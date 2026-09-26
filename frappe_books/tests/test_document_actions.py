@@ -118,6 +118,28 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				self.assertEqual(invoice.db_get("is_returned"), 0)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
+	def test_return_offers_only_what_is_not_yet_returned(self):
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+		)
+		invoice.items[0].update({"item_discount_percent": 0, "serial_number": "S-1\nS-2"})
+		other_item = make_item(self.income.name, self.expense.name)
+		invoice.append("items", {"item": other_item.name, "rate": 10, "quantity": 1})
+		invoice.save().submit()
+		partial = map_return(invoice.doctype, invoice.name)
+		partial.items[0].update({"quantity": -1, "serial_number": "S-1"})
+		partial.remove(partial.items[1])
+		partial.insert().submit()
+
+		remaining = map_return(invoice.doctype, invoice.name)
+
+		self.assertEqual([row.quantity for row in remaining.items], [-1, -1])
+		self.assertEqual(remaining.items[0].serial_number, "S-2")
+
 	def test_return_keeps_the_invoice_discounts(self):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
 		invoice = make_invoice(

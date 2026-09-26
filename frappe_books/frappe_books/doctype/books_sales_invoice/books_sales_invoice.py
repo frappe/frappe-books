@@ -91,11 +91,10 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def _validate_pos_rates(self, rows, rules):
 		rates = pricing.standard_rates(self)
 		for row in rows:
-			rate = rates.get((row.item, row.transfer_unit or row.unit)) or rates.get((row.item, None))
+			rate = pricing.standard_rate(self, row, rates)
 			# Rows without a standard rate, or priced by a rule, keep the rate they have.
-			if not rate or _price_type(rules, row) == "rate":
+			if rate is None or _price_type(rules, row) == "rate":
 				continue
-			rate = rounded(as_decimal(rate) / as_decimal(self.exchange_rate or 1), self.currency)
 			if rounded(row.rate, self.currency) != rate:
 				frappe.throw(_("The POS profile does not allow changing the rate of {0}.").format(row.item))
 

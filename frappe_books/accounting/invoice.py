@@ -229,18 +229,19 @@ def _populate_invoice_defaults(invoice):
 	if invoice.transaction_type != "quote" and invoice.party and not invoice.get("account"):
 		invoice.account = frappe.db.get_value("Books Party", invoice.party, "default_account")
 	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
+	rates = pricing.standard_rates(invoice) if items else {}
 	for row in invoice.get("items", []):
 		if row.item in items:
-			_populate_row(invoice, row, items[row.item])
+			_populate_row(invoice, row, items[row.item], rates)
 
 
-def _populate_row(invoice, row, item):
+def _populate_row(invoice, row, item, rates):
 	for fieldname in ("item_code", "description", "unit", "tax"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
-	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
-		row.rate = item.rate
 	row.transfer_unit = row.transfer_unit or row.unit
+	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
+		row.rate = pricing.standard_rate(invoice, row, rates)
 	row.unit_conversion_factor = row.unit_conversion_factor or 1
 	if not row.transfer_quantity:
 		row.transfer_quantity = as_decimal(row.quantity) * as_decimal(row.unit_conversion_factor)
@@ -258,7 +259,6 @@ def _item_details(names):
 			"name",
 			"item_code",
 			"description",
-			"rate",
 			"unit",
 			"tax",
 			"income_account",

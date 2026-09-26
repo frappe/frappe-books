@@ -52,6 +52,14 @@ def standard_rates(invoice):
 	return rates
 
 
+def standard_rate(invoice, row, rates):
+	"""Return the row's standard rate from `standard_rates` in the invoice currency, or None."""
+	rate = rates.get((row.item, row.transfer_unit or row.unit)) or rates.get((row.item, None))
+	if not rate:
+		return None
+	return rounded(as_decimal(rate) / as_decimal(invoice.exchange_rate or 1), invoice.get("currency"))
+
+
 def pos_setting(fieldname):
 	"""Read a POS setting from the POS profile in use, or from POS settings without one."""
 	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")

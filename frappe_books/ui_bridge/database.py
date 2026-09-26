@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import frappe
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
+from frappe_books.accounting.invoice import InvoiceController
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
 from frappe_books.ui_bridge.mapping import (
@@ -21,7 +22,7 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "close"}
+READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "close", "preview"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
@@ -149,6 +150,19 @@ class BooksDatabaseBridge:
 		self._validate_docstatus_update(doc, values)
 		self._set_target_values(doc, source_schema, values)
 		doc.save()
+		return self._to_readable_source(source_schema, doc)
+
+	def preview(self, source_schema: str, values: dict[str, Any], name: str | None = None) -> dict:
+		"""Return the values a save would calculate for a new or edited invoice, without saving."""
+		target = target_doctype(source_schema)
+		doc = frappe.get_doc({"doctype": target, **self._target_values(source_schema, values), "name": name})
+		if not isinstance(doc, InvoiceController):
+			frappe.throw(f"Books cannot preview {source_schema} documents")
+		if name:
+			frappe.get_doc(target, name).check_permission("write")
+		else:
+			doc.check_permission("create")
+		doc.calculate()
 		return self._to_readable_source(source_schema, doc)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:

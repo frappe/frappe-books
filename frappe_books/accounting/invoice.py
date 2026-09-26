@@ -78,8 +78,6 @@ class PostingInvoiceController(InvoiceController):
 
 
 def calculate_invoice(invoice):
-	if not invoice.get("items"):
-		return
 	taxes = {}
 	for row in invoice.items:
 		_calculate_row(invoice, row, taxes)

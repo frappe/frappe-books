@@ -343,7 +343,7 @@ export class GeneralLedger extends LedgerReport {
       { label: t`Journal Entries`, value: 'JournalEntry' },
     ];
 
-    if (!this.fyo.singles.AccountingSettings?.enableInventory) {
+    if (this.fyo.singles.AccountingSettings?.enableInventory) {
       refTypeOptions.push(
         { label: t`Shipment`, value: 'Shipment' },
         { label: t`Purchase Receipt`, value: 'PurchaseReceipt' }

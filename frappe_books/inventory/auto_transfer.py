@@ -64,19 +64,22 @@ def _returned_transfer(invoice) -> str:
 
 
 def _stock_location(invoice) -> str:
-	if invoice.flags.get("stock_location"):
-		return invoice.flags.stock_location
-	if invoice.transaction_type == "sales" and invoice.get("is_pos"):
-		settings = frappe.get_single("Books Pos Settings")
-		location = (
-			frappe.db.get_value("Books Pos Profile", settings.pos_profile, "inventory")
-			if settings.pos_profile
-			else None
-		)
-		if location or settings.inventory:
-			return location or settings.inventory
-	field = "shipment_location" if invoice.transaction_type == "sales" else "purchase_receipt_location"
-	return frappe.db.get_single_value("Books Defaults", field) or "Stores"
+	if invoice.transaction_type == "sales" and invoice.get("is_pos") and (location := _pos_location()):
+		return location
+	fieldname = "shipment_location" if invoice.transaction_type == "sales" else "purchase_receipt_location"
+	location = frappe.db.get_single_value("Books Defaults", fieldname)
+	if not location:
+		label = frappe.get_meta("Books Defaults").get_label(fieldname)
+		frappe.throw(_("Set {0} in Books Defaults to transfer stock automatically.").format(label))
+	return location
+
+
+def _pos_location() -> str | None:
+	settings = frappe.get_single("Books Pos Settings")
+	profile_location = settings.pos_profile and frappe.db.get_value(
+		"Books Pos Profile", settings.pos_profile, "inventory"
+	)
+	return profile_location or settings.inventory
 
 
 def _stock_rows(invoice) -> list[dict]:

@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
 from frappe_books.setup_service import run_setup
 from frappe_books.tests.accounting import unique_name
 
@@ -73,6 +74,15 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		)
 		self.assertEqual(frappe.db.get_value("Books Account", "Discounts", "root_type"), "Income")
 		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "write_off_account"))
+
+	def test_setup_completes_only_once(self):
+		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
+		self._wizard().save()
+
+		complete_setup()
+
+		self.assertTrue(frappe.db.get_single_value("Books Accounting Settings", "setup_complete"))
+		self.assertRaises(frappe.ValidationError, complete_setup)
 
 	def _wizard(self, **values):
 		wizard = frappe.get_single("Books Setup Wizard")

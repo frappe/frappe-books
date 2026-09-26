@@ -210,6 +210,36 @@ export class DatabaseHandler extends DatabaseBase {
     return (await this.#demux.call('exists', schemaName, name)) as boolean;
   }
 
+  /** Values a save would calculate for a new or edited document, without saving it. */
+  async preview(
+    schemaName: string,
+    docValueMap: DocValueMap,
+    name?: string
+  ): Promise<DocValueMap> {
+    const rawValueMap = this.converter.toRawValueMap(schemaName, docValueMap);
+    const previewed = (await this.#demux.call(
+      'preview',
+      schemaName,
+      rawValueMap,
+      name
+    )) as RawValueMap;
+    return this.converter.toDocValueMap(schemaName, previewed) as DocValueMap;
+  }
+
+  /** An unsaved `schemaName` document built by a whitelisted server mapper. */
+  async getMapped(
+    schemaName: string,
+    method: string,
+    sourceName: string
+  ): Promise<DocValueMap> {
+    const rawValueMap = (await this.#demux.call(
+      'getMapped',
+      method,
+      sourceName
+    )) as RawValueMap;
+    return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
+  }
+
   // The Frappe adapter runs these complex queries on the server.
 
   async getTopExpenses(fromDate: string, toDate: string): Promise<TopExpenses> {

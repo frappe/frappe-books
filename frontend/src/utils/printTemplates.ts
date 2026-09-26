@@ -93,7 +93,7 @@ async function getTotalValues(doc: Doc): Promise<PrintTemplateData> {
 async function getInvoiceTotalValues(
   invoice: Invoice
 ): Promise<PrintTemplateData> {
-  const totalTax = await invoice.getTotalTax();
+  const totalTax = getTotalTax(invoice);
   const values: PrintTemplateData = {
     ...(await getAmountValues(invoice, 'grandTotal', totalTax)),
     totalDiscount: formattedTotalDiscount(invoice),
@@ -119,7 +119,7 @@ async function getPaymentTotalValues(
     )) as Invoice;
   }
 
-  const totalTax = await taxedDoc.getTotalTax();
+  const totalTax = getTotalTax(taxedDoc);
   const values: PrintTemplateData = {
     ...(await getAmountValues(payment, 'amount', totalTax)),
     amountPaidInWords: await getDocAmountInWords(payment, 'amountPaid'),
@@ -244,17 +244,30 @@ function showDescription(doc: Doc): boolean {
   return description.length > 0;
 }
 
-function formattedTotalDiscount(doc: Doc): string {
-  if (!(doc instanceof Invoice)) {
+function formattedTotalDiscount(invoice: Invoice): string {
+  const totalDiscount = getTotalDiscount(invoice);
+  if (!totalDiscount.float) {
     return '';
   }
 
-  const totalDiscount = doc.getTotalDiscount();
-  if (!totalDiscount?.float) {
-    return '';
-  }
+  return invoice.fyo.format(totalDiscount, ModelNameEnum.Currency);
+}
 
-  return doc.fyo.format(totalDiscount, ModelNameEnum.Currency);
+function getTotalTax(doc: Invoice | Payment): Money {
+  return doc.getSum('taxes', 'amount', false) as Money;
+}
+
+/** Row and invoice discounts, from the amounts the server stored. */
+function getTotalDiscount(invoice: Invoice): Money {
+  const zero = invoice.fyo.pesa(0);
+  const undiscounted = invoice.discountAfterTax ? 'itemTaxedTotal' : 'amount';
+  return (invoice.items ?? []).reduce(
+    (total, row) =>
+      total
+        .add((row[undiscounted] as Money | undefined) ?? zero)
+        .sub(row.itemDiscountedTotal ?? zero),
+    invoice.discountAmount ?? zero
+  );
 }
 
 function getPrintTemplateDocHints(

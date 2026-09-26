@@ -42,13 +42,22 @@ export abstract class DatabaseBase {
   // Delete
   abstract delete(schemaName: string, name: string): Promise<void>;
 
-  abstract deleteAll(
-    schemaName: string,
-    filters: QueryFilter
-  ): Promise<number>;
+  abstract deleteAll(schemaName: string, filters: QueryFilter): Promise<number>;
 
   // Other
   abstract exists(schemaName: string, name?: string): Promise<boolean>;
+
+  abstract preview(
+    schemaName: string,
+    fieldValueMap: UnknownMap,
+    name?: string
+  ): Promise<UnknownMap>;
+
+  abstract getMapped(
+    schemaName: string,
+    method: string,
+    sourceName: string
+  ): Promise<UnknownMap>;
 }
 
 export type DatabaseMethod = keyof DatabaseBase;

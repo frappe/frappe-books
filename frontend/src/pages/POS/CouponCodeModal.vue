@@ -89,11 +89,8 @@ import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import Link from 'src/components/Controls/Link.vue';
-import { ModelNameEnum } from 'models/types';
-import { validateCouponCode } from 'models/helpers';
 import { Field } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
-import { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
 import { Button as FrappeButton } from 'frappe-ui';
 import {
   List as FrappeList,
@@ -171,19 +168,7 @@ export default defineComponent({
         }
 
         this.couponCode = value as string;
-        const appliedCouponCodes = this.fyo.doc.getNewDoc(
-          ModelNameEnum.AppliedCouponCodes
-        );
-
-        await validateCouponCode(
-          appliedCouponCodes as AppliedCouponCodes,
-          this.couponCode,
-          this.sinvDoc
-        );
-
-        await this.sinvDoc.append('coupons', { coupons: this.couponCode });
-
-        this.$emit('applyPricingRule');
+        await this.applyCoupon(this.couponCode);
         this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
         this.couponCode = '';
         this.validationError = false;
@@ -196,12 +181,21 @@ export default defineComponent({
         });
       }
     },
+    /** The server's preview rejects a coupon that does not apply, which is then taken off. */
+    async applyCoupon(coupon: string) {
+      await this.sinvDoc.append('coupons', { coupons: coupon });
+      try {
+        await this.sinvDoc.preview();
+      } catch (error) {
+        const added = this.sinvDoc.coupons?.at(-1);
+        await this.sinvDoc.remove('coupons', added?.idx as number);
+        throw error;
+      }
+    },
     setCouponCode() {
       this.$emit('toggleModal', 'CouponCode');
     },
     async removeAppliedCoupon(coupon: AppliedCouponCodes) {
-      this.clearPricingRuleDiscounts();
-
       await coupon?.parentdoc?.remove('coupons', coupon.idx as number);
 
       this.$emit('applyPricingRule');
@@ -209,7 +203,6 @@ export default defineComponent({
     },
     async cancelApplyCouponCode() {
       this.couponCode = '';
-      this.clearPricingRuleDiscounts();
       await this.sinvDoc.set('coupons', null);
 
       for (const coupons of this.initialCouponCodes) {
@@ -219,13 +212,6 @@ export default defineComponent({
       this.$emit('applyPricingRule');
       this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
       this.$emit('toggleModal', 'CouponCode');
-    },
-    clearPricingRuleDiscounts() {
-      this.sinvDoc.items?.forEach((item: InvoiceItem) => {
-        item.itemDiscountAmount = this.fyo.pesa(0);
-        item.itemDiscountPercent = 0;
-        item.setItemDiscountAmount = false;
-      });
     },
   },
 });

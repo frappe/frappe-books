@@ -202,86 +202,6 @@ export class Payment extends Transactional {
     }
   }
 
-  async getTaxSummary() {
-    const taxes: Record<
-      string,
-      Record<
-        string,
-        {
-          account: string;
-          from_account: string;
-          rate: number;
-          amount: Money;
-        }
-      >
-    > = {};
-
-    for (const childDoc of this.for ?? []) {
-      const referenceName = childDoc.referenceName;
-      const referenceType = childDoc.referenceType;
-
-      const refDoc = (await this.fyo.doc.getDoc(
-        childDoc.referenceType!,
-        childDoc.referenceName
-      )) as Invoice;
-
-      if (referenceName && referenceType && !refDoc) {
-        throw new ValidationError(
-          t`${referenceType} of type ${
-            this.fyo.schemaMap?.[referenceType]?.label ?? referenceType
-          } does not exist`
-        );
-      }
-
-      if (!refDoc) {
-        continue;
-      }
-
-      for (const {
-        details,
-        taxAmount,
-        exchangeRate,
-      } of await refDoc.getTaxItems()) {
-        const { account, payment_account } = details;
-        if (!payment_account) {
-          continue;
-        }
-
-        taxes[payment_account] ??= {};
-        taxes[payment_account][account] ??= {
-          account: payment_account,
-          from_account: account,
-          rate: details.rate,
-          amount: this.fyo.pesa(0),
-        };
-
-        taxes[payment_account][account].amount = taxes[payment_account][
-          account
-        ].amount.add(taxAmount.mul(exchangeRate ?? 1));
-      }
-    }
-
-    type Summary = (typeof taxes)[string][string] & { idx: number };
-    const taxArr: Summary[] = [];
-    let idx = 0;
-    for (const payment_account in taxes) {
-      for (const account in taxes[payment_account]) {
-        const tax = taxes[payment_account][account];
-        if (tax.amount.isZero()) {
-          continue;
-        }
-
-        taxArr.push({
-          ...tax,
-          idx,
-        });
-        idx += 1;
-      }
-    }
-
-    return taxArr;
-  }
-
   async validateReferences() {
     const forReferences = this.for ?? [];
     if (forReferences.length === 0) {
@@ -375,14 +295,6 @@ export class Payment extends Transactional {
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
     date: () => new Date(),
   };
-
-  async getTotalTax() {
-    const taxArr = await this.getTaxSummary();
-
-    return taxArr
-      .map(({ amount }) => amount)
-      .reduce((a, b) => a.add(b), this.fyo.pesa(0));
-  }
 
   async _getAccountsMap(): Promise<AccountTypeMap> {
     if (this._accountsMap) {
@@ -557,7 +469,6 @@ export class Payment extends Transactional {
       },
       dependsOn: ['for'],
     },
-    taxes: { formula: async () => await this.getTaxSummary() },
   };
 
   validations: ValidationMap = {

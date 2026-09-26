@@ -18,13 +18,6 @@ import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
 import { Item } from '../Item/Item';
 import { StockTransfer } from 'models/inventory/StockTransfer';
-import { isPesa } from 'fyo/utils';
-import { PricingRule } from '../PricingRule/PricingRule';
-import {
-  getItemRateFromPriceList,
-  getPricingRule,
-} from 'models/helpers';
-import { SalesInvoice } from '../SalesInvoice/SalesInvoice';
 import { getSuggestedBatchName } from 'models/inventory/helpers';
 import {
   getRawStockLedgerEntries,
@@ -79,14 +72,6 @@ export abstract class InvoiceItem extends Doc {
     return this.parentdoc?.party ?? undefined;
   }
 
-  get priceList() {
-    return this.parentdoc?.priceList ?? undefined;
-  }
-
-  get discountAfterTax() {
-    return !!this?.parentdoc?.discountAfterTax;
-  }
-
   get enableDiscounting() {
     return !!this.fyo.singles?.AccountingSettings?.enableDiscounting;
   }
@@ -109,10 +94,6 @@ export abstract class InvoiceItem extends Doc {
 
   get isReturn() {
     return !!this.parentdoc?.isReturn;
-  }
-
-  get pricingRuleDetail() {
-    return this.parentdoc?.pricingRuleDetail;
   }
 
   constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
@@ -145,26 +126,18 @@ export abstract class InvoiceItem extends Doc {
     fieldname: string,
     retriggerChildDocApplyChange?: boolean
   ) {
-    if (
-      ['rate', 'itemTaxedTotal', 'itemDiscountedTotal'].includes(fieldname)
-    ) {
+    if (fieldname === 'rate') {
       this.isManualRate = true;
-    } else if (['item', 'priceList', 'batch'].includes(fieldname)) {
-      this.isManualRate = false;
+    } else if (['item', 'transferUnit'].includes(fieldname)) {
+      this.clearStandardRate();
     }
     return super._applyChange(fieldname, retriggerChildDocApplyChange);
   }
 
-  async getTotalTaxRate(): Promise<number> {
-    if (!this.tax) {
-      return 0;
-    }
-
-    const details =
-      ((await this.fyo.getValue('Tax', this.tax, 'details')) as Doc[]) ?? [];
-    return details.reduce((acc, doc) => {
-      return (doc.rate as number) + acc;
-    }, 0);
+  /** An empty rate that is not manual is priced by the server's invoice preview. */
+  clearStandardRate() {
+    this.isManualRate = false;
+    this.rate = this.fyo.pesa(0);
   }
 
   formulas: FormulaMap = {
@@ -185,69 +158,6 @@ export abstract class InvoiceItem extends Doc {
           'itemCode'
         )) as string,
       dependsOn: ['item'],
-    },
-    rate: {
-      formula: async (fieldname) => {
-        if (['item', 'priceList', 'batch'].includes(fieldname ?? '')) {
-          this.isManualRate = false;
-        }
-        const isTotalEdit =
-          fieldname === 'itemTaxedTotal' ||
-          fieldname === 'itemDiscountedTotal';
-        if (this.isManualRate && !isTotalEdit) {
-          return this.rate;
-        }
-        const rate = await getItemRate(this);
-        if (!isTotalEdit && !rate?.float && this.rate?.float) {
-          return this.rate;
-        }
-
-        if (
-          fieldname !== 'itemTaxedTotal' &&
-          fieldname !== 'itemDiscountedTotal'
-        ) {
-          return rate?.div(this.exchangeRate) ?? this.fyo.pesa(0);
-        }
-
-        const quantity = this.quantity ?? 0;
-        const itemDiscountPercent = this.itemDiscountPercent ?? 0;
-        const itemDiscountAmount =
-          this.itemDiscountAmount ?? this.fyo.pesa(0);
-        const totalTaxRate = await this.getTotalTaxRate();
-        const itemTaxedTotal = this.itemTaxedTotal ?? this.fyo.pesa(0);
-        const itemDiscountedTotal =
-          this.itemDiscountedTotal ?? this.fyo.pesa(0);
-        const isItemTaxedTotal = fieldname === 'itemTaxedTotal';
-        const discountAfterTax = this.discountAfterTax;
-        const setItemDiscountAmount = !!this.setItemDiscountAmount;
-
-        const rateFromTotals = getRate(
-          quantity,
-          itemDiscountPercent,
-          itemDiscountAmount,
-          totalTaxRate,
-          itemTaxedTotal,
-          itemDiscountedTotal,
-          isItemTaxedTotal,
-          discountAfterTax,
-          setItemDiscountAmount
-        );
-
-        return rateFromTotals ?? rate ?? this.fyo.pesa(0);
-      },
-      dependsOn: [
-        'date',
-        'priceList',
-        'batch',
-        'party',
-        'exchangeRate',
-        'item',
-        'quantity',
-        'itemTaxedTotal',
-        'itemDiscountedTotal',
-        'setItemDiscountAmount',
-        'pricingRuleDetail',
-      ],
     },
     unit: {
       formula: async () =>
@@ -387,111 +297,10 @@ export abstract class InvoiceItem extends Doc {
       },
       dependsOn: ['item'],
     },
-    tax: {
-      formula: async () => {
-        const itemTax = (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'tax'
-        )) as string;
-
-        if (itemTax) {
-          return itemTax;
-        }
-
-        const itemGroup = (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'itemGroup'
-        )) as string;
-
-        if (!itemGroup) {
-          return '';
-        }
-
-        const itemGroupDoc = await this.fyo.doc.getDoc('ItemGroup', itemGroup);
-
-        return itemGroupDoc?.tax as string;
-      },
-      dependsOn: ['item'],
-    },
-    amount: {
-      formula: () => (this.rate as Money).mul(this.quantity as number),
-      dependsOn: ['item', 'rate', 'quantity'],
-    },
     hsnCode: {
       formula: async () =>
         await this.fyo.getValue('Item', this.item as string, 'hsnCode'),
       dependsOn: ['item'],
-    },
-    itemDiscountedTotal: {
-      formula: async () => {
-        const totalTaxRate = await this.getTotalTaxRate();
-        const rate = this.rate ?? this.fyo.pesa(0);
-        const quantity = this.quantity ?? 1;
-        const itemDiscountAmount = this.itemDiscountAmount ?? this.fyo.pesa(0);
-        const itemDiscountPercent = this.itemDiscountPercent ?? 0;
-
-        if (this.setItemDiscountAmount && this.itemDiscountAmount?.isZero()) {
-          return rate.mul(quantity);
-        }
-
-        if (!this.setItemDiscountAmount && this.itemDiscountPercent === 0) {
-          return rate.mul(quantity);
-        }
-
-        if (!this.discountAfterTax) {
-          return getDiscountedTotalBeforeTaxation(
-            rate,
-            quantity,
-            itemDiscountAmount,
-            itemDiscountPercent,
-            !!this.setItemDiscountAmount
-          );
-        }
-
-        return getDiscountedTotalAfterTaxation(
-          totalTaxRate,
-          rate,
-          quantity,
-          itemDiscountAmount,
-          itemDiscountPercent,
-          !!this.setItemDiscountAmount
-        );
-      },
-      dependsOn: [
-        'itemDiscountAmount',
-        'itemDiscountPercent',
-        'itemTaxedTotal',
-        'setItemDiscountAmount',
-        'tax',
-        'rate',
-        'quantity',
-        'item',
-      ],
-    },
-    itemTaxedTotal: {
-      formula: async () => {
-        const totalTaxRate = await this.getTotalTaxRate();
-        const rate = this.rate ?? this.fyo.pesa(0);
-        const quantity = this.quantity ?? 1;
-        const itemDiscountAmount = this.itemDiscountAmount ?? this.fyo.pesa(0);
-        const itemDiscountPercent = this.itemDiscountPercent ?? 0;
-
-        if (!this.discountAfterTax) {
-          return getTaxedTotalAfterDiscounting(
-            totalTaxRate,
-            rate,
-            quantity,
-            itemDiscountAmount,
-            itemDiscountPercent,
-            !!this.setItemDiscountAmount
-          );
-        }
-
-        return getTaxedTotalBeforeDiscounting(totalTaxRate, rate, quantity);
-      },
-      dependsOn: ['rate', 'quantity', 'item'],
     },
     stockNotTransferred: {
       formula: async () => {
@@ -527,129 +336,9 @@ export abstract class InvoiceItem extends Doc {
       },
       dependsOn: ['item', 'quantity'],
     },
-    setItemDiscountAmount: {
-      formula: async () => {
-        if (!this.fyo.singles.AccountingSettings?.enablePricingRule) {
-          return this.setItemDiscountAmount;
-        }
-
-        const hasPricingRule = this.parentdoc?.pricingRuleDetail?.some(
-          (rule) => rule.referenceItem === this.item
-        );
-
-        if (!hasPricingRule && (this.itemDiscountAmount as Money).isZero()) {
-          return false;
-        }
-
-        const applicablePricingRules = await getPricingRule(
-          this.parentdoc as SalesInvoice
-        );
-
-        const itemRule = applicablePricingRules?.find(
-          (rule) => rule.applyOnItem === this.item
-        );
-
-        if (!itemRule) {
-          if (!this.prule) {
-            await this.set('itemDiscountAmount', this.itemDiscountAmount);
-            return true;
-          } else {
-            await this.set('itemDiscountAmount', this.fyo.pesa(0));
-          }
-          return false;
-        }
-        this.prule = itemRule;
-
-        const pricingRuleDoc = itemRule.pricingRule;
-
-        if (pricingRuleDoc.priceDiscountType === 'amount') {
-          const discountAmount =
-            pricingRuleDoc.discountAmount ?? this.fyo.pesa(0);
-          await this.set('itemDiscountAmount', discountAmount);
-          return true;
-        }
-
-        return false;
-      },
-      dependsOn: ['pricingRuleDetail', 'quantity', 'item'],
-    },
-    itemDiscountPercent: {
-      formula: async () => {
-        if (!this.fyo.singles.AccountingSettings?.enablePricingRule) {
-          return this.itemDiscountPercent ?? 0;
-        }
-
-        const pricingRule = this.parentdoc?.pricingRuleDetail?.filter(
-          (prDetail) => prDetail.referenceItem === this.item
-        );
-
-        if (!pricingRule || !pricingRule.length) {
-          if (!this.prule) {
-            return this.itemDiscountPercent;
-          } else {
-            return 0;
-          }
-        }
-
-        const pricingRuleDoc = (await this.fyo.doc.getDoc(
-          ModelNameEnum.PricingRule,
-          pricingRule[0].referenceName
-        )) as PricingRule;
-
-        if (pricingRuleDoc.discountType === 'Product Discount') {
-          return this.itemDiscountPercent ?? 0;
-        }
-
-        if (pricingRuleDoc.priceDiscountType === 'percentage') {
-          await this.set('setItemDiscountAmount', false);
-          return pricingRuleDoc.discountPercentage ?? 0;
-        }
-
-        return this.itemDiscountPercent ?? 0;
-      },
-      dependsOn: ['pricingRuleDetail', 'item'],
-    },
   };
 
   validations: ValidationMap = {
-    rate: (value: DocValue) => {
-      if ((value as Money).gte(0)) {
-        return;
-      }
-
-      throw new ValidationError(
-        this.fyo.t`Rate (${this.fyo.format(
-          value,
-          'Currency'
-        )}) cannot be less zero.`
-      );
-    },
-    itemDiscountAmount: (value: DocValue) => {
-      if ((value as Money).gte(0) && (value as Money).lte(this.amount!.abs())) {
-        return;
-      }
-
-      throw new ValidationError(
-        this.fyo.t`Discount Amount (${this.fyo.format(
-          value,
-          'Currency'
-        )}) cannot be greater than Amount (${this.fyo.format(
-          this.amount!,
-          'Currency'
-        )}).`
-      );
-    },
-    itemDiscountPercent: (value: DocValue) => {
-      if ((value as number) <= 100) {
-        return;
-      }
-
-      throw new ValidationError(
-        this.fyo.t`Discount Percent (${
-          value as number
-        }) cannot be greater than 100.`
-      );
-    },
     transferUnit: async (value: DocValue) => {
       if (!this.item) {
         return;
@@ -943,211 +632,4 @@ export abstract class InvoiceItem extends Doc {
       this.getCurrencies[fieldname] ??= this._getCurrency.bind(this);
     }
   }
-}
-
-async function getItemRate(doc: InvoiceItem): Promise<Money | undefined> {
-  if (doc.isFreeItem) {
-    return doc.rate;
-  }
-
-  let pricingRuleRate: Money | undefined;
-  if (doc.fyo.singles.AccountingSettings?.enablePricingRule) {
-    pricingRuleRate = await getItemRateFromPricingRule(doc);
-  }
-
-  if (pricingRuleRate) {
-    return pricingRuleRate;
-  }
-
-  let priceListRate: Money | undefined;
-
-  if (doc.fyo.singles.AccountingSettings?.enablePriceList) {
-    priceListRate = await getItemRateFromPriceList(
-      doc,
-      doc.parentdoc?.priceList as string
-    );
-  }
-
-  if (priceListRate) {
-    return priceListRate;
-  }
-
-  if (!doc.item) {
-    return;
-  }
-
-  const itemRate = await doc.fyo.getValue(ModelNameEnum.Item, doc.item, 'rate');
-  if (isPesa(itemRate)) {
-    return itemRate;
-  }
-
-  return;
-}
-
-async function getItemRateFromPricingRule(
-  doc: InvoiceItem
-): Promise<Money | undefined> {
-  const pricingRule = doc.parentdoc?.pricingRuleDetail?.filter(
-    (prDetail) => prDetail.referenceItem === doc.item
-  );
-
-  if (!pricingRule || !pricingRule.length) {
-    return;
-  }
-
-  const pricingRuleDoc = (await doc.fyo.doc.getDoc(
-    ModelNameEnum.PricingRule,
-    pricingRule[0].referenceName
-  )) as PricingRule;
-
-  if (pricingRuleDoc.discountType !== 'Price Discount') {
-    return;
-  }
-
-  if (pricingRuleDoc.priceDiscountType !== 'rate') {
-    return;
-  }
-
-  return pricingRuleDoc.discountRate;
-}
-
-function getDiscountedTotalBeforeTaxation(
-  rate: Money,
-  quantity: number,
-  itemDiscountAmount: Money,
-  itemDiscountPercent: number,
-  setDiscountAmount: boolean
-) {
-  /**
-   * If Discount is applied before taxation
-   * Use different formulas depending on how discount is set
-   * - if amount : Quantity * Rate - DiscountAmount
-   * - if percent: Quantity * Rate (1 - DiscountPercent / 100)
-   */
-
-  if (setDiscountAmount) {
-    return rate.mul(quantity).sub(itemDiscountAmount.mul(Math.sign(quantity)));
-  } else if (itemDiscountPercent > 0) {
-    return rate.mul(quantity).percent(100 - itemDiscountPercent);
-  }
-  return rate.mul(quantity);
-}
-
-function getTaxedTotalAfterDiscounting(
-  totalTaxRate: number,
-  rate: Money,
-  quantity: number,
-  itemDiscountAmount: Money,
-  itemDiscountPercent: number,
-  setItemDiscountAmount: boolean
-) {
-  /**
-   * If Discount is applied before taxation
-   * Formula: Discounted Total * (1 + TotalTaxRate / 100)
-   */
-
-  const discountedTotal = getDiscountedTotalBeforeTaxation(
-    rate,
-    quantity,
-    itemDiscountAmount,
-    itemDiscountPercent,
-    setItemDiscountAmount
-  );
-
-  return discountedTotal.mul(1 + totalTaxRate / 100);
-}
-
-function getDiscountedTotalAfterTaxation(
-  totalTaxRate: number,
-  rate: Money,
-  quantity: number,
-  itemDiscountAmount: Money,
-  itemDiscountPercent: number,
-  setItemDiscountAmount: boolean
-) {
-  /**
-   * If Discount is applied after taxation
-   * Use different formulas depending on how discount is set
-   * - if amount : Taxed Total - Discount Amount
-   * - if percent: Taxed Total * (1 - Discount Percent / 100)
-   */
-  const taxedTotal = getTaxedTotalBeforeDiscounting(
-    totalTaxRate,
-    rate,
-    quantity
-  );
-
-  if (setItemDiscountAmount) {
-    return taxedTotal.sub(itemDiscountAmount.mul(Math.sign(quantity)));
-  }
-
-  return taxedTotal.mul(1 - itemDiscountPercent / 100);
-}
-
-function getTaxedTotalBeforeDiscounting(
-  totalTaxRate: number,
-  rate: Money,
-  quantity: number
-) {
-  /**
-   * If Discount is applied after taxation
-   * Formula: Rate * Quantity * (1 + Total Tax Rate / 100)
-   */
-
-  return rate.mul(quantity).mul(1 + totalTaxRate / 100);
-}
-
-function getRate(
-  quantity: number,
-  itemDiscountPercent: number,
-  itemDiscountAmount: Money,
-  totalTaxRate: number,
-  itemTaxedTotal: Money,
-  itemDiscountedTotal: Money,
-  isItemTaxedTotal: boolean,
-  discountAfterTax: boolean,
-  setItemDiscountAmount: boolean
-) {
-  const isItemDiscountedTotal = !isItemTaxedTotal;
-  const discountBeforeTax = !discountAfterTax;
-  itemDiscountAmount = itemDiscountAmount.mul(Math.sign(quantity));
-
-  if (isItemDiscountedTotal && discountBeforeTax && setItemDiscountAmount) {
-    return itemDiscountedTotal.add(itemDiscountAmount).div(quantity);
-  }
-
-  if (isItemDiscountedTotal && discountBeforeTax && !setItemDiscountAmount) {
-    return itemDiscountedTotal.div(quantity * (1 - itemDiscountPercent / 100));
-  }
-
-  if (isItemDiscountedTotal && discountAfterTax && setItemDiscountAmount) {
-    return itemDiscountedTotal
-      .add(itemDiscountAmount)
-      .div(quantity * (1 + totalTaxRate / 100));
-  }
-
-  if (isItemDiscountedTotal && discountAfterTax && !setItemDiscountAmount) {
-    return itemDiscountedTotal.div(
-      (quantity * (100 - itemDiscountPercent) * (100 + totalTaxRate)) / 10000
-    );
-  }
-
-  if (isItemTaxedTotal && discountAfterTax) {
-    return itemTaxedTotal.div(quantity * (1 + totalTaxRate / 100));
-  }
-
-  if (isItemTaxedTotal && discountBeforeTax && setItemDiscountAmount) {
-    return itemTaxedTotal
-      .div(1 + totalTaxRate / 100)
-      .add(itemDiscountAmount)
-      .div(quantity);
-  }
-
-  if (isItemTaxedTotal && discountBeforeTax && !setItemDiscountAmount) {
-    return itemTaxedTotal.div(
-      quantity * (1 - itemDiscountPercent / 100) * (1 + totalTaxRate / 100)
-    );
-  }
-
-  return null;
 }

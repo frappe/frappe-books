@@ -172,9 +172,6 @@ import {
 import {
   validateQty,
   getItemQtyMap,
-  getPricingRule,
-  removeFreeItems,
-  getItemRateFromPriceList,
   getItemVisibility,
   isLoyaltyProgramExpiredAndMaxed,
 } from 'models/helpers';
@@ -1022,7 +1019,6 @@ export default defineComponent({
           }
 
           await this.sinvDoc.append('items', {
-            rate: item.rate,
             item: itemName,
             quantity: addQty,
             transferQuantity: addQty,
@@ -1047,10 +1043,6 @@ export default defineComponent({
         }
 
         if (existingItems.length) {
-          if (!this.sinvDoc.priceList) {
-            existingItems[0].rate = item.rate;
-          }
-
           const currentQty = existingItems[0].quantity ?? 0;
           const addQty = quantity ?? 1;
           if (isInventoryItem) {
@@ -1082,26 +1074,12 @@ export default defineComponent({
         }
 
         await this.sinvDoc.append('items', {
-          rate: item.rate,
           item: itemName,
           quantity: quantity ?? 1,
           transferQuantity: quantity ?? 1,
           transferUnit: item.unit,
           hsnCode: itemsHsncode,
         });
-
-        if (this.sinvDoc.priceList) {
-          const itemData = this.sinvDoc.items?.filter(
-            (val) => val.item == itemName
-          ) as SalesInvoiceItem[];
-
-          if (itemData.length > 0) {
-            itemData[0].rate = await getItemRateFromPriceList(
-              itemData[0],
-              this.sinvDoc.priceList
-            );
-          }
-        }
 
         const newItemRows = this.sinvDoc.items?.filter(
           (row) => row.item === itemName && !row.isFreeItem
@@ -1167,7 +1145,6 @@ export default defineComponent({
           await existingItems[0].set('quantity', currentQty + addQty);
         } else {
           await this.sinvDoc.append('items', {
-            rate: item.rate as Money,
             item: item.name,
             quantity: quantity ?? 1,
             transferQuantity: quantity ?? 1,
@@ -1455,50 +1432,11 @@ export default defineComponent({
       }
     },
     async applyPricingRule() {
-      if (this.ignorePricingRules()) {
-        return;
+      try {
+        await this.sinvDoc.preview();
+      } catch (error) {
+        showToast({ type: 'error', message: t`${error as string}` });
       }
-      const hasPricingRules = await getPricingRule(
-        this.sinvDoc as SalesInvoice
-      );
-
-      if (!hasPricingRules || !hasPricingRules.length) {
-        this.sinvDoc.pricingRuleDetail = undefined;
-        this.sinvDoc.isPricingRuleApplied = false;
-
-        removeFreeItems(this.sinvDoc as SalesInvoice);
-        await this.sinvDoc.applyProductDiscount();
-
-        return;
-      }
-
-      await this.sinvDoc.appendPricingRuleDetail(hasPricingRules);
-      await this.sinvDoc.applyProductDiscount();
-
-      const outOfStockFreeItems: string[] = [];
-      const itemQtyMap = await getItemQtyMap(this.sinvDoc as SalesInvoice);
-
-      hasPricingRules.map((pRule) => {
-        const freeItemQty =
-          itemQtyMap[pRule.pricingRule.freeItem as string]?.availableQty;
-
-        if (freeItemQty <= 0) {
-          this.sinvDoc.items = this.sinvDoc.items?.filter(
-            (val) => !(val.isFreeItem && val.item == pRule.pricingRule.freeItem)
-          );
-
-          outOfStockFreeItems.push(pRule.pricingRule.freeItem as string);
-        }
-      });
-
-      if (!outOfStockFreeItems.length) {
-        return;
-      }
-
-      showToast({
-        type: 'error',
-        message: t`Free items out of stock: ${outOfStockFreeItems.join(', ')}`,
-      });
     },
     async routeToSinvList() {
       if (!this.sinvDoc.items?.length) {

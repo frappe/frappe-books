@@ -1,18 +1,5 @@
-import { DocValue } from 'fyo/core/types';
-import { ValidationMap } from 'fyo/model/types';
-import { InvoiceItem } from '../InvoiceItem/InvoiceItem';
-import { validateCouponCode } from 'models/helpers';
+import { Doc } from 'fyo/model/doc';
 
-export class AppliedCouponCodes extends InvoiceItem {
+export class AppliedCouponCodes extends Doc {
   coupons?: string;
-
-  validations: ValidationMap = {
-    coupons: async (value: DocValue) => {
-      if (!value) {
-        return;
-      }
-
-      await validateCouponCode(this as AppliedCouponCodes, value as string);
-    },
-  };
 }

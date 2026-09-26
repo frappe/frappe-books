@@ -2,6 +2,7 @@ import { Fyo, t } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
+  ChangeArg,
   CurrenciesMap,
   DefaultMap,
   FiltersMap,
@@ -13,17 +14,8 @@ import { ValidationError } from 'fyo/utils/errors';
 import { Transactional } from 'models/Transactional/Transactional';
 import {
   addItem,
-  canApplyCouponCode,
-  canApplyPricingRule,
-  filterPricingRules,
-  getAddedLPWithGrandTotal,
   getExchangeRate,
   getNumberSeries,
-  removeUnusedCoupons,
-  getPricingRulesConflicts,
-  roundFreeItemQty,
-  getReturnLoyaltyPoints,
-  getItemQtyMap,
   getItemVisibility,
   isLoyaltyProgramExpiredAndMaxed,
 } from 'models/helpers';
@@ -32,41 +24,26 @@ import { validateBatch } from 'models/inventory/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
-import { getIsNullOrUndef, joinMapLists, safeParseFloat } from 'utils';
+import { getIsNullOrUndef, safeParseFloat } from 'utils';
 import { Defaults } from '../Defaults/Defaults';
 import { InvoiceItem } from '../InvoiceItem/InvoiceItem';
 import { Item } from '../Item/Item';
-import { Party } from '../Party/Party';
 import { Payment } from '../Payment/Payment';
-import { Tax } from '../Tax/Tax';
 import { TaxSummary } from '../TaxSummary/TaxSummary';
 import { getReturnItems } from 'models/returnItems';
 import { AccountFieldEnum, PaymentTypeEnum } from '../Payment/types';
-import { PricingRule } from '../PricingRule/PricingRule';
-import { ApplicablePricingRules } from './types';
 import { PricingRuleDetail } from '../PricingRuleDetail/PricingRuleDetail';
 import { AppliedCouponCodes } from '../AppliedCouponCodes/AppliedCouponCodes';
-import { CouponCode } from '../CouponCode/CouponCode';
-import { SalesInvoice } from '../SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from '../SalesInvoiceItem/SalesInvoiceItem';
-import { PricingRuleItem } from '../PricingRuleItem/PricingRuleItem';
 import { getLinkedEntries } from 'src/utils/doc';
+import { applyPreview } from './preview';
 
-export type TaxDetail = {
-  account: string;
-  payment_account?: string;
-  rate: number;
-};
-
-export type InvoiceTaxItem = {
-  details: TaxDetail;
-  exchangeRate?: number;
-  fullAmount: Money;
-  taxAmount: Money;
-};
+const PREVIEW_DELAY = 300;
+const RATE_SOURCE_FIELDS = ['party', 'priceList', 'currency', 'exchangeRate'];
 
 export abstract class Invoice extends Transactional {
-  _taxes: Record<string, Tax> = {};
+  _previewTimer?: ReturnType<typeof setTimeout>;
+  _edits = 0;
+
   taxes?: TaxSummary[];
 
   items?: InvoiceItem[];
@@ -132,22 +109,6 @@ export abstract class Invoice extends Transactional {
       : ModelNameEnum.PurchaseReceipt;
   }
 
-  get hasLinkedTransfers() {
-    if (!this.submitted) {
-      return false;
-    }
-
-    return this.getStockTransferred() > 0;
-  }
-
-  get hasLinkedPayments() {
-    if (!this.submitted) {
-      return false;
-    }
-
-    return !this.baseGrandTotal?.eq(this.outstandingAmount!);
-  }
-
   get autoPaymentAccount(): string | null {
     const fieldname = this.isSales
       ? 'salesPaymentAccount'
@@ -210,7 +171,6 @@ export abstract class Invoice extends Transactional {
       throw new ValidationError(this.fyo.t`Discount Account is not set.`);
     }
     await validateBatch(this);
-    await this._validatePricingRule();
   }
 
   async getPaymentIds() {
@@ -247,323 +207,6 @@ export abstract class Invoice extends Transactional {
     return safeParseFloat(exchangeRate.toFixed(2));
   }
 
-  async getTaxItems(): Promise<InvoiceTaxItem[]> {
-    const taxItems: InvoiceTaxItem[] = [];
-    for (const item of this.items ?? []) {
-      if (!item.tax) {
-        continue;
-      }
-
-      const tax = await this.getTax(item.tax);
-      for (const details of (tax.details ?? []) as TaxDetail[]) {
-        let amount = item.amount!;
-
-        if (this.isReturn && amount.isPositive()) {
-          amount = amount.neg();
-        }
-
-        if (!this.discountAfterTax) {
-          let itemDiscountAmount = this.getDiscountAmount(item);
-
-          if (this.isReturn && itemDiscountAmount.isNegative()) {
-            itemDiscountAmount = itemDiscountAmount.abs();
-          }
-
-          if (this.isReturn) {
-            amount = amount.add(itemDiscountAmount);
-          } else {
-            amount = amount.sub(itemDiscountAmount);
-          }
-
-          const taxItem: InvoiceTaxItem = {
-            details,
-            exchangeRate: this.exchangeRate ?? 1,
-            fullAmount: amount,
-            taxAmount: amount.mul(details.rate / 100),
-          };
-
-          taxItems.push(taxItem);
-        }
-      }
-    }
-
-    return taxItems;
-  }
-
-  async getTaxSummary() {
-    const taxes: Record<
-      string,
-      {
-        account: string;
-        rate: number;
-        amount: Money;
-      }
-    > = {};
-
-    for (const { details, taxAmount } of await this.getTaxItems()) {
-      const account = details.account;
-
-      taxes[account] ??= {
-        account,
-        rate: details.rate,
-        amount: this.fyo.pesa(0),
-      };
-
-      taxes[account].amount = taxes[account].amount.add(taxAmount);
-    }
-
-    type Summary = (typeof taxes)[string] & { idx: number };
-    const taxArr: Summary[] = [];
-    let idx = 0;
-    for (const account in taxes) {
-      const tax = taxes[account];
-      if (tax.amount.isZero()) {
-        continue;
-      }
-
-      taxArr.push({
-        ...tax,
-        idx,
-      });
-      idx += 1;
-    }
-
-    return taxArr;
-  }
-
-  async getTotalTax() {
-    const taxArr = await this.getTaxSummary();
-    return taxArr
-      .map(({ amount }) => amount)
-      .reduce((a, b) => a.add(b), this.fyo.pesa(0));
-  }
-
-  async getTax(tax: string) {
-    if (!this._taxes[tax]) {
-      this._taxes[tax] = await this.fyo.doc.getDoc('Tax', tax);
-    }
-
-    return this._taxes[tax];
-  }
-
-  getTotalDiscount() {
-    if (!this.enableDiscounting) {
-      return this.fyo.pesa(0);
-    }
-
-    const itemDiscountAmount = this.getItemDiscountAmount();
-    const invoiceDiscountAmount = this.getInvoiceDiscountAmount();
-
-    if (
-      this.isReturn &&
-      itemDiscountAmount.add(invoiceDiscountAmount).isPositive()
-    ) {
-      return itemDiscountAmount.add(invoiceDiscountAmount).neg();
-    }
-
-    return itemDiscountAmount.add(invoiceDiscountAmount);
-  }
-
-  getGrandTotal() {
-    const totalDiscount = this.getTotalDiscount();
-
-    if (!this.taxes!.length) {
-      if (this.redeemLoyaltyPoints) {
-        return this.getLPAddedBaseGrandTotal();
-      }
-      return (this.netTotal as Money).sub(totalDiscount);
-    }
-
-    const grandTotal = ((this.taxes ?? []) as Doc[])
-      .map((doc) => doc.amount as Money)
-      .reduce(
-        (a, b) => {
-          if (this.isReturn) {
-            return a.abs().add(b.abs()).neg();
-          }
-
-          return a.add(b);
-        },
-        (this.netTotal as Money).abs()
-      )
-      .sub(totalDiscount);
-
-    if (this.redeemLoyaltyPoints) {
-      return this.getLPAddedBaseGrandTotal();
-    }
-    return grandTotal;
-  }
-
-  getInvoiceDiscountAmount() {
-    if (!this.enableDiscounting) {
-      return this.fyo.pesa(0);
-    }
-
-    if (this.setDiscountAmount) {
-      return this.discountAmount ?? this.fyo.pesa(0);
-    }
-
-    let totalItemAmounts = this.fyo.pesa(0);
-    for (const item of this.items ?? []) {
-      if (this.discountAfterTax) {
-        totalItemAmounts = totalItemAmounts.add(item.itemTaxedTotal!);
-      } else {
-        totalItemAmounts = totalItemAmounts.add(item.itemDiscountedTotal!);
-      }
-    }
-
-    return totalItemAmounts.percent(this.discountPercent ?? 0);
-  }
-  getDiscountAmount(item: InvoiceItem) {
-    if (!this.enableDiscounting) {
-      return this.fyo.pesa(0);
-    }
-
-    if (!this?.items?.length) {
-      return this.fyo.pesa(0);
-    }
-
-    let discountAmount = this.fyo.pesa(0);
-    if (item.setItemDiscountAmount) {
-      discountAmount = discountAmount.add(
-        item.itemDiscountAmount ?? this.fyo.pesa(0)
-      );
-    } else if (!this.discountAfterTax) {
-      if (this.isReturn) {
-        discountAmount = discountAmount.add(
-          (item.amount ?? this.fyo.pesa(0)).mul(
-            -Math.abs(item.itemDiscountPercent as number) / 100
-          )
-        );
-      } else {
-        discountAmount = discountAmount.add(
-          (item.amount ?? this.fyo.pesa(0)).mul(
-            (item.itemDiscountPercent ?? 0) / 100
-          )
-        );
-      }
-    } else if (this.discountAfterTax) {
-      if (this.isReturn) {
-        discountAmount = discountAmount.add(
-          (item.itemTaxedTotal ?? this.fyo.pesa(0)).mul(
-            -Math.abs(item.itemDiscountPercent as number) / 100
-          )
-        );
-      } else {
-        discountAmount = discountAmount.add(
-          (item.itemTaxedTotal ?? this.fyo.pesa(0)).mul(
-            (item.itemDiscountPercent ?? 0) / 100
-          )
-        );
-      }
-    }
-
-    if (this.isReturn) {
-      return discountAmount.neg();
-    }
-
-    return discountAmount;
-  }
-  getItemDiscountAmount() {
-    if (!this.enableDiscounting) {
-      return this.fyo.pesa(0);
-    }
-
-    if (!this?.items?.length) {
-      return this.fyo.pesa(0);
-    }
-
-    let discountAmount = this.fyo.pesa(0);
-    for (const item of this.items) {
-      if (item.setItemDiscountAmount) {
-        discountAmount = discountAmount.add(
-          item.itemDiscountAmount ?? this.fyo.pesa(0)
-        );
-      } else if (!this.discountAfterTax) {
-        if (this.isReturn) {
-          discountAmount = discountAmount.add(
-            (item.amount ?? this.fyo.pesa(0)).mul(
-              Math.abs(item.itemDiscountPercent as number) / 100
-            )
-          );
-        } else {
-          discountAmount = discountAmount.add(
-            (item.amount ?? this.fyo.pesa(0)).mul(
-              (item.itemDiscountPercent ?? 0) / 100
-            )
-          );
-        }
-      } else if (this.discountAfterTax) {
-        if (this.isReturn) {
-          discountAmount = discountAmount.add(
-            (item.itemTaxedTotal ?? this.fyo.pesa(0)).mul(
-              -Math.abs(item.itemDiscountPercent as number) / 100
-            )
-          );
-        } else {
-          discountAmount = discountAmount.add(
-            (item.itemTaxedTotal ?? this.fyo.pesa(0)).mul(
-              (item.itemDiscountPercent ?? 0) / 100
-            )
-          );
-        }
-      }
-    }
-
-    if (this.isReturn) {
-      return discountAmount.neg();
-    }
-
-    return discountAmount;
-  }
-  async getTotalTaxRate(row: InvoiceItem): Promise<number> {
-    if (!this.taxes!.length) {
-      return 0;
-    }
-
-    const details =
-      ((await this.fyo.getValue(
-        'Tax',
-        row.tax as string,
-        'details'
-      )) as Doc[]) ?? [];
-    return details.reduce((acc, doc) => {
-      return (doc.rate as number) + acc;
-    }, 0);
-  }
-
-  async getItemsDiscountedTotal(row: InvoiceItem) {
-    const totalTaxRate = await this.getTotalTaxRate(row);
-    const rate = row.rate ?? this.fyo.pesa(0);
-    const quantity = row.quantity ?? 1;
-    const itemDiscountAmount = row.itemDiscountAmount ?? this.fyo.pesa(0);
-    const itemDiscountPercent = row.itemDiscountPercent ?? 0;
-
-    if (row.setItemDiscountAmount && row.itemDiscountAmount?.isZero()) {
-      return rate.mul(quantity);
-    }
-
-    if (!row.setItemDiscountAmount && row.itemDiscountPercent === 0) {
-      return rate.mul(quantity);
-    }
-
-    if (!this.discountAfterTax) {
-      const amount = rate.mul(quantity);
-      if (row.setItemDiscountAmount) {
-        return amount.sub(itemDiscountAmount);
-      }
-
-      return amount.mul(1 - itemDiscountPercent / 100);
-    }
-
-    const taxedTotal = rate.mul(quantity).mul(1 + totalTaxRate / 100);
-    if (row.setItemDiscountAmount) {
-      return taxedTotal.sub(itemDiscountAmount);
-    }
-
-    return taxedTotal.mul(1 - itemDiscountPercent / 100);
-  }
-
   async getReturnDoc(): Promise<Invoice | undefined> {
     if (!this.name) {
       return;
@@ -595,45 +238,6 @@ export abstract class Invoice extends Transactional {
 
     await newReturnDoc.runFormulas();
     return newReturnDoc;
-  }
-  async getLPAddedBaseGrandTotal() {
-    const totalDiscount = this.getTotalDiscount();
-
-    let baseTotal: Money;
-
-    if (!this.taxes?.length) {
-      baseTotal = (this.netTotal as Money).sub(totalDiscount);
-    } else {
-      baseTotal = this.taxes
-        .map((doc) => doc.amount as Money)
-        .reduce((a, b) => a.add(b.abs()), (this.netTotal as Money).abs())
-        .sub(totalDiscount);
-    }
-    if (!this.isReturn) {
-      const totalLoyaltyAmount = await getAddedLPWithGrandTotal(
-        this.fyo,
-        this.loyaltyProgram as string,
-        this.loyaltyPoints as number
-      );
-
-      return baseTotal.sub(totalLoyaltyAmount);
-    }
-
-    if (this.isReturn) {
-      const loyaltyAmount = await getReturnLoyaltyPoints(this);
-
-      const totalAmount = baseTotal.abs().sub(loyaltyAmount);
-
-      this.loyaltyPoints = loyaltyAmount;
-      if (totalAmount.isNegative()) {
-        this.loyaltyPoints = totalAmount.abs().float - Math.abs(loyaltyAmount);
-        return this.fyo.pesa(0);
-      }
-
-      return baseTotal.abs().sub(loyaltyAmount);
-    }
-
-    return baseTotal;
   }
 
   formulas: FormulaMap = {
@@ -721,45 +325,6 @@ export abstract class Invoice extends Transactional {
       },
       dependsOn: ['party', 'currency'],
     },
-    netTotal: { formula: () => this.getSum('items', 'amount', false) },
-    taxes: { formula: async () => await this.getTaxSummary() },
-    grandTotal: {
-      formula: async () => await this.getGrandTotal(),
-      dependsOn: ['loyaltyPoints'],
-    },
-    baseGrandTotal: {
-      formula: () => (this.grandTotal as Money).mul(this.exchangeRate ?? 1),
-      dependsOn: ['grandTotal', 'exchangeRate'],
-    },
-    outstandingAmount: {
-      formula: async () => {
-        if (this.submitted) {
-          return;
-        }
-        if (this.isReturn) {
-          const sinvreturnedDoc = (await this.fyo.doc.getDoc(
-            this.schemaName,
-            this.returnAgainst
-          )) as Invoice;
-          if (sinvreturnedDoc.outstandingAmount?.isZero()) {
-            return this.grandTotal?.abs();
-          } else {
-            const totalPaid = sinvreturnedDoc
-              .grandTotal!.abs()
-              .sub(sinvreturnedDoc.outstandingAmount!);
-
-            const outstandingAmount = this.grandTotal!.abs();
-
-            return outstandingAmount.lte(totalPaid)
-              ? outstandingAmount
-              : totalPaid;
-          }
-        }
-
-        return this.baseGrandTotal;
-      },
-      dependsOn: ['discountAmount', 'discountPercent'],
-    },
     stockNotTransferred: {
       formula: async () => {
         if (this.submitted) {
@@ -792,56 +357,13 @@ export abstract class Invoice extends Transactional {
         !!this.autoStockTransferLocation,
       dependsOn: [],
     },
-    isPricingRuleApplied: {
-      formula: async () => {
-        if (!this.fyo.singles.AccountingSettings?.enablePricingRule) {
-          return false;
-        }
-
-        const pricingRule = await this.getPricingRule();
-
-        if (pricingRule) {
-          await this.appendPricingRuleDetail(pricingRule);
-          return !!pricingRule;
-        } else {
-          this.pricingRuleDetail = [];
-          return false;
-        }
-      },
-      dependsOn: ['items', 'coupons'],
-    },
   };
-
-  getStockTransferred() {
-    return (this.items ?? []).reduce(
-      (acc, item) =>
-        (item.quantity ?? 0) - (item.stockNotTransferred ?? 0) + acc,
-      0
-    );
-  }
-
-  getTotalQuantity() {
-    return (this.items ?? []).reduce(
-      (acc, item) => acc + (item.quantity ?? 0),
-      0
-    );
-  }
 
   getStockNotTransferred() {
     return (this.items ?? []).reduce(
       (acc, item) => (item.stockNotTransferred ?? 0) + acc,
       0
     );
-  }
-
-  getItemDiscountedAmounts() {
-    let itemDiscountedAmounts = this.fyo.pesa(0);
-    for (const item of this.items ?? []) {
-      itemDiscountedAmounts = itemDiscountedAmounts.add(
-        item.itemDiscountedTotal ?? item.amount!
-      );
-    }
-    return itemDiscountedAmounts;
   }
 
   hidden: HiddenMap = {
@@ -947,6 +469,7 @@ export abstract class Invoice extends Transactional {
 
     return this.currency ?? DEFAULT_CURRENCY;
   }
+
   _setGetCurrencies() {
     const currencyFields = this.schema.fields.filter(
       ({ fieldtype }) => fieldtype === FieldTypeEnum.Currency
@@ -1016,6 +539,7 @@ export abstract class Invoice extends Transactional {
 
     return this.fyo.doc.getNewDoc(ModelNameEnum.Payment, data) as Payment;
   }
+
   async getStockTransfer(isAuto = false): Promise<StockTransfer | null> {
     if (!this.isSubmitted) {
       return null;
@@ -1151,404 +675,67 @@ export abstract class Invoice extends Transactional {
 
   async beforeSync(): Promise<void> {
     await super.beforeSync();
-
-    if (this.pricingRuleDetail?.length) {
-      await this.applyProductDiscount();
-    } else {
-      this.clearFreeItems();
-    }
-
-    await removeUnusedCoupons(this as SalesInvoice);
+    clearTimeout(this._previewTimer);
   }
 
-  async getLinkedPayments() {
-    if (!this.hasLinkedPayments) {
-      return [];
+  async change({ changed }: ChangeArg) {
+    if (changed && RATE_SOURCE_FIELDS.includes(changed)) {
+      this.clearStandardRates();
     }
 
-    const paymentFors = (await this.fyo.db.getAllRaw('PaymentFor', {
-      fields: ['parent', 'amount'],
-      filters: { referenceName: this.name!, referenceType: this.schemaName },
-    })) as { parent: string; amount: string }[];
-
-    const payments = (await this.fyo.db.getAllRaw('Payment', {
-      fields: ['name', 'date', 'submitted', 'cancelled'],
-      filters: { name: ['in', paymentFors.map((p) => p.parent)] },
-    })) as {
-      name: string;
-      date: string;
-      submitted: number;
-      cancelled: number;
-    }[];
-
-    return joinMapLists(payments, paymentFors, 'name', 'parent')
-      .map((j) => ({
-        name: j.name,
-        date: new Date(j.date),
-        submitted: !!j.submitted,
-        cancelled: !!j.cancelled,
-        amount: this.fyo.pesa(j.amount),
-      }))
-      .sort((a, b) => a.date.valueOf() - b.date.valueOf());
+    this.schedulePreview();
   }
 
-  async getLinkedStockTransfers() {
-    if (!this.hasLinkedTransfers) {
-      return [];
+  /** Previews once edits pause, so totals follow the user without a request per keystroke. */
+  schedulePreview() {
+    this._edits += 1;
+    clearTimeout(this._previewTimer);
+    if (!this.canEdit || !this.dirty) {
+      return;
     }
 
-    const schemaName = this.stockTransferSchemaName;
-    const transfers = (await this.fyo.db.getAllRaw(schemaName, {
-      fields: ['name', 'date', 'submitted', 'cancelled'],
-      filters: { backReference: this.name! },
-    })) as {
-      name: string;
-      date: string;
-      submitted: number;
-      cancelled: number;
-    }[];
+    this._previewTimer = setTimeout(() => {
+      this.preview().catch(showPreviewError);
+    }, PREVIEW_DELAY);
+  }
 
-    const itemSchemaName = schemaName + 'Item';
-    const transferItems = (await this.fyo.db.getAllRaw(itemSchemaName, {
-      fields: ['parent', 'quantity', 'location', 'amount'],
-      filters: {
-        parent: ['in', transfers.map((t) => t.name)],
-        item: ['in', this.items!.map((i) => i.item!)],
-      },
-    })) as {
-      parent: string;
-      quantity: number;
-      location: string;
-      amount: string;
-    }[];
+  /** Show the server's pricing and totals for the unsaved values; dropped if they changed meanwhile. */
+  async preview() {
+    clearTimeout(this._previewTimer);
+    if (!this.canEdit) {
+      return;
+    }
 
-    return joinMapLists(transfers, transferItems, 'name', 'parent')
-      .map((j) => ({
-        name: j.name,
-        date: new Date(j.date),
-        submitted: !!j.submitted,
-        cancelled: !!j.cancelled,
-        amount: this.fyo.pesa(j.amount),
-        location: j.location,
-        quantity: j.quantity,
-      }))
-      .sort((a, b) => a.date.valueOf() - b.date.valueOf());
+    const edits = this._edits;
+    const sent = this.getValidDict(true, true);
+    const previewed = await this.fyo.db.preview(
+      this.schemaName,
+      sent,
+      this.notInserted ? undefined : this.name
+    );
+    if (edits === this._edits && this.dirty) {
+      applyPreview(this, sent, previewed);
+    }
+  }
+
+  /** Let the server price rows again, from the current party, price list and currency. */
+  clearStandardRates() {
+    for (const row of this.items ?? []) {
+      if (!row.isFreeItem && !row.isManualRate) {
+        row.clearStandardRate();
+      }
+    }
   }
 
   async addItem(name: string) {
     return await addItem(name, this);
   }
+}
 
-  async appendPricingRuleDetail(
-    applicablePricingRule: ApplicablePricingRules[]
-  ) {
-    await this.set('pricingRuleDetail', null);
-
-    for (const doc of applicablePricingRule) {
-      await this.append('pricingRuleDetail', {
-        referenceName: doc.pricingRule.name,
-        referenceItem: doc.applyOnItem,
-      });
-    }
-  }
-
-  clearFreeItems() {
-    if (this.pricingRuleDetail?.length || !this.items || this.isReturn) {
-      return;
-    }
-
-    for (const item of this.items) {
-      if (item.isFreeItem) {
-        this.items = this.items?.filter(
-          (invoiceItem) => invoiceItem.name !== item.name
-        );
-      }
-    }
-  }
-
-  async applyProductDiscount() {
-    if (!this.items || (await this.ignorePricingRules())) {
-      return;
-    }
-
-    if (!this.isReturn) {
-      this.items = this.items.filter((item) => !item.isFreeItem);
-    }
-
-    for (const item of this.items) {
-      const pricingRuleDetailForItem = this.pricingRuleDetail?.filter(
-        (doc) => doc.referenceItem === item.item
-      );
-
-      if (!pricingRuleDetailForItem?.length) {
-        await item.runFormulas();
-        continue;
-      }
-
-      const pricingRuleDoc = (await this.fyo.doc.getDoc(
-        ModelNameEnum.PricingRule,
-        pricingRuleDetailForItem[0].referenceName
-      )) as PricingRule;
-
-      if (pricingRuleDoc.discountType === 'Price Discount') {
-        continue;
-      }
-
-      const appliedItems = pricingRuleDoc.appliedItems?.map((doc) => doc.item);
-      if (!appliedItems?.includes(item.item)) {
-        continue;
-      }
-
-      const canApplyPRLOnItem = canApplyPricingRule(
-        pricingRuleDoc,
-        this.date as Date,
-        item.quantity as number,
-        item.amount as Money
-      );
-
-      if (!canApplyPRLOnItem) {
-        continue;
-      }
-
-      let roundFreeItemQuantity = pricingRuleDoc.freeItemQuantity as number;
-
-      if (pricingRuleDoc.isRecursive) {
-        roundFreeItemQuantity =
-          (item.quantity as number) / (pricingRuleDoc.recurseEvery as number);
-      }
-
-      if (pricingRuleDoc.roundFreeItemQty) {
-        roundFreeItemQuantity = roundFreeItemQty(
-          roundFreeItemQuantity,
-          'floor'
-        );
-      }
-
-      if (roundFreeItemQuantity <= 0) {
-        throw new ValidationError(
-          t`Free item "${
-            pricingRuleDoc.freeItem as string
-          }" was not added due to zero
-           quantity`
-        );
-      }
-
-      const freeItem = pricingRuleDoc.freeItem as string;
-      const itemQtyMap = await getItemQtyMap(this as SalesInvoice);
-      const availableQty = itemQtyMap[freeItem]?.availableQty ?? 0;
-
-      if (availableQty < roundFreeItemQuantity) {
-        continue;
-      }
-
-      await this.append('items', {
-        item: freeItem,
-        quantity: roundFreeItemQuantity,
-        isFreeItem: true,
-        pricingRule: pricingRuleDoc.title,
-        unit: pricingRuleDoc.freeItemUnit,
-      });
-    }
-  }
-
-  async ignorePricingRules(): Promise<boolean> {
-    const posProfileName = this.fyo.singles.POSSettings?.posProfile as string;
-
-    if (posProfileName) {
-      const posProfile = await this.fyo.doc.getDoc(
-        ModelNameEnum.POSProfile,
-        posProfileName
-      );
-
-      if (posProfile) {
-        return posProfile.ignorePricingRule as boolean;
-      }
-    }
-
-    return !!this.fyo.singles.POSSettings?.ignorePricingRule;
-  }
-
-  async getPricingRuleDocNames(
-    item: SalesInvoiceItem,
-    sinvDoc: SalesInvoice
-  ): Promise<string[]> {
-    const docs = (await sinvDoc.fyo.db.getAll(ModelNameEnum.PricingRuleItem, {
-      fields: ['parent'],
-      filters: {
-        item: item.item as string,
-        unit: item.unit as string,
-      },
-    })) as PricingRuleItem[];
-
-    return docs.map((doc) => doc.parent) as string[];
-  }
-
-  async getPricingRule(): Promise<ApplicablePricingRules[] | undefined> {
-    if (await this.ignorePricingRules()) {
-      return;
-    }
-    if (!this.isSales || !this.items) {
-      return;
-    }
-
-    const pricingRules: ApplicablePricingRules[] = [];
-
-    for (const item of this.items) {
-      if (item.isFreeItem) {
-        continue;
-      }
-
-      const duplicatePricingRule = this.pricingRuleDetail?.filter(
-        (pricingrule: PricingRuleDetail) =>
-          pricingrule.referenceItem == item.item
-      );
-
-      if (duplicatePricingRule && duplicatePricingRule?.length >= 2) {
-        continue;
-      }
-
-      const pricingRuleDocNames = await this.getPricingRuleDocNames(
-        item,
-        this as SalesInvoice
-      );
-
-      if (!pricingRuleDocNames.length) {
-        continue;
-      }
-
-      if (this.coupons?.length) {
-        for (const coupon of this.coupons) {
-          const couponCodeDatas = await this.fyo.db.getAll(
-            ModelNameEnum.CouponCode,
-            {
-              fields: ['*'],
-              filters: {
-                name: coupon?.coupons as string,
-                isEnabled: true,
-              },
-            }
-          );
-
-          const couponPricingRuleDocNames = couponCodeDatas
-            .map((doc) => doc.pricingRule)
-            .filter((val) =>
-              pricingRuleDocNames.includes(val as string)
-            ) as string[];
-
-          if (!couponPricingRuleDocNames.length) {
-            continue;
-          }
-
-          const filtered = canApplyCouponCode(
-            couponCodeDatas[0] as CouponCode,
-            this.grandTotal as Money,
-            this.date as Date
-          );
-
-          if (filtered) {
-            pricingRuleDocNames.push(...couponPricingRuleDocNames);
-          }
-        }
-      }
-
-      const pricingRuleDocsForItem = (await this.fyo.db.getAll(
-        ModelNameEnum.PricingRule,
-        {
-          fields: ['*'],
-          filters: {
-            name: ['in', pricingRuleDocNames],
-            isEnabled: true,
-          },
-          orderBy: 'priority',
-          order: 'desc',
-        }
-      )) as PricingRule[];
-
-      if (
-        pricingRuleDocsForItem.length &&
-        pricingRuleDocsForItem[0].isCouponCodeBased
-      ) {
-        if (!this.coupons?.length) {
-          continue;
-        }
-
-        const data = await Promise.allSettled(
-          this.coupons?.map(async (val) => {
-            if (!val.coupons) {
-              return false;
-            }
-
-            const [pricingRule] = (
-              await this.fyo.db.getAll(ModelNameEnum.CouponCode, {
-                fields: ['pricingRule'],
-                filters: {
-                  name: val?.coupons,
-                },
-              })
-            ).map((doc) => doc.pricingRule);
-
-            if (!pricingRule) {
-              return false;
-            }
-
-            if (pricingRuleDocsForItem[0].name === pricingRule) {
-              return pricingRule;
-            }
-
-            return false;
-          })
-        );
-
-        const fulfilledData = data
-          .filter(
-            (result): result is PromiseFulfilledResult<string | false> =>
-              result.status === 'fulfilled'
-          )
-          .map((result) => result.value as string);
-
-        if (!fulfilledData[0] && !fulfilledData.filter((val) => val).length) {
-          continue;
-        }
-      }
-
-      const docItem = await this.fyo.doc.getDoc(ModelNameEnum.Item, item.item);
-
-      const totalAmount = (docItem.rate as Money).mul(item.quantity as number);
-
-      const filtered = filterPricingRules(
-        this as SalesInvoice,
-        pricingRuleDocsForItem,
-        item.quantity as number,
-        totalAmount
-      );
-
-      if (!filtered || !filtered.length) {
-        continue;
-      }
-
-      const isPricingRuleHasConflicts = getPricingRulesConflicts(filtered);
-
-      if (isPricingRuleHasConflicts) {
-        continue;
-      }
-
-      pricingRules.push({
-        applyOnItem: item.item as string,
-        pricingRule: filtered[0],
-      });
-    }
-
-    return pricingRules;
-  }
-
-  async _validatePricingRule() {
-    if (!this.fyo.singles.AccountingSettings?.enablePricingRule) {
-      return;
-    }
-
-    if (!this.items) {
-      return;
-    }
-    await this.getPricingRule();
-  }
+async function showPreviewError(error: unknown) {
+  const { showToast } = await import('src/utils/interactive');
+  showToast({
+    type: 'error',
+    message: error instanceof Error ? error.message : String(error),
+  });
 }

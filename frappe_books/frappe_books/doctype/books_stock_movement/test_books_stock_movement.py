@@ -88,6 +88,44 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "more than once", receipt.insert)
 
+	def test_receipt_cannot_be_cancelled_once_its_stock_is_used(self):
+		receipt = self._receive(10)
+		make_movement(
+			"MaterialIssue",
+			[{"item": self.item.name, "from_location": "Stores", "quantity": 8, "rate": 10}],
+		).submit()
+
+		self.assertRaisesRegex(frappe.ValidationError, "Insufficient stock", receipt.cancel)
+		self.assertEqual(stock_quantity(self.item.name, "Stores"), 2)
+
+	def test_receipt_cannot_be_cancelled_once_its_serial_number_left(self):
+		item = self._serial_item()
+		sold, kept = unique_name("SER"), unique_name("SER")
+		receipt = self._receive_serial(item, sold)
+		self._receive_serial(item, kept)
+		make_movement(
+			"MaterialIssue",
+			[{"item": item, "from_location": "Stores", "quantity": 1, "rate": 5, "serial_number": sold}],
+		).submit()
+
+		self.assertRaisesRegex(frappe.ValidationError, "not available", receipt.cancel)
+
+	def _receive_serial(self, item, serial_number):
+		receipt = make_movement(
+			"MaterialReceipt",
+			[
+				{
+					"item": item,
+					"to_location": "Stores",
+					"quantity": 1,
+					"rate": 5,
+					"serial_number": serial_number,
+				}
+			],
+		)
+		receipt.submit()
+		return receipt
+
 	def _receive(self, quantity):
 		receipt = make_movement(
 			"MaterialReceipt",

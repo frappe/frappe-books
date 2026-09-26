@@ -97,6 +97,33 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		entries = ledger_entries(receipt.doctype, receipt.name)
 		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries if row.account == stock.name), 8000)
 
+	def test_invoice_cancel_keeps_auto_receipt_once_its_stock_is_used(self):
+		payable = make_account("Used Payable", root_type="Liability", account_type="Payable")
+		stock = make_account("Used Stock", account_type="Stock")
+		received = make_account("Used Received", root_type="Liability")
+		expense = make_account("Used Expense", root_type="Expense")
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock.name)
+		frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received.name)
+		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
+		item = make_item(expense.name, expense.name, track_item=1)
+		invoice = make_invoice(
+			"Books Purchase Invoice",
+			make_party(payable.name, role="Supplier").name,
+			payable.name,
+			item.name,
+			received.name,
+			make_auto_stock_transfer=1,
+		)
+		invoice.submit()
+		make_movement(
+			"MaterialIssue",
+			[{"item": item.name, "from_location": "Stores", "quantity": 2, "rate": 10}],
+		).submit()
+
+		self.assertRaisesRegex(frappe.ValidationError, "Insufficient stock", invoice.cancel)
+		self.assertEqual(stock_quantity(item.name, "Stores"), 0)
+
 	def _check_pos_inventory(self, use_profile):
 		invoice, item, location = self._make_pos_invoice(use_profile)
 		invoice.submit()

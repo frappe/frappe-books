@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import frappe
+from frappe import _
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.invoice_balance import pending_quantities
@@ -19,17 +20,13 @@ def create_auto_transfer(invoice) -> str | None:
 	is_sales = invoice.transaction_type == "sales"
 	doctype = "Books Shipment" if is_sales else "Books Purchase Receipt"
 	location = _stock_location(invoice)
-	return_against = None
-	if invoice.get("return_against"):
-		return_against = frappe.db.get_value(invoice.doctype, invoice.return_against, "back_reference")
-
 	transfer = frappe.get_doc(
 		{
 			"doctype": doctype,
 			"party": invoice.party,
 			"date": invoice.date,
 			"back_reference": invoice.name,
-			"return_against": return_against,
+			"return_against": _returned_transfer(invoice) if invoice.get("return_against") else None,
 			"items": [{**row, "location": location} for row in rows],
 		}
 	).insert(ignore_permissions=True)
@@ -54,6 +51,16 @@ def cancel_auto_transfer(invoice) -> None:
 		return
 	transfer.flags.ignore_links = True
 	transfer.cancel()
+
+
+def _returned_transfer(invoice) -> str:
+	"""Return the original invoice's transfer, as a return transfer must reverse it."""
+	transfer = frappe.db.get_value(invoice.doctype, invoice.return_against, "back_reference")
+	if not transfer:
+		frappe.throw(
+			_("Invoice {0} has no stock transfer to return stock against.").format(invoice.return_against)
+		)
+	return transfer
 
 
 def _stock_location(invoice) -> str:

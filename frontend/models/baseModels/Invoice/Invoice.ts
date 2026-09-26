@@ -32,7 +32,7 @@ import {
   isLoyaltyProgramExpiredAndMaxed,
 } from 'models/helpers';
 import { StockTransfer } from 'models/inventory/StockTransfer';
-import { validateBatch } from 'models/inventory/helpers';
+import { createMissingBatches } from 'models/inventory/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
@@ -214,7 +214,7 @@ export abstract class Invoice extends Transactional {
     ) {
       throw new ValidationError(this.fyo.t`Discount Account is not set.`);
     }
-    await validateBatch(this);
+    await createMissingBatches(this);
     await this._validatePricingRule();
   }
 

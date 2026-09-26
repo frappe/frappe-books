@@ -1,4 +1,3 @@
-import { t } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
@@ -8,7 +7,6 @@ import {
   FormulaMap,
   HiddenMap,
 } from 'fyo/model/types';
-import { ValidationError } from 'fyo/utils/errors';
 import { Defaults } from 'models/baseModels/Defaults/Defaults';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { addItem, getNumberSeries } from 'models/helpers';
@@ -16,16 +14,9 @@ import { getReturnItems } from 'models/returnItems';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { TargetField } from 'schemas/types';
-import { SerialNumber } from './SerialNumber';
 import { StockTransferItem } from './StockTransferItem';
 import { Transfer } from './Transfer';
-import {
-  canValidateSerialNumber,
-  getSerialNumberFromDoc,
-  validateBatch,
-  validateSerialNumber,
-  generateSerialNumbersForItem,
-} from './helpers';
+import { createMissingBatches, generateSerialNumbersForItem } from './helpers';
 
 export abstract class StockTransfer extends Transfer {
   name?: string;
@@ -107,9 +98,7 @@ export abstract class StockTransfer extends Transfer {
 
   override async validate(): Promise<void> {
     await super.validate();
-    await validateBatch(this);
-    await validateSerialNumber(this);
-    await validateSerialNumberStatus(this);
+    await createMissingBatches(this);
   }
 
   override duplicate(): Doc {
@@ -281,50 +270,5 @@ export abstract class StockTransfer extends Transfer {
 
     await newReturnDoc.runFormulas();
     return newReturnDoc;
-  }
-}
-
-async function validateSerialNumberStatus(doc: StockTransfer) {
-  if (doc.isCancelled) {
-    return;
-  }
-
-  for (const { serialNumber, item } of getSerialNumberFromDoc(doc)) {
-    const cannotValidate = !(await canValidateSerialNumber(item, serialNumber));
-    if (cannotValidate) {
-      continue;
-    }
-
-    const snDoc = await doc.fyo.doc.getDoc(
-      ModelNameEnum.SerialNumber,
-      serialNumber
-    );
-
-    if (!(snDoc instanceof SerialNumber)) {
-      continue;
-    }
-
-    const status = snDoc.status ?? 'Inactive';
-    const isSubmitted = !!doc.isSubmitted;
-    const isReturn = !!doc.returnAgainst;
-
-    if (isSubmitted || isReturn) {
-      return;
-    }
-
-    if (
-      doc.schemaName === ModelNameEnum.PurchaseReceipt &&
-      status !== 'Inactive'
-    ) {
-      throw new ValidationError(
-        t`Serial Number ${serialNumber} is not Inactive`
-      );
-    }
-
-    if (doc.schemaName === ModelNameEnum.Shipment && status !== 'Active') {
-      throw new ValidationError(
-        t`Serial Number ${serialNumber} is not Active.`
-      );
-    }
   }
 }

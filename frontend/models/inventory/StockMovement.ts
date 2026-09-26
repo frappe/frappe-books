@@ -10,16 +10,9 @@ import { ValidationError } from 'fyo/utils/errors';
 import { getDocStatusListColumn, getLedgerLinkAction } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { SerialNumber } from './SerialNumber';
 import { StockMovementItem } from './StockMovementItem';
 import { Transfer } from './Transfer';
-import {
-  canValidateSerialNumber,
-  generateBatchForItem,
-  getSerialNumberFromDoc,
-  validateBatch,
-  validateSerialNumber,
-} from './helpers';
+import { createMissingBatches, generateBatchForItem } from './helpers';
 import { MovementType, MovementTypeEnum } from './types';
 
 export class StockMovement extends Transfer {
@@ -49,27 +42,7 @@ export class StockMovement extends Transfer {
 
   async validate() {
     await super.validate();
-    this.validateManufacture();
-    await validateBatch(this);
-    await validateSerialNumber(this);
-    await validateSerialNumberStatus(this);
-  }
-
-  validateManufacture() {
-    if (this.movementType !== MovementTypeEnum.Manufacture) {
-      return;
-    }
-
-    const hasFrom = this.items?.findIndex((f) => f.fromLocation) !== -1;
-    const hasTo = this.items?.findIndex((f) => f.toLocation) !== -1;
-
-    if (!hasFrom) {
-      throw new ValidationError(this.fyo.t`Item with From location not found`);
-    }
-
-    if (!hasTo) {
-      throw new ValidationError(this.fyo.t`Item with To location not found`);
-    }
+    await createMissingBatches(this);
   }
 
   static filters: FiltersMap = {
@@ -144,53 +117,5 @@ export class StockMovement extends Transfer {
     }
 
     return item;
-  }
-}
-
-async function validateSerialNumberStatus(doc: StockMovement) {
-  if (doc.isCancelled) {
-    return;
-  }
-
-  for (const { serialNumber, item } of getSerialNumberFromDoc(doc)) {
-    const cannotValidate = !(await canValidateSerialNumber(item, serialNumber));
-    if (cannotValidate) {
-      continue;
-    }
-
-    const snDoc = await doc.fyo.doc.getDoc(
-      ModelNameEnum.SerialNumber,
-      serialNumber
-    );
-
-    if (!(snDoc instanceof SerialNumber)) {
-      continue;
-    }
-
-    const status = snDoc.status ?? 'Inactive';
-
-    if (doc.movementType === 'MaterialReceipt' && status !== 'Inactive') {
-      throw new ValidationError(
-        t`Non Inactive Serial Number ${serialNumber} cannot be used for Material Receipt`
-      );
-    }
-
-    if (doc.movementType === 'MaterialIssue' && status !== 'Active') {
-      throw new ValidationError(
-        t`Non Active Serial Number ${serialNumber} cannot be used for Material Issue`
-      );
-    }
-
-    if (doc.movementType === 'MaterialTransfer' && status !== 'Active') {
-      throw new ValidationError(
-        t`Non Active Serial Number ${serialNumber} cannot be used for Material Transfer`
-      );
-    }
-
-    if (item.fromLocation && status !== 'Active') {
-      throw new ValidationError(
-        t`Non Active Serial Number ${serialNumber} cannot be used as Manufacture raw material`
-      );
-    }
   }
 }

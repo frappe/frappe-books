@@ -65,6 +65,23 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, "no stock transfer to return", return_invoice.submit)
 		self.assertEqual(stock_quantity(item, "Stores"), 5)
 
+	def test_invoice_cancel_keeps_a_shipment_that_has_a_return(self):
+		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
+		invoice.submit()
+		shipment = frappe.get_doc("Books Shipment", invoice.reload().back_reference)
+		return_shipment = frappe.get_doc(
+			{
+				"doctype": shipment.doctype,
+				"party": shipment.party,
+				"date": shipment.date,
+				"return_against": shipment.name,
+				"items": [{**shipment.items[0].as_dict(no_default_fields=True), "quantity": 1}],
+			}
+		)
+		return_shipment.insert().submit()
+
+		self.assertRaises(frappe.LinkExistsError, invoice.cancel)
+
 	def _sales_invoice(self, **values):
 		receivable = make_account("Auto Receivable", account_type="Receivable")
 		income = make_account("Auto Sales", root_type="Income", account_type="Income Account")

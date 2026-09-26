@@ -8,6 +8,7 @@ from frappe_books.accounting import returns
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
+from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer
 from frappe_books.series import SeriesNamingMixin
@@ -45,6 +46,15 @@ class PostingInvoiceController(InvoiceController):
 		create_auto_transfer(self)
 		if self.return_against:
 			returns.update_return_status(self, include_current=True)
+		# POS invoices are paid at the counter with the tendered payment method.
+		if self.make_auto_payment and self.outstanding_amount and not self.get("is_pos"):
+			self.pay_outstanding_amount()
+
+	def pay_outstanding_amount(self):
+		payment = map_invoice_payment(self.doctype, self.name)
+		payment.insert()
+		payment.submit()
+		self.outstanding_amount = self.db_get("outstanding_amount")
 
 	def before_cancel(self):
 		cancel_auto_transfer(self)

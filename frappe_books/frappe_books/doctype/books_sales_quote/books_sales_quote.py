@@ -51,6 +51,12 @@ class BooksSalesQuote(InvoiceController):
 
 	transaction_type = "quote"
 
+	def on_submit(self):
+		if self.reference_type == "Books Lead":
+			lead = frappe.get_doc("Books Lead", self.party)
+			lead.status = "Quotation"
+			lead.save()
+
 
 @frappe.whitelist()
 def make_sales_invoice(source_name: str):

@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import unique_name
+from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -61,3 +61,16 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 			}
 		).insert()
 		self.assertFalse(party.gstin)
+
+	def test_stale_party_save_cannot_reset_outstanding(self):
+		receivable = make_account("Stale Receivable", account_type="Receivable")
+		income = make_account("Stale Income", root_type="Income")
+		expense = make_account("Stale Expense", root_type="Expense")
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		party = make_party(receivable.name)
+		item = make_item(income.name, expense.name)
+		make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name).submit()
+
+		party.email = "stale@example.com"
+		with self.assertRaises(frappe.TimestampMismatchError):
+			party.save()

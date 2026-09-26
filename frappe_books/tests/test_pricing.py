@@ -123,6 +123,35 @@ class IntegrationTestPricing(IntegrationTestCase):
 				self.assertFalse(invoice.items[0].pricing_rule)
 				self.assertEqual(invoice.grand_total, 100)
 
+	def test_stale_coupon_save_cannot_reset_usage(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		rule = self._pricing_rule(is_coupon_code_based=1)
+		coupon = self._coupon(rule, maximum_use=1)
+		make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			coupons=[{"coupons": coupon.name}],
+		).submit()
+
+		coupon.min_amount = 1
+		with self.assertRaises(frappe.TimestampMismatchError):
+			coupon.save()
+
+	def _coupon(self, rule, **values):
+		return frappe.get_doc(
+			{
+				"doctype": "Books Coupon Code",
+				"coupon_name": unique_name("Coupon"),
+				"pricing_rule": rule.name,
+				"valid_from": add_days(nowdate(), -1),
+				"valid_to": add_days(nowdate(), 1),
+				**values,
+			}
+		).insert()
+
 	def _pricing_rule(self, **values):
 		data = {
 			"doctype": "Books Pricing Rule",

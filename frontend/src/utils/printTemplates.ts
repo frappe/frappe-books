@@ -9,8 +9,9 @@ import { getPrintTemplateDocValues } from './printTemplateData';
 import { showToast } from './interactive';
 import { PrintValues } from './types';
 import { Money } from 'pesa';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { Payment } from 'models/baseModels/Payment/Payment';
+import { StockMovement } from 'models/inventory/StockMovement';
+import { StockTransfer } from 'models/inventory/StockTransfer';
 
 export type PrintTemplateHint = {
   [key: string]: string | PrintTemplateHint | PrintTemplateHint[];
@@ -34,112 +35,134 @@ const accountingSettingsFields = ['gstin', 'taxId'];
 export async function getPrintTemplatePropValues(
   doc: Doc
 ): Promise<PrintValues> {
-  const fyo = doc.fyo;
-  let paymentId;
-  let sinvDoc;
-
-  const values: PrintValues = { doc: {}, print: {} };
-  values.doc = await getPrintTemplateDocValues(doc);
-
-  if (
-    values.doc.entryType === ModelNameEnum.SalesInvoice ||
-    values.doc.entryType === ModelNameEnum.PurchaseInvoice
-  ) {
-    paymentId = await (doc as SalesInvoice).getPaymentIds();
-
-    if (paymentId && paymentId.length) {
-      const paymentDetails = await getPaymentDetails(doc, paymentId);
-      (values.doc as PrintTemplateData).paymentDetails = paymentDetails;
-    }
-  }
-
-  if (doc.referenceType == ModelNameEnum.SalesInvoice) {
-    const referenceName = (doc as Payment)?.for![0]?.referenceName;
-
-    if (referenceName) {
-      sinvDoc = await fyo.doc.getDoc(ModelNameEnum.SalesInvoice, referenceName);
-
-      if (sinvDoc.taxes) {
-        (values.doc as PrintTemplateData).taxes = sinvDoc.taxes;
-      }
-    }
-  }
-
-  let totalTax;
-
-  if (values.doc.entryType !== ModelNameEnum.Shipment) {
-    totalTax = await ((sinvDoc as Invoice) ?? (doc as Payment))?.getTotalTax();
-  }
-
-  if (doc.schema.name == ModelNameEnum.Payment) {
-    (values.doc as PrintTemplateData).amountPaidInWords = getGrandTotalInWords(
-      (doc.amountPaid as Money)?.float
-    );
-  }
-
-  (values.doc as PrintTemplateData).subTotal = doc.fyo.format(
-    ((doc.grandTotal as Money) ?? (doc.amount as Money)).sub(totalTax || 0),
-    ModelNameEnum.Currency
-  );
-
-  const printSettings = await fyo.doc.getDoc(ModelNameEnum.PrintSettings);
-  const printValues = await getPrintTemplateDocValues(
-    printSettings,
-    printSettingsFields
-  );
-
-  const accountingSettings = await fyo.doc.getDoc(
-    ModelNameEnum.AccountingSettings
-  );
-  const accountingValues = await getPrintTemplateDocValues(
-    accountingSettings,
-    accountingSettingsFields
-  );
-
-  values.print = {
-    ...printValues,
-    ...accountingValues,
+  const printSettings = await doc.fyo.doc.getDoc(ModelNameEnum.PrintSettings);
+  const values: PrintTemplateData = {
+    ...(await getPrintTemplateDocValues(doc)),
+    ...(await getTotalValues(doc)),
+    date: getDate(doc.date as string),
+    showHSN: showHSN(doc),
   };
-  const discountSchema = ['Invoice', 'Quote'];
-  if (discountSchema.some((value) => doc.schemaName?.endsWith(value))) {
-    (values.doc as PrintTemplateData).totalDiscount =
-      formattedTotalDiscount(doc);
-  }
-  (values.doc as PrintTemplateData).showHSN = showHSN(doc);
-
-  (values.doc as PrintTemplateData).grandTotalInWords = getGrandTotalInWords(
-    ((doc.grandTotal as Money) ?? (doc.amount as Money)).float
-  );
-
-  (values.doc as PrintTemplateData).date = getDate(doc.date as string);
 
   if (printSettings.displayTime) {
-    (values.doc as PrintTemplateData).time = getTime(doc.date as string);
+    values.time = getTime(doc.date as string);
   }
 
   if (printSettings.displayDescription) {
-    (values.doc as PrintTemplateData).description = showDescription(doc);
+    values.description = showDescription(doc);
+  }
+
+  return { doc: values, print: await getPrintValues(printSettings) };
+}
+
+async function getPrintValues(printSettings: Doc): Promise<PrintTemplateData> {
+  const accountingSettings = await printSettings.fyo.doc.getDoc(
+    ModelNameEnum.AccountingSettings
+  );
+
+  return {
+    ...(await getPrintTemplateDocValues(printSettings, printSettingsFields)),
+    ...(await getPrintTemplateDocValues(
+      accountingSettings,
+      accountingSettingsFields
+    )),
+  };
+}
+
+async function getTotalValues(doc: Doc): Promise<PrintTemplateData> {
+  if (doc instanceof Invoice) {
+    return await getInvoiceTotalValues(doc);
+  }
+
+  if (doc instanceof Payment) {
+    return await getPaymentTotalValues(doc);
+  }
+
+  if (doc instanceof StockTransfer) {
+    return getAmountValues(doc.fyo, doc.grandTotal);
+  }
+
+  if (doc instanceof StockMovement) {
+    return getAmountValues(doc.fyo, doc.amount);
+  }
+
+  return {};
+}
+
+async function getInvoiceTotalValues(
+  invoice: Invoice
+): Promise<PrintTemplateData> {
+  const totalTax = await invoice.getTotalTax();
+  const values: PrintTemplateData = {
+    ...getAmountValues(invoice.fyo, invoice.grandTotal, totalTax),
+    totalDiscount: formattedTotalDiscount(invoice),
+  };
+
+  const paymentIds = invoice.isQuote ? [] : await invoice.getPaymentIds();
+  if (paymentIds.length) {
+    values.paymentDetails = await getPaymentDetails(invoice, paymentIds);
   }
 
   return values;
 }
-async function getPaymentDetails(doc: Doc, paymentId: string[]) {
-  const paymentIds = paymentId.sort();
-  const paymentDetails = [];
-  let outstandingAmount = doc.grandTotal as Money;
 
-  for (const payment of paymentIds) {
-    const paymentDoc = await doc.fyo.doc.getDoc(ModelNameEnum.Payment, payment);
+async function getPaymentTotalValues(
+  payment: Payment
+): Promise<PrintTemplateData> {
+  const referenceName = payment.for?.[0]?.referenceName;
+  let taxedDoc: Invoice | Payment = payment;
+  if (payment.referenceType === ModelNameEnum.SalesInvoice && referenceName) {
+    taxedDoc = (await payment.fyo.doc.getDoc(
+      ModelNameEnum.SalesInvoice,
+      referenceName
+    )) as Invoice;
+  }
+
+  const totalTax = await taxedDoc.getTotalTax();
+  const values: PrintTemplateData = {
+    ...getAmountValues(payment.fyo, payment.amount, totalTax),
+    amountPaidInWords: getGrandTotalInWords((payment.amountPaid as Money).float),
+  };
+
+  if (taxedDoc instanceof Invoice && taxedDoc.taxes) {
+    values.taxes = taxedDoc.taxes;
+  }
+
+  return values;
+}
+
+function getAmountValues(
+  fyo: Fyo,
+  total: Money | undefined,
+  totalTax?: Money
+): PrintTemplateData {
+  if (!total) {
+    return {};
+  }
+
+  return {
+    subTotal: formatAmount(fyo, totalTax ? total.sub(totalTax) : total),
+    grandTotalInWords: getGrandTotalInWords(total.float),
+  };
+}
+
+function formatAmount(fyo: Fyo, amount: Money): string {
+  return fyo.format(amount, FieldTypeEnum.Currency);
+}
+
+async function getPaymentDetails(invoice: Invoice, paymentIds: string[]) {
+  const { fyo } = invoice;
+  const paymentDetails = [];
+  let outstandingAmount = invoice.grandTotal!;
+
+  for (const payment of paymentIds.sort()) {
+    const paymentDoc = await fyo.doc.getDoc(ModelNameEnum.Payment, payment);
     outstandingAmount = outstandingAmount.sub(paymentDoc.amount as Money);
 
     paymentDetails.push({
-      amount: doc.fyo.format(paymentDoc.amount, ModelNameEnum.Currency),
-      amountPaid: doc.fyo.format(paymentDoc.amountPaid, ModelNameEnum.Currency),
+      amount: formatAmount(fyo, paymentDoc.amount as Money),
+      amountPaid: formatAmount(fyo, paymentDoc.amountPaid as Money),
       paymentMethod: paymentDoc.paymentMethod as string,
-      outstandingAmount: doc.fyo.format(
-        outstandingAmount,
-        ModelNameEnum.Currency
-      ),
+      outstandingAmount: formatAmount(fyo, outstandingAmount),
     });
   }
 

@@ -37,7 +37,12 @@ def validate_transfer_rows(transfers):
 
 
 def validate_stock_available(transfers):
-	"""Check that outgoing rows of tracked items have the stock and serial numbers they take."""
+	"""Lock the items, then check that outgoing rows of tracked items have the stock they take.
+
+	The lock is held until commit, so concurrent postings of an item check and
+	post one at a time.
+	"""
+	_lock_items(transfers)
 	tracked = {name for name, item in _item_settings(transfers).items() if item.track_item}
 	outgoing = [row for row in transfers if row.get("from_location") and row["item"] in tracked]
 	_validate_quantities_available(outgoing)
@@ -195,6 +200,16 @@ def _validate_serial_numbers_available(outgoing):
 	for key in wanted:
 		if available.get(key, 0) < 1:
 			frappe.throw(_("Serial number {0} is not available at the source.").format(key[2]))
+
+
+def _lock_items(transfers):
+	frappe.db.get_values(
+		"Books Item",
+		{"name": ["in", sorted({transfer["item"] for transfer in transfers})]},
+		"name",
+		order_by="name asc",
+		for_update=True,
+	)
 
 
 def _item_settings(transfers):

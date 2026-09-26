@@ -35,7 +35,7 @@ class PaymentController(SeriesNamingMixin, Document):
 		if self.account == self.payment_account:
 			frappe.throw(_("The From and To accounts cannot be the same."))
 		self.validate_payment_method()
-		_validate_allocations(self)
+		self.set("taxes", _realised_taxes(_validate_allocations(self)))
 
 	def validate_payment_method(self):
 		method = frappe.db.get_value(
@@ -77,10 +77,12 @@ def _validate_allocations(payment):
 		if as_decimal(row.amount) <= 0:
 			frappe.throw(_("Allocated amounts must be greater than zero."))
 		allocated[row.reference_type, row.reference_name] += as_decimal(row.amount)
-	for (doctype, name), amount in allocated.items():
-		_validate_allocation(payment, _referenced_invoice(payment, doctype, name), amount)
+	allocations = [(_referenced_invoice(payment, *key), amount) for key, amount in allocated.items()]
+	for invoice, amount in allocations:
+		_validate_allocation(payment, invoice, amount)
 	if sum_decimal(allocated.values()) > as_decimal(payment.amount):
 		frappe.throw(_("Payment allocations cannot exceed the settled amount, including the write-off."))
+	return allocations
 
 
 def _validate_allocation(payment, invoice, amount):
@@ -101,20 +103,55 @@ def _validate_allocation(payment, invoice, amount):
 def _referenced_invoice(payment, doctype, name):
 	if doctype not in REFERENCE_DOCTYPES.values():
 		frappe.throw(_("Select a sales or purchase invoice reference."))
-	invoice = frappe.db.get_value(
-		doctype,
-		name,
-		["name", "docstatus", "party", "outstanding_amount", "return_against"],
-		as_dict=True,
-	)
-	if not invoice:
-		frappe.throw(_("Referenced invoice {0} does not exist.").format(name))
+	invoice = frappe.get_doc(doctype, name)
 	if invoice.docstatus != 1:
 		frappe.throw(_("Submit invoice {0} before allocating a payment to it.").format(name))
 	if invoice.party != payment.party:
 		frappe.throw(_("Invoice {0} belongs to {1}, not to {2}.").format(name, invoice.party, payment.party))
-	invoice.doctype = doctype
 	return invoice
+
+
+def _realised_taxes(allocations):
+	"""Move invoice taxes that have a payment account to it, in proportion to what is paid."""
+	taxes = {}
+	for invoice, amount in allocations:
+		for tax in _invoice_realised_taxes(invoice, amount):
+			key = (tax["account"], tax["from_account"])
+			taxes.setdefault(key, {**tax, "amount": as_decimal(0)})["amount"] += tax["amount"]
+	return [tax for tax in taxes.values() if tax["amount"]]
+
+
+def _invoice_realised_taxes(invoice, amount):
+	payment_accounts = _tax_payment_accounts(invoice)
+	total = abs(as_decimal(invoice.base_grand_total))
+	if not payment_accounts or not total:
+		return
+	paid = total - abs(as_decimal(invoice.outstanding_amount))
+	for tax in invoice.taxes:
+		if tax.account not in payment_accounts:
+			continue
+		base_tax = abs(as_decimal(tax.amount)) * as_decimal(invoice.exchange_rate or 1)
+		yield {
+			"account": payment_accounts[tax.account],
+			"from_account": tax.account,
+			"rate": tax.rate,
+			# Realise the share paid so far, so partial payments add up to the full tax.
+			"amount": rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total),
+		}
+
+
+def _tax_payment_accounts(invoice):
+	"""Map each invoice tax account to the account its tax moves to on payment."""
+	accounts = {}
+	for tax_name in {row.tax for row in invoice.items if row.tax}:
+		for detail in frappe.get_cached_doc("Books Tax", tax_name).details:
+			if not detail.payment_account:
+				continue
+			if accounts.setdefault(detail.account, detail.payment_account) != detail.payment_account:
+				frappe.throw(
+					_("Tax account {0} moves to more than one payment account.").format(detail.account)
+				)
+	return accounts
 
 
 def _apply_allocations(payment, reverse):

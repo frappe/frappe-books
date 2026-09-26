@@ -138,7 +138,9 @@ export async function makeFyo() {
       return getSchemas('-', []);
     }
     call(method, ...args) {
+      // The store holds no documents; a missing one reads as an empty map.
       if (method === 'exists') return false;
+      if (method === 'get') return {};
       if (['getAll', 'getAllRaw'].includes(method)) return [];
       // Invoices preview their totals once edits pause; echo the values back.
       if (method === 'preview') return args[1];

@@ -24,7 +24,6 @@ import {
   getPricingRulesConflicts,
   removeLoyaltyPoint,
   roundFreeItemQty,
-  getReturnQtyTotal,
   getReturnLoyaltyPoints,
   getItemQtyMap,
   getItemVisibility,
@@ -45,7 +44,7 @@ import { Party } from '../Party/Party';
 import { Payment } from '../Payment/Payment';
 import { Tax } from '../Tax/Tax';
 import { TaxSummary } from '../TaxSummary/TaxSummary';
-import { ReturnDocItem } from 'models/inventory/types';
+import { getReturnItems } from 'models/returnItems';
 import { AccountFieldEnum, PaymentTypeEnum } from '../Payment/types';
 import { PricingRule } from '../PricingRule/PricingRule';
 import { ApplicablePricingRules } from './types';
@@ -63,13 +62,6 @@ export type TaxDetail = {
   payment_account?: string;
   rate: number;
 };
-
-export type ReturnedItemData =
-  | number
-  | {
-      quantity?: number;
-      batches?: Record<string, number>;
-    };
 
 export type InvoiceTaxItem = {
   details: TaxDetail;
@@ -283,7 +275,6 @@ export abstract class Invoice extends Transactional {
       await this._removeLoyaltyPointEntry();
       await this._updateIsItemsReturned();
       this.reduceUsedCountOfCoupons();
-      await this.updateIsItemsFullyReturned(this);
     }
 
     if (this.isQuote) {
@@ -737,140 +728,21 @@ export abstract class Invoice extends Transactional {
     }
 
     const docData = this.getValidDict(true, true);
-    docData.pricingRuleDetail = [];
-    const docItems = docData.items as DocValueMap[];
-
+    const docItems = docData.items as DocValueMap[] | undefined;
     if (!docItems) {
       return;
     }
 
-    let returnDocItems: DocValueMap[] = [];
-
-    const totalQtyOfReturnedItems: Record<
-      string,
-      number | { quantity?: number; batches?: Record<string, number> }
-    > = await getReturnQtyTotal(this);
-
-    const returnBalanceItemsQty = await this.fyo.db.getReturnBalanceItemsQty(
+    const balances = await this.fyo.db.getReturnBalanceItemsQty(
       this.schemaName,
       this.name
     );
-
-    for (const item of docItems) {
-      if (totalQtyOfReturnedItems) {
-        if (item.isFreeItem) {
-          returnDocItems.push({
-            ...item,
-            name: undefined,
-            quantity: -(item.quantity as number),
-            transferQuantity: -(
-              (item.quantity as number) / (item.unitConversionFactor as number)
-            ),
-          });
-          continue;
-        }
-        if (item.batch) {
-          const returnData = totalQtyOfReturnedItems[item.item as string];
-          if (typeof returnData === 'object' && returnData?.batches) {
-            returnDocItems = docItems.map((docItem: DocValueMap) => {
-              const qty = -returnData?.batches![docItem.batch as string] || 0;
-              const transferQty =
-                qty / ((docItem.unitConversionFactor as number) || 1);
-              return {
-                ...docItem,
-                name: undefined,
-                quantity: qty,
-                transferQuantity: transferQty,
-              };
-            });
-          }
-        } else {
-          returnDocItems = docItems.map((docItem: DocValueMap) => ({
-            ...docItem,
-            name: undefined,
-            quantity: -(totalQtyOfReturnedItems[docItem.item as string] || 0),
-            qty:
-              -(totalQtyOfReturnedItems[docItem.item as string] as number) /
-              (item.unitConversionFactor as number),
-            transferQuantity: -(
-              (totalQtyOfReturnedItems[docItem.item as string] as number) /
-              (item.unitConversionFactor as number)
-            ),
-          }));
-        }
-
-        for (const row of returnDocItems) {
-          row.itemDiscountedTotal = await this.getItemsDiscountedTotal(
-            row as InvoiceItem
-          );
-        }
-        break;
-      }
-
-      const isItemExist = !!returnDocItems.filter(
-        (balanceItem) => !item.batch && balanceItem.item === item.item
-      ).length;
-
-      if (isItemExist) {
-        continue;
-      }
-
-      const returnedItem: ReturnDocItem | undefined =
-        returnBalanceItemsQty![item.item as string];
-
-      if (!returnedItem) {
-        continue;
-      }
-
-      let quantity = returnedItem.quantity;
-      let transferQuantity = quantity / (item.unitConversionFactor as number);
-
-      let serialNumber: string | undefined =
-        returnedItem.serialNumbers?.join('\n');
-
-      if (
-        item.batch &&
-        returnedItem.batches &&
-        returnedItem.batches[item.batch as string]
-      ) {
-        if (returnedItem.batches[item.batch as string].serialNumbers) {
-          serialNumber =
-            returnedItem.batches[item.batch as string].serialNumbers?.join(
-              '\n'
-            );
-        }
-        const returnedItemsData = totalQtyOfReturnedItems[
-          item.item as string
-        ] as ReturnedItemData;
-
-        if (
-          typeof returnedItemsData === 'object' &&
-          returnedItemsData.batches
-        ) {
-          quantity = -returnedItemsData?.batches[item.batch as string];
-          transferQuantity = quantity / (item.unitConversionFactor as number);
-        }
-      }
-
-      returnDocItems.push({
-        ...item,
-        serialNumber,
-        name: undefined,
-        quantity: quantity,
-        qty: transferQuantity,
-        transferQuantity,
-      });
-    }
-
-    returnDocItems = returnDocItems.filter(
-      (docItems) => (docItems.quantity as number) < 0
-    );
-
     const returnDocData = {
       ...docData,
+      pricingRuleDetail: [],
       name: undefined,
       date: new Date(),
-      items: returnDocItems,
+      items: getReturnItems(docItems, balances),
       returnAgainst: docData.name,
     } as DocValueMap;
 
@@ -963,34 +835,6 @@ export abstract class Invoice extends Transactional {
         });
       }
     }
-  }
-
-  async updateIsItemsFullyReturned(doc?: Invoice) {
-    if (!doc?.returnAgainst || doc.schemaName !== ModelNameEnum.SalesInvoice) {
-      return;
-    }
-
-    const sinvDoc = await this.fyo.doc.getDoc(
-      ModelNameEnum.SalesInvoice,
-      doc.returnAgainst
-    );
-
-    const totalQtyOfReturnedItems = await getReturnQtyTotal(
-      (sinvDoc as Invoice) ?? this
-    );
-    const isFullyReturned = Object.values(totalQtyOfReturnedItems).every(
-      (value) =>
-        typeof value === 'number' ? value === 0 : value?.quantity === 0
-    );
-    if (!isFullyReturned) {
-      return;
-    }
-    const invoiceDoc = await this.fyo.doc.getDoc(
-      this.schemaName,
-      this.returnAgainst
-    );
-    await invoiceDoc.setAndSync({ isFullyReturned });
-    await invoiceDoc.submit();
   }
 
   async _updateIsItemsReturned() {

@@ -12,7 +12,7 @@ from frappe_books.coa import (
 )
 from frappe_books.currency import currency_fraction_values, currency_precision
 from frappe_books.regional import ensure_regional_records
-from frappe_books.setup import ensure_default_records, ensure_number_series, ensure_roles
+from frappe_books.setup import ensure_default_records, ensure_number_series
 
 SERIES_DEFAULTS = {
 	"sales_invoice_number_series": "SINV-",
@@ -27,7 +27,6 @@ SERIES_DEFAULTS = {
 
 
 def run_setup(wizard):
-	ensure_roles()
 	ensure_number_series()
 	ensure_default_records()
 	chart = load_chart(wizard.chart_of_accounts)

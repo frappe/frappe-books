@@ -13,7 +13,6 @@ NUMERIC_NAME_DOCTYPES = (
 	"Books Ledger Entry",
 	"Books Stock Ledger Entry",
 )
-BOOKS_ROLES = ("Books User", "Books Manager")
 DEFAULT_PRINT_TEMPLATES = {
 	"Business - Quote": ("SalesQuote", "business_print_template.html", 21, 29.7),
 	"Business - Sales Invoice": ("SalesInvoice", "business_print_template.html", 21, 29.7),
@@ -45,20 +44,17 @@ DEFAULT_NUMBER_SERIES = {
 
 
 def after_install():
-	ensure_roles()
 	ensure_number_series()
 	ensure_default_records()
 
 
 def before_tests():
-	ensure_roles()
 	ensure_number_series()
 	ensure_numeric_name_series()
 	ensure_default_records()
 
 
 def after_migrate():
-	ensure_roles()
 	ensure_number_series()
 	ensure_numeric_name_series()
 	ensure_default_records()
@@ -89,19 +85,6 @@ def max_numeric_name(doctype):
 	name_type = "signed" if frappe.db.db_type == "mariadb" else "bigint"
 	maximum = frappe.qb.from_(table).select(Max(Cast_(table.name, name_type))).run()[0][0]
 	return int(maximum or 0)
-
-
-def ensure_roles():
-	for role_name in BOOKS_ROLES:
-		if frappe.db.exists("Role", role_name):
-			continue
-		frappe.get_doc(
-			{
-				"doctype": "Role",
-				"role_name": role_name,
-				"desk_access": 1,
-			}
-		).insert(ignore_permissions=True)
 
 
 def ensure_number_series():

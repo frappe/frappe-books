@@ -883,35 +883,3 @@ export async function validateQty(
 
   return;
 }
-export async function isLoyaltyProgramExpiredAndMaxed(
-  fyo: Fyo,
-  loyaltyProgramName: string
-): Promise<boolean> {
-  if (!loyaltyProgramName) {
-    return false;
-  }
-
-  const loyaltyProgram = await fyo.db.getAll(ModelNameEnum.LoyaltyProgram, {
-    fields: ['toDate', 'maximumUse', 'used', 'isEnabled'],
-    filters: { name: loyaltyProgramName },
-  });
-
-  if (!loyaltyProgram.length) {
-    return false;
-  }
-
-  const program = loyaltyProgram[0];
-  const currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
-
-  const toDate = program.toDate as Date;
-  const isExpired =
-    toDate && new Date(toDate).getTime() < currentDate.getTime();
-
-  const maximumUse = (program.maximumUse as number) || 0;
-  const used = (program.used as number) || 0;
-  const isMaxed = maximumUse > 0 && used >= maximumUse;
-
-  const result = isExpired || isMaxed;
-  return result;
-}

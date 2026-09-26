@@ -1,4 +1,4 @@
-import { Fyo, t } from 'fyo';
+import { Fyo } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
@@ -10,14 +10,12 @@ import {
   HiddenMap,
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
-import { ValidationError } from 'fyo/utils/errors';
 import { Transactional } from 'models/Transactional/Transactional';
 import {
   addItem,
   getExchangeRate,
   getNumberSeries,
   getItemVisibility,
-  isLoyaltyProgramExpiredAndMaxed,
 } from 'models/helpers';
 import { StockTransfer } from 'models/inventory/StockTransfer';
 import { validateBatch } from 'models/inventory/helpers';
@@ -144,33 +142,9 @@ export abstract class Invoice extends Transactional {
 
   async validate() {
     await super.validate();
-    if (this.isQuote) {
-      return;
+    if (!this.isQuote) {
+      await validateBatch(this);
     }
-    if (!this.submitted && this.loyaltyProgram) {
-      const isExpiredOrMaxed = await isLoyaltyProgramExpiredAndMaxed(
-        this.fyo,
-        this.loyaltyProgram
-      );
-
-      if (isExpiredOrMaxed) {
-        const { showToast } = await import('src/utils/interactive');
-
-        showToast({
-          type: 'warning',
-          message: t`Loyalty program has expired or reached maximum usage`,
-          duration: 'short',
-        });
-      }
-    }
-
-    if (
-      this.enableDiscounting &&
-      !this.fyo.singles?.AccountingSettings?.discountAccount
-    ) {
-      throw new ValidationError(this.fyo.t`Discount Account is not set.`);
-    }
-    await validateBatch(this);
   }
 
   async getPaymentIds() {
@@ -266,32 +240,6 @@ export abstract class Invoice extends Transactional {
         return loyaltyProgramName;
       },
       dependsOn: ['party', 'name'],
-    },
-    availableLoyaltyPoints: {
-      formula: async () => {
-        if (!this.party) {
-          return 0;
-        }
-
-        const loyaltyProgramName = this.loyaltyProgram as string;
-        if (loyaltyProgramName) {
-          const isExpiredAndMaxed = await isLoyaltyProgramExpiredAndMaxed(
-            this.fyo,
-            loyaltyProgramName
-          );
-          if (isExpiredAndMaxed) {
-            return 0;
-          }
-        }
-
-        const loyaltyPoints = await this.fyo.getValue(
-          ModelNameEnum.Party,
-          this.party,
-          'loyaltyPoints'
-        );
-        return loyaltyPoints || 0;
-      },
-      dependsOn: ['party', 'loyaltyProgram'],
     },
     currency: {
       formula: async () => {

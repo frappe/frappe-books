@@ -173,7 +173,6 @@ import {
   validateQty,
   getItemQtyMap,
   getItemVisibility,
-  isLoyaltyProgramExpiredAndMaxed,
 } from 'models/helpers';
 import { ItemVisibility } from 'src/components/POS/types';
 import {
@@ -542,21 +541,7 @@ export default defineComponent({
         filters: { name: value },
       });
 
-      const loyaltyProgramName = party[0]?.loyaltyProgram as string;
-
-      if (loyaltyProgramName) {
-        const isExpiredAndMaxed = await isLoyaltyProgramExpiredAndMaxed(
-          this.fyo,
-          loyaltyProgramName
-        );
-        if (isExpiredAndMaxed) {
-          this.loyaltyProgram = loyaltyProgramName;
-          this.loyaltyPoints = 0;
-          return;
-        }
-      }
-
-      this.loyaltyProgram = loyaltyProgramName;
+      this.loyaltyProgram = party[0]?.loyaltyProgram as string;
       this.loyaltyPoints = party[0]?.loyaltyPoints as number;
     },
 

@@ -54,6 +54,17 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(invoice.items[0].tax, self.tax.name)
 		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
 
+	def test_item_discount_stays_within_the_row(self):
+		for values, message in (
+			({"item_discount_percent": 101}, "between 0 and 100"),
+			({"set_item_discount_amount": 1, "item_discount_amount": 201}, "cannot exceed the row amount"),
+			({"set_item_discount_amount": 1, "item_discount_amount": -1}, "cannot exceed the row amount"),
+		):
+			with self.subTest(values=values):
+				invoice = self._make_invoice()
+				invoice.items[0].update(values)
+				self.assertRaisesRegex(frappe.ValidationError, message, invoice.save)
+
 	def test_cancel_posts_reversals_and_clears_outstanding(self):
 		invoice = self._make_invoice()
 		invoice.submit()

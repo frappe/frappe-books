@@ -1,7 +1,35 @@
+import {
+  BaseError,
+  ConflictError,
+  DuplicateEntryError,
+  ForbiddenError,
+  LinkValidationError,
+  MandatoryError,
+  NotFoundError,
+  ValidationError,
+} from 'fyo/utils/errors';
+
 type FrappeResponse<T> = {
   message?: T;
   exception?: string;
+  exc_type?: string;
   _server_messages?: string;
+};
+
+type ErrorClass = new (message: string, shouldStore?: boolean) => BaseError;
+
+const errorClassByType: Record<string, ErrorClass | undefined> = {
+  DuplicateEntryError,
+  LinkExistsError: LinkValidationError,
+  MandatoryError,
+  TimestampMismatchError: ConflictError,
+};
+
+const errorClassByStatus: Record<number, ErrorClass | undefined> = {
+  403: ForbiddenError,
+  404: NotFoundError,
+  409: ValidationError,
+  417: ValidationError,
 };
 
 export async function call<T>(method: string, args: unknown = {}): Promise<T> {
@@ -31,9 +59,20 @@ export async function call<T>(method: string, args: unknown = {}): Promise<T> {
 
   const payload = await getResponsePayload<T>(response);
   if (!response.ok || payload.exception) {
-    throw new Error(getErrorMessage(payload, response));
+    throw getServerError(payload, response);
   }
   return payload.message as T;
+}
+
+function getServerError(
+  payload: FrappeResponse<unknown>,
+  response: Response
+): Error {
+  const message = getErrorMessage(payload, response);
+  const ServerError =
+    errorClassByType[payload.exc_type ?? ''] ??
+    errorClassByStatus[response.status];
+  return ServerError ? new ServerError(message, false) : new Error(message);
 }
 
 async function getResponsePayload<T>(

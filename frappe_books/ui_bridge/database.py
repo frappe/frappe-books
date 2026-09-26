@@ -60,9 +60,7 @@ class BooksDatabaseBridge:
 			return {}
 		doc.check_permission("read")
 		requested = [fields] if isinstance(fields, str) else fields
-		if doc.meta.issingle:
-			return self._to_source_single(source_schema, doc, requested)
-		return self._to_source_document(source_schema, doc, requested)
+		return self._to_readable_source(source_schema, doc, requested)
 
 	def get_all(self, source_schema: str, options: ListOptions | None = None) -> list[dict]:
 		options = frappe._dict(options or {})
@@ -163,7 +161,7 @@ class BooksDatabaseBridge:
 				doc.set(name_field, values["name"])
 		self._set_docstatus(doc, values)
 		doc.insert(set_name=values.get("name"))
-		return self._to_source_document(source_schema, doc)
+		return self._to_readable_source(source_schema, doc)
 
 	def update(self, source_schema: str, values: dict[str, Any]) -> dict:
 		target = _writable_doctype(source_schema)
@@ -179,7 +177,7 @@ class BooksDatabaseBridge:
 			doc.set(fieldname, value)
 		self._set_docstatus(doc, values)
 		doc.save()
-		return self._to_source_document(source_schema, doc)
+		return self._to_readable_source(source_schema, doc)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
 		doc = frappe.get_doc(_writable_doctype(source_schema), old_name)
@@ -219,6 +217,12 @@ class BooksDatabaseBridge:
 	def close(self) -> None:
 		return None
 
+	def _to_readable_source(self, source_schema: str, doc, requested=None) -> dict:
+		doc.apply_fieldlevel_read_permissions()
+		if doc.meta.issingle:
+			return self._to_source_single(source_schema, doc, requested)
+		return self._to_source_document(source_schema, doc, requested)
+
 	def _to_source_document(self, source_schema: str, doc, requested=None) -> dict:
 		values = self._row_to_source(source_schema, doc.as_dict(), requested)
 		return self._append_source_children(source_schema, doc, values, requested)
@@ -227,7 +231,7 @@ class BooksDatabaseBridge:
 		stored = {
 			field: value
 			for field, value in frappe.db.get_singles_dict(doc.doctype).items()
-			if not self._is_password_field(doc.meta, field)
+			if hasattr(doc, field) and not self._is_password_field(doc.meta, field)
 		}
 		stored["name"] = source_schema
 		known_targets = set(schema_mapping()[source_schema]["fields"].values())

@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, make_tax
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 RIGHTS = ("read", "write", "create", "delete", "submit", "cancel", "amend")
 FULL = {"read", "write", "create", "delete"}
@@ -60,6 +63,13 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(TEST_USER):
 			template.template = "<div>{{ doc.name }}</div>"
 			self.assertRaises(frappe.PermissionError, template.save)
+
+	def test_bridge_hides_fields_above_the_users_permlevel(self):
+		party = make_party(make_account("Permlevel Receivable", account_type="Receivable").name)
+		party.db_set("email", "hidden@example.com")
+		email = frappe.get_meta("Books Party").get_field("email")
+		with patch.object(email, "permlevel", 1), self.set_user(TEST_USER):
+			self.assertIsNone(BooksDatabaseBridge().get("Party", party.name).get("email"))
 
 	def _make_invoice_as_books_user(self):
 		receivable = make_account("Permission Receivable", account_type="Receivable")

@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 import frappe
@@ -22,6 +23,13 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 			context = books.get_context(frappe._dict())
 			self.assertTrue(context.csrf_token)
 			self.assertEqual(context.csrf_token, frappe.local.session.data.csrf_token)
+
+	def test_page_boot_lists_the_users_permissions(self):
+		with self.set_user(BOOKS_USER), patch("frappe.sessions.get", return_value={}):
+			permissions = json.loads(books.get_context(frappe._dict()).books_boot)["permissions"]
+		self.assertEqual(permissions["SalesInvoice"], ["read", "write", "create", "submit"])
+		self.assertEqual(permissions["Tax"], ["read"])
+		self.assertNotIn("SalesInvoiceItem", permissions)
 
 	def test_users_without_a_books_role_are_refused(self):
 		with self.set_user(DESK_USER):

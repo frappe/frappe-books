@@ -53,10 +53,6 @@ export class Fyo {
 
   }
 
-  get initialized() {
-    return this._initialized;
-  }
-
   reportDocumentActionWarning(
     doc: Doc,
     action: DocumentActionWarning['action'],
@@ -109,10 +105,9 @@ export class Fyo {
 
   async initializeAndRegister(
     models: ModelMap = {},
-    regionalModels: ModelMap = {},
-    force = false
+    regionalModels: ModelMap = {}
   ) {
-    if (this._initialized && !force) return;
+    if (this._initialized) return;
 
     this.#initializeModules();
     await this.#initializeMoneyMaker();
@@ -165,10 +160,6 @@ export class Fyo {
     });
   }
 
-  async close() {
-    await this.db.close();
-  }
-
   getField(schemaName: string, fieldname: string) {
     return this.fieldMap[schemaName]?.[fieldname];
   }
@@ -206,24 +197,6 @@ export class Fyo {
     }
 
     return value;
-  }
-
-  async purgeCache() {
-    this.pesa = getMoneyMaker({
-      currency: DEFAULT_CURRENCY,
-      precision: DEFAULT_INTERNAL_PRECISION,
-      display: DEFAULT_DISPLAY_PRECISION,
-      wrapper: markRaw,
-    });
-
-    this._initialized = false;
-    this.temp = {};
-    this.currencyFormatter = undefined;
-    this.currencySymbols = {};
-    this.errorLog = [];
-    this.temp = {};
-    await this.db.purgeCache();
-    this.doc.purgeCache();
   }
 
   store = {

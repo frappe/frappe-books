@@ -32,7 +32,6 @@ export class DatabaseHandler extends DatabaseBase {
   #fyo: Fyo;
   converter: Converter;
   #demux: DatabaseDemuxBase;
-  #connected = false;
   #schemaMap: SchemaMap = {};
   #fieldMap: FieldMap = {};
   observer: Observable<never> = new Observable();
@@ -53,14 +52,9 @@ export class DatabaseHandler extends DatabaseBase {
     return this.#fieldMap;
   }
 
-  get isConnected() {
-    return this.#connected;
-  }
-
   async connect(countryCode?: string) {
     countryCode = await this.#demux.connect(countryCode);
     await this.init();
-    this.#connected = true;
     return countryCode;
   }
 
@@ -72,13 +66,6 @@ export class DatabaseHandler extends DatabaseBase {
   async refreshSchemaMap() {
     this.#schemaMap = await this.#demux.getSchemaMap();
     this.#setFieldMap();
-  }
-
-  async purgeCache() {
-    await this.close();
-    this.#connected = false;
-    this.#schemaMap = {};
-    this.#fieldMap = {};
   }
 
   async insert(
@@ -249,10 +236,6 @@ export class DatabaseHandler extends DatabaseBase {
 
     this.observer.trigger(`exists:${schemaName}`, name);
     return doesExist;
-  }
-
-  async close(): Promise<void> {
-    await this.#demux.call('close');
   }
 
   // The Frappe adapter runs these complex queries on the server.

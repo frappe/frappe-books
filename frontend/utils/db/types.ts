@@ -48,8 +48,6 @@ export abstract class DatabaseBase {
   ): Promise<number>;
 
   // Other
-  abstract close(): Promise<void>;
-
   abstract exists(schemaName: string, name?: string): Promise<boolean>;
 }
 

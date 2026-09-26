@@ -40,10 +40,6 @@ export class DocHandler {
     this.#loadingDocs.clear();
   }
 
-  purgeCache() {
-    this.init();
-  }
-
   registerModels(models: ModelMap, regionalModels: ModelMap = {}) {
     for (const schemaName in this.fyo.db.schemaMap) {
       if (coreModels[schemaName] !== undefined) {

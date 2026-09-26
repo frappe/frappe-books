@@ -213,15 +213,6 @@ export abstract class Invoice extends Transactional {
     await this._validatePricingRule();
   }
 
-  async afterDelete() {
-    await super.afterDelete();
-    const paymentIds = await this.getPaymentIds();
-    for (const name of paymentIds) {
-      const paymentDoc = await this.fyo.doc.getDoc(ModelNameEnum.Payment, name);
-      await paymentDoc.delete();
-    }
-  }
-
   async getPaymentIds() {
     const payments = (await this.fyo.db.getAll('PaymentFor', {
       fields: ['parent'],
@@ -1168,52 +1159,6 @@ export abstract class Invoice extends Transactional {
     }
 
     await removeUnusedCoupons(this as SalesInvoice);
-  }
-
-  async beforeDelete(): Promise<void> {
-    await super.beforeDelete();
-    await this._validateStockTransferCancelled();
-    await this._deleteCancelledStockTransfers();
-  }
-
-  async _deleteCancelledStockTransfers() {
-    const schemaName = this.stockTransferSchemaName;
-    const transfers = await this._getLinkedStockTransferNames(true);
-
-    for (const { name } of transfers) {
-      const st = await this.fyo.doc.getDoc(schemaName, name);
-      await st.delete();
-    }
-  }
-
-  async _validateStockTransferCancelled() {
-    const schemaName = this.stockTransferSchemaName;
-    const transfers = await this._getLinkedStockTransferNames(false);
-    if (!transfers?.length) {
-      return;
-    }
-
-    const names = transfers.map(({ name }) => name).join(', ');
-    const label = this.fyo.schemaMap[schemaName]?.label ?? schemaName;
-    throw new ValidationError(
-      this.fyo.t`Cannot cancel ${this.schema.label} ${
-        this.name!
-      } because of the following ${label}: ${names}`
-    );
-  }
-
-  async _getLinkedStockTransferNames(cancelled: boolean) {
-    const name = this.name;
-    if (!name) {
-      throw new ValidationError(`Name not found for ${this.schema.label}`);
-    }
-
-    const schemaName = this.stockTransferSchemaName;
-    const transfers = (await this.fyo.db.getAllRaw(schemaName, {
-      fields: ['name'],
-      filters: { backReference: this.name!, cancelled },
-    })) as { name: string }[];
-    return transfers;
   }
 
   async getLinkedPayments() {

@@ -12,6 +12,8 @@ import { GetAllOptions, QueryFilter } from 'utils/db/types';
 import { getMapFromList, safeParseFloat } from 'utils/index';
 import { ExportField, ExportTableField } from './types';
 
+const EXPORT_PAGE_SIZE = 500;
+
 const excludedFieldTypes: FieldType[] = [
   FieldTypeEnum.AttachImage,
   FieldTypeEnum.Attachment,
@@ -213,20 +215,42 @@ async function getExportData(
   filters: QueryFilter,
   fyo: Fyo
 ) {
-  const parentData = await getParentData(
-    schemaName,
-    filters,
-    fields,
-    limit,
-    fyo
-  );
-  const parentNames = parentData.map((f) => f.name as string).filter(Boolean);
-  const childTableData = await getAllChildTableData(
-    tableFields,
-    fields,
-    parentNames,
-    fyo
-  );
+  const parentData: RawValueMap[] = [];
+  const childTableData: Record<string, RawValueMap[]> = {};
+  while (!limit || parentData.length < limit) {
+    const pageSize = Math.min(
+      EXPORT_PAGE_SIZE,
+      (limit || Infinity) - parentData.length
+    );
+    const page = await getParentData(
+      schemaName,
+      filters,
+      fields,
+      { offset: parentData.length, limit: pageSize },
+      fyo
+    );
+    if (!page.length) {
+      break;
+    }
+
+    const parentNames = page.map((f) => f.name as string).filter(Boolean);
+    const children = await getAllChildTableData(
+      tableFields,
+      fields,
+      parentNames,
+      fyo
+    );
+    parentData.push(...page);
+    for (const fieldname in children) {
+      childTableData[fieldname] ??= [];
+      childTableData[fieldname].push(...children[fieldname]);
+    }
+
+    if (page.length < pageSize) {
+      break;
+    }
+  }
+
   return { parentData, childTableData };
 }
 
@@ -263,7 +287,7 @@ async function getParentData(
   schemaName: string,
   filters: QueryFilter,
   fields: ExportField[],
-  limit: number | null,
+  page: { offset: number; limit: number },
   fyo: Fyo
 ) {
   const orderBy = ['created'];
@@ -271,11 +295,7 @@ async function getParentData(
     orderBy.unshift('date');
   }
 
-  const options: GetAllOptions = { filters, orderBy, order: 'desc' };
-  if (limit) {
-    options.limit = limit;
-  }
-
+  const options: GetAllOptions = { filters, orderBy, order: 'desc', ...page };
   options.fields = fields
     .filter((f) => f.export && f.fieldtype !== FieldTypeEnum.Table)
     .map((f) => f.fieldname);

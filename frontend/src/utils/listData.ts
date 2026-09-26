@@ -10,41 +10,54 @@ export interface ListState {
   filters: QueryFilter;
   activeFilters: QueryFilter;
   requestId: number;
+  pageStart: number;
+  pageLength: number;
 }
 
 /**
- * Load a list's rows for its base and active filters. Returns undefined when
- * a newer load started before this one finished.
+ * Load a page of a list's rows and the row count for its base and active
+ * filters. New active filters go back to the first page. Returns undefined
+ * when a newer load started before this one finished.
  */
 export async function loadListData(
   fyo: Fyo,
   list: ListState,
   filters?: QueryFilter
-): Promise<{ rows: RenderData[]; appliedFilters: QueryFilter } | undefined> {
-  if (filters !== undefined) list.activeFilters = cloneDeep(toRaw(filters));
+): Promise<
+  { rows: RenderData[]; total: number; appliedFilters: QueryFilter } | undefined
+> {
+  if (filters !== undefined) {
+    list.activeFilters = cloneDeep(toRaw(filters));
+    list.pageStart = 0;
+  }
   const requestId = ++list.requestId;
   const appliedFilters = mergeQueryFilters(
     cloneDeep(toRaw(list.filters)),
     cloneDeep(toRaw(list.activeFilters))
   );
-  const rows = await getListRows(fyo, list.schemaName, appliedFilters);
+  const [total, rows] = await Promise.all([
+    fyo.db.count(list.schemaName, { filters: appliedFilters }),
+    getListRows(fyo, list, appliedFilters),
+  ]);
   if (requestId !== list.requestId) return;
-  return { rows, appliedFilters };
+  return { rows, total, appliedFilters };
 }
 
 async function getListRows(
   fyo: Fyo,
-  schemaName: string,
+  list: ListState,
   filters: QueryFilter
 ): Promise<RenderData[]> {
-  const orderBy = fyo.db.fieldMap[schemaName].date
+  const orderBy = fyo.db.fieldMap[list.schemaName].date
     ? ['date', 'created']
     : ['created'];
-  const schema = fyo.schemaMap[schemaName];
-  const rows = await fyo.db.getAll(schemaName, {
+  const schema = fyo.schemaMap[list.schemaName];
+  const rows = await fyo.db.getAll(list.schemaName, {
     fields: ['*'],
     filters,
     orderBy,
+    offset: list.pageStart,
+    limit: list.pageLength,
   });
   return rows.map((row) => ({ ...row, schema })) as RenderData[];
 }

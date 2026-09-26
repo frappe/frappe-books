@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col overflow-hidden text-base">
     <FrappeList
-      v-if="dataSlice.length"
+      v-if="data.length"
       :columns="listColumns"
       :selectable="isSelectionMode"
       :selection="selectedItems"
@@ -21,7 +21,7 @@
         </FrappeListHeaderCell>
       </FrappeListHeader>
 
-      <FrappeListRows :items="dataSlice" row-key="name">
+      <FrappeListRows :items="data" row-key="name">
         <template #default="{ item: row, index, value }">
           <FrappeListRow
             :value="value"
@@ -47,11 +47,12 @@
     </FrappeList>
 
     <!-- Pagination Footer -->
-    <div v-if="data?.length" class="mt-auto">
+    <div v-if="total" class="mt-auto">
       <hr class="border-outline-gray-1" />
       <Paginator
         ref="paginator"
-        :item-count="data.length"
+        :item-count="total"
+        :allowed-counts="[50, 100, 500]"
         class="px-4"
         @index-change="setPageIndices"
       />
@@ -59,7 +60,7 @@
 
     <!-- Empty State -->
     <div
-      v-if="!data?.length"
+      v-if="!total"
       class="flex flex-col items-center justify-center my-auto"
     >
       <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
@@ -121,20 +122,15 @@ export default defineComponent({
   data() {
     return {
       data: [] as RenderData[],
+      total: 0,
       pageStart: 0,
-      pageEnd: 0,
+      pageLength: 50,
       selectedItems: [] as string[],
       activeFilters: {} as QueryFilter,
       requestId: 0,
     };
   },
   computed: {
-    dataSlice() {
-      return this.data.slice(this.pageStart, this.pageEnd);
-    },
-    count() {
-      return this.pageEnd - this.pageStart + 1;
-    },
     listColumns(): string[] {
       return ['2rem', ...this.columns.map(() => 'minmax(0, 1fr)')];
     },
@@ -178,9 +174,14 @@ export default defineComponent({
   },
   methods: {
     isNumeric,
-    setPageIndices({ start, end }: { start: number; end: number }) {
+    async setPageIndices({ start, end }: { start: number; end: number }) {
+      if (start === this.pageStart && end - start === this.pageLength) {
+        return;
+      }
+
       this.pageStart = start;
-      this.pageEnd = end;
+      this.pageLength = end - start;
+      await this.updateData();
     },
     setUpdateListeners() {
       if (this.schemaName) {
@@ -191,11 +192,13 @@ export default defineComponent({
       const loaded = await loadListData(fyo, this, filters);
       if (!loaded) return;
       this.data = loaded.rows;
+      this.total = loaded.total;
       const { requestId } = this;
       await this.$nextTick();
       if (requestId !== this.requestId) return;
       const paginator = this.$refs.paginator as
         InstanceType<typeof Paginator> | undefined;
+      // Clamps the page when rows were removed; a moved page reloads its rows.
       paginator?.setPageNo(filters !== undefined ? 1 : paginator.pageNo);
       this.$emit('updatedData', loaded.appliedFilters);
     },

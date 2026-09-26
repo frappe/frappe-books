@@ -309,7 +309,7 @@
                 {{ f.name }}
               </p>
               <p class="min-w-0 break-words text-ink-gray-6">
-                {{ f.error.message }}
+                {{ f.message }}
               </p>
             </div>
           </div>
@@ -340,6 +340,7 @@
 </template>
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
+import { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { Button as FrappeButton } from 'frappe-ui';
@@ -379,7 +380,7 @@ type ImportWizardData = {
   complete: boolean;
   success: string[];
   successOldName: string[];
-  failed: { name: string; error: Error }[];
+  failed: { name: string; message: string }[];
   file: null | { name: string; filePath: string; text: string };
   nullOrImporter: null | Importer;
   importType: string;
@@ -805,28 +806,40 @@ export default defineComponent({
 
       const shouldSubmit = await this.askShouldSubmit();
 
-      let doneCount = 0;
-      for (const doc of this.importer.docs) {
-        this.setLoadingStatus(doneCount, this.importer.docs.length);
-        const oldName = doc.name ?? '';
-        try {
-          await doc.sync();
-          if (shouldSubmit) {
-            await doc.submit();
-          }
-          doneCount += 1;
-
-          this.success.push(doc.name!);
-          this.successOldName.push(oldName);
-        } catch (error) {
-          if (error instanceof Error) {
-            this.failed.push({ name: doc.name!, error });
-          }
-        }
+      const { docs } = this.importer;
+      for (const [index, doc] of docs.entries()) {
+        this.setLoadingStatus(index, docs.length);
+        await this.importDoc(doc, shouldSubmit);
       }
 
       this.isMakingEntries = false;
       this.complete = true;
+    },
+    async importDoc(doc: Doc, shouldSubmit: boolean): Promise<void> {
+      const oldName = doc.name ?? '';
+      try {
+        await doc.sync();
+      } catch (error) {
+        this.failed.push({ name: doc.name!, message: getMessage(error) });
+        return;
+      }
+
+      // A saved draft must not be imported again by Fix Failed.
+      this.successOldName.push(oldName);
+      try {
+        if (shouldSubmit) {
+          await doc.submit();
+        }
+      } catch (error) {
+        const message = getMessage(error);
+        this.failed.push({
+          name: doc.name!,
+          message: this.t`Saved as draft, but submit failed: ${message}`,
+        });
+        return;
+      }
+
+      this.success.push(doc.name!);
     },
     async askShouldSubmit(): Promise<boolean> {
       if (!this.fyo.schemaMap[this.importType]?.isSubmittable) {
@@ -917,6 +930,10 @@ export default defineComponent({
     },
   },
 });
+
+function getMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 </script>
 <style scoped>
 .index-cell {

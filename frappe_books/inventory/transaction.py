@@ -5,6 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
+from frappe_books.inventory.invoice_balance import update_invoice_balance, validate_invoice_balance
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_stock_entries,
@@ -54,22 +55,35 @@ class StockTransferController(SeriesNamingMixin, Document):
 
 	def before_submit(self):
 		validate_stock_available(transfer_rows(self))
+		validate_invoice_balance(self)
 
 	def before_cancel(self):
 		validate_stock_available(reverse_transfers(transfer_rows(self)))
 
 	def on_submit(self):
-		transfers = transfer_rows(self)
-		create_stock_entries(self, transfers)
+		create_stock_entries(self, transfer_rows(self))
 		post_stock_accounts(self)
+		update_invoice_balance(self)
+		self.update_returned_status()
 
 	def on_cancel(self):
 		cancel_stock_entries(self, transfer_rows(self))
 		reverse_entries(self)
+		update_invoice_balance(self)
+		self.update_returned_status()
 
 	def on_trash(self):
 		delete_stock_entries(self)
 		delete_entries(self)
+
+	def update_returned_status(self):
+		"""Flag the original transfer as returned while a submitted return against it remains."""
+		if not self.return_against:
+			return
+		is_returned = frappe.db.exists(self.doctype, {"return_against": self.return_against, "docstatus": 1})
+		frappe.db.set_value(
+			self.doctype, self.return_against, "is_returned", int(bool(is_returned)), update_modified=False
+		)
 
 
 def movement_transfers(movement):

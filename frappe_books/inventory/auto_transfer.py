@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
-
 import frappe
 
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.inventory.invoice_balance import pending_quantities
 
 
 def create_auto_transfer(invoice) -> str | None:
@@ -35,14 +34,11 @@ def create_auto_transfer(invoice) -> str | None:
 		}
 	).insert(ignore_permissions=True)
 	transfer.submit()
-	frappe.db.set_value(
-		invoice.doctype,
-		invoice.name,
-		{"back_reference": transfer.name, "stock_not_transferred": 0},
-		update_modified=False,
-	)
-	invoice.back_reference = transfer.name
-	invoice.stock_not_transferred = 0
+	if not invoice.back_reference:
+		frappe.db.set_value(
+			invoice.doctype, invoice.name, "back_reference", transfer.name, update_modified=False
+		)
+		invoice.back_reference = transfer.name
 	return transfer.name
 
 
@@ -77,27 +73,22 @@ def _stock_location(invoice) -> str:
 
 
 def _stock_rows(invoice) -> list[dict]:
+	pending = pending_quantities(invoice)
 	exchange_rate = as_decimal(invoice.exchange_rate or 1)
-	rows = []
-	for row in invoice.items:
-		if not frappe.db.get_value("Books Item", row.item, "track_item"):
-			continue
-		quantity = abs(as_decimal(row.quantity))
-		if quantity == Decimal(0):
-			continue
-		rows.append(
-			{
-				"item": row.item,
-				"transfer_unit": row.transfer_unit or row.unit,
-				"transfer_quantity": abs(as_decimal(row.transfer_quantity)) or quantity,
-				"unit": row.unit,
-				"batch": row.batch,
-				"serial_number": row.serial_number,
-				"quantity": quantity,
-				"unit_conversion_factor": row.unit_conversion_factor or 1,
-				"rate": rounded(as_decimal(row.rate) * exchange_rate),
-				"description": row.description,
-				"hsn_code": row.hsn_code,
-			}
-		)
-	return rows
+	return [
+		{
+			"item": row.item,
+			"transfer_unit": row.transfer_unit or row.unit,
+			"transfer_quantity": pending[row.name] / as_decimal(row.unit_conversion_factor or 1),
+			"unit": row.unit,
+			"batch": row.batch,
+			"serial_number": row.serial_number,
+			"quantity": pending[row.name],
+			"unit_conversion_factor": row.unit_conversion_factor or 1,
+			"rate": rounded(as_decimal(row.rate) * exchange_rate),
+			"description": row.description,
+			"hsn_code": row.hsn_code,
+		}
+		for row in invoice.items
+		if pending.get(row.name)
+	]

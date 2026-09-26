@@ -37,6 +37,8 @@ await build({
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getReturnItems } from './models/returnItems';
       export { getPrintTemplatePropValues } from './src/utils/printTemplates';
+      export { call } from './src/web/api';
+      export * as errors from './fyo/utils/errors';
     `,
     resolveDir: frontend,
   },
@@ -91,6 +93,8 @@ export const {
   GSTR1,
   getReturnItems,
   getPrintTemplatePropValues,
+  call,
+  errors,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

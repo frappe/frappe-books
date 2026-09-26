@@ -117,7 +117,7 @@ class BooksBespokeQueries:
 	def return_balance(self, source_schema: str, name: str):
 		doc = frappe.get_doc(target_doctype(source_schema), name)
 		doc.check_permission("read")
-		return_names = frappe.get_all(
+		return_names = frappe.get_list(
 			doc.doctype,
 			filters={"return_against": name, "docstatus": 1},
 			pluck="name",
@@ -125,10 +125,11 @@ class BooksBespokeQueries:
 		if not return_names:
 			return None
 
-		returned_rows = frappe.get_all(
+		returned_rows = frappe.get_list(
 			doc.meta.get_field("items").options,
 			filters={"parent": ["in", return_names], "parenttype": doc.doctype, "parentfield": "items"},
 			fields=["item", "quantity", "batch", "serial_number"],
+			parent_doctype=doc.doctype,
 		)
 		if not returned_rows:
 			return None
@@ -147,8 +148,8 @@ class BooksBespokeQueries:
 
 	def pos_transacted_amount(self, from_date: str, to_date: str):
 		"""Return the same expected amounts the closing shift stores on the server."""
-		if not frappe.has_permission("Books Payment", ptype="read"):
-			raise frappe.PermissionError
+		for doctype in ("Books Payment", "Books Sales Invoice"):
+			frappe.has_permission(doctype, ptype="read", throw=True)
 		return transacted_amounts(get_datetime(from_date), get_datetime(to_date))
 
 	def open_pos_shift(self):

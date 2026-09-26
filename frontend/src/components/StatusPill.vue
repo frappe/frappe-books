@@ -20,12 +20,12 @@ type UIColors = 'gray' | 'orange' | 'red' | 'green' | 'blue' | 'yellow';
 export default defineComponent({
   components: { FrappeBadge },
   props: { doc: { type: Doc, required: true } },
-  data() {
-    return {
-      showStatus: true,
-    };
-  },
   computed: {
+    showStatus(): boolean {
+      return !(
+        this.doc.schemaName === ModelNameEnum.SalesQuote && this.doc.isSubmitted
+      );
+    },
     badgeTheme(): 'gray' | 'blue' | 'green' | 'amber' | 'red' {
       return {
         gray: 'gray',
@@ -40,13 +40,6 @@ export default defineComponent({
       return getStatus(this.doc);
     },
     text() {
-      if (
-        this.doc.schemaName === ModelNameEnum.SalesQuote &&
-        this.doc.isSubmitted
-      ) {
-        this.showStatus = false;
-      }
-
       const hasOutstanding = isPesa(this.doc.outstandingAmount);
 
       if (hasOutstanding && this.status === 'Unpaid') {

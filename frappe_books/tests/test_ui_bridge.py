@@ -384,6 +384,13 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			BooksBespokeQueries().call("getTopExpenses", ["2026-01-01"])
 
+	def test_non_string_names_are_rejected_before_reading_rows(self):
+		lookup = {"name": ["like", "%"]}
+		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
+			self.bridge.call("get", ["Party", lookup])
+		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
+			BooksBespokeQueries().call("getReturnBalanceItemsQty", ["SalesInvoice", lookup])
+
 	def test_list_reads_return_every_matching_row(self):
 		prefix = unique_name("Bridge Color")
 		for index in range(501):

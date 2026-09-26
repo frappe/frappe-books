@@ -117,6 +117,33 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		return_shipment.cancel()
 		self.assertEqual(frappe.db.get_value(shipment.doctype, shipment.name, "is_returned"), 0)
 
+	def test_shipped_serial_numbers_are_delivered_until_cancelled(self):
+		item, _cogs, _stock = self._tracked_item()
+		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)
+		serials = ["SHIP-A " + item.name, "SHIP-B " + item.name]
+		seed_stock(item.name, quantity=2, rate=10, serial_number="\n".join(serials))
+		shipment = frappe.get_doc(
+			{
+				"doctype": "Books Shipment",
+				"party": make_party(make_account("Receivable", account_type="Receivable").name).name,
+				"date": now_datetime(),
+				"items": [
+					{
+						"item": item.name,
+						"location": "Stores",
+						"quantity": 2,
+						"rate": 25,
+						"serial_number": "\n".join(serials),
+					}
+				],
+			}
+		).insert()
+		shipment.submit()
+		self.assertEqual(serial_statuses(serials), {"Delivered"})
+
+		shipment.cancel()
+		self.assertEqual(serial_statuses(serials), {"Active"})
+
 	def _make_invoice(self, item, account):
 		receivable = make_account("Receivable", account_type="Receivable")
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", account.name)
@@ -153,16 +180,23 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		).insert()
 
 
-def seed_stock(item, quantity, rate):
+def seed_stock(item, quantity, rate, serial_number=None):
+	row = {"item": item, "to_location": "Stores", "quantity": quantity, "rate": rate}
 	movement = frappe.get_doc(
 		{
 			"doctype": "Books Stock Movement",
 			"movement_type": "MaterialReceipt",
 			"date": now_datetime(),
-			"items": [{"item": item, "to_location": "Stores", "quantity": quantity, "rate": rate}],
+			"items": [{**row, "serial_number": serial_number}],
 		}
 	).insert(ignore_permissions=True)
 	movement.submit()
+
+
+def serial_statuses(serial_numbers):
+	return set(
+		frappe.get_all("Books Serial Number", filters={"name": ["in", serial_numbers]}, pluck="status")
+	)
 
 
 def transfer_balance(invoice):

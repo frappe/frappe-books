@@ -40,6 +40,7 @@ await build({
       export { call } from './src/web/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
+      export { getAmountInWords } from './src/utils/amountInWords';
     `,
     resolveDir: frontend,
   },
@@ -97,6 +98,7 @@ export const {
   call,
   errors,
   getInsufficientItems,
+  getAmountInWords,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

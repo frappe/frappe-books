@@ -22,7 +22,6 @@ import {
   setChildDocIdx,
   shouldApplyFormula,
 } from './helpers';
-import { setName } from './naming';
 import {
   Action,
   ChangeArg,
@@ -895,7 +894,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
   async _insert() {
     this._setBaseMetaValues();
     await this._preSync();
-    await setName(this, this.fyo);
 
     const validDict = this.getValidDict(false, true);
     const data = await this.fyo.db.insert(this.schemaName, validDict);

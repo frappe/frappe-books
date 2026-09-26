@@ -104,19 +104,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(source["account"], "Cash")
 		self.assertEqual(source["paymentAccount"], "Creditors")
 
-	def test_autoincrement_query_returns_latest_numeric_name(self):
-		first = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "First bridge enquiry"}).insert(
-			ignore_permissions=True
-		)
-		second = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Second bridge enquiry"}).insert(
-			ignore_permissions=True
-		)
-
-		self.assertEqual(
-			BooksBespokeQueries().call("getLastInserted", ["ItemEnquiry"]),
-			max(int(first.name), int(second.name)),
-		)
-
 	def test_crud_uses_interface_names_and_iso_datetimes(self):
 		name = unique_name("Web UOM")
 		inserted = self.bridge.insert("UOM", {"name": name, "isWhole": True})
@@ -192,12 +179,10 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		expense = make_account("Bridge Quote Expense", root_type="Expense", account_type="Expense Account")
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
-		name = unique_name("Bridge Quote")
 
 		inserted = self.bridge.insert(
 			"SalesQuote",
 			{
-				"name": name,
 				"numberSeries": "SQUOT-",
 				"party": party.name,
 				"date": now_datetime().isoformat(),
@@ -219,7 +204,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_value(
 				"Books Sales Quote",
-				name,
+				inserted["name"],
 				["reference_type", "entry_currency"],
 			),
 			("Books Party", "Party"),
@@ -366,11 +351,9 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		expense = make_account("Bridge Linked Expense", root_type="Expense", account_type="Expense Account")
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
-		invoice_name = unique_name("Bridge Linked Invoice")
-		self.bridge.insert(
+		invoice_name = self.bridge.insert(
 			"SalesInvoice",
 			{
-				"name": invoice_name,
 				"numberSeries": "SINV-",
 				"party": party.name,
 				"account": receivable.name,
@@ -386,7 +369,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 					}
 				],
 			},
-		)
+		)["name"]
 
 		rows = self.bridge.get_all(
 			"SalesInvoiceItem",
@@ -447,11 +430,9 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
-		invoice_name = unique_name("Bridge Sales Invoice")
-		self.bridge.insert(
+		invoice_name = self.bridge.insert(
 			"SalesInvoice",
 			{
-				"name": invoice_name,
 				"numberSeries": "SINV-",
 				"party": party.name,
 				"account": receivable.name,
@@ -468,7 +449,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 					}
 				],
 			},
-		)
+		)["name"]
 		invoice = frappe.get_doc("Books Sales Invoice", invoice_name)
 		self.assertEqual(len(invoice.items), 1)
 		self.assertEqual(invoice.items[0].parent, invoice_name)

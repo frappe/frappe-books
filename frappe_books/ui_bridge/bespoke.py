@@ -1,6 +1,5 @@
 """Aggregate queries used by the Books web interface."""
 
-import re
 from collections import defaultdict
 from typing import Any
 
@@ -9,11 +8,9 @@ from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
-from frappe_books.setup import max_numeric_name
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.mapping import target_doctype
 
-NUMERIC_AUTONAME = re.compile(r"format:\{#+\}")
 MONTH_FIELDS = [{"YEAR": "posting_date", "as": "year"}, {"MONTH": "posting_date", "as": "month"}]
 MONTH_GROUP = "year, month"
 DEBIT_MINUS_CREDIT = [{"SUB": [{"SUM": "debit"}, {"SUM": "credit"}], "as": "balance"}]
@@ -136,15 +133,6 @@ class BooksBespokeQueries:
 			raise frappe.PermissionError
 		return open_shift_name()
 
-	def last_inserted(self, source_schema: str) -> int:
-		"""Return the highest numeric name used by an autoincrement Books schema."""
-		target = target_doctype(source_schema)
-		if not NUMERIC_AUTONAME.fullmatch(frappe.get_meta(target).autoname or ""):
-			frappe.throw(f"{source_schema} does not use numeric names")
-		if not frappe.has_permission(target, ptype="read"):
-			raise frappe.PermissionError
-		return max_numeric_name(target)
-
 	def _monthly_balances(self, from_date, to_date, root_type, balance):
 		rows = self._ledger_totals(
 			from_date, to_date, {"account.root_type": root_type}, [*MONTH_FIELDS, *balance], MONTH_GROUP
@@ -221,5 +209,4 @@ _METHODS = {
 	"getReturnBalanceItemsQty": "return_balance",
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
-	"getLastInserted": "last_inserted",
 }

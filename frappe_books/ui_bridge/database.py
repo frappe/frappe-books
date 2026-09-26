@@ -130,12 +130,12 @@ class BooksDatabaseBridge:
 		if frappe.get_meta(target).issingle:
 			return self._update_single(source_schema, values)
 		doc = frappe.get_doc({"doctype": target, **self._target_values(source_schema, values)})
-		if values.get("name"):
-			doc.name = values["name"]
-			name_field = schema_mapping()[source_schema]["fields"].get("name")
-			if name_field and name_field != "name":
-				doc.set(name_field, values["name"])
-		doc.insert(set_name=values.get("name"))
+		# The server names series, autoincrement and random documents; the client names the rest.
+		name = values.get("name") if _is_named_by_user(doc.meta) else None
+		name_field = schema_mapping()[source_schema]["fields"].get("name")
+		if name and name_field != "name":
+			doc.set(name_field, name)
+		doc.insert(set_name=name)
 		return self._to_readable_source(source_schema, doc)
 
 	def update(self, source_schema: str, values: dict[str, Any]) -> dict:
@@ -372,6 +372,11 @@ class BooksDatabaseBridge:
 	def _is_password_field(self, meta, fieldname):
 		field = meta.get_field(fieldname)
 		return bool(field and field.fieldtype == "Password")
+
+
+def _is_named_by_user(meta) -> bool:
+	autoname = (meta.autoname or "").lower()
+	return autoname == "prompt" or autoname.startswith("field:")
 
 
 def _writable_doctype(source_schema: str) -> str:

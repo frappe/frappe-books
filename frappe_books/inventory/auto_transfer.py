@@ -49,7 +49,7 @@ def cancel_auto_transfer(invoice) -> None:
 	transfer = frappe.get_doc(doctype, invoice.back_reference)
 	if transfer.back_reference != invoice.name or transfer.docstatus != 1:
 		return
-	transfer.flags.ignore_links = True
+	transfer.ignore_linked_doctypes = (invoice.doctype,)
 	transfer.cancel()
 
 

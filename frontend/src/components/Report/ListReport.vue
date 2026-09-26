@@ -218,7 +218,7 @@ export default defineComponent({
         return 'text-ink-gray-6';
       }
 
-      const prec = this.fyo?.singles?.displayPrecision ?? 2;
+      const prec = this.fyo.singles.SystemSettings?.displayPrecision ?? 2;
       if (Number(cell.rawValue.toFixed(prec)) === 0) {
         return 'text-ink-gray-6';
       }

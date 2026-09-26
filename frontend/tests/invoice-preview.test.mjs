@@ -133,6 +133,9 @@ async function makeInvoice(respond) {
   fyo.doc.registerModels(models);
   fyo.singles.AccountingSettings = {};
   fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
+  for (const name of ['Service', 'Consulting', 'Other Service']) {
+    fyo.doc.getNewDoc('Item', { name });
+  }
   const invoice = fyo.doc.getNewDoc('SalesInvoice', {
     party: 'Customer',
     items: [{ item: 'Service', quantity: 2, rate: 100 }],

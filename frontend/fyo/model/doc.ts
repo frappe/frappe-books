@@ -871,12 +871,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return;
     }
 
-    let value: FormulaReturn;
-    try {
-      value = await formula(fieldname);
-    } catch {
-      return;
-    }
+    let value = await formula(fieldname);
 
     if (Array.isArray(value) && field.fieldtype === FieldTypeEnum.Table) {
       value = value.map((row) => this._getChildDoc(row, field.fieldname));

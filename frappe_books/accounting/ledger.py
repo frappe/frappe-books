@@ -95,7 +95,7 @@ def _validate(debits, credits):
 		_throw_unbalanced(debit, credit)
 	if debit == 0:
 		frappe.throw(_("Ledger posting total must be greater than zero."))
-	_validate_leaf_accounts({key.account for key in debits | credits})
+	validate_leaf_accounts({key.account for key in debits | credits})
 
 
 def _total(entries):
@@ -141,7 +141,7 @@ def delete_entries(voucher):
 	)
 
 
-def _validate_leaf_accounts(accounts):
+def validate_leaf_accounts(accounts):
 	rows = frappe.get_all(
 		"Books Account",
 		filters={"name": ["in", list(accounts)]},

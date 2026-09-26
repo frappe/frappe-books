@@ -34,7 +34,8 @@ def _validate_redemption(invoice):
 			_("Customer {0} has only {1} available loyalty points.").format(invoice.party, available)
 		)
 	amount = redemption_amount(invoice)
-	if amount > as_decimal(invoice.grand_total) + amount:
+	total_before_redemption = as_decimal(invoice.grand_total) + amount
+	if amount > total_before_redemption:
 		frappe.throw(_("Loyalty redemption cannot exceed the invoice total."))
 
 

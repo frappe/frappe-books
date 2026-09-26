@@ -34,6 +34,38 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertEqual(stock_quantity(item.name, "Stores"), 0)
 
 	def test_sales_invoice_creates_and_cancels_shipment(self):
+		invoice, item = self._sales_invoice(make_auto_stock_transfer=1)
+		invoice.submit()
+
+		shipment = frappe.get_doc("Books Shipment", invoice.reload().back_reference)
+		self.assertEqual(shipment.docstatus, 1)
+		self.assertEqual(shipment.back_reference, invoice.name)
+		self.assertEqual(stock_quantity(item, "Stores"), 3)
+		self.assertEqual([invoice.stock_not_transferred, invoice.items[0].stock_not_transferred], [0, 0])
+
+		invoice.cancel()
+		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 2)
+		self.assertEqual(stock_quantity(item, "Stores"), 5)
+
+	def test_return_without_original_transfer_does_not_ship_again(self):
+		original, item = self._sales_invoice()
+		original.submit()
+		return_invoice = frappe.get_doc(
+			{
+				"doctype": original.doctype,
+				"party": original.party,
+				"account": original.account,
+				"date": original.date,
+				"return_against": original.name,
+				"make_auto_stock_transfer": 1,
+				"items": [{"item": item, "rate": 100, "quantity": -2, "item_discount_percent": 10}],
+			}
+		).insert()
+
+		self.assertRaisesRegex(frappe.ValidationError, "no stock transfer to return", return_invoice.submit)
+		self.assertEqual(stock_quantity(item, "Stores"), 5)
+
+	def _sales_invoice(self, **values):
 		receivable = make_account("Auto Receivable", account_type="Receivable")
 		income = make_account("Auto Sales", root_type="Income", account_type="Income Account")
 		cogs = make_account("Auto COGS", root_type="Expense", account_type="Cost of Goods Sold")
@@ -44,33 +76,20 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock.name)
 		frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received.name)
 		frappe.db.set_single_value("Books Defaults", "shipment_location", "Stores")
-		party = make_party(receivable.name)
 		item = make_item(income.name, cogs.name, track_item=1, rate=10)
-		receipt = make_movement(
+		make_movement(
 			"MaterialReceipt",
 			[{"item": item.name, "to_location": "Stores", "quantity": 5, "rate": 10}],
-		)
-		receipt.submit()
-
+		).submit()
 		invoice = make_invoice(
 			"Books Sales Invoice",
-			party.name,
+			make_party(receivable.name).name,
 			receivable.name,
 			item.name,
 			income.name,
-			make_auto_stock_transfer=1,
+			**values,
 		)
-		invoice.submit()
-
-		shipment = frappe.get_doc("Books Shipment", invoice.reload().back_reference)
-		self.assertEqual(shipment.docstatus, 1)
-		self.assertEqual(shipment.back_reference, invoice.name)
-		self.assertEqual(stock_quantity(item.name, "Stores"), 3)
-		self.assertEqual([invoice.stock_not_transferred, invoice.items[0].stock_not_transferred], [0, 0])
-
-		invoice.cancel()
-		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 2)
-		self.assertEqual(stock_quantity(item.name, "Stores"), 5)
+		return invoice, item.name
 
 	def test_foreign_currency_receipt_uses_base_currency_rate(self):
 		payable = make_account("FX Payable", root_type="Liability", account_type="Payable")

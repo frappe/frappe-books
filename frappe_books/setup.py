@@ -40,7 +40,7 @@ DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
 
 
 def bootstrap():
-	"""Seed the records every Books site needs."""
+	"""Seed the records every Books site needs. Runs after install and before tests."""
 	for prefix, (reference_type, _field) in DEFAULT_NUMBER_SERIES.items():
 		values = {"start": DEFAULT_SERIES_START, "pad_zeros": 4, "reference_type": reference_type}
 		_insert_if_missing("Books Number Series", prefix, values)
@@ -49,45 +49,43 @@ def bootstrap():
 	_insert_if_missing("Books Location", "Stores", {})
 	_insert_if_missing("Books Payment Method", "Cash", {"type": "Cash"})
 	for name, template_spec in DEFAULT_PRINT_TEMPLATES.items():
-		_sync_default_print_template(name, template_spec)
-	_sync_default_print_template_settings()
+		_insert_if_missing("Books Print Template", name, _print_template_values(template_spec))
+	_fill_default_print_templates()
 
 
 def after_migrate():
-	bootstrap()
+	"""Update shipped templates only. Records a user deleted or changed stay that way."""
+	update_standard_print_templates()
 	sync_all_custom_forms()
 
 
-def _sync_default_print_template_settings():
-	settings = frappe.get_single("Books Defaults")
-	if all(settings.get(fieldname) == value for fieldname, value in DEFAULT_PRINT_TEMPLATE_FIELDS.items()):
-		return
+def update_standard_print_templates():
+	filters = {"name": ["in", list(DEFAULT_PRINT_TEMPLATES)], "is_custom": 0}
+	for name in frappe.get_all("Books Print Template", filters=filters, pluck="name"):
+		template = frappe.get_doc("Books Print Template", name)
+		values = _print_template_values(DEFAULT_PRINT_TEMPLATES[name])
+		if any(template.get(fieldname) != value for fieldname, value in values.items()):
+			template.update(values)
+			template.save(ignore_permissions=True)
 
-	settings.update(DEFAULT_PRINT_TEMPLATE_FIELDS)
-	settings.save(ignore_permissions=True)
+
+def _fill_default_print_templates():
+	defaults = frappe.get_single("Books Defaults")
+	empty = {field: name for field, name in DEFAULT_PRINT_TEMPLATE_FIELDS.items() if not defaults.get(field)}
+	if empty:
+		defaults.update(empty)
+		defaults.save(ignore_permissions=True)
 
 
-def _sync_default_print_template(name, template_spec):
+def _print_template_values(template_spec):
 	document_type, filename, width, height = template_spec
-	values = {
+	return {
 		"type": document_type,
 		"template": (PRINT_TEMPLATE_DIRECTORY / filename).read_text(),
 		"width": width,
 		"height": height,
 		"is_custom": 0,
 	}
-	if not frappe.db.exists("Books Print Template", name):
-		frappe.get_doc({"doctype": "Books Print Template", "name": name, **values}).insert(
-			ignore_permissions=True
-		)
-		return
-
-	template = frappe.get_doc("Books Print Template", name)
-	if template.is_custom or all(template.get(fieldname) == value for fieldname, value in values.items()):
-		return
-
-	template.update(values)
-	template.save(ignore_permissions=True)
 
 
 def _insert_if_missing(doctype, name, values):

@@ -40,7 +40,8 @@ class IntegrationTestInstallation(IntegrationTestCase):
 				with self.subTest(doctype=doctype, fieldname=fieldname):
 					self.assertFalse(meta.get_field(fieldname).default)
 
-	def test_print_template_defaults_are_seeded_after_records(self):
+	def test_print_template_defaults_fill_empty_links(self):
+		frappe.db.set_single_value("Books Defaults", dict.fromkeys(DEFAULT_PRINT_TEMPLATE_FIELDS))
 		bootstrap()
 		settings = frappe.get_single("Books Defaults")
 

@@ -14,6 +14,7 @@ from frappe_books.tests.accounting import ledger_entries, make_account, make_inv
 
 class IntegrationTestPrFixes(IntegrationTestCase):
 	def setUp(self):
+		frappe.db.set_single_value("Books System Settings", "currency", "INR")
 		self.cash = make_account("PR Cash", account_type="Cash")
 		self.income = make_account("PR Income", root_type="Income")
 		self.expense = make_account("PR Expense", root_type="Expense")

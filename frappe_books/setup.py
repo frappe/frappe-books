@@ -3,16 +3,10 @@
 from pathlib import Path
 
 import frappe
-from frappe.query_builder.functions import Cast_, Max
 
 from frappe_books.customization import sync_all_custom_forms
 
 DEFAULT_SERIES_START = 1001
-NUMERIC_NAME_DOCTYPES = (
-	"Books Item Enquiry",
-	"Books Ledger Entry",
-	"Books Stock Ledger Entry",
-)
 DEFAULT_PRINT_TEMPLATES = {
 	"Business - Quote": ("SalesQuote", "business_print_template.html", 21, 29.7),
 	"Business - Sales Invoice": ("SalesInvoice", "business_print_template.html", 21, 29.7),
@@ -50,41 +44,13 @@ def after_install():
 
 def before_tests():
 	ensure_number_series()
-	ensure_numeric_name_series()
 	ensure_default_records()
 
 
 def after_migrate():
 	ensure_number_series()
-	ensure_numeric_name_series()
 	ensure_default_records()
 	sync_all_custom_forms()
-
-
-def ensure_numeric_name_series():
-	"""Keep formatted numeric names ahead of legacy autoincrement rows."""
-	maximum = max((max_numeric_name(doctype) for doctype in NUMERIC_NAME_DOCTYPES), default=0)
-	if not maximum:
-		return
-
-	series = frappe.qb.DocType("Series")
-	current = frappe.qb.from_(series).select(series.current).where(series.name == "").run()
-	if current:
-		if int(current[0][0] or 0) < maximum:
-			frappe.qb.update(series).set(series.current, maximum).where(series.name == "").run()
-		return
-
-	frappe.qb.into(series).columns(series.name, series.current).insert("", maximum).run()
-
-
-def max_numeric_name(doctype):
-	"""Return the largest integer name in a doctype whose names are all numeric."""
-	if not frappe.db.table_exists(doctype):
-		return 0
-	table = frappe.qb.DocType(doctype)
-	name_type = "signed" if frappe.db.db_type == "mariadb" else "bigint"
-	maximum = frappe.qb.from_(table).select(Max(Cast_(table.name, name_type))).run()[0][0]
-	return int(maximum or 0)
 
 
 def ensure_number_series():

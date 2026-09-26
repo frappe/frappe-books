@@ -3,8 +3,10 @@ from itertools import pairwise
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_to_date, now_datetime, nowdate
 
-from frappe_books.tests.accounting import make_account, unique_name
+from frappe_books.tests.accounting import make_account, make_item, unique_name
+from frappe_books.tests.test_valuation import move
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 VOUCHER = "Books Journal Entry"
@@ -141,3 +143,48 @@ def _periods(*dates):
 
 def _rows_by_account(sections):
 	return {row["name"]: row for section in sections for row in section["accounts"]}
+
+
+class IntegrationTestStockReports(IntegrationTestCase):
+	def setUp(self):
+		self.queries = BooksBespokeQueries()
+		income = make_account("Stock Report Income", root_type="Income")
+		expense = make_account("Stock Report Expense", root_type="Expense")
+		self.item = make_item(income.name, expense.name, track_item=1).name
+		now = now_datetime()
+		move(self.item, "MaterialReceipt", 4, 10, add_to_date(now, days=-3))
+		move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, days=-2))
+		move(self.item, "MaterialIssue", 5, 99, now)
+
+	def test_stock_ledger_reads_the_stored_fifo_balances(self):
+		rows = self.queries.call("getStockLedger", [{"item": self.item, "ascending": True}])
+
+		columns = (
+			"quantity",
+			"balanceQuantity",
+			"valueChange",
+			"balanceValue",
+			"incomingRate",
+			"valuationRate",
+		)
+		self.assertEqual(
+			[tuple(row[column] for column in columns) for row in rows],
+			[
+				_decimals(4, 4, 40, 40, 10, 10),
+				_decimals(2, 6, 40, 80, 20, "13.33"),
+				_decimals(-5, 1, -60, 20, 12, 20),
+			],
+		)
+
+	def test_stock_balance_splits_opening_and_period_movement(self):
+		today = nowdate()
+		rows = self.queries.call("getStockBalance", [{"item": self.item, "fromDate": today, "toDate": today}])
+
+		self.assertEqual(len(rows), 1)
+		columns = ("openingQuantity", "openingValue", "outgoingQuantity", "outgoingValue", "balanceValue")
+		self.assertEqual(tuple(rows[0][column] for column in columns), _decimals(6, 80, 5, 60, 20))
+		self.assertEqual((rows[0]["balanceQuantity"], rows[0]["valuationRate"]), _decimals(1, 20))
+
+
+def _decimals(*values):
+	return tuple(Decimal(str(value)) for value in values)

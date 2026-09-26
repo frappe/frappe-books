@@ -35,6 +35,7 @@ await build({
       export { validateSinv } from './src/utils/pos';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
+      export { getReturnItems } from './models/returnItems';
     `,
     resolveDir: frontend,
   },
@@ -87,6 +88,7 @@ export const {
   validateSinv,
   FrappeDatabaseDemux,
   GSTR1,
+  getReturnItems,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

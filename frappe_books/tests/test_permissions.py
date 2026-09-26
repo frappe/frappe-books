@@ -1,9 +1,11 @@
 from unittest.mock import patch
 
 import frappe
+from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, make_tax
+from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 RIGHTS = ("read", "write", "create", "delete", "submit", "cancel", "amend")
@@ -71,6 +73,23 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with patch.object(email, "permlevel", 1), self.set_user(TEST_USER):
 			self.assertIsNone(BooksDatabaseBridge().get("Party", party.name).get("email"))
 
+	def test_return_balance_ignores_returns_the_user_cannot_read(self):
+		original = _seed_shipment()
+		_seed_shipment(return_against=original)
+		add_user_permission("Books Shipment", original, TEST_USER)
+		with self.set_user(TEST_USER):
+			balance = BooksBespokeQueries().call("getReturnBalanceItemsQty", ["Shipment", original])
+		self.assertIsNone(balance)
+
+	def test_pos_amounts_require_invoice_read(self):
+		def has_permission(doctype, ptype="read", throw=False, **kwargs):
+			if doctype == "Books Sales Invoice":
+				raise frappe.PermissionError
+			return True
+
+		with patch("frappe.has_permission", has_permission), self.assertRaises(frappe.PermissionError):
+			BooksBespokeQueries().call("getPOSTransactedAmount", ["2031-01-01", "2031-01-02"])
+
 	def _make_invoice_as_books_user(self):
 		receivable = make_account("Permission Receivable", account_type="Receivable")
 		income = make_account("Permission Income", root_type="Income", account_type="Income Account")
@@ -85,3 +104,18 @@ class IntegrationTestPermissions(IntegrationTestCase):
 def _role_rights(doctype, role):
 	rows = [row for row in frappe.get_meta(doctype).permissions if row.role == role and not row.permlevel]
 	return {right for right in RIGHTS for row in rows if row.get(right)}
+
+
+def _seed_shipment(return_against=None):
+	doc = frappe.get_doc(
+		{
+			"doctype": "Books Shipment",
+			"name": frappe.generate_hash(),
+			"docstatus": 1,
+			"return_against": return_against,
+			"items": [{"item": "Keyboard", "quantity": 1}],
+		}
+	)
+	doc.db_insert()
+	doc.items[0].db_insert()
+	return doc.name

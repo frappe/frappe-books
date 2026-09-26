@@ -15,6 +15,7 @@ from frappe_books.ui_bridge.database import BooksDatabaseBridge
 class IntegrationTestCustomFields(IntegrationTestCase):
 	def setUp(self):
 		self.bridge = BooksDatabaseBridge()
+		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
 
 	def test_custom_fields_are_materialized_and_round_trip(self):
 		fieldname = "hostedBridgeTestValue"

@@ -24,7 +24,7 @@ from frappe_books.ui_bridge.mapping import (
 
 READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "close"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
-PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "StockLedgerEntry"}
+PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
 INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__expectedModified"}
 # Frappe maintains nested-set indices when the document is saved.

@@ -421,12 +421,15 @@ class BooksDatabaseBridge:
 		)
 
 	def _order_by(self, source_schema, order_by, order):
-		if not order_by:
-			return None
+		"""Match Books' getAll defaults: `created` (non-child schemas only) and `desc`."""
 		if order not in {None, "asc", "desc"}:
 			frappe.throw("Books sort order must be asc or desc")
+		if not order_by and not frappe.get_meta(target_doctype(source_schema)).istable:
+			order_by = "created"
+		if not order_by:
+			return None
 		fields = [order_by] if isinstance(order_by, str) else order_by
-		return ", ".join(f"{target_field(source_schema, field)} {order or 'asc'}" for field in fields)
+		return ", ".join(f"{target_field(source_schema, field)} {order or 'desc'}" for field in fields)
 
 	def _group_by(self, source_schema, group_by):
 		if not group_by:

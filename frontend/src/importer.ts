@@ -150,54 +150,55 @@ export class Importer {
   }
 
   async checkLinks() {
-    const tfKeys = this.assignedTemplateFields
-      .map((key, index) => ({
-        key,
-        index,
-        tf: this.templateFieldsMap.get(key ?? ''),
-      }))
-      .filter(({ key, tf }) => {
-        if (!key || !tf) {
-          return false;
-        }
-
-        return tf.fieldtype === FieldTypeEnum.Link;
-      }) as { key: string; index: number; tf: TemplateField }[];
-
-    const linksNames: Map<string, Set<string>> = new Map();
-    for (const row of this.valueMatrix) {
-      for (const { tf, index } of tfKeys) {
-        const target = (tf as TargetField).target;
-        const value = row[index]?.value;
-        if (typeof value !== 'string' || !value) {
-          continue;
-        }
-
-        if (!linksNames.has(target)) {
-          linksNames.set(target, new Set());
-        }
-
-        linksNames.get(target)?.add(value);
-      }
-    }
-
     const doesNotExist = [];
-    for (const [target, values] of linksNames.entries()) {
-      for (const value of values) {
-        const exists = await this.fyo.db.exists(target, value);
-        if (exists) {
-          continue;
-        }
-
+    for (const [target, values] of this.getLinkValues()) {
+      for (const name of await this.getMissingNames(target, values)) {
         doesNotExist.push({
           schemaName: target,
-          schemaLabel: this.fyo.schemaMap[this.schemaName]?.label,
-          name: value,
+          schemaLabel: this.fyo.schemaMap[target]?.label,
+          name,
         });
       }
     }
 
     return doesNotExist;
+  }
+
+  /** Values of the picked Link columns, grouped by linked schema. */
+  getLinkValues(): Map<string, Set<string>> {
+    const linkColumns = this.assignedTemplateFields
+      .map((key, index) => ({ index, tf: this.templateFieldsMap.get(key ?? '') }))
+      .filter(({ tf }) => tf?.fieldtype === FieldTypeEnum.Link) as {
+      index: number;
+      tf: TargetField;
+    }[];
+
+    const linkValues: Map<string, Set<string>> = new Map();
+    for (const row of this.valueMatrix) {
+      for (const { tf, index } of linkColumns) {
+        const value = row[index]?.value;
+        if (typeof value !== 'string' || !value) {
+          continue;
+        }
+
+        if (!linkValues.has(tf.target)) {
+          linkValues.set(tf.target, new Set());
+        }
+
+        linkValues.get(tf.target)!.add(value);
+      }
+    }
+
+    return linkValues;
+  }
+
+  async getMissingNames(target: string, names: Set<string>) {
+    const existing = await this.fyo.db.getAll(target, {
+      fields: ['name'],
+      filters: { name: ['in', [...names]] },
+    });
+    const existingNames = new Set(existing.map(({ name }) => name));
+    return [...names].filter((name) => !existingNames.has(name));
   }
 
   checkCellErrors() {

@@ -10,6 +10,7 @@ frappe_books.patches.line_discounts
 frappe_books.patches.currency_display
 frappe_books.patches.currency_fraction_metadata
 frappe_books.patches.submit_pos_shifts
+frappe_books.patches.store_stock_valuation
 # Patches added in this section will be executed after doctypes are migrated
 
 [post_fixture_sync]

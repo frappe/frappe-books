@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.inventory.valuation import delete_entries, insert_entry
 
 
 def stock_quantity(item, location, batch=None, serial_number=None):
@@ -53,10 +54,7 @@ def cancel_stock_entries(transaction, transfers):
 
 
 def delete_stock_entries(transaction):
-	frappe.db.delete(
-		"Books Stock Ledger Entry",
-		{"reference_type": transaction.doctype, "reference_name": transaction.name},
-	)
+	delete_entries(transaction.doctype, transaction.name)
 
 
 def populate_stock_row(row):
@@ -136,9 +134,8 @@ def _create_location_entries(transaction, transfer, quantity, serial_number):
 
 
 def _create_stock_entry(transaction, transfer, location, quantity, serial_number):
-	frappe.get_doc(
+	insert_entry(
 		{
-			"doctype": "Books Stock Ledger Entry",
 			"date": transaction.date,
 			"location": location,
 			"batch": transfer.get("batch"),
@@ -149,7 +146,7 @@ def _create_stock_entry(transaction, transfer, location, quantity, serial_number
 			"reference_type": transaction.doctype,
 			"reference_name": transaction.name,
 		}
-	).insert(ignore_permissions=True)
+	)
 
 
 def _update_serial_statuses(transaction, transfer, serial_numbers, cancel):

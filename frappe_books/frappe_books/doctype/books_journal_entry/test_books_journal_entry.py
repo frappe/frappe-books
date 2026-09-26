@@ -77,6 +77,19 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		self.assertEqual(flt(sum(entry.debit for entry in entries), 2), 0.3)
 		self.assertEqual(flt(sum(entry.credit for entry in entries), 2), 0.3)
 
+	def test_posts_amounts_rounded_to_currency(self):
+		journal_entry = make_journal_entry(
+			[
+				{"account": self.cash.name, "debit": 10.005},
+				{"account": self.equity.name, "credit": 10.005},
+			]
+		)
+		journal_entry.submit()
+
+		entries = get_ledger_entries(journal_entry.name)
+		self.assertEqual(sum(to_decimal(entry.debit) for entry in entries), Decimal("10.01"))
+		self.assertEqual(sum(to_decimal(entry.credit) for entry in entries), Decimal("10.01"))
+
 
 def make_account(account_name, root_type="Asset"):
 	return frappe.get_doc(

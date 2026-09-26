@@ -177,25 +177,14 @@ export class Fyo {
       return undefined;
     }
 
-    let doc: Doc;
-    let value: DocValue | Doc[];
-    try {
-      doc = await this.doc.getDoc(schemaName, name);
-      value = doc.get(fieldname);
-    } catch {
-      value = undefined;
+    const cachedDoc = this.docs.get(schemaName)?.[name];
+    if (cachedDoc) {
+      return cachedDoc.get(fieldname);
     }
 
-    if (value === undefined && schemaName === name) {
-      const sv = await this.db.getSingleValues({
-        fieldname: fieldname,
-        parent: schemaName,
-      });
-
-      return sv?.[0]?.value;
-    }
-
-    return value;
+    // A missing document reads as an empty map.
+    const values = await this.db.get(schemaName, name, fieldname);
+    return values[fieldname] as DocValue | undefined;
   }
 
   store = {

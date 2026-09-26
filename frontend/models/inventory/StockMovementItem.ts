@@ -79,46 +79,7 @@ export class StockMovementItem extends TransferItem {
         name: ['in', validUoms],
       };
     },
-    batch: async (doc: Doc) => {
-      let suggestedBatch: string | undefined;
-      let hasBatch = false;
-
-      if (doc.parentdoc?.movementType === MovementTypeEnum.MaterialReceipt) {
-        hasBatch = !!(await doc.fyo.getValue(
-          ModelNameEnum.Item,
-          doc.item as string,
-          'hasBatch'
-        ));
-
-        if (hasBatch) {
-          suggestedBatch = await getSuggestedBatchName(
-            doc.fyo,
-            doc.item as string
-          );
-
-          if (suggestedBatch) {
-            await doc.set('batch', suggestedBatch);
-          }
-        }
-      }
-
-      const batches = await doc.fyo.db.getAll(ModelNameEnum.Batch, {
-        fields: ['name'],
-        filters: { item: doc.item as string },
-      });
-      const existingBatchNames = batches.map((b) => b.name) as string[];
-
-      const allBatches = new Set<string>(existingBatchNames);
-      if (suggestedBatch) {
-        allBatches.add(suggestedBatch);
-      }
-
-      const finalBatchList = Array.from(allBatches);
-
-      return {
-        name: ['in', finalBatchList],
-      };
-    },
+    batch: (doc: Doc) => ({ item: doc.item as string }),
   };
 
   formulas: FormulaMap = {
@@ -274,18 +235,16 @@ export class StockMovementItem extends TransferItem {
         );
       }
     },
-    batch: async () => {
-      if (!this.item || !this.batch) return;
-
-      const batchDoc = await this.fyo.doc.getDoc(
+    batch: async (value: DocValue) => {
+      // A new batch has no record until the movement saves.
+      const batchItem = await this.fyo.getValue(
         ModelNameEnum.Batch,
-        this.batch
+        value as string,
+        'item'
       );
-      if (!batchDoc) return;
-
-      if (batchDoc.item !== this.item) {
+      if (this.item && batchItem && batchItem !== this.item) {
         throw new ValidationError(
-          t`Batch ${this.batch} does not belong to Item ${this.item}`
+          t`Batch ${value as string} does not belong to Item ${this.item}`
         );
       }
     },

@@ -1,4 +1,4 @@
-import { Fyo, t } from 'fyo';
+import { Fyo } from 'fyo';
 import {
   Action,
   DefaultMap,
@@ -6,13 +6,16 @@ import {
   FormulaMap,
   ListViewSettings,
 } from 'fyo/model/types';
-import { ValidationError } from 'fyo/utils/errors';
-import { getDocStatusListColumn, getLedgerLinkAction } from 'models/helpers';
+import {
+  addItem,
+  getDocStatusListColumn,
+  getLedgerLinkAction,
+} from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { StockMovementItem } from './StockMovementItem';
 import { Transfer } from './Transfer';
-import { createMissingBatches, generateBatchForItem } from './helpers';
+import { createMissingBatches } from './helpers';
 import { MovementType, MovementTypeEnum } from './types';
 
 export class StockMovement extends Transfer {
@@ -83,39 +86,6 @@ export class StockMovement extends Transfer {
   }
 
   async addItem(name: string) {
-    const itemDoc = await this.fyo.doc.getDoc(ModelNameEnum.Item, name);
-    if (!itemDoc) {
-      throw new ValidationError(t`Item ${name} not found`);
-    }
-
-    let batch: string | null | undefined =
-      (itemDoc.defaultBatch as string | null | undefined) ?? null;
-
-    if (
-      this.movementType === MovementTypeEnum.MaterialReceipt &&
-      itemDoc.hasBatch &&
-      !batch
-    ) {
-      batch = await generateBatchForItem(this.fyo, name);
-    }
-
-    const item = {
-      name: itemDoc.name,
-      batch,
-    };
-
-    if (item.batch) {
-      const batchDoc = await this.fyo.doc.getDoc(
-        ModelNameEnum.Batch,
-        item.batch
-      );
-      if (batchDoc && batchDoc.item !== name) {
-        throw new ValidationError(
-          t`Batch ${item.batch} does not belong to Item ${name}`
-        );
-      }
-    }
-
-    return item;
+    return await addItem(name, this);
   }
 }

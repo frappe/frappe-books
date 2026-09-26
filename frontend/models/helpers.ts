@@ -42,10 +42,7 @@ import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
 import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
-import {
-  generateSerialNumbersForItem,
-  generateBatchForItem,
-} from './inventory/helpers';
+import { generateSerialNumbersForItem } from './inventory/helpers';
 
 export function getQuoteActions(
   fyo: Fyo,
@@ -798,13 +795,6 @@ export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
   }
 
   await item.set('item', name);
-
-  if (doc instanceof Invoice && !doc.isSales) {
-    const batchName = await generateBatchForItem(doc.fyo, name);
-    if (batchName) {
-      await item.set('batch', batchName);
-    }
-  }
 
   if (
     doc instanceof StockTransfer &&

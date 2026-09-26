@@ -8,9 +8,7 @@ import type { StockMovement } from './StockMovement';
 import type { StockMovementItem } from './StockMovementItem';
 import { StockTransfer } from './StockTransfer';
 import type { StockTransferItem } from './StockTransferItem';
-import { Transfer } from './Transfer';
 import { TransferItem } from './TransferItem';
-import type { SerialNumberStatus } from './types';
 import BatchSeries from 'fyo/models/BatchSeries';
 import SerialNumberSeries from 'fyo/models/SerialNumberSeries';
 
@@ -241,36 +239,6 @@ export function getSerialNumberFromDoc(doc: StockTransfer | StockMovement) {
     .filter(Boolean);
 }
 
-export async function createSerialNumbers(doc: Transfer) {
-  const items = doc.items ?? [];
-  const serialNumberCreateList = items
-    .map((item) => {
-      const serialNumbers = getSerialNumbers(item.serialNumber ?? '');
-      return serialNumbers.map((serialNumber) => ({
-        item: item.item ?? '',
-        serialNumber,
-        isIncoming: isSerialNumberIncoming(item),
-      }));
-    })
-    .flat()
-    .filter(({ item, isIncoming }) => isIncoming && item);
-
-  for (const { item, serialNumber } of serialNumberCreateList) {
-    if (await doc.fyo.db.exists(ModelNameEnum.SerialNumber, serialNumber)) {
-      continue;
-    }
-
-    const snDoc = doc.fyo.doc.getNewDoc(ModelNameEnum.SerialNumber, {
-      name: serialNumber,
-      item,
-    });
-
-    const status: SerialNumberStatus = 'Active';
-    await snDoc.set('status', status);
-    await snDoc.sync();
-  }
-}
-
 function isSerialNumberIncoming(item: TransferItem) {
   if (item.parentdoc?.schemaName === ModelNameEnum.Shipment) {
     return false;
@@ -292,84 +260,6 @@ export async function canValidateSerialNumber(
   }
 
   return await item.fyo.db.exists(ModelNameEnum.SerialNumber, serialNumber);
-}
-
-export async function updateSerialNumbers(
-  doc: StockTransfer | StockMovement,
-  isCancel: boolean,
-  isReturn = false
-) {
-  for (const row of doc.items ?? []) {
-    if (!row.serialNumber) {
-      continue;
-    }
-
-    const status = getSerialNumberStatus(doc, row, isCancel, isReturn);
-    await updateSerialNumberStatus(status, row.serialNumber, doc.fyo);
-  }
-}
-
-async function updateSerialNumberStatus(
-  status: SerialNumberStatus,
-  serialNumber: string,
-  fyo: Fyo
-) {
-  for (const name of getSerialNumbers(serialNumber)) {
-    const doc = await fyo.doc.getDoc(ModelNameEnum.SerialNumber, name);
-    await doc.setAndSync('status', status);
-  }
-}
-
-function getSerialNumberStatus(
-  doc: StockTransfer | StockMovement,
-  item: StockTransferItem | StockMovementItem,
-  isCancel: boolean,
-  isReturn: boolean
-): SerialNumberStatus {
-  if (doc.schemaName === ModelNameEnum.Shipment) {
-    if (isReturn) {
-      return isCancel ? 'Delivered' : 'Active';
-    }
-    return isCancel ? 'Active' : 'Delivered';
-  }
-
-  if (doc.schemaName === ModelNameEnum.PurchaseReceipt) {
-    if (isReturn) {
-      return isCancel ? 'Active' : 'Delivered';
-    }
-    return isCancel ? 'Inactive' : 'Active';
-  }
-
-  return getSerialNumberStatusForStockMovement(
-    doc as StockMovement,
-    item,
-    isCancel
-  );
-}
-
-function getSerialNumberStatusForStockMovement(
-  doc: StockMovement,
-  item: StockTransferItem | StockMovementItem,
-  isCancel: boolean
-): SerialNumberStatus {
-  if (doc.movementType === 'MaterialIssue') {
-    return isCancel ? 'Active' : 'Delivered';
-  }
-
-  if (doc.movementType === 'MaterialReceipt') {
-    return isCancel ? 'Inactive' : 'Active';
-  }
-
-  if (doc.movementType === 'MaterialTransfer') {
-    return 'Active';
-  }
-
-  // MovementType is Manufacture
-  if (item.fromLocation) {
-    return isCancel ? 'Active' : 'Delivered';
-  }
-
-  return isCancel ? 'Inactive' : 'Active';
 }
 
 export async function generateSerialNumbersForItem(

@@ -22,7 +22,6 @@ import { Transfer } from './Transfer';
 import {
   canValidateSerialNumber,
   getSerialNumberFromDoc,
-  updateSerialNumbers,
   validateBatch,
   validateSerialNumber,
   generateSerialNumbersForItem,
@@ -106,165 +105,11 @@ export abstract class StockTransfer extends Transfer {
     }),
   };
 
-  override _getTransferDetails() {
-    return (this.items ?? []).map((row) => {
-      let fromLocation = undefined;
-      let toLocation = undefined;
-
-      if (this.isSales) {
-        fromLocation = row.location;
-      } else {
-        toLocation = row.location;
-      }
-
-      return {
-        item: row.item!,
-        rate: row.rate!,
-        quantity: row.quantity!,
-        batch: row.batch!,
-        serialNumber: row.serialNumber!,
-        isReturn: row.isReturn,
-        fromLocation,
-        toLocation,
-      };
-    });
-  }
-
   override async validate(): Promise<void> {
     await super.validate();
     await validateBatch(this);
     await validateSerialNumber(this);
     await validateSerialNumberStatus(this);
-    await this._validateHasReturnDocs();
-  }
-
-  async afterSubmit() {
-    await super.afterSubmit();
-    await updateSerialNumbers(this, false, this.isReturn);
-    await this._updateBackReference();
-    await this._updateItemsReturned();
-  }
-
-  async afterCancel(): Promise<void> {
-    await super.afterCancel();
-    await updateSerialNumbers(this, true, this.isReturn);
-    await this._updateBackReference();
-    await this._updateItemsReturned();
-  }
-
-  async _updateBackReference() {
-    if (!this.isCancelled && !this.isSubmitted) {
-      return;
-    }
-
-    if (!this.backReference) {
-      return;
-    }
-
-    const schemaName = this.isSales
-      ? ModelNameEnum.SalesInvoice
-      : ModelNameEnum.PurchaseInvoice;
-
-    const invoice = (await this.fyo.doc.getDoc(
-      schemaName,
-      this.backReference
-    )) as Invoice;
-    const transferMap = this._getTransferMap();
-
-    for (const row of invoice.items ?? []) {
-      const item = row.item!;
-      const quantity = row.quantity!;
-      const notTransferred = (row.stockNotTransferred as number) ?? 0;
-
-      const transferred = transferMap[item];
-      if (
-        typeof transferred !== 'number' ||
-        typeof notTransferred !== 'number'
-      ) {
-        continue;
-      }
-
-      if (this.isCancelled) {
-        await row.set(
-          'stockNotTransferred',
-          Math.min(notTransferred + transferred, quantity)
-        );
-        transferMap[item] = Math.max(
-          transferred + notTransferred - quantity,
-          0
-        );
-      } else {
-        await row.set(
-          'stockNotTransferred',
-          Math.max(notTransferred - transferred, 0)
-        );
-        transferMap[item] = Math.max(transferred - notTransferred, 0);
-      }
-    }
-
-    const notTransferred = invoice.getStockNotTransferred();
-    await invoice.setAndSync('stockNotTransferred', notTransferred);
-  }
-
-  async _updateItemsReturned() {
-    if (!this.returnAgainst) {
-      return;
-    }
-
-    const linkedReference = await this.loadAndGetLink('returnAgainst');
-    if (!linkedReference) {
-      return;
-    }
-
-    const referenceDoc = await this.fyo.doc.getDoc(
-      this.schemaName,
-      linkedReference.name
-    );
-
-    const isReturned = this.isSubmitted;
-    await referenceDoc.setAndSync({ isReturned });
-  }
-
-  async _validateHasReturnDocs() {
-    if (!this.name || !this.isCancelled) {
-      return;
-    }
-
-    const returnDocs = await this.fyo.db.getAll(this.schemaName, {
-      filters: { returnAgainst: this.name },
-    });
-
-    const hasReturnDocs = !!returnDocs.length;
-    if (!hasReturnDocs) {
-      return;
-    }
-
-    const returnDocNames = returnDocs.map((doc) => doc.name).join(', ');
-    const label = this.fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
-
-    throw new ValidationError(
-      t`Cannot cancel ${this.schema.label} ${this.name} because of the following ${label}: ${returnDocNames}`
-    );
-  }
-
-  _getTransferMap() {
-    return (this.items ?? []).reduce(
-      (acc, item) => {
-        if (!item.item) {
-          return acc;
-        }
-
-        if (!item.quantity) {
-          return acc;
-        }
-
-        acc[item.item] ??= 0;
-        acc[item.item] += item.quantity;
-
-        return acc;
-      },
-      {} as Record<string, number>
-    );
   }
 
   override duplicate(): Doc {

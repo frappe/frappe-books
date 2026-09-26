@@ -15,10 +15,8 @@ import { StockMovementItem } from './StockMovementItem';
 import { Transfer } from './Transfer';
 import {
   canValidateSerialNumber,
-  createBatch,
   generateBatchForItem,
   getSerialNumberFromDoc,
-  updateSerialNumbers,
   validateBatch,
   validateSerialNumber,
 } from './helpers';
@@ -55,52 +53,6 @@ export class StockMovement extends Transfer {
     await validateBatch(this);
     await validateSerialNumber(this);
     await validateSerialNumberStatus(this);
-  }
-
-  async afterSubmit(): Promise<void> {
-    await super.afterSubmit();
-    await updateSerialNumbers(this, false);
-  }
-
-  async beforeSubmit(): Promise<void> {
-    await super.beforeSubmit();
-
-    const batchesToCreate: { item: string; batch: string }[] = [];
-
-    for (const item of this.items ?? []) {
-      if (!item.item || !item.batch) {
-        continue;
-      }
-
-      const hasBatch = await this.fyo.getValue(
-        ModelNameEnum.Item,
-        item.item,
-        'hasBatch'
-      );
-
-      if (hasBatch) {
-        const batchExists = await this.fyo.db.exists(
-          ModelNameEnum.Batch,
-          item.batch
-        );
-
-        if (!batchExists) {
-          batchesToCreate.push({
-            item: item.item,
-            batch: item.batch,
-          });
-        }
-      }
-    }
-
-    for (const { item, batch } of batchesToCreate) {
-      await createBatch(this.fyo, item, batch);
-    }
-  }
-
-  async afterCancel(): Promise<void> {
-    await super.afterCancel();
-    await updateSerialNumbers(this, true);
   }
 
   validateManufacture() {
@@ -151,18 +103,6 @@ export class StockMovement extends Transfer {
         },
       ],
     };
-  }
-
-  _getTransferDetails() {
-    return (this.items ?? []).map((row) => ({
-      item: row.item!,
-      rate: row.rate!,
-      quantity: row.quantity!,
-      batch: row.batch ?? undefined,
-      serialNumber: row.serialNumber ?? undefined,
-      fromLocation: row.fromLocation ?? undefined,
-      toLocation: row.toLocation ?? undefined,
-    }));
   }
 
   static getActions(fyo: Fyo): Action[] {

@@ -1,11 +1,10 @@
 """Invoice calculations, validation, posting, and cancellation behavior."""
 
-from collections import defaultdict
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from frappe_books.accounting import returns
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
@@ -15,7 +14,9 @@ from frappe_books.series import SeriesNamingMixin
 
 
 class InvoiceController(SeriesNamingMixin, Document):
-	transaction_type = "quote"
+	"""Totals and validation shared by quotes and invoices."""
+
+	transaction_type: str
 
 	def before_validate(self):
 		_populate_invoice_defaults(self)
@@ -30,41 +31,34 @@ class InvoiceController(SeriesNamingMixin, Document):
 		if self.transaction_type == "sales" and self.redeem_loyalty_points:
 			calculate_invoice(self)
 
-	def on_submit(self):
-		if self.transaction_type == "quote":
-			return
-		post_invoice(self)
+
+class PostingInvoiceController(InvoiceController):
+	"""Ledger, outstanding and follow-up effects of submitting an invoice."""
+
+	def before_submit(self):
 		outstanding = abs(as_decimal(self.base_grand_total))
-		if self.get("return_against"):
-			outstanding = -outstanding
-		frappe.db.set_value(
-			self.doctype,
-			self.name,
-			"outstanding_amount",
-			rounded(outstanding),
-			update_modified=False,
-		)
+		self.outstanding_amount = -outstanding if self.return_against else outstanding
+
+	def on_submit(self):
+		post_invoice(self)
 		update_party_outstanding(self.party)
 		pricing.update_coupon_usage(self, 1)
 		loyalty.process_invoice(self)
 		create_auto_transfer(self)
-		if self.get("return_against"):
-			update_return_status(self, include_current=True)
+		if self.return_against:
+			returns.update_return_status(self, include_current=True)
 
 	def before_cancel(self):
-		if self.transaction_type != "quote":
-			cancel_auto_transfer(self)
+		cancel_auto_transfer(self)
+		self.outstanding_amount = 0
 
 	def on_cancel(self):
-		if self.transaction_type == "quote":
-			return
 		reverse_entries(self)
-		frappe.db.set_value(self.doctype, self.name, "outstanding_amount", 0, update_modified=False)
 		update_party_outstanding(self.party)
 		pricing.update_coupon_usage(self, -1)
 		loyalty.reverse_invoice(self)
-		if self.get("return_against"):
-			update_return_status(self, include_current=False)
+		if self.return_against:
+			returns.update_return_status(self, include_current=False)
 
 	def on_trash(self):
 		delete_entries(self)
@@ -142,7 +136,7 @@ def validate_invoice(invoice):
 	for row in invoice.items:
 		_validate_row(invoice, row)
 	if invoice.get("return_against"):
-		_validate_return(invoice)
+		returns.validate_return(invoice)
 
 
 def _validate_row(invoice, row):
@@ -282,64 +276,3 @@ def _invoice_discount(invoice, taxed_total, discounted_total, currency):
 	base = taxed_total if invoice.discount_after_tax else discounted_total
 	discount = abs(base) * as_decimal(invoice.discount_percent) / 100
 	return rounded(-discount if base < 0 else discount, currency)
-
-
-def _validate_return(invoice):
-	if not frappe.db.exists(invoice.doctype, invoice.return_against):
-		frappe.throw(_("Return-against invoice {0} does not exist.").format(invoice.return_against))
-	original = frappe.get_doc(invoice.doctype, invoice.return_against)
-	if original.docstatus != 1 or original.get("return_against"):
-		frappe.throw(_("Returns can only reference a submitted original invoice."))
-	if original.party != invoice.party:
-		frappe.throw(_("A return must use the same party as the original invoice."))
-
-	original_quantities = _item_quantities(original)
-	returned_quantities = _submitted_return_quantities(original, exclude=invoice.name)
-	for item, quantity in _item_quantities(invoice).items():
-		if item not in original_quantities:
-			frappe.throw(_("Item {0} is not present in the original invoice.").format(item))
-		if returned_quantities[item] + quantity > original_quantities[item]:
-			frappe.throw(_("Returned quantity for item {0} exceeds the original invoice.").format(item))
-
-
-def update_return_status(return_invoice, *, include_current):
-	"""Keep the original invoice's return indicators consistent after submit or cancel."""
-	original = frappe.get_doc(return_invoice.doctype, return_invoice.return_against)
-	returned_quantities = _submitted_return_quantities(original, exclude=return_invoice.name)
-	if include_current:
-		for item, quantity in _item_quantities(return_invoice).items():
-			returned_quantities[item] += quantity
-
-	original_quantities = _item_quantities(original)
-	is_returned = any(returned_quantities.values())
-	is_fully_returned = bool(original_quantities) and all(
-		returned_quantities[item] >= quantity for item, quantity in original_quantities.items()
-	)
-	frappe.db.set_value(
-		original.doctype,
-		original.name,
-		{"is_returned": int(is_returned), "is_fully_returned": int(is_fully_returned)},
-		update_modified=False,
-	)
-
-
-def _submitted_return_quantities(original, *, exclude=None):
-	quantities = defaultdict(as_decimal)
-	return_names = frappe.get_all(
-		original.doctype,
-		filters={"return_against": original.name, "docstatus": 1},
-		pluck="name",
-	)
-	for name in return_names:
-		if name == exclude:
-			continue
-		for item, quantity in _item_quantities(frappe.get_doc(original.doctype, name)).items():
-			quantities[item] += quantity
-	return quantities
-
-
-def _item_quantities(invoice):
-	quantities = defaultdict(as_decimal)
-	for row in invoice.items:
-		quantities[row.item] += abs(as_decimal(row.quantity))
-	return quantities

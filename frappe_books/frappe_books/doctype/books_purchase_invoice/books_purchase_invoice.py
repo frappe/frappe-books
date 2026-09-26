@@ -1,10 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from frappe_books.accounting.invoice import InvoiceController
+from frappe_books.accounting.invoice import PostingInvoiceController
 
 
-class BooksPurchaseInvoice(InvoiceController):
+class BooksPurchaseInvoice(PostingInvoiceController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 

@@ -5,7 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime, nowdate
 
-from frappe_books.tests.accounting import make_account, make_item, unique_name
+from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_valuation import move
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
@@ -184,6 +184,85 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		columns = ("openingQuantity", "openingValue", "outgoingQuantity", "outgoingValue", "balanceValue")
 		self.assertEqual(tuple(rows[0][column] for column in columns), _decimals(6, 80, 5, 60, 20))
 		self.assertEqual((rows[0]["balanceQuantity"], rows[0]["valuationRate"]), _decimals(1, 20))
+
+
+class IntegrationTestGSTR(IntegrationTestCase):
+	def setUp(self):
+		self.queries = BooksBespokeQueries()
+		for account in ("CGST", "SGST", "IGST"):
+			if not frappe.db.exists("Books Account", account):
+				frappe.get_doc(
+					{"doctype": "Books Account", "account_name": account, "root_type": "Liability"}
+				).insert()
+		self.receivable = make_account("GSTR Receivable", account_type="Receivable")
+		self.income = make_account("GSTR Income", root_type="Income", account_type="Income Account")
+		expense = make_account("GSTR Expense", root_type="Expense", account_type="Expense Account")
+		self.party = make_party(self.receivable.name)
+		self.item = make_item(self.income.name, expense.name).name
+
+	def test_mixed_rates_give_one_row_per_rate(self):
+		gst_18 = _tax(("CGST", 9), ("SGST", 9))
+		gst_5 = _tax(("CGST", 2.5), ("SGST", 2.5))
+		invoice = self._invoice((gst_18, 100, 1), (gst_5, 50, 2), (gst_18, 200, 1))
+
+		rows = self._rows(invoice)
+
+		self.assertEqual(
+			{(row["rate"], row["taxVal"], row["cgstAmt"], row["sgstAmt"]) for row in rows},
+			{_decimals(18, 300, 27, 27), _decimals(5, 100, "2.5", "2.5")},
+		)
+		self.assertTrue(all(row["invAmt"] == Decimal(459) for row in rows))
+
+	def test_igst_rows_are_interstate(self):
+		invoice = self._invoice((_tax(("IGST", 18)), 100, 1))
+
+		(row,) = self._rows(invoice)
+
+		self.assertEqual((row["rate"], row["igstAmt"], row["inState"]), (*_decimals(18, 18), False))
+		self.assertNotIn("cgstAmt", row)
+
+	def _invoice(self, *rows):
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Books Sales Invoice",
+					"party": self.party.name,
+					"account": self.receivable.name,
+					"date": now_datetime(),
+					"items": [
+						{
+							"item": self.item,
+							"account": self.income.name,
+							"tax": tax,
+							"rate": rate,
+							"quantity": quantity,
+						}
+						for tax, rate, quantity in rows
+					],
+				}
+			)
+			.insert()
+			.submit()
+		)
+
+	def _rows(self, invoice):
+		today = nowdate()
+		rows = self.queries.call("getGSTRRows", ["SalesInvoice", {"fromDate": today, "toDate": today}])
+		return [row for row in rows if row["invNo"] == invoice.name]
+
+
+def _tax(*details):
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Books Tax",
+				"name": unique_name("GST"),
+				"details": [{"account": account, "rate": rate} for account, rate in details],
+			}
+		)
+		.insert()
+		.name
+	)
 
 
 def _decimals(*values):

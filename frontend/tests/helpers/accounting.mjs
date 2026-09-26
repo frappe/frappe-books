@@ -40,6 +40,7 @@ await build({
       export { showReport } from './src/utils/misc';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
+      export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
       export { getReturnItems } from './models/returnItems';
       export { getPrintTemplatePropValues } from './src/utils/printTemplates';
       export { call } from './src/web/api';
@@ -116,6 +117,7 @@ export const {
   showReport,
   FrappeDatabaseDemux,
   GSTR1,
+  getGstrJsonData,
   getReturnItems,
   getPrintTemplatePropValues,
   call,

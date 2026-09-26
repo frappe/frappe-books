@@ -1,57 +1,70 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GSTR1, makeFyo } from './helpers/accounting.mjs';
+import { GSTR1, getGstrJsonData, makeFyo } from './helpers/accounting.mjs';
 
 const GSTIN = '27AAAAA0000A1Z5';
 
-async function getGstrRow(taxes) {
+test('GSTR shows the server rows and exports one invoice with an item per rate', async () => {
   const fyo = await makeFyo();
-  const invoice = {
-    name: 'SINV-1',
-    party: 'Customer',
-    date: new Date('2026-01-01'),
-    grandTotal: fyo.pesa(118),
-    netTotal: fyo.pesa(100),
-    taxes: taxes.map(([account, rate, amount]) => ({
-      account,
-      rate,
-      amount: fyo.pesa(amount),
-    })),
+  const row = {
+    gstin: GSTIN,
+    partyName: 'Customer',
+    invNo: 'SINV-1',
+    invDate: '2026-01-01',
+    reverseCharge: 'N',
+    inState: true,
+    place: 'Maharashtra',
+    invAmt: 459,
   };
-  fyo.doc.getDoc = async (schemaName) =>
-    schemaName === 'Party' ? { gstin: GSTIN } : invoice;
+  const rows = [
+    { ...row, rate: 18, taxVal: 300, cgstAmt: 27, sgstAmt: 27 },
+    { ...row, rate: 5, taxVal: 100, cgstAmt: 2.5, sgstAmt: 2.5 },
+  ];
+  let call;
+  fyo.db.getReportData = async (...args) => {
+    call = args;
+    return rows;
+  };
   fyo.getValue = async () => GSTIN;
-  const { rate, igstAmt, cgstAmt, sgstAmt, nilRated, exempt, nonGST } =
-    await new GSTR1(fyo).getGstrRow(invoice.name);
-  return { rate, igstAmt, cgstAmt, sgstAmt, nilRated, exempt, nonGST };
-}
+  const report = new GSTR1(fyo);
+  report.transferType = 'B2B';
+  report.toDate = '2026-01-31';
+  report.filters = report.getFilters();
+  report.columns = await report.getColumns();
 
-test('GSTR row of a CGST and SGST invoice', async () => {
-  assert.deepEqual(
-    await getGstrRow([
-      ['CGST', 9, 9],
-      ['SGST', 9, 9],
-    ]),
-    {
-      rate: 18,
-      igstAmt: undefined,
-      cgstAmt: 9,
-      sgstAmt: 9,
-      nilRated: undefined,
-      exempt: undefined,
-      nonGST: undefined,
-    }
-  );
-});
+  await report.setReportData();
 
-test('GSTR row of an IGST invoice', async () => {
-  assert.deepEqual(await getGstrRow([['IGST', 18, 18]]), {
-    rate: 18,
-    igstAmt: 18,
-    cgstAmt: undefined,
-    sgstAmt: undefined,
-    nilRated: undefined,
-    exempt: undefined,
-    nonGST: undefined,
+  assert.deepEqual(call, [
+    'getGSTRRows',
+    'SalesInvoice',
+    { transferType: 'B2B', toDate: '2026-01-31' },
+  ]);
+  assert.equal(report.reportData.length, 2);
+  const itemDetails = (rate, taxVal, tax) => ({
+    txval: taxVal,
+    rt: rate,
+    csamt: 0,
+    camt: tax,
+    samt: tax,
+    iamt: 0,
   });
+  assert.deepEqual(JSON.parse(await getGstrJsonData(report)).b2b, [
+    {
+      ctin: GSTIN,
+      inv: [
+        {
+          inum: 'SINV-1',
+          idt: '01-01-2026',
+          val: 459,
+          pos: '27',
+          rchrg: 'N',
+          inv_typ: 'R',
+          itms: [
+            { num: 1, itm_det: itemDetails(18, 300, 27) },
+            { num: 2, itm_det: itemDetails(5, 100, 2.5) },
+          ],
+        },
+      ],
+    },
+  ]);
 });

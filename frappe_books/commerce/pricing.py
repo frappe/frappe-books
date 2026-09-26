@@ -6,7 +6,7 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 import frappe
 from frappe import _
 
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 
 
 def validate_pricing_rule(rule):
@@ -85,29 +85,31 @@ def apply_pricing(invoice):
 	if _ignore_pos_pricing(invoice):
 		return
 
-	original_rows = list(invoice.items)
+	rows = list(invoice.items)
+	if not rows:
+		return
+	coupons = _validated_coupons(invoice, sum_decimal(_row_value(row) for row in rows))
+	candidates = _candidate_rules(rows)
 	quantities = defaultdict(Decimal)
-	for row in original_rows:
+	for row in rows:
 		quantities[row.item] += as_decimal(row.quantity)
-
-	coupons = _validated_coupons(invoice)
 	applied = []
-	for row in original_rows:
-		rule = _applicable_rule(invoice, row, quantities[row.item], coupons)
-		if not rule:
-			continue
-		row.pricing_rule = rule.name
-		invoice.append(
-			"pricing_rule_detail",
-			{"reference_name": rule.name, "reference_item": row.item},
-		)
-		if rule.discount_type == "Price Discount":
-			_apply_price_discount(row, rule)
-		else:
-			_append_free_item(invoice, row, rule)
-		applied.append(rule.name)
+	for row in rows:
+		rule = _best_rule(invoice, row, quantities[row.item], candidates[row.item, row.unit], coupons)
+		if rule:
+			_apply_rule(invoice, row, rule)
+			applied.append(rule.name)
 	invoice.is_pricing_rule_applied = int(bool(applied))
 	_validate_coupon_application(coupons, applied)
+
+
+def _apply_rule(invoice, row, rule):
+	row.pricing_rule = rule.name
+	invoice.append("pricing_rule_detail", {"reference_name": rule.name, "reference_item": row.item})
+	if rule.discount_type == "Price Discount":
+		_apply_price_discount(row, rule)
+	else:
+		_append_free_item(invoice, row, rule)
 
 
 def update_coupon_usage(invoice, delta):
@@ -123,37 +125,50 @@ def update_coupon_usage(invoice, delta):
 		frappe.db.set_value("Books Coupon Code", coupon.name, "used", used, update_modified=False)
 
 
-def _validated_coupons(invoice):
+def _validated_coupons(invoice, order_value):
 	names = [row.coupons for row in invoice.get("coupons", []) if row.coupons]
 	if len(names) != len(set(names)):
 		frappe.throw(_("The same coupon cannot be applied more than once."))
-	coupons = {}
-	for name in names:
-		coupon = frappe.get_doc("Books Coupon Code", name)
+	if not names:
+		return {}
+	coupons = frappe.get_all("Books Coupon Code", filters={"name": ["in", names]}, fields=["*"])
+	for coupon in coupons:
 		if not coupon.is_enabled:
-			frappe.throw(_("Coupon {0} is disabled.").format(name))
+			frappe.throw(_("Coupon {0} is disabled.").format(coupon.name))
 		if coupon.maximum_use and coupon.used >= coupon.maximum_use:
-			frappe.throw(_("Coupon {0} has reached its use limit.").format(name))
-		if not _within_limits(coupon, invoice.date, invoice.grand_total):
-			frappe.throw(_("Coupon {0} is not valid for this invoice.").format(name))
-		coupons[coupon.pricing_rule] = coupon
-	return coupons
+			frappe.throw(_("Coupon {0} has reached its use limit.").format(coupon.name))
+		if not _within_limits(coupon, invoice.date, order_value):
+			frappe.throw(_("Coupon {0} is not valid for this invoice.").format(coupon.name))
+	return {coupon.pricing_rule: coupon for coupon in coupons}
 
 
-def _applicable_rule(invoice, row, quantity, coupons):
-	parents = frappe.get_all(
+def _candidate_rules(rows):
+	"""Return enabled rules keyed by the (item, unit) they apply to."""
+	links = frappe.get_all(
 		"Books Pricing Rule Item",
-		filters={"item": row.item, "unit": row.unit},
-		pluck="parent",
+		filters={"item": ["in", list({row.item for row in rows})]},
+		fields=["parent", "item", "unit"],
 	)
-	if not parents:
-		return None
-	rules = [frappe.get_doc("Books Pricing Rule", name) for name in set(parents)]
+	if not links:
+		return defaultdict(list)
+	rules = frappe.get_all(
+		"Books Pricing Rule",
+		filters={"name": ["in", list({link.parent for link in links})], "is_enabled": 1},
+		fields=["*"],
+	)
+	rules = {rule.name: rule for rule in rules}
+	candidates = defaultdict(dict)
+	for link in links:
+		if link.parent in rules:
+			candidates[link.item, link.unit][link.parent] = rules[link.parent]
+	return defaultdict(list, {key: list(value.values()) for key, value in candidates.items()})
+
+
+def _best_rule(invoice, row, quantity, rules, coupons):
 	rules = [
 		rule
 		for rule in rules
-		if rule.is_enabled
-		and bool(rule.is_coupon_code_based) == (rule.name in coupons)
+		if bool(rule.is_coupon_code_based) == (rule.name in coupons)
 		and _within_limits(rule, invoice.date, as_decimal(row.rate) * quantity, quantity)
 	]
 	if not rules:
@@ -166,6 +181,10 @@ def _applicable_rule(invoice, row, quantity, coupons):
 			)
 		)
 	return rules[0]
+
+
+def _row_value(row):
+	return as_decimal(row.rate) * as_decimal(row.quantity)
 
 
 def _apply_price_discount(row, rule):

@@ -21,7 +21,6 @@ class InvoiceController(SeriesNamingMixin, Document):
 	def before_validate(self):
 		pricing.reset_pricing(self)
 		_populate_invoice_defaults(self)
-		calculate_invoice(self)
 		pricing.apply_pricing(self)
 		_populate_invoice_defaults(self)
 		calculate_invoice(self)
@@ -29,8 +28,6 @@ class InvoiceController(SeriesNamingMixin, Document):
 	def validate(self):
 		validate_invoice(self)
 		loyalty.validate_invoice_loyalty(self)
-		if self.transaction_type == "sales" and self.redeem_loyalty_points:
-			calculate_invoice(self)
 
 
 class PostingInvoiceController(InvoiceController):

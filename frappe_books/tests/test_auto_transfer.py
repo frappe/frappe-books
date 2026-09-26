@@ -60,6 +60,12 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice.reload()
 		self.assertEqual([invoice.stock_not_transferred, invoice.items[0].stock_not_transferred], [2, 2])
 
+	def test_invoice_rows_follow_the_item_batch_rule(self):
+		invoice, item = self._sales_invoice()
+		frappe.db.set_value("Books Item", item, "has_batch", 1)
+
+		self.assertRaisesRegex(frappe.ValidationError, "requires a batch", invoice.save)
+
 	def test_return_without_original_transfer_does_not_ship_again(self):
 		original, item = self._sales_invoice()
 		original.submit()

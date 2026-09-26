@@ -976,12 +976,6 @@ export default defineComponent({
               invoiceItem.item === itemName && !invoiceItem.isFreeItem
           ) ?? [];
 
-        await validateQty(
-          this.sinvDoc as SalesInvoice,
-          item,
-          existingItems as InvoiceItem[]
-        );
-
         const itemsHsncode = (await this.fyo.getValue(
           'Item',
           itemName,
@@ -1071,13 +1065,6 @@ export default defineComponent({
 
           await this.applyPricingRule();
           await this.sinvDoc.runFormulas();
-          if (isInventoryItem) {
-            await validateQty(
-              this.sinvDoc as SalesInvoice,
-              item,
-              existingItems as InvoiceItem[]
-            );
-          }
           return;
         }
 

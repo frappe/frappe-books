@@ -28,7 +28,6 @@ import { Money } from 'pesa';
 import { Party } from './baseModels/Party/Party';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
 import { Router } from 'vue-router';
-import { Item } from 'models/baseModels/Item/Item';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
 import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
 import { StockMovement } from './inventory/StockMovement';
@@ -40,13 +39,8 @@ import { safeParseFloat } from 'utils/index';
 import { PriceList } from './baseModels/PriceList/PriceList';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
-import { getPOSInventory } from './inventory/posStock';
-import {
-  getRawStockLedgerEntries,
-  getStockBalanceEntries,
-  getStockLedgerEntries,
-} from 'reports/inventory/helpers';
+import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
+import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
 import {
   generateSerialNumbersForItem,
@@ -76,28 +70,22 @@ export function getInvoiceActions(
   ];
 }
 
-export async function getItemQtyMap(doc: SalesInvoice): Promise<ItemQtyMap> {
+/** Stock of each item, and of each of its batches, at the POS location. */
+export async function getItemQtyMap(
+  doc: SalesInvoice,
+  items?: string[]
+): Promise<ItemQtyMap> {
+  const location = await getPOSInventory(doc.fyo);
+  const rows = await doc.fyo.db.getStockQuantities(location, items);
   const itemQtyMap: ItemQtyMap = {};
-  const rawSLEs = await getRawStockLedgerEntries(doc.fyo);
-  const rawData = getStockLedgerEntries(rawSLEs);
-
-  const inventoryLocation = await getPOSInventory(doc.fyo);
-
-  const stockBalance = getStockBalanceEntries(rawData, {
-    location: inventoryLocation,
-  });
-
-  for (const row of stockBalance) {
-    if (!itemQtyMap[row.item]) {
-      itemQtyMap[row.item] = { availableQty: 0 };
+  for (const { item, batch, quantity } of rows) {
+    itemQtyMap[item] ??= { availableQty: 0 };
+    itemQtyMap[item].availableQty += quantity;
+    if (batch) {
+      itemQtyMap[item][batch] = quantity;
     }
-
-    if (row.batch) {
-      itemQtyMap[row.item][row.batch] = row.balanceQuantity;
-    }
-
-    itemQtyMap[row.item]!.availableQty += row.balanceQuantity;
   }
+
   return itemQtyMap;
 }
 
@@ -1016,72 +1004,35 @@ export async function removeLoyaltyPoint(doc: Doc) {
   await party.updateLoyaltyPoints();
 }
 
+/** Checks the POS location has the stock that a row's item, or its batch, needs. */
 export async function validateQty(
   sinvDoc: SalesInvoice,
-  item: Item | SalesInvoiceItem | POSItem | undefined,
+  row: SalesInvoiceItem,
   existingItems: InvoiceItem[]
 ) {
+  const { fyo } = sinvDoc;
+  const item = row.item;
   if (!item) {
     return;
   }
 
-  let itemName = item.name as string;
-  const itemhasBatch = await sinvDoc.fyo.getValue(
-    ModelNameEnum.Item,
-    item.item as string,
-    'hasBatch'
-  );
-
-  const itemQtyMap: ItemQtyMap = await getItemQtyMap(sinvDoc);
-
-  if (item instanceof SalesInvoiceItem) {
-    itemName = item.item as string;
+  if (!row.batch && (await fyo.getValue(ModelNameEnum.Item, item, 'hasBatch'))) {
+    throw new ValidationError(t`Please select a batch first`);
   }
 
-  if (itemhasBatch) {
-    if (!item.batch) {
-      throw new ValidationError(t`Please select a batch first`);
-    }
-  }
-
-  const trackItem = await sinvDoc.fyo.getValue(
-    ModelNameEnum.Item,
-    item.item as string,
-    'trackItem'
-  );
-
-  if (!trackItem) {
+  if (!(await fyo.getValue(ModelNameEnum.Item, item, 'trackItem'))) {
     return;
   }
 
-  if (!itemQtyMap[itemName] || itemQtyMap[itemName].availableQty === 0) {
-    throw new ValidationError(t`Item ${itemName} has Zero Quantity`);
-  }
-
-  if (item.batch) {
-    if (
-      (existingItems && !itemQtyMap[itemName]) ||
-      itemQtyMap[itemName][item.batch as string] <
-        (existingItems[0]?.quantity as number)
-    ) {
-      throw new ValidationError(
-        t`Item ${itemName} only has ${
-          itemQtyMap[itemName][item.batch as string]
-        } Quantity in batch ${item.batch as string}`
-      );
-    }
-  } else {
-    if (
-      (existingItems && !itemQtyMap[itemName]) ||
-      itemQtyMap[itemName].availableQty < (existingItems[0]?.quantity as number)
-    ) {
-      throw new ValidationError(
-        t`Item ${itemName} only has ${itemQtyMap[itemName].availableQty} Quantity`
-      );
-    }
-  }
-
-  return;
+  const quantity = existingItems
+    .filter((existing) => !row.batch || existing.batch === row.batch)
+    .reduce(
+      (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
+      0
+    );
+  const itemQtyMap = await getItemQtyMap(sinvDoc, [item]);
+  const location = await getPOSInventory(fyo);
+  validatePOSStock(item, quantity, itemQtyMap, location, row.batch);
 }
 
 export async function getPricingRulesOfCoupons(

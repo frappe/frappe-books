@@ -261,10 +261,13 @@ def _item_details(names):
 			"description",
 			"unit",
 			"tax",
+			"item_group.tax as group_tax",
 			"income_account",
 			"expense_account",
 		],
 	)
+	for row in rows:
+		row.tax = row.tax or row.group_tax
 	return {row.name: row for row in rows}
 
 

@@ -115,14 +115,16 @@ def _apply_rule(invoice, row, rule):
 def update_coupon_usage(invoice, delta):
 	if invoice.transaction_type != "sales":
 		return
-	for row in invoice.get("coupons", []):
-		if not row.coupons:
-			continue
-		coupon = frappe.get_doc("Books Coupon Code", row.coupons)
-		used = max(0, int(coupon.used or 0) + delta)
+	for name in {row.coupons for row in invoice.get("coupons", []) if row.coupons}:
+		coupon = frappe.db.get_value(
+			"Books Coupon Code", name, ["used", "maximum_use"], as_dict=True, for_update=True
+		)
+		used = coupon.used + delta
+		if used < 0:
+			frappe.throw(_("Coupon {0} usage cannot drop below zero.").format(name))
 		if delta > 0 and coupon.maximum_use and used > coupon.maximum_use:
-			frappe.throw(_("Coupon {0} has reached its use limit.").format(coupon.name))
-		frappe.db.set_value("Books Coupon Code", coupon.name, "used", used)
+			frappe.throw(_("Coupon {0} has reached its use limit.").format(name))
+		frappe.db.set_value("Books Coupon Code", name, "used", used)
 
 
 def _validated_coupons(invoice, order_value):

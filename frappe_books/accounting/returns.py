@@ -51,7 +51,7 @@ def _prepare_return(invoice, credit_note):
 
 
 def validate_return(invoice):
-	original = frappe.get_doc(invoice.doctype, invoice.return_against)
+	original = frappe.get_doc(invoice.doctype, invoice.return_against, for_update=True)
 	if original.docstatus != 1 or original.get("return_against"):
 		frappe.throw(_("Returns can only reference a submitted original invoice."))
 	if original.party != invoice.party:

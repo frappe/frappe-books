@@ -139,6 +139,24 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		discount = next(row for row in entries if row.account == self.discount.name)
 		self.assertEqual(Decimal(str(discount.credit)), Decimal("29"))
 
+	def test_return_cannot_credit_more_than_was_billed(self):
+		item = make_item(self.income.name, self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			item.name,
+			self.income.name,
+			discount_percent=5,
+		)
+		invoice.submit()
+		credit_note = frappe.copy_doc(invoice)
+		credit_note.update({"return_against": invoice.name, "discount_percent": 0})
+		credit_note.items[0].update({"quantity": -2, "item_discount_percent": 0})
+
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
+			credit_note.insert()
+
 	def _make_invoice(self):
 		return make_invoice(
 			"Books Sales Invoice",

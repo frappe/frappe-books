@@ -11,7 +11,7 @@ The app currently targets only the Frappe Framework `develop` branch. It uses Fr
 ## Included
 
 - Books Vue interface on the standalone `/books` route
-- Standard Frappe DocTypes generated from the interface schemas
+- Standard Frappe DocTypes that back the interface schemas
 - Authenticated Frappe APIs for document operations and aggregate queries
 - Setup wizard, chart of accounts, number series, roles, and defaults
 - Sales invoices, purchase invoices, quotes, payments, journal entries, returns, and cancellation reversals
@@ -114,17 +114,9 @@ The app also keeps the `/app/books` Desk workspace for administration.
 
 Use standard Frappe **Data Import** and **Data Export** for CSV-based transfers.
 
-## Schema synchronization
+## Schema changes
 
-The checked-in DocTypes and `frappe_books/schema_mapping.json` are generated from the frontend schema files. After you change a frontend schema, synchronize it from the bench:
-
-```bash
-bench --site books.localhost execute frappe_books.dev.schema_sync.sync \
-  --kwargs '{"source_root":"/absolute/path/to/frappe-books"}'
-bench --site books.localhost migrate
-```
-
-Review generated files before committing them. Keep application logic outside the auto-generated type blocks in DocType controllers.
+The DocType JSON files are the source of truth. When you change a DocType field that the Vue app uses, update the matching file in `frontend/schemas` and `frappe_books/schema_mapping.json`. `yarn --cwd frontend test` checks that the three agree.
 
 ## Tests and checks
 

@@ -113,7 +113,7 @@ def _apply_rule(invoice, row, rule):
 
 
 def update_coupon_usage(invoice, delta):
-	if invoice.transaction_type != "sales":
+	if invoice.transaction_type != "sales" or invoice.get("return_against"):
 		return
 	for name in {row.coupons for row in invoice.get("coupons", []) if row.coupons}:
 		coupon = frappe.db.get_value(

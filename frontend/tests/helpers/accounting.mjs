@@ -42,6 +42,7 @@ await build({
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
+      export { Importer } from './src/importer';
     `,
     resolveDir: frontend,
   },
@@ -102,6 +103,7 @@ export const {
   getAmountInWords,
   generateCSV,
   parseCSV,
+  Importer,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

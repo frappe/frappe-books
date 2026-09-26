@@ -181,6 +181,15 @@ def _validate_row(invoice, row):
 		frappe.throw(_("Negative quantities require a return-against invoice."))
 	if as_decimal(row.rate) < 0:
 		frappe.throw(_("Item rate cannot be negative."))
+	_validate_row_discount(row)
+
+
+def _validate_row_discount(row):
+	if row.set_item_discount_amount:
+		if not 0 <= as_decimal(row.item_discount_amount) <= abs(as_decimal(row.amount)):
+			frappe.throw(_("Item discount amount cannot exceed the row amount."))
+	elif not 0 <= as_decimal(row.item_discount_percent) <= 100:
+		frappe.throw(_("Item discount percent must be between 0 and 100."))
 
 
 def post_invoice(invoice):

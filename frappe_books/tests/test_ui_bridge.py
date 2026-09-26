@@ -1,6 +1,7 @@
 """Integration coverage for the original Vue UI's Frappe compatibility layer."""
 
 from datetime import datetime, timedelta
+from unittest.mock import ANY
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -411,6 +412,30 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 		self.assertEqual(self.bridge.call("count", ["Color", {"name": ["like", f"{prefix}%"]}]), 3)
 		self.assertEqual(self.bridge.call("count", ["UOMConversionItem", {"parent": item.name}]), 1)
+
+	def test_search_matches_keyword_letters_in_order_within_the_limit(self):
+		prefix = frappe.generate_hash(length=6)
+		for index in range(3):
+			frappe.get_doc(
+				{"doctype": "Books Color", "name": f"Qz{prefix} Marigold {index}", "hexvalue": "#000"}
+			).insert()
+
+		found = self.bridge.call("search", [f"qz{prefix} mrgld", {"Color": ["name"]}, 2])["Color"]
+
+		self.assertEqual(len(found), 2)
+		self.assertTrue(all(row["name"].startswith(f"Qz{prefix}") for row in found))
+		self.assertEqual(self.bridge.call("search", ["zzq", {"Color": ["name"]}, 2])["Color"], [])
+
+	def test_search_returns_the_parent_of_matching_rows(self):
+		income = make_account("Bridge Search Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Bridge Search Expense", root_type="Expense", account_type="Expense Account")
+		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
+
+		found = self.bridge.call("search", [item.name, {"UOMConversionItem": ["parent"]}, 5])
+
+		self.assertEqual(
+			found["UOMConversionItem"], [{"parent": item.name, "parentSchemaName": "Item", "name": ANY}]
+		)
 
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):

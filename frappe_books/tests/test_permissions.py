@@ -88,6 +88,13 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			count = BooksDatabaseBridge().call("count", ["Shipment", {"name": ["in", [readable, hidden]]}])
 		self.assertEqual(count, 1)
 
+	def test_search_skips_documents_the_user_cannot_read(self):
+		readable, hidden = _seed_shipment(), _seed_shipment()
+		add_user_permission("Books Shipment", readable, TEST_USER)
+		with self.set_user(TEST_USER):
+			self.assertEqual(_search_shipments(hidden), [])
+			self.assertEqual(_search_shipments(readable), [readable])
+
 	def test_pos_amounts_require_invoice_read(self):
 		def has_permission(doctype, ptype="read", throw=False, **kwargs):
 			if doctype == "Books Sales Invoice":
@@ -111,6 +118,11 @@ class IntegrationTestPermissions(IntegrationTestCase):
 def _role_rights(doctype, role):
 	rows = [row for row in frappe.get_meta(doctype).permissions if row.role == role and not row.permlevel]
 	return {right for right in RIGHTS for row in rows if row.get(right)}
+
+
+def _search_shipments(name):
+	found = BooksDatabaseBridge().call("search", [name, {"Shipment": ["name"]}, 5])
+	return [row["name"] for row in found["Shipment"]]
 
 
 def _seed_shipment(return_against=None):

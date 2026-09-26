@@ -102,6 +102,15 @@ export abstract class DatabaseDemuxBase {
   ): Promise<unknown>;
 }
 
+export type ReportQuery =
+  | 'getGeneralLedger'
+  | 'getTrialBalance'
+  | 'getProfitAndLoss'
+  | 'getBalanceSheet'
+  | 'getStockLedger'
+  | 'getStockBalance'
+  | 'getGSTRRows';
+
 // Return types of Bespoke Queries
 export type TopExpenses = { account: string; total: number }[];
 export type TotalOutstanding = { total: number; outstanding: number };

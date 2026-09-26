@@ -8,6 +8,9 @@ from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
+from frappe_books.reports import financial_statements
+from frappe_books.reports.financial_statements import Period
+from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.mapping import target_doctype
 
@@ -149,6 +152,18 @@ class BooksBespokeQueries:
 			raise frappe.PermissionError
 		return open_shift_name()
 
+	def general_ledger(self, filters: LedgerFilters):
+		return general_ledger(filters)
+
+	def trial_balance(self, from_date: str, to_date: str):
+		return financial_statements.trial_balance(from_date, to_date)
+
+	def profit_and_loss(self, periods: list[Period]):
+		return financial_statements.profit_and_loss(periods)
+
+	def balance_sheet(self, periods: list[Period]):
+		return financial_statements.balance_sheet(periods)
+
 	def _monthly_balances(self, from_date, to_date, root_type, balance):
 		rows = self._ledger_totals(
 			from_date, to_date, {"account.root_type": root_type}, [*MONTH_FIELDS, *balance], MONTH_GROUP
@@ -226,4 +241,8 @@ _METHODS = {
 	"getReturnBalanceItemsQty": "return_balance",
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
+	"getGeneralLedger": "general_ledger",
+	"getTrialBalance": "trial_balance",
+	"getProfitAndLoss": "profit_and_loss",
+	"getBalanceSheet": "balance_sheet",
 }

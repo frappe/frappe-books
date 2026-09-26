@@ -1,16 +1,11 @@
-import { Fyo, t } from 'fyo';
+import { t } from 'fyo';
+import { Action } from 'fyo/model/types';
 import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
-import { LedgerReport } from 'reports/LedgerReport';
-import {
-  ColumnField,
-  GroupedMap,
-  LedgerEntry,
-  ReportData,
-  ReportRow,
-} from 'reports/types';
-import { Field, FieldTypeEnum } from 'schemas/types';
-import { QueryFilter } from 'utils/db/types';
+import getCommonExportActions from 'reports/commonExporter';
+import { Report } from 'reports/Report';
+import { ColumnField, LedgerRow, ReportRow } from 'reports/types';
+import { Field } from 'schemas/types';
 
 type ReferenceType =
   | ModelNameEnum.SalesInvoice
@@ -21,7 +16,7 @@ type ReferenceType =
   | ModelNameEnum.PurchaseReceipt
   | 'All';
 
-export class GeneralLedger extends LedgerReport {
+export class GeneralLedger extends Report {
   static title = t`General Ledger`;
   static reportName = 'general-ledger';
   usePagination = true;
@@ -31,12 +26,6 @@ export class GeneralLedger extends LedgerReport {
   reverted = false;
   referenceType: ReferenceType = 'All';
   groupBy: 'none' | 'party' | 'account' | 'referenceName' = 'none';
-  _rawData: LedgerEntry[] = [];
-  _openingData: LedgerEntry[] = [];
-
-  constructor(fyo: Fyo) {
-    super(fyo);
-  }
 
   setDefaultFilters() {
     if (!this.toDate) {
@@ -45,72 +34,21 @@ export class GeneralLedger extends LedgerReport {
     }
   }
 
-  async setReportData(filter?: string, force?: boolean) {
+  async setReportData() {
     this.loading = true;
-    let sort = true;
-    if (force || filter !== 'grouped' || this._rawData.length === 0) {
-      await this._setRawData();
-      sort = false;
-    }
-
-    const map = this._getGroupedMap(sort);
-    this._setIndexOnEntries(map);
-    const { totalDebit, totalCredit } = this._getTotalsAndSetBalance(map);
-    const consolidated = this._consolidateEntries(map);
-
-    /**
-     * Push a blank row if last row isn't blank
-     */
-    if (consolidated.at(-1)?.name !== -3) {
-      this._pushBlankEntry(consolidated);
-    }
-
-    /**
-     * Set the closing row
-     */
-    consolidated.push({
-      name: -2, // Bold
-      account: t`Closing`,
-      date: null,
-      debit: totalDebit,
-      credit: totalCredit,
-      balance: this._getOpeningBalance() + totalDebit - totalCredit,
-      referenceType: '',
-      referenceName: '',
-      party: '',
-      reverted: false,
-      reverts: '',
-    });
-
-    this.reportData = this._convertEntriesToReportData(consolidated);
+    const rows = await this.fyo.db.getReportData<LedgerRow[]>(
+      'getGeneralLedger',
+      this.filterMap
+    );
+    this.reportData = rows.map((row) => this._getReportRow(row));
     this.loading = false;
   }
 
-  _setIndexOnEntries(map: GroupedMap) {
-    let i = 1;
-    for (const key of map.keys()) {
-      for (const entry of map.get(key)!) {
-        entry.index = String(i);
-        i = i + 1;
-      }
-    }
-  }
-
-  _convertEntriesToReportData(entries: LedgerEntry[]): ReportData {
-    const reportData = [];
-    for (const entry of entries) {
-      const row = this._getRowFromEntry(entry, this.columns);
-      reportData.push(row);
-    }
-
-    return reportData;
-  }
-
-  _getRowFromEntry(entry: LedgerEntry, columns: ColumnField[]): ReportRow {
-    if (entry.name === -3) {
+  _getReportRow(row: LedgerRow): ReportRow {
+    if (row.type === 'blank') {
       return {
         isEmpty: true,
-        cells: columns.map((c) => ({
+        cells: this.columns.map((c) => ({
           rawValue: '',
           value: '',
           width: c.width ?? 1,
@@ -118,220 +56,58 @@ export class GeneralLedger extends LedgerReport {
       };
     }
 
-    const row: ReportRow = { cells: [] };
-    for (const col of columns) {
-      const align = col.align ?? 'left';
-      const width = col.width ?? 1;
-      const fieldname = col.fieldname;
-
-      let value = entry[fieldname as keyof LedgerEntry];
-      const rawValue = value;
-      if (value === null || value === undefined) {
-        value = '';
-      }
-
-      if (value instanceof Date) {
-        value = this.fyo.format(value, FieldTypeEnum.Date);
-      }
-
-      if (typeof value === 'number' && fieldname !== 'index') {
-        value = this.fyo.format(value, FieldTypeEnum.Currency);
-      }
-
-      if (typeof value === 'boolean' && fieldname === 'reverted') {
-        value = value ? t`Reverted` : '';
-      } else {
-        value = String(value);
-      }
-
-      if (fieldname === 'referenceType') {
-        value = this.fyo.schemaMap[value]?.label ?? value;
-      }
-
-      row.cells.push({
-        italics: entry.name === -1,
-        bold: entry.name === -2,
-        value,
-        rawValue,
-        align,
-        width,
-      });
-    }
-
-    return row;
-  }
-
-  _consolidateEntries(map: GroupedMap) {
-    const entries: LedgerEntry[] = [];
-    for (const key of map.keys()) {
-      entries.push(...map.get(key)!);
-
-      /**
-       * Add blank row for spacing if groupBy
-       */
-      if (this.groupBy !== 'none') {
-        this._pushBlankEntry(entries);
-      }
-    }
-
-    return entries;
-  }
-
-  _pushBlankEntry(entries: LedgerEntry[]) {
-    entries.push({
-      name: -3, // Empty
-      account: '',
-      date: null,
-      debit: null,
-      credit: null,
-      balance: null,
-      referenceType: '',
-      referenceName: '',
-      party: '',
-      reverted: false,
-      reverts: '',
-    });
-  }
-
-  override async _setRawData() {
-    const filters = this._getQueryFilters();
-    delete filters.date;
-    if (this.toDate) {
-      filters.date = [
-        '<',
-        DateTime.fromISO(String(this.toDate)).plus({ days: 1 }).toISODate(),
-      ];
-    }
-    await super._setRawData(filters);
-    const from = this.fromDate ? String(this.fromDate) : '';
-    this._openingData = this._rawData.filter(
-      (entry) => entry.date!.toISOString().slice(0, 10) < from
-    );
-    this._rawData = this._rawData.filter(
-      (entry) => entry.date!.toISOString().slice(0, 10) >= from
-    );
-  }
-
-  override _getGroupedMap(sort: boolean): GroupedMap {
-    const map = super._getGroupedMap(sort);
-    if (this.groupBy === 'none') {
-      return new Map([['', this._rawData.slice()]]);
-    }
-    for (const entry of this._openingData) {
-      const key = entry[this.groupBy];
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-    }
-    return map;
-  }
-
-  _getOpeningBalance() {
-    return this._openingData.reduce(
-      (balance, entry) => balance + entry.debit! - entry.credit!,
-      0
-    );
-  }
-
-  _getOpeningBalances() {
-    const balances = new Map<string, number>();
-    for (const entry of this._openingData) {
-      const key = this.groupBy === 'none' ? '' : entry[this.groupBy];
-      balances.set(
-        key,
-        (balances.get(key) ?? 0) + entry.debit! - entry.credit!
-      );
-    }
-    return balances;
-  }
-
-  _getTotalsAndSetBalance(map: GroupedMap) {
-    const openings = this._getOpeningBalances();
-    let totalDebit = 0;
-    let totalCredit = 0;
-    for (const [key, entries] of map) {
-      const opening = openings.get(key) ?? 0;
-      let balance = opening;
-      let debit = 0;
-      let credit = 0;
-      // Balances follow posting order even when the newest entries display first.
-      const chronological = this.ascending
-        ? entries
-        : entries.slice().reverse();
-      for (const entry of chronological) {
-        debit += entry.debit!;
-        credit += entry.credit!;
-        balance += entry.debit! - entry.credit!;
-        entry.balance = balance;
-      }
-      if (this.fromDate) {
-        const row = this._getBalanceEntry(t`Opening`, opening);
-        if (this.groupBy === 'account') row.account = t`Opening: ${key}`;
-        else if (this.groupBy !== 'none') row[this.groupBy] = key;
-        entries.unshift(row);
-      }
-      if (this.groupBy !== 'none') {
-        entries.push(this._getBalanceEntry(t`Total`, balance, debit, credit));
-      }
-      totalDebit += debit;
-      totalCredit += credit;
-    }
-    return { totalDebit, totalCredit };
-  }
-
-  _getBalanceEntry(
-    account: string,
-    balance: number,
-    debit = 0,
-    credit = 0
-  ): LedgerEntry {
+    const values = { ...row, account: this._getAccountLabel(row) };
     return {
-      name: -1,
-      account,
-      date: null,
-      debit,
-      credit,
-      balance,
-      referenceType: '',
-      referenceName: '',
-      party: '',
-      reverted: false,
-      reverts: '',
+      cells: this.columns.map((column) => ({
+        italics: row.type === 'opening' || row.type === 'total',
+        bold: row.type === 'closing',
+        value: this._formatCell(column, values),
+        rawValue: values[column.fieldname as keyof LedgerRow],
+        align: column.align ?? 'left',
+        width: column.width ?? 1,
+      })),
     };
   }
 
-  _getQueryFilters(): QueryFilter {
-    const filters: QueryFilter = {};
-    const stringFilters = ['account', 'party', 'referenceName'];
-
-    for (const sf of stringFilters) {
-      const value = this[sf];
-      if (value === undefined) {
-        continue;
-      }
-
-      filters[sf] = value as string;
+  _getAccountLabel(row: LedgerRow) {
+    if (row.type === 'opening') {
+      return row.account ? t`Opening: ${row.account}` : t`Opening`;
     }
 
-    if (this.referenceType !== 'All') {
-      filters.referenceType = this.referenceType as string;
+    if (row.type === 'total') {
+      return t`Total`;
     }
 
-    if (this.toDate) {
-      filters.date ??= [];
-      (filters.date as string[]).push('<=', this.toDate as string);
+    if (row.type === 'closing') {
+      return t`Closing`;
     }
 
-    if (this.fromDate) {
-      filters.date ??= [];
-      (filters.date as string[]).push('>=', this.fromDate as string);
+    return row.account;
+  }
+
+  _formatCell(column: ColumnField, row: LedgerRow): string {
+    const value = row[column.fieldname as keyof LedgerRow];
+    if (value === null || value === undefined) {
+      return '';
     }
 
-    if (!this.reverted) {
-      filters.reverted = false;
+    if (column.fieldname === 'reverted') {
+      return value ? t`Reverted` : '';
     }
 
-    return filters;
+    if (column.fieldname === 'referenceType') {
+      return this.fyo.schemaMap[value as string]?.label ?? String(value);
+    }
+
+    if (column.fieldname === 'index') {
+      return String(value);
+    }
+
+    return this.fyo.format(value, column.fieldtype);
+  }
+
+  getActions(): Action[] {
+    return getCommonExportActions(this);
   }
 
   getFilters() {

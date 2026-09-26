@@ -9,6 +9,7 @@ import {
   GetAllOptions,
   IncomeExpense,
   QueryFilter,
+  ReportQuery,
   SingleValue,
   TopExpenses,
   TotalCreditAndDebit,
@@ -340,6 +341,10 @@ export class DatabaseHandler extends DatabaseBase {
       fromDate,
       toDate
     )) as Promise<Record<string, Money> | undefined>;
+  }
+
+  async getReportData<T>(query: ReportQuery, ...args: unknown[]): Promise<T> {
+    return (await this.#demux.callBespoke(query, ...args)) as T;
   }
 
   async getOpenPOSShift(): Promise<string | null> {

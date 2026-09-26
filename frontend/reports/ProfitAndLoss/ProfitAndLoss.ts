@@ -1,189 +1,41 @@
 import { t } from 'fyo';
-import {
-  AccountRootType,
-  AccountRootTypeEnum,
-} from 'models/baseModels/Account/types';
-import {
-  AccountReport,
-  convertAccountRootNodesToAccountList,
-} from 'reports/AccountReport';
-import {
-  AccountListNode,
-  AccountTreeNode,
-  ReportData,
-  ValueMap,
-} from 'reports/types';
+import { AccountReport } from 'reports/AccountReport';
+import { AccountSection, ReportData } from 'reports/types';
+
+type ProfitAndLossData = { sections: AccountSection[]; profit: number[] };
 
 export class ProfitAndLoss extends AccountReport {
   static title = t`Profit And Loss`;
   static reportName = 'profit-and-loss';
   loading = false;
 
-  get rootTypes(): AccountRootType[] {
-    return [AccountRootTypeEnum.Income, AccountRootTypeEnum.Expense];
-  }
-
-  async setReportData(filter?: string, force?: boolean) {
+  async setReportData() {
     this.loading = true;
-    if (force || filter !== 'hideGroupAmounts') {
-      await this._setRawData();
-    }
-
-    const map = this._getGroupedMap(true, 'account');
-    const rangeGroupedMap = await this._getGroupedByDateRanges(map);
-    const accountTree = await this._getAccountTree(rangeGroupedMap);
-
-    for (const name of Object.keys(accountTree)) {
-      const { rootType } = accountTree[name];
-      if (this.rootTypes.includes(rootType)) {
-        continue;
-      }
-
-      delete accountTree[name];
-    }
-
-    /**
-     * Income Rows
-     */
-    const incomeRoots = this.getRootNodes(
-      AccountRootTypeEnum.Income,
-      accountTree
-    )!;
-    const incomeList = convertAccountRootNodesToAccountList(incomeRoots);
-    const incomeRows = this.getReportRowsFromAccountList(incomeList);
-
-    /**
-     * Expense Rows
-     */
-    const expenseRoots = this.getRootNodes(
-      AccountRootTypeEnum.Expense,
-      accountTree
-    )!;
-    const expenseList = convertAccountRootNodesToAccountList(expenseRoots);
-    const expenseRows = this.getReportRowsFromAccountList(expenseList);
-
-    this.reportData = this.getReportDataFromRows(
-      incomeRows,
-      expenseRows,
-      incomeRoots,
-      expenseRoots
+    const data = await this.fyo.db.getReportData<ProfitAndLossData>(
+      'getProfitAndLoss',
+      this._getPeriods()
     );
+    this.reportData = this.getReportDataFromSections(data);
     this.loading = false;
   }
 
-  getReportDataFromRows(
-    incomeRows: ReportData,
-    expenseRows: ReportData,
-    incomeRoots: AccountTreeNode[] | undefined,
-    expenseRoots: AccountTreeNode[] | undefined
-  ): ReportData {
-    if (
-      incomeRoots &&
-      incomeRoots.length &&
-      (!expenseRoots || !expenseRoots.length)
-    ) {
-      return this.getIncomeOrExpenseRows(
-        incomeRoots,
-        incomeRows,
-        t`Total Income (Credit)`
-      );
-    }
-
-    if (
-      expenseRoots &&
-      expenseRoots.length &&
-      (!incomeRoots || !incomeRoots.length)
-    ) {
-      return this.getIncomeOrExpenseRows(
-        expenseRoots,
-        expenseRows,
-        t`Total Expense (Debit)`
-      );
-    }
-
-    if (
-      !incomeRoots ||
-      !incomeRoots.length ||
-      !expenseRoots ||
-      !expenseRoots.length
-    ) {
-      return [];
-    }
-
-    return this.getIncomeAndExpenseRows(
-      incomeRows,
-      expenseRows,
-      incomeRoots,
-      expenseRoots
-    );
-  }
-
-  getIncomeOrExpenseRows(
-    roots: AccountTreeNode[],
-    rows: ReportData,
-    totalRowName: string
-  ): ReportData {
-    const total = this.getTotalNode(roots, totalRowName);
-    const totalRow = this.getRowFromAccountListNode(total);
-
-    return [rows, totalRow].flat();
-  }
-
-  getIncomeAndExpenseRows(
-    incomeRows: ReportData,
-    expenseRows: ReportData,
-    incomeRoots: AccountTreeNode[],
-    expenseRoots: AccountTreeNode[]
-  ) {
-    const totalIncome = this.getTotalNode(
-      incomeRoots,
-      t`Total Income (Credit)`
-    );
-    const totalIncomeRow = this.getRowFromAccountListNode(totalIncome);
-
-    const totalExpense = this.getTotalNode(
-      expenseRoots,
-      t`Total Expense (Debit)`
-    );
-    const totalExpenseRow = this.getRowFromAccountListNode(totalExpense);
-
-    const totalValueMap: ValueMap = new Map();
-    for (const key of totalIncome.valueMap!.keys()) {
-      const income = totalIncome.valueMap!.get(key)?.balance ?? 0;
-      const expense = totalExpense.valueMap!.get(key)?.balance ?? 0;
-      totalValueMap.set(key, { balance: income - expense });
-    }
-
-    const totalProfit = {
-      name: t`Total Profit`,
-      valueMap: totalValueMap,
-      level: 0,
-    } as AccountListNode;
-
-    const totalProfitRow = this.getRowFromAccountListNode(totalProfit);
-    totalProfitRow.cells.forEach((c) => {
-      c.bold = true;
-      if (typeof c.rawValue !== 'number') {
-        return;
-      }
-
-      if (c.rawValue > 0) {
-        c.color = 'green';
-      } else if (c.rawValue < 0) {
-        c.color = 'red';
-      }
+  getReportDataFromSections({ sections, profit }: ProfitAndLossData) {
+    const reportData = this.getSectionRows(sections, {
+      Income: t`Total Income (Credit)`,
+      Expense: t`Total Expense (Debit)`,
     });
+    if (sections.length < 2) {
+      return reportData;
+    }
 
-    const emptyRow = this.getEmptyRow();
+    const profitRow = this.getTotalRow(t`Total Profit`, profit);
+    for (const cell of profitRow.cells) {
+      cell.bold = true;
+      if (typeof cell.rawValue === 'number' && cell.rawValue !== 0) {
+        cell.color = cell.rawValue > 0 ? 'green' : 'red';
+      }
+    }
 
-    return [
-      incomeRows,
-      totalIncomeRow,
-      emptyRow,
-      expenseRows,
-      totalExpenseRow,
-      emptyRow,
-      totalProfitRow,
-    ].flat() as ReportData;
+    return [...reportData, this.getEmptyRow(), profitRow] as ReportData;
   }
 }

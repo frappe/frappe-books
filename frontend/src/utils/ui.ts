@@ -11,6 +11,7 @@ import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { getLedgerLink } from 'models/helpers';
+import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { Transfer } from 'models/inventory/Transfer';
 import { Transactional } from 'models/Transactional/Transactional';
 import { ModelNameEnum } from 'models/types';
@@ -618,33 +619,7 @@ export async function commonDocSubmit(doc: Doc): Promise<boolean> {
 }
 
 async function showInsufficientInventoryDialog(doc: SalesInvoice) {
-  const insufficient: { item: string; quantity: number }[] = [];
-  for (const { item, quantity, batch } of doc.items ?? []) {
-    if (!item || typeof quantity !== 'number') {
-      continue;
-    }
-
-    const isTracked = await fyo.getValue(ModelNameEnum.Item, item, 'trackItem');
-    if (!isTracked) {
-      continue;
-    }
-
-    const stockQuantity =
-      (await fyo.db.getStockQuantity(
-        item,
-        undefined,
-        undefined,
-        doc.date!.toISOString(),
-        batch,
-      )) ?? 0;
-
-    if (stockQuantity > quantity) {
-      continue;
-    }
-
-    insufficient.push({ item, quantity: quantity - stockQuantity });
-  }
-
+  const insufficient = await getInsufficientItems(doc);
   if (insufficient.length) {
     const buttons = [
       {

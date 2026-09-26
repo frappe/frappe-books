@@ -109,14 +109,15 @@ class BooksPosClosingShift(Document):
 
 
 def _closing_journal_rows(cash_row):
-	if not as_decimal(cash_row.expected_amount):
-		return []
+	"""Move counted cash out of the counter, clear what was expected, and write off the difference."""
 	settings = frappe.get_single("Books Pos Settings")
-	closing = rounded(cash_row.closing_amount)
-	difference = rounded(cash_row.difference_amount)
-	rows = [(cash_account(), closing, 0), (settings.cash_account, 0, closing)]
-	if difference < 0:
-		rows.extend([(cash_account(), abs(difference), 0), (settings.write_off_account, 0, abs(difference))])
-	elif difference > 0:
-		rows.extend([(settings.write_off_account, difference, 0), (cash_account(), 0, difference)])
+	rows = [
+		(cash_account(), cash_row.closing_amount, 0),
+		(settings.cash_account, 0, cash_row.expected_amount),
+	]
+	difference = as_decimal(cash_row.difference_amount)
+	if difference:
+		if not settings.write_off_account:
+			frappe.throw(_("Set a write-off account in POS Settings."))
+		rows.append((settings.write_off_account, max(-difference, 0), max(difference, 0)))
 	return rows

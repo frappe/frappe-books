@@ -254,13 +254,23 @@ def _post_direction(posting, account, amount, party=None, credit=False, reverse=
 
 
 def _populate_invoice_defaults(invoice):
-	if invoice.transaction_type != "quote" and invoice.party and not invoice.get("account"):
-		invoice.account = frappe.db.get_value("Books Party", invoice.party, "default_account")
+	_populate_party_defaults(invoice)
 	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
 	rates = pricing.standard_rates(invoice) if items else {}
 	for row in invoice.get("items", []):
 		if row.item in items:
 			_populate_row(invoice, row, items[row.item], rates)
+
+
+def _populate_party_defaults(invoice):
+	party = invoice.transaction_type != "quote" and frappe.db.get_value(
+		"Books Party", invoice.party, ["default_account", "loyalty_program"], as_dict=True
+	)
+	if not party:
+		return
+	invoice.account = invoice.get("account") or party.default_account
+	if invoice.transaction_type == "sales" and not invoice.get("return_against"):
+		invoice.loyalty_program = party.loyalty_program
 
 
 def _populate_row(invoice, row, item, rates):

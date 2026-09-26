@@ -45,6 +45,7 @@ class BooksSalesQuote(InvoiceController):
 		price_list: DF.Link | None
 		reference_type: DF.Link
 		set_discount_amount: DF.Check
+		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None
 	# end: auto-generated types

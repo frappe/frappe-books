@@ -11,6 +11,7 @@
   "party",
   "account",
   "date",
+  "status",
   "price_list",
   "items_section_break_7",
   "items",
@@ -89,6 +90,19 @@
    "in_list_view": 1,
    "label": "Date",
    "reqd": 1
+  },
+  {
+   "default": "Saved",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Saved\nUnpaid\nPartlyPaid\nPaid\nReturn\nReturnIssued\nCancelled",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "price_list",
@@ -275,7 +289,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-26 22:32:02.651346",
+ "modified": "2026-09-27 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Purchase Invoice",

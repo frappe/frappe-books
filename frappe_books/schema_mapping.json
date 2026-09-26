@@ -319,6 +319,7 @@
         "numberSeries": "number_series",
         "referenceDate": "reference_date",
         "referenceNumber": "reference_number",
+        "status": "status",
         "userRemark": "user_remark"
       }
     },
@@ -511,6 +512,7 @@
         "referenceDate": "reference_date",
         "referenceId": "reference_id",
         "referenceType": "reference_type",
+        "status": "status",
         "taxes": "taxes",
         "writeoff": "writeoff"
       }
@@ -657,6 +659,7 @@
         "priceList": "price_list",
         "returnAgainst": "return_against",
         "setDiscountAmount": "set_discount_amount",
+        "status": "status",
         "stockNotTransferred": "stock_not_transferred",
         "taxes": "taxes",
         "terms": "terms"
@@ -704,6 +707,7 @@
         "numberSeries": "number_series",
         "party": "party",
         "returnAgainst": "return_against",
+        "status": "status",
         "terms": "terms"
       }
     },
@@ -765,6 +769,7 @@
         "redeemLoyaltyPoints": "redeem_loyalty_points",
         "returnAgainst": "return_against",
         "setDiscountAmount": "set_discount_amount",
+        "status": "status",
         "stockNotTransferred": "stock_not_transferred",
         "taxes": "taxes",
         "terms": "terms"
@@ -825,6 +830,7 @@
         "priceList": "price_list",
         "referenceType": "reference_type",
         "setDiscountAmount": "set_discount_amount",
+        "status": "status",
         "taxes": "taxes",
         "terms": "terms"
       }
@@ -904,6 +910,7 @@
         "numberSeries": "number_series",
         "party": "party",
         "returnAgainst": "return_against",
+        "status": "status",
         "terms": "terms"
       }
     },
@@ -951,7 +958,8 @@
         "items": "items",
         "movementType": "movement_type",
         "name": "name",
-        "numberSeries": "number_series"
+        "numberSeries": "number_series",
+        "status": "status"
       }
     },
     "StockMovementItem": {

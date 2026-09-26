@@ -10,6 +10,7 @@
   "number_series",
   "party",
   "date",
+  "status",
   "payment_type",
   "details_section_break_6",
   "account",
@@ -68,6 +69,19 @@
    "in_list_view": 1,
    "label": "Posting Date",
    "reqd": 1
+  },
+  {
+   "default": "Saved",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Saved\nSubmitted\nCancelled",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "description": "Payment Type",
@@ -184,7 +198,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-26 22:32:02.651346",
+ "modified": "2026-09-27 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Payment",

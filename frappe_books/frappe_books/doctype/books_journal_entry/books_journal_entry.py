@@ -48,6 +48,7 @@ class BooksJournalEntry(SeriesNamingMixin, Document):
 		posting_date: DF.Date
 		reference_date: DF.Date | None
 		reference_number: DF.Data | None
+		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 		total_credit: DF.Currency
 		total_debit: DF.Currency
 		user_remark: DF.Text | None

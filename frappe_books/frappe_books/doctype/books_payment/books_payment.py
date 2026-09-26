@@ -36,6 +36,7 @@ class BooksPayment(PaymentController):
 		reference_date: DF.Date | None
 		reference_id: DF.Data | None
 		reference_type: DF.Literal["SalesInvoice", "PurchaseInvoice"]
+		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 		taxes: DF.Table[BooksTaxSummary]
 		writeoff: DF.Currency
 	# end: auto-generated types

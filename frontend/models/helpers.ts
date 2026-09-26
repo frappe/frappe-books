@@ -675,7 +675,7 @@ export async function getExchangeRate({
       rates: Record<string, number>;
     };
     exchangeRate = data.rates[toCurrency];
-  } catch (error) {
+  } catch {
     exchangeRate ??= 1;
   }
 

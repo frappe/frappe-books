@@ -30,7 +30,6 @@ export class StockMovement extends Transfer {
     return false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   formulas: FormulaMap = {
     amount: {
       formula: () => {

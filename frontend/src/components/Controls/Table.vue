@@ -230,7 +230,7 @@ export default {
 
     scrollToRow(index) {
       const row = this.$refs['table-row'][index];
-      row && row.$el.scrollIntoView({ block: 'nearest' });
+      row?.$el.scrollIntoView({ block: 'nearest' });
     },
   },
 };

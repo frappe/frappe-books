@@ -9,7 +9,6 @@ export class Party extends BaseParty {
   gstType?: GSTType;
   loyaltyProgram?: string;
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async beforeSync() {
     const gstin = this.get('gstin') as string | undefined;
     const gstType = this.get('gstType') as GSTType;

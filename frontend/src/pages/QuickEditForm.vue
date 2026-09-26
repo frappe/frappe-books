@@ -184,7 +184,6 @@ export default defineComponent({
   activated() {
     this.setShortcuts();
   },
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async mounted() {
     await this.initialize();
 
@@ -217,7 +216,7 @@ export default defineComponent({
     async setDoc() {
       try {
         this.doc = await fyo.doc.getDoc(this.schemaName, this.name);
-      } catch (e) {
+      } catch {
         return this.$router.back();
       }
     },

@@ -319,7 +319,7 @@ export default defineComponent({
       return [ShortcutKey.ctrl, ShortcutKey.enter];
     },
     view(): EditorView | null {
-      // @ts-ignore
+      // @ts-expect-error template refs are untyped
       const { view } = this.$refs.templateEditor ?? {};
       if (view instanceof EditorView) {
         return view;
@@ -550,7 +550,7 @@ export default defineComponent({
       this.scale = this.preEditMode.scale;
     },
     getEditModeScale(): number {
-      // @ts-ignore
+      // @ts-expect-error template refs are untyped
       const div = this.$refs.printContainer.$el as unknown;
       if (!(div instanceof HTMLDivElement)) {
         return this.scale;

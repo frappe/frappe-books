@@ -6,7 +6,7 @@
         class="h-8"
         @item-selected="
           (name: string) => {
-            // @ts-ignore
+            // @ts-expect-error only invoices have addItem
             doc?.addItem(name);
           }
         "
@@ -234,7 +234,6 @@ export default defineComponent({
         return false;
       }
 
-      // @ts-ignore
       return typeof this.doc?.addItem === 'function';
     },
     canShowExchangeRate(): boolean {

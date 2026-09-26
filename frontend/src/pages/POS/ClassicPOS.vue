@@ -252,7 +252,6 @@ import { fyo } from 'src/initFyo';
 import { getItem } from 'src/utils/pos';
 import AlertModal from './AlertModal.vue';
 import PaymentModal from './PaymentModal.vue';
-import Button from 'src/components/Button.vue';
 import { defineComponent, PropType } from 'vue';
 import PriceListModal from './PriceListModal.vue';
 import ItemEnquiryModal from './ItemEnquiryModal.vue';
@@ -282,7 +281,6 @@ export default defineComponent({
     POSOrderSummary,
     POSInvoiceActions,
     Link,
-    Button,
     ItemsGrid,
     AlertModal,
     ItemsTable,

@@ -187,7 +187,6 @@ export class DocHandler {
 
     // propagate change to `docs`
     doc.on('change', (params: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.docs.trigger('change', params);
     });
 

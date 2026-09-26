@@ -276,7 +276,7 @@ export default defineComponent({
     },
     searchResults(): SearchItems {
       // The web app keeps Search in a shallow ref; track filter mutations here.
-      this.filterRevision;
+      void this.filterRevision;
       if (!this.searcher) {
         return [];
       }

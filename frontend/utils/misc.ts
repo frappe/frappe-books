@@ -3,7 +3,7 @@ import countryInfo from '../fixtures/countryInfo.json';
 import { CountryInfoMap } from './types';
 
 export function getCountryInfo(): CountryInfoMap {
-  // @ts-ignore
+  // @ts-expect-error some countries have no fiscal year dates
   return countryInfo as CountryInfoMap;
 }
 

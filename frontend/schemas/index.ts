@@ -88,7 +88,7 @@ function deepFreeze(schemaMap: SchemaMap) {
   for (const schemaName in schemaMap) {
     Object.freeze(schemaMap[schemaName]);
     for (const key in schemaMap[schemaName]) {
-      // @ts-ignore
+      // @ts-expect-error for...in keys are plain strings
       Object.freeze(schemaMap[schemaName][key]);
     }
 
@@ -252,7 +252,7 @@ export function getRegionalCombinedSchemas(
   for (const name in regionalSchemaMap) {
     const regionalSchema = regionalSchemaMap[name];
 
-    if (!combined.hasOwnProperty(name)) {
+    if (!Object.hasOwn(combined, name)) {
       combined[name] = regionalSchema;
       continue;
     }

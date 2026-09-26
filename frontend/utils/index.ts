@@ -180,4 +180,4 @@ export function joinMapLists<A, B>(
 /**
  * Asserts that `value` is of type T. Use with care.
  */
-export const assertIsType = <T>(value: unknown): value is T => true;
+export const assertIsType = <T>(_value: unknown): _value is T => true;

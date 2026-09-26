@@ -6,7 +6,7 @@ test('a purchase return receipt returns against the original receipt', async () 
   const fyo = await makeFyo();
   const original = fyo.doc.getNewDoc('PurchaseInvoice', { name: 'PINV-1' });
   const loaded = [];
-  fyo.doc.getDoc = async (schemaName, name) => {
+  fyo.doc.getDoc = async (schemaName) => {
     loaded.push(schemaName);
     return schemaName === 'PurchaseInvoice' ? original : {};
   };

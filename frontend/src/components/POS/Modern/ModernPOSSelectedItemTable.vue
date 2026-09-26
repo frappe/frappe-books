@@ -11,7 +11,7 @@
           v-for="df in tableFields"
           :key="df.fieldname"
           class="px-2"
-          :class="isNumeric(df as Field) ? 'justify-end' : ''"
+          :class="isNumeric(df) ? 'justify-end' : ''"
         >
           {{ df.label }}
         </FrappeListHeaderCell>
@@ -61,9 +61,6 @@
 </template>
 
 <script lang="ts">
-import FormContainer from 'src/components/FormContainer.vue';
-import FormControl from 'src/components/Controls/FormControl.vue';
-import Link from 'src/components/Controls/Link.vue';
 import {
   List as FrappeList,
   ListHeader as FrappeListHeader,
@@ -71,7 +68,6 @@ import {
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
-import RowEditForm from 'src/pages/CommonForm/RowEditForm.vue';
 import ModernPOSSelectedItemRow from './ModernPOSSelectedItemRow.vue';
 import { isNumeric } from 'src/utils';
 import { t } from 'fyo';
@@ -83,15 +79,11 @@ import { Field } from 'schemas/types';
 export default defineComponent({
   name: 'ModernPOSSelectedItemTable',
   components: {
-    FormContainer,
-    FormControl,
-    Link,
     FrappeList,
     FrappeListHeader,
     FrappeListHeaderCell,
     FrappeListRow,
     FrappeListRows,
-    RowEditForm,
     ModernPOSSelectedItemRow,
   },
   setup() {
@@ -122,7 +114,7 @@ export default defineComponent({
         '2.5rem',
       ];
     },
-    tableFields() {
+    tableFields(): Field[] {
       return [
         {
           fieldname: 'toggler',
@@ -166,7 +158,7 @@ export default defineComponent({
           fieldtype: 'Link',
           label: ' ',
         },
-      ];
+      ] as Field[];
     },
   },
   methods: {

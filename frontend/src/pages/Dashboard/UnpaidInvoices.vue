@@ -76,12 +76,6 @@ import { PropType, defineComponent } from 'vue';
 import BaseDashboardChart from './BaseDashboardChart.vue';
 import SectionHeader from './SectionHeader.vue';
 
-// Linting broken in this file cause of `extends: ...`
-/*
-  eslint-disable @typescript-eslint/no-unsafe-argument,
-  @typescript-eslint/restrict-template-expressions,
-  @typescript-eslint/no-unsafe-return
-*/
 export default defineComponent({
   name: 'UnpaidInvoices',
   components: {

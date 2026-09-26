@@ -34,12 +34,6 @@ import { defineComponent } from 'vue';
 import { getMapFromList } from 'utils/index';
 import { PeriodKey } from 'src/utils/types';
 
-// Linting broken in this file cause of `extends: ...`
-/*
-  eslint-disable @typescript-eslint/no-unsafe-argument,
-  @typescript-eslint/no-unsafe-return
-*/
-
 export default defineComponent({
   name: 'Cashflow',
   components: {

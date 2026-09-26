@@ -1162,7 +1162,6 @@ export default defineComponent({
 
         if (shouldPrint) {
           await routeTo(
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             `/print/${this.sinvDoc.schemaName}/${this.sinvDoc.name}`
           );
         }

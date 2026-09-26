@@ -122,7 +122,6 @@ export default defineComponent({
       return Object.values(actionsMap);
     },
   },
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async activated() {
     docsPathRef.value =
       docsPathMap[this.reportClassName] ?? docsPathMap.Reports!;

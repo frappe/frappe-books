@@ -263,7 +263,6 @@
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
 import { Button as FrappeButton } from 'frappe-ui';
 import Currency from 'src/components/Controls/Currency.vue';
-import Data from 'src/components/Controls/Data.vue';
 import Float from 'src/components/Controls/Float.vue';
 import Link from 'src/components/Controls/Link.vue';
 import Text from 'src/components/Controls/Text.vue';
@@ -288,7 +287,6 @@ export default defineComponent({
   components: {
     FrappeListCell,
     Currency,
-    Data,
     Float,
     Link,
     Text,
@@ -539,9 +537,8 @@ export default defineComponent({
         if (serialNumbers) {
           await this.row.set('serialNumber', serialNumbers);
           this.itemSerialNumbers[this.row.item as string] = serialNumbers;
-        } else {
         }
-      } catch (error) {}
+      } catch {}
     },
     isRateReadOnly() {
       const canChangeRate = this.profileRateSetting;

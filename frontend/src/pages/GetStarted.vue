@@ -229,7 +229,6 @@ export default defineComponent({
       return {
         name,
         render() {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           return h(Icon, {
             ...Object.assign(
               {

@@ -10,7 +10,7 @@ export function unique<T>(list: T[], key = (it: T) => String(it)) {
   const seen: Record<string, boolean> = {};
   return list.filter((item) => {
     const k = key(item);
-    return seen.hasOwnProperty(k) ? false : (seen[k] = true);
+    return Object.hasOwn(seen, k) ? false : (seen[k] = true);
   });
 }
 

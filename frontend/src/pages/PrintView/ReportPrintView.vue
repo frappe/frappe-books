@@ -261,11 +261,9 @@ export default defineComponent({
     await this.$nextTick();
     this.setScale();
 
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     window.addEventListener('resize', this.setScale);
   },
   unmounted() {
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     window.removeEventListener('resize', this.setScale);
   },
   methods: {

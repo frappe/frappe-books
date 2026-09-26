@@ -111,7 +111,7 @@ export class Party extends Doc {
             query: {
               schemaName: 'PurchaseInvoice',
               values: {
-                // @ts-ignore
+                // @ts-expect-error the router types query values as strings
                 party: partyDoc.name!,
               },
             },
@@ -144,7 +144,7 @@ export class Party extends Doc {
             query: {
               schemaName: 'SalesInvoice',
               values: {
-                // @ts-ignore
+                // @ts-expect-error the router types query values as strings
                 party: partyDoc.name!,
               },
             },

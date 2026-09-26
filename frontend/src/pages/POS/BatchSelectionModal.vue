@@ -86,7 +86,7 @@ export default defineComponent({
         })) as { name: string; itemCode: string }[];
 
         return batches.map((b) => ({ label: b.name, value: b.name }));
-      } catch (error) {
+      } catch {
         showToast({ type: 'error', message: t`Failed to load batches` });
         return [];
       }

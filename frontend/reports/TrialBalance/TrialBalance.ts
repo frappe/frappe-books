@@ -79,7 +79,6 @@ export class TrialBalance extends AccountReport {
     this.loading = false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async getReportDataFromRows(
     rootTypeRows: RootTypeRow[]
   ): Promise<ReportData> {
@@ -94,7 +93,6 @@ export class TrialBalance extends AccountReport {
     return reportData;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async _getGroupedByDateRanges(
     map: GroupedMap
   ): Promise<AccountNameValueMapMap> {
@@ -191,7 +189,6 @@ export class TrialBalance extends AccountReport {
     } as ReportRow;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async _getQueryFilters(): Promise<QueryFilter> {
     const filters: QueryFilter = {};
     filters.reverted = false;

@@ -267,22 +267,32 @@ def _create_stock_entry(transaction, transfer, location, quantity, serial_number
 
 
 def _update_serial_statuses(transaction, transfer, serial_numbers, cancel):
+	if not serial_numbers:
+		return
+	if transfer.get("to_location") and not cancel:
+		_create_serial_numbers(transfer["item"], serial_numbers)
+	frappe.db.set_value(
+		"Books Serial Number",
+		{"name": ["in", serial_numbers]},
+		"status",
+		_serial_status(transaction, transfer, cancel),
+	)
+
+
+def _create_serial_numbers(item, serial_numbers):
+	existing = set(
+		frappe.get_all("Books Serial Number", filters={"name": ["in", serial_numbers]}, pluck="name")
+	)
 	for serial_number in serial_numbers:
-		if transfer.get("to_location") and not frappe.db.exists("Books Serial Number", serial_number):
+		if serial_number not in existing:
 			frappe.get_doc(
-				{
-					"doctype": "Books Serial Number",
-					"name": serial_number,
-					"item": transfer["item"],
-					"status": "Active",
-				}
+				{"doctype": "Books Serial Number", "name": serial_number, "item": item, "status": "Active"}
 			).insert(ignore_permissions=True)
-		if not frappe.db.exists("Books Serial Number", serial_number):
-			continue
-		if cancel:
-			status = "Active" if transfer.get("from_location") else "Inactive"
-		elif transfer.get("from_location") and not transfer.get("to_location"):
-			status = "Delivered" if transaction.doctype == "Books Shipment" else "Inactive"
-		else:
-			status = "Active"
-		frappe.db.set_value("Books Serial Number", serial_number, "status", status)
+
+
+def _serial_status(transaction, transfer, cancel):
+	if cancel:
+		return "Active" if transfer.get("from_location") else "Inactive"
+	if transfer.get("from_location") and not transfer.get("to_location"):
+		return "Delivered" if transaction.doctype == "Books Shipment" else "Inactive"
+	return "Active"

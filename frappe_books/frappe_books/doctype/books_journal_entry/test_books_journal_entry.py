@@ -7,6 +7,9 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, nowdate
 
+from frappe_books.accounting.money import as_decimal
+from frappe_books.tests.accounting import ledger_entries, make_account
+
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
 # Use these module variables to add/remove to/from that list
@@ -28,10 +31,10 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		)
 		journal_entry.submit()
 
-		entries = get_ledger_entries(journal_entry.name)
+		entries = ledger_entries(journal_entry.doctype, journal_entry.name)
 		self.assertEqual(len(entries), 2)
-		self.assertEqual(sum(to_decimal(entry.debit) for entry in entries), Decimal("125.5"))
-		self.assertEqual(sum(to_decimal(entry.credit) for entry in entries), Decimal("125.5"))
+		self.assertEqual(sum(as_decimal(entry.debit) for entry in entries), Decimal("125.5"))
+		self.assertEqual(sum(as_decimal(entry.credit) for entry in entries), Decimal("125.5"))
 
 	def test_cancel_posts_reversals(self):
 		journal_entry = make_journal_entry(
@@ -43,7 +46,7 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		journal_entry.submit()
 		journal_entry.cancel()
 
-		entries = get_ledger_entries(journal_entry.name)
+		entries = ledger_entries(journal_entry.doctype, journal_entry.name)
 		self.assertEqual(len(entries), 4)
 		self.assertEqual(sum(flt(entry.debit, 2) for entry in entries), 100)
 		self.assertEqual(sum(flt(entry.credit, 2) for entry in entries), 100)
@@ -73,7 +76,7 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		)
 		journal_entry.submit()
 
-		entries = get_ledger_entries(journal_entry.name)
+		entries = ledger_entries(journal_entry.doctype, journal_entry.name)
 		self.assertEqual(flt(sum(entry.debit for entry in entries), 2), 0.3)
 		self.assertEqual(flt(sum(entry.credit for entry in entries), 2), 0.3)
 
@@ -86,19 +89,9 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		)
 		journal_entry.submit()
 
-		entries = get_ledger_entries(journal_entry.name)
-		self.assertEqual(sum(to_decimal(entry.debit) for entry in entries), Decimal("10.01"))
-		self.assertEqual(sum(to_decimal(entry.credit) for entry in entries), Decimal("10.01"))
-
-
-def make_account(account_name, root_type="Asset"):
-	return frappe.get_doc(
-		{
-			"doctype": "Books Account",
-			"account_name": f"{account_name} {frappe.generate_hash(length=8)}",
-			"root_type": root_type,
-		}
-	).insert()
+		entries = ledger_entries(journal_entry.doctype, journal_entry.name)
+		self.assertEqual(sum(as_decimal(entry.debit) for entry in entries), Decimal("10.01"))
+		self.assertEqual(sum(as_decimal(entry.credit) for entry in entries), Decimal("10.01"))
 
 
 def make_journal_entry(accounts):
@@ -109,16 +102,3 @@ def make_journal_entry(accounts):
 			"accounts": accounts,
 		}
 	).insert()
-
-
-def get_ledger_entries(voucher_no):
-	return frappe.get_all(
-		"Books Ledger Entry",
-		filters={"voucher_type": "Books Journal Entry", "voucher_no": voucher_no},
-		fields=["debit", "credit", "reverted", "reverts"],
-		order_by="creation asc",
-	)
-
-
-def to_decimal(value):
-	return Decimal(str(value or 0))

@@ -13,6 +13,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_party,
 	make_tax,
+	set_inventory_accounts,
 )
 
 
@@ -36,8 +37,7 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		tax = make_tax(tax_account.name, rate=18)
 		party = make_party(payable.name, role="Supplier")
 		item = make_item(income.name, expense.name, tax=tax.name, track_item=1)
-		frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock.name)
-		frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received.name)
+		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
 		invoice = make_invoice(
 			"Books Purchase Invoice",

@@ -5,9 +5,6 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (
-	set_inventory_accounts,
-)
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
 )
@@ -18,6 +15,7 @@ from frappe_books.tests.accounting import (
 	make_invoice,
 	make_item,
 	make_party,
+	set_inventory_accounts,
 	unique_name,
 )
 

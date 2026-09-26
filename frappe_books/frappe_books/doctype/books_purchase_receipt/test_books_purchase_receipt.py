@@ -8,7 +8,13 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.inventory.stock import stock_quantity
-from frappe_books.tests.accounting import ledger_entries, make_account, make_item, make_party
+from frappe_books.tests.accounting import (
+	ledger_entries,
+	make_account,
+	make_item,
+	make_party,
+	set_inventory_accounts,
+)
 
 
 class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
@@ -93,12 +99,6 @@ def make_receipt(item, quantity, rate, return_against=None):
 	).insert()
 	receipt.submit()
 	return receipt
-
-
-def set_inventory_accounts(stock, received, cogs):
-	frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock)
-	frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received)
-	frappe.db.set_single_value("Books Inventory Settings", "cost_of_goods_sold", cogs)
 
 
 def stock_value_change(transaction):

@@ -8,7 +8,6 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (
-	set_inventory_accounts,
 	stock_value_change,
 )
 from frappe_books.inventory.stock import stock_quantity
@@ -18,6 +17,7 @@ from frappe_books.tests.accounting import (
 	make_invoice,
 	make_item,
 	make_party,
+	set_inventory_accounts,
 	unique_name,
 )
 

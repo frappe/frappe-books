@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.tests.accounting import make_account, unique_name
+
 
 class IntegrationTestBooksAccount(IntegrationTestCase):
 	def test_root_deletion_is_blocked_but_children_can_be_deleted(self):
@@ -44,18 +46,3 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 		)
 
 		self.assertRaises(frappe.ValidationError, child.insert)
-
-
-def make_account(account_name, **values):
-	return frappe.get_doc(
-		{
-			"doctype": "Books Account",
-			"account_name": unique_name(account_name),
-			"root_type": "Asset",
-			**values,
-		}
-	).insert()
-
-
-def unique_name(account_name):
-	return f"{account_name} {frappe.generate_hash(length=8)}"

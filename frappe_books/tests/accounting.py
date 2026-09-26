@@ -4,14 +4,13 @@ import frappe
 from frappe.utils import now_datetime
 
 
-def make_account(label, root_type="Asset", account_type=None):
-	name = unique_name(label)
+def make_account(label, root_type="Asset", **values):
 	return frappe.get_doc(
 		{
 			"doctype": "Books Account",
-			"account_name": name,
+			"account_name": unique_name(label),
 			"root_type": root_type,
-			"account_type": account_type,
+			**values,
 		}
 	).insert()
 
@@ -95,6 +94,13 @@ def ensure_user(email, *roles):
 			}
 		).insert(ignore_permissions=True)
 	return email
+
+
+def set_inventory_accounts(stock, received, cogs):
+	frappe.db.set_single_value(
+		"Books Inventory Settings",
+		{"stock_in_hand": stock, "stock_received_but_not_billed": received, "cost_of_goods_sold": cogs},
+	)
 
 
 def unique_name(label):

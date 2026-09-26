@@ -9,41 +9,6 @@ from frappe import _
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 
 
-def validate_pricing_rule(rule):
-	_validate_range(rule.min_quantity, rule.max_quantity, _("quantity"))
-	_validate_range(rule.min_amount, rule.max_amount, _("amount"), strict=True)
-	_validate_dates(rule.valid_from, rule.valid_to)
-	if not rule.applied_items:
-		frappe.throw(_("Add at least one item to the pricing rule."))
-	if rule.discount_type == "Price Discount":
-		_validate_price_discount(rule)
-	elif rule.discount_type == "Product Discount":
-		if not rule.free_item or as_decimal(rule.free_item_quantity) <= 0:
-			frappe.throw(_("A product discount requires a free item and a positive quantity."))
-		if rule.is_recursive and as_decimal(rule.recurse_every) <= 0:
-			frappe.throw(_("Recursive product discounts require a positive recurse-every quantity."))
-
-
-def validate_coupon(coupon):
-	rule = frappe.get_doc("Books Pricing Rule", coupon.pricing_rule)
-	if not rule.is_coupon_code_based:
-		frappe.throw(_("Coupon codes can only use coupon-based pricing rules."))
-	_validate_range(coupon.min_amount, coupon.max_amount, _("amount"), strict=True)
-	_validate_dates(coupon.valid_from, coupon.valid_to)
-	if coupon.maximum_use < 0 or coupon.used < 0:
-		frappe.throw(_("Coupon usage counts cannot be negative."))
-	if coupon.maximum_use and coupon.used > coupon.maximum_use:
-		frappe.throw(_("Coupon usage cannot exceed its maximum use limit."))
-	if as_decimal(rule.min_amount) and as_decimal(coupon.min_amount) < as_decimal(rule.min_amount):
-		frappe.throw(_("Coupon minimum amount cannot be below the pricing-rule minimum."))
-	if as_decimal(rule.max_amount) and as_decimal(coupon.max_amount) > as_decimal(rule.max_amount):
-		frappe.throw(_("Coupon maximum amount cannot exceed the pricing-rule maximum."))
-	if rule.valid_from and frappe.utils.getdate(coupon.valid_from) < frappe.utils.getdate(rule.valid_from):
-		frappe.throw(_("Coupon validity cannot start before its pricing rule."))
-	if rule.valid_to and frappe.utils.getdate(coupon.valid_to) > frappe.utils.getdate(rule.valid_to):
-		frappe.throw(_("Coupon validity cannot end after its pricing rule."))
-
-
 def reset_pricing(invoice):
 	"""Undo what pricing rules set on an invoice so they can be evaluated afresh."""
 	if invoice.transaction_type != "sales" or invoice.get("return_against"):
@@ -289,22 +254,7 @@ def _ignore_pos_pricing(invoice):
 	return bool(invoice.get("is_pos") and pos_setting("ignore_pricing_rule"))
 
 
-def _validate_price_discount(rule):
-	value_by_type = {
-		"rate": rule.discount_rate,
-		"percentage": rule.discount_percentage,
-		"amount": rule.discount_amount,
-	}
-	if rule.price_discount_type not in value_by_type:
-		frappe.throw(_("Select a price discount type."))
-	value = as_decimal(value_by_type[rule.price_discount_type])
-	if value < 0:
-		frappe.throw(_("Discount values cannot be negative."))
-	if rule.price_discount_type == "percentage" and value > 100:
-		frappe.throw(_("Discount percentage cannot exceed 100."))
-
-
-def _validate_range(minimum, maximum, label, strict=False):
+def validate_range(minimum, maximum, label, strict=False):
 	minimum = as_decimal(minimum)
 	maximum = as_decimal(maximum)
 	if minimum < 0 or maximum < 0:
@@ -313,6 +263,6 @@ def _validate_range(minimum, maximum, label, strict=False):
 		frappe.throw(_("Minimum {0} must be less than maximum {0}.").format(label))
 
 
-def _validate_dates(valid_from, valid_to):
+def validate_dates(valid_from, valid_to):
 	if valid_from and valid_to and frappe.utils.getdate(valid_from) > frappe.utils.getdate(valid_to):
 		frappe.throw(_("Valid From must be on or before Valid To."))

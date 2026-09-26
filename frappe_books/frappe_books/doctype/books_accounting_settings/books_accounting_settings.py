@@ -4,7 +4,7 @@
 # import frappe
 from frappe.model.document import Document
 
-from frappe_books.regional import validate_accounting_settings
+from frappe_books.regional import validate_gstin
 
 
 class BooksAccountingSettings(Document):
@@ -47,4 +47,5 @@ class BooksAccountingSettings(Document):
 	_DOCTYPE_NAME = "Books Accounting Settings"
 
 	def validate(self):
-		validate_accounting_settings(self)
+		if self.country == "India" and self.gstin:
+			self.gstin = validate_gstin(self.gstin)

@@ -1,9 +1,12 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import getdate
 
-from frappe_books.commerce.loyalty import validate_program
+from frappe_books.accounting.money import as_decimal
 
 
 class BooksLoyaltyProgram(Document):
@@ -33,4 +36,20 @@ class BooksLoyaltyProgram(Document):
 	_DOCTYPE_NAME = "Books Loyalty Program"
 
 	def validate(self):
-		validate_program(self)
+		if getdate(self.from_date) > getdate(self.to_date):
+			frappe.throw(_("Loyalty program start date must be on or before its end date."))
+		if self.maximum_use < 0 or self.used < 0:
+			frappe.throw(_("Loyalty-program usage counts cannot be negative."))
+		if self.maximum_use and self.used > self.maximum_use:
+			frappe.throw(_("Loyalty-program usage cannot exceed its maximum."))
+		if as_decimal(self.conversion_factor) < 0:
+			frappe.throw(_("Loyalty conversion factor cannot be negative."))
+		self.validate_tiers()
+
+	def validate_tiers(self):
+		minimums = [as_decimal(row.minimum_total_spent) for row in self.collection_rules]
+		if len(minimums) != len(set(minimums)):
+			frappe.throw(_("Each loyalty tier must have a unique minimum spend."))
+		for row in self.collection_rules:
+			if as_decimal(row.collection_factor) < 0 or as_decimal(row.minimum_total_spent) < 0:
+				frappe.throw(_("Loyalty tier values cannot be negative."))

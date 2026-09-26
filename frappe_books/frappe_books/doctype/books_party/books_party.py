@@ -2,9 +2,10 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
-from frappe_books.regional import validate_party
+from frappe_books.regional import validate_gstin
 
 
 class BooksParty(Document):
@@ -35,7 +36,12 @@ class BooksParty(Document):
 	_DOCTYPE_NAME = "Books Party"
 
 	def validate(self):
-		validate_party(self)
+		if self.gst_type != "Registered Regular":
+			self.gstin = None
+		elif not self.gstin:
+			frappe.throw(_("GSTIN is required for a registered party."))
+		else:
+			self.gstin = validate_gstin(self.gstin)
 
 	def on_update(self):
 		if not self.from_lead:

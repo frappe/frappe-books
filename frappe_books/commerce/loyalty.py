@@ -13,23 +13,6 @@ from frappe_books.accounting.money import as_decimal, rounded
 ENTRY = "Books Loyalty Point Entry"
 
 
-def validate_program(program):
-	if getdate(program.from_date) > getdate(program.to_date):
-		frappe.throw(_("Loyalty program start date must be on or before its end date."))
-	if program.maximum_use < 0 or program.used < 0:
-		frappe.throw(_("Loyalty-program usage counts cannot be negative."))
-	if program.maximum_use and program.used > program.maximum_use:
-		frappe.throw(_("Loyalty-program usage cannot exceed its maximum."))
-	if as_decimal(program.conversion_factor) < 0:
-		frappe.throw(_("Loyalty conversion factor cannot be negative."))
-	minimums = [as_decimal(row.minimum_total_spent) for row in program.collection_rules]
-	if len(minimums) != len(set(minimums)):
-		frappe.throw(_("Each loyalty tier must have a unique minimum spend."))
-	for row in program.collection_rules:
-		if as_decimal(row.collection_factor) < 0 or as_decimal(row.minimum_total_spent) < 0:
-			frappe.throw(_("Loyalty tier values cannot be negative."))
-
-
 def validate_invoice_loyalty(invoice):
 	if invoice.transaction_type != "sales" or not invoice.get("loyalty_program"):
 		return

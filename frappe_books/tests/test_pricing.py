@@ -123,6 +123,33 @@ class IntegrationTestPricing(IntegrationTestCase):
 				self.assertFalse(invoice.items[0].pricing_rule)
 				self.assertEqual(invoice.grand_total, 100)
 
+	def test_empty_rate_comes_from_price_list_in_invoice_currency(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
+		item = make_item(self.income.name, self.expense.name, rate=100)
+		price_list = frappe.get_doc(
+			{
+				"doctype": "Books Price List",
+				"name": unique_name("Price List"),
+				"is_enabled": 1,
+				"is_sales": 1,
+				"price_list_item": [{"item": item.name, "unit": "Unit", "rate": 90}],
+			}
+		).insert()
+		for price_list_name, rate in ((price_list.name, 45), (None, 50)):
+			with self.subTest(price_list=price_list_name):
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					item.name,
+					self.income.name,
+					price_list=price_list_name,
+					exchange_rate=2,
+				)
+				invoice.items[0].rate = None
+				invoice.save()
+				self.assertEqual(invoice.items[0].rate, rate)
+
 	def test_stale_coupon_save_cannot_reset_usage(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		rule = self._pricing_rule(is_coupon_code_based=1)

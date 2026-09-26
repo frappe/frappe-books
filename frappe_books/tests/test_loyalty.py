@@ -131,6 +131,31 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "already redeemed"):
 			credit_note.submit()
 
+	def test_returning_a_redemption_gives_the_points_back(self):
+		program = self._loyalty_program()
+		self._loyalty_invoice(program).submit()
+		redemption = self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=40).submit()
+		self.assertEqual(self._points(), 140)
+
+		partial = map_return(redemption.doctype, redemption.name)
+		partial.items[0].quantity = -1
+		partial.insert().submit()
+		self.assertEqual((partial.loyalty_points, partial.grand_total), (-20, -80))
+		self.assertEqual(self._points(), 160)
+		entries = ledger_entries(partial.doctype, partial.name)
+		self.assertEqual(sum(row.debit for row in entries), sum(row.credit for row in entries))
+
+		rest = map_return(redemption.doctype, redemption.name).insert().submit()
+		self.assertEqual(rest.loyalty_points, -20)
+		self.assertEqual(self._points(), 180)
+
+		rest.cancel()
+		self.assertEqual(self._points(), 160)
+		self.assertEqual(program.db_get("used"), 1)
+
+	def _points(self):
+		return frappe.db.get_value("Books Party", self.party.name, "loyalty_points")
+
 	def _loyalty_invoice(self, program, **values):
 		return make_invoice(
 			"Books Sales Invoice",

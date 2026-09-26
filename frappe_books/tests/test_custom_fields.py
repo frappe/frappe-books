@@ -73,6 +73,8 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 		self.assertEqual(_field_owner(), SYSTEM_MANAGER)
 
 	def _cleanup_custom_field_test(self):
+		# Custom field DDL commits, so undo what this class committed. The column drop commits it.
+		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 0)
 		for color in frappe.get_all(
 			"Books Color", filters={"name": ["like", "Bridge Custom Color%"]}, pluck="name"
 		):

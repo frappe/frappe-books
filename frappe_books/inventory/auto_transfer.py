@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import frappe
 
-from frappe_books.accounting.money import as_decimal
+from frappe_books.accounting.money import as_decimal, rounded
 
 
 def create_auto_transfer(invoice) -> str | None:
@@ -77,6 +77,7 @@ def _stock_location(invoice) -> str:
 
 
 def _stock_rows(invoice) -> list[dict]:
+	exchange_rate = as_decimal(invoice.exchange_rate or 1)
 	rows = []
 	for row in invoice.items:
 		if not frappe.db.get_value("Books Item", row.item, "track_item"):
@@ -94,7 +95,7 @@ def _stock_rows(invoice) -> list[dict]:
 				"serial_number": row.serial_number,
 				"quantity": quantity,
 				"unit_conversion_factor": row.unit_conversion_factor or 1,
-				"rate": row.rate,
+				"rate": rounded(as_decimal(row.rate) * exchange_rate),
 				"description": row.description,
 				"hsn_code": row.hsn_code,
 			}

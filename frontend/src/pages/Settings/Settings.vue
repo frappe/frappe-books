@@ -238,7 +238,7 @@ export default defineComponent({
       try {
         await doc.sync();
       } catch (error) {
-        await handleErrorWithDialog(error, doc, false, true);
+        await handleErrorWithDialog(error, doc, true);
         return false;
       }
 

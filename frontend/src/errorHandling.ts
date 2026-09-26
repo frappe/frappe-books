@@ -2,13 +2,10 @@ import { t } from 'fyo';
 import type { Doc } from 'fyo/model/doc';
 import { BaseError } from 'fyo/utils/errors';
 import { ErrorLog } from 'fyo/utils/types';
-import { truncate } from 'lodash';
 import { showDialog } from 'src/utils/interactive';
 import { fyo } from './initFyo';
-import router from './router';
 import { getErrorMessage } from './utils';
 import type { DialogOptions, ToastOptions } from './utils/types';
-import { ModelNameEnum } from 'models/types';
 
 function shouldNotStore(error: Error) {
   const shouldLog = (error as BaseError).shouldStore ?? true;
@@ -19,8 +16,6 @@ function getToastProps(errorLogObj: ErrorLog) {
   const props: ToastOptions = {
     message: errorLogObj.name ?? t`Error`,
     type: 'error',
-    actionText: t`Report Error`,
-    action: () => reportIssue(errorLogObj),
   };
 
   return props;
@@ -69,7 +64,6 @@ export async function handleError(
 export async function handleErrorWithDialog(
   error: unknown,
   doc?: Doc,
-  reportError?: boolean,
   dontThrow?: boolean
 ) {
   if (!(error instanceof Error)) {
@@ -85,26 +79,6 @@ export async function handleErrorWithDialog(
     detail: errorMessage,
     type: 'error',
   };
-
-  if (reportError) {
-    options.detail = truncate(String(options.detail), { length: 128 });
-    options.buttons = [
-      {
-        label: t`Report`,
-        action() {
-          reportIssue(getErrorLogObject(error, { errorMessage }));
-        },
-        isPrimary: true,
-      },
-      {
-        label: t`Cancel`,
-        action() {
-          return null;
-        },
-        isEscape: true,
-      },
-    ];
-  }
 
   await showDialog(options);
   if (dontThrow) {
@@ -160,99 +134,6 @@ export function getErrorHandledSync<T extends (...args: any[]) => any>(
       });
     }
   };
-}
-
-function getFeatureFlags(): string[] {
-  const getBooleanFields = (docName: string) => {
-    const doc = fyo.singles[docName];
-
-    return Object.entries(doc as Doc).reduce((acc, [key, value]) => {
-      const fieldsArray = fyo.schemaMap[docName]?.fields ?? [];
-      const fieldsMap = new Map(fieldsArray.map((f) => [f.fieldname, f]));
-
-      const field = fieldsMap.get(key);
-      if (
-        typeof value === 'boolean' &&
-        !field?.hidden &&
-        !key.startsWith('_')
-      ) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as Record<string, boolean>);
-  };
-
-  const sections = [
-    {
-      name: 'Accounting',
-      flags: getBooleanFields(ModelNameEnum.AccountingSettings),
-    },
-    { name: 'POS', flags: getBooleanFields(ModelNameEnum.POSSettings) },
-    {
-      name: 'Inventory',
-      flags: getBooleanFields(ModelNameEnum.InventorySettings),
-    },
-  ]
-
-    .filter(({ flags }) => Object.keys(flags).length > 0)
-    .flatMap(({ name, flags }) => [
-      `**${name} Settings**:`,
-      '```json',
-      JSON.stringify(flags, null, 2),
-      '```',
-      '',
-    ]);
-
-  return sections.length
-    ? [
-        '<details>',
-        '<summary><strong>Feature Flags</strong></summary>',
-        '',
-        ...sections,
-        '</details>',
-      ]
-    : [];
-}
-
-function getIssueUrlQuery(errorLogObj?: ErrorLog): string {
-  const baseUrl = 'https://github.com/frappe/books/issues/new?labels=bug';
-
-  const body = [
-    '<h2>Description</h2>',
-    'Add some description...',
-    '',
-    '<h2>Steps to Reproduce</h2>',
-    'Add steps to reproduce the error...',
-    '',
-    '<h2>Info</h2>',
-    '',
-  ];
-
-  if (errorLogObj) {
-    body.push(`**Error**: _${errorLogObj.name}: ${errorLogObj.message}_`, '');
-  }
-
-  if (errorLogObj?.stack) {
-    body.push('**Stack**:', '```', errorLogObj.stack, '```', '');
-  }
-
-  body.push(`**Version**: \`${fyo.store.appVersion}\``);
-  body.push('**Platform**: `Web`');
-  body.push(`**Path**: \`${router.currentRoute.value.fullPath}\``);
-
-  body.push(`**Language**: \`${fyo.store.language || '-'}\``);
-  if (fyo.singles.SystemSettings?.countryCode) {
-    body.push(`**Country**: \`${fyo.singles.SystemSettings.countryCode}\``);
-  }
-  body.push('', ...getFeatureFlags());
-
-  const encodedBody = encodeURIComponent(body.join('\n'));
-  return `${baseUrl}&body=${encodedBody}`;
-}
-
-export function reportIssue(errorLogObj?: ErrorLog) {
-  const urlQuery = getIssueUrlQuery(errorLogObj);
-  window.open(urlQuery, '_blank', 'noopener,noreferrer');
 }
 
 function getErrorLabel(error: Error) {

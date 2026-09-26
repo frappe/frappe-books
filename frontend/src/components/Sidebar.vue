@@ -61,7 +61,6 @@
       </div>
     </div>
 
-    <!-- Report Issue and DB Switcher -->
     <div class="window-no-drag flex-shrink-0 flex flex-col gap-2 py-2 px-4">
       <FrappeSidebarItem
         :label="t`Help`"
@@ -95,17 +94,7 @@
         </template>
       </FrappeSidebarItem>
 
-      <div class="flex items-center gap-2">
-        <FrappeSidebarItem
-          :label="t`Report Issue`"
-          class="!h-7 min-w-0 flex-1"
-          @click="() => reportIssue()"
-        >
-          <template #prefix>
-            <Icon name="flag" class="h-4 w-4 flex-shrink-0" />
-          </template>
-        </FrappeSidebarItem>
-
+      <div class="flex items-center justify-end">
         <Button
           :background="false"
           :icon="true"
@@ -134,7 +123,6 @@ import {
   Sidebar as FrappeSidebar,
   SidebarItem as FrappeSidebarItem,
 } from 'frappe-ui';
-import { reportIssue } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { languageDirectionKey, shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathRef } from 'src/utils/refs';
@@ -208,7 +196,6 @@ export default defineComponent({
   },
   methods: {
     routeTo,
-    reportIssue,
     toggleSidebar,
     openDocumentation() {
       window.open(

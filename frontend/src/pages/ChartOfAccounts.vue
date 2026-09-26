@@ -491,7 +491,7 @@ export default defineComponent({
         });
         await doc.sync();
       } catch (e) {
-        await handleErrorWithDialog(e, doc, false, true);
+        await handleErrorWithDialog(e, doc, true);
         return;
       } finally {
         this.insertingAccount = false;

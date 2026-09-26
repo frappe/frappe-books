@@ -726,7 +726,7 @@ async function showSubmitOrSyncDialog(doc: Doc, type: 'submit' | 'sync') {
   const success = (await showDialog(dialogOptions)) as boolean;
   if (actionError) {
     // Show the error after the confirmation closes so it cannot offer a stale retry.
-    await handleErrorWithDialog(actionError, doc, false, true);
+    await handleErrorWithDialog(actionError, doc, true);
   }
 
   return success;

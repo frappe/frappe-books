@@ -7,7 +7,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
-from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
+from frappe_books.tests.accounting import make_account, make_item, make_party, make_tax, unique_name
 from frappe_books.ui_api import lifecycle_action
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
@@ -311,6 +311,28 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		updated = self.bridge.get("Tax", name)
 		self.assertEqual(len(updated["details"]), 1)
 		self.assertEqual(updated["details"][0]["rate"], 18)
+
+	def test_update_keeps_existing_child_rows_in_place(self):
+		account = make_account("Bridge Row Account", root_type="Liability", account_type="Tax")
+		tax, other = make_tax(account.name), make_tax(account.name)
+		own_row, foreign_row = tax.details[0].name, other.details[0].name
+
+		self.bridge.update(
+			"Tax",
+			{
+				"name": tax.name,
+				"details": [
+					{"name": own_row, "account": account.name, "rate": 18},
+					{"name": foreign_row, "account": account.name, "rate": 5},
+				],
+			},
+		)
+
+		tax.reload()
+		self.assertEqual(tax.details[0].name, own_row)
+		self.assertEqual([row.rate for row in tax.details], [18, 5])
+		self.assertNotEqual(tax.details[1].name, foreign_row)
+		self.assertEqual(frappe.db.get_value("Books Tax Detail", foreign_row, "parent"), other.name)
 
 	def test_item_list_request_returns_created_items(self):
 		income = make_account("Bridge Item Income", root_type="Income", account_type="Income Account")

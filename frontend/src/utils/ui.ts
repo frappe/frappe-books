@@ -126,24 +126,7 @@ export async function deleteDocWithPrompt(doc: Doc) {
 export async function cancelDocWithPrompt(doc: Doc) {
   let detail = t`This action is permanent`;
   if (['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
-    const payments = (
-      await fyo.db.getAll('Payment', {
-        fields: ['name'],
-        filters: { cancelled: false },
-      })
-    ).map(({ name }) => name);
-
-    const query = (
-      await fyo.db.getAll('PaymentFor', {
-        fields: ['parent'],
-        filters: {
-          referenceName: doc.name!,
-        },
-      })
-    ).filter(({ parent }) => payments.includes(parent));
-
-    const paymentList = [...new Set(query.map(({ parent }) => parent))];
-
+    const paymentList = await getInvoicePayments(doc);
     if (paymentList.length === 1) {
       detail = t`This action is permanent and will cancel the following payment: ${
         paymentList[0] as string
@@ -183,6 +166,23 @@ export async function cancelDocWithPrompt(doc: Doc) {
       },
     ],
   })) as boolean;
+}
+
+async function getInvoicePayments(doc: Doc): Promise<string[]> {
+  const references = await fyo.db.getAll(ModelNameEnum.PaymentFor, {
+    fields: ['parent'],
+    filters: { referenceType: doc.schemaName, referenceName: doc.name! },
+  });
+  const parents = [...new Set(references.map(({ parent }) => String(parent)))];
+  if (!parents.length) {
+    return [];
+  }
+
+  const payments = await fyo.db.getAll(ModelNameEnum.Payment, {
+    fields: ['name'],
+    filters: { name: ['in', parents], cancelled: false },
+  });
+  return payments.map(({ name }) => String(name));
 }
 
 export function getActionsForDoc(doc?: Doc): Action[] {

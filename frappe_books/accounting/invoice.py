@@ -11,6 +11,7 @@ from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer
+from frappe_books.inventory.invoice_balance import store_pending_quantities
 from frappe_books.series import SeriesNamingMixin
 
 
@@ -44,6 +45,7 @@ class PostingInvoiceController(InvoiceController):
 		pricing.update_coupon_usage(self, 1)
 		loyalty.process_invoice(self)
 		create_auto_transfer(self)
+		store_pending_quantities(self)
 		if self.return_against:
 			returns.update_return_status(self, include_current=True)
 		# POS invoices are paid at the counter with the tendered payment method.

@@ -50,6 +50,16 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 2)
 		self.assertEqual(stock_quantity(item, "Stores"), 5)
 
+	def test_invoice_submit_stores_its_own_quantity_to_transfer(self):
+		invoice, _item = self._sales_invoice()
+		invoice.stock_not_transferred = 0
+		invoice.items[0].stock_not_transferred = 0
+		invoice.save().submit()
+
+		self.assertEqual([invoice.stock_not_transferred, invoice.items[0].stock_not_transferred], [2, 2])
+		invoice.reload()
+		self.assertEqual([invoice.stock_not_transferred, invoice.items[0].stock_not_transferred], [2, 2])
+
 	def test_return_without_original_transfer_does_not_ship_again(self):
 		original, item = self._sales_invoice()
 		original.submit()

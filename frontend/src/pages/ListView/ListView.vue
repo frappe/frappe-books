@@ -135,7 +135,10 @@ export default defineComponent({
       return fyo.schemaMap[this.schemaName]?.fields ?? [];
     },
     canCreate(): boolean {
-      return fyo.schemaMap[this.schemaName]?.create !== false;
+      return (
+        fyo.schemaMap[this.schemaName]?.create !== false &&
+        fyo.can(this.schemaName, 'create')
+      );
     },
     actionOptions(): DropdownOptions {
       return [

@@ -114,11 +114,15 @@ export default {
         }
       }
 
-      if (this.doc && this.df.create) {
+      if (this.doc && this.df.create && this.canCreateTarget()) {
         options = options.concat(this.getCreateNewOption());
       }
 
       return options;
+    },
+    canCreateTarget() {
+      const target = this.getTargetSchemaName();
+      return !!target && fyo.can(target, 'create');
     },
     getCreateNewOption() {
       return {

@@ -21,7 +21,7 @@
         {{ t`Print` }}
       </Button>
       <Button
-        v-if="doc && doc.isCustom && displayDoc"
+        v-if="doc && doc.isCustom && doc.canEdit && displayDoc"
         :title="t`Toggle Edit Mode`"
         :icon="true"
         @click="toggleEditMode"
@@ -344,7 +344,8 @@ export default defineComponent({
         },
       });
 
-      if (this.doc.isCustom && !this.showTypeModal) {
+      const canEditTemplate = this.doc.isCustom && this.doc.canEdit;
+      if (canEditTemplate && !this.showTypeModal) {
         actions.push({
           label: this.t`Set Template Type`,
           group: this.t`Action`,
@@ -352,7 +353,7 @@ export default defineComponent({
         });
       }
 
-      if (this.doc.isCustom && !this.showSizeModal) {
+      if (canEditTemplate && !this.showSizeModal) {
         actions.push({
           label: this.t`Set Print Size`,
           group: this.t`Action`,
@@ -360,7 +361,7 @@ export default defineComponent({
         });
       }
 
-      if (this.doc.isCustom) {
+      if (canEditTemplate) {
         actions.push({
           label: this.t`Select Template File`,
           group: this.t`Action`,

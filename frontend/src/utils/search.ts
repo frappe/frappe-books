@@ -158,7 +158,9 @@ function getCreateList(fyo: Fyo): SearchItem[] {
     } as SearchItem;
   });
 
-  return [formEditCreateList, filteredCreateList].flat();
+  return [formEditCreateList, filteredCreateList]
+    .flat()
+    .filter((item) => fyo.can(item.schemaName!, 'create'));
 }
 
 function getReportList(fyo: Fyo): SearchItem[] {

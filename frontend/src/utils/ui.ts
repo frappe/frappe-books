@@ -302,7 +302,8 @@ function getDuplicateAction(doc: Doc): Action {
     condition: (doc: Doc) =>
       !!(
         ((isSubmittable && doc.submitted) || !isSubmittable) &&
-        !doc.notInserted
+        !doc.notInserted &&
+        fyo.can(doc.schemaName, 'create')
       ),
     async action() {
       try {
@@ -319,6 +320,7 @@ function getNewAction(doc: Doc): Action {
   return {
     label: t`New Entry`,
     group: t`Create`,
+    condition: (doc: Doc) => fyo.can(doc.schemaName, 'create'),
     async action() {
       try {
         const newDoc = fyo.doc.getNewDoc(doc.schemaName);

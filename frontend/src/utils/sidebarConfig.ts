@@ -151,7 +151,9 @@ function getCompleteSidebar(): SidebarConfig {
       icon: 'general',
       iconSize: '24',
       iconHeight: 5,
-      hidden: () => !!fyo.singles.SystemSettings?.hideGetStarted,
+      hidden: () =>
+        !!fyo.singles.SystemSettings?.hideGetStarted ||
+        !fyo.can('GetStarted', 'write'),
     },
     {
       label: t`Dashboard`,
@@ -334,7 +336,8 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'customize-form',
           route: `/list/CustomForm/${t`Customize Form`}`,
           hidden: () =>
-            !fyo.singles.AccountingSettings?.enableFormCustomization,
+            !fyo.singles.AccountingSettings?.enableFormCustomization ||
+            !fyo.can('CustomForm', 'create'),
         },
         {
           label: t`Settings`,

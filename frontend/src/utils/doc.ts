@@ -43,6 +43,10 @@ export function evaluateReadOnly(field: Field, doc?: Doc) {
     return true;
   }
 
+  if (doc && !doc.canWrite) {
+    return true;
+  }
+
   return evaluateFieldMeta(field, doc, 'readOnly');
 }
 

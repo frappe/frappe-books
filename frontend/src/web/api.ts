@@ -8,6 +8,7 @@ import {
   NotFoundError,
   ValidationError,
 } from 'fyo/utils/errors';
+import type { PermissionMap } from 'fyo/utils/permissions';
 
 type FrappeResponse<T> = {
   message?: T;
@@ -188,6 +189,7 @@ declare global {
       setup_complete: boolean;
       app_version: string;
       developer_mode: boolean;
+      permissions: PermissionMap;
     };
   }
 }

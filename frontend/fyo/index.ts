@@ -14,6 +14,11 @@ import {
 } from './utils/consts';
 import * as errors from './utils/errors';
 import { format } from './utils/format';
+import {
+  DocPermission,
+  hasPermission,
+  type PermissionMap,
+} from './utils/permissions';
 import { t, T } from './utils/translation';
 import { ErrorLog } from './utils/types';
 import type { reports } from 'reports/index';
@@ -160,6 +165,10 @@ export class Fyo {
     });
   }
 
+  can(schemaName: string, permission: DocPermission): boolean {
+    return hasPermission(this.store.permissions, schemaName, permission);
+  }
+
   getField(schemaName: string, fieldname: string) {
     return this.fieldMap[schemaName]?.[fieldname];
   }
@@ -203,6 +212,7 @@ export class Fyo {
     isDevelopment: false,
     appVersion: '',
     language: '',
+    permissions: null as PermissionMap | null,
     reports: {} as Record<keyof typeof reports, Report | undefined>,
   };
 }

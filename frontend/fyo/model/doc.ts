@@ -133,7 +133,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canDelete() {
-    if (this.notInserted) {
+    if (this.notInserted || !this.fyo.can(this.schemaName, 'delete')) {
       return false;
     }
 
@@ -160,20 +160,12 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return false;
   }
 
-  get canEdit() {
-    if (!this.schema.isSubmittable) {
-      return true;
-    }
-
-    if (this.submitted) {
+  get canEdit(): boolean {
+    if (this.schema.isSubmittable && (this.submitted || this.cancelled)) {
       return false;
     }
 
-    if (this.cancelled) {
-      return false;
-    }
-
-    return true;
+    return this.canWrite;
   }
 
   get canSave() {
@@ -194,11 +186,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return false;
     }
 
-    return true;
+    return this.canWrite;
   }
 
   get canSubmit() {
-    if (!this.schema.isSubmittable) {
+    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'submit')) {
       return false;
     }
 
@@ -222,7 +214,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canCancel() {
-    if (!this.schema.isSubmittable) {
+    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'cancel')) {
       return false;
     }
 
@@ -243,6 +235,16 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
 
     return true;
+  }
+
+  /** Create for a new document and write for a saved one. */
+  get canWrite(): boolean {
+    if (this.schema.isChild) {
+      // A row is saved with its parent; a detached row is never saved.
+      return this.parentdoc?.canWrite ?? true;
+    }
+
+    return this.fyo.can(this.schemaName, this.notInserted ? 'create' : 'write');
   }
 
   _setValuesWithoutChecks(data: DocValueMap, convertToDocValue: boolean) {

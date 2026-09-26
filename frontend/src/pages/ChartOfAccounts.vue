@@ -1,7 +1,9 @@
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
-      <Button @click="addRootGroup">{{ t`Add Root Group` }}</Button>
+      <Button v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
+        t`Add Root Group`
+      }}</Button>
       <Button v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</Button>
       <Button v-if="!isAllCollapsed" @click="collapse">{{
         t`Collapse`
@@ -207,7 +209,7 @@ export default defineComponent({
     getAccountLabel,
     getAccountActions(account: AccountItem): DropdownOptions {
       const actions: DropdownOptions = [];
-      if (account.isGroup) {
+      if (account.isGroup && fyo.can(ModelNameEnum.Account, 'create')) {
         actions.push(
           {
             label: t`Add Account`,
@@ -220,7 +222,7 @@ export default defineComponent({
         );
       }
 
-      if (account.parentAccount) actions.push({
+      if (account.parentAccount && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
         label: account.isGroup ? t`Delete Group` : t`Delete Account`,
         theme: 'red',
         onClick: () => this.deleteAccount(account),

@@ -119,7 +119,7 @@ export default {
           .map(({ item }) => item);
       }
 
-      if (this.doc && this.df.create) {
+      if (this.doc && this.df.create && this.canCreateTarget()) {
         options = options.concat(this.getCreateNewOption());
       }
 
@@ -139,6 +139,10 @@ export default {
         },
         { isMatch: false, distance: Number.MAX_SAFE_INTEGER }
       );
+    },
+    canCreateTarget() {
+      const target = this.getTargetSchemaName();
+      return !!target && fyo.can(target, 'create');
     },
     getCreateNewOption() {
       return {

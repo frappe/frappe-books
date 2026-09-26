@@ -16,8 +16,6 @@ import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
 import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
-import { Item } from '../Item/Item';
-import { StockTransfer } from 'models/inventory/StockTransfer';
 import { isPesa } from 'fyo/utils';
 import { PricingRule } from '../PricingRule/PricingRule';
 import {
@@ -492,40 +490,6 @@ export abstract class InvoiceItem extends Doc {
         return getTaxedTotalBeforeDiscounting(totalTaxRate, rate, quantity);
       },
       dependsOn: ['rate', 'quantity', 'item'],
-    },
-    stockNotTransferred: {
-      formula: async () => {
-        if (this.parentdoc?.isSubmitted) {
-          return;
-        }
-
-        const item = (await this.loadAndGetLink('item')) as Item;
-        if (!item.trackItem) {
-          return 0;
-        }
-
-        const { backReference, stockTransferSchemaName } = this.parentdoc ?? {};
-        if (
-          !backReference ||
-          !stockTransferSchemaName ||
-          typeof this.quantity !== 'number'
-        ) {
-          return this.quantity;
-        }
-
-        const refdoc = (await this.fyo.doc.getDoc(
-          stockTransferSchemaName,
-          backReference
-        )) as StockTransfer;
-
-        const transferred =
-          refdoc.items
-            ?.filter((i) => i.item === this.item)
-            .reduce((acc, i) => i.quantity ?? 0 + acc, 0) ?? 0;
-
-        return Math.max(0, this.quantity - transferred);
-      },
-      dependsOn: ['item', 'quantity'],
     },
     setItemDiscountAmount: {
       formula: async () => {

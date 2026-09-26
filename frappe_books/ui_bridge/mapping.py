@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import frappe
+from frappe.utils.caching import request_cache
 
 MAPPING_PATH = Path(__file__).resolve().parents[1] / "schema_mapping.json"
 SOURCE_META_TO_TARGET = {
@@ -70,8 +71,12 @@ def source_field(source_schema: str, target_fieldname: str) -> str:
 	return target_fieldname
 
 
+@request_cache
 def custom_field_mapping(source_schema: str) -> dict[str, str]:
-	"""Return Books custom field names mapped to their hosted columns."""
+	"""Return Books custom field names mapped to their hosted columns.
+
+	Saving a custom form clears the doctype cache, which also clears this request cache.
+	"""
 	if not frappe.db.table_exists("Books Custom Field"):
 		return {}
 

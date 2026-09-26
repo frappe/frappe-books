@@ -188,8 +188,6 @@ async function getPaymentDetails(invoice: Invoice, paymentIds: string[]) {
 
 function getDate(dateString: string): string {
   const date = new Date(dateString);
-  date.setMonth(date.getMonth());
-
   return `${date.toLocaleString('default', {
     month: 'short',
   })} ${date.getDate()}, ${date.getFullYear()}`;

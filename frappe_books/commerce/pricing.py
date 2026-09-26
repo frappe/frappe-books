@@ -44,6 +44,39 @@ def validate_coupon(coupon):
 		frappe.throw(_("Coupon validity cannot end after its pricing rule."))
 
 
+def reset_pricing(invoice):
+	"""Undo what pricing rules set on an invoice so they can be evaluated afresh."""
+	if invoice.transaction_type != "sales" or invoice.get("return_against"):
+		return
+	invoice.set("items", [row for row in invoice.items if not row.is_free_item])
+	invoice.set("pricing_rule_detail", [])
+	invoice.is_pricing_rule_applied = 0
+	rows = [row for row in invoice.items if row.pricing_rule]
+	if not rows:
+		return
+	rules = frappe.get_all(
+		"Books Pricing Rule",
+		filters={"name": ["in", list({row.pricing_rule for row in rows})]},
+		fields=["name", "discount_type", "price_discount_type"],
+	)
+	rules = {rule.name: rule for rule in rules}
+	for row in rows:
+		_reset_row(row, rules.get(row.pricing_rule))
+
+
+def _reset_row(row, rule):
+	row.pricing_rule = None
+	if not rule or rule.discount_type != "Price Discount":
+		return
+	if rule.price_discount_type == "rate" and not row.is_manual_rate:
+		row.rate = None
+	elif rule.price_discount_type == "percentage":
+		row.item_discount_percent = 0
+	elif rule.price_discount_type == "amount":
+		row.set_item_discount_amount = 0
+		row.item_discount_amount = 0
+
+
 def apply_pricing(invoice):
 	if invoice.transaction_type != "sales" or invoice.get("return_against"):
 		return
@@ -52,17 +85,14 @@ def apply_pricing(invoice):
 	if _ignore_pos_pricing(invoice):
 		return
 
-	original_rows = [row for row in invoice.items if not row.is_free_item]
-	invoice.set("items", original_rows)
-	invoice.set("pricing_rule_detail", [])
-	invoice.is_pricing_rule_applied = 0
+	original_rows = list(invoice.items)
 	quantities = defaultdict(Decimal)
 	for row in original_rows:
 		quantities[row.item] += as_decimal(row.quantity)
 
 	coupons = _validated_coupons(invoice)
 	applied = []
-	for row in list(original_rows):
+	for row in original_rows:
 		rule = _applicable_rule(invoice, row, quantities[row.item], coupons)
 		if not rule:
 			continue

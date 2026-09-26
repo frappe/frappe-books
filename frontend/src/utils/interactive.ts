@@ -1,6 +1,5 @@
 import { t } from 'fyo';
 import { dialog, toast } from 'frappe-ui';
-import { getColorClass } from './colors';
 import { renderSafeRichText } from './safeRichText';
 import { DialogButton, DialogOptions, ToastOptions, ToastType } from './types';
 
@@ -116,26 +115,4 @@ function getDialogTheme(
     success: 'green',
   };
   return themeMap[type ?? 'info'];
-}
-
-export function getIconConfig(type: ToastType) {
-  let iconName = 'alert-circle';
-  if (type === 'warning') {
-    iconName = 'alert-triangle';
-  } else if (type === 'success') {
-    iconName = 'check-circle';
-  }
-
-  const color = {
-    info: 'blue',
-    warning: 'orange',
-    error: 'red',
-    success: 'green',
-  }[type];
-
-  const iconColor = getColorClass(color ?? 'gray', 'text', 400);
-  const containerBackground = getColorClass(color ?? 'gray', 'bg', 100);
-  const containerBorder = getColorClass(color ?? 'gray', 'border', 300);
-
-  return { iconName, color, iconColor, containerBorder, containerBackground };
 }

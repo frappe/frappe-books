@@ -68,7 +68,6 @@ import { Button as FrappeButton, Tooltip as FrappeTooltip } from 'frappe-ui';
 import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
-import { uicolors } from 'src/utils/colors';
 import { getDatesAndPeriodList } from 'src/utils/misc';
 import { PeriodKey } from 'src/utils/types';
 import { routeTo } from 'src/utils/ui';

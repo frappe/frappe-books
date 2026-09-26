@@ -50,10 +50,6 @@ export function evaluateHidden(field: Field, doc?: Doc) {
   return evaluateFieldMeta(field, doc, 'hidden');
 }
 
-export function evaluateInvisible(field: Field, doc?: Doc) {
-  return evaluateFieldMeta(field, doc, 'invisible');
-}
-
 export function evaluateRequired(field: Field, doc?: Doc) {
   return evaluateFieldMeta(field, doc, 'required');
 }

@@ -3,7 +3,6 @@
  */
 import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
-import { isPesa } from 'fyo/utils';
 import {
   BaseError,
   DuplicateEntryError,
@@ -11,38 +10,6 @@ import {
 } from 'fyo/utils/errors';
 import { Field, FieldType, FieldTypeEnum, NumberField } from 'schemas/types';
 import { fyo } from 'src/initFyo';
-
-export function stringifyCircular(
-  obj: unknown,
-  ignoreCircular = false,
-  convertDocument = false
-): string {
-  const cacheKey: string[] = [];
-  const cacheValue: unknown[] = [];
-
-  return JSON.stringify(obj, (key: string, value: unknown) => {
-    if (typeof value !== 'object' || value === null) {
-      cacheKey.push(key);
-      cacheValue.push(value);
-      return value;
-    }
-
-    if (cacheValue.includes(value)) {
-      const circularKey: string =
-        cacheKey[cacheValue.indexOf(value)] || '{self}';
-      return ignoreCircular ? undefined : `[Circular:${circularKey}]`;
-    }
-
-    cacheKey.push(key);
-    cacheValue.push(value);
-
-    if (convertDocument && value instanceof Doc) {
-      return value.getValidDict();
-    }
-
-    return value;
-  });
-}
 
 export function fuzzyMatch(input: string, target: string) {
   const keywordLetters = [...input];
@@ -75,17 +42,6 @@ export function fuzzyMatch(input: string, target: string) {
   }
 
   return { isMatch, distance };
-}
-
-export function convertPesaValuesToFloat(obj: Record<string, unknown>) {
-  Object.keys(obj).forEach((key) => {
-    const value = obj[key];
-    if (!isPesa(value)) {
-      return;
-    }
-
-    obj[key] = value.float;
-  });
 }
 
 export function getErrorMessage(e: Error, doc?: Doc): string {

@@ -5,7 +5,6 @@ import {
   onMounted,
   onUnmounted,
   reactive,
-  ref,
 } from 'vue';
 import { getIsMac } from './misc';
 import { Shortcuts } from './shortcuts';
@@ -89,24 +88,6 @@ export function useKeys() {
   });
 
   return keys;
-}
-
-export function useMouseLocation() {
-  const loc = ref({ clientX: 0, clientY: 0 });
-
-  const mousemoveListener = (e: MouseEvent) => {
-    loc.value.clientX = e.clientX;
-    loc.value.clientY = e.clientY;
-  };
-
-  onMounted(() => {
-    window.addEventListener('mousemove', mousemoveListener);
-  });
-  onUnmounted(() => {
-    window.removeEventListener('mousemove', mousemoveListener);
-  });
-
-  return loc;
 }
 
 export function useDocShortcuts(

@@ -4,15 +4,7 @@ import { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { Money } from 'pesa';
 import { Field, FieldType, OptionField, SelectOption } from 'schemas/types';
-import { getIsNullOrUndef, safeParseInt } from 'utils';
-
-export function slug(str: string) {
-  return str
-    .replace(/(?:^\w|[A-Z]|\b\w)/g, (letter, index) => {
-      return index == 0 ? letter.toLowerCase() : letter.toUpperCase();
-    })
-    .replace(/\s+/g, '');
-}
+import { getIsNullOrUndef } from 'utils';
 
 export function unique<T>(list: T[], key = (it: T) => String(it)) {
   const seen: Record<string, boolean> = {};
@@ -20,21 +12,6 @@ export function unique<T>(list: T[], key = (it: T) => String(it)) {
     const k = key(item);
     return seen.hasOwnProperty(k) ? false : (seen[k] = true);
   });
-}
-
-export function getDuplicates(array: unknown[]) {
-  const duplicates: unknown[] = [];
-  for (let i = 0; i < array.length; i++) {
-    const previous = array[safeParseInt(i) - 1];
-    const current = array[i];
-
-    if (current === previous) {
-      if (!duplicates.includes(current)) {
-        duplicates.push(current);
-      }
-    }
-  }
-  return duplicates;
 }
 
 export function isPesa(value: unknown): value is Money {
@@ -68,27 +45,6 @@ export function getActions(doc: Doc): Action[] {
   }
 
   return Model.getActions(doc.fyo);
-}
-
-export async function getSingleValue(
-  fieldname: string,
-  parent: string,
-  fyo: Fyo
-) {
-  if (!fyo.db.isConnected) {
-    return undefined;
-  }
-
-  const res = await fyo.db.getSingleValues({ fieldname, parent });
-  const singleValue = res.find(
-    (f) => f.fieldname === fieldname && f.parent === parent
-  );
-
-  if (singleValue === undefined) {
-    return undefined;
-  }
-
-  return singleValue.value;
 }
 
 export function getOptionList(

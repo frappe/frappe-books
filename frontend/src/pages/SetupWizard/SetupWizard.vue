@@ -89,7 +89,6 @@
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { TranslationString } from 'fyo/utils/translation';
-import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
 import Button from 'src/components/Button.vue';
 import FormContainer from 'src/components/FormContainer.vue';

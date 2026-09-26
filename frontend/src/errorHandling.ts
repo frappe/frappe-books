@@ -92,50 +92,6 @@ export async function handleErrorWithDialog(
   throw error;
 }
 
-export async function showErrorDialog(title?: string, content?: string) {
-  // To be used for  show stopper errors
-  title ??= t`Error`;
-  content ??= t`Something has gone terribly wrong. Please check the console and raise an issue.`;
-  await showDialog({ title, detail: content, type: 'error' });
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getErrorHandled<T extends (...args: any[]) => Promise<any>>(
-  func: T
-) {
-  type Return = ReturnType<T> extends Promise<infer P> ? P : true;
-  return async function errorHandled(...args: Parameters<T>): Promise<Return> {
-    try {
-      return (await func(...args)) as Return;
-    } catch (error) {
-      await handleError(false, error as Error, {
-        functionName: func.name,
-        functionArgs: args,
-      });
-
-      throw error;
-    }
-  };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getErrorHandledSync<T extends (...args: any[]) => any>(
-  func: T
-) {
-  type Return = ReturnType<T> extends Promise<infer P> ? P : ReturnType<T>;
-  return function errorHandledSync(...args: Parameters<T>) {
-    try {
-      return func(...args) as Return;
-    } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      handleError(false, error as Error, {
-        functionName: func.name,
-        functionArgs: args,
-      });
-    }
-  };
-}
-
 function getErrorLabel(error: Error) {
   const name = error.name;
   if (!name) {

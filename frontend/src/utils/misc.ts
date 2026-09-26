@@ -1,4 +1,3 @@
-import { Fyo } from 'fyo';
 import { translateSchema, TranslationString } from 'fyo/utils/translation';
 import { cloneDeep } from 'lodash';
 import { DateTime } from 'luxon';

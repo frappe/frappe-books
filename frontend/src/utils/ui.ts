@@ -515,31 +515,6 @@ export enum ShortcutKey {
   esc = 'esc',
 }
 
-export function getShortcutKeyMap(
-  platform: string,
-): Record<ShortcutKey, string> {
-  if (platform === 'Mac') {
-    return {
-      [ShortcutKey.alt]: '⌥',
-      [ShortcutKey.ctrl]: '⌃',
-      [ShortcutKey.pmod]: '⌘',
-      [ShortcutKey.shift]: 'shift',
-      [ShortcutKey.delete]: 'delete',
-      [ShortcutKey.esc]: 'esc',
-      [ShortcutKey.enter]: 'return',
-    };
-  }
-  return {
-    [ShortcutKey.alt]: 'Alt',
-    [ShortcutKey.ctrl]: 'Ctrl',
-    [ShortcutKey.pmod]: 'Ctrl',
-    [ShortcutKey.shift]: '⇧',
-    [ShortcutKey.delete]: 'Backspace',
-    [ShortcutKey.esc]: 'Esc',
-    [ShortcutKey.enter]: 'Enter',
-  };
-}
-
 export async function commongDocDelete(
   doc: Doc,
   routeBack = true,

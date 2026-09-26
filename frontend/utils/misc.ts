@@ -7,16 +7,6 @@ export function getCountryInfo(): CountryInfoMap {
   return countryInfo as CountryInfoMap;
 }
 
-export function getCountryCodeFromCountry(countryName: string): string {
-  const countryInfoMap = getCountryInfo();
-  const countryInfo = countryInfoMap[countryName];
-  if (countryInfo === undefined) {
-    return '';
-  }
-
-  return countryInfo.code;
-}
-
 export function getFiscalYear(
   date: string,
   isStart: boolean

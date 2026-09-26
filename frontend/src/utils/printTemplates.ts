@@ -8,6 +8,8 @@ import { constructPrintDocument } from './printDocument';
 import { getPrintTemplateDocValues } from './printTemplateData';
 import { showToast } from './interactive';
 import { PrintValues } from './types';
+import { CurrencyUnits, getAmountInWords } from './amountInWords';
+import { DEFAULT_CURRENCY, DEFAULT_LOCALE } from 'fyo/utils/consts';
 import { Money } from 'pesa';
 import { Payment } from 'models/baseModels/Payment/Payment';
 import { StockMovement } from 'models/inventory/StockMovement';
@@ -78,11 +80,11 @@ async function getTotalValues(doc: Doc): Promise<PrintTemplateData> {
   }
 
   if (doc instanceof StockTransfer) {
-    return getAmountValues(doc.fyo, doc.grandTotal);
+    return await getAmountValues(doc, 'grandTotal');
   }
 
   if (doc instanceof StockMovement) {
-    return getAmountValues(doc.fyo, doc.amount);
+    return await getAmountValues(doc, 'amount');
   }
 
   return {};
@@ -93,7 +95,7 @@ async function getInvoiceTotalValues(
 ): Promise<PrintTemplateData> {
   const totalTax = await invoice.getTotalTax();
   const values: PrintTemplateData = {
-    ...getAmountValues(invoice.fyo, invoice.grandTotal, totalTax),
+    ...(await getAmountValues(invoice, 'grandTotal', totalTax)),
     totalDiscount: formattedTotalDiscount(invoice),
   };
 
@@ -119,8 +121,8 @@ async function getPaymentTotalValues(
 
   const totalTax = await taxedDoc.getTotalTax();
   const values: PrintTemplateData = {
-    ...getAmountValues(payment.fyo, payment.amount, totalTax),
-    amountPaidInWords: getGrandTotalInWords((payment.amountPaid as Money).float),
+    ...(await getAmountValues(payment, 'amount', totalTax)),
+    amountPaidInWords: await getDocAmountInWords(payment, 'amountPaid'),
   };
 
   if (taxedDoc instanceof Invoice && taxedDoc.taxes) {
@@ -130,19 +132,34 @@ async function getPaymentTotalValues(
   return values;
 }
 
-function getAmountValues(
-  fyo: Fyo,
-  total: Money | undefined,
+async function getAmountValues(
+  doc: Doc,
+  fieldname: string,
   totalTax?: Money
-): PrintTemplateData {
+): Promise<PrintTemplateData> {
+  const total = doc[fieldname] as Money | undefined;
   if (!total) {
     return {};
   }
 
   return {
-    subTotal: formatAmount(fyo, totalTax ? total.sub(totalTax) : total),
-    grandTotalInWords: getGrandTotalInWords(total.float),
+    subTotal: formatAmount(doc.fyo, totalTax ? total.sub(totalTax) : total),
+    grandTotalInWords: await getDocAmountInWords(doc, fieldname),
   };
+}
+
+async function getDocAmountInWords(doc: Doc, fieldname: string) {
+  const { fyo } = doc;
+  const currency =
+    doc.getCurrencies[fieldname]?.() ??
+    fyo.singles.SystemSettings?.currency ??
+    DEFAULT_CURRENCY;
+  const currencyDoc = await fyo.doc.getDoc(ModelNameEnum.Currency, currency);
+  return getAmountInWords(
+    (doc[fieldname] as Money).float,
+    currencyDoc as CurrencyUnits,
+    fyo.singles.SystemSettings?.locale ?? DEFAULT_LOCALE
+  );
 }
 
 function formatAmount(fyo: Fyo, amount: Money): string {
@@ -211,112 +228,6 @@ export function getPrintTemplatePropHints(schemaName: string, fyo: Fyo) {
   }
 
   return hints;
-}
-
-function getGrandTotalInWords(total: number) {
-  const formattedTotal = total.toFixed(2);
-
-  const [integerPart, decimalPart] = formattedTotal.split('.');
-
-  const ones = [
-    '',
-    t`One`,
-    t`Two`,
-    t`Three`,
-    t`Four`,
-    t`Five`,
-    t`Six`,
-    t`Seven`,
-    t`Eight`,
-    t`Nine`,
-  ];
-
-  const teens = [
-    t`Ten`,
-    t`Eleven`,
-    t`Twelve`,
-    t`Thirteen`,
-    t`Fourteen`,
-    t`Fifteen`,
-    t`Sixteen`,
-    t`Seventeen`,
-    t`Eighteen`,
-    t`Nineteen`,
-  ];
-
-  const tens = [
-    '',
-    '',
-    t`Twenty`,
-    t`Thirty`,
-    t`Forty`,
-    t`Fifty`,
-    t`Sixty`,
-    t`Seventy`,
-    t`Eighty`,
-    t`Ninety`,
-  ];
-
-  const scales = ['', t`Thousand`, t`Million`, t`Billion`];
-
-  function convertThreeDigitNumber(num: number) {
-    let result = '';
-
-    const hundredDigit = Math.floor(num / 100);
-    const remainder = num % 100;
-
-    if (hundredDigit > 0) {
-      result += ones[hundredDigit] + ` ${t`Hundred`}`;
-    }
-
-    if (remainder > 0) {
-      if (hundredDigit > 0) {
-        result += ` ${t`And`} `;
-      }
-
-      if (remainder < 10) {
-        result += ones[remainder];
-      } else if (remainder < 20) {
-        result += teens[remainder - 10];
-      } else {
-        const tensDigit = Math.floor(remainder / 10);
-        const onesDigit = remainder % 10;
-        result += tens[tensDigit];
-        if (onesDigit > 0) {
-          result += ' ' + ones[onesDigit];
-        }
-      }
-    }
-
-    return result;
-  }
-
-  let spelledOutInteger = '';
-  const integerGroups = integerPart.match(/(\d{1,3})(?=(\d{3})*$)/g) || [];
-  const groupCount = integerGroups.length;
-
-  integerGroups.forEach((group, index) => {
-    const groupValue = parseInt(group);
-
-    if (groupValue > 0) {
-      const groupText = convertThreeDigitNumber(groupValue);
-      const groupSuffix = scales[groupCount - index - 1];
-      spelledOutInteger +=
-        groupText + (groupSuffix ? ' ' + groupSuffix : '') + ' ';
-    }
-  });
-
-  spelledOutInteger = spelledOutInteger.trim() || t`Zero`;
-
-  let spelledOutDecimal = '';
-  const decimalCents = parseInt(decimalPart);
-
-  if (decimalCents !== 0) {
-    spelledOutDecimal =
-      ` ${t`and`} ` + convertThreeDigitNumber(decimalCents) + ` ${t`Paisa`}`;
-  }
-
-  return `${spelledOutInteger}${spelledOutDecimal} ${t`only`}`;
 }
 
 function showHSN(doc: Doc): boolean {

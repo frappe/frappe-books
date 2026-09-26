@@ -18,6 +18,7 @@ async function getValues(schemaName, values) {
   const singles = {
     PrintSettings: fyo.doc.getNewDoc('PrintSettings', { companyName: 'Co' }),
     AccountingSettings: fyo.doc.getNewDoc('AccountingSettings'),
+    Currency: { fraction: 'Cent', fractionUnits: 100 },
   };
   fyo.doc.getDoc = async (schemaName) => singles[schemaName];
   const doc = fyo.doc.getNewDoc(schemaName, { date, ...values });

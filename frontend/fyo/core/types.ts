@@ -3,7 +3,6 @@ import type { Money } from 'pesa';
 import type { RawValue } from 'schemas/types';
 import type { DatabaseDemuxBase } from 'utils/db/types';
 
-export type Attachment = { name: string; type: string; data: string };
 export type DocValue =
   | string
   | number
@@ -11,7 +10,6 @@ export type DocValue =
   | Date
   | Money
   | null
-  | Attachment
   | undefined;
 export type DocValueMap = Record<string, DocValue | Doc[] | DocValueMap[]>;
 export type RawValueMap = Record<string, RawValue | RawValueMap[]>;

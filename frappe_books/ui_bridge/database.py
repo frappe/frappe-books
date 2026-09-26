@@ -1,6 +1,5 @@
 """Permission-aware database compatibility layer for the Books Vue SPA."""
 
-from base64 import b64decode
 from datetime import UTC, datetime
 from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
@@ -433,7 +432,6 @@ def _target_condition(meta, target_name: str, operator: str, comparison: Any) ->
 
 
 def _target_value(meta, fieldname: str, value: Any) -> Any:
-	value = _normalize_attach_image(meta, fieldname, value)
 	if _stores_doctype_name(meta, fieldname):
 		return target_reference(value)
 	field = meta.get_field(fieldname)
@@ -451,27 +449,9 @@ def _numeric_value(fieldtype: str, value: Any) -> Any:
 
 
 def _source_value(meta, fieldname: str, value: Any) -> Any:
-	value = _normalize_attach_image(meta, fieldname, value)
 	if _stores_doctype_name(meta, fieldname):
 		return source_reference(value)
 	return value
-
-
-def _normalize_attach_image(meta, fieldname: str, value: Any) -> Any:
-	field = meta.get_field(fieldname)
-	if not field or field.fieldtype != "Attach Image" or not isinstance(value, str):
-		return value
-	if not value.startswith("data:image/") or ";base64," not in value:
-		return value
-
-	payload = value.split(",", 1)[1]
-	if not payload.startswith("ZGF0YTppbWFn"):
-		return value
-	try:
-		decoded = b64decode(payload, validate=True).decode()
-	except ValueError:
-		return value
-	return decoded if decoded.startswith("data:image/") else value
 
 
 def _stores_doctype_name(meta, fieldname: str) -> bool:

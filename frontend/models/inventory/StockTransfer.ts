@@ -1,5 +1,5 @@
 import { t } from 'fyo';
-import { Attachment, DocValueMap } from 'fyo/core/types';
+import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
   ChangeArg,
@@ -33,7 +33,7 @@ export abstract class StockTransfer extends Transfer {
   date?: Date;
   party?: string;
   terms?: string;
-  attachment?: Attachment;
+  attachment?: string;
   grandTotal?: Money;
   backReference?: string;
   items?: StockTransferItem[];

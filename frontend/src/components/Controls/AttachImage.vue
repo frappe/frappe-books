@@ -54,18 +54,12 @@
 import { Field } from 'schemas/types';
 import { Button as FrappeButton } from 'frappe-ui';
 import { fyo } from 'src/initFyo';
-import { selectFile } from 'src/utils/browser';
-import { getDataURL } from 'src/utils/misc';
+import { pickFile } from 'src/utils/browser';
+import { uploadFile } from 'src/web/api';
 import { defineComponent, PropType } from 'vue';
 import Base from './Base.vue';
 
-const mime_types: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  svg: 'image/svg+xml',
-};
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
 
 export default defineComponent({
   name: 'AttachImage',
@@ -102,29 +96,16 @@ export default defineComponent({
       if (this.isReadOnly) {
         return;
       }
-      const options = {
+      const file = await pickFile({
         title: fyo.t`Select Image`,
-        filters: [{ name: 'Image', extensions: Object.keys(mime_types) }],
-      };
-
-      const selectedFile = await selectFile(options);
-      if (!selectedFile) {
+        filters: [{ name: 'Image', extensions: IMAGE_EXTENSIONS }],
+      });
+      if (!file) {
         return;
       }
-      const { name, data } = selectedFile;
-      const extension = name.split('.').at(-1)?.toLowerCase();
-      if (!extension) {
-        return;
-      }
-
-      const type = mime_types[extension];
-      if (!type) {
-        return;
-      }
-      const dataURL = await getDataURL(type, Uint8Array.from(data));
 
       // @ts-ignore
-      this.triggerChange(dataURL);
+      this.triggerChange(await uploadFile(file));
     },
   },
 });

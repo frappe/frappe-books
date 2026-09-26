@@ -115,27 +115,6 @@ export const docsPathMap: Record<string, string | undefined> = {
   ChartOfAccounts: 'books/chart-of-accounts',
 };
 
-export async function getDataURL(type: string, data: Uint8Array) {
-  const bytes = new Uint8Array(data.byteLength);
-  bytes.set(data);
-  const blob = new Blob([bytes.buffer], { type });
-
-  return new Promise<string>((resolve) => {
-    const fr = new FileReader();
-    fr.addEventListener('loadend', () => {
-      resolve(fr.result as string);
-    });
-
-    fr.readAsDataURL(blob);
-  });
-}
-
-export async function convertFileToDataURL(file: File, type: string) {
-  const buffer = await file.arrayBuffer();
-  const array = new Uint8Array(buffer);
-  return await getDataURL(type, array);
-}
-
 export function getCreateFiltersFromListViewFilters(filters: QueryFilter) {
   const createFilters: Record<string, string | number | boolean | null> = {};
 

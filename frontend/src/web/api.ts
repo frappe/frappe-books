@@ -33,12 +33,26 @@ const errorClassByStatus: Record<number, ErrorClass | undefined> = {
 };
 
 export async function call<T>(method: string, args: unknown = {}): Promise<T> {
-  const csrfToken = window.frappe?.csrf_token || window.csrf_token;
-  const headers: Record<string, string> = {
+  return await post<T>(method, JSON.stringify(args), {
     'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
+  });
+}
 
+export async function uploadFile(file: File): Promise<string> {
+  const body = new FormData();
+  body.append('file', file, file.name);
+  body.append('is_private', '1');
+  const uploaded = await post<{ file_url: string }>('upload_file', body);
+  return uploaded.file_url;
+}
+
+async function post<T>(
+  method: string,
+  body: BodyInit,
+  headers: Record<string, string> = {}
+): Promise<T> {
+  const csrfToken = window.frappe?.csrf_token || window.csrf_token;
+  headers.Accept = 'application/json';
   if (csrfToken) {
     headers['X-Frappe-CSRF-Token'] = csrfToken;
   }
@@ -49,7 +63,7 @@ export async function call<T>(method: string, args: unknown = {}): Promise<T> {
       method: 'POST',
       credentials: 'same-origin',
       headers,
-      body: JSON.stringify(args),
+      body,
     });
   } catch {
     throw new Error(

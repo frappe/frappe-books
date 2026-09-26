@@ -1,6 +1,5 @@
 """Integration coverage for the original Vue UI's Frappe compatibility layer."""
 
-from base64 import b64encode
 from datetime import datetime, timedelta
 
 import frappe
@@ -348,18 +347,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 		self.assertEqual(listed["unit"], "Unit")
 		self.assertEqual(listed["rate"], 42)
-
-	def test_double_encoded_attach_images_are_normalized(self):
-		receivable = make_account("Bridge Image Receivable", account_type="Receivable")
-		party = make_party(receivable.name)
-		image = "data:image/png;base64,aW1hZ2UtYnl0ZXM="
-		double_encoded = f"data:image/png;base64,{b64encode(image.encode()).decode()}"
-		frappe.db.set_value("Books Party", party.name, "image", double_encoded)
-
-		self.assertEqual(self.bridge.get("Party", party.name, ["image"])["image"], image)
-
-		self.bridge.update("Party", {"name": party.name, "image": double_encoded})
-		self.assertEqual(frappe.db.get_value("Books Party", party.name, "image"), image)
 
 	def test_child_list_returns_parent_metadata_for_linked_entries(self):
 		receivable = make_account("Bridge Linked Receivable", account_type="Receivable")

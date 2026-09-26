@@ -29,27 +29,27 @@ export function downloadFile(
   window.setTimeout(() => URL.revokeObjectURL(url));
 }
 
-export function selectFile(
+export function pickFile(
   options?: Partial<SelectFileOptions>
-): Promise<SelectedFile | null> {
+): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = getAcceptedExtensions(options?.filters);
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) {
-        resolve(null);
-        return;
-      }
-
-      resolve({
-        name: file.name,
-        data: new Uint8Array(await file.arrayBuffer()),
-      });
-    };
+    input.onchange = () => resolve(input.files?.[0] ?? null);
     input.click();
   });
+}
+
+export async function selectFile(
+  options?: Partial<SelectFileOptions>
+): Promise<SelectedFile | null> {
+  const file = await pickFile(options);
+  if (!file) {
+    return null;
+  }
+
+  return { name: file.name, data: new Uint8Array(await file.arrayBuffer()) };
 }
 
 export async function printHtml(html: string): Promise<boolean> {

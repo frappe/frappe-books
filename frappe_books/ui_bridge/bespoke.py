@@ -8,6 +8,7 @@ from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
+from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.reports import financial_statements, gst, stock
 from frappe_books.reports.financial_statements import Period
 from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
@@ -229,9 +230,7 @@ class BooksBespokeQueries:
 		}
 
 	def _add_serials(self, entry, row):
-		serials = [
-			value.strip() for value in str(row.get("serial_number") or "").splitlines() if value.strip()
-		]
+		serials = parse_serial_numbers(row.get("serial_number"))
 		entry["serialNumbers"].extend(serials)
 		if row.get("batch"):
 			entry["batches"][row.batch]["serialNumbers"].extend(serials)

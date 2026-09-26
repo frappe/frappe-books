@@ -1,5 +1,7 @@
 """Integration coverage for invoice-driven stock transfers."""
 
+from decimal import Decimal
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -7,7 +9,14 @@ from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_mov
 	make_movement,
 )
 from frappe_books.inventory.stock import stock_quantity
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
+from frappe_books.tests.accounting import (
+	ledger_entries,
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	unique_name,
+)
 
 
 class IntegrationTestAutoTransfer(IntegrationTestCase):
@@ -61,6 +70,32 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice.cancel()
 		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 2)
 		self.assertEqual(stock_quantity(item.name, "Stores"), 5)
+
+	def test_foreign_currency_receipt_uses_base_currency_rate(self):
+		payable = make_account("FX Payable", root_type="Liability", account_type="Payable")
+		stock = make_account("FX Stock", account_type="Stock")
+		received = make_account("FX Received", root_type="Liability")
+		expense = make_account("FX Expense", root_type="Expense")
+		frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock.name)
+		frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received.name)
+		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
+		item = make_item(expense.name, expense.name, track_item=1)
+		invoice = make_invoice(
+			"Books Purchase Invoice",
+			make_party(payable.name, role="Supplier").name,
+			payable.name,
+			item.name,
+			received.name,
+			make_auto_stock_transfer=1,
+			exchange_rate=80,
+		)
+		invoice.items[0].update({"quantity": 1, "rate": 100, "item_discount_percent": 0})
+		invoice.save().submit()
+
+		receipt = frappe.get_doc("Books Purchase Receipt", invoice.reload().back_reference)
+		self.assertEqual(receipt.items[0].rate, 8000)
+		entries = ledger_entries(receipt.doctype, receipt.name)
+		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries if row.account == stock.name), 8000)
 
 	def _check_pos_inventory(self, use_profile):
 		invoice, item, location = self._make_pos_invoice(use_profile)

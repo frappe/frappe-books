@@ -382,7 +382,9 @@ export default defineComponent({
     routeTo,
     async toggleWidth() {
       const value = !this.useFullWidth;
-      await this.fyo.singles.Misc?.setAndSync('useFullWidth', value);
+      if (this.fyo.can('Misc', 'write')) {
+        await this.fyo.singles.Misc?.setAndSync('useFullWidth', value);
+      }
       this.useFullWidth = value;
     },
     updateGroupedFields(): void {

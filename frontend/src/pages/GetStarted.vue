@@ -108,7 +108,9 @@ export default defineComponent({
   },
   async activated() {
     await fyo.doc.getDoc('GetStarted');
-    await this.checkForCompletedTasks();
+    if (fyo.can('GetStarted', 'write')) {
+      await this.checkForCompletedTasks();
+    }
   },
   methods: {
     async handleDocumentation({ key, documentation }: ListItem) {
@@ -210,6 +212,10 @@ export default defineComponent({
       await this.updateChecks(toUpdate);
     },
     async updateChecks(toUpdate: Record<string, DocValue>) {
+      if (!fyo.can('GetStarted', 'write')) {
+        return;
+      }
+
       await fyo.singles.GetStarted?.setAndSync(toUpdate);
       await fyo.doc.getDoc('GetStarted');
     },

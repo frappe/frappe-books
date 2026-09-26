@@ -336,3 +336,18 @@ function entry(name, date, debit, credit, account = 'Cash') {
     reverts: '',
   };
 }
+
+test('general ledger offers stock reference types only with inventory', async () => {
+  const fyo = await makeFyo();
+  const referenceTypes = () =>
+    new GeneralLedger(fyo)
+      .getFilters()
+      .find(({ fieldname }) => fieldname === 'referenceType')
+      .options.map(({ value }) => value);
+
+  fyo.singles.AccountingSettings.enableInventory = false;
+  assert.ok(!referenceTypes().includes('Shipment'));
+  fyo.singles.AccountingSettings.enableInventory = true;
+  assert.ok(referenceTypes().includes('Shipment'));
+  assert.ok(referenceTypes().includes('PurchaseReceipt'));
+});

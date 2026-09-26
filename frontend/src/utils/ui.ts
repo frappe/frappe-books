@@ -6,7 +6,7 @@ import { t } from 'fyo';
 import type { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
-import { ValueError } from 'fyo/utils/errors';
+import { NotFoundError, ValueError } from 'fyo/utils/errors';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
@@ -409,8 +409,12 @@ export async function getDocFromNameIfExistsElseNew(
 
   try {
     return await fyo.doc.getDoc(schemaName, name);
-  } catch {
-    return fyo.doc.getNewDoc(schemaName);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return fyo.doc.getNewDoc(schemaName);
+    }
+
+    throw error;
   }
 }
 

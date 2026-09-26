@@ -141,6 +141,7 @@ import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import Icon from 'src/components/Icon.vue';
 import StatusPill from 'src/components/StatusPill.vue';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { getErrorMessage } from 'src/utils';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
@@ -411,7 +412,11 @@ export default defineComponent({
         return;
       }
 
-      this.docOrNull = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
+      try {
+        this.docOrNull = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
+      } catch (error) {
+        await handleErrorWithDialog(error);
+      }
     },
     replacePathAfterSync() {
       if (!this.hasDoc || this.doc.inserted) {

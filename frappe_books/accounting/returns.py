@@ -44,6 +44,7 @@ def _prepare_return(invoice, credit_note):
 		frappe.throw(_("This invoice is already fully returned."))
 	credit_note.date = now_datetime()
 	_return_unreturned_rows(invoice, credit_note)
+	credit_note.calculate()
 
 
 def _return_unreturned_rows(invoice, credit_note):

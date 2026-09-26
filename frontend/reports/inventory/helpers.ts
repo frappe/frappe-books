@@ -1,6 +1,5 @@
 import { Fyo } from 'fyo';
 import { StockQueue } from 'models/inventory/stockQueue';
-import { ValuationMethod } from 'models/inventory/types';
 import { ModelNameEnum } from 'models/types';
 import { safeParseFloat, safeParseInt } from 'utils/index';
 import type {
@@ -41,8 +40,7 @@ export async function getRawStockLedgerEntries(
 }
 
 export function getStockLedgerEntries(
-  rawSLEs: RawStockLedgerEntry[],
-  valuationMethod: ValuationMethod
+  rawSLEs: RawStockLedgerEntry[]
 ): ComputedStockLedgerEntry[] {
   const computedSLEs: ComputedStockLedgerEntry[] = [];
   const stockQueues: Record<
@@ -81,10 +79,7 @@ export function getStockLedgerEntries(
     }
 
     const balanceQuantity = q.quantity;
-    let valuationRate = q.fifo;
-    if (valuationMethod === ValuationMethod.MovingAverage) {
-      valuationRate = q.movingAverage;
-    }
+    const valuationRate = q.fifo;
 
     const balanceValue = q.value;
     const valueChange = balanceValue - initialValue;

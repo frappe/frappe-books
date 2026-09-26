@@ -2,12 +2,10 @@ export class StockQueue {
   quantity: number;
   value: number;
   queue: { rate: number; quantity: number }[];
-  movingAverage: number;
 
   constructor() {
     this.value = 0;
     this.quantity = 0;
-    this.movingAverage = 0;
     this.queue = [];
   }
 
@@ -34,13 +32,6 @@ export class StockQueue {
     }
 
     const inwardValue = rate * quantity;
-    /**
-     * Update Moving Average valuation
-     */
-    this.movingAverage =
-      (this.movingAverage * this.quantity + inwardValue) /
-      (this.quantity + quantity);
-
     this.quantity += quantity;
     this.value += inwardValue;
 
@@ -71,7 +62,6 @@ export class StockQueue {
       const rate = value / this.quantity;
       this.quantity = 0;
       this.value = 0;
-      this.movingAverage = 0;
       this.queue = [];
       return rate;
     }

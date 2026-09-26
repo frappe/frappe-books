@@ -26,7 +26,6 @@ import {
 } from 'models/helpers';
 import { SalesInvoice } from '../SalesInvoice/SalesInvoice';
 import { getSuggestedBatchName } from 'models/inventory/helpers';
-import { ValuationMethod } from 'models/inventory/types';
 import {
   getRawStockLedgerEntries,
   getStockLedgerEntries,
@@ -746,12 +745,8 @@ export abstract class InvoiceItem extends Doc {
       }
     }
 
-    const valuationMethod =
-      (this.fyo.singles.InventorySettings
-        ?.valuationMethod as ValuationMethod) ?? ValuationMethod.FIFO;
-
     const rawSLEs = await getRawStockLedgerEntries(this.fyo);
-    const computedSLEs = getStockLedgerEntries(rawSLEs, valuationMethod);
+    const computedSLEs = getStockLedgerEntries(rawSLEs);
 
     const stockBalance = getStockBalanceEntries(computedSLEs, {
       item: this.item!,
@@ -860,12 +855,7 @@ export abstract class InvoiceItem extends Doc {
         }
 
         const rawSLEs = await getRawStockLedgerEntries(doc.fyo);
-
-        const valuationMethod =
-          (doc.fyo.singles.InventorySettings
-            ?.valuationMethod as ValuationMethod) ?? ValuationMethod.FIFO;
-
-        const computedSLEs = getStockLedgerEntries(rawSLEs, valuationMethod);
+        const computedSLEs = getStockLedgerEntries(rawSLEs);
 
         const stockBalance = getStockBalanceEntries(computedSLEs, {
           item: doc.item as string,

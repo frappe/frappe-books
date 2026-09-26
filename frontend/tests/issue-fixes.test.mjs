@@ -55,7 +55,6 @@ test('empty FIFO stock has no residual value or valuation and can be replenished
   assert.equal(stock.quantity, 0);
   assert.equal(stock.value, 0);
   assert.equal(stock.fifo, 0);
-  assert.equal(stock.movingAverage, 0);
   assert.deepEqual(stock.queue, []);
   stock.inward(7.5, 0.5);
   assert.equal(stock.fifo, 7.5);

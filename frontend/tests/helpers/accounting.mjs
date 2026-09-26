@@ -40,7 +40,11 @@ await build({
       export { call } from './src/web/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
-      export { createMissingBatches } from './models/inventory/helpers';
+      export {
+        createMissingBatches,
+        generateSerialNumbersForItem,
+        getSuggestedBatchName,
+      } from './models/inventory/helpers';
       export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { Importer } from './src/importer';
@@ -103,6 +107,8 @@ export const {
   errors,
   getInsufficientItems,
   createMissingBatches,
+  generateSerialNumbersForItem,
+  getSuggestedBatchName,
   getAmountInWords,
   generateCSV,
   parseCSV,

@@ -112,8 +112,8 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		self.assertEqual(program.db_get("is_enabled"), 0)
 
 	def test_redemption_uses_the_soonest_expiring_points_first(self):
-		program = self._loyalty_program()
 		invoice = self._submitted_invoice()
+		program = self._loyalty_program()
 		for points, days in ((100, 5), (50, 60)):
 			self._point_entry(program, invoice, points, add_days(nowdate(), days))
 		self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=120).submit()
@@ -153,6 +153,23 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		self.assertEqual(self._points(), 160)
 		self.assertEqual(program.db_get("used"), 1)
 
+	def test_invoice_takes_the_customers_program(self):
+		other = self._loyalty_program()
+		program = self._loyalty_program()
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			loyalty_program=other.name,
+		)
+		self.assertEqual(invoice.loyalty_program, program.name)
+
+		self.party.db_set("loyalty_program", None)
+		invoice.save()
+		self.assertIsNone(invoice.loyalty_program)
+
 	def _points(self):
 		return frappe.db.get_value("Books Party", self.party.name, "loyalty_points")
 
@@ -182,7 +199,8 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		).insert()
 
 	def _loyalty_program(self, **values):
-		return frappe.get_doc(
+		"""Make a program and give it to the test customer."""
+		program = frappe.get_doc(
 			{
 				"doctype": "Books Loyalty Program",
 				"name": unique_name("Rewards"),
@@ -195,6 +213,8 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				**values,
 			}
 		).insert()
+		self.party.db_set("loyalty_program", program.name)
+		return program
 
 	def _submitted_invoice(self):
 		invoice = make_invoice(

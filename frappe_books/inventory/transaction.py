@@ -96,13 +96,14 @@ def transfer_rows(transaction):
 				"rate": row.rate,
 				"batch": row.batch,
 				"serial_number": row.serial_number,
+				"at_valuation_rate": is_return and transaction.transfer_type == "sales",
 			}
 		)
 	return rows
 
 
 def post_stock_accounts(transaction):
-	amount = _stock_posting_amount(transaction)
+	amount = transaction_stock_value(transaction)
 	if amount == 0:
 		return
 	settings = frappe.get_single("Books Inventory Settings")
@@ -125,13 +126,6 @@ def post_stock_accounts(transaction):
 			reverse=is_return,
 		)
 	posting.post()
-
-
-def _stock_posting_amount(transaction):
-	"""Shipments move stock out at cost; receipts bring it in at the billed value."""
-	if transaction.transfer_type == "sales":
-		return transaction_stock_value(transaction)
-	return abs(as_decimal(transaction.grand_total))
 
 
 def _debit_credit(posting, debit_account, credit_account, amount, reverse):

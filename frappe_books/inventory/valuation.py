@@ -28,10 +28,17 @@ LEDGER_FIELDS = [
 ]
 
 
-def insert_entry(values):
-	"""Insert a stock ledger entry with its FIFO state and restate any later entries."""
+def insert_entry(values, at_valuation_rate=False):
+	"""Insert a stock ledger entry with its FIFO state and restate any later entries.
+
+	An entry at valuation rate rejoins stock at the current valuation, or at its
+	own rate when nothing is in stock.
+	"""
 	values = frappe._dict(values)
-	state = next_state(_entry_before(values, values.date), values.quantity, values.rate)
+	previous = _entry_before(values, values.date)
+	if at_valuation_rate and previous and as_decimal(previous.balance_quantity) > 0:
+		values.rate = rounded(_valuation_rate(previous.balance_value, previous.balance_quantity))
+	state = next_state(previous, values.quantity, values.rate)
 	entry = frappe.get_doc({"doctype": DOCTYPE, **values, **state}).insert(ignore_permissions=True)
 	restate_after(entry, entry)
 	return entry
@@ -80,18 +87,13 @@ def next_state(previous, quantity, rate):
 
 
 def transaction_stock_value(transaction):
-	"""Return the cost of a stock transaction's ledger entries.
-
-	Outgoing entries use their FIFO value. Incoming return entries are valued
-	at the rate of the stock they rejoin, or at their own rate when nothing is
-	in stock.
-	"""
-	entries = frappe.get_all(
+	"""Return the value a stock transaction moved in or out of stock."""
+	values = frappe.get_all(
 		DOCTYPE,
 		filters={"reference_type": transaction.doctype, "reference_name": transaction.name},
-		fields=["quantity", "rate", "value_change", "balance_quantity", "balance_value"],
+		pluck="value_change",
 	)
-	return rounded(sum((_entry_cost(entry) for entry in entries), as_decimal(0)))
+	return abs(rounded(sum((as_decimal(value) for value in values), as_decimal(0))))
 
 
 def computed_entries(items):
@@ -137,17 +139,6 @@ def _entries_after(anchor):
 def _key_query(sle, row):
 	batch = (sle.batch == row.batch) if row.batch else (sle.batch.isnull() | (sle.batch == ""))
 	return frappe.qb.from_(sle).where((sle.item == row.item) & (sle.location == row.location) & batch)
-
-
-def _entry_cost(entry):
-	quantity = as_decimal(entry.quantity)
-	if quantity < 0:
-		return -as_decimal(entry.value_change)
-	opening_quantity = as_decimal(entry.balance_quantity) - quantity
-	if opening_quantity > 0:
-		opening_value = as_decimal(entry.balance_value) - as_decimal(entry.value_change)
-		return quantity * opening_value / opening_quantity
-	return quantity * as_decimal(entry.rate)
 
 
 def _consume_layers(queue, quantity, rate):

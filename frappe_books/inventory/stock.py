@@ -145,7 +145,8 @@ def _create_stock_entry(transaction, transfer, location, quantity, serial_number
 			"quantity": quantity,
 			"reference_type": transaction.doctype,
 			"reference_name": transaction.name,
-		}
+		},
+		at_valuation_rate=quantity > 0 and transfer.get("at_valuation_rate"),
 	)
 
 

@@ -399,6 +399,19 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 		self.assertEqual([row["uom"] for row in rows], ["Gram"])
 
+	def test_count_matches_filtered_parent_and_child_rows(self):
+		prefix = unique_name("Bridge Count")
+		for index in range(3):
+			frappe.get_doc(
+				{"doctype": "Books Color", "name": f"{prefix} {index}", "hexvalue": "#000"}
+			).insert()
+		income = make_account("Bridge Count Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Bridge Count Expense", root_type="Expense", account_type="Expense Account")
+		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
+
+		self.assertEqual(self.bridge.call("count", ["Color", {"name": ["like", f"{prefix}%"]}]), 3)
+		self.assertEqual(self.bridge.call("count", ["UOMConversionItem", {"parent": item.name}]), 1)
+
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])

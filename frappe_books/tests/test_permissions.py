@@ -81,6 +81,13 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			balance = BooksBespokeQueries().call("getReturnBalanceItemsQty", ["Shipment", original])
 		self.assertIsNone(balance)
 
+	def test_bridge_count_skips_documents_the_user_cannot_read(self):
+		readable, hidden = _seed_shipment(), _seed_shipment()
+		add_user_permission("Books Shipment", readable, TEST_USER)
+		with self.set_user(TEST_USER):
+			count = BooksDatabaseBridge().call("count", ["Shipment", {"name": ["in", [readable, hidden]]}])
+		self.assertEqual(count, 1)
+
 	def test_pos_amounts_require_invoice_read(self):
 		def has_permission(doctype, ptype="read", throw=False, **kwargs):
 			if doctype == "Books Sales Invoice":

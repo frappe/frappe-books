@@ -99,3 +99,21 @@ test('list queries never send computed statuses to the database', async () => {
   await updateData.call(lead);
   assert.deepEqual(query.filters.status, ['!=', 'Lost']);
 });
+
+test('a submittable list refreshes after a cancel', async () => {
+  const events = [];
+  const observer = { on: (event) => events.push(event) };
+  const fyo = {
+    schemaMap: { SalesInvoice: { isSubmittable: true } },
+    doc: { observer },
+    db: { observer },
+  };
+  const setUpdateListeners = await loadMethod(
+    'src/pages/ListView/List.vue',
+    'setUpdateListeners',
+    { fyo }
+  );
+  setUpdateListeners.call({ schemaName: 'SalesInvoice' });
+  assert.ok(events.includes('submit:SalesInvoice'));
+  assert.ok(events.includes('cancel:SalesInvoice'));
+});

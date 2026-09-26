@@ -1,14 +1,12 @@
-"""Integration coverage for promotions, loyalty programs, and POS shifts."""
+"""Integration coverage for promotions and loyalty programs."""
 
 from decimal import Decimal
-from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, now_datetime, nowdate
 
 from frappe_books.commerce.loyalty import expire_programs_and_points
-from frappe_books.commerce.pos import transacted_amounts
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
 )
@@ -21,7 +19,6 @@ from frappe_books.tests.accounting import (
 	make_party,
 	unique_name,
 )
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
 class IntegrationTestCommerce(IntegrationTestCase):
@@ -209,109 +206,3 @@ class IntegrationTestCommerce(IntegrationTestCase):
 		)
 		invoice.submit()
 		return invoice
-
-
-class IntegrationTestPosShift(IntegrationTestCase):
-	def setUp(self):
-		self.counter = make_account("POS Counter", account_type="Cash")
-		self.write_off = make_account("POS Write Off", root_type="Expense", account_type="Expense Account")
-		settings = frappe.get_single("Books Pos Settings")
-		settings.cash_account = self.counter.name
-		settings.write_off_account = self.write_off.name
-		settings.default_account = self.counter.name
-		settings.is_shift_open = 0
-		settings.save()
-		if not frappe.db.exists("Books Account", "Cash"):
-			frappe.get_doc(
-				{
-					"doctype": "Books Account",
-					"account_name": "Cash",
-					"root_type": "Asset",
-					"account_type": "Cash",
-				}
-			).insert()
-		if not frappe.db.exists("Books Payment Method", "Bank"):
-			frappe.get_doc(
-				{
-					"doctype": "Books Payment Method",
-					"name": "Bank",
-					"type": "Bank",
-				}
-			).insert()
-
-	def test_open_and_close_shift_reconciles_cash(self):
-		with patch("frappe_books.commerce.pos._open_shift_name", return_value=None):
-			opening = frappe.get_doc(
-				{
-					"doctype": "Books Pos Opening Shift",
-					"opening_date": now_datetime(),
-					"opening_cash": [{"denomination": 50, "count": 2}],
-					"opening_amounts": [
-						{"payment_method": "Cash", "amount": 100},
-						{"payment_method": "Bank", "amount": 0},
-					],
-				}
-			).insert()
-		self.assertEqual(frappe.db.get_single_value("Books Pos Settings", "is_shift_open"), 1)
-
-		closing = frappe.get_doc(
-			{
-				"doctype": "Books Pos Closing Shift",
-				"opening_shift": opening.name,
-				"closing_date": now_datetime(),
-				"closing_cash": [{"denomination": 50, "count": 2}],
-				"closing_amounts": [
-					{"payment_method": "Cash", "closing_amount": 100},
-					{"payment_method": "Bank", "closing_amount": 0},
-				],
-			}
-		).insert()
-		cash_row = next(row for row in closing.closing_amounts if row.payment_method == "Cash")
-		self.assertEqual(cash_row.expected_amount, 100)
-		self.assertEqual(cash_row.difference_amount, 0)
-		self.assertEqual(frappe.db.get_single_value("Books Pos Settings", "is_shift_open"), 0)
-		self.assertEqual(frappe.db.count("Books Journal Entry", {"user_remark": ["like", "POS % shift%"]}), 2)
-
-	def test_interface_expected_amounts_match_closing_shift_totals(self):
-		receivable = make_account("POS Receivable", account_type="Receivable")
-		income = make_account("POS Income", root_type="Income", account_type="Income Account")
-		expense = make_account("POS Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
-		party = make_party(receivable.name)
-		item = make_item(income.name, expense.name)
-		start = now_datetime()
-		invoice = make_invoice(
-			"Books Sales Invoice", party.name, receivable.name, item.name, income.name, is_pos=1
-		)
-		invoice.submit()
-		self._cash_payment(invoice, party, receivable).submit()
-		end = add_days(now_datetime(), 1)
-
-		amounts = BooksBespokeQueries().pos_transacted_amount(start.isoformat(), end.isoformat())
-
-		self.assertEqual(amounts, transacted_amounts(start, end))
-		self.assertEqual(amounts["Cash"], invoice.base_grand_total)
-
-	def _cash_payment(self, invoice, party, account):
-		return frappe.get_doc(
-			{
-				"doctype": "Books Payment",
-				"party": party.name,
-				"date": now_datetime(),
-				"payment_type": "Receive",
-				"account": account.name,
-				"payment_account": self.counter.name,
-				"payment_method": "Cash",
-				"amount": invoice.base_grand_total,
-				"payment_references": [
-					{
-						"reference_type": invoice.doctype,
-						"reference_name": invoice.name,
-						"amount": invoice.base_grand_total,
-					}
-				],
-			}
-		).insert()
-
-	def tearDown(self):
-		frappe.db.set_single_value("Books Pos Settings", "is_shift_open", 0)

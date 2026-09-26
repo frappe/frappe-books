@@ -91,19 +91,17 @@ def _referenced_invoice(payment, row):
 
 def _apply_allocations(payment, reverse):
 	for row in payment.payment_references:
-		outstanding = as_decimal(
-			frappe.db.get_value(row.reference_type, row.reference_name, "outstanding_amount")
+		invoice = frappe.db.get_value(
+			row.reference_type, row.reference_name, ["outstanding_amount", "return_against"], as_dict=True
 		)
-		amount = as_decimal(row.amount)
-		if outstanding < 0:
-			updated = outstanding - amount if reverse else outstanding + amount
-		else:
-			updated = outstanding + amount if reverse else outstanding - amount
+		settled = -as_decimal(row.amount) if invoice.return_against else as_decimal(row.amount)
+		if reverse:
+			settled = -settled
 		frappe.db.set_value(
 			row.reference_type,
 			row.reference_name,
 			"outstanding_amount",
-			rounded(updated),
+			rounded(as_decimal(invoice.outstanding_amount) - settled),
 			update_modified=False,
 		)
 

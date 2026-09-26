@@ -34,6 +34,7 @@ await build({
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export { validateSinv } from './src/utils/pos';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
+      export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
     `,
     resolveDir: frontend,
   },
@@ -85,6 +86,7 @@ export const {
   validatePOSStock,
   validateSinv,
   FrappeDatabaseDemux,
+  GSTR1,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

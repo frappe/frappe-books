@@ -189,7 +189,7 @@ def _post_discount(invoice, posting, exchange_rate, credit, reverse):
 		),
 		as_decimal(0),
 	)
-	discount = abs((item_discount + as_decimal(invoice.discount_amount)) * exchange_rate)
+	discount = (abs(item_discount) + abs(as_decimal(invoice.discount_amount))) * exchange_rate
 	if discount == 0:
 		return
 	account = frappe.db.get_single_value("Books Accounting Settings", "discount_account")

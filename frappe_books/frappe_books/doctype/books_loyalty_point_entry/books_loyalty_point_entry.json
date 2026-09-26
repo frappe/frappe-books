@@ -19,9 +19,10 @@
  "fields": [
   {
    "fieldname": "loyalty_program",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Loyalty Program",
+   "options": "Books Loyalty Program",
    "read_only": 1,
    "reqd": 1
   },
@@ -79,7 +80,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.414682",
+ "modified": "2026-09-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Loyalty Point Entry",

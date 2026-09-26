@@ -12,6 +12,10 @@ def as_decimal(value=0) -> Decimal:
 	return Decimal(str(value or 0))
 
 
+def sum_decimal(values) -> Decimal:
+	return sum((as_decimal(value) for value in values), Decimal(0))
+
+
 def rounded(value, currency=None) -> Decimal:
 	"""Round to the smallest unit of `currency`, or of the company currency."""
 	return as_decimal(value).quantize(smallest_unit(currency or company_currency()), rounding=ROUND_HALF_UP)

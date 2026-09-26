@@ -7,7 +7,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer
@@ -73,49 +73,65 @@ class InvoiceController(SeriesNamingMixin, Document):
 def calculate_invoice(invoice):
 	if not invoice.get("items"):
 		return
-	currency = invoice.get("currency")
-	tax_totals = defaultdict(as_decimal)
-	tax_rates = {}
-	net_total = as_decimal(0)
-	item_discount_total = as_decimal(0)
-	item_taxed_total = as_decimal(0)
-
+	taxes = {}
 	for row in invoice.items:
-		amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity), currency)
-		discount = _item_discount(row, amount, currency)
-		discounted = amount - discount
-		tax_base = amount if invoice.discount_after_tax else discounted
-		row_tax = as_decimal(0)
-		for detail in _tax_details(row.tax):
-			tax_amount = rounded(tax_base * as_decimal(detail.rate) / 100, currency)
-			tax_totals[detail.account] += tax_amount
-			tax_rates.setdefault(detail.account, detail.rate)
-			row_tax += tax_amount
-		if invoice.discount_after_tax:
-			discount = _item_discount(row, amount + row_tax, currency)
-		row.amount = amount
-		row.item_discounted_total = amount + row_tax - discount if invoice.discount_after_tax else discounted
-		row.item_taxed_total = amount + row_tax if invoice.discount_after_tax else amount + row_tax - discount
-		net_total += amount
-		item_discount_total += discount
-		item_taxed_total += as_decimal(row.item_taxed_total)
+		_calculate_row(invoice, row, taxes)
+	invoice.set("taxes", list(taxes.values()))
+	_calculate_totals(invoice)
 
-	invoice.set("taxes", [])
-	for account, amount in tax_totals.items():
-		invoice.append("taxes", {"account": account, "rate": tax_rates[account], "amount": amount})
-	invoice.net_total = net_total
-	invoice_discount = _invoice_discount(invoice, item_taxed_total, net_total - item_discount_total, currency)
-	invoice.discount_amount = invoice_discount
-	invoice.grand_total = net_total + sum(tax_totals.values()) - item_discount_total - invoice_discount
-	if invoice.transaction_type == "sales":
-		invoice.grand_total = rounded(
-			as_decimal(invoice.grand_total) - loyalty.redemption_amount(invoice), currency
+
+def _calculate_row(invoice, row, taxes):
+	currency = invoice.get("currency")
+	row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity), currency)
+	discount = _item_discount(row, row.amount, currency)
+	tax_base = row.amount if invoice.discount_after_tax else row.amount - discount
+	row_tax = _add_row_taxes(row, tax_base, taxes, currency)
+	if invoice.discount_after_tax:
+		row.item_taxed_total = row.amount + row_tax
+		row.item_discounted_total = row.item_taxed_total - _item_discount(row, row.item_taxed_total, currency)
+	else:
+		row.item_discounted_total = row.amount - discount
+		row.item_taxed_total = row.item_discounted_total + row_tax
+
+
+def _add_row_taxes(row, base, taxes, currency):
+	row_tax = as_decimal(0)
+	for detail in _tax_details(row.tax):
+		amount = rounded(base * as_decimal(detail.rate) / 100, currency)
+		tax = taxes.setdefault(
+			detail.account, {"account": detail.account, "rate": detail.rate, "amount": as_decimal(0)}
 		)
-	invoice.base_grand_total = rounded(
-		as_decimal(invoice.grand_total) * as_decimal(invoice.exchange_rate or 1)
+		tax["amount"] += amount
+		row_tax += amount
+	return row_tax
+
+
+def _calculate_totals(invoice):
+	currency = invoice.get("currency")
+	invoice.net_total = sum_decimal(row.amount for row in invoice.items)
+	item_discount = sum_decimal(row_discount(invoice, row) for row in invoice.items)
+	taxed_total = sum_decimal(row.item_taxed_total for row in invoice.items)
+	invoice.discount_amount = _invoice_discount(
+		invoice, taxed_total, invoice.net_total - item_discount, currency
 	)
+	grand_total = (
+		invoice.net_total
+		+ sum_decimal(tax.amount for tax in invoice.taxes)
+		- item_discount
+		- invoice.discount_amount
+	)
+	if invoice.transaction_type == "sales":
+		grand_total -= loyalty.redemption_amount(invoice)
+	invoice.grand_total = rounded(grand_total, currency)
+	invoice.base_grand_total = rounded(invoice.grand_total * as_decimal(invoice.exchange_rate or 1))
 	if invoice.docstatus == 0:
-		invoice.outstanding_amount = abs(as_decimal(invoice.base_grand_total))
+		invoice.outstanding_amount = abs(invoice.base_grand_total)
+
+
+def row_discount(invoice, row):
+	"""Return the item discount of a calculated row, signed like its amount."""
+	undiscounted = row.item_taxed_total if invoice.discount_after_tax else row.amount
+	return as_decimal(undiscounted) - as_decimal(row.item_discounted_total)
 
 
 def validate_invoice(invoice):
@@ -124,17 +140,21 @@ def validate_invoice(invoice):
 	if invoice.exchange_rate is not None and as_decimal(invoice.exchange_rate) <= 0:
 		frappe.throw(_("Exchange rate must be greater than zero."))
 	for row in invoice.items:
-		if not row.item:
-			frappe.throw(_("Every invoice row requires an item."))
-		quantity = as_decimal(row.quantity)
-		if quantity == 0:
-			frappe.throw(_("Item quantity cannot be zero."))
-		if quantity < 0 and not invoice.get("return_against"):
-			frappe.throw(_("Negative quantities require a return-against invoice."))
-		if as_decimal(row.rate) < 0:
-			frappe.throw(_("Item rate cannot be negative."))
+		_validate_row(invoice, row)
 	if invoice.get("return_against"):
 		_validate_return(invoice)
+
+
+def _validate_row(invoice, row):
+	if not row.item:
+		frappe.throw(_("Every invoice row requires an item."))
+	quantity = as_decimal(row.quantity)
+	if quantity == 0:
+		frappe.throw(_("Item quantity cannot be zero."))
+	if quantity < 0 and not invoice.get("return_against"):
+		frappe.throw(_("Negative quantities require a return-against invoice."))
+	if as_decimal(row.rate) < 0:
+		frappe.throw(_("Item rate cannot be negative."))
 
 
 def post_invoice(invoice):
@@ -181,14 +201,7 @@ def _post_purchase(invoice, posting, total, exchange_rate, is_return):
 
 
 def _post_discount(invoice, posting, exchange_rate, credit, reverse):
-	item_discount = sum(
-		(
-			abs(as_decimal(row.item_taxed_total if invoice.discount_after_tax else row.amount))
-			- abs(as_decimal(row.item_discounted_total))
-			for row in invoice.items
-		),
-		as_decimal(0),
-	)
+	item_discount = sum_decimal(row_discount(invoice, row) for row in invoice.items)
 	discount = (abs(item_discount) + abs(as_decimal(invoice.discount_amount))) * exchange_rate
 	if discount == 0:
 		return
@@ -210,26 +223,22 @@ def _populate_invoice_defaults(invoice):
 		invoice.account = frappe.db.get_value("Books Party", invoice.party, "default_account")
 	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
 	for row in invoice.get("items", []):
-		item = items.get(row.item)
-		if not item:
-			continue
-		for fieldname in ("item_code", "description", "rate", "unit", "tax"):
-			if fieldname == "rate" and (row.is_manual_rate or row.get("is_free_item")):
-				continue
-			if not row.get(fieldname):
-				row.set(fieldname, item.get(fieldname))
-		if not row.transfer_unit:
-			row.transfer_unit = row.unit
-		if not row.unit_conversion_factor:
-			row.unit_conversion_factor = 1
-		if not row.transfer_quantity:
-			row.transfer_quantity = as_decimal(row.quantity) * as_decimal(row.unit_conversion_factor)
-		if not row.account:
-			row.account = (
-				item.income_account
-				if invoice.transaction_type in {"sales", "quote"}
-				else item.expense_account
-			)
+		if row.item in items:
+			_populate_row(invoice, row, items[row.item])
+
+
+def _populate_row(invoice, row, item):
+	for fieldname in ("item_code", "description", "unit", "tax"):
+		if not row.get(fieldname):
+			row.set(fieldname, item.get(fieldname))
+	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
+		row.rate = item.rate
+	row.transfer_unit = row.transfer_unit or row.unit
+	row.unit_conversion_factor = row.unit_conversion_factor or 1
+	if not row.transfer_quantity:
+		row.transfer_quantity = as_decimal(row.quantity) * as_decimal(row.unit_conversion_factor)
+	if not row.account:
+		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
 
 
 def _item_details(names):

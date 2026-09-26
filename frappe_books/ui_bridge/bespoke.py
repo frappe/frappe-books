@@ -1,16 +1,17 @@
 """Aggregate queries used by the Books web interface."""
 
 from collections import defaultdict
-from typing import Any
+from typing import Any, Literal
 
 import frappe
 from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
-from frappe_books.reports import financial_statements, stock
+from frappe_books.reports import financial_statements, gst, stock
 from frappe_books.reports.financial_statements import Period
 from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
+from frappe_books.reports.gst import GSTRFilters
 from frappe_books.reports.stock import StockFilters
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.mapping import target_doctype
@@ -171,6 +172,9 @@ class BooksBespokeQueries:
 	def stock_balance(self, filters: StockFilters):
 		return stock.stock_balance(filters)
 
+	def gstr_rows(self, schema: Literal["SalesInvoice", "PurchaseInvoice"], filters: GSTRFilters):
+		return gst.gstr_rows(schema, filters)
+
 	def _monthly_balances(self, from_date, to_date, root_type, balance):
 		rows = self._ledger_totals(
 			from_date, to_date, {"account.root_type": root_type}, [*MONTH_FIELDS, *balance], MONTH_GROUP
@@ -254,4 +258,5 @@ _METHODS = {
 	"getBalanceSheet": "balance_sheet",
 	"getStockLedger": "stock_ledger",
 	"getStockBalance": "stock_balance",
+	"getGSTRRows": "gstr_rows",
 }

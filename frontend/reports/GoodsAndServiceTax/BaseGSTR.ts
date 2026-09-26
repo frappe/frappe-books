@@ -1,8 +1,6 @@
 import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
 import { DateTime } from 'luxon';
-import { Invoice } from 'models/baseModels/Invoice/Invoice';
-import { Party } from 'models/regionalModels/in/Party';
 import { ModelNameEnum } from 'models/types';
 import { codeStateMap } from 'regional/in';
 import { Report } from 'reports/Report';
@@ -48,10 +46,12 @@ export abstract class BaseGSTR extends Report {
 
   async setReportData(): Promise<void> {
     this.loading = true;
-    const gstrRows = await this.getGstrRows();
-    const filteredRows = this.filterGstrRows(gstrRows);
-    this.gstrRows = filteredRows;
-    this.reportData = this.getReportDataFromGSTRRows(filteredRows);
+    this.gstrRows = await this.fyo.db.getReportData<GSTRRow[]>(
+      'getGSTRRows',
+      this.schemaName,
+      this.filterMap
+    );
+    this.reportData = this.getReportDataFromGSTRRows(this.gstrRows);
     this.loading = false;
   }
 
@@ -81,137 +81,6 @@ export abstract class BaseGSTR extends Report {
     }
 
     return reportData;
-  }
-
-  filterGstrRows(gstrRows: GSTRRow[]) {
-    return gstrRows.filter((row) => {
-      if (this.place && codeStateMap[this.place] !== row.place) {
-        return false;
-      }
-      return this.transferFilterFunction(row);
-    });
-  }
-
-  get transferFilterFunction(): (row: GSTRRow) => boolean {
-    if (this.transferType === 'B2B') {
-      return (row) => !!row.gstin;
-    }
-
-    if (this.transferType === 'B2CL') {
-      return (row) => !row.gstin && !row.inState && row.invAmt >= 250000;
-    }
-
-    if (this.transferType === 'B2CS') {
-      return (row) => !row.gstin && (row.inState || row.invAmt < 250000);
-    }
-
-    if (this.transferType === 'NR') {
-      return (row) => row.rate === 0; // this takes care of both nil rated, exempted goods
-    }
-
-    return () => true;
-  }
-
-  async getEntries() {
-    const date: string[] = [];
-    if (this.toDate) {
-      date.push('<=', this.toDate);
-    }
-
-    if (this.fromDate) {
-      date.push('>=', this.fromDate);
-    }
-
-    return (await this.fyo.db.getAllRaw(this.schemaName, {
-      filters: { date, submitted: true, cancelled: false },
-    })) as { name: string }[];
-  }
-
-  async getGstrRows(): Promise<GSTRRow[]> {
-    const entries = await this.getEntries();
-    const gstrRows: GSTRRow[] = [];
-    for (const entry of entries) {
-      const gstrRow = await this.getGstrRow(entry.name);
-      gstrRows.push(gstrRow);
-    }
-    return gstrRows;
-  }
-
-  async getGstrRow(entryName: string): Promise<GSTRRow> {
-    const entry = (await this.fyo.doc.getDoc(
-      this.schemaName,
-      entryName
-    )) as Invoice;
-    const gstin = (await this.fyo.getValue(
-      ModelNameEnum.AccountingSettings,
-      'gstin'
-    )) as string | null;
-
-    const party = (await this.fyo.doc.getDoc('Party', entry.party)) as Party;
-
-    let place = '';
-    if (party.address) {
-      const pos = (await this.fyo.getValue(
-        ModelNameEnum.Address,
-        party.address as string,
-        'pos'
-      )) as string | undefined;
-
-      place = pos ?? '';
-    } else if (party.gstin) {
-      const code = party.gstin.slice(0, 2);
-      place = codeStateMap[code] ?? '';
-    }
-
-    let inState = false;
-    if (gstin) {
-      inState = codeStateMap[gstin.slice(0, 2)] === place;
-    }
-
-    const gstrRow: GSTRRow = {
-      gstin: party.gstin ?? '',
-      partyName: entry.party!,
-      invNo: entry.name!,
-      invDate: entry.date!,
-      rate: 0,
-      reverseCharge: !party.gstin ? 'Y' : 'N',
-      inState,
-      place,
-      invAmt: entry.grandTotal?.float ?? 0,
-      taxVal: entry.netTotal?.float ?? 0,
-    };
-
-    this.setTaxValuesOnGSTRRow(entry, gstrRow);
-    return gstrRow;
-  }
-
-  setTaxValuesOnGSTRRow(entry: Invoice, gstrRow: GSTRRow) {
-    for (const tax of entry.taxes ?? []) {
-      gstrRow.rate += tax.rate ?? 0;
-      const taxAmount = tax.amount?.float ?? 0;
-
-      switch (tax.account) {
-        case 'IGST':
-          gstrRow.igstAmt = taxAmount;
-          gstrRow.inState = false;
-          break;
-        case 'CGST':
-          gstrRow.cgstAmt = taxAmount;
-          break;
-        case 'SGST':
-          gstrRow.sgstAmt = taxAmount;
-          break;
-        case 'Nil Rated':
-          gstrRow.nilRated = true;
-          break;
-        case 'Exempt':
-          gstrRow.exempt = true;
-          break;
-        case 'Non GST':
-          gstrRow.nonGST = true;
-          break;
-      }
-    }
   }
 
   setDefaultFilters() {

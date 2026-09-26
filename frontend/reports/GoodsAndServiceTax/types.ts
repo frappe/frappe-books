@@ -11,7 +11,7 @@ export interface GSTRRow {
   gstin: string;
   partyName: string;
   invNo: string;
-  invDate: Date;
+  invDate: string;
   rate: number;
   reverseCharge: 'Y' | 'N';
   inState: boolean;

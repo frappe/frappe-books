@@ -22,6 +22,8 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 	def setUp(self):
 		self.counter = set_pos_accounts()
 		self.write_off = frappe.db.get_single_value("Books Pos Settings", "write_off_account")
+		self.receivable = make_account("POS Receivable", account_type="Receivable")
+		self.party = make_party(self.receivable.name)
 
 	def test_closing_reconciles_cash_and_closes_shift(self):
 		opening = open_shift(100)
@@ -90,18 +92,9 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertRaises(frappe.LinkExistsError, frappe.get_doc(opening.doctype, opening.name).cancel)
 
 	def test_interface_expected_amounts_match_closing_shift_totals(self):
-		receivable = make_account("POS Receivable", account_type="Receivable")
-		income = make_account("POS Income", root_type="Income", account_type="Income Account")
-		expense = make_account("POS Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
-		party = make_party(receivable.name)
-		item = make_item(income.name, expense.name)
 		start = now_datetime()
-		invoice = make_invoice(
-			"Books Sales Invoice", party.name, receivable.name, item.name, income.name, is_pos=1
-		)
-		invoice.submit()
-		self._cash_payment(party, receivable, [invoice]).submit()
+		invoice = self._pos_invoice()
+		self._cash_payment([invoice]).submit()
 		end = add_days(now_datetime(), 1)
 
 		amounts = BooksBespokeQueries().pos_transacted_amount(start.isoformat(), end.isoformat())
@@ -109,14 +102,34 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertEqual(amounts, transacted_amounts(start, end))
 		self.assertEqual(amounts["Cash"], invoice.base_grand_total)
 
-	def _cash_payment(self, party, account, invoices):
+	def test_payment_for_several_invoices_is_counted_once(self):
+		start = now_datetime()
+		invoices = [self._pos_invoice(), self._pos_invoice()]
+		self._cash_payment(invoices).submit()
+
+		amounts = transacted_amounts(start, add_days(now_datetime(), 1))
+
+		self.assertEqual(amounts["Cash"], sum(invoice.base_grand_total for invoice in invoices))
+
+	def _pos_invoice(self):
+		income = make_account("POS Income", root_type="Income", account_type="Income Account")
+		expense = make_account("POS Expense", root_type="Expense", account_type="Expense Account")
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		item = make_item(income.name, expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, income.name, is_pos=1
+		)
+		invoice.submit()
+		return invoice
+
+	def _cash_payment(self, invoices):
 		return frappe.get_doc(
 			{
 				"doctype": "Books Payment",
-				"party": party.name,
+				"party": self.party.name,
 				"date": now_datetime(),
 				"payment_type": "Receive",
-				"account": account.name,
+				"account": self.receivable.name,
 				"payment_account": self.counter,
 				"payment_method": "Cash",
 				"amount": sum(invoice.base_grand_total for invoice in invoices),

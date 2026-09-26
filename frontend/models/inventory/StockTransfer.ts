@@ -155,61 +155,42 @@ export abstract class StockTransfer extends Transfer {
       return null;
     }
 
-    const schemaName = this.invoiceSchemaName;
-
-    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
-    let terms;
-    let numberSeries;
-    if (this.isSales) {
-      terms = defaults.salesInvoiceTerms ?? '';
-      numberSeries = defaults.salesInvoiceNumberSeries ?? undefined;
-    } else {
-      terms = defaults.purchaseInvoiceTerms ?? '';
-      numberSeries = defaults.purchaseInvoiceNumberSeries ?? undefined;
-    }
-
-    const data = {
+    const invoice = this.fyo.doc.getNewDoc(this.invoiceSchemaName, {
       party: this.party,
       date: new Date().toISOString(),
-      terms,
-      numberSeries,
+      ...this.getInvoiceDefaults(),
       backReference: this.name,
-    };
-
-    const invoice = this.fyo.doc.getNewDoc(schemaName, data) as Invoice;
+    }) as Invoice;
     for (const row of this.items ?? []) {
-      if (!row.item) {
-        continue;
+      if (row.item && row.quantity) {
+        await invoice.append('items', {
+          item: row.item,
+          quantity: row.quantity,
+          unit: row.unit,
+          rate: row.rate ?? this.fyo.pesa(0),
+          batch: row.batch || null,
+          hsnCode: row.hsnCode,
+          description: row.description,
+        });
       }
-
-      const item = row.item;
-      const unit = row.unit;
-      const quantity = row.quantity;
-      const batch = row.batch || null;
-      const rate = row.rate ?? this.fyo.pesa(0);
-      const description = row.description;
-      const hsnCode = row.hsnCode;
-
-      if (!quantity) {
-        continue;
-      }
-
-      await invoice.append('items', {
-        item,
-        quantity,
-        unit,
-        rate,
-        batch,
-        hsnCode,
-        description,
-      });
     }
 
-    if (!invoice.items?.length) {
-      return null;
+    return invoice.items?.length ? invoice : null;
+  }
+
+  getInvoiceDefaults() {
+    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
+    if (this.isSales) {
+      return {
+        terms: defaults.salesInvoiceTerms ?? '',
+        numberSeries: defaults.salesInvoiceNumberSeries ?? undefined,
+      };
     }
 
-    return invoice;
+    return {
+      terms: defaults.purchaseInvoiceTerms ?? '',
+      numberSeries: defaults.purchaseInvoiceNumberSeries ?? undefined,
+    };
   }
 
   async getReturnDoc(): Promise<StockTransfer | undefined> {

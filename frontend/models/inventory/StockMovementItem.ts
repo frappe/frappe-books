@@ -294,59 +294,44 @@ export class StockMovementItem extends TransferItem {
 
   override async change(ch: ChangeArg): Promise<void> {
     await super.change(ch);
-
-    const shouldGenerateSerialNumbers =
-      this.parentdoc?.movementType === MovementTypeEnum.MaterialReceipt &&
-      this.item &&
-      this.quantity &&
-      this.quantity > 0;
-
     if (ch.changed === 'item') {
       await this.set('serialNumber', '');
-
-      if (
-        this.parentdoc?.movementType === MovementTypeEnum.MaterialReceipt &&
-        this.item
-      ) {
-        const hasBatch = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          this.item,
-          'hasBatch'
-        );
-
-        if (hasBatch) {
-          const batchName = await getSuggestedBatchName(this.fyo, this.item);
-          if (batchName) {
-            await this.set('batch', batchName);
-          }
-        }
-      }
-
-      if (shouldGenerateSerialNumbers) {
-        await this.generateAndSetSerialNumbers();
-      }
+      await this.setSuggestedBatch();
     }
 
-    if (ch.changed === 'quantity') {
-      if (!this.quantity || this.quantity <= 0) {
-        await this.set('serialNumber', '');
-      } else if (shouldGenerateSerialNumbers) {
-        await this.generateAndSetSerialNumbers();
+    if (ch.changed === 'item' || ch.changed === 'quantity') {
+      await this.setNewSerialNumbers();
+    }
+  }
+
+  async setSuggestedBatch() {
+    if (!this.isReceipt || !this.item) {
+      return;
+    }
+
+    if (await this.fyo.getValue(ModelNameEnum.Item, this.item, 'hasBatch')) {
+      const batch = await getSuggestedBatchName(this.fyo, this.item);
+      if (batch) {
+        await this.set('batch', batch);
       }
     }
   }
 
-  private async generateAndSetSerialNumbers(): Promise<void> {
-    if (!this.item || !this.quantity) {
+  async setNewSerialNumbers() {
+    if (!this.quantity || this.quantity <= 0) {
+      await this.set('serialNumber', '');
+      return;
+    }
+
+    if (!this.isReceipt || !this.item) {
       return;
     }
 
     const serialNumbers = await generateSerialNumbersForItem(
       this.fyo,
       this.item,
-      Math.abs(this.quantity)
+      this.quantity
     );
-
     if (serialNumbers) {
       await this.set('serialNumber', serialNumbers);
     }

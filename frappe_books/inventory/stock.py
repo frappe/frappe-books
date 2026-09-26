@@ -1,29 +1,47 @@
 """Stock-ledger creation, availability checks, batches, and serial numbers."""
 
+from collections import Counter, defaultdict
 from decimal import Decimal
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.valuation import delete_entries, insert_entry
 
+LEDGER = "Books Stock Ledger Entry"
+
 
 def stock_quantity(item, location, batch=None, serial_number=None):
-	filters = {"item": item, "location": location}
+	sle = frappe.qb.DocType(LEDGER)
+	condition = (sle.item == item) & (sle.location == location)
 	if batch:
-		filters["batch"] = batch
+		condition &= sle.batch == batch
 	if serial_number:
-		filters["serial_number"] = serial_number
-	quantities = frappe.get_all("Books Stock Ledger Entry", filters=filters, pluck="quantity")
-	return sum((as_decimal(quantity) for quantity in quantities), Decimal())
+		condition &= sle.serial_number == serial_number
+	return as_decimal(frappe.qb.from_(sle).select(Sum(sle.quantity)).where(condition).run()[0][0])
 
 
-def validate_transfer_rows(transaction, transfers):
+def validate_transfer_rows(transfers):
+	"""Check row values, batches and serial numbers; stock levels are checked on submit."""
 	if not transfers:
 		frappe.throw(_("At least one stock item is required."))
 	for transfer in transfers:
-		_validate_transfer(transaction, transfer)
+		_validate_row(transfer)
+	items = _item_settings(transfers)
+	batch_items = _batch_items(transfers)
+	for transfer in transfers:
+		_validate_tracking(transfer, items[transfer["item"]], batch_items)
+	_validate_unique_serial_numbers(transfers)
+
+
+def validate_stock_available(transfers):
+	"""Check that outgoing rows of tracked items have the stock and serial numbers they take."""
+	tracked = {name for name, item in _item_settings(transfers).items() if item.track_item}
+	outgoing = [row for row in transfers if row.get("from_location") and row["item"] in tracked]
+	_validate_quantities_available(outgoing)
+	_validate_serial_numbers_available(outgoing)
 
 
 def create_stock_entries(transaction, transfers):
@@ -57,18 +75,20 @@ def delete_stock_entries(transaction):
 	delete_entries(transaction.doctype, transaction.name)
 
 
-def populate_stock_row(row):
-	if not row.item:
-		return
-	item = frappe.db.get_value("Books Item", row.item, ["description", "rate", "unit"], as_dict=True)
-	if not item:
-		return
-	for fieldname in ("description", "rate", "unit"):
-		if not row.get(fieldname):
-			row.set(fieldname, item.get(fieldname))
-	if not row.transfer_unit:
-		row.transfer_unit = row.unit
-	row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
+def populate_stock_rows(rows):
+	"""Fill item defaults on stock rows and return their total amount."""
+	items = _item_defaults(rows)
+	for row in rows:
+		item = items.get(row.item)
+		if not item:
+			continue
+		for fieldname in ("description", "rate", "unit"):
+			if not row.get(fieldname):
+				row.set(fieldname, item.get(fieldname))
+		if not row.transfer_unit:
+			row.transfer_unit = row.unit
+		row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
+	return rounded(sum((as_decimal(row.amount) for row in rows), as_decimal(0)))
 
 
 def parse_serial_numbers(value):
@@ -77,53 +97,122 @@ def parse_serial_numbers(value):
 	return [line.strip() for line in str(value).replace(",", "\n").splitlines() if line.strip()]
 
 
-def _validate_transfer(transaction, transfer):
+def _validate_row(transfer):
 	if not transfer.get("item"):
 		frappe.throw(_("Every stock row requires an item."))
-	quantity = abs(as_decimal(transfer.get("quantity")))
-	if quantity <= 0:
+	if abs(as_decimal(transfer.get("quantity"))) <= 0:
 		frappe.throw(_("Stock quantity must be greater than zero."))
 	if as_decimal(transfer.get("rate")) < 0:
 		frappe.throw(_("Stock rate cannot be negative."))
 	if not transfer.get("from_location") and not transfer.get("to_location"):
 		frappe.throw(_("Set a source or destination location."))
 
-	item = frappe.db.get_value(
-		"Books Item",
-		transfer["item"],
-		["track_item", "has_batch", "has_serial_number"],
-		as_dict=True,
-	)
-	if item.has_batch:
-		_validate_batch(transfer)
-	serial_numbers = parse_serial_numbers(transfer.get("serial_number"))
-	if item.has_serial_number and len(serial_numbers) != int(quantity):
+
+def _validate_tracking(transfer, item, batch_items):
+	batch = transfer.get("batch")
+	if item.has_batch and not batch:
+		frappe.throw(_("Item {0} requires a batch.").format(transfer["item"]))
+	if batch_items.get(batch) and batch_items[batch] != transfer["item"]:
+		frappe.throw(_("Batch {0} belongs to another item.").format(batch))
+	quantity = abs(as_decimal(transfer["quantity"]))
+	if item.has_serial_number and len(parse_serial_numbers(transfer.get("serial_number"))) != quantity:
 		frappe.throw(_("Serial-number count must equal stock quantity."))
-	if transfer.get("from_location") and item.track_item:
-		available = stock_quantity(transfer["item"], transfer["from_location"], transfer.get("batch"))
-		if available < quantity:
+
+
+def _validate_unique_serial_numbers(transfers):
+	counts = Counter(
+		serial_number
+		for transfer in transfers
+		for serial_number in parse_serial_numbers(transfer.get("serial_number"))
+	)
+	repeated = sorted(serial_number for serial_number, count in counts.items() if count > 1)
+	if repeated:
+		frappe.throw(_("Serial number {0} is listed more than once.").format(", ".join(repeated)))
+
+
+def _validate_quantities_available(outgoing):
+	required = defaultdict(as_decimal)
+	for transfer in outgoing:
+		key = (transfer["item"], transfer["from_location"], transfer.get("batch") or "")
+		required[key] += abs(as_decimal(transfer["quantity"]))
+	available = _available_quantities(required)
+	for key, quantity in required.items():
+		if available[key] < quantity:
 			frappe.throw(
 				_("Insufficient stock for {0} at {1}: {2} available, {3} required.").format(
-					transfer["item"], transfer["from_location"], available, quantity
+					key[0], key[1], available[key], quantity
 				)
 			)
-		for serial_number in serial_numbers:
-			if (
-				stock_quantity(
-					transfer["item"], transfer["from_location"], transfer.get("batch"), serial_number
-				)
-				< 1
-			):
-				frappe.throw(_("Serial number {0} is not available at the source.").format(serial_number))
 
 
-def _validate_batch(transfer):
-	batch = transfer.get("batch")
-	if not batch:
-		frappe.throw(_("Item {0} requires a batch.").format(transfer["item"]))
-	batch_item = frappe.db.get_value("Books Batch", batch, "item")
-	if batch_item and batch_item != transfer["item"]:
-		frappe.throw(_("Batch {0} belongs to another item.").format(batch))
+def _available_quantities(keys):
+	available = defaultdict(as_decimal)
+	if not keys:
+		return available
+	sle = frappe.qb.DocType(LEDGER)
+	rows = (
+		frappe.qb.from_(sle)
+		.select(sle.item, sle.location, sle.batch, Sum(sle.quantity))
+		.where(
+			sle.item.isin(sorted({key[0] for key in keys}))
+			& sle.location.isin(sorted({key[1] for key in keys}))
+		)
+		.groupby(sle.item, sle.location, sle.batch)
+	).run()
+	for item, location, batch, quantity in rows:
+		available[(item, location, batch or "")] += as_decimal(quantity)
+	return available
+
+
+def _validate_serial_numbers_available(outgoing):
+	wanted = [
+		(transfer["item"], transfer["from_location"], serial_number)
+		for transfer in outgoing
+		for serial_number in parse_serial_numbers(transfer.get("serial_number"))
+	]
+	if not wanted:
+		return
+	sle = frappe.qb.DocType(LEDGER)
+	rows = (
+		frappe.qb.from_(sle)
+		.select(sle.item, sle.location, sle.serial_number, Sum(sle.quantity))
+		.where(sle.serial_number.isin(sorted({key[2] for key in wanted})))
+		.groupby(sle.item, sle.location, sle.serial_number)
+	).run()
+	available = {(item, location, serial): as_decimal(quantity) for item, location, serial, quantity in rows}
+	for key in wanted:
+		if available.get(key, 0) < 1:
+			frappe.throw(_("Serial number {0} is not available at the source.").format(key[2]))
+
+
+def _item_settings(transfers):
+	rows = frappe.get_all(
+		"Books Item",
+		filters={"name": ["in", sorted({transfer["item"] for transfer in transfers})]},
+		fields=["name", "track_item", "has_batch", "has_serial_number"],
+	)
+	return {row.name: row for row in rows}
+
+
+def _item_defaults(rows):
+	names = sorted({row.item for row in rows if row.item})
+	if not names:
+		return {}
+	items = frappe.get_all(
+		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate", "unit"]
+	)
+	return {item.name: item for item in items}
+
+
+def _batch_items(transfers):
+	batches = sorted({transfer["batch"] for transfer in transfers if transfer.get("batch")})
+	if not batches:
+		return {}
+	return dict(
+		frappe.get_all(
+			"Books Batch", filters={"name": ["in", batches]}, fields=["name", "item"], as_list=True
+		)
+	)
 
 
 def _create_location_entries(transaction, transfer, quantity, serial_number):

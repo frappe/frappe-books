@@ -5,12 +5,12 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_stock_entries,
 	delete_stock_entries,
-	populate_stock_row,
+	populate_stock_rows,
+	validate_stock_available,
 	validate_transfer_rows,
 )
 from frappe_books.inventory.valuation import transaction_stock_value
@@ -19,14 +19,15 @@ from frappe_books.series import SeriesNamingMixin
 
 class StockMovementController(SeriesNamingMixin, Document):
 	def before_validate(self):
-		for row in self.items:
-			populate_stock_row(row)
-		self.amount = rounded(sum((as_decimal(row.amount) for row in self.items), as_decimal(0)))
+		self.amount = populate_stock_rows(self.items)
 
 	def validate(self):
 		transfers = movement_transfers(self)
 		_validate_movement_locations(self, transfers)
-		validate_transfer_rows(self, transfers)
+		validate_transfer_rows(transfers)
+
+	def before_submit(self):
+		validate_stock_available(movement_transfers(self))
 
 	def on_submit(self):
 		create_stock_entries(self, movement_transfers(self))
@@ -42,12 +43,13 @@ class StockTransferController(SeriesNamingMixin, Document):
 	transfer_type = "sales"
 
 	def before_validate(self):
-		for row in self.items:
-			populate_stock_row(row)
-		self.grand_total = rounded(sum((as_decimal(row.amount) for row in self.items), as_decimal(0)))
+		self.grand_total = populate_stock_rows(self.items)
 
 	def validate(self):
-		validate_transfer_rows(self, transfer_rows(self))
+		validate_transfer_rows(transfer_rows(self))
+
+	def before_submit(self):
+		validate_stock_available(transfer_rows(self))
 
 	def on_submit(self):
 		transfers = transfer_rows(self)

@@ -33,6 +33,7 @@ await build({
       export { getItemQtyMap } from './models/helpers';
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export { validateSinv } from './src/utils/pos';
+      export { FrappeDatabaseDemux } from './src/web/databaseDemux';
     `,
     resolveDir: frontend,
   },
@@ -83,6 +84,7 @@ export const {
   getPOSBatchQuantity,
   validatePOSStock,
   validateSinv,
+  FrappeDatabaseDemux,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

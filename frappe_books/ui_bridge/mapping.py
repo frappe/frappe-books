@@ -35,8 +35,6 @@ def source_by_doctype() -> dict[str, str]:
 
 
 def target_doctype(source_schema: str) -> str:
-	if not isinstance(source_schema, str):
-		frappe.throw("Books schema names must be strings")
 	config = schema_mapping().get(source_schema)
 	if not config:
 		frappe.throw(f"Unsupported Books schema: {source_schema}")
@@ -44,8 +42,6 @@ def target_doctype(source_schema: str) -> str:
 
 
 def target_field(source_schema: str, source_field: str) -> str:
-	if not isinstance(source_field, str):
-		frappe.throw("Books field names must be strings")
 	if source_field in SOURCE_META_TO_TARGET:
 		return SOURCE_META_TO_TARGET[source_field]
 	if source_field in {"submitted", "cancelled"}:

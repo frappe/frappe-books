@@ -1,7 +1,5 @@
 """Aggregate queries used by the Books web interface."""
 
-from __future__ import annotations
-
 import re
 from collections import defaultdict
 from typing import Any
@@ -20,8 +18,6 @@ NUMERIC_AUTONAME = re.compile(r"format:\{#+\}")
 
 class BooksBespokeQueries:
 	def call(self, method: str, args: list[Any]) -> Any:
-		if not isinstance(method, str) or not isinstance(args, list):
-			frappe.throw("Books aggregate queries require a method and argument list")
 		handler = getattr(self, _METHODS.get(method, ""), None)
 		if not handler:
 			frappe.throw(f"Unsupported Books query: {method}")
@@ -149,7 +145,7 @@ class BooksBespokeQueries:
 			}
 		return balances
 
-	def pos_transacted_amount(self, from_date, to_date, _last_shift_closing_date=None):
+	def pos_transacted_amount(self, from_date: str, to_date: str):
 		"""Return the same expected amounts the closing shift stores on the server."""
 		if not frappe.has_permission("Books Payment", ptype="read"):
 			raise frappe.PermissionError

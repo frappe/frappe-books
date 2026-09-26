@@ -118,11 +118,11 @@ export class DatabaseHandler extends DatabaseBase {
   }
 
   async getSingleValues(
-    ...fieldnames: ({ fieldname: string; parent?: string } | string)[]
+    ...fieldnames: { fieldname: string; parent: string }[]
   ): Promise<SingleValue<DocValue>> {
     const rawSingleValue = (await this.#demux.call(
       'getSingleValues',
-      ...fieldnames
+      fieldnames
     )) as SingleValue<RawValue>;
 
     const docSingleValue: SingleValue<DocValue> = [];
@@ -304,14 +304,12 @@ export class DatabaseHandler extends DatabaseBase {
 
   async getPOSTransactedAmount(
     fromDate: Date,
-    toDate: Date,
-    lastShiftClosingDate?: Date
+    toDate: Date
   ): Promise<Record<string, Money> | undefined> {
     return (await this.#demux.callBespoke(
       'getPOSTransactedAmount',
       fromDate,
-      toDate,
-      lastShiftClosingDate
+      toDate
     )) as Promise<Record<string, Money> | undefined>;
   }
 

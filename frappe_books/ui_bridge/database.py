@@ -1,10 +1,8 @@
 """Permission-aware database compatibility layer for the Books Vue SPA."""
 
-from __future__ import annotations
-
 from base64 import b64decode
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 import frappe
@@ -30,21 +28,27 @@ PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
 
 
+class ListOptions(TypedDict, total=False):
+	fields: list[str] | None
+	filters: dict[str, Any] | None
+	offset: int | None
+	limit: int | None
+	groupBy: str | list[str] | None
+	orderBy: str | list[str] | None
+	order: Literal["asc", "desc"] | None
+
+
+class SingleValueRequest(TypedDict):
+	parent: str
+	fieldname: str
+
+
 class BooksDatabaseBridge:
 	"""Expose Frappe documents through the Books interface data contract."""
 
 	def call(self, method: str, args: list[Any]) -> Any:
-		if not isinstance(method, str) or not isinstance(args, list):
-			frappe.throw("Books database operations require a method and argument list")
 		if method not in READ_METHODS | WRITE_METHODS:
 			frappe.throw(f"Unsupported database operation: {method}")
-		if (
-			method in WRITE_METHODS
-			and args
-			and isinstance(args[0], str)
-			and args[0] in PROTECTED_WRITE_SCHEMAS
-		):
-			frappe.throw(f"{args[0]} records are managed by server document actions")
 		return call_handler(getattr(self, _snake_case(method)), method, args)
 
 	def get(self, source_schema: str, name: str, fields: str | list[str] | None = None) -> dict:
@@ -60,9 +64,7 @@ class BooksDatabaseBridge:
 			return self._to_source_single(source_schema, doc, requested)
 		return self._to_source_document(source_schema, doc, requested)
 
-	def get_all(self, source_schema: str, options: dict[str, Any] | None = None) -> list[dict]:
-		if options is not None and not isinstance(options, dict):
-			frappe.throw("Books list options must be an object")
+	def get_all(self, source_schema: str, options: ListOptions | None = None) -> list[dict]:
 		options = frappe._dict(options or {})
 		if source_schema == "SingleValue":
 			return self._single_value_rows()
@@ -128,19 +130,10 @@ class BooksDatabaseBridge:
 				parents.append(parent_doctype)
 		return parents
 
-	def get_single_values(self, *requests: dict | str) -> list[dict]:
+	def get_single_values(self, requests: list[SingleValueRequest]) -> list[dict]:
 		values = []
 		for request in requests:
-			if isinstance(request, str):
-				continue
-			parent = request.get("parent")
-			fieldname = request.get("fieldname")
-			if (
-				not isinstance(parent, str)
-				or not isinstance(fieldname, str)
-				or parent not in schema_mapping()
-			):
-				continue
+			parent, fieldname = request["parent"], request["fieldname"]
 			target = target_doctype(parent)
 			target_name = target_field(parent, fieldname)
 			meta = frappe.get_meta(target)
@@ -157,9 +150,7 @@ class BooksDatabaseBridge:
 		return values
 
 	def insert(self, source_schema: str, values: dict[str, Any]) -> dict:
-		target = target_doctype(source_schema)
-		if not isinstance(values, dict):
-			frappe.throw("Books insert values must be an object")
+		target = _writable_doctype(source_schema)
 		if values.get("submitted") or values.get("cancelled"):
 			frappe.throw("Use the Books document action API to submit or cancel documents")
 		if frappe.get_meta(target).issingle:
@@ -175,9 +166,7 @@ class BooksDatabaseBridge:
 		return self._to_source_document(source_schema, doc)
 
 	def update(self, source_schema: str, values: dict[str, Any]) -> dict:
-		if not isinstance(values, dict):
-			frappe.throw("Books update values must be an object")
-		target = target_doctype(source_schema)
+		target = _writable_doctype(source_schema)
 		if frappe.get_meta(target).issingle:
 			return self._update_single(source_schema, values)
 		if not isinstance(values.get("name"), str):
@@ -193,7 +182,7 @@ class BooksDatabaseBridge:
 		return self._to_source_document(source_schema, doc)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
-		doc = frappe.get_doc(target_doctype(source_schema), old_name)
+		doc = frappe.get_doc(_writable_doctype(source_schema), old_name)
 		doc.check_permission("write")
 		frappe.rename_doc(doc.doctype, old_name, new_name)
 
@@ -201,15 +190,15 @@ class BooksDatabaseBridge:
 		if source_schema == "SingleValue":
 			self._delete_single_value(name)
 			return
-		doc = frappe.get_doc(target_doctype(source_schema), name)
+		doc = frappe.get_doc(_writable_doctype(source_schema), name)
 		doc.check_permission("delete")
 		frappe.delete_doc(doc.doctype, name)
 
 	def delete_all(self, source_schema: str, filters: dict[str, Any]) -> int:
-		if not isinstance(filters, dict) or not filters:
+		if not filters:
 			frappe.throw("Books bulk deletion requires at least one filter")
 		names = frappe.get_list(
-			target_doctype(source_schema),
+			_writable_doctype(source_schema),
 			filters=self._target_filters(source_schema, filters),
 			pluck="name",
 		)
@@ -220,7 +209,7 @@ class BooksDatabaseBridge:
 	def exists(self, source_schema: str, name: str | None = None) -> bool:
 		if source_schema == "SingleValue":
 			return bool(name and self._get_single_value_row(name))
-		if not isinstance(name, str):
+		if not name:
 			return False
 		target = target_doctype(source_schema)
 		if not frappe.db.exists(target, name):
@@ -346,8 +335,6 @@ class BooksDatabaseBridge:
 		return mapped
 
 	def _target_filters(self, source_schema: str, filters: dict) -> list[list[Any]]:
-		if not isinstance(filters, dict):
-			frappe.throw("Books filters must be an object")
 		meta = frappe.get_meta(target_doctype(source_schema))
 		translated = []
 		if "submitted" in filters or "cancelled" in filters:
@@ -391,8 +378,6 @@ class BooksDatabaseBridge:
 	def _requested_source_fields(self, source_schema: str, requested) -> list[str]:
 		if requested is None or requested == [] or requested == ["*"]:
 			return self._default_source_fields(source_schema)
-		if not isinstance(requested, list) or not all(isinstance(field, str) for field in requested):
-			frappe.throw("Books list fields must be an array of strings")
 		if "*" in requested:
 			frappe.throw("The Books wildcard field must be requested on its own")
 		return requested
@@ -423,8 +408,6 @@ class BooksDatabaseBridge:
 	def _order_by(self, source_schema, order_by, order):
 		if not order_by:
 			return None
-		if order not in {None, "asc", "desc"}:
-			frappe.throw("Books sort order must be asc or desc")
 		fields = [order_by] if isinstance(order_by, str) else order_by
 		return ", ".join(f"{target_field(source_schema, field)} {order or 'asc'}" for field in fields)
 
@@ -514,6 +497,12 @@ class BooksDatabaseBridge:
 	def _is_password_field(self, meta, fieldname):
 		field = meta.get_field(fieldname)
 		return bool(field and field.fieldtype == "Password")
+
+
+def _writable_doctype(source_schema: str) -> str:
+	if source_schema in PROTECTED_WRITE_SCHEMAS:
+		frappe.throw(f"{source_schema} records are managed by server document actions")
+	return target_doctype(source_schema)
 
 
 def _row_limit(value: Any) -> int | None:

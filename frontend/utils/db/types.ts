@@ -23,7 +23,7 @@ export abstract class DatabaseBase {
   ): Promise<UnknownMap[]>;
 
   abstract getSingleValues(
-    ...fieldnames: ({ fieldname: string; parent?: string } | string)[]
+    ...fieldnames: { fieldname: string; parent: string }[]
   ): Promise<{ fieldname: string; parent: string; value: unknown }[]>;
 
   // Update

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Literal
 
 import frappe
 
@@ -27,13 +27,8 @@ def bespoke_call(method: str, args: list[Any] | str | None = None) -> Any:
 
 
 @frappe.whitelist(methods=["POST"])
-def lifecycle_action(action: str, source_schema: str, name: str) -> dict[str, Any]:
+def lifecycle_action(action: Literal["submit", "cancel"], source_schema: str, name: str) -> dict[str, Any]:
 	"""Run accounting and stock lifecycle hooks in one server transaction."""
-	if not all(isinstance(value, str) for value in (action, source_schema, name)):
-		frappe.throw("Books document actions require string values")
-	if action not in {"submit", "cancel"}:
-		frappe.throw(f"Unsupported Books document action: {action}")
-
 	doc = frappe.get_doc(target_doctype(source_schema), name)
 	if action == "submit":
 		doc.submit()

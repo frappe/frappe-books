@@ -30,9 +30,11 @@ def validate_transfer_rows(transfers):
 	for transfer in transfers:
 		_validate_row(transfer)
 	items = _item_settings(transfers)
-	batch_items = _batch_items(transfers)
+	batch_items = _items_of("Books Batch", [transfer.get("batch") for transfer in transfers])
+	serial_items = _items_of("Books Serial Number", _all_serial_numbers(transfers))
 	for transfer in transfers:
-		_validate_tracking(transfer, items[transfer["item"]], batch_items)
+		_validate_batch(transfer, items[transfer["item"]], batch_items)
+		_validate_serial_numbers(transfer, items[transfer["item"]], serial_items)
 	_validate_unique_serial_numbers(transfers)
 
 
@@ -45,8 +47,10 @@ def validate_stock_available(transfers):
 	_lock_items(transfers)
 	tracked = {name for name, item in _item_settings(transfers).items() if item.track_item}
 	outgoing = [row for row in transfers if row.get("from_location") and row["item"] in tracked]
+	incoming = [row for row in transfers if not row.get("from_location") and row["item"] in tracked]
 	_validate_quantities_available(outgoing)
 	_validate_serial_numbers_available(outgoing)
+	_validate_serial_numbers_not_in_stock(incoming)
 
 
 def reverse_transfers(transfers):
@@ -125,23 +129,29 @@ def _validate_row(transfer):
 		frappe.throw(_("Set a source or destination location."))
 
 
-def _validate_tracking(transfer, item, batch_items):
+def _validate_batch(transfer, item, batch_items):
 	batch = transfer.get("batch")
 	if item.has_batch and not batch:
 		frappe.throw(_("Item {0} requires a batch.").format(transfer["item"]))
+	if batch and not item.has_batch:
+		frappe.throw(_("Item {0} does not use batches.").format(transfer["item"]))
 	if batch_items.get(batch) and batch_items[batch] != transfer["item"]:
 		frappe.throw(_("Batch {0} belongs to another item.").format(batch))
-	quantity = abs(as_decimal(transfer["quantity"]))
-	if item.has_serial_number and len(parse_serial_numbers(transfer.get("serial_number"))) != quantity:
+
+
+def _validate_serial_numbers(transfer, item, serial_items):
+	serial_numbers = parse_serial_numbers(transfer.get("serial_number"))
+	if serial_numbers and not item.has_serial_number:
+		frappe.throw(_("Item {0} does not use serial numbers.").format(transfer["item"]))
+	if item.has_serial_number and len(serial_numbers) != abs(as_decimal(transfer["quantity"])):
 		frappe.throw(_("Serial-number count must equal stock quantity."))
+	for serial_number in serial_numbers:
+		if serial_items.get(serial_number, transfer["item"]) != transfer["item"]:
+			frappe.throw(_("Serial number {0} belongs to another item.").format(serial_number))
 
 
 def _validate_unique_serial_numbers(transfers):
-	counts = Counter(
-		serial_number
-		for transfer in transfers
-		for serial_number in parse_serial_numbers(transfer.get("serial_number"))
-	)
+	counts = Counter(_all_serial_numbers(transfers))
 	repeated = sorted(serial_number for serial_number, count in counts.items() if count > 1)
 	if repeated:
 		frappe.throw(_("Serial number {0} is listed more than once.").format(", ".join(repeated)))
@@ -202,6 +212,30 @@ def _validate_serial_numbers_available(outgoing):
 			frappe.throw(_("Serial number {0} is not available at the source.").format(key[2]))
 
 
+def _validate_serial_numbers_not_in_stock(incoming):
+	serial_numbers = sorted(set(_all_serial_numbers(incoming)))
+	if not serial_numbers:
+		return
+	sle = frappe.qb.DocType(LEDGER)
+	in_stock = (
+		frappe.qb.from_(sle)
+		.select(sle.serial_number)
+		.where(sle.serial_number.isin(serial_numbers))
+		.groupby(sle.serial_number)
+		.having(Sum(sle.quantity) > 0)
+	).run(pluck=True)
+	if in_stock:
+		frappe.throw(_("Serial number {0} is already in stock.").format(", ".join(sorted(in_stock))))
+
+
+def _all_serial_numbers(transfers):
+	return [
+		serial_number
+		for transfer in transfers
+		for serial_number in parse_serial_numbers(transfer.get("serial_number"))
+	]
+
+
 def _lock_items(transfers):
 	frappe.db.get_values(
 		"Books Item",
@@ -231,14 +265,13 @@ def _item_defaults(rows):
 	return {item.name: item for item in items}
 
 
-def _batch_items(transfers):
-	batches = sorted({transfer["batch"] for transfer in transfers if transfer.get("batch")})
-	if not batches:
+def _items_of(doctype, names):
+	"""Map the given batches or serial numbers to their items."""
+	names = sorted(set(filter(None, names)))
+	if not names:
 		return {}
 	return dict(
-		frappe.get_all(
-			"Books Batch", filters={"name": ["in", batches]}, fields=["name", "item"], as_list=True
-		)
+		frappe.get_all(doctype, filters={"name": ["in", names]}, fields=["name", "item"], as_list=True)
 	)
 
 

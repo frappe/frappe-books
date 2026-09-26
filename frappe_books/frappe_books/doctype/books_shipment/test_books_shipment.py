@@ -9,6 +9,7 @@ from frappe.utils import now_datetime
 
 from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (
 	set_inventory_accounts,
+	stock_value_change,
 )
 from frappe_books.inventory.stock import stock_quantity
 from frappe_books.tests.accounting import ledger_entries, make_account, make_item, make_party
@@ -76,6 +77,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		self.assertEqual(Decimal(str(stock_entry.debit)), Decimal("20"))
 		self.assertEqual(Decimal(str(cogs_entry.credit)), Decimal("20"))
 		self.assertEqual(stock_quantity(item.name, "Stores"), 2)
+		self.assertEqual(stock_value_change(return_shipment), Decimal("20"))
 
 	def _tracked_item(self):
 		stock = make_account("Stock", account_type="Stock")

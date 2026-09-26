@@ -40,8 +40,54 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		self.assertEqual(sum(Decimal(str(row.debit or 0)) for row in entries), Decimal("100"))
 		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("100"))
 
+	def test_purchase_return_posts_fifo_value(self):
+		stock = make_account("Stock", account_type="Stock")
+		received = make_account(
+			"Received", root_type="Liability", account_type="Stock Received But Not Billed"
+		)
+		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
+		set_inventory_accounts(stock.name, received.name, cogs.name)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		make_receipt(item.name, quantity=2, rate=10)
+		receipt = make_receipt(item.name, quantity=2, rate=20)
+
+		purchase_return = make_receipt(item.name, quantity=1, rate=20, return_against=receipt.name)
+
+		entries = ledger_entries(purchase_return.doctype, purchase_return.name)
+		stock_credit = sum(Decimal(str(row.credit or 0)) for row in entries if row.account == stock.name)
+		self.assertEqual(stock_credit, Decimal("10"))
+		self.assertEqual(stock_value_change(purchase_return), -stock_credit)
+
+
+def make_receipt(item, quantity, rate, return_against=None):
+	payable = make_account("Payable", root_type="Liability", account_type="Payable")
+	receipt = frappe.get_doc(
+		{
+			"doctype": "Books Purchase Receipt",
+			"party": make_party(payable.name, role="Supplier").name,
+			"date": now_datetime(),
+			"return_against": return_against,
+			"items": [{"item": item, "location": "Stores", "quantity": quantity, "rate": rate}],
+		}
+	).insert()
+	receipt.submit()
+	return receipt
+
 
 def set_inventory_accounts(stock, received, cogs):
 	frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock)
 	frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received)
 	frappe.db.set_single_value("Books Inventory Settings", "cost_of_goods_sold", cogs)
+
+
+def stock_value_change(transaction):
+	values = frappe.get_all(
+		"Books Stock Ledger Entry",
+		filters={"reference_type": transaction.doctype, "reference_name": transaction.name},
+		pluck="value_change",
+	)
+	return sum(Decimal(str(value)) for value in values)

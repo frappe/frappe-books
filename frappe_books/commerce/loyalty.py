@@ -13,10 +13,15 @@ from frappe_books.accounting.money import as_decimal, rounded
 ENTRY = "Books Loyalty Point Entry"
 
 
+def set_available_points(invoice):
+	if invoice.transaction_type != "sales" or not (invoice.party and invoice.get("loyalty_program")):
+		return
+	invoice.available_loyalty_points = get_available_points(invoice.party, invoice.loyalty_program)
+
+
 def validate_invoice_loyalty(invoice):
 	if invoice.transaction_type != "sales" or not invoice.get("loyalty_program"):
 		return
-	invoice.available_loyalty_points = get_available_points(invoice.party, invoice.loyalty_program)
 	if invoice.redeem_loyalty_points:
 		_validate_redemption(invoice)
 

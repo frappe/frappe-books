@@ -20,11 +20,16 @@ class InvoiceController(SeriesNamingMixin, Document):
 	transaction_type: str
 
 	def before_validate(self):
+		self.calculate()
+
+	def calculate(self):
+		"""Fill defaults, apply pricing and set the totals, without writing anything."""
 		pricing.reset_pricing(self)
 		_populate_invoice_defaults(self)
 		pricing.apply_pricing(self)
 		_populate_invoice_defaults(self)
 		calculate_invoice(self)
+		loyalty.set_available_points(self)
 
 	def validate(self):
 		validate_invoice(self)

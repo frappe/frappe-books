@@ -16,7 +16,8 @@
       "fieldname": "loyaltyProgram",
       "readOnly": true,
       "label": "Loyalty Program",
-      "fieldtype": "Data",
+      "fieldtype": "Link",
+      "target": "LoyaltyProgram",
       "required": true
     },
     {

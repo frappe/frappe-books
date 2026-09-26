@@ -17,7 +17,7 @@
     {
       "fieldname": "date",
       "label": "Date",
-      "fieldtype": "Datetime",
+      "fieldtype": "Date",
       "readOnly": true,
       "section": "Default"
     },

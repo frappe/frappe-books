@@ -47,7 +47,7 @@ export default defineComponent({
     },
   },
   methods: {
-    selectOption(value?: string | number) {
+    selectOption(value?: string | number | null) {
       if (typeof value !== 'string') {
         return;
       }

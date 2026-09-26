@@ -1,6 +1,6 @@
 <template>
   <span ref="container" class="block min-w-0 w-full" data-report-text>
-    <FrappeTooltip :disabled="!isTruncated" :hover-delay="0.3">
+    <FrappeTooltip :disabled="!isTruncated" :hover-delay="300">
       <span
         ref="text"
         class="block truncate rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"

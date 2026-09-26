@@ -1,6 +1,6 @@
 <template>
   <FrappeIcon
-    :name="resolvedName"
+    :icon="resolvedName"
     :class="iconClasses"
     :style="iconStyle"
     v-bind="$attrs"

@@ -4,8 +4,8 @@
 		side="bottom"
 		align="center"
 		:offset="8"
-		:hover-delay="0.3"
-		:leave-delay="0.15"
+		:hover-delay="300"
+		:leave-delay="150"
 	>
 		<template #trigger>
 			<!-- Preview visibility belongs to the hover target, not the button's pressed state. -->

@@ -197,7 +197,7 @@ export default defineComponent({
       }
 
       if (!fyo.singles.GetStarted?.billCreated) {
-        const count = await fyo.db.count('SalesInvoice');
+        const count = await fyo.db.count('PurchaseInvoice');
         toUpdate.billCreated = count > 0;
       }
 

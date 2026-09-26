@@ -348,18 +348,11 @@ export function getTransactionStatusColumn(invoice = true): ColumnConfig {
         ]
       : ['Saved', 'Submitted', 'Return', 'ReturnIssued', 'Cancelled']
     ).map((value) => ({ value, label: getStatusText(value as InvoiceStatus) })),
-    render(doc) {
+    badge(doc) {
       const status = getDocStatus(doc) as InvoiceStatus;
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusText(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-        metadata: {
-          status,
-          color,
-          label,
-        },
+        color: statusColor[status] ?? 'gray',
+        label: getStatusText(status),
       };
     },
   };
@@ -370,13 +363,11 @@ export function getLeadStatusColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    render(doc) {
+    badge(doc) {
       const status = getLeadStatus(doc) as LeadStatus;
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusTextOfLead(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
+        color: statusColor[status] ?? 'gray',
+        label: getStatusTextOfLead(status),
       };
     },
   };
@@ -571,17 +562,15 @@ export function getSerialNumberStatusColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    render(doc) {
+    badge(doc) {
       let status = doc.status;
       if (typeof status !== 'string') {
         status = 'Inactive';
       }
 
-      const color = serialNumberStatusColor[status] ?? 'gray';
-      const label = getSerialNumberStatusText(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
+        color: serialNumberStatusColor[status] ?? 'gray',
+        label: getSerialNumberStatusText(status),
       };
     },
   };
@@ -611,20 +600,18 @@ export function getPriceListStatusColumn(): ColumnConfig {
     label: t`Enabled For`,
     fieldname: 'enabledFor',
     fieldtype: 'Select',
-    render({ isSales, isPurchase }) {
-      let status = t`None`;
+    badge({ isSales, isPurchase }) {
+      let label = t`None`;
 
       if (isSales && isPurchase) {
-        status = t`Sales and Purchase`;
+        label = t`Sales and Purchase`;
       } else if (isSales) {
-        status = t`Sales`;
+        label = t`Sales`;
       } else if (isPurchase) {
-        status = t`Purchase`;
+        label = t`Purchase`;
       }
 
-      return {
-        template: `<Badge class="text-xs" color="gray">${status}</Badge>`,
-      };
+      return { color: 'gray', label };
     },
   };
 }
@@ -634,17 +621,12 @@ export function getIsDocEnabledColumn(): ColumnConfig {
     label: t`Enabled`,
     fieldname: 'enabled',
     fieldtype: 'Data',
-    render(doc) {
-      let status = t`Disabled`;
-      let color = 'orange';
+    badge(doc) {
       if (doc.isEnabled) {
-        status = t`Enabled`;
-        color = 'green';
+        return { color: 'green', label: t`Enabled` };
       }
 
-      return {
-        template: `<Badge class="text-xs" color="${color}">${status}</Badge>`,
-      };
+      return { color: 'orange', label: t`Disabled` };
     },
   };
 }
@@ -736,18 +718,11 @@ export function getDocStatusListColumn(): ColumnConfig {
       value,
       label: getStatusText(value as DocStatus),
     })),
-    render(doc) {
+    badge(doc) {
       const status = getDocStatus(doc);
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusText(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-        metadata: {
-          status,
-          color,
-          label,
-        },
+        color: statusColor[status] ?? 'gray',
+        label: getStatusText(status),
       };
     },
   };
@@ -762,18 +737,11 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
       value,
       label: getLoyaltyProgramStatusText(value),
     })),
-    render(doc) {
+    badge(doc) {
       const status = getLoyaltyProgramStatus(doc);
-      const color = loyaltyProgramStatusColor[status] ?? 'gray';
-      const label = getLoyaltyProgramStatusText(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-        metadata: {
-          status,
-          color,
-          label,
-        },
+        color: loyaltyProgramStatusColor[status] ?? 'gray',
+        label: getLoyaltyProgramStatusText(status),
       };
     },
   };

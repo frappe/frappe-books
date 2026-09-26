@@ -39,7 +39,6 @@
                 class="min-w-0 flex-1"
                 :row="row as RenderData"
                 :column="column"
-                @status-found="handleStatusFound"
               />
             </FrappeListCell>
           </FrappeListRow>
@@ -126,7 +125,6 @@ export default defineComponent({
       data: [] as RenderData[],
       pageStart: 0,
       pageEnd: 0,
-      statusMap: {} as Record<string, string>,
       selectedItems: [] as string[],
       activeFilters: {} as QueryFilter,
       requestId: 0,
@@ -181,9 +179,6 @@ export default defineComponent({
     this.setUpdateListeners();
   },
   methods: {
-    handleStatusFound({ rowId, status }: { rowId: string; status: string }) {
-      this.statusMap[rowId] = status;
-    },
     isNumeric,
     setPageIndices({ start, end }: { start: number; end: number }) {
       this.pageStart = start;

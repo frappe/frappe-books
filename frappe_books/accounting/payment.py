@@ -103,11 +103,11 @@ def _validate_allocation(payment, invoice, amount):
 def _referenced_invoice(payment, doctype, name):
 	if doctype not in REFERENCE_DOCTYPES.values():
 		frappe.throw(_("Select a sales or purchase invoice reference."))
-	invoice = frappe.get_doc(doctype, name, for_update=True)
+	invoice = frappe.get_doc(doctype, name, for_update=True, check_permission="read")
 	if invoice.docstatus != 1:
 		frappe.throw(_("Submit invoice {0} before allocating a payment to it.").format(name))
 	if invoice.party != payment.party:
-		frappe.throw(_("Invoice {0} belongs to {1}, not to {2}.").format(name, invoice.party, payment.party))
+		frappe.throw(_("Invoice {0} does not belong to party {1}.").format(name, payment.party))
 	return invoice
 
 

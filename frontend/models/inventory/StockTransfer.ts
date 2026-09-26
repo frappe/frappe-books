@@ -16,7 +16,7 @@ import { Money } from 'pesa';
 import { TargetField } from 'schemas/types';
 import { StockTransferItem } from './StockTransferItem';
 import { Transfer } from './Transfer';
-import { createMissingBatches, generateSerialNumbersForItem } from './helpers';
+import { createMissingBatches } from './helpers';
 
 export abstract class StockTransfer extends Transfer {
   name?: string;
@@ -148,32 +148,6 @@ export abstract class StockTransfer extends Transfer {
     await this.set('terms', stDoc.terms);
     await this.set('date', stDoc.date);
     await this.set('items', stDoc.items);
-
-    if (this.items) {
-      for (const item of this.items) {
-        if (!item.item || !item.quantity) {
-          continue;
-        }
-
-        const hasSerialNumber = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          item.item,
-          'hasSerialNumber'
-        );
-
-        if (hasSerialNumber) {
-          const serialNumbers = await generateSerialNumbersForItem(
-            this.fyo,
-            item.item,
-            Math.abs(item.quantity)
-          );
-
-          if (serialNumbers) {
-            await item.set('serialNumber', serialNumbers);
-          }
-        }
-      }
-    }
   }
 
   async getInvoice(): Promise<Invoice | null> {

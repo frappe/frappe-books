@@ -30,7 +30,7 @@ await build({
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
-      export { getItemQtyMap } from './models/helpers';
+      export { getItemQtyMap, getMappedDoc } from './models/helpers';
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export { validateSinv } from './src/utils/pos';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
@@ -89,6 +89,7 @@ export const {
   isCompleteFilter,
   mergeQueryFilters,
   getItemQtyMap,
+  getMappedDoc,
   getPOSInventory,
   getPOSBatchQuantity,
   validatePOSStock,

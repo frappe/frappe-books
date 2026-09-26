@@ -26,10 +26,7 @@ import { getIsNullOrUndef, safeParseFloat } from 'utils';
 import { Defaults } from '../Defaults/Defaults';
 import { InvoiceItem } from '../InvoiceItem/InvoiceItem';
 import { Item } from '../Item/Item';
-import { Payment } from '../Payment/Payment';
 import { TaxSummary } from '../TaxSummary/TaxSummary';
-import { getReturnItems } from 'models/returnItems';
-import { AccountFieldEnum, PaymentTypeEnum } from '../Payment/types';
 import { PricingRuleDetail } from '../PricingRuleDetail/PricingRuleDetail';
 import { AppliedCouponCodes } from '../AppliedCouponCodes/AppliedCouponCodes';
 import { getLinkedEntries } from 'src/utils/doc';
@@ -179,39 +176,6 @@ export abstract class Invoice extends Transactional {
     });
 
     return safeParseFloat(exchangeRate.toFixed(2));
-  }
-
-  async getReturnDoc(): Promise<Invoice | undefined> {
-    if (!this.name) {
-      return;
-    }
-
-    const docData = this.getValidDict(true, true);
-    const docItems = docData.items as DocValueMap[] | undefined;
-    if (!docItems) {
-      return;
-    }
-
-    const balances = await this.fyo.db.getReturnBalanceItemsQty(
-      this.schemaName,
-      this.name
-    );
-    const returnDocData = {
-      ...docData,
-      pricingRuleDetail: [],
-      name: undefined,
-      date: new Date(),
-      items: getReturnItems(docItems, balances),
-      returnAgainst: docData.name,
-    } as DocValueMap;
-
-    const newReturnDoc = this.fyo.doc.getNewDoc(
-      this.schema.name,
-      returnDocData
-    ) as Invoice;
-
-    await newReturnDoc.runFormulas();
-    return newReturnDoc;
   }
 
   formulas: FormulaMap = {
@@ -426,66 +390,6 @@ export abstract class Invoice extends Transactional {
     for (const { fieldname } of currencyFields) {
       this.getCurrencies[fieldname] ??= this._getCurrency.bind(this);
     }
-  }
-
-  getPayment(): Payment | null {
-    if (!this.isSubmitted) {
-      return null;
-    }
-
-    const outstandingAmount = this.outstandingAmount;
-    if (!outstandingAmount) {
-      return null;
-    }
-
-    if (this.outstandingAmount?.isZero()) {
-      return null;
-    }
-
-    let accountField: AccountFieldEnum = AccountFieldEnum.Account;
-    let paymentType: PaymentTypeEnum = PaymentTypeEnum.Receive;
-    let referenceType: 'SalesInvoice' | 'PurchaseInvoice';
-
-    if (this.isSales) {
-      referenceType = 'SalesInvoice';
-      if (this.isReturn) {
-        accountField = AccountFieldEnum.PaymentAccount;
-        paymentType = PaymentTypeEnum.Pay;
-      }
-    } else {
-      referenceType = 'PurchaseInvoice';
-      accountField = AccountFieldEnum.PaymentAccount;
-      paymentType = PaymentTypeEnum.Pay;
-
-      if (this.isReturn) {
-        accountField = AccountFieldEnum.Account;
-        paymentType = PaymentTypeEnum.Receive;
-      }
-    }
-    const paymentAmount = outstandingAmount.abs();
-
-    const data = {
-      party: this.party,
-      date: new Date().toISOString(),
-      paymentType,
-      amount: paymentAmount,
-      [accountField]: this.account,
-      referenceType,
-      for: [
-        {
-          referenceType: this.schemaName,
-          referenceName: this.name,
-          amount: this.isReturn ? this.grandTotal : outstandingAmount,
-        },
-      ],
-    };
-
-    if (this.makeAutoPayment && this.autoPaymentAccount) {
-      const autoPaymentAccount = this.isSales ? 'paymentAccount' : 'account';
-      data[autoPaymentAccount] = this.autoPaymentAccount;
-    }
-
-    return this.fyo.doc.getNewDoc(ModelNameEnum.Payment, data) as Payment;
   }
 
   async getStockTransfer(isAuto = false): Promise<StockTransfer | null> {

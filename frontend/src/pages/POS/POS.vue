@@ -173,6 +173,7 @@ import {
   validateQty,
   getItemQtyMap,
   getItemVisibility,
+  getMappedDoc,
 } from 'models/helpers';
 import { ItemVisibility } from 'src/components/POS/types';
 import {
@@ -790,13 +791,11 @@ export default defineComponent({
         invoiceName
       )) as SalesInvoice;
 
-      let returnDoc = (await salesInvoiceDoc.getReturnDoc()) as SalesInvoice;
-
-      if (!returnDoc || !returnDoc.name) {
-        return;
-      }
-
-      this.sinvDoc = returnDoc;
+      this.sinvDoc = (await getMappedDoc(
+        salesInvoiceDoc,
+        ModelNameEnum.SalesInvoice,
+        'make_return'
+      )) as SalesInvoice;
     },
     toggleView() {
       this.tableView = !this.tableView;
@@ -1239,10 +1238,15 @@ export default defineComponent({
       }
     },
     async makePayment() {
-      this.paymentDoc = this.sinvDoc.getPayment() as Payment;
-      if (!this.paymentDoc) {
-        return null;
+      if (this.sinvDoc.outstandingAmount?.isZero()) {
+        return;
       }
+
+      this.paymentDoc = (await getMappedDoc(
+        this.sinvDoc as SalesInvoice,
+        ModelNameEnum.Payment,
+        'make_payment'
+      )) as Payment;
 
       const paymentMethod = this.paymentMethod;
       const tenderedAmount = this.fyo.pesa(this.paidAmount.float).abs();

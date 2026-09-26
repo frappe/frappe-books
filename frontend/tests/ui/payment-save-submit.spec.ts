@@ -233,19 +233,36 @@ async function installPaymentFixture(page: Page) {
     });
     invoice._dirty = false;
     invoice._notInserted = false;
-    const getPayment = invoice.getPayment.bind(invoice);
-    invoice.getPayment = () => {
-      const payment = getPayment();
-      fixture.payment = payment;
-      const series = fyo.doc.getNewDoc('NumberSeries', {
-        name: payment.numberSeries,
-        referenceType: 'Payment',
-      });
-      series.next = async () => 'PAYMENT-FLOW-0001';
-      payment.afterSubmit = () => {
-        throw new Error('Browser accounting hooks must not run');
+    fyo.db.getMapped = async (schemaName: string) => {
+      if (schemaName !== 'Payment')
+        throw new Error(`Unexpected mapping: ${schemaName}`);
+      return {
+        party: invoice.party,
+        date: new Date(),
+        paymentType: 'Pay',
+        paymentMethod: 'Cash',
+        account: 'Flow Cash',
+        paymentAccount: 'Flow Creditors',
+        amount: fyo.pesa(100),
+        for: [
+          {
+            referenceType: 'PurchaseInvoice',
+            referenceName: invoice.name,
+            amount: fyo.pesa(100),
+          },
+        ],
       };
-      return payment;
+    };
+    const getNewDoc = fyo.doc.getNewDoc.bind(fyo.doc);
+    fyo.doc.getNewDoc = (schemaName: string, ...args: any[]) => {
+      const doc = getNewDoc(schemaName, ...args);
+      if (schemaName === 'Payment') {
+        fixture.payment = doc;
+        doc.afterSubmit = () => {
+          throw new Error('Browser accounting hooks must not run');
+        };
+      }
+      return doc;
     };
 
     // All fixture writes stay in memory; the server supplies only the app shell.

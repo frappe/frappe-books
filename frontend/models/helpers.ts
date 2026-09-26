@@ -20,12 +20,11 @@ import { Money } from 'pesa';
 import { Router } from 'vue-router';
 import { Item } from 'models/baseModels/Item/Item';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
-import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
 import { StockMovement } from './inventory/StockMovement';
 import { StockTransfer } from './inventory/StockTransfer';
 import { ValidationError } from 'fyo/utils/errors';
 import { numberSeriesDefaultsMap } from './baseModels/Defaults/Defaults';
-import { safeParseFloat } from 'utils/index';
+import { getIsNullOrUndef, safeParseFloat } from 'utils/index';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
@@ -39,6 +38,41 @@ import {
   generateSerialNumbersForItem,
   generateBatchForItem,
 } from './inventory/helpers';
+
+const MAPPER_MODULES: Record<string, string> = {
+  SalesInvoice:
+    'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice',
+  PurchaseInvoice:
+    'frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice',
+  SalesQuote:
+    'frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote',
+};
+
+/** The unsaved `schemaName` document a server mapper, such as make_return, builds from `source`. */
+export async function getMappedDoc(
+  source: Doc,
+  schemaName: string,
+  mapper: string
+): Promise<Doc> {
+  const method = `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
+  const values = await source.fyo.db.getMapped(
+    schemaName,
+    method,
+    source.name!
+  );
+  // Unset values keep the new document's defaults, such as its number series.
+  const setValues = Object.fromEntries(
+    Object.entries(values).filter(([, value]) => !getIsNullOrUndef(value))
+  );
+  return source.fyo.doc.getNewDoc(
+    schemaName,
+    setValues,
+    true,
+    undefined,
+    undefined,
+    false
+  );
+}
 
 export function getQuoteActions(
   fyo: Fyo,
@@ -164,7 +198,14 @@ export function getMakeInvoiceAction(
       }
     },
     action: async (doc: Doc) => {
-      const invoice = await (doc as SalesQuote | StockTransfer).getInvoice();
+      const invoice =
+        doc instanceof StockTransfer
+          ? await doc.getInvoice()
+          : await getMappedDoc(
+              doc,
+              ModelNameEnum.SalesInvoice,
+              'make_sales_invoice'
+            );
       if (!invoice || !invoice.name) {
         return;
       }
@@ -214,13 +255,12 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     condition: (doc: Doc) =>
       doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
     action: async (doc, router) => {
-      const schemaName = doc.schema.name;
-      const payment = (doc as Invoice).getPayment();
-      if (!payment) {
-        return;
-      }
-
-      await payment?.set('referenceType', schemaName);
+      const payment = await getMappedDoc(
+        doc,
+        ModelNameEnum.Payment,
+        'make_payment'
+      );
+      await payment.set('referenceType', doc.schemaName);
       const currentRoute = router.currentRoute.value.fullPath;
       payment.once('afterSubmit', async () => {
         await doc.load();
@@ -296,11 +336,10 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {
-      let returnDoc: Invoice | StockTransfer | undefined;
-
-      if (doc instanceof Invoice || doc instanceof StockTransfer) {
-        returnDoc = await doc.getReturnDoc();
-      }
+      const returnDoc =
+        doc instanceof StockTransfer
+          ? await doc.getReturnDoc()
+          : await getMappedDoc(doc, doc.schemaName, 'make_return');
 
       if (!returnDoc || !returnDoc.name) {
         return;

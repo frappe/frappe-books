@@ -95,6 +95,14 @@ class IntegrationTestReturnBalance(IntegrationTestCase):
 		self.assertEqual(balances["Notebook"]["batches"], {"C": {"quantity": 0, "serialNumbers": []}})
 		self.assertEqual(balances["Mouse"]["serialNumbers"], ["M1"])
 
+	def test_comma_separated_serial_numbers_are_split(self):
+		original = self._document(
+			"Shipment", [{"item": "Mouse", "quantity": 3, "serial_number": "M1, M2,M3"}]
+		)
+		self._document("Shipment", [{"item": "Mouse", "quantity": 1, "serial_number": "M2"}], original.name)
+
+		self.assertEqual(self._balance("Shipment", original)["Mouse"]["serialNumbers"], ["M1", "M3"])
+
 	def _balance(self, schema, original):
 		return self.queries.call("getReturnBalanceItemsQty", [schema, original.name])
 

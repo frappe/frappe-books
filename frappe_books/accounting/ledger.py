@@ -7,8 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from frappe_books.accounting.money import as_decimal, company_currency, rounded
-from frappe_books.currency import smallest_unit
+from frappe_books.accounting.money import as_decimal, currency_unit, rounded
 
 
 @dataclass(frozen=True)
@@ -85,7 +84,7 @@ def _add_round_off(debits, credits):
 
 def _round_off_limit(entry_count):
 	"""Rounding moves each entry by at most half the smallest currency unit."""
-	return smallest_unit(company_currency()) * entry_count / 2
+	return currency_unit() * entry_count / 2
 
 
 def _validate(debits, credits):

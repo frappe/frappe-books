@@ -118,3 +118,25 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual(credit_note.grand_total, -invoice.grand_total)
 		self.assertEqual(credit_note.return_against, invoice.name)
 		self.assertFalse(credit_note.is_returned)
+
+	def test_submit_makes_the_automatic_payment(self):
+		for is_pos, payments in ((0, 1), (1, 0)):
+			with self.subTest(is_pos=is_pos):
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					self.item.name,
+					self.income.name,
+					make_auto_payment=1,
+					is_pos=is_pos,
+				)
+				invoice.items[0].item_discount_percent = 0
+				invoice.save().submit()
+
+				references = frappe.get_all(
+					"Books Payment For", filters={"reference_name": invoice.name}, pluck="parent"
+				)
+				self.assertEqual(len(references), payments)
+				self.assertEqual(invoice.db_get("outstanding_amount"), 0 if payments else 200)
+				self.assertEqual(invoice.outstanding_amount, invoice.db_get("outstanding_amount"))

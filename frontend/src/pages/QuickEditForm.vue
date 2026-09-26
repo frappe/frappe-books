@@ -188,11 +188,6 @@ export default defineComponent({
   async mounted() {
     await this.initialize();
 
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.qef = this;
-    }
-
     this.setShortcuts();
   },
   methods: {

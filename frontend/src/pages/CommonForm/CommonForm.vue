@@ -347,11 +347,6 @@ export default defineComponent({
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
   },
   async mounted() {
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.cf = this;
-    }
-
     await this.setDoc();
     this.replacePathAfterSync();
     this.updateGroupedFields();

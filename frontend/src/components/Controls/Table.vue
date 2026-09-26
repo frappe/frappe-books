@@ -202,12 +202,6 @@ export default {
       return fields.map((fieldname) => fyo.getField(this.df.target, fieldname));
     },
   },
-  mounted() {
-    if (fyo.store.isDevelopment) {
-      window.tab = this;
-    }
-  },
-
   methods: {
     focus() {},
     async addRow() {

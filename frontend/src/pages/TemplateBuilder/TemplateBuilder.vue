@@ -424,10 +424,6 @@ export default defineComponent({
   },
   async mounted() {
     await this.initialize();
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.tb = this;
-    }
   },
   async activated(): Promise<void> {
     await this.initialize();

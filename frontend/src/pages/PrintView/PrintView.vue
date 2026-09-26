@@ -181,12 +181,6 @@ export default defineComponent({
       return actions;
     },
   },
-  mounted() {
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.pv = this;
-    }
-  },
   async activated() {
     await this.initialize();
   },

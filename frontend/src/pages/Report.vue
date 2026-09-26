@@ -57,7 +57,6 @@ import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ListReport from 'src/components/Report/ListReport.vue';
-import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, getReport } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
@@ -149,11 +148,6 @@ export default defineComponent({
 
     if (filterKeys.length) {
       await this.report?.updateData();
-    }
-
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.rep = this;
     }
 
     this.shortcuts?.pmod.set(this.reportClassName, ['KeyP'], async () => {

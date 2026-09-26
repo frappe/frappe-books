@@ -163,11 +163,6 @@ export default defineComponent({
     },
   },
   mounted() {
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.settings = this;
-    }
-
     this.update();
   },
   activated(): void {

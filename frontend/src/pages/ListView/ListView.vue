@@ -152,11 +152,6 @@ export default defineComponent({
     this.listConfig = getListConfig(this.schemaName);
     docsPathRef.value = docsPathMap[this.schemaName] ?? docsPathMap.Entries ?? '';
 
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.lv = this;
-    }
-
     this.setShortcuts();
   },
   deactivated() {

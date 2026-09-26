@@ -48,7 +48,6 @@
 <script lang="ts">
 import { Doc } from 'fyo/model/doc';
 import FormControl from 'src/components/Controls/FormControl.vue';
-import { fyo } from 'src/initFyo';
 import { getErrorMessage } from 'src/utils';
 import { evaluateHidden } from 'src/utils/doc';
 import Table from './Controls/Table.vue';
@@ -94,10 +93,6 @@ export default defineComponent({
   },
   mounted() {
     this.setFormFields();
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.tcf = this;
-    }
   },
   methods: {
     async onChange(field: Field, value: DocValue | Doc[] | DocValueMap[]) {

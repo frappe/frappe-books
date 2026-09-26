@@ -290,11 +290,6 @@ export default defineComponent({
     },
   },
   async mounted() {
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.search = this;
-    }
-
     this.openModal = false;
     this.setShortcuts();
   },

@@ -197,10 +197,6 @@ export default defineComponent({
   async activated() {
     await this.fetchAccounts();
     await this.setTotalDebitAndCredit();
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.coa = this;
-    }
 
     docsPathRef.value = docsPathMap.ChartOfAccounts!;
   },

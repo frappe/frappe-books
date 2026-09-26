@@ -665,12 +665,6 @@ export default defineComponent({
       }
     },
   },
-  mounted() {
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.iw = this;
-    }
-  },
   activated(): void {
     docsPathRef.value = docsPathMap.ImportWizard ?? '';
   },

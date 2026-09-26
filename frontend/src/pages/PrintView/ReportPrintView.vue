@@ -263,9 +263,6 @@ export default defineComponent({
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     window.addEventListener('resize', this.setScale);
-
-    // @ts-ignore
-    window.rpv = this;
   },
   unmounted() {
     // eslint-disable-next-line @typescript-eslint/unbound-method

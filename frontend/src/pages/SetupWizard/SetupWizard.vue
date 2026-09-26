@@ -163,10 +163,6 @@ export default defineComponent({
   async mounted() {
     const languageMap = TranslationString.prototype.languageMap;
     this.docOrNull = getSetupWizardDoc(languageMap);
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.sw = this;
-    }
   },
   methods: {
     async fill() {

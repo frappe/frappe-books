@@ -12,6 +12,7 @@ from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer
 from frappe_books.inventory.invoice_balance import store_pending_quantities
+from frappe_books.inventory.stock import validate_batches
 from frappe_books.series import SeriesNamingMixin
 
 
@@ -34,6 +35,10 @@ class InvoiceController(SeriesNamingMixin, Document):
 
 class PostingInvoiceController(InvoiceController):
 	"""Ledger, outstanding and follow-up effects of submitting an invoice."""
+
+	def validate(self):
+		super().validate()
+		validate_batches([{"item": row.item, "batch": row.batch} for row in self.items])
 
 	def before_submit(self):
 		outstanding = abs(as_decimal(self.base_grand_total))

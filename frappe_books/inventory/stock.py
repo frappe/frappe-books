@@ -29,13 +29,16 @@ def validate_transfer_rows(transfers):
 		frappe.throw(_("At least one stock item is required."))
 	for transfer in transfers:
 		_validate_row(transfer)
-	items = _item_settings(transfers)
-	batch_items = _items_of("Books Batch", [transfer.get("batch") for transfer in transfers])
-	serial_items = _items_of("Books Serial Number", _all_serial_numbers(transfers))
-	for transfer in transfers:
-		_validate_batch(transfer, items[transfer["item"]], batch_items)
-		_validate_serial_numbers(transfer, items[transfer["item"]], serial_items)
-	_validate_unique_serial_numbers(transfers)
+	validate_batches(transfers)
+	_validate_serial_numbers(transfers)
+
+
+def validate_batches(rows):
+	"""Check each row names a batch of its item exactly when the item uses batches."""
+	items = _item_settings(rows)
+	batch_items = _items_of("Books Batch", [row.get("batch") for row in rows])
+	for row in rows:
+		_validate_batch(row, items[row["item"]], batch_items)
 
 
 def validate_stock_available(transfers):
@@ -139,7 +142,15 @@ def _validate_batch(transfer, item, batch_items):
 		frappe.throw(_("Batch {0} belongs to another item.").format(batch))
 
 
-def _validate_serial_numbers(transfer, item, serial_items):
+def _validate_serial_numbers(transfers):
+	items = _item_settings(transfers)
+	serial_items = _items_of("Books Serial Number", _all_serial_numbers(transfers))
+	for transfer in transfers:
+		_validate_row_serial_numbers(transfer, items[transfer["item"]], serial_items)
+	_validate_unique_serial_numbers(transfers)
+
+
+def _validate_row_serial_numbers(transfer, item, serial_items):
 	serial_numbers = parse_serial_numbers(transfer.get("serial_number"))
 	if serial_numbers and not item.has_serial_number:
 		frappe.throw(_("Item {0} does not use serial numbers.").format(transfer["item"]))

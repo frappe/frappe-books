@@ -39,113 +39,74 @@ export async function generateSerialNumbersForItem(
   item: string,
   quantity: number
 ): Promise<string> {
-  if (!quantity || quantity <= 0) {
+  const series =
+    quantity > 0 ? await getSerialNumberSeries(fyo, item) : undefined;
+  if (!series) {
     return '';
   }
 
-  const hasSerialNumber = await fyo.getValue(
-    ModelNameEnum.Item,
-    item,
-    'hasSerialNumber'
-  );
-
-  if (!hasSerialNumber) {
-    return '';
-  }
-
-  const serialNumberSeries = await fyo.getValue(
-    ModelNameEnum.Item,
-    item,
-    'serialNumberSeries'
-  );
-
-  if (!serialNumberSeries || typeof serialNumberSeries !== 'string') {
-    return '';
-  }
-
-  const seriesName = serialNumberSeries.trim();
-  if (!seriesName) {
-    return '';
-  }
-
-  const exists = await fyo.db.exists(
-    ModelNameEnum.SerialNumberSeries,
-    seriesName
-  );
-
-  if (!exists) {
-    return '';
-  }
-
-  const seriesDoc = (await fyo.doc.getDoc(
-    ModelNameEnum.SerialNumberSeries,
-    seriesName
-  )) as SerialNumberSeries;
-
+  const prefix = series.name as string;
+  let current =
+    (await getHighestNumber(fyo, ModelNameEnum.SerialNumber, item, prefix)) ??
+    ((series.current as number) || (series.start as number)) - 1;
   const serialNumbers: string[] = [];
-  const padZeros = seriesDoc.padZeros as number;
-
-  let currentValue = await getHighestSerialNumberForItem(fyo, item, seriesName);
-
-  if (currentValue === null) {
-    currentValue =
-      ((seriesDoc.current as number) || (seriesDoc.start as number)) - 1;
-  }
-
   while (serialNumbers.length < quantity) {
-    currentValue++;
-
-    const serialNumber = getPaddedName(seriesName, currentValue, padZeros);
-
-    const snExists = await fyo.db.exists(
-      ModelNameEnum.SerialNumber,
-      serialNumber
-    );
-
-    if (!snExists) {
-      serialNumbers.push(serialNumber);
+    current++;
+    const name = getPaddedName(prefix, current, series.padZeros as number);
+    if (!(await fyo.db.exists(ModelNameEnum.SerialNumber, name))) {
+      serialNumbers.push(name);
     }
   }
 
-  if (serialNumbers.length > 0) {
-    await seriesDoc.set('current', currentValue);
-    await seriesDoc.sync();
-  }
-
-  const result = serialNumbers.join('\n');
-  return result;
+  await series.setAndSync('current', current);
+  return serialNumbers.join('\n');
 }
 
-async function getHighestSerialNumberForItem(
+async function getSerialNumberSeries(
+  fyo: Fyo,
+  item: string
+): Promise<SerialNumberSeries | undefined> {
+  if (!(await fyo.getValue(ModelNameEnum.Item, item, 'hasSerialNumber'))) {
+    return;
+  }
+
+  const name = await getItemSeriesName(fyo, item, 'serialNumberSeries');
+  if (!name || !(await fyo.db.exists(ModelNameEnum.SerialNumberSeries, name))) {
+    return;
+  }
+
+  return (await fyo.doc.getDoc(
+    ModelNameEnum.SerialNumberSeries,
+    name
+  )) as SerialNumberSeries;
+}
+
+async function getItemSeriesName(
   fyo: Fyo,
   item: string,
-  seriesName: string
+  fieldname: 'batchSeries' | 'serialNumberSeries'
+): Promise<string | undefined> {
+  const name = await fyo.getValue(ModelNameEnum.Item, item, fieldname);
+  return typeof name === 'string' ? name.trim() : undefined;
+}
+
+/** Highest number after the prefix in the names of an item's batches or serial numbers. */
+async function getHighestNumber(
+  fyo: Fyo,
+  schemaName: ModelNameEnum.Batch | ModelNameEnum.SerialNumber,
+  item: string,
+  prefix: string
 ): Promise<number | null> {
-  const serialNumbers = await fyo.db.getAllRaw(ModelNameEnum.SerialNumber, {
-    filters: { item: item },
+  const rows = await fyo.db.getAllRaw(schemaName, {
     fields: ['name'],
+    filters: { item },
   });
-
-  if (!serialNumbers || serialNumbers.length === 0) {
-    return null;
-  }
-
-  let highestValue = -1;
-
-  for (const sn of serialNumbers) {
-    const name = sn.name as string;
-
-    if (name.startsWith(seriesName)) {
-      const numericPart = name.substring(seriesName.length);
-      const value = parseInt(numericPart, 10);
-
-      if (!isNaN(value) && value > highestValue) {
-        highestValue = value;
-      }
-    }
-  }
-
-  return highestValue >= 0 ? highestValue : null;
+  const highest = rows
+    .map((row) => row.name as string)
+    .filter((name) => name.startsWith(prefix))
+    .map((name) => parseInt(name.substring(prefix.length), 10))
+    .reduce((max, value) => (value > max ? value : max), -1);
+  return highest >= 0 ? highest : null;
 }
 
 function getPaddedName(prefix: string, next: number, padZeros: number): string {
@@ -231,75 +192,32 @@ export async function getExistingActiveSerialNumbersForItem(
 
 export async function getSuggestedBatchName(
   fyo: Fyo,
-  itemName: string
+  item: string
 ): Promise<string | undefined> {
-  const batchSeries = await fyo.getValue(
-    ModelNameEnum.Item,
-    itemName,
-    'batchSeries'
-  );
-
-  if (!batchSeries) {
+  const prefix = await getItemSeriesName(fyo, item, 'batchSeries');
+  if (!prefix) {
     return undefined;
   }
 
-  const seriesName = (batchSeries as string).trim();
+  const series = await getBatchSeries(fyo, prefix);
+  const highest = await getHighestNumber(
+    fyo,
+    ModelNameEnum.Batch,
+    item,
+    prefix
+  );
+  const next =
+    highest === null ? ((series.start as number) ?? 1001) : highest + 1;
+  return getPaddedName(prefix, next, (series.padZeros as number) ?? 4);
+}
 
-  const seriesExists = await fyo.db.exists('BatchSeries', seriesName);
-
-  if (!seriesExists) {
-    await fyo.doc
-      .getNewDoc('BatchSeries', {
-        name: seriesName,
-        start: 1001,
-        padZeros: 4,
-        current: 1001,
-      })
-      .sync();
+async function getBatchSeries(fyo: Fyo, name: string): Promise<BatchSeries> {
+  if (!(await fyo.db.exists(ModelNameEnum.BatchSeries, name))) {
+    const values = { name, start: 1001, padZeros: 4, current: 1001 };
+    await fyo.doc.getNewDoc(ModelNameEnum.BatchSeries, values).sync();
   }
 
-  const batchSeriesDoc = (await fyo.doc.getDoc(
-    'BatchSeries',
-    seriesName
-  )) as BatchSeries;
-
-  const padZeros = (batchSeriesDoc.padZeros as number) ?? 4;
-
-  const existingBatches = (await fyo.db.getAllRaw(ModelNameEnum.Batch, {
-    fields: ['name'],
-    filters: { item: itemName },
-  })) as { name: string }[];
-
-  let nextNumber: number;
-
-  if (existingBatches && existingBatches.length > 0) {
-    let highestNumber = -1;
-
-    for (const batch of existingBatches) {
-      const batchName = batch.name;
-      // Extract numeric part from batch name (handles names like "com-1001")
-      const numericPart = batchName.replace(seriesName, '');
-      const num = parseInt(numericPart, 10);
-
-      if (!isNaN(num) && num > highestNumber) {
-        highestNumber = num;
-      }
-    }
-
-    if (highestNumber >= 0) {
-      nextNumber = highestNumber + 1;
-    } else {
-      nextNumber = (batchSeriesDoc.start as number) ?? 1001;
-    }
-  } else {
-    nextNumber = (batchSeriesDoc.start as number) ?? 1001;
-  }
-
-  const batchName = `${seriesName}${nextNumber
-    .toString()
-    .padStart(padZeros, '0')}`;
-
-  return batchName;
+  return (await fyo.doc.getDoc(ModelNameEnum.BatchSeries, name)) as BatchSeries;
 }
 
 export async function createBatch(fyo: Fyo, item: string, batch: string) {

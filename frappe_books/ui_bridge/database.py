@@ -23,7 +23,7 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "preview", "getMapped"}
+READ_METHODS = {"get", "getAll", "count", "getSingleValues", "exists", "preview", "getMapped"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
@@ -83,6 +83,16 @@ class BooksDatabaseBridge:
 			limit=options.limit,
 		)
 		return [self._row_to_source(source_schema, row, requested) for row in rows]
+
+	def count(self, source_schema: str, filters: dict[str, Any] | None = None) -> int:
+		rows = self._get_list_rows(
+			target_doctype(source_schema),
+			fields=[{"COUNT": "*", "as": "count"}],
+			filters=self._target_filters(source_schema, filters or {}),
+			offset=None,
+			limit=None,
+		)
+		return sum(row.count for row in rows)
 
 	def _get_list_rows(self, target, **query):
 		if not frappe.get_meta(target).istable:

@@ -142,8 +142,11 @@ export class DatabaseHandler extends DatabaseBase {
     schemaName: string,
     options: GetAllOptions = {}
   ): Promise<number> {
-    const rawValueMap = await this.#getAll(schemaName, options);
-    return rawValueMap.length;
+    return (await this.#demux.call(
+      'count',
+      schemaName,
+      options.filters ?? {}
+    )) as number;
   }
 
   // Update

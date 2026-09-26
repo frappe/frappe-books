@@ -22,6 +22,8 @@ export abstract class DatabaseBase {
     options: GetAllOptions
   ): Promise<UnknownMap[]>;
 
+  abstract count(schemaName: string, options: GetAllOptions): Promise<number>;
+
   abstract getSingleValues(
     ...fieldnames: { fieldname: string; parent: string }[]
   ): Promise<{ fieldname: string; parent: string; value: unknown }[]>;

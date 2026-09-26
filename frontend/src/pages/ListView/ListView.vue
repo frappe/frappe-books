@@ -72,7 +72,7 @@ import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, getCreateFiltersFromListViewFilters } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
-import { getFormRoute, routeTo } from 'src/utils/ui';
+import { getFormRoute, openNewDoc, routeTo } from 'src/utils/ui';
 import { QueryFilter } from 'utils/db/types';
 import { defineComponent, inject, ref } from 'vue';
 import List from './List.vue';
@@ -183,9 +183,7 @@ export default defineComponent({
       }
 
       const filters = getCreateFiltersFromListViewFilters(this.filters ?? {});
-      const doc = fyo.doc.getNewDoc(this.schemaName, filters);
-      const route = getFormRoute(this.schemaName, doc.name!);
-      await routeTo(route);
+      await openNewDoc(this.schemaName, filters);
     },
     async handleMakeNewDoc() {
       await this.makeNewDoc();

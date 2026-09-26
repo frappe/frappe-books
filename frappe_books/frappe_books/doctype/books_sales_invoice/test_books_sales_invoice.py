@@ -6,6 +6,7 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.setup_service import ensure_currency
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -72,6 +73,42 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(debit, Decimal("37.04"))
 		round_off_entry = next(row for row in entries if row.account == round_off.name)
 		self.assertEqual(Decimal(str(round_off_entry.debit)), Decimal("0.01"))
+
+	def test_rounds_to_company_currency_precision(self):
+		item = make_item(self.income.name, self.expense.name)
+		for currency, rate, total in (("KWD", "1.2345", "2.469"), ("JPY", "10.25", "21")):
+			with self.subTest(currency=currency):
+				frappe.db.set_single_value("Books System Settings", "currency", currency)
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					item.name,
+					self.income.name,
+				)
+				invoice.items[0].update({"rate": Decimal(rate), "quantity": 2, "item_discount_percent": 0})
+				invoice.discount_percent = 0
+				invoice.save().submit()
+
+				self.assertEqual(Decimal(str(invoice.grand_total)), Decimal(total))
+				entries = ledger_entries(invoice.doctype, invoice.name)
+				self.assertEqual(sum(Decimal(str(row.debit)) for row in entries), Decimal(total))
+
+	def test_rounds_invoice_amounts_to_invoice_currency(self):
+		ensure_currency("USD")
+		frappe.db.set_single_value("Books System Settings", "currency", "JPY")
+		item = make_item(self.income.name, self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
+		)
+		invoice.update({"currency": "USD", "exchange_rate": 150})
+		invoice.items[0].update({"rate": Decimal("10.25"), "quantity": 1, "item_discount_percent": 0})
+		invoice.save().submit()
+
+		self.assertEqual(Decimal(str(invoice.grand_total)), Decimal("10.25"))
+		self.assertEqual(Decimal(str(invoice.base_grand_total)), Decimal("1538"))
+		entries = ledger_entries(invoice.doctype, invoice.name)
+		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries), Decimal("1538"))
 
 	def _make_invoice(self):
 		return make_invoice(

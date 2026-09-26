@@ -71,58 +71,29 @@ class BooksDatabaseBridge:
 
 	def get_all(self, source_schema: str, options: ListOptions | None = None) -> list[dict]:
 		options = frappe._dict(options or {})
-		target = target_doctype(source_schema)
 		requested = self._requested_source_fields(source_schema, options.fields)
-		target_fields = self._target_fields(source_schema, requested)
-		filters = self._target_filters(source_schema, options.filters if options.filters is not None else {})
-		order_by = self._order_by(source_schema, options.orderBy, options.order)
-		group_by = self._group_by(source_schema, options.groupBy)
 		rows = self._get_list_rows(
-			target,
-			filters,
-			target_fields,
-			offset=cint(options.offset),
-			limit=_row_limit(options.limit),
-			order_by=order_by,
-			group_by=group_by,
+			target_doctype(source_schema),
+			fields=self._target_fields(source_schema, requested),
+			filters=self._target_filters(source_schema, options.filters or {}),
+			order_by=self._order_by(source_schema, options.orderBy, options.order),
+			group_by=self._group_by(source_schema, options.groupBy),
+			offset=options.offset,
+			limit=options.limit,
 		)
 		return [self._row_to_source(source_schema, row, requested) for row in rows]
 
-	def _get_list_rows(self, target, filters, fields, offset, limit, order_by, group_by):
-		if frappe.get_meta(target).istable:
-			rows = self._get_child_rows(target, filters, fields, order_by, group_by)
-			return rows[offset : offset + limit if limit else None]
-
-		query = {"filters": filters, "fields": fields, "order_by": order_by, "group_by": group_by}
-		if limit:
-			return frappe.get_list(target, start=offset, limit=limit, **query)
-		# Frappe only applies an offset together with a limit.
-		return frappe.get_list(target, **query)[offset:]
-
-	def _get_child_rows(self, target, filters, fields, order_by, group_by):
+	def _get_list_rows(self, target, **query):
+		if not frappe.get_meta(target).istable:
+			return frappe.get_list(target, **query)
+		parents = self._child_parent_doctypes(target)
+		if len(parents) > 1 and (query["offset"] or query["limit"]):
+			frappe.throw(f"Filter {target} rows by one parent document type to page through them")
 		rows = []
-		for parent_doctype in self._child_parent_doctypes(target):
-			rows.extend(
-				self._get_parent_child_rows(target, parent_doctype, filters, fields, order_by, group_by)
-			)
+		for parent_doctype in parents:
+			filters = [["parenttype", "=", parent_doctype], *query["filters"]]
+			rows += frappe.get_list(target, **{**query, "filters": filters}, parent_doctype=parent_doctype)
 		return rows
-
-	def _get_parent_child_rows(self, target, parent_doctype, filters, fields, order_by, group_by):
-		child_filters = [["parenttype", "=", parent_doctype], *filters]
-		parent_filters = [[target, *condition] for condition in child_filters]
-		parent_names = frappe.get_list(parent_doctype, filters=parent_filters, pluck="name")
-		if not parent_names:
-			return []
-
-		child_filters.append(["parent", "in", parent_names])
-		return frappe.get_list(
-			target,
-			filters=child_filters,
-			fields=fields,
-			order_by=order_by,
-			group_by=group_by,
-			parent_doctype=parent_doctype,
-		)
 
 	def _child_parent_doctypes(self, child_doctype):
 		parents = []
@@ -407,12 +378,6 @@ def _writable_doctype(source_schema: str) -> str:
 	if source_schema in PROTECTED_WRITE_SCHEMAS:
 		frappe.throw(f"{source_schema} records are managed by server document actions")
 	return target_doctype(source_schema)
-
-
-def _row_limit(value: Any) -> int | None:
-	if value in (None, ""):
-		return None
-	return max(cint(value), 1)
 
 
 def _snake_case(value: str) -> str:

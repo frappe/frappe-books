@@ -1349,12 +1349,12 @@ export abstract class Invoice extends Transactional {
     let linkedEntries;
 
     if (this.returnAgainst) {
-      const sinvDoc = (await this.fyo.doc.getDoc(
-        ModelNameEnum.SalesInvoice,
+      const original = await this.fyo.doc.getDoc(
+        this.schemaName,
         this.returnAgainst
-      )) as SalesInvoice;
+      );
 
-      linkedEntries = await getLinkedEntries(sinvDoc);
+      linkedEntries = await getLinkedEntries(original);
     }
 
     const itemVisibility = await getItemVisibility(this.fyo);
@@ -1382,7 +1382,7 @@ export abstract class Invoice extends Transactional {
       terms,
       numberSeries,
       backReference: this.name,
-      returnAgainst: linkedEntries ? linkedEntries.Shipment![0] : '',
+      returnAgainst: linkedEntries?.[schemaName]?.[0] ?? '',
     };
 
     let location = this.autoStockTransferLocation;

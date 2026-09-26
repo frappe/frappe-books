@@ -36,6 +36,7 @@ await build({
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getReturnItems } from './models/returnItems';
+      export { getPrintTemplatePropValues } from './src/utils/printTemplates';
     `,
     resolveDir: frontend,
   },
@@ -89,6 +90,7 @@ export const {
   FrappeDatabaseDemux,
   GSTR1,
   getReturnItems,
+  getPrintTemplatePropValues,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

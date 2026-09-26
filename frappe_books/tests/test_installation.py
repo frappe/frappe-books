@@ -27,6 +27,7 @@ class IntegrationTestInstallation(IntegrationTestCase):
 					"logo": app_icon_url,
 					"title": app_icon_title,
 					"route": app_icon_route,
+					"has_permission": "frappe_books.permissions.has_app_permission",
 					"sequence_id": 10,
 				}
 			],

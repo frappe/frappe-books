@@ -140,6 +140,24 @@ class IntegrationTestPricing(IntegrationTestCase):
 		with self.assertRaises(frappe.TimestampMismatchError):
 			coupon.save()
 
+	def test_return_does_not_use_a_coupon(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		coupon = self._coupon(self._pricing_rule(is_coupon_code_based=1), maximum_use=1)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			coupons=[{"coupons": coupon.name}],
+		).submit()
+		credit_note = frappe.copy_doc(invoice)
+		credit_note.return_against = invoice.name
+		credit_note.items[0].quantity = -2
+		credit_note.insert().submit()
+
+		self.assertEqual(coupon.db_get("used"), 1)
+
 	def _coupon(self, rule, **values):
 		return frappe.get_doc(
 			{

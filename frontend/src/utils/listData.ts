@@ -4,7 +4,6 @@ import { cloneDeep } from 'lodash';
 import type { QueryFilter } from 'utils/db/types';
 import { toRaw } from 'vue';
 import { mergeQueryFilters } from './filterQuery';
-import { matchesStatus } from './statusFilter';
 
 export interface ListState {
   schemaName: string;
@@ -33,30 +32,21 @@ export async function loadListData(
   return { rows, appliedFilters };
 }
 
-/** Status is computed, so a status filter is matched after the query. */
 async function getListRows(
   fyo: Fyo,
   schemaName: string,
-  appliedFilters: QueryFilter
+  filters: QueryFilter
 ): Promise<RenderData[]> {
-  const query = cloneDeep(appliedFilters);
-  const isStatusFilter =
-    'status' in query && !fyo.db.fieldMap[schemaName]?.status;
-  const statusFilter = query.status;
-  if (isStatusFilter) {
-    delete query.status;
-  }
-
   const orderBy = fyo.db.fieldMap[schemaName].date
     ? ['date', 'created']
     : ['created'];
   const schema = fyo.schemaMap[schemaName];
-  const rows = (
-    await fyo.db.getAll(schemaName, { fields: ['*'], filters: query, orderBy })
-  ).map((row) => ({ ...row, schema })) as RenderData[];
-  return isStatusFilter
-    ? rows.filter((row) => matchesStatus(row, statusFilter))
-    : rows;
+  const rows = await fyo.db.getAll(schemaName, {
+    fields: ['*'],
+    filters,
+    orderBy,
+  });
+  return rows.map((row) => ({ ...row, schema })) as RenderData[];
 }
 
 /** Call `listener` when documents shown in a list of `schemaName` change. */

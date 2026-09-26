@@ -1,7 +1,7 @@
 import { Action, ListViewSettings } from 'fyo/model/types';
 import {
   getStockTransferActions,
-  getTransactionStatusColumn,
+  getDocStatusListColumn,
 } from 'models/helpers';
 import { PurchaseReceiptItem } from './PurchaseReceiptItem';
 import { StockTransfer } from './StockTransfer';
@@ -15,7 +15,7 @@ export class PurchaseReceipt extends StockTransfer {
     return {
       columns: [
         'name',
-        getTransactionStatusColumn(false),
+        getDocStatusListColumn(),
         'party',
         'date',
         'grandTotal',

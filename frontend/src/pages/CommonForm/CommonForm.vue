@@ -130,7 +130,6 @@ import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
 import { TabButtons as FrappeTabButtons } from 'frappe-ui';
-import { getDocStatus } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import Button from 'src/components/Button.vue';
@@ -283,13 +282,6 @@ export default defineComponent({
     },
     hasDoc(): boolean {
       return this.docOrNull instanceof Doc;
-    },
-    status(): string {
-      if (!this.hasDoc) {
-        return '';
-      }
-
-      return getDocStatus(this.doc);
     },
     doc(): Doc {
       const doc = this.docOrNull;

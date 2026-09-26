@@ -337,33 +337,6 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
   };
 }
 
-export function getTransactionStatusColumn(invoice = true): ColumnConfig {
-  return {
-    label: t`Status`,
-    fieldname: 'status',
-    fieldtype: 'Select',
-    options: (invoice
-      ? [
-          'Saved',
-          'Unpaid',
-          'PartlyPaid',
-          'Paid',
-          'Return',
-          'ReturnIssued',
-          'Cancelled',
-        ]
-      : ['Saved', 'Submitted', 'Return', 'ReturnIssued', 'Cancelled']
-    ).map((value) => ({ value, label: getStatusText(value as InvoiceStatus) })),
-    badge(doc) {
-      const status = getDocStatus(doc) as InvoiceStatus;
-      return {
-        color: statusColor[status] ?? 'gray',
-        label: getStatusText(status),
-      };
-    },
-  };
-}
-
 export function getLeadStatusColumn(): ColumnConfig {
   return {
     label: t`Status`,
@@ -480,87 +453,16 @@ export function getDocStatus(
     return 'Saved';
   }
 
-  return getSubmittableDocStatus(doc);
-}
-
-function getSubmittableDocStatus(doc: RenderData | Doc) {
-  if (
-    [ModelNameEnum.SalesInvoice, ModelNameEnum.PurchaseInvoice].includes(
-      doc.schema.name as ModelNameEnum
-    )
-  ) {
-    return getInvoiceStatus(doc);
-  }
-
-  if (
-    [ModelNameEnum.Shipment, ModelNameEnum.PurchaseReceipt].includes(
-      doc.schema.name as ModelNameEnum
-    )
-  ) {
-    if (!!doc.returnAgainst && doc.submitted && !doc.cancelled) {
-      return 'Return';
-    }
-
-    if (doc.isReturned && doc.submitted && !doc.cancelled) {
-      return 'ReturnIssued';
-    }
-  }
-
-  /**
-   * SalesQuote extends Invoice but should never show payment-related
-   * statuses (Paid, Unpaid, etc.) since quotes cannot be paid.
-   * Return early with simple submitted/cancelled/saved statuses.
-   */
-  if (!!doc.submitted && !doc.cancelled) {
-    return 'Submitted';
-  }
-
-  if (!!doc.submitted && !!doc.cancelled) {
-    return 'Cancelled';
-  }
-
-  return 'Saved';
-}
-
-export function getInvoiceStatus(doc: RenderData | Doc): InvoiceStatus {
-  if (doc.submitted && !doc.cancelled && doc.returnAgainst) {
-    return 'Return';
-  }
-
-  if (doc.submitted && !doc.cancelled && doc.isReturned) {
-    return 'ReturnIssued';
-  }
-
-  if (
-    doc.submitted &&
-    !doc.cancelled &&
-    (doc.outstandingAmount as Money).isZero()
-  ) {
-    return 'Paid';
-  }
-
-  if (
-    doc.submitted &&
-    !doc.cancelled &&
-    (doc.outstandingAmount as Money).eq(doc.baseGrandTotal as Money)
-  ) {
-    return 'Unpaid';
+  // The server stores the status of documents that have a status field.
+  if (doc.status) {
+    return doc.status as InvoiceStatus;
   }
 
   if (doc.cancelled) {
     return 'Cancelled';
   }
 
-  if (
-    doc.submitted &&
-    !doc.isCancelled &&
-    (doc.outstandingAmount as Money).isPositive() &&
-    (doc.outstandingAmount as Money).neq(doc.baseGrandTotal as Money)
-  ) {
-    return 'PartlyPaid';
-  }
-
-  return 'Saved';
+  return doc.submitted ? 'Submitted' : 'Saved';
 }
 
 export function getSerialNumberStatusColumn(): ColumnConfig {
@@ -720,10 +622,6 @@ export function getDocStatusListColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    options: ['Saved', 'Submitted', 'Cancelled'].map((value) => ({
-      value,
-      label: getStatusText(value as DocStatus),
-    })),
     badge(doc) {
       const status = getDocStatus(doc);
       return {
@@ -739,10 +637,6 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    options: ['Active', 'Expired', 'Maxed'].map((value) => ({
-      value,
-      label: getLoyaltyProgramStatusText(value),
-    })),
     badge(doc) {
       const status = getLoyaltyProgramStatus(doc);
       return {

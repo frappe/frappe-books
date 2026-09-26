@@ -47,21 +47,12 @@ export function getFilterFields(
     return true;
   });
 
-  if (statusField && statusField.fieldname) {
-    const statusFieldExists = filteredFields.some(
-      (field) => field.fieldname === statusField.fieldname
-    );
-
-    if (!statusFieldExists) {
-      const originalStatusField = fields.find(
-        (field) => field.fieldname === statusField.fieldname
-      );
-      if (originalStatusField) {
-        filteredFields.unshift(originalStatusField);
-      } else {
-        filteredFields.unshift(statusField);
-      }
-    }
+  // A status column can filter the list only when the server stores it.
+  const storedStatusField = fields.find(
+    (field) => field.fieldname === statusField?.fieldname
+  );
+  if (storedStatusField && !filteredFields.includes(storedStatusField)) {
+    filteredFields.unshift(storedStatusField);
   }
 
   return filteredFields;

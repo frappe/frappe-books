@@ -11,9 +11,6 @@ import { generateCSV } from 'utils/csvParser';
 import { GetAllOptions, QueryFilter } from 'utils/db/types';
 import { getMapFromList, safeParseFloat } from 'utils/index';
 import { ExportField, ExportTableField } from './types';
-import { matchesStatus } from './statusFilter';
-import { mergeQueryFilters } from './filterQuery';
-import { RenderData } from 'fyo/model/types';
 
 const excludedFieldTypes: FieldType[] = [
   FieldTypeEnum.AttachImage,
@@ -274,23 +271,6 @@ async function getParentData(
     orderBy.unshift('date');
   }
 
-  if ('status' in filters && !fyo.db.fieldMap[schemaName]?.status) {
-    const { status, ...storedFilters } = filters;
-    const rows = await fyo.db.getAll(schemaName, {
-      fields: ['*'],
-      filters: storedFilters,
-    });
-    const names = rows
-      .filter((row) =>
-        matchesStatus(
-          { ...row, schema: fyo.schemaMap[schemaName] } as RenderData,
-          status
-        )
-      )
-      .map((row) => String(row.name));
-    if (!names.length) return [];
-    filters = mergeQueryFilters(storedFilters, { name: ['in', names] });
-  }
   const options: GetAllOptions = { filters, orderBy, order: 'desc' };
   if (limit) {
     options.limit = limit;

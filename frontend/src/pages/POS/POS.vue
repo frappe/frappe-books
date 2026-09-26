@@ -162,6 +162,8 @@ import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import {
+  addBatchItem,
+  hasShippedStock,
   validateSinv,
   validateShipment,
   getTotalQuantity,
@@ -183,7 +185,7 @@ import {
 import { ValidationError } from 'fyo/utils/errors';
 import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
 import { filterPOSItems, findExactPOSItem } from 'src/utils/posItemSearch';
-import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
+import { getPOSInventory } from 'models/inventory/posStock';
 
 const COMPONENT_NAME = 'POS';
 
@@ -1078,50 +1080,15 @@ export default defineComponent({
       this.pendingBatchItem = null;
 
       try {
-        const itemDoc = (await this.fyo.doc.getDoc(
-          ModelNameEnum.Item,
-          item.name
-        )) as Item;
         await this.setItemQtyMap();
         await this.setItems();
-
-        const existingItems =
-          this.sinvDoc.items?.filter(
-            (invoiceItem) =>
-              invoiceItem.item === item.name &&
-              invoiceItem.batch === batchName &&
-              !invoiceItem.isFreeItem
-          ) ?? [];
-
-        if (itemDoc.trackItem) {
-          const requestedQuantity = existingItems.reduce(
-            (total, row) => total + (row.quantity ?? 0),
-            quantity ?? 1
-          );
-          validatePOSStock(
-            item.name,
-            requestedQuantity,
-            this.itemQtyMap,
-            await getPOSInventory(this.fyo),
-            batchName
-          );
-        }
-
-        if (existingItems.length) {
-          const currentQty = existingItems[0].quantity ?? 0;
-          const addQty = quantity ?? 1;
-          await existingItems[0].set('quantity', currentQty + addQty);
-        } else {
-          await this.sinvDoc.append('items', {
-            item: item.name,
-            quantity: quantity ?? 1,
-            transferQuantity: quantity ?? 1,
-            transferUnit: item.unit,
-            hsnCode: itemDoc.hsnCode,
-            batch: batchName,
-          });
-        }
-
+        await addBatchItem(
+          this.sinvDoc as SalesInvoice,
+          item as POSItem,
+          batchName,
+          quantity ?? 1,
+          this.itemQtyMap
+        );
         await this.applyPricingRule();
         await this.sinvDoc.runFormulas();
       } catch (error) {
@@ -1390,8 +1357,7 @@ export default defineComponent({
       this.setTotalTaxedAmount();
     },
     async validate() {
-      // A payment retry must not check stock that was already shipped.
-      if (this.sinvDoc.isSubmitted && !this.sinvDoc.stockNotTransferred) {
+      if (hasShippedStock(this.sinvDoc as SalesInvoice)) {
         return;
       }
 

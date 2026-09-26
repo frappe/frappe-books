@@ -340,7 +340,6 @@
 </template>
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { Button as FrappeButton } from 'frappe-ui';
@@ -365,7 +364,12 @@ import FormHeader from 'src/components/FormHeader.vue';
 import Icon from 'src/components/Icon.vue';
 import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
-import { Importer, TemplateField, getColumnLabel } from 'src/importer';
+import {
+  Importer,
+  TemplateField,
+  getColumnLabel,
+  importDoc,
+} from 'src/importer';
 import { fyo } from 'src/initFyo';
 import { downloadFile } from 'src/utils/browser';
 import { showDialog } from 'src/utils/interactive';
@@ -803,37 +807,11 @@ export default defineComponent({
       const { docs } = this.importer;
       for (const [index, doc] of docs.entries()) {
         this.setLoadingStatus(index, docs.length);
-        await this.importDoc(doc, shouldSubmit);
+        await importDoc(doc, shouldSubmit, this);
       }
 
       this.isMakingEntries = false;
       this.complete = true;
-    },
-    async importDoc(doc: Doc, shouldSubmit: boolean): Promise<void> {
-      const oldName = doc.name ?? '';
-      try {
-        await doc.sync();
-      } catch (error) {
-        this.failed.push({ name: doc.name!, message: getMessage(error) });
-        return;
-      }
-
-      // A saved draft must not be imported again by Fix Failed.
-      this.successOldName.push(oldName);
-      try {
-        if (shouldSubmit) {
-          await doc.submit();
-        }
-      } catch (error) {
-        const message = getMessage(error);
-        this.failed.push({
-          name: doc.name!,
-          message: this.t`Saved as draft, but submit failed: ${message}`,
-        });
-        return;
-      }
-
-      this.success.push(doc.name!);
     },
     async askShouldSubmit(): Promise<boolean> {
       if (!this.fyo.schemaMap[this.importType]?.isSubmittable) {
@@ -924,10 +902,6 @@ export default defineComponent({
     },
   },
 });
-
-function getMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 </script>
 <style scoped>
 .index-cell {

@@ -76,6 +76,7 @@ import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { defineComponent, inject } from 'vue';
 import Paginator from '../Paginator.vue';
 import ReportColumnHeader from './ReportColumnHeader.vue';
+import { getReportCellColorClass } from './cellColor';
 import { ReportColumnWidths } from './ReportColumnWidths';
 import ReportOverflowText from './ReportOverflowText.vue';
 
@@ -200,30 +201,8 @@ export default defineComponent({
       return 'justify-start text-start';
     },
     getCellColorClass(cell) {
-      if (cell.color === 'red') {
-        return 'text-red-600';
-      } else if (cell.color === 'green') {
-        return 'text-green-600';
-      }
-
-      if (!cell.rawValue) {
-        return 'text-ink-gray-6';
-      }
-
-      if (typeof cell.rawValue !== 'number') {
-        return 'text-ink-gray-9';
-      }
-
-      if (cell.rawValue === 0) {
-        return 'text-ink-gray-6';
-      }
-
-      const prec = this.fyo.singles.SystemSettings?.displayPrecision ?? 2;
-      if (Number(cell.rawValue.toFixed(prec)) === 0) {
-        return 'text-ink-gray-6';
-      }
-
-      return 'text-ink-gray-9';
+      const precision = this.fyo.singles.SystemSettings?.displayPrecision ?? 2;
+      return getReportCellColorClass(cell, precision);
     },
   },
 });

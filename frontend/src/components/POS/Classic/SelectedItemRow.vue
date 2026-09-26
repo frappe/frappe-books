@@ -461,15 +461,7 @@ export default defineComponent({
     },
 
     async getAvailableQtyInBatch(): Promise<number> {
-      if (!this.row.batch) {
-        return 0;
-      }
-
-      return getPOSBatchQuantity(
-        fyo,
-        this.row.item as string,
-        this.row.batch
-      );
+      return getPOSBatchQuantity(fyo, this.row.item as string, this.row.batch);
     },
 
     getDisplayTransferQuantity() {

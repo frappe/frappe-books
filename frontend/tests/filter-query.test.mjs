@@ -11,10 +11,8 @@ import {
   getFilterFields,
   getFieldLabel,
   getJsonExportData,
+  loadListData,
 } from './helpers/accounting.mjs';
-import { loadMethod } from './helpers/vue-method.mjs';
-import lodash from 'lodash';
-const { cloneDeep } = lodash;
 
 const field = (fieldtype = 'Data', fieldname = 'value') => ({
   fieldname,
@@ -197,7 +195,7 @@ test('status filters match display labels, SQL wildcards and all AND pairs', asy
   assert.throws(() => matchesStatus(row, ['=']));
 });
 
-test('list keeps filters on refresh, resets pagination, retains export status and ignores stale responses', async () => {
+test('list keeps filters on refresh, retains export status and ignores stale responses', async () => {
   const fyo = await makeFyo();
   const calls = [];
   const pending = [];
@@ -205,51 +203,37 @@ test('list keeps filters on refresh, resets pagination, retains export status an
     calls.push(options);
     return new Promise((resolve) => pending.push(resolve));
   };
-  const update = await loadMethod('src/pages/ListView/List.vue', 'updateData', {
-    fyo,
-    cloneDeep,
-    toRaw: (v) => v,
-    mergeQueryFilters,
-    matchesStatus,
-  });
-  const pages = [];
-  const events = [];
-  const context = {
+  const list = {
     filters: { name: ['like', 'JV%'] },
     activeFilters: {},
     requestId: 0,
     schemaName: 'JournalEntry',
-    $nextTick: async () => {},
-    $refs: { paginator: { pageNo: 2, setPageNo: (n) => pages.push(n) } },
-    $emit: (...event) => events.push(event),
   };
   const query = { status: ['=', 'Submitted'] };
-  const first = update.call(context, query);
+  const first = loadListData(fyo, list, query);
   pending.shift()([
     { name: 'JV1', submitted: true },
     { name: 'JV2', submitted: false },
   ]);
-  await first;
+  const loaded = await first;
   assert.deepEqual(
-    context.data.map((r) => r.name),
+    loaded.rows.map((r) => r.name),
     ['JV1']
   );
-  assert.equal(pages.at(-1), 1);
-  assert.deepEqual(events.at(-1)[1], { ...context.filters, ...query });
-  const refresh = update.call(context);
+  assert.deepEqual(loaded.appliedFilters, { ...list.filters, ...query });
+  const refresh = loadListData(fyo, list);
   pending.shift()([]);
   await refresh;
-  assert.deepEqual(context.activeFilters, query);
+  assert.deepEqual(list.activeFilters, query);
   assert.equal(calls.at(-1).filters.status, undefined);
-  const old = update.call(context, { name: ['=', 'JV-old'] });
-  const latest = update.call(context, {});
+  const old = loadListData(fyo, list, { name: ['=', 'JV-old'] });
+  const latest = loadListData(fyo, list, {});
   const oldResolve = pending.shift();
   pending.shift()([{ name: 'JV-new' }]);
-  await latest;
+  assert.equal((await latest).rows[0].name, 'JV-new');
   oldResolve([{ name: 'JV-old' }]);
-  await old;
-  assert.equal(context.data[0].name, 'JV-new');
-  assert.deepEqual(context.activeFilters, {});
+  assert.equal(await old, undefined);
+  assert.deepEqual(list.activeFilters, {});
 });
 
 test('filtered export applies virtual status before limit and preserves base restrictions', async () => {

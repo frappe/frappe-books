@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { loadMethod } from './helpers/vue-method.mjs';
-import { Importer, makeFyo } from './helpers/accounting.mjs';
+import { Importer, importDoc, makeFyo } from './helpers/accounting.mjs';
 
 test('import link checks query each linked schema once', async () => {
   const fyo = await makeFyo();
@@ -33,18 +32,7 @@ test('import link checks query each linked schema once', async () => {
 });
 
 test('an import that saves but fails to submit is reported as a draft', async () => {
-  const importDoc = await loadMethod(
-    'src/pages/ImportWizard.vue',
-    'importDoc',
-    { getMessage: (error) => error.message }
-  );
-  const wizard = {
-    success: [],
-    successOldName: [],
-    failed: [],
-    t: (strings, ...values) =>
-      strings.reduce((text, part, i) => text + values[i - 1] + part),
-  };
+  const results = { success: [], successOldName: [], failed: [] };
   const doc = {
     name: 'New Invoice 01',
     async sync() {
@@ -55,13 +43,16 @@ test('an import that saves but fails to submit is reported as a draft', async ()
     },
   };
 
-  await importDoc.call(wizard, doc, true);
-  assert.deepEqual(wizard.success, []);
-  assert.deepEqual(wizard.successOldName, ['New Invoice 01']);
-  assert.deepEqual(wizard.failed.map((failure) => ({ ...failure })), [
-    {
-      name: 'SINV-1',
-      message: 'Saved as draft, but submit failed: Insufficient stock',
-    },
-  ]);
+  await importDoc(doc, true, results);
+  assert.deepEqual(results.success, []);
+  assert.deepEqual(results.successOldName, ['New Invoice 01']);
+  assert.deepEqual(
+    results.failed.map((failure) => ({ ...failure })),
+    [
+      {
+        name: 'SINV-1',
+        message: 'Saved as draft, but submit failed: Insufficient stock',
+      },
+    ]
+  );
 });

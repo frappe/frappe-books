@@ -85,6 +85,7 @@ import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { getGetStartedConfig } from 'src/utils/getStartedConfig';
+import { getTaskChecks } from 'src/utils/getStartedTasks';
 import { GetStartedConfigItem } from 'src/utils/types';
 import { Component, defineComponent, h } from 'vue';
 
@@ -169,47 +170,11 @@ export default defineComponent({
       return onboardingComplete;
     },
     async checkForCompletedTasks() {
-      let toUpdate: Record<string, DocValue> = {};
       if (await this.checkIsOnboardingComplete()) {
         return;
       }
 
-      if (!fyo.singles.GetStarted?.salesItemCreated) {
-        const count = await fyo.db.count('Item', { filters: { for: 'Sales' } });
-        toUpdate.salesItemCreated = count > 0;
-      }
-
-      if (!fyo.singles.GetStarted?.purchaseItemCreated) {
-        const count = await fyo.db.count('Item', {
-          filters: { for: 'Purchases' },
-        });
-        toUpdate.purchaseItemCreated = count > 0;
-      }
-
-      if (!fyo.singles.GetStarted?.invoiceCreated) {
-        const count = await fyo.db.count('SalesInvoice');
-        toUpdate.invoiceCreated = count > 0;
-      }
-
-      if (!fyo.singles.GetStarted?.customerCreated) {
-        const count = await fyo.db.count('Party', {
-          filters: { role: 'Customer' },
-        });
-        toUpdate.customerCreated = count > 0;
-      }
-
-      if (!fyo.singles.GetStarted?.billCreated) {
-        const count = await fyo.db.count('PurchaseInvoice');
-        toUpdate.billCreated = count > 0;
-      }
-
-      if (!fyo.singles.GetStarted?.supplierCreated) {
-        const count = await fyo.db.count('Party', {
-          filters: { role: 'Supplier' },
-        });
-        toUpdate.supplierCreated = count > 0;
-      }
-      await this.updateChecks(toUpdate);
+      await this.updateChecks(await getTaskChecks(fyo));
     },
     async updateChecks(toUpdate: Record<string, DocValue>) {
       if (!fyo.can('GetStarted', 'write')) {

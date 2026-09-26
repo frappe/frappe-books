@@ -1,4 +1,4 @@
-import { Fyo } from 'fyo';
+import { Fyo, t } from 'fyo';
 import { Converter } from 'fyo/core/converter';
 import { DocValue, DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
@@ -17,6 +17,12 @@ import { generateCSV, parseCSV } from 'utils/csvParser';
 import { getValueMapFromList } from 'utils/index';
 
 export type TemplateField = Field & TemplateFieldProps;
+
+export interface ImportResults {
+  success: string[];
+  successOldName: string[];
+  failed: { name: string; message: string }[];
+}
 
 type TemplateFieldProps = {
   schemaName: string;
@@ -710,4 +716,40 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
   }
 
   return false;
+}
+
+/** Save `doc`, then submit it if asked, and record the outcome in `results`. */
+export async function importDoc(
+  doc: Doc,
+  shouldSubmit: boolean,
+  results: ImportResults
+): Promise<void> {
+  const oldName = doc.name ?? '';
+  try {
+    await doc.sync();
+  } catch (error) {
+    results.failed.push({ name: doc.name!, message: getMessage(error) });
+    return;
+  }
+
+  // A saved draft must not be imported again by Fix Failed.
+  results.successOldName.push(oldName);
+  try {
+    if (shouldSubmit) {
+      await doc.submit();
+    }
+  } catch (error) {
+    const message = getMessage(error);
+    results.failed.push({
+      name: doc.name!,
+      message: t`Saved as draft, but submit failed: ${message}`,
+    });
+    return;
+  }
+
+  results.success.push(doc.name!);
+}
+
+function getMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -32,7 +32,12 @@ await build({
       export { getJsonExportData } from './src/utils/export';
       export { getItemQtyMap, getMappedDoc, validateQty } from './models/helpers';
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
-      export { validateSinv } from './src/utils/pos';
+      export { addBatchItem, hasShippedStock, validateSinv } from './src/utils/pos';
+      export { getTaskChecks } from './src/utils/getStartedTasks';
+      export { getReportCellColorClass } from './src/components/Report/cellColor';
+      export { linkOnSave } from './src/utils/doc';
+      export { loadListData, onListChange } from './src/utils/listData';
+      export { showReport } from './src/utils/misc';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getReturnItems } from './models/returnItems';
@@ -48,7 +53,7 @@ await build({
       } from './models/inventory/helpers';
       export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
-      export { Importer } from './src/importer';
+      export { Importer, importDoc } from './src/importer';
     `,
     resolveDir: frontend,
   },
@@ -101,6 +106,14 @@ export const {
   getPOSBatchQuantity,
   validatePOSStock,
   validateSinv,
+  addBatchItem,
+  hasShippedStock,
+  getTaskChecks,
+  getReportCellColorClass,
+  linkOnSave,
+  loadListData,
+  onListChange,
+  showReport,
   FrappeDatabaseDemux,
   GSTR1,
   getReturnItems,
@@ -116,6 +129,7 @@ export const {
   generateCSV,
   parseCSV,
   Importer,
+  importDoc,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

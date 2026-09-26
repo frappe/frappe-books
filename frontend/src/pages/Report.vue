@@ -58,7 +58,7 @@ import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ListReport from 'src/components/Report/ListReport.vue';
 import { shortcutsKey } from 'src/utils/injectionKeys';
-import { docsPathMap, getReport } from 'src/utils/misc';
+import { docsPathMap, showReport } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { ActionGroup } from 'src/utils/types';
 import { routeTo } from 'src/utils/ui';
@@ -160,12 +160,10 @@ export default defineComponent({
   methods: {
     routeTo,
     async setReportData() {
-      if (this.report === null) {
-        this.report = await getReport(this.reportClassName);
-        return;
-      }
-
-      await this.report.setReportData(undefined, true);
+      this.report = await showReport(
+        this.report as Report | null,
+        this.reportClassName
+      );
     },
   },
 });

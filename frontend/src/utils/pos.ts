@@ -6,7 +6,11 @@ import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoic
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { ItemQtyMap, ItemSerialNumbers } from 'src/components/POS/types';
+import {
+  ItemQtyMap,
+  ItemSerialNumbers,
+  POSItem,
+} from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
 import { showToast } from './interactive';
@@ -132,6 +136,55 @@ async function validateSinvItems(
       );
     }
   }
+}
+
+/** A payment retry needs no stock check once the invoice's stock has shipped. */
+export function hasShippedStock(sinvDoc: SalesInvoice): boolean {
+  return !!sinvDoc.isSubmitted && !sinvDoc.stockNotTransferred;
+}
+
+/**
+ * Add `quantity` of `item` from `batch` to the invoice, merging it into the
+ * batch's row. A tracked item needs the whole batch quantity in POS stock.
+ */
+export async function addBatchItem(
+  sinvDoc: SalesInvoice,
+  item: POSItem,
+  batch: string,
+  quantity: number,
+  itemQtyMap: ItemQtyMap
+) {
+  const itemDoc = (await sinvDoc.fyo.doc.getDoc(
+    ModelNameEnum.Item,
+    item.name
+  )) as Item;
+  const rows =
+    sinvDoc.items?.filter(
+      (row) => row.item === item.name && row.batch === batch && !row.isFreeItem
+    ) ?? [];
+
+  if (itemDoc.trackItem) {
+    const required = rows.reduce(
+      (total, row) => total + (row.quantity ?? 0),
+      quantity
+    );
+    const inventory = await getPOSInventory(sinvDoc.fyo);
+    validatePOSStock(item.name, required, itemQtyMap, inventory, batch);
+  }
+
+  if (rows.length) {
+    await rows[0].set('quantity', (rows[0].quantity ?? 0) + quantity);
+    return;
+  }
+
+  await sinvDoc.append('items', {
+    item: item.name,
+    quantity,
+    transferQuantity: quantity,
+    transferUnit: item.unit,
+    hsnCode: itemDoc.hsnCode,
+    batch,
+  });
 }
 
 export async function validateShipment(itemSerialNumbers: ItemSerialNumbers) {

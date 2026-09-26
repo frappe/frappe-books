@@ -23,6 +23,22 @@ export async function setLinkOnParent(
   }
 }
 
+/**
+ * Link a record created from a link control to the parent that was open when
+ * it was created, even if the control has unmounted before the record saves.
+ */
+export function linkOnSave(
+  doc: Doc,
+  parentDoc: Doc | undefined,
+  fieldname: string | undefined,
+  afterLink: (name: string) => void
+) {
+  doc.once('afterSync', async () => {
+    await setLinkOnParent(parentDoc, fieldname, doc.name!);
+    afterLink(doc.name!);
+  });
+}
+
 export function evaluateReadOnly(field: Field, doc?: Doc) {
   if (doc?.inserted && field.fieldname === 'numberSeries') {
     return true;

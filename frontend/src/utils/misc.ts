@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 import { SetupWizard } from 'models/baseModels/SetupWizard/SetupWizard';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
+import type { Report } from 'reports/Report';
 import SetupWizardSchema from 'schemas/app/SetupWizard.json';
 import { Schema } from 'schemas/types';
 import { fyo } from 'src/initFyo';
@@ -148,5 +149,18 @@ export async function getReport(name: keyof typeof reports) {
   const report = new reports[name](fyo);
   await report.initialize();
   fyo.store.reports[name] = report;
+  return report;
+}
+
+/** Load a report when it is first shown, and refetch its data when shown again. */
+export async function showReport(
+  report: Report | null,
+  name: keyof typeof reports
+): Promise<Report> {
+  if (report === null) {
+    return getReport(name);
+  }
+
+  await report.setReportData(undefined, true);
   return report;
 }

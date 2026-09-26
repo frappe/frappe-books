@@ -416,15 +416,7 @@ export default defineComponent({
       return this.isReadOnly || !this.canEditDiscount || hasConflictingDiscount;
     },
     async getAvailableQtyInBatch(): Promise<number> {
-      if (!this.row.batch) {
-        return 0;
-      }
-
-      return getPOSBatchQuantity(
-        fyo,
-        this.row.item as string,
-        this.row.batch
-      );
+      return getPOSBatchQuantity(fyo, this.row.item as string, this.row.batch);
     },
     async setBatch(batch: string) {
       this.row.set('batch', batch);

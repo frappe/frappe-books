@@ -82,15 +82,13 @@ import {
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
-import { cloneDeep } from 'lodash';
 import Button from 'src/components/Button.vue';
 import Paginator from 'src/components/Paginator.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
-import { mergeQueryFilters } from 'src/utils/filterQuery';
-import { matchesStatus } from 'src/utils/statusFilter';
+import { loadListData, onListChange } from 'src/utils/listData';
 import { QueryFilter } from 'utils/db/types';
-import { PropType, defineComponent, toRaw } from 'vue';
+import { PropType, defineComponent } from 'vue';
 import ListCell from './ListCell.vue';
 
 export default defineComponent({
@@ -185,63 +183,21 @@ export default defineComponent({
       this.pageEnd = end;
     },
     setUpdateListeners() {
-      if (!this.schemaName) {
-        return;
+      if (this.schemaName) {
+        onListChange(fyo, this.schemaName, () => this.updateData());
       }
-
-      const listener = async () => {
-        await this.updateData();
-      };
-
-      if (fyo.schemaMap[this.schemaName]?.isSubmittable) {
-        fyo.doc.observer.on(`submit:${this.schemaName}`, listener);
-        fyo.doc.observer.on(`cancel:${this.schemaName}`, listener);
-      }
-
-      fyo.doc.observer.on(`sync:${this.schemaName}`, listener);
-      fyo.db.observer.on(`delete:${this.schemaName}`, listener);
-      fyo.doc.observer.on(`rename:${this.schemaName}`, listener);
     },
     async updateData(filters?: QueryFilter) {
-      if (filters !== undefined) this.activeFilters = cloneDeep(toRaw(filters));
-      const requestId = ++this.requestId;
-      const appliedFilters = mergeQueryFilters(
-        cloneDeep(toRaw(this.filters)),
-        cloneDeep(toRaw(this.activeFilters))
-      );
-      const query = cloneDeep(appliedFilters);
-      const isStatusFilter =
-        'status' in query && !fyo.db.fieldMap[this.schemaName]?.status;
-      const statusFilter = query.status;
-      if (isStatusFilter) {
-        delete query['status'];
-      }
-
-      const orderBy = ['created'];
-      if (fyo.db.fieldMap[this.schemaName]['date']) {
-        orderBy.unshift('date');
-      }
-
-      const tableData = await fyo.db.getAll(this.schemaName, {
-        fields: ['*'],
-        filters: query,
-        orderBy,
-      });
-
-      if (requestId !== this.requestId) return;
-      const rows = tableData.map((d) => ({
-        ...d,
-        schema: fyo.schemaMap[this.schemaName],
-      })) as RenderData[];
-      this.data = isStatusFilter
-        ? rows.filter((row) => matchesStatus(row, statusFilter))
-        : rows;
+      const loaded = await loadListData(fyo, this, filters);
+      if (!loaded) return;
+      this.data = loaded.rows;
+      const { requestId } = this;
       await this.$nextTick();
       if (requestId !== this.requestId) return;
       const paginator = this.$refs.paginator as
         InstanceType<typeof Paginator> | undefined;
       paginator?.setPageNo(filters !== undefined ? 1 : paginator.pageNo);
-      this.$emit('updatedData', appliedFilters);
+      this.$emit('updatedData', loaded.appliedFilters);
     },
     updateSelection(selectedItems: string[]) {
       this.selectedItems = selectedItems;

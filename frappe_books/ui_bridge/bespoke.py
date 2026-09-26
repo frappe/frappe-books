@@ -90,6 +90,21 @@ class BooksBespokeQueries:
 		)[0].quantity
 		return None if quantity is None else float(quantity)
 
+	def stock_quantities(self, location: str | None = None, items: list[str] | None = None):
+		"""Return the stock quantity of each item and batch."""
+		filters: dict[str, Any] = {}
+		if location:
+			filters["location"] = location
+		if items:
+			filters["item"] = ["in", items]
+		return frappe.get_list(
+			"Books Stock Ledger Entry",
+			filters=filters,
+			fields=["item", "batch", {"SUM": "quantity", "as": "quantity"}],
+			group_by="item, batch",
+			order_by="item, batch",
+		)
+
 	def return_balance(self, source_schema: str, name: str):
 		doc = frappe.get_doc(target_doctype(source_schema), name)
 		doc.check_permission("read")
@@ -206,6 +221,7 @@ _METHODS = {
 	"getIncomeAndExpenses": "income_and_expenses",
 	"getTotalCreditAndDebit": "total_credit_and_debit",
 	"getStockQuantity": "stock_quantity",
+	"getStockQuantities": "stock_quantities",
 	"getReturnBalanceItemsQty": "return_balance",
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",

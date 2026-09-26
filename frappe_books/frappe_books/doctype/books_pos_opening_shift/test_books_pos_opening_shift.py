@@ -89,7 +89,13 @@ def set_pos_accounts():
 	write_off = make_account("POS Write Off", root_type="Expense", account_type="Expense Account")
 	frappe.db.set_single_value(
 		"Books Pos Settings",
-		{"cash_account": counter.name, "write_off_account": write_off.name, "default_account": counter.name},
+		{
+			"cash_account": counter.name,
+			"write_off_account": write_off.name,
+			"default_account": counter.name,
+			"can_change_rate": 1,
+			"can_edit_discount": 1,
+		},
 	)
 	if not frappe.db.exists("Books Account", "Cash"):
 		frappe.get_doc(

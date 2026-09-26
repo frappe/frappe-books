@@ -12,7 +12,14 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchas
 	stock_value_change,
 )
 from frappe_books.inventory.stock import stock_quantity
-from frappe_books.tests.accounting import ledger_entries, make_account, make_invoice, make_item, make_party
+from frappe_books.tests.accounting import (
+	ledger_entries,
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	unique_name,
+)
 
 
 class IntegrationTestBooksShipment(IntegrationTestCase):
@@ -144,6 +151,70 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		shipment.cancel()
 		self.assertEqual(serial_statuses(serials), {"Active"})
 
+	def test_return_cannot_take_back_more_than_was_shipped(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=3, rate=10)
+		shipment = self._make_shipment(item, quantity=3, rate=25)
+		shipment.submit()
+		self._make_shipment(item, quantity=2, rate=25, return_against=shipment.name).submit()
+
+		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 3"):
+			self._make_shipment(item, quantity=2, rate=25, return_against=shipment.name)
+
+	def test_return_takes_back_only_the_shipped_batch_quantity(self):
+		item, _cogs, _stock = self._tracked_item(has_batch=1)
+		batches = [make_batch(item.name), make_batch(item.name)]
+		for batch in batches:
+			seed_stock(item.name, quantity=2, rate=10, batch=batch)
+		shipment = self._make_shipment(
+			item, quantity=2, rate=25, items=[self._row(item, 1, batch) for batch in batches]
+		)
+		shipment.submit()
+
+		with self.assertRaisesRegex(frappe.ValidationError, rf"\({batches[1]}\) exceed"):
+			self._make_shipment(
+				item,
+				quantity=2,
+				rate=25,
+				return_against=shipment.name,
+				items=[self._row(item, 2, batches[1])],
+			)
+
+	def test_return_takes_back_only_shipped_serial_numbers(self):
+		item, _cogs, _stock = self._tracked_item(has_serial_number=1)
+		serials = [unique_name("SER") for _ in range(3)]
+		seed_stock(item.name, quantity=3, rate=10, serial_number="\n".join(serials))
+		shipment = self._make_shipment(
+			item, quantity=2, rate=25, items=[self._row(item, 2, serial_number="\n".join(serials[:2]))]
+		)
+		shipment.submit()
+
+		with self.assertRaisesRegex(frappe.ValidationError, f"{serials[2]} is not in"):
+			self._return_serial(item, shipment, serials[2])
+		self._return_serial(item, shipment, serials[0]).submit()
+		with self.assertRaisesRegex(frappe.ValidationError, f"{serials[0]} is already returned"):
+			self._return_serial(item, shipment, serials[0])
+
+	def test_return_must_reference_a_submitted_original(self):
+		item, _cogs, _stock = self._tracked_item()
+		draft = self._make_shipment(item, quantity=1, rate=25)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "submitted original"):
+			self._make_shipment(item, quantity=1, rate=25, return_against=draft.name)
+
+	def _return_serial(self, item, shipment, serial_number):
+		return self._make_shipment(
+			item,
+			quantity=1,
+			rate=25,
+			return_against=shipment.name,
+			items=[self._row(item, 1, serial_number=serial_number)],
+		)
+
+	def _row(self, item, quantity, batch=None, serial_number=None):
+		row = {"item": item.name, "location": "Stores", "quantity": quantity, "rate": 25}
+		return {**row, "batch": batch, "serial_number": serial_number}
+
 	def _make_invoice(self, item, account):
 		receivable = make_account("Receivable", account_type="Receivable")
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", account.name)
@@ -157,14 +228,14 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		invoice.submit()
 		return invoice
 
-	def _tracked_item(self):
+	def _tracked_item(self, **values):
 		stock = make_account("Stock", account_type="Stock")
 		received = make_account("Received", root_type="Liability")
 		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		income = make_account("Income", root_type="Income")
 		expense = make_account("Expense", root_type="Expense")
 		set_inventory_accounts(stock.name, received.name, cogs.name)
-		return make_item(income.name, expense.name, track_item=1), cogs, stock
+		return make_item(income.name, expense.name, track_item=1, **values), cogs, stock
 
 	def _make_shipment(self, item, quantity, rate, **values):
 		receivable = make_account("Receivable", account_type="Receivable")
@@ -180,8 +251,8 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		).insert()
 
 
-def seed_stock(item, quantity, rate, serial_number=None):
-	row = {"item": item, "to_location": "Stores", "quantity": quantity, "rate": rate}
+def seed_stock(item, quantity, rate, serial_number=None, batch=None):
+	row = {"item": item, "to_location": "Stores", "quantity": quantity, "rate": rate, "batch": batch}
 	movement = frappe.get_doc(
 		{
 			"doctype": "Books Stock Movement",
@@ -191,6 +262,12 @@ def seed_stock(item, quantity, rate, serial_number=None):
 		}
 	).insert(ignore_permissions=True)
 	movement.submit()
+
+
+def make_batch(item):
+	return (
+		frappe.get_doc({"doctype": "Books Batch", "name": unique_name("BATCH"), "item": item}).insert().name
+	)
 
 
 def serial_statuses(serial_numbers):

@@ -21,6 +21,7 @@ from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 	def setUp(self):
 		self.counter = set_pos_accounts()
+		self.write_off = frappe.db.get_single_value("Books Pos Settings", "write_off_account")
 
 	def test_closing_reconciles_cash_and_closes_shift(self):
 		opening = open_shift(100)
@@ -34,6 +35,29 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
 		self.assertEqual(debits(entries, "Cash"), Decimal("100"))
 		self.assertEqual(credits(entries, self.counter), Decimal("100"))
+
+	def test_cash_shortage_is_written_off_from_counter(self):
+		closing = close_shift(open_shift(100), 90)
+
+		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
+		self.assertEqual(debits(entries, "Cash"), Decimal("90"))
+		self.assertEqual(debits(entries, self.write_off), Decimal("10"))
+		self.assertEqual(credits(entries, self.counter), Decimal("100"))
+
+	def test_cash_overage_is_written_back_from_counter(self):
+		closing = close_shift(open_shift(100), 110)
+
+		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
+		self.assertEqual(debits(entries, "Cash"), Decimal("110"))
+		self.assertEqual(credits(entries, self.counter), Decimal("100"))
+		self.assertEqual(credits(entries, self.write_off), Decimal("10"))
+
+	def test_cash_found_without_expected_cash_is_posted(self):
+		closing = close_shift(open_shift(0), 5)
+
+		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
+		self.assertEqual(debits(entries, "Cash"), Decimal("5"))
+		self.assertEqual(credits(entries, self.write_off), Decimal("5"))
 
 	def test_shift_cannot_be_closed_twice(self):
 		opening = open_shift(100)

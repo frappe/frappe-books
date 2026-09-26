@@ -4,9 +4,50 @@ from collections import defaultdict
 
 import frappe
 from frappe import _
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, currency_unit, sum_decimal
 from frappe_books.commerce import loyalty
+
+
+def map_return(invoice_doctype, invoice_name):
+	"""Return an unsaved credit note or purchase return for the whole invoice."""
+	item_doctype = frappe.get_meta(invoice_doctype).get_field("items").options
+	return get_mapped_doc(
+		invoice_doctype,
+		invoice_name,
+		{
+			invoice_doctype: {
+				"doctype": invoice_doctype,
+				"validation": {"docstatus": ["=", 1]},
+				"field_map": {"name": "return_against"},
+				"field_no_map": [
+					"date",
+					"quote",
+					"make_auto_payment",
+					"redeem_loyalty_points",
+					"loyalty_points",
+				],
+			},
+			item_doctype: {"doctype": item_doctype, "postprocess": _negate_quantities},
+			"Books Applied Coupon Codes": {"doctype": "Books Applied Coupon Codes", "ignore": True},
+		},
+		postprocess=_prepare_return,
+	)
+
+
+def _negate_quantities(source_row, target_row, source_parent):
+	target_row.quantity = -abs(as_decimal(source_row.quantity))
+	target_row.transfer_quantity = -abs(as_decimal(source_row.transfer_quantity))
+
+
+def _prepare_return(invoice, credit_note):
+	if invoice.return_against:
+		frappe.throw(_("Create a return from the original invoice."))
+	if invoice.is_fully_returned:
+		frappe.throw(_("This invoice is already fully returned."))
+	credit_note.date = now_datetime()
 
 
 def validate_return(invoice):

@@ -194,6 +194,7 @@
    "fieldname": "outstanding_amount",
    "fieldtype": "Currency",
    "label": "Outstanding Amount",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -218,7 +219,8 @@
    "fieldname": "is_fully_returned",
    "fieldtype": "Check",
    "hidden": 1,
-   "label": "Is Fully Returned"
+   "label": "Is Fully Returned",
+   "no_copy": 1
   },
   {
    "default": "Books Party",
@@ -235,7 +237,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.334894",
+ "modified": "2026-09-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Quote",

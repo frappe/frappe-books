@@ -3,6 +3,8 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import now_datetime
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded
@@ -127,3 +129,56 @@ def _post_writeoff(payment, posting):
 		posting.credit(writeoff_account, writeoff)
 	else:
 		posting.debit(writeoff_account, writeoff)
+
+
+def payment_type_for(invoice_doctype, is_return):
+	"""Money comes in for sales and for purchase returns, and goes out otherwise."""
+	return "Receive" if (invoice_doctype == "Books Sales Invoice") != is_return else "Pay"
+
+
+def map_invoice_payment(invoice_doctype, invoice_name):
+	"""Return an unsaved payment that settles the invoice's outstanding amount."""
+	return get_mapped_doc(
+		invoice_doctype,
+		invoice_name,
+		{
+			invoice_doctype: {
+				"doctype": "Books Payment",
+				"validation": {"docstatus": ["=", 1]},
+				"field_no_map": ["date", "number_series", "attachment"],
+			},
+			"Books Tax Summary": {"doctype": "Books Tax Summary", "ignore": True},
+		},
+		postprocess=_settle_invoice,
+	)
+
+
+def _settle_invoice(invoice, payment):
+	outstanding = abs(as_decimal(invoice.outstanding_amount))
+	if not outstanding:
+		frappe.throw(_("Invoice {0} has no outstanding amount.").format(invoice.name))
+	payment.update(
+		{
+			"date": now_datetime(),
+			"payment_type": payment_type_for(invoice.doctype, bool(invoice.return_against)),
+			"payment_method": "Cash",
+			"payment_account": _default_payment_account(invoice.doctype),
+			"amount": outstanding,
+		}
+	)
+	payment.append(
+		"payment_references",
+		{"reference_type": invoice.doctype, "reference_name": invoice.name, "amount": outstanding},
+	)
+
+
+def _default_payment_account(invoice_doctype):
+	fieldname = (
+		"sales_payment_account" if invoice_doctype == "Books Sales Invoice" else "purchase_payment_account"
+	)
+	account = frappe.db.get_single_value("Books Defaults", fieldname) or frappe.db.get_value(
+		"Books Payment Method", "Cash", "account"
+	)
+	if not account:
+		frappe.throw(_("Set a default payment account in Books Defaults."))
+	return account

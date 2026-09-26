@@ -1,7 +1,11 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import frappe
+
 from frappe_books.accounting.invoice import PostingInvoiceController
+from frappe_books.accounting.payment import map_invoice_payment
+from frappe_books.accounting.returns import map_return
 
 
 class BooksPurchaseInvoice(PostingInvoiceController):
@@ -51,3 +55,13 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "purchase"
+
+
+@frappe.whitelist()
+def make_payment(source_name: str):
+	return map_invoice_payment("Books Purchase Invoice", source_name)
+
+
+@frappe.whitelist()
+def make_return(source_name: str):
+	return map_return("Books Purchase Invoice", source_name)

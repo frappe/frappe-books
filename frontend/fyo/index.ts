@@ -20,7 +20,6 @@ import {
   type PermissionMap,
 } from './utils/permissions';
 import { t, T } from './utils/translation';
-import { ErrorLog } from './utils/types';
 import type { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
 
@@ -38,7 +37,6 @@ export class Fyo {
 
   _initialized = false;
 
-  errorLog: ErrorLog[] = [];
   onDocumentActionWarning?: (warning: DocumentActionWarning) => void;
   temp?: Record<string, unknown>;
 
@@ -69,14 +67,6 @@ export class Fyo {
       submit: this.t`${label} was submitted, but the view could not be fully updated. Reload the page before continuing.`,
     };
     const message = messages[action];
-    for (const error of errors) {
-      this.errorLog.push({
-        name: 'Document follow-up failed',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        more: { schemaName: doc.schemaName, name: doc.name, action },
-      });
-    }
     try {
       this.onDocumentActionWarning?.({ doc, action, message, errors });
     } catch (error) {

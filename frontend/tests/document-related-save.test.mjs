@@ -13,6 +13,8 @@ test('saving a converted party refreshes its linked lead without another write',
     fromLead: lead.name,
   });
   const writes = [];
+  const warnings = [];
+  fyo.onDocumentActionWarning = (warning) => warnings.push(warning);
   fyo.db.insert = async (schema, values) => {
     writes.push(schema);
     return values;
@@ -28,5 +30,5 @@ test('saving a converted party refreshes its linked lead without another write',
   assert.deepEqual(writes, ['Party']);
   assert.equal(party.dirty, false);
   assert.equal(lead.status, 'Converted');
-  assert.equal(fyo.errorLog.length, 0);
+  assert.deepEqual(warnings, []);
 });

@@ -31,7 +31,6 @@ for (const kind of ['master', 'transaction', 'singleton']) {
     assert.equal(warnings[0].action, 'save');
     assert.equal(warnings[0].errors.length, 4);
     assert.match(warnings[0].message, /was saved/);
-    assert.equal(fyo.errorLog.length, 4);
     assert.deepEqual(calls, ['once', 'next', 'list']);
     assert.equal(await fyo.doc.getDoc('Record', doc.name), doc);
 

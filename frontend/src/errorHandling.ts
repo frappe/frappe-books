@@ -30,11 +30,7 @@ export function getErrorLogObject(
     more.cause = cause;
   }
 
-  const errorLogObj = { name, stack, message, more };
-
-  fyo.errorLog.push(errorLogObj);
-
-  return errorLogObj;
+  return { name, stack, message, more };
 }
 
 export async function handleError(

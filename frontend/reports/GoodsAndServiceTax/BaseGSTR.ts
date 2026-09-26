@@ -183,35 +183,35 @@ export abstract class BaseGSTR extends Report {
       taxVal: entry.netTotal?.float ?? 0,
     };
 
-    for (const tax of entry.taxes ?? []) {
-      gstrRow.rate += tax.rate ?? 0;
-    }
-
     this.setTaxValuesOnGSTRRow(entry, gstrRow);
     return gstrRow;
   }
 
   setTaxValuesOnGSTRRow(entry: Invoice, gstrRow: GSTRRow) {
     for (const tax of entry.taxes ?? []) {
-      const rate = tax.rate ?? 0;
-      gstrRow.rate += rate;
-      const taxAmt = entry.netTotal!.percent(rate).float;
+      gstrRow.rate += tax.rate ?? 0;
+      const taxAmount = tax.amount?.float ?? 0;
 
       switch (tax.account) {
-        case 'IGST': {
-          gstrRow.igstAmt = taxAmt;
+        case 'IGST':
+          gstrRow.igstAmt = taxAmount;
           gstrRow.inState = false;
-        }
+          break;
         case 'CGST':
-          gstrRow.cgstAmt = taxAmt;
+          gstrRow.cgstAmt = taxAmount;
+          break;
         case 'SGST':
-          gstrRow.sgstAmt = taxAmt;
+          gstrRow.sgstAmt = taxAmount;
+          break;
         case 'Nil Rated':
           gstrRow.nilRated = true;
+          break;
         case 'Exempt':
           gstrRow.exempt = true;
+          break;
         case 'Non GST':
           gstrRow.nonGST = true;
+          break;
       }
     }
   }

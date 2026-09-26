@@ -400,6 +400,19 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(rows[0]["parent"], invoice_name)
 		self.assertEqual(rows[0]["parentSchemaName"], "SalesInvoice")
 
+	def test_child_list_pages_rows_in_the_query(self):
+		income = make_account("Bridge Paging Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Bridge Paging Expense", root_type="Expense", account_type="Expense Account")
+		conversions = [{"uom": uom, "conversion_factor": 2} for uom in ("Kg", "Gram", "Meter")]
+		item = make_item(income.name, expense.name, uom_conversions=conversions)
+
+		rows = self.bridge.get_all(
+			"UOMConversionItem",
+			{"fields": ["uom"], "filters": {"parent": item.name}, "orderBy": "idx", "limit": 1, "offset": 1},
+		)
+
+		self.assertEqual([row["uom"] for row in rows], ["Gram"])
+
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])

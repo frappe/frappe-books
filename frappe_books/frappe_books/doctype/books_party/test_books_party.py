@@ -74,3 +74,17 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 		party.email = "stale@example.com"
 		with self.assertRaises(frappe.TimestampMismatchError):
 			party.save()
+
+	def test_outstanding_nets_sales_against_purchases(self):
+		account = make_account("Both Account", account_type="Receivable")
+		income = make_account("Both Income", root_type="Income")
+		expense = make_account("Both Expense", root_type="Expense")
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		party = make_party(account.name, role="Both")
+		item = make_item(income.name, expense.name)
+		make_invoice("Books Sales Invoice", party.name, account.name, item.name, income.name).submit()
+		purchase = make_invoice("Books Purchase Invoice", party.name, account.name, item.name, expense.name)
+		purchase.items[0].quantity = 1
+		purchase.save().submit()
+
+		self.assertEqual(party.db_get("outstanding_amount"), 180 - 90)

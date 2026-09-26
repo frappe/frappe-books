@@ -59,24 +59,10 @@ def delete_stock_entries(transaction):
 	)
 
 
-def ensure_stock_batches(rows):
-	for row in rows:
-		item = row.get("item")
-		batch = row.get("batch")
-		if not item or not batch:
-			continue
-		_ensure_stock_batch(item, batch)
-
-
 def populate_stock_row(row):
 	if not row.item:
 		return
-	item = frappe.db.get_value(
-		"Books Item",
-		row.item,
-		["description", "rate", "unit", "has_batch", "batch_series"],
-		as_dict=True,
-	)
+	item = frappe.db.get_value("Books Item", row.item, ["description", "rate", "unit"], as_dict=True)
 	if not item:
 		return
 	for fieldname in ("description", "rate", "unit"):
@@ -85,26 +71,12 @@ def populate_stock_row(row):
 	if not row.transfer_unit:
 		row.transfer_unit = row.unit
 	row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
-	if item.has_batch:
-		_ensure_stock_batch(row.item, row.batch, has_batch=True)
 
 
 def parse_serial_numbers(value):
 	if not value:
 		return []
 	return [line.strip() for line in str(value).replace(",", "\n").splitlines() if line.strip()]
-
-
-def _ensure_stock_batch(item, batch, has_batch=None):
-	if not batch or frappe.db.exists("Books Batch", batch):
-		return
-	if has_batch is None:
-		has_batch = frappe.db.get_value("Books Item", item, "has_batch")
-	if has_batch:
-		frappe.get_doc({"doctype": "Books Batch", "item": item}).insert(
-			ignore_permissions=True,
-			set_name=batch,
-		)
 
 
 def _validate_transfer(transaction, transfer):

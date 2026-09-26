@@ -10,7 +10,6 @@ from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_stock_entries,
 	delete_stock_entries,
-	ensure_stock_batches,
 	populate_stock_row,
 	validate_transfer_rows,
 )
@@ -18,14 +17,7 @@ from frappe_books.inventory.valuation import transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
 
 
-class StockBatchPreparationMixin:
-	def _validate_links(self):
-		# Frappe checks links before before_validate, so create requested batches here.
-		ensure_stock_batches(self.get("items") or [])
-		return super()._validate_links()
-
-
-class StockMovementController(StockBatchPreparationMixin, SeriesNamingMixin, Document):
+class StockMovementController(SeriesNamingMixin, Document):
 	def before_validate(self):
 		for row in self.items:
 			populate_stock_row(row)
@@ -46,7 +38,7 @@ class StockMovementController(StockBatchPreparationMixin, SeriesNamingMixin, Doc
 		delete_stock_entries(self)
 
 
-class StockTransferController(StockBatchPreparationMixin, SeriesNamingMixin, Document):
+class StockTransferController(SeriesNamingMixin, Document):
 	transfer_type = "sales"
 
 	def before_validate(self):

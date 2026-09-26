@@ -6,7 +6,7 @@ import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
 from frappe_books.currency import currency_fraction_values, currency_precision
-from frappe_books.migrations import update_currency_display, update_currency_fractions
+from frappe_books.patches import currency_display
 from frappe_books.setup_service import _update_system_settings, ensure_currency
 
 CURRENCIES = (
@@ -57,7 +57,7 @@ class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 			ensure_currency(currency)
 			frappe.db.set_value("Books Currency", currency, {"fraction_units": 100, "smallest_value": 0})
 		for _ in range(2):
-			update_currency_fractions()
+			currency_display.update_currency_fractions()
 			for currency, _, units, minimum in CURRENCIES:
 				with self.subTest(currency=currency):
 					record = frappe.get_doc("Books Currency", currency)
@@ -70,7 +70,7 @@ class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 			{"doctype": "Books Currency", "name": "CUSTOM", "fraction_units": 1000, "smallest_value": 0.005}
 		).insert()
 		frappe.db.set_single_value("Books System Settings", {"currency": "BHD", "display_precision": 4})
-		update_currency_display()
+		currency_display.execute()
 		self.assertEqual(frappe.db.get_single_value("Books System Settings", "display_precision"), 4)
 		self.assertEqual(
 			Decimal(str(frappe.db.get_value("Books Currency", "CHF", "smallest_value"))), Decimal("0.05")

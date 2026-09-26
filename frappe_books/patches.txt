@@ -7,8 +7,7 @@ frappe_books.patches.standard_print_formats
 [post_model_sync]
 frappe_books.patches.normalize_ledger_dates
 frappe_books.patches.line_discounts
-frappe_books.patches.currency_display
-frappe_books.patches.currency_fraction_metadata
+frappe_books.patches.currency_display #2
 frappe_books.patches.submit_pos_shifts
 frappe_books.patches.store_stock_valuation
 frappe_books.patches.sync_numeric_name_series

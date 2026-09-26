@@ -4,8 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
-from frappe_books.migrations import normalize_ledger_dates
-from frappe_books.patches import sync_numeric_name_series
+from frappe_books.patches import normalize_ledger_dates, sync_numeric_name_series
 from frappe_books.tests.accounting import make_account
 
 
@@ -26,8 +25,8 @@ class IntegrationTestDatabaseCompatibility(IntegrationTestCase):
 	def test_ledger_date_repair_preserves_native_dates(self):
 		entry = self._make_ledger_entry("2026-09-01")
 
-		normalize_ledger_dates()
-		normalize_ledger_dates()
+		normalize_ledger_dates.execute()
+		normalize_ledger_dates.execute()
 
 		self.assertEqual(getdate(entry.reload().posting_date), getdate("2026-09-01"))
 
@@ -42,8 +41,8 @@ class IntegrationTestDatabaseCompatibility(IntegrationTestCase):
 			.where(ledger.name == entry.name)
 		).run()
 
-		normalize_ledger_dates()
-		normalize_ledger_dates()
+		normalize_ledger_dates.execute()
+		normalize_ledger_dates.execute()
 
 		stored = frappe.qb.from_(ledger).select(ledger.posting_date).where(ledger.name == entry.name).run()
 		self.assertEqual(str(stored[0][0]), "2026-09-01")

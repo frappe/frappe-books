@@ -9,6 +9,7 @@ from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, currency_unit, sum_decimal
 from frappe_books.commerce import loyalty
+from frappe_books.inventory.stock import parse_serial_numbers
 
 
 def map_return(invoice_doctype, invoice_name):
@@ -30,16 +31,11 @@ def map_return(invoice_doctype, invoice_name):
 					"loyalty_points",
 				],
 			},
-			item_doctype: {"doctype": item_doctype, "postprocess": _negate_quantities},
+			item_doctype: {"doctype": item_doctype},
 			"Books Applied Coupon Codes": {"doctype": "Books Applied Coupon Codes", "ignore": True},
 		},
 		postprocess=_prepare_return,
 	)
-
-
-def _negate_quantities(source_row, target_row, source_parent):
-	target_row.quantity = -abs(as_decimal(source_row.quantity))
-	target_row.transfer_quantity = -abs(as_decimal(source_row.transfer_quantity))
 
 
 def _prepare_return(invoice, credit_note):
@@ -48,6 +44,32 @@ def _prepare_return(invoice, credit_note):
 	if invoice.is_fully_returned:
 		frappe.throw(_("This invoice is already fully returned."))
 	credit_note.date = now_datetime()
+	_return_unreturned_rows(invoice, credit_note)
+
+
+def _return_unreturned_rows(invoice, credit_note):
+	"""Negate each row, limited to what earlier returns have not taken back."""
+	returned_rows = _submitted_returns(invoice)[1]
+	remaining = _batch_quantities(invoice.items)
+	for key, quantity in _batch_quantities(returned_rows).items():
+		remaining[key] -= quantity
+	returned_serials = {serial for row in returned_rows for serial in parse_serial_numbers(row.serial_number)}
+	rows = []
+	for row in credit_note.items:
+		key = (row.item, row.batch)
+		quantity = min(abs(as_decimal(row.quantity)), remaining[key])
+		remaining[key] -= quantity
+		if quantity > 0:
+			_negate_row(row, quantity, returned_serials)
+			rows.append(row)
+	credit_note.set("items", rows)
+
+
+def _negate_row(row, quantity, returned_serials):
+	row.quantity = -quantity
+	row.transfer_quantity = -quantity / as_decimal(row.unit_conversion_factor or 1)
+	serials = [serial for serial in parse_serial_numbers(row.serial_number) if serial not in returned_serials]
+	row.serial_number = "\n".join(serials) or None
 
 
 def validate_return(invoice):
@@ -115,7 +137,7 @@ def _submitted_returns(original, *, exclude=None):
 			"parentfield": "items",
 			"parent": ["in", [row.name for row in returns]],
 		},
-		fields=["item", "quantity"],
+		fields=["item", "batch", "quantity", "serial_number"],
 	)
 	return returns, rows
 
@@ -124,4 +146,11 @@ def _item_quantities(rows):
 	quantities = defaultdict(as_decimal)
 	for row in rows:
 		quantities[row.item] += abs(as_decimal(row.quantity))
+	return quantities
+
+
+def _batch_quantities(rows):
+	quantities = defaultdict(as_decimal)
+	for row in rows:
+		quantities[row.item, row.batch] += abs(as_decimal(row.quantity))
 	return quantities

@@ -12,23 +12,10 @@ from frappe_books.coa import (
 )
 from frappe_books.currency import currency_fraction_values, currency_precision
 from frappe_books.regional import ensure_regional_records
-from frappe_books.setup import ensure_default_records, ensure_number_series
-
-SERIES_DEFAULTS = {
-	"sales_invoice_number_series": "SINV-",
-	"purchase_invoice_number_series": "PINV-",
-	"journal_entry_number_series": "JV-",
-	"payment_number_series": "PAY-",
-	"stock_movement_number_series": "SMOV-",
-	"shipment_number_series": "SHPM-",
-	"purchase_receipt_number_series": "PREC-",
-	"sales_quote_number_series": "SQUOT-",
-}
+from frappe_books.setup import DEFAULT_NUMBER_SERIES
 
 
 def run_setup(wizard):
-	ensure_number_series()
-	ensure_default_records()
 	chart = load_chart(wizard.chart_of_accounts)
 	ensure_chart(chart)
 	ensure_regional_records(wizard.country)
@@ -172,7 +159,7 @@ def _update_defaults(bank_account, accounts):
 			"purchase_payment_account": bank_account,
 			"shipment_location": "Stores",
 			"purchase_receipt_location": "Stores",
-			**SERIES_DEFAULTS,
+			**{field: prefix for prefix, (_type, field) in DEFAULT_NUMBER_SERIES.items() if field},
 		}
 	)
 	defaults.save(ignore_permissions=True)

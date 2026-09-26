@@ -111,7 +111,7 @@ jinja = {"methods": ["frappe_books.printing.get_print_settings"]}
 # Installation
 # ------------
 
-after_install = "frappe_books.setup.after_install"
+after_install = "frappe_books.setup.bootstrap"
 
 # Keep required bootstrap data present after schema migrations.
 after_migrate = "frappe_books.setup.after_migrate"
@@ -218,7 +218,7 @@ scheduler_events = {
 # Testing
 # -------
 
-before_tests = "frappe_books.setup.before_tests"
+before_tests = "frappe_books.setup.bootstrap"
 
 # Extend DocType Class
 # ------------------------------

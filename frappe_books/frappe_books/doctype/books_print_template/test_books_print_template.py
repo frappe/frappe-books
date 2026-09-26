@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.setup import DEFAULT_PRINT_TEMPLATES, ensure_default_records
+from frappe_books.setup import DEFAULT_PRINT_TEMPLATES, bootstrap
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -15,7 +15,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 class IntegrationTestBooksPrintTemplate(IntegrationTestCase):
 	def test_default_templates_use_books_print_layouts(self):
-		ensure_default_records()
+		bootstrap()
 
 		for name in DEFAULT_PRINT_TEMPLATES:
 			template = frappe.get_doc("Books Print Template", name)
@@ -34,7 +34,7 @@ class IntegrationTestBooksPrintTemplate(IntegrationTestCase):
 		legacy_template = '<div class="books-print-template">{{ doc.name }}</div>'
 		frappe.db.set_value("Books Print Template", name, "template", legacy_template)
 
-		ensure_default_records()
+		bootstrap()
 
 		template = frappe.get_doc("Books Print Template", name)
 		self.assertNotEqual(template.template, legacy_template)

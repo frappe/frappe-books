@@ -24,60 +24,38 @@ DEFAULT_PRINT_TEMPLATE_FIELDS = {
 	"pos_print_template": "Business-POS - Sales Invoice",
 }
 PRINT_TEMPLATE_DIRECTORY = Path(__file__).with_name("data")
+# Prefix: (reference type, Books Defaults field that selects it)
 DEFAULT_NUMBER_SERIES = {
-	"JV-": "JournalEntry",
-	"PAY-": "Payment",
-	"PINV-": "PurchaseInvoice",
-	"PRLE-": "PricingRule",
-	"PREC-": "PurchaseReceipt",
-	"SHPM-": "Shipment",
-	"SINV-": "SalesInvoice",
-	"SMOV-": "StockMovement",
-	"SQUOT-": "SalesQuote",
+	"JV-": ("JournalEntry", "journal_entry_number_series"),
+	"PAY-": ("Payment", "payment_number_series"),
+	"PINV-": ("PurchaseInvoice", "purchase_invoice_number_series"),
+	"PRLE-": ("PricingRule", None),
+	"PREC-": ("PurchaseReceipt", "purchase_receipt_number_series"),
+	"SHPM-": ("Shipment", "shipment_number_series"),
+	"SINV-": ("SalesInvoice", "sales_invoice_number_series"),
+	"SMOV-": ("StockMovement", "stock_movement_number_series"),
+	"SQUOT-": ("SalesQuote", "sales_quote_number_series"),
 }
+DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
 
 
-def after_install():
-	ensure_number_series()
-	ensure_default_records()
-
-
-def before_tests():
-	ensure_number_series()
-	ensure_default_records()
-
-
-def after_migrate():
-	ensure_number_series()
-	ensure_default_records()
-	sync_all_custom_forms()
-
-
-def ensure_number_series():
-	"""Create the prefixes expected by transaction defaults on a fresh site."""
-	for prefix, reference_type in DEFAULT_NUMBER_SERIES.items():
-		if frappe.db.exists("Books Number Series", prefix):
-			continue
-		frappe.get_doc(
-			{
-				"doctype": "Books Number Series",
-				"name": prefix,
-				"start": DEFAULT_SERIES_START,
-				"pad_zeros": 4,
-				"reference_type": reference_type,
-				"current": DEFAULT_SERIES_START - 1,
-			}
-		).insert(ignore_permissions=True)
-
-
-def ensure_default_records():
-	for name, is_whole in (("Unit", 1), ("Kg", 0), ("Gram", 0), ("Meter", 0), ("Hour", 0), ("Day", 0)):
+def bootstrap():
+	"""Seed the records every Books site needs."""
+	for prefix, (reference_type, _field) in DEFAULT_NUMBER_SERIES.items():
+		values = {"start": DEFAULT_SERIES_START, "pad_zeros": 4, "reference_type": reference_type}
+		_insert_if_missing("Books Number Series", prefix, values)
+	for name, is_whole in DEFAULT_UOMS.items():
 		_insert_if_missing("Books Uom", name, {"is_whole": is_whole})
 	_insert_if_missing("Books Location", "Stores", {})
 	_insert_if_missing("Books Payment Method", "Cash", {"type": "Cash"})
 	for name, template_spec in DEFAULT_PRINT_TEMPLATES.items():
 		_sync_default_print_template(name, template_spec)
 	_sync_default_print_template_settings()
+
+
+def after_migrate():
+	bootstrap()
+	sync_all_custom_forms()
 
 
 def _sync_default_print_template_settings():

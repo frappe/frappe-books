@@ -7,7 +7,7 @@ from frappe.tests import IntegrationTestCase
 
 import frappe_books
 from frappe_books.hooks import app_icon_route, app_icon_title, app_icon_url
-from frappe_books.setup import DEFAULT_PRINT_TEMPLATE_FIELDS, ensure_default_records
+from frappe_books.setup import DEFAULT_PRINT_TEMPLATE_FIELDS, bootstrap
 
 POST_INSTALL_LINK_FIELDS = {
 	"Books Pos Settings": ("inventory", "cash_account", "write_off_account", "default_account"),
@@ -41,7 +41,7 @@ class IntegrationTestInstallation(IntegrationTestCase):
 					self.assertFalse(meta.get_field(fieldname).default)
 
 	def test_print_template_defaults_are_seeded_after_records(self):
-		ensure_default_records()
+		bootstrap()
 		settings = frappe.get_single("Books Defaults")
 
 		for fieldname, template_name in DEFAULT_PRINT_TEMPLATE_FIELDS.items():

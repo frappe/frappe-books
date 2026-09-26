@@ -86,7 +86,8 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Books Party",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "account",
@@ -280,7 +281,8 @@
    "fieldname": "return_against",
    "fieldtype": "Link",
    "label": "Return Against",
-   "options": "Books Sales Invoice"
+   "options": "Books Sales Invoice",
+   "search_index": 1
   },
   {
    "fieldname": "coupons_section_break_35",
@@ -364,7 +366,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-26 12:00:00.000000",
+ "modified": "2026-09-26 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",

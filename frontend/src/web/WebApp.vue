@@ -142,7 +142,7 @@ export default defineComponent({
       setDarkMode(this.darkMode);
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
-        await this.searcher.initializeKeywords();
+        this.searcher.initialize();
       }
       this.loading = false;
     },

@@ -24,6 +24,12 @@ export abstract class DatabaseBase {
 
   abstract count(schemaName: string, options: GetAllOptions): Promise<number>;
 
+  abstract search(
+    text: string,
+    fieldsBySchema: Record<string, string[]>,
+    limit: number
+  ): Promise<Record<string, UnknownMap[]>>;
+
   abstract getSingleValues(
     ...fieldnames: { fieldname: string; parent: string }[]
   ): Promise<{ fieldname: string; parent: string; value: unknown }[]>;

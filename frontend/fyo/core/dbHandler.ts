@@ -150,6 +150,19 @@ export class DatabaseHandler extends DatabaseBase {
     )) as number;
   }
 
+  async search(
+    text: string,
+    fieldsBySchema: Record<string, string[]>,
+    limit: number
+  ): Promise<Record<string, RawValueMap[]>> {
+    return (await this.#demux.call(
+      'search',
+      text,
+      fieldsBySchema,
+      limit
+    )) as Record<string, RawValueMap[]>;
+  }
+
   // Update
   async rename(
     schemaName: string,

@@ -5,20 +5,19 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 from frappe_books.migrations import normalize_ledger_dates
-from frappe_books.setup import ensure_numeric_name_series
+from frappe_books.patches import sync_numeric_name_series
 from frappe_books.tests.accounting import make_account
 
 
 class IntegrationTestDatabaseCompatibility(IntegrationTestCase):
 	def test_numeric_series_continues_after_large_legacy_names(self):
 		legacy_name = "2000000000"
-		frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Legacy enquiry"}).insert(
-			set_name=legacy_name
-		)
+		for name in (legacy_name, "legacy-hash-name"):
+			frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Legacy enquiry"}).insert(set_name=name)
 
-		ensure_numeric_name_series()
+		sync_numeric_name_series.execute()
 		first = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "New enquiry"}).insert()
-		ensure_numeric_name_series()
+		sync_numeric_name_series.execute()
 		second = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Next enquiry"}).insert()
 
 		self.assertGreater(int(first.name), int(legacy_name))

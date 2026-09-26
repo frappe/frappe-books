@@ -1051,7 +1051,7 @@ export abstract class Invoice extends Transactional {
       dependsOn: ['loyaltyPoints'],
     },
     baseGrandTotal: {
-      formula: () => (this.grandTotal as Money).mul(this.exchangeRate! ?? 1),
+      formula: () => (this.grandTotal as Money).mul(this.exchangeRate ?? 1),
       dependsOn: ['grandTotal', 'exchangeRate'],
     },
     outstandingAmount: {
@@ -1186,11 +1186,9 @@ export abstract class Invoice extends Transactional {
 
       return !this.autoStockTransferLocation;
     },
-    setDiscountAmount: () => true || !this.enableDiscounting,
-    discountAmount: () =>
-      true || !(this.enableDiscounting && !!this.setDiscountAmount),
-    discountPercent: () =>
-      true || !(this.enableDiscounting && !this.setDiscountAmount),
+    setDiscountAmount: () => true,
+    discountAmount: () => true,
+    discountPercent: () => true,
     discountAfterTax: () => !this.enableDiscounting,
     taxes: () => !this.taxes?.length,
     baseGrandTotal: () =>
@@ -1493,7 +1491,7 @@ export abstract class Invoice extends Transactional {
   }
 
   async beforeDelete(): Promise<void> {
-    await super.beforeCancel();
+    await super.beforeDelete();
     await this._validateStockTransferCancelled();
     await this._deleteCancelledStockTransfers();
   }

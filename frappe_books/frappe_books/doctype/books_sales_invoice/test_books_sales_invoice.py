@@ -14,6 +14,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_party,
 	make_tax,
+	unique_name,
 )
 
 
@@ -40,6 +41,18 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(sum(Decimal(str(row.debit or 0)) for row in entries), Decimal("218"))
 		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("218"))
 		self.assertEqual(Decimal(str(invoice.db_get("outstanding_amount"))), Decimal("198"))
+
+	def test_row_tax_defaults_to_the_item_group_tax(self):
+		group = frappe.get_doc(
+			{"doctype": "Books Item Group", "name": unique_name("Taxed Group"), "tax": self.tax.name}
+		).insert()
+		item = make_item(self.income.name, self.expense.name, item_group=group.name)
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
+		)
+
+		self.assertEqual(invoice.items[0].tax, self.tax.name)
+		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
 
 	def test_cancel_posts_reversals_and_clears_outstanding(self):
 		invoice = self._make_invoice()

@@ -3,6 +3,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.permissions import has_app_permission
 from frappe_books.www import books
 
 BOOKS_USER = "books-page-user@example.com"
@@ -25,6 +26,11 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 	def test_users_without_a_books_role_are_refused(self):
 		with self.set_user(DESK_USER):
 			self.assertRaises(frappe.PermissionError, books.get_context, frappe._dict())
+
+	def test_apps_screen_needs_a_books_role(self):
+		for user, allowed in ((BOOKS_USER, True), (DESK_USER, False)):
+			with self.subTest(user=user), self.set_user(user):
+				self.assertEqual(has_app_permission(), allowed)
 
 
 def _make_user(email, role):

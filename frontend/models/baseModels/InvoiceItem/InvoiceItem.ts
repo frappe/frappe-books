@@ -16,14 +16,8 @@ import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
 import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
-import { Item } from '../Item/Item';
-import { StockTransfer } from 'models/inventory/StockTransfer';
 import { getSuggestedBatchName } from 'models/inventory/helpers';
-import {
-  getRawStockLedgerEntries,
-  getStockLedgerEntries,
-  getStockBalanceEntries,
-} from 'reports/inventory/helpers';
+import { getPOSInventory } from 'models/inventory/posStock';
 import { QueryFilter } from 'utils/db/types';
 
 export abstract class InvoiceItem extends Doc {
@@ -302,40 +296,6 @@ export abstract class InvoiceItem extends Doc {
         await this.fyo.getValue('Item', this.item as string, 'hsnCode'),
       dependsOn: ['item'],
     },
-    stockNotTransferred: {
-      formula: async () => {
-        if (this.parentdoc?.isSubmitted) {
-          return;
-        }
-
-        const item = (await this.loadAndGetLink('item')) as Item;
-        if (!item.trackItem) {
-          return 0;
-        }
-
-        const { backReference, stockTransferSchemaName } = this.parentdoc ?? {};
-        if (
-          !backReference ||
-          !stockTransferSchemaName ||
-          typeof this.quantity !== 'number'
-        ) {
-          return this.quantity;
-        }
-
-        const refdoc = (await this.fyo.doc.getDoc(
-          stockTransferSchemaName,
-          backReference
-        )) as StockTransfer;
-
-        const transferred =
-          refdoc.items
-            ?.filter((i) => i.item === this.item)
-            .reduce((acc, i) => i.quantity ?? 0 + acc, 0) ?? 0;
-
-        return Math.max(0, this.quantity - transferred);
-      },
-      dependsOn: ['item', 'quantity'],
-    },
   };
 
   validations: ValidationMap = {
@@ -363,97 +323,50 @@ export abstract class InvoiceItem extends Doc {
     },
 
     qty: async (value: DocValue) => {
-      const requiredQuantity = Math.abs(value as number);
-
-      if (!this.item || requiredQuantity <= 0) {
-        return;
+      if (this.batch) {
+        await this.validateBatchQuantity(this.batch, value as number);
       }
-
-      if (!this.isSales) {
-        return;
-      }
-
-      if (!this.fyo.singles.InventorySettings?.enableBatches) {
-        return;
-      }
-
-      if (!this.batch) {
-        return;
-      }
-
-      await this.validateBatchQuantity(this.batch, requiredQuantity);
     },
 
     batch: async (value: DocValue) => {
-      if (!value || !this.item) {
-        return;
-      }
-
-      if (!this.isSales) {
-        return;
-      }
-
-      if (!this.fyo.singles.InventorySettings?.enableBatches) {
-        return;
-      }
-
-      const requiredQuantity = this.quantity ?? 0;
-
-      if (requiredQuantity > 0) {
-        await this.validateBatchQuantity(value as string, requiredQuantity);
-      } else if (requiredQuantity < 0) {
-        await this.validateBatchQuantity(
-          value as string,
-          Math.abs(requiredQuantity)
-        );
+      if (value) {
+        await this.validateBatchQuantity(value as string, this.quantity ?? 0);
       }
     },
   };
 
-  async validateBatchQuantity(
-    batchName: string,
-    requiredQuantity: number
-  ): Promise<void> {
-    let inventoryLocation: string | undefined;
-
-    if (this.location) {
-      inventoryLocation = this.location as string;
-    } else {
-      const posProfileName = this.fyo.singles.POSSettings?.posProfile;
-
-      if (posProfileName) {
-        const inventory = await this.fyo.getValue(
-          ModelNameEnum.POSProfile,
-          posProfileName as string,
-          'inventory'
-        );
-
-        inventoryLocation = inventory as string | undefined;
-      } else {
-        inventoryLocation = this.fyo.singles.POSSettings?.inventory;
-      }
+  /** Stock location a sale ships from: the POS location or the default. */
+  async getStockLocation(): Promise<string | undefined> {
+    if (this.parentdoc?.isPOS) {
+      return await getPOSInventory(this.fyo);
     }
 
-    const rawSLEs = await getRawStockLedgerEntries(this.fyo);
-    const computedSLEs = getStockLedgerEntries(rawSLEs);
+    return this.parentdoc?.autoStockTransferLocation ?? undefined;
+  }
 
-    const stockBalance = getStockBalanceEntries(computedSLEs, {
-      item: this.item!,
-      location: inventoryLocation,
-      batch: batchName,
-    });
+  async validateBatchQuantity(batch: string, quantity: number): Promise<void> {
+    if (
+      !this.item ||
+      !this.isSales ||
+      this.isReturn ||
+      !this.fyo.singles.InventorySettings?.enableBatches
+    ) {
+      return;
+    }
 
-    const availableQuantity = stockBalance.reduce(
-      (sum, entry) => sum + (entry.balanceQuantity || 0),
-      0
-    );
+    const available =
+      (await this.fyo.db.getStockQuantity(
+        this.item,
+        await this.getStockLocation(),
+        undefined,
+        undefined,
+        batch
+      )) ?? 0;
 
-    if (requiredQuantity > availableQuantity) {
+    if (quantity > available) {
       throw new ValidationError(
-        this.fyo.t`
-        Batch ${batchName} only has ${availableQuantity} quantity available
-        but ${requiredQuantity} is required
-      `
+        this.fyo
+          .t`Batch ${batch} only has ${available} quantity available but ${quantity} is required`
       );
     }
   }
@@ -501,88 +414,18 @@ export abstract class InvoiceItem extends Doc {
 
       return filters;
     },
-    batch: async (doc: Doc) => {
-      const hasBatch = !!(await doc.fyo.getValue(
-        ModelNameEnum.Item,
-        doc.item as string,
-        'hasBatch'
-      ));
-
-      if (!hasBatch) {
-        return { name: ['in', []] };
+    batch: async (doc: Doc): Promise<QueryFilter> => {
+      const item = doc.item as string;
+      if (!doc.isSales || doc.isReturn) {
+        return { item };
       }
 
-      let suggestedBatch: string | undefined;
-
-      if (!doc.isSales) {
-        suggestedBatch = await getSuggestedBatchName(
-          doc.fyo,
-          doc.item as string
-        );
-
-        if (suggestedBatch) {
-          await doc.set('batch', suggestedBatch);
-        }
-      }
-
-      try {
-        let inventoryLocation: string | undefined;
-
-        if (doc.location) {
-          inventoryLocation = doc.location as string;
-        } else {
-          const posProfileName = doc.fyo.singles.POSSettings?.posProfile;
-          if (posProfileName) {
-            const posProfile = await doc.fyo.doc.getDoc(
-              ModelNameEnum.POSProfile,
-              posProfileName as string
-            );
-            inventoryLocation = posProfile?.inventory as string | undefined;
-          } else {
-            inventoryLocation = doc.fyo.singles.POSSettings?.inventory;
-          }
-        }
-
-        const rawSLEs = await getRawStockLedgerEntries(doc.fyo);
-        const computedSLEs = getStockLedgerEntries(rawSLEs);
-
-        const stockBalance = getStockBalanceEntries(computedSLEs, {
-          item: doc.item as string,
-          location: inventoryLocation,
-        });
-
-        const batchesWithStock = stockBalance
-          .filter((entry) => entry.batch && entry.balanceQuantity > 0)
-          .map((entry) => entry.batch);
-
-        const allBatches = new Set<string>(batchesWithStock);
-        if (suggestedBatch) {
-          allBatches.add(suggestedBatch);
-        }
-
-        const finalBatchList = Array.from(allBatches);
-
-        return {
-          name: ['in', finalBatchList],
-        };
-      } catch (error) {
-        const batches = await doc.fyo.db.getAll(ModelNameEnum.Batch, {
-          fields: ['name'],
-          filters: { item: doc.item as string },
-        });
-        const batchNames = batches.map((b) => b.name) as string[];
-
-        const allBatches = new Set<string>(batchNames);
-        if (suggestedBatch) {
-          allBatches.add(suggestedBatch);
-        }
-
-        const finalBatchList = Array.from(allBatches);
-
-        return {
-          name: ['in', finalBatchList],
-        };
-      }
+      const location = await (doc as InvoiceItem).getStockLocation();
+      const rows = await doc.fyo.db.getStockQuantities(location, [item]);
+      const batches = rows
+        .filter((row) => row.batch && row.quantity > 0)
+        .map((row) => row.batch as string);
+      return { name: ['in', batches] };
     },
     transferUnit: async (doc: Doc) => {
       const conversionItems = await doc.fyo.db.getAll(

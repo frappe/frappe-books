@@ -6,6 +6,7 @@ from frappe.model.document import Document
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.inventory.invoice_balance import update_invoice_balance, validate_invoice_balance
+from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_stock_entries,
@@ -52,6 +53,8 @@ class StockTransferController(SeriesNamingMixin, Document):
 
 	def validate(self):
 		validate_transfer_rows(transfer_rows(self))
+		if self.return_against:
+			validate_transfer_return(self)
 
 	def before_submit(self):
 		validate_stock_available(transfer_rows(self))

@@ -62,6 +62,23 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		self.assertEqual(stock_credit, Decimal("10"))
 		self.assertEqual(stock_value_change(purchase_return), -stock_credit)
 
+	def test_purchase_return_cannot_exceed_the_received_quantity(self):
+		set_inventory_accounts(
+			make_account("Stock", account_type="Stock").name,
+			make_account("Received", root_type="Liability").name,
+			make_account("COGS", root_type="Expense").name,
+		)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		make_receipt(item.name, quantity=5, rate=10)
+		receipt = make_receipt(item.name, quantity=2, rate=10)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2"):
+			make_receipt(item.name, quantity=3, rate=10, return_against=receipt.name)
+
 
 def make_receipt(item, quantity, rate, return_against=None):
 	payable = make_account("Payable", root_type="Liability", account_type="Payable")

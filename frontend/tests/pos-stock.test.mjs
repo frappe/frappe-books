@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   getItemQtyMap,
+  validateQty,
   getPOSInventory,
   getPOSBatchQuantity,
   validatePOSStock,
@@ -73,6 +74,28 @@ test('fractional sales and returns do not produce false stock errors', async () 
   invoice.returnAgainst = 'Original Invoice';
   invoice.items[0].quantity = -2;
   await validateSinv(invoice, {});
+});
+
+test('a row may not ask for more of its batch than the POS warehouse has', async () => {
+  const fyo = makeFyo();
+  const rows = [
+    { item, batch, quantity: 3 },
+    { item, batch, quantity: 1 },
+  ];
+  await validateQty({ fyo }, rows[0], rows);
+  rows[1].quantity = 2;
+  await assert.rejects(
+    validateQty({ fyo }, rows[0], rows),
+    /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
+  );
+});
+
+test('a batched row needs a batch and untracked items need no stock', async () => {
+  const fyo = makeFyo();
+  const row = { item, quantity: 999 };
+  await assert.rejects(validateQty({ fyo }, row, [row]), /select a batch/);
+  fyo.getValue = async () => false;
+  await validateQty({ fyo }, row, [row]);
 });
 
 for (const component of [
@@ -159,7 +182,11 @@ function makeFyo() {
     doc: { getDoc: async () => ({ inventory }) },
     getValue: async () => true,
     db: {
-      getAllRaw: async () => ledger,
+      getStockQuantities: async (location, items) =>
+        ledger
+          .filter((row) => !location || row.location === location)
+          .filter((row) => !items || items.includes(row.item))
+          .map(({ item, batch, quantity }) => ({ item, batch, quantity })),
       getStockQuantity: async (name, location, _from, _to, selectedBatch) =>
         ledger
           .filter((row) =>

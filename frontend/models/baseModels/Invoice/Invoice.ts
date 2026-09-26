@@ -18,7 +18,7 @@ import {
   getItemVisibility,
 } from 'models/helpers';
 import { StockTransfer } from 'models/inventory/StockTransfer';
-import { validateBatch } from 'models/inventory/helpers';
+import { createMissingBatches } from 'models/inventory/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
@@ -140,7 +140,7 @@ export abstract class Invoice extends Transactional {
   async validate() {
     await super.validate();
     if (!this.isQuote) {
-      await validateBatch(this);
+      await createMissingBatches(this);
     }
   }
 

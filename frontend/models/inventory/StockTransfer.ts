@@ -1,4 +1,3 @@
-import { t } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
@@ -8,7 +7,6 @@ import {
   FormulaMap,
   HiddenMap,
 } from 'fyo/model/types';
-import { ValidationError } from 'fyo/utils/errors';
 import { Defaults } from 'models/baseModels/Defaults/Defaults';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { addItem, getNumberSeries } from 'models/helpers';
@@ -16,17 +14,9 @@ import { getReturnItems } from 'models/returnItems';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { TargetField } from 'schemas/types';
-import { SerialNumber } from './SerialNumber';
 import { StockTransferItem } from './StockTransferItem';
 import { Transfer } from './Transfer';
-import {
-  canValidateSerialNumber,
-  getSerialNumberFromDoc,
-  updateSerialNumbers,
-  validateBatch,
-  validateSerialNumber,
-  generateSerialNumbersForItem,
-} from './helpers';
+import { createMissingBatches } from './helpers';
 
 export abstract class StockTransfer extends Transfer {
   name?: string;
@@ -106,165 +96,9 @@ export abstract class StockTransfer extends Transfer {
     }),
   };
 
-  override _getTransferDetails() {
-    return (this.items ?? []).map((row) => {
-      let fromLocation = undefined;
-      let toLocation = undefined;
-
-      if (this.isSales) {
-        fromLocation = row.location;
-      } else {
-        toLocation = row.location;
-      }
-
-      return {
-        item: row.item!,
-        rate: row.rate!,
-        quantity: row.quantity!,
-        batch: row.batch!,
-        serialNumber: row.serialNumber!,
-        isReturn: row.isReturn,
-        fromLocation,
-        toLocation,
-      };
-    });
-  }
-
   override async validate(): Promise<void> {
     await super.validate();
-    await validateBatch(this);
-    await validateSerialNumber(this);
-    await validateSerialNumberStatus(this);
-    await this._validateHasReturnDocs();
-  }
-
-  async afterSubmit() {
-    await super.afterSubmit();
-    await updateSerialNumbers(this, false, this.isReturn);
-    await this._updateBackReference();
-    await this._updateItemsReturned();
-  }
-
-  async afterCancel(): Promise<void> {
-    await super.afterCancel();
-    await updateSerialNumbers(this, true, this.isReturn);
-    await this._updateBackReference();
-    await this._updateItemsReturned();
-  }
-
-  async _updateBackReference() {
-    if (!this.isCancelled && !this.isSubmitted) {
-      return;
-    }
-
-    if (!this.backReference) {
-      return;
-    }
-
-    const schemaName = this.isSales
-      ? ModelNameEnum.SalesInvoice
-      : ModelNameEnum.PurchaseInvoice;
-
-    const invoice = (await this.fyo.doc.getDoc(
-      schemaName,
-      this.backReference
-    )) as Invoice;
-    const transferMap = this._getTransferMap();
-
-    for (const row of invoice.items ?? []) {
-      const item = row.item!;
-      const quantity = row.quantity!;
-      const notTransferred = (row.stockNotTransferred as number) ?? 0;
-
-      const transferred = transferMap[item];
-      if (
-        typeof transferred !== 'number' ||
-        typeof notTransferred !== 'number'
-      ) {
-        continue;
-      }
-
-      if (this.isCancelled) {
-        await row.set(
-          'stockNotTransferred',
-          Math.min(notTransferred + transferred, quantity)
-        );
-        transferMap[item] = Math.max(
-          transferred + notTransferred - quantity,
-          0
-        );
-      } else {
-        await row.set(
-          'stockNotTransferred',
-          Math.max(notTransferred - transferred, 0)
-        );
-        transferMap[item] = Math.max(transferred - notTransferred, 0);
-      }
-    }
-
-    const notTransferred = invoice.getStockNotTransferred();
-    await invoice.setAndSync('stockNotTransferred', notTransferred);
-  }
-
-  async _updateItemsReturned() {
-    if (!this.returnAgainst) {
-      return;
-    }
-
-    const linkedReference = await this.loadAndGetLink('returnAgainst');
-    if (!linkedReference) {
-      return;
-    }
-
-    const referenceDoc = await this.fyo.doc.getDoc(
-      this.schemaName,
-      linkedReference.name
-    );
-
-    const isReturned = this.isSubmitted;
-    await referenceDoc.setAndSync({ isReturned });
-  }
-
-  async _validateHasReturnDocs() {
-    if (!this.name || !this.isCancelled) {
-      return;
-    }
-
-    const returnDocs = await this.fyo.db.getAll(this.schemaName, {
-      filters: { returnAgainst: this.name },
-    });
-
-    const hasReturnDocs = !!returnDocs.length;
-    if (!hasReturnDocs) {
-      return;
-    }
-
-    const returnDocNames = returnDocs.map((doc) => doc.name).join(', ');
-    const label = this.fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
-
-    throw new ValidationError(
-      t`Cannot cancel ${this.schema.label} ${this.name} because of the following ${label}: ${returnDocNames}`
-    );
-  }
-
-  _getTransferMap() {
-    return (this.items ?? []).reduce(
-      (acc, item) => {
-        if (!item.item) {
-          return acc;
-        }
-
-        if (!item.quantity) {
-          return acc;
-        }
-
-        acc[item.item] ??= 0;
-        acc[item.item] += item.quantity;
-
-        return acc;
-      },
-      {} as Record<string, number>
-    );
+    await createMissingBatches(this);
   }
 
   override duplicate(): Doc {
@@ -314,32 +148,6 @@ export abstract class StockTransfer extends Transfer {
     await this.set('terms', stDoc.terms);
     await this.set('date', stDoc.date);
     await this.set('items', stDoc.items);
-
-    if (this.items) {
-      for (const item of this.items) {
-        if (!item.item || !item.quantity) {
-          continue;
-        }
-
-        const hasSerialNumber = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          item.item,
-          'hasSerialNumber'
-        );
-
-        if (hasSerialNumber) {
-          const serialNumbers = await generateSerialNumbersForItem(
-            this.fyo,
-            item.item,
-            Math.abs(item.quantity)
-          );
-
-          if (serialNumbers) {
-            await item.set('serialNumber', serialNumbers);
-          }
-        }
-      }
-    }
   }
 
   async getInvoice(): Promise<Invoice | null> {
@@ -347,61 +155,42 @@ export abstract class StockTransfer extends Transfer {
       return null;
     }
 
-    const schemaName = this.invoiceSchemaName;
-
-    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
-    let terms;
-    let numberSeries;
-    if (this.isSales) {
-      terms = defaults.salesInvoiceTerms ?? '';
-      numberSeries = defaults.salesInvoiceNumberSeries ?? undefined;
-    } else {
-      terms = defaults.purchaseInvoiceTerms ?? '';
-      numberSeries = defaults.purchaseInvoiceNumberSeries ?? undefined;
-    }
-
-    const data = {
+    const invoice = this.fyo.doc.getNewDoc(this.invoiceSchemaName, {
       party: this.party,
       date: new Date().toISOString(),
-      terms,
-      numberSeries,
+      ...this.getInvoiceDefaults(),
       backReference: this.name,
-    };
-
-    const invoice = this.fyo.doc.getNewDoc(schemaName, data) as Invoice;
+    }) as Invoice;
     for (const row of this.items ?? []) {
-      if (!row.item) {
-        continue;
+      if (row.item && row.quantity) {
+        await invoice.append('items', {
+          item: row.item,
+          quantity: row.quantity,
+          unit: row.unit,
+          rate: row.rate ?? this.fyo.pesa(0),
+          batch: row.batch || null,
+          hsnCode: row.hsnCode,
+          description: row.description,
+        });
       }
-
-      const item = row.item;
-      const unit = row.unit;
-      const quantity = row.quantity;
-      const batch = row.batch || null;
-      const rate = row.rate ?? this.fyo.pesa(0);
-      const description = row.description;
-      const hsnCode = row.hsnCode;
-
-      if (!quantity) {
-        continue;
-      }
-
-      await invoice.append('items', {
-        item,
-        quantity,
-        unit,
-        rate,
-        batch,
-        hsnCode,
-        description,
-      });
     }
 
-    if (!invoice.items?.length) {
-      return null;
+    return invoice.items?.length ? invoice : null;
+  }
+
+  getInvoiceDefaults() {
+    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
+    if (this.isSales) {
+      return {
+        terms: defaults.salesInvoiceTerms ?? '',
+        numberSeries: defaults.salesInvoiceNumberSeries ?? undefined,
+      };
     }
 
-    return invoice;
+    return {
+      terms: defaults.purchaseInvoiceTerms ?? '',
+      numberSeries: defaults.purchaseInvoiceNumberSeries ?? undefined,
+    };
   }
 
   async getReturnDoc(): Promise<StockTransfer | undefined> {
@@ -436,50 +225,5 @@ export abstract class StockTransfer extends Transfer {
 
     await newReturnDoc.runFormulas();
     return newReturnDoc;
-  }
-}
-
-async function validateSerialNumberStatus(doc: StockTransfer) {
-  if (doc.isCancelled) {
-    return;
-  }
-
-  for (const { serialNumber, item } of getSerialNumberFromDoc(doc)) {
-    const cannotValidate = !(await canValidateSerialNumber(item, serialNumber));
-    if (cannotValidate) {
-      continue;
-    }
-
-    const snDoc = await doc.fyo.doc.getDoc(
-      ModelNameEnum.SerialNumber,
-      serialNumber
-    );
-
-    if (!(snDoc instanceof SerialNumber)) {
-      continue;
-    }
-
-    const status = snDoc.status ?? 'Inactive';
-    const isSubmitted = !!doc.isSubmitted;
-    const isReturn = !!doc.returnAgainst;
-
-    if (isSubmitted || isReturn) {
-      return;
-    }
-
-    if (
-      doc.schemaName === ModelNameEnum.PurchaseReceipt &&
-      status !== 'Inactive'
-    ) {
-      throw new ValidationError(
-        t`Serial Number ${serialNumber} is not Inactive`
-      );
-    }
-
-    if (doc.schemaName === ModelNameEnum.Shipment && status !== 'Active') {
-      throw new ValidationError(
-        t`Serial Number ${serialNumber} is not Active.`
-      );
-    }
   }
 }

@@ -48,17 +48,16 @@ def validate_invoice_balance(transfer):
 
 def update_invoice_balance(transfer):
 	"""Store what the transfer's invoice still has to transfer after a submit or cancel."""
-	if not transfer.back_reference:
-		return
-	invoice = _invoice(transfer)
+	if transfer.back_reference:
+		store_pending_quantities(_invoice(transfer))
+
+
+def store_pending_quantities(invoice):
+	"""Store what the invoice and each of its rows still have to transfer."""
 	pending = pending_quantities(invoice)
 	for row in invoice.items:
-		frappe.db.set_value(
-			row.doctype, row.name, "stock_not_transferred", pending.get(row.name, 0), update_modified=False
-		)
-	frappe.db.set_value(
-		invoice.doctype, invoice.name, "stock_not_transferred", sum(pending.values()), update_modified=False
-	)
+		row.db_set("stock_not_transferred", pending.get(row.name, 0), update_modified=False)
+	invoice.db_set("stock_not_transferred", sum(pending.values()), update_modified=False)
 
 
 def _invoice(transfer):

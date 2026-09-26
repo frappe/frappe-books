@@ -110,6 +110,51 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "not available", receipt.cancel)
 
+	def test_batch_is_rejected_for_an_item_without_batches(self):
+		batch = frappe.get_doc(
+			{"doctype": "Books Batch", "name": unique_name("BATCH"), "item": self.item.name}
+		).insert()
+		receipt = frappe.get_doc(
+			movement_values(
+				"MaterialReceipt",
+				[
+					{
+						"item": self.item.name,
+						"to_location": "Stores",
+						"quantity": 1,
+						"rate": 5,
+						"batch": batch.name,
+					}
+				],
+			)
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "does not use batches", receipt.insert)
+
+	def test_serial_numbers_are_rejected_for_an_item_without_them(self):
+		row = {"item": self.item.name, "to_location": "Stores", "quantity": 2, "rate": 5}
+		receipt = frappe.get_doc(movement_values("MaterialReceipt", [{**row, "serial_number": "S1"}]))
+
+		self.assertRaisesRegex(frappe.ValidationError, "does not use serial numbers", receipt.insert)
+
+	def test_serial_number_of_another_item_is_rejected(self):
+		serial_number = unique_name("SER")
+		self._receive_serial(self._serial_item(), serial_number)
+		row = {"item": self._serial_item(), "to_location": "Stores", "quantity": 1, "rate": 5}
+		receipt = frappe.get_doc(
+			movement_values("MaterialReceipt", [{**row, "serial_number": serial_number}])
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "belongs to another item", receipt.insert)
+
+	def test_serial_number_in_stock_cannot_be_received_again(self):
+		item, serial_number = self._serial_item(), unique_name("SER")
+		self._receive_serial(item, serial_number)
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, "already in stock", self._receive_serial, item, serial_number
+		)
+
 	def _receive_serial(self, item, serial_number):
 		receipt = make_movement(
 			"MaterialReceipt",

@@ -30,7 +30,7 @@ await build({
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
-      export { getItemQtyMap, getMappedDoc } from './models/helpers';
+      export { getItemQtyMap, getMappedDoc, validateQty } from './models/helpers';
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export { validateSinv } from './src/utils/pos';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
@@ -40,6 +40,12 @@ await build({
       export { call } from './src/web/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
+      export {
+        createMissingBatches,
+        generateSerialNumbersForItem,
+        getExistingActiveSerialNumbersForItem,
+        getSuggestedBatchName,
+      } from './models/inventory/helpers';
       export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { Importer } from './src/importer';
@@ -90,6 +96,7 @@ export const {
   mergeQueryFilters,
   getItemQtyMap,
   getMappedDoc,
+  validateQty,
   getPOSInventory,
   getPOSBatchQuantity,
   validatePOSStock,
@@ -101,6 +108,10 @@ export const {
   call,
   errors,
   getInsufficientItems,
+  createMissingBatches,
+  generateSerialNumbersForItem,
+  getExistingActiveSerialNumbersForItem,
+  getSuggestedBatchName,
   getAmountInWords,
   generateCSV,
   parseCSV,
@@ -112,9 +123,11 @@ export async function makeFyo() {
     getSchemaMap() {
       return getSchemas('-', []);
     }
-    call(method) {
+    call(method, ...args) {
       if (method === 'exists') return false;
       if (['getAll', 'getAllRaw'].includes(method)) return [];
+      // Invoices preview their totals once edits pause; echo the values back.
+      if (method === 'preview') return args[1];
       throw new Error(`Unexpected database call: ${method}`);
     }
   }

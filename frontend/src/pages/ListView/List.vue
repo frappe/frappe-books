@@ -195,7 +195,7 @@ export default defineComponent({
 
       if (fyo.schemaMap[this.schemaName]?.isSubmittable) {
         fyo.doc.observer.on(`submit:${this.schemaName}`, listener);
-        fyo.doc.observer.on(`revert:${this.schemaName}`, listener);
+        fyo.doc.observer.on(`cancel:${this.schemaName}`, listener);
       }
 
       fyo.doc.observer.on(`sync:${this.schemaName}`, listener);

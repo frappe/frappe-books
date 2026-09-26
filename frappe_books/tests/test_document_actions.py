@@ -5,7 +5,9 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.document_actions import make_payment, make_return, make_sales_invoice
+from frappe_books.accounting.payment import map_invoice_payment
+from frappe_books.accounting.returns import map_return
+from frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote import make_sales_invoice
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
 
 
@@ -31,12 +33,12 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		).insert()
 		quote.submit()
 
-		invoice = frappe.get_doc(make_sales_invoice(quote.name)).insert()
+		invoice = make_sales_invoice(quote.name).insert()
 		self.assertEqual(invoice.quote, quote.name)
 		self.assertEqual(invoice.account, self.receivable.name)
 		invoice.submit()
 
-		payment = frappe.get_doc(make_payment(invoice.doctype, invoice.name))
+		payment = map_invoice_payment(invoice.doctype, invoice.name)
 		self.assertEqual(payment.payment_type, "Receive")
 		self.assertEqual(Decimal(str(payment.amount)), Decimal("150"))
 		self.assertEqual(payment.payment_references[0].reference_name, invoice.name)
@@ -53,16 +55,16 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		invoice.save()
 		invoice.submit()
 
-		credit_note = frappe.get_doc(make_return(invoice.doctype, invoice.name)).insert()
+		credit_note = map_return(invoice.doctype, invoice.name).insert()
 		self.assertEqual(Decimal(str(credit_note.items[0].quantity)), Decimal("-2"))
 		credit_note.submit()
 		self.assertEqual(invoice.db_get("is_fully_returned"), 1)
 		self.assertEqual(Decimal(str(credit_note.db_get("outstanding_amount"))), Decimal("-200"))
 
 		with self.assertRaises(frappe.ValidationError):
-			make_return(invoice.doctype, invoice.name)
+			map_return(invoice.doctype, invoice.name)
 
-		refund = frappe.get_doc(make_payment(credit_note.doctype, credit_note.name))
+		refund = map_invoice_payment(credit_note.doctype, credit_note.name)
 		self.assertEqual(refund.payment_type, "Pay")
 		refund.insert().submit()
 		self.assertEqual(credit_note.db_get("outstanding_amount"), 0)
@@ -83,13 +85,13 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				invoice = make_invoice(doctype, party, account, self.item.name, item_account)
 				invoice.items[0].item_discount_percent = 0
 				invoice.save().submit()
-				partial = frappe.get_doc(make_return(doctype, invoice.name))
+				partial = map_return(doctype, invoice.name)
 				partial.items[0].quantity = -1
 				partial.insert().submit()
 				self.assertEqual(invoice.db_get("is_returned"), 1)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
-				remaining = frappe.get_doc(make_return(doctype, invoice.name))
+				remaining = map_return(doctype, invoice.name)
 				remaining.items[0].quantity = -1
 				remaining.insert().submit()
 				self.assertEqual(invoice.db_get("is_fully_returned"), 1)
@@ -99,3 +101,20 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				partial.cancel()
 				self.assertEqual(invoice.db_get("is_returned"), 0)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
+
+	def test_return_keeps_the_invoice_discounts(self):
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			discount_percent=5,
+		)
+		invoice.submit()
+
+		credit_note = map_return(invoice.doctype, invoice.name).insert()
+		self.assertEqual(credit_note.grand_total, -invoice.grand_total)
+		self.assertEqual(credit_note.return_against, invoice.name)
+		self.assertFalse(credit_note.is_returned)

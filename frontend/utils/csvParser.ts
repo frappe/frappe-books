@@ -121,24 +121,18 @@ function getFormattedItem(item: unknown): string {
 }
 
 function formatStringToCSV(item: string): string {
-  let shouldDq = false;
-  if (item.match(/^".*"$/)) {
-    shouldDq = true;
-    item = item.slice(1, -1);
+  if (isFormula(item)) {
+    item = `'${item}`;
   }
 
-  if (item.match(/"/)) {
-    shouldDq = true;
-    item = item.replaceAll('"', '""');
+  if (!/[",\s]/.test(item)) {
+    return item;
   }
 
-  if (item.match(/,|\s/)) {
-    shouldDq = true;
-  }
+  return `"${item.replaceAll('"', '""')}"`;
+}
 
-  if (shouldDq) {
-    return '"' + item + '"';
-  }
-
-  return item;
+/** Text a spreadsheet would run as a formula; numbers are left alone. */
+function isFormula(item: string): boolean {
+  return /^[=+\-@\t\r]/.test(item) && !Number.isFinite(Number(item));
 }

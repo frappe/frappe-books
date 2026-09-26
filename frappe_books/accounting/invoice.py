@@ -75,6 +75,25 @@ class PostingInvoiceController(InvoiceController):
 
 	def on_trash(self):
 		delete_entries(self)
+		self.delete_cancelled_follow_ups()
+
+	def delete_cancelled_follow_ups(self):
+		"""Delete the cancelled stock transfers and payments made for this invoice, with the user's rights."""
+		transfer_doctype = "Books Shipment" if self.transaction_type == "sales" else "Books Purchase Receipt"
+		transfers = frappe.get_all(
+			transfer_doctype, filters={"back_reference": self.name, "docstatus": 2}, pluck="name"
+		)
+		if self.back_reference in transfers:
+			# The link back to the transfer would block deleting it.
+			self.db_set("back_reference", None, update_modified=False)
+		payments = frappe.get_all(
+			"Books Payment For",
+			filters={"reference_type": self.doctype, "reference_name": self.name, "docstatus": 2},
+			pluck="parent",
+		)
+		for doctype, names in ((transfer_doctype, transfers), ("Books Payment", set(payments))):
+			for name in names:
+				frappe.delete_doc(doctype, name)
 
 
 def calculate_invoice(invoice):

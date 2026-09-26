@@ -29,7 +29,9 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 	def test_quote_to_invoice_and_invoice_to_payment(self):
 		quote = self._submitted_quote()
-		invoice = make_sales_invoice(quote.name).insert()
+		invoice = make_sales_invoice(quote.name)
+		self.assertEqual((invoice.grand_total, invoice.outstanding_amount), (150, 150))
+		invoice.insert()
 		self.assertEqual(invoice.quote, quote.name)
 		self.assertEqual(invoice.account, self.receivable.name)
 		invoice.submit()
@@ -155,7 +157,9 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		)
 		invoice.submit()
 
-		credit_note = map_return(invoice.doctype, invoice.name).insert()
+		credit_note = map_return(invoice.doctype, invoice.name)
+		self.assertEqual(credit_note.grand_total, -invoice.grand_total)
+		credit_note.insert()
 		self.assertEqual(credit_note.grand_total, -invoice.grand_total)
 		self.assertEqual(credit_note.return_against, invoice.name)
 		self.assertFalse(credit_note.is_returned)

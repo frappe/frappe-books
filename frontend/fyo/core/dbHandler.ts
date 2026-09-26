@@ -81,7 +81,6 @@ export class DatabaseHandler extends DatabaseBase {
       schemaName,
       rawValueMap
     )) as RawValueMap;
-    this.observer.trigger(`insert:${schemaName}`, docValueMap);
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
@@ -97,7 +96,6 @@ export class DatabaseHandler extends DatabaseBase {
       name,
       fields
     )) as RawValueMap;
-    this.observer.trigger(`get:${schemaName}`, { name, fields });
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
@@ -106,8 +104,6 @@ export class DatabaseHandler extends DatabaseBase {
     options: GetAllOptions = {}
   ): Promise<DocValueMap[]> {
     const rawValueMap = await this.#getAll(schemaName, options);
-
-    this.observer.trigger(`getAll:${schemaName}`, options);
     return this.converter.toDocValueMap(
       schemaName,
       rawValueMap
@@ -118,10 +114,7 @@ export class DatabaseHandler extends DatabaseBase {
     schemaName: string,
     options: GetAllOptions = {}
   ): Promise<RawValueMap[]> {
-    const all = await this.#getAll(schemaName, options);
-
-    this.observer.trigger(`getAllRaw:${schemaName}`, options);
-    return all;
+    return await this.#getAll(schemaName, options);
   }
 
   async getSingleValues(
@@ -144,7 +137,6 @@ export class DatabaseHandler extends DatabaseBase {
       });
     }
 
-    this.observer.trigger(`getSingleValues`, fieldnames);
     return docSingleValue;
   }
 
@@ -153,10 +145,7 @@ export class DatabaseHandler extends DatabaseBase {
     options: GetAllOptions = {}
   ): Promise<number> {
     const rawValueMap = await this.#getAll(schemaName, options);
-    const count = rawValueMap.length;
-
-    this.observer.trigger(`count:${schemaName}`, options);
-    return count;
+    return rawValueMap.length;
   }
 
   // Update
@@ -187,8 +176,6 @@ export class DatabaseHandler extends DatabaseBase {
       schemaName,
       rawValueMap
     )) as RawValueMap;
-
-    this.observer.trigger(`update:${schemaName}`, docValueMap);
     return this.converter.toDocValueMap(
       schemaName,
       updatedRawValueMap
@@ -216,26 +203,12 @@ export class DatabaseHandler extends DatabaseBase {
   }
 
   async deleteAll(schemaName: string, filters: QueryFilter): Promise<number> {
-    const count = (await this.#demux.call(
-      'deleteAll',
-      schemaName,
-      filters
-    )) as number;
-
-    this.observer.trigger(`deleteAll:${schemaName}`, filters);
-    return count;
+    return (await this.#demux.call('deleteAll', schemaName, filters)) as number;
   }
 
   // Other
   async exists(schemaName: string, name?: string): Promise<boolean> {
-    const doesExist = (await this.#demux.call(
-      'exists',
-      schemaName,
-      name
-    )) as boolean;
-
-    this.observer.trigger(`exists:${schemaName}`, name);
-    return doesExist;
+    return (await this.#demux.call('exists', schemaName, name)) as boolean;
   }
 
   // The Frappe adapter runs these complex queries on the server.

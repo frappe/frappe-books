@@ -637,7 +637,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
     this._setDirty(false);
     this._notInserted = false;
-    this.fyo.doc.observer.trigger(`load:${this.schemaName}`, this.name);
   }
 
   async loadLinks() {

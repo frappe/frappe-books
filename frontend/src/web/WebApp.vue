@@ -38,8 +38,10 @@
 </template>
 
 <script lang="ts">
+import type { DocValueMap } from 'fyo/core/types';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { models, getRegionalModels } from 'models';
+import { ModelNameEnum } from 'models/types';
 import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
 import { fyo } from 'src/initFyo';
@@ -143,8 +145,11 @@ export default defineComponent({
       }
       this.loading = false;
     },
-    async completeSetup(options: Record<string, unknown>) {
-      await call('frappe_books.ui_api.complete_setup', { options });
+    async completeSetup(values: DocValueMap) {
+      await fyo.db.insert(ModelNameEnum.SetupWizard, values);
+      await call(
+        'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
+      );
       window.location.reload();
     },
     leaveBooks() {

@@ -12,6 +12,7 @@ frappe_books.patches.currency_fraction_metadata
 frappe_books.patches.submit_pos_shifts
 frappe_books.patches.store_stock_valuation
 frappe_books.patches.sync_numeric_name_series
+frappe_books.patches.remove_setup_wizard_completed
 # Patches added in this section will be executed after doctypes are migrated
 
 [post_fixture_sync]

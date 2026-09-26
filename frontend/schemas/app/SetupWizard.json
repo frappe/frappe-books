@@ -80,13 +80,6 @@
       "fieldtype": "Date",
       "section": "Accounting",
       "required": true
-    },
-    {
-      "fieldname": "completed",
-      "label": "Completed",
-      "fieldtype": "Check",
-      "hidden": true,
-      "readOnly": true
     }
   ],
   "quickEditFields": [

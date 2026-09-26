@@ -2,8 +2,8 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Books Setup Wizard", {
-	refresh(frm) {
-		if (frm.doc.completed) {
+	async refresh(frm) {
+		if (await frappe.db.get_single_value("Books Accounting Settings", "setup_complete")) {
 			frm.disable_save();
 			frm.dashboard.set_headline_alert(__("Frappe Books setup is complete."), "green");
 			return;

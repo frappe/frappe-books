@@ -18,8 +18,7 @@
   "bank_name",
   "chart_of_accounts",
   "fiscal_year_start",
-  "fiscal_year_end",
-  "completed"
+  "fiscal_year_end"
  ],
  "fields": [
   {
@@ -108,21 +107,13 @@
    "fieldtype": "Date",
    "label": "Fiscal Year End Date",
    "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "completed",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Completed",
-   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.475211",
+ "modified": "2026-09-26 22:39:10.945547",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Setup Wizard",

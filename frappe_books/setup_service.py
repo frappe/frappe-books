@@ -29,7 +29,6 @@ def run_setup(wizard):
 	_update_inventory_settings(accounts)
 	_update_pos_settings(accounts)
 	_update_defaults(bank_account, accounts)
-	frappe.db.set_single_value("Books Setup Wizard", "completed", 1)
 	return {"setup_complete": True, "bank_account": bank_account}
 
 

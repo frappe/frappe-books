@@ -7,7 +7,6 @@ from typing import Any, Literal
 
 import frappe
 
-from frappe_books.setup_service import run_setup
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 from frappe_books.ui_bridge.mapping import target_doctype
@@ -35,33 +34,6 @@ def lifecycle_action(action: Literal["submit", "cancel"], source_schema: str, na
 	else:
 		doc.cancel()
 	return BooksDatabaseBridge().get(source_schema, name)
-
-
-@frappe.whitelist(methods=["POST"])
-def complete_setup(options: dict[str, Any] | str) -> dict[str, Any]:
-	"""Complete site setup from the original Books setup-wizard interface."""
-	if isinstance(options, str):
-		options = json.loads(options)
-	if not isinstance(options, dict):
-		frappe.throw("Books setup options must be an object")
-	wizard = frappe.get_single("Books Setup Wizard")
-	wizard.check_permission("write")
-	wizard.update(
-		{
-			"logo": options.get("logo"),
-			"company_name": options.get("companyName"),
-			"country": options.get("country"),
-			"fullname": options.get("fullname"),
-			"email": options.get("email"),
-			"bank_name": options.get("bankName"),
-			"currency": options.get("currency"),
-			"fiscal_year_start": options.get("fiscalYearStart"),
-			"fiscal_year_end": options.get("fiscalYearEnd"),
-			"chart_of_accounts": options.get("chartOfAccounts"),
-		}
-	)
-	wizard.save()
-	return run_setup(wizard)
 
 
 def _as_list(value: list[Any] | str | None) -> list[Any]:

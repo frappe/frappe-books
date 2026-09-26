@@ -110,6 +110,34 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		entries = ledger_entries(invoice.doctype, invoice.name)
 		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries), Decimal("1538"))
 
+	def test_return_posts_item_and_invoice_discounts(self):
+		item = make_item(self.income.name, self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			item.name,
+			self.income.name,
+			discount_percent=5,
+		)
+		invoice.submit()
+		credit_note = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			item.name,
+			self.income.name,
+			discount_percent=5,
+			return_against=invoice.name,
+		)
+		credit_note.items[0].quantity = -2
+		credit_note.save().submit()
+
+		self.assertEqual(Decimal(str(credit_note.grand_total)), Decimal("-171"))
+		entries = ledger_entries(credit_note.doctype, credit_note.name)
+		discount = next(row for row in entries if row.account == self.discount.name)
+		self.assertEqual(Decimal(str(discount.credit)), Decimal("29"))
+
 	def _make_invoice(self):
 		return make_invoice(
 			"Books Sales Invoice",

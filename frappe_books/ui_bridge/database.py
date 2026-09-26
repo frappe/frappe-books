@@ -52,8 +52,6 @@ class BooksDatabaseBridge:
 		return call_handler(getattr(self, _snake_case(method)), method, args)
 
 	def get(self, source_schema: str, name: str, fields: str | list[str] | None = None) -> dict:
-		if source_schema == "SingleValue":
-			return self._get_single_value_row(name)
 		try:
 			doc = frappe.get_doc(target_doctype(source_schema), name)
 		except frappe.DoesNotExistError:
@@ -64,8 +62,6 @@ class BooksDatabaseBridge:
 
 	def get_all(self, source_schema: str, options: ListOptions | None = None) -> list[dict]:
 		options = frappe._dict(options or {})
-		if source_schema == "SingleValue":
-			return self._single_value_rows()
 		target = target_doctype(source_schema)
 		requested = self._requested_source_fields(source_schema, options.fields)
 		target_fields = self._target_fields(source_schema, requested)
@@ -159,7 +155,6 @@ class BooksDatabaseBridge:
 			name_field = schema_mapping()[source_schema]["fields"].get("name")
 			if name_field and name_field != "name":
 				doc.set(name_field, values["name"])
-		self._set_docstatus(doc, values)
 		doc.insert(set_name=values.get("name"))
 		return self._to_readable_source(source_schema, doc)
 
@@ -173,24 +168,15 @@ class BooksDatabaseBridge:
 		doc.check_permission("write")
 		self._validate_expected_modified(doc, values.get("__expectedModified"))
 		self._validate_docstatus_update(doc, values)
-		for fieldname, value in self._target_values(source_schema, values).items():
-			doc.set(fieldname, value)
-		self._set_docstatus(doc, values)
+		doc.update(self._target_values(source_schema, values))
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
-		doc = frappe.get_doc(_writable_doctype(source_schema), old_name)
-		doc.check_permission("write")
-		frappe.rename_doc(doc.doctype, old_name, new_name)
+		frappe.rename_doc(_writable_doctype(source_schema), old_name, new_name)
 
 	def delete(self, source_schema: str, name: str) -> None:
-		if source_schema == "SingleValue":
-			self._delete_single_value(name)
-			return
-		doc = frappe.get_doc(_writable_doctype(source_schema), name)
-		doc.check_permission("delete")
-		frappe.delete_doc(doc.doctype, name)
+		frappe.delete_doc(_writable_doctype(source_schema), name)
 
 	def delete_all(self, source_schema: str, filters: dict[str, Any]) -> int:
 		if not filters:
@@ -205,8 +191,6 @@ class BooksDatabaseBridge:
 		return len(names)
 
 	def exists(self, source_schema: str, name: str | None = None) -> bool:
-		if source_schema == "SingleValue":
-			return bool(name and self._get_single_value_row(name))
 		if not name:
 			return False
 		target = target_doctype(source_schema)
@@ -236,9 +220,7 @@ class BooksDatabaseBridge:
 		stored["name"] = source_schema
 		known_targets = set(schema_mapping()[source_schema]["fields"].values())
 		available = {
-			self._source_field_for_target(source_schema, target_name)
-			for target_name in stored
-			if target_name in known_targets
+			source_field(source_schema, target_name) for target_name in stored if target_name in known_targets
 		}
 		available.discard("name")
 		if requested:
@@ -251,7 +233,7 @@ class BooksDatabaseBridge:
 			source_name = source_by_doctype().get(field.options)
 			if not source_name:
 				continue
-			source_fieldname = self._source_field_for_target(source_schema, field.fieldname)
+			source_fieldname = source_field(source_schema, field.fieldname)
 			if requested and source_fieldname not in requested:
 				continue
 			values[source_fieldname] = [
@@ -421,55 +403,10 @@ class BooksDatabaseBridge:
 		fields = [group_by] if isinstance(group_by, str) else group_by
 		return ", ".join(target_field(source_schema, field) for field in fields)
 
-	def _source_field_for_target(self, source_schema, target_name):
-		return source_field(source_schema, target_name)
-
-	def _set_docstatus(self, doc, values):
-		if values.get("cancelled"):
-			doc.docstatus = 2
-		elif values.get("submitted"):
-			doc.docstatus = 1
-		elif "submitted" in values:
-			doc.docstatus = 0
-
-	def _single_value_rows(self):
-		rows = []
-		for source_schema, config in schema_mapping().items():
-			meta = frappe.get_meta(config["doctype"])
-			if not meta.issingle or not frappe.has_permission(config["doctype"], ptype="read"):
-				continue
-			for source_name, target_name in config["fields"].items():
-				if self._is_password_field(meta, target_name):
-					continue
-				value = frappe.db.get_single_value(config["doctype"], target_name)
-				if value is not None:
-					rows.append(
-						{
-							"name": f"{source_schema}::{source_name}",
-							"parent": source_schema,
-							"fieldname": source_name,
-							"value": _source_value(meta, target_name, value),
-						}
-					)
-		return rows
-
-	def _get_single_value_row(self, name):
-		return next((row for row in self._single_value_rows() if row["name"] == name), {})
-
-	def _delete_single_value(self, name):
-		if "::" not in name:
-			return
-		source_schema, source_name = name.split("::", 1)
-		target = target_doctype(source_schema)
-		if not frappe.has_permission(target, ptype="write"):
-			frappe.throw("Not permitted", frappe.PermissionError)
-		frappe.db.set_single_value(target, target_field(source_schema, source_name), None)
-
-	def _update_single(self, source_schema, values, doc=None):
-		doc = doc or frappe.get_single(target_doctype(source_schema))
+	def _update_single(self, source_schema, values):
+		doc = frappe.get_single(target_doctype(source_schema))
 		doc.check_permission("write")
-		for fieldname, value in self._target_values(source_schema, values).items():
-			doc.set(fieldname, value)
+		doc.update(self._target_values(source_schema, values))
 		doc.save()
 		return self.get(source_schema, source_schema)
 

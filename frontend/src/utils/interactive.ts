@@ -4,7 +4,7 @@ import { getColorClass } from './colors';
 import { renderSafeRichText } from './safeRichText';
 import { DialogButton, DialogOptions, ToastOptions, ToastType } from './types';
 
-export async function showDialog<DO extends DialogOptions>(options: DO) {
+export async function showDialog(options: DialogOptions) {
   const preWrappedButtons: DialogButton[] = options.buttons ?? [
     { label: t`Okay`, action: () => null, isEscape: true },
   ];

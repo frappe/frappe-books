@@ -837,7 +837,7 @@ export default defineComponent({
       await showDialog({
         title: this.t`Submit entries?`,
         type: 'info',
-        details: this.t`Should entries be submitted after syncing?`,
+        detail: this.t`Should entries be submitted after syncing?`,
         buttons: [
           {
             label: this.t`Yes`,

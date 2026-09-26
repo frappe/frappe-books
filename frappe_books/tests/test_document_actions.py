@@ -9,6 +9,9 @@ from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
 from frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote import make_sales_invoice
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
+
+MAPPERS = "frappe_books.frappe_books.doctype.{0}.{0}.{1}"
 
 
 class IntegrationTestDocumentActions(IntegrationTestCase):
@@ -22,17 +25,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		frappe.db.set_single_value("Books Defaults", "sales_payment_account", self.cash.name)
 
 	def test_quote_to_invoice_and_invoice_to_payment(self):
-		quote = frappe.get_doc(
-			{
-				"doctype": "Books Sales Quote",
-				"reference_type": "Books Party",
-				"party": self.party.name,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": self.item.name, "rate": 75, "quantity": 2}],
-			}
-		).insert()
-		quote.submit()
-
+		quote = self._submitted_quote()
 		invoice = make_sales_invoice(quote.name).insert()
 		self.assertEqual(invoice.quote, quote.name)
 		self.assertEqual(invoice.account, self.receivable.name)
@@ -42,6 +35,29 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual(payment.payment_type, "Receive")
 		self.assertEqual(Decimal(str(payment.amount)), Decimal("150"))
 		self.assertEqual(payment.payment_references[0].reference_name, invoice.name)
+
+	def test_bridge_returns_mapped_documents_in_interface_fields(self):
+		quote = self._submitted_quote()
+		bridge = BooksDatabaseBridge()
+
+		invoice = bridge.call(
+			"getMapped", [MAPPERS.format("books_sales_quote", "make_sales_invoice"), quote.name]
+		)
+		self.assertEqual((invoice["quote"], invoice["party"]), (quote.name, self.party.name))
+		self.assertEqual(invoice["items"][0]["rate"], 75)
+
+		submitted = make_sales_invoice(quote.name).insert().submit()
+		payment = bridge.call(
+			"getMapped", [MAPPERS.format("books_sales_invoice", "make_payment"), submitted.name]
+		)
+		self.assertEqual((payment["paymentType"], payment["amount"]), ("Receive", 150))
+		self.assertEqual(payment["for"][0]["referenceName"], submitted.name)
+		self.assertEqual(payment["for"][0]["referenceType"], "SalesInvoice")
+
+	def test_bridge_maps_only_through_whitelisted_mappers(self):
+		quote = self._submitted_quote()
+		with self.assertRaises(frappe.PermissionError):
+			BooksDatabaseBridge().get_mapped("frappe_books.accounting.returns.map_return", quote.name)
 
 	def test_return_limits_quantity_and_updates_original_status(self):
 		invoice = make_invoice(
@@ -143,3 +159,18 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				self.assertEqual(len(references), payments)
 				self.assertEqual(invoice.db_get("outstanding_amount"), 0 if payments else 200)
 				self.assertEqual(invoice.outstanding_amount, invoice.db_get("outstanding_amount"))
+
+	def _submitted_quote(self):
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Books Sales Quote",
+					"reference_type": "Books Party",
+					"party": self.party.name,
+					"date": frappe.utils.now_datetime(),
+					"items": [{"item": self.item.name, "rate": 75, "quantity": 2}],
+				}
+			)
+			.insert()
+			.submit()
+		)

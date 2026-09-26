@@ -189,22 +189,6 @@ export abstract class Invoice extends Transactional {
       },
       dependsOn: ['party'],
     },
-    loyaltyProgram: {
-      formula: async () => {
-        const partyDoc = await this.fyo.doc.getDoc(
-          ModelNameEnum.Party,
-          this.party
-        );
-        const loyaltyProgramName = partyDoc?.loyaltyProgram as string;
-
-        if (!loyaltyProgramName) {
-          return '';
-        }
-
-        return loyaltyProgramName;
-      },
-      dependsOn: ['party', 'name'],
-    },
     currency: {
       formula: async () => {
         const currency = (await this.fyo.getValue(

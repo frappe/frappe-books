@@ -7,6 +7,9 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
+from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (
+	set_inventory_accounts,
+)
 from frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote import make_sales_invoice
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
@@ -156,6 +159,44 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual(credit_note.grand_total, -invoice.grand_total)
 		self.assertEqual(credit_note.return_against, invoice.name)
 		self.assertFalse(credit_note.is_returned)
+
+	def test_deleting_an_invoice_deletes_its_cancelled_payment_and_receipt(self):
+		payable = make_account("Delete Payable", root_type="Liability", account_type="Payable")
+		stock = make_account("Delete Stock", account_type="Stock")
+		received = make_account("Delete Received", root_type="Liability")
+		set_inventory_accounts(stock.name, received.name, self.expense.name)
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		frappe.db.set_single_value(
+			"Books Defaults",
+			{"purchase_receipt_location": "Stores", "purchase_payment_account": self.cash.name},
+		)
+		item = make_item(self.expense.name, self.expense.name, track_item=1)
+		supplier = make_party(payable.name, role="Supplier")
+		invoice = make_invoice(
+			"Books Purchase Invoice",
+			supplier.name,
+			payable.name,
+			item.name,
+			received.name,
+			make_auto_stock_transfer=1,
+			make_auto_payment=1,
+		).submit()
+		receipt = invoice.reload().back_reference
+		payment = frappe.get_doc(
+			"Books Payment",
+			frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent"),
+		)
+		payment.cancel()
+		invoice.reload().cancel()
+
+		frappe.delete_doc(invoice.doctype, invoice.name)
+
+		for doctype, name in (
+			(invoice.doctype, invoice.name),
+			("Books Purchase Receipt", receipt),
+			(payment.doctype, payment.name),
+		):
+			self.assertFalse(frappe.db.exists(doctype, name), doctype)
 
 	def test_submit_makes_the_automatic_payment(self):
 		frappe.db.set_single_value(

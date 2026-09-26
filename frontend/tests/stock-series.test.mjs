@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   generateSerialNumbersForItem,
+  getExistingActiveSerialNumbersForItem,
   getSuggestedBatchName,
 } from './helpers/accounting.mjs';
 
@@ -52,4 +53,33 @@ test('new serial numbers skip taken names and move the series on', async () => {
   );
   assert.equal(series.current, 5);
   assert.equal(await generateSerialNumbersForItem(fyo, 'Pen', 0), '');
+});
+
+test('in-stock serial numbers are the oldest active ones on the server', async () => {
+  const requests = [];
+  const fyo = {
+    getValue: async () => true,
+    db: {
+      getAllRaw: async (schemaName, options) => {
+        requests.push([schemaName, options]);
+        return [{ name: 'S1' }, { name: 'S2' }];
+      },
+    },
+  };
+  assert.equal(
+    await getExistingActiveSerialNumbersForItem(fyo, 'Pen', 2),
+    'S1\nS2'
+  );
+  assert.deepEqual(requests, [
+    [
+      'SerialNumber',
+      {
+        fields: ['name'],
+        filters: { item: 'Pen', status: 'Active' },
+        orderBy: 'created',
+        order: 'asc',
+        limit: 2,
+      },
+    ],
+  ]);
 });

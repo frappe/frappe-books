@@ -2,7 +2,7 @@ import { t } from 'fyo';
 
 export type CurrencyUnits = { fraction?: string; fractionUnits?: number };
 
-/** Amount spelt out in the currency's fraction unit and the locale's grouping. */
+/** Amount in words, in the currency's fraction unit and locale grouping. */
 export function getAmountInWords(
   amount: number,
   { fraction, fractionUnits = 100 }: CurrencyUnits,
@@ -39,7 +39,8 @@ function getIntegerInWords(value: number, isIndian: boolean): string {
     }
 
     const rest = value % size;
-    const head = `${getIntegerInWords(Math.floor(value / size), isIndian)} ${label}`;
+    const count = getIntegerInWords(Math.floor(value / size), isIndian);
+    const head = `${count} ${label}`;
     return rest ? `${head} ${getIntegerInWords(rest, isIndian)}` : head;
   }
 

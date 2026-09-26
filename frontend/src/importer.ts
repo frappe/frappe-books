@@ -167,7 +167,10 @@ export class Importer {
   /** Values of the picked Link columns, grouped by linked schema. */
   getLinkValues(): Map<string, Set<string>> {
     const linkColumns = this.assignedTemplateFields
-      .map((key, index) => ({ index, tf: this.templateFieldsMap.get(key ?? '') }))
+      .map((key, index) => ({
+        index,
+        tf: this.templateFieldsMap.get(key ?? ''),
+      }))
       .filter(({ tf }) => tf?.fieldtype === FieldTypeEnum.Link) as {
       index: number;
       tf: TargetField;

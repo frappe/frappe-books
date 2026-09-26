@@ -73,6 +73,7 @@ class InvoiceController(SeriesNamingMixin, Document):
 def calculate_invoice(invoice):
 	if not invoice.get("items"):
 		return
+	currency = invoice.get("currency")
 	tax_totals = defaultdict(as_decimal)
 	tax_rates = {}
 	net_total = as_decimal(0)
@@ -80,48 +81,41 @@ def calculate_invoice(invoice):
 	item_taxed_total = as_decimal(0)
 
 	for row in invoice.items:
-		amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
-		discount = _item_discount(row, amount)
-		discounted = rounded(amount - discount)
+		amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity), currency)
+		discount = _item_discount(row, amount, currency)
+		discounted = amount - discount
 		tax_base = amount if invoice.discount_after_tax else discounted
 		row_tax = as_decimal(0)
 		for detail in _tax_details(row.tax):
-			tax_amount = rounded(tax_base * as_decimal(detail.rate) / 100)
+			tax_amount = rounded(tax_base * as_decimal(detail.rate) / 100, currency)
 			tax_totals[detail.account] += tax_amount
 			tax_rates.setdefault(detail.account, detail.rate)
 			row_tax += tax_amount
 		if invoice.discount_after_tax:
-			discount = _item_discount(row, amount + row_tax)
+			discount = _item_discount(row, amount + row_tax, currency)
 		row.amount = amount
-		row.item_discounted_total = (
-			rounded(amount + row_tax - discount) if invoice.discount_after_tax else discounted
-		)
-		row.item_taxed_total = (
-			rounded(amount + row_tax) if invoice.discount_after_tax else rounded(amount + row_tax - discount)
-		)
+		row.item_discounted_total = amount + row_tax - discount if invoice.discount_after_tax else discounted
+		row.item_taxed_total = amount + row_tax if invoice.discount_after_tax else amount + row_tax - discount
 		net_total += amount
 		item_discount_total += discount
 		item_taxed_total += as_decimal(row.item_taxed_total)
 
 	invoice.set("taxes", [])
 	for account, amount in tax_totals.items():
-		invoice.append(
-			"taxes",
-			{"account": account, "rate": tax_rates[account], "amount": rounded(amount)},
-		)
-	invoice.net_total = rounded(net_total)
-	invoice_discount = _invoice_discount(invoice, item_taxed_total, net_total - item_discount_total)
-	invoice.discount_amount = rounded(invoice_discount)
-	invoice.grand_total = rounded(
-		net_total + sum(tax_totals.values()) - item_discount_total - invoice_discount
-	)
+		invoice.append("taxes", {"account": account, "rate": tax_rates[account], "amount": amount})
+	invoice.net_total = net_total
+	invoice_discount = _invoice_discount(invoice, item_taxed_total, net_total - item_discount_total, currency)
+	invoice.discount_amount = invoice_discount
+	invoice.grand_total = net_total + sum(tax_totals.values()) - item_discount_total - invoice_discount
 	if invoice.transaction_type == "sales":
-		invoice.grand_total = rounded(as_decimal(invoice.grand_total) - loyalty.redemption_amount(invoice))
+		invoice.grand_total = rounded(
+			as_decimal(invoice.grand_total) - loyalty.redemption_amount(invoice), currency
+		)
 	invoice.base_grand_total = rounded(
 		as_decimal(invoice.grand_total) * as_decimal(invoice.exchange_rate or 1)
 	)
 	if invoice.docstatus == 0:
-		invoice.outstanding_amount = rounded(abs(as_decimal(invoice.base_grand_total)))
+		invoice.outstanding_amount = abs(as_decimal(invoice.base_grand_total))
 
 
 def validate_invoice(invoice):
@@ -264,21 +258,21 @@ def _tax_details(tax_name):
 	return frappe.get_cached_doc("Books Tax", tax_name).details
 
 
-def _item_discount(row, amount):
+def _item_discount(row, amount, currency):
 	if row.set_item_discount_amount:
 		discount = as_decimal(row.item_discount_amount)
 	else:
 		discount = abs(amount) * as_decimal(row.item_discount_percent) / 100
-	return rounded(-discount if amount < 0 else discount)
+	return rounded(-discount if amount < 0 else discount, currency)
 
 
-def _invoice_discount(invoice, taxed_total, discounted_total):
+def _invoice_discount(invoice, taxed_total, discounted_total, currency):
 	if invoice.set_discount_amount:
-		discount = abs(as_decimal(invoice.discount_amount))
+		discount = rounded(abs(as_decimal(invoice.discount_amount)), currency)
 		return -discount if discounted_total < 0 else discount
 	base = taxed_total if invoice.discount_after_tax else discounted_total
 	discount = abs(base) * as_decimal(invoice.discount_percent) / 100
-	return rounded(-discount if base < 0 else discount)
+	return rounded(-discount if base < 0 else discount, currency)
 
 
 def _validate_return(invoice):

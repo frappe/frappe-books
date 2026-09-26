@@ -1,9 +1,21 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import now_datetime
 
-from frappe_books.commerce.pos import activate_opening_shift, prepare_opening_shift, prevent_open_shift_delete
+from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.commerce.pos import (
+	cancel_cash_journal,
+	cash_account,
+	cash_total,
+	lock_pos_settings,
+	make_cash_journal,
+	open_shift_name,
+	validate_cash_rows,
+)
 
 
 class BooksPosOpeningShift(Document):
@@ -22,6 +34,8 @@ class BooksPosOpeningShift(Document):
 			BooksOpeningCash,
 		)
 
+		amended_from: DF.Link | None
+		journal_entry: DF.Link | None
 		opening_amounts: DF.Table[BooksOpeningAmounts]
 		opening_cash: DF.Table[BooksOpeningCash]
 		opening_date: DF.Datetime | None
@@ -29,11 +43,38 @@ class BooksPosOpeningShift(Document):
 
 	_DOCTYPE_NAME = "Books Pos Opening Shift"
 
-	def before_insert(self):
-		prepare_opening_shift(self)
+	def validate(self):
+		if not self.opening_date:
+			self.opening_date = now_datetime()
+		validate_cash_rows(self.opening_cash)
+		amounts = self.get_opening_amounts()
+		if rounded(amounts.get("Cash", 0)) != cash_total(self.opening_cash):
+			frappe.throw(_("Opening Cash amount must equal the denomination total."))
 
-	def after_insert(self):
-		activate_opening_shift(self)
+	def before_submit(self):
+		lock_pos_settings()
+		if open_shift_name():
+			frappe.throw(_("A POS shift is already open."))
 
-	def on_trash(self):
-		prevent_open_shift_delete(self)
+	def on_submit(self):
+		total = cash_total(self.opening_cash)
+		counter = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+		journal = make_cash_journal(
+			self.opening_date,
+			[(counter, total, 0), (cash_account(), 0, total)],
+			_("POS opening shift {0}").format(self.name),
+		)
+		self.db_set("journal_entry", journal)
+
+	def on_cancel(self):
+		cancel_cash_journal(self.journal_entry)
+
+	def get_opening_amounts(self):
+		amounts = {}
+		for row in self.opening_amounts:
+			if row.payment_method in amounts:
+				frappe.throw(_("Payment method {0} is listed more than once.").format(row.payment_method))
+			if as_decimal(row.amount) < 0:
+				frappe.throw(_("POS amounts cannot be negative."))
+			amounts[row.payment_method] = as_decimal(row.amount)
+		return amounts

@@ -22,7 +22,6 @@ class BooksPosSettings(Document):
 		hide_unavailable_items: DF.Check
 		ignore_pricing_rule: DF.Check
 		inventory: DF.Link | None
-		is_shift_open: DF.Check
 		item_code_digits: DF.Int
 		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items"]
 		pos_profile: DF.Link | None

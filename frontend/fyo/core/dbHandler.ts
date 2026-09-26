@@ -370,6 +370,10 @@ export class DatabaseHandler extends DatabaseBase {
     )) as Promise<Record<string, Money> | undefined>;
   }
 
+  async getOpenPOSShift(): Promise<string | null> {
+    return (await this.#demux.callBespoke('getOpenPOSShift')) as string | null;
+  }
+
   /**
    * Internal methods
    */

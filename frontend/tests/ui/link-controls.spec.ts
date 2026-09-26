@@ -260,7 +260,7 @@ test('one notification renders once and dismisses on click', async ({ page }) =>
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins.find((m: any) => m.computed?.fyo).computed.fyo();
-    fyo.singles.POSSettings.isShiftOpen = true;
+    fyo.db.getOpenPOSShift = async () => 'Fixture Shift';
     fyo.singles.POSSettings.inventory = 'Stores';
     fyo.singles.POSSettings.cashAccount = 'Fixture Cash';
     fyo.singles.POSSettings.writeOffAccount = 'Fixture Write Off';

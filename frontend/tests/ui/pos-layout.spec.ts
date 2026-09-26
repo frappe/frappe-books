@@ -83,7 +83,6 @@ for (const viewport of [
     }
     await page.evaluate(() => {
       const f = (window as any).posFixture;
-      f.fyo.singles.POSSettings.isShiftOpen = false;
       f.state.shiftOpen = false;
     });
     const opening = page.getByRole('dialog', {

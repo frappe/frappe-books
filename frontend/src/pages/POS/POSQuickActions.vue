@@ -105,9 +105,6 @@ export default defineComponent({
       transferClearanceDate: undefined as Date | undefined,
     };
   },
-  computed: {
-    isPosShiftOpen: () => !!fyo.singles.POSShift?.isShiftOpen,
-  },
   methods: {
     setTransferRefNo(ref: string) {
       this.transferRefNo = ref;

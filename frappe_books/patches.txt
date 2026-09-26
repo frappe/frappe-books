@@ -9,6 +9,7 @@ frappe_books.patches.normalize_ledger_dates
 frappe_books.patches.line_discounts
 frappe_books.patches.currency_display
 frappe_books.patches.currency_fraction_metadata
+frappe_books.patches.submit_pos_shifts
 # Patches added in this section will be executed after doctypes are migrated
 
 [post_fixture_sync]

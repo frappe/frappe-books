@@ -10,7 +10,7 @@ import frappe
 from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.commerce.pos import transacted_amounts
+from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.setup import max_numeric_name
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.mapping import target_doctype
@@ -155,6 +155,11 @@ class BooksBespokeQueries:
 			raise frappe.PermissionError
 		return transacted_amounts(get_datetime(from_date), get_datetime(to_date))
 
+	def open_pos_shift(self):
+		if not frappe.has_permission("Books Pos Opening Shift", ptype="read"):
+			raise frappe.PermissionError
+		return open_shift_name()
+
 	def last_inserted(self, source_schema: str) -> int:
 		"""Return the highest numeric name used by an autoincrement Books schema."""
 		target = target_doctype(source_schema)
@@ -217,5 +222,6 @@ _METHODS = {
 	"getStockQuantity": "stock_quantity",
 	"getReturnBalanceItemsQty": "return_balance",
 	"getPOSTransactedAmount": "pos_transacted_amount",
+	"getOpenPOSShift": "open_pos_shift",
 	"getLastInserted": "last_inserted",
 }

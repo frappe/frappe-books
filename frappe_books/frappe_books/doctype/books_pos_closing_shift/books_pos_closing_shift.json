@@ -10,7 +10,9 @@
   "closing_date",
   "closing_cash",
   "closing_amounts",
-  "opening_shift"
+  "opening_shift",
+  "journal_entry",
+  "amended_from"
  ],
  "fields": [
   {
@@ -34,19 +36,41 @@
    "fieldname": "opening_shift",
    "fieldtype": "Link",
    "label": "Opening Shift",
-   "options": "Books Pos Opening Shift"
+   "options": "Books Pos Opening Shift",
+   "search_index": 1
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "no_copy": 1,
+   "options": "Books Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Books Pos Closing Shift",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.574651",
+ "modified": "2026-09-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Closing Shift",
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -56,9 +80,12 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -68,6 +95,7 @@
    "report": 1,
    "role": "Books Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
@@ -78,6 +106,7 @@
    "read": 1,
    "report": 1,
    "role": "Books User",
+   "submit": 1,
    "write": 1
   }
  ],

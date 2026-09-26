@@ -59,13 +59,6 @@
       "section": "Default"
     },
     {
-      "fieldname": "isShiftOpen",
-      "label": "Is POS Shift Open",
-      "fieldtype": "Check",
-      "default": false,
-      "hidden": true
-    },
-    {
       "fieldname": "defaultAccount",
       "label": "Default Account",
       "fieldtype": "Link",

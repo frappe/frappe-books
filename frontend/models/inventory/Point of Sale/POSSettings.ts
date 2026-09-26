@@ -6,7 +6,6 @@ import {
 } from 'models/baseModels/Account/types';
 
 export class POSSettings extends Doc {
-  isShiftOpen?: boolean;
   inventory?: string;
   cashAccount?: string;
   writeOffAccount?: string;

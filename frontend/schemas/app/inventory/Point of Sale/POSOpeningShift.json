@@ -2,6 +2,7 @@
   "name": "POSOpeningShift",
   "label": "POS Opening Shift",
   "naming": "random",
+  "isSubmittable": true,
   "fields": [
     {
       "fieldname": "openingDate",

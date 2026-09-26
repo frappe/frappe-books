@@ -8,10 +8,6 @@ export class POSOpeningShift extends Doc {
   openingCash?: OpeningCash[];
   openingDate?: Date;
 
-  async afterSync() {
-    await this.fyo.singles.POSSettings?.load();
-  }
-
   get openingCashAmount() {
     if (!this.openingCash) {
       return this.fyo.pesa(0);

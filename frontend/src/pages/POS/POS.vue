@@ -241,6 +241,7 @@ export default defineComponent({
       openAppliedCouponsModal: false,
       openReturnSalesInvoiceModal: false,
       openBatchSelectionModal: false,
+      isPosShiftOpen: false,
 
       totalQuantity: 0,
       paidAmount: fyo.pesa(0),
@@ -286,7 +287,6 @@ export default defineComponent({
     isDiscountingEnabled(): boolean {
       return !!fyo.singles.AccountingSettings?.enableDiscounting;
     },
-    isPosShiftOpen: () => !!fyo.singles.POSSettings?.isShiftOpen,
     itemVisibility() {
       return this.itemVisibilityValue;
     },
@@ -315,6 +315,7 @@ export default defineComponent({
   },
 
   async mounted() {
+    await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
     this.setCouponCodeDoc();
     this.setSinvDoc();
@@ -326,6 +327,7 @@ export default defineComponent({
   async activated() {
     toggleSidebar(false);
     validateIsPosSettingsSet(fyo);
+    await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
     this.setCouponCodeDoc();
     this.setSinvDoc();
@@ -1411,7 +1413,17 @@ export default defineComponent({
         this.sinvDoc.party = '';
       }
     },
-    toggleModal(modal: ModalName, value?: boolean) {
+    async setIsPosShiftOpen() {
+      this.isPosShiftOpen = !!(await fyo.db.getOpenPOSShift());
+    },
+    toggleModal(modal: ModalName | 'ShiftOpen', value?: boolean) {
+      if (modal === 'ShiftOpen' || modal === 'ShiftClose') {
+        void this.setIsPosShiftOpen();
+      }
+      if (modal === 'ShiftOpen') {
+        return;
+      }
+
       if (value !== undefined) {
         return (this[`open${modal}Modal`] = value);
       }

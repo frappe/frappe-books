@@ -35,20 +35,14 @@ export async function getPOSPermissionSetting(
 export async function getPOSOpeningShiftDoc(
   fyo: Fyo
 ): Promise<POSOpeningShift> {
-  const existingShiftDoc = await fyo.db.getAll(ModelNameEnum.POSOpeningShift, {
-    limit: 1,
-    orderBy: 'created',
-    order: 'desc',
-    fields: ['name'],
-  });
-
-  if (!fyo.singles.POSSettings?.isShiftOpen || !existingShiftDoc.length) {
+  const openShift = await fyo.db.getOpenPOSShift();
+  if (!openShift) {
     return fyo.doc.getNewDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
   }
 
   return (await fyo.doc.getDoc(
     ModelNameEnum.POSOpeningShift,
-    existingShiftDoc[0].name as string
+    openShift
   )) as POSOpeningShift;
 }
 

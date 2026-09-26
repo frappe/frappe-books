@@ -72,7 +72,8 @@ export async function preparePOSData() {
     if (method === 'exists') return true;
     throw new Error(`Unexpected database write or call: ${method}`);
   };
-  FrappeDatabaseDemux.prototype.callBespoke = async () => ({});
+  FrappeDatabaseDemux.prototype.callBespoke = async (method) =>
+    method === 'getOpenPOSShift' ? null : {};
   await fyo.db.init();
   fyo.doc.registerModels(models);
   for (const schema of Object.values(fyo.schemaMap)) {
@@ -87,7 +88,6 @@ export async function preparePOSData() {
     enableDiscounting: true,
   });
   Object.assign(fyo.singles.POSSettings!, {
-    isShiftOpen: true,
     canChangeRate: true,
     canEditDiscount: true,
   });

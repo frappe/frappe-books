@@ -9,10 +9,6 @@ export class POSClosingShift extends Doc {
   closingDate?: Date;
   openingShift?: string;
 
-  async afterSync() {
-    await this.fyo.singles.POSSettings?.load();
-  }
-
   get closingCashAmount() {
     if (!this.closingCash) {
       return this.fyo.pesa(0);

@@ -13,7 +13,6 @@
   "inventory",
   "pos_print_template",
   "pos_ui",
-  "is_shift_open",
   "item_visibility",
   "can_change_rate",
   "hide_unavailable_items",
@@ -62,13 +61,6 @@
    "label": "Pos Ui",
    "options": "Classic\nModern",
    "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "is_shift_open",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Is POS Shift Open"
   },
   {
    "default": "Inventory Items",
@@ -161,7 +153,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.640371",
+ "modified": "2026-09-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Profile",

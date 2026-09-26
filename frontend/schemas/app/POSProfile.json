@@ -52,13 +52,6 @@
       "required": true
     },
     {
-      "fieldname": "isShiftOpen",
-      "label": "Is POS Shift Open",
-      "fieldtype": "Check",
-      "default": false,
-      "hidden": true
-    },
-    {
       "fieldname": "itemVisibility",
       "label": "Item Visibility",
       "fieldtype": "Select",
@@ -459,7 +452,6 @@
     "inventory",
     "posPrintTemplate",
     "posUI",
-    "isShiftOpen",
     "itemVisibility",
     "canChangeRate",
     "hideUnavailableItems",

@@ -1,8 +1,11 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
+from frappe import _
 from frappe.model.document import Document
+
+from frappe_books.commerce.pos import open_shift_name
 
 
 class BooksInventorySettings(Document):
@@ -26,3 +29,11 @@ class BooksInventorySettings(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Inventory Settings"
+
+	def validate(self):
+		if (
+			self.has_value_changed("enable_point_of_sale")
+			and not self.enable_point_of_sale
+			and open_shift_name()
+		):
+			frappe.throw(_("Close the open POS shift before disabling Point of Sale."))

@@ -44,6 +44,18 @@ def validate_stock_available(transfers):
 	_validate_serial_numbers_available(outgoing)
 
 
+def reverse_transfers(transfers):
+	"""Return the rows that undo the given transfers, to check stock before cancelling."""
+	return [
+		{
+			**transfer,
+			"from_location": transfer.get("to_location"),
+			"to_location": transfer.get("from_location"),
+		}
+		for transfer in transfers
+	]
+
+
 def create_stock_entries(transaction, transfers):
 	for transfer in transfers:
 		serial_numbers = parse_serial_numbers(transfer.get("serial_number"))

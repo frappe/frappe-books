@@ -10,6 +10,7 @@ from frappe_books.inventory.stock import (
 	create_stock_entries,
 	delete_stock_entries,
 	populate_stock_rows,
+	reverse_transfers,
 	validate_stock_available,
 	validate_transfer_rows,
 )
@@ -28,6 +29,9 @@ class StockMovementController(SeriesNamingMixin, Document):
 
 	def before_submit(self):
 		validate_stock_available(movement_transfers(self))
+
+	def before_cancel(self):
+		validate_stock_available(reverse_transfers(movement_transfers(self)))
 
 	def on_submit(self):
 		create_stock_entries(self, movement_transfers(self))
@@ -50,6 +54,9 @@ class StockTransferController(SeriesNamingMixin, Document):
 
 	def before_submit(self):
 		validate_stock_available(transfer_rows(self))
+
+	def before_cancel(self):
+		validate_stock_available(reverse_transfers(transfer_rows(self)))
 
 	def on_submit(self):
 		transfers = transfer_rows(self)

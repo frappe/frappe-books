@@ -1,5 +1,7 @@
 """Payment validation, posting, and allocation behavior."""
 
+from collections import defaultdict
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -7,7 +9,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.series import SeriesNamingMixin
 
@@ -30,7 +32,21 @@ class PaymentController(SeriesNamingMixin, Document):
 			frappe.throw(_("Payment amount must be greater than zero."))
 		if as_decimal(self.writeoff) < 0 or as_decimal(self.writeoff) > as_decimal(self.amount):
 			frappe.throw(_("Write-off must be between zero and the payment amount."))
+		if self.account == self.payment_account:
+			frappe.throw(_("The From and To accounts cannot be the same."))
+		self.validate_payment_method()
 		_validate_allocations(self)
+
+	def validate_payment_method(self):
+		method = frappe.db.get_value(
+			"Books Payment Method", self.payment_method, ["type", "requires_clearance_date"], as_dict=True
+		)
+		if not method:
+			return
+		if method.type != "Cash" and not self.reference_id:
+			frappe.throw(_("Set a reference ID for {0} payments.").format(self.payment_method))
+		if method.requires_clearance_date and not self.clearance_date:
+			frappe.throw(_("Set a clearance date for {0} payments.").format(self.payment_method))
 
 	def on_submit(self):
 		posting = LedgerPosting(self)
@@ -56,36 +72,48 @@ class PaymentController(SeriesNamingMixin, Document):
 
 
 def _validate_allocations(payment):
-	total = as_decimal(0)
+	allocated = defaultdict(as_decimal)
 	for row in payment.payment_references:
-		invoice = _referenced_invoice(payment, row)
-		amount = as_decimal(row.amount)
-		if amount <= 0 or amount > abs(as_decimal(invoice.outstanding_amount)):
-			frappe.throw(_("Allocated amount exceeds the invoice outstanding amount."))
-		total += amount
-	if total > as_decimal(payment.amount):
+		if as_decimal(row.amount) <= 0:
+			frappe.throw(_("Allocated amounts must be greater than zero."))
+		allocated[row.reference_type, row.reference_name] += as_decimal(row.amount)
+	for (doctype, name), amount in allocated.items():
+		_validate_allocation(payment, _referenced_invoice(payment, doctype, name), amount)
+	if sum_decimal(allocated.values()) > as_decimal(payment.amount):
 		frappe.throw(_("Payment allocations cannot exceed the settled amount, including the write-off."))
 
 
-def _referenced_invoice(payment, row):
-	if row.reference_type not in REFERENCE_DOCTYPES.values():
+def _validate_allocation(payment, invoice, amount):
+	outstanding = abs(as_decimal(invoice.outstanding_amount))
+	if amount > outstanding:
+		frappe.throw(_("Allocated amount exceeds the invoice outstanding amount."))
+	if amount < outstanding and not frappe.db.get_single_value(
+		"Books Accounting Settings", "enable_partial_payment"
+	):
+		frappe.throw(
+			_("Enable partial payments to pay less than the outstanding amount of {0}.").format(invoice.name)
+		)
+	payment_type = payment_type_for(invoice.doctype, bool(invoice.return_against))
+	if payment.payment_type != payment_type:
+		frappe.throw(_("A payment for {0} must be a {1} payment.").format(invoice.name, payment_type))
+
+
+def _referenced_invoice(payment, doctype, name):
+	if doctype not in REFERENCE_DOCTYPES.values():
 		frappe.throw(_("Select a sales or purchase invoice reference."))
 	invoice = frappe.db.get_value(
-		row.reference_type,
-		row.reference_name,
-		["docstatus", "party", "outstanding_amount"],
+		doctype,
+		name,
+		["name", "docstatus", "party", "outstanding_amount", "return_against"],
 		as_dict=True,
 	)
 	if not invoice:
-		frappe.throw(_("Referenced invoice {0} does not exist.").format(row.reference_name))
+		frappe.throw(_("Referenced invoice {0} does not exist.").format(name))
 	if invoice.docstatus != 1:
-		frappe.throw(_("Submit invoice {0} before allocating a payment to it.").format(row.reference_name))
+		frappe.throw(_("Submit invoice {0} before allocating a payment to it.").format(name))
 	if invoice.party != payment.party:
-		frappe.throw(
-			_("Invoice {0} belongs to {1}, not to {2}.").format(
-				row.reference_name, invoice.party, payment.party
-			)
-		)
+		frappe.throw(_("Invoice {0} belongs to {1}, not to {2}.").format(name, invoice.party, payment.party))
+	invoice.doctype = doctype
 	return invoice
 
 

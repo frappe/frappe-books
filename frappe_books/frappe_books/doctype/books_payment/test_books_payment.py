@@ -4,11 +4,13 @@
 from decimal import Decimal
 
 import frappe
+from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.tests.accounting import (
+	ensure_user,
 	ledger_entries,
 	make_account,
 	make_invoice,
@@ -82,7 +84,7 @@ class IntegrationTestBooksPayment(IntegrationTestCase):
 			self._payment_for(invoice, party, receivable, cash).insert()
 
 		invoice.submit()
-		with self.assertRaisesRegex(frappe.ValidationError, "Invoice .* belongs to .* not to"):
+		with self.assertRaisesRegex(frappe.ValidationError, f"does not belong to party {other_party.name}"):
 			self._payment_for(invoice, other_party, receivable, cash).insert()
 		self._payment_for(invoice, party, receivable, cash).insert()
 
@@ -172,6 +174,14 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 
 		refund.cancel()
 		self.assertEqual(credit_note.db_get("outstanding_amount"), -180)
+
+	def test_payment_needs_read_access_to_the_invoice(self):
+		user = ensure_user("books-payment-reader@example.com", "Books User")
+		own_party = make_party(self.receivable.name)
+		add_user_permission("Books Party", own_party.name, user)
+		payment = self._payment(self.invoice, party=own_party.name)
+		with self.set_user(user), self.assertRaises(frappe.PermissionError):
+			payment.insert()
 
 	def test_payment_type_must_match_the_invoice(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "must be a Receive payment"):

@@ -83,5 +83,19 @@ def ledger_entries(voucher_type, voucher_no):
 	)
 
 
+def ensure_user(email, *roles):
+	if not frappe.db.exists("User", email):
+		frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": email,
+				"first_name": email.split("@")[0],
+				"send_welcome_email": 0,
+				"roles": [{"role": role} for role in roles],
+			}
+		).insert(ignore_permissions=True)
+	return email
+
+
 def unique_name(label):
 	return f"{label} {frappe.generate_hash(length=8)}"

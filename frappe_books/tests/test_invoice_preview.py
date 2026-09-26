@@ -2,7 +2,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime, nowdate
 
-from frappe_books.tests.accounting import make_account, make_item, make_party, make_tax, unique_name
+from frappe_books.tests.accounting import (
+	ensure_user,
+	make_account,
+	make_item,
+	make_party,
+	make_tax,
+	unique_name,
+)
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 COMPARED_FIELDS = ("netTotal", "grandTotal", "baseGrandTotal", "outstandingAmount", "discountAmount")
@@ -80,8 +87,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 	def test_preview_requires_create_or_write_permission(self):
 		saved = self.bridge.insert("SalesInvoice", self.values)
-		_ensure_user(NO_ROLE_USER)
-		with self.set_user(NO_ROLE_USER):
+		with self.set_user(ensure_user(NO_ROLE_USER)):
 			self.assertRaises(frappe.PermissionError, self.bridge.preview, "SalesInvoice", self.values)
 			self.assertRaises(
 				frappe.PermissionError, self.bridge.preview, "SalesInvoice", saved, saved["name"]
@@ -149,10 +155,3 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 def _rows(rows, fields):
 	return [{field: row.get(field) for field in fields} for row in rows]
-
-
-def _ensure_user(email):
-	if not frappe.db.exists("User", email):
-		frappe.get_doc(
-			{"doctype": "User", "email": email, "first_name": "No Role", "send_welcome_email": 0}
-		).insert(ignore_permissions=True)

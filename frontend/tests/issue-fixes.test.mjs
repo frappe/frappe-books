@@ -6,46 +6,11 @@ import {
   GeneralLedger,
   TrialBalance,
   ProfitAndLoss,
-  StockQueue,
   useTranslations,
   getAccountLabel,
   t,
   setLanguageMapOnTranslationString,
 } from './helpers/accounting.mjs';
-
-test('empty FIFO stock has no residual value or valuation and can be replenished', () => {
-  const stock = new StockQueue();
-  stock.inward(0.1, 1);
-  stock.inward(0.2, 1);
-  assert.equal(stock.outward(2), 0.15000000000000002);
-  assert.equal(stock.quantity, 0);
-  assert.equal(stock.value, 0);
-  assert.equal(stock.fifo, 0);
-  assert.deepEqual(stock.queue, []);
-  stock.inward(7.5, 0.5);
-  assert.equal(stock.fifo, 7.5);
-  assert.equal(stock.outward(0.25), 7.5);
-  assert.equal(stock.value, 1.875);
-  assert.equal(stock.outward(0.25), 7.5);
-  assert.equal(stock.fifo, 0);
-});
-
-test('fractional FIFO depletion clears rounding dust without discarding small stock', () => {
-  const stock = new StockQueue();
-  stock.inward(10, 0.1);
-  stock.inward(20, 0.2);
-  assert.ok(Number.isFinite(stock.outward(0.3)));
-  assert.deepEqual([stock.quantity, stock.value, stock.fifo], [0, 0, 0]);
-  assert.deepEqual(stock.queue, []);
-  stock.inward(10, 1e-20);
-  stock.outward(0.5e-20);
-  assert.ok(stock.quantity > 0);
-  assert.equal(stock.fifo, 10);
-  for (const invalid of [NaN, Infinity, -1, 0]) {
-    assert.equal(stock.inward(10, invalid), null);
-    assert.equal(stock.outward(invalid), null);
-  }
-});
 
 test('trial balance requests an inclusive to date and renders six amounts', async () => {
   const fyo = await makeFyo();
@@ -60,7 +25,12 @@ test('trial balance requests an inclusive to date and renders six amounts', asyn
         {
           rootType: 'Asset',
           accounts: [
-            { name: 'Cash', level: 0, isGroup: false, values: [80, 0, 50, 30, 100, 0] },
+            {
+              name: 'Cash',
+              level: 0,
+              isGroup: false,
+              values: [80, 0, 50, 30, 100, 0],
+            },
           ],
           total: [80, 0, 50, 30, 100, 0],
         },

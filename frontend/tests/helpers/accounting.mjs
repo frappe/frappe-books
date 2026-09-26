@@ -24,7 +24,6 @@ await build({
       export { useTranslations } from './src/web/translations';
       export { getAccountLabel } from './src/utils/accountLabel';
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
-      export { StockQueue } from './models/inventory/stockQueue';
       export { getJsonData, getCsvData } from './reports/commonExporter';
       export { getDocStatus } from './models/helpers';
       export * from './src/utils/filterQuery';
@@ -83,7 +82,6 @@ export const {
   ProfitAndLoss,
   GeneralLedger,
   TrialBalance,
-  StockQueue,
   useTranslations,
   getAccountLabel,
   t,

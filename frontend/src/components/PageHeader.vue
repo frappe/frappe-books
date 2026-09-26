@@ -1,32 +1,10 @@
 <template>
   <FrappePageHeader
-    class="h-row-largest w-full min-w-0 flex-shrink-0 !px-4"
-    :class="[
-      border ? '' : '!border-b-0',
-      platform !== 'Windows' ? 'window-drag' : '',
-    ]"
+    v-if="isActive"
+    class="w-full min-w-0 flex-shrink-0"
+    :class="border ? '' : '!border-b-0'"
   >
-    <Transition name="spacer" class="border-none">
-      <div
-        v-if="!showSidebar && platform === 'Mac' && languageDirection !== 'rtl'"
-        class="h-full"
-        :class="spacerClass"
-      />
-    </Transition>
-
-    <div
-      class="
-        flex
-        min-w-0
-        flex-1
-        items-center
-        window-no-drag
-        gap-4
-        me-auto
-        overflow-hidden
-      "
-      :class="platform === 'Mac' && languageDirection === 'rtl' ? 'me-18' : ''"
-    >
+    <div class="me-auto flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
       <Button
         v-if="!showSidebar"
         :background="false"
@@ -40,92 +18,52 @@
         <Icon name="chevrons-right" class="h-4 w-4" />
       </Button>
 
-      <!-- Nav Group -->
       <PageHeaderNavGroup />
-      <h1
-        v-if="title"
-        class="text-xl font-semibold select-none truncate text-ink-gray-9"
-      >
-        {{ title }}
+      <h1 v-if="title" class="min-w-0">
+        <FrappePageHeaderTitle :title="title" class="block select-none" />
       </h1>
 
-      <!-- Left Slot -->
-      <div class="flex min-w-0 items-stretch window-no-drag gap-4">
+      <div class="flex min-w-0 items-stretch gap-3">
         <slot name="left" />
       </div>
     </div>
 
-    <!-- Right (regular) Slot -->
-    <div
-      class="flex flex-shrink-0 items-stretch window-no-drag gap-2 ms-auto"
-      :class="platform === 'Mac' && languageDirection === 'rtl' ? 'me-18' : ''"
-    >
+    <div class="ms-auto flex flex-shrink-0 items-stretch gap-2">
       <slot />
     </div>
   </FrappePageHeader>
 </template>
 <script lang="ts">
-import { PageHeader as FrappePageHeader } from 'frappe-ui';
-import { languageDirectionKey } from 'src/utils/injectionKeys';
+import {
+  PageHeader as FrappePageHeader,
+  PageHeaderTitle as FrappePageHeaderTitle,
+} from 'frappe-ui';
 import { showSidebar } from 'src/utils/refs';
 import { toggleSidebar } from 'src/utils/ui';
-import { defineComponent, inject, Transition } from 'vue';
+import { defineComponent, onActivated, onDeactivated, ref } from 'vue';
 import Button from './Button.vue';
 import Icon from './Icon.vue';
 import PageHeaderNavGroup from './PageHeaderNavGroup.vue';
 
 export default defineComponent({
-  components: { Button, FrappePageHeader, Icon, Transition, PageHeaderNavGroup },
+  components: {
+    Button,
+    FrappePageHeader,
+    FrappePageHeaderTitle,
+    Icon,
+    PageHeaderNavGroup,
+  },
   props: {
     title: { type: String, default: '' },
     border: { type: Boolean, default: true },
-    searchborder: { type: Boolean, default: true },
   },
   setup() {
-    return { showSidebar, languageDirection: inject(languageDirectionKey) };
+    // A teleported header stays in the shell when keep-alive caches its page.
+    const isActive = ref(true);
+    onActivated(() => (isActive.value = true));
+    onDeactivated(() => (isActive.value = false));
+    return { showSidebar, isActive };
   },
   methods: { toggleSidebar },
-  computed: {
-    showBorder() {
-      return !!this.$slots.default && this.searchborder;
-    },
-    spacerClass() {
-      if (this.showSidebar) {
-        return '';
-      }
-
-      if (this.border) {
-        return 'w-tl me-4 border-e';
-      }
-
-      return 'w-tl me-4';
-    },
-  },
 });
 </script>
-<style scoped>
-.w-tl {
-  width: var(--w-trafficlights);
-}
-
-.spacer-enter-from,
-.spacer-leave-to {
-  opacity: 0;
-  width: 0px;
-  margin-right: 0px;
-  border-right-width: 0px;
-}
-
-.spacer-enter-to,
-.spacer-leave-from {
-  opacity: 1;
-  width: var(--w-trafficlights);
-  margin-right: 1rem;
-  border-right-width: 1px;
-}
-
-.spacer-enter-active,
-.spacer-leave-active {
-  transition: all 150ms ease-out;
-}
-</style>

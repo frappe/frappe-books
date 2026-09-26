@@ -1,37 +1,25 @@
 <template>
   <FrappeSidebar
-    :disable-collapse="true"
+    :collapsible="false"
     width="var(--w-sidebar)"
-    class="py-2 h-full min-h-0 flex flex-col overflow-hidden bg-surface-sidebar"
-    :class="{
-      'window-drag': platform !== 'Windows',
-    }"
+    :aria-label="t`Books`"
   >
-    <div
-      class="min-h-0 flex-1 overflow-y-auto custom-scroll custom-scroll-thumb1"
-    >
-      <!-- Company name -->
-      <div
-        class="px-4 flex flex-row items-center justify-between mb-4"
-        :class="
-          platform === 'Mac' && languageDirection === 'ltr' ? 'mt-10' : 'mt-2'
-        "
-      >
-        <h6
-          data-testid="company-name"
-          class="font-semibold text-ink-gray-8 whitespace-nowrap overflow-auto no-scrollbar select-none"
-        >
-          {{ companyName }}
-        </h6>
-      </div>
+    <FrappeSidebarHeader
+      data-testid="company-name"
+      :title="companyName"
+      :subtitle="userName"
+      :menu-items="menuItems"
+    />
 
-      <!-- Sidebar Items -->
+    <div
+      class="min-h-0 flex-1 overflow-y-auto px-2 pb-2 custom-scroll custom-scroll-thumb1"
+    >
       <div v-for="group in groups" :key="group.label">
         <FrappeSidebarItem
           :label="group.label"
+          :route="getPath(group)"
           :active="Boolean(isGroupActive(group) && !group.items)"
-          class="mx-2 mb-1 [&_[data-slot='sidebar-item-suffix']]:hidden"
-          @click="routeToSidebarItem(group)"
+          class="mb-0.5"
         >
           <template #prefix>
             <Icon
@@ -40,20 +28,19 @@
               :size="group.iconSize || '18'"
               :height="group.iconHeight ?? 0"
               :active="!!isGroupActive(group)"
-              :darkMode="darkMode"
+              :dark-mode="darkMode"
             />
           </template>
         </FrappeSidebarItem>
 
-        <!-- Expanded Group -->
-        <div v-if="group.items && isGroupActive(group)">
+        <div v-if="group.items && isGroupActive(group)" class="mb-1">
           <FrappeSidebarItem
             v-for="item in group.items"
             :key="item.label"
             :label="item.label"
+            :route="getPath(item)"
             :active="Boolean(isItemActive(item))"
-            class="mx-2 mb-1 ps-7"
-            @click="routeToSidebarItem(item)"
+            class="mb-0.5 ps-6"
           >
             <template #prefix><span class="w-0" /></template>
           </FrappeSidebarItem>
@@ -61,63 +48,15 @@
       </div>
     </div>
 
-    <!-- Report Issue and DB Switcher -->
-    <div class="window-no-drag flex-shrink-0 flex flex-col gap-2 py-2 px-4">
+    <div class="flex-shrink-0 px-2 py-2">
       <FrappeSidebarItem
-        :label="t`Help`"
-        class="!h-7"
-        @click="openDocumentation"
+        :label="t`Hide Sidebar`"
+        @click="() => toggleSidebar()"
       >
         <template #prefix>
-          <Icon name="help-circle" class="h-4 w-4 flex-shrink-0" />
+          <Icon name="chevrons-left" class="h-4 w-4 rtl-rotate-180" />
         </template>
       </FrappeSidebarItem>
-
-      <FrappeSidebarItem
-        :label="t`Shortcuts`"
-        class="!h-7"
-        @click="viewShortcuts = true"
-      >
-        <template #prefix>
-          <Icon name="command" class="h-4 w-4 flex-shrink-0" />
-        </template>
-      </FrappeSidebarItem>
-
-      <FrappeSidebarItem
-        v-if="platform !== 'Web'"
-        data-testid="change-db"
-        :label="t`Change DB`"
-        class="!h-7"
-        @click="$emit('change-db-file')"
-      >
-        <template #prefix>
-          <Icon name="database" class="h-4 w-4 flex-shrink-0" />
-        </template>
-      </FrappeSidebarItem>
-
-      <div class="flex items-center gap-2">
-        <FrappeSidebarItem
-          :label="t`Report Issue`"
-          class="!h-7 min-w-0 flex-1"
-          @click="() => reportIssue()"
-        >
-          <template #prefix>
-            <Icon name="flag" class="h-4 w-4 flex-shrink-0" />
-          </template>
-        </FrappeSidebarItem>
-
-        <Button
-          :background="false"
-          :icon="true"
-          :padding="false"
-          :title="t`Hide sidebar`"
-          :aria-label="t`Hide sidebar`"
-          class="flex-shrink-0 rtl-rotate-180"
-          @click="() => toggleSidebar()"
-        >
-          <Icon name="chevrons-left" class="w-4 h-4" />
-        </Button>
-      </div>
     </div>
 
     <Modal
@@ -132,23 +71,23 @@
 <script lang="ts">
 import {
   Sidebar as FrappeSidebar,
+  SidebarHeader as FrappeSidebarHeader,
   SidebarItem as FrappeSidebarItem,
+  type DropdownOptions,
 } from 'frappe-ui';
-import { reportIssue } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
-import { languageDirectionKey, shortcutsKey } from 'src/utils/injectionKeys';
-import { docsPathRef } from 'src/utils/refs';
+import { getAppMenuItems, openDocumentation } from 'src/utils/appMenu';
+import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getSidebarConfig } from 'src/utils/sidebarConfig';
 import {
   getSidebarPath,
   matchesSidebarPath,
 } from 'src/utils/sidebarNavigation';
 import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
-import { routeTo, toggleSidebar } from 'src/utils/ui';
+import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
 import router from '../router';
 import Icon from './Icon.vue';
-import Button from './Button.vue';
 import Modal from './Modal.vue';
 import ShortcutsHelper from './ShortcutsHelper.vue';
 
@@ -156,8 +95,8 @@ const COMPONENT_NAME = 'Sidebar';
 
 export default defineComponent({
   components: {
-    Button,
     FrappeSidebar,
+    FrappeSidebarHeader,
     FrappeSidebarItem,
     Icon,
     Modal,
@@ -166,12 +105,8 @@ export default defineComponent({
   props: {
     darkMode: { type: Boolean, default: false },
   },
-  emits: ['change-db-file', 'toggle-darkmode'],
   setup() {
-    return {
-      languageDirection: inject(languageDirectionKey),
-      shortcuts: inject(shortcutsKey),
-    };
+    return { shortcuts: inject(shortcutsKey) };
   },
   data() {
     return {
@@ -185,6 +120,15 @@ export default defineComponent({
       viewShortcuts: boolean;
       activeGroup: null | SidebarRoot;
     };
+  },
+  computed: {
+    userName(): string {
+      const user = window.frappe.boot?.user?.name ?? '';
+      return window.frappe.boot?.user_info?.[user]?.fullname ?? user;
+    },
+    menuItems(): DropdownOptions {
+      return getAppMenuItems(() => (this.viewShortcuts = true));
+    },
   },
   async mounted() {
     const { companyName } = await fyo.doc.getDoc('AccountingSettings');
@@ -201,22 +145,13 @@ export default defineComponent({
         this.toggleSidebar();
       }
     });
-    this.shortcuts?.set(COMPONENT_NAME, ['F1'], () => this.openDocumentation());
+    this.shortcuts?.set(COMPONENT_NAME, ['F1'], openDocumentation);
   },
   unmounted() {
     this.shortcuts?.delete(COMPONENT_NAME);
   },
   methods: {
-    routeTo,
-    reportIssue,
     toggleSidebar,
-    openDocumentation() {
-      window.open(
-        'https://docs.frappe.io/' + docsPathRef.value,
-        '_blank',
-        'noopener,noreferrer'
-      );
-    },
     setActiveGroup() {
       const { path } = this.$route;
       const fallBackGroup = this.activeGroup;
@@ -254,9 +189,6 @@ export default defineComponent({
     },
     isGroupActive(group: SidebarRoot) {
       return this.activeGroup && group.label === this.activeGroup.label;
-    },
-    routeToSidebarItem(item: SidebarItem | SidebarRoot) {
-      routeTo(this.getPath(item));
     },
     getPath(item: SidebarItem | SidebarRoot) {
       const { route: path, filters } = item;

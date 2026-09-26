@@ -17,7 +17,6 @@
         v-if="showHeader"
         :title="title"
         :border="false"
-        :searchborder="searchborder"
       >
         <template #left>
           <slot name="header-left" />
@@ -59,7 +58,6 @@ export default defineComponent({
     title: { type: String, default: '' },
     useFullWidth: { type: Boolean, default: false },
     showHeader: { type: Boolean, default: true },
-    searchborder: { type: Boolean, default: true },
   },
 });
 </script>

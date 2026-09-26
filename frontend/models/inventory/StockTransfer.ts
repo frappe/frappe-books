@@ -12,6 +12,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import { Defaults } from 'models/baseModels/Defaults/Defaults';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { addItem, getNumberSeries } from 'models/helpers';
+import { getReturnItems } from 'models/returnItems';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { TargetField } from 'schemas/types';
@@ -26,7 +27,6 @@ import {
   validateSerialNumber,
   generateSerialNumbersForItem,
 } from './helpers';
-import { ReturnDocItem } from './types';
 
 export abstract class StockTransfer extends Transfer {
   name?: string;
@@ -416,66 +416,16 @@ export abstract class StockTransfer extends Transfer {
       return;
     }
 
-    let returnDocItems: DocValueMap[] = [];
-
-    const returnBalanceItemsQty = await this.fyo.db.getReturnBalanceItemsQty(
+    const balances = await this.fyo.db.getReturnBalanceItemsQty(
       this.schemaName,
       this.name
     );
-    for (const item of docItems) {
-      if (!returnBalanceItemsQty) {
-        returnDocItems = docItems;
-        returnDocItems.map((row) => {
-          row.name = undefined;
-          (row.quantity as number) *= -1;
-          return row;
-        });
-        break;
-      }
-
-      const isItemExist = !!returnDocItems.filter(
-        (balanceItem) => !item.batch && balanceItem.item === item.item
-      ).length;
-
-      if (isItemExist) {
-        continue;
-      }
-
-      const returnedItem: ReturnDocItem | undefined =
-        returnBalanceItemsQty[item.item as string];
-
-      let quantity = returnedItem.quantity;
-      let serialNumber: string | undefined =
-        returnedItem.serialNumbers?.join('\n');
-
-      if (
-        item.batch &&
-        returnedItem.batches &&
-        returnedItem.batches[item.batch as string]
-      ) {
-        quantity = returnedItem.batches[item.batch as string].quantity;
-
-        if (returnedItem.batches[item.batch as string].serialNumbers) {
-          serialNumber =
-            returnedItem.batches[item.batch as string].serialNumbers?.join(
-              '\n'
-            );
-        }
-      }
-
-      returnDocItems.push({
-        ...item,
-        serialNumber,
-        name: undefined,
-        quantity: quantity,
-      });
-    }
 
     const returnDocData = {
       ...docData,
       name: undefined,
       date: new Date(),
-      items: returnDocItems,
+      items: getReturnItems(docItems, balances),
       returnAgainst: docData.name,
     } as DocValueMap;
 

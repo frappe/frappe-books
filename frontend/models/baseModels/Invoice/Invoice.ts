@@ -15,20 +15,16 @@ import {
   addItem,
   canApplyCouponCode,
   canApplyPricingRule,
-  createLoyaltyPointEntry,
   filterPricingRules,
   getAddedLPWithGrandTotal,
   getExchangeRate,
   getNumberSeries,
   removeUnusedCoupons,
   getPricingRulesConflicts,
-  removeLoyaltyPoint,
   roundFreeItemQty,
   getReturnLoyaltyPoints,
   getItemQtyMap,
   getItemVisibility,
-  validateLoyaltyProgram,
-  getLoyaltyProgramTier,
   isLoyaltyProgramExpiredAndMaxed,
 } from 'models/helpers';
 import { StockTransfer } from 'models/inventory/StockTransfer';
@@ -49,7 +45,6 @@ import { AccountFieldEnum, PaymentTypeEnum } from '../Payment/types';
 import { PricingRule } from '../PricingRule/PricingRule';
 import { ApplicablePricingRules } from './types';
 import { PricingRuleDetail } from '../PricingRuleDetail/PricingRuleDetail';
-import { LoyaltyProgram } from '../LoyaltyProgram/LoyaltyProgram';
 import { AppliedCouponCodes } from '../AppliedCouponCodes/AppliedCouponCodes';
 import { CouponCode } from '../CouponCode/CouponCode';
 import { SalesInvoice } from '../SalesInvoice/SalesInvoice';
@@ -218,153 +213,6 @@ export abstract class Invoice extends Transactional {
     await this._validatePricingRule();
   }
 
-  async beforeSubmit() {
-    const partyDoc = (await this.fyo.doc.getDoc(
-      ModelNameEnum.Party,
-      this.party
-    )) as Party;
-
-    if (this.redeemLoyaltyPoints && (this.loyaltyPoints as number) > 0) {
-      const currentPoints = partyDoc?.loyaltyPoints || 0;
-
-      let pointsToBeEarned = 0;
-      if (!this.isReturn && this.loyaltyProgram) {
-        const loyaltyProgramDoc = (await this.fyo.doc.getDoc(
-          ModelNameEnum.LoyaltyProgram,
-          this.loyaltyProgram
-        )) as LoyaltyProgram;
-
-        const tier = getLoyaltyProgramTier(
-          loyaltyProgramDoc,
-          this?.grandTotal as Money
-        );
-
-        if (tier) {
-          const collectionFactor = tier.collectionFactor as number;
-          pointsToBeEarned =
-            Math.round(this?.grandTotal?.float || 0) * collectionFactor;
-        }
-      }
-
-      const totalAvailablePoints = currentPoints + pointsToBeEarned;
-      if ((this.loyaltyPoints as number) > totalAvailablePoints) {
-        throw new ValidationError(
-          t`${
-            this.party as string
-          } only has ${currentPoints} points (${pointsToBeEarned} will be earned from this transaction)`
-        );
-      }
-    } else if (
-      (this.loyaltyPoints as number) > (partyDoc?.loyaltyPoints || 0)
-    ) {
-      throw new ValidationError(
-        t`${this.party as string} only has ${
-          partyDoc.loyaltyPoints as number
-        } points`
-      );
-    }
-
-    if (this.loyaltyProgram) {
-      await validateLoyaltyProgram(this, this.loyaltyProgram);
-    }
-  }
-
-  async afterSubmit() {
-    await super.afterSubmit();
-    if (this.isReturn) {
-      await this._removeLoyaltyPointEntry();
-      await this._updateIsItemsReturned();
-      this.reduceUsedCountOfCoupons();
-    }
-
-    if (this.isQuote) {
-      return;
-    }
-
-    let lpAddedBaseGrandTotal: Money | undefined;
-
-    if (this.redeemLoyaltyPoints) {
-      lpAddedBaseGrandTotal = await this.getLPAddedBaseGrandTotal();
-    }
-
-    // update outstanding amounts
-    await this.fyo.db.update(this.schemaName, {
-      name: this.name as string,
-      outstandingAmount: lpAddedBaseGrandTotal! || this.baseGrandTotal!,
-    });
-
-    const party = (await this.fyo.doc.getDoc(
-      ModelNameEnum.Party,
-      this.party
-    )) as Party;
-
-    await party.updateOutstandingAmount();
-
-    if (this.makeAutoPayment && this.autoPaymentAccount) {
-      const payment = this.getPayment();
-      await payment?.sync();
-      await payment?.submit();
-      await this.load();
-    }
-
-    if (this.makeAutoStockTransfer && this.autoStockTransferLocation) {
-      const stockTransfer = await this.getStockTransfer(true);
-      await stockTransfer?.sync();
-      await stockTransfer?.submit();
-      await this.load();
-    }
-
-    await this._updateIsItemsReturned();
-    if (!this.isReturn) {
-      await this._createLoyaltyPointEntry();
-    }
-
-    if (this.schemaName === ModelNameEnum.SalesInvoice) {
-      this.updateUsedCountOfCoupons();
-    }
-
-    if (this.loyaltyProgram) {
-      await this.updateUsedCountOfLoyaltyProgram();
-    }
-  }
-
-  async afterCancel() {
-    await super.afterCancel();
-    await this._cancelPayments();
-    await this._updatePartyOutStanding();
-    await this._updateIsItemsReturned();
-    await this._removeLoyaltyPointEntry();
-    this.reduceUsedCountOfCoupons();
-
-    if (this.loyaltyProgram) {
-      await this.reduceUsedCountOfLoyaltyProgram();
-    }
-  }
-
-  async _removeLoyaltyPointEntry() {
-    await removeLoyaltyPoint(this);
-  }
-
-  async _cancelPayments() {
-    const paymentIds = await this.getPaymentIds();
-    for (const paymentId of paymentIds) {
-      const paymentDoc = (await this.fyo.doc.getDoc(
-        'Payment',
-        paymentId
-      )) as Payment;
-      await paymentDoc.cancel();
-    }
-  }
-
-  async _updatePartyOutStanding() {
-    const partyDoc = (await this.fyo.doc.getDoc(
-      ModelNameEnum.Party,
-      this.party
-    )) as Party;
-
-    await partyDoc.updateOutstandingAmount();
-  }
-
   async afterDelete() {
     await super.afterDelete();
     const paymentIds = await this.getPaymentIds();
@@ -473,7 +321,7 @@ export abstract class Invoice extends Transactional {
       taxes[account].amount = taxes[account].amount.add(taxAmount);
     }
 
-    type Summary = typeof taxes[string] & { idx: number };
+    type Summary = (typeof taxes)[string] & { idx: number };
     const taxArr: Summary[] = [];
     let idx = 0;
     for (const account in taxes) {
@@ -537,13 +385,16 @@ export abstract class Invoice extends Transactional {
 
     const grandTotal = ((this.taxes ?? []) as Doc[])
       .map((doc) => doc.amount as Money)
-      .reduce((a, b) => {
-        if (this.isReturn) {
-          return a.abs().add(b.abs()).neg();
-        }
+      .reduce(
+        (a, b) => {
+          if (this.isReturn) {
+            return a.abs().add(b.abs()).neg();
+          }
 
-        return a.add(b);
-      }, (this.netTotal as Money).abs())
+          return a.add(b);
+        },
+        (this.netTotal as Money).abs()
+      )
       .sub(totalDiscount);
 
     if (this.redeemLoyaltyPoints) {
@@ -754,171 +605,6 @@ export abstract class Invoice extends Transactional {
     await newReturnDoc.runFormulas();
     return newReturnDoc;
   }
-
-  updateUsedCountOfCoupons() {
-    this.coupons?.map(async (coupon) => {
-      const couponDoc = await this.fyo.doc.getDoc(
-        ModelNameEnum.CouponCode,
-        coupon.coupons
-      );
-
-      await couponDoc.setAndSync({ used: (couponDoc.used as number) + 1 });
-    });
-  }
-  reduceUsedCountOfCoupons() {
-    if (!this.coupons?.length) {
-      return;
-    }
-
-    this.coupons?.map(async (coupon) => {
-      const couponDoc = await this.fyo.doc.getDoc(
-        ModelNameEnum.CouponCode,
-        coupon.coupons
-      );
-
-      await couponDoc.setAndSync({ used: (couponDoc.used as number) - 1 });
-    });
-  }
-
-  async updateUsedCountOfLoyaltyProgram() {
-    if (!this.loyaltyProgram) {
-      return;
-    }
-
-    const loyaltyProgramDoc = await this.fyo.doc.getDoc(
-      ModelNameEnum.LoyaltyProgram,
-      this.loyaltyProgram
-    );
-
-    const maximumUse = loyaltyProgramDoc.maximumUse as number;
-    const used = (loyaltyProgramDoc.used as number) || 0;
-
-    if (this.redeemLoyaltyPoints) {
-      const newUsedCount = used + 1;
-
-      if (maximumUse > 0 && newUsedCount >= maximumUse) {
-        await loyaltyProgramDoc.setAndSync({
-          used: newUsedCount,
-          isEnabled: false,
-        });
-      } else {
-        await loyaltyProgramDoc.setAndSync({
-          used: newUsedCount,
-        });
-      }
-    }
-  }
-
-  async reduceUsedCountOfLoyaltyProgram() {
-    if (!this.loyaltyProgram) {
-      return;
-    }
-
-    const loyaltyProgramDoc = await this.fyo.doc.getDoc(
-      ModelNameEnum.LoyaltyProgram,
-      this.loyaltyProgram
-    );
-
-    const maximumUse = loyaltyProgramDoc.maximumUse as number;
-    const used = (loyaltyProgramDoc.used as number) || 0;
-    const newUsedCount = used - 1;
-
-    if (this.redeemLoyaltyPoints) {
-      if (newUsedCount < maximumUse) {
-        await loyaltyProgramDoc.setAndSync({
-          used: newUsedCount,
-          isEnabled: true,
-        });
-      } else {
-        await loyaltyProgramDoc.setAndSync({
-          used: newUsedCount,
-        });
-      }
-    }
-  }
-
-  async _updateIsItemsReturned() {
-    if (!this.isReturn || !this.returnAgainst || this.isQuote) {
-      return;
-    }
-
-    const returnInvoices = await this.fyo.db.getAll(this.schema.name, {
-      filters: {
-        submitted: true,
-        cancelled: false,
-        returnAgainst: this.returnAgainst,
-      },
-    });
-
-    const isReturned = !!returnInvoices.length;
-    const invoiceDoc = await this.fyo.doc.getDoc(
-      this.schemaName,
-      this.returnAgainst
-    );
-    await invoiceDoc.setAndSync({ isReturned });
-    await invoiceDoc.submit();
-  }
-
-  async _createLoyaltyPointEntry() {
-    if (!this.loyaltyProgram) {
-      return;
-    }
-
-    const loyaltyProgramDoc = (await this.fyo.doc.getDoc(
-      ModelNameEnum.LoyaltyProgram,
-      this.loyaltyProgram
-    )) as LoyaltyProgram;
-
-    const invoiceDate = this.date as Date;
-    const fromDate = loyaltyProgramDoc.fromDate as Date;
-    const toDate = loyaltyProgramDoc.toDate as Date;
-
-    const normalizedInvoiceDate = new Date(invoiceDate);
-    normalizedInvoiceDate.setHours(0, 0, 0, 0);
-
-    const normalizedFromDate = new Date(fromDate);
-    normalizedFromDate.setHours(0, 0, 0, 0);
-
-    const normalizedToDate = new Date(toDate);
-    normalizedToDate.setHours(0, 0, 0, 0);
-
-    if (normalizedToDate.getTime() < normalizedInvoiceDate.getTime()) {
-      return;
-    }
-
-    if (
-      normalizedInvoiceDate.getTime() >= normalizedFromDate.getTime() &&
-      normalizedInvoiceDate.getTime() <= normalizedToDate.getTime()
-    ) {
-      const party = (await this.loadAndGetLink('party')) as Party;
-
-      await createLoyaltyPointEntry(this);
-      await party.updateLoyaltyPoints();
-    }
-  }
-
-  async _validateHasLinkedReturnInvoices() {
-    if (!this.name || this.isReturn || this.isQuote) {
-      return;
-    }
-
-    const returnInvoices = await this.fyo.db.getAll(this.schemaName, {
-      filters: {
-        returnAgainst: this.name,
-      },
-    });
-
-    if (!returnInvoices.length) {
-      return;
-    }
-
-    const names = returnInvoices.map(({ name }) => name).join(', ');
-    throw new ValidationError(
-      this.fyo
-        .t`Cannot cancel ${this.name} because of the following ${this.schema.label}: ${names}`
-    );
-  }
-
   async getLPAddedBaseGrandTotal() {
     const totalDiscount = this.getTotalDiscount();
 
@@ -1484,12 +1170,6 @@ export abstract class Invoice extends Transactional {
     await removeUnusedCoupons(this as SalesInvoice);
   }
 
-  async beforeCancel(): Promise<void> {
-    await super.beforeCancel();
-    await this._validateStockTransferCancelled();
-    await this._validateHasLinkedReturnInvoices();
-  }
-
   async beforeDelete(): Promise<void> {
     await super.beforeDelete();
     await this._validateStockTransferCancelled();
@@ -1516,8 +1196,9 @@ export abstract class Invoice extends Transactional {
     const names = transfers.map(({ name }) => name).join(', ');
     const label = this.fyo.schemaMap[schemaName]?.label ?? schemaName;
     throw new ValidationError(
-      this.fyo.t`Cannot cancel ${this.schema.label} ${this
-        .name!} because of the following ${label}: ${names}`
+      this.fyo.t`Cannot cancel ${this.schema.label} ${
+        this.name!
+      } because of the following ${label}: ${names}`
     );
   }
 

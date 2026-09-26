@@ -17,7 +17,6 @@ import {
   ApplicablePricingRules,
 } from './baseModels/Invoice/types';
 import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCouponCodes';
-import { CollectionRulesItems } from './baseModels/CollectionRulesItems/CollectionRulesItems';
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { DateTime } from 'luxon';
 import { Doc } from 'fyo/model/doc';
@@ -34,7 +33,6 @@ import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
 import { StockMovement } from './inventory/StockMovement';
 import { StockTransfer } from './inventory/StockTransfer';
 import { ValidationError } from 'fyo/utils/errors';
-import { isPesa } from 'fyo/utils';
 import { numberSeriesDefaultsMap } from './baseModels/Defaults/Defaults';
 import { safeParseFloat } from 'utils/index';
 import { PriceList } from './baseModels/PriceList/PriceList';
@@ -47,7 +45,6 @@ import {
   getStockBalanceEntries,
   getStockLedgerEntries,
 } from 'reports/inventory/helpers';
-import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
 import {
   generateSerialNumbersForItem,
   generateBatchForItem,
@@ -854,66 +851,6 @@ export async function getReturnLoyaltyPoints(doc: Invoice) {
   return Math.abs((loyaltyPoints as number) - Math.abs(totalLoyaltyPoints));
 }
 
-export async function createLoyaltyPointEntry(doc: Invoice) {
-  const loyaltyProgramDoc = (await doc.fyo.doc.getDoc(
-    ModelNameEnum.LoyaltyProgram,
-    doc?.loyaltyProgram
-  )) as LoyaltyProgram;
-
-  if (!loyaltyProgramDoc.isEnabled) {
-    return;
-  }
-
-  const toDate = loyaltyProgramDoc.toDate as Date;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (toDate && new Date(toDate).getTime() < today.getTime()) {
-    return;
-  }
-
-  const expiryDate = new Date(Date.now());
-
-  expiryDate.setDate(
-    expiryDate.getDate() + (loyaltyProgramDoc.expiryDuration || 0)
-  );
-
-  let loyaltyProgramTier;
-  let loyaltyPoint: number;
-
-  if (doc.redeemLoyaltyPoints) {
-    loyaltyPoint = -(doc.loyaltyPoints || 0);
-  } else {
-    loyaltyProgramTier = getLoyaltyProgramTier(
-      loyaltyProgramDoc,
-      doc?.grandTotal as Money
-    ) as CollectionRulesItems;
-
-    if (!loyaltyProgramTier) {
-      return;
-    }
-
-    const collectionFactor = loyaltyProgramTier.collectionFactor as number;
-    loyaltyPoint = Math.round(doc?.grandTotal?.float || 0) * collectionFactor;
-  }
-
-  const newLoyaltyPointEntry = doc.fyo.doc.getNewDoc(
-    ModelNameEnum.LoyaltyPointEntry,
-    {
-      loyaltyProgram: doc.loyaltyProgram,
-      customer: doc.party,
-      invoice: doc.name,
-      postingDate: doc.date,
-      purchaseAmount: doc.grandTotal,
-      expiryDate: expiryDate,
-      loyaltyProgramTier: loyaltyProgramTier?.tierName,
-      loyaltyPoints: loyaltyPoint,
-    }
-  );
-
-  return await newLoyaltyPointEntry.sync();
-}
-
 export async function getAddedLPWithGrandTotal(
   fyo: Fyo,
   loyaltyProgram: string,
@@ -927,93 +864,6 @@ export async function getAddedLPWithGrandTotal(
   const conversionFactor = loyaltyProgramDoc.conversionFactor as number;
 
   return fyo.pesa((loyaltyPoints || 0) * conversionFactor);
-}
-
-export function getLoyaltyProgramTier(
-  loyaltyProgramData: LoyaltyProgram,
-  grandTotal: Money
-): CollectionRulesItems | undefined {
-  if (!loyaltyProgramData.collectionRules) {
-    return;
-  }
-
-  let loyaltyProgramTier: CollectionRulesItems | undefined;
-
-  for (const row of loyaltyProgramData.collectionRules) {
-    if (row.minimumTotalSpent !== undefined && row.minimumTotalSpent !== null) {
-      let minimumSpent: Money;
-
-      if (isPesa(row.minimumTotalSpent)) {
-        minimumSpent = row.minimumTotalSpent;
-      } else {
-        minimumSpent = new Money(row.minimumTotalSpent as number);
-      }
-
-      if (minimumSpent.lte(grandTotal)) {
-        if (
-          !loyaltyProgramTier ||
-          minimumSpent.gt(loyaltyProgramTier.minimumTotalSpent as Money)
-        ) {
-          loyaltyProgramTier = row;
-        }
-      }
-    }
-  }
-  return loyaltyProgramTier;
-}
-
-export async function removeLoyaltyPoint(doc: Doc) {
-  if (!doc.loyaltyProgram) {
-    return;
-  }
-
-  const data = (await doc.fyo.db.getAll(ModelNameEnum.LoyaltyPointEntry, {
-    fields: ['name', 'loyaltyPoints', 'expiryDate'],
-    filters: {
-      loyaltyProgram: doc.loyaltyProgram as string,
-      invoice: doc.isReturn
-        ? (doc.returnAgainst as string)
-        : (doc.name as string),
-    },
-  })) as { name: string; loyaltyPoints: number; expiryDate: Date }[];
-
-  if (!data.length) {
-    return;
-  }
-
-  const lPEntryDoc = (await doc.fyo.doc.getDoc(
-    ModelNameEnum.LoyaltyPointEntry,
-    data[0].name
-  )) as LoyaltyPointEntry;
-
-  const newLoyaltyPoint =
-    (lPEntryDoc?.loyaltyPoints as number) +
-    Math.abs(doc.loyaltyPoints as number);
-
-  if (newLoyaltyPoint !== 0) {
-    const newLoyaltyPointEntry = doc.fyo.doc.getNewDoc(
-      ModelNameEnum.LoyaltyPointEntry,
-      {
-        loyaltyProgram: lPEntryDoc.loyaltyProgram,
-        customer: lPEntryDoc.customer,
-        invoice: lPEntryDoc.invoice,
-        postingDate: lPEntryDoc.date as Date,
-        purchaseAmount: lPEntryDoc.purchaseAmount,
-        expiryDate: lPEntryDoc.expiryDate,
-        loyaltyProgramTier: lPEntryDoc.loyaltyProgramTier,
-        loyaltyPoints: newLoyaltyPoint,
-      }
-    );
-    await newLoyaltyPointEntry.sync();
-  }
-
-  const party = (await doc.fyo.doc.getDoc(
-    ModelNameEnum.Party,
-    doc.party as string
-  )) as Party;
-
-  await lPEntryDoc.delete();
-  await party.updateLoyaltyPoints();
 }
 
 export async function validateQty(
@@ -1527,43 +1377,6 @@ export async function validateCouponCode(
     throw new ValidationError(
       t`Valid To Date should be greater than Valid From Date.`
     );
-  }
-}
-
-export async function validateLoyaltyProgram(
-  doc: Invoice,
-  loyaltyProgramName: string
-) {
-  const loyaltyProgram = await doc.fyo.db.getAll(ModelNameEnum.LoyaltyProgram, {
-    fields: ['fromDate', 'toDate', 'maximumUse', 'used', 'isEnabled'],
-    filters: { name: loyaltyProgramName },
-  });
-
-  if (
-    (loyaltyProgram[0]?.maximumUse as number) > 0 &&
-    (loyaltyProgram[0]?.used as number) >=
-      (loyaltyProgram[0]?.maximumUse as number)
-  ) {
-    return;
-  }
-
-  if (
-    loyaltyProgram[0].fromDate &&
-    (doc.date as Date) < (loyaltyProgram[0].fromDate as Date)
-  ) {
-    throw new ValidationError('Loyalty program is not yet active');
-  }
-
-  const toDate = loyaltyProgram[0].toDate as Date;
-  if (toDate) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const normalizedToDate = new Date(toDate);
-    normalizedToDate.setHours(0, 0, 0, 0);
-
-    if (normalizedToDate.getTime() < today.getTime()) {
-      return;
-    }
   }
 }
 

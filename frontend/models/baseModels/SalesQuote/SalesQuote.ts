@@ -7,7 +7,6 @@ import { Invoice } from '../Invoice/Invoice';
 import { SalesQuoteItem } from '../SalesQuoteItem/SalesQuoteItem';
 import { Defaults } from '../Defaults/Defaults';
 import { Doc } from 'fyo/model/doc';
-import { Party } from '../Party/Party';
 
 export class SalesQuote extends Invoice {
   items?: SalesQuoteItem[];
@@ -56,16 +55,6 @@ export class SalesQuote extends Invoice {
   static filters: FiltersMap = {
     numberSeries: (doc: Doc) => ({ referenceType: doc.schemaName }),
   };
-
-  async afterSubmit(): Promise<void> {
-    await super.afterSubmit();
-
-    if (this.referenceType == ModelNameEnum.Lead) {
-      const partyDoc = (await this.loadAndGetLink('party')) as Party;
-
-      await partyDoc.setAndSync('status', 'Quotation');
-    }
-  }
 
   static getListViewSettings(): ListViewSettings {
     return {

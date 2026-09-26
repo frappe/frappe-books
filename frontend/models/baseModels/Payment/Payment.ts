@@ -348,36 +348,6 @@ export class Payment extends Transactional {
     throw new ValidationError(message);
   }
 
-  async afterSubmit() {
-    await super.afterSubmit();
-    await this.updateReferenceDocOutstanding();
-    await this.updatePartyOutstanding();
-  }
-
-  async updateReferenceDocOutstanding() {
-    for (const row of this.for ?? []) {
-      const referenceDoc = await this.fyo.doc.getDoc(
-        row.referenceType!,
-        row.referenceName
-      );
-
-      const previousOutstandingAmount = referenceDoc.outstandingAmount as Money;
-      const isReturnInvoice = (referenceDoc as Invoice).isReturn;
-
-      let outstandingAmount: Money;
-
-      if (isReturnInvoice) {
-        const paymentAmount = row.amount!.abs();
-        const previous = previousOutstandingAmount.abs();
-
-        outstandingAmount = previous.sub(paymentAmount);
-      } else {
-        outstandingAmount = previousOutstandingAmount.sub(row.amount!);
-      }
-      await referenceDoc.setAndSync({ outstandingAmount });
-    }
-  }
-
   async beforeSync(): Promise<void> {
     await super.beforeSync();
     const totalAmount = await this.getReferenceOutstandingAmount();
@@ -399,38 +369,6 @@ export class Payment extends Transactional {
         }
       }
     }
-  }
-
-  async afterCancel() {
-    await super.afterCancel();
-    await this.revertOutstandingAmount();
-  }
-
-  async revertOutstandingAmount() {
-    await this._revertReferenceOutstanding();
-    await this.updatePartyOutstanding();
-  }
-
-  async _revertReferenceOutstanding() {
-    for (const ref of this.for ?? []) {
-      const refDoc = await this.fyo.doc.getDoc(
-        ref.referenceType!,
-        ref.referenceName
-      );
-      const isReturnInvoice = (refDoc as Invoice).isReturn;
-      const outstandingAmount = isReturnInvoice
-        ? (refDoc.outstandingAmount as Money).sub(ref.amount!)
-        : (refDoc.outstandingAmount as Money).add(ref.amount!);
-      await refDoc.setAndSync({ outstandingAmount });
-    }
-  }
-
-  async updatePartyOutstanding() {
-    const partyDoc = (await this.fyo.doc.getDoc(
-      ModelNameEnum.Party,
-      this.party
-    )) as Party;
-    await partyDoc.updateOutstandingAmount();
   }
 
   static defaults: DefaultMap = {

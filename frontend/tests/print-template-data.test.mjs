@@ -13,8 +13,6 @@ for (const [invoiceType, transferType] of [
     });
     const invoice = await fyo.doc.getDoc(invoiceType, 'INV-1');
     const transfer = await fyo.doc.getDoc(transferType, 'ST-1');
-    assert.equal(invoice.links.backReference, transfer);
-    assert.equal(transfer.links.backReference, invoice);
 
     const values = await getPrintTemplateDocValues(invoice);
     assert.equal(values.backReference, 'ST-1');
@@ -155,3 +153,27 @@ async function makeFixture(records, schemas = getSchemas('-', [])) {
   };
   return fyo;
 }
+
+test('loading a document leaves its links to be loaded on access', async () => {
+  const fyo = await makeFixture({
+    SalesInvoice: [{ name: 'INV-1', party: 'Customer', account: 'Debtors' }],
+    Party: [{ name: 'Customer', defaultAccount: 'Debtors' }],
+    Account: [{ name: 'Debtors', parentAccount: 'Receivables' }],
+  });
+  const loads = [];
+  const load = fyo.db.get.bind(fyo.db);
+  fyo.db.get = (schemaName, name, ...rest) => {
+    loads.push(`${schemaName} ${name}`);
+    return load(schemaName, name, ...rest);
+  };
+
+  const invoice = await fyo.doc.getDoc('SalesInvoice', 'INV-1');
+  assert.deepEqual(loads, ['SalesInvoice INV-1']);
+  assert.equal(invoice.links, undefined);
+
+  const party = await invoice.loadAndGetLink('party');
+  assert.equal(party.name, 'Customer');
+  assert.deepEqual(loads, ['SalesInvoice INV-1', 'Party Customer']);
+  assert.equal(await invoice.loadAndGetLink('party'), party);
+  assert.equal(loads.length, 2);
+});

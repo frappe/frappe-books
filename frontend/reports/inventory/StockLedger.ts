@@ -1,11 +1,10 @@
-import { Fyo, t } from 'fyo';
+import { t } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import { cloneDeep } from 'lodash';
 import { DateTime } from 'luxon';
 import { InventorySettings } from 'models/inventory/InventorySettings';
 import { ValuationMethod } from 'models/inventory/types';
-import { ModelNameEnum } from 'models/types';
 import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
 import { ColumnField, ReportCell, ReportData, ReportRow } from 'reports/types';
@@ -23,7 +22,6 @@ export class StockLedger extends Report {
 
   _rawData?: ComputedStockLedgerEntry[];
   loading = false;
-  shouldRefresh = false;
 
   item?: string;
   location?: string;
@@ -47,11 +45,6 @@ export class StockLedger extends Report {
       .enableSerialNumber;
   }
 
-  constructor(fyo: Fyo) {
-    super(fyo);
-    this._setObservers();
-  }
-
   setDefaultFilters() {
     if (!this.toDate) {
       this.toDate = DateTime.now().plus({ days: 1 }).toISODate();
@@ -69,7 +62,7 @@ export class StockLedger extends Report {
   }
 
   async _getReportData(force?: boolean): Promise<ReportData> {
-    if (this.shouldRefresh || force || !this._rawData?.length) {
+    if (force || !this._rawData?.length) {
       await this._setRawData();
     }
 
@@ -234,20 +227,6 @@ export class StockLedger extends Report {
     }
 
     return { cells };
-  }
-
-  _setObservers() {
-    const listener = () => (this.shouldRefresh = true);
-
-    this.fyo.doc.observer.on(
-      `sync:${ModelNameEnum.StockLedgerEntry}`,
-      listener
-    );
-
-    this.fyo.doc.observer.on(
-      `delete:${ModelNameEnum.StockLedgerEntry}`,
-      listener
-    );
   }
 
   getColumns(): ColumnField[] {

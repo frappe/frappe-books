@@ -169,13 +169,10 @@ export default defineComponent({
     async setReportData() {
       if (this.report === null) {
         this.report = await getReport(this.reportClassName);
+        return;
       }
 
-      if (!this.report.reportData.length) {
-        await this.report.setReportData();
-      } else if (this.report.shouldRefresh) {
-        await this.report.setReportData(undefined, true);
-      }
+      await this.report.setReportData(undefined, true);
     },
   },
 });

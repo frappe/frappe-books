@@ -178,7 +178,6 @@ export default defineComponent({
       newAccountName: '',
       insertingAccount: false,
       totals: {} as Record<string, { totalDebit: number; totalCredit: number }>,
-      refetchTotals: false,
       settings: null as null | TreeViewSettings,
     };
   },
@@ -195,25 +194,15 @@ export default defineComponent({
         : t`Add Account`;
     },
   },
-  async mounted() {
-    await this.setTotalDebitAndCredit();
-    fyo.doc.observer.on('sync:AccountingLedgerEntry', () => {
-      this.refetchTotals = true;
-    });
-  },
   async activated() {
     await this.fetchAccounts();
+    await this.setTotalDebitAndCredit();
     if (fyo.store.isDevelopment) {
       // @ts-ignore
       window.coa = this;
     }
 
     docsPathRef.value = docsPathMap.ChartOfAccounts!;
-
-    if (this.refetchTotals) {
-      await this.setTotalDebitAndCredit();
-      this.refetchTotals = false;
-    }
   },
   deactivated() {
     docsPathRef.value = '';

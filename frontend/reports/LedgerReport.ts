@@ -1,4 +1,4 @@
-import { Fyo, t } from 'fyo';
+import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
 import { Report } from 'reports/Report';
@@ -14,26 +14,6 @@ export abstract class LedgerReport extends Report {
   static reportName = 'general-ledger';
 
   _rawData: LedgerEntry[] = [];
-  shouldRefresh = false;
-
-  constructor(fyo: Fyo) {
-    super(fyo);
-    this._setObservers();
-  }
-
-  _setObservers() {
-    const listener = () => (this.shouldRefresh = true);
-
-    this.fyo.doc.observer.on(
-      `sync:${ModelNameEnum.AccountingLedgerEntry}`,
-      listener
-    );
-
-    this.fyo.doc.observer.on(
-      `delete:${ModelNameEnum.AccountingLedgerEntry}`,
-      listener
-    );
-  }
 
   _getGroupByKey() {
     let groupBy: GroupByKey = 'referenceName';

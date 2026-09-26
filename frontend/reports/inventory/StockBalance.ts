@@ -21,7 +21,7 @@ export class StockBalance extends StockLedger {
   serialNumberFilter: SerialNumberStatus = 'All';
 
   override async _getReportData(force?: boolean): Promise<ReportData> {
-    if (this.shouldRefresh || force || !this._rawData?.length) {
+    if (force || !this._rawData?.length) {
       await this._setRawData();
     }
 

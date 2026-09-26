@@ -122,7 +122,7 @@ def update_coupon_usage(invoice, delta):
 		used = max(0, int(coupon.used or 0) + delta)
 		if delta > 0 and coupon.maximum_use and used > coupon.maximum_use:
 			frappe.throw(_("Coupon {0} has reached its use limit.").format(coupon.name))
-		frappe.db.set_value("Books Coupon Code", coupon.name, "used", used, update_modified=False)
+		frappe.db.set_value("Books Coupon Code", coupon.name, "used", used)
 
 
 def _validated_coupons(invoice, order_value):

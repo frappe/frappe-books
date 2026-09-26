@@ -17,13 +17,7 @@ def update_party_outstanding(party_name):
 		total = purchases
 	else:
 		total = sales - purchases
-	frappe.db.set_value(
-		"Books Party",
-		party_name,
-		"outstanding_amount",
-		rounded(total),
-		update_modified=False,
-	)
+	frappe.db.set_value("Books Party", party_name, "outstanding_amount", rounded(total))
 
 
 def _invoice_total(doctype, party_name):

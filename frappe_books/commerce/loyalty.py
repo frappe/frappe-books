@@ -111,13 +111,7 @@ def get_available_points(customer, loyalty_program=None, on_date=None):
 
 
 def update_party_points(customer):
-	frappe.db.set_value(
-		"Books Party",
-		customer,
-		"loyalty_points",
-		max(0, get_available_points(customer)),
-		update_modified=False,
-	)
+	frappe.db.set_value("Books Party", customer, "loyalty_points", max(0, get_available_points(customer)))
 
 
 def expire_programs_and_points():
@@ -125,7 +119,7 @@ def expire_programs_and_points():
 	for name in frappe.get_all(
 		"Books Loyalty Program", filters={"is_enabled": 1, "to_date": ["<", today]}, pluck="name"
 	):
-		frappe.db.set_value("Books Loyalty Program", name, "is_enabled", 0, update_modified=False)
+		frappe.db.set_value("Books Loyalty Program", name, "is_enabled", 0)
 	customers = frappe.get_all("Books Loyalty Point Entry", distinct=True, pluck="customer")
 	for customer in customers:
 		update_party_points(customer)
@@ -181,4 +175,4 @@ def _update_program_usage(program, delta):
 	values = {"used": used}
 	if program.maximum_use:
 		values["is_enabled"] = int(used < program.maximum_use)
-	frappe.db.set_value("Books Loyalty Program", program.name, values, update_modified=False)
+	frappe.db.set_value("Books Loyalty Program", program.name, values)

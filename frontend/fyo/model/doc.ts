@@ -1,7 +1,6 @@
 import { Fyo } from 'fyo';
 import { Converter } from 'fyo/core/converter';
 import { DocValue, DocValueMap, RawValueMap } from 'fyo/core/types';
-import { DEFAULT_USER } from 'fyo/utils/consts';
 import { ConflictError, MandatoryError, NotFoundError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
 import {
@@ -601,21 +600,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
       this.submitted = false;
       this.cancelled = false;
     }
-
-    if (!this.createdBy) {
-      this.createdBy = this.fyo.user || DEFAULT_USER;
-    }
-
-    if (!this.created) {
-      this.created = new Date();
-    }
-
-    this._updateModifiedMetaValues();
-  }
-
-  _updateModifiedMetaValues() {
-    this.modifiedBy = this.fyo.user || DEFAULT_USER;
-    this.modified = new Date();
   }
 
   async load() {
@@ -926,13 +910,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
     await this._preSync();
 
     let data = this.getValidDict(false, true);
-    // Keep the saved timestamp until the database accepts the update.
-    if (this.fieldMap.modifiedBy) {
-      data.modifiedBy = this.fyo.user || DEFAULT_USER;
-    }
-    if (this.fieldMap.modified) {
-      data.modified = new Date();
-    }
     data = await this.fyo.db.update(
       this.schemaName,
       data,

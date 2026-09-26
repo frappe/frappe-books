@@ -24,8 +24,10 @@ async function makeFixture(storedForm) {
             updateError = undefined;
             throw error;
           }
+          const modified = Date.parse(stored.modified) + 1000;
           stored = structuredClone(value);
           delete stored.__expectedModified;
+          stored.modified = new Date(modified).toISOString();
           return structuredClone(stored);
         }
       }

@@ -6,7 +6,6 @@ export const DEFAULT_COUNTRY_CODE = 'in';
 export const DEFAULT_CURRENCY = 'INR';
 export const DEFAULT_LANGUAGE = 'English';
 export const DEFAULT_SERIES_START = 1001;
-export const DEFAULT_USER = 'Admin';
 export const RTL_LANGUAGES = [
   'Arabic',
   'Aramaic',

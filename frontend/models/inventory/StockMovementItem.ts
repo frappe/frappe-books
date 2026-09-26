@@ -172,7 +172,7 @@ export class StockMovementItem extends TransferItem {
           ModelNameEnum.Item,
           this.item
         );
-        const unitDoc = itemDoc.getLink('uom');
+        const unitDoc = await itemDoc.loadAndGetLink('uom');
 
         let quantity: number = this.quantity ?? 1;
         if (fieldname === 'transferQuantity') {

@@ -614,7 +614,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
     if (data && data.name) {
       await this._syncValues(data);
-      await this.loadLinks();
     } else {
       throw new NotFoundError(`Not Found: ${this.schemaName} ${this.name}`);
     }
@@ -623,8 +622,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
     this._notInserted = false;
   }
 
+  /** Loads every linked doc; `loadAndGetLink` loads one. */
   async loadLinks() {
-    this.links ??= {};
     const linkFields = this.schema.fields.filter(
       ({ fieldtype }) =>
         fieldtype === FieldTypeEnum.Link ||
@@ -668,13 +667,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _loadLinkDoc(fieldname: string, schemaName: string, name: string) {
-    this.links![fieldname] = await this.fyo.doc.getDoc(schemaName, name, {
-      reuseLoadingDoc: true,
-    });
-  }
-
-  getLink(fieldname: string): Doc | null {
-    return this.links?.[fieldname] ?? null;
+    const linkDoc = await this.fyo.doc.getDoc(schemaName, name);
+    this.links ??= {};
+    this.links[fieldname] = linkDoc;
   }
 
   async loadAndGetLink(fieldname: string): Promise<Doc | null> {
@@ -683,7 +678,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
 
     if (this.links?.[fieldname]?.name !== this[fieldname]) {
-      await this.loadLinks();
+      await this._loadLink(this.fieldMap[fieldname]);
     }
 
     return this.links?.[fieldname] ?? null;

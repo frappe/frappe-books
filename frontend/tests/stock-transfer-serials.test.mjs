@@ -65,7 +65,7 @@ test('a material receipt row suggests a batch and new serial numbers', async () 
     start: 1,
     padZeros: 3,
     setAndSync() {},
-    getLink() {},
+    loadAndGetLink() {},
   });
   const movement = fyo.doc.getNewDoc('StockMovement', {
     movementType: 'MaterialReceipt',

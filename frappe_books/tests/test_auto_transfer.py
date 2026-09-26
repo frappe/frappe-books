@@ -82,6 +82,12 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 		self.assertRaises(frappe.LinkExistsError, invoice.cancel)
 
+	def test_auto_transfer_requires_a_default_location(self):
+		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
+		frappe.db.set_single_value("Books Defaults", "shipment_location", None)
+
+		self.assertRaisesRegex(frappe.ValidationError, "Set Shipment Location", invoice.submit)
+
 	def _sales_invoice(self, **values):
 		receivable = make_account("Auto Receivable", account_type="Receivable")
 		income = make_account("Auto Sales", root_type="Income", account_type="Income Account")

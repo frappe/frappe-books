@@ -38,6 +38,7 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		item = make_item(income.name, expense.name, tax=tax.name, track_item=1)
 		frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock.name)
 		frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received.name)
+		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			party.name,

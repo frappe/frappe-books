@@ -210,6 +210,22 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			("Books Party", "Party"),
 		)
 
+	def test_series_names_come_from_the_server(self):
+		account = make_account("Bridge Series Account", root_type="Liability")
+		values = {"name": "Client Chosen Name", "numberSeries": "JV-", "date": "2031-01-01"}
+		values["accounts"] = [{"account": account.name, "debit": 10}, {"account": account.name, "credit": 10}]
+
+		first = self.bridge.insert("JournalEntry", values)["name"]
+		second = self.bridge.insert("JournalEntry", values)["name"]
+
+		self.assertRegex(first, r"^JV-\d+$")
+		self.assertEqual(int(second.removeprefix("JV-")), int(first.removeprefix("JV-")) + 1)
+		self.assertFalse(frappe.db.exists("Books Journal Entry", "Client Chosen Name"))
+
+	def test_autoincrement_names_come_from_the_server(self):
+		inserted = self.bridge.insert("ItemEnquiry", {"name": "999999999", "item": "Bridge enquiry"})
+		self.assertNotEqual(inserted["name"], "999999999")
+
 	def test_draft_insert_runs_frappe_mandatory_validation(self):
 		name = unique_name("Invalid Bridge Color")
 

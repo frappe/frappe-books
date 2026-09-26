@@ -84,30 +84,29 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		for serial_number in serials.splitlines():
 			self.assertEqual(frappe.db.get_value("Books Serial Number", serial_number, "status"), "Active")
 
-	def test_receipt_creates_missing_batch_with_requested_name(self):
+	def test_receipt_requires_an_existing_batch(self):
 		tracked_item = make_item(
 			self.item.income_account,
 			self.item.expense_account,
 			track_item=1,
 			has_batch=1,
 		)
-		batch = unique_name("NEW-BATCH")
-		receipt = make_movement(
-			"MaterialReceipt",
-			[
-				{
-					"item": tracked_item.name,
-					"to_location": "Stores",
-					"quantity": 2,
-					"rate": 12,
-					"batch": batch,
-				}
-			],
+		receipt = frappe.get_doc(
+			movement_values(
+				"MaterialReceipt",
+				[
+					{
+						"item": tracked_item.name,
+						"to_location": "Stores",
+						"quantity": 2,
+						"rate": 12,
+						"batch": unique_name("NEW-BATCH"),
+					}
+				],
+			)
 		)
-		receipt.submit()
 
-		self.assertEqual(frappe.db.get_value("Books Batch", batch, "item"), tracked_item.name)
-		self.assertEqual(stock_quantity(tracked_item.name, "Stores", batch), 2)
+		self.assertRaises(frappe.LinkValidationError, receipt.insert)
 
 
 def make_movement(movement_type, items):

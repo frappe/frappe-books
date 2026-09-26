@@ -97,6 +97,32 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual(free_row.pricing_rule, rule.name)
 		self.assertEqual(invoice.grand_total, 180)
 
+	def test_rule_values_reset_when_rule_stops_applying(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		for values in (
+			{"price_discount_type": "percentage", "discount_percentage": 25},
+			{"price_discount_type": "rate", "discount_rate": 80},
+		):
+			with self.subTest(values=values):
+				self.item = make_item(self.income.name, self.expense.name, rate=100)
+				rule = self._pricing_rule(min_quantity=2, **values)
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					self.item.name,
+					self.income.name,
+				)
+				invoice.items[0].update({"rate": None, "item_discount_percent": 0})
+				invoice.save()
+				self.assertEqual(invoice.items[0].pricing_rule, rule.name)
+				self.assertEqual(invoice.grand_total, 150 if "discount_percentage" in values else 160)
+
+				invoice.items[0].quantity = 1
+				invoice.save()
+				self.assertFalse(invoice.items[0].pricing_rule)
+				self.assertEqual(invoice.grand_total, 100)
+
 	def _pricing_rule(self, **values):
 		data = {
 			"doctype": "Books Pricing Rule",

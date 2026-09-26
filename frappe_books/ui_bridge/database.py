@@ -177,7 +177,7 @@ class BooksDatabaseBridge:
 		doc.check_permission("write")
 		self._validate_expected_modified(doc, values.get("__expectedModified"))
 		self._validate_docstatus_update(doc, values)
-		doc.update(self._target_values(source_schema, values))
+		self._set_target_values(doc, source_schema, values)
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
 
@@ -282,7 +282,7 @@ class BooksDatabaseBridge:
 
 	def _target_rows(self, child_doctype: str, rows: list[dict]) -> list[dict]:
 		child_source = source_by_doctype()[child_doctype]
-		return [self._target_values(child_source, row) for row in rows]
+		return [{**self._target_values(child_source, row), "name": row.get("name")} for row in rows]
 
 	def _target_filters(self, source_schema: str, filters: dict) -> list[list[Any]]:
 		meta = frappe.get_meta(target_doctype(source_schema))
@@ -359,9 +359,19 @@ class BooksDatabaseBridge:
 	def _update_single(self, source_schema, values):
 		doc = frappe.get_single(target_doctype(source_schema))
 		doc.check_permission("write")
-		doc.update(self._target_values(source_schema, values))
+		self._set_target_values(doc, source_schema, values)
 		doc.save()
 		return self.get(source_schema, source_schema)
+
+	def _set_target_values(self, doc, source_schema, values):
+		mapped = self._target_values(source_schema, values)
+		# Rows of this document update in place. Any other client row name becomes a new row.
+		own_rows = {row.name for row in doc.get_all_children()}
+		for field in doc.meta.get_table_fields():
+			for row in mapped.get(field.fieldname) or []:
+				if row["name"] not in own_rows:
+					row["name"] = None
+		doc.update(mapped)
 
 	def _validate_docstatus_update(self, doc, values):
 		if not doc.meta.is_submittable:

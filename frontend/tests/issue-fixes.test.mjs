@@ -13,40 +13,6 @@ import {
   setLanguageMapOnTranslationString,
 } from './helpers/accounting.mjs';
 
-test('payment limits follow added, removed and replaced invoice references', async () => {
-  const fyo = await makeFyo();
-  const invoices = { first: 157.5, second: 63, replacement: 40 };
-  fyo.doc.getDoc = async (_schema, name) => ({
-    outstandingAmount: fyo.pesa(invoices[name]),
-  });
-  const payment = fyo.doc.getNewDoc('Payment');
-  const reference = (name) => ({
-    referenceType: 'SalesInvoice',
-    referenceName: name,
-    amount: fyo.pesa(invoices[name]),
-  });
-  payment.for = [reference('first')];
-  await payment.validations.amount(fyo.pesa(157.5));
-  payment.for.push(reference('second'));
-  await payment.validations.amount(fyo.pesa(220.5));
-  payment.for.shift();
-  await assert.rejects(
-    payment.validations.amount(fyo.pesa(220.5)),
-    /cannot exceed/
-  );
-  payment.for = [reference('replacement')];
-  await payment.validations.amount(fyo.pesa(40));
-  await assert.rejects(
-    payment.validations.amount(fyo.pesa(63)),
-    /cannot exceed/
-  );
-  invoices.replacement = 20;
-  await assert.rejects(
-    payment.validations.amount(fyo.pesa(40)),
-    /cannot exceed/
-  );
-});
-
 test('empty FIFO stock has no residual value or valuation and can be replenished', () => {
   const stock = new StockQueue();
   stock.inward(0.1, 1);

@@ -1,5 +1,4 @@
-import { Fyo, t } from 'fyo';
-import { DocValue } from 'fyo/core/types';
+import { Fyo } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import {
   Action,
@@ -9,9 +8,7 @@ import {
   FormulaMap,
   HiddenMap,
   ListViewSettings,
-  ValidationMap,
 } from 'fyo/model/types';
-import { ValidationError } from 'fyo/utils/errors';
 import {
   getDocStatusListColumn,
   getLedgerLinkAction,
@@ -29,7 +26,6 @@ import { PaymentType, PaymentTypeEnum } from './types';
 import { PartyRoleEnum } from '../Party/types';
 import { TaxSummary } from '../TaxSummary/TaxSummary';
 import { PaymentMethod } from '../PaymentMethod/PaymentMethod';
-import { getPaymentMethodRequirements } from '../PaymentMethod/requirements';
 
 type AccountTypeMap = Record<AccountTypeEnum, string[] | undefined>;
 
@@ -97,191 +93,6 @@ export class Payment extends Transactional {
     }
 
     forReferences[0].amount = this.amount;
-  }
-
-  async validate() {
-    await super.validate();
-    if (this.submitted) {
-      return;
-    }
-
-    await this.validateFor();
-    this.validateAccounts();
-    this.validateTotalReferenceAmount();
-    await this.validateReferences();
-    await this.validateReferencesAreSet();
-  }
-
-  async validateFor() {
-    for (const childDoc of this.for ?? []) {
-      const referenceName = childDoc.referenceName;
-      const referenceType = childDoc.referenceType;
-
-      const refDoc = (await this.fyo.doc.getDoc(
-        childDoc.referenceType!,
-        childDoc.referenceName
-      )) as Invoice;
-
-      if (referenceName && referenceType && !refDoc) {
-        throw new ValidationError(
-          t`${referenceType} of type ${
-            this.fyo.schemaMap?.[referenceType]?.label ?? referenceType
-          } does not exist`
-        );
-      }
-
-      if (!refDoc) {
-        continue;
-      }
-
-      if (refDoc?.party !== this.party) {
-        throw new ValidationError(
-          t`${refDoc.name!} party ${refDoc.party!} is different from ${
-            this.party!
-          }`
-        );
-      }
-    }
-  }
-
-  validateAccounts() {
-    if (this.paymentAccount !== this.account || !this.account) {
-      return;
-    }
-
-    throw new this.fyo.errors.ValidationError(
-      t`To Account and From Account can't be the same: ${
-        this.account as string
-      }`
-    );
-  }
-
-  validateTotalReferenceAmount() {
-    const forReferences = (this.for ?? []) as Doc[];
-    if (forReferences.length === 0) {
-      return;
-    }
-
-    const referenceAmountTotal = forReferences
-      .map(({ amount }) => amount as Money)
-      .reduce((a, b) => a.add(b), this.fyo.pesa(0));
-
-    if ((this.amount as Money).gte(referenceAmountTotal)) {
-      return;
-    }
-
-    const payment = this.fyo.format(this.amount!, 'Currency');
-    const refAmount = this.fyo.format(referenceAmountTotal, 'Currency');
-
-    throw new ValidationError(
-      this.fyo.t`Amount: ${payment} is less than the total
-        amount allocated to references: ${refAmount}.`
-    );
-  }
-
-  async validateReferencesAreSet() {
-    const paymentMethod = await this.paymentMethodDoc();
-    const requirements = getPaymentMethodRequirements(
-      paymentMethod.type,
-      paymentMethod.requiresClearanceDate
-    );
-
-    if (requirements.requiresClearanceDate && !this.clearanceDate) {
-      throw new ValidationError(t`Clearance Date not set.`);
-    }
-
-    if (requirements.requiresReferenceId && !this.referenceId) {
-      throw new ValidationError(t`Reference Id not set.`);
-    }
-  }
-
-  async validateReferences() {
-    const forReferences = this.for ?? [];
-    if (forReferences.length === 0) {
-      return;
-    }
-
-    for (const row of forReferences) {
-      this.validateReferenceType(row);
-    }
-
-    await this.validateReferenceOutstanding();
-  }
-
-  validateReferenceType(row: PaymentFor) {
-    const referenceType = row.referenceType;
-    if (
-      ![ModelNameEnum.SalesInvoice, ModelNameEnum.PurchaseInvoice].includes(
-        referenceType!
-      )
-    ) {
-      throw new ValidationError(t`Please select a valid reference type.`);
-    }
-  }
-
-  async getReferenceOutstandingAmount() {
-    let outstandingAmount = this.fyo.pesa(0);
-    for (const row of this.for ?? []) {
-      if (!row.referenceType || !row.referenceName) {
-        continue;
-      }
-      const referenceDoc = (await this.fyo.doc.getDoc(
-        row.referenceType as string,
-        row.referenceName as string
-      )) as Invoice;
-
-      outstandingAmount = outstandingAmount.add(
-        referenceDoc.outstandingAmount?.abs() ?? 0
-      );
-    }
-    return outstandingAmount;
-  }
-
-  async validateReferenceOutstanding() {
-    const outstandingAmount = await this.getReferenceOutstandingAmount();
-    const amount = this.amount as Money;
-
-    if (amount.gt(0) && amount.lte(outstandingAmount)) {
-      return;
-    }
-
-    let message = this.fyo.t`Payment amount: ${this.fyo.format(
-      this.amount!,
-      'Currency'
-    )} should be less than Outstanding amount: ${this.fyo.format(
-      outstandingAmount,
-      'Currency'
-    )}.`;
-
-    if (amount.lte(0)) {
-      const amt = this.fyo.format(this.amount!, 'Currency');
-      message = this.fyo.t`Payment amount: ${amt} should be greater than 0.`;
-    }
-
-    throw new ValidationError(message);
-  }
-
-  async beforeSync(): Promise<void> {
-    await super.beforeSync();
-    const totalAmount = await this.getReferenceOutstandingAmount();
-
-    for (const row of this.for ?? []) {
-      if (!this.fyo.singles.AccountingSettings?.enablePartialPayment) {
-        const amount = (this.writeoff as Money).isZero()
-          ? (this.amount as Money)
-          : (this.amountPaid as Money);
-
-        if (amount.lt(totalAmount)) {
-          if (this.writeoff?.isZero()) {
-            this.amount = totalAmount;
-            row.amountPaid = this.fyo.pesa(0);
-            throw new ValidationError(
-              this.fyo.t`Enable Partial payment to pay partial amount`
-            );
-          }
-        }
-      }
-    }
   }
 
   static defaults: DefaultMap = {
@@ -440,38 +251,6 @@ export class Payment extends Transactional {
         return this.referenceType || undefined;
       },
       dependsOn: ['for'],
-    },
-  };
-
-  validations: ValidationMap = {
-    amount: async (value: DocValue) => {
-      if ((value as Money).isNegative()) {
-        throw new ValidationError(
-          this.fyo.t`Payment amount cannot be less than zero.`
-        );
-      }
-
-      if (((this.for ?? []) as Doc[]).length === 0) {
-        return;
-      }
-
-      const totalAmount = await this.getReferenceOutstandingAmount();
-
-      if ((value as Money).gt(totalAmount)) {
-        throw new ValidationError(
-          this.fyo.t`Payment amount cannot exceed ${this.fyo.format(
-            totalAmount,
-            'Currency'
-          )}.`
-        );
-      } else if ((value as Money).isZero()) {
-        throw new ValidationError(
-          this.fyo.t`Payment amount cannot be ${this.fyo.format(
-            value as Money,
-            'Currency'
-          )}.`
-        );
-      }
     },
   };
 

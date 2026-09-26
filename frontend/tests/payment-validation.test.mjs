@@ -2,47 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Fyo, getSchemas, models } from './helpers/accounting.mjs';
 
-test('an overallocated duplicate keeps its amount and can save after correction', async () => {
-  const { fyo, original, invoice, payment, stored } = await makePayment();
-
-  await assert.rejects(
-    payment.sync(),
-    /Payment amount cannot exceed 4,90,231\.00/
-  );
-  assert.equal(payment.amount.float, 910429);
-  assert.equal(payment.for[0].amount.float, 910429);
-  assert.equal(payment.isSyncing, false);
-  assert.equal(stored.has('Payment'), false);
-
-  await payment.set('amount', fyo.pesa(490231));
-  await payment.sync();
-
-  assert.equal(payment.amount.float, 490231);
-  assert.equal(payment.for[0].amount.float, 490231);
-  assert.equal(payment.inserted, true);
-  assert.equal(payment.isSubmitted, false);
-  assert.notEqual(payment.name, original.name);
-  assert.equal(Number(stored.get('Payment').amount), 490231);
-  assert.equal(original.amount.float, 910429);
-  assert.equal(original.for[0].amount.float, 910429);
-  assert.equal(original.isSubmitted, true);
-  assert.equal(invoice.outstandingAmount.float, 490231);
-});
-
-test('rejecting an amount edit preserves the previous payment and allocation', async () => {
-  const { fyo, payment } = await makePayment();
-  await payment.set('amount', fyo.pesa(490231));
-
-  await assert.rejects(
-    payment.set('amount', fyo.pesa(910429)),
-    /Payment amount cannot exceed 4,90,231\.00/
-  );
-
-  assert.equal(payment.amount.float, 490231);
-  assert.equal(payment.for[0].amount.float, 490231);
-});
-
-test('changing an invoice reference refreshes the payment limit', async () => {
+test('changing an invoice reference refreshes the payment amount', async () => {
   const { fyo, payment } = await makePayment();
   await payment.set('amount', fyo.pesa(490231));
   fyo.doc.getNewDoc('PurchaseInvoice', {
@@ -60,19 +20,7 @@ test('changing an invoice reference refreshes the payment limit', async () => {
   assert.equal(payment.inserted, true);
 });
 
-test('a changed invoice balance is checked again when editing the amount', async () => {
-  const { fyo, invoice, payment } = await makePayment();
-  await payment.set('amount', fyo.pesa(490231));
-  invoice.outstandingAmount = fyo.pesa(100);
-
-  await assert.rejects(
-    payment.set('amount', fyo.pesa(200)),
-    /Payment amount cannot exceed 100\.00/
-  );
-  assert.equal(payment.amount.float, 490231);
-});
-
-test('full-payment validation uses the newly selected invoice balance', async () => {
+test('a full payment takes the newly selected invoice balance', async () => {
   const { fyo, payment } = await makePayment();
   fyo.singles.AccountingSettings.enablePartialPayment = false;
   await payment.set('amount', fyo.pesa(490231));

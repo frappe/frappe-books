@@ -5,6 +5,7 @@ from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 import frappe
+from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
 from frappe_books.accounting.invoice import InvoiceController
@@ -22,7 +23,7 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "close", "preview"}
+READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "close", "preview", "getMapped"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
@@ -164,6 +165,11 @@ class BooksDatabaseBridge:
 			doc.check_permission("create")
 		doc.calculate()
 		return self._to_readable_source(source_schema, doc)
+
+	def get_mapped(self, method: str, source_name: str) -> dict:
+		"""Return the unsaved document a whitelisted mapper, like make_return, builds."""
+		doc = make_mapped_doc(method, source_name)
+		return self._to_readable_source(source_by_doctype()[doc.doctype], doc)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
 		frappe.rename_doc(_writable_doctype(source_schema), old_name, new_name)

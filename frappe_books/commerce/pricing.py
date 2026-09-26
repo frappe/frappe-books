@@ -51,17 +51,48 @@ def reset_pricing(invoice):
 	invoice.set("items", [row for row in invoice.items if not row.is_free_item])
 	invoice.set("pricing_rule_detail", [])
 	invoice.is_pricing_rule_applied = 0
-	rows = [row for row in invoice.items if row.pricing_rule]
-	if not rows:
-		return
+	rules = applied_rules(invoice.items)
+	for row in invoice.items:
+		if row.pricing_rule:
+			_reset_row(row, rules.get(row.pricing_rule))
+
+
+def applied_rules(rows):
+	"""Return the pricing rules named on the rows, by name."""
+	names = list({row.pricing_rule for row in rows if row.pricing_rule})
+	if not names:
+		return {}
 	rules = frappe.get_all(
 		"Books Pricing Rule",
-		filters={"name": ["in", list({row.pricing_rule for row in rows})]},
+		filters={"name": ["in", names]},
 		fields=["name", "discount_type", "price_discount_type"],
 	)
-	rules = {rule.name: rule for rule in rules}
-	for row in rows:
-		_reset_row(row, rules.get(row.pricing_rule))
+	return {rule.name: rule for rule in rules}
+
+
+def standard_rates(invoice):
+	"""Map (item, unit) to the rate a row gets when nobody edits it; unit None is the item rate."""
+	items = list({row.item for row in invoice.items})
+	rates = {
+		(item.name, None): item.rate
+		for item in frappe.get_all("Books Item", filters={"name": ["in", items]}, fields=["name", "rate"])
+	}
+	if invoice.price_list and frappe.db.get_single_value("Books Accounting Settings", "enable_price_list"):
+		for row in frappe.get_all(
+			"Books Price List Item",
+			filters={"parent": invoice.price_list, "item": ["in", items]},
+			fields=["item", "unit", "rate"],
+		):
+			rates[row.item, row.unit] = row.rate
+	return rates
+
+
+def pos_setting(fieldname):
+	"""Read a POS setting from the POS profile in use, or from POS settings without one."""
+	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
+	if profile:
+		return frappe.db.get_value("Books Pos Profile", profile, fieldname)
+	return frappe.db.get_single_value("Books Pos Settings", fieldname)
 
 
 def _reset_row(row, rule):
@@ -255,12 +286,7 @@ def _within_limits(record, date, amount, quantity=None):
 
 
 def _ignore_pos_pricing(invoice):
-	if not invoice.get("is_pos"):
-		return False
-	profile_name = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
-	if profile_name:
-		return bool(frappe.db.get_value("Books Pos Profile", profile_name, "ignore_pricing_rule"))
-	return bool(frappe.db.get_single_value("Books Pos Settings", "ignore_pricing_rule"))
+	return bool(invoice.get("is_pos") and pos_setting("ignore_pricing_rule"))
 
 
 def _validate_price_discount(rule):

@@ -4,7 +4,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, nowdate
 
-from frappe_books.commerce.loyalty import expire_programs_and_points
+from frappe_books.accounting.returns import map_return
+from frappe_books.commerce.loyalty import expire_programs_and_points, get_available_points
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -82,7 +83,80 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Books Loyalty Program", program.name, "is_enabled"), 0)
 		self.assertEqual(frappe.db.get_value("Books Party", self.party.name, "loyalty_points"), 0)
 
-	def _loyalty_program(self):
+	def test_inactive_program_only_blocks_redemption(self):
+		program = self._loyalty_program()
+		program.db_set("is_enabled", 0)
+		invoice = self._loyalty_invoice(program).submit()
+		self.assertEqual(invoice.db_get("docstatus"), 1)
+		self.assertEqual(get_available_points(self.party.name, program.name), 0)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "is disabled"):
+			self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10)
+
+	def test_redemption_is_capped_by_the_total_before_redemption(self):
+		program = self._loyalty_program()
+		self._loyalty_invoice(program).submit()
+		self._loyalty_invoice(program).submit()
+
+		redemption = self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=240)
+		self.assertEqual(Decimal(str(redemption.grand_total)), Decimal("60"))
+
+	def test_cancel_does_not_enable_a_disabled_program(self):
+		program = self._loyalty_program(maximum_use=1)
+		self._loyalty_invoice(program).submit()
+		redemption = self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10).submit()
+		self.assertEqual(program.db_get("is_enabled"), 0)
+
+		redemption.cancel()
+		self.assertEqual(program.db_get("used"), 0)
+		self.assertEqual(program.db_get("is_enabled"), 0)
+
+	def test_redemption_uses_the_soonest_expiring_points_first(self):
+		program = self._loyalty_program()
+		invoice = self._submitted_invoice()
+		for points, days in ((100, 5), (50, 60)):
+			self._point_entry(program, invoice, points, add_days(nowdate(), days))
+		self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=120).submit()
+
+		self.assertEqual(get_available_points(self.party.name, program.name), 30)
+		later = add_days(nowdate(), 10)
+		self.assertEqual(get_available_points(self.party.name, program.name, on_date=later), 30)
+
+	def test_return_cannot_take_back_points_already_redeemed(self):
+		program = self._loyalty_program()
+		invoice = self._loyalty_invoice(program).submit()
+		self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=180).submit()
+		credit_note = map_return(invoice.doctype, invoice.name).insert()
+
+		with self.assertRaisesRegex(frappe.ValidationError, "already redeemed"):
+			credit_note.submit()
+
+	def _loyalty_invoice(self, program, **values):
+		return make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			loyalty_program=program.name,
+			**values,
+		)
+
+	def _point_entry(self, program, invoice, points, expiry_date):
+		frappe.get_doc(
+			{
+				"doctype": "Books Loyalty Point Entry",
+				"loyalty_program": program.name,
+				"customer": self.party.name,
+				"invoice": invoice.name,
+				"loyalty_points": points,
+				"purchase_amount": points,
+				"posting_date": nowdate(),
+				"expiry_date": expiry_date,
+			}
+		).insert()
+
+	def _loyalty_program(self, **values):
 		return frappe.get_doc(
 			{
 				"doctype": "Books Loyalty Program",
@@ -93,6 +167,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				"expiry_duration": 30,
 				"expense_account": self.expense.name,
 				"collection_rules": [{"tier_name": "Base", "collection_factor": 1, "minimum_total_spent": 0}],
+				**values,
 			}
 		).insert()
 

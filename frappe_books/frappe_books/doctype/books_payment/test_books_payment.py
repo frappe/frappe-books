@@ -7,6 +7,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
+from frappe_books.accounting.returns import map_return
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -164,10 +165,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self.invoice = self._submitted_invoice()
 
 	def test_cancelling_a_refund_restores_the_credit_note(self):
-		credit_note = frappe.copy_doc(self.invoice)
-		credit_note.return_against = self.invoice.name
-		credit_note.items[0].quantity = -2
-		credit_note.insert().submit()
+		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
 		refund = self._payment(credit_note, payment_type="Pay").insert()
 		refund.submit()
 		self.assertEqual(credit_note.db_get("outstanding_amount"), 0)

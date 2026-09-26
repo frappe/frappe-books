@@ -151,7 +151,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		)
 		invoice.submit()
 		credit_note = frappe.copy_doc(invoice)
-		credit_note.update({"return_against": invoice.name, "discount_percent": 0})
+		credit_note.update({"docstatus": 0, "return_against": invoice.name, "discount_percent": 0})
 		credit_note.items[0].update({"quantity": -2, "item_discount_percent": 0})
 
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):

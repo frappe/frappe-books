@@ -152,7 +152,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			coupons=[{"coupons": coupon.name}],
 		).submit()
 		credit_note = frappe.copy_doc(invoice)
-		credit_note.return_against = invoice.name
+		credit_note.update({"docstatus": 0, "return_against": invoice.name})
 		credit_note.items[0].quantity = -2
 		credit_note.insert().submit()
 

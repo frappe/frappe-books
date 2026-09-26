@@ -27,28 +27,17 @@ test('a new linked record updates the parent it was created from', async () => {
   assert.deepEqual(linked, ['New Child']);
 });
 
-test('list queries never send computed statuses to the database', async () => {
+test('list status filters are queried on the server', async () => {
   const fyo = await makeFyo();
   let query;
   fyo.db.getAll = async (_schema, options) => {
     query = options;
-    return [
-      { name: 'A', submitted: true, cancelled: true },
-      { name: 'B', submitted: true, cancelled: false },
-    ];
+    return [{ name: 'A', status: 'Cancelled' }];
   };
-  for (const filter of [
-    ['not like', 'Cancelled'],
-    ['like', '%can%'],
-    ['is null', ''],
-  ]) {
-    const list = makeList('JournalEntry', { status: filter });
-    const { rows } = await loadListData(fyo, list);
-    assert.equal(Object.hasOwn(query.filters, 'status'), false);
-    assert.equal(rows.length, filter[0] === 'is null' ? 0 : 1);
-  }
-  await loadListData(fyo, makeList('Lead', { status: ['!=', 'Lost'] }));
-  assert.deepEqual(query.filters.status, ['!=', 'Lost']);
+  const list = makeList('JournalEntry', { status: ['not like', 'Cancelled'] });
+  const { rows } = await loadListData(fyo, list);
+  assert.deepEqual(query.filters.status, ['not like', 'Cancelled']);
+  assert.equal(rows.length, 1);
 });
 
 test('a submittable list refreshes after a cancel', () => {

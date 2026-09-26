@@ -7,7 +7,7 @@ import {
   ProfitAndLoss,
   getJsonData,
   getCsvData,
-  matchesStatus,
+  getDocStatus,
 } from './helpers/accounting.mjs';
 
 test('CSV and JSON retain hidden groups and visible leaf amounts', async () => {
@@ -90,25 +90,15 @@ test('balance sheets include opening balances while P&L shows each period', asyn
   );
 });
 
-test('computed filters work without rendered rows, for every offered operator', async () => {
+test('list and form statuses come from the stored status', async () => {
   const fyo = await makeFyo();
-  const row = {
-    schema: fyo.schemaMap.JournalEntry,
-    submitted: true,
-    cancelled: true,
-  };
-  for (const [filter, expected] of [
-    [['like', '%can%'], true],
-    [['not like', '%can%'], false],
-    [['=', 'Cancelled'], true],
-    [['!=', 'Submitted'], true],
-    [['>', 'a'], true],
-    [['<', 'a'], false],
-    [['is null', ''], false],
-    [['is not null', ''], true],
-  ])
-    assert.equal(matchesStatus(row, filter), expected, JSON.stringify(filter));
-  assert.throws(() => matchesStatus(row, ['invalid', '']), /Unsupported/);
+  const schema = fyo.schemaMap.SalesInvoice;
+  assert.equal(getDocStatus({ schema, status: 'PartlyPaid' }), 'PartlyPaid');
+  assert.equal(getDocStatus({ schema, notInserted: true }), 'Draft');
+  assert.equal(getDocStatus({ schema, dirty: true, status: 'Saved' }), 'NotSaved');
+  const shift = fyo.schemaMap.POSOpeningShift;
+  assert.equal(getDocStatus({ schema: shift, submitted: true }), 'Submitted');
+  assert.equal(getDocStatus({ schema: fyo.schemaMap.Lead, status: 'Open' }), 'Saved');
 });
 
 test('currency formatting uses exactly the configured precision', async () => {

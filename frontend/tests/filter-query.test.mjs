@@ -6,7 +6,6 @@ import {
   conditionsForField,
   defaultCondition,
   mergeQueryFilters,
-  matchesStatus,
   makeFyo,
   getFilterFields,
   getFieldLabel,
@@ -175,27 +174,7 @@ test('merging user filters cannot replace base restrictions or mutate inputs', (
   });
   assert.deepEqual(base, { name: ['in', ['one', 'two']], value: 'base' });
 });
-test('status filters match display labels, SQL wildcards and all AND pairs', async () => {
-  const fyo = await makeFyo();
-  const row = {
-    schema: fyo.schemaMap.SalesInvoice,
-    submitted: true,
-    cancelled: false,
-    grandTotal: fyo.pesa(100),
-    outstandingAmount: fyo.pesa(50),
-  };
-  for (const expected of ['Partly Paid', 'PartlyPaid'])
-    assert.equal(matchesStatus(row, ['=', expected]), true);
-  for (const pattern of ['%paid%', 'Partly_Paid', '%'])
-    assert.equal(matchesStatus(row, ['like', pattern]), true);
-  assert.equal(matchesStatus(row, ['like', '%paid%', '!=', 'Paid']), true);
-  assert.equal(matchesStatus(row, ['like', '%paid%', '=', 'Paid']), false);
-  assert.equal(matchesStatus(row, ['like', 'paid']), false);
-  assert.equal(matchesStatus(row, ['like', '.*']), false);
-  assert.throws(() => matchesStatus(row, ['=']));
-});
-
-test('list keeps filters on refresh, retains export status and ignores stale responses', async () => {
+test('list keeps filters on refresh and ignores stale responses', async () => {
   const fyo = await makeFyo();
   const calls = [];
   const pending = [];
@@ -211,10 +190,7 @@ test('list keeps filters on refresh, retains export status and ignores stale res
   };
   const query = { status: ['=', 'Submitted'] };
   const first = loadListData(fyo, list, query);
-  pending.shift()([
-    { name: 'JV1', submitted: true },
-    { name: 'JV2', submitted: false },
-  ]);
+  pending.shift()([{ name: 'JV1', status: 'Submitted' }]);
   const loaded = await first;
   assert.deepEqual(
     loaded.rows.map((r) => r.name),
@@ -225,7 +201,7 @@ test('list keeps filters on refresh, retains export status and ignores stale res
   pending.shift()([]);
   await refresh;
   assert.deepEqual(list.activeFilters, query);
-  assert.equal(calls.at(-1).filters.status, undefined);
+  assert.deepEqual(calls.at(-1).filters.status, ['=', 'Submitted']);
   const old = loadListData(fyo, list, { name: ['=', 'JV-old'] });
   const latest = loadListData(fyo, list, {});
   const oldResolve = pending.shift();
@@ -236,16 +212,9 @@ test('list keeps filters on refresh, retains export status and ignores stale res
   assert.deepEqual(list.activeFilters, {});
 });
 
-test('filtered export applies virtual status before limit and preserves base restrictions', async () => {
+test('filtered export sends status to the server', async () => {
   const fyo = await makeFyo();
   const calls = [];
-  fyo.db.getAll = async (_schema, options) => {
-    calls.push(options);
-    return [
-      { name: 'JV-1', submitted: true },
-      { name: 'JV-2', submitted: false },
-    ];
-  };
   fyo.db.getAllRaw = async (_schema, options) => {
     calls.push(options);
     return [{ name: 'JV-1' }];
@@ -260,22 +229,8 @@ test('filtered export applies virtual status before limit and preserves base res
     fyo
   );
   assert.deepEqual(JSON.parse(result), [{ name: 'JV-1' }]);
-  assert.deepEqual(calls[0].filters, { name: ['like', 'JV%'] });
-  assert.equal(calls[0].limit, undefined);
-  assert.deepEqual(calls[1].filters, { name: ['like', 'JV%', 'in', ['JV-1']] });
-  assert.equal(calls[1].limit, 1);
-  assert.deepEqual(query.status, ['=', 'Submitted']);
-  calls.length = 0;
-  const empty = await getJsonExportData(
-    'JournalEntry',
-    [],
-    [],
-    null,
-    { status: ['=', 'Cancelled'] },
-    fyo
-  );
-  assert.equal(empty, '[]');
-  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].filters, query);
+  assert.equal(calls[0].limit, 1);
 });
 
 test('field selection excludes unsupported and computed fields; column position is irrelevant', () => {
@@ -295,7 +250,7 @@ test('field selection excludes unsupported and computed fields; column position 
   ];
   assert.deepEqual(
     getFilterFields(fields, columns).map((f) => f.fieldname),
-    ['status', 'editable', 'total']
+    ['editable', 'total']
   );
   assert.equal(fields.length, 9);
   const status = { ...field('Select', 'status'), options: ['Open', 'Closed'] };
@@ -320,23 +275,6 @@ test('filter labels retain supplied translations and format identifiers and acro
     assert.equal(
       getFieldLabel({ ...field('Data', name), label: name }),
       expected
-    );
-  }
-});
-
-test('loyalty filters use the same computed statuses as the list', async () => {
-  const fyo = await makeFyo();
-  for (const [values, status] of [
-    [{ toDate: new Date('2000-01-01') }, 'Expired'],
-    [{ maximumUse: 10, used: 10 }, 'Maxed'],
-    [{ maximumUse: 10, used: 9 }, 'Active'],
-  ]) {
-    const row = { schema: fyo.schemaMap.LoyaltyProgram, ...values };
-    assert.equal(matchesStatus(row, ['=', status]), true);
-    assert.equal(matchesStatus(row, ['=', 'Saved']), false);
-    assert.equal(
-      matchesStatus(row, ['not like', `%${status.toLowerCase()}%`]),
-      false
     );
   }
 });

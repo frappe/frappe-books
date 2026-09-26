@@ -26,7 +26,7 @@ await build({
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { StockQueue } from './models/inventory/stockQueue';
       export { getJsonData, getCsvData } from './reports/commonExporter';
-      export { matchesStatus } from './src/utils/statusFilter';
+      export { getDocStatus } from './models/helpers';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
@@ -89,7 +89,7 @@ export const {
   setLanguageMapOnTranslationString,
   getJsonData,
   getCsvData,
-  matchesStatus,
+  getDocStatus,
   getFilterFields,
   getFieldLabel,
   getJsonExportData,

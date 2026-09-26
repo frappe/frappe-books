@@ -17,9 +17,9 @@ def validate_return(invoice):
 	if original.party != invoice.party:
 		frappe.throw(_("A return must use the same party as the original invoice."))
 
-	original_quantities = _item_quantities(original)
+	original_quantities = _item_quantities(original.items)
 	returned_quantities = _submitted_return_quantities(original, exclude=invoice.name)
-	for item, quantity in _item_quantities(invoice).items():
+	for item, quantity in _item_quantities(invoice.items).items():
 		if item not in original_quantities:
 			frappe.throw(_("Item {0} is not present in the original invoice.").format(item))
 		if returned_quantities[item] + quantity > original_quantities[item]:
@@ -31,10 +31,10 @@ def update_return_status(return_invoice, *, include_current):
 	original = frappe.get_doc(return_invoice.doctype, return_invoice.return_against)
 	returned_quantities = _submitted_return_quantities(original, exclude=return_invoice.name)
 	if include_current:
-		for item, quantity in _item_quantities(return_invoice).items():
+		for item, quantity in _item_quantities(return_invoice.items).items():
 			returned_quantities[item] += quantity
 
-	original_quantities = _item_quantities(original)
+	original_quantities = _item_quantities(original.items)
 	is_returned = any(returned_quantities.values())
 	is_fully_returned = bool(original_quantities) and all(
 		returned_quantities[item] >= quantity for item, quantity in original_quantities.items()
@@ -48,22 +48,22 @@ def update_return_status(return_invoice, *, include_current):
 
 
 def _submitted_return_quantities(original, *, exclude=None):
-	quantities = defaultdict(as_decimal)
-	return_names = frappe.get_all(
-		original.doctype,
-		filters={"return_against": original.name, "docstatus": 1},
-		pluck="name",
+	filters = {"return_against": original.name, "docstatus": 1}
+	if exclude:
+		filters["name"] = ["!=", exclude]
+	names = frappe.get_all(original.doctype, filters=filters, pluck="name")
+	if not names:
+		return defaultdict(as_decimal)
+	rows = frappe.get_all(
+		original.meta.get_field("items").options,
+		filters={"parenttype": original.doctype, "parentfield": "items", "parent": ["in", names]},
+		fields=["item", "quantity"],
 	)
-	for name in return_names:
-		if name == exclude:
-			continue
-		for item, quantity in _item_quantities(frappe.get_doc(original.doctype, name)).items():
-			quantities[item] += quantity
-	return quantities
+	return _item_quantities(rows)
 
 
-def _item_quantities(invoice):
+def _item_quantities(rows):
 	quantities = defaultdict(as_decimal)
-	for row in invoice.items:
+	for row in rows:
 		quantities[row.item] += abs(as_decimal(row.quantity))
 	return quantities

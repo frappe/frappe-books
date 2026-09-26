@@ -21,5 +21,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 			make_item(income.name, expense.name, hsn_code="12A4")
 		with self.assertRaises(frappe.ValidationError):
 			make_item(income.name, expense.name, barcode="123")
+		with self.assertRaises(frappe.NonNegativeError):
+			make_item(income.name, expense.name, rate=-1)
 		item = make_item(income.name, expense.name, hsn_code="123456", barcode="123456789012")
 		self.assertEqual(item.hsn_code, "123456")

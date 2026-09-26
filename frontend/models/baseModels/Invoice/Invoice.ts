@@ -221,28 +221,6 @@ export abstract class Invoice extends Transactional {
       },
       dependsOn: ['party', 'currency'],
     },
-    stockNotTransferred: {
-      formula: async () => {
-        if (this.submitted) {
-          return;
-        }
-        if (this.isReturn) {
-          const sinvreturnedDoc = (await this.fyo.doc.getDoc(
-            this.schemaName,
-            this.returnAgainst
-          )) as Invoice;
-
-          if (sinvreturnedDoc.stockNotTransferred === 0) {
-            return this.getStockNotTransferred();
-          } else {
-            return 0;
-          }
-        }
-
-        return this.getStockNotTransferred();
-      },
-      dependsOn: ['items'],
-    },
     makeAutoPayment: {
       formula: () => !!this.autoPaymentAccount,
       dependsOn: [],
@@ -254,13 +232,6 @@ export abstract class Invoice extends Transactional {
       dependsOn: [],
     },
   };
-
-  getStockNotTransferred() {
-    return (this.items ?? []).reduce(
-      (acc, item) => (item.stockNotTransferred ?? 0) + acc,
-      0
-    );
-  }
 
   hidden: HiddenMap = {
     makeAutoPayment: () => {

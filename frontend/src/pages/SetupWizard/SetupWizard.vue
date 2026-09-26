@@ -2,7 +2,6 @@
   <FormContainer
     :show-header="false"
     class="justify-content items-center h-full"
-    :class="{ 'window-drag': platform !== 'Windows' }"
   >
     <template #body>
       <FormHeader

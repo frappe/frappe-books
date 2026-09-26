@@ -3,20 +3,12 @@
     :disable-collapse="true"
     width="var(--w-sidebar)"
     class="py-2 h-full min-h-0 flex flex-col overflow-hidden bg-surface-sidebar"
-    :class="{
-      'window-drag': platform !== 'Windows',
-    }"
   >
     <div
       class="min-h-0 flex-1 overflow-y-auto custom-scroll custom-scroll-thumb1"
     >
       <!-- Company name -->
-      <div
-        class="px-4 flex flex-row items-center justify-between mb-4"
-        :class="
-          platform === 'Mac' && languageDirection === 'ltr' ? 'mt-10' : 'mt-2'
-        "
-      >
+      <div class="px-4 flex flex-row items-center justify-between mt-2 mb-4">
         <h6
           data-testid="company-name"
           class="font-semibold text-ink-gray-8 whitespace-nowrap overflow-auto no-scrollbar select-none"
@@ -61,7 +53,7 @@
       </div>
     </div>
 
-    <div class="window-no-drag flex-shrink-0 flex flex-col gap-2 py-2 px-4">
+    <div class="flex-shrink-0 flex flex-col gap-2 py-2 px-4">
       <FrappeSidebarItem
         :label="t`Help`"
         class="!h-7"
@@ -79,18 +71,6 @@
       >
         <template #prefix>
           <Icon name="command" class="h-4 w-4 flex-shrink-0" />
-        </template>
-      </FrappeSidebarItem>
-
-      <FrappeSidebarItem
-        v-if="platform !== 'Web'"
-        data-testid="change-db"
-        :label="t`Change DB`"
-        class="!h-7"
-        @click="$emit('change-db-file')"
-      >
-        <template #prefix>
-          <Icon name="database" class="h-4 w-4 flex-shrink-0" />
         </template>
       </FrappeSidebarItem>
 
@@ -124,7 +104,7 @@ import {
   SidebarItem as FrappeSidebarItem,
 } from 'frappe-ui';
 import { fyo } from 'src/initFyo';
-import { languageDirectionKey, shortcutsKey } from 'src/utils/injectionKeys';
+import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathRef } from 'src/utils/refs';
 import { getSidebarConfig } from 'src/utils/sidebarConfig';
 import {
@@ -154,12 +134,8 @@ export default defineComponent({
   props: {
     darkMode: { type: Boolean, default: false },
   },
-  emits: ['change-db-file', 'toggle-darkmode'],
   setup() {
-    return {
-      languageDirection: inject(languageDirectionKey),
-      shortcuts: inject(shortcutsKey),
-    };
+    return { shortcuts: inject(shortcutsKey) };
   },
   data() {
     return {

@@ -418,9 +418,7 @@ export default defineComponent({
     templateDisplayStyles(): Record<string, string> {
       const styles: Record<string, string> = {};
 
-      styles.height = `calc(100vh - var(--h-row-largest) - 1px - ${
-        this.platform == 'Windows' ? 'var(--h-row-smallest)' : '0px'
-      }`;
+      styles.height = 'calc(100vh - var(--h-row-largest) - 1px)';
       return styles;
     },
   },

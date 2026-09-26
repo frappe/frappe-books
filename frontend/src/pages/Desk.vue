@@ -4,7 +4,6 @@ import { showSidebar } from 'src/utils/refs';
 <template>
   <div class="flex overflow-hidden">
     <Transition name="sidebar">
-      <!-- eslint-disable vue/require-explicit-emits -->
       <Sidebar
         v-show="showSidebar"
         class="
@@ -15,7 +14,6 @@ import { showSidebar } from 'src/utils/refs';
           w-sidebar
         "
         :dark-mode="darkMode"
-        @change-db-file="$emit('change-db-file')"
       />
     </Transition>
 
@@ -67,7 +65,6 @@ export default defineComponent({
   props: {
     darkMode: { type: Boolean, default: false },
   },
-  emits: ['change-db-file'],
 });
 </script>
 

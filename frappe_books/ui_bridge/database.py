@@ -23,7 +23,7 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "count", "getSingleValues", "exists", "preview", "getMapped"}
+READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists", "preview", "getMapped"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
@@ -93,6 +93,32 @@ class BooksDatabaseBridge:
 			limit=None,
 		)
 		return sum(row.count for row in rows)
+
+	def search(self, text: str, fields_by_schema: dict[str, list[str]], limit: int) -> dict[str, list[dict]]:
+		"""Return up to `limit` rows of each schema whose keyword fields match `text`."""
+		pattern = _subsequence_pattern(text)
+		return {
+			source_schema: self._search_rows(source_schema, fields, pattern, limit)
+			for source_schema, fields in fields_by_schema.items()
+		}
+
+	def _search_rows(self, source_schema, fields, pattern, limit):
+		meta = frappe.get_meta(target_doctype(source_schema))
+		requested = [*fields]
+		if meta.istable:
+			requested += ["parent", "parentSchemaName"]
+		if meta.is_submittable:
+			requested += ["submitted", "cancelled"]
+		rows = self._get_list_rows(
+			meta.name,
+			fields=self._target_fields(source_schema, requested),
+			filters=[],
+			or_filters=[[target_field(source_schema, field), "like", pattern] for field in fields],
+			order_by="idx" if meta.istable else "modified desc",
+			offset=None,
+			limit=limit,
+		)
+		return [self._row_to_source(source_schema, row, requested) for row in rows]
 
 	def _get_list_rows(self, target, **query):
 		if not frappe.get_meta(target).istable:
@@ -398,6 +424,12 @@ class BooksDatabaseBridge:
 	def _is_password_field(self, meta, fieldname):
 		field = meta.get_field(fieldname)
 		return bool(field and field.fieldtype == "Password")
+
+
+def _subsequence_pattern(text: str) -> str:
+	"""Match the letters of the longest word in order, as the interface's fuzzy search does."""
+	word = max(text.split(), key=len, default="")
+	return f"%{'%'.join(word)}%"
 
 
 def _is_named_by_user(meta) -> bool:

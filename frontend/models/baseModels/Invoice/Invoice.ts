@@ -347,137 +347,102 @@ export abstract class Invoice extends Transactional {
     }
   }
 
-  async getStockTransfer(isAuto = false): Promise<StockTransfer | null> {
+  /** A draft Shipment or Purchase Receipt for what this invoice has not transferred yet. */
+  async getStockTransfer(): Promise<StockTransfer | null> {
     if (!this.isSubmitted) {
       return null;
     }
 
-    let linkedEntries;
-
-    if (this.returnAgainst) {
-      const original = await this.fyo.doc.getDoc(
-        this.schemaName,
-        this.returnAgainst
-      );
-
-      linkedEntries = await getLinkedEntries(original);
-    }
-
-    const itemVisibility = await getItemVisibility(this.fyo);
-
-    if (!this.stockNotTransferred && itemVisibility === 'Inventory Items') {
+    const onlyInventory =
+      (await getItemVisibility(this.fyo)) === 'Inventory Items';
+    if (!this.stockNotTransferred && onlyInventory) {
       return null;
     }
 
-    const schemaName = this.stockTransferSchemaName;
-    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
-    let terms;
-    let numberSeries;
-
-    if (this.isSales) {
-      terms = defaults.shipmentTerms ?? '';
-      numberSeries = defaults.shipmentNumberSeries ?? undefined;
-    } else {
-      terms = defaults.purchaseReceiptTerms ?? '';
-      numberSeries = defaults.purchaseReceiptNumberSeries ?? undefined;
+    const transfer = this.fyo.doc.getNewDoc(
+      this.stockTransferSchemaName,
+      await this.getStockTransferValues()
+    ) as StockTransfer;
+    const location =
+      this.autoStockTransferLocation ??
+      this.fyo.singles.InventorySettings?.defaultLocation ??
+      null;
+    for (const row of this.items ?? []) {
+      const values = await this.getStockTransferRow(row, onlyInventory);
+      if (values) {
+        await transfer.append('items', { ...values, location });
+      }
     }
 
-    const data = {
+    return transfer.items?.length ? transfer : null;
+  }
+
+  async getStockTransferValues(): Promise<DocValueMap> {
+    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
+    const [terms, numberSeries] = this.isSales
+      ? [defaults.shipmentTerms, defaults.shipmentNumberSeries]
+      : [defaults.purchaseReceiptTerms, defaults.purchaseReceiptNumberSeries];
+
+    return {
       party: this.party,
       date: new Date().toISOString(),
-      terms,
-      numberSeries,
+      terms: terms ?? '',
+      numberSeries: numberSeries ?? undefined,
       backReference: this.name,
-      returnAgainst: linkedEntries?.[schemaName]?.[0] ?? '',
+      returnAgainst: await this.getReturnedStockTransfer(),
     };
+  }
 
-    let location = this.autoStockTransferLocation;
-    if (!location) {
-      location = this.fyo.singles.InventorySettings?.defaultLocation ?? null;
+  /** The original invoice's transfer, which the transfer of a return reverses. */
+  async getReturnedStockTransfer(): Promise<string> {
+    if (!this.returnAgainst) {
+      return '';
     }
 
-    if (isAuto && !location) {
+    const original = await this.fyo.doc.getDoc(
+      this.schemaName,
+      this.returnAgainst
+    );
+    const linkedEntries = await getLinkedEntries(original);
+    return linkedEntries[this.stockTransferSchemaName]?.[0] ?? '';
+  }
+
+  /** Transfer row values for an invoice row, or null when it has nothing left to transfer. */
+  async getStockTransferRow(
+    row: InvoiceItem,
+    onlyInventory: boolean
+  ): Promise<DocValueMap | null> {
+    if (!row.item) {
       return null;
     }
 
-    const transfer = this.fyo.doc.getNewDoc(schemaName, data) as StockTransfer;
-
-    for (const row of this.items ?? []) {
-      if (!row.item) {
-        continue;
-      }
-
-      const itemDoc = (await row.loadAndGetLink('item')) as Item;
-      if (isAuto && (itemDoc.hasBatch || itemDoc.hasSerialNumber)) {
-        continue;
-      }
-
-      const isFreeItem = row.isFreeItem ?? false;
-      if (isFreeItem) {
-        await transfer.append('items', {
-          item: row.item,
-          quantity: row.quantity,
-          location,
-          rate: this.fyo.pesa(0),
-          batch: row.batch || null,
-          description: row.description,
-          hsnCode: row.hsnCode,
-          isFreeItem,
-        });
-        continue;
-      }
-
-      let quantity;
-      if (itemDoc.trackItem) {
-        quantity = row.stockNotTransferred;
-      } else {
-        quantity = row.quantity;
-      }
-
-      const item = row.item;
-      const batch = row.batch || null;
-      const description = row.description;
-      const hsnCode = row.hsnCode;
-      let rate = row.rate as Money;
-
-      if (this.exchangeRate && this.exchangeRate > 1) {
-        rate = rate.mul(this.exchangeRate);
-      }
-
-      if (!quantity && itemVisibility === 'Inventory Items') {
-        continue;
-      }
-
-      if (isAuto) {
-        const stock =
-          (await this.fyo.db.getStockQuantity(
-            item,
-            location!,
-            undefined,
-            data.date
-          )) ?? 0;
-
-        if (stock < (quantity as number)) {
-          continue;
-        }
-      }
-
-      await transfer.append('items', {
-        item,
-        quantity,
-        location,
-        rate,
-        batch,
-        description,
-        hsnCode,
-      });
+    const values = {
+      item: row.item,
+      batch: row.batch || null,
+      description: row.description,
+      hsnCode: row.hsnCode,
+    };
+    if (row.isFreeItem) {
+      return {
+        ...values,
+        quantity: row.quantity,
+        rate: this.fyo.pesa(0),
+        isFreeItem: true,
+      };
     }
 
-    if (!transfer.items?.length) {
+    const item = (await row.loadAndGetLink('item')) as Item;
+    const quantity = item.trackItem ? row.stockNotTransferred : row.quantity;
+    if (!quantity && onlyInventory) {
       return null;
     }
 
-    return transfer;
+    let rate = row.rate as Money;
+    if (this.exchangeRate && this.exchangeRate > 1) {
+      rate = rate.mul(this.exchangeRate);
+    }
+
+    return { ...values, quantity, rate };
   }
 
   async beforeSync(): Promise<void> {

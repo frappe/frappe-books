@@ -157,6 +157,32 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
 			credit_note.insert()
 
+	def test_pos_invoice_keeps_rate_and_discount_when_profile_forbids(self):
+		frappe.db.set_single_value(
+			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 0, "can_edit_discount": 0}
+		)
+		item = make_item(self.income.name, self.expense.name, rate=100)
+		for values, message in (
+			({"rate": 90, "item_discount_percent": 0}, "changing the rate"),
+			({"rate": 100, "item_discount_percent": 10}, "editing the discount"),
+		):
+			with self.subTest(values=values):
+				invoice = frappe.get_doc(
+					{
+						"doctype": "Books Sales Invoice",
+						"party": self.party.name,
+						"account": self.receivable.name,
+						"date": frappe.utils.now_datetime(),
+						"is_pos": 1,
+						"items": [{"item": item.name, "quantity": 1, **values}],
+					}
+				)
+				with self.assertRaisesRegex(frappe.ValidationError, message):
+					invoice.insert()
+
+		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
+		invoice.insert()
+
 	def _make_invoice(self):
 		return make_invoice(
 			"Books Sales Invoice",

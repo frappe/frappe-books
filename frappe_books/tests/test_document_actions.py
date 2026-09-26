@@ -120,6 +120,9 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertFalse(credit_note.is_returned)
 
 	def test_submit_makes_the_automatic_payment(self):
+		frappe.db.set_single_value(
+			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 1, "can_edit_discount": 1}
+		)
 		for is_pos, payments in ((0, 1), (1, 0)):
 			with self.subTest(is_pos=is_pos):
 				invoice = make_invoice(

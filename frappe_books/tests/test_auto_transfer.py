@@ -194,9 +194,12 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 					"doctype": "Books Pos Profile",
 					"name": unique_name("POS Profile"),
 					"inventory": location.name,
+					"can_change_rate": 1,
+					"can_edit_discount": 1,
 				}
 			).insert()
 		frappe.db.set_single_value("Books Pos Settings", "pos_profile", profile.name if profile else "")
+		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		frappe.db.set_single_value("Books Pos Settings", "inventory", "Stores" if profile else location.name)
 		party = make_party(receivable.name)
 		item = make_item(income.name, cogs.name, track_item=1, rate=10)

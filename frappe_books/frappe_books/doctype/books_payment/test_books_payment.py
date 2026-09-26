@@ -214,6 +214,55 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		payment.clearance_date = frappe.utils.nowdate()
 		payment.save()
 
+	def test_server_builds_the_realised_tax_rows(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
+		for discount_after_tax, tax_amount in ((0, Decimal("18")), (1, Decimal("20"))):
+			with self.subTest(discount_after_tax=discount_after_tax):
+				unrealised = make_account("Unrealised Tax", root_type="Liability", account_type="Tax")
+				realised = make_account("Realised Tax", root_type="Liability", account_type="Tax")
+				invoice = self._taxed_invoice(unrealised, realised, discount_after_tax)
+
+				first = self._payment(invoice, amount=invoice.grand_total / 2)
+				first.append(
+					"taxes",
+					{"account": self.cash.name, "from_account": self.income.name, "rate": 1, "amount": 1},
+				)
+				first.insert().submit()
+				self._payment(invoice, amount=invoice.grand_total / 2).insert().submit()
+
+				self.assertEqual(
+					[(row.account, row.from_account) for row in first.taxes],
+					[(realised.name, unrealised.name)],
+				)
+				self.assertEqual(Decimal(str(first.taxes[0].amount)), tax_amount / 2)
+				self.assertEqual(self._balance(realised), tax_amount)
+				self.assertEqual(self._balance(unrealised), 0)
+
+	def _taxed_invoice(self, unrealised, realised, discount_after_tax):
+		tax = frappe.get_doc(
+			{
+				"doctype": "Books Tax",
+				"name": unique_name("Deferred Tax"),
+				"details": [{"account": unrealised.name, "payment_account": realised.name, "rate": 10}],
+			}
+		).insert()
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			discount_after_tax=discount_after_tax,
+		)
+		invoice.items[0].tax = tax.name
+		return invoice.save().submit()
+
+	def _balance(self, account):
+		entries = frappe.get_all(
+			"Books Ledger Entry", filters={"account": account.name}, fields=["debit", "credit"]
+		)
+		return sum(Decimal(str(row.credit)) - Decimal(str(row.debit)) for row in entries)
+
 	def _submitted_invoice(self):
 		invoice = make_invoice(
 			"Books Sales Invoice", self.party.name, self.receivable.name, self.item.name, self.income.name

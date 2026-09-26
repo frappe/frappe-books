@@ -1,7 +1,6 @@
 import { t } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
-import { cloneDeep } from 'lodash';
 import { DateTime } from 'luxon';
 import { InventorySettings } from 'models/inventory/InventorySettings';
 import getCommonExportActions from 'reports/commonExporter';
@@ -9,8 +8,7 @@ import { Report } from 'reports/Report';
 import { ColumnField, ReportCell, ReportData, ReportRow } from 'reports/types';
 import { Field, RawValue } from 'schemas/types';
 import { isNumeric } from 'src/utils';
-import { getRawStockLedgerEntries, getStockLedgerEntries } from './helpers';
-import { ComputedStockLedgerEntry, ReferenceType } from './types';
+import { ReferenceType, StockLedgerRow } from './types';
 
 export class StockLedger extends Report {
   static title = t`Stock Ledger`;
@@ -18,8 +16,6 @@ export class StockLedger extends Report {
   static isInventory = true;
 
   usePagination = true;
-
-  _rawData?: ComputedStockLedgerEntry[];
   loading = false;
 
   item?: string;
@@ -51,29 +47,19 @@ export class StockLedger extends Report {
     }
   }
 
-  async setReportData(
-    filter?: string | undefined,
-    force?: boolean | undefined
-  ): Promise<void> {
+  async setReportData(): Promise<void> {
     this.loading = true;
-    this.reportData = await this._getReportData(force);
+    this.reportData = await this._getReportData();
     this.loading = false;
   }
 
-  async _getReportData(force?: boolean): Promise<ReportData> {
-    if (force || !this._rawData?.length) {
-      await this._setRawData();
-    }
-
-    const rawData = cloneDeep(this._rawData);
-    if (!rawData) {
-      return [];
-    }
-
-    const filtered = this._getFilteredRawData(rawData);
-    const grouped = this._getGroupedRawData(filtered);
-
-    return grouped.map((row) =>
+  async _getReportData(): Promise<ReportData> {
+    const rows = await this.fyo.db.getReportData<StockLedgerRow[]>(
+      'getStockLedger',
+      this.filterMap
+    );
+    const numbered = rows.map((row, i) => ({ ...row, name: i + 1 }));
+    return this._getGroupedRawData(numbered).map((row) =>
       this._convertRawDataRowToReportRow(row as RawValueMap, {
         quantity: null,
         valueChange: null,
@@ -81,73 +67,13 @@ export class StockLedger extends Report {
     );
   }
 
-  async _setRawData() {
-    const rawSLEs = await getRawStockLedgerEntries(this.fyo);
-    this._rawData = getStockLedgerEntries(rawSLEs);
-  }
-
-  _getFilteredRawData(rawData: ComputedStockLedgerEntry[]) {
-    const filteredRawData: ComputedStockLedgerEntry[] = [];
-    if (!rawData.length) {
-      return [];
-    }
-
-    const fromDate = this.fromDate ? Date.parse(this.fromDate) : null;
-    const toDate = this.toDate ? Date.parse(this.toDate) : null;
-
-    if (!this.ascending) {
-      rawData.reverse();
-    }
-
-    let i = 0;
-    for (let idx = 0; idx < rawData.length; idx++) {
-      const row = rawData[idx];
-      if (this.item && row.item !== this.item) {
-        continue;
-      }
-
-      if (this.location && row.location !== this.location) {
-        continue;
-      }
-
-      if (this.batch && row.batch !== this.batch) {
-        continue;
-      }
-
-      const date = row.date.valueOf();
-      if (toDate && date > toDate) {
-        continue;
-      }
-
-      if (fromDate && date < fromDate) {
-        continue;
-      }
-
-      if (
-        this.referenceType !== 'All' &&
-        row.referenceType !== this.referenceType
-      ) {
-        continue;
-      }
-
-      if (this.referenceName && row.referenceName !== this.referenceName) {
-        continue;
-      }
-
-      row.name = ++i;
-      filteredRawData.push(row);
-    }
-
-    return filteredRawData;
-  }
-
-  _getGroupedRawData(rawData: ComputedStockLedgerEntry[]) {
+  _getGroupedRawData(rawData: StockLedgerRow[]) {
     const groupBy = this.groupBy;
     if (groupBy === 'none') {
       return rawData;
     }
 
-    const groups: Map<string, ComputedStockLedgerEntry[]> = new Map();
+    const groups: Map<string, StockLedgerRow[]> = new Map();
     for (const row of rawData) {
       const key = row[groupBy];
       if (!groups.has(key)) {
@@ -157,7 +83,7 @@ export class StockLedger extends Report {
       groups.get(key)?.push(row);
     }
 
-    const groupedRawData: (ComputedStockLedgerEntry | { name: null })[] = [];
+    const groupedRawData: (StockLedgerRow | { name: null })[] = [];
     let i = 0;
     for (const key of groups.keys()) {
       for (const row of groups.get(key) ?? []) {
@@ -194,7 +120,7 @@ export class StockLedger extends Report {
     }
 
     for (const col of columns) {
-      const fieldname = col.fieldname as keyof ComputedStockLedgerEntry;
+      const fieldname = col.fieldname as keyof StockLedgerRow;
       const fieldtype = col.fieldtype;
 
       const rawValue = row[fieldname] as RawValue;

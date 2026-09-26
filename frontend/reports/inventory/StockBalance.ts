@@ -4,9 +4,8 @@ import { Action } from 'fyo/model/types';
 import getCommonExportActions from 'reports/commonExporter';
 import { ColumnField, ReportData } from 'reports/types';
 import { Field } from 'schemas/types';
-import { getStockBalanceEntries } from './helpers';
 import { StockLedger } from './StockLedger';
-import { ReferenceType, SerialNumberStatus } from './types';
+import { ReferenceType, SerialNumberStatus, StockBalanceEntry } from './types';
 
 export class StockBalance extends StockLedger {
   static title = t`Stock Balance`;
@@ -20,27 +19,13 @@ export class StockBalance extends StockLedger {
   showSerialNumbers = false;
   serialNumberFilter: SerialNumberStatus = 'All';
 
-  override async _getReportData(force?: boolean): Promise<ReportData> {
-    if (force || !this._rawData?.length) {
-      await this._setRawData();
-    }
-
-    const filters = {
-      item: this.item,
-      location: this.location,
-      batch: this.batch,
-      fromDate: this.fromDate,
-      toDate: this.toDate,
-    };
-
-    const rawData = getStockBalanceEntries(
-      this._rawData ?? [],
-      filters,
-      this.showSerialNumbers,
-      this.serialNumberFilter
+  override async _getReportData(): Promise<ReportData> {
+    const rows = await this.fyo.db.getReportData<StockBalanceEntry[]>(
+      'getStockBalance',
+      this.filterMap
     );
 
-    return rawData.map((sbe, i) => {
+    return rows.map((sbe, i) => {
       const row = { ...sbe, name: i + 1 } as RawValueMap;
       return this._convertRawDataRowToReportRow(row, {
         incomingQuantity: 'green',

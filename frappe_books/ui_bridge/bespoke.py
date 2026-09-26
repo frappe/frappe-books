@@ -8,9 +8,10 @@ from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
-from frappe_books.reports import financial_statements
+from frappe_books.reports import financial_statements, stock
 from frappe_books.reports.financial_statements import Period
 from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
+from frappe_books.reports.stock import StockFilters
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.mapping import target_doctype
 
@@ -164,6 +165,12 @@ class BooksBespokeQueries:
 	def balance_sheet(self, periods: list[Period]):
 		return financial_statements.balance_sheet(periods)
 
+	def stock_ledger(self, filters: StockFilters):
+		return stock.stock_ledger(filters)
+
+	def stock_balance(self, filters: StockFilters):
+		return stock.stock_balance(filters)
+
 	def _monthly_balances(self, from_date, to_date, root_type, balance):
 		rows = self._ledger_totals(
 			from_date, to_date, {"account.root_type": root_type}, [*MONTH_FIELDS, *balance], MONTH_GROUP
@@ -245,4 +252,6 @@ _METHODS = {
 	"getTrialBalance": "trial_balance",
 	"getProfitAndLoss": "profit_and_loss",
 	"getBalanceSheet": "balance_sheet",
+	"getStockLedger": "stock_ledger",
+	"getStockBalance": "stock_balance",
 }

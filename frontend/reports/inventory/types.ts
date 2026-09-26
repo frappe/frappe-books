@@ -38,6 +38,10 @@ export interface ComputedStockLedgerEntry{
 }
 
 
+export type StockLedgerRow = Omit<ComputedStockLedgerEntry, 'date'> & {
+  date: string;
+};
+
 export interface StockBalanceEntry{
   name: number;
 

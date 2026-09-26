@@ -48,45 +48,61 @@ test('CSV and JSON retain hidden groups and visible leaf amounts', async () => {
   }
 });
 
-test('balance sheets include opening balances while P&L shows each period', async () => {
+test('balance sheet and P&L request their periods and render server totals', async () => {
   const fyo = await makeFyo();
-  const ranges = [2023, 2024].map((year) => ({
+  const calls = [];
+  const section = (rootType, name, values) => ({
+    rootType,
+    accounts: [{ name, level: 0, isGroup: false, values }],
+    total: values,
+  });
+  fyo.db.getReportData = async (query, ...args) => {
+    calls.push([query, ...args]);
+    if (query === 'getBalanceSheet')
+      return { sections: [section('Asset', 'Cash', [130, 150])] };
+    return {
+      sections: [
+        section('Income', 'Sales', [200, 100]),
+        section('Expense', 'Rent', [0, 130]),
+      ],
+      profit: [200, -30],
+    };
+  };
+  const ranges = [2024, 2023].map((year) => ({
     fromDate: DateTime.local(year, 1, 1),
     toDate: DateTime.local(year + 1, 1, 1),
   }));
-  const entries = [
-    { account: 'Cash', date: new Date('2022-01-01'), debit: 100 },
-    { account: 'Cash', date: new Date('2023-01-01'), debit: 50 },
-    { account: 'Cash', date: new Date('2024-01-01'), credit: 20 },
-    { account: 'Cash', date: new Date('2025-01-01'), debit: 999 },
-  ];
-  const report = new BalanceSheet(fyo);
-  report._dateRanges = ranges;
-  report.accountMap = { Cash: { rootType: 'Asset' } };
-  const values = (
-    await report._getGroupedByDateRanges(new Map([['Cash', entries]]))
-  ).get('Cash');
-  assert.deepEqual(
-    ranges.map((range) => values.get(range).balance),
-    [150, 130]
-  );
-  report.toDate = '2024-12-31';
-  assert.deepEqual((await report._getQueryFilters()).date, ['<', '2025-01-01']);
+  const rawValues = (report) =>
+    report.reportData.map((row) => row.cells.map((cell) => cell.rawValue));
+
+  const balanceSheet = new BalanceSheet(fyo);
+  balanceSheet._dateRanges = ranges;
+  await balanceSheet.setReportData();
+  assert.deepEqual(calls[0], [
+    'getBalanceSheet',
+    [
+      { fromDate: '2024-01-01', toDate: '2025-01-01' },
+      { fromDate: '2023-01-01', toDate: '2024-01-01' },
+    ],
+  ]);
+  assert.deepEqual(rawValues(balanceSheet), [
+    ['Cash', 130, 150],
+    ['Total Asset (Debit)', 130, 150],
+  ]);
 
   const profit = new ProfitAndLoss(fyo);
   profit._dateRanges = ranges;
-  profit.accountMap = { Sales: { rootType: 'Income' } };
-  const income = [2023, 2024].map((year, i) => ({
-    account: 'Sales',
-    date: new Date(`${year}-02-01`),
-    credit: (i + 1) * 100,
-  }));
-  const periods = (
-    await profit._getGroupedByDateRanges(new Map([['Sales', income]]))
-  ).get('Sales');
+  await profit.setReportData();
+  assert.equal(calls[1][0], 'getProfitAndLoss');
+  assert.equal(profit.reportData.length, 7);
+  const profitRow = profit.reportData.at(-1);
+  assert.equal(profitRow.cells[0].rawValue, 'Total Profit');
   assert.deepEqual(
-    ranges.map((range) => periods.get(range).balance),
-    [100, 200]
+    profitRow.cells.slice(1).map((cell) => [cell.rawValue, cell.color]),
+    [
+      [200, 'green'],
+      [-30, 'red'],
+    ]
   );
 });
 
@@ -95,10 +111,16 @@ test('list and form statuses come from the stored status', async () => {
   const schema = fyo.schemaMap.SalesInvoice;
   assert.equal(getDocStatus({ schema, status: 'PartlyPaid' }), 'PartlyPaid');
   assert.equal(getDocStatus({ schema, notInserted: true }), 'Draft');
-  assert.equal(getDocStatus({ schema, dirty: true, status: 'Saved' }), 'NotSaved');
+  assert.equal(
+    getDocStatus({ schema, dirty: true, status: 'Saved' }),
+    'NotSaved'
+  );
   const shift = fyo.schemaMap.POSOpeningShift;
   assert.equal(getDocStatus({ schema: shift, submitted: true }), 'Submitted');
-  assert.equal(getDocStatus({ schema: fyo.schemaMap.Lead, status: 'Open' }), 'Saved');
+  assert.equal(
+    getDocStatus({ schema: fyo.schemaMap.Lead, status: 'Open' }),
+    'Saved'
+  );
 });
 
 test('currency formatting uses exactly the configured precision', async () => {

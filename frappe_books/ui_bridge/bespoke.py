@@ -28,6 +28,7 @@ class BooksBespokeQueries:
 		rows = self._ledger_totals(
 			from_date, to_date, {"account.root_type": "Expense"}, ["account", *DEBIT_MINUS_CREDIT], "account"
 		)
+		# The query engine wraps an ORDER BY on this expression alias in MAX() on Postgres.
 		rows.sort(key=lambda row: row.balance, reverse=True)
 		return [{"account": row.account, "total": rounded(row.balance)} for row in rows[:5]]
 

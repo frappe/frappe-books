@@ -1,7 +1,6 @@
 import { Fyo } from 'fyo';
 import { ValueError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
-import { translateSchema } from 'fyo/utils/translation';
 import { Field, RawValue, SchemaMap } from 'schemas/types';
 import { getMapFromList } from 'utils';
 import {
@@ -16,8 +15,6 @@ import {
   TotalCreditAndDebit,
   TotalOutstanding,
 } from 'utils/db/types';
-import { schemaTranslateables } from 'utils/translationHelpers';
-import { LanguageMap } from 'utils/types';
 import { Converter } from './converter';
 import {
   DatabaseDemuxConstructor,
@@ -75,14 +72,6 @@ export class DatabaseHandler extends DatabaseBase {
   async refreshSchemaMap() {
     this.#schemaMap = await this.#demux.getSchemaMap();
     this.#setFieldMap();
-  }
-
-  async translateSchemaMap(languageMap?: LanguageMap) {
-    if (languageMap) {
-      translateSchema(this.#schemaMap, languageMap, schemaTranslateables);
-    } else {
-      await this.refreshSchemaMap();
-    }
   }
 
   async purgeCache() {

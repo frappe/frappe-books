@@ -38,7 +38,6 @@
 </template>
 
 <script lang="ts">
-import { TranslationString } from 'fyo/utils/translation';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { models, getRegionalModels } from 'models';
 import Desk from 'src/pages/Desk.vue';
@@ -126,7 +125,6 @@ export default defineComponent({
 
       const countryCode = window.books_boot.country_code || '-';
       await fyo.db.connect(countryCode);
-      await fyo.db.translateSchemaMap(TranslationString.prototype.languageMap);
       await fyo.initializeAndRegister(
         models,
         await getRegionalModels(countryCode)

@@ -114,7 +114,7 @@ export class Fyo {
   ) {
     if (this._initialized && !force) return;
 
-    await this.#initializeModules();
+    this.#initializeModules();
     await this.#initializeMoneyMaker();
 
     this.doc.registerModels(models, regionalModels);
@@ -122,12 +122,11 @@ export class Fyo {
     this._initialized = true;
   }
 
-  async #initializeModules() {
+  #initializeModules() {
     // temp params while calling routes
     this.temp = {};
 
     this.doc.init();
-    await this.db.init();
   }
 
   async #initializeMoneyMaker() {

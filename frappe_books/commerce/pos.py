@@ -45,20 +45,21 @@ def transacted_amounts(from_date, to_date):
 	references = frappe.get_all(
 		"Books Payment For",
 		filters={
+			"parenttype": "Books Payment",
 			"reference_type": "Books Sales Invoice",
 			"reference_name": ["in", [invoice.name for invoice in invoices]],
 		},
-		fields=["parent", "reference_name"],
+		fields=["parent", "reference_name", "amount"],
 	)
-	payments = _submitted_payments({reference.parent for reference in references})
+	methods = _submitted_payment_methods({reference.parent for reference in references})
 	returns = {invoice.name for invoice in invoices if invoice.return_against}
 	result = defaultdict(as_decimal)
 	for reference in references:
-		payment = payments.get(reference.parent)
-		if not payment:
+		method = methods.get(reference.parent)
+		if not method:
 			continue
 		sign = -1 if reference.reference_name in returns else 1
-		result[payment.payment_method] += sign * as_decimal(payment.amount)
+		result[method] += sign * as_decimal(reference.amount)
 	return {method: rounded(amount) for method, amount in result.items()}
 
 
@@ -108,12 +109,14 @@ def cancel_cash_journal(name):
 	journal.cancel()
 
 
-def _submitted_payments(names):
+def _submitted_payment_methods(names):
 	if not names:
 		return {}
-	rows = frappe.get_all(
-		"Books Payment",
-		filters={"name": ["in", sorted(names)], "docstatus": 1},
-		fields=["name", "payment_method", "amount"],
+	return dict(
+		frappe.get_all(
+			"Books Payment",
+			filters={"name": ["in", sorted(names)], "docstatus": 1},
+			fields=["name", "payment_method"],
+			as_list=True,
+		)
 	)
-	return {row.name: row for row in rows}

@@ -6,7 +6,7 @@ import { t } from 'fyo';
 import type { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
-import { getDbError, LinkValidationError, ValueError } from 'fyo/utils/errors';
+import { ValueError } from 'fyo/utils/errors';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
@@ -87,7 +87,6 @@ export async function routeTo(route: RouteLocationRaw) {
 }
 
 export async function deleteDocWithPrompt(doc: Doc) {
-  const schemaLabel = fyo.schemaMap[doc.schemaName]!.label;
   let detail = t`This action is permanent.`;
   if (doc.isTransactional && doc.isSubmitted) {
     detail = t`This action is permanent and will delete associated ledger entries.`;
@@ -104,16 +103,7 @@ export async function deleteDocWithPrompt(doc: Doc) {
           try {
             await doc.delete();
           } catch (err) {
-            if (getDbError(err as Error) === LinkValidationError) {
-              await showDialog({
-                title: t`Delete Failed`,
-                detail: t`Cannot delete ${schemaLabel} "${doc.name!}" because of linked entries.`,
-                type: 'error',
-              });
-            } else {
-              await handleErrorWithDialog(err as Error, doc);
-            }
-
+            await handleErrorWithDialog(err as Error, doc);
             return false;
           }
 

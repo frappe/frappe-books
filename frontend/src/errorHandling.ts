@@ -289,14 +289,6 @@ function getErrorLabel(error: Error) {
     return t`Mandatory Error`;
   }
 
-  if (name === 'DatabaseError') {
-    return t`Database Error`;
-  }
-
-  if (name === 'CannotCommitError') {
-    return t`Cannot Commit Error`;
-  }
-
   if (name === 'NotImplemented') {
     return t`Error`;
   }

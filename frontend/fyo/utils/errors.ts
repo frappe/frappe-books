@@ -55,20 +55,6 @@ export class MandatoryError extends ValidationError {
   }
 }
 
-export class DatabaseError extends BaseError {
-  constructor(message: string, shouldStore = true) {
-    super(500, message, shouldStore);
-    this.name = 'DatabaseError';
-  }
-}
-
-export class CannotCommitError extends DatabaseError {
-  constructor(message: string, shouldStore = true) {
-    super(message, shouldStore);
-    this.name = 'CannotCommitError';
-  }
-}
-
 export class NotImplemented extends BaseError {
   constructor(message = '', shouldStore = false) {
     super(501, message, shouldStore);
@@ -79,27 +65,3 @@ export class NotImplemented extends BaseError {
 export class ValueError extends ValidationError {}
 export class ConflictError extends ValidationError {}
 export class InvalidFieldError extends ValidationError {}
-
-export function getDbError(err: Error) {
-  if (!err.message) {
-    return DatabaseError;
-  }
-
-  if (err.message.includes('SQLITE_ERROR: no such table')) {
-    return NotFoundError;
-  }
-
-  if (err.message.includes('FOREIGN KEY')) {
-    return LinkValidationError;
-  }
-
-  if (err.message.includes('SQLITE_ERROR: cannot commit')) {
-    return CannotCommitError;
-  }
-
-  if (err.message.includes('UNIQUE constraint failed:')) {
-    return DuplicateEntryError;
-  }
-
-  return DatabaseError;
-}

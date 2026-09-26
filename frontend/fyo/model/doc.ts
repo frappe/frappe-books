@@ -15,7 +15,6 @@ import {
 import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
 import { markRaw, reactive } from 'vue';
 import { isPesa } from '../utils/index';
-import { getDbSyncError } from './errorHelpers';
 import {
   areDocValuesEqual,
   getFormulaSequence,
@@ -916,12 +915,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     await setName(this, this.fyo);
 
     const validDict = this.getValidDict(false, true);
-    let data: DocValueMap;
-    try {
-      data = await this.fyo.db.insert(this.schemaName, validDict);
-    } catch (err) {
-      throw await getDbSyncError(err as Error, this, this.fyo);
-    }
+    const data = await this.fyo.db.insert(this.schemaName, validDict);
     await this._syncValues(data, 'save');
 
     return this;
@@ -940,15 +934,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
     if (this.fieldMap.modified) {
       data.modified = new Date();
     }
-    try {
-      data = await this.fyo.db.update(
-        this.schemaName,
-        data,
-        expectedModified instanceof Date ? expectedModified : undefined
-      );
-    } catch (err) {
-      throw await getDbSyncError(err as Error, this, this.fyo);
-    }
+    data = await this.fyo.db.update(
+      this.schemaName,
+      data,
+      expectedModified instanceof Date ? expectedModified : undefined
+    );
     await this._syncValues(data, 'save');
 
     return this;

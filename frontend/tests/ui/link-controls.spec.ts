@@ -21,7 +21,7 @@ test.beforeAll(async ({ browser, baseURL }) => {
 test.beforeEach(async ({ page }) => {
   await page.context().addCookies(cookies);
   await page.goto('/books');
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).waitFor();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).waitFor();
   await installFixture(page);
   await openFixture(page, 'Party', partyName);
 });
@@ -43,7 +43,7 @@ test('displaying and reopening a saved link does not edit the document', async (
     path: test.info().outputPath('saved-link.png'),
     fullPage: true,
   });
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
   await openFixture(page, 'Party', partyName);
   await expect(address).toHaveValue(addressLabel);
   expect(await getPartyState(page)).toEqual({

@@ -23,7 +23,7 @@ test.beforeAll(async ({ browser, baseURL }) => {
 test.beforeEach(async ({ page }) => {
   await page.context().addCookies(cookies);
   await page.goto('/books');
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).waitFor();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).waitFor();
   await page.evaluate(async (names) => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins

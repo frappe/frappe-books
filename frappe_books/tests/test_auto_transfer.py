@@ -66,6 +66,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertEqual(shipment.docstatus, 1)
 		self.assertEqual(shipment.back_reference, invoice.name)
 		self.assertEqual(stock_quantity(item.name, "Stores"), 3)
+		self.assertEqual([invoice.stock_not_transferred, invoice.items[0].stock_not_transferred], [0, 0])
 
 		invoice.cancel()
 		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 2)

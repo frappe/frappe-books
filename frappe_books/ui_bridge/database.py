@@ -23,7 +23,7 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "close", "preview", "getMapped"}
+READ_METHODS = {"get", "getAll", "getSingleValues", "exists", "preview", "getMapped"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
@@ -196,9 +196,6 @@ class BooksDatabaseBridge:
 		if not frappe.db.exists(target, name):
 			return False
 		return bool(frappe.has_permission(target, ptype="read", doc=name))
-
-	def close(self) -> None:
-		return None
 
 	def _to_readable_source(self, source_schema: str, doc, requested=None) -> dict:
 		doc.apply_fieldlevel_read_permissions()

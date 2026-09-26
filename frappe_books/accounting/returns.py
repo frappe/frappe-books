@@ -8,7 +8,6 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, currency_unit, sum_decimal
-from frappe_books.commerce import loyalty
 from frappe_books.inventory.stock import parse_serial_numbers
 
 
@@ -95,7 +94,7 @@ def _validate_quantities(invoice, original, returned_quantities):
 def _validate_value(invoice, original, returns, returned_row_count):
 	returned = sum_decimal(abs(as_decimal(row.grand_total)) for row in returns)
 	returned += abs(as_decimal(invoice.grand_total))
-	billed = abs(as_decimal(original.grand_total)) + loyalty.redemption_amount(original)
+	billed = abs(as_decimal(original.grand_total))
 	# Each returned row is rounded on its own, which can add one smallest unit.
 	tolerance = currency_unit(invoice.get("currency")) * (returned_row_count + len(invoice.items))
 	if returned > billed + tolerance:

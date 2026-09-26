@@ -125,6 +125,8 @@ def _calculate_totals(invoice):
 		- item_discount
 		- invoice.discount_amount
 	)
+	if invoice.transaction_type == "sales" and invoice.get("return_against"):
+		loyalty.set_return_redemption(invoice, grand_total)
 	if invoice.transaction_type == "sales":
 		grand_total -= loyalty.redemption_amount(invoice)
 	invoice.grand_total = rounded(grand_total, currency)
@@ -177,7 +179,7 @@ def post_invoice(invoice):
 
 def _post_sales(invoice, posting, total, exchange_rate, is_return):
 	_post_direction(posting, invoice.account, total, invoice.party, reverse=is_return)
-	loyalty_amount = loyalty.redemption_amount(invoice) * exchange_rate
+	loyalty_amount = abs(loyalty.redemption_amount(invoice)) * exchange_rate
 	if loyalty_amount:
 		_post_direction(
 			posting,

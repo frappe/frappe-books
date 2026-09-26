@@ -39,6 +39,7 @@ await build({
       export { getPrintTemplatePropValues } from './src/utils/printTemplates';
       export { call } from './src/web/api';
       export * as errors from './fyo/utils/errors';
+      export { getInsufficientItems } from './models/inventory/insufficientStock';
     `,
     resolveDir: frontend,
   },
@@ -95,6 +96,7 @@ export const {
   getPrintTemplatePropValues,
   call,
   errors,
+  getInsufficientItems,
 } = createRequire(import.meta.url)(output);
 
 export async function makeFyo() {

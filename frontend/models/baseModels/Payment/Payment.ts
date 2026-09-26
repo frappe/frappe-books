@@ -79,15 +79,8 @@ export class Payment extends Transactional {
       referenceName as string
     )) as Invoice;
 
-    let paymentType: PaymentType;
-    if (doc.isSales) {
-      paymentType = 'Receive';
-    } else {
-      paymentType = 'Pay';
-    }
-
     this.party = doc.party as string;
-    this.paymentType = paymentType;
+    this.paymentType = getPaymentType(doc);
   }
 
   updateAmountOnReferenceUpdate() {
@@ -417,42 +410,21 @@ export class Payment extends Transactional {
           return;
         }
 
-        const reference = this?.for?.[0];
-        const refDoc = (await reference?.loadAndGetLink(
+        const invoice = (await this.for?.[0]?.loadAndGetLink(
           'referenceName'
         )) as Invoice | null;
-
-        const partyDoc = (await this.loadAndGetLink('party')) as Party;
-        const outstanding = partyDoc.outstandingAmount as Money;
-
-        if (partyDoc.role === PartyRoleEnum.Supplier) {
-          if (refDoc?.isReturn) {
-            return PaymentTypeEnum.Receive;
-          } else {
-            return PaymentTypeEnum.Pay;
-          }
-        } else if (partyDoc.role === PartyRoleEnum.Customer) {
-          if (refDoc?.isSales && refDoc.isReturn) {
-            return PaymentTypeEnum.Pay;
-          } else {
-            return PaymentTypeEnum.Receive;
-          }
-        } else if (partyDoc.role === PartyRoleEnum.Both) {
-          if (refDoc?.isSales && refDoc.isReturn) {
-            return PaymentTypeEnum.Pay;
-          } else {
-            return PaymentTypeEnum.Receive;
-          }
+        if (invoice) {
+          return getPaymentType(invoice);
         }
 
-        if (outstanding?.isZero() ?? true) {
-          return this.paymentType;
+        const party = (await this.loadAndGetLink('party')) as Party;
+        if (party.role === PartyRoleEnum.Both) {
+          return this.paymentType ?? PaymentTypeEnum.Receive;
         }
 
-        if (outstanding?.isPositive()) {
-          return PaymentTypeEnum.Receive;
-        }
-        return PaymentTypeEnum.Pay;
+        return party.role === PartyRoleEnum.Supplier
+          ? PaymentTypeEnum.Pay
+          : PaymentTypeEnum.Receive;
       },
     },
     amount: {
@@ -566,4 +538,11 @@ export class Payment extends Transactional {
       columns: ['name', getDocStatusListColumn(), 'party', 'date', 'amount'],
     };
   }
+}
+
+/** Money comes in for sales and purchase returns, and goes out otherwise. */
+export function getPaymentType(invoice: Invoice): PaymentTypeEnum {
+  return invoice.isSales !== invoice.isReturn
+    ? PaymentTypeEnum.Receive
+    : PaymentTypeEnum.Pay;
 }

@@ -113,81 +113,28 @@ function getPaddedName(prefix: string, next: number, padZeros: number): string {
   return prefix + next.toString().padStart(padZeros ?? 4, '0');
 }
 
+/** The item's earliest received serial numbers that are in stock. */
 export async function getExistingActiveSerialNumbersForItem(
   fyo: Fyo,
   item: string,
   quantity: number
 ): Promise<string> {
-  if (!quantity || quantity <= 0) {
+  if (
+    !quantity ||
+    quantity <= 0 ||
+    !(await fyo.getValue(ModelNameEnum.Item, item, 'hasSerialNumber'))
+  ) {
     return '';
   }
 
-  const hasSerialNumber = await fyo.getValue(
-    ModelNameEnum.Item,
-    item,
-    'hasSerialNumber'
-  );
-
-  if (!hasSerialNumber) {
-    return '';
-  }
-
-  const stockLedgerEntries = (await fyo.db.getAllRaw(
-    ModelNameEnum.StockLedgerEntry,
-    {
-      fields: ['serialNumber', 'date', 'quantity'],
-      filters: {
-        item: item,
-        serialNumber: ['!=', ''],
-      },
-      orderBy: ['date', 'created', 'name'],
-      order: 'asc',
-    }
-  )) as {
-    serialNumber?: string;
-    serial_number?: string;
-    date: string;
-    quantity: number;
-  }[];
-
-  if (!stockLedgerEntries || stockLedgerEntries.length === 0) {
-    return '';
-  }
-
-  const serialNumberStockMap: Record<string, number> = {};
-
-  for (const entry of stockLedgerEntries) {
-    const sn = (entry.serialNumber ?? entry.serial_number ?? '').trim();
-    if (!sn) continue;
-
-    serialNumberStockMap[sn] = (serialNumberStockMap[sn] || 0) + entry.quantity;
-  }
-
-  const availableSerialNumbers: string[] = [];
-  const seenSerialNumbers = new Set<string>();
-
-  for (const entry of stockLedgerEntries) {
-    const sn = (entry.serialNumber ?? entry.serial_number ?? '').trim();
-    if (!sn) continue;
-    if (seenSerialNumbers.has(sn)) continue;
-
-    if ((serialNumberStockMap[sn] || 0) > 0) {
-      availableSerialNumbers.push(sn);
-      seenSerialNumbers.add(sn);
-
-      if (availableSerialNumbers.length >= quantity) {
-        break;
-      }
-    }
-  }
-
-  if (availableSerialNumbers.length === 0) {
-    return '';
-  }
-
-  const selectedSerialNumbers = availableSerialNumbers.slice(0, quantity);
-
-  return selectedSerialNumbers.join('\n');
+  const serialNumbers = await fyo.db.getAllRaw(ModelNameEnum.SerialNumber, {
+    fields: ['name'],
+    filters: { item, status: 'Active' },
+    orderBy: 'created',
+    order: 'asc',
+    limit: quantity,
+  });
+  return serialNumbers.map((row) => row.name as string).join('\n');
 }
 
 export async function getSuggestedBatchName(

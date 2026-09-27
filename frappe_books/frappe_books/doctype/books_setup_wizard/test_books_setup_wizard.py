@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.coa import STANDARD_CHART
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
 from frappe_books.setup_service import run_setup
 from frappe_books.tests.accounting import unique_name
@@ -16,7 +17,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			wizard.save(ignore_permissions=True)
 
 	def test_setup_creates_standard_accounts_and_defaults(self):
-		wizard = self._wizard(chart_of_accounts="Standard")
+		wizard = self._wizard(chart_of_accounts=STANDARD_CHART)
 		wizard.save(ignore_permissions=True)
 		run_setup(wizard)
 
@@ -94,7 +95,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 				"country": "India",
 				"currency": "INR",
 				"bank_name": unique_name("Test Primary Bank"),
-				"chart_of_accounts": "Standard",
+				"chart_of_accounts": STANDARD_CHART,
 				"fiscal_year_start": "2026-04-01",
 				"fiscal_year_end": "2027-03-31",
 				**values,

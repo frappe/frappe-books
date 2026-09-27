@@ -1,4 +1,3 @@
-import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import { FormulaMap, ListsMap, ValidationMap } from 'fyo/model/types';
 import { validateEmail } from 'fyo/model/validationFunction';
@@ -17,43 +16,6 @@ function getCurrencyList(): { countryCode: string; name: string }[] {
     result.push({ name: currency, countryCode: code });
   }
   return result;
-}
-
-export function getCOAList() {
-  return [
-    { name: t`Standard Chart of Accounts`, countryCode: '' },
-
-    { countryCode: 'ae', name: 'U.A.E - Chart of Accounts' },
-    {
-      countryCode: 'ca',
-      language: 'fr',
-      name: 'Canada - Plan comptable pour les provinces francophones',
-    },
-    { countryCode: 'gt', name: 'Guatemala - Cuentas' },
-    { countryCode: 'hu', name: 'Hungary - Chart of Accounts' },
-    { countryCode: 'id', name: 'Indonesia - Chart of Accounts' },
-    { countryCode: 'in', name: 'India - Chart of Accounts' },
-    { countryCode: 'mx', name: 'Mexico - Plan de Cuentas' },
-    { countryCode: 'ni', name: 'Nicaragua - Catalogo de Cuentas' },
-    { countryCode: 'nl', name: 'Netherlands - Grootboekschema' },
-    { countryCode: 'sg', name: 'Singapore - Chart of Accounts' },
-    { countryCode: 'fr', name: 'France - Plan Comptable General' },
-    /*
-    { countryCode: 'th', name: 'Thailand - Chart of Accounts' },
-    { countryCode: 'us', name: 'United States - Chart of Accounts' },
-    { countryCode: 've', name: 'Venezuela - Plan de Cuentas' },
-    { countryCode: 'za', name: 'South Africa - Chart of Accounts' },
-    { countryCode: 'de', name: 'Germany - Kontenplan' },
-    { countryCode: 'it', name: 'Italy - Piano dei Conti' },
-    { countryCode: 'es', name: 'Spain - Plan de Cuentas' },
-    { countryCode: 'pt', name: 'Portugal - Plan de Contas' },
-    { countryCode: 'pl', name: 'Poland - Rejestr Kont' },
-    { countryCode: 'ro', name: 'Romania - Contabilitate' },
-    { countryCode: 'ru', name: 'Russia - Chart of Accounts' },
-    { countryCode: 'se', name: 'Sweden - Kontoplan' },
-    { countryCode: 'ch', name: 'Switzerland - Kontenplan' },
-    { countryCode: 'tr', name: 'Turkey - Chart of Accounts' },*/
-  ];
 }
 
 export class SetupWizard extends Doc {
@@ -147,16 +109,16 @@ export class SetupWizard extends Doc {
         if (!code) {
           return;
         }
-        const coaList = getCOAList();
+        const charts = this.fyo.store.chartsOfAccounts;
         const language = (this.fyo.store.language || 'en')
           .toLowerCase()
           .split(/[-_]/)[0];
-        const coa = coaList.find(
-          (chart) =>
-            chart.countryCode === code &&
-            (!chart.language || chart.language === language)
+        const chart = charts.find(
+          (option) =>
+            option.country_code === code &&
+            (!option.language || option.language === language)
         );
-        return coa?.name ?? coaList[0].name;
+        return chart?.name ?? charts[0]?.name;
       },
       dependsOn: ['country'],
     },
@@ -169,6 +131,10 @@ export class SetupWizard extends Doc {
   static lists: ListsMap = {
     country: () => Object.keys(getCountryInfo()),
     currency: () => getCurrencyList().map(({ name }) => name),
-    chartOfAccounts: () => getCOAList().map(({ name }) => name),
+    chartOfAccounts: (doc) =>
+      (doc?.fyo.store.chartsOfAccounts ?? []).map(({ name, label }) => ({
+        value: name,
+        label,
+      })),
   };
 }

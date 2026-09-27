@@ -22,6 +22,7 @@ import {
 import { t, T } from './utils/translation';
 import type { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
+import type { ChartOfAccounts } from 'utils/types';
 
 export class Fyo {
   t = t;
@@ -209,6 +210,7 @@ export class Fyo {
     appVersion: '',
     language: '',
     permissions: null as PermissionMap | null,
+    chartsOfAccounts: [] as ChartOfAccounts[],
     reports: {} as Record<keyof typeof reports, Report | undefined>,
   };
 }

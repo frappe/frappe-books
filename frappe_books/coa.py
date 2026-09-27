@@ -23,16 +23,28 @@ class ChartAccount:
 	is_group: bool
 
 
-def chart_names() -> list[str]:
-	return [STANDARD_CHART, *(chart["name"] for chart in _country_charts())]
+def chart_options() -> list[dict]:
+	"""Return the charts the setup wizard offers, the standard chart first."""
+	charts = [{"name": STANDARD_CHART, "countryCode": ""}, *_country_charts()]
+	return [
+		{
+			"name": chart["name"],
+			"label": _(chart["name"]),
+			"country_code": chart["countryCode"],
+			"language": chart.get("language"),
+		}
+		for chart in charts
+	]
 
 
 def load_chart(chart_name) -> list[ChartAccount]:
-	"""Return the named chart's accounts in tree order. Unknown names load the standard chart."""
+	"""Return the named chart's accounts in tree order."""
+	if chart_name == STANDARD_CHART:
+		return _flatten(json.loads((CHART_DIRECTORY / "standardCOA.json").read_text()))
 	for chart in _country_charts():
 		if chart["name"] == chart_name:
 			return _flatten(chart["tree"])
-	return _flatten(json.loads((CHART_DIRECTORY / "standardCOA.json").read_text()))
+	frappe.throw(_("Unknown chart of accounts: {0}").format(chart_name))
 
 
 def ensure_chart(accounts: list[ChartAccount]):

@@ -29,6 +29,7 @@ await build({
       export { getJsonData, getCsvData } from './reports/commonExporter';
       export { getDocStatus, getDocStatusBadge, getLoyaltyProgramBadge, getStateBadge } from './models/helpers';
       export { getQuickEditFieldnames, getRowEditFieldnames } from './src/utils/sheetFields';
+      export { getRowDetails } from './src/components/Controls/rowDetails';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
@@ -115,6 +116,7 @@ export const {
   getStateBadge,
   getQuickEditFieldnames,
   getRowEditFieldnames,
+  getRowDetails,
   getFilterFields,
   getFieldLabel,
   getJsonExportData,

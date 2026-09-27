@@ -10,7 +10,6 @@ from frappe_books.reports.filters import datetime_conditions
 from frappe_books.ui_bridge.mapping import target_doctype
 
 TAX_AMOUNT_FIELDS = {"IGST": "igstAmt", "CGST": "cgstAmt", "SGST": "sgstAmt"}
-TAX_FLAGS = {"Nil Rated": "nilRated", "Exempt": "exempt", "Non GST": "nonGST"}
 LARGE_B2C_INVOICE = 250000
 # SQLite allows 32766 query parameters.
 IN_LIST_BATCH_SIZE = 1000
@@ -150,8 +149,6 @@ def _invoice_rows(invoice, items, details, header):
 
 
 def _add_tax(row, detail, base, currency):
-	if detail.account in TAX_FLAGS:
-		row[TAX_FLAGS[detail.account]] = True
 	if detail.account not in TAX_AMOUNT_FIELDS:
 		return
 	field = TAX_AMOUNT_FIELDS[detail.account]

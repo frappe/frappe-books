@@ -21,7 +21,4 @@ export interface GSTRRow {
   igstAmt?: number;
   cgstAmt?: number;
   sgstAmt?: number;
-  exempt?: boolean;
-  nonGST?: boolean;
-  nilRated?: boolean;
 }

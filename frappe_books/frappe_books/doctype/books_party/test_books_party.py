@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.accounting.money import company_currency
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
 
 # On IntegrationTestCase, the doctype test records and all
@@ -73,6 +74,15 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 				make_party(account.name, role=role)
 
 		self.assertEqual(make_party(payable.name, role="Both").default_account, payable.name)
+
+	def test_party_defaults_to_the_role_ledger_and_company_currency(self):
+		if not frappe.db.exists("Books Account", "Debtors"):
+			make_account("Debtors", account_type="Receivable", account_name="Debtors")
+		party = frappe.get_doc(
+			{"doctype": "Books Party", "name": unique_name("Default Party"), "role": "Customer"}
+		).insert()
+
+		self.assertEqual((party.default_account, party.currency), ("Debtors", company_currency()))
 
 	def test_stale_party_save_cannot_reset_outstanding(self):
 		receivable = make_account("Stale Receivable", account_type="Receivable")

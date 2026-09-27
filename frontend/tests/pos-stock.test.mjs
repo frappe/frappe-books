@@ -6,6 +6,8 @@ import {
   validateQty,
   getPOSInventory,
   getPOSBatchQuantity,
+  setPOSRowQuantity,
+  setPOSRowValue,
   validateSinv,
   validatePOSCheckout,
 } from './helpers/accounting.mjs';
@@ -147,6 +149,65 @@ test('a payment retry does not require stock that has already shipped', async ()
     { [item]: 'SN-1' }
   );
 });
+
+test('a cart quantity must be above zero unless the row is a return', async () => {
+  const row = makeRow({ quantity: 2, transferQuantity: 2 });
+  for (const quantity of [0, -1]) {
+    await assert.rejects(
+      setPOSRowQuantity(row, 'quantity', quantity),
+      /greater than zero/
+    );
+  }
+  assert.equal(row.quantity, 2);
+
+  const returned = makeRow({ isReturn: true, quantity: -1, transferQuantity: -1 });
+  await setPOSRowQuantity(returned, 'transferQuantity', 3);
+  assert.deepEqual([returned.quantity, returned.transferQuantity], [-3, -3]);
+});
+
+test('a cart quantity the POS warehouse cannot supply is restored', async () => {
+  const row = makeRow({ quantity: 2, transferQuantity: 2 });
+  await assert.rejects(
+    setPOSRowQuantity(row, 'transferQuantity', 5),
+    /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
+  );
+  assert.deepEqual([row.quantity, row.transferQuantity], [2, 2]);
+
+  await setPOSRowQuantity(row, 'quantity', 4);
+  assert.deepEqual([row.quantity, row.transferQuantity], [4, 4]);
+});
+
+test('a cart discount edit picks amount or percent discounts', async () => {
+  const row = makeRow();
+  await setPOSRowValue(row, 'itemDiscountAmount', 5);
+  assert.equal(row.setItemDiscountAmount, true);
+  await setPOSRowValue(row, 'itemDiscountPercent', 10);
+  assert.deepEqual([row.setItemDiscountAmount, row.itemDiscountPercent], [false, 10]);
+  await setPOSRowValue(row, 'rate', 7);
+  assert.deepEqual([row.setItemDiscountAmount, row.rate], [false, 7]);
+});
+
+function makeRow(values = {}) {
+  const invoice = { fyo: makeFyo(), items: [] };
+  const row = {
+    item,
+    batch,
+    quantity: 1,
+    transferQuantity: 1,
+    parentdoc: invoice,
+    ...values,
+    async set(field, value) {
+      this[field] = value;
+      if (field === 'quantity') this.transferQuantity = value;
+      if (field === 'transferQuantity') this.quantity = value;
+    },
+    async setMultiple(values) {
+      Object.assign(this, values);
+    },
+  };
+  invoice.items.push(row);
+  return row;
+}
 
 function makeFyo() {
   const ledger = [

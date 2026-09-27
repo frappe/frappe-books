@@ -46,6 +46,30 @@ test('a mapped payment comes from the server mapper and keeps unset defaults', a
   assert.equal(await fyo.doc.getDoc('Payment', payment.name), payment);
 });
 
+test('transfer invoices and returns come from the transfer mappers', async () => {
+  const calls = [];
+  const fyo = await makeFyo((method, ...args) => {
+    calls.push([method, ...args]);
+    return { party: 'Supplier', items: [{ item: 'Pen', quantity: -2 }] };
+  });
+  const receipt = fyo.doc.getNewDoc('PurchaseReceipt', { name: 'PREC-1' });
+
+  await getMappedDoc(receipt, 'PurchaseInvoice', 'make_purchase_invoice');
+  const purchaseReturn = await getMappedDoc(
+    receipt,
+    'PurchaseReceipt',
+    'make_return'
+  );
+
+  const module =
+    'frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt';
+  assert.deepEqual(calls, [
+    ['getMapped', `${module}.make_purchase_invoice`, 'PREC-1'],
+    ['getMapped', `${module}.make_return`, 'PREC-1'],
+  ]);
+  assert.equal(purchaseReturn.items[0].quantity, -2);
+});
+
 async function makeFyo(call) {
   class Store {
     getSchemaMap() {

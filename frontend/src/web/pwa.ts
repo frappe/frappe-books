@@ -5,6 +5,8 @@ export type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
+export const appIconUrl = '/assets/frappe_books/pwa/icon.svg';
+
 /** The browser's deferred install prompt, when it offers one. */
 export const installPrompt = shallowRef<InstallPromptEvent | null>(null);
 

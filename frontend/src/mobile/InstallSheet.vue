@@ -7,7 +7,7 @@
     <div
       class="flex flex-col items-center gap-4 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] text-center"
     >
-      <img :src="ICON_URL" alt="" class="size-16" />
+      <img :src="appIconUrl" alt="" class="size-16" />
       <p class="text-p-md text-ink-gray-7">
         {{
           t`Add Books to your home screen to open it full screen, like an app.`
@@ -51,10 +51,14 @@ import {
   Button as FrappeButton,
 } from 'frappe-ui';
 import { t } from 'fyo';
-import { canInstall, installPrompt, isInstallSheetOpen } from 'src/web/pwa';
+import {
+  appIconUrl,
+  canInstall,
+  installPrompt,
+  isInstallSheetOpen,
+} from 'src/web/pwa';
 import { onMounted, watch } from 'vue';
 
-const ICON_URL = '/assets/frappe_books/pwa/icon.svg';
 const SNOOZED_AT_KEY = 'booksInstallSheetSnoozedAt';
 const SNOOZE_DAYS = 30;
 

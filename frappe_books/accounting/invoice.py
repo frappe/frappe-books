@@ -289,7 +289,7 @@ def _populate_row(invoice, row, item, rates):
 		row.rate = pricing.standard_rate(invoice, row, rates)
 	row.unit_conversion_factor = row.unit_conversion_factor or 1
 	if not row.transfer_quantity:
-		row.transfer_quantity = as_decimal(row.quantity) * as_decimal(row.unit_conversion_factor)
+		row.transfer_quantity = as_decimal(row.quantity) / as_decimal(row.unit_conversion_factor)
 	if not row.account:
 		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
 

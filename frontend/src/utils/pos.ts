@@ -22,10 +22,7 @@ import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers'
 export type POSPermissionSetting = 'canChangeRate' | 'canEditDiscount';
 export type POSQuantityField = 'quantity' | 'transferQuantity';
 export type POSRowField =
-  | POSQuantityField
-  | 'rate'
-  | 'itemDiscountAmount'
-  | 'itemDiscountPercent';
+  POSQuantityField | 'rate' | 'itemDiscountAmount' | 'itemDiscountPercent';
 
 /** Sets a cart row value as the POS edits it. */
 export async function setPOSRowValue(

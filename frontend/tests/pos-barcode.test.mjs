@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { findScannedPOSItem } from './helpers/accounting.mjs';
 
-const rice = { name: 'Basmati Rice', itemCode: '12345', barcode: '890000000001', unit: 'Kg' };
+const rice = {
+  name: 'Basmati Rice',
+  itemCode: '12345',
+  barcode: '890000000001',
+  unit: 'Kg',
+};
 const eggs = { name: 'Eggs', itemCode: '54321', unit: 'Unit' };
 const items = [rice, eggs];
 const scale = {
@@ -28,7 +33,10 @@ test('other codes match a 12 digit barcode or an exact name or code', () => {
     item: rice,
     quantity: 1,
   });
-  assert.deepEqual(findScannedPOSItem(items, 'eggs'), { item: eggs, quantity: 1 });
+  assert.deepEqual(findScannedPOSItem(items, 'eggs'), {
+    item: eggs,
+    quantity: 1,
+  });
   assert.equal(findScannedPOSItem(items, '211234501500'), undefined);
   assert.equal(findScannedPOSItem(items, 'Egg'), undefined);
 });

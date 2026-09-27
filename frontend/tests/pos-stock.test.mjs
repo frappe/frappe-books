@@ -164,7 +164,11 @@ test('a cart quantity must be above zero unless the row is a return', async () =
   }
   assert.equal(row.quantity, 2);
 
-  const returned = makeRow({ isReturn: true, quantity: -1, transferQuantity: -1 });
+  const returned = makeRow({
+    isReturn: true,
+    quantity: -1,
+    transferQuantity: -1,
+  });
   await setPOSRowQuantity(returned, 'transferQuantity', 3);
   assert.deepEqual([returned.quantity, returned.transferQuantity], [-3, -3]);
 });
@@ -186,7 +190,10 @@ test('a cart discount edit picks amount or percent discounts', async () => {
   await setPOSRowValue(row, 'itemDiscountAmount', 5);
   assert.equal(row.setItemDiscountAmount, true);
   await setPOSRowValue(row, 'itemDiscountPercent', 10);
-  assert.deepEqual([row.setItemDiscountAmount, row.itemDiscountPercent], [false, 10]);
+  assert.deepEqual(
+    [row.setItemDiscountAmount, row.itemDiscountPercent],
+    [false, 10]
+  );
   await setPOSRowValue(row, 'rate', 7);
   assert.deepEqual([row.setItemDiscountAmount, row.rate], [false, 7]);
 });

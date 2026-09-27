@@ -41,19 +41,13 @@
                   v-for="df in tableFields"
                   :key="df.fieldname"
                   class="min-w-0 px-3"
-                  :class="
-                    isNumeric(df as Field) ? 'justify-end text-end' : ''
-                  "
+                  :class="isNumeric(df as Field) ? 'justify-end text-end' : ''"
                 >
                   <span
                     class="truncate"
-                    :title="
-                      fyo.format(row[df.fieldname as keyof POSItem], df)
-                    "
+                    :title="fyo.format(row[df.fieldname as keyof POSItem], df)"
                   >
-                    {{
-                      fyo.format(row[df.fieldname as keyof POSItem], df)
-                    }}
+                    {{ fyo.format(row[df.fieldname as keyof POSItem], df) }}
                   </span>
                 </FrappeListCell>
               </FrappeListRow>

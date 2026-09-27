@@ -55,7 +55,8 @@ export function findScannedPOSItem(
   settings?: BarcodeSettings
 ): { item: POSItem; quantity: number } | undefined {
   const weighed = parseWeightBarcode(code, settings);
-  const item = findByBarcode(items, code, weighed) ?? findExactPOSItem(items, code);
+  const item =
+    findByBarcode(items, code, weighed) ?? findExactPOSItem(items, code);
   if (!item) {
     return;
   }
@@ -76,7 +77,9 @@ function findByBarcode(
 ): POSItem | undefined {
   if (weighed) {
     const { itemCode } = weighed;
-    return items.find((item) => [item.itemCode, item.barcode].includes(itemCode));
+    return items.find((item) =>
+      [item.itemCode, item.barcode].includes(itemCode)
+    );
   }
 
   if (code.length === 12) {
@@ -97,7 +100,11 @@ function parseWeightBarcode(
   const codeEnd = prefix.length + Number(settings.itemCodeDigits || 0);
   const length = codeEnd + Number(settings.itemWeightDigits || 0);
   const weight = code.slice(codeEnd);
-  if (!code.startsWith(prefix) || code.length !== length || isNaN(Number(weight))) {
+  if (
+    !code.startsWith(prefix) ||
+    code.length !== length ||
+    isNaN(Number(weight))
+  ) {
     return;
   }
 

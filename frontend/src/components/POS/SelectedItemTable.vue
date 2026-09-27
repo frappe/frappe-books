@@ -5,7 +5,9 @@
       :columns="columns.map(({ width }) => width)"
       divider="full"
       class="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-4 border border-outline-gray-1 list-gap-0 [--list-row-padding-x:0px]"
-      :class="layout === 'Classic' ? 'min-w-[36rem]' : 'min-w-[calc(23rem+2px)]'"
+      :class="
+        layout === 'Classic' ? 'min-w-[36rem]' : 'min-w-[calc(23rem+2px)]'
+      "
     >
       <FrappeListHeader>
         <FrappeListHeaderCell

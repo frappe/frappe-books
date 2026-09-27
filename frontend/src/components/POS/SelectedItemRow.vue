@@ -411,9 +411,13 @@ export default defineComponent({
         case 'rate':
           return !this.canChangeRate;
         case 'itemDiscountAmount':
-          return !this.canEditDiscount || (this.row.itemDiscountPercent ?? 0) > 0;
+          return (
+            !this.canEditDiscount || (this.row.itemDiscountPercent ?? 0) > 0
+          );
         case 'itemDiscountPercent':
-          return !this.canEditDiscount || !this.row.itemDiscountAmount?.isZero();
+          return (
+            !this.canEditDiscount || !this.row.itemDiscountAmount?.isZero()
+          );
         default:
           return false;
       }
@@ -440,7 +444,9 @@ export default defineComponent({
       }
     },
     async adjustQuantity(change: number) {
-      const field = this.isUOMConversionEnabled ? 'transferQuantity' : 'quantity';
+      const field = this.isUOMConversionEnabled
+        ? 'transferQuantity'
+        : 'quantity';
       const quantity = (this.row[field] ?? this.row.quantity ?? 1) + change;
       if (quantity !== 0) {
         await this.setValue(field, quantity);

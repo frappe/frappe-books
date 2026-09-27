@@ -1,12 +1,14 @@
 import { fyo } from 'src/initFyo';
 import { createApp, h, reactive, ref } from 'vue';
-import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
+import { FrappeUI, FrappeUIProvider, MobileShell } from 'frappe-ui';
 import { ConfigProvider } from 'reka-ui';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import 'src/router';
 import POS from 'src/pages/POS/POS.vue';
 import Link from 'src/components/Controls/Link.vue';
+import DialogSheet from 'src/mobile/DialogSheet.vue';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
+import { isMobile } from 'src/utils/viewport';
 import { preparePOSData, shift } from './pos-data';
 import 'src/styles/index.css';
 
@@ -44,11 +46,13 @@ async function mount() {
         });
       }
       // Desk.vue bounds the page height, so POS scrolls inside its grid.
+      // Phones scroll the page in the shell, as MobileDesk.vue does.
+      const pos = () => h(POS, { ref: posRef, class: 'min-w-0 flex-1' });
       return h(FrappeUIProvider, {}, {
         default: () =>
-          h('div', { class: 'flex h-screen overflow-hidden' }, [
-            h(POS, { ref: posRef, class: 'min-w-0 flex-1' }),
-          ]),
+          isMobile.value
+            ? [h(MobileShell, {}, { default: pos }), h(DialogSheet)]
+            : h('div', { class: 'flex h-screen overflow-hidden' }, [pos()]),
       });
     },
   });

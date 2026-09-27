@@ -203,6 +203,7 @@ import {
   getTotalQuantity,
   getTotalTaxedAmount,
   validateIsPosSettingsSet,
+  setPOSRowQuantity,
 } from 'src/utils/pos';
 import {
   validateQty,
@@ -509,83 +510,35 @@ export default defineComponent({
       }
 
       this.quickQtyActive = false;
-
       const buffer = this.quickQtyBuffer;
       this.quickQtyBuffer = '';
-
-      if (!buffer || !buffer.length) {
+      const row = this.getQuickQtyRow();
+      if (!buffer || !row) {
         return;
       }
 
-      const qty = Number(buffer);
-      if (!Number.isFinite(qty)) {
-        return;
-      }
-
-      // Determine target row: prefer explicitly selected row; else fallback to last non-free item
-      let row = this.selectedRow as SalesInvoiceItem | null;
-      if (!row || !(this.sinvDoc.items || []).includes(row)) {
-        const items = (this.sinvDoc.items || []).filter((r) => !r.isFreeItem);
-        row = items.length
-          ? (items[items.length - 1] as SalesInvoiceItem)
-          : null;
-      }
-
-      if (!row) {
-        return;
-      }
-
-      // Validate and recalculate similar to keyboard modal quantity change.
-      const isUOMConversionEnabled =
-        !!this.fyo.singles.InventorySettings?.enableUomConversions;
-      const quantityField = isUOMConversionEnabled
+      const field = this.fyo.singles.InventorySettings?.enableUomConversions
         ? 'transferQuantity'
         : 'quantity';
-      const previousQuantity = row.quantity ?? 1;
-      const previousTransferQuantity = row.transferQuantity ?? previousQuantity;
-      const previousFieldQuantity = isUOMConversionEnabled
-        ? previousTransferQuantity
-        : previousQuantity;
-
-      if (!row.isReturn && qty <= 0) {
-        showToast({
-          type: 'error',
-          message: t`Quantity must be greater than zero.`,
-          duration: 'short',
-        });
-        return;
-      }
-
       try {
-        await row.set(quantityField, qty);
-
-        const existingItems = (this.sinvDoc.items || []).filter(
-          (invoiceItem) =>
-            (invoiceItem as InvoiceItem).item === row.item &&
-            !(invoiceItem as InvoiceItem).isFreeItem
-        ) as InvoiceItem[];
-
-        await validateQty(
-          this.sinvDoc as SalesInvoice,
-          row,
-          existingItems as unknown as InvoiceItem[]
-        );
+        await setPOSRowQuantity(row, field, Number(buffer));
       } catch (error) {
-        row.quantity = previousQuantity;
-        row.transferQuantity = previousTransferQuantity;
-        await row.set(quantityField, previousFieldQuantity);
         showToast({
           type: 'error',
           message: t`${error as string}`,
           duration: 'short',
         });
-        return;
+      }
+    },
+    /** The selected row, else the last row that is not a free item. */
+    getQuickQtyRow(): SalesInvoiceItem | undefined {
+      const items = (this.sinvDoc as SalesInvoice).items ?? [];
+      const selected = this.selectedRow as SalesInvoiceItem | null;
+      if (selected && items.includes(selected)) {
+        return selected;
       }
 
-      if (!row.isFreeItem) {
-        await this.previewInvoice();
-        await this.sinvDoc.runFormulas();
-      }
+      return items.filter((row) => !row.isFreeItem).at(-1);
     },
     async setCustomer(value: string) {
       if (!value) {

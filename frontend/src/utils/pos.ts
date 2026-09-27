@@ -16,8 +16,58 @@ import { safeParseFloat } from 'utils/index';
 import { showToast } from './interactive';
 import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
 import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
+import { validateQty } from 'models/helpers';
 
 export type POSPermissionSetting = 'canChangeRate' | 'canEditDiscount';
+export type POSQuantityField = 'quantity' | 'transferQuantity';
+export type POSRowField =
+  | POSQuantityField
+  | 'rate'
+  | 'itemDiscountAmount'
+  | 'itemDiscountPercent';
+
+/** Sets a cart row value as the POS edits it. */
+export async function setPOSRowValue(
+  row: SalesInvoiceItem,
+  field: POSRowField,
+  value: number | Money
+) {
+  if (field === 'quantity' || field === 'transferQuantity') {
+    return await setPOSRowQuantity(row, field, value as number);
+  }
+
+  if (field !== 'rate') {
+    await row.set('setItemDiscountAmount', field === 'itemDiscountAmount');
+  }
+  await row.set(field, value);
+}
+
+/** Sets a cart row's quantity, restoring it if the POS warehouse cannot supply it. */
+export async function setPOSRowQuantity(
+  row: SalesInvoiceItem,
+  field: POSQuantityField,
+  value: number
+) {
+  if (!value || (value < 0 && !row.isReturn)) {
+    throw new ValidationError(t`Quantity must be greater than zero.`);
+  }
+
+  const invoice = row.parentdoc as SalesInvoice;
+  const previous = {
+    quantity: row.quantity,
+    transferQuantity: row.transferQuantity,
+  };
+  try {
+    await row.set(field, row.isReturn ? -Math.abs(value) : value);
+    const itemRows = (invoice.items ?? []).filter(
+      (itemRow) => itemRow.item === row.item && !itemRow.isFreeItem
+    );
+    await validateQty(invoice, row, itemRows);
+  } catch (error) {
+    await row.setMultiple(previous);
+    throw error;
+  }
+}
 
 export async function getPOSPermissionSetting(
   fyo: Fyo,

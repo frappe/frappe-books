@@ -108,7 +108,7 @@
         :border="true"
         :show-label="true"
         :value="getDisplayTransferQuantity()"
-        @change="(value: number) => setTransferQuantity(value)"
+        @change="(value: number) => setQuantity('transferQuantity', value)"
         :read-only="isReadOnly"
       />
     </div>
@@ -146,7 +146,7 @@
         :border="true"
         :show-label="true"
         :value="row.quantity"
-        @change="(value: number) => setQuantity(value)"
+        @change="(value: number) => setQuantity('quantity', value)"
         :read-only="isUOMConversionEnabled"
       />
     </div>
@@ -272,10 +272,12 @@ import { defineComponent, PropType } from 'vue';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { Money } from 'pesa';
 import { DiscountType } from '../types';
-import { validateSerialNumberCount } from 'src/utils/pos';
-import { getItemVisibility, validateQty } from 'models/helpers';
-import { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import {
+  POSQuantityField,
+  setPOSRowQuantity,
+  validateSerialNumberCount,
+} from 'src/utils/pos';
+import { getItemVisibility } from 'models/helpers';
 import { showToast } from 'src/utils/interactive';
 import AutoComplete from 'src/components/Controls/AutoComplete.vue';
 import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
@@ -413,21 +415,11 @@ export default defineComponent({
       this.$emit('selectedRow', this.row);
     },
     async adjustQuantity(change: number) {
-      const currentQuantity = this.isUOMConversionEnabled
-        ? (this.row.transferQuantity ?? this.row.quantity ?? 1)
-        : (this.row.quantity ?? 1);
-      const newQuantity = currentQuantity + change;
-
-      if (newQuantity === 0) {
-        return;
+      const field = this.isUOMConversionEnabled ? 'transferQuantity' : 'quantity';
+      const newQuantity = (this.row[field] ?? this.row.quantity ?? 1) + change;
+      if (newQuantity !== 0) {
+        await this.setQuantity(field, newQuantity);
       }
-
-      if (this.isUOMConversionEnabled) {
-        await this.setTransferQuantity(newQuantity);
-        return;
-      }
-
-      await this.setQuantity(newQuantity);
     },
     async updateTransferUnitOptions() {
       if (!this.row.item) {
@@ -549,113 +541,15 @@ export default defineComponent({
       this.row.setRate = rate;
       this.$emit('runSinvFormulas');
     },
-    async setQuantity(quantity: number) {
-      const previousQuantity = this.row.quantity ?? 1;
-      const hasManualDiscount = this.row.setItemDiscountAmount;
-      const isPercentageDiscount = !hasManualDiscount && this.row.itemDiscountPercent !== 0;
-      const manualDiscountAmount = this.row.itemDiscountAmount;
-      const manualDiscountPercent = this.row.itemDiscountPercent;
-
-      if (!this.row.isReturn && quantity <= 0) {
-        showToast({
-          type: 'error',
-          message: 'Quantity must be greater than zero.',
-          duration: 'short',
-        });
-
-        quantity = previousQuantity;
-      }
-
-      await this.row.set('quantity', quantity);
-
-      const existingItems =
-        (this.row.parentdoc as SalesInvoice).items?.filter(
-          (invoiceItem: InvoiceItem) =>
-            invoiceItem.item === this.row.item && !invoiceItem.isFreeItem,
-        ) ?? [];
-
+    async setQuantity(field: POSQuantityField, quantity: number) {
       try {
-        await validateQty(this.row.parentdoc as SalesInvoice, this.row, existingItems);
+        await setPOSRowQuantity(this.row, field, quantity);
       } catch (error) {
-        await this.row.set('quantity', previousQuantity);
-
-        return showToast({
+        showToast({
           type: 'error',
           message: this.t`${error as string}`,
           duration: 'short',
         });
-      }
-
-      if (!this.row.isFreeItem) {
-        this.$emit('runSinvFormulas');
-
-        if (!hasManualDiscount && !isPercentageDiscount) {
-          this.row.set('setItemDiscountAmount', false);
-          this.row.set('itemDiscountPercent', 0);
-        }
-
-        if (hasManualDiscount) {
-          this.row.set('setItemDiscountAmount', true);
-          this.row.set('itemDiscountAmount', manualDiscountAmount);
-        } else if (isPercentageDiscount) {
-          this.row.set('setItemDiscountAmount', false);
-          this.row.set('itemDiscountPercent', manualDiscountPercent);
-        }
-      }
-    },
-    async setTransferQuantity(transferQuantity: number) {
-      const previousTransferQuantity = this.row.transferQuantity ?? this.row.quantity ?? 1;
-      const previousQuantity = this.row.quantity ?? 1;
-      const hasManualDiscount = this.row.setItemDiscountAmount;
-      const isPercentageDiscount = !hasManualDiscount && this.row.itemDiscountPercent !== 0;
-      const manualDiscountAmount = this.row.itemDiscountAmount;
-      const manualDiscountPercent = this.row.itemDiscountPercent;
-
-      if (!this.row.isReturn && transferQuantity <= 0) {
-        showToast({
-          type: 'error',
-          message: 'Quantity must be greater than zero.',
-          duration: 'short',
-        });
-        return;
-      }
-
-      await this.row.set('transferQuantity', transferQuantity);
-
-      const existingItems =
-        (this.row.parentdoc as SalesInvoice).items?.filter(
-          (invoiceItem: InvoiceItem) =>
-            invoiceItem.item === this.row.item && !invoiceItem.isFreeItem,
-        ) ?? [];
-
-      try {
-        await validateQty(this.row.parentdoc as SalesInvoice, this.row, existingItems);
-      } catch (error) {
-        await this.row.set('transferQuantity', previousTransferQuantity);
-        await this.row.set('quantity', previousQuantity);
-
-        return showToast({
-          type: 'error',
-          message: this.t`${error as string}`,
-          duration: 'short',
-        });
-      }
-
-      await this.fetchSerialNumbers();
-
-      if (!this.row.isFreeItem) {
-        this.$emit('runSinvFormulas');
-
-        if (!hasManualDiscount && !isPercentageDiscount) {
-          this.row.set('setItemDiscountAmount', false);
-          this.row.set('itemDiscountPercent', 0);
-        } else if (hasManualDiscount) {
-          this.row.set('setItemDiscountAmount', true);
-          this.row.set('itemDiscountAmount', manualDiscountAmount);
-        } else {
-          this.row.set('setItemDiscountAmount', false);
-          this.row.set('itemDiscountPercent', manualDiscountPercent);
-        }
       }
     },
     async removeAddedItem(row: SalesInvoiceItem) {

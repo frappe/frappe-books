@@ -37,6 +37,12 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 	def test_account_without_a_type_has_none(self):
 		self.assertFalse(make_account("Untyped").account_type)
 
+	def test_child_takes_the_group_account_type_unless_it_has_one(self):
+		parent = make_account("Test Banks", is_group=1, account_type="Bank")
+		self.assertEqual(make_account("Test Current", parent_books_account=parent.name).account_type, "Bank")
+		child = make_account("Test Petty Cash", parent_books_account=parent.name, account_type="Cash")
+		self.assertEqual(child.account_type, "Cash")
+
 	def test_leaf_account_cannot_be_parent(self):
 		parent = make_account("Test Cash")
 		child = frappe.get_doc(

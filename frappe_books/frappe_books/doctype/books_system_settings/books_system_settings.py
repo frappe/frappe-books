@@ -1,8 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 
 
 class BooksSystemSettings(Document):
@@ -28,3 +30,7 @@ class BooksSystemSettings(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books System Settings"
+
+	def validate(self):
+		if not 0 <= cint(self.display_precision) <= 9:
+			frappe.throw(_("Display Precision should have a value between 0 and 9."))

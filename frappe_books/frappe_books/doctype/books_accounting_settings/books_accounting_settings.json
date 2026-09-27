@@ -80,6 +80,7 @@
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email",
+   "options": "Email",
    "reqd": 1
   },
   {
@@ -234,7 +235,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-27 23:43:14.600442",
+ "modified": "2026-09-27 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Accounting Settings",

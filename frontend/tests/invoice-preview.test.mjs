@@ -104,6 +104,17 @@ test('manual rates, including zero, survive quantity changes', async () => {
   clearTimeout(invoice._previewTimer);
 });
 
+test('a new item drops the old item tax for the server to set again', async () => {
+  const { invoice } = await makeInvoice((values) => values);
+  const [row] = invoice.items;
+  await row.set('tax', 'GST-18');
+
+  await row.set('item', 'Other Service');
+
+  assert.equal(row.tax, undefined);
+  clearTimeout(invoice._previewTimer);
+});
+
 async function addRow(invoice) {
   await invoice.append('items', { item: 'Consulting', quantity: 1 });
   return invoice.items.at(-1);

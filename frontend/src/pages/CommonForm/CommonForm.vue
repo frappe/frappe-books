@@ -3,7 +3,6 @@
     <template v-if="hasDoc" #header-left>
       <Barcode
         v-if="canShowBarcode"
-        class="h-8"
         @item-selected="
           (name: string) => {
             // @ts-expect-error only invoices have addItem

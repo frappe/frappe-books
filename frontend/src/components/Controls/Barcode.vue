@@ -1,33 +1,24 @@
 <template>
   <FrappeTextInput
-    ref="scanner"
     class="w-36"
     type="text"
     variant="outline"
-    size="sm"
+    size="md"
     :placeholder="t`Enter barcode`"
     @change="handleChange"
   >
     <template #suffix>
-      <FrappeButton
-        size="xs"
-        variant="ghost"
-        class="!size-6 !p-0"
-        :aria-label="t`Focus barcode scanner`"
-        @click="focusScanner"
-      >
-        <template #icon><span class="lucide-scan-line size-3" /></template>
-      </FrappeButton>
+      <span class="lucide-scan-line size-4 text-ink-gray-5" aria-hidden="true" />
     </template>
   </FrappeTextInput>
 </template>
 
 <script lang="ts">
 import { showToast } from 'src/utils/interactive';
-import { Button as FrappeButton, TextInput as FrappeTextInput } from 'frappe-ui';
+import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { defineComponent } from 'vue';
 export default defineComponent({
-  components: { FrappeButton, FrappeTextInput },
+  components: { FrappeTextInput },
   emits: ['item-selected'],
   data() {
     return {
@@ -53,12 +44,6 @@ export default defineComponent({
     document.removeEventListener('keydown', this.scanListener);
   },
   methods: {
-    focusScanner() {
-      const control = this.$refs.scanner as {
-        focus?: () => void;
-      };
-      control.focus?.();
-    },
     handleChange(e: Event) {
       const elem = e.target as HTMLInputElement;
       this.selectItem(elem.value);

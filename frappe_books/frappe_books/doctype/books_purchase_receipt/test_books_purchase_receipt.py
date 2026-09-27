@@ -7,6 +7,10 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
+from frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt import (
+	make_purchase_invoice,
+	make_return,
+)
 from frappe_books.inventory.stock import stock_quantity
 from frappe_books.tests.accounting import (
 	ledger_entries,
@@ -84,6 +88,32 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 
 		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2"):
 			make_receipt(item.name, quantity=3, rate=10, return_against=receipt.name)
+
+	def test_invoice_and_return_are_mapped_from_a_receipt(self):
+		set_inventory_accounts(
+			make_account("Stock", account_type="Stock").name,
+			make_account("Received", root_type="Liability").name,
+			make_account("COGS", root_type="Expense").name,
+		)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		receipt = make_receipt(item.name, quantity=2, rate=10)
+		payable = frappe.db.get_value("Books Party", receipt.party, "default_account")
+
+		invoice = make_purchase_invoice(receipt.name)
+		purchase_return = make_return(receipt.name)
+
+		self.assertEqual(
+			(invoice.doctype, invoice.back_reference, invoice.account, invoice.grand_total),
+			("Books Purchase Invoice", receipt.name, payable, 20),
+		)
+		self.assertEqual(
+			(purchase_return.doctype, purchase_return.return_against, purchase_return.items[0].quantity),
+			("Books Purchase Receipt", receipt.name, -2),
+		)
 
 
 def make_receipt(item, quantity, rate, return_against=None):

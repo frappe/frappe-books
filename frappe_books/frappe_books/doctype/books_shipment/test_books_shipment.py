@@ -10,6 +10,7 @@ from frappe.utils import now_datetime
 from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (
 	stock_value_change,
 )
+from frappe_books.frappe_books.doctype.books_shipment.books_shipment import make_return, make_sales_invoice
 from frappe_books.inventory.stock import stock_quantity
 from frappe_books.tests.accounting import (
 	ledger_entries,
@@ -20,6 +21,7 @@ from frappe_books.tests.accounting import (
 	set_inventory_accounts,
 	unique_name,
 )
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestBooksShipment(IntegrationTestCase):
@@ -201,6 +203,77 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 
 		with self.assertRaisesRegex(frappe.ValidationError, "submitted original"):
 			self._make_shipment(item, quantity=1, rate=25, return_against=draft.name)
+
+	def test_invoice_bills_a_shipment_without_shipping_again(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=3, rate=10)
+		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment.submit()
+
+		invoice = make_sales_invoice(shipment.name)
+
+		self.assertEqual(
+			(invoice.doctype, invoice.party, invoice.back_reference),
+			("Books Sales Invoice", shipment.party, shipment.name),
+		)
+		self.assertEqual([(row.item, row.quantity, row.rate) for row in invoice.items], [(item.name, 2, 25)])
+		self.assertEqual(invoice.grand_total, 50)
+		invoice.make_auto_stock_transfer = 1
+		invoice.insert().submit()
+		self.assertEqual(stock_quantity(item.name, "Stores"), 1)
+
+	def test_shipment_made_from_an_invoice_is_not_billed_again(self):
+		item, cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=5, rate=10)
+		invoice = self._make_invoice(item, cogs)
+		shipment = self._make_shipment(item, quantity=2, rate=100, back_reference=invoice.name)
+		shipment.submit()
+
+		self.assertRaisesRegex(frappe.ValidationError, "made from invoice", make_sales_invoice, shipment.name)
+
+	def test_return_of_an_invoiced_shipment_leaves_the_invoice_balance(self):
+		item, cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=5, rate=10)
+		invoice = self._make_invoice(item, cogs)
+		shipment = self._make_shipment(item, quantity=2, rate=100, back_reference=invoice.name)
+		shipment.submit()
+
+		shipment_return = make_return(shipment.name)
+
+		self.assertEqual(
+			(shipment_return.return_against, shipment_return.back_reference), (shipment.name, None)
+		)
+		self.assertEqual([row.quantity for row in shipment_return.items], [-2])
+		shipment_return.insert().submit()
+		self.assertEqual(stock_quantity(item.name, "Stores"), 5)
+		self.assertEqual(transfer_balance(invoice), [0, 0])
+
+	def test_return_offers_only_what_earlier_returns_left(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=3, rate=10)
+		shipment = self._make_shipment(item, quantity=3, rate=25)
+		shipment.submit()
+		first = make_return(shipment.name)
+		first.items[0].update({"quantity": -1, "transfer_quantity": -1})
+		first.insert().submit()
+
+		second = make_return(shipment.name)
+
+		self.assertEqual([row.quantity for row in second.items], [-2])
+		second.insert().submit()
+		self.assertRaisesRegex(frappe.ValidationError, "fully returned", make_return, shipment.name)
+
+	def test_bridge_maps_shipment_returns(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=1, rate=10)
+		shipment = self._make_shipment(item, quantity=1, rate=25)
+		shipment.submit()
+		method = "frappe_books.frappe_books.doctype.books_shipment.books_shipment.make_return"
+
+		shipment_return = BooksDatabaseBridge().call("getMapped", [method, shipment.name])
+
+		self.assertEqual(shipment_return["returnAgainst"], shipment.name)
+		self.assertEqual(shipment_return["items"][0]["quantity"], -1)
 
 	def _return_serial(self, item, shipment, serial_number):
 		return self._make_shipment(

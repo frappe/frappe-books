@@ -5,10 +5,8 @@
   "fields": [
     {
       "fieldname": "denomination",
-      "fieldtype": "Currency",
       "label": "Denomination",
-      "placeholder": "Denomination",
-      "required": true
+      "placeholder": "Denomination"
     }
   ]
 }

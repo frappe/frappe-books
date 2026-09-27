@@ -5,17 +5,12 @@
   "fields": [
     {
       "fieldname": "item",
-      "label": "Item",
-      "fieldtype": "Link",
-      "target": "Item",
-      "required": true
+      "label": "Item"
     },
     {
       "fieldname": "unit",
       "label": "Unit Type",
       "placeholder": "Unit Type",
-      "fieldtype": "Link",
-      "target": "UOM",
       "create": true,
       "section": "Default"
     }

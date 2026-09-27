@@ -15,92 +15,49 @@
     {
       "fieldname": "posCustomer",
       "label": "POS Customer",
-      "fieldtype": "Link",
-      "target": "Party",
       "create": true
     },
     {
       "fieldname": "inventory",
       "label": "Inventory",
-      "fieldtype": "Link",
-      "target": "Location",
       "create": true,
-      "required": true,
       "section": "Default"
     },
     {
       "fieldname": "posPrintTemplate",
-      "label": "POS Print Template",
-      "fieldtype": "Link",
-      "target": "PrintTemplate"
+      "label": "POS Print Template"
     },
     {
       "fieldname": "posUI",
-      "label": "Pos Ui",
-      "fieldtype": "Select",
-      "options": [
-        {
-          "value": "Classic",
-          "label": "Classic"
-        },
-        {
-          "value": "Modern",
-          "label": "Modern"
-        }
-      ],
-      "default": "Classic",
-      "required": true
+      "label": "Pos Ui"
     },
     {
       "fieldname": "itemVisibility",
-      "label": "Item Visibility",
-      "fieldtype": "Select",
-      "options": [
-        {
-          "value": "Inventory Items",
-          "label": "Inventory Items"
-        },
-        {
-          "value": "Non-Inventory Items",
-          "label": "Non-Inventory Items"
-        }
-      ],
-      "default": "Inventory Items",
-      "required": true
+      "label": "Item Visibility"
     },
     {
       "fieldname": "canChangeRate",
-      "label": "Can Change Rate",
-      "fieldtype": "Check",
-      "default": false
+      "label": "Can Change Rate"
     },
     {
       "fieldname": "hideUnavailableItems",
       "label": "Hide Unavailable Items",
-      "fieldtype": "Check",
-      "default": false,
       "section": "Default"
     },
     {
       "fieldname": "canEditDiscount",
       "label": "Can Change Discount",
-      "fieldtype": "Check",
-      "default": false,
       "section": "Default"
     },
     {
       "fieldname": "ignorePricingRule",
       "label": "Ignore Pricing Rule",
-      "fieldtype": "Check",
-      "section": "Default",
-      "default": false
+      "section": "Default"
     },
     {
       "fieldname": "saveButtonColour",
       "label": "Save Button Colour",
       "placeholder": "Select Colour",
-      "fieldtype": "Color",
-      "default": "#86efac",
       "options": [
         {
           "label": "Red",
@@ -149,8 +106,6 @@
       "fieldname": "cancelButtonColour",
       "label": "Cancel Button Colour",
       "placeholder": "Select Colour",
-      "fieldtype": "Color",
-      "default": "#f98080",
       "options": [
         {
           "label": "Red",
@@ -199,8 +154,6 @@
       "fieldname": "submitButtonColour",
       "label": "Submit Button Colour",
       "placeholder": "Select Colour",
-      "fieldtype": "Color",
-      "default": "#86efac",
       "options": [
         {
           "label": "Red",
@@ -249,8 +202,6 @@
       "fieldname": "heldButtonColour",
       "label": "Held Button Colour",
       "placeholder": "Select Colour",
-      "fieldtype": "Color",
-      "default": "#f98080",
       "options": [
         {
           "label": "Red",
@@ -299,8 +250,6 @@
       "fieldname": "returnButtonColour",
       "label": "Return Button Colour",
       "placeholder": "Select Colour",
-      "fieldtype": "Color",
-      "default": "#f98080",
       "options": [
         {
           "label": "Red",
@@ -349,8 +298,6 @@
       "fieldname": "payButtonColour",
       "label": "Pay Button Colour",
       "placeholder": "Select Colour",
-      "fieldtype": "Color",
-      "default": "#86efac",
       "options": [
         {
           "label": "Red",
@@ -399,8 +346,6 @@
       "fieldname": "payAndPrintButtonColour",
       "label": "Pay And Print Button Colour",
       "placeholder": "Select Colour",
-      "fieldtype": "Color",
-      "default": "#86efac",
       "options": [
         {
           "label": "Red",

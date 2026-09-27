@@ -4,7 +4,6 @@
     {
       "fieldname": "taxId",
       "label": "Tax ID",
-      "fieldtype": "Data",
       "placeholder": "CHE-123.456.789",
       "section": "Default"
     }

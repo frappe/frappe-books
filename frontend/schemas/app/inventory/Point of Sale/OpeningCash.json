@@ -7,10 +7,7 @@
     {
       "fieldname": "count",
       "label": "Count",
-      "placeholder": "Count",
-      "fieldtype": "Int",
-      "default": 0,
-      "required": true
+      "placeholder": "Count"
     }
   ],
   "tableFields": ["denomination", "count"]

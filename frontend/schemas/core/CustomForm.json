@@ -13,9 +13,6 @@
     {
       "fieldname": "customFields",
       "label": "Custom Fields",
-      "fieldtype": "Table",
-      "target": "CustomField",
-      "required": true,
       "edit": true
     }
   ]

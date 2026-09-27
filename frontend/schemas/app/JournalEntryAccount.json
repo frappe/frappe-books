@@ -7,20 +7,15 @@
       "fieldname": "account",
       "label": "Account",
       "placeholder": "Account",
-      "fieldtype": "Link",
-      "target": "Account",
-      "required": true,
       "groupBy": "rootType"
     },
     {
       "fieldname": "debit",
-      "label": "Debit",
-      "fieldtype": "Currency"
+      "label": "Debit"
     },
     {
       "fieldname": "credit",
-      "label": "Credit",
-      "fieldtype": "Currency"
+      "label": "Credit"
     }
   ],
   "tableFields": ["account", "debit", "credit"],

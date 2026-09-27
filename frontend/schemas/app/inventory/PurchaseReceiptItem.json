@@ -6,9 +6,6 @@
     {
       "fieldname": "location",
       "label": "To Loc.",
-      "fieldtype": "Link",
-      "target": "Location",
-      "required": true,
       "create": true
     }
   ]

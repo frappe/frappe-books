@@ -10,35 +10,15 @@
     },
     {
       "fieldname": "type",
-      "label": "Type",
-      "fieldtype": "Select",
-      "required": true,
-      "options": [
-        {
-          "value": "Cash",
-          "label": "Cash"
-        },
-        {
-          "value": "Bank",
-          "label": "Bank"
-        },
-        {
-          "value": "Transfer",
-          "label": "Transfer"
-        }
-      ]
+      "label": "Type"
     },
     {
       "fieldname": "account",
-      "label": "Account",
-      "fieldtype": "Link",
-      "target": "Account"
+      "label": "Account"
     },
     {
       "fieldname": "requiresClearanceDate",
-      "label": "Requires Clearance Date",
-      "fieldtype": "Check",
-      "default": false
+      "label": "Requires Clearance Date"
     }
   ],
   "quickEditFields": ["name", "type", "account", "requiresClearanceDate"]

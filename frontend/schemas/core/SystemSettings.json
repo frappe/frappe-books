@@ -7,41 +7,6 @@
     {
       "fieldname": "dateFormat",
       "label": "Date Format",
-      "fieldtype": "AutoComplete",
-      "options": [
-        {
-          "label": "23/03/2022",
-          "value": "dd/MM/yyyy"
-        },
-        {
-          "label": "03/23/2022",
-          "value": "MM/dd/yyyy"
-        },
-        {
-          "label": "23-03-2022",
-          "value": "dd-MM-yyyy"
-        },
-        {
-          "label": "03-23-2022",
-          "value": "MM-dd-yyyy"
-        },
-        {
-          "label": "2022-03-23",
-          "value": "yyyy-MM-dd"
-        },
-        {
-          "label": "23 Mar, 2022",
-          "value": "d MMM, y"
-        },
-        {
-          "label": "Mar 23, 2022",
-          "value": "MMM d, y"
-        },
-        {
-          "label": "23.03.2022",
-          "value": "dd.MM.yyyy"
-        }
-      ],
       "optionLabels": {
         "dd/MM/yyyy": "23/03/2022",
         "MM/dd/yyyy": "03/23/2022",
@@ -52,8 +17,6 @@
         "MMM d, y": "Mar 23, 2022",
         "dd.MM.yyyy": "23.03.2022"
       },
-      "default": "MMM d, y",
-      "required": true,
       "allowCustom": true,
       "description": "Sets the app-wide date display format.",
       "section": "Default"
@@ -61,33 +24,24 @@
     {
       "fieldname": "hideGetStarted",
       "label": "Hide Get Started",
-      "fieldtype": "Check",
-      "default": false,
       "description": "Hides the Get Started section from the sidebar. Change will be visible on restart or refreshing the app.",
       "section": "Default"
     },
     {
       "fieldname": "allowFilterBypass",
       "label": "Allow to bypass filters",
-      "fieldtype": "Check",
-      "default": false,
       "description": "When linking documents, if no match is found and filtering is in effect, allow to disable filters.",
       "section": "Default"
     },
     {
       "fieldname": "removeFilter",
       "label": "Remove Filter",
-      "fieldtype": "Check",
-      "default": false,
       "description": "When enabled, removes all default filters applied across the system, showing all available options instead of filtered ones.",
       "section": "Default"
     },
     {
       "fieldname": "locale",
       "label": "Locale",
-      "fieldtype": "AutoComplete",
-      "default": "en-IN",
-      "required": true,
       "allowCustom": true,
       "description": "Set the local code. This is used for number formatting.",
       "section": "Number Display"
@@ -95,10 +49,6 @@
     {
       "fieldname": "displayPrecision",
       "label": "Display Precision",
-      "fieldtype": "Int",
-      "default": 2,
-      "required": true,
-      "minvalue": 0,
       "maxvalue": 9,
       "description": "Sets how many digits are shown after the decimal point.",
       "section": "Number Display"
@@ -106,42 +56,29 @@
     {
       "fieldname": "currency",
       "label": "Currency",
-      "fieldtype": "AutoComplete",
-      "default": "INR",
-      "readOnly": true,
-      "required": true,
       "section": "Number Display"
     },
     {
       "fieldname": "internalPrecision",
       "label": "Internal Precision",
-      "fieldtype": "Int",
-      "minvalue": 0,
-      "default": 11,
       "description": "Sets the internal precision used for monetary calculations. Above 6 should be sufficient for most currencies.",
       "hidden": true
     },
     {
       "fieldname": "countryCode",
       "label": "Country Code",
-      "fieldtype": "Data",
-      "default": "in",
       "description": "Country code used to initialize regional settings.",
       "hidden": true
     },
     {
       "fieldname": "darkMode",
       "label": "Dark mode",
-      "fieldtype": "Check",
-      "default": false,
       "description": "Sets the theme of the app.",
       "section": "Theme"
     },
     {
       "fieldname": "displayTermsAndConditions",
       "label": "Display Terms and Conditions",
-      "fieldtype": "Check",
-      "default": false,
       "section": "Customizations"
     }
   ],

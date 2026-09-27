@@ -11,27 +11,19 @@
     },
     {
       "fieldname": "isEnabled",
-      "label": "Is Price List Enabled",
-      "fieldtype": "Check",
-      "default": true
+      "label": "Is Price List Enabled"
     },
     {
       "fieldname": "isSales",
-      "label": "For Sales",
-      "fieldtype": "Check",
-      "default": true
+      "label": "For Sales"
     },
     {
       "fieldname": "isPurchase",
-      "label": "For Purchase",
-      "fieldtype": "Check",
-      "default": false
+      "label": "For Purchase"
     },
     {
       "fieldname": "priceListItem",
       "label": "Item Prices",
-      "fieldtype": "Table",
-      "target": "PriceListItem",
       "section": "Item Prices"
     }
   ]

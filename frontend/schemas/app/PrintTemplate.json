@@ -12,35 +12,23 @@
     },
     {
       "fieldname": "type",
-      "label": "Template Type",
-      "fieldtype": "AutoComplete",
-      "default": "SalesInvoice",
-      "required": true
+      "label": "Template Type"
     },
     {
       "fieldname": "template",
-      "label": "Template",
-      "fieldtype": "Text",
-      "required": true
+      "label": "Template"
     },
     {
       "fieldname": "height",
-      "label": "Height (in cm)",
-      "fieldtype": "Float",
-      "default": 29.7
+      "label": "Height (in cm)"
     },
     {
       "fieldname": "width",
-      "label": "Width (in cm)",
-      "fieldtype": "Float",
-      "default": 21
+      "label": "Width (in cm)"
     },
     {
       "fieldname": "isCustom",
-      "label": "Is Custom",
-      "fieldtype": "Check",
-      "default": true,
-      "readOnly": true
+      "label": "Is Custom"
     }
   ]
 }

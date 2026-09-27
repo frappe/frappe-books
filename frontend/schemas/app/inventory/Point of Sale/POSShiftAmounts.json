@@ -7,10 +7,7 @@
     {
       "fieldname": "paymentMethod",
       "label": "Payment Method",
-      "placeholder": "Payment Method",
-      "fieldtype": "Link",
-      "target": "PaymentMethod",
-      "required": true
+      "placeholder": "Payment Method"
     }
   ]
 }

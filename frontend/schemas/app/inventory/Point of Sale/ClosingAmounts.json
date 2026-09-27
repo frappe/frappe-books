@@ -7,38 +7,27 @@
     {
       "fieldname": "paymentMethod",
       "label": "Payment Method",
-      "placeholder": "Payment Method",
-      "fieldtype": "Link",
-      "target": "PaymentMethod",
-      "required": true,
-      "readOnly": true
+      "placeholder": "Payment Method"
     },
     {
       "fieldname": "openingAmount",
-      "fieldtype": "Currency",
       "label": "Opening Amount",
-      "placeholder": "Opening Amount",
-      "readOnly": true
+      "placeholder": "Opening Amount"
     },
     {
       "fieldname": "closingAmount",
-      "fieldtype": "Currency",
       "label": "Closing Amount",
       "placeholder": "Closing Amount"
     },
     {
       "fieldname": "expectedAmount",
-      "fieldtype": "Currency",
       "label": "Expected Amount",
-      "placeholder": "Expected Amount",
-      "readOnly": true
+      "placeholder": "Expected Amount"
     },
     {
       "fieldname": "differenceAmount",
-      "fieldtype": "Currency",
       "label": "Difference Amount",
-      "placeholder": "Difference Amount",
-      "readOnly": true
+      "placeholder": "Difference Amount"
     }
   ],
   "tableFields": [

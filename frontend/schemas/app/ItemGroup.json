@@ -6,8 +6,7 @@
     {
       "fieldname": "image",
       "label": "Image",
-      "section": "Default",
-      "fieldtype": "AttachImage"
+      "section": "Default"
     },
     {
       "fieldname": "name",
@@ -20,15 +19,12 @@
     {
       "fieldname": "tax",
       "label": "Tax",
-      "fieldtype": "Link",
-      "target": "Tax",
       "create": true,
       "placeholder": "Tax"
     },
     {
       "fieldname": "hsnCode",
       "label": "HSN/SAC",
-      "fieldtype": "Data",
       "placeholder": "HSN/SAC Code"
     }
   ],

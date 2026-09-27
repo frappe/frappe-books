@@ -13,61 +13,15 @@
     },
     {
       "fieldname": "start",
-      "label": "Start",
-      "fieldtype": "Int",
-      "default": 1001,
-      "required": true,
-      "minvalue": 0
+      "label": "Start"
     },
     {
       "fieldname": "padZeros",
-      "label": "Pad Zeros",
-      "fieldtype": "Int",
-      "default": 4,
-      "required": true
+      "label": "Pad Zeros"
     },
     {
       "fieldname": "referenceType",
       "label": "Reference Type",
-      "fieldtype": "Select",
-      "options": [
-        {
-          "value": "SalesInvoice",
-          "label": "Sales Invoice"
-        },
-        {
-          "value": "SalesQuote",
-          "label": "Sales Quote"
-        },
-        {
-          "value": "PurchaseInvoice",
-          "label": "Purchase Invoice"
-        },
-        {
-          "value": "Payment",
-          "label": "Payment"
-        },
-        {
-          "value": "JournalEntry",
-          "label": "Journal Entry"
-        },
-        {
-          "value": "StockMovement",
-          "label": "Stock Movement"
-        },
-        {
-          "value": "Shipment",
-          "label": "Shipment"
-        },
-        {
-          "value": "PurchaseReceipt",
-          "label": "Purchase Receipt"
-        },
-        {
-          "value": "PricingRule",
-          "label": "Pricing Rule"
-        }
-      ],
       "optionLabels": {
         "SalesInvoice": "Sales Invoice",
         "SalesQuote": "Sales Quote",
@@ -76,16 +30,11 @@
         "StockMovement": "Stock Movement",
         "PurchaseReceipt": "Purchase Receipt",
         "PricingRule": "Pricing Rule"
-      },
-      "default": "-",
-      "required": true
+      }
     },
     {
       "fieldname": "current",
-      "label": "Current",
-      "fieldtype": "Int",
-      "required": true,
-      "readOnly": true
+      "label": "Current"
     }
   ],
   "quickEditFields": ["referenceType", "start", "padZeros"]

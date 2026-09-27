@@ -7,16 +7,11 @@
     {
       "fieldname": "paymentMethod",
       "label": "Payment Method",
-      "placeholder": "Payment Method",
-      "fieldtype": "Link",
-      "target": "PaymentMethod",
-      "required": true,
-      "readOnly": true
+      "placeholder": "Payment Method"
     },
     {
       "fieldname": "amount",
       "label": "Amount",
-      "fieldtype": "Currency",
       "section": "Defaults"
     }
   ],

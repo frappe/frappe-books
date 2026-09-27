@@ -138,7 +138,14 @@ import {
   type SearchItems,
 } from 'src/utils/search';
 import { useSearch } from 'src/utils/useSearch';
-import { computed, onActivated, ref, useTemplateRef, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onActivated,
+  ref,
+  useTemplateRef,
+  watch,
+} from 'vue';
 import { useRouter } from 'vue-router';
 import { isDesktopOnly } from '../availability';
 import SearchFilterSheet from './SearchFilterSheet.vue';
@@ -180,13 +187,15 @@ const changedFilterCount = computed(() => {
 
 watch(query, () => (showAll.value = false));
 
-onActivated(() => {
+onActivated(async () => {
   // Coming back from a result keeps the search; a new visit starts fresh.
   if (historyState.forward) {
     return;
   }
 
   query.value = '';
+  // The header bar renders again once the page is active.
+  await nextTick();
   input.value?.focus();
 });
 

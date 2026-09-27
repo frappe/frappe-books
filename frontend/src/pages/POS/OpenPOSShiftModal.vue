@@ -3,9 +3,42 @@
     :open-modal="openModal && !isDismissed && isValuesSeeded"
     :title="t`Open POS Shift`"
     size="3xl"
+    :dismissible="false"
     @closemodal="handleDismiss"
   >
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <template v-if="isMobile && posShiftDoc">
+      <MobileCashCount
+        :heading="t`Opening cash`"
+        :rows="openingCash"
+        @change="handleChange"
+      />
+      <FormControl
+        v-for="row in otherOpeningAmounts"
+        :key="row.idx"
+        :df="{
+          fieldname: 'amount',
+          fieldtype: 'Currency',
+          label: row.paymentMethod,
+        }"
+        :value="row.amount"
+        :show-label="true"
+        :border="true"
+        @change="(amount: Money) => row.set('amount', amount)"
+      />
+      <dl class="flex flex-col rounded-6 bg-surface-gray-1 text-md tabular-nums">
+        <div
+          v-for="row in posShiftDoc.openingAmounts"
+          :key="row.idx"
+          class="flex min-h-11 items-center justify-between gap-2 border-b border-outline-gray-1 px-3 last:border-b-0"
+        >
+          <dt class="text-ink-gray-8">{{ row.paymentMethod }}</dt>
+          <dd class="text-ink-gray-9" dir="ltr">
+            {{ fyo.format(row.amount ?? 0, 'Currency') }}
+          </dd>
+        </div>
+      </dl>
+    </template>
+    <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2">
       <div class="flex min-w-0 flex-col gap-4">
         <h2 class="text-base font-medium text-ink-gray-8">
           {{ t`Cash In Denominations` }}
@@ -59,9 +92,13 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
 import Table from 'src/components/Controls/Table.vue';
+import FormControl from 'src/components/Controls/FormControl.vue';
+import { isMobile } from 'src/utils/viewport';
+import MobileCashCount from './MobileCashCount.vue';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
+import { OpeningCash } from 'models/inventory/Point of Sale/OpeningCash';
 import { computed } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
@@ -72,7 +109,7 @@ import { getCashPaymentMethods, getPOSOpeningShiftDoc } from 'src/utils/pos';
 
 export default defineComponent({
   name: 'OpenPOSShift',
-  components: { FrappeButton, Modal, Table },
+  components: { FormControl, FrappeButton, MobileCashCount, Modal, Table },
   provide() {
     return {
       doc: computed(() => this.posShiftDoc),
@@ -85,6 +122,9 @@ export default defineComponent({
     },
   },
   emits: ['toggleModal'],
+  setup() {
+    return { isMobile };
+  },
   data() {
     return {
       posShiftDoc: undefined as POSOpeningShift | undefined,
@@ -97,6 +137,14 @@ export default defineComponent({
   computed: {
     getDefaultCashDenominations() {
       return this.fyo.singles.Defaults?.posCashDenominations;
+    },
+    openingCash(): OpeningCash[] {
+      return (this.posShiftDoc?.openingCash ?? []) as OpeningCash[];
+    },
+    otherOpeningAmounts() {
+      return (this.posShiftDoc?.openingAmounts ?? []).filter(
+        (row) => row.paymentMethod !== 'Cash'
+      );
     },
     posOpeningCashAmount(): Money {
       return this.posShiftDoc?.openingCashAmount as Money;

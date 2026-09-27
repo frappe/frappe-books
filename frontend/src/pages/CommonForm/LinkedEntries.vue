@@ -33,42 +33,32 @@
     />
 
     <!-- Linked Entry List -->
-    <div
+    <FrappeAccordion
       v-else-if="sequence.length"
-      class="w-full overflow-y-auto custom-scroll custom-scroll-thumb2 border-t border-outline-gray-1"
+      v-model="openGroups"
+      type="multiple"
+      class="w-full overflow-y-auto custom-scroll custom-scroll-thumb2 border-t border-outline-gray-1 px-2"
+      :items="groupItems"
     >
-      <div
-        v-for="sn of sequence"
-        :key="sn"
-        class="border-b border-outline-gray-1 p-4 overflow-auto"
-      >
-        <!-- Header with count and schema label -->
-        <div class="-mx-2" :class="entries[sn].collapsed ? '' : 'mb-4'">
-          <DisclosureButton
-            :expanded="!entries[sn].collapsed"
-            @toggle="entries[sn].collapsed = !entries[sn].collapsed"
-          >
-            <h2 class="text-base text-ink-gray-6 font-semibold select-none">
-              {{ fyo.schemaMap[sn]?.label ?? sn
-              }}<span class="font-normal">{{ ` – ${entries[sn].details.length}` }}</span>
-            </h2>
-          </DisclosureButton>
-        </div>
-
+      <template #item-suffix="{ item }">
+        <span class="text-sm font-normal text-ink-gray-5">
+          {{ entries[item.value].details.length }}
+        </span>
+      </template>
+      <template #item-content="{ item }">
         <!-- Entry list -->
         <div
-          v-show="!entries[sn].collapsed"
           class="entry-container rounded-4 border border-outline-gray-1 overflow-hidden"
         >
           <!-- Entry -->
           <FrappeItemListRow
-            v-for="e of entries[sn].details"
-            :key="String(e.name) + sn"
+            v-for="e of entries[item.value].details"
+            :key="String(e.name) + item.value"
             as="button"
             type="button"
             size="md"
             class="!rounded-none text-start border-b last:border-0 border-outline-gray-1 hover:bg-surface-gray-2"
-            @click="routeTo(sn, String(e.name))"
+            @click="routeTo(item.value, String(e.name))"
           >
             <div class="flex justify-between">
               <!-- Name -->
@@ -151,8 +141,8 @@
             </div>
           </FrappeItemListRow>
         </div>
-      </div>
-    </div>
+      </template>
+    </FrappeAccordion>
     <p v-else class="p-4 text-sm text-ink-gray-6">
       {{ t`No linked entries found` }}
     </p>
@@ -168,8 +158,8 @@ import {
   ItemListRow as FrappeItemListRow,
   LoadingText as FrappeLoadingText,
 } from 'frappe-ui';
+import { Accordion as FrappeAccordion, type AccordionItem } from 'frappe-ui-accordion';
 import { ModelNameEnum } from 'models/types';
-import DisclosureButton from 'src/components/DisclosureButton.vue';
 import { getLinkedEntries } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getFormRoute, routeTo } from 'src/utils/ui';
@@ -178,15 +168,23 @@ import { PropType, defineComponent, inject } from 'vue';
 const COMPONENT_NAME = 'LinkedEntries';
 
 export default defineComponent({
-  components: { FrappeAlert, FrappeLoadingText, FrappeButton, FrappeBadge, DisclosureButton, FrappeItemListRow },
+  components: {
+    FrappeAccordion,
+    FrappeAlert,
+    FrappeBadge,
+    FrappeButton,
+    FrappeItemListRow,
+    FrappeLoadingText,
+  },
   props: { doc: { type: Object as PropType<Doc>, required: true } },
   emits: ['close'],
   setup() {
     return { shortcuts: inject(shortcutsKey) };
   },
   data() {
-    return { entries: {}, loading: true, loadFailed: false } as {
-      entries: Record<string, { collapsed: boolean; details: Record<string, unknown>[] }>;
+    return { entries: {}, openGroups: [], loading: true, loadFailed: false } as {
+      entries: Record<string, { details: Record<string, unknown>[] }>;
+      openGroups: string[];
       loading: boolean;
       loadFailed: boolean;
     };
@@ -203,6 +201,12 @@ export default defineComponent({
       }
 
       return seq;
+    },
+    groupItems(): AccordionItem[] {
+      return this.sequence.map((schemaName) => ({
+        value: schemaName,
+        title: this.fyo.schemaMap[schemaName]?.label ?? schemaName,
+      }));
     },
   },
   async mounted() {
@@ -237,9 +241,10 @@ export default defineComponent({
             filters: { name: ['in', entryNames] },
           });
 
-          entries[key] = { collapsed: false, details };
+          entries[key] = { details };
         }
         this.entries = entries;
+        this.openGroups = this.sequence;
       } catch (error) {
         console.error('Could not load linked entries', error);
         this.loadFailed = true;

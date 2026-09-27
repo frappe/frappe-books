@@ -13,14 +13,23 @@
     >
       <template v-if="value || !isReadOnly" #trailing>
         <div class="ms-2 flex shrink-0 gap-1">
-          <FrappeButton
+          <FrappeFileUploader
             v-if="!value && !isReadOnly"
-            variant="ghost"
-            size="xs"
-            icon="lucide-upload"
-            aria-label="Upload attachment"
-            @click="upload"
-          />
+            file-types="image/*,.pdf"
+            @success="onUploaded"
+            @failure="onUploadFailure"
+          >
+            <template #default="{ openFileSelector, uploading }">
+              <FrappeButton
+                variant="ghost"
+                size="xs"
+                icon="lucide-upload"
+                aria-label="Upload attachment"
+                :loading="uploading"
+                @click="openFileSelector"
+              />
+            </template>
+          </FrappeFileUploader>
 
           <FrappeButton
             v-if="value"
@@ -42,30 +51,24 @@
         </div>
       </template>
     </ReadOnlyValue>
-    <input
-      id="attachment"
-      ref="fileInput"
-      type="file"
-      accept="image/*,.pdf"
-      class="hidden"
-      :disabled="!!value || isReadOnly"
-      @input="selectFile"
-    />
   </div>
 </template>
 <script lang="ts">
 import { t } from 'fyo';
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  FileUploader as FrappeFileUploader,
+  type UploadedFile,
+} from 'frappe-ui';
 import { Field } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getFileName, isFileUrl } from 'src/utils/files';
-import { uploadFile } from 'src/web/api';
 import { defineComponent, PropType } from 'vue';
 import Base from './Base.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
 export default defineComponent({
-  components: { FrappeButton, ReadOnlyValue },
+  components: { FrappeFileUploader, FrappeButton, ReadOnlyValue },
   extends: Base,
   props: {
     df: Object as PropType<Field>,
@@ -83,9 +86,6 @@ export default defineComponent({
     },
   },
   methods: {
-    upload() {
-      (this.$refs.fileInput as HTMLInputElement).click();
-    },
     clear() {
       this.triggerChange(null);
     },
@@ -105,20 +105,11 @@ export default defineComponent({
       a.click();
       document.body.removeChild(a);
     },
-    async selectFile(e: Event) {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      // Lets the same file be picked again, like after a failed upload.
-      target.value = '';
-      if (!file) {
-        return;
-      }
-
-      try {
-        this.triggerChange(await uploadFile(file));
-      } catch (error) {
-        await handleErrorWithDialog(error, this.doc, true);
-      }
+    onUploaded(file: UploadedFile) {
+      this.triggerChange(file.file_url);
+    },
+    async onUploadFailure(error: unknown) {
+      await handleErrorWithDialog(error, this.doc, true);
     },
   },
 });

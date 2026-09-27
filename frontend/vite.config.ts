@@ -33,6 +33,10 @@ export default defineConfig(async () => {
           frontendRoot,
           'node_modules/frappe-ui/experimental/CommandPalette/index.ts',
         ),
+        'frappe-ui-accordion': path.resolve(
+          frontendRoot,
+          'node_modules/frappe-ui/experimental/Accordion/index.ts',
+        ),
       },
     },
     define: {

@@ -61,50 +61,46 @@
 
         <!-- Bottom Bar -->
         <div
-          class="w-full sticky bottom-0 flex bg-surface-base border-t border-outline-gray-1 mt-auto flex-shrink-0"
+          class="sticky bottom-0 mt-auto flex h-11 w-full flex-shrink-0 items-center gap-2 border-t border-outline-gray-1 bg-surface-base px-3"
         >
           <!-- Entry Type -->
           <FormControl
-            :title="fields.type.label"
-            class="w-40 border-r border-outline-gray-1 flex-shrink-0"
+            class="w-44 flex-shrink-0"
             :df="fields.type"
-            :border="false"
+            :border="true"
+            size="small"
             :value="doc.get('type')"
-            :container-styles="{ 'border-radius': '0px' }"
             @change="async (value: unknown) => await setType(value)"
           />
           <!-- Display Doc -->
           <Link
             v-if="doc.type"
-            :title="displayDocField.label"
-            class="w-40 border-r border-outline-gray-1 flex-shrink-0"
+            class="w-48 min-w-0"
             :df="displayDocField"
-            :border="false"
+            :border="true"
+            size="small"
             :value="displayDoc?.name"
-            :container-styles="{ 'border-radius': '0px' }"
             @change="(value: string) => setDisplayDoc(value)"
           />
 
           <!-- Display Scale -->
-          <div
+          <label
             v-if="canDisplayPreview"
-            class="flex ml-auto gap-2 px-2 w-36 justify-between flex-shrink-0"
+            class="ms-auto flex flex-shrink-0 items-center gap-2 text-sm text-ink-gray-6"
           >
-            <p class="text-sm text-ink-gray-6 my-auto">
-              {{ t`Display Scale` }}
-            </p>
+            <span class="whitespace-nowrap">{{ t`Display Scale` }}</span>
             <FrappeTextInput
               type="number"
-              class="my-auto w-14 [&_input]:text-end"
+              class="w-16"
               :model-value="scale"
               :min="0.1"
               :max="10"
               :step="0.1"
               size="sm"
-              variant="ghost"
+              variant="outline"
               @update:model-value="setScale"
             />
-          </div>
+          </label>
         </div>
       </div>
 
@@ -149,27 +145,20 @@
           class="border-t border-outline-gray-1 flex-shrink-0"
           :class="templateChanged ? '' : 'mt-auto'"
         >
-          <!-- Value Key Toggle -->
-          <DisclosureButton
-            class="!rounded-none"
-            :expanded="showHints"
-            @toggle="toggleShowHints"
+          <FrappeAccordion
+            :model-value="showHints ? 'hints' : undefined"
+            :items="[{ value: 'hints', title: t`Key Hints` }]"
+            @update:model-value="(value) => (showHints = value === 'hints')"
           >
-            <h2 class="text-base text-ink-gray-9 font-semibold">
-              {{ t`Key Hints` }}
-            </h2>
-          </DisclosureButton>
-
-          <!-- Value Key Hints -->
-          <Transition name="hints">
-            <div
-              v-if="showHints"
-              class="overflow-auto custom-scroll custom-scroll-thumb1 p-2 border-t border-outline-gray-1"
-              style="max-height: 30vh"
-            >
-              <TemplateBuilderHint :hints="hints" />
-            </div>
-          </Transition>
+            <template #item-content>
+              <div
+                class="overflow-auto custom-scroll custom-scroll-thumb1"
+                style="max-height: 30vh"
+              >
+                <TemplateBuilderHint :hints="hints" />
+              </div>
+            </template>
+          </FrappeAccordion>
         </div>
       </div>
     </div>
@@ -186,7 +175,7 @@ import { ModelNameEnum } from 'models/types';
 import { saveExportData } from 'reports/commonExporter';
 import { Field, TargetField } from 'schemas/types';
 import { TextInput as FrappeTextInput, Button as FrappeButton } from 'frappe-ui';
-import DisclosureButton from 'src/components/DisclosureButton.vue';
+import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
@@ -227,7 +216,7 @@ export default defineComponent({
   components: {
     PageHeader,
     FrappeButton,
-    DisclosureButton,
+    FrappeAccordion,
     DropdownWithActions,
     PrintContainer,
     HorizontalResizer,
@@ -684,21 +673,3 @@ export default defineComponent({
   },
 });
 </script>
-
-<style scoped>
-.hints-enter-from,
-.hints-leave-to {
-  opacity: 0;
-  height: 0px;
-}
-.hints-enter-to,
-.hints-leave-from {
-  opacity: 1;
-  height: 30vh;
-}
-
-.hints-enter-active,
-.hints-leave-active {
-  transition: all 150ms ease-out;
-}
-</style>

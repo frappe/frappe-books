@@ -25,6 +25,9 @@
       "#utils/*": ["node_modules/frappe-ui/src/utils/*"],
       "frappe-ui-command-palette": [
         "node_modules/frappe-ui/experimental/CommandPalette/index.ts"
+      ],
+      "frappe-ui-accordion": [
+        "node_modules/frappe-ui/experimental/Accordion/index.ts"
       ]
     },
     "lib": ["esnext", "dom", "dom.iterable", "scripthost"]

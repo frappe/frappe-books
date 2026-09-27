@@ -1,6 +1,5 @@
 import {
   call as frappeCall,
-  upload,
   type FrappeResourceError,
 } from 'frappe-ui';
 import {
@@ -40,10 +39,6 @@ export async function call<T>(
   } catch (error) {
     throw toBooksError(error);
   }
-}
-
-export async function uploadFile(file: File): Promise<string> {
-  return (await upload(file, { private: true })).file_url;
 }
 
 /** Server errors become fyo errors, so forms treat them like their own. */

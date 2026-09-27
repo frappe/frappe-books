@@ -18,84 +18,79 @@
         aria-hidden="true"
       />
     </button>
-    <div
-      v-else-if="kind === 'table'"
-      class="flex h-[52px] items-center justify-between px-4"
-    >
-      <h2 class="text-base-semibold text-ink-gray-9">{{ title }}</h2>
-      <span class="text-sm text-ink-gray-5">{{ rowCount }}</span>
-    </div>
-
-    <div v-if="tableField && $slots.table" class="px-4 pb-3">
-      <slot name="table" />
-    </div>
-    <Table
-      v-if="tableField"
-      :data-fieldname="tableField.fieldname"
-      :df="tableField"
-      :value="(doc[tableField.fieldname] ?? []) as Doc[]"
-      :flush="true"
-      @editrow="(row: Doc) => $emit('editrow', row)"
-      @change="(value: DocValue) => $emit('value-change', tableField!, value)"
-      @row-change="
-        (field: Field, value: DocValue, parentfield: Field) =>
-          $emit('row-change', field, value, parentfield)
-      "
-    />
-    <FrappeErrorMessage
-      v-if="tableField"
-      class="px-4 pb-3"
-      :message="errors[tableField.fieldname]"
-    />
-
-    <div
-      v-if="fieldGroups.length && (kind !== 'collapsible' || isOpen)"
-      class="flex flex-col"
-      :class="{
-        'gap-4 px-4 pb-4': kind === 'collapsible',
-        'gap-4 p-4': kind === 'plain',
-        'gap-2.5 p-4 text-md tabular-nums': kind === 'totals',
-        'gap-2.5 border-t border-outline-gray-1 p-4 text-md tabular-nums':
-          kind === 'table',
-      }"
-    >
-      <template v-for="group in fieldGroups" :key="group[0].fieldname">
-        <div v-if="group.length > 1" class="grid grid-cols-2 gap-3">
-          <MobileFormField
-            v-for="field of group"
-            :key="field.fieldname"
-            :field="field"
-            :doc="doc"
-            :error="errors[field.fieldname]"
-            @change="(value: DocValue) => $emit('value-change', field, value)"
-          />
+    <template v-for="block in blocks" :key="block.key">
+      <template v-if="block.key === 'table' && tableField">
+        <div class="flex h-[52px] items-center justify-between px-4">
+          <h2 class="text-base-semibold text-ink-gray-9">{{ tableTitle }}</h2>
+          <span class="text-sm text-ink-gray-5">{{ rowCount }}</span>
         </div>
-        <template v-else-if="isTotal(group[0])">
-          <div
-            v-for="line in getTotalLines(group[0])"
-            :key="line.label"
-            class="flex justify-between gap-3"
-            :class="
-              line.emphasis
-                ? 'border-t border-outline-gray-1 pt-2.5 font-semibold text-ink-gray-9 first:border-t-0 first:pt-0'
-                : 'text-ink-gray-8'
-            "
-            :data-fieldname="group[0].fieldname"
-          >
-            <span class="min-w-0 truncate">{{ line.label }}</span>
-            <span dir="ltr">{{ line.value }}</span>
-          </div>
-        </template>
-        <MobileFormField
-          v-else
-          :field="group[0]"
-          :doc="doc"
-          :error="errors[group[0].fieldname]"
-          @change="(value: DocValue) => $emit('value-change', group[0], value)"
+        <div v-if="$slots.table" class="px-4 pb-3">
+          <slot name="table" />
+        </div>
+        <Table
+          :data-fieldname="tableField.fieldname"
+          :df="tableField"
+          :value="(doc[tableField.fieldname] ?? []) as Doc[]"
+          :flush="true"
+          @editrow="(row: Doc) => $emit('editrow', row)"
+          @change="
+            (value: DocValue) => $emit('value-change', tableField!, value)
+          "
+          @row-change="
+            (field: Field, value: DocValue, parentfield: Field) =>
+              $emit('row-change', field, value, parentfield)
+          "
+        />
+        <FrappeErrorMessage
+          class="px-4 pb-3"
+          :message="errors[tableField.fieldname]"
         />
       </template>
-      <slot name="end" />
-    </div>
+      <div
+        v-else-if="block.groups.length && (kind !== 'collapsible' || isOpen)"
+        class="flex flex-col"
+        :class="getListClass(block)"
+      >
+        <template v-for="group in block.groups" :key="group[0].fieldname">
+          <div v-if="group.length > 1" class="grid grid-cols-2 gap-3">
+            <MobileFormField
+              v-for="field of group"
+              :key="field.fieldname"
+              :field="field"
+              :doc="doc"
+              :error="errors[field.fieldname]"
+              @change="(value: DocValue) => $emit('value-change', field, value)"
+            />
+          </div>
+          <template v-else-if="isTotal(group[0])">
+            <div
+              v-for="line in getTotalLines(group[0])"
+              :key="line.label"
+              class="flex justify-between gap-3"
+              :class="
+                line.emphasis
+                  ? 'border-t border-outline-gray-1 pt-2.5 font-semibold text-ink-gray-9 first:border-t-0 first:pt-0'
+                  : 'text-ink-gray-8'
+              "
+              :data-fieldname="group[0].fieldname"
+            >
+              <span class="min-w-0 truncate">{{ line.label }}</span>
+              <span dir="ltr">{{ line.value }}</span>
+            </div>
+          </template>
+          <MobileFormField
+            v-else
+            :field="group[0]"
+            :doc="doc"
+            :error="errors[group[0].fieldname]"
+            @change="
+              (value: DocValue) => $emit('value-change', group[0], value)
+            "
+          />
+        </template>
+        <slot v-if="block.key !== 'before'" name="end" />
+      </div>
+    </template>
   </section>
 </template>
 <script setup lang="ts">
@@ -130,12 +125,12 @@ const dateTypes: string[] = [FieldTypeEnum.Date, FieldTypeEnum.Datetime];
 // Line tables (items) show as rows; read-only summary tables (taxes) as totals.
 const tableField = computed(() => props.fields.find(isLineTable));
 const kind = computed(() => {
-  if (props.title === 'Default') {
-    return 'plain';
-  }
-
   if (tableField.value) {
     return 'table';
+  }
+
+  if (props.title === 'Default') {
+    return 'plain';
   }
 
   return props.fields.every(isTotal) ? 'totals' : 'collapsible';
@@ -156,14 +151,34 @@ const isOpen = ref(
 );
 watch(hasError, (value) => value && (isOpen.value = true), { immediate: true });
 
-/** Consecutive date fields sit two to a row. */
-const fieldGroups = computed(() => {
-  const groups: Field[][] = [];
-  for (const field of visibleFields.value) {
-    if (field === tableField.value) {
-      continue;
-    }
+interface FieldBlock {
+  key: 'before' | 'table' | 'after' | 'fields';
+  groups: Field[][];
+}
 
+/** Fields keep their schema order around the table. */
+const blocks = computed<FieldBlock[]>(() => {
+  const fields = visibleFields.value;
+  const index = tableField.value ? fields.indexOf(tableField.value) : -1;
+  if (index === -1) {
+    return [{ key: 'fields', groups: groupFields(fields) }];
+  }
+
+  return [
+    { key: 'before', groups: groupFields(fields.slice(0, index)) },
+    { key: 'table', groups: [] },
+    { key: 'after', groups: groupFields(fields.slice(index + 1)) },
+  ];
+});
+
+const tableTitle = computed(() =>
+  props.title === 'Default' ? tableField.value?.label : props.title
+);
+
+/** Consecutive date fields sit two to a row. */
+function groupFields(fields: Field[]): Field[][] {
+  const groups: Field[][] = [];
+  for (const field of fields) {
     const previous = groups.at(-1);
     const isDate = dateTypes.includes(field.fieldtype);
     if (
@@ -178,7 +193,20 @@ const fieldGroups = computed(() => {
   }
 
   return groups;
-});
+}
+
+function getListClass(block: FieldBlock) {
+  if (kind.value === 'collapsible') {
+    return 'gap-4 px-4 pb-4';
+  }
+
+  const onlyTotals = block.groups.flat().every(isTotal);
+  return [
+    'p-4',
+    onlyTotals ? 'gap-2.5 text-md tabular-nums' : 'gap-4',
+    { 'border-t border-outline-gray-1': block.key === 'after' },
+  ];
+}
 
 // A finished document hides its empty fields.
 const visibleFields = computed(() => {

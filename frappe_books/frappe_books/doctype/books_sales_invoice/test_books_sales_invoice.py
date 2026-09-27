@@ -300,6 +300,14 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 		self.assertEqual((invoice.currency, invoice.exchange_rate), (company_currency(), 1))
 
+	def test_sales_invoice_needs_a_receivable_ledger_account(self):
+		group = make_account("Receivables", account_type="Receivable", is_group=1)
+		for account, message in ((self.income, "must be of type Receivable"), (group, "group account")):
+			with self.subTest(message=message), self.assertRaisesRegex(frappe.ValidationError, message):
+				make_invoice(
+					"Books Sales Invoice", self.party.name, account.name, self.item.name, self.income.name
+				)
+
 	def test_pos_invoice_needs_an_open_shift(self):
 		set_pos_accounts()
 		invoice = make_invoice(

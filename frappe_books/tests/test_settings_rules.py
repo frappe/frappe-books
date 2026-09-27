@@ -7,6 +7,7 @@ from frappe_books.frappe_books.doctype.books_accounting_settings.books_accountin
 	POINT_OF_SALE_FEATURES,
 )
 from frappe_books.frappe_books.doctype.books_inventory_settings import books_inventory_settings
+from frappe_books.tests.accounting import unique_name
 
 COMPANY = {
 	"company_name": "Settings Test Company",
@@ -59,6 +60,28 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 					settings = frappe.get_single(doctype)
 					settings.set(fieldname, 0)
 					self.assertRaisesRegex(frappe.ValidationError, "cannot be disabled", settings.save)
+
+	def test_email_and_phone_values_must_be_valid(self):
+		invalid_values = [
+			("Books Party", {"role": "Customer", "email": "not-an-email"}, frappe.InvalidEmailAddressError),
+			("Books Party", {"role": "Customer", "phone": "call me"}, frappe.InvalidPhoneNumberError),
+			("Books Lead", {"email": "not-an-email"}, frappe.InvalidEmailAddressError),
+			("Books Lead", {"mobile": "call me"}, frappe.InvalidPhoneNumberError),
+		]
+		for doctype, values, error in invalid_values:
+			with self.subTest(doctype=doctype, values=values):
+				doc = frappe.get_doc({"doctype": doctype, "name": unique_name("Format Test"), **values})
+				self.assertRaises(error, doc.insert)
+		settings = _accounting_settings()
+		settings.email = "not-an-email"
+		self.assertRaises(frappe.InvalidEmailAddressError, settings.save)
+
+	def test_display_precision_stays_between_zero_and_nine(self):
+		for precision in (-1, 10):
+			with self.subTest(precision=precision):
+				settings = frappe.get_single("Books System Settings")
+				settings.display_precision = precision
+				self.assertRaisesRegex(frappe.ValidationError, "between 0 and 9", settings.save)
 
 
 def _accounting_settings(**values):

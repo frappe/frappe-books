@@ -116,13 +116,13 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		)
 
 
-def make_receipt(item, quantity, rate, return_against=None):
+def make_receipt(item, quantity, rate, return_against=None, date=None):
 	payable = make_account("Payable", root_type="Liability", account_type="Payable")
 	receipt = frappe.get_doc(
 		{
 			"doctype": "Books Purchase Receipt",
 			"party": make_party(payable.name, role="Supplier").name,
-			"date": now_datetime(),
+			"date": date or now_datetime(),
 			"return_against": return_against,
 			"items": [{"item": item, "location": "Stores", "quantity": quantity, "rate": rate}],
 		}

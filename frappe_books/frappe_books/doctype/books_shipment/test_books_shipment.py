@@ -5,9 +5,10 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import add_to_date, now_datetime
 
 from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (
+	make_receipt,
 	stock_value_change,
 )
 from frappe_books.frappe_books.doctype.books_shipment.books_shipment import make_return, make_sales_invoice
@@ -109,6 +110,19 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		shipment = self._make_shipment(item, quantity=5, rate=25)
 
 		self.assertRaisesRegex(frappe.ValidationError, "the wrong way", shipment.submit)
+
+	def test_backdated_receipt_reposts_later_shipment_cost(self):
+		item, cogs, _stock = self._tracked_item()
+		now = now_datetime()
+		seed_stock(item.name, quantity=5, rate=10, date=add_to_date(now, hours=-2))
+		shipment = self._make_shipment(item, quantity=3, rate=25, date=add_to_date(now, hours=-1))
+		shipment.submit()
+
+		receipt = make_receipt(item.name, quantity=2, rate=20, date=add_to_date(now, hours=-3))
+		self.assertEqual(account_balance(shipment, cogs.name), 50)
+
+		receipt.cancel()
+		self.assertEqual(account_balance(shipment, cogs.name), 30)
 
 	def test_shipment_against_invoice_updates_quantity_to_transfer(self):
 		item, cogs, _stock = self._tracked_item()
@@ -346,13 +360,13 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		).insert()
 
 
-def seed_stock(item, quantity, rate, serial_number=None, batch=None):
+def seed_stock(item, quantity, rate, serial_number=None, batch=None, date=None):
 	row = {"item": item, "to_location": "Stores", "quantity": quantity, "rate": rate, "batch": batch}
 	movement = frappe.get_doc(
 		{
 			"doctype": "Books Stock Movement",
 			"movement_type": "MaterialReceipt",
-			"date": now_datetime(),
+			"date": date or now_datetime(),
 			"items": [{**row, "serial_number": serial_number}],
 		}
 	).insert(ignore_permissions=True)
@@ -362,6 +376,13 @@ def seed_stock(item, quantity, rate, serial_number=None, batch=None):
 def make_batch(item):
 	return (
 		frappe.get_doc({"doctype": "Books Batch", "name": unique_name("BATCH"), "item": item}).insert().name
+	)
+
+
+def account_balance(voucher, account):
+	entries = ledger_entries(voucher.doctype, voucher.name)
+	return sum(
+		Decimal(str(row.debit)) - Decimal(str(row.credit)) for row in entries if row.account == account
 	)
 
 

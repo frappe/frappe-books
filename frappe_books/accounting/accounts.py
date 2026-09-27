@@ -6,6 +6,7 @@ PARTY_ACCOUNT_TYPES = {
 	"Supplier": ("Payable",),
 	"Both": ("Receivable", "Payable"),
 }
+PAYMENT_ACCOUNT_TYPES = ("Cash", "Bank")
 
 
 def validate_account(doc, fieldname, account_types=(), root_types=()):

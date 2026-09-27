@@ -55,8 +55,14 @@ export class Defaults extends Doc {
 
   static commonFilters = {
     // Auto Payments
-    salesPaymentAccount: () => ({ isGroup: false, accountType: 'Cash' }),
-    purchasePaymentAccount: () => ({ isGroup: false, accountType: 'Cash' }),
+    salesPaymentAccount: () => ({
+      isGroup: false,
+      accountType: ['in', ['Cash', 'Bank']],
+    }),
+    purchasePaymentAccount: () => ({
+      isGroup: false,
+      accountType: ['in', ['Cash', 'Bank']],
+    }),
     // Number Series
     salesQuoteNumberSeries: () => ({
       referenceType: ModelNameEnum.SalesQuote,

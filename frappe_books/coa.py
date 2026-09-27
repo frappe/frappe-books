@@ -68,12 +68,21 @@ def ensure_bank_account(bank_name, accounts, country=None):
 
 def bank_account_parent(accounts, country=None):
 	"""Return the chart's first bank group, creating the standard one when the chart has none."""
-	groups = [account.name for account in accounts if account.is_group and account.account_type == "Bank"]
+	groups = _type_groups(accounts, "Bank")
 	if country == "Indonesia" and "Bank Rupiah - 1121.000" in groups:
 		return "Bank Rupiah - 1121.000"
 	if groups:
 		return groups[0]
 	return _ensure_group("Bank Accounts", "Asset", accounts, account_type="Bank")
+
+
+def ensure_cash_account(accounts):
+	"""Return the chart's cash ledger, creating one in its first cash group, else the Asset root."""
+	if cash := find_ledger_account(accounts, ["Cash"], "Cash"):
+		return cash
+	groups = _type_groups(accounts, "Cash")
+	parent = groups[0] if groups else _root_account("Asset", accounts)
+	return _create_account("Cash", parent, root_type="Asset", account_type="Cash", is_group=False).name
 
 
 def ensure_discount_account(accounts=()):
@@ -100,33 +109,17 @@ def ensure_account(label, parent, root_type, account_type=None, is_group=False):
 	return _create_account(label, parent, root_type, account_type, is_group)
 
 
-def find_account(accounts, names=(), account_type=None):
-	"""Return the first chart account by name, else the first leaf of the chart's first account of the type."""
-	by_name = {account.name: account for account in accounts}
-	for name in names:
-		if name in by_name:
-			return name
-	typed = next(
-		(account for account in accounts if account_type and account.account_type == account_type), None
-	)
-	if typed is None:
-		return None
-	return _first_leaf(typed, accounts)
-
-
 def find_ledger_account(accounts, names=(), account_type=None):
-	"""Return the first leaf chart account by name, else of the type, as settings need postable accounts."""
-	leaves = [account for account in accounts if not account.is_group]
-	return find_account(leaves, names) or next(
-		(account.name for account in leaves if account_type and account.account_type == account_type), None
-	)
-
-
-def _first_leaf(account, accounts):
-	if not account.is_group:
-		return account.name
-	child = next((child for child in accounts if child.parent == account.name), None)
-	return _first_leaf(child, accounts) if child else account.name
+	"""Return the chart's ledger of the account type named first in `names`, else its first of the type."""
+	ledgers = [
+		account.name
+		for account in accounts
+		if not account.is_group and account_type in (None, account.account_type)
+	]
+	named = [name for name in names if name in ledgers]
+	if named:
+		return named[0]
+	return ledgers[0] if account_type and ledgers else None
 
 
 @lru_cache(maxsize=1)
@@ -176,6 +169,10 @@ def _ensure_group(label, root_type, accounts, account_type=None):
 		account_type=account_type,
 		is_group=True,
 	).name
+
+
+def _type_groups(accounts, account_type):
+	return [account.name for account in accounts if account.is_group and account.account_type == account_type]
 
 
 def _root_account(root_type, accounts):

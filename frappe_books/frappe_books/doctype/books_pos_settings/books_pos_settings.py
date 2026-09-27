@@ -1,8 +1,15 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
+
+from frappe_books.accounting.accounts import validate_changed_accounts
+
+ACCOUNT_TYPES = {
+	"cash_account": {"account_types": ("Cash",), "root_types": ("Asset",)},
+	"write_off_account": {"root_types": ("Expense",)},
+	"default_account": {"account_types": ("Receivable",)},
+}
 
 
 class BooksPosSettings(Document):
@@ -31,3 +38,6 @@ class BooksPosSettings(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Pos Settings"
+
+	def validate(self):
+		validate_changed_accounts(self, ACCOUNT_TYPES)

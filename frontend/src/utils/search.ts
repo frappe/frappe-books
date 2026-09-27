@@ -76,6 +76,18 @@ export function getGroupLabelMap() {
   };
 }
 
+export const groupThemeMap: Record<
+  SearchGroup,
+  'gray' | 'blue' | 'green' | 'amber' | 'red' | 'violet'
+> = {
+  Docs: 'blue',
+  Create: 'green',
+  List: 'violet',
+  Report: 'amber',
+  Page: 'red',
+  Recent: 'gray',
+};
+
 function getCreateList(fyo: Fyo): SearchItem[] {
   const hasInventory = fyo.doc.singles.AccountingSettings?.enableInventory;
   const formEditCreateList = [
@@ -513,6 +525,29 @@ export class Search {
       value &&= !this.filters.schemaFilters[val.schemaName];
     }
     return value;
+  }
+
+  /** Schema filter chips: transactions first, child tables last. */
+  get schemaFilterOptions(): { value: string; label: string }[] {
+    return Object.values(this.searchables)
+      .map(({ schemaName, isChild, isSubmittable }) => ({
+        value: schemaName,
+        label: this.fyo.schemaMap[schemaName]?.label ?? schemaName,
+        index: isSubmittable ? 0 : isChild ? 2 : 1,
+      }))
+      .sort((a, b) => a.index - b.index);
+  }
+
+  isFilterOn(filterName: string): boolean {
+    if (filterName in this.filters.groupFilters) {
+      return this.filters.groupFilters[filterName as SearchGroup];
+    }
+
+    if (filterName === 'skipTables' || filterName === 'skipTransactions') {
+      return this.filters[filterName];
+    }
+
+    return !!this.filters.schemaFilters[filterName];
   }
 
   set(filterName: string, value: boolean) {

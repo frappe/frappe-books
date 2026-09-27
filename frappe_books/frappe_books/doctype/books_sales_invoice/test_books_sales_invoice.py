@@ -7,6 +7,10 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.returns import map_return
+from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+	open_shift,
+	set_pos_accounts,
+)
 from frappe_books.setup_service import ensure_currency
 from frappe_books.tests.accounting import (
 	ledger_entries,
@@ -250,6 +254,21 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		invoice.insert()
+
+	def test_pos_invoice_needs_an_open_shift(self):
+		set_pos_accounts()
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			is_pos=1,
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "Open a POS shift", invoice.submit)
+		open_shift(0)
+		invoice.reload().submit()
 
 	def _make_invoice(self):
 		return make_invoice(

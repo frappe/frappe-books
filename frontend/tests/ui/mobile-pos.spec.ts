@@ -195,7 +195,8 @@ test('scanning with the camera adds the item', async ({ page }) => {
   await page.route('**/html5-qrcode.min.js', (route) =>
     route.fulfill({
       contentType: 'text/javascript',
-      body: `window.Html5Qrcode = class {
+      body: `window.Html5QrcodeSupportedFormats = {};
+      window.Html5Qrcode = class {
         isScanning = false;
         async start(camera, config, onScan) {
           this.isScanning = true;

@@ -3,6 +3,8 @@ import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import type { DocValueMap } from 'fyo/core/types';
 import { chunk } from 'lodash';
 import { fyo } from 'src/initFyo';
+// Load the router before the controls that import it, as the app does.
+import 'src/router';
 import List from 'src/pages/ListView/List.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
 import { models } from 'models';

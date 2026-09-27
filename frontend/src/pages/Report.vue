@@ -51,6 +51,7 @@
         @open-filters="filtersOpen = true"
         @clear-filters="clearFilters"
       />
+      <MobileReportSkeleton v-else :values="[128]" :height="48" :lines="1" />
       <MobileReportFilters
         v-if="report"
         v-model:open="filtersOpen"
@@ -112,6 +113,7 @@ import MobileOptionSheet, {
 } from 'src/components/Report/Mobile/MobileOptionSheet.vue';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
 import MobileReportFilters from 'src/components/Report/Mobile/MobileReportFilters.vue';
+import MobileReportSkeleton from 'src/components/Report/Mobile/MobileReportSkeleton.vue';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, showReport } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
@@ -130,6 +132,7 @@ export default defineComponent({
     MobileOptionSheet,
     MobileReport,
     MobileReportFilters,
+    MobileReportSkeleton,
   },
   provide() {
     return {

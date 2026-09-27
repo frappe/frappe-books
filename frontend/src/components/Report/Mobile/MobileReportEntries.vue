@@ -56,6 +56,7 @@
 </template>
 <script setup lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import { isEqual } from 'lodash';
 import type { ReportRow } from 'reports/types';
 import { computed, ref, watch } from 'vue';
 import type { MobileEntries } from './MobileEntries';
@@ -69,8 +70,11 @@ const limit = ref(pageSize);
 const sections = computed(() => props.entries.getSections(limit.value));
 const hasMore = computed(() => props.entries.rows.length > limit.value);
 
+// A refresh keeps the loaded pages; new filters start from the top.
 watch(
-  () => props.entries.report.reportData,
-  () => (limit.value = pageSize)
+  () => props.entries.report.filterMap,
+  (filters, previous) => {
+    if (!isEqual(filters, previous)) limit.value = pageSize;
+  }
 );
 </script>

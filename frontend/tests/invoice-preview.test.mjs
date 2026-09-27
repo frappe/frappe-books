@@ -48,6 +48,30 @@ test('a preview is dropped when the invoice changes while it runs', async () => 
   clearTimeout(invoice._previewTimer);
 });
 
+test('a preview sent before an item change does not price the new item', async () => {
+  const previewed = Promise.withResolvers();
+  const { invoice, holdLookups } = await makeInvoice(async (values) => {
+    await previewed.promise;
+    const items = values.items.map((row) => ({ ...row, rate: 150 }));
+    return { ...values, items };
+  });
+  const [row] = invoice.items;
+  const lookups = Promise.withResolvers();
+  holdLookups(lookups.promise);
+
+  const preview = invoice.preview();
+  const edit = row.set('item', 'Other Service');
+  await new Promise(setImmediate);
+  previewed.resolve();
+  await preview;
+  lookups.resolve();
+  await edit;
+
+  assert.equal(row.item, 'Other Service');
+  assert.equal(row.rate.float, 0);
+  clearTimeout(invoice._previewTimer);
+});
+
 test('rows removed while a preview runs stay removed', async () => {
   const { invoice } = await makeInvoice((values) => ({
     ...values,
@@ -122,6 +146,7 @@ async function addRow(invoice) {
 
 async function makeInvoice(respond) {
   const calls = [];
+  let lookups;
   class Store {
     getSchemaMap() {
       return getSchemas('-', []);
@@ -133,7 +158,10 @@ async function makeInvoice(respond) {
         calls.push({ values, name });
         return await respond(structuredClone(values));
       }
-      if (method === 'getAll') return [];
+      if (method === 'getAll') {
+        await lookups;
+        return [];
+      }
       if (method === 'get') return {};
       throw new Error(`Unexpected database call: ${method}`);
     }
@@ -151,7 +179,7 @@ async function makeInvoice(respond) {
     party: 'Customer',
     items: [{ item: 'Service', quantity: 2, rate: 100 }],
   });
-  return { invoice, calls, fyo };
+  return { invoice, calls, fyo, holdLookups: (until) => (lookups = until) };
 }
 
 test('discounts come from the row totals the server calculated', async () => {

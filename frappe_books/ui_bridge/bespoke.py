@@ -15,6 +15,7 @@ from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
 from frappe_books.reports.gst import GSTRFilters
 from frappe_books.reports.stock import StockFilters
 from frappe_books.ui_bridge.dispatch import call_handler
+from frappe_books.ui_bridge.linked_entries import linked_entries
 from frappe_books.ui_bridge.mapping import target_doctype
 
 MONTH_FIELDS = [{"YEAR": "posting_date", "as": "year"}, {"MONTH": "posting_date", "as": "month"}]
@@ -155,6 +156,9 @@ class BooksBespokeQueries:
 			raise frappe.PermissionError
 		return open_shift_name()
 
+	def linked_entries(self, source_schema: str, name: str):
+		return linked_entries(source_schema, name)
+
 	def general_ledger(self, filters: LedgerFilters):
 		return general_ledger(filters)
 
@@ -251,6 +255,7 @@ _METHODS = {
 	"getReturnBalanceItemsQty": "return_balance",
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
+	"getLinkedEntries": "linked_entries",
 	"getGeneralLedger": "general_ledger",
 	"getTrialBalance": "trial_balance",
 	"getProfitAndLoss": "profit_and_loss",

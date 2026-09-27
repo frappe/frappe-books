@@ -356,6 +356,17 @@ export class DatabaseHandler extends DatabaseBase {
     )) as Promise<Record<string, Money> | undefined>;
   }
 
+  async getLinkedEntries(
+    schemaName: string,
+    name: string
+  ): Promise<Record<string, string[]>> {
+    return (await this.#demux.callBespoke(
+      'getLinkedEntries',
+      schemaName,
+      name
+    )) as Record<string, string[]>;
+  }
+
   async getReportData<T>(query: ReportQuery, ...args: unknown[]): Promise<T> {
     return (await this.#demux.callBespoke(query, ...args)) as T;
   }

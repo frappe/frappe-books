@@ -1,7 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from frappe_books.inventory.transaction import StockTransferController
+import frappe
+
+from frappe_books.inventory.returns import map_transfer_return
+from frappe_books.inventory.transaction import StockTransferController, map_transfer_invoice
 
 
 class BooksShipment(StockTransferController):
@@ -32,3 +35,13 @@ class BooksShipment(StockTransferController):
 	# end: auto-generated types
 
 	transfer_type = "sales"
+
+
+@frappe.whitelist()
+def make_sales_invoice(source_name: str):
+	return map_transfer_invoice("Books Shipment", source_name)
+
+
+@frappe.whitelist()
+def make_return(source_name: str):
+	return map_transfer_return("Books Shipment", source_name)

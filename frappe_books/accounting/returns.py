@@ -43,26 +43,26 @@ def _prepare_return(invoice, credit_note):
 	if invoice.is_fully_returned:
 		frappe.throw(_("This invoice is already fully returned."))
 	credit_note.date = now_datetime()
-	_return_unreturned_rows(invoice, credit_note)
+	return_unreturned_rows(invoice, credit_note)
 	credit_note.calculate()
 
 
-def _return_unreturned_rows(invoice, credit_note):
+def return_unreturned_rows(original, return_doc):
 	"""Negate each row, limited to what earlier returns have not taken back."""
-	returned_rows = _submitted_returns(invoice)[1]
-	remaining = _batch_quantities(invoice.items)
+	returned_rows = _submitted_returns(original)[1]
+	remaining = _batch_quantities(original.items)
 	for key, quantity in _batch_quantities(returned_rows).items():
 		remaining[key] -= quantity
 	returned_serials = {serial for row in returned_rows for serial in parse_serial_numbers(row.serial_number)}
 	rows = []
-	for row in credit_note.items:
+	for row in return_doc.items:
 		key = (row.item, row.batch)
 		quantity = min(abs(as_decimal(row.quantity)), remaining[key])
 		remaining[key] -= quantity
 		if quantity > 0:
 			_negate_row(row, quantity, returned_serials)
 			rows.append(row)
-	credit_note.set("items", rows)
+	return_doc.set("items", rows)
 
 
 def _negate_row(row, quantity, returned_serials):

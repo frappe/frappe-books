@@ -3,6 +3,8 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import now_datetime
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.inventory.invoice_balance import update_invoice_balance, validate_invoice_balance
@@ -18,6 +20,9 @@ from frappe_books.inventory.stock import (
 )
 from frappe_books.inventory.valuation import transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
+
+# Transfer fields that an invoice made from the transfer must not copy.
+UNBILLED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
 
 class StockMovementController(SeriesNamingMixin, Document):
@@ -49,6 +54,10 @@ class StockTransferController(SeriesNamingMixin, Document):
 	transfer_type = "sales"
 
 	def before_validate(self):
+		self.calculate()
+
+	def calculate(self):
+		"""Fill row defaults and the grand total, without writing anything."""
 		self.grand_total = populate_stock_rows(self.items)
 
 	def validate(self):
@@ -87,6 +96,37 @@ class StockTransferController(SeriesNamingMixin, Document):
 		frappe.db.set_value(
 			self.doctype, self.return_against, "is_returned", int(bool(is_returned)), update_modified=False
 		)
+
+
+def map_transfer_invoice(transfer_doctype, transfer_name):
+	"""Return an unsaved invoice that bills a submitted shipment or purchase receipt."""
+	invoice_doctype = frappe.get_meta(transfer_doctype).get_field("back_reference").options
+	return get_mapped_doc(
+		transfer_doctype,
+		transfer_name,
+		{
+			transfer_doctype: {
+				"doctype": invoice_doctype,
+				"validation": {"docstatus": ["=", 1]},
+				"field_no_map": UNBILLED_FIELDS,
+			},
+			_items_doctype(transfer_doctype): {"doctype": _items_doctype(invoice_doctype)},
+		},
+		postprocess=_bill_transfer,
+	)
+
+
+def _bill_transfer(transfer, invoice):
+	if transfer.back_reference:
+		frappe.throw(_("{0} was made from invoice {1}.").format(transfer.name, transfer.back_reference))
+	if transfer.return_against:
+		frappe.throw(_("A return cannot be billed."))
+	invoice.date = now_datetime()
+	invoice.calculate()
+
+
+def _items_doctype(doctype):
+	return frappe.get_meta(doctype).get_field("items").options
 
 
 def movement_transfers(movement):

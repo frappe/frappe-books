@@ -70,7 +70,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		self.assertEqual(Decimal(str(cogs_entry.debit)), Decimal("60"))
 		self.assertEqual(Decimal(str(stock_entry.credit)), Decimal("60"))
 
-	def test_return_shipment_posts_current_valuation(self):
+	def test_return_shipment_posts_the_shipped_cost(self):
 		item, cogs, stock = self._tracked_item()
 		seed_stock(item.name, quantity=4, rate=10)
 		seed_stock(item.name, quantity=2, rate=20)
@@ -83,10 +83,21 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		entries = ledger_entries(return_shipment.doctype, return_shipment.name)
 		stock_entry = next(row for row in entries if row.account == stock.name)
 		cogs_entry = next(row for row in entries if row.account == cogs.name)
-		self.assertEqual(Decimal(str(stock_entry.debit)), Decimal("20"))
-		self.assertEqual(Decimal(str(cogs_entry.credit)), Decimal("20"))
+		self.assertEqual(Decimal(str(stock_entry.debit)), Decimal("12"))
+		self.assertEqual(Decimal(str(cogs_entry.credit)), Decimal("12"))
 		self.assertEqual(stock_quantity(item.name, "Stores"), 2)
-		self.assertEqual(stock_value_change(return_shipment), Decimal("20"))
+		self.assertEqual(stock_value_change(return_shipment), Decimal("12"))
+
+	def test_return_into_empty_stock_takes_the_shipped_cost(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment.submit()
+
+		return_shipment = self._make_shipment(item, quantity=1, rate=25, return_against=shipment.name)
+		return_shipment.submit()
+
+		self.assertEqual(stock_value_change(return_shipment), Decimal("10"))
 
 	def test_shipment_cannot_post_a_stock_value_increase(self):
 		item, _cogs, _stock = self._tracked_item()

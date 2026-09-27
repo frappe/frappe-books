@@ -186,7 +186,12 @@ export function getMakeInvoiceAction(
       if (schemaName === ModelNameEnum.SalesQuote) {
         return doc.isSubmitted;
       } else {
-        return doc.isSubmitted && !doc.backReference && !doc.returnAgainst;
+        return (
+          doc.isSubmitted &&
+          !doc.backReference &&
+          !doc.returnAgainst &&
+          !doc.isFullyBilled
+        );
       }
     },
     action: async (doc: Doc) => {

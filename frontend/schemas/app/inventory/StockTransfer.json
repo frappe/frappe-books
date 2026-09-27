@@ -68,6 +68,13 @@
       "default": false
     },
     {
+      "fieldname": "isFullyBilled",
+      "fieldtype": "Check",
+      "hidden": true,
+      "readOnly": true,
+      "default": false
+    },
+    {
       "abstract": true,
       "fieldname": "backReference",
       "section": "References"

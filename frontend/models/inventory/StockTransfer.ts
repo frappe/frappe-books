@@ -25,6 +25,7 @@ export abstract class StockTransfer extends Transfer {
   backReference?: string;
   items?: StockTransferItem[];
   isReturned?: boolean;
+  isFullyBilled?: boolean;
   returnAgainst?: string;
 
   get isSales() {

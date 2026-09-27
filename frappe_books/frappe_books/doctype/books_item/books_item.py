@@ -6,6 +6,7 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
 
 
 class BooksItem(Document):
@@ -49,6 +50,14 @@ class BooksItem(Document):
 			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
 		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
 			frappe.throw(_("Barcode must contain exactly 12 digits."))
+		self.validate_unit_conversions()
+
+	def validate_unit_conversions(self):
+		units = [row.uom for row in self.uom_conversions]
+		if len(units) != len(set(units)):
+			frappe.throw(_("Each unit can have only one conversion factor."))
+		if any(flt(row.conversion_factor) <= 0 for row in self.uom_conversions):
+			frappe.throw(_("Conversion factors must be greater than zero."))
 
 	def on_update(self):
 		if self.has_serial_number:

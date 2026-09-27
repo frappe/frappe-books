@@ -17,6 +17,7 @@ from frappe_books.inventory.invoice_balance import (
 	validate_billed_quantities,
 )
 from frappe_books.inventory.stock import validate_batches
+from frappe_books.inventory.units import populate_units
 from frappe_books.series import SeriesNamingMixin
 
 
@@ -269,6 +270,7 @@ def _post_direction(posting, account, amount, party=None, credit=False, reverse=
 
 def _populate_invoice_defaults(invoice):
 	_populate_party_defaults(invoice)
+	populate_units(invoice.get("items", []))
 	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
 	rates = pricing.standard_rates(invoice) if items else {}
 	for row in invoice.get("items", []):
@@ -291,12 +293,8 @@ def _populate_row(invoice, row, item, rates):
 	for fieldname in ("item_code", "description", "unit", "tax"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
-	row.transfer_unit = row.transfer_unit or row.unit
 	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
 		row.rate = pricing.standard_rate(invoice, row, rates)
-	row.unit_conversion_factor = row.unit_conversion_factor or 1
-	if not row.transfer_quantity:
-		row.transfer_quantity = as_decimal(row.quantity) / as_decimal(row.unit_conversion_factor)
 	if not row.account:
 		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
 

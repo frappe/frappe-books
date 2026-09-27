@@ -8,6 +8,7 @@ from frappe import _
 from frappe.query_builder.functions import Coalesce, Min, Sum
 
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.inventory.units import populate_units
 from frappe_books.inventory.valuation import delete_entries, insert_entry
 
 LEDGER = "Books Stock Ledger Entry"
@@ -91,17 +92,16 @@ def delete_stock_entries(transaction):
 
 
 def populate_stock_rows(rows):
-	"""Fill item defaults on stock rows and return their total amount."""
+	"""Fill item defaults and units on stock rows and return their total amount."""
+	populate_units(rows)
 	items = _item_defaults(rows)
 	for row in rows:
 		item = items.get(row.item)
 		if not item:
 			continue
-		for fieldname in ("description", "rate", "unit"):
+		for fieldname in ("description", "rate"):
 			if not row.get(fieldname):
 				row.set(fieldname, item.get(fieldname))
-		if not row.transfer_unit:
-			row.transfer_unit = row.unit
 		row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
 	return rounded(sum((as_decimal(row.amount) for row in rows), as_decimal(0)))
 
@@ -269,7 +269,7 @@ def _item_defaults(rows):
 	if not names:
 		return {}
 	items = frappe.get_all(
-		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate", "unit"]
+		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate"]
 	)
 	return {item.name: item for item in items}
 

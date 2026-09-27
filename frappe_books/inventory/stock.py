@@ -20,6 +20,7 @@ def validate_transfer_rows(transfers):
 		frappe.throw(_("At least one stock item is required."))
 	for transfer in transfers:
 		_validate_row(transfer)
+	_validate_tracked_items(transfers)
 	validate_batches(transfers)
 	_validate_serial_numbers(transfers)
 
@@ -33,15 +34,14 @@ def validate_batches(rows):
 
 
 def validate_stock_available(transfers, date):
-	"""Lock the items, then check that outgoing rows of tracked items have the stock they take at the date.
+	"""Lock the items, then check that outgoing rows have the stock they take at the date.
 
 	The lock is held until commit, so concurrent postings of an item check and
 	post one at a time.
 	"""
 	_lock_items(transfers)
-	tracked = {name for name, item in _item_settings(transfers).items() if item.track_item}
-	outgoing = [row for row in transfers if row.get("from_location") and row["item"] in tracked]
-	incoming = [row for row in transfers if not row.get("from_location") and row["item"] in tracked]
+	outgoing = [row for row in transfers if row.get("from_location")]
+	incoming = [row for row in transfers if not row.get("from_location")]
 	_validate_quantities_available(outgoing, date)
 	_validate_serial_numbers_available(outgoing)
 	_validate_serial_numbers_not_in_stock(incoming)
@@ -121,6 +121,13 @@ def _validate_row(transfer):
 		frappe.throw(_("Stock rate cannot be negative."))
 	if not transfer.get("from_location") and not transfer.get("to_location"):
 		frappe.throw(_("Set a source or destination location."))
+
+
+def _validate_tracked_items(transfers):
+	items = _item_settings(transfers)
+	untracked = sorted({row["item"] for row in transfers if not items[row["item"]].track_item})
+	if untracked:
+		frappe.throw(_("Item {0} does not track stock.").format(", ".join(untracked)))
 
 
 def _validate_batch(transfer, item, batch_items):

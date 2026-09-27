@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getPrintTemplatePropValues, makeFyo } from './helpers/accounting.mjs';
+import {
+  getPrintTemplatePropValues,
+  getTemplateNameFromFile,
+  makeFyo,
+} from './helpers/accounting.mjs';
 
 const date = new Date('2026-01-02T10:00:00');
 const documents = {
@@ -40,4 +44,11 @@ test('JournalEntry print values have no totals', async () => {
   assert.equal(doc.subTotal, undefined);
   assert.equal(doc.grandTotalInWords, undefined);
   assert.equal(doc.date, 'Jan 2, 2026');
+});
+
+test('a template file name gives the template name', () => {
+  assert.equal(getTemplateNameFromFile('Invoice.template.html'), 'Invoice');
+  assert.equal(getTemplateNameFromFile('Invoice.html'), 'Invoice');
+  assert.equal(getTemplateNameFromFile('Invoice.txt'), null);
+  assert.equal(getTemplateNameFromFile('.html'), null);
 });

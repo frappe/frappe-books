@@ -1,5 +1,6 @@
 import { Fyo, t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
+import { Item } from 'models/baseModels/Item/Item';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
@@ -214,7 +215,7 @@ export async function validatePOSCheckout(
 
   await validateSinv(sinvDoc, await loadStock());
   if (!sinvDoc.isReturn) {
-    await validateShipment(itemSerialNumbers);
+    await validateActiveSerialNumbers(sinvDoc.fyo, itemSerialNumbers);
   }
 }
 
@@ -304,27 +305,29 @@ function newItemRow(
   };
 }
 
-export async function validateShipment(itemSerialNumbers: ItemSerialNumbers) {
-  if (!itemSerialNumbers) {
+/** Rejects serial numbers that left stock, before the invoice is submitted. */
+export async function validateActiveSerialNumbers(
+  fyo: Fyo,
+  itemSerialNumbers: ItemSerialNumbers
+) {
+  const serialNumbers = Object.values(itemSerialNumbers)
+    .flatMap((value) => value.split('\n'))
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (!serialNumbers.length) {
     return;
   }
 
-  for (const idx in itemSerialNumbers) {
-    const serialNumbers = itemSerialNumbers[idx].split('\n');
-
-    for (const serialNumber of serialNumbers) {
-      const status = await fyo.getValue(
-        ModelNameEnum.SerialNumber,
-        serialNumber,
-        'status'
-      );
-
-      if (status !== 'Active') {
-        throw new ValidationError(
-          t`Serial Number ${serialNumber} status is not Active.`
-        );
-      }
-    }
+  const active = await fyo.db.getAllRaw(ModelNameEnum.SerialNumber, {
+    fields: ['name'],
+    filters: { name: ['in', serialNumbers], status: 'Active' },
+  });
+  const activeNames = new Set(active.map(({ name }) => name));
+  const inactive = serialNumbers.find((name) => !activeNames.has(name));
+  if (inactive) {
+    throw new ValidationError(
+      t`Serial Number ${inactive} status is not Active.`
+    );
   }
 }
 

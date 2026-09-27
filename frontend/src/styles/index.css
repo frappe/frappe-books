@@ -102,7 +102,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 :root {
-  --w-form: 720px;
+  --w-form: 800px;
   --w-sidebar: 14rem;
   --w-quick-edit: 22rem;
   --w-scrollbar: 0.6rem;

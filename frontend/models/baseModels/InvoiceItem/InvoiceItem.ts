@@ -110,6 +110,9 @@ export abstract class InvoiceItem extends Doc {
     fieldname: string,
     retriggerChildDocApplyChange?: boolean
   ) {
+    if (this.parentdoc) {
+      this.parentdoc._edits += 1;
+    }
     if (fieldname === 'rate') {
       this.isManualRate = true;
     } else if (['item', 'transferUnit'].includes(fieldname)) {

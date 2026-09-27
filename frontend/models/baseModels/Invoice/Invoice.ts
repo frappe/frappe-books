@@ -470,6 +470,15 @@ export abstract class Invoice extends Transactional {
     clearTimeout(this._previewTimer);
   }
 
+  /** Counts edits as they start, so a preview sent before one is dropped. */
+  override async _applyChange(
+    fieldname: string,
+    retriggerChildDocApplyChange?: boolean
+  ) {
+    this._edits += 1;
+    return await super._applyChange(fieldname, retriggerChildDocApplyChange);
+  }
+
   async change({ changed }: ChangeArg) {
     if (changed && RATE_SOURCE_FIELDS.includes(changed)) {
       this.clearStandardRates();
@@ -480,7 +489,6 @@ export abstract class Invoice extends Transactional {
 
   /** Previews once edits pause, so totals follow the user without a request per keystroke. */
   schedulePreview() {
-    this._edits += 1;
     clearTimeout(this._previewTimer);
     if (!this.canEdit || !this.dirty) {
       return;

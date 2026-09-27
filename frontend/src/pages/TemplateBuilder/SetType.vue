@@ -1,8 +1,11 @@
 <template>
-  <div class="w-full">
-    <FormHeader :form-title="t`Set Template Type`" />
-    <hr class="border-outline-gray-1" />
-    <div class="p-4 w-full flex flex-col gap-4">
+  <FrappeDialog
+    :open="open"
+    :title="t`Set Template Type`"
+    size="2xl"
+    @update:open="(value: boolean) => $emit('update:open', value)"
+  >
+    <div class="flex w-full flex-col gap-4">
       <p class="text-base text-ink-gray-9">
         {{ t`Select the template type.` }}
       </p>
@@ -14,25 +17,27 @@
         @change="typeChange"
       />
     </div>
-    <div class="flex border-t border-outline-gray-1 p-4">
-      <FrappeButton class="ml-auto" variant="solid" @click="done">{{
-        t`Done`
-      }}</FrappeButton>
-    </div>
-  </div>
+    <template #actions>
+      <div class="flex justify-end">
+        <FrappeButton variant="solid" @click="done">{{ t`Done` }}</FrappeButton>
+      </div>
+    </template>
+  </FrappeDialog>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
 import { PrintTemplate } from 'models/baseModels/PrintTemplate';
 import { OptionField, SelectOption } from 'schemas/types';
 import Select from 'src/components/Controls/Select.vue';
-import FormHeader from 'src/components/FormHeader.vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-  components: { FormHeader, Select, FrappeButton },
-  props: { doc: { type: PrintTemplate, required: true } },
-  emits: ['done'],
+  components: { FrappeDialog, Select, FrappeButton },
+  props: {
+    open: { type: Boolean, default: false },
+    doc: { type: PrintTemplate, required: true },
+  },
+  emits: ['update:open'],
   data() {
     return { type: 'SalesInvoice' };
   },
@@ -49,8 +54,15 @@ export default defineComponent({
       } as OptionField;
     },
   },
-  mounted() {
-    this.type = this.doc.type ?? 'SalesInvoice';
+  watch: {
+    open: {
+      handler(open: boolean) {
+        if (open) {
+          this.type = this.doc.type ?? 'SalesInvoice';
+        }
+      },
+      immediate: true,
+    },
   },
   methods: {
     typeChange(v: string | number | SelectOption | undefined) {
@@ -65,7 +77,7 @@ export default defineComponent({
     },
     async done() {
       await this.doc.set('type', this.type);
-      this.$emit('done');
+      this.$emit('update:open', false);
     },
   },
 });

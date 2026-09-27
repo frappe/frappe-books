@@ -173,12 +173,8 @@
         </div>
       </div>
     </div>
-    <Modal v-if="doc" :open-modal="showSizeModal" @closemodal="showSizeModal = !showSizeModal">
-      <SetPrintSize :doc="doc" @done="showSizeModal = !showSizeModal" />
-    </Modal>
-    <Modal v-if="doc" :open-modal="showTypeModal" @closemodal="showTypeModal = !showTypeModal">
-      <SetType :doc="doc" @done="showTypeModal = !showTypeModal" />
-    </Modal>
+    <SetPrintSize v-if="doc" v-model:open="showSizeModal" :doc="doc" />
+    <SetType v-if="doc" v-model:open="showTypeModal" :doc="doc" />
   </div>
 </template>
 <script lang="ts">
@@ -195,7 +191,6 @@ import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import HorizontalResizer from 'src/components/HorizontalResizer.vue';
-import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ShortcutKeys from 'src/components/ShortcutKeys.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -241,7 +236,6 @@ export default defineComponent({
     TemplateBuilderHint,
     ShortcutKeys,
     Link,
-    Modal,
     SetPrintSize,
     SetType,
     FrappeTextInput,

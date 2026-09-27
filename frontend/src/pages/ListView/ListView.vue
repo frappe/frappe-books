@@ -45,14 +45,12 @@
       @make-new-doc="makeNewDoc"
       @selected-items-changed="updateSelectedItems"
     />
-    <Modal :open-modal="openExportModal" size="4xl" @closemodal="openExportModal = false">
-      <ExportWizard
-        class="w-full"
-        :schema-name="schemaName"
-        :title="pageTitle"
-        :list-filters="listFilters"
-      />
-    </Modal>
+    <ExportWizard
+      v-model:open="openExportModal"
+      :schema-name="schemaName"
+      :page-title="pageTitle"
+      :list-filters="listFilters"
+    />
   </div>
 </template>
 <script lang="ts">
@@ -64,7 +62,6 @@ import {
 } from 'frappe-ui';
 import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
-import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 
 import { fyo } from 'src/initFyo';
@@ -85,7 +82,6 @@ export default defineComponent({
     List,
     FilterDropdown,
     FrappeButton,
-    Modal,
     ExportWizard,
     FrappeDropdown,
   },

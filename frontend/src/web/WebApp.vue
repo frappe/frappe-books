@@ -175,34 +175,4 @@ body,
   height: 100%;
   overflow: hidden;
 }
-
-.books-modal {
-  max-height: calc(100vh - 5rem);
-  max-height: calc(100dvh - 5rem);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-color: #d1d8dd transparent;
-  scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-}
-
-.books-modal::-webkit-scrollbar {
-  display: block;
-  width: 0.375rem;
-}
-
-.books-modal::-webkit-scrollbar-thumb {
-  background: #d1d8dd;
-  border-radius: 9999px;
-}
-
-.dark .books-modal {
-  scrollbar-color: #525252 transparent;
-}
-
-.dark .books-modal::-webkit-scrollbar-thumb {
-  background: #525252;
-}
 </style>

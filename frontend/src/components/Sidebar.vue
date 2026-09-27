@@ -60,17 +60,17 @@
       </FrappeSidebarItem>
     </div>
 
-    <Modal
-      :open-modal="viewShortcuts"
-      size="2xl"
-      @closemodal="viewShortcuts = false"
+    <FrappeKeyboardShortcutsDialog
+      v-model:open="viewShortcuts"
+      :title="t`Keyboard Shortcuts`"
     >
-      <ShortcutsHelper class="w-full" />
-    </Modal>
+      <ShortcutsHelper />
+    </FrappeKeyboardShortcutsDialog>
   </FrappeSidebar>
 </template>
 <script lang="ts">
 import {
+  KeyboardShortcutsDialog as FrappeKeyboardShortcutsDialog,
   Sidebar as FrappeSidebar,
   SidebarHeader as FrappeSidebarHeader,
   SidebarItem as FrappeSidebarItem,
@@ -90,7 +90,6 @@ import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
 import router from '../router';
 import Icon from './Icon.vue';
-import Modal from './Modal.vue';
 import ShortcutsHelper from './ShortcutsHelper.vue';
 
 const COMPONENT_NAME = 'Sidebar';
@@ -100,8 +99,8 @@ export default defineComponent({
     FrappeSidebar,
     FrappeSidebarHeader,
     FrappeSidebarItem,
+    FrappeKeyboardShortcutsDialog,
     Icon,
-    Modal,
     ShortcutsHelper,
   },
   props: {

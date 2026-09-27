@@ -17,8 +17,14 @@ const documents = {
   StockMovement: { amount: 100 },
 };
 
-async function getValues(schemaName, values, getLinkedDocs = () => ({})) {
+async function getValues(
+  schemaName,
+  values,
+  getLinkedDocs = () => ({}),
+  systemSettings = {}
+) {
   const fyo = await makeFyo();
+  Object.assign(fyo.singles.SystemSettings, systemSettings);
   const singles = {
     PrintSettings: fyo.doc.getNewDoc('PrintSettings', { companyName: 'Co' }),
     AccountingSettings: fyo.doc.getNewDoc('AccountingSettings'),
@@ -65,6 +71,13 @@ test('Payment print values show the tax share it settles', async () => {
   );
   assert.equal(doc.subTotal, '50.00');
   assert.deepEqual(doc.taxes, [{ account: 'CGST', amount: '5.00' }]);
+});
+
+test('print values use the date format setting', async () => {
+  const { doc } = await getValues('SalesInvoice', {}, undefined, {
+    dateFormat: 'dd/MM/yyyy',
+  });
+  assert.equal(doc.date, '02/01/2026');
 });
 
 test('JournalEntry print values have no totals', async () => {

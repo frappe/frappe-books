@@ -61,7 +61,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   _dirty = true;
   _notInserted = true;
 
-  _syncing = false;
+  _syncPromise?: Promise<Doc>;
 
   constructor(
     schema: Schema,
@@ -128,7 +128,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get isSyncing() {
-    return this._syncing;
+    return !!this._syncPromise;
   }
 
   get canDelete() {
@@ -890,17 +890,21 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
     return this;
   }
+
+  /** Saves the doc; a save already in progress is returned instead of starting another. */
   async sync(): Promise<Doc> {
-    this._syncing = true;
-    try {
-      await this.trigger('beforeSync');
-      const doc = this.notInserted ? await this._insert() : await this._update();
-      this._notInserted = false;
-      await this._notifyAfterAction('sync');
-      return doc;
-    } finally {
-      this._syncing = false;
-    }
+    this._syncPromise ??= this._sync().finally(() => {
+      this._syncPromise = undefined;
+    });
+    return await this._syncPromise;
+  }
+
+  async _sync(): Promise<Doc> {
+    await this.trigger('beforeSync');
+    const doc = this.notInserted ? await this._insert() : await this._update();
+    this._notInserted = false;
+    await this._notifyAfterAction('sync');
+    return doc;
   }
 
   async delete() {

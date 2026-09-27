@@ -117,3 +117,15 @@ export async function getLinkedEntries(
 ): Promise<Record<string, string[]>> {
   return await doc.fyo.db.getLinkedEntries(doc.schemaName, doc.name!);
 }
+
+/** Whether a field holds a value worth showing; an unchecked box does not. */
+export function hasFieldValue(doc: Doc, field: Field): boolean {
+  const value = doc.get(field.fieldname);
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  return (
+    value !== null && value !== undefined && value !== '' && value !== false
+  );
+}

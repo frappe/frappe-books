@@ -1,5 +1,5 @@
 <template>
-  <section class="border-b border-outline-gray-1">
+  <section v-if="visibleFields.length" class="border-b border-outline-gray-1">
     <button
       v-if="kind === 'collapsible'"
       class="flex h-[52px] w-full items-center gap-2 px-4 text-start text-base-semibold text-ink-gray-9 active:bg-surface-gray-1"
@@ -104,7 +104,7 @@ import { getRowSummary } from 'src/components/Controls/rowSummary';
 import Table from 'src/components/Controls/Table.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
-import { evaluateReadOnly } from 'src/utils/doc';
+import { evaluateReadOnly, hasFieldValue } from 'src/utils/doc';
 import { computed, ref, watch } from 'vue';
 import MobileFormField from './MobileFormField.vue';
 
@@ -147,7 +147,9 @@ const hasError = computed(() =>
 );
 
 // Collapsed sections open when they hold a value or an error.
-const isOpen = ref(props.fields.some((field) => hasValue(field)));
+const isOpen = ref(
+  props.fields.some((field) => hasFieldValue(props.doc, field))
+);
 watch(hasError, (value) => value && (isOpen.value = true), { immediate: true });
 
 /** Consecutive date fields sit two to a row. */
@@ -180,7 +182,7 @@ const visibleFields = computed(() => {
     return props.fields;
   }
 
-  return props.fields.filter((field) => hasValue(field));
+  return props.fields.filter((field) => hasFieldValue(props.doc, field));
 });
 
 function isLineTable(field: Field) {
@@ -220,16 +222,5 @@ function getTotalLines(field: Field) {
       emphasis: false,
     };
   });
-}
-
-function hasValue(field: Field) {
-  const value = props.doc.get(field.fieldname);
-  if (Array.isArray(value)) {
-    return value.length > 0;
-  }
-
-  return (
-    value !== null && value !== undefined && value !== '' && value !== false
-  );
 }
 </script>

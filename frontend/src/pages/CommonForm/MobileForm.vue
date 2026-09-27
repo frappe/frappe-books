@@ -148,6 +148,7 @@ import { Action } from 'fyo/model/types';
 import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
+import { hasFieldValue } from 'src/utils/doc';
 import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc } from 'src/utils/ui';
 import { computed, nextTick, ref } from 'vue';
@@ -183,12 +184,19 @@ const emit = defineEmits<{
 const router = useRouter();
 const showActions = ref(false);
 
-const tabOptions = computed(() =>
-  [...(props.groupedFields?.keys() ?? [])].map((tab) => ({
-    value: tab,
-    label: tab,
-  }))
-);
+// A finished document hides empty fields, so tabs without values go too.
+const tabOptions = computed(() => {
+  const isFinished = props.doc.isSubmitted || props.doc.isCancelled;
+  return [...(props.groupedFields ?? [])]
+    .filter(
+      ([, sections]) =>
+        !isFinished ||
+        [...sections.values()]
+          .flat()
+          .some((field) => hasFieldValue(props.doc, field))
+    )
+    .map(([tab]) => ({ value: tab, label: tab }));
+});
 
 const activeSections = computed(() => {
   const tab = props.groupedFields?.get(props.activeTab);

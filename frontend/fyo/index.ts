@@ -56,6 +56,17 @@ export class Fyo {
 
   }
 
+  /** Loads the symbols that formatted amounts carry, e.g. ₹. */
+  async loadCurrencySymbols() {
+    const currencies = (await this.db.getAll('Currency', {
+      fields: ['name', 'symbol'],
+    })) as { name: string; symbol?: string | null }[];
+
+    this.currencySymbols = Object.fromEntries(
+      currencies.map(({ name, symbol }) => [name, symbol || undefined])
+    );
+  }
+
   reportDocumentActionWarning(
     doc: Doc,
     action: DocumentActionWarning['action'],

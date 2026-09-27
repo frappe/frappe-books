@@ -131,6 +131,7 @@ export default defineComponent({
         models,
         await getRegionalModels(countryCode)
       );
+      await fyo.loadCurrencySymbols();
       for (const schema of Object.values(fyo.schemaMap)) {
         if (schema?.isSingle && schema.name !== 'SetupWizard') {
           await fyo.doc.getDoc(schema.name);

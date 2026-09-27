@@ -17,6 +17,7 @@ class BooksAccount(NestedSet):
 
 		account_name: DF.Data
 		account_type: DF.Literal[
+			"",
 			"Accumulated Depreciation",
 			"Bank",
 			"Cash",

@@ -1,5 +1,3 @@
-"""Transfer units of invoice and stock rows."""
-
 from collections import defaultdict
 
 import frappe

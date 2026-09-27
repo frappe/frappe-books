@@ -1,6 +1,16 @@
 <template>
-  <div class="flex flex-col">
+  <div class="flex flex-col" :class="isMobile ? 'min-h-full' : ''">
     <PageHeader :title="title">
+      <template #mobile>
+        <FrappeButton
+          v-if="canCreate"
+          variant="ghost"
+          size="md"
+          icon="lucide-plus"
+          :label="t`Create new entry`"
+          @click="handleMakeNewDoc"
+        />
+      </template>
       <FrappeButton
         v-if="
           schemaName === 'Item' &&
@@ -73,6 +83,7 @@ import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, getCreateFiltersFromListViewFilters } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { getFormRoute, openNewDoc, routeTo } from 'src/utils/ui';
+import { isMobile } from 'src/utils/viewport';
 import { QueryFilter } from 'utils/db/types';
 import { defineComponent, inject, ref } from 'vue';
 import List from './List.vue';
@@ -96,6 +107,7 @@ export default defineComponent({
   },
   setup() {
     return {
+      isMobile,
       shortcuts: inject(shortcutsKey),
       list: ref<InstanceType<typeof List> | null>(null),
       exportButton: ref<InstanceType<typeof FrappeButton> | null>(null),

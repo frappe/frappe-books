@@ -149,27 +149,20 @@
           class="border-t border-outline-gray-1 flex-shrink-0"
           :class="templateChanged ? '' : 'mt-auto'"
         >
-          <!-- Value Key Toggle -->
-          <DisclosureButton
-            class="!rounded-none"
-            :expanded="showHints"
-            @toggle="toggleShowHints"
+          <FrappeAccordion
+            :model-value="showHints ? 'hints' : undefined"
+            :items="[{ value: 'hints', title: t`Key Hints` }]"
+            @update:model-value="(value) => (showHints = value === 'hints')"
           >
-            <h2 class="text-base text-ink-gray-9 font-semibold">
-              {{ t`Key Hints` }}
-            </h2>
-          </DisclosureButton>
-
-          <!-- Value Key Hints -->
-          <Transition name="hints">
-            <div
-              v-if="showHints"
-              class="overflow-auto custom-scroll custom-scroll-thumb1 p-2 border-t border-outline-gray-1"
-              style="max-height: 30vh"
-            >
-              <TemplateBuilderHint :hints="hints" />
-            </div>
-          </Transition>
+            <template #item-content>
+              <div
+                class="overflow-auto custom-scroll custom-scroll-thumb1"
+                style="max-height: 30vh"
+              >
+                <TemplateBuilderHint :hints="hints" />
+              </div>
+            </template>
+          </FrappeAccordion>
         </div>
       </div>
     </div>
@@ -186,7 +179,7 @@ import { ModelNameEnum } from 'models/types';
 import { saveExportData } from 'reports/commonExporter';
 import { Field, TargetField } from 'schemas/types';
 import { TextInput as FrappeTextInput, Button as FrappeButton } from 'frappe-ui';
-import DisclosureButton from 'src/components/DisclosureButton.vue';
+import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
@@ -227,7 +220,7 @@ export default defineComponent({
   components: {
     PageHeader,
     FrappeButton,
-    DisclosureButton,
+    FrappeAccordion,
     DropdownWithActions,
     PrintContainer,
     HorizontalResizer,
@@ -684,21 +677,3 @@ export default defineComponent({
   },
 });
 </script>
-
-<style scoped>
-.hints-enter-from,
-.hints-leave-to {
-  opacity: 0;
-  height: 0px;
-}
-.hints-enter-to,
-.hints-leave-from {
-  opacity: 1;
-  height: 30vh;
-}
-
-.hints-enter-active,
-.hints-leave-active {
-  transition: all 150ms ease-out;
-}
-</style>

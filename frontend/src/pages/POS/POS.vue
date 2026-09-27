@@ -9,37 +9,80 @@
         </Button>
       </slot>
     </PageHeader>
-    <component
-      :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'"
-      :table-view="tableView"
-      :profile="posProfile as POSProfile"
-      :total-quantity="totalQuantity"
-      :item-quantity-map="itemQtyMap"
-      :loyalty-points="loyaltyPoints"
-      :loyalty-program="loyaltyProgram"
-      :item-search-term="itemSearchTerm"
-      :selected-item-group="selectedItemGroup"
-      :items="filteredItems as [] as POSItem[]"
-      :search-items="items as [] as POSItem[]"
-      :item-visibility="itemVisibility"
-      :sinv-doc="sinvDoc as SalesInvoice"
-      :disable-pay-button="disablePayButton"
-      :item-discounts="itemDiscounts as Money"
-      :applied-coupons-count="appliedCouponsCount"
-      :expanded-batch-id="expandedBatchId"
-      @set-expanded-batch-id="setExpandedBatchId"
-      @add-item="addItem"
-      @toggle-view="toggleView"
-      @clear-values="clearValues"
-      @set-customer="setCustomer"
-      @toggle-modal="toggleModal"
-      @set-item-group="setItemGroup"
-      @handle-item-search="handleItemSearch"
-      @route-to-sinv-list="routeToSinvList"
-      @save-invoice-action="saveInvoiceAction"
-      @handle-payment-action="handlePaymentAction"
-      @selected-row="selectRow"
-    />
+    <component :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'">
+      <template #items>
+        <POSItemPicker
+          :items="filteredItems as POSItem[]"
+          :search-items="items as POSItem[]"
+          :search-term="itemSearchTerm"
+          :item-group="selectedItemGroup"
+          :table-view="tableView"
+          :split="layout === 'Modern'"
+          @search="handleItemSearch"
+          @set-item-group="setItemGroup"
+          @add-item="addItem"
+        />
+        <div class="flex shrink-0 flex-wrap gap-2 pt-3">
+          <POSQuickActions
+            :table-view="tableView"
+            :sinv-doc="sinvDoc as SalesInvoice"
+            :loyalty-points="loyaltyPoints"
+            :loyalty-program="loyaltyProgram"
+            :applied-coupons-count="appliedCouponsCount"
+            @toggle-view="toggleView"
+            @emit-route-to-sinv-list="routeToSinvList"
+            @toggle-modal="toggleModal"
+          />
+        </div>
+      </template>
+
+      <template #cart>
+        <div class="flex-none">
+          <MultiLabelLink
+            v-if="sinvDoc.fieldMap"
+            class="w-full"
+            secondary-link="phone"
+            :border="true"
+            :value="sinvDoc.party"
+            :df="sinvDoc.fieldMap.party"
+            :show-clear-button="true"
+            @change="setCustomer"
+          />
+        </div>
+        <SelectedItemTable
+          v-if="layout === 'Classic'"
+          :expanded-batch-id="expandedBatchId"
+          @set-expanded-batch-id="setExpandedBatchId"
+          @selected-row="selectRow"
+        />
+        <ModernPOSSelectedItemTable
+          v-else
+          :expanded-batch-id="expandedBatchId"
+          @set-expanded-batch-id="setExpandedBatchId"
+          @selected-row="selectRow"
+          @toggle-modal="toggleModal('Keyboard')"
+        />
+      </template>
+
+      <template #summary>
+        <POSOrderSummary
+          :sinv-doc="sinvDoc as SalesInvoice"
+          :total-quantity="totalQuantity"
+          :item-discounts="itemDiscounts as Money"
+        />
+        <POSInvoiceActions
+          :profile="posProfile as POSProfile"
+          :enable-returns="enableReturns"
+          :disable-pay="disablePayButton"
+          :is-return="!!sinvDoc.isReturn"
+          @save="saveInvoiceAction"
+          @clear="clearValues"
+          @held="toggleModal('SavedInvoice', true)"
+          @return="toggleModal('ReturnSalesInvoice', true)"
+          @pay="handlePaymentAction"
+        />
+      </template>
+    </component>
 
     <OpenPOSShiftModal
       v-if="!isPosShiftOpen"
@@ -117,6 +160,13 @@ import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import ModernPOS from './ModernPOS.vue';
 import ClassicPOS from './ClassicPOS.vue';
+import POSQuickActions from './POSQuickActions.vue';
+import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
+import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
+import POSOrderSummary from 'src/components/POS/POSOrderSummary.vue';
+import POSInvoiceActions from 'src/components/POS/POSInvoiceActions.vue';
+import SelectedItemTable from 'src/components/POS/Classic/SelectedItemTable.vue';
+import ModernPOSSelectedItemTable from 'src/components/POS/Modern/ModernPOSSelectedItemTable.vue';
 import AlertModal from './AlertModal.vue';
 import PaymentModal from './PaymentModal.vue';
 import KeyboardModal from './KeyboardModal.vue';
@@ -160,7 +210,6 @@ import {
   getItemVisibility,
   getMappedDoc,
 } from 'models/helpers';
-import { ItemVisibility } from 'src/components/POS/types';
 import {
   POSItem,
   ItemQtyMap,
@@ -180,6 +229,13 @@ export default defineComponent({
     ModernPOS,
     PageHeader,
     ClassicPOS,
+    POSQuickActions,
+    MultiLabelLink,
+    POSItemPicker,
+    POSOrderSummary,
+    POSInvoiceActions,
+    SelectedItemTable,
+    ModernPOSSelectedItemTable,
     AlertModal,
     PaymentModal,
     KeyboardModal,
@@ -273,7 +329,6 @@ export default defineComponent({
       selectedItemForBatch: '' as string,
       pendingBatchItem: null as { item: POSItem; quantity: number } | null,
       expandedBatchId: undefined as string | null | undefined,
-      itemVisibilityValue: 'Inventory Items' as ItemVisibility,
     };
   },
   computed: {
@@ -287,8 +342,8 @@ export default defineComponent({
     isDiscountingEnabled(): boolean {
       return !!fyo.singles.AccountingSettings?.enableDiscounting;
     },
-    itemVisibility() {
-      return this.itemVisibilityValue;
+    enableReturns(): boolean {
+      return !!fyo.singles.AccountingSettings?.enableInvoiceReturns;
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
@@ -321,7 +376,6 @@ export default defineComponent({
     this.setSinvDoc();
     this.setDefaultCustomer();
     await this.setItemQtyMap();
-    this.itemVisibilityValue = await getItemVisibility(this.fyo);
     await this.setItems();
   },
   async activated() {

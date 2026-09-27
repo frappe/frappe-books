@@ -28,15 +28,6 @@ export const modalNames = [
 
 export type ModalName = typeof modalNames[number];
 
-export type PosEmits =
-  | 'addItem'
-  | 'toggleView'
-  | 'toggleModal'
-  | 'setItemGroup'
-  | 'routeToSinvList'
-  | 'handleItemSearch'
-  | 'handlePaymentAction';
-
 export interface POSItem {
   id?: number;
   image?: string;

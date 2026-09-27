@@ -1,5 +1,9 @@
 <template>
-  <div ref="container" class="flex min-h-0 flex-1 gap-2 pt-2">
+  <div
+    ref="container"
+    class="flex min-h-0 flex-1 gap-2"
+    :class="split ? 'pt-2' : 'pt-4'"
+  >
     <div
       v-for="(columnItems, columnIndex) in itemColumns"
       :key="columnIndex"
@@ -72,12 +76,13 @@ import {
 } from 'frappe-ui/list';
 import { isNumeric } from 'src/utils';
 import { t } from 'fyo';
-import { defineComponent } from 'vue';
+import { defineComponent, PropType } from 'vue';
 import { Field } from 'schemas/types';
-import { POSItem } from '../types';
+import { POSItem } from './types';
 
+/** Items to add to the cart; `split` shows two lists side by side when wide. */
 export default defineComponent({
-  name: 'ModernPOSItemsTable',
+  name: 'ItemsTable',
   components: {
     FrappeList,
     FrappeListCell,
@@ -86,24 +91,20 @@ export default defineComponent({
     FrappeListRow,
     FrappeListRows,
   },
-  emits: ['addItem', 'updateValues'],
+  emits: ['addItem'],
   props: {
-    items: Array,
-    itemQtyMap: Object,
-    itemVisibility: {
-      type: String,
-      default: 'Inventory Items',
-    },
+    items: { type: Array as PropType<POSItem[]>, required: true },
+    split: Boolean,
   },
   data() {
     return {
-      showTwoColumns: false,
+      isWide: false,
       resizeObserver: undefined as ResizeObserver | undefined,
     };
   },
   mounted() {
     this.resizeObserver = new ResizeObserver(([entry]) => {
-      this.showTwoColumns = entry.contentRect.width >= 840;
+      this.isWide = entry.contentRect.width >= 840;
     });
     this.resizeObserver.observe(this.$refs.container as HTMLElement);
   },
@@ -117,45 +118,17 @@ export default defineComponent({
     listColumns(): string[] {
       return this.ratio.map((ratio) => `minmax(0, ${ratio}fr)`);
     },
-    tableFields() {
-      const fields = [
-        {
-          fieldname: 'name',
-          fieldtype: 'Data',
-          label: t`Item`,
-          placeholder: 'Item',
-          readOnly: true,
-        },
-        {
-          fieldname: 'rate',
-          label: t`Rate`,
-          placeholder: 'Rate',
-          fieldtype: 'Currency',
-          readOnly: true,
-        },
-        {
-          fieldname: 'unit',
-          label: t`Unit`,
-          placeholder: 'Unit',
-          fieldtype: 'Data',
-          target: 'UOM',
-          readOnly: true,
-        },
-      ] as Field[];
-
-      fields.splice(2, 0, {
-        fieldname: 'availableQty',
-        label: t`Qty`,
-        placeholder: 'Available Qty',
-        fieldtype: 'Float',
-        readOnly: true,
-      });
-
-      return fields;
+    tableFields(): Field[] {
+      return [
+        { fieldname: 'name', fieldtype: 'Data', label: t`Item` },
+        { fieldname: 'rate', fieldtype: 'Currency', label: t`Rate` },
+        { fieldname: 'availableQty', fieldtype: 'Float', label: t`Qty` },
+        { fieldname: 'unit', fieldtype: 'Data', label: t`Unit` },
+      ];
     },
     itemColumns(): POSItem[][] {
-      const items = (this.items ?? []) as POSItem[];
-      if (!this.showTwoColumns || items.length < 2) return [items];
+      const items = this.items;
+      if (!this.split || !this.isWide || items.length < 2) return [items];
       const midpoint = Math.ceil(items.length / 2);
       return [items.slice(0, midpoint), items.slice(midpoint)];
     },
@@ -163,7 +136,6 @@ export default defineComponent({
   methods: {
     handleChange(value: POSItem) {
       this.$emit('addItem', value);
-      this.$emit('updateValues');
     },
     isNumeric,
   },

@@ -66,6 +66,7 @@ async function mount() {
   const pos = posRef.value;
   await pos.setCustomer('Aarav Shah');
   pos.selectedItemForBatch = items[0].name;
+  pos.setPaymentMethod('Cash');
   state.invoice = pos.sinvDoc;
 
   (window as any).posFixture = {

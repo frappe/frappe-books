@@ -61,10 +61,12 @@ export async function printHtml(html: string): Promise<boolean> {
   popup.document.open();
   popup.document.write(`<!DOCTYPE html>${html}`);
   popup.document.close();
-  void printPopupWhenReady(popup).catch(() => {
+  void printPopupWhenReady(popup).catch((error) => {
     if (!popup.closed) {
       popup.close();
     }
+
+    throw error;
   });
   return true;
 }

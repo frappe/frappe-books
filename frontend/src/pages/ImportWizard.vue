@@ -370,6 +370,7 @@ import {
   getColumnLabel,
   importDoc,
 } from 'src/importer';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { downloadFile } from 'src/utils/browser';
 import { showDialog } from 'src/utils/interactive';
@@ -808,13 +809,10 @@ export default defineComponent({
         return;
       }
 
-      const isValid = this.importer.selectFile(text);
-      if (!isValid) {
-        await showDialog({
-          title: this.t`Cannot read file`,
-          detail: this.t`Bad import data, could not read file.`,
-          type: 'error',
-        });
+      try {
+        this.importer.selectFile(text);
+      } catch (error) {
+        await handleErrorWithDialog(error, undefined, true);
         return;
       }
 

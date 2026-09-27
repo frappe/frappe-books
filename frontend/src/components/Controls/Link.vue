@@ -189,11 +189,8 @@ export default {
         return await getFilters(this.doc);
       }
 
-      try {
-        return await getFilters();
-      } catch {
-        return null;
-      }
+      // Filters that read the document cannot apply without one.
+      return getFilters.length ? null : await getFilters();
     },
   },
 };

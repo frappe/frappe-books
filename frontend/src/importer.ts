@@ -141,15 +141,8 @@ export class Importer {
     this.templateHeadersByFieldKey = headersByFieldKey;
   }
 
-  selectFile(data: string): boolean {
-    try {
-      const parsed = parseCSV(data);
-      this.selectParsed(parsed);
-    } catch {
-      return false;
-    }
-
-    return true;
+  selectFile(data: string) {
+    this.selectParsed(parseCSV(data));
   }
 
   async checkLinks() {

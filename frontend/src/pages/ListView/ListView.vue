@@ -23,17 +23,16 @@
         {{ t`Export` }}
       </Button>
       <FilterDropdown ref="filterDropdown" :schema-name="schemaName" @change="applyFilter" />
-      <Button
+      <FrappeButton
         v-if="canCreate"
         ref="makeNewDocButton"
-        :icon="true"
-        type="primary"
-        :title="t`Create new entry`"
-        :aria-label="t`Create new entry`"
+        variant="solid"
+        size="md"
+        icon="lucide-plus"
+        :label="t`Create new entry`"
+        :tooltip="t`Create new entry`"
         @click="handleMakeNewDoc"
-      >
-        <Icon name="plus" class="w-4 h-4" />
-      </Button>
+      />
     </PageHeader>
     <List
       ref="list"
@@ -60,11 +59,14 @@
 </template>
 <script lang="ts">
 import { Field } from 'schemas/types';
-import { Dropdown as FrappeDropdown, type DropdownOptions } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  Dropdown as FrappeDropdown,
+  type DropdownOptions,
+} from 'frappe-ui';
 import Button from 'src/components/Button.vue';
 import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
-import Icon from 'src/components/Icon.vue';
 import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 
@@ -86,7 +88,7 @@ export default defineComponent({
     List,
     Button,
     FilterDropdown,
-    Icon,
+    FrappeButton,
     Modal,
     ExportWizard,
     FrappeDropdown,
@@ -100,7 +102,7 @@ export default defineComponent({
     return {
       shortcuts: inject(shortcutsKey),
       list: ref<InstanceType<typeof List> | null>(null),
-      makeNewDocButton: ref<InstanceType<typeof Button> | null>(null),
+      makeNewDocButton: ref<InstanceType<typeof FrappeButton> | null>(null),
       exportButton: ref<InstanceType<typeof Button> | null>(null),
       filterDropdown: ref<InstanceType<typeof FilterDropdown> | null>(null),
     };

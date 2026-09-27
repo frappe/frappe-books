@@ -1,9 +1,23 @@
 <template>
   <button
     type="button"
+    :role="selected === undefined ? undefined : 'checkbox'"
+    :aria-checked="selected"
     class="flex min-h-[68px] w-full items-center gap-3 border-b border-outline-gray-1 px-4 py-2.5 text-start active:bg-surface-gray-1"
     @click="$emit('open')"
   >
+    <span
+      v-if="selected !== undefined"
+      class="grid size-5 shrink-0 place-items-center rounded-[5px] border-[1.5px]"
+      :class="
+        selected
+          ? 'border-transparent bg-surface-gray-10 text-ink-base'
+          : 'border-outline-gray-4 bg-surface-base'
+      "
+      aria-hidden="true"
+    >
+      <span v-if="selected" class="lucide-check size-3.5" />
+    </span>
     <FrappeAvatar
       v-if="layout.avatar"
       size="lg"
@@ -53,6 +67,8 @@ export default defineComponent({
   props: {
     row: { type: Object as PropType<RenderData>, required: true },
     layout: { type: Object as PropType<MobileRowLayout>, required: true },
+    /** Set while the list is picking rows; tapping then toggles the row. */
+    selected: { type: Boolean, default: undefined },
   },
   emits: ['open'],
   computed: {

@@ -9,11 +9,14 @@
     :is-loading-more="isLoadingMore"
     :is-filtered="isFiltered"
     :can-create="canCreate"
+    :is-selection-mode="isSelectionMode"
+    :selected-items="selectedItems"
     :refresh="updateData"
     @open-doc="(name: string) => $emit('openDoc', name)"
     @load-more="loadMore"
     @make-new-doc="$emit('makeNewDoc')"
     @clear-filters="$emit('clearFilters')"
+    @update-selection="updateSelection"
   />
   <div v-else class="flex flex-col overflow-hidden text-base">
     <FrappeList
@@ -179,6 +182,11 @@ export default defineComponent({
     },
   },
   watch: {
+    isSelectionMode(isSelecting: boolean) {
+      if (!isSelecting) {
+        this.updateSelection([]);
+      }
+    },
     async schemaName(oldValue, newValue) {
       if (oldValue === newValue) {
         return;

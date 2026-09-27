@@ -3,13 +3,30 @@
     <PageHeader :title="title">
       <template #mobile>
         <FrappeButton
-          v-if="canCreate"
+          v-if="isSelectionMode"
           variant="ghost"
           size="md"
-          icon="lucide-plus"
-          :label="t`Create new entry`"
-          @click="handleMakeNewDoc"
+          :label="t`Cancel`"
+          @click="toggleSelectionMode"
         />
+        <template v-else>
+          <FrappeButton
+            v-if="schemaName === 'Item'"
+            variant="ghost"
+            size="md"
+            icon="lucide-list-checks"
+            :label="t`Select items`"
+            @click="toggleSelectionMode"
+          />
+          <FrappeButton
+            v-if="canCreate"
+            variant="ghost"
+            size="md"
+            icon="lucide-plus"
+            :label="t`Create new entry`"
+            @click="handleMakeNewDoc"
+          />
+        </template>
       </template>
       <FrappeButton
         v-if="
@@ -67,6 +84,29 @@
       @clear-filters="mobileToolbar?.clear()"
       @selected-items-changed="updateSelectedItems"
     />
+    <div
+      v-if="isMobile && isSelectionMode"
+      class="sticky bottom-0 mt-auto flex items-center gap-3 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
+    >
+      <span class="min-w-0 flex-1 text-base text-ink-gray-7">
+        {{ t`${selectedItems.length} selected` }}
+      </span>
+      <FrappeButton
+        size="lg"
+        variant="solid"
+        :label="t`Create`"
+        :disabled="!selectedItems.length"
+        @click="isCreateSheetOpen = true"
+      />
+    </div>
+    <MobileOptionsSheet
+      v-if="isMobile"
+      v-model:open="isCreateSheetOpen"
+      actions
+      :title="t`Create`"
+      :options="createOptions"
+      @select="(value) => createInvoice(String(value))"
+    />
     <ExportWizard
       v-model:open="openExportModal"
       :schema-name="schemaName"
@@ -96,6 +136,7 @@ import { QueryFilter } from 'utils/db/types';
 import { defineComponent, inject, ref } from 'vue';
 import List from './List.vue';
 import { getListColumns } from './listColumns';
+import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import MobileListToolbar from './MobileListToolbar.vue';
 import { getMobileRowLayout } from './mobileRowLayout';
 import { Money } from 'pesa';
@@ -111,6 +152,7 @@ export default defineComponent({
     ExportWizard,
     FrappeDropdown,
     MobileListToolbar,
+    MobileOptionsSheet,
   },
   props: {
     schemaName: { type: String, required: true },
@@ -134,12 +176,14 @@ export default defineComponent({
       listFilters: {},
       isSelectionMode: false,
       selectedItems: [] as string[],
+      isCreateSheetOpen: false,
     } as {
       listConfig: undefined | ReturnType<typeof getListConfig>;
       openExportModal: boolean;
       listFilters: QueryFilter;
       isSelectionMode: boolean;
       selectedItems: string[];
+      isCreateSheetOpen: boolean;
     };
   },
   computed: {
@@ -175,12 +219,16 @@ export default defineComponent({
         fyo.can(this.schemaName, 'create')
       );
     },
-    actionOptions(): DropdownOptions {
+    /** Documents that can be made from the selected items. */
+    createOptions(): { value: string; label: string }[] {
       return [
-        { value: 'SalesQuote', label: 'Sales Quote' },
-        { value: 'SalesInvoice', label: 'Sales Invoice' },
-        { value: 'PurchaseInvoice', label: 'Purchase Invoice' },
-      ].map((option) => ({
+        { value: ModelNameEnum.SalesQuote, label: this.t`Sales Quote` },
+        { value: ModelNameEnum.SalesInvoice, label: this.t`Sales Invoice` },
+        { value: ModelNameEnum.PurchaseInvoice, label: this.t`Purchase Invoice` },
+      ];
+    },
+    actionOptions(): DropdownOptions {
+      return this.createOptions.map((option) => ({
         ...option,
         onClick: () => this.createInvoice(option.value),
       }));

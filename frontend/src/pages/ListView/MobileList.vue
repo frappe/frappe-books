@@ -26,7 +26,10 @@
         :key="String(row.name)"
         :row="row"
         :layout="layout"
-        @open="$emit('openDoc', row.name)"
+        :selected="
+          isSelectionMode ? selectedItems.includes(String(row.name)) : undefined
+        "
+        @open="onTap(String(row.name))"
       />
       <div class="flex flex-col items-center gap-2.5 px-4 pb-6 pt-4">
         <p class="text-sm tabular-nums text-ink-gray-5">
@@ -86,18 +89,39 @@ export default defineComponent({
     isLoadingMore: Boolean,
     isFiltered: Boolean,
     canCreate: Boolean,
+    isSelectionMode: Boolean,
+    selectedItems: { type: Array as PropType<string[]>, default: () => [] },
     refresh: {
       type: Function as PropType<() => Promise<unknown>>,
       required: true,
     },
   },
-  emits: ['openDoc', 'loadMore', 'makeNewDoc', 'clearFilters'],
+  emits: [
+    'openDoc',
+    'loadMore',
+    'makeNewDoc',
+    'clearFilters',
+    'updateSelection',
+  ],
   data() {
     return { skeletonWidths: [140, 110, 160, 120, 150, 100, 130, 145] };
   },
   computed: {
     layout(): MobileRowLayout {
       return getMobileRowLayout(this.schemaName, this.columns);
+    },
+  },
+  methods: {
+    onTap(name: string) {
+      if (!this.isSelectionMode) {
+        this.$emit('openDoc', name);
+        return;
+      }
+
+      const selected = this.selectedItems.includes(name)
+        ? this.selectedItems.filter((item) => item !== name)
+        : [...this.selectedItems, name];
+      this.$emit('updateSelection', selected);
     },
   },
 });

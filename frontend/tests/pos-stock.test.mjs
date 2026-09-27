@@ -11,7 +11,6 @@ import {
   getPOSBatchQuantity,
   setPOSRowQuantity,
   setPOSRowValue,
-  validateActiveSerialNumbers,
   validateSinv,
   validatePOSCheckout,
 } from './helpers/accounting.mjs';
@@ -133,9 +132,9 @@ test('selecting a stocked batch adds to its row and checks the added quantity', 
 
 test('checkout validates against freshly loaded stock', async () => {
   const invoice = { fyo: makeFyo(), items: [{ item, batch, quantity: 2 }] };
-  await validatePOSCheckout(invoice, async () => stockMap(4), {});
+  await validatePOSCheckout(invoice, async () => stockMap(4));
   await assert.rejects(
-    validatePOSCheckout(invoice, async () => stockMap(1), {}),
+    validatePOSCheckout(invoice, async () => stockMap(1)),
     /Available: 1; required: 2/
   );
 });
@@ -144,13 +143,10 @@ test('a payment retry does not require stock that has already shipped', async ()
   const invoice = {
     fyo: makeFyo(),
     isSubmitted: true,
-    stockNotTransferred: false,
     items: [{ item, batch, quantity: 2 }],
   };
-  await validatePOSCheckout(
-    invoice,
-    async () => assert.fail('Stock already shipped'),
-    { [item]: 'SN-1' }
+  await validatePOSCheckout(invoice, async () =>
+    assert.fail('Stock already shipped')
   );
 });
 
@@ -220,28 +216,6 @@ test('a new cart row needs the item in stock', async () => {
     [invoice.items.length, row.quantity, row.transferUnit],
     [1, 2, 'Unit']
   );
-});
-
-test('checkout checks all serial numbers in one query', async () => {
-  const queries = [];
-  const fyo = {
-    db: {
-      getAllRaw: async (_schema, { filters }) => {
-        queries.push(filters);
-        return [{ name: 'SN-1' }, { name: 'SN-3' }];
-      },
-    },
-  };
-  await assert.rejects(
-    validateActiveSerialNumbers(fyo, { A: 'SN-1\nSN-2', B: 'SN-3\n' }),
-    /Serial Number SN-2 status is not Active/
-  );
-  assert.deepEqual(queries, [
-    { name: ['in', ['SN-1', 'SN-2', 'SN-3']], status: 'Active' },
-  ]);
-  await validateActiveSerialNumbers(fyo, { A: 'SN-1', B: 'SN-3' });
-  await validateActiveSerialNumbers(fyo, {});
-  assert.equal(queries.length, 2);
 });
 
 test('a cart row fills serial numbers for sales and keeps a return row’s', async () => {

@@ -199,22 +199,18 @@ async function validateSinvItems(
 }
 
 /**
- * Check a POS checkout against freshly loaded stock. A payment retry skips
- * the check once the invoice's stock has shipped.
+ * Check a POS checkout against freshly loaded stock. A submitted invoice has
+ * shipped, so a payment retry skips the check.
  */
 export async function validatePOSCheckout(
   sinvDoc: SalesInvoice,
-  loadStock: () => Promise<ItemQtyMap>,
-  itemSerialNumbers: ItemSerialNumbers
+  loadStock: () => Promise<ItemQtyMap>
 ) {
-  if (sinvDoc.isSubmitted && !sinvDoc.stockNotTransferred) {
+  if (sinvDoc.isSubmitted) {
     return;
   }
 
   await validateSinv(sinvDoc, await loadStock());
-  if (!sinvDoc.isReturn) {
-    await validateActiveSerialNumbers(sinvDoc.fyo, itemSerialNumbers);
-  }
 }
 
 export type POSRowItem = {
@@ -364,32 +360,6 @@ function newItemRow(
     hsnCode: itemDoc.hsnCode,
     batch,
   };
-}
-
-/** Rejects serial numbers that left stock, before the invoice is submitted. */
-export async function validateActiveSerialNumbers(
-  fyo: Fyo,
-  itemSerialNumbers: ItemSerialNumbers
-) {
-  const serialNumbers = Object.values(itemSerialNumbers)
-    .flatMap((value) => value.split('\n'))
-    .map((value) => value.trim())
-    .filter(Boolean);
-  if (!serialNumbers.length) {
-    return;
-  }
-
-  const active = await fyo.db.getAllRaw(ModelNameEnum.SerialNumber, {
-    fields: ['name'],
-    filters: { name: ['in', serialNumbers], status: 'Active' },
-  });
-  const activeNames = new Set(active.map(({ name }) => name));
-  const inactive = serialNumbers.find((name) => !activeNames.has(name));
-  if (inactive) {
-    throw new ValidationError(
-      t`Serial Number ${inactive} status is not Active.`
-    );
-  }
 }
 
 export function validateIsPosSettingsSet(fyo: Fyo) {

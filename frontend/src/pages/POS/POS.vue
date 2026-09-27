@@ -175,7 +175,6 @@ import { ModelNameEnum } from 'models/types';
 import Button from 'src/components/Button.vue';
 import { showToast } from 'src/utils/interactive';
 import { Item } from 'models/baseModels/Item/Item';
-import { Shipment } from 'models/inventory/Shipment';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import PageHeader from 'src/components/PageHeader.vue';
@@ -217,7 +216,6 @@ import {
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
-import { getPOSInventory } from 'models/inventory/posStock';
 
 const COMPONENT_NAME = 'POS';
 
@@ -808,15 +806,6 @@ export default defineComponent({
           await this.submitSinvDoc();
         }
 
-        const itemVisibility = await getItemVisibility(this.fyo);
-
-        if (
-          this.sinvDoc.stockNotTransferred &&
-          itemVisibility === 'Inventory Items'
-        ) {
-          await this.makeStockTransfer();
-        }
-
         if (isPay) {
           await this.makePayment();
         }
@@ -951,42 +940,6 @@ export default defineComponent({
         });
       }
     },
-    async makeStockTransfer() {
-      const shipmentDoc = (await this.sinvDoc.getStockTransfer()) as Shipment;
-      if (!shipmentDoc.items) {
-        return;
-      }
-
-      const inventory = await getPOSInventory(this.fyo);
-
-      for (const item of shipmentDoc.items) {
-        const trackItem = await fyo.getValue(
-          ModelNameEnum.Item,
-          item.item as string,
-          'trackItem'
-        );
-
-        if (!trackItem) {
-          continue;
-        }
-
-        item.location = inventory;
-
-        item.serialNumber =
-          this.itemSerialNumbers[item.item as string] ?? undefined;
-      }
-
-      shipmentDoc.once('afterSubmit', () => {
-        showToast({
-          type: 'success',
-          message: t`Shipment ${shipmentDoc.name as string} is Submitted`,
-          duration: 'short',
-        });
-      });
-
-      await shipmentDoc.sync();
-      await shipmentDoc.submit();
-    },
     async submitSinvDoc() {
       this.sinvDoc.once('afterSubmit', () => {
         showToast({
@@ -1060,8 +1013,7 @@ export default defineComponent({
           await this.setItemQtyMap();
           await this.setItems();
           return this.itemQtyMap;
-        },
-        this.itemSerialNumbers
+        }
       );
     },
     async previewInvoice() {

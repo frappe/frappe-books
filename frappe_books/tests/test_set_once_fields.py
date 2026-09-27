@@ -1,0 +1,66 @@
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from frappe_books.tests.accounting import make_account, make_item, make_number_series
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
+
+
+class IntegrationTestSetOnceFields(IntegrationTestCase):
+	def test_item_stock_settings_cannot_change_after_insert(self):
+		account = make_account("Set Once Expense", root_type="Expense").name
+		unit = frappe.get_doc({"doctype": "Books Uom", "name": frappe.generate_hash()}).insert().name
+		for fieldname, value in (
+			("unit", unit),
+			("item_type", "Service"),
+			("track_item", 1),
+			("has_batch", 1),
+			("has_serial_number", 1),
+		):
+			with self.subTest(fieldname=fieldname):
+				item = make_item(account, account)
+				item.set(fieldname, value)
+				self.assertRaises(frappe.CannotChangeConstantError, item.save)
+
+	def test_account_tree_fields_cannot_change_after_insert(self):
+		group = make_account("Set Once Group", is_group=1)
+		for fieldname, value in (
+			("root_type", "Expense"),
+			("parent_books_account", group.name),
+			("is_group", 1),
+		):
+			with self.subTest(fieldname=fieldname):
+				account = make_account("Set Once Account")
+				account.set(fieldname, value)
+				self.assertRaises(frappe.CannotChangeConstantError, account.save)
+
+	def test_account_type_is_empty_until_chosen(self):
+		account = make_account("Untyped Account")
+
+		self.assertFalse(frappe.db.get_value("Books Account", account.name, "account_type"))
+
+	def test_account_type_can_be_set_once_when_empty(self):
+		account = make_account("Set Once Type")
+		account.account_type = "Bank"
+		account.save()
+
+		for value in ("Cash", None):
+			with self.subTest(value=value):
+				account.reload()
+				account.account_type = value
+				self.assertRaises(frappe.CannotChangeConstantError, account.save)
+
+	def test_number_series_format_cannot_change_after_insert(self):
+		for fieldname, value in (("reference_type", "Payment"), ("pad_zeros", 6), ("start", 50)):
+			with self.subTest(fieldname=fieldname):
+				series = frappe.get_doc("Books Number Series", make_number_series("SalesInvoice"))
+				series.set(fieldname, value)
+				self.assertRaises(frappe.CannotChangeConstantError, series.save)
+
+	def test_interface_can_save_unchanged_locked_fields(self):
+		bridge = BooksDatabaseBridge()
+		account = make_account("Set Once Root", is_group=1)
+		values = bridge.get("Account", account.name)
+
+		bridge.update("Account", {**values, "accountType": "Bank"})
+
+		self.assertEqual(frappe.db.get_value("Books Account", account.name, "account_type"), "Bank")

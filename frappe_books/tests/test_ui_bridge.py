@@ -28,9 +28,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 	def test_account_crud_keeps_frappe_tree_indices(self):
 		name = unique_name("UI Tree Account")
-		parent = make_account("UI Tree Root")
-		parent.is_group = 1
-		parent.save()
+		parent = make_account("UI Tree Root", is_group=1)
 		self.bridge.insert(
 			"Account",
 			{
@@ -283,7 +281,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 	def test_numeric_strings_are_coerced_before_controller_validation(self):
 		income = make_account("Bridge Numeric Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Bridge Numeric Expense", root_type="Expense", account_type="Expense Account")
-		item = make_item(income.name, expense.name, rate=10)
+		item = make_item(income.name, expense.name, rate=10, track_item=1)
 		inserted = self.bridge.get("Item", item.name)
 
 		updated = self.bridge.update(

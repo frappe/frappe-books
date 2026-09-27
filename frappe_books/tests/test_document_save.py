@@ -56,8 +56,8 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 				)
 
 	def test_failed_series_creation_fails_the_item_update(self):
-		item = make_item(self.income.name, self.expense.name)
-		item.update({"has_batch": 1, "batch_series": unique_name("Rejected Update Batch")})
+		item = make_item(self.income.name, self.expense.name, has_batch=1, batch_series=unique_name("Batch"))
+		item.batch_series = unique_name("Rejected Update Batch")
 		with patch.object(BooksBatchSeries, "validate", self.reject_save, create=True):
 			with self.assertRaises(frappe.ValidationError):
 				item.save()

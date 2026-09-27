@@ -40,24 +40,31 @@ for (const [schemaName, values] of Object.entries(documents)) {
   });
 }
 
-test('Payment print values format the invoice taxes', async () => {
+test('Payment print values show the tax share it settles', async () => {
   const { doc } = await getValues(
     'Payment',
     {
-      amount: 110,
-      amountPaid: 110,
+      amount: 55,
+      amountPaid: 55,
       referenceType: 'SalesInvoice',
-      for: [{ referenceType: 'SalesInvoice', referenceName: 'SINV-1' }],
+      for: [
+        {
+          referenceType: 'SalesInvoice',
+          referenceName: 'SINV-1',
+          amount: 55,
+        },
+      ],
     },
     (fyo) => ({
       SalesInvoice: fyo.doc.getNewDoc('SalesInvoice', {
+        baseGrandTotal: fyo.pesa(110),
+        exchangeRate: 1,
         taxes: [{ account: 'CGST', amount: fyo.pesa(10) }],
       }),
     })
   );
-  assert.equal(doc.subTotal, '100.00');
-  assert.equal(doc.taxes[0].account, 'CGST');
-  assert.equal(doc.taxes[0].amount, '10.00');
+  assert.equal(doc.subTotal, '50.00');
+  assert.deepEqual(doc.taxes, [{ account: 'CGST', amount: '5.00' }]);
 });
 
 test('JournalEntry print values have no totals', async () => {

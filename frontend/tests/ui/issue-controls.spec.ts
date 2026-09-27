@@ -1,48 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { build, preview, loadConfigFromFile, type PreviewServer } from 'vite';
+import { serveFixture } from './helpers/fixture-server';
 
-let server: PreviewServer;
-let outputDirectory: string;
-let fixtureUrl: string;
-
-test.beforeAll(async () => {
-  const loaded = await loadConfigFromFile(
-    { command: 'serve', mode: 'test' },
-    path.resolve(__dirname, '../../vite.config.ts')
-  );
-  outputDirectory = await mkdtemp(path.join(tmpdir(), 'books-issue-controls-'));
-  const config = {
-    ...loaded!.config,
-    configFile: false,
-    logLevel: 'error' as const,
-    build: {
-      ...loaded!.config.build,
-      outDir: outputDirectory,
-      rollupOptions: {
-        input: path.resolve(__dirname, 'fixtures/issue-controls.html'),
-      },
-    },
-    preview: { host: '127.0.0.1', port: 0, proxy: {} },
-  } as const;
-  await build(config);
-  server = await preview(config);
-  fixtureUrl = `${server.resolvedUrls!.local[0]}tests/ui/fixtures/issue-controls.html`;
-});
-
-test.afterAll(async () => {
-  if (server)
-    await new Promise<void>((resolve) =>
-      server.httpServer.close(() => resolve())
-    );
-  if (outputDirectory)
-    await rm(outputDirectory, { recursive: true, force: true });
-});
+const fixtureUrl = serveFixture('issue-controls');
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(fixtureUrl);
+  await page.goto(fixtureUrl());
   await page.getByRole('button', { name: 'Before fields' }).waitFor();
 });
 

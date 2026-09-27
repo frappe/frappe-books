@@ -1,29 +1,15 @@
-import { expect, test, type Cookie } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { openBooks } from './helpers/books-session';
 
 const accountNames = [
   'Sidebar Account A',
   'Sidebar Account B',
   'Sidebar Account C',
 ];
-let cookies: Cookie[];
 
-test.beforeAll(async ({ browser, baseURL }) => {
-  const context = await browser.newContext({ baseURL });
-  const response = await context.request.post('/api/method/login', {
-    form: {
-      usr: process.env.BOOKS_TEST_USER ?? 'Administrator',
-      pwd: process.env.BOOKS_TEST_PASSWORD ?? 'admin',
-    },
-  });
-  expect(response.ok()).toBe(true);
-  cookies = await context.cookies();
-  await context.close();
-});
+openBooks();
 
 test.beforeEach(async ({ page }) => {
-  await page.context().addCookies(cookies);
-  await page.goto('/books');
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).waitFor();
   await page.evaluate(async (names) => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins

@@ -12,7 +12,7 @@ from frappe_books.coa import (
 )
 from frappe_books.currency import currency_fraction_values, currency_precision
 from frappe_books.regional import ensure_regional_records
-from frappe_books.setup import DEFAULT_NUMBER_SERIES
+from frappe_books.series import NUMBER_SERIES
 
 
 def run_setup(wizard):
@@ -158,7 +158,7 @@ def _update_defaults(bank_account, accounts):
 			"purchase_payment_account": bank_account,
 			"shipment_location": "Stores",
 			"purchase_receipt_location": "Stores",
-			**{field: prefix for prefix, (_type, field) in DEFAULT_NUMBER_SERIES.items() if field},
+			**{field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field},
 		}
 	)
 	defaults.save(ignore_permissions=True)

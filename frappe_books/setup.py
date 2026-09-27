@@ -5,6 +5,7 @@ from pathlib import Path
 import frappe
 
 from frappe_books.customization import sync_all_custom_forms
+from frappe_books.series import NUMBER_SERIES
 
 DEFAULT_SERIES_START = 1001
 DEFAULT_PRINT_TEMPLATES = {
@@ -24,24 +25,12 @@ DEFAULT_PRINT_TEMPLATE_FIELDS = {
 	"pos_print_template": "Business-POS - Sales Invoice",
 }
 PRINT_TEMPLATE_DIRECTORY = Path(__file__).with_name("data")
-# Prefix: (reference type, Books Defaults field that selects it)
-DEFAULT_NUMBER_SERIES = {
-	"JV-": ("JournalEntry", "journal_entry_number_series"),
-	"PAY-": ("Payment", "payment_number_series"),
-	"PINV-": ("PurchaseInvoice", "purchase_invoice_number_series"),
-	"PRLE-": ("PricingRule", None),
-	"PREC-": ("PurchaseReceipt", "purchase_receipt_number_series"),
-	"SHPM-": ("Shipment", "shipment_number_series"),
-	"SINV-": ("SalesInvoice", "sales_invoice_number_series"),
-	"SMOV-": ("StockMovement", "stock_movement_number_series"),
-	"SQUOT-": ("SalesQuote", "sales_quote_number_series"),
-}
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
 
 
 def bootstrap():
 	"""Seed the records every Books site needs. Runs after install and before tests."""
-	for prefix, (reference_type, _field) in DEFAULT_NUMBER_SERIES.items():
+	for prefix, reference_type, _field in NUMBER_SERIES.values():
 		values = {"start": DEFAULT_SERIES_START, "pad_zeros": 4, "reference_type": reference_type}
 		_insert_if_missing("Books Number Series", prefix, values)
 	for name, is_whole in DEFAULT_UOMS.items():

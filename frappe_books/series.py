@@ -6,6 +6,18 @@ import frappe
 from frappe import _
 
 INVALID_PREFIX = re.compile(r"[/=?&%]")
+# Doctype: (standard prefix, series reference type, Books Defaults field that selects its series)
+NUMBER_SERIES = {
+	"Books Journal Entry": ("JV-", "JournalEntry", "journal_entry_number_series"),
+	"Books Payment": ("PAY-", "Payment", "payment_number_series"),
+	"Books Purchase Invoice": ("PINV-", "PurchaseInvoice", "purchase_invoice_number_series"),
+	"Books Pricing Rule": ("PRLE-", "PricingRule", None),
+	"Books Purchase Receipt": ("PREC-", "PurchaseReceipt", "purchase_receipt_number_series"),
+	"Books Shipment": ("SHPM-", "Shipment", "shipment_number_series"),
+	"Books Sales Invoice": ("SINV-", "SalesInvoice", "sales_invoice_number_series"),
+	"Books Stock Movement": ("SMOV-", "StockMovement", "stock_movement_number_series"),
+	"Books Sales Quote": ("SQUOT-", "SalesQuote", "sales_quote_number_series"),
+}
 # Named doctype: (item flag, item series field, series doctype)
 ITEM_SERIES = {
 	"Books Batch": ("has_batch", "batch_series", "Books Batch Series"),
@@ -15,9 +27,14 @@ ITEM_SERIES = {
 
 class SeriesNamingMixin:
 	def autoname(self):
-		prefix = self.get("number_series")
-		if prefix:
-			self.name = next_name(prefix)
+		self.number_series = self.number_series or default_series(self.doctype)
+		self.name = next_name(self.number_series)
+
+
+def default_series(doctype):
+	"""Return the number series Books Defaults sets for the doctype, else its standard prefix."""
+	prefix, _reference_type, defaults_field = NUMBER_SERIES[doctype]
+	return (defaults_field and frappe.db.get_single_value("Books Defaults", defaults_field)) or prefix
 
 
 def next_name(prefix):

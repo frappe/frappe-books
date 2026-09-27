@@ -59,7 +59,6 @@
    "label": "Default"
   },
   {
-   "default": "PINV-",
    "fieldname": "number_series",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -289,7 +288,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-27 10:00:00.000000",
+ "modified": "2026-09-28 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Purchase Invoice",

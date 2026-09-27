@@ -62,6 +62,18 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 		).insert()
 		self.assertFalse(party.gstin)
 
+	def test_default_account_follows_the_role(self):
+		receivable = make_account("Role Receivable", account_type="Receivable")
+		payable = make_account("Role Payable", root_type="Liability", account_type="Payable")
+		for account, role, message in (
+			(payable, "Customer", "must be of type Receivable,"),
+			(receivable, "Supplier", "must be of type Payable,"),
+		):
+			with self.subTest(role=role), self.assertRaisesRegex(frappe.ValidationError, message):
+				make_party(account.name, role=role)
+
+		self.assertEqual(make_party(payable.name, role="Both").default_account, payable.name)
+
 	def test_stale_party_save_cannot_reset_outstanding(self):
 		receivable = make_account("Stale Receivable", account_type="Receivable")
 		income = make_account("Stale Income", root_type="Income")

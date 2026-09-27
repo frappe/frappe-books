@@ -171,6 +171,9 @@ export function getMakeInvoiceAction(
     | ModelNameEnum.SalesQuote
 ): Action {
   const isPurchase = schemaName === ModelNameEnum.PurchaseReceipt;
+  const [invoiceSchemaName, mapper] = isPurchase
+    ? [ModelNameEnum.PurchaseInvoice, 'make_purchase_invoice']
+    : [ModelNameEnum.SalesInvoice, 'make_sales_invoice'];
   return {
     label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
@@ -182,17 +185,7 @@ export function getMakeInvoiceAction(
       }
     },
     action: async (doc: Doc) => {
-      const invoice = isPurchase
-        ? await getMappedDoc(
-            doc,
-            ModelNameEnum.PurchaseInvoice,
-            'make_purchase_invoice'
-          )
-        : await getMappedDoc(
-            doc,
-            ModelNameEnum.SalesInvoice,
-            'make_sales_invoice'
-          );
+      const invoice = await getMappedDoc(doc, invoiceSchemaName, mapper);
       if (!invoice.name) {
         return;
       }

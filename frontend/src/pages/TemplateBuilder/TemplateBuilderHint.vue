@@ -1,89 +1,85 @@
 <template>
-  <div :class="level > 0 ? 'ms-2 ps-2 border-l border-outline-gray-1' : ''">
-    <template v-for="r of rows" :key="r.key">
-      <DisclosureButton
-        v-if="r.isCollapsible"
-        class="text-ink-gray-6"
-        :expanded="!r.collapsed"
-        @toggle="r.collapsed = !r.collapsed"
-      >
-        <span class="flex min-w-0 flex-wrap items-center gap-2">
-          <span class="min-w-0 break-all">{{ getKey(r) }}</span>
-          <FrappeBadge :theme="Array.isArray(r.value) ? 'blue' : 'red'" variant="subtle" size="sm">
-            {{ Array.isArray(r.value) ? t`Array` : t`Object` }}
-          </FrappeBadge>
-        </span>
-      </DisclosureButton>
-      <div
-        v-else
-        class="flex gap-2 px-2 py-1.5 text-sm text-ink-gray-6 whitespace-nowrap overflow-auto no-scrollbar"
-      >
-        <div>{{ getKey(r) }}</div>
-        <div class="font-semibold text-ink-gray-8">
-          {{ r.value }}
-        </div>
-      </div>
-      <div v-if="!r.collapsed && typeof r.value === 'object'">
-        <TemplateBuilderHint
-          :prefix="getKey(r)"
-          :hints="Array.isArray(r.value) ? r.value[0] : r.value"
-          :level="level + 1"
-        />
-      </div>
+  <FrappeTree
+    v-model:expanded="expanded"
+    :nodes="nodes"
+    node-key="path"
+    :aria-label="t`Template keys`"
+  >
+    <template #item-label="{ node }">
+      <span class="min-w-0 truncate text-sm text-ink-gray-6">
+        {{ node.label }}
+      </span>
     </template>
-  </div>
+    <template #item-suffix="{ node }">
+      <FrappeBadge
+        v-if="node.children"
+        :theme="node.isArray ? 'blue' : 'red'"
+        size="sm"
+      >
+        {{ node.isArray ? t`Array` : t`Object` }}
+      </FrappeBadge>
+      <span v-else class="truncate text-sm font-semibold text-ink-gray-8">
+        {{ node.value }}
+      </span>
+    </template>
+  </FrappeTree>
 </template>
 <script lang="ts">
+import { Badge as FrappeBadge, Tree as FrappeTree } from 'frappe-ui';
 import { PrintTemplateHint } from 'src/utils/printTemplates';
-import { Badge as FrappeBadge } from 'frappe-ui';
-import DisclosureButton from 'src/components/DisclosureButton.vue';
-import { PropType } from 'vue';
-import { defineComponent } from 'vue';
-type HintRow = {
-  key: string;
-  value: PrintTemplateHint[string];
-  isCollapsible: boolean;
-  collapsed: boolean;
+import { defineComponent, PropType } from 'vue';
+
+type HintNode = {
+  path: string;
+  label: string;
+  value?: string;
+  isArray?: boolean;
+  children?: HintNode[];
 };
+
 export default defineComponent({
   name: 'TemplateBuilderHint',
-  components: { FrappeBadge, DisclosureButton },
+  components: { FrappeBadge, FrappeTree },
   props: {
-    prefix: { type: String, default: '' },
     hints: {
       type: Object as PropType<PrintTemplateHint>,
       required: true,
     },
-    level: { type: Number, default: 0 },
   },
   data() {
-    return { rows: [] } as {
-      rows: HintRow[];
-    };
+    return { expanded: [] as string[] };
   },
-  mounted() {
-    this.rows = Object.entries(this.hints)
-      .map(([key, value]) => ({
-        key,
-        value,
-        isCollapsible: typeof value === 'object',
-        collapsed: this.level > 0,
-      }))
-      .sort((a, b) => Number(a.isCollapsible) - Number(b.isCollapsible));
+  computed: {
+    nodes(): HintNode[] {
+      return getHintNodes(this.hints, '');
+    },
   },
-  methods: {
-    getKey(row: HintRow) {
-      const isArray = Array.isArray(row.value);
-      if (isArray) {
-        return `${this.prefix}.${row.key}[number]`;
-      }
-
-      if (this.prefix.length) {
-        return `${this.prefix}.${row.key}`;
-      }
-
-      return row.key;
+  watch: {
+    nodes: {
+      handler(nodes: HintNode[]) {
+        this.expanded = nodes
+          .filter((node) => node.children)
+          .map((node) => node.path);
+      },
+      immediate: true,
     },
   },
 });
+
+/** Leaf keys first, then objects and arrays, as template paths. */
+function getHintNodes(hints: PrintTemplateHint, prefix: string): HintNode[] {
+  return Object.entries(hints)
+    .map(([key, value]): HintNode => {
+      if (typeof value === 'string') {
+        const path = prefix ? `${prefix}.${key}` : key;
+        return { path, label: path, value };
+      }
+
+      const isArray = Array.isArray(value);
+      const path = isArray ? `${prefix}.${key}[number]` : prefix ? `${prefix}.${key}` : key;
+      const children = getHintNodes(Array.isArray(value) ? value[0] : value, path);
+      return { path, label: path, isArray, children };
+    })
+    .sort((a, b) => Number(!!a.children) - Number(!!b.children));
+}
 </script>

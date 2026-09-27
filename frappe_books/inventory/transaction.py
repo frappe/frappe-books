@@ -18,7 +18,7 @@ from frappe_books.inventory.stock import (
 	validate_stock_available,
 	validate_transfer_rows,
 )
-from frappe_books.inventory.valuation import transaction_stock_value
+from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
 
 # Transfer fields that an invoice made from the transfer must not copy.
@@ -73,7 +73,7 @@ class StockTransferController(SeriesNamingMixin, Document):
 		validate_stock_available(reverse_transfers(transfer_rows(self)), self.date)
 
 	def on_submit(self):
-		create_stock_entries(self, transfer_rows(self))
+		create_stock_entries(self, valued_transfer_rows(self))
 		post_stock_accounts(self)
 		update_invoice_balance(self)
 		self.update_returned_status()
@@ -162,9 +162,18 @@ def transfer_rows(transaction):
 				"rate": row.rate,
 				"batch": row.batch,
 				"serial_number": row.serial_number,
-				"at_valuation_rate": is_return and transaction.transfer_type == "sales",
 			}
 		)
+	return rows
+
+
+def valued_transfer_rows(transaction):
+	"""Return the transfer rows, with a sales return valued at the cost its shipment took out."""
+	rows = transfer_rows(transaction)
+	if transaction.transfer_type == "sales" and transaction.return_against:
+		rates = outgoing_rates(transaction.doctype, transaction.return_against)
+		for row in rows:
+			row["rate"] = rates[row["item"], row["batch"] or ""]
 	return rows
 
 

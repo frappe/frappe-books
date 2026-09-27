@@ -1,7 +1,7 @@
 """FIFO stock valuation stored on each stock ledger entry."""
 
 import json
-from collections import deque
+from collections import defaultdict, deque
 
 import frappe
 from frappe.query_builder import Order
@@ -13,17 +13,10 @@ KEY_FIELDS = ["item", "location", "batch"]
 STATE_FIELDS = ["name", "date", "quantity", "rate", "balance_quantity", "balance_value", "stock_queue"]
 
 
-def insert_entry(values, at_valuation_rate=False):
-	"""Insert a stock ledger entry with its FIFO state and restate any later entries.
-
-	An entry at valuation rate rejoins stock at the current valuation, or at its
-	own rate when nothing is in stock.
-	"""
+def insert_entry(values):
+	"""Insert a stock ledger entry with its FIFO state and restate any later entries."""
 	values = frappe._dict(values)
-	previous = _entry_before(values, values.date)
-	if at_valuation_rate and previous and as_decimal(previous.balance_quantity) > 0:
-		values.rate = rounded(_valuation_rate(previous.balance_value, previous.balance_quantity))
-	state = next_state(previous, values.quantity, values.rate)
+	state = next_state(_entry_before(values, values.date), values.quantity, values.rate)
 	entry = frappe.get_doc({"doctype": DOCTYPE, **values, **state}).insert(ignore_permissions=True)
 	restate_after(entry, entry)
 	return entry
@@ -81,6 +74,22 @@ def transaction_stock_value(transaction):
 	return rounded(sum((as_decimal(value) for value in values), as_decimal(0)))
 
 
+def outgoing_rates(reference_type, reference_name):
+	"""Map (item, batch) to the average rate at which a transaction took stock out."""
+	entries = frappe.get_all(
+		DOCTYPE,
+		filters={"reference_type": reference_type, "reference_name": reference_name, "quantity": ["<", 0]},
+		fields=["item", "batch", "value_change", "quantity"],
+	)
+	values = defaultdict(as_decimal)
+	quantities = defaultdict(as_decimal)
+	for entry in entries:
+		key = (entry.item, entry.batch or "")
+		values[key] += as_decimal(entry.value_change)
+		quantities[key] += as_decimal(entry.quantity)
+	return {key: values[key] / quantities[key] for key in values}
+
+
 def _entry_before(row, date, name=None):
 	"""Return the latest entry of the row's stock key before a position; a new entry goes last on its date."""
 	sle = frappe.qb.DocType(DOCTYPE)
@@ -128,10 +137,6 @@ def _consume_layers(queue, quantity, rate):
 			queue.popleft()
 	# Stock that was never received is valued at the entry's own rate.
 	return value_change - remaining * rate
-
-
-def _valuation_rate(value, quantity):
-	return as_decimal(value) / as_decimal(quantity) if as_decimal(quantity) else as_decimal(0)
 
 
 def _plain(value):

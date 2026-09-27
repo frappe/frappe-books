@@ -185,6 +185,11 @@ test('leaving a sale with items asks in a sheet', async ({ page }) => {
   await expect(sheet).toBeHidden();
 });
 
+test('opening a saved invoice shows its cart', async ({ page }) => {
+  await page.evaluate(() => (window as any).posFixture.openSavedInvoice());
+  await expectSheet(page.getByRole('dialog', { name: 'Cart' }));
+});
+
 async function expectSheet(sheet: Locator) {
   await expect(sheet).toBeVisible();
   await expect(sheet).toHaveClass(/rounded-t-\[36px\]/);

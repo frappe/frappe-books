@@ -94,6 +94,16 @@ async function mount() {
       shift.open = false;
       pos.isPosShiftOpen = false;
     },
+    /** Loads a saved, unsubmitted invoice as the Saved Invoices sheet does. */
+    openSavedInvoice() {
+      const invoice = fyo.doc.getNewDoc('SalesInvoice', {
+        name: 'SINV-SAVED',
+        isPOS: true,
+        items: [{ item: items[0].name, quantity: 1, transferQuantity: 1 }],
+      });
+      invoice._notInserted = false;
+      pos.sinvDoc = invoice;
+    },
     fillCart() {
       state.invoice.items = items.slice(0, 3).map((item, index) =>
         fyo.doc.getNewDoc('SalesInvoiceItem', {

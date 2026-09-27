@@ -22,6 +22,12 @@ const metaFieldnames: Record<string, string[]> = {
   [ModelNameEnum.Payment]: ['name', 'date', 'paymentType'],
 };
 
+/** Schemas whose rows start with an initials avatar. */
+const avatarShapes: Record<string, MobileRowLayout['avatar']> = {
+  [ModelNameEnum.Party]: 'circle',
+  [ModelNameEnum.Item]: 'square',
+};
+
 /**
  * Line 1 is the party (or the first text column) and the first currency
  * column. Line 2 is the other text columns, dates last, and the badge.
@@ -47,7 +53,7 @@ export function getMobileRowLayout(
       schemaName,
       text.filter((column) => column !== title)
     ),
-    avatar: getAvatarShape(schemaName),
+    avatar: avatarShapes[schemaName],
   };
 }
 
@@ -65,17 +71,6 @@ function getMetaColumns(schemaName: string, columns: ListColumn[]) {
     ...columns.filter((column) => !isDate(column)),
     ...columns.filter(isDate),
   ];
-}
-
-function getAvatarShape(schemaName: string): MobileRowLayout['avatar'] {
-  const hasImage = fyo.schemaMap[schemaName]?.fields.some(
-    (field) => field.fieldtype === 'AttachImage'
-  );
-  if (!hasImage) {
-    return;
-  }
-
-  return schemaName === ModelNameEnum.Party ? 'circle' : 'square';
 }
 
 /** Pay entries read as money going out; zero outstanding is left blank. */

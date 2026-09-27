@@ -77,6 +77,34 @@ class IntegrationTestValuation(IntegrationTestCase):
 		self.assertEqual(entry.balance_quantity, 2)
 		self.assertEqual(Decimal(str(entry.balance_value)), Decimal("20"))
 
+	def test_backdated_issue_needs_stock_at_its_date_and_after(self):
+		now = now_datetime()
+		move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-3))
+		move(self.item, "MaterialIssue", 5, 10, add_to_date(now, hours=-1))
+		move(self.item, "MaterialReceipt", 5, 10, now)
+
+		for hours in (-4, -2):
+			with self.subTest(hours=hours):
+				self.assertRaisesRegex(
+					frappe.ValidationError,
+					"Insufficient stock",
+					move,
+					self.item,
+					"MaterialIssue",
+					2,
+					10,
+					add_to_date(now, hours=hours),
+				)
+		move(self.item, "MaterialIssue", 5, 10, add_to_date(now, hours=1))
+
+	def test_receipt_used_by_a_later_issue_cannot_be_cancelled(self):
+		now = now_datetime()
+		receipt = move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-3))
+		move(self.item, "MaterialIssue", 5, 10, add_to_date(now, hours=-2))
+		move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-1))
+
+		self.assertRaisesRegex(frappe.ValidationError, "Insufficient stock", receipt.cancel)
+
 	def test_patch_stores_state_on_existing_entries(self):
 		move(self.item, "MaterialReceipt", 4, 10)
 		move(self.item, "MaterialReceipt", 2, 20)

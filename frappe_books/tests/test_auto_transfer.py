@@ -44,6 +44,17 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertEqual(stock_quantity(item.name, location.name), 1)
 		self.assertEqual(stock_quantity(item.name, "Stores"), 0)
 
+	def test_pos_invoice_submit_rejects_serial_numbers_out_of_stock(self):
+		invoice, item, _location = self._make_pos_invoice(use_profile=False)
+		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)
+		serial_numbers = [unique_name("SN") for _ in range(2)]
+		invoice.items[0].serial_number = "\n".join(serial_numbers)
+		invoice.save()
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, f"{serial_numbers[0]} is not available", invoice.submit
+		)
+
 	def test_sales_invoice_creates_and_cancels_shipment(self):
 		invoice, item = self._sales_invoice(make_auto_stock_transfer=1)
 		invoice.submit()
@@ -287,6 +298,5 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 			item.name,
 			income.name,
 			is_pos=1,
-			make_auto_stock_transfer=1,
 		)
 		return invoice, item, location

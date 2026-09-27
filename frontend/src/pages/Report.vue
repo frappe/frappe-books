@@ -5,9 +5,9 @@
         <FrappeButton
           variant="ghost"
           size="md"
-          icon="lucide-ellipsis"
-          :label="t`Print or export`"
-          @click="exportSheetOpen = true"
+          icon="lucide-printer"
+          :label="t`Print`"
+          @click="routeTo(`/report-print/${reportClassName}`)"
         />
         <span class="relative">
           <FrappeButton
@@ -59,13 +59,6 @@
         :defaults="filterDefaults"
         @apply="reload"
       />
-      <MobileOptionsSheet
-        v-model:open="exportSheetOpen"
-        actions
-        :title="title"
-        :options="exportOptions"
-        @select="(value) => runExport(String(value))"
-      />
     </template>
 
     <!-- Filters -->
@@ -98,7 +91,6 @@ import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { reports } from 'reports';
-import { exportReport } from 'reports/commonExporter';
 import { Report } from 'reports/Report';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
@@ -109,9 +101,6 @@ import {
   MobileFilters,
   getDefaultFilters,
 } from 'src/components/Report/Mobile/MobileFilters';
-import MobileOptionsSheet, {
-  SheetOption,
-} from 'src/mobile/MobileOptionsSheet.vue';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
 import MobileReportFilters from 'src/components/Report/Mobile/MobileReportFilters.vue';
 import MobileReportSkeleton from 'src/components/Report/Mobile/MobileReportSkeleton.vue';
@@ -130,7 +119,6 @@ export default defineComponent({
     ListReport,
     DropdownWithActions,
     FrappeButton,
-    MobileOptionsSheet,
     MobileReport,
     MobileReportFilters,
     MobileReportSkeleton,
@@ -159,7 +147,6 @@ export default defineComponent({
       report: null as null | Report,
       filterDefaults: {} as FilterValues,
       filtersOpen: false,
-      exportSheetOpen: false,
     };
   },
   computed: {
@@ -192,18 +179,6 @@ export default defineComponent({
         new MobileFilters(this.report as Report, this.filterDefaults)
           .hasChanges
       );
-    },
-    exportOptions(): SheetOption[] {
-      return [
-        { value: 'print', label: t`Print`, icon: 'lucide-printer' },
-        {
-          value: 'csv',
-          label: t`Export as CSV`,
-          icon: 'lucide-file-spreadsheet',
-        },
-        { value: 'json', label: t`Export as JSON`, icon: 'lucide-file-json' },
-        { value: 'pdf', label: t`Save as PDF`, icon: 'lucide-file-down' },
-      ];
     },
   },
   async activated() {
@@ -264,15 +239,6 @@ export default defineComponent({
     async clearFilters() {
       await this.report?.setFilters(this.filterDefaults);
       await this.reload();
-    },
-    async runExport(value: string) {
-      if (value === 'csv' || value === 'json') {
-        await exportReport(value, this.report as Report);
-        return;
-      }
-
-      // The print view saves the PDF, as on desktop.
-      await routeTo(`/report-print/${this.reportClassName}`);
     },
   },
 });

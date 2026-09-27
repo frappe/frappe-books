@@ -73,6 +73,14 @@ class IntegrationTestFilters(IntegrationTestCase):
 		self.assert_rows({"userRemark": ["=", "Beta", "=", "Beta"]}, [3])
 		self.assert_rows({}, range(5))
 
+	def test_or_filters_match_any_field_within_the_filters(self):
+		query = fixture_filters({"entryType": "Journal Entry"}, self.names)
+		or_filters = {"userRemark": ["like", "%Beta%"], "referenceNumber": ["like", "%2%"]}
+		rows = self.bridge.get_all("JournalEntry", {"fields": ["name"], "filters": query, "orFilters": or_filters})
+
+		self.assertEqual({row["name"] for row in rows}, {self.names[2]})
+		self.assertEqual(self.bridge.count("JournalEntry", query, or_filters), 1)
+
 	def test_date_datetime_and_select_comparisons(self):
 		for field, pivot in [("date", "2024-01-03"), ("created", "2024-01-03 12:00:00")]:
 			for operator, indices in [

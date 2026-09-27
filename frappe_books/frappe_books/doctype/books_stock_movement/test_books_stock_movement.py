@@ -241,6 +241,20 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertRaises(frappe.LinkValidationError, receipt.insert)
 
+	def test_manufacture_row_cannot_both_consume_and_produce(self):
+		row = {"item": self.item.name, "quantity": 1, "rate": 10}
+		manufacture = frappe.get_doc(
+			movement_values(
+				"Manufacture",
+				[
+					{**row, "from_location": "Stores"},
+					{**row, "from_location": "Stores", "to_location": self.warehouse.name},
+				],
+			)
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "Only From or To", manufacture.insert)
+
 
 def make_movement(movement_type, items):
 	return frappe.get_doc(movement_values(movement_type, items)).insert()

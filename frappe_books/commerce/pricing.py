@@ -53,11 +53,19 @@ def standard_rates(invoice):
 
 
 def standard_rate(invoice, row, rates):
-	"""Return the row's standard rate from `standard_rates` in the invoice currency, or None."""
-	rate = rates.get((row.item, row.transfer_unit or row.unit)) or rates.get((row.item, None))
+	"""Return the row's standard rate per stock unit from `standard_rates` in the invoice currency, or None."""
+	rate = _stock_unit_rate(row, rates)
 	if not rate:
 		return None
 	return rounded(as_decimal(rate) / as_decimal(invoice.exchange_rate or 1), invoice.get("currency"))
+
+
+def _stock_unit_rate(row, rates):
+	"""Prefer the price of the transfer unit, then of the stock unit, then the item rate."""
+	is_other_unit = row.transfer_unit and row.transfer_unit != row.unit
+	if is_other_unit and (rate := rates.get((row.item, row.transfer_unit))):
+		return as_decimal(rate) / as_decimal(row.unit_conversion_factor or 1)
+	return rates.get((row.item, row.unit)) or rates.get((row.item, None))
 
 
 def pos_setting(fieldname):

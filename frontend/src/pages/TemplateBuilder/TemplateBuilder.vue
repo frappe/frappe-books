@@ -178,7 +178,7 @@
   </div>
 </template>
 <script lang="ts">
-import { EditorView } from 'codemirror';
+import { EditorView } from '@codemirror/view';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { PrintTemplate } from 'models/baseModels/PrintTemplate';

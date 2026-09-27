@@ -46,7 +46,9 @@ def validate_transfer_return(transfer):
 	if original.docstatus != 1 or original.return_against:
 		frappe.throw(_("A return must reference a submitted original {0}.").format(_(transfer.doctype)))
 	returned = _returned_rows(original, exclude=transfer.name)
-	_validate_quantities(original, [*returned, *transfer.items])
+	validate_moved_quantities(
+		original, [*returned, *transfer.items], _("Returns of {0} exceed the quantity of {1} in {2}.")
+	)
 	_validate_serial_numbers(original, returned, transfer.items)
 
 
@@ -66,16 +68,13 @@ def _returned_rows(original, exclude):
 	)
 
 
-def _validate_quantities(original, rows):
-	moved = _quantities(original.items)
+def validate_moved_quantities(transfer, rows, message):
+	"""Throw `message` when the rows hold more of an item and batch than the transfer moved."""
+	moved = _quantities(transfer.items)
 	for (item, batch), quantity in _quantities(rows).items():
 		if quantity > moved[(item, batch)]:
 			label = f"{item} ({batch})" if batch else item
-			frappe.throw(
-				_("Returns of {0} exceed the quantity of {1} in {2}.").format(
-					label, moved[(item, batch)], original.name
-				)
-			)
+			frappe.throw(message.format(label, moved[(item, batch)], transfer.name))
 
 
 def _validate_serial_numbers(original, returned, rows):

@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting.money import as_decimal
+from frappe_books.inventory.returns import validate_moved_quantities
 
 
 def pending_quantities(invoice, exclude=None):
@@ -60,6 +61,31 @@ def store_pending_quantities(invoice):
 	invoice.db_set("stock_not_transferred", sum(pending.values()), update_modified=False)
 
 
+def validate_billed_quantities(invoice):
+	"""Stop the invoices made from a transfer from billing more than it moved."""
+	if not invoice.back_reference or invoice.get("return_against"):
+		return
+	transfer = frappe.get_doc(
+		invoice.meta.get_field("back_reference").options, invoice.back_reference, for_update=True
+	)
+	validate_billable(transfer)
+	validate_moved_quantities(
+		transfer,
+		_billing_rows(transfer, [*_billed_rows(transfer), *invoice.items]),
+		_("Invoices of {0} exceed the quantity of {1} in {2}."),
+	)
+
+
+def validate_billable(transfer):
+	"""Allow billing only a submitted transfer that is not a return and was not made from an invoice."""
+	if transfer.docstatus != 1:
+		frappe.throw(_("{0} must be submitted before it is billed.").format(transfer.name))
+	if transfer.back_reference:
+		frappe.throw(_("{0} was made from invoice {1}.").format(transfer.name, transfer.back_reference))
+	if transfer.return_against:
+		frappe.throw(_("A return cannot be billed."))
+
+
 def _invoice(transfer):
 	return frappe.get_doc(transfer.meta.get_field("back_reference").options, transfer.back_reference)
 
@@ -84,3 +110,27 @@ def _transferred_quantities(invoice, exclude):
 	for row in rows:
 		quantities[row.item] += abs(as_decimal(row.quantity))
 	return quantities
+
+
+def _billing_rows(transfer, rows):
+	"""Return the rows that bill the transfer's items; free items and other lines bill none of it."""
+	items = {row.item for row in transfer.items}
+	return [row for row in rows if row.item in items and not row.get("is_free_item")]
+
+
+def _billed_rows(transfer):
+	"""Return the item rows of the submitted invoices made from the transfer."""
+	doctype = transfer.meta.get_field("back_reference").options
+	names = frappe.get_all(
+		doctype,
+		filters={"back_reference": transfer.name, "return_against": ("is", "not set"), "docstatus": 1},
+		pluck="name",
+	)
+	if not names:
+		return []
+	return frappe.get_all(
+		frappe.get_meta(doctype).get_field("items").options,
+		filters={"parenttype": doctype, "parent": ["in", names]},
+		# Purchase invoice rows have no is_free_item field.
+		fields=["*"],
+	)

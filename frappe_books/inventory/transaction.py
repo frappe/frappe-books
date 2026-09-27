@@ -7,7 +7,11 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.inventory.invoice_balance import update_invoice_balance, validate_invoice_balance
+from frappe_books.inventory.invoice_balance import (
+	update_invoice_balance,
+	validate_billable,
+	validate_invoice_balance,
+)
 from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
@@ -121,10 +125,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 
 
 def _bill_transfer(transfer, invoice):
-	if transfer.back_reference:
-		frappe.throw(_("{0} was made from invoice {1}.").format(transfer.name, transfer.back_reference))
-	if transfer.return_against:
-		frappe.throw(_("A return cannot be billed."))
+	validate_billable(transfer)
 	invoice.date = now_datetime()
 	invoice.calculate()
 

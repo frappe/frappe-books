@@ -3,13 +3,25 @@
     <PageHeader :title="t`Point of Sale`">
       <template v-if="isMobile && isPosShiftOpen" #mobile-prefix>
         <FrappeButton
+          v-if="openPaymentModal"
+          variant="ghost"
+          icon="lucide-chevron-left"
+          class="rtl-rotate-180"
+          :label="t`Back`"
+          @click="cancelPayment"
+        />
+        <FrappeButton
+          v-else
           variant="ghost"
           icon="lucide-x"
           :label="t`Exit POS`"
           @click="routeToSinvList"
         />
       </template>
-      <template v-if="isMobile" #mobile-title>
+      <template v-if="isMobile && openPaymentModal" #mobile-title>
+        {{ sinvDoc.isReturn ? t`Refund` : t`Payment` }}
+      </template>
+      <template v-else-if="isMobile" #mobile-title>
         <span class="flex flex-col items-center gap-0.5">
           <span>{{ t`POS` }}</span>
           <span v-if="shiftSubtitle" class="text-xs text-ink-gray-5">
@@ -17,7 +29,7 @@
           </span>
         </span>
       </template>
-      <template v-if="isPosShiftOpen" #mobile>
+      <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>
         <FrappeButton
           variant="ghost"
           icon="lucide-ellipsis"
@@ -35,6 +47,7 @@
     </PageHeader>
     <MobilePOS
       v-if="isMobile"
+      v-show="!openPaymentModal"
       :items="filteredItems as POSItem[]"
       :search-term="itemSearchTerm"
       :total-quantity="totalQuantity"
@@ -166,7 +179,13 @@
       @toggle-modal="toggleModal('ItemEnquiry', false)"
     />
     <PaymentModal
+      ref="payment"
       :open-modal="openPaymentModal"
+      :loyalty-points="loyaltyPoints"
+      :loyalty-program="loyaltyProgram"
+      :applied-coupons-count="appliedCouponsCount"
+      @set-loyalty="setLoyalty"
+      @apply-coupon="openCouponCode"
       @toggle-modal="toggleModal('Payment', false)"
       @set-paid-amount="setPaidAmount"
       @set-payment-method="setPaymentMethod"
@@ -758,6 +777,15 @@ export default defineComponent({
     setCouponsCount(value: number) {
       this.appliedCouponsCount = value;
     },
+    /** Turning redemption on asks for the points; off clears them. */
+    async setLoyalty(on: boolean) {
+      if (on) {
+        return this.openLoyaltyProgram();
+      }
+
+      this.sinvDoc.loyaltyPoints = 0;
+      await this.setLoyaltyPoints(0);
+    },
     async setLoyaltyPoints(value: number) {
       await this.sinvDoc.set('redeemLoyaltyPoints', value > 0);
       await this.previewInvoice();
@@ -1170,6 +1198,9 @@ export default defineComponent({
         return;
       }
       await this.saveOrder();
+    },
+    cancelPayment() {
+      (this.$refs.payment as InstanceType<typeof PaymentModal>).cancelTransaction();
     },
     handlePaymentAction() {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {

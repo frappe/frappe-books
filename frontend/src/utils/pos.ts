@@ -297,6 +297,21 @@ export function getItemInitials(name: string): string {
     .join('');
 }
 
+/** Round cash amounts above `due` that a customer may hand over. */
+export function getQuickPaymentAmounts(due: number, count = 2): number[] {
+  const amounts: number[] = [];
+  for (let note = 1; amounts.length < count && note < due * 100; note *= 10) {
+    for (const size of [note, note * 5]) {
+      const amount = (Math.floor(due / size) + 1) * size;
+      if (size >= due / 100 && !amounts.includes(amount)) {
+        amounts.push(amount);
+      }
+    }
+  }
+
+  return amounts.slice(0, count);
+}
+
 export function toPOSItem(item: Item, itemQtyMap: ItemQtyMap): POSItem {
   return {
     availableQty: itemQtyMap[item.name as string]?.availableQty ?? 0,

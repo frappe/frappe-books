@@ -1,3 +1,4 @@
+import { PaymentMethodType } from 'models/types';
 import { Money } from 'pesa';
 
 export type ItemQtyMap = {
@@ -45,3 +46,9 @@ export interface POSItem {
   hasSerialNumber: boolean;
   itemGroup?: string;
 }
+
+export type PaymentMethodOption = {
+  name: string;
+  type?: PaymentMethodType;
+  requiresClearanceDate?: boolean;
+};

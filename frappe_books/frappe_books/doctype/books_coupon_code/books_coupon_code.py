@@ -42,8 +42,7 @@ class BooksCouponCode(Document):
 
 	def validate(self):
 		validate_range(self.min_amount, self.max_amount, _("amount"), strict=True)
-		# Electron Books rejected a coupon that starts and ends on the same day.
-		validate_dates(self.valid_from, self.valid_to, strict=True)
+		validate_dates(self.valid_from, self.valid_to)
 		if self.maximum_use < 0 or self.used < 0:
 			frappe.throw(_("Coupon usage counts cannot be negative."))
 		if self.maximum_use and self.used > self.maximum_use:

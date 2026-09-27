@@ -47,8 +47,8 @@ await build({
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export {
         createMissingBatches,
-        generateSerialNumbersForItem,
         getExistingActiveSerialNumbersForItem,
+        getSerialNumbersForQuantity,
         getSuggestedBatchName,
       } from './models/inventory/helpers';
       export { getAmountInWords } from './src/utils/amountInWords';
@@ -122,8 +122,8 @@ export const {
   errors,
   getInsufficientItems,
   createMissingBatches,
-  generateSerialNumbersForItem,
   getExistingActiveSerialNumbersForItem,
+  getSerialNumbersForQuantity,
   getSuggestedBatchName,
   getAmountInWords,
   generateCSV,

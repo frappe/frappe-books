@@ -31,15 +31,10 @@ test('a shipment made from an invoice ships the invoiced serial numbers', async 
 
 test('a receipt made from an invoice gets new serial numbers from the series', async () => {
   const fyo = await makeFyo();
-  const values = { hasSerialNumber: true, serialNumberSeries: 'SN-' };
+  const values = { hasSerialNumber: true };
   fyo.getValue = async (_schemaName, _name, fieldname) => values[fieldname];
-  fyo.db.exists = async (_schemaName, name) => name === 'SN-';
-  fyo.doc.getDoc = async () => ({
-    name: 'SN-',
-    start: 1,
-    padZeros: 3,
-    setAndSync() {},
-  });
+  fyo.db.getNewSeriesNames = async (_schemaName, _item, count) =>
+    ['SN-001', 'SN-002'].slice(0, count);
   const receipt = fyo.doc.getNewDoc('PurchaseReceipt', {
     backReference: 'PINV-1',
     items: [{ item: 'Pen', quantity: 2 }],
@@ -52,21 +47,11 @@ test('a receipt made from an invoice gets new serial numbers from the series', a
 
 test('a material receipt row suggests a batch and new serial numbers', async () => {
   const fyo = await makeFyo();
-  const values = {
-    hasBatch: true,
-    batchSeries: 'PEN-',
-    hasSerialNumber: true,
-    serialNumberSeries: 'SN-',
-  };
+  const values = { hasBatch: true, hasSerialNumber: true };
   fyo.getValue = async (_schemaName, _name, fieldname) => values[fieldname];
-  fyo.db.exists = async (_schemaName, name) => ['PEN-', 'SN-'].includes(name);
-  fyo.doc.getDoc = async (_schemaName, name) => ({
-    name,
-    start: 1,
-    padZeros: 3,
-    setAndSync() {},
-    loadAndGetLink() {},
-  });
+  fyo.db.getNewSeriesNames = async (schemaName) =>
+    schemaName === 'Batch' ? ['PEN-001'] : ['SN-001'];
+  fyo.doc.getDoc = async () => ({ loadAndGetLink() {} });
   const movement = fyo.doc.getNewDoc('StockMovement', {
     movementType: 'MaterialReceipt',
     items: [{ quantity: 1 }],

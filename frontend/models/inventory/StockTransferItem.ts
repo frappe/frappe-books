@@ -15,8 +15,8 @@ import { TransferItem } from './TransferItem';
 import type { Invoice } from 'models/baseModels/Invoice/Invoice';
 import type { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
 import {
-  generateSerialNumbersForItem,
   getExistingActiveSerialNumbersForItem,
+  getSerialNumbersForQuantity,
 } from './helpers';
 
 export class StockTransferItem extends TransferItem {
@@ -73,7 +73,12 @@ export class StockTransferItem extends TransferItem {
     }
 
     if (!this.isSales) {
-      return await generateSerialNumbersForItem(this.fyo, this.item, quantity);
+      return await getSerialNumbersForQuantity(
+        this.fyo,
+        this.item,
+        undefined,
+        quantity
+      );
     }
 
     return (

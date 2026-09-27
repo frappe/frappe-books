@@ -98,20 +98,10 @@ export abstract class InvoiceItem extends Doc {
   override async change(ch: ChangeArg): Promise<void> {
     await super.change(ch);
 
-    if (ch.changed === 'item') {
-      if (!this.isSales && this.item) {
-        const hasBatch = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          this.item,
-          'hasBatch'
-        );
-
-        if (hasBatch) {
-          const batchName = await getSuggestedBatchName(this.fyo, this.item);
-          if (batchName) {
-            await this.set('batch', batchName);
-          }
-        }
+    if (ch.changed === 'item' && !this.isSales && this.item) {
+      const batchName = await getSuggestedBatchName(this.fyo, this.item);
+      if (batchName) {
+        await this.set('batch', batchName);
       }
     }
   }

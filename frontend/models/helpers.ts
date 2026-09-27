@@ -28,7 +28,7 @@ import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
 import { getPOSInventory, validatePOSStock } from './inventory/posStock';
-import { generateSerialNumbersForItem } from './inventory/helpers';
+import { getSerialNumbersForQuantity } from './inventory/helpers';
 
 const MAPPER_MODULES: Record<string, string> = {
   SalesInvoice:
@@ -720,7 +720,12 @@ export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
     doc instanceof StockTransfer &&
     doc.schemaName === ModelNameEnum.PurchaseReceipt
   ) {
-    const serialNumbers = await generateSerialNumbersForItem(doc.fyo, name, 1);
+    const serialNumbers = await getSerialNumbersForQuantity(
+      doc.fyo,
+      name,
+      undefined,
+      1
+    );
     if (serialNumbers) {
       await item.set('serialNumber', serialNumbers);
     }

@@ -13,7 +13,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { safeParseFloat } from 'utils/index';
-import { generateSerialNumbersForItem, getSuggestedBatchName } from './helpers';
+import { getSerialNumbersForQuantity, getSuggestedBatchName } from './helpers';
 import { StockMovement } from './StockMovement';
 import { TransferItem } from './TransferItem';
 import { MovementTypeEnum } from './types';
@@ -287,11 +287,9 @@ export class StockMovementItem extends TransferItem {
       return;
     }
 
-    if (await this.fyo.getValue(ModelNameEnum.Item, this.item, 'hasBatch')) {
-      const batch = await getSuggestedBatchName(this.fyo, this.item);
-      if (batch) {
-        await this.set('batch', batch);
-      }
+    const batch = await getSuggestedBatchName(this.fyo, this.item);
+    if (batch) {
+      await this.set('batch', batch);
     }
   }
 
@@ -305,9 +303,10 @@ export class StockMovementItem extends TransferItem {
       return;
     }
 
-    const serialNumbers = await generateSerialNumbersForItem(
+    const serialNumbers = await getSerialNumbersForQuantity(
       this.fyo,
       this.item,
+      this.serialNumber,
       this.quantity
     );
     if (serialNumbers) {

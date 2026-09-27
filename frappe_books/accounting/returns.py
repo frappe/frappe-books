@@ -7,7 +7,7 @@ from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import now_datetime
 
-from frappe_books.accounting.money import as_decimal, currency_unit, sum_decimal
+from frappe_books.accounting.money import as_decimal, currency_unit, rounded, sum_decimal
 from frappe_books.inventory.stock import parse_serial_numbers
 
 
@@ -100,6 +100,25 @@ def _validate_value(invoice, original, returns, returned_row_count):
 	tolerance = currency_unit(invoice.get("currency")) * (returned_row_count + len(invoice.items))
 	if returned > billed + tolerance:
 		frappe.throw(_("Returns against {0} cannot exceed its value of {1}.").format(original.name, billed))
+
+
+def share_fixed_row_discounts(credit_note, original):
+	"""Give each fixed row discount of a return its share of the original's, by quantity."""
+	per_unit = _fixed_discounts_per_unit(original.items)
+	for row in credit_note.items:
+		if row.set_item_discount_amount:
+			share = per_unit[row.item, row.batch] * abs(as_decimal(row.quantity))
+			row.item_discount_amount = rounded(share, credit_note.get("currency"))
+
+
+def _fixed_discounts_per_unit(rows):
+	discounts = defaultdict(as_decimal)
+	quantities = defaultdict(as_decimal)
+	for row in rows:
+		if row.set_item_discount_amount:
+			discounts[row.item, row.batch] += as_decimal(row.item_discount_amount)
+			quantities[row.item, row.batch] += abs(as_decimal(row.quantity))
+	return defaultdict(as_decimal, {key: discounts[key] / quantities[key] for key in discounts})
 
 
 def update_return_status(return_invoice, *, include_current):

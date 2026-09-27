@@ -104,11 +104,14 @@ class PostingInvoiceController(InvoiceController):
 
 
 def calculate_invoice(invoice):
+	original = invoice.get("return_against") and frappe.get_doc(invoice.doctype, invoice.return_against)
+	if original:
+		returns.share_fixed_row_discounts(invoice, original)
 	taxes = {}
 	for row in invoice.items:
 		_calculate_row(invoice, row, taxes)
 	invoice.set("taxes", list(taxes.values()))
-	_calculate_totals(invoice)
+	_calculate_totals(invoice, original)
 
 
 def _calculate_row(invoice, row, taxes):
@@ -137,14 +140,11 @@ def _add_row_taxes(row, base, taxes, currency):
 	return row_tax
 
 
-def _calculate_totals(invoice):
+def _calculate_totals(invoice, original):
 	currency = invoice.get("currency")
 	invoice.net_total = sum_decimal(row.amount for row in invoice.items)
 	item_discount = sum_decimal(row_discount(invoice, row) for row in invoice.items)
-	taxed_total = sum_decimal(row.item_taxed_total for row in invoice.items)
-	invoice.discount_amount = _invoice_discount(
-		invoice, taxed_total, invoice.net_total - item_discount, currency
-	)
+	invoice.discount_amount = _invoice_discount(invoice, original, currency)
 	grand_total = (
 		invoice.net_total
 		+ sum_decimal(tax.amount for tax in invoice.taxes)
@@ -330,10 +330,26 @@ def _item_discount(row, amount, currency):
 	return rounded(-discount if amount < 0 else discount, currency)
 
 
-def _invoice_discount(invoice, taxed_total, discounted_total, currency):
+def _invoice_discount(invoice, original, currency):
+	base = _discount_base(invoice)
 	if invoice.set_discount_amount:
-		discount = rounded(abs(as_decimal(invoice.discount_amount)), currency)
-		return -discount if discounted_total < 0 else discount
-	base = taxed_total if invoice.discount_after_tax else discounted_total
-	discount = abs(base) * as_decimal(invoice.discount_percent) / 100
+		discount = _fixed_invoice_discount(invoice, original, base)
+	else:
+		discount = abs(base) * as_decimal(invoice.discount_percent) / 100
 	return rounded(-discount if base < 0 else discount, currency)
+
+
+def _fixed_invoice_discount(invoice, original, base):
+	"""Return the invoice's fixed discount, or a return's share of the original's by value."""
+	if not original:
+		return abs(as_decimal(invoice.discount_amount))
+	original_base = _discount_base(original)
+	if not original_base:
+		return as_decimal(0)
+	return abs(as_decimal(original.discount_amount) * base / original_base)
+
+
+def _discount_base(invoice):
+	"""Return the total of the calculated rows that the invoice discount applies to."""
+	fieldname = "item_taxed_total" if invoice.discount_after_tax else "item_discounted_total"
+	return sum_decimal(row.get(fieldname) for row in invoice.items)

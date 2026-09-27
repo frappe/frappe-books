@@ -2,7 +2,7 @@ import type { Field } from 'schemas/types';
 import { fyo } from 'src/initFyo';
 import type { QueryFilter } from 'utils/db/types';
 import { markRaw } from 'vue';
-import { getFilterFields } from './filterFields';
+import { getFieldLabel, getFilterFields } from './filterFields';
 import {
   FilterSet,
   conditionsForField,
@@ -18,6 +18,7 @@ export class ListFilters {
   applied: FilterRow[] = [];
   error = '';
   readonly fields: Field[];
+  readonly fieldOptions: { label: string; value: string }[];
 
   constructor(schemaName: string) {
     this.fields = markRaw(
@@ -25,6 +26,12 @@ export class ListFilters {
         fyo.schemaMap[schemaName]?.fields ?? [],
         fyo.models[schemaName]?.getListViewSettings?.(fyo)?.columns
       )
+    );
+    this.fieldOptions = markRaw(
+      this.fields.map((field) => ({
+        label: getFieldLabel(field),
+        value: field.fieldname,
+      }))
     );
   }
 

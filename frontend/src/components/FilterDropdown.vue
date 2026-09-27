@@ -38,7 +38,7 @@
                 label: t`Field`,
                 fieldname: 'fieldname',
                 fieldtype: 'Select',
-                options: fieldOptions,
+                options: filters.fieldOptions,
               }"
               :value="filter.fieldname"
               @change="(value) => filters.update(filter, 'fieldname', value)"
@@ -123,7 +123,6 @@ import Select from './Controls/Select.vue';
 import FilterValueInput from './FilterValueInput.vue';
 import { QueryFilter } from 'utils/db/types';
 import { t } from 'fyo';
-import { getFieldLabel } from 'src/utils/filterFields';
 import {
   isValuelessCondition,
   type FilterCondition,
@@ -149,12 +148,6 @@ export default defineComponent({
     };
   },
   computed: {
-    fieldOptions(): { label: string; value: string }[] {
-      return this.filters.fields.map((df) => ({
-        label: getFieldLabel(df),
-        value: df.fieldname,
-      }));
-    },
     activeFilterCount(): number {
       return this.filters.applied.length;
     },

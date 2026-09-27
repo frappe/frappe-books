@@ -46,6 +46,13 @@
         @click="handleMakeNewDoc"
       />
     </PageHeader>
+    <MobileListToolbar
+      v-if="isMobile"
+      ref="mobileToolbar"
+      :schema-name="schemaName"
+      :search-field="searchField"
+      @change="applyFilter"
+    />
     <List
       ref="list"
       :schema-name="schemaName"
@@ -57,6 +64,7 @@
       @open-doc="openDoc"
       @updated-data="updatedData"
       @make-new-doc="makeNewDoc"
+      @clear-filters="mobileToolbar?.clear()"
       @selected-items-changed="updateSelectedItems"
     />
     <ExportWizard
@@ -87,6 +95,9 @@ import { isMobile } from 'src/utils/viewport';
 import { QueryFilter } from 'utils/db/types';
 import { defineComponent, inject, ref } from 'vue';
 import List from './List.vue';
+import { getListColumns } from './listColumns';
+import MobileListToolbar from './MobileListToolbar.vue';
+import { getMobileRowLayout } from './mobileRowLayout';
 import { Money } from 'pesa';
 import { ModelNameEnum } from 'models/types';
 
@@ -99,6 +110,7 @@ export default defineComponent({
     FrappeButton,
     ExportWizard,
     FrappeDropdown,
+    MobileListToolbar,
   },
   props: {
     schemaName: { type: String, required: true },
@@ -112,6 +124,7 @@ export default defineComponent({
       list: ref<InstanceType<typeof List> | null>(null),
       exportButton: ref<InstanceType<typeof FrappeButton> | null>(null),
       filterDropdown: ref<InstanceType<typeof FilterDropdown> | null>(null),
+      mobileToolbar: ref<InstanceType<typeof MobileListToolbar> | null>(null),
     };
   },
   data() {
@@ -139,6 +152,10 @@ export default defineComponent({
       }
 
       return fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
+    },
+    searchField(): string {
+      const columns = getListColumns(this.schemaName, this.listConfig);
+      return getMobileRowLayout(this.schemaName, columns).title.fieldname;
     },
     fields(): Field[] {
       return fyo.schemaMap[this.schemaName]?.fields ?? [];

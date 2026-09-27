@@ -94,9 +94,5 @@ def _reserve_unused_names(doctype, series_doctype, prefix, count):
 def validate_series(series_doc):
 	if INVALID_PREFIX.search(series_doc.name or ""):
 		frappe.throw(_("Number-series prefixes cannot contain /, ?, &, =, or %."))
-	if series_doc.start < 0:
-		frappe.throw(_("Number-series start must be zero or greater."))
-	if series_doc.pad_zeros < 0:
-		frappe.throw(_("Number-series padding must be zero or greater."))
 	if series_doc.is_new() and not series_doc.current:
 		series_doc.current = series_doc.start - 1

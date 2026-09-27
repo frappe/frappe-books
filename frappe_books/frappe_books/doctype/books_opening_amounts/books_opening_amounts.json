@@ -17,6 +17,7 @@
    "in_list_view": 1,
    "label": "Payment Method",
    "options": "Books Payment Method",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -30,7 +31,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.529676",
+ "modified": "2026-09-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Opening Amounts",

@@ -69,7 +69,7 @@ export function splitCsvLine(line: string): string[] {
     if (!inDq && c === ',') {
       item = unwrapDq(item);
       item = item.replaceAll('""', '"');
-      items.push(item);
+      items.push(unescapeFormula(item));
       item = '';
       continue;
     }
@@ -132,7 +132,17 @@ function formatStringToCSV(item: string): string {
   return `"${item.replaceAll('"', '""')}"`;
 }
 
-/** Text a spreadsheet would run as a formula; numbers are left alone. */
+/** Undoes the quote that `formatStringToCSV` puts before a formula. */
+function unescapeFormula(item: string): string {
+  if (item.startsWith("'") && isFormula(item.slice(1))) {
+    return item.slice(1);
+  }
+
+  return item;
+}
+
+/** Text a spreadsheet would run as a formula without its escaping quotes; numbers are left alone. */
 function isFormula(item: string): boolean {
-  return /^[=+\-@\t\r]/.test(item) && !Number.isFinite(Number(item));
+  const text = item.replace(/^'+/, '');
+  return /^[=+\-@\t\r]/.test(text) && !Number.isFinite(Number(text));
 }

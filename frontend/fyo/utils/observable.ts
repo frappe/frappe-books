@@ -76,7 +76,7 @@ export default class Observable<T> {
   }
 
   /**
-   * Sets a `listener` that execture `once`: executes once when `event` is
+   * Sets a `listener` that executes `once`: executes once when `event` is
    * triggered then deletes itself
    *
    * @param event : name of the event for which the listener is set

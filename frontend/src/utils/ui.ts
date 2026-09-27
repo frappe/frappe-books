@@ -280,7 +280,7 @@ function getDeleteAction(doc: Doc): Action {
     theme: 'red',
     condition: (doc: Doc) => doc.canDelete,
     async action() {
-      await commongDocDelete(doc);
+      await commonDocDelete(doc);
     },
   };
 }
@@ -521,7 +521,7 @@ export enum ShortcutKey {
   esc = 'esc',
 }
 
-export async function commongDocDelete(
+export async function commonDocDelete(
   doc: Doc,
   routeBack = true,
 ): Promise<boolean> {

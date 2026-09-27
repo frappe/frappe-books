@@ -13,7 +13,7 @@ import {
   commonDocCancel,
   commonDocSubmit,
   commonDocSync,
-  commongDocDelete,
+  commonDocDelete,
   showCannotCancelOrDeleteToast,
   showCannotSaveOrSubmitToast,
 } from './ui';
@@ -129,7 +129,7 @@ export function useDocShortcuts(
     }
 
     if (doc.canDelete) {
-      return await commongDocDelete(doc);
+      return await commonDocDelete(doc);
     }
 
     showCannotCancelOrDeleteToast(doc);

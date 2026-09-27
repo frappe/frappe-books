@@ -126,7 +126,7 @@ import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
-import { commongDocDelete, openQuickEdit } from 'src/utils/ui';
+import { commonDocDelete, openQuickEdit } from 'src/utils/ui';
 import { getMapFromList } from 'utils/index';
 import { defineComponent, nextTick } from 'vue';
 import Button from '../components/Button.vue';
@@ -336,7 +336,7 @@ export default defineComponent({
       const doc = await fyo.doc.getDoc(ModelNameEnum.Account, account.name);
       this.setOpenAccountDocListener(doc, account);
 
-      await commongDocDelete(doc, false);
+      await commonDocDelete(doc, false);
     },
     async addRootGroup() {
       const doc = fyo.doc.getNewDoc(ModelNameEnum.Account, { isGroup: true });

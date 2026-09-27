@@ -2,7 +2,7 @@ import type { Fyo } from 'fyo';
 import { Money } from 'pesa';
 
 /**
- * And so should not contain and platforma specific imports.
+ * And so should not contain any platform specific imports.
  */
 export function getValueMapFromList<T, K extends keyof T, V extends keyof T>(
   list: T[],

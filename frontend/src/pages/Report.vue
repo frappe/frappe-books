@@ -6,7 +6,6 @@
         :key="group.label"
         :type="group.type"
         :actions="group.actions"
-        class="text-xs"
       >
         {{ group.group }}
       </DropdownWithActions>

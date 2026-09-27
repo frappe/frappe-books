@@ -1,13 +1,11 @@
 <template>
-  <Dropdown
-    v-if="actions && actions.length"
-    class="text-xs"
-    :items="items"
-    :doc="doc"
+  <FrappeDropdown
+    v-if="actions.length"
+    :options="options"
     :disabled="disabled"
-    right
+    align="end"
   >
-    <template #default>
+    <template #trigger>
       <FrappeButton v-if="$slots.default" :variant="variant" :disabled="disabled">
         <slot />
       </FrappeButton>
@@ -20,23 +18,23 @@
         :disabled="disabled"
       />
     </template>
-  </Dropdown>
+  </FrappeDropdown>
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  Dropdown as FrappeDropdown,
+  type DropdownOption,
+  type DropdownOptions,
+} from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
-import Dropdown from 'src/components/Dropdown.vue';
-import { DropdownItem } from 'src/utils/types';
 import { defineComponent, PropType } from 'vue';
 
 export default defineComponent({
   name: 'DropdownWithActions',
-  components: {
-    Dropdown,
-    FrappeButton,
-  },
+  components: { FrappeButton, FrappeDropdown },
   inject: {
     injectedDoc: {
       from: 'doc',
@@ -53,21 +51,42 @@ export default defineComponent({
     variant(): 'solid' | 'subtle' {
       return this.type === 'primary' ? 'solid' : 'subtle';
     },
-    doc() {
+    doc(): Doc | undefined {
       const doc = this.injectedDoc;
-      if (doc instanceof Doc) {
-        return doc;
+      return doc instanceof Doc ? doc : undefined;
+    },
+    options(): DropdownOptions {
+      const groups = new Map<string, Action[]>();
+      for (const action of this.actions) {
+        const group = action.group ?? '';
+        groups.set(group, [...(groups.get(group) ?? []), action]);
       }
 
-      return undefined;
+      const options: DropdownOptions = (groups.get('') ?? []).map(
+        this.toOption
+      );
+      for (const group of [...groups.keys()].filter(Boolean).sort()) {
+        options.push({ group, options: groups.get(group)!.map(this.toOption) });
+      }
+
+      return options;
     },
-    items(): DropdownItem[] {
-      return this.actions.map(({ label, group, theme, action }) => ({
-        label,
-        group,
-        action,
-        theme,
-      }));
+  },
+  methods: {
+    toOption(action: Action): DropdownOption {
+      return {
+        label: action.label,
+        theme: action.theme,
+        onClick: () => this.runAction(action),
+      };
+    },
+    async runAction({ action }: Action) {
+      // Actions shown without a document, such as report exports, take no arguments.
+      if (this.doc) {
+        await action(this.doc, this.$router);
+      } else {
+        await (action as () => unknown)();
+      }
     },
   },
 });

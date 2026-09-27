@@ -42,11 +42,7 @@
               v-else
               :ref="field.fieldname === 'name' ? 'nameField' : 'fields'"
               class="w-full"
-              :class="
-                errors?.[field.fieldname]
-                  ? 'max-md:[&_[data-slot=control]]:border-outline-red-3'
-                  : ''
-              "
+              :invalid="Boolean(errors?.[field.fieldname])"
               :layout="field.fieldtype === 'Check' ? 'inline' : undefined"
               :size="field.fieldtype === 'AttachImage' ? 'form' : undefined"
               :show-label="true"

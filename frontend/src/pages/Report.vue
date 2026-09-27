@@ -59,11 +59,12 @@
         :defaults="filterDefaults"
         @apply="reload"
       />
-      <MobileOptionSheet
+      <MobileOptionsSheet
         v-model:open="exportSheetOpen"
+        actions
         :title="title"
         :options="exportOptions"
-        @select="runExport"
+        @select="(value) => runExport(String(value))"
       />
     </template>
 
@@ -108,9 +109,9 @@ import {
   MobileFilters,
   getDefaultFilters,
 } from 'src/components/Report/Mobile/MobileFilters';
-import MobileOptionSheet, {
+import MobileOptionsSheet, {
   SheetOption,
-} from 'src/components/Report/Mobile/MobileOptionSheet.vue';
+} from 'src/mobile/MobileOptionsSheet.vue';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
 import MobileReportFilters from 'src/components/Report/Mobile/MobileReportFilters.vue';
 import MobileReportSkeleton from 'src/components/Report/Mobile/MobileReportSkeleton.vue';
@@ -129,7 +130,7 @@ export default defineComponent({
     ListReport,
     DropdownWithActions,
     FrappeButton,
-    MobileOptionSheet,
+    MobileOptionsSheet,
     MobileReport,
     MobileReportFilters,
     MobileReportSkeleton,

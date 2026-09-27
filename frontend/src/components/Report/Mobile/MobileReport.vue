@@ -63,12 +63,12 @@
       :row="detailRow"
       :title="detailTitle"
     />
-    <MobileOptionSheet
+    <MobileOptionsSheet
       v-model:open="columnSheetOpen"
       :title="t`Column`"
       :options="columnOptions.map(({ key, label }) => ({ value: key, label }))"
-      :selected="valueColumns[0]?.key ?? ''"
-      @select="chooseColumn"
+      :value="valueColumns[0]?.key ?? ''"
+      @select="(key) => chooseColumn(String(key))"
     />
   </div>
 </template>
@@ -77,10 +77,10 @@ import { useLocalStorage } from '@vueuse/core';
 import { Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import type { Report } from 'reports/Report';
 import type { ReportRow } from 'reports/types';
+import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import { computed, ref } from 'vue';
 import { MobileEntries } from './MobileEntries';
 import { MobileFilters, type FilterValues } from './MobileFilters';
-import MobileOptionSheet from './MobileOptionSheet.vue';
 import MobileReportDetail from './MobileReportDetail.vue';
 import MobileReportEntries from './MobileReportEntries.vue';
 import MobileReportSkeleton from './MobileReportSkeleton.vue';

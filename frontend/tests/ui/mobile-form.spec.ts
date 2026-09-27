@@ -59,6 +59,19 @@ test('rows open in a sheet', async ({ page }) => {
   await expect(page.getByText('1 row', { exact: true })).toBeVisible();
 });
 
+test('rows without quick edit fields edit their table columns', async ({
+  page,
+}) => {
+  await page.goto(`/books/edit/JournalEntry/new-phone-${Date.now()}`);
+  await waitForBooks(page);
+  await page.getByRole('button', { name: 'Add Row' }).first().click();
+
+  const sheet = page.getByRole('dialog', { name: 'Row 1' });
+  for (const label of ['Account', 'Debit', 'Credit']) {
+    await expect(sheet.getByText(label, { exact: true })).toBeVisible();
+  }
+});
+
 test('a foreign-currency customer shows the exchange rate', async ({
   page,
 }) => {

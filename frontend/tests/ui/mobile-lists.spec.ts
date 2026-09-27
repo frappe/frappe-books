@@ -107,6 +107,23 @@ test('a filter chip narrows the list until it is removed', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('date filters use the native picker', async ({ page }) => {
+  await page.goto('/books/list/SalesInvoice');
+  await page.getByRole('button', { name: 'Filters', exact: true }).tap();
+  await page
+    .getByRole('dialog', { name: 'Filter by' })
+    .getByRole('button', { name: /^Date/ })
+    .tap();
+  const sheet = page.getByRole('dialog', { name: 'Filters' });
+  const value = sheet.getByLabel('Value');
+  await expect(value).toHaveAttribute('type', 'datetime-local');
+  await value.fill('2026-09-19T10:30');
+  await sheet.getByRole('button', { name: 'Apply', exact: true }).tap();
+
+  await expect(page.getByText(/10:30:00/)).toBeVisible();
+  await expect(page.getByText(/Invalid/)).toHaveCount(0);
+});
+
 test('a filtered empty list clears its search', async ({ page }) => {
   await page.goto('/books/list/Party');
   await search(page, `none ${run}`);

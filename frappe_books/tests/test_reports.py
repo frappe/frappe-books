@@ -178,6 +178,12 @@ class IntegrationTestStockReports(IntegrationTestCase):
 			],
 		)
 
+	def test_stock_ledger_dates_are_iso_datetimes(self):
+		rows = self.queries.call("getStockLedger", [{"item": self.item}])
+
+		for row in rows:
+			self.assertRegex(row["date"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[+-]\d{2}:\d{2}$")
+
 	def test_stock_balance_splits_opening_and_period_movement(self):
 		today = nowdate()
 		rows = self.queries.call("getStockBalance", [{"item": self.item, "fromDate": today, "toDate": today}])
@@ -214,6 +220,13 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			{_decimals(18, 300, 27, 27), _decimals(5, 100, "2.5", "2.5")},
 		)
 		self.assertTrue(all(row["invAmt"] == Decimal(459) for row in rows))
+
+	def test_invoice_dates_are_iso_dates(self):
+		invoice = self._invoice((_tax(("IGST", 18)), 100, 1))
+
+		(row,) = self._rows(invoice)
+
+		self.assertEqual(row["invDate"], nowdate())
 
 	def test_igst_rows_are_interstate(self):
 		invoice = self._invoice((_tax(("IGST", 18)), 100, 1))

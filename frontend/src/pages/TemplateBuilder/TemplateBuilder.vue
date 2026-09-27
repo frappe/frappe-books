@@ -61,50 +61,46 @@
 
         <!-- Bottom Bar -->
         <div
-          class="w-full sticky bottom-0 flex bg-surface-base border-t border-outline-gray-1 mt-auto flex-shrink-0"
+          class="sticky bottom-0 mt-auto flex h-11 w-full flex-shrink-0 items-center gap-2 border-t border-outline-gray-1 bg-surface-base px-3"
         >
           <!-- Entry Type -->
           <FormControl
-            :title="fields.type.label"
-            class="w-40 border-r border-outline-gray-1 flex-shrink-0"
+            class="w-44 flex-shrink-0"
             :df="fields.type"
-            :border="false"
+            :border="true"
+            size="small"
             :value="doc.get('type')"
-            :container-styles="{ 'border-radius': '0px' }"
             @change="async (value: unknown) => await setType(value)"
           />
           <!-- Display Doc -->
           <Link
             v-if="doc.type"
-            :title="displayDocField.label"
-            class="w-40 border-r border-outline-gray-1 flex-shrink-0"
+            class="w-48 min-w-0"
             :df="displayDocField"
-            :border="false"
+            :border="true"
+            size="small"
             :value="displayDoc?.name"
-            :container-styles="{ 'border-radius': '0px' }"
             @change="(value: string) => setDisplayDoc(value)"
           />
 
           <!-- Display Scale -->
-          <div
+          <label
             v-if="canDisplayPreview"
-            class="flex ml-auto gap-2 px-2 w-36 justify-between flex-shrink-0"
+            class="ms-auto flex flex-shrink-0 items-center gap-2 text-sm text-ink-gray-6"
           >
-            <p class="text-sm text-ink-gray-6 my-auto">
-              {{ t`Display Scale` }}
-            </p>
+            <span class="whitespace-nowrap">{{ t`Display Scale` }}</span>
             <FrappeTextInput
               type="number"
-              class="my-auto w-14 [&_input]:text-end"
+              class="w-16"
               :model-value="scale"
               :min="0.1"
               :max="10"
               :step="0.1"
               size="sm"
-              variant="ghost"
+              variant="outline"
               @update:model-value="setScale"
             />
-          </div>
+          </label>
         </div>
       </div>
 

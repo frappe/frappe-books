@@ -19,13 +19,18 @@
       </div>
     </div>
 
-    <p v-if="loading" role="status" class="p-4 text-sm text-ink-gray-6">
-      {{ t`Loading linked entries...` }}
-    </p>
-    <div v-else-if="loadFailed" role="alert" class="p-4 text-sm text-ink-gray-6">
-      <p class="mb-3">{{ t`Could not load linked entries. Please try again.` }}</p>
-      <FrappeButton @click="setLinkedEntries">{{ t`Try again` }}</FrappeButton>
-    </div>
+    <FrappeLoadingText
+      v-if="loading"
+      class="p-4"
+      :text="t`Loading linked entries...`"
+    />
+    <FrappeAlert
+      v-else-if="loadFailed"
+      class="m-4"
+      theme="red"
+      :title="t`Could not load linked entries. Please try again.`"
+      :primary-action="{ label: t`Try again`, onClick: () => setLinkedEntries() }"
+    />
 
     <!-- Linked Entry List -->
     <div
@@ -157,9 +162,11 @@
 import { Doc } from 'fyo/model/doc';
 import { isPesa } from 'fyo/utils';
 import {
+  Alert as FrappeAlert,
   Badge as FrappeBadge,
-  ItemListRow as FrappeItemListRow,
   Button as FrappeButton,
+  ItemListRow as FrappeItemListRow,
+  LoadingText as FrappeLoadingText,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import DisclosureButton from 'src/components/DisclosureButton.vue';
@@ -171,7 +178,7 @@ import { PropType, defineComponent, inject } from 'vue';
 const COMPONENT_NAME = 'LinkedEntries';
 
 export default defineComponent({
-  components: { FrappeButton, FrappeBadge, DisclosureButton, FrappeItemListRow },
+  components: { FrappeAlert, FrappeLoadingText, FrappeButton, FrappeBadge, DisclosureButton, FrappeItemListRow },
   props: { doc: { type: Object as PropType<Doc>, required: true } },
   emits: ['close'],
   setup() {

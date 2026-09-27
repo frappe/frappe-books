@@ -1,5 +1,35 @@
 <template>
+  <FrappeBottomSheet
+    v-if="isMobile"
+    :open="true"
+    :title="sheetTitle"
+    @update:open="(open: boolean) => !open && routeToPrevious()"
+  >
+    <TwoColumnForm v-if="doc" ref="form" :doc="doc" :fields="sheetFields" />
+    <div
+      v-if="doc?.canSave || doc?.canSubmit"
+      class="px-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
+    >
+      <FrappeButton
+        v-if="doc.canSave"
+        class="w-full"
+        size="lg"
+        variant="solid"
+        :label="t`Save`"
+        @click="sync"
+      />
+      <FrappeButton
+        v-else
+        class="w-full"
+        size="lg"
+        variant="solid"
+        :label="t`Submit`"
+        @click="submit"
+      />
+    </div>
+  </FrappeBottomSheet>
   <div
+    v-else
     class="
       border-s
       border-outline-gray-1
@@ -83,7 +113,10 @@
   </div>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  BottomSheet as FrappeBottomSheet,
+  Button as FrappeButton,
+} from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import { Field, Schema } from 'schemas/types';
 import AttachImage from 'src/components/Controls/AttachImage.vue';
@@ -99,6 +132,7 @@ import {
   commonDocSync,
   focusOrSelectFormControl,
 } from 'src/utils/ui';
+import { isMobile } from 'src/utils/viewport';
 import { getQuickEditFieldnames } from 'src/utils/sheetFields';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { computed, defineComponent, inject, ref } from 'vue';
@@ -106,6 +140,7 @@ import { computed, defineComponent, inject, ref } from 'vue';
 export default defineComponent({
   name: 'QuickEditForm',
   components: {
+    FrappeBottomSheet,
     FrappeButton,
     FormControl,
     TwoColumnForm,
@@ -137,6 +172,7 @@ export default defineComponent({
       doc,
       context,
       shortcuts,
+      isMobile,
     };
   },
   data() {
@@ -161,6 +197,26 @@ export default defineComponent({
       }
 
       return '';
+    },
+    sheetTitle(): string {
+      if (!this.doc || this.doc.notInserted) {
+        return this.t`New ${this.schema.label}`;
+      }
+
+      const title = this.titleField && this.doc.get(this.titleField.fieldname);
+      return String(title || this.doc.name);
+    },
+    sheetFields(): Field[] {
+      const isTitleEditable =
+        this.titleField &&
+        this.doc?.notInserted &&
+        this.doc.schema.naming === 'manual';
+      const fields = this.fields as Field[];
+      if (!isTitleEditable || fields.includes(this.titleField!)) {
+        return fields;
+      }
+
+      return [this.titleField!, ...fields];
     },
     schema(): Schema {
       return fyo.schemaMap[this.schemaName]!;

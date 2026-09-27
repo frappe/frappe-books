@@ -6,6 +6,15 @@
       </keep-alive>
     </router-view>
   </FrappeMobileShell>
+  <router-view v-slot="{ Component, route }" name="edit">
+    <component
+      :is="Component"
+      v-if="route?.query?.edit"
+      :key="
+        String(route.query.schemaName ?? '') + String(route.query.name ?? '')
+      "
+    />
+  </router-view>
   <MobileDrawer v-model:open="isDrawerOpen" />
 </template>
 <script setup lang="ts">

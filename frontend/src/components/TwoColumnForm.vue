@@ -1,5 +1,34 @@
 <template>
-  <div class="text-base">
+  <div v-if="isMobile" class="flex flex-col gap-4 p-4">
+    <template v-for="df in formFields" :key="df.fieldname">
+      <Table
+        v-if="df.fieldtype === 'Table'"
+        ref="controls"
+        :df="df"
+        :show-label="true"
+        :value="(doc[df.fieldname] ?? []) as unknown[]"
+        @change="
+          async (value: Doc[] | DocValueMap[]) => await onChange(df, value)
+        "
+      />
+      <div v-else class="min-w-0">
+        <FormControl
+          ref="controls"
+          class="w-full"
+          :df="df"
+          :value="doc[df.fieldname]"
+          :show-label="true"
+          :border="true"
+          @change="async (value: DocValue) => await onChange(df, value)"
+        />
+        <FrappeErrorMessage
+          class="mt-1.5 break-words"
+          :message="errors[df.fieldname]"
+        />
+      </div>
+    </template>
+  </div>
+  <div v-else class="text-base">
     <template v-for="df in formFields">
       <!-- Table Field Form (Eg: PaymentFor) -->
       <Table
@@ -49,6 +78,7 @@ import { Doc } from 'fyo/model/doc';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { getErrorMessage } from 'src/utils';
 import { evaluateHidden } from 'src/utils/doc';
+import { isMobile } from 'src/utils/viewport';
 import Table from './Controls/Table.vue';
 import { defineComponent } from 'vue';
 import { Field } from 'schemas/types';
@@ -69,6 +99,9 @@ export default defineComponent({
       type: Array as PropType<number[]>,
       default: () => [1, 1],
     },
+  },
+  setup() {
+    return { isMobile };
   },
   data() {
     return {

@@ -18,18 +18,6 @@ export const canInstall = computed(
   () => !isInstalledApp() && (!!installPrompt.value || isIOS())
 );
 
-export function registerServiceWorker() {
-  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) {
-    return;
-  }
-
-  navigator.serviceWorker
-    .register('/books/sw.js', { scope: '/books/' })
-    .catch((error) =>
-      console.error('Books could not install offline support.', error)
-    );
-}
-
 /** Books shows its own install sheet, so it keeps the browser's prompt. */
 export function listenForInstallPrompt() {
   window.addEventListener('beforeinstallprompt', (event) => {
@@ -56,4 +44,14 @@ function isInstalledApp(): boolean {
     window.matchMedia('(display-mode: standalone)').matches ||
     standalone === true
   );
+}
+
+export function registerServiceWorker() {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) {
+    return;
+  }
+
+  navigator.serviceWorker
+    .register('/books/sw.js', { scope: '/books/' })
+    .catch((error) => console.error('Books could not install offline support.', error));
 }

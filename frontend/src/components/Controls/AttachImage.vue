@@ -53,6 +53,7 @@
 <script lang="ts">
 import { Field } from 'schemas/types';
 import { Button as FrappeButton } from 'frappe-ui';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { pickFile } from 'src/utils/browser';
 import { uploadFile } from 'src/web/api';
@@ -103,7 +104,11 @@ export default defineComponent({
         return;
       }
 
-      this.triggerChange(await uploadFile(file));
+      try {
+        this.triggerChange(await uploadFile(file));
+      } catch (error) {
+        await handleErrorWithDialog(error, this.doc, true);
+      }
     },
   },
 });

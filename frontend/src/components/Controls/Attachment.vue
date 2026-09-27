@@ -60,6 +60,7 @@
 import { t } from 'fyo';
 import { Button as FrappeButton } from 'frappe-ui';
 import { Field } from 'schemas/types';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { getFileName, isFileUrl } from 'src/utils/files';
 import { uploadFile } from 'src/web/api';
 import { defineComponent, PropType } from 'vue';
@@ -89,7 +90,6 @@ export default defineComponent({
       (this.$refs.fileInput as HTMLInputElement).click();
     },
     clear() {
-      (this.$refs.fileInput as HTMLInputElement).value = '';
       this.triggerChange(null);
     },
     download() {
@@ -111,11 +111,17 @@ export default defineComponent({
     async selectFile(e: Event) {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
+      // Lets the same file be picked again, like after a failed upload.
+      target.value = '';
       if (!file) {
         return;
       }
 
-      this.triggerChange(await uploadFile(file));
+      try {
+        this.triggerChange(await uploadFile(file));
+      } catch (error) {
+        await handleErrorWithDialog(error, this.doc, true);
+      }
     },
   },
 });

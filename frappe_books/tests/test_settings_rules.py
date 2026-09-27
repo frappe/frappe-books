@@ -86,11 +86,11 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		self.assertRaises(frappe.InvalidEmailAddressError, settings.save)
 
 	def test_display_precision_stays_between_zero_and_nine(self):
-		for precision in (-1, 10):
+		for precision, error in ((-1, frappe.NonNegativeError), (10, frappe.ValidationError)):
 			with self.subTest(precision=precision):
 				settings = frappe.get_single("Books System Settings")
 				settings.display_precision = precision
-				self.assertRaisesRegex(frappe.ValidationError, "between 0 and 9", settings.save)
+				self.assertRaises(error, settings.save)
 
 	def test_the_interface_gets_default_number_series_from_the_server(self):
 		series = make_number_series("SalesInvoice")

@@ -9,17 +9,19 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 	def test_item_stock_settings_cannot_change_after_insert(self):
 		income = make_account("Set Once Income", root_type="Income").name
 		expense = make_account("Set Once Expense", root_type="Expense").name
+		received = make_account("Set Once Received", root_type="Liability").name
 		unit = frappe.get_doc({"doctype": "Books Uom", "name": frappe.generate_hash()}).insert().name
-		for fieldname, value in (
-			("unit", unit),
-			("item_type", "Service"),
-			("track_item", 1),
-			("has_batch", 1),
-			("has_serial_number", 1),
+		for fieldname, changes in (
+			("unit", {"unit": unit}),
+			("item_type", {"item_type": "Service"}),
+			# a tracked item needs a liability account, so only the locked field can fail
+			("track_item", {"track_item": 1, "expense_account": received}),
+			("has_batch", {"has_batch": 1}),
+			("has_serial_number", {"has_serial_number": 1}),
 		):
 			with self.subTest(fieldname=fieldname):
 				item = make_item(income, expense)
-				item.set(fieldname, value)
+				item.update(changes)
 				self.assertRaises(frappe.CannotChangeConstantError, item.save)
 
 	def test_account_tree_fields_cannot_change_after_insert(self):

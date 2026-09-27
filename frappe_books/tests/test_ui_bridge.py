@@ -69,8 +69,9 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		payable = make_account("Bridge Payable", root_type="Liability", account_type="Payable")
 		cash = make_account("Bridge Cash", account_type="Cash")
 		expense = make_account("Bridge Expense", root_type="Expense", account_type="Expense Account")
+		income = make_account("Bridge Income", root_type="Income", account_type="Income Account")
 		party = make_party(payable.name, role="Supplier")
-		item = make_item(expense.name, expense.name)
+		item = make_item(income.name, expense.name)
 		invoice = _submitted_invoice(
 			"Books Purchase Invoice", party.name, payable.name, item.name, expense.name
 		)
@@ -94,8 +95,9 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		receivable = make_account("Bridge Receivable", account_type="Receivable")
 		cash = make_account("Bridge Cash", account_type="Cash")
 		income = make_account("Bridge Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Bridge Expense", root_type="Expense", account_type="Expense Account")
 		party = make_party(receivable.name)
-		item = make_item(income.name, income.name)
+		item = make_item(income.name, expense.name)
 		invoice = _submitted_invoice(
 			"Books Sales Invoice", party.name, receivable.name, item.name, income.name
 		)
@@ -280,7 +282,8 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 	def test_numeric_strings_are_coerced_before_controller_validation(self):
 		income = make_account("Bridge Numeric Income", root_type="Income", account_type="Income Account")
-		expense = make_account("Bridge Numeric Expense", root_type="Expense", account_type="Expense Account")
+		# a tracked item books its cost against a liability until the stock is sold
+		expense = make_account("Bridge Numeric Stock Received", root_type="Liability")
 		item = make_item(income.name, expense.name, rate=10, track_item=1)
 		inserted = self.bridge.get("Item", item.name)
 

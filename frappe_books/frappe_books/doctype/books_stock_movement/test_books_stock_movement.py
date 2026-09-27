@@ -268,7 +268,8 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		self.assertFalse(frappe.db.exists("Books Batch", batch))
 
 	def test_untracked_item_cannot_move_stock(self):
-		item = make_item(self.item.income_account, self.item.expense_account).name
+		expense = make_account("Service Expense", root_type="Expense")
+		item = make_item(self.item.income_account, expense.name).name
 		receipt = frappe.get_doc(
 			movement_values(
 				"MaterialReceipt", [{"item": item, "to_location": "Stores", "quantity": 1, "rate": 10}]

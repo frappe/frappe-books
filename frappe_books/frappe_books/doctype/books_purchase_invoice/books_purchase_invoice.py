@@ -6,6 +6,7 @@ import frappe
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
+from frappe_books.inventory.auto_transfer import map_invoice_transfer
 
 
 class BooksPurchaseInvoice(PostingInvoiceController):
@@ -66,3 +67,8 @@ def make_payment(source_name: str):
 @frappe.whitelist()
 def make_return(source_name: str):
 	return map_return("Books Purchase Invoice", source_name)
+
+
+@frappe.whitelist()
+def make_purchase_receipt(source_name: str):
+	return map_invoice_transfer("Books Purchase Invoice", source_name)

@@ -23,8 +23,8 @@ from frappe_books.series import SeriesNamingMixin
 
 STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
 
-# Transfer fields that an invoice made from the transfer must not copy.
-UNBILLED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
+# Fields an invoice and its transfer do not share when one is mapped from the other.
+UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
 
 class StockMovementController(SeriesNamingMixin, Document):
@@ -112,7 +112,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 			transfer_doctype: {
 				"doctype": invoice_doctype,
 				"validation": {"docstatus": ["=", 1]},
-				"field_no_map": UNBILLED_FIELDS,
+				"field_no_map": UNSHARED_FIELDS,
 			},
 			_items_doctype(transfer_doctype): {"doctype": _items_doctype(invoice_doctype)},
 		},

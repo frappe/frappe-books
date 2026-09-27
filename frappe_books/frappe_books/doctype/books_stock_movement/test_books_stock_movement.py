@@ -240,6 +240,16 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertRaises(frappe.LinkValidationError, receipt.insert)
 
+	def test_untracked_item_cannot_move_stock(self):
+		item = make_item(self.item.income_account, self.item.expense_account).name
+		receipt = frappe.get_doc(
+			movement_values(
+				"MaterialReceipt", [{"item": item, "to_location": "Stores", "quantity": 1, "rate": 10}]
+			)
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "does not track stock", receipt.insert)
+
 	def test_manufacture_row_cannot_both_consume_and_produce(self):
 		row = {"item": self.item.name, "quantity": 1, "rate": 10}
 		manufacture = frappe.get_doc(

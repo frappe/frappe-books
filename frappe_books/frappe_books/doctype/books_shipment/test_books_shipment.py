@@ -2,6 +2,7 @@
 # See license.txt
 
 from decimal import Decimal
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -102,9 +103,9 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 
 	def test_shipment_cannot_post_a_stock_value_increase(self):
 		item, _cogs, _stock = self._tracked_item()
-		frappe.db.set_value("Books Item", item.name, "track_item", 0)
-		self._make_shipment(item, quantity=5, rate=25).submit()
-		frappe.db.set_value("Books Item", item.name, "track_item", 1)
+		# Stock checks keep stock from going negative, so skip them to get there.
+		with patch("frappe_books.inventory.transaction.validate_stock_available"):
+			self._make_shipment(item, quantity=5, rate=25).submit()
 		seed_stock(item.name, quantity=10, rate=10)
 
 		shipment = self._make_shipment(item, quantity=5, rate=25)

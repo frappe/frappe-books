@@ -67,6 +67,7 @@ import { ValueError } from 'fyo/utils/errors';
 import FormHeader from 'src/components/FormHeader.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import { shortcutsKey } from 'src/utils/injectionKeys';
+import { getRowEditFieldnames } from 'src/utils/sheetFields';
 import { computed } from 'vue';
 import { inject } from 'vue';
 import { defineComponent } from 'vue';
@@ -107,8 +108,7 @@ export default defineComponent({
       throw new ValueError(this.t`Invalid value found for ${label}`);
     },
     fields() {
-      const { quickEditFields, tableFields } = this.row.schema;
-      const fieldnames = quickEditFields ?? tableFields ?? [];
+      const fieldnames = getRowEditFieldnames(this.row.schema);
       return fieldnames.map((f) => this.fyo.getField(this.row.schemaName, f));
     },
     previous(): number {

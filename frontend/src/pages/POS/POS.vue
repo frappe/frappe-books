@@ -60,7 +60,6 @@
       @route-to-sinv-list="routeToSinvList"
       @set-loyalty-points="setLoyaltyPoints"
       @set-transfer-ref-no="setTransferRefNo"
-      @apply-pricing-rule="applyPricingRule"
       @create-transaction="createTransaction"
       @save-invoice-action="saveInvoiceAction"
       @set-transfer-amount="setTransferAmount"
@@ -104,7 +103,6 @@
       :open-applied-coupons-modal="openAppliedCouponsModal"
       :open-return-sales-invoice-modal="openReturnSalesInvoiceModal"
       :open-batch-selection-modal="openBatchSelectionModal"
-      :apply-pricing-rule-action="applyPricingRule"
       :selected-item-for-batch="selectedItemForBatch"
       :expanded-batch-id="expandedBatchId"
       @set-expanded-batch-id="setExpandedBatchId"
@@ -120,7 +118,6 @@
       @set-payment-method="setPaymentMethod"
       @set-coupons-count="setCouponsCount"
       @route-to-sinv-list="routeToSinvList"
-      @apply-pricing-rule="applyPricingRule"
       @set-loyalty-points="setLoyaltyPoints"
       @set-transfer-ref-no="setTransferRefNo"
       @create-transaction="createTransaction"
@@ -524,7 +521,7 @@ export default defineComponent({
       }
 
       if (!row.isFreeItem) {
-        await this.applyPricingRule();
+        await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       }
     },
@@ -853,7 +850,7 @@ export default defineComponent({
     async setLoyaltyPoints(value: number) {
       this.appliedLoyaltyPoints = value;
       await this.sinvDoc.set('redeemLoyaltyPoints', value > 0);
-      await this.applyPricingRule();
+      await this.previewInvoice();
     },
     async selectedInvoiceName(doc: SalesInvoice) {
       const salesInvoiceDoc = (await this.fyo.doc.getDoc(
@@ -986,7 +983,7 @@ export default defineComponent({
                   existingItem
                 );
 
-                await this.applyPricingRule();
+                await this.previewInvoice();
                 await this.sinvDoc.runFormulas();
                 return;
               }
@@ -1012,7 +1009,7 @@ export default defineComponent({
             );
           }
 
-          await this.applyPricingRule();
+          await this.previewInvoice();
           await this.sinvDoc.runFormulas();
           return;
         }
@@ -1036,7 +1033,7 @@ export default defineComponent({
             existingItems[0]
           );
 
-          await this.applyPricingRule();
+          await this.previewInvoice();
           await this.sinvDoc.runFormulas();
           return;
         }
@@ -1060,7 +1057,7 @@ export default defineComponent({
           );
         }
 
-        await this.applyPricingRule();
+        await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       } catch (error) {
         return showToast({
@@ -1087,7 +1084,7 @@ export default defineComponent({
           quantity ?? 1,
           this.itemQtyMap
         );
-        await this.applyPricingRule();
+        await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       } catch (error) {
         showToast({
@@ -1365,7 +1362,7 @@ export default defineComponent({
         this.itemSerialNumbers
       );
     },
-    async applyPricingRule() {
+    async previewInvoice() {
       try {
         await this.sinvDoc.preview();
       } catch (error) {

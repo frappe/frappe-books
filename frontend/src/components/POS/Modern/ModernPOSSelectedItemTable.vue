@@ -34,7 +34,6 @@
                 "
                 @selected-row="selectedItemRow"
                 @run-sinv-formulas="runSinvFormulas"
-                @apply-pricing-rule="$emit('applyPricingRule')"
                 @toggle-modal="$emit('toggleModal')"
               />
             </FrappeListRow>
@@ -100,7 +99,6 @@ export default defineComponent({
   emits: [
     'toggleModal',
     'selectedRow',
-    'applyPricingRule',
     'setExpandedBatchId',
   ],
   computed: {

@@ -38,7 +38,6 @@
 
     <CouponCodeModal
       :open-modal="openCouponCodeModal"
-      @apply-pricing-rule="emitEvent('applyPricingRule')"
       @toggle-modal="emitEvent('toggleModal', 'CouponCode', false)"
       @set-coupons-count="(count) => emitEvent('setCouponsCount', count)"
     />
@@ -92,7 +91,6 @@
       :modal-status="openKeyboardModal"
       :selected-item-field="selectedItemField"
       :selected-item-row="selectedItemRow as SalesInvoiceItem"
-      :apply-pricing-rule-action="applyPricingRuleAction"
       @toggle-modal="emitEvent('toggleModal', 'Keyboard', false)"
     />
 
@@ -124,7 +122,6 @@
                 (rowName) => $emit('setExpandedBatchId', rowName)
               "
               @selected-row="selectedRow"
-              @apply-pricing-rule="emitEvent('applyPricingRule')"
               @toggle-modal="emitEvent('toggleModal', 'Keyboard')"
             />
           </div>
@@ -255,9 +252,8 @@
 import POSOrderSummary from 'src/components/POS/POSOrderSummary.vue';
 import POSInvoiceActions from 'src/components/POS/POSInvoiceActions.vue';
 import { Money } from 'pesa';
-import { PropType } from 'vue';
 import { fyo } from 'src/initFyo';
-import { defineComponent } from 'vue';
+import { defineComponent, PropType } from 'vue';
 import { getItem } from 'src/utils/pos';
 import AlertModal from './AlertModal.vue';
 import PaymentModal from './PaymentModal.vue';
@@ -326,10 +322,6 @@ export default defineComponent({
     openAppliedCouponsModal: Boolean,
     openReturnSalesInvoiceModal: Boolean,
     openBatchSelectionModal: Boolean,
-    applyPricingRuleAction: {
-      type: Function as PropType<() => Promise<void>>,
-      required: true,
-    },
     totalQuantity: {
       type: Number,
       default: 0,
@@ -411,7 +403,6 @@ export default defineComponent({
     'setLoyaltyPoints',
     'setPaymentMethod',
     'setTransferRefNo',
-    'applyPricingRule',
     'saveInvoiceAction',
     'createTransaction',
     'setTransferAmount',

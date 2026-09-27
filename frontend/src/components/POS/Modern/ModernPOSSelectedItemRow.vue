@@ -271,7 +271,6 @@ export default defineComponent({
     'toggleModal',
     'runSinvFormulas',
     'selectedRow',
-    'applyPricingRule',
     'setExpandedBatchId',
   ],
 
@@ -466,10 +465,6 @@ export default defineComponent({
     },
     async removeAddedItem(row: SalesInvoiceItem) {
       this.row.parentdoc?.remove('items', row?.idx as number);
-
-      if (!row.isFreeItem) {
-        this.$emit('applyPricingRule');
-      }
     },
   },
 });

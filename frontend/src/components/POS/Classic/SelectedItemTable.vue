@@ -33,7 +33,6 @@
                   (rowName) => $emit('setExpandedBatchId', rowName)
                 "
                 @run-sinv-formulas="runSinvFormulas"
-                @apply-pricing-rule="$emit('applyPricingRule')"
                 @selected-row="selectedItemRow"
               />
             </FrappeListRow>
@@ -97,7 +96,7 @@ export default defineComponent({
       default: undefined,
     },
   },
-  emits: ['applyPricingRule', 'selectedRow', 'setExpandedBatchId'],
+  emits: ['selectedRow', 'setExpandedBatchId'],
   computed: {
     listColumns(): string[] {
       return [

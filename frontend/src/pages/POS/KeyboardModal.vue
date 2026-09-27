@@ -48,7 +48,7 @@ import Modal from 'src/components/POS/POSDialog.vue';
 import NumericKeypad from 'src/components/POS/NumericKeypad.vue';
 import { parseNumericDraft } from 'src/components/POS/numericKeypad';
 import { getErrorMessage } from 'src/utils';
-import { defineComponent, inject, PropType } from 'vue';
+import { defineComponent, inject } from 'vue';
 
 type NumericKeypadRef = {
   begin: () => Promise<void>;
@@ -72,10 +72,6 @@ export default defineComponent({
     modalStatus: Boolean,
     selectedItemRow: { type: SalesInvoiceItem, required: true },
     selectedItemField: { type: String, default: '' },
-    applyPricingRuleAction: {
-      type: Function as PropType<() => Promise<void>>,
-      required: true,
-    },
   },
   emits: ['toggleModal'],
   setup() {
@@ -205,7 +201,6 @@ export default defineComponent({
       if (this.isQuantityField) {
         await row.set(fieldname, value);
         await validateQty(this.sinvDoc, row, this.getMatchingItems(row));
-        await this.applyPricingRuleAction();
         return;
       }
 
@@ -263,10 +258,6 @@ export default defineComponent({
         await row.set('itemDiscountAmount', snapshot.itemDiscountAmount);
         await row.set('itemDiscountPercent', snapshot.itemDiscountPercent);
         await this.sinvDoc.runFormulas();
-
-        if (this.isQuantityField) {
-          await this.applyPricingRuleAction();
-        }
       } catch {
         // Keep the original error visible if rollback recalculation also fails.
       }

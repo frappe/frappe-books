@@ -38,7 +38,6 @@ export type PosEmits =
   | 'setCouponsCount'
   | 'routeToSinvList'
   | 'handleItemSearch'
-  | 'applyPricingRule'
   | 'setTransferRefNo'
   | 'setLoyaltyPoints'
   | 'setTransferAmount'

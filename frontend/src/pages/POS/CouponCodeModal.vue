@@ -115,7 +115,7 @@ export default defineComponent({
   props: {
     openModal: Boolean,
   },
-  emits: ['setCouponsCount', 'toggleModal', 'applyPricingRule'],
+  emits: ['setCouponsCount', 'toggleModal'],
 
   setup() {
     return {
@@ -197,8 +197,6 @@ export default defineComponent({
     },
     async removeAppliedCoupon(coupon: AppliedCouponCodes) {
       await coupon?.parentdoc?.remove('coupons', coupon.idx as number);
-
-      this.$emit('applyPricingRule');
       this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
     },
     async cancelApplyCouponCode() {
@@ -209,7 +207,6 @@ export default defineComponent({
         await this.sinvDoc.append('coupons', { coupons });
       }
 
-      this.$emit('applyPricingRule');
       this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
       this.$emit('toggleModal', 'CouponCode');
     },

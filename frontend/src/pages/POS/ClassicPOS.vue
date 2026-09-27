@@ -38,7 +38,6 @@
 
     <CouponCodeModal
       :open-modal="openCouponCodeModal"
-      @apply-pricing-rule="emitEvent('applyPricingRule')"
       @toggle-modal="emitEvent('toggleModal', 'CouponCode', false)"
       @set-coupons-count="(count) => emitEvent('setCouponsCount', count)"
     />
@@ -210,7 +209,6 @@
               @set-expanded-batch-id="
                 (rowName) => $emit('setExpandedBatchId', rowName)
               "
-              @apply-pricing-rule="emitEvent('applyPricingRule')"
               @selected-row="(row) => $emit('selectedRow', row)"
             />
           </div>
@@ -396,7 +394,6 @@ export default defineComponent({
     'setPaymentMethod',
     'setTransferRefNo',
     'setLoyaltyPoints',
-    'applyPricingRule',
     'saveInvoiceAction',
     'createTransaction',
     'setTransferAmount',

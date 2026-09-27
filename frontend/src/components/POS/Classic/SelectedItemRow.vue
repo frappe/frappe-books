@@ -301,7 +301,7 @@ export default defineComponent({
       default: undefined,
     },
   },
-  emits: ['runSinvFormulas', 'applyPricingRule', 'selectedRow', 'setExpandedBatchId'],
+  emits: ['runSinvFormulas', 'selectedRow', 'setExpandedBatchId'],
   setup() {
     return {
       isDiscountingEnabled: inject('isDiscountingEnabled') as boolean,
@@ -587,7 +587,6 @@ export default defineComponent({
       }
 
       if (!this.row.isFreeItem) {
-        this.$emit('applyPricingRule');
         this.$emit('runSinvFormulas');
 
         if (!hasManualDiscount && !isPercentageDiscount) {
@@ -645,7 +644,6 @@ export default defineComponent({
       await this.fetchSerialNumbers();
 
       if (!this.row.isFreeItem) {
-        this.$emit('applyPricingRule');
         this.$emit('runSinvFormulas');
 
         if (!hasManualDiscount && !isPercentageDiscount) {
@@ -663,9 +661,6 @@ export default defineComponent({
     async removeAddedItem(row: SalesInvoiceItem) {
       this.row.parentdoc?.remove('items', row?.idx as number);
       this.row.runFormulas();
-      if (!row.isFreeItem) {
-        this.$emit('applyPricingRule');
-      }
     },
   },
 });

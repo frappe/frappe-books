@@ -140,7 +140,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				ensure_currency(currency)
 				invoice = make_invoice(
 					"Books Sales Invoice",
-					self.party.name,
+					make_party(self.receivable.name).name,
 					self.receivable.name,
 					item.name,
 					self.income.name,

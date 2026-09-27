@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.accounts import validate_party_account
+from frappe_books.accounting.money import company_currency
 from frappe_books.regional import validate_gstin
 
 
@@ -36,6 +37,10 @@ class BooksParty(Document):
 
 	_DOCTYPE_NAME = "Books Party"
 
+	def before_validate(self):
+		self.default_account = self.default_account or _default_account(self.role)
+		self.currency = self.currency or company_currency()
+
 	def validate(self):
 		validate_party_account(self, "default_account", self.role)
 		if self.gst_type != "Registered Regular":
@@ -52,3 +57,9 @@ class BooksParty(Document):
 		if lead.status != "Converted":
 			lead.status = "Converted"
 			lead.save()
+
+
+def _default_account(role):
+	"""Debtors for a customer and Creditors for a supplier, when the chart has them."""
+	account = {"Customer": "Debtors", "Supplier": "Creditors"}.get(role)
+	return account if account and frappe.db.exists("Books Account", account) else None

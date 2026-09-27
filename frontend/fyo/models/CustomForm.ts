@@ -75,7 +75,7 @@ export class CustomForm extends Doc {
     await this.refreshParentSchema();
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   override async validate(): Promise<void> {
     for (const row of this.customFields ?? []) {
       if (row.fieldtype === 'Select' || row.fieldtype === 'AutoComplete') {

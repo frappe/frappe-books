@@ -31,7 +31,6 @@ import {
   EmptyMessageMap,
   FiltersMap,
   FormulaMap,
-  FormulaReturn,
   HiddenMap,
   ListViewSettings,
   ListsMap,
@@ -43,7 +42,7 @@ import {
 import { validateOptions, validateRequired } from './validationFunction';
 
 export class Doc extends Observable<DocValue | Doc[]> {
-  /* eslint-disable @typescript-eslint/no-floating-promises */
+   
   name?: string;
   schema: Readonly<Schema>;
   fyo: Fyo;
@@ -1092,7 +1091,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
    * This may cause the lifecycle function to execute incorrectly.
    */
 
-  /* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars */
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   async change(ch: ChangeArg) {}
   async validate() {}
   async beforeSync() {}

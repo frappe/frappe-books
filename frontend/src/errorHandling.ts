@@ -44,7 +44,7 @@ export async function handleError(
   notifyUser = true
 ) {
   if (logToConsole) {
-    // eslint-disable-next-line no-console
+     
     console.error(error);
   }
 
@@ -83,7 +83,7 @@ export async function handleErrorWithDialog(
   await showDialog(options);
   if (dontThrow) {
     if (fyo.store.isDevelopment) {
-      // eslint-disable-next-line no-console
+       
       console.error(error);
     }
     return;

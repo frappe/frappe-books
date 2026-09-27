@@ -90,7 +90,6 @@ export default defineComponent({
     },
     clear() {
       (this.$refs.fileInput as HTMLInputElement).value = '';
-      // @ts-ignore
       this.triggerChange(null);
     },
     download() {
@@ -116,7 +115,6 @@ export default defineComponent({
         return;
       }
 
-      // @ts-ignore
       this.triggerChange(await uploadFile(file));
     },
   },

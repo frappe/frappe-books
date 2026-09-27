@@ -89,7 +89,6 @@ export default defineComponent({
       return await this.selectImage();
     },
     async clearImage() {
-      // @ts-ignore
       this.triggerChange(null);
     },
     async selectImage() {
@@ -104,7 +103,6 @@ export default defineComponent({
         return;
       }
 
-      // @ts-ignore
       this.triggerChange(await uploadFile(file));
     },
   },

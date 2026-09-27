@@ -109,6 +109,7 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 		)
 		modified = invoice.modified
 		line_discounts.execute()
+		line_discounts.execute()
 		invoice.reload()
 		self.assertEqual(invoice.items[0].item_discount_amount, 150)
 		self.assertEqual(frappe.utils.get_datetime(invoice.modified), frappe.utils.get_datetime(modified))

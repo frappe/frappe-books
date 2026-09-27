@@ -8,6 +8,7 @@ import {
   FiltersMap,
   FormulaMap,
   HiddenMap,
+  RequiredMap,
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { Transactional } from 'models/Transactional/Transactional';
@@ -22,7 +23,7 @@ import { createMissingBatches } from 'models/inventory/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
-import { getIsNullOrUndef, safeParseFloat } from 'utils';
+import { getIsNullOrUndef } from 'utils';
 import { Defaults } from '../Defaults/Defaults';
 import { InvoiceItem } from '../InvoiceItem/InvoiceItem';
 import { Item } from '../Item/Item';
@@ -175,24 +176,26 @@ export abstract class Invoice extends Transactional {
     return [];
   }
 
-  async getExchangeRate() {
-    if (!this.currency) {
+  /** The fetched rate, or null (with a warning) when the user must enter it. */
+  async getExchangeRate(): Promise<number | null> {
+    if (!this.currency || this.currency === this.companyCurrency) {
       return 1.0;
     }
 
-    const currency = await this.fyo.getValue(
-      ModelNameEnum.SystemSettings,
-      'currency'
-    );
-    if (this.currency === currency) {
-      return 1.0;
-    }
     const exchangeRate = await getExchangeRate({
       fromCurrency: this.currency,
-      toCurrency: currency as string,
+      toCurrency: this.companyCurrency,
     });
+    // Warn once, not on every change while the rate stays missing.
+    if (exchangeRate === undefined && this.exchangeRate !== null) {
+      await showToast(
+        'warning',
+        this.fyo
+          .t`Could not fetch the exchange rate from ${this.currency} to ${this.companyCurrency}. Enter it at the top of the form.`
+      );
+    }
 
-    return safeParseFloat(exchangeRate.toFixed(2));
+    return exchangeRate ?? null;
   }
 
   formulas: FormulaMap = {
@@ -300,6 +303,10 @@ export abstract class Invoice extends Transactional {
     pricingRuleDetail: () =>
       !this.fyo.singles.AccountingSettings?.enablePricingRule ||
       !this.pricingRuleDetail?.length,
+  };
+
+  required: RequiredMap = {
+    exchangeRate: () => this.isMultiCurrency,
   };
 
   static defaults: DefaultMap = {
@@ -518,9 +525,13 @@ export abstract class Invoice extends Transactional {
 }
 
 async function showPreviewError(error: unknown) {
+  await showToast(
+    'error',
+    error instanceof Error ? error.message : String(error)
+  );
+}
+
+async function showToast(type: 'error' | 'warning', message: string) {
   const { showToast } = await import('src/utils/interactive');
-  showToast({
-    type: 'error',
-    message: error instanceof Error ? error.message : String(error),
-  });
+  showToast({ type, message });
 }

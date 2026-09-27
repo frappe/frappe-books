@@ -245,8 +245,9 @@ export default defineComponent({
       return this.hasDoc && !!this.doc.isMultiCurrency;
     },
     exchangeRate(): number {
+      // 0 shows the rate as missing, to be entered by the user.
       if (!this.hasDoc || typeof this.doc.exchangeRate !== 'number') {
-        return 1;
+        return 0;
       }
 
       return this.doc.exchangeRate;

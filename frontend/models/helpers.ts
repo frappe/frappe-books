@@ -537,53 +537,52 @@ export function getIsDocEnabledColumn(): ColumnConfig {
   };
 }
 
+/**
+ * The rate from a public rates service, or undefined when it has none.
+ * Only the currency codes and the date leave the browser.
+ */
 export async function getExchangeRate({
   fromCurrency,
   toCurrency,
-  date,
+  date = DateTime.local().toISODate() as string,
 }: {
   fromCurrency: string;
   toCurrency: string;
   date?: string;
-}) {
-  if (!fetch) {
-    return 1;
-  }
-
-  if (!date) {
-    date = DateTime.local().toISODate();
-  }
-
+}): Promise<number | undefined> {
   const cacheKey = `currencyExchangeRate:${date}:${fromCurrency}:${toCurrency}`;
-
-  let exchangeRate = 0;
-  if (localStorage) {
-    exchangeRate = safeParseFloat(localStorage.getItem(cacheKey) as string);
+  const cached = safeParseFloat(localStorage.getItem(cacheKey) as string);
+  if (cached > 0) {
+    return cached;
   }
 
-  if (exchangeRate && exchangeRate !== 1) {
-    return exchangeRate;
-  }
-
-  try {
-    const res = await fetch(
-      `https://api.vatcomply.com/rates?date=${date}&base=${fromCurrency}&symbols=${toCurrency}`
-    );
-    const data = (await res.json()) as {
-      base: string;
-      data: string;
-      rates: Record<string, number>;
-    };
-    exchangeRate = data.rates[toCurrency];
-  } catch {
-    exchangeRate ??= 1;
-  }
-
-  if (localStorage) {
+  const exchangeRate = await fetchExchangeRate(fromCurrency, toCurrency, date);
+  if (exchangeRate) {
     localStorage.setItem(cacheKey, String(exchangeRate));
   }
 
   return exchangeRate;
+}
+
+async function fetchExchangeRate(
+  fromCurrency: string,
+  toCurrency: string,
+  date: string
+): Promise<number | undefined> {
+  const query = new URLSearchParams({
+    date,
+    base: fromCurrency,
+    symbols: toCurrency,
+  });
+  try {
+    const response = await fetch(`https://api.vatcomply.com/rates?${query}`);
+    const data = (await response.json()) as { rates?: Record<string, number> };
+    const exchangeRate = response.ok ? data.rates?.[toCurrency] : undefined;
+    return exchangeRate && exchangeRate > 0 ? exchangeRate : undefined;
+  } catch {
+    // Offline or an unreadable reply: the user enters the rate instead.
+    return undefined;
+  }
 }
 
 export function isCredit(rootType: AccountRootType) {

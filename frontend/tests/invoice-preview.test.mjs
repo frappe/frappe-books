@@ -85,6 +85,23 @@ test('rows removed while a preview runs stay removed', async () => {
   assert.deepEqual(invoice.items, []);
 });
 
+test('a preview keeps the row quantities the client computes', async () => {
+  // The server fills the transfer unit of item rows and has no computed qty.
+  const { invoice } = await makeInvoice((values) => ({
+    ...values,
+    items: [
+      ...values.items.map((row) => ({ ...row, transferUnit: row.item && row.unit, qty: null })),
+      { item: 'Gift', unit: 'Unit', transferUnit: 'Unit', quantity: 3, transferQuantity: 3, rate: 0, isFreeItem: true },
+    ],
+  }));
+  await invoice.append('items');
+
+  await invoice.preview();
+
+  assert.deepEqual(invoice.items.map((row) => row.qty), [2, 1, 3]);
+  clearTimeout(invoice._previewTimer);
+});
+
 test('edits in quick succession send one preview', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const { invoice, calls } = await makeInvoice((values) => values);

@@ -21,7 +21,7 @@ await build({
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { TrialBalance } from './reports/TrialBalance/TrialBalance';
-      export { useTranslations } from './src/web/translations';
+      export { loadTranslations, useTranslations } from './src/web/translations';
       export { getAccountLabel } from './src/utils/accountLabel';
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getJsonData, getCsvData } from './reports/commonExporter';
@@ -81,6 +81,7 @@ export const {
   ProfitAndLoss,
   GeneralLedger,
   TrialBalance,
+  loadTranslations,
   useTranslations,
   getAccountLabel,
   t,

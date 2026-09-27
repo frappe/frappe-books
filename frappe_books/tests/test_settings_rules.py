@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.coa import STANDARD_CHART, ensure_chart, load_chart
+from frappe_books.coa import STANDARD_CHART, chart_options, ensure_chart, load_chart
 from frappe_books.frappe_books.doctype.books_accounting_settings import books_accounting_settings
 from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
 	POINT_OF_SALE_FEATURES,
@@ -22,6 +22,14 @@ COMPANY = {
 
 
 class IntegrationTestSettingsRules(IntegrationTestCase):
+	def test_every_chart_links_each_account_to_a_parent_it_contains(self):
+		for chart in chart_options():
+			with self.subTest(chart=chart["name"]):
+				accounts = load_chart(chart["name"])
+				names = {account.name for account in accounts}
+				self.assertTrue(all(account.name == account.name.strip() for account in accounts))
+				self.assertTrue(all(account.parent in names for account in accounts if account.parent))
+
 	def test_enabling_discounting_creates_the_discount_account(self):
 		ensure_chart(load_chart(STANDARD_CHART))
 		frappe.db.delete("Books Account", {"name": "Discounts"})

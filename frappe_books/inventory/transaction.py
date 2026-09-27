@@ -164,6 +164,8 @@ def _debit_credit(posting, debit_account, credit_account, amount, reverse):
 
 
 def _validate_movement_locations(movement, transfers):
+	if movement.movement_type == "Manufacture":
+		_validate_manufacture_locations(transfers)
 	if movement.movement_type == "MaterialIssue" and any(row["to_location"] for row in transfers):
 		frappe.throw(_("Material issues cannot have a destination location."))
 	if movement.movement_type == "MaterialReceipt" and any(row["from_location"] for row in transfers):
@@ -172,8 +174,11 @@ def _validate_movement_locations(movement, transfers):
 		not row["from_location"] or not row["to_location"] for row in transfers
 	):
 		frappe.throw(_("Material transfers require both source and destination locations."))
-	if movement.movement_type == "Manufacture":
-		if not any(row["from_location"] for row in transfers) or not any(
-			row["to_location"] for row in transfers
-		):
-			frappe.throw(_("Manufacture requires both consumed and produced items."))
+
+
+def _validate_manufacture_locations(transfers):
+	"""Each row either consumes (source only) or produces (destination only)."""
+	if any(row["from_location"] and row["to_location"] for row in transfers):
+		frappe.throw(_("Only From or To can be set for Manufacture"))
+	if not any(row["from_location"] for row in transfers) or not any(row["to_location"] for row in transfers):
+		frappe.throw(_("Manufacture requires both consumed and produced items."))

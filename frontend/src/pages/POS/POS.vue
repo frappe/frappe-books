@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-col">
+  <div class="flex min-h-0 flex-col">
     <PageHeader :title="t`Point of Sale`">
       <slot>
         <FrappeButton

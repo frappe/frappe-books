@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen" style="width: var(--w-desk)">
+  <div class="flex min-h-0 flex-col">
     <PageHeader :title="t`Dashboard`">
       <PeriodSelector
         :value="period"
@@ -8,10 +8,7 @@
       />
     </PageHeader>
 
-    <div
-      class="no-scrollbar overflow-auto bg-surface-base"
-      style="height: calc(100vh - var(--h-row-largest) - 1px)"
-    >
+    <div class="no-scrollbar min-h-0 flex-1 overflow-auto bg-surface-base">
       <div class="min-w-0">
         <Cashflow class="p-4" :common-period="period" :dark-mode="darkMode" />
         <hr class="border-outline-gray-1" />

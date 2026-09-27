@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-[calc(100dvh-var(--h-row-largest))] min-h-0 overflow-y-auto xl:overflow-hidden bg-surface-gray-1 grid grid-cols-1 xl:grid-cols-12 gap-2 p-4"
+    class="min-h-0 flex-1 overflow-y-auto xl:overflow-hidden bg-surface-gray-1 grid grid-cols-1 xl:grid-cols-12 gap-2 p-4"
   >
     <div
       class="relative col-span-1 xl:col-span-5 min-w-0 min-h-[28rem] xl:min-h-0 overflow-hidden bg-surface-base border rounded-4 border-outline-gray-1"

@@ -1,8 +1,7 @@
-import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
+import { Button, FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import { createApp, h, reactive } from 'vue';
 import { fyo } from 'src/initFyo';
 import 'src/router';
-import Button from 'src/components/Button.vue';
 import { commonDocSubmit, commonDocSync } from 'src/utils/ui';
 import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 import 'src/styles/index.css';

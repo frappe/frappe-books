@@ -6,7 +6,10 @@
   >
     <div class="flex flex-col gap-5">
       <div class="flex items-start gap-3">
-        <Icon name="coins" class="mt-1 size-5 shrink-0 text-ink-gray-6" />
+        <span
+          class="lucide-coins mt-1 size-5 shrink-0 text-ink-gray-6"
+          aria-hidden="true"
+        />
         <div class="min-w-0">
           <p class="text-base font-medium text-ink-gray-9">
             {{ t`${loyaltyPoints} points available` }}
@@ -28,37 +31,34 @@
       />
     </div>
     <template #actions>
-      <Button size="md" class="min-w-24" @click="cancelLoyaltyProgram">{{
+      <FrappeButton size="md" class="min-w-24" @click="cancelLoyaltyProgram">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         @click="saveLoyaltyPoints"
-        >{{ t`Save` }}</Button
-      >
+        >{{ t`Save` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import Button from 'src/components/Button.vue';
+import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { defineComponent, inject } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
 import Int from 'src/components/Controls/Int.vue';
-import Icon from 'src/components/Icon.vue';
 
 export default defineComponent({
   name: 'LoyaltyProgramModal',
   components: {
     Modal,
-    Button,
+    FrappeButton,
     Int,
-    Icon,
   },
   props: {
     openModal: {

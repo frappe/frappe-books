@@ -36,17 +36,11 @@
       <FrappeButton
         size="xs"
         variant="subtle"
+        :icon="shouldClear ? 'lucide-x' : 'lucide-upload'"
         class="mb-1"
         :aria-label="shouldClear ? t`Remove image` : t`Upload image`"
         @click="handleClick"
-      >
-        <template #icon>
-          <span
-            :class="shouldClear ? 'lucide-x' : 'lucide-upload'"
-            class="size-4"
-          />
-        </template>
-      </FrappeButton>
+      />
     </div>
   </div>
 </template>

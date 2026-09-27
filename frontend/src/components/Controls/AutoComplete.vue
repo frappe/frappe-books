@@ -56,12 +56,11 @@
           v-if="value && showClearButton"
           variant="ghost"
           size="xs"
+          icon="lucide-x"
           :aria-label="t`Clear value`"
           @pointerdown.prevent
           @click.stop="clearSelection(clear, setOpen)"
-        >
-          <template #icon><span class="lucide-x size-3.5" /></template>
-        </FrappeButton>
+        />
 
         <LinkedEntryButton
           v-if="canLink"

@@ -1,13 +1,13 @@
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
-      <Button v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
+      <FrappeButton v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
         t`Add Root Group`
-      }}</Button>
-      <Button v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</Button>
-      <Button v-if="!isAllCollapsed" @click="collapse">{{
+      }}</FrappeButton>
+      <FrappeButton v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</FrappeButton>
+      <FrappeButton v-if="!isAllCollapsed" @click="collapse">{{
         t`Collapse`
-      }}</Button>
+      }}</FrappeButton>
     </PageHeader>
     <div
       v-if="root"
@@ -20,9 +20,10 @@
         :aria-label="t`Chart of Accounts`"
       >
         <template #item-prefix="{ node }">
-          <Icon
-            :name="getAccountIconName(!!node.isGroup, String(node.name))"
-            :size="16"
+          <span
+            class="size-4 shrink-0"
+            :class="getAccountIconName(!!node.isGroup, String(node.name))"
+            aria-hidden="true"
           />
         </template>
         <template #item-label="{ node }">
@@ -46,19 +47,18 @@
                 align="end"
               >
                 <template #trigger="{ open }">
-                  <Button
-                    :background="false"
-                    :icon="true"
+                  <FrappeButton
+                    variant="ghost"
                     size="xs"
-                    :title="t`Actions for ${String(node.name)}`"
+                    icon="lucide-ellipsis"
+                    :label="t`Actions for ${String(node.name)}`"
+                    :tooltip="t`Actions for ${String(node.name)}`"
                     :class="
                       open
                         ? 'opacity-100'
                         : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'
                     "
-                  >
-                    <Icon name="more-horizontal" :size="14" />
-                  </Button>
+                  />
                 </template>
               </FrappeDropdown>
             </div>
@@ -92,19 +92,18 @@
         "
       />
       <template #actions>
-        <Button @click="cancelAddingAccount(addingParent)">{{
+        <FrappeButton @click="cancelAddingAccount(addingParent)">{{
           t`Cancel`
-        }}</Button>
-        <Button
-          type="primary"
+        }}</FrappeButton>
+        <FrappeButton
+          variant="solid"
           :loading="insertingAccount"
           :disabled="!newAccountName.trim() || insertingAccount"
           @click="
             addingParent &&
             createNewAccount(addingParent, addingParent.addingGroupAccount)
           "
-          >{{ t`Save` }}</Button
-        >
+          >{{ t`Save` }}</FrappeButton>
       </template>
     </FrappeDialog>
   </div>
@@ -118,10 +117,10 @@ import {
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
   type DropdownOptions,
+  Button as FrappeButton,
 } from 'frappe-ui';
 import { isCredit } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { docsPathMap } from 'src/utils/misc';
@@ -129,7 +128,6 @@ import { docsPathRef } from 'src/utils/refs';
 import { commonDocDelete, openQuickEdit } from 'src/utils/ui';
 import { getMapFromList } from 'utils/index';
 import { defineComponent, nextTick } from 'vue';
-import Button from '../components/Button.vue';
 import { handleErrorWithDialog } from '../errorHandling';
 import { AccountRootType, AccountType } from 'models/baseModels/Account/types';
 import { TreeViewSettings } from 'fyo/model/types';
@@ -152,16 +150,15 @@ type AccountItem = {
 type AccKey = 'addingAccount' | 'addingGroupAccount';
 
 const rootAccountIcons: Record<string, string> = {
-  'Application of Funds (Assets)': 'landmark',
-  Expenses: 'receipt-indian-rupee',
-  Income: 'coins',
-  'Source of Funds (Liabilities)': 'hand-coins',
+  'Application of Funds (Assets)': 'lucide-landmark',
+  Expenses: 'lucide-receipt-indian-rupee',
+  Income: 'lucide-coins',
+  'Source of Funds (Liabilities)': 'lucide-hand-coins',
 };
 
 export default defineComponent({
   components: {
-    Button,
-    Icon,
+    FrappeButton,
     PageHeader,
     FrappeTextInput,
     FrappeTree,
@@ -502,7 +499,7 @@ export default defineComponent({
     },
     getAccountIconName(isGroup: boolean, name?: string): string {
       return (
-        (name && rootAccountIcons[name]) || (isGroup ? 'folder' : 'circle')
+        (name && rootAccountIcons[name]) || (isGroup ? 'lucide-folder' : 'lucide-circle')
       );
     },
     getGroups(accounts: AccountItem[]): AccountItem[] {

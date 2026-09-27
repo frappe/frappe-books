@@ -20,7 +20,6 @@ export const modalNames = [
   'ShiftClose',
   'LoyaltyProgram',
   'SavedInvoice',
-  'Alert',
   'CouponCode',
   'PriceList',
   'ItemEnquiry',

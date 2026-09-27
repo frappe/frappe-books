@@ -34,16 +34,16 @@
               @mouseleave="() => (activeCard = null)"
             >
               <div>
-                <component
-                  :is="getIconComponent(item)"
+                <span
                   v-show="activeCard !== item.key && !isCompleted(item)"
-                  class="mb-4"
+                  class="mb-4 block size-5"
+                  :class="item.icon"
+                  aria-hidden="true"
                 />
-                <Icon
+                <span
                   v-show="isCompleted(item)"
-                  name="green-check"
-                  size="24"
-                  class="w-5 h-5 mb-4"
+                  class="lucide-circle-check-big mb-4 block size-5 text-ink-green-5"
+                  aria-hidden="true"
                 />
                 <h3 class="font-medium">{{ item.label }}</h3>
                 <p class="mt-2 text-sm text-ink-gray-8">
@@ -54,21 +54,21 @@
                 v-show="activeCard === item.key && !isCompleted(item)"
                 class="flex gap-2 mt-2 overflow-hidden"
               >
-                <Button
+                <FrappeButton
                   v-if="item.action"
                   class="leading-tight text-base"
-                  type="primary"
+                  variant="solid"
                   @click="handleAction(item)"
                 >
                   {{ t`Set Up` }}
-                </Button>
-                <Button
+                </FrappeButton>
+                <FrappeButton
                   v-if="item.documentation"
                   class="leading-tight text-base"
                   @click="handleDocumentation(item)"
                 >
                   {{ t`Documentation` }}
-                </Button>
+                </FrappeButton>
               </div>
             </div>
           </div>
@@ -79,15 +79,14 @@
 </template>
 
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
-import Button from 'src/components/Button.vue';
-import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { getGetStartedConfig } from 'src/utils/getStartedConfig';
 import { getTaskChecks } from 'src/utils/getStartedTasks';
 import { GetStartedConfigItem } from 'src/utils/types';
-import { Component, defineComponent, h } from 'vue';
+import { defineComponent } from 'vue';
 
 type ListItem = GetStartedConfigItem['items'][number];
 
@@ -95,8 +94,7 @@ export default defineComponent({
   name: 'GetStarted',
   components: {
     PageHeader,
-    Button,
-    Icon,
+    FrappeButton,
   },
   props: {
     darkMode: { type: Boolean, default: false },
@@ -186,25 +184,6 @@ export default defineComponent({
     },
     isCompleted(item: ListItem) {
       return fyo.singles.GetStarted?.get(item.fieldname) || false;
-    },
-    getIconComponent(item: ListItem) {
-      let completed = fyo.singles.GetStarted?.[item.fieldname] || false;
-      let name = completed ? 'green-check' : item.icon;
-      let size = completed ? '24' : '18';
-      return {
-        name,
-        render() {
-          return h(Icon, {
-            ...Object.assign(
-              {
-                name,
-                size,
-              },
-              this.$attrs
-            ),
-          });
-        },
-      } as Component;
     },
   },
 });

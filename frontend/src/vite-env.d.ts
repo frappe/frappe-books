@@ -13,8 +13,6 @@ declare module 'frappe-ui/vite/lucideIconsPlugin' {
   export function lucideIconsPlugin(): Plugin;
 }
 
-declare module '@lezer/highlight';
-
 interface ImportMetaEnv {
   readonly VITE_ROUTER_BASE?: string;
 }

@@ -1,8 +1,11 @@
 <template>
   <div v-if="tableFields?.length" class="min-w-0">
-    <div v-if="showLabel" class="text-ink-gray-6 text-sm mb-1">
-      {{ df.label }}
-    </div>
+    <FrappeFormLabel
+      v-if="showLabel"
+      class="mb-1"
+      :label="df.label"
+      :required="isRequired"
+    />
 
     <div
       class="max-w-full overflow-x-auto custom-scroll custom-scroll-thumb1"
@@ -74,7 +77,7 @@
           @click="addRow"
         >
           <FrappeListCell class="justify-center">
-            <Icon name="plus" class="w-4 h-4 text-ink-gray-5" />
+            <span class="lucide-plus size-4 text-ink-gray-5" aria-hidden="true" />
           </FrappeListCell>
           <FrappeListCell
             class="justify-between px-2"
@@ -101,7 +104,7 @@
 </template>
 
 <script>
-import Icon from 'src/components/Icon.vue';
+import { FormLabel as FrappeFormLabel } from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -117,12 +120,12 @@ import TableRow from './TableRow.vue';
 export default {
   name: 'Table',
   components: {
+    FrappeFormLabel,
     FrappeList,
     FrappeListCell,
     FrappeListHeader,
     FrappeListHeaderCell,
     FrappeListRow,
-    Icon,
     TableRow,
   },
   extends: Base,

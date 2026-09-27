@@ -8,22 +8,29 @@
       style="z-index: 1"
     >
       <div class="flex items-center justify-between w-full">
-        <Button :icon="true" @click="$emit('close')">
-          <Icon name="x" class="w-4 h-4" />
-        </Button>
+        <FrappeButton
+          icon="lucide-x"
+          :label="t`Close`"
+          @click="$emit('close')"
+        />
         <p class="text-xl font-semibold text-ink-gray-6">
           {{ t`Linked Entries` }}
         </p>
       </div>
     </div>
 
-    <p v-if="loading" role="status" class="p-4 text-sm text-ink-gray-6">
-      {{ t`Loading linked entries...` }}
-    </p>
-    <div v-else-if="loadFailed" role="alert" class="p-4 text-sm text-ink-gray-6">
-      <p class="mb-3">{{ t`Could not load linked entries. Please try again.` }}</p>
-      <Button @click="setLinkedEntries">{{ t`Try again` }}</Button>
-    </div>
+    <FrappeLoadingText
+      v-if="loading"
+      class="p-4"
+      :text="t`Loading linked entries...`"
+    />
+    <FrappeAlert
+      v-else-if="loadFailed"
+      class="m-4"
+      theme="red"
+      :title="t`Could not load linked entries. Please try again.`"
+      :primary-action="{ label: t`Try again`, onClick: () => setLinkedEntries() }"
+    />
 
     <!-- Linked Entry List -->
     <div
@@ -155,13 +162,14 @@
 import { Doc } from 'fyo/model/doc';
 import { isPesa } from 'fyo/utils';
 import {
+  Alert as FrappeAlert,
   Badge as FrappeBadge,
+  Button as FrappeButton,
   ItemListRow as FrappeItemListRow,
+  LoadingText as FrappeLoadingText,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
-import Button from 'src/components/Button.vue';
 import DisclosureButton from 'src/components/DisclosureButton.vue';
-import Icon from 'src/components/Icon.vue';
 import { getLinkedEntries } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getFormRoute, routeTo } from 'src/utils/ui';
@@ -170,7 +178,7 @@ import { PropType, defineComponent, inject } from 'vue';
 const COMPONENT_NAME = 'LinkedEntries';
 
 export default defineComponent({
-  components: { Button, FrappeBadge, DisclosureButton, FrappeItemListRow, Icon },
+  components: { FrappeAlert, FrappeLoadingText, FrappeButton, FrappeBadge, DisclosureButton, FrappeItemListRow },
   props: { doc: { type: Object as PropType<Doc>, required: true } },
   emits: ['close'],
   setup() {

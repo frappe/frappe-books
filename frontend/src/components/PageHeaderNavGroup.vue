@@ -3,7 +3,6 @@
     <SearchBar />
     <!-- Back Button -->
     <FrappeButton
-      ref="backlink"
       icon="lucide-chevron-left"
       variant="subtle"
     class="rounded-none border-x border-outline-gray-1"
@@ -27,19 +26,16 @@
 <script lang="ts">
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { Button as FrappeButton } from 'frappe-ui';
-import { ref, inject } from 'vue';
+import { inject } from 'vue';
 import { defineComponent } from 'vue';
 import SearchBar from './SearchBar.vue';
 import { historyState } from 'src/utils/refs';
-
-const COMPONENT_NAME = 'PageHeaderNavGroup';
 
 export default defineComponent({
   components: { SearchBar, FrappeButton },
   setup() {
     return {
       historyState,
-      backlink: ref<InstanceType<typeof FrappeButton> | null>(null),
       shortcuts: inject(shortcutsKey),
     };
   },
@@ -51,13 +47,17 @@ export default defineComponent({
       return !!history.forward;
     },
   },
-  activated() {
-    this.shortcuts?.shift.set(COMPONENT_NAME, ['Backspace'], () => {
-      this.backlink?.$el.click();
+  // PageHeader mounts this only while its page is active, and each page has
+  // its own copy, so the instance is the shortcut context.
+  mounted() {
+    this.shortcuts?.shift.set(this, ['Backspace'], () => {
+      if (this.historyState.back) {
+        this.$router.back();
+      }
     });
   },
-  deactivated() {
-    this.shortcuts?.delete(COMPONENT_NAME);
+  unmounted() {
+    this.shortcuts?.delete(this);
   },
 });
 </script>

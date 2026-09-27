@@ -27,16 +27,15 @@
       />
     </div>
     <template #actions>
-      <Button size="md" class="min-w-24" @click="cancelPriceList">{{
+      <FrappeButton size="md" class="min-w-24" @click="cancelPriceList">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         @click="setPriceList"
-        >{{ t`Save` }}</Button
-      >
+        >{{ t`Save` }}</FrappeButton>
     </template>
   </Modal>
 </template>
@@ -45,7 +44,6 @@
 import { t } from 'fyo';
 import Modal from 'src/components/POS/POSDialog.vue';
 import { defineComponent, inject } from 'vue';
-import Button from 'src/components/Button.vue';
 import { showToast } from 'src/utils/interactive';
 import Link from 'src/components/Controls/Link.vue';
 import { Button as FrappeButton } from 'frappe-ui';
@@ -56,7 +54,6 @@ export default defineComponent({
   components: {
     Link,
     Modal,
-    Button,
     FrappeButton,
   },
   props: {

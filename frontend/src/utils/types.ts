@@ -4,7 +4,6 @@ import type { ModelNameEnum } from 'models/types';
 import type { Field, FieldType } from 'schemas/types';
 import type { QueryFilter } from 'utils/db/types';
 import type { Ref } from 'vue';
-import type { Router } from 'vue-router';
 import type { toastDurationMap } from './ui';
 
 export type DocRef<D extends Doc = Doc> = Ref<D | null>;
@@ -50,8 +49,6 @@ export interface SidebarRoot {
   name: string;
   route: string;
   icon: string;
-  iconSize?: string;
-  iconHeight?: number;
   hidden?: () => boolean;
   items?: SidebarItem[];
   filters?: QueryFilter;
@@ -85,15 +82,6 @@ export type ActionGroup = {
   label: string;
   type: string;
   actions: Action[];
-};
-
-export type DropdownItem = {
-  label: string;
-  value?: string;
-  action?: (() => unknown) | ((doc: Doc, router: Router) => unknown);
-  group?: string;
-  theme?: 'gray' | 'red';
-  isGroup?: boolean;
 };
 
 export type UIGroupedFields = Map<string, Map<string, Field[]>>;

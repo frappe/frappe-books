@@ -1,8 +1,11 @@
 <template>
-  <div class="w-full">
-    <FormHeader :form-title="t`Set Print Size`" />
-    <hr class="border-outline-gray-1" />
-    <div class="p-4 w-full flex flex-col gap-4">
+  <FrappeDialog
+    :open="open"
+    :title="t`Set Print Size`"
+    size="2xl"
+    @update:open="(value: boolean) => $emit('update:open', value)"
+  >
+    <div class="flex w-full flex-col gap-4">
       <p class="text-p-base text-ink-gray-8">
         {{
           t`Select a pre-defined page size, or set a custom page size for your Print Template.`
@@ -34,28 +37,30 @@
         />
       </div>
     </div>
-    <div class="flex border-t border-outline-gray-1 p-4">
-      <Button class="ml-auto" type="primary" @click="done">{{
-        t`Done`
-      }}</Button>
-    </div>
-  </div>
+    <template #actions>
+      <div class="flex justify-end">
+        <FrappeButton variant="solid" @click="done">{{ t`Done` }}</FrappeButton>
+      </div>
+    </template>
+  </FrappeDialog>
 </template>
 <script lang="ts">
+import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
 import { PrintTemplate } from 'models/baseModels/PrintTemplate';
 import { OptionField } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import Float from 'src/components/Controls/Float.vue';
 import Select from 'src/components/Controls/Select.vue';
-import FormHeader from 'src/components/FormHeader.vue';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { defineComponent } from 'vue';
 
 type SizeName = (typeof printSizes)[number];
 export default defineComponent({
-  components: { Float, FormHeader, Select, Button },
-  props: { doc: { type: PrintTemplate, required: true } },
-  emits: ['done'],
+  components: { Float, FrappeDialog, Select, FrappeButton },
+  props: {
+    open: { type: Boolean, default: false },
+    doc: { type: PrintTemplate, required: true },
+  },
+  emits: ['update:open'],
   data() {
     return { size: 'A4', width: 21, height: 29.7 };
   },
@@ -70,20 +75,30 @@ export default defineComponent({
       };
     },
   },
-  mounted() {
-    this.width = this.doc.width ?? 21;
-    this.height = this.doc.height ?? 29.7;
-
-    this.size = '';
-    Object.entries(paperSizeMap).forEach(([name, { width, height }]) => {
-      if (this.width === width && this.height === height) {
-        this.size = name;
-      }
-    });
-
-    this.size ||= 'Custom';
+  watch: {
+    open: {
+      handler(open: boolean) {
+        if (open) {
+          this.setSizeFromDoc();
+        }
+      },
+      immediate: true,
+    },
   },
   methods: {
+    setSizeFromDoc() {
+      this.width = this.doc.width ?? 21;
+      this.height = this.doc.height ?? 29.7;
+
+      this.size = '';
+      Object.entries(paperSizeMap).forEach(([name, { width, height }]) => {
+        if (this.width === width && this.height === height) {
+          this.size = name;
+        }
+      });
+
+      this.size ||= 'Custom';
+    },
     sizeChange(v: string) {
       const size = paperSizeMap[v as SizeName];
       if (!size) {
@@ -104,7 +119,7 @@ export default defineComponent({
     async done() {
       await this.doc.set('width', this.width);
       await this.doc.set('height', this.height);
-      this.$emit('done');
+      this.$emit('update:open', false);
     },
   },
 });

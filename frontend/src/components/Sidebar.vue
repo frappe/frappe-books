@@ -8,30 +8,21 @@
       data-testid="company-name"
       :title="companyName"
       :subtitle="userName"
+      :logo="companyLogo || undefined"
       :menu-items="menuItems"
     />
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto px-2 pb-2 custom-scroll custom-scroll-thumb1"
+      class="min-h-0 flex-1 overflow-y-auto px-2 py-2 custom-scroll custom-scroll-thumb1"
     >
       <div v-for="group in groups" :key="group.label">
         <FrappeSidebarItem
           :label="group.label"
           :route="getPath(group)"
           :active="Boolean(isGroupActive(group) && !group.items)"
-          class="mb-0.5"
-        >
-          <template #prefix>
-            <Icon
-              class="flex-shrink-0"
-              :name="group.icon"
-              :size="group.iconSize || '18'"
-              :height="group.iconHeight ?? 0"
-              :active="!!isGroupActive(group)"
-              :dark-mode="darkMode"
-            />
-          </template>
-        </FrappeSidebarItem>
+          :icon="group.icon"
+          class="mb-1"
+        />
 
         <div v-if="group.items && isGroupActive(group)" class="mb-1">
           <FrappeSidebarItem
@@ -40,7 +31,7 @@
             :label="item.label"
             :route="getPath(item)"
             :active="Boolean(isItemActive(item))"
-            class="mb-0.5 ps-6"
+            class="mb-1 ps-6"
           >
             <template #prefix><span class="w-0" /></template>
           </FrappeSidebarItem>
@@ -54,27 +45,31 @@
         @click="() => toggleSidebar()"
       >
         <template #prefix>
-          <Icon name="chevrons-left" class="h-4 w-4 rtl-rotate-180" />
+          <span
+            class="lucide-chevrons-left size-4 text-ink-gray-6 rtl-rotate-180"
+            aria-hidden="true"
+          />
         </template>
       </FrappeSidebarItem>
     </div>
 
-    <Modal
-      :open-modal="viewShortcuts"
-      size="2xl"
-      @closemodal="viewShortcuts = false"
+    <FrappeKeyboardShortcutsDialog
+      v-model:open="viewShortcuts"
+      :title="t`Keyboard Shortcuts`"
     >
-      <ShortcutsHelper class="w-full" />
-    </Modal>
+      <ShortcutsHelper />
+    </FrappeKeyboardShortcutsDialog>
   </FrappeSidebar>
 </template>
 <script lang="ts">
 import {
+  KeyboardShortcutsDialog as FrappeKeyboardShortcutsDialog,
   Sidebar as FrappeSidebar,
   SidebarHeader as FrappeSidebarHeader,
   SidebarItem as FrappeSidebarItem,
   type DropdownOptions,
 } from 'frappe-ui';
+import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
 import { getAppMenuItems, openDocumentation } from 'src/utils/appMenu';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -87,8 +82,6 @@ import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
 import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
 import router from '../router';
-import Icon from './Icon.vue';
-import Modal from './Modal.vue';
 import ShortcutsHelper from './ShortcutsHelper.vue';
 
 const COMPONENT_NAME = 'Sidebar';
@@ -98,12 +91,8 @@ export default defineComponent({
     FrappeSidebar,
     FrappeSidebarHeader,
     FrappeSidebarItem,
-    Icon,
-    Modal,
+    FrappeKeyboardShortcutsDialog,
     ShortcutsHelper,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
   },
   setup() {
     return { shortcuts: inject(shortcutsKey) };
@@ -111,11 +100,13 @@ export default defineComponent({
   data() {
     return {
       companyName: '',
+      companyLogo: '',
       groups: [],
       viewShortcuts: false,
       activeGroup: null,
     } as {
       companyName: string;
+      companyLogo: string;
       groups: SidebarConfig;
       viewShortcuts: boolean;
       activeGroup: null | SidebarRoot;
@@ -133,6 +124,11 @@ export default defineComponent({
   async mounted() {
     const { companyName } = await fyo.doc.getDoc('AccountingSettings');
     this.companyName = companyName as string;
+    await this.setCompanyLogo();
+    fyo.doc.observer.on(
+      `sync:${ModelNameEnum.PrintSettings}`,
+      this.setCompanyLogo
+    );
     this.groups = await getSidebarConfig();
 
     this.setActiveGroup();
@@ -152,6 +148,14 @@ export default defineComponent({
   },
   methods: {
     toggleSidebar,
+    async setCompanyLogo() {
+      // Skipped by the server when the user cannot read Print Settings.
+      const [logo] = await fyo.db.getSingleValues({
+        fieldname: 'logo',
+        parent: ModelNameEnum.PrintSettings,
+      });
+      this.companyLogo = (logo?.value as string | undefined) ?? '';
+    },
     setActiveGroup() {
       const { path } = this.$route;
       const fallBackGroup = this.activeGroup;

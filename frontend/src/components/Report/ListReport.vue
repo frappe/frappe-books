@@ -45,8 +45,13 @@
         </template>
       </FrappeListRows>
     </FrappeList>
+    <FrappeLoadingText
+      v-else-if="report.loading"
+      class="mt-20 w-full justify-center"
+      :text="t`Loading Report...`"
+    />
     <p v-else class="w-full text-center mt-20 text-ink-gray-8 text-base">
-      {{ report.loading ? t`Loading Report...` : t`No Values to be Displayed` }}
+      {{ t`No Values to be Displayed` }}
     </p>
 
     <!-- Pagination Footer -->
@@ -62,6 +67,7 @@
   </div>
 </template>
 <script>
+import { LoadingText as FrappeLoadingText } from 'frappe-ui';
 import { Report } from 'reports/Report';
 import {
   List as FrappeList,
@@ -82,6 +88,7 @@ import ReportOverflowText from './ReportOverflowText.vue';
 
 export default defineComponent({
   components: {
+    FrappeLoadingText,
     FrappeList,
     FrappeListCell,
     FrappeListHeader,

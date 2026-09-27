@@ -16,15 +16,14 @@
         v-if="loading"
         class="h-full flex items-center justify-center bg-surface-gray-1"
       >
-        <div v-if="startupError" class="max-w-xl p-8 text-center">
-          <h1 class="text-xl font-semibold text-ink-gray-9">
-            Books could not start
-          </h1>
-          <p class="mt-3 text-sm text-ink-gray-7">{{ startupError }}</p>
-          <FrappeButton class="mt-5" theme="blue" @click="initialize">
-            Try again
-          </FrappeButton>
-        </div>
+        <FrappeAlert
+          v-if="startupError"
+          class="max-w-xl"
+          theme="red"
+          title="Books could not start"
+          :description="startupError"
+          :primary-action="{ label: 'Try again', onClick: () => initialize() }"
+        />
         <FrappeSpinner v-else size="lg" />
       </div>
       <SetupWizard
@@ -60,7 +59,7 @@ import {
   shallowRef,
 } from 'vue';
 import {
-  Button as FrappeButton,
+  Alert as FrappeAlert,
   FrappeUIProvider,
   Spinner as FrappeSpinner,
 } from 'frappe-ui';
@@ -69,8 +68,8 @@ import { call } from './api';
 export default defineComponent({
   name: 'WebApp',
   components: {
+    FrappeAlert,
     Desk,
-    FrappeButton,
     FrappeSpinner,
     FrappeUIProvider,
     SetupWizard,
@@ -174,35 +173,5 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-}
-
-.books-modal {
-  max-height: calc(100vh - 5rem);
-  max-height: calc(100dvh - 5rem);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-color: #d1d8dd transparent;
-  scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-}
-
-.books-modal::-webkit-scrollbar {
-  display: block;
-  width: 0.375rem;
-}
-
-.books-modal::-webkit-scrollbar-thumb {
-  background: #d1d8dd;
-  border-radius: 9999px;
-}
-
-.dark .books-modal {
-  scrollbar-color: #525252 transparent;
-}
-
-.dark .books-modal::-webkit-scrollbar-thumb {
-  background: #525252;
 }
 </style>

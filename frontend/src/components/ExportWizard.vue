@@ -1,11 +1,12 @@
 <template>
-  <div>
-    <!-- Export Wizard Header -->
-    <FormHeader :form-title="label" :form-sub-title="t`Export Wizard`" />
-    <hr class="border-outline-gray-1" />
-
+  <FrappeDialog
+    :open="open"
+    :title="t`Export ${label}`"
+    size="4xl"
+    @update:open="(value: boolean) => $emit('update:open', value)"
+  >
     <!-- Export Config -->
-    <div class="flex flex-wrap items-end gap-4 p-4">
+    <div class="flex flex-wrap items-end gap-4">
       <Check
         v-if="configFields.useListFilters && Object.keys(listFilters).length"
         class="w-56"
@@ -36,12 +37,13 @@
         @change="(value: number) => (limit = value)"
       />
     </div>
-    <hr class="border-outline-gray-1" />
 
     <!-- Fields Selection -->
-    <div class="max-h-80 overflow-auto custom-scroll custom-scroll-thumb2">
+    <div
+      class="mt-4 max-h-80 space-y-4 overflow-auto custom-scroll custom-scroll-thumb2"
+    >
       <!-- Main Fields -->
-      <div class="p-4">
+      <div>
         <h2 class="text-sm font-semibold text-ink-gray-8">
           {{ fyo.schemaMap[schemaName]?.label ?? schemaName }}
         </h2>
@@ -70,7 +72,7 @@
       </div>
 
       <!-- Table Fields -->
-      <div v-for="efs of filteredTableFields" :key="efs.fieldname" class="p-4">
+      <div v-for="efs of filteredTableFields" :key="efs.fieldname">
         <h2 class="text-sm font-semibold text-ink-gray-8">
           {{ fyo.schemaMap[efs.target]?.label ?? schemaName }}
         </h2>
@@ -98,17 +100,20 @@
       </div>
     </div>
 
-    <!-- Export Button -->
-    <hr class="border-outline-gray-1" />
-    <div class="p-4 flex justify-between items-center">
-      <p class="text-sm text-ink-gray-6">
-        {{ t`${numSelected} fields selected` }}
-      </p>
-      <Button type="primary" @click="exportData">{{ t`Export` }}</Button>
-    </div>
-  </div>
+    <template #actions>
+      <div class="flex items-center justify-between">
+        <p class="text-sm text-ink-gray-6">
+          {{ t`${numSelected} fields selected` }}
+        </p>
+        <FrappeButton variant="solid" @click="exportData">{{
+          t`Export`
+        }}</FrappeButton>
+      </div>
+    </template>
+  </FrappeDialog>
 </template>
 <script lang="ts">
+import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
 import { t } from 'fyo';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { fyo } from 'src/initFyo';
@@ -122,11 +127,9 @@ import {
 import { ExportField, ExportFormat, ExportTableField } from 'src/utils/types';
 import { QueryFilter } from 'utils/db/types';
 import { PropType, defineComponent } from 'vue';
-import Button from './Button.vue';
 import Check from './Controls/Check.vue';
 import Int from './Controls/Int.vue';
 import Select from './Controls/Select.vue';
-import FormHeader from './FormHeader.vue';
 
 interface ExportWizardData {
   useListFilters: boolean;
@@ -138,12 +141,14 @@ interface ExportWizardData {
 }
 
 export default defineComponent({
-  components: { FormHeader, Check, Select, Button, Int },
+  components: { FrappeDialog, Check, Select, FrappeButton, Int },
   props: {
+    open: { type: Boolean, default: false },
     schemaName: { type: String, required: true },
     listFilters: { type: Object as PropType<QueryFilter>, default: () => {} },
     pageTitle: String,
   },
+  emits: ['update:open'],
   data() {
     const fields = fyo.schemaMap[this.schemaName]?.fields ?? [];
     const exportFields = getExportFields(fields);

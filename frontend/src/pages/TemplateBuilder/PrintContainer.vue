@@ -21,23 +21,18 @@
     </ErrorBoundary>
 
     <!-- Compilation Error -->
-    <div
-      v-else
-      class="h-full bg-red-100 dark:bg-red-900 dark:bg-opacity-50 w-full text-2xl text-ink-gray-9 flex flex-col gap-4"
-    >
-      <h1
-        class="text-4xl font-bold text-red-500 dark:text-red-200 p-4 border-b border-red-200 dark:border-red-900"
-      >
-        {{ error.name }}
-      </h1>
-      <p class="px-4 font-semibold">{{ error.message }}</p>
-      <pre v-if="error.detail" class="px-4 text-xl text-ink-gray-7">{{
-        error.detail
-      }}</pre>
-    </div>
+    <FrappeAlert v-else class="m-4" theme="red" :title="error.name">
+      <template #description>
+        <p>{{ error.message }}</p>
+        <pre v-if="error.detail" class="mt-2 whitespace-pre-wrap">{{
+          error.detail
+        }}</pre>
+      </template>
+    </FrappeAlert>
   </PrintSheet>
 </template>
 <script lang="ts">
+import { Alert as FrappeAlert } from 'frappe-ui';
 import {
   compile,
   CompilerError,
@@ -58,7 +53,7 @@ export const baseSafeTemplate = `<main class="h-full w-full bg-white">
 `;
 
 export default defineComponent({
-  components: { PrintSheet, ErrorBoundary },
+  components: { FrappeAlert, PrintSheet, ErrorBoundary },
   props: {
     template: { type: String, required: true },
     printSchemaName: { type: String, required: true },

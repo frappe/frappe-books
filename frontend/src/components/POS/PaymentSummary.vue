@@ -12,11 +12,9 @@
 					{{ sinvDoc.party || t`No customer selected` }}
 				</p>
 			</div>
-			<span
-				class="shrink-0 rounded-full bg-surface-gray-3 px-2 py-1 text-xs font-medium text-ink-gray-7"
-			>
+			<FrappeBadge class="shrink-0">
 				{{ sinvDoc.isReturn ? t`Return` : t`Sale` }}
-			</span>
+			</FrappeBadge>
 		</div>
 
 		<dl class="mt-5 space-y-3">
@@ -55,7 +53,7 @@
 import { SalesInvoice } from "models/baseModels/SalesInvoice/SalesInvoice";
 import { Money } from "pesa";
 import { fyo } from "src/initFyo";
-import { Divider as FrappeDivider } from "frappe-ui";
+import { Badge as FrappeBadge, Divider as FrappeDivider } from "frappe-ui";
 import { defineComponent, PropType } from "vue";
 
 type SummaryRow = {
@@ -65,7 +63,7 @@ type SummaryRow = {
 
 export default defineComponent({
 	name: "PaymentSummary",
-	components: { FrappeDivider },
+	components: { FrappeBadge, FrappeDivider },
 	props: {
 		sinvDoc: { type: Object as PropType<SalesInvoice>, required: true },
 		totalTaxedAmount: { type: Object as PropType<Money>, required: true },

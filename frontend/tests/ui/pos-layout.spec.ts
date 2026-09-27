@@ -19,7 +19,6 @@ const dialogs = [
   ['SavedInvoice', 'Saved and Submitted Invoices'],
   ['ReturnSalesInvoice', 'Return Sales Invoice'],
   ['Payment', 'Complete payment'],
-  ['Alert', 'Leave this sale?'],
   ['ShiftClose', 'Close POS Shift'],
 ];
 for (const viewport of [
@@ -63,6 +62,23 @@ for (const viewport of [
     });
   });
 }
+
+test('leaving a sale with items asks to save or discard it', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const fixture = (window as any).posFixture;
+    fixture.fillCart();
+    void fixture.pos.routeToSinvList();
+  });
+
+  const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
+  for (const name of ['Cancel', 'Discard and Continue', 'Save and Continue']) {
+    await expect(dialog.getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(dialog).toBeHidden();
+});
 
 test('cart values fit and expanded item fields open a usable keypad', async ({
   page,

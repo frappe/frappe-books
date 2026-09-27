@@ -8,7 +8,6 @@ import { showSidebar } from 'src/utils/refs';
         <Sidebar
           v-show="showSidebar"
           class="flex-shrink-0 border-e border-outline-gray-1 whitespace-nowrap"
-          :dark-mode="darkMode"
         />
       </Transition>
     </template>

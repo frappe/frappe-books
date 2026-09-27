@@ -42,50 +42,47 @@
       />
     </FrappeListCell>
     <FrappeListCell v-if="canEditRow" class="justify-center">
-      <Button
-        :icon="true"
-        :padding="false"
-        :background="false"
-        size="sm"
-        :title="t`Edit row`"
+      <FrappeButton
+        variant="ghost"
+        icon="lucide-square-pen"
+        :label="t`Edit row`"
+        :tooltip="t`Edit row`"
         @click="openRowQuickEdit"
-      >
-        <Icon name="edit" class="w-4 h-4 text-ink-gray-6" />
-      </Button>
+      />
     </FrappeListCell>
 
     <!-- Error Display -->
     <FrappeListCell
       v-if="hasErrors"
-      class="text-xs text-red-600 ps-2 col-span-full relative"
+      class="ps-2 col-span-full relative"
       style="bottom: 0.75rem; height: 0px"
     >
-      {{ getErrorString() }}
+      <FrappeErrorMessage :message="getErrorString()" />
     </FrappeListCell>
   </FrappeListRow>
 </template>
 <script>
 import { Doc } from 'fyo/model/doc';
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ErrorMessage as FrappeErrorMessage,
+} from 'frappe-ui';
 import {
   ListCell as FrappeListCell,
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
-import Icon from 'src/components/Icon.vue';
 import { getErrorMessage } from 'src/utils';
 import { computed, nextTick } from 'vue';
-import Button from '../Button.vue';
 import FormControl from './FormControl.vue';
 
 export default {
   name: 'TableRow',
   components: {
+    FrappeErrorMessage,
     FrappeListRow,
     FrappeListCell,
     FormControl,
-    Button,
     FrappeButton,
-    Icon,
   },
   provide() {
     return {

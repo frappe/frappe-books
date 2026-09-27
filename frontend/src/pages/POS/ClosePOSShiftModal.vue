@@ -35,25 +35,23 @@
     />
 
     <template #actions>
-      <Button
+      <FrappeButton
         size="md"
         class="min-w-24"
         @click="$emit('toggleModal', 'ShiftClose', false)"
-        >{{ t`Cancel` }}</Button
-      >
-      <Button
+        >{{ t`Cancel` }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         @click="handleSubmit"
-        >{{ t`Close Shift` }}</Button
-      >
+        >{{ t`Close Shift` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import Button from 'src/components/Button.vue';
+import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
 import Table from 'src/components/Controls/Table.vue';
 import { ModelNameEnum } from 'models/types';
@@ -71,7 +69,7 @@ import { ForbiddenError } from 'fyo/utils/errors';
 
 export default defineComponent({
   name: 'ClosePOSShiftModal',
-  components: { Button, Modal, Table },
+  components: { FrappeButton, Modal, Table },
   provide() {
     return {
       doc: computed(() => this.posClosingShiftDoc),

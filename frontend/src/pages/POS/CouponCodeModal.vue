@@ -65,23 +65,21 @@
       />
     </div>
     <template #actions>
-      <Button size="md" class="min-w-24" @click="cancelApplyCouponCode">{{
+      <FrappeButton size="md" class="min-w-24" @click="cancelApplyCouponCode">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         :disabled="validationError"
         @click="setCouponCode"
-        >{{ t`Save` }}</Button
-      >
+        >{{ t`Save` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import Button from 'src/components/Button.vue';
 import Modal from 'src/components/POS/POSDialog.vue';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { defineComponent, inject } from 'vue';
@@ -103,7 +101,6 @@ export default defineComponent({
   name: 'CouponCodeModal',
   components: {
     Modal,
-    Button,
     Link,
     FormControl,
     FrappeButton,

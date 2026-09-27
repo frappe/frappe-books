@@ -1,42 +1,43 @@
 <template>
   <div class="flex flex-col gap-3">
     <div class="grid grid-cols-2 gap-2">
-      <Button :style="buttonStyle('save')" @click="$emit('save')">{{
+      <FrappeButton v-bind="colourProps('save')" @click="$emit('save')">{{
         t`Save`
-      }}</Button>
-      <Button :style="buttonStyle('cancel')" @click="$emit('clear')">{{
+      }}</FrappeButton>
+      <FrappeButton v-bind="colourProps('cancel')" @click="$emit('clear')">{{
         t`Cancel`
-      }}</Button>
-      <Button
-        :style="buttonStyle('held')"
+      }}</FrappeButton>
+      <FrappeButton
+        v-bind="colourProps('held')"
         :class="{ 'col-span-2': !enableReturns }"
         @click="$emit('held')"
-        >{{ t`Held` }}</Button
+        >{{ t`Held` }}</FrappeButton
       >
-      <Button
+      <FrappeButton
         v-if="enableReturns"
-        :style="buttonStyle('return')"
+        v-bind="colourProps('return')"
         @click="$emit('return')"
-        >{{ t`Return` }}</Button
+        >{{ t`Return` }}</FrappeButton
       >
     </div>
-    <Button
+    <FrappeButton
       size="md"
-      type="primary"
-      :style="buttonStyle('pay')"
+      variant="solid"
+      v-bind="colourProps('pay')"
       :disabled="disablePay"
       @click="$emit('pay')"
     >
       {{ isReturn ? t`Refund` : t`Pay` }}
-    </Button>
+    </FrappeButton>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
-import Button from 'src/components/Button.vue';
 import { fyo } from 'src/initFyo';
+import { getButtonTextColor } from 'src/utils/button';
 
 const props = defineProps<{
   profile?: POSProfile | null;
@@ -46,14 +47,44 @@ const props = defineProps<{
 }>();
 defineEmits<{ save: []; clear: []; held: []; return: []; pay: [] }>();
 
-function buttonStyle(
-  action: 'save' | 'cancel' | 'held' | 'return' | 'pay',
-) {
+// frappe-ui has no arbitrary button colours, so only red and green map to a theme.
+const themeByColour: Record<string, 'green' | 'red'> = {
+  '#86efac': 'green',
+  '#f98080': 'red',
+};
+
+function colourProps(action: 'save' | 'cancel' | 'held' | 'return' | 'pay') {
   const field = `${action}ButtonColour`;
-  const backgroundColor =
-    props.profile?.[field] || fyo.singles.Defaults?.[field];
-  return backgroundColor
-    ? { backgroundColor: String(backgroundColor) }
-    : undefined;
+  const colour = String(
+    props.profile?.[field] || fyo.singles.Defaults?.[field] || ''
+  ).toLowerCase();
+  if (!colour) {
+    return {};
+  }
+
+  const theme = themeByColour[colour];
+  if (theme) {
+    return { variant: 'solid' as const, theme };
+  }
+
+  return {
+    variant: 'solid' as const,
+    class: 'pos-colour-button',
+    style: {
+      '--pos-button-background': colour,
+      '--pos-button-foreground': getButtonTextColor(colour),
+    },
+  };
 }
 </script>
+
+<style scoped>
+.pos-colour-button:not(:disabled) {
+  background-color: var(--pos-button-background);
+  color: var(--pos-button-foreground);
+}
+
+.pos-colour-button:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--pos-button-background), black 8%);
+}
+</style>

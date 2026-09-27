@@ -6,37 +6,38 @@
         v-if="hasImporter"
         :actions="actions"
         :disabled="isMakingEntries"
-        :title="t`More`"
+        :label="t`More`"
       />
-      <Button
+      <FrappeButton
         v-if="hasImporter"
-        :title="t`Add Row`"
+        :label="t`Add Row`"
+        :tooltip="t`Add Row`"
         :disabled="isMakingEntries"
-        :icon="true"
+        icon="lucide-plus"
         @click="() => importer.addRow()"
-      >
-        <Icon name="plus" class="w-4 h-4" />
-      </Button>
-      <Button v-if="hasImporter" :title="t`Save Template`" :icon="true" @click="saveTemplate">
-        <Icon name="download" class="w-4 h-4" />
-      </Button>
-      <Button
+      />
+      <FrappeButton
+        v-if="hasImporter"
+        icon="lucide-download"
+        :label="t`Save Template`"
+        :tooltip="t`Save Template`"
+        @click="saveTemplate"
+      />
+      <FrappeButton
         v-if="canImportData"
-        :title="t`Import Data`"
-        type="primary"
+        variant="solid"
         :disabled="errorMessage.length > 0 || isMakingEntries"
         @click="importData"
       >
         {{ t`Import Data` }}
-      </Button>
-      <Button
+      </FrappeButton>
+      <FrappeButton
         v-if="importType && !canImportData"
-        :title="t`Select File`"
-        type="primary"
+        variant="solid"
         @click="selectFile"
       >
         {{ t`Select File` }}
-      </Button>
+      </FrappeButton>
     </PageHeader>
 
     <!-- Main Body of the Wizard -->
@@ -62,9 +63,11 @@
           @change="setImportType"
         />
 
-        <p v-if="errorMessage.length > 0" class="text-base ms-2 text-red-500">
-          {{ errorMessage }}
-        </p>
+        <FrappeErrorMessage
+          v-if="errorMessage.length > 0"
+          class="ms-2"
+          :message="errorMessage"
+        />
         <p
           v-else
           class="text-base ms-2"
@@ -192,27 +195,14 @@
       </div>
     </div>
 
-    <!-- Loading Bar when Saving Docs -->
-    <Loading
-      v-if="isMakingEntries"
-      :open="isMakingEntries"
-      :percent="percentLoading"
-      :message="messageLoading"
-    />
-
-    <!-- Pick Column Modal -->
-    <Modal :open-modal="showColumnPicker" size="3xl" @closemodal="showColumnPicker = false">
-      <div class="w-full">
-        <!-- Pick Column Header -->
-        <FormHeader :form-title="t`Pick Import Columns`" />
-        <hr class="border-outline-gray-1" />
-
-        <!-- Pick Column Checkboxes -->
-        <div
-          v-for="[key, value] of columnPickerFieldsMap.entries()"
-          :key="key"
-          class="p-4 max-h-80 overflow-auto custom-scroll custom-scroll-thumb1"
-        >
+    <!-- Pick Column Dialog -->
+    <FrappeDialog
+      v-model:open="showColumnPicker"
+      :title="t`Pick Import Columns`"
+      size="3xl"
+    >
+      <div class="max-h-80 space-y-4 overflow-auto custom-scroll custom-scroll-thumb1">
+        <div v-for="[key, value] of columnPickerFieldsMap.entries()" :key="key">
           <h2 class="text-sm font-semibold text-ink-gray-8">
             {{ key }}
           </h2>
@@ -235,31 +225,31 @@
             </div>
           </div>
         </div>
-
-        <!-- Pick Column Footer -->
-        <hr class="border-outline-gray-1" />
-        <div class="p-4 flex justify-between items-center">
+      </div>
+      <template #actions>
+        <div class="flex items-center justify-between">
           <p class="text-sm text-ink-gray-6">
             {{ t`${numColumnsPicked} fields selected` }}
           </p>
-          <Button type="primary" @click="showColumnPicker = false">{{ t`Done` }}</Button>
+          <FrappeButton variant="solid" @click="showColumnPicker = false">{{
+            t`Done`
+          }}</FrappeButton>
         </div>
-      </div>
-    </Modal>
+      </template>
+    </FrappeDialog>
 
-    <!-- Import Completed Modal -->
-    <Modal :open-modal="complete" size="2xl" @closemodal="clear">
-      <div class="w-full min-w-0">
-        <!-- Import Completed Header -->
-        <FormHeader :form-title="t`Import Complete`" />
-        <hr class="border-outline-gray-1" />
+    <!-- Import Completed Dialog -->
+    <FrappeDialog
+      :open="complete"
+      :title="t`Import Complete`"
+      size="2xl"
+      @update:open="(open: boolean) => !open && clear()"
+    >
+      <div class="space-y-4 text-base text-ink-gray-9">
         <!-- Success -->
         <div v-if="success.length > 0">
-          <!-- Success Section Header -->
-          <div class="flex items-center justify-between gap-4 px-4 pt-4 pb-2">
-            <p class="text-base font-semibold text-ink-gray-8">
-              {{ t`Success` }}
-            </p>
+          <div class="flex items-center justify-between gap-4 pb-2">
+            <p class="font-semibold text-ink-gray-8">{{ t`Success` }}</p>
             <p class="text-sm text-ink-gray-6">
               {{
                 success.length === 1
@@ -268,12 +258,11 @@
               }}
             </p>
           </div>
-          <!-- Success Body -->
-          <div class="max-h-40 overflow-y-auto text-ink-gray-9">
+          <div class="max-h-40 overflow-y-auto">
             <div
               v-for="(name, i) of success"
               :key="name"
-              class="flex items-start gap-3 px-4 py-1.5 text-base"
+              class="flex items-start gap-3 py-1.5"
             >
               <div class="w-6 flex-shrink-0 text-end">{{ i + 1 }}.</div>
               <p class="min-w-0 flex-1 break-words">
@@ -281,14 +270,12 @@
               </p>
             </div>
           </div>
-          <hr class="border-outline-gray-1" />
         </div>
 
         <!-- Failed -->
         <div v-if="failed.length > 0">
-          <!-- Failed Section Header -->
-          <div class="flex items-center justify-between gap-4 px-4 pt-4 pb-2">
-            <p class="text-base font-semibold">{{ t`Failed` }}</p>
+          <div class="flex items-center justify-between gap-4 pb-2">
+            <p class="font-semibold text-ink-gray-8">{{ t`Failed` }}</p>
             <p class="text-sm text-ink-gray-6">
               {{
                 failed.length === 1
@@ -297,12 +284,11 @@
               }}
             </p>
           </div>
-          <!-- Failed Body -->
-          <div class="max-h-40 overflow-y-auto text-ink-gray-9">
+          <div class="max-h-40 overflow-y-auto">
             <div
               v-for="(f, i) of failed"
               :key="f.name"
-              class="grid grid-cols-[1.5rem_minmax(6rem,auto)_minmax(0,1fr)] gap-3 px-4 py-1.5 text-base"
+              class="grid grid-cols-[1.5rem_minmax(6rem,auto)_minmax(0,1fr)] gap-3 py-1.5"
             >
               <div class="text-end">{{ i + 1 }}.</div>
               <p class="min-w-0 break-words">
@@ -313,36 +299,36 @@
               </p>
             </div>
           </div>
-          <hr />
         </div>
 
-        <!-- Fallback Div -->
-        <div
-          v-if="failed.length === 0 && success.length === 0"
-          class="p-4 text-base text-ink-gray-8"
-        >
+        <p v-if="failed.length === 0 && success.length === 0" class="text-ink-gray-8">
           {{ t`No entries were imported.` }}
-        </div>
-
-        <!-- Footer Button -->
-        <div class="flex items-center justify-end gap-2 p-4">
-          <Button v-if="failed.length > 0" @click="clearSuccessfullyImportedEntries">{{
-            t`Fix Failed`
-          }}</Button>
-          <Button v-if="failed.length === 0 && success.length > 0" @click="showMe">{{
-            t`Show Me`
-          }}</Button>
-          <Button type="primary" @click="clear">{{ t`Done` }}</Button>
-        </div>
+        </p>
       </div>
-    </Modal>
+      <template #actions>
+        <div class="flex items-center justify-end gap-2">
+          <FrappeButton v-if="failed.length > 0" @click="clearSuccessfullyImportedEntries">{{
+            t`Fix Failed`
+          }}</FrappeButton>
+          <FrappeButton v-if="failed.length === 0 && success.length > 0" @click="showMe">{{
+            t`Show Me`
+          }}</FrappeButton>
+          <FrappeButton variant="solid" @click="clear">{{ t`Done` }}</FrappeButton>
+        </div>
+      </template>
+    </FrappeDialog>
   </div>
 </template>
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  Dialog as FrappeDialog,
+  ErrorMessage as FrappeErrorMessage,
+  toast,
+} from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -353,16 +339,12 @@ import {
 } from 'frappe-ui/list';
 import { ModelNameEnum } from 'models/types';
 import { OptionField, RawValue, SelectOption } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import AutoComplete from 'src/components/Controls/AutoComplete.vue';
 import Check from 'src/components/Controls/Check.vue';
 import Data from 'src/components/Controls/Data.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Select from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
-import FormHeader from 'src/components/FormHeader.vue';
-import Icon from 'src/components/Icon.vue';
-import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import {
   Importer,
@@ -378,7 +360,6 @@ import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { selectTextFile } from 'src/utils/ui';
 import { defineComponent } from 'vue';
-import Loading from '../components/Loading.vue';
 
 type ImportWizardData = {
   showColumnPicker: boolean;
@@ -390,22 +371,17 @@ type ImportWizardData = {
   nullOrImporter: null | Importer;
   importType: string;
   isMakingEntries: boolean;
-  percentLoading: number;
-  messageLoading: string;
 };
 
 export default defineComponent({
   components: {
+    FrappeErrorMessage,
     PageHeader,
     FormControl,
-    Button,
     DropdownWithActions,
-    Loading,
     AutoComplete,
     Data,
-    Modal,
-    FormHeader,
-    Icon,
+    FrappeDialog,
     Check,
     Select,
     FrappeButton,
@@ -427,8 +403,6 @@ export default defineComponent({
       nullOrImporter: null,
       importType: '',
       isMakingEntries: false,
-      percentLoading: 0,
-      messageLoading: '',
     } as ImportWizardData;
   },
   computed: {
@@ -685,8 +659,6 @@ export default defineComponent({
       this.importType = '';
       this.complete = false;
       this.isMakingEntries = false;
-      this.percentLoading = 0;
-      this.messageLoading = '';
     },
     async saveTemplate(): Promise<void> {
       const template = this.importer.getCSVTemplate();
@@ -740,9 +712,17 @@ export default defineComponent({
       const shouldSubmit = await this.askShouldSubmit();
 
       const { docs } = this.importer;
-      for (const [index, doc] of docs.entries()) {
-        this.setLoadingStatus(index, docs.length);
-        await importDoc(doc, shouldSubmit, this);
+      const progress = toast.loading(this.t`Importing entries...`);
+      try {
+        for (const [index, doc] of docs.entries()) {
+          toast.loading(
+            this.t`${index} entries made out of ${docs.length}...`,
+            { id: progress }
+          );
+          await importDoc(doc, shouldSubmit, this);
+        }
+      } finally {
+        toast.dismiss(progress);
       }
 
       this.isMakingEntries = false;
@@ -793,12 +773,6 @@ export default defineComponent({
 
       this.importType = importType;
       this.nullOrImporter = new Importer(importType, fyo);
-    },
-    setLoadingStatus(entriesMade: number, totalEntries: number): void {
-      this.percentLoading = entriesMade / totalEntries;
-      this.messageLoading = this.isMakingEntries
-        ? `${entriesMade} entries made out of ${totalEntries}...`
-        : '';
     },
     async selectFile(): Promise<void> {
       const { text, name, filePath } = await selectTextFile([

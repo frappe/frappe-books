@@ -5,18 +5,15 @@
     :class="border ? '' : '!border-b-0'"
   >
     <div class="me-auto flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-      <Button
+      <FrappeButton
         v-if="!showSidebar"
-        :background="false"
-        :icon="true"
-        :padding="false"
-        class="!h-8 !w-8 !px-0 flex-shrink-0 rtl-rotate-180"
-        :title="t`Show sidebar`"
-        :aria-label="t`Show sidebar`"
+        variant="ghost"
+        icon="lucide-chevrons-right"
+        class="rtl-rotate-180"
+        :label="t`Show sidebar`"
+        :tooltip="t`Show sidebar`"
         @click="toggleSidebar"
-      >
-        <Icon name="chevrons-right" class="h-4 w-4" />
-      </Button>
+      />
 
       <PageHeaderNavGroup />
       <h1 v-if="title" class="min-w-0">
@@ -37,20 +34,18 @@
 import {
   PageHeader as FrappePageHeader,
   PageHeaderTitle as FrappePageHeaderTitle,
+  Button as FrappeButton,
 } from 'frappe-ui';
 import { showSidebar } from 'src/utils/refs';
 import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, onActivated, onDeactivated, ref } from 'vue';
-import Button from './Button.vue';
-import Icon from './Icon.vue';
 import PageHeaderNavGroup from './PageHeaderNavGroup.vue';
 
 export default defineComponent({
   components: {
-    Button,
+    FrappeButton,
     FrappePageHeader,
     FrappePageHeaderTitle,
-    Icon,
     PageHeaderNavGroup,
   },
   props: {

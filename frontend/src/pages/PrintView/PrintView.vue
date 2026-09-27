@@ -15,13 +15,13 @@
         :value="templateName ?? ''"
         @change="onTemplateNameChange"
       />
-      <DropdownWithActions :actions="actions" :title="t`More`" />
-      <Button type="primary" @click="savePDF()">
+      <DropdownWithActions :actions="actions" :label="t`More`" />
+      <FrappeButton variant="solid" @click="savePDF()">
         {{ t`Save as PDF` }}
-      </Button>
-      <Button type="primary" @click="savePDF(true)">
+      </FrappeButton>
+      <FrappeButton variant="solid" @click="savePDF(true)">
         {{ t`Print` }}
-      </Button>
+      </FrappeButton>
     </PageHeader>
 
     <!-- Template Display Area -->
@@ -49,11 +49,11 @@
   </div>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { PrintTemplate } from 'models/baseModels/PrintTemplate';
 import { ModelNameEnum } from 'models/types';
-import Button from 'src/components/Button.vue';
 import SelectControl from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
@@ -70,7 +70,7 @@ export default defineComponent({
   name: 'PrintView',
   components: {
     PageHeader,
-    Button,
+    FrappeButton,
     SelectControl,
     PrintContainer,
     DropdownWithActions,

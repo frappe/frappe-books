@@ -3,7 +3,6 @@
     <template v-if="hasDoc" #header-left>
       <Barcode
         v-if="canShowBarcode"
-        class="h-8"
         @item-selected="
           (name: string) => {
             // @ts-expect-error only invoices have addItem
@@ -27,49 +26,43 @@
       </p>
     </template>
     <template v-if="hasDoc" #header>
-      <Button
+      <FrappeButton
         v-if="canShowLinks"
-        :icon="true"
-        :title="t`View linked entries`"
+        icon="lucide-link"
+        :label="t`View linked entries`"
+        :tooltip="t`View linked entries`"
         @click="showLinks = true"
-      >
-        <Icon name="link" class="w-4 h-4" />
-      </Button>
-      <Button
+      />
+      <FrappeButton
         v-if="canPrint"
-        ref="printButton"
-        :icon="true"
-        :title="t`Open Print View`"
-        @click="routeTo(`/print/${doc.schemaName}/${doc.name}`)"
-      >
-        <Icon name="printer" class="w-4 h-4" />
-      </Button>
-      <Button :icon="true" :title="t`Toggle between form and full width`" @click="toggleWidth">
-        <Icon
-          :name="useFullWidth ? 'minimize' : 'maximize'"
-          class="w-4 h-4"
-        />
-      </Button>
+        icon="lucide-printer"
+        :label="t`Open Print View`"
+        :tooltip="t`Open Print View`"
+        @click="openPrintView"
+      />
+      <FrappeButton
+        :icon="useFullWidth ? 'lucide-minimize-2' : 'lucide-maximize-2'"
+        :label="t`Toggle between form and full width`"
+        :tooltip="t`Toggle between form and full width`"
+        @click="toggleWidth"
+      />
       <DropdownWithActions
         v-for="group of groupedActions"
         :key="group.label"
         :type="group.type"
         :actions="group.actions"
       >
-        <p v-if="group.group">
-          {{ group.group }}
-        </p>
-        <Icon v-else name="more-horizontal" class="w-4 h-4" />
+        <template v-if="group.group" #default>{{ group.group }}</template>
       </DropdownWithActions>
-      <Button
+      <FrappeButton
         v-if="doc?.canSave"
-        type="primary"
+        variant="solid"
         :disabled="doc.isSyncing"
         @click="sync"
       >
         {{ t`Save` }}
-      </Button>
-      <Button v-else-if="doc?.canSubmit" type="primary" @click="submit">{{ t`Submit` }}</Button>
+      </FrappeButton>
+      <FrappeButton v-else-if="doc?.canSubmit" variant="solid" @click="submit">{{ t`Submit` }}</FrappeButton>
     </template>
     <template #body>
       <FormHeader
@@ -134,16 +127,14 @@ import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
-import { TabButtons as FrappeTabButtons } from 'frappe-ui';
+import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import Barcode from 'src/components/Controls/Barcode.vue';
 import ExchangeRate from 'src/components/Controls/ExchangeRate.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
-import Icon from 'src/components/Icon.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getErrorMessage } from 'src/utils';
@@ -171,9 +162,8 @@ export default defineComponent({
   components: {
     FormContainer,
     FormHeader,
-    Icon,
     CommonFormSection,
-    Button,
+    FrappeButton,
     DropdownWithActions,
     Barcode,
     ExchangeRate,
@@ -203,7 +193,6 @@ export default defineComponent({
       docOrNull,
       shortcuts,
       context,
-      printButton: ref<InstanceType<typeof Button> | null>(null),
     };
   },
   data() {
@@ -364,7 +353,7 @@ export default defineComponent({
         return;
       }
 
-      this.printButton?.$el.click();
+      void this.openPrintView();
     });
     this.shortcuts?.pmod.set(this.context, ['KeyL'], () => {
       if (!this.canShowLinks && !this.showLinks) {
@@ -381,6 +370,9 @@ export default defineComponent({
   },
   methods: {
     routeTo,
+    async openPrintView() {
+      await routeTo(`/print/${this.doc.schemaName}/${this.doc.name}`);
+    },
     async toggleWidth() {
       const value = !this.useFullWidth;
       if (this.fyo.can('Misc', 'write')) {

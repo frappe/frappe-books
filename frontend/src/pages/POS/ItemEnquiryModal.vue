@@ -76,26 +76,25 @@
       />
     </div>
     <template #actions>
-      <Button size="md" class="min-w-24" @click="closeModal">{{
+      <FrappeButton size="md" class="min-w-24" @click="closeModal">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         @click="submitForm"
-        >{{ t`Submit` }}</Button
-      >
+        >{{ t`Submit` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
 import Modal from 'src/components/POS/POSDialog.vue';
-import Button from 'src/components/Button.vue';
 import Link from 'src/components/Controls/Link.vue';
 import Text from 'src/components/Controls/Text.vue';
 import Data from 'src/components/Controls/Data.vue';
@@ -107,7 +106,7 @@ export default defineComponent({
   name: 'ItemEnquiryModal',
   components: {
     Modal,
-    Button,
+    FrappeButton,
     Link,
     Text,
     Data,

@@ -42,22 +42,21 @@
     </div>
 
     <template #actions>
-      <Button size="md" class="min-w-24" @click="handleDismiss">{{
+      <FrappeButton size="md" class="min-w-24" @click="handleDismiss">{{
         t`Back`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         @click="handleSubmit"
-        >{{ t`Open Shift` }}</Button
-      >
+        >{{ t`Open Shift` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import Button from 'src/components/Button.vue';
+import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
 import Table from 'src/components/Controls/Table.vue';
 import { ModelNameEnum } from 'models/types';
@@ -73,7 +72,7 @@ import { getPOSOpeningShiftDoc } from 'src/utils/pos';
 
 export default defineComponent({
   name: 'OpenPOSShift',
-  components: { Button, Modal, Table },
+  components: { FrappeButton, Modal, Table },
   provide() {
     return {
       doc: computed(() => this.posShiftDoc),

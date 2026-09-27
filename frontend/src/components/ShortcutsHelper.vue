@@ -1,48 +1,19 @@
 <template>
-  <div class="min-w-0">
-    <FormHeader :form-title="t`Shortcuts`" />
-    <hr class="border-outline-gray-1" />
-    <div
-      class="max-h-[min(34rem,calc(100vh-10rem))] overflow-y-auto custom-scroll custom-scroll-thumb2 text-ink-gray-9"
-    >
-      <template v-for="g in groups" :key="g.label">
-        <div class="p-4 w-full">
-          <!-- Shortcut Group Header -->
-          <div class="-mx-2 mb-4">
-            <DisclosureButton
-              :expanded="!g.collapsed"
-              @toggle="g.collapsed = !g.collapsed"
-            >
-              <span class="flex flex-col items-start gap-1">
-                <strong>{{ g.label }}</strong>
-                <span class="text-base font-normal text-ink-gray-6">
-                  {{ g.description }}
-                </span>
-              </span>
-            </DisclosureButton>
-          </div>
-          <!-- Shortcuts -->
-          <div v-if="!g.collapsed" class="flex flex-col gap-4">
-            <div
-              v-for="(s, i) in g.shortcuts"
-              :key="g.label + ' ' + i"
-              class="grid grid-cols-[10rem_minmax(0,1fr)] gap-4 items-start"
-            >
-              <ShortcutKeys class="text-base" :keys="s.shortcut" />
-              <div class="min-w-0 whitespace-normal text-base">
-                {{ s.description }}
-              </div>
-            </div>
-          </div>
-          <!-- Shortcut count if collapsed -->
-          <div v-else class="text-base text-ink-gray-6">
-            {{ t`${g.shortcuts.length} shortcuts` }}
-          </div>
-        </div>
-        <hr class="border-outline-gray-1" />
-      </template>
-      <div class="p-4 text-base text-ink-gray-6">
-        {{ t`More shortcuts will be added soon.` }}
+  <div
+    class="grid max-h-[70vh] grid-cols-1 gap-8 gap-x-6 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3"
+  >
+    <div v-for="g in groups" :key="g.label" class="space-y-1">
+      <h3 class="text-base-medium tracking-wide text-ink-gray-8">
+        {{ g.label }}
+      </h3>
+      <p class="mb-3 text-p-sm text-ink-gray-5">{{ g.description }}</p>
+      <div
+        v-for="(s, i) in g.shortcuts"
+        :key="g.label + ' ' + i"
+        class="grid grid-cols-[1fr_auto] items-start gap-3 rounded-4 py-0.5"
+      >
+        <span class="text-p-base text-ink-gray-6">{{ s.description }}</span>
+        <ShortcutKeys :keys="s.shortcut" />
       </div>
     </div>
   </div>
@@ -51,19 +22,16 @@
 import { t } from 'fyo';
 import { ShortcutKey } from 'src/utils/ui';
 import { defineComponent } from 'vue';
-import DisclosureButton from './DisclosureButton.vue';
-import FormHeader from './FormHeader.vue';
 import ShortcutKeys from './ShortcutKeys.vue';
 
 type Group = {
   label: string;
   description: string;
-  collapsed: boolean;
   shortcuts: { shortcut: string[]; description: string }[];
 };
 
 export default defineComponent({
-  components: { FormHeader, ShortcutKeys, DisclosureButton },
+  components: { ShortcutKeys },
   data() {
     return { groups: [] } as { groups: Group[] };
   },
@@ -72,7 +40,6 @@ export default defineComponent({
       {
         label: t`Global`,
         description: t`Applicable anywhere in Frappe Books`,
-        collapsed: false,
         shortcuts: [
           {
             shortcut: [ShortcutKey.pmod, 'K'],
@@ -95,7 +62,6 @@ export default defineComponent({
       {
         label: t`Entry`,
         description: t`Applicable when a entry is open in the Form view or Quick Edit view`,
-        collapsed: false,
         shortcuts: [
           {
             shortcut: [ShortcutKey.pmod, 'S'],
@@ -125,7 +91,6 @@ export default defineComponent({
       {
         label: t`List View`,
         description: t`Applicable when the List View of an entry type is open`,
-        collapsed: false,
         shortcuts: [
           {
             shortcut: [ShortcutKey.pmod, 'N'],
@@ -140,7 +105,6 @@ export default defineComponent({
       {
         label: t`Quick Search`,
         description: t`Applicable when Quick Search is open`,
-        collapsed: false,
         shortcuts: [
           { shortcut: [ShortcutKey.esc], description: t`Close Quick Search` },
           {
@@ -168,7 +132,6 @@ export default defineComponent({
       {
         label: t`Template Builder`,
         description: t`Applicable when Template Builder is open`,
-        collapsed: false,
         shortcuts: [
           {
             shortcut: [ShortcutKey.ctrl, ShortcutKey.enter],
@@ -195,7 +158,6 @@ export default defineComponent({
       {
         label: t`Point of Sale`,
         description: t`Applicable when POS is open`,
-        collapsed: false,
         shortcuts: [
           {
             shortcut: [ShortcutKey.shift, 'V'],

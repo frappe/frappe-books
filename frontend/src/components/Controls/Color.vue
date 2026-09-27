@@ -20,11 +20,14 @@
     </template>
   </ReadOnlyValue>
   <div v-else>
-    <div v-if="showLabel" :class="labelClasses">
-      {{ df.label }}
-    </div>
-    <Popover placement="bottom-end">
-      <template #target>
+    <FrappeFormLabel
+      v-if="showLabel"
+      class="mb-1.5"
+      :label="df.label"
+      :required="isRequired"
+    />
+    <FrappePopover side="bottom" align="end">
+      <template #trigger>
         <FrappeButton
           :variant="frappeVariant"
           :size="frappeSize"
@@ -46,65 +49,65 @@
           </div>
         </FrappeButton>
       </template>
-      <template #content>
-        <div class="w-48 p-3">
-          <div class="grid grid-cols-5 gap-2">
-            <FrappeButton
-              v-for="color in colors"
-              :key="color.value"
-              variant="outline"
-              size="sm"
-              class="!size-7 !min-w-0 !p-0"
-              :class="
-                normalizedColor.toLowerCase() === color.value.toLowerCase()
-                  ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-850'
-                  : ''
-              "
-              :style="{ backgroundColor: color.value }"
-              :title="color.label"
-              :aria-label="color.label"
-              @click="setColorValue(color.value)"
-            />
-          </div>
-
-          <div
-            class="mt-3 flex items-center gap-2 rounded-4 border border-outline-gray-2 bg-surface-gray-1 p-1.5"
-          >
-            <input
-              type="color"
-              class="color-swatch h-7 w-7 flex-shrink-0 cursor-pointer"
-              :value="normalizedColor"
-              :title="t`Choose color`"
-              :aria-label="t`Choose color`"
-              @input="setColorFromEvent"
-            />
-            <FrappeTextInput
-              class="min-w-0 flex-1 font-mono uppercase"
-              :model-value="normalizedColor"
-              :placeholder="t`Custom Hex`"
-              :aria-label="t`Custom Hex`"
-              @update:model-value="setColorValue"
-            />
-          </div>
+      <div class="w-48 p-3">
+        <div class="grid grid-cols-5 gap-2">
+          <FrappeButton
+            v-for="color in colors"
+            :key="color.value"
+            variant="outline"
+            size="sm"
+            class="!size-7 !min-w-0 !p-0"
+            :class="
+              normalizedColor.toLowerCase() === color.value.toLowerCase()
+                ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-850'
+                : ''
+            "
+            :style="{ backgroundColor: color.value }"
+            :title="color.label"
+            :aria-label="color.label"
+            @click="setColorValue(color.value)"
+          />
         </div>
-      </template>
-    </Popover>
+
+        <div
+          class="mt-3 flex items-center gap-2 rounded-4 border border-outline-gray-2 bg-surface-gray-1 p-1.5"
+        >
+          <input
+            type="color"
+            class="color-swatch h-7 w-7 flex-shrink-0 cursor-pointer"
+            :value="normalizedColor"
+            :title="t`Choose color`"
+            :aria-label="t`Choose color`"
+            @input="setColorFromEvent"
+          />
+          <FrappeTextInput
+            class="min-w-0 flex-1 font-mono uppercase"
+            :model-value="normalizedColor"
+            :placeholder="t`Custom Hex`"
+            :aria-label="t`Custom Hex`"
+            @update:model-value="setColorValue"
+          />
+        </div>
+      </div>
+    </FrappePopover>
   </div>
 </template>
 
 <script>
 import {
   Button as FrappeButton,
+  FormLabel as FrappeFormLabel,
+  Popover as FrappePopover,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
-import Popover from 'src/components/Popover.vue';
 import Base from './Base.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
 export default {
   name: 'Color',
   components: {
-    Popover,
+    FrappeFormLabel,
+    FrappePopover,
     ReadOnlyValue,
     FrappeButton,
     FrappeTextInput,

@@ -37,8 +37,8 @@ def bootstrap():
 		_insert_if_missing("Books Uom", name, {"is_whole": is_whole})
 	_insert_if_missing("Books Location", "Stores", {})
 	_insert_if_missing("Books Payment Method", "Cash", {"type": "Cash"})
-	for name, template_spec in DEFAULT_PRINT_TEMPLATES.items():
-		_insert_if_missing("Books Print Template", name, _print_template_values(template_spec))
+	for name in DEFAULT_PRINT_TEMPLATES:
+		_insert_if_missing("Books Print Template", name, standard_print_template_values(name))
 	_fill_default_print_templates()
 
 
@@ -52,7 +52,7 @@ def update_standard_print_templates():
 	filters = {"name": ["in", list(DEFAULT_PRINT_TEMPLATES)], "is_custom": 0}
 	for name in frappe.get_all("Books Print Template", filters=filters, pluck="name"):
 		template = frappe.get_doc("Books Print Template", name)
-		values = _print_template_values(DEFAULT_PRINT_TEMPLATES[name])
+		values = standard_print_template_values(name)
 		if any(template.get(fieldname) != value for fieldname, value in values.items()):
 			template.update(values)
 			template.save(ignore_permissions=True)
@@ -66,8 +66,8 @@ def _fill_default_print_templates():
 		defaults.save(ignore_permissions=True)
 
 
-def _print_template_values(template_spec):
-	document_type, filename, width, height = template_spec
+def standard_print_template_values(name):
+	document_type, filename, width, height = DEFAULT_PRINT_TEMPLATES[name]
 	return {
 		"type": document_type,
 		"template": (PRINT_TEMPLATE_DIRECTORY / filename).read_text(),

@@ -39,6 +39,11 @@
           $emit('row-change', field, value, parentfield)
       "
     />
+    <FrappeErrorMessage
+      v-if="tableField"
+      class="px-4 pb-3"
+      :message="errors[tableField.fieldname]"
+    />
 
     <div
       v-if="fieldGroups.length && (kind !== 'collapsible' || isOpen)"
@@ -90,6 +95,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';

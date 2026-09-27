@@ -8,6 +8,7 @@
       :aria-label="label ? undefined : placeholder"
       @click="$emit('click')"
     >
+      <slot name="prefix" />
       <span
         class="min-w-0 flex-1 truncate"
         :class="displayValue ? 'text-ink-gray-8' : 'text-ink-gray-4'"

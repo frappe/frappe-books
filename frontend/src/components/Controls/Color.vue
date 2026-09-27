@@ -19,6 +19,33 @@
       />
     </template>
   </ReadOnlyValue>
+  <div v-else-if="isMobile" :style="containerStyles">
+    <MobileFieldTrigger
+      :label="showLabel ? df.label : undefined"
+      :required="isRequired"
+      :placeholder="inputPlaceholder"
+      :display-value="value ? selectedColorLabel : ''"
+      :invalid="invalid"
+      icon="lucide-palette"
+      @click="isSheetOpen = true"
+    >
+      <template v-if="value" #prefix>
+        <span
+          class="size-5 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)]"
+          :style="{ backgroundColor: normalizedColor }"
+          aria-hidden="true"
+        />
+      </template>
+    </MobileFieldTrigger>
+    <FrappeBottomSheet v-model:open="isSheetOpen" :title="df.label">
+      <ColorPalette
+        class="px-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
+        :colors="colors"
+        :value="normalizedColor"
+        @select="setColorValue"
+      />
+    </FrappeBottomSheet>
+  </div>
   <div v-else>
     <FrappeFormLabel
       v-if="showLabel"
@@ -49,70 +76,43 @@
           </div>
         </FrappeButton>
       </template>
-      <div class="w-48 p-3">
-        <div class="grid grid-cols-5 gap-2">
-          <FrappeButton
-            v-for="color in colors"
-            :key="color.value"
-            variant="outline"
-            size="sm"
-            class="!size-7 !min-w-0 !p-0"
-            :class="
-              normalizedColor.toLowerCase() === color.value.toLowerCase()
-                ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-850'
-                : ''
-            "
-            :style="{ backgroundColor: color.value }"
-            :title="color.label"
-            :aria-label="color.label"
-            @click="setColorValue(color.value)"
-          />
-        </div>
-
-        <div
-          class="mt-3 flex items-center gap-2 rounded-4 border border-outline-gray-2 bg-surface-gray-1 p-1.5"
-        >
-          <input
-            type="color"
-            class="color-swatch h-7 w-7 flex-shrink-0 cursor-pointer"
-            :value="normalizedColor"
-            :title="t`Choose color`"
-            :aria-label="t`Choose color`"
-            @input="setColorFromEvent"
-          />
-          <FrappeTextInput
-            class="min-w-0 flex-1 font-mono uppercase"
-            :model-value="normalizedColor"
-            :placeholder="t`Custom Hex`"
-            :aria-label="t`Custom Hex`"
-            @update:model-value="setColorValue"
-          />
-        </div>
-      </div>
+      <ColorPalette
+        class="w-48 p-3"
+        :colors="colors"
+        :value="normalizedColor"
+        @select="setColorValue"
+      />
     </FrappePopover>
   </div>
 </template>
 
 <script>
 import {
+  BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
   FormLabel as FrappeFormLabel,
   Popover as FrappePopover,
-  TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
 import Base from './Base.vue';
+import ColorPalette from './ColorPalette.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
 export default {
   name: 'Color',
   components: {
+    ColorPalette,
+    FrappeBottomSheet,
     FrappeFormLabel,
     FrappePopover,
+    MobileFieldTrigger,
     ReadOnlyValue,
     FrappeButton,
-    FrappeTextInput,
   },
   extends: Base,
+  data() {
+    return { isSheetOpen: false };
+  },
   computed: {
     colors() {
       if (Array.isArray(this.df.options) && this.df.options.length) {
@@ -153,13 +153,6 @@ export default {
         this.triggerChange(value);
       }
     },
-    setColorFromEvent(event) {
-      if (!(event.target instanceof HTMLInputElement)) {
-        return;
-      }
-
-      this.setColorValue(event.target.value);
-    },
   },
 };
 
@@ -180,22 +173,3 @@ function isValidColor(value) {
   return /^#[0-9A-F]{6}$/i.test(value);
 }
 </script>
-
-<style scoped>
-.color-swatch {
-  appearance: none;
-  border: 0;
-  border-radius: 0.375rem;
-  overflow: hidden;
-  padding: 0;
-}
-
-.color-swatch::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-
-.color-swatch::-webkit-color-swatch,
-.color-swatch::-moz-color-swatch {
-  border: 0;
-}
-</style>

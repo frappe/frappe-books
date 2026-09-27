@@ -125,6 +125,22 @@ test('reports fit a phone screen without sideways scrolling', async ({
   }
 });
 
+test('trial balance scrolls sideways instead of cutting off accounts', async ({
+  page,
+}) => {
+  await show(page, 'TrialBalance');
+  const name = page.getByText('Application of Funds (Assets)', { exact: true });
+  await expect(name).toBeVisible();
+  expect(await name.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true
+  );
+
+  const scroller = page.locator('.overflow-auto').filter({ has: name });
+  expect(await scroller.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
+    true
+  );
+});
+
 function row(page: Page, name: string) {
   return page.getByRole('button', { name, exact: false }).filter({
     has: page.getByText(name, { exact: true }),

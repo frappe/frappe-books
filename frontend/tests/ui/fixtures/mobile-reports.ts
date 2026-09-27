@@ -6,6 +6,7 @@ import { ProfitAndLoss } from 'reports/ProfitAndLoss/ProfitAndLoss';
 import { GeneralLedger } from 'reports/GeneralLedger/GeneralLedger';
 import { StockBalance } from 'reports/inventory/StockBalance';
 import { StockLedger } from 'reports/inventory/StockLedger';
+import { TrialBalance } from 'reports/TrialBalance/TrialBalance';
 import type { Report } from 'reports/Report';
 import type { AccountSection, LedgerRow } from 'reports/types';
 import { getSchemas } from 'schemas';
@@ -159,11 +160,30 @@ function makeStockLedger() {
   return report;
 }
 
+function makeTrialBalance() {
+  const report = new TrialBalance(fyo);
+  report.filters = report.getFilters();
+  report.columns = report.getColumns();
+  const values = [0, 0, 1235280, 0, 1235280, 0];
+  report.reportData = report.getSectionRows([
+    {
+      rootType: 'Asset',
+      accounts: [
+        account('Application of Funds (Assets)', 0, values, true),
+        account('Accounts Receivable', 1, values),
+      ],
+      total: values,
+    },
+  ]);
+  return report;
+}
+
 const makers: Record<string, () => Report> = {
   ProfitAndLoss: makeProfitAndLoss,
   GeneralLedger: makeGeneralLedger,
   StockBalance: makeStockBalance,
   StockLedger: makeStockLedger,
+  TrialBalance: makeTrialBalance,
 };
 
 async function mount() {

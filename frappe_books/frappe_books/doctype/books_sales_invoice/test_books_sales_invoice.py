@@ -61,6 +61,14 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(invoice.items[0].tax, self.tax.name)
 		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
 
+	def test_row_hsn_code_comes_from_the_item(self):
+		item = make_item(self.income.name, self.expense.name, hsn_code="998314")
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
+		)
+
+		self.assertEqual(invoice.items[0].db_get("hsn_code"), 998314)
+
 	def test_item_discount_stays_within_the_row(self):
 		for values, message in (
 			({"item_discount_percent": 101}, "between 0 and 100"),

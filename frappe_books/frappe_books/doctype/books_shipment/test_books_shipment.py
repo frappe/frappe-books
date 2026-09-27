@@ -287,6 +287,23 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 			frappe.ValidationError, "already fully billed", make_sales_invoice, shipment.name
 		)
 
+	def test_shipment_is_fully_billed_until_an_invoice_is_cancelled(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment.submit()
+		first = make_sales_invoice(shipment.name)
+		first.items[0].update({"quantity": 1, "transfer_quantity": 1})
+		first.insert().submit()
+		self.assertEqual(shipment.db_get("is_fully_billed"), 0)
+
+		second = make_sales_invoice(shipment.name).insert()
+		second.submit()
+		self.assertEqual(shipment.db_get("is_fully_billed"), 1)
+
+		second.cancel()
+		self.assertEqual(shipment.db_get("is_fully_billed"), 0)
+
 	def test_invoice_of_a_shipment_can_bill_lines_it_did_not_ship(self):
 		item, _cogs, _stock = self._tracked_item()
 		service = make_item(item.income_account, item.expense_account)

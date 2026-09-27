@@ -8,6 +8,13 @@ from frappe.tests import IntegrationTestCase
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
 	start_pos_shift,
 )
+from frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice import (
+	make_purchase_receipt,
+)
+from frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice import (
+	make_return as make_purchase_return,
+)
+from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import make_shipment
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
 )
@@ -107,6 +114,54 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Defaults", "shipment_location", None)
 
 		self.assertRaisesRegex(frappe.ValidationError, "Set Shipment Location", invoice.submit)
+
+	def test_shipment_maps_only_what_the_invoice_has_not_shipped(self):
+		invoice, item = self._sales_invoice(exchange_rate=2)
+		invoice.submit()
+		first = make_shipment(invoice.name)
+		first.items[0].update({"quantity": 1, "transfer_quantity": 1})
+		first.insert().submit()
+
+		shipment = make_shipment(invoice.name)
+
+		self.assertEqual((shipment.back_reference, shipment.return_against), (invoice.name, None))
+		self.assertEqual(
+			[(row.item, row.quantity, row.rate, row.location) for row in shipment.items],
+			[(item, 1, 200, "Stores")],
+		)
+		shipment.insert().submit()
+		self.assertRaisesRegex(frappe.ValidationError, "no stock left", make_shipment, invoice.name)
+
+	def test_receipt_of_a_return_returns_against_the_original_receipt(self):
+		invoice, _item = self._purchase_invoice(make_auto_stock_transfer=1)
+		invoice.submit()
+		purchase_return = make_purchase_return(invoice.name)
+		purchase_return.make_auto_stock_transfer = 0
+		purchase_return.insert().submit()
+
+		receipt = make_purchase_receipt(purchase_return.name)
+
+		self.assertEqual(receipt.return_against, invoice.reload().back_reference)
+		self.assertEqual([row.quantity for row in receipt.items], [2])
+
+	def _purchase_invoice(self, **values):
+		payable = make_account("Map Payable", root_type="Liability", account_type="Payable")
+		stock = make_account("Map Stock", account_type="Stock")
+		received = make_account("Map Received", root_type="Liability")
+		expense = make_account("Map Expense", root_type="Expense")
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_inventory_accounts(stock.name, received.name, expense.name)
+		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
+		item = make_item(expense.name, expense.name, track_item=1)
+		invoice = make_invoice(
+			"Books Purchase Invoice",
+			make_party(payable.name, role="Supplier").name,
+			payable.name,
+			item.name,
+			received.name,
+			**values,
+		)
+		return invoice, item.name
 
 	def _sales_invoice(self, **values):
 		receivable = make_account("Auto Receivable", account_type="Receivable")

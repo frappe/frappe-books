@@ -1,5 +1,6 @@
 import json
 from base64 import b64encode
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -23,6 +24,15 @@ class IntegrationTestAttachments(IntegrationTestCase):
 
 		self.assertEqual(_file_content("Books Party", party.name, "image"), "image-bytes")
 		self.assertEqual(_file_content("Books Journal Entry", entry.name, "attachment"), "bill")
+
+	def test_attachments_over_the_upload_limit_still_move(self):
+		party = make_party(make_account("Large Attachment Receivable", account_type="Receivable").name)
+		party.db_set("image", "data:image/png;base64," + b64encode(b"large-image").decode())
+
+		with patch("frappe.core.api.file.get_max_file_size", return_value=4):
+			move_attachments_to_files.execute()
+
+		self.assertEqual(_file_content("Books Party", party.name, "image"), "large-image")
 
 
 def _file_content(doctype, name, fieldname):

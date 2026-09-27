@@ -1,6 +1,6 @@
 import { t } from 'fyo';
 import type { Doc } from 'fyo/model/doc';
-import { BaseError } from 'fyo/utils/errors';
+import { BaseError, ConflictError } from 'fyo/utils/errors';
 import { ErrorLog } from 'fyo/utils/types';
 import { showDialog } from 'src/utils/interactive';
 import { fyo } from './initFyo';
@@ -75,6 +75,12 @@ export async function handleErrorWithDialog(
     detail: errorMessage,
     type: 'error',
   };
+  if (error instanceof ConflictError && doc?.inserted) {
+    options.buttons = [
+      { label: t`Reload`, action: () => doc.load(), isPrimary: true },
+      { label: t`Cancel`, action: () => null, isEscape: true },
+    ];
+  }
 
   await showDialog(options);
   if (dontThrow) {

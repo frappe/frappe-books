@@ -408,7 +408,7 @@ export async function getDocFromNameIfExistsElseNew(
   }
 
   try {
-    return await fyo.doc.getDoc(schemaName, name);
+    return await fyo.doc.getDoc(schemaName, name, { refresh: true });
   } catch (error) {
     if (error instanceof NotFoundError) {
       return fyo.doc.getNewDoc(schemaName);

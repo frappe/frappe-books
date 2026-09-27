@@ -10,6 +10,8 @@ import { DocValueMap, RawValueMap } from './types';
 
 type GetDocOptions = {
   skipDocumentCache?: boolean;
+  // Reload a cached doc that has no unsaved edits.
+  refresh?: boolean;
 };
 
 export class DocHandler {
@@ -67,6 +69,10 @@ export class DocHandler {
     }
 
     if (doc) {
+      if (options.refresh) {
+        await doc.refresh();
+      }
+
       return doc;
     }
 

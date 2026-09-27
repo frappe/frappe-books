@@ -353,6 +353,9 @@ export default defineComponent({
     this.isPrintable = await isPrintable(this.schemaName);
   },
   activated(): void {
+    if (this.hasDoc) {
+      void this.refreshDoc();
+    }
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
     docsPathRef.value = docsPathMap[this.schemaName] ?? '';
     this.shortcuts?.pmod.set(this.context, ['KeyP'], () => {
@@ -413,6 +416,14 @@ export default defineComponent({
         this.docOrNull = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
       } catch (error) {
         await handleErrorWithDialog(error);
+      }
+    },
+    async refreshDoc() {
+      try {
+        await this.doc.refresh();
+        this.updateGroupedFields();
+      } catch (error) {
+        await handleErrorWithDialog(error, this.doc, true);
       }
     },
     replacePathAfterSync() {

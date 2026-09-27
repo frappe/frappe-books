@@ -622,6 +622,15 @@ export class Doc extends Observable<DocValue | Doc[]> {
     this._notInserted = false;
   }
 
+  /** Reloads a saved, unedited doc so it shows changes made elsewhere. */
+  async refresh() {
+    if (this.notInserted || this.dirty || this.isSyncing) {
+      return;
+    }
+
+    await this.load();
+  }
+
   /** Loads every linked doc; `loadAndGetLink` loads one. */
   async loadLinks() {
     const linkFields = this.schema.fields.filter(

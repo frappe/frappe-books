@@ -34,31 +34,49 @@
       style="background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2px)"
     >
       <FrappeButton
+        v-if="value"
         size="xs"
         variant="subtle"
-        :icon="shouldClear ? 'lucide-x' : 'lucide-upload'"
+        icon="lucide-x"
         class="mb-1"
-        :aria-label="shouldClear ? t`Remove image` : t`Upload image`"
-        @click="handleClick"
+        :aria-label="t`Remove image`"
+        @click="triggerChange(null)"
       />
+      <FrappeFileUploader
+        v-else
+        class="mb-1"
+        file-types="image/*"
+        @success="onUploaded"
+        @failure="onUploadFailure"
+      >
+        <template #default="{ openFileSelector, uploading }">
+          <FrappeButton
+            size="xs"
+            variant="subtle"
+            icon="lucide-upload"
+            :aria-label="t`Upload image`"
+            :loading="uploading"
+            @click="openFileSelector"
+          />
+        </template>
+      </FrappeFileUploader>
     </div>
   </div>
 </template>
 <script lang="ts">
 import { Field } from 'schemas/types';
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  FileUploader as FrappeFileUploader,
+  type UploadedFile,
+} from 'frappe-ui';
 import { handleErrorWithDialog } from 'src/errorHandling';
-import { fyo } from 'src/initFyo';
-import { pickFile } from 'src/utils/browser';
-import { uploadFile } from 'src/web/api';
 import { defineComponent, PropType } from 'vue';
 import Base from './Base.vue';
 
-const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
-
 export default defineComponent({
   name: 'AttachImage',
-  components: { FrappeButton },
+  components: { FrappeFileUploader, FrappeButton },
   extends: Base,
   props: {
     letterPlaceholder: { type: String, default: '' },
@@ -72,37 +90,13 @@ export default defineComponent({
       }
       return {};
     },
-    shouldClear() {
-      return !!this.value;
-    },
   },
   methods: {
-    async handleClick() {
-      if (this.value) {
-        return await this.clearImage();
-      }
-      return await this.selectImage();
+    onUploaded(file: UploadedFile) {
+      this.triggerChange(file.file_url);
     },
-    async clearImage() {
-      this.triggerChange(null);
-    },
-    async selectImage() {
-      if (this.isReadOnly) {
-        return;
-      }
-      const file = await pickFile({
-        title: fyo.t`Select Image`,
-        filters: [{ name: 'Image', extensions: IMAGE_EXTENSIONS }],
-      });
-      if (!file) {
-        return;
-      }
-
-      try {
-        this.triggerChange(await uploadFile(file));
-      } catch (error) {
-        await handleErrorWithDialog(error, this.doc, true);
-      }
+    async onUploadFailure(error: unknown) {
+      await handleErrorWithDialog(error, this.doc, true);
     },
   },
 });

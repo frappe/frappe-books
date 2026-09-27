@@ -305,6 +305,12 @@ function getPrintTemplateDocHints(
   return hints;
 }
 
+/** The template name that a `.template.html` or `.html` file name gives. */
+export function getTemplateNameFromFile(fileName: string): string | null {
+  const name = fileName.replace(/(\.template)?\.html$/, '');
+  return name && name !== fileName ? name : null;
+}
+
 export async function getPathAndMakePDF(
   name: string,
   innerHTML: string,

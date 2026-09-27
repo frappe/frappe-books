@@ -40,7 +40,7 @@ await build({
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
-      export { getPrintTemplatePropValues } from './src/utils/printTemplates';
+      export { getPrintTemplatePropValues, getTemplateNameFromFile } from './src/utils/printTemplates';
       export { call } from './src/web/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
@@ -117,6 +117,7 @@ export const {
   GSTR1,
   getGstrJsonData,
   getPrintTemplatePropValues,
+  getTemplateNameFromFile,
   call,
   errors,
   getInsufficientItems,

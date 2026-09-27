@@ -210,6 +210,7 @@ import {
   baseTemplate,
   getPrintTemplatePropHints,
   getPrintTemplatePropValues,
+  getTemplateNameFromFile,
 } from 'src/utils/printTemplates';
 import { docsPathRef, showSidebar } from 'src/utils/refs';
 import { DocRef, PrintValues } from 'src/utils/types';
@@ -663,24 +664,10 @@ export default defineComponent({
         changes: { from: 0, to: this.view.state.doc.length, insert: text },
       });
 
-      if (this.doc?.inserted) {
-        return;
+      const name = getTemplateNameFromFile(fileName);
+      if (name && !this.doc?.inserted) {
+        await this.doc?.set('name', name);
       }
-
-      let name: string | null = null;
-      if (fileName.endsWith('.template.html')) {
-        name = fileName.split('.template.html')[0];
-      }
-
-      if (!name && fileName.endsWith('.html')) {
-        name = fileName.split('.html')[0];
-      }
-
-      if (!name) {
-        return;
-      }
-
-      await this.doc?.set('name', name);
     },
     async saveFile() {
       const name = this.doc?.name;

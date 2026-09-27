@@ -148,9 +148,7 @@ for (const [label, operator, value, count] of operatorCases) {
     await choose(page, 'Condition', label);
     if (value !== null) await setValue(page, value);
     else
-      await expect(
-        panel.getByRole('textbox', { name: 'Value', exact: true })
-      ).toHaveCount(0);
+      await expect(panel.getByLabel('Value', { exact: true })).toHaveCount(0);
     await panel.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect
       .poll(() => listSize(page))

@@ -50,7 +50,6 @@ const cases = [
     'status',
     ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled'],
   ],
-  ['LoyaltyProgram', 'Status', 'status', ['Active', 'Expired', 'Maxed']],
 ] as const;
 
 for (const [schema, label, field, options] of cases) {

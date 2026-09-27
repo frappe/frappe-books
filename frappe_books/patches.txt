@@ -15,6 +15,7 @@ frappe_books.patches.remove_setup_wizard_completed
 frappe_books.patches.give_custom_fields_to_form_owners
 frappe_books.patches.move_attachments_to_files
 frappe_books.patches.set_document_status
+frappe_books.patches.rename_colliding_custom_fields
 # Patches added in this section will be executed after doctypes are migrated
 
 [post_fixture_sync]

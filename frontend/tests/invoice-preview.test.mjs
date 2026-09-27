@@ -142,3 +142,20 @@ async function makeInvoice(respond) {
   });
   return { invoice, calls, fyo };
 }
+
+test('discounts come from the row totals the server calculated', async () => {
+  const { invoice, fyo } = await makeInvoice((values) => values);
+  const [row] = invoice.items;
+  Object.assign(row, {
+    setItemDiscountAmount: true,
+    itemDiscountAmount: fyo.pesa(15),
+    amount: fyo.pesa(200),
+    itemDiscountedTotal: fyo.pesa(185),
+    itemTaxedTotal: fyo.pesa(203.5),
+  });
+  invoice.discountAmount = fyo.pesa(5);
+
+  assert.equal(invoice.itemDiscount.float, 15);
+  assert.equal(invoice.totalDiscount.float, 20);
+  clearTimeout(invoice._previewTimer);
+});

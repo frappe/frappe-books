@@ -77,13 +77,14 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 
 	def test_outstanding_nets_sales_against_purchases(self):
 		account = make_account("Both Account", account_type="Receivable")
+		payable = make_account("Both Payable", root_type="Liability", account_type="Payable")
 		income = make_account("Both Income", root_type="Income")
 		expense = make_account("Both Expense", root_type="Expense")
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
 		party = make_party(account.name, role="Both")
 		item = make_item(income.name, expense.name)
 		make_invoice("Books Sales Invoice", party.name, account.name, item.name, income.name).submit()
-		purchase = make_invoice("Books Purchase Invoice", party.name, account.name, item.name, expense.name)
+		purchase = make_invoice("Books Purchase Invoice", party.name, payable.name, item.name, expense.name)
 		purchase.items[0].quantity = 1
 		purchase.save().submit()
 

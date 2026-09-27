@@ -5,6 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns
+from frappe_books.accounting.accounts import validate_account, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
@@ -178,6 +179,7 @@ def row_discount(invoice, row):
 def validate_invoice(invoice):
 	if not invoice.items:
 		frappe.throw(_("At least one invoice item is required."))
+	_validate_party_and_account(invoice)
 	if as_decimal(invoice.exchange_rate) <= 0:
 		frappe.throw(
 			_("Set an exchange rate from {0} to {1} above zero.").format(invoice.currency, company_currency())
@@ -186,6 +188,15 @@ def validate_invoice(invoice):
 		_validate_row(invoice, row)
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
+
+
+def _validate_party_and_account(invoice):
+	"""Sales go to customers and receivables, purchases to suppliers and payables."""
+	is_purchase = invoice.transaction_type == "purchase"
+	if _has_books_party(invoice):
+		validate_party_role(invoice, "party", ("Supplier" if is_purchase else "Customer", "Both"))
+	if invoice.transaction_type != "quote":
+		validate_account(invoice, "account", ("Payable" if is_purchase else "Receivable",))
 
 
 def _validate_row(invoice, row):
@@ -292,10 +303,15 @@ def _populate_party_defaults(invoice):
 
 def _party_defaults(invoice):
 	"""Return the party's invoice defaults; a quote to a lead has none."""
-	if not invoice.party or (invoice.get("reference_type") or "Books Party") != "Books Party":
+	if not invoice.party or not _has_books_party(invoice):
 		return frappe._dict()
 	fields = ["currency", "default_account", "loyalty_program"]
 	return frappe.db.get_value("Books Party", invoice.party, fields, as_dict=True) or frappe._dict()
+
+
+def _has_books_party(invoice):
+	"""Quotes can go to a lead instead."""
+	return (invoice.get("reference_type") or "Books Party") == "Books Party"
 
 
 def _populate_currency(invoice, party_currency):

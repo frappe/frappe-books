@@ -428,8 +428,8 @@ export abstract class Invoice extends Transactional {
     }
   }
 
-  async addItem(name: string) {
-    return await addItem(name, this);
+  async addItem(name: string, quantity?: number) {
+    return await addItem(name, this, quantity);
   }
 }
 

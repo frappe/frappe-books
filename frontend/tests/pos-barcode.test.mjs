@@ -40,3 +40,16 @@ test('other codes match a 12 digit barcode or an exact name or code', () => {
   assert.equal(findScannedPOSItem(items, '211234501500'), undefined);
   assert.equal(findScannedPOSItem(items, 'Egg'), undefined);
 });
+
+test('any barcode matches exactly, whatever its length or characters', () => {
+  const tagged = { name: 'Tagged', barcode: 'ABC-abc-1234', unit: 'Unit' };
+  const short = { name: 'Short', barcode: '96385074', unit: 'Unit' };
+  assert.deepEqual(findScannedPOSItem([tagged, short], 'ABC-abc-1234'), {
+    item: tagged,
+    quantity: 1,
+  });
+  assert.deepEqual(findScannedPOSItem([tagged, short], '96385074'), {
+    item: short,
+    quantity: 1,
+  });
+});

@@ -5,6 +5,7 @@ import {
   addPOSItem,
   fillRowSerialNumbers,
   getItemQtyMap,
+  getPOSRowItem,
   validateQty,
   getPOSInventory,
   getPOSBatchQuantity,
@@ -263,6 +264,28 @@ test('a cart row reports serial number lookup failures', async () => {
     fillRowSerialNumbers(makeSerialRow(fyo, { quantity: 1 }), {}),
     /Serial numbers unavailable/
   );
+});
+
+test('a cart row reads batch, serial and unit settings from its item', async () => {
+  const fyo = makeFyo();
+  fyo.doc.getDoc = async (schema, name) => ({
+    schema,
+    name,
+    unit: 'Kg',
+    hasBatch: true,
+    hasSerialNumber: true,
+    uomConversions: [{ uom: 'Box' }, { uom: 'Kg' }],
+  });
+  assert.deepEqual(await getPOSRowItem(fyo, item), {
+    hasBatch: true,
+    hasSerialNumber: true,
+    units: ['Kg', 'Box'],
+  });
+  assert.deepEqual(await getPOSRowItem(fyo, undefined), {
+    hasBatch: false,
+    hasSerialNumber: false,
+    units: [],
+  });
 });
 
 function makeSerialFyo(getSerialNumbers) {

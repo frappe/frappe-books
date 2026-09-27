@@ -607,28 +607,43 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return;
     }
 
-    const data = await this.fyo.db.get(this.schemaName, this.name);
-    if (this.schema.isSingle && !data?.name) {
-      data.name = this.name!;
-    }
-
-    if (data && data.name) {
-      await this._syncValues(data);
-    } else {
-      throw new NotFoundError(`Not Found: ${this.schemaName} ${this.name}`);
-    }
-
-    this._setDirty(false);
-    this._notInserted = false;
+    await this._setLoadedValues(await this._fetchSaved());
   }
 
   /** Reloads a saved, unedited doc so it shows changes made elsewhere. */
   async refresh() {
-    if (this.notInserted || this.dirty || this.isSyncing) {
+    if (!this.canRefresh) {
       return;
     }
 
-    await this.load();
+    const data = await this._fetchSaved();
+    // Edits made while fetching win.
+    if (this.canRefresh) {
+      await this._setLoadedValues(data);
+    }
+  }
+
+  get canRefresh() {
+    return !this.notInserted && !this.dirty && !this.isSyncing;
+  }
+
+  async _fetchSaved(): Promise<DocValueMap> {
+    const data = await this.fyo.db.get(this.schemaName, this.name!);
+    if (this.schema.isSingle && !data?.name) {
+      data.name = this.name!;
+    }
+
+    if (!data?.name) {
+      throw new NotFoundError(`Not Found: ${this.schemaName} ${this.name}`);
+    }
+
+    return data;
+  }
+
+  async _setLoadedValues(data: DocValueMap) {
+    await this._syncValues(data);
+    this._setDirty(false);
+    this._notInserted = false;
   }
 
   /** Loads every linked doc; `loadAndGetLink` loads one. */

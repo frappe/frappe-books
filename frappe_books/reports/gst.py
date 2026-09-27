@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Literal, TypedDict
 
 import frappe
+from frappe.utils import create_batch
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.regional import INDIAN_STATES
@@ -11,6 +12,8 @@ from frappe_books.ui_bridge.mapping import target_doctype
 TAX_AMOUNT_FIELDS = {"IGST": "igstAmt", "CGST": "cgstAmt", "SGST": "sgstAmt"}
 TAX_FLAGS = {"Nil Rated": "nilRated", "Exempt": "exempt", "Non GST": "nonGST"}
 LARGE_B2C_INVOICE = 250000
+# SQLite allows 32766 query parameters.
+IN_LIST_BATCH_SIZE = 1000
 TRANSFER_TYPES = {
 	"B2B": lambda row: bool(row["gstin"]),
 	"B2CL": lambda row: not row["gstin"] and not row["inState"] and row["invAmt"] >= LARGE_B2C_INVOICE,
@@ -69,9 +72,11 @@ def _invoices(doctype, filters):
 
 
 def _items(doctype, names):
-	return frappe.get_list(
+	return _get_list_in(
 		frappe.get_meta(doctype).get_field("items").options,
-		filters={"parent": ["in", names], "parenttype": doctype, "parentfield": "items"},
+		"parent",
+		names,
+		filters={"parenttype": doctype, "parentfield": "items"},
 		fields=["parent", "tax", "amount", "item_discounted_total"],
 		parent_doctype=doctype,
 		order_by="idx asc",
@@ -94,18 +99,18 @@ def _tax_details(taxes):
 
 def _party_places(parties):
 	"""Return each party's GSTIN and place of supply."""
-	rows = frappe.get_list(
-		"Books Party", filters={"name": ["in", list(parties)]}, fields=["name", "gstin", "address"]
-	)
-	addresses = [row.address for row in rows if row.address]
-	positions = dict(
-		frappe.get_list(
-			"Books Address", filters={"name": ["in", addresses]}, fields=["name", "pos"], as_list=True
-		)
-		if addresses
-		else []
-	)
+	rows = _get_list_in("Books Party", "name", parties, fields=["name", "gstin", "address"])
+	addresses = {row.address for row in rows if row.address}
+	positions = dict(_get_list_in("Books Address", "name", addresses, fields=["name", "pos"], as_list=True))
 	return {row.name: (row.gstin or "", _place(row, positions)) for row in rows}
+
+
+def _get_list_in(doctype, fieldname, values, filters=None, **kwargs):
+	"""`frappe.get_list` of rows whose `fieldname` is in `values`, queried in batches."""
+	rows = []
+	for batch in create_batch(list(values), IN_LIST_BATCH_SIZE):
+		rows += frappe.get_list(doctype, filters={**(filters or {}), fieldname: ["in", batch]}, **kwargs)
+	return rows
 
 
 def _place(party, positions):

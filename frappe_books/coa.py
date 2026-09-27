@@ -151,6 +151,8 @@ def _is_group(node):
 
 
 def _account_name(label, account_number):
+	# some charts pad names with spaces, which Frappe strips from document names
+	label = label.strip()
 	if account_number:
 		return f"{label} - {account_number}"
 	return label

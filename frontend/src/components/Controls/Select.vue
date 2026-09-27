@@ -11,6 +11,23 @@
     :text-right="textRight"
     :container-styles="containerStyles"
   />
+  <div v-else-if="isMobile" :style="containerStyles">
+    <MobileFieldTrigger
+      :label="showLabel ? df.label : undefined"
+      :required="isRequired"
+      :placeholder="inputPlaceholder"
+      :display-value="selectedLabel"
+      :invalid="invalid"
+      @click="dropdownVisible = true"
+    />
+    <MobileOptionsSheet
+      v-model:open="dropdownVisible"
+      :title="df.label"
+      :options="options"
+      :value="selectValue"
+      @select="selectOption"
+    />
+  </div>
   <FrappeSelect
     v-else
     ref="input"
@@ -37,13 +54,20 @@
 <script lang="ts">
 import { Select as FrappeSelect } from 'frappe-ui';
 import { SelectOption } from 'schemas/types';
+import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
+import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import { defineComponent, nextTick } from 'vue';
 import Base from './Base.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
 export default defineComponent({
   name: 'Select',
-  components: { FrappeSelect, ReadOnlyValue },
+  components: {
+    FrappeSelect,
+    MobileFieldTrigger,
+    MobileOptionsSheet,
+    ReadOnlyValue,
+  },
   extends: Base,
   emits: ['focus'],
   props: {
@@ -64,6 +88,10 @@ export default defineComponent({
       }
 
       return this.df.options;
+    },
+    selectedLabel(): string {
+      const option = this.options.find((o) => o.value === this.selectValue);
+      return option?.label ?? String(this.selectValue ?? '');
     },
     selectValue(): string | number | undefined {
       if (typeof this.value === 'string' || typeof this.value === 'number') {

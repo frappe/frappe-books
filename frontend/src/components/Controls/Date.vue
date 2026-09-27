@@ -11,6 +11,22 @@
     :text-right="textRight"
     :container-styles="containerStyles"
   />
+  <FrappeTextInput
+    v-else-if="isMobile"
+    ref="input"
+    :type="nativeType"
+    :model-value="nativeValue"
+    :label="showLabel ? df.label : undefined"
+    :aria-label="showLabel ? undefined : df.label"
+    :description="showLabel ? df.sub_label : undefined"
+    :required="isRequired"
+    :size="frappeSize"
+    :variant="frappeVariant"
+    :class="controlClasses"
+    :style="containerStyles"
+    @update:model-value="onNativeChange"
+    @focus="onFocus"
+  />
   <component
     v-else
     :is="pickerComponent"
@@ -35,7 +51,7 @@
 </template>
 
 <script lang="ts">
-import { DatePicker, DateTimePicker } from 'frappe-ui';
+import { DatePicker, DateTimePicker, TextInput } from 'frappe-ui';
 import { DateTime } from 'luxon';
 import { fyo } from 'src/initFyo';
 import { defineComponent } from 'vue';
@@ -47,6 +63,7 @@ export default defineComponent({
   components: {
     FrappeDatePicker: DatePicker,
     FrappeDateTimePicker: DateTimePicker,
+    FrappeTextInput: TextInput,
     ReadOnlyValue,
   },
   extends: Base,
@@ -54,6 +71,13 @@ export default defineComponent({
   computed: {
     pickerComponent(): string {
       return 'FrappeDatePicker';
+    },
+    /** Phones use the native picker. */
+    nativeType(): 'date' | 'datetime-local' {
+      return 'date';
+    },
+    nativeValue(): string {
+      return this.inputValue;
     },
     inputValue(): string {
       const date = this.toDateTime(this.value);
@@ -76,6 +100,9 @@ export default defineComponent({
       }
 
       return null;
+    },
+    onNativeChange(value: string) {
+      this.onPickerChange(value);
     },
     onPickerChange(value: string) {
       if (!value) {

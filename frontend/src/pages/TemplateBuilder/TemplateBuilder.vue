@@ -21,7 +21,7 @@
         {{ t`Print` }}
       </Button>
       <Button
-        v-if="doc && doc.isCustom && doc.canEdit && displayDoc"
+        v-if="canEditTemplate && displayDoc"
         :title="t`Toggle Edit Mode`"
         :icon="true"
         @click="toggleEditMode"
@@ -130,7 +130,7 @@
             ref="templateEditor"
             class="overflow-auto custom-scroll custom-scroll-thumb1 h-full"
             :initial-value="doc.template"
-            :disabled="!doc.isCustom"
+            :disabled="!canEditTemplate"
             :hints="hints"
             @input="() => (templateChanged = true)"
             @blur="(value: string) => setTemplate(value)"
@@ -305,6 +305,9 @@ export default defineComponent({
     };
   },
   computed: {
+    canEditTemplate(): boolean {
+      return !!this.doc?.isCustom && !!this.doc?.canEdit;
+    },
     canDisplayPreview(): boolean {
       if (!this.displayDoc || !this.values) {
         return false;
@@ -345,8 +348,7 @@ export default defineComponent({
         },
       });
 
-      const canEditTemplate = this.doc.isCustom && this.doc.canEdit;
-      if (canEditTemplate && !this.showTypeModal) {
+      if (this.canEditTemplate && !this.showTypeModal) {
         actions.push({
           label: this.t`Set Template Type`,
           group: this.t`Action`,
@@ -354,7 +356,7 @@ export default defineComponent({
         });
       }
 
-      if (canEditTemplate && !this.showSizeModal) {
+      if (this.canEditTemplate && !this.showSizeModal) {
         actions.push({
           label: this.t`Set Print Size`,
           group: this.t`Action`,
@@ -362,7 +364,7 @@ export default defineComponent({
         });
       }
 
-      if (canEditTemplate) {
+      if (this.canEditTemplate) {
         actions.push({
           label: this.t`Select Template File`,
           group: this.t`Action`,
@@ -493,7 +495,7 @@ export default defineComponent({
     },
     async setTemplate(value?: string) {
       this.templateChanged = false;
-      if (!this.doc?.isCustom) {
+      if (!this.canEditTemplate) {
         return;
       }
 
@@ -518,7 +520,7 @@ export default defineComponent({
       this.showHints = !this.showHints;
     },
     toggleEditMode() {
-      if (!this.doc?.isCustom) {
+      if (!this.canEditTemplate) {
         return;
       }
 

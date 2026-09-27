@@ -40,13 +40,13 @@ def validate_changed_accounts(doc, rules):
 			validate_account(doc, fieldname, **types)
 
 
-def validate_party_role(doc, fieldname, roles):
-	"""Throw unless the field holds a party with one of the roles, the first one named in the error."""
-	party = doc.get(fieldname)
-	role = party and frappe.db.get_value("Books Party", party, "role")
-	if role and role not in roles:
+def validate_party_role(doc, is_purchase):
+	"""Sales go to customers and purchases come from suppliers; a party with both roles does either."""
+	role = doc.party and frappe.db.get_value("Books Party", doc.party, "role")
+	expected = "Supplier" if is_purchase else "Customer"
+	if role and role not in (expected, "Both"):
 		frappe.throw(
 			_("{0} must be a {1}, but {2} is a {3}.").format(
-				_(doc.meta.get_label(fieldname)), _(roles[0]), party, _(role)
+				_(doc.meta.get_label("party")), _(expected), doc.party, _(role)
 			)
 		)

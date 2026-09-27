@@ -194,7 +194,7 @@ def _validate_party_and_account(invoice):
 	"""Sales go to customers and receivables, purchases to suppliers and payables."""
 	is_purchase = invoice.transaction_type == "purchase"
 	if _has_books_party(invoice):
-		validate_party_role(invoice, "party", ("Supplier" if is_purchase else "Customer", "Both"))
+		validate_party_role(invoice, is_purchase)
 	if invoice.transaction_type != "quote":
 		validate_account(invoice, "account", ("Payable" if is_purchase else "Receivable",))
 

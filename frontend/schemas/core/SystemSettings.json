@@ -42,6 +42,16 @@
           "value": "dd.MM.yyyy"
         }
       ],
+      "optionLabels": {
+        "dd/MM/yyyy": "23/03/2022",
+        "MM/dd/yyyy": "03/23/2022",
+        "dd-MM-yyyy": "23-03-2022",
+        "MM-dd-yyyy": "03-23-2022",
+        "yyyy-MM-dd": "2022-03-23",
+        "d MMM, y": "23 Mar, 2022",
+        "MMM d, y": "Mar 23, 2022",
+        "dd.MM.yyyy": "23.03.2022"
+      },
       "default": "MMM d, y",
       "required": true,
       "allowCustom": true,

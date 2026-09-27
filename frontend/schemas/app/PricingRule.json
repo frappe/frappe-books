@@ -107,7 +107,12 @@
           "value": "amount",
           "label": "Discount Amount"
         }
-      ]
+      ],
+      "optionLabels": {
+        "rate": "Rate",
+        "percentage": "Discount Percentage",
+        "amount": "Discount Amount"
+      }
     },
     {
       "fieldname": "discountRate",
@@ -174,7 +179,12 @@
           "value": "ceil",
           "label": "Ceil"
         }
-      ]
+      ],
+      "optionLabels": {
+        "floor": "Floor",
+        "round": "Round",
+        "ceil": "Ceil"
+      }
     },
     {
       "fieldname": "isRecursive",

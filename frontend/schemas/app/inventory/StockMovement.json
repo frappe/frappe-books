@@ -46,6 +46,11 @@
           "label": "Manufacture"
         }
       ],
+      "optionLabels": {
+        "MaterialIssue": "Material Issue",
+        "MaterialReceipt": "Material Receipt",
+        "MaterialTransfer": "Material Transfer"
+      },
       "required": true,
       "section": "Default"
     },

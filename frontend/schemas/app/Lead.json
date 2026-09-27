@@ -46,6 +46,9 @@
           "label": "Do not Contact"
         }
       ],
+      "optionLabels": {
+        "DonotContact": "Do not Contact"
+      },
       "required": true,
       "section": "Default"
     },

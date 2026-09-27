@@ -85,6 +85,12 @@
           "value": "Attachment"
         }
       ],
+      "optionLabels": {
+        "Datetime": "Date Time",
+        "AutoComplete": "Autocomplete",
+        "AttachImage": "Attach Image",
+        "DynamicLink": "Dynamic Link"
+      },
       "default": "Data",
       "required": true
     },

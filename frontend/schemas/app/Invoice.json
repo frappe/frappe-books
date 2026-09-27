@@ -216,6 +216,10 @@
         { "value": "ReturnIssued", "label": "Return Issued" },
         { "value": "Cancelled", "label": "Cancelled" }
       ],
+      "optionLabels": {
+        "PartlyPaid": "Partly Paid",
+        "ReturnIssued": "Return Issued"
+      },
       "readOnly": true,
       "hidden": true
     }

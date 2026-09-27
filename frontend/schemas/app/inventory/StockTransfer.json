@@ -95,6 +95,9 @@
         { "value": "ReturnIssued", "label": "Return Issued" },
         { "value": "Cancelled", "label": "Cancelled" }
       ],
+      "optionLabels": {
+        "ReturnIssued": "Return Issued"
+      },
       "readOnly": true,
       "hidden": true
     }

@@ -166,6 +166,10 @@
           "label": "Purchase"
         }
       ],
+      "optionLabels": {
+        "SalesInvoice": "Sales",
+        "PurchaseInvoice": "Purchase"
+      },
       "hidden": true
     },
     {

@@ -9,6 +9,8 @@ export interface ListState {
   schemaName: string;
   filters: QueryFilter;
   activeFilters: QueryFilter;
+  /** Rows match at least one of these, e.g. a search over several fields. */
+  orFilters: QueryFilter;
   requestId: number;
   pageStart: number;
   pageLength: number;
@@ -22,12 +24,14 @@ export interface ListState {
 export async function loadListData(
   fyo: Fyo,
   list: ListState,
-  filters?: QueryFilter
+  filters?: QueryFilter,
+  orFilters: QueryFilter = {}
 ): Promise<
   { rows: RenderData[]; total: number; appliedFilters: QueryFilter } | undefined
 > {
   if (filters !== undefined) {
     list.activeFilters = cloneDeep(toRaw(filters));
+    list.orFilters = cloneDeep(toRaw(orFilters));
     list.pageStart = 0;
   }
   const requestId = ++list.requestId;
@@ -36,7 +40,10 @@ export async function loadListData(
     cloneDeep(toRaw(list.activeFilters))
   );
   const [total, rows] = await Promise.all([
-    fyo.db.count(list.schemaName, { filters: appliedFilters }),
+    fyo.db.count(list.schemaName, {
+      filters: appliedFilters,
+      orFilters: list.orFilters,
+    }),
     getListRows(fyo, list, appliedFilters),
   ]);
   if (requestId !== list.requestId) return;
@@ -55,6 +62,7 @@ async function getListRows(
   const rows = await fyo.db.getAll(list.schemaName, {
     fields: ['*'],
     filters,
+    orFilters: list.orFilters,
     orderBy,
     offset: list.pageStart,
     limit: list.pageLength,

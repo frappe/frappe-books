@@ -72,12 +72,11 @@ import { getFieldLabel } from 'src/utils/filterFields';
 import {
   filterConditions,
   isValuelessCondition,
-  mergeQueryFilters,
   type FilterRow,
 } from 'src/utils/filterQuery';
 import { ListFilters } from 'src/utils/listFilters';
 import type { QueryFilter } from 'utils/db/types';
-import { defineComponent } from 'vue';
+import { defineComponent, type PropType } from 'vue';
 import MobileFilterSheet from './MobileFilterSheet.vue';
 
 /** Search box, Filters button and filter chips above a phone list. */
@@ -86,7 +85,7 @@ export default defineComponent({
   components: { FrappeButton, FrappeTextInput, MobileFilterSheet },
   props: {
     schemaName: { type: String, required: true },
-    searchField: { type: String, required: true },
+    searchFields: { type: Array as PropType<string[]>, required: true },
   },
   emits: ['change'],
   data() {
@@ -109,9 +108,19 @@ export default defineComponent({
         };
       });
     },
+    /** Rows whose number, title or keyword fields contain the text. */
     searchQuery(): QueryFilter {
       const text = this.search.trim();
-      return text ? { [this.searchField]: ['like', `%${text}%`] } : {};
+      if (!text) {
+        return {};
+      }
+
+      return Object.fromEntries(
+        this.searchFields.map((fieldname: string) => [
+          fieldname,
+          ['like', `%${text}%`],
+        ])
+      );
     },
   },
   methods: {
@@ -136,10 +145,7 @@ export default defineComponent({
       this.onApply(this.filters.apply() ?? {});
     },
     emitChange() {
-      this.$emit(
-        'change',
-        mergeQueryFilters(this.filterQuery, this.searchQuery)
-      );
+      this.$emit('change', this.filterQuery, this.searchQuery);
     },
   },
 });

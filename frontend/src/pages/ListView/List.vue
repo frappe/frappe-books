@@ -160,6 +160,7 @@ export default defineComponent({
       pageLength: isMobile.value ? mobilePageLength : 50,
       selectedItems: [] as string[],
       activeFilters: {} as QueryFilter,
+      orFilters: {} as QueryFilter,
       requestId: 0,
     };
   },
@@ -171,7 +172,10 @@ export default defineComponent({
       return getListColumns(this.schemaName, this.listConfig);
     },
     isFiltered(): boolean {
-      return Object.keys(this.activeFilters).length > 0;
+      return (
+        Object.keys(this.activeFilters).length > 0 ||
+        Object.keys(this.orFilters).length > 0
+      );
     },
   },
   watch: {
@@ -209,12 +213,12 @@ export default defineComponent({
         onListChange(fyo, this.schemaName, () => this.updateData());
       }
     },
-    async updateData(filters?: QueryFilter) {
+    async updateData(filters?: QueryFilter, orFilters?: QueryFilter) {
       if (filters !== undefined) {
         this.isLoading = true;
         if (isMobile.value) this.pageLength = mobilePageLength;
       }
-      const loaded = await loadListData(fyo, this, filters).catch(
+      const loaded = await loadListData(fyo, this, filters, orFilters).catch(
         (error: unknown) => {
           this.isLoading = false;
           throw error;

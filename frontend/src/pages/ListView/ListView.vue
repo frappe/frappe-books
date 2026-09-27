@@ -50,7 +50,7 @@
       v-if="isMobile"
       ref="mobileToolbar"
       :schema-name="schemaName"
-      :search-field="searchField"
+      :search-fields="searchFields"
       @change="applyFilter"
     />
     <List
@@ -153,9 +153,15 @@ export default defineComponent({
 
       return fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
     },
-    searchField(): string {
+    /** The row title and the schema's keyword fields, as stored columns. */
+    searchFields(): string[] {
       const columns = getListColumns(this.schemaName, this.listConfig);
-      return getMobileRowLayout(this.schemaName, columns).title.fieldname;
+      const title = getMobileRowLayout(this.schemaName, columns).title.fieldname;
+      const keywords = fyo.schemaMap[this.schemaName]?.keywordFields ?? [];
+      const stored = fyo.db.fieldMap[this.schemaName] ?? {};
+      return [...new Set(['name', title, ...keywords])].filter(
+        (fieldname) => stored[fieldname] && !stored[fieldname].computed
+      );
     },
     fields(): Field[] {
       return fyo.schemaMap[this.schemaName]?.fields ?? [];
@@ -217,8 +223,8 @@ export default defineComponent({
     async handleMakeNewDoc() {
       await this.makeNewDoc();
     },
-    applyFilter(filters: QueryFilter) {
-      this.list?.updateData(filters);
+    applyFilter(filters: QueryFilter, orFilters?: QueryFilter) {
+      this.list?.updateData(filters, orFilters);
     },
     toggleSelectionMode() {
       this.isSelectionMode = !this.isSelectionMode;

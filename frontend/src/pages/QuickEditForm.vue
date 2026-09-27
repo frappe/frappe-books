@@ -87,6 +87,7 @@ import AttachImage from 'src/components/Controls/AttachImage.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Icon from 'src/components/Icon.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { DocRef } from 'src/utils/types';
@@ -216,7 +217,8 @@ export default defineComponent({
     async setDoc() {
       try {
         this.doc = await fyo.doc.getDoc(this.schemaName, this.name);
-      } catch {
+      } catch (error) {
+        await handleErrorWithDialog(error, undefined, true);
         return this.$router.back();
       }
     },

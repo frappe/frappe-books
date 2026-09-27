@@ -1,12 +1,14 @@
 <template>
 	<div v-if="isMobile" class="flex min-w-0 flex-col gap-1.5" :style="containerStyles">
 		<span v-if="showLabel" class="text-sm text-ink-gray-6">{{ df.label }}</span>
+		<!-- Frappe keeps colour for state, so links are marked by the icon. -->
 		<button
 			v-if="linked"
-			class="min-h-6 break-words text-start text-lg text-ink-blue-link"
+			class="-mx-2 flex min-h-9 max-w-full items-center gap-1.5 self-start rounded-4 px-2 text-start text-lg text-ink-gray-9 active:bg-surface-gray-2"
 			@click="$emit('open')"
 		>
-			{{ displayText }}
+			<span class="min-w-0 truncate">{{ displayText }}</span>
+			<FrappeIcon icon="lucide-arrow-up-right" class="size-4 shrink-0 text-ink-gray-5" />
 		</button>
 		<span v-else class="min-h-6 break-words text-lg text-ink-gray-8">{{ displayText }}</span>
 	</div>
@@ -34,7 +36,7 @@
 
 <script lang="ts">
 import { Doc } from "fyo/model/doc";
-import { TextInput as FrappeTextInput } from "frappe-ui";
+import { Icon as FrappeIcon, TextInput as FrappeTextInput } from "frappe-ui";
 import { Field } from "schemas/types";
 import { fyo } from "src/initFyo";
 import { isNumeric } from "src/utils";
@@ -43,7 +45,7 @@ import { defineComponent, PropType } from "vue";
 
 export default defineComponent({
 	name: "ReadOnlyValue",
-	components: { FrappeTextInput },
+	components: { FrappeIcon, FrappeTextInput },
 	props: {
 		df: { type: Object as PropType<Field>, required: true },
 		value: {
@@ -57,7 +59,7 @@ export default defineComponent({
 		border: { type: Boolean, default: false },
 		showLabel: { type: Boolean, default: false },
 		trailingActions: { type: Boolean, default: false },
-		/** Phones show the value as a link that emits `open`. */
+		/** Phones show the value as a tappable link that emits `open`. */
 		linked: { type: Boolean, default: false },
 		required: { type: Boolean, default: false },
 		size: { type: String, default: "large" },

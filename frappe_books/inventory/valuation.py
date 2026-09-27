@@ -117,15 +117,13 @@ def _entry_before(row, date, name=None):
 
 def _entries_after(anchor):
 	sle = frappe.qb.DocType(DOCTYPE)
-	query = (
+	return (
 		_key_query(sle, anchor)
 		.select(*STATE_FIELDS, sle.value_change, sle.reference_type, sle.reference_name)
+		.where((sle.date > anchor.date) | ((sle.date == anchor.date) & (sle.name > anchor.name)))
 		.orderby(sle.date)
 		.orderby(sle.name)
-	)
-	if anchor.get("name"):
-		query = query.where((sle.date > anchor.date) | ((sle.date == anchor.date) & (sle.name > anchor.name)))
-	return query.run(as_dict=True)
+	).run(as_dict=True)
 
 
 def _key_query(sle, row):

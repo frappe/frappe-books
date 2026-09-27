@@ -20,7 +20,7 @@
     </button>
     <div
       v-else-if="kind === 'table'"
-      class="flex items-baseline justify-between px-4 pb-2 pt-4"
+      class="flex h-[52px] items-center justify-between px-4"
     >
       <h2 class="text-base-semibold text-ink-gray-9">{{ title }}</h2>
       <span class="text-sm text-ink-gray-5">{{ rowCount }}</span>

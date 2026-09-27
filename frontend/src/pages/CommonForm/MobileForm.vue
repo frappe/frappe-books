@@ -32,7 +32,7 @@
 
     <div
       v-if="tabOptions.length > 1"
-      class="sticky top-0 z-[2] mt-1 overflow-x-auto bg-surface-base [scrollbar-width:none]"
+      class="sticky top-0 z-[2] mt-1 overflow-x-auto bg-surface-base shadow-[inset_0_-1px_0_var(--outline-gray-1)] [scrollbar-width:none]"
     >
       <FrappeTabButtons
         class="px-4"

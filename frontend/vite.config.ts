@@ -4,6 +4,12 @@ import { defineConfig } from 'vite';
 
 const frontendRoot = __dirname;
 const appRoot = path.resolve(frontendRoot, '..');
+const siteUrl = process.env.BOOKS_SITE_URL ?? 'http://localhost:8000';
+const siteProxy = {
+  target: siteUrl,
+  // frappe-ui names the site after the page's host; use the proxied site instead.
+  headers: { 'X-Frappe-Site-Name': new URL(siteUrl).hostname },
+};
 
 export default defineConfig(async () => {
   const { lucideIconsPlugin } =
@@ -39,13 +45,8 @@ export default defineConfig(async () => {
       sourcemap: false,
     },
     server: {
-      host: '0.0.0.0',
       port: 6969,
-      proxy: {
-        '/api': 'http://books-sqlite.localhost:8000',
-        '/assets': 'http://books-sqlite.localhost:8000',
-        '/files': 'http://books-sqlite.localhost:8000',
-      },
+      proxy: { '/api': siteProxy, '/assets': siteProxy, '/files': siteProxy },
     },
   };
 });

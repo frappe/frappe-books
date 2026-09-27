@@ -110,6 +110,12 @@ Vite writes the asset graph to `frappe_books/public/books`. The build then copie
 
 Bench uses the root `build` script during `bench build --app frappe_books`. This follows the same source-to-generated-output pattern as ERPNext Banking.
 
+For development, `yarn dev` serves the interface on `localhost:6969` and proxies `/api`, `/assets` and `/files` to the site in `BOOKS_SITE_URL` (default `http://localhost:8000`):
+
+```bash
+BOOKS_SITE_URL=http://books.localhost:8000 yarn dev
+```
+
 The app also keeps the `/app/books` Desk workspace for administration.
 
 Use standard Frappe **Data Import** and **Data Export** for CSV-based transfers.

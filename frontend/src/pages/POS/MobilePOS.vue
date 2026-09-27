@@ -133,7 +133,15 @@ import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoic
 import { POSItem } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import { getItemInitials } from 'src/utils/pos';
-import { computed, inject, ref, shallowRef, watch, type Ref } from 'vue';
+import {
+  computed,
+  inject,
+  onDeactivated,
+  ref,
+  shallowRef,
+  watch,
+  type Ref,
+} from 'vue';
 import MobilePOSCart from './MobilePOSCart.vue';
 import MobilePOSLineSheet from './MobilePOSLineSheet.vue';
 
@@ -157,6 +165,9 @@ const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
 const search = ref<InstanceType<typeof FrappeTextInput>>();
 const sheet = ref<'cart' | 'line' | null>(null);
 const editingRow = shallowRef<SalesInvoiceItem | null>(null);
+
+// Sheets are teleported, so they would outlive a cached page.
+onDeactivated(() => (sheet.value = null));
 
 watch(
   () => sinvDoc.value.items?.length,

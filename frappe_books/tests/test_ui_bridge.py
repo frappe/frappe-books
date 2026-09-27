@@ -7,10 +7,19 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
-from frappe_books.tests.accounting import make_account, make_item, make_party, make_tax, unique_name
+from frappe_books.accounting.returns import map_return
+from frappe_books.tests.accounting import (
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	make_tax,
+	unique_name,
+)
 from frappe_books.ui_api import bespoke_call, database_call, lifecycle_action
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
+from frappe_books.ui_bridge.mapping import source_by_doctype
 
 
 class IntegrationTestUiBridge(IntegrationTestCase):
@@ -57,6 +66,59 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			self.bridge.get("PurchaseInvoice", "New Purchase Invoice 01"),
 			{},
 		)
+
+	def test_pay_payment_accounts_pass_through_unchanged(self):
+		payable = make_account("Bridge Payable", root_type="Liability", account_type="Payable")
+		cash = make_account("Bridge Cash", account_type="Cash")
+		expense = make_account("Bridge Expense", root_type="Expense", account_type="Expense Account")
+		party = make_party(payable.name, role="Supplier")
+		item = make_item(expense.name, expense.name)
+		invoice = _submitted_invoice(
+			"Books Purchase Invoice", party.name, payable.name, item.name, expense.name
+		)
+
+		name = self.bridge.insert(
+			"Payment", _payment_values("Pay", party.name, payable.name, cash.name, invoice)
+		)["name"]
+
+		stored = frappe.db.get_value("Books Payment", name, ["account", "payment_account"])
+		self.assertEqual(stored, (payable.name, cash.name))
+		self.assertEqual(
+			_accounts(self.bridge.get("Payment", name)),
+			{"account": payable.name, "paymentAccount": cash.name},
+		)
+		rows = self.bridge.get_all(
+			"Payment", {"fields": ["account", "paymentAccount"], "filters": {"name": name}}
+		)
+		self.assertEqual(_accounts(rows[0]), {"account": payable.name, "paymentAccount": cash.name})
+
+	def test_return_outstanding_and_refund_allocations_keep_stored_signs(self):
+		receivable = make_account("Bridge Receivable", account_type="Receivable")
+		cash = make_account("Bridge Cash", account_type="Cash")
+		income = make_account("Bridge Income", root_type="Income", account_type="Income Account")
+		party = make_party(receivable.name)
+		item = make_item(income.name, income.name)
+		invoice = _submitted_invoice(
+			"Books Sales Invoice", party.name, receivable.name, item.name, income.name
+		)
+		credit_note = map_return(invoice.doctype, invoice.name).insert()
+		credit_note.submit()
+		outstanding = credit_note.db_get("outstanding_amount")
+		self.assertLess(outstanding, 0)
+
+		self.assertEqual(self.bridge.get("SalesInvoice", credit_note.name)["outstandingAmount"], outstanding)
+		rows = self.bridge.get_all(
+			"SalesInvoice", {"fields": ["outstandingAmount"], "filters": {"name": credit_note.name}}
+		)
+		self.assertEqual(rows[0]["outstandingAmount"], outstanding)
+
+		refund = _payment_values("Pay", party.name, receivable.name, cash.name, credit_note)
+		refund["for"][0]["amount"] = outstanding
+		with self.assertRaisesRegex(frappe.ValidationError, "Allocated amounts must be greater than zero"):
+			self.bridge.insert("Payment", refund)
+		refund["for"][0]["amount"] = -outstanding
+		payment = self.bridge.insert("Payment", refund)
+		self.assertEqual(payment["for"][0]["amount"], -outstanding)
 
 	def test_crud_uses_interface_names_and_iso_datetimes(self):
 		name = unique_name("Web UOM")
@@ -499,3 +561,34 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				{"voucher_type": invoice.doctype, "voucher_no": invoice.name, "reverted": 1},
 			)
 		)
+
+
+def _submitted_invoice(doctype, party, account, item, item_account):
+	invoice = make_invoice(doctype, party, account, item, item_account)
+	invoice.items[0].item_discount_percent = 0
+	return invoice.save().submit()
+
+
+def _payment_values(payment_type, party, account, payment_account, invoice):
+	amount = abs(invoice.db_get("outstanding_amount"))
+	return {
+		"numberSeries": "PAY-",
+		"party": party,
+		"date": now_datetime().isoformat(),
+		"paymentType": payment_type,
+		"paymentMethod": "Cash",
+		"account": account,
+		"paymentAccount": payment_account,
+		"amount": amount,
+		"for": [
+			{
+				"referenceType": source_by_doctype()[invoice.doctype],
+				"referenceName": invoice.name,
+				"amount": amount,
+			}
+		],
+	}
+
+
+def _accounts(values):
+	return {field: values[field] for field in ("account", "paymentAccount")}

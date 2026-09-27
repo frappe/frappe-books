@@ -39,6 +39,22 @@ test('a full payment takes the newly selected invoice balance', async () => {
   assert.equal(payment.inserted, true);
 });
 
+test('a return allocation takes its negative balance as a positive amount', async () => {
+  const { fyo, payment } = await makePayment();
+  fyo.doc.getNewDoc('PurchaseInvoice', {
+    name: 'RETURN-PI',
+    party: payment.party,
+    returnAgainst: 'DEMO-PI-1001',
+    submitted: true,
+    outstandingAmount: -50000,
+  });
+
+  await payment.for[0].set('referenceName', 'RETURN-PI');
+
+  assert.equal(payment.for[0].amount.float, 50000);
+  assert.equal(payment.amount.float, 50000);
+});
+
 async function makePayment() {
   const stored = new Map();
   let fyo;

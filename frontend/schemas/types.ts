@@ -150,5 +150,10 @@ export interface Schema {
 export interface SchemaStub extends Partial<Schema> {
   name: string;
 }
+
+/** A schema file. The server's DocType meta supplies its fields' data properties. */
+export type SchemaFile = Omit<SchemaStub, 'fields'> & {
+  fields?: Partial<Field>[];
+};
 export type SchemaMap = Record<string, Schema | undefined>;
 export type SchemaStubMap = Record<string, SchemaStub>;

@@ -157,13 +157,19 @@ function addNameField(schemaMap: SchemaMap) {
 }
 
 function getCoreSchemas(): SchemaMap {
-  const rawSchemaMap = getMapFromList(cloneDeep(coreSchemas), 'name');
+  const rawSchemaMap = getMapFromList(
+    cloneDeep(coreSchemas),
+    'name'
+  ) as SchemaStubMap;
   const coreSchemaMap = getAbstractCombinedSchemas(rawSchemaMap);
   return cleanSchemas(coreSchemaMap);
 }
 
 function getAppSchemas(countryCode: string): SchemaMap {
-  const appSchemaMap = getMapFromList(cloneDeep(appSchemas), 'name');
+  const appSchemaMap = getMapFromList(
+    cloneDeep(appSchemas),
+    'name'
+  ) as SchemaStubMap;
   const regionalSchemaMap = getRegionalSchemaMap(countryCode);
   const combinedSchemas = getRegionalCombinedSchemas(
     appSchemaMap,

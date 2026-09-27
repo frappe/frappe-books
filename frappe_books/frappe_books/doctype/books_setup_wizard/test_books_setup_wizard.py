@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.coa import STANDARD_CHART
+from frappe_books.coa import STANDARD_CHART, chart_options, load_chart
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
 from frappe_books.setup_service import run_setup
 from frappe_books.tests.accounting import unique_name
@@ -75,6 +75,16 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		)
 		self.assertEqual(frappe.db.get_value("Books Account", "Discounts", "root_type"), "Income")
 		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "write_off_account"))
+
+	def test_setup_offers_every_shipped_chart_and_rejects_others(self):
+		charts = {chart["name"]: chart for chart in chart_options()}
+		self.assertEqual(chart_options()[0]["name"], STANDARD_CHART)
+		self.assertEqual(charts["Canada - Plan comptable pour les provinces francophones"]["language"], "fr")
+		self.assertEqual(charts["Switzerland - General Chart of Accounts"]["country_code"], "ch")
+		for name in charts:
+			with self.subTest(chart=name):
+				self.assertTrue(load_chart(name))
+		self.assertRaisesRegex(frappe.ValidationError, "Unknown chart of accounts", load_chart, "Standard")
 
 	def test_setup_completes_only_once(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)

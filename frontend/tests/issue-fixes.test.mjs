@@ -182,6 +182,27 @@ test('Canada selects the French chart only for a French language preference', as
   );
 });
 
+test('the setup wizard offers the charts the server lists', async () => {
+  const fyo = await makeFyo();
+  const swiss = 'Switzerland - General Chart of Accounts';
+  fyo.store.chartsOfAccounts = [
+    { ...chart('Standard Chart of Accounts', ''), label: 'Plan standard' },
+    chart(swiss, 'ch'),
+  ];
+  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Switzerland' });
+
+  assert.deepEqual(wizard.constructor.lists.chartOfAccounts(wizard), [
+    { value: 'Standard Chart of Accounts', label: 'Plan standard' },
+    { value: swiss, label: swiss },
+  ]);
+  assert.equal(wizard.formulas.chartOfAccounts.formula(), swiss);
+  wizard.country = 'Japan';
+  assert.equal(
+    wizard.formulas.chartOfAccounts.formula(),
+    'Standard Chart of Accounts'
+  );
+});
+
 function chart(name, countryCode, language = null) {
   return { name, label: name, country_code: countryCode, language };
 }

@@ -6,6 +6,7 @@ from frappe.model.document import Document
 
 from frappe_books.coa import ensure_discount_account
 from frappe_books.regional import validate_gstin
+from frappe_books.settings import validate_one_way_switches
 
 POINT_OF_SALE_FEATURES = (
 	"enable_batches",
@@ -13,6 +14,15 @@ POINT_OF_SALE_FEATURES = (
 	"enable_serial_number",
 	"enable_barcodes",
 	"enable_point_of_sale",
+)
+ONE_WAY_SWITCHES = (
+	"enable_discounting",
+	"enable_inventory",
+	"enable_lead",
+	"enable_invoice_returns",
+	"enable_loyalty_program",
+	"enable_point_of_sale_with_out_inventory",
+	"enableitem_group",
 )
 
 
@@ -69,5 +79,6 @@ class BooksAccountingSettings(Document):
 		return bool(self.get(fieldname)) and self.has_value_changed(fieldname)
 
 	def validate(self):
+		validate_one_way_switches(self, ONE_WAY_SWITCHES)
 		if self.country == "India" and self.gstin:
 			self.gstin = validate_gstin(self.gstin)

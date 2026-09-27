@@ -6,6 +6,9 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.commerce.pos import open_shift_name
+from frappe_books.settings import validate_one_way_switches
+
+ONE_WAY_SWITCHES = ("enable_barcodes", "enable_batches", "enable_serial_number", "enable_uom_conversions")
 
 
 class BooksInventorySettings(Document):
@@ -31,6 +34,7 @@ class BooksInventorySettings(Document):
 	_DOCTYPE_NAME = "Books Inventory Settings"
 
 	def validate(self):
+		validate_one_way_switches(self, ONE_WAY_SWITCHES)
 		if (
 			self.has_value_changed("enable_point_of_sale")
 			and not self.enable_point_of_sale

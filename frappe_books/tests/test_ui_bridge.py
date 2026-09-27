@@ -8,7 +8,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.tests.accounting import make_account, make_item, make_party, make_tax, unique_name
-from frappe_books.ui_api import lifecycle_action
+from frappe_books.ui_api import bespoke_call, database_call, lifecycle_action
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
@@ -449,6 +449,16 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			self.bridge.call("get", ["Party", lookup])
 		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
 			BooksBespokeQueries().call("getStockQuantity", [lookup])
+
+	def test_api_endpoints_validate_argument_types(self):
+		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
+			lifecycle_action("submit", "SalesInvoice", {"name": ["like", "%"]})
+		for action in ("Submit", "bogus"):
+			with self.subTest(action=action), self.assertRaises(frappe.FrappeTypeError):
+				lifecycle_action(action, "SalesInvoice", "SINV-0001")
+		for endpoint in (database_call, bespoke_call):
+			with self.subTest(endpoint=endpoint.__name__), self.assertRaises(frappe.FrappeTypeError):
+				endpoint("get", {"source_schema": "Party"})
 
 	def test_list_reads_return_every_matching_row(self):
 		prefix = unique_name("Bridge Color")

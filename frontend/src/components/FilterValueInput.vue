@@ -9,6 +9,13 @@
     align="start"
     @update:model-value="(value) => $emit('change', value ?? '')"
   />
+  <FrappeTextInput
+    v-else-if="isNativeDate"
+    :type="field?.fieldtype === 'Date' ? 'date' : 'datetime-local'"
+    :model-value="nativeDateValue"
+    v-bind="controlProps"
+    @update:model-value="onNativeDateChange"
+  />
   <component
     :is="
       field?.fieldtype === 'Date' ? 'FrappeDatePicker' : 'FrappeDateTimePicker'
@@ -119,8 +126,30 @@ export default defineComponent({
       const target = targets.size === 1 ? [...targets][0] : '';
       return fyo.schemaMap[target] ? target : '';
     },
+    /** Phones use the native date and time picker. */
+    isNativeDate(): boolean {
+      return (
+        isMobile.value &&
+        ['Date', 'Datetime'].includes(this.field?.fieldtype ?? '')
+      );
+    },
+    nativeDateValue(): string {
+      const value = String(this.value ?? '');
+      return this.field?.fieldtype === 'Date'
+        ? value.slice(0, 10)
+        : value.replace(' ', 'T').slice(0, 16);
+    },
     numeric() {
       return ['Int', 'Float', 'Currency'].includes(this.field?.fieldtype ?? '');
+    },
+  },
+  methods: {
+    onNativeDateChange(value: string) {
+      const isDatetime = this.field?.fieldtype === 'Datetime';
+      this.$emit(
+        'change',
+        value && isDatetime ? `${value.replace('T', ' ')}:00` : value
+      );
     },
   },
 });

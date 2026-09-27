@@ -170,7 +170,8 @@ function formatFilterValue(value: FilterRow['value'], field?: Field): string {
   }
 
   if (field?.fieldtype === 'Date' || field?.fieldtype === 'Datetime') {
-    return fyo.format(value, field);
+    // Pickers give `YYYY-MM-DD HH:mm:ss`; the formatter reads ISO.
+    return fyo.format(String(value).replace(' ', 'T'), field);
   }
 
   const option = field

@@ -180,6 +180,13 @@ export default defineComponent({
         );
       }
 
+      // Required custom fields are asked for so the record can be saved.
+      for (const { fieldname, isCustom, required } of this.schema.fields) {
+        if (isCustom && required && !fieldnames.includes(fieldname)) {
+          fieldnames.push(fieldname);
+        }
+      }
+
       return fieldnames.map((f) => fyo.getField(this.schemaName, f));
     },
   },

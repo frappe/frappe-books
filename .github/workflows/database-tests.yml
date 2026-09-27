@@ -9,10 +9,37 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: astral-sh/setup-uv@v6
+
+      # Keep the ruff version in sync with .pre-commit-config.yaml.
+      - name: Check Python style
+        run: |
+          uvx ruff@0.14.10 check frappe_books
+          uvx ruff@0.14.10 format --check frappe_books
+
+      - name: Check the Vue app
+        working-directory: frontend
+        run: |
+          npm install --global yarn@1.22.22
+          yarn install --frozen-lockfile
+          yarn lint
+          yarn typecheck
+          yarn test
+
   integration:
     name: Frappe develop / ${{ matrix.database }}
+    needs: lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -98,19 +125,35 @@ jobs:
         working-directory: ${{ runner.temp }}/books-bench
         run: bench --site books-test.localhost run-tests --app frappe_books
 
-      - name: Test frontend filters against Frappe
+      - name: Set up a company for the browser tests
+        working-directory: ${{ runner.temp }}/books-bench
+        run: |
+          bench --site books-test.localhost execute frappe.db.set_single_value --args '["Books Setup Wizard", {
+            "company_name": "Books UI Tests", "fullname": "Administrator", "email": "admin@example.com",
+            "country": "India", "currency": "INR", "bank_name": "UI Test Bank", "chart_of_accounts": "Standard",
+            "fiscal_year_start": "2026-04-01", "fiscal_year_end": "2027-03-31"}]'
+          bench --site books-test.localhost execute \
+            frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup
+
+      - name: Run browser tests
         working-directory: ${{ github.workspace }}/frontend
         env:
+          BOOKS_TEST_URL: http://books-test.localhost:8000
           BOOKS_FILTER_TEST_BENCH: ${{ runner.temp }}/books-bench
           BOOKS_FILTER_TEST_SITE: books-test.localhost
         run: |
+          echo "127.0.0.1 books-test.localhost" | sudo tee -a /etc/hosts
+          (cd "$BOOKS_FILTER_TEST_BENCH" && bench serve --port 8000 --noreload > "$RUNNER_TEMP/web.log" 2>&1 &)
+          timeout 60 bash -c 'until curl -sf "$BOOKS_TEST_URL/api/method/ping" > /dev/null; do sleep 1; done'
           yarn install --frozen-lockfile
-          yarn test
-          yarn typecheck
           yarn playwright install --with-deps chromium
-          yarn test:ui tests/ui/filter-dropdown.spec.ts tests/ui/filter-value-input.spec.ts
+          yarn test:ui
 
-      - name: Check Python style
-        run: |
-          uvx ruff check frappe_books
-          uvx ruff format --check frappe_books
+      - name: Upload browser test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ matrix.database }}
+          path: |
+            frontend/test-results/
+            ${{ runner.temp }}/web.log

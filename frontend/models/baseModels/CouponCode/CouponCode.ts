@@ -63,7 +63,7 @@ export class CouponCode extends Doc {
 
       if ((value as Money).lt(minAmount as Money)) {
         throw new ValidationError(
-          t`Minimum Amount should be greather than the Pricing Rule's Minimum Amount.`
+          t`Minimum Amount should be greater than the Pricing Rule's Minimum Amount.`
         );
       }
 
@@ -122,7 +122,7 @@ export class CouponCode extends Doc {
         (value as Date).toISOString() < (validFrom as Date).toISOString()
       ) {
         throw new ValidationError(
-          t`Valid From Date should be greather than Pricing Rule's Valid From Date.`
+          t`Valid From Date should be greater than Pricing Rule's Valid From Date.`
         );
       }
 

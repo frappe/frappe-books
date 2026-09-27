@@ -14,7 +14,19 @@ import { t } from 'fyo';
 import POS from 'src/pages/POS/POS.vue';
 import type { HistoryState } from 'vue-router';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { isDesktopOnly } from './mobile/availability';
 import { historyState } from './utils/refs';
+import { isMobile } from './utils/viewport';
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    sidebarPath?: string;
+    /** Left out of the phone layout. */
+    desktopOnly?: boolean;
+    /** Phones show a back button instead of the menu. */
+    pushed?: boolean;
+  }
+}
 
 const routes: RouteRecordRaw[] = [
   {
@@ -23,12 +35,13 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/get-started',
+    meta: { desktopOnly: true },
     component: GetStarted,
   },
   {
     path: `/edit/:schemaName/:name`,
     name: `CommonForm`,
-    meta: { sidebarPath: '/list/:schemaName' },
+    meta: { sidebarPath: '/list/:schemaName', pushed: true },
     components: {
       default: CommonForm,
       edit: QuickEditForm,
@@ -71,14 +84,14 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/print/:schemaName/:name',
     name: 'PrintView',
-    meta: { sidebarPath: '/list/:schemaName' },
+    meta: { sidebarPath: '/list/:schemaName', pushed: true },
     component: PrintView,
     props: true,
   },
   {
     path: '/report-print/:reportName',
     name: 'ReportPrintView',
-    meta: { sidebarPath: '/report/:reportName' },
+    meta: { sidebarPath: '/report/:reportName', pushed: true },
     component: ReportPrintView,
     props: true,
   },
@@ -91,6 +104,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/chart-of-accounts',
     name: 'Chart Of Accounts',
+    meta: { desktopOnly: true },
     components: {
       default: ChartOfAccounts,
       edit: QuickEditForm,
@@ -103,12 +117,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/import-wizard',
     name: 'Import Wizard',
+    meta: { desktopOnly: true },
     component: ImportWizard,
   },
   {
     path: '/template-builder/:name',
     name: 'Template Builder',
-    meta: { sidebarPath: '/list/PrintTemplate' },
+    meta: { sidebarPath: '/list/PrintTemplate', desktopOnly: true },
     component: TemplateBuilder,
     props: true,
   },
@@ -149,6 +164,12 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   routes,
   history: createWebHistory(import.meta.env.VITE_ROUTER_BASE || '/'),
+});
+
+router.beforeEach((to) => {
+  if (isMobile.value && isDesktopOnly(to)) {
+    return '/';
+  }
 });
 
 router.afterEach(() => {

@@ -1,6 +1,28 @@
 <template>
+  <FrappePageHeaderMobile v-if="isActive && isMobile" :title="title">
+    <template #prefix>
+      <FrappePageHeaderBackButton
+        v-if="$route.meta.pushed"
+        class="rtl-rotate-180"
+        :label="t`Back`"
+        fallback-route="/"
+      />
+      <FrappeButton
+        v-else
+        variant="ghost"
+        icon="lucide-menu"
+        :label="t`Menu`"
+        @click="openDrawer?.()"
+      />
+    </template>
+    <template v-if="$slots.mobile" #suffix>
+      <div class="flex items-center gap-1">
+        <slot name="mobile" />
+      </div>
+    </template>
+  </FrappePageHeaderMobile>
   <FrappePageHeader
-    v-if="isActive"
+    v-else-if="isActive"
     class="w-full min-w-0 flex-shrink-0"
     :class="border ? '' : '!border-b-0'"
   >
@@ -33,18 +55,24 @@
 <script lang="ts">
 import {
   PageHeader as FrappePageHeader,
+  PageHeaderBackButton as FrappePageHeaderBackButton,
+  PageHeaderMobile as FrappePageHeaderMobile,
   PageHeaderTitle as FrappePageHeaderTitle,
   Button as FrappeButton,
 } from 'frappe-ui';
+import { openDrawerKey } from 'src/utils/injectionKeys';
 import { showSidebar } from 'src/utils/refs';
 import { toggleSidebar } from 'src/utils/ui';
-import { defineComponent, onActivated, onDeactivated, ref } from 'vue';
+import { isMobile } from 'src/utils/viewport';
+import { defineComponent, inject, onActivated, onDeactivated, ref } from 'vue';
 import PageHeaderNavGroup from './PageHeaderNavGroup.vue';
 
 export default defineComponent({
   components: {
     FrappeButton,
     FrappePageHeader,
+    FrappePageHeaderBackButton,
+    FrappePageHeaderMobile,
     FrappePageHeaderTitle,
     PageHeaderNavGroup,
   },
@@ -57,7 +85,8 @@ export default defineComponent({
     const isActive = ref(true);
     onActivated(() => (isActive.value = true));
     onDeactivated(() => (isActive.value = false));
-    return { showSidebar, isActive };
+    const openDrawer = inject(openDrawerKey, undefined);
+    return { showSidebar, isActive, isMobile, openDrawer };
   },
   methods: { toggleSidebar },
 });

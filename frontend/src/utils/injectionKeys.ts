@@ -16,3 +16,5 @@ export const searcherKey = Symbol('searcher') as InjectionKey<
 >;
 
 export const shortcutsKey = Symbol('shortcuts') as InjectionKey<Shortcuts>;
+
+export const openDrawerKey = Symbol('openDrawer') as InjectionKey<() => void>;

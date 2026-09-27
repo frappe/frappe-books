@@ -69,12 +69,12 @@ import {
   SidebarItem as FrappeSidebarItem,
   type DropdownOptions,
 } from 'frappe-ui';
-import { ModelNameEnum } from 'models/types';
-import { fyo } from 'src/initFyo';
 import { getAppMenuItems, openDocumentation } from 'src/utils/appMenu';
+import { useCompanyIdentity } from 'src/utils/company';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getSidebarConfig } from 'src/utils/sidebarConfig';
 import {
+  getSidebarLocation,
   getSidebarPath,
   matchesSidebarPath,
 } from 'src/utils/sidebarNavigation';
@@ -95,40 +95,25 @@ export default defineComponent({
     ShortcutsHelper,
   },
   setup() {
-    return { shortcuts: inject(shortcutsKey) };
+    return { shortcuts: inject(shortcutsKey), ...useCompanyIdentity() };
   },
   data() {
     return {
-      companyName: '',
-      companyLogo: '',
       groups: [],
       viewShortcuts: false,
       activeGroup: null,
     } as {
-      companyName: string;
-      companyLogo: string;
       groups: SidebarConfig;
       viewShortcuts: boolean;
       activeGroup: null | SidebarRoot;
     };
   },
   computed: {
-    userName(): string {
-      const user = window.frappe.boot?.user?.name ?? '';
-      return window.frappe.boot?.user_info?.[user]?.fullname ?? user;
-    },
     menuItems(): DropdownOptions {
       return getAppMenuItems(() => (this.viewShortcuts = true));
     },
   },
   async mounted() {
-    const { companyName } = await fyo.doc.getDoc('AccountingSettings');
-    this.companyName = companyName as string;
-    await this.setCompanyLogo();
-    fyo.doc.observer.on(
-      `sync:${ModelNameEnum.PrintSettings}`,
-      this.setCompanyLogo
-    );
     this.groups = await getSidebarConfig();
 
     this.setActiveGroup();
@@ -148,14 +133,6 @@ export default defineComponent({
   },
   methods: {
     toggleSidebar,
-    async setCompanyLogo() {
-      // Skipped by the server when the user cannot read Print Settings.
-      const [logo] = await fyo.db.getSingleValues({
-        fieldname: 'logo',
-        parent: ModelNameEnum.PrintSettings,
-      });
-      this.companyLogo = (logo?.value as string | undefined) ?? '';
-    },
     setActiveGroup() {
       const { path } = this.$route;
       const fallBackGroup = this.activeGroup;
@@ -194,14 +171,7 @@ export default defineComponent({
     isGroupActive(group: SidebarRoot) {
       return this.activeGroup && group.label === this.activeGroup.label;
     },
-    getPath(item: SidebarItem | SidebarRoot) {
-      const { route: path, filters } = item;
-      if (!filters) {
-        return path;
-      }
-
-      return { path, query: { filters: JSON.stringify(filters) } };
-    },
+    getPath: getSidebarLocation,
   },
 });
 </script>

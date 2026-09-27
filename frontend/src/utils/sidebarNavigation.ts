@@ -1,4 +1,8 @@
-import type { RouteLocationNormalizedLoaded } from 'vue-router';
+import type {
+  RouteLocationNormalizedLoaded,
+  RouteLocationRaw,
+} from 'vue-router';
+import type { SidebarItem, SidebarRoot } from './types';
 
 type SidebarRoute = Pick<
   RouteLocationNormalizedLoaded,
@@ -32,4 +36,15 @@ export function matchesSidebarPath(
   }
 
   return item !== '/' && current.startsWith(item + '/');
+}
+
+export function getSidebarLocation(
+  item: SidebarItem | SidebarRoot
+): RouteLocationRaw {
+  const { route: path, filters } = item;
+  if (!filters) {
+    return path;
+  }
+
+  return { path, query: { filters: JSON.stringify(filters) } };
 }

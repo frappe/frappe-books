@@ -31,6 +31,7 @@
         @setup-complete="completeSetup"
         @setup-canceled="leaveBooks"
       />
+      <MobileDesk v-else-if="isMobile" :dark-mode="darkMode" />
       <Desk v-else class="flex-1" :dark-mode="darkMode" />
     </div>
   </FrappeUIProvider>
@@ -41,6 +42,7 @@ import type { DocValueMap } from 'fyo/core/types';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { models, getRegionalModels } from 'models';
 import { ModelNameEnum } from 'models/types';
+import MobileDesk from 'src/mobile/MobileDesk.vue';
 import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
 import { fyo } from 'src/initFyo';
@@ -48,6 +50,7 @@ import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
 import { setDarkMode } from 'src/utils/theme';
 import { systemLanguageRef } from 'src/utils/refs';
+import { isMobile } from 'src/utils/viewport';
 import { useKeys } from 'src/utils/vueUtils';
 import * as injectionKeys from 'src/utils/injectionKeys';
 import {
@@ -70,6 +73,7 @@ export default defineComponent({
   components: {
     FrappeAlert,
     Desk,
+    MobileDesk,
     FrappeSpinner,
     FrappeUIProvider,
     SetupWizard,
@@ -87,7 +91,7 @@ export default defineComponent({
     provide(injectionKeys.searcherKey, searcher);
     provide(injectionKeys.shortcutsKey, shortcuts);
     provide(injectionKeys.languageDirectionKey, languageDirection);
-    return { keys, languageDirection, searcher, shortcuts };
+    return { keys, languageDirection, searcher, shortcuts, isMobile };
   },
   data() {
     return {

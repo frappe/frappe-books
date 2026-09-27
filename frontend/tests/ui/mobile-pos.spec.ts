@@ -190,6 +190,32 @@ test('opening a saved invoice shows its cart', async ({ page }) => {
   await expectSheet(page.getByRole('dialog', { name: 'Cart' }));
 });
 
+test('scanning with the camera adds the item', async ({ page }) => {
+  // Stands in for the camera: reads one code as soon as it starts.
+  await page.route('**/html5-qrcode.min.js', (route) =>
+    route.fulfill({
+      contentType: 'text/javascript',
+      body: `window.Html5Qrcode = class {
+        isScanning = false;
+        async start(camera, config, onScan) {
+          this.isScanning = true;
+          setTimeout(() => onScan('Organic Assam Tea'), 50);
+        }
+        async stop() { this.isScanning = false; }
+        clear() {}
+      };`,
+    })
+  );
+
+  await page.getByRole('button', { name: 'Scan barcode' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Scan barcode' });
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole('button', { name: /\d+ items?/ })).toContainText(
+    '1 item'
+  );
+});
+
 async function expectSheet(sheet: Locator) {
   await expect(sheet).toBeVisible();
   await expect(sheet).toHaveClass(/rounded-t-\[36px\]/);

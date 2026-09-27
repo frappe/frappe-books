@@ -16,6 +16,7 @@ import { safeParseFloat } from 'utils/index';
 import { getSerialNumbersForQuantity, getSuggestedBatchName } from './helpers';
 import { StockMovement } from './StockMovement';
 import { TransferItem } from './TransferItem';
+import { getUnitConversionFactor, validateTransferUnit } from './units';
 import { MovementTypeEnum } from './types';
 import { Doc } from 'fyo/model/doc';
 
@@ -193,21 +194,7 @@ export class StockMovementItem extends TransferItem {
       ],
     },
     unitConversionFactor: {
-      formula: async () => {
-        if (this.unit === this.transferUnit) {
-          return 1;
-        }
-
-        const conversionFactor = await this.fyo.db.getAll(
-          ModelNameEnum.UOMConversionItem,
-          {
-            fields: ['conversionFactor'],
-            filters: { parent: this.item! },
-          }
-        );
-
-        return safeParseFloat(conversionFactor[0]?.conversionFactor ?? 1);
-      },
+      formula: async () => await getUnitConversionFactor(this),
       dependsOn: ['transferUnit'],
     },
   };
@@ -226,23 +213,8 @@ export class StockMovementItem extends TransferItem {
         );
       }
     },
-    transferUnit: async (value: DocValue) => {
-      if (!this.item) {
-        return;
-      }
-
-      const item = await this.fyo.db.getAll(ModelNameEnum.UOMConversionItem, {
-        fields: ['parent'],
-        filters: { uom: value as string, parent: this.item },
-      });
-
-      if (item.length < 1)
-        throw new ValidationError(
-          t`Transfer Unit ${value as string} is not applicable for Item ${
-            this.item
-          }`
-        );
-    },
+    transferUnit: async (value: DocValue) =>
+      await validateTransferUnit(this, value as string),
   };
 
   required: RequiredMap = {

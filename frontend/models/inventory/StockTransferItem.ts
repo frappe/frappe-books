@@ -6,7 +6,6 @@ import {
   HiddenMap,
   ValidationMap,
 } from 'fyo/model/types';
-import { ValidationError } from 'fyo/utils/errors';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { safeParseFloat } from 'utils/index';
@@ -18,6 +17,7 @@ import {
   getExistingActiveSerialNumbersForItem,
   getSerialNumbersForQuantity,
 } from './helpers';
+import { getUnitConversionFactor, validateTransferUnit } from './units';
 
 export class StockTransferItem extends TransferItem {
   item?: string;
@@ -175,21 +175,7 @@ export class StockTransferItem extends TransferItem {
       ],
     },
     unitConversionFactor: {
-      formula: async () => {
-        if (this.unit === this.transferUnit) {
-          return 1;
-        }
-
-        const conversionFactor = await this.fyo.db.getAll(
-          ModelNameEnum.UOMConversionItem,
-          {
-            fields: ['conversionFactor'],
-            filters: { parent: this.item! },
-          }
-        );
-
-        return safeParseFloat(conversionFactor[0]?.conversionFactor ?? 1);
-      },
+      formula: async () => await getUnitConversionFactor(this),
       dependsOn: ['transferUnit'],
     },
     hsnCode: {
@@ -265,23 +251,8 @@ export class StockTransferItem extends TransferItem {
   };
 
   validations: ValidationMap = {
-    transferUnit: async (value: DocValue) => {
-      if (!this.item) {
-        return;
-      }
-
-      const item = await this.fyo.db.getAll(ModelNameEnum.UOMConversionItem, {
-        fields: ['parent'],
-        filters: { uom: value as string, parent: this.item },
-      });
-
-      if (item.length < 1)
-        throw new ValidationError(
-          this.fyo.t`Transfer Unit ${
-            value as string
-          } is not applicable for Item ${this.item}`
-        );
-    },
+    transferUnit: async (value: DocValue) =>
+      await validateTransferUnit(this, value as string),
   };
 
   static filters: FiltersMap = {

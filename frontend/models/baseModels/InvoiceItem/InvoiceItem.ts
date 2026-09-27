@@ -1,4 +1,4 @@
-import { Fyo, t } from 'fyo';
+import { Fyo } from 'fyo';
 import { DocValue, DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
@@ -18,6 +18,10 @@ import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
 import { getSuggestedBatchName } from 'models/inventory/helpers';
 import { getPOSInventory } from 'models/inventory/posStock';
+import {
+  getUnitConversionFactor,
+  validateTransferUnit,
+} from 'models/inventory/units';
 import { QueryFilter } from 'utils/db/types';
 
 export abstract class InvoiceItem extends Doc {
@@ -257,24 +261,9 @@ export abstract class InvoiceItem extends Doc {
     },
     unitConversionFactor: {
       formula: async () => {
-        if (this.unit === this.transferUnit) {
-          this.quantity = this.transferQuantity!;
-          return 1;
-        }
-
-        const conversionItems = await this.fyo.db.getAll(
-          ModelNameEnum.UOMConversionItem,
-          {
-            fields: ['conversionFactor', 'uom'],
-            filters: { parent: this.item!, uom: this.transferUnit as string },
-          }
-        );
-
-        this.quantity =
-          (conversionItems[0]?.conversionFactor as number) *
-          this.transferQuantity!;
-
-        return safeParseFloat(conversionItems[0]?.conversionFactor ?? 0);
+        const factor = await getUnitConversionFactor(this);
+        this.quantity = factor * this.transferQuantity!;
+        return factor;
       },
       dependsOn: ['transferUnit', 'qty'],
     },
@@ -296,28 +285,8 @@ export abstract class InvoiceItem extends Doc {
   };
 
   validations: ValidationMap = {
-    transferUnit: async (value: DocValue) => {
-      if (!this.item) {
-        return;
-      }
-
-      if (value === this.unit) {
-        return;
-      }
-
-      const item = await this.fyo.db.getAll(ModelNameEnum.UOMConversionItem, {
-        fields: ['parent'],
-        filters: { uom: value as string, parent: this.item },
-      });
-
-      if (item.length < 1) {
-        throw new ValidationError(
-          t`Transfer Unit ${value as string} is not applicable for Item ${
-            this.item
-          }`
-        );
-      }
-    },
+    transferUnit: async (value: DocValue) =>
+      await validateTransferUnit(this, value as string),
 
     qty: async (value: DocValue) => {
       if (this.batch) {

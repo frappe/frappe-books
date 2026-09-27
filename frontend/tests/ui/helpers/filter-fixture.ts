@@ -43,3 +43,11 @@ export async function setValue(page: Page, value: string, index = 0) {
 export async function appliedFilters(page: Page) {
   return page.evaluate(() => (window as any).filterFixture.state.applied);
 }
+
+/** The list's matching record count and the rows on its current page. */
+export async function listSize(page: Page) {
+  return page.evaluate(() => {
+    const list = (window as any).filterFixture.list.value;
+    return { total: list.total, rows: list.data.length };
+  });
+}

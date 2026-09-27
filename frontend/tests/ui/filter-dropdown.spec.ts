@@ -7,9 +7,11 @@ import {
   choose,
   setValue,
   appliedFilters,
+  listSize,
 } from './helpers/filter-fixture';
 
 setupFilterFixture();
+const pageLength = 50;
 
 for (const viewport of [
   { width: 1440, height: 900 },
@@ -151,12 +153,8 @@ for (const [label, operator, value, count] of operatorCases) {
       ).toHaveCount(0);
     await panel.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect
-      .poll(() =>
-        page.evaluate(
-          () => (window as any).filterFixture.list.value.data.length
-        )
-      )
-      .toBe(count);
+      .poll(() => listSize(page))
+      .toEqual({ total: count, rows: Math.min(count, pageLength) });
     expect(await appliedFilters(page)).toEqual({
       status: [operator, operator.includes('like') ? `%${value}%` : value],
     });
@@ -241,19 +239,11 @@ test('same-field conditions survive apply, reopen, edit, remove, refresh and cle
   expect(await appliedFilters(page)).toEqual({
     status: ['like', '%Paid%', '!=', 'Paid'],
   });
-  await expect
-    .poll(() =>
-      page.evaluate(() => (window as any).filterFixture.list.value.data.length)
-    )
-    .toBe(40);
+  await expect.poll(() => listSize(page)).toEqual({ total: 40, rows: 40 });
   await page.evaluate(async () => {
     await (window as any).filterFixture.list.value.updateData();
   });
-  await expect
-    .poll(() =>
-      page.evaluate(() => (window as any).filterFixture.list.value.data.length)
-    )
-    .toBe(40);
+  await expect.poll(() => listSize(page)).toEqual({ total: 40, rows: 40 });
   await page
     .getByRole('button', { name: '2 filters applied', exact: true })
     .click();
@@ -269,10 +259,8 @@ test('same-field conditions survive apply, reopen, edit, remove, refresh and cle
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   expect(await appliedFilters(page)).toEqual({});
   await expect
-    .poll(() =>
-      page.evaluate(() => (window as any).filterFixture.list.value.data.length)
-    )
-    .toBe(60);
+    .poll(() => listSize(page))
+    .toEqual({ total: 60, rows: pageLength });
 });
 
 test('filtering on page two returns to the first page of matching records', async ({

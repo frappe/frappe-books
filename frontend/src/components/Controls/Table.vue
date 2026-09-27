@@ -11,7 +11,7 @@
       :fields="tableFields"
       :can-edit="!isReadOnly"
       :can-add="canAddRemoveRows"
-      :flush="flush"
+      :title="title"
       @edit="(row) => $emit('editrow', row)"
       @add="addRowAndEdit"
     />
@@ -166,10 +166,10 @@ export default {
       type: Boolean,
       default: true,
     },
-    /** Phones: rows run edge to edge instead of in a bordered box. */
-    flush: {
-      type: Boolean,
-      default: false,
+    /** Phones: a section's table names itself in its card header. */
+    title: {
+      type: String,
+      default: '',
     },
   },
   emits: ['editrow', 'row-change', 'row-remove'],

@@ -19,19 +19,16 @@
       />
     </button>
     <template v-for="block in blocks" :key="block.key">
-      <template v-if="block.key === 'table' && tableField">
-        <div class="flex h-[52px] items-center justify-between px-4">
-          <h2 class="text-base-semibold text-ink-gray-9">{{ tableTitle }}</h2>
-          <span class="text-sm text-ink-gray-5">{{ rowCount }}</span>
-        </div>
-        <div v-if="$slots.table" class="px-4 pb-3">
-          <slot name="table" />
-        </div>
+      <div
+        v-if="block.key === 'table' && tableField"
+        class="flex flex-col gap-3 p-4"
+      >
+        <slot name="table" />
         <Table
           :data-fieldname="tableField.fieldname"
           :df="tableField"
           :value="(doc[tableField.fieldname] ?? []) as Doc[]"
-          :flush="true"
+          :title="tableTitle"
           @editrow="(row: Doc) => $emit('editrow', row)"
           @change="
             (value: DocValue) => $emit('value-change', tableField!, value)
@@ -41,11 +38,8 @@
               $emit('row-change', field, value, parentfield)
           "
         />
-        <FrappeErrorMessage
-          class="px-4 pb-3"
-          :message="errors[tableField.fieldname]"
-        />
-      </template>
+        <FrappeErrorMessage :message="errors[tableField.fieldname]" />
+      </div>
       <div
         v-else-if="block.groups.length && (kind !== 'collapsible' || isOpen)"
         class="flex flex-col"
@@ -134,11 +128,6 @@ const kind = computed(() => {
   }
 
   return props.fields.every(isTotal) ? 'totals' : 'collapsible';
-});
-
-const rowCount = computed(() => {
-  const count = (props.doc.get(tableField.value!.fieldname) as Doc[]).length;
-  return count === 1 ? t`1 row` : t`${count} rows`;
 });
 
 const hasError = computed(() =>

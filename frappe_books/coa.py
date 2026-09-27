@@ -114,6 +114,14 @@ def find_account(accounts, names=(), account_type=None):
 	return _first_leaf(typed, accounts)
 
 
+def find_ledger_account(accounts, names=(), account_type=None):
+	"""Return the first leaf chart account by name, else of the type, as settings need postable accounts."""
+	leaves = [account for account in accounts if not account.is_group]
+	return find_account(leaves, names) or next(
+		(account.name for account in leaves if account_type and account.account_type == account_type), None
+	)
+
+
 def _first_leaf(account, accounts):
 	if not account.is_group:
 		return account.name

@@ -27,3 +27,21 @@ test('a purchase return receipt returns against the original receipt', async () 
   assert.equal(receipt.returnAgainst, 'PREC-1');
   assert.ok(!loaded.includes('SalesInvoice'));
 });
+
+test('a receipt from a foreign currency invoice uses company currency rates', async () => {
+  const fyo = await makeFyo();
+  fyo.doc.getNewDoc('Item', { name: 'Pen', trackItem: true });
+  fyo.doc.getNewDoc('UOM', { name: 'Unit' });
+  for (const exchangeRate of [0.5, 80]) {
+    const invoice = fyo.doc.getNewDoc('PurchaseInvoice', {
+      name: `PINV-${exchangeRate}`,
+      submitted: true,
+      exchangeRate,
+      stockNotTransferred: 2,
+      items: [{ item: 'Pen', quantity: 2, stockNotTransferred: 2, rate: 10 }],
+    });
+
+    const receipt = await invoice.getStockTransfer();
+    assert.equal(receipt.items[0].rate.float, 10 * exchangeRate);
+  }
+});

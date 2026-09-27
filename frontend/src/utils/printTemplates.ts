@@ -12,6 +12,7 @@ import { CurrencyUnits, getAmountInWords } from './amountInWords';
 import { DEFAULT_CURRENCY, DEFAULT_LOCALE } from 'fyo/utils/consts';
 import { Money } from 'pesa';
 import { Payment } from 'models/baseModels/Payment/Payment';
+import { PaymentFor } from 'models/baseModels/PaymentFor/PaymentFor';
 import { StockMovement } from 'models/inventory/StockMovement';
 import { StockTransfer } from 'models/inventory/StockTransfer';
 
@@ -110,28 +111,58 @@ async function getInvoiceTotalValues(
 async function getPaymentTotalValues(
   payment: Payment
 ): Promise<PrintTemplateData> {
-  const referenceName = payment.for?.[0]?.referenceName;
-  let taxedDoc: Invoice | Payment = payment;
-  if (payment.referenceType === ModelNameEnum.SalesInvoice && referenceName) {
-    taxedDoc = (await payment.fyo.doc.getDoc(
-      ModelNameEnum.SalesInvoice,
-      referenceName
-    )) as Invoice;
-  }
-
-  const totalTax = getTotalTax(taxedDoc);
+  const taxes = await getPaymentTaxes(payment);
+  const totalTax = taxes.reduce(
+    (total, tax) => total.add(tax.amount),
+    payment.fyo.pesa(0)
+  );
   const values: PrintTemplateData = {
     ...(await getAmountValues(payment, 'amount', totalTax)),
     amountPaidInWords: await getDocAmountInWords(payment, 'amountPaid'),
   };
 
-  if (taxedDoc instanceof Invoice && taxedDoc.taxes) {
-    values.taxes = await Promise.all(
-      taxedDoc.taxes.map((tax) => getPrintTemplateDocValues(tax))
-    );
+  if (taxes.length) {
+    values.taxes = taxes.map(({ account, amount }) => ({
+      account,
+      amount: formatAmount(payment.fyo, amount),
+    }));
   }
 
   return values;
+}
+
+async function getPaymentTaxes(payment: Payment) {
+  const taxes = new Map<string, Money>();
+  for (const reference of payment.for ?? []) {
+    for (const { account, amount } of await getPaidInvoiceTaxes(reference)) {
+      taxes.set(account, amount.add(taxes.get(account) ?? 0));
+    }
+  }
+
+  return [...taxes].map(([account, amount]) => ({ account, amount }));
+}
+
+/** The invoice's taxes in base currency, in the share this row settles. */
+async function getPaidInvoiceTaxes(reference: PaymentFor) {
+  const { referenceType, referenceName, amount } = reference;
+  if (!referenceType || !referenceName || !amount) {
+    return [];
+  }
+
+  const invoice = (await reference.fyo.doc.getDoc(
+    referenceType,
+    referenceName
+  )) as Invoice;
+  const total = Math.abs(invoice.baseGrandTotal?.float ?? 0);
+  if (!total) {
+    return [];
+  }
+
+  const share = ((invoice.exchangeRate ?? 1) * amount.float) / total;
+  return (invoice.taxes ?? []).map((tax) => ({
+    account: tax.account!,
+    amount: tax.amount!.abs().mul(share),
+  }));
 }
 
 async function getAmountValues(
@@ -255,7 +286,7 @@ function formattedTotalDiscount(invoice: Invoice): string {
   return invoice.fyo.format(totalDiscount, ModelNameEnum.Currency);
 }
 
-function getTotalTax(doc: Invoice | Payment): Money {
+function getTotalTax(doc: Invoice): Money {
   return doc.getSum('taxes', 'amount', false) as Money;
 }
 

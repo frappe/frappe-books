@@ -16,12 +16,6 @@ export type SerialNumberStatus =
   | 'Active'
   | 'Delivered';
 
-export interface ReturnDocItem {
-  quantity: number;
-  batches?: Record<string, { quantity: number, serialNumbers?: string[] }> | undefined;
-  serialNumbers?: string[] | undefined;
-}
-
 export interface StockQuantity {
   item: string;
   batch: string | null;

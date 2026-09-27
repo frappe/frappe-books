@@ -74,14 +74,6 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with patch.object(email, "permlevel", 1), self.set_user(TEST_USER):
 			self.assertIsNone(BooksDatabaseBridge().get("Party", party.name).get("email"))
 
-	def test_return_balance_ignores_returns_the_user_cannot_read(self):
-		original = _seed_shipment()
-		_seed_shipment(return_against=original)
-		add_user_permission("Books Shipment", original, TEST_USER)
-		with self.set_user(TEST_USER):
-			balance = BooksBespokeQueries().call("getReturnBalanceItemsQty", ["Shipment", original])
-		self.assertIsNone(balance)
-
 	def test_bridge_count_skips_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
 		add_user_permission("Books Shipment", readable, TEST_USER)

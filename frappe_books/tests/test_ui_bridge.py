@@ -448,7 +448,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
 			self.bridge.call("get", ["Party", lookup])
 		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
-			BooksBespokeQueries().call("getReturnBalanceItemsQty", ["SalesInvoice", lookup])
+			BooksBespokeQueries().call("getStockQuantity", [lookup])
 
 	def test_list_reads_return_every_matching_row(self):
 		prefix = unique_name("Bridge Color")

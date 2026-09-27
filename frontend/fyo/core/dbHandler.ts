@@ -22,7 +22,7 @@ import {
   DocValueMap,
   RawValueMap,
 } from './types';
-import { ReturnDocItem, StockQuantity } from 'models/inventory/types';
+import { StockQuantity } from 'models/inventory/types';
 import { Money } from 'pesa';
 
 type FieldMap = Record<string, Record<string, Field>>;
@@ -332,17 +332,6 @@ export class DatabaseHandler extends DatabaseBase {
       location,
       items
     )) as StockQuantity[];
-  }
-
-  async getReturnBalanceItemsQty(
-    schemaName: string,
-    docName: string
-  ): Promise<Record<string, ReturnDocItem> | undefined> {
-    return (await this.#demux.callBespoke(
-      'getReturnBalanceItemsQty',
-      schemaName,
-      docName
-    )) as Promise<Record<string, ReturnDocItem> | undefined>;
   }
 
   async getPOSTransactedAmount(

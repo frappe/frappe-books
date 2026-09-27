@@ -1,6 +1,5 @@
 """Aggregate queries used by the Books web interface."""
 
-from collections import defaultdict
 from typing import Any, Literal
 
 import frappe
@@ -8,7 +7,6 @@ from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
-from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.reports import financial_statements, gst, stock
 from frappe_books.reports.financial_statements import Period
 from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
@@ -114,38 +112,6 @@ class BooksBespokeQueries:
 			order_by="item, batch",
 		)
 
-	def return_balance(self, source_schema: str, name: str):
-		doc = frappe.get_doc(target_doctype(source_schema), name)
-		doc.check_permission("read")
-		return_names = frappe.get_list(
-			doc.doctype,
-			filters={"return_against": name, "docstatus": 1},
-			pluck="name",
-		)
-		if not return_names:
-			return None
-
-		returned_rows = frappe.get_list(
-			doc.meta.get_field("items").options,
-			filters={"parent": ["in", return_names], "parenttype": doc.doctype, "parentfield": "items"},
-			fields=["item", "quantity", "batch", "serial_number"],
-			parent_doctype=doc.doctype,
-		)
-		if not returned_rows:
-			return None
-
-		original_items = self._return_items(doc.items)
-		returned_items = self._return_items(returned_rows)
-		balances = {}
-		for item, original in original_items.items():
-			returned = returned_items.get(item, {})
-			balances[item] = self._remaining_return(original, returned)
-			balances[item]["batches"] = {
-				batch: self._remaining_return(values, returned.get("batches", {}).get(batch, {}))
-				for batch, values in original["batches"].items()
-			}
-		return balances
-
 	def pos_transacted_amount(self, from_date: str, to_date: str):
 		"""Return the same expected amounts the closing shift stores on the server."""
 		for doctype in ("Books Payment", "Books Sales Invoice"):
@@ -212,37 +178,6 @@ class BooksBespokeQueries:
 			],
 		)[0]
 
-	def _return_items(self, rows):
-		items = defaultdict(lambda: {"quantity": as_decimal(0), "batches": {}, "serialNumbers": []})
-		for row in rows:
-			entry = items[row.item]
-			quantity = abs(as_decimal(row.quantity))
-			entry["quantity"] += quantity
-			if row.get("batch"):
-				batch = entry["batches"].setdefault(
-					row.batch, {"quantity": as_decimal(0), "serialNumbers": []}
-				)
-				batch["quantity"] += quantity
-			self._add_serials(entry, row)
-		return items
-
-	def _remaining_return(self, original, returned):
-		remaining = max(original["quantity"] - returned.get("quantity", 0), 0)
-		returned_serials = set(returned.get("serialNumbers", []))
-		return {
-			# The interface represents return quantities as negative values.
-			"quantity": -float(remaining),
-			"serialNumbers": [
-				serial for serial in original["serialNumbers"] if serial not in returned_serials
-			],
-		}
-
-	def _add_serials(self, entry, row):
-		serials = parse_serial_numbers(row.get("serial_number"))
-		entry["serialNumbers"].extend(serials)
-		if row.get("batch"):
-			entry["batches"][row.batch]["serialNumbers"].extend(serials)
-
 
 def _year_month(row) -> str:
 	return f"{row.year:04d}-{row.month:02d}"
@@ -256,7 +191,6 @@ _METHODS = {
 	"getTotalCreditAndDebit": "total_credit_and_debit",
 	"getStockQuantity": "stock_quantity",
 	"getStockQuantities": "stock_quantities",
-	"getReturnBalanceItemsQty": "return_balance",
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
 	"getLinkedEntries": "linked_entries",

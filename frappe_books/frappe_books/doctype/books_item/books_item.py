@@ -60,6 +60,6 @@ class BooksItem(Document):
 		name = (name or "").strip()
 		if not name or frappe.db.exists(doctype, name):
 			return
-		frappe.get_doc(
-			{"doctype": doctype, "name": name, "start": 1001, "pad_zeros": 4, "current": 1001}
-		).insert(ignore_if_duplicate=True)
+		frappe.get_doc({"doctype": doctype, "name": name, "start": 1001, "pad_zeros": 4}).insert(
+			ignore_if_duplicate=True
+		)

@@ -29,7 +29,7 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		)
 		for doctype, name in (("Books Serial Number Series", serial), ("Books Batch Series", batch)):
 			series = frappe.get_doc(doctype, name)
-			self.assertEqual((series.start, series.pad_zeros, series.current), (1001, 4, 1001))
+			self.assertEqual((series.start, series.pad_zeros, series.current), (1001, 4, 1000))
 			series.current = 1020
 			series.save()
 		item.save()

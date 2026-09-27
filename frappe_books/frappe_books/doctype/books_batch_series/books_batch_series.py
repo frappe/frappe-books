@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
+
+from frappe_books.series import validate_series
 
 
 class BooksBatchSeries(Document):
@@ -20,3 +21,6 @@ class BooksBatchSeries(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Batch Series"
+
+	def validate(self):
+		validate_series(self)

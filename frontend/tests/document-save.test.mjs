@@ -44,6 +44,17 @@ for (const kind of ['master', 'transaction', 'singleton']) {
   });
 }
 
+test('saving twice while the first save runs inserts the document once', async () => {
+  const { doc, writes } = await makeFixture('master');
+  const first = doc.sync();
+  assert.equal(doc.isSyncing, true);
+  const second = doc.sync();
+  assert.equal(await first, doc);
+  assert.equal(await second, doc);
+  assert.equal(writes.length, 1);
+  assert.equal(doc.isSyncing, false);
+});
+
 for (const existing of [false, true]) {
   test(`a rejected ${existing ? 'update' : 'insert'} keeps edits and does not run post-save hooks`, async () => {
     const fixture = await makeFixture('transaction');

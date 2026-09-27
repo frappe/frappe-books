@@ -1,6 +1,6 @@
 <template>
   <FrappePopover
-    v-if="fields.length"
+    v-if="filters.fields.length"
     side="bottom"
     align="end"
     :offset="8"
@@ -22,9 +22,9 @@
         {{ t`Filters` }}
       </h2>
       <div class="min-h-0 overflow-y-auto px-4 pb-4">
-        <div v-if="explicitFilters.length" class="flex flex-col gap-4">
+        <div v-if="filters.explicitRows.length" class="flex flex-col gap-4">
           <div
-            v-for="(filter, i) in explicitFilters"
+            v-for="(filter, i) in filters.explicitRows"
             :key="filter.id"
             role="group"
             :aria-label="t`Filter ${i + 1}`"
@@ -41,7 +41,7 @@
                 options: fieldOptions,
               }"
               :value="filter.fieldname"
-              @change="(value) => updateFilter(filter, 'fieldname', value)"
+              @change="(value) => filters.update(filter, 'fieldname', value)"
             />
             <Select
               :border="true"
@@ -51,10 +51,10 @@
                 label: t`Condition`,
                 fieldname: 'condition',
                 fieldtype: 'Select',
-                options: conditionsFor(filter),
+                options: filters.conditionsFor(filter),
               }"
               :value="filter.condition"
-              @change="(value) => updateFilter(filter, 'condition', value)"
+              @change="(value) => filters.update(filter, 'condition', value)"
             />
             <div
               v-if="isValuelessCondition(filter.condition)"
@@ -64,12 +64,12 @@
               v-else
               :key="filter.fieldname"
               class="col-span-2 min-w-0 sm:col-span-1"
-              :field="fieldFor(filter)"
+              :field="filters.fieldFor(filter)"
               :condition="filter.condition"
               :value="filter.value"
-              :filters="filterSet.rows"
+              :filters="filters.filterSet.rows"
               @change="
-                (value: FilterValue) => updateFilter(filter, 'value', value)
+                (value: FilterValue) => filters.update(filter, 'value', value)
               "
               @apply="applyFilters"
             />
@@ -80,7 +80,7 @@
               class="col-start-3 row-start-1 mb-1 justify-self-center sm:col-start-4"
               :tooltip="t`Remove filter`"
               :aria-label="t`Remove filter ${i + 1}`"
-              @click="removeFilter(filter.id)"
+              @click="filters.remove(filter.id)"
             />
           </div>
         </div>
@@ -88,7 +88,7 @@
           {{ t`No filters selected` }}
         </p>
       </div>
-      <FrappeErrorMessage class="px-4 pb-3" :message="error" />
+      <FrappeErrorMessage class="px-4 pb-3" :message="filters.error" />
       <footer
         class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-outline-gray-1 p-3"
       >
@@ -96,11 +96,11 @@
           icon-left="lucide-plus"
           size="md"
           variant="ghost"
-          @click="addNewFilter"
+          @click="filters.add()"
         >
           {{ t`Add a filter` }}
         </FrappeButton>
-        <div v-if="explicitFilters.length" class="flex items-center gap-2">
+        <div v-if="filters.explicitRows.length" class="flex items-center gap-2">
           <FrappeButton size="md" variant="ghost" @click="clearAllFilters">
             {{ t`Clear` }}
           </FrappeButton>
@@ -113,29 +113,23 @@
   </FrappePopover>
 </template>
 <script lang="ts">
-import { Field } from 'schemas/types';
 import {
   Button as FrappeButton,
   ErrorMessage as FrappeErrorMessage,
   Popover as FrappePopover,
 } from 'frappe-ui';
-import { fyo } from 'src/initFyo';
 import { defineComponent } from 'vue';
 import Select from './Controls/Select.vue';
 import FilterValueInput from './FilterValueInput.vue';
 import { QueryFilter } from 'utils/db/types';
 import { t } from 'fyo';
-import { getFilterFields, getFieldLabel } from 'src/utils/filterFields';
+import { getFieldLabel } from 'src/utils/filterFields';
 import {
-  FilterSet,
-  conditionsForField,
-  defaultCondition,
-  isCompleteFilter,
   isValuelessCondition,
-  type FilterRow,
   type FilterCondition,
   type FilterValue,
 } from 'src/utils/filterQuery';
+import { ListFilters } from 'src/utils/listFilters';
 
 export default defineComponent({
   name: 'FilterDropdown',
@@ -150,27 +144,19 @@ export default defineComponent({
   emits: ['change'],
   data() {
     return {
-      filterSet: new FilterSet(),
-      activeFilterCount: 0,
+      filters: new ListFilters(this.schemaName),
       isOpen: false,
-      error: '',
     };
   },
   computed: {
-    fields(): Field[] {
-      return getFilterFields(
-        fyo.schemaMap[this.schemaName]?.fields ?? [],
-        fyo.models[this.schemaName]?.getListViewSettings?.(fyo)?.columns
-      );
-    },
     fieldOptions(): { label: string; value: string }[] {
-      return this.fields.map((df) => ({
+      return this.filters.fields.map((df) => ({
         label: getFieldLabel(df),
         value: df.fieldname,
       }));
     },
-    explicitFilters(): FilterRow[] {
-      return this.filterSet.rows.filter((row) => !row.implicit);
+    activeFilterCount(): number {
+      return this.filters.applied.length;
     },
     filterAppliedMessage(): string {
       return this.activeFilterCount === 1
@@ -179,22 +165,14 @@ export default defineComponent({
     },
   },
   watch: {
-    schemaName() {
-      this.filterSet = new FilterSet();
-      this.activeFilterCount = 0;
-      this.error = '';
+    schemaName(schemaName: string) {
+      this.filters = new ListFilters(schemaName);
       this.isOpen = false;
       this.$emit('change', {});
     },
   },
   methods: {
     isValuelessCondition,
-    fieldFor(filter: FilterRow) {
-      return this.fields.find((field) => field.fieldname === filter.fieldname);
-    },
-    conditionsFor(filter: FilterRow) {
-      return [...conditionsForField(this.fieldFor(filter))];
-    },
     async onOpenChange(open: boolean) {
       if (open) this.isOpen = true;
       else {
@@ -203,72 +181,29 @@ export default defineComponent({
         this.applyFilters();
       }
     },
-    addNewFilter() {
-      const field = this.fields[0];
-      if (field) this.filterSet.add(field.fieldname, defaultCondition(field));
-      this.error = '';
-    },
     addFilter(
       fieldname: string,
       condition: FilterCondition,
       value: FilterValue,
       implicit = false
     ) {
-      this.filterSet.add(fieldname, condition, value, implicit);
-    },
-    removeFilter(id: number) {
-      this.filterSet.remove(id);
-      this.error = '';
+      this.filters.filterSet.add(fieldname, condition, value, implicit);
     },
     clearAllFilters() {
-      this.filterSet.clear();
+      this.filters.clear();
       this.emitFilterChange();
-    },
-    updateFilter<K extends 'fieldname' | 'condition' | 'value'>(
-      row: FilterRow,
-      key: K,
-      value: FilterRow[K]
-    ) {
-      const previousValue = row[key];
-      row[key] = value;
-      this.error = '';
-      if (key === 'fieldname') {
-        row.value = '';
-        row.condition = defaultCondition(this.fieldFor(row));
-      }
-      if (key === 'value' && previousValue !== value) {
-        for (const dependent of this.filterSet.rows) {
-          const field = this.fieldFor(dependent);
-          if (
-            !dependent.implicit &&
-            field?.fieldtype === 'DynamicLink' &&
-            field.references === row.fieldname
-          ) {
-            dependent.value = '';
-          }
-        }
-      }
     },
     applyFilters() {
       if (this.emitFilterChange()) this.isOpen = false;
     },
     setFilter(filters: QueryFilter, implicit = false) {
-      this.filterSet.setQuery(filters, implicit);
+      this.filters.filterSet.setQuery(filters, implicit);
       this.emitFilterChange();
     },
     emitFilterChange(): boolean {
-      try {
-        const query = this.filterSet.toQuery(this.fields);
-        this.filterSet.normalize();
-        this.activeFilterCount =
-          this.explicitFilters.filter(isCompleteFilter).length;
-        this.error = '';
-        this.$emit('change', query);
-        return true;
-      } catch (error) {
-        this.error = (error as Error).message;
-        return false;
-      }
+      const query = this.filters.apply();
+      if (query) this.$emit('change', query);
+      return query !== undefined;
     },
   },
 });

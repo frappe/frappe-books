@@ -1,5 +1,49 @@
 <template>
-  <FormContainer>
+  <div v-if="isMobile" ref="mobileSettings" class="flex min-h-full flex-col">
+    <PageHeader :title="t`Settings`">
+      <template #mobile>
+        <FrappeButton
+          v-if="canSave"
+          variant="solid"
+          :label="t`Save`"
+          @click="saveOnPhone"
+        />
+      </template>
+    </PageHeader>
+    <div
+      v-if="tabOptions.length > 1"
+      ref="mobileTabs"
+      class="sticky top-0 z-10 flex-shrink-0 overflow-x-auto bg-surface-base px-4 pt-3 shadow-[inset_0_-1px_0_var(--outline-gray-1)]"
+    >
+      <FrappeTabButtons
+        v-model="activeTab"
+        :options="tabOptions"
+        variant="underline"
+        size="md"
+      />
+    </div>
+    <template v-if="doc">
+      <section
+        v-for="[name, fields] in mobileSections"
+        :key="name"
+        class="flex flex-col gap-4 border-b border-outline-gray-1 p-4"
+      >
+        <h2
+          v-if="activeGroup.size > 1 && name !== t`Default`"
+          class="text-base-semibold text-ink-gray-9"
+        >
+          {{ name }}
+        </h2>
+        <CommonFormSection
+          :fields="fields"
+          :doc="doc"
+          :errors="errors"
+          @value-change="onValueChange"
+        />
+      </section>
+    </template>
+  </div>
+  <FormContainer v-else>
     <template #header>
       <FrappeButton v-if="canSave" variant="solid" @click="sync">
         {{ t`Save` }}
@@ -44,11 +88,16 @@
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { ValidationError } from 'fyo/utils/errors';
-import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
+import {
+  TabButtons as FrappeTabButtons,
+  Button as FrappeButton,
+  shellScrollContainer,
+} from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
+import PageHeader from 'src/components/PageHeader.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getErrorMessage } from 'src/utils';
 import { evaluateHidden } from 'src/utils/doc';
@@ -57,7 +106,8 @@ import { showDialog } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { UIGroupedFields } from 'src/utils/types';
-import { computed, defineComponent, inject } from 'vue';
+import { isMobile } from 'src/utils/viewport';
+import { computed, defineComponent, inject, nextTick } from 'vue';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 
 const COMPONENT_NAME = 'Settings';
@@ -69,6 +119,7 @@ export default defineComponent({
     FormHeader,
     CommonFormSection,
     FrappeTabButtons,
+    PageHeader,
   },
   provide() {
     return { doc: computed(() => this.doc) };
@@ -76,6 +127,7 @@ export default defineComponent({
   setup() {
     return {
       shortcuts: inject(shortcutsKey),
+      isMobile,
     };
   },
   data() {
@@ -160,6 +212,24 @@ export default defineComponent({
 
       return group;
     },
+    mobileSections(): [string, Field[]][] {
+      return [...this.activeGroup.entries()].filter(
+        ([, fields]) => fields.length
+      );
+    },
+  },
+  watch: {
+    async activeTab() {
+      if (!this.isMobile) {
+        return;
+      }
+
+      shellScrollContainer.value?.scrollTo({ top: 0 });
+      await nextTick();
+      (this.$refs.mobileTabs as HTMLElement | undefined)
+        ?.querySelector('[data-state="active"]')
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    },
   },
   mounted() {
     this.update();
@@ -226,6 +296,25 @@ export default defineComponent({
             isEscape: true,
           },
         ],
+      });
+    },
+    /** Phones scroll to the first invalid field instead of saving. */
+    async saveOnPhone(): Promise<void> {
+      const field = (this.$refs.mobileSettings as HTMLElement | undefined)
+        ?.querySelector('[role="alert"]')?.parentElement;
+      if (!field) {
+        await this.sync();
+        return;
+      }
+
+      // scrollIntoView would also scroll the shell's clipped ancestors.
+      const container = shellScrollContainer.value;
+      const offset =
+        field.getBoundingClientRect().top -
+        (container?.getBoundingClientRect().top ?? 0);
+      container?.scrollBy({
+        top: offset - container.clientHeight / 3,
+        behavior: 'smooth',
       });
     },
     async syncDoc(doc: Doc): Promise<boolean> {

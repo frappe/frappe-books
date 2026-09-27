@@ -12,6 +12,8 @@ export type DiscountType = 'percent' | 'amount';
 
 export type ItemVisibility = 'Inventory Items' | 'Non-Inventory Items';
 
+export type POSLayout = 'Classic' | 'Modern';
+
 export const modalNames = [
   'Keyboard',
   'Payment',

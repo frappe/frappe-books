@@ -50,17 +50,10 @@
           />
         </div>
         <SelectedItemTable
-          v-if="layout === 'Classic'"
-          :expanded-batch-id="expandedBatchId"
-          @set-expanded-batch-id="setExpandedBatchId"
-          @selected-row="selectRow"
-        />
-        <ModernPOSSelectedItemTable
-          v-else
-          :expanded-batch-id="expandedBatchId"
-          @set-expanded-batch-id="setExpandedBatchId"
-          @selected-row="selectRow"
-          @toggle-modal="toggleModal('Keyboard')"
+          :layout="layout"
+          :expanded-row="expandedRow"
+          @expand="(name?: string) => (expandedRow = name)"
+          @select="selectRow"
         />
       </template>
 
@@ -165,8 +158,7 @@ import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
 import POSOrderSummary from 'src/components/POS/POSOrderSummary.vue';
 import POSInvoiceActions from 'src/components/POS/POSInvoiceActions.vue';
-import SelectedItemTable from 'src/components/POS/Classic/SelectedItemTable.vue';
-import ModernPOSSelectedItemTable from 'src/components/POS/Modern/ModernPOSSelectedItemTable.vue';
+import SelectedItemTable from 'src/components/POS/SelectedItemTable.vue';
 import AlertModal from './AlertModal.vue';
 import PaymentModal from './PaymentModal.vue';
 import KeyboardModal from './KeyboardModal.vue';
@@ -213,6 +205,7 @@ import {
 } from 'models/helpers';
 import {
   POSItem,
+  POSLayout,
   ItemQtyMap,
   ItemSerialNumbers,
 } from 'src/components/POS/types';
@@ -236,7 +229,6 @@ export default defineComponent({
     POSOrderSummary,
     POSInvoiceActions,
     SelectedItemTable,
-    ModernPOSSelectedItemTable,
     AlertModal,
     PaymentModal,
     KeyboardModal,
@@ -329,11 +321,11 @@ export default defineComponent({
       quickQtyKeyUpHandler: null as ((e: KeyboardEvent) => void) | null,
       selectedItemForBatch: '' as string,
       pendingBatchItem: null as { item: POSItem; quantity: number } | null,
-      expandedBatchId: undefined as string | null | undefined,
+      expandedRow: undefined as string | undefined,
     };
   },
   computed: {
-    layout(): 'Classic' | 'Modern' {
+    layout(): POSLayout {
       const posUI =
         this.posProfile?.posUI || fyo.singles.POSSettings?.posUI;
       return posUI === 'Classic' ? 'Classic' : 'Modern';
@@ -404,12 +396,11 @@ export default defineComponent({
     this.closeAllModals();
   },
   methods: {
+    /** Targets `row` for quick quantity; a `field` opens it in the keypad. */
     selectRow(row: SalesInvoiceItem, field = '') {
       this.selectedRow = row;
       this.keyboardField = field;
-    },
-    setExpandedBatchId(rowName: string | null) {
-      this.expandedBatchId = rowName;
+      this.openKeyboardModal = !!field;
     },
     addQuickQtyListeners() {
       this.quickQtyKeyDownHandler = (e: KeyboardEvent) =>

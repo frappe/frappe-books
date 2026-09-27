@@ -219,16 +219,6 @@ export abstract class Invoice extends Transactional {
       },
       dependsOn: ['party', 'currency'],
     },
-    makeAutoPayment: {
-      formula: () => !!this.autoPaymentAccount,
-      dependsOn: [],
-    },
-    makeAutoStockTransfer: {
-      formula: () =>
-        !!this.fyo.singles.AccountingSettings?.enableInventory &&
-        !!this.autoStockTransferLocation,
-      dependsOn: [],
-    },
   };
 
   hidden: HiddenMap = {

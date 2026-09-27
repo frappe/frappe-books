@@ -28,6 +28,7 @@ ITEM_SERIES = {
 class SeriesNamingMixin:
 	def autoname(self):
 		self.number_series = self.number_series or default_series(self.doctype)
+		validate_series_type(self.doctype, self.number_series)
 		self.name = next_name(self.number_series)
 
 
@@ -42,6 +43,13 @@ def default_series_by_schema():
 		reference_type: (defaults_field and defaults.get(defaults_field)) or prefix
 		for prefix, reference_type, defaults_field in NUMBER_SERIES.values()
 	}
+
+
+def validate_series_type(doctype, series):
+	"""A series names only the document type it is made for."""
+	reference_type = NUMBER_SERIES[doctype][1]
+	if frappe.db.get_value("Books Number Series", series, "reference_type") != reference_type:
+		frappe.throw(_("Number series {0} is not for {1} documents.").format(series, _(doctype)))
 
 
 def next_name(prefix):

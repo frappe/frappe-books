@@ -1,58 +1,53 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  generateSerialNumbersForItem,
   getExistingActiveSerialNumbersForItem,
+  getSerialNumbersForQuantity,
   getSuggestedBatchName,
 } from './helpers/accounting.mjs';
 
-function makeFyo({ item, names, taken = [], series }) {
-  return {
+function makeFyo(item, reserved) {
+  const requests = [];
+  const fyo = {
     getValue: async (_schemaName, _name, fieldname) => item[fieldname],
     db: {
-      exists: async (_schemaName, name) =>
-        name === series.name || taken.includes(name),
-      getAllRaw: async () => names.map((name) => ({ name })),
+      getNewSeriesNames: async (...args) => {
+        requests.push(args);
+        return reserved.splice(0, args[2]);
+      },
     },
-    doc: { getDoc: async () => series },
   };
+  return { fyo, requests };
 }
 
-test('the suggested batch follows the highest batch of the series', async () => {
-  const series = { name: 'PEN-', start: 1001, padZeros: 4 };
-  const item = { batchSeries: ' PEN- ' };
-  const names = ['PEN-1003', 'PEN-0999', 'OTHER-5000'];
-  assert.equal(
-    await getSuggestedBatchName(makeFyo({ item, names, series }), 'Pen'),
-    'PEN-1004'
-  );
-  assert.equal(
-    await getSuggestedBatchName(makeFyo({ item, names: [], series }), 'Pen'),
-    'PEN-1001'
-  );
+test('a suggested batch is reserved from the item series on the server', async () => {
+  const { fyo, requests } = makeFyo({ hasBatch: true }, ['PEN-1001']);
+  assert.equal(await getSuggestedBatchName(fyo, 'Pen'), 'PEN-1001');
+  assert.deepEqual(requests, [['Batch', 'Pen', 1]]);
+
+  const noBatches = makeFyo({ hasBatch: false }, ['PEN-1002']);
+  assert.equal(await getSuggestedBatchName(noBatches.fyo, 'Pen'), undefined);
+  assert.deepEqual(noBatches.requests, []);
 });
 
-test('new serial numbers skip taken names and move the series on', async () => {
-  const series = {
-    name: 'SN-',
-    start: 1,
-    padZeros: 3,
-    async setAndSync(fieldname, value) {
-      this[fieldname] = value;
-    },
-  };
-  const fyo = makeFyo({
-    item: { hasSerialNumber: true, serialNumberSeries: 'SN-' },
-    names: ['SN-002'],
-    taken: ['SN-004'],
-    series,
-  });
+test('serial numbers keep the row numbers and reserve only the shortfall', async () => {
+  const { fyo, requests } = makeFyo({ hasSerialNumber: true }, ['SN-3']);
   assert.equal(
-    await generateSerialNumbersForItem(fyo, 'Pen', 2),
-    'SN-003\nSN-005'
+    await getSerialNumbersForQuantity(fyo, 'Pen', 'SN-1\n SN-2 ', 3),
+    'SN-1\nSN-2\nSN-3'
   );
-  assert.equal(series.current, 5);
-  assert.equal(await generateSerialNumbersForItem(fyo, 'Pen', 0), '');
+  assert.equal(
+    await getSerialNumbersForQuantity(fyo, 'Pen', 'SN-1\nSN-2', 1),
+    'SN-1'
+  );
+  assert.deepEqual(requests, [['SerialNumber', 'Pen', 1]]);
+
+  const noSerials = makeFyo({ hasSerialNumber: false }, ['SN-4']);
+  assert.equal(
+    await getSerialNumbersForQuantity(noSerials.fyo, 'Pen', undefined, 2),
+    ''
+  );
+  assert.deepEqual(noSerials.requests, []);
 });
 
 test('in-stock serial numbers are the oldest active ones on the server', async () => {

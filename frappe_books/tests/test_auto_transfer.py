@@ -26,6 +26,7 @@ from frappe_books.tests.accounting import (
 	make_account,
 	make_invoice,
 	make_item,
+	make_number_series,
 	make_party,
 	set_inventory_accounts,
 	stock_quantity,
@@ -145,6 +146,17 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		)
 		shipment.insert().submit()
 		self.assertRaisesRegex(frappe.ValidationError, "no stock left", make_shipment, invoice.name)
+
+	def test_shipment_uses_the_defaults_series(self):
+		series = make_number_series("Shipment")
+		frappe.db.set_single_value("Books Defaults", "shipment_number_series", series)
+		invoice, _item = self._sales_invoice()
+		invoice.submit()
+
+		shipment = make_shipment(invoice.name)
+
+		self.assertIsNone(shipment.number_series)
+		self.assertTrue(shipment.insert().name.startswith(series), shipment.name)
 
 	def test_receipt_of_a_return_returns_against_the_original_receipt(self):
 		invoice, _item = self._purchase_invoice(make_auto_stock_transfer=1)

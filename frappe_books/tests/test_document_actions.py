@@ -14,7 +14,13 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchas
 	set_inventory_accounts,
 )
 from frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote import make_sales_invoice
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
+from frappe_books.tests.accounting import (
+	make_account,
+	make_invoice,
+	make_item,
+	make_number_series,
+	make_party,
+)
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 MAPPERS = "frappe_books.frappe_books.doctype.{0}.{0}.{1}"
@@ -228,6 +234,23 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				self.assertEqual(len(references), payments)
 				self.assertEqual(invoice.db_get("outstanding_amount"), 0 if payments else 200)
 				self.assertEqual(invoice.outstanding_amount, invoice.db_get("outstanding_amount"))
+
+	def test_automatic_payment_uses_the_defaults_series(self):
+		series = make_number_series("Payment")
+		frappe.db.set_single_value("Books Defaults", "payment_number_series", series)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			make_auto_payment=1,
+		)
+		invoice.items[0].item_discount_percent = 0
+		invoice.save().submit()
+
+		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+		self.assertTrue(payment.startswith(series), payment)
 
 	def _submitted_quote(self):
 		return (

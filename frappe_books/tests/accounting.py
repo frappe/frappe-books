@@ -109,5 +109,22 @@ def stock_quantity(item, location):
 	return BooksBespokeQueries().stock_quantity(item, location) or 0
 
 
+def make_number_series(reference_type):
+	prefix = f"{reference_type[:4].upper()}-{frappe.generate_hash(length=6)}-"
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Books Number Series",
+				"name": prefix,
+				"start": 1,
+				"pad_zeros": 3,
+				"reference_type": reference_type,
+			}
+		)
+		.insert()
+		.name
+	)
+
+
 def unique_name(label):
 	return f"{label} {frappe.generate_hash(length=8)}"

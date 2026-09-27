@@ -231,7 +231,7 @@ test('filter resets preserve page size and unchanged filters preserve the page',
       () => report.reportData[0]
     );
   });
-  await page.getByRole('button', { name: '100', exact: true }).click();
+  await page.getByRole('radio', { name: '100', exact: true }).click();
   await page
     .getByRole('button', { name: 'Next page', exact: true })
     .click();

@@ -100,7 +100,14 @@ test('a failed attachment upload is shown and the file can be picked again', asy
     await route.fulfill({
       status: 417,
       contentType: 'application/json',
-      body: JSON.stringify({ exception: 'File is too large' }),
+      // Frappe's error response shape: the message is in _server_messages.
+      body: JSON.stringify({
+        exc_type: 'ValidationError',
+        exception: 'frappe.exceptions.ValidationError: File is too large',
+        _server_messages: JSON.stringify([
+          JSON.stringify({ message: 'File is too large' }),
+        ]),
+      }),
     });
   });
   const input = page.locator('#attachment');

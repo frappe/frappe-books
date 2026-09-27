@@ -13,6 +13,7 @@ from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_op
 )
 from frappe_books.setup_service import ensure_currency
 from frappe_books.tests.accounting import (
+	foreign_currency,
 	ledger_entries,
 	make_account,
 	make_invoice,
@@ -100,9 +101,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		round_off = make_account("Round Off", root_type="Expense", account_type="Round Off")
 		frappe.db.set_single_value("Books Accounting Settings", "round_off_account", round_off.name)
 		item = make_item(self.income.name, self.expense.name)
+		party = make_party(self.receivable.name, currency=foreign_currency())
 		invoice = make_invoice(
 			"Books Sales Invoice",
-			self.party.name,
+			party.name,
 			self.receivable.name,
 			item.name,
 			self.income.name,
@@ -126,6 +128,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				self.subTest(currency=currency),
 				self.change_settings("Books System Settings", currency=currency),
 			):
+				ensure_currency(currency)
 				invoice = make_invoice(
 					"Books Sales Invoice",
 					self.party.name,
@@ -141,13 +144,18 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				self.assertEqual(sum(Decimal(str(row.debit)) for row in entries), Decimal(total))
 
 	def test_rounds_invoice_amounts_to_invoice_currency(self):
-		ensure_currency("USD")
 		item = make_item(self.income.name, self.expense.name)
 		with self.change_settings("Books System Settings", currency="JPY"):
+			ensure_currency("JPY")
+			party = make_party(self.receivable.name, currency=foreign_currency())
 			invoice = make_invoice(
-				"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
+				"Books Sales Invoice",
+				party.name,
+				self.receivable.name,
+				item.name,
+				self.income.name,
+				exchange_rate=150,
 			)
-			invoice.update({"currency": "USD", "exchange_rate": 150})
 			invoice.items[0].update({"rate": Decimal("10.25"), "quantity": 1, "item_discount_percent": 0})
 			invoice.save().submit()
 

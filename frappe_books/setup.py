@@ -6,6 +6,7 @@ import frappe
 
 from frappe_books.customization import sync_all_custom_forms
 from frappe_books.series import NUMBER_SERIES
+from frappe_books.setup_service import ensure_currency
 
 DEFAULT_SERIES_START = 1001
 DEFAULT_PRINT_TEMPLATES = {
@@ -37,6 +38,7 @@ def bootstrap():
 		_insert_if_missing("Books Uom", name, {"is_whole": is_whole})
 	_insert_if_missing("Books Location", "Stores", {})
 	_insert_if_missing("Books Payment Method", "Cash", {"type": "Cash"})
+	ensure_currency(frappe.db.get_single_value("Books System Settings", "currency"))
 	for name in DEFAULT_PRINT_TEMPLATES:
 		_insert_if_missing("Books Print Template", name, standard_print_template_values(name))
 	_fill_default_print_templates()

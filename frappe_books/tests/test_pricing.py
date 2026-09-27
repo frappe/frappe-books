@@ -4,7 +4,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, nowdate
 
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
+from frappe_books.tests.accounting import (
+	foreign_currency,
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	unique_name,
+)
 
 
 class IntegrationTestPricing(IntegrationTestCase):
@@ -140,7 +147,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 				self._pricing_rule(**values)
 				invoice = make_invoice(
 					"Books Sales Invoice",
-					self.party.name,
+					make_party(self.receivable.name, currency=foreign_currency()).name,
 					self.receivable.name,
 					self.item.name,
 					self.income.name,
@@ -167,7 +174,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			with self.subTest(price_list=price_list_name):
 				invoice = make_invoice(
 					"Books Sales Invoice",
-					self.party.name,
+					make_party(self.receivable.name, currency=foreign_currency()).name,
 					self.receivable.name,
 					item.name,
 					self.income.name,

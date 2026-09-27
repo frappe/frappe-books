@@ -6,7 +6,7 @@ from frappe.model.document import Document
 
 from frappe_books.accounting import returns
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
@@ -178,8 +178,10 @@ def row_discount(invoice, row):
 def validate_invoice(invoice):
 	if not invoice.items:
 		frappe.throw(_("At least one invoice item is required."))
-	if invoice.exchange_rate is not None and as_decimal(invoice.exchange_rate) <= 0:
-		frappe.throw(_("Exchange rate must be greater than zero."))
+	if as_decimal(invoice.exchange_rate) <= 0:
+		frappe.throw(
+			_("Set an exchange rate from {0} to {1} above zero.").format(invoice.currency, company_currency())
+		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
 	if invoice.get("return_against"):
@@ -279,14 +281,29 @@ def _populate_invoice_defaults(invoice):
 
 
 def _populate_party_defaults(invoice):
-	party = invoice.transaction_type != "quote" and frappe.db.get_value(
-		"Books Party", invoice.party, ["default_account", "loyalty_program"], as_dict=True
-	)
-	if not party:
+	party = _party_defaults(invoice)
+	_populate_currency(invoice, party.currency)
+	if invoice.transaction_type == "quote" or not party:
 		return
 	invoice.account = invoice.get("account") or party.default_account
 	if invoice.transaction_type == "sales" and not invoice.get("return_against"):
 		invoice.loyalty_program = party.loyalty_program
+
+
+def _party_defaults(invoice):
+	"""Return the party's invoice defaults; a quote to a lead has none."""
+	if not invoice.party or (invoice.get("reference_type") or "Books Party") != "Books Party":
+		return frappe._dict()
+	fields = ["currency", "default_account", "loyalty_program"]
+	return frappe.db.get_value("Books Party", invoice.party, fields, as_dict=True) or frappe._dict()
+
+
+def _populate_currency(invoice, party_currency):
+	"""Bill in the party's currency; the company currency needs no exchange rate."""
+	company = company_currency()
+	invoice.currency = party_currency or company
+	if invoice.currency == company:
+		invoice.exchange_rate = 1
 
 
 def _populate_row(invoice, row, item, rates):

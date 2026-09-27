@@ -173,7 +173,6 @@
    "read_only": 1
   },
   {
-   "default": "1",
    "fieldname": "exchange_rate",
    "fieldtype": "Float",
    "hidden": 1,
@@ -249,7 +248,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-28 10:00:00.000000",
+ "modified": "2026-09-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Quote",

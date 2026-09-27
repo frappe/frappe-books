@@ -323,7 +323,7 @@ def _populate_currency(invoice, party_currency):
 
 
 def _populate_row(invoice, row, item, rates):
-	for fieldname in ("item_code", "description", "unit", "tax"):
+	for fieldname in ("item_code", "description", "unit", "tax", "hsn_code"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
 	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
@@ -345,6 +345,7 @@ def _item_details(names):
 			"unit",
 			"tax",
 			"item_group.tax as group_tax",
+			"hsn_code",
 			"income_account",
 			"expense_account",
 		],

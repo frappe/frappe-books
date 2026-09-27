@@ -474,6 +474,8 @@ def _target_value(meta, fieldname: str, value: Any) -> Any:
 	field = meta.get_field(fieldname)
 	if field and field.fieldtype in NUMERIC_FIELDTYPES:
 		return _numeric_value(field.fieldtype, value)
+	if value and field and field.fieldtype == "Datetime":
+		return system_datetime(value)
 	return value
 
 
@@ -500,6 +502,12 @@ def _stores_doctype_name(meta, fieldname: str) -> bool:
 
 def iso_datetime(value) -> str:
 	return _aware_datetime(value).isoformat()
+
+
+def system_datetime(value) -> datetime:
+	"""Return an interface datetime as the naive system time the database stores."""
+	system_timezone = ZoneInfo(get_system_timezone())
+	return _aware_datetime(value).astimezone(system_timezone).replace(tzinfo=None)
 
 
 def _aware_datetime(value) -> datetime:

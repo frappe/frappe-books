@@ -3,7 +3,7 @@
 from typing import Any, Literal
 
 import frappe
-from frappe.utils import get_datetime, getdate
+from frappe.utils import getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
@@ -14,6 +14,7 @@ from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
 from frappe_books.reports.gst import GSTRFilters
 from frappe_books.reports.stock import StockFilters
 from frappe_books.series import default_series_by_schema, new_item_names
+from frappe_books.ui_bridge.database import system_datetime
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.linked_entries import linked_entries
 from frappe_books.ui_bridge.mapping import target_doctype
@@ -88,11 +89,11 @@ class BooksBespokeQueries:
 		if serial_numbers:
 			filters["serial_number"] = ["in", serial_numbers]
 		if from_date and to_date:
-			filters["date"] = ["between", [from_date, to_date]]
+			filters["date"] = ["between", [system_datetime(from_date), system_datetime(to_date)]]
 		elif from_date:
-			filters["date"] = [">=", from_date]
+			filters["date"] = [">=", system_datetime(from_date)]
 		elif to_date:
-			filters["date"] = ["<=", to_date]
+			filters["date"] = ["<=", system_datetime(to_date)]
 		quantity = frappe.get_list(
 			"Books Stock Ledger Entry", filters=filters, fields=[{"SUM": "quantity", "as": "quantity"}]
 		)[0].quantity
@@ -123,7 +124,7 @@ class BooksBespokeQueries:
 		"""Return the same expected amounts the closing shift stores on the server."""
 		for doctype in ("Books Payment", "Books Sales Invoice"):
 			frappe.has_permission(doctype, ptype="read", throw=True)
-		return transacted_amounts(get_datetime(from_date), get_datetime(to_date))
+		return transacted_amounts(system_datetime(from_date), system_datetime(to_date))
 
 	def open_pos_shift(self):
 		if not frappe.has_permission("Books Pos Opening Shift", ptype="read"):
@@ -180,7 +181,7 @@ class BooksBespokeQueries:
 			target_doctype(source_schema),
 			filters={
 				"docstatus": 1,
-				"date": ["between", [from_date, to_date]],
+				"date": ["between", [system_datetime(from_date), system_datetime(to_date)]],
 				"return_against": ["is", "set" if is_return else "not set"],
 			},
 			fields=[

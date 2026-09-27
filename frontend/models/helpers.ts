@@ -151,8 +151,13 @@ export function getMakeStockTransferAction(
     group: fyo.t`Create`,
     condition: (doc: Doc) => doc.isSubmitted && !!doc.stockNotTransferred,
     action: async (doc: Doc) => {
-      const transfer = await (doc as Invoice).getStockTransfer();
-      if (!transfer || !transfer.name) {
+      const invoice = doc as Invoice;
+      const transfer = await getMappedDoc(
+        invoice,
+        invoice.stockTransferSchemaName,
+        invoice.stockTransferMapper
+      );
+      if (!transfer.name) {
         return;
       }
 

@@ -2,30 +2,34 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeFyo } from './helpers/accounting.mjs';
 
-async function makeShipmentFromInvoice() {
+async function makeShipmentFromInvoice(mapped) {
   const fyo = await makeFyo();
-  const values = { hasSerialNumber: true, serialNumberSeries: 'SN-' };
-  fyo.getValue = async (_schemaName, _name, fieldname) => values[fieldname];
-  const invoice = fyo.doc.getNewDoc('SalesInvoice', {
-    name: 'SINV-1',
-    items: [{ item: 'Pen', quantity: 1, serialNumber: 'SN-7' }],
-  });
-  invoice.getStockTransfer = async () => ({
-    party: 'Customer',
-    terms: '',
-    date: new Date(),
-    items: [{ item: 'Pen', quantity: 1 }],
-  });
-  const series = { name: 'SN-', start: 1, padZeros: 3, setAndSync() {} };
-  fyo.doc.getDoc = async (schemaName) =>
-    schemaName === 'SerialNumberSeries' ? series : invoice;
-  fyo.db.exists = async (_schemaName, name) => name === 'SN-';
+  fyo.getValue = async () => undefined;
+  const invoice = fyo.doc.getNewDoc('SalesInvoice', { name: 'SINV-1' });
+  fyo.db.getMapped = async (...args) => {
+    mapped.push(args);
+    return {
+      party: 'Customer',
+      backReference: 'SINV-1',
+      items: [{ item: 'Pen', quantity: 1, serialNumber: 'SN-7' }],
+    };
+  };
+  fyo.doc.getDoc = async () => invoice;
   return fyo.doc.getNewDoc('Shipment', { backReference: 'SINV-1' });
 }
 
-test('a shipment made from an invoice ships the invoiced serial numbers', async () => {
-  const shipment = await makeShipmentFromInvoice();
+test('a shipment picked for an invoice gets the rows the server maps', async () => {
+  const mapped = [];
+  const shipment = await makeShipmentFromInvoice(mapped);
   await shipment.setFieldsFromBackReference();
+  assert.deepEqual(mapped, [
+    [
+      'Shipment',
+      'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice.make_shipment',
+      'SINV-1',
+    ],
+  ]);
+  assert.equal(shipment.party, 'Customer');
   assert.equal(shipment.items[0].serialNumber, 'SN-7');
 });
 

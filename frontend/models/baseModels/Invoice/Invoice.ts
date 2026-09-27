@@ -12,25 +12,16 @@ import {
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { Transactional } from 'models/Transactional/Transactional';
-import {
-  addItem,
-  getExchangeRate,
-  getNumberSeries,
-  getItemVisibility,
-} from 'models/helpers';
-import { StockTransfer } from 'models/inventory/StockTransfer';
+import { addItem, getExchangeRate, getNumberSeries } from 'models/helpers';
 import { createMissingBatches } from 'models/inventory/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
-import { Defaults } from '../Defaults/Defaults';
 import { InvoiceItem } from '../InvoiceItem/InvoiceItem';
-import { Item } from '../Item/Item';
 import { TaxSummary } from '../TaxSummary/TaxSummary';
 import { PricingRuleDetail } from '../PricingRuleDetail/PricingRuleDetail';
 import { AppliedCouponCodes } from '../AppliedCouponCodes/AppliedCouponCodes';
-import { getLinkedEntries } from 'src/utils/doc';
 import { applyPreview } from './preview';
 
 const PREVIEW_DELAY = 300;
@@ -103,6 +94,10 @@ export abstract class Invoice extends Transactional {
     return this.isSales
       ? ModelNameEnum.Shipment
       : ModelNameEnum.PurchaseReceipt;
+  }
+
+  get stockTransferMapper() {
+    return this.isSales ? 'make_shipment' : 'make_purchase_receipt';
   }
 
   get autoPaymentAccount(): string | null {
@@ -369,100 +364,6 @@ export abstract class Invoice extends Transactional {
     for (const { fieldname } of currencyFields) {
       this.getCurrencies[fieldname] ??= this._getCurrency.bind(this);
     }
-  }
-
-  /** A draft Shipment or Purchase Receipt for what this invoice has not transferred yet. */
-  async getStockTransfer(): Promise<StockTransfer | null> {
-    if (!this.isSubmitted) {
-      return null;
-    }
-
-    const onlyInventory =
-      (await getItemVisibility(this.fyo)) === 'Inventory Items';
-    if (!this.stockNotTransferred && onlyInventory) {
-      return null;
-    }
-
-    const transfer = this.fyo.doc.getNewDoc(
-      this.stockTransferSchemaName,
-      await this.getStockTransferValues()
-    ) as StockTransfer;
-    const location =
-      this.autoStockTransferLocation ??
-      this.fyo.singles.InventorySettings?.defaultLocation ??
-      null;
-    for (const row of this.items ?? []) {
-      const values = await this.getStockTransferRow(row, onlyInventory);
-      if (values) {
-        await transfer.append('items', { ...values, location });
-      }
-    }
-
-    return transfer.items?.length ? transfer : null;
-  }
-
-  async getStockTransferValues(): Promise<DocValueMap> {
-    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
-    const [terms, numberSeries] = this.isSales
-      ? [defaults.shipmentTerms, defaults.shipmentNumberSeries]
-      : [defaults.purchaseReceiptTerms, defaults.purchaseReceiptNumberSeries];
-
-    return {
-      party: this.party,
-      date: new Date().toISOString(),
-      terms: terms ?? '',
-      numberSeries: numberSeries ?? undefined,
-      backReference: this.name,
-      returnAgainst: await this.getReturnedStockTransfer(),
-    };
-  }
-
-  /** The original invoice's transfer, which the transfer of a return reverses. */
-  async getReturnedStockTransfer(): Promise<string> {
-    if (!this.returnAgainst) {
-      return '';
-    }
-
-    const original = await this.fyo.doc.getDoc(
-      this.schemaName,
-      this.returnAgainst
-    );
-    const linkedEntries = await getLinkedEntries(original);
-    return linkedEntries[this.stockTransferSchemaName]?.[0] ?? '';
-  }
-
-  /** Transfer row values for an invoice row, or null when it has nothing left to transfer. */
-  async getStockTransferRow(
-    row: InvoiceItem,
-    onlyInventory: boolean
-  ): Promise<DocValueMap | null> {
-    if (!row.item) {
-      return null;
-    }
-
-    const values = {
-      item: row.item,
-      batch: row.batch || null,
-      description: row.description,
-      hsnCode: row.hsnCode,
-    };
-    if (row.isFreeItem) {
-      return {
-        ...values,
-        quantity: row.quantity,
-        rate: this.fyo.pesa(0),
-        isFreeItem: true,
-      };
-    }
-
-    const item = (await row.loadAndGetLink('item')) as Item;
-    const quantity = item.trackItem ? row.stockNotTransferred : row.quantity;
-    if (!quantity && onlyInventory) {
-      return null;
-    }
-
-    const rate = (row.rate as Money).mul(this.exchangeRate ?? 1);
-    return { ...values, quantity, rate };
   }
 
   async beforeSync(): Promise<void> {

@@ -7,7 +7,7 @@ import {
   HiddenMap,
 } from 'fyo/model/types';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
-import { addItem, getNumberSeries } from 'models/helpers';
+import { addItem, getMappedDoc, getNumberSeries } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { TargetField } from 'schemas/types';
@@ -136,14 +136,13 @@ export abstract class StockTransfer extends Transfer {
       return;
     }
 
-    const stDoc = await brDoc.getStockTransfer();
-    if (!stDoc) {
-      return;
-    }
-
-    await this.set('party', stDoc.party);
-    await this.set('terms', stDoc.terms);
-    await this.set('date', stDoc.date);
-    await this.set('items', stDoc.items);
+    const transfer = (await getMappedDoc(
+      brDoc,
+      this.schemaName,
+      brDoc.stockTransferMapper
+    )) as StockTransfer;
+    await this.set('party', transfer.party);
+    await this.set('returnAgainst', transfer.returnAgainst);
+    await this.set('items', transfer.items);
   }
 }

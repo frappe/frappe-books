@@ -16,6 +16,7 @@
     />
   </router-view>
   <MobileDrawer v-model:open="isDrawerOpen" />
+  <OfflineScreen />
 </template>
 <script setup lang="ts">
 import { useSwipe } from '@vueuse/core';
@@ -30,6 +31,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { isDesktopOnly } from './availability';
 import MobileDrawer from './MobileDrawer.vue';
 import { useBackClosesSheets } from './useBackClosesSheets';
+import OfflineScreen from './OfflineScreen.vue';
 
 defineProps<{ darkMode: boolean }>();
 

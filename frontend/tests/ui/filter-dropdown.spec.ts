@@ -671,7 +671,7 @@ for (const [schema, field, condition, value, matches] of storedFieldCases) {
     else if (field === 'Date' || field === 'Created' || field === 'Modified') {
       const date = value.slice(0, 10);
       // Start the calendar in the fixture month, then select a real day cell.
-      const input = page.getByRole('textbox', { name: 'Value', exact: true });
+      const input = page.getByRole('combobox', { name: 'Value', exact: true });
       await input.fill(value);
       await input.press('Enter');
       await input.click();

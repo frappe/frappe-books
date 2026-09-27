@@ -54,21 +54,21 @@
                 v-show="activeCard === item.key && !isCompleted(item)"
                 class="flex gap-2 mt-2 overflow-hidden"
               >
-                <Button
+                <FrappeButton
                   v-if="item.action"
                   class="leading-tight text-base"
-                  type="primary"
+                  variant="solid"
                   @click="handleAction(item)"
                 >
                   {{ t`Set Up` }}
-                </Button>
-                <Button
+                </FrappeButton>
+                <FrappeButton
                   v-if="item.documentation"
                   class="leading-tight text-base"
                   @click="handleDocumentation(item)"
                 >
                   {{ t`Documentation` }}
-                </Button>
+                </FrappeButton>
               </div>
             </div>
           </div>
@@ -79,8 +79,8 @@
 </template>
 
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
-import Button from 'src/components/Button.vue';
 import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
@@ -95,7 +95,7 @@ export default defineComponent({
   name: 'GetStarted',
   components: {
     PageHeader,
-    Button,
+    FrappeButton,
     Icon,
   },
   props: {

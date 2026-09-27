@@ -15,22 +15,22 @@
       />
     </div>
     <div class="flex border-t border-outline-gray-1 p-4">
-      <Button class="ml-auto" type="primary" @click="done">{{
+      <FrappeButton class="ml-auto" variant="solid" @click="done">{{
         t`Done`
-      }}</Button>
+      }}</FrappeButton>
     </div>
   </div>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { PrintTemplate } from 'models/baseModels/PrintTemplate';
 import { OptionField, SelectOption } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import Select from 'src/components/Controls/Select.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-  components: { FormHeader, Select, Button },
+  components: { FormHeader, Select, FrappeButton },
   props: { doc: { type: PrintTemplate, required: true } },
   emits: ['done'],
   data() {

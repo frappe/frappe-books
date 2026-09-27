@@ -36,23 +36,21 @@
     />
 
     <template #actions>
-      <Button size="md" class="min-w-24" @click="closeModal">{{
+      <FrappeButton size="md" class="min-w-24" @click="closeModal">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         :disabled="!selectedInvoiceName"
         @click="openSelectedInvoice"
-        >{{ t`Open Invoice` }}</Button
-      >
+        >{{ t`Open Invoice` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import Button from 'src/components/Button.vue';
 import Modal from 'src/components/POS/POSDialog.vue';
 import InvoiceSelectionTable from 'src/components/POS/InvoiceSelectionTable.vue';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
@@ -60,13 +58,13 @@ import { defineComponent } from 'vue';
 import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
 import { Money } from 'pesa';
-import { TabButtons as FrappeTabButtons, TextInput as FrappeTextInput } from 'frappe-ui';
+import { TabButtons as FrappeTabButtons, TextInput as FrappeTextInput, Button as FrappeButton } from 'frappe-ui';
 
 export default defineComponent({
   name: 'SavedInvoiceModal',
   components: {
     Modal,
-    Button,
+    FrappeButton,
     InvoiceSelectionTable,
     FrappeTextInput,
     FrappeTabButtons,

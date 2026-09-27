@@ -4,21 +4,19 @@
       <DropdownWithActions
         v-for="group of groupedActions"
         :key="group.label"
-        :icon="false"
         :type="group.type"
         :actions="group.actions"
         class="text-xs"
       >
         {{ group.group }}
       </DropdownWithActions>
-      <Button
+      <FrappeButton
         ref="printButton"
-        :icon="true"
-        :title="t`Open Report Print View`"
+        icon="lucide-printer"
+        :label="t`Open Report Print View`"
+        :tooltip="t`Open Report Print View`"
         @click="routeTo(`/report-print/${reportClassName}`)"
-      >
-        <Icon name="printer" class="w-4 h-4" />
-      </Button>
+      />
     </PageHeader>
 
     <!-- Filters -->
@@ -47,14 +45,13 @@
   </div>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { reports } from 'reports';
 import { Report } from 'reports/Report';
-import Button from 'src/components/Button.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
-import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ListReport from 'src/components/Report/ListReport.vue';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -70,8 +67,7 @@ export default defineComponent({
     FormControl,
     ListReport,
     DropdownWithActions,
-    Button,
-    Icon,
+    FrappeButton,
   },
   provide() {
     return {

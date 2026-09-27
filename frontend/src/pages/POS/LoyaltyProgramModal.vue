@@ -28,22 +28,21 @@
       />
     </div>
     <template #actions>
-      <Button size="md" class="min-w-24" @click="cancelLoyaltyProgram">{{
+      <FrappeButton size="md" class="min-w-24" @click="cancelLoyaltyProgram">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         @click="saveLoyaltyPoints"
-        >{{ t`Save` }}</Button
-      >
+        >{{ t`Save` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import Button from 'src/components/Button.vue';
+import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { defineComponent, inject } from 'vue';
@@ -56,7 +55,7 @@ export default defineComponent({
   name: 'LoyaltyProgramModal',
   components: {
     Modal,
-    Button,
+    FrappeButton,
     Int,
     Icon,
   },

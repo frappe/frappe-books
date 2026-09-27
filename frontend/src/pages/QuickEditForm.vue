@@ -24,17 +24,20 @@
       style="z-index: 1"
     >
       <!-- Close Button  -->
-      <Button :icon="true" :title="t`Close quick edit`" @click="routeToPrevious">
-        <Icon name="x" class="w-4 h-4" />
-      </Button>
+      <FrappeButton
+        icon="lucide-x"
+        :label="t`Close quick edit`"
+        :tooltip="t`Close quick edit`"
+        @click="routeToPrevious"
+      />
 
       <!-- Save & Submit Buttons -->
-      <Button v-if="doc?.canSave" type="primary" @click="sync">
+      <FrappeButton v-if="doc?.canSave" variant="solid" @click="sync">
         {{ t`Save` }}
-      </Button>
-      <Button v-else-if="doc?.canSubmit" type="primary" @click="submit">
+      </FrappeButton>
+      <FrappeButton v-else-if="doc?.canSubmit" variant="solid" @click="submit">
         {{ t`Submit` }}
-      </Button>
+      </FrappeButton>
     </div>
 
     <!-- Name and image -->
@@ -80,12 +83,11 @@
   </div>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import { Field, Schema } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import AttachImage from 'src/components/Controls/AttachImage.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
-import Icon from 'src/components/Icon.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
@@ -102,9 +104,8 @@ import { computed, defineComponent, inject, ref } from 'vue';
 export default defineComponent({
   name: 'QuickEditForm',
   components: {
-    Button,
+    FrappeButton,
     FormControl,
-    Icon,
     TwoColumnForm,
     AttachImage,
   },

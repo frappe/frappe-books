@@ -11,27 +11,26 @@
       }}
     </p>
     <template #actions>
-      <Button size="md" @click="$emit('toggleModal', 'Alert')">{{
+      <FrappeButton size="md" @click="$emit('toggleModal', 'Alert')">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         theme="red"
         @click="
           routeTo('/list/SalesInvoice');
           $emit('toggleModal', 'Alert');
         "
-        >{{ t`Discard and Continue` }}</Button
-      >
-      <Button size="md" type="primary" @click="$emit('saveAndContinue')">{{
+        >{{ t`Discard and Continue` }}</FrappeButton>
+      <FrappeButton size="md" variant="solid" @click="$emit('saveAndContinue')">{{
         t`Save and Continue`
-      }}</Button>
+      }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import Button from 'src/components/Button.vue';
+import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
 import { defineComponent } from 'vue';
 import { routeTo } from 'src/utils/ui';
@@ -40,7 +39,7 @@ export default defineComponent({
   name: 'AlertModal',
   components: {
     Modal,
-    Button,
+    FrappeButton,
   },
   props: {
     openModal: {

@@ -2,11 +2,11 @@
   <div class="flex-col">
     <PageHeader :title="t`Point of Sale`">
       <slot>
-        <Button
+        <FrappeButton
           @click="toggleModal('ShiftClose')"
         >
           <span>{{ t`Close POS Shift` }}</span>
-        </Button>
+        </FrappeButton>
       </slot>
     </PageHeader>
     <component :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'">
@@ -148,6 +148,7 @@
 </template>
 
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
@@ -172,7 +173,6 @@ import BatchSelectionModal from './BatchSelectionModal.vue';
 import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
 import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { ModelNameEnum } from 'models/types';
-import Button from 'src/components/Button.vue';
 import { showToast } from 'src/utils/interactive';
 import { Item } from 'models/baseModels/Item/Item';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
@@ -222,7 +222,7 @@ const COMPONENT_NAME = 'POS';
 export default defineComponent({
   name: 'POS',
   components: {
-    Button,
+    FrappeButton,
     ModernPOS,
     PageHeader,
     ClassicPOS,

@@ -8,7 +8,7 @@
     @update:open="onOpenChange"
   >
     <template #trigger>
-      <FrappeButton icon-left="lucide-list-filter" size="md">
+      <FrappeButton icon-left="lucide-list-filter">
         {{ activeFilterCount > 0 ? filterAppliedMessage : t`Filter` }}
       </FrappeButton>
     </template>

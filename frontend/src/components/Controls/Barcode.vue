@@ -3,7 +3,6 @@
     class="w-36"
     type="text"
     variant="outline"
-    size="md"
     :placeholder="t`Enter barcode`"
     @change="handleChange"
   >

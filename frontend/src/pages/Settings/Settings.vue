@@ -1,9 +1,9 @@
 <template>
   <FormContainer>
     <template #header>
-      <Button v-if="canSave" type="primary" @click="sync">
+      <FrappeButton v-if="canSave" variant="solid" @click="sync">
         {{ t`Save` }}
-      </Button>
+      </FrappeButton>
     </template>
     <template #body>
       <FormHeader
@@ -44,10 +44,9 @@
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { ValidationError } from 'fyo/utils/errors';
-import { TabButtons as FrappeTabButtons } from 'frappe-ui';
+import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -66,7 +65,7 @@ const COMPONENT_NAME = 'Settings';
 export default defineComponent({
   components: {
     FormContainer,
-    Button,
+    FrappeButton,
     FormHeader,
     CommonFormSection,
     FrappeTabButtons,

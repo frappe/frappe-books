@@ -25,27 +25,26 @@
       />
     </div>
     <template #actions>
-      <Button size="md" class="min-w-24" @click="closeModal">{{
+      <FrappeButton size="md" class="min-w-24" @click="closeModal">{{
         t`Cancel`
-      }}</Button>
-      <Button
+      }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         :disabled="!selectedBatch"
         @click="submitSelection"
-        >{{ t`Select` }}</Button
-      >
+        >{{ t`Select` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
 import Modal from 'src/components/POS/POSDialog.vue';
-import Button from 'src/components/Button.vue';
 import Link from 'src/components/Controls/Link.vue';
 import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
@@ -54,7 +53,7 @@ export default defineComponent({
   name: 'BatchSelectionModal',
   components: {
     Modal,
-    Button,
+    FrappeButton,
     Link,
   },
   props: {

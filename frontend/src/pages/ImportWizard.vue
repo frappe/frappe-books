@@ -6,37 +6,38 @@
         v-if="hasImporter"
         :actions="actions"
         :disabled="isMakingEntries"
-        :title="t`More`"
+        :label="t`More`"
       />
-      <Button
+      <FrappeButton
         v-if="hasImporter"
-        :title="t`Add Row`"
+        :label="t`Add Row`"
+        :tooltip="t`Add Row`"
         :disabled="isMakingEntries"
-        :icon="true"
+        icon="lucide-plus"
         @click="() => importer.addRow()"
-      >
-        <Icon name="plus" class="w-4 h-4" />
-      </Button>
-      <Button v-if="hasImporter" :title="t`Save Template`" :icon="true" @click="saveTemplate">
-        <Icon name="download" class="w-4 h-4" />
-      </Button>
-      <Button
+      />
+      <FrappeButton
+        v-if="hasImporter"
+        icon="lucide-download"
+        :label="t`Save Template`"
+        :tooltip="t`Save Template`"
+        @click="saveTemplate"
+      />
+      <FrappeButton
         v-if="canImportData"
-        :title="t`Import Data`"
-        type="primary"
+        variant="solid"
         :disabled="errorMessage.length > 0 || isMakingEntries"
         @click="importData"
       >
         {{ t`Import Data` }}
-      </Button>
-      <Button
+      </FrappeButton>
+      <FrappeButton
         v-if="importType && !canImportData"
-        :title="t`Select File`"
-        type="primary"
+        variant="solid"
         @click="selectFile"
       >
         {{ t`Select File` }}
-      </Button>
+      </FrappeButton>
     </PageHeader>
 
     <!-- Main Body of the Wizard -->
@@ -242,7 +243,7 @@
           <p class="text-sm text-ink-gray-6">
             {{ t`${numColumnsPicked} fields selected` }}
           </p>
-          <Button type="primary" @click="showColumnPicker = false">{{ t`Done` }}</Button>
+          <FrappeButton variant="solid" @click="showColumnPicker = false">{{ t`Done` }}</FrappeButton>
         </div>
       </div>
     </Modal>
@@ -326,13 +327,13 @@
 
         <!-- Footer Button -->
         <div class="flex items-center justify-end gap-2 p-4">
-          <Button v-if="failed.length > 0" @click="clearSuccessfullyImportedEntries">{{
+          <FrappeButton v-if="failed.length > 0" @click="clearSuccessfullyImportedEntries">{{
             t`Fix Failed`
-          }}</Button>
-          <Button v-if="failed.length === 0 && success.length > 0" @click="showMe">{{
+          }}</FrappeButton>
+          <FrappeButton v-if="failed.length === 0 && success.length > 0" @click="showMe">{{
             t`Show Me`
-          }}</Button>
-          <Button type="primary" @click="clear">{{ t`Done` }}</Button>
+          }}</FrappeButton>
+          <FrappeButton variant="solid" @click="clear">{{ t`Done` }}</FrappeButton>
         </div>
       </div>
     </Modal>
@@ -353,7 +354,6 @@ import {
 } from 'frappe-ui/list';
 import { ModelNameEnum } from 'models/types';
 import { OptionField, RawValue, SelectOption } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import AutoComplete from 'src/components/Controls/AutoComplete.vue';
 import Check from 'src/components/Controls/Check.vue';
 import Data from 'src/components/Controls/Data.vue';
@@ -361,7 +361,6 @@ import FormControl from 'src/components/Controls/FormControl.vue';
 import Select from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import FormHeader from 'src/components/FormHeader.vue';
-import Icon from 'src/components/Icon.vue';
 import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import {
@@ -398,14 +397,12 @@ export default defineComponent({
   components: {
     PageHeader,
     FormControl,
-    Button,
     DropdownWithActions,
     Loading,
     AutoComplete,
     Data,
     Modal,
     FormHeader,
-    Icon,
     Check,
     Select,
     FrappeButton,

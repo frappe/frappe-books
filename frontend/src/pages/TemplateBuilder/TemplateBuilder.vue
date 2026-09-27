@@ -14,24 +14,23 @@
           @change="setTemplateName"
         />
       </template>
-      <Button v-if="displayDoc && doc?.template" @click="savePDF()">
+      <FrappeButton v-if="displayDoc && doc?.template" @click="savePDF()">
         {{ t`Save as PDF` }}
-      </Button>
-      <Button v-if="displayDoc && doc?.template" @click="savePDF(true)">
+      </FrappeButton>
+      <FrappeButton v-if="displayDoc && doc?.template" @click="savePDF(true)">
         {{ t`Print` }}
-      </Button>
-      <Button
+      </FrappeButton>
+      <FrappeButton
         v-if="canEditTemplate && displayDoc"
-        :title="t`Toggle Edit Mode`"
-        :icon="true"
+        :label="t`Toggle Edit Mode`"
+        :tooltip="t`Toggle Edit Mode`"
+        icon="lucide-square-pen"
         @click="toggleEditMode"
-      >
-        <Icon name="edit" class="w-4 h-4" />
-      </Button>
+      />
       <DropdownWithActions v-if="actions.length" :actions="actions" />
-      <Button v-if="doc?.canSave" type="primary" @click="sync()">
+      <FrappeButton v-if="doc?.canSave" variant="solid" @click="sync()">
         {{ t`Save` }}
-      </Button>
+      </FrappeButton>
     </PageHeader>
 
     <!-- Template Builder Body -->
@@ -190,14 +189,12 @@ import { PrintTemplate } from 'models/baseModels/PrintTemplate';
 import { ModelNameEnum } from 'models/types';
 import { saveExportData } from 'reports/commonExporter';
 import { Field, TargetField } from 'schemas/types';
-import { TextInput as FrappeTextInput } from 'frappe-ui';
-import Button from 'src/components/Button.vue';
+import { TextInput as FrappeTextInput, Button as FrappeButton } from 'frappe-ui';
 import DisclosureButton from 'src/components/DisclosureButton.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import HorizontalResizer from 'src/components/HorizontalResizer.vue';
-import Icon from 'src/components/Icon.vue';
 import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ShortcutKeys from 'src/components/ShortcutKeys.vue';
@@ -234,12 +231,11 @@ import TemplateEditor from './TemplateEditor.vue';
 export default defineComponent({
   components: {
     PageHeader,
-    Button,
+    FrappeButton,
     DisclosureButton,
     DropdownWithActions,
     PrintContainer,
     HorizontalResizer,
-    Icon,
     TemplateEditor,
     FormControl,
     TemplateBuilderHint,

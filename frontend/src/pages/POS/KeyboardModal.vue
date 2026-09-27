@@ -15,30 +15,28 @@
     />
 
     <template #actions>
-      <Button
+      <FrappeButton
         size="md"
         class="min-w-24"
         :disabled="saving"
         @click="closeKeyboardModal"
-        >{{ t`Cancel` }}</Button
-      >
-      <Button
+        >{{ t`Cancel` }}</FrappeButton>
+      <FrappeButton
         size="md"
         class="min-w-24"
-        type="primary"
+        variant="solid"
         :disabled="saving"
         :loading="saving"
         @click="saveSelectedItem"
-        >{{ t`Save` }}</Button
-      >
+        >{{ t`Save` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { FieldTypeEnum } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import Modal from 'src/components/POS/POSDialog.vue';
 import NumericKeypad from 'src/components/POS/NumericKeypad.vue';
 import { parseNumericDraft } from 'src/components/POS/numericKeypad';
@@ -53,7 +51,7 @@ type NumericKeypadRef = {
 
 export default defineComponent({
   name: 'KeyboardModal',
-  components: { Button, Modal, NumericKeypad },
+  components: { FrappeButton, Modal, NumericKeypad },
   props: {
     modalStatus: Boolean,
     selectedItemRow: { type: SalesInvoiceItem, required: true },

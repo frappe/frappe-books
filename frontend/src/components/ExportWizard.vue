@@ -104,11 +104,12 @@
       <p class="text-sm text-ink-gray-6">
         {{ t`${numSelected} fields selected` }}
       </p>
-      <Button type="primary" @click="exportData">{{ t`Export` }}</Button>
+      <FrappeButton variant="solid" @click="exportData">{{ t`Export` }}</FrappeButton>
     </div>
   </div>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { fyo } from 'src/initFyo';
@@ -122,7 +123,6 @@ import {
 import { ExportField, ExportFormat, ExportTableField } from 'src/utils/types';
 import { QueryFilter } from 'utils/db/types';
 import { PropType, defineComponent } from 'vue';
-import Button from './Button.vue';
 import Check from './Controls/Check.vue';
 import Int from './Controls/Int.vue';
 import Select from './Controls/Select.vue';
@@ -138,7 +138,7 @@ interface ExportWizardData {
 }
 
 export default defineComponent({
-  components: { FormHeader, Check, Select, Button, Int },
+  components: { FormHeader, Check, Select, FrappeButton, Int },
   props: {
     schemaName: { type: String, required: true },
     listFilters: { type: Object as PropType<QueryFilter>, default: () => {} },

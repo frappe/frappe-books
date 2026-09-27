@@ -67,13 +67,14 @@
       <p class="my-3 text-ink-gray-8">
         {{ t`No entries found` }}
       </p>
-      <Button v-if="canCreate" type="primary" @click="$emit('makeNewDoc')">
+      <FrappeButton v-if="canCreate" variant="solid" @click="$emit('makeNewDoc')">
         {{ t`Make Entry` }}
-      </Button>
+      </FrappeButton>
     </div>
   </div>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { ListViewSettings, RenderData } from 'fyo/model/types';
 import {
   List as FrappeList,
@@ -83,7 +84,6 @@ import {
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
-import Button from 'src/components/Button.vue';
 import Paginator from 'src/components/Paginator.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
@@ -102,7 +102,7 @@ export default defineComponent({
     FrappeListRow,
     FrappeListRows,
     ListCell,
-    Button,
+    FrappeButton,
     Paginator,
   },
   props: {

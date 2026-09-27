@@ -60,37 +60,34 @@
         <p v-if="loading" class="text-base text-ink-gray-6">
           {{ t`Loading instance...` }}
         </p>
-        <Button
+        <FrappeButton
           v-if="!loading"
           class="w-24 border border-outline-gray-1"
           @click="cancel"
-          >{{ t`Cancel` }}</Button
-        >
-        <Button
+          >{{ t`Cancel` }}</FrappeButton>
+        <FrappeButton
           v-if="fyo.store.isDevelopment && !loading"
           class="w-24 ml-auto mr-4 border border-outline-gray-1"
           :disabled="loading"
           @click="fill"
-          >{{ t`Fill` }}</Button
-        >
-        <Button
-          type="primary"
+          >{{ t`Fill` }}</FrappeButton>
+        <FrappeButton
+          variant="solid"
           class="w-24"
           data-testid="submit-button"
           :disabled="!areAllValuesFilled || loading"
           @click="submit"
-          >{{ t`Submit` }}</Button
-        >
+          >{{ t`Submit` }}</FrappeButton>
       </div>
     </template>
   </FormContainer>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { TranslationString } from 'fyo/utils/translation';
 import { Field } from 'schemas/types';
-import Button from 'src/components/Button.vue';
 import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import { getErrorMessage } from 'src/utils';
@@ -103,7 +100,7 @@ import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 export default defineComponent({
   name: 'SetupWizard',
   components: {
-    Button,
+    FrappeButton,
     FormContainer,
     FormHeader,
     CommonFormSection,

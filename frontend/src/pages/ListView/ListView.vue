@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <PageHeader :title="title">
-      <Button
+      <FrappeButton
         v-if="
           schemaName === 'Item' &&
           (!isSelectionMode || (isSelectionMode && selectedItems.length === 0))
@@ -9,24 +9,23 @@
         @click="toggleSelectionMode"
       >
         {{ t`Select` }}
-      </Button>
+      </FrappeButton>
       <FrappeDropdown
         v-if="isSelectionMode && schemaName === 'Item' && selectedItems.length > 0"
         :options="actionOptions"
         align="end"
       >
         <template #trigger>
-          <Button class="w-40">{{ t`Create` }}</Button>
+          <FrappeButton class="w-40">{{ t`Create` }}</FrappeButton>
         </template>
       </FrappeDropdown>
-      <Button ref="exportButton" :icon="false" @click="openExportModal = true">
+      <FrappeButton ref="exportButton" @click="openExportModal = true">
         {{ t`Export` }}
-      </Button>
+      </FrappeButton>
       <FilterDropdown ref="filterDropdown" :schema-name="schemaName" @change="applyFilter" />
       <FrappeButton
         v-if="canCreate"
         variant="solid"
-        size="md"
         icon="lucide-plus"
         :label="t`Create new entry`"
         :tooltip="t`Create new entry`"
@@ -63,7 +62,6 @@ import {
   Dropdown as FrappeDropdown,
   type DropdownOptions,
 } from 'frappe-ui';
-import Button from 'src/components/Button.vue';
 import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
 import Modal from 'src/components/Modal.vue';
@@ -85,7 +83,6 @@ export default defineComponent({
   components: {
     PageHeader,
     List,
-    Button,
     FilterDropdown,
     FrappeButton,
     Modal,
@@ -101,7 +98,7 @@ export default defineComponent({
     return {
       shortcuts: inject(shortcutsKey),
       list: ref<InstanceType<typeof List> | null>(null),
-      exportButton: ref<InstanceType<typeof Button> | null>(null),
+      exportButton: ref<InstanceType<typeof FrappeButton> | null>(null),
       filterDropdown: ref<InstanceType<typeof FilterDropdown> | null>(null),
     };
   },

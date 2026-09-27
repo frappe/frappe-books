@@ -23,32 +23,26 @@
     >
       <div class="flex items-center justify-between px-4 h-row-largest">
         <!-- Close Button -->
-        <Button
-          :icon="true"
-          :aria-label="t`Close row editor`"
+        <FrappeButton
+          icon="lucide-x"
+          :label="t`Close row editor`"
           @click="$emit('close')"
-        >
-          <Icon name="x" class="w-4 h-4" />
-        </Button>
+        />
 
         <!-- Actions, Badge and Status Change Buttons -->
         <div class="flex items-stretch gap-2">
-          <Button
+          <FrappeButton
             v-if="previous >= 0"
-            :icon="true"
-            :aria-label="t`Previous row`"
+            icon="lucide-chevron-left"
+            :label="t`Previous row`"
             @click="$emit('previous', previous)"
-          >
-            <Icon name="chevron-left" class="w-4 h-4" />
-          </Button>
-          <Button
+          />
+          <FrappeButton
             v-if="next >= 0"
-            :icon="true"
-            :aria-label="t`Next row`"
+            icon="lucide-chevron-right"
+            :label="t`Next row`"
             @click="$emit('next', next)"
-          >
-            <Icon name="chevron-right" class="w-4 h-4" />
-          </Button>
+          />
         </div>
       </div>
       <FormHeader
@@ -67,11 +61,10 @@
   </div>
 </template>
 <script lang="ts">
+import { Button as FrappeButton } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { ValueError } from 'fyo/utils/errors';
-import Button from 'src/components/Button.vue';
 import FormHeader from 'src/components/FormHeader.vue';
-import Icon from 'src/components/Icon.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { computed } from 'vue';
@@ -81,7 +74,7 @@ import { defineComponent } from 'vue';
 const COMPONENT_NAME = 'RowEditForm';
 
 export default defineComponent({
-  components: { Button, TwoColumnForm, FormHeader, Icon },
+  components: { FrappeButton, TwoColumnForm, FormHeader },
   provide() {
     return {
       doc: computed(() => this.row),

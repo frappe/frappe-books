@@ -1,13 +1,13 @@
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
-      <Button v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
+      <FrappeButton v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
         t`Add Root Group`
-      }}</Button>
-      <Button v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</Button>
-      <Button v-if="!isAllCollapsed" @click="collapse">{{
+      }}</FrappeButton>
+      <FrappeButton v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</FrappeButton>
+      <FrappeButton v-if="!isAllCollapsed" @click="collapse">{{
         t`Collapse`
-      }}</Button>
+      }}</FrappeButton>
     </PageHeader>
     <div
       v-if="root"
@@ -46,19 +46,18 @@
                 align="end"
               >
                 <template #trigger="{ open }">
-                  <Button
-                    :background="false"
-                    :icon="true"
+                  <FrappeButton
+                    variant="ghost"
                     size="xs"
-                    :title="t`Actions for ${String(node.name)}`"
+                    icon="lucide-ellipsis"
+                    :label="t`Actions for ${String(node.name)}`"
+                    :tooltip="t`Actions for ${String(node.name)}`"
                     :class="
                       open
                         ? 'opacity-100'
                         : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'
                     "
-                  >
-                    <Icon name="more-horizontal" :size="14" />
-                  </Button>
+                  />
                 </template>
               </FrappeDropdown>
             </div>
@@ -92,19 +91,18 @@
         "
       />
       <template #actions>
-        <Button @click="cancelAddingAccount(addingParent)">{{
+        <FrappeButton @click="cancelAddingAccount(addingParent)">{{
           t`Cancel`
-        }}</Button>
-        <Button
-          type="primary"
+        }}</FrappeButton>
+        <FrappeButton
+          variant="solid"
           :loading="insertingAccount"
           :disabled="!newAccountName.trim() || insertingAccount"
           @click="
             addingParent &&
             createNewAccount(addingParent, addingParent.addingGroupAccount)
           "
-          >{{ t`Save` }}</Button
-        >
+          >{{ t`Save` }}</FrappeButton>
       </template>
     </FrappeDialog>
   </div>
@@ -118,6 +116,7 @@ import {
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
   type DropdownOptions,
+  Button as FrappeButton,
 } from 'frappe-ui';
 import { isCredit } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
@@ -129,7 +128,6 @@ import { docsPathRef } from 'src/utils/refs';
 import { commonDocDelete, openQuickEdit } from 'src/utils/ui';
 import { getMapFromList } from 'utils/index';
 import { defineComponent, nextTick } from 'vue';
-import Button from '../components/Button.vue';
 import { handleErrorWithDialog } from '../errorHandling';
 import { AccountRootType, AccountType } from 'models/baseModels/Account/types';
 import { TreeViewSettings } from 'fyo/model/types';
@@ -160,7 +158,7 @@ const rootAccountIcons: Record<string, string> = {
 
 export default defineComponent({
   components: {
-    Button,
+    FrappeButton,
     Icon,
     PageHeader,
     FrappeTextInput,

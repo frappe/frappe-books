@@ -8,7 +8,6 @@ from frappe.tests import IntegrationTestCase
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
 )
-from frappe_books.inventory.stock import stock_quantity
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -16,6 +15,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_party,
 	set_inventory_accounts,
+	stock_quantity,
 	unique_name,
 )
 

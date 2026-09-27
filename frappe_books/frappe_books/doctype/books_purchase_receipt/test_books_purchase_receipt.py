@@ -11,13 +11,13 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_rec
 	make_purchase_invoice,
 	make_return,
 )
-from frappe_books.inventory.stock import stock_quantity
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
 	make_item,
 	make_party,
 	set_inventory_accounts,
+	stock_quantity,
 )
 
 

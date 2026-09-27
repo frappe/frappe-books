@@ -11,21 +11,6 @@ from frappe_books.accounting.money import as_decimal, rounded
 DOCTYPE = "Books Stock Ledger Entry"
 KEY_FIELDS = ["item", "location", "batch"]
 STATE_FIELDS = ["name", "date", "quantity", "rate", "balance_quantity", "balance_value", "stock_queue"]
-LEDGER_FIELDS = [
-	"name",
-	"date",
-	"item",
-	"location",
-	"batch",
-	"serial_number",
-	"quantity",
-	"rate",
-	"reference_type",
-	"reference_name",
-	"value_change",
-	"balance_quantity",
-	"balance_value",
-]
 
 
 def insert_entry(values, at_valuation_rate=False):
@@ -94,21 +79,6 @@ def transaction_stock_value(transaction):
 		pluck="value_change",
 	)
 	return abs(rounded(sum((as_decimal(value) for value in values), as_decimal(0))))
-
-
-def computed_entries(items):
-	"""Return the stock ledger rows of the given items with their stored FIFO balances."""
-	entries = frappe.get_all(
-		DOCTYPE, filters={"item": ["in", items]}, fields=LEDGER_FIELDS, order_by="date asc, name asc"
-	)
-	return [
-		{
-			**entry,
-			"incoming_rate": rounded(entry.rate if entry.quantity > 0 else 0),
-			"valuation_rate": rounded(_valuation_rate(entry.balance_value, entry.balance_quantity)),
-		}
-		for entry in entries
-	]
 
 
 def _entry_before(row, date, name=None):

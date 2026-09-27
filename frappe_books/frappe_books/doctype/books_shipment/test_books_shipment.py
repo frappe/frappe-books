@@ -11,7 +11,6 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchas
 	stock_value_change,
 )
 from frappe_books.frappe_books.doctype.books_shipment.books_shipment import make_return, make_sales_invoice
-from frappe_books.inventory.stock import stock_quantity
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -19,6 +18,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_party,
 	set_inventory_accounts,
+	stock_quantity,
 	unique_name,
 )
 from frappe_books.ui_bridge.database import BooksDatabaseBridge

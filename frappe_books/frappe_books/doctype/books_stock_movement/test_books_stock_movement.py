@@ -5,8 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
-from frappe_books.inventory.stock import stock_quantity
-from frappe_books.tests.accounting import make_account, make_item, unique_name
+from frappe_books.tests.accounting import make_account, make_item, stock_quantity, unique_name
 
 
 class IntegrationTestBooksStockMovement(IntegrationTestCase):

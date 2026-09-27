@@ -13,16 +13,6 @@ from frappe_books.inventory.valuation import delete_entries, insert_entry
 LEDGER = "Books Stock Ledger Entry"
 
 
-def stock_quantity(item, location, batch=None, serial_number=None):
-	sle = frappe.qb.DocType(LEDGER)
-	condition = (sle.item == item) & (sle.location == location)
-	if batch:
-		condition &= sle.batch == batch
-	if serial_number:
-		condition &= sle.serial_number == serial_number
-	return as_decimal(frappe.qb.from_(sle).select(Sum(sle.quantity)).where(condition).run()[0][0])
-
-
 def validate_transfer_rows(transfers):
 	"""Check row values, batches and serial numbers; stock levels are checked on submit."""
 	if not transfers:

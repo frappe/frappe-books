@@ -3,6 +3,8 @@
 import frappe
 from frappe.utils import now_datetime
 
+from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
+
 
 def make_account(label, root_type="Asset", **values):
 	return frappe.get_doc(
@@ -101,6 +103,10 @@ def set_inventory_accounts(stock, received, cogs):
 		"Books Inventory Settings",
 		{"stock_in_hand": stock, "stock_received_but_not_billed": received, "cost_of_goods_sold": cogs},
 	)
+
+
+def stock_quantity(item, location):
+	return BooksBespokeQueries().stock_quantity(item, location) or 0
 
 
 def unique_name(label):

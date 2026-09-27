@@ -21,7 +21,7 @@
     :tooltip="t`Loyalty Program`"
     variant="subtle"
     :aria-label="t`Loyalty Program`"
-    @click="openLoyaltyModal"
+    @click="$emit('openLoyaltyProgram')"
   />
 
   <div v-if="fyo.singles.AccountingSettings?.enableCouponCode" class="relative">
@@ -30,7 +30,7 @@
       :tooltip="t`Coupon Code`"
       variant="subtle"
       :aria-label="t`Coupon Code`"
-      @click="openCouponModal"
+      @click="$emit('openCouponCode')"
     />
     <FrappeBadge
       v-if="appliedCouponsCount"
@@ -61,21 +61,14 @@
 </template>
 
 <script lang="ts">
-import { t } from 'fyo';
 import { Badge as FrappeBadge, Button as FrappeButton } from 'frappe-ui';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { showToast } from 'src/utils/interactive';
-import { defineComponent, PropType } from 'vue';
+import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'POSQuickActions',
   components: { FrappeBadge, FrappeButton },
   props: {
     tableView: Boolean,
-    loyaltyPoints: {
-      type: Number,
-      default: 0,
-    },
     loyaltyProgram: {
       type: String,
       default: '',
@@ -84,43 +77,13 @@ export default defineComponent({
       type: Number,
       default: 0,
     },
-    sinvDoc: {
-      type: Object as PropType<SalesInvoice | undefined>,
-      default: undefined,
-    },
   },
-  emits: ['toggleView', 'toggleModal', 'emitRouteToSinvList'],
-  methods: {
-    showValidationToast(action: string, isLoyalty = false) {
-      let message = '';
-
-      if (!this.sinvDoc?.items?.length) {
-        message = t`Please add items`;
-      } else if (!this.sinvDoc?.party) {
-        message = t`Please select a customer`;
-      } else if (isLoyalty && !this.loyaltyPoints) {
-        message = t`Customer has no loyalty points to redeem`;
-      }
-
-      showToast({
-        type: 'error',
-        message: t`${message} before ${action}`,
-      });
-    },
-    openCouponModal() {
-      if (!this.sinvDoc?.items?.length || !this.sinvDoc?.party) {
-        this.showValidationToast('applying coupon');
-        return;
-      }
-      this.$emit('toggleModal', 'CouponCode', true);
-    },
-    openLoyaltyModal() {
-      if (!this.sinvDoc?.items?.length || !this.sinvDoc?.party || !this.loyaltyPoints) {
-        this.showValidationToast('applying loyalty points', true);
-        return;
-      }
-      this.$emit('toggleModal', 'LoyaltyProgram', true);
-    },
-  },
+  emits: [
+    'toggleView',
+    'toggleModal',
+    'emitRouteToSinvList',
+    'openLoyaltyProgram',
+    'openCouponCode',
+  ],
 });
 </script>

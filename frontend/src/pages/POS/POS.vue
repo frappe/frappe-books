@@ -17,6 +17,14 @@
           </span>
         </span>
       </template>
+      <template v-if="isPosShiftOpen" #mobile>
+        <FrappeButton
+          variant="ghost"
+          icon="lucide-ellipsis"
+          :label="t`POS actions`"
+          @click="isMenuOpen = true"
+        />
+      </template>
       <slot>
         <FrappeButton
           @click="toggleModal('ShiftClose')"
@@ -56,13 +64,13 @@
         <div class="flex shrink-0 flex-wrap gap-2 pt-3">
           <POSQuickActions
             :table-view="tableView"
-            :sinv-doc="sinvDoc as SalesInvoice"
-            :loyalty-points="loyaltyPoints"
             :loyalty-program="loyaltyProgram"
             :applied-coupons-count="appliedCouponsCount"
             @toggle-view="toggleView"
             @emit-route-to-sinv-list="routeToSinvList"
             @toggle-modal="toggleModal"
+            @open-loyalty-program="openLoyaltyProgram"
+            @open-coupon-code="openCouponCode"
           />
         </div>
       </template>
@@ -108,6 +116,14 @@
       </template>
     </component>
 
+    <MobilePOSMenu
+      v-if="isMobile"
+      v-model:open="isMenuOpen"
+      :enable-returns="enableReturns"
+      :loyalty-program="loyaltyProgram"
+      :applied-coupons-count="appliedCouponsCount"
+      @select="openMenuAction"
+    />
     <OpenPOSShiftModal
       v-if="!isPosShiftOpen"
       :open-modal="!isPosShiftOpen"
@@ -182,6 +198,7 @@ import { fyo } from 'src/initFyo';
 import ModernPOS from './ModernPOS.vue';
 import ClassicPOS from './ClassicPOS.vue';
 import MobilePOS from './MobilePOS.vue';
+import MobilePOSMenu from './MobilePOSMenu.vue';
 import POSQuickActions from './POSQuickActions.vue';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
@@ -265,6 +282,7 @@ export default defineComponent({
     PageHeader,
     ClassicPOS,
     MobilePOS,
+    MobilePOSMenu,
     POSQuickActions,
     MultiLabelLink,
     POSItemPicker,
@@ -323,6 +341,7 @@ export default defineComponent({
       openBatchSelectionModal: false,
       isPosShiftOpen: false,
       shiftOpenedAt: undefined as Date | undefined,
+      isMenuOpen: false,
 
       totalQuantity: 0,
       paidAmount: fyo.pesa(0),
@@ -430,6 +449,7 @@ export default defineComponent({
     await nextTick();
   },
   deactivated() {
+    this.isMenuOpen = false;
     this.shortcuts?.delete(COMPONENT_NAME);
     toggleSidebar(true);
     this.removeQuickQtyListeners();
@@ -1104,14 +1124,44 @@ export default defineComponent({
       await routeTo('/list/SalesInvoice');
     },
     showValidationToast(method: string) {
-      showToast({
-        type: 'error',
-        message: t`${
-          !this.sinvDoc.items?.length
-            ? 'Please add items'
-            : 'Please select a customer'
-        } before ${method}`,
-      });
+      let message = t`Customer has no loyalty points to redeem`;
+      if (!this.sinvDoc.items?.length) {
+        message = t`Please add items`;
+      } else if (!this.sinvDoc.party) {
+        message = t`Please select a customer`;
+      }
+
+      showToast({ type: 'error', message: t`${message} before ${method}` });
+    },
+    openCouponCode() {
+      if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {
+        return this.showValidationToast('applying coupon');
+      }
+
+      this.toggleModal('CouponCode', true);
+    },
+    openLoyaltyProgram() {
+      if (
+        !this.sinvDoc.items?.length ||
+        !this.sinvDoc.party ||
+        !this.loyaltyPoints
+      ) {
+        return this.showValidationToast('applying loyalty points');
+      }
+
+      this.toggleModal('LoyaltyProgram', true);
+    },
+    openMenuAction(modal: ModalName) {
+      this.isMenuOpen = false;
+      if (modal === 'LoyaltyProgram') {
+        return this.openLoyaltyProgram();
+      }
+
+      if (modal === 'CouponCode') {
+        return this.openCouponCode();
+      }
+
+      this.toggleModal(modal, true);
     },
 
     async saveInvoiceAction() {

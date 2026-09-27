@@ -1,58 +1,69 @@
 <template>
-  <div class="grid gap-x-2" :style="{ gridTemplateColumns }">
+  <!-- A scrolling tree scrolls both ways itself, so its header still sticks. -->
+  <div :class="{ 'min-h-0 flex-1 overflow-auto': scroll }">
     <div
-      class="sticky top-0 z-[1] col-span-full grid grid-cols-subgrid border-y border-outline-gray-1 bg-surface-base px-4 py-2 text-xs-medium text-ink-gray-5"
+      class="grid gap-x-2"
+      :class="{ 'w-max min-w-full pb-12': scroll }"
+      :style="{ gridTemplateColumns }"
     >
-      <span class="truncate">{{ labelHeader }}</span>
-      <span v-for="value in values" :key="value.key" class="truncate text-end">
-        {{ value.label }}
-      </span>
-    </div>
-
-    <button
-      v-for="row in visibleRows"
-      :key="row.key"
-      type="button"
-      data-testid="report-row"
-      class="col-span-full grid grid-cols-subgrid items-center border-b border-outline-gray-1 px-4 text-start tabular-nums enabled:active:bg-surface-gray-2"
-      :class="getRowClass(row)"
-      :aria-expanded="row.isGroup ? !isCollapsed(row) : undefined"
-      :disabled="!row.isGroup && !row.source"
-      @click="onClick(row)"
-    >
-      <span
-        class="flex min-w-0 items-center gap-1.5"
-        :style="{ paddingInlineStart: `${getIndent(row)}px` }"
+      <div
+        class="sticky top-0 z-[1] col-span-full grid grid-cols-subgrid border-y border-outline-gray-1 bg-surface-base px-4 py-2 text-xs-medium text-ink-gray-5"
       >
-        <FrappeIcon
-          v-if="row.isGroup"
-          :icon="
-            isCollapsed(row) ? 'lucide-chevron-right' : 'lucide-chevron-down'
-          "
-          class="size-4 shrink-0 text-ink-gray-5"
-          :class="{ 'rtl-rotate-180': isCollapsed(row) }"
-        />
-        <FrappeIcon
-          v-else-if="row.isChild && icon"
-          :icon="icon"
-          class="size-3.5 shrink-0 text-ink-gray-5"
-        />
-        <span class="flex min-w-0 flex-col gap-1">
-          <span class="truncate">{{ row.label }}</span>
-          <span v-if="row.subtitle" class="truncate text-sm text-ink-gray-5">
-            {{ row.subtitle }}
+        <span class="truncate">{{ labelHeader }}</span>
+        <span
+          v-for="value in values"
+          :key="value.key"
+          class="truncate text-end"
+        >
+          {{ value.label }}
+        </span>
+      </div>
+
+      <button
+        v-for="row in visibleRows"
+        :key="row.key"
+        type="button"
+        data-testid="report-row"
+        class="col-span-full grid grid-cols-subgrid items-center border-b border-outline-gray-1 px-4 text-start tabular-nums enabled:active:bg-surface-gray-2"
+        :class="getRowClass(row)"
+        :aria-expanded="row.isGroup ? !isCollapsed(row) : undefined"
+        :disabled="!row.isGroup && !row.source"
+        @click="onClick(row)"
+      >
+        <span
+          class="flex min-w-0 items-center gap-1.5"
+          :style="{ paddingInlineStart: `${getIndent(row)}px` }"
+        >
+          <FrappeIcon
+            v-if="row.isGroup"
+            :icon="
+              isCollapsed(row) ? 'lucide-chevron-right' : 'lucide-chevron-down'
+            "
+            class="size-4 shrink-0 text-ink-gray-5"
+            :class="{ 'rtl-rotate-180': isCollapsed(row) }"
+          />
+          <FrappeIcon
+            v-else-if="row.isChild && icon"
+            :icon="icon"
+            class="size-3.5 shrink-0 text-ink-gray-5"
+          />
+          <span class="flex min-w-0 flex-col gap-1">
+            <span class="truncate">{{ row.label }}</span>
+            <span v-if="row.subtitle" class="truncate text-sm text-ink-gray-5">
+              {{ row.subtitle }}
+            </span>
           </span>
         </span>
-      </span>
-      <span
-        v-for="(value, index) in row.values"
-        :key="index"
-        class="whitespace-nowrap text-end"
-        :class="{ 'text-ink-gray-4': value.isZero }"
-      >
-        <span dir="ltr">{{ value.text }}</span>
-      </span>
-    </button>
+        <span
+          v-for="(value, index) in row.values"
+          :key="index"
+          class="whitespace-nowrap text-end"
+          :class="{ 'text-ink-gray-4': value.isZero }"
+        >
+          <span dir="ltr">{{ value.text }}</span>
+        </span>
+      </button>
+    </div>
   </div>
 </template>
 <script setup lang="ts">
@@ -72,6 +83,8 @@ const props = defineProps<{
   /** Rows grouped on the client: groups start collapsed. */
   grouped?: boolean;
   icon?: string;
+  /** Labels keep their full width and the tree scrolls sideways. */
+  scroll?: boolean;
 }>();
 
 const emit = defineEmits<{ open: [row: ReportRow] }>();
@@ -80,7 +93,7 @@ const toggled = ref(new Set<string>());
 
 const gridTemplateColumns = computed(() =>
   [
-    'minmax(0, 1fr)',
+    props.scroll ? 'max-content' : 'minmax(0, 1fr)',
     ...props.values.map(({ width }) => `minmax(${width}px, max-content)`),
   ].join(' ')
 );

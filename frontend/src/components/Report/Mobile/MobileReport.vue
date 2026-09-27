@@ -1,5 +1,8 @@
 <template>
-  <div class="flex min-h-full flex-col pb-12">
+  <div
+    class="flex flex-col"
+    :class="isScrollable ? 'min-h-0 flex-1' : 'min-h-full pb-12'"
+  >
     <div
       class="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none]"
     >
@@ -49,6 +52,7 @@
       :label-header="report.columns[tree.headerIndex]?.label ?? ''"
       :grouped="!!tree.layout.groupBy"
       :icon="tree.layout.icon"
+      :scroll="isScrollable"
       @open="openDetail"
     />
     <MobileReportEntries
@@ -128,6 +132,7 @@ const valueColumns = computed(
     []
 );
 const treeRows = computed(() => tree.value?.getRows(valueColumns.value) ?? []);
+const isScrollable = computed(() => !!tree.value?.layout.scroll);
 const isEmpty = computed(
   () => !props.report.reportData.some((row) => !row.isEmpty)
 );

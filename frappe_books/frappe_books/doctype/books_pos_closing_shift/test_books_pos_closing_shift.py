@@ -61,6 +61,17 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertEqual(debits(entries, "Cash"), Decimal("5"))
 		self.assertEqual(credits(entries, self.write_off), Decimal("5"))
 
+	def test_closing_counts_sales_made_after_its_draft_was_saved(self):
+		draft = make_closing_shift(open_shift(100), 280).insert()
+		invoice = self._pos_invoice()
+		self._cash_payment([invoice]).submit()
+
+		draft.submit()
+
+		self.assertEqual(invoice.base_grand_total, 180)
+		self.assertEqual(cash_amounts(draft).expected_amount, 280)
+		self.assertEqual(cash_amounts(draft).difference_amount, 0)
+
 	def test_shift_cannot_be_closed_twice(self):
 		opening = open_shift(100)
 		close_shift(opening, 100)
@@ -146,7 +157,13 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 
 
 def close_shift(opening, counted_cash):
-	shift = frappe.get_doc(
+	shift = make_closing_shift(opening, counted_cash).insert()
+	shift.submit()
+	return shift
+
+
+def make_closing_shift(opening, counted_cash):
+	return frappe.get_doc(
 		{
 			"doctype": "Books Pos Closing Shift",
 			"opening_shift": opening.name,
@@ -157,9 +174,7 @@ def close_shift(opening, counted_cash):
 				{"payment_method": "Bank", "closing_amount": 0},
 			],
 		}
-	).insert()
-	shift.submit()
-	return shift
+	)
 
 
 def cash_amounts(shift):

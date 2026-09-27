@@ -34,6 +34,9 @@ export function getPreDefaultValues(
     case FieldTypeEnum.Int:
     case FieldTypeEnum.Float:
       return 0;
+    // A check box is never empty; a custom one has no schema default.
+    case FieldTypeEnum.Check:
+      return false;
     default:
       return null;
   }

@@ -132,11 +132,6 @@
       @selected-return-invoice="selectedReturnInvoice"
       @toggle-modal="toggleModal('ReturnSalesInvoice', false)"
     />
-    <AlertModal
-      :open-modal="openAlertModal"
-      @toggle-modal="toggleModal('Alert', false)"
-      @save-and-continue="handleSaveAndContinue"
-    />
     <KeyboardModal
       v-if="selectedRow && keyboardField"
       :modal-status="openKeyboardModal"
@@ -148,7 +143,7 @@
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import { Button as FrappeButton, dialog } from 'frappe-ui';
 import { t } from 'fyo';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
@@ -160,7 +155,6 @@ import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
 import POSOrderSummary from 'src/components/POS/POSOrderSummary.vue';
 import POSInvoiceActions from 'src/components/POS/POSInvoiceActions.vue';
 import SelectedItemTable from 'src/components/POS/SelectedItemTable.vue';
-import AlertModal from './AlertModal.vue';
 import PaymentModal from './PaymentModal.vue';
 import KeyboardModal from './KeyboardModal.vue';
 import PriceListModal from './PriceListModal.vue';
@@ -232,7 +226,6 @@ export default defineComponent({
     POSOrderSummary,
     POSInvoiceActions,
     SelectedItemTable,
-    AlertModal,
     PaymentModal,
     KeyboardModal,
     PriceListModal,
@@ -272,7 +265,6 @@ export default defineComponent({
 
       items: [] as POSItem[],
 
-      openAlertModal: false,
       openPaymentModal: false,
       openKeyboardModal: false,
       openPriceListModal: false,
@@ -1028,25 +1020,33 @@ export default defineComponent({
         return await routeTo('/list/SalesInvoice');
       }
 
-      this.openAlertModal = true;
+      dialog.confirm({
+        title: t`Leave this sale?`,
+        message: t`Save this sale to resume it later, or discard the selected items and continue to the invoice list.`,
+        actions: [
+          { label: t`Cancel` },
+          {
+            label: t`Discard and Continue`,
+            theme: 'red',
+            onClick: async () => {
+              await routeTo('/list/SalesInvoice');
+            },
+          },
+          {
+            label: t`Save and Continue`,
+            variant: 'solid',
+            onClick: () => this.saveAndContinue(),
+          },
+        ],
+      });
     },
-    async handleSaveAndContinue() {
-      try {
-        if (!this.sinvDoc.party) {
-          return showToast({
-            type: 'error',
-            message: t`Please add a customer before saving`,
-          });
-        }
-        await this.saveInvoiceAction();
-        this.toggleModal('Alert', false);
-        await this.routeTo('/list/SalesInvoice');
-      } catch (error) {
-        showToast({
-          type: 'error',
-          message: t`${error as string}`,
-        });
+    async saveAndContinue() {
+      if (!this.sinvDoc.party) {
+        throw new Error(t`Please add a customer before saving`);
       }
+
+      await this.saveInvoiceAction();
+      await routeTo('/list/SalesInvoice');
     },
     showValidationToast(method: string) {
       showToast({

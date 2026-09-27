@@ -185,6 +185,8 @@ export class Item extends Doc {
             item: doc.name as string,
             rate: doc.rate as Money,
             tax: doc.tax as string,
+            quantity: 1,
+            transferQuantity: 1,
           });
           await router.push(`/edit/SalesInvoice/${invoice.name!}`);
         },
@@ -199,6 +201,8 @@ export class Item extends Doc {
             item: doc.name as string,
             rate: doc.rate as Money,
             tax: doc.tax as string,
+            quantity: 1,
+            transferQuantity: 1,
           });
           await router.push(`/edit/PurchaseInvoice/${invoice.name!}`);
         },

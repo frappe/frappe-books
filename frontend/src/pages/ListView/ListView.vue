@@ -207,6 +207,7 @@ export default defineComponent({
             item: itemName,
             rate: (itemDoc.rate as Money) || fyo.pesa(0),
             quantity: 1,
+            transferQuantity: 1,
           };
 
           await doc.append('items', itemRow);

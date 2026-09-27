@@ -126,7 +126,9 @@ async function getPaymentTotalValues(
   };
 
   if (taxedDoc instanceof Invoice && taxedDoc.taxes) {
-    values.taxes = taxedDoc.taxes;
+    values.taxes = await Promise.all(
+      taxedDoc.taxes.map((tax) => getPrintTemplateDocValues(tax))
+    );
   }
 
   return values;

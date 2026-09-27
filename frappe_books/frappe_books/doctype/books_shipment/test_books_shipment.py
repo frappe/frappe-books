@@ -12,7 +12,6 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchas
 	stock_value_change,
 )
 from frappe_books.frappe_books.doctype.books_shipment.books_shipment import make_return, make_sales_invoice
-from frappe_books.patches import set_fully_billed_transfers
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -304,18 +303,6 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 
 		second.cancel()
 		self.assertEqual(shipment.db_get("is_fully_billed"), 0)
-
-	def test_patch_flags_shipments_billed_before_the_flag_existed(self):
-		item, _cogs, _stock = self._tracked_item()
-		seed_stock(item.name, quantity=2, rate=10)
-		shipment = self._make_shipment(item, quantity=2, rate=25)
-		shipment.submit()
-		make_sales_invoice(shipment.name).insert().submit()
-		shipment.db_set("is_fully_billed", 0, update_modified=False)
-
-		set_fully_billed_transfers.execute()
-
-		self.assertEqual(shipment.db_get("is_fully_billed"), 1)
 
 	def test_invoice_of_a_shipment_can_bill_lines_it_did_not_ship(self):
 		item, _cogs, _stock = self._tracked_item()

@@ -1,11 +1,8 @@
-from unittest.mock import patch
-
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.returns import map_return
-from frappe_books.patches import set_document_status
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
 
 
@@ -46,23 +43,6 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		credit_note.cancel()
 		self.assertEqual(credit_note.db_get("status"), "Cancelled")
 		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
-
-	def test_patch_stores_existing_statuses(self):
-		self.invoice.submit()
-		self.invoice.db_set("status", "Saved", update_modified=False)
-		set_document_status.execute()
-		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
-
-	def test_patch_updates_statuses_in_batches(self):
-		invoices = [self.invoice, frappe.copy_doc(self.invoice).insert()]
-		for invoice in invoices:
-			invoice.submit()
-			invoice.db_set("status", "Saved", update_modified=False)
-
-		with patch.object(set_document_status, "BATCH_SIZE", 1):
-			set_document_status.execute()
-
-		self.assertEqual([invoice.db_get("status") for invoice in invoices], ["Unpaid", "Unpaid"])
 
 	def _pay(self, amount):
 		payment = frappe.get_doc(

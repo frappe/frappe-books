@@ -184,6 +184,7 @@ async function installPaymentFixture(page: Page) {
       failRefresh: false,
       payment: null as any,
       stored: null as any,
+      openPayment: null as any,
     });
     const accounts = [
       {
@@ -283,15 +284,35 @@ async function installPaymentFixture(page: Page) {
       if (schemaName === 'PurchaseInvoice' && name === invoice.name) {
         fixture.refreshes++;
         if (fixture.failRefresh) throw new Error('Invoice refresh rejected');
-        return { ...invoice.getValidDict(), outstandingAmount: fyo.pesa(0) };
+        const outstandingAmount = fixture.stored?.submitted ? 0 : 100;
+        return {
+          ...invoice.getValidDict(),
+          outstandingAmount: fyo.pesa(outstandingAmount),
+        };
       }
       return get(schemaName, name, ...args);
     };
+    const exists = fyo.db.exists.bind(fyo.db);
+    fyo.db.exists = async (schemaName: string, name?: string) =>
+      (schemaName === 'PurchaseInvoice' && name === invoice.name) ||
+      exists(schemaName, name);
 
+    fixture.openPayment = async () => {
+      const action = fyo.models.PurchaseInvoice.getActions(fyo).find(
+        (entry: any) => entry.label === 'Payment'
+      );
+      await action.action(invoice, router);
+    };
     await router.push(`/edit/PurchaseInvoice/${invoice.name}`);
-    const action = fyo.models.PurchaseInvoice.getActions(fyo).find(
-      (entry: any) => entry.label === 'Payment'
-    );
-    await action.action(invoice, router);
+  });
+
+  // Opening the form reloads the invoice; count only the payment's reloads.
+  await expect(
+    page.getByRole('heading', { name: 'PAYMENT-FLOW-INVOICE', exact: true })
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const fixture = (window as any).paymentFlow;
+    fixture.refreshes = 0;
+    return fixture.openPayment();
   });
 }

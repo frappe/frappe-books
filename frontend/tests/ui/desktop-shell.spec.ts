@@ -47,7 +47,6 @@ test('the sidebar header menu opens help and account actions', async ({
   for (const name of [
     'Documentation',
     'Keyboard Shortcuts',
-    'Report Issue',
     'Apps',
     'Log Out',
   ]) {

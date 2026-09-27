@@ -79,9 +79,12 @@ class BooksDatabaseBridge:
 			filters=self._target_filters(source_schema, options.filters or {}),
 			order_by=self._order_by(source_schema, options.orderBy, options.order),
 			group_by=self._group_by(source_schema, options.groupBy),
-			offset=options.offset,
+			offset=options.offset if options.limit else None,
 			limit=options.limit,
 		)
+		if options.offset and not options.limit:
+			# Frappe pads a limitless offset with MariaDB's largest LIMIT, which overflows SQLite.
+			rows = rows[options.offset :]
 		return [self._row_to_source(source_schema, row, requested) for row in rows]
 
 	def count(self, source_schema: str, filters: dict[str, Any] | None = None) -> int:

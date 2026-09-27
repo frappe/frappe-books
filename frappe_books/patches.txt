@@ -1,22 +1,8 @@
 [pre_model_sync]
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://docs.frappe.io/framework/user/en/database-migrations
-frappe_books.patches.rename_books_module
-frappe_books.patches.standard_print_formats
 
 [post_model_sync]
-frappe_books.patches.normalize_ledger_dates
-frappe_books.patches.line_discounts
-frappe_books.patches.currency_display
-frappe_books.patches.submit_pos_shifts
-frappe_books.patches.store_stock_valuation
-frappe_books.patches.sync_numeric_name_series
-frappe_books.patches.remove_setup_wizard_completed
-frappe_books.patches.give_custom_fields_to_form_owners
-frappe_books.patches.move_attachments_to_files
-frappe_books.patches.set_document_status
-frappe_books.patches.rename_colliding_custom_fields
-frappe_books.patches.set_fully_billed_transfers
 # Patches added in this section will be executed after doctypes are migrated
 
 [post_fixture_sync]

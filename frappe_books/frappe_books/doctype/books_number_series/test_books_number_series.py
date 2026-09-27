@@ -24,6 +24,8 @@ class IntegrationTestBooksNumberSeries(IntegrationTestCase):
 		self.assertEqual(series.next(), f"{prefix}008")
 
 	def test_taken_number_stays_locked_until_the_request_commits(self):
+		if frappe.db.db_type == "sqlite":
+			self.skipTest("SQLite has no row locks; a write locks the whole database.")
 		# JV- is seeded before tests, so the second connection can see it.
 		with self.primary_connection():
 			next_name("JV-")

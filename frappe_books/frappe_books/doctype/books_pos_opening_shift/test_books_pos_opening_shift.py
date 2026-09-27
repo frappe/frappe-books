@@ -8,7 +8,6 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.commerce.pos import open_shift_name
-from frappe_books.patches import submit_pos_shifts
 from frappe_books.tests.accounting import ledger_entries, make_account, unique_name
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
@@ -68,18 +67,6 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		with self.set_user(user):
 			self.assertRaises(frappe.PermissionError, frappe.get_doc(shift.doctype, shift.name).cancel)
 
-	def test_patch_submits_posted_shift_without_posting_again(self):
-		shift = make_opening_shift(100).insert()
-		journal = make_journal(f"POS opening shift {shift.name}", self.counter)
-
-		submit_pos_shifts.execute()
-
-		self.assertEqual(frappe.db.get_value(shift.doctype, shift.name, "docstatus"), 1)
-		self.assertEqual(frappe.db.get_value(shift.doctype, shift.name, "journal_entry"), journal)
-		self.assertEqual(
-			frappe.db.count("Books Journal Entry", {"user_remark": f"POS opening shift {shift.name}"}), 1
-		)
-
 
 def set_pos_accounts():
 	"""Configure POS accounts and start without an open shift, as tests in a class share one transaction."""
@@ -130,23 +117,6 @@ def open_shift(cash):
 	shift = make_opening_shift(cash).insert()
 	shift.submit()
 	return shift
-
-
-def make_journal(remark, account):
-	journal = frappe.get_doc(
-		{
-			"doctype": "Books Journal Entry",
-			"entry_type": "Cash Entry",
-			"posting_date": now_datetime().date(),
-			"user_remark": remark,
-			"accounts": [
-				{"account": account, "debit": 100, "credit": 0},
-				{"account": "Cash", "debit": 0, "credit": 100},
-			],
-		}
-	).insert()
-	journal.submit()
-	return journal.name
 
 
 def make_user(role):

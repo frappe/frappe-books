@@ -10,7 +10,6 @@ from frappe.utils import add_to_date, now_datetime
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	movement_values,
 )
-from frappe_books.patches import store_stock_valuation
 from frappe_books.reports.stock import stock_ledger
 from frappe_books.tests.accounting import make_account, make_item
 
@@ -105,21 +104,6 @@ class IntegrationTestValuation(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "Insufficient stock", receipt.cancel)
 
-	def test_patch_stores_state_on_existing_entries(self):
-		move(self.item, "MaterialReceipt", 4, 10)
-		move(self.item, "MaterialReceipt", 2, 20)
-		issue = move(self.item, "MaterialIssue", 5, 99)
-		expected = ledger_state(issue)
-		frappe.db.set_value(
-			"Books Stock Ledger Entry",
-			{"item": self.item},
-			{"value_change": 0, "balance_quantity": 0, "balance_value": 0, "stock_queue": None},
-		)
-
-		store_stock_valuation.execute()
-
-		self.assertEqual(ledger_state(issue), expected)
-
 
 def move(item, movement_type, quantity, rate, date=None):
 	location = "to_location" if movement_type == "MaterialReceipt" else "from_location"
@@ -135,13 +119,4 @@ def ledger_entry(movement):
 	return frappe.get_last_doc(
 		"Books Stock Ledger Entry",
 		filters={"reference_type": movement.doctype, "reference_name": movement.name},
-	)
-
-
-def ledger_state(movement):
-	return frappe.db.get_value(
-		"Books Stock Ledger Entry",
-		{"reference_type": movement.doctype, "reference_name": movement.name},
-		["value_change", "balance_quantity", "balance_value", "stock_queue"],
-		as_dict=True,
 	)

@@ -148,7 +148,6 @@ yarn --cwd frontend test:ui
 `frontend/tests/ui/README.md` explains which browser tests need a running site. Run `pre-commit install` to format and lint changed files on commit. The Prettier and ESLint hooks use `frontend/node_modules`, so run `yarn install` first.
 
 The integration suite covers the UI data layer, posting, reversals, payments, valuation, stock, POS, setup, and printing.
-Database regressions cover legacy date repair, native Date columns, singleton settings, and large numeric record names.
 Use a separate test site for each database and run the same suite against Frappe `develop`.
 GitHub Actions runs the linters once, then installation, migration, the integration suite, and the browser tests on all three databases against Frappe `develop`.
 

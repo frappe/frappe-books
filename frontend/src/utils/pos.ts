@@ -300,6 +300,7 @@ export function getItemInitials(name: string): string {
 export function toPOSItem(item: Item, itemQtyMap: ItemQtyMap): POSItem {
   return {
     availableQty: itemQtyMap[item.name as string]?.availableQty ?? 0,
+    trackItem: !!item.trackItem,
     name: item.name as string,
     itemCode: item.itemCode as string,
     barcode: item.barcode as string,

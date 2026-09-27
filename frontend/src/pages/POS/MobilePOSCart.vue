@@ -1,0 +1,171 @@
+<template>
+  <FrappeBottomSheet
+    :open="open"
+    :title="t`Cart`"
+    @update:open="(value: boolean) => $emit('update:open', value)"
+  >
+    <div class="flex flex-col pb-[max(env(safe-area-inset-bottom),1rem)]">
+      <div class="px-4 pb-3">
+        <MultiLabelLink
+          v-if="sinvDoc.fieldMap"
+          class="w-full"
+          secondary-link="phone"
+          :border="true"
+          :value="sinvDoc.party"
+          :df="sinvDoc.fieldMap.party"
+          :show-clear-button="true"
+          @change="(party: string) => $emit('setCustomer', party)"
+        />
+      </div>
+
+      <div
+        v-for="row in sinvDoc.items ?? []"
+        :key="row.name"
+        class="flex items-center gap-3 border-t border-outline-gray-1 px-4 py-2.5"
+      >
+        <button
+          type="button"
+          class="flex min-w-0 flex-1 flex-col gap-1.5 text-start"
+          :disabled="!!row.isFreeItem"
+          @click="$emit('edit', row)"
+        >
+          <span class="truncate text-md-medium text-ink-gray-9">
+            {{ row.item }}
+          </span>
+          <span class="truncate text-sm tabular-nums text-ink-gray-5">
+            {{ getRowMeta(row) }}
+          </span>
+        </button>
+        <MobileStepper
+          v-if="!row.isFreeItem"
+          class="w-32 shrink-0"
+          removable
+          :min="1"
+          :value="getQuantity(row)"
+          :df="{
+            fieldname: quantityField,
+            fieldtype: 'Float',
+            label: t`Quantity of ${row.item ?? ''}`,
+          }"
+          @change="(quantity: number) => setQuantity(row, quantity)"
+          @remove="row.parentdoc?.remove('items', row.idx as number)"
+        />
+        <span v-else class="text-md tabular-nums text-ink-gray-7">
+          {{ getQuantity(row) }}
+        </span>
+      </div>
+
+      <dl
+        class="flex flex-col gap-2 border-t border-outline-gray-1 px-4 py-3 text-md tabular-nums"
+      >
+        <div
+          v-for="total in totals"
+          :key="total.label"
+          class="flex justify-between gap-4"
+          :class="
+            total.strong ? 'font-semibold text-ink-gray-9' : 'text-ink-gray-8'
+          "
+        >
+          <dt>{{ total.label }}</dt>
+          <dd dir="ltr">{{ fyo.format(total.value, 'Currency') }}</dd>
+        </div>
+      </dl>
+
+      <div class="flex gap-2 px-4 pt-2">
+        <FrappeButton
+          class="flex-1"
+          size="lg"
+          :label="t`Hold`"
+          @click="$emit('hold')"
+        />
+        <FrappeButton
+          class="flex-[2]"
+          size="lg"
+          variant="solid"
+          :disabled="disablePay"
+          :label="payLabel"
+          @click="$emit('pay')"
+        />
+      </div>
+    </div>
+  </FrappeBottomSheet>
+</template>
+
+<script setup lang="ts">
+import { t } from 'fyo';
+import {
+  BottomSheet as FrappeBottomSheet,
+  Button as FrappeButton,
+} from 'frappe-ui';
+import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import { Money } from 'pesa';
+import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
+import MobileStepper from 'src/components/POS/MobileStepper.vue';
+import { ItemSerialNumbers } from 'src/components/POS/types';
+import { fyo } from 'src/initFyo';
+import { showToast } from 'src/utils/interactive';
+import {
+  fillRowSerialNumbers,
+  getPOSQuantityField,
+  setPOSRowQuantity,
+} from 'src/utils/pos';
+import { computed, inject, type Ref } from 'vue';
+
+/** The cart sheet: customer, lines with quantity steppers, totals, Hold and Pay. */
+defineProps<{ open: boolean; disablePay: boolean }>();
+
+defineEmits<{
+  'update:open': [open: boolean];
+  setCustomer: [party: string];
+  edit: [row: SalesInvoiceItem];
+  hold: [];
+  pay: [];
+}>();
+
+const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
+const totalTaxedAmount = inject('totalTaxedAmount') as Ref<Money>;
+const itemDiscounts = inject('itemDiscounts') as Ref<Money>;
+const itemSerialNumbers = inject('itemSerialNumbers') as Ref<ItemSerialNumbers>;
+const quantityField = getPOSQuantityField(fyo);
+
+const totals = computed(() => {
+  const optional = [
+    { label: t`Taxes`, value: totalTaxedAmount.value },
+    { label: t`Item Discounts`, value: itemDiscounts.value },
+  ].filter(({ value }) => value && !value.isZero());
+
+  return [
+    { label: t`Net Total`, value: sinvDoc.value.netTotal ?? fyo.pesa(0) },
+    ...optional,
+    {
+      label: t`Grand Total`,
+      value: sinvDoc.value.grandTotal ?? fyo.pesa(0),
+      strong: true,
+    },
+  ];
+});
+
+const payLabel = computed(() => {
+  const amount = fyo.format(sinvDoc.value.grandTotal ?? 0, 'Currency');
+  return sinvDoc.value.isReturn ? t`Refund ${amount}` : t`Pay ${amount}`;
+});
+
+function getQuantity(row: SalesInvoiceItem): number {
+  return Math.abs(row[quantityField] ?? row.quantity ?? 0);
+}
+
+function getRowMeta(row: SalesInvoiceItem): string {
+  const rate = fyo.format(row.rate ?? 0, 'Currency');
+  return [rate, row.tax, row.pricingRule].filter(Boolean).join(' · ');
+}
+
+async function setQuantity(row: SalesInvoiceItem, quantity: number) {
+  try {
+    await setPOSRowQuantity(row, quantityField, quantity);
+    await fillRowSerialNumbers(row, itemSerialNumbers.value);
+  } catch (error) {
+    showToast({ type: 'error', message: t`${error as string}` });
+  }
+}
+</script>

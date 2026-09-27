@@ -1,6 +1,22 @@
 <template>
-  <div class="flex min-h-0 flex-col">
+  <div class="flex flex-col" :class="isMobile ? 'min-h-full' : 'min-h-0'">
     <PageHeader :title="t`Point of Sale`">
+      <template v-if="isMobile && isPosShiftOpen" #mobile-prefix>
+        <FrappeButton
+          variant="ghost"
+          icon="lucide-x"
+          :label="t`Exit POS`"
+          @click="routeToSinvList"
+        />
+      </template>
+      <template v-if="isMobile" #mobile-title>
+        <span class="flex flex-col items-center gap-0.5">
+          <span>{{ t`POS` }}</span>
+          <span v-if="shiftSubtitle" class="text-xs text-ink-gray-5">
+            {{ shiftSubtitle }}
+          </span>
+        </span>
+      </template>
       <slot>
         <FrappeButton
           @click="toggleModal('ShiftClose')"
@@ -9,7 +25,22 @@
         </FrappeButton>
       </slot>
     </PageHeader>
-    <component :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'">
+    <MobilePOS
+      v-if="isMobile"
+      :items="filteredItems as POSItem[]"
+      :search-term="itemSearchTerm"
+      :total-quantity="totalQuantity"
+      :disable-pay="disablePayButton"
+      @search="handleItemSearch"
+      @add-item="addItem"
+      @set-customer="setCustomer"
+      @hold="saveInvoiceAction"
+      @pay="handlePaymentAction"
+    />
+    <component
+      :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'"
+      v-else
+    >
       <template #items>
         <POSItemPicker
           :items="filteredItems as POSItem[]"
@@ -150,6 +181,7 @@ import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import ModernPOS from './ModernPOS.vue';
 import ClassicPOS from './ClassicPOS.vue';
+import MobilePOS from './MobilePOS.vue';
 import POSQuickActions from './POSQuickActions.vue';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
@@ -232,6 +264,7 @@ export default defineComponent({
     ModernPOS,
     PageHeader,
     ClassicPOS,
+    MobilePOS,
     POSQuickActions,
     MultiLabelLink,
     POSItemPicker,
@@ -268,6 +301,7 @@ export default defineComponent({
   },
   setup() {
     return {
+      isMobile,
       shortcuts: inject(shortcutsKey),
     };
   },
@@ -288,6 +322,7 @@ export default defineComponent({
       openReturnSalesInvoiceModal: false,
       openBatchSelectionModal: false,
       isPosShiftOpen: false,
+      shiftOpenedAt: undefined as Date | undefined,
 
       totalQuantity: 0,
       paidAmount: fyo.pesa(0),
@@ -334,6 +369,17 @@ export default defineComponent({
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
+    },
+    shiftSubtitle(): string {
+      if (!this.shiftOpenedAt) {
+        return '';
+      }
+
+      const opened = DateTime.fromJSDate(this.shiftOpenedAt);
+      const time = opened.hasSame(DateTime.now(), 'day')
+        ? opened.toLocaleString(DateTime.TIME_SIMPLE)
+        : fyo.format(this.shiftOpenedAt, 'Date');
+      return t`Shift opened ${time}`;
     },
     disablePayButton(): boolean {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {
@@ -952,7 +998,15 @@ export default defineComponent({
       }
     },
     async setIsPosShiftOpen() {
-      this.isPosShiftOpen = !!(await fyo.db.getOpenPOSShift());
+      const shift = await fyo.db.getOpenPOSShift();
+      this.isPosShiftOpen = !!shift;
+      this.shiftOpenedAt = shift
+        ? ((await fyo.getValue(
+            ModelNameEnum.POSOpeningShift,
+            shift,
+            'openingDate'
+          )) as Date)
+        : undefined;
     },
     toggleModal(modal: ModalName | 'ShiftOpen', value?: boolean) {
       if (modal === 'ShiftOpen' || modal === 'ShiftClose') {

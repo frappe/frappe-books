@@ -1,19 +1,24 @@
 <template>
   <FrappePageHeaderMobile v-if="isActive && isMobile" :title="title">
     <template #prefix>
-      <FrappePageHeaderBackButton
-        v-if="$route.meta.pushed"
-        class="rtl-rotate-180"
-        :label="t`Back`"
-        fallback-route="/"
-      />
-      <FrappeButton
-        v-else
-        variant="ghost"
-        icon="lucide-menu"
-        :label="t`Menu`"
-        @click="openDrawer?.()"
-      />
+      <slot name="mobile-prefix">
+        <FrappePageHeaderBackButton
+          v-if="$route.meta.pushed"
+          class="rtl-rotate-180"
+          :label="t`Back`"
+          fallback-route="/"
+        />
+        <FrappeButton
+          v-else
+          variant="ghost"
+          icon="lucide-menu"
+          :label="t`Menu`"
+          @click="openDrawer?.()"
+        />
+      </slot>
+    </template>
+    <template v-if="$slots['mobile-title']" #default>
+      <slot name="mobile-title" />
     </template>
     <template v-if="$slots.mobile" #suffix>
       <div class="flex items-center gap-1">

@@ -39,6 +39,7 @@ export interface POSItem {
   item?: string;
   batch?: string;
   availableQty: number;
+  trackItem?: boolean;
   unit: string;
   hasBatch: boolean;
   hasSerialNumber: boolean;

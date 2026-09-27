@@ -31,9 +31,6 @@ def validate_custom_form(doc):
 
 
 def sync_all_custom_forms():
-	if not frappe.db.table_exists("Books Custom Form"):
-		return
-
 	for name in frappe.get_all("Books Custom Form", pluck="name"):
 		sync_custom_form(frappe.get_doc("Books Custom Form", name))
 

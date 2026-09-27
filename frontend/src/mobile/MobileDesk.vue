@@ -29,6 +29,7 @@ import { inject, onMounted, provide, readonly, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { isDesktopOnly } from './availability';
 import MobileDrawer from './MobileDrawer.vue';
+import { useBackClosesSheets } from './useBackClosesSheets';
 
 defineProps<{ darkMode: boolean }>();
 
@@ -39,6 +40,7 @@ const route = useRoute();
 const router = useRouter();
 const direction = inject(languageDirectionKey, ref<'ltr' | 'rtl'>('ltr'));
 const isDrawerOpen = ref(false);
+useBackClosesSheets();
 provide(openDrawerKey, () => (isDrawerOpen.value = true));
 provide(isDrawerOpenKey, readonly(isDrawerOpen));
 

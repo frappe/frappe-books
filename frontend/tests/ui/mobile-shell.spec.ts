@@ -56,3 +56,19 @@ test('pushed pages show a back button instead of the menu', async ({
   await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(0);
 });
+
+test('back closes the drawer before leaving the page', async ({ page }) => {
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await drawer(page)
+    .getByRole('button', { name: 'Sales', exact: true })
+    .click();
+  await drawer(page).getByRole('link', { name: 'Sales Quotes' }).click();
+  await expect(page).toHaveURL(/\/books\/list\/SalesQuote$/);
+
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await expect(drawer(page)).toBeVisible();
+  await page.evaluate(() => history.back());
+
+  await expect(drawer(page)).toBeHidden();
+  await expect(page).toHaveURL(/\/books\/list\/SalesQuote$/);
+});

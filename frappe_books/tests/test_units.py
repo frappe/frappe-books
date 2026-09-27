@@ -1,4 +1,5 @@
 import frappe
+from frappe.client import insert
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
@@ -12,10 +13,10 @@ class IntegrationTestUnits(IntegrationTestCase):
 		self.income = make_account("Unit Sales", root_type="Income", account_type="Income Account")
 		self.expense = make_account("Unit Expense", root_type="Expense", account_type="Expense Account")
 		self.box = make_uom("Box")
-		received = make_account("Unit Received", root_type="Liability")
+		self.received = make_account("Unit Received", root_type="Liability").name
 		self.item = make_item(
 			self.income.name,
-			received.name,
+			self.received,
 			track_item=1,
 			uom_conversions=[{"uom": self.box, "conversion_factor": 12}],
 		)
@@ -49,6 +50,41 @@ class IntegrationTestUnits(IntegrationTestCase):
 		row = movement.items[0]
 		self.assertEqual((row.unit_conversion_factor, row.transfer_quantity, row.quantity), (1, 4, 4))
 
+	def test_api_rows_take_the_item_unit_and_derive_the_missing_quantity(self):
+		piece = make_uom("Piece")
+		conversions = [{"uom": self.box, "conversion_factor": 12}]
+		item = make_item(
+			self.income.name, self.received, track_item=1, unit=piece, uom_conversions=conversions
+		)
+		for values, expected in (
+			({"quantity": 3}, (piece, 3, 3)),
+			({"transfer_quantity": 4}, (piece, 4, 4)),
+			({"transfer_unit": self.box, "quantity": 24}, (self.box, 2, 24)),
+		):
+			with self.subTest(values=values):
+				row = {"item": item.name, "to_location": "Stores", "rate": 10, **values}
+				movement = insert(movement_values("MaterialReceipt", [row]))
+				row = movement["items"][0]
+				self.assertEqual(
+					(row["unit"], row["transfer_unit"], row["transfer_quantity"], row["quantity"]),
+					(piece, *expected),
+				)
+
+	def test_api_invoice_rows_take_the_item_unit(self):
+		receivable = make_account("Unit Receivable", account_type="Receivable")
+		piece = make_uom("Piece")
+		item = make_item(self.income.name, self.expense.name, unit=piece)
+		invoice = insert(
+			{
+				"doctype": "Books Sales Invoice",
+				"party": make_party(receivable.name).name,
+				"date": frappe.utils.now_datetime(),
+				"items": [{"item": item.name, "quantity": 2, "rate": 10}],
+			}
+		)
+		row = invoice["items"][0]
+		self.assertEqual((row["transfer_unit"], row["transfer_quantity"], row["amount"]), (piece, 2, 20))
+
 	def test_row_unit_must_be_a_unit_of_the_item(self):
 		movement = self._receipt({"transfer_unit": make_uom("Crate"), "unit_conversion_factor": 6})
 
@@ -59,7 +95,7 @@ class IntegrationTestUnits(IntegrationTestCase):
 		box = make_uom("Whole Box", is_whole=1)
 		item = make_item(
 			self.income.name,
-			make_account("Unit Received", root_type="Liability").name,
+			self.received,
 			track_item=1,
 			unit=piece,
 			uom_conversions=[{"uom": box, "conversion_factor": 12}],

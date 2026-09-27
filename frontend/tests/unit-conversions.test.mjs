@@ -39,4 +39,19 @@ for (const schemaName of [
       /Transfer Unit Crate is not applicable for Item Pen/
     );
   });
+
+  test(`a new ${schemaName} row starts at one of its item's unit`, async () => {
+    const fyo = await makeFyo();
+    fyo.doc.getNewDoc('Item', { name: 'Rice', unit: 'Kg' });
+    const doc = fyo.doc.getNewDoc(schemaName);
+    await doc.append('items');
+    await doc.items[0].set('item', 'Rice');
+    clearTimeout(doc._previewTimer);
+
+    const { quantity, transferQuantity, unit, transferUnit } = doc.items[0];
+    assert.deepEqual(
+      [quantity, transferQuantity, unit, transferUnit],
+      [1, 1, 'Kg', 'Kg']
+    );
+  });
 }

@@ -1,102 +1,96 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
-import { getSchemas } from './helpers/fyo.mjs';
+import {
+  dataProperties,
+  FieldTypeEnum,
+  fieldProperties,
+  getSchemas,
+  isReferenceField,
+} from './helpers/fyo.mjs';
 
-const appRoot = new URL('../../frappe_books/', import.meta.url);
-const mapping = readJson(new URL('schema_mapping.json', appRoot)).doctypes;
-const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 // Frappe stores single values in its own Singles table.
 const UNMAPPED_SCHEMAS = ['SingleValue'];
-const FRAPPE_FIELD_TYPES = {
-  AttachImage: ['Attach Image'],
-  Attachment: ['Attach'],
-  AutoComplete: ['Autocomplete'],
-  DynamicLink: ['Dynamic Link'],
-  Secret: ['Password'],
-  Text: ['Text', 'Code'],
-};
 
-for (const countryCode of ['in', 'ch']) {
-  test(`${countryCode} app schemas match the DocType fields`, () => {
-    const problems = [];
+for (const countryCode of ['-', 'in', 'ch']) {
+  test(`${countryCode} schema files leave data properties to the DocTypes`, () => {
+    const schemas = getSchemas(countryCode, [], {});
+    const problems = getFields(schemas).flatMap(
+      ([schemaName, field, docfield]) =>
+        getFileProblems(field, docfield).map(
+          (problem) => `${schemaName}.${field.fieldname} ${problem}`
+        )
+    );
+    assert.deepEqual(problems, []);
+  });
+
+  test(`${countryCode} schemas built with DocType properties are complete`, () => {
     const schemas = getSchemas(countryCode, []);
-    for (const [schemaName, schema] of Object.entries(schemas)) {
-      if (UNMAPPED_SCHEMAS.includes(schemaName)) continue;
-      problems.push(...getSchemaProblems(schemaName, schema));
-    }
+    const problems = getFields(schemas)
+      .filter(([, , docfield]) => docfield)
+      .flatMap(([schemaName, field]) =>
+        getBuiltFieldProblems(schemas, field).map(
+          (problem) => `${schemaName}.${field.fieldname} ${problem}`
+        )
+      );
     assert.deepEqual(problems, []);
   });
 }
 
-function getSchemaProblems(schemaName, schema) {
-  const config = mapping[schemaName];
-  const doctype = doctypes[config?.doctype];
-  if (!doctype) return [`${schemaName} has no mapped DocType`];
-
-  const referenceFields = schema.fields
-    .filter((field) => field.fieldtype === 'DynamicLink')
-    .map((field) => field.references);
-  return schema.fields
-    .filter((field) => !field.meta && field.fieldname !== 'name')
-    .flatMap((field) => {
-      const target = config.fields[field.fieldname];
-      const docfield = doctype.fields.find((df) => df.fieldname === target);
-      if (!docfield) {
-        return [`${schemaName}.${field.fieldname} has no DocType field`];
-      }
-      const isReference = referenceFields.includes(field.fieldname);
-      return getFieldProblems(field, docfield, isReference).map(
-        (problem) => `${schemaName}.${field.fieldname} ${problem}`
-      );
-    });
+function getFields(schemas) {
+  return Object.entries(schemas)
+    .filter(([schemaName]) => !UNMAPPED_SCHEMAS.includes(schemaName))
+    .flatMap(([schemaName, schema]) =>
+      schema.fields
+        .filter((field) => !field.meta)
+        .map((field) => [
+          schemaName,
+          field,
+          fieldProperties[schemaName]?.[field.fieldname],
+        ])
+    );
 }
 
-function getFieldProblems(field, docfield, isReference) {
-  const fieldtypes = isReference
-    ? ['Link']
-    : (FRAPPE_FIELD_TYPES[field.fieldtype] ?? [field.fieldtype]);
+function getFileProblems(field, docfield) {
+  if (!docfield) {
+    // The primary key is a DocType field only when it is renamed.
+    return field.fieldname === 'name' ? [] : ['has no DocType field'];
+  }
+
+  return getOwnedProperties(field, docfield).map(
+    (property) => `sets ${property}, which the DocType owns`
+  );
+}
+
+function getOwnedProperties(field, docfield) {
+  if (field.computed) {
+    return [];
+  }
+
+  // The DocType stores a doctype name; the Books app picks from its own list.
+  const kept = isReferenceField(docfield) ? ['fieldtype', 'options'] : [];
+  // Frappe Color fields have no palette.
+  if (docfield.fieldtype === 'Color') {
+    kept.push('options');
+  }
+
+  return dataProperties.filter(
+    (property) => field[property] !== undefined && !kept.includes(property)
+  );
+}
+
+function getBuiltFieldProblems(schemas, field) {
   const problems = [];
-  if (!fieldtypes.includes(docfield.fieldtype)) {
-    problems.push(`is ${docfield.fieldtype}, not ${fieldtypes.join(' or ')}`);
+  if (!Object.values(FieldTypeEnum).includes(field.fieldtype)) {
+    problems.push(`has no Books field type for ${field.fieldtype}`);
   }
-  if (docfield.reqd && !field.required) {
-    problems.push('is required by the DocType');
+  if (['Link', 'Table'].includes(field.fieldtype) && !schemas[field.target]) {
+    problems.push(`links to ${field.target}, which is not a Books schema`);
   }
-  if (field.target && docfield.options !== getDoctypeName(field.target)) {
-    problems.push(`links to ${docfield.options}`);
-  }
-  if (field.fieldtype === 'Select' && !isReference) {
-    problems.push(...getMissingOptions(field, docfield));
+  const values = (field.options ?? []).map((option) => option.value);
+  for (const value of Object.keys(field.optionLabels ?? {})) {
+    if (!values.includes(value)) {
+      problems.push(`labels ${value}, which is not a DocType option`);
+    }
   }
   return problems;
-}
-
-function getMissingOptions(field, docfield) {
-  const options = (docfield.options ?? '').split('\n');
-  return (field.options ?? [])
-    .map((option) => option.value ?? option)
-    .filter((value) => value !== '' && !options.includes(value))
-    .map((value) => `has no ${value} option`);
-}
-
-function getDoctypeName(schemaName) {
-  return mapping[schemaName]?.doctype ?? schemaName;
-}
-
-function readDoctypes(directory) {
-  const entries = readdirSync(directory, { withFileTypes: true });
-  const folders = entries.filter(
-    (entry) => entry.isDirectory() && !entry.name.startsWith('__')
-  );
-  return Object.fromEntries(
-    folders.map(({ name }) => {
-      const doctype = readJson(new URL(`${name}/${name}.json`, directory));
-      return [doctype.name, doctype];
-    })
-  );
-}
-
-function readJson(url) {
-  return JSON.parse(readFileSync(url, 'utf8'));
 }

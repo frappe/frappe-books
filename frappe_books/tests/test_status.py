@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
@@ -50,6 +52,17 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		self.invoice.db_set("status", "Saved", update_modified=False)
 		set_document_status.execute()
 		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
+
+	def test_patch_updates_statuses_in_batches(self):
+		invoices = [self.invoice, frappe.copy_doc(self.invoice).insert()]
+		for invoice in invoices:
+			invoice.submit()
+			invoice.db_set("status", "Saved", update_modified=False)
+
+		with patch.object(set_document_status, "BATCH_SIZE", 1):
+			set_document_status.execute()
+
+		self.assertEqual([invoice.db_get("status") for invoice in invoices], ["Unpaid", "Unpaid"])
 
 	def _pay(self, amount):
 		payment = frappe.get_doc(

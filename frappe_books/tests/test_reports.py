@@ -1,10 +1,12 @@
 from decimal import Decimal
 from itertools import pairwise
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime, nowdate
 
+from frappe_books.reports import gst
 from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_valuation import move
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
@@ -220,6 +222,20 @@ class IntegrationTestGSTR(IntegrationTestCase):
 
 		self.assertEqual((row["rate"], row["igstAmt"], row["inState"]), (*_decimals(18, 18), False))
 		self.assertNotIn("cgstAmt", row)
+
+	def test_invoices_and_parties_are_read_in_batches(self):
+		gst_18 = _tax(("CGST", 9), ("SGST", 9))
+		first = self._invoice((gst_18, 100, 1))
+		self.party = make_party(self.receivable.name)
+		second = self._invoice((gst_18, 200, 1))
+
+		with patch.object(gst, "IN_LIST_BATCH_SIZE", 1):
+			rows = [*self._rows(first), *self._rows(second)]
+
+		self.assertEqual(
+			[(row["invNo"], row["partyName"], row["taxVal"]) for row in rows],
+			[(first.name, first.party, Decimal(100)), (second.name, second.party, Decimal(200))],
+		)
 
 	def _invoice(self, *rows):
 		return (

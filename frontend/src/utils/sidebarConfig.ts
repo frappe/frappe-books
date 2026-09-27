@@ -36,7 +36,7 @@ function getRegionalSidebar(): SidebarRoot[] {
     {
       label: t`GST`,
       name: 'gst',
-      icon: 'gst',
+      icon: 'lucide-badge-indian-rupee',
       route: '/report/GSTR1',
       items: [
         {
@@ -64,8 +64,7 @@ function getInventorySidebar(): SidebarRoot[] {
     {
       label: t`Inventory`,
       name: 'inventory',
-      icon: 'inventory',
-      iconSize: '18',
+      icon: 'lucide-package',
       route: '/list/StockMovement',
       items: [
         {
@@ -106,7 +105,7 @@ function getPOSSidebar() {
     label: t`POS`,
     name: 'pos',
     route: '/pos',
-    icon: 'pos',
+    icon: 'lucide-store',
     hidden: () => !fyo.singles.InventorySettings?.enablePointOfSale,
   };
 }
@@ -115,7 +114,7 @@ function getReportSidebar() {
   return {
     label: t`Reports`,
     name: 'reports',
-    icon: 'reports',
+    icon: 'lucide-chart-no-axes-combined',
     route: '/report/GeneralLedger',
     items: [
       {
@@ -148,9 +147,7 @@ function getCompleteSidebar(): SidebarConfig {
       label: t`Get Started`,
       name: 'get-started',
       route: '/get-started',
-      icon: 'general',
-      iconSize: '24',
-      iconHeight: 5,
+      icon: 'lucide-wrench',
       hidden: () =>
         !!fyo.singles.SystemSettings?.hideGetStarted ||
         !fyo.can('GetStarted', 'write'),
@@ -159,12 +156,12 @@ function getCompleteSidebar(): SidebarConfig {
       label: t`Dashboard`,
       name: 'dashboard',
       route: '/',
-      icon: 'dashboard',
+      icon: 'lucide-layout-dashboard',
     },
     {
       label: t`Sales`,
       name: 'sales',
-      icon: 'sales',
+      icon: 'lucide-credit-card',
       route: '/list/SalesInvoice',
       items: [
         {
@@ -233,7 +230,7 @@ function getCompleteSidebar(): SidebarConfig {
     {
       label: t`Purchases`,
       name: 'purchases',
-      icon: 'purchase',
+      icon: 'lucide-shopping-bag',
       route: '/list/PurchaseInvoice',
       items: [
         {
@@ -268,7 +265,7 @@ function getCompleteSidebar(): SidebarConfig {
     {
       label: t`Common`,
       name: 'common-entries',
-      icon: 'common-entries',
+      icon: 'lucide-notebook-tabs',
       route: '/list/JournalEntry',
       items: [
         {
@@ -307,7 +304,7 @@ function getCompleteSidebar(): SidebarConfig {
     {
       label: t`Setup`,
       name: 'setup',
-      icon: 'settings',
+      icon: 'lucide-sliders-horizontal',
       route: '/chart-of-accounts',
       items: [
         {

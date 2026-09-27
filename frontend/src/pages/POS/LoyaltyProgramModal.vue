@@ -6,7 +6,10 @@
   >
     <div class="flex flex-col gap-5">
       <div class="flex items-start gap-3">
-        <Icon name="coins" class="mt-1 size-5 shrink-0 text-ink-gray-6" />
+        <span
+          class="lucide-coins mt-1 size-5 shrink-0 text-ink-gray-6"
+          aria-hidden="true"
+        />
         <div class="min-w-0">
           <p class="text-base font-medium text-ink-gray-9">
             {{ t`${loyaltyPoints} points available` }}
@@ -49,7 +52,6 @@ import { defineComponent, inject } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
 import Int from 'src/components/Controls/Int.vue';
-import Icon from 'src/components/Icon.vue';
 
 export default defineComponent({
   name: 'LoyaltyProgramModal',
@@ -57,7 +59,6 @@ export default defineComponent({
     Modal,
     FrappeButton,
     Int,
-    Icon,
   },
   props: {
     openModal: {

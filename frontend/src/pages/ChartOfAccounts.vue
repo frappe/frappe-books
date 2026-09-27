@@ -20,9 +20,10 @@
         :aria-label="t`Chart of Accounts`"
       >
         <template #item-prefix="{ node }">
-          <Icon
-            :name="getAccountIconName(!!node.isGroup, String(node.name))"
-            :size="16"
+          <span
+            class="size-4 shrink-0"
+            :class="getAccountIconName(!!node.isGroup, String(node.name))"
+            aria-hidden="true"
           />
         </template>
         <template #item-label="{ node }">
@@ -120,7 +121,6 @@ import {
 } from 'frappe-ui';
 import { isCredit } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import Icon from 'src/components/Icon.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { docsPathMap } from 'src/utils/misc';
@@ -150,16 +150,15 @@ type AccountItem = {
 type AccKey = 'addingAccount' | 'addingGroupAccount';
 
 const rootAccountIcons: Record<string, string> = {
-  'Application of Funds (Assets)': 'landmark',
-  Expenses: 'receipt-indian-rupee',
-  Income: 'coins',
-  'Source of Funds (Liabilities)': 'hand-coins',
+  'Application of Funds (Assets)': 'lucide-landmark',
+  Expenses: 'lucide-receipt-indian-rupee',
+  Income: 'lucide-coins',
+  'Source of Funds (Liabilities)': 'lucide-hand-coins',
 };
 
 export default defineComponent({
   components: {
     FrappeButton,
-    Icon,
     PageHeader,
     FrappeTextInput,
     FrappeTree,
@@ -500,7 +499,7 @@ export default defineComponent({
     },
     getAccountIconName(isGroup: boolean, name?: string): string {
       return (
-        (name && rootAccountIcons[name]) || (isGroup ? 'folder' : 'circle')
+        (name && rootAccountIcons[name]) || (isGroup ? 'lucide-folder' : 'lucide-circle')
       );
     },
     getGroups(accounts: AccountItem[]): AccountItem[] {

@@ -47,12 +47,11 @@
       variant="subtle"
       size="xs"
       class="ms-1"
+      icon="lucide-refresh-cw"
+      :label="t`Swap currencies`"
       :tooltip="t`Swap currencies`"
-      :aria-label="t`Swap currencies`"
       @click="swap"
-    >
-      <Icon name="refresh-cw" class="w-3 h-3 text-ink-gray-6" />
-    </FrappeButton>
+    />
   </div>
 </template>
 <script lang="ts">
@@ -60,12 +59,11 @@ import {
   Button as FrappeButton,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
-import Icon from 'src/components/Icon.vue';
 import { safeParseFloat } from 'utils/index';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-  components: { FrappeButton, FrappeTextInput, Icon },
+  components: { FrappeButton, FrappeTextInput },
   props: {
     disabled: { type: Boolean, default: false },
     fromCurrency: { type: String, default: 'USD' },

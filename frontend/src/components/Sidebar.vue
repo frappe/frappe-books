@@ -20,19 +20,9 @@
           :label="group.label"
           :route="getPath(group)"
           :active="Boolean(isGroupActive(group) && !group.items)"
+          :icon="group.icon"
           class="mb-1"
-        >
-          <template #prefix>
-            <Icon
-              class="flex-shrink-0"
-              :name="group.icon"
-              :size="group.iconSize || '18'"
-              :height="group.iconHeight ?? 0"
-              :active="!!isGroupActive(group)"
-              :dark-mode="darkMode"
-            />
-          </template>
-        </FrappeSidebarItem>
+        />
 
         <div v-if="group.items && isGroupActive(group)" class="mb-1">
           <FrappeSidebarItem
@@ -55,7 +45,10 @@
         @click="() => toggleSidebar()"
       >
         <template #prefix>
-          <Icon name="chevrons-left" class="h-4 w-4 rtl-rotate-180" />
+          <span
+            class="lucide-chevrons-left size-4 text-ink-gray-6 rtl-rotate-180"
+            aria-hidden="true"
+          />
         </template>
       </FrappeSidebarItem>
     </div>
@@ -89,7 +82,6 @@ import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
 import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
 import router from '../router';
-import Icon from './Icon.vue';
 import ShortcutsHelper from './ShortcutsHelper.vue';
 
 const COMPONENT_NAME = 'Sidebar';
@@ -100,11 +92,7 @@ export default defineComponent({
     FrappeSidebarHeader,
     FrappeSidebarItem,
     FrappeKeyboardShortcutsDialog,
-    Icon,
     ShortcutsHelper,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
   },
   setup() {
     return { shortcuts: inject(shortcutsKey) };

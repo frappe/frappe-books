@@ -74,7 +74,7 @@
           @click="addRow"
         >
           <FrappeListCell class="justify-center">
-            <Icon name="plus" class="w-4 h-4 text-ink-gray-5" />
+            <span class="lucide-plus size-4 text-ink-gray-5" aria-hidden="true" />
           </FrappeListCell>
           <FrappeListCell
             class="justify-between px-2"
@@ -101,7 +101,6 @@
 </template>
 
 <script>
-import Icon from 'src/components/Icon.vue';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -122,7 +121,6 @@ export default {
     FrappeListHeader,
     FrappeListHeaderCell,
     FrappeListRow,
-    Icon,
     TableRow,
   },
   extends: Base,

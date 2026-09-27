@@ -220,6 +220,30 @@ export async function validatePOSCheckout(
   }
 }
 
+export type POSRowItem = {
+  hasBatch: boolean;
+  hasSerialNumber: boolean;
+  units: string[];
+};
+
+/** A cart row item's batch and serial number tracking, and the units it sells in. */
+export async function getPOSRowItem(
+  fyo: Fyo,
+  item?: string
+): Promise<POSRowItem> {
+  if (!item) {
+    return { hasBatch: false, hasSerialNumber: false, units: [] };
+  }
+
+  const doc = (await fyo.doc.getDoc(ModelNameEnum.Item, item)) as Item;
+  const units = [doc.unit, ...doc.uomConversions.map(({ uom }) => uom)];
+  return {
+    hasBatch: !!doc.hasBatch,
+    hasSerialNumber: !!doc.hasSerialNumber,
+    units: [...new Set(units.filter((unit): unit is string => !!unit))],
+  };
+}
+
 /** Fills a sale row with in-stock serial numbers; a return row keeps the sold ones. */
 export async function fillRowSerialNumbers(
   row: SalesInvoiceItem,

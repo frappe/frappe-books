@@ -271,6 +271,8 @@ import { showToast } from 'src/utils/interactive';
 import {
   fillRowSerialNumbers,
   getPOSPermissionSetting,
+  getPOSRowItem,
+  POSRowItem,
   POSRowField,
   setPOSRowValue,
   validateSerialNumberCount,
@@ -311,7 +313,11 @@ export default defineComponent({
       availableQtyInBatch: 0,
       canChangeRate: false,
       canEditDiscount: false,
-      transferUnitOptions: [] as { label: string; value: string }[],
+      itemSettings: {
+        hasBatch: false,
+        hasSerialNumber: false,
+        units: [],
+      } as POSRowItem,
     };
   },
   computed: {
@@ -325,10 +331,16 @@ export default defineComponent({
       return !!this.row.isFreeItem;
     },
     hasBatch(): boolean {
-      return !!this.row.links?.item?.hasBatch;
+      return this.itemSettings.hasBatch;
     },
     hasSerialNumber(): boolean {
-      return !!this.row.links?.item?.hasSerialNumber;
+      return this.itemSettings.hasSerialNumber;
+    },
+    transferUnitOptions(): { label: string; value: string }[] {
+      return this.itemSettings.units.map((unit) => ({
+        label: unit,
+        value: unit,
+      }));
     },
     displayQuantity(): number | undefined {
       if (!this.isUOMConversionEnabled) {
@@ -360,8 +372,8 @@ export default defineComponent({
       immediate: true,
     },
     'row.item': {
-      async handler() {
-        await this.updateTransferUnitOptions();
+      async handler(item?: string) {
+        this.itemSettings = await getPOSRowItem(fyo, item);
       },
       immediate: true,
     },
@@ -433,24 +445,6 @@ export default defineComponent({
       if (quantity !== 0) {
         await this.setValue(field, quantity);
       }
-    },
-    async updateTransferUnitOptions() {
-      if (!this.row.item) {
-        this.transferUnitOptions = [];
-        return;
-      }
-
-      const item = await fyo.doc.getDoc('Item', this.row.item);
-      const conversions = (item.uomConversions ?? []) as { uom?: string }[];
-      const units = new Set(
-        [item.unit, ...conversions.map(({ uom }) => uom)].filter(
-          (unit): unit is string => typeof unit === 'string'
-        )
-      );
-      this.transferUnitOptions = [...units].map((unit) => ({
-        label: unit,
-        value: unit,
-      }));
     },
     async getAvailableQtyInBatch(): Promise<number> {
       return getPOSBatchQuantity(fyo, this.row.item as string, this.row.batch);

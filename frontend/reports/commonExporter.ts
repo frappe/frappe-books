@@ -42,7 +42,10 @@ export function getExportActions<T extends Report>(
   }));
 }
 
-async function exportReport(extension: ExportExtension, report: Report) {
+export async function exportReport(
+  extension: ExportExtension,
+  report: Report
+) {
   let data = '';
 
   if (extension === 'csv') {

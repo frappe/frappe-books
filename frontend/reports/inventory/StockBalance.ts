@@ -1,6 +1,7 @@
 import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
 import getCommonExportActions from 'reports/commonExporter';
+import { PhoneLayout } from 'reports/types';
 import { Field } from 'schemas/types';
 import { StockLedger } from './StockLedger';
 import { ReferenceType, SerialNumberStatus } from './types';
@@ -9,6 +10,19 @@ export class StockBalance extends StockLedger {
   static title = t`Stock Balance`;
   static reportName = 'stock-balance';
   static serverReportName = 'Books Stock Balance';
+  static phoneLayout: PhoneLayout = {
+    type: 'tree',
+    label: 'location',
+    groupBy: 'item',
+    describeGroup: (count) =>
+      count === 1 ? t`1 location` : t`${count} locations`,
+    icon: 'lucide-map-pin',
+    values: [
+      { fieldname: 'balance_quantity', label: t`Qty`, width: 52 },
+      { fieldname: 'balance_value', label: t`Value`, width: 112 },
+    ],
+    chips: ['toDate', 'location', 'item'],
+  };
   static isInventory = true;
 
   override ascending = true;

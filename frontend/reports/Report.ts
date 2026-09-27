@@ -13,7 +13,13 @@ import {
   ServerReportResult,
   ServerRow,
 } from './serverReport';
-import { ColumnField, ReportCell, ReportData, ReportRow } from './types';
+import {
+  ColumnField,
+  PhoneLayout,
+  ReportCell,
+  ReportData,
+  ReportRow,
+} from './types';
 
 export abstract class Report extends Observable<RawValue> {
   static title: string;
@@ -21,6 +27,7 @@ export abstract class Report extends Observable<RawValue> {
   /** The Script Report that computes this report on the server. */
   static serverReportName: string;
   static isInventory = false;
+  static phoneLayout?: PhoneLayout;
 
   fyo: Fyo;
   columns: ColumnField[] = [];
@@ -46,6 +53,10 @@ export abstract class Report extends Observable<RawValue> {
 
   get serverReportName(): string {
     return (this.constructor as typeof Report).serverReportName;
+  }
+
+  get phoneLayout(): PhoneLayout | undefined {
+    return (this.constructor as typeof Report).phoneLayout;
   }
 
   async initialize() {
@@ -79,7 +90,10 @@ export abstract class Report extends Observable<RawValue> {
       return;
     }
 
-    value = Converter.toRawValue(value, field, this.fyo);
+    // Clearing works for every field type, including checks.
+    value = getIsNullOrUndef(value)
+      ? null
+      : Converter.toRawValue(value, field, this.fyo);
     const prevValue = this[key];
     if (prevValue === value) {
       return;
@@ -96,9 +110,22 @@ export abstract class Report extends Observable<RawValue> {
     }
   }
 
-  async updateData(key?: string, force?: boolean) {
+  /** Sets filter values in order, without loading data. */
+  async setFilters(values: Record<string, DocValue>) {
+    for (const [key, value] of Object.entries(values)) {
+      await this.set(key, value, false);
+      // A value can add the filter fields that follow it.
+      await this.refreshFilters();
+    }
+  }
+
+  async refreshFilters() {
     await this.setDefaultFilters();
     this.filters = await this.getFilters();
+  }
+
+  async updateData(key?: string, force?: boolean) {
+    await this.refreshFilters();
     this.columns = await this.getColumns();
     await this.setReportData(key, force);
   }

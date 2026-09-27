@@ -7,6 +7,10 @@ export class ProfitAndLoss extends AccountReport {
   static title = t`Profit And Loss`;
   static reportName = 'profit-and-loss';
   static serverReportName = 'Books Profit and Loss';
+  static phoneLayout = {
+    ...AccountReport.phoneLayout,
+    periods: { total: true },
+  };
 
   /** The profit row is bold, with profits in green and losses in red. */
   getReportRow(row: ServerRow): ReportRow {

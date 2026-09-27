@@ -1,11 +1,21 @@
 import { t } from 'fyo';
 import { AccountReport } from 'reports/AccountReport';
+import { PhoneTreeLayout } from 'reports/types';
 import { Field } from 'schemas/types';
 
 export class TrialBalance extends AccountReport {
   static title = t`Trial Balance`;
   static reportName = 'trial-balance';
   static serverReportName = 'Books Trial Balance';
+  static phoneLayout: PhoneTreeLayout = {
+    type: 'tree',
+    label: 'account',
+    values: [
+      { fieldname: 'closing_debit', width: 100 },
+      { fieldname: 'closing_credit', width: 100 },
+    ],
+    chips: ['fromDate', 'toDate'],
+  };
 
   fromDate?: string;
 

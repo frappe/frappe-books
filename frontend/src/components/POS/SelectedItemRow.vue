@@ -259,7 +259,6 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
 import { getPOSBatchQuantity } from 'models/inventory/posStock';
 import { Money } from 'pesa';
 import AutoComplete from 'src/components/Controls/AutoComplete.vue';
@@ -270,6 +269,7 @@ import Text from 'src/components/Controls/Text.vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
+  fillRowSerialNumbers,
   getPOSPermissionSetting,
   POSRowField,
   setPOSRowValue,
@@ -367,8 +367,8 @@ export default defineComponent({
     },
     'row.quantity': {
       async handler(quantity?: number, previous?: number) {
-        if (quantity !== previous) {
-          await this.fetchSerialNumbers();
+        if (this.hasSerialNumber && quantity !== previous) {
+          await fillRowSerialNumbers(this.row, this.itemSerialNumbers);
         }
       },
     },
@@ -467,31 +467,6 @@ export default defineComponent({
         Math.abs(this.row.quantity ?? 0),
         this.row.item as string
       );
-    },
-    /** Fills a sale row with in-stock serial numbers; returns keep the sold ones. */
-    async fetchSerialNumbers() {
-      const item = this.row.item as string;
-      const quantity = this.row.quantity ?? 0;
-      if (!this.hasSerialNumber || quantity <= 0) {
-        return;
-      }
-
-      const existing = (this.itemSerialNumbers[item] ?? '')
-        .split('\n')
-        .filter((serialNumber) => serialNumber.trim());
-      if (existing.length === quantity) {
-        return;
-      }
-
-      const serialNumbers = await getExistingActiveSerialNumbersForItem(
-        fyo,
-        item,
-        quantity
-      );
-      if (serialNumbers) {
-        await this.row.set('serialNumber', serialNumbers);
-        this.itemSerialNumbers[item] = serialNumbers;
-      }
     },
     async removeRow() {
       await this.row.parentdoc?.remove('items', this.row.idx as number);

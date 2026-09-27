@@ -17,6 +17,7 @@ import { showToast } from './interactive';
 import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
 import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
 import { validateQty } from 'models/helpers';
+import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
 
 export type POSPermissionSetting = 'canChangeRate' | 'canEditDiscount';
 export type POSQuantityField = 'quantity' | 'transferQuantity';
@@ -216,6 +217,31 @@ export async function validatePOSCheckout(
   await validateSinv(sinvDoc, await loadStock());
   if (!sinvDoc.isReturn) {
     await validateActiveSerialNumbers(sinvDoc.fyo, itemSerialNumbers);
+  }
+}
+
+/** Fills a sale row with in-stock serial numbers; a return row keeps the sold ones. */
+export async function fillRowSerialNumbers(
+  row: SalesInvoiceItem,
+  itemSerialNumbers: ItemSerialNumbers
+) {
+  const item = row.item as string;
+  const quantity = row.quantity ?? 0;
+  const existing = (itemSerialNumbers[item] ?? '')
+    .split('\n')
+    .filter((serialNumber) => serialNumber.trim());
+  if (quantity <= 0 || existing.length === quantity) {
+    return;
+  }
+
+  const serialNumbers = await getExistingActiveSerialNumbersForItem(
+    row.fyo,
+    item,
+    quantity
+  );
+  if (serialNumbers) {
+    await row.set('serialNumber', serialNumbers);
+    itemSerialNumbers[item] = serialNumbers;
   }
 }
 

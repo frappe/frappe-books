@@ -185,13 +185,13 @@ import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
 import { getPaymentMethodRequirements } from 'models/baseModels/PaymentMethod/requirements';
 import { ModalName, modalNames } from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
-import { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import {
   addBatchItem,
   addPOSItem,
+  fillRowSerialNumbers,
   validatePOSCheckout,
   getTotalQuantity,
   getTotalTaxedAmount,
@@ -212,7 +212,6 @@ import {
   ItemSerialNumbers,
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
 import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
 import { getPOSInventory } from 'models/inventory/posStock';
 
@@ -747,24 +746,6 @@ export default defineComponent({
         );
       }
     },
-    async assignActiveSerialNumbers(
-      itemName: string,
-      quantity: number,
-      row: Pick<InvoiceItem, 'set'>
-    ) {
-      const serialNumbers = await getExistingActiveSerialNumbersForItem(
-        this.fyo,
-        itemName,
-        quantity
-      );
-
-      if (!serialNumbers) {
-        return;
-      }
-
-      this.itemSerialNumbers[itemName] = serialNumbers;
-      await row.set('serialNumber', serialNumbers);
-    },
     async addItem(item: POSItem | undefined, quantity = 1) {
       try {
         await this.sinvDoc.runFormulas();
@@ -784,11 +765,7 @@ export default defineComponent({
           quantity,
           this.itemQtyMap
         );
-        await this.assignActiveSerialNumbers(
-          item.name,
-          row.quantity as number,
-          row
-        );
+        await fillRowSerialNumbers(row, this.itemSerialNumbers);
         await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       } catch (error) {

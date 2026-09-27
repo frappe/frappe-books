@@ -6,6 +6,7 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.accounting.money import company_currency
 from frappe_books.accounting.returns import map_return
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
 	open_shift,
@@ -263,6 +264,41 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		invoice.insert()
+
+	def test_invoice_bills_in_the_party_currency(self):
+		currency = foreign_currency()
+		party = make_party(self.receivable.name, currency=currency)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			currency=company_currency(),
+			exchange_rate=80,
+		)
+
+		self.assertEqual((invoice.currency, invoice.exchange_rate), (currency, 80))
+
+	def test_foreign_currency_invoice_needs_an_exchange_rate(self):
+		party = make_party(self.receivable.name, currency=foreign_currency())
+		with self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"):
+			make_invoice(
+				"Books Sales Invoice", party.name, self.receivable.name, self.item.name, self.income.name
+			)
+
+	def test_company_currency_invoice_has_an_exchange_rate_of_one(self):
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			currency=foreign_currency(),
+			exchange_rate=80,
+		)
+
+		self.assertEqual((invoice.currency, invoice.exchange_rate), (company_currency(), 1))
 
 	def test_pos_invoice_needs_an_open_shift(self):
 		set_pos_accounts()

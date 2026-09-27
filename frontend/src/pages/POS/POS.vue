@@ -168,7 +168,8 @@ import BatchSelectionModal from './BatchSelectionModal.vue';
 import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
 import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { ModelNameEnum } from 'models/types';
-import { showToast } from 'src/utils/interactive';
+import { showDialog, showToast } from 'src/utils/interactive';
+import { isMobile } from 'src/utils/viewport';
 import { Item } from 'models/baseModels/Item/Item';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -1001,9 +1002,30 @@ export default defineComponent({
         return await routeTo('/list/SalesInvoice');
       }
 
+      const title = t`Leave this sale?`;
+      const message = t`Save this sale to resume it later, or discard the selected items and continue to the invoice list.`;
+      if (isMobile.value) {
+        return await showDialog({
+          title,
+          detail: message,
+          buttons: [
+            {
+              label: t`Save and Continue`,
+              action: () => this.saveAndContinue(),
+              isPrimary: true,
+            },
+            {
+              label: t`Discard and Continue`,
+              action: () => routeTo('/list/SalesInvoice'),
+            },
+            { label: t`Cancel`, action: () => null, isEscape: true },
+          ],
+        });
+      }
+
       dialog.confirm({
-        title: t`Leave this sale?`,
-        message: t`Save this sale to resume it later, or discard the selected items and continue to the invoice list.`,
+        title,
+        message,
         actions: [
           { label: t`Cancel` },
           {

@@ -41,12 +41,12 @@
       </div>
     </div>
 
-    <template #actions>
-      <FrappeButton size="md" class="min-w-24" @click="handleDismiss">{{
+    <template #actions="{ size }">
+      <FrappeButton :size="size" class="min-w-24" @click="handleDismiss">{{
         t`Back`
       }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         @click="handleSubmit"

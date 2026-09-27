@@ -13,10 +13,14 @@
         :aria-label="t`Search by invoice name`"
         :placeholder="t`Search by invoice name`"
         class="w-full"
-        variant="outline"
-        size="md"
+        :variant="isMobile ? 'subtle' : 'outline'"
+        :size="isMobile ? 'lg' : 'md'"
         @keydown.enter="handleSearchEnter"
-      />
+     >
+        <template v-if="isMobile" #prefix>
+          <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
+        </template>
+      </FrappeTextInput>
     </div>
 
     <InvoiceSelectionTable
@@ -35,12 +39,12 @@
       />
     </div>
 
-    <template #actions>
-      <FrappeButton size="md" class="min-w-24" @click="closeModal">{{
+    <template #actions="{ size }">
+      <FrappeButton :size="size" class="min-w-24" @click="closeModal">{{
         t`Cancel`
       }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         :disabled="!selectedInvoiceName"
@@ -59,13 +63,15 @@ import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
 import { Money } from 'pesa';
 import Paginator from 'src/components/Paginator.vue';
-import { TextInput as FrappeTextInput, Button as FrappeButton } from 'frappe-ui';
+import { TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
+import { isMobile } from 'src/utils/viewport';
 
 export default defineComponent({
   name: 'ReturnSalesInvoice',
   components: {
     Modal,
     FrappeButton,
+    FrappeIcon,
     InvoiceSelectionTable,
     Paginator,
     FrappeTextInput,
@@ -74,6 +80,9 @@ export default defineComponent({
     openModal: Boolean,
   },
   emits: ['toggleModal', 'selectedReturnInvoice'],
+  setup() {
+    return { isMobile };
+  },
   data() {
     return {
       returnedInvoices: [] as SalesInvoice[],

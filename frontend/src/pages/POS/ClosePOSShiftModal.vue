@@ -34,14 +34,14 @@
       @row-change="updateClosingAmounts"
     />
 
-    <template #actions>
+    <template #actions="{ size }">
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         @click="$emit('toggleModal', 'ShiftClose', false)"
         >{{ t`Cancel` }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         @click="handleSubmit"

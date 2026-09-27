@@ -11,7 +11,7 @@
         :border="true"
         :show-label="true"
         :value="selectedPriceList"
-        :focus-input="true"
+        :focus-input="!isMobile"
         :df="sinvDoc.fieldMap.priceList"
         @change="(value) => (selectedPriceList = value ?? '')"
       />
@@ -26,12 +26,12 @@
         @click="removePriceList"
       />
     </div>
-    <template #actions>
-      <FrappeButton size="md" class="min-w-24" @click="cancelPriceList">{{
+    <template #actions="{ size }">
+      <FrappeButton :size="size" class="min-w-24" @click="cancelPriceList">{{
         t`Cancel`
       }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         @click="setPriceList"
@@ -47,6 +47,7 @@ import { defineComponent, inject } from 'vue';
 import { showToast } from 'src/utils/interactive';
 import Link from 'src/components/Controls/Link.vue';
 import { Button as FrappeButton } from 'frappe-ui';
+import { isMobile } from 'src/utils/viewport';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 
 export default defineComponent({
@@ -62,6 +63,7 @@ export default defineComponent({
   emits: ['toggleModal'],
   setup() {
     return {
+      isMobile,
       sinvDoc: inject('sinvDoc') as SalesInvoice,
     };
   },

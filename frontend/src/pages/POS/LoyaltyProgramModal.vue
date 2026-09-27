@@ -23,19 +23,19 @@
         v-if="sinvDoc.fieldMap"
         :show-label="true"
         :border="true"
-        :focus-input="true"
+        :focus-input="!isMobile"
         :value="pendingLoyaltyPoints"
         :df="sinvDoc.fieldMap.loyaltyPoints"
         @keydown.enter="saveLoyaltyPoints"
         @change="setPendingLoyaltyPoints"
       />
     </div>
-    <template #actions>
-      <FrappeButton size="md" class="min-w-24" @click="cancelLoyaltyProgram">{{
+    <template #actions="{ size }">
+      <FrappeButton :size="size" class="min-w-24" @click="cancelLoyaltyProgram">{{
         t`Cancel`
       }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         @click="saveLoyaltyPoints"
@@ -46,6 +46,7 @@
 
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import { isMobile } from 'src/utils/viewport';
 import Modal from 'src/components/POS/POSDialog.vue';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { defineComponent, inject } from 'vue';
@@ -78,6 +79,7 @@ export default defineComponent({
   emits: ['setLoyaltyPoints', 'toggleModal'],
   setup() {
     return {
+      isMobile,
       sinvDoc: inject('sinvDoc') as SalesInvoice,
     };
   },

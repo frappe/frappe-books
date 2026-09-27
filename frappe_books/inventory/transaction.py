@@ -169,38 +169,34 @@ def transfer_rows(transaction):
 
 
 def post_stock_accounts(transaction):
-	amount = transaction_stock_value(transaction)
-	if amount == 0:
+	value = transaction_stock_value(transaction)
+	if value == 0:
 		return
+	_validate_value_direction(transaction, value)
 	settings = frappe.get_single("Books Inventory Settings")
+	stock = settings.stock_in_hand
+	counter = (
+		settings.cost_of_goods_sold
+		if transaction.transfer_type == "sales"
+		else settings.stock_received_but_not_billed
+	)
+	if not stock or not counter:
+		frappe.throw(_("Set all inventory ledger accounts in Books Inventory Settings."))
+	debit, credit = (stock, counter) if value > 0 else (counter, stock)
 	posting = LedgerPosting(transaction)
-	is_return = bool(transaction.return_against)
-	if transaction.transfer_type == "sales":
-		_debit_credit(
-			posting,
-			settings.cost_of_goods_sold,
-			settings.stock_in_hand,
-			amount,
-			reverse=is_return,
-		)
-	else:
-		_debit_credit(
-			posting,
-			settings.stock_in_hand,
-			settings.stock_received_but_not_billed,
-			amount,
-			reverse=is_return,
-		)
+	posting.debit(debit, abs(value))
+	posting.credit(credit, abs(value))
 	posting.post()
 
 
-def _debit_credit(posting, debit_account, credit_account, amount, reverse):
-	if not debit_account or not credit_account:
-		frappe.throw(_("Set all inventory ledger accounts in Books Inventory Settings."))
-	if reverse:
-		debit_account, credit_account = credit_account, debit_account
-	posting.debit(debit_account, amount)
-	posting.credit(credit_account, amount)
+def _validate_value_direction(transaction, value):
+	takes_stock_out = (transaction.transfer_type == "sales") != bool(transaction.return_against)
+	if (value < 0) != takes_stock_out:
+		frappe.throw(
+			_("{0} would move stock value the wrong way by {1}. Check its items for negative stock.").format(
+				transaction.name, value
+			)
+		)
 
 
 def _validate_movement_locations(movement, transfers):

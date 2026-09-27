@@ -72,13 +72,13 @@ def next_state(previous, quantity, rate):
 
 
 def transaction_stock_value(transaction):
-	"""Return the value a stock transaction moved in or out of stock."""
+	"""Return the value a stock transaction moved into stock, negative when it took stock out."""
 	values = frappe.get_all(
 		DOCTYPE,
 		filters={"reference_type": transaction.doctype, "reference_name": transaction.name},
 		pluck="value_change",
 	)
-	return abs(rounded(sum((as_decimal(value) for value in values), as_decimal(0))))
+	return rounded(sum((as_decimal(value) for value in values), as_decimal(0)))
 
 
 def _entry_before(row, date, name=None):

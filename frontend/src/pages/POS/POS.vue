@@ -163,7 +163,6 @@ import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoic
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import {
   validateSinv,
-  getItemDiscounts,
   validateShipment,
   getTotalQuantity,
   getTotalTaxedAmount,
@@ -814,9 +813,7 @@ export default defineComponent({
       this.sinvDoc.party = this.defaultCustomer;
     },
     setItemDiscounts() {
-      this.itemDiscounts = getItemDiscounts(
-        this.sinvDoc.items as SalesInvoiceItem[]
-      );
+      this.itemDiscounts = (this.sinvDoc as SalesInvoice).itemDiscount;
     },
     async setItemQtyMap() {
       this.itemQtyMap = await getItemQtyMap(this.sinvDoc as SalesInvoice);

@@ -132,6 +132,23 @@ export abstract class Invoice extends Transactional {
     return !!this.returnAgainst;
   }
 
+  /** Row discounts, from the row totals the server calculated. */
+  get itemDiscount(): Money {
+    const zero = this.fyo.pesa(0);
+    const undiscounted = this.discountAfterTax ? 'itemTaxedTotal' : 'amount';
+    return (this.items ?? []).reduce(
+      (total, row) =>
+        total
+          .add(row[undiscounted] ?? zero)
+          .sub(row.itemDiscountedTotal ?? zero),
+      zero
+    );
+  }
+
+  get totalDiscount(): Money {
+    return this.itemDiscount.add(this.discountAmount ?? this.fyo.pesa(0));
+  }
+
   constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
     super(schema, data, fyo);
     this._setGetCurrencies();

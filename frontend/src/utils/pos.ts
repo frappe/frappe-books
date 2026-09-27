@@ -60,31 +60,6 @@ export function getTotalQuantity(items: SalesInvoiceItem[]): number {
   return totalQuantity;
 }
 
-export function getItemDiscounts(items: SalesInvoiceItem[]): Money {
-  let itemDiscounts = fyo.pesa(0);
-
-  if (!items.length) {
-    return itemDiscounts;
-  }
-
-  for (const item of items) {
-    if (item.setItemDiscountAmount) {
-      if (!item.itemDiscountAmount?.isZero()) {
-        itemDiscounts = itemDiscounts.add(
-          (item.itemDiscountAmount as Money).mul(item.quantity as number)
-        );
-      }
-    } else {
-      if (item.amount && (item.itemDiscountPercent as number) > 1) {
-        itemDiscounts = itemDiscounts.add(
-          item.amount.percent(item.itemDiscountPercent as number)
-        );
-      }
-    }
-  }
-  return itemDiscounts;
-}
-
 export async function getItem(item: string): Promise<Item | undefined> {
   const itemDoc = (await fyo.doc.getDoc(ModelNameEnum.Item, item)) as Item;
   if (!itemDoc) {

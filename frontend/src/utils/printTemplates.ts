@@ -245,7 +245,7 @@ function showDescription(doc: Doc): boolean {
 }
 
 function formattedTotalDiscount(invoice: Invoice): string {
-  const totalDiscount = getTotalDiscount(invoice);
+  const totalDiscount = invoice.totalDiscount;
   if (!totalDiscount.float) {
     return '';
   }
@@ -255,19 +255,6 @@ function formattedTotalDiscount(invoice: Invoice): string {
 
 function getTotalTax(doc: Invoice | Payment): Money {
   return doc.getSum('taxes', 'amount', false) as Money;
-}
-
-/** Row and invoice discounts, from the amounts the server stored. */
-function getTotalDiscount(invoice: Invoice): Money {
-  const zero = invoice.fyo.pesa(0);
-  const undiscounted = invoice.discountAfterTax ? 'itemTaxedTotal' : 'amount';
-  return (invoice.items ?? []).reduce(
-    (total, row) =>
-      total
-        .add((row[undiscounted] as Money | undefined) ?? zero)
-        .sub(row.itemDiscountedTotal ?? zero),
-    invoice.discountAmount ?? zero
-  );
 }
 
 function getPrintTemplateDocHints(

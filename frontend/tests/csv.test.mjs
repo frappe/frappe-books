@@ -16,3 +16,15 @@ test('CSV export keeps quotes that are part of a value', () => {
   assert.equal(csv, '"""Quoted""","say ""hi""","a,b",plain');
   assert.deepEqual(parseCSV(csv), [row]);
 });
+
+test('CSV import reads back the values export escaped as formulas', () => {
+  const row = [
+    '+91 98765 43210',
+    '=HYPERLINK("x")',
+    '@home',
+    "'=typed quote",
+    "'quoted",
+    "'-5",
+  ];
+  assert.deepEqual(parseCSV(generateCSV([row])), [row]);
+});

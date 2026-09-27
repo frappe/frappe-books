@@ -1,7 +1,27 @@
 import { t } from 'fyo';
 import { dialog, toast } from 'frappe-ui';
+import { shallowRef } from 'vue';
 import { renderSafeRichText } from './safeRichText';
 import { DialogButton, DialogOptions, ToastOptions, ToastType } from './types';
+import { isMobile } from './viewport';
+
+export interface DialogSheetAction {
+  label: string;
+  variant: 'solid' | 'subtle';
+  theme: 'gray' | 'red';
+  onClick: () => Promise<void>;
+}
+
+export interface DialogSheet {
+  title: string;
+  detail?: string;
+  actions: DialogSheetAction[];
+  dismissible: boolean;
+  onCancel: () => Promise<void>;
+}
+
+/** Phones show `showDialog` as a bottom sheet, rendered by DialogSheet.vue. */
+export const dialogSheet = shallowRef<DialogSheet | null>(null);
 
 export async function showDialog(options: DialogOptions) {
   const preWrappedButtons: DialogButton[] = options.buttons ?? [
@@ -53,6 +73,21 @@ export async function showDialog(options: DialogOptions) {
       ? options.detail.join('\n')
       : options.detail;
 
+    if (isMobile.value) {
+      dialogSheet.value = {
+        title: options.title,
+        detail,
+        actions: getSheetActions(
+          preWrappedButtons,
+          options.type,
+          settleFromAction
+        ),
+        dismissible: Boolean(escapeButton),
+        onCancel: settleFromDismiss,
+      };
+      return;
+    }
+
     dialog.confirm({
       title: options.title,
       // Frappe UI renders `message` as a Vue child, although its public type
@@ -103,6 +138,20 @@ export function showToast(options: ToastOptions) {
   }
 
   return toast.info(options.message, toastOptions);
+}
+
+function getSheetActions(
+  buttons: DialogButton[],
+  type: ToastType | undefined,
+  settle: (button: DialogButton) => Promise<void>
+): DialogSheetAction[] {
+  const isDestructive = type === 'warning' || type === 'error';
+  return buttons.map((button) => ({
+    label: button.label,
+    variant: button.isPrimary ? 'solid' : 'subtle',
+    theme: button.isPrimary && isDestructive ? 'red' : 'gray',
+    onClick: async () => await settle(button),
+  }));
 }
 
 function getDialogTheme(

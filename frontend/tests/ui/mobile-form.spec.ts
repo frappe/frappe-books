@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { insert } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 test.use({
@@ -56,4 +57,25 @@ test('rows open in a sheet', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(sheet).toBeHidden();
   await expect(page.getByText('1 row', { exact: true })).toBeVisible();
+});
+
+test('a foreign-currency customer shows the exchange rate', async ({
+  page,
+}) => {
+  const code = `Z${Date.now().toString(36).toUpperCase()}`;
+  const customer = `Phone Foreign ${code}`;
+  await insert(page, 'Currency', { name: code, symbol: code });
+  await insert(page, 'Party', {
+    name: customer,
+    role: 'Customer',
+    currency: code,
+  });
+
+  await page.getByRole('button', { name: 'Customer', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Customer' });
+  await picker.getByPlaceholder('Search').fill(customer);
+  await picker.getByRole('option', { name: customer, exact: true }).click();
+
+  await expect(page.getByText('Exchange Rate', { exact: true })).toBeVisible();
+  await expect(page.getByLabel(code, { exact: true })).toBeVisible();
 });

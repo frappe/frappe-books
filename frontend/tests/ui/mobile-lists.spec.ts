@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { insert } from './helpers/records';
 import { useBooksSession } from './helpers/session';
 
 test.use({
@@ -48,6 +49,35 @@ test('search also matches keyword fields', async ({ page }) => {
 
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page)).toContainText(customer);
+});
+
+test('selected items start a new sales invoice', async ({ page }) => {
+  const items = [`Phone Item A ${run}`, `Phone Item B ${run}`];
+  for (const name of items) {
+    await insert(page, 'Item', {
+      name,
+      rate: 100,
+      incomeAccount: 'Sales',
+      expenseAccount: 'Cost of Goods Sold',
+    });
+  }
+  await page.goto('/books/list/Item');
+  await search(page, run);
+  await expect(rows(page)).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Select items' }).tap();
+  for (const name of items) {
+    await page.getByRole('checkbox', { name }).tap();
+  }
+  await expect(page.getByText('2 selected')).toBeVisible();
+  await page.getByRole('button', { name: 'Create', exact: true }).tap();
+  await page
+    .getByRole('dialog', { name: 'Create' })
+    .getByRole('button', { name: 'Sales Invoice' })
+    .tap();
+
+  await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\//);
+  await expect(page.getByText('2 rows', { exact: true })).toBeVisible();
 });
 
 test('a filter chip narrows the list until it is removed', async ({ page }) => {
@@ -111,32 +141,4 @@ function rows(page: Page) {
 
 async function search(page: Page, text: string) {
   await page.getByRole('searchbox', { name: 'Search' }).fill(text);
-}
-
-async function insert(
-  page: Page,
-  schemaName: string,
-  values: Record<string, unknown>
-) {
-  const response = await page.evaluate(
-    async ({ schemaName, values }) => {
-      const result = await fetch(
-        '/api/method/frappe_books.ui_api.database_call',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': (window as any).csrf_token,
-          },
-          body: JSON.stringify({
-            method: 'insert',
-            args: [schemaName, values],
-          }),
-        }
-      );
-      return { ok: result.ok, text: await result.text() };
-    },
-    { schemaName, values }
-  );
-  expect(response.ok, response.text).toBe(true);
 }

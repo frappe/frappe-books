@@ -42,7 +42,7 @@ export async function getPrintTemplatePropValues(
   const values: PrintTemplateData = {
     ...(await getPrintTemplateDocValues(doc)),
     ...(await getTotalValues(doc)),
-    date: getDate(doc.date as string),
+    date: doc.fyo.format(doc.date, FieldTypeEnum.Date),
     showHSN: showHSN(doc),
   };
 
@@ -217,13 +217,6 @@ async function getPaymentDetails(invoice: Invoice, paymentIds: string[]) {
   }
 
   return paymentDetails;
-}
-
-function getDate(dateString: string): string {
-  const date = new Date(dateString);
-  return `${date.toLocaleString('default', {
-    month: 'short',
-  })} ${date.getDate()}, ${date.getFullYear()}`;
 }
 
 function getTime(dateString: string): string {

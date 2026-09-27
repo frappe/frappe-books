@@ -4,9 +4,12 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import now_datetime
 
-from frappe_books.tests.accounting import make_account
+from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
+from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
+from frappe_books.ui_bridge.linked_entries import linked_entries
 
 
 class IntegrationTestLinkedEntries(IntegrationTestCase):
@@ -53,3 +56,43 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		self.assertEqual(details[0]["name"], str(entry.name))
 		self.assertEqual(details[0]["debit"], 12.5)
 		self.assertEqual(self.bridge.get("AccountingLedgerEntry", str(entry.name))["name"], str(entry.name))
+
+	def test_linked_entries_include_links_made_after_the_first_lookup(self):
+		receivable = make_account("Linked Receivable", account_type="Receivable")
+		cash = make_account("Linked Cash", account_type="Cash")
+		income = make_account("Linked Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Linked Expense", root_type="Expense", account_type="Expense Account")
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		party = make_party(receivable.name)
+		item = make_item(income.name, expense.name)
+		invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
+		invoice.submit()
+		self.assertNotIn("Payment", linked_entries("SalesInvoice", invoice.name))
+
+		payment = frappe.get_doc(
+			{
+				"doctype": "Books Payment",
+				"party": party.name,
+				"date": now_datetime(),
+				"payment_type": "Receive",
+				"account": receivable.name,
+				"payment_account": cash.name,
+				"payment_method": "Cash",
+				"amount": invoice.base_grand_total,
+				"payment_references": [
+					{
+						"reference_type": invoice.doctype,
+						"reference_name": invoice.name,
+						"amount": invoice.base_grand_total,
+					}
+				],
+			}
+		).insert()
+		payment.submit()
+
+		entries = BooksBespokeQueries().call("getLinkedEntries", ["SalesInvoice", invoice.name])
+		self.assertEqual(entries["Payment"], [payment.name])
+		self.assertIn("AccountingLedgerEntry", entries)
+
+		payment.cancel()
+		self.assertNotIn("Payment", linked_entries("SalesInvoice", invoice.name))

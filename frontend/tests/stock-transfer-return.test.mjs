@@ -10,10 +10,10 @@ test('a purchase return receipt returns against the original receipt', async () 
     loaded.push(schemaName);
     return schemaName === 'PurchaseInvoice' ? original : {};
   };
-  fyo.db.getAllRaw = async (schemaName, { filters }) =>
-    schemaName === 'PurchaseReceipt' && filters.backReference === 'PINV-1'
-      ? [{ name: 'PREC-1', created: '2026-01-01' }]
-      : [];
+  fyo.db.getLinkedEntries = async (schemaName, name) =>
+    schemaName === 'PurchaseInvoice' && name === 'PINV-1'
+      ? { PurchaseReceipt: ['PREC-1'] }
+      : {};
   const purchaseReturn = fyo.doc.getNewDoc('PurchaseInvoice', {
     name: 'PINV-2',
     party: 'Supplier',

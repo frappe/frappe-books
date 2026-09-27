@@ -7,6 +7,7 @@ from frappe.tests import IntegrationTestCase
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, make_tax
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
+from frappe_books.ui_bridge.linked_entries import linked_entries
 
 RIGHTS = ("read", "write", "create", "delete", "submit", "cancel", "amend")
 FULL = {"read", "write", "create", "delete"}
@@ -94,6 +95,17 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(TEST_USER):
 			self.assertEqual(_search_shipments(hidden), [])
 			self.assertEqual(_search_shipments(readable), [readable])
+
+	def test_linked_entries_need_the_document_and_hide_unreadable_links(self):
+		original = _seed_shipment()
+		readable_return = _seed_shipment(return_against=original)
+		_seed_shipment(return_against=original)
+		for name in (original, readable_return):
+			add_user_permission("Books Shipment", name, TEST_USER)
+		hidden = _seed_shipment()
+		with self.set_user(TEST_USER):
+			self.assertEqual(linked_entries("Shipment", original), {"Shipment": [readable_return]})
+			self.assertRaises(frappe.PermissionError, linked_entries, "Shipment", hidden)
 
 	def test_pos_amounts_require_invoice_read(self):
 		def has_permission(doctype, ptype="read", throw=False, **kwargs):

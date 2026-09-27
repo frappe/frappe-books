@@ -213,29 +213,7 @@ export class StockMovementItem extends TransferItem {
   };
 
   validations: ValidationMap = {
-    fromLocation: (value) => {
-      if (!this.isManufacture) {
-        return;
-      }
-
-      if (value && this.toLocation) {
-        throw new ValidationError(
-          this.fyo.t`Only From or To can be set for Manufacture`
-        );
-      }
-    },
-    toLocation: (value) => {
-      if (!this.isManufacture) {
-        return;
-      }
-
-      if (value && this.fromLocation) {
-        throw new ValidationError(
-          this.fyo.t`Only From or To can be set for Manufacture`
-        );
-      }
-    },
-    batch: async (value: DocValue) => {
+    batch:async (value: DocValue) => {
       // A new batch has no record until the movement saves.
       const batchItem = await this.fyo.getValue(
         ModelNameEnum.Batch,

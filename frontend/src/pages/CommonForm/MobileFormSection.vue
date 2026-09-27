@@ -1,23 +1,25 @@
 <template>
   <section v-if="visibleFields.length" class="border-b border-outline-gray-1">
-    <button
-      v-if="kind === 'collapsible'"
-      class="flex h-[52px] w-full items-center gap-2 px-4 text-start text-base-semibold text-ink-gray-9 active:bg-surface-gray-1"
-      :aria-expanded="isOpen"
-      @click="isOpen = !isOpen"
-    >
-      <span class="min-w-0 flex-1 truncate">{{ title }}</span>
-      <span
-        v-if="hasError"
-        class="size-1.5 rounded-full bg-surface-red-4"
-        :aria-label="t`Has errors`"
-      />
-      <span
-        class="lucide-chevron-down size-4 text-ink-gray-5 transition-transform"
-        :class="isOpen ? 'rotate-180' : ''"
-        aria-hidden="true"
-      />
-    </button>
+    <!-- The press state is inset, as on drawer rows, so it keeps clear of the fields. -->
+    <div v-if="kind === 'collapsible'" class="px-2 py-1">
+      <button
+        class="flex h-11 w-full items-center gap-2 rounded-4 px-2 text-start text-base-semibold text-ink-gray-9 active:bg-surface-gray-1"
+        :aria-expanded="isOpen"
+        @click="isOpen = !isOpen"
+      >
+        <span class="min-w-0 flex-1 truncate">{{ title }}</span>
+        <span
+          v-if="hasError"
+          class="size-1.5 rounded-full bg-surface-red-4"
+          :aria-label="t`Has errors`"
+        />
+        <span
+          class="lucide-chevron-down size-4 text-ink-gray-5 transition-transform"
+          :class="isOpen ? 'rotate-180' : ''"
+          aria-hidden="true"
+        />
+      </button>
+    </div>
     <template v-for="block in blocks" :key="block.key">
       <div
         v-if="block.key === 'table' && tableField"
@@ -186,7 +188,7 @@ function groupFields(fields: Field[]): Field[][] {
 
 function getListClass(block: FieldBlock) {
   if (kind.value === 'collapsible') {
-    return 'gap-4 px-4 pb-4';
+    return 'gap-4 px-4 pb-4 pt-2';
   }
 
   const onlyTotals = block.groups.flat().every(isTotal);

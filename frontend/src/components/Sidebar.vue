@@ -8,6 +8,7 @@
       data-testid="company-name"
       :title="companyName"
       :subtitle="userName"
+      :logo="companyLogo || undefined"
       :menu-items="menuItems"
     />
 
@@ -75,6 +76,7 @@ import {
   SidebarItem as FrappeSidebarItem,
   type DropdownOptions,
 } from 'frappe-ui';
+import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
 import { getAppMenuItems, openDocumentation } from 'src/utils/appMenu';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -111,11 +113,13 @@ export default defineComponent({
   data() {
     return {
       companyName: '',
+      companyLogo: '',
       groups: [],
       viewShortcuts: false,
       activeGroup: null,
     } as {
       companyName: string;
+      companyLogo: string;
       groups: SidebarConfig;
       viewShortcuts: boolean;
       activeGroup: null | SidebarRoot;
@@ -133,6 +137,11 @@ export default defineComponent({
   async mounted() {
     const { companyName } = await fyo.doc.getDoc('AccountingSettings');
     this.companyName = companyName as string;
+    await this.setCompanyLogo();
+    fyo.doc.observer.on(
+      `sync:${ModelNameEnum.PrintSettings}`,
+      this.setCompanyLogo
+    );
     this.groups = await getSidebarConfig();
 
     this.setActiveGroup();
@@ -152,6 +161,14 @@ export default defineComponent({
   },
   methods: {
     toggleSidebar,
+    async setCompanyLogo() {
+      // Skipped by the server when the user cannot read Print Settings.
+      const [logo] = await fyo.db.getSingleValues({
+        fieldname: 'logo',
+        parent: ModelNameEnum.PrintSettings,
+      });
+      this.companyLogo = (logo?.value as string | undefined) ?? '';
+    },
     setActiveGroup() {
       const { path } = this.$route;
       const fallBackGroup = this.activeGroup;

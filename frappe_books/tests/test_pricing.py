@@ -181,7 +181,12 @@ class IntegrationTestPricing(IntegrationTestCase):
 	def test_price_list_rate_is_charged_per_stock_unit(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
 		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
-		item = make_item(self.income.name, self.expense.name, rate=100)
+		item = make_item(
+			self.income.name,
+			self.expense.name,
+			rate=100,
+			uom_conversions=[{"uom": box.name, "conversion_factor": 12}],
+		)
 		for unit, price, rate in ((box.name, 120, 10), ("Unit", 9, 9)):
 			with self.subTest(unit=unit):
 				price_list = frappe.get_doc(
@@ -201,9 +206,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 					self.income.name,
 					price_list=price_list.name,
 				)
-				invoice.items[0].update(
-					{"rate": None, "transfer_unit": box.name, "unit_conversion_factor": 12, "quantity": 24}
-				)
+				invoice.items[0].update({"rate": None, "transfer_unit": box.name, "transfer_quantity": 2})
 				invoice.save()
 
 				self.assertEqual(invoice.items[0].rate, rate)

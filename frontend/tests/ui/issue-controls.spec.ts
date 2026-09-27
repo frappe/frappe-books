@@ -90,3 +90,28 @@ test('the hidden sidebar has a visible keyboard-operated restore button', async 
     await page.evaluate(() => (window as any).issueFixture.showSidebar.value)
   ).toBe(true);
 });
+
+test('a failed attachment upload is shown and the file can be picked again', async ({
+  page,
+}) => {
+  let uploads = 0;
+  await page.route('**/api/method/upload_file', async (route) => {
+    uploads += 1;
+    await route.fulfill({
+      status: 417,
+      contentType: 'application/json',
+      body: JSON.stringify({ exception: 'File is too large' }),
+    });
+  });
+  const input = page.locator('#attachment');
+
+  await input.setInputFiles({
+    name: 'bill.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4'),
+  });
+
+  await expect(page.getByRole('dialog')).toContainText('File is too large');
+  await expect(input).toHaveValue('');
+  expect(uploads).toBe(1);
+});

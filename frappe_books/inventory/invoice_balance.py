@@ -63,17 +63,25 @@ def store_pending_quantities(invoice):
 
 def validate_billed_quantities(invoice):
 	"""Stop the invoices made from a transfer from billing more than it moved."""
-	if not invoice.back_reference or invoice.get("return_against"):
+	transfer = _billed_transfer(invoice, for_update=True)
+	if not transfer:
 		return
-	transfer = frappe.get_doc(
-		invoice.meta.get_field("back_reference").options, invoice.back_reference, for_update=True
-	)
 	validate_billable(transfer)
 	validate_moved_quantities(
 		transfer,
 		_billing_rows(transfer, [*_billed_rows(transfer), *invoice.items]),
 		_("Invoices of {0} exceed the quantity of {1} in {2}."),
 	)
+
+
+def update_billed_status(invoice):
+	"""Flag the transfer an invoice bills as fully billed while its invoices bill all it moved."""
+	transfer = _billed_transfer(invoice)
+	# A transfer made from the invoice is not billed by it.
+	if not transfer or transfer.back_reference:
+		return
+	is_fully_billed = not any(unbilled_quantities(transfer).values())
+	transfer.db_set("is_fully_billed", int(is_fully_billed), update_modified=False)
 
 
 def validate_billable(transfer):
@@ -135,6 +143,14 @@ def _transferred_quantities(invoice, exclude):
 	for row in rows:
 		quantities[row.item] += abs(as_decimal(row.quantity))
 	return quantities
+
+
+def _billed_transfer(invoice, for_update=False):
+	"""Return the transfer an invoice (not a return) references, if any."""
+	if not invoice.back_reference or invoice.get("return_against"):
+		return None
+	doctype = invoice.meta.get_field("back_reference").options
+	return frappe.get_doc(doctype, invoice.back_reference, for_update=for_update)
 
 
 def _billing_rows(transfer, rows):

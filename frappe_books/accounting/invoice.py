@@ -11,7 +11,11 @@ from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer
-from frappe_books.inventory.invoice_balance import store_pending_quantities, validate_billed_quantities
+from frappe_books.inventory.invoice_balance import (
+	store_pending_quantities,
+	update_billed_status,
+	validate_billed_quantities,
+)
 from frappe_books.inventory.stock import validate_batches
 from frappe_books.series import SeriesNamingMixin
 
@@ -55,6 +59,7 @@ class PostingInvoiceController(InvoiceController):
 		update_party_outstanding(self.party)
 		pricing.update_coupon_usage(self, 1)
 		loyalty.process_invoice(self)
+		update_billed_status(self)
 		create_auto_transfer(self)
 		store_pending_quantities(self)
 		if self.return_against:
@@ -78,6 +83,7 @@ class PostingInvoiceController(InvoiceController):
 		update_party_outstanding(self.party)
 		pricing.update_coupon_usage(self, -1)
 		loyalty.reverse_invoice(self)
+		update_billed_status(self)
 		if self.return_against:
 			returns.update_return_status(self, include_current=False)
 

@@ -25,6 +25,7 @@ class BooksShipment(StockTransferController):
 		back_reference: DF.Link | None
 		date: DF.Datetime
 		grand_total: DF.Currency
+		is_fully_billed: DF.Check
 		is_returned: DF.Check
 		items: DF.Table[BooksShipmentItem]
 		number_series: DF.Link

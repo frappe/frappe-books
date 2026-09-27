@@ -128,15 +128,48 @@ test('manual rates, including zero, survive quantity changes', async () => {
   clearTimeout(invoice._previewTimer);
 });
 
-test('a new item drops the old item tax for the server to set again', async () => {
+test('a new item drops the old item details for the server to set again', async () => {
   const { invoice } = await makeInvoice((values) => values);
   const [row] = invoice.items;
-  await row.set('tax', 'GST-18');
+  const details = {
+    tax: 'GST-18',
+    description: 'Old service',
+    itemCode: 'SRV-1',
+    account: 'Service',
+    hsnCode: 998314,
+  };
+  await row.setMultiple(details);
 
   await row.set('item', 'Other Service');
 
-  assert.equal(row.tax, undefined);
+  for (const fieldname of Object.keys(details)) {
+    assert.equal(row[fieldname], undefined, fieldname);
+  }
   clearTimeout(invoice._previewTimer);
+});
+
+test('a new party drops the old account for the server to set again', async () => {
+  const { invoice } = await makeInvoice((values) => values);
+  await invoice.set('account', 'Debtors');
+
+  await invoice.set('party', 'Other Customer');
+
+  assert.equal(invoice.account, undefined);
+  clearTimeout(invoice._previewTimer);
+});
+
+test('a save previews first when the server must fill required values', async () => {
+  const { invoice, calls, inserts } = await makeInvoice((values) => ({
+    ...values,
+    account: 'Debtors',
+    items: values.items.map((row) => ({ ...row, account: 'Service' })),
+  }));
+
+  await invoice.sync();
+
+  assert.equal(calls.length, 1);
+  assert.equal(inserts[0].account, 'Debtors');
+  assert.equal(inserts[0].items[0].account, 'Service');
 });
 
 async function addRow(invoice) {
@@ -146,6 +179,7 @@ async function addRow(invoice) {
 
 async function makeInvoice(respond) {
   const calls = [];
+  const inserts = [];
   let lookups;
   class Store {
     getSchemaMap() {
@@ -163,6 +197,10 @@ async function makeInvoice(respond) {
         return [];
       }
       if (method === 'get') return {};
+      if (method === 'insert') {
+        inserts.push(args[1]);
+        return structuredClone(args[1]);
+      }
       throw new Error(`Unexpected database call: ${method}`);
     }
   }
@@ -179,7 +217,13 @@ async function makeInvoice(respond) {
     party: 'Customer',
     items: [{ item: 'Service', quantity: 2, rate: 100 }],
   });
-  return { invoice, calls, fyo, holdLookups: (until) => (lookups = until) };
+  return {
+    invoice,
+    calls,
+    inserts,
+    fyo,
+    holdLookups: (until) => (lookups = until),
+  };
 }
 
 test('discounts come from the row totals the server calculated', async () => {

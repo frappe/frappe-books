@@ -164,24 +164,14 @@ export class StockMovementItem extends TransferItem {
       dependsOn: ['item', 'quantity'],
     },
     quantity: {
-      formula: async (fieldname) => {
+      formula: (fieldname) => {
         if (!this.item) {
           return this.quantity as number;
         }
 
-        const itemDoc = await this.fyo.doc.getDoc(
-          ModelNameEnum.Item,
-          this.item
-        );
-        const unitDoc = await itemDoc.loadAndGetLink('uom');
-
         let quantity: number = this.quantity ?? 1;
         if (fieldname === 'transferQuantity') {
           quantity = this.transferQuantity! * this.unitConversionFactor!;
-        }
-
-        if (unitDoc?.isWhole) {
-          return Math.round(quantity);
         }
 
         return safeParseFloat(quantity);

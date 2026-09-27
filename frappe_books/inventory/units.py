@@ -11,11 +11,25 @@ def populate_units(rows):
 	"""Set each row's stock unit and conversion factor from its item, and its quantity in stock units.
 
 	A row in the stock unit keeps its quantity. A row in another unit converts its transfer quantity.
+	Quantities in a whole-number unit must be whole.
 	"""
 	items = _item_units({row.item for row in rows if row.item})
 	for row in rows:
 		if row.item in items:
 			_populate_row_units(row, *items[row.item])
+	validate_whole_quantities(rows)
+
+
+def validate_whole_quantities(rows):
+	whole_units = _whole_units({unit for row in rows for unit in (row.unit, row.transfer_unit) if unit})
+	for row in rows:
+		for fieldname, unit in (("quantity", row.unit), ("transfer_quantity", row.transfer_unit)):
+			if unit in whole_units and not flt(row.get(fieldname)).is_integer():
+				frappe.throw(
+					_("{0} of {1} must be a whole number of {2}.").format(
+						_(row.meta.get_label(fieldname)), row.item, unit
+					)
+				)
 
 
 def _populate_row_units(row, unit, factors):
@@ -49,3 +63,11 @@ def _item_units(names):
 		factors[row.parent][row.uom] = row.conversion_factor
 	items = frappe.get_all("Books Item", filters={"name": ["in", sorted(names)]}, fields=["name", "unit"])
 	return {item.name: (item.unit, factors[item.name]) for item in items}
+
+
+def _whole_units(units):
+	if not units:
+		return set()
+	return set(
+		frappe.get_all("Books Uom", filters={"name": ["in", sorted(units)], "is_whole": 1}, pluck="name")
+	)

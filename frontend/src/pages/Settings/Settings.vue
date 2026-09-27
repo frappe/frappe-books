@@ -42,6 +42,15 @@
         />
       </section>
     </template>
+    <div v-if="showInstallButton" class="p-4">
+      <FrappeButton
+        class="w-full"
+        size="lg"
+        icon-left="lucide-download"
+        :label="t`Install Books`"
+        @click="isInstallSheetOpen = true"
+      />
+    </div>
   </div>
   <FormContainer v-else>
     <template #header>
@@ -107,6 +116,7 @@ import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { UIGroupedFields } from 'src/utils/types';
 import { isMobile } from 'src/utils/viewport';
+import { canInstall, isInstallSheetOpen } from 'src/web/pwa';
 import { computed, defineComponent, inject, nextTick } from 'vue';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 
@@ -128,6 +138,7 @@ export default defineComponent({
     return {
       shortcuts: inject(shortcutsKey),
       isMobile,
+      isInstallSheetOpen,
     };
   },
   data() {
@@ -211,6 +222,11 @@ export default defineComponent({
       }
 
       return group;
+    },
+    showInstallButton(): boolean {
+      return (
+        this.activeTab === ModelNameEnum.SystemSettings && canInstall.value
+      );
     },
     mobileSections(): [string, Field[]][] {
       return [...this.activeGroup.entries()].filter(

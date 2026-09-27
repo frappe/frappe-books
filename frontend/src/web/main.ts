@@ -1,4 +1,4 @@
-import { registerServiceWorker } from './pwa';
+import { listenForInstallPrompt, registerServiceWorker } from './pwa';
 import { loadTranslations } from './translations';
 
 async function start() {
@@ -14,5 +14,6 @@ async function start() {
   await import('./mount');
 }
 
+listenForInstallPrompt();
 registerServiceWorker();
 void start();

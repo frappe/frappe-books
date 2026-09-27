@@ -16,6 +16,7 @@
     />
   </router-view>
   <MobileDrawer v-model:open="isDrawerOpen" />
+  <InstallSheet />
   <OfflineScreen />
 </template>
 <script setup lang="ts">
@@ -29,6 +30,7 @@ import {
 import { inject, onMounted, provide, readonly, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { isDesktopOnly } from './availability';
+import InstallSheet from './InstallSheet.vue';
 import MobileDrawer from './MobileDrawer.vue';
 import { useBackClosesSheets } from './useBackClosesSheets';
 import OfflineScreen from './OfflineScreen.vue';

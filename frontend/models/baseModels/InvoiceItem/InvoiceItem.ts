@@ -115,6 +115,10 @@ export abstract class InvoiceItem extends Doc {
     } else if (['item', 'transferUnit'].includes(fieldname)) {
       this.clearStandardRate();
     }
+    if (fieldname === 'item') {
+      // The server's preview sets the new item's tax.
+      this.tax = undefined;
+    }
     return super._applyChange(fieldname, retriggerChildDocApplyChange);
   }
 

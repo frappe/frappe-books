@@ -3,7 +3,7 @@ import { after, before, test } from 'node:test';
 import { call, errors } from './helpers/accounting.mjs';
 
 before(() => {
-  globalThis.window = { frappe: {} };
+  globalThis.window = { location: { hostname: 'books.localhost' } };
 });
 after(() => {
   delete globalThis.window;
@@ -47,4 +47,12 @@ test('an unexpected server error stays a plain error', async () => {
   const error = await call('method').catch((error) => error);
   assert.ok(!(error instanceof errors.BaseError));
   assert.equal(error.message, 'Server says no');
+});
+
+test('an unreachable server surfaces the network error', async () => {
+  globalThis.fetch = async () => {
+    throw new TypeError('Failed to fetch');
+  };
+  const error = await call('method').catch((error) => error);
+  assert.ok(error instanceof TypeError);
 });

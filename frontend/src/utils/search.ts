@@ -550,6 +550,37 @@ export class Search {
     return !!this.filters.schemaFilters[filterName];
   }
 
+  /** Filters that differ from the defaults; a skip filter counts once. */
+  get changedFilterCount(): number {
+    const { groupFilters, schemaFilters, skipTables, skipTransactions } =
+      this.filters;
+    const groups = searchGroups.filter((group) => !groupFilters[group]);
+    const schemas = Object.values(this.searchables).filter(
+      ({ schemaName, isChild, isSubmittable }) =>
+        !schemaFilters[schemaName] &&
+        !(isChild && skipTables) &&
+        !(isSubmittable && skipTransactions)
+    );
+
+    return (
+      groups.length +
+      schemas.length +
+      Number(skipTables) +
+      Number(skipTransactions)
+    );
+  }
+
+  resetFilters() {
+    for (const group of searchGroups) {
+      this.filters.groupFilters[group] = true;
+    }
+
+    this.filters.skipTables = false;
+    this.filters.skipTransactions = false;
+    this._setSchemaFilters();
+    this._setIntermediate([]);
+  }
+
   set(filterName: string, value: boolean) {
     /**
      * When a filter is set, intermediate is reset

@@ -54,6 +54,12 @@ export default defineComponent({
   props: {
     darkMode: { type: Boolean, default: false },
   },
+  async mounted() {
+    // The viewport can grow while a phone-only page is open.
+    if (this.$route.meta.phoneOnly) {
+      await this.$router.replace('/');
+    }
+  },
 });
 </script>
 

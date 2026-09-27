@@ -39,6 +39,12 @@ export function useSearch() {
     void fetchDocs();
   }
 
+  function resetSearchFilters() {
+    searcher.value?.resetFilters();
+    revision.value += 1;
+    void fetchDocs();
+  }
+
   function openSearchItem(item: SearchItems[number]) {
     if (!item.action) {
       return;
@@ -61,6 +67,7 @@ export function useSearch() {
     revision,
     isFilterOn,
     setSearchFilter,
+    resetSearchFilters,
     openSearchItem,
   };
 }

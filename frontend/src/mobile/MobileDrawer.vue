@@ -19,6 +19,16 @@
             :menu-items="menuItems"
           />
         </div>
+        <div class="px-2 pb-2 pt-1">
+          <button
+            type="button"
+            class="flex h-10 w-full items-center gap-2 rounded-5 bg-surface-gray-3 px-3 text-start text-lg text-ink-gray-6 active:bg-surface-gray-4"
+            @click="openSearch"
+          >
+            <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
+            {{ t`Search` }}
+          </button>
+        </div>
 
         <nav
           class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-10 pt-1"
@@ -183,6 +193,11 @@ function linkClasses(active: boolean) {
 
 function close() {
   isOpen.value = false;
+}
+
+async function openSearch() {
+  close();
+  await router.push('/search');
 }
 </script>
 <style scoped>

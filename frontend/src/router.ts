@@ -2,6 +2,7 @@ import ChartOfAccounts from 'src/pages/ChartOfAccounts.vue';
 import CommonForm from 'src/pages/CommonForm/CommonForm.vue';
 import Dashboard from 'src/pages/Dashboard/Dashboard.vue';
 import GetStarted from 'src/pages/GetStarted.vue';
+import MobileSearch from 'src/mobile/search/MobileSearch.vue';
 import ImportWizard from 'src/pages/ImportWizard.vue';
 import ListView from 'src/pages/ListView/ListView.vue';
 import PrintView from 'src/pages/PrintView/PrintView.vue';
@@ -25,6 +26,8 @@ declare module 'vue-router' {
     desktopOnly?: boolean;
     /** Phones show a back button instead of the menu. */
     pushed?: boolean;
+    /** Left out of the desktop layout. */
+    phoneOnly?: boolean;
   }
 }
 
@@ -148,6 +151,12 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/search',
+    name: 'Search',
+    meta: { pushed: true, phoneOnly: true },
+    component: MobileSearch,
+  },
+  {
     path: '/pos',
     name: 'Point of Sale',
     components: {
@@ -167,7 +176,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  if (isMobile.value && isDesktopOnly(to)) {
+  if (isMobile.value ? isDesktopOnly(to) : to.meta.phoneOnly) {
     return '/';
   }
 });

@@ -1,7 +1,13 @@
 <template>
   <div class="flex min-h-0 flex-col">
-    <PageHeader :title="t`Dashboard`">
+    <PageHeader :title="t`Dashboard`" title-start>
       <template #mobile>
+        <FrappeButton
+          variant="ghost"
+          icon="lucide-search"
+          :label="t`Search`"
+          @click="$router.push('/search')"
+        />
         <PeriodSelector :value="period" @change="(value) => (period = value)" />
       </template>
       <PeriodSelector
@@ -51,6 +57,7 @@
 </template>
 
 <script>
+import { Button as FrappeButton } from 'frappe-ui';
 import PageHeader from 'src/components/PageHeader.vue';
 import UnpaidInvoices from './UnpaidInvoices.vue';
 import Cashflow from './Cashflow.vue';
@@ -64,6 +71,7 @@ import { isMobile } from 'src/utils/viewport';
 export default {
   name: 'Dashboard',
   components: {
+    FrappeButton,
     PageHeader,
     Cashflow,
     ProfitAndLoss,

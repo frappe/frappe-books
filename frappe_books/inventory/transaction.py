@@ -21,6 +21,8 @@ from frappe_books.inventory.stock import (
 from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
 
+STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
+
 # Transfer fields that an invoice made from the transfer must not copy.
 UNBILLED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
@@ -41,13 +43,13 @@ class StockMovementController(SeriesNamingMixin, Document):
 		validate_stock_available(reverse_transfers(movement_transfers(self)), self.date)
 
 	def on_submit(self):
-		create_stock_entries(self, movement_transfers(self))
+		repost_stock_accounts(create_stock_entries(self, movement_transfers(self)))
 
 	def on_cancel(self):
-		cancel_stock_entries(self, movement_transfers(self))
+		repost_stock_accounts(cancel_stock_entries(self, movement_transfers(self)))
 
 	def on_trash(self):
-		delete_stock_entries(self)
+		repost_stock_accounts(delete_stock_entries(self))
 
 
 class StockTransferController(SeriesNamingMixin, Document):
@@ -73,19 +75,21 @@ class StockTransferController(SeriesNamingMixin, Document):
 		validate_stock_available(reverse_transfers(transfer_rows(self)), self.date)
 
 	def on_submit(self):
-		create_stock_entries(self, valued_transfer_rows(self))
+		restated = create_stock_entries(self, valued_transfer_rows(self))
 		post_stock_accounts(self)
+		repost_stock_accounts(restated)
 		update_invoice_balance(self)
 		self.update_returned_status()
 
 	def on_cancel(self):
-		cancel_stock_entries(self, transfer_rows(self))
+		restated = cancel_stock_entries(self, transfer_rows(self))
 		reverse_entries(self)
+		repost_stock_accounts(restated)
 		update_invoice_balance(self)
 		self.update_returned_status()
 
 	def on_trash(self):
-		delete_stock_entries(self)
+		repost_stock_accounts(delete_stock_entries(self))
 		delete_entries(self)
 
 	def update_returned_status(self):
@@ -196,6 +200,15 @@ def post_stock_accounts(transaction):
 	posting.debit(debit, abs(value))
 	posting.credit(credit, abs(value))
 	posting.post()
+
+
+def repost_stock_accounts(references):
+	"""Post the stock accounts of transfers again after a restatement changed their stock value."""
+	for doctype, name in sorted(references):
+		if doctype in STOCK_POSTING_DOCTYPES:
+			transfer = frappe.get_doc(doctype, name)
+			delete_entries(transfer)
+			post_stock_accounts(transfer)
 
 
 def _validate_value_direction(transaction, value):

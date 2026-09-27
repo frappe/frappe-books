@@ -14,16 +14,15 @@ STATE_FIELDS = ["name", "date", "quantity", "rate", "balance_quantity", "balance
 
 
 def insert_entry(values):
-	"""Insert a stock ledger entry with its FIFO state and restate any later entries."""
+	"""Insert a stock ledger entry with its FIFO state and restate later entries; return the restated transactions."""
 	values = frappe._dict(values)
 	state = next_state(_entry_before(values, values.date), values.quantity, values.rate)
 	entry = frappe.get_doc({"doctype": DOCTYPE, **values, **state}).insert(ignore_permissions=True)
-	restate_after(entry, entry)
-	return entry
+	return restate_after(entry, entry)
 
 
 def delete_entries(reference_type, reference_name):
-	"""Delete a transaction's stock ledger entries and restate the entries after them."""
+	"""Delete a transaction's stock ledger entries and restate later entries; return the restated transactions."""
 	reference = {"reference_type": reference_type, "reference_name": reference_name}
 	entries = frappe.get_all(
 		DOCTYPE, filters=reference, fields=["name", "date", *KEY_FIELDS], order_by="date asc, name asc"
@@ -32,16 +31,25 @@ def delete_entries(reference_type, reference_name):
 	first_entries = {}
 	for entry in entries:
 		first_entries.setdefault(tuple(entry[field] or "" for field in KEY_FIELDS), entry)
+	restated = set()
 	for entry in first_entries.values():
-		restate_after(entry, _entry_before(entry, entry.date, entry.name))
+		restated |= restate_after(entry, _entry_before(entry, entry.date, entry.name))
+	return restated
 
 
 def restate_after(anchor, previous):
-	"""Recompute the stored state of the entries that follow the anchor in its stock key."""
+	"""Recompute the stored state of the entries that follow the anchor in its stock key.
+
+	Return the (reference_type, reference_name) of the transactions whose stock value changed.
+	"""
+	restated = set()
 	for entry in _entries_after(anchor):
 		state = next_state(previous, entry.quantity, entry.rate)
+		if state["value_change"] != as_decimal(entry.value_change):
+			restated.add((entry.reference_type, entry.reference_name))
 		frappe.db.set_value(DOCTYPE, entry.name, state, update_modified=False)
 		previous = frappe._dict(state)
+	return restated
 
 
 def next_state(previous, quantity, rate):
@@ -109,7 +117,12 @@ def _entry_before(row, date, name=None):
 
 def _entries_after(anchor):
 	sle = frappe.qb.DocType(DOCTYPE)
-	query = _key_query(sle, anchor).select(*STATE_FIELDS).orderby(sle.date).orderby(sle.name)
+	query = (
+		_key_query(sle, anchor)
+		.select(*STATE_FIELDS, sle.value_change, sle.reference_type, sle.reference_name)
+		.orderby(sle.date)
+		.orderby(sle.name)
+	)
 	if anchor.get("name"):
 		query = query.where((sle.date > anchor.date) | ((sle.date == anchor.date) & (sle.name > anchor.name)))
 	return query.run(as_dict=True)

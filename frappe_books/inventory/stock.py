@@ -59,22 +59,23 @@ def reverse_transfers(transfers):
 
 
 def create_stock_entries(transaction, transfers):
+	"""Insert the transfers' stock ledger entries and return the other transactions they restated."""
+	restated = set()
 	for transfer in transfers:
 		serial_numbers = parse_serial_numbers(transfer.get("serial_number"))
 		_update_serial_statuses(transaction, transfer, serial_numbers, cancel=False)
 		if serial_numbers:
 			for serial_number in serial_numbers:
-				_create_location_entries(transaction, transfer, Decimal(1), serial_number)
+				restated |= _create_location_entries(transaction, transfer, Decimal(1), serial_number)
 		else:
-			_create_location_entries(
-				transaction,
-				transfer,
-				abs(as_decimal(transfer["quantity"])),
-				None,
-			)
+			quantity = abs(as_decimal(transfer["quantity"]))
+			restated |= _create_location_entries(transaction, transfer, quantity, None)
+	restated.discard((transaction.doctype, transaction.name))
+	return restated
 
 
 def cancel_stock_entries(transaction, transfers):
+	"""Delete the transaction's stock ledger entries and return the transactions they restated."""
 	for transfer in transfers:
 		_update_serial_statuses(
 			transaction,
@@ -82,11 +83,11 @@ def cancel_stock_entries(transaction, transfers):
 			parse_serial_numbers(transfer.get("serial_number")),
 			cancel=True,
 		)
-	delete_stock_entries(transaction)
+	return delete_stock_entries(transaction)
 
 
 def delete_stock_entries(transaction):
-	delete_entries(transaction.doctype, transaction.name)
+	return delete_entries(transaction.doctype, transaction.name)
 
 
 def populate_stock_rows(rows):
@@ -284,14 +285,20 @@ def _items_of(doctype, names):
 
 
 def _create_location_entries(transaction, transfer, quantity, serial_number):
+	restated = set()
 	if transfer.get("from_location"):
-		_create_stock_entry(transaction, transfer, transfer["from_location"], -quantity, serial_number)
+		restated |= _create_stock_entry(
+			transaction, transfer, transfer["from_location"], -quantity, serial_number
+		)
 	if transfer.get("to_location"):
-		_create_stock_entry(transaction, transfer, transfer["to_location"], quantity, serial_number)
+		restated |= _create_stock_entry(
+			transaction, transfer, transfer["to_location"], quantity, serial_number
+		)
+	return restated
 
 
 def _create_stock_entry(transaction, transfer, location, quantity, serial_number):
-	insert_entry(
+	return insert_entry(
 		{
 			"date": transaction.date,
 			"location": location,

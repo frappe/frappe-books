@@ -49,7 +49,6 @@ import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { defineComponent, inject } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
-import { ModelNameEnum } from 'models/types';
 import Int from 'src/components/Controls/Int.vue';
 import Icon from 'src/components/Icon.vue';
 
@@ -110,68 +109,21 @@ export default defineComponent({
       this.$emit('setLoyaltyPoints', this.initialLoyaltyPoints);
       this.$emit('toggleModal', 'LoyaltyProgram', false);
     },
-    async applyLoyaltyPoints(newValue: number): Promise<boolean> {
-      try {
-        const partyData = await this.fyo.db.get(
-          ModelNameEnum.Party,
-          this.sinvDoc.party as string
-        );
-
-        if (!partyData.loyaltyProgram) {
-          throw new Error(t`Customer is not enrolled in a loyalty program`);
-        }
-
-        const loyaltyProgramDoc = await this.fyo.db.getAll(
-          ModelNameEnum.LoyaltyProgram,
-          {
-            fields: ['conversionFactor', 'toDate'],
-            filters: { name: partyData.loyaltyProgram as string },
-          }
-        );
-
-        const toDate = loyaltyProgramDoc[0]?.toDate as Date;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (toDate && new Date(toDate).getTime() < today.getTime()) {
-          throw new Error(t`Loyalty program has expired and cannot be applied`);
-        }
-
-        if (this.loyaltyPoints < newValue) {
-          throw new Error(
-            `${this.sinvDoc.party as string} only has ${this.loyaltyPoints} points`
-          );
-        }
-
-        const loyaltyPoint =
-          newValue * ((loyaltyProgramDoc[0]?.conversionFactor as number) || 0);
-
-        if (this.sinvDoc.baseGrandTotal?.lt(loyaltyPoint)) {
-          throw new Error(t`no need ${newValue} points to purchase this item`);
-        }
-
-        if (newValue < 0) {
-          throw new Error(t`Points must be greater than 0`);
-        }
-
-        this.sinvDoc.loyaltyPoints = newValue;
-        this.$emit('setLoyaltyPoints', newValue);
-
-        this.validationError = false;
-        return true;
-      } catch (error) {
+    /** The server checks the points against the customer's balance and the invoice total. */
+    applyLoyaltyPoints(newValue: number): boolean {
+      if (newValue < 0) {
         this.validationError = true;
-
-        showToast({
-          type: 'error',
-          message: t`${error as string}`,
-        });
-
+        showToast({ type: 'error', message: t`Points must be greater than 0` });
         return false;
       }
+
+      this.sinvDoc.loyaltyPoints = newValue;
+      this.$emit('setLoyaltyPoints', newValue);
+      this.validationError = false;
+      return true;
     },
-    async saveLoyaltyPoints() {
-      const applied = await this.applyLoyaltyPoints(this.pendingLoyaltyPoints);
+    saveLoyaltyPoints() {
+      const applied = this.applyLoyaltyPoints(this.pendingLoyaltyPoints);
 
       if (applied) {
         this.$emit('toggleModal', 'LoyaltyProgram', false);

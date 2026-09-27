@@ -853,7 +853,7 @@ export default defineComponent({
     async setLoyaltyPoints(value: number) {
       this.appliedLoyaltyPoints = value;
       await this.sinvDoc.set('redeemLoyaltyPoints', value > 0);
-      await this.sinvDoc.runFormulas();
+      await this.applyPricingRule();
     },
     async selectedInvoiceName(doc: SalesInvoice) {
       const salesInvoiceDoc = (await this.fyo.doc.getDoc(

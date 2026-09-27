@@ -35,10 +35,10 @@ class StockMovementController(SeriesNamingMixin, Document):
 		validate_transfer_rows(transfers)
 
 	def before_submit(self):
-		validate_stock_available(movement_transfers(self))
+		validate_stock_available(movement_transfers(self), self.date)
 
 	def before_cancel(self):
-		validate_stock_available(reverse_transfers(movement_transfers(self)))
+		validate_stock_available(reverse_transfers(movement_transfers(self)), self.date)
 
 	def on_submit(self):
 		create_stock_entries(self, movement_transfers(self))
@@ -66,11 +66,11 @@ class StockTransferController(SeriesNamingMixin, Document):
 			validate_transfer_return(self)
 
 	def before_submit(self):
-		validate_stock_available(transfer_rows(self))
+		validate_stock_available(transfer_rows(self), self.date)
 		validate_invoice_balance(self)
 
 	def before_cancel(self):
-		validate_stock_available(reverse_transfers(transfer_rows(self)))
+		validate_stock_available(reverse_transfers(transfer_rows(self)), self.date)
 
 	def on_submit(self):
 		create_stock_entries(self, transfer_rows(self))

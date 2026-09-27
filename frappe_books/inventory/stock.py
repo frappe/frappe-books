@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Sum
+from frappe.query_builder.functions import Coalesce, Min, Sum
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.valuation import delete_entries, insert_entry
@@ -31,8 +31,8 @@ def validate_batches(rows):
 		_validate_batch(row, items[row["item"]], batch_items)
 
 
-def validate_stock_available(transfers):
-	"""Lock the items, then check that outgoing rows of tracked items have the stock they take.
+def validate_stock_available(transfers, date):
+	"""Lock the items, then check that outgoing rows of tracked items have the stock they take at the date.
 
 	The lock is held until commit, so concurrent postings of an item check and
 	post one at a time.
@@ -41,7 +41,7 @@ def validate_stock_available(transfers):
 	tracked = {name for name, item in _item_settings(transfers).items() if item.track_item}
 	outgoing = [row for row in transfers if row.get("from_location") and row["item"] in tracked]
 	incoming = [row for row in transfers if not row.get("from_location") and row["item"] in tracked]
-	_validate_quantities_available(outgoing)
+	_validate_quantities_available(outgoing, date)
 	_validate_serial_numbers_available(outgoing)
 	_validate_serial_numbers_not_in_stock(incoming)
 
@@ -158,12 +158,12 @@ def _validate_unique_serial_numbers(transfers):
 		frappe.throw(_("Serial number {0} is listed more than once.").format(", ".join(repeated)))
 
 
-def _validate_quantities_available(outgoing):
+def _validate_quantities_available(outgoing, date):
 	required = defaultdict(as_decimal)
 	for transfer in outgoing:
 		key = (transfer["item"], transfer["from_location"], transfer.get("batch") or "")
 		required[key] += abs(as_decimal(transfer["quantity"]))
-	available = _available_quantities(required)
+	available = _available_quantities(required, date)
 	for key, quantity in required.items():
 		if available[key] < quantity:
 			frappe.throw(
@@ -173,23 +173,30 @@ def _validate_quantities_available(outgoing):
 			)
 
 
-def _available_quantities(keys):
-	available = defaultdict(as_decimal)
+def _available_quantities(keys, date):
+	"""Return each key's stock at the date, capped by the lowest balance of its later entries."""
 	if not keys:
-		return available
+		return defaultdict(as_decimal)
 	sle = frappe.qb.DocType(LEDGER)
+	available = defaultdict(as_decimal, _key_totals(sle, keys, Sum(sle.quantity), sle.date <= date))
+	for key, lowest in _key_totals(sle, keys, Min(sle.balance_quantity), sle.date > date).items():
+		available[key] = min(available[key], lowest)
+	return available
+
+
+def _key_totals(sle, keys, aggregate, condition):
+	batch = Coalesce(sle.batch, "")
 	rows = (
 		frappe.qb.from_(sle)
-		.select(sle.item, sle.location, sle.batch, Sum(sle.quantity))
+		.select(sle.item, sle.location, batch, aggregate)
 		.where(
 			sle.item.isin(sorted({key[0] for key in keys}))
 			& sle.location.isin(sorted({key[1] for key in keys}))
+			& condition
 		)
-		.groupby(sle.item, sle.location, sle.batch)
+		.groupby(sle.item, sle.location, batch)
 	).run()
-	for item, location, batch, quantity in rows:
-		available[(item, location, batch or "")] += as_decimal(quantity)
-	return available
+	return {(item, location, batch): as_decimal(value) for item, location, batch, value in rows}
 
 
 def _validate_serial_numbers_available(outgoing):

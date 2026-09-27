@@ -12,7 +12,7 @@
     </PageHeader>
 
     <div class="no-scrollbar min-h-0 flex-1 overflow-auto bg-surface-base">
-      <div class="min-w-0">
+      <div class="min-w-0 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)]">
         <Cashflow class="p-4" :common-period="period" :dark-mode="darkMode" />
         <hr class="border-outline-gray-1" />
         <div class="grid grid-cols-1 md:grid-cols-2">
@@ -46,6 +46,7 @@
         <hr class="border-outline-gray-1" />
       </div>
     </div>
+    <MobileCreateButton v-if="isMobile" />
   </div>
 </template>
 
@@ -54,9 +55,11 @@ import PageHeader from 'src/components/PageHeader.vue';
 import UnpaidInvoices from './UnpaidInvoices.vue';
 import Cashflow from './Cashflow.vue';
 import Expenses from './Expenses.vue';
+import MobileCreateButton from './MobileCreateButton.vue';
 import PeriodSelector from './PeriodSelector.vue';
 import ProfitAndLoss from './ProfitAndLoss.vue';
 import { docsPathRef } from 'src/utils/refs';
+import { isMobile } from 'src/utils/viewport';
 
 export default {
   name: 'Dashboard',
@@ -65,11 +68,15 @@ export default {
     Cashflow,
     ProfitAndLoss,
     Expenses,
+    MobileCreateButton,
     PeriodSelector,
     UnpaidInvoices,
   },
   props: {
     darkMode: { type: Boolean, default: false },
+  },
+  setup() {
+    return { isMobile };
   },
   data() {
     return { period: 'This Year' };

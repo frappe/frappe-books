@@ -20,8 +20,12 @@
 <script setup lang="ts">
 import { useSwipe } from '@vueuse/core';
 import { MobileShell as FrappeMobileShell } from 'frappe-ui';
-import { languageDirectionKey, openDrawerKey } from 'src/utils/injectionKeys';
-import { inject, onMounted, provide, ref } from 'vue';
+import {
+  isDrawerOpenKey,
+  languageDirectionKey,
+  openDrawerKey,
+} from 'src/utils/injectionKeys';
+import { inject, onMounted, provide, readonly, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { isDesktopOnly } from './availability';
 import MobileDrawer from './MobileDrawer.vue';
@@ -36,6 +40,7 @@ const router = useRouter();
 const direction = inject(languageDirectionKey, ref<'ltr' | 'rtl'>('ltr'));
 const isDrawerOpen = ref(false);
 provide(openDrawerKey, () => (isDrawerOpen.value = true));
+provide(isDrawerOpenKey, readonly(isDrawerOpen));
 
 const {
   coordsStart,

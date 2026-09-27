@@ -4,7 +4,14 @@
       <template #title>{{ t`Top Expenses` }}</template>
     </SectionHeader>
 
-    <div v-if="hasData" class="h-64 w-full">
+    <MobileExpenses
+      v-if="isMobile && hasData"
+      class="mt-4"
+      :expenses="expenses"
+      :total="totalExpense"
+      :dark-mode="darkMode"
+    />
+    <div v-else-if="hasData" class="h-64 w-full">
       <FrappeDonutChart
         :data="expenses"
         category="account"
@@ -16,7 +23,7 @@
     </div>
 
     <!-- Empty Message -->
-    <div v-if="expenses.length === 0" class="flex-1 w-full h-full flex-center my-20">
+    <div v-else class="flex-1 w-full h-full flex-center my-20">
       <span class="text-base text-ink-gray-6">
         {{ t`No expenses in this period` }}
       </span>
@@ -30,12 +37,14 @@ import { uicolors } from 'src/utils/colors';
 import { getDashboardData } from 'src/utils/dashboard';
 import { defineComponent } from 'vue';
 import DashboardChartBase from './BaseDashboardChart.vue';
+import MobileExpenses from './MobileExpenses.vue';
 import SectionHeader from './SectionHeader.vue';
 
 export default defineComponent({
   name: 'Expenses',
   components: {
     FrappeDonutChart,
+    MobileExpenses,
     SectionHeader,
   },
   extends: DashboardChartBase,

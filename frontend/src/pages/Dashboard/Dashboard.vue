@@ -21,7 +21,7 @@
             doctype="Books Sales Invoice"
             :common-period="period"
             :dark-mode="darkMode"
-            class="min-w-0 border-e border-outline-gray-1"
+            class="min-w-0 border-outline-gray-1 max-md:border-b md:border-e"
           />
           <UnpaidInvoices
             :schema-name="'PurchaseInvoice'"
@@ -33,7 +33,7 @@
         <hr class="border-outline-gray-1" />
         <div class="grid grid-cols-1 xl:grid-cols-2">
           <ProfitAndLoss
-            class="min-w-0 w-full p-4 border-e border-outline-gray-1"
+            class="min-w-0 w-full p-4 border-outline-gray-1 max-md:border-b md:border-e"
             :common-period="period"
             :dark-mode="darkMode"
           />

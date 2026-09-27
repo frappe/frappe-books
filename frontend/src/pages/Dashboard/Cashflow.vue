@@ -8,8 +8,14 @@
     </div>
 
     <!-- Line Chart -->
-    <div v-if="chartData.data.length" class="mt-4 h-56 w-full">
+    <div
+      v-if="chartData.data.length"
+      v-bind="phoneChartListeners"
+      class="mt-4 w-full"
+      :class="isMobile ? 'h-[208px]' : 'h-56'"
+    >
       <FrappeLineChart
+        :dir="isMobile ? 'ltr' : undefined"
         :data="chartData.data"
         x="yearmonth"
         :y="['inflow', 'outflow']"
@@ -62,6 +68,7 @@ export default defineComponent({
 
       const format = (value: number) => fyo.format(value ?? 0, 'Currency');
       const yMax = getYMax(points);
+      const phoneAxes = this.isMobile ? this.phoneAxisLabels : undefined;
       return {
         data,
         colors,
@@ -69,8 +76,12 @@ export default defineComponent({
           inflow: { label: this.t`Inflow`, color: colors[0], smooth: true },
           outflow: { label: this.t`Outflow`, color: colors[1], smooth: true },
         },
-        xAxis: { type: 'category' as const, format: formatXLabels },
-        yAxis: { max: yMax, format },
+        xAxis: {
+          type: 'category' as const,
+          format: formatXLabels,
+          echartOptions: phoneAxes?.x,
+        },
+        yAxis: { max: yMax, format, echartOptions: phoneAxes?.y },
       };
     },
   },

@@ -33,3 +33,25 @@ export function getYMin(points: number[][]): number {
 export function formatXLabels(label: string) {
   return DateTime.fromISO(label).toFormat('MMM yy');
 }
+
+/**
+ * Phone axis ticks: month names and compact values. They replace the tick
+ * formatter only, so tooltips keep the axis `format`.
+ */
+export function getPhoneAxisLabels(locale: string) {
+  const compact = Intl.NumberFormat(`${locale}-u-nu-latn`, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  });
+
+  return {
+    x: {
+      axisLabel: {
+        formatter: (label: string) => DateTime.fromISO(label).toFormat('MMM'),
+        // Flat labels that skip months when crowded read better than tilted ones.
+        rotate: 0,
+      },
+    },
+    y: { axisLabel: { formatter: (value: number) => compact.format(value) } },
+  };
+}

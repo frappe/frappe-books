@@ -13,6 +13,7 @@
         <FrappeButton
           class="text-sm font-medium text-ink-gray-8"
           variant="ghost"
+          :size="isMobile ? 'md' : 'sm'"
           :disabled="paidCount === 0"
           :tooltip="paidCount > 0 ? t`View Paid Invoices` : undefined"
           @click="routeToInvoices('paid')"
@@ -27,6 +28,7 @@
         <FrappeButton
           class="text-sm font-medium text-ink-gray-8"
           variant="ghost"
+          :size="isMobile ? 'md' : 'sm'"
           :disabled="unpaidCount === 0"
           :tooltip="unpaidCount > 0 ? t`View Unpaid Invoices` : undefined"
           @click="routeToInvoices('unpaid')"

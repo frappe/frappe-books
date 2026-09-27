@@ -2,9 +2,30 @@
   <div class="flex flex-col h-full">
     <SectionHeader>
       <template #title>{{ t`Profit and Loss` }}</template>
+      <template v-if="isMobile" #action>
+        <div class="flex gap-3 text-xs text-ink-gray-6">
+          <span
+            v-for="entry in legend"
+            :key="entry.label"
+            class="flex items-center gap-1.5"
+          >
+            <span
+              class="size-2 rounded-[2px]"
+              :style="{ backgroundColor: entry.color }"
+            />
+            {{ entry.label }}
+          </span>
+        </div>
+      </template>
     </SectionHeader>
-    <div v-if="hasData" class="mt-4 h-72 w-full">
+    <div
+      v-if="hasData"
+      v-bind="phoneChartListeners"
+      class="mt-4 w-full"
+      :class="isMobile ? 'h-[184px]' : 'h-72'"
+    >
       <FrappeBarChart
+        :dir="isMobile ? 'ltr' : undefined"
         :data="data"
         x="yearmonth"
         y="balance"
@@ -45,13 +66,25 @@ export default defineComponent({
     hasData: false,
   }),
   computed: {
+    colors() {
+      return {
+        positive: uicolors.blue[this.darkMode ? '600' : '500'],
+        negative: uicolors.pink[this.darkMode ? '600' : '500'],
+      };
+    },
+    legend() {
+      return [
+        { label: this.t`Profit`, color: this.colors.positive },
+        { label: this.t`Loss`, color: this.colors.negative },
+      ];
+    },
     chartData() {
       const points = [this.data.map((d) => d.balance)];
-      const positive = uicolors.blue[this.darkMode ? '600' : '500'];
-      const negative = uicolors.pink[this.darkMode ? '600' : '500'];
+      const { positive, negative } = this.colors;
       const format = (value: number) => fyo.format(value ?? 0, 'Currency');
       const yMax = getYMax(points);
       const yMin = getYMin(points);
+      const phoneAxes = this.isMobile ? this.phoneAxisLabels : undefined;
       return {
         seriesConfig: {
           balance: {
@@ -65,8 +98,12 @@ export default defineComponent({
             },
           },
         },
-        xAxis: { type: 'category' as const, format: formatXLabels },
-        yAxis: { min: yMin, max: yMax, format },
+        xAxis: {
+          type: 'category' as const,
+          format: formatXLabels,
+          echartOptions: phoneAxes?.x,
+        },
+        yAxis: { min: yMin, max: yMax, format, echartOptions: phoneAxes?.y },
       };
     },
   },

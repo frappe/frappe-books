@@ -115,6 +115,24 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 			("Books Purchase Receipt", receipt.name, -2),
 		)
 
+	def test_receipt_is_billed_only_once(self):
+		set_inventory_accounts(
+			make_account("Stock", account_type="Stock").name,
+			make_account("Received", root_type="Liability").name,
+			make_account("COGS", root_type="Expense").name,
+		)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		receipt = make_receipt(item.name, quantity=2, rate=10)
+		make_purchase_invoice(receipt.name).insert().submit()
+
+		again = make_purchase_invoice(receipt.name).insert()
+
+		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2", again.submit)
+
 
 def make_receipt(item, quantity, rate, return_against=None, date=None):
 	payable = make_account("Payable", root_type="Liability", account_type="Payable")

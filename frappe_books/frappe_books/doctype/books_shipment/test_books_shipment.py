@@ -258,6 +258,33 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		invoice.insert().submit()
 		self.assertEqual(stock_quantity(item.name, "Stores"), 1)
 
+	def test_invoices_bill_a_shipment_only_up_to_what_it_shipped(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=3, rate=10)
+		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment.submit()
+		first = make_sales_invoice(shipment.name).insert()
+		first.submit()
+
+		second = make_sales_invoice(shipment.name).insert()
+
+		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2", second.submit)
+		first.cancel()
+		second.reload().submit()
+
+	def test_invoice_of_a_shipment_can_bill_lines_it_did_not_ship(self):
+		item, _cogs, _stock = self._tracked_item()
+		service = make_item(item.income_account, item.expense_account)
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment.submit()
+		invoice = make_sales_invoice(shipment.name)
+		invoice.append("items", {"item": service.name, "quantity": 1, "rate": 5})
+
+		invoice.insert().submit()
+
+		self.assertEqual(invoice.docstatus, 1)
+
 	def test_shipment_made_from_an_invoice_is_not_billed_again(self):
 		item, cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=5, rate=10)

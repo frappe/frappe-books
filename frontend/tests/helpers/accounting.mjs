@@ -29,7 +29,7 @@ await build({
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
-      export { getItemQtyMap, getMappedDoc, validateQty } from './models/helpers';
+      export { getExchangeRate, getItemQtyMap, getMappedDoc, validateQty } from './models/helpers';
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export { addBatchItem, validatePOSCheckout, validateSinv } from './src/utils/pos';
       export { getTaskChecks } from './src/utils/getStartedTasks';
@@ -97,6 +97,7 @@ export const {
   defaultCondition,
   isCompleteFilter,
   mergeQueryFilters,
+  getExchangeRate,
   getItemQtyMap,
   getMappedDoc,
   validateQty,

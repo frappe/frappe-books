@@ -54,6 +54,47 @@ class IntegrationTestUnits(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "not applicable", movement.insert)
 
+	def test_whole_number_units_take_whole_quantities(self):
+		piece = make_uom("Piece", is_whole=1)
+		box = make_uom("Whole Box", is_whole=1)
+		item = make_item(
+			self.income.name,
+			make_account("Unit Received", root_type="Liability").name,
+			track_item=1,
+			unit=piece,
+			uom_conversions=[{"uom": box, "conversion_factor": 12}],
+		)
+		for values, label in (
+			({"transfer_unit": piece, "quantity": 1.5}, "Quantity"),
+			({"transfer_unit": box, "transfer_quantity": 0.5}, r"Qty\. in Transfer Unit"),
+		):
+			with self.subTest(label=label):
+				movement = self._receipt({"item": item.name, **values})
+				self.assertRaisesRegex(
+					frappe.ValidationError, f"^{label} of .* whole number", movement.insert
+				)
+		movement = self._receipt({"item": item.name, "transfer_unit": box, "transfer_quantity": 2}).insert()
+		self.assertEqual(movement.items[0].quantity, 24)
+
+	def test_invoice_rows_in_whole_number_units_take_whole_quantities(self):
+		receivable = make_account("Unit Receivable", account_type="Receivable")
+		piece = make_uom("Piece", is_whole=1)
+		item = make_item(self.income.name, self.expense.name, unit=piece)
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Books Sales Invoice",
+				"party": make_party(receivable.name).name,
+				"account": receivable.name,
+				"date": frappe.utils.now_datetime(),
+				"items": [{"item": item.name, "transfer_unit": piece, "quantity": 2.5, "rate": 10}],
+			}
+		)
+		self.assertRaisesRegex(frappe.ValidationError, "^Quantity of .* whole number", invoice.insert)
+
+	def test_other_units_take_fractional_quantities(self):
+		movement = self._receipt({"transfer_unit": self.box, "transfer_quantity": 0.5}).insert()
+		self.assertEqual(movement.items[0].quantity, 6)
+
 	def test_item_conversions_need_one_positive_factor_per_unit(self):
 		for conversions, message in (
 			(
@@ -77,5 +118,9 @@ class IntegrationTestUnits(IntegrationTestCase):
 		return frappe.get_doc(movement_values("MaterialReceipt", [row]))
 
 
-def make_uom(label):
-	return frappe.get_doc({"doctype": "Books Uom", "name": unique_name(label)}).insert().name
+def make_uom(label, is_whole=0):
+	return (
+		frappe.get_doc({"doctype": "Books Uom", "name": unique_name(label), "is_whole": is_whole})
+		.insert()
+		.name
+	)

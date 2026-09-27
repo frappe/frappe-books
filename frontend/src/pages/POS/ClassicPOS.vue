@@ -1,92 +1,5 @@
 <template>
   <div>
-    <OpenPOSShiftModal
-      v-if="!isPosShiftOpen"
-      :open-modal="!isPosShiftOpen"
-      @toggle-modal="emitEvent('toggleModal', 'ShiftOpen')"
-    />
-
-    <ClosePOSShiftModal
-      :open-modal="openShiftCloseModal"
-      @toggle-modal="emitEvent('toggleModal', 'ShiftClose', false)"
-    />
-
-    <LoyaltyProgramModal
-      :open-modal="openLoyaltyProgramModal"
-      :loyalty-points="loyaltyPoints"
-      :loyalty-program="loyaltyProgram"
-      @toggle-modal="emitEvent('toggleModal', 'LoyaltyProgram', false)"
-      @set-loyalty-points="
-        (points) => emitEvent('setLoyaltyPoints', points)
-      "
-    />
-
-    <BatchSelectionModal
-      :open-modal="openBatchSelectionModal"
-      :item-code="selectedItemForBatch"
-      @toggle-modal="emitEvent('toggleModal', 'BatchSelection', false)"
-      @batch-selected="(batch) => emitEvent('batchSelected', batch)"
-    />
-
-    <SavedInvoiceModal
-      :open-modal="openSavedInvoiceModal"
-      @toggle-modal="emitEvent('toggleModal', 'SavedInvoice', false)"
-      @selected-invoice-name="
-        (invName) => emitEvent('selectedInvoiceName', invName)
-      "
-    />
-
-    <CouponCodeModal
-      :open-modal="openCouponCodeModal"
-      @toggle-modal="emitEvent('toggleModal', 'CouponCode', false)"
-      @set-coupons-count="(count) => emitEvent('setCouponsCount', count)"
-    />
-
-    <PriceListModal
-      :open-modal="openPriceListModal"
-      @toggle-modal="emitEvent('toggleModal', 'PriceList', false)"
-    />
-
-    <ItemEnquiryModal
-      :open-modal="openItemEnquiryModal"
-      :customer="sinvDoc?.party"
-      @toggle-modal="emitEvent('toggleModal', 'ItemEnquiry', false)"
-    />
-
-    <PaymentModal
-      :open-modal="openPaymentModal"
-      @toggle-modal="emitEvent('toggleModal', 'Payment', false)"
-      @set-paid-amount="
-        (amount: Money) => emitEvent('setPaidAmount', amount)
-      "
-      @set-payment-method="
-        (paymentMethod) => emitEvent('setPaymentMethod', paymentMethod)
-      "
-      @set-transfer-ref-no="(ref) => emitEvent('setTransferRefNo', ref)"
-      @set-transfer-clearance-date="
-        (date) => emitEvent('setTransferClearanceDate', date)
-      "
-      @create-transaction="
-        (print, status) => emitEvent('createTransaction', print, status)
-      "
-    />
-
-    <ReturnSalesInvoiceModal
-      :open-modal="openReturnSalesInvoiceModal"
-      @selected-return-invoice="
-        (value: any) => emitEvent('selectedReturnInvoice', value)
-      "
-      @toggle-modal="emitEvent('toggleModal', 'ReturnSalesInvoice', false)"
-    />
-
-    <AlertModal
-      :open-modal="openAlertModal"
-      @toggle-modal="emitEvent('toggleModal', 'Alert', false)"
-      @save-and-continue="
-        (value: any) => emitEvent('saveAndContinue', value)
-      "
-    />
-
     <div
       class="h-[calc(100dvh-var(--h-row-largest))] min-h-0 overflow-y-auto xl:overflow-hidden bg-surface-gray-1 grid grid-cols-1 xl:grid-cols-12 gap-2 p-4"
     >
@@ -248,30 +161,18 @@ import POSInvoiceActions from 'src/components/POS/POSInvoiceActions.vue';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import { getItem } from 'src/utils/pos';
-import AlertModal from './AlertModal.vue';
-import PaymentModal from './PaymentModal.vue';
 import { defineComponent, PropType } from 'vue';
-import PriceListModal from './PriceListModal.vue';
-import ItemEnquiryModal from './ItemEnquiryModal.vue';
 import { Item } from 'models/baseModels/Item/Item';
-import CouponCodeModal from './CouponCodeModal.vue';
 import POSQuickActions from './POSQuickActions.vue';
 import { PosEmits } from 'src/components/POS/types';
 import Link from 'src/components/Controls/Link.vue';
-import SavedInvoiceModal from './SavedInvoiceModal.vue';
-import OpenPOSShiftModal from './OpenPOSShiftModal.vue';
-import ClosePOSShiftModal from './ClosePOSShiftModal.vue';
-import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
 import { POSItem, ItemQtyMap } from 'src/components/POS/types';
 import ItemsGrid from 'src/components/POS/ItemsGrid.vue';
 import ItemsTable from 'src/components/POS/Classic/ItemsTable.vue';
-import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import SelectedItemTable from 'src/components/POS/Classic/SelectedItemTable.vue';
-import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
-import BatchSelectionModal from 'src/pages/POS/BatchSelectionModal.vue';
 
 export default defineComponent({
   name: 'ClassicPOS',
@@ -280,39 +181,15 @@ export default defineComponent({
     POSInvoiceActions,
     Link,
     ItemsGrid,
-    AlertModal,
     ItemsTable,
-    PaymentModal,
     MultiLabelLink,
-    PriceListModal,
-    ItemEnquiryModal,
-    CouponCodeModal,
     POSQuickActions,
-    OpenPOSShiftModal,
     SelectedItemTable,
-    SavedInvoiceModal,
-    ClosePOSShiftModal,
-    LoyaltyProgramModal,
-    ReturnSalesInvoiceModal,
-    BatchSelectionModal,
   },
   props: {
-    paidAmount: Money,
     tableView: Boolean,
     itemDiscounts: Money,
-    openAlertModal: Boolean,
-    isPosShiftOpen: Boolean,
     disablePayButton: Boolean,
-    openPaymentModal: Boolean,
-    openPriceListModal: Boolean,
-    openItemEnquiryModal: Boolean,
-    openCouponCodeModal: Boolean,
-    openShiftCloseModal: Boolean,
-    openSavedInvoiceModal: Boolean,
-    openLoyaltyProgramModal: Boolean,
-    openAppliedCouponsModal: Boolean,
-    openReturnSalesInvoiceModal: Boolean,
-    openBatchSelectionModal: Boolean,
     totalQuantity: {
       type: Number,
       default: 0,
@@ -345,10 +222,6 @@ export default defineComponent({
       type: Object as PropType<ItemQtyMap>,
       default: () => ({}),
     },
-    coupons: {
-      type: Object as PropType<AppliedCouponCodes>,
-      default: () => ({}),
-    },
     items: {
       type: Array as PropType<POSItem[]>,
       default: () => [],
@@ -366,14 +239,6 @@ export default defineComponent({
       required: false,
       default: null,
     },
-    batchAddedItems: {
-      type: Array as () => string[],
-      default: () => [],
-    },
-    selectedItemForBatch: {
-      type: String,
-      default: '',
-    },
     expandedBatchId: {
       type: String as PropType<string | null | undefined>,
       default: undefined,
@@ -387,23 +252,11 @@ export default defineComponent({
     'setCustomer',
     'clearValues',
     'setItemGroup',
-    'setPaidAmount',
-    'setCouponsCount',
     'routeToSinvList',
     'handleItemSearch',
-    'setPaymentMethod',
-    'setTransferRefNo',
-    'setLoyaltyPoints',
     'saveInvoiceAction',
-    'createTransaction',
-    'setTransferAmount',
-    'selectedInvoiceName',
-    'selectedReturnInvoice',
-    'setTransferClearanceDate',
-    'saveAndContinue',
     'handlePaymentAction',
     'selectedRow',
-    'batchSelected',
   ],
   data() {
     return {

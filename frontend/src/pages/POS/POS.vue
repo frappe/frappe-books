@@ -9,127 +9,104 @@
         </Button>
       </slot>
     </PageHeader>
-    <ClassicPOS
-      v-if="
-        posProfile?.posUI === 'Classic' ||
-        (!posProfile?.posUI && fyo.singles.POSSettings?.posUI === 'Classic')
-      "
+    <component
+      :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'"
       :table-view="tableView"
       :profile="posProfile as POSProfile"
       :total-quantity="totalQuantity"
       :item-quantity-map="itemQtyMap"
       :loyalty-points="loyaltyPoints"
       :loyalty-program="loyaltyProgram"
-      :open-alert-modal="openAlertModal"
-      :default-customer="defaultCustomer"
       :item-search-term="itemSearchTerm"
       :selected-item-group="selectedItemGroup"
-      :is-pos-shift-open="isPosShiftOpen"
       :items="filteredItems as [] as POSItem[]"
       :search-items="items as [] as POSItem[]"
       :item-visibility="itemVisibility"
       :sinv-doc="sinvDoc as SalesInvoice"
       :disable-pay-button="disablePayButton"
-      :open-payment-modal="openPaymentModal"
       :item-discounts="itemDiscounts as Money"
-      :coupons="coupons as AppliedCouponCodes"
-      :open-price-list-modal="openPriceListModal"
-      :open-item-enquiry-modal="openItemEnquiryModal"
       :applied-coupons-count="appliedCouponsCount"
-      :open-shift-close-modal="openShiftCloseModal"
-      :open-coupon-code-modal="openCouponCodeModal"
-      :open-saved-invoice-modal="openSavedInvoiceModal"
-      :open-loyalty-program-modal="openLoyaltyProgramModal"
-      :open-applied-coupons-modal="openAppliedCouponsModal"
-      :open-return-sales-invoice-modal="openReturnSalesInvoiceModal"
-      :open-batch-selection-modal="openBatchSelectionModal"
-      :selected-item-for-batch="selectedItemForBatch"
       :expanded-batch-id="expandedBatchId"
       @set-expanded-batch-id="setExpandedBatchId"
       @add-item="addItem"
       @toggle-view="toggleView"
-      @set-sinv-doc="setSinvDoc"
       @clear-values="clearValues"
       @set-customer="setCustomer"
       @toggle-modal="toggleModal"
       @set-item-group="setItemGroup"
       @handle-item-search="handleItemSearch"
-      @set-paid-amount="setPaidAmount"
-      @set-payment-method="setPaymentMethod"
-      @set-coupons-count="setCouponsCount"
       @route-to-sinv-list="routeToSinvList"
-      @set-loyalty-points="setLoyaltyPoints"
-      @set-transfer-ref-no="setTransferRefNo"
-      @create-transaction="createTransaction"
       @save-invoice-action="saveInvoiceAction"
-      @set-transfer-amount="setTransferAmount"
-      @selected-invoice-name="selectedInvoiceName"
-      @selected-return-invoice="selectedReturnInvoice"
-      @set-transfer-clearance-date="setTransferClearanceDate"
-      @save-and-continue="handleSaveAndContinue"
       @handle-payment-action="handlePaymentAction"
-      @selected-row="setQuickQtySelectedRow"
+      @selected-row="selectRow"
+    />
+
+    <OpenPOSShiftModal
+      v-if="!isPosShiftOpen"
+      :open-modal="!isPosShiftOpen"
+      @toggle-modal="toggleModal('ShiftOpen')"
+    />
+    <ClosePOSShiftModal
+      :open-modal="openShiftCloseModal"
+      @toggle-modal="toggleModal('ShiftClose', false)"
+    />
+    <LoyaltyProgramModal
+      :open-modal="openLoyaltyProgramModal"
+      :loyalty-points="loyaltyPoints"
+      :loyalty-program="loyaltyProgram"
+      @toggle-modal="toggleModal('LoyaltyProgram', false)"
+      @set-loyalty-points="setLoyaltyPoints"
+    />
+    <BatchSelectionModal
+      :open-modal="openBatchSelectionModal"
+      :item-code="selectedItemForBatch"
+      @toggle-modal="toggleModal('BatchSelection', false)"
       @batch-selected="handleBatchSelected"
     />
-    <ModernPOS
-      v-else
-      :table-view="tableView"
-      :profile="posProfile as POSProfile"
-      :total-quantity="totalQuantity"
-      :item-quantity-map="itemQtyMap"
-      :loyalty-points="loyaltyPoints"
-      :loyalty-program="loyaltyProgram"
-      :open-alert-modal="openAlertModal"
-      :default-customer="defaultCustomer"
-      :item-search-term="itemSearchTerm"
-      :selected-item-group="selectedItemGroup"
-      :is-pos-shift-open="isPosShiftOpen"
-      :items="filteredItems as [] as POSItem[]"
-      :search-items="items as [] as POSItem[]"
-      :item-visibility="itemVisibility"
-      :sinv-doc="sinvDoc as SalesInvoice"
-      :disable-pay-button="disablePayButton"
-      :open-payment-modal="openPaymentModal"
-      :open-keyboard-modal="openKeyboardModal"
-      :item-discounts="itemDiscounts as Money"
-      :coupons="coupons as AppliedCouponCodes"
-      :open-price-list-modal="openPriceListModal"
-      :open-item-enquiry-modal="openItemEnquiryModal"
-      :applied-coupons-count="appliedCouponsCount"
-      :open-shift-close-modal="openShiftCloseModal"
-      :open-coupon-code-modal="openCouponCodeModal"
-      :open-saved-invoice-modal="openSavedInvoiceModal"
-      :open-loyalty-program-modal="openLoyaltyProgramModal"
-      :open-applied-coupons-modal="openAppliedCouponsModal"
-      :open-return-sales-invoice-modal="openReturnSalesInvoiceModal"
-      :open-batch-selection-modal="openBatchSelectionModal"
-      :selected-item-for-batch="selectedItemForBatch"
-      :expanded-batch-id="expandedBatchId"
-      @set-expanded-batch-id="setExpandedBatchId"
-      @add-item="addItem"
-      @toggle-view="toggleView"
-      @set-sinv-doc="setSinvDoc"
-      @clear-values="clearValues"
-      @set-customer="setCustomer"
-      @toggle-modal="toggleModal"
-      @set-item-group="setItemGroup"
-      @handle-item-search="handleItemSearch"
+    <SavedInvoiceModal
+      :open-modal="openSavedInvoiceModal"
+      @toggle-modal="toggleModal('SavedInvoice', false)"
+      @selected-invoice-name="selectedInvoiceName"
+    />
+    <CouponCodeModal
+      :open-modal="openCouponCodeModal"
+      @toggle-modal="toggleModal('CouponCode', false)"
+      @set-coupons-count="setCouponsCount"
+    />
+    <PriceListModal
+      :open-modal="openPriceListModal"
+      @toggle-modal="toggleModal('PriceList', false)"
+    />
+    <ItemEnquiryModal
+      :open-modal="openItemEnquiryModal"
+      :customer="sinvDoc.party"
+      @toggle-modal="toggleModal('ItemEnquiry', false)"
+    />
+    <PaymentModal
+      :open-modal="openPaymentModal"
+      @toggle-modal="toggleModal('Payment', false)"
       @set-paid-amount="setPaidAmount"
       @set-payment-method="setPaymentMethod"
-      @set-coupons-count="setCouponsCount"
-      @route-to-sinv-list="routeToSinvList"
-      @set-loyalty-points="setLoyaltyPoints"
       @set-transfer-ref-no="setTransferRefNo"
-      @create-transaction="createTransaction"
-      @save-invoice-action="saveInvoiceAction"
-      @set-transfer-amount="setTransferAmount"
-      @selected-invoice-name="selectedInvoiceName"
-      @selected-return-invoice="selectedReturnInvoice"
-      @save-and-continue="handleSaveAndContinue"
       @set-transfer-clearance-date="setTransferClearanceDate"
-      @selected-row="setQuickQtySelectedRow"
-      @handle-payment-action="handlePaymentAction"
-      @batch-selected="handleBatchSelected"
+      @create-transaction="createTransaction"
+    />
+    <ReturnSalesInvoiceModal
+      :open-modal="openReturnSalesInvoiceModal"
+      @selected-return-invoice="selectedReturnInvoice"
+      @toggle-modal="toggleModal('ReturnSalesInvoice', false)"
+    />
+    <AlertModal
+      :open-modal="openAlertModal"
+      @toggle-modal="toggleModal('Alert', false)"
+      @save-and-continue="handleSaveAndContinue"
+    />
+    <KeyboardModal
+      v-if="selectedRow && keyboardField"
+      :modal-status="openKeyboardModal"
+      :selected-item-field="keyboardField"
+      :selected-item-row="selectedRow as SalesInvoiceItem"
+      @toggle-modal="toggleModal('Keyboard', false)"
     />
   </div>
 </template>
@@ -140,6 +117,18 @@ import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import ModernPOS from './ModernPOS.vue';
 import ClassicPOS from './ClassicPOS.vue';
+import AlertModal from './AlertModal.vue';
+import PaymentModal from './PaymentModal.vue';
+import KeyboardModal from './KeyboardModal.vue';
+import PriceListModal from './PriceListModal.vue';
+import CouponCodeModal from './CouponCodeModal.vue';
+import ItemEnquiryModal from './ItemEnquiryModal.vue';
+import SavedInvoiceModal from './SavedInvoiceModal.vue';
+import OpenPOSShiftModal from './OpenPOSShiftModal.vue';
+import ClosePOSShiftModal from './ClosePOSShiftModal.vue';
+import BatchSelectionModal from './BatchSelectionModal.vue';
+import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
+import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { ModelNameEnum } from 'models/types';
 import Button from 'src/components/Button.vue';
 import { showToast } from 'src/utils/interactive';
@@ -191,6 +180,18 @@ export default defineComponent({
     ModernPOS,
     PageHeader,
     ClassicPOS,
+    AlertModal,
+    PaymentModal,
+    KeyboardModal,
+    PriceListModal,
+    CouponCodeModal,
+    ItemEnquiryModal,
+    SavedInvoiceModal,
+    OpenPOSShiftModal,
+    ClosePOSShiftModal,
+    BatchSelectionModal,
+    LoyaltyProgramModal,
+    ReturnSalesInvoiceModal,
   },
   provide() {
     return {
@@ -265,7 +266,8 @@ export default defineComponent({
       itemSerialNumbers: {} as ItemSerialNumbers,
       quickQtyActive: false,
       quickQtyBuffer: '' as string,
-      quickQtyRow: null as SalesInvoiceItem | null,
+      selectedRow: null as SalesInvoiceItem | null,
+      keyboardField: '',
       quickQtyKeyDownHandler: null as ((e: KeyboardEvent) => void) | null,
       quickQtyKeyUpHandler: null as ((e: KeyboardEvent) => void) | null,
       selectedItemForBatch: '' as string,
@@ -275,6 +277,11 @@ export default defineComponent({
     };
   },
   computed: {
+    layout(): 'Classic' | 'Modern' {
+      const posUI =
+        this.posProfile?.posUI || fyo.singles.POSSettings?.posUI;
+      return posUI === 'Classic' ? 'Classic' : 'Modern';
+    },
     defaultPOSCashAccount: () =>
       fyo.singles.POSSettings?.cashAccount ?? undefined,
     isDiscountingEnabled(): boolean {
@@ -342,8 +349,9 @@ export default defineComponent({
     this.closeAllModals();
   },
   methods: {
-    setQuickQtySelectedRow(row: SalesInvoiceItem) {
-      this.quickQtyRow = row;
+    selectRow(row: SalesInvoiceItem, field = '') {
+      this.selectedRow = row;
+      this.keyboardField = field;
     },
     setExpandedBatchId(rowName: string | null) {
       this.expandedBatchId = rowName;
@@ -461,7 +469,7 @@ export default defineComponent({
       }
 
       // Determine target row: prefer explicitly selected row; else fallback to last non-free item
-      let row = this.quickQtyRow as SalesInvoiceItem | null;
+      let row = this.selectedRow as SalesInvoiceItem | null;
       if (!row || !(this.sinvDoc.items || []).includes(row)) {
         const items = (this.sinvDoc.items || []).filter((r) => !r.isFreeItem);
         row = items.length

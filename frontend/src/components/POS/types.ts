@@ -33,21 +33,9 @@ export type PosEmits =
   | 'toggleView'
   | 'toggleModal'
   | 'setItemGroup'
-  | 'setPaidAmount'
-  | 'setPaymentMethod'
-  | 'setCouponsCount'
   | 'routeToSinvList'
   | 'handleItemSearch'
-  | 'setTransferRefNo'
-  | 'setLoyaltyPoints'
-  | 'setTransferAmount'
-  | 'createTransaction'
-  | 'selectedInvoiceName'
-  | 'selectedReturnInvoice'
-  | 'saveAndContinue'
-  | 'handlePaymentAction'
-  | 'setTransferClearanceDate'
-  | 'batchSelected';
+  | 'handlePaymentAction';
 
 export interface POSItem {
   id?: number;

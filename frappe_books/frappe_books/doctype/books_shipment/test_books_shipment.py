@@ -264,13 +264,28 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		shipment = self._make_shipment(item, quantity=2, rate=25)
 		shipment.submit()
 		first = make_sales_invoice(shipment.name).insert()
-		first.submit()
-
 		second = make_sales_invoice(shipment.name).insert()
+
+		first.submit()
 
 		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2", second.submit)
 		first.cancel()
 		second.reload().submit()
+
+	def test_invoice_maps_what_earlier_invoices_left_to_bill(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=3, rate=10)
+		shipment = self._make_shipment(item, quantity=3, rate=25)
+		shipment.submit()
+		first = make_sales_invoice(shipment.name)
+		first.items[0].update({"quantity": 2, "transfer_quantity": 2})
+		first.insert().submit()
+
+		self.assertEqual([row.quantity for row in make_sales_invoice(shipment.name).items], [1])
+		make_sales_invoice(shipment.name).insert().submit()
+		self.assertRaisesRegex(
+			frappe.ValidationError, "already fully billed", make_sales_invoice, shipment.name
+		)
 
 	def test_invoice_of_a_shipment_can_bill_lines_it_did_not_ship(self):
 		item, _cogs, _stock = self._tracked_item()

@@ -127,9 +127,10 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 			track_item=1,
 		)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
-		make_purchase_invoice(receipt.name).insert().submit()
-
+		first = make_purchase_invoice(receipt.name).insert()
 		again = make_purchase_invoice(receipt.name).insert()
+
+		first.submit()
 
 		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2", again.submit)
 

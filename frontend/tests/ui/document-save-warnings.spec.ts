@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { openBooks } from './helpers/books-session';
+import { useBooksSession } from './helpers/session';
 
-openBooks();
+useBooksSession();
 
 for (const schemaName of ['Color', 'PrintSettings']) {
   test(`${schemaName} reports post-save warnings without leaving an unsaved document`, async ({

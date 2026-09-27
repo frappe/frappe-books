@@ -2,30 +2,18 @@
 import { showSidebar } from 'src/utils/refs';
 </script>
 <template>
-  <div class="flex overflow-hidden">
-    <Transition name="sidebar">
-      <Sidebar
-        v-show="showSidebar"
-        class="
-          flex-shrink-0
-          border-e
-          border-outline-gray-1
-          whitespace-nowrap
-          w-sidebar
-        "
-        :dark-mode="darkMode"
-      />
-    </Transition>
+  <FrappeDesktopShell :scroll="false">
+    <template #sidebar>
+      <Transition name="sidebar">
+        <Sidebar
+          v-show="showSidebar"
+          class="flex-shrink-0 border-e border-outline-gray-1 whitespace-nowrap"
+          :dark-mode="darkMode"
+        />
+      </Transition>
+    </template>
 
-    <div
-      class="
-        flex flex-1
-        min-w-0
-        overflow-y-hidden
-        custom-scroll custom-scroll-thumb1
-        bg-surface-base
-      "
-    >
+    <div class="flex min-h-0 flex-1 overflow-hidden bg-surface-base">
       <router-view v-slot="{ Component }">
         <keep-alive>
           <component
@@ -52,14 +40,16 @@ import { showSidebar } from 'src/utils/refs';
         </Transition>
       </router-view>
     </div>
-  </div>
+  </FrappeDesktopShell>
 </template>
 <script lang="ts">
+import { DesktopShell as FrappeDesktopShell } from 'frappe-ui';
 import { defineComponent } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
 export default defineComponent({
   name: 'Desk',
   components: {
+    FrappeDesktopShell,
     Sidebar,
   },
   props: {

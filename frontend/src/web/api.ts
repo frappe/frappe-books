@@ -181,6 +181,7 @@ declare global {
       boot?: {
         lang?: string;
         user?: { name?: string };
+        user_info?: Record<string, { fullname?: string }>;
         [key: string]: unknown;
       };
     };

@@ -14,6 +14,7 @@
       class="books-account-tree relative flex-1 overflow-y-auto p-4 custom-scroll custom-scroll-thumb1"
     >
       <FrappeTree
+        v-model:expanded="expandedAccounts"
         :nodes="accounts"
         node-key="name"
         :aria-label="t`Chart of Accounts`"
@@ -144,7 +145,6 @@ type AccountItem = {
   accountType: AccountType;
   isGroup?: boolean;
   children: AccountItem[];
-  expanded: boolean;
   addingAccount: boolean;
   addingGroupAccount: boolean;
 };
@@ -176,6 +176,7 @@ export default defineComponent({
       addingParent: null as AccountItem | null,
       root: null as null | { label: string; balance: number; currency: string },
       accounts: [] as AccountItem[],
+      expandedAccounts: [] as string[],
       schemaName: 'Account',
       newAccountName: '',
       insertingAccount: false,
@@ -185,10 +186,12 @@ export default defineComponent({
   },
   computed: {
     isAllExpanded(): boolean {
-      return this.getGroups(this.accounts).every((account) => account.expanded);
+      return this.getGroups(this.accounts).every((account) =>
+        this.isExpanded(account)
+      );
     },
     isAllCollapsed(): boolean {
-      return this.accounts.every((account) => !account.expanded);
+      return this.accounts.every((account) => !this.isExpanded(account));
     },
     newAccountTitle(): string {
       return this.addingParent?.addingGroupAccount
@@ -229,28 +232,22 @@ export default defineComponent({
       });
       return actions;
     },
-    async expand() {
-      await this.toggleAll(this.accounts, true);
+    expand() {
+      this.expandedAccounts = this.getGroups(this.accounts).map(
+        (account) => account.name
+      );
     },
-    async collapse() {
-      await this.toggleAll(this.accounts, false);
+    collapse() {
+      this.expandedAccounts = [];
     },
-    async toggleAll(accounts: AccountItem | AccountItem[], expand: boolean) {
-      if (!Array.isArray(accounts)) {
-        await this.toggle(accounts, expand);
-        accounts = accounts.children ?? [];
-      }
-
-      for (const account of accounts) {
-        await this.toggleAll(account, expand);
-      }
+    isExpanded(account: AccountItem) {
+      return this.expandedAccounts.includes(account.name);
     },
-    async toggle(account: AccountItem, expand: boolean) {
-      if (account.expanded === expand || !account.isGroup) {
-        return;
-      }
-
-      await this.toggleChildren(account);
+    setExpanded(account: AccountItem, expanded: boolean) {
+      const others = this.expandedAccounts.filter(
+        (name) => name !== account.name
+      );
+      this.expandedAccounts = expanded ? [...others, account.name] : others;
     },
     getBalance(account: AccountItem) {
       const total = this.totals[account.name];
@@ -294,7 +291,6 @@ export default defineComponent({
       const nodes = records.map((record) => ({
         ...record,
         label: getAccountLabel(String(record.name)),
-        expanded: false,
         children: [],
       })) as unknown as AccountItem[];
       const byName = new Map(nodes.map((node) => [node.name, node]));
@@ -405,8 +401,9 @@ export default defineComponent({
         return false;
       }
 
-      account.expanded = !account.expanded;
-      if (!account.expanded) {
+      const expanded = !this.isExpanded(account);
+      this.setExpanded(account, expanded);
+      if (!expanded) {
         account.addingAccount = false;
         account.addingGroupAccount = false;
       }
@@ -442,7 +439,6 @@ export default defineComponent({
 
       return children.map((d) => {
         d.label = getAccountLabel(String(d.name));
-        d.expanded = false;
         d.addingAccount = false;
         d.addingGroupAccount = false;
 
@@ -450,9 +446,9 @@ export default defineComponent({
       });
     },
     async addAccount(parentAccount: AccountItem, key: AccKey) {
-      if (!parentAccount.expanded) {
+      if (!this.isExpanded(parentAccount)) {
         await this.fetchChildren(parentAccount);
-        parentAccount.expanded = true;
+        this.setExpanded(parentAccount, true);
       }
       // activate editing of type 'key' and deactivate other type
       let otherKey: AccKey =

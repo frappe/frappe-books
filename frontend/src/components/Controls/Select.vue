@@ -77,7 +77,7 @@ export default defineComponent({
     onOpenChange(open: boolean) {
       this.dropdownVisible = open;
     },
-    selectOption(value: string | number | undefined) {
+    selectOption(value: string | number | null | undefined) {
       this.triggerChange(value);
 
       if (!this.closeDropDown) {

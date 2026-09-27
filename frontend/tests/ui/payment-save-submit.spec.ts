@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openBooks } from './helpers/books-session';
+import { useBooksSession } from './helpers/session';
 
-openBooks();
+useBooksSession();
 
 test.beforeEach(async ({ page }) => {
   await installPaymentFixture(page);

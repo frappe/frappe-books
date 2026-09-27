@@ -200,7 +200,7 @@ test('date filters use the calendar and reset incompatible field values', async 
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
   await setValue(page, 'Submitted');
   await choose(page, 'Field', 'Date');
-  const input = page.getByRole('textbox', { name: 'Value', exact: true });
+  const input = page.getByRole('combobox', { name: 'Value', exact: true });
   const panel = page.getByRole('region', { name: 'Filters', exact: true });
   await expect(input).toHaveValue('');
   await page.getByRole('combobox', { name: 'Condition', exact: true }).click();
@@ -338,7 +338,7 @@ test('datetime filters select both calendar date and time and preserve SQL round
 }) => {
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
   await choose(page, 'Field', 'Date');
-  const input = page.getByRole('textbox', { name: 'Value', exact: true });
+  const input = page.getByRole('combobox', { name: 'Value', exact: true });
   const panel = page.getByRole('region', { name: 'Filters', exact: true });
   await input.click();
   await page.locator('[role="gridcell"][data-value="2024-02-29"]').click();
@@ -395,7 +395,7 @@ for (const schema of ['JournalEntry', 'SalesInvoice']) {
       .getByRole('button', { name: 'Add a filter', exact: true })
       .click();
     await choose(page, 'Field', 'Date');
-    const input = page.getByRole('textbox', { name: 'Value', exact: true });
+    const input = page.getByRole('combobox', { name: 'Value', exact: true });
     const panel = page.getByRole('region', { name: 'Filters', exact: true });
     await input.focus();
     await input.press('ArrowDown');
@@ -446,7 +446,7 @@ for (const [schema, first, second] of [
       .getByRole('button', { name: 'Add a filter', exact: true })
       .click();
     await choose(page, 'Field', 'Date');
-    const input = page.getByRole('textbox', { name: 'Value', exact: true });
+    const input = page.getByRole('combobox', { name: 'Value', exact: true });
     await input.click();
     await input.fill(first);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
@@ -479,7 +479,7 @@ for (const width of [1440, 390]) {
       .getByRole('button', { name: 'Add a filter', exact: true })
       .click();
     await choose(page, 'Field', 'Date');
-    await page.getByRole('textbox', { name: 'Value', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Value', exact: true }).click();
     const calendar = page.getByRole('grid', { name: 'Calendar dates' });
     await expect(calendar).toBeVisible();
     const bounds = (await calendar.boundingBox())!;

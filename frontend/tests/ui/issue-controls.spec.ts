@@ -21,7 +21,7 @@ test('fields retain accessible names when their visual labels are hidden', async
     page.getByRole('combobox', { name: 'Payment method', exact: true })
   ).toBeVisible();
   await expect(
-    page.getByRole('textbox', { name: 'Posting date', exact: true })
+    page.getByRole('combobox', { name: 'Posting date', exact: true })
   ).toBeVisible();
   await expect(
     page.getByRole('combobox', { name: 'Account', exact: true })
@@ -53,7 +53,7 @@ test('Tab reaches checkbox and select and the keyboard changes both values', asy
   await expect(select).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(
-    page.getByRole('textbox', { name: 'Posting date' })
+    page.getByRole('combobox', { name: 'Posting date' })
   ).toBeFocused();
 });
 

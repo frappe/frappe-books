@@ -464,6 +464,22 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			len(self.bridge.get_all("Color", {"filters": filters, "limit": 10, "offset": 495})), 6
 		)
 
+	def test_list_order_defaults_to_newest_first(self):
+		prefix = unique_name("Bridge Order")
+		for index, creation in enumerate(["2026-01-01", "2026-01-03", "2026-01-02"]):
+			name = f"{prefix} {index}"
+			frappe.get_doc({"doctype": "Books Color", "name": name, "hexvalue": "#000000"}).insert()
+			frappe.db.set_value("Books Color", name, "creation", creation, update_modified=False)
+		filters = {"name": ["like", f"{prefix}%"]}
+
+		def listed_indexes(**options):
+			rows = self.bridge.get_all("Color", {"filters": filters, **options})
+			return [row["name"].removeprefix(f"{prefix} ") for row in rows]
+
+		self.assertEqual(listed_indexes(), ["1", "2", "0"])
+		self.assertEqual(listed_indexes(orderBy="name"), ["2", "1", "0"])
+		self.assertEqual(listed_indexes(orderBy="name", order="asc"), ["0", "1", "2"])
+
 	def test_submit_and_cancel_use_atomic_server_lifecycle(self):
 		receivable = make_account("Bridge Receivable", account_type="Receivable")
 		income = make_account("Bridge Income", root_type="Income", account_type="Income Account")

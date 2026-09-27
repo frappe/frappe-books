@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openBooks } from './helpers/books-session';
+import { useBooksSession } from './helpers/session';
 
 const accountNames = [
   'Sidebar Account A',
@@ -7,7 +7,7 @@ const accountNames = [
   'Sidebar Account C',
 ];
 
-openBooks();
+useBooksSession();
 
 test.beforeEach(async ({ page }) => {
   await page.evaluate(async (names) => {

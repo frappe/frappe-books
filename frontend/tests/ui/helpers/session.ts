@@ -1,7 +1,7 @@
-import { expect, test, type Cookie } from '@playwright/test';
+import { expect, test, type Cookie, type Page } from '@playwright/test';
 
-/** Log in once for the calling file, then open the Books app before each test. */
-export function openBooks() {
+/** Signs in once per file and opens Books before each test. */
+export function useBooksSession(path = '/books') {
   let cookies: Cookie[];
 
   test.beforeAll(async ({ browser, baseURL }) => {
@@ -19,9 +19,11 @@ export function openBooks() {
 
   test.beforeEach(async ({ page }) => {
     await page.context().addCookies(cookies);
-    await page.goto('/books');
-    await page
-      .getByRole('button', { name: 'Dashboard', exact: true })
-      .waitFor();
+    await page.goto(path);
+    await waitForBooks(page);
   });
+}
+
+export async function waitForBooks(page: Page) {
+  await page.locator('header').first().waitFor();
 }

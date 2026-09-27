@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openBooks } from './helpers/books-session';
+import { useBooksSession } from './helpers/session';
 
 const partyName = 'Audit Saved Party';
 const addressName = 'Audit Address A';
 const addressLabel = '103, Demo Commerce Street, Mumbai, India';
 
-openBooks();
+useBooksSession();
 
 test.beforeEach(async ({ page }) => {
   await installFixture(page);
@@ -29,7 +29,7 @@ test('displaying and reopening a saved link does not edit the document', async (
     path: test.info().outputPath('saved-link.png'),
     fullPage: true,
   });
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
   await openFixture(page, 'Party', partyName);
   await expect(address).toHaveValue(addressLabel);
   expect(await getPartyState(page)).toEqual({

@@ -25,7 +25,6 @@
       <FilterDropdown ref="filterDropdown" :schema-name="schemaName" @change="applyFilter" />
       <FrappeButton
         v-if="canCreate"
-        ref="makeNewDocButton"
         variant="solid"
         size="md"
         icon="lucide-plus"
@@ -102,7 +101,6 @@ export default defineComponent({
     return {
       shortcuts: inject(shortcutsKey),
       list: ref<InstanceType<typeof List> | null>(null),
-      makeNewDocButton: ref<InstanceType<typeof FrappeButton> | null>(null),
       exportButton: ref<InstanceType<typeof Button> | null>(null),
       filterDropdown: ref<InstanceType<typeof FilterDropdown> | null>(null),
     };
@@ -169,7 +167,7 @@ export default defineComponent({
         return;
       }
 
-      this.shortcuts.pmod.set(this.context, ['KeyN'], () => this.makeNewDocButton?.$el.click());
+      this.shortcuts.pmod.set(this.context, ['KeyN'], () => this.makeNewDoc());
       this.shortcuts.pmod.set(this.context, ['KeyE'], () => this.exportButton?.$el.click());
     },
     updatedData(listFilters: QueryFilter) {

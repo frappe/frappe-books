@@ -155,7 +155,7 @@ export default defineComponent({
       await this.posShiftDoc.set('openingAmounts', paymentMethods);
     },
     async seedDefaults() {
-      if (!!this.posShiftDoc?.isShiftOpen) {
+      if (this.posShiftDoc?.isSubmitted) {
         return;
       }
 
@@ -187,13 +187,9 @@ export default defineComponent({
           );
         }
 
-        await this.posShiftDoc?.setMultiple({
-          isShiftOpen: true,
-          openingDate: new Date(),
-        });
-
-        // The server posts the opening cash journal when the shift is saved.
+        await this.posShiftDoc?.set('openingDate', new Date());
         await this.posShiftDoc?.sync();
+        await this.posShiftDoc?.submit();
 
         this.$emit('toggleModal', 'ShiftOpen');
       } catch (error) {

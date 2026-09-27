@@ -6,158 +6,104 @@ import {
   GeneralLedger,
   TrialBalance,
   ProfitAndLoss,
-  StockQueue,
   useTranslations,
   getAccountLabel,
   t,
   setLanguageMapOnTranslationString,
 } from './helpers/accounting.mjs';
 
-test('payment limits follow added, removed and replaced invoice references', async () => {
+test('trial balance requests an inclusive to date and renders six amounts', async () => {
   const fyo = await makeFyo();
-  const invoices = { first: 157.5, second: 63, replacement: 40 };
-  fyo.doc.getDoc = async (_schema, name) => ({
-    outstandingAmount: fyo.pesa(invoices[name]),
-  });
-  const payment = fyo.doc.getNewDoc('Payment');
-  const reference = (name) => ({
-    referenceType: 'SalesInvoice',
-    referenceName: name,
-    amount: fyo.pesa(invoices[name]),
-  });
-  payment.for = [reference('first')];
-  await payment.validations.amount(fyo.pesa(157.5));
-  payment.for.push(reference('second'));
-  await payment.validations.amount(fyo.pesa(220.5));
-  payment.for.shift();
-  await assert.rejects(
-    payment.validations.amount(fyo.pesa(220.5)),
-    /cannot exceed/
-  );
-  payment.for = [reference('replacement')];
-  await payment.validations.amount(fyo.pesa(40));
-  await assert.rejects(
-    payment.validations.amount(fyo.pesa(63)),
-    /cannot exceed/
-  );
-  invoices.replacement = 20;
-  await assert.rejects(
-    payment.validations.amount(fyo.pesa(40)),
-    /cannot exceed/
-  );
-});
-
-test('empty FIFO stock has no residual value or valuation and can be replenished', () => {
-  const stock = new StockQueue();
-  stock.inward(0.1, 1);
-  stock.inward(0.2, 1);
-  assert.equal(stock.outward(2), 0.15000000000000002);
-  assert.equal(stock.quantity, 0);
-  assert.equal(stock.value, 0);
-  assert.equal(stock.fifo, 0);
-  assert.equal(stock.movingAverage, 0);
-  assert.deepEqual(stock.queue, []);
-  stock.inward(7.5, 0.5);
-  assert.equal(stock.fifo, 7.5);
-  assert.equal(stock.outward(0.25), 7.5);
-  assert.equal(stock.value, 1.875);
-  assert.equal(stock.outward(0.25), 7.5);
-  assert.equal(stock.fifo, 0);
-});
-
-test('fractional FIFO depletion clears rounding dust without discarding small stock', () => {
-  const stock = new StockQueue();
-  stock.inward(10, 0.1);
-  stock.inward(20, 0.2);
-  assert.ok(Number.isFinite(stock.outward(0.3)));
-  assert.deepEqual([stock.quantity, stock.value, stock.fifo], [0, 0, 0]);
-  assert.deepEqual(stock.queue, []);
-  stock.inward(10, 1e-20);
-  stock.outward(0.5e-20);
-  assert.ok(stock.quantity > 0);
-  assert.equal(stock.fifo, 10);
-  for (const invalid of [NaN, Infinity, -1, 0]) {
-    assert.equal(stock.inward(10, invalid), null);
-    assert.equal(stock.outward(invalid), null);
-  }
-});
-
-test('trial balance closing includes opening and period entries, but no later entries', async () => {
-  const report = new TrialBalance(await makeFyo());
+  const report = new TrialBalance(fyo);
   report.fromDate = '2026-01-01';
   report.toDate = '2026-01-31';
-  report._dateRanges = await report._getDateRanges();
-  const values = (
-    await report._getGroupedByDateRanges(
-      new Map([
-        [
-          'Cash',
-          [
-            entry(1, '2025-12-31', 100, 20),
-            entry(2, '2026-01-01', 50, 0),
-            entry(3, '2026-01-31', 0, 30),
-            entry(4, '2026-02-01', 999, 0),
+  let call;
+  fyo.db.getReportData = async (...args) => {
+    call = args;
+    return {
+      sections: [
+        {
+          rootType: 'Asset',
+          accounts: [
+            {
+              name: 'Cash',
+              level: 0,
+              isGroup: false,
+              values: [80, 0, 50, 30, 100, 0],
+            },
           ],
-        ],
-      ])
-    )
-  ).get('Cash');
+          total: [80, 0, 50, 30, 100, 0],
+        },
+      ],
+    };
+  };
+  await report.setReportData();
+  assert.deepEqual(call, ['getTrialBalance', '2026-01-01', '2026-02-01']);
   assert.deepEqual(
-    report._dateRanges.map((range) => values.get(range)),
-    [
-      { debit: 80, credit: 0 },
-      { debit: 50, credit: 30 },
-      { debit: 100, credit: 0 },
-    ]
+    report.reportData.map((row) => row.cells.map((cell) => cell.rawValue)),
+    [['Cash', 80, 0, 50, 30, 100, 0]]
   );
-  assert.deepEqual((await report._getQueryFilters()).date, ['<', '2026-02-01']);
+  assert.equal(report.getColumns().length, 7);
 });
 
-for (const ascending of [true, false]) {
-  test(`general ledger carries prior balances across vouchers, ascending=${ascending}`, async () => {
-    const fyo = await makeFyo();
-    const report = new GeneralLedger(fyo);
-    report.fromDate = '2026-01-01';
-    report.toDate = '2026-01-31';
-    report.account = 'Cash';
-    report.ascending = ascending;
-    report.columns = report.getColumns();
-    fyo.db.getAllRaw = async (_schema, options) => {
-      assert.equal(options.filters.account, 'Cash');
-      assert.equal(options.filters.reverted, false);
-      const rows = [
-        entry(1, '2025-12-31', 100, 0),
-        entry(2, '2026-01-01', 50, 0),
-        entry(3, '2026-01-31', 0, 20),
-      ];
-      return ascending ? rows : rows.reverse();
-    };
-    await report.setReportData();
-    const records = report.reportData
-      .filter((row) => !row.isEmpty)
-      .map((row) =>
-        Object.fromEntries(
-          row.cells.map((cell, i) => [
-            report.columns[i].fieldname,
-            cell.rawValue,
-          ])
-        )
-      );
-    assert.equal(records[0].account, 'Opening');
-    assert.equal(records[0].balance, 100);
-    assert.equal(
-      records.find((row) => row.referenceName === 'V2').balance,
-      150
-    );
-    assert.equal(
-      records.find((row) => row.referenceName === 'V3').balance,
-      130
-    );
-    assert.equal(records.at(-1).balance, 130);
-    assert.equal(records.at(-1).debit, 50);
-    assert.equal(records.at(-1).credit, 20);
-  });
-}
+test('general ledger sends its filters and renders server rows', async () => {
+  const fyo = await makeFyo();
+  const report = new GeneralLedger(fyo);
+  report.fromDate = '2026-01-01';
+  report.toDate = '2026-01-31';
+  report.account = 'Cash';
+  report.ascending = true;
+  report.filters = report.getFilters();
+  report.columns = report.getColumns();
+  let filters;
+  fyo.db.getReportData = async (query, requested) => {
+    assert.equal(query, 'getGeneralLedger');
+    filters = requested;
+    return [
+      { type: 'opening', account: null, debit: 0, credit: 0, balance: 100 },
+      {
+        type: 'entry',
+        index: 1,
+        account: 'Cash',
+        date: '2026-01-01',
+        debit: 50,
+        credit: 0,
+        balance: 150,
+        party: null,
+        referenceType: 'JournalEntry',
+        referenceName: 'V2',
+        reverted: false,
+      },
+      { type: 'blank' },
+      { type: 'closing', debit: 50, credit: 0, balance: 150 },
+    ];
+  };
+  await report.setReportData();
+  assert.equal(filters.account, 'Cash');
+  assert.equal(filters.ascending, true);
+  assert.equal(filters.reverted, false);
+  const cell = (row, fieldname) =>
+    row.cells[report.columns.findIndex((c) => c.fieldname === fieldname)];
+  const [opening, entry, blank, closing] = report.reportData;
+  assert.equal(cell(opening, 'account').value, 'Opening');
+  assert.equal(cell(opening, 'balance').rawValue, 100);
+  assert.equal(cell(opening, 'account').italics, true);
+  assert.equal(cell(entry, 'index').value, '1');
+  assert.equal(cell(entry, 'referenceType').value, 'Journal Entry');
+  assert.equal(blank.isEmpty, true);
+  assert.equal(cell(closing, 'account').value, 'Closing');
+  assert.equal(cell(closing, 'balance').bold, true);
+  assert.ok(!report.columns.some((c) => c.fieldname === 'reverted'));
+});
+
+test('general ledger labels group openings by their account', async () => {
+  const report = new GeneralLedger(await makeFyo());
+  assert.equal(
+    report._getAccountLabel({ type: 'opening', account: 'Cash' }),
+    'Opening: Cash'
+  );
+  assert.equal(report._getAccountLabel({ type: 'total' }), 'Total');
+});
 
 test('expense-only P&L labels its expense total correctly', async () => {
   const report = new ProfitAndLoss(await makeFyo());
@@ -167,15 +113,10 @@ test('expense-only P&L labels its expense total correctly', async () => {
       toDate: DateTime.local(2027, 1, 1),
     },
   ];
-  const roots = [
-    {
-      name: 'Expenses',
-      rootType: 'Expense',
-      valueMap: new Map(),
-      children: [],
-    },
-  ];
-  const rows = report.getReportDataFromRows([], [], [], roots);
+  const rows = report.getReportDataFromSections({
+    sections: [{ rootType: 'Expense', accounts: [], total: [10] }],
+    profit: [-10],
+  });
   assert.equal(rows.at(-1).cells[0].rawValue, 'Total Expense (Debit)');
 });
 
@@ -255,9 +196,12 @@ test('account translations change display labels while identifiers and custom na
     useTranslations({ Cash: 'Trésorerie', Save: '' });
     assert.equal(t`Save`, 'Save');
     const report = new TrialBalance(fyo);
-    report._dateRanges = [];
-    const cell = report.getRowFromAccountListNode({ name: account.name })
-      .cells[0];
+    const cell = report.getAccountRow({
+      name: account.name,
+      level: 0,
+      isGroup: false,
+      values: [],
+    }).cells[0];
     assert.equal(cell.value, 'Trésorerie');
     assert.equal(cell.rawValue, 'Cash');
     useTranslations({ Cash: 'Kasse' });
@@ -269,70 +213,17 @@ test('account translations change display labels while identifiers and custom na
   }
 });
 
-test('general ledger group balances include inactive groups and respect all non-date filters', async () => {
+test('general ledger offers stock reference types only with inventory', async () => {
   const fyo = await makeFyo();
-  const report = new GeneralLedger(fyo);
-  report.fromDate = '2026-01-01';
-  report.toDate = '2026-01-31';
-  report.party = 'Customer';
-  report.referenceType = 'SalesInvoice';
-  report.referenceName = 'Invoice';
-  report.groupBy = 'account';
-  report.ascending = true;
-  report.columns = report.getColumns();
-  fyo.db.getAllRaw = async (_schema, options) => {
-    assert.deepEqual(options.filters, {
-      date: ['<', '2026-02-01'],
-      party: 'Customer',
-      referenceType: 'SalesInvoice',
-      referenceName: 'Invoice',
-      reverted: false,
-    });
-    return [
-      entry(1, '2025-12-31', 100, 0, 'Cash'),
-      entry(2, '2025-12-31', 0, 100, 'Income'),
-      entry(3, '2026-01-01', 20, 0, 'Cash'),
-    ];
-  };
-  await report.setReportData();
-  const totals = report.reportData.filter(
-    (row) => row.cells[1].rawValue === 'Total'
-  );
-  assert.deepEqual(
-    totals.map((row) => row.cells[5].rawValue),
-    [120, -100]
-  );
-  assert.equal(report.reportData.at(-1).cells[5].rawValue, 20);
-  await report.setReportData('grouped');
-  assert.equal(report.reportData.at(-1).cells[5].rawValue, 20);
-});
+  const referenceTypes = () =>
+    new GeneralLedger(fyo)
+      .getFilters()
+      .find(({ fieldname }) => fieldname === 'referenceType')
+      .options.map(({ value }) => value);
 
-test('general ledger with no transactions still reports the opening as closing', async () => {
-  const fyo = await makeFyo();
-  const report = new GeneralLedger(fyo);
-  report.fromDate = '2026-01-01';
-  report.toDate = '2026-01-31';
-  report.columns = report.getColumns();
-  fyo.db.getAllRaw = async (_schema, { filters }) => {
-    assert.deepEqual(filters.date, ['<', '2026-02-01']);
-    return [entry(1, '2025-12-31', 0, 100)];
-  };
-  await report.setReportData();
-  assert.equal(report.reportData[0].cells[5].rawValue, -100);
-  assert.equal(report.reportData.at(-1).cells[5].rawValue, -100);
+  fyo.singles.AccountingSettings.enableInventory = false;
+  assert.ok(!referenceTypes().includes('Shipment'));
+  fyo.singles.AccountingSettings.enableInventory = true;
+  assert.ok(referenceTypes().includes('Shipment'));
+  assert.ok(referenceTypes().includes('PurchaseReceipt'));
 });
-
-function entry(name, date, debit, credit, account = 'Cash') {
-  return {
-    name,
-    date: new Date(date),
-    debit,
-    credit,
-    account,
-    referenceType: 'JournalEntry',
-    referenceName: `V${name}`,
-    party: '',
-    reverted: false,
-    reverts: '',
-  };
-}

@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
- "autoname": "format:JV-{#####}",
  "creation": "2026-08-27 21:50:16.573737",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -11,6 +10,7 @@
   "number_series",
   "entry_type",
   "posting_date",
+  "status",
   "accounts_section_break_5",
   "accounts",
   "references_section_break_7",
@@ -38,6 +38,19 @@
    "in_list_view": 1,
    "label": "Date",
    "reqd": 1
+  },
+  {
+   "default": "Saved",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Saved\nSubmitted\nCancelled",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "accounts",
@@ -90,7 +103,6 @@
    "label": "Default"
   },
   {
-   "default": "JV-",
    "fieldname": "number_series",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -119,11 +131,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.287503",
+ "modified": "2026-09-28 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Journal Entry",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -157,17 +169,12 @@
    "write": 1
   },
   {
-   "amend": 1,
-   "cancel": 1,
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Books User",
-   "submit": 1,
-   "write": 1
+   "role": "Books User"
   }
  ],
  "row_format": "Dynamic",

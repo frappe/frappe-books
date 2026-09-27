@@ -22,8 +22,16 @@ export abstract class DatabaseBase {
     options: GetAllOptions
   ): Promise<UnknownMap[]>;
 
+  abstract count(schemaName: string, options: GetAllOptions): Promise<number>;
+
+  abstract search(
+    text: string,
+    fieldsBySchema: Record<string, string[]>,
+    limit: number
+  ): Promise<Record<string, UnknownMap[]>>;
+
   abstract getSingleValues(
-    ...fieldnames: ({ fieldname: string; parent?: string } | string)[]
+    ...fieldnames: { fieldname: string; parent: string }[]
   ): Promise<{ fieldname: string; parent: string; value: unknown }[]>;
 
   // Update
@@ -42,15 +50,22 @@ export abstract class DatabaseBase {
   // Delete
   abstract delete(schemaName: string, name: string): Promise<void>;
 
-  abstract deleteAll(
-    schemaName: string,
-    filters: QueryFilter
-  ): Promise<number>;
+  abstract deleteAll(schemaName: string, filters: QueryFilter): Promise<number>;
 
   // Other
-  abstract close(): Promise<void>;
-
   abstract exists(schemaName: string, name?: string): Promise<boolean>;
+
+  abstract preview(
+    schemaName: string,
+    fieldValueMap: UnknownMap,
+    name?: string
+  ): Promise<UnknownMap>;
+
+  abstract getMapped(
+    schemaName: string,
+    method: string,
+    sourceName: string
+  ): Promise<UnknownMap>;
 }
 
 export type DatabaseMethod = keyof DatabaseBase;
@@ -92,6 +107,15 @@ export abstract class DatabaseDemuxBase {
     name: string
   ): Promise<unknown>;
 }
+
+export type ReportQuery =
+  | 'getGeneralLedger'
+  | 'getTrialBalance'
+  | 'getProfitAndLoss'
+  | 'getBalanceSheet'
+  | 'getStockLedger'
+  | 'getStockBalance'
+  | 'getGSTRRows';
 
 // Return types of Bespoke Queries
 export type TopExpenses = { account: string; total: number }[];

@@ -3,6 +3,8 @@ import { models } from 'models';
 import { getSchemas } from 'schemas';
 import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 
+export const shift = { open: true };
+
 export const products = [
   'Organic Assam Tea',
   'Roasted Arabica Coffee Beans',
@@ -34,6 +36,7 @@ export async function preparePOSData() {
         name: 'Aarav Shah',
         role: 'Customer',
         loyaltyProgram: 'Store Rewards',
+        loyaltyPoints: 1250,
       },
     ],
     PriceList: [{ name: 'Retail' }, { name: 'Members' }],
@@ -70,9 +73,18 @@ export async function preparePOSData() {
       return records[schema]?.find((row) => row.name === name) ?? { name };
     if (method === 'getSingleValues') return [];
     if (method === 'exists') return true;
+    if (method === 'preview') return {};
     throw new Error(`Unexpected database write or call: ${method}`);
   };
-  FrappeDatabaseDemux.prototype.callBespoke = async () => ({});
+  FrappeDatabaseDemux.prototype.callBespoke = async (method) => {
+    if (method === 'getOpenPOSShift') return shift.open ? 'SHIFT-001' : null;
+    if (method === 'getStockQuantities')
+      return records.Item.map((item) => ({
+        item: item.name,
+        quantity: item.availableQty,
+      }));
+    return {};
+  };
   await fyo.db.init();
   fyo.doc.registerModels(models);
   for (const schema of Object.values(fyo.schemaMap)) {
@@ -87,7 +99,7 @@ export async function preparePOSData() {
     enableDiscounting: true,
   });
   Object.assign(fyo.singles.POSSettings!, {
-    isShiftOpen: true,
+    posUI: 'Modern',
     canChangeRate: true,
     canEditDiscount: true,
   });

@@ -6,14 +6,63 @@ import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoic
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { ItemQtyMap, ItemSerialNumbers } from 'src/components/POS/types';
+import {
+  ItemQtyMap,
+  ItemSerialNumbers,
+  POSItem,
+} from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
 import { showToast } from './interactive';
 import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
 import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
+import { validateQty } from 'models/helpers';
+import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
 
 export type POSPermissionSetting = 'canChangeRate' | 'canEditDiscount';
+export type POSQuantityField = 'quantity' | 'transferQuantity';
+export type POSRowField =
+  POSQuantityField | 'rate' | 'itemDiscountAmount' | 'itemDiscountPercent';
+
+/** Sets a cart row value as the POS edits it. */
+export async function setPOSRowValue(
+  row: SalesInvoiceItem,
+  field: POSRowField,
+  value: number | Money
+) {
+  if (field === 'quantity' || field === 'transferQuantity') {
+    return await setPOSRowQuantity(row, field, value as number);
+  }
+
+  if (field !== 'rate') {
+    await row.set('setItemDiscountAmount', field === 'itemDiscountAmount');
+  }
+  await row.set(field, value);
+}
+
+/** Sets a cart row's quantity, restoring it if the POS warehouse cannot supply it. */
+export async function setPOSRowQuantity(
+  row: SalesInvoiceItem,
+  field: POSQuantityField,
+  value: number
+) {
+  if (!value || (value < 0 && !row.isReturn)) {
+    throw new ValidationError(t`Quantity must be greater than zero.`);
+  }
+
+  const invoice = row.parentdoc as SalesInvoice;
+  const previous = {
+    quantity: row.quantity,
+    transferQuantity: row.transferQuantity,
+  };
+  try {
+    await row.set(field, row.isReturn ? -Math.abs(value) : value);
+    await validateQty(invoice, row, getItemRows(invoice, row.item));
+  } catch (error) {
+    await row.setMultiple(previous);
+    throw error;
+  }
+}
 
 export async function getPOSPermissionSetting(
   fyo: Fyo,
@@ -32,23 +81,41 @@ export async function getPOSPermissionSetting(
   return !!fyo.singles.POSSettings?.[fieldname];
 }
 
+/** Whether a key press types into a field, which POS shortcuts must leave alone. */
+export function isTypingInField(event: KeyboardEvent): boolean {
+  const { target } = event;
+  const isField =
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLInputElement && target.type !== 'button') ||
+    (target instanceof HTMLElement && target.isContentEditable);
+  return isField && !(event.altKey || event.metaKey || event.ctrlKey);
+}
+
+/** The quick quantity after the key `code`; undefined when the key is not part of it. */
+export function getQuickQtyBuffer(
+  buffer: string,
+  code: string
+): string | undefined {
+  if (/^(Digit|Numpad)[0-9]$/.test(code)) {
+    return buffer + code.slice(-1);
+  }
+
+  if (code === 'Backspace') {
+    return buffer.slice(0, -1);
+  }
+}
+
 export async function getPOSOpeningShiftDoc(
   fyo: Fyo
 ): Promise<POSOpeningShift> {
-  const existingShiftDoc = await fyo.db.getAll(ModelNameEnum.POSOpeningShift, {
-    limit: 1,
-    orderBy: 'created',
-    order: 'desc',
-    fields: ['name'],
-  });
-
-  if (!fyo.singles.POSSettings?.isShiftOpen || !existingShiftDoc.length) {
+  const openShift = await fyo.db.getOpenPOSShift();
+  if (!openShift) {
     return fyo.doc.getNewDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
   }
 
   return (await fyo.doc.getDoc(
     ModelNameEnum.POSOpeningShift,
-    existingShiftDoc[0].name as string
+    openShift
   )) as POSOpeningShift;
 }
 
@@ -64,40 +131,6 @@ export function getTotalQuantity(items: SalesInvoiceItem[]): number {
     totalQuantity = safeParseFloat(totalQuantity + quantity);
   }
   return totalQuantity;
-}
-
-export function getItemDiscounts(items: SalesInvoiceItem[]): Money {
-  let itemDiscounts = fyo.pesa(0);
-
-  if (!items.length) {
-    return itemDiscounts;
-  }
-
-  for (const item of items) {
-    if (item.setItemDiscountAmount) {
-      if (!item.itemDiscountAmount?.isZero()) {
-        itemDiscounts = itemDiscounts.add(
-          (item.itemDiscountAmount as Money).mul(item.quantity as number)
-        );
-      }
-    } else {
-      if (item.amount && (item.itemDiscountPercent as number) > 1) {
-        itemDiscounts = itemDiscounts.add(
-          item.amount.percent(item.itemDiscountPercent as number)
-        );
-      }
-    }
-  }
-  return itemDiscounts;
-}
-
-export async function getItem(item: string): Promise<Item | undefined> {
-  const itemDoc = (await fyo.doc.getDoc(ModelNameEnum.Item, item)) as Item;
-  if (!itemDoc) {
-    return;
-  }
-
-  return itemDoc;
 }
 
 export async function validateSinv(
@@ -165,28 +198,168 @@ async function validateSinvItems(
   }
 }
 
-export async function validateShipment(itemSerialNumbers: ItemSerialNumbers) {
-  if (!itemSerialNumbers) {
+/**
+ * Check a POS checkout against freshly loaded stock. A submitted invoice has
+ * shipped, so a payment retry skips the check.
+ */
+export async function validatePOSCheckout(
+  sinvDoc: SalesInvoice,
+  loadStock: () => Promise<ItemQtyMap>
+) {
+  if (sinvDoc.isSubmitted) {
     return;
   }
 
-  for (const idx in itemSerialNumbers) {
-    const serialNumbers = itemSerialNumbers[idx].split('\n');
+  await validateSinv(sinvDoc, await loadStock());
+}
 
-    for (const serialNumber of serialNumbers) {
-      const status = await fyo.getValue(
-        ModelNameEnum.SerialNumber,
-        serialNumber,
-        'status'
-      );
+export type POSRowItem = {
+  hasBatch: boolean;
+  hasSerialNumber: boolean;
+  units: string[];
+};
 
-      if (status !== 'Active') {
-        throw new ValidationError(
-          t`Serial Number ${serialNumber} status is not Active.`
-        );
-      }
-    }
+/** A cart row item's batch and serial number tracking, and the units it sells in. */
+export async function getPOSRowItem(
+  fyo: Fyo,
+  item?: string
+): Promise<POSRowItem> {
+  if (!item) {
+    return { hasBatch: false, hasSerialNumber: false, units: [] };
   }
+
+  const doc = (await fyo.doc.getDoc(ModelNameEnum.Item, item)) as Item;
+  const units = [doc.unit, ...doc.uomConversions.map(({ uom }) => uom)];
+  return {
+    hasBatch: !!doc.hasBatch,
+    hasSerialNumber: !!doc.hasSerialNumber,
+    units: [...new Set(units.filter((unit): unit is string => !!unit))],
+  };
+}
+
+export function toPOSItem(item: Item, itemQtyMap: ItemQtyMap): POSItem {
+  return {
+    availableQty: itemQtyMap[item.name as string]?.availableQty ?? 0,
+    name: item.name as string,
+    itemCode: item.itemCode as string,
+    barcode: item.barcode as string,
+    image: item.image as string,
+    rate: item.rate as Money,
+    unit: item.unit as string,
+    hasBatch: !!item.hasBatch,
+    hasSerialNumber: !!item.hasSerialNumber,
+  };
+}
+
+/** Fills a sale row with in-stock serial numbers; a return row keeps the sold ones. */
+export async function fillRowSerialNumbers(
+  row: SalesInvoiceItem,
+  itemSerialNumbers: ItemSerialNumbers
+) {
+  const item = row.item as string;
+  const quantity = row.quantity ?? 0;
+  const existing = (itemSerialNumbers[item] ?? '')
+    .split('\n')
+    .filter((serialNumber) => serialNumber.trim());
+  if (quantity <= 0 || existing.length === quantity) {
+    return;
+  }
+
+  const serialNumbers = await getExistingActiveSerialNumbersForItem(
+    row.fyo,
+    item,
+    quantity
+  );
+  if (serialNumbers) {
+    await row.set('serialNumber', serialNumbers);
+    itemSerialNumbers[item] = serialNumbers;
+  }
+}
+
+/** Adds `quantity` of a batchless item to its cart row, or to a new row. */
+export async function addPOSItem(
+  sinvDoc: SalesInvoice,
+  item: POSItem,
+  quantity: number,
+  itemQtyMap: ItemQtyMap
+): Promise<SalesInvoiceItem> {
+  const itemDoc = await getItemDoc(sinvDoc, item);
+  if (itemDoc.trackItem && (itemQtyMap[item.name]?.availableQty ?? 0) <= 0) {
+    throw new ValidationError(
+      t`Item ${item.name} is out of stock (quantity is zero)`
+    );
+  }
+
+  const row = getItemRows(sinvDoc, item.name)[0];
+  if (row) {
+    await setPOSRowQuantity(row, 'quantity', (row.quantity ?? 0) + quantity);
+    return row;
+  }
+
+  await sinvDoc.append('items', newItemRow(item, itemDoc, quantity));
+  return sinvDoc.items!.at(-1)!;
+}
+
+/**
+ * Add `quantity` of `item` from `batch` to the invoice, merging it into the
+ * batch's row. A tracked item needs the whole batch quantity in POS stock.
+ */
+export async function addBatchItem(
+  sinvDoc: SalesInvoice,
+  item: POSItem,
+  batch: string,
+  quantity: number,
+  itemQtyMap: ItemQtyMap
+) {
+  const itemDoc = await getItemDoc(sinvDoc, item);
+  const rows = getItemRows(sinvDoc, item.name, batch);
+  if (itemDoc.trackItem) {
+    const required = rows.reduce(
+      (total, row) => total + (row.quantity ?? 0),
+      quantity
+    );
+    const inventory = await getPOSInventory(sinvDoc.fyo);
+    validatePOSStock(item.name, required, itemQtyMap, inventory, batch);
+  }
+
+  if (rows.length) {
+    await rows[0].set('quantity', (rows[0].quantity ?? 0) + quantity);
+    return;
+  }
+
+  await sinvDoc.append('items', newItemRow(item, itemDoc, quantity, batch));
+}
+
+async function getItemDoc(sinvDoc: SalesInvoice, item: POSItem) {
+  return (await sinvDoc.fyo.doc.getDoc(ModelNameEnum.Item, item.name)) as Item;
+}
+
+/** The cart rows of `item` that are not free items, from `batch` if given. */
+function getItemRows(
+  sinvDoc: SalesInvoice,
+  item?: string,
+  batch?: string
+): SalesInvoiceItem[] {
+  return (sinvDoc.items ?? []).filter(
+    (row) =>
+      row.item === item && !row.isFreeItem && (!batch || row.batch === batch)
+  );
+}
+
+function newItemRow(
+  item: POSItem,
+  itemDoc: Item,
+  quantity: number,
+  batch?: string
+) {
+  return {
+    item: item.name,
+    quantity,
+    transferQuantity: quantity,
+    transferUnit: item.unit,
+    hsnCode: itemDoc.hsnCode,
+    batch,
+  };
 }
 
 export function validateIsPosSettingsSet(fyo: Fyo) {

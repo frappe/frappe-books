@@ -16,7 +16,8 @@
    "in_list_view": 1,
    "label": "Item",
    "options": "Books Item",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "description": "Unit Type",
@@ -31,7 +32,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.986197",
+ "modified": "2026-09-26 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pricing Rule Item",

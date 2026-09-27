@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import frappe
+from frappe.utils.caching import request_cache
 
 MAPPING_PATH = Path(__file__).resolve().parents[1] / "schema_mapping.json"
 SOURCE_META_TO_TARGET = {
@@ -35,8 +36,6 @@ def source_by_doctype() -> dict[str, str]:
 
 
 def target_doctype(source_schema: str) -> str:
-	if not isinstance(source_schema, str):
-		frappe.throw("Books schema names must be strings")
 	config = schema_mapping().get(source_schema)
 	if not config:
 		frappe.throw(f"Unsupported Books schema: {source_schema}")
@@ -44,8 +43,6 @@ def target_doctype(source_schema: str) -> str:
 
 
 def target_field(source_schema: str, source_field: str) -> str:
-	if not isinstance(source_field, str):
-		frappe.throw("Books field names must be strings")
 	if source_field in SOURCE_META_TO_TARGET:
 		return SOURCE_META_TO_TARGET[source_field]
 	if source_field in {"submitted", "cancelled"}:
@@ -74,8 +71,12 @@ def source_field(source_schema: str, target_fieldname: str) -> str:
 	return target_fieldname
 
 
+@request_cache
 def custom_field_mapping(source_schema: str) -> dict[str, str]:
-	"""Return Books custom field names mapped to their hosted columns."""
+	"""Return Books custom field names mapped to their hosted columns.
+
+	Saving a custom form clears the doctype cache, which also clears this request cache.
+	"""
 	if not frappe.db.table_exists("Books Custom Field"):
 		return {}
 

@@ -87,6 +87,7 @@ import AttachImage from 'src/components/Controls/AttachImage.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Icon from 'src/components/Icon.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { DocRef } from 'src/utils/types';
@@ -184,14 +185,8 @@ export default defineComponent({
   activated() {
     this.setShortcuts();
   },
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   async mounted() {
     await this.initialize();
-
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.qef = this;
-    }
 
     this.setShortcuts();
   },
@@ -222,7 +217,8 @@ export default defineComponent({
     async setDoc() {
       try {
         this.doc = await fyo.doc.getDoc(this.schemaName, this.name);
-      } catch (e) {
+      } catch (error) {
+        await handleErrorWithDialog(error, undefined, true);
         return this.$router.back();
       }
     },

@@ -135,7 +135,10 @@ export default defineComponent({
       return fyo.schemaMap[this.schemaName]?.fields ?? [];
     },
     canCreate(): boolean {
-      return fyo.schemaMap[this.schemaName]?.create !== false;
+      return (
+        fyo.schemaMap[this.schemaName]?.create !== false &&
+        fyo.can(this.schemaName, 'create')
+      );
     },
     actionOptions(): DropdownOptions {
       return [
@@ -151,11 +154,6 @@ export default defineComponent({
   activated() {
     this.listConfig = getListConfig(this.schemaName);
     docsPathRef.value = docsPathMap[this.schemaName] ?? docsPathMap.Entries ?? '';
-
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.lv = this;
-    }
 
     this.setShortcuts();
   },

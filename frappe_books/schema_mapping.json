@@ -319,6 +319,7 @@
         "numberSeries": "number_series",
         "referenceDate": "reference_date",
         "referenceNumber": "reference_number",
+        "status": "status",
         "userRemark": "user_remark"
       }
     },
@@ -439,7 +440,6 @@
         "hideUnavailableItems": "hide_unavailable_items",
         "ignorePricingRule": "ignore_pricing_rule",
         "inventory": "inventory",
-        "isShiftOpen": "is_shift_open",
         "itemVisibility": "item_visibility",
         "name": "name",
         "payAndPrintButtonColour": "pay_and_print_button_colour",
@@ -463,7 +463,6 @@
         "hideUnavailableItems": "hide_unavailable_items",
         "ignorePricingRule": "ignore_pricing_rule",
         "inventory": "inventory",
-        "isShiftOpen": "is_shift_open",
         "itemCodeDigits": "item_code_digits",
         "itemWeightDigits": "item_weight_digits",
         "itemVisibility": "item_visibility",
@@ -513,6 +512,7 @@
         "referenceDate": "reference_date",
         "referenceId": "reference_id",
         "referenceType": "reference_type",
+        "status": "status",
         "taxes": "taxes",
         "writeoff": "writeoff"
       }
@@ -659,6 +659,7 @@
         "priceList": "price_list",
         "returnAgainst": "return_against",
         "setDiscountAmount": "set_discount_amount",
+        "status": "status",
         "stockNotTransferred": "stock_not_transferred",
         "taxes": "taxes",
         "terms": "terms"
@@ -700,12 +701,14 @@
         "backReference": "back_reference",
         "date": "date",
         "grandTotal": "grand_total",
+        "isFullyBilled": "is_fully_billed",
         "isReturned": "is_returned",
         "items": "items",
         "name": "name",
         "numberSeries": "number_series",
         "party": "party",
         "returnAgainst": "return_against",
+        "status": "status",
         "terms": "terms"
       }
     },
@@ -767,6 +770,7 @@
         "redeemLoyaltyPoints": "redeem_loyalty_points",
         "returnAgainst": "return_against",
         "setDiscountAmount": "set_discount_amount",
+        "status": "status",
         "stockNotTransferred": "stock_not_transferred",
         "taxes": "taxes",
         "terms": "terms"
@@ -827,6 +831,7 @@
         "priceList": "price_list",
         "referenceType": "reference_type",
         "setDiscountAmount": "set_discount_amount",
+        "status": "status",
         "taxes": "taxes",
         "terms": "terms"
       }
@@ -883,7 +888,6 @@
         "bankName": "bank_name",
         "chartOfAccounts": "chart_of_accounts",
         "companyName": "company_name",
-        "completed": "completed",
         "country": "country",
         "currency": "currency",
         "email": "email",
@@ -901,12 +905,14 @@
         "backReference": "back_reference",
         "date": "date",
         "grandTotal": "grand_total",
+        "isFullyBilled": "is_fully_billed",
         "isReturned": "is_returned",
         "items": "items",
         "name": "name",
         "numberSeries": "number_series",
         "party": "party",
         "returnAgainst": "return_against",
+        "status": "status",
         "terms": "terms"
       }
     },
@@ -954,7 +960,8 @@
         "items": "items",
         "movementType": "movement_type",
         "name": "name",
-        "numberSeries": "number_series"
+        "numberSeries": "number_series",
+        "status": "status"
       }
     },
     "StockMovementItem": {

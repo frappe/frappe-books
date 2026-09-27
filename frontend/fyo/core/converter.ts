@@ -6,7 +6,7 @@ import { DateTime } from 'luxon';
 import { Field, FieldTypeEnum, RawValue, TargetField } from 'schemas/types';
 import { getIsNullOrUndef, safeParseFloat, safeParseInt } from 'utils';
 import { DatabaseHandler } from './dbHandler';
-import { Attachment, DocValue, DocValueMap, RawValueMap } from './types';
+import { DocValue, DocValueMap, RawValueMap } from './types';
 
 /**
  * # Converter
@@ -70,8 +70,6 @@ export class Converter {
         return toDocFloat(value, field);
       case FieldTypeEnum.Check:
         return toDocCheck(value, field);
-      case FieldTypeEnum.Attachment:
-        return toDocAttachment(value, field);
       default:
         return toDocString(value, field);
     }
@@ -93,8 +91,6 @@ export class Converter {
         return toRawCheck(value, field);
       case FieldTypeEnum.Link:
         return toRawLink(value, field);
-      case FieldTypeEnum.Attachment:
-        return toRawAttachment(value, field);
       case FieldTypeEnum.Button:
         return null;
       default:
@@ -278,22 +274,6 @@ function toDocCheck(value: RawValue, field: Field): boolean {
   throwError(value, field, 'doc');
 }
 
-function toDocAttachment(value: RawValue, field: Field): null | Attachment {
-  if (!value) {
-    return null;
-  }
-
-  if (typeof value !== 'string') {
-    throwError(value, field, 'doc');
-  }
-
-  try {
-    return (JSON.parse(value) as Attachment) || null;
-  } catch {
-    throwError(value, field, 'doc');
-  }
-}
-
 function toRawCurrency(value: DocValue, fyo: Fyo, field: Field): string {
   if (isPesa(value)) {
     return value.store;
@@ -421,22 +401,6 @@ function toRawLink(value: DocValue, field: Field): string | null {
 
   if (typeof value === 'string') {
     return value;
-  }
-
-  throwError(value, field, 'raw');
-}
-
-function toRawAttachment(value: DocValue, field: Field): null | string {
-  if (!value) {
-    return null;
-  }
-
-  if (
-    (value as Attachment)?.name &&
-    (value as Attachment)?.data &&
-    (value as Attachment)?.type
-  ) {
-    return JSON.stringify(value);
   }
 
   throwError(value, field, 'raw');

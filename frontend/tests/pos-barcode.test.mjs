@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { findScannedPOSItem } from './helpers/accounting.mjs';
+
+const rice = {
+  name: 'Basmati Rice',
+  itemCode: '12345',
+  barcode: '890000000001',
+  unit: 'Kg',
+};
+const eggs = { name: 'Eggs', itemCode: '54321', unit: 'Unit' };
+const items = [rice, eggs];
+const scale = {
+  weightEnabledBarcode: true,
+  checkDigits: 21,
+  itemCodeDigits: 5,
+  itemWeightDigits: 5,
+};
+
+test('a scale barcode adds its weight, in kilograms for kg items', () => {
+  assert.deepEqual(findScannedPOSItem(items, '211234501500', scale), {
+    item: rice,
+    quantity: 1.5,
+  });
+  assert.deepEqual(findScannedPOSItem(items, '215432100012', scale), {
+    item: eggs,
+    quantity: 12,
+  });
+});
+
+test('other codes match a 12 digit barcode or an exact name or code', () => {
+  assert.deepEqual(findScannedPOSItem(items, '890000000001', scale), {
+    item: rice,
+    quantity: 1,
+  });
+  assert.deepEqual(findScannedPOSItem(items, 'eggs'), {
+    item: eggs,
+    quantity: 1,
+  });
+  assert.equal(findScannedPOSItem(items, '211234501500'), undefined);
+  assert.equal(findScannedPOSItem(items, 'Egg'), undefined);
+});

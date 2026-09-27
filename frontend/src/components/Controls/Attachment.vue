@@ -58,10 +58,11 @@
 </template>
 <script lang="ts">
 import { t } from 'fyo';
-import { Attachment } from 'fyo/core/types';
 import { Button as FrappeButton } from 'frappe-ui';
 import { Field } from 'schemas/types';
-import { convertFileToDataURL } from 'src/utils/misc';
+import { handleErrorWithDialog } from 'src/errorHandling';
+import { getFileName, isFileUrl } from 'src/utils/files';
+import { uploadFile } from 'src/web/api';
 import { defineComponent, PropType } from 'vue';
 import Base from './Base.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
@@ -71,14 +72,14 @@ export default defineComponent({
   extends: Base,
   props: {
     df: Object as PropType<Field>,
-    value: { type: Object as PropType<Attachment | null>, default: null },
+    value: { type: String as PropType<string | null>, default: null },
     border: { type: Boolean, default: false },
     size: String,
   },
   computed: {
     label() {
       if (this.value) {
-        return this.value.name;
+        return getFileName(this.value);
       }
 
       return this.df?.placeholder ?? this.df?.label ?? t`Attachment`;
@@ -89,26 +90,19 @@ export default defineComponent({
       (this.$refs.fileInput as HTMLInputElement).click();
     },
     clear() {
-      (this.$refs.fileInput as HTMLInputElement).value = '';
-      // @ts-ignore
       this.triggerChange(null);
     },
     download() {
-      if (!this.value) {
-        return;
-      }
-
-      const { name, data } = this.value;
-      if (!name || !data) {
+      if (!isFileUrl(this.value)) {
         return;
       }
 
       const a = document.createElement('a');
 
       a.style.display = 'none';
-      a.href = data;
+      a.href = this.value;
       a.target = '_self';
-      a.download = name;
+      a.download = getFileName(this.value);
 
       document.body.appendChild(a);
       a.click();
@@ -117,23 +111,17 @@ export default defineComponent({
     async selectFile(e: Event) {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
+      // Lets the same file be picked again, like after a failed upload.
+      target.value = '';
       if (!file) {
         return;
       }
 
-      const attachment = await this.getAttachment(file);
-      // @ts-ignore
-      this.triggerChange(attachment);
-    },
-    async getAttachment(file: File | null) {
-      if (!file) {
-        return null;
+      try {
+        this.triggerChange(await uploadFile(file));
+      } catch (error) {
+        await handleErrorWithDialog(error, this.doc, true);
       }
-
-      const name = file.name;
-      const type = file.type;
-      const data = await convertFileToDataURL(file, type);
-      return { name, type, data };
     },
   },
 });

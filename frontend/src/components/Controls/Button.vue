@@ -46,7 +46,7 @@ export default defineComponent({
     },
   },
   methods: {
-    onClick(e: Event) {
+    onClick() {
       if (this.isReadOnly) return;
       this.triggerChange(true);
     },

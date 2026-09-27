@@ -6,30 +6,24 @@ from frappe_books.accounting.money import as_decimal, rounded
 
 
 def update_party_outstanding(party_name):
-	if not party_name or not frappe.db.exists("Books Party", party_name):
+	role = party_name and frappe.db.get_value("Books Party", party_name, "role")
+	if not role:
 		return
-	role = frappe.db.get_value("Books Party", party_name, "role")
-	sales = _invoice_total("Books Sales Invoice", party_name)
-	purchases = _invoice_total("Books Purchase Invoice", party_name)
 	if role == "Customer":
-		total = sales
+		total = _invoice_total("Books Sales Invoice", party_name)
 	elif role == "Supplier":
-		total = purchases
+		total = _invoice_total("Books Purchase Invoice", party_name)
 	else:
-		total = sales - purchases
-	frappe.db.set_value(
-		"Books Party",
-		party_name,
-		"outstanding_amount",
-		rounded(total),
-		update_modified=False,
-	)
+		total = _invoice_total("Books Sales Invoice", party_name) - _invoice_total(
+			"Books Purchase Invoice", party_name
+		)
+	frappe.db.set_value("Books Party", party_name, "outstanding_amount", rounded(total))
 
 
 def _invoice_total(doctype, party_name):
-	values = frappe.get_all(
+	rows = frappe.get_all(
 		doctype,
 		filters={"party": party_name, "docstatus": 1},
-		pluck="outstanding_amount",
+		fields=[{"SUM": "outstanding_amount", "as": "total"}],
 	)
-	return sum((as_decimal(value) for value in values), as_decimal(0))
+	return as_decimal(rows[0].total)

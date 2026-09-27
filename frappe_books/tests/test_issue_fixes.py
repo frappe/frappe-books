@@ -5,7 +5,7 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.inventory.valuation import computed_entries
+from frappe_books.reports.stock import stock_ledger
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -13,6 +13,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_party,
 	make_tax,
+	set_inventory_accounts,
 )
 
 
@@ -36,8 +37,8 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		tax = make_tax(tax_account.name, rate=18)
 		party = make_party(payable.name, role="Supplier")
 		item = make_item(income.name, expense.name, tax=tax.name, track_item=1)
-		frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock.name)
-		frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received.name)
+		set_inventory_accounts(stock.name, received.name, expense.name)
+		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			party.name,
@@ -54,9 +55,9 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		entries = ledger_entries(receipt.doctype, receipt.name)
 		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries if row.account == stock.name), 100)
 		self.assertEqual(sum(Decimal(str(row.debit)) - Decimal(str(row.credit)) for row in entries), 0)
-		self.assertEqual(Decimal(str(computed_entries([item.name])[-1]["balance_value"])), 100)
+		self.assertEqual(stock_ledger({"item": item.name})[0]["balanceValue"], 100)
 		invoice.cancel()
-		self.assertFalse(computed_entries([item.name]))
+		self.assertFalse(stock_ledger({"item": item.name}))
 
 	def test_payment_settles_multiple_invoices_and_cancel_restores_each(self):
 		receivable = make_account("Multiple Receivable", account_type="Receivable")

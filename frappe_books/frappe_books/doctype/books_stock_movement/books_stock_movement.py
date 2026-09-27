@@ -23,6 +23,7 @@ class BooksStockMovement(StockMovementController):
 		items: DF.Table[BooksStockMovementItem]
 		movement_type: DF.Literal["MaterialIssue", "MaterialReceipt", "MaterialTransfer", "Manufacture"]
 		number_series: DF.Link
+		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 	# end: auto-generated types
 
 	pass

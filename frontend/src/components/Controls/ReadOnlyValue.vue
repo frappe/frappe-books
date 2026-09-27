@@ -74,11 +74,7 @@ export default defineComponent({
 	},
 	methods: {
 		formatValue(value: unknown, field: Field, doc?: Doc): string {
-			try {
-				return fyo.format(value, field, doc);
-			} catch {
-				return value == null ? "" : String(value);
-			}
+			return fyo.format(value, field, doc);
 		},
 	},
 });

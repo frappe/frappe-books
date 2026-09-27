@@ -164,8 +164,8 @@ class IntegrationTestFilters(IntegrationTestCase):
 			for value in [[], ["="], ["invalid", "x"], ["=", {}], ["=", []], ["in", "a,b"], ["not in", [{}]]]
 		]
 		for malformed in [[], "bad", False]:
-			with self.assertRaises(frappe.ValidationError):
-				self.bridge.get_all("JournalEntry", {"filters": malformed})
+			with self.assertRaises(frappe.FrappeTypeError):
+				self.bridge.call("getAll", ["JournalEntry", {"filters": malformed}])
 		cases += [{"name) OR 1=1 --": "x"}, {"submitted": ["like", "%1%"]}, {"cancelled": "bad"}]
 		for filters in cases:
 			with self.subTest(filters=filters), self.assertRaises(frappe.ValidationError):

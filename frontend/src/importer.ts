@@ -1,4 +1,4 @@
-import { Fyo } from 'fyo';
+import { Fyo, t } from 'fyo';
 import { Converter } from 'fyo/core/converter';
 import { DocValue, DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
@@ -18,6 +18,12 @@ import { getValueMapFromList } from 'utils/index';
 
 export type TemplateField = Field & TemplateFieldProps;
 
+export interface ImportResults {
+  success: string[];
+  successOldName: string[];
+  failed: { name: string; message: string }[];
+}
+
 type TemplateFieldProps = {
   schemaName: string;
   schemaLabel: string;
@@ -34,6 +40,9 @@ type ValueMatrixItem =
   | { value?: DocValue; rawValue: RawValue; error?: boolean };
 
 type ValueMatrix = ValueMatrixItem[][];
+
+/** Child rows by doc name, child schema name and child row name. */
+type ChildTableMap = Record<string, Record<string, Map<string, DocValueMap>>>;
 
 const skippedFieldsTypes: FieldType[] = [
   FieldTypeEnum.AttachImage,
@@ -80,11 +89,6 @@ export class Importer {
   templateFieldsPicked: Map<string, boolean>;
 
   /**
-   * Whether the schema type being imported has table fields
-   */
-  hasChildTables: boolean;
-
-  /**
    * Matrix containing the raw values which will be converted to
    * doc values before importing.
    */
@@ -112,7 +116,6 @@ export class Importer {
       );
     }
 
-    this.hasChildTables = false;
     this.schemaName = schemaName;
     this.fyo = fyo;
     this.docs = [];
@@ -122,7 +125,7 @@ export class Importer {
       labelValueMap: {},
     };
 
-    const templateFields = getTemplateFields(schemaName, fyo, this);
+    const templateFields = getTemplateFields(schemaName, fyo);
     this.assignedTemplateFields = templateFields.map((f) => f.fieldKey);
     this.templateFieldsMap = new Map();
     this.templateFieldsPicked = new Map();
@@ -138,66 +141,129 @@ export class Importer {
     this.templateHeadersByFieldKey = headersByFieldKey;
   }
 
-  selectFile(data: string): boolean {
-    try {
-      const parsed = parseCSV(data);
-      this.selectParsed(parsed);
-    } catch {
-      return false;
-    }
-
-    return true;
+  selectFile(data: string) {
+    this.selectParsed(parseCSV(data));
   }
 
   async checkLinks() {
-    const tfKeys = this.assignedTemplateFields
-      .map((key, index) => ({
-        key,
-        index,
-        tf: this.templateFieldsMap.get(key ?? ''),
-      }))
-      .filter(({ key, tf }) => {
-        if (!key || !tf) {
-          return false;
-        }
-
-        return tf.fieldtype === FieldTypeEnum.Link;
-      }) as { key: string; index: number; tf: TemplateField }[];
-
-    const linksNames: Map<string, Set<string>> = new Map();
-    for (const row of this.valueMatrix) {
-      for (const { tf, index } of tfKeys) {
-        const target = (tf as TargetField).target;
-        const value = row[index]?.value;
-        if (typeof value !== 'string' || !value) {
-          continue;
-        }
-
-        if (!linksNames.has(target)) {
-          linksNames.set(target, new Set());
-        }
-
-        linksNames.get(target)?.add(value);
-      }
-    }
-
     const doesNotExist = [];
-    for (const [target, values] of linksNames.entries()) {
-      for (const value of values) {
-        const exists = await this.fyo.db.exists(target, value);
-        if (exists) {
-          continue;
-        }
-
+    for (const [target, values] of this.getLinkValues()) {
+      for (const name of await this.getMissingNames(target, values)) {
         doesNotExist.push({
           schemaName: target,
-          schemaLabel: this.fyo.schemaMap[this.schemaName]?.label,
-          name: value,
+          schemaLabel: this.fyo.schemaMap[target]?.label,
+          name,
         });
       }
     }
 
     return doesNotExist;
+  }
+
+  /** Values of the picked Link columns, grouped by linked schema. */
+  getLinkValues(): Map<string, Set<string>> {
+    const linkColumns = this.assignedTemplateFields
+      .map((key, index) => ({
+        index,
+        tf: this.templateFieldsMap.get(key ?? ''),
+      }))
+      .filter(({ tf }) => tf?.fieldtype === FieldTypeEnum.Link) as {
+      index: number;
+      tf: TargetField;
+    }[];
+
+    const linkValues: Map<string, Set<string>> = new Map();
+    for (const row of this.valueMatrix) {
+      for (const { tf, index } of linkColumns) {
+        const value = row[index]?.value;
+        if (typeof value !== 'string' || !value) {
+          continue;
+        }
+
+        if (!linkValues.has(tf.target)) {
+          linkValues.set(tf.target, new Set());
+        }
+
+        linkValues.get(tf.target)!.add(value);
+      }
+    }
+
+    return linkValues;
+  }
+
+  async getMissingNames(target: string, names: Set<string>) {
+    const existing = await this.fyo.db.getAll(target, {
+      fields: ['name'],
+      filters: { name: ['in', [...names]] },
+    });
+    const existingNames = new Set(existing.map(({ name }) => name));
+    return [...names].filter((name) => !existingNames.has(name));
+  }
+
+  /** Labels of the template fields assigned to more than one column. */
+  getDuplicateColumns(): string[] {
+    const assigned = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const key of this.assignedTemplateFields) {
+      const tf = this.templateFieldsMap.get(key ?? '');
+      if (!key || !tf) {
+        continue;
+      }
+
+      if (assigned.has(key)) {
+        duplicates.add(getColumnLabel(tf));
+      }
+
+      assigned.add(key);
+    }
+
+    return [...duplicates];
+  }
+
+  /** Labels of the required template fields no column is assigned to. */
+  getMissingRequiredColumns(): string[] {
+    const assigned = new Set(this.assignedTemplateFields);
+    return [...this.templateFieldsMap.values()]
+      .filter((tf) => tf.required && !assigned.has(tf.fieldKey))
+      .map(getColumnLabel);
+  }
+
+  /** Includes or leaves out a template field; leaving one out frees its column. */
+  pickColumn(fieldKey: string, picked: boolean) {
+    this.templateFieldsPicked.set(fieldKey, picked);
+    const index = this.assignedTemplateFields.indexOf(fieldKey);
+    if (picked || index < 0) {
+      return;
+    }
+
+    this.assignedTemplateFields[index] = null;
+    this.reassignTemplateFields();
+  }
+
+  /** Assigns the picked fields to the columns in order, until data is loaded. */
+  reassignTemplateFields() {
+    if (this.valueMatrix.length) {
+      return;
+    }
+
+    const picked = [...this.templateFieldsPicked]
+      .filter(([, isPicked]) => isPicked)
+      .map(([key]) => key);
+    this.assignedTemplateFields = this.assignedTemplateFields.map(
+      (_, index) => picked[index] ?? null
+    );
+  }
+
+  /** Keeps only the rows whose name is not among the imported names, to import them again. */
+  retryRowsNotImported(importedNames: string[]) {
+    this.docs = [];
+    const nameIndex = this.assignedTemplateFields.indexOf(
+      `${this.schemaName}.name`
+    );
+    this.valueMatrix = this.valueMatrix.filter((row) => {
+      const name = row[nameIndex].value;
+      return typeof name === 'string' && !importedNames.includes(name);
+    });
   }
 
   checkCellErrors() {
@@ -261,91 +327,52 @@ export class Importer {
     }
   }
 
+  /** Parent values by doc name, and child rows by doc name and child schema. */
   getDataAndChildTableMapFromValueMatrix() {
-    /**
-     * Record key is the doc.name value
-     */
     const dataMap: Map<string, DocValueMap> = new Map();
+    const childTableMap: ChildTableMap = {};
+    const nameIndices = this.getNameIndices();
+    const nameIndex = nameIndices[this.schemaName];
 
-    /**
-     * Record key is doc.name, childSchemaName, childDoc.name
-     */
-    const childTableMap: Record<
-      string,
-      Record<string, Map<string, DocValueMap>>
-    > = {};
-
-    const nameIndices = this.assignedTemplateFields
-      .map((key, index) => ({ key, index }))
-      .filter((f) => f.key?.endsWith('.name'))
-      .reduce((acc, f) => {
-        if (f.key == null) {
-          return acc;
-        }
-
-        const schemaName = f.key.split('.')[0];
-        acc[schemaName] = f.index;
-        return acc;
-      }, {} as Record<string, number>);
-
-    const nameIndex = nameIndices?.[this.schemaName];
-    if (nameIndex < 0) {
-      return { dataMap, childTableMap };
-    }
-
-    for (let i = 0; i < this.valueMatrix.length; i++) {
-      const row = this.valueMatrix[i];
+    for (const [rowIndex, row] of this.valueMatrix.entries()) {
       const name = row[nameIndex]?.value;
       if (typeof name !== 'string') {
         continue;
       }
 
-      for (let j = 0; j < row.length; j++) {
-        const key = this.assignedTemplateFields[j];
-        const tf = this.templateFieldsMap.get(key ?? '');
-        if (!tf || !key) {
+      for (const [column, vmi] of row.entries()) {
+        const tf = this.templateFieldsMap.get(
+          this.assignedTemplateFields[column] ?? ''
+        );
+        if (!tf || vmi.value == null) {
           continue;
         }
 
-        const isChild = this.fyo.schemaMap[tf.schemaName]?.isChild;
-        const vmi = row[j];
-        if (vmi.value == null) {
-          continue;
-        }
-
-        if (!isChild && !dataMap.has(name)) {
-          dataMap.set(name, {});
-        }
-
-        if (!isChild) {
-          dataMap.get(name)![tf.fieldname] = vmi.value;
-          continue;
-        }
-
-        const childNameIndex = nameIndices[tf.schemaName];
-        let childName = row[childNameIndex]?.value;
-        if (typeof childName !== 'string') {
-          childName = `${tf.schemaName}-${i}`;
-        }
-
-        childTableMap[name] ??= {};
-        childTableMap[name][tf.schemaName] ??= new Map();
-
-        const childMap = childTableMap[name][tf.schemaName];
-        if (!childMap.has(childName)) {
-          childMap.set(childName, {});
-        }
-
-        const childDocValueMap = childMap.get(childName);
-        if (!childDocValueMap) {
-          continue;
-        }
-
-        childDocValueMap[tf.fieldname] = vmi.value;
+        const values = this.fyo.schemaMap[tf.schemaName]?.isChild
+          ? getChildValues(
+              childTableMap,
+              name,
+              tf.schemaName,
+              getChildName(row, nameIndices[tf.schemaName], tf, rowIndex)
+            )
+          : getOrSet(dataMap, name, {});
+        values[tf.fieldname] = vmi.value;
       }
     }
 
     return { dataMap, childTableMap };
+  }
+
+  /** The column of each schema's name field. */
+  getNameIndices(): Record<string, number> {
+    const nameIndices: Record<string, number> = {};
+    for (const [index, key] of this.assignedTemplateFields.entries()) {
+      if (key?.endsWith('.name')) {
+        nameIndices[key.split('.')[0]] = index;
+      }
+    }
+
+    return nameIndices;
   }
 
   selectParsed(parsed: string[][]): void {
@@ -501,37 +528,34 @@ export class Importer {
     return { error: true, value: null, rawValue };
   }
 
+  /** Assigns the columns a header row names; false when the row is not a header row. */
   assignTemplateFieldsFromParsedRow(row: string[]): boolean {
-    const hasFieldKey = row.some((value) => this.templateFieldsMap.has(value));
-    const nonEmptyValues = row.filter(Boolean);
-    const hasOnlyTemplateHeaders =
-      nonEmptyValues.length > 0 &&
-      nonEmptyValues.every((value) =>
-        this.templateFieldKeysByHeader.has(value)
-      );
-
-    if (!hasFieldKey && !hasOnlyTemplateHeaders) {
+    if (!this.isHeaderRow(row)) {
       return false;
     }
 
-    for (let i = 0; i < row.length; i++) {
-      const value = row[i];
-      let key: string | null = this.templateFieldsMap.has(value)
-        ? value
-        : this.templateFieldKeysByHeader.get(value) ?? null;
-
-      if (key !== null && !this.templateFieldsPicked.get(key)) {
-        key = null;
-      }
-
-      if (Number(i) >= this.assignedTemplateFields.length) {
-        this.assignedTemplateFields.push(key);
-      } else {
-        this.assignedTemplateFields[i] = key;
-      }
+    for (const [index, value] of row.entries()) {
+      this.assignedTemplateFields[index] = this.getPickedFieldKey(value);
     }
 
     return true;
+  }
+
+  isHeaderRow(row: string[]): boolean {
+    const values = row.filter(Boolean);
+    return (
+      row.some((value) => this.templateFieldsMap.has(value)) ||
+      (values.length > 0 &&
+        values.every((value) => this.templateFieldKeysByHeader.has(value)))
+    );
+  }
+
+  /** The picked template field that a field key or header names. */
+  getPickedFieldKey(value: string): string | null {
+    const key = this.templateFieldsMap.has(value)
+      ? value
+      : this.templateFieldKeysByHeader.get(value);
+    return key && this.templateFieldsPicked.get(key) ? key : null;
   }
 
   addRow() {
@@ -575,6 +599,37 @@ export class Importer {
   }
 }
 
+function getChildName(
+  row: ValueMatrix[number],
+  nameIndex: number | undefined,
+  tf: TemplateField,
+  rowIndex: number
+): string {
+  const childName = nameIndex === undefined ? null : row[nameIndex]?.value;
+  return typeof childName === 'string'
+    ? childName
+    : `${tf.schemaName}-${rowIndex}`;
+}
+
+function getChildValues(
+  childTableMap: ChildTableMap,
+  name: string,
+  schemaName: string,
+  childName: string
+): DocValueMap {
+  childTableMap[name] ??= {};
+  childTableMap[name][schemaName] ??= new Map();
+  return getOrSet(childTableMap[name][schemaName], childName, {});
+}
+
+function getOrSet<K, V>(map: Map<K, V>, key: K, value: V): V {
+  if (!map.has(key)) {
+    map.set(key, value);
+  }
+
+  return map.get(key)!;
+}
+
 function getTemplateHeaderMaps(fields: TemplateField[]) {
   const headerCounts = new Map<string, number>();
   for (const field of fields) {
@@ -602,82 +657,49 @@ function getTemplateHeaderMaps(fields: TemplateField[]) {
   return { fieldKeysByHeader, headersByFieldKey };
 }
 
-function getTemplateFields(
-  schemaName: string,
-  fyo: Fyo,
-  importer: Importer
-): TemplateField[] {
+function getTemplateFields(schemaName: string, fyo: Fyo): TemplateField[] {
+  const fields: TemplateField[] = [];
   const schemas: { schema: Schema; parentSchemaChildField?: TargetField }[] = [
     { schema: fyo.schemaMap[schemaName]! },
   ];
-  const fields: TemplateField[] = [];
-
-  const targetSchemaFieldMap =
-    fyo.schemaMap[importer.schemaName]?.fields.reduce((acc, f) => {
-      if (!(f as TargetField).target) {
-        return acc;
-      }
-
-      acc[f.fieldname] = f;
-      return acc;
-    }, {} as Record<string, Field>) ?? {};
-
   while (schemas.length) {
-    const { schema, parentSchemaChildField } = schemas.pop() ?? {};
-    if (!schema) {
-      continue;
-    }
-
+    const { schema, parentSchemaChildField } = schemas.pop()!;
     for (const field of schema.fields) {
       if (shouldSkipField(field, schema)) {
         continue;
       }
 
       if (field.fieldtype === FieldTypeEnum.Table) {
-        importer.hasChildTables = true;
         schemas.push({
           schema: fyo.schemaMap[field.target]!,
           parentSchemaChildField: field,
         });
       }
 
-      if (skippedFieldsTypes.includes(field.fieldtype)) {
-        continue;
+      if (!skippedFieldsTypes.includes(field.fieldtype)) {
+        fields.push(getTemplateField(field, schema, parentSchemaChildField));
       }
-
-      const tf = { ...field };
-
-      if (tf.readOnly) {
-        tf.readOnly = false;
-      }
-
-      if (schema.isChild && tf.fieldname === 'name') {
-        tf.required = false;
-      }
-
-      if (
-        schema.isChild &&
-        tf.required &&
-        !targetSchemaFieldMap[tf.schemaName ?? '']?.required
-      ) {
-        tf.required = false;
-      }
-
-      const schemaName = schema.name;
-      const schemaLabel = schema.label;
-      const fieldKey = `${schema.name}.${field.fieldname}`;
-
-      fields.push({
-        ...tf,
-        schemaName,
-        schemaLabel,
-        fieldKey,
-        parentSchemaChildField,
-      });
     }
   }
 
   return fields;
+}
+
+/** An editable copy of the field. Child rows are checked on save, so none is required here. */
+function getTemplateField(
+  field: Field,
+  schema: Schema,
+  parentSchemaChildField?: TargetField
+): TemplateField {
+  return {
+    ...field,
+    readOnly: false,
+    required: schema.isChild ? false : field.required,
+    schemaName: schema.name,
+    schemaLabel: schema.label,
+    fieldKey: `${schema.name}.${field.fieldname}`,
+    parentSchemaChildField,
+  };
 }
 
 export function getColumnLabel(field: TemplateField): string {
@@ -706,4 +728,40 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
   }
 
   return false;
+}
+
+/** Save `doc`, then submit it if asked, and record the outcome in `results`. */
+export async function importDoc(
+  doc: Doc,
+  shouldSubmit: boolean,
+  results: ImportResults
+): Promise<void> {
+  const oldName = doc.name ?? '';
+  try {
+    await doc.sync();
+  } catch (error) {
+    results.failed.push({ name: doc.name!, message: getMessage(error) });
+    return;
+  }
+
+  // A saved draft must not be imported again by Fix Failed.
+  results.successOldName.push(oldName);
+  try {
+    if (shouldSubmit) {
+      await doc.submit();
+    }
+  } catch (error) {
+    const message = getMessage(error);
+    results.failed.push({
+      name: doc.name!,
+      message: t`Saved as draft, but submit failed: ${message}`,
+    });
+    return;
+  }
+
+  results.success.push(doc.name!);
+}
+
+function getMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

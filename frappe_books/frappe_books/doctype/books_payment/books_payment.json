@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
- "autoname": "format:PAY-{#####}",
  "creation": "2026-08-27 22:09:39.969788",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -11,6 +10,7 @@
   "number_series",
   "party",
   "date",
+  "status",
   "payment_type",
   "details_section_break_6",
   "account",
@@ -47,7 +47,6 @@
    "label": "Default"
   },
   {
-   "default": "PAY-",
    "fieldname": "number_series",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -69,6 +68,19 @@
    "in_list_view": 1,
    "label": "Posting Date",
    "reqd": 1
+  },
+  {
+   "default": "Saved",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Saved\nSubmitted\nCancelled",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "description": "Payment Type",
@@ -185,11 +197,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.750897",
+ "modified": "2026-09-28 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Payment",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -223,8 +235,6 @@
    "write": 1
   },
   {
-   "amend": 1,
-   "cancel": 1,
    "create": 1,
    "email": 1,
    "export": 1,

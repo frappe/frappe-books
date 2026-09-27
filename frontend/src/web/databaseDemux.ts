@@ -1,3 +1,4 @@
+import { TranslationString } from 'fyo/utils/translation';
 import { getSchemas } from 'schemas';
 import type { RawCustomField, SchemaMap } from 'schemas/types';
 import { DatabaseDemuxBase, DatabaseMethod } from 'utils/db/types';
@@ -21,7 +22,11 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
       ],
     })) as RawCustomField[];
 
-    return getSchemas(window.books_boot?.country_code || '-', rawCustomFields);
+    return getSchemas(
+      window.books_boot?.country_code || '-',
+      rawCustomFields,
+      TranslationString.prototype.languageMap
+    );
   }
 
   connect(countryCode?: string): Promise<string> {

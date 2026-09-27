@@ -3,15 +3,16 @@
 import frappe
 from frappe.utils import now_datetime
 
+from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
-def make_account(label, root_type="Asset", account_type=None):
-	name = unique_name(label)
+
+def make_account(label, root_type="Asset", **values):
 	return frappe.get_doc(
 		{
 			"doctype": "Books Account",
-			"account_name": name,
+			"account_name": unique_name(label),
 			"root_type": root_type,
-			"account_type": account_type,
+			**values,
 		}
 	).insert()
 
@@ -80,6 +81,48 @@ def ledger_entries(voucher_type, voucher_no):
 		filters={"voucher_type": voucher_type, "voucher_no": voucher_no},
 		fields=["account", "debit", "credit", "reverted", "reverts"],
 		order_by="creation asc",
+	)
+
+
+def ensure_user(email, *roles):
+	if not frappe.db.exists("User", email):
+		frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": email,
+				"first_name": email.split("@")[0],
+				"send_welcome_email": 0,
+				"roles": [{"role": role} for role in roles],
+			}
+		).insert(ignore_permissions=True)
+	return email
+
+
+def set_inventory_accounts(stock, received, cogs):
+	frappe.db.set_single_value(
+		"Books Inventory Settings",
+		{"stock_in_hand": stock, "stock_received_but_not_billed": received, "cost_of_goods_sold": cogs},
+	)
+
+
+def stock_quantity(item, location):
+	return BooksBespokeQueries().stock_quantity(item, location) or 0
+
+
+def make_number_series(reference_type):
+	prefix = f"{reference_type[:4].upper()}-{frappe.generate_hash(length=6)}-"
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Books Number Series",
+				"name": prefix,
+				"start": 1,
+				"pad_zeros": 3,
+				"reference_type": reference_type,
+			}
+		)
+		.insert()
+		.name
 	)
 
 

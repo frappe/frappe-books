@@ -6,7 +6,7 @@
         class="h-8"
         @item-selected="
           (name: string) => {
-            // @ts-ignore
+            // @ts-expect-error only invoices have addItem
             doc?.addItem(name);
           }
         "
@@ -61,7 +61,12 @@
         </p>
         <Icon v-else name="more-horizontal" class="w-4 h-4" />
       </DropdownWithActions>
-      <Button v-if="doc?.canSave" type="primary" @click="sync">
+      <Button
+        v-if="doc?.canSave"
+        type="primary"
+        :disabled="doc.isSyncing"
+        @click="sync"
+      >
         {{ t`Save` }}
       </Button>
       <Button v-else-if="doc?.canSubmit" type="primary" @click="submit">{{ t`Submit` }}</Button>
@@ -130,7 +135,6 @@ import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
 import { TabButtons as FrappeTabButtons } from 'frappe-ui';
-import { getDocStatus } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import Button from 'src/components/Button.vue';
@@ -141,6 +145,7 @@ import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import Icon from 'src/components/Icon.vue';
 import StatusPill from 'src/components/StatusPill.vue';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { getErrorMessage } from 'src/utils';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
@@ -234,15 +239,15 @@ export default defineComponent({
         return false;
       }
 
-      // @ts-ignore
       return typeof this.doc?.addItem === 'function';
     },
     canShowExchangeRate(): boolean {
       return this.hasDoc && !!this.doc.isMultiCurrency;
     },
     exchangeRate(): number {
+      // 0 shows the rate as missing, to be entered by the user.
       if (!this.hasDoc || typeof this.doc.exchangeRate !== 'number') {
-        return 1;
+        return 0;
       }
 
       return this.doc.exchangeRate;
@@ -283,13 +288,6 @@ export default defineComponent({
     },
     hasDoc(): boolean {
       return this.docOrNull instanceof Doc;
-    },
-    status(): string {
-      if (!this.hasDoc) {
-        return '';
-      }
-
-      return getDocStatus(this.doc);
     },
     doc(): Doc {
       const doc = this.docOrNull;
@@ -347,11 +345,6 @@ export default defineComponent({
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
   },
   async mounted() {
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.cf = this;
-    }
-
     await this.setDoc();
     this.replacePathAfterSync();
     this.updateGroupedFields();
@@ -361,6 +354,9 @@ export default defineComponent({
     this.isPrintable = await isPrintable(this.schemaName);
   },
   activated(): void {
+    if (this.hasDoc) {
+      void this.refreshDoc();
+    }
     this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
     docsPathRef.value = docsPathMap[this.schemaName] ?? '';
     this.shortcuts?.pmod.set(this.context, ['KeyP'], () => {
@@ -387,7 +383,9 @@ export default defineComponent({
     routeTo,
     async toggleWidth() {
       const value = !this.useFullWidth;
-      await this.fyo.singles.Misc?.setAndSync('useFullWidth', value);
+      if (this.fyo.can('Misc', 'write')) {
+        await this.fyo.singles.Misc?.setAndSync('useFullWidth', value);
+      }
       this.useFullWidth = value;
     },
     updateGroupedFields(): void {
@@ -415,7 +413,19 @@ export default defineComponent({
         return;
       }
 
-      this.docOrNull = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
+      try {
+        this.docOrNull = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
+      } catch (error) {
+        await handleErrorWithDialog(error);
+      }
+    },
+    async refreshDoc() {
+      try {
+        await this.doc.refresh();
+        this.updateGroupedFields();
+      } catch (error) {
+        await handleErrorWithDialog(error, this.doc, true);
+      }
     },
     replacePathAfterSync() {
       if (!this.hasDoc || this.doc.inserted) {

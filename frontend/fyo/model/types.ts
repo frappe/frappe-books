@@ -102,12 +102,14 @@ export interface RenderData {
   [key: string]: DocValue | Schema;
 }
 
+export type BadgeData = { label: string; color: string };
+
 export type ColumnConfig = {
   options?: SelectOption[];
   label: string;
   fieldtype: FieldType;
   fieldname: string;
-  render?: (doc: RenderData) => { template: string };
+  badge?: (doc: RenderData) => BadgeData;
   display?: (value: unknown, fyo: Fyo) => string;
 };
 

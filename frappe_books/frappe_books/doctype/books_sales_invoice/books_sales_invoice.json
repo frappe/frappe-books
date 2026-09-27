@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
- "autoname": "format:SINV-{#####}",
  "creation": "2026-08-27 22:09:40.131128",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -12,6 +11,7 @@
   "party",
   "account",
   "date",
+  "status",
   "price_list",
   "items_section_break_7",
   "items",
@@ -72,7 +72,6 @@
    "label": "Default"
   },
   {
-   "default": "SINV-",
    "fieldname": "number_series",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -86,7 +85,8 @@
    "in_list_view": 1,
    "label": "Customer",
    "options": "Books Party",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "account",
@@ -102,6 +102,19 @@
    "in_list_view": 1,
    "label": "Date",
    "reqd": 1
+  },
+  {
+   "default": "Saved",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Saved\nUnpaid\nPartlyPaid\nPaid\nReturn\nReturnIssued\nCancelled",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "price_list",
@@ -226,12 +239,14 @@
    "fieldname": "outstanding_amount",
    "fieldtype": "Currency",
    "label": "Outstanding Amount",
+   "no_copy": 1,
    "read_only": 1
   },
   {
    "fieldname": "stock_not_transferred",
    "fieldtype": "Float",
    "label": "Stock Not Shipped",
+   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -256,26 +271,30 @@
    "fieldname": "is_returned",
    "fieldtype": "Check",
    "hidden": 1,
-   "label": "Is Returned"
+   "label": "Is Returned",
+   "no_copy": 1
   },
   {
    "default": "0",
    "fieldname": "is_fully_returned",
    "fieldtype": "Check",
    "hidden": 1,
-   "label": "Is Fully Returned"
+   "label": "Is Fully Returned",
+   "no_copy": 1
   },
   {
    "fieldname": "back_reference",
    "fieldtype": "Link",
    "label": "Back Reference",
+   "no_copy": 1,
    "options": "Books Shipment"
   },
   {
    "fieldname": "return_against",
    "fieldtype": "Link",
    "label": "Return Against",
-   "options": "Books Sales Invoice"
+   "options": "Books Sales Invoice",
+   "search_index": 1
   },
   {
    "fieldname": "coupons_section_break_35",
@@ -359,11 +378,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.234812",
+ "modified": "2026-09-28 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -397,8 +416,6 @@
    "write": 1
   },
   {
-   "amend": 1,
-   "cancel": 1,
    "create": 1,
    "email": 1,
    "export": 1,

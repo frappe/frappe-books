@@ -1,6 +1,6 @@
 <script>
 import { fyo } from 'src/initFyo';
-import { setLinkOnParent } from 'src/utils/doc';
+import { linkOnSave } from 'src/utils/doc';
 import Link from './Link.vue';
 export default {
   name: 'DynamicLink',
@@ -87,14 +87,10 @@ export default {
       const doc = fyo.doc.getNewDoc(schemaName, { name, ...filters });
       openQuickEdit({ doc });
 
-      const parentDoc = this.doc;
-      const fieldname = this.df.fieldname;
-
-      doc.once('afterSync', async () => {
-        await setLinkOnParent(parentDoc, fieldname, doc.name);
+      linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
         this.$router.back();
         this.results = [];
-        this.triggerChange(doc.name);
+        this.triggerChange(savedName);
       });
     },
   },

@@ -9,15 +9,19 @@ import frappe.sessions
 from frappe import _
 from frappe.utils.jinja_globals import is_rtl
 
+from frappe_books.permissions import get_schema_permissions, has_app_permission
+
 no_cache = 1
 SCRIPT_TAG_PATTERN = re.compile(r"\<script[^<]*\</script\>", re.IGNORECASE)
 CLOSING_SCRIPT_TAG_PATTERN = re.compile(r"</script\>", re.IGNORECASE)
 
 
 def get_context(context):
-	_require_login()
+	_require_books_access()
 	context.no_cache = 1
 	context.boot = _get_boot()
+	# Direct visits have no token yet. Generating one stores it in the session, so the check runs.
+	context.csrf_token = frappe.sessions.get_csrf_token()
 	context.app_name = (
 		frappe.get_website_settings("app_name") or frappe.get_system_settings("app_name") or "Frappe"
 	)
@@ -27,16 +31,14 @@ def get_context(context):
 	return context
 
 
-def _require_login():
-	"""Send a logged out visitor to the login page.
-
-	The boot needs a desk session. Without this the page ends as a server error.
-	"""
-	if frappe.session.user != "Guest":
-		return
-	frappe.response["status_code"] = 403
-	frappe.msgprint(_("Log in to access this page."))
-	frappe.redirect(f"/login?{urlencode({'redirect-to': frappe.request.path})}")
+def _require_books_access():
+	"""Send a logged out visitor to the login page and refuse users without Books access."""
+	if frappe.session.user == "Guest":
+		frappe.response["status_code"] = 403
+		frappe.msgprint(_("Log in to access this page."))
+		frappe.redirect(f"/login?{urlencode({'redirect-to': frappe.request.path})}")
+	if frappe.session.data.user_type == "Website User" or not has_app_permission():
+		frappe.throw(_("You are not permitted to access this page."), frappe.PermissionError)
 
 
 def _get_boot():
@@ -58,4 +60,5 @@ def _books_boot():
 		"setup_complete": bool(settings.setup_complete),
 		"app_version": frappe.get_attr("frappe_books.__version__"),
 		"developer_mode": bool(frappe.conf.developer_mode),
+		"permissions": get_schema_permissions(),
 	}

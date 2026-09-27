@@ -89,11 +89,8 @@ export default defineComponent({
           fyo() {
             return {};
           },
-          platform() {
-            return '';
-          },
         },
-        // eslint-disable-next-line @typescript-eslint/ban-types
+        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
       } as {};
     },
   },

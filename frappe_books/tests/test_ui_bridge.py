@@ -1,14 +1,14 @@
 """Integration coverage for the original Vue UI's Frappe compatibility layer."""
 
-from base64 import b64encode
 from datetime import datetime, timedelta
+from unittest.mock import ANY
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
-from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
-from frappe_books.ui_api import lifecycle_action
+from frappe_books.tests.accounting import make_account, make_item, make_party, make_tax, unique_name
+from frappe_books.ui_api import bespoke_call, database_call, lifecycle_action
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
@@ -104,19 +104,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(source["account"], "Cash")
 		self.assertEqual(source["paymentAccount"], "Creditors")
 
-	def test_autoincrement_query_returns_latest_numeric_name(self):
-		first = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "First bridge enquiry"}).insert(
-			ignore_permissions=True
-		)
-		second = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Second bridge enquiry"}).insert(
-			ignore_permissions=True
-		)
-
-		self.assertEqual(
-			BooksBespokeQueries().call("getLastInserted", ["ItemEnquiry"]),
-			max(int(first.name), int(second.name)),
-		)
-
 	def test_crud_uses_interface_names_and_iso_datetimes(self):
 		name = unique_name("Web UOM")
 		inserted = self.bridge.insert("UOM", {"name": name, "isWhole": True})
@@ -192,12 +179,10 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		expense = make_account("Bridge Quote Expense", root_type="Expense", account_type="Expense Account")
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
-		name = unique_name("Bridge Quote")
 
 		inserted = self.bridge.insert(
 			"SalesQuote",
 			{
-				"name": name,
 				"numberSeries": "SQUOT-",
 				"party": party.name,
 				"date": now_datetime().isoformat(),
@@ -219,11 +204,27 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_value(
 				"Books Sales Quote",
-				name,
+				inserted["name"],
 				["reference_type", "entry_currency"],
 			),
 			("Books Party", "Party"),
 		)
+
+	def test_series_names_come_from_the_server(self):
+		account = make_account("Bridge Series Account", root_type="Liability")
+		values = {"name": "Client Chosen Name", "numberSeries": "JV-", "date": "2031-01-01"}
+		values["accounts"] = [{"account": account.name, "debit": 10}, {"account": account.name, "credit": 10}]
+
+		first = self.bridge.insert("JournalEntry", values)["name"]
+		second = self.bridge.insert("JournalEntry", values)["name"]
+
+		self.assertRegex(first, r"^JV-\d+$")
+		self.assertEqual(int(second.removeprefix("JV-")), int(first.removeprefix("JV-")) + 1)
+		self.assertFalse(frappe.db.exists("Books Journal Entry", "Client Chosen Name"))
+
+	def test_autoincrement_names_come_from_the_server(self):
+		inserted = self.bridge.insert("ItemEnquiry", {"name": "999999999", "item": "Bridge enquiry"})
+		self.assertNotEqual(inserted["name"], "999999999")
 
 	def test_draft_insert_runs_frappe_mandatory_validation(self):
 		name = unique_name("Invalid Bridge Color")
@@ -312,6 +313,28 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(len(updated["details"]), 1)
 		self.assertEqual(updated["details"][0]["rate"], 18)
 
+	def test_update_keeps_existing_child_rows_in_place(self):
+		account = make_account("Bridge Row Account", root_type="Liability", account_type="Tax")
+		tax, other = make_tax(account.name), make_tax(account.name)
+		own_row, foreign_row = tax.details[0].name, other.details[0].name
+
+		self.bridge.update(
+			"Tax",
+			{
+				"name": tax.name,
+				"details": [
+					{"name": own_row, "account": account.name, "rate": 18},
+					{"name": foreign_row, "account": account.name, "rate": 5},
+				],
+			},
+		)
+
+		tax.reload()
+		self.assertEqual(tax.details[0].name, own_row)
+		self.assertEqual([row.rate for row in tax.details], [18, 5])
+		self.assertNotEqual(tax.details[1].name, foreign_row)
+		self.assertEqual(frappe.db.get_value("Books Tax Detail", foreign_row, "parent"), other.name)
+
 	def test_item_list_request_returns_created_items(self):
 		income = make_account("Bridge Item Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Bridge Item Expense", root_type="Expense", account_type="Expense Account")
@@ -326,29 +349,15 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(listed["unit"], "Unit")
 		self.assertEqual(listed["rate"], 42)
 
-	def test_double_encoded_attach_images_are_normalized(self):
-		receivable = make_account("Bridge Image Receivable", account_type="Receivable")
-		party = make_party(receivable.name)
-		image = "data:image/png;base64,aW1hZ2UtYnl0ZXM="
-		double_encoded = f"data:image/png;base64,{b64encode(image.encode()).decode()}"
-		frappe.db.set_value("Books Party", party.name, "image", double_encoded)
-
-		self.assertEqual(self.bridge.get("Party", party.name, ["image"])["image"], image)
-
-		self.bridge.update("Party", {"name": party.name, "image": double_encoded})
-		self.assertEqual(frappe.db.get_value("Books Party", party.name, "image"), image)
-
 	def test_child_list_returns_parent_metadata_for_linked_entries(self):
 		receivable = make_account("Bridge Linked Receivable", account_type="Receivable")
 		income = make_account("Bridge Linked Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Bridge Linked Expense", root_type="Expense", account_type="Expense Account")
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
-		invoice_name = unique_name("Bridge Linked Invoice")
-		self.bridge.insert(
+		invoice_name = self.bridge.insert(
 			"SalesInvoice",
 			{
-				"name": invoice_name,
 				"numberSeries": "SINV-",
 				"party": party.name,
 				"account": receivable.name,
@@ -364,7 +373,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 					}
 				],
 			},
-		)
+		)["name"]
 
 		rows = self.bridge.get_all(
 			"SalesInvoiceItem",
@@ -378,11 +387,78 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertEqual(rows[0]["parent"], invoice_name)
 		self.assertEqual(rows[0]["parentSchemaName"], "SalesInvoice")
 
+	def test_child_list_pages_rows_in_the_query(self):
+		income = make_account("Bridge Paging Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Bridge Paging Expense", root_type="Expense", account_type="Expense Account")
+		conversions = [{"uom": uom, "conversion_factor": 2} for uom in ("Kg", "Gram", "Meter")]
+		item = make_item(income.name, expense.name, uom_conversions=conversions)
+
+		rows = self.bridge.get_all(
+			"UOMConversionItem",
+			{"fields": ["uom"], "filters": {"parent": item.name}, "orderBy": "idx", "limit": 1, "offset": 1},
+		)
+
+		self.assertEqual([row["uom"] for row in rows], ["Gram"])
+
+	def test_count_matches_filtered_parent_and_child_rows(self):
+		prefix = unique_name("Bridge Count")
+		for index in range(3):
+			frappe.get_doc(
+				{"doctype": "Books Color", "name": f"{prefix} {index}", "hexvalue": "#000"}
+			).insert()
+		income = make_account("Bridge Count Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Bridge Count Expense", root_type="Expense", account_type="Expense Account")
+		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
+
+		self.assertEqual(self.bridge.call("count", ["Color", {"name": ["like", f"{prefix}%"]}]), 3)
+		self.assertEqual(self.bridge.call("count", ["UOMConversionItem", {"parent": item.name}]), 1)
+
+	def test_search_matches_keyword_letters_in_order_within_the_limit(self):
+		prefix = frappe.generate_hash(length=6)
+		for index in range(3):
+			frappe.get_doc(
+				{"doctype": "Books Color", "name": f"Qz{prefix} Marigold {index}", "hexvalue": "#000"}
+			).insert()
+
+		found = self.bridge.call("search", [f"qz{prefix} mrgld", {"Color": ["name"]}, 2])["Color"]
+
+		self.assertEqual(len(found), 2)
+		self.assertTrue(all(row["name"].startswith(f"Qz{prefix}") for row in found))
+		self.assertEqual(self.bridge.call("search", ["zzq", {"Color": ["name"]}, 2])["Color"], [])
+
+	def test_search_returns_the_parent_of_matching_rows(self):
+		income = make_account("Bridge Search Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Bridge Search Expense", root_type="Expense", account_type="Expense Account")
+		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
+
+		found = self.bridge.call("search", [item.name, {"UOMConversionItem": ["parent"]}, 5])
+
+		self.assertEqual(
+			found["UOMConversionItem"], [{"parent": item.name, "parentSchemaName": "Item", "name": ANY}]
+		)
+
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])
 		with self.assertRaises(frappe.ValidationError):
 			BooksBespokeQueries().call("getTopExpenses", ["2026-01-01"])
+
+	def test_non_string_names_are_rejected_before_reading_rows(self):
+		lookup = {"name": ["like", "%"]}
+		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
+			self.bridge.call("get", ["Party", lookup])
+		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
+			BooksBespokeQueries().call("getStockQuantity", [lookup])
+
+	def test_api_endpoints_validate_argument_types(self):
+		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
+			lifecycle_action("submit", "SalesInvoice", {"name": ["like", "%"]})
+		for action in ("Submit", "bogus"):
+			with self.subTest(action=action), self.assertRaises(frappe.FrappeTypeError):
+				lifecycle_action(action, "SalesInvoice", "SINV-0001")
+		for endpoint in (database_call, bespoke_call):
+			with self.subTest(endpoint=endpoint.__name__), self.assertRaises(frappe.FrappeTypeError):
+				endpoint("get", {"source_schema": "Party"})
 
 	def test_list_reads_return_every_matching_row(self):
 		prefix = unique_name("Bridge Color")
@@ -421,11 +497,9 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
-		invoice_name = unique_name("Bridge Sales Invoice")
-		self.bridge.insert(
+		invoice_name = self.bridge.insert(
 			"SalesInvoice",
 			{
-				"name": invoice_name,
 				"numberSeries": "SINV-",
 				"party": party.name,
 				"account": receivable.name,
@@ -442,7 +516,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 					}
 				],
 			},
-		)
+		)["name"]
 		invoice = frappe.get_doc("Books Sales Invoice", invoice_name)
 		self.assertEqual(len(invoice.items), 1)
 		self.assertEqual(invoice.items[0].parent, invoice_name)

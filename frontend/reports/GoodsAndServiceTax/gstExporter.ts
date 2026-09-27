@@ -2,52 +2,12 @@ import { Action } from 'fyo/model/types';
 import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import { codeStateMap } from 'regional/in';
-import { ExportExtention } from 'reports/types';
+import { ExportExtension } from 'reports/types';
 import { showDialog } from 'src/utils/interactive';
 import { invertMap } from 'utils';
 import { getCsvData, saveExportData } from '../commonExporter';
 import { BaseGSTR } from './BaseGSTR';
-import { TransferTypeEnum } from './types';
-
-const GST = {
-  'GST-0': 0,
-  'GST-0.25': 0.25,
-  'GST-3': 3,
-  'GST-5': 5,
-  'GST-6': 6,
-  'GST-12': 12,
-  'GST-18': 18,
-  'GST-28': 28,
-  'IGST-0': 0,
-  'IGST-0.25': 0.25,
-  'IGST-3': 3,
-  'IGST-5': 5,
-  'IGST-6': 6,
-  'IGST-12': 12,
-  'IGST-18': 18,
-  'IGST-28': 28,
-} as Record<string, number>;
-
-const CSGST = {
-  'GST-0': 0,
-  'GST-0.25': 0.125,
-  'GST-3': 1.5,
-  'GST-5': 2.5,
-  'GST-6': 3,
-  'GST-12': 6,
-  'GST-18': 9,
-  'GST-28': 14,
-} as Record<string, number>;
-
-const IGST = {
-  'IGST-0.25': 0.25,
-  'IGST-3': 3,
-  'IGST-5': 5,
-  'IGST-6': 6,
-  'IGST-12': 12,
-  'IGST-18': 18,
-  'IGST-28': 28,
-} as Record<string, number>;
+import { GSTRRow, TransferTypeEnum } from './types';
 
 interface GSTData {
   version: string;
@@ -121,9 +81,9 @@ interface B2CSInvRecord {
 }
 
 export default function getGSTRExportActions(report: BaseGSTR): Action[] {
-  const exportExtention = ['csv', 'json'] as ExportExtention[];
+  const exportExtension = ['csv', 'json'] as ExportExtension[];
 
-  return exportExtention.map((ext) => ({
+  return exportExtension.map((ext) => ({
     group: `Export`,
     label: ext.toUpperCase(),
     type: 'primary',
@@ -133,7 +93,7 @@ export default function getGSTRExportActions(report: BaseGSTR): Action[] {
   }));
 }
 
-async function exportReport(extention: ExportExtention, report: BaseGSTR) {
+async function exportReport(extension: ExportExtension, report: BaseGSTR) {
   const canExport = await getCanExport(report);
   if (!canExport) {
     return;
@@ -141,9 +101,9 @@ async function exportReport(extention: ExportExtention, report: BaseGSTR) {
 
   let data = '';
 
-  if (extention === 'csv') {
+  if (extension === 'csv') {
     data = getCsvData(report);
-  } else if (extention === 'json') {
+  } else if (extension === 'json') {
     data = await getGstrJsonData(report);
   }
 
@@ -151,7 +111,7 @@ async function exportReport(extention: ExportExtention, report: BaseGSTR) {
     return;
   }
 
-  saveExportData(data, `${report.reportName}.${extention}`);
+  saveExportData(data, `${report.reportName}.${extension}`);
 }
 
 async function getCanExport(report: BaseGSTR) {
@@ -188,9 +148,9 @@ export async function getGstrJsonData(report: BaseGSTR): Promise<string> {
   };
 
   if (transferType === TransferTypeEnum.B2B) {
-    gstData.b2b = await generateB2bData(report);
+    gstData.b2b = generateB2bData(report);
   } else if (transferType === TransferTypeEnum.B2CL) {
-    gstData.b2cl = await generateB2clData(report);
+    gstData.b2cl = generateB2clData(report);
   } else if (transferType === TransferTypeEnum.B2CS) {
     gstData.b2cs = generateB2csData(report);
   }
@@ -198,166 +158,85 @@ export async function getGstrJsonData(report: BaseGSTR): Promise<string> {
   return JSON.stringify(gstData);
 }
 
-async function generateB2bData(report: BaseGSTR): Promise<B2BCustomer[]> {
-  const fyo = report.fyo;
+function generateB2bData(report: BaseGSTR): B2BCustomer[] {
   const b2b: B2BCustomer[] = [];
-
-  const schemaName =
-    report.gstrType === 'GSTR-1'
-      ? ModelNameEnum.SalesInvoiceItem
-      : ModelNameEnum.PurchaseInvoiceItem;
-
-  const parentSchemaName =
-    report.gstrType === 'GSTR-1'
-      ? ModelNameEnum.SalesInvoice
-      : ModelNameEnum.PurchaseInvoice;
-
-  for (const row of report.gstrRows ?? []) {
+  for (const rows of getInvoiceRows(report)) {
+    const [row] = rows;
     const invRecord: B2BInvRecord = {
       inum: row.invNo,
-      idt: DateTime.fromJSDate(row.invDate).toFormat('dd-MM-yyyy'),
+      idt: getInvoiceDate(row),
       val: row.invAmt,
       pos: row.gstin && row.gstin.substring(0, 2),
       rchrg: row.reverseCharge,
       inv_typ: 'R',
-      itms: [],
+      itms: rows.map((rateRow, i) => ({
+        num: i + 1,
+        itm_det: {
+          txval: rateRow.taxVal,
+          rt: rateRow.rate,
+          csamt: 0,
+          camt: rateRow.cgstAmt ?? 0,
+          samt: rateRow.sgstAmt ?? 0,
+          iamt: rateRow.igstAmt ?? 0,
+        },
+      })),
     };
 
-    const exchangeRate = (
-      await fyo.db.getAllRaw(parentSchemaName, {
-        fields: ['exchangeRate'],
-        filters: { name: invRecord.inum },
-      })
-    )[0].exchangeRate as number;
-
-    const items = await fyo.db.getAllRaw(schemaName, {
-      fields: ['amount', 'tax', 'hsnCode'],
-      filters: { parent: invRecord.inum },
-    });
-
-    items.forEach((item) => {
-      const hsnCode = item.hsnCode as number;
-      const tax = item.tax as string;
-      const baseAmount = fyo
-        .pesa((item.amount as string) ?? 0)
-        .mul(exchangeRate);
-
-      const itemRecord: B2BItmRecord = {
-        num: hsnCode,
-        itm_det: {
-          txval: baseAmount.float,
-          rt: GST[tax],
-          csamt: 0,
-          camt: fyo
-            .pesa(CSGST[tax] ?? 0)
-            .mul(baseAmount)
-            .div(100).float,
-          samt: fyo
-            .pesa(CSGST[tax] ?? 0)
-            .mul(baseAmount)
-            .div(100).float,
-          iamt: fyo
-            .pesa(IGST[tax] ?? 0)
-            .mul(baseAmount)
-            .div(100).float,
-        },
-      };
-
-      invRecord.itms.push(itemRecord);
-    });
-
     const customerRecord = b2b.find((b) => b.ctin === row.gstin);
-    const customer = {
-      ctin: row.gstin,
-      inv: [],
-    } as B2BCustomer;
-
     if (customerRecord) {
       customerRecord.inv.push(invRecord);
     } else {
-      customer.inv.push(invRecord);
-      b2b.push(customer);
+      b2b.push({ ctin: row.gstin, inv: [invRecord] });
     }
   }
 
   return b2b;
 }
 
-async function generateB2clData(
-  report: BaseGSTR
-): Promise<B2CLStateInvoiceRecord[]> {
-  const fyo = report.fyo;
+function generateB2clData(report: BaseGSTR): B2CLStateInvoiceRecord[] {
   const b2cl: B2CLStateInvoiceRecord[] = [];
   const stateCodeMap = invertMap(codeStateMap);
-
-  const schemaName =
-    report.gstrType === 'GSTR-1'
-      ? ModelNameEnum.SalesInvoiceItem
-      : ModelNameEnum.PurchaseInvoiceItem;
-
-  const parentSchemaName =
-    report.gstrType === 'GSTR-1'
-      ? ModelNameEnum.SalesInvoice
-      : ModelNameEnum.PurchaseInvoice;
-
-  for (const row of report.gstrRows ?? []) {
+  for (const rows of getInvoiceRows(report)) {
+    const [row] = rows;
     const invRecord: B2CLInvRecord = {
       inum: row.invNo,
-      idt: DateTime.fromJSDate(row.invDate).toFormat('dd-MM-yyyy'),
+      idt: getInvoiceDate(row),
       val: row.invAmt,
-      itms: [],
-    };
-
-    const exchangeRate = (
-      await fyo.db.getAllRaw(parentSchemaName, {
-        fields: ['exchangeRate'],
-        filters: { name: invRecord.inum },
-      })
-    )[0].exchangeRate as number;
-
-    const items = await fyo.db.getAllRaw(schemaName, {
-      fields: ['amount', 'tax', 'hsnCode'],
-      filters: { parent: invRecord.inum },
-    });
-
-    items.forEach((item) => {
-      const hsnCode = item.hsnCode as number;
-      const tax = item.tax as string;
-      const baseAmount = fyo
-        .pesa((item.amount as string) ?? 0)
-        .mul(exchangeRate);
-
-      const itemRecord: B2CLItmRecord = {
-        num: hsnCode,
+      itms: rows.map((rateRow, i) => ({
+        num: i + 1,
         itm_det: {
-          txval: baseAmount.float,
-          rt: GST[tax] ?? 0,
+          txval: rateRow.taxVal,
+          rt: rateRow.rate,
           csamt: 0,
-          iamt: fyo
-            .pesa(row.rate ?? 0)
-            .mul(baseAmount)
-            .div(100).float,
+          iamt: rateRow.igstAmt ?? 0,
         },
-      };
-
-      invRecord.itms.push(itemRecord);
-    });
-
-    const stateRecord = b2cl.find((b) => b.pos === stateCodeMap[row.place]);
-    const stateInvoiceRecord: B2CLStateInvoiceRecord = {
-      pos: stateCodeMap[row.place],
-      inv: [],
+      })),
     };
 
+    const pos = stateCodeMap[row.place];
+    const stateRecord = b2cl.find((b) => b.pos === pos);
     if (stateRecord) {
       stateRecord.inv.push(invRecord);
     } else {
-      stateInvoiceRecord.inv.push(invRecord);
-      b2cl.push(stateInvoiceRecord);
+      b2cl.push({ pos, inv: [invRecord] });
     }
   }
 
   return b2cl;
+}
+
+/** Rows of each invoice; the report has one row per invoice and tax rate. */
+function getInvoiceRows(report: BaseGSTR): GSTRRow[][] {
+  const invoices = new Map<string, GSTRRow[]>();
+  for (const row of report.gstrRows ?? []) {
+    invoices.set(row.invNo, [...(invoices.get(row.invNo) ?? []), row]);
+  }
+
+  return [...invoices.values()];
+}
+
+function getInvoiceDate(row: GSTRRow) {
+  return DateTime.fromISO(row.invDate).toFormat('dd-MM-yyyy');
 }
 
 function generateB2csData(report: BaseGSTR): B2CSInvRecord[] {

@@ -2,7 +2,7 @@ import type { Fyo } from 'fyo';
 import { Money } from 'pesa';
 
 /**
- * And so should not contain and platforma specific imports.
+ * And so should not contain any platform specific imports.
  */
 export function getValueMapFromList<T, K extends keyof T, V extends keyof T>(
   list: T[],
@@ -32,10 +32,6 @@ export function getRandomString(): string {
   return `${randomNumber}-${currentTime}`;
 }
 
-export async function sleep(durationMilliseconds = 1000) {
-  return new Promise((r) => setTimeout(() => r(null), durationMilliseconds));
-}
-
 export function getMapFromList<T, K extends keyof T>(
   list: T[],
   name: K
@@ -53,32 +49,6 @@ export function getMapFromList<T, K extends keyof T>(
 
     acc[String(key)] = t;
   }
-  return acc;
-}
-
-export function getDefaultMapFromList<T, K extends keyof T, D>(
-  list: T[] | string[],
-  defaultValue: D,
-  name?: K
-): Record<string, D> {
-  const acc: Record<string, D> = {};
-  if (typeof list[0] === 'string') {
-    for (const l of list as string[]) {
-      acc[l] = defaultValue;
-    }
-
-    return acc;
-  }
-
-  if (!name) {
-    return {};
-  }
-
-  for (const l of list as T[]) {
-    const key = String(l[name]);
-    acc[key] = defaultValue;
-  }
-
   return acc;
 }
 
@@ -121,46 +91,6 @@ export function time<K, T>(func: (...args: K[]) => T, ...args: K[]): T {
   const stuff = func(...args);
   console.timeEnd(name);
   return stuff;
-}
-
-export async function timeAsync<K, T>(
-  func: (...args: K[]) => Promise<T>,
-  ...args: K[]
-): Promise<T> {
-  /* eslint-disable no-console */
-  const name = func.name;
-  console.time(name);
-  const stuff = await func(...args);
-  console.timeEnd(name);
-  return stuff;
-}
-
-export function changeKeys<T>(
-  source: Record<string, T>,
-  keyMap: Record<string, string | undefined>
-) {
-  const dest: Record<string, T> = {};
-  for (const key of Object.keys(source)) {
-    const newKey = keyMap[key] ?? key;
-    dest[newKey] = source[key];
-  }
-
-  return dest;
-}
-
-export function deleteKeys<T>(
-  source: Record<string, T>,
-  keysToDelete: string[]
-) {
-  const dest: Record<string, T> = {};
-  for (const key of Object.keys(source)) {
-    if (keysToDelete.includes(key)) {
-      continue;
-    }
-    dest[key] = source[key];
-  }
-
-  return dest;
 }
 
 function safeParseNumber(value: unknown, parser: (v: string) => number) {
@@ -216,46 +146,7 @@ export function safeParsePesa(value: unknown, fyo: Fyo): Money {
   }
 }
 
-export function joinMapLists<A, B>(
-  listA: A[],
-  listB: B[],
-  keyA: keyof A,
-  keyB: keyof B
-): (A & B)[] {
-  const mapA = getMapFromList(listA, keyA);
-  const mapB = getMapFromList(listB, keyB);
-
-  const keyListA = listA
-    .map((i) => i[keyA])
-    .filter((k) => (k as unknown as string) in mapB);
-
-  const keyListB = listB
-    .map((i) => i[keyB])
-    .filter((k) => (k as unknown as string) in mapA);
-
-  const keys = new Set([keyListA, keyListB].flat().sort());
-
-  const joint: (A & B)[] = [];
-  for (const k of keys) {
-    const a = mapA[k as unknown as string];
-    const b = mapB[k as unknown as string];
-    const c = { ...a, ...b };
-
-    joint.push(c);
-  }
-
-  return joint;
-}
-
-export function removeAtIndex<T>(array: T[], index: number): T[] {
-  if (index < 0 || index >= array.length) {
-    return array;
-  }
-
-  return [...array.slice(0, index), ...array.slice(index + 1)];
-}
-
 /**
  * Asserts that `value` is of type T. Use with care.
  */
-export const assertIsType = <T>(value: unknown): value is T => true;
+export const assertIsType = <T>(_value: unknown): _value is T => true;

@@ -1,6 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import frappe
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import now_datetime
+
 from frappe_books.accounting.invoice import InvoiceController
 
 
@@ -41,8 +45,38 @@ class BooksSalesQuote(InvoiceController):
 		price_list: DF.Link | None
 		reference_type: DF.Link
 		set_discount_amount: DF.Check
+		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None
 	# end: auto-generated types
 
 	transaction_type = "quote"
+
+	def on_submit(self):
+		if self.reference_type == "Books Lead":
+			lead = frappe.get_doc("Books Lead", self.party)
+			lead.status = "Quotation"
+			lead.save()
+
+
+@frappe.whitelist()
+def make_sales_invoice(source_name: str):
+	return get_mapped_doc(
+		"Books Sales Quote",
+		source_name,
+		{
+			"Books Sales Quote": {
+				"doctype": "Books Sales Invoice",
+				"validation": {"docstatus": ["=", 1], "reference_type": ["=", "Books Party"]},
+				"field_no_map": ["date", "number_series", "make_auto_payment", "attachment"],
+			},
+			"Books Sales Quote Item": {"doctype": "Books Sales Invoice Item"},
+		},
+		postprocess=_set_invoice_details,
+	)
+
+
+def _set_invoice_details(quote, invoice):
+	invoice.date = now_datetime()
+	invoice.account = frappe.db.get_value("Books Party", quote.party, "default_account")
+	invoice.calculate()

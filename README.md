@@ -11,7 +11,7 @@ The app currently targets only the Frappe Framework `develop` branch. It uses Fr
 ## Included
 
 - Books Vue interface on the standalone `/books` route
-- Standard Frappe DocTypes generated from the interface schemas
+- Standard Frappe DocTypes that back the interface schemas
 - Authenticated Frappe APIs for document operations and aggregate queries
 - Setup wizard, chart of accounts, number series, roles, and defaults
 - Sales invoices, purchase invoices, quotes, payments, journal entries, returns, and cancellation reversals
@@ -110,21 +110,19 @@ Vite writes the asset graph to `frappe_books/public/books`. The build then copie
 
 Bench uses the root `build` script during `bench build --app frappe_books`. This follows the same source-to-generated-output pattern as ERPNext Banking.
 
+For development, `yarn dev` serves the interface on `localhost:6969` and proxies `/api`, `/assets` and `/files` to the site in `BOOKS_SITE_URL` (default `http://localhost:8000`):
+
+```bash
+BOOKS_SITE_URL=http://books.localhost:8000 yarn dev
+```
+
 The app also keeps the `/app/books` Desk workspace for administration.
 
 Use standard Frappe **Data Import** and **Data Export** for CSV-based transfers.
 
-## Schema synchronization
+## Schema changes
 
-The checked-in DocTypes and `frappe_books/schema_mapping.json` are generated from the frontend schema files. After you change a frontend schema, synchronize it from the bench:
-
-```bash
-bench --site books.localhost execute frappe_books.dev.schema_sync.sync \
-  --kwargs '{"source_root":"/absolute/path/to/frappe-books"}'
-bench --site books.localhost migrate
-```
-
-Review generated files before committing them. Keep application logic outside the auto-generated type blocks in DocType controllers.
+The DocType JSON files are the source of truth. When you change a DocType field that the Vue app uses, update the matching file in `frontend/schemas` and `frappe_books/schema_mapping.json`. `yarn --cwd frontend test` checks that the three agree.
 
 ## Tests and checks
 
@@ -139,16 +137,20 @@ bench --site "$BOOKS_TEST_SITE" install-app frappe_books
 bench --site "$BOOKS_TEST_SITE" set-config allow_tests 1 --parse
 bench --site "$BOOKS_TEST_SITE" migrate
 bench --site "$BOOKS_TEST_SITE" run-tests --app frappe_books
-uvx ruff check apps/frappe_books/frappe_books
-uvx ruff format --check apps/frappe_books/frappe_books
+uvx ruff@0.14.10 check apps/frappe_books/frappe_books
+uvx ruff@0.14.10 format --check apps/frappe_books/frappe_books
+yarn --cwd frontend lint
 yarn --cwd frontend typecheck
 yarn --cwd frontend test
+yarn --cwd frontend test:ui
 ```
+
+`frontend/tests/ui/README.md` explains which browser tests need a running site. Run `pre-commit install` to format and lint changed files on commit. The Prettier and ESLint hooks use `frontend/node_modules`, so run `yarn install` first.
 
 The integration suite covers the UI data layer, posting, reversals, payments, valuation, stock, POS, setup, and printing.
 Database regressions cover legacy date repair, native Date columns, singleton settings, and large numeric record names.
 Use a separate test site for each database and run the same suite against Frappe `develop`.
-GitHub Actions runs installation, migration, and the integration suite on all three databases against Frappe `develop`.
+GitHub Actions runs the linters once, then installation, migration, the integration suite, and the browser tests on all three databases against Frappe `develop`.
 
 ## Site maintenance
 

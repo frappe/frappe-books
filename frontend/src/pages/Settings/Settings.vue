@@ -163,11 +163,6 @@ export default defineComponent({
     },
   },
   mounted() {
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.settings = this;
-    }
-
     this.update();
   },
   activated(): void {
@@ -238,7 +233,7 @@ export default defineComponent({
       try {
         await doc.sync();
       } catch (error) {
-        await handleErrorWithDialog(error, doc, false, true);
+        await handleErrorWithDialog(error, doc, true);
         return false;
       }
 

@@ -21,9 +21,6 @@ app.mixin({
     fyo() {
       return fyo;
     },
-    platform() {
-      return 'Web';
-    },
   },
   methods: { t: fyo.t, T: fyo.T },
 });

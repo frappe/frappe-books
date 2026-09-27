@@ -127,24 +127,12 @@ export default defineComponent({
       return { values, template };
     },
     actions(): Action[] {
-      const actions = [
+      const actions: Action[] = [
         {
           label: this.t`Print Settings`,
           group: this.t`View`,
           async action() {
             await openSettings(ModelNameEnum.PrintSettings);
-          },
-        },
-        {
-          label: this.t`New Template`,
-          group: this.t`Create`,
-          action: async () => {
-            const doc = this.fyo.doc.getNewDoc(ModelNameEnum.PrintTemplate, {
-              type: this.schemaName,
-            });
-
-            const route = getFormRoute(doc.schemaName, doc.name!);
-            await routeTo(route);
           },
         },
       ];
@@ -162,7 +150,42 @@ export default defineComponent({
             await routeTo(route);
           },
         });
+      }
 
+      if (this.fyo.can(ModelNameEnum.PrintTemplate, 'create')) {
+        actions.push(...this.createTemplateActions());
+      }
+
+      return actions;
+    },
+  },
+  async activated() {
+    await this.initialize();
+  },
+  unmounted() {
+    this.reset();
+  },
+  deactivated() {
+    this.reset();
+  },
+  methods: {
+    createTemplateActions(): Action[] {
+      const actions: Action[] = [
+        {
+          label: this.t`New Template`,
+          group: this.t`Create`,
+          action: async () => {
+            const doc = this.fyo.doc.getNewDoc(ModelNameEnum.PrintTemplate, {
+              type: this.schemaName,
+            });
+
+            const route = getFormRoute(doc.schemaName, doc.name!);
+            await routeTo(route);
+          },
+        },
+      ];
+
+      if (this.templateDoc?.name) {
         actions.push({
           label: this.t`Duplicate Template`,
           group: this.t`Create`,
@@ -180,23 +203,6 @@ export default defineComponent({
 
       return actions;
     },
-  },
-  mounted() {
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.pv = this;
-    }
-  },
-  async activated() {
-    await this.initialize();
-  },
-  unmounted() {
-    this.reset();
-  },
-  deactivated() {
-    this.reset();
-  },
-  methods: {
     async initialize() {
       this.doc = await fyo.doc.getDoc(this.schemaName, this.name);
       await this.setTemplateList();

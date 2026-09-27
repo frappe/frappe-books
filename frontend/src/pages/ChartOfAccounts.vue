@@ -1,7 +1,9 @@
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
-      <Button @click="addRootGroup">{{ t`Add Root Group` }}</Button>
+      <Button v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
+        t`Add Root Group`
+      }}</Button>
       <Button v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</Button>
       <Button v-if="!isAllCollapsed" @click="collapse">{{
         t`Collapse`
@@ -124,7 +126,7 @@ import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
-import { commongDocDelete, openQuickEdit } from 'src/utils/ui';
+import { commonDocDelete, openQuickEdit } from 'src/utils/ui';
 import { getMapFromList } from 'utils/index';
 import { defineComponent, nextTick } from 'vue';
 import Button from '../components/Button.vue';
@@ -179,7 +181,6 @@ export default defineComponent({
       newAccountName: '',
       insertingAccount: false,
       totals: {} as Record<string, { totalDebit: number; totalCredit: number }>,
-      refetchTotals: false,
       settings: null as null | TreeViewSettings,
     };
   },
@@ -198,25 +199,11 @@ export default defineComponent({
         : t`Add Account`;
     },
   },
-  async mounted() {
-    await this.setTotalDebitAndCredit();
-    fyo.doc.observer.on('sync:AccountingLedgerEntry', () => {
-      this.refetchTotals = true;
-    });
-  },
   async activated() {
     await this.fetchAccounts();
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.coa = this;
-    }
+    await this.setTotalDebitAndCredit();
 
     docsPathRef.value = docsPathMap.ChartOfAccounts!;
-
-    if (this.refetchTotals) {
-      await this.setTotalDebitAndCredit();
-      this.refetchTotals = false;
-    }
   },
   deactivated() {
     docsPathRef.value = '';
@@ -225,7 +212,7 @@ export default defineComponent({
     getAccountLabel,
     getAccountActions(account: AccountItem): DropdownOptions {
       const actions: DropdownOptions = [];
-      if (account.isGroup) {
+      if (account.isGroup && fyo.can(ModelNameEnum.Account, 'create')) {
         actions.push(
           {
             label: t`Add Account`,
@@ -238,7 +225,7 @@ export default defineComponent({
         );
       }
 
-      if (account.parentAccount) actions.push({
+      if (account.parentAccount && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
         label: account.isGroup ? t`Delete Group` : t`Delete Account`,
         theme: 'red',
         onClick: () => this.deleteAccount(account),
@@ -349,7 +336,7 @@ export default defineComponent({
       const doc = await fyo.doc.getDoc(ModelNameEnum.Account, account.name);
       this.setOpenAccountDocListener(doc, account);
 
-      await commongDocDelete(doc, false);
+      await commonDocDelete(doc, false);
     },
     async addRootGroup() {
       const doc = fyo.doc.getNewDoc(ModelNameEnum.Account, { isGroup: true });
@@ -498,7 +485,7 @@ export default defineComponent({
         });
         await doc.sync();
       } catch (e) {
-        await handleErrorWithDialog(e, doc, false, true);
+        await handleErrorWithDialog(e, doc, true);
         return;
       } finally {
         this.insertingAccount = false;

@@ -16,11 +16,7 @@ export function areDocValuesEqual(
   }
 
   if (isPesa(dvOne)) {
-    try {
-      return dvOne.eq(dvTwo as string | number);
-    } catch {
-      return false;
-    }
+    return !getIsNullOrUndef(dvTwo) && dvOne.eq(dvTwo as string | number);
   }
 
   return isEqual(dvOne, dvTwo);

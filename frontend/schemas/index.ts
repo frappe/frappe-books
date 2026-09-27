@@ -1,5 +1,8 @@
+import { translateSchema } from 'fyo/utils/translation';
 import { cloneDeep } from 'lodash';
 import { getListFromMap, getMapFromList } from 'utils';
+import { schemaTranslateables } from 'utils/translationHelpers';
+import type { LanguageMap } from 'utils/types';
 import regionalSchemas from './regional';
 import { appSchemas, coreSchemas, metaSchemas } from './schemas';
 import type {
@@ -25,7 +28,8 @@ const NAME_FIELD = {
 
 export function getSchemas(
   countryCode = '-',
-  rawCustomFields: RawCustomField[]
+  rawCustomFields: RawCustomField[],
+  languageMap?: LanguageMap
 ): Readonly<SchemaMap> {
   const builtCoreSchemas = getCoreSchemas();
   const builtAppSchemas = getAppSchemas(countryCode);
@@ -36,6 +40,9 @@ export function getSchemas(
   schemaMap = setSchemaNameOnFields(schemaMap);
 
   addCustomFields(schemaMap, rawCustomFields);
+  if (languageMap) {
+    translateSchema(schemaMap, languageMap, schemaTranslateables);
+  }
   deepFreeze(schemaMap);
   return schemaMap;
 }
@@ -81,7 +88,7 @@ function deepFreeze(schemaMap: SchemaMap) {
   for (const schemaName in schemaMap) {
     Object.freeze(schemaMap[schemaName]);
     for (const key in schemaMap[schemaName]) {
-      // @ts-ignore
+      // @ts-expect-error for...in keys are plain strings
       Object.freeze(schemaMap[schemaName][key]);
     }
 
@@ -245,7 +252,7 @@ export function getRegionalCombinedSchemas(
   for (const name in regionalSchemaMap) {
     const regionalSchema = regionalSchemaMap[name];
 
-    if (!combined.hasOwnProperty(name)) {
+    if (!Object.hasOwn(combined, name)) {
       combined[name] = regionalSchema;
       continue;
     }

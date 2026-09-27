@@ -1,10 +1,15 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from frappe_books.accounting.invoice import InvoiceController
+import frappe
+
+from frappe_books.accounting.invoice import PostingInvoiceController
+from frappe_books.accounting.payment import map_invoice_payment
+from frappe_books.accounting.returns import map_return
+from frappe_books.inventory.auto_transfer import map_invoice_transfer
 
 
-class BooksPurchaseInvoice(InvoiceController):
+class BooksPurchaseInvoice(PostingInvoiceController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -45,9 +50,25 @@ class BooksPurchaseInvoice(InvoiceController):
 		price_list: DF.Link | None
 		return_against: DF.Link | None
 		set_discount_amount: DF.Check
+		status: DF.Literal["Saved", "Unpaid", "PartlyPaid", "Paid", "Return", "ReturnIssued", "Cancelled"]
 		stock_not_transferred: DF.Float
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None
 	# end: auto-generated types
 
 	transaction_type = "purchase"
+
+
+@frappe.whitelist()
+def make_payment(source_name: str):
+	return map_invoice_payment("Books Purchase Invoice", source_name)
+
+
+@frappe.whitelist()
+def make_return(source_name: str):
+	return map_return("Books Purchase Invoice", source_name)
+
+
+@frappe.whitelist()
+def make_purchase_receipt(source_name: str):
+	return map_invoice_transfer("Books Purchase Invoice", source_name)

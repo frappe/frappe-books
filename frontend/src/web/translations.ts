@@ -1,3 +1,4 @@
+import { frappeRequest } from 'frappe-ui';
 import { setLanguageMapOnTranslationString } from 'fyo/utils/translation';
 import type { LanguageMap } from 'utils/types';
 
@@ -15,14 +16,10 @@ export function useTranslations(messages: Record<string, string>): LanguageMap {
 
 export async function loadTranslations(language: string) {
   if (!language || language === 'en') return useTranslations({});
-  const params = new URLSearchParams({ lang: language });
-  const response = await fetch(
-    `/api/method/frappe.translate.get_boot_translations?${params}`,
-    {
-      credentials: 'same-origin',
-    }
-  );
-  if (!response.ok) throw new Error('Unable to load translations');
-  const { message } = await response.json();
-  return useTranslations(message ?? {});
+  const messages = await frappeRequest<Record<string, string> | null>({
+    url: 'frappe.translate.get_boot_translations',
+    method: 'GET',
+    params: { lang: language },
+  });
+  return useTranslations(messages ?? {});
 }

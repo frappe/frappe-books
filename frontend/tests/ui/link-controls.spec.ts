@@ -1,27 +1,13 @@
-import { expect, test, type Cookie, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { useBooksSession } from './helpers/session';
 
 const partyName = 'Audit Saved Party';
 const addressName = 'Audit Address A';
 const addressLabel = '103, Demo Commerce Street, Mumbai, India';
-let cookies: Cookie[];
 
-test.beforeAll(async ({ browser, baseURL }) => {
-  const context = await browser.newContext({ baseURL });
-  const response = await context.request.post('/api/method/login', {
-    form: {
-      usr: process.env.BOOKS_TEST_USER ?? 'Administrator',
-      pwd: process.env.BOOKS_TEST_PASSWORD ?? 'admin',
-    },
-  });
-  expect(response.ok()).toBe(true);
-  cookies = await context.cookies();
-  await context.close();
-});
+useBooksSession();
 
 test.beforeEach(async ({ page }) => {
-  await page.context().addCookies(cookies);
-  await page.goto('/books');
-  await page.getByRole('link', { name: 'Dashboard', exact: true }).waitFor();
   await installFixture(page);
   await openFixture(page, 'Party', partyName);
 });
@@ -260,7 +246,7 @@ test('one notification renders once and dismisses on click', async ({ page }) =>
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins.find((m: any) => m.computed?.fyo).computed.fyo();
-    fyo.singles.POSSettings.isShiftOpen = true;
+    fyo.db.getOpenPOSShift = async () => 'Fixture Shift';
     fyo.singles.POSSettings.inventory = 'Stores';
     fyo.singles.POSSettings.cashAccount = 'Fixture Cash';
     fyo.singles.POSSettings.writeOffAccount = 'Fixture Write Off';

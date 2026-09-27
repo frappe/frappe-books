@@ -38,9 +38,10 @@
 </template>
 
 <script lang="ts">
-import { TranslationString } from 'fyo/utils/translation';
+import type { DocValueMap } from 'fyo/core/types';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { models, getRegionalModels } from 'models';
+import { ModelNameEnum } from 'models/types';
 import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
 import { fyo } from 'src/initFyo';
@@ -121,12 +122,12 @@ export default defineComponent({
       }
       fyo.store.isDevelopment = window.books_boot.developer_mode;
       fyo.store.appVersion = window.books_boot.app_version;
+      fyo.store.permissions = window.books_boot.permissions;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 
       const countryCode = window.books_boot.country_code || '-';
       await fyo.db.connect(countryCode);
-      await fyo.db.translateSchemaMap(TranslationString.prototype.languageMap);
       await fyo.initializeAndRegister(
         models,
         await getRegionalModels(countryCode)
@@ -141,12 +142,15 @@ export default defineComponent({
       setDarkMode(this.darkMode);
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
-        await this.searcher.initializeKeywords();
+        this.searcher.initialize();
       }
       this.loading = false;
     },
-    async completeSetup(options: Record<string, unknown>) {
-      await call('frappe_books.ui_api.complete_setup', { options });
+    async completeSetup(values: DocValueMap) {
+      await fyo.db.insert(ModelNameEnum.SetupWizard, values);
+      await call(
+        'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
+      );
       window.location.reload();
     },
     leaveBooks() {

@@ -216,8 +216,8 @@ export default defineComponent({
           'openingShift',
           this.posOpeningShiftDoc?.name
         );
-        // The server posts the closing cash journal when the shift is saved.
         await this.posClosingShiftDoc?.sync();
+        await this.posClosingShiftDoc?.submit();
 
         this.$emit('toggleModal', 'ShiftClose');
       } catch (error) {

@@ -12,6 +12,8 @@ export type DiscountType = 'percent' | 'amount';
 
 export type ItemVisibility = 'Inventory Items' | 'Non-Inventory Items';
 
+export type POSLayout = 'Classic' | 'Modern';
+
 export const modalNames = [
   'Keyboard',
   'Payment',
@@ -27,28 +29,6 @@ export const modalNames = [
 ] as const;
 
 export type ModalName = typeof modalNames[number];
-
-export type PosEmits =
-  | 'addItem'
-  | 'toggleView'
-  | 'toggleModal'
-  | 'setItemGroup'
-  | 'setPaidAmount'
-  | 'setPaymentMethod'
-  | 'setCouponsCount'
-  | 'routeToSinvList'
-  | 'handleItemSearch'
-  | 'applyPricingRule'
-  | 'setTransferRefNo'
-  | 'setLoyaltyPoints'
-  | 'setTransferAmount'
-  | 'createTransaction'
-  | 'selectedInvoiceName'
-  | 'selectedReturnInvoice'
-  | 'saveAndContinue'
-  | 'handlePaymentAction'
-  | 'setTransferClearanceDate'
-  | 'batchSelected';
 
 export interface POSItem {
   id?: number;

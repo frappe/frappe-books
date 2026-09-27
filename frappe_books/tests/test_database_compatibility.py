@@ -4,21 +4,19 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
-from frappe_books.migrations import normalize_ledger_dates
-from frappe_books.setup import ensure_numeric_name_series
+from frappe_books.patches import normalize_ledger_dates, sync_numeric_name_series
 from frappe_books.tests.accounting import make_account
 
 
 class IntegrationTestDatabaseCompatibility(IntegrationTestCase):
 	def test_numeric_series_continues_after_large_legacy_names(self):
 		legacy_name = "2000000000"
-		frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Legacy enquiry"}).insert(
-			set_name=legacy_name
-		)
+		for name in (legacy_name, "legacy-hash-name"):
+			frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Legacy enquiry"}).insert(set_name=name)
 
-		ensure_numeric_name_series()
+		sync_numeric_name_series.execute()
 		first = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "New enquiry"}).insert()
-		ensure_numeric_name_series()
+		sync_numeric_name_series.execute()
 		second = frappe.get_doc({"doctype": "Books Item Enquiry", "item": "Next enquiry"}).insert()
 
 		self.assertGreater(int(first.name), int(legacy_name))
@@ -27,8 +25,8 @@ class IntegrationTestDatabaseCompatibility(IntegrationTestCase):
 	def test_ledger_date_repair_preserves_native_dates(self):
 		entry = self._make_ledger_entry("2026-09-01")
 
-		normalize_ledger_dates()
-		normalize_ledger_dates()
+		normalize_ledger_dates.execute()
+		normalize_ledger_dates.execute()
 
 		self.assertEqual(getdate(entry.reload().posting_date), getdate("2026-09-01"))
 
@@ -43,8 +41,8 @@ class IntegrationTestDatabaseCompatibility(IntegrationTestCase):
 			.where(ledger.name == entry.name)
 		).run()
 
-		normalize_ledger_dates()
-		normalize_ledger_dates()
+		normalize_ledger_dates.execute()
+		normalize_ledger_dates.execute()
 
 		stored = frappe.qb.from_(ledger).select(ledger.posting_date).where(ledger.name == entry.name).run()
 		self.assertEqual(str(stored[0][0]), "2026-09-01")

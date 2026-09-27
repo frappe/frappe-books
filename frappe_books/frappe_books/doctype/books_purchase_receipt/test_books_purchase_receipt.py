@@ -7,8 +7,18 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
-from frappe_books.inventory.stock import stock_quantity
-from frappe_books.tests.accounting import ledger_entries, make_account, make_item, make_party
+from frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt import (
+	make_purchase_invoice,
+	make_return,
+)
+from frappe_books.tests.accounting import (
+	ledger_entries,
+	make_account,
+	make_item,
+	make_party,
+	set_inventory_accounts,
+	stock_quantity,
+)
 
 
 class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
@@ -40,8 +50,110 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		self.assertEqual(sum(Decimal(str(row.debit or 0)) for row in entries), Decimal("100"))
 		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("100"))
 
+	def test_purchase_return_posts_fifo_value(self):
+		stock = make_account("Stock", account_type="Stock")
+		received = make_account(
+			"Received", root_type="Liability", account_type="Stock Received But Not Billed"
+		)
+		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
+		set_inventory_accounts(stock.name, received.name, cogs.name)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		make_receipt(item.name, quantity=2, rate=10)
+		receipt = make_receipt(item.name, quantity=2, rate=20)
 
-def set_inventory_accounts(stock, received, cogs):
-	frappe.db.set_single_value("Books Inventory Settings", "stock_in_hand", stock)
-	frappe.db.set_single_value("Books Inventory Settings", "stock_received_but_not_billed", received)
-	frappe.db.set_single_value("Books Inventory Settings", "cost_of_goods_sold", cogs)
+		purchase_return = make_receipt(item.name, quantity=1, rate=20, return_against=receipt.name)
+
+		entries = ledger_entries(purchase_return.doctype, purchase_return.name)
+		stock_credit = sum(Decimal(str(row.credit or 0)) for row in entries if row.account == stock.name)
+		self.assertEqual(stock_credit, Decimal("10"))
+		self.assertEqual(stock_value_change(purchase_return), -stock_credit)
+
+	def test_purchase_return_cannot_exceed_the_received_quantity(self):
+		set_inventory_accounts(
+			make_account("Stock", account_type="Stock").name,
+			make_account("Received", root_type="Liability").name,
+			make_account("COGS", root_type="Expense").name,
+		)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		make_receipt(item.name, quantity=5, rate=10)
+		receipt = make_receipt(item.name, quantity=2, rate=10)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2"):
+			make_receipt(item.name, quantity=3, rate=10, return_against=receipt.name)
+
+	def test_invoice_and_return_are_mapped_from_a_receipt(self):
+		set_inventory_accounts(
+			make_account("Stock", account_type="Stock").name,
+			make_account("Received", root_type="Liability").name,
+			make_account("COGS", root_type="Expense").name,
+		)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		receipt = make_receipt(item.name, quantity=2, rate=10)
+		payable = frappe.db.get_value("Books Party", receipt.party, "default_account")
+
+		invoice = make_purchase_invoice(receipt.name)
+		purchase_return = make_return(receipt.name)
+
+		self.assertEqual(
+			(invoice.doctype, invoice.back_reference, invoice.account, invoice.grand_total),
+			("Books Purchase Invoice", receipt.name, payable, 20),
+		)
+		self.assertEqual(
+			(purchase_return.doctype, purchase_return.return_against, purchase_return.items[0].quantity),
+			("Books Purchase Receipt", receipt.name, -2),
+		)
+
+	def test_receipt_is_billed_only_once(self):
+		set_inventory_accounts(
+			make_account("Stock", account_type="Stock").name,
+			make_account("Received", root_type="Liability").name,
+			make_account("COGS", root_type="Expense").name,
+		)
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Expense", root_type="Expense").name,
+			track_item=1,
+		)
+		receipt = make_receipt(item.name, quantity=2, rate=10)
+		first = make_purchase_invoice(receipt.name).insert()
+		again = make_purchase_invoice(receipt.name).insert()
+
+		first.submit()
+
+		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2", again.submit)
+
+
+def make_receipt(item, quantity, rate, return_against=None, date=None):
+	payable = make_account("Payable", root_type="Liability", account_type="Payable")
+	receipt = frappe.get_doc(
+		{
+			"doctype": "Books Purchase Receipt",
+			"party": make_party(payable.name, role="Supplier").name,
+			"date": date or now_datetime(),
+			"return_against": return_against,
+			"items": [{"item": item, "location": "Stores", "quantity": quantity, "rate": rate}],
+		}
+	).insert()
+	receipt.submit()
+	return receipt
+
+
+def stock_value_change(transaction):
+	values = frappe.get_all(
+		"Books Stock Ledger Entry",
+		filters={"reference_type": transaction.doctype, "reference_name": transaction.name},
+		pluck="value_change",
+	)
+	return sum(Decimal(str(value)) for value in values)

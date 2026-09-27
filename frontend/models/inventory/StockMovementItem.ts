@@ -13,7 +13,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { safeParseFloat } from 'utils/index';
-import { generateSerialNumbersForItem, getSuggestedBatchName } from './helpers';
+import { getSerialNumbersForQuantity, getSuggestedBatchName } from './helpers';
 import { StockMovement } from './StockMovement';
 import { TransferItem } from './TransferItem';
 import { MovementTypeEnum } from './types';
@@ -79,69 +79,8 @@ export class StockMovementItem extends TransferItem {
         name: ['in', validUoms],
       };
     },
-    batch: async (doc: Doc) => {
-      let suggestedBatch: string | undefined;
-      let hasBatch = false;
-
-      if (doc.parentdoc?.movementType === MovementTypeEnum.MaterialReceipt) {
-        hasBatch = !!(await doc.fyo.getValue(
-          ModelNameEnum.Item,
-          doc.item as string,
-          'hasBatch'
-        ));
-
-        if (hasBatch) {
-          suggestedBatch = await getSuggestedBatchName(
-            doc.fyo,
-            doc.item as string
-          );
-
-          if (suggestedBatch) {
-            await doc.set('batch', suggestedBatch);
-          }
-        }
-      }
-
-      const batches = await doc.fyo.db.getAll(ModelNameEnum.Batch, {
-        fields: ['name'],
-        filters: { item: doc.item as string },
-      });
-      const existingBatchNames = batches.map((b) => b.name) as string[];
-
-      const allBatches = new Set<string>(existingBatchNames);
-      if (suggestedBatch) {
-        allBatches.add(suggestedBatch);
-      }
-
-      const finalBatchList = Array.from(allBatches);
-
-      return {
-        name: ['in', finalBatchList],
-      };
-    },
+    batch: (doc: Doc) => ({ item: doc.item as string }),
   };
-
-  async validate() {
-    await super.validate();
-    await this.validateBatchAndItemConsistency();
-  }
-
-  async validateBatchAndItemConsistency() {
-    if (!this.batch || !this.item) {
-      return;
-    }
-
-    const batchDoc = await this.fyo.doc.getDoc(ModelNameEnum.Batch, this.batch);
-    if (!batchDoc) {
-      return;
-    }
-
-    if (batchDoc.item !== this.item) {
-      throw new ValidationError(
-        t`Batch ${this.batch} does not belong to Item ${this.item}`
-      );
-    }
-  }
 
   formulas: FormulaMap = {
     rate: {
@@ -233,7 +172,7 @@ export class StockMovementItem extends TransferItem {
           ModelNameEnum.Item,
           this.item
         );
-        const unitDoc = itemDoc.getLink('uom');
+        const unitDoc = await itemDoc.loadAndGetLink('uom');
 
         let quantity: number = this.quantity ?? 1;
         if (fieldname === 'transferQuantity') {
@@ -274,40 +213,16 @@ export class StockMovementItem extends TransferItem {
   };
 
   validations: ValidationMap = {
-    fromLocation: (value) => {
-      if (!this.isManufacture) {
-        return;
-      }
-
-      if (value && this.toLocation) {
-        throw new ValidationError(
-          this.fyo.t`Only From or To can be set for Manufacture`
-        );
-      }
-    },
-    toLocation: (value) => {
-      if (!this.isManufacture) {
-        return;
-      }
-
-      if (value && this.fromLocation) {
-        throw new ValidationError(
-          this.fyo.t`Only From or To can be set for Manufacture`
-        );
-      }
-    },
-    batch: async () => {
-      if (!this.item || !this.batch) return;
-
-      const batchDoc = await this.fyo.doc.getDoc(
+    batch: async (value: DocValue) => {
+      // A new batch has no record until the movement saves.
+      const batchItem = await this.fyo.getValue(
         ModelNameEnum.Batch,
-        this.batch
+        value as string,
+        'item'
       );
-      if (!batchDoc) return;
-
-      if (batchDoc.item !== this.item) {
+      if (this.item && batchItem && batchItem !== this.item) {
         throw new ValidationError(
-          t`Batch ${this.batch} does not belong to Item ${this.item}`
+          t`Batch ${value as string} does not belong to Item ${this.item}`
         );
       }
     },
@@ -357,59 +272,43 @@ export class StockMovementItem extends TransferItem {
 
   override async change(ch: ChangeArg): Promise<void> {
     await super.change(ch);
-
-    const shouldGenerateSerialNumbers =
-      this.parentdoc?.movementType === MovementTypeEnum.MaterialReceipt &&
-      this.item &&
-      this.quantity &&
-      this.quantity > 0;
-
     if (ch.changed === 'item') {
       await this.set('serialNumber', '');
-
-      if (
-        this.parentdoc?.movementType === MovementTypeEnum.MaterialReceipt &&
-        this.item
-      ) {
-        const hasBatch = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          this.item,
-          'hasBatch'
-        );
-
-        if (hasBatch) {
-          const batchName = await getSuggestedBatchName(this.fyo, this.item);
-          if (batchName) {
-            await this.set('batch', batchName);
-          }
-        }
-      }
-
-      if (shouldGenerateSerialNumbers) {
-        await this.generateAndSetSerialNumbers();
-      }
+      await this.setSuggestedBatch();
     }
 
-    if (ch.changed === 'quantity') {
-      if (!this.quantity || this.quantity <= 0) {
-        await this.set('serialNumber', '');
-      } else if (shouldGenerateSerialNumbers) {
-        await this.generateAndSetSerialNumbers();
-      }
+    if (ch.changed === 'item' || ch.changed === 'quantity') {
+      await this.setNewSerialNumbers();
     }
   }
 
-  private async generateAndSetSerialNumbers(): Promise<void> {
-    if (!this.item || !this.quantity) {
+  async setSuggestedBatch() {
+    if (!this.isReceipt || !this.item) {
       return;
     }
 
-    const serialNumbers = await generateSerialNumbersForItem(
+    const batch = await getSuggestedBatchName(this.fyo, this.item);
+    if (batch) {
+      await this.set('batch', batch);
+    }
+  }
+
+  async setNewSerialNumbers() {
+    if (!this.quantity || this.quantity <= 0) {
+      await this.set('serialNumber', '');
+      return;
+    }
+
+    if (!this.isReceipt || !this.item) {
+      return;
+    }
+
+    const serialNumbers = await getSerialNumbersForQuantity(
       this.fyo,
       this.item,
-      Math.abs(this.quantity)
+      this.serialNumber,
+      this.quantity
     );
-
     if (serialNumbers) {
       await this.set('serialNumber', serialNumbers);
     }

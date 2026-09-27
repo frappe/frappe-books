@@ -1,7 +1,5 @@
 import { Fyo } from 'fyo';
-import { ValueError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
-import { translateSchema } from 'fyo/utils/translation';
 import { Field, RawValue, SchemaMap } from 'schemas/types';
 import { getMapFromList } from 'utils';
 import {
@@ -11,13 +9,12 @@ import {
   GetAllOptions,
   IncomeExpense,
   QueryFilter,
+  ReportQuery,
   SingleValue,
   TopExpenses,
   TotalCreditAndDebit,
   TotalOutstanding,
 } from 'utils/db/types';
-import { schemaTranslateables } from 'utils/translationHelpers';
-import { LanguageMap } from 'utils/types';
 import { Converter } from './converter';
 import {
   DatabaseDemuxConstructor,
@@ -25,17 +22,15 @@ import {
   DocValueMap,
   RawValueMap,
 } from './types';
-import { ReturnDocItem } from 'models/inventory/types';
+import { StockQuantity } from 'models/inventory/types';
 import { Money } from 'pesa';
 
 type FieldMap = Record<string, Record<string, Field>>;
 
 export class DatabaseHandler extends DatabaseBase {
-  /* eslint-disable @typescript-eslint/no-floating-promises */
   #fyo: Fyo;
   converter: Converter;
   #demux: DatabaseDemuxBase;
-  #connected = false;
   #schemaMap: SchemaMap = {};
   #fieldMap: FieldMap = {};
   observer: Observable<never> = new Observable();
@@ -56,14 +51,9 @@ export class DatabaseHandler extends DatabaseBase {
     return this.#fieldMap;
   }
 
-  get isConnected() {
-    return this.#connected;
-  }
-
   async connect(countryCode?: string) {
     countryCode = await this.#demux.connect(countryCode);
     await this.init();
-    this.#connected = true;
     return countryCode;
   }
 
@@ -75,21 +65,6 @@ export class DatabaseHandler extends DatabaseBase {
   async refreshSchemaMap() {
     this.#schemaMap = await this.#demux.getSchemaMap();
     this.#setFieldMap();
-  }
-
-  async translateSchemaMap(languageMap?: LanguageMap) {
-    if (languageMap) {
-      translateSchema(this.#schemaMap, languageMap, schemaTranslateables);
-    } else {
-      await this.refreshSchemaMap();
-    }
-  }
-
-  async purgeCache() {
-    await this.close();
-    this.#connected = false;
-    this.#schemaMap = {};
-    this.#fieldMap = {};
   }
 
   async insert(
@@ -105,7 +80,6 @@ export class DatabaseHandler extends DatabaseBase {
       schemaName,
       rawValueMap
     )) as RawValueMap;
-    this.observer.trigger(`insert:${schemaName}`, docValueMap);
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
@@ -121,7 +95,6 @@ export class DatabaseHandler extends DatabaseBase {
       name,
       fields
     )) as RawValueMap;
-    this.observer.trigger(`get:${schemaName}`, { name, fields });
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
@@ -130,8 +103,6 @@ export class DatabaseHandler extends DatabaseBase {
     options: GetAllOptions = {}
   ): Promise<DocValueMap[]> {
     const rawValueMap = await this.#getAll(schemaName, options);
-
-    this.observer.trigger(`getAll:${schemaName}`, options);
     return this.converter.toDocValueMap(
       schemaName,
       rawValueMap
@@ -142,18 +113,15 @@ export class DatabaseHandler extends DatabaseBase {
     schemaName: string,
     options: GetAllOptions = {}
   ): Promise<RawValueMap[]> {
-    const all = await this.#getAll(schemaName, options);
-
-    this.observer.trigger(`getAllRaw:${schemaName}`, options);
-    return all;
+    return await this.#getAll(schemaName, options);
   }
 
   async getSingleValues(
-    ...fieldnames: ({ fieldname: string; parent?: string } | string)[]
+    ...fieldnames: { fieldname: string; parent: string }[]
   ): Promise<SingleValue<DocValue>> {
     const rawSingleValue = (await this.#demux.call(
       'getSingleValues',
-      ...fieldnames
+      fieldnames
     )) as SingleValue<RawValue>;
 
     const docSingleValue: SingleValue<DocValue> = [];
@@ -168,7 +136,6 @@ export class DatabaseHandler extends DatabaseBase {
       });
     }
 
-    this.observer.trigger(`getSingleValues`, fieldnames);
     return docSingleValue;
   }
 
@@ -176,11 +143,24 @@ export class DatabaseHandler extends DatabaseBase {
     schemaName: string,
     options: GetAllOptions = {}
   ): Promise<number> {
-    const rawValueMap = await this.#getAll(schemaName, options);
-    const count = rawValueMap.length;
+    return (await this.#demux.call(
+      'count',
+      schemaName,
+      options.filters ?? {}
+    )) as number;
+  }
 
-    this.observer.trigger(`count:${schemaName}`, options);
-    return count;
+  async search(
+    text: string,
+    fieldsBySchema: Record<string, string[]>,
+    limit: number
+  ): Promise<Record<string, RawValueMap[]>> {
+    return (await this.#demux.call(
+      'search',
+      text,
+      fieldsBySchema,
+      limit
+    )) as Record<string, RawValueMap[]>;
   }
 
   // Update
@@ -211,8 +191,6 @@ export class DatabaseHandler extends DatabaseBase {
       schemaName,
       rawValueMap
     )) as RawValueMap;
-
-    this.observer.trigger(`update:${schemaName}`, docValueMap);
     return this.converter.toDocValueMap(
       schemaName,
       updatedRawValueMap
@@ -240,46 +218,45 @@ export class DatabaseHandler extends DatabaseBase {
   }
 
   async deleteAll(schemaName: string, filters: QueryFilter): Promise<number> {
-    const count = (await this.#demux.call(
-      'deleteAll',
-      schemaName,
-      filters
-    )) as number;
-
-    this.observer.trigger(`deleteAll:${schemaName}`, filters);
-    return count;
+    return (await this.#demux.call('deleteAll', schemaName, filters)) as number;
   }
 
   // Other
   async exists(schemaName: string, name?: string): Promise<boolean> {
-    const doesExist = (await this.#demux.call(
-      'exists',
-      schemaName,
-      name
-    )) as boolean;
-
-    this.observer.trigger(`exists:${schemaName}`, name);
-    return doesExist;
+    return (await this.#demux.call('exists', schemaName, name)) as boolean;
   }
 
-  async close(): Promise<void> {
-    await this.#demux.call('close');
+  /** Values a save would calculate for a new or edited document, without saving it. */
+  async preview(
+    schemaName: string,
+    docValueMap: DocValueMap,
+    name?: string
+  ): Promise<DocValueMap> {
+    const rawValueMap = this.converter.toRawValueMap(schemaName, docValueMap);
+    const previewed = (await this.#demux.call(
+      'preview',
+      schemaName,
+      rawValueMap,
+      name
+    )) as RawValueMap;
+    return this.converter.toDocValueMap(schemaName, previewed) as DocValueMap;
+  }
+
+  /** An unsaved `schemaName` document built by a whitelisted server mapper. */
+  async getMapped(
+    schemaName: string,
+    method: string,
+    sourceName: string
+  ): Promise<DocValueMap> {
+    const rawValueMap = (await this.#demux.call(
+      'getMapped',
+      method,
+      sourceName
+    )) as RawValueMap;
+    return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
   // The Frappe adapter runs these complex queries on the server.
-
-  async getLastInserted(schemaName: string): Promise<number> {
-    if (this.schemaMap[schemaName]?.naming !== 'autoincrement') {
-      throw new ValueError(
-        `invalid schema, ${schemaName} does not have autoincrement naming`
-      );
-    }
-
-    return (await this.#demux.callBespoke(
-      'getLastInserted',
-      schemaName
-    )) as number;
-  }
 
   async getTopExpenses(fromDate: string, toDate: string): Promise<TopExpenses> {
     return (await this.#demux.callBespoke(
@@ -346,28 +323,59 @@ export class DatabaseHandler extends DatabaseBase {
     )) as number | null;
   }
 
-  async getReturnBalanceItemsQty(
-    schemaName: string,
-    docName: string
-  ): Promise<Record<string, ReturnDocItem> | undefined> {
+  async getStockQuantities(
+    location?: string,
+    items?: string[]
+  ): Promise<StockQuantity[]> {
     return (await this.#demux.callBespoke(
-      'getReturnBalanceItemsQty',
-      schemaName,
-      docName
-    )) as Promise<Record<string, ReturnDocItem> | undefined>;
+      'getStockQuantities',
+      location,
+      items
+    )) as StockQuantity[];
   }
 
   async getPOSTransactedAmount(
     fromDate: Date,
-    toDate: Date,
-    lastShiftClosingDate?: Date
+    toDate: Date
   ): Promise<Record<string, Money> | undefined> {
     return (await this.#demux.callBespoke(
       'getPOSTransactedAmount',
       fromDate,
-      toDate,
-      lastShiftClosingDate
+      toDate
     )) as Promise<Record<string, Money> | undefined>;
+  }
+
+  async getLinkedEntries(
+    schemaName: string,
+    name: string
+  ): Promise<Record<string, string[]>> {
+    return (await this.#demux.callBespoke(
+      'getLinkedEntries',
+      schemaName,
+      name
+    )) as Record<string, string[]>;
+  }
+
+  async getReportData<T>(query: ReportQuery, ...args: unknown[]): Promise<T> {
+    return (await this.#demux.callBespoke(query, ...args)) as T;
+  }
+
+  async getOpenPOSShift(): Promise<string | null> {
+    return (await this.#demux.callBespoke('getOpenPOSShift')) as string | null;
+  }
+
+  /** Unused names from the item's batch or serial-number series, reserved on the server. */
+  async getNewSeriesNames(
+    schemaName: 'Batch' | 'SerialNumber',
+    item: string,
+    count: number
+  ): Promise<string[]> {
+    return (await this.#demux.callBespoke(
+      'getNewSeriesNames',
+      schemaName,
+      item,
+      count
+    )) as string[];
   }
 
   /**

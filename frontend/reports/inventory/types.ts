@@ -1,26 +1,11 @@
 import { ModelNameEnum } from "models/types";
 
-export interface RawStockLedgerEntry {
-  name: string;
-  date: string;
-  item: string;
-  rate: string;
-  batch: string | null;
-  serialNumber: string | null;
-  quantity: number;
-  location: string;
-  referenceName: string;
-  referenceType: string;
-  [key: string]: unknown;
-}
-
-
-export interface ComputedStockLedgerEntry{
+export interface StockLedgerRow {
   name: number;
-  date: Date;
+  date: string;
 
   item: string;
-  location:string;
+  location: string;
   batch: string;
   serialNumber: string;
 
@@ -28,15 +13,14 @@ export interface ComputedStockLedgerEntry{
   balanceQuantity: number;
 
   incomingRate: number;
-  valuationRate:number;
+  valuationRate: number;
 
-  balanceValue:number;
-  valueChange:number;
+  balanceValue: number;
+  valueChange: number;
 
   referenceName: string;
   referenceType: string;
 }
-
 
 export interface StockBalanceEntry{
   name: number;

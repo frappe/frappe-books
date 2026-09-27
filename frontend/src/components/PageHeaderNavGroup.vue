@@ -55,8 +55,6 @@ export default defineComponent({
     this.shortcuts?.shift.set(COMPONENT_NAME, ['Backspace'], () => {
       this.backlink?.$el.click();
     });
-    // @ts-ignore
-    window.ng = this;
   },
   deactivated() {
     this.shortcuts?.delete(COMPONENT_NAME);

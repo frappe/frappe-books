@@ -1,6 +1,5 @@
 import { t } from 'fyo';
 import type { DropdownOptions } from 'frappe-ui';
-import { reportIssue } from 'src/errorHandling';
 import { call } from 'src/web/api';
 import { docsPathRef } from './refs';
 
@@ -19,11 +18,6 @@ export function getAppMenuItems(openShortcuts: () => void): DropdownOptions {
           label: t`Keyboard Shortcuts`,
           icon: 'lucide-command',
           onClick: openShortcuts,
-        },
-        {
-          label: t`Report Issue`,
-          icon: 'lucide-flag',
-          onClick: () => reportIssue(),
         },
       ],
     },

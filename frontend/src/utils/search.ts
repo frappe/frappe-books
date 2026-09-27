@@ -5,7 +5,6 @@ import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports';
 import { OptionField } from 'schemas/types';
 import { createFilters, routeFilters } from 'src/utils/filters';
-import { GetAllOptions } from 'utils/db/types';
 import { safeParseFloat } from 'utils/index';
 import { RouteLocationRaw } from 'vue-router';
 import { fuzzyMatch } from '.';
@@ -38,8 +37,9 @@ interface RecentSearchItem extends Omit<SearchItem, 'group'> {
 
 export type SearchItems = (DocSearchItem | SearchItem | RecentSearchItem)[];
 
+const DOC_RESULT_LIMIT = 20;
+
 interface Searchable {
-  needsUpdate: boolean;
   schemaName: string;
   fields: string[];
   meta: string[];
@@ -158,7 +158,9 @@ function getCreateList(fyo: Fyo): SearchItem[] {
     } as SearchItem;
   });
 
-  return [formEditCreateList, filteredCreateList].flat();
+  return [formEditCreateList, filteredCreateList]
+    .flat()
+    .filter((item) => fyo.can(item.schemaName!, 'create'));
 }
 
 function getReportList(fyo: Fyo): SearchItem[] {
@@ -341,7 +343,8 @@ export class Search {
    * A simple fuzzy searcher.
    *
    * How the Search works:
-   * - Pulls `keywordFields` (string columns) from the db.
+   * - Typed input fetches a bounded set of matching docs from the server,
+   *   matched on the schema's `keywordFields`.
    * - `name` or `parent` (parent doc's name) is used as the main
    *   label.
    * - The `name`, `keywordFields` and schema label are used as
@@ -351,12 +354,10 @@ export class Search {
    * - Non matches are ignored.
    * - Each letter in the input narrows the search using the `this._intermediate`
    *   object where the incremental searches are stored.
-   * - Search index is marked for updation when a doc is entered or deleted.
-   * - Marked indices are rebuilt when the modal is opened.
    */
 
-  _obsSet = false;
   numSearches = 0;
+  _docRequestId = 0;
   recentKey = 'searchRecents';
   searchables: Record<string, Searchable>;
   keywords: Record<string, Keyword[]>;
@@ -412,7 +413,7 @@ export class Search {
     try {
       const raw = localStorage.getItem(this.recentKey);
       return raw ? (JSON.parse(raw) as StoredRecentItem[]) : [];
-    } catch (error) {
+    } catch {
       return [];
     }
   }
@@ -469,7 +470,7 @@ export class Search {
       }));
 
       return result;
-    } catch (error) {
+    } catch {
       return [];
     }
   }
@@ -553,24 +554,10 @@ export class Search {
     this._setIntermediate([]);
   }
 
-  async initializeKeywords() {
+  initialize() {
     this._setSearchables();
-    await this.updateKeywords();
-    this._setDocObservers();
     this._setSchemaFilters();
     this._groupLabelMap = getGroupLabelMap();
-    this._setFilterDefaults();
-  }
-
-  _setFilterDefaults() {
-    const totalChildKeywords = Object.values(this.searchables)
-      .filter((s) => s.isChild)
-      .map((s) => this.keywords[s.schemaName]?.length ?? 0)
-      .reduce((a, b) => a + b, 0);
-
-    if (totalChildKeywords > 2_000) {
-      this.set('skipTables', true);
-    }
   }
 
   _setSchemaFilters() {
@@ -579,25 +566,47 @@ export class Search {
     }
   }
 
-  async updateKeywords() {
-    for (const searchable of Object.values(this.searchables)) {
-      if (!searchable.needsUpdate) {
-        continue;
-      }
-
-      const options: GetAllOptions = {
-        fields: [searchable.fields, searchable.meta].flat(),
-        order: 'desc',
-      };
-
-      if (!searchable.isChild) {
-        options.orderBy = 'modified';
-      }
-
-      const maps = await this.fyo.db.getAllRaw(searchable.schemaName, options);
-      this._setKeywords(maps, searchable);
-      this.searchables[searchable.schemaName].needsUpdate = false;
+  /** Loads the docs matching the input; returns false for a superseded request. */
+  async fetchDocs(input?: string): Promise<boolean> {
+    const requestId = ++this._docRequestId;
+    const searchables = Object.values(this.searchables).filter((searchable) =>
+      this._isSearchable(searchable)
+    );
+    const text = input?.trim();
+    const results =
+      text && searchables.length
+        ? await this.fyo.db.search(
+            text,
+            Object.fromEntries(searchables.map((s) => [s.schemaName, s.fields])),
+            DOC_RESULT_LIMIT
+          )
+        : {};
+    if (requestId !== this._docRequestId) {
+      return false;
     }
+
+    this.keywords = {};
+    for (const searchable of searchables) {
+      this._setKeywords(results[searchable.schemaName] ?? [], searchable);
+    }
+
+    this._setIntermediate([]);
+    return true;
+  }
+
+  _isSearchable(searchable: Searchable): boolean {
+    if (
+      !this.filters.groupFilters.Docs ||
+      !this.filters.schemaFilters[searchable.schemaName]
+    ) {
+      return false;
+    }
+
+    if (searchable.isChild && this.filters.skipTables) {
+      return false;
+    }
+
+    return !(searchable.isSubmittable && this.filters.skipTransactions);
   }
 
   _searchSuggestions(input: string): SearchItems {
@@ -652,7 +661,7 @@ export class Search {
     const useSuggestions = this._shouldUseSuggestions(input);
     /**
      * If the suggestion list is already populated
-     * and the input is an extention of the previous
+     * and the input is an extension of the previous
      * then use the suggestions.
      */
     if (useSuggestions) {
@@ -854,24 +863,13 @@ export class Search {
      * group by the keyword priority
      */
     const keywords: Keyword[] = [];
-    const schemaNames = Object.keys(this.keywords);
-    for (const sn of schemaNames) {
-      const searchable = this.searchables[sn];
-      if (!this.filters.schemaFilters[sn] || !this.filters.groupFilters.Docs) {
-        continue;
+    for (const sn of Object.keys(this.keywords)) {
+      if (this._isSearchable(this.searchables[sn])) {
+        keywords.push(...this.keywords[sn]);
       }
-
-      if (searchable.isChild && this.filters.skipTables) {
-        continue;
-      }
-
-      if (searchable.isSubmittable && this.filters.skipTransactions) {
-        continue;
-      }
-      keywords.push(...this.keywords[sn]);
     }
 
-    return groupBy(keywords.flat(), 'priority');
+    return groupBy(keywords, 'priority');
   }
 
   _setSearchables() {
@@ -897,27 +895,8 @@ export class Search {
         meta,
         isChild: !!schema.isChild,
         isSubmittable: !!schema.isSubmittable,
-        needsUpdate: true,
       };
     }
-  }
-
-  _setDocObservers() {
-    if (this._obsSet) {
-      return;
-    }
-
-    for (const { schemaName } of Object.values(this.searchables)) {
-      this.fyo.doc.observer.on(`sync:${schemaName}`, () => {
-        this.searchables[schemaName].needsUpdate = true;
-      });
-
-      this.fyo.doc.observer.on(`delete:${schemaName}`, () => {
-        this.searchables[schemaName].needsUpdate = true;
-      });
-    }
-
-    this._obsSet = true;
   }
 
   _setKeywords(maps: RawValueMap[], searchable: Searchable) {
@@ -960,7 +939,7 @@ export class Search {
     // Set the meta map
     for (const fn of searchable.meta) {
       const meta = map[fn];
-      if (typeof meta === 'number') {
+      if (typeof meta === 'number' || typeof meta === 'boolean') {
         keyword.meta[fn] = Boolean(meta);
       } else if (typeof meta === 'string') {
         keyword.meta[fn] = meta;

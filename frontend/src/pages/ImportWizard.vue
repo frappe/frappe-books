@@ -309,7 +309,7 @@
                 {{ f.name }}
               </p>
               <p class="min-w-0 break-words text-ink-gray-6">
-                {{ f.error.message }}
+                {{ f.message }}
               </p>
             </div>
           </div>
@@ -364,7 +364,13 @@ import FormHeader from 'src/components/FormHeader.vue';
 import Icon from 'src/components/Icon.vue';
 import Modal from 'src/components/Modal.vue';
 import PageHeader from 'src/components/PageHeader.vue';
-import { Importer, TemplateField, getColumnLabel } from 'src/importer';
+import {
+  Importer,
+  TemplateField,
+  getColumnLabel,
+  importDoc,
+} from 'src/importer';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { downloadFile } from 'src/utils/browser';
 import { showDialog } from 'src/utils/interactive';
@@ -379,7 +385,7 @@ type ImportWizardData = {
   complete: boolean;
   success: string[];
   successOldName: string[];
-  failed: { name: string; error: Error }[];
+  failed: { name: string; message: string }[];
   file: null | { name: string; filePath: string; text: string };
   nullOrImporter: null | Importer;
   importType: string;
@@ -430,47 +436,10 @@ export default defineComponent({
       return ['4rem', ...this.columnIterator.map(() => '10rem')];
     },
     duplicates(): string[] {
-      if (!this.hasImporter) {
-        return [];
-      }
-
-      const dupes = new Set<string>();
-      const assignedSet = new Set<string>();
-
-      for (const key of this.importer.assignedTemplateFields) {
-        if (!key) {
-          continue;
-        }
-
-        const tf = this.importer.templateFieldsMap.get(key);
-        if (assignedSet.has(key) && tf) {
-          dupes.add(getColumnLabel(tf));
-        }
-
-        assignedSet.add(key);
-      }
-
-      return Array.from(dupes);
+      return this.hasImporter ? this.importer.getDuplicateColumns() : [];
     },
     requiredNotSelected(): string[] {
-      if (!this.hasImporter) {
-        return [];
-      }
-
-      const assigned = new Set(this.importer.assignedTemplateFields);
-      return [...this.importer.templateFieldsMap.values()]
-        .filter((f) => {
-          if (assigned.has(f.fieldKey) || !f.required) {
-            return false;
-          }
-
-          if (f.parentSchemaChildField && !f.parentSchemaChildField.required) {
-            return false;
-          }
-
-          return f.required;
-        })
-        .map((f) => getColumnLabel(f));
+      return this.hasImporter ? this.importer.getMissingRequiredColumns() : [];
     },
     errorMessage(): string {
       if (this.duplicates.length) {
@@ -664,12 +633,6 @@ export default defineComponent({
       }
     },
   },
-  mounted() {
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.iw = this;
-    }
-  },
   activated(): void {
     docsPathRef.value = docsPathMap.ImportWizard ?? '';
   },
@@ -706,36 +669,7 @@ export default defineComponent({
       return title.join(', ');
     },
     pickColumn(fieldKey: string, value: boolean): void {
-      this.importer.templateFieldsPicked.set(fieldKey, value);
-      if (value) {
-        return;
-      }
-
-      const idx = this.importer.assignedTemplateFields.findIndex((f) => f === fieldKey);
-
-      if (idx >= 0) {
-        this.importer.assignedTemplateFields[idx] = null;
-        this.reassignTemplateFields();
-      }
-    },
-    reassignTemplateFields(): void {
-      if (this.importer.valueMatrix.length) {
-        return;
-      }
-
-      for (let idx = 0; idx < this.importer.assignedTemplateFields.length; idx++) {
-        this.importer.assignedTemplateFields[idx] = null;
-      }
-
-      let idx = 0;
-      for (const [fieldKey, value] of this.importer.templateFieldsPicked) {
-        if (!value) {
-          continue;
-        }
-
-        this.importer.assignedTemplateFields[idx] = fieldKey;
-        idx += 1;
-      }
+      this.importer.pickColumn(fieldKey, value);
     },
     async showMe(): Promise<void> {
       const schemaName = this.importer.schemaName;
@@ -805,24 +739,10 @@ export default defineComponent({
 
       const shouldSubmit = await this.askShouldSubmit();
 
-      let doneCount = 0;
-      for (const doc of this.importer.docs) {
-        this.setLoadingStatus(doneCount, this.importer.docs.length);
-        const oldName = doc.name ?? '';
-        try {
-          await doc.sync();
-          if (shouldSubmit) {
-            await doc.submit();
-          }
-          doneCount += 1;
-
-          this.success.push(doc.name!);
-          this.successOldName.push(oldName);
-        } catch (error) {
-          if (error instanceof Error) {
-            this.failed.push({ name: doc.name!, error });
-          }
-        }
+      const { docs } = this.importer;
+      for (const [index, doc] of docs.entries()) {
+        this.setLoadingStatus(index, docs.length);
+        await importDoc(doc, shouldSubmit, this);
       }
 
       this.isMakingEntries = false;
@@ -837,7 +757,7 @@ export default defineComponent({
       await showDialog({
         title: this.t`Submit entries?`,
         type: 'info',
-        details: this.t`Should entries be submitted after syncing?`,
+        detail: this.t`Should entries be submitted after syncing?`,
         buttons: [
           {
             label: this.t`Yes`,
@@ -859,21 +779,11 @@ export default defineComponent({
       return shouldSubmit;
     },
     clearSuccessfullyImportedEntries() {
-      const schemaName = this.importer.schemaName;
-      const nameFieldKey = `${schemaName}.name`;
-      const nameIndex = this.importer.assignedTemplateFields.findIndex((n) => n === nameFieldKey);
-
-      const failedEntriesValueMatrix = this.importer.valueMatrix.filter((row) => {
-        const value = row[nameIndex].value;
-        if (typeof value !== 'string') {
-          return false;
-        }
-
-        return !this.successOldName.includes(value);
-      });
-
-      this.setImportType(this.importType);
-      this.importer.valueMatrix = failedEntriesValueMatrix;
+      const importer = this.importer;
+      importer.retryRowsNotImported(this.successOldName);
+      this.clear();
+      this.importType = importer.schemaName;
+      this.nullOrImporter = importer;
     },
     setImportType(importType: string): void {
       this.clear();
@@ -899,13 +809,10 @@ export default defineComponent({
         return;
       }
 
-      const isValid = this.importer.selectFile(text);
-      if (!isValid) {
-        await showDialog({
-          title: this.t`Cannot read file`,
-          detail: this.t`Bad import data, could not read file.`,
-          type: 'error',
-        });
+      try {
+        this.importer.selectFile(text);
+      } catch (error) {
+        await handleErrorWithDialog(error, undefined, true);
         return;
       }
 

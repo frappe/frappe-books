@@ -9,7 +9,6 @@ export class POSProfile extends Doc {
   posPrintTemplate?: string;
   inventory?: string;
   posUI?: 'Classic' | 'Modern';
-  isShiftOpen?: boolean;
   itemVisibility?: string;
   canChangeRate?: boolean;
   hideUnavailableItems?: boolean;

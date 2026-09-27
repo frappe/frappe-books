@@ -3,7 +3,7 @@ import { t } from 'fyo';
 import { getAccountLabel } from 'src/utils/accountLabel';
 import { fyo } from 'src/initFyo';
 import { fuzzyMatch } from 'src/utils';
-import { setLinkOnParent } from 'src/utils/doc';
+import { linkOnSave } from 'src/utils/doc';
 import { getCreateFiltersFromListViewFilters } from 'src/utils/misc';
 import AutoComplete from './AutoComplete.vue';
 
@@ -114,11 +114,15 @@ export default {
         }
       }
 
-      if (this.doc && this.df.create) {
+      if (this.doc && this.df.create && this.canCreateTarget()) {
         options = options.concat(this.getCreateNewOption());
       }
 
       return options;
+    },
+    canCreateTarget() {
+      const target = this.getTargetSchemaName();
+      return !!target && fyo.can(target, 'create');
     },
     getCreateNewOption() {
       return {
@@ -146,14 +150,10 @@ export default {
       const doc = fyo.doc.getNewDoc(schemaName, { name, ...filters });
       openQuickEdit({ doc });
 
-      const parentDoc = this.doc;
-      const fieldname = this.df.fieldname;
-
-      doc.once('afterSync', async () => {
-        await setLinkOnParent(parentDoc, fieldname, doc.name);
+      linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
         this.$router.back();
         this.results = [];
-        this.triggerChange(doc.name);
+        this.triggerChange(savedName);
       });
     },
     async getCreateFilters() {
@@ -189,11 +189,8 @@ export default {
         return await getFilters(this.doc);
       }
 
-      try {
-        return await getFilters();
-      } catch {
-        return null;
-      }
+      // Filters that read the document cannot apply without one.
+      return getFilters.length ? null : await getFilters();
     },
   },
 };

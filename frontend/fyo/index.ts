@@ -14,8 +14,12 @@ import {
 } from './utils/consts';
 import * as errors from './utils/errors';
 import { format } from './utils/format';
+import {
+  DocPermission,
+  hasPermission,
+  type PermissionMap,
+} from './utils/permissions';
 import { t, T } from './utils/translation';
-import { ErrorLog } from './utils/types';
 import type { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
 
@@ -33,7 +37,6 @@ export class Fyo {
 
   _initialized = false;
 
-  errorLog: ErrorLog[] = [];
   onDocumentActionWarning?: (warning: DocumentActionWarning) => void;
   temp?: Record<string, unknown>;
 
@@ -53,10 +56,6 @@ export class Fyo {
 
   }
 
-  get initialized() {
-    return this._initialized;
-  }
-
   reportDocumentActionWarning(
     doc: Doc,
     action: DocumentActionWarning['action'],
@@ -68,14 +67,6 @@ export class Fyo {
       submit: this.t`${label} was submitted, but the view could not be fully updated. Reload the page before continuing.`,
     };
     const message = messages[action];
-    for (const error of errors) {
-      this.errorLog.push({
-        name: 'Document follow-up failed',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        more: { schemaName: doc.schemaName, name: doc.name, action },
-      });
-    }
     try {
       this.onDocumentActionWarning?.({ doc, action, message, errors });
     } catch (error) {
@@ -109,12 +100,11 @@ export class Fyo {
 
   async initializeAndRegister(
     models: ModelMap = {},
-    regionalModels: ModelMap = {},
-    force = false
+    regionalModels: ModelMap = {}
   ) {
-    if (this._initialized && !force) return;
+    if (this._initialized) return;
 
-    await this.#initializeModules();
+    this.#initializeModules();
     await this.#initializeMoneyMaker();
 
     this.doc.registerModels(models, regionalModels);
@@ -122,12 +112,11 @@ export class Fyo {
     this._initialized = true;
   }
 
-  async #initializeModules() {
+  #initializeModules() {
     // temp params while calling routes
     this.temp = {};
 
     this.doc.init();
-    await this.db.init();
   }
 
   async #initializeMoneyMaker() {
@@ -166,8 +155,8 @@ export class Fyo {
     });
   }
 
-  async close() {
-    await this.db.close();
+  can(schemaName: string, permission: DocPermission): boolean {
+    return hasPermission(this.store.permissions, schemaName, permission);
   }
 
   getField(schemaName: string, fieldname: string) {
@@ -188,49 +177,21 @@ export class Fyo {
       return undefined;
     }
 
-    let doc: Doc;
-    let value: DocValue | Doc[];
-    try {
-      doc = await this.doc.getDoc(schemaName, name);
-      value = doc.get(fieldname);
-    } catch (err) {
-      value = undefined;
+    const cachedDoc = this.docs.get(schemaName)?.[name];
+    if (cachedDoc) {
+      return cachedDoc.get(fieldname);
     }
 
-    if (value === undefined && schemaName === name) {
-      const sv = await this.db.getSingleValues({
-        fieldname: fieldname,
-        parent: schemaName,
-      });
-
-      return sv?.[0]?.value;
-    }
-
-    return value;
-  }
-
-  async purgeCache() {
-    this.pesa = getMoneyMaker({
-      currency: DEFAULT_CURRENCY,
-      precision: DEFAULT_INTERNAL_PRECISION,
-      display: DEFAULT_DISPLAY_PRECISION,
-      wrapper: markRaw,
-    });
-
-    this._initialized = false;
-    this.temp = {};
-    this.currencyFormatter = undefined;
-    this.currencySymbols = {};
-    this.errorLog = [];
-    this.temp = {};
-    await this.db.purgeCache();
-    this.doc.purgeCache();
+    // A missing document reads as an empty map.
+    const values = await this.db.get(schemaName, name, fieldname);
+    return values[fieldname] as DocValue | undefined;
   }
 
   store = {
     isDevelopment: false,
     appVersion: '',
     language: '',
+    permissions: null as PermissionMap | null,
     reports: {} as Record<keyof typeof reports, Report | undefined>,
   };
 }

@@ -162,6 +162,7 @@
 </template>
 
 <script lang="ts">
+import { handleError } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { searcherKey, shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
@@ -220,6 +221,7 @@ export default defineComponent({
       limit: 50,
       allowedLimits: [50, 100, 500, -1],
       filterRevision: 0,
+      docSearchTimer: undefined as ReturnType<typeof setTimeout> | undefined,
     };
   },
   computed: {
@@ -276,7 +278,7 @@ export default defineComponent({
     },
     searchResults(): SearchItems {
       // The web app keeps Search in a shallow ref; track filter mutations here.
-      this.filterRevision;
+      void this.filterRevision;
       if (!this.searcher) {
         return [];
       }
@@ -290,11 +292,6 @@ export default defineComponent({
     },
   },
   async mounted() {
-    if (fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.search = this;
-    }
-
     this.openModal = false;
     this.setShortcuts();
   },
@@ -306,9 +303,14 @@ export default defineComponent({
     this.shortcuts?.delete(COMPONENT_NAME);
   },
   unmounted() {
+    clearTimeout(this.docSearchTimer);
     this.shortcuts?.delete(COMPONENT_NAME);
   },
   watch: {
+    inputValue(value: string) {
+      clearTimeout(this.docSearchTimer);
+      this.docSearchTimer = setTimeout(() => void this.fetchDocs(value), 250);
+    },
     openModal(open: boolean) {
       if (open) {
         this.setShortcuts();
@@ -378,7 +380,15 @@ export default defineComponent({
     open(): void {
       this.openModal = true;
       this.setShortcuts();
-      this.searcher?.updateKeywords();
+    },
+    async fetchDocs(value: string) {
+      try {
+        if (await this.searcher?.fetchDocs(value)) {
+          this.filterRevision += 1;
+        }
+      } catch (error) {
+        await handleError(false, error as Error);
+      }
     },
     close(): void {
       this.clearFilterShortcuts();
@@ -395,6 +405,7 @@ export default defineComponent({
 
       this.searcher.set(filterName, value);
       this.filterRevision += 1;
+      void this.fetchDocs(this.inputValue);
     },
     selectSearchItem(value: CommandPaletteValue): void {
       const selectedItem = value as SearchItems[number];

@@ -106,7 +106,6 @@ export default defineComponent({
       return classes;
     },
     doc(): Doc | undefined {
-      // @ts-ignore
       const doc = this.injectedDoc;
 
       if (doc instanceof Doc) {

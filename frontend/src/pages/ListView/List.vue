@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col overflow-hidden text-base">
     <FrappeList
-      v-if="dataSlice.length"
+      v-if="data.length"
       :columns="listColumns"
       :selectable="isSelectionMode"
       :selection="selectedItems"
@@ -21,7 +21,7 @@
         </FrappeListHeaderCell>
       </FrappeListHeader>
 
-      <FrappeListRows :items="dataSlice" row-key="name">
+      <FrappeListRows :items="data" row-key="name">
         <template #default="{ item: row, index, value }">
           <FrappeListRow
             :value="value"
@@ -39,7 +39,6 @@
                 class="min-w-0 flex-1"
                 :row="row as RenderData"
                 :column="column"
-                @status-found="handleStatusFound"
               />
             </FrappeListCell>
           </FrappeListRow>
@@ -48,11 +47,12 @@
     </FrappeList>
 
     <!-- Pagination Footer -->
-    <div v-if="data?.length" class="mt-auto">
+    <div v-if="total" class="mt-auto">
       <hr class="border-outline-gray-1" />
       <Paginator
         ref="paginator"
-        :item-count="data.length"
+        :item-count="total"
+        :allowed-counts="[50, 100, 500]"
         class="px-4"
         @index-change="setPageIndices"
       />
@@ -60,7 +60,7 @@
 
     <!-- Empty State -->
     <div
-      v-if="!data?.length"
+      v-if="!total"
       class="flex flex-col items-center justify-center my-auto"
     >
       <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
@@ -83,15 +83,13 @@ import {
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
-import { cloneDeep } from 'lodash';
 import Button from 'src/components/Button.vue';
 import Paginator from 'src/components/Paginator.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
-import { mergeQueryFilters } from 'src/utils/filterQuery';
-import { matchesStatus } from 'src/utils/statusFilter';
+import { loadListData, onListChange } from 'src/utils/listData';
 import { QueryFilter } from 'utils/db/types';
-import { PropType, defineComponent, toRaw } from 'vue';
+import { PropType, defineComponent } from 'vue';
 import ListCell from './ListCell.vue';
 
 export default defineComponent({
@@ -124,21 +122,15 @@ export default defineComponent({
   data() {
     return {
       data: [] as RenderData[],
+      total: 0,
       pageStart: 0,
-      pageEnd: 0,
-      statusMap: {} as Record<string, string>,
+      pageLength: 50,
       selectedItems: [] as string[],
       activeFilters: {} as QueryFilter,
       requestId: 0,
     };
   },
   computed: {
-    dataSlice() {
-      return this.data.slice(this.pageStart, this.pageEnd);
-    },
-    count() {
-      return this.pageEnd - this.pageStart + 1;
-    },
     listColumns(): string[] {
       return ['2rem', ...this.columns.map(() => 'minmax(0, 1fr)')];
     },
@@ -181,72 +173,34 @@ export default defineComponent({
     this.setUpdateListeners();
   },
   methods: {
-    handleStatusFound({ rowId, status }: { rowId: string; status: string }) {
-      this.statusMap[rowId] = status;
-    },
     isNumeric,
-    setPageIndices({ start, end }: { start: number; end: number }) {
-      this.pageStart = start;
-      this.pageEnd = end;
-    },
-    setUpdateListeners() {
-      if (!this.schemaName) {
+    async setPageIndices({ start, end }: { start: number; end: number }) {
+      if (start === this.pageStart && end - start === this.pageLength) {
         return;
       }
 
-      const listener = async () => {
-        await this.updateData();
-      };
-
-      if (fyo.schemaMap[this.schemaName]?.isSubmittable) {
-        fyo.doc.observer.on(`submit:${this.schemaName}`, listener);
-        fyo.doc.observer.on(`revert:${this.schemaName}`, listener);
+      this.pageStart = start;
+      this.pageLength = end - start;
+      await this.updateData();
+    },
+    setUpdateListeners() {
+      if (this.schemaName) {
+        onListChange(fyo, this.schemaName, () => this.updateData());
       }
-
-      fyo.doc.observer.on(`sync:${this.schemaName}`, listener);
-      fyo.db.observer.on(`delete:${this.schemaName}`, listener);
-      fyo.doc.observer.on(`rename:${this.schemaName}`, listener);
     },
     async updateData(filters?: QueryFilter) {
-      if (filters !== undefined) this.activeFilters = cloneDeep(toRaw(filters));
-      const requestId = ++this.requestId;
-      const appliedFilters = mergeQueryFilters(
-        cloneDeep(toRaw(this.filters)),
-        cloneDeep(toRaw(this.activeFilters))
-      );
-      const query = cloneDeep(appliedFilters);
-      const isStatusFilter =
-        'status' in query && !fyo.db.fieldMap[this.schemaName]?.status;
-      const statusFilter = query.status;
-      if (isStatusFilter) {
-        delete query['status'];
-      }
-
-      const orderBy = ['created'];
-      if (fyo.db.fieldMap[this.schemaName]['date']) {
-        orderBy.unshift('date');
-      }
-
-      const tableData = await fyo.db.getAll(this.schemaName, {
-        fields: ['*'],
-        filters: query,
-        orderBy,
-      });
-
-      if (requestId !== this.requestId) return;
-      const rows = tableData.map((d) => ({
-        ...d,
-        schema: fyo.schemaMap[this.schemaName],
-      })) as RenderData[];
-      this.data = isStatusFilter
-        ? rows.filter((row) => matchesStatus(row, statusFilter))
-        : rows;
+      const loaded = await loadListData(fyo, this, filters);
+      if (!loaded) return;
+      this.data = loaded.rows;
+      this.total = loaded.total;
+      const { requestId } = this;
       await this.$nextTick();
       if (requestId !== this.requestId) return;
       const paginator = this.$refs.paginator as
         InstanceType<typeof Paginator> | undefined;
+      // Clamps the page when rows were removed; a moved page reloads its rows.
       paginator?.setPageNo(filters !== undefined ? 1 : paginator.pageNo);
-      this.$emit('updatedData', appliedFilters);
+      this.$emit('updatedData', loaded.appliedFilters);
     },
     updateSelection(selectedItems: string[]) {
       this.selectedItems = selectedItems;

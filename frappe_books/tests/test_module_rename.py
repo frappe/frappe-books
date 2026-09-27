@@ -8,11 +8,6 @@ from frappe_books.patches.rename_books_module import NEW_MODULE, OLD_MODULE, exe
 
 
 class TestModuleRename(IntegrationTestCase):
-	def setUp(self):
-		super().setUp()
-		frappe.db.savepoint("books_module_rename")
-		self.addCleanup(self.restore_module)
-
 	def test_renames_standard_module_and_preserves_records(self):
 		cash = frappe.get_doc("Books Payment Method", "Cash").as_dict()
 		rename_doc(
@@ -42,7 +37,7 @@ class TestModuleRename(IntegrationTestCase):
 		)
 
 	def test_merges_an_existing_app_module(self):
-		self.create_old_module()
+		create_old_module()
 		frappe.db.set_value("Print Format", "Frappe Books - Sales Invoice", "module", OLD_MODULE)
 
 		execute()
@@ -62,8 +57,12 @@ class TestModuleRename(IntegrationTestCase):
 		self.assertEqual(frappe.get_doc("Module Def", NEW_MODULE).as_dict(), module)
 		self.assertFalse(frappe.db.exists("Module Def", OLD_MODULE))
 
+
+class TestModuleRenameRejection(IntegrationTestCase):
+	"""Runs alone because it leaves both modules in place until the class rollback."""
+
 	def test_rejects_a_module_owned_by_another_app(self):
-		self.create_old_module()
+		create_old_module()
 		frappe.db.set_value("Module Def", NEW_MODULE, "app_name", "frappe")
 
 		with self.assertRaises(frappe.ValidationError):
@@ -72,11 +71,8 @@ class TestModuleRename(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("Module Def", OLD_MODULE))
 		self.assertEqual(frappe.db.get_value("Module Def", NEW_MODULE, "app_name"), "frappe")
 
-	def create_old_module(self):
-		frappe.get_doc(
-			{"doctype": "Module Def", "module_name": OLD_MODULE, "app_name": "frappe_books", "custom": 0}
-		).db_insert()
 
-	def restore_module(self):
-		frappe.db.rollback(save_point="books_module_rename")
-		frappe.clear_cache()
+def create_old_module():
+	frappe.get_doc(
+		{"doctype": "Module Def", "module_name": OLD_MODULE, "app_name": "frappe_books", "custom": 0}
+	).db_insert()

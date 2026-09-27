@@ -18,7 +18,7 @@ class BooksLoyaltyPointEntry(Document):
 		expiry_date: DF.Date | None
 		invoice: DF.Link
 		loyalty_points: DF.Int
-		loyalty_program: DF.Data
+		loyalty_program: DF.Link
 		loyalty_program_tier: DF.Data | None
 		posting_date: DF.Date | None
 		purchase_amount: DF.Currency

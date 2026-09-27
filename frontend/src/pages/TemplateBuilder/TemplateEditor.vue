@@ -48,11 +48,6 @@ export default defineComponent({
     if (!this.view) {
       this.init();
     }
-
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.te = this;
-    }
   },
   beforeUnmount() {
     this.view?.destroy();

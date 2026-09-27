@@ -17,7 +17,6 @@ export abstract class Report extends Observable<RawValue> {
   filters: Field[] = [];
   reportData: ReportData;
   usePagination = false;
-  shouldRefresh = false;
   abstract loading: boolean;
 
   constructor(fyo: Fyo) {

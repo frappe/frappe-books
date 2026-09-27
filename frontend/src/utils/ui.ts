@@ -6,11 +6,12 @@ import { t } from 'fyo';
 import type { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
-import { getDbError, LinkValidationError, ValueError } from 'fyo/utils/errors';
+import { NotFoundError, ValueError } from 'fyo/utils/errors';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { getLedgerLink } from 'models/helpers';
+import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { Transfer } from 'models/inventory/Transfer';
 import { Transactional } from 'models/Transactional/Transactional';
 import { ModelNameEnum } from 'models/types';
@@ -87,7 +88,6 @@ export async function routeTo(route: RouteLocationRaw) {
 }
 
 export async function deleteDocWithPrompt(doc: Doc) {
-  const schemaLabel = fyo.schemaMap[doc.schemaName]!.label;
   let detail = t`This action is permanent.`;
   if (doc.isTransactional && doc.isSubmitted) {
     detail = t`This action is permanent and will delete associated ledger entries.`;
@@ -104,16 +104,7 @@ export async function deleteDocWithPrompt(doc: Doc) {
           try {
             await doc.delete();
           } catch (err) {
-            if (getDbError(err as Error) === LinkValidationError) {
-              await showDialog({
-                title: t`Delete Failed`,
-                detail: t`Cannot delete ${schemaLabel} "${doc.name!}" because of linked entries.`,
-                type: 'error',
-              });
-            } else {
-              await handleErrorWithDialog(err as Error, doc);
-            }
-
+            await handleErrorWithDialog(err as Error, doc);
             return false;
           }
 
@@ -135,24 +126,7 @@ export async function deleteDocWithPrompt(doc: Doc) {
 export async function cancelDocWithPrompt(doc: Doc) {
   let detail = t`This action is permanent`;
   if (['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
-    const payments = (
-      await fyo.db.getAll('Payment', {
-        fields: ['name'],
-        filters: { cancelled: false },
-      })
-    ).map(({ name }) => name);
-
-    const query = (
-      await fyo.db.getAll('PaymentFor', {
-        fields: ['parent'],
-        filters: {
-          referenceName: doc.name!,
-        },
-      })
-    ).filter(({ parent }) => payments.includes(parent));
-
-    const paymentList = [...new Set(query.map(({ parent }) => parent))];
-
+    const paymentList = await getInvoicePayments(doc);
     if (paymentList.length === 1) {
       detail = t`This action is permanent and will cancel the following payment: ${
         paymentList[0] as string
@@ -192,6 +166,23 @@ export async function cancelDocWithPrompt(doc: Doc) {
       },
     ],
   })) as boolean;
+}
+
+async function getInvoicePayments(doc: Doc): Promise<string[]> {
+  const references = await fyo.db.getAll(ModelNameEnum.PaymentFor, {
+    fields: ['parent'],
+    filters: { referenceType: doc.schemaName, referenceName: doc.name! },
+  });
+  const parents = [...new Set(references.map(({ parent }) => String(parent)))];
+  if (!parents.length) {
+    return [];
+  }
+
+  const payments = await fyo.db.getAll(ModelNameEnum.Payment, {
+    fields: ['name'],
+    filters: { name: ['in', parents], cancelled: false },
+  });
+  return payments.map(({ name }) => String(name));
 }
 
 export function getActionsForDoc(doc?: Doc): Action[] {
@@ -289,7 +280,7 @@ function getDeleteAction(doc: Doc): Action {
     theme: 'red',
     condition: (doc: Doc) => doc.canDelete,
     async action() {
-      await commongDocDelete(doc);
+      await commonDocDelete(doc);
     },
   };
 }
@@ -311,7 +302,8 @@ function getDuplicateAction(doc: Doc): Action {
     condition: (doc: Doc) =>
       !!(
         ((isSubmittable && doc.submitted) || !isSubmittable) &&
-        !doc.notInserted
+        !doc.notInserted &&
+        fyo.can(doc.schemaName, 'create')
       ),
     async action() {
       try {
@@ -328,6 +320,7 @@ function getNewAction(doc: Doc): Action {
   return {
     label: t`New Entry`,
     group: t`Create`,
+    condition: (doc: Doc) => fyo.can(doc.schemaName, 'create'),
     async action() {
       try {
         const newDoc = fyo.doc.getNewDoc(doc.schemaName);
@@ -415,9 +408,13 @@ export async function getDocFromNameIfExistsElseNew(
   }
 
   try {
-    return await fyo.doc.getDoc(schemaName, name);
-  } catch {
-    return fyo.doc.getNewDoc(schemaName);
+    return await fyo.doc.getDoc(schemaName, name, { refresh: true });
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return fyo.doc.getNewDoc(schemaName);
+    }
+
+    throw error;
   }
 }
 
@@ -524,32 +521,7 @@ export enum ShortcutKey {
   esc = 'esc',
 }
 
-export function getShortcutKeyMap(
-  platform: string,
-): Record<ShortcutKey, string> {
-  if (platform === 'Mac') {
-    return {
-      [ShortcutKey.alt]: '⌥',
-      [ShortcutKey.ctrl]: '⌃',
-      [ShortcutKey.pmod]: '⌘',
-      [ShortcutKey.shift]: 'shift',
-      [ShortcutKey.delete]: 'delete',
-      [ShortcutKey.esc]: 'esc',
-      [ShortcutKey.enter]: 'return',
-    };
-  }
-  return {
-    [ShortcutKey.alt]: 'Alt',
-    [ShortcutKey.ctrl]: 'Ctrl',
-    [ShortcutKey.pmod]: 'Ctrl',
-    [ShortcutKey.shift]: '⇧',
-    [ShortcutKey.delete]: 'Backspace',
-    [ShortcutKey.esc]: 'Esc',
-    [ShortcutKey.enter]: 'Enter',
-  };
-}
-
-export async function commongDocDelete(
+export async function commonDocDelete(
   doc: Doc,
   routeBack = true,
 ): Promise<boolean> {
@@ -628,33 +600,7 @@ export async function commonDocSubmit(doc: Doc): Promise<boolean> {
 }
 
 async function showInsufficientInventoryDialog(doc: SalesInvoice) {
-  const insufficient: { item: string; quantity: number }[] = [];
-  for (const { item, quantity, batch } of doc.items ?? []) {
-    if (!item || typeof quantity !== 'number') {
-      continue;
-    }
-
-    const isTracked = await fyo.getValue(ModelNameEnum.Item, item, 'trackItem');
-    if (!isTracked) {
-      continue;
-    }
-
-    const stockQuantity =
-      (await fyo.db.getStockQuantity(
-        item,
-        undefined,
-        undefined,
-        doc.date!.toISOString(),
-        batch,
-      )) ?? 0;
-
-    if (stockQuantity > quantity) {
-      continue;
-    }
-
-    insufficient.push({ item, quantity: quantity - stockQuantity });
-  }
-
+  const insufficient = await getInsufficientItems(doc);
   if (insufficient.length) {
     const buttons = [
       {
@@ -736,7 +682,7 @@ async function showSubmitOrSyncDialog(doc: Doc, type: 'submit' | 'sync') {
   const success = (await showDialog(dialogOptions)) as boolean;
   if (actionError) {
     // Show the error after the confirmation closes so it cannot offer a stale retry.
-    await handleErrorWithDialog(actionError, doc, false, true);
+    await handleErrorWithDialog(actionError, doc, true);
   }
 
   return success;

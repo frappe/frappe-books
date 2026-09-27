@@ -1,8 +1,7 @@
 import { Fyo } from 'fyo';
 import { Converter } from 'fyo/core/converter';
 import { DocValue, DocValueMap, RawValueMap } from 'fyo/core/types';
-import { DEFAULT_USER } from 'fyo/utils/consts';
-import { ConflictError, MandatoryError, NotFoundError } from 'fyo/utils/errors';
+import { MandatoryError, NotFoundError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
 import {
   DynamicLinkField,
@@ -15,7 +14,6 @@ import {
 import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
 import { markRaw, reactive } from 'vue';
 import { isPesa } from '../utils/index';
-import { getDbSyncError } from './errorHelpers';
 import {
   areDocValuesEqual,
   getFormulaSequence,
@@ -24,7 +22,6 @@ import {
   setChildDocIdx,
   shouldApplyFormula,
 } from './helpers';
-import { setName } from './naming';
 import {
   Action,
   ChangeArg,
@@ -34,7 +31,6 @@ import {
   EmptyMessageMap,
   FiltersMap,
   FormulaMap,
-  FormulaReturn,
   HiddenMap,
   ListViewSettings,
   ListsMap,
@@ -46,7 +42,7 @@ import {
 import { validateOptions, validateRequired } from './validationFunction';
 
 export class Doc extends Observable<DocValue | Doc[]> {
-  /* eslint-disable @typescript-eslint/no-floating-promises */
+   
   name?: string;
   schema: Readonly<Schema>;
   fyo: Fyo;
@@ -65,7 +61,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   _dirty = true;
   _notInserted = true;
 
-  _syncing = false;
+  _syncPromise?: Promise<Doc>;
 
   constructor(
     schema: Schema,
@@ -132,11 +128,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get isSyncing() {
-    return this._syncing;
+    return !!this._syncPromise;
   }
 
   get canDelete() {
-    if (this.notInserted) {
+    if (this.notInserted || !this.fyo.can(this.schemaName, 'delete')) {
       return false;
     }
 
@@ -163,20 +159,12 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return false;
   }
 
-  get canEdit() {
-    if (!this.schema.isSubmittable) {
-      return true;
-    }
-
-    if (this.submitted) {
+  get canEdit(): boolean {
+    if (this.schema.isSubmittable && (this.submitted || this.cancelled)) {
       return false;
     }
 
-    if (this.cancelled) {
-      return false;
-    }
-
-    return true;
+    return this.canWrite;
   }
 
   get canSave() {
@@ -197,11 +185,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return false;
     }
 
-    return true;
+    return this.canWrite;
   }
 
   get canSubmit() {
-    if (!this.schema.isSubmittable) {
+    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'submit')) {
       return false;
     }
 
@@ -225,7 +213,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canCancel() {
-    if (!this.schema.isSubmittable) {
+    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'cancel')) {
       return false;
     }
 
@@ -246,6 +234,16 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
 
     return true;
+  }
+
+  /** Create for a new document and write for a saved one. */
+  get canWrite(): boolean {
+    if (this.schema.isChild) {
+      // A row is saved with its parent; a detached row is never saved.
+      return this.parentdoc?.canWrite ?? true;
+    }
+
+    return this.fyo.can(this.schemaName, this.notInserted ? 'create' : 'write');
   }
 
   _setValuesWithoutChecks(data: DocValueMap, convertToDocValue: boolean) {
@@ -602,21 +600,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
       this.submitted = false;
       this.cancelled = false;
     }
-
-    if (!this.createdBy) {
-      this.createdBy = this.fyo.user || DEFAULT_USER;
-    }
-
-    if (!this.created) {
-      this.created = new Date();
-    }
-
-    this._updateModifiedMetaValues();
-  }
-
-  _updateModifiedMetaValues() {
-    this.modifiedBy = this.fyo.user || DEFAULT_USER;
-    this.modified = new Date();
   }
 
   async load() {
@@ -624,25 +607,47 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return;
     }
 
-    const data = await this.fyo.db.get(this.schemaName, this.name);
+    await this._setLoadedValues(await this._fetchSaved());
+  }
+
+  /** Reloads a saved, unedited doc so it shows changes made elsewhere. */
+  async refresh() {
+    if (!this.canRefresh) {
+      return;
+    }
+
+    const data = await this._fetchSaved();
+    // Edits made while fetching win.
+    if (this.canRefresh) {
+      await this._setLoadedValues(data);
+    }
+  }
+
+  get canRefresh() {
+    return !this.notInserted && !this.dirty && !this.isSyncing;
+  }
+
+  async _fetchSaved(): Promise<DocValueMap> {
+    const data = await this.fyo.db.get(this.schemaName, this.name!);
     if (this.schema.isSingle && !data?.name) {
       data.name = this.name!;
     }
 
-    if (data && data.name) {
-      await this._syncValues(data);
-      await this.loadLinks();
-    } else {
+    if (!data?.name) {
       throw new NotFoundError(`Not Found: ${this.schemaName} ${this.name}`);
     }
 
-    this._setDirty(false);
-    this._notInserted = false;
-    this.fyo.doc.observer.trigger(`load:${this.schemaName}`, this.name);
+    return data;
   }
 
+  async _setLoadedValues(data: DocValueMap) {
+    await this._syncValues(data);
+    this._setDirty(false);
+    this._notInserted = false;
+  }
+
+  /** Loads every linked doc; `loadAndGetLink` loads one. */
   async loadLinks() {
-    this.links ??= {};
     const linkFields = this.schema.fields.filter(
       ({ fieldtype }) =>
         fieldtype === FieldTypeEnum.Link ||
@@ -686,13 +691,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _loadLinkDoc(fieldname: string, schemaName: string, name: string) {
-    this.links![fieldname] = await this.fyo.doc.getDoc(schemaName, name, {
-      reuseLoadingDoc: true,
-    });
-  }
-
-  getLink(fieldname: string): Doc | null {
-    return this.links?.[fieldname] ?? null;
+    const linkDoc = await this.fyo.doc.getDoc(schemaName, name);
+    this.links ??= {};
+    this.links[fieldname] = linkDoc;
   }
 
   async loadAndGetLink(fieldname: string): Promise<Doc | null> {
@@ -701,7 +702,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
 
     if (this.links?.[fieldname]?.name !== this[fieldname]) {
-      await this.loadLinks();
+      await this._loadLink(this.fieldMap[fieldname]);
     }
 
     return this.links?.[fieldname] ?? null;
@@ -781,23 +782,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
     for (const field of childFields) {
       const childDocs = (this.get(field.fieldname) as Doc[]) ?? [];
       setChildDocIdx(childDocs);
-    }
-  }
-
-  async _validateDbNotModified() {
-    if (this.notInserted || !this.name || this.schema.isSingle) {
-      return;
-    }
-
-    const dbValues = await this.fyo.db.get(this.schemaName, this.name);
-    const docModified = (this.modified as Date)?.toISOString();
-    const dbModified = (dbValues.modified as Date)?.toISOString();
-
-    if (dbValues && docModified !== dbModified) {
-      throw new ConflictError(
-        this.fyo
-          .t`${this.schema.label} ${this.name} has been modified after loading please reload entry.`
-      );
     }
   }
 
@@ -888,12 +872,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return;
     }
 
-    let value: FormulaReturn;
-    try {
-      value = await formula(fieldname);
-    } catch {
-      return;
-    }
+    let value = await formula(fieldname);
 
     if (Array.isArray(value) && field.fieldtype === FieldTypeEnum.Table) {
       value = value.map((row) => this._getChildDoc(row, field.fieldname));
@@ -913,15 +892,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
   async _insert() {
     this._setBaseMetaValues();
     await this._preSync();
-    await setName(this, this.fyo);
 
     const validDict = this.getValidDict(false, true);
-    let data: DocValueMap;
-    try {
-      data = await this.fyo.db.insert(this.schemaName, validDict);
-    } catch (err) {
-      throw await getDbSyncError(err as Error, this, this.fyo);
-    }
+    const data = await this.fyo.db.insert(this.schemaName, validDict);
     await this._syncValues(data, 'save');
 
     return this;
@@ -929,41 +902,33 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
   async _update() {
     const expectedModified = this.modified;
-    await this._validateDbNotModified();
     await this._preSync();
 
     let data = this.getValidDict(false, true);
-    // Keep the saved timestamp until the database accepts the update.
-    if (this.fieldMap.modifiedBy) {
-      data.modifiedBy = this.fyo.user || DEFAULT_USER;
-    }
-    if (this.fieldMap.modified) {
-      data.modified = new Date();
-    }
-    try {
-      data = await this.fyo.db.update(
-        this.schemaName,
-        data,
-        expectedModified instanceof Date ? expectedModified : undefined
-      );
-    } catch (err) {
-      throw await getDbSyncError(err as Error, this, this.fyo);
-    }
+    data = await this.fyo.db.update(
+      this.schemaName,
+      data,
+      expectedModified instanceof Date ? expectedModified : undefined
+    );
     await this._syncValues(data, 'save');
 
     return this;
   }
+
+  /** Saves the doc; a save already in progress is returned instead of starting another. */
   async sync(): Promise<Doc> {
-    this._syncing = true;
-    try {
-      await this.trigger('beforeSync');
-      const doc = this.notInserted ? await this._insert() : await this._update();
-      this._notInserted = false;
-      await this._notifyAfterAction('sync');
-      return doc;
-    } finally {
-      this._syncing = false;
-    }
+    this._syncPromise ??= this._sync().finally(() => {
+      this._syncPromise = undefined;
+    });
+    return await this._syncPromise;
+  }
+
+  async _sync(): Promise<Doc> {
+    await this.trigger('beforeSync');
+    const doc = this.notInserted ? await this._insert() : await this._update();
+    this._notInserted = false;
+    await this._notifyAfterAction('sync');
+    return doc;
   }
 
   async delete() {
@@ -1131,7 +1096,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
    * This may cause the lifecycle function to execute incorrectly.
    */
 
-  /* eslint-disable @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars */
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   async change(ch: ChangeArg) {}
   async validate() {}
   async beforeSync() {}

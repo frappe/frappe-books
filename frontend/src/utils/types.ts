@@ -31,7 +31,6 @@ export interface ToastOptions {
   actionText?: string;
 }
 
-export type WindowAction = 'close' | 'minimize' | 'maximize' | 'unmaximize';
 export type SettingsTab =
   | ModelNameEnum.AccountingSettings
   | ModelNameEnum.Defaults

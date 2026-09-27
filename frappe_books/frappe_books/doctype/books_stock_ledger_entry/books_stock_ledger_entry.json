@@ -16,6 +16,11 @@
   "item",
   "rate",
   "quantity",
+  "valuation_section_break",
+  "value_change",
+  "balance_quantity",
+  "balance_value",
+  "stock_queue",
   "reference_section_break_10",
   "reference_type",
   "reference_name"
@@ -82,6 +87,36 @@
    "read_only": 1
   },
   {
+   "fieldname": "valuation_section_break",
+   "fieldtype": "Section Break",
+   "label": "Valuation"
+  },
+  {
+   "fieldname": "value_change",
+   "fieldtype": "Currency",
+   "label": "Value Change",
+   "read_only": 1
+  },
+  {
+   "fieldname": "balance_quantity",
+   "fieldtype": "Float",
+   "label": "Balance Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "balance_value",
+   "fieldtype": "Currency",
+   "label": "Balance Value",
+   "read_only": 1
+  },
+  {
+   "description": "FIFO layers as [quantity, rate] pairs after this entry.",
+   "fieldname": "stock_queue",
+   "fieldtype": "Long Text",
+   "label": "Stock Queue",
+   "read_only": 1
+  },
+  {
    "fieldname": "reference_section_break_10",
    "fieldtype": "Section Break",
    "label": "Reference"
@@ -105,7 +140,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.573765",
+ "modified": "2026-09-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Stock Ledger Entry",

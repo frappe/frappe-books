@@ -202,12 +202,6 @@ export default {
       return fields.map((fieldname) => fyo.getField(this.df.target, fieldname));
     },
   },
-  mounted() {
-    if (fyo.store.isDevelopment) {
-      window.tab = this;
-    }
-  },
-
   methods: {
     focus() {},
     async addRow() {
@@ -236,7 +230,7 @@ export default {
 
     scrollToRow(index) {
       const row = this.$refs['table-row'][index];
-      row && row.$el.scrollIntoView({ block: 'nearest' });
+      row?.$el.scrollIntoView({ block: 'nearest' });
     },
   },
 };

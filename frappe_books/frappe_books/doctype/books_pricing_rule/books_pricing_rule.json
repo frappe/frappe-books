@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
- "autoname": "format:PRLE-{#####}",
  "creation": "2026-08-27 22:09:40.027558",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -46,7 +45,6 @@
    "label": "Default"
   },
   {
-   "default": "PRLE-",
    "fieldname": "number_series",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -223,11 +221,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.911390",
+ "modified": "2026-09-28 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pricing Rule",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -255,14 +253,12 @@
    "write": 1
   },
   {
-   "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Books User",
-   "write": 1
+   "role": "Books User"
   }
  ],
  "row_format": "Dynamic",

@@ -10,8 +10,6 @@ import { ValidationError } from 'fyo/utils/errors';
 import { t } from 'fyo';
 import { Money } from 'pesa';
 import { ModelNameEnum } from 'models/types';
-import { SalesInvoice } from '../SalesInvoice/SalesInvoice';
-import { ApplicableCouponCodes } from '../Invoice/types';
 
 export class CouponCode extends Doc {
   name?: string;
@@ -23,20 +21,6 @@ export class CouponCode extends Doc {
 
   minAmount?: Money;
   maxAmount?: Money;
-
-  removeUnusedCoupons(coupons: ApplicableCouponCodes[], sinvDoc: SalesInvoice) {
-    if (!coupons.length) {
-      sinvDoc.coupons = [];
-
-      return;
-    }
-
-    sinvDoc.coupons = sinvDoc.coupons!.filter((coupon) => {
-      return coupons.find((c: ApplicableCouponCodes) =>
-        coupon?.coupons?.includes(c?.coupon)
-      );
-    });
-  }
 
   formulas: FormulaMap = {
     name: {
@@ -79,7 +63,7 @@ export class CouponCode extends Doc {
 
       if ((value as Money).lt(minAmount as Money)) {
         throw new ValidationError(
-          t`Minimum Amount should be greather than the Pricing Rule's Minimum Amount.`
+          t`Minimum Amount should be greater than the Pricing Rule's Minimum Amount.`
         );
       }
 
@@ -138,7 +122,7 @@ export class CouponCode extends Doc {
         (value as Date).toISOString() < (validFrom as Date).toISOString()
       ) {
         throw new ValidationError(
-          t`Valid From Date should be greather than Pricing Rule's Valid From Date.`
+          t`Valid From Date should be greater than Pricing Rule's Valid From Date.`
         );
       }
 

@@ -12,11 +12,11 @@ import { Money } from 'pesa';
 import { safeParseFloat } from 'utils/index';
 import { StockTransfer } from './StockTransfer';
 import { TransferItem } from './TransferItem';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
+import type { Invoice } from 'models/baseModels/Invoice/Invoice';
+import type { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
 import {
-  generateSerialNumbersForItem,
   getExistingActiveSerialNumbersForItem,
+  getSerialNumbersForQuantity,
 } from './helpers';
 
 export class StockTransferItem extends TransferItem {
@@ -51,34 +51,44 @@ export class StockTransferItem extends TransferItem {
     return !!this.parentdoc?.isReturn;
   }
 
-  async getItemDiscountAmount(): Promise<Money | undefined> {
-    const docData = (await this.fyo.doc.getDoc(
-      this.parentSchemaName == ModelNameEnum.Shipment
-        ? ModelNameEnum.SalesInvoice
-        : ModelNameEnum.PurchaseInvoice,
-      this.parentdoc?.backReference
-    )) as SalesInvoice | PurchaseInvoice;
+  /** The row of the invoice this transfer was made from, for the same item. */
+  async getInvoiceRow(): Promise<InvoiceItem | undefined> {
+    const backReference = this.parentdoc?.backReference;
+    if (!backReference || !this.parentdoc) {
+      return undefined;
+    }
 
-    const discountAmount = docData?.items?.find(
-      (val) => val.item === this.item
-    )?.itemDiscountAmount;
-
-    return discountAmount;
+    const invoice = (await this.fyo.doc.getDoc(
+      this.parentdoc.invoiceSchemaName,
+      backReference
+    )) as Invoice;
+    return invoice.items?.find((row) => row.item === this.item);
   }
 
-  async getItemDiscountPercent() {
-    const docData = (await this.fyo.doc.getDoc(
-      this.parentSchemaName == ModelNameEnum.Shipment
-        ? ModelNameEnum.SalesInvoice
-        : ModelNameEnum.PurchaseInvoice,
-      this.parentdoc?.backReference
-    )) as SalesInvoice | PurchaseInvoice;
+  /** New series numbers on receipts; invoiced or in-stock ones on shipments. */
+  async getDefaultSerialNumbers(): Promise<string | undefined> {
+    const quantity = Math.abs(this.quantity ?? 0);
+    if (!this.item || !this.parentdoc?.backReference || quantity <= 0) {
+      return undefined;
+    }
 
-    const discountPercent = docData?.items?.find(
-      (val) => val.item === this.item
-    )?.itemDiscountPercent;
+    if (!this.isSales) {
+      return await getSerialNumbersForQuantity(
+        this.fyo,
+        this.item,
+        undefined,
+        quantity
+      );
+    }
 
-    return discountPercent;
+    return (
+      (await this.getInvoiceRow())?.serialNumber ||
+      (await getExistingActiveSerialNumbersForItem(
+        this.fyo,
+        this.item,
+        quantity
+      ))
+    );
   }
 
   formulas: FormulaMap = {
@@ -134,7 +144,7 @@ export class StockTransferItem extends TransferItem {
           ModelNameEnum.Item,
           this.item
         );
-        const unitDoc = itemDoc.getLink('uom');
+        const unitDoc = await itemDoc.loadAndGetLink('uom');
 
         let quantity: number = this.quantity ?? 1;
 
@@ -198,13 +208,11 @@ export class StockTransferItem extends TransferItem {
       dependsOn: ['rate', 'quantity'],
     },
     itemDiscountAmount: {
-      formula: async () => {
-        return await this.getItemDiscountAmount();
-      },
+      formula: async () => (await this.getInvoiceRow())?.itemDiscountAmount,
       dependsOn: ['items'],
     },
     itemDiscountPercent: {
-      formula: () => this.getItemDiscountPercent(),
+      formula: async () => (await this.getInvoiceRow())?.itemDiscountPercent,
       dependsOn: ['items'],
     },
     rate: {
@@ -248,77 +256,10 @@ export class StockTransferItem extends TransferItem {
       },
     },
     serialNumber: {
-      formula: async () => {
-        if (this.serialNumber) {
-          return this.serialNumber;
-        }
-
-        if (!this.item || !this.parentdoc?.backReference) {
-          return undefined;
-        }
-
-        const hasSerialNumber = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          this.item,
-          'hasSerialNumber'
-        );
-
-        if (!hasSerialNumber) {
-          return undefined;
-        }
-
-        const quantity = Math.abs(this.quantity ?? 0);
-        if (quantity <= 0) {
-          return undefined;
-        }
-
-        try {
-          if (
-            !this.isSales &&
-            this.parentdoc?.schemaName === ModelNameEnum.PurchaseReceipt
-          ) {
-            const serialNumbers = await generateSerialNumbersForItem(
-              this.fyo,
-              this.item,
-              quantity
-            );
-
-            if (serialNumbers) {
-              return serialNumbers;
-            }
-          }
-
-          if (
-            this.isSales &&
-            this.parentdoc?.schemaName === ModelNameEnum.Shipment
-          ) {
-            const salesInvoice = (await this.fyo.doc.getDoc(
-              ModelNameEnum.SalesInvoice,
-              this.parentdoc.backReference
-            )) as SalesInvoice;
-
-            const invoiceItem = salesInvoice?.items?.find(
-              (val) => val.item === this.item
-            );
-
-            if (invoiceItem?.serialNumber) {
-              return invoiceItem.serialNumber;
-            }
-
-            const serialNumbers = await getExistingActiveSerialNumbersForItem(
-              this.fyo,
-              this.item,
-              quantity
-            );
-
-            if (serialNumbers) {
-              return serialNumbers;
-            }
-          }
-        } catch (error) {}
-
-        return undefined;
-      },
+      formula: async () =>
+        this.serialNumber ||
+        (await this.getDefaultSerialNumbers()) ||
+        undefined,
       dependsOn: ['item', 'quantity'],
     },
   };

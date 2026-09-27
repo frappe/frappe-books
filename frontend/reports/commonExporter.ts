@@ -5,7 +5,7 @@ import { showToast } from 'src/utils/interactive';
 import { getIsNullOrUndef } from 'utils';
 import { generateCSV } from 'utils/csvParser';
 import { Report } from './Report';
-import { ExportExtention, ReportCell } from './types';
+import { ExportExtension, ReportCell } from './types';
 
 interface JSONExport {
   columns: { fieldname: string; label: string }[];
@@ -18,9 +18,9 @@ interface JSONExport {
 }
 
 export default function getCommonExportActions(report: Report): Action[] {
-  const exportExtention = ['csv', 'json'] as ExportExtention[];
+  const exportExtension = ['csv', 'json'] as ExportExtension[];
 
-  return exportExtention.map((ext) => ({
+  return exportExtension.map((ext) => ({
     group: t`Export`,
     label: ext.toUpperCase(),
     type: 'primary',
@@ -30,12 +30,12 @@ export default function getCommonExportActions(report: Report): Action[] {
   }));
 }
 
-async function exportReport(extention: ExportExtention, report: Report) {
+async function exportReport(extension: ExportExtension, report: Report) {
   let data = '';
 
-  if (extention === 'csv') {
+  if (extension === 'csv') {
     data = getCsvData(report);
-  } else if (extention === 'json') {
+  } else if (extension === 'json') {
     data = getJsonData(report);
   }
 
@@ -43,7 +43,7 @@ async function exportReport(extention: ExportExtention, report: Report) {
     return;
   }
 
-  saveExportData(data, `${report.reportName}.${extention}`);
+  saveExportData(data, `${report.reportName}.${extension}`);
 }
 
 export function getJsonData(report: Report): string {

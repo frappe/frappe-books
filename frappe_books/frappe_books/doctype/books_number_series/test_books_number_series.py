@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.series import next_name
+
 
 class IntegrationTestBooksNumberSeries(IntegrationTestCase):
 	def test_next_name_increments_with_padding(self):
@@ -20,6 +22,22 @@ class IntegrationTestBooksNumberSeries(IntegrationTestCase):
 
 		self.assertEqual(series.next(), f"{prefix}007")
 		self.assertEqual(series.next(), f"{prefix}008")
+
+	def test_taken_number_stays_locked_until_the_request_commits(self):
+		# JV- is seeded before tests, so the second connection can see it.
+		with self.primary_connection():
+			next_name("JV-")
+
+		with self.secondary_connection():
+			self.assertRaises(
+				frappe.QueryTimeoutError,
+				frappe.db.get_value,
+				"Books Number Series",
+				"JV-",
+				"current",
+				for_update=True,
+				wait=False,
+			)
 
 	def test_rejects_unsafe_prefix(self):
 		series = frappe.get_doc(

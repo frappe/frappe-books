@@ -151,16 +151,10 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.VITE_ROUTER_BASE || '/'),
 });
 
-router.afterEach(({ fullPath }) => {
+router.afterEach(() => {
   const state = history.state as HistoryState;
   historyState.forward = !!state.forward;
   historyState.back = !!state.back;
-
-  if (fullPath.includes('index.html')) {
-    return;
-  }
-
-  localStorage.setItem('lastRoute', fullPath);
 });
 
 export default router;

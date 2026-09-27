@@ -1,10 +1,11 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import frappe
-from frappe.model.document import Document
+import re
 
-from frappe_books.regional import validate_item
+import frappe
+from frappe import _
+from frappe.model.document import Document
 
 
 class BooksItem(Document):
@@ -44,7 +45,10 @@ class BooksItem(Document):
 	_DOCTYPE_NAME = "Books Item"
 
 	def validate(self):
-		validate_item(self)
+		if self.hsn_code and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code)):
+			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
+		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
+			frappe.throw(_("Barcode must contain exactly 12 digits."))
 
 	def on_update(self):
 		if self.has_serial_number:
@@ -56,6 +60,6 @@ class BooksItem(Document):
 		name = (name or "").strip()
 		if not name or frappe.db.exists(doctype, name):
 			return
-		frappe.get_doc(
-			{"doctype": doctype, "name": name, "start": 1001, "pad_zeros": 4, "current": 1001}
-		).insert(ignore_if_duplicate=True)
+		frappe.get_doc({"doctype": doctype, "name": name, "start": 1001, "pad_zeros": 4}).insert(
+			ignore_if_duplicate=True
+		)

@@ -1,48 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { build, preview, loadConfigFromFile, type PreviewServer } from 'vite';
+import { expect, test } from '@playwright/test';
+import { serveFixture } from './helpers/fixture-server';
 
-let server: PreviewServer;
-let outputDirectory: string;
-let fixtureUrl: string;
-
-test.beforeAll(async () => {
-  const loaded = await loadConfigFromFile(
-    { command: 'serve', mode: 'test' },
-    path.resolve(__dirname, '../../vite.config.ts')
-  );
-  outputDirectory = await mkdtemp(path.join(tmpdir(), 'books-issue-controls-'));
-  const config = {
-    ...loaded!.config,
-    configFile: false,
-    logLevel: 'error' as const,
-    build: {
-      ...loaded!.config.build,
-      outDir: outputDirectory,
-      rollupOptions: {
-        input: path.resolve(__dirname, 'fixtures/issue-controls.html'),
-      },
-    },
-    preview: { host: '127.0.0.1', port: 0, proxy: {} },
-  } as const;
-  await build(config);
-  server = await preview(config);
-  fixtureUrl = `${server.resolvedUrls!.local[0]}tests/ui/fixtures/issue-controls.html`;
-});
-
-test.afterAll(async () => {
-  if (server)
-    await new Promise<void>((resolve) =>
-      server.httpServer.close(() => resolve())
-    );
-  if (outputDirectory)
-    await rm(outputDirectory, { recursive: true, force: true });
-});
+const fixtureUrl = serveFixture('issue-controls');
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(fixtureUrl);
+  await page.goto(fixtureUrl());
   await page.getByRole('button', { name: 'Before fields' }).waitFor();
 });
 
@@ -127,4 +89,29 @@ test('the hidden sidebar has a visible keyboard-operated restore button', async 
   expect(
     await page.evaluate(() => (window as any).issueFixture.showSidebar.value)
   ).toBe(true);
+});
+
+test('a failed attachment upload is shown and the file can be picked again', async ({
+  page,
+}) => {
+  let uploads = 0;
+  await page.route('**/api/method/upload_file', async (route) => {
+    uploads += 1;
+    await route.fulfill({
+      status: 417,
+      contentType: 'application/json',
+      body: JSON.stringify({ exception: 'File is too large' }),
+    });
+  });
+  const input = page.locator('#attachment');
+
+  await input.setInputFiles({
+    name: 'bill.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4'),
+  });
+
+  await expect(page.getByRole('dialog')).toContainText('File is too large');
+  await expect(input).toHaveValue('');
+  expect(uploads).toBe(1);
 });

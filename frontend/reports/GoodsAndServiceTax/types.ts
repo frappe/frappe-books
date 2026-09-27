@@ -11,7 +11,7 @@ export interface GSTRRow {
   gstin: string;
   partyName: string;
   invNo: string;
-  invDate: Date;
+  invDate: string;
   rate: number;
   reverseCharge: 'Y' | 'N';
   inState: boolean;
@@ -21,7 +21,4 @@ export interface GSTRRow {
   igstAmt?: number;
   cgstAmt?: number;
   sgstAmt?: number;
-  exempt?: boolean;
-  nonGST?: boolean;
-  nilRated?: boolean;
 }

@@ -2,16 +2,12 @@
 
 from collections import defaultdict
 from dataclasses import dataclass
-from decimal import Decimal
 
 import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from frappe_books.accounting.money import as_decimal, rounded
-
-# Differences at or above this size are posting errors, not rounding.
-ROUND_OFF_LIMIT = Decimal("1")
+from frappe_books.accounting.money import as_decimal, currency_unit, rounded
 
 
 @dataclass(frozen=True)
@@ -77,13 +73,18 @@ def _add_round_off(debits, credits):
 	difference = _total(debits) - _total(credits)
 	if difference == 0:
 		return
-	if abs(difference) >= ROUND_OFF_LIMIT:
+	if abs(difference) > _round_off_limit(len(debits) + len(credits)):
 		_throw_unbalanced(_total(debits), _total(credits))
 	account = frappe.db.get_single_value("Books Accounting Settings", "round_off_account")
 	if not account:
 		frappe.throw(_("Set a round-off account in Books Accounting Settings."))
 	entries = credits if difference > 0 else debits
 	entries[EntryKey(account, None)] += abs(difference)
+
+
+def _round_off_limit(entry_count):
+	"""Rounding moves each entry by at most half the smallest currency unit."""
+	return currency_unit() * entry_count / 2
 
 
 def _validate(debits, credits):
@@ -93,7 +94,7 @@ def _validate(debits, credits):
 		_throw_unbalanced(debit, credit)
 	if debit == 0:
 		frappe.throw(_("Ledger posting total must be greater than zero."))
-	_validate_leaf_accounts({key.account for key in debits | credits})
+	validate_leaf_accounts({key.account for key in debits | credits})
 
 
 def _total(entries):
@@ -139,7 +140,7 @@ def delete_entries(voucher):
 	)
 
 
-def _validate_leaf_accounts(accounts):
+def validate_leaf_accounts(accounts):
 	rows = frappe.get_all(
 		"Books Account",
 		filters={"name": ["in", list(accounts)]},

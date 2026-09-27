@@ -1,10 +1,10 @@
-import { Fyo } from 'fyo';
 import { translateSchema, TranslationString } from 'fyo/utils/translation';
 import { cloneDeep } from 'lodash';
 import { DateTime } from 'luxon';
 import { SetupWizard } from 'models/baseModels/SetupWizard/SetupWizard';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
+import type { Report } from 'reports/Report';
 import SetupWizardSchema from 'schemas/app/SetupWizard.json';
 import { Schema } from 'schemas/types';
 import { fyo } from 'src/initFyo';
@@ -116,27 +116,6 @@ export const docsPathMap: Record<string, string | undefined> = {
   ChartOfAccounts: 'books/chart-of-accounts',
 };
 
-export async function getDataURL(type: string, data: Uint8Array) {
-  const bytes = new Uint8Array(data.byteLength);
-  bytes.set(data);
-  const blob = new Blob([bytes.buffer], { type });
-
-  return new Promise<string>((resolve) => {
-    const fr = new FileReader();
-    fr.addEventListener('loadend', () => {
-      resolve(fr.result as string);
-    });
-
-    fr.readAsDataURL(blob);
-  });
-}
-
-export async function convertFileToDataURL(file: File, type: string) {
-  const buffer = await file.arrayBuffer();
-  const array = new Uint8Array(buffer);
-  return await getDataURL(type, array);
-}
-
 export function getCreateFiltersFromListViewFilters(filters: QueryFilter) {
   const createFilters: Record<string, string | number | boolean | null> = {};
 
@@ -170,5 +149,18 @@ export async function getReport(name: keyof typeof reports) {
   const report = new reports[name](fyo);
   await report.initialize();
   fyo.store.reports[name] = report;
+  return report;
+}
+
+/** Load a report when it is first shown, and refetch its data when shown again. */
+export async function showReport(
+  report: Report | null,
+  name: keyof typeof reports
+): Promise<Report> {
+  if (report === null) {
+    return getReport(name);
+  }
+
+  await report.setReportData(undefined, true);
   return report;
 }

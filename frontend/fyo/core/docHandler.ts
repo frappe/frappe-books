@@ -9,13 +9,9 @@ import { Fyo } from '..';
 import { DocValueMap, RawValueMap } from './types';
 
 type GetDocOptions = {
-  reuseLoadingDoc?: boolean;
   skipDocumentCache?: boolean;
-};
-
-type LoadingDoc = {
-  doc: Doc;
-  promise: Promise<Doc>;
+  // Reload a cached doc that has no unsaved edits.
+  refresh?: boolean;
 };
 
 export class DocHandler {
@@ -25,7 +21,7 @@ export class DocHandler {
   docs: Observable<DocMap | undefined> = new Observable();
   observer: Observable<never> = new Observable();
   #temporaryNameCounters: Record<string, number>;
-  #loadingDocs = new Map<string, LoadingDoc>();
+  #loadingDocs = new Map<string, Promise<Doc>>();
 
   constructor(fyo: Fyo) {
     this.fyo = fyo;
@@ -38,10 +34,6 @@ export class DocHandler {
     this.docs = new Observable();
     this.observer = new Observable();
     this.#loadingDocs.clear();
-  }
-
-  purgeCache() {
-    this.init();
   }
 
   registerModels(models: ModelMap, regionalModels: ModelMap = {}) {
@@ -77,29 +69,25 @@ export class DocHandler {
     }
 
     if (doc) {
+      if (options.refresh) {
+        await doc.refresh();
+      }
+
       return doc;
     }
 
     const loadingKey = this.#getLoadingKey(schemaName, name);
     const loadingDoc = this.#loadingDocs.get(loadingKey);
     if (loadingDoc) {
-      if (options.reuseLoadingDoc) {
-        return loadingDoc.doc;
-      }
-
-      return await loadingDoc.promise;
+      return await loadingDoc;
     }
 
-    doc = this.getNewDoc(schemaName, { name }, false);
-    const loading = {
-      doc,
-      promise: Promise.resolve(doc),
-    };
+    const loading = this.#loadAndCache(
+      this.getNewDoc(schemaName, { name }, false)
+    );
     this.#loadingDocs.set(loadingKey, loading);
-    loading.promise = this.#loadAndCache(doc);
-
     try {
-      return await loading.promise;
+      return await loading;
     } finally {
       if (this.#loadingDocs.get(loadingKey) === loading) {
         this.#loadingDocs.delete(loadingKey);
@@ -191,7 +179,6 @@ export class DocHandler {
 
     // propagate change to `docs`
     doc.on('change', (params: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.docs.trigger('change', params);
     });
 

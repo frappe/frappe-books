@@ -128,15 +128,13 @@
       "fieldname": "itemDiscountedTotal",
       "label": "Discounted Amount",
       "fieldtype": "Currency",
-      "readOnly": false,
-      "computed": true
+      "readOnly": true
     },
     {
       "fieldname": "itemTaxedTotal",
       "label": "Taxed Amount",
       "fieldtype": "Currency",
-      "readOnly": false,
-      "computed": true
+      "readOnly": true
     },
     {
       "fieldname": "hsnCode",

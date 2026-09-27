@@ -52,7 +52,6 @@ export default defineComponent({
   },
   computed: {
     doc() {
-      // @ts-ignore
       const doc = this.injectedDoc;
       if (doc instanceof Doc) {
         return doc;

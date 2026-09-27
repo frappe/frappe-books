@@ -4,7 +4,7 @@
     :tooltip="tableView ? t`Grid View` : t`List View`"
     variant="subtle"
     :aria-label="tableView ? t`Grid View` : t`List View`"
-    @click="toggleItemsView"
+    @click="$emit('toggleView')"
   />
 
   <FrappeButton
@@ -63,10 +63,7 @@
 <script lang="ts">
 import { t } from 'fyo';
 import { Badge as FrappeBadge, Button as FrappeButton } from 'frappe-ui';
-import { Payment } from 'models/baseModels/Payment/Payment';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { ItemSerialNumbers } from 'src/components/POS/types';
-import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { defineComponent, PropType } from 'vue';
 
@@ -75,7 +72,6 @@ export default defineComponent({
   components: { FrappeBadge, FrappeButton },
   props: {
     tableView: Boolean,
-    openAlertModal: Boolean,
     loyaltyPoints: {
       type: Number,
       default: 0,
@@ -94,27 +90,7 @@ export default defineComponent({
     },
   },
   emits: ['toggleView', 'toggleModal', 'emitRouteToSinvList'],
-  data() {
-    return {
-      totalQuantity: 0,
-      totalTaxedAmount: fyo.pesa(0),
-      additionalDiscounts: fyo.pesa(0),
-      paymentDoc: {} as Payment,
-      itemSerialNumbers: {} as ItemSerialNumbers,
-      transferRefNo: undefined as string | undefined,
-      transferClearanceDate: undefined as Date | undefined,
-    };
-  },
-  computed: {
-    isPosShiftOpen: () => !!fyo.singles.POSShift?.isShiftOpen,
-  },
   methods: {
-    setTransferRefNo(ref: string) {
-      this.transferRefNo = ref;
-    },
-    toggleItemsView() {
-      this.$emit('toggleView');
-    },
     showValidationToast(action: string, isLoyalty = false) {
       let message = '';
 

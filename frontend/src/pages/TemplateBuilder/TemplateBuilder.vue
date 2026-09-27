@@ -21,7 +21,7 @@
         {{ t`Print` }}
       </Button>
       <Button
-        v-if="doc && doc.isCustom && displayDoc"
+        v-if="canEditTemplate && displayDoc"
         :title="t`Toggle Edit Mode`"
         :icon="true"
         @click="toggleEditMode"
@@ -130,7 +130,7 @@
             ref="templateEditor"
             class="overflow-auto custom-scroll custom-scroll-thumb1 h-full"
             :initial-value="doc.template"
-            :disabled="!doc.isCustom"
+            :disabled="!canEditTemplate"
             :hints="hints"
             @input="() => (templateChanged = true)"
             @blur="(value: string) => setTemplate(value)"
@@ -210,6 +210,7 @@ import {
   baseTemplate,
   getPrintTemplatePropHints,
   getPrintTemplatePropValues,
+  getTemplateNameFromFile,
 } from 'src/utils/printTemplates';
 import { docsPathRef, showSidebar } from 'src/utils/refs';
 import { DocRef, PrintValues } from 'src/utils/types';
@@ -304,6 +305,9 @@ export default defineComponent({
     };
   },
   computed: {
+    canEditTemplate(): boolean {
+      return !!this.doc?.isCustom && !!this.doc?.canEdit;
+    },
     canDisplayPreview(): boolean {
       if (!this.displayDoc || !this.values) {
         return false;
@@ -319,7 +323,7 @@ export default defineComponent({
       return [ShortcutKey.ctrl, ShortcutKey.enter];
     },
     view(): EditorView | null {
-      // @ts-ignore
+      // @ts-expect-error template refs are untyped
       const { view } = this.$refs.templateEditor ?? {};
       if (view instanceof EditorView) {
         return view;
@@ -344,7 +348,7 @@ export default defineComponent({
         },
       });
 
-      if (this.doc.isCustom && !this.showTypeModal) {
+      if (this.canEditTemplate && !this.showTypeModal) {
         actions.push({
           label: this.t`Set Template Type`,
           group: this.t`Action`,
@@ -352,7 +356,7 @@ export default defineComponent({
         });
       }
 
-      if (this.doc.isCustom && !this.showSizeModal) {
+      if (this.canEditTemplate && !this.showSizeModal) {
         actions.push({
           label: this.t`Set Print Size`,
           group: this.t`Action`,
@@ -360,7 +364,7 @@ export default defineComponent({
         });
       }
 
-      if (this.doc.isCustom) {
+      if (this.canEditTemplate) {
         actions.push({
           label: this.t`Select Template File`,
           group: this.t`Action`,
@@ -418,18 +422,12 @@ export default defineComponent({
     templateDisplayStyles(): Record<string, string> {
       const styles: Record<string, string> = {};
 
-      styles.height = `calc(100vh - var(--h-row-largest) - 1px - ${
-        this.platform == 'Windows' ? 'var(--h-row-smallest)' : '0px'
-      }`;
+      styles.height = 'calc(100vh - var(--h-row-largest) - 1px)';
       return styles;
     },
   },
   async mounted() {
     await this.initialize();
-    if (this.fyo.store.isDevelopment) {
-      // @ts-ignore
-      window.tb = this;
-    }
   },
   async activated(): Promise<void> {
     await this.initialize();
@@ -497,7 +495,7 @@ export default defineComponent({
     },
     async setTemplate(value?: string) {
       this.templateChanged = false;
-      if (!this.doc?.isCustom) {
+      if (!this.canEditTemplate) {
         return;
       }
 
@@ -522,7 +520,7 @@ export default defineComponent({
       this.showHints = !this.showHints;
     },
     toggleEditMode() {
-      if (!this.doc?.isCustom) {
+      if (!this.canEditTemplate) {
         return;
       }
 
@@ -555,7 +553,7 @@ export default defineComponent({
       this.scale = this.preEditMode.scale;
     },
     getEditModeScale(): number {
-      // @ts-ignore
+      // @ts-expect-error template refs are untyped
       const div = this.$refs.printContainer.$el as unknown;
       if (!(div instanceof HTMLDivElement)) {
         return this.scale;
@@ -668,24 +666,10 @@ export default defineComponent({
         changes: { from: 0, to: this.view.state.doc.length, insert: text },
       });
 
-      if (this.doc?.inserted) {
-        return;
+      const name = getTemplateNameFromFile(fileName);
+      if (name && !this.doc?.inserted) {
+        await this.doc?.set('name', name);
       }
-
-      let name: string | null = null;
-      if (fileName.endsWith('.template.html')) {
-        name = fileName.split('.template.html')[0];
-      }
-
-      if (!name && fileName.endsWith('.html')) {
-        name = fileName.split('.html')[0];
-      }
-
-      if (!name) {
-        return;
-      }
-
-      await this.doc?.set('name', name);
     },
     async saveFile() {
       const name = this.doc?.name;

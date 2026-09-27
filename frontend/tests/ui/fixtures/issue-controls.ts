@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import { models } from 'models';
 import { getSchemas } from 'schemas';
+import Attachment from 'src/components/Controls/Attachment.vue';
 import Base from 'src/components/Controls/Base.vue';
 import Check from 'src/components/Controls/Check.vue';
 import Select from 'src/components/Controls/Select.vue';
@@ -29,6 +30,7 @@ async function mount() {
     selected: 'First',
     date: '',
     account: '',
+    attachment: null as string | null,
   });
   const app = createApp({
     render() {
@@ -99,6 +101,15 @@ async function mount() {
               ]
             ),
             h('button', { id: 'after', type: 'button' }, 'After fields'),
+            h(Attachment, {
+              df: {
+                fieldtype: 'Attachment',
+                fieldname: 'attachment',
+                label: 'Bill',
+              },
+              value: state.attachment,
+              onChange: (value: string | null) => (state.attachment = value),
+            }),
           ],
         }
       );

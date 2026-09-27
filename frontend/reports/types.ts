@@ -2,7 +2,7 @@ import { DateTime } from 'luxon';
 import { AccountRootType } from 'models/baseModels/Account/types';
 import { BaseField, FieldType, RawValue } from 'schemas/types';
 
-export type ExportExtention = 'csv' | 'json';
+export type ExportExtension = 'csv' | 'json';
 
 export interface ReportCell {
   bold?: boolean;
@@ -32,83 +32,34 @@ export interface ColumnField extends Omit<BaseField, 'fieldtype'> {
   width?: number;
 }
 
-export type BalanceType = 'Credit' | 'Debit';
 export type Periodicity = 'Monthly' | 'Quarterly' | 'Half Yearly' | 'Yearly';
-export interface FinancialStatementOptions {
-  rootType: AccountRootType;
-  fromDate: string;
-  toDate: string;
-  balanceMustBe?: BalanceType;
-  periodicity?: Periodicity;
-  accumulateValues?: boolean;
-}
 
-export interface RawLedgerEntry {
-  name: string;
-  account: string;
-  date: string;
-  debit: string;
-  credit: string;
-  referenceType: string;
-  referenceName: string;
-  party: string;
-  reverted: number;
-  reverts: string;
-  [key: string]: RawValue;
+export interface LedgerRow {
+  type: 'entry' | 'opening' | 'total' | 'closing' | 'blank';
+  index?: number;
+  account?: string | null;
+  date?: string;
+  debit?: number;
+  credit?: number;
+  balance?: number;
+  party?: string | null;
+  referenceType?: string;
+  referenceName?: string;
+  reverted?: boolean;
 }
-
-export interface LedgerEntry {
-  index?: string;
-  name: number;
-  account: string;
-  date: Date | null;
-  debit: number | null;
-  credit: number | null;
-  balance: number | null;
-  referenceType: string;
-  referenceName: string;
-  party: string;
-  reverted: boolean;
-  reverts: string;
-}
-
-export type GroupedMap = Map<string, LedgerEntry[]>;
 
 export type DateRange = { fromDate: DateTime; toDate: DateTime };
-export type ValueMap = Map<DateRange, Record<string, number>>;
-
-export interface Account {
-  name: string;
-  rootType: AccountRootType;
-  isGroup: boolean;
-  parentAccount: string | null;
-}
-
-export type AccountTree = Record<string, AccountTreeNode>;
-export interface AccountTreeNode extends Account {
-  children?: AccountTreeNode[];
-  valueMap?: ValueMap;
-  prune?: boolean;
-}
-
-export type AccountList = AccountListNode[];
-export interface AccountListNode extends Account {
-  valueMap?: ValueMap;
-  level?: number;
-}
-
-export type AccountNameValueMapMap = Map<string, ValueMap>;
 export type BasedOn = 'Fiscal Year' | 'Until Date';
 
-export interface TreeNode {
+export interface ReportAccount {
   name: string;
-  children?: TreeNode[];
+  level: number;
+  isGroup: boolean;
+  values: number[];
 }
 
-export type Tree = Record<string, TreeNode>;
-
-export type RootTypeRow = {
+export interface AccountSection {
   rootType: AccountRootType;
-  rootNodes: AccountTreeNode[];
-  rows: ReportData;
-};
+  accounts: ReportAccount[];
+  total: number[];
+}

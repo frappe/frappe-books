@@ -11,7 +11,7 @@ const settings = [
   ['Defaults', 'salesInvoiceTerms', 'Payment within 30 days'],
   ['GetStarted', 'onboardingComplete', true],
   ['Misc', 'useFullWidth', true],
-  ['SetupWizard', 'completed', true],
+  ['SetupWizard', 'companyName', 'Test Company'],
 ];
 
 for (const [schemaName, fieldname, value] of settings) {

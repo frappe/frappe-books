@@ -3,72 +3,137 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import now_datetime
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.inventory.invoice_balance import (
+	bill_unbilled_rows,
+	update_invoice_balance,
+	validate_billable,
+	validate_invoice_balance,
+)
+from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_stock_entries,
 	delete_stock_entries,
-	ensure_stock_batches,
-	populate_stock_row,
+	populate_stock_rows,
+	reverse_transfers,
+	validate_stock_available,
 	validate_transfer_rows,
 )
-from frappe_books.inventory.valuation import transaction_stock_value
+from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
 
+STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
 
-class StockBatchPreparationMixin:
-	def _validate_links(self):
-		# Frappe checks links before before_validate, so create requested batches here.
-		ensure_stock_batches(self.get("items") or [])
-		return super()._validate_links()
+# Fields an invoice and its transfer do not share when one is mapped from the other.
+UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
 
-class StockMovementController(StockBatchPreparationMixin, SeriesNamingMixin, Document):
+class StockMovementController(SeriesNamingMixin, Document):
 	def before_validate(self):
-		for row in self.items:
-			populate_stock_row(row)
-		self.amount = rounded(sum((as_decimal(row.amount) for row in self.items), as_decimal(0)))
+		self.amount = populate_stock_rows(self.items)
 
 	def validate(self):
 		transfers = movement_transfers(self)
 		_validate_movement_locations(self, transfers)
-		validate_transfer_rows(self, transfers)
+		validate_transfer_rows(transfers)
+
+	def before_submit(self):
+		validate_stock_available(movement_transfers(self), self.date)
+
+	def before_cancel(self):
+		validate_stock_available(reverse_transfers(movement_transfers(self)), self.date)
 
 	def on_submit(self):
-		create_stock_entries(self, movement_transfers(self))
+		repost_stock_accounts(create_stock_entries(self, movement_transfers(self)))
 
 	def on_cancel(self):
-		cancel_stock_entries(self, movement_transfers(self))
+		repost_stock_accounts(cancel_stock_entries(self, movement_transfers(self)))
 
 	def on_trash(self):
-		delete_stock_entries(self)
+		repost_stock_accounts(delete_stock_entries(self))
 
 
-class StockTransferController(StockBatchPreparationMixin, SeriesNamingMixin, Document):
+class StockTransferController(SeriesNamingMixin, Document):
 	transfer_type = "sales"
 
 	def before_validate(self):
-		for row in self.items:
-			populate_stock_row(row)
-		self.grand_total = rounded(sum((as_decimal(row.amount) for row in self.items), as_decimal(0)))
+		self.calculate()
+
+	def calculate(self):
+		"""Fill row defaults and the grand total, without writing anything."""
+		self.grand_total = populate_stock_rows(self.items)
 
 	def validate(self):
-		validate_transfer_rows(self, transfer_rows(self))
+		validate_transfer_rows(transfer_rows(self))
+		if self.return_against:
+			validate_transfer_return(self)
+
+	def before_submit(self):
+		validate_stock_available(transfer_rows(self), self.date)
+		validate_invoice_balance(self)
+
+	def before_cancel(self):
+		validate_stock_available(reverse_transfers(transfer_rows(self)), self.date)
 
 	def on_submit(self):
-		transfers = transfer_rows(self)
-		create_stock_entries(self, transfers)
+		restated = create_stock_entries(self, valued_transfer_rows(self))
 		post_stock_accounts(self)
+		repost_stock_accounts(restated)
+		update_invoice_balance(self)
+		self.update_returned_status()
 
 	def on_cancel(self):
-		cancel_stock_entries(self, transfer_rows(self))
+		restated = cancel_stock_entries(self, transfer_rows(self))
 		reverse_entries(self)
+		repost_stock_accounts(restated)
+		update_invoice_balance(self)
+		self.update_returned_status()
 
 	def on_trash(self):
-		delete_stock_entries(self)
+		repost_stock_accounts(delete_stock_entries(self))
 		delete_entries(self)
+
+	def update_returned_status(self):
+		"""Flag the original transfer as returned while a submitted return against it remains."""
+		if not self.return_against:
+			return
+		is_returned = frappe.db.exists(self.doctype, {"return_against": self.return_against, "docstatus": 1})
+		frappe.db.set_value(
+			self.doctype, self.return_against, "is_returned", int(bool(is_returned)), update_modified=False
+		)
+
+
+def map_transfer_invoice(transfer_doctype, transfer_name):
+	"""Return an unsaved invoice that bills a submitted shipment or purchase receipt."""
+	invoice_doctype = frappe.get_meta(transfer_doctype).get_field("back_reference").options
+	return get_mapped_doc(
+		transfer_doctype,
+		transfer_name,
+		{
+			transfer_doctype: {
+				"doctype": invoice_doctype,
+				"validation": {"docstatus": ["=", 1]},
+				"field_no_map": UNSHARED_FIELDS,
+			},
+			_items_doctype(transfer_doctype): {"doctype": _items_doctype(invoice_doctype)},
+		},
+		postprocess=_bill_transfer,
+	)
+
+
+def _bill_transfer(transfer, invoice):
+	validate_billable(transfer)
+	bill_unbilled_rows(transfer, invoice)
+	invoice.date = now_datetime()
+	invoice.calculate()
+
+
+def _items_doctype(doctype):
+	return frappe.get_meta(doctype).get_field("items").options
 
 
 def movement_transfers(movement):
@@ -109,49 +174,59 @@ def transfer_rows(transaction):
 	return rows
 
 
+def valued_transfer_rows(transaction):
+	"""Return the transfer rows, with a sales return valued at the cost its shipment took out."""
+	rows = transfer_rows(transaction)
+	if transaction.transfer_type == "sales" and transaction.return_against:
+		rates = outgoing_rates(transaction.doctype, transaction.return_against)
+		for row in rows:
+			row["rate"] = rates[row["item"], row["batch"] or ""]
+	return rows
+
+
 def post_stock_accounts(transaction):
-	amount = _stock_posting_amount(transaction)
-	if amount == 0:
+	value = transaction_stock_value(transaction)
+	if value == 0:
 		return
+	_validate_value_direction(transaction, value)
 	settings = frappe.get_single("Books Inventory Settings")
+	stock = settings.stock_in_hand
+	counter = (
+		settings.cost_of_goods_sold
+		if transaction.transfer_type == "sales"
+		else settings.stock_received_but_not_billed
+	)
+	if not stock or not counter:
+		frappe.throw(_("Set all inventory ledger accounts in Books Inventory Settings."))
+	debit, credit = (stock, counter) if value > 0 else (counter, stock)
 	posting = LedgerPosting(transaction)
-	is_return = bool(transaction.return_against)
-	if transaction.transfer_type == "sales":
-		_debit_credit(
-			posting,
-			settings.cost_of_goods_sold,
-			settings.stock_in_hand,
-			amount,
-			reverse=is_return,
-		)
-	else:
-		_debit_credit(
-			posting,
-			settings.stock_in_hand,
-			settings.stock_received_but_not_billed,
-			amount,
-			reverse=is_return,
-		)
+	posting.debit(debit, abs(value))
+	posting.credit(credit, abs(value))
 	posting.post()
 
 
-def _stock_posting_amount(transaction):
-	"""Shipments move stock out at cost; receipts bring it in at the billed value."""
-	if transaction.transfer_type == "sales":
-		return transaction_stock_value(transaction)
-	return abs(as_decimal(transaction.grand_total))
+def repost_stock_accounts(references):
+	"""Post the stock accounts of transfers again after a restatement changed their stock value."""
+	for doctype, name in sorted(references):
+		if doctype in STOCK_POSTING_DOCTYPES:
+			transfer = frappe.get_doc(doctype, name)
+			delete_entries(transfer)
+			post_stock_accounts(transfer)
 
 
-def _debit_credit(posting, debit_account, credit_account, amount, reverse):
-	if not debit_account or not credit_account:
-		frappe.throw(_("Set all inventory ledger accounts in Books Inventory Settings."))
-	if reverse:
-		debit_account, credit_account = credit_account, debit_account
-	posting.debit(debit_account, amount)
-	posting.credit(credit_account, amount)
+def _validate_value_direction(transaction, value):
+	takes_stock_out = (transaction.transfer_type == "sales") != bool(transaction.return_against)
+	if (value < 0) != takes_stock_out:
+		frappe.throw(
+			_("{0} would move stock value the wrong way by {1}. Check its items for negative stock.").format(
+				transaction.name, value
+			)
+		)
 
 
 def _validate_movement_locations(movement, transfers):
+	if movement.movement_type == "Manufacture":
+		_validate_manufacture_locations(transfers)
 	if movement.movement_type == "MaterialIssue" and any(row["to_location"] for row in transfers):
 		frappe.throw(_("Material issues cannot have a destination location."))
 	if movement.movement_type == "MaterialReceipt" and any(row["from_location"] for row in transfers):
@@ -160,8 +235,11 @@ def _validate_movement_locations(movement, transfers):
 		not row["from_location"] or not row["to_location"] for row in transfers
 	):
 		frappe.throw(_("Material transfers require both source and destination locations."))
-	if movement.movement_type == "Manufacture":
-		if not any(row["from_location"] for row in transfers) or not any(
-			row["to_location"] for row in transfers
-		):
-			frappe.throw(_("Manufacture requires both consumed and produced items."))
+
+
+def _validate_manufacture_locations(transfers):
+	"""Each row either consumes (source only) or produces (destination only)."""
+	if any(row["from_location"] and row["to_location"] for row in transfers):
+		frappe.throw(_("Only From or To can be set for Manufacture"))
+	if not any(row["from_location"] for row in transfers) or not any(row["to_location"] for row in transfers):
+		frappe.throw(_("Manufacture requires both consumed and produced items."))

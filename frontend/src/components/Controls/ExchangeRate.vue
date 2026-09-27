@@ -30,9 +30,7 @@
       <FrappeTextInput
         type="number"
         :aria-label="right"
-        :model-value="
-          isSwapped ? fromValue / exchangeRate : exchangeRate * fromValue
-        "
+        :model-value="toValue"
         :disabled="disabled"
         :min="0"
         size="sm"
@@ -79,6 +77,15 @@ export default defineComponent({
     return { fromValue: 1, isSwapped: false };
   },
   computed: {
+    toValue(): number | string {
+      if (!this.exchangeRate) {
+        return '';
+      }
+
+      return this.isSwapped
+        ? this.fromValue / this.exchangeRate
+        : this.exchangeRate * this.fromValue;
+    },
     left(): string {
       if (this.isSwapped) {
         return this.toCurrency;

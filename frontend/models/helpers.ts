@@ -12,47 +12,61 @@ import {
 import { Fyo, t } from 'fyo';
 import { InvoiceStatus, ModelNameEnum } from './types';
 
-import {
-  ApplicableCouponCodes,
-  ApplicablePricingRules,
-} from './baseModels/Invoice/types';
-import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCouponCodes';
-import { CollectionRulesItems } from './baseModels/CollectionRulesItems/CollectionRulesItems';
-import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { DateTime } from 'luxon';
 import { Doc } from 'fyo/model/doc';
 import { Invoice } from './baseModels/Invoice/Invoice';
 import { Lead } from './baseModels/Lead/Lead';
-import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { Money } from 'pesa';
-import { Party } from './baseModels/Party/Party';
-import { PricingRule } from './baseModels/PricingRule/PricingRule';
 import { Router } from 'vue-router';
-import { Item } from 'models/baseModels/Item/Item';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
-import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
 import { StockMovement } from './inventory/StockMovement';
 import { StockTransfer } from './inventory/StockTransfer';
 import { ValidationError } from 'fyo/utils/errors';
-import { isPesa } from 'fyo/utils';
 import { numberSeriesDefaultsMap } from './baseModels/Defaults/Defaults';
-import { safeParseFloat } from 'utils/index';
-import { PriceList } from './baseModels/PriceList/PriceList';
+import { getIsNullOrUndef, safeParseFloat } from 'utils/index';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
-import { ValuationMethod } from './inventory/types';
-import { getPOSInventory } from './inventory/posStock';
-import {
-  getRawStockLedgerEntries,
-  getStockBalanceEntries,
-  getStockLedgerEntries,
-} from 'reports/inventory/helpers';
-import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
-import {
-  generateSerialNumbersForItem,
-  generateBatchForItem,
-} from './inventory/helpers';
+import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
+import { getPOSInventory, validatePOSStock } from './inventory/posStock';
+import { getSerialNumbersForQuantity } from './inventory/helpers';
+
+const MAPPER_MODULES: Record<string, string> = {
+  SalesInvoice:
+    'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice',
+  PurchaseInvoice:
+    'frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice',
+  SalesQuote:
+    'frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote',
+  Shipment: 'frappe_books.frappe_books.doctype.books_shipment.books_shipment',
+  PurchaseReceipt:
+    'frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt',
+};
+
+/** The unsaved `schemaName` document a server mapper, such as make_return, builds from `source`. */
+export async function getMappedDoc(
+  source: Doc,
+  schemaName: string,
+  mapper: string
+): Promise<Doc> {
+  const method = `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
+  const values = await source.fyo.db.getMapped(
+    schemaName,
+    method,
+    source.name!
+  );
+  // Unset values keep the new document's defaults, such as its number series.
+  const setValues = Object.fromEntries(
+    Object.entries(values).filter(([, value]) => !getIsNullOrUndef(value))
+  );
+  return source.fyo.doc.getNewDoc(
+    schemaName,
+    setValues,
+    true,
+    undefined,
+    undefined,
+    false
+  );
+}
 
 export function getQuoteActions(
   fyo: Fyo,
@@ -77,32 +91,22 @@ export function getInvoiceActions(
   ];
 }
 
-export async function getItemQtyMap(doc: SalesInvoice): Promise<ItemQtyMap> {
+/** Stock of each item, and of each of its batches, at the POS location. */
+export async function getItemQtyMap(
+  doc: SalesInvoice,
+  items?: string[]
+): Promise<ItemQtyMap> {
+  const location = await getPOSInventory(doc.fyo);
+  const rows = await doc.fyo.db.getStockQuantities(location, items);
   const itemQtyMap: ItemQtyMap = {};
-  const valuationMethod =
-    (doc.fyo.singles.InventorySettings?.valuationMethod as ValuationMethod) ??
-    ValuationMethod.FIFO;
-
-  const rawSLEs = await getRawStockLedgerEntries(doc.fyo);
-  const rawData = getStockLedgerEntries(rawSLEs, valuationMethod);
-
-  const inventoryLocation = await getPOSInventory(doc.fyo);
-
-  const stockBalance = getStockBalanceEntries(rawData, {
-    location: inventoryLocation,
-  });
-
-  for (const row of stockBalance) {
-    if (!itemQtyMap[row.item]) {
-      itemQtyMap[row.item] = { availableQty: 0 };
+  for (const { item, batch, quantity } of rows) {
+    itemQtyMap[item] ??= { availableQty: 0 };
+    itemQtyMap[item].availableQty += quantity;
+    if (batch) {
+      itemQtyMap[item][batch] = quantity;
     }
-
-    if (row.batch) {
-      itemQtyMap[row.item][row.batch] = row.balanceQuantity;
-    }
-
-    itemQtyMap[row.item]!.availableQty += row.balanceQuantity;
   }
+
   return itemQtyMap;
 }
 
@@ -147,8 +151,13 @@ export function getMakeStockTransferAction(
     group: fyo.t`Create`,
     condition: (doc: Doc) => doc.isSubmitted && !!doc.stockNotTransferred,
     action: async (doc: Doc) => {
-      const transfer = await (doc as Invoice).getStockTransfer();
-      if (!transfer || !transfer.name) {
+      const invoice = doc as Invoice;
+      const transfer = await getMappedDoc(
+        invoice,
+        invoice.stockTransferSchemaName,
+        invoice.stockTransferMapper
+      );
+      if (!transfer.name) {
         return;
       }
 
@@ -166,24 +175,28 @@ export function getMakeInvoiceAction(
     | ModelNameEnum.PurchaseReceipt
     | ModelNameEnum.SalesQuote
 ): Action {
-  let label = fyo.t`Sales Invoice`;
-  if (schemaName === ModelNameEnum.PurchaseReceipt) {
-    label = fyo.t`Purchase Invoice`;
-  }
-
+  const isPurchase = schemaName === ModelNameEnum.PurchaseReceipt;
+  const [invoiceSchemaName, mapper] = isPurchase
+    ? [ModelNameEnum.PurchaseInvoice, 'make_purchase_invoice']
+    : [ModelNameEnum.SalesInvoice, 'make_sales_invoice'];
   return {
-    label,
+    label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
     condition: (doc: Doc) => {
       if (schemaName === ModelNameEnum.SalesQuote) {
         return doc.isSubmitted;
       } else {
-        return doc.isSubmitted && !doc.backReference;
+        return (
+          doc.isSubmitted &&
+          !doc.backReference &&
+          !doc.returnAgainst &&
+          !doc.isFullyBilled
+        );
       }
     },
     action: async (doc: Doc) => {
-      const invoice = await (doc as SalesQuote | StockTransfer).getInvoice();
-      if (!invoice || !invoice.name) {
+      const invoice = await getMappedDoc(doc, invoiceSchemaName, mapper);
+      if (!invoice.name) {
         return;
       }
 
@@ -232,13 +245,12 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     condition: (doc: Doc) =>
       doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
     action: async (doc, router) => {
-      const schemaName = doc.schema.name;
-      const payment = (doc as Invoice).getPayment();
-      if (!payment) {
-        return;
-      }
-
-      await payment?.set('referenceType', schemaName);
+      const payment = await getMappedDoc(
+        doc,
+        ModelNameEnum.Payment,
+        'make_payment'
+      );
+      await payment.set('referenceType', doc.schemaName);
       const currentRoute = router.currentRoute.value.fullPath;
       payment.once('afterSubmit', async () => {
         await doc.load();
@@ -314,13 +326,8 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {
-      let returnDoc: Invoice | StockTransfer | undefined;
-
-      if (doc instanceof Invoice || doc instanceof StockTransfer) {
-        returnDoc = await doc.getReturnDoc();
-      }
-
-      if (!returnDoc || !returnDoc.name) {
+      const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
+      if (!returnDoc.name) {
         return;
       }
 
@@ -331,52 +338,16 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
   };
 }
 
-export function getTransactionStatusColumn(invoice = true): ColumnConfig {
-  return {
-    label: t`Status`,
-    fieldname: 'status',
-    fieldtype: 'Select',
-    options: (invoice
-      ? [
-          'Saved',
-          'Unpaid',
-          'PartlyPaid',
-          'Paid',
-          'Return',
-          'ReturnIssued',
-          'Cancelled',
-        ]
-      : ['Saved', 'Submitted', 'Return', 'ReturnIssued', 'Cancelled']
-    ).map((value) => ({ value, label: getStatusText(value as InvoiceStatus) })),
-    render(doc) {
-      const status = getDocStatus(doc) as InvoiceStatus;
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusText(status);
-
-      return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-        metadata: {
-          status,
-          color,
-          label,
-        },
-      };
-    },
-  };
-}
-
 export function getLeadStatusColumn(): ColumnConfig {
   return {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    render(doc) {
+    badge(doc) {
       const status = getLeadStatus(doc) as LeadStatus;
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusTextOfLead(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
+        color: statusColor[status] ?? 'gray',
+        label: getStatusTextOfLead(status),
       };
     },
   };
@@ -483,87 +454,16 @@ export function getDocStatus(
     return 'Saved';
   }
 
-  return getSubmittableDocStatus(doc);
-}
-
-function getSubmittableDocStatus(doc: RenderData | Doc) {
-  if (
-    [ModelNameEnum.SalesInvoice, ModelNameEnum.PurchaseInvoice].includes(
-      doc.schema.name as ModelNameEnum
-    )
-  ) {
-    return getInvoiceStatus(doc);
-  }
-
-  if (
-    [ModelNameEnum.Shipment, ModelNameEnum.PurchaseReceipt].includes(
-      doc.schema.name as ModelNameEnum
-    )
-  ) {
-    if (!!doc.returnAgainst && doc.submitted && !doc.cancelled) {
-      return 'Return';
-    }
-
-    if (doc.isReturned && doc.submitted && !doc.cancelled) {
-      return 'ReturnIssued';
-    }
-  }
-
-  /**
-   * SalesQuote extends Invoice but should never show payment-related
-   * statuses (Paid, Unpaid, etc.) since quotes cannot be paid.
-   * Return early with simple submitted/cancelled/saved statuses.
-   */
-  if (!!doc.submitted && !doc.cancelled) {
-    return 'Submitted';
-  }
-
-  if (!!doc.submitted && !!doc.cancelled) {
-    return 'Cancelled';
-  }
-
-  return 'Saved';
-}
-
-export function getInvoiceStatus(doc: RenderData | Doc): InvoiceStatus {
-  if (doc.submitted && !doc.cancelled && doc.returnAgainst) {
-    return 'Return';
-  }
-
-  if (doc.submitted && !doc.cancelled && doc.isReturned) {
-    return 'ReturnIssued';
-  }
-
-  if (
-    doc.submitted &&
-    !doc.cancelled &&
-    (doc.outstandingAmount as Money).isZero()
-  ) {
-    return 'Paid';
-  }
-
-  if (
-    doc.submitted &&
-    !doc.cancelled &&
-    (doc.outstandingAmount as Money).eq(doc.baseGrandTotal as Money)
-  ) {
-    return 'Unpaid';
+  // The server stores the status of documents that have a status field.
+  if (doc.status) {
+    return doc.status as InvoiceStatus;
   }
 
   if (doc.cancelled) {
     return 'Cancelled';
   }
 
-  if (
-    doc.submitted &&
-    !doc.isCancelled &&
-    (doc.outstandingAmount as Money).isPositive() &&
-    (doc.outstandingAmount as Money).neq(doc.baseGrandTotal as Money)
-  ) {
-    return 'PartlyPaid';
-  }
-
-  return 'Saved';
+  return doc.submitted ? 'Submitted' : 'Saved';
 }
 
 export function getSerialNumberStatusColumn(): ColumnConfig {
@@ -571,17 +471,15 @@ export function getSerialNumberStatusColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    render(doc) {
+    badge(doc) {
       let status = doc.status;
       if (typeof status !== 'string') {
         status = 'Inactive';
       }
 
-      const color = serialNumberStatusColor[status] ?? 'gray';
-      const label = getSerialNumberStatusText(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
+        color: serialNumberStatusColor[status] ?? 'gray',
+        label: getSerialNumberStatusText(status),
       };
     },
   };
@@ -611,20 +509,18 @@ export function getPriceListStatusColumn(): ColumnConfig {
     label: t`Enabled For`,
     fieldname: 'enabledFor',
     fieldtype: 'Select',
-    render({ isSales, isPurchase }) {
-      let status = t`None`;
+    badge({ isSales, isPurchase }) {
+      let label = t`None`;
 
       if (isSales && isPurchase) {
-        status = t`Sales and Purchase`;
+        label = t`Sales and Purchase`;
       } else if (isSales) {
-        status = t`Sales`;
+        label = t`Sales`;
       } else if (isPurchase) {
-        status = t`Purchase`;
+        label = t`Purchase`;
       }
 
-      return {
-        template: `<Badge class="text-xs" color="gray">${status}</Badge>`,
-      };
+      return { color: 'gray', label };
     },
   };
 }
@@ -634,68 +530,62 @@ export function getIsDocEnabledColumn(): ColumnConfig {
     label: t`Enabled`,
     fieldname: 'enabled',
     fieldtype: 'Data',
-    render(doc) {
-      let status = t`Disabled`;
-      let color = 'orange';
+    badge(doc) {
       if (doc.isEnabled) {
-        status = t`Enabled`;
-        color = 'green';
+        return { color: 'green', label: t`Enabled` };
       }
 
-      return {
-        template: `<Badge class="text-xs" color="${color}">${status}</Badge>`,
-      };
+      return { color: 'orange', label: t`Disabled` };
     },
   };
 }
 
+/**
+ * The rate from a public rates service, or undefined when it has none.
+ * Only the currency codes and the date leave the browser.
+ */
 export async function getExchangeRate({
   fromCurrency,
   toCurrency,
-  date,
+  date = DateTime.local().toISODate() as string,
 }: {
   fromCurrency: string;
   toCurrency: string;
   date?: string;
-}) {
-  if (!fetch) {
-    return 1;
-  }
-
-  if (!date) {
-    date = DateTime.local().toISODate();
-  }
-
+}): Promise<number | undefined> {
   const cacheKey = `currencyExchangeRate:${date}:${fromCurrency}:${toCurrency}`;
-
-  let exchangeRate = 0;
-  if (localStorage) {
-    exchangeRate = safeParseFloat(localStorage.getItem(cacheKey) as string);
+  const cached = safeParseFloat(localStorage.getItem(cacheKey) as string);
+  if (cached > 0) {
+    return cached;
   }
 
-  if (exchangeRate && exchangeRate !== 1) {
-    return exchangeRate;
-  }
-
-  try {
-    const res = await fetch(
-      `https://api.vatcomply.com/rates?date=${date}&base=${fromCurrency}&symbols=${toCurrency}`
-    );
-    const data = (await res.json()) as {
-      base: string;
-      data: string;
-      rates: Record<string, number>;
-    };
-    exchangeRate = data.rates[toCurrency];
-  } catch (error) {
-    exchangeRate ??= 1;
-  }
-
-  if (localStorage) {
+  const exchangeRate = await fetchExchangeRate(fromCurrency, toCurrency, date);
+  if (exchangeRate) {
     localStorage.setItem(cacheKey, String(exchangeRate));
   }
 
   return exchangeRate;
+}
+
+async function fetchExchangeRate(
+  fromCurrency: string,
+  toCurrency: string,
+  date: string
+): Promise<number | undefined> {
+  const query = new URLSearchParams({
+    date,
+    base: fromCurrency,
+    symbols: toCurrency,
+  });
+  try {
+    const response = await fetch(`https://api.vatcomply.com/rates?${query}`);
+    const data = (await response.json()) as { rates?: Record<string, number> };
+    const exchangeRate = response.ok ? data.rates?.[toCurrency] : undefined;
+    return exchangeRate && exchangeRate > 0 ? exchangeRate : undefined;
+  } catch {
+    // Offline or an unreadable reply: the user enters the rate instead.
+    return undefined;
+  }
 }
 
 export function isCredit(rootType: AccountRootType) {
@@ -732,22 +622,11 @@ export function getDocStatusListColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    options: ['Saved', 'Submitted', 'Cancelled'].map((value) => ({
-      value,
-      label: getStatusText(value as DocStatus),
-    })),
-    render(doc) {
+    badge(doc) {
       const status = getDocStatus(doc);
-      const color = statusColor[status] ?? 'gray';
-      const label = getStatusText(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-        metadata: {
-          status,
-          color,
-          label,
-        },
+        color: statusColor[status] ?? 'gray',
+        label: getStatusText(status),
       };
     },
   };
@@ -758,22 +637,11 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    options: ['Active', 'Expired', 'Maxed'].map((value) => ({
-      value,
-      label: getLoyaltyProgramStatusText(value),
-    })),
-    render(doc) {
+    badge(doc) {
       const status = getLoyaltyProgramStatus(doc);
-      const color = loyaltyProgramStatusColor[status] ?? 'gray';
-      const label = getLoyaltyProgramStatusText(status);
-
       return {
-        template: `<Badge class="text-xs" color="${color}">${label}</Badge>`,
-        metadata: {
-          status,
-          color,
-          label,
-        },
+        color: loyaltyProgramStatusColor[status] ?? 'gray',
+        label: getLoyaltyProgramStatusText(status),
       };
     },
   };
@@ -848,943 +716,52 @@ export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
 
   await item.set('item', name);
 
-  if (doc instanceof Invoice && !doc.isSales) {
-    const batchName = await generateBatchForItem(doc.fyo, name);
-    if (batchName) {
-      await item.set('batch', batchName);
-    }
-  }
-
   if (
     doc instanceof StockTransfer &&
     doc.schemaName === ModelNameEnum.PurchaseReceipt
   ) {
-    const serialNumbers = await generateSerialNumbersForItem(doc.fyo, name, 1);
+    const serialNumbers = await getSerialNumbersForQuantity(
+      doc.fyo,
+      name,
+      undefined,
+      1
+    );
     if (serialNumbers) {
       await item.set('serialNumber', serialNumbers);
     }
   }
 }
 
-export async function getReturnLoyaltyPoints(doc: Invoice) {
-  const returnDocs = await doc.fyo.db.getAll(doc.schemaName, {
-    fields: ['name', 'loyaltyPoints'],
-    filters: {
-      returnAgainst: doc.returnAgainst as string,
-      submitted: true,
-    },
-  });
-
-  const sunvDocs = returnDocs.filter((sinvDoc) => sinvDoc.name !== doc.name);
-
-  const totalLoyaltyPoints = sunvDocs.reduce(
-    (sum, doc) => sum + Math.abs(doc.loyaltyPoints as number),
-    0
-  );
-
-  const loyaltyPoints = await doc.fyo.getValue(
-    ModelNameEnum.SalesInvoice,
-    doc.returnAgainst as string,
-    'loyaltyPoints'
-  );
-
-  return Math.abs((loyaltyPoints as number) - Math.abs(totalLoyaltyPoints));
-}
-
-export async function getReturnQtyTotal(
-  doc: Invoice
-): Promise<
-  Record<
-    string,
-    number | { quantity: number; batches?: Record<string, number> }
-  >
-> {
-  const returnDocs = await doc.fyo.db.getAll(doc.schemaName, {
-    fields: ['*'],
-    filters: {
-      returnAgainst: doc.name as string,
-    },
-  });
-
-  const returnedDocs = await Promise.all(
-    returnDocs.map((d) => doc.fyo.doc.getDoc(doc.schemaName, d.name as string))
-  );
-
-  const quantitySum: Record<
-    string,
-    number | { quantity: number; batches?: Record<string, number> }
-  > = {};
-
-  for (const item of doc.items || []) {
-    const itemName = item.item;
-    const batch = item.batch;
-    const qty = item.quantity as number;
-
-    if (!itemName) {
-      continue;
-    }
-
-    if (batch) {
-      if (!quantitySum[itemName]) {
-        quantitySum[itemName] = { quantity: qty, batches: { [batch]: qty } };
-      } else {
-        const entry = quantitySum[itemName] as {
-          quantity: number;
-          batches?: Record<string, number>;
-        };
-        entry.quantity += qty;
-        entry.batches![batch] = (entry.batches![batch] || 0) + qty;
-      }
-    } else {
-      quantitySum[itemName] = ((quantitySum[itemName] as number) || 0) + qty;
-    }
-  }
-
-  for (const returnedDoc of returnedDocs) {
-    for (const item of (returnedDoc?.items as InvoiceItem[]) || []) {
-      const itemName = item.item;
-      const batch = item.batch;
-      const qty = Math.abs(item.quantity!);
-
-      if (!itemName || !quantitySum[itemName]) {
-        continue;
-      }
-
-      if (batch && quantitySum[itemName]) {
-        const entry = quantitySum[itemName] as {
-          quantity: number;
-          batches?: Record<string, number>;
-        };
-        entry.quantity -= qty;
-        if (entry.batches?.[batch]) {
-          entry.batches[batch] -= qty;
-        }
-      } else {
-        quantitySum[itemName] = (quantitySum[itemName] as number) - qty;
-      }
-    }
-  }
-
-  return quantitySum;
-}
-
-export async function createLoyaltyPointEntry(doc: Invoice) {
-  const loyaltyProgramDoc = (await doc.fyo.doc.getDoc(
-    ModelNameEnum.LoyaltyProgram,
-    doc?.loyaltyProgram
-  )) as LoyaltyProgram;
-
-  if (!loyaltyProgramDoc.isEnabled) {
-    return;
-  }
-
-  const toDate = loyaltyProgramDoc.toDate as Date;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (toDate && new Date(toDate).getTime() < today.getTime()) {
-    return;
-  }
-
-  const expiryDate = new Date(Date.now());
-
-  expiryDate.setDate(
-    expiryDate.getDate() + (loyaltyProgramDoc.expiryDuration || 0)
-  );
-
-  let loyaltyProgramTier;
-  let loyaltyPoint: number;
-
-  if (doc.redeemLoyaltyPoints) {
-    loyaltyPoint = -(doc.loyaltyPoints || 0);
-  } else {
-    loyaltyProgramTier = getLoyaltyProgramTier(
-      loyaltyProgramDoc,
-      doc?.grandTotal as Money
-    ) as CollectionRulesItems;
-
-    if (!loyaltyProgramTier) {
-      return;
-    }
-
-    const collectionFactor = loyaltyProgramTier.collectionFactor as number;
-    loyaltyPoint = Math.round(doc?.grandTotal?.float || 0) * collectionFactor;
-  }
-
-  const newLoyaltyPointEntry = doc.fyo.doc.getNewDoc(
-    ModelNameEnum.LoyaltyPointEntry,
-    {
-      loyaltyProgram: doc.loyaltyProgram,
-      customer: doc.party,
-      invoice: doc.name,
-      postingDate: doc.date,
-      purchaseAmount: doc.grandTotal,
-      expiryDate: expiryDate,
-      loyaltyProgramTier: loyaltyProgramTier?.tierName,
-      loyaltyPoints: loyaltyPoint,
-    }
-  );
-
-  return await newLoyaltyPointEntry.sync();
-}
-
-export async function getAddedLPWithGrandTotal(
-  fyo: Fyo,
-  loyaltyProgram: string,
-  loyaltyPoints: number
-) {
-  const loyaltyProgramDoc = (await fyo.doc.getDoc(
-    ModelNameEnum.LoyaltyProgram,
-    loyaltyProgram
-  )) as LoyaltyProgram;
-
-  const conversionFactor = loyaltyProgramDoc.conversionFactor as number;
-
-  return fyo.pesa((loyaltyPoints || 0) * conversionFactor);
-}
-
-export function getLoyaltyProgramTier(
-  loyaltyProgramData: LoyaltyProgram,
-  grandTotal: Money
-): CollectionRulesItems | undefined {
-  if (!loyaltyProgramData.collectionRules) {
-    return;
-  }
-
-  let loyaltyProgramTier: CollectionRulesItems | undefined;
-
-  for (const row of loyaltyProgramData.collectionRules) {
-    if (row.minimumTotalSpent !== undefined && row.minimumTotalSpent !== null) {
-      let minimumSpent: Money;
-
-      if (isPesa(row.minimumTotalSpent)) {
-        minimumSpent = row.minimumTotalSpent;
-      } else {
-        minimumSpent = new Money(row.minimumTotalSpent as number);
-      }
-
-      if (minimumSpent.lte(grandTotal)) {
-        if (
-          !loyaltyProgramTier ||
-          minimumSpent.gt(loyaltyProgramTier.minimumTotalSpent as Money)
-        ) {
-          loyaltyProgramTier = row;
-        }
-      }
-    }
-  }
-  return loyaltyProgramTier;
-}
-
-export async function removeLoyaltyPoint(doc: Doc) {
-  if (!doc.loyaltyProgram) {
-    return;
-  }
-
-  const data = (await doc.fyo.db.getAll(ModelNameEnum.LoyaltyPointEntry, {
-    fields: ['name', 'loyaltyPoints', 'expiryDate'],
-    filters: {
-      loyaltyProgram: doc.loyaltyProgram as string,
-      invoice: doc.isReturn
-        ? (doc.returnAgainst as string)
-        : (doc.name as string),
-    },
-  })) as { name: string; loyaltyPoints: number; expiryDate: Date }[];
-
-  if (!data.length) {
-    return;
-  }
-
-  const lPEntryDoc = (await doc.fyo.doc.getDoc(
-    ModelNameEnum.LoyaltyPointEntry,
-    data[0].name
-  )) as LoyaltyPointEntry;
-
-  const newLoyaltyPoint =
-    (lPEntryDoc?.loyaltyPoints as number) +
-    Math.abs(doc.loyaltyPoints as number);
-
-  if (newLoyaltyPoint !== 0) {
-    const newLoyaltyPointEntry = doc.fyo.doc.getNewDoc(
-      ModelNameEnum.LoyaltyPointEntry,
-      {
-        loyaltyProgram: lPEntryDoc.loyaltyProgram,
-        customer: lPEntryDoc.customer,
-        invoice: lPEntryDoc.invoice,
-        postingDate: lPEntryDoc.date as Date,
-        purchaseAmount: lPEntryDoc.purchaseAmount,
-        expiryDate: lPEntryDoc.expiryDate,
-        loyaltyProgramTier: lPEntryDoc.loyaltyProgramTier,
-        loyaltyPoints: newLoyaltyPoint,
-      }
-    );
-    await newLoyaltyPointEntry.sync();
-  }
-
-  const party = (await doc.fyo.doc.getDoc(
-    ModelNameEnum.Party,
-    doc.party as string
-  )) as Party;
-
-  await lPEntryDoc.delete();
-  await party.updateLoyaltyPoints();
-}
-
+/** Checks the POS location has the stock that a row's item, or its batch, needs. */
 export async function validateQty(
   sinvDoc: SalesInvoice,
-  item: Item | SalesInvoiceItem | POSItem | undefined,
+  row: SalesInvoiceItem,
   existingItems: InvoiceItem[]
 ) {
+  const { fyo } = sinvDoc;
+  const item = row.item;
   if (!item) {
     return;
   }
 
-  let itemName = item.name as string;
-  const itemhasBatch = await sinvDoc.fyo.getValue(
-    ModelNameEnum.Item,
-    item.item as string,
-    'hasBatch'
-  );
-
-  const itemQtyMap: ItemQtyMap = await getItemQtyMap(sinvDoc);
-
-  if (item instanceof SalesInvoiceItem) {
-    itemName = item.item as string;
-  }
-
-  if (itemhasBatch) {
-    if (!item.batch) {
-      throw new ValidationError(t`Please select a batch first`);
-    }
-  }
-
-  const trackItem = await sinvDoc.fyo.getValue(
-    ModelNameEnum.Item,
-    item.item as string,
-    'trackItem'
-  );
-
-  if (!trackItem) {
-    return;
-  }
-
-  if (!itemQtyMap[itemName] || itemQtyMap[itemName].availableQty === 0) {
-    throw new ValidationError(t`Item ${itemName} has Zero Quantity`);
-  }
-
-  if (item.batch) {
-    if (
-      (existingItems && !itemQtyMap[itemName]) ||
-      itemQtyMap[itemName][item.batch as string] <
-        (existingItems[0]?.quantity as number)
-    ) {
-      throw new ValidationError(
-        t`Item ${itemName} only has ${
-          itemQtyMap[itemName][item.batch as string]
-        } Quantity in batch ${item.batch as string}`
-      );
-    }
-  } else {
-    if (
-      (existingItems && !itemQtyMap[itemName]) ||
-      itemQtyMap[itemName].availableQty < (existingItems[0]?.quantity as number)
-    ) {
-      throw new ValidationError(
-        t`Item ${itemName} only has ${itemQtyMap[itemName].availableQty} Quantity`
-      );
-    }
-  }
-
-  return;
-}
-
-export async function getPricingRulesOfCoupons(
-  doc: SalesInvoice,
-  couponName?: string,
-  pricingRuleDocNames?: string[]
-): Promise<PricingRule[] | undefined> {
-  if (!doc?.coupons?.length && !couponName) {
-    return;
-  }
-
-  let appliedCoupons: CouponCode[] = [];
-
-  const couponsToFetch = couponName
-    ? [couponName]
-    : (doc?.coupons?.map((coupon) => coupon.coupons) as string[] | []);
-
-  if (couponsToFetch?.length) {
-    appliedCoupons = (await doc.fyo.db.getAll(ModelNameEnum.CouponCode, {
-      fields: ['*'],
-      filters: { name: ['in', couponsToFetch] },
-    })) as CouponCode[];
-  }
-
-  const filteredPricingRuleNames = appliedCoupons.filter(
-    (val) => val.pricingRule === pricingRuleDocNames![0]
-  );
-
-  if (!filteredPricingRuleNames.length) {
-    return;
-  }
-
-  const pricingRuleDocsForItem = (await doc.fyo.db.getAll(
-    ModelNameEnum.PricingRule,
-    {
-      fields: ['*'],
-      filters: {
-        name: ['in', pricingRuleDocNames as string[]],
-        isEnabled: true,
-        isCouponCodeBased: true,
-      },
-      orderBy: 'priority',
-      order: 'desc',
-    }
-  )) as PricingRule[];
-
-  return pricingRuleDocsForItem;
-}
-
-export async function getPricingRule(
-  doc: Invoice,
-  couponName?: string
-): Promise<ApplicablePricingRules[] | undefined> {
   if (
-    !doc.fyo.singles.AccountingSettings?.enablePricingRule ||
-    !doc.isSales ||
-    !doc.items
+    !row.batch &&
+    (await fyo.getValue(ModelNameEnum.Item, item, 'hasBatch'))
   ) {
+    throw new ValidationError(t`Please select a batch first`);
+  }
+
+  if (!(await fyo.getValue(ModelNameEnum.Item, item, 'trackItem'))) {
     return;
   }
 
-  const pricingRules: ApplicablePricingRules[] = [];
-
-  for (const item of doc.items) {
-    if (item.isFreeItem) {
-      continue;
-    }
-
-    const pricingRuleDocNames = (
-      await doc.fyo.db.getAll(ModelNameEnum.PricingRuleItem, {
-        fields: ['parent'],
-        filters: {
-          item: item.item as string,
-          unit: item.unit as string,
-        },
-      })
-    ).map((doc) => doc.parent) as string[];
-
-    let pricingRuleDocsForItem;
-
-    const pricingRuleDocs = (await doc.fyo.db.getAll(
-      ModelNameEnum.PricingRule,
-      {
-        fields: ['*'],
-        filters: {
-          name: ['in', pricingRuleDocNames],
-          isEnabled: true,
-          isCouponCodeBased: false,
-        },
-        orderBy: 'priority',
-        order: 'desc',
-      }
-    )) as PricingRule[];
-
-    if (pricingRuleDocs.length) {
-      pricingRuleDocsForItem = pricingRuleDocs;
-    }
-
-    if (!pricingRuleDocs.length || couponName) {
-      const couponPricingRules: PricingRule[] | undefined =
-        await getPricingRulesOfCoupons(
-          doc as SalesInvoice,
-          couponName,
-          pricingRuleDocNames
-        );
-
-      pricingRuleDocsForItem = couponPricingRules as PricingRule[];
-    }
-
-    if (!pricingRuleDocsForItem) {
-      continue;
-    }
-
-    const itemQuantity: Record<string, number> = {};
-
-    for (const item of doc.items) {
-      if (!item?.item) continue;
-
-      if (!itemQuantity[item.item]) {
-        itemQuantity[item.item] = item.quantity ?? 0;
-      } else {
-        itemQuantity[item.item] += item.quantity ?? 0;
-      }
-    }
-
-    const filtered = filterPricingRules(
-      doc as SalesInvoice,
-      pricingRuleDocsForItem,
-      itemQuantity[item.item as string],
-      item.amount as Money
+  const quantity = existingItems
+    .filter((existing) => !row.batch || existing.batch === row.batch)
+    .reduce(
+      (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
+      0
     );
-
-    if (!filtered.length) {
-      continue;
-    }
-
-    const isPricingRuleHasConflicts = getPricingRulesConflicts(filtered);
-
-    if (isPricingRuleHasConflicts) {
-      continue;
-    }
-
-    pricingRules.push({
-      applyOnItem: item.item as string,
-      pricingRule: filtered[0],
-    });
-  }
-
-  return pricingRules;
-}
-
-export async function getItemRateFromPriceList(
-  doc: InvoiceItem | SalesInvoiceItem,
-  priceListName: string
-): Promise<Money | undefined> {
-  const item = doc.item;
-  if (!priceListName || !item) {
-    return;
-  }
-
-  const priceList = await doc.fyo.doc.getDoc(
-    ModelNameEnum.PriceList,
-    priceListName
-  );
-
-  if (!(priceList instanceof PriceList)) {
-    return;
-  }
-
-  const unit = doc.unit;
-  const transferUnit = doc.transferUnit;
-  const plItem = priceList.priceListItem?.find((pli) => {
-    if (pli.item !== item) {
-      return false;
-    }
-
-    if (transferUnit && pli.unit !== transferUnit) {
-      return false;
-    } else if (unit && pli.unit !== unit) {
-      return false;
-    }
-
-    return true;
-  });
-
-  return plItem?.rate;
-}
-
-export function filterPricingRules(
-  doc: SalesInvoice,
-  pricingRuleDocsForItem: PricingRule[],
-  quantity: number,
-  amount: Money
-): PricingRule[] | [] {
-  const filteredPricingRules: PricingRule[] = [];
-
-  for (const pricingRuleDoc of pricingRuleDocsForItem) {
-    if (
-      canApplyPricingRule(pricingRuleDoc, doc.date as Date, quantity, amount)
-    ) {
-      filteredPricingRules.push(pricingRuleDoc);
-    }
-  }
-  return filteredPricingRules;
-}
-
-export function canApplyPricingRule(
-  pricingRuleDoc: PricingRule,
-  sinvDate: Date,
-  quantity: number,
-  amount: Money
-): boolean {
-  if (
-    (pricingRuleDoc.minQuantity as number) > 0 &&
-    quantity < (pricingRuleDoc.minQuantity as number)
-  ) {
-    return false;
-  }
-
-  if (
-    (pricingRuleDoc.maxQuantity as number) > 0 &&
-    quantity > (pricingRuleDoc.maxQuantity as number)
-  ) {
-    return false;
-  }
-
-  // Filter by Amount
-  if (
-    !pricingRuleDoc.minAmount?.isZero() &&
-    amount.lte(pricingRuleDoc.minAmount as Money)
-  ) {
-    return false;
-  }
-
-  if (
-    !pricingRuleDoc.maxAmount?.isZero() &&
-    amount.gte(pricingRuleDoc.maxAmount as Money)
-  ) {
-    return false;
-  }
-
-  // Filter by Validity
-  if (sinvDate) {
-    if (
-      pricingRuleDoc.validFrom &&
-      new Date(sinvDate).toISOString() < pricingRuleDoc.validFrom.toISOString()
-    ) {
-      return false;
-    }
-
-    if (
-      pricingRuleDoc.validTo &&
-      new Date(sinvDate).toISOString() > pricingRuleDoc.validTo.toISOString()
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-export function canApplyCouponCode(
-  couponCodeData: CouponCode,
-  amount: Money,
-  sinvDate: Date
-): boolean {
-  // Filter by Amount
-  if (
-    !couponCodeData.minAmount?.isZero() &&
-    amount.lte(couponCodeData.minAmount as Money)
-  ) {
-    return false;
-  }
-
-  if (
-    !couponCodeData.maxAmount?.isZero() &&
-    amount.gte(couponCodeData.maxAmount as Money)
-  ) {
-    return false;
-  }
-
-  // Filter by Validity
-  if (
-    couponCodeData.validFrom &&
-    new Date(sinvDate).toISOString() < couponCodeData.validFrom.toISOString()
-  ) {
-    return false;
-  }
-
-  if (
-    couponCodeData.validTo &&
-    new Date(sinvDate).toISOString() > couponCodeData.validTo.toISOString()
-  ) {
-    return false;
-  }
-  return true;
-}
-export async function removeUnusedCoupons(sinvDoc: SalesInvoice) {
-  if (!sinvDoc.coupons?.length) {
-    return;
-  }
-
-  const applicableCouponCodes = await Promise.all(
-    sinvDoc.coupons?.map(async (coupon) => {
-      return await getApplicableCouponCodesName(
-        coupon.coupons as string,
-        sinvDoc
-      );
-    })
-  );
-
-  const flattedApplicableCouponCodes = applicableCouponCodes?.flat();
-
-  const couponCodeDoc = (await sinvDoc.fyo.doc.getDoc(
-    ModelNameEnum.CouponCode,
-    sinvDoc.coupons[0].coupons
-  )) as CouponCode;
-
-  couponCodeDoc.removeUnusedCoupons(
-    flattedApplicableCouponCodes as ApplicableCouponCodes[],
-    sinvDoc
-  );
-}
-
-export async function getApplicableCouponCodesName(
-  couponName: string,
-  sinvDoc: SalesInvoice
-) {
-  const couponCodeDatas = (await sinvDoc.fyo.db.getAll(
-    ModelNameEnum.CouponCode,
-    {
-      fields: ['*'],
-      filters: {
-        name: couponName,
-        isEnabled: true,
-      },
-    }
-  )) as CouponCode[];
-
-  if (!couponCodeDatas || !couponCodeDatas.length) {
-    return [];
-  }
-
-  const applicablePricingRules = await getPricingRule(sinvDoc, couponName);
-
-  if (!applicablePricingRules?.length) {
-    return [];
-  }
-
-  return applicablePricingRules
-    ?.filter(
-      (rule) => rule?.pricingRule?.name === couponCodeDatas[0].pricingRule
-    )
-    .map((rule) => ({
-      pricingRule: rule.pricingRule.name,
-      coupon: couponCodeDatas[0].name,
-    }));
-}
-
-export async function validateCouponCode(
-  doc: AppliedCouponCodes,
-  value: string,
-  sinvDoc?: SalesInvoice
-) {
-  const coupon = await doc.fyo.db.getAll(ModelNameEnum.CouponCode, {
-    fields: [
-      'minAmount',
-      'maxAmount',
-      'pricingRule',
-      'validFrom',
-      'validTo',
-      'maximumUse',
-      'used',
-      'isEnabled',
-    ],
-    filters: { name: value },
-  });
-
-  if (!coupon[0]?.isEnabled) {
-    throw new ValidationError(
-      'Coupon code cannot be applied as it is not enabled'
-    );
-  }
-
-  if ((coupon[0]?.maximumUse as number) <= (coupon[0]?.used as number)) {
-    throw new ValidationError(
-      'Coupon code has been used maximum number of times'
-    );
-  }
-
-  if (!doc.parentdoc) {
-    doc.parentdoc = sinvDoc;
-  }
-
-  const applicableCouponCodesNames = await getApplicableCouponCodesName(
-    value,
-    doc.parentdoc as SalesInvoice
-  );
-
-  if (!applicableCouponCodesNames?.length) {
-    throw new ValidationError(
-      t`Coupon ${value} is not applicable for applied items.`
-    );
-  }
-
-  const couponExist = doc.parentdoc?.coupons?.some(
-    (coupon) => coupon?.coupons === value
-  );
-
-  if (couponExist) {
-    throw new ValidationError(t`${value} already applied.`);
-  }
-
-  if (
-    (coupon[0].minAmount as Money).gte(doc.parentdoc?.grandTotal as Money) &&
-    !(coupon[0].minAmount as Money).isZero()
-  ) {
-    throw new ValidationError(
-      t`The Grand Total must exceed ${
-        (coupon[0].minAmount as Money).float
-      } to apply the coupon ${value}.`
-    );
-  }
-
-  if (
-    (coupon[0].maxAmount as Money).lte(doc.parentdoc?.grandTotal as Money) &&
-    !(coupon[0].maxAmount as Money).isZero()
-  ) {
-    throw new ValidationError(
-      t`The Grand Total must be less than ${
-        (coupon[0].maxAmount as Money).float
-      } to apply this coupon.`
-    );
-  }
-
-  if ((coupon[0].validFrom as Date) > (doc.parentdoc?.date as Date)) {
-    throw new ValidationError(
-      t`Valid From Date should be less than Valid To Date.`
-    );
-  }
-
-  if ((coupon[0].validTo as Date) < (doc.parentdoc?.date as Date)) {
-    throw new ValidationError(
-      t`Valid To Date should be greater than Valid From Date.`
-    );
-  }
-}
-
-export async function validateLoyaltyProgram(
-  doc: Invoice,
-  loyaltyProgramName: string
-) {
-  const loyaltyProgram = await doc.fyo.db.getAll(ModelNameEnum.LoyaltyProgram, {
-    fields: ['fromDate', 'toDate', 'maximumUse', 'used', 'isEnabled'],
-    filters: { name: loyaltyProgramName },
-  });
-
-  if (
-    (loyaltyProgram[0]?.maximumUse as number) > 0 &&
-    (loyaltyProgram[0]?.used as number) >=
-      (loyaltyProgram[0]?.maximumUse as number)
-  ) {
-    return;
-  }
-
-  if (
-    loyaltyProgram[0].fromDate &&
-    (doc.date as Date) < (loyaltyProgram[0].fromDate as Date)
-  ) {
-    throw new ValidationError('Loyalty program is not yet active');
-  }
-
-  const toDate = loyaltyProgram[0].toDate as Date;
-  if (toDate) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const normalizedToDate = new Date(toDate);
-    normalizedToDate.setHours(0, 0, 0, 0);
-
-    if (normalizedToDate.getTime() < today.getTime()) {
-      return;
-    }
-  }
-}
-
-export function removeFreeItems(sinvDoc: SalesInvoice) {
-  if (!sinvDoc || !sinvDoc.items) {
-    return;
-  }
-
-  if (!!sinvDoc.isPricingRuleApplied) {
-    return;
-  }
-
-  for (const item of sinvDoc.items) {
-    if (item.isFreeItem) {
-      sinvDoc.items = sinvDoc.items?.filter(
-        (invoiceItem) => invoiceItem.name !== item.name
-      );
-    }
-  }
-}
-
-export async function updatePricingRule(sinvDoc: SalesInvoice) {
-  const applicablePricingRuleNames = await getPricingRule(sinvDoc);
-
-  if (!applicablePricingRuleNames || !applicablePricingRuleNames.length) {
-    sinvDoc.pricingRuleDetail = undefined;
-    sinvDoc.isPricingRuleApplied = false;
-    removeFreeItems(sinvDoc);
-    return;
-  }
-
-  const appliedPricingRuleCount = sinvDoc?.items?.filter(
-    (val) => val.isFreeItem
-  ).length;
-
-  setTimeout(() => {
-    void (async () => {
-      if (appliedPricingRuleCount !== applicablePricingRuleNames?.length) {
-        await sinvDoc.appendPricingRuleDetail(applicablePricingRuleNames);
-        await sinvDoc.applyProductDiscount();
-      }
-    })();
-  }, 1);
-}
-
-export function getPricingRulesConflicts(
-  pricingRules: PricingRule[]
-): undefined | boolean {
-  const pricingRuleDocs = Array.from(pricingRules);
-
-  const firstPricingRule = pricingRuleDocs.shift();
-  if (!firstPricingRule) {
-    return;
-  }
-
-  const conflictingPricingRuleNames: string[] = [];
-  for (const pricingRuleDoc of pricingRuleDocs.slice(0)) {
-    if (pricingRuleDoc.priority !== firstPricingRule?.priority) {
-      continue;
-    }
-
-    conflictingPricingRuleNames.push(pricingRuleDoc.name as string);
-  }
-
-  if (!conflictingPricingRuleNames.length) {
-    return;
-  }
-
-  return true;
-}
-
-export function roundFreeItemQty(
-  quantity: number,
-  roundingMethod: 'round' | 'floor' | 'ceil'
-): number {
-  return Math[roundingMethod](quantity);
-}
-
-export async function isLoyaltyProgramExpiredAndMaxed(
-  fyo: Fyo,
-  loyaltyProgramName: string
-): Promise<boolean> {
-  if (!loyaltyProgramName) {
-    return false;
-  }
-
-  const loyaltyProgram = await fyo.db.getAll(ModelNameEnum.LoyaltyProgram, {
-    fields: ['toDate', 'maximumUse', 'used', 'isEnabled'],
-    filters: { name: loyaltyProgramName },
-  });
-
-  if (!loyaltyProgram.length) {
-    return false;
-  }
-
-  const program = loyaltyProgram[0];
-  const currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
-
-  const toDate = program.toDate as Date;
-  const isExpired =
-    toDate && new Date(toDate).getTime() < currentDate.getTime();
-
-  const maximumUse = (program.maximumUse as number) || 0;
-  const used = (program.used as number) || 0;
-  const isMaxed = maximumUse > 0 && used >= maximumUse;
-
-  const result = isExpired || isMaxed;
-  return result;
+  const itemQtyMap = await getItemQtyMap(sinvDoc, [item]);
+  const location = await getPOSInventory(fyo);
+  validatePOSStock(item, quantity, itemQtyMap, location, row.batch);
 }

@@ -1,44 +1,11 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { build, preview, loadConfigFromFile, type PreviewServer } from 'vite';
+import { serveFixture } from './helpers/fixture-server';
 
-let server: PreviewServer;
-let directory: string;
-let url: string;
+const url = serveFixture('pos');
 
-test.beforeAll(async () => {
-  const loaded = await loadConfigFromFile(
-    { command: 'serve', mode: 'test' },
-    path.resolve(__dirname, '../../vite.config.ts')
-  );
-  directory = await mkdtemp(path.join(tmpdir(), 'books-pos-ui-'));
-  const config = {
-    ...loaded!.config,
-    configFile: false,
-    root: path.resolve(__dirname, '../..'),
-    logLevel: 'error' as const,
-    build: {
-      ...loaded!.config.build,
-      outDir: directory,
-      rollupOptions: { input: path.resolve(__dirname, 'fixtures/pos.html') },
-    },
-    preview: { host: '127.0.0.1', port: 0, proxy: {} },
-  };
-  await build(config);
-  server = await preview(config);
-  url = `${server.resolvedUrls!.local[0]}tests/ui/fixtures/pos.html`;
-});
-test.afterAll(async () => {
-  if (server)
-    await new Promise<void>((resolve) =>
-      server.httpServer.close(() => resolve())
-    );
-  if (directory) await rm(directory, { recursive: true, force: true });
-});
 test.beforeEach(async ({ page }) => {
-  await page.goto(url);
+  await page.goto(url());
+  await page.waitForFunction(() => (window as any).posFixture);
   await expect(page.getByText('No items in this sale')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 });
@@ -81,11 +48,7 @@ for (const viewport of [
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
     }
-    await page.evaluate(() => {
-      const f = (window as any).posFixture;
-      f.fyo.singles.POSSettings.isShiftOpen = false;
-      f.state.shiftOpen = false;
-    });
+    await page.evaluate(() => (window as any).posFixture.closeShift());
     const opening = page.getByRole('dialog', {
       name: 'Open POS Shift',
       exact: true,
@@ -155,7 +118,7 @@ for (const modern of [true, false]) {
   }) => {
     await page.evaluate((modern) => {
       const fixture = (window as any).posFixture;
-      fixture.state.modern = modern;
+      fixture.setLayout(modern);
       fixture.fillCart();
     }, modern);
     const row = page
@@ -221,9 +184,7 @@ test('view toggles survive switching layouts and checkout remains reachable', as
     animations: 'disabled',
     path: test.info().outputPath('item-grid.png'),
   });
-  await page.evaluate(() => {
-    (window as any).posFixture.state.modern = false;
-  });
+  await page.evaluate(() => (window as any).posFixture.setLayout(false));
   await expect(
     page.getByRole('button', { name: 'List View', exact: true })
   ).toBeVisible();
@@ -238,9 +199,10 @@ test('view toggles survive switching layouts and checkout remains reachable', as
   await page.getByRole('button', { name: 'List View', exact: true }).click();
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const modern of [true, false]) {
-    await page.evaluate((modern) => {
-      (window as any).posFixture.state.modern = modern;
-    }, modern);
+    await page.evaluate(
+      (modern) => (window as any).posFixture.setLayout(modern),
+      modern
+    );
     await page.setViewportSize({ width: 390, height: 700 });
     const pay = page.getByRole('button', { name: 'Pay', exact: true });
     await pay.scrollIntoViewIfNeeded();
@@ -321,9 +283,9 @@ test('payment buttons match the form text scale', async ({ page }) => {
 async function showModal(page: Page, name: string) {
   await page.evaluate((name) => {
     const fixture = (window as any).posFixture;
-    if (name === 'Payment' && !fixture.state.invoice.items.length)
+    if (name === 'Payment' && !fixture.state.invoice.items?.length)
       fixture.fillCart();
-    fixture.state.modal = name;
+    fixture.showModal(name);
   }, name);
 }
 

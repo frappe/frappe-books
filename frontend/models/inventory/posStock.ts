@@ -21,10 +21,10 @@ export async function getPOSInventory(fyo: Fyo): Promise<string | undefined> {
 export async function getPOSBatchQuantity(
   fyo: Fyo,
   item: string,
-  batch: string
+  batch?: string
 ): Promise<number> {
   const inventory = await getPOSInventory(fyo);
-  if (!inventory) {
+  if (!batch || !inventory) {
     return 0;
   }
 

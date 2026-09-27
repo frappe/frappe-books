@@ -17,17 +17,6 @@
         </dd>
       </div>
       <div
-        v-if="additionalDiscounts && !additionalDiscounts.isZero()"
-        class="flex items-baseline justify-between gap-4"
-      >
-        <dt class="text-ink-gray-6">
-          {{ t`Additional Discounts` }}
-        </dt>
-        <dd class="font-medium tabular-nums text-ink-gray-9">
-          {{ fyo.format(additionalDiscounts, 'Currency') }}
-        </dd>
-      </div>
-      <div
         class="flex flex-wrap items-baseline justify-between gap-2 border-t border-outline-gray-1 pt-3"
       >
         <dt class="text-base font-medium text-ink-gray-9">
@@ -51,6 +40,5 @@ defineProps<{
   sinvDoc?: SalesInvoice;
   totalQuantity?: number;
   itemDiscounts?: Money;
-  additionalDiscounts?: Money;
 }>();
 </script>

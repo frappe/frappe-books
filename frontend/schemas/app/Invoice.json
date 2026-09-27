@@ -202,6 +202,22 @@
       "abstract": true,
       "fieldname": "returnAgainst",
       "section": "References"
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": [
+        { "value": "Saved", "label": "Saved" },
+        { "value": "Unpaid", "label": "Unpaid" },
+        { "value": "PartlyPaid", "label": "Partly Paid" },
+        { "value": "Paid", "label": "Paid" },
+        { "value": "Return", "label": "Return" },
+        { "value": "ReturnIssued", "label": "Return Issued" },
+        { "value": "Cancelled", "label": "Cancelled" }
+      ],
+      "readOnly": true,
+      "hidden": true
     }
   ],
   "keywordFields": ["name", "party"]

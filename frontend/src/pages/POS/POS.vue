@@ -9,130 +9,140 @@
         </Button>
       </slot>
     </PageHeader>
-    <ClassicPOS
-      v-if="
-        posProfile?.posUI === 'Classic' ||
-        (!posProfile?.posUI && fyo.singles.POSSettings?.posUI === 'Classic')
-      "
-      :table-view="tableView"
-      :profile="posProfile as POSProfile"
-      :total-quantity="totalQuantity"
-      :item-quantity-map="itemQtyMap"
+    <component :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'">
+      <template #items>
+        <POSItemPicker
+          :items="filteredItems as POSItem[]"
+          :search-items="items as POSItem[]"
+          :search-term="itemSearchTerm"
+          :item-group="selectedItemGroup"
+          :table-view="tableView"
+          :split="layout === 'Modern'"
+          @search="handleItemSearch"
+          @set-item-group="setItemGroup"
+          @add-item="addItem"
+        />
+        <div class="flex shrink-0 flex-wrap gap-2 pt-3">
+          <POSQuickActions
+            :table-view="tableView"
+            :sinv-doc="sinvDoc as SalesInvoice"
+            :loyalty-points="loyaltyPoints"
+            :loyalty-program="loyaltyProgram"
+            :applied-coupons-count="appliedCouponsCount"
+            @toggle-view="toggleView"
+            @emit-route-to-sinv-list="routeToSinvList"
+            @toggle-modal="toggleModal"
+          />
+        </div>
+      </template>
+
+      <template #cart>
+        <div class="flex-none">
+          <MultiLabelLink
+            v-if="sinvDoc.fieldMap"
+            class="w-full"
+            secondary-link="phone"
+            :border="true"
+            :value="sinvDoc.party"
+            :df="sinvDoc.fieldMap.party"
+            :show-clear-button="true"
+            @change="setCustomer"
+          />
+        </div>
+        <SelectedItemTable
+          :layout="layout"
+          :expanded-row="expandedRow"
+          @expand="(name?: string) => (expandedRow = name)"
+          @select="selectRow"
+        />
+      </template>
+
+      <template #summary>
+        <POSOrderSummary
+          :sinv-doc="sinvDoc as SalesInvoice"
+          :total-quantity="totalQuantity"
+          :item-discounts="itemDiscounts as Money"
+        />
+        <POSInvoiceActions
+          :profile="posProfile as POSProfile"
+          :enable-returns="enableReturns"
+          :disable-pay="disablePayButton"
+          :is-return="!!sinvDoc.isReturn"
+          @save="saveInvoiceAction"
+          @clear="clearValues"
+          @held="toggleModal('SavedInvoice', true)"
+          @return="toggleModal('ReturnSalesInvoice', true)"
+          @pay="handlePaymentAction"
+        />
+      </template>
+    </component>
+
+    <OpenPOSShiftModal
+      v-if="!isPosShiftOpen"
+      :open-modal="!isPosShiftOpen"
+      @toggle-modal="toggleModal('ShiftOpen')"
+    />
+    <ClosePOSShiftModal
+      :open-modal="openShiftCloseModal"
+      @toggle-modal="toggleModal('ShiftClose', false)"
+    />
+    <LoyaltyProgramModal
+      :open-modal="openLoyaltyProgramModal"
       :loyalty-points="loyaltyPoints"
       :loyalty-program="loyaltyProgram"
-      :open-alert-modal="openAlertModal"
-      :default-customer="defaultCustomer"
-      :item-search-term="itemSearchTerm"
-      :selected-item-group="selectedItemGroup"
-      :is-pos-shift-open="isPosShiftOpen"
-      :items="filteredItems as [] as POSItem[]"
-      :search-items="items as [] as POSItem[]"
-      :item-visibility="itemVisibility"
-      :sinv-doc="sinvDoc as SalesInvoice"
-      :disable-pay-button="disablePayButton"
-      :open-payment-modal="openPaymentModal"
-      :item-discounts="itemDiscounts as Money"
-      :coupons="coupons as AppliedCouponCodes"
-      :open-price-list-modal="openPriceListModal"
-      :open-item-enquiry-modal="openItemEnquiryModal"
-      :applied-coupons-count="appliedCouponsCount"
-      :open-shift-close-modal="openShiftCloseModal"
-      :open-coupon-code-modal="openCouponCodeModal"
-      :open-saved-invoice-modal="openSavedInvoiceModal"
-      :open-loyalty-program-modal="openLoyaltyProgramModal"
-      :open-applied-coupons-modal="openAppliedCouponsModal"
-      :open-return-sales-invoice-modal="openReturnSalesInvoiceModal"
-      :open-batch-selection-modal="openBatchSelectionModal"
-      :selected-item-for-batch="selectedItemForBatch"
-      :expanded-batch-id="expandedBatchId"
-      @set-expanded-batch-id="setExpandedBatchId"
-      @add-item="addItem"
-      @toggle-view="toggleView"
-      @set-sinv-doc="setSinvDoc"
-      @clear-values="clearValues"
-      @set-customer="setCustomer"
-      @toggle-modal="toggleModal"
-      @set-item-group="setItemGroup"
-      @handle-item-search="handleItemSearch"
-      @set-paid-amount="setPaidAmount"
-      @set-payment-method="setPaymentMethod"
-      @set-coupons-count="setCouponsCount"
-      @route-to-sinv-list="routeToSinvList"
+      @toggle-modal="toggleModal('LoyaltyProgram', false)"
       @set-loyalty-points="setLoyaltyPoints"
-      @set-transfer-ref-no="setTransferRefNo"
-      @apply-pricing-rule="applyPricingRule"
-      @create-transaction="createTransaction"
-      @save-invoice-action="saveInvoiceAction"
-      @set-transfer-amount="setTransferAmount"
-      @selected-invoice-name="selectedInvoiceName"
-      @selected-return-invoice="selectedReturnInvoice"
-      @set-transfer-clearance-date="setTransferClearanceDate"
-      @save-and-continue="handleSaveAndContinue"
-      @handle-payment-action="handlePaymentAction"
-      @selected-row="setQuickQtySelectedRow"
+    />
+    <BatchSelectionModal
+      :open-modal="openBatchSelectionModal"
+      :item-code="selectedItemForBatch"
+      @toggle-modal="toggleModal('BatchSelection', false)"
       @batch-selected="handleBatchSelected"
     />
-    <ModernPOS
-      v-else
-      :table-view="tableView"
-      :profile="posProfile as POSProfile"
-      :total-quantity="totalQuantity"
-      :item-quantity-map="itemQtyMap"
-      :loyalty-points="loyaltyPoints"
-      :loyalty-program="loyaltyProgram"
-      :open-alert-modal="openAlertModal"
-      :default-customer="defaultCustomer"
-      :item-search-term="itemSearchTerm"
-      :selected-item-group="selectedItemGroup"
-      :is-pos-shift-open="isPosShiftOpen"
-      :items="filteredItems as [] as POSItem[]"
-      :search-items="items as [] as POSItem[]"
-      :item-visibility="itemVisibility"
-      :sinv-doc="sinvDoc as SalesInvoice"
-      :disable-pay-button="disablePayButton"
-      :open-payment-modal="openPaymentModal"
-      :open-keyboard-modal="openKeyboardModal"
-      :item-discounts="itemDiscounts as Money"
-      :coupons="coupons as AppliedCouponCodes"
-      :open-price-list-modal="openPriceListModal"
-      :open-item-enquiry-modal="openItemEnquiryModal"
-      :applied-coupons-count="appliedCouponsCount"
-      :open-shift-close-modal="openShiftCloseModal"
-      :open-coupon-code-modal="openCouponCodeModal"
-      :open-saved-invoice-modal="openSavedInvoiceModal"
-      :open-loyalty-program-modal="openLoyaltyProgramModal"
-      :open-applied-coupons-modal="openAppliedCouponsModal"
-      :open-return-sales-invoice-modal="openReturnSalesInvoiceModal"
-      :open-batch-selection-modal="openBatchSelectionModal"
-      :apply-pricing-rule-action="applyPricingRule"
-      :selected-item-for-batch="selectedItemForBatch"
-      :expanded-batch-id="expandedBatchId"
-      @set-expanded-batch-id="setExpandedBatchId"
-      @add-item="addItem"
-      @toggle-view="toggleView"
-      @set-sinv-doc="setSinvDoc"
-      @clear-values="clearValues"
-      @set-customer="setCustomer"
-      @toggle-modal="toggleModal"
-      @set-item-group="setItemGroup"
-      @handle-item-search="handleItemSearch"
+    <SavedInvoiceModal
+      :open-modal="openSavedInvoiceModal"
+      @toggle-modal="toggleModal('SavedInvoice', false)"
+      @selected-invoice-name="selectedInvoiceName"
+    />
+    <CouponCodeModal
+      :open-modal="openCouponCodeModal"
+      @toggle-modal="toggleModal('CouponCode', false)"
+      @set-coupons-count="setCouponsCount"
+    />
+    <PriceListModal
+      :open-modal="openPriceListModal"
+      @toggle-modal="toggleModal('PriceList', false)"
+    />
+    <ItemEnquiryModal
+      :open-modal="openItemEnquiryModal"
+      :customer="sinvDoc.party"
+      @toggle-modal="toggleModal('ItemEnquiry', false)"
+    />
+    <PaymentModal
+      :open-modal="openPaymentModal"
+      @toggle-modal="toggleModal('Payment', false)"
       @set-paid-amount="setPaidAmount"
       @set-payment-method="setPaymentMethod"
-      @set-coupons-count="setCouponsCount"
-      @route-to-sinv-list="routeToSinvList"
-      @apply-pricing-rule="applyPricingRule"
-      @set-loyalty-points="setLoyaltyPoints"
       @set-transfer-ref-no="setTransferRefNo"
-      @create-transaction="createTransaction"
-      @save-invoice-action="saveInvoiceAction"
-      @set-transfer-amount="setTransferAmount"
-      @selected-invoice-name="selectedInvoiceName"
-      @selected-return-invoice="selectedReturnInvoice"
-      @save-and-continue="handleSaveAndContinue"
       @set-transfer-clearance-date="setTransferClearanceDate"
-      @selected-row="setQuickQtySelectedRow"
-      @handle-payment-action="handlePaymentAction"
-      @batch-selected="handleBatchSelected"
+      @create-transaction="createTransaction"
+    />
+    <ReturnSalesInvoiceModal
+      :open-modal="openReturnSalesInvoiceModal"
+      @selected-return-invoice="selectedReturnInvoice"
+      @toggle-modal="toggleModal('ReturnSalesInvoice', false)"
+    />
+    <AlertModal
+      :open-modal="openAlertModal"
+      @toggle-modal="toggleModal('Alert', false)"
+      @save-and-continue="handleSaveAndContinue"
+    />
+    <KeyboardModal
+      v-if="selectedRow && keyboardField"
+      :modal-status="openKeyboardModal"
+      :selected-item-field="keyboardField"
+      :selected-item-row="selectedRow as SalesInvoiceItem"
+      @toggle-modal="toggleModal('Keyboard', false)"
     />
   </div>
 </template>
@@ -143,51 +153,69 @@ import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import ModernPOS from './ModernPOS.vue';
 import ClassicPOS from './ClassicPOS.vue';
+import POSQuickActions from './POSQuickActions.vue';
+import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
+import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
+import POSOrderSummary from 'src/components/POS/POSOrderSummary.vue';
+import POSInvoiceActions from 'src/components/POS/POSInvoiceActions.vue';
+import SelectedItemTable from 'src/components/POS/SelectedItemTable.vue';
+import AlertModal from './AlertModal.vue';
+import PaymentModal from './PaymentModal.vue';
+import KeyboardModal from './KeyboardModal.vue';
+import PriceListModal from './PriceListModal.vue';
+import CouponCodeModal from './CouponCodeModal.vue';
+import ItemEnquiryModal from './ItemEnquiryModal.vue';
+import SavedInvoiceModal from './SavedInvoiceModal.vue';
+import OpenPOSShiftModal from './OpenPOSShiftModal.vue';
+import ClosePOSShiftModal from './ClosePOSShiftModal.vue';
+import BatchSelectionModal from './BatchSelectionModal.vue';
+import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
+import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { ModelNameEnum } from 'models/types';
 import Button from 'src/components/Button.vue';
 import { showToast } from 'src/utils/interactive';
 import { Item } from 'models/baseModels/Item/Item';
-import { Shipment } from 'models/inventory/Shipment';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import PageHeader from 'src/components/PageHeader.vue';
 import { computed, defineComponent, inject, nextTick } from 'vue';
 import { Payment } from 'models/baseModels/Payment/Payment';
 import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
-import { getPaymentMethodRequirements } from 'models/baseModels/PaymentMethod/requirements';
+import {
+  getPaymentMethodRequirements,
+  PaymentMethodRequirements,
+} from 'models/baseModels/PaymentMethod/requirements';
 import { ModalName, modalNames } from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
-import { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import {
-  validateSinv,
-  getItemDiscounts,
-  validateShipment,
+  addBatchItem,
+  addPOSItem,
+  fillRowSerialNumbers,
+  toPOSItem,
+  validatePOSCheckout,
   getTotalQuantity,
   getTotalTaxedAmount,
   validateIsPosSettingsSet,
+  setPOSRowQuantity,
+  isTypingInField,
+  getQuickQtyBuffer,
 } from 'src/utils/pos';
 import {
-  validateQty,
   getItemQtyMap,
-  getPricingRule,
-  removeFreeItems,
-  getItemRateFromPriceList,
   getItemVisibility,
-  isLoyaltyProgramExpiredAndMaxed,
+  getMappedDoc,
 } from 'models/helpers';
-import { ItemVisibility } from 'src/components/POS/types';
 import {
   POSItem,
+  POSLayout,
   ItemQtyMap,
   ItemSerialNumbers,
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
-import { filterPOSItems, findExactPOSItem } from 'src/utils/posItemSearch';
-import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
+import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
 
 const COMPONENT_NAME = 'POS';
 
@@ -198,24 +226,39 @@ export default defineComponent({
     ModernPOS,
     PageHeader,
     ClassicPOS,
+    POSQuickActions,
+    MultiLabelLink,
+    POSItemPicker,
+    POSOrderSummary,
+    POSInvoiceActions,
+    SelectedItemTable,
+    AlertModal,
+    PaymentModal,
+    KeyboardModal,
+    PriceListModal,
+    CouponCodeModal,
+    ItemEnquiryModal,
+    SavedInvoiceModal,
+    OpenPOSShiftModal,
+    ClosePOSShiftModal,
+    BatchSelectionModal,
+    LoyaltyProgramModal,
+    ReturnSalesInvoiceModal,
   },
   provide() {
     return {
       doc: computed(() => this.sinvDoc),
       sinvDoc: computed(() => this.sinvDoc),
       coupons: computed(() => this.coupons),
-      itemQtyMap: computed(() => this.itemQtyMap),
       paidAmount: computed(() => this.paidAmount),
       paymentMethod: computed(() => this.paymentMethod),
       transferRefNo: computed(() => this.transferRefNo),
       itemDiscounts: computed(() => this.itemDiscounts),
-      transferAmount: computed(() => this.transferAmount),
       appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
       totalTaxedAmount: computed(() => this.totalTaxedAmount),
       itemSerialNumbers: computed(() => this.itemSerialNumbers),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
       transferClearanceDate: computed(() => this.transferClearanceDate),
-      posSettings: computed(() => fyo.singles.POSSettings),
     };
   },
   setup() {
@@ -238,23 +281,19 @@ export default defineComponent({
       openShiftCloseModal: false,
       openSavedInvoiceModal: false,
       openLoyaltyProgramModal: false,
-      openAppliedCouponsModal: false,
       openReturnSalesInvoiceModal: false,
       openBatchSelectionModal: false,
+      isPosShiftOpen: false,
 
       totalQuantity: 0,
       paidAmount: fyo.pesa(0),
       itemDiscounts: fyo.pesa(0),
-      transferAmount: fyo.pesa(0),
       totalTaxedAmount: fyo.pesa(0),
-      additionalDiscounts: fyo.pesa(0),
 
       loyaltyPoints: 0,
-      appliedLoyaltyPoints: 0,
       loyaltyProgram: '' as string,
 
       appliedCouponsCount: 0,
-      appliedCoupons: [] as AppliedCouponCodes[],
 
       itemSearchTerm: '',
       selectedItemGroup: '',
@@ -263,7 +302,6 @@ export default defineComponent({
       defaultCustomer: undefined as string | undefined,
       transferClearanceDate: undefined as Date | undefined,
 
-      paymentDoc: {} as Payment,
       sinvDoc: {} as SalesInvoice,
       posProfile: null as POSProfile | null,
       itemQtyMap: {} as ItemQtyMap,
@@ -271,24 +309,26 @@ export default defineComponent({
       itemSerialNumbers: {} as ItemSerialNumbers,
       quickQtyActive: false,
       quickQtyBuffer: '' as string,
-      quickQtyRow: null as SalesInvoiceItem | null,
-      quickQtyKeyDownHandler: null as ((e: KeyboardEvent) => void) | null,
-      quickQtyKeyUpHandler: null as ((e: KeyboardEvent) => void) | null,
+      selectedRow: null as SalesInvoiceItem | null,
+      keyboardField: '',
       selectedItemForBatch: '' as string,
       pendingBatchItem: null as { item: POSItem; quantity: number } | null,
-      expandedBatchId: undefined as string | null | undefined,
-      itemVisibilityValue: 'Inventory Items' as ItemVisibility,
+      expandedRow: undefined as string | undefined,
     };
   },
   computed: {
+    layout(): POSLayout {
+      const posUI =
+        this.posProfile?.posUI || fyo.singles.POSSettings?.posUI;
+      return posUI === 'Classic' ? 'Classic' : 'Modern';
+    },
     defaultPOSCashAccount: () =>
       fyo.singles.POSSettings?.cashAccount ?? undefined,
     isDiscountingEnabled(): boolean {
       return !!fyo.singles.AccountingSettings?.enableDiscounting;
     },
-    isPosShiftOpen: () => !!fyo.singles.POSSettings?.isShiftOpen,
-    itemVisibility() {
-      return this.itemVisibilityValue;
+    enableReturns(): boolean {
+      return !!fyo.singles.AccountingSettings?.enableInvoiceReturns;
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
@@ -315,17 +355,18 @@ export default defineComponent({
   },
 
   async mounted() {
+    await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
     this.setCouponCodeDoc();
     this.setSinvDoc();
     this.setDefaultCustomer();
     await this.setItemQtyMap();
-    this.itemVisibilityValue = await getItemVisibility(this.fyo);
     await this.setItems();
   },
   async activated() {
     toggleSidebar(false);
     validateIsPosSettingsSet(fyo);
+    await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
     this.setCouponCodeDoc();
     this.setSinvDoc();
@@ -347,73 +388,26 @@ export default defineComponent({
     this.closeAllModals();
   },
   methods: {
-    setQuickQtySelectedRow(row: SalesInvoiceItem) {
-      this.quickQtyRow = row;
-    },
-    setExpandedBatchId(rowName: string | null) {
-      this.expandedBatchId = rowName;
+    /** Targets `row` for quick quantity; a `field` opens it in the keypad. */
+    selectRow(row: SalesInvoiceItem, field = '') {
+      this.selectedRow = row;
+      this.keyboardField = field;
+      this.openKeyboardModal = !!field;
     },
     addQuickQtyListeners() {
-      this.quickQtyKeyDownHandler = (e: KeyboardEvent) =>
-        this.onQuickQtyKeyDown(e);
-      this.quickQtyKeyUpHandler = (e: KeyboardEvent) => this.onQuickQtyKeyUp(e);
-      window.addEventListener(
-        'keydown',
-        this.quickQtyKeyDownHandler as EventListener
-      );
-      window.addEventListener(
-        'keyup',
-        this.quickQtyKeyUpHandler as EventListener
-      );
+      window.addEventListener('keydown', this.onQuickQtyKeyDown);
+      window.addEventListener('keyup', this.onQuickQtyKeyUp);
     },
     removeQuickQtyListeners() {
-      if (this.quickQtyKeyDownHandler) {
-        window.removeEventListener(
-          'keydown',
-          this.quickQtyKeyDownHandler as EventListener
-        );
-        this.quickQtyKeyDownHandler = null;
-      }
-      if (this.quickQtyKeyUpHandler) {
-        window.removeEventListener(
-          'keyup',
-          this.quickQtyKeyUpHandler as EventListener
-        );
-        this.quickQtyKeyUpHandler = null;
-      }
+      window.removeEventListener('keydown', this.onQuickQtyKeyDown);
+      window.removeEventListener('keyup', this.onQuickQtyKeyUp);
     },
     hasAnyOpenModal(): boolean {
-      return (
-        this.openAlertModal ||
-        this.openPaymentModal ||
-        this.openBatchSelectionModal ||
-        this.openKeyboardModal ||
-        this.openPriceListModal ||
-        this.openItemEnquiryModal ||
-        this.openCouponCodeModal ||
-        this.openShiftCloseModal ||
-        this.openSavedInvoiceModal ||
-        this.openLoyaltyProgramModal ||
-        this.openAppliedCouponsModal ||
-        this.openReturnSalesInvoiceModal
-      );
+      return modalNames.some((modal) => this[`open${modal}Modal`]);
     },
+    /** Holding Q and typing digits sets the selected row's quantity. */
     onQuickQtyKeyDown(e: KeyboardEvent) {
-      // Ignore if focus is in an input/contentEditable without modifiers
-      const notMods = !(e.altKey || e.metaKey || e.ctrlKey);
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        notMods &&
-        ((target instanceof HTMLInputElement && target.type !== 'button') ||
-          target instanceof HTMLTextAreaElement ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      // Only active on POS page with no modal open
-      if (this.hasAnyOpenModal()) {
+      if (isTypingInField(e) || this.hasAnyOpenModal()) {
         return;
       }
 
@@ -423,27 +417,12 @@ export default defineComponent({
         return;
       }
 
-      if (!this.quickQtyActive) {
-        return;
-      }
-
-      // While holding Q, collect digits; support both main digits and numpad
-      if (/^Digit[0-9]$/.test(e.code)) {
-        this.quickQtyBuffer += e.code.replace('Digit', '');
+      const buffer = this.quickQtyActive
+        ? getQuickQtyBuffer(this.quickQtyBuffer, e.code)
+        : undefined;
+      if (buffer !== undefined) {
+        this.quickQtyBuffer = buffer;
         e.preventDefault();
-        return;
-      }
-
-      if (/^Numpad[0-9]$/.test(e.code)) {
-        this.quickQtyBuffer += e.code.replace('Numpad', '');
-        e.preventDefault();
-        return;
-      }
-
-      if (e.code === 'Backspace') {
-        this.quickQtyBuffer = this.quickQtyBuffer.slice(0, -1);
-        e.preventDefault();
-        return;
       }
     },
     async onQuickQtyKeyUp(e: KeyboardEvent) {
@@ -452,83 +431,35 @@ export default defineComponent({
       }
 
       this.quickQtyActive = false;
-
       const buffer = this.quickQtyBuffer;
       this.quickQtyBuffer = '';
-
-      if (!buffer || !buffer.length) {
+      const row = this.getQuickQtyRow();
+      if (!buffer || !row) {
         return;
       }
 
-      const qty = Number(buffer);
-      if (!Number.isFinite(qty)) {
-        return;
-      }
-
-      // Determine target row: prefer explicitly selected row; else fallback to last non-free item
-      let row = this.quickQtyRow as SalesInvoiceItem | null;
-      if (!row || !(this.sinvDoc.items || []).includes(row)) {
-        const items = (this.sinvDoc.items || []).filter((r) => !r.isFreeItem);
-        row = items.length
-          ? (items[items.length - 1] as SalesInvoiceItem)
-          : null;
-      }
-
-      if (!row) {
-        return;
-      }
-
-      // Validate and recalculate similar to keyboard modal quantity change.
-      const isUOMConversionEnabled =
-        !!this.fyo.singles.InventorySettings?.enableUomConversions;
-      const quantityField = isUOMConversionEnabled
+      const field = this.fyo.singles.InventorySettings?.enableUomConversions
         ? 'transferQuantity'
         : 'quantity';
-      const previousQuantity = row.quantity ?? 1;
-      const previousTransferQuantity = row.transferQuantity ?? previousQuantity;
-      const previousFieldQuantity = isUOMConversionEnabled
-        ? previousTransferQuantity
-        : previousQuantity;
-
-      if (!row.isReturn && qty <= 0) {
-        showToast({
-          type: 'error',
-          message: t`Quantity must be greater than zero.`,
-          duration: 'short',
-        });
-        return;
-      }
-
       try {
-        await row.set(quantityField, qty);
-
-        const existingItems = (this.sinvDoc.items || []).filter(
-          (invoiceItem) =>
-            (invoiceItem as InvoiceItem).item === row.item &&
-            !(invoiceItem as InvoiceItem).isFreeItem
-        ) as InvoiceItem[];
-
-        await validateQty(
-          this.sinvDoc as SalesInvoice,
-          row,
-          existingItems as unknown as InvoiceItem[]
-        );
+        await setPOSRowQuantity(row, field, Number(buffer));
       } catch (error) {
-        row.quantity = previousQuantity;
-        row.transferQuantity = previousTransferQuantity;
-        await row.set(quantityField, previousFieldQuantity);
         showToast({
           type: 'error',
           message: t`${error as string}`,
           duration: 'short',
         });
-        return;
+      }
+    },
+    /** The selected row, else the last row that is not a free item. */
+    getQuickQtyRow(): SalesInvoiceItem | undefined {
+      const items = (this.sinvDoc as SalesInvoice).items ?? [];
+      const selected = this.selectedRow as SalesInvoiceItem | null;
+      if (selected && items.includes(selected)) {
+        return selected;
       }
 
-      if (!row.isFreeItem) {
-        await this.applyPricingRule();
-        await this.sinvDoc.runFormulas();
-      }
+      return items.filter((row) => !row.isFreeItem).at(-1);
     },
     async setCustomer(value: string) {
       if (!value) {
@@ -543,21 +474,7 @@ export default defineComponent({
         filters: { name: value },
       });
 
-      const loyaltyProgramName = party[0]?.loyaltyProgram as string;
-
-      if (loyaltyProgramName) {
-        const isExpiredAndMaxed = await isLoyaltyProgramExpiredAndMaxed(
-          this.fyo,
-          loyaltyProgramName
-        );
-        if (isExpiredAndMaxed) {
-          this.loyaltyProgram = loyaltyProgramName;
-          this.loyaltyPoints = 0;
-          return;
-        }
-      }
-
-      this.loyaltyProgram = loyaltyProgramName;
+      this.loyaltyProgram = party[0]?.loyaltyProgram as string;
       this.loyaltyPoints = party[0]?.loyaltyPoints as number;
     },
 
@@ -574,81 +491,19 @@ export default defineComponent({
       )) as POSProfile;
     },
 
-    async handleItemSearch(searchTerm: string | null, addItem?: boolean) {
-      searchTerm ??= '';
-      this.itemSearchTerm = searchTerm;
-      if (!addItem) return;
-
-      let quantity = 1;
-      const posSettings = fyo.singles.POSSettings;
-      const isWeightEnabledBarcode = posSettings?.weightEnabledBarcode;
-
-      const checkDigits = posSettings?.checkDigits || '';
-      const itemCodeDigits = posSettings?.itemCodeDigits || 0;
-      const weightDigits = posSettings?.itemWeightDigits || 0;
-
-      const expectedWeightBarcodeLength =
-        String(checkDigits).length +
-        Number(itemCodeDigits) +
-        Number(weightDigits);
-
-      let isWeightBarcode = false;
-      let itemCode = searchTerm;
-      let weightPart = '';
-
-      if (
-        isWeightEnabledBarcode &&
-        searchTerm.startsWith(String(checkDigits)) &&
-        searchTerm.length === expectedWeightBarcodeLength
-      ) {
-        const extractedItemCode = searchTerm.slice(
-          checkDigits.toString().length,
-          checkDigits.toString().length + itemCodeDigits
+    async handleItemSearch(searchTerm: string | null, addItem = false) {
+      this.itemSearchTerm = searchTerm ?? '';
+      const scanned =
+        addItem &&
+        findScannedPOSItem(
+          this.items as POSItem[],
+          this.itemSearchTerm,
+          fyo.singles.POSSettings
         );
-        const weightData = searchTerm.slice(
-          checkDigits.toString().length + itemCodeDigits
-        );
-
-        if (!isNaN(Number(weightData))) {
-          isWeightBarcode = true;
-          itemCode = extractedItemCode;
-          weightPart = weightData;
-        }
-      }
-
-      const allItems = this.items;
-
-      let matchedItem = null;
-
-      if (isWeightBarcode) {
-        matchedItem = allItems.find(
-          (item) => item.itemCode === itemCode || item.barcode === itemCode
-        );
-      } else if (searchTerm.length === 12) {
-        matchedItem = allItems.find((item) => item.barcode === searchTerm);
-      }
-
-      matchedItem ??= findExactPOSItem(allItems, searchTerm);
-
-      if (!matchedItem) return;
-
-      if (isWeightBarcode && weightPart) {
-        const weightValue = parseInt(weightPart, 10);
-        if (matchedItem.unit?.toLowerCase() === 'kg') {
-          quantity = weightValue / 1000;
-        } else {
-          quantity = weightValue;
-        }
-      }
-
-      if (addItem) {
-        await this.addItem(matchedItem as POSItem, quantity);
+      if (scanned) {
+        await this.addItem(scanned.item, scanned.quantity);
         this.itemSearchTerm = '';
       }
-    },
-
-    getItem(name: string) {
-      return this.items.find((item) => item.name === name);
     },
 
     isModalOpen() {
@@ -750,13 +605,25 @@ export default defineComponent({
       await this.setItems();
     },
     async setItems() {
-      const filters: Record<string, boolean | string> = {};
-      const itemVisibility = await getItemVisibility(this.fyo);
-
+      const filters = await this.getItemFilters();
       const hideUnavailable =
         this.posProfile?.hideUnavailableItems ??
         this.fyo.singles.POSSettings?.hideUnavailableItems;
+      const items = (await fyo.db.getAll(ModelNameEnum.Item, {
+        fields: [],
+        filters,
+      })) as Item[];
 
+      this.items = items
+        .map((item) => toPOSItem(item, this.itemQtyMap))
+        .filter(
+          ({ availableQty }) =>
+            !(hideUnavailable && filters.trackItem && availableQty <= 0)
+        );
+    },
+    async getItemFilters(): Promise<Record<string, boolean | string>> {
+      const filters: Record<string, boolean | string> = {};
+      const itemVisibility = await getItemVisibility(this.fyo);
       if (itemVisibility === 'Inventory Items') {
         filters.trackItem = true;
       } else if (itemVisibility === 'Non-Inventory Items') {
@@ -767,38 +634,7 @@ export default defineComponent({
         filters.itemGroup = this.selectedItemGroup;
       }
 
-      const items = (await fyo.db.getAll(ModelNameEnum.Item, {
-        fields: [],
-        filters: filters,
-      })) as Item[];
-
-      this.items = [] as POSItem[];
-      for (const item of items) {
-        let availableQty = 0;
-
-        if (!!this.itemQtyMap[item.name as string]) {
-          availableQty = this.itemQtyMap[item.name as string].availableQty;
-        }
-
-        if (!item.name) {
-          return;
-        }
-        if (hideUnavailable && filters.trackItem && availableQty <= 0) {
-          continue;
-        }
-
-        this.items.push({
-          availableQty,
-          name: item.name,
-          itemCode: item.itemCode as string,
-          barcode: item.barcode as string,
-          image: item?.image as string,
-          rate: item.rate as Money,
-          unit: item.unit as string,
-          hasBatch: !!item.hasBatch,
-          hasSerialNumber: !!item.hasSerialNumber,
-        });
-      }
+      return filters;
     },
     async selectedReturnInvoice(invoiceName: string) {
       const salesInvoiceDoc = (await this.fyo.doc.getDoc(
@@ -806,13 +642,11 @@ export default defineComponent({
         invoiceName
       )) as SalesInvoice;
 
-      let returnDoc = (await salesInvoiceDoc.getReturnDoc()) as SalesInvoice;
-
-      if (!returnDoc || !returnDoc.name) {
-        return;
-      }
-
-      this.sinvDoc = returnDoc;
+      this.sinvDoc = (await getMappedDoc(
+        salesInvoiceDoc,
+        ModelNameEnum.SalesInvoice,
+        'make_return'
+      )) as SalesInvoice;
     },
     toggleView() {
       this.tableView = !this.tableView;
@@ -831,9 +665,7 @@ export default defineComponent({
       this.sinvDoc.party = this.defaultCustomer;
     },
     setItemDiscounts() {
-      this.itemDiscounts = getItemDiscounts(
-        this.sinvDoc.items as SalesInvoiceItem[]
-      );
+      this.itemDiscounts = (this.sinvDoc as SalesInvoice).itemDiscount;
     },
     async setItemQtyMap() {
       this.itemQtyMap = await getItemQtyMap(this.sinvDoc as SalesInvoice);
@@ -850,18 +682,9 @@ export default defineComponent({
         ModelNameEnum.AppliedCouponCodes
       ) as AppliedCouponCodes;
     },
-    setAppliedCoupons() {
-      this.appliedCoupons = this.sinvDoc.coupons as AppliedCouponCodes[];
-    },
     setTotalQuantity() {
       this.totalQuantity = getTotalQuantity(
         this.sinvDoc.items as SalesInvoiceItem[]
-      );
-    },
-    ignorePricingRules(): boolean {
-      return !!(
-        this.posProfile?.ignorePricingRule ??
-        this.fyo.singles.POSSettings?.ignorePricingRule
       );
     },
     setTotalTaxedAmount() {
@@ -871,9 +694,8 @@ export default defineComponent({
       this.appliedCouponsCount = value;
     },
     async setLoyaltyPoints(value: number) {
-      this.appliedLoyaltyPoints = value;
       await this.sinvDoc.set('redeemLoyaltyPoints', value > 0);
-      await this.sinvDoc.runFormulas();
+      await this.previewInvoice();
     },
     async selectedInvoiceName(doc: SalesInvoice) {
       const salesInvoiceDoc = (await this.fyo.doc.getDoc(
@@ -887,9 +709,6 @@ export default defineComponent({
       if (doc.submitted) {
         this.toggleModal('Payment');
       }
-    },
-    setTransferAmount(amount: Money = fyo.pesa(0)) {
-      this.transferAmount = amount;
     },
     setTransferClearanceDate(date: Date) {
       this.transferClearanceDate = date;
@@ -910,278 +729,68 @@ export default defineComponent({
         );
       }
     },
-    async assignActiveSerialNumbers(
-      itemName: string,
-      quantity: number,
-      row: Pick<InvoiceItem, 'set'>
-    ) {
-      const serialNumbers = await getExistingActiveSerialNumbersForItem(
-        this.fyo,
-        itemName,
-        quantity
-      );
-
-      if (!serialNumbers) {
-        return;
-      }
-
-      this.itemSerialNumbers[itemName] = serialNumbers;
-      await row.set('serialNumber', serialNumbers);
-    },
-    async addItem(item: POSItem | undefined, quantity?: number) {
+    async addItem(item: POSItem | undefined, quantity = 1) {
       try {
         await this.sinvDoc.runFormulas();
         this.validateInvoice();
-
         if (!item) {
           return;
         }
 
-        const itemName = item.name;
-        const storedHasBatch = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          itemName,
-          'hasBatch'
-        );
-        const hasBatch = !!item.hasBatch || !!storedHasBatch;
-
-        if (hasBatch) {
-          this.selectedItemForBatch = itemName;
-          this.pendingBatchItem = { item, quantity: quantity ?? 1 };
-
-          this.toggleModal('BatchSelection', true);
+        if (await this.isBatchItem(item)) {
+          this.selectBatch(item, quantity);
           return;
         }
 
-        const isInventoryItem = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          itemName,
-          'trackItem'
-        );
-
-        if (isInventoryItem) {
-          const availableQty = this.itemQtyMap[itemName]?.availableQty ?? 0;
-          if (availableQty <= 0) {
-            throw new ValidationError(
-              t`Item ${itemName} is out of stock (quantity is zero)`
-            );
-          }
-        }
-
-        const existingItems =
-          this.sinvDoc.items?.filter(
-            (invoiceItem) =>
-              invoiceItem.item === itemName && !invoiceItem.isFreeItem
-          ) ?? [];
-
-        await validateQty(
+        const row = await addPOSItem(
           this.sinvDoc as SalesInvoice,
           item,
-          existingItems as InvoiceItem[]
+          quantity,
+          this.itemQtyMap
         );
-
-        const itemsHsncode = (await this.fyo.getValue(
-          'Item',
-          itemName,
-          'hsnCode'
-        )) as number;
-
-        if (hasBatch) {
-          const addQty = quantity ?? 1;
-
-          if (existingItems.length > 0) {
-            for (let existingItem of existingItems) {
-              const availableQty = await this.fyo.db.getStockQuantity(
-                existingItem.item as string,
-                undefined,
-                undefined,
-                undefined,
-                existingItem.batch
-              );
-              if (
-                existingItem.batch != null &&
-                availableQty != null &&
-                availableQty > (existingItem.quantity as number)
-              ) {
-                const currentQty = existingItem.quantity ?? 0;
-                await existingItem.set('quantity', currentQty + addQty);
-
-                await this.assignActiveSerialNumbers(
-                  itemName,
-                  currentQty + addQty,
-                  existingItem
-                );
-
-                await this.applyPricingRule();
-                await this.sinvDoc.runFormulas();
-                return;
-              }
-            }
-          }
-
-          await this.sinvDoc.append('items', {
-            rate: item.rate,
-            item: itemName,
-            quantity: addQty,
-            transferQuantity: addQty,
-            transferUnit: item.unit,
-            hsnCode: itemsHsncode,
-          });
-
-          const newItemRows = this.sinvDoc.items?.filter(
-            (row) => row.item === itemName && !row.isFreeItem
-          );
-          if (newItemRows?.length) {
-            await this.assignActiveSerialNumbers(
-              itemName,
-              addQty,
-              newItemRows[newItemRows.length - 1]
-            );
-          }
-
-          await this.applyPricingRule();
-          await this.sinvDoc.runFormulas();
-          return;
-        }
-
-        if (existingItems.length) {
-          if (!this.sinvDoc.priceList) {
-            existingItems[0].rate = item.rate;
-          }
-
-          const currentQty = existingItems[0].quantity ?? 0;
-          const addQty = quantity ?? 1;
-          if (isInventoryItem) {
-            const availableQty = this.itemQtyMap[itemName]?.availableQty ?? 0;
-            if (currentQty + addQty > availableQty) {
-              throw new ValidationError(
-                `Cannot add more than the available quantity for ${itemName}`
-              );
-            }
-          }
-
-          await existingItems[0].set('quantity', currentQty + addQty);
-          await this.assignActiveSerialNumbers(
-            itemName,
-            currentQty + addQty,
-            existingItems[0]
-          );
-
-          await this.applyPricingRule();
-          await this.sinvDoc.runFormulas();
-          if (isInventoryItem) {
-            await validateQty(
-              this.sinvDoc as SalesInvoice,
-              item,
-              existingItems as InvoiceItem[]
-            );
-          }
-          return;
-        }
-
-        await this.sinvDoc.append('items', {
-          rate: item.rate,
-          item: itemName,
-          quantity: quantity ?? 1,
-          transferQuantity: quantity ?? 1,
-          transferUnit: item.unit,
-          hsnCode: itemsHsncode,
-        });
-
-        if (this.sinvDoc.priceList) {
-          const itemData = this.sinvDoc.items?.filter(
-            (val) => val.item == itemName
-          ) as SalesInvoiceItem[];
-
-          if (itemData.length > 0) {
-            itemData[0].rate = await getItemRateFromPriceList(
-              itemData[0],
-              this.sinvDoc.priceList
-            );
-          }
-        }
-
-        const newItemRows = this.sinvDoc.items?.filter(
-          (row) => row.item === itemName && !row.isFreeItem
-        );
-        if (newItemRows?.length) {
-          await this.assignActiveSerialNumbers(
-            itemName,
-            quantity ?? 1,
-            newItemRows[newItemRows.length - 1]
-          );
-        }
-
-        await this.applyPricingRule();
+        await fillRowSerialNumbers(row, this.itemSerialNumbers);
+        await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       } catch (error) {
-        return showToast({
-          type: 'error',
-          message: t`${error as string}`,
-        });
+        showToast({ type: 'error', message: t`${error as string}` });
       }
+    },
+    async isBatchItem(item: POSItem): Promise<boolean> {
+      return (
+        item.hasBatch ||
+        !!(await this.fyo.getValue(ModelNameEnum.Item, item.name, 'hasBatch'))
+      );
+    },
+    selectBatch(item: POSItem, quantity: number) {
+      this.selectedItemForBatch = item.name;
+      this.pendingBatchItem = { item, quantity };
+      this.toggleModal('BatchSelection', true);
     },
     async handleBatchSelected(batchName: string) {
       if (!this.pendingBatchItem) {
         return;
       }
 
-      const { item, quantity } = this.pendingBatchItem;
+      const { item, quantity } = this.pendingBatchItem as {
+        item: POSItem;
+        quantity: number;
+      };
       this.pendingBatchItem = null;
 
       try {
-        const itemDoc = (await this.fyo.doc.getDoc(
-          ModelNameEnum.Item,
-          item.name
-        )) as Item;
         await this.setItemQtyMap();
         await this.setItems();
-
-        const existingItems =
-          this.sinvDoc.items?.filter(
-            (invoiceItem) =>
-              invoiceItem.item === item.name &&
-              invoiceItem.batch === batchName &&
-              !invoiceItem.isFreeItem
-          ) ?? [];
-
-        if (itemDoc.trackItem) {
-          const requestedQuantity = existingItems.reduce(
-            (total, row) => total + (row.quantity ?? 0),
-            quantity ?? 1
-          );
-          validatePOSStock(
-            item.name,
-            requestedQuantity,
-            this.itemQtyMap,
-            await getPOSInventory(this.fyo),
-            batchName
-          );
-        }
-
-        if (existingItems.length) {
-          const currentQty = existingItems[0].quantity ?? 0;
-          const addQty = quantity ?? 1;
-          await existingItems[0].set('quantity', currentQty + addQty);
-        } else {
-          await this.sinvDoc.append('items', {
-            rate: item.rate as Money,
-            item: item.name,
-            quantity: quantity ?? 1,
-            transferQuantity: quantity ?? 1,
-            transferUnit: item.unit,
-            hsnCode: itemDoc.hsnCode,
-            batch: batchName,
-          });
-        }
-
-        await this.applyPricingRule();
+        await addBatchItem(
+          this.sinvDoc as SalesInvoice,
+          item as POSItem,
+          batchName,
+          quantity ?? 1,
+          this.itemQtyMap
+        );
+        await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       } catch (error) {
-        showToast({
-          type: 'error',
-          message: t`${error as string}`,
-        });
+        showToast({ type: 'error', message: t`${error as string}` });
       }
     },
 
@@ -1197,15 +806,6 @@ export default defineComponent({
           await this.submitSinvDoc();
         }
 
-        const itemVisibility = await getItemVisibility(this.fyo);
-
-        if (
-          this.sinvDoc.stockNotTransferred &&
-          itemVisibility === 'Inventory Items'
-        ) {
-          await this.makeStockTransfer();
-        }
-
         if (isPay) {
           await this.makePayment();
         }
@@ -1215,7 +815,6 @@ export default defineComponent({
 
         if (shouldPrint) {
           await routeTo(
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
             `/print/${this.sinvDoc.schemaName}/${this.sinvDoc.name}`
           );
         }
@@ -1237,12 +836,6 @@ export default defineComponent({
       }
 
       const paidAmount = this.fyo.pesa(this.paidAmount.float).abs();
-      const outstandingAmount = (
-        this.sinvDoc.outstandingAmount?.isZero()
-          ? this.sinvDoc.grandTotal
-          : this.sinvDoc.outstandingAmount
-      )?.abs();
-
       if (paidAmount.isZero()) {
         throw new ValidationError(t`Please enter an amount greater than zero.`);
       }
@@ -1255,11 +848,19 @@ export default defineComponent({
         paymentMethod.type,
         paymentMethod.requiresClearanceDate
       );
-
-      if (requirements.isCash) {
-        return;
+      if (!requirements.isCash) {
+        this.validateTransfer(paidAmount, requirements);
       }
-
+    },
+    validateTransfer(
+      paidAmount: Money,
+      requirements: PaymentMethodRequirements
+    ) {
+      const outstandingAmount = (
+        this.sinvDoc.outstandingAmount?.isZero()
+          ? this.sinvDoc.grandTotal
+          : this.sinvDoc.outstandingAmount
+      )?.abs();
       if (outstandingAmount && paidAmount.gt(outstandingAmount)) {
         throw new ValidationError(
           t`Non-cash payment amount cannot exceed the outstanding amount.`
@@ -1275,101 +876,69 @@ export default defineComponent({
       }
     },
     async makePayment() {
-      this.paymentDoc = this.sinvDoc.getPayment() as Payment;
-      if (!this.paymentDoc) {
-        return null;
+      if (this.sinvDoc.outstandingAmount?.isZero()) {
+        return;
       }
 
-      const paymentMethod = this.paymentMethod;
+      const payment = (await getMappedDoc(
+        this.sinvDoc as SalesInvoice,
+        ModelNameEnum.Payment,
+        'make_payment'
+      )) as Payment;
+      await payment.setMultiple({
+        paymentMethod: this.paymentMethod,
+        amount: this.getPaymentAmount(),
+        referenceType: ModelNameEnum.SalesInvoice,
+      });
+      await this.setPaymentMethodDetails(payment);
+
+      payment.once('afterSubmit', () => {
+        showToast({
+          type: 'success',
+          message: t`Payment ${payment.name as string} is Saved`,
+          duration: 'short',
+        });
+      });
+
+      await payment.sync();
+      await payment.submit();
+    },
+    /** The tendered amount, up to what the invoice still owes. */
+    getPaymentAmount(): Money {
       const tenderedAmount = this.fyo.pesa(this.paidAmount.float).abs();
       const outstandingAmount = (
         this.sinvDoc.outstandingAmount ?? this.sinvDoc.grandTotal
       )?.abs();
-      const paymentAmount =
-        outstandingAmount && tenderedAmount.gt(outstandingAmount)
-          ? outstandingAmount
-          : tenderedAmount;
-
-      await this.paymentDoc.set('paymentMethod', paymentMethod);
-      await this.paymentDoc.set('amount', paymentAmount);
-      await this.paymentDoc.set('referenceType', ModelNameEnum.SalesInvoice);
-
-      const paymentMethodDoc = (await this.paymentDoc.loadAndGetLink(
+      return outstandingAmount && tenderedAmount.gt(outstandingAmount)
+        ? outstandingAmount
+        : tenderedAmount;
+    },
+    /** The reference, clearance date or cash accounts the payment method needs. */
+    async setPaymentMethodDetails(payment: Payment) {
+      const paymentMethod = (await payment.loadAndGetLink(
         'paymentMethod'
       )) as PaymentMethod;
       const requirements = getPaymentMethodRequirements(
-        paymentMethodDoc?.type,
-        paymentMethodDoc?.requiresClearanceDate
+        paymentMethod?.type,
+        paymentMethod?.requiresClearanceDate
       );
-
       if (requirements.requiresReferenceId) {
-        await this.paymentDoc.set('referenceId', this.transferRefNo);
+        await payment.set('referenceId', this.transferRefNo);
       }
 
       if (requirements.requiresClearanceDate) {
-        await this.paymentDoc.set('clearanceDate', this.transferClearanceDate);
+        await payment.set('clearanceDate', this.transferClearanceDate);
       }
 
       if (requirements.isCash) {
-        if (this.paymentDoc.paymentType === 'Pay') {
-          await this.paymentDoc.setMultiple({
-            account: this.defaultPOSCashAccount,
-            paymentAccount: this.sinvDoc.account,
-          });
-        } else {
-          await this.paymentDoc.setMultiple({
-            account: this.sinvDoc.account,
-            paymentAccount: this.defaultPOSCashAccount,
-          });
-        }
-      }
-
-      this.paymentDoc.once('afterSubmit', () => {
-        showToast({
-          type: 'success',
-          message: t`Payment ${this.paymentDoc.name as string} is Saved`,
-          duration: 'short',
+        const cash = this.defaultPOSCashAccount;
+        const receivable = this.sinvDoc.account;
+        const isPay = payment.paymentType === 'Pay';
+        await payment.setMultiple({
+          account: isPay ? cash : receivable,
+          paymentAccount: isPay ? receivable : cash,
         });
-      });
-
-      await this.paymentDoc.sync();
-      await this.paymentDoc.submit();
-    },
-    async makeStockTransfer() {
-      const shipmentDoc = (await this.sinvDoc.getStockTransfer()) as Shipment;
-      if (!shipmentDoc.items) {
-        return;
       }
-
-      const inventory = await getPOSInventory(this.fyo);
-
-      for (const item of shipmentDoc.items) {
-        const trackItem = await fyo.getValue(
-          ModelNameEnum.Item,
-          item.item as string,
-          'trackItem'
-        );
-
-        if (!trackItem) {
-          continue;
-        }
-
-        item.location = inventory;
-
-        item.serialNumber =
-          this.itemSerialNumbers[item.item as string] ?? undefined;
-      }
-
-      shipmentDoc.once('afterSubmit', () => {
-        showToast({
-          type: 'success',
-          message: t`Shipment ${shipmentDoc.name as string} is Submitted`,
-          duration: 'short',
-        });
-      });
-
-      await shipmentDoc.sync();
-      await shipmentDoc.submit();
     },
     async submitSinvDoc() {
       this.sinvDoc.once('afterSubmit', () => {
@@ -1401,7 +970,6 @@ export default defineComponent({
       this.itemSerialNumbers = {};
 
       this.paidAmount = fyo.pesa(0);
-      this.transferAmount = fyo.pesa(0);
       this.paymentMethod = undefined;
       this.transferRefNo = undefined;
       this.transferClearanceDate = undefined;
@@ -1411,7 +979,17 @@ export default defineComponent({
         this.sinvDoc.party = '';
       }
     },
-    toggleModal(modal: ModalName, value?: boolean) {
+    async setIsPosShiftOpen() {
+      this.isPosShiftOpen = !!(await fyo.db.getOpenPOSShift());
+    },
+    toggleModal(modal: ModalName | 'ShiftOpen', value?: boolean) {
+      if (modal === 'ShiftOpen' || modal === 'ShiftClose') {
+        void this.setIsPosShiftOpen();
+      }
+      if (modal === 'ShiftOpen') {
+        return;
+      }
+
       if (value !== undefined) {
         return (this[`open${modal}Modal`] = value);
       }
@@ -1429,64 +1007,21 @@ export default defineComponent({
       this.setTotalTaxedAmount();
     },
     async validate() {
-      // A payment retry must not check stock that was already shipped.
-      if (this.sinvDoc.isSubmitted && !this.sinvDoc.stockNotTransferred) {
-        return;
-      }
-
-      await this.setItemQtyMap();
-      await this.setItems();
-      await validateSinv(this.sinvDoc as SalesInvoice, this.itemQtyMap);
-
-      if (!this.sinvDoc.isReturn) {
-        await validateShipment(this.itemSerialNumbers);
-      }
-    },
-    async applyPricingRule() {
-      if (this.ignorePricingRules()) {
-        return;
-      }
-      const hasPricingRules = await getPricingRule(
-        this.sinvDoc as SalesInvoice
-      );
-
-      if (!hasPricingRules || !hasPricingRules.length) {
-        this.sinvDoc.pricingRuleDetail = undefined;
-        this.sinvDoc.isPricingRuleApplied = false;
-
-        removeFreeItems(this.sinvDoc as SalesInvoice);
-        await this.sinvDoc.applyProductDiscount();
-
-        return;
-      }
-
-      await this.sinvDoc.appendPricingRuleDetail(hasPricingRules);
-      await this.sinvDoc.applyProductDiscount();
-
-      const outOfStockFreeItems: string[] = [];
-      const itemQtyMap = await getItemQtyMap(this.sinvDoc as SalesInvoice);
-
-      hasPricingRules.map((pRule) => {
-        const freeItemQty =
-          itemQtyMap[pRule.pricingRule.freeItem as string]?.availableQty;
-
-        if (freeItemQty <= 0) {
-          this.sinvDoc.items = this.sinvDoc.items?.filter(
-            (val) => !(val.isFreeItem && val.item == pRule.pricingRule.freeItem)
-          );
-
-          outOfStockFreeItems.push(pRule.pricingRule.freeItem as string);
+      await validatePOSCheckout(
+        this.sinvDoc as SalesInvoice,
+        async () => {
+          await this.setItemQtyMap();
+          await this.setItems();
+          return this.itemQtyMap;
         }
-      });
-
-      if (!outOfStockFreeItems.length) {
-        return;
+      );
+    },
+    async previewInvoice() {
+      try {
+        await this.sinvDoc.preview();
+      } catch (error) {
+        showToast({ type: 'error', message: t`${error as string}` });
       }
-
-      showToast({
-        type: 'error',
-        message: t`Free items out of stock: ${outOfStockFreeItems.join(', ')}`,
-      });
     },
     async routeToSinvList() {
       if (!this.sinvDoc.items?.length) {

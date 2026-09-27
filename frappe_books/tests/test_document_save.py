@@ -1,4 +1,4 @@
-"""Dependent records belong to the same transaction as their parent save."""
+"""A failed dependent save fails its parent save, so the request rolls back both."""
 
 from unittest.mock import patch
 
@@ -29,7 +29,7 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		)
 		for doctype, name in (("Books Serial Number Series", serial), ("Books Batch Series", batch)):
 			series = frappe.get_doc(doctype, name)
-			self.assertEqual((series.start, series.pad_zeros, series.current), (1001, 4, 1001))
+			self.assertEqual((series.start, series.pad_zeros, series.current), (1001, 4, 1000))
 			series.current = 1020
 			series.save()
 		item.save()
@@ -43,45 +43,24 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		self.assertFalse(frappe.db.exists("Books Serial Number Series", serial))
 		self.assertFalse(frappe.db.exists("Books Batch Series", batch))
 
-	def test_failed_series_creation_rolls_back_item_insert_and_other_series(self):
-		name = unique_name("Rejected Item")
-		serial = unique_name("Rejected Serial")
-		batch = unique_name("Rejected Batch")
-		frappe.db.savepoint("item_insert")
+	def test_failed_series_creation_fails_the_item_insert(self):
 		with patch.object(BooksBatchSeries, "validate", self.reject_save, create=True):
 			with self.assertRaises(frappe.ValidationError):
 				make_item(
 					self.income.name,
 					self.expense.name,
-					name=name,
 					has_serial_number=1,
-					serial_number_series=serial,
+					serial_number_series=unique_name("Rejected Serial"),
 					has_batch=1,
-					batch_series=batch,
+					batch_series=unique_name("Rejected Batch"),
 				)
-		# Request handling rolls back the entire transaction on an uncaught error.
-		frappe.db.rollback(save_point="item_insert")
-		self.assertFalse(frappe.db.exists("Books Item", name))
-		self.assertFalse(frappe.db.exists("Books Serial Number Series", serial))
-		self.assertFalse(frappe.db.exists("Books Batch Series", batch))
 
-	def test_failed_series_creation_preserves_the_previous_item(self):
+	def test_failed_series_creation_fails_the_item_update(self):
 		item = make_item(self.income.name, self.expense.name)
-		serial = unique_name("Rejected Update Serial")
-		batch = unique_name("Rejected Update Batch")
-		frappe.db.savepoint("item_update")
-		item.update(
-			{"has_serial_number": 1, "serial_number_series": serial, "has_batch": 1, "batch_series": batch}
-		)
+		item.update({"has_batch": 1, "batch_series": unique_name("Rejected Update Batch")})
 		with patch.object(BooksBatchSeries, "validate", self.reject_save, create=True):
 			with self.assertRaises(frappe.ValidationError):
 				item.save()
-		frappe.db.rollback(save_point="item_update")
-		item.reload()
-		self.assertFalse(item.has_serial_number)
-		self.assertFalse(item.has_batch)
-		self.assertFalse(frappe.db.exists("Books Serial Number Series", serial))
-		self.assertFalse(frappe.db.exists("Books Batch Series", batch))
 
 	def test_party_converts_the_linked_lead_even_when_the_names_differ(self):
 		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Source Lead")}).insert()
@@ -96,18 +75,18 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		self.assertNotEqual(lead.name, party.name)
 		self.assertEqual(lead.reload().status, "Converted")
 
-	def test_rejected_lead_conversion_rolls_back_the_party(self):
+	def test_rejected_lead_conversion_fails_the_party_insert(self):
 		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Source Lead")}).insert()
-		name = unique_name("Rejected Party")
-		frappe.db.savepoint("party_insert")
 		with patch.object(BooksLead, "validate", self.reject_save, create=True):
 			with self.assertRaises(frappe.ValidationError):
 				frappe.get_doc(
-					{"doctype": "Books Party", "name": name, "role": "Customer", "from_lead": lead.name}
+					{
+						"doctype": "Books Party",
+						"name": unique_name("Rejected Party"),
+						"role": "Customer",
+						"from_lead": lead.name,
+					}
 				).insert()
-		frappe.db.rollback(save_point="party_insert")
-		self.assertFalse(frappe.db.exists("Books Party", name))
-		self.assertEqual(lead.reload().status, "Open")
 
 	@staticmethod
 	def reject_save(*args, **kwargs):

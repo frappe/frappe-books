@@ -1,12 +1,15 @@
 <template>
   <div class="flex items-center truncate" :class="cellClass">
-    <span v-if="!customRenderer" class="truncate">{{ columnValue }}</span>
-    <component :is="(customRenderer as {})" v-else />
+    <Badge v-if="badge" class="text-xs" :color="badge.color">{{
+      badge.label
+    }}</Badge>
+    <span v-else class="truncate">{{ columnValue }}</span>
   </div>
 </template>
 <script lang="ts">
-import { ColumnConfig, RenderData } from 'fyo/model/types';
+import { BadgeData, ColumnConfig, RenderData } from 'fyo/model/types';
 import { Field } from 'schemas/types';
+import Badge from 'src/components/Badge.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { defineComponent, PropType } from 'vue';
@@ -14,7 +17,7 @@ import { defineComponent, PropType } from 'vue';
 type Column = ColumnConfig | Field;
 
 function isField(column: ColumnConfig | Field): column is Field {
-  if ((column as ColumnConfig).display || (column as ColumnConfig).render) {
+  if ((column as ColumnConfig).display || (column as ColumnConfig).badge) {
     return false;
   }
 
@@ -23,11 +26,11 @@ function isField(column: ColumnConfig | Field): column is Field {
 
 export default defineComponent({
   name: 'ListCell',
+  components: { Badge },
   props: {
     row: { type: Object as PropType<RenderData>, required: true },
     column: { type: Object as PropType<Column>, required: true },
   },
-  emits: ['status-found'],
   computed: {
     columnValue(): string {
       const column = this.column;
@@ -39,36 +42,12 @@ export default defineComponent({
 
       return column.display?.(value, fyo) ?? '';
     },
-    customRenderer() {
-      const { render } = this.column as ColumnConfig;
-
-      if (!render) {
-        return;
-      }
-
-      return render(this.row);
+    badge(): BadgeData | undefined {
+      return (this.column as ColumnConfig).badge?.(this.row);
     },
     cellClass() {
       return isNumeric(this.column.fieldtype) ? 'justify-end' : '';
     },
-  },
-  mounted() {
-    const { render } = this.column as ColumnConfig;
-    if (render) {
-      const result = render(this.row) as {
-        template: string;
-        metadata?: { status: string; color: string; label: string };
-      };
-
-      if (result?.metadata) {
-        this.$emit('status-found', {
-          rowId: this.row.name || this.row.id,
-          fieldname: this.column.fieldname,
-          status: result.metadata.status,
-          label: result.metadata.label,
-        });
-      }
-    }
   },
 });
 </script>

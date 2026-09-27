@@ -1,10 +1,9 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
 
-from frappe_books.customization import remove_custom_fields, sync_custom_form
+from frappe_books.customization import remove_custom_fields, sync_custom_form, validate_custom_form
 
 
 class BooksCustomForm(Document):
@@ -24,6 +23,9 @@ class BooksCustomForm(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Custom Form"
+
+	def validate(self):
+		validate_custom_form(self)
 
 	def on_update(self):
 		sync_custom_form(self)

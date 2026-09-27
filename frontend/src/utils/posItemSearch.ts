@@ -1,7 +1,15 @@
+import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { POSItem } from 'src/components/POS/types';
 import { fuzzyMatch } from 'src/utils';
 
 type POSItemSearchRecord = Pick<POSItem, 'name' | 'itemCode' | 'barcode'>;
+
+type BarcodeSettings = Pick<
+  POSSettings,
+  'weightEnabledBarcode' | 'checkDigits' | 'itemCodeDigits' | 'itemWeightDigits'
+>;
+
+type WeightBarcode = { itemCode: string; weight?: number };
 
 type POSItemSearchMatch = {
   distance: number;
@@ -38,6 +46,72 @@ export function findExactPOSItem<T extends POSItemSearchRecord>(
       (value) => normalize(value) === normalizedSearchTerm
     )
   );
+}
+
+/** The item a scanned or typed code names, with the quantity a scale barcode carries. */
+export function findScannedPOSItem(
+  items: POSItem[],
+  code: string,
+  settings?: BarcodeSettings
+): { item: POSItem; quantity: number } | undefined {
+  const weighed = parseWeightBarcode(code, settings);
+  const item =
+    findByBarcode(items, code, weighed) ?? findExactPOSItem(items, code);
+  if (!item) {
+    return;
+  }
+
+  const weight = weighed?.weight;
+  if (weight === undefined) {
+    return { item, quantity: 1 };
+  }
+
+  const isKilogram = item.unit?.toLowerCase() === 'kg';
+  return { item, quantity: isKilogram ? weight / 1000 : weight };
+}
+
+function findByBarcode(
+  items: POSItem[],
+  code: string,
+  weighed?: WeightBarcode
+): POSItem | undefined {
+  if (weighed) {
+    const { itemCode } = weighed;
+    return items.find((item) =>
+      [item.itemCode, item.barcode].includes(itemCode)
+    );
+  }
+
+  if (code.length === 12) {
+    return items.find((item) => item.barcode === code);
+  }
+}
+
+/** Splits a scale barcode (prefix, item code, weight in grams) per POS Settings. */
+function parseWeightBarcode(
+  code: string,
+  settings?: BarcodeSettings
+): WeightBarcode | undefined {
+  if (!settings?.weightEnabledBarcode) {
+    return;
+  }
+
+  const prefix = String(settings.checkDigits || '');
+  const codeEnd = prefix.length + Number(settings.itemCodeDigits || 0);
+  const length = codeEnd + Number(settings.itemWeightDigits || 0);
+  const weight = code.slice(codeEnd);
+  if (
+    !code.startsWith(prefix) ||
+    code.length !== length ||
+    isNaN(Number(weight))
+  ) {
+    return;
+  }
+
+  return {
+    itemCode: code.slice(prefix.length, codeEnd),
+    weight: weight ? parseInt(weight, 10) : undefined,
+  };
 }
 
 function getBestMatch(

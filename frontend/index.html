@@ -14,7 +14,7 @@
   <body>
     <div id="app"></div>
     <script>
-      window.csrf_token = '{{ frappe.session.csrf_token }}';
+      window.csrf_token = '{{ csrf_token }}';
       window.frappe = window.frappe || {};
       frappe.csrf_token = window.csrf_token;
       frappe.boot = JSON.parse({{ boot }});

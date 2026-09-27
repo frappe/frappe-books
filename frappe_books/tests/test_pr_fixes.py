@@ -7,13 +7,14 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate, now_datetime
 
 from frappe_books.currency import currency_precision
-from frappe_books.migrations import convert_line_discounts, normalize_ledger_dates, update_currency_display
+from frappe_books.patches import currency_display, line_discounts, normalize_ledger_dates
 from frappe_books.setup_service import _update_system_settings, ensure_currency
 from frappe_books.tests.accounting import ledger_entries, make_account, make_invoice, make_item, make_party
 
 
 class IntegrationTestPrFixes(IntegrationTestCase):
 	def setUp(self):
+		frappe.db.set_single_value("Books System Settings", "currency", "INR")
 		self.cash = make_account("PR Cash", account_type="Cash")
 		self.income = make_account("PR Income", root_type="Income")
 		self.expense = make_account("PR Expense", root_type="Expense")
@@ -107,7 +108,8 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 			update_modified=False,
 		)
 		modified = invoice.modified
-		convert_line_discounts()
+		line_discounts.execute()
+		line_discounts.execute()
 		invoice.reload()
 		self.assertEqual(invoice.items[0].item_discount_amount, 150)
 		self.assertEqual(frappe.utils.get_datetime(invoice.modified), frappe.utils.get_datetime(modified))
@@ -153,10 +155,10 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 			)
 		self.assertEqual(currency_precision("JPY"), 0)
 		frappe.db.set_single_value("Books System Settings", "display_precision", 2)
-		update_currency_display()
+		currency_display.execute()
 		self.assertEqual(frappe.db.get_single_value("Books System Settings", "display_precision"), 0)
 		frappe.db.set_single_value("Books System Settings", "display_precision", 4)
-		update_currency_display()
+		currency_display.execute()
 		self.assertEqual(frappe.db.get_single_value("Books System Settings", "display_precision"), 4)
 
 	def test_date_repair_matches_voucher_type_and_is_repeatable(self):
@@ -183,9 +185,9 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 		frappe.qb.update(ledger).set(ledger.posting_date, "2025-12-31T18:30:00.000Z").where(
 			ledger.name == entry.name
 		).run()
-		normalize_ledger_dates()
+		normalize_ledger_dates.execute()
 		self.assertEqual(getdate(entry.db_get("posting_date")), getdate("2026-01-01"))
-		normalize_ledger_dates()
+		normalize_ledger_dates.execute()
 		self.assertEqual(getdate(entry.db_get("posting_date")), getdate("2026-01-01"))
 
 	def test_date_repair_uses_journal_entry_posting_date(self):
@@ -213,7 +215,7 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 			ledger.name == entry_name
 		).run()
 
-		normalize_ledger_dates()
+		normalize_ledger_dates.execute()
 
 		posting_date = frappe.db.get_value("Books Ledger Entry", entry_name, "posting_date")
 		self.assertEqual(getdate(posting_date), getdate("2026-03-03"))

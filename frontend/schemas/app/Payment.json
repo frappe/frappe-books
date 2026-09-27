@@ -168,6 +168,18 @@
         }
       ],
       "hidden": true
+    },
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": [
+        { "value": "Saved", "label": "Saved" },
+        { "value": "Submitted", "label": "Submitted" },
+        { "value": "Cancelled", "label": "Cancelled" }
+      ],
+      "readOnly": true,
+      "hidden": true
     }
   ],
   "quickEditFields": [

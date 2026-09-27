@@ -21,7 +21,6 @@ class BooksPosProfile(Document):
 		hide_unavailable_items: DF.Check
 		ignore_pricing_rule: DF.Check
 		inventory: DF.Link
-		is_shift_open: DF.Check
 		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items"]
 		pay_and_print_button_colour: DF.Color | None
 		pay_button_colour: DF.Color | None

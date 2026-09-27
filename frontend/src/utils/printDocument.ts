@@ -59,9 +59,12 @@ function getAllCSSAsStyleElem() {
       if (sheet.ownerRule) {
         cssTexts.push(sheet.ownerRule.cssText);
       }
-    } catch {
+    } catch (error) {
       // Browsers block cssRules for cross-origin stylesheets. The remaining
       // same-origin application styles are still enough to print the document.
+      if (!(error instanceof DOMException)) {
+        throw error;
+      }
     }
   }
 

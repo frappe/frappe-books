@@ -6,15 +6,12 @@ import {
   conditionsForField,
   defaultCondition,
   mergeQueryFilters,
-  matchesStatus,
   makeFyo,
   getFilterFields,
   getFieldLabel,
   getJsonExportData,
+  loadListData,
 } from './helpers/accounting.mjs';
-import { loadMethod } from './helpers/vue-method.mjs';
-import lodash from 'lodash';
-const { cloneDeep } = lodash;
 
 const field = (fieldtype = 'Data', fieldname = 'value') => ({
   fieldname,
@@ -177,121 +174,87 @@ test('merging user filters cannot replace base restrictions or mutate inputs', (
   });
   assert.deepEqual(base, { name: ['in', ['one', 'two']], value: 'base' });
 });
-test('status filters match display labels, SQL wildcards and all AND pairs', async () => {
-  const fyo = await makeFyo();
-  const row = {
-    schema: fyo.schemaMap.SalesInvoice,
-    submitted: true,
-    cancelled: false,
-    grandTotal: fyo.pesa(100),
-    outstandingAmount: fyo.pesa(50),
-  };
-  for (const expected of ['Partly Paid', 'PartlyPaid'])
-    assert.equal(matchesStatus(row, ['=', expected]), true);
-  for (const pattern of ['%paid%', 'Partly_Paid', '%'])
-    assert.equal(matchesStatus(row, ['like', pattern]), true);
-  assert.equal(matchesStatus(row, ['like', '%paid%', '!=', 'Paid']), true);
-  assert.equal(matchesStatus(row, ['like', '%paid%', '=', 'Paid']), false);
-  assert.equal(matchesStatus(row, ['like', 'paid']), false);
-  assert.equal(matchesStatus(row, ['like', '.*']), false);
-  assert.throws(() => matchesStatus(row, ['=']));
-});
-
-test('list keeps filters on refresh, resets pagination, retains export status and ignores stale responses', async () => {
+test('list keeps filters on refresh and ignores stale responses', async () => {
   const fyo = await makeFyo();
   const calls = [];
   const pending = [];
+  fyo.db.count = async () => 2;
   fyo.db.getAll = async (_schema, options) => {
     calls.push(options);
     return new Promise((resolve) => pending.push(resolve));
   };
-  const update = await loadMethod('src/pages/ListView/List.vue', 'updateData', {
-    fyo,
-    cloneDeep,
-    toRaw: (v) => v,
-    mergeQueryFilters,
-    matchesStatus,
-  });
-  const pages = [];
-  const events = [];
-  const context = {
+  const list = {
     filters: { name: ['like', 'JV%'] },
     activeFilters: {},
+    pageStart: 100,
+    pageLength: 50,
     requestId: 0,
     schemaName: 'JournalEntry',
-    $nextTick: async () => {},
-    $refs: { paginator: { pageNo: 2, setPageNo: (n) => pages.push(n) } },
-    $emit: (...event) => events.push(event),
   };
   const query = { status: ['=', 'Submitted'] };
-  const first = update.call(context, query);
-  pending.shift()([
-    { name: 'JV1', submitted: true },
-    { name: 'JV2', submitted: false },
-  ]);
-  await first;
+  const first = loadListData(fyo, list, query);
+  pending.shift()([{ name: 'JV1', status: 'Submitted' }]);
+  const loaded = await first;
   assert.deepEqual(
-    context.data.map((r) => r.name),
+    loaded.rows.map((r) => r.name),
     ['JV1']
   );
-  assert.equal(pages.at(-1), 1);
-  assert.deepEqual(events.at(-1)[1], { ...context.filters, ...query });
-  const refresh = update.call(context);
+  assert.equal(loaded.total, 2);
+  assert.equal(calls.at(-1).offset, 0);
+  assert.deepEqual(loaded.appliedFilters, { ...list.filters, ...query });
+  const refresh = loadListData(fyo, list);
   pending.shift()([]);
   await refresh;
-  assert.deepEqual(context.activeFilters, query);
-  assert.equal(calls.at(-1).filters.status, undefined);
-  const old = update.call(context, { name: ['=', 'JV-old'] });
-  const latest = update.call(context, {});
+  assert.deepEqual(list.activeFilters, query);
+  assert.deepEqual(calls.at(-1).filters.status, ['=', 'Submitted']);
+  const old = loadListData(fyo, list, { name: ['=', 'JV-old'] });
+  const latest = loadListData(fyo, list, {});
   const oldResolve = pending.shift();
   pending.shift()([{ name: 'JV-new' }]);
-  await latest;
+  assert.equal((await latest).rows[0].name, 'JV-new');
   oldResolve([{ name: 'JV-old' }]);
-  await old;
-  assert.equal(context.data[0].name, 'JV-new');
-  assert.deepEqual(context.activeFilters, {});
+  assert.equal(await old, undefined);
+  assert.deepEqual(list.activeFilters, {});
 });
 
-test('filtered export applies virtual status before limit and preserves base restrictions', async () => {
+test('filtered export sends status to the server and pages rows', async () => {
   const fyo = await makeFyo();
   const calls = [];
-  fyo.db.getAll = async (_schema, options) => {
-    calls.push(options);
-    return [
-      { name: 'JV-1', submitted: true },
-      { name: 'JV-2', submitted: false },
-    ];
-  };
+  const names = Array.from({ length: 700 }, (_, i) => ({ name: `JV-${i}` }));
   fyo.db.getAllRaw = async (_schema, options) => {
     calls.push(options);
-    return [{ name: 'JV-1' }];
+    return names.slice(options.offset, options.offset + options.limit);
   };
   const query = { name: ['like', 'JV%'], status: ['=', 'Submitted'] };
-  const result = await getJsonExportData(
+  const fields = [{ fieldname: 'name', fieldtype: 'Data', export: true }];
+  const limited = await getJsonExportData(
     'JournalEntry',
-    [{ fieldname: 'name', fieldtype: 'Data', export: true }],
+    fields,
     [],
     1,
     query,
     fyo
   );
-  assert.deepEqual(JSON.parse(result), [{ name: 'JV-1' }]);
-  assert.deepEqual(calls[0].filters, { name: ['like', 'JV%'] });
-  assert.equal(calls[0].limit, undefined);
-  assert.deepEqual(calls[1].filters, { name: ['like', 'JV%', 'in', ['JV-1']] });
-  assert.equal(calls[1].limit, 1);
-  assert.deepEqual(query.status, ['=', 'Submitted']);
+  assert.deepEqual(JSON.parse(limited), [{ name: 'JV-0' }]);
+  assert.deepEqual(calls[0].filters, query);
+  assert.equal(calls[0].limit, 1);
   calls.length = 0;
-  const empty = await getJsonExportData(
+  const all = await getJsonExportData(
     'JournalEntry',
-    [],
+    fields,
     [],
     null,
-    { status: ['=', 'Cancelled'] },
+    query,
     fyo
   );
-  assert.equal(empty, '[]');
-  assert.equal(calls.length, 1);
+  assert.equal(JSON.parse(all).length, 700);
+  assert.deepEqual(
+    calls.map(({ offset, limit }) => [offset, limit]),
+    [
+      [0, 500],
+      [500, 500],
+    ]
+  );
 });
 
 test('field selection excludes unsupported and computed fields; column position is irrelevant', () => {
@@ -311,7 +274,7 @@ test('field selection excludes unsupported and computed fields; column position 
   ];
   assert.deepEqual(
     getFilterFields(fields, columns).map((f) => f.fieldname),
-    ['status', 'editable', 'total']
+    ['editable', 'total']
   );
   assert.equal(fields.length, 9);
   const status = { ...field('Select', 'status'), options: ['Open', 'Closed'] };
@@ -336,23 +299,6 @@ test('filter labels retain supplied translations and format identifiers and acro
     assert.equal(
       getFieldLabel({ ...field('Data', name), label: name }),
       expected
-    );
-  }
-});
-
-test('loyalty filters use the same computed statuses as the list', async () => {
-  const fyo = await makeFyo();
-  for (const [values, status] of [
-    [{ toDate: new Date('2000-01-01') }, 'Expired'],
-    [{ maximumUse: 10, used: 10 }, 'Maxed'],
-    [{ maximumUse: 10, used: 9 }, 'Active'],
-  ]) {
-    const row = { schema: fyo.schemaMap.LoyaltyProgram, ...values };
-    assert.equal(matchesStatus(row, ['=', status]), true);
-    assert.equal(matchesStatus(row, ['=', 'Saved']), false);
-    assert.equal(
-      matchesStatus(row, ['not like', `%${status.toLowerCase()}%`]),
-      false
     );
   }
 });

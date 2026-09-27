@@ -31,7 +31,6 @@ for (const kind of ['master', 'transaction', 'singleton']) {
     assert.equal(warnings[0].action, 'save');
     assert.equal(warnings[0].errors.length, 4);
     assert.match(warnings[0].message, /was saved/);
-    assert.equal(fyo.errorLog.length, 4);
     assert.deepEqual(calls, ['once', 'next', 'list']);
     assert.equal(await fyo.doc.getDoc('Record', doc.name), doc);
 
@@ -44,6 +43,51 @@ for (const kind of ['master', 'transaction', 'singleton']) {
     assert.equal(warnings[1].errors.length, 3);
   });
 }
+
+test('saving twice while the first save runs inserts the document once', async () => {
+  const { doc, writes } = await makeFixture('master');
+  const first = doc.sync();
+  assert.equal(doc.isSyncing, true);
+  const second = doc.sync();
+  assert.equal(await first, doc);
+  assert.equal(await second, doc);
+  assert.equal(writes.length, 1);
+  assert.equal(doc.isSyncing, false);
+});
+
+test('opening a cached document reloads it unless it has unsaved edits', async () => {
+  const { fyo, doc, loads, setStored } = await makeFixture('master');
+  await doc.sync();
+  setStored({ value: 'Changed elsewhere' });
+
+  assert.equal(await fyo.doc.getDoc('Record', doc.name), doc);
+  assert.equal(loads(), 0);
+  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  assert.equal(loads(), 1);
+  assert.equal(doc.value, 'Changed elsewhere');
+
+  await doc.set('value', 'Unsaved edit');
+  setStored({ value: 'Changed again' });
+  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  assert.equal(loads(), 1);
+  assert.equal(doc.value, 'Unsaved edit');
+});
+
+test('edits made while a cached document reloads are kept', async () => {
+  const { fyo, doc, setStored, holdLoads } = await makeFixture('master');
+  await doc.sync();
+  setStored({ value: 'Changed elsewhere' });
+  const load = Promise.withResolvers();
+  holdLoads(load.promise);
+
+  const refresh = fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  await doc.set('value', 'Typed while loading');
+  load.resolve();
+  await refresh;
+
+  assert.equal(doc.value, 'Typed while loading');
+  assert.equal(doc.dirty, true);
+});
 
 for (const existing of [false, true]) {
   test(`a rejected ${existing ? 'update' : 'insert'} keeps edits and does not run post-save hooks`, async () => {
@@ -136,6 +180,8 @@ async function makeFixture(kind, savedName) {
   const writes = [];
   let stored;
   let writeError;
+  let loadCount = 0;
+  let loading;
   const schema = {
     name: 'Record',
     label: 'Record',
@@ -157,7 +203,10 @@ async function makeFixture(kind, savedName) {
       return { Record: schema };
     }
     call(method, _schemaName, values) {
-      if (method === 'get') return structuredClone(stored);
+      if (method === 'get') {
+        loadCount++;
+        return loading ? loading.then(() => structuredClone(stored)) : structuredClone(stored);
+      }
       assert.ok(['insert', 'update'].includes(method), method);
       if (writeError) {
         const error = writeError;
@@ -186,6 +235,13 @@ async function makeFixture(kind, savedName) {
     writes,
     rejectWrite: (error) => {
       writeError = error;
+    },
+    loads: () => loadCount,
+    setStored: (values) => {
+      stored = { ...stored, ...values };
+    },
+    holdLoads: (until) => {
+      loading = until;
     },
   };
 }

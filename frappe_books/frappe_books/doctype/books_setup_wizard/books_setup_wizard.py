@@ -21,7 +21,6 @@ class BooksSetupWizard(Document):
 		bank_name: DF.Data
 		chart_of_accounts: DF.Autocomplete
 		company_name: DF.Data
-		completed: DF.Check
 		country: DF.Autocomplete
 		currency: DF.Autocomplete
 		email: DF.Data
@@ -37,13 +36,14 @@ class BooksSetupWizard(Document):
 		validate_email_address(self.email, throw=True)
 
 
-@frappe.whitelist()
-def complete_setup():
+@frappe.whitelist(methods=["POST"])
+def complete_setup() -> dict:
+	"""Set up the company from the saved wizard values, once."""
 	wizard = frappe.get_single("Books Setup Wizard")
 	wizard.check_permission("write")
+	if frappe.db.get_single_value("Books Accounting Settings", "setup_complete"):
+		frappe.throw(_("Frappe Books setup is already complete."))
 	wizard.save()
-	if wizard.completed:
-		return {"setup_complete": True}
 	result = run_setup(wizard)
 	frappe.msgprint(_("Frappe Books setup is complete."), alert=True)
 	return result

@@ -9,6 +9,7 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 from frappe_books.accounting.accounts import validate_account
+from frappe_books.series import ITEM_SERIES
 
 
 class BooksItem(Document):
@@ -46,6 +47,13 @@ class BooksItem(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Item"
+
+	def before_validate(self):
+		for flag, fieldname, _series_doctype in ITEM_SERIES.values():
+			series = (self.get(fieldname) or "").strip()
+			if self.get(flag) and series:
+				# A dash keeps the series prefix apart from its numbers.
+				self.set(fieldname, series if series.endswith("-") else f"{series}-")
 
 	def validate(self):
 		self.validate_accounts()

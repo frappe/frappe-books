@@ -56,3 +56,65 @@ test('an import that saves but fails to submit is reported as a draft', async ()
     ]
   );
 });
+
+test('import columns report duplicates and missing required fields', async () => {
+  const importer = new Importer('Party', await makeFyo());
+  const required = [...importer.templateFieldsMap.values()].filter(
+    (field) => field.required
+  );
+  assert.ok(required.length > 0);
+
+  importer.assignedTemplateFields = [
+    required[0].fieldKey,
+    required[0].fieldKey,
+    'Party.unknown',
+    'Party.unknown',
+  ];
+
+  assert.deepEqual(importer.getDuplicateColumns(), [required[0].label]);
+  assert.deepEqual(
+    importer.getMissingRequiredColumns(),
+    required.slice(1).map((field) => field.label)
+  );
+});
+
+test('child table fields are never required in an import template', async () => {
+  const importer = new Importer('SalesInvoice', await makeFyo());
+  const childFields = [...importer.templateFieldsMap.values()].filter(
+    (field) => field.parentSchemaChildField
+  );
+
+  assert.ok(childFields.some((field) => field.fieldname === 'item'));
+  assert.ok(childFields.every((field) => !field.required));
+});
+
+test('leaving a column out moves the later picked columns up', async () => {
+  const importer = new Importer('Party', await makeFyo());
+  const [first, second, third] = importer.assignedTemplateFields;
+
+  importer.pickColumn(first, false);
+
+  assert.deepEqual(importer.assignedTemplateFields.slice(0, 2), [
+    second,
+    third,
+  ]);
+  assert.equal(importer.assignedTemplateFields.at(-1), null);
+  assert.equal(importer.templateFieldsPicked.get(first), false);
+});
+
+test('a retry keeps only the rows that were not imported', async () => {
+  const importer = new Importer('Party', await makeFyo());
+  importer.assignedTemplateFields = ['Party.role', 'Party.name'];
+  importer.valueMatrix = [
+    [{ value: 'Customer' }, { value: 'A' }],
+    [{ value: 'Customer' }, { value: 'B' }],
+    [{ value: 'Customer' }, { value: null }],
+  ];
+
+  importer.keepRowsNotImported(['A']);
+
+  assert.deepEqual(
+    importer.valueMatrix.map((row) => row[1].value),
+    ['B']
+  );
+});

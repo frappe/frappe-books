@@ -102,6 +102,17 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 					frappe.ValidationError, "cannot be customized", _custom_form(schema, [FIELD]).insert
 				)
 
+	def test_invalid_custom_fields_are_rejected(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
+		cases = {
+			"needs a default": [{**FIELD, "is_required": 1}],
+			"must be unique": [FIELD, {**FIELD, "label": "Duplicate"}],
+			"at least two options": [{**FIELD, "fieldtype": "Select", "options": "Only\n "}],
+		}
+		for message, fields in cases.items():
+			with self.subTest(message=message):
+				self.assertRaisesRegex(frappe.ValidationError, message, _custom_form("Color", fields).insert)
+
 
 def _custom_form(schema, fields):
 	# `get_doc` adds a doctype to each row dict, so give it copies.

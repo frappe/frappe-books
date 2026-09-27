@@ -17,31 +17,28 @@
             v-if="!value && !isReadOnly"
             variant="ghost"
             size="xs"
+            icon="lucide-upload"
             aria-label="Upload attachment"
             @click="upload"
-          >
-            <template #icon><span class="lucide-upload size-4" /></template>
-          </FrappeButton>
+          />
 
           <FrappeButton
             v-if="value"
             variant="ghost"
             size="xs"
+            icon="lucide-download"
             aria-label="Download attachment"
             @click="download"
-          >
-            <template #icon><span class="lucide-download size-4" /></template>
-          </FrappeButton>
+          />
 
           <FrappeButton
             v-if="value && !isReadOnly"
             variant="ghost"
             size="xs"
+            icon="lucide-x"
             aria-label="Remove attachment"
             @click="clear"
-          >
-            <template #icon><span class="lucide-x size-4" /></template>
-          </FrappeButton>
+          />
         </div>
       </template>
     </ReadOnlyValue>

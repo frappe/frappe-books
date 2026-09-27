@@ -36,13 +36,10 @@
           v-if="showX"
           variant="ghost"
           size="xs"
+          icon="lucide-x"
           aria-label="Close"
           @click="closeToast"
-        >
-          <template #icon>
-            <span class="lucide-x size-3.5" />
-          </template>
-        </FrappeButton>
+        />
       </div>
     </div>
   </div>

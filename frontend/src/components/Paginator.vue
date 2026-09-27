@@ -15,14 +15,12 @@
       <FrappeButton
         variant="ghost"
         size="xs"
+        class="rtl-rotate-180"
+        icon="lucide-chevron-left"
         :disabled="pageNo <= 1"
         aria-label="Previous page"
         @click="() => setPageNo(Math.max(1, pageNo - 1))"
-      >
-        <template #icon>
-          <span class="lucide-chevron-left size-4 rtl-rotate-180" />
-        </template>
-      </FrappeButton>
+      />
       <div
         class="grid items-center gap-1 rounded-4 bg-surface-gray-2 px-1 text-base tabular-nums focus-within:outline focus-within:outline-2 focus-within:outline-outline-gray-3"
         :style="{
@@ -49,14 +47,12 @@
       <FrappeButton
         variant="ghost"
         size="xs"
+        class="rtl-rotate-180"
+        icon="lucide-chevron-right"
         :disabled="pageNo >= maxPages"
         aria-label="Next page"
         @click="() => setPageNo(Math.min(maxPages, pageNo + 1))"
-      >
-        <template #icon>
-          <span class="lucide-chevron-right size-4 rtl-rotate-180" />
-        </template>
-      </FrappeButton>
+      />
     </div>
 
     <!-- Count Selector -->

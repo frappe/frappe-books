@@ -72,6 +72,20 @@ test('rows without quick edit fields edit their table columns', async ({
   }
 });
 
+test('fields before a table stay above its header', async ({ page }) => {
+  await page.goto(`/books/edit/Tax/new-phone-${Date.now()}`);
+  await waitForBooks(page);
+
+  const name = page.getByRole('textbox', { name: 'Name' });
+  const details = page.getByRole('heading', { name: 'Details' });
+  await expect(details).toBeVisible();
+  const [nameBox, detailsBox] = await Promise.all([
+    name.boundingBox(),
+    details.boundingBox(),
+  ]);
+  expect(nameBox!.y).toBeLessThan(detailsBox!.y);
+});
+
 test('a foreign-currency customer shows the exchange rate', async ({
   page,
 }) => {

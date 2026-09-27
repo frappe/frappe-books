@@ -26,6 +26,7 @@ import { TextInput as FrappeTextInput } from "frappe-ui";
 import { Field } from "schemas/types";
 import { fyo } from "src/initFyo";
 import { isNumeric } from "src/utils";
+import { isMobile } from "src/utils/viewport";
 import { defineComponent, PropType } from "vue";
 
 export default defineComponent({
@@ -61,7 +62,11 @@ export default defineComponent({
 			const formatted = this.displayValue ?? this.formatValue(this.value, this.df, this.doc);
 			return formatted || "—";
 		},
-		frappeSize(): "sm" | "md" {
+		frappeSize(): "sm" | "md" | "lg" {
+			if (isMobile.value) {
+				return "lg";
+			}
+
 			return this.size === "small" ? "sm" : "md";
 		},
 		controlClasses(): string[] {

@@ -9,7 +9,7 @@
   >
     <div
       class="books-check-control flex min-w-0 items-center"
-      :class="frappeSize === 'sm' ? 'min-h-7' : 'min-h-8'"
+      :class="controlHeight"
     >
       <FrappeCheckbox
         ref="input"
@@ -19,7 +19,7 @@
         :aria-label="showLabel ? undefined : df.label"
         :required="isRequired"
         :disabled="isReadOnly"
-        :size="frappeSize"
+        :size="frappeSize === 'lg' ? 'md' : frappeSize"
         @update:model-value="onChange"
         @focus="onFocus"
       />
@@ -43,6 +43,11 @@ export default defineComponent({
     },
   },
   emits: ['focus'],
+  computed: {
+    controlHeight(): string {
+      return { sm: 'min-h-7', md: 'min-h-8', lg: 'min-h-11' }[this.frappeSize];
+    },
+  },
   methods: {
     getChecked(value: unknown) {
       return Boolean(value);

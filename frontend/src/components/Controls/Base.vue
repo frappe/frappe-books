@@ -41,6 +41,7 @@ import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { Field } from 'schemas/types';
 import { isNumeric } from 'src/utils';
 import { evaluateReadOnly, evaluateRequired } from 'src/utils/doc';
+import { isMobile } from 'src/utils/viewport';
 import { getIsNullOrUndef } from 'utils/index';
 import { defineComponent, PropType } from 'vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
@@ -86,11 +87,20 @@ export default defineComponent({
 
       return this.value == null ? '' : String(this.value);
     },
-    frappeSize(): 'sm' | 'md' {
+    frappeSize(): 'sm' | 'md' | 'lg' {
+      // 16px text on phones keeps iOS from zooming into a focused field.
+      if (isMobile.value) {
+        return 'lg';
+      }
+
       return this.size === 'small' ? 'sm' : 'md';
     },
-    frappeVariant(): 'outline' | 'ghost' {
-      return this.border ? 'outline' : 'ghost';
+    frappeVariant(): 'outline' | 'ghost' | 'subtle' {
+      if (!this.border) {
+        return 'ghost';
+      }
+
+      return isMobile.value ? 'subtle' : 'outline';
     },
     controlClasses(): (string | string[])[] {
       const classes: (string | string[])[] = [];

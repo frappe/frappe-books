@@ -612,7 +612,9 @@ function getChildName(
   rowIndex: number
 ): string {
   const childName = nameIndex === undefined ? null : row[nameIndex]?.value;
-  return typeof childName === 'string' ? childName : `${tf.schemaName}-${rowIndex}`;
+  return typeof childName === 'string'
+    ? childName
+    : `${tf.schemaName}-${rowIndex}`;
 }
 
 function getChildValues(

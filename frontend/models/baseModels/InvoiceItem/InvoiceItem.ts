@@ -17,7 +17,6 @@ import { FieldTypeEnum, Schema } from 'schemas/types';
 import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
 import { getSuggestedBatchName } from 'models/inventory/helpers';
-import { getPOSInventory } from 'models/inventory/posStock';
 import {
   getUnitConversionFactor,
   validateTransferUnit,
@@ -301,13 +300,18 @@ export abstract class InvoiceItem extends Doc {
     },
   };
 
-  /** Stock location a sale ships from: the POS location or the default. */
+  /** Stock location a sale ships from, as the server picks it. */
   async getStockLocation(): Promise<string | undefined> {
-    if (this.parentdoc?.isPOS) {
-      return await getPOSInventory(this.fyo);
+    if (!this.parentdoc) {
+      return undefined;
     }
 
-    return this.parentdoc?.autoStockTransferLocation ?? undefined;
+    return (
+      (await this.fyo.db.getStockLocation(
+        this.parentdoc.schemaName,
+        !!this.parentdoc.isPOS
+      )) ?? undefined
+    );
   }
 
   async validateBatchQuantity(batch: string, quantity: number): Promise<void> {

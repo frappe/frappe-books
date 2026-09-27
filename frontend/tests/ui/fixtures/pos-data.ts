@@ -78,6 +78,7 @@ export async function preparePOSData() {
   };
   FrappeDatabaseDemux.prototype.callBespoke = async (method) => {
     if (method === 'getOpenPOSShift') return shift.open ? 'SHIFT-001' : null;
+    if (method === 'getStockLocation') return null;
     if (method === 'getStockQuantities')
       return records.Item.map((item) => ({
         item: item.name,

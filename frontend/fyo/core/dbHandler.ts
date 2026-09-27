@@ -334,6 +334,18 @@ export class DatabaseHandler extends DatabaseBase {
     )) as StockQuantity[];
   }
 
+  /** The location the server moves an invoice's stock from or to. */
+  async getStockLocation(
+    schemaName: string,
+    isPOS: boolean
+  ): Promise<string | null> {
+    return (await this.#demux.callBespoke(
+      'getStockLocation',
+      schemaName,
+      isPOS
+    )) as string | null;
+  }
+
   async getPOSTransactedAmount(
     fromDate: Date,
     toDate: Date

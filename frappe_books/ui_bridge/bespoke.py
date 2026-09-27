@@ -7,6 +7,7 @@ from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
+from frappe_books.inventory.auto_transfer import default_location
 from frappe_books.reports import financial_statements, gst, stock
 from frappe_books.reports.financial_statements import Period
 from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
@@ -112,6 +113,12 @@ class BooksBespokeQueries:
 			order_by="item, batch",
 		)
 
+	def stock_location(self, source_schema: Literal["SalesInvoice", "PurchaseInvoice"], is_pos: bool = False):
+		"""Return the location an invoice's stock transfer uses, as the server picks it."""
+		invoice = frappe.new_doc(target_doctype(source_schema), is_pos=is_pos)
+		frappe.has_permission(invoice.doctype, "read", throw=True)
+		return default_location(invoice)
+
 	def pos_transacted_amount(self, from_date: str, to_date: str):
 		"""Return the same expected amounts the closing shift stores on the server."""
 		for doctype in ("Books Payment", "Books Sales Invoice"):
@@ -191,6 +198,7 @@ _METHODS = {
 	"getTotalCreditAndDebit": "total_credit_and_debit",
 	"getStockQuantity": "stock_quantity",
 	"getStockQuantities": "stock_quantities",
+	"getStockLocation": "stock_location",
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
 	"getLinkedEntries": "linked_entries",

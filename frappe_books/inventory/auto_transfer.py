@@ -77,7 +77,7 @@ def _transfer_pending_stock(invoice, transfer):
 	rows = _stock_rows(invoice)
 	if not rows:
 		frappe.throw(_("Invoice {0} has no stock left to transfer.").format(invoice.name))
-	location = _default_location(invoice)
+	location = default_location(invoice)
 	transfer.date = now_datetime()
 	transfer.return_against = _returned_transfer(invoice)
 	transfer.set("items", [{**row, "location": location} for row in rows])
@@ -104,14 +104,14 @@ def _returned_transfer(invoice) -> str | None:
 
 
 def _stock_location(invoice) -> str:
-	location = _default_location(invoice)
+	location = default_location(invoice)
 	if not location:
 		label = frappe.get_meta("Books Defaults").get_label(_location_field(invoice))
 		frappe.throw(_("Set {0} in Books Defaults to transfer stock automatically.").format(label))
 	return location
 
 
-def _default_location(invoice) -> str | None:
+def default_location(invoice) -> str | None:
 	"""Return the POS inventory of a POS sale, else the Books Defaults transfer location."""
 	if invoice.transaction_type == "sales" and invoice.get("is_pos") and (location := _pos_location()):
 		return location

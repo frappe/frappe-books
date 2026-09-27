@@ -88,6 +88,17 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		self.assertEqual(stock_quantity(item.name, "Stores"), 2)
 		self.assertEqual(stock_value_change(return_shipment), Decimal("20"))
 
+	def test_shipment_cannot_post_a_stock_value_increase(self):
+		item, _cogs, _stock = self._tracked_item()
+		frappe.db.set_value("Books Item", item.name, "track_item", 0)
+		self._make_shipment(item, quantity=5, rate=25).submit()
+		frappe.db.set_value("Books Item", item.name, "track_item", 1)
+		seed_stock(item.name, quantity=10, rate=10)
+
+		shipment = self._make_shipment(item, quantity=5, rate=25)
+
+		self.assertRaisesRegex(frappe.ValidationError, "the wrong way", shipment.submit)
+
 	def test_shipment_against_invoice_updates_quantity_to_transfer(self):
 		item, cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=5, rate=10)

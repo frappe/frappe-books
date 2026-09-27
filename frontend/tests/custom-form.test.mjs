@@ -7,6 +7,7 @@ async function makeFixture(storedForm) {
   let stored = structuredClone(storedForm);
   let updateError;
   let updateCount = 0;
+  let loadCount = 0;
   class DefinitionStore {
     getSchemaMap() {
       return getSchemas('-', definitions);
@@ -14,11 +15,14 @@ async function makeFixture(storedForm) {
     call(method, schemaName, value) {
       if (stored && schemaName === 'CustomForm') {
         if (method === 'get' && value === stored.name) {
+          loadCount++;
           return structuredClone(stored);
         }
         if (method === 'update') {
+          if (value.__expectedModified !== stored.modified) {
+            throw new Error('Changed after it was opened');
+          }
           updateCount++;
-          assert.equal(value.__expectedModified, stored.modified);
           if (updateError) {
             const error = updateError;
             updateError = undefined;
@@ -60,6 +64,7 @@ async function makeFixture(storedForm) {
       stored.modified = value;
     },
     getUpdateCount: () => updateCount,
+    getLoadCount: () => loadCount,
   };
 }
 
@@ -206,14 +211,15 @@ test('a rejected database update preserves the saved timestamp for retry', async
   assert.equal(form.customFields[0].label, 'Updated Note');
 });
 
-test('a real concurrent edit still prevents overwriting the database', async () => {
-  const { form, row, setStoredModified, getUpdateCount } =
+test('a real concurrent edit is rejected by the server check alone', async () => {
+  const { form, row, setStoredModified, getUpdateCount, getLoadCount } =
     await makeFixture(savedForm());
   const modified = form.modified;
   await row.set('label', 'Updated Note');
   setStoredModified('2026-09-05T02:00:00.000Z');
-  await assert.rejects(form.sync(), /modified after loading/);
+  await assert.rejects(form.sync(), /Changed after it was opened/);
   assert.equal(getUpdateCount(), 0);
+  assert.equal(getLoadCount(), 1);
   assert.equal(form.modified, modified);
   assert.equal(form.isSyncing, false);
 });

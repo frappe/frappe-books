@@ -4,11 +4,31 @@ import { t } from 'fyo';
 const SCRIPT_URL =
   '/assets/frappe/node_modules/html5-qrcode/html5-qrcode.min.js';
 
+/** Retail and shelf codes; fewer formats decode faster. */
+const FORMATS = [
+  'QR_CODE',
+  'EAN_13',
+  'EAN_8',
+  'UPC_A',
+  'UPC_E',
+  'CODE_128',
+  'CODE_39',
+  'CODE_93',
+  'CODABAR',
+  'ITF',
+] as const;
+
+type Box = { width: number; height: number };
+
 export interface Html5Qrcode {
   isScanning: boolean;
   start(
     camera: { facingMode: 'environment' },
-    config: { fps: number; qrbox: { width: number; height: number } },
+    config: {
+      fps: number;
+      qrbox: (viewfinderWidth: number, viewfinderHeight: number) => Box;
+      videoConstraints: MediaTrackConstraints;
+    },
     onScan: (code: string) => void,
     onFrameWithoutCode: () => void
   ): Promise<void>;
@@ -16,21 +36,25 @@ export interface Html5Qrcode {
   clear(): void;
 }
 
-type Html5QrcodeClass = new (
-  elementId: string,
-  config: { verbose: boolean }
-) => Html5Qrcode;
+interface Html5QrcodeLibrary {
+  Html5Qrcode: new (
+    elementId: string,
+    config: {
+      verbose: boolean;
+      formatsToSupport: number[];
+      experimentalFeatures: { useBarCodeDetectorIfSupported: boolean };
+    }
+  ) => Html5Qrcode;
+  Html5QrcodeSupportedFormats: Record<(typeof FORMATS)[number], number>;
+}
 
-let loading: Promise<Html5QrcodeClass> | undefined;
+let loading: Promise<Html5QrcodeLibrary> | undefined;
 
-export function loadHtml5Qrcode(): Promise<Html5QrcodeClass> {
+function loadLibrary(): Promise<Html5QrcodeLibrary> {
   loading ??= new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = SCRIPT_URL;
-    script.onload = () =>
-      resolve(
-        (window as unknown as { Html5Qrcode: Html5QrcodeClass }).Html5Qrcode
-      );
+    script.onload = () => resolve(window as unknown as Html5QrcodeLibrary);
     script.onerror = () => {
       loading = undefined;
       script.remove();
@@ -40,4 +64,42 @@ export function loadHtml5Qrcode(): Promise<Html5QrcodeClass> {
   });
 
   return loading;
+}
+
+/** Starts the rear camera in the element and reports each code it reads. */
+export async function startScanner(
+  elementId: string,
+  onScan: (code: string) => void
+): Promise<Html5Qrcode> {
+  const library = await loadLibrary();
+  const scanner = new library.Html5Qrcode(elementId, {
+    verbose: false,
+    formatsToSupport: FORMATS.map(
+      (format) => library.Html5QrcodeSupportedFormats[format]
+    ),
+    // Android Chrome's own detector is faster; iOS falls back to the library.
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+  });
+
+  await scanner.start(
+    { facingMode: 'environment' },
+    {
+      fps: 10,
+      // Wide barcodes fill the view, so the scan area spans nearly all of it.
+      qrbox: (width, height) => ({
+        width: Math.floor(width * 0.9),
+        height: Math.max(80, Math.floor(height * 0.5)),
+      }),
+      // iOS gives 640x480 unless asked, too coarse for thin bars.
+      videoConstraints: {
+        facingMode: 'environment',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+    },
+    onScan,
+    () => undefined
+  );
+
+  return scanner;
 }

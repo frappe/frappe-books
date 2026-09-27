@@ -6,7 +6,7 @@
       <div
         :id="viewfinderId"
         ref="viewfinder"
-        class="aspect-square w-full overflow-hidden rounded-6 bg-surface-gray-9"
+        class="min-h-48 w-full overflow-hidden rounded-6 bg-surface-gray-9"
       />
       <p
         class="text-center text-p-base"
@@ -26,7 +26,7 @@ import {
   Button as FrappeButton,
 } from 'frappe-ui';
 import { onBeforeUnmount, ref, useId, useTemplateRef, watch } from 'vue';
-import { loadHtml5Qrcode, type Html5Qrcode } from './html5Qrcode';
+import { startScanner, type Html5Qrcode } from './html5Qrcode';
 
 const isOpen = defineModel<boolean>('open', { required: true });
 const emit = defineEmits<{ scan: [code: string] }>();
@@ -43,18 +43,11 @@ onBeforeUnmount(stop);
 async function start() {
   error.value = '';
   try {
-    const Html5QrcodeScanner = await loadHtml5Qrcode();
+    scanner = await startScanner(viewfinderId, onScan);
+    // The sheet can close while the camera starts.
     if (!viewfinder.value) {
-      return;
+      await stop();
     }
-
-    scanner = new Html5QrcodeScanner(viewfinderId, { verbose: false });
-    await scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 240, height: 160 } },
-      onScan,
-      () => undefined
-    );
   } catch (reason) {
     error.value = String(reason).includes('NotAllowedError')
       ? t`Camera access is blocked. Allow it in the browser settings, or type the barcode.`

@@ -98,6 +98,7 @@ import {
   commonDocSync,
   focusOrSelectFormControl,
 } from 'src/utils/ui';
+import { getQuickEditFieldnames } from 'src/utils/sheetFields';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { computed, defineComponent, inject, ref } from 'vue';
 
@@ -168,25 +169,11 @@ export default defineComponent({
         return [];
       }
 
-      const fieldnames = (this.schema.quickEditFields ?? ['name']).filter(
-        (f) => !this.hideFields.includes(f)
+      const fieldnames = getQuickEditFieldnames(
+        this.schema,
+        this.hideFields as string[],
+        this.showFields as string[]
       );
-
-      if (this.showFields?.length) {
-        fieldnames.push(
-          ...this.schema.fields
-            .map((f) => f.fieldname)
-            .filter((f) => this.showFields.includes(f))
-        );
-      }
-
-      // Required custom fields are asked for so the record can be saved.
-      for (const { fieldname, isCustom, required } of this.schema.fields) {
-        if (isCustom && required && !fieldnames.includes(fieldname)) {
-          fieldnames.push(fieldname);
-        }
-      }
-
       return fieldnames.map((f) => fyo.getField(this.schemaName, f));
     },
   },

@@ -26,6 +26,7 @@ await build({
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getJsonData, getCsvData } from './reports/commonExporter';
       export { getDocStatus } from './models/helpers';
+      export { getQuickEditFieldnames, getRowEditFieldnames } from './src/utils/sheetFields';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
@@ -105,6 +106,8 @@ export const {
   getJsonData,
   getCsvData,
   getDocStatus,
+  getQuickEditFieldnames,
+  getRowEditFieldnames,
   getFilterFields,
   getFieldLabel,
   getJsonExportData,

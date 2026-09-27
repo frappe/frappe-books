@@ -83,6 +83,30 @@ export async function getPOSPermissionSetting(
   return !!fyo.singles.POSSettings?.[fieldname];
 }
 
+/** Whether a key press types into a field, which POS shortcuts must leave alone. */
+export function isTypingInField(event: KeyboardEvent): boolean {
+  const { target } = event;
+  const isField =
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLInputElement && target.type !== 'button') ||
+    (target instanceof HTMLElement && target.isContentEditable);
+  return isField && !(event.altKey || event.metaKey || event.ctrlKey);
+}
+
+/** The quick quantity after the key `code`; undefined when the key is not part of it. */
+export function getQuickQtyBuffer(
+  buffer: string,
+  code: string
+): string | undefined {
+  if (/^(Digit|Numpad)[0-9]$/.test(code)) {
+    return buffer + code.slice(-1);
+  }
+
+  if (code === 'Backspace') {
+    return buffer.slice(0, -1);
+  }
+}
+
 export async function getPOSOpeningShiftDoc(
   fyo: Fyo
 ): Promise<POSOpeningShift> {

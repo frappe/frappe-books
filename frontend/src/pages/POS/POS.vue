@@ -197,6 +197,8 @@ import {
   getTotalTaxedAmount,
   validateIsPosSettingsSet,
   setPOSRowQuantity,
+  isTypingInField,
+  getQuickQtyBuffer,
 } from 'src/utils/pos';
 import {
   validateQty,
@@ -318,8 +320,6 @@ export default defineComponent({
       quickQtyBuffer: '' as string,
       selectedRow: null as SalesInvoiceItem | null,
       keyboardField: '',
-      quickQtyKeyDownHandler: null as ((e: KeyboardEvent) => void) | null,
-      quickQtyKeyUpHandler: null as ((e: KeyboardEvent) => void) | null,
       selectedItemForBatch: '' as string,
       pendingBatchItem: null as { item: POSItem; quantity: number } | null,
       expandedRow: undefined as string | undefined,
@@ -404,66 +404,19 @@ export default defineComponent({
       this.openKeyboardModal = !!field;
     },
     addQuickQtyListeners() {
-      this.quickQtyKeyDownHandler = (e: KeyboardEvent) =>
-        this.onQuickQtyKeyDown(e);
-      this.quickQtyKeyUpHandler = (e: KeyboardEvent) => this.onQuickQtyKeyUp(e);
-      window.addEventListener(
-        'keydown',
-        this.quickQtyKeyDownHandler as EventListener
-      );
-      window.addEventListener(
-        'keyup',
-        this.quickQtyKeyUpHandler as EventListener
-      );
+      window.addEventListener('keydown', this.onQuickQtyKeyDown);
+      window.addEventListener('keyup', this.onQuickQtyKeyUp);
     },
     removeQuickQtyListeners() {
-      if (this.quickQtyKeyDownHandler) {
-        window.removeEventListener(
-          'keydown',
-          this.quickQtyKeyDownHandler as EventListener
-        );
-        this.quickQtyKeyDownHandler = null;
-      }
-      if (this.quickQtyKeyUpHandler) {
-        window.removeEventListener(
-          'keyup',
-          this.quickQtyKeyUpHandler as EventListener
-        );
-        this.quickQtyKeyUpHandler = null;
-      }
+      window.removeEventListener('keydown', this.onQuickQtyKeyDown);
+      window.removeEventListener('keyup', this.onQuickQtyKeyUp);
     },
     hasAnyOpenModal(): boolean {
-      return (
-        this.openAlertModal ||
-        this.openPaymentModal ||
-        this.openBatchSelectionModal ||
-        this.openKeyboardModal ||
-        this.openPriceListModal ||
-        this.openItemEnquiryModal ||
-        this.openCouponCodeModal ||
-        this.openShiftCloseModal ||
-        this.openSavedInvoiceModal ||
-        this.openLoyaltyProgramModal ||
-        this.openAppliedCouponsModal ||
-        this.openReturnSalesInvoiceModal
-      );
+      return modalNames.some((modal) => this[`open${modal}Modal`]);
     },
+    /** Holding Q and typing digits sets the selected row's quantity. */
     onQuickQtyKeyDown(e: KeyboardEvent) {
-      // Ignore if focus is in an input/contentEditable without modifiers
-      const notMods = !(e.altKey || e.metaKey || e.ctrlKey);
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        notMods &&
-        ((target instanceof HTMLInputElement && target.type !== 'button') ||
-          target instanceof HTMLTextAreaElement ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      // Only active on POS page with no modal open
-      if (this.hasAnyOpenModal()) {
+      if (isTypingInField(e) || this.hasAnyOpenModal()) {
         return;
       }
 
@@ -473,27 +426,12 @@ export default defineComponent({
         return;
       }
 
-      if (!this.quickQtyActive) {
-        return;
-      }
-
-      // While holding Q, collect digits; support both main digits and numpad
-      if (/^Digit[0-9]$/.test(e.code)) {
-        this.quickQtyBuffer += e.code.replace('Digit', '');
+      const buffer = this.quickQtyActive
+        ? getQuickQtyBuffer(this.quickQtyBuffer, e.code)
+        : undefined;
+      if (buffer !== undefined) {
+        this.quickQtyBuffer = buffer;
         e.preventDefault();
-        return;
-      }
-
-      if (/^Numpad[0-9]$/.test(e.code)) {
-        this.quickQtyBuffer += e.code.replace('Numpad', '');
-        e.preventDefault();
-        return;
-      }
-
-      if (e.code === 'Backspace') {
-        this.quickQtyBuffer = this.quickQtyBuffer.slice(0, -1);
-        e.preventDefault();
-        return;
       }
     },
     async onQuickQtyKeyUp(e: KeyboardEvent) {

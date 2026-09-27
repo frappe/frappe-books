@@ -214,6 +214,7 @@ async function makeInvoice(respond) {
     fyo.doc.getNewDoc('Item', { name });
   }
   const invoice = fyo.doc.getNewDoc('SalesInvoice', {
+    numberSeries: 'SINV-',
     party: 'Customer',
     items: [{ item: 'Service', quantity: 2, rate: 100 }],
   });

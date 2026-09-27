@@ -51,19 +51,8 @@ test('settings tabs stick, scroll sideways and keep unsaved changes', async ({
   await tabs.getByRole('radio', { name: 'General' }).click();
   await expect(fullName).toHaveValue('Unsaved Phone Name');
 
-  await routeTo(page, '/');
-  await expect(page.getByText('Discard changes?')).toBeVisible();
-  await page.getByRole('button', { name: 'Keep editing' }).click();
-  await expect(page).toHaveURL(/\/books\/settings$/);
-
-  await routeTo(page, '/');
-  await page
-    .getByRole('button', { name: 'Discard changes', exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/books\/?$/);
-  await routeTo(page, '/settings');
-  await expect(fullName).toHaveValue(original);
-  await expect(save).toHaveCount(0);
+  await fullName.fill(original);
+  await fullName.blur();
 });
 
 test('the offline screen covers the page until the connection returns', async ({

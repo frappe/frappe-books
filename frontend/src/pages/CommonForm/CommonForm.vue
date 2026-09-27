@@ -156,7 +156,6 @@
   </FormContainer>
 </template>
 <script lang="ts">
-import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
@@ -172,7 +171,6 @@ import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
-import { showDialog } from 'src/utils/interactive';
 import { getErrorMessage } from 'src/utils';
 import { loadDocPermissions } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -192,7 +190,6 @@ import {
 import { isMobile } from 'src/utils/viewport';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { computed, defineComponent, inject, nextTick, ref } from 'vue';
-import { onBeforeRouteLeave } from 'vue-router';
 import CommonFormSection from './CommonFormSection.vue';
 import LinkedEntries from './LinkedEntries.vue';
 import MobileForm from './MobileForm.vue';
@@ -229,15 +226,6 @@ export default defineComponent({
     if (shortcuts) {
       context = useDocShortcuts(shortcuts, docOrNull, 'CommonForm', true);
     }
-
-    onBeforeRouteLeave(async (to, from) => {
-      const doc = docOrNull.value;
-      if (!isMobile.value || !doc?.dirty || to.path === from.path) {
-        return true;
-      }
-
-      return await confirmDiscard(doc);
-    });
 
     return {
       docOrNull,
@@ -556,27 +544,4 @@ export default defineComponent({
     },
   },
 });
-
-/** Phones ask before leaving a form with unsaved edits. */
-async function confirmDiscard(doc: Doc): Promise<boolean> {
-  return (await showDialog({
-    title: t`Discard changes?`,
-    detail: t`Your changes to ${doc.schema.label} have not been saved.`,
-    type: 'warning',
-    buttons: [
-      {
-        label: t`Discard changes`,
-        isPrimary: true,
-        async action() {
-          if (doc.inserted) {
-            await doc.load();
-          }
-
-          return true;
-        },
-      },
-      { label: t`Keep editing`, isEscape: true, action: () => false },
-    ],
-  })) as boolean;
-}
 </script>

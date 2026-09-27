@@ -4,10 +4,27 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.coa import STANDARD_CHART, chart_options, load_chart
+from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
+from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
+	ACCOUNT_TYPES as ACCOUNTING_RULES,
+)
+from frappe_books.frappe_books.doctype.books_inventory_settings.books_inventory_settings import (
+	ACCOUNT_TYPES as INVENTORY_RULES,
+)
+from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings import (
+	ACCOUNT_TYPES as POS_RULES,
+)
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
-from frappe_books.setup_service import run_setup
+from frappe_books.setup_service import default_accounts, run_setup
 from frappe_books.tests.accounting import unique_name
+
+SETUP_ACCOUNT_RULES = {
+	"write_off": POS_RULES["write_off_account"],
+	"round_off": ACCOUNTING_RULES["round_off_account"],
+	"cash": POS_RULES["cash_account"],
+	"receivable": POS_RULES["default_account"],
+	**INVENTORY_RULES,
+}
 
 
 class IntegrationTestBooksSetupWizard(IntegrationTestCase):
@@ -68,16 +85,24 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			frappe.db.get_value("Books Account", wizard.bank_name, "parent_books_account"),
 			"Caja y Equivalentes - 1.9",
 		)
-		self.assertEqual(frappe.db.get_single_value("Books Pos Settings", "cash_account"), "Caja - 1.9.1")
-		self.assertEqual(
-			frappe.db.get_single_value("Books Pos Settings", "default_account"),
-			"Activos bajo Contrato - 1.8.2",
-		)
+		# The chart's first cash and receivable accounts are empty groups.
+		self.assert_pos_accounts_are_ledgers()
 		self.assertEqual(frappe.db.get_value("Books Account", "Discounts", "root_type"), "Income")
 		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "write_off_account"))
 		# The chart has no postable round-off or stock account, only groups or other types.
 		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "round_off_account"))
 		self.assertFalse(frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"))
+
+	def test_setup_makes_a_cash_ledger_for_a_chart_without_one(self):
+		wizard = self._wizard(
+			country="Canada",
+			currency="CAD",
+			chart_of_accounts="Canada - Plan comptable pour les provinces francophones",
+		)
+		wizard.save(ignore_permissions=True)
+		run_setup(wizard)
+
+		self.assert_pos_accounts_are_ledgers()
 
 	def test_setup_offers_every_shipped_chart_and_rejects_others(self):
 		charts = {chart["name"]: chart for chart in chart_options()}
@@ -86,7 +111,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual(charts["Switzerland - General Chart of Accounts"]["country_code"], "ch")
 		for name in charts:
 			with self.subTest(chart=name):
-				self.assertTrue(load_chart(name))
+				self.assert_settings_accept_default_accounts(load_chart(name))
 		self.assertRaisesRegex(frappe.ValidationError, "Unknown chart of accounts", load_chart, "Standard")
 
 	def test_setup_completes_only_once(self):
@@ -97,6 +122,24 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 		self.assertTrue(frappe.db.get_single_value("Books Accounting Settings", "setup_complete"))
 		self.assertRaises(frappe.ValidationError, complete_setup)
+
+	def assert_settings_accept_default_accounts(self, chart):
+		by_name = {account.name: account for account in chart}
+		picks = {**default_accounts(chart), "cash": find_ledger_account(chart, ["Cash"], "Cash")}
+		for key, name in picks.items():
+			if not name:
+				continue
+			account, rules = by_name[name], SETUP_ACCOUNT_RULES[key]
+			self.assertFalse(account.is_group, name)
+			self.assertIn(account.account_type, rules.get("account_types", (account.account_type,)), name)
+			self.assertIn(account.root_type, rules.get("root_types", (account.root_type,)), name)
+
+	def assert_pos_accounts_are_ledgers(self):
+		for fieldname, account_type in (("cash_account", "Cash"), ("default_account", "Receivable")):
+			account = frappe.db.get_single_value("Books Pos Settings", fieldname)
+			self.assertEqual(
+				frappe.db.get_value("Books Account", account, ["is_group", "account_type"]), (0, account_type)
+			)
 
 	def _wizard(self, **values):
 		wizard = frappe.get_single("Books Setup Wizard")

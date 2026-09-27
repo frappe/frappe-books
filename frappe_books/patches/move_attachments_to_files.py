@@ -41,7 +41,10 @@ def _save_file(doctype, name, fieldname, value):
 			"is_private": 1,
 			"content": content,
 		}
-	).insert()
+	)
+	# The content is already stored, so the upload size limit must not stop moving it.
+	file.flags.skip_file_size_check = True
+	file.insert()
 	return file.file_url
 
 

@@ -70,6 +70,31 @@ test('transfer invoices and returns come from the transfer mappers', async () =>
   assert.equal(purchaseReturn.items[0].quantity, -2);
 });
 
+test('an invoice maps its pending stock with the transfer mapper', async () => {
+  const calls = [];
+  const fyo = await makeFyo((method, ...args) => {
+    calls.push([method, ...args]);
+    return { party: 'Supplier', items: [{ item: 'Pen', quantity: 2 }] };
+  });
+  const invoice = fyo.doc.getNewDoc('PurchaseInvoice', { name: 'PINV-1' });
+
+  const receipt = await getMappedDoc(
+    invoice,
+    invoice.stockTransferSchemaName,
+    invoice.stockTransferMapper
+  );
+
+  assert.deepEqual(calls, [
+    [
+      'getMapped',
+      'frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice.make_purchase_receipt',
+      'PINV-1',
+    ],
+  ]);
+  assert.equal(receipt.schemaName, 'PurchaseReceipt');
+  assert.equal(receipt.items[0].quantity, 2);
+});
+
 async function makeFyo(call) {
   class Store {
     getSchemaMap() {

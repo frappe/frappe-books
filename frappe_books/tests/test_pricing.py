@@ -123,6 +123,34 @@ class IntegrationTestPricing(IntegrationTestCase):
 				self.assertFalse(invoice.items[0].pricing_rule)
 				self.assertEqual(invoice.grand_total, 100)
 
+	def test_rule_values_and_limits_are_in_company_currency(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		for values, rate, fieldname, expected in (
+			({"price_discount_type": "rate", "discount_rate": 80}, None, "rate", 40),
+			({"price_discount_type": "amount", "discount_amount": 10}, 100, "item_discount_amount", 5),
+			(
+				{"price_discount_type": "percentage", "discount_percentage": 10, "min_amount": 150},
+				100,
+				"item_discount_percent",
+				10,
+			),
+		):
+			with self.subTest(values=values):
+				self.item = make_item(self.income.name, self.expense.name, rate=100)
+				self._pricing_rule(**values)
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					self.item.name,
+					self.income.name,
+					exchange_rate=2,
+				)
+				invoice.items[0].update({"rate": rate, "quantity": 1, "item_discount_percent": 0})
+				invoice.save()
+
+				self.assertEqual(invoice.items[0].get(fieldname), expected)
+
 	def test_empty_rate_comes_from_price_list_in_invoice_currency(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
 		item = make_item(self.income.name, self.expense.name, rate=100)

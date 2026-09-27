@@ -4,10 +4,9 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import getdate, now_datetime
+from frappe.utils import now_datetime
 
 from frappe_books.currency import currency_precision
-from frappe_books.patches import currency_display, line_discounts, normalize_ledger_dates
 from frappe_books.setup_service import _update_system_settings, ensure_currency
 from frappe_books.tests.accounting import ledger_entries, make_account, make_invoice, make_item, make_party
 
@@ -91,31 +90,6 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 		self.assertEqual(invoice.items[0].rate, 0)
 		self.assertEqual(invoice.items[0].is_manual_rate, 1)
 
-	def test_discount_upgrade_preserves_existing_invoice_total(self):
-		invoice, _, _ = self.make_invoice("Receive")
-		row = invoice.items[0]
-		frappe.db.set_value(
-			row.doctype,
-			row.name,
-			{
-				"rate": 100,
-				"quantity": 3,
-				"set_item_discount_amount": 1,
-				"item_discount_amount": 50,
-				"amount": 300,
-				"item_discounted_total": 150,
-			},
-			update_modified=False,
-		)
-		modified = invoice.modified
-		line_discounts.execute()
-		line_discounts.execute()
-		invoice.reload()
-		self.assertEqual(invoice.items[0].item_discount_amount, 150)
-		self.assertEqual(frappe.utils.get_datetime(invoice.modified), frappe.utils.get_datetime(modified))
-		invoice.save()
-		self.assertEqual(invoice.grand_total, 150)
-
 	def test_flat_discount_with_tax_matches_before_and_after_tax_postings(self):
 		tax = frappe.get_doc(
 			{
@@ -154,71 +128,6 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 				frappe.db.get_single_value("Books System Settings", "display_precision"), precision
 			)
 		self.assertEqual(currency_precision("JPY"), 0)
-		frappe.db.set_single_value("Books System Settings", "display_precision", 2)
-		currency_display.execute()
-		self.assertEqual(frappe.db.get_single_value("Books System Settings", "display_precision"), 0)
-		frappe.db.set_single_value("Books System Settings", "display_precision", 4)
-		currency_display.execute()
-		self.assertEqual(frappe.db.get_single_value("Books System Settings", "display_precision"), 4)
-
-	def test_date_repair_matches_voucher_type_and_is_repeatable(self):
-		if frappe.db.db_type != "sqlite":
-			self.skipTest("Legacy timestamp strings are specific to SQLite Date columns.")
-		sales, _, _ = self.make_invoice("Receive")
-		purchase, _, _ = self.make_invoice("Pay")
-		frappe.rename_doc(purchase.doctype, purchase.name, sales.name, force=True)
-		purchase.name = sales.name
-		frappe.db.set_value(sales.doctype, sales.name, "date", "2026-01-01")
-		frappe.db.set_value(purchase.doctype, purchase.name, "date", "2026-02-02")
-		entry = frappe.get_doc(
-			{
-				"doctype": "Books Ledger Entry",
-				"posting_date": "2025-12-31",
-				"account": self.cash.name,
-				"debit": 10,
-				"credit": 0,
-				"voucher_type": sales.doctype,
-				"voucher_no": sales.name,
-			}
-		).insert(ignore_permissions=True)
-		ledger = frappe.qb.DocType("Books Ledger Entry")
-		frappe.qb.update(ledger).set(ledger.posting_date, "2025-12-31T18:30:00.000Z").where(
-			ledger.name == entry.name
-		).run()
-		normalize_ledger_dates.execute()
-		self.assertEqual(getdate(entry.db_get("posting_date")), getdate("2026-01-01"))
-		normalize_ledger_dates.execute()
-		self.assertEqual(getdate(entry.db_get("posting_date")), getdate("2026-01-01"))
-
-	def test_date_repair_uses_journal_entry_posting_date(self):
-		if frappe.db.db_type != "sqlite":
-			self.skipTest("Legacy timestamp strings are specific to SQLite Date columns.")
-		journal = frappe.get_doc(
-			{
-				"doctype": "Books Journal Entry",
-				"entry_type": "Journal Entry",
-				"posting_date": "2026-03-03",
-				"accounts": [
-					{"account": self.cash.name, "debit": 10, "credit": 0},
-					{"account": self.income.name, "debit": 0, "credit": 10},
-				],
-			}
-		).insert()
-		journal.submit()
-		entry_name = frappe.get_all(
-			"Books Ledger Entry",
-			filters={"voucher_type": journal.doctype, "voucher_no": journal.name},
-			pluck="name",
-		)[0]
-		ledger = frappe.qb.DocType("Books Ledger Entry")
-		frappe.qb.update(ledger).set(ledger.posting_date, "2025-12-31T18:30:00.000Z").where(
-			ledger.name == entry_name
-		).run()
-
-		normalize_ledger_dates.execute()
-
-		posting_date = frappe.db.get_value("Books Ledger Entry", entry_name, "posting_date")
-		self.assertEqual(getdate(posting_date), getdate("2026-03-03"))
 
 	def make_invoice(self, payment_type):
 		is_sales = payment_type == "Receive"

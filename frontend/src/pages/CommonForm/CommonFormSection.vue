@@ -31,6 +31,7 @@
               :df="field"
               :value="tableValue(doc[field.fieldname])"
               @editrow="(doc: Doc) => $emit('editrow', doc)"
+              @row-remove="(doc: Doc) => $emit('row-remove', doc)"
               @change="(value: DocValue) => $emit('value-change', field, value)"
               @row-change="
                 (field: Field, value: DocValue, parentfield: Field) =>
@@ -96,7 +97,7 @@ export default defineComponent({
     doc: { type: Object as PropType<Doc>, required: true },
     fields: { type: Array as PropType<Field[]>, required: true },
   },
-  emits: ['editrow', 'value-change', 'row-change'],
+  emits: ['editrow', 'row-remove', 'value-change', 'row-change'],
   setup() {
     // The fields render under an accordion header or on their own.
     const [DefineFields, ReuseFields] = createReusableTemplate();

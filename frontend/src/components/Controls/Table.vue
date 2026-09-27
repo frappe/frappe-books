@@ -148,7 +148,7 @@ export default {
       default: true,
     },
   },
-  emits: ['editrow', 'row-change'],
+  emits: ['editrow', 'row-change', 'row-remove'],
   computed: {
     rowHeight() {
       return 48;
@@ -223,6 +223,8 @@ export default {
       });
     },
     removeRow(row) {
+      // Before removal, so listeners update ahead of the next render.
+      this.$emit('row-remove', row);
       this.doc.remove(this.df.fieldname, row.idx).then((s) => {
         if (!s) {
           return;

@@ -12,6 +12,7 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_books.customization import sync_all_custom_forms
 from frappe_books.tests.accounting import unique_name
+from frappe_books.ui_api import get_field_properties
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 COLUMN = "custom_books_hostedbridgetestvalue"
@@ -48,6 +49,11 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 
 		self.assertEqual(inserted[FIELD["fieldname"]], "persisted")
 		self.assertEqual(self.bridge.get("Color", color_name)[FIELD["fieldname"]], "persisted")
+
+	def test_custom_fields_are_served_under_their_books_names(self):
+		self.bridge.insert("CustomForm", {"name": "Color", "customFields": [FIELD]})
+
+		self.assertEqual(get_field_properties()["Color"][FIELD["fieldname"]], {"fieldtype": "Data"})
 
 	def test_system_manager_removes_fields_without_switching_user(self):
 		_make_system_manager()

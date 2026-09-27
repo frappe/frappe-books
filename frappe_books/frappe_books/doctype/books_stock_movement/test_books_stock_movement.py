@@ -1,9 +1,11 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
+from datetime import datetime
+
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now, now_datetime
+from frappe.utils import convert_utc_to_system_timezone, now, now_datetime
 
 from frappe_books.inventory.stock import create_missing_batches
 from frappe_books.tests.accounting import make_account, make_item, stock_quantity, unique_name
@@ -256,6 +258,16 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertEqual(frappe.db.get_value("Books Batch", first, "item"), item)
 		self.assertEqual(frappe.db.get_value("Books Batch", second, "item"), item)
+
+	def test_interface_datetimes_are_stored_in_system_time(self):
+		row = {"item": self.item.name, "toLocation": "Stores", "quantity": 1, "rate": 10}
+		movement = BooksDatabaseBridge().insert(
+			"StockMovement",
+			{"movementType": "MaterialReceipt", "date": "2031-01-01T00:00:00Z", "items": [row]},
+		)
+
+		stored = frappe.db.get_value("Books Stock Movement", movement["name"], "date")
+		self.assertEqual(stored, convert_utc_to_system_timezone(datetime(2031, 1, 1)).replace(tzinfo=None))
 
 	def test_shipments_do_not_create_batches(self):
 		item = make_item(self.item.income_account, self.item.expense_account, track_item=1, has_batch=1).name

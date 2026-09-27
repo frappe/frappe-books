@@ -37,3 +37,30 @@ test('search starts without loading documents and fetches a bounded match set', 
     [['SINV-1001', ['Acme']]]
   );
 });
+
+test('recent records reopen the record instead of a list', async () => {
+  const fyo = await makeFyo();
+  fyo.db.search = async () => ({
+    SalesInvoice: [{ name: 'SINV-1001', party: 'Acme' }],
+  });
+  const stored = new Map();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key) => stored.get(key) ?? null,
+      setItem: (key, value) => stored.set(key, value),
+    },
+  });
+  const search = new Search(fyo);
+  search.initialize();
+  await search.fetchDocs('SINV-1001');
+
+  const [record] = search
+    .search('SINV-1001')
+    .filter((item) => item.group === 'Docs');
+  search.addToRecent(record);
+  assert.equal(
+    search.getRecentItems()[0].route,
+    '/edit/SalesInvoice/SINV-1001'
+  );
+});

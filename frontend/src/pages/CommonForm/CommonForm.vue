@@ -17,7 +17,14 @@
       @submit="submit"
       @print="openPrintView"
       @show-links="showLinks = true"
-    />
+    >
+      <template v-if="canShowExchangeRate" #exchange-rate>
+        <ExchangeRate v-bind="exchangeRateProps" @change="setExchangeRate" />
+      </template>
+      <template v-if="canShowBarcode" #barcode>
+        <Barcode @item-selected="addItem" />
+      </template>
+    </MobileForm>
     <LinkedEntries
       v-if="showLinks && canShowLinks"
       :doc="doc"
@@ -33,22 +40,11 @@
   </div>
   <FormContainer v-else :use-full-width="useFullWidth">
     <template v-if="hasDoc" #header-left>
-      <Barcode
-        v-if="canShowBarcode"
-        @item-selected="
-          (name: string, quantity: number) => {
-            // @ts-expect-error only invoices and transfers have addItem
-            doc?.addItem(name, quantity);
-          }
-        "
-      />
+      <Barcode v-if="canShowBarcode" @item-selected="addItem" />
       <ExchangeRate
         v-if="canShowExchangeRate"
-        :disabled="doc?.isSubmitted || doc?.isCancelled"
-        :from-currency="fromCurrency"
-        :to-currency="toCurrency"
-        :exchange-rate="exchangeRate"
-        @change="async (exchangeRate: number) => await doc.set('exchangeRate', exchangeRate)"
+        v-bind="exchangeRateProps"
+        @change="setExchangeRate"
       />
       <p
         v-if="schema.label && !(canShowBarcode || canShowExchangeRate)"
@@ -282,6 +278,14 @@ export default defineComponent({
 
       return this.doc.exchangeRate;
     },
+    exchangeRateProps() {
+      return {
+        disabled: this.doc.isSubmitted || this.doc.isCancelled,
+        fromCurrency: this.fromCurrency,
+        toCurrency: this.toCurrency,
+        exchangeRate: this.exchangeRate,
+      };
+    },
     fromCurrency(): string {
       const currency = this.doc?.currency;
       if (typeof currency !== 'string') {
@@ -416,6 +420,13 @@ export default defineComponent({
   },
   methods: {
     routeTo,
+    async addItem(name: string, quantity?: number) {
+      // @ts-expect-error only invoices and transfers have addItem
+      await this.doc.addItem(name, quantity);
+    },
+    async setExchangeRate(exchangeRate: number) {
+      await this.doc.set('exchangeRate', exchangeRate);
+    },
     async openPrintView() {
       await routeTo(`/print/${this.doc.schemaName}/${this.doc.name}`);
     },

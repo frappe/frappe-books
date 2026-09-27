@@ -72,7 +72,7 @@
     </button>
 
     <MobileFormSection
-      v-for="[section, fields] of activeSections"
+      v-for="([section, fields], index) of activeSections"
       :key="activeTab + section"
       :title="section"
       :fields="fields"
@@ -84,7 +84,18 @@
           $emit('row-change', field, value, parentfield)
       "
       @editrow="(row) => $emit('editrow', row)"
-    />
+    >
+      <!-- Currency follows the party and dates; scanning adds item rows. -->
+      <template
+        v-if="$slots['exchange-rate'] && index === 0 && isFirstTab"
+        #end
+      >
+        <slot name="exchange-rate" />
+      </template>
+      <template v-if="$slots.barcode && hasItemsTable(fields)" #table>
+        <slot name="barcode" />
+      </template>
+    </MobileFormSection>
 
     <div
       v-if="nextStep"
@@ -203,6 +214,10 @@ const activeSections = computed(() => {
   return [...(tab ?? props.groupedFields?.values().next().value ?? new Map())];
 });
 
+const isFirstTab = computed(
+  () => props.activeTab === (tabOptions.value[0]?.value ?? props.activeTab)
+);
+
 const unresolvedFields = computed(() =>
   props.missingFields.filter((field) => props.errors[field.fieldname])
 );
@@ -263,6 +278,10 @@ const actionGroups = computed(() => {
 
   return groups.filter((group) => group.actions.length);
 });
+
+function hasItemsTable(fields: Field[]) {
+  return fields.some((field) => field.fieldname === 'items');
+}
 
 function getTabOf(field: Field) {
   for (const [tab, sections] of props.groupedFields ?? []) {

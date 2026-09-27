@@ -26,6 +26,9 @@
       <span class="text-sm text-ink-gray-5">{{ rowCount }}</span>
     </div>
 
+    <div v-if="tableField && $slots.table" class="px-4 pb-3">
+      <slot name="table" />
+    </div>
     <Table
       v-if="tableField"
       :data-fieldname="tableField.fieldname"
@@ -91,6 +94,7 @@
           @change="(value: DocValue) => $emit('value-change', group[0], value)"
         />
       </template>
+      <slot name="end" />
     </div>
   </section>
 </template>

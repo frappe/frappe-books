@@ -17,8 +17,14 @@ const documents = {
   StockMovement: { amount: 100 },
 };
 
-async function getValues(schemaName, values, getLinkedDocs = () => ({})) {
+async function getValues(
+  schemaName,
+  values,
+  getLinkedDocs = () => ({}),
+  systemSettings = {}
+) {
   const fyo = await makeFyo();
+  Object.assign(fyo.singles.SystemSettings, systemSettings);
   const singles = {
     PrintSettings: fyo.doc.getNewDoc('PrintSettings', { companyName: 'Co' }),
     AccountingSettings: fyo.doc.getNewDoc('AccountingSettings'),
@@ -40,24 +46,38 @@ for (const [schemaName, values] of Object.entries(documents)) {
   });
 }
 
-test('Payment print values format the invoice taxes', async () => {
+test('Payment print values show the tax share it settles', async () => {
   const { doc } = await getValues(
     'Payment',
     {
-      amount: 110,
-      amountPaid: 110,
+      amount: 55,
+      amountPaid: 55,
       referenceType: 'SalesInvoice',
-      for: [{ referenceType: 'SalesInvoice', referenceName: 'SINV-1' }],
+      for: [
+        {
+          referenceType: 'SalesInvoice',
+          referenceName: 'SINV-1',
+          amount: 55,
+        },
+      ],
     },
     (fyo) => ({
       SalesInvoice: fyo.doc.getNewDoc('SalesInvoice', {
+        baseGrandTotal: fyo.pesa(110),
+        exchangeRate: 1,
         taxes: [{ account: 'CGST', amount: fyo.pesa(10) }],
       }),
     })
   );
-  assert.equal(doc.subTotal, '100.00');
-  assert.equal(doc.taxes[0].account, 'CGST');
-  assert.equal(doc.taxes[0].amount, '10.00');
+  assert.equal(doc.subTotal, '50.00');
+  assert.deepEqual(doc.taxes, [{ account: 'CGST', amount: '5.00' }]);
+});
+
+test('print values use the date format setting', async () => {
+  const { doc } = await getValues('SalesInvoice', {}, undefined, {
+    dateFormat: 'dd/MM/yyyy',
+  });
+  assert.equal(doc.date, '02/01/2026');
 });
 
 test('JournalEntry print values have no totals', async () => {

@@ -178,7 +178,7 @@ export function getMakeInvoiceAction(
       if (schemaName === ModelNameEnum.SalesQuote) {
         return doc.isSubmitted;
       } else {
-        return doc.isSubmitted && !doc.backReference;
+        return doc.isSubmitted && !doc.backReference && !doc.returnAgainst;
       }
     },
     action: async (doc: Doc) => {

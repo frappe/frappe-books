@@ -21,5 +21,8 @@ export class TransferItem extends Doc {
   parentdoc?: Transfer;
 
   // The server derives a missing quantity from the other, so a new row's start is set here.
-  static defaults: DefaultMap = { quantity: () => 1 };
+  static defaults: DefaultMap = {
+    quantity: () => 1,
+    transferQuantity: () => 1,
+  };
 }

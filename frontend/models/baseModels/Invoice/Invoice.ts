@@ -404,6 +404,8 @@ export abstract class Invoice extends Transactional {
     );
     if (edits === this._edits && this.dirty) {
       applyPreview(this, sent, previewed);
+      // Computed values are not sent, so the preview has none.
+      await this._setComputedValuesFromFormulas();
     }
   }
 

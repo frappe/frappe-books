@@ -338,7 +338,10 @@ export abstract class InvoiceItem extends Doc {
   };
 
   // The server derives a missing quantity from the other, so a new row's start is set here.
-  static defaults: DefaultMap = { quantity: () => 1 };
+  static defaults: DefaultMap = {
+    quantity: () => 1,
+    transferQuantity: () => 1,
+  };
 
   static filters: FiltersMap = {
     item: async (doc: Doc): Promise<QueryFilter> => {

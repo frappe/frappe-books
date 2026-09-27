@@ -184,18 +184,18 @@ test('Canada selects the French chart only for a French language preference', as
 
 test('the setup wizard offers the charts the server lists', async () => {
   const fyo = await makeFyo();
-  const swiss = 'Switzerland - General Chart of Accounts';
+  const mexican = 'Mexico - Plan de Cuentas';
   fyo.store.chartsOfAccounts = [
     { ...chart('Standard Chart of Accounts', ''), label: 'Plan standard' },
-    chart(swiss, 'ch'),
+    chart(mexican, 'mx'),
   ];
-  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Switzerland' });
+  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Mexico' });
 
   assert.deepEqual(wizard.constructor.lists.chartOfAccounts(wizard), [
     { value: 'Standard Chart of Accounts', label: 'Plan standard' },
-    { value: swiss, label: swiss },
+    { value: mexican, label: mexican },
   ]);
-  assert.equal(wizard.formulas.chartOfAccounts.formula(), swiss);
+  assert.equal(wizard.formulas.chartOfAccounts.formula(), mexican);
   wizard.country = 'Japan';
   assert.equal(
     wizard.formulas.chartOfAccounts.formula(),

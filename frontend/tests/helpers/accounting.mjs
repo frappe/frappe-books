@@ -32,7 +32,7 @@ await build({
       export { getJsonExportData } from './src/utils/export';
       export { getItemQtyMap, getMappedDoc, validateQty } from './models/helpers';
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
-      export { addBatchItem, hasShippedStock, validateSinv } from './src/utils/pos';
+      export { addBatchItem, validatePOSCheckout, validateSinv } from './src/utils/pos';
       export { getTaskChecks } from './src/utils/getStartedTasks';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { linkOnSave } from './src/utils/doc';
@@ -107,7 +107,7 @@ export const {
   validatePOSStock,
   validateSinv,
   addBatchItem,
-  hasShippedStock,
+  validatePOSCheckout,
   getTaskChecks,
   getReportCellColorClass,
   linkOnSave,

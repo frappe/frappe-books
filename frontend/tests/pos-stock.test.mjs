@@ -7,7 +7,7 @@ import {
   getPOSInventory,
   getPOSBatchQuantity,
   validateSinv,
-  hasShippedStock,
+  validatePOSCheckout,
 } from './helpers/accounting.mjs';
 
 const item = 'Demo - Coffee Beans';
@@ -125,16 +125,27 @@ test('selecting a stocked batch adds to its row and checks the added quantity', 
   assert.equal(invoice.items[0].quantity, 2);
 });
 
-test('a payment retry does not require stock that has already shipped', () => {
-  assert.equal(
-    hasShippedStock({ isSubmitted: true, stockNotTransferred: false }),
-    true
+test('checkout validates against freshly loaded stock', async () => {
+  const invoice = { fyo: makeFyo(), items: [{ item, batch, quantity: 2 }] };
+  await validatePOSCheckout(invoice, async () => stockMap(4), {});
+  await assert.rejects(
+    validatePOSCheckout(invoice, async () => stockMap(1), {}),
+    /Available: 1; required: 2/
   );
-  assert.equal(
-    hasShippedStock({ isSubmitted: true, stockNotTransferred: true }),
-    false
+});
+
+test('a payment retry does not require stock that has already shipped', async () => {
+  const invoice = {
+    fyo: makeFyo(),
+    isSubmitted: true,
+    stockNotTransferred: false,
+    items: [{ item, batch, quantity: 2 }],
+  };
+  await validatePOSCheckout(
+    invoice,
+    async () => assert.fail('Stock already shipped'),
+    { [item]: 'SN-1' }
   );
-  assert.equal(hasShippedStock({ isSubmitted: false }), false);
 });
 
 function makeFyo() {

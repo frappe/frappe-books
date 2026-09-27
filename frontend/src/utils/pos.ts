@@ -138,9 +138,23 @@ async function validateSinvItems(
   }
 }
 
-/** A payment retry needs no stock check once the invoice's stock has shipped. */
-export function hasShippedStock(sinvDoc: SalesInvoice): boolean {
-  return !!sinvDoc.isSubmitted && !sinvDoc.stockNotTransferred;
+/**
+ * Check a POS checkout against freshly loaded stock. A payment retry skips
+ * the check once the invoice's stock has shipped.
+ */
+export async function validatePOSCheckout(
+  sinvDoc: SalesInvoice,
+  loadStock: () => Promise<ItemQtyMap>,
+  itemSerialNumbers: ItemSerialNumbers
+) {
+  if (sinvDoc.isSubmitted && !sinvDoc.stockNotTransferred) {
+    return;
+  }
+
+  await validateSinv(sinvDoc, await loadStock());
+  if (!sinvDoc.isReturn) {
+    await validateShipment(itemSerialNumbers);
+  }
 }
 
 /**

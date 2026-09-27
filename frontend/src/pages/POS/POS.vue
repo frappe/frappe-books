@@ -163,9 +163,7 @@ import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoic
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import {
   addBatchItem,
-  hasShippedStock,
-  validateSinv,
-  validateShipment,
+  validatePOSCheckout,
   getTotalQuantity,
   getTotalTaxedAmount,
   validateIsPosSettingsSet,
@@ -1357,17 +1355,15 @@ export default defineComponent({
       this.setTotalTaxedAmount();
     },
     async validate() {
-      if (hasShippedStock(this.sinvDoc as SalesInvoice)) {
-        return;
-      }
-
-      await this.setItemQtyMap();
-      await this.setItems();
-      await validateSinv(this.sinvDoc as SalesInvoice, this.itemQtyMap);
-
-      if (!this.sinvDoc.isReturn) {
-        await validateShipment(this.itemSerialNumbers);
-      }
+      await validatePOSCheckout(
+        this.sinvDoc as SalesInvoice,
+        async () => {
+          await this.setItemQtyMap();
+          await this.setItems();
+          return this.itemQtyMap;
+        },
+        this.itemSerialNumbers
+      );
     },
     async applyPricingRule() {
       try {

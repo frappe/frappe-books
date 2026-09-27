@@ -103,6 +103,7 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertRaises(frappe.LinkExistsError, frappe.get_doc(opening.doctype, opening.name).cancel)
 
 	def test_interface_expected_amounts_match_closing_shift_totals(self):
+		open_shift(0)
 		start = now_datetime()
 		invoice = self._pos_invoice()
 		self._cash_payment([invoice]).submit()
@@ -114,6 +115,7 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertEqual(amounts["Cash"], invoice.base_grand_total)
 
 	def test_payment_for_several_invoices_is_counted_once(self):
+		open_shift(0)
 		start = now_datetime()
 		invoices = [self._pos_invoice(), self._pos_invoice()]
 		self._cash_payment(invoices).submit()

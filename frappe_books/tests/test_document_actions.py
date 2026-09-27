@@ -7,6 +7,9 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
+from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+	start_pos_shift,
+)
 from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (
 	set_inventory_accounts,
 )
@@ -203,9 +206,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			self.assertFalse(frappe.db.exists(doctype, name), doctype)
 
 	def test_submit_makes_the_automatic_payment(self):
-		frappe.db.set_single_value(
-			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 1, "can_edit_discount": 1}
-		)
+		start_pos_shift()
+		frappe.db.set_single_value("Books Pos Settings", "pos_profile", None)
 		for is_pos, payments in ((0, 1), (1, 0)):
 			with self.subTest(is_pos=is_pos):
 				invoice = make_invoice(

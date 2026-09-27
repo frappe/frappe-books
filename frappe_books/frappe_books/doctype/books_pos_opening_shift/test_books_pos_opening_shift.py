@@ -106,6 +106,12 @@ def set_pos_accounts():
 	return counter.name
 
 
+def start_pos_shift():
+	"""Configure POS accounts and open an empty shift, as POS invoices need one."""
+	set_pos_accounts()
+	return open_shift(0)
+
+
 def make_opening_shift(cash):
 	return frappe.get_doc(
 		{

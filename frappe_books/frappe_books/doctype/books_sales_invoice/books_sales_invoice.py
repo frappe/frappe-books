@@ -9,6 +9,7 @@ from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import pricing
+from frappe_books.commerce.pos import open_shift_name
 
 
 class BooksSalesInvoice(PostingInvoiceController):
@@ -79,6 +80,11 @@ class BooksSalesInvoice(PostingInvoiceController):
 		super().validate()
 		if self.is_pos and not self.return_against:
 			self.validate_pos_permissions()
+
+	def before_submit(self):
+		super().before_submit()
+		if self.is_pos and not self.return_against and not open_shift_name():
+			frappe.throw(_("Open a POS shift before submitting a POS invoice."))
 
 	def validate_pos_permissions(self):
 		"""Hold POS rows to the rates and discounts the POS profile allows."""

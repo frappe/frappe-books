@@ -5,6 +5,9 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+	start_pos_shift,
+)
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
 )
@@ -192,6 +195,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertEqual(stock_quantity(item.name, location.name), 5)
 
 	def _make_pos_invoice(self, use_profile, opening_quantity=5):
+		start_pos_shift()
 		receivable = make_account("POS Receivable", account_type="Receivable")
 		income = make_account("POS Sales", root_type="Income", account_type="Income Account")
 		cogs = make_account("POS COGS", root_type="Expense", account_type="Cost of Goods Sold")

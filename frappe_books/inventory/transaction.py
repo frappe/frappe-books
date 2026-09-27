@@ -8,6 +8,7 @@ from frappe.utils import now_datetime
 
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.inventory.invoice_balance import (
+	bill_unbilled_rows,
 	update_invoice_balance,
 	validate_billable,
 	validate_invoice_balance,
@@ -126,6 +127,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 
 def _bill_transfer(transfer, invoice):
 	validate_billable(transfer)
+	bill_unbilled_rows(transfer, invoice)
 	invoice.date = now_datetime()
 	invoice.calculate()
 

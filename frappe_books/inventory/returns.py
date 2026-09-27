@@ -70,8 +70,8 @@ def _returned_rows(original, exclude):
 
 def validate_moved_quantities(transfer, rows, message):
 	"""Throw `message` when the rows hold more of an item and batch than the transfer moved."""
-	moved = _quantities(transfer.items)
-	for (item, batch), quantity in _quantities(rows).items():
+	moved = batch_quantities(transfer.items)
+	for (item, batch), quantity in batch_quantities(rows).items():
 		if quantity > moved[(item, batch)]:
 			label = f"{item} ({batch})" if batch else item
 			frappe.throw(message.format(label, moved[(item, batch)], transfer.name))
@@ -87,7 +87,7 @@ def _validate_serial_numbers(original, returned, rows):
 			frappe.throw(_("Serial number {0} is already returned.").format(serial_number))
 
 
-def _quantities(rows):
+def batch_quantities(rows):
 	quantities = defaultdict(as_decimal)
 	for row in rows:
 		quantities[(row.item, row.batch or "")] += abs(as_decimal(row.quantity))

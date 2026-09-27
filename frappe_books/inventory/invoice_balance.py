@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting.money import as_decimal
-from frappe_books.inventory.returns import validate_moved_quantities
+from frappe_books.inventory.returns import batch_quantities, validate_moved_quantities
 
 
 def pending_quantities(invoice, exclude=None):
@@ -84,6 +84,31 @@ def validate_billable(transfer):
 		frappe.throw(_("{0} was made from invoice {1}.").format(transfer.name, transfer.back_reference))
 	if transfer.return_against:
 		frappe.throw(_("A return cannot be billed."))
+
+
+def bill_unbilled_rows(transfer, invoice):
+	"""Keep on an invoice mapped from the transfer only what its invoices have not billed yet."""
+	left = unbilled_quantities(transfer)
+	rows = []
+	for row in invoice.items:
+		key = (row.item, row.batch or "")
+		quantity = min(abs(as_decimal(row.quantity)), left[key])
+		left[key] -= quantity
+		if quantity > 0:
+			row.quantity = quantity
+			row.transfer_quantity = quantity / as_decimal(row.unit_conversion_factor or 1)
+			rows.append(row)
+	if not rows:
+		frappe.throw(_("{0} is already fully billed.").format(transfer.name))
+	invoice.set("items", rows)
+
+
+def unbilled_quantities(transfer):
+	"""Return what the transfer moved and its invoices have not billed yet, per item and batch."""
+	left = batch_quantities(transfer.items)
+	for key, quantity in batch_quantities(_billing_rows(transfer, _billed_rows(transfer))).items():
+		left[key] -= quantity
+	return left
 
 
 def _invoice(transfer):

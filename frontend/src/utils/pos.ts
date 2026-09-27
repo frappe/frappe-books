@@ -1,6 +1,5 @@
 import { Fyo, t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
-import { Item } from 'models/baseModels/Item/Item';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
@@ -133,15 +132,6 @@ export function getTotalQuantity(items: SalesInvoiceItem[]): number {
     totalQuantity = safeParseFloat(totalQuantity + quantity);
   }
   return totalQuantity;
-}
-
-export async function getItem(item: string): Promise<Item | undefined> {
-  const itemDoc = (await fyo.doc.getDoc(ModelNameEnum.Item, item)) as Item;
-  if (!itemDoc) {
-    return;
-  }
-
-  return itemDoc;
 }
 
 export async function validateSinv(

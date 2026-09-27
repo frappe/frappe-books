@@ -201,7 +201,6 @@ import {
   getQuickQtyBuffer,
 } from 'src/utils/pos';
 import {
-  validateQty,
   getItemQtyMap,
   getItemVisibility,
   getMappedDoc,
@@ -250,18 +249,15 @@ export default defineComponent({
       doc: computed(() => this.sinvDoc),
       sinvDoc: computed(() => this.sinvDoc),
       coupons: computed(() => this.coupons),
-      itemQtyMap: computed(() => this.itemQtyMap),
       paidAmount: computed(() => this.paidAmount),
       paymentMethod: computed(() => this.paymentMethod),
       transferRefNo: computed(() => this.transferRefNo),
       itemDiscounts: computed(() => this.itemDiscounts),
-      transferAmount: computed(() => this.transferAmount),
       appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
       totalTaxedAmount: computed(() => this.totalTaxedAmount),
       itemSerialNumbers: computed(() => this.itemSerialNumbers),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
       transferClearanceDate: computed(() => this.transferClearanceDate),
-      posSettings: computed(() => fyo.singles.POSSettings),
     };
   },
   setup() {
@@ -284,7 +280,6 @@ export default defineComponent({
       openShiftCloseModal: false,
       openSavedInvoiceModal: false,
       openLoyaltyProgramModal: false,
-      openAppliedCouponsModal: false,
       openReturnSalesInvoiceModal: false,
       openBatchSelectionModal: false,
       isPosShiftOpen: false,
@@ -292,16 +287,12 @@ export default defineComponent({
       totalQuantity: 0,
       paidAmount: fyo.pesa(0),
       itemDiscounts: fyo.pesa(0),
-      transferAmount: fyo.pesa(0),
       totalTaxedAmount: fyo.pesa(0),
-      additionalDiscounts: fyo.pesa(0),
 
       loyaltyPoints: 0,
-      appliedLoyaltyPoints: 0,
       loyaltyProgram: '' as string,
 
       appliedCouponsCount: 0,
-      appliedCoupons: [] as AppliedCouponCodes[],
 
       itemSearchTerm: '',
       selectedItemGroup: '',
@@ -310,7 +301,6 @@ export default defineComponent({
       defaultCustomer: undefined as string | undefined,
       transferClearanceDate: undefined as Date | undefined,
 
-      paymentDoc: {} as Payment,
       sinvDoc: {} as SalesInvoice,
       posProfile: null as POSProfile | null,
       itemQtyMap: {} as ItemQtyMap,
@@ -515,10 +505,6 @@ export default defineComponent({
       }
     },
 
-    getItem(name: string) {
-      return this.items.find((item) => item.name === name);
-    },
-
     isModalOpen() {
       for (const modal of modalNames) {
         if (modal && this[`open${modal}Modal`]) {
@@ -714,18 +700,9 @@ export default defineComponent({
         ModelNameEnum.AppliedCouponCodes
       ) as AppliedCouponCodes;
     },
-    setAppliedCoupons() {
-      this.appliedCoupons = this.sinvDoc.coupons as AppliedCouponCodes[];
-    },
     setTotalQuantity() {
       this.totalQuantity = getTotalQuantity(
         this.sinvDoc.items as SalesInvoiceItem[]
-      );
-    },
-    ignorePricingRules(): boolean {
-      return !!(
-        this.posProfile?.ignorePricingRule ??
-        this.fyo.singles.POSSettings?.ignorePricingRule
       );
     },
     setTotalTaxedAmount() {
@@ -735,7 +712,6 @@ export default defineComponent({
       this.appliedCouponsCount = value;
     },
     async setLoyaltyPoints(value: number) {
-      this.appliedLoyaltyPoints = value;
       await this.sinvDoc.set('redeemLoyaltyPoints', value > 0);
       await this.previewInvoice();
     },
@@ -751,9 +727,6 @@ export default defineComponent({
       if (doc.submitted) {
         this.toggleModal('Payment');
       }
-    },
-    setTransferAmount(amount: Money = fyo.pesa(0)) {
-      this.transferAmount = amount;
     },
     setTransferClearanceDate(date: Date) {
       this.transferClearanceDate = date;
@@ -954,7 +927,7 @@ export default defineComponent({
         return;
       }
 
-      this.paymentDoc = (await getMappedDoc(
+      const payment = (await getMappedDoc(
         this.sinvDoc as SalesInvoice,
         ModelNameEnum.Payment,
         'make_payment'
@@ -970,11 +943,11 @@ export default defineComponent({
           ? outstandingAmount
           : tenderedAmount;
 
-      await this.paymentDoc.set('paymentMethod', paymentMethod);
-      await this.paymentDoc.set('amount', paymentAmount);
-      await this.paymentDoc.set('referenceType', ModelNameEnum.SalesInvoice);
+      await payment.set('paymentMethod', paymentMethod);
+      await payment.set('amount', paymentAmount);
+      await payment.set('referenceType', ModelNameEnum.SalesInvoice);
 
-      const paymentMethodDoc = (await this.paymentDoc.loadAndGetLink(
+      const paymentMethodDoc = (await payment.loadAndGetLink(
         'paymentMethod'
       )) as PaymentMethod;
       const requirements = getPaymentMethodRequirements(
@@ -983,37 +956,37 @@ export default defineComponent({
       );
 
       if (requirements.requiresReferenceId) {
-        await this.paymentDoc.set('referenceId', this.transferRefNo);
+        await payment.set('referenceId', this.transferRefNo);
       }
 
       if (requirements.requiresClearanceDate) {
-        await this.paymentDoc.set('clearanceDate', this.transferClearanceDate);
+        await payment.set('clearanceDate', this.transferClearanceDate);
       }
 
       if (requirements.isCash) {
-        if (this.paymentDoc.paymentType === 'Pay') {
-          await this.paymentDoc.setMultiple({
+        if (payment.paymentType === 'Pay') {
+          await payment.setMultiple({
             account: this.defaultPOSCashAccount,
             paymentAccount: this.sinvDoc.account,
           });
         } else {
-          await this.paymentDoc.setMultiple({
+          await payment.setMultiple({
             account: this.sinvDoc.account,
             paymentAccount: this.defaultPOSCashAccount,
           });
         }
       }
 
-      this.paymentDoc.once('afterSubmit', () => {
+      payment.once('afterSubmit', () => {
         showToast({
           type: 'success',
-          message: t`Payment ${this.paymentDoc.name as string} is Saved`,
+          message: t`Payment ${payment.name as string} is Saved`,
           duration: 'short',
         });
       });
 
-      await this.paymentDoc.sync();
-      await this.paymentDoc.submit();
+      await payment.sync();
+      await payment.submit();
     },
     async makeStockTransfer() {
       const shipmentDoc = (await this.sinvDoc.getStockTransfer()) as Shipment;
@@ -1081,7 +1054,6 @@ export default defineComponent({
       this.itemSerialNumbers = {};
 
       this.paidAmount = fyo.pesa(0);
-      this.transferAmount = fyo.pesa(0);
       this.paymentMethod = undefined;
       this.transferRefNo = undefined;
       this.transferClearanceDate = undefined;

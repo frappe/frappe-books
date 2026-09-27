@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 import frappe
+from frappe.client import insert
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.payment import map_invoice_payment
@@ -251,6 +252,36 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
 		self.assertTrue(payment.startswith(series), payment)
+
+	def test_new_invoices_follow_up_as_the_defaults_allow(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_inventory", 1)
+		frappe.db.set_single_value("Books Defaults", "shipment_location", "Stores")
+		invoice = insert(self._invoice_values())
+		self.assertEqual((invoice.make_auto_payment, invoice.make_auto_stock_transfer), (1, 1))
+
+		frappe.db.set_single_value(
+			"Books Defaults", {"sales_payment_account": None, "shipment_location": None}
+		)
+		invoice = insert(self._invoice_values())
+		self.assertEqual((invoice.make_auto_payment, invoice.make_auto_stock_transfer), (0, 0))
+
+	def test_new_invoices_keep_the_follow_ups_the_caller_chose(self):
+		invoice = insert(self._invoice_values(make_auto_payment=0))
+		self.assertEqual(invoice.make_auto_payment, 0)
+
+	def test_preview_shows_the_follow_up_defaults(self):
+		values = {"party": self.party.name, "items": [{"item": self.item.name, "quantity": 1}]}
+		preview = BooksDatabaseBridge().preview("SalesInvoice", values)
+		self.assertTrue(preview["makeAutoPayment"])
+
+	def _invoice_values(self, **values):
+		return {
+			"doctype": "Books Sales Invoice",
+			"party": self.party.name,
+			"date": frappe.utils.now_datetime(),
+			"items": [{"item": self.item.name, "rate": 75, "quantity": 2}],
+			**values,
+		}
 
 	def _submitted_quote(self):
 		return (

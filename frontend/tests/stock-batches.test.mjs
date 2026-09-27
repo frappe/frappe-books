@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createMissingBatches, makeFyo } from './helpers/accounting.mjs';
+import { makeFyo } from './helpers/accounting.mjs';
 
 async function makeBatchFyo() {
   const fyo = await makeFyo();
@@ -20,28 +20,17 @@ const items = [
   { item: 'Ink', batch: 'INK' },
 ];
 
-test('a receipt inserts only the missing batches of batched items', async () => {
-  const { fyo, inserted } = await makeBatchFyo();
-  await createMissingBatches(fyo.doc.getNewDoc('PurchaseReceipt', { items }));
-  assert.deepEqual(inserted, [['Batch', 'NEW', 'Pen']]);
-});
-
-test('a shipment does not invent batches', async () => {
-  const { fyo, inserted } = await makeBatchFyo();
-  await createMissingBatches(fyo.doc.getNewDoc('Shipment', { items }));
-  assert.deepEqual(inserted, []);
-});
-
-test('a failed batch insert stops the save', async () => {
-  const { fyo } = await makeBatchFyo();
-  fyo.db.insert = async () => {
-    throw new Error('Not permitted');
-  };
-  await assert.rejects(
-    createMissingBatches(fyo.doc.getNewDoc('PurchaseInvoice', { items })),
-    /Not permitted/
-  );
-});
+for (const schemaName of [
+  'PurchaseReceipt',
+  'PurchaseInvoice',
+  'StockMovement',
+]) {
+  test(`a ${schemaName} leaves its new batches for the server to create`, async () => {
+    const { fyo, inserted } = await makeBatchFyo();
+    await fyo.doc.getNewDoc(schemaName, { items }).validate();
+    assert.deepEqual(inserted, []);
+  });
+}
 
 test("a movement row accepts a new batch but not another item's batch", async () => {
   const fyo = await makeFyo();

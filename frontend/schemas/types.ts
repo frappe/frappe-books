@@ -73,6 +73,7 @@ export interface BaseField {
   hidden?: boolean;              // UI Facing config, whether field is shown in a form
   invisible?: boolean;           // UI Facing config, whether field is invisible but occupies space
   readOnly?: boolean;            // UI Facing config, whether field is editable
+  setOnlyOnce?: boolean;         // Read only once the document is saved
   description?: string;          // UI Facing, translateable, used for inline documentation
   default?: RawValue;            // Default value of a field, should match the db type
   placeholder?: string;          // UI Facing config, form field placeholder
@@ -95,6 +96,7 @@ export type SelectOption = { value: string; label: string };
 export interface OptionField extends Omit<BaseField, 'fieldtype'> {
   fieldtype: OptionFieldType;
   options: SelectOption[];
+  optionLabels?: Record<string, string>; // Labels of option values that need one
   allowCustom?: boolean;
 }
 
@@ -148,5 +150,10 @@ export interface Schema {
 export interface SchemaStub extends Partial<Schema> {
   name: string;
 }
+
+/** A schema file. The server's DocType meta supplies its fields' data properties. */
+export type SchemaFile = Omit<SchemaStub, 'fields'> & {
+  fields?: Partial<Field>[];
+};
 export type SchemaMap = Record<string, Schema | undefined>;
 export type SchemaStubMap = Record<string, SchemaStub>;

@@ -17,8 +17,8 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		self.expense = make_account("Series Expense", root_type="Expense")
 
 	def test_item_creates_both_series_and_does_not_reset_existing_counters(self):
-		serial = unique_name("Serial")
-		batch = unique_name("Batch")
+		serial = f"{unique_name('Serial')}-"
+		batch = f"{unique_name('Batch')}-"
 		item = make_item(
 			self.income.name,
 			self.expense.name,
@@ -56,8 +56,8 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 				)
 
 	def test_failed_series_creation_fails_the_item_update(self):
-		item = make_item(self.income.name, self.expense.name)
-		item.update({"has_batch": 1, "batch_series": unique_name("Rejected Update Batch")})
+		item = make_item(self.income.name, self.expense.name, has_batch=1, batch_series=unique_name("Batch"))
+		item.batch_series = unique_name("Rejected Update Batch")
 		with patch.object(BooksBatchSeries, "validate", self.reject_save, create=True):
 			with self.assertRaises(frappe.ValidationError):
 				item.save()
@@ -74,6 +74,21 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		).insert()
 		self.assertNotEqual(lead.name, party.name)
 		self.assertEqual(lead.reload().status, "Converted")
+
+	def test_deleting_a_converted_party_reopens_its_lead(self):
+		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Source Lead")}).insert()
+		party = frappe.get_doc(
+			{
+				"doctype": "Books Party",
+				"name": unique_name("Customer"),
+				"role": "Customer",
+				"from_lead": lead.name,
+			}
+		).insert()
+
+		party.delete()
+
+		self.assertEqual(lead.reload().status, "Interested")
 
 	def test_rejected_lead_conversion_fails_the_party_insert(self):
 		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Source Lead")}).insert()

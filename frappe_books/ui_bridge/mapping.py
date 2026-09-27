@@ -71,9 +71,14 @@ def source_field(source_schema: str, target_fieldname: str) -> str:
 	return target_fieldname
 
 
-@request_cache
 def custom_field_mapping(source_schema: str) -> dict[str, str]:
-	"""Return Books custom field names mapped to their hosted columns.
+	"""Return Books custom field names mapped to their hosted columns."""
+	return custom_field_mappings().get(source_schema, {})
+
+
+@request_cache
+def custom_field_mappings() -> dict[str, dict[str, str]]:
+	"""Map each customized Books schema to its custom field columns, in one query.
 
 	Saving a custom form clears the doctype cache, which also clears this request cache.
 	"""
@@ -82,14 +87,13 @@ def custom_field_mapping(source_schema: str) -> dict[str, str]:
 
 	rows = frappe.get_all(
 		"Books Custom Field",
-		filters={
-			"parent": source_schema,
-			"parenttype": "Books Custom Form",
-			"parentfield": "custom_fields",
-		},
-		pluck="fieldname",
+		filters={"parenttype": "Books Custom Form", "parentfield": "custom_fields"},
+		fields=["parent", "fieldname"],
 	)
-	return {fieldname: custom_target_field(fieldname) for fieldname in rows}
+	mappings: dict[str, dict[str, str]] = {}
+	for row in rows:
+		mappings.setdefault(row.parent, {})[row.fieldname] = custom_target_field(row.fieldname)
+	return mappings
 
 
 def custom_target_field(source_field: str) -> str:

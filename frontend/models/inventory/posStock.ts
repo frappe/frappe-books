@@ -3,19 +3,12 @@ import { ValidationError } from 'fyo/utils/errors';
 import { ModelNameEnum } from 'models/types';
 import { ItemQtyMap } from 'src/components/POS/types';
 
+/** The location a POS sale ships from, as the server picks it. */
 export async function getPOSInventory(fyo: Fyo): Promise<string | undefined> {
-  const settings = fyo.singles.POSSettings;
-  if (settings?.posProfile) {
-    const profile = await fyo.doc.getDoc(
-      ModelNameEnum.POSProfile,
-      settings.posProfile as string
-    );
-    if (profile.inventory) {
-      return profile.inventory as string;
-    }
-  }
-
-  return settings?.inventory;
+  return (
+    (await fyo.db.getStockLocation(ModelNameEnum.SalesInvoice, true)) ??
+    undefined
+  );
 }
 
 export async function getPOSBatchQuantity(

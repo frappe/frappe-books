@@ -6,7 +6,6 @@ import {
   HiddenMap,
   ValidationMap,
 } from 'fyo/model/types';
-import { ValidationError } from 'fyo/utils/errors';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { safeParseFloat } from 'utils/index';
@@ -18,6 +17,7 @@ import {
   getExistingActiveSerialNumbersForItem,
   getSerialNumbersForQuantity,
 } from './helpers';
+import { getUnitConversionFactor, validateTransferUnit } from './units';
 
 export class StockTransferItem extends TransferItem {
   item?: string;
@@ -135,16 +135,10 @@ export class StockTransferItem extends TransferItem {
       dependsOn: ['item', 'quantity'],
     },
     quantity: {
-      formula: async (fieldname) => {
+      formula: (fieldname) => {
         if (!this.item) {
           return this.quantity as number;
         }
-
-        const itemDoc = await this.fyo.doc.getDoc(
-          ModelNameEnum.Item,
-          this.item
-        );
-        const unitDoc = await itemDoc.loadAndGetLink('uom');
 
         let quantity: number = this.quantity ?? 1;
 
@@ -160,10 +154,6 @@ export class StockTransferItem extends TransferItem {
           quantity = this.transferQuantity! * this.unitConversionFactor!;
         }
 
-        if (unitDoc?.isWhole) {
-          return Math.round(quantity);
-        }
-
         return safeParseFloat(quantity);
       },
       dependsOn: [
@@ -175,21 +165,7 @@ export class StockTransferItem extends TransferItem {
       ],
     },
     unitConversionFactor: {
-      formula: async () => {
-        if (this.unit === this.transferUnit) {
-          return 1;
-        }
-
-        const conversionFactor = await this.fyo.db.getAll(
-          ModelNameEnum.UOMConversionItem,
-          {
-            fields: ['conversionFactor'],
-            filters: { parent: this.item! },
-          }
-        );
-
-        return safeParseFloat(conversionFactor[0]?.conversionFactor ?? 1);
-      },
+      formula: async () => await getUnitConversionFactor(this),
       dependsOn: ['transferUnit'],
     },
     hsnCode: {
@@ -265,23 +241,8 @@ export class StockTransferItem extends TransferItem {
   };
 
   validations: ValidationMap = {
-    transferUnit: async (value: DocValue) => {
-      if (!this.item) {
-        return;
-      }
-
-      const item = await this.fyo.db.getAll(ModelNameEnum.UOMConversionItem, {
-        fields: ['parent'],
-        filters: { uom: value as string, parent: this.item },
-      });
-
-      if (item.length < 1)
-        throw new ValidationError(
-          this.fyo.t`Transfer Unit ${
-            value as string
-          } is not applicable for Item ${this.item}`
-        );
-    },
+    transferUnit: async (value: DocValue) =>
+      await validateTransferUnit(this, value as string),
   };
 
   static filters: FiltersMap = {

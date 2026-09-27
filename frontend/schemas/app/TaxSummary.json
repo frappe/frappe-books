@@ -5,32 +5,20 @@
   "fields": [
     {
       "fieldname": "account",
-      "label": "Tax Account",
-      "fieldtype": "Link",
-      "target": "Account",
-      "required": true
+      "label": "Tax Account"
     },
     {
       "fieldname": "from_account",
       "label": "Tax Invoice Account",
-      "fieldtype": "Link",
-      "target": "Account",
-      "required": false,
       "hidden": true
     },
     {
       "fieldname": "rate",
-      "label": "Tax Rate",
-      "fieldtype": "Float",
-      "required": true,
-      "readOnly": true
+      "label": "Tax Rate"
     },
     {
       "fieldname": "amount",
-      "label": "Tax Amount",
-      "fieldtype": "Currency",
-      "required": true,
-      "readOnly": true
+      "label": "Tax Amount"
     }
   ],
   "tableFields": ["account", "rate", "amount"]

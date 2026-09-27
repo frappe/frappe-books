@@ -1,6 +1,7 @@
 import { Fyo } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
+import { getMissingMandatoryMessage } from 'fyo/model/helpers';
 import {
   ChangeArg,
   CurrenciesMap,
@@ -13,7 +14,6 @@ import {
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { Transactional } from 'models/Transactional/Transactional';
 import { addItem, getExchangeRate, getNumberSeries } from 'models/helpers';
-import { createMissingBatches } from 'models/inventory/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
@@ -150,13 +150,6 @@ export abstract class Invoice extends Transactional {
     this._setGetCurrencies();
   }
 
-  async validate() {
-    await super.validate();
-    if (!this.isQuote) {
-      await createMissingBatches(this);
-    }
-  }
-
   async getPaymentIds() {
     const payments = (await this.fyo.db.getAll('PaymentFor', {
       fields: ['parent'],
@@ -194,16 +187,6 @@ export abstract class Invoice extends Transactional {
   }
 
   formulas: FormulaMap = {
-    account: {
-      formula: async () => {
-        return (await this.fyo.getValue(
-          'Party',
-          this.party!,
-          'defaultAccount'
-        )) as string;
-      },
-      dependsOn: ['party'],
-    },
     currency: {
       formula: async () => {
         const currency = (await this.fyo.getValue(
@@ -235,16 +218,6 @@ export abstract class Invoice extends Transactional {
         return await this.getExchangeRate();
       },
       dependsOn: ['party', 'currency'],
-    },
-    makeAutoPayment: {
-      formula: () => !!this.autoPaymentAccount,
-      dependsOn: [],
-    },
-    makeAutoStockTransfer: {
-      formula: () =>
-        !!this.fyo.singles.AccountingSettings?.enableInventory &&
-        !!this.autoStockTransferLocation,
-      dependsOn: [],
     },
   };
 
@@ -305,6 +278,7 @@ export abstract class Invoice extends Transactional {
   };
 
   static defaults: DefaultMap = {
+    // Mirror the server's defaults, as the client always sends check boxes.
     makeAutoPayment: (doc) =>
       doc instanceof Invoice && !!doc.autoPaymentAccount,
     makeAutoStockTransfer: (doc) =>
@@ -366,9 +340,19 @@ export abstract class Invoice extends Transactional {
     }
   }
 
+  /** Previews first when values the server fills, like a new row's account, are still missing. */
   async beforeSync(): Promise<void> {
     await super.beforeSync();
     clearTimeout(this._previewTimer);
+    if (this.hasMissingValues) {
+      await this.preview();
+    }
+  }
+
+  get hasMissingValues(): boolean {
+    return [this, ...(this.items ?? [])].some(
+      (doc) => !!getMissingMandatoryMessage(doc)
+    );
   }
 
   /** Counts edits as they start, so a preview sent before one is dropped. */
@@ -377,6 +361,10 @@ export abstract class Invoice extends Transactional {
     retriggerChildDocApplyChange?: boolean
   ) {
     this._edits += 1;
+    if (fieldname === 'party') {
+      // The server's preview sets the new party's account.
+      this.account = undefined;
+    }
     return await super._applyChange(fieldname, retriggerChildDocApplyChange);
   }
 

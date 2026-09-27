@@ -23,16 +23,28 @@ class ChartAccount:
 	is_group: bool
 
 
-def chart_names() -> list[str]:
-	return [STANDARD_CHART, *(chart["name"] for chart in _country_charts())]
+def chart_options() -> list[dict]:
+	"""Return the charts the setup wizard offers, the standard chart first."""
+	charts = [{"name": STANDARD_CHART, "countryCode": ""}, *_country_charts()]
+	return [
+		{
+			"name": chart["name"],
+			"label": _(chart["name"]),
+			"country_code": chart["countryCode"],
+			"language": chart.get("language"),
+		}
+		for chart in charts
+	]
 
 
 def load_chart(chart_name) -> list[ChartAccount]:
-	"""Return the named chart's accounts in tree order. Unknown names load the standard chart."""
+	"""Return the named chart's accounts in tree order."""
+	if chart_name == STANDARD_CHART:
+		return _flatten(json.loads((CHART_DIRECTORY / "standardCOA.json").read_text()))
 	for chart in _country_charts():
 		if chart["name"] == chart_name:
 			return _flatten(chart["tree"])
-	return _flatten(json.loads((CHART_DIRECTORY / "standardCOA.json").read_text()))
+	frappe.throw(_("Unknown chart of accounts: {0}").format(chart_name))
 
 
 def ensure_chart(accounts: list[ChartAccount]):
@@ -56,7 +68,7 @@ def ensure_bank_account(bank_name, accounts, country=None):
 
 def bank_account_parent(accounts, country=None):
 	"""Return the chart's first bank group, creating the standard one when the chart has none."""
-	groups = [account.name for account in accounts if account.is_group and account.account_type == "Bank"]
+	groups = _type_groups(accounts, "Bank")
 	if country == "Indonesia" and "Bank Rupiah - 1121.000" in groups:
 		return "Bank Rupiah - 1121.000"
 	if groups:
@@ -64,10 +76,23 @@ def bank_account_parent(accounts, country=None):
 	return _ensure_group("Bank Accounts", "Asset", accounts, account_type="Bank")
 
 
-def ensure_discount_account(accounts):
+def ensure_cash_account(accounts):
+	"""Return the chart's cash ledger, creating one in its first cash group, else the Asset root."""
+	if cash := find_ledger_account(accounts, ["Cash"], "Cash"):
+		return cash
+	groups = _type_groups(accounts, "Cash")
+	parent = groups[0] if groups else _root_account("Asset", accounts)
+	return _create_account("Cash", parent, root_type="Asset", account_type="Cash", is_group=False).name
+
+
+def ensure_discount_account(accounts=()):
+	"""Return the Discounts account, creating it under Indirect Income, else the Income root."""
 	if frappe.db.exists("Books Account", "Discounts"):
 		return "Discounts"
-	parent = find_account(accounts, ["Indirect Income"]) or _root_account("Income", accounts)
+	if frappe.db.exists("Books Account", {"name": "Indirect Income", "is_group": 1}):
+		parent = "Indirect Income"
+	else:
+		parent = _root_account("Income", accounts)
 	return _create_account(
 		"Discounts",
 		parent=parent,
@@ -84,25 +109,17 @@ def ensure_account(label, parent, root_type, account_type=None, is_group=False):
 	return _create_account(label, parent, root_type, account_type, is_group)
 
 
-def find_account(accounts, names=(), account_type=None):
-	"""Return the first chart account by name, else the first leaf of the chart's first account of the type."""
-	by_name = {account.name: account for account in accounts}
-	for name in names:
-		if name in by_name:
-			return name
-	typed = next(
-		(account for account in accounts if account_type and account.account_type == account_type), None
-	)
-	if typed is None:
-		return None
-	return _first_leaf(typed, accounts)
-
-
-def _first_leaf(account, accounts):
-	if not account.is_group:
-		return account.name
-	child = next((child for child in accounts if child.parent == account.name), None)
-	return _first_leaf(child, accounts) if child else account.name
+def find_ledger_account(accounts, names=(), account_type=None):
+	"""Return the chart's ledger of the account type named first in `names`, else its first of the type."""
+	ledgers = [
+		account.name
+		for account in accounts
+		if not account.is_group and account_type in (None, account.account_type)
+	]
+	named = [name for name in names if name in ledgers]
+	if named:
+		return named[0]
+	return ledgers[0] if account_type and ledgers else None
 
 
 @lru_cache(maxsize=1)
@@ -115,17 +132,17 @@ def _country_charts():
 	return charts
 
 
-def _flatten(tree, parent=None, root_type=None):
+def _flatten(tree, parent=None, root_type=None, account_type=None):
+	"""Children without an account type take their parent's, as Books Account does on save."""
 	accounts = []
 	for label, node in tree.items():
 		if label in META_KEYS or not isinstance(node, dict):
 			continue
 		name = _account_name(label, node.get("accountNumber"))
 		account_root_type = node["rootType"] if parent is None else root_type
-		accounts.append(
-			ChartAccount(name, parent, account_root_type, node.get("accountType") or None, _is_group(node))
-		)
-		accounts.extend(_flatten(node, parent=name, root_type=account_root_type))
+		node_type = node.get("accountType") or account_type
+		accounts.append(ChartAccount(name, parent, account_root_type, node_type, _is_group(node)))
+		accounts.extend(_flatten(node, parent=name, root_type=account_root_type, account_type=node_type))
 	return accounts
 
 
@@ -135,6 +152,8 @@ def _is_group(node):
 
 
 def _account_name(label, account_number):
+	# some charts pad names with spaces, which Frappe strips from document names
+	label = label.strip()
 	if account_number:
 		return f"{label} - {account_number}"
 	return label
@@ -150,6 +169,10 @@ def _ensure_group(label, root_type, accounts, account_type=None):
 		account_type=account_type,
 		is_group=True,
 	).name
+
+
+def _type_groups(accounts, account_type):
+	return [account.name for account in accounts if account.is_group and account.account_type == account_type]
 
 
 def _root_account(root_type, accounts):

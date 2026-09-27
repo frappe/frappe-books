@@ -28,13 +28,28 @@ ITEM_SERIES = {
 class SeriesNamingMixin:
 	def autoname(self):
 		self.number_series = self.number_series or default_series(self.doctype)
+		validate_series_type(self.doctype, self.number_series)
 		self.name = next_name(self.number_series)
 
 
 def default_series(doctype):
-	"""Return the number series Books Defaults sets for the doctype, else its standard prefix."""
-	prefix, _reference_type, defaults_field = NUMBER_SERIES[doctype]
-	return (defaults_field and frappe.db.get_single_value("Books Defaults", defaults_field)) or prefix
+	return default_series_by_schema()[NUMBER_SERIES[doctype][1]]
+
+
+def default_series_by_schema():
+	"""Return each Books schema's series from Books Defaults, else its standard prefix."""
+	defaults = frappe.db.get_singles_dict("Books Defaults")
+	return {
+		reference_type: (defaults_field and defaults.get(defaults_field)) or prefix
+		for prefix, reference_type, defaults_field in NUMBER_SERIES.values()
+	}
+
+
+def validate_series_type(doctype, series):
+	"""A series names only the document type it is made for."""
+	reference_type = NUMBER_SERIES[doctype][1]
+	if frappe.db.get_value("Books Number Series", series, "reference_type") != reference_type:
+		frappe.throw(_("Number series {0} is not for {1} documents.").format(series, _(doctype)))
 
 
 def next_name(prefix):
@@ -79,9 +94,5 @@ def _reserve_unused_names(doctype, series_doctype, prefix, count):
 def validate_series(series_doc):
 	if INVALID_PREFIX.search(series_doc.name or ""):
 		frappe.throw(_("Number-series prefixes cannot contain /, ?, &, =, or %."))
-	if series_doc.start < 0:
-		frappe.throw(_("Number-series start must be zero or greater."))
-	if series_doc.pad_zeros < 0:
-		frappe.throw(_("Number-series padding must be zero or greater."))
 	if series_doc.is_new() and not series_doc.current:
 		series_doc.current = series_doc.start - 1

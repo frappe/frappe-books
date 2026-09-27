@@ -1,12 +1,27 @@
 import { TranslationString } from 'fyo/utils/translation';
 import { getSchemas } from 'schemas';
+import type { FieldPropertyMap } from 'schemas/fieldProperties';
 import type { RawCustomField, SchemaMap } from 'schemas/types';
 import { DatabaseDemuxBase, DatabaseMethod } from 'utils/db/types';
 import { call } from './api';
 
 export class FrappeDatabaseDemux extends DatabaseDemuxBase {
   async getSchemaMap(): Promise<SchemaMap> {
-    const rawCustomFields = (await this.call('getAll', 'CustomField', {
+    const [rawCustomFields, fieldProperties] = await Promise.all([
+      this.getRawCustomFields(),
+      this.getFieldProperties(),
+    ]);
+
+    return getSchemas(
+      window.books_boot?.country_code || '-',
+      rawCustomFields,
+      fieldProperties,
+      TranslationString.prototype.languageMap
+    );
+  }
+
+  async getRawCustomFields(): Promise<RawCustomField[]> {
+    return (await this.call('getAll', 'CustomField', {
       fields: [
         'parent',
         'label',
@@ -21,12 +36,10 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
         'default',
       ],
     })) as RawCustomField[];
+  }
 
-    return getSchemas(
-      window.books_boot?.country_code || '-',
-      rawCustomFields,
-      TranslationString.prototype.languageMap
-    );
+  getFieldProperties(): Promise<FieldPropertyMap> {
+    return call('frappe_books.ui_api.get_field_properties');
   }
 
   connect(countryCode?: string): Promise<string> {

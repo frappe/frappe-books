@@ -12,23 +12,19 @@
     },
     {
       "fieldname": "fraction",
-      "label": "Fraction",
-      "fieldtype": "Data"
+      "label": "Fraction"
     },
     {
       "fieldname": "fractionUnits",
-      "label": "Fraction Units",
-      "fieldtype": "Int"
+      "label": "Fraction Units"
     },
     {
       "label": "Smallest Currency Fraction Value",
-      "fieldname": "smallestValue",
-      "fieldtype": "Currency"
+      "fieldname": "smallestValue"
     },
     {
       "label": "Symbol",
-      "fieldname": "symbol",
-      "fieldtype": "Data"
+      "fieldname": "symbol"
     }
   ],
   "quickEditFields": ["symbol"]

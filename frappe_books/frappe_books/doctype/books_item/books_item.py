@@ -6,6 +6,10 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
+
+from frappe_books.accounting.accounts import validate_account
+from frappe_books.series import ITEM_SERIES
 
 
 class BooksItem(Document):
@@ -44,11 +48,32 @@ class BooksItem(Document):
 
 	_DOCTYPE_NAME = "Books Item"
 
+	def before_validate(self):
+		for flag, fieldname, _series_doctype in ITEM_SERIES.values():
+			series = (self.get(fieldname) or "").strip()
+			if self.get(flag) and series:
+				# A dash keeps the series prefix apart from its numbers.
+				self.set(fieldname, series if series.endswith("-") else f"{series}-")
+
 	def validate(self):
+		self.validate_accounts()
 		if self.hsn_code and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code)):
 			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
 		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
 			frappe.throw(_("Barcode must contain exactly 12 digits."))
+		self.validate_unit_conversions()
+
+	def validate_unit_conversions(self):
+		units = [row.uom for row in self.uom_conversions]
+		if len(units) != len(set(units)):
+			frappe.throw(_("Each unit can have only one conversion factor."))
+		if any(flt(row.conversion_factor) <= 0 for row in self.uom_conversions):
+			frappe.throw(_("Conversion factors must be greater than zero."))
+
+	def validate_accounts(self):
+		"""A tracked item is bought into stock received but not billed, a liability."""
+		validate_account(self, "income_account", root_types=("Income",))
+		validate_account(self, "expense_account", root_types=("Liability" if self.track_item else "Expense",))
 
 	def on_update(self):
 		if self.has_serial_number:

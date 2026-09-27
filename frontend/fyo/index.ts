@@ -22,6 +22,7 @@ import {
 import { t, T } from './utils/translation';
 import type { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
+import type { ChartOfAccounts } from 'utils/types';
 
 export class Fyo {
   t = t;
@@ -42,6 +43,7 @@ export class Fyo {
 
   currencyFormatter?: Intl.NumberFormat;
   currencySymbols: Record<string, string | undefined> = {};
+  defaultNumberSeries: Record<string, string | undefined> = {};
 
   constructor(conf: FyoConfig) {
     this.db = new DatabaseHandler(this, conf.DatabaseDemux);
@@ -65,6 +67,11 @@ export class Fyo {
     this.currencySymbols = Object.fromEntries(
       currencies.map(({ name, symbol }) => [name, symbol || undefined])
     );
+  }
+
+  /** Loads the series the server names new documents with, by schema. */
+  async loadDefaultNumberSeries() {
+    this.defaultNumberSeries = await this.db.getDefaultNumberSeries();
   }
 
   reportDocumentActionWarning(
@@ -203,6 +210,7 @@ export class Fyo {
     appVersion: '',
     language: '',
     permissions: null as PermissionMap | null,
+    chartsOfAccounts: [] as ChartOfAccounts[],
     reports: {} as Record<keyof typeof reports, Report | undefined>,
   };
 }

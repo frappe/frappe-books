@@ -29,10 +29,9 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		)
 		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		income = make_account("Income", root_type="Income")
-		expense = make_account("Expense", root_type="Expense")
 		payable = make_account("Payable", root_type="Liability", account_type="Payable")
 		party = make_party(payable.name, role="Supplier")
-		item = make_item(income.name, expense.name, track_item=1)
+		item = make_item(income.name, received.name, track_item=1)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 
 		receipt = frappe.get_doc(
@@ -59,7 +58,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		item = make_item(
 			make_account("Income", root_type="Income").name,
-			make_account("Expense", root_type="Expense").name,
+			make_account("Received", root_type="Liability").name,
 			track_item=1,
 		)
 		make_receipt(item.name, quantity=2, rate=10)
@@ -80,7 +79,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		)
 		item = make_item(
 			make_account("Income", root_type="Income").name,
-			make_account("Expense", root_type="Expense").name,
+			make_account("Received", root_type="Liability").name,
 			track_item=1,
 		)
 		make_receipt(item.name, quantity=5, rate=10)
@@ -97,7 +96,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		)
 		item = make_item(
 			make_account("Income", root_type="Income").name,
-			make_account("Expense", root_type="Expense").name,
+			make_account("Received", root_type="Liability").name,
 			track_item=1,
 		)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
@@ -123,7 +122,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		)
 		item = make_item(
 			make_account("Income", root_type="Income").name,
-			make_account("Expense", root_type="Expense").name,
+			make_account("Received", root_type="Liability").name,
 			track_item=1,
 		)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
@@ -133,6 +132,24 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		first.submit()
 
 		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2", again.submit)
+
+	def test_receipt_comes_from_a_supplier(self):
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Received", root_type="Liability").name,
+			track_item=1,
+		)
+		customer = make_party(make_account("Receivable", account_type="Receivable").name)
+		receipt = frappe.get_doc(
+			{
+				"doctype": "Books Purchase Receipt",
+				"party": customer.name,
+				"date": now_datetime(),
+				"items": [{"item": item.name, "location": "Stores", "quantity": 1, "rate": 10}],
+			}
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "must be a Supplier", receipt.insert)
 
 
 def make_receipt(item, quantity, rate, return_against=None, date=None):

@@ -5,18 +5,20 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns
+from frappe_books.accounting.accounts import validate_account, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
-from frappe_books.accounting.payment import map_invoice_payment
+from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
-from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer
+from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
 from frappe_books.inventory.invoice_balance import (
 	store_pending_quantities,
 	update_billed_status,
 	validate_billed_quantities,
 )
 from frappe_books.inventory.stock import validate_batches
+from frappe_books.inventory.units import populate_units
 from frappe_books.series import SeriesNamingMixin
 
 
@@ -42,8 +44,27 @@ class InvoiceController(SeriesNamingMixin, Document):
 		loyalty.validate_invoice_loyalty(self)
 
 
+FOLLOW_UP_FIELDS = ("make_auto_payment", "make_auto_stock_transfer")
+
+
 class PostingInvoiceController(InvoiceController):
 	"""Ledger, outstanding and follow-up effects of submitting an invoice."""
+
+	def __setup__(self):
+		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
+		self.dont_update_if_missing.extend(FOLLOW_UP_FIELDS)
+
+	def calculate(self):
+		super().calculate()
+		self.set_follow_up_defaults()
+
+	def set_follow_up_defaults(self):
+		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
+		if self.get("make_auto_payment") is None:
+			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
+		if self.get("make_auto_stock_transfer") is None:
+			inventory = frappe.db.get_single_value("Books Accounting Settings", "enable_inventory")
+			self.make_auto_stock_transfer = int(bool(inventory and default_location(self)))
 
 	def validate(self):
 		super().validate()
@@ -177,12 +198,24 @@ def row_discount(invoice, row):
 def validate_invoice(invoice):
 	if not invoice.items:
 		frappe.throw(_("At least one invoice item is required."))
-	if invoice.exchange_rate is not None and as_decimal(invoice.exchange_rate) <= 0:
-		frappe.throw(_("Exchange rate must be greater than zero."))
+	_validate_party_and_account(invoice)
+	if as_decimal(invoice.exchange_rate) <= 0:
+		frappe.throw(
+			_("Set an exchange rate from {0} to {1} above zero.").format(invoice.currency, company_currency())
+		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
+
+
+def _validate_party_and_account(invoice):
+	"""Sales go to customers and receivables, purchases to suppliers and payables."""
+	is_purchase = invoice.transaction_type == "purchase"
+	if _has_books_party(invoice):
+		validate_party_role(invoice, is_purchase)
+	if invoice.transaction_type != "quote":
+		validate_account(invoice, "account", ("Payable" if is_purchase else "Receivable",))
 
 
 def _validate_row(invoice, row):
@@ -269,6 +302,7 @@ def _post_direction(posting, account, amount, party=None, credit=False, reverse=
 
 def _populate_invoice_defaults(invoice):
 	_populate_party_defaults(invoice)
+	populate_units(invoice.get("items", []))
 	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
 	rates = pricing.standard_rates(invoice) if items else {}
 	for row in invoice.get("items", []):
@@ -277,26 +311,42 @@ def _populate_invoice_defaults(invoice):
 
 
 def _populate_party_defaults(invoice):
-	party = invoice.transaction_type != "quote" and frappe.db.get_value(
-		"Books Party", invoice.party, ["default_account", "loyalty_program"], as_dict=True
-	)
-	if not party:
+	party = _party_defaults(invoice)
+	_populate_currency(invoice, party.currency)
+	if invoice.transaction_type == "quote" or not party:
 		return
 	invoice.account = invoice.get("account") or party.default_account
 	if invoice.transaction_type == "sales" and not invoice.get("return_against"):
 		invoice.loyalty_program = party.loyalty_program
 
 
+def _party_defaults(invoice):
+	"""Return the party's invoice defaults; a quote to a lead has none."""
+	if not invoice.party or not _has_books_party(invoice):
+		return frappe._dict()
+	fields = ["currency", "default_account", "loyalty_program"]
+	return frappe.db.get_value("Books Party", invoice.party, fields, as_dict=True) or frappe._dict()
+
+
+def _has_books_party(invoice):
+	"""Quotes can go to a lead instead."""
+	return (invoice.get("reference_type") or "Books Party") == "Books Party"
+
+
+def _populate_currency(invoice, party_currency):
+	"""Bill in the party's currency; the company currency needs no exchange rate."""
+	company = company_currency()
+	invoice.currency = party_currency or company
+	if invoice.currency == company:
+		invoice.exchange_rate = 1
+
+
 def _populate_row(invoice, row, item, rates):
-	for fieldname in ("item_code", "description", "unit", "tax"):
+	for fieldname in ("item_code", "description", "unit", "tax", "hsn_code"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
-	row.transfer_unit = row.transfer_unit or row.unit
 	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
 		row.rate = pricing.standard_rate(invoice, row, rates)
-	row.unit_conversion_factor = row.unit_conversion_factor or 1
-	if not row.transfer_quantity:
-		row.transfer_quantity = as_decimal(row.quantity) / as_decimal(row.unit_conversion_factor)
 	if not row.account:
 		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
 
@@ -314,6 +364,7 @@ def _item_details(names):
 			"unit",
 			"tax",
 			"item_group.tax as group_tax",
+			"hsn_code",
 			"income_account",
 			"expense_account",
 		],

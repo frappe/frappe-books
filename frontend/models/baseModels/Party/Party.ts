@@ -2,8 +2,8 @@ import { Fyo } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import {
   Action,
+  ChangeArg,
   FiltersMap,
-  FormulaMap,
   ListViewSettings,
   ValidationMap,
 } from 'fyo/model/types';
@@ -22,32 +22,13 @@ export class Party extends Doc {
   defaultAccount?: string;
   loyaltyPoints?: number;
   outstandingAmount?: Money;
-  formulas: FormulaMap = {
-    defaultAccount: {
-      formula: async () => {
-        const role = this.role as PartyRole;
-        if (role === 'Both') {
-          return '';
-        }
 
-        let accountName = 'Debtors';
-        if (role === 'Supplier') {
-          accountName = 'Creditors';
-        }
-
-        const accountExists = await this.fyo.db.exists('Account', accountName);
-        return accountExists ? accountName : '';
-      },
-      dependsOn: ['role'],
-    },
-    currency: {
-      formula: () => {
-        if (!this.currency) {
-          return this.fyo.singles.SystemSettings!.currency as string;
-        }
-      },
-    },
-  };
+  override async change({ changed }: ChangeArg) {
+    if (changed === 'role') {
+      // The server sets the new role's default account on save.
+      this.defaultAccount = undefined;
+    }
+  }
 
   validations: ValidationMap = {
     email: validateEmail,
@@ -79,14 +60,15 @@ export class Party extends Doc {
 
   async afterDelete() {
     await super.afterDelete();
-    if (!this.fromLead) {
-      return;
-    }
-    const leadData = await this.fyo.doc.getDoc(ModelNameEnum.Lead, this.name);
-    await leadData.setAndSync('status', 'Interested');
+    await this.reloadLead();
   }
 
   async afterSync() {
+    await this.reloadLead();
+  }
+
+  /** Shows the lead status the server set when this party was saved or deleted. */
+  async reloadLead() {
     if (!this.fromLead) {
       return;
     }

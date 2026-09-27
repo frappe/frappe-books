@@ -18,6 +18,14 @@ export interface CountryInfo {
   locale: string;
 }
 
+/** A chart of accounts the server can create in the setup wizard. */
+export interface ChartOfAccounts {
+  name: string;
+  label: string;
+  country_code: string;
+  language: string | null;
+}
+
 export interface SelectFileOptions {
   title: string;
   filters?: { name: string; extensions: string[] }[];

@@ -5,6 +5,7 @@ from typing import Any, Literal, get_args
 
 import frappe
 
+from frappe_books.ui_bridge import field_properties
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 from frappe_books.ui_bridge.mapping import target_doctype
@@ -23,6 +24,12 @@ def database_call(method: str, args: list[Any] | str | None = None) -> Any:
 def bespoke_call(method: str, args: list[Any] | str | None = None) -> Any:
 	"""Run one aggregate query required by dashboards, reports, or inventory."""
 	return BooksBespokeQueries().call(method, _as_list(args))
+
+
+@frappe.whitelist(methods=["POST"])
+def get_field_properties() -> dict[str, dict[str, dict[str, Any]]]:
+	"""Return the DocType data properties of every Books schema the user can read."""
+	return field_properties.get_field_properties()
 
 
 @frappe.whitelist(methods=["POST"])

@@ -2,6 +2,7 @@
 # See license.txt
 
 from decimal import Decimal
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -31,10 +32,9 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		received = make_account("Received", root_type="Liability")
 		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		income = make_account("Income", root_type="Income")
-		expense = make_account("Expense", root_type="Expense")
 		receivable = make_account("Receivable", account_type="Receivable")
 		party = make_party(receivable.name)
-		item = make_item(income.name, expense.name, track_item=1)
+		item = make_item(income.name, received.name, track_item=1)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		seed_stock(item.name, quantity=4, rate=25)
 
@@ -102,9 +102,9 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 
 	def test_shipment_cannot_post_a_stock_value_increase(self):
 		item, _cogs, _stock = self._tracked_item()
-		frappe.db.set_value("Books Item", item.name, "track_item", 0)
-		self._make_shipment(item, quantity=5, rate=25).submit()
-		frappe.db.set_value("Books Item", item.name, "track_item", 1)
+		# Stock checks keep stock from going negative, so skip them to get there.
+		with patch("frappe_books.inventory.transaction.validate_stock_available"):
+			self._make_shipment(item, quantity=5, rate=25).submit()
 		seed_stock(item.name, quantity=10, rate=10)
 
 		shipment = self._make_shipment(item, quantity=5, rate=25)
@@ -305,8 +305,8 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		self.assertEqual(shipment.db_get("is_fully_billed"), 0)
 
 	def test_invoice_of_a_shipment_can_bill_lines_it_did_not_ship(self):
-		item, _cogs, _stock = self._tracked_item()
-		service = make_item(item.income_account, item.expense_account)
+		item, cogs, _stock = self._tracked_item()
+		service = make_item(item.income_account, cogs.name)
 		seed_stock(item.name, quantity=2, rate=10)
 		shipment = self._make_shipment(item, quantity=2, rate=25)
 		shipment.submit()
@@ -401,9 +401,8 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		received = make_account("Received", root_type="Liability")
 		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		income = make_account("Income", root_type="Income")
-		expense = make_account("Expense", root_type="Expense")
 		set_inventory_accounts(stock.name, received.name, cogs.name)
-		return make_item(income.name, expense.name, track_item=1, **values), cogs, stock
+		return make_item(income.name, received.name, track_item=1, **values), cogs, stock
 
 	def _make_shipment(self, item, quantity, rate, **values):
 		receivable = make_account("Receivable", account_type="Receivable")

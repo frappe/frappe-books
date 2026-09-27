@@ -3,16 +3,20 @@ import { ModelNameEnum } from 'models/types';
 
 type ItemQuantity = { item: string; batch?: string; quantity: number };
 
-/** Tracked items short of stock on the invoice date, with the shortfall. */
+/** Tracked items short of stock on the invoice date where the server ships them from. */
 export async function getInsufficientItems(
   invoice: SalesInvoice
 ): Promise<ItemQuantity[]> {
   const date = invoice.date!.toISOString();
+  const location = await invoice.fyo.db.getStockLocation(
+    invoice.schemaName,
+    !!invoice.isPOS
+  );
   const shortfalls = await Promise.all(
     (await getTrackedItemQuantities(invoice)).map(async (row) => {
       const stock = await invoice.fyo.db.getStockQuantity(
         row.item,
-        undefined,
+        location ?? undefined,
         undefined,
         date,
         row.batch

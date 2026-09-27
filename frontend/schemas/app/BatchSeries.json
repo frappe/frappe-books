@@ -13,25 +13,15 @@
     },
     {
       "fieldname": "start",
-      "label": "Start",
-      "fieldtype": "Int",
-      "default": 1001,
-      "required": true,
-      "minvalue": 0
+      "label": "Start"
     },
     {
       "fieldname": "padZeros",
-      "label": "Pad Zeros",
-      "fieldtype": "Int",
-      "default": 4,
-      "required": true
+      "label": "Pad Zeros"
     },
     {
       "fieldname": "current",
-      "label": "Current",
-      "fieldtype": "Int",
-      "required": true,
-      "readOnly": true
+      "label": "Current"
     }
   ],
   "quickEditFields": ["start", "padZeros"]

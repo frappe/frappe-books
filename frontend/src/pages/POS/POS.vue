@@ -905,7 +905,7 @@ export default defineComponent({
         ? outstandingAmount
         : tenderedAmount;
     },
-    /** The reference, clearance date or cash accounts the payment method needs. */
+    /** The reference, clearance date or cash account the payment method needs. */
     async setPaymentMethodDetails(payment: Payment) {
       const paymentMethod = (await payment.loadAndGetLink(
         'paymentMethod'
@@ -923,13 +923,7 @@ export default defineComponent({
       }
 
       if (requirements.isCash) {
-        const cash = this.defaultPOSCashAccount;
-        const receivable = this.sinvDoc.account;
-        const isPay = payment.paymentType === 'Pay';
-        await payment.setMultiple({
-          account: isPay ? cash : receivable,
-          paymentAccount: isPay ? receivable : cash,
-        });
+        await payment.set('paymentAccount', this.defaultPOSCashAccount);
       }
     },
     async submitSinvDoc() {

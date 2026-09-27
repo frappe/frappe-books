@@ -227,8 +227,8 @@ async function installPaymentFixture(page: Page) {
         date: new Date(),
         paymentType: 'Pay',
         paymentMethod: 'Cash',
-        account: 'Flow Cash',
-        paymentAccount: 'Flow Creditors',
+        account: 'Flow Creditors',
+        paymentAccount: 'Flow Cash',
         amount: fyo.pesa(100),
         for: [
           {

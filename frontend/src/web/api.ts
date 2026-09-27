@@ -13,6 +13,7 @@ import {
   ValidationError,
 } from 'fyo/utils/errors';
 import type { PermissionMap } from 'fyo/utils/permissions';
+import type { ChartOfAccounts } from 'utils/types';
 
 type ErrorClass = new (message: string, shouldStore?: boolean) => BaseError;
 
@@ -79,6 +80,7 @@ declare global {
       app_version: string;
       developer_mode: boolean;
       permissions: PermissionMap;
+      charts_of_accounts: ChartOfAccounts[];
     };
   }
 }

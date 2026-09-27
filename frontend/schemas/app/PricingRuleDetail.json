@@ -6,17 +6,11 @@
   "fields": [
     {
       "label": "Pricing Rule",
-      "fieldname": "referenceName",
-      "fieldtype": "Link",
-      "target": "PricingRule",
-      "readOnly": true
+      "fieldname": "referenceName"
     },
     {
       "label": "Item",
-      "fieldname": "referenceItem",
-      "fieldtype": "Link",
-      "target": "Item",
-      "readOnly": true
+      "fieldname": "referenceItem"
     }
   ],
   "tableFields": ["referenceName", "referenceItem"]

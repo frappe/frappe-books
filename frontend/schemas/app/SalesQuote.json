@@ -8,11 +8,7 @@
     {
       "fieldname": "numberSeries",
       "label": "Number Series",
-      "fieldtype": "Link",
-      "target": "NumberSeries",
       "create": true,
-      "required": true,
-      "default": "SQUOT-",
       "section": "Default"
     },
     {
@@ -20,7 +16,6 @@
       "label": "Type",
       "placeholder": "Type",
       "fieldtype": "Select",
-      "default": "Party",
       "options": [
         {
           "value": "Party",
@@ -30,44 +25,29 @@
           "value": "Lead",
           "label": "Lead"
         }
-      ],
-      "required": true
+      ]
     },
     {
       "fieldname": "party",
       "label": "Customer",
-      "fieldtype": "DynamicLink",
-      "references": "referenceType",
       "create": true,
-      "required": true,
       "section": "Default"
     },
     {
       "fieldname": "terms",
       "label": "Notes",
       "placeholder": "Add quote terms",
-      "fieldtype": "Text",
       "section": "References"
     },
     {
       "fieldname": "items",
       "label": "Items",
-      "fieldtype": "Table",
-      "target": "SalesQuoteItem",
-      "required": true,
       "edit": true,
       "section": "Items"
     },
     {
       "fieldname": "status",
       "label": "Status",
-      "fieldtype": "Select",
-      "options": [
-        { "value": "Saved", "label": "Saved" },
-        { "value": "Submitted", "label": "Submitted" },
-        { "value": "Cancelled", "label": "Cancelled" }
-      ],
-      "readOnly": true,
       "hidden": true
     }
   ],

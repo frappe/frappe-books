@@ -30,6 +30,11 @@ The order in which a schema is built is:
 1. Build _Regional_ schemas by overriding the fields and other properties of the
    non regional variants.
 2. Combine _Subclass_ schemas with _Abstract_ schemas to get complete schemas.
+3. Apply the field properties the server sends from the DocType meta: field
+   type, options, link target, required, default, read only, set only once and
+   minimum value. The server owns these, so schema files must not set them.
+   Option labels go in `optionLabels`. Computed fields, fields that refer to a
+   doctype and Color palettes keep their own type and options.
 
 _Note: if a Regional schema is not present as a non regional
 variant it's used as it is._

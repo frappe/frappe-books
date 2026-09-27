@@ -3,16 +3,18 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import now, now_datetime
 
+from frappe_books.inventory.stock import create_missing_batches
 from frappe_books.tests.accounting import make_account, make_item, stock_quantity, unique_name
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestBooksStockMovement(IntegrationTestCase):
 	def setUp(self):
 		income = make_account("Income", root_type="Income")
-		expense = make_account("Expense", root_type="Expense")
-		self.item = make_item(income.name, expense.name, track_item=1)
+		received = make_account("Received", root_type="Liability")
+		self.item = make_item(income.name, received.name, track_item=1)
 		self.warehouse = frappe.get_doc(
 			{"doctype": "Books Location", "name": unique_name("Warehouse")}
 		).insert()
@@ -239,6 +241,42 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		)
 
 		self.assertRaises(frappe.LinkValidationError, receipt.insert)
+
+	def test_interface_saves_create_the_new_batches_they_receive(self):
+		item = make_item(self.item.income_account, self.item.expense_account, track_item=1, has_batch=1).name
+		row = {"item": item, "toLocation": "Stores", "quantity": 2, "rate": 12}
+		bridge = BooksDatabaseBridge()
+		first, second = unique_name("NEW-BATCH"), unique_name("NEW-BATCH")
+
+		movement = bridge.insert(
+			"StockMovement",
+			{"movementType": "MaterialReceipt", "date": now(), "items": [{**row, "batch": first}]},
+		)
+		bridge.update("StockMovement", {**movement, "items": [*movement["items"], {**row, "batch": second}]})
+
+		self.assertEqual(frappe.db.get_value("Books Batch", first, "item"), item)
+		self.assertEqual(frappe.db.get_value("Books Batch", second, "item"), item)
+
+	def test_shipments_do_not_create_batches(self):
+		item = make_item(self.item.income_account, self.item.expense_account, track_item=1, has_batch=1).name
+		batch = unique_name("NEW-BATCH")
+
+		create_missing_batches(
+			frappe.get_doc({"doctype": "Books Shipment", "items": [{"item": item, "batch": batch}]})
+		)
+
+		self.assertFalse(frappe.db.exists("Books Batch", batch))
+
+	def test_untracked_item_cannot_move_stock(self):
+		expense = make_account("Service Expense", root_type="Expense")
+		item = make_item(self.item.income_account, expense.name).name
+		receipt = frappe.get_doc(
+			movement_values(
+				"MaterialReceipt", [{"item": item, "to_location": "Stores", "quantity": 1, "rate": 10}]
+			)
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "does not track stock", receipt.insert)
 
 	def test_manufacture_row_cannot_both_consume_and_produce(self):
 		row = {"item": self.item.name, "quantity": 1, "rate": 10}

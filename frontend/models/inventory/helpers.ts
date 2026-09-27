@@ -1,36 +1,5 @@
 import { Fyo } from 'fyo';
-import type { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { ModelNameEnum } from 'models/types';
-import type { StockMovement } from './StockMovement';
-import type { StockTransfer } from './StockTransfer';
-
-const batchReceivingSchemas: string[] = [
-  ModelNameEnum.PurchaseInvoice,
-  ModelNameEnum.PurchaseReceipt,
-  ModelNameEnum.StockMovement,
-];
-
-/**
- * Inserts the new batches that receiving rows name, before the document saves.
- * The server checks links before any document hook, so it cannot add them.
- */
-export async function createMissingBatches(
-  doc: StockMovement | StockTransfer | Invoice
-) {
-  if (!batchReceivingSchemas.includes(doc.schemaName)) {
-    return;
-  }
-
-  for (const { item, batch } of doc.items ?? []) {
-    if (
-      item &&
-      batch &&
-      (await doc.fyo.getValue(ModelNameEnum.Item, item, 'hasBatch'))
-    ) {
-      await createBatch(doc.fyo, item, batch);
-    }
-  }
-}
 
 /** The row's serial numbers resized to `quantity`, topped up with new ones from the item's series. */
 export async function getSerialNumbersForQuantity(
@@ -94,12 +63,4 @@ export async function getSuggestedBatchName(
 
   const [batch] = await fyo.db.getNewSeriesNames(ModelNameEnum.Batch, item, 1);
   return batch;
-}
-
-export async function createBatch(fyo: Fyo, item: string, batch: string) {
-  if (await fyo.db.exists(ModelNameEnum.Batch, batch)) {
-    return;
-  }
-
-  await fyo.doc.getNewDoc(ModelNameEnum.Batch, { name: batch, item }).sync();
 }

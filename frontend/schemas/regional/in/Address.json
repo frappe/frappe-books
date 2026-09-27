@@ -4,7 +4,6 @@
     {
       "fieldname": "pos",
       "label": "Place of Supply",
-      "fieldtype": "AutoComplete",
       "placeholder": "Place of Supply",
       "section": "Miscellaneous"
     }

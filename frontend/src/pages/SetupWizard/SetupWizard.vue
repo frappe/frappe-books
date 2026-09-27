@@ -86,7 +86,6 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
-import { TranslationString } from 'fyo/utils/translation';
 import { Field } from 'schemas/types';
 import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
@@ -157,9 +156,8 @@ export default defineComponent({
       return [...groupedFields.values()][0];
     },
   },
-  async mounted() {
-    const languageMap = TranslationString.prototype.languageMap;
-    this.docOrNull = getSetupWizardDoc(languageMap);
+  mounted() {
+    this.docOrNull = getSetupWizardDoc();
   },
   methods: {
     async fill() {

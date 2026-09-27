@@ -1,4 +1,4 @@
-import { Fyo } from 'fyo';
+import { Fyo, t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import {
   Action,
@@ -17,12 +17,13 @@ import {
 import { Transactional } from 'models/Transactional/Transactional';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
+import { Field } from 'schemas/types';
 import { QueryFilter } from 'utils/db/types';
 import { AccountTypeEnum } from '../Account/types';
 import { Invoice } from '../Invoice/Invoice';
 import { Party } from '../Party/Party';
 import { PaymentFor } from '../PaymentFor/PaymentFor';
-import { PaymentType, PaymentTypeEnum } from './types';
+import { AccountFieldEnum, PaymentType, PaymentTypeEnum } from './types';
 import { PartyRoleEnum } from '../Party/types';
 import { TaxSummary } from '../TaxSummary/TaxSummary';
 import { PaymentMethod } from '../PaymentMethod/PaymentMethod';
@@ -100,6 +101,40 @@ export class Payment extends Transactional {
     date: () => new Date(),
   };
 
+  /** Label the accounts by the way money moves, with From Account first. */
+  getFormFields(fields: Field[]): Field[] {
+    const isPay = this.paymentType === PaymentTypeEnum.Pay;
+    const labels = new Map([
+      [AccountFieldEnum.Account, isPay ? t`To Account` : t`From Account`],
+      [
+        AccountFieldEnum.PaymentAccount,
+        isPay ? t`From Account` : t`To Account`,
+      ],
+    ]);
+    const formFields = fields.map((field) => {
+      const label = labels.get(field.fieldname as AccountFieldEnum);
+      return label ? { ...field, label } : field;
+    });
+    if (!isPay) {
+      return formFields;
+    }
+
+    const account = formFields.findIndex(
+      (field) => field.fieldname === AccountFieldEnum.Account
+    );
+    const paymentAccount = formFields.findIndex(
+      (field) => field.fieldname === AccountFieldEnum.PaymentAccount
+    );
+    if (account !== -1 && paymentAccount !== -1) {
+      [formFields[account], formFields[paymentAccount]] = [
+        formFields[paymentAccount],
+        formFields[account],
+      ];
+    }
+
+    return formFields;
+  }
+
   async _getAccountsMap(): Promise<AccountTypeMap> {
     if (this._accountsMap) {
       return this._accountsMap;
@@ -156,15 +191,6 @@ export class Payment extends Transactional {
       'referenceName'
     )) as Invoice | null;
 
-    if (
-      refDoc &&
-      refDoc.schema.name === ModelNameEnum.SalesInvoice &&
-      refDoc.isReturned
-    ) {
-      const accountsMap = await this._getAccountsMap();
-      return accountsMap[AccountTypeEnum.Cash]?.[0];
-    }
-
     return refDoc?.account ?? null;
   }
 
@@ -172,54 +198,39 @@ export class Payment extends Transactional {
     account: {
       formula: async () => {
         const accountsMap = await this._getAccountsMap();
-        if (this.paymentType === 'Receive') {
-          return (
-            (await this._getReferenceAccount()) ??
-            accountsMap[AccountTypeEnum.Receivable]?.[0] ??
-            null
-          );
-        }
-
-        const paymentMethodDoc = await this.paymentMethodDoc();
-        if (!paymentMethodDoc) {
-          return;
-        }
-
-        if (paymentMethodDoc.type === 'Cash') {
-          return accountsMap[AccountTypeEnum.Cash]?.[0] ?? null;
-        }
-
-        return accountsMap[AccountTypeEnum.Bank]?.[0] ?? null;
+        const accountType =
+          this.paymentType === PaymentTypeEnum.Pay
+            ? AccountTypeEnum.Payable
+            : AccountTypeEnum.Receivable;
+        return (
+          (await this._getReferenceAccount()) ??
+          accountsMap[accountType]?.[0] ??
+          null
+        );
       },
-      dependsOn: ['paymentMethod', 'paymentType', 'party'],
+      dependsOn: ['paymentType', 'party'],
     },
     paymentAccount: {
       formula: async () => {
-        const accountsMap = await this._getAccountsMap();
-        if (this.paymentType === 'Pay') {
-          return (
-            (await this._getReferenceAccount()) ??
-            accountsMap[AccountTypeEnum.Payable]?.[0] ??
-            null
-          );
-        }
-
         const paymentMethodDoc = await this.paymentMethodDoc();
         if (!paymentMethodDoc) {
           return;
         }
 
-        if (paymentMethodDoc.account) {
+        // Like Electron Books, only receipts default to the method's account.
+        const isPay = this.paymentType === PaymentTypeEnum.Pay;
+        if (paymentMethodDoc.account && !isPay) {
           return paymentMethodDoc.get('account');
         }
 
+        const accountsMap = await this._getAccountsMap();
         if (paymentMethodDoc.type === 'Cash') {
           return accountsMap[AccountTypeEnum.Cash]?.[0] ?? null;
         }
 
         return accountsMap[AccountTypeEnum.Bank]?.[0] ?? null;
       },
-      dependsOn: ['paymentMethod', 'paymentType', 'party'],
+      dependsOn: ['paymentMethod', 'paymentType'],
     },
     paymentType: {
       formula: async () => {
@@ -284,33 +295,18 @@ export class Payment extends Transactional {
     numberSeries: () => {
       return { referenceType: 'Payment' };
     },
-    account: (doc: Doc) => {
-      const paymentType = doc.paymentType as PaymentType;
-      const paymentMethod = doc.paymentMethod as PaymentMethod;
-
-      if (paymentType === 'Receive') {
-        return { accountType: 'Receivable', isGroup: false };
-      }
-
-      if (paymentMethod.name === 'Cash') {
-        return { accountType: 'Cash', isGroup: false };
-      } else {
-        return { accountType: ['in', ['Bank', 'Cash']], isGroup: false };
-      }
-    },
+    account: (doc: Doc) => ({
+      accountType:
+        doc.paymentType === PaymentTypeEnum.Pay ? 'Payable' : 'Receivable',
+      isGroup: false,
+    }),
     paymentAccount: (doc: Doc) => {
-      const paymentType = doc.paymentType as PaymentType;
       const paymentMethod = doc.paymentMethod as PaymentMethod;
-
-      if (paymentType === 'Pay') {
-        return { accountType: 'Payable', isGroup: false };
-      }
-
       if (paymentMethod.name === 'Cash') {
         return { accountType: 'Cash', isGroup: false };
-      } else {
-        return { accountType: ['in', ['Bank', 'Cash']], isGroup: false };
       }
+
+      return { accountType: ['in', ['Bank', 'Cash']], isGroup: false };
     },
   };
 

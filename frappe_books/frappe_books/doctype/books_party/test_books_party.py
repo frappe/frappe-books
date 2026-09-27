@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.accounting.money import company_currency
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
 
 # On IntegrationTestCase, the doctype test records and all
@@ -62,6 +63,27 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 		).insert()
 		self.assertFalse(party.gstin)
 
+	def test_default_account_follows_the_role(self):
+		receivable = make_account("Role Receivable", account_type="Receivable")
+		payable = make_account("Role Payable", root_type="Liability", account_type="Payable")
+		for account, role, message in (
+			(payable, "Customer", "must be of type Receivable,"),
+			(receivable, "Supplier", "must be of type Payable,"),
+		):
+			with self.subTest(role=role), self.assertRaisesRegex(frappe.ValidationError, message):
+				make_party(account.name, role=role)
+
+		self.assertEqual(make_party(payable.name, role="Both").default_account, payable.name)
+
+	def test_party_defaults_to_the_role_ledger_and_company_currency(self):
+		if not frappe.db.exists("Books Account", "Debtors"):
+			make_account("Debtors", account_type="Receivable", account_name="Debtors")
+		party = frappe.get_doc(
+			{"doctype": "Books Party", "name": unique_name("Default Party"), "role": "Customer"}
+		).insert()
+
+		self.assertEqual((party.default_account, party.currency), ("Debtors", company_currency()))
+
 	def test_stale_party_save_cannot_reset_outstanding(self):
 		receivable = make_account("Stale Receivable", account_type="Receivable")
 		income = make_account("Stale Income", root_type="Income")
@@ -77,13 +99,14 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 
 	def test_outstanding_nets_sales_against_purchases(self):
 		account = make_account("Both Account", account_type="Receivable")
+		payable = make_account("Both Payable", root_type="Liability", account_type="Payable")
 		income = make_account("Both Income", root_type="Income")
 		expense = make_account("Both Expense", root_type="Expense")
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
 		party = make_party(account.name, role="Both")
 		item = make_item(income.name, expense.name)
 		make_invoice("Books Sales Invoice", party.name, account.name, item.name, income.name).submit()
-		purchase = make_invoice("Books Purchase Invoice", party.name, account.name, item.name, expense.name)
+		purchase = make_invoice("Books Purchase Invoice", party.name, payable.name, item.name, expense.name)
 		purchase.items[0].quantity = 1
 		purchase.save().submit()
 

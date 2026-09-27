@@ -156,6 +156,10 @@ test('root groups can be recreated and edited but cannot be deleted', async () =
 
 test('Canada selects the French chart only for a French language preference', async () => {
   const fyo = await makeFyo();
+  fyo.store.chartsOfAccounts = [
+    chart('Standard Chart of Accounts', ''),
+    chart('Canada - Plan comptable pour les provinces francophones', 'ca', 'fr'),
+  ];
   const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Canada' });
   for (const language of ['en', 'en-CA', 'English', '']) {
     fyo.store.language = language;
@@ -173,10 +177,35 @@ test('Canada selects the French chart only for a French language preference', as
   }
   assert.ok(
     wizard.constructor.lists
-      .chartOfAccounts()
-      .some((name) => name.startsWith('Canada'))
+      .chartOfAccounts(wizard)
+      .some(({ value }) => value.startsWith('Canada'))
   );
 });
+
+test('the setup wizard offers the charts the server lists', async () => {
+  const fyo = await makeFyo();
+  const swiss = 'Switzerland - General Chart of Accounts';
+  fyo.store.chartsOfAccounts = [
+    { ...chart('Standard Chart of Accounts', ''), label: 'Plan standard' },
+    chart(swiss, 'ch'),
+  ];
+  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Switzerland' });
+
+  assert.deepEqual(wizard.constructor.lists.chartOfAccounts(wizard), [
+    { value: 'Standard Chart of Accounts', label: 'Plan standard' },
+    { value: swiss, label: swiss },
+  ]);
+  assert.equal(wizard.formulas.chartOfAccounts.formula(), swiss);
+  wizard.country = 'Japan';
+  assert.equal(
+    wizard.formulas.chartOfAccounts.formula(),
+    'Standard Chart of Accounts'
+  );
+});
+
+function chart(name, countryCode, language = null) {
+  return { name, label: name, country_code: countryCode, language };
+}
 
 test('account translations change display labels while identifiers and custom names stay stable', async () => {
   const fyo = await makeFyo();

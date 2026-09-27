@@ -13,10 +13,7 @@
     },
     {
       "fieldname": "details",
-      "label": "Details",
-      "fieldtype": "Table",
-      "target": "TaxDetail",
-      "required": true
+      "label": "Details"
     }
   ],
   "keywordFields": ["name"],

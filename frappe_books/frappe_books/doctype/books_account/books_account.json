@@ -33,19 +33,22 @@
    "in_list_view": 1,
    "label": "Root Type",
    "options": "Asset\nLiability\nEquity\nIncome\nExpense",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "parent_books_account",
    "fieldtype": "Link",
    "label": "Parent Account",
-   "options": "Books Account"
+   "options": "Books Account",
+   "set_only_once": 1
   },
   {
    "default": "0",
    "fieldname": "is_group",
    "fieldtype": "Check",
-   "label": "Is Group"
+   "label": "Is Group",
+   "set_only_once": 1
   },
   {
    "fieldname": "lft",
@@ -64,12 +67,6 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "fieldname": "is_group",
-   "fieldtype": "Check",
-   "label": "Is Group"
-  },
-  {
    "fieldname": "old_parent",
    "fieldtype": "Link",
    "hidden": 1,
@@ -77,24 +74,18 @@
    "options": "Books Account"
   },
   {
-   "fieldname": "parent_books_account",
-   "fieldtype": "Link",
-   "label": "Parent Account",
-   "options": "Books Account"
-  },
-  {
    "description": "Account Type",
    "fieldname": "account_type",
    "fieldtype": "Select",
    "label": "Account Type",
-   "options": "Accumulated Depreciation\nBank\nCash\nChargeable\nCost of Goods Sold\nDepreciation\nEquity\nExpense Account\nExpenses Included In Valuation\nFixed Asset\nIncome Account\nPayable\nReceivable\nRound Off\nStock\nStock Adjustment\nStock Received But Not Billed\nTax\nTemporary"
+   "options": "\nAccumulated Depreciation\nBank\nCash\nChargeable\nCost of Goods Sold\nDepreciation\nEquity\nExpense Account\nExpenses Included In Valuation\nFixed Asset\nIncome Account\nPayable\nReceivable\nRound Off\nStock\nStock Adjustment\nStock Received But Not Billed\nTax\nTemporary"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-08-27 23:43:14.533019",
+ "modified": "2026-09-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Account",

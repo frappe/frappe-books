@@ -14,58 +14,35 @@
     },
     {
       "fieldname": "loyaltyProgram",
-      "readOnly": true,
-      "label": "Loyalty Program",
-      "fieldtype": "Link",
-      "target": "LoyaltyProgram",
-      "required": true
+      "label": "Loyalty Program"
     },
     {
       "fieldname": "loyaltyProgramTier",
-      "readOnly": true,
-      "label": "Loyalty Program Tier",
-      "fieldtype": "Data"
+      "label": "Loyalty Program Tier"
     },
     {
       "fieldname": "customer",
-      "readOnly": true,
-      "label": "Customer",
-      "fieldtype": "Link",
-      "target": "Party",
-      "required": true
+      "label": "Customer"
     },
     {
       "fieldname": "invoice",
-      "readOnly": true,
-      "label": "Invoice",
-      "fieldtype": "Link",
-      "target": "SalesInvoice",
-      "required": true
+      "label": "Invoice"
     },
     {
       "fieldname": "loyaltyPoints",
-      "readOnly": true,
-      "label": "Loyalty Points",
-      "fieldtype": "Int"
+      "label": "Loyalty Points"
     },
     {
       "fieldname": "purchaseAmount",
-      "readOnly": true,
-      "label": "Purchase Amount",
-      "fieldtype": "Currency",
-      "required": true
+      "label": "Purchase Amount"
     },
     {
       "fieldname": "expiryDate",
-      "readOnly": true,
-      "label": "Expiry Date",
-      "fieldtype": "Date"
+      "label": "Expiry Date"
     },
     {
       "fieldname": "postingDate",
-      "readOnly": true,
-      "label": "Posting Date",
-      "fieldtype": "Date"
+      "label": "Posting Date"
     }
   ]
 }

@@ -55,5 +55,5 @@ class IntegrationTestBooksSerialNumberSeries(IntegrationTestCase):
 
 def make_series_item(**values):
 	income = make_account("Series Income", root_type="Income")
-	expense = make_account("Series Expense", root_type="Expense")
-	return make_item(income.name, expense.name, track_item=1, **values).name
+	received = make_account("Series Received", root_type="Liability")
+	return make_item(income.name, received.name, track_item=1, **values).name

@@ -19,6 +19,7 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Start",
+   "non_negative": 1,
    "reqd": 1
   },
   {
@@ -27,6 +28,7 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Pad Zeros",
+   "non_negative": 1,
    "reqd": 1
   },
   {
@@ -41,7 +43,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 23:43:14.720966",
+ "modified": "2026-09-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Batch Series",

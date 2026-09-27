@@ -9,6 +9,7 @@ import frappe.sessions
 from frappe import _
 from frappe.utils.jinja_globals import is_rtl
 
+from frappe_books.coa import chart_options
 from frappe_books.permissions import get_schema_permissions, has_app_permission
 
 no_cache = 1
@@ -61,4 +62,5 @@ def _books_boot():
 		"app_version": frappe.get_attr("frappe_books.__version__"),
 		"developer_mode": bool(frappe.conf.developer_mode),
 		"permissions": get_schema_permissions(),
+		"charts_of_accounts": chart_options(),
 	}

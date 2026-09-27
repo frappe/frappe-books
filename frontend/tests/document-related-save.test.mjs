@@ -32,3 +32,27 @@ test('saving a converted party refreshes its linked lead without another write',
   assert.equal(lead.status, 'Converted');
   assert.deepEqual(warnings, []);
 });
+
+test('deleting a converted party refreshes its linked lead without writing it', async () => {
+  const fyo = await makeFyo();
+  const lead = fyo.doc.getNewDoc('Lead', {
+    name: 'Original Lead',
+    status: 'Converted',
+  });
+  const party = fyo.doc.getNewDoc('Party', {
+    name: 'Converted Party',
+    fromLead: lead.name,
+  });
+  fyo.db.insert = async (schema, values) => values;
+  fyo.db.get = async () => lead.getValidDict();
+  await party.sync();
+  const calls = [];
+  fyo.db.delete = async (schema) => calls.push(`delete ${schema}`);
+  fyo.db.update = async (schema) => calls.push(`update ${schema}`);
+  fyo.db.get = async () => ({ ...lead.getValidDict(), status: 'Interested' });
+
+  await party.delete();
+
+  assert.deepEqual(calls, ['delete Party']);
+  assert.equal(lead.status, 'Interested');
+});

@@ -72,7 +72,8 @@
    "fieldname": "item_type",
    "fieldtype": "Select",
    "label": "Type",
-   "options": "Product\nService"
+   "options": "Product\nService",
+   "set_only_once": 1
   },
   {
    "fieldname": "details_section_break_7",
@@ -85,7 +86,8 @@
    "fieldname": "unit",
    "fieldtype": "Link",
    "label": "Unit Type",
-   "options": "Books Uom"
+   "options": "Books Uom",
+   "set_only_once": 1
   },
   {
    "fieldname": "rate",
@@ -150,13 +152,15 @@
    "default": "0",
    "fieldname": "track_item",
    "fieldtype": "Check",
-   "label": "Track Inventory"
+   "label": "Track Inventory",
+   "set_only_once": 1
   },
   {
    "default": "0",
    "fieldname": "has_batch",
    "fieldtype": "Check",
-   "label": "Has Batch"
+   "label": "Has Batch",
+   "set_only_once": 1
   },
   {
    "fieldname": "batch_series",
@@ -167,7 +171,8 @@
    "default": "0",
    "fieldname": "has_serial_number",
    "fieldtype": "Check",
-   "label": "Has Serial Number"
+   "label": "Has Serial Number",
+   "set_only_once": 1
   },
   {
    "fieldname": "serial_number_series",
@@ -189,7 +194,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-26 13:00:00.000000",
+ "modified": "2026-09-27 20:03:37.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item",

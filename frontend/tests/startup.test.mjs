@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   Fyo,
   FrappeDatabaseDemux,
+  fieldProperties,
   models,
   setLanguageMapOnTranslationString,
   useTranslations,
@@ -14,6 +15,10 @@ test('startup builds one translated schema map for a non-English language', asyn
     call(method, schemaName) {
       calls.push([method, schemaName]);
       return method === 'get' ? {} : [];
+    }
+    async getFieldProperties() {
+      calls.push(['getFieldProperties']);
+      return fieldProperties;
     }
   }
   globalThis.window = { books_boot: { country_code: '-' } };
@@ -28,6 +33,10 @@ test('startup builds one translated schema map for a non-English language', asyn
     assert.ok(Object.isFrozen(field));
     const customFieldCalls = calls.filter(([, name]) => name === 'CustomField');
     assert.equal(customFieldCalls.length, 1);
+    const propertyCalls = calls.filter(
+      ([method]) => method === 'getFieldProperties'
+    );
+    assert.equal(propertyCalls.length, 1);
   } finally {
     setLanguageMapOnTranslationString(undefined);
     delete globalThis.window;

@@ -94,20 +94,6 @@ export class Item extends Doc {
     });
 
     this.uomConversions = Array.from(latestByUom.values());
-
-    if (this.serialNumberSeries && this.hasSerialNumber) {
-      const series = this.serialNumberSeries.trim();
-      if (series && !series.endsWith('-')) {
-        this.serialNumberSeries = series + '-';
-      }
-    }
-
-    if (this.batchSeries && this.hasBatch) {
-      const series = this.batchSeries.trim();
-      if (series && !series.endsWith('-')) {
-        this.batchSeries = series + '-';
-      }
-    }
   }
 
   static filters: FiltersMap = {

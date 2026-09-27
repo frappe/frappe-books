@@ -26,6 +26,10 @@ export class POSSettings extends Doc {
       accountType: AccountTypeEnum.Cash,
       isGroup: false,
     }),
+    writeOffAccount: () => ({
+      isGroup: false,
+      rootType: AccountRootTypeEnum.Expense,
+    }),
     defaultAccount: () => ({
       isGroup: false,
       accountType: AccountTypeEnum.Receivable,

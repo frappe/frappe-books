@@ -11,22 +11,16 @@
     },
     {
       "fieldname": "item",
-      "fieldtype": "Link",
-      "target": "Item",
       "create": true,
       "label": "Item"
     },
     {
       "fieldname": "expiryDate",
-      "fieldtype": "Date",
-      "label": "Expiry Date",
-      "required": false
+      "label": "Expiry Date"
     },
     {
       "fieldname": "manufactureDate",
-      "fieldtype": "Date",
-      "label": "Manufacture Date",
-      "required": false
+      "label": "Manufacture Date"
     }
   ],
   "quickEditFields": ["item", "expiryDate", "manufactureDate"],

@@ -2,7 +2,6 @@
   "name": "LoyaltyProgram",
   "label": "Loyalty Program",
   "naming": "manual",
-
   "fields": [
     {
       "fieldname": "name",
@@ -14,65 +13,42 @@
     },
     {
       "fieldname": "fromDate",
-      "label": "From Date",
-      "fieldtype": "Date",
-      "required": true
+      "label": "From Date"
     },
     {
       "fieldname": "toDate",
-      "label": "To Date",
-      "fieldtype": "Date",
-      "required": true
+      "label": "To Date"
     },
     {
       "fieldname": "isEnabled",
-      "label": "Is Enabled",
-      "fieldtype": "Check",
-      "default": true,
-      "required": true
+      "label": "Is Enabled"
     },
     {
       "fieldname": "collectionRules",
-      "label": "Collection Rules",
-      "fieldtype": "Table",
-      "target": "CollectionRulesItems",
-      "required": false
+      "label": "Collection Rules"
     },
     {
       "fieldname": "conversionFactor",
       "label": "Conversion Factor",
-      "fieldtype": "Float",
-      "default": 1,
-      "required": true,
       "sub_label": "100 Points → 100 (Factor 1), 50 (Factor 0.5)"
     },
     {
       "fieldname": "expiryDuration",
       "label": "Expiry Duration",
-      "fieldtype": "Int",
-      "default": 1,
       "hidden": true
     },
     {
       "fieldname": "expenseAccount",
-      "label": "Expense Account",
-      "fieldtype": "Link",
-      "target": "Account",
-      "required": true
+      "label": "Expense Account"
     },
     {
       "fieldname": "maximumUse",
       "label": "Maximum Use",
-      "fieldtype": "Int",
-      "default": 0,
       "section": "Validity and Usage"
     },
     {
       "fieldname": "used",
       "label": "Used",
-      "fieldtype": "Int",
-      "default": 0,
-      "readOnly": true,
       "section": "Validity and Usage"
     }
   ],

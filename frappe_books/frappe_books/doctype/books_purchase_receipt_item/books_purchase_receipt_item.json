@@ -40,7 +40,6 @@
    "reqd": 1
   },
   {
-   "default": "Unit",
    "description": "Unit",
    "fieldname": "transfer_unit",
    "fieldtype": "Link",
@@ -48,14 +47,12 @@
    "options": "Books Uom"
   },
   {
-   "default": "1",
    "fieldname": "transfer_quantity",
    "fieldtype": "Float",
    "label": "Qty. in Transfer Unit",
    "reqd": 1
   },
   {
-   "default": "Unit",
    "description": "Unit",
    "fieldname": "unit",
    "fieldtype": "Link",
@@ -75,7 +72,6 @@
    "label": "Serial Number"
   },
   {
-   "default": "1",
    "fieldname": "quantity",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -130,7 +126,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.201579",
+ "modified": "2026-09-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Purchase Receipt Item",

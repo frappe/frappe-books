@@ -3,6 +3,8 @@
 import frappe
 from frappe.utils import now_datetime
 
+from frappe_books.accounting.money import company_currency
+from frappe_books.setup_service import ensure_currency
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
@@ -17,15 +19,23 @@ def make_account(label, root_type="Asset", **values):
 	).insert()
 
 
-def make_party(default_account, role="Customer"):
+def make_party(default_account, role="Customer", **values):
 	return frappe.get_doc(
 		{
 			"doctype": "Books Party",
 			"name": unique_name("Test Party"),
 			"role": role,
 			"default_account": default_account,
+			**values,
 		}
 	).insert()
+
+
+def foreign_currency():
+	"""Return a currency other than the company's."""
+	currency = "EUR" if company_currency() == "USD" else "USD"
+	ensure_currency(currency)
+	return currency
 
 
 def make_item(income_account, expense_account, tax=None, **values):

@@ -5,126 +5,49 @@
   "fields": [
     {
       "fieldname": "label",
-      "label": "Label",
-      "fieldtype": "Data",
-      "required": true
+      "label": "Label"
     },
     {
       "fieldname": "fieldname",
-      "label": "Fieldname",
-      "fieldtype": "Data",
-      "required": true
+      "label": "Fieldname"
     },
     {
       "fieldname": "fieldtype",
       "label": "Fieldtype",
-      "fieldtype": "Select",
-      "options": [
-        {
-          "label": "Data",
-          "value": "Data"
-        },
-        {
-          "label": "Select",
-          "value": "Select"
-        },
-        {
-          "label": "Link",
-          "value": "Link"
-        },
-        {
-          "label": "Date",
-          "value": "Date"
-        },
-        {
-          "label": "Date Time",
-          "value": "Datetime"
-        },
-        {
-          "label": "Table",
-          "value": "Table"
-        },
-        {
-          "label": "Autocomplete",
-          "value": "AutoComplete"
-        },
-        {
-          "label": "Check",
-          "value": "Check"
-        },
-        {
-          "label": "Attach Image",
-          "value": "AttachImage"
-        },
-        {
-          "label": "Dynamic Link",
-          "value": "DynamicLink"
-        },
-        {
-          "label": "Int",
-          "value": "Int"
-        },
-        {
-          "label": "Float",
-          "value": "Float"
-        },
-        {
-          "label": "Currency",
-          "value": "Currency"
-        },
-        {
-          "label": "Text",
-          "value": "Text"
-        },
-        {
-          "label": "Color",
-          "value": "Color"
-        },
-        {
-          "label": "Attachment",
-          "value": "Attachment"
-        }
-      ],
-      "default": "Data",
-      "required": true
+      "optionLabels": {
+        "Datetime": "Date Time",
+        "AutoComplete": "Autocomplete",
+        "AttachImage": "Attach Image",
+        "DynamicLink": "Dynamic Link"
+      }
     },
     {
       "fieldname": "isRequired",
-      "label": "Is Required",
-      "fieldtype": "Check",
-      "default": false
+      "label": "Is Required"
     },
     {
       "fieldname": "default",
-      "label": "Default",
-      "fieldtype": "Data"
+      "label": "Default"
     },
     {
       "fieldname": "section",
-      "label": "Form Section",
-      "fieldtype": "Data",
-      "default": "Default"
+      "label": "Form Section"
     },
     {
       "fieldname": "tab",
-      "label": "Form Tab",
-      "fieldtype": "Data",
-      "default": "Custom"
+      "label": "Form Tab"
     },
     {
       "fieldname": "options",
-      "label": "Options",
-      "fieldtype": "Text"
+      "label": "Options"
     },
     {
       "fieldname": "target",
-      "label": "Target",
-      "fieldtype": "AutoComplete"
+      "label": "Target"
     },
     {
       "fieldname": "references",
-      "label": "References",
-      "fieldtype": "AutoComplete"
+      "label": "References"
     }
   ],
   "tableFields": ["label", "fieldname", "fieldtype", "isRequired"],

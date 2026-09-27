@@ -17,71 +17,38 @@
     {
       "fieldname": "numberSeries",
       "label": "Number Series",
-      "fieldtype": "Link",
-      "target": "NumberSeries",
       "create": true,
-      "required": true,
-      "default": "SMOV-",
       "section": "Default"
     },
     {
       "fieldname": "movementType",
       "label": "Movement Type",
-      "fieldtype": "Select",
-      "options": [
-        {
-          "value": "MaterialIssue",
-          "label": "Material Issue"
-        },
-        {
-          "value": "MaterialReceipt",
-          "label": "Material Receipt"
-        },
-        {
-          "value": "MaterialTransfer",
-          "label": "Material Transfer"
-        },
-        {
-          "value": "Manufacture",
-          "label": "Manufacture"
-        }
-      ],
-      "required": true,
+      "optionLabels": {
+        "MaterialIssue": "Material Issue",
+        "MaterialReceipt": "Material Receipt",
+        "MaterialTransfer": "Material Transfer"
+      },
       "section": "Default"
     },
     {
       "fieldname": "date",
       "label": "Date",
-      "fieldtype": "Datetime",
-      "required": true,
       "section": "Default"
     },
     {
       "fieldname": "items",
       "label": "Items",
-      "fieldtype": "Table",
-      "target": "StockMovementItem",
-      "required": true,
       "edit": true,
       "section": "Items"
     },
     {
       "fieldname": "amount",
       "label": "Total Amount",
-      "fieldtype": "Currency",
-      "readOnly": true,
       "section": "Items"
     },
     {
       "fieldname": "status",
       "label": "Status",
-      "fieldtype": "Select",
-      "options": [
-        { "value": "Saved", "label": "Saved" },
-        { "value": "Submitted", "label": "Submitted" },
-        { "value": "Cancelled", "label": "Cancelled" }
-      ],
-      "readOnly": true,
       "hidden": true
     }
   ],

@@ -14,7 +14,10 @@ await build({
   absWorkingDir: frontend,
   stdin: {
     contents: `
-      export { getDocFromNameIfExistsElseNew } from './src/utils/ui';
+      export {
+        getDocFromNameIfExistsElseNew,
+        getFieldsGroupedByTabAndSection,
+      } from './src/utils/ui';
       export { Search } from './src/utils/search';
       export { fyo } from './src/initFyo';
       export { NotFoundError } from './fyo/utils/errors';
@@ -45,5 +48,10 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 globalThis.history = { state: null };
-export const { getDocFromNameIfExistsElseNew, Search, fyo, NotFoundError } =
-  createRequire(import.meta.url)(output);
+export const {
+  getDocFromNameIfExistsElseNew,
+  getFieldsGroupedByTabAndSection,
+  Search,
+  fyo,
+  NotFoundError,
+} = createRequire(import.meta.url)(output);

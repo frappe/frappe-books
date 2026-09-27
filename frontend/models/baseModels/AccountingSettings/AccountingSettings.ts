@@ -1,6 +1,5 @@
 import { Doc } from 'fyo/model/doc';
 import {
-  ChangeArg,
   FiltersMap,
   HiddenMap,
   ListsMap,
@@ -8,10 +7,7 @@ import {
   ValidationMap,
 } from 'fyo/model/types';
 import { validateEmail } from 'fyo/model/validationFunction';
-import { InventorySettings } from 'models/inventory/InventorySettings';
-import { ModelNameEnum } from 'models/types';
 import { getCountryInfo } from 'utils/misc';
-import { AccountRootTypeEnum } from '../Account/types';
 
 export class AccountingSettings extends Doc {
   enableDiscounting?: boolean;
@@ -83,57 +79,4 @@ export class AccountingSettings extends Doc {
     enableCouponCode: () =>
       !this.fyo.singles.AccountingSettings?.enablePricingRule,
   };
-
-  async change(ch: ChangeArg) {
-    const discountingEnabled =
-      ch.changed === 'enableDiscounting' && this.enableDiscounting;
-    const discountAccountNotSet = !this.discountAccount;
-
-    if (discountingEnabled && discountAccountNotSet) {
-      await this.createDiscountAccount();
-    }
-
-    if (
-      ch.changed == 'enablePointOfSaleWithOutInventory' &&
-      this.enablePointOfSaleWithOutInventory
-    ) {
-      const inventorySettings = (await this.fyo.doc.getDoc(
-        ModelNameEnum.InventorySettings
-      )) as InventorySettings;
-
-      await inventorySettings.set('enableBatches', true);
-      await inventorySettings.set('enableUomConversions', true);
-      await inventorySettings.set('enableSerialNumber', true);
-      await inventorySettings.set('enableBarcodes', true);
-      await inventorySettings.set('enablePointOfSale', true);
-
-      await inventorySettings.sync();
-    }
-  }
-
-  async createDiscountAccount() {
-    const incomeAccountName = this.fyo.t`Indirect Income`;
-    if (!(await this.fyo.db.exists(ModelNameEnum.Account, incomeAccountName))) {
-      return;
-    }
-
-    const discountAccountName = this.fyo.t`Discounts`;
-    const discountAccountExists = await this.fyo.db.exists(
-      ModelNameEnum.Account,
-      discountAccountName
-    );
-    if (!discountAccountExists) {
-      await this.fyo.doc
-        .getNewDoc(ModelNameEnum.Account, {
-          name: discountAccountName,
-          rootType: AccountRootTypeEnum.Income,
-          parentAccount: incomeAccountName,
-          accountType: 'Income Account',
-          isGroup: false,
-        })
-        .sync();
-    }
-
-    await this.setAndSync('discountAccount', discountAccountName);
-  }
 }

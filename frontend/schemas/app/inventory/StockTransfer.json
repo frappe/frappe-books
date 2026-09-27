@@ -22,17 +22,12 @@
     {
       "fieldname": "party",
       "label": "Party",
-      "fieldtype": "Link",
-      "target": "Party",
       "create": true,
-      "required": true,
       "section": "Default"
     },
     {
       "fieldname": "date",
       "label": "Date",
-      "fieldtype": "Datetime",
-      "required": true,
       "section": "Default"
     },
     {
@@ -43,36 +38,27 @@
     {
       "fieldname": "grandTotal",
       "label": "Grand Total",
-      "fieldtype": "Currency",
-      "readOnly": true,
       "section": "Items"
     },
     {
       "fieldname": "terms",
       "label": "Notes",
       "placeholder": "Add transfer terms",
-      "fieldtype": "Text",
       "section": "References"
     },
     {
       "fieldname": "attachment",
       "placeholder": "Add attachment",
       "label": "Attachment",
-      "fieldtype": "Attachment",
       "section": "References"
     },
     {
       "fieldname": "isReturned",
-      "fieldtype": "Check",
-      "hidden": true,
-      "default": false
+      "hidden": true
     },
     {
       "fieldname": "isFullyBilled",
-      "fieldtype": "Check",
-      "hidden": true,
-      "readOnly": true,
-      "default": false
+      "hidden": true
     },
     {
       "abstract": true,
@@ -87,15 +73,9 @@
     {
       "fieldname": "status",
       "label": "Status",
-      "fieldtype": "Select",
-      "options": [
-        { "value": "Saved", "label": "Saved" },
-        { "value": "Submitted", "label": "Submitted" },
-        { "value": "Return", "label": "Return" },
-        { "value": "ReturnIssued", "label": "Return Issued" },
-        { "value": "Cancelled", "label": "Cancelled" }
-      ],
-      "readOnly": true,
+      "optionLabels": {
+        "ReturnIssued": "Return Issued"
+      },
       "hidden": true
     }
   ],

@@ -6,17 +6,11 @@
     {
       "fieldname": "uom",
       "label": "UOM",
-      "fieldtype": "Link",
-      "target": "UOM",
-      "create": true,
-      "required": true
+      "create": true
     },
     {
       "fieldname": "conversionFactor",
-      "label": "Conversion Factor",
-      "fieldtype": "Float",
-      "default": 1,
-      "required": true
+      "label": "Conversion Factor"
     }
   ],
   "tableFields": ["uom", "conversionFactor"]

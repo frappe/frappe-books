@@ -5,68 +5,55 @@
   "fields": [
     {
       "fieldname": "onboardingComplete",
-      "label": "Onboarding Complete",
-      "fieldtype": "Check"
+      "label": "Onboarding Complete"
     },
     {
       "fieldname": "companySetup",
-      "label": "Company Setup",
-      "fieldtype": "Check"
+      "label": "Company Setup"
     },
     {
       "fieldname": "systemSetup",
-      "label": "System Setup",
-      "fieldtype": "Check"
+      "label": "System Setup"
     },
     {
       "fieldname": "printSetup",
-      "label": "Print Setup",
-      "fieldtype": "Check"
+      "label": "Print Setup"
     },
     {
       "fieldname": "salesItemCreated",
-      "label": "Purchase Item Created",
-      "fieldtype": "Check"
+      "label": "Purchase Item Created"
     },
     {
       "fieldname": "purchaseItemCreated",
-      "label": "Sales Item Created",
-      "fieldtype": "Check"
+      "label": "Sales Item Created"
     },
     {
       "fieldname": "customerCreated",
-      "label": "Customer Created",
-      "fieldtype": "Check"
+      "label": "Customer Created"
     },
     {
       "fieldname": "supplierCreated",
-      "label": "Supplier Created",
-      "fieldtype": "Check"
+      "label": "Supplier Created"
     },
     {
       "fieldname": "invoiceCreated",
-      "label": "Invoice Created",
-      "fieldtype": "Check"
+      "label": "Invoice Created"
     },
     {
       "fieldname": "billCreated",
-      "label": "Bill Created",
-      "fieldtype": "Check"
+      "label": "Bill Created"
     },
     {
       "fieldname": "chartOfAccountsReviewed",
-      "label": "Chart Of Accounts Reviewed",
-      "fieldtype": "Check"
+      "label": "Chart Of Accounts Reviewed"
     },
     {
       "fieldname": "openingBalanceChecked",
-      "label": "Opening Balances",
-      "fieldtype": "Check"
+      "label": "Opening Balances"
     },
     {
       "fieldname": "taxesAdded",
-      "label": "Add Taxes",
-      "fieldtype": "Check"
+      "label": "Add Taxes"
     }
   ]
 }

@@ -5,28 +5,11 @@
       "fieldname": "gstType",
       "label": "GST Registration",
       "placeholder": "GST Registration",
-      "fieldtype": "Select",
-      "default": "Unregistered",
-      "options": [
-        {
-          "value": "Unregistered",
-          "label": "Unregistered"
-        },
-        {
-          "value": "Registered Regular",
-          "label": "Registered Regular"
-        },
-        {
-          "value": "Consumer",
-          "label": "Consumer"
-        }
-      ],
       "section": "Billing"
     },
     {
       "fieldname": "gstin",
       "label": "GSTIN No.",
-      "fieldtype": "Data",
       "section": "Billing"
     }
   ],

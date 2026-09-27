@@ -18,22 +18,16 @@
           "value": "PurchaseInvoice",
           "label": "Purchase"
         }
-      ],
-      "required": true
+      ]
     },
     {
       "fieldname": "referenceName",
       "label": "Name",
-      "fieldtype": "DynamicLink",
-      "references": "referenceType",
-      "placeholder": "Name",
-      "required": true
+      "placeholder": "Name"
     },
     {
       "fieldname": "amount",
-      "label": "Amount",
-      "fieldtype": "Currency",
-      "required": true
+      "label": "Amount"
     }
   ],
   "tableFields": ["referenceType", "referenceName", "amount"],

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { withFieldProperties } from './doctypes.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'books-accounting-tests-'));
 after(() => rm(directory, { recursive: true, force: true }));
@@ -16,6 +17,7 @@ await build({
     contents: `
       export { Fyo } from './fyo';
       export { getSchemas } from './schemas';
+      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
       export { models } from './models';
       export { BalanceSheet } from './reports/BalanceSheet/BalanceSheet';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
@@ -51,7 +53,7 @@ await build({
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getTaskChecks } from './src/utils/getStartedTasks';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
-      export { linkOnSave } from './src/utils/doc';
+      export { evaluateReadOnly, linkOnSave } from './src/utils/doc';
       export { loadListData, onListChange } from './src/utils/listData';
       export { showReport } from './src/utils/misc';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
@@ -62,7 +64,6 @@ await build({
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export {
-        createMissingBatches,
         getExistingActiveSerialNumbersForItem,
         getSerialNumbersForQuantity,
         getSuggestedBatchName,
@@ -90,9 +91,10 @@ await build({
   ],
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
+const bundle = createRequire(import.meta.url)(output);
+export const { fieldProperties, getSchemas } = withFieldProperties(bundle);
 export const {
   Fyo,
-  getSchemas,
   models,
   BalanceSheet,
   ProfitAndLoss,
@@ -136,6 +138,7 @@ export const {
   validatePOSCheckout,
   getTaskChecks,
   getReportCellColorClass,
+  evaluateReadOnly,
   linkOnSave,
   loadListData,
   onListChange,
@@ -148,7 +151,6 @@ export const {
   call,
   errors,
   getInsufficientItems,
-  createMissingBatches,
   getExistingActiveSerialNumbersForItem,
   getSerialNumbersForQuantity,
   getSuggestedBatchName,
@@ -157,7 +159,7 @@ export const {
   parseCSV,
   Importer,
   importDoc,
-} = createRequire(import.meta.url)(output);
+} = bundle;
 
 export async function makeFyo() {
   class Store {

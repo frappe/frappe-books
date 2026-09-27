@@ -1,8 +1,9 @@
 import { Doc } from 'fyo/model/doc';
 import { Money } from 'pesa';
 import { PricingRuleItem } from '../PricingRuleItem/PricingRuleItem';
-import { getIsDocEnabledColumn } from 'models/helpers';
+import { getIsDocEnabledColumn, getNumberSeries } from 'models/helpers';
 import {
+  DefaultMap,
   HiddenMap,
   ListViewSettings,
   RequiredMap,
@@ -130,6 +131,10 @@ export class PricingRule extends Doc {
 
   required: RequiredMap = {
     priceDiscountType: () => this.isDiscountTypeIsPriceDiscount,
+  };
+
+  static defaults: DefaultMap = {
+    numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
   };
 
   static getListViewSettings(): ListViewSettings {

@@ -13,9 +13,7 @@
     },
     {
       "fieldname": "isWhole",
-      "label": "Is Whole",
-      "fieldtype": "Check",
-      "default": false
+      "label": "Is Whole"
     }
   ],
   "quickEditFields": ["isWhole"]

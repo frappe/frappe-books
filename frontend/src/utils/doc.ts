@@ -39,7 +39,8 @@ export function linkOnSave(
 }
 
 export function evaluateReadOnly(field: Field, doc?: Doc) {
-  if (doc?.inserted && field.fieldname === 'numberSeries') {
+  const isSetOnce = field.setOnlyOnce || field.fieldname === 'numberSeries';
+  if (doc?.inserted && isSetOnce) {
     return true;
   }
 

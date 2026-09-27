@@ -1,9 +1,10 @@
-import { Fyo, t } from 'fyo';
+import { Fyo } from 'fyo';
 import { DocValue, DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
   CurrenciesMap,
   ChangeArg,
+  DefaultMap,
   FiltersMap,
   FormulaMap,
   HiddenMap,
@@ -17,8 +18,13 @@ import { FieldTypeEnum, Schema } from 'schemas/types';
 import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
 import { getSuggestedBatchName } from 'models/inventory/helpers';
-import { getPOSInventory } from 'models/inventory/posStock';
+import {
+  getUnitConversionFactor,
+  validateTransferUnit,
+} from 'models/inventory/units';
 import { QueryFilter } from 'utils/db/types';
+
+const ITEM_DETAILS = ['tax', 'description', 'itemCode', 'account', 'hsnCode'];
 
 export abstract class InvoiceItem extends Doc {
   item?: string;
@@ -119,10 +125,16 @@ export abstract class InvoiceItem extends Doc {
       this.clearStandardRate();
     }
     if (fieldname === 'item') {
-      // The server's preview sets the new item's tax.
-      this.tax = undefined;
+      this.clearItemDetails();
     }
     return super._applyChange(fieldname, retriggerChildDocApplyChange);
+  }
+
+  /** The server's invoice preview fills empty item details from the new item. */
+  clearItemDetails() {
+    for (const fieldname of ITEM_DETAILS) {
+      this[fieldname] = undefined;
+    }
   }
 
   /** An empty rate that is not manual is priced by the server's invoice preview. */
@@ -132,24 +144,6 @@ export abstract class InvoiceItem extends Doc {
   }
 
   formulas: FormulaMap = {
-    description: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'description'
-        )) as string,
-      dependsOn: ['item'],
-    },
-    itemCode: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'itemCode'
-        )) as string,
-      dependsOn: ['item'],
-    },
     unit: {
       formula: async () =>
         (await this.fyo.getValue(
@@ -215,16 +209,10 @@ export abstract class InvoiceItem extends Doc {
       dependsOn: ['transferQuantity', 'quantity'],
     },
     quantity: {
-      formula: async (fieldname) => {
+      formula: (fieldname) => {
         if (!this.item) {
           return this.quantity as number;
         }
-
-        const itemDoc = await this.fyo.doc.getDoc(
-          ModelNameEnum.Item,
-          this.item
-        );
-        const unitDoc = await itemDoc.loadAndGetLink('uom');
 
         let quantity: number = this.quantity ?? 1;
 
@@ -240,10 +228,6 @@ export abstract class InvoiceItem extends Doc {
           quantity = this.transferQuantity! * this.unitConversionFactor!;
         }
 
-        if (unitDoc?.isWhole) {
-          return Math.round(quantity);
-        }
-
         return safeParseFloat(quantity);
       },
       dependsOn: [
@@ -257,67 +241,17 @@ export abstract class InvoiceItem extends Doc {
     },
     unitConversionFactor: {
       formula: async () => {
-        if (this.unit === this.transferUnit) {
-          this.quantity = this.transferQuantity!;
-          return 1;
-        }
-
-        const conversionItems = await this.fyo.db.getAll(
-          ModelNameEnum.UOMConversionItem,
-          {
-            fields: ['conversionFactor', 'uom'],
-            filters: { parent: this.item!, uom: this.transferUnit as string },
-          }
-        );
-
-        this.quantity =
-          (conversionItems[0]?.conversionFactor as number) *
-          this.transferQuantity!;
-
-        return safeParseFloat(conversionItems[0]?.conversionFactor ?? 0);
+        const factor = await getUnitConversionFactor(this);
+        this.quantity = factor * this.transferQuantity!;
+        return factor;
       },
       dependsOn: ['transferUnit', 'qty'],
-    },
-    account: {
-      formula: () => {
-        let accountType = 'expenseAccount';
-        if (this.isSales) {
-          accountType = 'incomeAccount';
-        }
-        return this.fyo.getValue('Item', this.item as string, accountType);
-      },
-      dependsOn: ['item'],
-    },
-    hsnCode: {
-      formula: async () =>
-        await this.fyo.getValue('Item', this.item as string, 'hsnCode'),
-      dependsOn: ['item'],
     },
   };
 
   validations: ValidationMap = {
-    transferUnit: async (value: DocValue) => {
-      if (!this.item) {
-        return;
-      }
-
-      if (value === this.unit) {
-        return;
-      }
-
-      const item = await this.fyo.db.getAll(ModelNameEnum.UOMConversionItem, {
-        fields: ['parent'],
-        filters: { uom: value as string, parent: this.item },
-      });
-
-      if (item.length < 1) {
-        throw new ValidationError(
-          t`Transfer Unit ${value as string} is not applicable for Item ${
-            this.item
-          }`
-        );
-      }
-    },
+    transferUnit: async (value: DocValue) =>
+      await validateTransferUnit(this, value as string),
 
     qty: async (value: DocValue) => {
       if (this.batch) {
@@ -332,13 +266,18 @@ export abstract class InvoiceItem extends Doc {
     },
   };
 
-  /** Stock location a sale ships from: the POS location or the default. */
+  /** Stock location a sale ships from, as the server picks it. */
   async getStockLocation(): Promise<string | undefined> {
-    if (this.parentdoc?.isPOS) {
-      return await getPOSInventory(this.fyo);
+    if (!this.parentdoc) {
+      return undefined;
     }
 
-    return this.parentdoc?.autoStockTransferLocation ?? undefined;
+    return (
+      (await this.fyo.db.getStockLocation(
+        this.parentdoc.schemaName,
+        !!this.parentdoc.isPOS
+      )) ?? undefined
+    );
   }
 
   async validateBatchQuantity(batch: string, quantity: number): Promise<void> {
@@ -396,6 +335,12 @@ export abstract class InvoiceItem extends Doc {
       !this.fyo.singles.InventorySettings?.enableUomConversions,
     unitConversionFactor: () =>
       !this.fyo.singles.InventorySettings?.enableUomConversions,
+  };
+
+  // The server derives a missing quantity from the other, so a new row's start is set here.
+  static defaults: DefaultMap = {
+    quantity: () => 1,
+    transferQuantity: () => 1,
   };
 
   static filters: FiltersMap = {

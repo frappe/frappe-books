@@ -3,6 +3,7 @@ import { cloneDeep } from 'lodash';
 import { getListFromMap, getMapFromList } from 'utils';
 import { schemaTranslateables } from 'utils/translationHelpers';
 import type { LanguageMap } from 'utils/types';
+import { applyFieldProperties, type FieldPropertyMap } from './fieldProperties';
 import regionalSchemas from './regional';
 import { appSchemas, coreSchemas, metaSchemas } from './schemas';
 import type {
@@ -29,6 +30,7 @@ const NAME_FIELD = {
 export function getSchemas(
   countryCode = '-',
   rawCustomFields: RawCustomField[],
+  fieldProperties: FieldPropertyMap,
   languageMap?: LanguageMap
 ): Readonly<SchemaMap> {
   const builtCoreSchemas = getCoreSchemas();
@@ -40,6 +42,7 @@ export function getSchemas(
   schemaMap = setSchemaNameOnFields(schemaMap);
 
   addCustomFields(schemaMap, rawCustomFields);
+  applyFieldProperties(schemaMap, fieldProperties);
   if (languageMap) {
     translateSchema(schemaMap, languageMap, schemaTranslateables);
   }
@@ -154,13 +157,19 @@ function addNameField(schemaMap: SchemaMap) {
 }
 
 function getCoreSchemas(): SchemaMap {
-  const rawSchemaMap = getMapFromList(cloneDeep(coreSchemas), 'name');
+  const rawSchemaMap = getMapFromList(
+    cloneDeep(coreSchemas),
+    'name'
+  ) as SchemaStubMap;
   const coreSchemaMap = getAbstractCombinedSchemas(rawSchemaMap);
   return cleanSchemas(coreSchemaMap);
 }
 
 function getAppSchemas(countryCode: string): SchemaMap {
-  const appSchemaMap = getMapFromList(cloneDeep(appSchemas), 'name');
+  const appSchemaMap = getMapFromList(
+    cloneDeep(appSchemas),
+    'name'
+  ) as SchemaStubMap;
   const regionalSchemaMap = getRegionalSchemaMap(countryCode);
   const combinedSchemas = getRegionalCombinedSchemas(
     appSchemaMap,

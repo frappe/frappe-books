@@ -5,9 +5,7 @@
   "fields": [
     {
       "fieldname": "coupons",
-      "label": "Coupons",
-      "fieldtype": "Link",
-      "target": "CouponCode"
+      "label": "Coupons"
     }
   ],
   "tableFields": ["coupons"],

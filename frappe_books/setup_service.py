@@ -5,9 +5,10 @@ import frappe
 from frappe_books.accounting.money import as_decimal
 from frappe_books.coa import (
 	ensure_bank_account,
+	ensure_cash_account,
 	ensure_chart,
 	ensure_discount_account,
-	find_account,
+	find_ledger_account,
 	load_chart,
 )
 from frappe_books.currency import currency_fraction_values, currency_precision
@@ -22,7 +23,7 @@ def run_setup(wizard):
 	bank_account = ensure_bank_account(wizard.bank_name, chart, wizard.country)
 	discount_account = ensure_discount_account(chart)
 	ensure_currency(wizard.currency)
-	accounts = _default_accounts(chart)
+	accounts = {**default_accounts(chart), "cash": ensure_cash_account(chart)}
 	_update_accounting_settings(wizard, discount_account, accounts)
 	_update_system_settings(wizard)
 	_update_print_settings(wizard)
@@ -59,18 +60,17 @@ def ensure_currency(currency):
 	).insert(ignore_permissions=True)
 
 
-def _default_accounts(chart):
-	"""Pick the chart's accounts for settings by name first, then by account type."""
+def default_accounts(chart):
+	"""Pick the chart's ledger accounts for settings by name first, then by account type."""
 	return {
-		"write_off": find_account(chart, ["Write Off"]),
-		"round_off": find_account(chart, ["Rounded Off", "Round Off"], "Round Off"),
-		"cash": find_account(chart, ["Cash"], "Cash"),
-		"receivable": find_account(chart, ["Debtors"], "Receivable"),
-		"stock_in_hand": find_account(chart, ["Stock In Hand"], "Stock"),
-		"stock_received_but_not_billed": find_account(
+		"write_off": find_ledger_account(chart, ["Write Off"]),
+		"round_off": find_ledger_account(chart, ["Rounded Off", "Round Off"]),
+		"receivable": find_ledger_account(chart, ["Debtors"], "Receivable"),
+		"stock_in_hand": find_ledger_account(chart, ["Stock In Hand"], "Stock"),
+		"stock_received_but_not_billed": find_ledger_account(
 			chart, ["Stock Received But Not Billed"], "Stock Received But Not Billed"
 		),
-		"cost_of_goods_sold": find_account(chart, ["Cost of Goods Sold"], "Cost of Goods Sold"),
+		"cost_of_goods_sold": find_ledger_account(chart, ["Cost of Goods Sold"], "Cost of Goods Sold"),
 	}
 
 

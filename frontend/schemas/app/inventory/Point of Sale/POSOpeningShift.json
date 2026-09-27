@@ -6,20 +6,15 @@
   "fields": [
     {
       "fieldname": "openingDate",
-      "label": "Opening Date",
-      "fieldtype": "Datetime"
+      "label": "Opening Date"
     },
     {
       "fieldname": "openingCash",
-      "fieldtype": "Table",
-      "label": "Opening Cash",
-      "target": "OpeningCash"
+      "label": "Opening Cash"
     },
     {
       "fieldname": "openingAmounts",
-      "fieldtype": "Table",
-      "label": "Opening Amounts",
-      "target": "OpeningAmounts"
+      "label": "Opening Amounts"
     }
   ]
 }

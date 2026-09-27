@@ -6,6 +6,7 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.accounting.money import company_currency
 from frappe_books.accounting.returns import map_return
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
 	open_shift,
@@ -13,6 +14,7 @@ from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_op
 )
 from frappe_books.setup_service import ensure_currency
 from frappe_books.tests.accounting import (
+	foreign_currency,
 	ledger_entries,
 	make_account,
 	make_invoice,
@@ -59,6 +61,14 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(invoice.items[0].tax, self.tax.name)
 		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
 
+	def test_row_hsn_code_comes_from_the_item(self):
+		item = make_item(self.income.name, self.expense.name, hsn_code="998314")
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
+		)
+
+		self.assertEqual(invoice.items[0].db_get("hsn_code"), 998314)
+
 	def test_item_discount_stays_within_the_row(self):
 		for values, message in (
 			({"item_discount_percent": 101}, "between 0 and 100"),
@@ -72,11 +82,12 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_transfer_quantity_counts_transfer_units(self):
 		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		self.item.append("uom_conversions", {"uom": box.name, "conversion_factor": 12})
+		self.item.save()
 		invoice = self._make_invoice()
 		invoice.items[0].update(
 			{
 				"transfer_unit": box.name,
-				"unit_conversion_factor": 12,
 				"quantity": 24,
 				"transfer_quantity": None,
 			}
@@ -99,9 +110,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		round_off = make_account("Round Off", root_type="Expense", account_type="Round Off")
 		frappe.db.set_single_value("Books Accounting Settings", "round_off_account", round_off.name)
 		item = make_item(self.income.name, self.expense.name)
+		party = make_party(self.receivable.name, currency=foreign_currency())
 		invoice = make_invoice(
 			"Books Sales Invoice",
-			self.party.name,
+			party.name,
 			self.receivable.name,
 			item.name,
 			self.income.name,
@@ -125,9 +137,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				self.subTest(currency=currency),
 				self.change_settings("Books System Settings", currency=currency),
 			):
+				ensure_currency(currency)
 				invoice = make_invoice(
 					"Books Sales Invoice",
-					self.party.name,
+					make_party(self.receivable.name).name,
 					self.receivable.name,
 					item.name,
 					self.income.name,
@@ -140,13 +153,18 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				self.assertEqual(sum(Decimal(str(row.debit)) for row in entries), Decimal(total))
 
 	def test_rounds_invoice_amounts_to_invoice_currency(self):
-		ensure_currency("USD")
 		item = make_item(self.income.name, self.expense.name)
 		with self.change_settings("Books System Settings", currency="JPY"):
+			ensure_currency("JPY")
+			party = make_party(self.receivable.name, currency=foreign_currency())
 			invoice = make_invoice(
-				"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
+				"Books Sales Invoice",
+				party.name,
+				self.receivable.name,
+				item.name,
+				self.income.name,
+				exchange_rate=150,
 			)
-			invoice.update({"currency": "USD", "exchange_rate": 150})
 			invoice.items[0].update({"rate": Decimal("10.25"), "quantity": 1, "item_discount_percent": 0})
 			invoice.save().submit()
 
@@ -254,6 +272,49 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		invoice.insert()
+
+	def test_invoice_bills_in_the_party_currency(self):
+		currency = foreign_currency()
+		party = make_party(self.receivable.name, currency=currency)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			currency=company_currency(),
+			exchange_rate=80,
+		)
+
+		self.assertEqual((invoice.currency, invoice.exchange_rate), (currency, 80))
+
+	def test_foreign_currency_invoice_needs_an_exchange_rate(self):
+		party = make_party(self.receivable.name, currency=foreign_currency())
+		with self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"):
+			make_invoice(
+				"Books Sales Invoice", party.name, self.receivable.name, self.item.name, self.income.name
+			)
+
+	def test_company_currency_invoice_has_an_exchange_rate_of_one(self):
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			currency=foreign_currency(),
+			exchange_rate=80,
+		)
+
+		self.assertEqual((invoice.currency, invoice.exchange_rate), (company_currency(), 1))
+
+	def test_sales_invoice_needs_a_receivable_ledger_account(self):
+		group = make_account("Receivables", account_type="Receivable", is_group=1)
+		for account, message in ((self.income, "must be of type Receivable"), (group, "group account")):
+			with self.subTest(message=message), self.assertRaisesRegex(frappe.ValidationError, message):
+				make_invoice(
+					"Books Sales Invoice", self.party.name, account.name, self.item.name, self.income.name
+				)
 
 	def test_pos_invoice_needs_an_open_shift(self):
 		set_pos_accounts()

@@ -151,8 +151,8 @@ class IntegrationTestStockReports(IntegrationTestCase):
 	def setUp(self):
 		self.queries = BooksBespokeQueries()
 		income = make_account("Stock Report Income", root_type="Income")
-		expense = make_account("Stock Report Expense", root_type="Expense")
-		self.item = make_item(income.name, expense.name, track_item=1).name
+		received = make_account("Stock Report Received", root_type="Liability")
+		self.item = make_item(income.name, received.name, track_item=1).name
 		now = now_datetime()
 		move(self.item, "MaterialReceipt", 4, 10, add_to_date(now, days=-3))
 		move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, days=-2))

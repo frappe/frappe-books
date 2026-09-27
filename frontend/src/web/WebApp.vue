@@ -122,6 +122,7 @@ export default defineComponent({
       fyo.store.isDevelopment = window.books_boot.developer_mode;
       fyo.store.appVersion = window.books_boot.app_version;
       fyo.store.permissions = window.books_boot.permissions;
+      fyo.store.chartsOfAccounts = window.books_boot.charts_of_accounts;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 
@@ -132,6 +133,7 @@ export default defineComponent({
         await getRegionalModels(countryCode)
       );
       await fyo.loadCurrencySymbols();
+      await fyo.loadDefaultNumberSeries();
       for (const schema of Object.values(fyo.schemaMap)) {
         if (schema?.isSingle && schema.name !== 'SetupWizard') {
           await fyo.doc.getDoc(schema.name);

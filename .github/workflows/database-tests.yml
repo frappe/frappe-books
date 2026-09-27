@@ -130,7 +130,7 @@ jobs:
         run: |
           bench --site books-test.localhost execute frappe.db.set_single_value --args '["Books Setup Wizard", {
             "company_name": "Books UI Tests", "fullname": "Administrator", "email": "admin@example.com",
-            "country": "India", "currency": "INR", "bank_name": "UI Test Bank", "chart_of_accounts": "Standard",
+            "country": "India", "currency": "INR", "bank_name": "UI Test Bank", "chart_of_accounts": "Standard Chart of Accounts",
             "fiscal_year_start": "2026-04-01", "fiscal_year_end": "2027-03-31"}]'
           bench --site books-test.localhost execute \
             frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup

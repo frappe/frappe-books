@@ -125,9 +125,9 @@ export default defineComponent({
         fieldList = this.doc.schema.fields.filter((f) => f.required);
       }
 
-      this.formFields = fieldList.filter(
-        (field) => field && !evaluateHidden(field, this.doc)
-      );
+      this.formFields = this.doc
+        .getFormFields(fieldList.filter(Boolean))
+        .filter((field) => !evaluateHidden(field, this.doc));
     },
   },
 });

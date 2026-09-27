@@ -6,6 +6,7 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import now_datetime
 
+from frappe_books.accounting.accounts import validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.inventory.invoice_balance import (
 	bill_unbilled_rows,
@@ -68,6 +69,7 @@ class StockTransferController(SeriesNamingMixin, Document):
 		self.grand_total = populate_stock_rows(self.items)
 
 	def validate(self):
+		validate_party_role(self, self.transfer_type == "purchase")
 		validate_transfer_rows(transfer_rows(self))
 		if self.return_against:
 			validate_transfer_return(self)

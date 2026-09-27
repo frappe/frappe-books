@@ -8,6 +8,11 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import now_datetime
 
+from frappe_books.accounting.accounts import (
+	PAYMENT_ACCOUNT_TYPES,
+	validate_account,
+	validate_party_account,
+)
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
@@ -34,8 +39,14 @@ class PaymentController(SeriesNamingMixin, Document):
 			frappe.throw(_("Write-off must be between zero and the payment amount."))
 		if self.account == self.payment_account:
 			frappe.throw(_("The From and To accounts cannot be the same."))
+		self.validate_accounts()
 		self.validate_payment_method()
 		self.set("taxes", _realised_taxes(_validate_allocations(self)))
+
+	def validate_accounts(self):
+		"""The account is the party's ledger, the payment account its cash or bank."""
+		validate_party_account(self, "account", frappe.db.get_value("Books Party", self.party, "role"))
+		validate_account(self, "payment_account", PAYMENT_ACCOUNT_TYPES)
 
 	def validate_payment_method(self):
 		method = frappe.db.get_value(
@@ -225,7 +236,7 @@ def _settle_invoice(invoice, payment):
 			"date": now_datetime(),
 			"payment_type": payment_type_for(invoice.doctype, bool(invoice.return_against)),
 			"payment_method": "Cash",
-			"payment_account": _default_payment_account(invoice.doctype),
+			"payment_account": _settling_account(invoice.doctype),
 			"amount": outstanding,
 		}
 	)
@@ -235,11 +246,16 @@ def _settle_invoice(invoice, payment):
 	)
 
 
-def _default_payment_account(invoice_doctype):
+def default_payment_account(invoice_doctype) -> str | None:
+	"""Return the Books Defaults account that pays invoices of the doctype."""
 	fieldname = (
 		"sales_payment_account" if invoice_doctype == "Books Sales Invoice" else "purchase_payment_account"
 	)
-	account = frappe.db.get_single_value("Books Defaults", fieldname) or frappe.db.get_value(
+	return frappe.db.get_single_value("Books Defaults", fieldname)
+
+
+def _settling_account(invoice_doctype):
+	account = default_payment_account(invoice_doctype) or frappe.db.get_value(
 		"Books Payment Method", "Cash", "account"
 	)
 	if not account:

@@ -21,6 +21,7 @@ FIELD_TYPE_MAP = {
 	"DynamicLink": "Dynamic Link",
 }
 PROTECTED_SCHEMAS = {*PROTECTED_WRITE_SCHEMAS, "CustomField", "CustomForm", "SetupWizard"}
+OPTION_FIELDTYPES = {"Select", "AutoComplete"}
 
 
 def validate_custom_form(doc):
@@ -28,6 +29,24 @@ def validate_custom_form(doc):
 		frappe.throw(_("Enable form customization in Accounting Settings to customize forms."))
 	if doc.name in PROTECTED_SCHEMAS or frappe.get_meta(target_doctype(doc.name)).issingle:
 		frappe.throw(_("{0} cannot be customized.").format(doc.name))
+	_validate_unique_fieldnames(doc.custom_fields)
+	for row in doc.custom_fields:
+		_validate_custom_field(row)
+
+
+def _validate_unique_fieldnames(rows):
+	fieldnames = [row.fieldname for row in rows]
+	duplicates = sorted({fieldname for fieldname in fieldnames if fieldnames.count(fieldname) > 1})
+	if duplicates:
+		frappe.throw(_("Custom field names must be unique: {0}").format(", ".join(duplicates)))
+
+
+def _validate_custom_field(row):
+	if row.is_required and not row.default:
+		frappe.throw(_("Required custom field {0} needs a default value.").format(row.label))
+	options = [option for option in (row.options or "").split("\n") if option.strip()]
+	if row.fieldtype in OPTION_FIELDTYPES and len(options) < 2:
+		frappe.throw(_("Custom field {0} needs at least two options.").format(row.label))
 
 
 def sync_all_custom_forms():
@@ -61,8 +80,7 @@ def _custom_field_definition(source_schema: str, row, rows) -> dict:
 		"fieldname": custom_target_field(row.fieldname),
 		"label": row.label,
 		"fieldtype": fieldtype,
-		# Existing rows have no value yet, so a column is only required when a default can fill it.
-		"reqd": bool(row.is_required and row.default is not None),
+		"reqd": row.is_required,
 		"default": row.default,
 		"is_system_generated": 1,
 	}

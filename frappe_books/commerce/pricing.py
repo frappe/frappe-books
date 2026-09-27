@@ -288,5 +288,7 @@ def validate_range(minimum, maximum, label, strict=False):
 
 
 def validate_dates(valid_from, valid_to):
-	if valid_from and valid_to and frappe.utils.getdate(valid_from) > frappe.utils.getdate(valid_to):
+	if not (valid_from and valid_to):
+		return
+	if frappe.utils.getdate(valid_from) > frappe.utils.getdate(valid_to):
 		frappe.throw(_("Valid From must be on or before Valid To."))

@@ -1,8 +1,14 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
+
+from frappe_books.accounting.accounts import PAYMENT_ACCOUNT_TYPES, validate_changed_accounts
+
+ACCOUNT_TYPES = {
+	"sales_payment_account": {"account_types": PAYMENT_ACCOUNT_TYPES},
+	"purchase_payment_account": {"account_types": PAYMENT_ACCOUNT_TYPES},
+}
 
 
 class BooksDefaults(Document):
@@ -55,3 +61,6 @@ class BooksDefaults(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Defaults"
+
+	def validate(self):
+		validate_changed_accounts(self, ACCOUNT_TYPES)

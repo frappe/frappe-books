@@ -19,21 +19,19 @@ const item = 'Demo - Coffee Beans';
 const batch = 'DEMO-COFFEE-2026';
 const inventory = 'POS Counter';
 
-test('the card and batch quantities use the POS profile warehouse', async () => {
+test('the card and batch quantities use the location the server ships POS sales from', async () => {
   const fyo = makeFyo();
+  const requests = [];
+  fyo.db.getStockLocation = async (...args) => {
+    requests.push(args);
+    return inventory;
+  };
   assert.equal(await getPOSInventory(fyo), inventory);
   const quantities = await getItemQtyMap({ fyo });
   assert.equal(quantities[item].availableQty, 4);
   assert.equal(quantities[item][batch], 4);
   assert.equal(await getPOSBatchQuantity(fyo, item, batch), 4);
-});
-
-test('a profile without a warehouse falls back to POS Settings', async () => {
-  const fyo = makeFyo();
-  fyo.doc.getDoc = async () => ({ inventory: '' });
-  assert.equal(await getPOSInventory(fyo), 'Warehouse');
-  assert.equal((await getItemQtyMap({ fyo }))[item].availableQty, 128);
-  assert.equal(await getPOSBatchQuantity(fyo, item, batch), 128);
+  assert.deepEqual(requests[0], ['SalesInvoice', true]);
 });
 
 test('checkout accepts stocked batches and rejects stock held elsewhere', async () => {
@@ -41,7 +39,7 @@ test('checkout accepts stocked batches and rejects stock held elsewhere', async 
   const invoice = { fyo, items: [{ item, batch, quantity: 2 }] };
   await validateSinv(invoice, await getItemQtyMap(invoice));
 
-  fyo.doc.getDoc = async () => ({ inventory: 'Empty Counter' });
+  fyo.db.getStockLocation = async () => 'Empty Counter';
   await assert.rejects(
     validateSinv(invoice, await getItemQtyMap(invoice)),
     /Demo - Coffee Beans in Empty Counter.*Available: 0; required: 2/
@@ -322,12 +320,11 @@ function makeFyo() {
     ...row,
   }));
   return {
-    singles: {
-      POSSettings: { posProfile: 'Retail', inventory: 'Warehouse' },
-    },
-    doc: { getDoc: async () => ({ inventory }) },
+    singles: {},
+    doc: { getDoc: async () => ({}) },
     getValue: async () => true,
     db: {
+      getStockLocation: async () => inventory,
       getStockQuantities: async (location, items) =>
         ledger
           .filter((row) => !location || row.location === location)

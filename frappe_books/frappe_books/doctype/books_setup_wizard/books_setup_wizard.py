@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate, validate_email_address
+from frappe.utils import getdate
 
 from frappe_books.setup_service import run_setup
 
@@ -33,7 +33,6 @@ class BooksSetupWizard(Document):
 	def validate(self):
 		if getdate(self.fiscal_year_end) <= getdate(self.fiscal_year_start):
 			frappe.throw(_("Fiscal Year End Date must be after Fiscal Year Start Date."))
-		validate_email_address(self.email, throw=True)
 
 
 @frappe.whitelist(methods=["POST"])

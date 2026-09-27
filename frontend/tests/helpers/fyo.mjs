@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { withFieldProperties } from './doctypes.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'books-model-tests-'));
 after(() => rm(directory, { recursive: true, force: true }));
@@ -16,6 +17,9 @@ await build({
     contents: `
       export { Fyo } from './fyo';
       export { getSchemas } from './schemas';
+      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
+      export { dataProperties, isReferenceField } from './schemas/fieldProperties';
+      export { FieldTypeEnum } from './schemas/types';
       export { getPrintTemplateDocValues } from './src/utils/printTemplateData';
     `,
     resolveDir: frontend,
@@ -25,6 +29,12 @@ await build({
   format: 'cjs',
   outfile: output,
 });
-export const { Fyo, getSchemas, getPrintTemplateDocValues } = createRequire(
-  import.meta.url
-)(output);
+const bundle = createRequire(import.meta.url)(output);
+export const {
+  Fyo,
+  getPrintTemplateDocValues,
+  dataProperties,
+  isReferenceField,
+  FieldTypeEnum,
+} = bundle;
+export const { fieldProperties, getSchemas } = withFieldProperties(bundle);

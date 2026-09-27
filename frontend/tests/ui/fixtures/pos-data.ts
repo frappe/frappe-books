@@ -1,7 +1,7 @@
 import { fyo } from 'src/initFyo';
 import { models } from 'models';
-import { getSchemas } from 'schemas';
 import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
+import { getTestSchemas } from './schemas';
 
 export const shift = { open: true };
 
@@ -65,7 +65,7 @@ export async function preparePOSData() {
     })),
   };
   // The real schemas and models use an in-memory database for this fixture.
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getSchemas('-', []);
+  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
   FrappeDatabaseDemux.prototype.call = async (method, ...args) => {
     const [schema, name] = args as string[];
     if (method === 'getAll') return records[schema] ?? [];
@@ -78,6 +78,7 @@ export async function preparePOSData() {
   };
   FrappeDatabaseDemux.prototype.callBespoke = async (method) => {
     if (method === 'getOpenPOSShift') return shift.open ? 'SHIFT-001' : null;
+    if (method === 'getStockLocation') return null;
     if (method === 'getStockQuantities')
       return records.Item.map((item) => ({
         item: item.name,

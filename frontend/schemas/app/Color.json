@@ -11,9 +11,7 @@
     },
     {
       "fieldname": "hexvalue",
-      "fieldtype": "Data",
-      "label": "Hex Value",
-      "required": true
+      "label": "Hex Value"
     }
   ]
 }

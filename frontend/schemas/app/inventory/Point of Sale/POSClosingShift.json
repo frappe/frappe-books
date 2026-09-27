@@ -6,26 +6,19 @@
   "fields": [
     {
       "fieldname": "closingDate",
-      "label": "Closing Date",
-      "fieldtype": "Datetime"
+      "label": "Closing Date"
     },
     {
       "fieldname": "closingCash",
-      "fieldtype": "Table",
-      "label": "Closing Cash",
-      "target": "ClosingCash"
+      "label": "Closing Cash"
     },
     {
       "fieldname": "closingAmounts",
-      "fieldtype": "Table",
-      "label": "Closing Amounts",
-      "target": "ClosingAmounts"
+      "label": "Closing Amounts"
     },
     {
       "fieldname": "openingShift",
-      "fieldtype": "Link",
-      "label": "Opening Shift",
-      "target": "POSOpeningShift"
+      "label": "Opening Shift"
     }
   ]
 }

@@ -34,18 +34,17 @@
             :text-right="false"
             @change="async (value: DocValue) => await onChange(df, value)"
           />
-          <div
-            v-if="errors[df.fieldname]"
-            class="mt-2 break-words text-p-sm text-ink-red-5"
-          >
-            {{ errors[df.fieldname] }}
-          </div>
+          <FrappeErrorMessage
+            class="mt-2 break-words"
+            :message="errors[df.fieldname]"
+          />
         </div>
       </div>
     </template>
   </div>
 </template>
 <script lang="ts">
+import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { getErrorMessage } from 'src/utils';
@@ -59,6 +58,7 @@ import { DocValue, DocValueMap } from 'fyo/core/types';
 export default defineComponent({
   name: 'TwoColumnForm',
   components: {
+    FrappeErrorMessage,
     FormControl,
     Table,
   },

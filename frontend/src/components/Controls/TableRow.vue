@@ -54,16 +54,19 @@
     <!-- Error Display -->
     <FrappeListCell
       v-if="hasErrors"
-      class="text-xs text-red-600 ps-2 col-span-full relative"
+      class="ps-2 col-span-full relative"
       style="bottom: 0.75rem; height: 0px"
     >
-      {{ getErrorString() }}
+      <FrappeErrorMessage :message="getErrorString()" />
     </FrappeListCell>
   </FrappeListRow>
 </template>
 <script>
 import { Doc } from 'fyo/model/doc';
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ErrorMessage as FrappeErrorMessage,
+} from 'frappe-ui';
 import {
   ListCell as FrappeListCell,
   ListRow as FrappeListRow,
@@ -75,6 +78,7 @@ import FormControl from './FormControl.vue';
 export default {
   name: 'TableRow',
   components: {
+    FrappeErrorMessage,
     FrappeListRow,
     FrappeListCell,
     FormControl,

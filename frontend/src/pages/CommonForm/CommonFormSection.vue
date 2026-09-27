@@ -67,15 +67,14 @@
                 $emit('row-change', field, value, parentfield)
             "
           />
-          <div v-if="errors?.[field.fieldname]" class="text-sm text-red-600 mt-1">
-            {{ errors[field.fieldname] }}
-          </div>
+          <FrappeErrorMessage class="mt-1" :message="errors?.[field.fieldname]" />
         </div>
       </div>
     </div>
   </div>
 </template>
 <script lang="ts">
+import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
@@ -87,7 +86,7 @@ import { focusOrSelectFormControl } from 'src/utils/ui';
 import { defineComponent, PropType } from 'vue';
 
 export default defineComponent({
-  components: { FormControl, Table, DisclosureButton },
+  components: { FrappeErrorMessage, FormControl, Table, DisclosureButton },
   props: {
     title: { type: String, default: '' },
     errors: {

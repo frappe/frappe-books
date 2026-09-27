@@ -88,9 +88,7 @@
           {{ t`No filters selected` }}
         </p>
       </div>
-      <p v-if="error" role="alert" class="px-4 pb-3 text-base text-ink-red-5">
-        {{ error }}
-      </p>
+      <FrappeErrorMessage class="px-4 pb-3" :message="error" />
       <footer
         class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-outline-gray-1 p-3"
       >
@@ -116,7 +114,11 @@
 </template>
 <script lang="ts">
 import { Field } from 'schemas/types';
-import { Button as FrappeButton, Popover as FrappePopover } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ErrorMessage as FrappeErrorMessage,
+  Popover as FrappePopover,
+} from 'frappe-ui';
 import { fyo } from 'src/initFyo';
 import { defineComponent } from 'vue';
 import Select from './Controls/Select.vue';
@@ -138,6 +140,7 @@ import {
 export default defineComponent({
   name: 'FilterDropdown',
   components: {
+    FrappeErrorMessage,
     FrappePopover,
     FilterValueInput,
     Select,

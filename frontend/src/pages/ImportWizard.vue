@@ -63,9 +63,11 @@
           @change="setImportType"
         />
 
-        <p v-if="errorMessage.length > 0" class="text-base ms-2 text-red-500">
-          {{ errorMessage }}
-        </p>
+        <FrappeErrorMessage
+          v-if="errorMessage.length > 0"
+          class="ms-2"
+          :message="errorMessage"
+        />
         <p
           v-else
           class="text-base ms-2"
@@ -329,7 +331,11 @@
 import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  Dialog as FrappeDialog,
+  ErrorMessage as FrappeErrorMessage,
+} from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -379,6 +385,7 @@ type ImportWizardData = {
 
 export default defineComponent({
   components: {
+    FrappeErrorMessage,
     PageHeader,
     FormControl,
     DropdownWithActions,

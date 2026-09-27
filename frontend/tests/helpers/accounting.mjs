@@ -29,7 +29,13 @@ await build({
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
-      export { getExchangeRate, getItemQtyMap, getMappedDoc, validateQty } from './models/helpers';
+      export {
+        getExchangeRate,
+        getItemQtyMap,
+        getMappedDoc,
+        getStockTransferActions,
+        validateQty,
+      } from './models/helpers';
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export {
         addBatchItem,
@@ -111,6 +117,7 @@ export const {
   getExchangeRate,
   getItemQtyMap,
   getMappedDoc,
+  getStockTransferActions,
   validateQty,
   getPOSInventory,
   getPOSBatchQuantity,

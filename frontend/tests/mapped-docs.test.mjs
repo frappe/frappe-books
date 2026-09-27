@@ -5,6 +5,7 @@ import {
   getSchemas,
   models,
   getMappedDoc,
+  getStockTransferActions,
 } from './helpers/accounting.mjs';
 
 test('a mapped payment comes from the server mapper and keeps unset defaults', async () => {
@@ -93,6 +94,16 @@ test('an invoice maps its pending stock with the transfer mapper', async () => {
   ]);
   assert.equal(receipt.schemaName, 'PurchaseReceipt');
   assert.equal(receipt.items[0].quantity, 2);
+});
+
+test('a fully billed shipment does not offer an invoice', async () => {
+  const fyo = await makeFyo(() => ({}));
+  const [makeInvoice] = getStockTransferActions(fyo, 'Shipment');
+  const shipment = fyo.doc.getNewDoc('Shipment', { submitted: true });
+
+  assert.equal(makeInvoice.condition(shipment), true);
+  shipment.isFullyBilled = true;
+  assert.equal(makeInvoice.condition(shipment), false);
 });
 
 async function makeFyo(call) {

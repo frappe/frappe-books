@@ -213,7 +213,7 @@ export class StockMovementItem extends TransferItem {
   };
 
   validations: ValidationMap = {
-    batch:async (value: DocValue) => {
+    batch: async (value: DocValue) => {
       // A new batch has no record until the movement saves.
       const batchItem = await this.fyo.getValue(
         ModelNameEnum.Batch,

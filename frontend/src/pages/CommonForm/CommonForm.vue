@@ -1,5 +1,37 @@
 <template>
-  <FormContainer :use-full-width="useFullWidth">
+  <div v-if="isMobile" class="flex min-h-full flex-col">
+    <MobileForm
+      v-if="hasDoc"
+      v-model:active-tab="activeTab"
+      :doc="doc"
+      :title="title"
+      :grouped-fields="groupedFields"
+      :errors="errors"
+      :missing-fields="missingFields"
+      :can-print="canPrint"
+      :can-show-links="canShowLinks"
+      @value-change="onValueChange"
+      @row-change="updateGroupedFields"
+      @editrow="(doc: Doc) => showRowEditForm(doc)"
+      @sync="sync"
+      @submit="submit"
+      @print="openPrintView"
+      @show-links="showLinks = true"
+    />
+    <LinkedEntries
+      v-if="showLinks && canShowLinks"
+      :doc="doc"
+      @close="showLinks = false"
+    />
+    <RowEditForm
+      v-if="row && !showLinks"
+      :doc="doc"
+      :fieldname="row.fieldname"
+      :index="row.index"
+      @close="() => (row = null)"
+    />
+  </div>
+  <FormContainer v-else :use-full-width="useFullWidth">
     <template v-if="hasDoc" #header-left>
       <Barcode
         v-if="canShowBarcode"
@@ -124,9 +156,11 @@
   </FormContainer>
 </template>
 <script lang="ts">
+import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
+import { getMissingMandatoryFields } from 'fyo/model/helpers';
 import { ValidationError } from 'fyo/utils/errors';
 import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
@@ -138,6 +172,7 @@ import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import { showDialog } from 'src/utils/interactive';
 import { getErrorMessage } from 'src/utils';
 import { loadDocPermissions } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -154,10 +189,13 @@ import {
   isPrintable,
   routeTo,
 } from 'src/utils/ui';
+import { isMobile } from 'src/utils/viewport';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { computed, defineComponent, inject, nextTick, ref } from 'vue';
+import { onBeforeRouteLeave } from 'vue-router';
 import CommonFormSection from './CommonFormSection.vue';
 import LinkedEntries from './LinkedEntries.vue';
+import MobileForm from './MobileForm.vue';
 import RowEditForm from './RowEditForm.vue';
 
 export default defineComponent({
@@ -170,6 +208,7 @@ export default defineComponent({
     Barcode,
     ExchangeRate,
     LinkedEntries,
+    MobileForm,
     RowEditForm,
     StatusPill,
     FrappeTabButtons,
@@ -191,15 +230,26 @@ export default defineComponent({
       context = useDocShortcuts(shortcuts, docOrNull, 'CommonForm', true);
     }
 
+    onBeforeRouteLeave(async (to, from) => {
+      const doc = docOrNull.value;
+      if (!isMobile.value || !doc?.dirty || to.path === from.path) {
+        return true;
+      }
+
+      return await confirmDiscard(doc);
+    });
+
     return {
       docOrNull,
       shortcuts,
       context,
+      isMobile,
     };
   },
   data() {
     return {
       errors: {},
+      missingFields: [],
       activeTab: this.t`Default`,
       groupedFields: null,
       isPrintable: false,
@@ -208,6 +258,7 @@ export default defineComponent({
       row: null,
     } as {
       errors: Record<string, string>;
+      missingFields: Field[];
       activeTab: string;
       groupedFields: null | UIGroupedFields;
       isPrintable: boolean;
@@ -398,14 +449,38 @@ export default defineComponent({
       }
     },
     async sync(useDialog?: boolean) {
+      if (this.isMobile && !this.checkRequiredFields()) {
+        return;
+      }
+
       if (await commonDocSync(this.doc, useDialog)) {
         this.updateGroupedFields();
       }
     },
     async submit() {
+      if (this.isMobile && !this.checkRequiredFields()) {
+        return;
+      }
+
       if (await commonDocSubmit(this.doc)) {
         this.updateGroupedFields();
       }
+    },
+    /** Phones mark missing fields in place instead of in a dialog. */
+    checkRequiredFields(): boolean {
+      const shown = new Set(
+        [...(this.groupedFields?.values() ?? [])].flatMap((tab) =>
+          [...tab.values()].flat()
+        )
+      );
+      this.missingFields = [...new Set(getMissingMandatoryFields(this.doc))].filter(
+        (field) => shown.has(field)
+      );
+      for (const field of this.missingFields) {
+        this.errors[field.fieldname] = this.t`${field.label} is required`;
+      }
+
+      return !this.missingFields.length;
     },
     async setDoc() {
       if (this.hasDoc) {
@@ -481,4 +556,27 @@ export default defineComponent({
     },
   },
 });
+
+/** Phones ask before leaving a form with unsaved edits. */
+async function confirmDiscard(doc: Doc): Promise<boolean> {
+  return (await showDialog({
+    title: t`Discard changes?`,
+    detail: t`Your changes to ${doc.schema.label} have not been saved.`,
+    type: 'warning',
+    buttons: [
+      {
+        label: t`Discard changes`,
+        isPrimary: true,
+        async action() {
+          if (doc.inserted) {
+            await doc.load();
+          }
+
+          return true;
+        },
+      },
+      { label: t`Keep editing`, isEscape: true, action: () => false },
+    ],
+  })) as boolean;
+}
 </script>

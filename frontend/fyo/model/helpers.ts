@@ -53,19 +53,21 @@ export function getPreDefaultValues(
   }
 }
 
+export function getMissingMandatoryFields(doc: Doc): Field[] {
+  return getMandatory(doc).filter((f) => {
+    const value = doc.get(f.fieldname);
+    const isNullOrUndef = getIsNullOrUndef(value);
+
+    if (f.fieldtype === FieldTypeEnum.Table) {
+      return isNullOrUndef || (value as Doc[])?.length === 0;
+    }
+
+    return isNullOrUndef || value === '';
+  });
+}
+
 export function getMissingMandatoryMessage(doc: Doc) {
-  const mandatoryFields = getMandatory(doc);
-  const message = mandatoryFields
-    .filter((f) => {
-      const value = doc.get(f.fieldname);
-      const isNullOrUndef = getIsNullOrUndef(value);
-
-      if (f.fieldtype === FieldTypeEnum.Table) {
-        return isNullOrUndef || (value as Doc[])?.length === 0;
-      }
-
-      return isNullOrUndef || value === '';
-    })
+  const message = getMissingMandatoryFields(doc)
     .map((f) => f.label ?? f.fieldname)
     .join(', ');
 

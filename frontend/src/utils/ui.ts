@@ -207,6 +207,7 @@ export function getActionsForDoc(doc?: Doc): Action[] {
         label: d.label,
         theme: d.theme,
         action: d.action,
+        nextStep: d.nextStep,
       };
     });
 }

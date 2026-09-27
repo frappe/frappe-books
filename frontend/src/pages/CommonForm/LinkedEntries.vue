@@ -1,24 +1,5 @@
 <template>
-  <div
-    class="w-quick-edit bg-surface-base border-l border-outline-gray-1 overflow-y-auto custom-scroll custom-scroll-thumb2"
-  >
-    <!-- Page Header -->
-    <div
-      class="flex items-center justify-between px-4 h-row-largest sticky top-0 bg-surface-base"
-      style="z-index: 1"
-    >
-      <div class="flex items-center justify-between w-full">
-        <FrappeButton
-          icon="lucide-x"
-          :label="t`Close`"
-          @click="$emit('close')"
-        />
-        <p class="text-xl font-semibold text-ink-gray-6">
-          {{ t`Linked Entries` }}
-        </p>
-      </div>
-    </div>
-
+  <component :is="DefineEntries">
     <FrappeLoadingText
       v-if="loading"
       class="p-4"
@@ -146,14 +127,50 @@
     <p v-else class="p-4 text-sm text-ink-gray-6">
       {{ t`No linked entries found` }}
     </p>
+  </component>
+  <FrappeBottomSheet
+    v-if="isMobile"
+    :open="true"
+    :title="t`Linked Entries`"
+    @update:open="(open: boolean) => !open && $emit('close')"
+  >
+    <div class="pb-[max(env(safe-area-inset-bottom),1rem)]">
+      <component :is="ReuseEntries" />
+    </div>
+  </FrappeBottomSheet>
+  <div
+    v-else
+    class="w-quick-edit bg-surface-base border-l border-outline-gray-1 overflow-y-auto custom-scroll custom-scroll-thumb2"
+  >
+    <!-- Page Header -->
+    <div
+      class="flex items-center justify-between px-4 h-row-largest sticky top-0 bg-surface-base"
+      style="z-index: 1"
+    >
+      <div class="flex items-center justify-between w-full">
+        <FrappeButton
+          icon="lucide-x"
+          :label="t`Close`"
+          @click="$emit('close')"
+        />
+        <p class="text-xl font-semibold text-ink-gray-6">
+          {{ t`Linked Entries` }}
+        </p>
+      </div>
+    </div>
+
+    <component :is="ReuseEntries" />
   </div>
+
 </template>
 <script lang="ts">
+import { createReusableTemplate } from '@vueuse/core';
 import { Doc } from 'fyo/model/doc';
 import { isPesa } from 'fyo/utils';
 import {
   Alert as FrappeAlert,
   Badge as FrappeBadge,
+  BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
   ItemListRow as FrappeItemListRow,
   LoadingText as FrappeLoadingText,
@@ -163,6 +180,7 @@ import { ModelNameEnum } from 'models/types';
 import { getLinkedEntries } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getFormRoute, routeTo } from 'src/utils/ui';
+import { isMobile } from 'src/utils/viewport';
 import { PropType, defineComponent, inject } from 'vue';
 
 const COMPONENT_NAME = 'LinkedEntries';
@@ -172,6 +190,7 @@ export default defineComponent({
     FrappeAccordion,
     FrappeAlert,
     FrappeBadge,
+    FrappeBottomSheet,
     FrappeButton,
     FrappeItemListRow,
     FrappeLoadingText,
@@ -179,7 +198,14 @@ export default defineComponent({
   props: { doc: { type: Object as PropType<Doc>, required: true } },
   emits: ['close'],
   setup() {
-    return { shortcuts: inject(shortcutsKey) };
+    // Phones show the entries in a sheet, desktop in a side panel.
+    const [DefineEntries, ReuseEntries] = createReusableTemplate();
+    return {
+      shortcuts: inject(shortcutsKey),
+      isMobile,
+      DefineEntries,
+      ReuseEntries,
+    };
   },
   data() {
     return { entries: {}, openGroups: [], loading: true, loadFailed: false } as {

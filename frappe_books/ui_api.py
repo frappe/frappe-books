@@ -1,15 +1,15 @@
 """Authenticated RPC endpoints used by the original Books Vue interface."""
 
-from __future__ import annotations
-
 import json
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import frappe
 
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 from frappe_books.ui_bridge.mapping import target_doctype
+
+LifecycleAction = Literal["submit", "cancel"]
 
 
 @frappe.whitelist(methods=["POST"])
@@ -26,8 +26,11 @@ def bespoke_call(method: str, args: list[Any] | str | None = None) -> Any:
 
 
 @frappe.whitelist(methods=["POST"])
-def lifecycle_action(action: Literal["submit", "cancel"], source_schema: str, name: str) -> dict[str, Any]:
+def lifecycle_action(action: LifecycleAction, source_schema: str, name: str) -> dict[str, Any]:
 	"""Run accounting and stock lifecycle hooks in one server transaction."""
+	# Frappe skips a bare Literal annotation because its values are strings.
+	if action not in get_args(LifecycleAction):
+		frappe.throw(f"Unsupported Books lifecycle action: {action}", frappe.FrappeTypeError)
 	doc = frappe.get_doc(target_doctype(source_schema), name)
 	if action == "submit":
 		doc.submit()

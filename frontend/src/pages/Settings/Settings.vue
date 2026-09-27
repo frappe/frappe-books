@@ -249,6 +249,13 @@ export default defineComponent({
       await this.sync();
     });
   },
+  async beforeRouteLeave(): Promise<boolean> {
+    if (!this.isMobile || !this.canSave) {
+      return true;
+    }
+
+    return await this.confirmDiscard();
+  },
   async deactivated(): Promise<void> {
     docsPathRef.value = '';
     this.shortcuts?.delete(COMPONENT_NAME);
@@ -316,6 +323,26 @@ export default defineComponent({
         top: offset - container.clientHeight / 3,
         behavior: 'smooth',
       });
+    },
+    async confirmDiscard(): Promise<boolean> {
+      const discard = await showDialog({
+        title: this.t`Discard changes?`,
+        detail: this.t`Your changes to Settings have not been saved.`,
+        type: 'warning',
+        buttons: [
+          {
+            label: this.t`Discard changes`,
+            isPrimary: true,
+            action: () => true,
+          },
+          {
+            label: this.t`Keep editing`,
+            action: () => false,
+            isEscape: true,
+          },
+        ],
+      });
+      return discard === true;
     },
     async syncDoc(doc: Doc): Promise<boolean> {
       try {

@@ -4,8 +4,14 @@
       <template #title>{{ t`Top Expenses` }}</template>
     </SectionHeader>
 
+    <MobileSectionState
+      v-if="showLoadState"
+      class="mt-4 h-32"
+      :has-failed="hasFailed"
+      @retry="loadData"
+    />
     <MobileExpenses
-      v-if="isMobile && hasData"
+      v-else-if="isMobile && hasData"
       class="mt-4"
       :expenses="expenses"
       :total="totalExpense"
@@ -38,6 +44,7 @@ import { getDashboardData } from 'src/utils/dashboard';
 import { defineComponent } from 'vue';
 import DashboardChartBase from './BaseDashboardChart.vue';
 import MobileExpenses from './MobileExpenses.vue';
+import MobileSectionState from './MobileSectionState.vue';
 import SectionHeader from './SectionHeader.vue';
 
 export default defineComponent({
@@ -45,6 +52,7 @@ export default defineComponent({
   components: {
     FrappeDonutChart,
     MobileExpenses,
+    MobileSectionState,
     SectionHeader,
   },
   extends: DashboardChartBase,
@@ -69,9 +77,6 @@ export default defineComponent({
     expensePalette(): string[] {
       return this.expenses.map(({ color }) => (this.darkMode ? color.darkColor : color.color));
     },
-  },
-  activated() {
-    this.setData();
   },
   methods: {
     async setData() {

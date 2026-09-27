@@ -21,11 +21,17 @@ export default defineComponent({
         'This Quarter',
         'This Month',
       ] as PeriodKey[],
+      isLoaded: false,
+      hasFailed: false,
     };
   },
   computed: {
     isMobile(): boolean {
       return isMobile.value;
+    },
+    /** Phones replace a section's body while it first loads or after it fails. */
+    showLoadState(): boolean {
+      return this.isMobile && (!this.isLoaded || this.hasFailed);
     },
     /**
      * frappe-ui charts mishandle taps: the tooltip closes when the finger
@@ -62,10 +68,23 @@ export default defineComponent({
       this.period = val;
     },
   },
+  async activated() {
+    await this.loadData();
+  },
   methods: {
     async periodChange() {
       this.$emit('period-change', this.period);
-      await this.setData();
+      await this.loadData();
+    },
+    async loadData() {
+      this.hasFailed = false;
+      try {
+        await this.setData();
+        this.isLoaded = true;
+      } catch (error) {
+        this.hasFailed = true;
+        console.error(error);
+      }
     },
     async setData() {
       return Promise.resolve(null);

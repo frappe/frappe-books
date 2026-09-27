@@ -7,9 +7,15 @@
       </div>
     </div>
 
+    <MobileSectionState
+      v-if="showLoadState"
+      class="mt-4 h-[208px]"
+      :has-failed="hasFailed"
+      @retry="loadData"
+    />
     <!-- Line Chart -->
     <div
-      v-if="chartData.data.length"
+      v-else-if="chartData.data.length"
       v-bind="phoneChartListeners"
       class="mt-4 w-full"
       :class="isMobile ? 'h-[208px]' : 'h-56'"
@@ -34,12 +40,14 @@ import { formatXLabels, getYMax } from 'src/utils/chart';
 import { uicolors } from 'src/utils/colors';
 import { getDashboardData, MonthlyCashflow } from 'src/utils/dashboard';
 import DashboardChartBase from './BaseDashboardChart.vue';
+import MobileSectionState from './MobileSectionState.vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'Cashflow',
   components: {
     FrappeLineChart,
+    MobileSectionState,
   },
   extends: DashboardChartBase,
   props: {
@@ -84,9 +92,6 @@ export default defineComponent({
         yAxis: { max: yMax, format, echartOptions: phoneAxes?.y },
       };
     },
-  },
-  async activated() {
-    await this.setData();
   },
   methods: {
     async setData() {

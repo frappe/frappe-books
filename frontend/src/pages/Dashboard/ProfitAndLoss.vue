@@ -18,8 +18,14 @@
         </div>
       </template>
     </SectionHeader>
+    <MobileSectionState
+      v-if="showLoadState"
+      class="mt-4 h-[184px]"
+      :has-failed="hasFailed"
+      @retry="loadData"
+    />
     <div
-      v-if="hasData"
+      v-else-if="hasData"
       v-bind="phoneChartListeners"
       class="mt-4 w-full"
       :class="isMobile ? 'h-[184px]' : 'h-72'"
@@ -48,6 +54,7 @@ import { formatXLabels, getYMax, getYMin } from 'src/utils/chart';
 import { uicolors } from 'src/utils/colors';
 import { getDashboardData, MonthlyBalance } from 'src/utils/dashboard';
 import DashboardChartBase from './BaseDashboardChart.vue';
+import MobileSectionState from './MobileSectionState.vue';
 import SectionHeader from './SectionHeader.vue';
 import { defineComponent } from 'vue';
 
@@ -56,6 +63,7 @@ export default defineComponent({
   components: {
     SectionHeader,
     FrappeBarChart,
+    MobileSectionState,
   },
   extends: DashboardChartBase,
   props: {
@@ -106,9 +114,6 @@ export default defineComponent({
         yAxis: { min: yMin, max: yMax, format, echartOptions: phoneAxes?.y },
       };
     },
-  },
-  activated() {
-    this.setData();
   },
   methods: {
     async setData() {

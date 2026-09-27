@@ -4,6 +4,7 @@ import frappe
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
+from frappe_books.ui_bridge.database import iso_datetime
 from frappe_books.ui_bridge.mapping import source_reference, target_reference
 
 DOCTYPE = "Books Stock Ledger Entry"
@@ -78,7 +79,7 @@ def _key_conditions(filters):
 def _ledger_row(entry):
 	quantity = as_decimal(entry.quantity)
 	return {
-		"date": entry.date,
+		"date": iso_datetime(entry.date),
 		"item": entry.item,
 		"location": entry.location,
 		"batch": entry.batch or "",

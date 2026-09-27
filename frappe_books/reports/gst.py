@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Literal, TypedDict
 
 import frappe
-from frappe.utils import create_batch
+from frappe.utils import create_batch, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.regional import INDIAN_STATES
@@ -128,7 +128,7 @@ def _row_header(invoice, gstin, place, company_state):
 		"gstin": gstin,
 		"partyName": invoice.party,
 		"invNo": invoice.name,
-		"invDate": invoice.date,
+		"invDate": getdate(invoice.date).isoformat(),
 		"reverseCharge": "N" if gstin else "Y",
 		"inState": bool(company_state) and company_state == place,
 		"place": place,

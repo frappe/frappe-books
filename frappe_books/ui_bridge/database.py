@@ -456,7 +456,7 @@ def _source_row_value(meta, source_name: str, target_name: str, row: dict) -> An
 	value = row.get(target_name)
 	field = meta.get_field(target_name)
 	if value and (target_name in {"creation", "modified"} or (field and field.fieldtype == "Datetime")):
-		return _iso_datetime(value)
+		return iso_datetime(value)
 	return _source_value(meta, target_name, value)
 
 
@@ -523,7 +523,7 @@ def _stores_doctype_name(meta, fieldname: str) -> bool:
 	return bool(field and field.fieldtype == "Link" and field.options == "DocType")
 
 
-def _iso_datetime(value) -> str:
+def iso_datetime(value) -> str:
 	return _aware_datetime(value).isoformat()
 
 

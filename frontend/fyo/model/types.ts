@@ -1,3 +1,4 @@
+import type { BadgeProps } from 'frappe-ui';
 import type { Fyo } from 'fyo';
 import type { DocValue, DocValueMap } from 'fyo/core/types';
 import type SystemSettings from 'fyo/models/SystemSettings';
@@ -102,7 +103,8 @@ export interface RenderData {
   [key: string]: DocValue | Schema;
 }
 
-export type BadgeData = { label: string; color: string };
+export type BadgeTheme = NonNullable<BadgeProps['theme']>;
+export type BadgeData = { label: string; theme: BadgeTheme };
 
 export type ColumnConfig = {
   options?: SelectOption[];

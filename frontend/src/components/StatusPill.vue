@@ -1,8 +1,12 @@
 <template>
-  <Badge v-if="showStatus" :color="badge.color">{{ badge.label }}</Badge>
+  <FrappeBadge v-if="showStatus" :theme="badge.theme">{{
+    badge.label
+  }}</FrappeBadge>
 </template>
 <script lang="ts">
+import { Badge as FrappeBadge } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
+import { BadgeData } from 'fyo/model/types';
 import { LoyaltyProgram } from 'models/baseModels/LoyaltyProgram/LoyaltyProgram';
 import { Party } from 'models/baseModels/Party/Party';
 import {
@@ -15,11 +19,10 @@ import {
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import Badge from 'src/components/Badge.vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-  components: { Badge },
+  components: { FrappeBadge },
   props: { doc: { type: Doc, required: true } },
   computed: {
     showStatus(): boolean {
@@ -27,12 +30,12 @@ export default defineComponent({
         this.doc.schemaName === ModelNameEnum.SalesQuote && this.doc.isSubmitted
       );
     },
-    badge(): { color: string; label: string } {
+    badge(): BadgeData {
       const status = getDocStatus(this.doc);
       if (status === 'Saved' && this.doc instanceof LoyaltyProgram) {
         const programStatus = getLoyaltyProgramStatus(this.doc);
         return {
-          color: loyaltyProgramStatusColor[programStatus] ?? 'gray',
+          theme: loyaltyProgramStatusColor[programStatus] ?? 'gray',
           label: getLoyaltyProgramStatusText(programStatus),
         };
       }
@@ -45,13 +48,13 @@ export default defineComponent({
         !outstanding.isZero()
       ) {
         return {
-          color: 'orange',
+          theme: 'amber',
           label: this.t`Unpaid ${this.formatAmount(outstanding)}`,
         };
       }
 
       return {
-        color: statusColor[status] ?? 'gray',
+        theme: statusColor[status] ?? 'gray',
         label: this.getLabel(status),
       };
     },

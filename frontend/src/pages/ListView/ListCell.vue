@@ -1,15 +1,15 @@
 <template>
   <div class="flex items-center truncate" :class="cellClass">
-    <Badge v-if="badge" class="text-xs" :color="badge.color">{{
+    <FrappeBadge v-if="badge" :theme="badge.theme">{{
       badge.label
-    }}</Badge>
+    }}</FrappeBadge>
     <span v-else class="truncate">{{ columnValue }}</span>
   </div>
 </template>
 <script lang="ts">
+import { Badge as FrappeBadge } from 'frappe-ui';
 import { BadgeData, ColumnConfig, RenderData } from 'fyo/model/types';
 import { Field } from 'schemas/types';
-import Badge from 'src/components/Badge.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { defineComponent, PropType } from 'vue';
@@ -26,7 +26,7 @@ function isField(column: ColumnConfig | Field): column is Field {
 
 export default defineComponent({
   name: 'ListCell',
-  components: { Badge },
+  components: { FrappeBadge },
   props: {
     row: { type: Object as PropType<RenderData>, required: true },
     column: { type: Object as PropType<Column>, required: true },

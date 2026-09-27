@@ -4,6 +4,7 @@ import {
 } from './baseModels/Account/types';
 import {
   Action,
+  BadgeTheme,
   ColumnConfig,
   DocStatus,
   LeadStatus,
@@ -346,7 +347,7 @@ export function getLeadStatusColumn(): ColumnConfig {
     badge(doc) {
       const status = getLeadStatus(doc) as LeadStatus;
       return {
-        color: statusColor[status] ?? 'gray',
+        theme: statusColor[status] ?? 'gray',
         label: getStatusTextOfLead(status),
       };
     },
@@ -355,17 +356,17 @@ export function getLeadStatusColumn(): ColumnConfig {
 
 export const statusColor: Record<
   DocStatus | InvoiceStatus | LeadStatus,
-  string | undefined
+  BadgeTheme | undefined
 > = {
   '': 'gray',
   Draft: 'gray',
   Open: 'gray',
-  Replied: 'yellow',
-  Opportunity: 'yellow',
-  Unpaid: 'orange',
+  Replied: 'amber',
+  Opportunity: 'amber',
+  Unpaid: 'amber',
   Paid: 'green',
-  PartlyPaid: 'yellow',
-  Interested: 'yellow',
+  PartlyPaid: 'amber',
+  Interested: 'amber',
   Converted: 'green',
   Quotation: 'green',
   Saved: 'blue',
@@ -373,8 +374,8 @@ export const statusColor: Record<
   Submitted: 'green',
   Cancelled: 'red',
   DonotContact: 'red',
-  Return: 'lime',
-  ReturnIssued: 'lime',
+  Return: 'gray',
+  ReturnIssued: 'gray',
 };
 
 export function getStatusText(status: DocStatus | InvoiceStatus): string {
@@ -478,14 +479,14 @@ export function getSerialNumberStatusColumn(): ColumnConfig {
       }
 
       return {
-        color: serialNumberStatusColor[status] ?? 'gray',
+        theme: serialNumberStatusColor[status] ?? 'gray',
         label: getSerialNumberStatusText(status),
       };
     },
   };
 }
 
-export const serialNumberStatusColor: Record<string, string | undefined> = {
+export const serialNumberStatusColor: Record<string, BadgeTheme | undefined> = {
   Inactive: 'gray',
   Active: 'green',
   Delivered: 'blue',
@@ -520,7 +521,7 @@ export function getPriceListStatusColumn(): ColumnConfig {
         label = t`Purchase`;
       }
 
-      return { color: 'gray', label };
+      return { theme: 'gray', label };
     },
   };
 }
@@ -532,10 +533,10 @@ export function getIsDocEnabledColumn(): ColumnConfig {
     fieldtype: 'Data',
     badge(doc) {
       if (doc.isEnabled) {
-        return { color: 'green', label: t`Enabled` };
+        return { theme: 'green', label: t`Enabled` };
       }
 
-      return { color: 'orange', label: t`Disabled` };
+      return { theme: 'amber', label: t`Disabled` };
     },
   };
 }
@@ -625,7 +626,7 @@ export function getDocStatusListColumn(): ColumnConfig {
     badge(doc) {
       const status = getDocStatus(doc);
       return {
-        color: statusColor[status] ?? 'gray',
+        theme: statusColor[status] ?? 'gray',
         label: getStatusText(status),
       };
     },
@@ -640,7 +641,7 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
     badge(doc) {
       const status = getLoyaltyProgramStatus(doc);
       return {
-        color: loyaltyProgramStatusColor[status] ?? 'gray',
+        theme: loyaltyProgramStatusColor[status] ?? 'gray',
         label: getLoyaltyProgramStatusText(status),
       };
     },
@@ -671,11 +672,11 @@ export function getLoyaltyProgramStatus(doc?: RenderData | Doc): string {
   return 'Active';
 }
 
-export const loyaltyProgramStatusColor: Record<string, string | undefined> = {
+export const loyaltyProgramStatusColor: Record<string, BadgeTheme | undefined> = {
   Active: 'green',
   Disabled: 'gray',
   Expired: 'red',
-  Maxed: 'orange',
+  Maxed: 'amber',
 };
 
 export function getLoyaltyProgramStatusText(status: string): string {

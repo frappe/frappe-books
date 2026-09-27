@@ -111,10 +111,47 @@ test('a retry keeps only the rows that were not imported', async () => {
     [{ value: 'Customer' }, { value: null }],
   ];
 
-  importer.keepRowsNotImported(['A']);
+  importer.docs = [{ name: 'A' }];
+
+  importer.retryRowsNotImported(['A']);
 
   assert.deepEqual(
     importer.valueMatrix.map((row) => row[1].value),
+    ['B']
+  );
+  assert.deepEqual(importer.docs, []);
+});
+
+test('retrying failed imports keeps the file column order', async () => {
+  const fyo = await makeFyo();
+  const context = { Importer, fyo };
+  const wizardMethod = (name) =>
+    loadMethod('src/pages/ImportWizard.vue', name, context);
+  const wizard = {
+    importType: 'Party',
+    successOldName: ['A'],
+    get importer() {
+      return this.nullOrImporter;
+    },
+    clear: await wizardMethod('clear'),
+    setImportType: await wizardMethod('setImportType'),
+  };
+  wizard.setImportType('Party');
+  wizard.importer.assignedTemplateFields = ['Party.role', 'Party.name'];
+  wizard.importer.valueMatrix = [
+    [{ value: 'Customer' }, { value: 'A' }],
+    [{ value: 'Supplier' }, { value: 'B' }],
+  ];
+  wizard.successOldName = ['A'];
+
+  (await wizardMethod('clearSuccessfullyImportedEntries')).call(wizard);
+
+  assert.deepEqual(wizard.importer.assignedTemplateFields, [
+    'Party.role',
+    'Party.name',
+  ]);
+  assert.deepEqual(
+    wizard.importer.valueMatrix.map((row) => row[1].value),
     ['B']
   );
 });

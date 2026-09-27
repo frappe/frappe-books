@@ -117,9 +117,6 @@ export default defineComponent({
     inputType(): 'text' {
       return 'text';
     },
-    labelClasses(): string {
-      return 'text-base text-ink-gray-5 mb-1.5';
-    },
     inputPlaceholder(): string {
       return this.placeholder || this.df.placeholder || this.df.label;
     },

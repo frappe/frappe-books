@@ -20,9 +20,12 @@
     </template>
   </ReadOnlyValue>
   <div v-else>
-    <div v-if="showLabel" :class="labelClasses">
-      {{ df.label }}
-    </div>
+    <FrappeFormLabel
+      v-if="showLabel"
+      class="mb-1.5"
+      :label="df.label"
+      :required="isRequired"
+    />
     <FrappePopover side="bottom" align="end">
       <template #trigger>
         <FrappeButton
@@ -93,6 +96,7 @@
 <script>
 import {
   Button as FrappeButton,
+  FormLabel as FrappeFormLabel,
   Popover as FrappePopover,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
@@ -102,6 +106,7 @@ import ReadOnlyValue from './ReadOnlyValue.vue';
 export default {
   name: 'Color',
   components: {
+    FrappeFormLabel,
     FrappePopover,
     ReadOnlyValue,
     FrappeButton,

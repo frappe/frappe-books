@@ -40,11 +40,6 @@ export default defineComponent({
       default: true,
     },
   },
-  computed: {
-    labelClasses() {
-      return this.labelClass || 'text-gray-600 text-base';
-    },
-  },
   methods: {
     onClick() {
       if (this.isReadOnly) return;

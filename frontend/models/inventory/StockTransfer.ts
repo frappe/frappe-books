@@ -1,4 +1,3 @@
-import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import {
   ChangeArg,
@@ -7,10 +6,8 @@ import {
   FormulaMap,
   HiddenMap,
 } from 'fyo/model/types';
-import { Defaults } from 'models/baseModels/Defaults/Defaults';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { addItem, getNumberSeries } from 'models/helpers';
-import { getReturnItems } from 'models/returnItems';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { TargetField } from 'schemas/types';
@@ -148,82 +145,5 @@ export abstract class StockTransfer extends Transfer {
     await this.set('terms', stDoc.terms);
     await this.set('date', stDoc.date);
     await this.set('items', stDoc.items);
-  }
-
-  async getInvoice(): Promise<Invoice | null> {
-    if (!this.isSubmitted || this.backReference) {
-      return null;
-    }
-
-    const invoice = this.fyo.doc.getNewDoc(this.invoiceSchemaName, {
-      party: this.party,
-      date: new Date().toISOString(),
-      ...this.getInvoiceDefaults(),
-      backReference: this.name,
-    }) as Invoice;
-    for (const row of this.items ?? []) {
-      if (row.item && row.quantity) {
-        await invoice.append('items', {
-          item: row.item,
-          quantity: row.quantity,
-          unit: row.unit,
-          rate: row.rate ?? this.fyo.pesa(0),
-          batch: row.batch || null,
-          hsnCode: row.hsnCode,
-          description: row.description,
-        });
-      }
-    }
-
-    return invoice.items?.length ? invoice : null;
-  }
-
-  getInvoiceDefaults() {
-    const defaults = (this.fyo.singles.Defaults as Defaults) ?? {};
-    if (this.isSales) {
-      return {
-        terms: defaults.salesInvoiceTerms ?? '',
-        numberSeries: defaults.salesInvoiceNumberSeries ?? undefined,
-      };
-    }
-
-    return {
-      terms: defaults.purchaseInvoiceTerms ?? '',
-      numberSeries: defaults.purchaseInvoiceNumberSeries ?? undefined,
-    };
-  }
-
-  async getReturnDoc(): Promise<StockTransfer | undefined> {
-    if (!this.name) {
-      return;
-    }
-
-    const docData = this.getValidDict(true, true);
-    const docItems = docData.items as DocValueMap[];
-
-    if (!docItems) {
-      return;
-    }
-
-    const balances = await this.fyo.db.getReturnBalanceItemsQty(
-      this.schemaName,
-      this.name
-    );
-
-    const returnDocData = {
-      ...docData,
-      name: undefined,
-      date: new Date(),
-      items: getReturnItems(docItems, balances),
-      returnAgainst: docData.name,
-    } as DocValueMap;
-
-    const newReturnDoc = this.fyo.doc.getNewDoc(
-      this.schema.name,
-      returnDocData
-    ) as StockTransfer;
-
-    await newReturnDoc.runFormulas();
-    return newReturnDoc;
   }
 }

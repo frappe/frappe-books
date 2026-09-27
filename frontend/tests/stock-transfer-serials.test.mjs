@@ -62,30 +62,3 @@ test('a material receipt row suggests a batch and new serial numbers', async () 
   await row.set('quantity', 0);
   assert.equal(row.serialNumber, '');
 });
-
-test('an invoice made from a receipt copies its rows and purchase defaults', async () => {
-  const fyo = await makeFyo();
-  fyo.singles.Defaults = {
-    purchaseInvoiceTerms: 'Net 30',
-    purchaseInvoiceNumberSeries: 'PINV-',
-  };
-  const receipt = fyo.doc.getNewDoc('PurchaseReceipt', {
-    name: 'PREC-1',
-    party: 'Supplier',
-    submitted: true,
-    items: [
-      { item: 'Pen', quantity: 2, batch: 'B1' },
-      { item: 'Ink', quantity: 0 },
-    ],
-  });
-  const invoice = await receipt.getInvoice();
-  assert.equal(invoice.schemaName, 'PurchaseInvoice');
-  assert.deepEqual(
-    [invoice.terms, invoice.numberSeries, invoice.backReference],
-    ['Net 30', 'PINV-', 'PREC-1']
-  );
-  assert.deepEqual(
-    invoice.items.map((row) => [row.item, row.quantity, row.batch]),
-    [['Pen', 2, 'B1']]
-  );
-});

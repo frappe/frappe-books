@@ -37,6 +37,9 @@ const MAPPER_MODULES: Record<string, string> = {
     'frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice',
   SalesQuote:
     'frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote',
+  Shipment: 'frappe_books.frappe_books.doctype.books_shipment.books_shipment',
+  PurchaseReceipt:
+    'frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt',
 };
 
 /** The unsaved `schemaName` document a server mapper, such as make_return, builds from `source`. */
@@ -167,13 +170,9 @@ export function getMakeInvoiceAction(
     | ModelNameEnum.PurchaseReceipt
     | ModelNameEnum.SalesQuote
 ): Action {
-  let label = fyo.t`Sales Invoice`;
-  if (schemaName === ModelNameEnum.PurchaseReceipt) {
-    label = fyo.t`Purchase Invoice`;
-  }
-
+  const isPurchase = schemaName === ModelNameEnum.PurchaseReceipt;
   return {
-    label,
+    label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
     condition: (doc: Doc) => {
       if (schemaName === ModelNameEnum.SalesQuote) {
@@ -183,15 +182,18 @@ export function getMakeInvoiceAction(
       }
     },
     action: async (doc: Doc) => {
-      const invoice =
-        doc instanceof StockTransfer
-          ? await doc.getInvoice()
-          : await getMappedDoc(
-              doc,
-              ModelNameEnum.SalesInvoice,
-              'make_sales_invoice'
-            );
-      if (!invoice || !invoice.name) {
+      const invoice = isPurchase
+        ? await getMappedDoc(
+            doc,
+            ModelNameEnum.PurchaseInvoice,
+            'make_purchase_invoice'
+          )
+        : await getMappedDoc(
+            doc,
+            ModelNameEnum.SalesInvoice,
+            'make_sales_invoice'
+          );
+      if (!invoice.name) {
         return;
       }
 
@@ -321,12 +323,8 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {
-      const returnDoc =
-        doc instanceof StockTransfer
-          ? await doc.getReturnDoc()
-          : await getMappedDoc(doc, doc.schemaName, 'make_return');
-
-      if (!returnDoc || !returnDoc.name) {
+      const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
+      if (!returnDoc.name) {
         return;
       }
 

@@ -50,15 +50,6 @@ export class Account extends Doc {
     rgt: () => 0,
   };
 
-  async beforeSync() {
-    if (this.accountType || !this.parentAccount) {
-      return;
-    }
-
-    const account = await this.fyo.db.get('Account', this.parentAccount);
-    this.accountType = account.accountType as AccountType;
-  }
-
   async beforeDelete() {
     if (!this.parentAccount) {
       throw new ValidationError(this.fyo.t`Root accounts cannot be deleted.`);

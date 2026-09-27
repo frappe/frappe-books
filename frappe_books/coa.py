@@ -139,17 +139,17 @@ def _country_charts():
 	return charts
 
 
-def _flatten(tree, parent=None, root_type=None):
+def _flatten(tree, parent=None, root_type=None, account_type=None):
+	"""Children without an account type take their parent's, as Books Account does on save."""
 	accounts = []
 	for label, node in tree.items():
 		if label in META_KEYS or not isinstance(node, dict):
 			continue
 		name = _account_name(label, node.get("accountNumber"))
 		account_root_type = node["rootType"] if parent is None else root_type
-		accounts.append(
-			ChartAccount(name, parent, account_root_type, node.get("accountType") or None, _is_group(node))
-		)
-		accounts.extend(_flatten(node, parent=name, root_type=account_root_type))
+		node_type = node.get("accountType") or account_type
+		accounts.append(ChartAccount(name, parent, account_root_type, node_type, _is_group(node)))
+		accounts.extend(_flatten(node, parent=name, root_type=account_root_type, account_type=node_type))
 	return accounts
 
 

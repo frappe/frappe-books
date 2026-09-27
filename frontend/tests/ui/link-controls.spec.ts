@@ -345,11 +345,24 @@ async function installFixture(page: Page) {
       partySchema
     );
     // Fixture documents exist only in this browser's cache. No records are saved.
-    for (const doc of [...addresses, party]) {
+    const fixtureDocs = [...addresses, party];
+    for (const doc of fixtureDocs) {
       doc._dirty = false;
       doc._notInserted = false;
     }
-    await party.loadLinks();
+    // Forms reload saved documents on open, so serve the fixtures as saved.
+    const get = fyo.db.get.bind(fyo.db);
+    fyo.db.get = async (
+      schemaName: string,
+      name: string,
+      ...args: unknown[]
+    ) => {
+      const doc = fixtureDocs.find(
+        (fixture: any) =>
+          fixture.schemaName === schemaName && fixture.name === name
+      );
+      return doc ? doc.getValidDict() : get(schemaName, name, ...args);
+    };
     const getAll = fyo.db.getAll.bind(fyo.db);
     fyo.db.getAll = (schemaName: string, ...args: unknown[]) => {
       if (schemaName === 'Address') {

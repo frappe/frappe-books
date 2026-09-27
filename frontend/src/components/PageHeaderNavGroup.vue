@@ -31,8 +31,6 @@ import { defineComponent } from 'vue';
 import SearchBar from './SearchBar.vue';
 import { historyState } from 'src/utils/refs';
 
-const COMPONENT_NAME = 'PageHeaderNavGroup';
-
 export default defineComponent({
   components: { SearchBar, FrappeButton },
   setup() {
@@ -49,15 +47,17 @@ export default defineComponent({
       return !!history.forward;
     },
   },
-  activated() {
-    this.shortcuts?.shift.set(COMPONENT_NAME, ['Backspace'], () => {
+  // PageHeader mounts this only while its page is active, and each page has
+  // its own copy, so the instance is the shortcut context.
+  mounted() {
+    this.shortcuts?.shift.set(this, ['Backspace'], () => {
       if (this.historyState.back) {
         this.$router.back();
       }
     });
   },
-  deactivated() {
-    this.shortcuts?.delete(COMPONENT_NAME);
+  unmounted() {
+    this.shortcuts?.delete(this);
   },
 });
 </script>

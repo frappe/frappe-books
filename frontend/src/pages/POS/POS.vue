@@ -182,7 +182,10 @@ import PageHeader from 'src/components/PageHeader.vue';
 import { computed, defineComponent, inject, nextTick } from 'vue';
 import { Payment } from 'models/baseModels/Payment/Payment';
 import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
-import { getPaymentMethodRequirements } from 'models/baseModels/PaymentMethod/requirements';
+import {
+  getPaymentMethodRequirements,
+  PaymentMethodRequirements,
+} from 'models/baseModels/PaymentMethod/requirements';
 import { ModalName, modalNames } from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
@@ -192,6 +195,7 @@ import {
   addBatchItem,
   addPOSItem,
   fillRowSerialNumbers,
+  toPOSItem,
   validatePOSCheckout,
   getTotalQuantity,
   getTotalTaxedAmount,
@@ -603,13 +607,25 @@ export default defineComponent({
       await this.setItems();
     },
     async setItems() {
-      const filters: Record<string, boolean | string> = {};
-      const itemVisibility = await getItemVisibility(this.fyo);
-
+      const filters = await this.getItemFilters();
       const hideUnavailable =
         this.posProfile?.hideUnavailableItems ??
         this.fyo.singles.POSSettings?.hideUnavailableItems;
+      const items = (await fyo.db.getAll(ModelNameEnum.Item, {
+        fields: [],
+        filters,
+      })) as Item[];
 
+      this.items = items
+        .map((item) => toPOSItem(item, this.itemQtyMap))
+        .filter(
+          ({ availableQty }) =>
+            !(hideUnavailable && filters.trackItem && availableQty <= 0)
+        );
+    },
+    async getItemFilters(): Promise<Record<string, boolean | string>> {
+      const filters: Record<string, boolean | string> = {};
+      const itemVisibility = await getItemVisibility(this.fyo);
       if (itemVisibility === 'Inventory Items') {
         filters.trackItem = true;
       } else if (itemVisibility === 'Non-Inventory Items') {
@@ -620,38 +636,7 @@ export default defineComponent({
         filters.itemGroup = this.selectedItemGroup;
       }
 
-      const items = (await fyo.db.getAll(ModelNameEnum.Item, {
-        fields: [],
-        filters: filters,
-      })) as Item[];
-
-      this.items = [] as POSItem[];
-      for (const item of items) {
-        let availableQty = 0;
-
-        if (!!this.itemQtyMap[item.name as string]) {
-          availableQty = this.itemQtyMap[item.name as string].availableQty;
-        }
-
-        if (!item.name) {
-          return;
-        }
-        if (hideUnavailable && filters.trackItem && availableQty <= 0) {
-          continue;
-        }
-
-        this.items.push({
-          availableQty,
-          name: item.name,
-          itemCode: item.itemCode as string,
-          barcode: item.barcode as string,
-          image: item?.image as string,
-          rate: item.rate as Money,
-          unit: item.unit as string,
-          hasBatch: !!item.hasBatch,
-          hasSerialNumber: !!item.hasSerialNumber,
-        });
-      }
+      return filters;
     },
     async selectedReturnInvoice(invoiceName: string) {
       const salesInvoiceDoc = (await this.fyo.doc.getDoc(
@@ -862,12 +847,6 @@ export default defineComponent({
       }
 
       const paidAmount = this.fyo.pesa(this.paidAmount.float).abs();
-      const outstandingAmount = (
-        this.sinvDoc.outstandingAmount?.isZero()
-          ? this.sinvDoc.grandTotal
-          : this.sinvDoc.outstandingAmount
-      )?.abs();
-
       if (paidAmount.isZero()) {
         throw new ValidationError(t`Please enter an amount greater than zero.`);
       }
@@ -880,11 +859,19 @@ export default defineComponent({
         paymentMethod.type,
         paymentMethod.requiresClearanceDate
       );
-
-      if (requirements.isCash) {
-        return;
+      if (!requirements.isCash) {
+        this.validateTransfer(paidAmount, requirements);
       }
-
+    },
+    validateTransfer(
+      paidAmount: Money,
+      requirements: PaymentMethodRequirements
+    ) {
+      const outstandingAmount = (
+        this.sinvDoc.outstandingAmount?.isZero()
+          ? this.sinvDoc.grandTotal
+          : this.sinvDoc.outstandingAmount
+      )?.abs();
       if (outstandingAmount && paidAmount.gt(outstandingAmount)) {
         throw new ValidationError(
           t`Non-cash payment amount cannot exceed the outstanding amount.`
@@ -909,50 +896,12 @@ export default defineComponent({
         ModelNameEnum.Payment,
         'make_payment'
       )) as Payment;
-
-      const paymentMethod = this.paymentMethod;
-      const tenderedAmount = this.fyo.pesa(this.paidAmount.float).abs();
-      const outstandingAmount = (
-        this.sinvDoc.outstandingAmount ?? this.sinvDoc.grandTotal
-      )?.abs();
-      const paymentAmount =
-        outstandingAmount && tenderedAmount.gt(outstandingAmount)
-          ? outstandingAmount
-          : tenderedAmount;
-
-      await payment.set('paymentMethod', paymentMethod);
-      await payment.set('amount', paymentAmount);
-      await payment.set('referenceType', ModelNameEnum.SalesInvoice);
-
-      const paymentMethodDoc = (await payment.loadAndGetLink(
-        'paymentMethod'
-      )) as PaymentMethod;
-      const requirements = getPaymentMethodRequirements(
-        paymentMethodDoc?.type,
-        paymentMethodDoc?.requiresClearanceDate
-      );
-
-      if (requirements.requiresReferenceId) {
-        await payment.set('referenceId', this.transferRefNo);
-      }
-
-      if (requirements.requiresClearanceDate) {
-        await payment.set('clearanceDate', this.transferClearanceDate);
-      }
-
-      if (requirements.isCash) {
-        if (payment.paymentType === 'Pay') {
-          await payment.setMultiple({
-            account: this.defaultPOSCashAccount,
-            paymentAccount: this.sinvDoc.account,
-          });
-        } else {
-          await payment.setMultiple({
-            account: this.sinvDoc.account,
-            paymentAccount: this.defaultPOSCashAccount,
-          });
-        }
-      }
+      await payment.setMultiple({
+        paymentMethod: this.paymentMethod,
+        amount: this.getPaymentAmount(),
+        referenceType: ModelNameEnum.SalesInvoice,
+      });
+      await this.setPaymentMethodDetails(payment);
 
       payment.once('afterSubmit', () => {
         showToast({
@@ -964,6 +913,43 @@ export default defineComponent({
 
       await payment.sync();
       await payment.submit();
+    },
+    /** The tendered amount, up to what the invoice still owes. */
+    getPaymentAmount(): Money {
+      const tenderedAmount = this.fyo.pesa(this.paidAmount.float).abs();
+      const outstandingAmount = (
+        this.sinvDoc.outstandingAmount ?? this.sinvDoc.grandTotal
+      )?.abs();
+      return outstandingAmount && tenderedAmount.gt(outstandingAmount)
+        ? outstandingAmount
+        : tenderedAmount;
+    },
+    /** The reference, clearance date or cash accounts the payment method needs. */
+    async setPaymentMethodDetails(payment: Payment) {
+      const paymentMethod = (await payment.loadAndGetLink(
+        'paymentMethod'
+      )) as PaymentMethod;
+      const requirements = getPaymentMethodRequirements(
+        paymentMethod?.type,
+        paymentMethod?.requiresClearanceDate
+      );
+      if (requirements.requiresReferenceId) {
+        await payment.set('referenceId', this.transferRefNo);
+      }
+
+      if (requirements.requiresClearanceDate) {
+        await payment.set('clearanceDate', this.transferClearanceDate);
+      }
+
+      if (requirements.isCash) {
+        const cash = this.defaultPOSCashAccount;
+        const receivable = this.sinvDoc.account;
+        const isPay = payment.paymentType === 'Pay';
+        await payment.setMultiple({
+          account: isPay ? cash : receivable,
+          paymentAccount: isPay ? receivable : cash,
+        });
+      }
     },
     async makeStockTransfer() {
       const shipmentDoc = (await this.sinvDoc.getStockTransfer()) as Shipment;

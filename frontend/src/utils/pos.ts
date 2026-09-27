@@ -244,6 +244,20 @@ export async function getPOSRowItem(
   };
 }
 
+export function toPOSItem(item: Item, itemQtyMap: ItemQtyMap): POSItem {
+  return {
+    availableQty: itemQtyMap[item.name as string]?.availableQty ?? 0,
+    name: item.name as string,
+    itemCode: item.itemCode as string,
+    barcode: item.barcode as string,
+    image: item.image as string,
+    rate: item.rate as Money,
+    unit: item.unit as string,
+    hasBatch: !!item.hasBatch,
+    hasSerialNumber: !!item.hasSerialNumber,
+  };
+}
+
 /** Fills a sale row with in-stock serial numbers; a return row keeps the sold ones. */
 export async function fillRowSerialNumbers(
   row: SalesInvoiceItem,

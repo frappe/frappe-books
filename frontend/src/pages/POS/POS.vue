@@ -198,6 +198,7 @@ import {
   setPOSRowQuantity,
   isTypingInField,
   getQuickQtyBuffer,
+  getPOSQuantityField,
 } from 'src/utils/pos';
 import {
   getItemQtyMap,
@@ -439,11 +440,8 @@ export default defineComponent({
         return;
       }
 
-      const field = this.fyo.singles.InventorySettings?.enableUomConversions
-        ? 'transferQuantity'
-        : 'quantity';
       try {
-        await setPOSRowQuantity(row, field, Number(buffer));
+        await setPOSRowQuantity(row, getPOSQuantityField(fyo), Number(buffer));
       } catch (error) {
         showToast({
           type: 'error',

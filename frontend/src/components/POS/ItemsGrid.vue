@@ -33,7 +33,7 @@
             class="rounded-4 w-full h-full bg-surface-gray-3 flex justify-center items-center"
           >
             <p class="text-4xl font-semibold text-ink-gray-4 select-none">
-              {{ getExtractedWords(item.name) }}
+              {{ getItemInitials(item.name) }}
             </p>
           </div>
           <FrappeBadge
@@ -61,6 +61,7 @@
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
 import { Badge as FrappeBadge, Button as FrappeButton } from 'frappe-ui';
+import { getItemInitials } from 'src/utils/pos';
 import { POSItem } from './types';
 
 export default defineComponent({
@@ -73,17 +74,6 @@ export default defineComponent({
       default: () => [],
     },
   },
-  methods: {
-    getExtractedWords(item: string) {
-      const initials = item
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((word) => {
-          return word[0].toUpperCase();
-        });
-      return initials.slice(0, 2).join('');
-    },
-  },
+  methods: { getItemInitials },
 });
 </script>

@@ -270,8 +270,11 @@ import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
   fillRowSerialNumbers,
-  getPOSPermissionSetting,
+  getPOSPermissions,
+  getPOSQuantityField,
   getPOSRowItem,
+  isPOSRowFieldReadOnly,
+  POSPermissions,
   POSRowItem,
   POSRowField,
   setPOSRowValue,
@@ -311,8 +314,10 @@ export default defineComponent({
     return {
       isExpanded: false,
       availableQtyInBatch: 0,
-      canChangeRate: false,
-      canEditDiscount: false,
+      permissions: {
+        canChangeRate: false,
+        canEditDiscount: false,
+      } as POSPermissions,
       itemSettings: {
         hasBatch: false,
         hasSerialNumber: false,
@@ -386,10 +391,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    [this.canChangeRate, this.canEditDiscount] = await Promise.all([
-      getPOSPermissionSetting(this.fyo, 'canChangeRate'),
-      getPOSPermissionSetting(this.fyo, 'canEditDiscount'),
-    ]);
+    this.permissions = await getPOSPermissions(this.fyo);
   },
   methods: {
     toggleExpand() {
@@ -401,26 +403,7 @@ export default defineComponent({
       this.$emit('select', this.row);
     },
     isFieldReadOnly(field: POSRowField): boolean {
-      if (this.isReadOnly) {
-        return true;
-      }
-
-      switch (field) {
-        case 'quantity':
-          return this.isUOMConversionEnabled;
-        case 'rate':
-          return !this.canChangeRate;
-        case 'itemDiscountAmount':
-          return (
-            !this.canEditDiscount || (this.row.itemDiscountPercent ?? 0) > 0
-          );
-        case 'itemDiscountPercent':
-          return (
-            !this.canEditDiscount || !this.row.itemDiscountAmount?.isZero()
-          );
-        default:
-          return false;
-      }
+      return isPOSRowFieldReadOnly(this.row, field, this.permissions);
     },
     openKeypad(field: POSRowField) {
       if (!this.isClassic && !this.isFieldReadOnly(field)) {
@@ -444,9 +427,7 @@ export default defineComponent({
       }
     },
     async adjustQuantity(change: number) {
-      const field = this.isUOMConversionEnabled
-        ? 'transferQuantity'
-        : 'quantity';
+      const field = getPOSQuantityField(fyo);
       const quantity = (this.row[field] ?? this.row.quantity ?? 1) + change;
       if (quantity !== 0) {
         await this.setValue(field, quantity);

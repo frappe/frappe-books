@@ -64,6 +64,46 @@ export async function setPOSRowQuantity(
   }
 }
 
+/** The quantity field the POS edits: the transfer quantity with UOM conversions. */
+export function getPOSQuantityField(fyo: Fyo): POSQuantityField {
+  return fyo.singles.InventorySettings?.enableUomConversions
+    ? 'transferQuantity'
+    : 'quantity';
+}
+
+export type POSPermissions = Record<POSPermissionSetting, boolean>;
+
+export function isPOSRowFieldReadOnly(
+  row: SalesInvoiceItem,
+  field: POSRowField,
+  permissions: POSPermissions
+): boolean {
+  if (row.isFreeItem) {
+    return true;
+  }
+
+  switch (field) {
+    case 'quantity':
+      return getPOSQuantityField(row.fyo) === 'transferQuantity';
+    case 'rate':
+      return !permissions.canChangeRate;
+    case 'itemDiscountAmount':
+      return !permissions.canEditDiscount || (row.itemDiscountPercent ?? 0) > 0;
+    case 'itemDiscountPercent':
+      return !permissions.canEditDiscount || !row.itemDiscountAmount?.isZero();
+    default:
+      return false;
+  }
+}
+
+export async function getPOSPermissions(fyo: Fyo): Promise<POSPermissions> {
+  const [canChangeRate, canEditDiscount] = await Promise.all([
+    getPOSPermissionSetting(fyo, 'canChangeRate'),
+    getPOSPermissionSetting(fyo, 'canEditDiscount'),
+  ]);
+  return { canChangeRate, canEditDiscount };
+}
+
 export async function getPOSPermissionSetting(
   fyo: Fyo,
   fieldname: POSPermissionSetting
@@ -244,6 +284,17 @@ export async function getPOSRowItem(
     hasSerialNumber: !!doc.hasSerialNumber,
     units: [...new Set(units.filter((unit): unit is string => !!unit))],
   };
+}
+
+/** Up to two initials that stand in for an item without an image. */
+export function getItemInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join('');
 }
 
 export function toPOSItem(item: Item, itemQtyMap: ItemQtyMap): POSItem {

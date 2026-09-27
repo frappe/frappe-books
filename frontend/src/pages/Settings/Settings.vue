@@ -5,6 +5,7 @@
         <FrappeButton
           v-if="canSave"
           variant="solid"
+          size="md"
           :label="t`Save`"
           @click="saveOnPhone"
         />

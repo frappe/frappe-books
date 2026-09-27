@@ -5,6 +5,7 @@
         <FrappeButton
           v-if="openPaymentModal"
           variant="ghost"
+          size="md"
           icon="lucide-chevron-left"
           class="rtl-rotate-180"
           :label="t`Back`"
@@ -13,6 +14,7 @@
         <FrappeButton
           v-else
           variant="ghost"
+          size="md"
           icon="lucide-x"
           :label="t`Exit POS`"
           @click="routeToSinvList"
@@ -32,6 +34,7 @@
       <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>
         <FrappeButton
           variant="ghost"
+          size="md"
           icon="lucide-ellipsis"
           :label="t`POS actions`"
           @click="isMenuOpen = true"

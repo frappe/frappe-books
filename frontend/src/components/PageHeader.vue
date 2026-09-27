@@ -9,7 +9,9 @@
       <h1 class="min-w-0 flex-1 truncate ps-1 text-xl-semibold text-ink-gray-9">
         {{ title }}
       </h1>
-      <slot name="mobile" />
+      <div class="flex items-center gap-2">
+        <slot name="mobile" />
+      </div>
     </slot>
   </FrappePageHeaderBase>
   <FrappePageHeaderMobile v-else-if="isActive && isMobile" :title="title">
@@ -20,7 +22,7 @@
       <slot name="mobile-title" />
     </template>
     <template v-if="$slots.mobile" #suffix>
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-2">
         <slot name="mobile" />
       </div>
     </template>

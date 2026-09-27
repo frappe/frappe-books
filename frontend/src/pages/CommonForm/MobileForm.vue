@@ -5,6 +5,7 @@
         <FrappeButton
           v-if="actionGroups.length"
           variant="ghost"
+          size="md"
           icon="lucide-ellipsis"
           :label="t`More actions`"
           @click="showActions = true"
@@ -12,6 +13,7 @@
         <FrappeButton
           v-if="doc.canSave"
           variant="solid"
+          size="md"
           :label="t`Save`"
           :disabled="doc.isSyncing"
           @click="$emit('sync')"
@@ -19,6 +21,7 @@
         <FrappeButton
           v-else-if="doc.canSubmit"
           variant="solid"
+          size="md"
           :label="t`Submit`"
           @click="$emit('submit')"
         />

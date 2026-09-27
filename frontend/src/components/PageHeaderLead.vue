@@ -8,6 +8,7 @@
   <FrappeButton
     v-else
     variant="ghost"
+    size="md"
     icon="lucide-menu"
     :label="t`Menu`"
     @click="openDrawer?.()"

@@ -4,6 +4,7 @@
       <template #mobile>
         <FrappeButton
           variant="ghost"
+          size="md"
           icon="lucide-search"
           :label="t`Search`"
           @click="$router.push('/search')"

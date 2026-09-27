@@ -43,7 +43,13 @@ async function mount() {
             }),
         });
       }
-      return h(FrappeUIProvider, {}, { default: () => h(POS, { ref: posRef }) });
+      // Desk.vue bounds the page height, so POS scrolls inside its grid.
+      return h(FrappeUIProvider, {}, {
+        default: () =>
+          h('div', { class: 'flex h-screen overflow-hidden' }, [
+            h(POS, { ref: posRef, class: 'min-w-0 flex-1' }),
+          ]),
+      });
     },
   });
   app.use(FrappeUI);

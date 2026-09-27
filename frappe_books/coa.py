@@ -64,10 +64,14 @@ def bank_account_parent(accounts, country=None):
 	return _ensure_group("Bank Accounts", "Asset", accounts, account_type="Bank")
 
 
-def ensure_discount_account(accounts):
+def ensure_discount_account(accounts=()):
+	"""Return the Discounts account, creating it under Indirect Income, else the Income root."""
 	if frappe.db.exists("Books Account", "Discounts"):
 		return "Discounts"
-	parent = find_account(accounts, ["Indirect Income"]) or _root_account("Income", accounts)
+	if frappe.db.exists("Books Account", {"name": "Indirect Income", "is_group": 1}):
+		parent = "Indirect Income"
+	else:
+		parent = _root_account("Income", accounts)
 	return _create_account(
 		"Discounts",
 		parent=parent,

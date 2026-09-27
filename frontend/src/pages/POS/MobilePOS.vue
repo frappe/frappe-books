@@ -178,6 +178,13 @@ watch(
   }
 );
 
+// The cart bar alone barely changes when a saved invoice is opened.
+watch(sinvDoc, (doc) => {
+  if (!doc.notInserted && !doc.submitted && doc.items?.length) {
+    sheet.value = 'cart';
+  }
+});
+
 const cartQuantities = computed(() => {
   const quantities: Record<string, number> = {};
   for (const row of sinvDoc.value.items ?? []) {

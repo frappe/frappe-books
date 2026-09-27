@@ -39,3 +39,18 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 				make_item(accounts[0].name, accounts[1].name, **values)
 
 		self.assertTrue(make_item(income.name, received.name, track_item=1).track_item)
+
+	def test_tracked_series_names_end_with_a_dash(self):
+		income = make_account("Item Sales", root_type="Income")
+		received = make_account("Item Received", root_type="Liability")
+		prefix = f"B{frappe.generate_hash(length=6)}"
+		item = make_item(
+			income.name,
+			received.name,
+			track_item=1,
+			has_batch=1,
+			batch_series=f" {prefix} ",
+			serial_number_series="SERIAL",
+		)
+
+		self.assertEqual((item.batch_series, item.serial_number_series), (f"{prefix}-", "SERIAL"))

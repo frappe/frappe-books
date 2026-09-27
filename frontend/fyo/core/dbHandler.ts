@@ -142,7 +142,8 @@ export class DatabaseHandler extends DatabaseBase {
     return (await this.#demux.call(
       'count',
       schemaName,
-      options.filters ?? {}
+      options.filters ?? {},
+      options.orFilters ?? {}
     )) as number;
   }
 

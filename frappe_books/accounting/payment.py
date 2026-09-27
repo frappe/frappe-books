@@ -236,7 +236,7 @@ def _settle_invoice(invoice, payment):
 			"date": now_datetime(),
 			"payment_type": payment_type_for(invoice.doctype, bool(invoice.return_against)),
 			"payment_method": "Cash",
-			"payment_account": _default_payment_account(invoice.doctype),
+			"payment_account": _settling_account(invoice.doctype),
 			"amount": outstanding,
 		}
 	)
@@ -246,11 +246,16 @@ def _settle_invoice(invoice, payment):
 	)
 
 
-def _default_payment_account(invoice_doctype):
+def default_payment_account(invoice_doctype) -> str | None:
+	"""Return the Books Defaults account that pays invoices of the doctype."""
 	fieldname = (
 		"sales_payment_account" if invoice_doctype == "Books Sales Invoice" else "purchase_payment_account"
 	)
-	account = frappe.db.get_single_value("Books Defaults", fieldname) or frappe.db.get_value(
+	return frappe.db.get_single_value("Books Defaults", fieldname)
+
+
+def _settling_account(invoice_doctype):
+	account = default_payment_account(invoice_doctype) or frappe.db.get_value(
 		"Books Payment Method", "Cash", "account"
 	)
 	if not account:

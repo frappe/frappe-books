@@ -9,9 +9,9 @@ from frappe_books.accounting.accounts import validate_account, validate_party_ro
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
-from frappe_books.accounting.payment import map_invoice_payment
+from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
-from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer
+from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
 from frappe_books.inventory.invoice_balance import (
 	store_pending_quantities,
 	update_billed_status,
@@ -44,8 +44,27 @@ class InvoiceController(SeriesNamingMixin, Document):
 		loyalty.validate_invoice_loyalty(self)
 
 
+FOLLOW_UP_FIELDS = ("make_auto_payment", "make_auto_stock_transfer")
+
+
 class PostingInvoiceController(InvoiceController):
 	"""Ledger, outstanding and follow-up effects of submitting an invoice."""
+
+	def __setup__(self):
+		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
+		self.dont_update_if_missing.extend(FOLLOW_UP_FIELDS)
+
+	def calculate(self):
+		super().calculate()
+		self.set_follow_up_defaults()
+
+	def set_follow_up_defaults(self):
+		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
+		if self.get("make_auto_payment") is None:
+			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
+		if self.get("make_auto_stock_transfer") is None:
+			inventory = frappe.db.get_single_value("Books Accounting Settings", "enable_inventory")
+			self.make_auto_stock_transfer = int(bool(inventory and default_location(self)))
 
 	def validate(self):
 		super().validate()

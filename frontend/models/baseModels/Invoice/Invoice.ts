@@ -278,6 +278,7 @@ export abstract class Invoice extends Transactional {
   };
 
   static defaults: DefaultMap = {
+    // Mirror the server's defaults, as the client always sends check boxes.
     makeAutoPayment: (doc) =>
       doc instanceof Invoice && !!doc.autoPaymentAccount,
     makeAutoStockTransfer: (doc) =>

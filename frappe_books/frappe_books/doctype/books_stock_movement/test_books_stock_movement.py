@@ -13,8 +13,8 @@ from frappe_books.ui_bridge.database import BooksDatabaseBridge
 class IntegrationTestBooksStockMovement(IntegrationTestCase):
 	def setUp(self):
 		income = make_account("Income", root_type="Income")
-		expense = make_account("Expense", root_type="Expense")
-		self.item = make_item(income.name, expense.name, track_item=1)
+		received = make_account("Received", root_type="Liability")
+		self.item = make_item(income.name, received.name, track_item=1)
 		self.warehouse = frappe.get_doc(
 			{"doctype": "Books Location", "name": unique_name("Warehouse")}
 		).insert()

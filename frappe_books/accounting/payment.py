@@ -8,7 +8,7 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import now_datetime
 
-from frappe_books.accounting.accounts import PARTY_ACCOUNT_TYPES, validate_account
+from frappe_books.accounting.accounts import validate_account, validate_party_account
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
@@ -41,8 +41,7 @@ class PaymentController(SeriesNamingMixin, Document):
 
 	def validate_accounts(self):
 		"""The account is the party's ledger, the payment account its cash or bank."""
-		role = frappe.db.get_value("Books Party", self.party, "role")
-		validate_account(self, "account", PARTY_ACCOUNT_TYPES[role])
+		validate_party_account(self, "account", frappe.db.get_value("Books Party", self.party, "role"))
 		validate_account(self, "payment_account", ("Cash", "Bank"))
 
 	def validate_payment_method(self):

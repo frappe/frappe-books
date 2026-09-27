@@ -189,7 +189,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
-		item = make_item(expense.name, expense.name, track_item=1)
+		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			make_party(payable.name, role="Supplier").name,
@@ -209,7 +209,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", cogs.name)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		frappe.db.set_single_value("Books Defaults", "shipment_location", "Stores")
-		item = make_item(income.name, cogs.name, track_item=1, rate=10)
+		item = make_item(income.name, received.name, track_item=1, rate=10)
 		make_movement(
 			"MaterialReceipt",
 			[{"item": item.name, "to_location": "Stores", "quantity": 5, "rate": 10}],
@@ -231,7 +231,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		expense = make_account("FX Expense", root_type="Expense")
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
-		item = make_item(expense.name, expense.name, track_item=1)
+		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			make_party(payable.name, role="Supplier", currency=foreign_currency()).name,
@@ -257,7 +257,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
-		item = make_item(expense.name, expense.name, track_item=1)
+		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			make_party(payable.name, role="Supplier").name,
@@ -312,7 +312,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		frappe.db.set_single_value("Books Pos Settings", "inventory", "Stores" if profile else location.name)
 		party = make_party(receivable.name)
-		item = make_item(income.name, cogs.name, track_item=1, rate=10)
+		item = make_item(income.name, received.name, track_item=1, rate=10)
 		make_movement(
 			"MaterialReceipt",
 			[{"item": item.name, "to_location": location.name, "quantity": opening_quantity, "rate": 10}],

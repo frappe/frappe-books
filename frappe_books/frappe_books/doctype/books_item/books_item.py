@@ -8,6 +8,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from frappe_books.accounting.accounts import validate_account
+
 
 class BooksItem(Document):
 	# begin: auto-generated types
@@ -46,6 +48,7 @@ class BooksItem(Document):
 	_DOCTYPE_NAME = "Books Item"
 
 	def validate(self):
+		self.validate_accounts()
 		if self.hsn_code and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code)):
 			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
 		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
@@ -58,6 +61,11 @@ class BooksItem(Document):
 			frappe.throw(_("Each unit can have only one conversion factor."))
 		if any(flt(row.conversion_factor) <= 0 for row in self.uom_conversions):
 			frappe.throw(_("Conversion factors must be greater than zero."))
+
+	def validate_accounts(self):
+		"""A tracked item is bought into stock received but not billed, a liability."""
+		validate_account(self, "income_account", root_types=("Income",))
+		validate_account(self, "expense_account", root_types=("Liability" if self.track_item else "Expense",))
 
 	def on_update(self):
 		if self.has_serial_number:

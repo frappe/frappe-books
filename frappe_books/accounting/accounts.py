@@ -28,6 +28,11 @@ def validate_account(doc, fieldname, account_types=(), root_types=()):
 			)
 
 
+def validate_party_account(doc, fieldname, role):
+	"""A customer's ledger account is receivable, a supplier's payable."""
+	validate_account(doc, fieldname, PARTY_ACCOUNT_TYPES.get(role, ()))
+
+
 def validate_changed_accounts(doc, rules):
 	"""Check the accounts that changed, as `{fieldname: {"account_types": ..., "root_types": ...}}`."""
 	for fieldname, types in rules.items():

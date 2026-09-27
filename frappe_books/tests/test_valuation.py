@@ -17,8 +17,8 @@ from frappe_books.tests.accounting import make_account, make_item
 class IntegrationTestValuation(IntegrationTestCase):
 	def setUp(self):
 		income = make_account("Valuation Income", root_type="Income")
-		expense = make_account("Valuation Expense", root_type="Expense")
-		self.item = make_item(income.name, expense.name, track_item=1).name
+		received = make_account("Valuation Received", root_type="Liability")
+		self.item = make_item(income.name, received.name, track_item=1).name
 
 	def test_fifo_balances_follow_receipts_and_issues(self):
 		move(self.item, "MaterialReceipt", 5, 10)

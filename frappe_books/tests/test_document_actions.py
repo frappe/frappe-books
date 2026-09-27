@@ -183,7 +183,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			"Books Defaults",
 			{"purchase_receipt_location": "Stores", "purchase_payment_account": self.cash.name},
 		)
-		item = make_item(self.expense.name, self.expense.name, track_item=1)
+		item = make_item(self.income.name, received.name, track_item=1)
 		supplier = make_party(payable.name, role="Supplier")
 		invoice = make_invoice(
 			"Books Purchase Invoice",

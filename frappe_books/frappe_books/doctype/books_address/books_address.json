@@ -102,13 +102,14 @@
    "description": "Place of Supply",
    "fieldname": "pos",
    "fieldtype": "Autocomplete",
-   "label": "Place of Supply"
+   "label": "Place of Supply",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 23:43:14.631880",
+ "modified": "2026-09-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Address",

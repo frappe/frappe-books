@@ -122,7 +122,6 @@ export async function getRegionalModels(
     return {};
   }
 
-  const { Address } = await import('./regionalModels/in/Address');
   const { Party } = await import('./regionalModels/in/Party');
-  return { Address, Party };
+  return { Party };
 }

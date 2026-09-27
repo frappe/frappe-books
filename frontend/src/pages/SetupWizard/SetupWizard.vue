@@ -4,7 +4,7 @@
       <div
         class="flex flex-col items-center gap-2.5 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+1.75rem)] text-center"
       >
-        <img :src="appIconUrl" alt="" class="size-14" />
+        <img v-if="appIconUrl" :src="appIconUrl" alt="" class="size-14" />
         <h1 class="mt-1.5 text-4xl-semibold text-ink-gray-9">
           {{ t`Set up your organization` }}
         </h1>
@@ -157,7 +157,7 @@ import { showDialog } from 'src/utils/interactive';
 import { getSetupWizardDoc } from 'src/utils/misc';
 import { getFieldsGroupedByTabAndSection } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
-import { appIconUrl } from 'src/web/pwa';
+import { getAppIconUrl } from 'src/web/pwa';
 import { computed, defineComponent } from 'vue';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 
@@ -177,7 +177,7 @@ export default defineComponent({
   },
   emits: ['setup-complete', 'setup-canceled'],
   setup() {
-    return { isMobile, appIconUrl };
+    return { isMobile, appIconUrl: getAppIconUrl() };
   },
   data() {
     return {

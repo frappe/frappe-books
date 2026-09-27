@@ -5,7 +5,13 @@ export type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
-export const appIconUrl = '/assets/frappe_books/pwa/icon.svg';
+/** The Books logo the site declares (add_to_apps_screen in hooks.py). */
+export function getAppIconUrl(): string {
+  const books = window.frappe.boot?.app_data?.find(
+    ({ app_name }) => app_name === 'frappe_books'
+  );
+  return books?.app_logo_url ?? '';
+}
 
 /** The browser's deferred install prompt, when it offers one. */
 export const installPrompt = shallowRef<InstallPromptEvent | null>(null);

@@ -102,6 +102,7 @@ declare global {
           account_labels: Record<string, string>;
           indian_states: Record<string, string>;
         };
+        app_data?: { app_name: string; app_logo_url?: string | null }[];
         [key: string]: unknown;
       };
     };

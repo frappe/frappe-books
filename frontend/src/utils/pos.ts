@@ -296,7 +296,7 @@ export async function addPOSItem(
     return row;
   }
 
-  await sinvDoc.append('items', newItemRow(item, itemDoc, quantity));
+  await sinvDoc.append('items', newItemRow(item, quantity));
   return sinvDoc.items!.at(-1)!;
 }
 
@@ -327,7 +327,7 @@ export async function addBatchItem(
     return;
   }
 
-  await sinvDoc.append('items', newItemRow(item, itemDoc, quantity, batch));
+  await sinvDoc.append('items', newItemRow(item, quantity, batch));
 }
 
 async function getItemDoc(sinvDoc: SalesInvoice, item: POSItem) {
@@ -346,18 +346,12 @@ function getItemRows(
   );
 }
 
-function newItemRow(
-  item: POSItem,
-  itemDoc: Item,
-  quantity: number,
-  batch?: string
-) {
+function newItemRow(item: POSItem, quantity: number, batch?: string) {
   return {
     item: item.name,
     quantity,
     transferQuantity: quantity,
     transferUnit: item.unit,
-    hsnCode: itemDoc.hsnCode,
     batch,
   };
 }

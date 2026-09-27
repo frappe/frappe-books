@@ -1,6 +1,7 @@
 import { Fyo } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
+import { getMissingMandatoryMessage } from 'fyo/model/helpers';
 import {
   ChangeArg,
   CurrenciesMap,
@@ -186,16 +187,6 @@ export abstract class Invoice extends Transactional {
   }
 
   formulas: FormulaMap = {
-    account: {
-      formula: async () => {
-        return (await this.fyo.getValue(
-          'Party',
-          this.party!,
-          'defaultAccount'
-        )) as string;
-      },
-      dependsOn: ['party'],
-    },
     currency: {
       formula: async () => {
         const currency = (await this.fyo.getValue(
@@ -358,9 +349,19 @@ export abstract class Invoice extends Transactional {
     }
   }
 
+  /** Previews first when values the server fills, like a new row's account, are still missing. */
   async beforeSync(): Promise<void> {
     await super.beforeSync();
     clearTimeout(this._previewTimer);
+    if (this.hasMissingValues) {
+      await this.preview();
+    }
+  }
+
+  get hasMissingValues(): boolean {
+    return [this, ...(this.items ?? [])].some(
+      (doc) => !!getMissingMandatoryMessage(doc)
+    );
   }
 
   /** Counts edits as they start, so a preview sent before one is dropped. */
@@ -369,6 +370,10 @@ export abstract class Invoice extends Transactional {
     retriggerChildDocApplyChange?: boolean
   ) {
     this._edits += 1;
+    if (fieldname === 'party') {
+      // The server's preview sets the new party's account.
+      this.account = undefined;
+    }
     return await super._applyChange(fieldname, retriggerChildDocApplyChange);
   }
 

@@ -23,6 +23,8 @@ import {
 } from 'models/inventory/units';
 import { QueryFilter } from 'utils/db/types';
 
+const ITEM_DETAILS = ['tax', 'description', 'itemCode', 'account', 'hsnCode'];
+
 export abstract class InvoiceItem extends Doc {
   item?: string;
   account?: string;
@@ -122,10 +124,16 @@ export abstract class InvoiceItem extends Doc {
       this.clearStandardRate();
     }
     if (fieldname === 'item') {
-      // The server's preview sets the new item's tax.
-      this.tax = undefined;
+      this.clearItemDetails();
     }
     return super._applyChange(fieldname, retriggerChildDocApplyChange);
+  }
+
+  /** The server's invoice preview fills empty item details from the new item. */
+  clearItemDetails() {
+    for (const fieldname of ITEM_DETAILS) {
+      this[fieldname] = undefined;
+    }
   }
 
   /** An empty rate that is not manual is priced by the server's invoice preview. */
@@ -135,24 +143,6 @@ export abstract class InvoiceItem extends Doc {
   }
 
   formulas: FormulaMap = {
-    description: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'description'
-        )) as string,
-      dependsOn: ['item'],
-    },
-    itemCode: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'itemCode'
-        )) as string,
-      dependsOn: ['item'],
-    },
     unit: {
       formula: async () =>
         (await this.fyo.getValue(
@@ -265,21 +255,6 @@ export abstract class InvoiceItem extends Doc {
         return factor;
       },
       dependsOn: ['transferUnit', 'qty'],
-    },
-    account: {
-      formula: () => {
-        let accountType = 'expenseAccount';
-        if (this.isSales) {
-          accountType = 'incomeAccount';
-        }
-        return this.fyo.getValue('Item', this.item as string, accountType);
-      },
-      dependsOn: ['item'],
-    },
-    hsnCode: {
-      formula: async () =>
-        await this.fyo.getValue('Item', this.item as string, 'hsnCode'),
-      dependsOn: ['item'],
     },
   };
 

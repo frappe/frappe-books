@@ -1,6 +1,9 @@
 <template>
   <div class="flex min-h-0 flex-col">
     <PageHeader :title="t`Dashboard`">
+      <template #mobile>
+        <PeriodSelector :value="period" @change="(value) => (period = value)" />
+      </template>
       <PeriodSelector
         :value="period"
         :options="['This Year', 'This Quarter', 'This Month', 'YTD']"

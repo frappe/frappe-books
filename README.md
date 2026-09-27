@@ -131,16 +131,20 @@ bench --site "$BOOKS_TEST_SITE" install-app frappe_books
 bench --site "$BOOKS_TEST_SITE" set-config allow_tests 1 --parse
 bench --site "$BOOKS_TEST_SITE" migrate
 bench --site "$BOOKS_TEST_SITE" run-tests --app frappe_books
-uvx ruff check apps/frappe_books/frappe_books
-uvx ruff format --check apps/frappe_books/frappe_books
+uvx ruff@0.14.10 check apps/frappe_books/frappe_books
+uvx ruff@0.14.10 format --check apps/frappe_books/frappe_books
+yarn --cwd frontend lint
 yarn --cwd frontend typecheck
 yarn --cwd frontend test
+yarn --cwd frontend test:ui
 ```
+
+`frontend/tests/ui/README.md` explains which browser tests need a running site. Run `pre-commit install` to format and lint changed files on commit. The Prettier and ESLint hooks use `frontend/node_modules`, so run `yarn install` first.
 
 The integration suite covers the UI data layer, posting, reversals, payments, valuation, stock, POS, setup, and printing.
 Database regressions cover legacy date repair, native Date columns, singleton settings, and large numeric record names.
 Use a separate test site for each database and run the same suite against Frappe `develop`.
-GitHub Actions runs installation, migration, and the integration suite on all three databases against Frappe `develop`.
+GitHub Actions runs the linters once, then installation, migration, the integration suite, and the browser tests on all three databases against Frappe `develop`.
 
 ## Site maintenance
 

@@ -29,7 +29,7 @@ test.beforeEach(async ({ page }) => {
 test('rows show two lines and open their document', async ({ page }) => {
   await page.goto('/books/list/Party');
   await expect(
-    page.getByRole('button', { name: 'Create new entry' })
+    page.getByRole('button', { name: 'New', exact: true })
   ).toBeVisible();
   await search(page, run);
 

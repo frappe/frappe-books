@@ -57,6 +57,7 @@ test('rows open in a sheet', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(sheet).toBeHidden();
   await expect(page.getByText('1 row', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Items' })).toBeVisible();
 });
 
 test('rows without quick edit fields edit their table columns', async ({

@@ -20,10 +20,10 @@
           />
           <FrappeButton
             v-if="canCreate"
-            variant="ghost"
+            variant="solid"
             size="md"
-            icon="lucide-plus"
-            :label="t`Create new entry`"
+            icon-left="lucide-plus"
+            :label="t`New`"
             @click="handleMakeNewDoc"
           />
         </template>

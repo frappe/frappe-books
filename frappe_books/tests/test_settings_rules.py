@@ -2,9 +2,11 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, ensure_chart, load_chart
+from frappe_books.frappe_books.doctype.books_accounting_settings import books_accounting_settings
 from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
 	POINT_OF_SALE_FEATURES,
 )
+from frappe_books.frappe_books.doctype.books_inventory_settings import books_inventory_settings
 
 COMPANY = {
 	"company_name": "Settings Test Company",
@@ -43,6 +45,20 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		inventory_settings = frappe.get_single("Books Inventory Settings")
 		for fieldname in POINT_OF_SALE_FEATURES:
 			self.assertTrue(inventory_settings.get(fieldname), fieldname)
+
+	def test_one_way_switches_cannot_be_turned_off(self):
+		_accounting_settings()
+		switches = {
+			"Books Accounting Settings": books_accounting_settings.ONE_WAY_SWITCHES,
+			"Books Inventory Settings": books_inventory_settings.ONE_WAY_SWITCHES,
+		}
+		for doctype, fieldnames in switches.items():
+			for fieldname in fieldnames:
+				with self.subTest(fieldname=fieldname):
+					frappe.db.set_single_value(doctype, fieldname, 1)
+					settings = frappe.get_single(doctype)
+					settings.set(fieldname, 0)
+					self.assertRaisesRegex(frappe.ValidationError, "cannot be disabled", settings.save)
 
 
 def _accounting_settings(**values):

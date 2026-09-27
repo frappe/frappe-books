@@ -8,9 +8,10 @@ from frappe_books.accounting.money import as_decimal
 
 
 def populate_units(rows):
-	"""Set each row's stock unit and conversion factor from its item, and its quantity in stock units.
+	"""Set each row's stock unit, transfer unit and conversion factor from its item, and its quantities.
 
-	A row in the stock unit keeps its quantity. A row in another unit converts its transfer quantity.
+	A missing quantity is derived from the other. When both are set, a row in the stock unit keeps its
+	quantity and a row in another unit converts its transfer quantity.
 	Quantities in a whole-number unit must be whole.
 	"""
 	items = _item_units({row.item for row in rows if row.item})
@@ -35,19 +36,21 @@ def validate_whole_quantities(rows):
 def _populate_row_units(row, unit, factors):
 	row.unit = unit
 	row.transfer_unit = row.transfer_unit or unit
-	if row.transfer_unit == unit:
-		row.unit_conversion_factor = 1
-		row.transfer_quantity = row.quantity
-		return
+	row.unit_conversion_factor = factor = _conversion_factor(row, factors)
+	if row.quantity and (row.transfer_unit == unit or not row.transfer_quantity):
+		row.transfer_quantity = as_decimal(row.quantity) / factor
+	else:
+		row.quantity = flt(as_decimal(row.transfer_quantity) * factor, row.precision("quantity"))
+
+
+def _conversion_factor(row, factors):
+	if row.transfer_unit == row.unit:
+		return 1
 	if row.transfer_unit not in factors:
 		frappe.throw(
 			_("Transfer unit {0} is not applicable for item {1}.").format(row.transfer_unit, row.item)
 		)
-	factor = as_decimal(factors[row.transfer_unit])
-	row.unit_conversion_factor = factor
-	if not row.transfer_quantity:
-		row.transfer_quantity = as_decimal(row.quantity) / factor
-	row.quantity = flt(as_decimal(row.transfer_quantity) * factor, row.precision("quantity"))
+	return as_decimal(factors[row.transfer_unit])
 
 
 def _item_units(names):

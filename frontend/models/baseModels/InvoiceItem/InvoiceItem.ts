@@ -4,6 +4,7 @@ import { Doc } from 'fyo/model/doc';
 import {
   CurrenciesMap,
   ChangeArg,
+  DefaultMap,
   FiltersMap,
   FormulaMap,
   HiddenMap,
@@ -335,6 +336,9 @@ export abstract class InvoiceItem extends Doc {
     unitConversionFactor: () =>
       !this.fyo.singles.InventorySettings?.enableUomConversions,
   };
+
+  // The server derives a missing quantity from the other, so a new row's start is set here.
+  static defaults: DefaultMap = { quantity: () => 1 };
 
   static filters: FiltersMap = {
     item: async (doc: Doc): Promise<QueryFilter> => {

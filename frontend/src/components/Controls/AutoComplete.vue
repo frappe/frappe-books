@@ -94,7 +94,6 @@ import { getOptionList } from 'fyo/utils';
 import { Button as FrappeButton, Combobox as FrappeCombobox } from 'frappe-ui';
 import { FieldTypeEnum } from 'schemas/types';
 import { fuzzyMatch } from 'src/utils';
-import { getFormRoute, routeTo } from 'src/utils/ui';
 import { h } from 'vue';
 import Base from './Base.vue';
 import LinkedEntryButton from './LinkedEntryButton.vue';
@@ -376,6 +375,8 @@ export default {
       if (!this.linkSchemaName || !this.value) {
         return;
       }
+      // Imported on use: src/utils/ui imports the router, whose pages import this control.
+      const { getFormRoute, routeTo } = await import('src/utils/ui');
       await routeTo(getFormRoute(this.linkSchemaName, this.value));
     },
   },

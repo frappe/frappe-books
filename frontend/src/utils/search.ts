@@ -6,7 +6,6 @@ import { reports } from 'reports';
 import { OptionField } from 'schemas/types';
 import { createFilters, routeFilters } from 'src/utils/filters';
 import { safeParseFloat } from 'utils/index';
-import { RouteLocationRaw } from 'vue-router';
 import { fuzzyMatch } from '.';
 import { getFormRoute, routeTo } from './ui';
 import { searchGroups } from '../../utils/types';
@@ -842,13 +841,14 @@ export class Search {
       schemaLabel,
       more: keyword.values.slice(1),
       group: 'Docs',
+      route,
       action: async () => {
         await routeTo(route);
       },
     };
   }
 
-  _getRouteFromKeyword(keyword: Keyword): RouteLocationRaw {
+  _getRouteFromKeyword(keyword: Keyword): string {
     const { parent, parentSchemaName, schemaName } = keyword.meta;
     if (parent && parentSchemaName) {
       return getFormRoute(parentSchemaName as string, parent as string);

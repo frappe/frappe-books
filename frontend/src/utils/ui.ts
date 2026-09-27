@@ -383,10 +383,7 @@ export function getFieldsGroupedByTabAndSection(
   return grouped;
 }
 
-export function getFormRoute(
-  schemaName: string,
-  name: string,
-): RouteLocationRaw {
+export function getFormRoute(schemaName: string, name: string): string {
   const route = fyo.models[schemaName]
     ?.getListViewSettings(fyo)
     ?.formRoute?.(name);

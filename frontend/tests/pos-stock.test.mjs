@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   addBatchItem,
+  addPOSItem,
   getItemQtyMap,
   validateQty,
   getPOSInventory,
@@ -185,6 +186,30 @@ test('a cart discount edit picks amount or percent discounts', async () => {
   assert.deepEqual([row.setItemDiscountAmount, row.itemDiscountPercent], [false, 10]);
   await setPOSRowValue(row, 'rate', 7);
   assert.deepEqual([row.setItemDiscountAmount, row.rate], [false, 7]);
+});
+
+test('adding an item already in the cart checks the POS warehouse for the new total', async () => {
+  const row = makeRow({ quantity: 3, transferQuantity: 3 });
+  const invoice = row.parentdoc;
+  invoice.fyo.doc.getDoc = async () => ({ trackItem: true, inventory });
+  const stock = { [item]: { availableQty: 4 } };
+  assert.equal(await addPOSItem(invoice, product, 1, stock), row);
+  assert.equal(row.quantity, 4);
+  await assert.rejects(
+    addPOSItem(invoice, product, 1, stock),
+    /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
+  );
+  assert.equal(row.quantity, 4);
+});
+
+test('a new cart row needs the item in stock', async () => {
+  const invoice = makeInvoice();
+  await assert.rejects(addPOSItem(invoice, product, 1, {}), /out of stock/);
+  const row = await addPOSItem(invoice, product, 2, stockMap(0));
+  assert.deepEqual(
+    [invoice.items.length, row.quantity, row.transferUnit],
+    [1, 2, 'Unit']
+  );
 });
 
 function makeRow(values = {}) {

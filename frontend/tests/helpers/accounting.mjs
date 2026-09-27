@@ -33,6 +33,7 @@ await build({
       export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export {
         addBatchItem,
+        addPOSItem,
         setPOSRowQuantity,
         setPOSRowValue,
         validatePOSCheckout,
@@ -115,6 +116,7 @@ export const {
   setPOSRowValue,
   validateSinv,
   addBatchItem,
+  addPOSItem,
   validatePOSCheckout,
   getTaskChecks,
   getReportCellColorClass,

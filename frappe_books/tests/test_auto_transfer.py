@@ -14,6 +14,9 @@ from frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_inv
 from frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice import (
 	make_return as make_purchase_return,
 )
+from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import (
+	make_return as make_sales_return,
+)
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import make_shipment
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
@@ -154,6 +157,16 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 		self.assertEqual(receipt.return_against, invoice.reload().back_reference)
 		self.assertEqual([row.quantity for row in receipt.items], [2])
+
+	def test_return_shipment_reverses_the_shipment_made_by_hand(self):
+		invoice, _item = self._sales_invoice()
+		invoice.submit()
+		shipment = make_shipment(invoice.name).insert()
+		shipment.submit()
+		credit_note = make_sales_return(invoice.name)
+		credit_note.insert().submit()
+
+		self.assertEqual(make_shipment(credit_note.name).return_against, shipment.name)
 
 	def _purchase_invoice(self, **values):
 		payable = make_account("Map Payable", root_type="Liability", account_type="Payable")

@@ -195,14 +195,6 @@
       </div>
     </div>
 
-    <!-- Loading Bar when Saving Docs -->
-    <Loading
-      v-if="isMakingEntries"
-      :open="isMakingEntries"
-      :percent="percentLoading"
-      :message="messageLoading"
-    />
-
     <!-- Pick Column Dialog -->
     <FrappeDialog
       v-model:open="showColumnPicker"
@@ -335,6 +327,7 @@ import {
   Button as FrappeButton,
   Dialog as FrappeDialog,
   ErrorMessage as FrappeErrorMessage,
+  toast,
 } from 'frappe-ui';
 import {
   List as FrappeList,
@@ -367,7 +360,6 @@ import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { selectTextFile } from 'src/utils/ui';
 import { defineComponent } from 'vue';
-import Loading from '../components/Loading.vue';
 
 type ImportWizardData = {
   showColumnPicker: boolean;
@@ -379,8 +371,6 @@ type ImportWizardData = {
   nullOrImporter: null | Importer;
   importType: string;
   isMakingEntries: boolean;
-  percentLoading: number;
-  messageLoading: string;
 };
 
 export default defineComponent({
@@ -389,7 +379,6 @@ export default defineComponent({
     PageHeader,
     FormControl,
     DropdownWithActions,
-    Loading,
     AutoComplete,
     Data,
     FrappeDialog,
@@ -414,8 +403,6 @@ export default defineComponent({
       nullOrImporter: null,
       importType: '',
       isMakingEntries: false,
-      percentLoading: 0,
-      messageLoading: '',
     } as ImportWizardData;
   },
   computed: {
@@ -672,8 +659,6 @@ export default defineComponent({
       this.importType = '';
       this.complete = false;
       this.isMakingEntries = false;
-      this.percentLoading = 0;
-      this.messageLoading = '';
     },
     async saveTemplate(): Promise<void> {
       const template = this.importer.getCSVTemplate();
@@ -727,9 +712,17 @@ export default defineComponent({
       const shouldSubmit = await this.askShouldSubmit();
 
       const { docs } = this.importer;
-      for (const [index, doc] of docs.entries()) {
-        this.setLoadingStatus(index, docs.length);
-        await importDoc(doc, shouldSubmit, this);
+      const progress = toast.loading(this.t`Importing entries...`);
+      try {
+        for (const [index, doc] of docs.entries()) {
+          toast.loading(
+            this.t`${index} entries made out of ${docs.length}...`,
+            { id: progress }
+          );
+          await importDoc(doc, shouldSubmit, this);
+        }
+      } finally {
+        toast.dismiss(progress);
       }
 
       this.isMakingEntries = false;
@@ -780,12 +773,6 @@ export default defineComponent({
 
       this.importType = importType;
       this.nullOrImporter = new Importer(importType, fyo);
-    },
-    setLoadingStatus(entriesMade: number, totalEntries: number): void {
-      this.percentLoading = entriesMade / totalEntries;
-      this.messageLoading = this.isMakingEntries
-        ? `${entriesMade} entries made out of ${totalEntries}...`
-        : '';
     },
     async selectFile(): Promise<void> {
       const { text, name, filePath } = await selectTextFile([

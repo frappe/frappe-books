@@ -39,6 +39,18 @@ for (const paymentType of ['Pay', 'Receive']) {
   });
 }
 
+test('a refund against a returned sales invoice uses the invoice receivable account', async () => {
+  const payment = await makePayment('Pay', 'Cash');
+  const invoice = {
+    schema: { name: 'SalesInvoice' },
+    isReturned: true,
+    account: 'Debtors',
+  };
+  payment.for = [{ loadAndGetLink: async () => invoice }];
+
+  assert.equal(await payment._getAccountFromFor(), 'Debtors');
+});
+
 async function makePayment(paymentType, paymentMethod, groupsOnly = false) {
   const fyo = await makeFyo();
   const accounts = accountNames.flatMap(([accountType, group, ledger]) => [

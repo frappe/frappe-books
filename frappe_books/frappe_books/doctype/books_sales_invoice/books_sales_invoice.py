@@ -79,6 +79,9 @@ class BooksSalesInvoice(PostingInvoiceController):
 
 	def validate(self):
 		super().validate()
+		if self.is_pos:
+			# Ship in the submit transaction, so a stock error also rejects the sale.
+			self.make_auto_stock_transfer = 1
 		if self.is_pos and not self.return_against:
 			self.validate_pos_permissions()
 

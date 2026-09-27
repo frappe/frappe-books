@@ -73,6 +73,22 @@ test('opening a cached document reloads it unless it has unsaved edits', async (
   assert.equal(doc.value, 'Unsaved edit');
 });
 
+test('edits made while a cached document reloads are kept', async () => {
+  const { fyo, doc, setStored, holdLoads } = await makeFixture('master');
+  await doc.sync();
+  setStored({ value: 'Changed elsewhere' });
+  const load = Promise.withResolvers();
+  holdLoads(load.promise);
+
+  const refresh = fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  await doc.set('value', 'Typed while loading');
+  load.resolve();
+  await refresh;
+
+  assert.equal(doc.value, 'Typed while loading');
+  assert.equal(doc.dirty, true);
+});
+
 for (const existing of [false, true]) {
   test(`a rejected ${existing ? 'update' : 'insert'} keeps edits and does not run post-save hooks`, async () => {
     const fixture = await makeFixture('transaction');
@@ -165,6 +181,7 @@ async function makeFixture(kind, savedName) {
   let stored;
   let writeError;
   let loadCount = 0;
+  let loading;
   const schema = {
     name: 'Record',
     label: 'Record',
@@ -188,7 +205,7 @@ async function makeFixture(kind, savedName) {
     call(method, _schemaName, values) {
       if (method === 'get') {
         loadCount++;
-        return structuredClone(stored);
+        return loading ? loading.then(() => structuredClone(stored)) : structuredClone(stored);
       }
       assert.ok(['insert', 'update'].includes(method), method);
       if (writeError) {
@@ -222,6 +239,9 @@ async function makeFixture(kind, savedName) {
     loads: () => loadCount,
     setStored: (values) => {
       stored = { ...stored, ...values };
+    },
+    holdLoads: (until) => {
+      loading = until;
     },
   };
 }

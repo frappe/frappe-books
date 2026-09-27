@@ -1,7 +1,7 @@
 import { Fyo } from 'fyo';
 import { Converter } from 'fyo/core/converter';
 import { DocValue, DocValueMap, RawValueMap } from 'fyo/core/types';
-import { ConflictError, MandatoryError, NotFoundError } from 'fyo/utils/errors';
+import { MandatoryError, NotFoundError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
 import {
   DynamicLinkField,
@@ -761,23 +761,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
   }
 
-  async _validateDbNotModified() {
-    if (this.notInserted || !this.name || this.schema.isSingle) {
-      return;
-    }
-
-    const dbValues = await this.fyo.db.get(this.schemaName, this.name);
-    const docModified = (this.modified as Date)?.toISOString();
-    const dbModified = (dbValues.modified as Date)?.toISOString();
-
-    if (dbValues && docModified !== dbModified) {
-      throw new ConflictError(
-        this.fyo
-          .t`${this.schema.label} ${this.name} has been modified after loading please reload entry.`
-      );
-    }
-  }
-
   async runFormulas() {
     await this._applyFormula();
   }
@@ -895,7 +878,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
   async _update() {
     const expectedModified = this.modified;
-    await this._validateDbNotModified();
     await this._preSync();
 
     let data = this.getValidDict(false, true);

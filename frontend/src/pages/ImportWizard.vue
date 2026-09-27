@@ -435,47 +435,10 @@ export default defineComponent({
       return ['4rem', ...this.columnIterator.map(() => '10rem')];
     },
     duplicates(): string[] {
-      if (!this.hasImporter) {
-        return [];
-      }
-
-      const dupes = new Set<string>();
-      const assignedSet = new Set<string>();
-
-      for (const key of this.importer.assignedTemplateFields) {
-        if (!key) {
-          continue;
-        }
-
-        const tf = this.importer.templateFieldsMap.get(key);
-        if (assignedSet.has(key) && tf) {
-          dupes.add(getColumnLabel(tf));
-        }
-
-        assignedSet.add(key);
-      }
-
-      return Array.from(dupes);
+      return this.hasImporter ? this.importer.getDuplicateColumns() : [];
     },
     requiredNotSelected(): string[] {
-      if (!this.hasImporter) {
-        return [];
-      }
-
-      const assigned = new Set(this.importer.assignedTemplateFields);
-      return [...this.importer.templateFieldsMap.values()]
-        .filter((f) => {
-          if (assigned.has(f.fieldKey) || !f.required) {
-            return false;
-          }
-
-          if (f.parentSchemaChildField && !f.parentSchemaChildField.required) {
-            return false;
-          }
-
-          return f.required;
-        })
-        .map((f) => getColumnLabel(f));
+      return this.hasImporter ? this.importer.getMissingRequiredColumns() : [];
     },
     errorMessage(): string {
       if (this.duplicates.length) {
@@ -705,36 +668,7 @@ export default defineComponent({
       return title.join(', ');
     },
     pickColumn(fieldKey: string, value: boolean): void {
-      this.importer.templateFieldsPicked.set(fieldKey, value);
-      if (value) {
-        return;
-      }
-
-      const idx = this.importer.assignedTemplateFields.findIndex((f) => f === fieldKey);
-
-      if (idx >= 0) {
-        this.importer.assignedTemplateFields[idx] = null;
-        this.reassignTemplateFields();
-      }
-    },
-    reassignTemplateFields(): void {
-      if (this.importer.valueMatrix.length) {
-        return;
-      }
-
-      for (let idx = 0; idx < this.importer.assignedTemplateFields.length; idx++) {
-        this.importer.assignedTemplateFields[idx] = null;
-      }
-
-      let idx = 0;
-      for (const [fieldKey, value] of this.importer.templateFieldsPicked) {
-        if (!value) {
-          continue;
-        }
-
-        this.importer.assignedTemplateFields[idx] = fieldKey;
-        idx += 1;
-      }
+      this.importer.pickColumn(fieldKey, value);
     },
     async showMe(): Promise<void> {
       const schemaName = this.importer.schemaName;
@@ -844,21 +778,10 @@ export default defineComponent({
       return shouldSubmit;
     },
     clearSuccessfullyImportedEntries() {
-      const schemaName = this.importer.schemaName;
-      const nameFieldKey = `${schemaName}.name`;
-      const nameIndex = this.importer.assignedTemplateFields.findIndex((n) => n === nameFieldKey);
-
-      const failedEntriesValueMatrix = this.importer.valueMatrix.filter((row) => {
-        const value = row[nameIndex].value;
-        if (typeof value !== 'string') {
-          return false;
-        }
-
-        return !this.successOldName.includes(value);
-      });
-
+      const importer = this.importer;
+      importer.keepRowsNotImported(this.successOldName);
       this.setImportType(this.importType);
-      this.importer.valueMatrix = failedEntriesValueMatrix;
+      this.importer.valueMatrix = importer.valueMatrix;
     },
     setImportType(importType: string): void {
       this.clear();

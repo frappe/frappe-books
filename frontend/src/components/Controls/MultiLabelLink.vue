@@ -195,7 +195,7 @@ export default {
       }
 
       // Filters that read the document cannot apply without one.
-      return getFilters.length ? {} : (await getFilters()) ?? {};
+      return getFilters.length ? {} : ((await getFilters()) ?? {});
     },
   },
 };

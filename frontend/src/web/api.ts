@@ -1,4 +1,8 @@
-import { call as frappeCall, upload, type FrappeRequestError } from 'frappe-ui';
+import {
+  call as frappeCall,
+  upload,
+  type FrappeResourceError,
+} from 'frappe-ui';
 import {
   BaseError,
   ConflictError,
@@ -55,10 +59,10 @@ function toBooksError(error: unknown): unknown {
   return ServerError ? new ServerError(message, false) : new Error(message);
 }
 
-function isServerError(error: unknown): error is FrappeRequestError {
+function isServerError(error: unknown): error is FrappeResourceError {
   return (
     error instanceof Error &&
-    Array.isArray((error as FrappeRequestError).messages)
+    Array.isArray((error as FrappeResourceError).messages)
   );
 }
 

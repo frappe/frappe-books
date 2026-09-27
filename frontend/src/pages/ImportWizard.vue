@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col overflow-hidden w-full">
+  <div class="flex min-h-0 w-full flex-col overflow-hidden">
     <!-- Header -->
     <PageHeader :title="t`Import Wizard`">
       <DropdownWithActions
@@ -41,7 +41,7 @@
     </PageHeader>
 
     <!-- Main Body of the Wizard -->
-    <div class="flex text-base w-full flex-col">
+    <div class="flex min-h-0 w-full flex-1 flex-col text-base">
       <!-- Select Import Type -->
       <div
         class="h-row-largest flex flex-row justify-start items-center w-full gap-2 border-b border-outline-gray-1 p-4"
@@ -93,8 +93,7 @@
       <!-- Assignment Row and Value Grid container -->
       <div
         v-if="hasImporter"
-        class="overflow-auto custom-scroll custom-scroll-thumb1"
-        style="max-height: calc(100vh - (2 * var(--h-row-largest)) - 2px)"
+        class="min-h-0 flex-1 overflow-auto custom-scroll custom-scroll-thumb1"
       >
         <FrappeList
           v-if="importer.valueMatrix.length"

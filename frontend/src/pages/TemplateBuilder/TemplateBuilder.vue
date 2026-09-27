@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="flex min-h-0 flex-col">
     <PageHeader :title="doc && doc.inserted ? doc.name : ''">
       <!-- Template Name -->
       <template v-if="doc && !doc.inserted" #left>
@@ -36,11 +36,11 @@
     <!-- Template Builder Body -->
     <div
       v-if="doc"
-      class="w-full bg-surface-gray-1 grid"
+      class="grid min-h-0 w-full flex-1 grid-rows-[minmax(0,1fr)] bg-surface-gray-1"
       :style="templateBuilderBodyStyles"
     >
       <!-- Template Display Area -->
-      <div class="overflow-auto no-scrollbar flex flex-col" :style="templateDisplayStyles">
+      <div class="flex min-h-0 flex-col overflow-auto no-scrollbar">
         <!-- Template Container -->
         <div v-if="canDisplayPreview" class="p-4 overflow-auto custom-scroll custom-scroll-thumb1">
           <PrintContainer
@@ -115,8 +115,7 @@
 
       <!-- Template Panel -->
       <div
-        class="border-l border-outline-gray-1 bg-surface-base flex flex-col"
-        :style="templateDisplayStyles"
+        class="flex min-h-0 flex-col border-l border-outline-gray-1 bg-surface-base"
       >
         <!-- Template Editor -->
         <div class="min-h-0">
@@ -391,18 +390,7 @@ export default defineComponent({
       return '';
     },
     templateBuilderBodyStyles(): Record<string, string> {
-      const styles: Record<string, string> = {};
-
-      styles['grid-template-columns'] = `auto 0px ${this.panelWidth}px`;
-      styles['height'] = 'calc(100vh - var(--h-row-largest) - 1px)';
-
-      return styles;
-    },
-    templateDisplayStyles(): Record<string, string> {
-      const styles: Record<string, string> = {};
-
-      styles.height = 'calc(100vh - var(--h-row-largest) - 1px)';
-      return styles;
+      return { 'grid-template-columns': `auto 0px ${this.panelWidth}px` };
     },
   },
   async mounted() {

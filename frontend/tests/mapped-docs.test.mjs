@@ -121,6 +121,6 @@ async function makeFyo(call) {
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
-  fyo.singles.Defaults = { paymentNumberSeries: 'PAY-' };
+  fyo.defaultNumberSeries = { Payment: 'PAY-' };
   return fyo;
 }

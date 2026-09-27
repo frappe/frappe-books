@@ -7,7 +7,8 @@ from frappe_books.frappe_books.doctype.books_accounting_settings.books_accountin
 	POINT_OF_SALE_FEATURES,
 )
 from frappe_books.frappe_books.doctype.books_inventory_settings import books_inventory_settings
-from frappe_books.tests.accounting import unique_name
+from frappe_books.tests.accounting import ensure_user, make_number_series, unique_name
+from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 COMPANY = {
 	"company_name": "Settings Test Company",
@@ -82,6 +83,23 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 				settings = frappe.get_single("Books System Settings")
 				settings.display_precision = precision
 				self.assertRaisesRegex(frappe.ValidationError, "between 0 and 9", settings.save)
+
+	def test_the_interface_gets_default_number_series_from_the_server(self):
+		series = make_number_series("SalesInvoice")
+		frappe.db.set_single_value(
+			"Books Defaults", {"sales_invoice_number_series": series, "payment_number_series": None}
+		)
+
+		defaults = BooksBespokeQueries().call("getDefaultNumberSeries", [])
+
+		self.assertEqual(
+			(defaults["SalesInvoice"], defaults["Payment"], defaults["PricingRule"]),
+			(series, "PAY-", "PRLE-"),
+		)
+		with self.set_user(ensure_user("no-books-roles@example.com")):
+			self.assertRaises(
+				frappe.PermissionError, BooksBespokeQueries().call, "getDefaultNumberSeries", []
+			)
 
 
 def _accounting_settings(**values):

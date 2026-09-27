@@ -68,7 +68,6 @@
             class="w-44 flex-shrink-0"
             :df="fields.type"
             :border="true"
-            size="small"
             :value="doc.get('type')"
             @change="async (value: unknown) => await setType(value)"
           />
@@ -78,7 +77,6 @@
             class="w-48 min-w-0"
             :df="displayDocField"
             :border="true"
-            size="small"
             :value="displayDoc?.name"
             @change="(value: string) => setDisplayDoc(value)"
           />
@@ -96,7 +94,7 @@
               :min="0.1"
               :max="10"
               :step="0.1"
-              size="sm"
+              size="md"
               variant="outline"
               @update:model-value="setScale"
             />

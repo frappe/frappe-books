@@ -89,6 +89,13 @@ def _returned_transfer(invoice) -> str | None:
 	if not invoice.get("return_against"):
 		return None
 	transfer = frappe.db.get_value(invoice.doctype, invoice.return_against, "back_reference")
+	# A transfer made by hand from the original does not set the original's back reference.
+	transfer = transfer or frappe.db.get_value(
+		invoice.meta.get_field("back_reference").options,
+		{"back_reference": invoice.return_against, "return_against": ("is", "not set"), "docstatus": 1},
+		"name",
+		order_by="creation asc",
+	)
 	if not transfer:
 		frappe.throw(
 			_("Invoice {0} has no stock transfer to return stock against.").format(invoice.return_against)

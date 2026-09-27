@@ -41,7 +41,7 @@ export class Payment extends Transactional {
   _accountsMap?: AccountTypeMap;
 
   async paymentMethodDoc() {
-    return (await this.loadAndGetLink('paymentMethod')) as PaymentMethod;
+    return (await this.loadAndGetLink('paymentMethod')) as PaymentMethod | null;
   }
 
   async change({ changed }: ChangeArg) {
@@ -181,6 +181,9 @@ export class Payment extends Transactional {
         }
 
         const paymentMethodDoc = await this.paymentMethodDoc();
+        if (!paymentMethodDoc) {
+          return;
+        }
 
         if (paymentMethodDoc.type === 'Cash') {
           return accountsMap[AccountTypeEnum.Cash]?.[0] ?? null;
@@ -202,6 +205,9 @@ export class Payment extends Transactional {
         }
 
         const paymentMethodDoc = await this.paymentMethodDoc();
+        if (!paymentMethodDoc) {
+          return;
+        }
 
         if (paymentMethodDoc.account) {
           return paymentMethodDoc.get('account');

@@ -64,3 +64,15 @@ class BooksAccount(NestedSet):
 			frappe.throw(_("Parent account {0} must be a group.").format(self.parent_books_account))
 
 		self.root_type = parent.root_type
+
+	def validate(self):
+		self.validate_account_type_change()
+
+	def validate_account_type_change(self):
+		"""An account type left empty at insert can be set later, but never changed."""
+		previous = self.get_doc_before_save()
+		if previous and previous.account_type and previous.account_type != self.account_type:
+			frappe.throw(
+				_("Value cannot be changed for {0}").format(self.meta.get_label("account_type")),
+				frappe.CannotChangeConstantError,
+			)

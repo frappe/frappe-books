@@ -33,19 +33,22 @@
    "in_list_view": 1,
    "label": "Root Type",
    "options": "Asset\nLiability\nEquity\nIncome\nExpense",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "parent_books_account",
    "fieldtype": "Link",
    "label": "Parent Account",
-   "options": "Books Account"
+   "options": "Books Account",
+   "set_only_once": 1
   },
   {
    "default": "0",
    "fieldname": "is_group",
    "fieldtype": "Check",
-   "label": "Is Group"
+   "label": "Is Group",
+   "set_only_once": 1
   },
   {
    "fieldname": "lft",
@@ -64,22 +67,10 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "fieldname": "is_group",
-   "fieldtype": "Check",
-   "label": "Is Group"
-  },
-  {
    "fieldname": "old_parent",
    "fieldtype": "Link",
    "hidden": 1,
    "label": "Old Parent",
-   "options": "Books Account"
-  },
-  {
-   "fieldname": "parent_books_account",
-   "fieldtype": "Link",
-   "label": "Parent Account",
    "options": "Books Account"
   },
   {

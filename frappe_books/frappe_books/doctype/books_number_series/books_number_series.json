@@ -20,7 +20,8 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Start",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "default": "4",
@@ -28,7 +29,8 @@
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Pad Zeros",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "default": "-",
@@ -37,7 +39,8 @@
    "in_list_view": 1,
    "label": "Reference Type",
    "options": "-\nSalesInvoice\nSalesQuote\nPurchaseInvoice\nPayment\nJournalEntry\nStockMovement\nShipment\nPurchaseReceipt\nPricingRule",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "current",

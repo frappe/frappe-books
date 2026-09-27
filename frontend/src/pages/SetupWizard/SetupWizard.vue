@@ -57,17 +57,16 @@
           bg-surface-base
         "
       >
-        <p v-if="loading" class="text-base text-ink-gray-6">
-          {{ t`Loading instance...` }}
-        </p>
         <FrappeButton
-          v-if="!loading"
-          class="w-24 border border-outline-gray-1"
+          variant="outline"
+          class="w-24"
+          :disabled="loading"
           @click="cancel"
           >{{ t`Cancel` }}</FrappeButton>
         <FrappeButton
-          v-if="fyo.store.isDevelopment && !loading"
-          class="w-24 ml-auto mr-4 border border-outline-gray-1"
+          v-if="fyo.store.isDevelopment"
+          variant="outline"
+          class="w-24 ml-auto mr-4"
           :disabled="loading"
           @click="fill"
           >{{ t`Fill` }}</FrappeButton>
@@ -75,7 +74,8 @@
           variant="solid"
           class="w-24"
           data-testid="submit-button"
-          :disabled="!areAllValuesFilled || loading"
+          :disabled="!areAllValuesFilled"
+          :loading="loading"
           @click="submit"
           >{{ t`Submit` }}</FrappeButton>
       </div>

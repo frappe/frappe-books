@@ -12,14 +12,14 @@
     />
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto px-2 pb-2 custom-scroll custom-scroll-thumb1"
+      class="min-h-0 flex-1 overflow-y-auto px-2 py-2 custom-scroll custom-scroll-thumb1"
     >
       <div v-for="group in groups" :key="group.label">
         <FrappeSidebarItem
           :label="group.label"
           :route="getPath(group)"
           :active="Boolean(isGroupActive(group) && !group.items)"
-          class="mb-0.5"
+          class="mb-1"
         >
           <template #prefix>
             <Icon
@@ -40,7 +40,7 @@
             :label="item.label"
             :route="getPath(item)"
             :active="Boolean(isItemActive(item))"
-            class="mb-0.5 ps-6"
+            class="mb-1 ps-6"
           >
             <template #prefix><span class="w-0" /></template>
           </FrappeSidebarItem>

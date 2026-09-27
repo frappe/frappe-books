@@ -7,7 +7,8 @@ from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 class IntegrationTestSetOnceFields(IntegrationTestCase):
 	def test_item_stock_settings_cannot_change_after_insert(self):
-		account = make_account("Set Once Expense", root_type="Expense").name
+		income = make_account("Set Once Income", root_type="Income").name
+		expense = make_account("Set Once Expense", root_type="Expense").name
 		unit = frappe.get_doc({"doctype": "Books Uom", "name": frappe.generate_hash()}).insert().name
 		for fieldname, value in (
 			("unit", unit),
@@ -17,7 +18,7 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 			("has_serial_number", 1),
 		):
 			with self.subTest(fieldname=fieldname):
-				item = make_item(account, account)
+				item = make_item(income, expense)
 				item.set(fieldname, value)
 				self.assertRaises(frappe.CannotChangeConstantError, item.save)
 

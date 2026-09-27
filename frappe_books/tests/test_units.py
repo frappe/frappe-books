@@ -12,9 +12,10 @@ class IntegrationTestUnits(IntegrationTestCase):
 		self.income = make_account("Unit Sales", root_type="Income", account_type="Income Account")
 		self.expense = make_account("Unit Expense", root_type="Expense", account_type="Expense Account")
 		self.box = make_uom("Box")
+		received = make_account("Unit Received", root_type="Liability")
 		self.item = make_item(
 			self.income.name,
-			self.expense.name,
+			received.name,
 			track_item=1,
 			uom_conversions=[{"uom": self.box, "conversion_factor": 12}],
 		)

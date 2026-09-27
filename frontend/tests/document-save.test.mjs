@@ -55,6 +55,24 @@ test('saving twice while the first save runs inserts the document once', async (
   assert.equal(doc.isSyncing, false);
 });
 
+test('opening a cached document reloads it unless it has unsaved edits', async () => {
+  const { fyo, doc, loads, setStored } = await makeFixture('master');
+  await doc.sync();
+  setStored({ value: 'Changed elsewhere' });
+
+  assert.equal(await fyo.doc.getDoc('Record', doc.name), doc);
+  assert.equal(loads(), 0);
+  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  assert.equal(loads(), 1);
+  assert.equal(doc.value, 'Changed elsewhere');
+
+  await doc.set('value', 'Unsaved edit');
+  setStored({ value: 'Changed again' });
+  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  assert.equal(loads(), 1);
+  assert.equal(doc.value, 'Unsaved edit');
+});
+
 for (const existing of [false, true]) {
   test(`a rejected ${existing ? 'update' : 'insert'} keeps edits and does not run post-save hooks`, async () => {
     const fixture = await makeFixture('transaction');
@@ -146,6 +164,7 @@ async function makeFixture(kind, savedName) {
   const writes = [];
   let stored;
   let writeError;
+  let loadCount = 0;
   const schema = {
     name: 'Record',
     label: 'Record',
@@ -167,7 +186,10 @@ async function makeFixture(kind, savedName) {
       return { Record: schema };
     }
     call(method, _schemaName, values) {
-      if (method === 'get') return structuredClone(stored);
+      if (method === 'get') {
+        loadCount++;
+        return structuredClone(stored);
+      }
       assert.ok(['insert', 'update'].includes(method), method);
       if (writeError) {
         const error = writeError;
@@ -196,6 +218,10 @@ async function makeFixture(kind, savedName) {
     writes,
     rejectWrite: (error) => {
       writeError = error;
+    },
+    loads: () => loadCount,
+    setStored: (values) => {
+      stored = { ...stored, ...values };
     },
   };
 }

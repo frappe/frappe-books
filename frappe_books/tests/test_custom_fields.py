@@ -11,10 +11,13 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.customization import sync_all_custom_forms
+from frappe_books.patches import rename_colliding_custom_fields
 from frappe_books.tests.accounting import unique_name
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
+from frappe_books.ui_bridge.mapping import schema_mapping
 
 COLUMN = "custom_books_hostedbridgetestvalue"
+RENAMED_COLUMN = "custom_books_customhostedbridgetestvalue"
 FIELD = {
 	"label": "Hosted Bridge Test Value",
 	"fieldname": "hostedBridgeTestValue",
@@ -72,8 +75,23 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 
 		self.assertEqual(_field_owner(), SYSTEM_MANAGER)
 
+	def test_migrate_renames_custom_fields_a_standard_field_replaces(self):
+		self.bridge.insert("CustomForm", {"name": "Color", "customFields": [FIELD]})
+		color = unique_name("Bridge Custom Color")
+		self.bridge.insert("Color", {"name": color, "hexvalue": "#123456", FIELD["fieldname"]: "kept"})
+
+		with patch.dict(schema_mapping()["Color"]["fields"], {FIELD["fieldname"]: "hexvalue"}):
+			rename_colliding_custom_fields.execute()
+			sync_all_custom_forms()
+
+			self.assertEqual(self.bridge.get("Color", color)["customHostedBridgeTestValue"], "kept")
+		self.assertEqual(
+			frappe.get_all("Custom Field", filters={"dt": "Books Color"}, pluck="fieldname"), [RENAMED_COLUMN]
+		)
+
 	def _cleanup_custom_field_test(self):
-		# Custom field DDL commits, so undo what this class committed. The column drop commits it.
+		# Custom field DDL commits, so undo what this class committed. `sql_ddl` commits before
+		# the drop, not after, so commit the drop too.
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 0)
 		for color in frappe.get_all(
 			"Books Color", filters={"name": ["like", "Bridge Custom Color%"]}, pluck="name"
@@ -81,8 +99,10 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 			frappe.delete_doc("Books Color", color)
 		if frappe.db.exists("Books Custom Form", "Color"):
 			frappe.delete_doc("Books Custom Form", "Color")
-		if frappe.db.has_column("Books Color", COLUMN):
-			frappe.db.sql_ddl(f"alter table `tabBooks Color` drop column `{COLUMN}`")
+		for column in (COLUMN, RENAMED_COLUMN):
+			if frappe.db.has_column("Books Color", column):
+				frappe.db.sql_ddl(f"alter table `tabBooks Color` drop column `{column}`")
+		frappe.db.commit()  # nosemgrep
 
 
 class IntegrationTestCustomFormValidation(IntegrationTestCase):
@@ -102,7 +122,9 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 
 
 def _custom_form(schema, fields):
-	return frappe.get_doc({"doctype": "Books Custom Form", "name": schema, "custom_fields": fields})
+	# `get_doc` adds a doctype to each row dict, so give it copies.
+	rows = [dict(field) for field in fields]
+	return frappe.get_doc({"doctype": "Books Custom Form", "name": schema, "custom_fields": rows})
 
 
 def _field_owner():

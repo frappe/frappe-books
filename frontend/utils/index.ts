@@ -146,37 +146,6 @@ export function safeParsePesa(value: unknown, fyo: Fyo): Money {
   }
 }
 
-export function joinMapLists<A, B>(
-  listA: A[],
-  listB: B[],
-  keyA: keyof A,
-  keyB: keyof B
-): (A & B)[] {
-  const mapA = getMapFromList(listA, keyA);
-  const mapB = getMapFromList(listB, keyB);
-
-  const keyListA = listA
-    .map((i) => i[keyA])
-    .filter((k) => (k as unknown as string) in mapB);
-
-  const keyListB = listB
-    .map((i) => i[keyB])
-    .filter((k) => (k as unknown as string) in mapA);
-
-  const keys = new Set([keyListA, keyListB].flat().sort());
-
-  const joint: (A & B)[] = [];
-  for (const k of keys) {
-    const a = mapA[k as unknown as string];
-    const b = mapB[k as unknown as string];
-    const c = { ...a, ...b };
-
-    joint.push(c);
-  }
-
-  return joint;
-}
-
 /**
  * Asserts that `value` is of type T. Use with care.
  */

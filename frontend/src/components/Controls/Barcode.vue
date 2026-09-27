@@ -14,6 +14,7 @@
 
 <script lang="ts">
 import { showToast } from 'src/utils/interactive';
+import { findScannedPOSItem, type ScannableItem } from 'src/utils/posItemSearch';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { defineComponent } from 'vue';
 export default defineComponent({
@@ -48,10 +49,11 @@ export default defineComponent({
       this.selectItem(elem.value);
       elem.value = '';
     },
+    /** Matches the code as POS does: scale barcode, barcode, then item. */
     async selectItem(code: string) {
       const barcode = code.trim();
-      if (!/^[A-Za-z0-9]{12,}$/.test(barcode)) {
-        return this.error(this.t`Invalid barcode value ${barcode}.`);
+      if (!barcode) {
+        return;
       }
 
       /**
@@ -66,18 +68,20 @@ export default defineComponent({
       setTimeout(() => (this.cooldown = ''), 100);
 
       const items = (await this.fyo.db.getAll('Item', {
-        filters: { barcode },
-        fields: ['name'],
-      })) as { name: string }[];
-
-      const name = items?.[0]?.name;
-
-      if (!name) {
+        fields: ['name', 'itemCode', 'barcode', 'unit'],
+      })) as ScannableItem[];
+      const scanned = findScannedPOSItem(
+        items,
+        barcode,
+        this.fyo.singles.POSSettings
+      );
+      if (!scanned) {
         return this.error(this.t`Item with barcode ${barcode} not found.`);
       }
 
-      this.success(this.t`${name} quantity 1 added.`);
-      this.$emit('item-selected', name);
+      const { item, quantity } = scanned;
+      this.success(this.t`${item.name} quantity ${quantity} added.`);
+      this.$emit('item-selected', item.name, quantity);
     },
     async scanListener({ key, code }: KeyboardEvent) {
       /**

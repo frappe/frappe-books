@@ -4,9 +4,9 @@
       <Barcode
         v-if="canShowBarcode"
         @item-selected="
-          (name: string) => {
-            // @ts-expect-error only invoices have addItem
-            doc?.addItem(name);
+          (name: string, quantity: number) => {
+            // @ts-expect-error only invoices and transfers have addItem
+            doc?.addItem(name, quantity);
           }
         "
       />

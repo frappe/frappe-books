@@ -3,6 +3,7 @@ import { POSItem } from 'src/components/POS/types';
 import { fuzzyMatch } from 'src/utils';
 
 type POSItemSearchRecord = Pick<POSItem, 'name' | 'itemCode' | 'barcode'>;
+export type ScannableItem = POSItemSearchRecord & Pick<POSItem, 'unit'>;
 
 type BarcodeSettings = Pick<
   POSSettings,
@@ -49,11 +50,11 @@ export function findExactPOSItem<T extends POSItemSearchRecord>(
 }
 
 /** The item a scanned or typed code names, with the quantity a scale barcode carries. */
-export function findScannedPOSItem(
-  items: POSItem[],
+export function findScannedPOSItem<T extends ScannableItem>(
+  items: T[],
   code: string,
   settings?: BarcodeSettings
-): { item: POSItem; quantity: number } | undefined {
+): { item: T; quantity: number } | undefined {
   const weighed = parseWeightBarcode(code, settings);
   const item =
     findByBarcode(items, code, weighed) ?? findExactPOSItem(items, code);
@@ -70,11 +71,11 @@ export function findScannedPOSItem(
   return { item, quantity: isKilogram ? weight / 1000 : weight };
 }
 
-function findByBarcode(
-  items: POSItem[],
+function findByBarcode<T extends ScannableItem>(
+  items: T[],
   code: string,
   weighed?: WeightBarcode
-): POSItem | undefined {
+): T | undefined {
   if (weighed) {
     const { itemCode } = weighed;
     return items.find((item) =>

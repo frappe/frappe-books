@@ -695,7 +695,11 @@ export function getLoyaltyProgramStatusText(status: string): string {
 }
 
 type ModelsWithItems = Invoice | StockTransfer | StockMovement;
-export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
+export async function addItem<M extends ModelsWithItems>(
+  name: string,
+  doc: M,
+  quantity = 1
+) {
   if (!doc.canEdit) {
     return;
   }
@@ -704,8 +708,7 @@ export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
 
   let item = items.find((i) => i.item === name);
   if (item) {
-    const q = item.quantity ?? 0;
-    await item.set('quantity', q + 1);
+    await item.set('quantity', (item.quantity ?? 0) + quantity);
     return;
   }
 
@@ -716,6 +719,9 @@ export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
   }
 
   await item.set('item', name);
+  if (quantity !== 1) {
+    await item.set('quantity', quantity);
+  }
 
   if (
     doc instanceof StockTransfer &&
@@ -725,7 +731,7 @@ export async function addItem<M extends ModelsWithItems>(name: string, doc: M) {
       doc.fyo,
       name,
       undefined,
-      1
+      quantity
     );
     if (serialNumbers) {
       await item.set('serialNumber', serialNumbers);

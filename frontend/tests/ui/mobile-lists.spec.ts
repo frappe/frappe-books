@@ -19,6 +19,7 @@ test.beforeEach(async ({ page }) => {
     name: customer,
     role: 'Customer',
     phone: '98765 43210',
+    email: `${run}@example.com`,
   });
   await insert(page, 'Party', { name: supplier, role: 'Supplier' });
   hasParties = true;
@@ -39,6 +40,14 @@ test('rows show two lines and open their document', async ({ page }) => {
 
   await row.tap();
   await expect(page).toHaveURL(/\/books\/edit\/Party\//);
+});
+
+test('search also matches keyword fields', async ({ page }) => {
+  await page.goto('/books/list/Party');
+  await search(page, `${run}@example`);
+
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page)).toContainText(customer);
 });
 
 test('a filter chip narrows the list until it is removed', async ({ page }) => {

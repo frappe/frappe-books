@@ -7,96 +7,101 @@
       <DialogContent
         ref="content"
         :aria-describedby="undefined"
-        class="mobile-drawer fixed inset-y-0 start-0 z-40 flex w-[85%] max-w-[332px] flex-col border-e border-outline-gray-1 bg-surface-sidebar pt-[env(safe-area-inset-top)] shadow-xl focus:outline-none"
+        class="mobile-drawer fixed inset-y-0 start-0 z-40 flex w-[85%] max-w-[332px] border-e border-outline-gray-1 bg-surface-base shadow-xl focus:outline-none"
       >
-        <DialogTitle class="sr-only">{{ t`Books` }}</DialogTitle>
-        <div class="px-2 pt-1.5">
-          <FrappeSidebarHeader
-            data-testid="company-name"
-            :title="companyName"
-            :subtitle="userName"
-            :logo="companyLogo || undefined"
-            :menu-items="menuItems"
-          />
-        </div>
-        <div class="px-2 pb-2 pt-1">
-          <button
-            type="button"
-            class="flex h-10 w-full items-center gap-2 rounded-5 bg-surface-gray-3 px-3 text-start text-lg text-ink-gray-6 active:bg-surface-gray-4"
-            @click="openSearch"
-          >
-            <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
-            {{ t`Search` }}
-          </button>
-        </div>
-
-        <nav
-          class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-10 pt-1"
-          :aria-label="t`Books`"
+        <!-- The sidebar colour is see-through in dark mode, so it sits on the page colour as on desktop. -->
+        <div
+          class="flex min-w-0 flex-1 flex-col bg-surface-sidebar pt-[env(safe-area-inset-top)]"
         >
-          <div
-            v-for="group in groups"
-            :key="group.name"
-            class="flex flex-col gap-0.5"
-          >
+          <DialogTitle class="sr-only">{{ t`Books` }}</DialogTitle>
+          <div class="px-2 pt-1.5">
+            <FrappeSidebarHeader
+              data-testid="company-name"
+              :title="companyName"
+              :subtitle="userName"
+              :logo="companyLogo || undefined"
+              :menu-items="menuItems"
+            />
+          </div>
+          <div class="px-2 pb-2 pt-1">
             <button
-              v-if="group.items"
-              class="flex h-11 w-full items-center gap-2.5 rounded-4 px-2.5 text-start text-md active:bg-surface-gray-3"
-              :class="
-                isGroupActive(group) ? 'text-ink-gray-9' : 'text-ink-gray-7'
-              "
-              :aria-expanded="openGroup === group.name"
-              @click="toggleGroup(group)"
+              type="button"
+              class="flex h-10 w-full items-center gap-2 rounded-5 bg-surface-gray-3 px-3 text-start text-lg text-ink-gray-6 active:bg-surface-gray-4"
+              @click="openSearch"
             >
-              <FrappeIcon
-                :icon="group.icon"
-                class="size-[18px]"
-                :class="iconClasses(isGroupActive(group))"
-              />
-              <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
-              <FrappeIcon
-                v-if="openGroup === group.name"
-                icon="lucide-chevron-down"
-                class="size-4 text-ink-gray-4"
-              />
-              <FrappeIcon
-                v-else
-                icon="lucide-chevron-right"
-                class="size-4 text-ink-gray-4 rtl-rotate-180"
-              />
+              <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
+              {{ t`Search` }}
             </button>
-            <RouterLink
-              v-else
-              :to="getSidebarLocation(group)"
-              class="flex h-11 items-center gap-2.5 rounded-4 px-2.5 text-md"
-              :class="linkClasses(isGroupActive(group))"
-              @click="close"
-            >
-              <FrappeIcon
-                :icon="group.icon"
-                class="size-[18px]"
-                :class="iconClasses(isGroupActive(group))"
-              />
-              <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
-            </RouterLink>
+          </div>
 
+          <nav
+            class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-10 pt-1"
+            :aria-label="t`Books`"
+          >
             <div
-              v-if="group.items && openGroup === group.name"
-              class="flex flex-col gap-0.5 pb-1"
+              v-for="group in groups"
+              :key="group.name"
+              class="flex flex-col gap-0.5"
             >
+              <button
+                v-if="group.items"
+                class="flex h-11 w-full items-center gap-2.5 rounded-4 px-2.5 text-start text-md active:bg-surface-gray-3"
+                :class="
+                  isGroupActive(group) ? 'text-ink-gray-9' : 'text-ink-gray-7'
+                "
+                :aria-expanded="openGroup === group.name"
+                @click="toggleGroup(group)"
+              >
+                <FrappeIcon
+                  :icon="group.icon"
+                  class="size-[18px]"
+                  :class="iconClasses(isGroupActive(group))"
+                />
+                <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
+                <FrappeIcon
+                  v-if="openGroup === group.name"
+                  icon="lucide-chevron-down"
+                  class="size-4 text-ink-gray-4"
+                />
+                <FrappeIcon
+                  v-else
+                  icon="lucide-chevron-right"
+                  class="size-4 text-ink-gray-4 rtl-rotate-180"
+                />
+              </button>
               <RouterLink
-                v-for="item in group.items"
-                :key="item.name"
-                :to="getSidebarLocation(item)"
-                class="flex h-10 items-center rounded-4 pe-2.5 ps-[38px] text-base"
-                :class="linkClasses(isItemActive(item))"
+                v-else
+                :to="getSidebarLocation(group)"
+                class="flex h-11 items-center gap-2.5 rounded-4 px-2.5 text-md"
+                :class="linkClasses(isGroupActive(group))"
                 @click="close"
               >
-                <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
+                <FrappeIcon
+                  :icon="group.icon"
+                  class="size-[18px]"
+                  :class="iconClasses(isGroupActive(group))"
+                />
+                <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
               </RouterLink>
+
+              <div
+                v-if="group.items && openGroup === group.name"
+                class="flex flex-col gap-0.5 pb-1"
+              >
+                <RouterLink
+                  v-for="item in group.items"
+                  :key="item.name"
+                  :to="getSidebarLocation(item)"
+                  class="flex h-10 items-center rounded-4 pe-2.5 ps-[38px] text-base"
+                  :class="linkClasses(isItemActive(item))"
+                  @click="close"
+                >
+                  <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
+                </RouterLink>
+              </div>
             </div>
-          </div>
-        </nav>
+          </nav>
+        </div>
       </DialogContent>
     </DialogPortal>
   </DialogRoot>

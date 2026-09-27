@@ -437,11 +437,7 @@ export abstract class Invoice extends Transactional {
       return null;
     }
 
-    let rate = row.rate as Money;
-    if (this.exchangeRate && this.exchangeRate > 1) {
-      rate = rate.mul(this.exchangeRate);
-    }
-
+    const rate = (row.rate as Money).mul(this.exchangeRate ?? 1);
     return { ...values, quantity, rate };
   }
 

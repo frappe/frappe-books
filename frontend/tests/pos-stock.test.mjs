@@ -9,6 +9,7 @@ import {
   getPOSBatchQuantity,
   setPOSRowQuantity,
   setPOSRowValue,
+  validateActiveSerialNumbers,
   validateSinv,
   validatePOSCheckout,
 } from './helpers/accounting.mjs';
@@ -210,6 +211,28 @@ test('a new cart row needs the item in stock', async () => {
     [invoice.items.length, row.quantity, row.transferUnit],
     [1, 2, 'Unit']
   );
+});
+
+test('checkout checks all serial numbers in one query', async () => {
+  const queries = [];
+  const fyo = {
+    db: {
+      getAllRaw: async (_schema, { filters }) => {
+        queries.push(filters);
+        return [{ name: 'SN-1' }, { name: 'SN-3' }];
+      },
+    },
+  };
+  await assert.rejects(
+    validateActiveSerialNumbers(fyo, { A: 'SN-1\nSN-2', B: 'SN-3\n' }),
+    /Serial Number SN-2 status is not Active/
+  );
+  assert.deepEqual(queries, [
+    { name: ['in', ['SN-1', 'SN-2', 'SN-3']], status: 'Active' },
+  ]);
+  await validateActiveSerialNumbers(fyo, { A: 'SN-1', B: 'SN-3' });
+  await validateActiveSerialNumbers(fyo, {});
+  assert.equal(queries.length, 2);
 });
 
 function makeRow(values = {}) {

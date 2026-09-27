@@ -36,6 +36,7 @@ await build({
         addPOSItem,
         setPOSRowQuantity,
         setPOSRowValue,
+        validateActiveSerialNumbers,
         validatePOSCheckout,
         validateSinv,
       } from './src/utils/pos';
@@ -115,6 +116,7 @@ export const {
   validatePOSStock,
   setPOSRowQuantity,
   setPOSRowValue,
+  validateActiveSerialNumbers,
   findScannedPOSItem,
   validateSinv,
   addBatchItem,

@@ -50,7 +50,8 @@
             >
               <FrappeIcon
                 :icon="group.icon"
-                class="size-[18px] text-ink-gray-6"
+                class="size-[18px]"
+                :class="iconClasses(isGroupActive(group))"
               />
               <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
               <FrappeIcon
@@ -73,7 +74,8 @@
             >
               <FrappeIcon
                 :icon="group.icon"
-                class="size-[18px] text-ink-gray-6"
+                class="size-[18px]"
+                :class="iconClasses(isGroupActive(group))"
               />
               <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
             </RouterLink>
@@ -185,10 +187,16 @@ function toggleGroup(group: SidebarRoot) {
   openGroup.value = openGroup.value === group.name ? '' : group.name;
 }
 
+// The drawer is temporary, so the current page only darkens its label.
 function linkClasses(active: boolean) {
-  return active
-    ? 'bg-surface-elevation-3 text-ink-gray-9 shadow-sm'
-    : 'text-ink-gray-7 active:bg-surface-gray-3';
+  return [
+    'active:bg-surface-gray-3',
+    active ? 'text-ink-gray-9' : 'text-ink-gray-7',
+  ];
+}
+
+function iconClasses(active: boolean) {
+  return active ? 'text-ink-gray-9' : 'text-ink-gray-6';
 }
 
 function close() {

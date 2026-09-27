@@ -6,6 +6,7 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.accounting.returns import map_return
 from frappe_books.setup_service import ensure_currency
 from frappe_books.tests.accounting import (
 	ledger_entries,
@@ -177,6 +178,34 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		entries = ledger_entries(credit_note.doctype, credit_note.name)
 		discount = next(row for row in entries if row.account == self.discount.name)
 		self.assertEqual(Decimal(str(discount.credit)), Decimal("29"))
+
+	def test_partial_returns_share_fixed_discounts(self):
+		item = make_item(self.income.name, self.expense.name)
+		for row_discount, invoice_discount, refund in ((20, 0, 90), (150, 0, 25), (0, 20, 90)):
+			with self.subTest(row_discount=row_discount, invoice_discount=invoice_discount):
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					item.name,
+					self.income.name,
+					set_discount_amount=1,
+					discount_amount=invoice_discount,
+				)
+				invoice.items[0].update(
+					{
+						"set_item_discount_amount": 1,
+						"item_discount_amount": row_discount,
+						"item_discount_percent": 0,
+					}
+				)
+				invoice.save().submit()
+
+				for _ in range(2):
+					credit_note = map_return(invoice.doctype, invoice.name)
+					credit_note.items[0].quantity = -1
+					credit_note.insert().submit()
+					self.assertEqual(credit_note.grand_total, -refund)
 
 	def test_return_cannot_credit_more_than_was_billed(self):
 		item = make_item(self.income.name, self.expense.name)

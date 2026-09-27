@@ -55,9 +55,12 @@ def standard_rates(invoice):
 def standard_rate(invoice, row, rates):
 	"""Return the row's standard rate per stock unit from `standard_rates` in the invoice currency, or None."""
 	rate = _stock_unit_rate(row, rates)
-	if not rate:
-		return None
-	return rounded(as_decimal(rate) / as_decimal(invoice.exchange_rate or 1), invoice.get("currency"))
+	return in_invoice_currency(invoice, rate) if rate else None
+
+
+def in_invoice_currency(invoice, amount):
+	"""Convert a company-currency amount, such as a rate or a rule value, to the invoice currency."""
+	return rounded(as_decimal(amount) / as_decimal(invoice.exchange_rate or 1), invoice.get("currency"))
 
 
 def _stock_unit_rate(row, rates):
@@ -119,7 +122,7 @@ def _apply_rule(invoice, row, rule):
 	row.pricing_rule = rule.name
 	invoice.append("pricing_rule_detail", {"reference_name": rule.name, "reference_item": row.item})
 	if rule.discount_type == "Price Discount":
-		_apply_price_discount(row, rule)
+		_apply_price_discount(invoice, row, rule)
 	else:
 		_append_free_item(invoice, row, rule)
 
@@ -151,7 +154,7 @@ def _validated_coupons(invoice, order_value):
 			frappe.throw(_("Coupon {0} is disabled.").format(coupon.name))
 		if coupon.maximum_use and coupon.used >= coupon.maximum_use:
 			frappe.throw(_("Coupon {0} has reached its use limit.").format(coupon.name))
-		if not _within_limits(coupon, invoice.date, order_value):
+		if not _within_limits(coupon, invoice.date, _in_company_currency(invoice, order_value)):
 			frappe.throw(_("Coupon {0} is not valid for this invoice.").format(coupon.name))
 	return {coupon.pricing_rule: coupon for coupon in coupons}
 
@@ -179,11 +182,12 @@ def _candidate_rules(rows):
 
 
 def _best_rule(invoice, row, quantity, rules, coupons):
+	amount = _in_company_currency(invoice, as_decimal(row.rate) * quantity)
 	rules = [
 		rule
 		for rule in rules
 		if bool(rule.is_coupon_code_based) == (rule.name in coupons)
-		and _within_limits(rule, invoice.date, as_decimal(row.rate) * quantity, quantity)
+		and _within_limits(rule, invoice.date, amount, quantity)
 	]
 	if not rules:
 		return None
@@ -201,16 +205,20 @@ def _row_value(row):
 	return as_decimal(row.rate) * as_decimal(row.quantity)
 
 
-def _apply_price_discount(row, rule):
+def _in_company_currency(invoice, amount):
+	return as_decimal(amount) * as_decimal(invoice.exchange_rate or 1)
+
+
+def _apply_price_discount(invoice, row, rule):
 	if rule.price_discount_type == "rate":
 		if not row.is_manual_rate:
-			row.rate = rounded(rule.discount_rate)
+			row.rate = in_invoice_currency(invoice, rule.discount_rate)
 	elif rule.price_discount_type == "percentage":
 		row.set_item_discount_amount = 0
 		row.item_discount_percent = rule.discount_percentage
 	elif rule.price_discount_type == "amount":
 		row.set_item_discount_amount = 1
-		row.item_discount_amount = rounded(rule.discount_amount)
+		row.item_discount_amount = in_invoice_currency(invoice, rule.discount_amount)
 	else:
 		frappe.throw(_("Pricing rule {0} has no price discount type.").format(rule.name))
 

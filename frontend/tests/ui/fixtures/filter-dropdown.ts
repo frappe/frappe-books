@@ -8,15 +8,15 @@ import 'src/router';
 import List from 'src/pages/ListView/List.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
 import { models } from 'models';
-import { getSchemas } from 'schemas';
 import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
 import type { QueryFilter } from 'utils/db/types';
 import 'src/styles/index.css';
+import { getTestSchemas } from './schemas';
 
 async function mount() {
   FrappeDatabaseDemux.prototype.getSchemaMap = async () => {
-    const schemas = getSchemas('-', []);
+    const schemas = getTestSchemas();
     return {
       ...schemas,
       Item: {

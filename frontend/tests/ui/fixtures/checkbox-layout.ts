@@ -5,7 +5,6 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import { models } from 'models';
 import { StockBalance } from 'reports/inventory/StockBalance';
-import { getSchemas } from 'schemas';
 import type { Field } from 'schemas/types';
 import Check from 'src/components/Controls/Check.vue';
 import CommonFormSection from 'src/pages/CommonForm/CommonFormSection.vue';
@@ -13,9 +12,10 @@ import ReportPage from 'src/pages/Report.vue';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 import 'src/styles/index.css';
+import { getTestSchemas } from './schemas';
 
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getSchemas('-', []);
+  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.InventorySettings = {

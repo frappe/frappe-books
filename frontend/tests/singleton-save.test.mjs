@@ -46,6 +46,23 @@ test('System Settings can save again after reload', async () => {
   assert.equal(reloaded.displayPrecision, 3);
 });
 
+const setupValues = {
+  fullname: 'Test Owner',
+  companyName: 'Test Company',
+  bankName: 'Test Bank',
+  country: 'India',
+  email: 'test@example.com',
+  currency: 'INR',
+  chartOfAccounts: 'Standard',
+  fiscalYearStart: '2026-04-01',
+  fiscalYearEnd: '2027-03-31',
+};
+const requiredValues = {
+  AccountingSettings: setupValues,
+  SetupWizard: setupValues,
+  POSSettings: { cashAccount: 'Cash' },
+};
+
 async function makeFixture(schemaName) {
   const schemas = getSchemas('-', []);
   let stored;
@@ -72,20 +89,7 @@ async function makeFixture(schemaName) {
   const fyo = new Fyo({ DatabaseDemux: SettingsStore });
   await fyo.db.init();
   fyo.doc.registerModels({});
-  const values = ['AccountingSettings', 'SetupWizard'].includes(schemaName)
-    ? {
-        fullname: 'Test Owner',
-        companyName: 'Test Company',
-        bankName: 'Test Bank',
-        country: 'India',
-        email: 'test@example.com',
-        currency: 'INR',
-        chartOfAccounts: 'Standard',
-        fiscalYearStart: '2026-04-01',
-        fiscalYearEnd: '2027-03-31',
-      }
-    : {};
-  const doc = fyo.doc.getNewDoc(schemaName, values);
+  const doc = fyo.doc.getNewDoc(schemaName, requiredValues[schemaName] ?? {});
   stored = fyo.db.converter.toRawValueMap(schemaName, doc.getValidDict());
   // The fixture represents an existing singleton without loading linked records.
   doc._notInserted = false;

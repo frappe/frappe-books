@@ -4,7 +4,6 @@ import { createApp, h, reactive, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import { models } from 'models';
-import { getSchemas } from 'schemas';
 import Attachment from 'src/components/Controls/Attachment.vue';
 import Base from 'src/components/Controls/Base.vue';
 import Check from 'src/components/Controls/Check.vue';
@@ -16,9 +15,10 @@ import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { showSidebar } from 'src/utils/refs';
 import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 import 'src/styles/index.css';
+import { getTestSchemas } from './schemas';
 
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getSchemas('-', []);
+  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.SystemSettings = { dateFormat: 'MMM d, y' } as any;

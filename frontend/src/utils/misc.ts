@@ -1,16 +1,9 @@
-import { translateSchema, TranslationString } from 'fyo/utils/translation';
-import { cloneDeep } from 'lodash';
 import { DateTime } from 'luxon';
-import { SetupWizard } from 'models/baseModels/SetupWizard/SetupWizard';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
-import SetupWizardSchema from 'schemas/app/SetupWizard.json';
-import { Schema } from 'schemas/types';
 import { fyo } from 'src/initFyo';
 import { QueryFilter } from 'utils/db/types';
-import { schemaTranslateables } from 'utils/translationHelpers';
-import type { LanguageMap } from 'utils/types';
 import { PeriodKey } from './types';
 
 export function getDatesAndPeriodList(period: PeriodKey): {
@@ -58,24 +51,8 @@ export function getDatesAndPeriodList(period: PeriodKey): {
   };
 }
 
-export function getSetupWizardDoc(
-  languageMap: LanguageMap | undefined = TranslationString.prototype.languageMap
-) {
-  /**
-   * This is used cause when setup wizard is running
-   * the database isn't yet initialized.
-   */
-  const schema = cloneDeep(SetupWizardSchema);
-  if (languageMap) {
-    translateSchema(schema, languageMap, schemaTranslateables);
-  }
-  return fyo.doc.getNewDoc(
-    'SetupWizard',
-    {},
-    false,
-    schema as Schema,
-    SetupWizard
-  );
+export function getSetupWizardDoc() {
+  return fyo.doc.getNewDoc(ModelNameEnum.SetupWizard, {}, false);
 }
 
 export const docsPathMap: Record<string, string | undefined> = {

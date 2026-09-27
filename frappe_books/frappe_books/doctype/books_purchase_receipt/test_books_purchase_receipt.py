@@ -133,6 +133,24 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2", again.submit)
 
+	def test_receipt_comes_from_a_supplier(self):
+		item = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Received", root_type="Liability").name,
+			track_item=1,
+		)
+		customer = make_party(make_account("Receivable", account_type="Receivable").name)
+		receipt = frappe.get_doc(
+			{
+				"doctype": "Books Purchase Receipt",
+				"party": customer.name,
+				"date": now_datetime(),
+				"items": [{"item": item.name, "location": "Stores", "quantity": 1, "rate": 10}],
+			}
+		)
+
+		self.assertRaisesRegex(frappe.ValidationError, "must be a Supplier", receipt.insert)
+
 
 def make_receipt(item, quantity, rate, return_against=None, date=None):
 	payable = make_account("Payable", root_type="Liability", account_type="Payable")

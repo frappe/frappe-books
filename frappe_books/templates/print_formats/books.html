@@ -34,7 +34,7 @@
   <div class="books-meta">
     {% if doc.get("date") %}<strong>{{ _("Date") }}</strong><span>{{ doc.get_formatted("date") }}</span>{% endif %}
     {% if doc.get("posting_date") %}<strong>{{ _("Date") }}</strong><span>{{ doc.get_formatted("posting_date") }}</span>{% endif %}
-    {% if doc.get("party") %}<strong>{{ _("Party") }}</strong><span>{{ doc.party }}</span>{% endif %}
+    {% if doc.get("party") %}<strong>{{ _(doc.meta.get_label("party")) }}</strong><span>{{ doc.party }}</span>{% endif %}
     {% if doc.get("payment_type") %}<strong>{{ _("Payment Type") }}</strong><span>{{ _(doc.payment_type) }}</span>{% endif %}
     {% if doc.get("payment_method") %}<strong>{{ _("Payment Method") }}</strong><span>{{ doc.payment_method }}</span>{% endif %}
     {% if doc.get("movement_type") %}<strong>{{ _("Movement Type") }}</strong><span>{{ _(doc.movement_type) }}</span>{% endif %}
@@ -68,7 +68,7 @@
     <thead><tr><th>{{ _("Reference Type") }}</th><th>{{ _("Reference") }}</th><th class="books-number">{{ _("Amount") }}</th></tr></thead>
     <tbody>
       {% for row in doc.payment_references %}
-      <tr><td>{{ row.reference_type }}</td><td>{{ row.reference_name }}</td><td class="books-number">{{ row.get_formatted("amount", doc) }}</td></tr>
+      <tr><td>{{ _(row.reference_type.removeprefix("Books ")) }}</td><td>{{ row.reference_name }}</td><td class="books-number">{{ row.get_formatted("amount", doc) }}</td></tr>
       {% endfor %}
     </tbody>
   </table>

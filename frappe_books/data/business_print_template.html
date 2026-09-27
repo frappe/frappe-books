@@ -17,7 +17,7 @@
           {{ print.links.address.addressDisplay }}
         </p>
         <p class="text-sm text-gray-800" v-if="print.gstin">
-          GSTIN: {{ print.gstin }}
+          {{ t`GSTIN` }}: {{ print.gstin }}
         </p>
       </div>
     </section>
@@ -26,15 +26,13 @@
     <div class="mt-8 text-lg">
       <!-- Doc Details -->
       <section class="flex">
-        <h3 class="w-1/3 font-semibold">
-          {{ doc.entryType === 'SalesInvoice' ? 'Invoice' : 'Bill' }}
-        </h3>
+        <h3 class="w-1/3 font-semibold">{{ doc.entryLabel }}</h3>
         <div class="w-2/3 text-gray-800">
           <p class="font-semibold">{{ doc.name }}</p>
 
           <div class="flex gap-2">
             <p>{{ doc.date }}</p>
-            <p>{{doc?.time }}</p>
+            <p>{{ doc.time }}</p>
           </div>
         </div>
       </section>
@@ -42,7 +40,7 @@
       <!-- Party Details -->
       <section class="mt-4 flex">
         <h3 class="w-1/3 font-semibold">
-          {{ doc.entryType === 'SalesInvoice' ? 'Customer' : 'Supplier' }}
+          {{ doc.entryType === 'PurchaseInvoice' ? t`Supplier` : t`Customer` }}
         </h3>
 
         <div class="w-2/3 text-gray-800" v-if="doc.party">
@@ -50,7 +48,9 @@
           <p v-if="doc.links.party.address">
             {{ doc.links.party.links.address.addressDisplay }}
           </p>
-          <p v-if="doc.links.party.gstin">GSTIN: {{ doc.links.party.gstin }}</p>
+          <p v-if="doc.links.party.gstin">
+            {{ t`GSTIN` }}: {{ doc.links.party.gstin }}
+          </p>
         </div>
       </section>
     </div>
@@ -59,37 +59,34 @@
   <!-- Items Table -->
   <section class="px-12 pt-12 text-lg">
     <!-- Heading Row -->
-    <section class="mb-4 flex font-semibold">
-      <div class="w-3/12">{{ t`Item` }}</div>
-      <div class="w-3/12" v-if="doc.description">{{ t`Description` }}</div>
-      <div class="w-3/12 text-right" v-if="doc.showHSN">{{ t`HSN/SAC` }}</div>
-      <div class="w-3/12 text-right">{{ t`Qty` }}</div>
-      <div class="w-3/12 text-right">{{ t`Rate` }}</div>
-      <div class="w-3/12 text-right">{{ t`Amount` }}</div>
+    <section class="mb-4 flex gap-3 font-semibold">
+      <div class="flex-1">{{ t`Item` }}</div>
+      <div class="flex-1" v-if="doc.description">{{ t`Description` }}</div>
+      <div class="w-20 text-right" v-if="doc.showHSN">{{ t`HSN/SAC` }}</div>
+      <div class="w-20 text-right">{{ t`Qty` }}</div>
+      <div class="w-24 text-right">{{ t`Rate` }}</div>
+      <div class="w-28 text-right">{{ t`Amount` }}</div>
     </section>
 
     <!-- Body Rows -->
     <section
-      class="flex py-1 text-gray-800"
+      class="flex gap-3 py-1 text-gray-800"
       v-for="row in doc.items"
       :key="row.name"
     >
-      <div class="w-3/12">{{ row.item }}</div>
-      <div class="w-3/12" v-if="doc.description">{{ row.description }}</div>
-      <div class="w-3/12 text-right" v-if="doc.showHSN">{{ row.hsnCode }}</div>
-      <div class="w-3/12 text-right">
-        <div v-if="row.transferUnit">{{ row.transferUnit }} {{ row.qty }}</div>
-        <div v-else>{{ row.qty }}</div>
-      </div>
-      <div class="w-3/12 text-right">{{ row.rate }}</div>
-      <div class="w-3/12 text-right">{{ row.amount }}</div>
+      <div class="flex-1">{{ row.item }}</div>
+      <div class="flex-1" v-if="doc.description">{{ row.description }}</div>
+      <div class="w-20 text-right" v-if="doc.showHSN">{{ row.hsnCode }}</div>
+      <div class="w-20 text-right">{{ row.qty }} {{ row.transferUnit }}</div>
+      <div class="w-24 text-right">{{ row.rate }}</div>
+      <div class="w-28 text-right">{{ row.amount }}</div>
     </section>
   </section>
 
   <!-- Invoice Footer -->
   <footer class="px-12 py-12 text-lg">
     <!-- Totaled Amounts -->
-    <section class="flex -mx-3 justify-end flex-1 bg-gray-100 gap-8">
+    <section class="flex -mx-4 justify-end flex-1 bg-gray-100 gap-8">
       <!-- Subtotal -->
       <div class="text-right py-3">
         <h3 class="text-gray-800">{{ t`Subtotal` }}</h3>
@@ -130,23 +127,24 @@
       </div>
     </section>
 
+    <!-- Grand Total In Words -->
+    <p v-if="print.amountInWords" class="mt-4 text-right">
+      <span class="font-semibold">{{ t`Grand Total In Words` }}:</span>
+      {{ doc.grandTotalInWords }}
+    </p>
+
     <!-- Invoice Terms -->
     <section class="mt-12" v-if="doc.terms">
-      <h3 class="text-lg font-semibold">{{t`Notes`}}</h3>
+      <h3 class="text-lg font-semibold">{{ t`Notes` }}</h3>
       <p class="mt-4 text-lg whitespace-pre-line">{{ doc.terms }}</p>
     </section>
-
-    <div v-if="print.amountInWords" class="flex justify-end mt-10">
-      <h3 class="text-lg font-semibold mr-2">{{t`Grand Total In Words`}}:</h3>
-      <p>{{doc.grandTotalInWords}}</p>
-    </div>
 
     <!-- Terms and Conditions -->
     <section
       class="mt-12"
       v-if="print.displaytermsandconditions && print.termsAndConditions"
     >
-      <h3 class="text-lg font-semibold">{{t`Terms and Conditions`}}</h3>
+      <h3 class="text-lg font-semibold">{{ t`Terms and Conditions` }}</h3>
       <p class="mt-4 text-lg whitespace-pre-line">
         {{ print.termsAndConditions }}
       </p>

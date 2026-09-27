@@ -17,12 +17,13 @@ const documents = {
   StockMovement: { amount: 100 },
 };
 
-async function getValues(schemaName, values) {
+async function getValues(schemaName, values, getLinkedDocs = () => ({})) {
   const fyo = await makeFyo();
   const singles = {
     PrintSettings: fyo.doc.getNewDoc('PrintSettings', { companyName: 'Co' }),
     AccountingSettings: fyo.doc.getNewDoc('AccountingSettings'),
     Currency: { fraction: 'Cent', fractionUnits: 100 },
+    ...getLinkedDocs(fyo),
   };
   fyo.doc.getDoc = async (schemaName) => singles[schemaName];
   const doc = fyo.doc.getNewDoc(schemaName, { date, ...values });
@@ -38,6 +39,26 @@ for (const [schemaName, values] of Object.entries(documents)) {
     assert.equal(print.companyName, 'Co');
   });
 }
+
+test('Payment print values format the invoice taxes', async () => {
+  const { doc } = await getValues(
+    'Payment',
+    {
+      amount: 110,
+      amountPaid: 110,
+      referenceType: 'SalesInvoice',
+      for: [{ referenceType: 'SalesInvoice', referenceName: 'SINV-1' }],
+    },
+    (fyo) => ({
+      SalesInvoice: fyo.doc.getNewDoc('SalesInvoice', {
+        taxes: [{ account: 'CGST', amount: fyo.pesa(10) }],
+      }),
+    })
+  );
+  assert.equal(doc.subTotal, '100.00');
+  assert.equal(doc.taxes[0].account, 'CGST');
+  assert.equal(doc.taxes[0].amount, '10.00');
+});
 
 test('JournalEntry print values have no totals', async () => {
   const { doc } = await getValues('JournalEntry', {});

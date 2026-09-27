@@ -212,7 +212,7 @@ import {
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
-import { filterPOSItems, findExactPOSItem } from 'src/utils/posItemSearch';
+import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
 import { getPOSInventory } from 'models/inventory/posStock';
 
 const COMPONENT_NAME = 'POS';
@@ -562,75 +562,17 @@ export default defineComponent({
       )) as POSProfile;
     },
 
-    async handleItemSearch(searchTerm: string | null, addItem?: boolean) {
-      searchTerm ??= '';
-      this.itemSearchTerm = searchTerm;
-      if (!addItem) return;
-
-      let quantity = 1;
-      const posSettings = fyo.singles.POSSettings;
-      const isWeightEnabledBarcode = posSettings?.weightEnabledBarcode;
-
-      const checkDigits = posSettings?.checkDigits || '';
-      const itemCodeDigits = posSettings?.itemCodeDigits || 0;
-      const weightDigits = posSettings?.itemWeightDigits || 0;
-
-      const expectedWeightBarcodeLength =
-        String(checkDigits).length +
-        Number(itemCodeDigits) +
-        Number(weightDigits);
-
-      let isWeightBarcode = false;
-      let itemCode = searchTerm;
-      let weightPart = '';
-
-      if (
-        isWeightEnabledBarcode &&
-        searchTerm.startsWith(String(checkDigits)) &&
-        searchTerm.length === expectedWeightBarcodeLength
-      ) {
-        const extractedItemCode = searchTerm.slice(
-          checkDigits.toString().length,
-          checkDigits.toString().length + itemCodeDigits
+    async handleItemSearch(searchTerm: string | null, addItem = false) {
+      this.itemSearchTerm = searchTerm ?? '';
+      const scanned =
+        addItem &&
+        findScannedPOSItem(
+          this.items as POSItem[],
+          this.itemSearchTerm,
+          fyo.singles.POSSettings
         );
-        const weightData = searchTerm.slice(
-          checkDigits.toString().length + itemCodeDigits
-        );
-
-        if (!isNaN(Number(weightData))) {
-          isWeightBarcode = true;
-          itemCode = extractedItemCode;
-          weightPart = weightData;
-        }
-      }
-
-      const allItems = this.items;
-
-      let matchedItem = null;
-
-      if (isWeightBarcode) {
-        matchedItem = allItems.find(
-          (item) => item.itemCode === itemCode || item.barcode === itemCode
-        );
-      } else if (searchTerm.length === 12) {
-        matchedItem = allItems.find((item) => item.barcode === searchTerm);
-      }
-
-      matchedItem ??= findExactPOSItem(allItems, searchTerm);
-
-      if (!matchedItem) return;
-
-      if (isWeightBarcode && weightPart) {
-        const weightValue = parseInt(weightPart, 10);
-        if (matchedItem.unit?.toLowerCase() === 'kg') {
-          quantity = weightValue / 1000;
-        } else {
-          quantity = weightValue;
-        }
-      }
-
-      if (addItem) {
-        await this.addItem(matchedItem as POSItem, quantity);
+      if (scanned) {
+        await this.addItem(scanned.item, scanned.quantity);
         this.itemSearchTerm = '';
       }
     },

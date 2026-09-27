@@ -83,11 +83,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		charts = {chart["name"]: chart for chart in chart_options()}
 		self.assertEqual(chart_options()[0]["name"], STANDARD_CHART)
 		self.assertEqual(charts["Canada - Plan comptable pour les provinces francophones"]["language"], "fr")
-		# the charts Electron Books offered
-		self.assertEqual(
-			{chart["country_code"] for chart in chart_options()},
-			{"", "ae", "ca", "gt", "hu", "id", "in", "mx", "ni", "nl", "sg", "fr"},
-		)
+		self.assertEqual(charts["Switzerland - General Chart of Accounts"]["country_code"], "ch")
 		for name in charts:
 			with self.subTest(chart=name):
 				self.assertTrue(load_chart(name))

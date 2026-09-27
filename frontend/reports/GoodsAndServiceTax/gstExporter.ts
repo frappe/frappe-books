@@ -2,7 +2,7 @@ import { Action } from 'fyo/model/types';
 import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import { codeStateMap } from 'regional/in';
-import { ExportExtention } from 'reports/types';
+import { ExportExtension } from 'reports/types';
 import { showDialog } from 'src/utils/interactive';
 import { invertMap } from 'utils';
 import { getCsvData, saveExportData } from '../commonExporter';
@@ -81,9 +81,9 @@ interface B2CSInvRecord {
 }
 
 export default function getGSTRExportActions(report: BaseGSTR): Action[] {
-  const exportExtention = ['csv', 'json'] as ExportExtention[];
+  const exportExtension = ['csv', 'json'] as ExportExtension[];
 
-  return exportExtention.map((ext) => ({
+  return exportExtension.map((ext) => ({
     group: `Export`,
     label: ext.toUpperCase(),
     type: 'primary',
@@ -93,7 +93,7 @@ export default function getGSTRExportActions(report: BaseGSTR): Action[] {
   }));
 }
 
-async function exportReport(extention: ExportExtention, report: BaseGSTR) {
+async function exportReport(extension: ExportExtension, report: BaseGSTR) {
   const canExport = await getCanExport(report);
   if (!canExport) {
     return;
@@ -101,9 +101,9 @@ async function exportReport(extention: ExportExtention, report: BaseGSTR) {
 
   let data = '';
 
-  if (extention === 'csv') {
+  if (extension === 'csv') {
     data = getCsvData(report);
-  } else if (extention === 'json') {
+  } else if (extension === 'json') {
     data = await getGstrJsonData(report);
   }
 
@@ -111,7 +111,7 @@ async function exportReport(extention: ExportExtention, report: BaseGSTR) {
     return;
   }
 
-  saveExportData(data, `${report.reportName}.${extention}`);
+  saveExportData(data, `${report.reportName}.${extension}`);
 }
 
 async function getCanExport(report: BaseGSTR) {

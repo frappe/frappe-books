@@ -133,7 +133,7 @@ export abstract class AccountReport extends Report {
     return getCommonExportActions(this);
   }
 
-  // Fix arythmetic on dates when adding or substracting months. If the
+  // Fix arithmetic on dates when adding or subtracting months. If the
   // reference date was the last day in month, ensure that the resulting date is
   // also the last day.
   _fixMonthsJump(refDate: DateTime, date: DateTime): DateTime {

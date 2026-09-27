@@ -183,7 +183,7 @@ export abstract class BaseGSTR extends Report {
         fieldtype: 'Data',
       },
       {
-        label: t`Intergrated Tax`,
+        label: t`Integrated Tax`,
         fieldname: 'igstAmt',
         fieldtype: 'Currency',
       },

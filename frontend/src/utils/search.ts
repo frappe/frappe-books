@@ -661,7 +661,7 @@ export class Search {
     const useSuggestions = this._shouldUseSuggestions(input);
     /**
      * If the suggestion list is already populated
-     * and the input is an extention of the previous
+     * and the input is an extension of the previous
      * then use the suggestions.
      */
     if (useSuggestions) {

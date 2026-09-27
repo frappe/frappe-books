@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import frappe
 from frappe.query_builder.functions import Cast_, Length
-from frappe.utils import getdate
+from frappe.utils import create_batch, getdate
 
 VOUCHER_DATE_FIELDS = {
 	"Books Sales Invoice": "date",
@@ -43,11 +43,12 @@ def _voucher_dates(voucher_type, rows):
 	date_field = VOUCHER_DATE_FIELDS.get(voucher_type)
 	if not date_field:
 		return {}
-	return dict(
-		frappe.get_all(
-			voucher_type,
-			filters={"name": ["in", list({row.voucher_no for row in rows})]},
-			fields=["name", date_field],
-			as_list=True,
+	dates = {}
+	# SQLite allows at most 32766 query parameters.
+	for batch in create_batch(list({row.voucher_no for row in rows}), 1000):
+		dates.update(
+			frappe.get_all(
+				voucher_type, filters={"name": ["in", batch]}, fields=["name", date_field], as_list=True
+			)
 		)
-	)
+	return dates

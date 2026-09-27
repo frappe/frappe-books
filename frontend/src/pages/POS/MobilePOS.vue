@@ -2,7 +2,6 @@
   <div class="flex flex-1 flex-col">
     <div class="flex gap-2 px-4 py-3">
       <FrappeTextInput
-        ref="search"
         class="min-w-0 flex-1"
         type="search"
         size="lg"
@@ -18,12 +17,10 @@
           <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
         </template>
       </FrappeTextInput>
-      <FrappeButton
+      <BarcodeScanButton
         variant="subtle"
         size="lg"
-        icon="lucide-scan-barcode"
-        :label="t`Scan barcode`"
-        @click="search?.focus()"
+        @scan="(code: string) => $emit('search', code, true)"
       />
     </div>
 
@@ -124,7 +121,6 @@
 import { t } from 'fyo';
 import {
   Badge as FrappeBadge,
-  Button as FrappeButton,
   Icon as FrappeIcon,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
@@ -132,6 +128,7 @@ import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { POSItem } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
+import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { getItemInitials } from 'src/utils/pos';
 import {
   computed,
@@ -162,7 +159,6 @@ const emit = defineEmits<{
 }>();
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
-const search = ref<InstanceType<typeof FrappeTextInput>>();
 const sheet = ref<'cart' | 'line' | null>(null);
 const editingRow = shallowRef<SalesInvoiceItem | null>(null);
 

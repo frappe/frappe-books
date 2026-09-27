@@ -33,7 +33,15 @@
     @blur="onBlur"
     @focus="onFocus"
     @input="onInput"
-  />
+  >
+    <template v-if="isBarcodeField" #suffix>
+      <BarcodeScanButton
+        variant="ghost"
+        size="sm"
+        @scan="(code: string) => triggerChange(code)"
+      />
+    </template>
+  </FrappeTextInput>
 </template>
 <script lang="ts">
 import { Doc } from 'fyo/model/doc';
@@ -44,11 +52,12 @@ import { evaluateReadOnly, evaluateRequired } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
 import { getIsNullOrUndef } from 'utils/index';
 import { defineComponent, PropType } from 'vue';
+import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
 export default defineComponent({
   name: 'Base',
-  components: { FrappeTextInput, ReadOnlyValue },
+  components: { BarcodeScanButton, FrappeTextInput, ReadOnlyValue },
   inject: {
     injectedDoc: {
       from: 'doc',
@@ -84,6 +93,10 @@ export default defineComponent({
   computed: {
     isMobile(): boolean {
       return isMobile.value;
+    },
+    /** Phones scan barcodes with the camera. */
+    isBarcodeField(): boolean {
+      return this.isMobile && this.df.fieldname === 'barcode';
     },
     inputValue(): string | number {
       if (typeof this.value === 'number' || typeof this.value === 'string') {

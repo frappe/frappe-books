@@ -107,7 +107,8 @@ export default defineComponent({
       throw new ValueError(this.t`Invalid value found for ${label}`);
     },
     fields() {
-      const fieldnames = this.row.schema.quickEditFields ?? [];
+      const { quickEditFields, tableFields } = this.row.schema;
+      const fieldnames = quickEditFields ?? tableFields ?? [];
       return fieldnames.map((f) => this.fyo.getField(this.row.schemaName, f));
     },
     previous(): number {

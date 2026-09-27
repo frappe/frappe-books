@@ -86,6 +86,7 @@
           :doc="doc"
           :errors="errors"
           @editrow="(doc: Doc) => showRowEditForm(doc)"
+          @row-remove="onRowRemove"
           @value-change="onValueChange"
           @row-change="updateGroupedFields"
         />
@@ -440,6 +441,18 @@ export default defineComponent({
 
       if (typeof index === 'number' && typeof fieldname === 'string') {
         this.row = { index, fieldname };
+      }
+    },
+    onRowRemove({ idx, parentFieldname }: Doc) {
+      const row = this.row;
+      if (!row || row.fieldname !== parentFieldname || typeof idx !== 'number') {
+        return;
+      }
+
+      if (row.index === idx) {
+        this.row = null;
+      } else if (row.index > idx) {
+        row.index -= 1;
       }
     },
     async onValueChange(field: Field, value: DocValue) {

@@ -5,5 +5,5 @@ export function registerServiceWorker() {
 
   navigator.serviceWorker
     .register('/books/sw.js', { scope: '/books/' })
-    .catch((error) => console.warn('Books could not install offline support.', error));
+    .catch((error) => console.error('Books could not install offline support.', error));
 }

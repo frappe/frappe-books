@@ -3,7 +3,6 @@
     <SearchBar />
     <!-- Back Button -->
     <FrappeButton
-      ref="backlink"
       icon="lucide-chevron-left"
       variant="subtle"
     class="rounded-none border-x border-outline-gray-1"
@@ -27,7 +26,7 @@
 <script lang="ts">
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { Button as FrappeButton } from 'frappe-ui';
-import { ref, inject } from 'vue';
+import { inject } from 'vue';
 import { defineComponent } from 'vue';
 import SearchBar from './SearchBar.vue';
 import { historyState } from 'src/utils/refs';
@@ -39,7 +38,6 @@ export default defineComponent({
   setup() {
     return {
       historyState,
-      backlink: ref<InstanceType<typeof FrappeButton> | null>(null),
       shortcuts: inject(shortcutsKey),
     };
   },
@@ -53,7 +51,9 @@ export default defineComponent({
   },
   activated() {
     this.shortcuts?.shift.set(COMPONENT_NAME, ['Backspace'], () => {
-      this.backlink?.$el.click();
+      if (this.historyState.back) {
+        this.$router.back();
+      }
     });
   },
   deactivated() {

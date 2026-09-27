@@ -36,10 +36,9 @@
       </Button>
       <Button
         v-if="canPrint"
-        ref="printButton"
         :icon="true"
         :title="t`Open Print View`"
-        @click="routeTo(`/print/${doc.schemaName}/${doc.name}`)"
+        @click="openPrintView"
       >
         <Icon name="printer" class="w-4 h-4" />
       </Button>
@@ -202,7 +201,6 @@ export default defineComponent({
       docOrNull,
       shortcuts,
       context,
-      printButton: ref<InstanceType<typeof Button> | null>(null),
     };
   },
   data() {
@@ -363,7 +361,7 @@ export default defineComponent({
         return;
       }
 
-      this.printButton?.$el.click();
+      void this.openPrintView();
     });
     this.shortcuts?.pmod.set(this.context, ['KeyL'], () => {
       if (!this.canShowLinks && !this.showLinks) {
@@ -380,6 +378,9 @@ export default defineComponent({
   },
   methods: {
     routeTo,
+    async openPrintView() {
+      await routeTo(`/print/${this.doc.schemaName}/${this.doc.name}`);
+    },
     async toggleWidth() {
       const value = !this.useFullWidth;
       if (this.fyo.can('Misc', 'write')) {

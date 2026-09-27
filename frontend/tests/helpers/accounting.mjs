@@ -39,6 +39,7 @@ await build({
         validatePOSCheckout,
         validateSinv,
       } from './src/utils/pos';
+      export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getTaskChecks } from './src/utils/getStartedTasks';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { linkOnSave } from './src/utils/doc';
@@ -114,6 +115,7 @@ export const {
   validatePOSStock,
   setPOSRowQuantity,
   setPOSRowValue,
+  findScannedPOSItem,
   validateSinv,
   addBatchItem,
   addPOSItem,

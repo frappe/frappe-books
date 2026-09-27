@@ -1,6 +1,12 @@
 <template>
+  <RowDetailSheet
+    v-if="isMobile && !isEditable"
+    :row="row"
+    :title="t`${fieldlabel} · Row ${index + 1}`"
+    @close="$emit('close')"
+  />
   <FrappeBottomSheet
-    v-if="isMobile"
+    v-else-if="isMobile"
     :open="true"
     :title="t`Row ${index + 1}`"
     @update:open="(open: boolean) => !open && $emit('close')"
@@ -8,7 +14,7 @@
     <TwoColumnForm :doc="row" :fields="fields" />
     <div class="flex gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
       <FrappeButton
-        v-if="canRemove"
+        v-if="isEditable"
         size="lg"
         variant="ghost"
         theme="red"
@@ -96,6 +102,7 @@ import { Doc } from 'fyo/model/doc';
 import { ValueError } from 'fyo/utils/errors';
 import FormHeader from 'src/components/FormHeader.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import RowDetailSheet from './RowDetailSheet.vue';
 import { evaluateReadOnly } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -107,7 +114,13 @@ import { defineComponent } from 'vue';
 const COMPONENT_NAME = 'RowEditForm';
 
 export default defineComponent({
-  components: { FrappeBottomSheet, FrappeButton, TwoColumnForm, FormHeader },
+  components: {
+    FrappeBottomSheet,
+    FrappeButton,
+    FormHeader,
+    RowDetailSheet,
+    TwoColumnForm,
+  },
   provide() {
     return {
       doc: computed(() => this.row),
@@ -123,7 +136,7 @@ export default defineComponent({
     return { shortcuts: inject(shortcutsKey), isMobile };
   },
   computed: {
-    canRemove(): boolean {
+    isEditable(): boolean {
       const field = this.fyo.getField(this.doc.schemaName, this.fieldname);
       return !!field && !evaluateReadOnly(field, this.doc);
     },

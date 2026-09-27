@@ -27,16 +27,16 @@
         {{ rowCount }}
       </span>
     </div>
-    <component
-      :is="canEdit ? 'button' : 'div'"
+    <button
       v-for="({ row, title: rowTitle, meta, amount }, index) of summaries"
       :key="row.name"
-      class="flex w-full items-center gap-2.5 border-outline-gray-1 px-3 text-start"
+      type="button"
+      class="flex w-full items-center gap-2.5 border-outline-gray-1 px-3 text-start active:bg-surface-gray-1"
       :class="[
         title ? 'min-h-16 py-2.5' : 'min-h-[52px] py-2',
-        { 'border-t': index > 0, 'active:bg-surface-gray-1': canEdit },
+        { 'border-t': index > 0 },
       ]"
-      @click="canEdit && $emit('edit', row)"
+      @click="$emit('edit', row)"
     >
       <span
         class="grid size-[22px] shrink-0 place-items-center rounded-[6px] bg-surface-gray-2 text-xs-medium tabular-nums text-ink-gray-6"
@@ -59,11 +59,10 @@
         {{ amount }}
       </span>
       <span
-        v-if="canEdit"
         class="lucide-chevron-right size-4 shrink-0 text-ink-gray-4 rtl-rotate-180"
         aria-hidden="true"
       />
-    </component>
+    </button>
     <button
       v-if="canAdd"
       class="flex h-11 w-full items-center gap-2 border-outline-gray-1 px-3 text-md-medium text-ink-gray-8 active:bg-surface-gray-1"
@@ -87,7 +86,6 @@ import { getRowSummary } from './rowSummary';
 const props = defineProps<{
   rows: Doc[];
   fields: Field[];
-  canEdit: boolean;
   canAdd: boolean;
   /** A section's table names itself; a field's table has a label above. */
   title?: string;

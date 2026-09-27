@@ -9,7 +9,6 @@
     <MobileTableRows
       :rows="value"
       :fields="tableFields"
-      :can-edit="!isReadOnly"
       :can-add="canAddRemoveRows"
       :title="title"
       @edit="(row) => $emit('editrow', row)"

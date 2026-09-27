@@ -13,9 +13,7 @@ const quantityFields = ['qty', 'quantity'];
 /** Phone summary of a table row: the first column, a closing amount, the rest. */
 export function getRowSummary(row: Doc, fields: Field[]): RowSummary {
   const [titleField, ...rest] = fields;
-  const last = rest.at(-1);
-  const amountField =
-    last?.fieldtype === FieldTypeEnum.Currency ? last : undefined;
+  const amountField = getAmountField(fields);
   const metaFields = rest.filter((field) => field !== amountField);
 
   return {
@@ -23,6 +21,12 @@ export function getRowSummary(row: Doc, fields: Field[]): RowSummary {
     amount: amountField ? formatCell(row, amountField) : '',
     meta: getMeta(row, metaFields),
   };
+}
+
+/** The closing currency column, shown as the row's amount. */
+export function getAmountField(fields: Field[]): Field | undefined {
+  const last = fields.slice(1).at(-1);
+  return last?.fieldtype === FieldTypeEnum.Currency ? last : undefined;
 }
 
 function getMeta(row: Doc, fields: Field[]) {

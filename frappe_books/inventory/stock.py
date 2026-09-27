@@ -12,6 +12,7 @@ from frappe_books.inventory.units import populate_units
 from frappe_books.inventory.valuation import delete_entries, insert_entry
 
 LEDGER = "Books Stock Ledger Entry"
+BATCH_RECEIVING_DOCTYPES = ("Books Purchase Invoice", "Books Purchase Receipt", "Books Stock Movement")
 
 
 def validate_transfer_rows(transfers):
@@ -31,6 +32,23 @@ def validate_batches(rows):
 	batch_items = _items_of("Books Batch", [row.get("batch") for row in rows])
 	for row in rows:
 		_validate_batch(row, items[row["item"]], batch_items)
+
+
+def create_missing_batches(doc):
+	"""Insert the new batches a receiving document's rows name.
+
+	Frappe checks links before any document hook, so a caller saving the document
+	creates them first, in the same transaction.
+	"""
+	if doc.doctype not in BATCH_RECEIVING_DOCTYPES:
+		return
+	rows = [row for row in doc.items if row.item and row.batch]
+	batched_items = _items_with_batches({row.item for row in rows})
+	existing = set(_items_of("Books Batch", [row.batch for row in rows]))
+	for row in rows:
+		if row.item in batched_items and row.batch not in existing:
+			frappe.get_doc({"doctype": "Books Batch", "name": row.batch, "item": row.item}).insert()
+			existing.add(row.batch)
 
 
 def validate_stock_available(transfers, date):
@@ -279,6 +297,14 @@ def _item_defaults(rows):
 		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate"]
 	)
 	return {item.name: item for item in items}
+
+
+def _items_with_batches(names):
+	if not names:
+		return set()
+	return set(
+		frappe.get_all("Books Item", filters={"name": ["in", sorted(names)], "has_batch": 1}, pluck="name")
+	)
 
 
 def _items_of(doctype, names):

@@ -9,6 +9,7 @@ from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
 from frappe_books.accounting.invoice import InvoiceController
+from frappe_books.inventory.stock import create_missing_batches
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
 from frappe_books.ui_bridge.mapping import (
@@ -170,6 +171,7 @@ class BooksDatabaseBridge:
 		name_field = schema_mapping()[source_schema]["fields"].get("name")
 		if name and name_field != "name":
 			doc.set(name_field, name)
+		create_missing_batches(doc)
 		doc.insert(set_name=name)
 		return self._to_readable_source(source_schema, doc)
 
@@ -184,6 +186,7 @@ class BooksDatabaseBridge:
 		self._validate_expected_modified(doc, values.get("__expectedModified"))
 		self._validate_docstatus_update(doc, values)
 		self._set_target_values(doc, source_schema, values)
+		create_missing_batches(doc)
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
 

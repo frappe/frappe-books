@@ -15,7 +15,6 @@ import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { StockMovementItem } from './StockMovementItem';
 import { Transfer } from './Transfer';
-import { createMissingBatches } from './helpers';
 import { MovementType, MovementTypeEnum } from './types';
 
 export class StockMovement extends Transfer {
@@ -41,11 +40,6 @@ export class StockMovement extends Transfer {
       dependsOn: ['items'],
     },
   };
-
-  async validate() {
-    await super.validate();
-    await createMissingBatches(this);
-  }
 
   static filters: FiltersMap = {
     numberSeries: () => ({ referenceType: ModelNameEnum.StockMovement }),

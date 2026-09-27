@@ -13,7 +13,6 @@ import {
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { Transactional } from 'models/Transactional/Transactional';
 import { addItem, getExchangeRate, getNumberSeries } from 'models/helpers';
-import { createMissingBatches } from 'models/inventory/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
@@ -148,13 +147,6 @@ export abstract class Invoice extends Transactional {
   constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
     super(schema, data, fyo);
     this._setGetCurrencies();
-  }
-
-  async validate() {
-    await super.validate();
-    if (!this.isQuote) {
-      await createMissingBatches(this);
-    }
   }
 
   async getPaymentIds() {

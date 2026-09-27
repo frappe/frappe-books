@@ -13,7 +13,6 @@ import { Money } from 'pesa';
 import { TargetField } from 'schemas/types';
 import { StockTransferItem } from './StockTransferItem';
 import { Transfer } from './Transfer';
-import { createMissingBatches } from './helpers';
 
 export abstract class StockTransfer extends Transfer {
   name?: string;
@@ -93,11 +92,6 @@ export abstract class StockTransfer extends Transfer {
       cancelled: false,
     }),
   };
-
-  override async validate(): Promise<void> {
-    await super.validate();
-    await createMissingBatches(this);
-  }
 
   override duplicate(): Doc {
     const doc = super.duplicate() as StockTransfer;

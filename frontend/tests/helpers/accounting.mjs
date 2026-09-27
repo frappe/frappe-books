@@ -34,6 +34,7 @@ await build({
       export {
         addBatchItem,
         addPOSItem,
+        fillRowSerialNumbers,
         setPOSRowQuantity,
         setPOSRowValue,
         validateActiveSerialNumbers,
@@ -121,6 +122,7 @@ export const {
   validateSinv,
   addBatchItem,
   addPOSItem,
+  fillRowSerialNumbers,
   validatePOSCheckout,
   getTaskChecks,
   getReportCellColorClass,

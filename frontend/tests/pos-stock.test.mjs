@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   addBatchItem,
   addPOSItem,
+  fillRowSerialNumbers,
   getItemQtyMap,
   validateQty,
   getPOSInventory,
@@ -234,6 +235,53 @@ test('checkout checks all serial numbers in one query', async () => {
   await validateActiveSerialNumbers(fyo, {});
   assert.equal(queries.length, 2);
 });
+
+test('a cart row fills serial numbers for sales and keeps a return row’s', async () => {
+  const requested = [];
+  const fyo = makeSerialFyo(async (limit) => {
+    requested.push(limit);
+    return [{ name: 'SN-1' }, { name: 'SN-2' }];
+  });
+  const serials = {};
+  const sale = makeSerialRow(fyo, { quantity: 2 });
+  await fillRowSerialNumbers(sale, serials);
+  assert.equal(sale.serialNumber, 'SN-1\nSN-2');
+  assert.equal(serials[item], 'SN-1\nSN-2');
+  await fillRowSerialNumbers(sale, serials);
+
+  const returned = makeSerialRow(fyo, { quantity: -2, serialNumber: 'SOLD-1' });
+  await fillRowSerialNumbers(returned, {});
+  assert.equal(returned.serialNumber, 'SOLD-1');
+  assert.deepEqual(requested, [2]);
+});
+
+test('a cart row reports serial number lookup failures', async () => {
+  const fyo = makeSerialFyo(async () => {
+    throw new Error('Serial numbers unavailable');
+  });
+  await assert.rejects(
+    fillRowSerialNumbers(makeSerialRow(fyo, { quantity: 1 }), {}),
+    /Serial numbers unavailable/
+  );
+});
+
+function makeSerialFyo(getSerialNumbers) {
+  return {
+    getValue: async () => true,
+    db: { getAllRaw: async (_schema, { limit }) => getSerialNumbers(limit) },
+  };
+}
+
+function makeSerialRow(fyo, values) {
+  return {
+    fyo,
+    item,
+    ...values,
+    async set(field, value) {
+      this[field] = value;
+    },
+  };
+}
 
 function makeRow(values = {}) {
   const invoice = { fyo: makeFyo(), items: [] };

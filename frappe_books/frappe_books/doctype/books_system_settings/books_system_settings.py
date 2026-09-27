@@ -32,5 +32,6 @@ class BooksSystemSettings(Document):
 	_DOCTYPE_NAME = "Books System Settings"
 
 	def validate(self):
-		if not 0 <= cint(self.display_precision) <= 9:
-			frappe.throw(_("Display Precision should have a value between 0 and 9."))
+		# negatives are rejected by the field's non_negative flag
+		if cint(self.display_precision) > 9:
+			frappe.throw(_("Display Precision cannot be more than 9."))

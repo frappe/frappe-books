@@ -34,6 +34,15 @@ for (const paymentType of ['Pay', 'Receive']) {
   }
 }
 
+for (const paymentType of ['Pay', 'Receive']) {
+  test(`${paymentType} accounts wait for a payment method`, async () => {
+    const payment = await makePayment(paymentType, null);
+
+    const field = paymentType === 'Pay' ? 'account' : 'paymentAccount';
+    assert.equal(await payment.formulas[field].formula(), undefined);
+  });
+}
+
 async function makePayment(paymentType, paymentMethod, groupsOnly = false) {
   const fyo = await makeFyo();
   const accounts = accountNames.flatMap(([accountType, group, ledger]) => [

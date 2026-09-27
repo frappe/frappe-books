@@ -106,11 +106,11 @@
 
               <!-- Amounts -->
               <FrappeBadge
-                v-if="isPesa(e.outstandingAmount) && e.outstandingAmount.isPositive()"
+                v-if="isPesa(e.outstandingAmount) && !e.outstandingAmount.isZero()"
                 theme="amber"
                 variant="subtle"
               >
-                {{ t`Unpaid ${fyo.format(e.outstandingAmount, 'Currency')}` }}
+                {{ t`Unpaid ${fyo.format(e.outstandingAmount.abs(), 'Currency')}` }}
               </FrappeBadge>
               <FrappeBadge
                 v-else-if="isPesa(e.grandTotal) && e.grandTotal.isPositive()"

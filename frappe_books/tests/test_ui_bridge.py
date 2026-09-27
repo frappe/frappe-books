@@ -58,52 +58,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			{},
 		)
 
-	def test_return_outstanding_uses_interface_positive_balance_contract(self):
-		values = self.bridge._row_to_source(
-			"SalesInvoice",
-			{
-				"name": "SINV-RETURN",
-				"return_against": "SINV-ORIGINAL",
-				"outstanding_amount": -42,
-			},
-			["outstandingAmount"],
-		)
-
-		self.assertEqual(values["outstandingAmount"], 42)
-		self.assertIn(
-			"return_against",
-			self.bridge._target_fields("SalesInvoice", ["outstandingAmount"]),
-		)
-		self.assertEqual(
-			self.bridge._target_values("PaymentFor", {"amount": "-42"})["amount"],
-			42,
-		)
-
-	def test_pay_accounts_are_translated_between_interface_and_frappe_semantics(self):
-		target = self.bridge._target_values(
-			"Payment",
-			{
-				"paymentType": "Pay",
-				"account": "Cash",
-				"paymentAccount": "Creditors",
-			},
-		)
-		self.assertEqual(target["account"], "Creditors")
-		self.assertEqual(target["payment_account"], "Cash")
-
-		source = self.bridge._row_to_source(
-			"Payment",
-			{
-				"name": "PAY-RETURN",
-				"payment_type": "Pay",
-				"account": "Creditors",
-				"payment_account": "Cash",
-			},
-			["paymentType", "account", "paymentAccount"],
-		)
-		self.assertEqual(source["account"], "Cash")
-		self.assertEqual(source["paymentAccount"], "Creditors")
-
 	def test_crud_uses_interface_names_and_iso_datetimes(self):
 		name = unique_name("Web UOM")
 		inserted = self.bridge.insert("UOM", {"name": name, "isWhole": True})

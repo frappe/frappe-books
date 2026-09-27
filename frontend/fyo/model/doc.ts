@@ -119,6 +119,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return fieldnames.map((f) => this.fieldMap[f]);
   }
 
+  /** The fields a form shows, in order. Models override it to label fields by value. */
+  getFormFields(fields: Field[]): Field[] {
+    return fields;
+  }
+
   get isSubmitted() {
     return !!this.submitted && !this.cancelled;
   }

@@ -64,8 +64,9 @@ export class PaymentFor extends Doc {
           'outstandingAmount'
         )) as Money;
 
+        // Returns owe a negative balance; allocations are always positive.
         if (outstandingAmount) {
-          return outstandingAmount;
+          return outstandingAmount.abs();
         }
 
         return this.fyo.pesa(0);

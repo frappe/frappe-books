@@ -205,7 +205,8 @@ export default defineComponent({
 
       return {
         countTotal: isOutstanding.length,
-        countOutstanding: isOutstanding.filter((o) => o > 0).length,
+        // Returns owe a negative balance.
+        countOutstanding: isOutstanding.filter((o) => o !== 0).length,
       };
     },
   },

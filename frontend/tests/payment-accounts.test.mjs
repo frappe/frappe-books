@@ -17,12 +17,9 @@ for (const paymentType of ['Pay', 'Receive']) {
 
       assert.equal(
         await payment.formulas.account.formula(),
-        paymentType === 'Pay' ? cashOrBank : 'Debtors'
+        paymentType === 'Pay' ? 'Creditors' : 'Debtors'
       );
-      assert.equal(
-        await payment.formulas.paymentAccount.formula(),
-        paymentType === 'Pay' ? 'Creditors' : cashOrBank
-      );
+      assert.equal(await payment.formulas.paymentAccount.formula(), cashOrBank);
     });
 
     test(`${paymentType} ${paymentMethod} defaults stay empty when only group accounts exist`, async () => {
@@ -35,11 +32,10 @@ for (const paymentType of ['Pay', 'Receive']) {
 }
 
 for (const paymentType of ['Pay', 'Receive']) {
-  test(`${paymentType} accounts wait for a payment method`, async () => {
+  test(`${paymentType} cash or bank account waits for a payment method`, async () => {
     const payment = await makePayment(paymentType, null);
 
-    const field = paymentType === 'Pay' ? 'account' : 'paymentAccount';
-    assert.equal(await payment.formulas[field].formula(), undefined);
+    assert.equal(await payment.formulas.paymentAccount.formula(), undefined);
   });
 }
 

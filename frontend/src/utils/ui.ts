@@ -337,7 +337,7 @@ export function getFieldsGroupedByTabAndSection(
   doc: Doc,
 ): UIGroupedFields {
   const grouped: UIGroupedFields = new Map();
-  for (const field of schema?.fields ?? []) {
+  for (const field of doc.getFormFields(schema?.fields ?? [])) {
     const tab = field.tab ?? 'Main';
     const section = field.section ?? 'Default';
     if (!grouped.has(tab)) {

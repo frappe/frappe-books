@@ -258,16 +258,11 @@ export function getMakePaymentAction(fyo: Fyo): Action {
         await router.push(currentRoute);
       });
 
-      const hideFields = ['party', 'for'];
+      // The party account comes from the invoice.
+      const hideFields = ['party', 'for', 'account'];
 
       if (!fyo.singles.AccountingSettings?.enableInvoiceReturns) {
         hideFields.push('paymentType');
-      }
-
-      if (doc.schemaName === ModelNameEnum.SalesInvoice) {
-        hideFields.push('account');
-      } else {
-        hideFields.push('paymentAccount');
       }
 
       await payment.runFormulas();

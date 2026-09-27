@@ -60,7 +60,7 @@
     },
     {
       "fieldname": "account",
-      "label": "From Account",
+      "label": "Party Account",
       "fieldtype": "Link",
       "target": "Account",
       "create": true,
@@ -69,8 +69,7 @@
     },
     {
       "fieldname": "paymentAccount",
-      "label": "To Account",
-      "placeholder": "To Account",
+      "label": "Payment Account",
       "fieldtype": "Link",
       "target": "Account",
       "create": true,

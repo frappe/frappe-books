@@ -31,11 +31,6 @@ INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__ex
 # Frappe maintains nested-set indices when the document is saved.
 TREE_INDEX_FIELDS = {"lft", "rgt"}
 DOCSTATUS_FLAGS = {"submitted": {1, 2}, "cancelled": {2}}
-INVOICE_SCHEMAS = {"SalesInvoice", "PurchaseInvoice"}
-# Frappe keeps the party ledger in account and the cash or bank account in payment_account
-# for every payment. The Books interface keeps the source and destination accounts instead,
-# so the two fields swap for Pay payments.
-PAY_ACCOUNT_SWAP = {"account": "payment_account", "paymentAccount": "account"}
 
 
 class ListOptions(TypedDict, total=False):
@@ -288,7 +283,6 @@ class BooksDatabaseBridge:
 		# Numeric database IDs still identify text fields in the Books interface.
 		name = row.get("name")
 		values["name"] = str(name) if name is not None else None
-		_apply_source_conventions(source_schema, meta, row, values)
 		return values
 
 	def _target_values(self, source_schema: str, values: dict[str, Any]) -> dict:
@@ -303,7 +297,6 @@ class BooksDatabaseBridge:
 				mapped[target_name] = self._target_rows(field.options, value)
 			elif field:
 				mapped[target_name] = _target_value(meta, target_name, value)
-		_apply_target_conventions(source_schema, mapped)
 		return mapped
 
 	def _target_rows(self, child_doctype: str, rows: list[dict]) -> list[dict]:
@@ -334,10 +327,6 @@ class BooksDatabaseBridge:
 			== "Table"
 		}
 		fields.add("name")
-		if source_schema == "Payment" and {"account", "paymentAccount"}.intersection(requested):
-			fields.update({"account", "payment_account", "payment_type"})
-		if source_schema in {"SalesInvoice", "PurchaseInvoice"} and "outstandingAmount" in requested:
-			fields.add("return_against")
 		return sorted(fields)
 
 	def _requested_source_fields(self, source_schema: str, requested) -> list[str]:
@@ -461,26 +450,6 @@ def _source_row_value(meta, source_name: str, target_name: str, row: dict) -> An
 	if value and (target_name in {"creation", "modified"} or (field and field.fieldtype == "Datetime")):
 		return iso_datetime(value)
 	return _source_value(meta, target_name, value)
-
-
-def _apply_source_conventions(source_schema: str, meta, row: dict, values: dict) -> None:
-	if source_schema == "Payment" and row.get("payment_type") == "Pay":
-		for source_name, target_name in PAY_ACCOUNT_SWAP.items():
-			if source_name in values:
-				values[source_name] = _source_value(meta, target_name, row.get(target_name))
-	if source_schema in INVOICE_SCHEMAS and row.get("return_against") and values.get("outstandingAmount"):
-		# The Books interface treats return outstanding amounts as a positive refundable balance.
-		# Frappe stores credit-note outstanding values with a negative accounting sign.
-		values["outstandingAmount"] = abs(values["outstandingAmount"])
-
-
-def _apply_target_conventions(source_schema: str, mapped: dict) -> None:
-	if source_schema == "PaymentFor" and mapped.get("amount") is not None:
-		# The Books interface signs a refund allocation like its credit note.
-		# Frappe stores every payment allocation as a positive magnitude.
-		mapped["amount"] = abs(mapped["amount"])
-	if source_schema == "Payment" and mapped.get("payment_type") == "Pay":
-		mapped["account"], mapped["payment_account"] = mapped.get("payment_account"), mapped.get("account")
 
 
 def _target_condition(meta, target_name: str, operator: str, comparison: Any) -> list[Any]:

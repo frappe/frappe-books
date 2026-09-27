@@ -10,6 +10,7 @@ import {
   addItem,
   getDocStatusListColumn,
   getLedgerLinkAction,
+  getNumberSeries,
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
@@ -46,6 +47,7 @@ export class StockMovement extends Transfer {
   };
 
   static defaults: DefaultMap = {
+    numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
     date: () => new Date(),
   };
 

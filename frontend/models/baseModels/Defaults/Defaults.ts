@@ -129,18 +129,8 @@ export class Defaults extends Doc {
     payButtonColour: this.getPointOfSaleHidden(),
     payAndPrintButtonColour: this.getPointOfSaleHidden(),
   };
-}
 
-export const numberSeriesDefaultsMap: Record<
-  string,
-  keyof Defaults | undefined
-> = {
-  [ModelNameEnum.SalesInvoice]: 'salesInvoiceNumberSeries',
-  [ModelNameEnum.PurchaseInvoice]: 'purchaseInvoiceNumberSeries',
-  [ModelNameEnum.JournalEntry]: 'journalEntryNumberSeries',
-  [ModelNameEnum.Payment]: 'paymentNumberSeries',
-  [ModelNameEnum.StockMovement]: 'stockMovementNumberSeries',
-  [ModelNameEnum.Shipment]: 'shipmentNumberSeries',
-  [ModelNameEnum.PurchaseReceipt]: 'purchaseReceiptNumberSeries',
-  [ModelNameEnum.SalesQuote]: 'salesQuoteNumberSeries',
-};
+  override async afterSync() {
+    await this.fyo.loadDefaultNumberSeries();
+  }
+}

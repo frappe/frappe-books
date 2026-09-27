@@ -23,7 +23,6 @@ import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
 import { StockMovement } from './inventory/StockMovement';
 import { StockTransfer } from './inventory/StockTransfer';
 import { ValidationError } from 'fyo/utils/errors';
-import { numberSeriesDefaultsMap } from './baseModels/Defaults/Defaults';
 import { getIsNullOrUndef, safeParseFloat } from 'utils/index';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
@@ -602,15 +601,7 @@ export function isCredit(rootType: AccountRootType) {
 }
 
 export function getNumberSeries(schemaName: string, fyo: Fyo) {
-  const numberSeriesKey = numberSeriesDefaultsMap[schemaName];
-  if (!numberSeriesKey) {
-    return undefined;
-  }
-
-  const defaults = fyo.singles.Defaults;
-  const field = fyo.getField(schemaName, 'numberSeries');
-  const value = defaults?.[numberSeriesKey] as string | undefined;
-  return value ?? (field?.default as string | undefined);
+  return fyo.defaultNumberSeries[schemaName];
 }
 
 export function getDocStatusListColumn(): ColumnConfig {

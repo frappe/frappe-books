@@ -390,6 +390,13 @@ export class DatabaseHandler extends DatabaseBase {
     )) as string[];
   }
 
+  async getDefaultNumberSeries(): Promise<Record<string, string>> {
+    return (await this.#demux.callBespoke('getDefaultNumberSeries')) as Record<
+      string,
+      string
+    >;
+  }
+
   /**
    * Internal methods
    */

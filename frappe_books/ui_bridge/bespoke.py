@@ -13,7 +13,7 @@ from frappe_books.reports.financial_statements import Period
 from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
 from frappe_books.reports.gst import GSTRFilters
 from frappe_books.reports.stock import StockFilters
-from frappe_books.series import new_item_names
+from frappe_books.series import default_series_by_schema, new_item_names
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.linked_entries import linked_entries
 from frappe_books.ui_bridge.mapping import target_doctype
@@ -157,6 +157,10 @@ class BooksBespokeQueries:
 	def new_series_names(self, source_schema: Literal["Batch", "SerialNumber"], item: str, count: int):
 		return new_item_names(target_doctype(source_schema), item, count)
 
+	def default_number_series(self):
+		frappe.has_permission("Books Defaults", "read", throw=True)
+		return default_series_by_schema()
+
 	def _monthly_balances(self, from_date, to_date, root_type, balance):
 		rows = self._ledger_totals(
 			from_date, to_date, {"account.root_type": root_type}, [*MONTH_FIELDS, *balance], MONTH_GROUP
@@ -210,4 +214,5 @@ _METHODS = {
 	"getStockBalance": "stock_balance",
 	"getGSTRRows": "gstr_rows",
 	"getNewSeriesNames": "new_series_names",
+	"getDefaultNumberSeries": "default_number_series",
 }

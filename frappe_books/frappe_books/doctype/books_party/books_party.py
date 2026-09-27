@@ -58,6 +58,13 @@ class BooksParty(Document):
 			lead.status = "Converted"
 			lead.save()
 
+	def on_trash(self):
+		if not self.from_lead:
+			return
+		lead = frappe.get_doc("Books Lead", self.from_lead)
+		lead.status = "Interested"
+		lead.save()
+
 
 def _default_account(role):
 	"""Debtors for a customer and Creditors for a supplier, when the chart has them."""

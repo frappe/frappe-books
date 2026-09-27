@@ -60,14 +60,15 @@ export class Party extends Doc {
 
   async afterDelete() {
     await super.afterDelete();
-    if (!this.fromLead) {
-      return;
-    }
-    const leadData = await this.fyo.doc.getDoc(ModelNameEnum.Lead, this.name);
-    await leadData.setAndSync('status', 'Interested');
+    await this.reloadLead();
   }
 
   async afterSync() {
+    await this.reloadLead();
+  }
+
+  /** Shows the lead status the server set when this party was saved or deleted. */
+  async reloadLead() {
     if (!this.fromLead) {
       return;
     }

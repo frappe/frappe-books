@@ -75,6 +75,9 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		)
 		self.assertEqual(frappe.db.get_value("Books Account", "Discounts", "root_type"), "Income")
 		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "write_off_account"))
+		# The chart has no postable round-off or stock account, only groups or other types.
+		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "round_off_account"))
+		self.assertFalse(frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"))
 
 	def test_setup_offers_every_shipped_chart_and_rejects_others(self):
 		charts = {chart["name"]: chart for chart in chart_options()}

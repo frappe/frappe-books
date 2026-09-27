@@ -779,9 +779,10 @@ export default defineComponent({
     },
     clearSuccessfullyImportedEntries() {
       const importer = this.importer;
-      importer.keepRowsNotImported(this.successOldName);
-      this.setImportType(this.importType);
-      this.importer.valueMatrix = importer.valueMatrix;
+      importer.retryRowsNotImported(this.successOldName);
+      this.clear();
+      this.importType = importer.schemaName;
+      this.nullOrImporter = importer;
     },
     setImportType(importType: string): void {
       this.clear();

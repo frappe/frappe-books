@@ -261,8 +261,9 @@ export class Importer {
     );
   }
 
-  /** Leaves only the rows whose name is not among the imported names. */
-  keepRowsNotImported(importedNames: string[]) {
+  /** Keeps only the rows whose name is not among the imported names, to import them again. */
+  retryRowsNotImported(importedNames: string[]) {
+    this.docs = [];
     const nameIndex = this.assignedTemplateFields.indexOf(
       `${this.schemaName}.name`
     );

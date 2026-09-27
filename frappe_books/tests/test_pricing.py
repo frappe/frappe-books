@@ -81,6 +81,11 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual(getdate(coupon.valid_from), valid_from)
 		self.assertEqual(getdate(coupon.valid_to), valid_to)
 
+	def test_coupon_validity_ends_after_it_starts(self):
+		rule = self._pricing_rule(is_coupon_code_based=1)
+		with self.assertRaisesRegex(frappe.ValidationError, "must be before Valid To"):
+			self._coupon(rule, valid_from=nowdate(), valid_to=nowdate())
+
 	def test_product_discount_adds_free_item(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		free_item = make_item(self.income.name, self.expense.name)

@@ -59,10 +59,7 @@ export async function setPOSRowQuantity(
   };
   try {
     await row.set(field, row.isReturn ? -Math.abs(value) : value);
-    const itemRows = (invoice.items ?? []).filter(
-      (itemRow) => itemRow.item === row.item && !itemRow.isFreeItem
-    );
-    await validateQty(invoice, row, itemRows);
+    await validateQty(invoice, row, getItemRows(invoice, row.item));
   } catch (error) {
     await row.setMultiple(previous);
     throw error;
@@ -207,6 +204,30 @@ export async function validatePOSCheckout(
   }
 }
 
+/** Adds `quantity` of a batchless item to its cart row, or to a new row. */
+export async function addPOSItem(
+  sinvDoc: SalesInvoice,
+  item: POSItem,
+  quantity: number,
+  itemQtyMap: ItemQtyMap
+): Promise<SalesInvoiceItem> {
+  const itemDoc = await getItemDoc(sinvDoc, item);
+  if (itemDoc.trackItem && (itemQtyMap[item.name]?.availableQty ?? 0) <= 0) {
+    throw new ValidationError(
+      t`Item ${item.name} is out of stock (quantity is zero)`
+    );
+  }
+
+  const row = getItemRows(sinvDoc, item.name)[0];
+  if (row) {
+    await setPOSRowQuantity(row, 'quantity', (row.quantity ?? 0) + quantity);
+    return row;
+  }
+
+  await sinvDoc.append('items', newItemRow(item, itemDoc, quantity));
+  return sinvDoc.items!.at(-1)!;
+}
+
 /**
  * Add `quantity` of `item` from `batch` to the invoice, merging it into the
  * batch's row. A tracked item needs the whole batch quantity in POS stock.
@@ -218,15 +239,8 @@ export async function addBatchItem(
   quantity: number,
   itemQtyMap: ItemQtyMap
 ) {
-  const itemDoc = (await sinvDoc.fyo.doc.getDoc(
-    ModelNameEnum.Item,
-    item.name
-  )) as Item;
-  const rows =
-    sinvDoc.items?.filter(
-      (row) => row.item === item.name && row.batch === batch && !row.isFreeItem
-    ) ?? [];
-
+  const itemDoc = await getItemDoc(sinvDoc, item);
+  const rows = getItemRows(sinvDoc, item.name, batch);
   if (itemDoc.trackItem) {
     const required = rows.reduce(
       (total, row) => total + (row.quantity ?? 0),
@@ -241,14 +255,39 @@ export async function addBatchItem(
     return;
   }
 
-  await sinvDoc.append('items', {
+  await sinvDoc.append('items', newItemRow(item, itemDoc, quantity, batch));
+}
+
+async function getItemDoc(sinvDoc: SalesInvoice, item: POSItem) {
+  return (await sinvDoc.fyo.doc.getDoc(ModelNameEnum.Item, item.name)) as Item;
+}
+
+/** The cart rows of `item` that are not free items, from `batch` if given. */
+function getItemRows(
+  sinvDoc: SalesInvoice,
+  item?: string,
+  batch?: string
+): SalesInvoiceItem[] {
+  return (sinvDoc.items ?? []).filter(
+    (row) =>
+      row.item === item && !row.isFreeItem && (!batch || row.batch === batch)
+  );
+}
+
+function newItemRow(
+  item: POSItem,
+  itemDoc: Item,
+  quantity: number,
+  batch?: string
+) {
+  return {
     item: item.name,
     quantity,
     transferQuantity: quantity,
     transferUnit: item.unit,
     hsnCode: itemDoc.hsnCode,
     batch,
-  });
+  };
 }
 
 export async function validateShipment(itemSerialNumbers: ItemSerialNumbers) {

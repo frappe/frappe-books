@@ -191,6 +191,7 @@ import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoic
 import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import {
   addBatchItem,
+  addPOSItem,
   validatePOSCheckout,
   getTotalQuantity,
   getTotalTaxedAmount,
@@ -911,173 +912,56 @@ export default defineComponent({
       this.itemSerialNumbers[itemName] = serialNumbers;
       await row.set('serialNumber', serialNumbers);
     },
-    async addItem(item: POSItem | undefined, quantity?: number) {
+    async addItem(item: POSItem | undefined, quantity = 1) {
       try {
         await this.sinvDoc.runFormulas();
         this.validateInvoice();
-
         if (!item) {
           return;
         }
 
-        const itemName = item.name;
-        const storedHasBatch = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          itemName,
-          'hasBatch'
-        );
-        const hasBatch = !!item.hasBatch || !!storedHasBatch;
-
-        if (hasBatch) {
-          this.selectedItemForBatch = itemName;
-          this.pendingBatchItem = { item, quantity: quantity ?? 1 };
-
-          this.toggleModal('BatchSelection', true);
+        if (await this.isBatchItem(item)) {
+          this.selectBatch(item, quantity);
           return;
         }
 
-        const isInventoryItem = await this.fyo.getValue(
-          ModelNameEnum.Item,
-          itemName,
-          'trackItem'
+        const row = await addPOSItem(
+          this.sinvDoc as SalesInvoice,
+          item,
+          quantity,
+          this.itemQtyMap
         );
-
-        if (isInventoryItem) {
-          const availableQty = this.itemQtyMap[itemName]?.availableQty ?? 0;
-          if (availableQty <= 0) {
-            throw new ValidationError(
-              t`Item ${itemName} is out of stock (quantity is zero)`
-            );
-          }
-        }
-
-        const existingItems =
-          this.sinvDoc.items?.filter(
-            (invoiceItem) =>
-              invoiceItem.item === itemName && !invoiceItem.isFreeItem
-          ) ?? [];
-
-        const itemsHsncode = (await this.fyo.getValue(
-          'Item',
-          itemName,
-          'hsnCode'
-        )) as number;
-
-        if (hasBatch) {
-          const addQty = quantity ?? 1;
-
-          if (existingItems.length > 0) {
-            for (let existingItem of existingItems) {
-              const availableQty = await this.fyo.db.getStockQuantity(
-                existingItem.item as string,
-                undefined,
-                undefined,
-                undefined,
-                existingItem.batch
-              );
-              if (
-                existingItem.batch != null &&
-                availableQty != null &&
-                availableQty > (existingItem.quantity as number)
-              ) {
-                const currentQty = existingItem.quantity ?? 0;
-                await existingItem.set('quantity', currentQty + addQty);
-
-                await this.assignActiveSerialNumbers(
-                  itemName,
-                  currentQty + addQty,
-                  existingItem
-                );
-
-                await this.previewInvoice();
-                await this.sinvDoc.runFormulas();
-                return;
-              }
-            }
-          }
-
-          await this.sinvDoc.append('items', {
-            item: itemName,
-            quantity: addQty,
-            transferQuantity: addQty,
-            transferUnit: item.unit,
-            hsnCode: itemsHsncode,
-          });
-
-          const newItemRows = this.sinvDoc.items?.filter(
-            (row) => row.item === itemName && !row.isFreeItem
-          );
-          if (newItemRows?.length) {
-            await this.assignActiveSerialNumbers(
-              itemName,
-              addQty,
-              newItemRows[newItemRows.length - 1]
-            );
-          }
-
-          await this.previewInvoice();
-          await this.sinvDoc.runFormulas();
-          return;
-        }
-
-        if (existingItems.length) {
-          const currentQty = existingItems[0].quantity ?? 0;
-          const addQty = quantity ?? 1;
-          if (isInventoryItem) {
-            const availableQty = this.itemQtyMap[itemName]?.availableQty ?? 0;
-            if (currentQty + addQty > availableQty) {
-              throw new ValidationError(
-                `Cannot add more than the available quantity for ${itemName}`
-              );
-            }
-          }
-
-          await existingItems[0].set('quantity', currentQty + addQty);
-          await this.assignActiveSerialNumbers(
-            itemName,
-            currentQty + addQty,
-            existingItems[0]
-          );
-
-          await this.previewInvoice();
-          await this.sinvDoc.runFormulas();
-          return;
-        }
-
-        await this.sinvDoc.append('items', {
-          item: itemName,
-          quantity: quantity ?? 1,
-          transferQuantity: quantity ?? 1,
-          transferUnit: item.unit,
-          hsnCode: itemsHsncode,
-        });
-
-        const newItemRows = this.sinvDoc.items?.filter(
-          (row) => row.item === itemName && !row.isFreeItem
+        await this.assignActiveSerialNumbers(
+          item.name,
+          row.quantity as number,
+          row
         );
-        if (newItemRows?.length) {
-          await this.assignActiveSerialNumbers(
-            itemName,
-            quantity ?? 1,
-            newItemRows[newItemRows.length - 1]
-          );
-        }
-
         await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       } catch (error) {
-        return showToast({
-          type: 'error',
-          message: t`${error as string}`,
-        });
+        showToast({ type: 'error', message: t`${error as string}` });
       }
+    },
+    async isBatchItem(item: POSItem): Promise<boolean> {
+      return (
+        item.hasBatch ||
+        !!(await this.fyo.getValue(ModelNameEnum.Item, item.name, 'hasBatch'))
+      );
+    },
+    selectBatch(item: POSItem, quantity: number) {
+      this.selectedItemForBatch = item.name;
+      this.pendingBatchItem = { item, quantity };
+      this.toggleModal('BatchSelection', true);
     },
     async handleBatchSelected(batchName: string) {
       if (!this.pendingBatchItem) {
         return;
       }
 
-      const { item, quantity } = this.pendingBatchItem;
+      const { item, quantity } = this.pendingBatchItem as {
+        item: POSItem;
+        quantity: number;
+      };
       this.pendingBatchItem = null;
 
       try {
@@ -1093,10 +977,7 @@ export default defineComponent({
         await this.previewInvoice();
         await this.sinvDoc.runFormulas();
       } catch (error) {
-        showToast({
-          type: 'error',
-          message: t`${error as string}`,
-        });
+        showToast({ type: 'error', message: t`${error as string}` });
       }
     },
 

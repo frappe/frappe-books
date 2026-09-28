@@ -120,9 +120,20 @@ def update_party_points(customer):
 	frappe.db.set_value("Books Party", customer, "loyalty_points", get_available_points(customer))
 
 
+def program_status(program):
+	"""Expired after its last day, Maxed at its use limit, else Active while enabled."""
+	if getdate(program.to_date) < getdate(nowdate()):
+		return "Expired"
+	if program.maximum_use and program.used >= program.maximum_use:
+		return "Maxed"
+	return "Active" if program.is_enabled else "Disabled"
+
+
 def expire_programs_and_points():
 	frappe.db.set_value(
-		"Books Loyalty Program", {"is_enabled": 1, "to_date": ["<", getdate(nowdate())]}, "is_enabled", 0
+		"Books Loyalty Program",
+		{"status": ["!=", "Expired"], "to_date": ["<", getdate(nowdate())]},
+		{"is_enabled": 0, "status": "Expired"},
 	)
 	party = frappe.qb.DocType("Books Party")
 	entry = frappe.qb.DocType(ENTRY)
@@ -317,12 +328,16 @@ def _validate_redeemable(program, on_date):
 
 def _update_program_usage(program_name, delta):
 	program = frappe.db.get_value(
-		"Books Loyalty Program", program_name, ["used", "maximum_use"], as_dict=True, for_update=True
+		"Books Loyalty Program",
+		program_name,
+		["used", "maximum_use", "is_enabled", "to_date"],
+		as_dict=True,
+		for_update=True,
 	)
-	used = program.used + delta
-	if used < 0 or (delta > 0 and program.maximum_use and used > program.maximum_use):
+	program.used += delta
+	if program.used < 0 or (delta > 0 and program.maximum_use and program.used > program.maximum_use):
 		frappe.throw(_("Loyalty program {0} usage is out of range.").format(program_name))
-	values = {"used": used}
-	if delta > 0 and program.maximum_use and used == program.maximum_use:
-		values["is_enabled"] = 0
+	if delta > 0 and program.maximum_use and program.used == program.maximum_use:
+		program.is_enabled = 0
+	values = {"used": program.used, "is_enabled": program.is_enabled, "status": program_status(program)}
 	frappe.db.set_value("Books Loyalty Program", program_name, values)

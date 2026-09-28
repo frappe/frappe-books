@@ -374,6 +374,7 @@
         "isEnabled": "is_enabled",
         "maximumUse": "maximum_use",
         "name": "name",
+        "status": "status",
         "toDate": "to_date",
         "used": "used"
       }

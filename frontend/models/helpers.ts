@@ -625,37 +625,13 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
     fieldname: 'status',
     fieldtype: 'Select',
     badge(doc) {
-      const status = getLoyaltyProgramStatus(doc);
+      const status = doc.status as string;
       return {
         theme: loyaltyProgramStatusColor[status] ?? 'gray',
         label: getLoyaltyProgramStatusText(status),
       };
     },
   };
-}
-
-export function getLoyaltyProgramStatus(doc?: RenderData | Doc): string {
-  if (!doc) {
-    return '';
-  }
-
-  const currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
-
-  const toDate = doc.toDate as Date;
-
-  if (toDate && toDate <= currentDate) {
-    return 'Expired';
-  }
-
-  const maximumUse = doc.maximumUse as number;
-  const used = doc.used as number;
-
-  if (maximumUse > 0 && used >= maximumUse) {
-    return 'Maxed';
-  }
-
-  return 'Active';
 }
 
 export const loyaltyProgramStatusColor: Record<string, BadgeTheme | undefined> = {

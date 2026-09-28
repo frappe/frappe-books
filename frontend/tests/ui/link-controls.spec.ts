@@ -111,31 +111,34 @@ test('dynamic links keep display text separate from their stored IDs', async ({
   });
 });
 
-test('free text autocomplete still accepts typing and option selection', async ({
-  page,
-}) => {
+test('free text autocomplete still accepts typing', async ({ page }) => {
   await openFixture(page, 'Address', addressName);
-  const country = page.getByRole('combobox', { name: /^Country/ });
-  await country.fill('Canada');
-  await expect
-    .poll(() => getAddressState(page))
-    .toEqual({
-      dirty: true,
-      country: 'Canada',
-    });
-  await country.press('Escape');
   await page
     .getByRole('combobox', { name: 'State', exact: true })
     .fill('New Province');
   await expect
     .poll(() => page.evaluate(() => (window as any).linkFixture.address.state))
     .toBe('New Province');
-  await country.fill('Ind');
-  await page.getByRole('option', { name: 'India', exact: true }).click();
+});
+
+test('an address country is searched and picked from the server countries', async ({
+  page,
+}) => {
+  await openFixture(page, 'Address', addressName);
+  const country = page.getByRole('combobox', { name: /^Country/ });
   await expect(country).toHaveValue('India');
+  await country.fill('Canad');
+  const canada = page.getByRole('option', { name: 'Canada', exact: true });
+  await expect(canada).toBeVisible();
+  expect(await getAddressState(page)).toEqual({
+    dirty: false,
+    country: 'India',
+  });
+  await canada.click();
+  await expect(country).toHaveValue('Canada');
   expect(await getAddressState(page)).toEqual({
     dirty: true,
-    country: 'India',
+    country: 'Canada',
   });
 });
 

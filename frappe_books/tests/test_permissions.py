@@ -71,6 +71,16 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			template.template = "<div>{{ doc.name }}</div>"
 			self.assertRaises(frappe.PermissionError, template.save)
 
+	def test_roles_import_the_doctypes_they_create(self):
+		for user, doctype, allowed in (
+			(TEST_USER, "Books Sales Invoice", True),
+			(TEST_USER, "Books Tax", False),
+			(MANAGER, "Books Tax", True),
+			(MANAGER, "Books Ledger Entry", False),
+		):
+			with self.subTest(user=user, doctype=doctype), self.set_user(user):
+				self.assertEqual(frappe.has_permission(doctype, "import"), allowed)
+
 	def test_bridge_ledger_writes_follow_docperms(self):
 		with self.set_user(MANAGER):
 			for schema in ("AccountingLedgerEntry", "StockLedgerEntry", "LoyaltyPointEntry"):

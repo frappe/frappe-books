@@ -70,7 +70,7 @@ await build({
       } from './models/inventory/helpers';
       export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
-      export { Importer, importDoc } from './src/importer';
+      export { Importer, getImportableSchemaNames, importDoc } from './src/importer';
     `,
     resolveDir: frontend,
   },
@@ -158,6 +158,7 @@ export const {
   generateCSV,
   parseCSV,
   Importer,
+  getImportableSchemaNames,
   importDoc,
 } = bundle;
 

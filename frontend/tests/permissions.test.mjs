@@ -4,7 +4,7 @@ import {
   exportsOwnDocumentsOnly,
   hasPermission,
 } from '../fyo/utils/permissions.ts';
-import { makeFyo } from './helpers/accounting.mjs';
+import { getImportableSchemaNames, makeFyo } from './helpers/accounting.mjs';
 
 const doctypes = { SalesInvoice: 'Books Sales Invoice', Tax: 'Books Tax' };
 
@@ -58,6 +58,15 @@ test('printing a document needs the print permission', async () => {
 
   payment.docPermissions = { read: 1, print: 1 };
   assert.equal(payment.can('print'), true);
+});
+
+test('the import wizard offers only the schemas the user may import', async () => {
+  const fyo = await makeFyo();
+  fyo.store.permissions = {
+    doctypes: { Party: 'Books Party', Tax: 'Books Tax' },
+    user: { can_import: ['Books Party'] },
+  };
+  assert.deepEqual(getImportableSchemaNames(fyo), ['Party']);
 });
 
 test('export granted only to owners exports only the user’s documents', () => {

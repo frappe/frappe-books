@@ -14,7 +14,6 @@ import {
 } from 'fyo/utils/errors';
 import type { BootUserPermissions } from 'fyo/utils/permissions';
 import type { ChartOfAccounts } from 'utils/types';
-import type { PermissionMap } from 'fyo/utils/permissions';
 import { ref } from 'vue';
 
 type ErrorClass = new (message: string, shouldStore?: boolean) => BaseError;

@@ -2,6 +2,7 @@
 # See license.txt
 
 import frappe
+from frappe.desk.page.setup_wizard.setup_wizard import get_setup_wizard_url
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
@@ -113,6 +114,44 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			with self.subTest(chart=name):
 				self.assert_settings_accept_default_accounts(load_chart(name))
 		self.assertRaisesRegex(frappe.ValidationError, "Unknown chart of accounts", load_chart, "Standard")
+
+	def test_setup_completes_frappe_setup_on_a_fresh_site(self):
+		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
+		frappe.db.set_value("Installed Application", {"app_name": "frappe"}, "is_setup_complete", 0)
+		frappe.clear_document_cache("Installed Applications", "Installed Applications")
+		self._wizard(country="Switzerland", currency="CHF", time_zone="Europe/Zurich").save()
+
+		complete_setup()
+
+		self.assertTrue(frappe.is_setup_complete())
+		settings = frappe.get_single("System Settings")
+		self.assertEqual(
+			(settings.country, settings.currency, settings.time_zone, settings.date_format),
+			(
+				"Switzerland",
+				"CHF",
+				"Europe/Zurich",
+				frappe.db.get_value("Country", "Switzerland", "date_format"),
+			),
+		)
+
+	def test_fresh_site_opens_the_books_setup_wizard(self):
+		self.assertEqual(get_setup_wizard_url(), "/books")
+
+	def test_wizard_takes_a_valid_time_zone(self):
+		for time_zone, saved in (("Asia/Calcutta", "Asia/Kolkata"), (None, "Asia/Kolkata")):
+			with self.subTest(time_zone=time_zone):
+				wizard = self._wizard(time_zone=time_zone)
+				wizard.save()
+				self.assertEqual(wizard.time_zone, saved)
+		self.assertRaisesRegex(
+			frappe.ValidationError, "not a valid time zone", self._wizard(time_zone="Mars/Olympus").save
+		)
+
+	def test_wizard_takes_frappe_countries_and_currencies(self):
+		for values in ({"country": "Atlantis"}, {"currency": "XXX"}):
+			with self.subTest(values=values):
+				self.assertRaises(frappe.LinkValidationError, self._wizard(**values).save)
 
 	def test_setup_completes_only_once(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)

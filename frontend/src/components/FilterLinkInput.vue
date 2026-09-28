@@ -21,6 +21,7 @@ import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { Combobox as FrappeCombobox } from 'frappe-ui';
 import { fyo } from 'src/initFyo';
+import { LINK_PAGE_LENGTH } from 'src/utils';
 
 type Option = { label: string; value: string; description?: string };
 
@@ -32,17 +33,20 @@ export default defineComponent({
   },
   emits: ['change'],
   data() {
-    return { records: [] as Option[], search: '', loading: false, error: '' };
+    return {
+      records: [] as Option[],
+      search: '',
+      loading: false,
+      error: '',
+      request: 0,
+    };
   },
   computed: {
     options(): Option[] {
-      const query = this.search.toLocaleLowerCase();
-      const options = this.records.filter((option) =>
-        `${option.label} ${option.value}`.toLocaleLowerCase().includes(query)
-      );
+      const options = [...this.records];
       if (
         this.value &&
-        !query &&
+        !this.search &&
         !options.some((option) => option.value === this.value)
       )
         options.unshift({ label: this.value, value: this.value });
@@ -50,21 +54,31 @@ export default defineComponent({
     },
   },
   methods: {
-    onInput(event: Event) {
+    async onInput(event: Event) {
       this.search = (event.target as HTMLInputElement).value;
       if (!this.search) this.$emit('change', '');
+      await this.loadRecords();
     },
     async onOpen(open: boolean) {
       this.search = '';
-      if (!open || this.loading) return;
+      if (open) await this.loadRecords();
+    },
+    /** Loads a page of the records Frappe's link search finds for the typed text. */
+    async loadRecords() {
+      const request = ++this.request;
       this.loading = true;
       this.error = '';
       try {
         const schema = fyo.schemaMap[this.target];
         const title = schema?.linkDisplayField || schema?.titleField || 'name';
-        const rows = await fyo.db.getAll(this.target, {
-          fields: [...new Set(['name', title])],
-        });
+        const rows = await fyo.db.searchLink(
+          this.target,
+          this.search,
+          null,
+          [...new Set(['name', title])],
+          LINK_PAGE_LENGTH
+        );
+        if (request !== this.request) return;
         this.records = rows.map((row) => ({
           label: String(row[title] || row.name),
           value: String(row.name),
@@ -74,9 +88,9 @@ export default defineComponent({
               : undefined,
         }));
       } catch {
-        this.error = t`Unable to load options`;
+        if (request === this.request) this.error = t`Unable to load options`;
       } finally {
-        this.loading = false;
+        if (request === this.request) this.loading = false;
       }
     },
   },

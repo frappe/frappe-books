@@ -87,16 +87,27 @@ async function mount() {
     return lastQuery.rows;
   };
   const list = ref<InstanceType<typeof List>>();
+  const lookupRows = (schemaName: string) => {
+    state.lookupCalls.push(schemaName);
+    if (state.lookupFailure) throw new Error('Lookup unavailable');
+    if (schemaName === 'User')
+      return [{ name: 'Administrator' }, { name: 'Guest' }];
+    return schemaName === 'NumberSeries'
+      ? [{ name: 'JV-' }, { name: 'BANK-' }]
+      : [{ name: `${schemaName}-001` }, { name: `${schemaName}-002` }];
+  };
+  // The server's link search matches the typed letters in order.
+  fyo.db.searchLink = async (schemaName, text) => {
+    const letters = [...text.toLowerCase()].map((letter) =>
+      letter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    );
+    const pattern = new RegExp(letters.join('.*'));
+    return lookupRows(schemaName).filter(({ name }) =>
+      pattern.test(name.toLowerCase())
+    );
+  };
   fyo.db.getAll = async (_schema, options = {}) => {
-    if (options.fields?.[0] !== '*') {
-      state.lookupCalls.push(_schema);
-      if (state.lookupFailure) throw new Error('Lookup unavailable');
-      if (_schema === 'User')
-        return [{ name: 'Administrator' }, { name: 'Guest' }];
-      return _schema === 'NumberSeries'
-        ? [{ name: 'JV-' }, { name: 'BANK-' }]
-        : [{ name: `${_schema}-001` }, { name: `${_schema}-002` }];
-    }
+    if (options.fields?.[0] !== '*') return lookupRows(_schema);
     const rows = await queryRows(_schema, options.filters);
     const start = options.offset ?? 0;
     return rows.slice(start, options.limit ? start + options.limit : undefined);

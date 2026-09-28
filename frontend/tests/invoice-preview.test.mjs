@@ -30,6 +30,18 @@ test('a preview applies the values the server calculated', async () => {
   assert.ok(invoice.items[1].name);
 });
 
+test('a saved invoice previews its edits with the modified value it was read at', async () => {
+  const { invoice, calls } = await makeInvoice((values) => values);
+  invoice._notInserted = false;
+  invoice.modified = '2026-09-28 10:00:00.123456';
+  await invoice.set('terms', 'Edited');
+
+  await invoice.preview();
+
+  assert.equal(calls.at(-1).name, invoice.name);
+  assert.equal(calls.at(-1).values.modified, '2026-09-28 10:00:00.123456');
+});
+
 test('a preview is dropped when the invoice changes while it runs', async () => {
   let release;
   const running = new Promise((resolve) => (release = resolve));

@@ -1,4 +1,5 @@
 import frappe
+from frappe.permissions import add_permission, update_permission_property
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime, nowdate, set_request
 
@@ -27,6 +28,7 @@ COMPARED_ROW_FIELDS = (
 	"isFreeItem",
 )
 NO_ROLE_USER = "books-preview-no-role@example.com"
+CREATOR = "books-preview-creator@example.com"
 
 
 class IntegrationTestInvoicePreview(IntegrationTestCase):
@@ -92,6 +94,22 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		with self.set_user(ensure_user(NO_ROLE_USER)):
 			self.assertRaises(frappe.PermissionError, _preview, self.values)
 			self.assertRaises(frappe.PermissionError, _preview, saved, saved["name"])
+
+	def test_preview_needs_create_for_a_new_invoice_and_write_for_a_saved_one(self):
+		saved = self.bridge.insert("SalesInvoice", self.values)
+		role = frappe.get_doc({"doctype": "Role", "role_name": unique_name("Books Invoice Creator")}).insert()
+		add_permission("Books Sales Invoice", role.name)
+		update_permission_property("Books Sales Invoice", role.name, 0, "create", 1)
+
+		with self.set_user(ensure_user(CREATOR, role.name)):
+			self.assertEqual(_preview(self.values)["netTotal"], saved["netTotal"])
+			self.assertRaises(frappe.PermissionError, _preview, saved, saved["name"])
+
+	def test_a_preview_of_a_draft_changed_since_it_was_read_is_refused(self):
+		saved = self.bridge.insert("SalesInvoice", self.values)
+		frappe.db.set_value("Books Sales Invoice", saved["name"], "terms", "Changed elsewhere")
+
+		self.assertRaises(frappe.TimestampMismatchError, _preview, saved, saved["name"])
 
 	def test_only_whitelisted_methods_run(self):
 		with self.assertRaisesRegex(frappe.PermissionError, "not whitelisted"):

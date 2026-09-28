@@ -480,36 +480,15 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    badge(doc) {
-      const status = doc.status as string;
-      return {
-        theme: loyaltyProgramStatusColor[status] ?? 'gray',
-        label: getLoyaltyProgramStatusText(status),
-      };
-    },
+    badge: (doc) => getLoyaltyProgramBadge(doc),
   };
 }
 
-export const loyaltyProgramStatusColor: Record<string, BadgeTheme | undefined> = {
-  Active: 'green',
-  Disabled: 'gray',
-  Expired: 'red',
-  Maxed: 'amber',
-};
-
-export function getLoyaltyProgramStatusText(status: string): string {
-  switch (status) {
-    case 'Active':
-      return t`Active`;
-    case 'Disabled':
-      return t`Disabled`;
-    case 'Expired':
-      return t`Expired`;
-    case 'Maxed':
-      return t`Maxed`;
-    default:
-      return '';
-  }
+export function getLoyaltyProgramBadge(doc: RenderData | Doc): BadgeData {
+  const status = doc.status as string;
+  return (
+    getStateBadge(doc.schema, status) ?? { theme: 'gray', label: status ?? '' }
+  );
 }
 
 type ModelsWithItems = Invoice | StockTransfer | StockMovement;

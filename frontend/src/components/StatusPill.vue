@@ -12,8 +12,7 @@ import { Party } from 'models/baseModels/Party/Party';
 import {
   getDocStatus,
   getDocStatusBadge,
-  getLoyaltyProgramStatusText,
-  loyaltyProgramStatusColor,
+  getLoyaltyProgramBadge,
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
@@ -31,11 +30,7 @@ export default defineComponent({
     badge(): BadgeData {
       const status = getDocStatus(this.doc);
       if (status === 'Saved' && this.doc instanceof LoyaltyProgram) {
-        const programStatus = this.doc.status as string;
-        return {
-          theme: loyaltyProgramStatusColor[programStatus] ?? 'gray',
-          label: getLoyaltyProgramStatusText(programStatus),
-        };
+        return getLoyaltyProgramBadge(this.doc);
       }
 
       const outstanding = this.doc.outstandingAmount as Money | undefined;

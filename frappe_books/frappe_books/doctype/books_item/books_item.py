@@ -8,7 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
-from frappe_books.accounting.accounts import validate_account
+from frappe_books.accounting.accounts import latest_ledger_account, validate_account
 from frappe_books.series import ITEM_SERIES
 from frappe_books.settings import require_features
 
@@ -64,6 +64,8 @@ class BooksItem(Document):
 			if self.get(flag) and series:
 				# A dash keeps the series prefix apart from its numbers.
 				self.set(fieldname, series if series.endswith("-") else f"{series}-")
+		self.income_account = self.income_account or _default_income_account(self.item_type)
+		self.expense_account = self.expense_account or _default_expense_account(self.track_item)
 
 	def validate(self):
 		require_features(self, ITEM_FEATURES)
@@ -106,3 +108,16 @@ class BooksItem(Document):
 		frappe.get_doc({"doctype": doctype, "name": name, "start": 1001, "pad_zeros": 4}).insert(
 			ignore_if_duplicate=True
 		)
+
+
+def _default_income_account(item_type):
+	"""Products sell into Sales and services into Service, when the chart has them."""
+	account = "Sales" if item_type == "Product" else "Service"
+	return account if frappe.db.exists("Books Account", account) else None
+
+
+def _default_expense_account(track_item):
+	"""Tracked items are bought into stock received but not billed, others into cost of goods sold."""
+	if track_item:
+		return frappe.db.get_single_value("Books Inventory Settings", "stock_received_but_not_billed")
+	return latest_ledger_account("Cost of Goods Sold")

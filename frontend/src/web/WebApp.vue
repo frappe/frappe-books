@@ -119,17 +119,15 @@ export default defineComponent({
         )}`;
         return;
       }
-      fyo.store.isDevelopment = window.books_boot.developer_mode;
-      fyo.store.appVersion = window.books_boot.app_version;
-      fyo.store.permissions = {
-        doctypes: window.books_boot.doctypes,
-        user: boot.user,
-      };
-      fyo.store.chartsOfAccounts = window.books_boot.charts_of_accounts;
+      const books = boot.books!;
+      fyo.store.isDevelopment = !!boot.developer_mode;
+      fyo.store.appVersion = boot.versions?.frappe_books ?? '';
+      fyo.store.permissions = { doctypes: books.doctypes, user: boot.user };
+      fyo.store.chartsOfAccounts = books.charts_of_accounts;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 
-      const countryCode = window.books_boot.country_code || '-';
+      const countryCode = books.country_code || '-';
       await fyo.db.connect(countryCode);
       await fyo.initializeAndRegister(
         models,

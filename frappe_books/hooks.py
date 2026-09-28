@@ -26,6 +26,8 @@ add_to_apps_screen = [
 
 website_route_rules = [{"from_route": "/books/<path:app_path>", "to_route": "books"}]
 
+extend_bootinfo = "frappe_books.boot.extend_bootinfo"
+
 jinja = {"methods": ["frappe_books.printing.get_print_settings"]}
 
 after_install = "frappe_books.setup.bootstrap"

@@ -69,18 +69,18 @@ declare global {
       csrf_token?: string;
       boot?: {
         lang?: string;
+        developer_mode?: number;
+        versions?: Record<string, string | undefined>;
         user?: BootUserPermissions & { name?: string };
         user_info?: Record<string, { fullname?: string }>;
+        /** Added by `frappe_books.boot.extend_bootinfo`. */
+        books?: {
+          country_code: string;
+          doctypes: Record<string, string>;
+          charts_of_accounts: ChartOfAccounts[];
+        };
         [key: string]: unknown;
       };
-    };
-    books_boot: {
-      country_code: string;
-      setup_complete: boolean;
-      app_version: string;
-      developer_mode: boolean;
-      doctypes: Record<string, string>;
-      charts_of_accounts: ChartOfAccounts[];
     };
   }
 }

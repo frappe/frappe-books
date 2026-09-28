@@ -84,7 +84,7 @@
     {
       "fieldname": "payments",
       "label": "Payments",
-      "section": "Payments"
+      "hidden": true
     },
     {
       "fieldname": "pricingRuleDetail",

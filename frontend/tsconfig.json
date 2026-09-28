@@ -17,7 +17,6 @@
     "paths": {
       "src/*": ["src/*"],
       "schemas/*": ["schemas/*"],
-      "regional/*": ["regional/*"],
       "fixtures/*": ["fixtures/*"],
       "reports/*": ["reports/*"],
       "models/*": ["models/*"],
@@ -43,7 +42,6 @@
     "models/**/*.ts",
     "reports/**/*.ts",
     "scripts/**/*.ts",
-    "regional/**/*.ts",
     "utils/**/*.ts",
     "vite.config.ts"
   ],

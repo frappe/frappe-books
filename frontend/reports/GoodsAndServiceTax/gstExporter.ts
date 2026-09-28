@@ -1,7 +1,6 @@
 import { Action } from 'fyo/model/types';
 import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
-import { codeStateMap } from 'regional/in';
 import { ExportExtension } from 'reports/types';
 import { showDialog } from 'src/utils/interactive';
 import { invertMap } from 'utils';
@@ -195,7 +194,7 @@ function generateB2bData(report: BaseGSTR): B2BCustomer[] {
 
 function generateB2clData(report: BaseGSTR): B2CLStateInvoiceRecord[] {
   const b2cl: B2CLStateInvoiceRecord[] = [];
-  const stateCodeMap = invertMap(codeStateMap);
+  const stateCodeMap = invertMap(report.fyo.store.indianStates);
   for (const rows of getInvoiceRows(report)) {
     const [row] = rows;
     const invRecord: B2CLInvRecord = {
@@ -240,7 +239,7 @@ function getInvoiceDate(row: GSTRRow) {
 }
 
 function generateB2csData(report: BaseGSTR): B2CSInvRecord[] {
-  const stateCodeMap = invertMap(codeStateMap);
+  const stateCodeMap = invertMap(report.fyo.store.indianStates);
   const b2cs: B2CSInvRecord[] = [];
 
   for (const row of report.gstrRows ?? []) {

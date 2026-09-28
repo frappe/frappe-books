@@ -123,6 +123,7 @@ export default defineComponent({
       fyo.store.appVersion = window.books_boot.app_version;
       fyo.store.permissions = window.books_boot.permissions;
       fyo.store.chartsOfAccounts = window.books_boot.charts_of_accounts;
+      fyo.store.indianStates = window.books_boot.indian_states;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 

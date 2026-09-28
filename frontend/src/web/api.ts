@@ -81,6 +81,7 @@ declare global {
       developer_mode: boolean;
       permissions: PermissionMap;
       charts_of_accounts: ChartOfAccounts[];
+      indian_states: Record<string, string>;
     };
   }
 }

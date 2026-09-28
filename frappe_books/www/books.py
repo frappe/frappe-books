@@ -11,6 +11,7 @@ from frappe.utils.jinja_globals import is_rtl
 
 from frappe_books.coa import chart_options
 from frappe_books.permissions import get_schema_permissions, has_app_permission
+from frappe_books.regional import INDIAN_STATES
 from frappe_books.settings import regional_code
 
 no_cache = 1
@@ -62,4 +63,5 @@ def _books_boot():
 		"developer_mode": bool(frappe.conf.developer_mode),
 		"permissions": get_schema_permissions(),
 		"charts_of_accounts": chart_options(),
+		"indian_states": INDIAN_STATES,
 	}

@@ -2,7 +2,6 @@ import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
 import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
-import { codeStateMap } from 'regional/in';
 import { Report } from 'reports/Report';
 import { ColumnField, ReportData, ReportRow } from 'reports/types';
 import { Field, OptionField } from 'schemas/types';
@@ -117,12 +116,9 @@ export abstract class BaseGSTR extends Report {
         label: t`Place`,
         placeholder: t`Place`,
         fieldname: 'place',
-        options: Object.keys(codeStateMap).map((code) => {
-          return {
-            value: code,
-            label: codeStateMap[code],
-          };
-        }),
+        options: Object.entries(this.fyo.store.indianStates).map(
+          ([code, state]) => ({ value: code, label: state })
+        ),
       } as OptionField,
       {
         fieldtype: 'Date',

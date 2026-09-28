@@ -67,9 +67,9 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 			"items": [{"item": self.item.name, "rate": 90, "quantity": 2}],
 			"payments": [{"paymentMethod": "Cash", "amount": 200}],
 		}
-		name = BooksDatabaseBridge().insert("SalesInvoice", values)["name"]
+		inserted = BooksDatabaseBridge().insert("SalesInvoice", values)
 
-		invoice = lifecycle_action("submit", "SalesInvoice", name)
+		invoice = lifecycle_action("submit", "SalesInvoice", inserted["name"], inserted["modified"])
 
 		self.assertEqual((invoice["outstandingAmount"], invoice["status"]), (0, "Paid"))
 

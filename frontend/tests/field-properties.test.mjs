@@ -126,16 +126,24 @@ test('computed and reference fields keep the type the Books app gives them', () 
 });
 
 test('a custom field takes the server properties of its hosted column', () => {
-  const region = getField('Party', 'region', { fieldtype: 'Data', reqd: 1 }, [
-    {
-      parent: 'Party',
-      label: 'Region',
-      fieldname: 'region',
-      fieldtype: 'Data',
-    },
-  ]);
+  const region = getField(
+    'Party',
+    'region',
+    { fieldtype: 'Data', label: 'Region', reqd: 1 },
+    [{ parent: 'Party', fieldname: 'region', section: 'Location' }]
+  );
   assert.equal(region.isCustom, true);
+  assert.equal(region.label, 'Region');
+  assert.equal(region.section, 'Location');
   assert.equal(region.required, true);
+});
+
+test('a custom field without a Custom Field on the server is left out', () => {
+  const schemas = getSchemas('-', [{ parent: 'Party', fieldname: 'region' }]);
+  assert.equal(
+    schemas.Party.fields.some((field) => field.fieldname === 'region'),
+    false
+  );
 });
 
 test('a field set only once is read only after the first save', () => {

@@ -59,8 +59,13 @@ def get_schema_field_properties(schema: str) -> dict[str, dict[str, Any]]:
 
 
 def get_docfield_properties(schema: str, docfield) -> dict[str, Any]:
-	"""Return the set data properties of one field, naming linked doctypes and fields as Books does."""
+	"""Return the set data properties of one field, naming linked doctypes and fields as Books does.
+
+	A custom field also sends its label, as no Books schema file holds it.
+	"""
 	properties = {key: docfield.get(key) for key in DATA_PROPERTIES if docfield.get(key)}
+	if docfield.get("is_custom_field"):
+		properties["label"] = docfield.label
 	if docfield.fieldtype == "Link" or docfield.fieldtype in table_fields:
 		properties["options"] = source_reference(docfield.options)
 	elif docfield.fieldtype == "Dynamic Link":

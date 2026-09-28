@@ -22,19 +22,7 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
 
   async getRawCustomFields(): Promise<RawCustomField[]> {
     return (await this.call('getAll', 'CustomField', {
-      fields: [
-        'parent',
-        'label',
-        'fieldname',
-        'fieldtype',
-        'isRequired',
-        'section',
-        'tab',
-        'options',
-        'target',
-        'references',
-        'default',
-      ],
+      fields: ['parent', 'fieldname', 'section', 'tab'],
     })) as RawCustomField[];
   }
 

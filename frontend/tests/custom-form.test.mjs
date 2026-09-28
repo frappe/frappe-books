@@ -102,11 +102,12 @@ test('optional custom fields retain their configured defaults', async () => {
   setDefinitions([
     {
       parent: 'UOM',
-      label: 'My Note',
       fieldname: 'myNote',
-      fieldtype: 'Data',
-      isRequired: false,
-      default: 'Optional default',
+      docfield: {
+        fieldtype: 'Data',
+        label: 'My Note',
+        default: 'Optional default',
+      },
     },
   ]);
   await form.afterSync();
@@ -121,22 +122,22 @@ test('saving and deleting customizations refresh cached documents without losing
     name: 'Test Unit',
     isWhole: true,
   });
-  const field = {
-    parent: 'UOM',
-    label: 'My Note',
-    fieldname: 'myNote',
+  const docfield = {
     fieldtype: 'Data',
-    isRequired: true,
+    label: 'My Note',
+    reqd: 1,
     default: 'Initial note',
-    tab: 'Custom',
   };
+  const field = { parent: 'UOM', fieldname: 'myNote', tab: 'Custom', docfield };
   setDefinitions([field]);
   await form.afterSync();
   assert.ok(unit.fieldMap.myNote);
   assert.equal(unit.myNote, 'Initial note');
   await unit.set('myNote', 'Unsaved note');
 
-  setDefinitions([{ ...field, label: 'Updated label' }]);
+  setDefinitions([
+    { ...field, docfield: { ...docfield, label: 'Updated label' } },
+  ]);
   await form.afterSync();
   assert.equal(unit.fieldMap.myNote.label, 'Updated label');
   assert.equal(unit.myNote, 'Unsaved note');
@@ -163,10 +164,9 @@ test('customizing a child schema refreshes rows inside cached parent documents',
   setDefinitions([
     {
       parent: 'SalesInvoiceItem',
-      label: 'Packing Note',
       fieldname: 'packingNote',
-      fieldtype: 'Data',
       tab: 'Custom',
+      docfield: { fieldtype: 'Data', label: 'Packing Note' },
     },
   ]);
   await form.afterSync();

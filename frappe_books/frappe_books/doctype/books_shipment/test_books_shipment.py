@@ -251,6 +251,13 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "is not for Sales"):
 			self._make_shipment(item, quantity=1, rate=25)
 
+	def test_rows_default_to_the_inventory_location(self):
+		item, _cogs, _stock = self._tracked_item()
+		frappe.db.set_single_value("Books Inventory Settings", "default_location", "Stores")
+		shipment = self._make_shipment(item, quantity=1, rate=25, items=[{"item": item.name, "quantity": 1}])
+
+		self.assertEqual(shipment.items[0].location, "Stores")
+
 	def test_return_must_reference_a_submitted_original(self):
 		item, _cogs, _stock = self._tracked_item()
 		draft = self._make_shipment(item, quantity=1, rate=25)

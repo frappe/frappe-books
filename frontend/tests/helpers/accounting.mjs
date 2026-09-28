@@ -56,7 +56,11 @@ await build({
       export { evaluateReadOnly, linkOnSave } from './src/utils/doc';
       export { loadListData, onListChange } from './src/utils/listData';
       export { showReport } from './src/utils/misc';
-      export { getDashboardData, getInvoiceSummary } from './src/utils/dashboard';
+      export {
+        getDashboardData,
+        getInvoiceListFilters,
+        getInvoiceSummary,
+      } from './src/utils/dashboard';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
@@ -140,6 +144,7 @@ export const {
   getTaskChecks,
   getReportCellColorClass,
   getDashboardData,
+  getInvoiceListFilters,
   getInvoiceSummary,
   evaluateReadOnly,
   linkOnSave,

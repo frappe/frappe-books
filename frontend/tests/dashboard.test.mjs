@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getDashboardData, getInvoiceSummary } from './helpers/accounting.mjs';
+import {
+  getDashboardData,
+  getInvoiceListFilters,
+  getInvoiceSummary,
+} from './helpers/accounting.mjs';
 import { stubServer } from './helpers/server.mjs';
 
 test('dashboard figures come from the server for the chosen period', async () => {
@@ -19,4 +23,17 @@ test('dashboard figures come from the server for the chosen period', async () =>
       args: { doctype: 'Books Sales Invoice', period: 'YTD' },
     },
   ]);
+});
+
+test('paid and unpaid lists show the submitted invoices of the period', () => {
+  const summary = { from_date: '2031-09-01', before_date: '2031-10-01' };
+  const filters = (outstanding) => ({
+    submitted: ['=', 1],
+    cancelled: ['=', 0],
+    outstandingAmount: outstanding,
+    date: ['>=', '2031-09-01', '<', '2031-10-01'],
+  });
+
+  assert.deepEqual(getInvoiceListFilters(summary, true), filters(['=', 0]));
+  assert.deepEqual(getInvoiceListFilters(summary, false), filters(['!=', 0]));
 });

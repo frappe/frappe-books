@@ -288,11 +288,14 @@ class BooksDatabaseBridge:
 		return self._append_source_children(source_schema, doc, values, requested)
 
 	def _to_source_single(self, source_schema: str, doc, requested=None) -> dict:
+		# Virtual fields are computed on read; Frappe also saves a stale copy in Singles.
+		virtual = {df.fieldname: doc.get_virtual_field_value(df) for df in doc.meta.fields if df.is_virtual}
 		stored = {
 			field: value
 			for field, value in frappe.db.get_singles_dict(doc.doctype).items()
-			if hasattr(doc, field) and not self._is_password_field(doc.meta, field)
+			if field not in virtual and hasattr(doc, field) and not self._is_password_field(doc.meta, field)
 		}
+		stored.update(virtual)
 		stored["name"] = source_schema
 		known_targets = set(schema_mapping()[source_schema]["fields"].values())
 		available = {

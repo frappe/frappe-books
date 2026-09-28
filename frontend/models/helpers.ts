@@ -9,7 +9,6 @@ import { Fyo, t } from 'fyo';
 import { OptionField, Schema } from 'schemas/types';
 import { ModelNameEnum } from './types';
 
-import { DateTime } from 'luxon';
 import { Doc } from 'fyo/model/doc';
 import { Invoice } from './baseModels/Invoice/Invoice';
 import { Money } from 'pesa';
@@ -463,54 +462,6 @@ export function getIsDocEnabledColumn(): ColumnConfig {
   };
 }
 
-/**
- * The rate from a public rates service, or undefined when it has none.
- * Only the currency codes and the date leave the browser.
- */
-export async function getExchangeRate({
-  fromCurrency,
-  toCurrency,
-  date = DateTime.local().toISODate() as string,
-}: {
-  fromCurrency: string;
-  toCurrency: string;
-  date?: string;
-}): Promise<number | undefined> {
-  const cacheKey = `currencyExchangeRate:${date}:${fromCurrency}:${toCurrency}`;
-  const cached = safeParseFloat(localStorage.getItem(cacheKey) as string);
-  if (cached > 0) {
-    return cached;
-  }
-
-  const exchangeRate = await fetchExchangeRate(fromCurrency, toCurrency, date);
-  if (exchangeRate) {
-    localStorage.setItem(cacheKey, String(exchangeRate));
-  }
-
-  return exchangeRate;
-}
-
-async function fetchExchangeRate(
-  fromCurrency: string,
-  toCurrency: string,
-  date: string
-): Promise<number | undefined> {
-  const query = new URLSearchParams({
-    date,
-    base: fromCurrency,
-    symbols: toCurrency,
-  });
-  try {
-    const response = await fetch(`https://api.vatcomply.com/rates?${query}`);
-    const data = (await response.json()) as { rates?: Record<string, number> };
-    const exchangeRate = response.ok ? data.rates?.[toCurrency] : undefined;
-    return exchangeRate && exchangeRate > 0 ? exchangeRate : undefined;
-  } catch {
-    // Offline or an unreadable reply: the user enters the rate instead.
-    return undefined;
-  }
-}
-
 export function getNumberSeries(schemaName: string, fyo: Fyo) {
   return fyo.defaultNumberSeries[schemaName];
 }
@@ -530,37 +481,13 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
     fieldname: 'status',
     fieldtype: 'Select',
     badge(doc) {
-      const status = getLoyaltyProgramStatus(doc);
+      const status = doc.status as string;
       return {
         theme: loyaltyProgramStatusColor[status] ?? 'gray',
         label: getLoyaltyProgramStatusText(status),
       };
     },
   };
-}
-
-export function getLoyaltyProgramStatus(doc?: RenderData | Doc): string {
-  if (!doc) {
-    return '';
-  }
-
-  const currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
-
-  const toDate = doc.toDate as Date;
-
-  if (toDate && toDate <= currentDate) {
-    return 'Expired';
-  }
-
-  const maximumUse = doc.maximumUse as number;
-  const used = doc.used as number;
-
-  if (maximumUse > 0 && used >= maximumUse) {
-    return 'Maxed';
-  }
-
-  return 'Active';
 }
 
 export const loyaltyProgramStatusColor: Record<string, BadgeTheme | undefined> = {

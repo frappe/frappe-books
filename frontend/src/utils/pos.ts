@@ -119,6 +119,15 @@ export async function getPOSOpeningShiftDoc(
   )) as POSOpeningShift;
 }
 
+/** Cash-type payment methods, whose amounts the counted denominations cover. */
+export async function getCashPaymentMethods(fyo: Fyo): Promise<string[]> {
+  const methods = (await fyo.db.getAll(ModelNameEnum.PaymentMethod, {
+    fields: ['name'],
+    filters: { type: 'Cash' },
+  })) as { name: string }[];
+  return methods.map(({ name }) => name);
+}
+
 export function getTotalQuantity(items: SalesInvoiceItem[]): number {
   let totalQuantity = safeParseFloat(0);
 

@@ -37,6 +37,7 @@ import PurchaseInvoice from './app/PurchaseInvoice.json';
 import PurchaseInvoiceItem from './app/PurchaseInvoiceItem.json';
 import SalesInvoice from './app/SalesInvoice.json';
 import SalesInvoiceItem from './app/SalesInvoiceItem.json';
+import SalesInvoicePayment from './app/SalesInvoicePayment.json';
 import SalesQuote from './app/SalesQuote.json';
 import SalesQuoteItem from './app/SalesQuoteItem.json';
 import SetupWizard from './app/SetupWizard.json';
@@ -138,6 +139,7 @@ export const appSchemas: SchemaFile[] = [
 
   InvoiceItem as SchemaFile,
   SalesInvoiceItem as SchemaFile,
+  SalesInvoicePayment as SchemaFile,
   PurchaseInvoiceItem as SchemaFile,
   SalesQuoteItem as SchemaFile,
   CouponCode as SchemaFile,

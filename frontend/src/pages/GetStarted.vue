@@ -84,7 +84,6 @@ import { DocValue } from 'fyo/core/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { getGetStartedConfig } from 'src/utils/getStartedConfig';
-import { getTaskChecks } from 'src/utils/getStartedTasks';
 import { GetStartedConfigItem } from 'src/utils/types';
 import { defineComponent } from 'vue';
 
@@ -106,9 +105,10 @@ export default defineComponent({
     };
   },
   async activated() {
-    await fyo.doc.getDoc('GetStarted');
+    // The server checks the record tasks each time the page loads them.
+    await fyo.doc.getDoc('GetStarted', undefined, { refresh: true });
     if (fyo.can('GetStarted', 'write')) {
-      await this.checkForCompletedTasks();
+      await this.checkIsOnboardingComplete();
     }
   },
   methods: {
@@ -166,13 +166,6 @@ export default defineComponent({
       }
 
       return onboardingComplete;
-    },
-    async checkForCompletedTasks() {
-      if (await this.checkIsOnboardingComplete()) {
-        return;
-      }
-
-      await this.updateChecks(await getTaskChecks(fyo));
     },
     async updateChecks(toUpdate: Record<string, DocValue>) {
       if (!fyo.can('GetStarted', 'write')) {

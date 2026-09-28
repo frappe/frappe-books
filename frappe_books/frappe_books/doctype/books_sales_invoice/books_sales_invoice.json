@@ -51,6 +51,8 @@
   "loyalty_points",
   "is_pos",
   "is_pricing_rule_applied",
+  "payments_section_break",
+  "payments",
   "references_section_break_46",
   "pricing_rule_detail",
   "amended_from"
@@ -352,6 +354,19 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Is Pricing Rule Applied"
+  },
+  {
+   "fieldname": "payments_section_break",
+   "fieldtype": "Section Break",
+   "label": "Payments"
+  },
+  {
+   "description": "Payments tendered at the POS counter, made when the invoice is submitted.",
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "no_copy": 1,
+   "options": "Books Sales Invoice Payment"
   },
   {
    "fieldname": "references_section_break_46",

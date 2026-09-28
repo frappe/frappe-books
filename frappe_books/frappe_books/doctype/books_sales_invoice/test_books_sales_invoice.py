@@ -2,6 +2,7 @@
 # See license.txt
 
 from decimal import Decimal
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -372,7 +373,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_foreign_currency_invoice_needs_an_exchange_rate(self):
 		party = make_party(self.receivable.name, currency=foreign_currency())
-		with self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"):
+		with (
+			patch("frappe_books.accounting.invoice.get_exchange_rate", return_value=None),
+			self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"),
+		):
 			make_invoice(
 				"Books Sales Invoice", party.name, self.receivable.name, self.item.name, self.income.name
 			)

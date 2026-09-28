@@ -33,7 +33,6 @@ await build({
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
       export {
-        getExchangeRate,
         getItemQtyMap,
         getMappedDoc,
         getStockTransferActions,
@@ -51,9 +50,8 @@ await build({
         validateSinv,
       } from './src/utils/pos';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
-      export { getTaskChecks } from './src/utils/getStartedTasks';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
-      export { evaluateReadOnly, linkOnSave } from './src/utils/doc';
+      export { evaluateHidden, evaluateReadOnly, linkOnSave } from './src/utils/doc';
       export { loadListData, onListChange } from './src/utils/listData';
       export { showReport } from './src/utils/misc';
       export {
@@ -73,7 +71,6 @@ await build({
         getSerialNumbersForQuantity,
         getSuggestedBatchName,
       } from './models/inventory/helpers';
-      export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { Importer, getImportableSchemaNames, importDoc } from './src/importer';
     `,
@@ -127,7 +124,6 @@ export const {
   defaultCondition,
   isCompleteFilter,
   mergeQueryFilters,
-  getExchangeRate,
   getItemQtyMap,
   getMappedDoc,
   getStockTransferActions,
@@ -144,11 +140,12 @@ export const {
   fillRowSerialNumbers,
   getPOSRowItem,
   validatePOSCheckout,
-  getTaskChecks,
   getReportCellColorClass,
   getDashboardData,
   getInvoiceListFilters,
   getInvoiceSummary,
+
+  evaluateHidden,
   evaluateReadOnly,
   linkOnSave,
   loadListData,
@@ -165,7 +162,6 @@ export const {
   getAvailableSerialNumbers,
   getSerialNumbersForQuantity,
   getSuggestedBatchName,
-  getAmountInWords,
   generateCSV,
   parseCSV,
   Importer,

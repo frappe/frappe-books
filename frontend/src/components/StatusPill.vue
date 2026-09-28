@@ -12,7 +12,6 @@ import { Party } from 'models/baseModels/Party/Party';
 import {
   getDocStatus,
   getDocStatusBadge,
-  getLoyaltyProgramStatus,
   getLoyaltyProgramStatusText,
   loyaltyProgramStatusColor,
 } from 'models/helpers';
@@ -32,7 +31,7 @@ export default defineComponent({
     badge(): BadgeData {
       const status = getDocStatus(this.doc);
       if (status === 'Saved' && this.doc instanceof LoyaltyProgram) {
-        const programStatus = getLoyaltyProgramStatus(this.doc);
+        const programStatus = this.doc.status as string;
         return {
           theme: loyaltyProgramStatusColor[programStatus] ?? 'gray',
           label: getLoyaltyProgramStatusText(programStatus),

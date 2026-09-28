@@ -33,6 +33,41 @@ def pos_customer():
 	return customer or frappe.db.get_single_value("Books Defaults", "pos_customer")
 
 
+def counter_cash_account():
+	"""Return the account that POS cash goes through until the shift closes."""
+	account = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+	if not account:
+		frappe.throw(_("Set a cash account in POS Settings."))
+	return account
+
+
+def is_cash_method(payment_method):
+	"""Cash-type methods go through the counter, which the POS shift counts and reconciles."""
+	return frappe.get_cached_value("Books Payment Method", payment_method, "type") == "Cash"
+
+
+def counter_payment_account(payment_method):
+	"""Cash goes through the counter; other methods use their own account."""
+	if is_cash_method(payment_method):
+		return counter_cash_account()
+	return frappe.get_cached_value("Books Payment Method", payment_method, "account")
+
+
+def counter_payment_amounts(rows, due):
+	"""Return each tendered row with the amount it pays. Cash beyond what is due is change."""
+	amounts = []
+	for row in rows:
+		tendered = as_decimal(row.amount)
+		if tendered <= 0:
+			frappe.throw(_("Tendered amounts must be greater than zero."))
+		if tendered > due and not is_cash_method(row.payment_method):
+			frappe.throw(_("Non-cash payment amount cannot exceed the outstanding amount."))
+		paid = min(tendered, due)
+		due -= paid
+		amounts.append((row, paid))
+	return [(row, paid) for row, paid in amounts if paid]
+
+
 def lock_pos_settings():
 	"""Lock POS Settings so shift state changes run one at a time."""
 	settings = frappe.get_doc("Books Pos Settings", for_update=True)

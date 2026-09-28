@@ -8,6 +8,7 @@ from frappe.desk.form import linked_with
 from frappe.model.docstatus import DocStatus
 from frappe.model.document import Document
 
+from frappe_books import printing
 from frappe_books.ui_bridge import field_properties
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
@@ -93,6 +94,14 @@ def cancel_with_linked_docs(doc: Document, linked_docs: list[dict[str, Any]]) ->
 	doc._original_modified = doc.modified
 	doc.check_if_latest()
 	linked_with.cancel_all_linked_docs(linked_docs, root_doctype=doc.doctype, root_name=doc.name)
+
+
+@frappe.whitelist(methods=["POST"])
+def get_print_totals(source_schema: str, name: str) -> dict[str, Any]:
+	"""Return the totals a print template shows besides the document's own fields."""
+	doc = frappe.get_doc(target_doctype(source_schema), name)
+	doc.check_permission("print")
+	return printing.get_print_totals(doc)
 
 
 def _as_list(value: list[Any] | str | None) -> list[Any]:

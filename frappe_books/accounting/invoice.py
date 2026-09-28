@@ -12,6 +12,7 @@ from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import pos_customer
+from frappe_books.currency import get_exchange_rate
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
 from frappe_books.inventory.invoice_balance import (
 	store_pending_quantities,
@@ -396,6 +397,8 @@ def _populate_currency(invoice, party_currency):
 	invoice.currency = party_currency or company
 	if invoice.currency == company:
 		invoice.exchange_rate = 1
+	elif not invoice.get("exchange_rate"):
+		invoice.exchange_rate = get_exchange_rate(invoice.currency, company, invoice.date)
 
 
 def _populate_row(invoice, row, item, rates):

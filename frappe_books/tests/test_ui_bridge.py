@@ -468,6 +468,15 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			],
 		)
 
+	def test_search_matches_the_doctype_search_fields(self):
+		account = make_account("Bridge Search Receivable", account_type="Receivable").name
+		email = f"{frappe.generate_hash(length=8)}@example.com"
+		party = make_party(account, email=email).name
+
+		found = self.bridge.call("search", [email, ["Party"], 5])["Party"]
+
+		self.assertEqual([(row["name"], row["email"]) for row in found], [(party, email)])
+
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])

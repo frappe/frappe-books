@@ -64,3 +64,16 @@ test('recent records reopen the record instead of a list', async () => {
     '/edit/SalesInvoice/SINV-1001'
   );
 });
+
+test('the palette searches the schemas the DocType search fields name', async () => {
+  const fyo = await makeFyo();
+  const search = new Search(fyo);
+  search.initialize();
+  const fields = (schemaName) => search.searchables[schemaName]?.fields;
+
+  assert.deepEqual(fields('SalesInvoice'), ['name', 'party']);
+  assert.deepEqual(fields('Party'), ['name', 'email', 'role']);
+  assert.deepEqual(fields('Tax'), ['name']);
+  assert.deepEqual(fields('SalesInvoiceItem'), ['item', 'tax']);
+  assert.equal(fields('Account'), undefined);
+});

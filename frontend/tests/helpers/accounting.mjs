@@ -51,7 +51,7 @@ await build({
       } from './src/utils/pos';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
-      export { evaluateReadOnly, linkOnSave } from './src/utils/doc';
+      export { evaluateHidden, evaluateReadOnly, linkOnSave } from './src/utils/doc';
       export { loadListData, onListChange } from './src/utils/listData';
       export { showReport } from './src/utils/misc';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
@@ -133,6 +133,7 @@ export const {
   getPOSRowItem,
   validatePOSCheckout,
   getReportCellColorClass,
+  evaluateHidden,
   evaluateReadOnly,
   linkOnSave,
   loadListData,

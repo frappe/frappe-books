@@ -3,15 +3,20 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.reports.dashboard import (
+	get_cashflow,
+	get_invoice_summary,
+	get_profit_and_loss,
+	get_top_expenses,
+)
+from frappe_books.reports.financial_statements import get_account_balances
 from frappe_books.tests.accounting import make_account
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
-DATES = ["2031-01-01", "2031-12-31"]
+TODAY = "2031-12-15"
 
 
 class IntegrationTestDashboard(IntegrationTestCase):
 	def setUp(self):
-		self.queries = BooksBespokeQueries()
 		self.cash = make_account("Dashboard Cash", account_type="Cash")
 		self.rent = make_account("Dashboard Rent", root_type="Expense")
 		self.sales = make_account("Dashboard Sales", root_type="Income")
@@ -22,36 +27,29 @@ class IntegrationTestDashboard(IntegrationTestCase):
 			("2031-02-05", self.cash, 80, 0),
 			("2031-02-05", self.sales, 0, 80),
 		):
-			frappe.get_doc(
-				{
-					"doctype": "Books Ledger Entry",
-					"posting_date": date,
-					"account": account.name,
-					"debit": debit,
-					"credit": credit,
-				}
-			).insert()
+			_post(account, debit, credit, date)
 
 	def test_ledger_totals_are_grouped_by_account_and_month(self):
-		self.assertIn({"account": self.rent.name, "total": Decimal("50.00")}, self._call("getTopExpenses"))
+		with self.freeze_time(TODAY):
+			expenses = get_top_expenses("This Year")
+			cashflow = get_cashflow("This Year")
+			profit = get_profit_and_loss("This Year")
+
+		self.assertIn({"account": self.rent.name, "total": Decimal("50.00")}, expenses)
 		self.assertEqual(
-			self._call("getCashflow"),
+			cashflow["months"][:3],
 			[
 				{"yearmonth": "2031-01", "inflow": Decimal("0.00"), "outflow": Decimal("50.00")},
 				{"yearmonth": "2031-02", "inflow": Decimal("80.00"), "outflow": Decimal("0.00")},
+				{"yearmonth": "2031-03", "inflow": Decimal("0.00"), "outflow": Decimal("0.00")},
 			],
 		)
+		self.assertTrue(cashflow["has_data"])
 		self.assertEqual(
-			self._call("getIncomeAndExpenses"),
-			{
-				"income": [{"yearmonth": "2031-02", "balance": Decimal("80.00")}],
-				"expense": [{"yearmonth": "2031-01", "balance": Decimal("50.00")}],
-			},
+			[(month["yearmonth"], month["balance"]) for month in profit["months"][:3]],
+			[("2031-01", Decimal("-50.00")), ("2031-02", Decimal("80.00")), ("2031-03", Decimal("0.00"))],
 		)
-		self.assertIn(
-			{"account": self.cash.name, "totalCredit": Decimal("50.00"), "totalDebit": Decimal("80.00")},
-			self.queries.call("getTotalCreditAndDebit", []),
-		)
+		self.assertTrue(profit["has_data"])
 
 	def test_outstanding_counts_credit_notes_as_positive_amounts(self):
 		for total, outstanding, return_against in ((100, 40, None), (-30, -30, "Dashboard Original")):
@@ -67,10 +65,39 @@ class IntegrationTestDashboard(IntegrationTestCase):
 				}
 			).db_insert()
 
-		self.assertEqual(
-			self.queries.call("getTotalOutstanding", ["SalesInvoice", *DATES]),
-			{"total": Decimal("130.00"), "outstanding": Decimal("70.00")},
-		)
+		with self.freeze_time(TODAY):
+			summary = get_invoice_summary("Books Sales Invoice", "This Year")
 
-	def _call(self, method):
-		return self.queries.call(method, DATES)
+		self.assertEqual(
+			(summary["total"], summary["paid"], summary["unpaid"]),
+			(Decimal("130.00"), Decimal("60.00"), Decimal("70.00")),
+		)
+		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (0, 2))
+
+
+class IntegrationTestAccountBalances(IntegrationTestCase):
+	def test_account_balances_are_kept_on_the_root_type_side(self):
+		cash = make_account("Balance Cash", account_type="Cash")
+		sales = make_account("Balance Sales", root_type="Income")
+		_post(cash, 80, 0)
+		_post(sales, 0, 80)
+		_post(cash, 0, 50)
+
+		result = get_account_balances()
+
+		self.assertEqual(
+			(result["balances"][cash.name], result["balances"][sales.name]), (Decimal(30), Decimal(80))
+		)
+		self.assertEqual(result["credit_root_types"], ["Equity", "Income", "Liability"])
+
+
+def _post(account, debit, credit, date="2031-01-10"):
+	frappe.get_doc(
+		{
+			"doctype": "Books Ledger Entry",
+			"posting_date": date,
+			"account": account.name,
+			"debit": debit,
+			"credit": credit,
+		}
+	).insert()

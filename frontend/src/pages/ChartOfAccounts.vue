@@ -119,14 +119,13 @@ import {
   type DropdownOptions,
   Button as FrappeButton,
 } from 'frappe-ui';
-import { isCredit } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import { fyo } from 'src/initFyo';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { commonDocDelete, openQuickEdit } from 'src/utils/ui';
-import { getMapFromList } from 'utils/index';
+import { call } from 'src/web/api';
 import { defineComponent, nextTick } from 'vue';
 import { handleErrorWithDialog } from '../errorHandling';
 import { AccountRootType, AccountType } from 'models/baseModels/Account/types';
@@ -177,7 +176,8 @@ export default defineComponent({
       schemaName: 'Account',
       newAccountName: '',
       insertingAccount: false,
-      totals: {} as Record<string, { totalDebit: number; totalCredit: number }>,
+      balances: {} as Record<string, number>,
+      creditRootTypes: [] as string[],
       settings: null as null | TreeViewSettings,
     };
   },
@@ -198,7 +198,7 @@ export default defineComponent({
   },
   async activated() {
     await this.fetchAccounts();
-    await this.setTotalDebitAndCredit();
+    await this.setBalances();
 
     docsPathRef.value = docsPathMap.ChartOfAccounts!;
   },
@@ -246,28 +246,19 @@ export default defineComponent({
       );
       this.expandedAccounts = expanded ? [...others, account.name] : others;
     },
-    getBalance(account: AccountItem) {
-      const total = this.totals[account.name];
-      if (!total) {
-        return 0;
-      }
-
-      const { totalCredit, totalDebit } = total;
-
-      if (isCredit(account.rootType)) {
-        return totalCredit - totalDebit;
-      }
-
-      return totalDebit - totalCredit;
-    },
     getBalanceString(account: AccountItem) {
-      const suffix = isCredit(account.rootType) ? t`Cr.` : t`Dr.`;
-      const balance = this.getBalance(account);
-      return `${fyo.format(balance, 'Currency')} ${suffix}`;
+      const isCredit = this.creditRootTypes.includes(account.rootType);
+      const balance = this.balances[account.name] ?? 0;
+      return `${fyo.format(balance, 'Currency')} ${isCredit ? t`Cr.` : t`Dr.`}`;
     },
-    async setTotalDebitAndCredit() {
-      const totals = await this.fyo.db.getTotalCreditAndDebit();
-      this.totals = getMapFromList(totals, 'account');
+    /** Balances are signed on the server by the side each root type keeps. */
+    async setBalances() {
+      const { balances, credit_root_types } = await call<{
+        balances: Record<string, number>;
+        credit_root_types: string[];
+      }>('frappe_books.reports.financial_statements.get_account_balances');
+      this.balances = balances;
+      this.creditRootTypes = credit_root_types;
     },
     async fetchAccounts() {
       this.settings =

@@ -65,13 +65,11 @@
 <script lang="ts">
 import { t } from 'fyo';
 import { Button as FrappeButton, Tooltip as FrappeTooltip } from 'frappe-ui';
-import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
-import { getDatesAndPeriodList } from 'src/utils/misc';
+import { getInvoiceSummary, InvoiceSummary } from 'src/utils/dashboard';
 import { PeriodKey } from 'src/utils/types';
 import { routeTo } from 'src/utils/ui';
-import { safeParseFloat } from 'utils/index';
 import { PropType, defineComponent } from 'vue';
 import BaseDashboardChart from './BaseDashboardChart.vue';
 import SectionHeader from './SectionHeader.vue';
@@ -86,34 +84,39 @@ export default defineComponent({
   extends: BaseDashboardChart,
   props: {
     schemaName: { type: String as PropType<string>, required: true },
+    doctype: { type: String as PropType<string>, required: true },
     darkMode: { type: Boolean, default: false },
   },
   data() {
     return {
-      total: 0,
-      unpaid: 0,
-      hasData: false,
-      paid: 0,
-      count: 0,
-      unpaidCount: 0,
-      paidCount: 0,
-      barWidth: 40,
-      period: 'This Year',
-    } as {
-      period: PeriodKey;
-      total: number;
-      unpaid: number;
-      hasData: boolean;
-      paid: number;
-      count: number;
-      unpaidCount: number;
-      paidCount: number;
-      barWidth: number;
+      summary: null as InvoiceSummary | null,
+      period: 'This Year' as PeriodKey,
     };
   },
   computed: {
     title(): string {
       return fyo.schemaMap[this.schemaName]?.label ?? '';
+    },
+    paid(): number {
+      return this.summary?.paid ?? 0;
+    },
+    unpaid(): number {
+      return this.summary?.unpaid ?? 0;
+    },
+    paidCount(): number {
+      return this.summary?.paid_count ?? 0;
+    },
+    unpaidCount(): number {
+      return this.summary?.unpaid_count ?? 0;
+    },
+    count(): number {
+      return this.paidCount + this.unpaidCount;
+    },
+    hasData(): boolean {
+      return this.count > 0;
+    },
+    barWidth(): number {
+      return (this.paid / (this.summary?.total || 1)) * 100;
     },
     color(): 'blue' | 'pink' {
       if (this.schemaName === ModelNameEnum.SalesInvoice) {
@@ -141,11 +144,8 @@ export default defineComponent({
   },
   methods: {
     async routeToInvoices(type: 'paid' | 'unpaid') {
-      if (type === 'paid' && !this.paidCount) {
-        return;
-      }
-
-      if (type === 'unpaid' && !this.unpaidCount) {
+      const count = type === 'paid' ? this.paidCount : this.unpaidCount;
+      if (!this.summary || !count) {
         return;
       }
 
@@ -163,51 +163,7 @@ export default defineComponent({
       await routeTo({ path, query });
     },
     async setData() {
-      const { fromDate, toDate } = getDatesAndPeriodList(this.period);
-
-      const { total, outstanding } = await fyo.db.getTotalOutstanding(
-        this.schemaName,
-        fromDate.toISO(),
-        toDate.toISO(),
-      );
-
-      const { countTotal, countOutstanding } = await this.getCounts(
-        this.schemaName,
-        fromDate,
-        toDate,
-      );
-
-      this.total = total ?? 0;
-      this.unpaid = outstanding ?? 0;
-      this.paid = total - outstanding;
-      this.hasData = countTotal > 0;
-      this.count = countTotal;
-      this.paidCount = countTotal - countOutstanding;
-      this.unpaidCount = countOutstanding;
-      this.barWidth = (this.paid / (this.total || 1)) * 100;
-    },
-    async newInvoice() {
-      const doc = fyo.doc.getNewDoc(this.schemaName);
-      await routeTo(`/edit/${this.schemaName}/${doc.name!}`);
-    },
-
-    async getCounts(schemaName: string, fromDate: DateTime, toDate: DateTime) {
-      const outstandingAmounts = await fyo.db.getAllRaw(schemaName, {
-        fields: ['outstandingAmount'],
-        filters: {
-          cancelled: false,
-          submitted: true,
-          date: ['<=', toDate.toISO(), '>=', fromDate.toISO()],
-        },
-      });
-
-      const isOutstanding = outstandingAmounts.map((o) => safeParseFloat(o.outstandingAmount));
-
-      return {
-        countTotal: isOutstanding.length,
-        // Returns owe a negative balance.
-        countOutstanding: isOutstanding.filter((o) => o !== 0).length,
-      };
+      this.summary = await getInvoiceSummary(this.doctype, this.period);
     },
   },
 });

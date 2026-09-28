@@ -97,6 +97,17 @@ def get_trial_balance(filters) -> list[dict]:
 	return _rows(sections, TRIAL_BALANCE_KEYS, filters.hide_group_amounts)
 
 
+@frappe.whitelist()
+def get_account_balances() -> dict:
+	"""Return each account's balance on the side its root type keeps it, and the root types kept on credit."""
+	accounts = _accounts()
+	balances = {
+		account: _balance(accounts[account].root_type, debit, credit)
+		for account, (debit, credit) in _ledger_sums(None, None).items()
+	}
+	return {"balances": balances, "credit_root_types": sorted(CREDIT_ROOT_TYPES)}
+
+
 def _account_column():
 	return {
 		"fieldname": "account",
@@ -116,16 +127,21 @@ def _statement(root_types, date_ranges):
 	accounts = _accounts()
 	for index, (from_date, to_date) in enumerate(date_ranges):
 		for account, (debit, credit) in _ledger_sums(from_date, to_date).items():
-			is_credit = accounts[account].root_type in CREDIT_ROOT_TYPES
-			values[account][index] = credit - debit if is_credit else debit - credit
+			values[account][index] = _balance(accounts[account].root_type, debit, credit)
 	return _sections(root_types, values, len(date_ranges), accounts)
+
+
+def _balance(root_type, debit, credit):
+	return credit - debit if root_type in CREDIT_ROOT_TYPES else debit - credit
 
 
 def _ledger_sums(from_date, to_date):
 	"""Return the debit and credit totals of each account, both dates included."""
-	filters = [["reverted", "=", 0], ["posting_date", "<=", to_date]]
+	filters = [["reverted", "=", 0]]
 	if from_date:
 		filters.append(["posting_date", ">=", from_date])
+	if to_date:
+		filters.append(["posting_date", "<=", to_date])
 	rows = frappe.get_list(
 		LEDGER,
 		filters=filters,

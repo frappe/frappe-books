@@ -25,8 +25,7 @@ import { BarChart as FrappeBarChart } from 'frappe-ui/charts';
 import { fyo } from 'src/initFyo';
 import { formatXLabels, getYMax, getYMin } from 'src/utils/chart';
 import { uicolors } from 'src/utils/colors';
-import { getDatesAndPeriodList } from 'src/utils/misc';
-import { getValueMapFromList } from 'utils';
+import { getDashboardData, MonthlyBalance } from 'src/utils/dashboard';
 import DashboardChartBase from './BaseDashboardChart.vue';
 import SectionHeader from './SectionHeader.vue';
 import { defineComponent } from 'vue';
@@ -42,7 +41,7 @@ export default defineComponent({
     darkMode: { type: Boolean, default: false },
   },
   data: () => ({
-    data: [] as { yearmonth: string; balance: number }[],
+    data: [] as MonthlyBalance[],
     hasData: false,
   }),
   computed: {
@@ -76,19 +75,12 @@ export default defineComponent({
   },
   methods: {
     async setData() {
-      const { fromDate, toDate, periodList } = getDatesAndPeriodList(this.period);
-
-      const data = await fyo.db.getIncomeAndExpenses(fromDate.toISO(), toDate.toISO());
-      const incomes = getValueMapFromList(data.income, 'yearmonth', 'balance');
-      const expenses = getValueMapFromList(data.expense, 'yearmonth', 'balance');
-
-      this.data = periodList.map((d) => {
-        const key = d.toFormat('yyyy-MM');
-        const inc = incomes[key] ?? 0;
-        const exp = expenses[key] ?? 0;
-        return { yearmonth: key, balance: inc - exp };
-      });
-      this.hasData = data.income.length > 0 || data.expense.length > 0;
+      const { months, has_data } = await getDashboardData<{
+        months: MonthlyBalance[];
+        has_data: boolean;
+      }>('get_profit_and_loss', this.period);
+      this.data = months;
+      this.hasData = has_data;
     },
   },
 });

@@ -124,6 +124,13 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 				with self.assertRaisesRegex(frappe.ValidationError, OFF):
 					make_item(self.income.name, received, **values)
 
+	def test_only_tracked_products_have_stock_settings(self):
+		received = make_account("Received", root_type="Liability").name
+		with self.assertRaisesRegex(frappe.ValidationError, "Only products can track inventory"):
+			make_item(self.income.name, received, item_type="Service", track_item=1)
+		with self.assertRaisesRegex(frappe.ValidationError, "Only items that track inventory"):
+			make_item(self.income.name, self.expense.name, has_serial_number=1)
+
 	def coupon(self):
 		rule = frappe.get_doc(
 			{

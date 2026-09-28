@@ -45,7 +45,8 @@ def bootstrap():
 	for name, is_whole in DEFAULT_UOMS.items():
 		_insert_if_missing("Books Uom", name, {"is_whole": is_whole})
 	_insert_if_missing("Books Location", "Stores", {})
-	_insert_if_missing("Books Payment Method", "Cash", {"type": "Cash"})
+	for method_type in ("Cash", "Bank"):
+		_insert_if_missing("Books Payment Method", method_type, {"type": method_type})
 	grant_core_permissions()
 	for name in DEFAULT_PRINT_TEMPLATES:
 		_insert_if_missing("Books Print Template", name, standard_print_template_values(name))

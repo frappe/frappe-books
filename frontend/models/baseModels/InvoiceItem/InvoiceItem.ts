@@ -17,7 +17,6 @@ import { Money } from 'pesa';
 import { FieldTypeEnum, Schema } from 'schemas/types';
 import { safeParseFloat } from 'utils/index';
 import { Invoice } from '../Invoice/Invoice';
-import { getSuggestedBatchName } from 'models/inventory/helpers';
 import {
   getUnitConversionFactor,
   validateTransferUnit,
@@ -104,11 +103,9 @@ export abstract class InvoiceItem extends Doc {
   override async change(ch: ChangeArg): Promise<void> {
     await super.change(ch);
 
-    if (ch.changed === 'item' && !this.isSales && this.item) {
-      const batchName = await getSuggestedBatchName(this.fyo, this.item);
-      if (batchName) {
-        await this.set('batch', batchName);
-      }
+    // The server names an empty batch from the new item's series on save.
+    if (ch.changed === 'item' && !this.isSales && this.batch) {
+      await this.set('batch', '');
     }
   }
 

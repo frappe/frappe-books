@@ -49,20 +49,24 @@ test('a receipt made from an invoice gets new serial numbers from the series', a
   );
 });
 
-test('a material receipt row suggests a batch and new serial numbers', async () => {
+test('a material receipt row gets new serial numbers and leaves its batch to the server', async () => {
   const fyo = await makeFyo();
   const values = { hasBatch: true, hasSerialNumber: true };
   fyo.getValue = async (_schemaName, _name, fieldname) => values[fieldname];
-  fyo.db.getNewSeriesNames = async (schemaName) =>
-    schemaName === 'Batch' ? ['PEN-001'] : ['SN-001'];
+  const reserved = [];
+  fyo.db.getNewSeriesNames = async (schemaName) => {
+    reserved.push(schemaName);
+    return ['SN-001'];
+  };
   fyo.doc.getDoc = async () => ({ loadAndGetLink() {} });
   const movement = fyo.doc.getNewDoc('StockMovement', {
     movementType: 'MaterialReceipt',
-    items: [{ quantity: 1 }],
+    items: [{ quantity: 1, batch: 'INK-001' }],
   });
   const row = movement.items[0];
   await row.set('item', 'Pen');
-  assert.deepEqual([row.batch, row.serialNumber], ['PEN-001', 'SN-001']);
+  assert.deepEqual([row.batch, row.serialNumber], ['', 'SN-001']);
+  assert.deepEqual(reserved, ['SerialNumber']);
   await row.set('quantity', 0);
   assert.equal(row.serialNumber, '');
 });

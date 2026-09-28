@@ -69,7 +69,6 @@ await build({
       export {
         getAvailableSerialNumbers,
         getSerialNumbersForQuantity,
-        getSuggestedBatchName,
       } from './models/inventory/helpers';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { Importer, getImportableSchemaNames, importDoc } from './src/importer';
@@ -162,7 +161,6 @@ export const {
   getInsufficientItems,
   getAvailableSerialNumbers,
   getSerialNumbersForQuantity,
-  getSuggestedBatchName,
   generateCSV,
   parseCSV,
   Importer,

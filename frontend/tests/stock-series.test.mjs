@@ -3,7 +3,6 @@ import { test } from 'node:test';
 import {
   getAvailableSerialNumbers,
   getSerialNumbersForQuantity,
-  getSuggestedBatchName,
 } from './helpers/accounting.mjs';
 
 function makeFyo(item, reserved) {
@@ -19,16 +18,6 @@ function makeFyo(item, reserved) {
   };
   return { fyo, requests };
 }
-
-test('a suggested batch is reserved from the item series on the server', async () => {
-  const { fyo, requests } = makeFyo({ hasBatch: true }, ['PEN-1001']);
-  assert.equal(await getSuggestedBatchName(fyo, 'Pen'), 'PEN-1001');
-  assert.deepEqual(requests, [['Batch', 'Pen', 1]]);
-
-  const noBatches = makeFyo({ hasBatch: false }, ['PEN-1002']);
-  assert.equal(await getSuggestedBatchName(noBatches.fyo, 'Pen'), undefined);
-  assert.deepEqual(noBatches.requests, []);
-});
 
 test('serial numbers keep the row numbers and reserve only the shortfall', async () => {
   const { fyo, requests } = makeFyo({ hasSerialNumber: true }, ['SN-3']);

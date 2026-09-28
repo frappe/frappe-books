@@ -13,7 +13,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { safeParseFloat } from 'utils/index';
-import { getSerialNumbersForQuantity, getSuggestedBatchName } from './helpers';
+import { getSerialNumbersForQuantity } from './helpers';
 import { StockMovement } from './StockMovement';
 import { TransferItem } from './TransferItem';
 import { getUnitConversionFactor, validateTransferUnit } from './units';
@@ -191,7 +191,6 @@ export class StockMovementItem extends TransferItem {
 
   validations: ValidationMap = {
     batch: async (value: DocValue) => {
-      // A new batch has no record until the movement saves.
       const batchItem = await this.fyo.getValue(
         ModelNameEnum.Batch,
         value as string,
@@ -236,7 +235,7 @@ export class StockMovementItem extends TransferItem {
     await super.change(ch);
     if (ch.changed === 'item') {
       await this.set('serialNumber', '');
-      await this.setSuggestedBatch();
+      await this.clearReceiptBatch();
     }
 
     if (ch.changed === 'item' || ch.changed === 'quantity') {
@@ -244,14 +243,10 @@ export class StockMovementItem extends TransferItem {
     }
   }
 
-  async setSuggestedBatch() {
-    if (!this.isReceipt || !this.item) {
-      return;
-    }
-
-    const batch = await getSuggestedBatchName(this.fyo, this.item);
-    if (batch) {
-      await this.set('batch', batch);
+  /** The server names an empty receipt batch from the new item's series on save. */
+  async clearReceiptBatch() {
+    if (this.isReceipt && this.batch) {
+      await this.set('batch', '');
     }
   }
 

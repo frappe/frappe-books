@@ -5,8 +5,11 @@ around DDL. Integration tests only roll back at the end of a class, so this test
 lives in its own class to keep that commit from persisting other tests' records.
 """
 
+from unittest.mock import patch
+
 import frappe
 from frappe import client
+from frappe.api.v1 import update_doc
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import unique_name
@@ -138,6 +141,32 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 		self.assertEqual(_row(rows, PARTY_FIELD)["target"], "Party")
 		self.assertEqual(_row(rows, REFERENCE_FIELD)["references"], SIZE_FIELD["fieldname"])
 
+	def test_a_loaded_form_saves_unchanged(self):
+		fields = [{**FIELD, "is_required": 1, "default": "North"}, SIZE_FIELD, PARTY_FIELD, REFERENCE_FIELD]
+		_custom_form("UOM", fields).insert()
+		definitions = _definitions(fields)
+
+		frappe.get_doc("Books Custom Form", "UOM").save()
+		_rest_put("UOM", {})
+
+		self.assertEqual(_definitions(fields), definitions)
+
+	def test_rest_put_of_stored_row_columns_changes_only_them(self):
+		_custom_form("UOM", [FIELD, SIZE_FIELD]).insert()
+		definitions = _definitions([FIELD, SIZE_FIELD])
+		rows = frappe.get_all(
+			"Books Custom Field",
+			filters={"parent": "UOM"},
+			fields=["name", "parent", "parenttype", "parentfield", "fieldname", "section", "tab"],
+			order_by="idx",
+		)
+		rows[0].tab = "Details"
+
+		_rest_put("UOM", {"custom_fields": rows})
+
+		self.assertEqual(_definitions([FIELD, SIZE_FIELD]), definitions)
+		self.assertEqual(frappe.db.get_value("Books Custom Field", rows[0].name, "tab"), "Details")
+
 	def _cleanup_custom_field_test(self):
 		# Custom field DDL commits, so undo what this class committed. `sql_ddl` commits before
 		# the drop, not after, so commit the drop too.
@@ -195,6 +224,16 @@ def _custom_field(field):
 	filters = {"dt": "Books Uom", "fieldname": f"custom_books_{field['fieldname'].lower()}"}
 	name = frappe.db.exists("Custom Field", filters)
 	return name and frappe.get_doc("Custom Field", name)
+
+
+def _definitions(fields):
+	values = ["label", "fieldtype", "options", "reqd", "default"]
+	return [frappe.db.get_value("Custom Field", _custom_field(field).name, values) for field in fields]
+
+
+def _rest_put(name, values):
+	with patch.dict(frappe.local.form_dict, {"data": frappe.as_json(values)}):
+		update_doc("Books Custom Form", name)
 
 
 def _row(rows, field):

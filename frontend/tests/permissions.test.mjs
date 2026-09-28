@@ -1,15 +1,44 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { hasPermission } from '../fyo/utils/permissions.ts';
+import { makeFyo } from './helpers/accounting.mjs';
 
-test('permissions come from the boot map', () => {
-  const permissions = { SalesInvoice: ['read', 'create', 'submit'], Tax: ['read'] };
+const doctypes = { SalesInvoice: 'Books Sales Invoice', Tax: 'Books Tax' };
+
+test('permissions come from the boot lists of frappe.boot.user', () => {
+  const user = {
+    can_read: ['Books Sales Invoice', 'Books Tax'],
+    can_submit: ['Books Sales Invoice'],
+  };
+  const permissions = { doctypes, user };
   assert.equal(hasPermission(permissions, 'SalesInvoice', 'submit'), true);
   assert.equal(hasPermission(permissions, 'SalesInvoice', 'cancel'), false);
   assert.equal(hasPermission(permissions, 'Tax', 'write'), false);
   assert.equal(hasPermission(permissions, 'Party', 'read'), false);
 });
 
-test('without a boot map nothing is restricted', () => {
+test('a System Manager can export every doctype, as in Frappe', () => {
+  const permissions = { doctypes, user: { roles: ['System Manager'] } };
+  assert.equal(hasPermission(permissions, 'Tax', 'export'), true);
+  assert.equal(hasPermission(permissions, 'Tax', 'print'), false);
+});
+
+test('without boot permissions nothing is restricted', () => {
   assert.equal(hasPermission(null, 'Tax', 'delete'), true);
+});
+
+test('a saved document uses the rights the server returned for it', async () => {
+  const fyo = await makeFyo();
+  fyo.store.permissions = {
+    doctypes: { Payment: 'Books Payment' },
+    user: { can_write: ['Books Payment'], can_delete: ['Books Payment'] },
+  };
+  const payment = fyo.doc.getNewDoc('Payment', { name: 'PAY-0001' });
+  payment._notInserted = false;
+  assert.equal(payment.canWrite, true);
+  assert.equal(payment.canDelete, true);
+
+  payment.docPermissions = { read: 1, write: 0, delete: 0 };
+  assert.equal(payment.canWrite, false);
+  assert.equal(payment.canDelete, false);
 });

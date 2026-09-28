@@ -13,9 +13,11 @@ import {
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { Transactional } from 'models/Transactional/Transactional';
-import { addItem, getExchangeRate, getNumberSeries } from 'models/helpers';
+import { addItem, getNumberSeries } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
+import { DateTime } from 'luxon';
 import { Money } from 'pesa';
+import { call } from 'src/web/api';
 import { FieldTypeEnum, Schema } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
 import { InvoiceItem } from '../InvoiceItem/InvoiceItem';
@@ -25,6 +27,7 @@ import { AppliedCouponCodes } from '../AppliedCouponCodes/AppliedCouponCodes';
 import { applyPreview } from './preview';
 
 const PREVIEW_DELAY = 300;
+const GET_EXCHANGE_RATE = 'frappe_books.currency.get_exchange_rate';
 const RATE_SOURCE_FIELDS = ['party', 'priceList', 'currency', 'exchangeRate'];
 
 export abstract class Invoice extends Transactional {
@@ -164,18 +167,19 @@ export abstract class Invoice extends Transactional {
     return [];
   }
 
-  /** The fetched rate, or null (with a warning) when the user must enter it. */
+  /** The server's rate on the invoice date, or null (with a warning) when the user must enter it. */
   async getExchangeRate(): Promise<number | null> {
     if (!this.currency || this.currency === this.companyCurrency) {
       return 1.0;
     }
 
-    const exchangeRate = await getExchangeRate({
-      fromCurrency: this.currency,
-      toCurrency: this.companyCurrency,
+    const exchangeRate = await call<number | null>(GET_EXCHANGE_RATE, {
+      from_currency: this.currency,
+      to_currency: this.companyCurrency,
+      date: this.date ? DateTime.fromJSDate(this.date).toISODate() : null,
     });
     // Warn once, not on every change while the rate stays missing.
-    if (exchangeRate === undefined && this.exchangeRate !== null) {
+    if (exchangeRate === null && this.exchangeRate !== null) {
       await showToast(
         'warning',
         this.fyo
@@ -183,7 +187,7 @@ export abstract class Invoice extends Transactional {
       );
     }
 
-    return exchangeRate ?? null;
+    return exchangeRate;
   }
 
   formulas: FormulaMap = {

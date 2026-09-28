@@ -13,7 +13,6 @@ import {
 import { Fyo, t } from 'fyo';
 import { InvoiceStatus, ModelNameEnum } from './types';
 
-import { DateTime } from 'luxon';
 import { Doc } from 'fyo/model/doc';
 import { Invoice } from './baseModels/Invoice/Invoice';
 import { Lead } from './baseModels/Lead/Lead';
@@ -533,54 +532,6 @@ export function getIsDocEnabledColumn(): ColumnConfig {
       return { theme: 'amber', label: t`Disabled` };
     },
   };
-}
-
-/**
- * The rate from a public rates service, or undefined when it has none.
- * Only the currency codes and the date leave the browser.
- */
-export async function getExchangeRate({
-  fromCurrency,
-  toCurrency,
-  date = DateTime.local().toISODate() as string,
-}: {
-  fromCurrency: string;
-  toCurrency: string;
-  date?: string;
-}): Promise<number | undefined> {
-  const cacheKey = `currencyExchangeRate:${date}:${fromCurrency}:${toCurrency}`;
-  const cached = safeParseFloat(localStorage.getItem(cacheKey) as string);
-  if (cached > 0) {
-    return cached;
-  }
-
-  const exchangeRate = await fetchExchangeRate(fromCurrency, toCurrency, date);
-  if (exchangeRate) {
-    localStorage.setItem(cacheKey, String(exchangeRate));
-  }
-
-  return exchangeRate;
-}
-
-async function fetchExchangeRate(
-  fromCurrency: string,
-  toCurrency: string,
-  date: string
-): Promise<number | undefined> {
-  const query = new URLSearchParams({
-    date,
-    base: fromCurrency,
-    symbols: toCurrency,
-  });
-  try {
-    const response = await fetch(`https://api.vatcomply.com/rates?${query}`);
-    const data = (await response.json()) as { rates?: Record<string, number> };
-    const exchangeRate = response.ok ? data.rates?.[toCurrency] : undefined;
-    return exchangeRate && exchangeRate > 0 ? exchangeRate : undefined;
-  } catch {
-    // Offline or an unreadable reply: the user enters the rate instead.
-    return undefined;
-  }
 }
 
 export function isCredit(rootType: AccountRootType) {

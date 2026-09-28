@@ -71,6 +71,11 @@ def source_field(source_schema: str, target_fieldname: str) -> str:
 	return target_fieldname
 
 
+def system_settings_fields(source_schema: str) -> dict[str, str]:
+	"""Fields of a Books settings schema that Frappe's System Settings stores."""
+	return schema_mapping()[source_schema].get("system_settings", {})
+
+
 def custom_field_mapping(source_schema: str) -> dict[str, str]:
 	"""Return Books custom field names mapped to their hosted columns."""
 	return custom_field_mappings().get(source_schema, {})

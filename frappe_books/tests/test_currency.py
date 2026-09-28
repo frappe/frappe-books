@@ -6,7 +6,7 @@ import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
 from frappe_books.currency import currency_precision
-from frappe_books.setup_service import _update_system_settings, enable_currency
+from frappe_books.setup_service import _update_books_system_settings, enable_currency
 from frappe_books.tests.accounting import ensure_user, make_account, make_party
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
@@ -26,7 +26,7 @@ class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 	def test_setup_uses_currency_precision(self):
 		for currency, precision in CURRENCIES:
 			with self.subTest(currency=currency):
-				_update_system_settings(frappe._dict(country="India", currency=currency))
+				_update_books_system_settings(frappe._dict(country="India", currency=currency))
 				self.assertEqual(
 					frappe.db.get_single_value("Books System Settings", "display_precision"), precision
 				)

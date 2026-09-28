@@ -14,9 +14,7 @@
   "number_display_section_break_7",
   "locale",
   "display_precision",
-  "currency",
   "internal_precision",
-  "country_code",
   "theme_section_break_14",
   "dark_mode",
   "customizations_section_break_16",
@@ -78,28 +76,12 @@
    "reqd": 1
   },
   {
-   "default": "INR",
-   "fieldname": "currency",
-   "fieldtype": "Autocomplete",
-   "in_list_view": 1,
-   "label": "Currency",
-   "read_only": 1,
-   "reqd": 1
-  },
-  {
    "default": "11",
    "fieldname": "internal_precision",
    "fieldtype": "Int",
    "hidden": 1,
    "label": "Internal Precision",
    "non_negative": 1
-  },
-  {
-   "default": "in",
-   "fieldname": "country_code",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Country Code"
   },
   {
    "fieldname": "theme_section_break_14",
@@ -128,7 +110,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-29 10:00:00.000000",
+ "modified": "2026-09-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books System Settings",

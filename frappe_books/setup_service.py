@@ -14,6 +14,7 @@ from frappe_books.coa import (
 from frappe_books.currency import currency_precision
 from frappe_books.regional import ensure_regional_records
 from frappe_books.series import NUMBER_SERIES
+from frappe_books.settings import update_system_settings
 
 
 def run_setup(wizard):
@@ -26,7 +27,7 @@ def run_setup(wizard):
 	enable_currency(wizard.currency)
 	accounts = {**default_accounts(chart), "cash": ensure_cash_account(chart)}
 	_update_accounting_settings(wizard, discount_account, accounts)
-	_update_system_settings(wizard)
+	_update_books_system_settings(wizard)
 	_update_print_settings(wizard)
 	_update_inventory_settings(accounts)
 	_update_pos_settings(accounts)
@@ -35,8 +36,13 @@ def run_setup(wizard):
 
 
 def complete_site_setup(wizard):
-	"""Frappe's setup sets System Settings: country, currency, time zone and formats."""
-	if not frappe.is_setup_complete():
+	"""Frappe's setup sets System Settings: country, currency, time zone and formats.
+
+	On a site Frappe has set up already, only the company country and currency change.
+	"""
+	if frappe.is_setup_complete():
+		update_system_settings({"country": wizard.country, "currency": wizard.currency})
+	else:
 		complete_app_setup(country=wizard.country, currency=wizard.currency, timezone=wizard.time_zone)
 
 
@@ -66,7 +72,6 @@ def _update_accounting_settings(wizard, discount_account, accounts):
 			"fullname": wizard.fullname,
 			"company_name": wizard.company_name,
 			"bank_name": wizard.bank_name,
-			"country": wizard.country,
 			"email": wizard.email,
 			"write_off_account": accounts["write_off"],
 			"round_off_account": accounts["round_off"],
@@ -92,13 +97,11 @@ def _update_print_settings(wizard):
 	settings.save(ignore_permissions=True)
 
 
-def _update_system_settings(wizard):
+def _update_books_system_settings(wizard):
 	settings = frappe.get_single("Books System Settings")
 	settings.update(
 		{
-			"currency": wizard.currency,
 			"display_precision": currency_precision(wizard.currency),
-			"country_code": _country_code(wizard.country),
 			"locale": "en-IN" if wizard.country == "India" else "en-US",
 		}
 	)
@@ -147,7 +150,3 @@ def _update_defaults(bank_account, accounts):
 		}
 	)
 	defaults.save(ignore_permissions=True)
-
-
-def _country_code(country):
-	return {"India": "in", "Switzerland": "ch"}.get(country, "-")

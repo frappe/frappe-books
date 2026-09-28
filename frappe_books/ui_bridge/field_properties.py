@@ -11,6 +11,7 @@ from frappe_books.ui_bridge.mapping import (
 	schema_mapping,
 	source_field,
 	source_reference,
+	system_settings_fields,
 	target_doctype,
 )
 
@@ -48,6 +49,9 @@ def get_schema_field_properties(schema: str) -> dict[str, dict[str, Any]]:
 	for source, target in fieldnames.items():
 		if docfield := meta.get_field(target):
 			properties[source] = get_docfield_properties(schema, docfield)
+	system_settings = frappe.get_meta("System Settings")
+	for source, target in system_settings_fields(schema).items():
+		properties[source] = get_docfield_properties(schema, system_settings.get_field(target))
 	return properties
 
 

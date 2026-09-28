@@ -19,6 +19,20 @@ from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard imp
 from frappe_books.setup_service import default_accounts, run_setup
 from frappe_books.tests.accounting import unique_name
 
+# System Settings fields Frappe's setup fills; tests restore them so cached defaults stay right.
+FRAPPE_SETUP_FIELDS = (
+	"country",
+	"currency",
+	"language",
+	"time_zone",
+	"date_format",
+	"time_format",
+	"number_format",
+	"float_precision",
+	"rounding_method",
+	"enable_scheduler",
+	"backup_limit",
+)
 SETUP_ACCOUNT_RULES = {
 	"write_off": POS_RULES["write_off_account"],
 	"round_off": ACCOUNTING_RULES["round_off_account"],
@@ -79,7 +93,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 	def test_setup_adapts_defaults_to_a_numbered_chart(self):
 		wizard = self._wizard(country="Guatemala", currency="GTQ", chart_of_accounts="Guatemala - Cuentas")
 		wizard.save(ignore_permissions=True)
-		run_setup(wizard)
+		with self.restored_system_settings():
+			run_setup(wizard)
 
 		self.assertTrue(frappe.db.exists("Books Account", "Caja - 1.9.1"))
 		self.assertEqual(
@@ -101,7 +116,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			chart_of_accounts="Canada - Plan comptable pour les provinces francophones",
 		)
 		wizard.save(ignore_permissions=True)
-		run_setup(wizard)
+		with self.restored_system_settings():
+			run_setup(wizard)
 
 		self.assert_pos_accounts_are_ledgers()
 
@@ -121,10 +137,11 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		frappe.clear_document_cache("Installed Applications", "Installed Applications")
 		self._wizard(country="Switzerland", currency="CHF", time_zone="Europe/Zurich").save()
 
-		complete_setup()
+		with self.restored_system_settings():
+			complete_setup()
+			settings = frappe.get_single("System Settings")
 
 		self.assertTrue(frappe.is_setup_complete())
-		settings = frappe.get_single("System Settings")
 		self.assertEqual(
 			(settings.country, settings.currency, settings.time_zone, settings.date_format),
 			(
@@ -161,6 +178,12 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 		self.assertTrue(frappe.db.get_single_value("Books Accounting Settings", "setup_complete"))
 		self.assertRaises(frappe.ValidationError, complete_setup)
+
+	def restored_system_settings(self):
+		settings = frappe.get_single("System Settings")
+		return self.change_settings(
+			"System Settings", {field: settings.get(field) for field in FRAPPE_SETUP_FIELDS}
+		)
 
 	def assert_settings_accept_default_accounts(self, chart):
 		by_name = {account.name: account for account in chart}

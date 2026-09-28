@@ -11,6 +11,7 @@ from frappe.utils.jinja_globals import is_rtl
 
 from frappe_books.coa import chart_options
 from frappe_books.permissions import get_schema_permissions, has_app_permission
+from frappe_books.settings import regional_code
 
 no_cache = 1
 SCRIPT_TAG_PATTERN = re.compile(r"\<script[^<]*\</script\>", re.IGNORECASE)
@@ -54,11 +55,9 @@ def _get_boot():
 
 
 def _books_boot():
-	settings = frappe.get_single("Books Accounting Settings")
-	country = settings.country or ""
 	return {
-		"country_code": {"India": "in", "Switzerland": "ch"}.get(country, "-"),
-		"setup_complete": bool(settings.setup_complete),
+		"country_code": regional_code(),
+		"setup_complete": bool(frappe.db.get_single_value("Books Accounting Settings", "setup_complete")),
 		"app_version": frappe.get_attr("frappe_books.__version__"),
 		"developer_mode": bool(frappe.conf.developer_mode),
 		"permissions": get_schema_permissions(),

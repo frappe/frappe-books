@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import frappe
+from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 from frappe.permissions import add_permission, update_permission_property
 
 from frappe_books.customization import sync_all_custom_forms
@@ -49,6 +50,13 @@ def bootstrap():
 	for name in DEFAULT_PRINT_TEMPLATES:
 		_insert_if_missing("Books Print Template", name, standard_print_template_values(name))
 	_fill_default_print_templates()
+
+
+def before_tests():
+	"""Tests run on a site Frappe has set up for an Indian company."""
+	bootstrap()
+	if not frappe.is_setup_complete():
+		complete_app_setup(country="India", currency="INR", timezone="Asia/Kolkata")
 
 
 def grant_core_permissions():

@@ -11,7 +11,8 @@ import { doctypes, mapping } from './helpers/doctypes.mjs';
 
 // Frappe stores single values in its own Singles table.
 const UNMAPPED_SCHEMAS = ['SingleValue'];
-// Frappe's own DocTypes, whose files these tests cannot read.
+// Frappe's own DocTypes, and settings fields in its System Settings, whose
+// files these tests cannot read.
 const CORE_SCHEMAS = Object.keys(mapping).filter(
   (schemaName) =>
     !doctypes.some(({ name }) => name === mapping[schemaName].doctype)
@@ -51,7 +52,11 @@ function getFields(schemas) {
     )
     .flatMap(([schemaName, schema]) =>
       schema.fields
-        .filter((field) => !field.meta)
+        .filter(
+          (field) =>
+            !field.meta &&
+            !mapping[schemaName]?.system_settings?.[field.fieldname]
+        )
         .map((field) => [
           schemaName,
           field,

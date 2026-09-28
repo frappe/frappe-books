@@ -2,12 +2,10 @@ import { Doc } from 'fyo/model/doc';
 import {
   FiltersMap,
   HiddenMap,
-  ListsMap,
   ReadOnlyMap,
   ValidationMap,
 } from 'fyo/model/types';
 import { validateEmail } from 'fyo/model/validationFunction';
-import { getCountryInfo } from 'utils/misc';
 
 export class AccountingSettings extends Doc {
   enableDiscounting?: boolean;
@@ -43,11 +41,9 @@ export class AccountingSettings extends Doc {
     email: validateEmail,
   };
 
-  static lists: ListsMap = {
-    country: () => Object.keys(getCountryInfo()),
-  };
-
   readOnly: ReadOnlyMap = {
+    // Setup sets the company country in Frappe's System Settings.
+    country: () => true,
     enableDiscounting: () => {
       return !!this.enableDiscounting;
     },
@@ -73,7 +69,7 @@ export class AccountingSettings extends Doc {
 
   override hidden: HiddenMap = {
     discountAccount: () => !this.enableDiscounting,
-    gstin: () => this.fyo.singles.SystemSettings?.countryCode !== 'in',
+    gstin: () => this.country !== 'India',
     enablePricingRule: () =>
       !this.fyo.singles.AccountingSettings?.enableDiscounting,
     enableCouponCode: () =>

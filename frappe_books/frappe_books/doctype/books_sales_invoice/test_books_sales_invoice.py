@@ -134,7 +134,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		for currency, rate, total in (("KWD", "1.2345", "2.469"), ("JPY", "10.25", "21")):
 			with (
 				self.subTest(currency=currency),
-				self.change_settings("Books System Settings", currency=currency),
+				self.change_settings("System Settings", currency=currency),
 			):
 				invoice = make_invoice(
 					"Books Sales Invoice",
@@ -152,7 +152,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_rounds_invoice_amounts_to_invoice_currency(self):
 		item = make_item(self.income.name, self.expense.name)
-		with self.change_settings("Books System Settings", currency="JPY"):
+		with self.change_settings("System Settings", currency="JPY"):
 			party = make_party(self.receivable.name, currency=foreign_currency())
 			invoice = make_invoice(
 				"Books Sales Invoice",

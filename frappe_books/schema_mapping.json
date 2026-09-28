@@ -30,7 +30,6 @@
       "fields": {
         "bankName": "bank_name",
         "companyName": "company_name",
-        "country": "country",
         "discountAccount": "discount_account",
         "email": "email",
         "enableCouponCode": "enable_coupon_code",
@@ -55,6 +54,9 @@
         "setupComplete": "setup_complete",
         "taxId": "tax_id",
         "writeOffAccount": "write_off_account"
+      },
+      "system_settings": {
+        "country": "country"
       }
     },
     "Address": {
@@ -975,8 +977,6 @@
       "doctype": "Books System Settings",
       "fields": {
         "allowFilterBypass": "allow_filter_bypass",
-        "countryCode": "country_code",
-        "currency": "currency",
         "darkMode": "dark_mode",
         "dateFormat": "date_format",
         "displayPrecision": "display_precision",
@@ -986,6 +986,9 @@
         "locale": "locale",
         "name": "name",
         "removeFilter": "remove_filter"
+      },
+      "system_settings": {
+        "currency": "currency"
       }
     },
     "Tax": {

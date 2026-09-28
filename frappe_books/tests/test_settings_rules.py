@@ -14,7 +14,6 @@ COMPANY = {
 	"company_name": "Settings Test Company",
 	"fullname": "Settings Owner",
 	"email": "owner@example.com",
-	"country": "India",
 	"bank_name": "Settings Test Bank",
 	"fiscal_year_start": "2026-04-01",
 	"fiscal_year_end": "2027-03-31",

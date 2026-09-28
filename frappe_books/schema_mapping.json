@@ -120,13 +120,6 @@
         "tierName": "tier_name"
       }
     },
-    "Color": {
-      "doctype": "Books Color",
-      "fields": {
-        "hexvalue": "hexvalue",
-        "name": "name"
-      }
-    },
     "Country": {
       "doctype": "Country",
       "fields": {

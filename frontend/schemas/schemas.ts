@@ -3,7 +3,6 @@ import AccountingLedgerEntry from './app/AccountingLedgerEntry.json';
 import AccountingSettings from './app/AccountingSettings.json';
 import Address from './app/Address.json';
 import Batch from './app/Batch.json';
-import Color from './app/Color.json';
 import Country from './app/Country.json';
 import Currency from './app/Currency.json';
 import Defaults from './app/Defaults.json';
@@ -97,7 +96,6 @@ export const appSchemas: SchemaFile[] = [
   GetStarted as SchemaFile,
   PrintTemplate as SchemaFile,
 
-  Color as SchemaFile,
   Country as SchemaFile,
   Currency as SchemaFile,
   Defaults as SchemaFile,

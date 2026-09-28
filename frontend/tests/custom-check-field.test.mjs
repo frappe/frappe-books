@@ -8,9 +8,8 @@ test('a custom check field without a default starts unchecked and saves', async 
       return getSchemas('-', [
         {
           parent: 'UOM',
-          label: 'Fragile',
           fieldname: 'fragile',
-          fieldtype: 'Check',
+          docfield: { fieldtype: 'Check', label: 'Fragile' },
         },
       ]);
     }

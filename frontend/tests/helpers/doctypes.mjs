@@ -18,7 +18,10 @@ function readJson(url) {
   return JSON.parse(readFileSync(url, 'utf8'));
 }
 
-/** The field properties the server sends for the DocType files, and schemas built with them. */
+/**
+ * The field properties the server sends for the DocType files, and schemas built with them.
+ * A custom field's `docfield` stands for the properties of its Custom Field.
+ */
 export function withFieldProperties({
   getSchemas,
   getDoctypeFieldProperties,
@@ -29,6 +32,20 @@ export function withFieldProperties({
     fieldProperties,
     searchFields: getDoctypeSearchFields?.(doctypes, mapping),
     getSchemas: (countryCode, customFields, properties = fieldProperties) =>
-      getSchemas(countryCode, customFields, properties),
+      getSchemas(
+        countryCode,
+        customFields,
+        withCustomFields(properties, customFields)
+      ),
   };
+}
+
+function withCustomFields(properties, customFields) {
+  const merged = { ...properties };
+  for (const { parent, fieldname, docfield } of customFields) {
+    if (docfield) {
+      merged[parent] = { ...merged[parent], [fieldname]: docfield };
+    }
+  }
+  return merged;
 }

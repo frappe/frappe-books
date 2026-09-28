@@ -7,16 +7,12 @@ import { applyFieldProperties, type FieldPropertyMap } from './fieldProperties';
 import regionalSchemas from './regional';
 import { appSchemas, coreSchemas, metaSchemas } from './schemas';
 import type {
-  DynamicLinkField,
   Field,
-  OptionField,
   RawCustomField,
   Schema,
   SchemaMap,
   SchemaStub,
   SchemaStubMap,
-  SelectOption,
-  TargetField,
 } from './types';
 
 const NAME_FIELD = {
@@ -41,7 +37,7 @@ export function getSchemas(
   schemaMap = removeFields(schemaMap);
   schemaMap = setSchemaNameOnFields(schemaMap);
 
-  addCustomFields(schemaMap, rawCustomFields);
+  addCustomFields(schemaMap, rawCustomFields, fieldProperties);
   applyFieldProperties(schemaMap, fieldProperties);
   if (languageMap) {
     translateSchema(schemaMap, languageMap, schemaTranslateables);
@@ -280,94 +276,25 @@ function getRegionalSchemaMap(countryCode: string): SchemaStubMap {
   return getMapFromList(countrySchemas, 'name');
 }
 
+/** Place each custom field the server defines. Its Custom Field holds the rest. */
 function addCustomFields(
   schemaMap: SchemaMap,
-  rawCustomFields: RawCustomField[]
-): void {
-  const fieldMap = getFieldMapFromRawCustomFields(rawCustomFields, schemaMap);
-  for (const schemaName in fieldMap) {
-    const fields = fieldMap[schemaName];
-    schemaMap[schemaName]?.fields.push(...fields);
-  }
-}
-
-function getFieldMapFromRawCustomFields(
   rawCustomFields: RawCustomField[],
-  schemaMap: SchemaMap
-) {
-  const schemaFieldMap: Record<string, Record<string, Field>> = {};
+  fieldProperties: FieldPropertyMap
+): void {
+  for (const { parent, fieldname, section, tab } of rawCustomFields) {
+    const fields = schemaMap[parent]?.fields;
+    const docfield = fieldProperties[parent]?.[fieldname];
+    if (!fields || !docfield || fields.some((f) => f.fieldname === fieldname)) {
+      continue;
+    }
 
-  return rawCustomFields.reduce(
-    (
-      map,
-      {
-        parent,
-        label,
-        fieldname,
-        fieldtype,
-        isRequired,
-        section,
-        tab,
-        options: rawOptions,
-        default: defaultValue,
-        target,
-        references,
-      }
-    ) => {
-      schemaFieldMap[parent] ??= getMapFromList(
-        schemaMap[parent]?.fields ?? [],
-        'fieldname'
-      );
-
-      if (!schemaFieldMap[parent] || schemaFieldMap[parent][fieldname]) {
-        return map;
-      }
-
-      map[parent] ??= [];
-      const options = rawOptions
-        ?.split('\n')
-        .map((o) => {
-          const value = o.trim();
-          return { value, label: value } as SelectOption;
-        })
-        .filter((o) => o.label && o.value);
-
-      const field = {
-        label,
-        fieldname,
-        fieldtype,
-        section,
-        tab,
-        isCustom: true,
-      } as Field;
-
-      if (options?.length) {
-        (field as OptionField).options = options;
-      }
-
-      if (typeof isRequired === 'number' || typeof isRequired === 'boolean') {
-        field.required = Boolean(isRequired);
-      }
-
-      if (typeof target === 'string') {
-        (field as TargetField).target = target;
-      }
-
-      if (typeof references === 'string') {
-        (field as DynamicLinkField).references = references;
-      }
-
-      if (defaultValue != null) {
-        field.default = defaultValue;
-      }
-
-      if (field.required && field.default == null) {
-        field.required = false;
-      }
-
-      map[parent].push(field);
-      return map;
-    },
-    {} as Record<string, Field[]>
-  );
+    fields.push({
+      fieldname,
+      label: docfield.label,
+      section,
+      tab,
+      isCustom: true,
+    } as Field);
+  }
 }

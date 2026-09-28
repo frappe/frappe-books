@@ -126,15 +126,15 @@ test('computed and reference fields keep the type the Books app gives them', () 
 });
 
 test('a custom field takes the server properties of its hosted column', () => {
-  const region = getField('Party', 'region', { fieldtype: 'Data', reqd: 1 }, [
-    {
-      parent: 'Party',
-      label: 'Region',
-      fieldname: 'region',
-      fieldtype: 'Data',
-    },
-  ]);
+  const region = getField(
+    'Party',
+    'region',
+    { fieldtype: 'Data', label: 'Region', reqd: 1 },
+    [{ parent: 'Party', fieldname: 'region', section: 'Location' }]
+  );
   assert.equal(region.isCustom, true);
+  assert.equal(region.label, 'Region');
+  assert.equal(region.section, 'Location');
   assert.equal(region.required, true);
 });
 

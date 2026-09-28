@@ -50,18 +50,12 @@ type BaseFieldType = Exclude<
 
 export type RawValue = string | number | boolean | null;
 
+/** Where /books places a custom field. Its Custom Field defines it. */
 export type RawCustomField = {
   parent: string;
-  label: string;
   fieldname: string;
-  fieldtype: FieldType;
-  isRequired?: boolean;
   section?: string;
   tab?: string;
-  options?: string;
-  target?: string;
-  references?: string;
-  default?: string;
 };
 
 export interface BaseField {

@@ -52,7 +52,10 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 	def test_custom_fields_are_served_under_their_books_names(self):
 		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD]})
 
-		self.assertEqual(get_field_properties()["UOM"][FIELD["fieldname"]], {"fieldtype": "Data"})
+		self.assertEqual(
+			get_field_properties()["UOM"][FIELD["fieldname"]],
+			{"fieldtype": "Data", "label": FIELD["label"]},
+		)
 
 	def test_system_manager_removes_fields_without_switching_user(self):
 		_make_system_manager()

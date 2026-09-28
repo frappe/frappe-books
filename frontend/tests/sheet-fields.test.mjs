@@ -6,14 +6,15 @@ import {
   getSchemas,
 } from './helpers/accounting.mjs';
 
-// Books keeps a custom field required only when it has a default.
+// The server requires a custom field only with a default.
 const customField = (parent, fieldname, isRequired) => ({
   parent,
-  label: fieldname,
   fieldname,
-  fieldtype: 'Data',
-  isRequired,
-  default: isRequired ? 'North' : undefined,
+  docfield: {
+    fieldtype: 'Data',
+    label: fieldname,
+    ...(isRequired && { reqd: 1, default: 'North' }),
+  },
 });
 
 test('quick edit asks for required fields that have no default', () => {

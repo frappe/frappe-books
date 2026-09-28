@@ -11,6 +11,8 @@ import type {
 /** Data properties the server's DocType meta sets on a field. */
 export type DocFieldProperties = {
   fieldtype: string;
+  /** Custom fields only, as no schema file labels them. */
+  label?: string;
   options?: string;
   reqd?: number;
   default?: string;

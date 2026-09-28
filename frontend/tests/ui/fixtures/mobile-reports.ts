@@ -1,15 +1,18 @@
 import { fyo } from 'src/initFyo';
 import 'src/router';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
-import { DateTime } from 'luxon';
 import { ProfitAndLoss } from 'reports/ProfitAndLoss/ProfitAndLoss';
 import { GeneralLedger } from 'reports/GeneralLedger/GeneralLedger';
 import { StockBalance } from 'reports/inventory/StockBalance';
 import { StockLedger } from 'reports/inventory/StockLedger';
 import { TrialBalance } from 'reports/TrialBalance/TrialBalance';
 import type { Report } from 'reports/Report';
-import type { AccountSection, LedgerRow } from 'reports/types';
-import { getSchemas } from 'schemas';
+import {
+  toColumnField,
+  type ServerColumn,
+  type ServerRow,
+} from 'reports/serverReport';
+import { getTestSchemas } from './schemas';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
 import { getFilterValues } from 'src/components/Report/Mobile/MobileFilters';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
@@ -18,111 +21,141 @@ import { createApp, h, markRaw, reactive, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import 'src/styles/index.css';
 
-// Reports and rows exist only in browser memory. No server calls are needed.
-function account(
-  name: string,
-  level: number,
-  values: number[],
-  isGroup = false
+// Reports and rows exist only in browser memory, shaped as the server sends them.
+function column(
+  fieldname: string,
+  label: string,
+  fieldtype: ServerColumn['fieldtype'] = 'Data'
+): ServerColumn {
+  return { fieldname, label, fieldtype };
+}
+
+async function load(
+  report: Report,
+  columns: ServerColumn[],
+  rows: ServerRow[]
 ) {
-  return { name, level, isGroup, values };
+  report.getDefaultFilters = async () => ({});
+  report.runReport = async () => ({
+    columns: columns.map(toColumnField),
+    rows,
+  });
+  await report.setDefaultFilters();
+  report.filters = await report.getFilters();
+  await report.setReportData();
+  return report;
 }
 
 function makeProfitAndLoss() {
-  const report = new ProfitAndLoss(fyo);
-  report._dateRanges = ['2026-09-01', '2026-08-01'].map((date) => ({
-    toDate: DateTime.fromISO(date),
-    fromDate: DateTime.fromISO(date).minus({ months: 1 }),
-  }));
-  report.filters = report.getFilters();
-  report.columns = report.getColumns();
-  const sections: AccountSection[] = [
-    {
-      rootType: 'Income',
-      accounts: [
-        account('Income', 0, [123456789, 1000], true),
-        account('Direct Income', 1, [123456789, 1000], true),
-        account('Sales', 2, [123450000, 1000]),
-        account('Service', 2, [6789, 0]),
-      ],
-      total: [123456789, 1000],
-    },
-    {
-      rootType: 'Expense',
-      accounts: [
-        account('Expenses', 0, [500, 250], true),
-        account('Office Rent', 1, [500, 250]),
-      ],
-      total: [500, 250],
-    },
-  ];
-  report.reportData = report.getReportDataFromSections({
-    sections,
-    profit: [123456289, 750],
+  const periods = ['period_2026_08_31', 'period_2026_07_31'];
+  const account = (
+    name: string,
+    indent: number,
+    values: number[],
+    isGroup = false
+  ) => ({
+    account: name,
+    indent,
+    is_group: isGroup,
+    ...Object.fromEntries(periods.map((key, i) => [key, values[i]])),
   });
-  return report;
+  return load(
+    new ProfitAndLoss(fyo),
+    [
+      column('account', 'Account', 'Link'),
+      column(periods[0], 'Aug 31, 2026', 'Currency'),
+      column(periods[1], 'Jul 31, 2026', 'Currency'),
+    ],
+    [
+      account('Income', 0, [123456789, 1000], true),
+      account('Direct Income', 1, [123456789, 1000], true),
+      account('Sales', 2, [123450000, 1000]),
+      account('Service', 2, [6789, 0]),
+      account('Total Income (Credit)', 0, [123456789, 1000]),
+      {},
+      account('Expenses', 0, [500, 250], true),
+      account('Office Rent', 1, [500, 250]),
+      account('Total Expense (Debit)', 0, [500, 250]),
+      {},
+      { ...account('Total Profit', 0, [123456289, 750]), bold: 1 },
+    ]
+  );
 }
 
 function makeGeneralLedger() {
-  const report = new GeneralLedger(fyo);
-  report.setDefaultFilters();
-  report.filters = report.getFilters();
-  report.columns = report.getColumns();
-  const entry = (index: number, date: string, debit: number, credit: number) =>
-    ({
-      type: 'entry',
-      index,
-      account: index % 2 ? 'Debtors' : 'Sales',
-      date,
-      debit,
-      credit,
-      balance: debit - credit,
-      party: 'Sharma Traders',
-      referenceType: 'SalesInvoice',
-      referenceName: `SINV-10${index}`,
-    }) as LedgerRow;
-  const rows: LedgerRow[] = [
-    { type: 'opening', debit: 0, credit: 0, balance: 0 },
-    entry(1, '2026-09-27', 32332, 0),
-    entry(2, '2026-09-27', 0, 27400),
-    entry(3, '2026-09-26', 10000, 0),
-    { type: 'blank' },
-    { type: 'closing', debit: 42332, credit: 27400, balance: 14932 },
-  ];
-  report.reportData = rows.map((row) => report._getReportRow(row));
-  return report;
+  const entry = (
+    index: number,
+    date: string,
+    debit: number,
+    credit: number
+  ) => ({
+    type: 'entry',
+    index,
+    account: index % 2 ? 'Debtors' : 'Sales',
+    date,
+    debit,
+    credit,
+    balance: debit - credit,
+    party: 'Sharma Traders',
+    reference_type: 'SalesInvoice',
+    reference_name: `SINV-10${index}`,
+  });
+  return load(
+    new GeneralLedger(fyo),
+    [
+      column('index', '#', 'Int'),
+      column('account', 'Account', 'Link'),
+      column('date', 'Date', 'Date'),
+      column('debit', 'Debit', 'Currency'),
+      column('credit', 'Credit', 'Currency'),
+      column('balance', 'Balance', 'Currency'),
+      column('party', 'Party', 'Link'),
+      column('reference_name', 'Ref Name'),
+      column('reference_type', 'Ref Type'),
+    ],
+    [
+      { type: 'opening', account: 'Opening', debit: 0, credit: 0, balance: 0 },
+      entry(1, '2026-09-27', 32332, 0),
+      entry(2, '2026-09-27', 0, 27400),
+      entry(3, '2026-09-26', 10000, 0),
+      {},
+      {
+        type: 'closing',
+        account: 'Closing',
+        debit: 42332,
+        credit: 27400,
+        balance: 14932,
+      },
+    ]
+  );
 }
 
 function makeStockBalance() {
-  const report = new StockBalance(fyo);
-  report.setDefaultFilters();
-  report.filters = report.getFilters();
-  report.columns = report.getColumns();
   const rows = [
     ['Printed Brochures (100)', 'Stores', 80, 168000],
     ['Printed Brochures (100)', 'Showroom', 24, 50400],
     ['Business Cards (500)', 'Stores', 190, 133000],
   ] as const;
-  report.reportData = rows.map(([item, location, qty, value], index) =>
-    report._convertRawDataRowToReportRow(
-      {
-        name: index + 1,
-        item,
-        location,
-        balanceQuantity: qty,
-        balanceValue: value,
-      },
-      {}
-    )
+  return load(
+    new StockBalance(fyo),
+    [
+      column('index', '#', 'Int'),
+      column('item', 'Item', 'Link'),
+      column('location', 'Location', 'Link'),
+      column('balance_quantity', 'Balance Qty.', 'Float'),
+      column('balance_value', 'Balance Value', 'Float'),
+    ],
+    rows.map(([item, location, quantity, value], index) => ({
+      index: index + 1,
+      item,
+      location,
+      balance_quantity: quantity,
+      balance_value: value,
+    }))
   );
-  return report;
 }
 
 function makeStockLedger() {
-  const report = new StockLedger(fyo);
-  report.setDefaultFilters();
-  report.filters = report.getFilters();
-  report.columns = report.getColumns();
   const rows = [
     [
       '2026-09-27T10:00:00',
@@ -141,44 +174,70 @@ function makeStockLedger() {
       'PREC-1004',
     ],
   ] as const;
-  report.reportData = rows.map(
-    ([date, item, location, quantity, balanceQuantity, referenceName], index) =>
-      report._convertRawDataRowToReportRow(
-        {
-          name: index + 1,
-          date,
-          item,
-          location,
-          quantity,
-          balanceQuantity,
-          referenceName,
-          referenceType: 'Shipment',
-        },
-        { quantity: null }
-      )
+  return load(
+    new StockLedger(fyo),
+    [
+      column('index', '#', 'Int'),
+      column('date', 'Date', 'Datetime'),
+      column('item', 'Item', 'Link'),
+      column('location', 'Location', 'Link'),
+      column('quantity', 'Quantity', 'Float'),
+      column('balance_quantity', 'Balance Qty.', 'Float'),
+      column('reference_name', 'Ref. Name'),
+      column('reference_type', 'Ref. Type'),
+    ],
+    rows.map(([date, item, location, quantity, balance, name], index) => ({
+      index: index + 1,
+      date,
+      item,
+      location,
+      quantity,
+      balance_quantity: balance,
+      reference_name: name,
+      reference_type: 'Shipment',
+    }))
   );
-  return report;
 }
 
 function makeTrialBalance() {
-  const report = new TrialBalance(fyo);
-  report.filters = report.getFilters();
-  report.columns = report.getColumns();
-  const values = [0, 0, 1235280, 0, 1235280, 0];
-  report.reportData = report.getSectionRows([
-    {
-      rootType: 'Asset',
-      accounts: [
-        account('Application of Funds (Assets)', 0, values, true),
-        account('Accounts Receivable', 1, values),
-      ],
-      total: values,
-    },
-  ]);
-  return report;
+  const keys = [
+    'opening_debit',
+    'opening_credit',
+    'debit',
+    'credit',
+    'closing_debit',
+    'closing_credit',
+  ];
+  const labels = [
+    'Opening (Dr)',
+    'Opening (Cr)',
+    'Debit',
+    'Credit',
+    'Closing (Dr)',
+    'Closing (Cr)',
+  ];
+  const values = Object.fromEntries(
+    keys.map((key, i) => [key, [0, 0, 1235280, 0, 1235280, 0][i]])
+  );
+  return load(
+    new TrialBalance(fyo),
+    [
+      column('account', 'Account', 'Link'),
+      ...keys.map((key, i) => column(key, labels[i], 'Currency')),
+    ],
+    [
+      {
+        account: 'Application of Funds (Assets)',
+        indent: 0,
+        is_group: true,
+        ...values,
+      },
+      { account: 'Accounts Receivable', indent: 1, is_group: false, ...values },
+    ]
+  );
 }
 
-const makers: Record<string, () => Report> = {
+const makers: Record<string, () => Promise<Report>> = {
   ProfitAndLoss: makeProfitAndLoss,
   GeneralLedger: makeGeneralLedger,
   StockBalance: makeStockBalance,
@@ -187,7 +246,7 @@ const makers: Record<string, () => Report> = {
 };
 
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getSchemas('-', []);
+  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
   await fyo.db.init();
   // The app's documents mark fyo raw; reactive reports rely on it.
   markRaw(fyo);
@@ -202,16 +261,16 @@ async function mount() {
     enableSerialNumber: false,
   } as any;
 
+  const report = await makeProfitAndLoss();
   const state = reactive({
-    report: makeProfitAndLoss() as Report,
-    defaults: {} as Record<string, unknown>,
+    report: report as Report,
+    defaults: getFilterValues(report),
     loading: false,
   });
-  const show = (name: string) => {
-    state.report = makers[name]();
+  const show = async (name: string) => {
+    state.report = await makers[name]();
     state.defaults = getFilterValues(state.report);
   };
-  show('ProfitAndLoss');
 
   const app = createApp({
     render: () =>

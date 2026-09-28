@@ -148,7 +148,7 @@ def _default_payment_account(payment_method, payment_type, invoice):
 	if not method:
 		return None
 	if method.type == "Cash" and invoice and invoice.get("is_pos"):
-		return frappe.db.get_single_value("Books Pos Settings", "cash_account")
+		return counter_cash_account()
 	if method.account and payment_type != "Pay":
 		return method.account
 	return latest_ledger_account("Cash" if method.type == "Cash" else "Bank")

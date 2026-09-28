@@ -1,6 +1,5 @@
-from typing import Literal, TypedDict
-
 import frappe
+from frappe import _
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
@@ -22,54 +21,112 @@ LEDGER_FIELDS = [
 	"reference_type",
 	"reference_name",
 ]
+GROUP_FIELDS = ("item", "location", "reference_name")
 MOVEMENT = [{"SUM": "quantity", "as": "quantity"}, {"SUM": "value_change", "as": "value"}]
 
 
-class StockFilters(TypedDict, total=False):
-	item: str | None
-	location: str | None
-	batch: str | None
-	fromDate: str | None
-	toDate: str | None
-	referenceType: str | None
-	referenceName: str | None
-	ascending: bool | None
-	showSerialNumbers: bool | None
-	serialNumberFilter: Literal["All", "In stock", "Out stock"] | None
+def get_ledger_columns() -> list[dict]:
+	return [
+		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
+		{"fieldname": "date", "label": _("Date"), "fieldtype": "Datetime", "width": 150},
+		{"fieldname": "item", "label": _("Item"), "fieldtype": "Link", "options": "Books Item"},
+		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Location"},
+		*_tracking_columns(show_serial_numbers=True),
+		{"fieldname": "quantity", "label": _("Quantity"), "fieldtype": "Float"},
+		{"fieldname": "balance_quantity", "label": _("Balance Qty."), "fieldtype": "Float"},
+		{"fieldname": "incoming_rate", "label": _("Incoming rate"), "fieldtype": "Currency"},
+		{"fieldname": "valuation_rate", "label": _("Valuation Rate"), "fieldtype": "Currency"},
+		{"fieldname": "balance_value", "label": _("Balance Value"), "fieldtype": "Currency"},
+		{"fieldname": "value_change", "label": _("Value Change"), "fieldtype": "Currency"},
+		{"fieldname": "reference_name", "label": _("Ref. Name"), "fieldtype": "Data"},
+		{"fieldname": "reference_type", "label": _("Ref. Type"), "fieldtype": "Data"},
+	]
 
 
-def stock_ledger(filters: StockFilters) -> list[dict]:
+def get_balance_columns(filters) -> list[dict]:
+	return [
+		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
+		{"fieldname": "item", "label": _("Item"), "fieldtype": "Link", "options": "Books Item"},
+		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Location"},
+		*_tracking_columns(show_serial_numbers=filters.get("show_serial_numbers")),
+		{"fieldname": "balance_quantity", "label": _("Balance Qty."), "fieldtype": "Float"},
+		{"fieldname": "balance_value", "label": _("Balance Value"), "fieldtype": "Float"},
+		{"fieldname": "opening_quantity", "label": _("Opening Qty."), "fieldtype": "Float"},
+		{"fieldname": "opening_value", "label": _("Opening Value"), "fieldtype": "Float"},
+		{"fieldname": "incoming_quantity", "label": _("In Qty."), "fieldtype": "Float"},
+		{"fieldname": "incoming_value", "label": _("In Value"), "fieldtype": "Currency"},
+		{"fieldname": "outgoing_quantity", "label": _("Out Qty."), "fieldtype": "Float"},
+		{"fieldname": "outgoing_value", "label": _("Out Value"), "fieldtype": "Currency"},
+		{"fieldname": "valuation_rate", "label": _("Valuation rate"), "fieldtype": "Currency"},
+	]
+
+
+def _tracking_columns(show_serial_numbers):
+	settings = frappe.get_cached_doc("Books Inventory Settings")
+	columns = []
+	if settings.enable_batches:
+		columns.append(
+			{"fieldname": "batch", "label": _("Batch"), "fieldtype": "Link", "options": "Books Batch"}
+		)
+	if settings.enable_serial_number and show_serial_numbers:
+		columns.append({"fieldname": "serial_number", "label": _("Serial Number"), "fieldtype": "Data"})
+	return columns
+
+
+def get_ledger_data(filters) -> list[dict]:
 	"""Return stock ledger entries with the FIFO balances stored on each entry."""
 	conditions = [
 		*_key_conditions(filters),
-		*datetime_conditions("date", filters.get("fromDate"), filters.get("toDate")),
+		*datetime_conditions("date", filters.get("from_date"), filters.get("to_date")),
 	]
-	if filters.get("referenceType") and filters["referenceType"] != "All":
-		conditions.append(["reference_type", "=", target_reference(filters["referenceType"])])
-	if filters.get("referenceName"):
-		conditions.append(["reference_name", "=", filters["referenceName"]])
+	if filters.get("reference_type") and filters["reference_type"] != "All":
+		conditions.append(["reference_type", "=", target_reference(filters["reference_type"])])
+	if filters.get("reference_name"):
+		conditions.append(["reference_name", "=", filters["reference_name"]])
 	direction = "asc" if filters.get("ascending") else "desc"
 	entries = frappe.get_list(
 		DOCTYPE, filters=conditions, fields=LEDGER_FIELDS, order_by=f"date {direction}, name {direction}"
 	)
-	return [_ledger_row(entry) for entry in entries]
+	return _grouped([_ledger_row(entry) for entry in entries], filters.get("group_by"))
 
 
-def stock_balance(filters: StockFilters) -> list[dict]:
+def get_balance_data(filters) -> list[dict]:
 	"""Return opening, incoming, outgoing and closing stock of each item, location and batch."""
 	key_fields = ["item", "location", "batch"]
 	conditions = _key_conditions(filters)
-	if filters.get("showSerialNumbers"):
+	if filters.get("show_serial_numbers"):
 		key_fields.append("serial_number")
 		conditions.append(["serial_number", "is", "set"])
-	period = [*conditions, *datetime_conditions("date", filters.get("fromDate"), filters.get("toDate"))]
+	period = [*conditions, *datetime_conditions("date", filters.get("from_date"), filters.get("to_date"))]
 	balances = {}
-	if filters.get("fromDate"):
-		_add_movement(balances, key_fields, [*conditions, ["date", "<", filters["fromDate"]]], "opening")
+	if filters.get("from_date"):
+		_add_movement(balances, key_fields, [*conditions, ["date", "<", filters["from_date"]]], "opening")
 	_add_movement(balances, key_fields, [*period, ["quantity", ">", 0]], "incoming")
 	_add_movement(balances, key_fields, [*period, ["quantity", "<", 0]], "outgoing")
 	rows = [_balance_row(key, key_fields, movement) for key, movement in sorted(balances.items())]
-	return [row for row in rows if _matches_serial_filter(row, filters.get("serialNumberFilter"))]
+	return _numbered(
+		[row for row in rows if _matches_serial_filter(row, filters.get("serial_number_filter"))]
+	)
+
+
+def _grouped(rows, group_by):
+	"""Number the rows and, when grouped, keep each group together with a blank row between groups."""
+	if group_by not in GROUP_FIELDS:
+		return _numbered(rows)
+	groups = {}
+	for row in rows:
+		groups.setdefault(row[group_by], []).append(row)
+	grouped = []
+	for group in groups.values():
+		grouped += [*group, {}]
+	_numbered([row for row in grouped if row])
+	return grouped[:-1]
+
+
+def _numbered(rows):
+	for index, row in enumerate(rows, 1):
+		row["index"] = index
+	return rows
 
 
 def _key_conditions(filters):
@@ -83,15 +140,15 @@ def _ledger_row(entry):
 		"item": entry.item,
 		"location": entry.location,
 		"batch": entry.batch or "",
-		"serialNumber": entry.serial_number or "",
+		"serial_number": entry.serial_number or "",
 		"quantity": quantity,
-		"balanceQuantity": as_decimal(entry.balance_quantity),
-		"incomingRate": _incoming_rate(entry.rate, entry.value_change, quantity),
-		"valuationRate": _valuation_rate(entry.balance_value, entry.balance_quantity),
-		"balanceValue": as_decimal(entry.balance_value),
-		"valueChange": as_decimal(entry.value_change),
-		"referenceName": entry.reference_name,
-		"referenceType": source_reference(entry.reference_type),
+		"balance_quantity": as_decimal(entry.balance_quantity),
+		"incoming_rate": _incoming_rate(entry.rate, entry.value_change, quantity),
+		"valuation_rate": _valuation_rate(entry.balance_value, entry.balance_quantity),
+		"balance_value": as_decimal(entry.balance_value),
+		"value_change": as_decimal(entry.value_change),
+		"reference_name": entry.reference_name,
+		"reference_type": source_reference(entry.reference_type),
 	}
 
 
@@ -120,24 +177,24 @@ def _balance_row(key, key_fields, movement):
 	balance_quantity = opening[0] + incoming[0] + outgoing[0]
 	balance_value = opening[1] + incoming[1] + outgoing[1]
 	return {
-		**dict(zip(("item", "location", "batch", "serialNumber"), key, strict=False)),
-		"balanceQuantity": balance_quantity,
-		"balanceValue": balance_value,
-		"openingQuantity": opening[0],
-		"openingValue": opening[1],
-		"incomingQuantity": incoming[0],
-		"incomingValue": incoming[1],
-		"outgoingQuantity": -outgoing[0],
-		"outgoingValue": -outgoing[1],
-		"valuationRate": _valuation_rate(balance_value, balance_quantity),
+		**dict(zip(key_fields, key, strict=True)),
+		"balance_quantity": balance_quantity,
+		"balance_value": balance_value,
+		"opening_quantity": opening[0],
+		"opening_value": opening[1],
+		"incoming_quantity": incoming[0],
+		"incoming_value": incoming[1],
+		"outgoing_quantity": -outgoing[0],
+		"outgoing_value": -outgoing[1],
+		"valuation_rate": _valuation_rate(balance_value, balance_quantity),
 	}
 
 
 def _matches_serial_filter(row, serial_filter):
 	if serial_filter == "In stock":
-		return row["balanceQuantity"] > 0
+		return row["balance_quantity"] > 0
 	if serial_filter == "Out stock":
-		return row["balanceQuantity"] <= 0
+		return row["balance_quantity"] <= 0
 	return True
 
 

@@ -1,36 +1,53 @@
 from collections import defaultdict
-from typing import Literal, TypedDict
 
 import frappe
-from frappe.utils import create_batch, getdate
+from frappe import _
+from frappe.utils import add_months, create_batch, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.regional import INDIAN_STATES
 from frappe_books.reports.filters import datetime_conditions
-from frappe_books.ui_bridge.mapping import target_doctype
 
-TAX_AMOUNT_FIELDS = {"IGST": "igstAmt", "CGST": "cgstAmt", "SGST": "sgstAmt"}
+TAX_AMOUNT_FIELDS = {"IGST": "igst_amount", "CGST": "cgst_amount", "SGST": "sgst_amount"}
 LARGE_B2C_INVOICE = 250000
 # SQLite allows 32766 query parameters.
 IN_LIST_BATCH_SIZE = 1000
 TRANSFER_TYPES = {
 	"B2B": lambda row: bool(row["gstin"]),
-	"B2CL": lambda row: not row["gstin"] and not row["inState"] and row["invAmt"] >= LARGE_B2C_INVOICE,
-	"B2CS": lambda row: not row["gstin"] and (row["inState"] or row["invAmt"] < LARGE_B2C_INVOICE),
+	"B2CL": lambda row: (
+		not row["gstin"] and not row["in_state"] and row["invoice_value"] >= LARGE_B2C_INVOICE
+	),
+	"B2CS": lambda row: not row["gstin"] and (row["in_state"] or row["invoice_value"] < LARGE_B2C_INVOICE),
 	"NR": lambda row: row["rate"] == 0,
 }
 
 
-class GSTRFilters(TypedDict, total=False):
-	fromDate: str | None
-	toDate: str | None
-	place: str | None
-	transferType: Literal["B2B", "B2CL", "B2CS", "NR"] | None
+def get_default_filters() -> dict:
+	today = getdate()
+	return {"from_date": add_months(today, -3), "to_date": today, "transfer_type": "B2B"}
 
 
-def gstr_rows(schema: Literal["SalesInvoice", "PurchaseInvoice"], filters: GSTRFilters) -> list[dict]:
+def get_columns(filters) -> list[dict]:
+	columns = [
+		{"fieldname": "party", "label": _("Party"), "fieldtype": "Data", "width": 180},
+		{"fieldname": "invoice_no", "label": _("Invoice No."), "fieldtype": "Data"},
+		{"fieldname": "invoice_value", "label": _("Invoice Value"), "fieldtype": "Currency"},
+		{"fieldname": "invoice_date", "label": _("Invoice Date"), "fieldtype": "Date"},
+		{"fieldname": "place", "label": _("Place of supply"), "fieldtype": "Data"},
+		{"fieldname": "rate", "label": _("Rate"), "fieldtype": "Data", "width": 60},
+		{"fieldname": "taxable_value", "label": _("Taxable Value"), "fieldtype": "Currency"},
+		{"fieldname": "reverse_charge", "label": _("Reverse Chrg."), "fieldtype": "Data"},
+		{"fieldname": "igst_amount", "label": _("Integrated Tax"), "fieldtype": "Currency"},
+		{"fieldname": "cgst_amount", "label": _("Central Tax"), "fieldtype": "Currency"},
+		{"fieldname": "sgst_amount", "label": _("State Tax"), "fieldtype": "Currency"},
+	]
+	if (filters.get("transfer_type") or "B2B") == "B2B":
+		columns.insert(0, {"fieldname": "gstin", "label": _("GSTIN No."), "fieldtype": "Data", "width": 180})
+	return columns
+
+
+def get_data(doctype, filters) -> list[dict]:
 	"""Return one row per submitted invoice and tax rate, in the company currency."""
-	doctype = target_doctype(schema)
 	invoices = _invoices(doctype, filters)
 	if not invoices:
 		return []
@@ -52,7 +69,7 @@ def gstr_rows(schema: Literal["SalesInvoice", "PurchaseInvoice"], filters: GSTRF
 def _invoices(doctype, filters):
 	conditions = [
 		["docstatus", "=", 1],
-		*datetime_conditions("date", filters.get("fromDate"), filters.get("toDate")),
+		*datetime_conditions("date", filters.get("from_date"), filters.get("to_date")),
 	]
 	return frappe.get_list(
 		doctype,
@@ -125,13 +142,13 @@ def _gstin_state(gstin):
 def _row_header(invoice, gstin, place, company_state):
 	return {
 		"gstin": gstin,
-		"partyName": invoice.party,
-		"invNo": invoice.name,
-		"invDate": getdate(invoice.date).isoformat(),
-		"reverseCharge": "N" if gstin else "Y",
-		"inState": bool(company_state) and company_state == place,
+		"party": invoice.party,
+		"invoice_no": invoice.name,
+		"invoice_date": getdate(invoice.date),
+		"reverse_charge": "N" if gstin else "Y",
+		"in_state": bool(company_state) and company_state == place,
 		"place": place,
-		"invAmt": as_decimal(invoice.base_grand_total),
+		"invoice_value": as_decimal(invoice.base_grand_total),
 	}
 
 
@@ -140,9 +157,9 @@ def _invoice_rows(invoice, items, details, header):
 	for item in items:
 		item_details = details[item.tax] if item.tax else []
 		rate = sum_decimal(detail.rate for detail in item_details)
-		row = rows.setdefault(rate, {**header, "rate": rate, "taxVal": as_decimal(0)})
+		row = rows.setdefault(rate, {**header, "rate": rate, "taxable_value": as_decimal(0)})
 		base = as_decimal(item.amount if invoice.discount_after_tax else item.item_discounted_total)
-		row["taxVal"] += base
+		row["taxable_value"] += base
 		for detail in item_details:
 			_add_tax(row, detail, base, invoice.currency)
 	return [_in_company_currency(row, invoice.exchange_rate) for row in rows.values()]
@@ -154,11 +171,11 @@ def _add_tax(row, detail, base, currency):
 	field = TAX_AMOUNT_FIELDS[detail.account]
 	row[field] = row.get(field, as_decimal(0)) + rounded(base * as_decimal(detail.rate) / 100, currency)
 	if detail.account == "IGST":
-		row["inState"] = False
+		row["in_state"] = False
 
 
 def _in_company_currency(row, exchange_rate):
-	for field in ("taxVal", *TAX_AMOUNT_FIELDS.values()):
+	for field in ("taxable_value", *TAX_AMOUNT_FIELDS.values()):
 		if field in row:
 			row[field] = rounded(row[field] * as_decimal(exchange_rate or 1))
 	return row
@@ -168,5 +185,5 @@ def _matches(row, filters):
 	place = filters.get("place")
 	if place and INDIAN_STATES.get(place) != row["place"]:
 		return False
-	matches_transfer_type = TRANSFER_TYPES.get(filters.get("transferType"))
+	matches_transfer_type = TRANSFER_TYPES.get(filters.get("transfer_type"))
 	return not matches_transfer_type or matches_transfer_type(row)

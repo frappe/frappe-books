@@ -1,14 +1,14 @@
 from itertools import count
-from typing import Literal, TypedDict
 
 import frappe
+from frappe import _
 
 from frappe_books.accounting.money import as_decimal, sum_decimal
 from frappe_books.ui_bridge.mapping import source_reference, target_reference
 
 DOCTYPE = "Books Ledger Entry"
 BALANCE = {"SUB": [{"SUM": "debit"}, {"SUM": "credit"}], "as": "balance"}
-GROUP_FIELDS = {"party": "party", "account": "account", "referenceName": "voucher_no"}
+GROUP_FIELDS = {"party": "party", "account": "account", "reference_name": "voucher_no"}
 ENTRY_FIELDS = [
 	"account",
 	"posting_date",
@@ -21,30 +21,41 @@ ENTRY_FIELDS = [
 ]
 
 
-class LedgerFilters(TypedDict, total=False):
-	account: str | None
-	party: str | None
-	referenceType: str | None
-	referenceName: str | None
-	fromDate: str | None
-	toDate: str | None
-	groupBy: Literal["none", "party", "account", "referenceName"] | None
-	reverted: bool | None
-	ascending: bool | None
+def get_columns(filters) -> list[dict]:
+	columns = [
+		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
+		{
+			"fieldname": "account",
+			"label": _("Account"),
+			"fieldtype": "Link",
+			"options": "Books Account",
+			"width": 180,
+		},
+		{"fieldname": "date", "label": _("Date"), "fieldtype": "Date"},
+		{"fieldname": "debit", "label": _("Debit"), "fieldtype": "Currency", "width": 150},
+		{"fieldname": "credit", "label": _("Credit"), "fieldtype": "Currency", "width": 150},
+		{"fieldname": "balance", "label": _("Balance"), "fieldtype": "Currency", "width": 150},
+		{"fieldname": "party", "label": _("Party"), "fieldtype": "Link", "options": "Books Party"},
+		{"fieldname": "reference_name", "label": _("Ref Name"), "fieldtype": "Data"},
+		{"fieldname": "reference_type", "label": _("Ref Type"), "fieldtype": "Data"},
+	]
+	if filters.get("reverted"):
+		columns.append({"fieldname": "reverted", "label": _("Reverted"), "fieldtype": "Check"})
+	return columns
 
 
-def general_ledger(filters: LedgerFilters) -> list[dict]:
+def get_data(filters) -> list[dict]:
 	"""Return a period's ledger rows with opening, running, group and closing balances."""
 	conditions = _conditions(filters)
-	group_field = GROUP_FIELDS.get(filters.get("groupBy") or "none")
-	openings = _opening_balances(conditions, filters.get("fromDate"), group_field)
+	group_field = GROUP_FIELDS.get(filters.get("group_by") or "none")
+	openings = _opening_balances(conditions, filters.get("from_date"), group_field)
 	groups = _grouped_entries(_period_entries(conditions, filters), openings, group_field)
 	index = count(1)
 	rows = []
 	for key, entries in groups.items():
-		rows += _group_rows(key, entries, openings.get(key, as_decimal(0)), group_field, filters, index)
-	if not rows or rows[-1]["type"] != "blank":
-		rows.append({"type": "blank"})
+		rows += _group_rows(key, entries, openings.get(key, as_decimal(0)), filters, index)
+	if not rows or rows[-1]:
+		rows.append({})
 	rows.append(_closing_row(groups, openings))
 	return rows
 
@@ -52,11 +63,15 @@ def general_ledger(filters: LedgerFilters) -> list[dict]:
 def _conditions(filters):
 	conditions = [
 		[fieldname, "=", filters[source]]
-		for source, fieldname in (("account", "account"), ("party", "party"), ("referenceName", "voucher_no"))
+		for source, fieldname in (
+			("account", "account"),
+			("party", "party"),
+			("reference_name", "voucher_no"),
+		)
 		if filters.get(source)
 	]
-	if filters.get("referenceType") and filters["referenceType"] != "All":
-		conditions.append(["voucher_type", "=", target_reference(filters["referenceType"])])
+	if filters.get("reference_type") and filters["reference_type"] != "All":
+		conditions.append(["voucher_type", "=", target_reference(filters["reference_type"])])
 	if not filters.get("reverted"):
 		conditions.append(["reverted", "=", 0])
 	return conditions
@@ -76,7 +91,7 @@ def _opening_balances(conditions, from_date, group_field):
 
 
 def _period_entries(conditions, filters):
-	dates = [["posting_date", ">=", filters.get("fromDate")], ["posting_date", "<=", filters.get("toDate")]]
+	dates = [["posting_date", ">=", filters.get("from_date")], ["posting_date", "<=", filters.get("to_date")]]
 	direction = "asc" if filters.get("ascending") else "desc"
 	return frappe.get_list(
 		DOCTYPE,
@@ -97,17 +112,17 @@ def _grouped_entries(entries, openings, group_field):
 	return groups
 
 
-def _group_rows(key, entries, opening, group_field, filters, index):
+def _group_rows(key, entries, opening, filters, index):
 	rows = [_entry_row(entry, next(index)) for entry in entries]
 	# Balances run in posting order even when the newest entries show first.
 	balance = opening
 	for row in rows if filters.get("ascending") else reversed(rows):
 		balance += row["debit"] - row["credit"]
 		row["balance"] = balance
-	if filters.get("fromDate"):
-		rows.insert(0, _opening_row(key, opening, group_field))
-	if group_field:
-		rows += [_total_row(rows, balance), {"type": "blank"}]
+	if filters.get("from_date"):
+		rows.insert(0, _opening_row(key, opening, filters.get("group_by")))
+	if filters.get("group_by") in GROUP_FIELDS:
+		rows += [_total_row(rows, balance), {}]
 	return rows
 
 
@@ -120,17 +135,17 @@ def _entry_row(entry, index):
 		"debit": as_decimal(entry.debit),
 		"credit": as_decimal(entry.credit),
 		"party": entry.party,
-		"referenceType": source_reference(entry.voucher_type),
-		"referenceName": entry.voucher_no,
+		"reference_type": source_reference(entry.voucher_type),
+		"reference_name": entry.voucher_no,
 		"reverted": bool(entry.reverted),
 	}
 
 
-def _opening_row(key, opening, group_field):
+def _opening_row(key, opening, group_by):
 	row = {"type": "opening", "debit": as_decimal(0), "credit": as_decimal(0), "balance": opening}
-	source = next((source for source, field in GROUP_FIELDS.items() if field == group_field), None)
-	if source:
-		row[source] = key
+	if group_by in GROUP_FIELDS:
+		row[group_by] = key
+	row["account"] = _("Opening: {0}").format(key) if group_by == "account" else _("Opening")
 	return row
 
 
@@ -138,6 +153,7 @@ def _total_row(rows, balance):
 	entries = [row for row in rows if row["type"] == "entry"]
 	return {
 		"type": "total",
+		"account": _("Total"),
 		"debit": sum_decimal(row["debit"] for row in entries),
 		"credit": sum_decimal(row["credit"] for row in entries),
 		"balance": balance,
@@ -150,6 +166,7 @@ def _closing_row(groups, openings):
 	credit = sum_decimal(entry.credit for entry in entries)
 	return {
 		"type": "closing",
+		"account": _("Closing"),
 		"debit": debit,
 		"credit": credit,
 		"balance": sum_decimal(openings.values()) + debit - credit,

@@ -34,20 +34,6 @@ export interface ColumnField extends Omit<BaseField, 'fieldtype'> {
 
 export type Periodicity = 'Monthly' | 'Quarterly' | 'Half Yearly' | 'Yearly';
 
-export interface LedgerRow {
-  type: 'entry' | 'opening' | 'total' | 'closing' | 'blank';
-  index?: number;
-  account?: string | null;
-  date?: string;
-  debit?: number;
-  credit?: number;
-  balance?: number;
-  party?: string | null;
-  referenceType?: string;
-  referenceName?: string;
-  reverted?: boolean;
-}
-
 export type DateRange = { fromDate: DateTime; toDate: DateTime };
 export type BasedOn = 'Fiscal Year' | 'Until Date';
 

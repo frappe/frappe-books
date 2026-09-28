@@ -3,8 +3,9 @@ from itertools import pairwise
 from unittest.mock import patch
 
 import frappe
+from frappe.desk.query_report import run
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_to_date, now_datetime, nowdate
+from frappe.utils import add_to_date, getdate, now_datetime, nowdate
 
 from frappe_books.reports import gst
 from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
@@ -27,14 +28,14 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 			_post(date, self.cash.name, debit, credit)
 		for ascending in (True, False):
 			rows = self._ledger(account=self.cash.name, ascending=ascending)
-			entries = [row for row in rows if row["type"] == "entry"]
-			self.assertEqual(rows[0], _row("opening", 0, 0, 100))
+			entries = [row for row in rows if row.get("type") == "entry"]
+			self.assertEqual(rows[0], _row("opening", "Opening", 0, 0, 100))
 			self.assertEqual(
 				sorted((row["date"].isoformat(), row["balance"]) for row in entries),
 				[("2045-01-05", Decimal(150)), ("2045-01-20", Decimal(130))],
 			)
 			self.assertEqual(entries[0]["date"].isoformat(), "2045-01-05" if ascending else "2045-01-20")
-			self.assertEqual(rows[-2:], [{"type": "blank"}, _row("closing", 50, 20, 130)])
+			self.assertEqual(rows[-2:], [{}, _row("closing", "Closing", 50, 20, 130)])
 
 	def test_general_ledger_groups_include_accounts_with_only_an_opening(self):
 		voucher = unique_name("JV")
@@ -42,14 +43,15 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		_post("2044-12-31", self.sales.name, 0, 100, voucher)
 		_post("2045-01-01", self.cash.name, 20, 0, voucher)
 
-		rows = self._ledger(referenceName=voucher, groupBy="account", ascending=True)
+		rows = self._ledger(reference_name=voucher, group_by="account", ascending=True)
 
-		totals = [row["balance"] for row in rows if row["type"] == "total"]
+		totals = [row["balance"] for row in rows if row.get("type") == "total"]
 		self.assertEqual(totals, [Decimal(120), Decimal(-100)])
 		self.assertEqual(
-			[row["account"] for row in rows if row["type"] == "opening"], [self.cash.name, self.sales.name]
+			[row["account"] for row in rows if row.get("type") == "opening"],
+			[f"Opening: {self.cash.name}", f"Opening: {self.sales.name}"],
 		)
-		self.assertEqual(rows[-1], _row("closing", 20, 0, 20))
+		self.assertEqual(rows[-1], _row("closing", "Closing", 20, 0, 20))
 
 	def test_trial_balance_splits_opening_and_closing_balances(self):
 		for date, debit, credit in (
@@ -100,9 +102,7 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 			self._ledger()
 
 	def _ledger(self, **filters):
-		return self.queries.call(
-			"getGeneralLedger", [{"fromDate": "2045-01-01", "toDate": "2045-01-31", **filters}]
-		)
+		return _run("Books General Ledger", from_date="2045-01-01", to_date="2045-01-31", **filters)
 
 
 def _group_account(label, root_type):
@@ -135,8 +135,18 @@ def _post(date, account, debit, credit, voucher=None):
 	).insert(ignore_links=True)
 
 
-def _row(row_type, debit, credit, balance):
-	return {"type": row_type, "debit": Decimal(debit), "credit": Decimal(credit), "balance": Decimal(balance)}
+def _row(row_type, account, debit, credit, balance):
+	return {
+		"type": row_type,
+		"account": account,
+		"debit": Decimal(debit),
+		"credit": Decimal(credit),
+		"balance": Decimal(balance),
+	}
+
+
+def _run(report_name, **filters):
+	return run(report_name, filters)["result"]
 
 
 def _periods(*dates):
@@ -149,7 +159,6 @@ def _rows_by_account(sections):
 
 class IntegrationTestStockReports(IntegrationTestCase):
 	def setUp(self):
-		self.queries = BooksBespokeQueries()
 		income = make_account("Stock Report Income", root_type="Income")
 		received = make_account("Stock Report Received", root_type="Liability")
 		self.item = make_item(income.name, received.name, track_item=1).name
@@ -159,15 +168,15 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		move(self.item, "MaterialIssue", 5, 99, now)
 
 	def test_stock_ledger_reads_the_stored_fifo_balances(self):
-		rows = self.queries.call("getStockLedger", [{"item": self.item, "ascending": True}])
+		rows = _run("Books Stock Ledger", item=self.item, ascending=True)
 
 		columns = (
 			"quantity",
-			"balanceQuantity",
-			"valueChange",
-			"balanceValue",
-			"incomingRate",
-			"valuationRate",
+			"balance_quantity",
+			"value_change",
+			"balance_value",
+			"incoming_rate",
+			"valuation_rate",
 		)
 		self.assertEqual(
 			[tuple(row[column] for column in columns) for row in rows],
@@ -179,24 +188,29 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		)
 
 	def test_stock_ledger_dates_are_iso_datetimes(self):
-		rows = self.queries.call("getStockLedger", [{"item": self.item}])
+		rows = _run("Books Stock Ledger", item=self.item)
 
 		for row in rows:
 			self.assertRegex(row["date"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[+-]\d{2}:\d{2}$")
 
 	def test_stock_balance_splits_opening_and_period_movement(self):
 		today = nowdate()
-		rows = self.queries.call("getStockBalance", [{"item": self.item, "fromDate": today, "toDate": today}])
+		rows = _run("Books Stock Balance", item=self.item, from_date=today, to_date=today)
 
 		self.assertEqual(len(rows), 1)
-		columns = ("openingQuantity", "openingValue", "outgoingQuantity", "outgoingValue", "balanceValue")
+		columns = (
+			"opening_quantity",
+			"opening_value",
+			"outgoing_quantity",
+			"outgoing_value",
+			"balance_value",
+		)
 		self.assertEqual(tuple(rows[0][column] for column in columns), _decimals(6, 80, 5, 60, 20))
-		self.assertEqual((rows[0]["balanceQuantity"], rows[0]["valuationRate"]), _decimals(1, 20))
+		self.assertEqual((rows[0]["balance_quantity"], rows[0]["valuation_rate"]), _decimals(1, 20))
 
 
 class IntegrationTestGSTR(IntegrationTestCase):
 	def setUp(self):
-		self.queries = BooksBespokeQueries()
 		for account in ("CGST", "SGST", "IGST"):
 			if not frappe.db.exists("Books Account", account):
 				frappe.get_doc(
@@ -216,25 +230,25 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		rows = self._rows(invoice)
 
 		self.assertEqual(
-			{(row["rate"], row["taxVal"], row["cgstAmt"], row["sgstAmt"]) for row in rows},
+			{(row["rate"], row["taxable_value"], row["cgst_amount"], row["sgst_amount"]) for row in rows},
 			{_decimals(18, 300, 27, 27), _decimals(5, 100, "2.5", "2.5")},
 		)
-		self.assertTrue(all(row["invAmt"] == Decimal(459) for row in rows))
+		self.assertTrue(all(row["invoice_value"] == Decimal(459) for row in rows))
 
-	def test_invoice_dates_are_iso_dates(self):
+	def test_invoice_dates_are_dates(self):
 		invoice = self._invoice((_tax(("IGST", 18)), 100, 1))
 
 		(row,) = self._rows(invoice)
 
-		self.assertEqual(row["invDate"], nowdate())
+		self.assertEqual(row["invoice_date"], getdate())
 
 	def test_igst_rows_are_interstate(self):
 		invoice = self._invoice((_tax(("IGST", 18)), 100, 1))
 
 		(row,) = self._rows(invoice)
 
-		self.assertEqual((row["rate"], row["igstAmt"], row["inState"]), (*_decimals(18, 18), False))
-		self.assertNotIn("cgstAmt", row)
+		self.assertEqual((row["rate"], row["igst_amount"], row["in_state"]), (*_decimals(18, 18), False))
+		self.assertNotIn("cgst_amount", row)
 
 	def test_invoices_and_parties_are_read_in_batches(self):
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))
@@ -246,7 +260,7 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			rows = [*self._rows(first), *self._rows(second)]
 
 		self.assertEqual(
-			[(row["invNo"], row["partyName"], row["taxVal"]) for row in rows],
+			[(row["invoice_no"], row["party"], row["taxable_value"]) for row in rows],
 			[(first.name, first.party, Decimal(100)), (second.name, second.party, Decimal(200))],
 		)
 
@@ -276,8 +290,8 @@ class IntegrationTestGSTR(IntegrationTestCase):
 
 	def _rows(self, invoice):
 		today = nowdate()
-		rows = self.queries.call("getGSTRRows", ["SalesInvoice", {"fromDate": today, "toDate": today}])
-		return [row for row in rows if row["invNo"] == invoice.name]
+		rows = _run("Books GSTR-1", from_date=today, to_date=today)
+		return [row for row in rows if row["invoice_no"] == invoice.name]
 
 
 def _tax(*details):

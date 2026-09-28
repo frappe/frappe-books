@@ -163,21 +163,21 @@ function generateB2bData(report: BaseGSTR): B2BCustomer[] {
   for (const rows of getInvoiceRows(report)) {
     const [row] = rows;
     const invRecord: B2BInvRecord = {
-      inum: row.invNo,
+      inum: row.invoice_no,
       idt: getInvoiceDate(row),
-      val: row.invAmt,
+      val: row.invoice_value,
       pos: row.gstin && row.gstin.substring(0, 2),
-      rchrg: row.reverseCharge,
+      rchrg: row.reverse_charge,
       inv_typ: 'R',
       itms: rows.map((rateRow, i) => ({
         num: i + 1,
         itm_det: {
-          txval: rateRow.taxVal,
+          txval: rateRow.taxable_value,
           rt: rateRow.rate,
           csamt: 0,
-          camt: rateRow.cgstAmt ?? 0,
-          samt: rateRow.sgstAmt ?? 0,
-          iamt: rateRow.igstAmt ?? 0,
+          camt: rateRow.cgst_amount ?? 0,
+          samt: rateRow.sgst_amount ?? 0,
+          iamt: rateRow.igst_amount ?? 0,
         },
       })),
     };
@@ -199,16 +199,16 @@ function generateB2clData(report: BaseGSTR): B2CLStateInvoiceRecord[] {
   for (const rows of getInvoiceRows(report)) {
     const [row] = rows;
     const invRecord: B2CLInvRecord = {
-      inum: row.invNo,
+      inum: row.invoice_no,
       idt: getInvoiceDate(row),
-      val: row.invAmt,
+      val: row.invoice_value,
       itms: rows.map((rateRow, i) => ({
         num: i + 1,
         itm_det: {
-          txval: rateRow.taxVal,
+          txval: rateRow.taxable_value,
           rt: rateRow.rate,
           csamt: 0,
-          iamt: rateRow.igstAmt ?? 0,
+          iamt: rateRow.igst_amount ?? 0,
         },
       })),
     };
@@ -229,14 +229,14 @@ function generateB2clData(report: BaseGSTR): B2CLStateInvoiceRecord[] {
 function getInvoiceRows(report: BaseGSTR): GSTRRow[][] {
   const invoices = new Map<string, GSTRRow[]>();
   for (const row of report.gstrRows ?? []) {
-    invoices.set(row.invNo, [...(invoices.get(row.invNo) ?? []), row]);
+    invoices.set(row.invoice_no, [...(invoices.get(row.invoice_no) ?? []), row]);
   }
 
   return [...invoices.values()];
 }
 
 function getInvoiceDate(row: GSTRRow) {
-  return DateTime.fromISO(row.invDate).toFormat('dd-MM-yyyy');
+  return DateTime.fromISO(row.invoice_date).toFormat('dd-MM-yyyy');
 }
 
 function generateB2csData(report: BaseGSTR): B2CSInvRecord[] {
@@ -245,14 +245,14 @@ function generateB2csData(report: BaseGSTR): B2CSInvRecord[] {
 
   for (const row of report.gstrRows ?? []) {
     const invRecord: B2CSInvRecord = {
-      sply_ty: row.inState ? 'INTRA' : 'INTER',
+      sply_ty: row.in_state ? 'INTRA' : 'INTER',
       pos: stateCodeMap[row.place],
       typ: 'OE',
-      txval: row.taxVal,
+      txval: row.taxable_value,
       rt: row.rate,
-      iamt: !row.inState ? (row.taxVal * row.rate) / 100 : 0,
-      camt: row.inState ? row.cgstAmt ?? 0 : 0,
-      samt: row.inState ? row.sgstAmt ?? 0 : 0,
+      iamt: !row.in_state ? (row.taxable_value * row.rate) / 100 : 0,
+      camt: row.in_state ? row.cgst_amount ?? 0 : 0,
+      samt: row.in_state ? row.sgst_amount ?? 0 : 0,
       csamt: 0,
     };
 

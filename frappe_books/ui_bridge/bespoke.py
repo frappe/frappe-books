@@ -8,11 +8,8 @@ from frappe.utils import getdate
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.inventory.auto_transfer import default_location
-from frappe_books.reports import financial_statements, gst, stock
+from frappe_books.reports import financial_statements
 from frappe_books.reports.financial_statements import Period
-from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
-from frappe_books.reports.gst import GSTRFilters
-from frappe_books.reports.stock import StockFilters
 from frappe_books.series import default_series_by_schema, new_item_names
 from frappe_books.ui_bridge.database import system_datetime
 from frappe_books.ui_bridge.dispatch import call_handler
@@ -134,9 +131,6 @@ class BooksBespokeQueries:
 	def linked_entries(self, source_schema: str, name: str):
 		return linked_entries(source_schema, name)
 
-	def general_ledger(self, filters: LedgerFilters):
-		return general_ledger(filters)
-
 	def trial_balance(self, from_date: str, to_date: str):
 		return financial_statements.trial_balance(from_date, to_date)
 
@@ -145,15 +139,6 @@ class BooksBespokeQueries:
 
 	def balance_sheet(self, periods: list[Period]):
 		return financial_statements.balance_sheet(periods)
-
-	def stock_ledger(self, filters: StockFilters):
-		return stock.stock_ledger(filters)
-
-	def stock_balance(self, filters: StockFilters):
-		return stock.stock_balance(filters)
-
-	def gstr_rows(self, schema: Literal["SalesInvoice", "PurchaseInvoice"], filters: GSTRFilters):
-		return gst.gstr_rows(schema, filters)
 
 	def new_series_names(self, source_schema: Literal["Batch", "SerialNumber"], item: str, count: int):
 		return new_item_names(target_doctype(source_schema), item, count)
@@ -207,13 +192,9 @@ _METHODS = {
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
 	"getLinkedEntries": "linked_entries",
-	"getGeneralLedger": "general_ledger",
 	"getTrialBalance": "trial_balance",
 	"getProfitAndLoss": "profit_and_loss",
 	"getBalanceSheet": "balance_sheet",
-	"getStockLedger": "stock_ledger",
-	"getStockBalance": "stock_balance",
-	"getGSTRRows": "gstr_rows",
 	"getNewSeriesNames": "new_series_names",
 	"getDefaultNumberSeries": "default_number_series",
 }

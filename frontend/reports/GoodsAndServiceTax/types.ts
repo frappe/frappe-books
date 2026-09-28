@@ -9,16 +9,16 @@ export type TransferType = keyof typeof TransferTypeEnum;
 export type GSTRType = 'GSTR-1' | 'GSTR-2';
 export interface GSTRRow {
   gstin: string;
-  partyName: string;
-  invNo: string;
-  invDate: string;
+  party: string;
+  invoice_no: string;
+  invoice_date: string;
   rate: number;
-  reverseCharge: 'Y' | 'N';
-  inState: boolean;
+  reverse_charge: 'Y' | 'N';
+  in_state: boolean;
   place: string;
-  invAmt: number;
-  taxVal: number;
-  igstAmt?: number;
-  cgstAmt?: number;
-  sgstAmt?: number;
+  invoice_value: number;
+  taxable_value: number;
+  igst_amount?: number;
+  cgst_amount?: number;
+  sgst_amount?: number;
 }

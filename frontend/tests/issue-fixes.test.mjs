@@ -11,6 +11,7 @@ import {
   t,
   setLanguageMapOnTranslationString,
 } from './helpers/accounting.mjs';
+import { reportResult, stubServer } from './helpers/server.mjs';
 
 test('trial balance requests an inclusive to date and renders six amounts', async () => {
   const fyo = await makeFyo();
@@ -46,7 +47,7 @@ test('trial balance requests an inclusive to date and renders six amounts', asyn
   assert.equal(report.getColumns().length, 7);
 });
 
-test('general ledger sends its filters and renders server rows', async () => {
+test('general ledger runs its Script Report and styles the server rows', async () => {
   const fyo = await makeFyo();
   const report = new GeneralLedger(fyo);
   report.fromDate = '2026-01-01';
@@ -54,34 +55,54 @@ test('general ledger sends its filters and renders server rows', async () => {
   report.account = 'Cash';
   report.ascending = true;
   report.filters = report.getFilters();
-  report.columns = report.getColumns();
-  let filters;
-  fyo.db.getReportData = async (query, requested) => {
-    assert.equal(query, 'getGeneralLedger');
-    filters = requested;
-    return [
-      { type: 'opening', account: null, debit: 0, credit: 0, balance: 100 },
-      {
-        type: 'entry',
-        index: 1,
-        account: 'Cash',
-        date: '2026-01-01',
-        debit: 50,
-        credit: 0,
-        balance: 150,
-        party: null,
-        referenceType: 'JournalEntry',
-        referenceName: 'V2',
-        reverted: false,
-      },
-      { type: 'blank' },
-      { type: 'closing', debit: 50, credit: 0, balance: 150 },
-    ];
-  };
+  const calls = stubServer(() =>
+    reportResult(
+      [
+        ['index', 'Int', 60],
+        ['account', 'Link', 180],
+        ['date', 'Date'],
+        ['debit', 'Currency', 150],
+        ['credit', 'Currency', 150],
+        ['balance', 'Currency', 150],
+        ['reference_type', 'Data'],
+      ],
+      [
+        { type: 'opening', account: 'Opening', debit: 0, credit: 0, balance: 100 },
+        {
+          type: 'entry',
+          index: 1,
+          account: 'Cash',
+          date: '2026-01-01',
+          debit: 50,
+          credit: 0,
+          balance: 150,
+          reference_type: 'JournalEntry',
+        },
+        {},
+        { type: 'closing', account: 'Closing', debit: 50, credit: 0, balance: 150 },
+      ]
+    )
+  );
   await report.setReportData();
-  assert.equal(filters.account, 'Cash');
-  assert.equal(filters.ascending, true);
-  assert.equal(filters.reverted, false);
+  const [{ method, args }] = calls;
+  assert.equal(method, 'frappe.desk.query_report.run');
+  assert.equal(args.report_name, 'Books General Ledger');
+  assert.equal(args.filters.account, 'Cash');
+  assert.equal(args.filters.from_date, '2026-01-01');
+  assert.equal(args.filters.ascending, true);
+  assert.equal(args.filters.reverted, false);
+  assert.deepEqual(
+    report.columns.map((c) => [c.fieldname, c.align, c.width]),
+    [
+      ['index', 'right', 0.5],
+      ['account', 'left', 1.5],
+      ['date', 'left', 1],
+      ['debit', 'right', 1.25],
+      ['credit', 'right', 1.25],
+      ['balance', 'right', 1.25],
+      ['reference_type', 'left', 1],
+    ]
+  );
   const cell = (row, fieldname) =>
     row.cells[report.columns.findIndex((c) => c.fieldname === fieldname)];
   const [opening, entry, blank, closing] = report.reportData;
@@ -89,20 +110,20 @@ test('general ledger sends its filters and renders server rows', async () => {
   assert.equal(cell(opening, 'balance').rawValue, 100);
   assert.equal(cell(opening, 'account').italics, true);
   assert.equal(cell(entry, 'index').value, '1');
-  assert.equal(cell(entry, 'referenceType').value, 'Journal Entry');
+  assert.equal(cell(entry, 'reference_type').value, 'Journal Entry');
   assert.equal(blank.isEmpty, true);
   assert.equal(cell(closing, 'account').value, 'Closing');
   assert.equal(cell(closing, 'balance').bold, true);
-  assert.ok(!report.columns.some((c) => c.fieldname === 'reverted'));
 });
 
-test('general ledger labels group openings by their account', async () => {
+test('general ledger opens with the dates the server picks', async () => {
   const report = new GeneralLedger(await makeFyo());
-  assert.equal(
-    report._getAccountLabel({ type: 'opening', account: 'Cash' }),
-    'Opening: Cash'
-  );
-  assert.equal(report._getAccountLabel({ type: 'total' }), 'Total');
+  const calls = stubServer(() => ({ from_date: '2025-09-28', to_date: '2026-09-28' }));
+  await report.setDefaultFilters();
+  await report.setDefaultFilters();
+  assert.deepEqual(calls.map((c) => c.args), [{ report_name: 'Books General Ledger' }]);
+  assert.equal(report.fromDate, '2025-09-28');
+  assert.equal(report.toDate, '2026-09-28');
 });
 
 test('expense-only P&L labels its expense total correctly', async () => {

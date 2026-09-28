@@ -8,10 +8,9 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import (
-	PAYMENT_ACCOUNT_TYPES,
 	latest_ledger_account,
-	validate_account,
 	validate_party_account,
+	validate_payment_account,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
@@ -71,10 +70,12 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		self.set("taxes", _realised_taxes(allocations))
 
 	def validate_accounts(self):
-		"""The account is the party's ledger, the payment account its cash or bank; cash methods take cash."""
+		"""The account is the party's ledger; the payment account suits the payment method."""
 		validate_party_account(self, "account", frappe.db.get_value("Books Party", self.party, "role"))
-		is_cash = self.payment_method and is_cash_method(self.payment_method)
-		validate_account(self, "payment_account", ("Cash",) if is_cash else PAYMENT_ACCOUNT_TYPES)
+		method_type = self.payment_method and frappe.get_cached_value(
+			"Books Payment Method", self.payment_method, "type"
+		)
+		validate_payment_account(self, "payment_account", method_type)
 
 	def validate_payment_method(self):
 		method = frappe.db.get_value(

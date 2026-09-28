@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
+
+from frappe_books.accounting.accounts import validate_payment_account
 
 
 class BooksPaymentMethod(Document):
@@ -20,3 +21,6 @@ class BooksPaymentMethod(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Payment Method"
+
+	def validate(self):
+		validate_payment_account(self, "account", self.type)

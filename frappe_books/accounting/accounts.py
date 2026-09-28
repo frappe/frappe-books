@@ -29,6 +29,11 @@ def validate_account(doc, fieldname, account_types=(), root_types=()):
 			)
 
 
+def validate_payment_account(doc, fieldname, method_type):
+	"""Cash methods take cash accounts; other methods cash or bank, as the Books payment form offers."""
+	validate_account(doc, fieldname, ("Cash",) if method_type == "Cash" else PAYMENT_ACCOUNT_TYPES)
+
+
 def validate_party_account(doc, fieldname, role):
 	"""A customer's ledger account is receivable, a supplier's payable."""
 	validate_account(doc, fieldname, PARTY_ACCOUNT_TYPES.get(role, ()))

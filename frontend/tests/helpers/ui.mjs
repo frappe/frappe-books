@@ -1,5 +1,5 @@
 import { after } from 'node:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -22,6 +22,7 @@ await build({
       export { sortByFuzzyMatch } from './src/utils';
       export { fyo } from './src/initFyo';
       export { NotFoundError } from './fyo/utils/errors';
+      export { default as FilterLinkInput } from './src/components/FilterLinkInput.vue';
     `,
     resolveDir: frontend,
   },
@@ -40,6 +41,13 @@ await build({
         builder.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
           contents: 'export default {}',
         }));
+        // Components under test keep their script; the rest are stubs.
+        builder.onLoad({ filter: /FilterLinkInput\.vue$/ }, async (args) => ({
+          contents: (await readFile(args.path, 'utf8')).match(
+            /<script[^>]*>([\s\S]*?)<\/script>/
+          )[1],
+          loader: 'ts',
+        }));
         builder.onLoad({ filter: /\.vue$/ }, () => ({
           contents: 'export default {}',
         }));
@@ -56,4 +64,5 @@ export const {
   sortByFuzzyMatch,
   fyo,
   NotFoundError,
+  FilterLinkInput,
 } = createRequire(import.meta.url)(output);

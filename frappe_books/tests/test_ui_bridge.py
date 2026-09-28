@@ -462,6 +462,11 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			self.bridge.call("searchLink", ["Party", f"qz{prefix}spl", filters, ["name"], 5]), []
 		)
 
+	def test_link_search_finds_translated_doctypes_by_their_text(self):
+		found = self.bridge.call("searchLink", ["Country", "indi", {}, ["name"], 5])
+
+		self.assertIn({"name": "India"}, found)
+
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])

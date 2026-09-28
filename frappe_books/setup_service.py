@@ -2,7 +2,6 @@
 
 import frappe
 
-from frappe_books.accounting.money import as_decimal
 from frappe_books.coa import (
 	ensure_bank_account,
 	ensure_cash_account,
@@ -11,7 +10,7 @@ from frappe_books.coa import (
 	find_ledger_account,
 	load_chart,
 )
-from frappe_books.currency import currency_fraction_values, currency_precision
+from frappe_books.currency import currency_precision
 from frappe_books.regional import ensure_regional_records
 from frappe_books.series import NUMBER_SERIES
 
@@ -22,7 +21,7 @@ def run_setup(wizard):
 	ensure_regional_records(wizard.country)
 	bank_account = ensure_bank_account(wizard.bank_name, chart, wizard.country)
 	discount_account = ensure_discount_account(chart)
-	ensure_currency(wizard.currency)
+	enable_currency(wizard.currency)
 	accounts = {**default_accounts(chart), "cash": ensure_cash_account(chart)}
 	_update_accounting_settings(wizard, discount_account, accounts)
 	_update_system_settings(wizard)
@@ -33,31 +32,9 @@ def run_setup(wizard):
 	return {"setup_complete": True, "bank_account": bank_account}
 
 
-def ensure_currency(currency):
-	if not currency or frappe.db.exists("Books Currency", currency):
-		return
-	core_currency = (
-		frappe.db.get_value(
-			"Currency",
-			currency,
-			["symbol", "fraction", "fraction_units", "smallest_currency_fraction_value"],
-			as_dict=True,
-		)
-		or {}
-	)
-	fraction_values = currency_fraction_values(currency)
-	minimum = as_decimal(core_currency.get("smallest_currency_fraction_value"))
-	if minimum and minimum > fraction_values["smallest_value"]:
-		fraction_values["smallest_value"] = minimum
-	frappe.get_doc(
-		{
-			"doctype": "Books Currency",
-			"name": currency,
-			"symbol": core_currency.get("symbol") or currency,
-			"fraction": core_currency.get("fraction") or "Cent",
-			**fraction_values,
-		}
-	).insert(ignore_permissions=True)
+def enable_currency(currency):
+	"""Frappe offers only enabled currencies in Link searches."""
+	frappe.db.set_value("Currency", currency, "enabled", 1)
 
 
 def default_accounts(chart):

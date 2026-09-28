@@ -141,12 +141,12 @@
       }
     },
     "Currency": {
-      "doctype": "Books Currency",
+      "doctype": "Currency",
       "fields": {
         "fraction": "fraction",
         "fractionUnits": "fraction_units",
-        "name": "name",
-        "smallestValue": "smallest_value",
+        "name": "currency_name",
+        "smallestValue": "smallest_currency_fraction_value",
         "symbol": "symbol"
       }
     },

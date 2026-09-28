@@ -4,7 +4,6 @@ import frappe
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import company_currency
-from frappe_books.setup_service import ensure_currency
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
@@ -33,9 +32,7 @@ def make_party(default_account, role="Customer", **values):
 
 def foreign_currency():
 	"""Return a currency other than the company's."""
-	currency = "EUR" if company_currency() == "USD" else "USD"
-	ensure_currency(currency)
-	return currency
+	return "EUR" if company_currency() == "USD" else "USD"
 
 
 def make_item(income_account, expense_account, tax=None, **values):

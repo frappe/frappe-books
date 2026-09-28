@@ -103,13 +103,17 @@ for (const [schemaName, values] of [
   });
 }
 
-test('computed loyalty program statuses are not offered as filters', async () => {
+test('stored loyalty program statuses are offered as filters', async () => {
   const fyo = await makeFyo();
   const fields = getFilterFields(
     fyo.schemaMap.LoyaltyProgram.fields,
     fyo.models.LoyaltyProgram.getListViewSettings?.(fyo)?.columns
   );
-  assert.ok(!fields.some((field) => field.fieldname === 'status'));
+  const status = fields.find((field) => field.fieldname === 'status');
+  assert.deepEqual(
+    status.options.map(({ value }) => value),
+    ['Active', 'Disabled', 'Expired', 'Maxed']
+  );
 });
 
 test('stored Select fields retain all configured choices and labels', async () => {

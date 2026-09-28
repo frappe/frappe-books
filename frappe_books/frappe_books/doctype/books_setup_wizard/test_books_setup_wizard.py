@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import get_setup_wizard_url
+from frappe.geo.country_info import get_country_info
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
@@ -151,6 +152,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 				frappe.db.get_value("Country", "Switzerland", "date_format"),
 			),
 		)
+		# Amounts in words follow the country's number format, e.g. lakh and crore for India.
+		self.assertEqual(settings.number_format, get_country_info("Switzerland")["number_format"])
 
 	def test_fresh_site_opens_the_books_setup_wizard(self):
 		self.assertEqual(get_setup_wizard_url(), "/books")

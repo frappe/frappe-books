@@ -4,6 +4,7 @@ import re
 
 import frappe
 from frappe import _
+from frappe.model.naming import make_autoname
 
 INVALID_PREFIX = re.compile(r"[/=?&%]")
 # Doctype: (standard prefix, series reference type, Books Defaults field that selects its series)
@@ -28,8 +29,12 @@ ITEM_SERIES = {
 class SeriesNamingMixin:
 	def autoname(self):
 		self.number_series = self.number_series or default_series(self.doctype)
-		validate_series_type(self.doctype, self.number_series)
-		self.name = next_name(self.number_series)
+		series = frappe.get_doc("Books Number Series", self.number_series)
+		if series.reference_type != NUMBER_SERIES[self.doctype][1]:
+			frappe.throw(
+				_("Number series {0} is not for {1} documents.").format(series.name, _(self.doctype))
+			)
+		self.name = make_autoname(series.pattern)
 
 
 def default_series(doctype):
@@ -45,28 +50,16 @@ def default_series_by_schema():
 	}
 
 
-def validate_series_type(doctype, series):
-	"""A series names only the document type it is made for."""
-	reference_type = NUMBER_SERIES[doctype][1]
-	if frappe.db.get_value("Books Number Series", series, "reference_type") != reference_type:
-		frappe.throw(_("Number series {0} is not for {1} documents.").format(series, _(doctype)))
+def series_pattern(prefix, digits):
+	"""The `make_autoname` key that numbers `prefix` with `digits` digits, e.g. SINV-.####."""
+	return f"{prefix}.{'#' * max(digits, 1)}"
 
 
-def next_name(prefix):
-	return reserve_names("Books Number Series", prefix)[0]
-
-
-def reserve_names(series_doctype, prefix, count=1):
-	"""Take the next `count` numbers of a series.
-
-	The increment happens in the database and locks the series row until commit, so concurrent
-	callers never get the same number.
-	"""
-	pad_zeros = frappe.get_doc(series_doctype, prefix).pad_zeros
-	series = frappe.qb.DocType(series_doctype)
-	frappe.qb.update(series).set(series.current, series.current + count).where(series.name == prefix).run()
-	last = int(frappe.db.get_value(series_doctype, prefix, "current"))
-	return [f"{prefix}{number:0{pad_zeros}d}" for number in range(last - count + 1, last + 1)]
+def validate_prefix(prefix):
+	if INVALID_PREFIX.search(prefix or ""):
+		frappe.throw(
+			_("The following characters cannot be used {0} in a Number Series name.").format("/, ?, &, =, %")
+		)
 
 
 def new_item_names(doctype, item, count):
@@ -91,8 +84,16 @@ def _reserve_unused_names(doctype, series_doctype, prefix, count):
 	return names
 
 
+def reserve_names(series_doctype, prefix, count=1):
+	"""Take the next `count` numbers of a batch or serial-number series."""
+	pad_zeros = frappe.get_doc(series_doctype, prefix).pad_zeros
+	series = frappe.qb.DocType(series_doctype)
+	frappe.qb.update(series).set(series.current, series.current + count).where(series.name == prefix).run()
+	last = int(frappe.db.get_value(series_doctype, prefix, "current"))
+	return [f"{prefix}{number:0{pad_zeros}d}" for number in range(last - count + 1, last + 1)]
+
+
 def validate_series(series_doc):
-	if INVALID_PREFIX.search(series_doc.name or ""):
-		frappe.throw(_("Number-series prefixes cannot contain /, ?, &, =, or %."))
+	validate_prefix(series_doc.name)
 	if series_doc.is_new() and not series_doc.current:
 		series_doc.current = series_doc.start - 1

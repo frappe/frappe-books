@@ -326,8 +326,7 @@ class BooksDatabaseBridge:
 		fields = {
 			target_field(source_schema, fieldname)
 			for fieldname in requested
-			if not (meta.get_field(target_field(source_schema, fieldname)) or frappe._dict()).get("fieldtype")
-			== "Table"
+			if _is_column(meta.get_field(target_field(source_schema, fieldname)))
 		}
 		fields.add("name")
 		return sorted(fields)
@@ -428,6 +427,11 @@ def _subsequence_pattern(text: str) -> str:
 	"""Match the letters of the longest word in order, as the interface's fuzzy search does."""
 	word = max(text.split(), key=len, default="")
 	return f"%{'%'.join(word)}%"
+
+
+def _is_column(docfield) -> bool:
+	"""Standard fields have no DocField; tables and virtual fields have no column."""
+	return not docfield or not (docfield.fieldtype == "Table" or docfield.is_virtual)
 
 
 def _is_named_by_user(meta) -> bool:

@@ -247,6 +247,35 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual((submitted["isReturned"], submitted["status"]), (0, "Unpaid"))
 		self.assertEqual(submitted["outstandingAmount"], submitted["grandTotal"])
 
+	def test_submit_refuses_a_document_changed_since_it_was_read(self):
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, self.item.name, self.income.name
+		)
+		read = _modified(invoice)
+		invoice.save()
+
+		self.assertRaises(
+			frappe.TimestampMismatchError, lifecycle_action, "submit", "SalesInvoice", invoice.name, read
+		)
+		submitted = lifecycle_action("submit", "SalesInvoice", invoice.name, _modified(invoice))
+		self.assertTrue(submitted["submitted"])
+
+	def test_cancel_refuses_a_document_changed_since_it_was_read(self):
+		invoice = self._paid_invoice()
+		read = _modified(invoice)
+		linked_docs = get_submitted_linked_docs("SalesInvoice", invoice.name)
+		frappe.db.set_value(invoice.doctype, invoice.name, "terms", "Changed elsewhere")
+
+		for docs in ([], linked_docs):
+			with self.subTest(linked_docs=docs):
+				self.assertRaises(
+					frappe.TimestampMismatchError,
+					lifecycle_action,
+					*("cancel", "SalesInvoice", invoice.name, read, docs),
+				)
+		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
+
 	def test_duplicates_need_read_and_create_rights(self):
 		invoice = self._paid_invoice()
 		with self.set_user(ensure_user("books-no-role@example.com")):

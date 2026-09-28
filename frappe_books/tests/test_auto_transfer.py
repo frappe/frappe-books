@@ -33,6 +33,7 @@ from frappe_books.tests.accounting import (
 	stock_quantity,
 	unique_name,
 )
+from frappe_books.ui_api import get_duplicate
 
 
 class IntegrationTestAutoTransfer(IntegrationTestCase):
@@ -73,6 +74,15 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice.cancel()
 		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 2)
 		self.assertEqual(stock_quantity(item, "Stores"), 5)
+
+	def test_a_duplicate_shipment_is_not_linked_to_the_invoice(self):
+		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
+		invoice.submit()
+
+		duplicate = get_duplicate("Shipment", invoice.reload().back_reference)
+
+		self.assertIsNone(duplicate["backReference"])
+		self.assertEqual(duplicate["items"][0]["quantity"], 2)
 
 	def test_invoice_submit_stores_its_own_quantity_to_transfer(self):
 		invoice, _item = self._sales_invoice()

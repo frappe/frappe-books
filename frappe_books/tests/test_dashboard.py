@@ -2,10 +2,12 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import getdate
 
 from frappe_books.reports.dashboard import (
 	get_cashflow,
 	get_invoice_summary,
+	get_period_dates,
 	get_profit_and_loss,
 	get_top_expenses,
 )
@@ -13,6 +15,7 @@ from frappe_books.reports.financial_statements import get_account_balances
 from frappe_books.tests.accounting import make_account
 
 TODAY = "2031-12-15"
+PERIODS = ("This Year", "This Quarter", "This Month", "YTD")
 
 
 class IntegrationTestDashboard(IntegrationTestCase):
@@ -53,17 +56,7 @@ class IntegrationTestDashboard(IntegrationTestCase):
 
 	def test_outstanding_counts_credit_notes_as_positive_amounts(self):
 		for total, outstanding, return_against in ((100, 40, None), (-30, -30, "Dashboard Original")):
-			frappe.get_doc(
-				{
-					"doctype": "Books Sales Invoice",
-					"name": frappe.generate_hash(),
-					"date": "2031-03-01",
-					"docstatus": 1,
-					"base_grand_total": total,
-					"outstanding_amount": outstanding,
-					"return_against": return_against,
-				}
-			).db_insert()
+			_invoice("2031-03-01", total, outstanding, return_against=return_against)
 
 		with self.freeze_time(TODAY):
 			summary = get_invoice_summary("Books Sales Invoice", "This Year")
@@ -73,6 +66,33 @@ class IntegrationTestDashboard(IntegrationTestCase):
 			(Decimal("130.00"), Decimal("60.00"), Decimal("70.00")),
 		)
 		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (0, 2))
+
+
+class IntegrationTestDashboardPeriods(IntegrationTestCase):
+	def test_periods_end_today_and_start_on_the_first_of_a_month(self):
+		with self.freeze_time("2031-09-30 18:00:00"):
+			periods = {period: get_period_dates(period) for period in PERIODS}
+			months = get_profit_and_loss("This Month")["months"]
+
+		self.assertEqual(
+			periods,
+			{
+				"This Year": _dates("2030-10-01", "2031-09-30"),
+				"This Quarter": _dates("2031-07-01", "2031-09-30"),
+				"This Month": _dates("2031-09-01", "2031-09-30"),
+				"YTD": _dates("2031-01-01", "2031-09-30"),
+			},
+		)
+		self.assertEqual([month["yearmonth"] for month in months], ["2031-09"])
+
+	def test_invoices_dated_after_today_are_left_out(self):
+		for date in ("2031-09-30 09:00:00", "2031-10-01 09:00:00"):
+			_invoice(date, 100, 0)
+
+		with self.freeze_time("2031-09-30 18:00:00"):
+			summary = get_invoice_summary("Books Sales Invoice", "This Month")
+
+		self.assertEqual((summary["paid_count"], summary["total"]), (1, Decimal("100.00")))
 
 
 class IntegrationTestAccountBalances(IntegrationTestCase):
@@ -101,3 +121,21 @@ def _post(account, debit, credit, date="2031-01-10"):
 			"credit": credit,
 		}
 	).insert()
+
+
+def _invoice(date, total, outstanding, **values):
+	frappe.get_doc(
+		{
+			"doctype": "Books Sales Invoice",
+			"name": frappe.generate_hash(),
+			"date": date,
+			"docstatus": 1,
+			"base_grand_total": total,
+			"outstanding_amount": outstanding,
+			**values,
+		}
+	).db_insert()
+
+
+def _dates(*dates):
+	return tuple(getdate(date) for date in dates)

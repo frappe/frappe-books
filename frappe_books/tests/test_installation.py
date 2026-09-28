@@ -51,6 +51,12 @@ class IntegrationTestInstallation(IntegrationTestCase):
 			with self.subTest(fieldname=fieldname):
 				self.assertEqual(settings.get(fieldname), template_name)
 
+	def test_install_seeds_a_bank_payment_method(self):
+		frappe.delete_doc("Books Payment Method", "Bank")
+		bootstrap()
+
+		self.assertEqual(frappe.db.get_value("Books Payment Method", "Bank", "type"), "Bank")
+
 	def test_migrate_keeps_user_choices(self):
 		template = frappe.get_doc(
 			{

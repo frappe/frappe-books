@@ -6,6 +6,7 @@ lives in its own class to keep that commit from persisting other tests' records.
 """
 
 import frappe
+from frappe import client
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import unique_name
@@ -19,6 +20,24 @@ FIELD = {
 	"fieldtype": "Data",
 	"section": "Default",
 	"tab": "Custom",
+}
+SIZE_FIELD = {
+	"label": "Hosted Bridge Test Size",
+	"fieldname": "hostedBridgeTestSize",
+	"fieldtype": "Select",
+	"options": "Small\nLarge",
+}
+PARTY_FIELD = {
+	"label": "Hosted Bridge Test Party",
+	"fieldname": "hostedBridgeTestParty",
+	"fieldtype": "Link",
+	"target": "Party",
+}
+REFERENCE_FIELD = {
+	"label": "Hosted Bridge Test Reference",
+	"fieldname": "hostedBridgeTestReference",
+	"fieldtype": "DynamicLink",
+	"references": "hostedBridgeTestSize",
 }
 SYSTEM_MANAGER = "books-customizer@example.com"
 
@@ -66,6 +85,59 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 			self.assertEqual(frappe.local.session.data.csrf_token, "books-token")
 		self.assertIsNone(_field_owner())
 
+	def test_bridge_creates_edits_and_deletes_custom_fields(self):
+		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD, SIZE_FIELD]})
+		self.assertEqual(_custom_field(FIELD).label, FIELD["label"])
+		self.assertEqual(_custom_field(SIZE_FIELD).options, SIZE_FIELD["options"])
+
+		form = self.bridge.get("CustomForm", "UOM")
+		row = _row(form["customFields"], FIELD)
+		form["customFields"] = [{**row, "label": "Renamed", "isRequired": 1, "default": "North"}]
+		self.bridge.update("CustomForm", form)
+
+		self.assertEqual(
+			(_custom_field(FIELD).label, _custom_field(FIELD).reqd, _custom_field(FIELD).default),
+			("Renamed", 1, "North"),
+		)
+		self.assertIsNone(_custom_field(SIZE_FIELD))
+
+		self.bridge.delete("CustomForm", "UOM")
+		self.assertIsNone(_custom_field(FIELD))
+
+	def test_rest_creates_edits_and_deletes_custom_fields(self):
+		client.insert(_form_values("UOM", [FIELD, SIZE_FIELD]))
+		self.assertEqual(_custom_field(SIZE_FIELD).fieldtype, "Select")
+
+		form = client.get("Books Custom Form", "UOM")
+		row = _row(form["custom_fields"], SIZE_FIELD)
+		form["custom_fields"] = [{**row, "options": "Small\nMedium\nLarge"}]
+		client.save(form)
+
+		self.assertEqual(_custom_field(SIZE_FIELD).options, "Small\nMedium\nLarge")
+		self.assertIsNone(_custom_field(FIELD))
+
+		client.delete("Books Custom Form", "UOM")
+		self.assertIsNone(_custom_field(SIZE_FIELD))
+
+	def test_forms_show_the_definition_their_custom_field_holds(self):
+		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD]})
+
+		client.set_value("Custom Field", f"Books Uom-{COLUMN}", "label", "Edited In Frappe")
+
+		row = self.bridge.get("CustomForm", "UOM")["customFields"][0]
+		self.assertEqual(row["label"], "Edited In Frappe")
+		self.assertEqual(get_field_properties()["UOM"][FIELD["fieldname"]]["label"], "Edited In Frappe")
+
+	def test_link_options_round_trip_in_books_names(self):
+		fields = [SIZE_FIELD, PARTY_FIELD, REFERENCE_FIELD]
+		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": fields})
+
+		self.assertEqual(_custom_field(PARTY_FIELD).options, "Books Party")
+		self.assertEqual(_custom_field(REFERENCE_FIELD).options, "custom_books_hostedbridgetestsize")
+		rows = self.bridge.get("CustomForm", "UOM")["customFields"]
+		self.assertEqual(_row(rows, PARTY_FIELD)["target"], "Party")
+		self.assertEqual(_row(rows, REFERENCE_FIELD)["references"], SIZE_FIELD["fieldname"])
+
 	def _cleanup_custom_field_test(self):
 		# Custom field DDL commits, so undo what this class committed. `sql_ddl` commits before
 		# the drop, not after, so commit the drop too.
@@ -76,8 +148,9 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 			frappe.delete_doc("Books Uom", unit)
 		if frappe.db.exists("Books Custom Form", "UOM"):
 			frappe.delete_doc("Books Custom Form", "UOM")
-		if frappe.db.has_column("Books Uom", COLUMN):
-			frappe.db.sql_ddl(f"alter table `tabBooks Uom` drop column `{COLUMN}`")
+		for column in frappe.db.get_table_columns("Books Uom"):
+			if column.startswith("custom_books_hostedbridgetest"):
+				frappe.db.sql_ddl(f"alter table `tabBooks Uom` drop column `{column}`")
 		frappe.db.commit()  # nosemgrep
 
 
@@ -109,9 +182,23 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 
 
 def _custom_form(schema, fields):
+	return frappe.get_doc(_form_values(schema, fields))
+
+
+def _form_values(schema, fields):
 	# `get_doc` adds a doctype to each row dict, so give it copies.
 	rows = [dict(field) for field in fields]
-	return frappe.get_doc({"doctype": "Books Custom Form", "name": schema, "custom_fields": rows})
+	return {"doctype": "Books Custom Form", "name": schema, "custom_fields": rows}
+
+
+def _custom_field(field):
+	filters = {"dt": "Books Uom", "fieldname": f"custom_books_{field['fieldname'].lower()}"}
+	name = frappe.db.exists("Custom Field", filters)
+	return name and frappe.get_doc("Custom Field", name)
+
+
+def _row(rows, field):
+	return next(row for row in rows if row["fieldname"] == field["fieldname"])
 
 
 def _field_owner():

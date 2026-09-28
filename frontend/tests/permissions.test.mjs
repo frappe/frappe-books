@@ -78,3 +78,14 @@ test('export granted only to owners exports only the user’s documents', () => 
   assert.equal(exportsOwnDocumentsOnly(permissions, 'SalesInvoice'), false);
   assert.equal(exportsOwnDocumentsOnly(null, 'Tax'), false);
 });
+
+test('a new single document is writable with the write permission', async () => {
+  const fyo = await makeFyo();
+  fyo.store.permissions = {
+    doctypes: { SetupWizard: 'Books Setup Wizard' },
+    user: { can_write: ['Books Setup Wizard'] },
+  };
+  const wizard = fyo.doc.getNewDoc('SetupWizard');
+  assert.equal(wizard.notInserted, true);
+  assert.equal(wizard.canWrite, true);
+});

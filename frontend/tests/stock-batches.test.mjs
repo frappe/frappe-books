@@ -46,3 +46,22 @@ test("a movement row accepts a new batch but not another item's batch", async ()
     /Batch INK-1 does not belong to Item Pen/
   );
 });
+
+test('a new item on a purchase row leaves its batch for the server to name', async () => {
+  const fyo = await makeFyo();
+  fyo.getValue = async () => undefined;
+  fyo.db.getNewSeriesNames = async () => assert.fail('no batch is reserved');
+  const invoices = ['PurchaseInvoice', 'SalesInvoice'].map((schemaName) =>
+    fyo.doc.getNewDoc(schemaName, {
+      items: [{ item: 'Pen', batch: 'PEN-1001' }],
+    })
+  );
+  for (const invoice of invoices) {
+    await invoice.items[0].set('item', 'Ink');
+    clearTimeout(invoice._previewTimer);
+  }
+  assert.deepEqual(
+    invoices.map((invoice) => invoice.items[0].batch),
+    ['', 'PEN-1001']
+  );
+});

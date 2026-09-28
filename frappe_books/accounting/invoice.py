@@ -5,7 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns
-from frappe_books.accounting.accounts import validate_account, validate_party_role
+from frappe_books.accounting.accounts import validate_account, validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
@@ -205,6 +205,7 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	validate_item_usage(invoice, invoice.transaction_type == "purchase")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
 

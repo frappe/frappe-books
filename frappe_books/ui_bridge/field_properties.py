@@ -48,6 +48,9 @@ def get_schema_field_properties(schema: str) -> dict[str, dict[str, Any]]:
 	for source, target in fieldnames.items():
 		if docfield := meta.get_field(target):
 			properties[source] = get_docfield_properties(schema, docfield)
+	if "status" in properties and meta.states:
+		# Frappe colours a document's `status` by the DocType state of the same title.
+		properties["status"]["states"] = {state.title: state.color for state in meta.states}
 	return properties
 
 

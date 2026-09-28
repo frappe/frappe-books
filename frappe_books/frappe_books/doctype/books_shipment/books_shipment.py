@@ -31,7 +31,7 @@ class BooksShipment(StockTransferController):
 		number_series: DF.Link
 		party: DF.Link
 		return_against: DF.Link | None
-		status: DF.Literal["Saved", "Submitted", "Return", "ReturnIssued", "Cancelled"]
+		status: DF.Literal["Saved", "Submitted", "Return", "Return Issued", "Cancelled"]
 		terms: DF.Text | None
 	# end: auto-generated types
 

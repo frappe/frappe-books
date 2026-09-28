@@ -69,7 +69,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		redeem_loyalty_points: DF.Check
 		return_against: DF.Link | None
 		set_discount_amount: DF.Check
-		status: DF.Literal["Saved", "Unpaid", "PartlyPaid", "Paid", "Return", "ReturnIssued", "Cancelled"]
+		status: DF.Literal["Saved", "Unpaid", "Partly Paid", "Paid", "Return", "Return Issued", "Cancelled"]
 		stock_not_transferred: DF.Float
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None

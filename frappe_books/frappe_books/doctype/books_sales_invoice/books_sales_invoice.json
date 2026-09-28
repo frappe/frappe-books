@@ -112,7 +112,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Saved\nUnpaid\nPartlyPaid\nPaid\nReturn\nReturnIssued\nCancelled",
+   "options": "Saved\nUnpaid\nPartly Paid\nPaid\nReturn\nReturn Issued\nCancelled",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -378,7 +378,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-28 07:07:21.281977",
+ "modified": "2026-09-28 07:12:48.316360",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",
@@ -435,6 +435,35 @@
  "search_fields": "party",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Saved"
+  },
+  {
+   "color": "Orange",
+   "title": "Unpaid"
+  },
+  {
+   "color": "Orange",
+   "title": "Partly Paid"
+  },
+  {
+   "color": "Green",
+   "title": "Paid"
+  },
+  {
+   "color": "Gray",
+   "title": "Return"
+  },
+  {
+   "color": "Gray",
+   "title": "Return Issued"
+  },
+  {
+   "color": "Red",
+   "title": "Cancelled"
+  }
+ ],
  "track_changes": 1
 }

@@ -4,7 +4,11 @@ import type {
 } from '../../schemas/fieldProperties';
 
 type DocField = DocFieldProperties & { fieldname: string };
-type DocType = { name: string; fields: DocField[] };
+type DocType = {
+  name: string;
+  fields: DocField[];
+  states?: { title: string; color: string }[];
+};
 type SchemaMapping = Record<
   string,
   { doctype: string; fields: Record<string, string> }
@@ -37,13 +41,19 @@ export function getDoctypeFieldProperties(
 
   return Object.fromEntries(
     Object.entries(mapping).map(([schemaName, config]) => {
-      const docfields = doctypeMap[config.doctype]?.fields ?? [];
+      const doctype = doctypeMap[config.doctype];
+      const docfields = doctype?.fields ?? [];
       const properties: Record<string, DocFieldProperties> = {};
       for (const [source, target] of Object.entries(config.fields)) {
         const docfield = docfields.find((df) => df.fieldname === target);
         if (docfield) {
           properties[source] = getProperties(docfield, config.fields, toSchema);
         }
+      }
+      if (properties.status && doctype?.states?.length) {
+        properties.status.states = Object.fromEntries(
+          doctype.states.map(({ title, color }) => [title, color])
+        );
       }
       return [schemaName, properties];
     })

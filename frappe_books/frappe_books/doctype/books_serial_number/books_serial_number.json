@@ -39,7 +39,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.418302",
+ "modified": "2026-09-28 07:12:48.316360",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Serial Number",
@@ -84,6 +84,19 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Gray",
+   "title": "Inactive"
+  },
+  {
+   "color": "Green",
+   "title": "Active"
+  },
+  {
+   "color": "Blue",
+   "title": "Delivered"
+  }
+ ],
  "track_changes": 1
 }

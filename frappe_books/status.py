@@ -28,7 +28,7 @@ def get_status(doc) -> str:
 	if doc.get("return_against"):
 		return "Return"
 	if doc.get("is_returned"):
-		return "ReturnIssued"
+		return "Return Issued"
 	if doc.doctype in INVOICE_DOCTYPES:
 		return _payment_status(doc)
 	return "Submitted"
@@ -40,7 +40,7 @@ def _payment_status(invoice) -> str:
 		return "Paid"
 	if outstanding == as_decimal(invoice.base_grand_total):
 		return "Unpaid"
-	return "PartlyPaid"
+	return "Partly Paid"
 
 
 def store_status(doc):

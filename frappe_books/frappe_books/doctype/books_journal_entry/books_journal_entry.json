@@ -132,7 +132,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-28 07:07:21.281977",
+ "modified": "2026-09-28 07:12:48.316360",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Journal Entry",
@@ -185,6 +185,19 @@
  "search_fields": "entry_type",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Saved"
+  },
+  {
+   "color": "Green",
+   "title": "Submitted"
+  },
+  {
+   "color": "Red",
+   "title": "Cancelled"
+  }
+ ],
  "track_changes": 1
 }

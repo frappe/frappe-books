@@ -14,9 +14,6 @@
     {
       "fieldname": "status",
       "label": "Status",
-      "optionLabels": {
-        "DonotContact": "Do not Contact"
-      },
       "section": "Default"
     },
     {

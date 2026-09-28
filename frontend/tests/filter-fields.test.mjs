@@ -73,15 +73,15 @@ for (const [schemaName, values] of [
     [
       'Saved',
       'Unpaid',
-      'PartlyPaid',
+      'Partly Paid',
       'Paid',
       'Return',
-      'ReturnIssued',
+      'Return Issued',
       'Cancelled',
     ],
   ],
   ['JournalEntry', ['Saved', 'Submitted', 'Cancelled']],
-  ['Shipment', ['Saved', 'Submitted', 'Return', 'ReturnIssued', 'Cancelled']],
+  ['Shipment', ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled']],
 ]) {
   test(`${schemaName} supplies stored status values and display labels to the filter`, async () => {
     const fyo = await makeFyo();
@@ -95,11 +95,6 @@ for (const [schemaName, values] of [
       values
     );
     assert.ok(status.options.every((option) => option.label));
-    if (schemaName === 'SalesInvoice')
-      assert.equal(
-        status.options.find((option) => option.value === 'PartlyPaid').label,
-        'Partly Paid'
-      );
   });
 }
 

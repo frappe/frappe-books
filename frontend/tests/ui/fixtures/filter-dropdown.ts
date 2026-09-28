@@ -67,7 +67,7 @@ async function mount() {
     cancelled: false,
     grandTotal: fyo.pesa(100),
     baseGrandTotal: fyo.pesa(100),
-    status: ['Paid', 'PartlyPaid', 'Unpaid'][index % 3],
+    status: ['Paid', 'Partly Paid', 'Unpaid'][index % 3],
   }));
   const fetchRows = async (filters: QueryFilter): Promise<DocValueMap[]> => {
     if (!state.useDatabase)

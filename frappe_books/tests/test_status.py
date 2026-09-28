@@ -27,18 +27,18 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
 
 		self._pay(80)
-		self.assertEqual(self.invoice.db_get("status"), "PartlyPaid")
+		self.assertEqual(self.invoice.db_get("status"), "Partly Paid")
 		final = self._pay(100)
 		self.assertEqual(self.invoice.db_get("status"), "Paid")
 		final.cancel()
-		self.assertEqual(self.invoice.db_get("status"), "PartlyPaid")
+		self.assertEqual(self.invoice.db_get("status"), "Partly Paid")
 		self.assertEqual(final.db_get("status"), "Cancelled")
 
 	def test_returns_mark_both_invoices(self):
 		self.invoice.submit()
 		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
 		self.assertEqual(credit_note.db_get("status"), "Return")
-		self.assertEqual(self.invoice.db_get("status"), "ReturnIssued")
+		self.assertEqual(self.invoice.db_get("status"), "Return Issued")
 
 		credit_note.cancel()
 		self.assertEqual(credit_note.db_get("status"), "Cancelled")

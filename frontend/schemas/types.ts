@@ -97,6 +97,7 @@ export interface OptionField extends Omit<BaseField, 'fieldtype'> {
   fieldtype: OptionFieldType;
   options: SelectOption[];
   optionLabels?: Record<string, string>; // Labels of option values that need one
+  states?: Record<string, string>; // DocType state colour by `status` option value
   allowCustom?: boolean;
 }
 

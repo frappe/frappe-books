@@ -17,6 +17,7 @@ export type DocFieldProperties = {
   read_only?: number;
   set_only_once?: number;
   non_negative?: number;
+  states?: Record<string, string>;
 };
 
 /** Server field properties by schema name, then by field name. */
@@ -36,6 +37,7 @@ export const dataProperties = [
   'readOnly',
   'setOnlyOnce',
   'minvalue',
+  'states',
 ] as const;
 
 const numberFieldTypes = ['Int', 'Float', 'Currency'];
@@ -115,6 +117,7 @@ function getOptionProperties(
         value,
         label: labels[value] ?? value,
       })),
+      states: docfield.states,
     };
   }
 

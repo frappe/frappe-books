@@ -109,7 +109,7 @@ test('balance sheet and P&L request their periods and render server totals', asy
 test('list and form statuses come from the stored status', async () => {
   const fyo = await makeFyo();
   const schema = fyo.schemaMap.SalesInvoice;
-  assert.equal(getDocStatus({ schema, status: 'PartlyPaid' }), 'PartlyPaid');
+  assert.equal(getDocStatus({ schema, status: 'Partly Paid' }), 'Partly Paid');
   assert.equal(getDocStatus({ schema, notInserted: true }), 'Draft');
   assert.equal(
     getDocStatus({ schema, dirty: true, status: 'Saved' }),

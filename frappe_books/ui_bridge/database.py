@@ -26,7 +26,6 @@ from frappe_books.ui_bridge.mapping import (
 
 READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists", "preview", "getMapped"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
-PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
 INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__expectedModified"}
 # Frappe maintains nested-set indices when the document is saved.
@@ -160,7 +159,7 @@ class BooksDatabaseBridge:
 		return values
 
 	def insert(self, source_schema: str, values: dict[str, Any]) -> dict:
-		target = _writable_doctype(source_schema)
+		target = target_doctype(source_schema)
 		if values.get("submitted") or values.get("cancelled"):
 			frappe.throw("Use the Books document action API to submit or cancel documents")
 		if frappe.get_meta(target).issingle:
@@ -176,7 +175,7 @@ class BooksDatabaseBridge:
 		return self._to_readable_source(source_schema, doc)
 
 	def update(self, source_schema: str, values: dict[str, Any]) -> dict:
-		target = _writable_doctype(source_schema)
+		target = target_doctype(source_schema)
 		if frappe.get_meta(target).issingle:
 			return self._update_single(source_schema, values)
 		if not isinstance(values.get("name"), str):
@@ -209,16 +208,16 @@ class BooksDatabaseBridge:
 		return self._to_readable_source(source_by_doctype()[doc.doctype], doc)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
-		frappe.rename_doc(_writable_doctype(source_schema), old_name, new_name)
+		frappe.rename_doc(target_doctype(source_schema), old_name, new_name)
 
 	def delete(self, source_schema: str, name: str) -> None:
-		frappe.delete_doc(_writable_doctype(source_schema), name)
+		frappe.delete_doc(target_doctype(source_schema), name)
 
 	def delete_all(self, source_schema: str, filters: dict[str, Any]) -> int:
 		if not filters:
 			frappe.throw("Books bulk deletion requires at least one filter")
 		names = frappe.get_list(
-			_writable_doctype(source_schema),
+			target_doctype(source_schema),
 			filters=self._target_filters(source_schema, filters),
 			pluck="name",
 		)
@@ -433,12 +432,6 @@ def _subsequence_pattern(text: str) -> str:
 def _is_named_by_user(meta) -> bool:
 	autoname = (meta.autoname or "").lower()
 	return autoname == "prompt" or autoname.startswith("field:")
-
-
-def _writable_doctype(source_schema: str) -> str:
-	if source_schema in PROTECTED_WRITE_SCHEMAS:
-		frappe.throw(f"{source_schema} records are managed by server document actions")
-	return target_doctype(source_schema)
 
 
 def _snake_case(value: str) -> str:

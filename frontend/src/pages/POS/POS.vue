@@ -804,7 +804,6 @@ export default defineComponent({
         if (this.sinvDoc.isSubmitted) {
           await this.payAtCounter(payments);
         } else {
-          this.sinvDoc.date = new Date();
           await this.setTenderedPayments(payments);
           await this.submitSinvDoc();
         }

@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import now_datetime
 
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
@@ -80,6 +81,12 @@ class BooksSalesInvoice(PostingInvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "sales"
+
+	def before_validate(self):
+		if self.is_pos and self._action == "submit":
+			# A POS sale is dated when it is checked out.
+			self.date = now_datetime()
+		super().before_validate()
 
 	def validate(self):
 		super().validate()

@@ -10,7 +10,7 @@
   <!-- Search Modal -->
   <CommandPalette
     v-model:open="openModal"
-    v-model:query="inputValue"
+    v-model:query="query"
     :filterable="false"
     :title="t`Search Frappe Books`"
     @select="selectSearchItem"
@@ -55,11 +55,9 @@
               v-for="g in searchGroups"
               :key="g"
               size="xs"
-              :variant="
-                searcher?.filters.groupFilters[g] ? 'subtle' : 'outline'
-              "
-              :aria-pressed="searcher?.filters.groupFilters[g]"
-              @click="setSearchFilter(g, !searcher!.filters.groupFilters[g])"
+              :variant="isFilterOn(g) ? 'subtle' : 'outline'"
+              :aria-pressed="isFilterOn(g)"
+              @click="setSearchFilter(g, !isFilterOn(g))"
             >
               {{ groupLabelMap[g] }}
             </FrappeButton>
@@ -83,9 +81,9 @@
               v-for="s in ['skipTables', 'skipTransactions'] as const"
               :key="s"
               size="xs"
-              :variant="searcher?.filters[s] ? 'subtle' : 'outline'"
-              :aria-pressed="searcher?.filters[s]"
-              @click="setSearchFilter(s, !searcher?.filters[s])"
+              :variant="isFilterOn(s) ? 'subtle' : 'outline'"
+              :aria-pressed="isFilterOn(s)"
+              @click="setSearchFilter(s, !isFilterOn(s))"
             >
               {{
                 s === 'skipTables' ? t`Skip Child Tables` : t`Skip Transactions`
@@ -101,16 +99,9 @@
               class="whitespace-nowrap"
               size="xs"
               theme="blue"
-              :variant="
-                searcher?.filters.schemaFilters[sf.value] ? 'subtle' : 'outline'
-              "
-              :aria-pressed="searcher?.filters.schemaFilters[sf.value]"
-              @click="
-                setSearchFilter(
-                  sf.value,
-                  !searcher?.filters.schemaFilters[sf.value]
-                )
-              "
+              :variant="isFilterOn(sf.value) ? 'subtle' : 'outline'"
+              :aria-pressed="isFilterOn(sf.value)"
+              @click="setSearchFilter(sf.value, !isFilterOn(sf.value))"
             >
               {{ sf.label }}
             </FrappeButton>
@@ -144,11 +135,11 @@
           </div>
 
           <div class="ms-auto flex items-center gap-2 whitespace-nowrap">
-            <p v-if="searchResults.length">
-              {{ t`${suggestions.length} out of ${searchResults.length}` }}
+            <p v-if="results.length">
+              {{ t`${suggestions.length} out of ${results.length}` }}
             </p>
             <FrappeTabButtons
-              v-if="searchResults.length > 50"
+              v-if="results.length > 50"
               v-model="limit"
               :aria-label="t`Result limit`"
               size="sm"
@@ -162,16 +153,16 @@
 </template>
 
 <script lang="ts">
-import { handleError } from 'src/errorHandling';
-import { fyo } from 'src/initFyo';
-import { searcherKey, shortcutsKey } from 'src/utils/injectionKeys';
+import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
 import {
   SearchGroup,
   SearchItems,
   getGroupLabelMap,
+  groupThemeMap,
   searchGroups,
 } from 'src/utils/search';
+import { useSearch } from 'src/utils/useSearch';
 import { defineComponent, inject } from 'vue';
 import {
   Badge as FrappeBadge,
@@ -191,8 +182,6 @@ import {
 
 const COMPONENT_NAME = 'SearchBar';
 
-type SchemaFilters = { value: string; label: string; index: number }[];
-
 export default defineComponent({
   components: {
     CommandPalette,
@@ -208,7 +197,8 @@ export default defineComponent({
   },
   setup() {
     return {
-      searcher: inject(searcherKey),
+      ...useSearch(),
+      groupThemeMap,
       shortcuts: inject(shortcutsKey),
     };
   },
@@ -216,12 +206,9 @@ export default defineComponent({
     return {
       searchGroups,
       openModal: false,
-      inputValue: '',
       showMore: false,
       limit: 50,
       allowedLimits: [50, 100, 500, -1],
-      filterRevision: 0,
-      docSearchTimer: undefined as ReturnType<typeof setTimeout> | undefined,
     };
   },
   computed: {
@@ -229,7 +216,7 @@ export default defineComponent({
       return this.allowedLimits
         .filter(
           (limit) =>
-            limit < this.searchResults.length || limit === this.limit || limit === -1
+            limit < this.results.length || limit === this.limit || limit === -1
         )
         .map((value) => ({
           value,
@@ -239,56 +226,13 @@ export default defineComponent({
     groupLabelMap(): Record<SearchGroup, string> {
       return getGroupLabelMap();
     },
-    schemaFilters(): SchemaFilters {
-      const searchables = this.searcher?.searchables ?? {};
-
-      const schemaNames = Object.keys(searchables);
-      const filters = schemaNames
-        .map((value) => {
-          const schema = fyo.schemaMap[value];
-          if (!schema) {
-            return;
-          }
-
-          let index = 1;
-          if (schema.isSubmittable) {
-            index = 0;
-          } else if (schema.isChild) {
-            index = 2;
-          }
-
-          return { value, label: schema.label, index };
-        })
-        .filter(Boolean) as SchemaFilters;
-
-      return filters.sort((a, b) => a.index - b.index);
-    },
-    groupThemeMap(): Record<
-      SearchGroup,
-      'gray' | 'blue' | 'green' | 'amber' | 'red' | 'violet'
-    > {
-      return {
-        Docs: 'blue',
-        Create: 'green',
-        List: 'violet',
-        Report: 'amber',
-        Page: 'red',
-        Recent: 'gray',
-      };
-    },
-    searchResults(): SearchItems {
-      // The web app keeps Search in a shallow ref; track filter mutations here.
-      void this.filterRevision;
-      if (!this.searcher) {
-        return [];
-      }
-
-      return this.searcher.search(this.inputValue);
+    schemaFilters() {
+      return this.searcher?.schemaFilterOptions ?? [];
     },
     suggestions(): SearchItems {
       return this.limit === -1
-        ? this.searchResults
-        : this.searchResults.slice(0, this.limit);
+        ? this.results
+        : this.results.slice(0, this.limit);
     },
   },
   async mounted() {
@@ -303,14 +247,9 @@ export default defineComponent({
     this.shortcuts?.delete(COMPONENT_NAME);
   },
   unmounted() {
-    clearTimeout(this.docSearchTimer);
     this.shortcuts?.delete(COMPONENT_NAME);
   },
   watch: {
-    inputValue(value: string) {
-      clearTimeout(this.docSearchTimer);
-      this.docSearchTimer = setTimeout(() => void this.fetchDocs(value), 250);
-    },
     openModal(open: boolean) {
       if (open) {
         this.setShortcuts();
@@ -337,16 +276,7 @@ export default defineComponent({
           shortcut: `Digit${Number(i) + 1}`,
           callback: () => {
             const group = searchGroups[i];
-            if (!this.searcher) {
-              return;
-            }
-
-            const value = this.searcher.filters.groupFilters[group];
-            if (typeof value !== 'boolean') {
-              return;
-            }
-
-            this.setSearchFilter(group, !value);
+            this.setSearchFilter(group, !this.isFilterOn(group));
           },
         });
       }
@@ -381,38 +311,16 @@ export default defineComponent({
       this.openModal = true;
       this.setShortcuts();
     },
-    async fetchDocs(value: string) {
-      try {
-        if (await this.searcher?.fetchDocs(value)) {
-          this.filterRevision += 1;
-        }
-      } catch (error) {
-        await handleError(false, error as Error);
-      }
-    },
     close(): void {
       this.clearFilterShortcuts();
       this.openModal = false;
       this.reset();
     },
     reset(): void {
-      this.inputValue = '';
-    },
-    setSearchFilter(filterName: string, value: boolean): void {
-      if (!this.searcher) {
-        return;
-      }
-
-      this.searcher.set(filterName, value);
-      this.filterRevision += 1;
-      void this.fetchDocs(this.inputValue);
+      this.query = '';
     },
     selectSearchItem(value: CommandPaletteValue): void {
-      const selectedItem = value as SearchItems[number];
-      if (selectedItem?.action) {
-        this.searcher?.addToRecent(selectedItem);
-        selectedItem.action();
-      }
+      this.openSearchItem(value as SearchItems[number]);
     },
   },
 });

@@ -14,15 +14,15 @@
       @cancel="closeKeyboardModal"
     />
 
-    <template #actions>
+    <template #actions="{ size }">
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         :disabled="saving"
         @click="closeKeyboardModal"
         >{{ t`Cancel` }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         :disabled="saving"

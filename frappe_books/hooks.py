@@ -24,7 +24,12 @@ add_to_apps_screen = [
 	}
 ]
 
-website_route_rules = [{"from_route": "/books/<path:app_path>", "to_route": "books"}]
+website_route_rules = [
+	{"from_route": "/books/sw.js", "to_route": "books-service-worker"},
+	{"from_route": "/books/<path:app_path>", "to_route": "books"},
+]
+
+page_renderer = ["frappe_books.pwa.ServiceWorkerPage"]
 # A fresh site opens the Books setup wizard, which completes Frappe's setup too.
 setup_wizard_url = "/books"
 

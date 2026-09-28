@@ -7,9 +7,21 @@
       </div>
     </div>
 
+    <MobileSectionState
+      v-if="showLoadState"
+      class="mt-4 h-[208px]"
+      :has-failed="hasFailed"
+      @retry="loadData"
+    />
     <!-- Line Chart -->
-    <div v-if="chartData.data.length" class="mt-4 h-56 w-full">
+    <div
+      v-else-if="chartData.data.length"
+      v-bind="phoneChartListeners"
+      class="mt-4 w-full"
+      :class="isMobile ? 'h-[208px]' : 'h-56'"
+    >
       <FrappeLineChart
+        :dir="isMobile ? 'ltr' : undefined"
         :data="chartData.data"
         x="yearmonth"
         :y="['inflow', 'outflow']"
@@ -28,12 +40,14 @@ import { formatXLabels, getYMax } from 'src/utils/chart';
 import { uicolors } from 'src/utils/colors';
 import { getDashboardData, MonthlyCashflow } from 'src/utils/dashboard';
 import DashboardChartBase from './BaseDashboardChart.vue';
+import MobileSectionState from './MobileSectionState.vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'Cashflow',
   components: {
     FrappeLineChart,
+    MobileSectionState,
   },
   extends: DashboardChartBase,
   props: {
@@ -62,6 +76,7 @@ export default defineComponent({
 
       const format = (value: number) => fyo.format(value ?? 0, 'Currency');
       const yMax = getYMax(points);
+      const phoneAxes = this.isMobile ? this.phoneAxisLabels : undefined;
       return {
         data,
         colors,
@@ -69,13 +84,14 @@ export default defineComponent({
           inflow: { label: this.t`Inflow`, color: colors[0], smooth: true },
           outflow: { label: this.t`Outflow`, color: colors[1], smooth: true },
         },
-        xAxis: { type: 'category' as const, format: formatXLabels },
-        yAxis: { max: yMax, format },
+        xAxis: {
+          type: 'category' as const,
+          format: formatXLabels,
+          echartOptions: phoneAxes?.x,
+        },
+        yAxis: { max: yMax, format, echartOptions: phoneAxes?.y },
       };
     },
-  },
-  async activated() {
-    await this.setData();
   },
   methods: {
     async setData() {

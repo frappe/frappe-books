@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col w-full h-full">
+  <div class="flex flex-col w-full md:h-full">
     <PageHeader :title="t`Print ${title}`">
       <FrappeButton variant="solid" @click="savePDF()">
         {{ t`Save as PDF` }}
@@ -62,7 +62,10 @@
       </div>
 
       <!-- Report Print Settings -->
-      <div v-if="report" class="border-l border-outline-gray-1 flex flex-col">
+      <div
+        v-if="report"
+        class="border-t md:border-t-0 md:border-l border-outline-gray-1 flex flex-col"
+      >
         <p class="p-4 text-sm text-ink-gray-6">
           {{
             [
@@ -149,6 +152,25 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="isMobile"
+      class="sticky bottom-0 grid grid-cols-2 gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+    >
+      <FrappeButton
+        size="lg"
+        icon-left="lucide-file-down"
+        :label="t`Save as PDF`"
+        @click="savePDF()"
+      />
+      <FrappeButton
+        size="lg"
+        variant="solid"
+        icon-left="lucide-printer"
+        :label="t`Print`"
+        @click="savePDF(true)"
+      />
+    </div>
   </div>
 </template>
 <script lang="ts">
@@ -164,6 +186,7 @@ import { getReport } from 'src/utils/misc';
 import { getPathAndMakePDF } from 'src/utils/printTemplates';
 import { showSidebar } from 'src/utils/refs';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
+import { isMobile } from 'src/utils/viewport';
 import { PropType, defineComponent } from 'vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 
@@ -174,6 +197,9 @@ export default defineComponent({
       type: String as PropType<keyof typeof reports>,
       required: true,
     },
+  },
+  setup() {
+    return { isMobile };
   },
   data() {
     return {
@@ -333,8 +359,7 @@ export default defineComponent({
 </script>
 <style scoped>
 .outer-container {
-  display: grid;
   grid-template-columns: auto var(--w-quick-edit);
-  @apply h-full overflow-auto;
+  @apply md:grid md:h-full md:overflow-auto;
 }
 </style>

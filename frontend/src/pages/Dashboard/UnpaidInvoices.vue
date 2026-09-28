@@ -5,14 +5,28 @@
       <template #title>{{ title }}</template>
     </SectionHeader>
 
+    <MobileSectionState
+      v-if="showLoadState"
+      class="mt-4 min-h-14"
+      :has-failed="hasFailed"
+      @retry="loadData"
+    >
+      <div class="flex h-8 items-center justify-between">
+        <div class="h-[13px] w-[120px] rounded-[6px] bg-surface-gray-2" />
+        <div class="h-[13px] w-[120px] rounded-[6px] bg-surface-gray-2" />
+      </div>
+      <div class="mt-2 h-4 rounded-2 bg-surface-gray-2" />
+    </MobileSectionState>
+
     <!-- Widget Body -->
-    <div class="mt-4">
+    <div v-else class="mt-4">
       <!-- Paid & Unpaid Amounts -->
       <div class="flex justify-between">
         <!-- Paid -->
         <FrappeButton
           class="text-sm font-medium text-ink-gray-8"
           variant="ghost"
+          :size="isMobile ? 'md' : 'sm'"
           :disabled="paidCount === 0"
           :tooltip="paidCount > 0 ? t`View Paid Invoices` : undefined"
           @click="routeToInvoices('paid')"
@@ -27,6 +41,7 @@
         <FrappeButton
           class="text-sm font-medium text-ink-gray-8"
           variant="ghost"
+          :size="isMobile ? 'md' : 'sm'"
           :disabled="unpaidCount === 0"
           :tooltip="unpaidCount > 0 ? t`View Unpaid Invoices` : undefined"
           @click="routeToInvoices('unpaid')"
@@ -76,6 +91,7 @@ import { PeriodKey } from 'src/utils/types';
 import { routeTo } from 'src/utils/ui';
 import { PropType, defineComponent } from 'vue';
 import BaseDashboardChart from './BaseDashboardChart.vue';
+import MobileSectionState from './MobileSectionState.vue';
 import SectionHeader from './SectionHeader.vue';
 
 export default defineComponent({
@@ -84,6 +100,7 @@ export default defineComponent({
     SectionHeader,
     FrappeButton,
     FrappeTooltip,
+    MobileSectionState,
   },
   extends: BaseDashboardChart,
   props: {
@@ -142,9 +159,6 @@ export default defineComponent({
 
       return `bg-${this.color}-${this.darkMode ? '700 bg-opacity-20' : '200'}`;
     },
-  },
-  async activated() {
-    await this.setData();
   },
   methods: {
     async routeToInvoices(type: 'paid' | 'unpaid') {

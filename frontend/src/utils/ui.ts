@@ -3,6 +3,7 @@
  * Basically anything that may directly or indirectly import a Vue file.
  */
 import { t } from 'fyo';
+import type { RawValueMap } from 'fyo/core/types';
 import type { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
@@ -206,6 +207,7 @@ export function getActionsForDoc(doc?: Doc): Action[] {
         label: d.label,
         theme: d.theme,
         action: d.action,
+        nextStep: d.nextStep,
       };
     });
 }
@@ -391,6 +393,11 @@ export function getFormRoute(schemaName: string, name: string): string {
 
   // Use `encodeURIComponent` if more name issues
   return `/edit/${schemaName}/${name.replaceAll('/', '%2F')}`;
+}
+
+export async function openNewDoc(schemaName: string, initData?: RawValueMap) {
+  const doc = fyo.doc.getNewDoc(schemaName, initData);
+  await routeTo(getFormRoute(schemaName, doc.name!));
 }
 
 export async function getDocFromNameIfExistsElseNew(

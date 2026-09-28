@@ -48,6 +48,7 @@ DOCSTATUS_FLAGS = {"submitted": {1, 2}, "cancelled": {2}}
 class ListOptions(TypedDict, total=False):
 	fields: list[str] | None
 	filters: dict[str, Any] | None
+	orFilters: dict[str, Any] | None
 	offset: int | None
 	limit: int | None
 	groupBy: str | list[str] | None
@@ -84,6 +85,7 @@ class BooksDatabaseBridge:
 			target_doctype(source_schema),
 			fields=self._target_fields(source_schema, requested),
 			filters=self._target_filters(source_schema, options.filters or {}),
+			or_filters=self._target_filters(source_schema, options.orFilters or {}),
 			order_by=self._order_by(source_schema, options.orderBy, options.order),
 			group_by=self._group_by(source_schema, options.groupBy),
 			offset=options.offset if options.limit else None,
@@ -94,11 +96,17 @@ class BooksDatabaseBridge:
 			rows = rows[options.offset :]
 		return [self._row_to_source(source_schema, row, requested) for row in rows]
 
-	def count(self, source_schema: str, filters: dict[str, Any] | None = None) -> int:
+	def count(
+		self,
+		source_schema: str,
+		filters: dict[str, Any] | None = None,
+		or_filters: dict[str, Any] | None = None,
+	) -> int:
 		rows = self._get_list_rows(
 			target_doctype(source_schema),
 			fields=[{"COUNT": "*", "as": "count"}],
 			filters=self._target_filters(source_schema, filters or {}),
+			or_filters=self._target_filters(source_schema, or_filters or {}),
 			offset=None,
 			limit=None,
 		)

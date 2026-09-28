@@ -64,6 +64,46 @@ export async function setPOSRowQuantity(
   }
 }
 
+/** The quantity field the POS edits: the transfer quantity with UOM conversions. */
+export function getPOSQuantityField(fyo: Fyo): POSQuantityField {
+  return fyo.singles.InventorySettings?.enableUomConversions
+    ? 'transferQuantity'
+    : 'quantity';
+}
+
+export type POSPermissions = Record<POSPermissionSetting, boolean>;
+
+export function isPOSRowFieldReadOnly(
+  row: SalesInvoiceItem,
+  field: POSRowField,
+  permissions: POSPermissions
+): boolean {
+  if (row.isFreeItem) {
+    return true;
+  }
+
+  switch (field) {
+    case 'quantity':
+      return getPOSQuantityField(row.fyo) === 'transferQuantity';
+    case 'rate':
+      return !permissions.canChangeRate;
+    case 'itemDiscountAmount':
+      return !permissions.canEditDiscount || (row.itemDiscountPercent ?? 0) > 0;
+    case 'itemDiscountPercent':
+      return !permissions.canEditDiscount || !row.itemDiscountAmount?.isZero();
+    default:
+      return false;
+  }
+}
+
+export async function getPOSPermissions(fyo: Fyo): Promise<POSPermissions> {
+  const [canChangeRate, canEditDiscount] = await Promise.all([
+    getPOSPermissionSetting(fyo, 'canChangeRate'),
+    getPOSPermissionSetting(fyo, 'canEditDiscount'),
+  ]);
+  return { canChangeRate, canEditDiscount };
+}
+
 export async function getPOSPermissionSetting(
   fyo: Fyo,
   fieldname: POSPermissionSetting
@@ -246,9 +286,36 @@ export async function getPOSRowItem(
   };
 }
 
+/** Up to two initials that stand in for an item without an image. */
+export function getItemInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join('');
+}
+
+/** Round cash amounts above `due` that a customer may hand over. */
+export function getQuickPaymentAmounts(due: number, count = 2): number[] {
+  const amounts: number[] = [];
+  for (let note = 1; amounts.length < count && note < due * 100; note *= 10) {
+    for (const size of [note, note * 5]) {
+      const amount = (Math.floor(due / size) + 1) * size;
+      if (size >= due / 100 && !amounts.includes(amount)) {
+        amounts.push(amount);
+      }
+    }
+  }
+
+  return amounts.slice(0, count);
+}
+
 export function toPOSItem(item: Item, itemQtyMap: ItemQtyMap): POSItem {
   return {
     availableQty: itemQtyMap[item.name as string]?.availableQty ?? 0,
+    trackItem: !!item.trackItem,
     name: item.name as string,
     itemCode: item.itemCode as string,
     barcode: item.barcode as string,

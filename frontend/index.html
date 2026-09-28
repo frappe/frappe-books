@@ -2,16 +2,31 @@
 <html lang="{{ lang }}" dir="{{ layout_direction }}">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f8f9fa" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#171717"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Books" />
+    <link rel="manifest" href="/assets/frappe_books/pwa/manifest.json" />
+    <link rel="icon" href="/assets/frappe_books/pwa/icon.svg" type="image/svg+xml" />
     <link
-      rel="icon"
-      href="/assets/frappe_books/books-icon.png"
-      type="image/png"
+      rel="apple-touch-icon"
+      href="/assets/frappe_books/pwa/apple-touch-icon.png"
     />
     <title>Frappe Books | {{ app_name }}</title>
   </head>
-  <body>
+  <body class="bg-surface-base">
     <div id="app"></div>
     <script>
       window.csrf_token = '{{ csrf_token }}';

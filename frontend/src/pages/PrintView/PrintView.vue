@@ -1,6 +1,9 @@
 <template>
-  <div class="flex flex-col flex-1 bg-surface-gray-1">
-    <PageHeader :border="true" :title="t`Print View`">
+  <div
+    class="flex flex-col flex-1"
+    :class="isMobile ? 'min-h-full bg-surface-gray-2' : 'bg-surface-gray-1'"
+  >
+    <PageHeader :border="true" :title="isMobile ? name : t`Print View`">
       <SelectControl
         v-if="templateList.length"
         :df="{
@@ -26,8 +29,22 @@
       </template>
     </PageHeader>
 
+    <div
+      v-if="isMobile && templateList.length"
+      class="sticky top-0 z-10 bg-surface-base px-4 py-3"
+    >
+      <MobilePrintTemplatePicker
+        :model-value="templateName"
+        :templates="templateList"
+        @update:model-value="onTemplateNameChange"
+      />
+    </div>
+
     <!-- Template Display Area -->
-    <div class="overflow-auto custom-scroll custom-scroll-thumb1 p-4">
+    <div
+      class="overflow-auto custom-scroll custom-scroll-thumb1 p-4"
+      :class="isMobile ? 'flex-1' : ''"
+    >
       <!-- Display Hints -->
       <div
         v-if="helperMessage"
@@ -37,15 +54,49 @@
       </div>
 
       <!-- Template Container -->
-      <PrintContainer
-        v-if="printProps"
-        ref="printContainer"
-        :print-schema-name="schemaName"
-        :template="printProps.template"
-        :values="printProps.values"
-        :scale="scale"
-        :width="templateDoc?.width"
-        :height="templateDoc?.height"
+      <div :class="isMobile ? 'relative w-max min-w-full' : ''">
+        <PrintContainer
+          v-if="printProps"
+          ref="printContainer"
+          :print-schema-name="schemaName"
+          :template="printProps.template"
+          :values="printProps.values"
+          :scale="scale * zoom"
+          :width="templateDoc?.width"
+          :height="templateDoc?.height"
+        />
+        <!-- Takes the touches the preview frame would swallow. -->
+        <div
+          v-if="isMobile"
+          class="absolute inset-0 touch-pan-x touch-pan-y"
+          @touchstart="onTouchStart"
+          @touchmove="onTouchMove"
+          @touchend="onTouchEnd"
+          @touchcancel="onTouchEnd"
+        />
+      </div>
+    </div>
+
+    <div
+      v-if="isMobile"
+      class="sticky bottom-0 flex gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)]"
+    >
+      <FrappeButton
+        class="flex-1"
+        size="lg"
+        icon-left="lucide-download"
+        :label="t`Save as PDF`"
+        :disabled="!printProps"
+        @click="savePDF()"
+      />
+      <FrappeButton
+        class="flex-1"
+        size="lg"
+        variant="solid"
+        icon-left="lucide-printer"
+        :label="t`Print`"
+        :disabled="!printProps"
+        @click="savePDF(true)"
       />
     </div>
   </div>
@@ -65,8 +116,11 @@ import { getPrintTemplatePropValues } from 'src/utils/printTemplates';
 import { showSidebar } from 'src/utils/refs';
 import { PrintValues } from 'src/utils/types';
 import { getFormRoute, openSettings, routeTo } from 'src/utils/ui';
+import { isMobile } from 'src/utils/viewport';
 import { defineComponent } from 'vue';
 import PrintContainer from '../TemplateBuilder/PrintContainer.vue';
+import MobilePrintTemplatePicker from './MobilePrintTemplatePicker.vue';
+import { usePinchZoom } from './pinchZoom';
 
 export default defineComponent({
   name: 'PrintView',
@@ -76,10 +130,14 @@ export default defineComponent({
     SelectControl,
     PrintContainer,
     DropdownWithActions,
+    MobilePrintTemplatePicker,
   },
   props: {
     schemaName: { type: String, required: true },
     name: { type: String, required: true },
+  },
+  setup() {
+    return { isMobile, ...usePinchZoom() };
   },
   data() {
     return {
@@ -221,7 +279,7 @@ export default defineComponent({
       this.scale = 1;
       const width = (this.templateDoc?.width ?? 21) * 37.8;
       let containerWidth = window.innerWidth - 32;
-      if (showSidebar.value) {
+      if (showSidebar.value && !isMobile.value) {
         containerWidth -= 12 * 16;
       }
 
@@ -234,6 +292,7 @@ export default defineComponent({
       this.templateList = [];
       this.templateDoc = null;
       this.scale = 1;
+      this.zoom = 1;
     },
     async onTemplateNameChange(value: string | null): Promise<void> {
       if (!value) {

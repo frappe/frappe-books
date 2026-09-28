@@ -1,5 +1,21 @@
 <template>
-  <div v-if="tableFields?.length" class="min-w-0">
+  <div v-if="tableFields?.length && isMobile" class="min-w-0">
+    <FrappeFormLabel
+      v-if="showLabel"
+      class="mb-1.5"
+      :label="df.label"
+      :required="isRequired"
+    />
+    <MobileTableRows
+      :rows="value"
+      :fields="tableFields"
+      :can-add="canAddRemoveRows"
+      :title="title"
+      @edit="(row) => $emit('editrow', row)"
+      @add="addRowAndEdit"
+    />
+  </div>
+  <div v-else-if="tableFields?.length" class="min-w-0">
     <FrappeFormLabel
       v-if="showLabel"
       class="mb-1"
@@ -115,6 +131,7 @@ import {
 import { fyo } from 'src/initFyo';
 import { nextTick } from 'vue';
 import Base from './Base.vue';
+import MobileTableRows from './MobileTableRows.vue';
 import TableRow from './TableRow.vue';
 
 export default {
@@ -126,6 +143,7 @@ export default {
     FrappeListHeader,
     FrappeListHeaderCell,
     FrappeListRow,
+    MobileTableRows,
     TableRow,
   },
   extends: Base,
@@ -146,6 +164,11 @@ export default {
     allowAddRemoveRows: {
       type: Boolean,
       default: true,
+    },
+    /** Phones: a section's table names itself in its card header. */
+    title: {
+      type: String,
+      default: '',
     },
   },
   emits: ['editrow', 'row-change', 'row-remove'],
@@ -221,6 +244,12 @@ export default {
           }
         }
       });
+    },
+    async addRowAndEdit() {
+      await this.doc.append(this.df.fieldname);
+      const rows = this.doc.get(this.df.fieldname);
+      this.triggerChange(rows);
+      this.$emit('editrow', rows.at(-1));
     },
     removeRow(row) {
       // Before removal, so listeners update ahead of the next render.

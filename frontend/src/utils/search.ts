@@ -8,7 +8,7 @@ import { getImportableSchemaNames } from 'src/importer';
 import { createFilters, routeFilters } from 'src/utils/filters';
 import { safeParseFloat } from 'utils/index';
 import { fuzzyMatch } from '.';
-import { getFormRoute, routeTo } from './ui';
+import { getFormRoute, openNewDoc, routeTo } from './ui';
 import { searchGroups } from '../../utils/types';
 import type { SearchGroup, SearchItem } from '../../utils/types';
 
@@ -76,13 +76,17 @@ export function getGroupLabelMap() {
   };
 }
 
-function getCreateAction(fyo: Fyo, schemaName: string, initData?: RawValueMap) {
-  return async function action() {
-    const doc = fyo.doc.getNewDoc(schemaName, initData);
-    const route = getFormRoute(schemaName, doc.name!);
-    await routeTo(route);
-  };
-}
+export const groupThemeMap: Record<
+  SearchGroup,
+  'gray' | 'blue' | 'green' | 'amber' | 'red' | 'violet'
+> = {
+  Docs: 'blue',
+  Create: 'green',
+  List: 'violet',
+  Report: 'amber',
+  Page: 'red',
+  Recent: 'gray',
+};
 
 function getCreateList(fyo: Fyo): SearchItem[] {
   const hasInventory = fyo.doc.singles.AccountingSettings?.enableInventory;
@@ -102,7 +106,7 @@ function getCreateList(fyo: Fyo): SearchItem[] {
       ({
         label: fyo.schemaMap[schemaName]?.label,
         group: 'Create',
-        action: getCreateAction(fyo, schemaName),
+        action: () => openNewDoc(schemaName),
         schemaName,
       } as SearchItem)
   );
@@ -152,7 +156,7 @@ function getCreateList(fyo: Fyo): SearchItem[] {
     return {
       label,
       group: 'Create',
-      action: getCreateAction(fyo, schemaName, create),
+      action: () => openNewDoc(schemaName, create),
       schemaName,
       initData: create,
     } as SearchItem;
@@ -481,8 +485,7 @@ export class Search {
     if (item.route) {
       void routeTo(item.route);
     } else if (item.schemaName && item.group === 'Create') {
-      const action = getCreateAction(this.fyo, item.schemaName, item.initData);
-      void action();
+      void openNewDoc(item.schemaName, item.initData);
     } else if (item.schemaName) {
       this._openDocList(item.schemaName);
     } else if (item.reportName) {
@@ -522,6 +525,60 @@ export class Search {
       value &&= !this.filters.schemaFilters[val.schemaName];
     }
     return value;
+  }
+
+  /** Schema filter chips: transactions first, child tables last. */
+  get schemaFilterOptions(): { value: string; label: string }[] {
+    return Object.values(this.searchables)
+      .map(({ schemaName, isChild, isSubmittable }) => ({
+        value: schemaName,
+        label: this.fyo.schemaMap[schemaName]?.label ?? schemaName,
+        index: isSubmittable ? 0 : isChild ? 2 : 1,
+      }))
+      .sort((a, b) => a.index - b.index);
+  }
+
+  isFilterOn(filterName: string): boolean {
+    if (filterName in this.filters.groupFilters) {
+      return this.filters.groupFilters[filterName as SearchGroup];
+    }
+
+    if (filterName === 'skipTables' || filterName === 'skipTransactions') {
+      return this.filters[filterName];
+    }
+
+    return !!this.filters.schemaFilters[filterName];
+  }
+
+  /** Filters that differ from the defaults; a skip filter counts once. */
+  get changedFilterCount(): number {
+    const { groupFilters, schemaFilters, skipTables, skipTransactions } =
+      this.filters;
+    const groups = searchGroups.filter((group) => !groupFilters[group]);
+    const schemas = Object.values(this.searchables).filter(
+      ({ schemaName, isChild, isSubmittable }) =>
+        !schemaFilters[schemaName] &&
+        !(isChild && skipTables) &&
+        !(isSubmittable && skipTransactions)
+    );
+
+    return (
+      groups.length +
+      schemas.length +
+      Number(skipTables) +
+      Number(skipTransactions)
+    );
+  }
+
+  resetFilters() {
+    for (const group of searchGroups) {
+      this.filters.groupFilters[group] = true;
+    }
+
+    this.filters.skipTables = false;
+    this.filters.skipTransactions = false;
+    this._setSchemaFilters();
+    this._setIntermediate([]);
   }
 
   set(filterName: string, value: boolean) {

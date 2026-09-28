@@ -1,5 +1,33 @@
 <template>
+  <MobilePayment
+    v-if="isMobile"
+    v-show="openModal"
+    :methods="paymentMethods"
+    :requirements="paymentRequirements"
+    :due-amount="getDefaultPaymentAmount()"
+    :settlement="
+      showSettlementAmount
+        ? { label: settlementLabel, amount: settlementAmount }
+        : null
+    "
+    :pay-disabled="isPayDisabled"
+    :loyalty-points="loyaltyPoints"
+    :loyalty-program="loyaltyProgram"
+    :applied-coupons-count="appliedCouponsCount"
+    @select-method="setPaymentMethodAndAmount"
+    @set-paid-amount="(amount: Money) => $emit('setPaidAmount', amount)"
+    @set-transfer-ref-no="(value: string) => $emit('setTransferRefNo', value)"
+    @set-transfer-clearance-date="
+      (value: Date) => $emit('setTransferClearanceDate', value)
+    "
+    @set-loyalty="(on: boolean) => $emit('setLoyalty', on)"
+    @apply-coupon="$emit('applyCoupon')"
+    @pay="payTransaction"
+    @pay-and-print="payAndPrintTransaction"
+    @submit="submitTransaction"
+  />
   <Modal
+    v-else
     :open-modal="openModal"
     :title="paymentTitle"
     size="2xl"
@@ -134,23 +162,20 @@ import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
 } from 'models/baseModels/PaymentMethod/requirements';
-import { ModelNameEnum, PaymentMethodType } from 'models/types';
+import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import Currency from 'src/components/Controls/Currency.vue';
 import Data from 'src/components/Controls/Data.vue';
 import DateControl from 'src/components/Controls/Date.vue';
 import PaymentMethodSelector from 'src/components/POS/PaymentMethodSelector.vue';
 import PaymentSummary from 'src/components/POS/PaymentSummary.vue';
+import { PaymentMethodOption } from 'src/components/POS/types';
+import { isMobile } from 'src/utils/viewport';
+import MobilePayment from './MobilePayment.vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { Button as FrappeButton } from 'frappe-ui';
 import { defineComponent, inject } from 'vue';
-
-type PaymentMethodOption = {
-  name: string;
-  type?: PaymentMethodType;
-  requiresClearanceDate?: boolean;
-};
 
 export default defineComponent({
   name: 'PaymentModal',
@@ -159,15 +184,21 @@ export default defineComponent({
     Data,
     DateControl,
     FrappeButton,
+    MobilePayment,
     Modal,
     PaymentMethodSelector,
     PaymentSummary,
   },
   props: {
     openModal: Boolean,
+    loyaltyPoints: { type: Number, default: 0 },
+    loyaltyProgram: { type: String, default: '' },
+    appliedCouponsCount: { type: Number, default: 0 },
   },
   emits: [
+    'applyCoupon',
     'createTransaction',
+    'setLoyalty',
     'setPaidAmount',
     'setPaymentMethod',
     'setTransferClearanceDate',
@@ -176,6 +207,7 @@ export default defineComponent({
   ],
   setup() {
     return {
+      isMobile,
       paidAmount: inject('paidAmount') as Money,
       paymentMethod: inject('paymentMethod') as string,
       isDiscountingEnabled: inject('isDiscountingEnabled') as boolean,

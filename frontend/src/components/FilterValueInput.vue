@@ -3,13 +3,18 @@
     v-if="field?.fieldtype === 'Select' || field?.fieldtype === 'Check'"
     :options="options"
     :model-value="selectValue"
-    :label="t`Value`"
+    v-bind="controlProps"
     :placeholder="t`Select a value`"
-    variant="outline"
-    size="md"
     side="bottom"
     align="start"
     @update:model-value="(value) => $emit('change', value ?? '')"
+  />
+  <FrappeTextInput
+    v-else-if="isNativeDate"
+    :type="field?.fieldtype === 'Date' ? 'date' : 'datetime-local'"
+    :model-value="nativeDateValue"
+    v-bind="controlProps"
+    @update:model-value="onNativeDateChange"
   />
   <component
     :is="
@@ -17,10 +22,8 @@
     "
     v-else-if="['Date', 'Datetime'].includes(field?.fieldtype ?? '')"
     :model-value="String(value ?? '')"
-    :label="t`Value`"
+    v-bind="controlProps"
     :clearable="true"
-    variant="outline"
-    size="md"
     side="bottom"
     align="start"
     @change="(value: string) => $emit('change', value)"
@@ -29,6 +32,7 @@
     v-else-if="linkTarget && ['=', '!='].includes(condition)"
     :key="linkTarget"
     :target="linkTarget"
+    v-bind="controlProps"
     :value="String(value ?? '')"
     @change="(value) => $emit('change', value)"
   />
@@ -44,13 +48,11 @@
   <FrappeTextInput
     v-else
     :model-value="String(value ?? '')"
-    :label="t`Value`"
+    v-bind="controlProps"
     :placeholder="t`Value`"
     :inputmode="
       field?.fieldtype === 'Int' ? 'numeric' : numeric ? 'decimal' : undefined
     "
-    variant="outline"
-    size="md"
     @update:model-value="(value) => $emit('change', value)"
     @keydown.enter.stop.prevent="$emit('apply')"
   />
@@ -69,6 +71,7 @@ import {
 import type { Field } from 'schemas/types';
 import type { FilterRow, FilterValue } from 'src/utils/filterQuery';
 import { fyo } from 'src/initFyo';
+import { isMobile } from 'src/utils/viewport';
 import FilterLinkInput from './FilterLinkInput.vue';
 
 export default defineComponent({
@@ -90,6 +93,12 @@ export default defineComponent({
   },
   emits: ['change', 'apply'],
   computed: {
+    controlProps() {
+      const label = t`Value`;
+      return isMobile.value
+        ? ({ label, size: 'lg', variant: 'subtle' } as const)
+        : ({ label, size: 'md', variant: 'outline' } as const);
+    },
     options() {
       if (this.field?.fieldtype === 'Check')
         return [
@@ -117,8 +126,30 @@ export default defineComponent({
       const target = targets.size === 1 ? [...targets][0] : '';
       return fyo.schemaMap[target] ? target : '';
     },
+    /** Phones use the native date and time picker. */
+    isNativeDate(): boolean {
+      return (
+        isMobile.value &&
+        ['Date', 'Datetime'].includes(this.field?.fieldtype ?? '')
+      );
+    },
+    nativeDateValue(): string {
+      const value = String(this.value ?? '');
+      return this.field?.fieldtype === 'Date'
+        ? value.slice(0, 10)
+        : value.replace(' ', 'T').slice(0, 16);
+    },
     numeric() {
       return ['Int', 'Float', 'Currency'].includes(this.field?.fieldtype ?? '');
+    },
+  },
+  methods: {
+    onNativeDateChange(value: string) {
+      const isDatetime = this.field?.fieldtype === 'Datetime';
+      this.$emit(
+        'change',
+        value && isDatetime ? `${value.replace('T', ' ')}:00` : value
+      );
     },
   },
 });

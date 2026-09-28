@@ -4,7 +4,7 @@ import { ModelNameEnum } from 'models/types';
 import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
 import { ServerRow } from 'reports/serverReport';
-import { ColumnField, ReportRow } from 'reports/types';
+import { ColumnField, PhoneLayout, ReportRow } from 'reports/types';
 import { Field, RawValue } from 'schemas/types';
 
 type ReferenceType =
@@ -20,6 +20,16 @@ export class GeneralLedger extends Report {
   static title = t`General Ledger`;
   static reportName = 'general-ledger';
   static serverReportName = 'Books General Ledger';
+  static phoneLayout: PhoneLayout = {
+    type: 'entries',
+    date: 'date',
+    title: 'account',
+    amount: 'debit',
+    credit: 'credit',
+    meta: ['reference_name', 'party'],
+    balance: 'balance',
+    chips: ['fromDate', 'toDate', 'account', 'party'],
+  };
   usePagination = true;
 
   ascending = false;

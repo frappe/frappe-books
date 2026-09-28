@@ -11,8 +11,27 @@
       >
         {{ t`Applied Coupon Codes` }}
       </p>
+      <div
+        v-if="appliedCoupons.length && isMobile"
+        class="-mt-2 flex flex-wrap gap-2"
+      >
+        <span
+          v-for="coupon in appliedCoupons as AppliedCouponCodes[]"
+          :key="coupon.coupons"
+          class="flex h-8 items-center gap-1 rounded-full bg-surface-gray-2 pe-1 ps-3 text-sm-medium text-ink-gray-8"
+        >
+          {{ coupon.coupons }}
+          <FrappeButton
+            icon="lucide-x"
+            variant="ghost"
+            size="sm"
+            :aria-label="t`Remove coupon`"
+            @click="removeAppliedCoupon(coupon)"
+          />
+        </span>
+      </div>
       <FrappeList
-        v-if="appliedCoupons.length"
+        v-else-if="appliedCoupons.length"
         :columns="['minmax(0, 1fr)', '2rem']"
         divider="full"
         class="custom-scroll custom-scroll-thumb2 max-h-40 overflow-y-auto rounded-4 border border-outline-gray-1"
@@ -59,17 +78,17 @@
         :show-label="true"
         :border="true"
         :value="couponCode"
-        :focus-input="true"
+        :focus-input="!isMobile"
         :df="coupons.fieldMap.coupons"
         @change="updateCouponCode"
       />
     </div>
-    <template #actions>
-      <FrappeButton size="md" class="min-w-24" @click="cancelApplyCouponCode">{{
+    <template #actions="{ size }">
+      <FrappeButton :size="size" class="min-w-24" @click="cancelApplyCouponCode">{{
         t`Cancel`
       }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         :disabled="validationError"
@@ -90,6 +109,7 @@ import Link from 'src/components/Controls/Link.vue';
 import { Field } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { Button as FrappeButton } from 'frappe-ui';
+import { isMobile } from 'src/utils/viewport';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -116,6 +136,7 @@ export default defineComponent({
 
   setup() {
     return {
+      isMobile,
       sinvDoc: inject('sinvDoc') as SalesInvoice,
       coupons: inject('coupons') as AppliedCouponCodes,
       appliedCoupons: inject('appliedCoupons') as AppliedCouponCodes[],

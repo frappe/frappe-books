@@ -1,6 +1,45 @@
 <template>
-  <div class="flex min-h-0 flex-col">
+  <div class="flex flex-col" :class="isMobile ? 'min-h-full' : 'min-h-0'">
     <PageHeader :title="t`Point of Sale`">
+      <template v-if="isMobile && isPosShiftOpen" #mobile-prefix>
+        <FrappeButton
+          v-if="openPaymentModal"
+          variant="ghost"
+          size="md"
+          icon="lucide-chevron-left"
+          class="rtl-rotate-180"
+          :label="t`Back`"
+          @click="cancelPayment"
+        />
+        <FrappeButton
+          v-else
+          variant="ghost"
+          size="md"
+          icon="lucide-x"
+          :label="t`Exit POS`"
+          @click="routeToSinvList"
+        />
+      </template>
+      <template v-if="isMobile && openPaymentModal" #mobile-title>
+        {{ sinvDoc.isReturn ? t`Refund` : t`Payment` }}
+      </template>
+      <template v-else-if="isMobile" #mobile-title>
+        <span class="flex flex-col items-center gap-0.5">
+          <span>{{ t`POS` }}</span>
+          <span v-if="shiftSubtitle" class="text-xs text-ink-gray-5">
+            {{ shiftSubtitle }}
+          </span>
+        </span>
+      </template>
+      <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>
+        <FrappeButton
+          variant="ghost"
+          size="md"
+          icon="lucide-ellipsis"
+          :label="t`POS actions`"
+          @click="isMenuOpen = true"
+        />
+      </template>
       <slot>
         <FrappeButton
           @click="toggleModal('ShiftClose')"
@@ -9,7 +48,23 @@
         </FrappeButton>
       </slot>
     </PageHeader>
-    <component :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'">
+    <MobilePOS
+      v-if="isMobile"
+      v-show="!openPaymentModal"
+      :items="filteredItems as POSItem[]"
+      :search-term="itemSearchTerm"
+      :total-quantity="totalQuantity"
+      :disable-pay="disablePayButton"
+      @search="handleItemSearch"
+      @add-item="addItem"
+      @set-customer="setCustomer"
+      @hold="saveInvoiceAction"
+      @pay="handlePaymentAction"
+    />
+    <component
+      :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'"
+      v-else
+    >
       <template #items>
         <POSItemPicker
           :items="filteredItems as POSItem[]"
@@ -25,13 +80,13 @@
         <div class="flex shrink-0 flex-wrap gap-2 pt-3">
           <POSQuickActions
             :table-view="tableView"
-            :sinv-doc="sinvDoc as SalesInvoice"
-            :loyalty-points="loyaltyPoints"
             :loyalty-program="loyaltyProgram"
             :applied-coupons-count="appliedCouponsCount"
             @toggle-view="toggleView"
             @emit-route-to-sinv-list="routeToSinvList"
             @toggle-modal="toggleModal"
+            @open-loyalty-program="openLoyaltyProgram"
+            @open-coupon-code="openCouponCode"
           />
         </div>
       </template>
@@ -77,6 +132,14 @@
       </template>
     </component>
 
+    <MobilePOSMenu
+      v-if="isMobile"
+      v-model:open="isMenuOpen"
+      :enable-returns="enableReturns"
+      :loyalty-program="loyaltyProgram"
+      :applied-coupons-count="appliedCouponsCount"
+      @select="openMenuAction"
+    />
     <OpenPOSShiftModal
       v-if="!isPosShiftOpen"
       :open-modal="!isPosShiftOpen"
@@ -119,7 +182,13 @@
       @toggle-modal="toggleModal('ItemEnquiry', false)"
     />
     <PaymentModal
+      ref="payment"
       :open-modal="openPaymentModal"
+      :loyalty-points="loyaltyPoints"
+      :loyalty-program="loyaltyProgram"
+      :applied-coupons-count="appliedCouponsCount"
+      @set-loyalty="setLoyalty"
+      @apply-coupon="openCouponCode"
       @toggle-modal="toggleModal('Payment', false)"
       @set-paid-amount="setPaidAmount"
       @set-payment-method="setPaymentMethod"
@@ -150,6 +219,8 @@ import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import ModernPOS from './ModernPOS.vue';
 import ClassicPOS from './ClassicPOS.vue';
+import MobilePOS from './MobilePOS.vue';
+import MobilePOSMenu from './MobilePOSMenu.vue';
 import POSQuickActions from './POSQuickActions.vue';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
@@ -168,7 +239,8 @@ import BatchSelectionModal from './BatchSelectionModal.vue';
 import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
 import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { ModelNameEnum } from 'models/types';
-import { showToast } from 'src/utils/interactive';
+import { showDialog, showToast } from 'src/utils/interactive';
+import { isMobile } from 'src/utils/viewport';
 import { Item } from 'models/baseModels/Item/Item';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -197,6 +269,7 @@ import {
   setPOSRowQuantity,
   isTypingInField,
   getQuickQtyBuffer,
+  getPOSQuantityField,
 } from 'src/utils/pos';
 import {
   getItemQtyMap,
@@ -230,6 +303,8 @@ export default defineComponent({
     ModernPOS,
     PageHeader,
     ClassicPOS,
+    MobilePOS,
+    MobilePOSMenu,
     POSQuickActions,
     MultiLabelLink,
     POSItemPicker,
@@ -266,6 +341,7 @@ export default defineComponent({
   },
   setup() {
     return {
+      isMobile,
       shortcuts: inject(shortcutsKey),
     };
   },
@@ -286,6 +362,8 @@ export default defineComponent({
       openReturnSalesInvoiceModal: false,
       openBatchSelectionModal: false,
       isPosShiftOpen: false,
+      shiftOpenedAt: undefined as Date | undefined,
+      isMenuOpen: false,
 
       totalQuantity: 0,
       paidAmount: fyo.pesa(0),
@@ -332,6 +410,17 @@ export default defineComponent({
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
+    },
+    shiftSubtitle(): string {
+      if (!this.shiftOpenedAt) {
+        return '';
+      }
+
+      const opened = DateTime.fromJSDate(this.shiftOpenedAt);
+      const time = opened.hasSame(DateTime.now(), 'day')
+        ? opened.toLocaleString(DateTime.TIME_SIMPLE)
+        : fyo.format(this.shiftOpenedAt, 'Date');
+      return t`Shift opened ${time}`;
     },
     disablePayButton(): boolean {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {
@@ -382,6 +471,7 @@ export default defineComponent({
     await nextTick();
   },
   deactivated() {
+    this.isMenuOpen = false;
     this.shortcuts?.delete(COMPONENT_NAME);
     toggleSidebar(true);
     this.removeQuickQtyListeners();
@@ -438,11 +528,8 @@ export default defineComponent({
         return;
       }
 
-      const field = this.fyo.singles.InventorySettings?.enableUomConversions
-        ? 'transferQuantity'
-        : 'quantity';
       try {
-        await setPOSRowQuantity(row, field, Number(buffer));
+        await setPOSRowQuantity(row, getPOSQuantityField(fyo), Number(buffer));
       } catch (error) {
         showToast({
           type: 'error',
@@ -692,6 +779,15 @@ export default defineComponent({
     },
     setCouponsCount(value: number) {
       this.appliedCouponsCount = value;
+    },
+    /** Turning redemption on asks for the points; off clears them. */
+    async setLoyalty(on: boolean) {
+      if (on) {
+        return this.openLoyaltyProgram();
+      }
+
+      this.sinvDoc.loyaltyPoints = 0;
+      await this.setLoyaltyPoints(0);
     },
     async setLoyaltyPoints(value: number) {
       await this.sinvDoc.set('redeemLoyaltyPoints', value > 0);
@@ -953,7 +1049,15 @@ export default defineComponent({
       }
     },
     async setIsPosShiftOpen() {
-      this.isPosShiftOpen = !!(await fyo.db.getOpenPOSShift());
+      const shift = await fyo.db.getOpenPOSShift();
+      this.isPosShiftOpen = !!shift;
+      this.shiftOpenedAt = shift
+        ? ((await fyo.getValue(
+            ModelNameEnum.POSOpeningShift,
+            shift,
+            'openingDate'
+          )) as Date)
+        : undefined;
     },
     toggleModal(modal: ModalName | 'ShiftOpen', value?: boolean) {
       if (modal === 'ShiftOpen' || modal === 'ShiftClose') {
@@ -1001,9 +1105,30 @@ export default defineComponent({
         return await routeTo('/list/SalesInvoice');
       }
 
+      const title = t`Leave this sale?`;
+      const message = t`Save this sale to resume it later, or discard the selected items and continue to the invoice list.`;
+      if (isMobile.value) {
+        return await showDialog({
+          title,
+          detail: message,
+          buttons: [
+            {
+              label: t`Save and Continue`,
+              action: () => this.saveAndContinue(),
+              isPrimary: true,
+            },
+            {
+              label: t`Discard and Continue`,
+              action: () => routeTo('/list/SalesInvoice'),
+            },
+            { label: t`Cancel`, action: () => null, isEscape: true },
+          ],
+        });
+      }
+
       dialog.confirm({
-        title: t`Leave this sale?`,
-        message: t`Save this sale to resume it later, or discard the selected items and continue to the invoice list.`,
+        title,
+        message,
         actions: [
           { label: t`Cancel` },
           {
@@ -1030,14 +1155,44 @@ export default defineComponent({
       await routeTo('/list/SalesInvoice');
     },
     showValidationToast(method: string) {
-      showToast({
-        type: 'error',
-        message: t`${
-          !this.sinvDoc.items?.length
-            ? 'Please add items'
-            : 'Please select a customer'
-        } before ${method}`,
-      });
+      let message = t`Customer has no loyalty points to redeem`;
+      if (!this.sinvDoc.items?.length) {
+        message = t`Please add items`;
+      } else if (!this.sinvDoc.party) {
+        message = t`Please select a customer`;
+      }
+
+      showToast({ type: 'error', message: t`${message} before ${method}` });
+    },
+    openCouponCode() {
+      if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {
+        return this.showValidationToast('applying coupon');
+      }
+
+      this.toggleModal('CouponCode', true);
+    },
+    openLoyaltyProgram() {
+      if (
+        !this.sinvDoc.items?.length ||
+        !this.sinvDoc.party ||
+        !this.loyaltyPoints
+      ) {
+        return this.showValidationToast('applying loyalty points');
+      }
+
+      this.toggleModal('LoyaltyProgram', true);
+    },
+    openMenuAction(modal: ModalName) {
+      this.isMenuOpen = false;
+      if (modal === 'LoyaltyProgram') {
+        return this.openLoyaltyProgram();
+      }
+
+      if (modal === 'CouponCode') {
+        return this.openCouponCode();
+      }
+
+      this.toggleModal(modal, true);
     },
 
     async saveInvoiceAction() {
@@ -1046,6 +1201,9 @@ export default defineComponent({
         return;
       }
       await this.saveOrder();
+    },
+    cancelPayment() {
+      (this.$refs.payment as InstanceType<typeof PaymentModal>).cancelTransaction();
     },
     handlePaymentAction() {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {

@@ -74,6 +74,8 @@ export type DatabaseMethod = keyof DatabaseBase;
 export interface GetAllOptions {
   fields?: string[];
   filters?: QueryFilter;
+  /** Rows also have to match at least one of these. */
+  orFilters?: QueryFilter;
   offset?: number;
   limit?: number;
   groupBy?: string | string[];

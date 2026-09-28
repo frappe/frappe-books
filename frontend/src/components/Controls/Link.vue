@@ -92,6 +92,7 @@ export default {
             {
               label: t`Show unfiltered results`,
               description: t`No results match the current filters`,
+              icon: 'lucide-filter-x',
               action: () => this.disableFiltering(),
               actionOnly: true,
             },
@@ -113,6 +114,7 @@ export default {
       return {
         label: t`Create`,
         description: this.searchQuery || undefined,
+        icon: 'lucide-plus',
         action: () => this.openNewDoc(),
         actionOnly: true,
       };
@@ -140,6 +142,8 @@ export default {
 
       linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
         this.$router.back();
+        // Closes the phone picker the record was created from.
+        this.isDropdownOpen = false;
         this.triggerChange(savedName);
       });
     },

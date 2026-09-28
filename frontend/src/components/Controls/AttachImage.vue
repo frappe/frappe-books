@@ -1,5 +1,40 @@
 <template>
+  <div v-if="isMobile && size !== 'small'" class="min-w-0 space-y-1.5">
+    <FrappeFormLabel v-if="showLabel" :label="df?.label ?? ''" />
+    <div
+      v-if="value"
+      class="relative h-24 overflow-hidden rounded-5 border border-outline-gray-2"
+    >
+      <img :src="value" :alt="df?.label ?? ''" class="h-full w-full object-contain" />
+      <FrappeButton
+        v-if="!isReadOnly"
+        class="absolute end-1 top-1"
+        variant="subtle"
+        icon="lucide-x"
+        :label="t`Remove image`"
+        @click="triggerChange(null)"
+      />
+    </div>
+    <FrappeFileUploader
+      v-else-if="!isReadOnly"
+      file-types="image/*"
+      @success="onUploaded"
+      @failure="onUploadFailure"
+    >
+      <template #default="{ openFileSelector, uploading }">
+        <button
+          class="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-5 border border-dashed border-outline-gray-3 text-base text-ink-gray-5"
+          :disabled="uploading"
+          @click="openFileSelector"
+        >
+          <span class="lucide-image-plus size-[22px]" aria-hidden="true" />
+          {{ uploading ? t`Uploading...` : t`Upload` }}
+        </button>
+      </template>
+    </FrappeFileUploader>
+  </div>
   <div
+    v-else
     class="relative bg-surface-base border border-outline-gray-1 flex-center overflow-hidden group"
     :class="{
       'rounded-2': size === 'form',
@@ -68,6 +103,7 @@ import { Field } from 'schemas/types';
 import {
   Button as FrappeButton,
   FileUploader as FrappeFileUploader,
+  FormLabel as FrappeFormLabel,
   type UploadedFile,
 } from 'frappe-ui';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -76,7 +112,7 @@ import Base from './Base.vue';
 
 export default defineComponent({
   name: 'AttachImage',
-  components: { FrappeFileUploader, FrappeButton },
+  components: { FrappeFileUploader, FrappeButton, FrappeFormLabel },
   extends: Base,
   props: {
     letterPlaceholder: { type: String, default: '' },

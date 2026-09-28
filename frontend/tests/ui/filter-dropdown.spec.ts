@@ -456,7 +456,8 @@ for (const [schema, first, second] of [
   });
 }
 
-for (const width of [1440, 390]) {
+// Narrower windows get the phone filter sheet instead.
+for (const width of [1440, 768]) {
   test(`datetime calendar fits within a ${width}px viewport`, async ({
     page,
   }) => {

@@ -1,5 +1,53 @@
 <template>
-  <div class="flex min-h-0 flex-1 overflow-x-auto">
+  <div
+    v-if="isMobile"
+    role="radiogroup"
+    class="-mx-4 flex flex-col"
+    :aria-label="t`Invoices`"
+  >
+    <button
+      v-for="row in rows"
+      :key="getRowName(row)"
+      type="button"
+      role="radio"
+      class="flex min-h-[60px] w-full items-center gap-3 border-t border-outline-gray-1 px-4 py-2 text-start"
+      :class="isSelected(row) ? 'bg-surface-gray-1' : ''"
+      :aria-checked="isSelected(row)"
+      @click="setSelected(row, !isSelected(row))"
+    >
+      <span class="flex min-w-0 flex-1 flex-col gap-1">
+        <span class="truncate text-md-medium text-ink-gray-9">
+          {{ getRowName(row) }}
+        </span>
+        <span class="truncate text-sm text-ink-gray-5">
+          {{ getRowMeta(row) }}
+        </span>
+      </span>
+      <span
+        v-if="amountField"
+        class="shrink-0 text-md-medium tabular-nums text-ink-gray-9"
+        dir="ltr"
+      >
+        {{ formatCell(row, amountField) }}
+      </span>
+      <span
+        class="box-border size-5 shrink-0 rounded-full border-[1.5px] bg-surface-base"
+        :class="
+          isSelected(row)
+            ? 'border-[6px] border-[color:var(--surface-gray-10)]'
+            : 'border-outline-gray-3'
+        "
+        aria-hidden="true"
+      />
+    </button>
+    <p
+      v-if="!rows.length"
+      class="border-t border-outline-gray-1 px-4 py-6 text-center text-base text-ink-gray-6"
+    >
+      {{ emptyText }}
+    </p>
+  </div>
+  <div v-else class="flex min-h-0 flex-1 overflow-x-auto">
 	<FrappeList
 		:columns="listColumns"
 		:row-height="48"
@@ -78,6 +126,7 @@ import {
 } from "frappe-ui/list";
 import { fyo } from "src/initFyo";
 import { isNumeric } from "src/utils";
+import { isMobile } from "src/utils/viewport";
 import { defineComponent, PropType } from "vue";
 
 type InvoiceRow = Record<string, unknown>;
@@ -116,7 +165,13 @@ export default defineComponent({
 		},
 	},
 	emits: ["update:modelValue"],
+	setup() {
+		return { isMobile };
+	},
 	computed: {
+		amountField(): Field | undefined {
+			return this.fields.findLast((field) => isNumeric(field));
+		},
 		listColumns(): string[] {
 			return ["2.5rem", ...this.ratios.map((ratio) => `minmax(0, ${ratio}fr)` )];
 		},
@@ -125,6 +180,14 @@ export default defineComponent({
 		isNumeric,
 		getRowName(row: InvoiceRow): string {
 			return String(row.name ?? "");
+		},
+		/** The row's other columns, for the second line on phones. */
+		getRowMeta(row: InvoiceRow): string {
+			return this.fields
+				.slice(1)
+				.filter((field) => field !== this.amountField)
+				.map((field) => this.formatCell(row, field))
+				.join(" · ");
 		},
 		isSelected(row: InvoiceRow): boolean {
 			return this.modelValue === this.getRowName(row);

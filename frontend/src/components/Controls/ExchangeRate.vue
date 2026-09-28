@@ -1,5 +1,52 @@
 <template>
+  <div v-if="isMobile" class="space-y-1.5">
+    <FrappeFormLabel :label="t`Exchange Rate`" />
+    <div class="flex items-center gap-2" dir="ltr">
+      <FrappeTextInput
+        :model-value="fromValue"
+        type="number"
+        inputmode="decimal"
+        :aria-label="left"
+        :disabled="disabled"
+        :min="0"
+        size="lg"
+        variant="subtle"
+        class="min-w-0 flex-1 [&_input]:pe-12 [&_input]:text-end"
+        @update:model-value="setFromValue"
+      >
+        <template #suffix>
+          <span class="text-base text-ink-gray-5">{{ left }}</span>
+        </template>
+      </FrappeTextInput>
+      <span class="text-ink-gray-6">=</span>
+      <FrappeTextInput
+        type="number"
+        inputmode="decimal"
+        :aria-label="right"
+        :model-value="toValue"
+        :disabled="disabled"
+        :min="0"
+        size="lg"
+        variant="subtle"
+        class="min-w-0 flex-1 [&_input]:pe-12 [&_input]:text-end"
+        @change="rightChange"
+      >
+        <template #suffix>
+          <span class="text-base text-ink-gray-5">{{ right }}</span>
+        </template>
+      </FrappeTextInput>
+      <FrappeButton
+        v-if="!disabled"
+        size="lg"
+        variant="subtle"
+        icon="lucide-arrow-left-right"
+        :label="t`Swap currencies`"
+        @click="swap"
+      />
+    </div>
+  </div>
   <div
+    v-else
     class="flex items-center bg-surface-gray-1 border-outline-gray-1 rounded-4 text-sm p-1 border"
   >
     <div
@@ -57,13 +104,15 @@
 <script lang="ts">
 import {
   Button as FrappeButton,
+  FormLabel as FrappeFormLabel,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import { isMobile } from 'src/utils/viewport';
 import { safeParseFloat } from 'utils/index';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-  components: { FrappeButton, FrappeTextInput },
+  components: { FrappeButton, FrappeFormLabel, FrappeTextInput },
   props: {
     disabled: { type: Boolean, default: false },
     fromCurrency: { type: String, default: 'USD' },
@@ -71,6 +120,9 @@ export default defineComponent({
     exchangeRate: { type: Number, default: 75 },
   },
   emits: ['change'],
+  setup() {
+    return { isMobile };
+  },
   data() {
     return { fromValue: 1, isSwapped: false };
   },

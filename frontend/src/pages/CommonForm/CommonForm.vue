@@ -1,22 +1,50 @@
 <template>
-  <FormContainer :use-full-width="useFullWidth">
+  <div v-if="isMobile" class="flex min-h-full flex-col">
+    <MobileForm
+      v-if="hasDoc"
+      v-model:active-tab="activeTab"
+      :doc="doc"
+      :title="title"
+      :grouped-fields="groupedFields"
+      :errors="errors"
+      :missing-fields="missingFields"
+      :can-print="canPrint"
+      :can-show-links="canShowLinks"
+      @value-change="onValueChange"
+      @row-change="updateGroupedFields"
+      @editrow="(doc: Doc) => showRowEditForm(doc)"
+      @sync="sync"
+      @submit="submit"
+      @print="openPrintView"
+      @show-links="showLinks = true"
+    >
+      <template v-if="canShowExchangeRate" #exchange-rate>
+        <ExchangeRate v-bind="exchangeRateProps" @change="setExchangeRate" />
+      </template>
+      <template v-if="canShowBarcode" #barcode>
+        <Barcode @item-selected="addItem" />
+      </template>
+    </MobileForm>
+    <LinkedEntries
+      v-if="showLinks && canShowLinks"
+      :doc="doc"
+      @close="showLinks = false"
+    />
+    <RowEditForm
+      v-if="row && !showLinks"
+      :doc="doc"
+      :fieldname="row.fieldname"
+      :index="row.index"
+      @close="() => (row = null)"
+    />
+  </div>
+  <FormContainer v-else :use-full-width="useFullWidth">
     <template v-if="hasDoc" #header-left>
-      <Barcode
-        v-if="canShowBarcode"
-        @item-selected="
-          (name: string, quantity: number) => {
-            // @ts-expect-error only invoices and transfers have addItem
-            doc?.addItem(name, quantity);
-          }
-        "
-      />
+      <Barcode v-if="canShowBarcode" @item-selected="addItem" />
       <ExchangeRate
         v-if="canShowExchangeRate"
-        :disabled="doc?.isSubmitted || doc?.isCancelled"
-        :from-currency="fromCurrency"
-        :to-currency="toCurrency"
-        :exchange-rate="exchangeRate"
-        @change="async (exchangeRate: number) => await doc.set('exchangeRate', exchangeRate)"
+        v-bind="exchangeRateProps"
+        @change="setExchangeRate"
       />
       <p
         v-if="schema.label && !(canShowBarcode || canShowExchangeRate)"
@@ -127,6 +155,7 @@
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
+import { getMissingMandatoryFields } from 'fyo/model/helpers';
 import { ValidationError } from 'fyo/utils/errors';
 import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
@@ -154,10 +183,12 @@ import {
   isPrintable,
   routeTo,
 } from 'src/utils/ui';
+import { isMobile } from 'src/utils/viewport';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { computed, defineComponent, inject, nextTick, ref } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
 import LinkedEntries from './LinkedEntries.vue';
+import MobileForm from './MobileForm.vue';
 import RowEditForm from './RowEditForm.vue';
 
 export default defineComponent({
@@ -170,6 +201,7 @@ export default defineComponent({
     Barcode,
     ExchangeRate,
     LinkedEntries,
+    MobileForm,
     RowEditForm,
     StatusPill,
     FrappeTabButtons,
@@ -195,11 +227,13 @@ export default defineComponent({
       docOrNull,
       shortcuts,
       context,
+      isMobile,
     };
   },
   data() {
     return {
       errors: {},
+      missingFields: [],
       activeTab: this.t`Default`,
       groupedFields: null,
       isPrintable: false,
@@ -208,6 +242,7 @@ export default defineComponent({
       row: null,
     } as {
       errors: Record<string, string>;
+      missingFields: Field[];
       activeTab: string;
       groupedFields: null | UIGroupedFields;
       isPrintable: boolean;
@@ -242,6 +277,14 @@ export default defineComponent({
       }
 
       return this.doc.exchangeRate;
+    },
+    exchangeRateProps() {
+      return {
+        disabled: this.doc.isSubmitted || this.doc.isCancelled,
+        fromCurrency: this.fromCurrency,
+        toCurrency: this.toCurrency,
+        exchangeRate: this.exchangeRate,
+      };
     },
     fromCurrency(): string {
       const currency = this.doc?.currency;
@@ -377,6 +420,13 @@ export default defineComponent({
   },
   methods: {
     routeTo,
+    async addItem(name: string, quantity?: number) {
+      // @ts-expect-error only invoices and transfers have addItem
+      await this.doc.addItem(name, quantity);
+    },
+    async setExchangeRate(exchangeRate: number) {
+      await this.doc.set('exchangeRate', exchangeRate);
+    },
     async openPrintView() {
       await routeTo(`/print/${this.doc.schemaName}/${this.doc.name}`);
     },
@@ -398,14 +448,38 @@ export default defineComponent({
       }
     },
     async sync(useDialog?: boolean) {
+      if (this.isMobile && !this.checkRequiredFields()) {
+        return;
+      }
+
       if (await commonDocSync(this.doc, useDialog)) {
         this.updateGroupedFields();
       }
     },
     async submit() {
+      if (this.isMobile && !this.checkRequiredFields()) {
+        return;
+      }
+
       if (await commonDocSubmit(this.doc)) {
         this.updateGroupedFields();
       }
+    },
+    /** Phones mark missing fields in place instead of in a dialog. */
+    checkRequiredFields(): boolean {
+      const shown = new Set(
+        [...(this.groupedFields?.values() ?? [])].flatMap((tab) =>
+          [...tab.values()].flat()
+        )
+      );
+      this.missingFields = [...new Set(getMissingMandatoryFields(this.doc))].filter(
+        (field) => shown.has(field)
+      );
+      for (const field of this.missingFields) {
+        this.errors[field.fieldname] = this.t`${field.label} is required`;
+      }
+
+      return !this.missingFields.length;
     },
     async setDoc() {
       if (this.hasDoc) {

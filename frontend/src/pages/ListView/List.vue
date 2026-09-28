@@ -1,5 +1,24 @@
 <template>
-  <div class="flex flex-col overflow-hidden text-base">
+  <MobileList
+    v-if="isMobile"
+    :schema-name="schemaName"
+    :rows="data as RenderData[]"
+    :columns="columns"
+    :total="total"
+    :is-loading="isLoading"
+    :is-loading-more="isLoadingMore"
+    :is-filtered="isFiltered"
+    :can-create="canCreate"
+    :is-selection-mode="isSelectionMode"
+    :selected-items="selectedItems"
+    :refresh="updateData"
+    @open-doc="(name: string) => $emit('openDoc', name)"
+    @load-more="loadMore"
+    @make-new-doc="$emit('makeNewDoc')"
+    @clear-filters="$emit('clearFilters')"
+    @update-selection="updateSelection"
+  />
+  <div v-else class="flex flex-col overflow-hidden text-base">
     <FrappeList
       v-if="data.length"
       :columns="listColumns"
@@ -88,9 +107,14 @@ import Paginator from 'src/components/Paginator.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { loadListData, onListChange } from 'src/utils/listData';
+import { isMobile } from 'src/utils/viewport';
 import { QueryFilter } from 'utils/db/types';
 import { PropType, defineComponent } from 'vue';
 import ListCell from './ListCell.vue';
+import { getListColumns, type ListColumn } from './listColumns';
+import MobileList from './MobileList.vue';
+
+const mobilePageLength = 20;
 
 export default defineComponent({
   name: 'List',
@@ -103,6 +127,7 @@ export default defineComponent({
     FrappeListRows,
     ListCell,
     FrappeButton,
+    MobileList,
     Paginator,
   },
   props: {
@@ -118,15 +143,27 @@ export default defineComponent({
     canCreate: Boolean,
     isSelectionMode: Boolean,
   },
-  emits: ['openDoc', 'makeNewDoc', 'updatedData', 'selected-items-changed'],
+  emits: [
+    'openDoc',
+    'makeNewDoc',
+    'updatedData',
+    'selected-items-changed',
+    'clearFilters',
+  ],
+  setup() {
+    return { isMobile };
+  },
   data() {
     return {
       data: [] as RenderData[],
       total: 0,
+      isLoading: true,
+      isLoadingMore: false,
       pageStart: 0,
-      pageLength: 50,
+      pageLength: isMobile.value ? mobilePageLength : 50,
       selectedItems: [] as string[],
       activeFilters: {} as QueryFilter,
+      orFilters: {} as QueryFilter,
       requestId: 0,
     };
   },
@@ -134,26 +171,22 @@ export default defineComponent({
     listColumns(): string[] {
       return ['2rem', ...this.columns.map(() => 'minmax(0, 1fr)')];
     },
-    columns() {
-      let columns = this.listConfig?.columns ?? [];
-
-      if (columns.length === 0) {
-        columns = fyo.schemaMap[this.schemaName]?.quickEditFields ?? [];
-        columns = [...new Set(['name', ...columns])];
-      }
-
-      return columns
-        .map((fieldname) => {
-          if (typeof fieldname === 'object') {
-            return fieldname;
-          }
-
-          return fyo.getField(this.schemaName, fieldname);
-        })
-        .filter(Boolean);
+    columns(): ListColumn[] {
+      return getListColumns(this.schemaName, this.listConfig);
+    },
+    isFiltered(): boolean {
+      return (
+        Object.keys(this.activeFilters).length > 0 ||
+        Object.keys(this.orFilters).length > 0
+      );
     },
   },
   watch: {
+    isSelectionMode(isSelecting: boolean) {
+      if (!isSelecting) {
+        this.updateSelection([]);
+      }
+    },
     async schemaName(oldValue, newValue) {
       if (oldValue === newValue) {
         return;
@@ -188,9 +221,19 @@ export default defineComponent({
         onListChange(fyo, this.schemaName, () => this.updateData());
       }
     },
-    async updateData(filters?: QueryFilter) {
-      const loaded = await loadListData(fyo, this, filters);
+    async updateData(filters?: QueryFilter, orFilters?: QueryFilter) {
+      if (filters !== undefined) {
+        this.isLoading = true;
+        if (isMobile.value) this.pageLength = mobilePageLength;
+      }
+      const loaded = await loadListData(fyo, this, filters, orFilters).catch(
+        (error: unknown) => {
+          this.isLoading = false;
+          throw error;
+        }
+      );
       if (!loaded) return;
+      this.isLoading = false;
       this.data = loaded.rows;
       this.total = loaded.total;
       const { requestId } = this;
@@ -201,6 +244,15 @@ export default defineComponent({
       // Clamps the page when rows were removed; a moved page reloads its rows.
       paginator?.setPageNo(filters !== undefined ? 1 : paginator.pageNo);
       this.$emit('updatedData', loaded.appliedFilters);
+    },
+    async loadMore() {
+      this.isLoadingMore = true;
+      this.pageLength += mobilePageLength;
+      try {
+        await this.updateData();
+      } finally {
+        this.isLoadingMore = false;
+      }
     },
     updateSelection(selectedItems: string[]) {
       this.selectedItems = selectedItems;

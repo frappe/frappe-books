@@ -75,12 +75,12 @@
         @change="(value: string) => (ItemEnquiry.similarProduct = value)"
       />
     </div>
-    <template #actions>
-      <FrappeButton size="md" class="min-w-24" @click="closeModal">{{
+    <template #actions="{ size }">
+      <FrappeButton :size="size" class="min-w-24" @click="closeModal">{{
         t`Cancel`
       }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         @click="submitForm"

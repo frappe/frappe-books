@@ -3,7 +3,7 @@ import { Action } from 'fyo/model/types';
 import { InventorySettings } from 'models/inventory/InventorySettings';
 import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
-import { ColumnField, ReportCell } from 'reports/types';
+import { ColumnField, PhoneLayout, ReportCell } from 'reports/types';
 import { Field, RawValue } from 'schemas/types';
 import { ReferenceType } from './types';
 
@@ -11,6 +11,15 @@ export class StockLedger extends Report {
   static title = t`Stock Ledger`;
   static reportName = 'stock-ledger';
   static serverReportName = 'Books Stock Ledger';
+  static phoneLayout: PhoneLayout = {
+    type: 'entries',
+    date: 'date',
+    title: 'item',
+    amount: 'quantity',
+    meta: ['location', 'reference_name'],
+    balance: 'balance_quantity',
+    chips: ['fromDate', 'toDate', 'item', 'location'],
+  };
   static isInventory = true;
 
   usePagination = true;

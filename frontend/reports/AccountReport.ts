@@ -4,10 +4,22 @@ import { Action } from 'fyo/model/types';
 import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
 import { ServerRow } from 'reports/serverReport';
-import { BasedOn, Periodicity, ReportRow } from 'reports/types';
+import {
+  BasedOn,
+  Periodicity,
+  PhoneTreeLayout,
+  ReportRow,
+} from 'reports/types';
 import { Field } from 'schemas/types';
 
 export abstract class AccountReport extends Report {
+  static phoneLayout: PhoneTreeLayout = {
+    type: 'tree',
+    label: 'account',
+    periods: { total: false },
+    chips: ['toDate', 'fromYear', 'toYear', 'periodicity'],
+  };
+
   toDate?: string;
   count?: number;
   fromYear?: number;
@@ -36,6 +48,8 @@ export abstract class AccountReport extends Report {
       ...reportRow,
       level,
       isGroup: !!row.is_group,
+      // Only section totals sit at the top level without being a group.
+      isTotal: !level && !row.is_group,
       folded: false,
       foldedBelow: false,
     };

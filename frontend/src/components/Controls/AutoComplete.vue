@@ -12,6 +12,8 @@
     :text-right="textRight"
     :container-styles="containerStyles"
     :trailing-actions="canLink"
+    :linked="canLink"
+    @open="routeToLinkedDoc"
   >
     <template v-if="canLink" #trailing>
       <LinkedEntryButton
@@ -21,6 +23,28 @@
       />
     </template>
   </ReadOnlyValue>
+
+  <div v-else-if="isMobile" :style="containerStyles">
+    <MobileFieldTrigger
+      :label="showLabel ? df.label : undefined"
+      :required="isRequired"
+      :placeholder="inputPlaceholder"
+      :display-value="linkValue || String(value ?? '')"
+      :invalid="invalid"
+      @click="openPicker"
+    />
+    <MobilePicker
+      v-model:open="isDropdownOpen"
+      :query="searchQuery"
+      :title="df.label"
+      :options="suggestions"
+      :loading="isLoading"
+      :empty-text="emptyMessage"
+      @update:query="search"
+      @update:open="(open) => !open && (searchQuery = '')"
+      @select="onPickerSelect"
+    />
+  </div>
 
   <FrappeCombobox
     v-else
@@ -94,6 +118,8 @@ import { Button as FrappeButton, Combobox as FrappeCombobox } from 'frappe-ui';
 import { FieldTypeEnum } from 'schemas/types';
 import { fuzzyMatch } from 'src/utils';
 import { h } from 'vue';
+import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
+import MobilePicker from 'src/mobile/MobilePicker.vue';
 import Base from './Base.vue';
 import LinkedEntryButton from './LinkedEntryButton.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
@@ -104,6 +130,8 @@ export default {
     FrappeButton,
     FrappeCombobox,
     LinkedEntryButton,
+    MobileFieldTrigger,
+    MobilePicker,
     ReadOnlyValue,
   },
   extends: Base,
@@ -336,7 +364,9 @@ export default {
         return;
       }
 
-      const value = event.target.value;
+      this.search(event.target.value);
+    },
+    search(value) {
       this.searchQuery = value;
       this.$emit('search', value);
       // Link searches keep the stored ID until an option is selected.
@@ -360,6 +390,19 @@ export default {
 
       this.linkValue = String(value);
       this.triggerChange(value);
+    },
+    openPicker() {
+      this.isDropdownOpen = true;
+      this.updateSuggestions(this.searchQuery);
+    },
+    async onPickerSelect(suggestion) {
+      if (suggestion.actionOnly) {
+        await this.runSuggestionAction(suggestion);
+        return;
+      }
+
+      this.isDropdownOpen = false;
+      this.setSuggestion(suggestion);
     },
     async onPressEnter(event) {
       await this.$nextTick();

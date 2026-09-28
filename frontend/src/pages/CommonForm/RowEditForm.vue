@@ -1,5 +1,38 @@
 <template>
+  <RowDetailSheet
+    v-if="isMobile && !isEditable"
+    :row="row"
+    :title="t`${fieldlabel} · Row ${index + 1}`"
+    @close="$emit('close')"
+  />
+  <FrappeBottomSheet
+    v-else-if="isMobile"
+    :open="true"
+    :title="t`Row ${index + 1}`"
+    @update:open="(open: boolean) => !open && $emit('close')"
+  >
+    <TwoColumnForm :doc="row" :fields="fields" />
+    <div class="flex gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
+      <FrappeButton
+        v-if="isEditable"
+        size="lg"
+        variant="ghost"
+        theme="red"
+        icon-left="lucide-trash-2"
+        :label="t`Remove`"
+        @click="remove"
+      />
+      <FrappeButton
+        class="flex-1"
+        size="lg"
+        variant="solid"
+        :label="t`Done`"
+        @click="$emit('close')"
+      />
+    </div>
+  </FrappeBottomSheet>
   <div
+    v-else
     class="
       border-s
       border-outline-gray-1
@@ -61,11 +94,17 @@
   </div>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  BottomSheet as FrappeBottomSheet,
+  Button as FrappeButton,
+} from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { ValueError } from 'fyo/utils/errors';
 import FormHeader from 'src/components/FormHeader.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import RowDetailSheet from './RowDetailSheet.vue';
+import { evaluateReadOnly } from 'src/utils/doc';
+import { isMobile } from 'src/utils/viewport';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getRowEditFieldnames } from 'src/utils/sheetFields';
 import { computed } from 'vue';
@@ -75,7 +114,13 @@ import { defineComponent } from 'vue';
 const COMPONENT_NAME = 'RowEditForm';
 
 export default defineComponent({
-  components: { FrappeButton, TwoColumnForm, FormHeader },
+  components: {
+    FrappeBottomSheet,
+    FrappeButton,
+    FormHeader,
+    RowDetailSheet,
+    TwoColumnForm,
+  },
   provide() {
     return {
       doc: computed(() => this.row),
@@ -88,9 +133,13 @@ export default defineComponent({
   },
   emits: ['next', 'previous', 'close'],
   setup() {
-    return { shortcuts: inject(shortcutsKey) };
+    return { shortcuts: inject(shortcutsKey), isMobile };
   },
   computed: {
+    isEditable(): boolean {
+      const field = this.fyo.getField(this.doc.schemaName, this.fieldname);
+      return !!field && !evaluateReadOnly(field, this.doc);
+    },
     fieldlabel() {
       return (
         this.fyo.getField(this.doc.schemaName, this.fieldname)?.label ?? ''
@@ -132,6 +181,12 @@ export default defineComponent({
   },
   unmounted() {
     this.shortcuts?.delete(COMPONENT_NAME);
+  },
+  methods: {
+    async remove() {
+      await this.doc.remove(this.fieldname, this.index);
+      this.$emit('close');
+    },
   },
 });
 </script>

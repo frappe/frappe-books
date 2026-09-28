@@ -69,8 +69,13 @@ export function getInvoiceActions(
   fyo: Fyo,
   schemaName: ModelNameEnum.SalesInvoice | ModelNameEnum.PurchaseInvoice
 ): Action[] {
+  const nextStep =
+    schemaName === ModelNameEnum.SalesInvoice
+      ? fyo.t`Receive Payment`
+      : fyo.t`Make Payment`;
+
   return [
-    getMakePaymentAction(fyo),
+    { ...getMakePaymentAction(fyo), nextStep },
     getMakeStockTransferAction(fyo, schemaName),
     getLedgerLinkAction(fyo),
     getMakeReturnDocAction(fyo),

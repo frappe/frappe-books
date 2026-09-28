@@ -96,6 +96,8 @@ export interface Action {
   group?: string;
   type?: 'primary' | 'secondary';
   theme?: 'gray' | 'red';
+  /** Phones show this label on a bottom-bar button that runs the action. */
+  nextStep?: string;
 }
 
 export interface RenderData {

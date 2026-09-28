@@ -10,6 +10,9 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
 });
 
+// Below 768px POS has its phone layout (mobile-pos.spec.ts).
+const narrowest = 768;
+
 const dialogs = [
   ['PriceList', 'Apply Price List'],
   ['CouponCode', 'Apply Coupon Code'],
@@ -24,7 +27,7 @@ const dialogs = [
 for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1024, height: 640 },
-  { width: 390, height: 560 },
+  { width: narrowest, height: 560 },
 ]) {
   test(`dialogs keep titles and actions visible at ${viewport.width} × ${viewport.height}`, async ({
     page,
@@ -111,7 +114,7 @@ test('cart values fit and expanded item fields open a usable keypad', async ({
     exact: true,
   });
   await expect(keypad).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 560 });
+  await page.setViewportSize({ width: narrowest, height: 560 });
   await expect(
     keypad.getByRole('button', { name: 'Save', exact: true })
   ).toBeInViewport();
@@ -146,7 +149,7 @@ for (const modern of [true, false]) {
     const expand = row.getByRole('button', { name: 'Expand item', exact: true });
     const remove = row.getByRole('button', { name: 'Remove item', exact: true });
 
-    for (const width of [1440, 1024, 390]) {
+    for (const width of [1440, 1024, narrowest]) {
       await page.setViewportSize({ width, height: 900 });
       const bounds = (await row.boundingBox())!;
       const leading = (await expand.boundingBox())!;
@@ -204,7 +207,7 @@ test('view toggles survive switching layouts and checkout remains reachable', as
   await expect(
     page.getByRole('button', { name: 'List View', exact: true })
   ).toBeVisible();
-  await page.setViewportSize({ width: 390, height: 700 });
+  await page.setViewportSize({ width: narrowest, height: 700 });
   await page
     .getByRole('button', { name: 'Add Organic Assam Tea', exact: true })
     .scrollIntoViewIfNeeded();
@@ -219,13 +222,13 @@ test('view toggles survive switching layouts and checkout remains reachable', as
       (modern) => (window as any).posFixture.setLayout(modern),
       modern
     );
-    await page.setViewportSize({ width: 390, height: 700 });
+    await page.setViewportSize({ width: narrowest, height: 700 });
     const pay = page.getByRole('button', { name: 'Pay', exact: true });
     await pay.scrollIntoViewIfNeeded();
     await expect(pay).toBeInViewport();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth)
-    ).toBe(390);
+    ).toBe(narrowest);
     await page.screenshot({
       animations: 'disabled',
       path: test
@@ -238,7 +241,7 @@ test('view toggles survive switching layouts and checkout remains reachable', as
 test('invoice selection and bank payment fields work in a small dialog', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 560 });
+  await page.setViewportSize({ width: narrowest, height: 560 });
   await showModal(page, 'ReturnSalesInvoice');
   const dialog = page.getByRole('dialog');
   await dialog

@@ -1,5 +1,22 @@
 <template>
+  <template v-if="isMobile">
+    <FrappeButton
+      size="md"
+      variant="subtle"
+      icon-right="lucide-chevron-down"
+      :label="periodSelectorMap[value]"
+      @click="isSheetOpen = true"
+    />
+    <MobileOptionsSheet
+      v-model:open="isSheetOpen"
+      :title="t`Period`"
+      :options="periodOptions"
+      :value="value"
+      @select="selectOption"
+    />
+  </template>
   <FrappeSelect
+    v-else
     :model-value="value"
     :options="periodOptions"
     size="md"
@@ -12,15 +29,19 @@
 
 <script lang="ts">
 import { t } from 'fyo';
-import { Select as FrappeSelect } from 'frappe-ui';
+import { Button as FrappeButton, Select as FrappeSelect } from 'frappe-ui';
+import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import { PeriodKey } from 'src/utils/types';
+import { isMobile } from 'src/utils/viewport';
 import { PropType } from 'vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'PeriodSelector',
   components: {
+    FrappeButton,
     FrappeSelect,
+    MobileOptionsSheet,
   },
   props: {
     value: { type: String as PropType<PeriodKey>, default: 'This Year' },
@@ -30,6 +51,12 @@ export default defineComponent({
     },
   },
   emits: ['change'],
+  setup() {
+    return { isMobile };
+  },
+  data() {
+    return { isSheetOpen: false };
+  },
   computed: {
     periodSelectorMap(): Record<PeriodKey, string> {
       return {

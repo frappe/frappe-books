@@ -1,13 +1,13 @@
 <template>
   <div v-if="(fields ?? []).length > 0">
     <component :is="DefineFields">
-      <div class="grid gap-4 gap-x-8 grid-cols-2">
+      <div class="grid gap-4 gap-x-8 grid-cols-1 md:grid-cols-2">
         <div
           v-for="group in fieldGroups"
           :key="group[0].fieldname"
           :class="
             group[0].fieldtype === 'Check'
-              ? 'col-span-2 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2'
+              ? 'md:col-span-2 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2'
               : 'contents'
           "
         >
@@ -16,9 +16,9 @@
             :key="field.fieldname"
             :class="[
               'min-w-0 self-start w-full',
-              field.fieldtype === 'Table' ? 'col-span-2 text-base' : '',
-              field.fieldtype === 'AttachImage' ? 'row-span-2' : '',
-              field.fieldname === 'termsAndConditions' ? 'col-span-2' : '',
+              field.fieldtype === 'Table' ? 'md:col-span-2 text-base' : '',
+              field.fieldtype === 'AttachImage' ? 'md:row-span-2' : '',
+              field.fieldname === 'termsAndConditions' ? 'md:col-span-2' : '',
               field.invisible ? 'invisible' : '',
             ]"
             :style="field.invisible ? 'visibility: hidden;' : ''"
@@ -42,6 +42,7 @@
               v-else
               :ref="field.fieldname === 'name' ? 'nameField' : 'fields'"
               class="w-full"
+              :invalid="Boolean(errors?.[field.fieldname])"
               :layout="field.fieldtype === 'Check' ? 'inline' : undefined"
               :size="field.fieldtype === 'AttachImage' ? 'form' : undefined"
               :show-label="true"

@@ -9,6 +9,13 @@ export default defineComponent({
     pickerComponent(): string {
       return 'FrappeDateTimePicker';
     },
+    nativeType(): 'date' | 'datetime-local' {
+      return 'datetime-local';
+    },
+    nativeValue(): string {
+      const date = this.toDateTime(this.value);
+      return date?.isValid ? date.toFormat("yyyy-MM-dd'T'HH:mm") : '';
+    },
     inputValue(): string {
       const date = this.toDateTime(this.value);
       return date?.isValid ? date.toFormat('yyyy-MM-dd HH:mm:ss') : '';

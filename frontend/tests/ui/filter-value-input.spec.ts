@@ -56,8 +56,9 @@ for (const [schema, label, field, options] of cases) {
   test(`${schema}.${field} offers every option and preserves selection`, async ({
     page,
   }) => {
+    // The narrowest desktop window; phones get the filter sheet instead.
     if (schema === 'JournalEntry' && field === 'entryType')
-      await page.setViewportSize({ width: 390, height: 560 });
+      await page.setViewportSize({ width: 768, height: 560 });
     await openField(page, schema, label);
     const value = page.getByRole('combobox', { name: 'Value', exact: true });
     await expect(value).toHaveText('Select a value');
@@ -71,7 +72,7 @@ for (const [schema, label, field, options] of cases) {
       await expect(menu).toBeInViewport();
       const bounds = (await menu.boundingBox())!;
       expect(bounds.x).toBeGreaterThanOrEqual(0);
-      expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(768);
       await page.screenshot({
         path: test.info().outputPath('select-options.png'),
         animations: 'disabled',

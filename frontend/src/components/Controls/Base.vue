@@ -33,7 +33,15 @@
     @blur="onBlur"
     @focus="onFocus"
     @input="onInput"
-  />
+  >
+    <template v-if="isBarcodeField" #suffix>
+      <BarcodeScanButton
+        variant="ghost"
+        size="sm"
+        @scan="(code: string) => triggerChange(code)"
+      />
+    </template>
+  </FrappeTextInput>
 </template>
 <script lang="ts">
 import { Doc } from 'fyo/model/doc';
@@ -41,13 +49,15 @@ import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { Field } from 'schemas/types';
 import { isNumeric } from 'src/utils';
 import { evaluateReadOnly, evaluateRequired } from 'src/utils/doc';
+import { isMobile } from 'src/utils/viewport';
 import { getIsNullOrUndef } from 'utils/index';
 import { defineComponent, PropType } from 'vue';
+import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
 export default defineComponent({
   name: 'Base',
-  components: { FrappeTextInput, ReadOnlyValue },
+  components: { BarcodeScanButton, FrappeTextInput, ReadOnlyValue },
   inject: {
     injectedDoc: {
       from: 'doc',
@@ -76,9 +86,18 @@ export default defineComponent({
       type: [null, Boolean] as PropType<boolean | null>,
       default: null,
     },
+    /** Phones mark a field red only once it has an error. */
+    invalid: { type: Boolean, default: false },
   },
   emits: ['focus', 'input', 'change'],
   computed: {
+    isMobile(): boolean {
+      return isMobile.value;
+    },
+    /** Phones scan barcodes with the camera. */
+    isBarcodeField(): boolean {
+      return this.isMobile && this.df.fieldname === 'barcode';
+    },
     inputValue(): string | number {
       if (typeof this.value === 'number' || typeof this.value === 'string') {
         return this.value;
@@ -86,11 +105,20 @@ export default defineComponent({
 
       return this.value == null ? '' : String(this.value);
     },
-    frappeSize(): 'sm' | 'md' {
+    frappeSize(): 'sm' | 'md' | 'lg' {
+      // 16px text on phones keeps iOS from zooming into a focused field.
+      if (this.isMobile) {
+        return 'lg';
+      }
+
       return this.size === 'small' ? 'sm' : 'md';
     },
-    frappeVariant(): 'outline' | 'ghost' {
-      return this.border ? 'outline' : 'ghost';
+    frappeVariant(): 'outline' | 'ghost' | 'subtle' {
+      if (!this.border) {
+        return 'ghost';
+      }
+
+      return this.isMobile ? 'subtle' : 'outline';
     },
     controlClasses(): (string | string[])[] {
       const classes: (string | string[])[] = [];
@@ -100,7 +128,7 @@ export default defineComponent({
       if (this.textRight ?? isNumeric(this.df)) {
         classes.push('[&_input]:text-end');
       }
-      if (this.showMandatory) {
+      if (this.isMobile ? this.invalid : this.showMandatory) {
         classes.push('[&_[data-slot=control]]:border-outline-red-3');
       }
       return classes;

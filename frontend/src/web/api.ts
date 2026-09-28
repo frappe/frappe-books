@@ -14,6 +14,7 @@ import {
 } from 'fyo/utils/errors';
 import type { BootUserPermissions } from 'fyo/utils/permissions';
 import type { ChartOfAccounts } from 'utils/types';
+import { ref } from 'vue';
 
 type ErrorClass = new (message: string, shouldStore?: boolean) => BaseError;
 
@@ -31,15 +32,33 @@ const errorClassByStatus: Record<number, ErrorClass | undefined> = {
   417: ValidationError,
 };
 
+/** Browsers reject fetch with these messages when the network is down. */
+const CONNECTION_FAILURE = /failed to fetch|load failed|networkerror/i;
+
+/** Whether the last request failed because the server could not be reached. */
+export const hasLostConnection = ref(false);
+
 export async function call<T>(
   method: string,
   args: Record<string, unknown> = {}
 ): Promise<T> {
   try {
-    return await frappeCall<T>(method, args);
+    const response = await frappeCall<T>(method, args);
+    hasLostConnection.value = false;
+    return response;
   } catch (error) {
+    hasLostConnection.value = isConnectionFailure(error);
     throw toBooksError(error);
   }
+}
+
+/** Any answer from the server, even an error, means the connection is back. */
+export async function checkConnection(): Promise<void> {
+  await call('frappe.ping').catch(() => undefined);
+}
+
+function isConnectionFailure(error: unknown): boolean {
+  return error instanceof TypeError && CONNECTION_FAILURE.test(error.message);
 }
 
 /** Server errors become fyo errors, so forms treat them like their own. */
@@ -82,6 +101,7 @@ declare global {
           account_labels: Record<string, string>;
           indian_states: Record<string, string>;
         };
+        app_data?: { app_name: string; app_logo_url?: string | null }[];
         [key: string]: unknown;
       };
     };

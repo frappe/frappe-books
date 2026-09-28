@@ -60,7 +60,8 @@ test('Tab reaches checkbox and select and the keyboard changes both values', asy
 test('select options escape a clipped parent and stay inside the viewport', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 430, height: 400 });
+  // The narrowest desktop window; phones pick options from a sheet.
+  await page.setViewportSize({ width: 768, height: 400 });
   const select = page.getByRole('combobox', { name: 'Payment method' });
   await select.click();
   const option = page.getByRole('option', { name: 'Third', exact: true });

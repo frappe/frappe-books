@@ -40,6 +40,8 @@ export default {
   content: [
     ...frappeUIContent,
     './src/**/*.{vue,js,ts,jsx,tsx}',
+    // Phone layouts name their icons.
+    './reports/**/*.ts',
     '../frappe_books/data/**/*.html',
   ],
   darkMode: 'class',

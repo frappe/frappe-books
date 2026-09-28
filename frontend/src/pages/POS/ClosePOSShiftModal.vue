@@ -3,8 +3,62 @@
     :open-modal="openModal && isValuesSeeded"
     :title="t`Close POS Shift`"
     size="4xl"
+    :dismissible="false"
     @closemodal="$emit('toggleModal', 'ShiftClose', false)"
   >
+    <template v-if="isMobile && posClosingShiftDoc">
+      <MobileCashCount
+        :heading="t`Closing cash`"
+        :rows="closingCash"
+        @change="updateClosingAmounts"
+      />
+      <FormControl
+        v-for="row in otherClosingAmounts"
+        :key="row.idx"
+        :df="{
+          fieldname: 'closingAmount',
+          fieldtype: 'Currency',
+          label: t`Counted ${row.paymentMethod ?? ''}`,
+        }"
+        :value="row.closingAmount"
+        :show-label="true"
+        :border="true"
+        @change="(amount: Money) => setClosingAmount(row, amount)"
+      />
+      <table class="w-full rounded-6 bg-surface-gray-1 text-base tabular-nums">
+        <thead class="text-xs-medium text-ink-gray-5">
+          <tr class="h-11 border-b border-outline-gray-1">
+            <th class="ps-3 text-start font-medium">{{ t`Method` }}</th>
+            <th class="px-1.5 text-end font-medium">{{ t`Expected` }}</th>
+            <th class="px-1.5 text-end font-medium">{{ t`Counted` }}</th>
+            <th class="pe-3 text-end font-medium">{{ t`Difference` }}</th>
+          </tr>
+        </thead>
+        <tbody class="text-ink-gray-8">
+          <tr
+            v-for="row in closingAmounts"
+            :key="row.idx"
+            class="h-11 border-b border-outline-gray-1 last:border-b-0"
+          >
+            <td class="ps-3">{{ row.paymentMethod }}</td>
+            <td class="px-1.5 text-end" dir="ltr">
+              {{ format(row.expectedAmount) }}
+            </td>
+            <td class="px-1.5 text-end" dir="ltr">
+              {{ format(row.closingAmount) }}
+            </td>
+            <td
+              class="pe-3 text-end"
+              :class="{ 'text-ink-red-4': row.differenceAmount?.isNegative() }"
+              dir="ltr"
+            >
+              {{ format(row.differenceAmount) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </template>
+    <template v-else>
     <h2 class="mb-3 text-base font-medium text-ink-gray-8">
       {{ t`Closing Cash` }}
     </h2>
@@ -33,15 +87,16 @@
       :allow-add-remove-rows="false"
       @row-change="updateClosingAmounts"
     />
+    </template>
 
-    <template #actions>
+    <template #actions="{ size }">
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         @click="$emit('toggleModal', 'ShiftClose', false)"
         >{{ t`Cancel` }}</FrappeButton>
       <FrappeButton
-        size="md"
+        :size="size"
         class="min-w-24"
         variant="solid"
         @click="handleSubmit"
@@ -54,6 +109,11 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
 import Table from 'src/components/Controls/Table.vue';
+import FormControl from 'src/components/Controls/FormControl.vue';
+import { isMobile } from 'src/utils/viewport';
+import MobileCashCount from './MobileCashCount.vue';
+import { ClosingCash } from 'models/inventory/Point of Sale/ClosingCash';
+import { ClosingAmounts } from 'models/inventory/Point of Sale/ClosingAmounts';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { OpeningAmounts } from 'models/inventory/Point of Sale/OpeningAmounts';
@@ -73,7 +133,7 @@ import { ForbiddenError } from 'fyo/utils/errors';
 
 export default defineComponent({
   name: 'ClosePOSShiftModal',
-  components: { FrappeButton, Modal, Table },
+  components: { FormControl, FrappeButton, MobileCashCount, Modal, Table },
   provide() {
     return {
       doc: computed(() => this.posClosingShiftDoc),
@@ -86,6 +146,9 @@ export default defineComponent({
     },
   },
   emits: ['toggleModal'],
+  setup() {
+    return { isMobile };
+  },
   data() {
     return {
       isValuesSeeded: false,
@@ -97,6 +160,15 @@ export default defineComponent({
     };
   },
   computed: {
+    closingCash(): ClosingCash[] {
+      return (this.posClosingShiftDoc?.closingCash ?? []) as ClosingCash[];
+    },
+    closingAmounts(): ClosingAmounts[] {
+      return (this.posClosingShiftDoc?.closingAmounts ?? []) as ClosingAmounts[];
+    },
+    otherClosingAmounts(): ClosingAmounts[] {
+      return this.closingAmounts.filter((row) => row.paymentMethod !== 'Cash');
+    },
     isOnline() {
       return !!navigator.onLine;
     },
@@ -209,6 +281,13 @@ export default defineComponent({
     },
     getField(fieldname: string) {
       return fyo.getField(ModelNameEnum.POSClosingShift, fieldname);
+    },
+    format(amount?: Money): string {
+      return fyo.format(amount ?? fyo.pesa(0), 'Currency');
+    },
+    async setClosingAmount(row: ClosingAmounts, amount: Money) {
+      await row.set('closingAmount', amount);
+      this.updateClosingAmounts();
     },
     async handleSubmit() {
       try {

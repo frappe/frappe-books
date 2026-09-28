@@ -1,13 +1,25 @@
 <template>
   <FrappeTextInput
-    class="w-36"
+    :class="isMobile ? 'w-full' : 'w-36'"
     type="text"
-    variant="outline"
+    :size="isMobile ? 'lg' : 'sm'"
+    :variant="isMobile ? 'subtle' : 'outline'"
+    :label="isMobile ? t`Barcode` : undefined"
     :placeholder="t`Enter barcode`"
     @change="handleChange"
   >
     <template #suffix>
-      <span class="lucide-scan-line size-4 text-ink-gray-5" aria-hidden="true" />
+      <BarcodeScanButton
+        v-if="isMobile"
+        variant="ghost"
+        size="sm"
+        @scan="selectItem"
+      />
+      <span
+        v-else
+        class="lucide-scan-line size-4 text-ink-gray-5"
+        aria-hidden="true"
+      />
     </template>
   </FrappeTextInput>
 </template>
@@ -16,10 +28,15 @@
 import { showToast } from 'src/utils/interactive';
 import { findScannedPOSItem, type ScannableItem } from 'src/utils/posItemSearch';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
+import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
+import { isMobile } from 'src/utils/viewport';
 import { defineComponent } from 'vue';
 export default defineComponent({
-  components: { FrappeTextInput },
+  components: { BarcodeScanButton, FrappeTextInput },
   emits: ['item-selected'],
+  setup() {
+    return { isMobile };
+  },
   data() {
     return {
       timerId: null,

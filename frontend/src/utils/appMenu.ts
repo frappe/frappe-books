@@ -3,7 +3,18 @@ import type { DropdownOptions } from 'frappe-ui';
 import { call } from 'src/web/api';
 import { docsPathRef } from './refs';
 
-export function getAppMenuItems(openShortcuts: () => void): DropdownOptions {
+/** Phones have no keyboard shortcuts, so they pass no `openShortcuts`. */
+export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
+  const shortcuts = openShortcuts
+    ? [
+        {
+          label: t`Keyboard Shortcuts`,
+          icon: 'lucide-command',
+          onClick: openShortcuts,
+        },
+      ]
+    : [];
+
   return [
     {
       group: t`Help`,
@@ -14,11 +25,7 @@ export function getAppMenuItems(openShortcuts: () => void): DropdownOptions {
           icon: 'lucide-circle-help',
           onClick: openDocumentation,
         },
-        {
-          label: t`Keyboard Shortcuts`,
-          icon: 'lucide-command',
-          onClick: openShortcuts,
-        },
+        ...shortcuts,
       ],
     },
     {

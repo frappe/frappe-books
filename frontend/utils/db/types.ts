@@ -104,9 +104,18 @@ export abstract class DatabaseDemuxBase {
   abstract runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,
-    name: string
+    name: string,
+    linkedDocs?: LinkedDoc[]
   ): Promise<unknown>;
 }
+
+/** A submitted document Frappe cancels along with the one it links to. */
+export type LinkedDoc = {
+  doctype: string;
+  name: string;
+  docstatus: number;
+  schemaName: string;
+};
 
 export type ReportQuery =
   | 'getGeneralLedger'

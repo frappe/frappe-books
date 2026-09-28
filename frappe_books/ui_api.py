@@ -4,11 +4,12 @@ import json
 from typing import Any, Literal, get_args
 
 import frappe
+from frappe.desk.form import linked_with
 
 from frappe_books.ui_bridge import field_properties
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
-from frappe_books.ui_bridge.mapping import target_doctype
+from frappe_books.ui_bridge.mapping import source_reference, target_doctype
 
 LifecycleAction = Literal["submit", "cancel"]
 
@@ -32,15 +33,32 @@ def get_field_properties() -> dict[str, dict[str, dict[str, Any]]]:
 	return field_properties.get_field_properties()
 
 
+@frappe.whitelist()
+def get_submitted_linked_docs(source_schema: str, name: str) -> list[dict[str, Any]]:
+	"""Return the submitted documents Frappe cancels with this one, with their interface schemas."""
+	linked = linked_with.get_submitted_linked_docs(target_doctype(source_schema), name)
+	return [{**doc, "schemaName": source_reference(doc["doctype"])} for doc in linked["docs"]]
+
+
 @frappe.whitelist(methods=["POST"])
-def lifecycle_action(action: LifecycleAction, source_schema: str, name: str) -> dict[str, Any]:
-	"""Run accounting and stock lifecycle hooks in one server transaction."""
+def lifecycle_action(
+	action: LifecycleAction,
+	source_schema: str,
+	name: str,
+	linked_docs: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+	"""Run accounting and stock lifecycle hooks in one server transaction.
+
+	A cancel first cancels `linked_docs`, the documents `get_submitted_linked_docs` listed.
+	"""
 	# Frappe skips a bare Literal annotation because its values are strings.
 	if action not in get_args(LifecycleAction):
 		frappe.throw(f"Unsupported Books lifecycle action: {action}", frappe.FrappeTypeError)
 	doc = frappe.get_doc(target_doctype(source_schema), name)
 	if action == "submit":
 		doc.submit()
+	elif linked_docs:
+		linked_with.cancel_all_linked_docs(linked_docs, root_doctype=doc.doctype, root_name=doc.name)
 	else:
 		doc.cancel()
 	return BooksDatabaseBridge().get(source_schema, name)

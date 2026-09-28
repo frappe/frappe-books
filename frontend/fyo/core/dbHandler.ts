@@ -8,6 +8,7 @@ import {
   DatabaseDemuxBase,
   GetAllOptions,
   IncomeExpense,
+  LinkedDoc,
   QueryFilter,
   ReportQuery,
   SingleValue,
@@ -200,12 +201,14 @@ export class DatabaseHandler extends DatabaseBase {
   async runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,
-    name: string
+    name: string,
+    linkedDocs?: LinkedDoc[]
   ): Promise<DocValueMap> {
     const rawValueMap = (await this.#demux.runLifecycleAction(
       action,
       schemaName,
-      name
+      name,
+      linkedDocs
     )) as RawValueMap;
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }

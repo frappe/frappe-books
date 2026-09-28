@@ -19,7 +19,9 @@ import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import router from 'src/router';
+import { call } from 'src/web/api';
 import { assertIsType } from 'utils/index';
+import type { LinkedDoc } from 'utils/db/types';
 import { SelectFileOptions } from 'utils/types';
 import { RouteLocationRaw } from 'vue-router';
 import { evaluateHidden } from './doc';
@@ -124,30 +126,17 @@ export async function deleteDocWithPrompt(doc: Doc) {
 }
 
 export async function cancelDocWithPrompt(doc: Doc) {
-  let detail = t`This action is permanent`;
-  if (['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
-    const paymentList = await getInvoicePayments(doc);
-    if (paymentList.length === 1) {
-      detail = t`This action is permanent and will cancel the following payment: ${
-        paymentList[0] as string
-      }`;
-    } else if (paymentList.length > 1) {
-      detail = t`This action is permanent and will cancel the following payments: ${paymentList.join(
-        ', ',
-      )}`;
-    }
-  }
-
+  const linkedDocs = await getSubmittedLinkedDocs(doc);
   return (await showDialog({
     title: t`Cancel ${getDocReferenceLabel(doc)}?`,
-    detail,
+    detail: getCancelDetail(linkedDocs),
     type: 'warning',
     buttons: [
       {
         label: t`Yes`,
         async action() {
           try {
-            await doc.cancel();
+            await doc.cancel(linkedDocs);
           } catch (err) {
             await handleErrorWithDialog(err as Error, doc);
             return false;
@@ -168,21 +157,32 @@ export async function cancelDocWithPrompt(doc: Doc) {
   })) as boolean;
 }
 
-async function getInvoicePayments(doc: Doc): Promise<string[]> {
-  const references = await fyo.db.getAll(ModelNameEnum.PaymentFor, {
-    fields: ['parent'],
-    filters: { referenceType: doc.schemaName, referenceName: doc.name! },
+/** The submitted documents Frappe cancels along with `doc`, such as an invoice's payments. */
+async function getSubmittedLinkedDocs(doc: Doc): Promise<LinkedDoc[]> {
+  return await call('frappe_books.ui_api.get_submitted_linked_docs', {
+    source_schema: doc.schemaName,
+    name: doc.name,
   });
-  const parents = [...new Set(references.map(({ parent }) => String(parent)))];
-  if (!parents.length) {
-    return [];
+}
+
+function getCancelDetail(linkedDocs: LinkedDoc[]): string {
+  const names = linkedDocs.map(({ name }) => name).join(', ');
+  const arePayments = linkedDocs.every(
+    ({ schemaName }) => schemaName === ModelNameEnum.Payment
+  );
+  if (!linkedDocs.length) {
+    return t`This action is permanent`;
   }
 
-  const payments = await fyo.db.getAll(ModelNameEnum.Payment, {
-    fields: ['name'],
-    filters: { name: ['in', parents], cancelled: false },
-  });
-  return payments.map(({ name }) => String(name));
+  if (!arePayments) {
+    return t`This action is permanent and will cancel the following entries: ${names}`;
+  }
+
+  if (linkedDocs.length === 1) {
+    return t`This action is permanent and will cancel the following payment: ${names}`;
+  }
+
+  return t`This action is permanent and will cancel the following payments: ${names}`;
 }
 
 export function getActionsForDoc(doc?: Doc): Action[] {

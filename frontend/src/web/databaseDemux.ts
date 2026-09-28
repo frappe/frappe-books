@@ -2,7 +2,7 @@ import { TranslationString } from 'fyo/utils/translation';
 import { getSchemas } from 'schemas';
 import type { FieldPropertyMap } from 'schemas/fieldProperties';
 import type { RawCustomField, SchemaMap } from 'schemas/types';
-import { DatabaseDemuxBase, DatabaseMethod } from 'utils/db/types';
+import { DatabaseDemuxBase, DatabaseMethod, LinkedDoc } from 'utils/db/types';
 import { call } from './api';
 
 export class FrappeDatabaseDemux extends DatabaseDemuxBase {
@@ -59,12 +59,14 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
   override async runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,
-    name: string
+    name: string,
+    linkedDocs?: LinkedDoc[]
   ): Promise<unknown> {
     return call('frappe_books.ui_api.lifecycle_action', {
       action,
       source_schema: schemaName,
       name,
+      linked_docs: linkedDocs,
     });
   }
 }

@@ -12,6 +12,7 @@ import {
   TargetField,
 } from 'schemas/types';
 import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
+import type { LinkedDoc } from 'utils/db/types';
 import { markRaw, reactive } from 'vue';
 import { isPesa } from '../utils/index';
 import {
@@ -994,7 +995,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
   }
 
-  async cancel() {
+  /** Cancels the doc after `linkedDocs`, the submitted documents that link to it. */
+  async cancel(linkedDocs: LinkedDoc[] = []) {
     if (!this.schema.isSubmittable || !this.submitted || this.cancelled) {
       return;
     }
@@ -1002,7 +1004,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
     const data = await this.fyo.db.runLifecycleAction(
       'cancel',
       this.schemaName,
-      this.name!
+      this.name!,
+      linkedDocs
     );
     await this._syncValues(data);
     this._notInserted = false;

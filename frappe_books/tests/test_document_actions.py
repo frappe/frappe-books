@@ -256,12 +256,22 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		credit_note.make_auto_payment = 0
 		credit_note.insert().submit()
 
-		values = get_duplicate("SalesInvoice", invoice.name)
-		duplicate = BooksDatabaseBridge().insert("SalesInvoice", values)
+		bridge = BooksDatabaseBridge()
+		values = get_duplicate("SalesInvoice", bridge.get("SalesInvoice", invoice.name))
+		duplicate = bridge.insert("SalesInvoice", values)
 		submitted = lifecycle_action("submit", "SalesInvoice", duplicate["name"], duplicate["modified"])
 
 		self.assertEqual((submitted["isReturned"], submitted["status"]), (0, "Unpaid"))
 		self.assertEqual(submitted["outstandingAmount"], submitted["grandTotal"])
+
+	def test_a_duplicate_keeps_the_unsaved_edits_it_is_sent(self):
+		values = BooksDatabaseBridge().get("Item", self.item.name)
+		values.update(description="Edited, not saved", rate=45)
+
+		duplicate = get_duplicate("Item", values)
+
+		self.assertEqual((duplicate["description"], duplicate["rate"]), ("Edited, not saved", 45))
+		self.assertIsNone(duplicate["name"])
 
 	def test_submit_refuses_a_document_changed_since_it_was_read(self):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
@@ -292,10 +302,10 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				)
 		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
 
-	def test_duplicates_need_read_and_create_rights(self):
-		invoice = self._paid_invoice()
+	def test_duplicates_need_create_rights(self):
+		values = BooksDatabaseBridge().get("SalesInvoice", self._paid_invoice().name)
 		with self.set_user(ensure_user("books-no-role@example.com")):
-			self.assertRaises(frappe.PermissionError, get_duplicate, "SalesInvoice", invoice.name)
+			self.assertRaises(frappe.PermissionError, get_duplicate, "SalesInvoice", values)
 
 	def test_submit_makes_the_automatic_payment(self):
 		start_pos_shift()

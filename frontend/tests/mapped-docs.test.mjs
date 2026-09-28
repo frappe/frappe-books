@@ -125,10 +125,16 @@ test('a duplicate is the copy the server makes, with its unset values left out',
     isReturned: true,
     outstandingAmount: 100,
   });
+  invoice._notInserted = false;
+  await invoice.set('terms', 'Unsaved edit');
+  clearTimeout(invoice._previewTimer);
 
   const duplicate = await invoice.duplicate();
 
-  assert.deepEqual(calls, [['getDuplicate', 'SalesInvoice', 'SINV-1001']]);
+  const [[method, schemaName, values]] = calls;
+  assert.deepEqual([method, schemaName], ['getDuplicate', 'SalesInvoice']);
+  assert.equal(values.terms, 'Unsaved edit');
+  assert.equal(Object.hasOwn(values, 'modified'), false);
   assert.equal(duplicate.notInserted, true);
   assert.equal(duplicate.isReturned, false);
   assert.equal(duplicate.outstandingAmount.float, 0);

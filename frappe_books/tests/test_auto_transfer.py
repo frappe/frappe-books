@@ -34,6 +34,7 @@ from frappe_books.tests.accounting import (
 	unique_name,
 )
 from frappe_books.ui_api import get_duplicate
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestAutoTransfer(IntegrationTestCase):
@@ -79,7 +80,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
 		invoice.submit()
 
-		duplicate = get_duplicate("Shipment", invoice.reload().back_reference)
+		shipment = BooksDatabaseBridge().get("Shipment", invoice.reload().back_reference)
+		duplicate = get_duplicate("Shipment", shipment)
 
 		self.assertIsNone(duplicate["backReference"])
 		self.assertEqual(duplicate["items"][0]["quantity"], 2)

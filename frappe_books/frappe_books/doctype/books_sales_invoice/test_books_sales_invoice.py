@@ -271,6 +271,25 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "only returns can have negative"):
 			invoice.save()
 
+	def test_items_follow_their_item_usage(self):
+		purchase_item = make_item(self.income.name, self.expense.name, item_usage="Purchases")
+		with self.assertRaisesRegex(frappe.ValidationError, "is not for Sales"):
+			make_invoice(
+				"Books Sales Invoice",
+				self.party.name,
+				self.receivable.name,
+				purchase_item.name,
+				self.income.name,
+			)
+
+		payable = make_account("Payable", root_type="Liability", account_type="Payable")
+		supplier = make_party(payable.name, role="Supplier")
+		sales_item = make_item(self.income.name, self.expense.name, item_usage="Sales")
+		with self.assertRaisesRegex(frappe.ValidationError, "is not for Purchases"):
+			make_invoice(
+				"Books Purchase Invoice", supplier.name, payable.name, sales_item.name, self.expense.name
+			)
+
 	def test_pos_invoice_keeps_rate_and_discount_when_profile_forbids(self):
 		frappe.db.set_single_value(
 			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 0, "can_edit_discount": 0}

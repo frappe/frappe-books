@@ -244,6 +244,13 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "only returns can have negative"):
 			self._make_shipment(item, quantity=-1, rate=25)
 
+	def test_shipments_take_only_items_kept_for_sales(self):
+		item, _cogs, _stock = self._tracked_item(item_usage="Purchases")
+		seed_stock(item.name, quantity=1, rate=10)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "is not for Sales"):
+			self._make_shipment(item, quantity=1, rate=25)
+
 	def test_return_must_reference_a_submitted_original(self):
 		item, _cogs, _stock = self._tracked_item()
 		draft = self._make_shipment(item, quantity=1, rate=25)

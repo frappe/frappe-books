@@ -20,7 +20,7 @@ from frappe_books.inventory.invoice_balance import (
 from frappe_books.inventory.stock import validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.series import SeriesNamingMixin
-from frappe_books.settings import require_feature, require_features
+from frappe_books.settings import require_feature, require_features, set_default_terms
 
 
 class InvoiceController(SeriesNamingMixin, Document):
@@ -29,6 +29,7 @@ class InvoiceController(SeriesNamingMixin, Document):
 	transaction_type: str
 
 	def before_validate(self):
+		set_default_terms(self)
 		self.calculate()
 
 	def calculate(self):

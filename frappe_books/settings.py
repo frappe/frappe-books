@@ -17,6 +17,22 @@ FEATURES = {
 }
 
 
+# The Books Defaults terms each new document starts with.
+DEFAULT_TERMS = {
+	"Books Sales Quote": "sales_invoice_terms",
+	"Books Sales Invoice": "sales_invoice_terms",
+	"Books Purchase Invoice": "purchase_invoice_terms",
+	"Books Shipment": "shipment_terms",
+	"Books Purchase Receipt": "purchase_receipt_terms",
+}
+
+
+def set_default_terms(doc):
+	"""Start a new document with its Books Defaults terms, unless the caller sent terms."""
+	if doc.is_new() and doc.get("terms") is None:
+		doc.terms = frappe.db.get_single_value("Books Defaults", DEFAULT_TERMS[doc.doctype])
+
+
 def require_feature(fieldname):
 	"""Reject using a feature that is switched off, as the Books app hides it then."""
 	settings = FEATURES[fieldname]

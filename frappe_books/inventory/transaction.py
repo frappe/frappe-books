@@ -27,7 +27,7 @@ from frappe_books.inventory.stock import (
 )
 from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
-from frappe_books.settings import require_feature, require_features
+from frappe_books.settings import require_feature, require_features, set_default_terms
 
 STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
 
@@ -69,6 +69,7 @@ class StockTransferController(SeriesNamingMixin, Document):
 	transfer_type = "sales"
 
 	def before_validate(self):
+		set_default_terms(self)
 		self.calculate()
 
 	def calculate(self):

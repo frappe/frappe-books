@@ -288,9 +288,10 @@ export abstract class Invoice extends Transactional {
       doc instanceof Invoice &&
       !!doc.autoStockTransferLocation,
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
+    // Mirrors the server's terms for a new document; quotes are sales too.
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
-      if (doc.schemaName === ModelNameEnum.SalesInvoice) {
+      if ((doc as Invoice).isSales) {
         return defaults?.salesInvoiceTerms ?? '';
       }
 

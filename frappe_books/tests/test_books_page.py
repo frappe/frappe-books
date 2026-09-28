@@ -5,6 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.permissions import has_app_permission
+from frappe_books.regional import INDIAN_STATES
 from frappe_books.www import books
 
 BOOKS_USER = "books-page-user@example.com"
@@ -30,6 +31,11 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 		self.assertEqual(permissions["SalesInvoice"], ["read", "write", "create", "submit"])
 		self.assertEqual(permissions["Tax"], ["read"])
 		self.assertNotIn("SalesInvoiceItem", permissions)
+
+	def test_page_boot_sends_the_server_indian_states(self):
+		with self.set_user(BOOKS_USER), patch("frappe.sessions.get", return_value={}):
+			boot = json.loads(books.get_context(frappe._dict()).books_boot)
+		self.assertEqual(boot["indian_states"], INDIAN_STATES)
 
 	def test_users_without_a_books_role_are_refused(self):
 		with self.set_user(DESK_USER):

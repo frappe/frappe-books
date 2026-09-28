@@ -11,16 +11,17 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 		expense = make_account("Set Once Expense", root_type="Expense").name
 		received = make_account("Set Once Received", root_type="Liability").name
 		unit = frappe.get_doc({"doctype": "Books Uom", "name": frappe.generate_hash()}).insert().name
-		for fieldname, changes in (
-			("unit", {"unit": unit}),
-			("item_type", {"item_type": "Service"}),
+		for fieldname, changes, is_tracked in (
+			("unit", {"unit": unit}, False),
+			("item_type", {"item_type": "Service"}, False),
 			# a tracked item needs a liability account, so only the locked field can fail
-			("track_item", {"track_item": 1, "expense_account": received}),
-			("has_batch", {"has_batch": 1}),
-			("has_serial_number", {"has_serial_number": 1}),
+			("track_item", {"track_item": 1, "expense_account": received}, False),
+			("has_batch", {"has_batch": 1}, False),
+			# only tracked items have serial numbers
+			("has_serial_number", {"has_serial_number": 1}, True),
 		):
 			with self.subTest(fieldname=fieldname):
-				item = make_item(income, expense)
+				item = make_item(income, received, track_item=1) if is_tracked else make_item(income, expense)
 				item.update(changes)
 				self.assertRaises(frappe.CannotChangeConstantError, item.save)
 

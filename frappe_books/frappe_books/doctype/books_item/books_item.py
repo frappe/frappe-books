@@ -67,12 +67,19 @@ class BooksItem(Document):
 
 	def validate(self):
 		require_features(self, ITEM_FEATURES)
+		self.validate_stock_settings()
 		self.validate_accounts()
 		if self.hsn_code and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code)):
 			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
 		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
 			frappe.throw(_("Barcode must contain exactly 12 digits."))
 		self.validate_unit_conversions()
+
+	def validate_stock_settings(self):
+		if self.track_item and self.item_type != "Product":
+			frappe.throw(_("Only products can track inventory."))
+		if self.has_serial_number and not self.track_item:
+			frappe.throw(_("Only items that track inventory can have serial numbers."))
 
 	def validate_unit_conversions(self):
 		units = [row.uom for row in self.uom_conversions]

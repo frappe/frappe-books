@@ -299,9 +299,12 @@ export class Payment extends Transactional {
         doc.paymentType === PaymentTypeEnum.Pay ? 'Payable' : 'Receivable',
       isGroup: false,
     }),
-    paymentAccount: (doc: Doc) => {
-      const paymentMethod = doc.paymentMethod as PaymentMethod;
-      if (paymentMethod.name === 'Cash') {
+    paymentAccount: async (doc: Doc) => {
+      const method = doc.paymentMethod as string | undefined;
+      const type =
+        method &&
+        (await doc.fyo.getValue(ModelNameEnum.PaymentMethod, method, 'type'));
+      if (type === 'Cash') {
         return { accountType: 'Cash', isGroup: false };
       }
 

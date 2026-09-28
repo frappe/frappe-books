@@ -7,6 +7,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import money_in_words, now_datetime
 from frappe.utils.print_utils import get_print
 
+from frappe_books.accounting.money import company_currency
 from frappe_books.printing import get_print_totals
 from frappe_books.tests.accounting import (
 	make_account,
@@ -61,29 +62,45 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.assertEqual((totals["sub_total"], totals["total_discount"]), (180, 20))
 		self.assertEqual(totals["grand_total_in_words"], money_in_words(198, invoice.currency))
 
-	def test_payment_prints_the_taxes_it_realised(self):
+	def test_payment_prints_every_invoice_tax(self):
+		payment = self.make_payment({self.make_invoice(): 99})
+
+		totals = get_print_totals(payment)
+
+		self.assertEqual(totals["taxes"], [{"account": self.tax_account.name, "amount": 9}])
+		self.assertEqual(totals["sub_total"], 90)
+		self.assertEqual(totals["amount_paid_in_words"], money_in_words(99, company_currency()))
+
+	def test_payment_prints_the_realised_tax_it_stored(self):
 		paid_tax = make_account("Print Tax Paid", root_type="Liability", account_type="Tax")
+		other_tax = make_account("Print Other Tax", root_type="Liability", account_type="Tax")
 		tax = frappe.get_doc(
 			{
 				"doctype": "Books Tax",
 				"name": unique_name("Print Cash Tax"),
-				"details": [{"account": self.tax_account.name, "rate": 10, "payment_account": paid_tax.name}],
+				"details": [
+					{"account": self.tax_account.name, "rate": 10, "payment_account": paid_tax.name},
+					{"account": other_tax.name, "rate": 5},
+				],
 			}
 		).insert()
 		self.item.db_set("tax", tax.name)
 		invoice = self.make_invoice()
-		self.make_payment({invoice: 50})
-		# A share of 18 * 50 / 198 would round to 4.55; the second payment realises 4.54.
-		payment = self.make_payment({invoice: 50})
+		self.make_payment({invoice: Decimal("10.04")})
+		# A fresh share of 18 * 10.04 / 207 rounds to 0.87; the second payment realised 0.88.
+		payment = self.make_payment({invoice: Decimal("10.04")})
 
 		totals = get_print_totals(payment)
 
+		self.assertEqual([row.amount for row in payment.taxes], [Decimal("0.88")])
 		self.assertEqual(
-			[(row.account, row.amount) for row in payment.taxes], [(paid_tax.name, Decimal("4.54"))]
+			totals["taxes"],
+			[
+				{"account": self.tax_account.name, "amount": Decimal("0.88")},
+				{"account": other_tax.name, "amount": Decimal("0.44")},
+			],
 		)
-		self.assertEqual(totals["sub_total"], Decimal("45.46"))
-		self.assertNotIn("taxes", totals)
-		self.assertEqual(totals["amount_paid_in_words"], money_in_words(50, invoice.currency))
+		self.assertEqual(totals["sub_total"], Decimal("8.72"))
 
 	def make_invoice(self):
 		invoice = make_invoice(

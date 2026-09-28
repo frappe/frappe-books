@@ -4,9 +4,9 @@ import { makeFyo } from './helpers/accounting.mjs';
 
 test('a failing formula fails the change that ran it', async () => {
   const fyo = await makeFyo();
-  const color = fyo.doc.getNewDoc('Color', { name: 'Red' });
-  color.formulas = {
-    hexvalue: {
+  const unit = fyo.doc.getNewDoc('UOM', { name: 'Box' });
+  unit.formulas = {
+    isWhole: {
       formula: () => {
         throw new Error('Formula failed');
       },
@@ -14,5 +14,5 @@ test('a failing formula fails the change that ran it', async () => {
     },
   };
 
-  await assert.rejects(color.set('name', 'Blue'), /Formula failed/);
+  await assert.rejects(unit.set('name', 'Crate'), /Formula failed/);
 });

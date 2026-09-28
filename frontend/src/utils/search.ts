@@ -4,6 +4,7 @@ import { groupBy } from 'lodash';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports';
 import { OptionField } from 'schemas/types';
+import { getImportableSchemaNames } from 'src/importer';
 import { createFilters, routeFilters } from 'src/utils/filters';
 import { safeParseFloat } from 'utils/index';
 import { fuzzyMatch } from '.';
@@ -294,8 +295,8 @@ function getListViewList(fyo: Fyo): SearchItem[] {
   return [standardLists, filteredLists].flat();
 }
 
-function getSetupList(): SearchItem[] {
-  return [
+function getSetupList(fyo: Fyo): SearchItem[] {
+  const pages: SearchItem[] = [
     {
       label: t`Dashboard`,
       route: '/',
@@ -317,6 +318,8 @@ function getSetupList(): SearchItem[] {
       group: 'Page',
     },
   ];
+  const canImport = getImportableSchemaNames(fyo).length > 0;
+  return pages.filter((page) => canImport || page.route !== '/import-wizard');
 }
 
 function getNonDocSearchList(fyo: Fyo) {
@@ -324,7 +327,7 @@ function getNonDocSearchList(fyo: Fyo) {
     getListViewList(fyo),
     getCreateList(fyo),
     getReportList(fyo),
-    getSetupList(),
+    getSetupList(fyo),
   ]
     .flat()
     .map((d) => {
@@ -343,10 +346,10 @@ export class Search {
    *
    * How the Search works:
    * - Typed input fetches a bounded set of matching docs from the server,
-   *   matched on the schema's `keywordFields`.
+   *   matched on the DocType search fields.
    * - `name` or `parent` (parent doc's name) is used as the main
    *   label.
-   * - The `name`, `keywordFields` and schema label are used as
+   * - The search field values and schema label are used as
    *   search target terms.
    * - Input is split on `' '` (whitespace) and each part has to completely
    *   or partially match the search target terms.
@@ -576,7 +579,7 @@ export class Search {
       text && searchables.length
         ? await this.fyo.db.search(
             text,
-            Object.fromEntries(searchables.map((s) => [s.schemaName, s.fields])),
+            searchables.map((s) => s.schemaName),
             DOC_RESULT_LIMIT
           )
         : {};
@@ -873,13 +876,14 @@ export class Search {
   }
 
   _setSearchables() {
-    for (const schemaName of Object.keys(this.fyo.schemaMap)) {
+    for (const [schemaName, fields] of Object.entries(
+      this.fyo.store.searchFields
+    )) {
       const schema = this.fyo.schemaMap[schemaName];
-      if (!schema?.keywordFields?.length || this.searchables[schemaName]) {
+      if (!schema || !fields?.length || this.searchables[schemaName]) {
         continue;
       }
 
-      const fields = [...schema.keywordFields];
       const meta = [];
       if (schema.isChild) {
         meta.push('parent', 'parentSchemaName');

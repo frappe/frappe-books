@@ -7,9 +7,16 @@ import {
   getSchemas,
   isReferenceField,
 } from './helpers/fyo.mjs';
+import { doctypes, mapping } from './helpers/doctypes.mjs';
 
 // Frappe stores single values in its own Singles table.
 const UNMAPPED_SCHEMAS = ['SingleValue'];
+// Frappe's own DocTypes, and settings fields in its System Settings, whose
+// files these tests cannot read.
+const CORE_SCHEMAS = Object.keys(mapping).filter(
+  (schemaName) =>
+    !doctypes.some(({ name }) => name === mapping[schemaName].doctype)
+);
 
 for (const countryCode of ['-', 'in', 'ch']) {
   test(`${countryCode} schema files leave data properties to the DocTypes`, () => {
@@ -38,10 +45,18 @@ for (const countryCode of ['-', 'in', 'ch']) {
 
 function getFields(schemas) {
   return Object.entries(schemas)
-    .filter(([schemaName]) => !UNMAPPED_SCHEMAS.includes(schemaName))
+    .filter(
+      ([schemaName]) =>
+        !UNMAPPED_SCHEMAS.includes(schemaName) &&
+        !CORE_SCHEMAS.includes(schemaName)
+    )
     .flatMap(([schemaName, schema]) =>
       schema.fields
-        .filter((field) => !field.meta)
+        .filter(
+          (field) =>
+            !field.meta &&
+            !mapping[schemaName]?.system_settings?.[field.fieldname]
+        )
         .map((field) => [
           schemaName,
           field,

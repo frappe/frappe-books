@@ -19,7 +19,11 @@
           <FrappeButton class="w-40">{{ t`Create` }}</FrappeButton>
         </template>
       </FrappeDropdown>
-      <FrappeButton ref="exportButton" @click="openExportModal = true">
+      <FrappeButton
+        v-if="canExport"
+        ref="exportButton"
+        @click="openExportModal = true"
+      >
         {{ t`Export` }}
       </FrappeButton>
       <FilterDropdown ref="filterDropdown" :schema-name="schemaName" @change="applyFilter" />
@@ -126,6 +130,9 @@ export default defineComponent({
     },
     fields(): Field[] {
       return fyo.schemaMap[this.schemaName]?.fields ?? [];
+    },
+    canExport(): boolean {
+      return fyo.can(this.schemaName, 'export');
     },
     canCreate(): boolean {
       return (

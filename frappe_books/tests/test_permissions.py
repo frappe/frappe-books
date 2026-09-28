@@ -23,24 +23,28 @@ ROLE_MATRIX = {
 	"Books Print Template": (FULL, READ, READ),
 	"Books Custom Form": (FULL, READ, READ),
 	"Books Ledger Entry": (READ, READ, READ),
+	"Books Stock Ledger Entry": (READ, READ, READ),
+	"Books Loyalty Point Entry": (READ, READ, READ),
 }
 TEST_USER = "books-user-permissions@example.com"
+MANAGER = "books-manager-permissions@example.com"
 
 
 class IntegrationTestPermissions(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		if not frappe.db.exists("User", TEST_USER):
-			frappe.get_doc(
-				{
-					"doctype": "User",
-					"email": TEST_USER,
-					"first_name": "Books User",
-					"send_welcome_email": 0,
-					"roles": [{"role": "Books User"}],
-				}
-			).insert(ignore_permissions=True)
+		for email, role in ((TEST_USER, "Books User"), (MANAGER, "Books Manager")):
+			if not frappe.db.exists("User", email):
+				frappe.get_doc(
+					{
+						"doctype": "User",
+						"email": email,
+						"first_name": role,
+						"send_welcome_email": 0,
+						"roles": [{"role": role}],
+					}
+				).insert(ignore_permissions=True)
 
 	def test_role_matrix(self):
 		roles = ("System Manager", "Books Manager", "Books User")
@@ -67,6 +71,22 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			template.template = "<div>{{ doc.name }}</div>"
 			self.assertRaises(frappe.PermissionError, template.save)
 
+	def test_roles_import_the_doctypes_they_create(self):
+		for user, doctype, allowed in (
+			(TEST_USER, "Books Sales Invoice", True),
+			(TEST_USER, "Books Tax", False),
+			(MANAGER, "Books Tax", True),
+			(MANAGER, "Books Ledger Entry", False),
+		):
+			with self.subTest(user=user, doctype=doctype), self.set_user(user):
+				self.assertEqual(frappe.has_permission(doctype, "import"), allowed)
+
+	def test_bridge_ledger_writes_follow_docperms(self):
+		with self.set_user(MANAGER):
+			for schema in ("AccountingLedgerEntry", "StockLedgerEntry", "LoyaltyPointEntry"):
+				with self.subTest(schema=schema):
+					self.assertRaises(frappe.PermissionError, BooksDatabaseBridge().insert, schema, {})
+
 	def test_bridge_hides_fields_above_the_users_permlevel(self):
 		party = make_party(make_account("Permlevel Receivable", account_type="Receivable").name)
 		party.db_set("email", "hidden@example.com")
@@ -87,6 +107,14 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(TEST_USER):
 			self.assertEqual(_search_shipments(hidden), [])
 			self.assertEqual(_search_shipments(readable), [readable])
+
+	def test_link_search_skips_documents_the_user_cannot_read(self):
+		readable, hidden = _seed_shipment(), _seed_shipment()
+		add_user_permission("Books Shipment", readable, TEST_USER)
+		with self.set_user(TEST_USER):
+			found = BooksDatabaseBridge().call("searchLink", ["Shipment", "", {}, ["name"], 50])
+		self.assertIn(readable, [row["name"] for row in found])
+		self.assertNotIn(hidden, [row["name"] for row in found])
 
 	def test_linked_entries_need_the_document_and_hide_unreadable_links(self):
 		original = _seed_shipment()
@@ -125,7 +153,7 @@ def _role_rights(doctype, role):
 
 
 def _search_shipments(name):
-	found = BooksDatabaseBridge().call("search", [name, {"Shipment": ["name"]}, 5])
+	found = BooksDatabaseBridge().call("search", [name, ["Shipment"], 5])
 	return [row["name"] for row in found["Shipment"]]
 
 

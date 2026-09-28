@@ -218,9 +218,9 @@ test('a new cart row needs the item in stock', async () => {
 
 test('a cart row fills serial numbers for sales and keeps a return row’s', async () => {
   const requested = [];
-  const fyo = makeSerialFyo(async (limit) => {
-    requested.push(limit);
-    return [{ name: 'SN-1' }, { name: 'SN-2' }];
+  const fyo = makeSerialFyo(async (quantity) => {
+    requested.push(quantity);
+    return ['SN-1', 'SN-2'];
   });
   const serials = {};
   const sale = makeSerialRow(fyo, { quantity: 2 });
@@ -267,10 +267,17 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
   });
 });
 
+/** Serial numbers come from the server pick at the POS inventory. */
 function makeSerialFyo(getSerialNumbers) {
+  globalThis.window = { location: { hostname: 'books.localhost' } };
+  globalThis.fetch = async (_url, { body }) => {
+    const { location, quantity } = JSON.parse(body);
+    assert.equal(location, inventory);
+    return Response.json({ message: await getSerialNumbers(quantity) });
+  };
   return {
     getValue: async () => true,
-    db: { getAllRaw: async (_schema, { limit }) => getSerialNumbers(limit) },
+    db: { getStockLocation: async () => inventory },
   };
 }
 

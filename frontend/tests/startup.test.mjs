@@ -21,7 +21,7 @@ test('startup builds one translated schema map for a non-English language', asyn
       return fieldProperties;
     }
   }
-  globalThis.window = { books_boot: { country_code: '-' } };
+  globalThis.window = { frappe: { boot: { books: { country_code: '-' } } } };
   useTranslations({ Date: 'Datum' });
   try {
     const fyo = new Fyo({ DatabaseDemux: Demux });

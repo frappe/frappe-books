@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DateTime } from 'luxon';
 import {
   makeFyo,
-  BalanceSheet,
   ProfitAndLoss,
   getJsonData,
   getCsvData,
   getDocStatus,
+  getDocStatusBadge,
+  getLoyaltyProgramBadge,
+  getStateBadge,
 } from './helpers/accounting.mjs';
+import { reportResult, stubServer } from './helpers/server.mjs';
 
 test('CSV and JSON retain hidden groups and visible leaf amounts', async () => {
   const fyo = await makeFyo();
@@ -48,55 +50,67 @@ test('CSV and JSON retain hidden groups and visible leaf amounts', async () => {
   }
 });
 
-test('balance sheet and P&L request their periods and render server totals', async () => {
+test('P&L takes its defaults, periods and totals from the server', async () => {
   const fyo = await makeFyo();
-  const calls = [];
-  const section = (rootType, name, values) => ({
-    rootType,
-    accounts: [{ name, level: 0, isGroup: false, values }],
-    total: values,
-  });
-  fyo.db.getReportData = async (query, ...args) => {
-    calls.push([query, ...args]);
-    if (query === 'getBalanceSheet')
-      return { sections: [section('Asset', 'Cash', [130, 150])] };
-    return {
-      sections: [
-        section('Income', 'Sales', [200, 100]),
-        section('Expense', 'Rent', [0, 130]),
-      ],
-      profit: [200, -30],
-    };
-  };
-  const ranges = [2024, 2023].map((year) => ({
-    fromDate: DateTime.local(year, 1, 1),
-    toDate: DateTime.local(year + 1, 1, 1),
-  }));
-  const rawValues = (report) =>
-    report.reportData.map((row) => row.cells.map((cell) => cell.rawValue));
-
-  const balanceSheet = new BalanceSheet(fyo);
-  balanceSheet._dateRanges = ranges;
-  await balanceSheet.setReportData();
-  assert.deepEqual(calls[0], [
-    'getBalanceSheet',
-    [
-      { fromDate: '2024-01-01', toDate: '2025-01-01' },
-      { fromDate: '2023-01-01', toDate: '2024-01-01' },
-    ],
-  ]);
-  assert.deepEqual(rawValues(balanceSheet), [
-    ['Cash', 130, 150],
-    ['Total Asset (Debit)', 130, 150],
-  ]);
-
+  const columns = [
+    ['account', 'Link', 240],
+    ['period_2024_12_31', 'Currency', 150],
+    ['period_2023_12_31', 'Currency', 150],
+  ];
+  const rows = [
+    {
+      account: 'Income',
+      indent: 0,
+      is_group: true,
+      period_2024_12_31: null,
+      period_2023_12_31: null,
+    },
+    {
+      account: 'Sales',
+      indent: 1,
+      is_group: false,
+      period_2024_12_31: 200,
+      period_2023_12_31: 100,
+    },
+    {},
+    {
+      account: 'Total Profit',
+      indent: 0,
+      bold: 1,
+      period_2024_12_31: 200,
+      period_2023_12_31: -30,
+    },
+  ];
+  const calls = stubServer((method) =>
+    method.endsWith('get_default_filters')
+      ? {
+          based_on: 'Until Date',
+          periodicity: 'Yearly',
+          count: 2,
+          to_date: '2024-12-31',
+        }
+      : reportResult(columns, rows)
+  );
   const profit = new ProfitAndLoss(fyo);
-  profit._dateRanges = ranges;
-  await profit.setReportData();
-  assert.equal(calls[1][0], 'getProfitAndLoss');
-  assert.equal(profit.reportData.length, 7);
-  const profitRow = profit.reportData.at(-1);
-  assert.equal(profitRow.cells[0].rawValue, 'Total Profit');
+  await profit.initialize();
+
+  assert.deepEqual(calls[1].args.filters, {
+    based_on: 'Until Date',
+    periodicity: 'Yearly',
+    to_date: '2024-12-31',
+    count: 2,
+    consolidate_columns: false,
+    hide_group_amounts: false,
+  });
+  const [group, sales, blank, profitRow] = profit.reportData;
+  assert.deepEqual(
+    group.cells.map((cell) => cell.value),
+    ['Income', '', '']
+  );
+  assert.equal(group.isGroup, true);
+  assert.equal(sales.cells[0].indent, 1);
+  assert.equal(blank.isEmpty, true);
+  assert.equal(profitRow.cells[0].bold, true);
   assert.deepEqual(
     profitRow.cells.slice(1).map((cell) => [cell.rawValue, cell.color]),
     [
@@ -109,7 +123,7 @@ test('balance sheet and P&L request their periods and render server totals', asy
 test('list and form statuses come from the stored status', async () => {
   const fyo = await makeFyo();
   const schema = fyo.schemaMap.SalesInvoice;
-  assert.equal(getDocStatus({ schema, status: 'PartlyPaid' }), 'PartlyPaid');
+  assert.equal(getDocStatus({ schema, status: 'Partly Paid' }), 'Partly Paid');
   assert.equal(getDocStatus({ schema, notInserted: true }), 'Draft');
   assert.equal(
     getDocStatus({ schema, dirty: true, status: 'Saved' }),
@@ -120,6 +134,35 @@ test('list and form statuses come from the stored status', async () => {
   assert.equal(
     getDocStatus({ schema: fyo.schemaMap.Lead, status: 'Open' }),
     'Saved'
+  );
+});
+
+test('status badges use the status option label and the DocType state colour', async () => {
+  const fyo = await makeFyo();
+  const schema = fyo.schemaMap.SalesInvoice;
+  assert.deepEqual(getDocStatusBadge({ schema, status: 'Partly Paid' }), {
+    label: 'Partly Paid',
+    theme: 'amber',
+  });
+  assert.deepEqual(getDocStatusBadge({ schema, status: 'Paid' }), {
+    label: 'Paid',
+    theme: 'green',
+  });
+  assert.deepEqual(getDocStatusBadge({ schema, notInserted: true }), {
+    label: 'Draft',
+    theme: 'gray',
+  });
+  assert.deepEqual(getStateBadge(fyo.schemaMap.Lead, 'Do not Contact'), {
+    label: 'Do not Contact',
+    theme: 'red',
+  });
+  const program = fyo.schemaMap.LoyaltyProgram;
+  assert.deepEqual(
+    getLoyaltyProgramBadge({ schema: program, status: 'Maxed' }),
+    {
+      label: 'Maxed',
+      theme: 'amber',
+    }
   );
 });
 

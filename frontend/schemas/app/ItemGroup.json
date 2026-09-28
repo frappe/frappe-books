@@ -28,6 +28,5 @@
       "placeholder": "HSN/SAC Code"
     }
   ],
-  "quickEditFields": ["tax", "hsnCode"],
-  "keywordFields": ["name"]
+  "quickEditFields": ["tax", "hsnCode"]
 }

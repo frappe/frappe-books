@@ -5,10 +5,10 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import add_days, getdate, now_datetime
 
 from frappe_books.commerce.pos import open_shift_name
-from frappe_books.tests.accounting import ledger_entries, make_account, unique_name
+from frappe_books.tests.accounting import ledger_entries, make_account, root_group, unique_name
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
@@ -24,6 +24,16 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		entries = ledger_entries("Books Journal Entry", shift.journal_entry)
 		self.assertEqual(debits(entries, self.counter), Decimal("100"))
 		self.assertEqual(credits(entries, "Cash"), Decimal("100"))
+
+	def test_shift_is_dated_when_it_opens(self):
+		draft = make_opening_shift(0)
+		draft.opening_date = add_days(now_datetime(), -1)
+		draft.insert()
+		self.assertEqual(getdate(draft.opening_date), getdate(add_days(now_datetime(), -1)))
+
+		draft.submit()
+
+		self.assertEqual(getdate(draft.reload().opening_date), getdate(now_datetime()))
 
 	def test_draft_shift_is_not_open(self):
 		make_opening_shift(100).insert()
@@ -86,7 +96,12 @@ def set_pos_accounts():
 	)
 	if not frappe.db.exists("Books Account", "Cash"):
 		frappe.get_doc(
-			{"doctype": "Books Account", "account_name": "Cash", "root_type": "Asset", "account_type": "Cash"}
+			{
+				"doctype": "Books Account",
+				"account_name": "Cash",
+				"parent_books_account": root_group("Asset"),
+				"account_type": "Cash",
+			}
 		).insert()
 	if not frappe.db.exists("Books Payment Method", "Bank"):
 		frappe.get_doc({"doctype": "Books Payment Method", "name": "Bank", "type": "Bank"}).insert()

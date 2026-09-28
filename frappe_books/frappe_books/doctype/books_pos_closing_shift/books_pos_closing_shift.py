@@ -6,11 +6,12 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.commerce.pos import (
 	cancel_cash_journal,
 	cash_account,
 	cash_total,
+	is_cash_method,
 	lock_pos_settings,
 	make_cash_journal,
 	open_shift_name,
@@ -52,8 +53,8 @@ class BooksPosClosingShift(Document):
 			frappe.throw(_("There is no open POS shift to close."))
 		validate_cash_rows(self.closing_cash)
 		self.set_closing_amounts()
-		cash_row = self.get_cash_row()
-		if cash_row and cash_total(self.closing_cash) != rounded(cash_row.closing_amount):
+		cash_rows = self.get_cash_rows()
+		if cash_rows and cash_total(self.closing_cash) != _cash_sum(cash_rows, "closing_amount"):
 			frappe.throw(_("Closing Cash amount must equal the denomination total."))
 
 	def before_submit(self):
@@ -63,12 +64,12 @@ class BooksPosClosingShift(Document):
 		self.set_closing_amounts()
 
 	def on_submit(self):
-		cash_row = self.get_cash_row()
-		if not cash_row:
+		cash_rows = self.get_cash_rows()
+		if not cash_rows:
 			return
 		journal = make_cash_journal(
 			self.closing_date,
-			_closing_journal_rows(cash_row),
+			_closing_journal_rows(cash_rows),
 			_("POS closing shift {0}").format(self.name),
 		)
 		self.db_set("journal_entry", journal)
@@ -104,18 +105,22 @@ class BooksPosClosingShift(Document):
 				},
 			)
 
-	def get_cash_row(self):
-		return next((row for row in self.closing_amounts if row.payment_method == "Cash"), None)
+	def get_cash_rows(self):
+		return [row for row in self.closing_amounts if is_cash_method(row.payment_method)]
 
 
-def _closing_journal_rows(cash_row):
+def _cash_sum(cash_rows, fieldname):
+	return rounded(sum_decimal(row.get(fieldname) for row in cash_rows))
+
+
+def _closing_journal_rows(cash_rows):
 	"""Move counted cash out of the counter, clear what was expected, and write off the difference."""
 	settings = frappe.get_single("Books Pos Settings")
 	rows = [
-		(cash_account(), cash_row.closing_amount, 0),
-		(settings.cash_account, 0, cash_row.expected_amount),
+		(cash_account(), _cash_sum(cash_rows, "closing_amount"), 0),
+		(settings.cash_account, 0, _cash_sum(cash_rows, "expected_amount")),
 	]
-	difference = as_decimal(cash_row.difference_amount)
+	difference = _cash_sum(cash_rows, "difference_amount")
 	if difference:
 		if not settings.write_off_account:
 			frappe.throw(_("Set a write-off account in POS Settings."))

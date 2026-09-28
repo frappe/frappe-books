@@ -1,34 +1,46 @@
 """Permission-aware database compatibility layer for the Books Vue SPA."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 import frappe
+import frappe.handler
+from frappe.desk.search import search_widget
 from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
-from frappe_books.accounting.invoice import InvoiceController
 from frappe_books.inventory.stock import create_missing_batches
+from frappe_books.settings import update_system_settings
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
 from frappe_books.ui_bridge.mapping import (
 	SOURCE_META_TO_TARGET,
 	custom_field_mapping,
 	schema_mapping,
+	search_fields,
 	source_by_doctype,
 	source_field,
 	source_reference,
+	system_settings_fields,
 	target_doctype,
 	target_field,
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists", "preview", "getMapped"}
+READ_METHODS = {
+	"get",
+	"getAll",
+	"count",
+	"search",
+	"searchLink",
+	"getSingleValues",
+	"exists",
+	"getMapped",
+}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
-PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
-INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__expectedModified"}
+INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled"}
 # Frappe maintains nested-set indices when the document is saved.
 TREE_INDEX_FIELDS = {"lft", "rgt"}
 DOCSTATUS_FLAGS = {"submitted": {1, 2}, "cancelled": {2}}
@@ -93,27 +105,51 @@ class BooksDatabaseBridge:
 		)
 		return sum(row.count for row in rows)
 
-	def search(self, text: str, fields_by_schema: dict[str, list[str]], limit: int) -> dict[str, list[dict]]:
-		"""Return up to `limit` rows of each schema whose keyword fields match `text`."""
-		pattern = _subsequence_pattern(text)
-		return {
-			source_schema: self._search_rows(source_schema, fields, pattern, limit)
-			for source_schema, fields in fields_by_schema.items()
-		}
+	def search(self, text: str, schemas: list[str], limit: int) -> dict[str, list[dict]]:
+		"""Return up to `limit` rows of each schema whose search fields hold the letters of the
+		longest word in `text`, in order, as the interface's fuzzy search matches them."""
+		word = max(text.split(), key=len, default="")
+		return {source_schema: self._search_rows(source_schema, word, limit) for source_schema in schemas}
 
-	def _search_rows(self, source_schema, fields, pattern, limit):
+	def search_link(
+		self, source_schema: str, text: str, filters: dict[str, Any] | None, fields: list[str], limit: int
+	) -> list[dict]:
+		"""Return the link options Frappe's link search finds for the letters of `text`, in order."""
+		rows = self._search_widget(source_schema, text.strip(), limit, filters or {}, fields)
+		return [self._row_to_source(source_schema, row, fields) for row in rows]
+
+	def _search_rows(self, source_schema, word, limit):
 		meta = frappe.get_meta(target_doctype(source_schema))
-		requested = [*fields]
+		fields = search_fields(source_schema)
 		if meta.istable:
-			requested += ["parent", "parentSchemaName"]
-		if meta.is_submittable:
-			requested += ["submitted", "cancelled"]
+			return self._search_table_rows(source_schema, fields, word, limit)
+		requested = [*fields, "submitted", "cancelled"] if meta.is_submittable else fields
+		rows = self._search_widget(source_schema, word, limit, {}, requested)
+		return [self._row_to_source(source_schema, row, requested) for row in rows]
+
+	def _search_widget(self, source_schema, text, limit, filters, fields):
+		# Frappe matches `%txt%`; a `%` between letters matches them in order.
+		return search_widget(
+			target_doctype(source_schema),
+			"%".join(text),
+			page_length=limit,
+			filters=self._target_filters(source_schema, filters),
+			filter_fields=self._target_fields(source_schema, fields),
+			as_dict=True,
+		)
+
+	def _search_table_rows(self, source_schema, fields, word, limit):
+		"""Frappe's search needs a parent doctype for table rows, so their rows are listed directly."""
+		if not fields:
+			return []
+		requested = [*fields, "parent", "parentSchemaName"]
+		pattern = f"%{'%'.join(word)}%"
 		rows = self._get_list_rows(
-			meta.name,
+			target_doctype(source_schema),
 			fields=self._target_fields(source_schema, requested),
 			filters=[],
 			or_filters=[[target_field(source_schema, field), "like", pattern] for field in fields],
-			order_by="idx" if meta.istable else "modified desc",
+			order_by="idx",
 			offset=None,
 			limit=limit,
 		)
@@ -145,22 +181,21 @@ class BooksDatabaseBridge:
 		for request in requests:
 			parent, fieldname = request["parent"], request["fieldname"]
 			target = target_doctype(parent)
-			target_name = target_field(parent, fieldname)
-			meta = frappe.get_meta(target)
-			if not frappe.has_permission(target, ptype="read") or self._is_password_field(meta, target_name):
+			if not frappe.has_permission(target, ptype="read"):
 				continue
-			value = frappe.db.get_single_value(target, target_name)
-			values.append(
-				{
-					"parent": parent,
-					"fieldname": fieldname,
-					"value": _source_value(meta, target_name, value),
-				}
-			)
+			if fieldname in system_settings_fields(parent):
+				value = _system_setting(parent, fieldname)
+			else:
+				target_name = target_field(parent, fieldname)
+				meta = frappe.get_meta(target)
+				if self._is_password_field(meta, target_name):
+					continue
+				value = _source_value(meta, target_name, frappe.db.get_single_value(target, target_name))
+			values.append({"parent": parent, "fieldname": fieldname, "value": value})
 		return values
 
 	def insert(self, source_schema: str, values: dict[str, Any]) -> dict:
-		target = _writable_doctype(source_schema)
+		target = target_doctype(source_schema)
 		if values.get("submitted") or values.get("cancelled"):
 			frappe.throw("Use the Books document action API to submit or cancel documents")
 		if frappe.get_meta(target).issingle:
@@ -176,49 +211,58 @@ class BooksDatabaseBridge:
 		return self._to_readable_source(source_schema, doc)
 
 	def update(self, source_schema: str, values: dict[str, Any]) -> dict:
-		target = _writable_doctype(source_schema)
+		target = target_doctype(source_schema)
 		if frappe.get_meta(target).issingle:
 			return self._update_single(source_schema, values)
 		if not isinstance(values.get("name"), str):
 			frappe.throw("Books update values require a document name")
 		doc = frappe.get_doc(target, values["name"])
 		doc.check_permission("write")
-		self._validate_expected_modified(doc, values.get("__expectedModified"))
 		self._validate_docstatus_update(doc, values)
 		self._set_target_values(doc, source_schema, values)
+		if "modified" in values:
+			# Frappe's check_if_latest refuses the save if the stored document changed since.
+			doc.modified = values["modified"]
 		create_missing_batches(doc)
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
 
-	def preview(self, source_schema: str, values: dict[str, Any], name: str | None = None) -> dict:
-		"""Return the values a save would calculate for a new or edited invoice, without saving."""
-		target = target_doctype(source_schema)
-		doc = frappe.get_doc({"doctype": target, **self._target_values(source_schema, values), "name": name})
-		if not isinstance(doc, InvoiceController):
-			frappe.throw(f"Books cannot preview {source_schema} documents")
-		if name:
-			frappe.get_doc(target, name).check_permission("write")
-		else:
-			doc.check_permission("create")
-		doc.calculate()
-		return self._to_readable_source(source_schema, doc)
+	def run_doc_method(
+		self, method: str, source_schema: str, values: dict[str, Any], name: str | None = None
+	) -> dict:
+		"""Run a whitelisted controller method on the values with Frappe's run_doc_method.
+
+		The values edit the saved document `name`, or make a new document without it.
+		"""
+		frappe.handler.run_doc_method(method, docs=self._target_document(source_schema, values, name))
+		# Frappe responds with the document the method ran on.
+		return self._to_readable_source(source_schema, frappe.response.docs.pop())
 
 	def get_mapped(self, method: str, source_name: str) -> dict:
 		"""Return the unsaved document a whitelisted mapper, like make_return, builds."""
 		doc = make_mapped_doc(method, source_name)
 		return self._to_readable_source(source_by_doctype()[doc.doctype], doc)
 
+	def get_duplicate(self, source_schema: str, values: dict[str, Any]) -> dict:
+		"""Return an unsaved copy of a document's values, without the fields Frappe marks no_copy."""
+		document = {"doctype": target_doctype(source_schema), **self._target_values(source_schema, values)}
+		duplicate = frappe.copy_doc(document, ignore_no_copy=False)
+		# The fields Frappe does not copy take a new document's defaults.
+		duplicate.update_if_missing(frappe.new_doc(duplicate.doctype, as_dict=True))
+		duplicate.check_permission("create")
+		return self._to_readable_source(source_schema, duplicate)
+
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
-		frappe.rename_doc(_writable_doctype(source_schema), old_name, new_name)
+		frappe.rename_doc(target_doctype(source_schema), old_name, new_name)
 
 	def delete(self, source_schema: str, name: str) -> None:
-		frappe.delete_doc(_writable_doctype(source_schema), name)
+		frappe.delete_doc(target_doctype(source_schema), name)
 
 	def delete_all(self, source_schema: str, filters: dict[str, Any]) -> int:
 		if not filters:
 			frappe.throw("Books bulk deletion requires at least one filter")
 		names = frappe.get_list(
-			_writable_doctype(source_schema),
+			target_doctype(source_schema),
 			filters=self._target_filters(source_schema, filters),
 			pluck="name",
 		)
@@ -245,11 +289,14 @@ class BooksDatabaseBridge:
 		return self._append_source_children(source_schema, doc, values, requested)
 
 	def _to_source_single(self, source_schema: str, doc, requested=None) -> dict:
+		# Virtual fields are computed on read; Frappe also saves a stale copy in Singles.
+		virtual = {df.fieldname: doc.get_virtual_field_value(df) for df in doc.meta.fields if df.is_virtual}
 		stored = {
 			field: value
 			for field, value in frappe.db.get_singles_dict(doc.doctype).items()
-			if hasattr(doc, field) and not self._is_password_field(doc.meta, field)
+			if field not in virtual and hasattr(doc, field) and not self._is_password_field(doc.meta, field)
 		}
+		stored.update(virtual)
 		stored["name"] = source_schema
 		known_targets = set(schema_mapping()[source_schema]["fields"].values())
 		available = {
@@ -259,6 +306,7 @@ class BooksDatabaseBridge:
 		if requested:
 			available.intersection_update(requested)
 		values = self._row_to_source(source_schema, stored, sorted(available))
+		values.update(_system_settings_values(source_schema, requested))
 		return self._append_source_children(source_schema, doc, values, requested)
 
 	def _append_source_children(self, source_schema, doc, values, requested=None):
@@ -326,8 +374,7 @@ class BooksDatabaseBridge:
 		fields = {
 			target_field(source_schema, fieldname)
 			for fieldname in requested
-			if not (meta.get_field(target_field(source_schema, fieldname)) or frappe._dict()).get("fieldtype")
-			== "Table"
+			if _is_column(meta.get_field(target_field(source_schema, fieldname)))
 		}
 		fields.add("name")
 		return sorted(fields)
@@ -377,11 +424,22 @@ class BooksDatabaseBridge:
 		fields = [group_by] if isinstance(group_by, str) else group_by
 		return ", ".join(target_field(source_schema, field) for field in fields)
 
+	def _target_document(self, source_schema, values, name):
+		document = {"doctype": target_doctype(source_schema), **self._target_values(source_schema, values)}
+		if name:
+			return {**document, "name": name, "modified": values.get("modified")}
+		return {**document, "__islocal": 1}
+
 	def _update_single(self, source_schema, values):
+		system_fields = system_settings_fields(source_schema)
 		doc = frappe.get_single(target_doctype(source_schema))
 		doc.check_permission("write")
-		self._set_target_values(doc, source_schema, values)
+		own_values = {field: value for field, value in values.items() if field not in system_fields}
+		self._set_target_values(doc, source_schema, own_values)
 		doc.save()
+		update_system_settings(
+			{system_fields[field]: value for field, value in values.items() if field in system_fields}
+		)
 		return self.get(source_schema, source_schema)
 
 	def _set_target_values(self, doc, source_schema, values):
@@ -401,44 +459,33 @@ class BooksDatabaseBridge:
 		if ("submitted" in values or "cancelled" in values) and desired != doc.docstatus:
 			frappe.throw("Use the Books document action API to change document status")
 
-	def _validate_expected_modified(self, doc, expected):
-		if expected is None or doc.meta.issingle:
-			return
-		if not isinstance(expected, str):
-			frappe.throw("The expected Books modification time must be a string")
-		try:
-			expected_datetime = datetime.fromisoformat(expected.replace("Z", "+00:00"))
-		except ValueError:
-			frappe.throw("The expected Books modification time is invalid")
-		if expected_datetime.tzinfo is None:
-			expected_datetime = expected_datetime.replace(tzinfo=ZoneInfo(get_system_timezone()))
-		current_datetime = _aware_datetime(doc.modified)
-		if _javascript_datetime(current_datetime) != _javascript_datetime(expected_datetime):
-			frappe.throw(
-				f"{doc.doctype} {doc.name} changed after it was opened. Reload and try again.",
-				frappe.TimestampMismatchError,
-			)
-
 	def _is_password_field(self, meta, fieldname):
 		field = meta.get_field(fieldname)
 		return bool(field and field.fieldtype == "Password")
 
 
-def _subsequence_pattern(text: str) -> str:
-	"""Match the letters of the longest word in order, as the interface's fuzzy search does."""
-	word = max(text.split(), key=len, default="")
-	return f"%{'%'.join(word)}%"
+def _system_settings_values(source_schema: str, requested=None) -> dict:
+	fields = system_settings_fields(source_schema)
+	return {
+		field: _system_setting(source_schema, field)
+		for field in fields
+		if not requested or field in requested
+	}
+
+
+def _system_setting(source_schema: str, field: str) -> Any:
+	"""A System Settings value shown in a Books settings schema. Frappe boots it for every user."""
+	return frappe.db.get_single_value("System Settings", system_settings_fields(source_schema)[field])
+
+
+def _is_column(docfield) -> bool:
+	"""Standard fields have no DocField; tables and virtual fields have no column."""
+	return not docfield or not (docfield.fieldtype == "Table" or docfield.is_virtual)
 
 
 def _is_named_by_user(meta) -> bool:
 	autoname = (meta.autoname or "").lower()
 	return autoname == "prompt" or autoname.startswith("field:")
-
-
-def _writable_doctype(source_schema: str) -> str:
-	if source_schema in PROTECTED_WRITE_SCHEMAS:
-		frappe.throw(f"{source_schema} records are managed by server document actions")
-	return target_doctype(source_schema)
 
 
 def _snake_case(value: str) -> str:
@@ -450,7 +497,10 @@ def _source_row_value(meta, source_name: str, target_name: str, row: dict) -> An
 		return cint(row.get("docstatus")) in DOCSTATUS_FLAGS[source_name]
 	value = row.get(target_name)
 	field = meta.get_field(target_name)
-	if value and (target_name in {"creation", "modified"} or (field and field.fieldtype == "Datetime")):
+	if value and target_name == "modified":
+		# The client sends it back unchanged, for Frappe to refuse saving a stale document.
+		return str(get_datetime(value))
+	if value and (target_name == "creation" or (field and field.fieldtype == "Datetime")):
 		return iso_datetime(value)
 	return _source_value(meta, target_name, value)
 
@@ -515,8 +565,3 @@ def _aware_datetime(value) -> datetime:
 	if datetime_value.tzinfo is None:
 		datetime_value = datetime_value.replace(tzinfo=ZoneInfo(get_system_timezone()))
 	return datetime_value
-
-
-def _javascript_datetime(value: datetime) -> datetime:
-	utc_value = value.astimezone(UTC)
-	return utc_value.replace(microsecond=utc_value.microsecond // 1000 * 1000)

@@ -26,7 +26,6 @@ export default defineConfig(async () => {
         schemas: path.resolve(frontendRoot, 'schemas'),
         models: path.resolve(frontendRoot, 'models'),
         utils: path.resolve(frontendRoot, 'utils'),
-        regional: path.resolve(frontendRoot, 'regional'),
         reports: path.resolve(frontendRoot, 'reports'),
         fixtures: path.resolve(frontendRoot, 'fixtures'),
         'frappe-ui-command-palette': path.resolve(

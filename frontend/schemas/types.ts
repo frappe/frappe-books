@@ -97,6 +97,7 @@ export interface OptionField extends Omit<BaseField, 'fieldtype'> {
   fieldtype: OptionFieldType;
   options: SelectOption[];
   optionLabels?: Record<string, string>; // Labels of option values that need one
+  states?: Record<string, string>; // DocType state colour by `status` option value
   allowCustom?: boolean;
 }
 
@@ -138,7 +139,6 @@ export interface Schema {
   isAbstract?: boolean;          // Not entered into db, used to extend a Subclass schema
   tableFields?: string[]         // Used for displaying childTableFields
   isSubmittable?: boolean;       // For transactional types, values considered only after submit
-  keywordFields?: string[];      // Used to get fields that are to be used for search.
   quickEditFields?: string[];    // Used to get fields for the quickEditForm
   linkDisplayField?:string;      // Display field if inline editable
   create?: boolean               // Whether the user can create an entry from the ListView

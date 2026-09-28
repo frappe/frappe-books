@@ -4,10 +4,10 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
-from frappe_books.accounting.accounts import validate_party_role
+from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
+from frappe_books.accounting.returns import validate_quantity_sign
 from frappe_books.inventory.invoice_balance import (
 	bill_unbilled_rows,
 	update_invoice_balance,
@@ -19,6 +19,7 @@ from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_stock_entries,
 	delete_stock_entries,
+	fill_serial_numbers,
 	populate_stock_rows,
 	reverse_transfers,
 	validate_stock_available,
@@ -26,18 +27,25 @@ from frappe_books.inventory.stock import (
 )
 from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.settings import require_feature, require_features, set_default_terms
+from frappe_books.status import StatusMixin
 
 STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
+
+# The row location an issue takes from and a receipt puts to, the default location when empty.
+DEFAULT_LOCATION_FIELDS = {"MaterialIssue": "from_location", "MaterialReceipt": "to_location"}
 
 # Fields an invoice and its transfer do not share when one is mapped from the other.
 UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
 
-class StockMovementController(SeriesNamingMixin, Document):
+class StockMovementController(StatusMixin, SeriesNamingMixin, Document):
 	def before_validate(self):
+		fill_default_location(self.items, DEFAULT_LOCATION_FIELDS.get(self.movement_type))
 		self.amount = populate_stock_rows(self.items)
 
 	def validate(self):
+		require_feature("enable_inventory")
 		transfers = movement_transfers(self)
 		_validate_movement_locations(self, transfers)
 		validate_transfer_rows(transfers)
@@ -58,18 +66,27 @@ class StockMovementController(SeriesNamingMixin, Document):
 		repost_stock_accounts(delete_stock_entries(self))
 
 
-class StockTransferController(SeriesNamingMixin, Document):
+class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 	transfer_type = "sales"
 
 	def before_validate(self):
+		set_default_terms(self)
 		self.calculate()
 
 	def calculate(self):
 		"""Fill row defaults and the grand total, without writing anything."""
+		fill_default_location(self.items, "location")
 		self.grand_total = populate_stock_rows(self.items)
+		if self.transfer_type == "sales" and not self.return_against:
+			fill_serial_numbers(self.items)
 
 	def validate(self):
+		require_feature("enable_inventory")
+		require_features(self, {"return_against": "enable_invoice_returns"})
 		validate_party_role(self, self.transfer_type == "purchase")
+		validate_item_usage(self, self.transfer_type == "purchase")
+		for row in self.items:
+			validate_quantity_sign(row, bool(self.return_against))
 		validate_transfer_rows(transfer_rows(self))
 		if self.return_against:
 			validate_transfer_return(self)
@@ -109,6 +126,14 @@ class StockTransferController(SeriesNamingMixin, Document):
 		)
 
 
+def fill_default_location(rows, fieldname):
+	"""Set the Inventory Settings default location on rows that leave the field empty."""
+	location = fieldname and frappe.db.get_single_value("Books Inventory Settings", "default_location")
+	for row in rows:
+		if location and not row.get(fieldname):
+			row.set(fieldname, location)
+
+
 def map_transfer_invoice(transfer_doctype, transfer_name):
 	"""Return an unsaved invoice that bills a submitted shipment or purchase receipt."""
 	invoice_doctype = frappe.get_meta(transfer_doctype).get_field("back_reference").options
@@ -119,6 +144,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 			transfer_doctype: {
 				"doctype": invoice_doctype,
 				"validation": {"docstatus": ["=", 1]},
+				"field_map": {"name": "back_reference"},
 				"field_no_map": UNSHARED_FIELDS,
 			},
 			_items_doctype(transfer_doctype): {"doctype": _items_doctype(invoice_doctype)},
@@ -130,8 +156,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 def _bill_transfer(transfer, invoice):
 	validate_billable(transfer)
 	bill_unbilled_rows(transfer, invoice)
-	invoice.date = now_datetime()
-	invoice.calculate()
+	invoice.fill_mapped_values()
 
 
 def _items_doctype(doctype):

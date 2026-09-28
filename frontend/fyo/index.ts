@@ -17,7 +17,7 @@ import { format } from './utils/format';
 import {
   DocPermission,
   hasPermission,
-  type PermissionMap,
+  type Permissions,
 } from './utils/permissions';
 import { t, T } from './utils/translation';
 import type { reports } from 'reports/index';
@@ -209,8 +209,14 @@ export class Fyo {
     isDevelopment: false,
     appVersion: '',
     language: '',
-    permissions: null as PermissionMap | null,
+    permissions: null as Permissions | null,
+    /** The fields search matches and shows, by schema, from the DocType search fields. */
+    searchFields: {} as Record<string, string[] | undefined>,
     chartsOfAccounts: [] as ChartOfAccounts[],
+    // Translated names of the standard chart's accounts, from the server
+    accountLabels: {} as Record<string, string>,
+    // GST state codes and names, from the server
+    indianStates: {} as Record<string, string>,
     reports: {} as Record<keyof typeof reports, Report | undefined>,
   };
 }

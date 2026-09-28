@@ -5,7 +5,6 @@ from __future__ import annotations
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.invoice_balance import pending_quantities
@@ -78,7 +77,6 @@ def _transfer_pending_stock(invoice, transfer):
 	if not rows:
 		frappe.throw(_("Invoice {0} has no stock left to transfer.").format(invoice.name))
 	location = default_location(invoice)
-	transfer.date = now_datetime()
 	transfer.return_against = _returned_transfer(invoice)
 	transfer.set("items", [{**row, "location": location} for row in rows])
 	transfer.calculate()
@@ -131,17 +129,19 @@ def _pos_location() -> str | None:
 
 
 def _stock_rows(invoice) -> list[dict]:
+	"""Return the rows still to transfer, negative for a return like the invoice's own."""
 	pending = pending_quantities(invoice)
+	sign = -1 if invoice.get("return_against") else 1
 	exchange_rate = as_decimal(invoice.exchange_rate or 1)
 	return [
 		{
 			"item": row.item,
 			"transfer_unit": row.transfer_unit or row.unit,
-			"transfer_quantity": pending[row.name] / as_decimal(row.unit_conversion_factor or 1),
+			"transfer_quantity": sign * pending[row.name] / as_decimal(row.unit_conversion_factor or 1),
 			"unit": row.unit,
 			"batch": row.batch,
 			"serial_number": row.serial_number,
-			"quantity": pending[row.name],
+			"quantity": sign * pending[row.name],
 			"unit_conversion_factor": row.unit_conversion_factor or 1,
 			"rate": rounded(as_decimal(row.rate) * exchange_rate),
 			"description": row.description,

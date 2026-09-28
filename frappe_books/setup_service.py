@@ -1,8 +1,8 @@
 """Set up a Books company on the current Frappe site."""
 
 import frappe
+from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 
-from frappe_books.accounting.money import as_decimal
 from frappe_books.coa import (
 	ensure_bank_account,
 	ensure_cash_account,
@@ -11,21 +11,23 @@ from frappe_books.coa import (
 	find_ledger_account,
 	load_chart,
 )
-from frappe_books.currency import currency_fraction_values, currency_precision
+from frappe_books.currency import currency_precision
 from frappe_books.regional import ensure_regional_records
 from frappe_books.series import NUMBER_SERIES
+from frappe_books.settings import update_system_settings
 
 
 def run_setup(wizard):
+	complete_site_setup(wizard)
 	chart = load_chart(wizard.chart_of_accounts)
 	ensure_chart(chart)
 	ensure_regional_records(wizard.country)
 	bank_account = ensure_bank_account(wizard.bank_name, chart, wizard.country)
 	discount_account = ensure_discount_account(chart)
-	ensure_currency(wizard.currency)
+	enable_currency(wizard.currency)
 	accounts = {**default_accounts(chart), "cash": ensure_cash_account(chart)}
 	_update_accounting_settings(wizard, discount_account, accounts)
-	_update_system_settings(wizard)
+	_update_books_system_settings(wizard)
 	_update_print_settings(wizard)
 	_update_inventory_settings(accounts)
 	_update_pos_settings(accounts)
@@ -33,31 +35,20 @@ def run_setup(wizard):
 	return {"setup_complete": True, "bank_account": bank_account}
 
 
-def ensure_currency(currency):
-	if not currency or frappe.db.exists("Books Currency", currency):
-		return
-	core_currency = (
-		frappe.db.get_value(
-			"Currency",
-			currency,
-			["symbol", "fraction", "fraction_units", "smallest_currency_fraction_value"],
-			as_dict=True,
-		)
-		or {}
-	)
-	fraction_values = currency_fraction_values(currency)
-	minimum = as_decimal(core_currency.get("smallest_currency_fraction_value"))
-	if minimum and minimum > fraction_values["smallest_value"]:
-		fraction_values["smallest_value"] = minimum
-	frappe.get_doc(
-		{
-			"doctype": "Books Currency",
-			"name": currency,
-			"symbol": core_currency.get("symbol") or currency,
-			"fraction": core_currency.get("fraction") or "Cent",
-			**fraction_values,
-		}
-	).insert(ignore_permissions=True)
+def complete_site_setup(wizard):
+	"""Frappe's setup sets System Settings: country, currency, time zone and formats.
+
+	On a site Frappe has set up already, only the company country and currency change.
+	"""
+	if frappe.is_setup_complete():
+		update_system_settings({"country": wizard.country, "currency": wizard.currency})
+	else:
+		complete_app_setup(country=wizard.country, currency=wizard.currency, timezone=wizard.time_zone)
+
+
+def enable_currency(currency):
+	"""Frappe offers only enabled currencies in Link searches."""
+	frappe.db.set_value("Currency", currency, "enabled", 1)
 
 
 def default_accounts(chart):
@@ -81,7 +72,6 @@ def _update_accounting_settings(wizard, discount_account, accounts):
 			"fullname": wizard.fullname,
 			"company_name": wizard.company_name,
 			"bank_name": wizard.bank_name,
-			"country": wizard.country,
 			"email": wizard.email,
 			"write_off_account": accounts["write_off"],
 			"round_off_account": accounts["round_off"],
@@ -107,13 +97,11 @@ def _update_print_settings(wizard):
 	settings.save(ignore_permissions=True)
 
 
-def _update_system_settings(wizard):
+def _update_books_system_settings(wizard):
 	settings = frappe.get_single("Books System Settings")
 	settings.update(
 		{
-			"currency": wizard.currency,
 			"display_precision": currency_precision(wizard.currency),
-			"country_code": _country_code(wizard.country),
 			"locale": "en-IN" if wizard.country == "India" else "en-US",
 		}
 	)
@@ -162,7 +150,3 @@ def _update_defaults(bank_account, accounts):
 		}
 	)
 	defaults.save(ignore_permissions=True)
-
-
-def _country_code(country):
-	return {"India": "in", "Switzerland": "ch"}.get(country, "-")

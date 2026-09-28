@@ -145,6 +145,7 @@
 <script lang="ts">
 import { Button as FrappeButton, dialog } from 'frappe-ui';
 import { t } from 'fyo';
+import { DateTime } from 'luxon';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import ModernPOS from './ModernPOS.vue';
@@ -173,7 +174,7 @@ import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import PageHeader from 'src/components/PageHeader.vue';
 import { computed, defineComponent, inject, nextTick } from 'vue';
-import { Payment } from 'models/baseModels/Payment/Payment';
+import { call } from 'src/web/api';
 import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
 import {
   getPaymentMethodRequirements,
@@ -212,6 +213,15 @@ import { ValidationError } from 'fyo/utils/errors';
 import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
 
 const COMPONENT_NAME = 'POS';
+const PAY_POS_INVOICE =
+  'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice.pay_pos_invoice';
+
+type TenderedPayment = {
+  paymentMethod?: string;
+  amount: Money;
+  referenceId?: string;
+  clearanceDate?: Date;
+};
 
 export default defineComponent({
   name: 'POS',
@@ -314,8 +324,6 @@ export default defineComponent({
         this.posProfile?.posUI || fyo.singles.POSSettings?.posUI;
       return posUI === 'Classic' ? 'Classic' : 'Modern';
     },
-    defaultPOSCashAccount: () =>
-      fyo.singles.POSSettings?.cashAccount ?? undefined,
     isDiscountingEnabled(): boolean {
       return !!fyo.singles.AccountingSettings?.enableDiscounting;
     },
@@ -792,14 +800,12 @@ export default defineComponent({
           await this.validatePaymentDetails();
         }
 
-        this.sinvDoc.date = new Date();
-        await this.validate();
-        if (!this.sinvDoc.isSubmitted) {
+        const payments = isPay ? [this.getTenderedPayment()] : [];
+        if (this.sinvDoc.isSubmitted) {
+          await this.payAtCounter(payments);
+        } else {
+          await this.setTenderedPayments(payments);
           await this.submitSinvDoc();
-        }
-
-        if (isPay) {
-          await this.makePayment();
         }
 
         this.closeAllModals();
@@ -867,63 +873,44 @@ export default defineComponent({
         throw new ValidationError(t`Please select a clearance date.`);
       }
     },
-    async makePayment() {
-      if (this.sinvDoc.outstandingAmount?.isZero()) {
+    getTenderedPayment(): TenderedPayment {
+      return {
+        paymentMethod: this.paymentMethod,
+        amount: this.fyo.pesa(this.paidAmount.float).abs(),
+        referenceId: this.transferRefNo,
+        clearanceDate: this.transferClearanceDate,
+      };
+    },
+    /** The server pays the invoice with these when it submits it. */
+    async setTenderedPayments(payments: TenderedPayment[]) {
+      await this.sinvDoc.set('payments', null);
+      for (const payment of payments) {
+        await this.sinvDoc.append('payments', payment);
+      }
+    },
+    /** Pays an invoice submitted earlier; cash beyond what it owes is change. */
+    async payAtCounter(payments: TenderedPayment[]) {
+      if (!payments.length) {
         return;
       }
 
-      const payment = (await getMappedDoc(
-        this.sinvDoc as SalesInvoice,
-        ModelNameEnum.Payment,
-        'make_payment'
-      )) as Payment;
-      await payment.setMultiple({
-        paymentMethod: this.paymentMethod,
-        amount: this.getPaymentAmount(),
-        referenceType: ModelNameEnum.SalesInvoice,
+      const names = await call<string[]>(PAY_POS_INVOICE, {
+        invoice: this.sinvDoc.name,
+        payments: payments.map((payment) => ({
+          payment_method: payment.paymentMethod,
+          amount: payment.amount.float,
+          reference_id: payment.referenceId,
+          clearance_date: payment.clearanceDate
+            ? DateTime.fromJSDate(payment.clearanceDate).toISODate()
+            : null,
+        })),
       });
-      await this.setPaymentMethodDetails(payment);
-
-      payment.once('afterSubmit', () => {
+      for (const name of names) {
         showToast({
           type: 'success',
-          message: t`Payment ${payment.name as string} is Saved`,
+          message: t`Payment ${name} is Saved`,
           duration: 'short',
         });
-      });
-
-      await payment.sync();
-      await payment.submit();
-    },
-    /** The tendered amount, up to what the invoice still owes. */
-    getPaymentAmount(): Money {
-      const tenderedAmount = this.fyo.pesa(this.paidAmount.float).abs();
-      const outstandingAmount = (
-        this.sinvDoc.outstandingAmount ?? this.sinvDoc.grandTotal
-      )?.abs();
-      return outstandingAmount && tenderedAmount.gt(outstandingAmount)
-        ? outstandingAmount
-        : tenderedAmount;
-    },
-    /** The reference, clearance date or cash account the payment method needs. */
-    async setPaymentMethodDetails(payment: Payment) {
-      const paymentMethod = (await payment.loadAndGetLink(
-        'paymentMethod'
-      )) as PaymentMethod;
-      const requirements = getPaymentMethodRequirements(
-        paymentMethod?.type,
-        paymentMethod?.requiresClearanceDate
-      );
-      if (requirements.requiresReferenceId) {
-        await payment.set('referenceId', this.transferRefNo);
-      }
-
-      if (requirements.requiresClearanceDate) {
-        await payment.set('clearanceDate', this.transferClearanceDate);
-      }
-
-      if (requirements.isCash) {
-        await payment.set('paymentAccount', this.defaultPOSCashAccount);
       }
     },
     async submitSinvDoc() {

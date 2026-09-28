@@ -73,15 +73,15 @@ for (const [schemaName, values] of [
     [
       'Saved',
       'Unpaid',
-      'PartlyPaid',
+      'Partly Paid',
       'Paid',
       'Return',
-      'ReturnIssued',
+      'Return Issued',
       'Cancelled',
     ],
   ],
   ['JournalEntry', ['Saved', 'Submitted', 'Cancelled']],
-  ['Shipment', ['Saved', 'Submitted', 'Return', 'ReturnIssued', 'Cancelled']],
+  ['Shipment', ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled']],
 ]) {
   test(`${schemaName} supplies stored status values and display labels to the filter`, async () => {
     const fyo = await makeFyo();
@@ -95,21 +95,20 @@ for (const [schemaName, values] of [
       values
     );
     assert.ok(status.options.every((option) => option.label));
-    if (schemaName === 'SalesInvoice')
-      assert.equal(
-        status.options.find((option) => option.value === 'PartlyPaid').label,
-        'Partly Paid'
-      );
   });
 }
 
-test('computed loyalty program statuses are not offered as filters', async () => {
+test('stored loyalty program statuses are offered as filters', async () => {
   const fyo = await makeFyo();
   const fields = getFilterFields(
     fyo.schemaMap.LoyaltyProgram.fields,
     fyo.models.LoyaltyProgram.getListViewSettings?.(fyo)?.columns
   );
-  assert.ok(!fields.some((field) => field.fieldname === 'status'));
+  const status = fields.find((field) => field.fieldname === 'status');
+  assert.deepEqual(
+    status.options.map(({ value }) => value),
+    ['Active', 'Disabled', 'Expired', 'Maxed']
+  );
 });
 
 test('stored Select fields retain all configured choices and labels', async () => {

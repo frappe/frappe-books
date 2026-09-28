@@ -23,6 +23,5 @@
       "label": "Manufacture Date"
     }
   ],
-  "quickEditFields": ["item", "expiryDate", "manufactureDate"],
-  "keywordFields": ["name"]
+  "quickEditFields": ["item", "expiryDate", "manufactureDate"]
 }

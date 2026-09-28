@@ -19,10 +19,15 @@ function readJson(url) {
 }
 
 /** The field properties the server sends for the DocType files, and schemas built with them. */
-export function withFieldProperties({ getSchemas, getDoctypeFieldProperties }) {
+export function withFieldProperties({
+  getSchemas,
+  getDoctypeFieldProperties,
+  getDoctypeSearchFields,
+}) {
   const fieldProperties = getDoctypeFieldProperties(doctypes, mapping);
   return {
     fieldProperties,
+    searchFields: getDoctypeSearchFields?.(doctypes, mapping),
     getSchemas: (countryCode, customFields, properties = fieldProperties) =>
       getSchemas(countryCode, customFields, properties),
   };

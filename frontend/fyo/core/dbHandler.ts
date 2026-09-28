@@ -1,19 +1,15 @@
 import { Fyo } from 'fyo';
 import Observable from 'fyo/utils/observable';
+import type { DocPermissionMap } from 'fyo/utils/permissions';
 import { Field, RawValue, SchemaMap } from 'schemas/types';
 import { getMapFromList } from 'utils';
 import {
-  Cashflow,
   DatabaseBase,
   DatabaseDemuxBase,
   GetAllOptions,
-  IncomeExpense,
+  LinkedDoc,
   QueryFilter,
-  ReportQuery,
   SingleValue,
-  TopExpenses,
-  TotalCreditAndDebit,
-  TotalOutstanding,
 } from 'utils/db/types';
 import { Converter } from './converter';
 import {
@@ -150,17 +146,40 @@ export class DatabaseHandler extends DatabaseBase {
     )) as number;
   }
 
+  /** Rows of each schema whose DocType search fields match `text`, for the search palette. */
   async search(
     text: string,
-    fieldsBySchema: Record<string, string[]>,
+    schemaNames: string[],
     limit: number
   ): Promise<Record<string, RawValueMap[]>> {
     return (await this.#demux.call(
       'search',
       text,
-      fieldsBySchema,
+      schemaNames,
       limit
     )) as Record<string, RawValueMap[]>;
+  }
+
+  /** A page of link options that Frappe's link search finds for `text`. */
+  async searchLink(
+    schemaName: string,
+    text: string,
+    filters: QueryFilter | null,
+    fields: string[],
+    limit: number
+  ): Promise<DocValueMap[]> {
+    const rawValueMaps = (await this.#demux.call(
+      'searchLink',
+      schemaName,
+      text,
+      filters,
+      fields,
+      limit
+    )) as RawValueMap[];
+    return this.converter.toDocValueMap(
+      schemaName,
+      rawValueMaps
+    ) as DocValueMap[];
   }
 
   // Update
@@ -176,16 +195,12 @@ export class DatabaseHandler extends DatabaseBase {
 
   async update(
     schemaName: string,
-    docValueMap: DocValueMap,
-    expectedModified?: Date
+    docValueMap: DocValueMap
   ): Promise<DocValueMap> {
     const rawValueMap = this.converter.toRawValueMap(
       schemaName,
       docValueMap
     ) as RawValueMap;
-    if (expectedModified instanceof Date) {
-      rawValueMap.__expectedModified = expectedModified.toISOString();
-    }
     const updatedRawValueMap = (await this.#demux.call(
       'update',
       schemaName,
@@ -197,15 +212,20 @@ export class DatabaseHandler extends DatabaseBase {
     ) as DocValueMap;
   }
 
+  /** Submits or cancels a doc, which the server refuses if it changed after `modified`. */
   async runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,
-    name: string
+    name: string,
+    modified: string,
+    linkedDocs?: LinkedDoc[]
   ): Promise<DocValueMap> {
     const rawValueMap = (await this.#demux.runLifecycleAction(
       action,
       schemaName,
-      name
+      name,
+      modified,
+      linkedDocs
     )) as RawValueMap;
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
@@ -233,7 +253,7 @@ export class DatabaseHandler extends DatabaseBase {
     name?: string
   ): Promise<DocValueMap> {
     const rawValueMap = this.converter.toRawValueMap(schemaName, docValueMap);
-    const previewed = (await this.#demux.call(
+    const previewed = (await this.#demux.runDocMethod(
       'preview',
       schemaName,
       rawValueMap,
@@ -256,53 +276,28 @@ export class DatabaseHandler extends DatabaseBase {
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
-  // The Frappe adapter runs these complex queries on the server.
-
-  async getTopExpenses(fromDate: string, toDate: string): Promise<TopExpenses> {
-    return (await this.#demux.callBespoke(
-      'getTopExpenses',
-      fromDate,
-      toDate
-    )) as TopExpenses;
-  }
-
-  async getTotalOutstanding(
+  /** An unsaved copy of a document's values, without the values Frappe marks no_copy. */
+  async getDuplicate(
     schemaName: string,
-    fromDate: string,
-    toDate: string
-  ): Promise<TotalOutstanding> {
-    return (await this.#demux.callBespoke(
-      'getTotalOutstanding',
+    docValueMap: DocValueMap
+  ): Promise<DocValueMap> {
+    const rawValueMap = (await this.#demux.getDuplicate(
       schemaName,
-      fromDate,
-      toDate
-    )) as TotalOutstanding;
+      this.converter.toRawValueMap(schemaName, docValueMap)
+    )) as RawValueMap;
+    return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
-  async getCashflow(fromDate: string, toDate: string): Promise<Cashflow> {
-    return (await this.#demux.callBespoke(
-      'getCashflow',
-      fromDate,
-      toDate
-    )) as Cashflow;
+  /** The user's rights on one saved document, as Frappe grants them. */
+  async getDocPermissions(
+    doctype: string,
+    name: string
+  ): Promise<DocPermissionMap | undefined> {
+    return (await this.#demux.getDocPermissions(doctype, name)) as
+      DocPermissionMap | undefined;
   }
 
-  async getIncomeAndExpenses(
-    fromDate: string,
-    toDate: string
-  ): Promise<IncomeExpense> {
-    return (await this.#demux.callBespoke(
-      'getIncomeAndExpenses',
-      fromDate,
-      toDate
-    )) as IncomeExpense;
-  }
-
-  async getTotalCreditAndDebit(): Promise<TotalCreditAndDebit[]> {
-    return (await this.#demux.callBespoke(
-      'getTotalCreditAndDebit'
-    )) as TotalCreditAndDebit[];
-  }
+  // The Frappe adapter runs these complex queries on the server.
 
   async getStockQuantity(
     item: string,
@@ -366,10 +361,6 @@ export class DatabaseHandler extends DatabaseBase {
       schemaName,
       name
     )) as Record<string, string[]>;
-  }
-
-  async getReportData<T>(query: ReportQuery, ...args: unknown[]): Promise<T> {
-    return (await this.#demux.callBespoke(query, ...args)) as T;
   }
 
   async getOpenPOSShift(): Promise<string | null> {

@@ -2,8 +2,8 @@ import { createApp, h, reactive, ref } from 'vue';
 import { t } from 'fyo';
 import { StockLedger } from 'reports/inventory/StockLedger';
 import { BalanceSheet } from 'reports/BalanceSheet/BalanceSheet';
-import { DateTime } from 'luxon';
 import type { Report } from 'reports/Report';
+import { toColumnField, type ServerColumn } from 'reports/serverReport';
 import ListReport from 'src/components/Report/ListReport.vue';
 import { fyo } from 'src/initFyo';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
@@ -17,6 +17,28 @@ class OtherReport extends StockLedger {
   static reportName = 'other-report';
 }
 
+// The stock ledger columns as its Script Report returns them.
+const stockLedgerColumns = (
+  [
+    ['index', '#', 'Int', 60],
+    ['date', 'Date', 'Datetime', 150],
+    ['item', 'Item', 'Link'],
+    ['location', 'Location', 'Link'],
+    ['batch', 'Batch', 'Link'],
+    ['serial_number', 'Serial Number', 'Data'],
+    ['quantity', 'Quantity', 'Float'],
+    ['balance_quantity', 'Balance Qty.', 'Float'],
+    ['incoming_rate', 'Incoming rate', 'Currency'],
+    ['valuation_rate', 'Valuation Rate', 'Currency'],
+    ['balance_value', 'Balance Value', 'Currency'],
+    ['value_change', 'Value Change', 'Currency'],
+    ['reference_name', 'Ref. Name', 'Data'],
+    ['reference_type', 'Ref. Type', 'Data'],
+  ] as const
+).map(([fieldname, label, fieldtype, width]) =>
+  toColumnField({ fieldname, label, fieldtype, width })
+);
+
 // Reports and rows exist only in browser memory. No database calls are needed.
 fyo.singles.InventorySettings = {
   enableBatches: true,
@@ -24,20 +46,19 @@ fyo.singles.InventorySettings = {
 } as any;
 function makeReport(ReportClass = StockLedger) {
   const report = new ReportClass(fyo);
-  report.setDefaultFilters();
   report.filters = report.getFilters();
-  report.columns = report.getColumns();
+  report.columns = stockLedgerColumns;
   report.reportData = Array.from({ length: 51 }, (_, index) => {
     const values: Record<string, string> = {
-      name: String(index + 1),
+      index: String(index + 1),
       date: 'Sep 6, 2026 07:45:32',
       item: index === 50 ? lastItemName : itemName,
       location: 'Retail Floor',
       batch: '',
-      serialNumber: 'DEMO-SERIAL-WIRELESS-KEYBOARD-000001',
+      serial_number: 'DEMO-SERIAL-WIRELESS-KEYBOARD-000001',
       quantity: '-1.00',
-      balanceQuantity: '1.00',
-      incomingRate: '1,369.00',
+      balance_quantity: '1.00',
+      incoming_rate: '1,369.00',
     };
     return {
       cells: report.columns.map((column) => ({
@@ -74,11 +95,18 @@ app.mount('#app');
   },
   showBalanceSheet: () => {
     const report = new BalanceSheet(fyo);
-    report._dateRanges = ['2026-09-01', '2026-08-01'].map((date) => ({
-      toDate: DateTime.fromISO(date),
-      fromDate: DateTime.fromISO(date).minus({ months: 1 }),
-    }));
-    report.columns = report.getColumns();
+    report.columns = [
+      { fieldname: 'account', label: 'Account', fieldtype: 'Link', width: 240 },
+      ...[
+        ['period_2026_08_31', 'Aug 31, 2026'],
+        ['period_2026_07_31', 'Jul 31, 2026'],
+      ].map(([fieldname, label]) => ({
+        fieldname,
+        label,
+        fieldtype: 'Currency' as const,
+        width: 150,
+      })),
+    ].map((column) => toColumnField(column as ServerColumn));
     report.reportData = [
       {
         cells: report.columns.map((column, index) => ({

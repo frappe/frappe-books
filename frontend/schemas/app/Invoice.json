@@ -80,11 +80,6 @@
       "hidden": true
     },
     {
-      "fieldname": "entryCurrency",
-      "label": "Entry Currency",
-      "hidden": true
-    },
-    {
       "fieldname": "currency",
       "label": "Customer Currency",
       "hidden": true
@@ -152,12 +147,7 @@
     {
       "fieldname": "status",
       "label": "Status",
-      "optionLabels": {
-        "PartlyPaid": "Partly Paid",
-        "ReturnIssued": "Return Issued"
-      },
       "hidden": true
     }
-  ],
-  "keywordFields": ["name", "party"]
+  ]
 }

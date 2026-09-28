@@ -10,7 +10,7 @@ from frappe.utils import add_to_date, now_datetime
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	movement_values,
 )
-from frappe_books.reports.stock import stock_ledger
+from frappe_books.reports.stock import get_ledger_data
 from frappe_books.tests.accounting import make_account, make_item
 
 
@@ -25,12 +25,12 @@ class IntegrationTestValuation(IntegrationTestCase):
 		move(self.item, "MaterialReceipt", 5, 10)
 		move(self.item, "MaterialIssue", 2, 10)
 
-		entries = stock_ledger({"item": self.item, "ascending": True})
+		entries = get_ledger_data({"item": self.item, "ascending": True})
 
 		self.assertEqual(len(entries), 2)
-		self.assertEqual(entries[-1]["balanceQuantity"], 3)
-		self.assertEqual(entries[-1]["balanceValue"], Decimal("30.00"))
-		self.assertEqual(entries[-1]["valuationRate"], Decimal("10.00"))
+		self.assertEqual(entries[-1]["balance_quantity"], 3)
+		self.assertEqual(entries[-1]["balance_value"], Decimal("30.00"))
+		self.assertEqual(entries[-1]["valuation_rate"], Decimal("10.00"))
 
 	def test_issue_consumes_oldest_layers_first(self):
 		move(self.item, "MaterialReceipt", 4, 10)

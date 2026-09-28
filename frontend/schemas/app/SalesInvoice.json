@@ -82,11 +82,15 @@
       "hidden": true
     },
     {
+      "fieldname": "payments",
+      "label": "Payments",
+      "hidden": true
+    },
+    {
       "fieldname": "pricingRuleDetail",
       "label": "Pricing Rule Detail",
       "edit": false,
       "section": "References"
     }
-  ],
-  "keywordFields": ["name", "party"]
+  ]
 }

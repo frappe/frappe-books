@@ -1,6 +1,16 @@
 import { Doc } from 'fyo/model/doc';
 import { Field } from 'schemas/types';
 
+/** Loads the user's rights on a saved document, which shares, ownership and user permissions change. */
+export async function loadDocPermissions(doc: Doc) {
+  const doctype = doc.fyo.store.permissions?.doctypes[doc.schemaName];
+  if (!doctype || doc.notInserted) {
+    return;
+  }
+
+  doc.docPermissions = await doc.fyo.db.getDocPermissions(doctype, doc.name!);
+}
+
 /**
  * Point a parent document's link field at a record created from a quick edit.
  * The parent may reject the value, so the failure is shown instead of dropped.
@@ -92,8 +102,7 @@ function evaluateFieldMeta(
   const docRecord = doc as Record<string, unknown> | undefined;
   const metaKey = meta as string;
   const metaObj = docRecord?.[metaKey] as
-    | Record<string, (() => boolean) | undefined>
-    | undefined;
+    Record<string, (() => boolean) | undefined> | undefined;
   const evalFunction = metaObj?.[field.fieldname];
   if (typeof evalFunction === 'function') {
     return evalFunction();

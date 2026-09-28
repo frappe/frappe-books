@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import { models } from 'models';
 import { StockBalance } from 'reports/inventory/StockBalance';
+import { toColumnField } from 'reports/serverReport';
 import type { Field } from 'schemas/types';
 import Check from 'src/components/Controls/Check.vue';
 import CommonFormSection from 'src/pages/CommonForm/CommonFormSection.vue';
@@ -24,14 +25,19 @@ async function mount() {
   } as any;
   fyo.singles.SystemSettings = { dateFormat: 'MMM d, y' } as any;
   const report = reactive(new StockBalance(fyo));
-  // Only the report rows are stubbed; filters and their updates use the real model.
-  report._getReportData = async () => [
-    {
-      cells: report.columns.map((column) => ({
-        value: column.fieldname === 'item' ? 'Wireless Keyboard' : '1',
-      })),
-    },
-  ];
+  // Only the server calls are stubbed; filters and their updates use the real model.
+  report.getDefaultFilters = async () => ({});
+  report.runReport = async () => ({
+    columns: [
+      toColumnField({ fieldname: 'item', label: 'Item', fieldtype: 'Link' }),
+      toColumnField({
+        fieldname: 'balance_quantity',
+        label: 'Balance Qty.',
+        fieldtype: 'Float',
+      }),
+    ],
+    rows: [{ item: 'Wireless Keyboard', balance_quantity: 1 }],
+  });
   await report.initialize();
   const reportPage = {
     ...ReportPage,

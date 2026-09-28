@@ -5,7 +5,7 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.reports.stock import stock_ledger
+from frappe_books.reports.stock import get_ledger_data
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -55,9 +55,9 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		entries = ledger_entries(receipt.doctype, receipt.name)
 		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries if row.account == stock.name), 100)
 		self.assertEqual(sum(Decimal(str(row.debit)) - Decimal(str(row.credit)) for row in entries), 0)
-		self.assertEqual(stock_ledger({"item": item.name})[0]["balanceValue"], 100)
+		self.assertEqual(get_ledger_data({"item": item.name})[0]["balance_value"], 100)
 		invoice.cancel()
-		self.assertFalse(stock_ledger({"item": item.name}))
+		self.assertFalse(get_ledger_data({"item": item.name}))
 
 	def test_payment_settles_multiple_invoices_and_cancel_restores_each(self):
 		receivable = make_account("Multiple Receivable", account_type="Receivable")

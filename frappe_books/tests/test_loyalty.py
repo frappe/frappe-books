@@ -80,8 +80,27 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 
 		expire_programs_and_points()
 
-		self.assertEqual(frappe.db.get_value("Books Loyalty Program", program.name, "is_enabled"), 0)
+		self.assertEqual(program.db_get("is_enabled"), 0)
+		self.assertEqual(program.db_get("status"), "Expired")
 		self.assertEqual(frappe.db.get_value("Books Party", self.party.name, "loyalty_points"), 0)
+
+	def test_status_follows_the_server_rules(self):
+		for values, status in (
+			({"is_enabled": 0}, "Disabled"),
+			({"to_date": nowdate()}, "Active"),
+			({"from_date": add_days(nowdate(), -2), "to_date": add_days(nowdate(), -1)}, "Expired"),
+		):
+			with self.subTest(status=status):
+				self.assertEqual(self._loyalty_program(**values).status, status)
+
+	def test_status_is_maxed_at_the_use_limit(self):
+		program = self._loyalty_program(maximum_use=1)
+		self._loyalty_invoice(program).submit()
+		redemption = self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10).submit()
+		self.assertEqual(program.db_get("status"), "Maxed")
+
+		redemption.cancel()
+		self.assertEqual(program.db_get("status"), "Disabled")
 
 	def test_inactive_program_only_blocks_redemption(self):
 		program = self._loyalty_program()

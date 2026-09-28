@@ -5,6 +5,7 @@ import { showToast } from 'src/utils/interactive';
 import { getIsNullOrUndef } from 'utils';
 import { generateCSV } from 'utils/csvParser';
 import { Report } from './Report';
+import { canExportReport } from './serverReport';
 import { ExportExtension, ReportCell } from './types';
 
 interface JSONExport {
@@ -18,14 +19,25 @@ interface JSONExport {
 }
 
 export default function getCommonExportActions(report: Report): Action[] {
-  const exportExtension = ['csv', 'json'] as ExportExtension[];
+  return getExportActions(report, exportReport);
+}
 
+/** CSV and JSON export actions, shown only when the user can export the report. */
+export function getExportActions<T extends Report>(
+  report: T,
+  exporter: (extension: ExportExtension, report: T) => Promise<void>
+): Action[] {
+  if (!canExportReport(report.serverReportName)) {
+    return [];
+  }
+
+  const exportExtension = ['csv', 'json'] as ExportExtension[];
   return exportExtension.map((ext) => ({
     group: t`Export`,
     label: ext.toUpperCase(),
     type: 'primary',
     action: async () => {
-      await exportReport(ext, report);
+      await exporter(ext, report);
     },
   }));
 }

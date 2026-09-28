@@ -290,6 +290,15 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "does not track stock", receipt.insert)
 
+	def test_rows_default_to_the_inventory_location(self):
+		frappe.db.set_single_value("Books Inventory Settings", "default_location", self.warehouse.name)
+		row = {"item": self.item.name, "quantity": 1, "rate": 10}
+		receipt = make_movement("MaterialReceipt", [row])
+		issue = make_movement("MaterialIssue", [row])
+
+		self.assertEqual(receipt.items[0].to_location, self.warehouse.name)
+		self.assertEqual(issue.items[0].from_location, self.warehouse.name)
+
 	def test_manufacture_row_cannot_both_consume_and_produce(self):
 		row = {"item": self.item.name, "quantity": 1, "rate": 10}
 		manufacture = frappe.get_doc(

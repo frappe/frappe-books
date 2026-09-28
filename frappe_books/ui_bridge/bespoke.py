@@ -3,26 +3,14 @@
 from typing import Any, Literal
 
 import frappe
-from frappe.utils import getdate
 
-from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.inventory.auto_transfer import default_location
-from frappe_books.reports import financial_statements, gst, stock
-from frappe_books.reports.financial_statements import Period
-from frappe_books.reports.general_ledger import LedgerFilters, general_ledger
-from frappe_books.reports.gst import GSTRFilters
-from frappe_books.reports.stock import StockFilters
 from frappe_books.series import default_series_by_schema, new_item_names
 from frappe_books.ui_bridge.database import system_datetime
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.linked_entries import linked_entries
 from frappe_books.ui_bridge.mapping import target_doctype
-
-MONTH_FIELDS = [{"YEAR": "posting_date", "as": "year"}, {"MONTH": "posting_date", "as": "month"}]
-MONTH_GROUP = "year, month"
-DEBIT_MINUS_CREDIT = [{"SUB": [{"SUM": "debit"}, {"SUM": "credit"}], "as": "balance"}]
-CREDIT_MINUS_DEBIT = [{"SUB": [{"SUM": "credit"}, {"SUM": "debit"}], "as": "balance"}]
 
 
 class BooksBespokeQueries:
@@ -31,46 +19,6 @@ class BooksBespokeQueries:
 		if not handler:
 			frappe.throw(f"Unsupported Books query: {method}")
 		return call_handler(handler, method, args)
-
-	def top_expenses(self, from_date: str, to_date: str):
-		rows = self._ledger_totals(
-			from_date, to_date, {"account.root_type": "Expense"}, ["account", *DEBIT_MINUS_CREDIT], "account"
-		)
-		# The query engine wraps an ORDER BY on this expression alias in MAX() on Postgres.
-		rows.sort(key=lambda row: row.balance, reverse=True)
-		return [{"account": row.account, "total": rounded(row.balance)} for row in rows[:5]]
-
-	def total_outstanding(self, source_schema: str, from_date: str, to_date: str):
-		invoices = self._invoice_totals(source_schema, from_date, to_date, is_return=False)
-		returns = self._invoice_totals(source_schema, from_date, to_date, is_return=True)
-		# Credit notes are stored negative. Both are shown as positive amounts.
-		return {
-			key: rounded(abs(as_decimal(invoices[key])) + abs(as_decimal(returns[key]))) for key in invoices
-		}
-
-	def cashflow(self, from_date: str, to_date: str):
-		fields = [*MONTH_FIELDS, {"SUM": "debit", "as": "inflow"}, {"SUM": "credit", "as": "outflow"}]
-		rows = self._ledger_totals(
-			from_date, to_date, {"account.account_type": ["in", ["Cash", "Bank"]]}, fields, MONTH_GROUP
-		)
-		return [
-			{"yearmonth": _year_month(row), "inflow": rounded(row.inflow), "outflow": rounded(row.outflow)}
-			for row in rows
-		]
-
-	def income_and_expenses(self, from_date: str, to_date: str):
-		return {
-			"income": self._monthly_balances(from_date, to_date, "Income", CREDIT_MINUS_DEBIT),
-			"expense": self._monthly_balances(from_date, to_date, "Expense", DEBIT_MINUS_CREDIT),
-		}
-
-	def total_credit_and_debit(self):
-		fields = ["account", {"SUM": "credit", "as": "credit"}, {"SUM": "debit", "as": "debit"}]
-		rows = self._ledger_totals(None, None, {}, fields, "account")
-		return [
-			{"account": row.account, "totalCredit": rounded(row.credit), "totalDebit": rounded(row.debit)}
-			for row in rows
-		]
 
 	def stock_quantity(
 		self,
@@ -134,27 +82,6 @@ class BooksBespokeQueries:
 	def linked_entries(self, source_schema: str, name: str):
 		return linked_entries(source_schema, name)
 
-	def general_ledger(self, filters: LedgerFilters):
-		return general_ledger(filters)
-
-	def trial_balance(self, from_date: str, to_date: str):
-		return financial_statements.trial_balance(from_date, to_date)
-
-	def profit_and_loss(self, periods: list[Period]):
-		return financial_statements.profit_and_loss(periods)
-
-	def balance_sheet(self, periods: list[Period]):
-		return financial_statements.balance_sheet(periods)
-
-	def stock_ledger(self, filters: StockFilters):
-		return stock.stock_ledger(filters)
-
-	def stock_balance(self, filters: StockFilters):
-		return stock.stock_balance(filters)
-
-	def gstr_rows(self, schema: Literal["SalesInvoice", "PurchaseInvoice"], filters: GSTRFilters):
-		return gst.gstr_rows(schema, filters)
-
 	def new_series_names(self, source_schema: Literal["Batch", "SerialNumber"], item: str, count: int):
 		return new_item_names(target_doctype(source_schema), item, count)
 
@@ -162,58 +89,14 @@ class BooksBespokeQueries:
 		frappe.has_permission("Books Defaults", "read", throw=True)
 		return default_series_by_schema()
 
-	def _monthly_balances(self, from_date, to_date, root_type, balance):
-		rows = self._ledger_totals(
-			from_date, to_date, {"account.root_type": root_type}, [*MONTH_FIELDS, *balance], MONTH_GROUP
-		)
-		return [{"yearmonth": _year_month(row), "balance": rounded(row.balance)} for row in rows]
-
-	def _ledger_totals(self, from_date, to_date, filters, fields, group_by):
-		filters = {"reverted": 0, **filters}
-		if from_date and to_date:
-			filters["posting_date"] = ["between", [getdate(from_date), getdate(to_date)]]
-		return frappe.get_list(
-			"Books Ledger Entry", filters=filters, fields=fields, group_by=group_by, order_by=group_by
-		)
-
-	def _invoice_totals(self, source_schema, from_date, to_date, is_return):
-		return frappe.get_list(
-			target_doctype(source_schema),
-			filters={
-				"docstatus": 1,
-				"date": ["between", [system_datetime(from_date), system_datetime(to_date)]],
-				"return_against": ["is", "set" if is_return else "not set"],
-			},
-			fields=[
-				{"SUM": "base_grand_total", "as": "total"},
-				{"SUM": "outstanding_amount", "as": "outstanding"},
-			],
-		)[0]
-
-
-def _year_month(row) -> str:
-	return f"{row.year:04d}-{row.month:02d}"
-
 
 _METHODS = {
-	"getTopExpenses": "top_expenses",
-	"getTotalOutstanding": "total_outstanding",
-	"getCashflow": "cashflow",
-	"getIncomeAndExpenses": "income_and_expenses",
-	"getTotalCreditAndDebit": "total_credit_and_debit",
 	"getStockQuantity": "stock_quantity",
 	"getStockQuantities": "stock_quantities",
 	"getStockLocation": "stock_location",
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
 	"getLinkedEntries": "linked_entries",
-	"getGeneralLedger": "general_ledger",
-	"getTrialBalance": "trial_balance",
-	"getProfitAndLoss": "profit_and_loss",
-	"getBalanceSheet": "balance_sheet",
-	"getStockLedger": "stock_ledger",
-	"getStockBalance": "stock_balance",
-	"getGSTRRows": "gstr_rows",
 	"getNewSeriesNames": "new_series_names",
 	"getDefaultNumberSeries": "default_number_series",
 }

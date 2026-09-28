@@ -1,7 +1,6 @@
 import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
-import { codeStateMap } from 'regional/in';
 import { getCountryInfo } from 'utils/misc';
 
 export class Address extends Doc {
@@ -10,7 +9,7 @@ export class Address extends Doc {
       const country = doc?.country as string | undefined;
       switch (country) {
         case 'India':
-          return Object.values(codeStateMap).sort();
+          return Object.values(doc?.fyo.store.indianStates ?? {}).sort();
         default:
           return [] as string[];
       }

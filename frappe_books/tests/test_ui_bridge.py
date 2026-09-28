@@ -1,6 +1,5 @@
 """Integration coverage for the original Vue UI's Frappe compatibility layer."""
 
-from datetime import datetime, timedelta
 from unittest.mock import ANY
 
 import frappe
@@ -141,31 +140,13 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		row = next(row for row in rows if row["name"] == name)
 		self.assertEqual(row["createdBy"], frappe.session.user)
 
-		next_modified = datetime.fromisoformat(inserted["modified"]) + timedelta(seconds=1)
-		expected_modified = datetime.fromisoformat(inserted["modified"])
-		expected_modified = expected_modified.replace(
-			microsecond=expected_modified.microsecond // 1000 * 1000
-		)
 		updated = self.bridge.update(
-			"UOM",
-			{
-				"name": name,
-				"isWhole": False,
-				"modified": next_modified.isoformat(),
-				"__expectedModified": expected_modified.isoformat(),
-			},
+			"UOM", {"name": name, "isWhole": False, "modified": inserted["modified"]}
 		)
 		self.assertEqual(updated["modified"], self.bridge.get("UOM", name)["modified"])
 		self.assertEqual(self.bridge.get("UOM", name)["isWhole"], 0)
 		with self.assertRaises(frappe.TimestampMismatchError):
-			self.bridge.update(
-				"UOM",
-				{
-					"name": name,
-					"isWhole": True,
-					"__expectedModified": inserted["modified"],
-				},
-			)
+			self.bridge.update("UOM", {"name": name, "isWhole": True, "modified": inserted["modified"]})
 
 		self.bridge.delete("UOM", name)
 		self.assertFalse(self.bridge.exists("UOM", name))
@@ -211,19 +192,12 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 					}
 				],
 				"referenceType": "Party",
-				"entryCurrency": "Party",
 			},
 		)
 
 		self.assertEqual(inserted["referenceType"], "Party")
-		self.assertEqual(inserted["entryCurrency"], "Party")
 		self.assertEqual(
-			frappe.db.get_value(
-				"Books Sales Quote",
-				inserted["name"],
-				["reference_type", "entry_currency"],
-			),
-			("Books Party", "Party"),
+			frappe.db.get_value("Books Sales Quote", inserted["name"], "reference_type"), "Books Party"
 		)
 
 	def test_series_names_come_from_the_server(self):
@@ -243,12 +217,12 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertNotEqual(inserted["name"], "999999999")
 
 	def test_draft_insert_runs_frappe_mandatory_validation(self):
-		name = unique_name("Invalid Bridge Color")
+		name = unique_name("Invalid Bridge Tax")
 
 		with self.assertRaises(frappe.MandatoryError):
-			self.bridge.insert("Color", {"name": name})
+			self.bridge.insert("Tax", {"name": name})
 
-		self.assertFalse(frappe.db.exists("Books Color", name))
+		self.assertFalse(frappe.db.exists("Books Tax", name))
 
 	def test_draft_writes_run_frappe_controller_validation(self):
 		income = make_account("Bridge Validation Income", root_type="Income", account_type="Income Account")
@@ -274,7 +248,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				{
 					"name": name,
 					"rate": -1,
-					"__expectedModified": inserted["modified"],
+					"modified": inserted["modified"],
 				},
 			)
 
@@ -294,7 +268,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				"rate": "16.00000000000",
 				"trackItem": "1",
 				"uomConversions": [{"uom": "Kg", "conversionFactor": "2.5"}],
-				"__expectedModified": inserted["modified"],
+				"modified": inserted["modified"],
 			},
 		)
 
@@ -379,7 +353,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				"party": party.name,
 				"account": receivable.name,
 				"date": now_datetime().isoformat(),
-				"entryCurrency": "Party",
 				"exchangeRate": 1,
 				"items": [
 					{
@@ -420,45 +393,80 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 	def test_count_matches_filtered_parent_and_child_rows(self):
 		prefix = unique_name("Bridge Count")
 		for index in range(3):
-			frappe.get_doc(
-				{"doctype": "Books Color", "name": f"{prefix} {index}", "hexvalue": "#000"}
-			).insert()
+			frappe.get_doc({"doctype": "Books Uom", "name": f"{prefix} {index}"}).insert()
 		income = make_account("Bridge Count Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Bridge Count Expense", root_type="Expense", account_type="Expense Account")
 		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
 
-		self.assertEqual(self.bridge.call("count", ["Color", {"name": ["like", f"{prefix}%"]}]), 3)
+		self.assertEqual(self.bridge.call("count", ["UOM", {"name": ["like", f"{prefix}%"]}]), 3)
 		self.assertEqual(self.bridge.call("count", ["UOMConversionItem", {"parent": item.name}]), 1)
 
 	def test_search_matches_keyword_letters_in_order_within_the_limit(self):
 		prefix = frappe.generate_hash(length=6)
 		for index in range(3):
-			frappe.get_doc(
-				{"doctype": "Books Color", "name": f"Qz{prefix} Marigold {index}", "hexvalue": "#000"}
-			).insert()
+			frappe.get_doc({"doctype": "Books Uom", "name": f"Qz{prefix} Marigold {index}"}).insert()
 
-		found = self.bridge.call("search", [f"qz{prefix} mrgld", {"Color": ["name"]}, 2])["Color"]
+		found = self.bridge.call("search", [f"qz{prefix} mrgld", ["UOM"], 2])["UOM"]
 
 		self.assertEqual(len(found), 2)
 		self.assertTrue(all(row["name"].startswith(f"Qz{prefix}") for row in found))
-		self.assertEqual(self.bridge.call("search", ["zzq", {"Color": ["name"]}, 2])["Color"], [])
+		self.assertEqual(self.bridge.call("search", ["zzq", ["UOM"], 2])["UOM"], [])
 
 	def test_search_returns_the_parent_of_matching_rows(self):
+		receivable = make_account("Bridge Search Receivable", account_type="Receivable")
 		income = make_account("Bridge Search Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Bridge Search Expense", root_type="Expense", account_type="Expense Account")
-		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		item = make_item(income.name, expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice", make_party(receivable.name).name, receivable.name, item.name, income.name
+		)
 
-		found = self.bridge.call("search", [item.name, {"UOMConversionItem": ["parent"]}, 5])
+		found = self.bridge.call("search", [item.name, ["SalesInvoiceItem"], 5])
 
 		self.assertEqual(
-			found["UOMConversionItem"], [{"parent": item.name, "parentSchemaName": "Item", "name": ANY}]
+			found["SalesInvoiceItem"],
+			[
+				{
+					"item": item.name,
+					"tax": None,
+					"parent": invoice.name,
+					"parentSchemaName": "SalesInvoice",
+					"name": ANY,
+				}
+			],
+		)
+
+	def test_search_matches_the_doctype_search_fields(self):
+		account = make_account("Bridge Search Receivable", account_type="Receivable").name
+		email = f"{frappe.generate_hash(length=8)}@example.com"
+		party = make_party(account, email=email).name
+
+		found = self.bridge.call("search", [email, ["Party"], 5])["Party"]
+
+		self.assertEqual([(row["name"], row["email"]) for row in found], [(party, email)])
+
+	def test_link_search_matches_letters_in_order_within_the_link_filters(self):
+		account = make_account("Bridge Link Receivable", account_type="Receivable").name
+		prefix = frappe.generate_hash(length=6)
+		customers = [make_party(account, name=f"Qz{prefix} Customer {index}").name for index in range(3)]
+		payable = make_account("Bridge Link Payable", account_type="Payable").name
+		make_party(payable, "Supplier", name=f"Qz{prefix} Supplier")
+		filters = {"role": ["in", ["Customer", "Both"]]}
+
+		found = self.bridge.call("searchLink", ["Party", f"qz{prefix}cst", filters, ["name", "role"], 2])
+
+		self.assertEqual(len(found), 2)
+		self.assertTrue(all(row["name"] in customers and row["role"] == "Customer" for row in found))
+		self.assertEqual(
+			self.bridge.call("searchLink", ["Party", f"qz{prefix}spl", filters, ["name"], 5]), []
 		)
 
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])
 		with self.assertRaises(frappe.ValidationError):
-			BooksBespokeQueries().call("getTopExpenses", ["2026-01-01"])
+			BooksBespokeQueries().call("getStockQuantity", [])
 
 	def test_non_string_names_are_rejected_before_reading_rows(self):
 		lookup = {"name": ["like", "%"]}
@@ -469,38 +477,34 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 	def test_api_endpoints_validate_argument_types(self):
 		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
-			lifecycle_action("submit", "SalesInvoice", {"name": ["like", "%"]})
+			lifecycle_action("submit", "SalesInvoice", {"name": ["like", "%"]}, "2026-01-01 00:00:00")
 		for action in ("Submit", "bogus"):
 			with self.subTest(action=action), self.assertRaises(frappe.FrappeTypeError):
-				lifecycle_action(action, "SalesInvoice", "SINV-0001")
+				lifecycle_action(action, "SalesInvoice", "SINV-0001", "2026-01-01 00:00:00")
 		for endpoint in (database_call, bespoke_call):
 			with self.subTest(endpoint=endpoint.__name__), self.assertRaises(frappe.FrappeTypeError):
 				endpoint("get", {"source_schema": "Party"})
 
 	def test_list_reads_return_every_matching_row(self):
-		prefix = unique_name("Bridge Color")
+		prefix = unique_name("Bridge Unit")
 		for index in range(501):
-			frappe.get_doc(
-				{"doctype": "Books Color", "name": f"{prefix} {index}", "hexvalue": "#000000"}
-			).insert()
+			frappe.get_doc({"doctype": "Books Uom", "name": f"{prefix} {index}"}).insert()
 		filters = {"name": ["like", f"{prefix}%"]}
 
-		self.assertEqual(len(self.bridge.get_all("Color", {"filters": filters})), 501)
-		self.assertEqual(len(self.bridge.get_all("Color", {"filters": filters, "offset": 500})), 1)
-		self.assertEqual(
-			len(self.bridge.get_all("Color", {"filters": filters, "limit": 10, "offset": 495})), 6
-		)
+		self.assertEqual(len(self.bridge.get_all("UOM", {"filters": filters})), 501)
+		self.assertEqual(len(self.bridge.get_all("UOM", {"filters": filters, "offset": 500})), 1)
+		self.assertEqual(len(self.bridge.get_all("UOM", {"filters": filters, "limit": 10, "offset": 495})), 6)
 
 	def test_list_order_defaults_to_newest_first(self):
 		prefix = unique_name("Bridge Order")
 		for index, creation in enumerate(["2026-01-01", "2026-01-03", "2026-01-02"]):
 			name = f"{prefix} {index}"
-			frappe.get_doc({"doctype": "Books Color", "name": name, "hexvalue": "#000000"}).insert()
-			frappe.db.set_value("Books Color", name, "creation", creation, update_modified=False)
+			frappe.get_doc({"doctype": "Books Uom", "name": name}).insert()
+			frappe.db.set_value("Books Uom", name, "creation", creation, update_modified=False)
 		filters = {"name": ["like", f"{prefix}%"]}
 
 		def listed_indexes(**options):
-			rows = self.bridge.get_all("Color", {"filters": filters, **options})
+			rows = self.bridge.get_all("UOM", {"filters": filters, **options})
 			return [row["name"].removeprefix(f"{prefix} ") for row in rows]
 
 		self.assertEqual(listed_indexes(), ["1", "2", "0"])
@@ -521,7 +525,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				"party": party.name,
 				"account": receivable.name,
 				"date": now_datetime().isoformat(),
-				"entryCurrency": "Party",
 				"exchangeRate": 1,
 				"items": [
 					{
@@ -537,7 +540,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		invoice = frappe.get_doc("Books Sales Invoice", invoice_name)
 		self.assertEqual(len(invoice.items), 1)
 		self.assertEqual(invoice.items[0].parent, invoice_name)
-		self.assertEqual(invoice.entry_currency, "Party")
 
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.update(
@@ -545,7 +547,8 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				{"name": invoice.name, "submitted": True},
 			)
 
-		submitted = lifecycle_action("submit", "SalesInvoice", invoice.name)
+		modified = self.bridge.get("SalesInvoice", invoice.name)["modified"]
+		submitted = lifecycle_action("submit", "SalesInvoice", invoice.name, modified)
 		self.assertTrue(submitted["submitted"])
 		self.assertTrue(
 			frappe.db.exists(
@@ -554,7 +557,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			)
 		)
 
-		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name)
+		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name, submitted["modified"])
 		self.assertTrue(cancelled["cancelled"])
 		self.assertTrue(
 			frappe.db.exists(

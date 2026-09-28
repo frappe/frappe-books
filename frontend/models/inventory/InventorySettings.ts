@@ -11,7 +11,6 @@ export class InventorySettings extends Doc {
   enableBatches?: boolean;
   enableSerialNumber?: boolean;
   enableUomConversions?: boolean;
-  enableStockReturns?: boolean;
   enablePointOfSale?: boolean;
 
   static filters: FiltersMap = {
@@ -41,9 +40,6 @@ export class InventorySettings extends Doc {
     },
     enableUomConversions: () => {
       return !!this.enableUomConversions;
-    },
-    enableStockReturns: () => {
-      return !!this.enableStockReturns;
     },
   };
 }

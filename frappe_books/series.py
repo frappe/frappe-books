@@ -1,11 +1,13 @@
-"""Number series for transactions, batches and serial numbers, backed by Frappe records."""
+"""Number series for transactions, batches and serial numbers, counted in Frappe's tabSeries."""
 
 import re
 
 import frappe
 from frappe import _
+from frappe.model.naming import NamingSeries, make_autoname
 
 INVALID_PREFIX = re.compile(r"[/=?&%]")
+INVALID_PREFIX_CHARACTERS = "/, ?, &, =, %"
 # Doctype: (standard prefix, series reference type, Books Defaults field that selects its series)
 NUMBER_SERIES = {
 	"Books Journal Entry": ("JV-", "JournalEntry", "journal_entry_number_series"),
@@ -18,18 +20,24 @@ NUMBER_SERIES = {
 	"Books Stock Movement": ("SMOV-", "StockMovement", "stock_movement_number_series"),
 	"Books Sales Quote": ("SQUOT-", "SalesQuote", "sales_quote_number_series"),
 }
-# Named doctype: (item flag, item series field, series doctype)
+# Named doctype: (item flag, item series field)
 ITEM_SERIES = {
-	"Books Batch": ("has_batch", "batch_series", "Books Batch Series"),
-	"Books Serial Number": ("has_serial_number", "serial_number_series", "Books Serial Number Series"),
+	"Books Batch": ("has_batch", "batch_series"),
+	"Books Serial Number": ("has_serial_number", "serial_number_series"),
 }
+ITEM_SERIES_START = 1001
+ITEM_SERIES_DIGITS = 4
 
 
 class SeriesNamingMixin:
 	def autoname(self):
 		self.number_series = self.number_series or default_series(self.doctype)
-		validate_series_type(self.doctype, self.number_series)
-		self.name = next_name(self.number_series)
+		series = frappe.get_doc("Books Number Series", self.number_series)
+		if series.reference_type != NUMBER_SERIES[self.doctype][1]:
+			frappe.throw(
+				_("Number series {0} is not for {1} documents.").format(series.name, _(self.doctype))
+			)
+		self.name = make_autoname(series.pattern)
 
 
 def default_series(doctype):
@@ -45,54 +53,44 @@ def default_series_by_schema():
 	}
 
 
-def validate_series_type(doctype, series):
-	"""A series names only the document type it is made for."""
-	reference_type = NUMBER_SERIES[doctype][1]
-	if frappe.db.get_value("Books Number Series", series, "reference_type") != reference_type:
-		frappe.throw(_("Number series {0} is not for {1} documents.").format(series, _(doctype)))
+def series_pattern(prefix, digits):
+	"""The `make_autoname` key that numbers `prefix` with `digits` digits, e.g. SINV-.####."""
+	return f"{prefix}.{'#' * max(digits, 1)}"
 
 
-def next_name(prefix):
-	return reserve_names("Books Number Series", prefix)[0]
+def start_series(pattern, start):
+	"""Count `pattern` from `start`, unless it already counted past it."""
+	series = NamingSeries(pattern)
+	if series.get_current_value() < start - 1:
+		series.update_counter(start - 1)
 
 
-def reserve_names(series_doctype, prefix, count=1):
-	"""Take the next `count` numbers of a series.
-
-	The increment happens in the database and locks the series row until commit, so concurrent
-	callers never get the same number.
-	"""
-	pad_zeros = frappe.get_doc(series_doctype, prefix).pad_zeros
-	series = frappe.qb.DocType(series_doctype)
-	frappe.qb.update(series).set(series.current, series.current + count).where(series.name == prefix).run()
-	last = int(frappe.db.get_value(series_doctype, prefix, "current"))
-	return [f"{prefix}{number:0{pad_zeros}d}" for number in range(last - count + 1, last + 1)]
+def validate_prefix(prefix, message):
+	"""A prefix shows in /books URLs and must suit a Frappe naming series."""
+	if INVALID_PREFIX.search(prefix):
+		frappe.throw(message)
+	NamingSeries(series_pattern(prefix, 1)).validate()
 
 
 def new_item_names(doctype, item, count):
-	"""Reserve `count` unused batch or serial-number names from the item's series."""
+	"""Take `count` unused batch or serial-number names from the item's series."""
 	frappe.has_permission(doctype, "create", throw=True)
 	item_doc = frappe.get_doc("Books Item", item)
 	item_doc.check_permission("read")
-	flag, series_field, series_doctype = ITEM_SERIES[doctype]
+	flag, series_field = ITEM_SERIES[doctype]
 	prefix = (item_doc.get(series_field) or "").strip()
 	if not item_doc.get(flag) or not prefix:
 		return []
-	return _reserve_unused_names(doctype, series_doctype, prefix, count)
+	pattern = series_pattern(prefix, ITEM_SERIES_DIGITS)
+	start_series(pattern, ITEM_SERIES_START)
+	return unused_names(doctype, pattern, count)
 
 
-def _reserve_unused_names(doctype, series_doctype, prefix, count):
-	"""Skip numbers already used by hand-named records."""
+def unused_names(doctype, pattern, count):
+	"""Skip numbers already used by hand-named records, as ERPNext names batches."""
 	names = []
 	while len(names) < count:
-		reserved = reserve_names(series_doctype, prefix, count - len(names))
-		taken = set(frappe.get_all(doctype, filters={"name": ["in", reserved]}, pluck="name"))
-		names += [name for name in reserved if name not in taken]
+		drawn = [make_autoname(pattern) for _ in range(count - len(names))]
+		taken = set(frappe.get_all(doctype, filters={"name": ["in", drawn]}, pluck="name"))
+		names += [name for name in drawn if name not in taken]
 	return names
-
-
-def validate_series(series_doc):
-	if INVALID_PREFIX.search(series_doc.name or ""):
-		frappe.throw(_("Number-series prefixes cannot contain /, ?, &, =, or %."))
-	if series_doc.is_new() and not series_doc.current:
-		series_doc.current = series_doc.start - 1

@@ -27,7 +27,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nReplied\nInterested\nOpportunity\nConverted\nQuotation\nDonotContact",
+   "options": "Open\nReplied\nInterested\nOpportunity\nConverted\nQuotation\nDo not Contact",
    "reqd": 1
   },
   {
@@ -59,7 +59,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-27 20:00:00.000000",
+ "modified": "2026-09-28 07:12:48.316360",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Lead",
@@ -105,6 +105,35 @@
  "search_fields": "email, mobile",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Gray",
+   "title": "Open"
+  },
+  {
+   "color": "Orange",
+   "title": "Replied"
+  },
+  {
+   "color": "Orange",
+   "title": "Interested"
+  },
+  {
+   "color": "Orange",
+   "title": "Opportunity"
+  },
+  {
+   "color": "Green",
+   "title": "Converted"
+  },
+  {
+   "color": "Green",
+   "title": "Quotation"
+  },
+  {
+   "color": "Red",
+   "title": "Do not Contact"
+  }
+ ],
  "track_changes": 1
 }

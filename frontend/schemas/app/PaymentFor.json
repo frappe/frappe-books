@@ -30,6 +30,5 @@
       "label": "Amount"
     }
   ],
-  "tableFields": ["referenceType", "referenceName", "amount"],
-  "keywordFields": ["referenceName", "referenceType"]
+  "tableFields": ["referenceType", "referenceName", "amount"]
 }

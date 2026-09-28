@@ -1,22 +1,10 @@
-export type InvoiceStatus =
-  | 'Draft'
-  | 'Saved'
-  | 'Unpaid'
-  | 'Cancelled'
-  | 'Paid'
-  | 'Return'
-  | 'ReturnIssued'
-  | 'Unpaid'
-  | 'PartlyPaid';
-
 export enum ModelNameEnum {
   Account = 'Account',
   AccountingLedgerEntry = 'AccountingLedgerEntry',
   AccountingSettings = 'AccountingSettings',
   Address = 'Address',
   Batch = 'Batch',
-  BatchSeries = 'BatchSeries',
-  Color = 'Color',
+  Country = 'Country',
   Currency = 'Currency',
   GetStarted = 'GetStarted',
   Defaults = 'Defaults',
@@ -29,7 +17,6 @@ export enum ModelNameEnum {
   JournalEntryAccount = 'JournalEntryAccount',
   Misc = 'Misc',
   NumberSeries = 'NumberSeries',
-  SerialNumberSeries = 'SerialNumberSeries',
   Lead = 'Lead',
   Party = 'Party',
   LoyaltyProgram = 'LoyaltyProgram',
@@ -51,6 +38,7 @@ export enum ModelNameEnum {
   PurchaseInvoiceItem = 'PurchaseInvoiceItem',
   SalesInvoice = 'SalesInvoice',
   SalesInvoiceItem = 'SalesInvoiceItem',
+  SalesInvoicePayment = 'SalesInvoicePayment',
   SalesQuote = 'SalesQuote',
   SalesQuoteItem = 'SalesQuoteItem',
   SerialNumber = 'SerialNumber',

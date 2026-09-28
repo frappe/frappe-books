@@ -1,3 +1,0 @@
-These catalogs restore the existing Books translations from [frappe/books at a79a1e3](https://github.com/frappe/books/tree/a79a1e3b03f424805ad094e2fd8731d04f84d36f/translations). Empty translations are omitted so they do not replace Frappe translations with blank labels. Numbered placeholders use Frappe's `{0}` syntax; the web client converts them to the Books format when it loads the catalog.
-
-Standard account labels are translated for display. Stored account names, links, and custom account names stay unchanged. Existing accounts whose identifiers were translated when they were created are not renamed by this change.

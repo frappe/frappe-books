@@ -1,7 +1,7 @@
 <script>
 import { t } from 'fyo';
 import { fyo } from 'src/initFyo';
-import { fuzzyMatch } from 'src/utils';
+import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
 import { getCreateFiltersFromListViewFilters } from 'src/utils/misc';
 import AutoComplete from './AutoComplete.vue';
@@ -9,9 +9,6 @@ import AutoComplete from './AutoComplete.vue';
 export default {
   name: 'MultiLabelLink',
   extends: AutoComplete,
-  data() {
-    return { results: [] };
-  },
   watch: {
     value: {
       immediate: true,
@@ -57,7 +54,7 @@ export default {
     getTargetSchemaName() {
       return this.df.target;
     },
-    async getOptions() {
+    async getOptions(keyword) {
       const schemaName = this.getTargetSchemaName();
 
       if (!schemaName) {
@@ -66,7 +63,8 @@ export default {
 
       const schema = fyo.schemaMap[schemaName];
       const records =
-        this.optionRecords ?? (await this.getOptionRecords(schemaName, schema));
+        this.optionRecords ??
+        (await this.searchRecords(schemaName, schema, keyword));
 
       return records
         .map((r) => {
@@ -87,11 +85,7 @@ export default {
         })
         .filter(Boolean);
     },
-    async getOptionRecords(schemaName, schema) {
-      if (this.results?.length) {
-        return this.results;
-      }
-
+    async searchRecords(schemaName, schema, keyword) {
       const filters = await this.getFilters();
       const fields = [
         ...new Set([
@@ -103,42 +97,28 @@ export default {
         ]),
       ].filter(Boolean);
 
-      return (this.results = await fyo.db.getAll(schemaName, {
+      return await fyo.db.searchLink(
+        schemaName,
+        keyword,
         filters,
         fields,
-      }));
+        LINK_PAGE_LENGTH
+      );
     },
     async getSuggestions(keyword = '') {
-      let options = await this.getOptions();
-
-      if (keyword) {
-        options = options
-          .map((item) => ({ ...this.getSuggestionMatch(keyword, item), item }))
-          .filter(({ isMatch }) => isMatch)
-          .sort((a, b) => a.distance - b.distance)
-          .map(({ item }) => item);
-      }
+      // Given records are filtered here; searched ones were matched by the server.
+      let options = sortByFuzzyMatch(
+        keyword,
+        await this.getOptions(keyword),
+        (item) => [item.label, item.value2, item.value3],
+        !!this.optionRecords
+      );
 
       if (this.doc && this.df.create && this.canCreateTarget()) {
         options = options.concat(this.getCreateNewOption());
       }
 
       return options;
-    },
-    getSuggestionMatch(keyword, item) {
-      const searchValues = [item.label, item.value2, item.value3].filter(
-        (value) => value !== undefined && value !== null && String(value)
-      );
-
-      return searchValues.reduce(
-        (bestMatch, value) => {
-          const match = fuzzyMatch(keyword, String(value));
-          return match.isMatch && match.distance < bestMatch.distance
-            ? match
-            : bestMatch;
-        },
-        { isMatch: false, distance: Number.MAX_SAFE_INTEGER }
-      );
     },
     canCreateTarget() {
       const target = this.getTargetSchemaName();
@@ -164,7 +144,6 @@ export default {
 
       linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
         this.$router.back();
-        this.results = [];
         this.triggerChange(savedName);
       });
     },

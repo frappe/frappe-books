@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { getMissingMandatoryMessage } from 'fyo/model/helpers';
+import { ConflictError } from 'fyo/utils/errors';
 import {
   ChangeArg,
   CurrenciesMap,
@@ -13,9 +14,11 @@ import {
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { Transactional } from 'models/Transactional/Transactional';
-import { addItem, getExchangeRate, getNumberSeries } from 'models/helpers';
+import { addItem, getNumberSeries } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
+import { DateTime } from 'luxon';
 import { Money } from 'pesa';
+import { call } from 'src/web/api';
 import { FieldTypeEnum, Schema } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
 import { InvoiceItem } from '../InvoiceItem/InvoiceItem';
@@ -25,6 +28,7 @@ import { AppliedCouponCodes } from '../AppliedCouponCodes/AppliedCouponCodes';
 import { applyPreview } from './preview';
 
 const PREVIEW_DELAY = 300;
+const GET_EXCHANGE_RATE = 'frappe_books.currency.get_exchange_rate';
 const RATE_SOURCE_FIELDS = ['party', 'priceList', 'currency', 'exchangeRate'];
 
 export abstract class Invoice extends Transactional {
@@ -150,32 +154,19 @@ export abstract class Invoice extends Transactional {
     this._setGetCurrencies();
   }
 
-  async getPaymentIds() {
-    const payments = (await this.fyo.db.getAll('PaymentFor', {
-      fields: ['parent'],
-      filters: { referenceType: this.schemaName, referenceName: this.name! },
-      orderBy: 'name',
-    })) as { parent: string }[];
-
-    if (payments.length != 0) {
-      return [...new Set(payments.map(({ parent }) => parent))];
-    }
-
-    return [];
-  }
-
-  /** The fetched rate, or null (with a warning) when the user must enter it. */
+  /** The server's rate on the invoice date, or null (with a warning) when the user must enter it. */
   async getExchangeRate(): Promise<number | null> {
     if (!this.currency || this.currency === this.companyCurrency) {
       return 1.0;
     }
 
-    const exchangeRate = await getExchangeRate({
-      fromCurrency: this.currency,
-      toCurrency: this.companyCurrency,
+    const exchangeRate = await call<number | null>(GET_EXCHANGE_RATE, {
+      from_currency: this.currency,
+      to_currency: this.companyCurrency,
+      date: this.date ? DateTime.fromJSDate(this.date).toISODate() : null,
     });
     // Warn once, not on every change while the rate stays missing.
-    if (exchangeRate === undefined && this.exchangeRate !== null) {
+    if (exchangeRate === null && this.exchangeRate !== null) {
       await showToast(
         'warning',
         this.fyo
@@ -183,7 +174,7 @@ export abstract class Invoice extends Transactional {
       );
     }
 
-    return exchangeRate ?? null;
+    return exchangeRate;
   }
 
   formulas: FormulaMap = {
@@ -262,7 +253,9 @@ export abstract class Invoice extends Transactional {
 
       return (this.availableLoyaltyPoints ?? 0) <= 0;
     },
-    coupons: () => this.isSubmitted && !this.coupons?.length,
+    coupons: () =>
+      !this.fyo.singles.AccountingSettings?.enableCouponCode ||
+      (this.isSubmitted && !this.coupons?.length),
     priceList: () =>
       !this.fyo.singles.AccountingSettings?.enablePriceList ||
       (!this.canEdit && !this.priceList),
@@ -286,15 +279,15 @@ export abstract class Invoice extends Transactional {
       doc instanceof Invoice &&
       !!doc.autoStockTransferLocation,
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
+    // Mirrors the server's terms for a new document; quotes are sales too.
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
-      if (doc.schemaName === ModelNameEnum.SalesInvoice) {
+      if ((doc as Invoice).isSales) {
         return defaults?.salesInvoiceTerms ?? '';
       }
 
       return defaults?.purchaseInvoiceTerms ?? '';
     },
-    date: () => new Date(),
   };
 
   static filters: FiltersMap = {
@@ -396,16 +389,30 @@ export abstract class Invoice extends Transactional {
     }
 
     const edits = this._edits;
-    const sent = this.getValidDict(true, true);
-    const previewed = await this.fyo.db.preview(
-      this.schemaName,
-      sent,
-      this.notInserted ? undefined : this.name
-    );
-    if (edits === this._edits && this.dirty) {
+    // A saved invoice sends its `modified`, which the server checks is current.
+    const sent = this.getValidDict(false, true);
+    const previewed = await this._fetchPreview(sent);
+    if (previewed && edits === this._edits && this.dirty) {
       applyPreview(this, sent, previewed);
       // Computed values are not sent, so the preview has none.
       await this._setComputedValuesFromFormulas();
+    }
+  }
+
+  /** The server's preview, or none for a draft changed elsewhere, which only its save reports. */
+  async _fetchPreview(sent: DocValueMap): Promise<DocValueMap | undefined> {
+    try {
+      return await this.fyo.db.preview(
+        this.schemaName,
+        sent,
+        this.notInserted ? undefined : this.name
+      );
+    } catch (error) {
+      if (error instanceof ConflictError) {
+        return;
+      }
+
+      throw error;
     }
   }
 

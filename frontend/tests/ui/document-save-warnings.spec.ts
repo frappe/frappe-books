@@ -3,7 +3,7 @@ import { useBooksSession } from './helpers/session';
 
 useBooksSession();
 
-for (const schemaName of ['Color', 'PrintSettings']) {
+for (const schemaName of ['UOM', 'PrintSettings']) {
   test(`${schemaName} reports post-save warnings without leaving an unsaved document`, async ({
     page,
   }) => {
@@ -14,11 +14,8 @@ for (const schemaName of ['Color', 'PrintSettings']) {
         .computed.fyo();
       const router = app.config.globalProperties.$router;
       const doc =
-        schemaName === 'Color'
-          ? fyo.doc.getNewDoc('Color', {
-              name: 'Warning Color',
-              hexvalue: '#123456',
-            })
+        schemaName === 'UOM'
+          ? fyo.doc.getNewDoc('UOM', { name: 'Warning Unit', isWhole: false })
           : fyo.singles.PrintSettings;
       const fixture = ((window as any).saveWarning = {
         doc,

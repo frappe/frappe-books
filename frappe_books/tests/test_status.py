@@ -5,6 +5,19 @@ from frappe.utils import now_datetime
 from frappe_books.accounting.returns import map_return
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
 
+STATUS_DOCTYPES = (
+	"Books Sales Invoice",
+	"Books Purchase Invoice",
+	"Books Shipment",
+	"Books Purchase Receipt",
+	"Books Sales Quote",
+	"Books Journal Entry",
+	"Books Payment",
+	"Books Stock Movement",
+	"Books Lead",
+	"Books Serial Number",
+)
+
 
 class IntegrationTestDocumentStatus(IntegrationTestCase):
 	def setUp(self):
@@ -27,22 +40,30 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
 
 		self._pay(80)
-		self.assertEqual(self.invoice.db_get("status"), "PartlyPaid")
+		self.assertEqual(self.invoice.db_get("status"), "Partly Paid")
 		final = self._pay(100)
 		self.assertEqual(self.invoice.db_get("status"), "Paid")
 		final.cancel()
-		self.assertEqual(self.invoice.db_get("status"), "PartlyPaid")
+		self.assertEqual(self.invoice.db_get("status"), "Partly Paid")
 		self.assertEqual(final.db_get("status"), "Cancelled")
 
 	def test_returns_mark_both_invoices(self):
 		self.invoice.submit()
 		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
 		self.assertEqual(credit_note.db_get("status"), "Return")
-		self.assertEqual(self.invoice.db_get("status"), "ReturnIssued")
+		self.assertEqual(self.invoice.db_get("status"), "Return Issued")
 
 		credit_note.cancel()
 		self.assertEqual(credit_note.db_get("status"), "Cancelled")
 		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
+
+	def test_every_status_has_a_state_colour(self):
+		for doctype in STATUS_DOCTYPES:
+			meta = frappe.get_meta(doctype)
+			with self.subTest(doctype=doctype):
+				self.assertEqual(
+					[state.title for state in meta.states], meta.get_field("status").options.split("\n")
+				)
 
 	def _pay(self, amount):
 		payment = frappe.get_doc(

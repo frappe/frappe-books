@@ -4,7 +4,7 @@ import { coreModels } from 'fyo/models';
 import { NotFoundError, ValueError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
 import { Schema } from 'schemas/types';
-import { getRandomString } from 'utils';
+import { getIsNullOrUndef, getRandomString } from 'utils';
 import { Fyo } from '..';
 import { DocValueMap, RawValueMap } from './types';
 
@@ -131,6 +131,21 @@ export class DocHandler {
     }
 
     return doc;
+  }
+
+  /** A new doc from values the server built; unset values keep the doc's defaults. */
+  getNewDocFromServer(schemaName: string, values: DocValueMap): Doc {
+    const setValues = Object.fromEntries(
+      Object.entries(values).filter(([, value]) => !getIsNullOrUndef(value))
+    );
+    return this.getNewDoc(
+      schemaName,
+      setValues,
+      true,
+      undefined,
+      undefined,
+      false
+    );
   }
 
   isTemporaryName(name: string, schema: Schema): boolean {

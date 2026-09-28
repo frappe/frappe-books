@@ -17,7 +17,7 @@ await build({
     contents: `
       export { Fyo } from './fyo';
       export { getSchemas } from './schemas';
-      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
+      export { getDoctypeFieldProperties, getDoctypeSearchFields } from './tests/helpers/doctypeFieldProperties';
       export { models } from './models';
       export { BalanceSheet } from './reports/BalanceSheet/BalanceSheet';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
@@ -27,13 +27,12 @@ await build({
       export { getAccountLabel } from './src/utils/accountLabel';
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getJsonData, getCsvData } from './reports/commonExporter';
-      export { getDocStatus } from './models/helpers';
+      export { getDocStatus, getDocStatusBadge, getLoyaltyProgramBadge, getStateBadge } from './models/helpers';
       export { getQuickEditFieldnames, getRowEditFieldnames } from './src/utils/sheetFields';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
       export {
-        getExchangeRate,
         getItemQtyMap,
         getMappedDoc,
         getStockTransferActions,
@@ -51,11 +50,15 @@ await build({
         validateSinv,
       } from './src/utils/pos';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
-      export { getTaskChecks } from './src/utils/getStartedTasks';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
-      export { evaluateReadOnly, linkOnSave } from './src/utils/doc';
+      export { evaluateHidden, evaluateReadOnly, linkOnSave } from './src/utils/doc';
       export { loadListData, onListChange } from './src/utils/listData';
       export { showReport } from './src/utils/misc';
+      export {
+        getDashboardData,
+        getInvoiceListFilters,
+        getInvoiceSummary,
+      } from './src/utils/dashboard';
       export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
@@ -64,13 +67,12 @@ await build({
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export {
-        getExistingActiveSerialNumbersForItem,
+        getAvailableSerialNumbers,
         getSerialNumbersForQuantity,
         getSuggestedBatchName,
       } from './models/inventory/helpers';
-      export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
-      export { Importer, importDoc } from './src/importer';
+      export { Importer, getImportableSchemaNames, importDoc } from './src/importer';
     `,
     resolveDir: frontend,
   },
@@ -92,7 +94,8 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 const bundle = createRequire(import.meta.url)(output);
-export const { fieldProperties, getSchemas } = withFieldProperties(bundle);
+export const { fieldProperties, getSchemas, searchFields } =
+  withFieldProperties(bundle);
 export const {
   Fyo,
   models,
@@ -108,6 +111,9 @@ export const {
   getJsonData,
   getCsvData,
   getDocStatus,
+  getDocStatusBadge,
+  getLoyaltyProgramBadge,
+  getStateBadge,
   getQuickEditFieldnames,
   getRowEditFieldnames,
   getFilterFields,
@@ -119,7 +125,6 @@ export const {
   defaultCondition,
   isCompleteFilter,
   mergeQueryFilters,
-  getExchangeRate,
   getItemQtyMap,
   getMappedDoc,
   getStockTransferActions,
@@ -136,8 +141,12 @@ export const {
   fillRowSerialNumbers,
   getPOSRowItem,
   validatePOSCheckout,
-  getTaskChecks,
   getReportCellColorClass,
+  getDashboardData,
+  getInvoiceListFilters,
+  getInvoiceSummary,
+
+  evaluateHidden,
   evaluateReadOnly,
   linkOnSave,
   loadListData,
@@ -151,13 +160,13 @@ export const {
   call,
   errors,
   getInsufficientItems,
-  getExistingActiveSerialNumbersForItem,
+  getAvailableSerialNumbers,
   getSerialNumbersForQuantity,
   getSuggestedBatchName,
-  getAmountInWords,
   generateCSV,
   parseCSV,
   Importer,
+  getImportableSchemaNames,
   importDoc,
 } = bundle;
 
@@ -166,14 +175,16 @@ export async function makeFyo() {
     getSchemaMap() {
       return getSchemas('-', []);
     }
-    call(method, ...args) {
+    call(method) {
       // The store holds no documents; a missing one reads as an empty map.
       if (method === 'exists') return false;
       if (method === 'get') return {};
       if (['getAll', 'getAllRaw'].includes(method)) return [];
-      // Invoices preview their totals once edits pause; echo the values back.
-      if (method === 'preview') return args[1];
       throw new Error(`Unexpected database call: ${method}`);
+    }
+    // Invoices preview their totals once edits pause; echo the values back.
+    runDocMethod(method, schemaName, values) {
+      return values;
     }
   }
   const fyo = new Fyo({ DatabaseDemux: Store });
@@ -181,5 +192,6 @@ export async function makeFyo() {
   fyo.doc.registerModels(models);
   fyo.singles.AccountingSettings = { enableDiscounting: true };
   fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
+  fyo.store.searchFields = searchFields;
   return fyo;
 }

@@ -27,6 +27,8 @@ test.beforeEach(async ({ page }) => {
       doc._notInserted = false;
       return doc;
     });
+    // Fixture records exist only in the browser, so they keep the doctype-level rights.
+    fyo.db.getDocPermissions = async () => undefined;
     const getAll = fyo.db.getAll.bind(fyo.db);
     fyo.db.getAll = (schemaName: string, ...args: unknown[]) => {
       if (schemaName === 'Account') {
@@ -65,7 +67,9 @@ for (const closeWith of ['button', 'Escape', 'Back']) {
         page.getByRole('heading', { name, exact: true, level: 2 })
       ).toBeVisible();
       await expect(close).toHaveCount(1);
-      expect(new URL(page.url()).searchParams.get('source')).toBe('sidebar-test');
+      expect(new URL(page.url()).searchParams.get('source')).toBe(
+        'sidebar-test'
+      );
     }
 
     if (closeWith === 'button') {
@@ -83,7 +87,9 @@ for (const closeWith of ['button', 'Escape', 'Back']) {
       historyPosition
     );
 
-    await page.getByRole('button', { name: accountNames[1], exact: true }).click();
+    await page
+      .getByRole('button', { name: accountNames[1], exact: true })
+      .click();
     await expect(close).toBeVisible();
     await close.click();
     await expect(close).toHaveCount(0);

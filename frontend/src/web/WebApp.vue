@@ -119,26 +119,31 @@ export default defineComponent({
         )}`;
         return;
       }
-      fyo.store.isDevelopment = window.books_boot.developer_mode;
-      fyo.store.appVersion = window.books_boot.app_version;
-      fyo.store.permissions = window.books_boot.permissions;
-      fyo.store.chartsOfAccounts = window.books_boot.charts_of_accounts;
+      const books = boot.books!;
+      fyo.store.isDevelopment = !!boot.developer_mode;
+      fyo.store.appVersion = boot.versions?.frappe_books ?? '';
+      fyo.store.permissions = { doctypes: books.doctypes, user: boot.user };
+      fyo.store.searchFields = books.search_fields;
+      fyo.store.chartsOfAccounts = books.charts_of_accounts;
+      fyo.store.accountLabels = books.account_labels;
+      fyo.store.indianStates = books.indian_states;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 
-      const countryCode = window.books_boot.country_code || '-';
+      const countryCode = books.country_code || '-';
       await fyo.db.connect(countryCode);
       await fyo.initializeAndRegister(
         models,
         await getRegionalModels(countryCode)
       );
-      await fyo.loadCurrencySymbols();
-      await fyo.loadDefaultNumberSeries();
-      for (const schema of Object.values(fyo.schemaMap)) {
-        if (schema?.isSingle && schema.name !== 'SetupWizard') {
-          await fyo.doc.getDoc(schema.name);
-        }
-      }
+      const singles = Object.values(fyo.schemaMap).filter(
+        (schema) => schema?.isSingle && schema.name !== 'SetupWizard'
+      );
+      await Promise.all([
+        fyo.loadCurrencySymbols(),
+        fyo.loadDefaultNumberSeries(),
+        ...singles.map((schema) => fyo.doc.getDoc(schema!.name)),
+      ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setupComplete;
       this.darkMode = Boolean(fyo.singles.SystemSettings?.darkMode);
       setDarkMode(this.darkMode);

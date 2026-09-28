@@ -73,11 +73,7 @@
     {
       "fieldname": "status",
       "label": "Status",
-      "optionLabels": {
-        "ReturnIssued": "Return Issued"
-      },
       "hidden": true
     }
-  ],
-  "keywordFields": ["name", "party"]
+  ]
 }

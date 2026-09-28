@@ -106,6 +106,103 @@ test('a fully billed shipment does not offer an invoice', async () => {
   assert.equal(makeInvoice.condition(shipment), false);
 });
 
+test('a duplicate is the copy the server makes, with its unset values left out', async () => {
+  const calls = [];
+  const fyo = await makeFyo((method, ...args) => {
+    calls.push([method, ...args]);
+    return {
+      name: null,
+      numberSeries: 'SINV-',
+      party: 'Customer',
+      isReturned: 0,
+      outstandingAmount: null,
+      items: [{ name: null, item: 'Pen', quantity: 1 }],
+    };
+  });
+  const invoice = fyo.doc.getNewDoc('SalesInvoice', {
+    name: 'SINV-1001',
+    numberSeries: 'SINV-',
+    isReturned: true,
+    outstandingAmount: 100,
+  });
+  invoice._notInserted = false;
+  await invoice.set('terms', 'Unsaved edit');
+  clearTimeout(invoice._previewTimer);
+
+  const duplicate = await invoice.duplicate();
+
+  const [[method, schemaName, values]] = calls;
+  assert.deepEqual([method, schemaName], ['getDuplicate', 'SalesInvoice']);
+  assert.equal(values.terms, 'Unsaved edit');
+  assert.equal(Object.hasOwn(values, 'modified'), false);
+  assert.equal(duplicate.notInserted, true);
+  assert.equal(duplicate.isReturned, false);
+  assert.equal(duplicate.outstandingAmount.float, 0);
+  assert.equal(duplicate.party, 'Customer');
+  assert.notEqual(duplicate.name, 'SINV-1001');
+  assert.ok(duplicate.items[0].name);
+});
+
+test('a duplicate of a named document is named after it', async () => {
+  const fyo = await makeFyo(() => ({
+    name: null,
+    type: 'SalesInvoice',
+    isCustom: 1,
+  }));
+  const template = fyo.doc.getNewDoc('PrintTemplate', {
+    name: 'Basic',
+    type: 'SalesInvoice',
+    isCustom: false,
+  });
+
+  const duplicate = await template.duplicate();
+
+  assert.equal(duplicate.name, 'Basic CPY');
+  assert.equal(duplicate.isCustom, true);
+});
+
+test('lead, party and item actions open documents from their server mappers', async () => {
+  const calls = [];
+  const fyo = await makeFyo((method, ...args) => {
+    calls.push(args);
+    return { party: 'Acme', items: [{ item: 'Pen', quantity: 1 }] };
+  });
+  const cases = [
+    ['Lead', 'Customer', 'books_lead.books_lead.make_customer', '/edit/Party/'],
+    [
+      'Lead',
+      'Sales Quote',
+      'books_lead.books_lead.make_sales_quote',
+      '/edit/SalesQuote/',
+    ],
+    [
+      'Party',
+      'Create Sale',
+      'books_party.books_party.make_sales_invoice',
+      '/edit/SalesInvoice/',
+    ],
+    [
+      'Item',
+      'Purchase Invoice',
+      'books_item.books_item.make_purchase_invoice',
+      '/edit/PurchaseInvoice/',
+    ],
+  ];
+  for (const [schemaName, label, mapper, path] of cases) {
+    const source = fyo.doc.getNewDoc(schemaName, { name: 'Acme' });
+    source._notInserted = false;
+    const { action } = fyo.models[schemaName]
+      .getActions(fyo)
+      .find((action) => action.label === label);
+    let route = '';
+    await action(source, { push: (to) => (route = to.path ?? to) });
+
+    const method = `frappe_books.frappe_books.doctype.${mapper}`;
+    assert.deepEqual(calls.at(-1), [method, 'Acme'], label);
+    assert.ok(route.startsWith(path), label);
+  }
+});
+
 async function makeFyo(call) {
   class Store {
     getSchemaMap() {
@@ -114,6 +211,10 @@ async function makeFyo(call) {
 
     call(method, ...args) {
       return call(method, ...args);
+    }
+
+    getDuplicate(...args) {
+      return call('getDuplicate', ...args);
     }
   }
 

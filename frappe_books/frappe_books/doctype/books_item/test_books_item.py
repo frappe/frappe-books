@@ -4,7 +4,14 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import make_account, make_item
+from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice
+from frappe_books.tests.accounting import (
+	make_account,
+	make_item,
+	root_group,
+	set_inventory_accounts,
+	unique_name,
+)
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -25,6 +32,25 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 			make_item(income.name, expense.name, rate=-1)
 		item = make_item(income.name, expense.name, hsn_code="123456", barcode="123456789012")
 		self.assertEqual(item.hsn_code, "123456")
+
+	def test_missing_accounts_and_hsn_code_get_the_app_defaults(self):
+		for name in ("Sales", "Service"):
+			if not frappe.db.exists("Books Account", name):
+				values = {"account_name": name, "parent_books_account": root_group("Income")}
+				frappe.get_doc({"doctype": "Books Account", **values}).insert()
+		cogs = make_account("Item COGS", root_type="Expense", account_type="Cost of Goods Sold")
+		received = make_account("Item Received", root_type="Liability")
+		set_inventory_accounts(None, received.name, cogs.name)
+		group = frappe.get_doc(
+			{"doctype": "Books Item Group", "name": unique_name("Group"), "hsn_code": "998877"}
+		).insert()
+
+		service = make_item(None, None, item_type="Service", item_group=group.name)
+		product = make_item(None, None, track_item=1)
+
+		self.assertEqual((service.income_account, service.expense_account), ("Service", cogs.name))
+		self.assertEqual(service.hsn_code, "998877")
+		self.assertEqual((product.income_account, product.expense_account), ("Sales", received.name))
 
 	def test_accounts_follow_the_item_tracking(self):
 		income = make_account("Item Sales", root_type="Income")
@@ -54,3 +80,13 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		)
 
 		self.assertEqual((item.batch_series, item.serial_number_series), (f"{prefix}-", "SERIAL"))
+
+	def test_item_maps_to_an_invoice_row(self):
+		income = make_account("Mapped Sales", root_type="Income")
+		expense = make_account("Mapped Expense", root_type="Expense")
+		item = make_item(income.name, expense.name, rate=40)
+
+		invoice = make_purchase_invoice(item.name)
+
+		row = invoice.items[0]
+		self.assertEqual((row.item, row.quantity, row.rate, row.account), (item.name, 1, 40, expense.name))

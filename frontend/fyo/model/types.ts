@@ -126,9 +126,6 @@ export interface TreeViewSettings {
   getRootLabel: () => Promise<string>;
 }
 
-export type DocStatus =
-  '' | 'Draft' | 'Saved' | 'NotSaved' | 'Submitted' | 'Cancelled';
-
 export type LeadStatus =
   | ''
   | 'Open'
@@ -137,4 +134,4 @@ export type LeadStatus =
   | 'Opportunity'
   | 'Converted'
   | 'Quotation'
-  | 'DonotContact';
+  | 'Do not Contact';

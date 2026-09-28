@@ -5,12 +5,14 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns
-from frappe_books.accounting.accounts import validate_account, validate_party_role
+from frappe_books.accounting.accounts import validate_account, validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
+from frappe_books.commerce.pos import pos_customer
+from frappe_books.currency import get_exchange_rate
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
 from frappe_books.inventory.invoice_balance import (
 	store_pending_quantities,
@@ -20,14 +22,17 @@ from frappe_books.inventory.invoice_balance import (
 from frappe_books.inventory.stock import validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.settings import require_feature, require_features, set_default_terms
+from frappe_books.status import StatusMixin
 
 
-class InvoiceController(SeriesNamingMixin, Document):
+class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	"""Totals and validation shared by quotes and invoices."""
 
 	transaction_type: str
 
 	def before_validate(self):
+		set_default_terms(self)
 		self.calculate()
 
 	def calculate(self):
@@ -43,8 +48,22 @@ class InvoiceController(SeriesNamingMixin, Document):
 		validate_invoice(self)
 		loyalty.validate_invoice_loyalty(self)
 
+	@frappe.whitelist()
+	def preview(self):
+		"""Calculate what a save would store, without saving, for a new document or an edited draft."""
+		if self.is_new():
+			self.check_permission("create")
+		else:
+			frappe.has_permission(self.doctype, "write", doc=self.name, throw=True)
+		self.calculate()
+
 
 FOLLOW_UP_FIELDS = ("make_auto_payment", "make_auto_stock_transfer")
+INVOICE_FEATURES = {
+	"return_against": "enable_invoice_returns",
+	"coupons": "enable_coupon_code",
+	"is_pos": "enable_point_of_sale",
+}
 
 
 class PostingInvoiceController(InvoiceController):
@@ -57,6 +76,15 @@ class PostingInvoiceController(InvoiceController):
 	def calculate(self):
 		super().calculate()
 		self.set_follow_up_defaults()
+
+	def fill_mapped_values(self):
+		"""Fill a mapped invoice as a save would, letting it choose its own follow-ups.
+
+		frappe.new_doc sets every check box to 0, so the follow-up checks are cleared first.
+		"""
+		for fieldname in FOLLOW_UP_FIELDS:
+			self.set(fieldname, None)
+		self.calculate()
 
 	def set_follow_up_defaults(self):
 		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
@@ -198,6 +226,7 @@ def row_discount(invoice, row):
 def validate_invoice(invoice):
 	if not invoice.items:
 		frappe.throw(_("At least one invoice item is required."))
+	_validate_features(invoice)
 	_validate_party_and_account(invoice)
 	if as_decimal(invoice.exchange_rate) <= 0:
 		frappe.throw(
@@ -205,8 +234,27 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	validate_item_usage(invoice, invoice.transaction_type == "purchase")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
+
+
+def _validate_features(invoice):
+	"""Reject what the Books app offers only while its feature is on."""
+	require_features(invoice, INVOICE_FEATURES)
+	if invoice.get("reference_type") == "Books Lead":
+		require_feature("enable_lead")
+	if _has_manual_discount(invoice):
+		require_feature("enable_discounting")
+
+
+def _has_manual_discount(invoice):
+	"""Pricing rules discount rows under their own switch; other discounts need discounting."""
+	discounts = [invoice.get("discount_percent"), invoice.get("discount_amount")]
+	for row in invoice.items:
+		if not row.get("pricing_rule"):
+			discounts += [row.item_discount_percent, row.item_discount_amount]
+	return any(as_decimal(value) for value in discounts)
 
 
 def _validate_party_and_account(invoice):
@@ -224,8 +272,7 @@ def _validate_row(invoice, row):
 	quantity = as_decimal(row.quantity)
 	if quantity == 0:
 		frappe.throw(_("Item quantity cannot be zero."))
-	if quantity < 0 and not invoice.get("return_against"):
-		frappe.throw(_("Negative quantities require a return-against invoice."))
+	returns.validate_quantity_sign(row, bool(invoice.get("return_against")))
 	if as_decimal(row.rate) < 0:
 		frappe.throw(_("Item rate cannot be negative."))
 	_validate_row_discount(row)
@@ -301,6 +348,7 @@ def _post_direction(posting, account, amount, party=None, credit=False, reverse=
 
 
 def _populate_invoice_defaults(invoice):
+	_populate_pos_defaults(invoice)
 	_populate_party_defaults(invoice)
 	populate_units(invoice.get("items", []))
 	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
@@ -308,6 +356,16 @@ def _populate_invoice_defaults(invoice):
 	for row in invoice.get("items", []):
 		if row.item in items:
 			_populate_row(invoice, row, items[row.item], rates)
+
+
+def _populate_pos_defaults(invoice):
+	"""A POS sale bills the POS customer to the POS Settings account, unless told otherwise."""
+	if not invoice.get("is_pos"):
+		return
+	invoice.party = invoice.party or pos_customer()
+	invoice.account = invoice.get("account") or frappe.db.get_single_value(
+		"Books Pos Settings", "default_account"
+	)
 
 
 def _populate_party_defaults(invoice):
@@ -339,6 +397,8 @@ def _populate_currency(invoice, party_currency):
 	invoice.currency = party_currency or company
 	if invoice.currency == company:
 		invoice.exchange_rate = 1
+	elif not invoice.get("exchange_rate"):
+		invoice.exchange_rate = get_exchange_rate(invoice.currency, company, invoice.date)
 
 
 def _populate_row(invoice, row, item, rates):

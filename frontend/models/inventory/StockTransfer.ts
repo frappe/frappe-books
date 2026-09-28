@@ -78,7 +78,6 @@ export abstract class StockTransfer extends Transfer {
 
       return defaults?.purchaseReceiptTerms ?? '';
     },
-    date: () => new Date(),
   };
 
   static filters: FiltersMap = {
@@ -92,12 +91,6 @@ export abstract class StockTransfer extends Transfer {
       cancelled: false,
     }),
   };
-
-  override duplicate(): Doc {
-    const doc = super.duplicate() as StockTransfer;
-    doc.backReference = undefined;
-    return doc;
-  }
 
   static createFilters: FiltersMap = {
     party: (doc: Doc) => ({

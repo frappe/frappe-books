@@ -6,17 +6,19 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.accounts import (
 	PAYMENT_ACCOUNT_TYPES,
+	latest_ledger_account,
 	validate_account,
 	validate_party_account,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
+from frappe_books.commerce.pos import counter_cash_account, is_cash_method
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.status import StatusMixin
 
 REFERENCE_DOCTYPES = {
 	"SalesInvoice": "Books Sales Invoice",
@@ -26,11 +28,34 @@ REFERENCE_DOCTYPES = {
 }
 
 
-class PaymentController(SeriesNamingMixin, Document):
+class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 	def before_validate(self):
 		self.amount_paid = rounded(as_decimal(self.amount) - as_decimal(self.writeoff))
 		for row in self.payment_references:
 			row.reference_type = REFERENCE_DOCTYPES.get(row.reference_type, row.reference_type)
+		self.set_missing_values()
+
+	def set_missing_values(self):
+		"""Fill the payment type and accounts the way the Books app does while editing."""
+		fields = ["role", "default_account"]
+		party = self.party and frappe.db.get_value("Books Party", self.party, fields, as_dict=True)
+		invoice = self.get_first_invoice()
+		self.payment_type = self.payment_type or _default_payment_type(party, invoice)
+		self.account = self.account or _default_party_account(party, invoice, self.payment_type)
+		self.payment_account = self.payment_account or _default_payment_account(
+			self.payment_method, self.payment_type, invoice
+		)
+
+	def get_first_invoice(self):
+		"""Return the doctype, return link, account and POS flag of the first referenced invoice."""
+		row = self.payment_references[0] if self.payment_references else None
+		if not row or row.reference_type not in REFERENCE_DOCTYPES.values():
+			return None
+		fields = ["return_against", "account"]
+		if row.reference_type == "Books Sales Invoice":
+			fields.append("is_pos")
+		invoice = frappe.db.get_value(row.reference_type, row.reference_name, fields, as_dict=True)
+		return invoice and frappe._dict(invoice, doctype=row.reference_type)
 
 	def validate(self):
 		if as_decimal(self.amount) <= 0:
@@ -41,7 +66,9 @@ class PaymentController(SeriesNamingMixin, Document):
 			frappe.throw(_("The From and To accounts cannot be the same."))
 		self.validate_accounts()
 		self.validate_payment_method()
-		self.set("taxes", _realised_taxes(_validate_allocations(self)))
+		allocations = _validate_allocations(self)
+		self.validate_counter_account([invoice for invoice, _amount in allocations])
+		self.set("taxes", _realised_taxes(allocations))
 
 	def validate_accounts(self):
 		"""The account is the party's ledger, the payment account its cash or bank."""
@@ -58,6 +85,18 @@ class PaymentController(SeriesNamingMixin, Document):
 			frappe.throw(_("Set a reference ID for {0} payments.").format(self.payment_method))
 		if method.requires_clearance_date and not self.clearance_date:
 			frappe.throw(_("Set a clearance date for {0} payments.").format(self.payment_method))
+
+	def validate_counter_account(self, invoices):
+		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""
+		if not any(invoice.get("is_pos") for invoice in invoices):
+			return
+		if not is_cash_method(self.payment_method):
+			return
+		counter = counter_cash_account()
+		if self.payment_account != counter:
+			frappe.throw(
+				_("Cash payments for POS invoices must use the counter cash account {0}.").format(counter)
+			)
 
 	def on_submit(self):
 		posting = LedgerPosting(self)
@@ -80,6 +119,39 @@ class PaymentController(SeriesNamingMixin, Document):
 
 	def on_trash(self):
 		delete_entries(self)
+
+
+def _default_payment_type(party, invoice):
+	if invoice:
+		return payment_type_for(invoice.doctype, bool(invoice.return_against))
+	if party:
+		return "Pay" if party.role == "Supplier" else "Receive"
+	return None
+
+
+def _default_party_account(party, invoice, payment_type):
+	"""The party's ledger, else the invoice's, else the newest payable or receivable ledger."""
+	if party and party.role != "Both" and party.default_account:
+		return party.default_account
+	if invoice:
+		return invoice.account
+	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
+
+
+def _default_payment_account(payment_method, payment_type, invoice):
+	"""POS cash goes to the counter, other receipts to the method's account, else the newest ledger
+	of the method's kind."""
+	fields = ["type", "account"]
+	method = payment_method and frappe.db.get_value(
+		"Books Payment Method", payment_method, fields, as_dict=True
+	)
+	if not method:
+		return None
+	if method.type == "Cash" and invoice and invoice.get("is_pos"):
+		return counter_cash_account()
+	if method.account and payment_type != "Pay":
+		return method.account
+	return latest_ledger_account("Cash" if method.type == "Cash" else "Bank")
 
 
 def _validate_allocations(payment):
@@ -141,14 +213,20 @@ def _invoice_realised_taxes(invoice, amount):
 	for tax in invoice.taxes:
 		if tax.account not in payment_accounts:
 			continue
-		base_tax = abs(as_decimal(tax.amount)) * as_decimal(invoice.exchange_rate or 1)
 		yield {
 			"account": payment_accounts[tax.account],
 			"from_account": tax.account,
 			"rate": tax.rate,
-			# Realise the share paid so far, so partial payments add up to the full tax.
-			"amount": rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total),
+			"amount": tax_share(invoice, tax, amount, paid),
 		}
+
+
+def tax_share(invoice, tax, amount, paid=0):
+	"""Return the base-currency part of an invoice tax that `amount` settles after `paid`."""
+	total = abs(as_decimal(invoice.base_grand_total))
+	base_tax = abs(as_decimal(tax.amount)) * as_decimal(invoice.exchange_rate or 1)
+	# Share what is paid so far, so partial payments add up to the full tax.
+	return rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total)
 
 
 def _tax_payment_accounts(invoice):
@@ -233,10 +311,9 @@ def _settle_invoice(invoice, payment):
 		frappe.throw(_("Invoice {0} has no outstanding amount.").format(invoice.name))
 	payment.update(
 		{
-			"date": now_datetime(),
 			"payment_type": payment_type_for(invoice.doctype, bool(invoice.return_against)),
 			"payment_method": "Cash",
-			"payment_account": _settling_account(invoice.doctype),
+			"payment_account": _settling_account(invoice),
 			"amount": outstanding,
 		}
 	)
@@ -254,8 +331,10 @@ def default_payment_account(invoice_doctype) -> str | None:
 	return frappe.db.get_single_value("Books Defaults", fieldname)
 
 
-def _settling_account(invoice_doctype):
-	account = default_payment_account(invoice_doctype) or frappe.db.get_value(
+def _settling_account(invoice):
+	if invoice.get("is_pos"):
+		return counter_cash_account()
+	account = default_payment_account(invoice.doctype) or frappe.db.get_value(
 		"Books Payment Method", "Cash", "account"
 	)
 	if not account:

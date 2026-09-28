@@ -1,7 +1,13 @@
 import { Doc } from 'fyo/model/doc';
-import { FormulaMap, ListsMap, ValidationMap } from 'fyo/model/types';
+import {
+  DefaultMap,
+  FormulaMap,
+  ListsMap,
+  ValidationMap,
+} from 'fyo/model/types';
 import { validateEmail } from 'fyo/model/validationFunction';
 import { DateTime } from 'luxon';
+import { ModelNameEnum } from 'models/types';
 import { getCountryInfo, getFiscalYear } from 'utils/misc';
 
 function getCurrencyList(): { countryCode: string; name: string }[] {
@@ -72,7 +78,7 @@ export class SetupWizard extends Doc {
       dependsOn: ['country', 'fiscalYearStart'],
     },
     currency: {
-      formula: () => {
+      formula: async () => {
         const country = this.get('country');
         if (typeof country !== 'string') {
           return;
@@ -89,11 +95,11 @@ export class SetupWizard extends Doc {
           ({ countryCode }) => countryCode === code
         );
 
-        if (currency === undefined) {
-          return currencyList[0].name;
+        const name = currency?.name ?? currencyList[0].name;
+        // Some of these currencies are gone from Frappe's Currency list.
+        if (await this.fyo.db.exists(ModelNameEnum.Currency, name)) {
+          return name;
         }
-
-        return currency.name;
       },
       dependsOn: ['country'],
     },
@@ -128,9 +134,12 @@ export class SetupWizard extends Doc {
     email: validateEmail,
   };
 
+  static defaults: DefaultMap = {
+    // Frappe's setup sets the system time zone; the browser's is the best guess.
+    timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
+
   static lists: ListsMap = {
-    country: () => Object.keys(getCountryInfo()),
-    currency: () => getCurrencyList().map(({ name }) => name),
     chartOfAccounts: (doc) =>
       (doc?.fyo.store.chartsOfAccounts ?? []).map(({ name, label }) => ({
         value: name,

@@ -64,7 +64,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		make_receipt(item.name, quantity=2, rate=10)
 		receipt = make_receipt(item.name, quantity=2, rate=20)
 
-		purchase_return = make_receipt(item.name, quantity=1, rate=20, return_against=receipt.name)
+		purchase_return = make_receipt(item.name, quantity=-1, rate=20, return_against=receipt.name)
 
 		entries = ledger_entries(purchase_return.doctype, purchase_return.name)
 		stock_credit = sum(Decimal(str(row.credit or 0)) for row in entries if row.account == stock.name)
@@ -86,7 +86,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		receipt = make_receipt(item.name, quantity=2, rate=10)
 
 		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2"):
-			make_receipt(item.name, quantity=3, rate=10, return_against=receipt.name)
+			make_receipt(item.name, quantity=-3, rate=10, return_against=receipt.name)
 
 	def test_invoice_and_return_are_mapped_from_a_receipt(self):
 		set_inventory_accounts(

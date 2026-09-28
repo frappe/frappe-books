@@ -41,6 +41,13 @@ def validate_changed_accounts(doc, rules):
 			validate_account(doc, fieldname, **types)
 
 
+def latest_ledger_account(account_type):
+	"""Return the newest ledger account of the type, the one the Books app offers first."""
+	return frappe.db.get_value(
+		"Books Account", {"account_type": account_type, "is_group": 0}, "name", order_by="creation desc"
+	)
+
+
 def validate_party_role(doc, is_purchase):
 	"""Sales go to customers and purchases come from suppliers; a party with both roles does either."""
 	role = doc.party and frappe.db.get_value("Books Party", doc.party, "role")
@@ -51,3 +58,14 @@ def validate_party_role(doc, is_purchase):
 				_(doc.meta.get_label("party")), _(expected), doc.party, _(role)
 			)
 		)
+
+
+def validate_item_usage(doc, is_purchase):
+	"""Sales take items kept for sales and purchases items kept for purchases, as Item Usage says."""
+	items = sorted({row.item for row in doc.items if row.item})
+	usage, other_usage = ("Purchases", "Sales") if is_purchase else ("Sales", "Purchases")
+	other_only = items and frappe.get_all(
+		"Books Item", filters={"name": ["in", items], "item_usage": other_usage}, pluck="name"
+	)
+	if other_only:
+		frappe.throw(_("Item {0} is not for {1}.").format(", ".join(sorted(other_only)), _(usage)))

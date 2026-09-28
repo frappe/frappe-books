@@ -24,6 +24,11 @@
       "label": "Is Enabled"
     },
     {
+      "fieldname": "status",
+      "label": "Status",
+      "hidden": true
+    },
+    {
       "fieldname": "collectionRules",
       "label": "Collection Rules"
     },
@@ -60,6 +65,5 @@
     "expenseAccount",
     "maximumUse",
     "used"
-  ],
-  "keywordFields": ["name"]
+  ]
 }

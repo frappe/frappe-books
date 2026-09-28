@@ -1,0 +1,5 @@
+frontend/tests/**,ignore
+frontend/**.ts,frappe_books.translation_extractors.extract_template_strings
+frontend/**.vue,frappe_books.translation_extractors.extract_template_strings
+frontend/schemas/**.json,frappe_books.translation_extractors.extract_schema_labels
+frappe_books/data/charts/*.json,frappe_books.translation_extractors.extract_chart_names

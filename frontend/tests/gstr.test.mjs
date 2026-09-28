@@ -1,70 +1,57 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { GSTR1, getGstrJsonData, makeFyo } from './helpers/accounting.mjs';
+import { reportResult, stubServer } from './helpers/server.mjs';
 
 const GSTIN = '27AAAAA0000A1Z5';
 
-test('GSTR shows the server rows and exports one invoice with an item per rate', async () => {
+test('GSTR shows the server rows and asks the server for the JSON export', async () => {
   const fyo = await makeFyo();
-  const row = {
-    gstin: GSTIN,
-    partyName: 'Customer',
-    invNo: 'SINV-1',
-    invDate: '2026-01-01',
-    reverseCharge: 'N',
-    inState: true,
-    place: 'Maharashtra',
-    invAmt: 459,
-  };
-  const rows = [
-    { ...row, rate: 18, taxVal: 300, cgstAmt: 27, sgstAmt: 27 },
-    { ...row, rate: 5, taxVal: 100, cgstAmt: 2.5, sgstAmt: 2.5 },
-  ];
-  let call;
-  fyo.db.getReportData = async (...args) => {
-    call = args;
-    return rows;
-  };
-  fyo.getValue = async () => GSTIN;
-  const report = new GSTR1(fyo);
-  report.transferType = 'B2B';
-  report.toDate = '2026-01-31';
-  report.filters = report.getFilters();
-  report.columns = await report.getColumns();
-
-  await report.setReportData();
-
-  assert.deepEqual(call, [
-    'getGSTRRows',
-    'SalesInvoice',
-    { transferType: 'B2B', toDate: '2026-01-31' },
-  ]);
-  assert.equal(report.reportData.length, 2);
-  const itemDetails = (rate, taxVal, tax) => ({
-    txval: taxVal,
-    rt: rate,
-    csamt: 0,
-    camt: tax,
-    samt: tax,
-    iamt: 0,
-  });
-  assert.deepEqual(JSON.parse(await getGstrJsonData(report)).b2b, [
-    {
-      ctin: GSTIN,
-      inv: [
-        {
-          inum: 'SINV-1',
-          idt: '01-01-2026',
-          val: 459,
-          pos: '27',
-          rchrg: 'N',
-          inv_typ: 'R',
-          itms: [
-            { num: 1, itm_det: itemDetails(18, 300, 27) },
-            { num: 2, itm_det: itemDetails(5, 100, 2.5) },
-          ],
-        },
+  const row = { gstin: GSTIN, invoice_no: 'SINV-1', igst_amount: undefined };
+  const gstrJson = { gstin: GSTIN, fp: '012026', b2b: [] };
+  const calls = stubServer((method) => {
+    if (method.endsWith('get_default_filters'))
+      return {
+        from_date: '2025-10-31',
+        to_date: '2026-01-31',
+        transfer_type: 'B2B',
+      };
+    if (method.endsWith('get_gstr_json')) return gstrJson;
+    return reportResult(
+      [
+        ['gstin', 'Data', 180],
+        ['invoice_no', 'Data'],
+        ['rate', 'Data', 60],
+        ['taxable_value', 'Currency'],
+        ['igst_amount', 'Currency'],
       ],
-    },
-  ]);
+      [
+        { ...row, rate: 18, taxable_value: 300 },
+        { ...row, rate: 5, taxable_value: 100 },
+      ]
+    );
+  });
+  fyo.store.indianStates = { 27: 'Maharashtra' };
+  const report = new GSTR1(fyo);
+
+  await report.initialize();
+
+  const filters = {
+    transfer_type: 'B2B',
+    from_date: '2025-10-31',
+    to_date: '2026-01-31',
+  };
+  const run = calls.find((c) => c.method === 'frappe.desk.query_report.run');
+  assert.deepEqual(run.args.filters, filters);
+  assert.equal(run.args.report_name, 'Books GSTR-1');
+  assert.deepEqual(
+    report.filters.find((f) => f.fieldname === 'place').options,
+    [{ value: '27', label: 'Maharashtra' }]
+  );
+  assert.deepEqual(
+    report.reportData[1].cells.map((cell) => cell.value),
+    [GSTIN, 'SINV-1', '5', '100.00', '']
+  );
+  assert.deepEqual(JSON.parse(await getGstrJsonData(report)), gstrJson);
+  assert.deepEqual(calls.at(-1).args, { report_name: 'Books GSTR-1', filters });
 });

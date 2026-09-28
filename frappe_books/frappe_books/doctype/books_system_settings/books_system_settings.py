@@ -17,8 +17,6 @@ class BooksSystemSettings(Document):
 		from frappe.types import DF
 
 		allow_filter_bypass: DF.Check
-		country_code: DF.Data | None
-		currency: DF.Autocomplete
 		dark_mode: DF.Check
 		date_format: DF.Autocomplete
 		display_precision: DF.Int

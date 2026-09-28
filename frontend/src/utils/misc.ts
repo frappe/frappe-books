@@ -1,55 +1,8 @@
-import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
 import { fyo } from 'src/initFyo';
 import { QueryFilter } from 'utils/db/types';
-import { PeriodKey } from './types';
-
-export function getDatesAndPeriodList(period: PeriodKey): {
-  periodList: DateTime[];
-  fromDate: DateTime;
-  toDate: DateTime;
-} {
-  const toDate: DateTime = DateTime.now().plus({ days: 1 });
-  let fromDate: DateTime;
-
-  if (period === 'This Year') {
-    fromDate = toDate.minus({ months: 12 });
-  } else if (period === 'YTD') {
-    fromDate = DateTime.now().startOf('year');
-  } else if (period === 'This Quarter') {
-    fromDate = toDate.minus({ months: 3 });
-  } else if (period === 'This Month') {
-    fromDate = toDate.startOf('month');
-  } else {
-    fromDate = toDate.minus({ days: 1 });
-  }
-
-  /**
-   * periodList: Monthly decrements before toDate until fromDate
-   */
-  const periodList: DateTime[] = [toDate];
-  while (true) {
-    const nextDate = periodList.at(0)!.minus({ months: 1 });
-    if (nextDate.toMillis() < fromDate.toMillis()) {
-      if (period === 'YTD') {
-        periodList.unshift(nextDate);
-        break;
-      }
-      break;
-    }
-
-    periodList.unshift(nextDate);
-  }
-  periodList.shift();
-
-  return {
-    periodList,
-    fromDate,
-    toDate,
-  };
-}
 
 export function getSetupWizardDoc() {
   return fyo.doc.getNewDoc(ModelNameEnum.SetupWizard, {}, false);

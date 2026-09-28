@@ -139,6 +139,7 @@ import FormHeader from 'src/components/FormHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getErrorMessage } from 'src/utils';
+import { loadDocPermissions } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
@@ -263,7 +264,12 @@ export default defineComponent({
         return false;
       }
 
-      return !this.doc.isCancelled && !this.doc.dirty && this.isPrintable;
+      return (
+        this.doc.can('print') &&
+        !this.doc.isCancelled &&
+        !this.doc.dirty &&
+        this.isPrintable
+      );
     },
     canShowLinks(): boolean {
       if (!this.hasDoc) {
@@ -407,14 +413,16 @@ export default defineComponent({
       }
 
       try {
-        this.docOrNull = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
+        const doc = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
+        await loadDocPermissions(doc);
+        this.docOrNull = doc;
       } catch (error) {
         await handleErrorWithDialog(error);
       }
     },
     async refreshDoc() {
       try {
-        await this.doc.refresh();
+        await Promise.all([this.doc.refresh(), loadDocPermissions(this.doc)]);
         this.updateGroupedFields();
       } catch (error) {
         await handleErrorWithDialog(error, this.doc, true);

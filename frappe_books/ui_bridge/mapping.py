@@ -71,6 +71,29 @@ def source_field(source_schema: str, target_fieldname: str) -> str:
 	return target_fieldname
 
 
+def search_fields(source_schema: str) -> list[str]:
+	"""The fields Books search matches and shows: `name` and the DocType search fields, or only
+	the search fields for table rows."""
+	meta = frappe.get_meta(target_doctype(source_schema))
+	fields = [
+		source_field(source_schema, fieldname.strip())
+		for fieldname in (meta.search_fields or "").split(",")
+		if fieldname.strip()
+	]
+	return fields if meta.istable else ["name", *fields]
+
+
+def is_searchable(source_schema: str) -> bool:
+	"""Whether the search palette offers the schema: it has search fields or is found by name."""
+	meta = frappe.get_meta(target_doctype(source_schema))
+	return bool(meta.search_fields or (meta.show_name_in_global_search and not meta.istable))
+
+
+def system_settings_fields(source_schema: str) -> dict[str, str]:
+	"""Fields of a Books settings schema that Frappe's System Settings stores."""
+	return schema_mapping()[source_schema].get("system_settings", {})
+
+
 def custom_field_mapping(source_schema: str) -> dict[str, str]:
 	"""Return Books custom field names mapped to their hosted columns."""
 	return custom_field_mappings().get(source_schema, {})

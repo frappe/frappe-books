@@ -3,6 +3,7 @@ import { Converter } from 'fyo/core/converter';
 import { DocValue, DocValueMap, RawValueMap } from 'fyo/core/types';
 import { MandatoryError, NotFoundError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
+import type { DocPermission, DocPermissionMap } from 'fyo/utils/permissions';
 import {
   DynamicLinkField,
   Field,
@@ -12,10 +13,12 @@ import {
   TargetField,
 } from 'schemas/types';
 import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
+import type { LinkedDoc } from 'utils/db/types';
 import { markRaw, reactive } from 'vue';
 import { isPesa } from '../utils/index';
 import {
   areDocValuesEqual,
+  getFieldDefault,
   getFormulaSequence,
   getMissingMandatoryMessage,
   getPreDefaultValues,
@@ -58,6 +61,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
   parentSchemaName?: string;
 
   links?: Record<string, Doc>;
+  /** The server's rights on this saved document; unset until a form loads them. */
+  docPermissions?: DocPermissionMap;
   _dirty = true;
   _notInserted = true;
 
@@ -137,7 +142,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canDelete() {
-    if (this.notInserted || !this.fyo.can(this.schemaName, 'delete')) {
+    if (this.notInserted || !this.can('delete')) {
       return false;
     }
 
@@ -194,7 +199,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canSubmit() {
-    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'submit')) {
+    if (!this.schema.isSubmittable || !this.can('submit')) {
       return false;
     }
 
@@ -218,7 +223,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canCancel() {
-    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'cancel')) {
+    if (!this.schema.isSubmittable || !this.can('cancel')) {
       return false;
     }
 
@@ -241,14 +246,25 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return true;
   }
 
-  /** Create for a new document and write for a saved one. */
+  /** Create for a new document and write for a saved one or a single. */
   get canWrite(): boolean {
     if (this.schema.isChild) {
       // A row is saved with its parent; a detached row is never saved.
       return this.parentdoc?.canWrite ?? true;
     }
 
-    return this.fyo.can(this.schemaName, this.notInserted ? 'create' : 'write');
+    // Frappe lists singles under can_write, never can_create.
+    const isNew = this.notInserted && !this.schema.isSingle;
+    return this.can(isNew ? 'create' : 'write');
+  }
+
+  /** Rights on a saved document come from the server when loaded, else from the schema. */
+  can(permission: DocPermission): boolean {
+    if (this.docPermissions && this.inserted) {
+      return !!this.docPermissions[permission];
+    }
+
+    return this.fyo.can(this.schemaName, permission);
   }
 
   _setValuesWithoutChecks(data: DocValueMap, convertToDocValue: boolean) {
@@ -410,7 +426,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       if (defaultFunction !== undefined) {
         defaultValue = defaultFunction(this);
       } else if (field.default !== undefined) {
-        defaultValue = field.default;
+        defaultValue = getFieldDefault(field) as DocValue;
       }
 
       if (field.fieldtype === FieldTypeEnum.Currency && !isPesa(defaultValue)) {
@@ -906,15 +922,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _update() {
-    const expectedModified = this.modified;
     await this._preSync();
 
+    // The data holds `modified`, which the server compares to refuse a stale save.
     let data = this.getValidDict(false, true);
-    data = await this.fyo.db.update(
-      this.schemaName,
-      data,
-      expectedModified instanceof Date ? expectedModified : undefined
-    );
+    data = await this.fyo.db.update(this.schemaName, data);
     await this._syncValues(data, 'save');
 
     return this;
@@ -960,7 +972,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
     const data = await this.fyo.db.runLifecycleAction(
       'submit',
       this.schemaName,
-      this.name!
+      this.name!,
+      this.modified as string
     );
     await this._syncValues(data, 'submit');
     this._notInserted = false;
@@ -994,7 +1007,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
   }
 
-  async cancel() {
+  /** Cancels the doc after `linkedDocs`, the submitted documents that link to it. */
+  async cancel(linkedDocs: LinkedDoc[] = []) {
     if (!this.schema.isSubmittable || !this.submitted || this.cancelled) {
       return;
     }
@@ -1002,7 +1016,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
     const data = await this.fyo.db.runLifecycleAction(
       'cancel',
       this.schemaName,
-      this.name!
+      this.name!,
+      this.modified as string,
+      linkedDocs
     );
     await this._syncValues(data);
     this._notInserted = false;
@@ -1062,31 +1078,17 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return await this.sync();
   }
 
-  duplicate(): Doc {
-    const updateMap = this.getValidDict(true, true);
-    for (const field in updateMap) {
-      const value = updateMap[field];
-      if (!Array.isArray(value)) {
-        continue;
-      }
-
-      for (const row of value) {
-        delete row.name;
-      }
-    }
-
-    if (this.numberSeries) {
-      delete updateMap.name;
-    } else {
-      updateMap.name = String(updateMap.name) + ' CPY';
-    }
-
-    const rawUpdateMap = this.fyo.db.converter.toRawValueMap(
+  /** A new copy of the doc, unsaved edits included, without the values Frappe marks no_copy. */
+  async duplicate(): Promise<Doc> {
+    const values = await this.fyo.db.getDuplicate(
       this.schemaName,
-      updateMap
-    ) as RawValueMap;
+      this.getValidDict(true, true)
+    );
+    if (!this.numberSeries) {
+      values.name = `${this.name!} CPY`;
+    }
 
-    return this.fyo.doc.getNewDoc(this.schemaName, rawUpdateMap, true);
+    return this.fyo.doc.getNewDocFromServer(this.schemaName, values);
   }
 
   /**

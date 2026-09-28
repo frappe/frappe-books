@@ -30,39 +30,38 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 	def setUp(self):
 		self.bridge = BooksDatabaseBridge()
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
-		self.assertFalse(frappe.db.exists("Books Custom Form", "Color"))
+		self.assertFalse(frappe.db.exists("Books Custom Form", "UOM"))
 		self.addCleanup(self._cleanup_custom_field_test)
 
 	def test_custom_fields_are_materialized_and_round_trip(self):
-		color_name = unique_name("Bridge Custom Color")
-		self.bridge.insert("CustomForm", {"name": "Color", "customFields": [FIELD]})
-		self.assertTrue(frappe.db.exists("Custom Field", {"dt": "Books Color", "fieldname": COLUMN}))
+		unit_name = unique_name("Bridge Custom Unit")
+		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD]})
+		self.assertTrue(frappe.db.exists("Custom Field", {"dt": "Books Uom", "fieldname": COLUMN}))
 
 		inserted = self.bridge.insert(
-			"Color",
+			"UOM",
 			{
-				"name": color_name,
-				"hexvalue": "#123456",
+				"name": unit_name,
 				FIELD["fieldname"]: "persisted",
 			},
 		)
 
 		self.assertEqual(inserted[FIELD["fieldname"]], "persisted")
-		self.assertEqual(self.bridge.get("Color", color_name)[FIELD["fieldname"]], "persisted")
+		self.assertEqual(self.bridge.get("UOM", unit_name)[FIELD["fieldname"]], "persisted")
 
 	def test_custom_fields_are_served_under_their_books_names(self):
-		self.bridge.insert("CustomForm", {"name": "Color", "customFields": [FIELD]})
+		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD]})
 
-		self.assertEqual(get_field_properties()["Color"][FIELD["fieldname"]], {"fieldtype": "Data"})
+		self.assertEqual(get_field_properties()["UOM"][FIELD["fieldname"]], {"fieldtype": "Data"})
 
 	def test_system_manager_removes_fields_without_switching_user(self):
 		_make_system_manager()
 		with self.set_user(SYSTEM_MANAGER):
 			frappe.local.session.data.csrf_token = "books-token"
-			_custom_form("Color", [FIELD]).insert()
+			_custom_form("UOM", [FIELD]).insert()
 			self.assertEqual(_field_owner(), SYSTEM_MANAGER)
 
-			frappe.delete_doc("Books Custom Form", "Color")
+			frappe.delete_doc("Books Custom Form", "UOM")
 
 			self.assertEqual(frappe.local.session.data.csrf_token, "books-token")
 		self.assertIsNone(_field_owner())
@@ -70,8 +69,8 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 	def test_migrate_creates_fields_owned_by_the_form_owner(self):
 		_make_system_manager()
 		with self.set_user(SYSTEM_MANAGER):
-			_custom_form("Color", [FIELD]).insert()
-		frappe.db.delete("Custom Field", {"dt": "Books Color", "fieldname": COLUMN})
+			_custom_form("UOM", [FIELD]).insert()
+		frappe.db.delete("Custom Field", {"dt": "Books Uom", "fieldname": COLUMN})
 
 		with patch.dict(frappe.flags, {"in_migrate": True}):
 			sync_all_custom_forms()
@@ -82,14 +81,14 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 		# Custom field DDL commits, so undo what this class committed. `sql_ddl` commits before
 		# the drop, not after, so commit the drop too.
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 0)
-		for color in frappe.get_all(
-			"Books Color", filters={"name": ["like", "Bridge Custom Color%"]}, pluck="name"
+		for unit in frappe.get_all(
+			"Books Uom", filters={"name": ["like", "Bridge Custom Unit%"]}, pluck="name"
 		):
-			frappe.delete_doc("Books Color", color)
-		if frappe.db.exists("Books Custom Form", "Color"):
-			frappe.delete_doc("Books Custom Form", "Color")
-		if frappe.db.has_column("Books Color", COLUMN):
-			frappe.db.sql_ddl(f"alter table `tabBooks Color` drop column `{COLUMN}`")
+			frappe.delete_doc("Books Uom", unit)
+		if frappe.db.exists("Books Custom Form", "UOM"):
+			frappe.delete_doc("Books Custom Form", "UOM")
+		if frappe.db.has_column("Books Uom", COLUMN):
+			frappe.db.sql_ddl(f"alter table `tabBooks Uom` drop column `{COLUMN}`")
 		frappe.db.commit()  # nosemgrep
 
 
@@ -97,7 +96,7 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 	def test_customization_must_be_enabled(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 0)
 		self.assertRaisesRegex(
-			frappe.ValidationError, "Enable form customization", _custom_form("Color", [FIELD]).insert
+			frappe.ValidationError, "Enable form customization", _custom_form("UOM", [FIELD]).insert
 		)
 
 	def test_ledger_and_single_schemas_cannot_be_customized(self):
@@ -117,7 +116,7 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 		}
 		for message, fields in cases.items():
 			with self.subTest(message=message):
-				self.assertRaisesRegex(frappe.ValidationError, message, _custom_form("Color", fields).insert)
+				self.assertRaisesRegex(frappe.ValidationError, message, _custom_form("UOM", fields).insert)
 
 
 def _custom_form(schema, fields):
@@ -127,7 +126,7 @@ def _custom_form(schema, fields):
 
 
 def _field_owner():
-	return frappe.db.get_value("Custom Field", {"dt": "Books Color", "fieldname": COLUMN}, "owner")
+	return frappe.db.get_value("Custom Field", {"dt": "Books Uom", "fieldname": COLUMN}, "owner")
 
 
 def _make_system_manager():

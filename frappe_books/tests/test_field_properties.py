@@ -33,6 +33,14 @@ class IntegrationTestFieldProperties(IntegrationTestCase):
 		self.assertEqual(properties["SalesInvoice"]["numberSeries"]["default"], "SINV-")
 		self.assertEqual(properties["Payment"]["numberSeries"]["default"], "PAY-")
 
+	def test_status_carries_the_doctype_state_colours(self):
+		with self.set_user(BOOKS_USER):
+			properties = get_field_properties()
+
+		self.assertEqual(properties["SalesInvoice"]["status"]["states"]["Partly Paid"], "Orange")
+		self.assertEqual(properties["Lead"]["status"]["states"]["Do not Contact"], "Red")
+		self.assertNotIn("states", properties["SalesInvoice"]["party"])
+
 	def test_customize_form_changes_are_served(self):
 		make_property_setter("Books Party", "email", "reqd", 1, "Check")
 
@@ -43,4 +51,5 @@ class IntegrationTestFieldProperties(IntegrationTestCase):
 		with self.set_user(BOOKS_USER):
 			self.assertIn("SalesInvoiceItem", get_field_properties())
 		with self.set_user(DESK_USER):
-			self.assertEqual(get_field_properties(), {})
+			# Every user may read Frappe's Country.
+			self.assertEqual(list(get_field_properties()), ["Country"])

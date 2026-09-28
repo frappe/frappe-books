@@ -26,9 +26,17 @@ export abstract class DatabaseBase {
 
   abstract search(
     text: string,
-    fieldsBySchema: Record<string, string[]>,
+    schemaNames: string[],
     limit: number
   ): Promise<Record<string, UnknownMap[]>>;
+
+  abstract searchLink(
+    schemaName: string,
+    text: string,
+    filters: QueryFilter | null,
+    fields: string[],
+    limit: number
+  ): Promise<UnknownMap[]>;
 
   abstract getSingleValues(
     ...fieldnames: { fieldname: string; parent: string }[]
@@ -43,8 +51,7 @@ export abstract class DatabaseBase {
 
   abstract update(
     schemaName: string,
-    fieldValueMap: UnknownMap,
-    expectedModified?: Date
+    fieldValueMap: UnknownMap
   ): Promise<UnknownMap>;
 
   // Delete
@@ -54,12 +61,6 @@ export abstract class DatabaseBase {
 
   // Other
   abstract exists(schemaName: string, name?: string): Promise<boolean>;
-
-  abstract preview(
-    schemaName: string,
-    fieldValueMap: UnknownMap,
-    name?: string
-  ): Promise<UnknownMap>;
 
   abstract getMapped(
     schemaName: string,
@@ -101,30 +102,25 @@ export abstract class DatabaseDemuxBase {
 
   abstract callBespoke(method: string, ...args: unknown[]): Promise<unknown>;
 
+  abstract getDuplicate(schemaName: string, values: unknown): Promise<unknown>;
+
+  abstract getDocPermissions(doctype: string, name: string): Promise<unknown>;
+
+  abstract runDocMethod(
+    method: string,
+    schemaName: string,
+    values: unknown,
+    name?: string
+  ): Promise<unknown>;
+
   abstract runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,
-    name: string
+    name: string,
+    modified: string,
+    linkedDocs?: LinkedDoc[]
   ): Promise<unknown>;
 }
 
-export type ReportQuery =
-  | 'getGeneralLedger'
-  | 'getTrialBalance'
-  | 'getProfitAndLoss'
-  | 'getBalanceSheet'
-  | 'getStockLedger'
-  | 'getStockBalance'
-  | 'getGSTRRows';
-
-// Return types of Bespoke Queries
-export type TopExpenses = { account: string; total: number }[];
-export type TotalOutstanding = { total: number; outstanding: number };
-export type Cashflow = { inflow: number; outflow: number; yearmonth: string }[];
-export type Balance = { balance: number; yearmonth: string }[];
-export type IncomeExpense = { income: Balance; expense: Balance };
-export type TotalCreditAndDebit = {
-  account: string;
-  totalCredit: number;
-  totalDebit: number;
-};
+/** A submitted document Frappe cancels along with the one it links to. */
+export type LinkedDoc = { doctype: string; name: string; docstatus: number };

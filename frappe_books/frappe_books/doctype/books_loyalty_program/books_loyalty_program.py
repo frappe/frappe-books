@@ -7,6 +7,8 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from frappe_books.accounting.money import as_decimal
+from frappe_books.commerce.loyalty import program_status
+from frappe_books.settings import require_feature
 
 
 class BooksLoyaltyProgram(Document):
@@ -29,6 +31,7 @@ class BooksLoyaltyProgram(Document):
 		from_date: DF.Date
 		is_enabled: DF.Check
 		maximum_use: DF.Int
+		status: DF.Literal["Active", "Disabled", "Expired", "Maxed"]
 		to_date: DF.Date
 		used: DF.Int
 	# end: auto-generated types
@@ -36,6 +39,7 @@ class BooksLoyaltyProgram(Document):
 	_DOCTYPE_NAME = "Books Loyalty Program"
 
 	def validate(self):
+		require_feature("enable_loyalty_program")
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("Loyalty program start date must be on or before its end date."))
 		if self.maximum_use < 0 or self.used < 0:
@@ -45,6 +49,7 @@ class BooksLoyaltyProgram(Document):
 		if as_decimal(self.conversion_factor) < 0:
 			frappe.throw(_("Loyalty conversion factor cannot be negative."))
 		self.validate_tiers()
+		self.status = program_status(self)
 
 	def validate_tiers(self):
 		minimums = [as_decimal(row.minimum_total_spent) for row in self.collection_rules]

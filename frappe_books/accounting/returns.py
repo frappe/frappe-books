@@ -5,14 +5,15 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, currency_unit, rounded, sum_decimal
 from frappe_books.inventory.stock import parse_serial_numbers
+from frappe_books.settings import require_feature
 
 
 def map_return(invoice_doctype, invoice_name):
 	"""Return an unsaved credit note or purchase return for the whole invoice."""
+	require_feature("enable_invoice_returns")
 	item_doctype = frappe.get_meta(invoice_doctype).get_field("items").options
 	return get_mapped_doc(
 		invoice_doctype,
@@ -42,7 +43,6 @@ def _prepare_return(invoice, credit_note):
 		frappe.throw(_("Create a return from the original invoice."))
 	if invoice.is_fully_returned:
 		frappe.throw(_("This invoice is already fully returned."))
-	credit_note.date = now_datetime()
 	return_unreturned_rows(invoice, credit_note)
 	credit_note.calculate()
 
@@ -70,6 +70,15 @@ def _negate_row(row, quantity, returned_serials):
 	row.transfer_quantity = -quantity / as_decimal(row.unit_conversion_factor or 1)
 	serials = [serial for serial in parse_serial_numbers(row.serial_number) if serial not in returned_serials]
 	row.serial_number = "\n".join(serials) or None
+
+
+def validate_quantity_sign(row, is_return):
+	"""A return takes quantities back, so its rows are negative and other rows positive."""
+	quantity = as_decimal(row.quantity)
+	if is_return and quantity > 0:
+		frappe.throw(_("Row {0}: returned quantities must be negative.").format(row.idx))
+	if not is_return and quantity < 0:
+		frappe.throw(_("Row {0}: only returns can have negative quantities.").format(row.idx))
 
 
 def validate_return(invoice):

@@ -1,29 +1,23 @@
 import {
-  AccountRootType,
-  AccountRootTypeEnum,
-} from './baseModels/Account/types';
-import {
   Action,
+  BadgeData,
   BadgeTheme,
   ColumnConfig,
-  DocStatus,
-  LeadStatus,
   RenderData,
 } from 'fyo/model/types';
 import { Fyo, t } from 'fyo';
-import { InvoiceStatus, ModelNameEnum } from './types';
+import { OptionField, Schema } from 'schemas/types';
+import { ModelNameEnum } from './types';
 
-import { DateTime } from 'luxon';
 import { Doc } from 'fyo/model/doc';
 import { Invoice } from './baseModels/Invoice/Invoice';
-import { Lead } from './baseModels/Lead/Lead';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
 import { StockMovement } from './inventory/StockMovement';
 import { StockTransfer } from './inventory/StockTransfer';
 import { ValidationError } from 'fyo/utils/errors';
-import { getIsNullOrUndef, safeParseFloat } from 'utils/index';
+import { safeParseFloat } from 'utils/index';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
@@ -31,6 +25,9 @@ import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { getSerialNumbersForQuantity } from './inventory/helpers';
 
 const MAPPER_MODULES: Record<string, string> = {
+  Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
+  Lead: 'frappe_books.frappe_books.doctype.books_lead.books_lead',
+  Party: 'frappe_books.frappe_books.doctype.books_party.books_party',
   SalesInvoice:
     'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice',
   PurchaseInvoice:
@@ -54,18 +51,7 @@ export async function getMappedDoc(
     method,
     source.name!
   );
-  // Unset values keep the new document's defaults, such as its number series.
-  const setValues = Object.fromEntries(
-    Object.entries(values).filter(([, value]) => !getIsNullOrUndef(value))
-  );
-  return source.fyo.doc.getNewDoc(
-    schemaName,
-    setValues,
-    true,
-    undefined,
-    undefined,
-    false
-  );
+  return source.fyo.doc.getNewDocFromServer(schemaName, values);
 }
 
 export function getQuoteActions(
@@ -213,12 +199,12 @@ export function getCreateCustomerAction(fyo: Fyo): Action {
     label: fyo.t`Customer`,
     condition: (doc: Doc) => !doc.notInserted,
     action: async (doc: Doc, router) => {
-      const customerData = (doc as Lead).createCustomer();
-
-      if (!customerData.name) {
-        return;
-      }
-      await router.push(`/edit/Party/${customerData.name}`);
+      const customer = await getMappedDoc(
+        doc,
+        ModelNameEnum.Party,
+        'make_customer'
+      );
+      await router.push(`/edit/Party/${customer.name!}`);
     },
   };
 }
@@ -229,11 +215,12 @@ export function getSalesQuoteAction(fyo: Fyo): Action {
     label: fyo.t`Sales Quote`,
     condition: (doc: Doc) => !doc.notInserted,
     action: async (doc, router) => {
-      const salesQuoteData = (doc as Lead).createSalesQuote();
-      if (!salesQuoteData.name) {
-        return;
-      }
-      await router.push(`/edit/SalesQuote/${salesQuoteData.name}`);
+      const quote = await getMappedDoc(
+        doc,
+        ModelNameEnum.SalesQuote,
+        'make_sales_quote'
+      );
+      await router.push(`/edit/SalesQuote/${quote.name!}`);
     },
   };
 }
@@ -316,8 +303,7 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      (!!fyo.singles.AccountingSettings?.enableInvoiceReturns ||
-        !!fyo.singles.InventorySettings?.enableStockReturns) &&
+      !!fyo.singles.AccountingSettings?.enableInvoiceReturns &&
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {
@@ -339,100 +325,67 @@ export function getLeadStatusColumn(): ColumnConfig {
     fieldname: 'status',
     fieldtype: 'Select',
     badge(doc) {
-      const status = getLeadStatus(doc) as LeadStatus;
-      return {
-        theme: statusColor[status] ?? 'gray',
-        label: getStatusTextOfLead(status),
-      };
+      const status = String(doc.status ?? '');
+      return getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' };
     },
   };
 }
 
-export const statusColor: Record<
-  DocStatus | InvoiceStatus | LeadStatus,
-  BadgeTheme | undefined
-> = {
-  '': 'gray',
-  Draft: 'gray',
-  Open: 'gray',
-  Replied: 'amber',
-  Opportunity: 'amber',
-  Unpaid: 'amber',
-  Paid: 'green',
-  PartlyPaid: 'amber',
-  Interested: 'amber',
-  Converted: 'green',
-  Quotation: 'green',
-  Saved: 'blue',
-  NotSaved: 'gray',
-  Submitted: 'green',
-  Cancelled: 'red',
-  DonotContact: 'red',
-  Return: 'gray',
-  ReturnIssued: 'gray',
+/** Frappe UI badge themes for the colours a DocType state can have. */
+const stateThemes: Record<string, BadgeTheme | undefined> = {
+  Blue: 'blue',
+  Cyan: 'blue',
+  'Light Blue': 'blue',
+  Gray: 'gray',
+  Green: 'green',
+  Orange: 'amber',
+  Yellow: 'amber',
+  Red: 'red',
+  Pink: 'red',
+  Purple: 'violet',
 };
 
-export function getStatusText(status: DocStatus | InvoiceStatus): string {
+/** A stored status as its `status` option labels it and its DocType state colours it. */
+export function getStateBadge(
+  schema: Schema | undefined,
+  status: string
+): BadgeData | undefined {
+  const field = schema?.fields.find(({ fieldname }) => fieldname === 'status');
+  const color = (field as OptionField | undefined)?.states?.[status];
+  if (!color) {
+    return undefined;
+  }
+
+  const option = (field as OptionField).options.find(
+    ({ value }) => value === status
+  );
+  return { label: option?.label ?? status, theme: stateThemes[color] ?? 'gray' };
+}
+
+/** Unsaved and docstatus badges, which Frappe's desk also draws without states. */
+function getDocstatusBadge(status: string): BadgeData {
   switch (status) {
     case 'Draft':
-      return t`Draft`;
-    case 'Saved':
-      return t`Saved`;
+      return { label: t`Draft`, theme: 'gray' };
     case 'NotSaved':
-      return t`Not Saved`;
+      return { label: t`Not Saved`, theme: 'gray' };
+    case 'Saved':
+      return { label: t`Saved`, theme: 'blue' };
     case 'Submitted':
-      return t`Submitted`;
+      return { label: t`Submitted`, theme: 'green' };
     case 'Cancelled':
-      return t`Cancelled`;
-    case 'Paid':
-      return t`Paid`;
-    case 'Unpaid':
-      return t`Unpaid`;
-    case 'PartlyPaid':
-      return t`Partly Paid`;
-    case 'Return':
-      return t`Return`;
-    case 'ReturnIssued':
-      return t`Return Issued`;
+      return { label: t`Cancelled`, theme: 'red' };
     default:
-      return '';
+      return { label: status, theme: 'gray' };
   }
 }
 
-export function getStatusTextOfLead(status: LeadStatus): string {
-  switch (status) {
-    case 'Open':
-      return t`Open`;
-    case 'Replied':
-      return t`Replied`;
-    case 'Opportunity':
-      return t`Opportunity`;
-    case 'Interested':
-      return t`Interested`;
-    case 'Converted':
-      return t`Converted`;
-    case 'Quotation':
-      return t`Quotation`;
-    case 'DonotContact':
-      return t`Do not Contact`;
-    default:
-      return '';
-  }
+export function getDocStatusBadge(doc: RenderData | Doc): BadgeData {
+  const status = getDocStatus(doc);
+  return getStateBadge(doc.schema, status) ?? getDocstatusBadge(status);
 }
 
-export function getLeadStatus(
-  doc?: Lead | Doc | RenderData
-): LeadStatus | DocStatus {
-  if (!doc) {
-    return '';
-  }
-
-  return doc.status as LeadStatus;
-}
-
-export function getDocStatus(
-  doc?: RenderData | Doc
-): DocStatus | InvoiceStatus {
+export function getDocStatus(doc?: RenderData | Doc): string {
   if (!doc) {
     return '';
   }
@@ -451,7 +404,7 @@ export function getDocStatus(
 
   // The server stores the status of documents that have a status field.
   if (doc.status) {
-    return doc.status as InvoiceStatus;
+    return doc.status as string;
   }
 
   if (doc.cancelled) {
@@ -467,36 +420,10 @@ export function getSerialNumberStatusColumn(): ColumnConfig {
     fieldname: 'status',
     fieldtype: 'Select',
     badge(doc) {
-      let status = doc.status;
-      if (typeof status !== 'string') {
-        status = 'Inactive';
-      }
-
-      return {
-        theme: serialNumberStatusColor[status] ?? 'gray',
-        label: getSerialNumberStatusText(status),
-      };
+      const status = typeof doc.status === 'string' ? doc.status : 'Inactive';
+      return getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' };
     },
   };
-}
-
-export const serialNumberStatusColor: Record<string, BadgeTheme | undefined> = {
-  Inactive: 'gray',
-  Active: 'green',
-  Delivered: 'blue',
-};
-
-export function getSerialNumberStatusText(status: string): string {
-  switch (status) {
-    case 'Inactive':
-      return t`Inactive`;
-    case 'Active':
-      return t`Active`;
-    case 'Delivered':
-      return t`Delivered`;
-    default:
-      return t`Inactive`;
-  }
 }
 
 export function getPriceListStatusColumn(): ColumnConfig {
@@ -535,71 +462,6 @@ export function getIsDocEnabledColumn(): ColumnConfig {
   };
 }
 
-/**
- * The rate from a public rates service, or undefined when it has none.
- * Only the currency codes and the date leave the browser.
- */
-export async function getExchangeRate({
-  fromCurrency,
-  toCurrency,
-  date = DateTime.local().toISODate() as string,
-}: {
-  fromCurrency: string;
-  toCurrency: string;
-  date?: string;
-}): Promise<number | undefined> {
-  const cacheKey = `currencyExchangeRate:${date}:${fromCurrency}:${toCurrency}`;
-  const cached = safeParseFloat(localStorage.getItem(cacheKey) as string);
-  if (cached > 0) {
-    return cached;
-  }
-
-  const exchangeRate = await fetchExchangeRate(fromCurrency, toCurrency, date);
-  if (exchangeRate) {
-    localStorage.setItem(cacheKey, String(exchangeRate));
-  }
-
-  return exchangeRate;
-}
-
-async function fetchExchangeRate(
-  fromCurrency: string,
-  toCurrency: string,
-  date: string
-): Promise<number | undefined> {
-  const query = new URLSearchParams({
-    date,
-    base: fromCurrency,
-    symbols: toCurrency,
-  });
-  try {
-    const response = await fetch(`https://api.vatcomply.com/rates?${query}`);
-    const data = (await response.json()) as { rates?: Record<string, number> };
-    const exchangeRate = response.ok ? data.rates?.[toCurrency] : undefined;
-    return exchangeRate && exchangeRate > 0 ? exchangeRate : undefined;
-  } catch {
-    // Offline or an unreadable reply: the user enters the rate instead.
-    return undefined;
-  }
-}
-
-export function isCredit(rootType: AccountRootType) {
-  switch (rootType) {
-    case AccountRootTypeEnum.Asset:
-      return false;
-    case AccountRootTypeEnum.Liability:
-      return true;
-    case AccountRootTypeEnum.Equity:
-      return true;
-    case AccountRootTypeEnum.Expense:
-      return false;
-    case AccountRootTypeEnum.Income:
-      return true;
-    default:
-      return true;
-  }
-}
-
 export function getNumberSeries(schemaName: string, fyo: Fyo) {
   return fyo.defaultNumberSeries[schemaName];
 }
@@ -609,13 +471,7 @@ export function getDocStatusListColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    badge(doc) {
-      const status = getDocStatus(doc);
-      return {
-        theme: statusColor[status] ?? 'gray',
-        label: getStatusText(status),
-      };
-    },
+    badge: getDocStatusBadge,
   };
 }
 
@@ -624,60 +480,15 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    badge(doc) {
-      const status = getLoyaltyProgramStatus(doc);
-      return {
-        theme: loyaltyProgramStatusColor[status] ?? 'gray',
-        label: getLoyaltyProgramStatusText(status),
-      };
-    },
+    badge: (doc) => getLoyaltyProgramBadge(doc),
   };
 }
 
-export function getLoyaltyProgramStatus(doc?: RenderData | Doc): string {
-  if (!doc) {
-    return '';
-  }
-
-  const currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
-
-  const toDate = doc.toDate as Date;
-
-  if (toDate && toDate <= currentDate) {
-    return 'Expired';
-  }
-
-  const maximumUse = doc.maximumUse as number;
-  const used = doc.used as number;
-
-  if (maximumUse > 0 && used >= maximumUse) {
-    return 'Maxed';
-  }
-
-  return 'Active';
-}
-
-export const loyaltyProgramStatusColor: Record<string, BadgeTheme | undefined> = {
-  Active: 'green',
-  Disabled: 'gray',
-  Expired: 'red',
-  Maxed: 'amber',
-};
-
-export function getLoyaltyProgramStatusText(status: string): string {
-  switch (status) {
-    case 'Active':
-      return t`Active`;
-    case 'Disabled':
-      return t`Disabled`;
-    case 'Expired':
-      return t`Expired`;
-    case 'Maxed':
-      return t`Maxed`;
-    default:
-      return '';
-  }
+export function getLoyaltyProgramBadge(doc: RenderData | Doc): BadgeData {
+  const status = doc.status as string;
+  return (
+    getStateBadge(doc.schema, status) ?? { theme: 'gray', label: status ?? '' }
+  );
 }
 
 type ModelsWithItems = Invoice | StockTransfer | StockMovement;

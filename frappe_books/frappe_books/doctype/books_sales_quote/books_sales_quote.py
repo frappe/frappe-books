@@ -3,7 +3,6 @@
 
 import frappe
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.invoice import InvoiceController
 
@@ -32,7 +31,6 @@ class BooksSalesQuote(InvoiceController):
 		discount_after_tax: DF.Check
 		discount_amount: DF.Currency
 		discount_percent: DF.Float
-		entry_currency: DF.Literal["Party", "Company"]
 		exchange_rate: DF.Float
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check
@@ -77,6 +75,5 @@ def make_sales_invoice(source_name: str):
 
 
 def _set_invoice_details(quote, invoice):
-	invoice.date = now_datetime()
 	invoice.account = frappe.db.get_value("Books Party", quote.party, "default_account")
-	invoice.calculate()
+	invoice.fill_mapped_values()

@@ -22,17 +22,13 @@
   </div>
 </template>
 <script lang="ts">
-import { AccountTypeEnum } from 'models/baseModels/Account/types';
 import { LineChart as FrappeLineChart } from 'frappe-ui/charts';
-import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
 import { formatXLabels, getYMax } from 'src/utils/chart';
 import { uicolors } from 'src/utils/colors';
-import { getDatesAndPeriodList } from 'src/utils/misc';
+import { getDashboardData, MonthlyCashflow } from 'src/utils/dashboard';
 import DashboardChartBase from './BaseDashboardChart.vue';
 import { defineComponent } from 'vue';
-import { getMapFromList } from 'utils/index';
-import { PeriodKey } from 'src/utils/types';
 
 export default defineComponent({
   name: 'Cashflow',
@@ -44,8 +40,7 @@ export default defineComponent({
     darkMode: { type: Boolean, default: false },
   },
   data: () => ({
-    data: [] as { inflow: number; outflow: number; yearmonth: string }[],
-    periodList: [],
+    data: [] as MonthlyCashflow[],
     hasData: false,
   }),
   computed: {
@@ -81,41 +76,15 @@ export default defineComponent({
   },
   async activated() {
     await this.setData();
-    if (!this.hasData) {
-      await this.setHasData();
-    }
   },
   methods: {
     async setData() {
-      const { periodList, fromDate, toDate } = getDatesAndPeriodList(this.period as PeriodKey);
-
-      const data = await fyo.db.getCashflow(fromDate.toISO(), toDate.toISO());
-      const dataMap = getMapFromList(data, 'yearmonth');
-      this.data = periodList.map((p) => {
-        const key = p.toFormat('yyyy-MM');
-        const item = dataMap[key];
-        if (item) {
-          return item;
-        }
-
-        return {
-          inflow: 0,
-          outflow: 0,
-          yearmonth: key,
-        };
-      });
-    },
-    async setHasData() {
-      const accounts = await fyo.db.getAllRaw('Account', {
-        filters: {
-          accountType: ['in', [AccountTypeEnum.Cash, AccountTypeEnum.Bank]],
-        },
-      });
-      const accountNames = accounts.map((a) => a.name as string);
-      const count = await fyo.db.count(ModelNameEnum.AccountingLedgerEntry, {
-        filters: { account: ['in', accountNames] },
-      });
-      this.hasData = count > 0;
+      const { months, has_data } = await getDashboardData<{
+        months: MonthlyCashflow[];
+        has_data: boolean;
+      }>('get_cashflow', this.period);
+      this.data = months;
+      this.hasData = has_data;
     },
   },
 });

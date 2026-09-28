@@ -12,7 +12,7 @@ import {
   NotFoundError,
   ValidationError,
 } from 'fyo/utils/errors';
-import type { PermissionMap } from 'fyo/utils/permissions';
+import type { BootUserPermissions } from 'fyo/utils/permissions';
 import type { ChartOfAccounts } from 'utils/types';
 
 type ErrorClass = new (message: string, shouldStore?: boolean) => BaseError;
@@ -69,18 +69,21 @@ declare global {
       csrf_token?: string;
       boot?: {
         lang?: string;
-        user?: { name?: string };
+        developer_mode?: number;
+        versions?: Record<string, string | undefined>;
+        user?: BootUserPermissions & { name?: string };
         user_info?: Record<string, { fullname?: string }>;
+        /** Added by `frappe_books.boot.extend_bootinfo`. */
+        books?: {
+          country_code: string;
+          doctypes: Record<string, string>;
+          search_fields: Record<string, string[]>;
+          charts_of_accounts: ChartOfAccounts[];
+          account_labels: Record<string, string>;
+          indian_states: Record<string, string>;
+        };
         [key: string]: unknown;
       };
-    };
-    books_boot: {
-      country_code: string;
-      setup_complete: boolean;
-      app_version: string;
-      developer_mode: boolean;
-      permissions: PermissionMap;
-      charts_of_accounts: ChartOfAccounts[];
     };
   }
 }

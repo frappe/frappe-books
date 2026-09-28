@@ -35,7 +35,6 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 		discount_after_tax: DF.Check
 		discount_amount: DF.Currency
 		discount_percent: DF.Float
-		entry_currency: DF.Literal["Party", "Company"]
 		exchange_rate: DF.Float
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check
@@ -50,7 +49,7 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 		price_list: DF.Link | None
 		return_against: DF.Link | None
 		set_discount_amount: DF.Check
-		status: DF.Literal["Saved", "Unpaid", "PartlyPaid", "Paid", "Return", "ReturnIssued", "Cancelled"]
+		status: DF.Literal["Saved", "Unpaid", "Partly Paid", "Paid", "Return", "Return Issued", "Cancelled"]
 		stock_not_transferred: DF.Float
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None

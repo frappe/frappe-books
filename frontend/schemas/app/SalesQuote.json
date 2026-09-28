@@ -51,7 +51,6 @@
       "hidden": true
     }
   ],
-  "keywordFields": ["name", "party"],
   "removeFields": [
     "account",
     "stockNotTransferred",

@@ -1,0 +1,14 @@
+{
+  "name": "Country",
+  "label": "Country",
+  "naming": "manual",
+  "isSingle": false,
+  "fields": [
+    {
+      "fieldname": "name",
+      "label": "Country Name",
+      "fieldtype": "Data",
+      "required": true
+    }
+  ]
+}

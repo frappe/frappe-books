@@ -14,7 +14,7 @@ import { TransferItem } from './TransferItem';
 import type { Invoice } from 'models/baseModels/Invoice/Invoice';
 import type { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
 import {
-  getExistingActiveSerialNumbersForItem,
+  getAvailableSerialNumbers,
   getSerialNumbersForQuantity,
 } from './helpers';
 import { getUnitConversionFactor, validateTransferUnit } from './units';
@@ -65,7 +65,7 @@ export class StockTransferItem extends TransferItem {
     return invoice.items?.find((row) => row.item === this.item);
   }
 
-  /** New series numbers on receipts; invoiced or in-stock ones on shipments. */
+  /** New series numbers on receipts; invoiced ones, else those in stock at the row location, on shipments. */
   async getDefaultSerialNumbers(): Promise<string | undefined> {
     const quantity = Math.abs(this.quantity ?? 0);
     if (!this.item || !this.parentdoc?.backReference || quantity <= 0) {
@@ -83,9 +83,10 @@ export class StockTransferItem extends TransferItem {
 
     return (
       (await this.getInvoiceRow())?.serialNumber ||
-      (await getExistingActiveSerialNumbersForItem(
+      (await getAvailableSerialNumbers(
         this.fyo,
         this.item,
+        this.location,
         quantity
       ))
     );

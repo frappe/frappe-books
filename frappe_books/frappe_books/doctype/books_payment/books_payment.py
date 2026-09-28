@@ -32,7 +32,7 @@ class BooksPayment(PaymentController):
 		payment_account: DF.Link
 		payment_method: DF.Link
 		payment_references: DF.Table[BooksPaymentFor]
-		payment_type: DF.Literal["Receive", "Pay"]
+		payment_type: DF.Literal["", "Receive", "Pay"]
 		reference_date: DF.Date | None
 		reference_id: DF.Data | None
 		reference_type: DF.Literal["SalesInvoice", "PurchaseInvoice"]

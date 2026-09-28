@@ -2,6 +2,7 @@
 # See license.txt
 
 from decimal import Decimal
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -12,7 +13,6 @@ from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_op
 	open_shift,
 	set_pos_accounts,
 )
-from frappe_books.setup_service import ensure_currency
 from frappe_books.tests.accounting import (
 	foreign_currency,
 	ledger_entries,
@@ -135,9 +135,8 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		for currency, rate, total in (("KWD", "1.2345", "2.469"), ("JPY", "10.25", "21")):
 			with (
 				self.subTest(currency=currency),
-				self.change_settings("Books System Settings", currency=currency),
+				self.change_settings("System Settings", currency=currency),
 			):
-				ensure_currency(currency)
 				invoice = make_invoice(
 					"Books Sales Invoice",
 					make_party(self.receivable.name).name,
@@ -154,8 +153,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_rounds_invoice_amounts_to_invoice_currency(self):
 		item = make_item(self.income.name, self.expense.name)
-		with self.change_settings("Books System Settings", currency="JPY"):
-			ensure_currency("JPY")
+		with self.change_settings("System Settings", currency="JPY"):
 			party = make_party(self.receivable.name, currency=foreign_currency())
 			invoice = make_invoice(
 				"Books Sales Invoice",
@@ -192,9 +190,17 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			self.income.name,
 			discount_percent=5,
 			return_against=invoice.name,
+			items=[
+				{
+					"item": item.name,
+					"account": self.income.name,
+					"rate": 100,
+					"quantity": -2,
+					"item_discount_percent": 10,
+				}
+			],
 		)
-		credit_note.items[0].quantity = -2
-		credit_note.save().submit()
+		credit_note.submit()
 
 		self.assertEqual(Decimal(str(credit_note.grand_total)), Decimal("-171"))
 		entries = ledger_entries(credit_note.doctype, credit_note.name)
@@ -247,6 +253,64 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
 			credit_note.insert()
 
+	def test_return_quantities_must_be_negative(self):
+		invoice = self._make_invoice()
+		invoice.submit()
+		credit_note = map_return(invoice.doctype, invoice.name)
+		credit_note.items[0].quantity = 2
+
+		with self.assertRaisesRegex(frappe.ValidationError, "returned quantities must be negative"):
+			credit_note.insert()
+
+	def test_only_returns_have_negative_quantities(self):
+		invoice = self._make_invoice()
+		invoice.items[0].quantity = -2
+
+		with self.assertRaisesRegex(frappe.ValidationError, "only returns can have negative"):
+			invoice.save()
+
+	def test_items_follow_their_item_usage(self):
+		purchase_item = make_item(self.income.name, self.expense.name, item_usage="Purchases")
+		with self.assertRaisesRegex(frappe.ValidationError, "is not for Sales"):
+			make_invoice(
+				"Books Sales Invoice",
+				self.party.name,
+				self.receivable.name,
+				purchase_item.name,
+				self.income.name,
+			)
+
+		payable = make_account("Payable", root_type="Liability", account_type="Payable")
+		supplier = make_party(payable.name, role="Supplier")
+		sales_item = make_item(self.income.name, self.expense.name, item_usage="Sales")
+		with self.assertRaisesRegex(frappe.ValidationError, "is not for Purchases"):
+			make_invoice(
+				"Books Purchase Invoice", supplier.name, payable.name, sales_item.name, self.expense.name
+			)
+
+	def test_new_documents_start_with_the_default_terms(self):
+		frappe.db.set_single_value("Books Defaults", "sales_invoice_terms", "Pay within 30 days")
+		for doctype in ("Books Sales Invoice", "Books Sales Quote"):
+			with self.subTest(doctype=doctype):
+				invoice = make_invoice(
+					doctype, self.party.name, self.receivable.name, self.item.name, self.income.name
+				)
+				self.assertEqual(invoice.terms, "Pay within 30 days")
+
+		invoice = self._make_invoice()
+		invoice.terms = ""
+		invoice.save()
+		self.assertEqual(invoice.terms, "")
+		without_terms = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			terms="",
+		)
+		self.assertEqual(without_terms.terms, "")
+
 	def test_pos_invoice_keeps_rate_and_discount_when_profile_forbids(self):
 		frappe.db.set_single_value(
 			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 0, "can_edit_discount": 0}
@@ -273,6 +337,22 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		invoice.insert()
 
+	def test_pos_invoice_defaults_to_the_pos_customer_and_account(self):
+		frappe.db.set_single_value(
+			"Books Pos Settings", {"pos_profile": None, "default_account": self.receivable.name}
+		)
+		frappe.db.set_single_value("Books Defaults", "pos_customer", self.party.name)
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Books Sales Invoice",
+				"date": frappe.utils.now_datetime(),
+				"is_pos": 1,
+				"items": [{"item": self.item.name, "quantity": 1, "rate": 100}],
+			}
+		).insert()
+
+		self.assertEqual((invoice.party, invoice.account), (self.party.name, self.receivable.name))
+
 	def test_invoice_bills_in_the_party_currency(self):
 		currency = foreign_currency()
 		party = make_party(self.receivable.name, currency=currency)
@@ -290,7 +370,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_foreign_currency_invoice_needs_an_exchange_rate(self):
 		party = make_party(self.receivable.name, currency=foreign_currency())
-		with self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"):
+		with (
+			patch("frappe_books.accounting.invoice.get_exchange_rate", return_value=None),
+			self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"),
+		):
 			make_invoice(
 				"Books Sales Invoice", party.name, self.receivable.name, self.item.name, self.income.name
 			)

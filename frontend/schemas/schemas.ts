@@ -3,8 +3,7 @@ import AccountingLedgerEntry from './app/AccountingLedgerEntry.json';
 import AccountingSettings from './app/AccountingSettings.json';
 import Address from './app/Address.json';
 import Batch from './app/Batch.json';
-import BatchSeries from './app/BatchSeries.json';
-import Color from './app/Color.json';
+import Country from './app/Country.json';
 import Currency from './app/Currency.json';
 import Defaults from './app/Defaults.json';
 import GetStarted from './app/GetStarted.json';
@@ -15,7 +14,6 @@ import JournalEntry from './app/JournalEntry.json';
 import JournalEntryAccount from './app/JournalEntryAccount.json';
 import Misc from './app/Misc.json';
 import NumberSeries from './app/NumberSeries.json';
-import SerialNumberSeries from './app/SerialNumberSeries.json';
 import Party from './app/Party.json';
 import Lead from './app/Lead.json';
 import LoyaltyProgram from './app/LoyaltyProgram.json';
@@ -37,6 +35,7 @@ import PurchaseInvoice from './app/PurchaseInvoice.json';
 import PurchaseInvoiceItem from './app/PurchaseInvoiceItem.json';
 import SalesInvoice from './app/SalesInvoice.json';
 import SalesInvoiceItem from './app/SalesInvoiceItem.json';
+import SalesInvoicePayment from './app/SalesInvoicePayment.json';
 import SalesQuote from './app/SalesQuote.json';
 import SalesQuoteItem from './app/SalesQuoteItem.json';
 import SetupWizard from './app/SetupWizard.json';
@@ -98,12 +97,10 @@ export const appSchemas: SchemaFile[] = [
   GetStarted as SchemaFile,
   PrintTemplate as SchemaFile,
 
-  Color as SchemaFile,
+  Country as SchemaFile,
   Currency as SchemaFile,
   Defaults as SchemaFile,
   NumberSeries as SchemaFile,
-  SerialNumberSeries as SchemaFile,
-  BatchSeries as SchemaFile,
 
   PrintSettings as SchemaFile,
 
@@ -138,6 +135,7 @@ export const appSchemas: SchemaFile[] = [
 
   InvoiceItem as SchemaFile,
   SalesInvoiceItem as SchemaFile,
+  SalesInvoicePayment as SchemaFile,
   PurchaseInvoiceItem as SchemaFile,
   SalesQuoteItem as SchemaFile,
   CouponCode as SchemaFile,

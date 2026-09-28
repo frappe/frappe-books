@@ -68,7 +68,8 @@ export async function preparePOSData() {
   FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
   FrappeDatabaseDemux.prototype.call = async (method, ...args) => {
     const [schema, name] = args as string[];
-    if (method === 'getAll') return records[schema] ?? [];
+    if (method === 'getAll' || method === 'searchLink')
+      return records[schema] ?? [];
     if (method === 'get')
       return records[schema]?.find((row) => row.name === name) ?? { name };
     if (method === 'getSingleValues') return [];

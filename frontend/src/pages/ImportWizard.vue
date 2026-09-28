@@ -349,6 +349,7 @@ import {
   Importer,
   TemplateField,
   getColumnLabel,
+  getImportableSchemaNames,
   importDoc,
 } from 'src/importer';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -490,30 +491,7 @@ export default defineComponent({
       return this.nullOrImporter as Importer;
     },
     importableSchemaNames(): ModelNameEnum[] {
-      const importables = [
-        ModelNameEnum.SalesInvoice,
-        ModelNameEnum.PurchaseInvoice,
-        ModelNameEnum.Payment,
-        ModelNameEnum.Party,
-        ModelNameEnum.Item,
-        ModelNameEnum.JournalEntry,
-        ModelNameEnum.Tax,
-        ModelNameEnum.Account,
-        ModelNameEnum.Address,
-        ModelNameEnum.NumberSeries,
-      ];
-
-      const hasInventory = fyo.doc.singles.AccountingSettings?.enableInventory;
-      if (hasInventory) {
-        importables.push(
-          ModelNameEnum.StockMovement,
-          ModelNameEnum.Shipment,
-          ModelNameEnum.PurchaseReceipt,
-          ModelNameEnum.Location,
-        );
-      }
-
-      return importables;
+      return getImportableSchemaNames(fyo);
     },
     actions(): Action[] {
       const actions: Action[] = [];

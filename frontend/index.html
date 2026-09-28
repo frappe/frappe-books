@@ -17,9 +17,8 @@
       window.csrf_token = '{{ csrf_token }}';
       window.frappe = window.frappe || {};
       frappe.csrf_token = window.csrf_token;
-      frappe.boot = JSON.parse({{ boot }});
+      frappe.boot = {{ frappe.utils.orjson_dumps(boot, default=frappe.json_handler) }};
       frappe.boot.layout_direction = '{{ layout_direction }}';
-      window.books_boot = {{ books_boot }};
     </script>
     <script type="module" src="/src/web/main.ts"></script>
   </body>

@@ -152,12 +152,7 @@
     {
       "fieldname": "status",
       "label": "Status",
-      "optionLabels": {
-        "PartlyPaid": "Partly Paid",
-        "ReturnIssued": "Return Issued"
-      },
       "hidden": true
     }
-  ],
-  "keywordFields": ["name", "party"]
+  ]
 }

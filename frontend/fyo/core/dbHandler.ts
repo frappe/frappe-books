@@ -150,17 +150,40 @@ export class DatabaseHandler extends DatabaseBase {
     )) as number;
   }
 
+  /** Rows of each schema whose DocType search fields match `text`, for the search palette. */
   async search(
     text: string,
-    fieldsBySchema: Record<string, string[]>,
+    schemaNames: string[],
     limit: number
   ): Promise<Record<string, RawValueMap[]>> {
     return (await this.#demux.call(
       'search',
       text,
-      fieldsBySchema,
+      schemaNames,
       limit
     )) as Record<string, RawValueMap[]>;
+  }
+
+  /** A page of link options that Frappe's link search finds for `text`. */
+  async searchLink(
+    schemaName: string,
+    text: string,
+    filters: QueryFilter | null,
+    fields: string[],
+    limit: number
+  ): Promise<DocValueMap[]> {
+    const rawValueMaps = (await this.#demux.call(
+      'searchLink',
+      schemaName,
+      text,
+      filters,
+      fields,
+      limit
+    )) as RawValueMap[];
+    return this.converter.toDocValueMap(
+      schemaName,
+      rawValueMaps
+    ) as DocValueMap[];
   }
 
   // Update

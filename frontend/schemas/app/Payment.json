@@ -139,6 +139,5 @@
     "amountPaid",
     "attachment",
     "for"
-  ],
-  "keywordFields": ["name", "party", "paymentType"]
+  ]
 }

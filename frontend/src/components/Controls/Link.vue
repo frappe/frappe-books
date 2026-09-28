@@ -2,7 +2,7 @@
 import { t } from 'fyo';
 import { getAccountLabel } from 'src/utils/accountLabel';
 import { fyo } from 'src/initFyo';
-import { fuzzyMatch } from 'src/utils';
+import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
 import { getCreateFiltersFromListViewFilters } from 'src/utils/misc';
 import AutoComplete from './AutoComplete.vue';
@@ -11,16 +11,13 @@ export default {
   name: 'Link',
   extends: AutoComplete,
   data() {
-    return { results: [], filtersDisabled: false };
+    return { filtersDisabled: false };
   },
   watch: {
     value: {
       immediate: true,
-      handler(newValue, oldValue) {
+      handler(newValue) {
         this.setLinkValue(newValue);
-        if (oldValue && !newValue) {
-          this.results = [];
-        }
       },
     },
   },
@@ -54,52 +51,40 @@ export default {
     getTargetSchemaName() {
       return this.df.target;
     },
-    async getOptions(filters) {
+    async getOptions(keyword, filters) {
       const schemaName = this.getTargetSchemaName();
       if (!schemaName) {
         return [];
       }
 
-      if (this.results?.length) {
-        return this.results;
-      }
-
       const schema = fyo.schemaMap[schemaName];
-
       const fields = [
         ...new Set(['name', schema.titleField, this.df.groupBy]),
       ].filter(Boolean);
-
-      const results = await fyo.db.getAll(schemaName, {
+      const rows = await fyo.db.searchLink(
+        schemaName,
+        keyword,
         filters,
         fields,
-      });
+        LINK_PAGE_LENGTH
+      );
 
-      return (this.results = results
-        .map((r) => {
-          const label = r[schema.titleField] || r.name;
-          const option = {
-            label: schemaName === 'Account' ? getAccountLabel(label) : label,
-            value: r.name,
-          };
-          if (this.df.groupBy) {
-            option.group = r[this.df.groupBy];
-          }
-          return option;
-        })
-        .filter(Boolean));
+      return rows.map((r) => {
+        const label = r[schema.titleField] || r.name;
+        const option = {
+          label: schemaName === 'Account' ? getAccountLabel(label) : label,
+          value: r.name,
+        };
+        if (this.df.groupBy) {
+          option.group = r[this.df.groupBy];
+        }
+        return option;
+      });
     },
     async getSuggestions(keyword = '') {
-      let filters = this.filtersDisabled ? null : await this.getFilters();
-      let options = await this.getOptions(filters || {});
-
-      if (keyword) {
-        options = options
-          .map((item) => ({ ...fuzzyMatch(keyword, item.label), item }))
-          .filter(({ isMatch }) => isMatch)
-          .sort((a, b) => a.distance - b.distance)
-          .map(({ item }) => item);
-      }
+      const filters = this.filtersDisabled ? null : await this.getFilters();
+      let options = await this.getOptions(keyword, filters);
+      options = sortByFuzzyMatch(keyword, options, (item) => [item.label]);
 
       if (options.length === 0 && !this.df.emptyMessage) {
         if (filters && !!fyo.singles.SystemSettings?.allowFilterBypass) {
@@ -134,14 +119,17 @@ export default {
     },
     disableFiltering(keyword) {
       this.filtersDisabled = true;
-      this.results = [];
       setTimeout(() => {
         this.isDropdownOpen = true;
         this.updateSuggestions(keyword);
       }, 1);
     },
     async openNewDoc() {
-      const schemaName = this.df.target;
+      const schemaName = this.getTargetSchemaName();
+      if (!schemaName) {
+        return;
+      }
+
       const name =
         this.searchQuery || fyo.doc.getTemporaryName(fyo.schemaMap[schemaName]);
       const filters = await this.getCreateFilters();
@@ -152,7 +140,6 @@ export default {
 
       linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
         this.$router.back();
-        this.results = [];
         this.triggerChange(savedName);
       });
     },

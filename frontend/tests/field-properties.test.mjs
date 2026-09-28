@@ -75,13 +75,13 @@ test('Frappe field types and links become Books field types and targets', () => 
 });
 
 test('option values come from the server and labels from the schema file', () => {
-  const status = getField('SalesInvoice', 'status', {
+  const movementType = getField('StockMovement', 'movementType', {
     fieldtype: 'Select',
-    options: 'PartlyPaid\nPaid\nOnHold',
+    options: 'MaterialIssue\nManufacture\nOnHold',
   });
-  assert.deepEqual(status.options, [
-    { value: 'PartlyPaid', label: 'Partly Paid' },
-    { value: 'Paid', label: 'Paid' },
+  assert.deepEqual(movementType.options, [
+    { value: 'MaterialIssue', label: 'Material Issue' },
+    { value: 'Manufacture', label: 'Manufacture' },
     { value: 'OnHold', label: 'OnHold' },
   ]);
 });

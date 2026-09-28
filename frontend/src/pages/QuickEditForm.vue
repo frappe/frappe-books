@@ -91,6 +91,7 @@ import FormControl from 'src/components/Controls/FormControl.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
+import { loadDocPermissions } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { DocRef } from 'src/utils/types';
 import {
@@ -211,7 +212,9 @@ export default defineComponent({
     },
     async setDoc() {
       try {
-        this.doc = await fyo.doc.getDoc(this.schemaName, this.name);
+        const doc = await fyo.doc.getDoc(this.schemaName, this.name);
+        await loadDocPermissions(doc);
+        this.doc = doc;
       } catch (error) {
         await handleErrorWithDialog(error, undefined, true);
         return this.$router.back();

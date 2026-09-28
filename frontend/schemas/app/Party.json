@@ -88,6 +88,5 @@
     "currency",
     "role",
     "taxId"
-  ],
-  "keywordFields": ["name", "email", "role"]
+  ]
 }

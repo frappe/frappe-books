@@ -14,9 +14,6 @@
     {
       "fieldname": "status",
       "label": "Status",
-      "optionLabels": {
-        "DonotContact": "Do not Contact"
-      },
       "section": "Default"
     },
     {
@@ -37,6 +34,5 @@
       "create": true,
       "section": "Contacts"
     }
-  ],
-  "keywordFields": ["name", "email", "mobile"]
+  ]
 }

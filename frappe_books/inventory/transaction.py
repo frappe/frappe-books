@@ -26,6 +26,7 @@ from frappe_books.inventory.stock import (
 )
 from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.status import StatusMixin
 
 STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
 
@@ -33,7 +34,7 @@ STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
 UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
 
-class StockMovementController(SeriesNamingMixin, Document):
+class StockMovementController(StatusMixin, SeriesNamingMixin, Document):
 	def before_validate(self):
 		self.amount = populate_stock_rows(self.items)
 
@@ -58,7 +59,7 @@ class StockMovementController(SeriesNamingMixin, Document):
 		repost_stock_accounts(delete_stock_entries(self))
 
 
-class StockTransferController(SeriesNamingMixin, Document):
+class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 	transfer_type = "sales"
 
 	def before_validate(self):

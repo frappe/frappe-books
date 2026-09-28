@@ -13,7 +13,7 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
     ]);
 
     return getSchemas(
-      window.books_boot?.country_code || '-',
+      window.frappe?.boot?.books?.country_code || '-',
       rawCustomFields,
       fieldProperties,
       TranslationString.prototype.languageMap
@@ -44,7 +44,7 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
 
   connect(countryCode?: string): Promise<string> {
     return Promise.resolve(
-      countryCode || window.books_boot?.country_code || '-'
+      countryCode || window.frappe?.boot?.books?.country_code || '-'
     );
   }
 

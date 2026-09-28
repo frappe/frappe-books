@@ -4,7 +4,6 @@ import frappe
 from frappe import _
 from frappe.utils import now
 
-from frappe_books.ui_bridge.database import PROTECTED_WRITE_SCHEMAS
 from frappe_books.ui_bridge.mapping import (
 	CUSTOM_FIELD_PREFIX,
 	custom_target_field,
@@ -20,7 +19,14 @@ FIELD_TYPE_MAP = {
 	"AutoComplete": "Autocomplete",
 	"DynamicLink": "Dynamic Link",
 }
-PROTECTED_SCHEMAS = {*PROTECTED_WRITE_SCHEMAS, "CustomField", "CustomForm", "SetupWizard"}
+PROTECTED_SCHEMAS = {
+	"AccountingLedgerEntry",
+	"CustomField",
+	"CustomForm",
+	"LoyaltyPointEntry",
+	"SetupWizard",
+	"StockLedgerEntry",
+}
 OPTION_FIELDTYPES = {"Select", "AutoComplete"}
 
 

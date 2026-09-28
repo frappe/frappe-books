@@ -18,7 +18,7 @@ class BooksLead(Document):
 		email: DF.Data | None
 		mobile: DF.Data | None
 		status: DF.Literal[
-			"Open", "Replied", "Interested", "Opportunity", "Converted", "Quotation", "DonotContact"
+			"Open", "Replied", "Interested", "Opportunity", "Converted", "Quotation", "Do not Contact"
 		]
 	# end: auto-generated types
 

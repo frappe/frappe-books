@@ -1,14 +1,3 @@
-export type InvoiceStatus =
-  | 'Draft'
-  | 'Saved'
-  | 'Unpaid'
-  | 'Cancelled'
-  | 'Paid'
-  | 'Return'
-  | 'ReturnIssued'
-  | 'Unpaid'
-  | 'PartlyPaid';
-
 export enum ModelNameEnum {
   Account = 'Account',
   AccountingLedgerEntry = 'AccountingLedgerEntry',

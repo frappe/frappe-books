@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeFyo } from './helpers/accounting.mjs';
-import { Search } from './helpers/ui.mjs';
+import { Search, sortByFuzzyMatch } from './helpers/ui.mjs';
 
 test('search starts without loading documents and fetches a bounded match set', async () => {
   const fyo = await makeFyo();
@@ -17,9 +17,9 @@ test('search starts without loading documents and fetches a bounded match set', 
 
   const stale = search.fetchDocs('SINV');
   const latest = search.fetchDocs('SINV-1001');
-  const [text, fields, limit] = requests.at(-1);
+  const [text, schemaNames, limit] = requests.at(-1);
   assert.equal(text, 'SINV-1001');
-  assert.deepEqual(fields.SalesInvoice, ['name', 'party']);
+  assert.ok(schemaNames.includes('SalesInvoice'));
   assert.equal(limit, 20);
 
   responses[1]({
@@ -63,4 +63,38 @@ test('recent records reopen the record instead of a list', async () => {
     search.getRecentItems()[0].route,
     '/edit/SalesInvoice/SINV-1001'
   );
+});
+
+test('the palette searches the schemas the DocType search fields name', async () => {
+  const fyo = await makeFyo();
+  const search = new Search(fyo);
+  search.initialize();
+  const fields = (schemaName) => search.searchables[schemaName]?.fields;
+
+  assert.deepEqual(fields('SalesInvoice'), ['name', 'party']);
+  assert.deepEqual(fields('Party'), ['name', 'email', 'role', 'phone']);
+  assert.deepEqual(fields('Tax'), ['name']);
+  assert.deepEqual(fields('SalesInvoiceItem'), ['item', 'tax']);
+  assert.equal(fields('Account'), undefined);
+});
+
+test('link options keep every server match, closest first', () => {
+  const options = [
+    { label: 'Acme Supplies' },
+    { label: 'Northwind' },
+    { label: 'ACME' },
+  ];
+  const labels = (items) => items.map(({ label }) => label);
+  const getValues = ({ label }) => [label];
+
+  assert.deepEqual(labels(sortByFuzzyMatch('acme', options, getValues)), [
+    'ACME',
+    'Acme Supplies',
+    'Northwind',
+  ]);
+  assert.deepEqual(
+    labels(sortByFuzzyMatch('acme', options, getValues, true)),
+    ['ACME', 'Acme Supplies']
+  );
+  assert.equal(sortByFuzzyMatch('', options, getValues), options);
 });

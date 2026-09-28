@@ -23,6 +23,7 @@ async function mount() {
   fyo.doc.registerModels(models);
   fyo.singles.SystemSettings = { dateFormat: 'MMM d, y' } as any;
   fyo.db.getAll = async () => [{ name: 'Cash' }];
+  fyo.db.searchLink = async () => [{ name: 'Cash' }];
   showSidebar.value = false;
   const state = reactive({
     text: '',

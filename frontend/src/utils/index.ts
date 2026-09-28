@@ -44,6 +44,38 @@ export function fuzzyMatch(input: string, target: string) {
   return { isMatch, distance };
 }
 
+/** The closest fuzzy match of `keyword` among an item's values. */
+export function getBestFuzzyMatch(keyword: string, values: unknown[]) {
+  return values
+    .filter((value) => value !== undefined && value !== null && String(value))
+    .map((value) => fuzzyMatch(keyword, String(value)))
+    .reduce((best, match) => (match.distance < best.distance ? match : best), {
+      isMatch: false,
+      distance: Number.MAX_SAFE_INTEGER,
+    });
+}
+
+/** Items by how closely `keyword` fuzzy matches them; `onlyMatches` drops the rest. */
+export function sortByFuzzyMatch<T>(
+  keyword: string,
+  items: T[],
+  getValues: (item: T) => unknown[],
+  onlyMatches = false
+): T[] {
+  if (!keyword) {
+    return items;
+  }
+
+  return items
+    .map((item) => ({ item, ...getBestFuzzyMatch(keyword, getValues(item)) }))
+    .filter(({ isMatch }) => isMatch || !onlyMatches)
+    .sort((a, b) => a.distance - b.distance)
+    .map(({ item }) => item);
+}
+
+/** Link options load a page at a time, as Frappe's link search returns them. */
+export const LINK_PAGE_LENGTH = 50;
+
 export function getErrorMessage(e: Error, doc?: Doc): string {
   const errorMessage = e.message || t`An error occurred.`;
 

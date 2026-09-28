@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
+ "allow_import": 1,
  "creation": "2026-08-27 22:09:40.211132",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -70,7 +71,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Saved\nSubmitted\nReturn\nReturnIssued\nCancelled",
+   "options": "Saved\nSubmitted\nReturn\nReturn Issued\nCancelled",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -143,7 +144,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-28 11:00:00.000000",
+ "modified": "2026-09-28 07:12:48.316360",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Shipment",
@@ -157,6 +158,7 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
@@ -172,6 +174,7 @@
    "delete": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
@@ -184,6 +187,7 @@
    "create": 1,
    "email": 1,
    "export": 1,
+   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
@@ -197,6 +201,27 @@
  "search_fields": "party",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Saved"
+  },
+  {
+   "color": "Green",
+   "title": "Submitted"
+  },
+  {
+   "color": "Gray",
+   "title": "Return"
+  },
+  {
+   "color": "Gray",
+   "title": "Return Issued"
+  },
+  {
+   "color": "Red",
+   "title": "Cancelled"
+  }
+ ],
  "track_changes": 1
 }

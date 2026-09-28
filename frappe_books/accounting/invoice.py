@@ -20,9 +20,10 @@ from frappe_books.inventory.invoice_balance import (
 from frappe_books.inventory.stock import validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.status import StatusMixin
 
 
-class InvoiceController(SeriesNamingMixin, Document):
+class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	"""Totals and validation shared by quotes and invoices."""
 
 	transaction_type: str

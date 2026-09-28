@@ -71,9 +71,6 @@ function removeFields(schemaMap: SchemaMap): SchemaMap {
       schema.quickEditFields = schema.quickEditFields?.filter(
         (fn) => fn !== fieldname
       );
-      schema.keywordFields = schema.keywordFields?.filter(
-        (fn) => fn !== fieldname
-      );
 
       if (schema.linkDisplayField === fieldname) {
         delete schema.linkDisplayField;

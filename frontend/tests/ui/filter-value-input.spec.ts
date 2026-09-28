@@ -102,7 +102,7 @@ for (const [schema, label, field, options] of cases) {
 }
 
 for (const condition of ['Is', 'Contains']) {
-  test(`status ${condition} uses the stored value for a label with spaces`, async ({
+  test(`status ${condition} filters on the stored value`, async ({
     page,
   }) => {
     await openField(page, 'SalesInvoice', 'Status');
@@ -111,7 +111,7 @@ for (const condition of ['Is', 'Contains']) {
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
     expect(await appliedFilters(page)).toEqual({
       status:
-        condition === 'Is' ? ['=', 'PartlyPaid'] : ['like', '%PartlyPaid%'],
+        condition === 'Is' ? ['=', 'Partly Paid'] : ['like', '%Partly Paid%'],
     });
     await expect
       .poll(() =>

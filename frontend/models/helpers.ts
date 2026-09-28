@@ -4,14 +4,14 @@ import {
 } from './baseModels/Account/types';
 import {
   Action,
+  BadgeData,
   BadgeTheme,
   ColumnConfig,
-  DocStatus,
-  LeadStatus,
   RenderData,
 } from 'fyo/model/types';
 import { Fyo, t } from 'fyo';
-import { InvoiceStatus, ModelNameEnum } from './types';
+import { OptionField, Schema } from 'schemas/types';
+import { ModelNameEnum } from './types';
 
 import { DateTime } from 'luxon';
 import { Doc } from 'fyo/model/doc';
@@ -339,100 +339,67 @@ export function getLeadStatusColumn(): ColumnConfig {
     fieldname: 'status',
     fieldtype: 'Select',
     badge(doc) {
-      const status = getLeadStatus(doc) as LeadStatus;
-      return {
-        theme: statusColor[status] ?? 'gray',
-        label: getStatusTextOfLead(status),
-      };
+      const status = String(doc.status ?? '');
+      return getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' };
     },
   };
 }
 
-export const statusColor: Record<
-  DocStatus | InvoiceStatus | LeadStatus,
-  BadgeTheme | undefined
-> = {
-  '': 'gray',
-  Draft: 'gray',
-  Open: 'gray',
-  Replied: 'amber',
-  Opportunity: 'amber',
-  Unpaid: 'amber',
-  Paid: 'green',
-  PartlyPaid: 'amber',
-  Interested: 'amber',
-  Converted: 'green',
-  Quotation: 'green',
-  Saved: 'blue',
-  NotSaved: 'gray',
-  Submitted: 'green',
-  Cancelled: 'red',
-  DonotContact: 'red',
-  Return: 'gray',
-  ReturnIssued: 'gray',
+/** Frappe UI badge themes for the colours a DocType state can have. */
+const stateThemes: Record<string, BadgeTheme | undefined> = {
+  Blue: 'blue',
+  Cyan: 'blue',
+  'Light Blue': 'blue',
+  Gray: 'gray',
+  Green: 'green',
+  Orange: 'amber',
+  Yellow: 'amber',
+  Red: 'red',
+  Pink: 'red',
+  Purple: 'violet',
 };
 
-export function getStatusText(status: DocStatus | InvoiceStatus): string {
+/** A stored status as its `status` option labels it and its DocType state colours it. */
+export function getStateBadge(
+  schema: Schema | undefined,
+  status: string
+): BadgeData | undefined {
+  const field = schema?.fields.find(({ fieldname }) => fieldname === 'status');
+  const color = (field as OptionField | undefined)?.states?.[status];
+  if (!color) {
+    return undefined;
+  }
+
+  const option = (field as OptionField).options.find(
+    ({ value }) => value === status
+  );
+  return { label: option?.label ?? status, theme: stateThemes[color] ?? 'gray' };
+}
+
+/** Unsaved and docstatus badges, which Frappe's desk also draws without states. */
+function getDocstatusBadge(status: string): BadgeData {
   switch (status) {
     case 'Draft':
-      return t`Draft`;
-    case 'Saved':
-      return t`Saved`;
+      return { label: t`Draft`, theme: 'gray' };
     case 'NotSaved':
-      return t`Not Saved`;
+      return { label: t`Not Saved`, theme: 'gray' };
+    case 'Saved':
+      return { label: t`Saved`, theme: 'blue' };
     case 'Submitted':
-      return t`Submitted`;
+      return { label: t`Submitted`, theme: 'green' };
     case 'Cancelled':
-      return t`Cancelled`;
-    case 'Paid':
-      return t`Paid`;
-    case 'Unpaid':
-      return t`Unpaid`;
-    case 'PartlyPaid':
-      return t`Partly Paid`;
-    case 'Return':
-      return t`Return`;
-    case 'ReturnIssued':
-      return t`Return Issued`;
+      return { label: t`Cancelled`, theme: 'red' };
     default:
-      return '';
+      return { label: status, theme: 'gray' };
   }
 }
 
-export function getStatusTextOfLead(status: LeadStatus): string {
-  switch (status) {
-    case 'Open':
-      return t`Open`;
-    case 'Replied':
-      return t`Replied`;
-    case 'Opportunity':
-      return t`Opportunity`;
-    case 'Interested':
-      return t`Interested`;
-    case 'Converted':
-      return t`Converted`;
-    case 'Quotation':
-      return t`Quotation`;
-    case 'DonotContact':
-      return t`Do not Contact`;
-    default:
-      return '';
-  }
+export function getDocStatusBadge(doc: RenderData | Doc): BadgeData {
+  const status = getDocStatus(doc);
+  return getStateBadge(doc.schema, status) ?? getDocstatusBadge(status);
 }
 
-export function getLeadStatus(
-  doc?: Lead | Doc | RenderData
-): LeadStatus | DocStatus {
-  if (!doc) {
-    return '';
-  }
-
-  return doc.status as LeadStatus;
-}
-
-export function getDocStatus(
-  doc?: RenderData | Doc
-): DocStatus | InvoiceStatus {
+export function getDocStatus(doc?: RenderData | Doc): string {
   if (!doc) {
     return '';
   }
@@ -451,7 +418,7 @@ export function getDocStatus(
 
   // The server stores the status of documents that have a status field.
   if (doc.status) {
-    return doc.status as InvoiceStatus;
+    return doc.status as string;
   }
 
   if (doc.cancelled) {
@@ -467,36 +434,10 @@ export function getSerialNumberStatusColumn(): ColumnConfig {
     fieldname: 'status',
     fieldtype: 'Select',
     badge(doc) {
-      let status = doc.status;
-      if (typeof status !== 'string') {
-        status = 'Inactive';
-      }
-
-      return {
-        theme: serialNumberStatusColor[status] ?? 'gray',
-        label: getSerialNumberStatusText(status),
-      };
+      const status = typeof doc.status === 'string' ? doc.status : 'Inactive';
+      return getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' };
     },
   };
-}
-
-export const serialNumberStatusColor: Record<string, BadgeTheme | undefined> = {
-  Inactive: 'gray',
-  Active: 'green',
-  Delivered: 'blue',
-};
-
-export function getSerialNumberStatusText(status: string): string {
-  switch (status) {
-    case 'Inactive':
-      return t`Inactive`;
-    case 'Active':
-      return t`Active`;
-    case 'Delivered':
-      return t`Delivered`;
-    default:
-      return t`Inactive`;
-  }
 }
 
 export function getPriceListStatusColumn(): ColumnConfig {
@@ -609,13 +550,7 @@ export function getDocStatusListColumn(): ColumnConfig {
     label: t`Status`,
     fieldname: 'status',
     fieldtype: 'Select',
-    badge(doc) {
-      const status = getDocStatus(doc);
-      return {
-        theme: statusColor[status] ?? 'gray',
-        label: getStatusText(status),
-      };
-    },
+    badge: getDocStatusBadge,
   };
 }
 

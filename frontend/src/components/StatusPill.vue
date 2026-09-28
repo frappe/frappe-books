@@ -11,11 +11,10 @@ import { LoyaltyProgram } from 'models/baseModels/LoyaltyProgram/LoyaltyProgram'
 import { Party } from 'models/baseModels/Party/Party';
 import {
   getDocStatus,
+  getDocStatusBadge,
   getLoyaltyProgramStatus,
   getLoyaltyProgramStatusText,
-  getStatusText,
   loyaltyProgramStatusColor,
-  statusColor,
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
@@ -53,26 +52,24 @@ export default defineComponent({
         };
       }
 
-      return {
-        theme: statusColor[status] ?? 'gray',
-        label: this.getLabel(status),
-      };
+      const badge = getDocStatusBadge(this.doc);
+      return { ...badge, label: this.getAmountLabel(status) ?? badge.label };
     },
   },
   methods: {
-    getLabel(status: ReturnType<typeof getDocStatus>): string {
+    getAmountLabel(status: string): string | undefined {
       const outstanding = this.doc.outstandingAmount as Money | undefined;
       const grandTotal = this.doc.grandTotal as Money | undefined;
       if (status === 'Unpaid' && outstanding) {
         return this.t`Unpaid ${this.formatAmount(outstanding)}`;
       }
 
-      if (status === 'PartlyPaid' && outstanding && grandTotal) {
+      if (status === 'Partly Paid' && outstanding && grandTotal) {
         return this
           .t`Partly Paid ${this.formatAmount(grandTotal.sub(outstanding))}`;
       }
 
-      return getStatusText(status);
+      return undefined;
     },
     formatAmount(amount: Money): string {
       return this.fyo.format(amount, 'Currency');

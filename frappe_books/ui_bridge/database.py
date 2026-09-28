@@ -5,6 +5,7 @@ from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 import frappe
+from frappe.desk.search import search_widget
 from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
@@ -16,6 +17,7 @@ from frappe_books.ui_bridge.mapping import (
 	SOURCE_META_TO_TARGET,
 	custom_field_mapping,
 	schema_mapping,
+	search_fields,
 	source_by_doctype,
 	source_field,
 	source_reference,
@@ -24,9 +26,18 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists", "preview", "getMapped"}
+READ_METHODS = {
+	"get",
+	"getAll",
+	"count",
+	"search",
+	"searchLink",
+	"getSingleValues",
+	"exists",
+	"preview",
+	"getMapped",
+}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
-PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
 INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__expectedModified"}
 # Frappe maintains nested-set indices when the document is saved.
@@ -93,27 +104,51 @@ class BooksDatabaseBridge:
 		)
 		return sum(row.count for row in rows)
 
-	def search(self, text: str, fields_by_schema: dict[str, list[str]], limit: int) -> dict[str, list[dict]]:
-		"""Return up to `limit` rows of each schema whose keyword fields match `text`."""
-		pattern = _subsequence_pattern(text)
-		return {
-			source_schema: self._search_rows(source_schema, fields, pattern, limit)
-			for source_schema, fields in fields_by_schema.items()
-		}
+	def search(self, text: str, schemas: list[str], limit: int) -> dict[str, list[dict]]:
+		"""Return up to `limit` rows of each schema whose search fields hold the letters of the
+		longest word in `text`, in order, as the interface's fuzzy search matches them."""
+		word = max(text.split(), key=len, default="")
+		return {source_schema: self._search_rows(source_schema, word, limit) for source_schema in schemas}
 
-	def _search_rows(self, source_schema, fields, pattern, limit):
+	def search_link(
+		self, source_schema: str, text: str, filters: dict[str, Any] | None, fields: list[str], limit: int
+	) -> list[dict]:
+		"""Return the link options Frappe's link search finds for the letters of `text`, in order."""
+		rows = self._search_widget(source_schema, text.strip(), limit, filters or {}, fields)
+		return [self._row_to_source(source_schema, row, fields) for row in rows]
+
+	def _search_rows(self, source_schema, word, limit):
 		meta = frappe.get_meta(target_doctype(source_schema))
-		requested = [*fields]
+		fields = search_fields(source_schema)
 		if meta.istable:
-			requested += ["parent", "parentSchemaName"]
-		if meta.is_submittable:
-			requested += ["submitted", "cancelled"]
+			return self._search_table_rows(source_schema, fields, word, limit)
+		requested = [*fields, "submitted", "cancelled"] if meta.is_submittable else fields
+		rows = self._search_widget(source_schema, word, limit, {}, requested)
+		return [self._row_to_source(source_schema, row, requested) for row in rows]
+
+	def _search_widget(self, source_schema, text, limit, filters, fields):
+		# Frappe matches `%txt%`; a `%` between letters matches them in order.
+		return search_widget(
+			target_doctype(source_schema),
+			"%".join(text),
+			page_length=limit,
+			filters=self._target_filters(source_schema, filters),
+			filter_fields=self._target_fields(source_schema, fields),
+			as_dict=True,
+		)
+
+	def _search_table_rows(self, source_schema, fields, word, limit):
+		"""Frappe's search needs a parent doctype for table rows, so their rows are listed directly."""
+		if not fields:
+			return []
+		requested = [*fields, "parent", "parentSchemaName"]
+		pattern = f"%{'%'.join(word)}%"
 		rows = self._get_list_rows(
-			meta.name,
+			target_doctype(source_schema),
 			fields=self._target_fields(source_schema, requested),
 			filters=[],
 			or_filters=[[target_field(source_schema, field), "like", pattern] for field in fields],
-			order_by="idx" if meta.istable else "modified desc",
+			order_by="idx",
 			offset=None,
 			limit=limit,
 		)
@@ -160,7 +195,7 @@ class BooksDatabaseBridge:
 		return values
 
 	def insert(self, source_schema: str, values: dict[str, Any]) -> dict:
-		target = _writable_doctype(source_schema)
+		target = target_doctype(source_schema)
 		if values.get("submitted") or values.get("cancelled"):
 			frappe.throw("Use the Books document action API to submit or cancel documents")
 		if frappe.get_meta(target).issingle:
@@ -176,7 +211,7 @@ class BooksDatabaseBridge:
 		return self._to_readable_source(source_schema, doc)
 
 	def update(self, source_schema: str, values: dict[str, Any]) -> dict:
-		target = _writable_doctype(source_schema)
+		target = target_doctype(source_schema)
 		if frappe.get_meta(target).issingle:
 			return self._update_single(source_schema, values)
 		if not isinstance(values.get("name"), str):
@@ -209,16 +244,16 @@ class BooksDatabaseBridge:
 		return self._to_readable_source(source_by_doctype()[doc.doctype], doc)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
-		frappe.rename_doc(_writable_doctype(source_schema), old_name, new_name)
+		frappe.rename_doc(target_doctype(source_schema), old_name, new_name)
 
 	def delete(self, source_schema: str, name: str) -> None:
-		frappe.delete_doc(_writable_doctype(source_schema), name)
+		frappe.delete_doc(target_doctype(source_schema), name)
 
 	def delete_all(self, source_schema: str, filters: dict[str, Any]) -> int:
 		if not filters:
 			frappe.throw("Books bulk deletion requires at least one filter")
 		names = frappe.get_list(
-			_writable_doctype(source_schema),
+			target_doctype(source_schema),
 			filters=self._target_filters(source_schema, filters),
 			pluck="name",
 		)
@@ -424,21 +459,9 @@ class BooksDatabaseBridge:
 		return bool(field and field.fieldtype == "Password")
 
 
-def _subsequence_pattern(text: str) -> str:
-	"""Match the letters of the longest word in order, as the interface's fuzzy search does."""
-	word = max(text.split(), key=len, default="")
-	return f"%{'%'.join(word)}%"
-
-
 def _is_named_by_user(meta) -> bool:
 	autoname = (meta.autoname or "").lower()
 	return autoname == "prompt" or autoname.startswith("field:")
-
-
-def _writable_doctype(source_schema: str) -> str:
-	if source_schema in PROTECTED_WRITE_SCHEMAS:
-		frappe.throw(f"{source_schema} records are managed by server document actions")
-	return target_doctype(source_schema)
 
 
 def _snake_case(value: str) -> str:

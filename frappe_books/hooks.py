@@ -26,25 +26,13 @@ add_to_apps_screen = [
 
 website_route_rules = [{"from_route": "/books/<path:app_path>", "to_route": "books"}]
 
+extend_bootinfo = "frappe_books.boot.extend_bootinfo"
+
 jinja = {"methods": ["frappe_books.printing.get_print_settings"]}
 
 after_install = "frappe_books.setup.bootstrap"
 after_migrate = "frappe_books.setup.after_migrate"
 before_tests = "frappe_books.setup.bootstrap"
-
-doc_events = {
-	doctype: {"on_change": "frappe_books.status.on_change"}
-	for doctype in (
-		"Books Sales Invoice",
-		"Books Purchase Invoice",
-		"Books Shipment",
-		"Books Purchase Receipt",
-		"Books Sales Quote",
-		"Books Journal Entry",
-		"Books Payment",
-		"Books Stock Movement",
-	)
-}
 
 scheduler_events = {
 	"daily": ["frappe_books.commerce.loyalty.expire_programs_and_points"],

@@ -103,6 +103,7 @@
             {{ t`Submit only` }}
           </FrappeButton>
           <FrappeButton
+            v-if="sinvDoc.can('print')"
             size="md"
             theme="gray"
             variant="subtle"

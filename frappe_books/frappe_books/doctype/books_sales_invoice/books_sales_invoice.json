@@ -23,7 +23,6 @@
   "set_discount_amount",
   "discount_amount",
   "discount_percent",
-  "entry_currency",
   "currency",
   "exchange_rate",
   "settings_tab_break_20",
@@ -183,14 +182,6 @@
    "fieldtype": "Float",
    "hidden": 1,
    "label": "Discount Percent"
-  },
-  {
-   "default": "Party",
-   "fieldname": "entry_currency",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "label": "Entry Currency",
-   "options": "Party\nCompany"
   },
   {
    "fieldname": "currency",
@@ -378,7 +369,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-30 12:00:00.000000",
+ "modified": "2026-09-30 12:10:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",

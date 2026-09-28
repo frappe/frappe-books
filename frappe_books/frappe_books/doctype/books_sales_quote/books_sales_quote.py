@@ -31,7 +31,6 @@ class BooksSalesQuote(InvoiceController):
 		discount_after_tax: DF.Check
 		discount_amount: DF.Currency
 		discount_percent: DF.Float
-		entry_currency: DF.Literal["Party", "Company"]
 		exchange_rate: DF.Float
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check

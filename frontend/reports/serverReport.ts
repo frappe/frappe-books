@@ -32,10 +32,15 @@ export async function runServerReport(
     result: ServerRow[];
   }>('frappe.desk.query_report.run', {
     report_name: reportName,
-    filters: mapKeys(filters, (_, key) => snakeCase(key)),
+    filters: toServerFilters(filters),
     ignore_prepared_report: true,
   });
   return { columns: columns.map(toColumnField), rows: result };
+}
+
+/** Script Reports take Frappe's snake_case filter names. */
+export function toServerFilters(filters: ServerFilters): ServerFilters {
+  return mapKeys(filters, (_, key) => snakeCase(key));
 }
 
 export async function getServerDefaultFilters(

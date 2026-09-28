@@ -10,7 +10,7 @@ from frappe.utils import flt, money_in_words
 
 from frappe_books.accounting.invoice import InvoiceController, row_discount
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
-from frappe_books.accounting.payment import PaymentController
+from frappe_books.accounting.payment import PaymentController, tax_share
 from frappe_books.inventory.transaction import StockMovementController, StockTransferController
 
 
@@ -96,12 +96,28 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 
 
 def _payment_totals(payment) -> dict[str, Any]:
-	"""The tax lines are the taxes the payment realised, which templates read from its own rows."""
+	taxes = _payment_taxes(payment)
 	currency = company_currency()
 	totals = _amount_totals(payment.amount, currency)
-	totals["sub_total"] = as_decimal(payment.amount) - sum_decimal(tax.amount for tax in payment.taxes)
+	totals["sub_total"] = as_decimal(payment.amount) - sum_decimal(tax["amount"] for tax in taxes)
 	totals["amount_paid_in_words"] = amount_in_words(payment.amount_paid, currency)
+	totals["taxes"] = taxes
 	return totals
+
+
+def _payment_taxes(payment) -> list[dict[str, Any]]:
+	"""Each tax of the paid invoices: the amount the payment realised, else the share it settles."""
+	realised = defaultdict(as_decimal)
+	for row in payment.taxes:
+		realised[row.from_account] += as_decimal(row.amount)
+	shares = defaultdict(as_decimal)
+	for row in payment.payment_references:
+		invoice = frappe.get_doc(row.reference_type, row.reference_name)
+		if not as_decimal(invoice.base_grand_total):
+			continue
+		for tax in invoice.taxes:
+			shares[tax.account] += tax_share(invoice, tax, as_decimal(row.amount))
+	return [{"account": account, "amount": realised.get(account, share)} for account, share in shares.items()]
 
 
 def amount_in_words(amount, currency) -> str:

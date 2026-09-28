@@ -156,14 +156,20 @@ def _invoice_realised_taxes(invoice, amount):
 	for tax in invoice.taxes:
 		if tax.account not in payment_accounts:
 			continue
-		base_tax = abs(as_decimal(tax.amount)) * as_decimal(invoice.exchange_rate or 1)
 		yield {
 			"account": payment_accounts[tax.account],
 			"from_account": tax.account,
 			"rate": tax.rate,
-			# Realise the share paid so far, so partial payments add up to the full tax.
-			"amount": rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total),
+			"amount": tax_share(invoice, tax, amount, paid),
 		}
+
+
+def tax_share(invoice, tax, amount, paid=0):
+	"""Return the base-currency part of an invoice tax that `amount` settles after `paid`."""
+	total = abs(as_decimal(invoice.base_grand_total))
+	base_tax = abs(as_decimal(tax.amount)) * as_decimal(invoice.exchange_rate or 1)
+	# Share what is paid so far, so partial payments add up to the full tax.
+	return rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total)
 
 
 def _tax_payment_accounts(invoice):

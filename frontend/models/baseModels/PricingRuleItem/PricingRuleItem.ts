@@ -6,6 +6,7 @@ export class PricingRuleItem extends Doc {
   item?: string;
   unit?: string;
 
+  // Mirrors the server's fetch of an empty unit from the item.
   formulas: FormulaMap = {
     unit: {
       formula: () => {
@@ -14,6 +15,7 @@ export class PricingRuleItem extends Doc {
         }
         return this.fyo.getValue(ModelNameEnum.Item, this.item, 'unit');
       },
+      dependsOn: ['item'],
     },
   };
 }

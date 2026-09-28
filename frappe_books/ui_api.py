@@ -34,6 +34,12 @@ def get_field_properties() -> dict[str, dict[str, dict[str, Any]]]:
 
 
 @frappe.whitelist()
+def get_duplicate(source_schema: str, name: str) -> dict[str, Any]:
+	"""Return an unsaved copy of a document for the Duplicate action."""
+	return BooksDatabaseBridge().get_duplicate(source_schema, name)
+
+
+@frappe.whitelist()
 def get_submitted_linked_docs(source_schema: str, name: str) -> list[dict[str, Any]]:
 	"""Return the submitted documents Frappe cancels with this one, with their interface schemas."""
 	linked = linked_with.get_submitted_linked_docs(target_doctype(source_schema), name)

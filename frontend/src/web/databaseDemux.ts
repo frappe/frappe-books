@@ -56,6 +56,16 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
     return call('frappe_books.ui_api.bespoke_call', { method, args });
   }
 
+  override async getDuplicate(
+    schemaName: string,
+    name: string
+  ): Promise<unknown> {
+    return call('frappe_books.ui_api.get_duplicate', {
+      source_schema: schemaName,
+      name,
+    });
+  }
+
   override async runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,

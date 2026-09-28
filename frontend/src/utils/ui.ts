@@ -307,7 +307,7 @@ function getDuplicateAction(doc: Doc): Action {
       ),
     async action() {
       try {
-        const dupe = doc.duplicate();
+        const dupe = await doc.duplicate();
         await openEdit(dupe);
       } catch (err) {
         await handleErrorWithDialog(err as Error, doc);

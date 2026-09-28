@@ -48,13 +48,14 @@
    "fieldname": "is_custom",
    "fieldtype": "Check",
    "label": "Is Custom",
+   "no_copy": 1,
    "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-26 22:11:26.502504",
+ "modified": "2026-09-30 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Print Template",

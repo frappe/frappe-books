@@ -93,12 +93,6 @@ export abstract class StockTransfer extends Transfer {
     }),
   };
 
-  override duplicate(): Doc {
-    const doc = super.duplicate() as StockTransfer;
-    doc.backReference = undefined;
-    return doc;
-  }
-
   static createFilters: FiltersMap = {
     party: (doc: Doc) => ({
       role: doc.isSales ? 'Customer' : 'Supplier',

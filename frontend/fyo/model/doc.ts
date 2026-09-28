@@ -1065,31 +1065,14 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return await this.sync();
   }
 
-  duplicate(): Doc {
-    const updateMap = this.getValidDict(true, true);
-    for (const field in updateMap) {
-      const value = updateMap[field];
-      if (!Array.isArray(value)) {
-        continue;
-      }
-
-      for (const row of value) {
-        delete row.name;
-      }
+  /** A new copy made on the server, without the values Frappe marks no_copy. */
+  async duplicate(): Promise<Doc> {
+    const values = await this.fyo.db.getDuplicate(this.schemaName, this.name!);
+    if (!this.numberSeries) {
+      values.name = `${this.name!} CPY`;
     }
 
-    if (this.numberSeries) {
-      delete updateMap.name;
-    } else {
-      updateMap.name = String(updateMap.name) + ' CPY';
-    }
-
-    const rawUpdateMap = this.fyo.db.converter.toRawValueMap(
-      this.schemaName,
-      updateMap
-    ) as RawValueMap;
-
-    return this.fyo.doc.getNewDoc(this.schemaName, rawUpdateMap, true);
+    return this.fyo.doc.getNewDocFromServer(this.schemaName, values);
   }
 
   /**

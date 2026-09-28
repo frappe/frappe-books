@@ -23,7 +23,7 @@ import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
 import { StockMovement } from './inventory/StockMovement';
 import { StockTransfer } from './inventory/StockTransfer';
 import { ValidationError } from 'fyo/utils/errors';
-import { getIsNullOrUndef, safeParseFloat } from 'utils/index';
+import { safeParseFloat } from 'utils/index';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
@@ -54,18 +54,7 @@ export async function getMappedDoc(
     method,
     source.name!
   );
-  // Unset values keep the new document's defaults, such as its number series.
-  const setValues = Object.fromEntries(
-    Object.entries(values).filter(([, value]) => !getIsNullOrUndef(value))
-  );
-  return source.fyo.doc.getNewDoc(
-    schemaName,
-    setValues,
-    true,
-    undefined,
-    undefined,
-    false
-  );
+  return source.fyo.doc.getNewDocFromServer(schemaName, values);
 }
 
 export function getQuoteActions(

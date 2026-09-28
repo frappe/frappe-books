@@ -5,6 +5,7 @@ from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 import frappe
+from frappe.model.docstatus import DocStatus
 from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
@@ -207,6 +208,17 @@ class BooksDatabaseBridge:
 		"""Return the unsaved document a whitelisted mapper, like make_return, builds."""
 		doc = make_mapped_doc(method, source_name)
 		return self._to_readable_source(source_by_doctype()[doc.doctype], doc)
+
+	def get_duplicate(self, source_schema: str, name: str) -> dict:
+		"""Return an unsaved draft copy of a document, without the fields Frappe marks no_copy."""
+		source = frappe.get_doc(target_doctype(source_schema), name, check_permission="read")
+		duplicate = frappe.copy_doc(source, ignore_no_copy=False)
+		# The fields Frappe does not copy take a new document's defaults.
+		duplicate.update_if_missing(frappe.new_doc(duplicate.doctype, as_dict=True))
+		# Frappe keeps the docstatus of copies made while tests run.
+		duplicate.docstatus = DocStatus.DRAFT
+		duplicate.check_permission("create")
+		return self._to_readable_source(source_schema, duplicate)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
 		frappe.rename_doc(_writable_doctype(source_schema), old_name, new_name)

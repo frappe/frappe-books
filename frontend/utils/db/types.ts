@@ -101,6 +101,8 @@ export abstract class DatabaseDemuxBase {
 
   abstract callBespoke(method: string, ...args: unknown[]): Promise<unknown>;
 
+  abstract getDuplicate(schemaName: string, name: string): Promise<unknown>;
+
   abstract runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,

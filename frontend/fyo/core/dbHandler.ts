@@ -259,6 +259,15 @@ export class DatabaseHandler extends DatabaseBase {
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
+  /** An unsaved copy of a document, without the values Frappe marks no_copy. */
+  async getDuplicate(schemaName: string, name: string): Promise<DocValueMap> {
+    const rawValueMap = (await this.#demux.getDuplicate(
+      schemaName,
+      name
+    )) as RawValueMap;
+    return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
+  }
+
   // The Frappe adapter runs these complex queries on the server.
 
   async getTopExpenses(fromDate: string, toDate: string): Promise<TopExpenses> {

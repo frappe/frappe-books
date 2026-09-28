@@ -274,6 +274,8 @@ async function installPaymentFixture(page: Page) {
       fixture.stored = { ...fixture.stored, submitted: true };
       return { ...fixture.stored };
     };
+    // Fixture records exist only in the browser, so they keep the doctype-level rights.
+    fyo.db.getDocPermissions = async () => undefined;
     const getAll = fyo.db.getAll.bind(fyo.db);
     fyo.db.getAll = (schemaName: string, ...args: any[]) =>
       schemaName === 'Account' ? accounts : getAll(schemaName, ...args);

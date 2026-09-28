@@ -178,7 +178,9 @@ test('cancelling a new linked record returns to its parent quick edit', async ({
   await expect(
     page.getByRole('textbox', { name: 'Address Name', exact: true })
   ).toHaveValue(partyName);
-  await page.getByRole('button', { name: 'Close quick edit', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Close quick edit', exact: true })
+    .click();
   await expect(title).toBeVisible();
   await expect(page).toHaveURL(parentUrl);
   await expect(address).toHaveValue(addressLabel);
@@ -216,7 +218,9 @@ test('Escape dismisses account menus and dialogs without closing quick edit', as
   await expect(title).toBeVisible();
 
   await actions.click();
-  await page.getByRole('menuitem', { name: 'Add Account', exact: true }).click();
+  await page
+    .getByRole('menuitem', { name: 'Add Account', exact: true })
+    .click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).focus();
@@ -224,10 +228,15 @@ test('Escape dismisses account menus and dialogs without closing quick edit', as
   await expect(dialog).toBeHidden();
   await expect(title).toBeVisible();
 
-  await page.getByRole('button', { name: 'Close quick edit', exact: true }).focus();
+  await page
+    .getByRole('button', { name: 'Close quick edit', exact: true })
+    .focus();
   await page.keyboard.press('Escape');
   await expect(title).toBeHidden();
-  expect(await getPartyState(page)).toEqual({ dirty: false, address: addressName });
+  expect(await getPartyState(page)).toEqual({
+    dirty: false,
+    address: addressName,
+  });
 });
 
 test('one action opens one dismissible confirmation', async ({ page }) => {
@@ -239,13 +248,20 @@ test('one action opens one dismissible confirmation', async ({ page }) => {
   await confirmation.getByRole('button', { name: 'No', exact: true }).hover();
   await page.keyboard.press('Escape');
   await expect(confirmation).toHaveCount(0);
-  expect(await getPartyState(page)).toEqual({ dirty: false, address: addressName });
+  expect(await getPartyState(page)).toEqual({
+    dirty: false,
+    address: addressName,
+  });
 });
 
-test('one notification renders once and dismisses on click', async ({ page }) => {
+test('one notification renders once and dismisses on click', async ({
+  page,
+}) => {
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
-    const fyo = app._context.mixins.find((m: any) => m.computed?.fyo).computed.fyo();
+    const fyo = app._context.mixins
+      .find((m: any) => m.computed?.fyo)
+      .computed.fyo();
     fyo.db.getOpenPOSShift = async () => 'Fixture Shift';
     fyo.singles.POSSettings.inventory = 'Stores';
     fyo.singles.POSSettings.cashAccount = 'Fixture Cash';
@@ -350,6 +366,8 @@ async function installFixture(page: Page) {
       doc._dirty = false;
       doc._notInserted = false;
     }
+    // Fixture records exist only in the browser, so they keep the doctype-level rights.
+    fyo.db.getDocPermissions = async () => undefined;
     // Forms reload saved documents on open, so serve the fixtures as saved.
     const get = fyo.db.get.bind(fyo.db);
     fyo.db.get = async (
@@ -369,6 +387,27 @@ async function installFixture(page: Page) {
         return addresses.map((doc: any) => ({ name: doc.name }));
       }
       return getAll(schemaName, ...args);
+    };
+    // Link options come from the server's link search, which the fixtures are not in.
+    const searchLink = fyo.db.searchLink.bind(fyo.db);
+    fyo.db.searchLink = async (
+      schemaName: string,
+      text: string,
+      ...args: unknown[]
+    ) => {
+      if (schemaName !== 'Address') {
+        return searchLink(schemaName, text, ...args);
+      }
+      const letters = new RegExp(
+        [...text.toLowerCase()]
+          .map((letter) => letter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .join('.*')
+      );
+      return addresses
+        .filter((doc: any) =>
+          letters.test(`${doc.name} ${doc.addressDisplay ?? ''}`.toLowerCase())
+        )
+        .map((doc: any) => doc.getValidDict());
     };
     (window as any).linkFixture = { party, address: addresses[0] };
   });

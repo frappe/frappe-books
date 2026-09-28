@@ -35,7 +35,7 @@ export function getRowDetails(report: Report, row: ReportRow): RowDetail[] {
     }
 
     return {
-      key: column.key ?? column.fieldname,
+      key: column.fieldname,
       label: column.label,
       value: row.cells[index]?.value || '—',
     };
@@ -46,8 +46,8 @@ export function getRowDetails(report: Report, row: ReportRow): RowDetail[] {
 export function getRowReference(report: Report, row: ReportRow) {
   const getRaw = (fieldname: string) =>
     row.cells[getColumnIndex(report, fieldname)]?.rawValue;
-  const schemaName = getRaw('referenceType');
-  const name = getRaw('referenceName');
+  const schemaName = getRaw('reference_type');
+  const name = getRaw('reference_name');
   if (typeof schemaName !== 'string' || typeof name !== 'string' || !name) {
     return null;
   }

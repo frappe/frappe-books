@@ -206,7 +206,7 @@ export class MobileTree {
     value?: { label?: string; width?: number }
   ): MobileValueColumn {
     return {
-      key: column.key ?? column.fieldname,
+      key: column.fieldname,
       label: value?.label ?? column.label,
       width: value?.width ?? DEFAULT_WIDTH,
       fieldtype: column.fieldtype,

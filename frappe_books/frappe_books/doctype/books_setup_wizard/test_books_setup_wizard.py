@@ -51,7 +51,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			frappe.db.get_single_value("Books Defaults", "sales_invoice_number_series"),
 			"SINV-",
 		)
-		self.assertTrue(frappe.db.exists("Books Currency", "INR"))
+		self.assertTrue(frappe.db.get_value("Currency", "INR", "enabled"))
 		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
 		self.assertTrue(frappe.db.exists("Books Tax", "GST-18"))
 		gst = frappe.get_doc("Books Tax", "GST-18")

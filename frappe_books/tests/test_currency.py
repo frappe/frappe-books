@@ -1,52 +1,60 @@
-"""Currency defaults must follow metadata across supported decimal precisions."""
+"""Books uses Frappe's Currency records and CLDR precision."""
 
 from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
-from frappe_books.currency import currency_fraction_values, currency_precision
-from frappe_books.setup_service import _update_system_settings, ensure_currency
+from frappe_books.currency import currency_precision
+from frappe_books.setup_service import _update_system_settings, enable_currency
+from frappe_books.tests.accounting import ensure_user, make_account, make_party
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
-CURRENCIES = (
-	("JPY", 0, 0, Decimal("1")),
-	("VUV", 0, 0, Decimal("1")),
-	("USD", 2, 100, Decimal("0.01")),
-	("BHD", 3, 1000, Decimal("0.001")),
-	("CLF", 4, 10000, Decimal("0.0001")),
-)
+CURRENCIES = (("JPY", 0), ("VUV", 0), ("USD", 2), ("BHD", 3), ("CLF", 4))
+BOOKS_USER = "books-currency-user@example.com"
+BOOKS_MANAGER = "books-currency-manager@example.com"
 
 
 class UnitTestCurrencyMetadata(UnitTestCase):
-	def test_currency_fraction_defaults(self):
-		for currency, precision, units, minimum in CURRENCIES:
+	def test_currency_precision_follows_cldr(self):
+		for currency, precision in CURRENCIES:
 			with self.subTest(currency=currency):
 				self.assertEqual(currency_precision(currency), precision)
-				self.assertEqual(
-					currency_fraction_values(currency),
-					{
-						"fraction_units": units,
-						"smallest_value": minimum,
-					},
-				)
 
 
 class IntegrationTestCurrencyMetadata(IntegrationTestCase):
-	def test_setup_uses_currency_precision_and_fraction_defaults(self):
-		for currency, precision, units, minimum in CURRENCIES:
+	def test_setup_uses_currency_precision(self):
+		for currency, precision in CURRENCIES:
 			with self.subTest(currency=currency):
-				ensure_currency(currency)
-				record = frappe.get_doc("Books Currency", currency)
-				self.assertEqual(record.fraction_units, units)
-				self.assertEqual(Decimal(str(record.smallest_value)), minimum)
 				_update_system_settings(frappe._dict(country="India", currency=currency))
 				self.assertEqual(
 					frappe.db.get_single_value("Books System Settings", "display_precision"), precision
 				)
 
-	def test_setup_preserves_cash_increment_from_core_currency(self):
-		ensure_currency("CHF")
-		self.assertEqual(frappe.db.get_value("Books Currency", "CHF", "fraction_units"), 100)
-		self.assertEqual(
-			Decimal(str(frappe.db.get_value("Books Currency", "CHF", "smallest_value"))), Decimal("0.05")
-		)
+	def test_setup_enables_the_company_currency(self):
+		frappe.db.set_value("Currency", "BHD", "enabled", 0)
+
+		enable_currency("BHD")
+
+		self.assertEqual(frappe.db.get_value("Currency", "BHD", "enabled"), 1)
+
+	def test_books_user_reads_frappe_currencies(self):
+		with self.set_user(ensure_user(BOOKS_USER, "Books User")):
+			currency = BooksDatabaseBridge().get("Currency", "CHF")
+
+		self.assertEqual(currency["name"], "CHF")
+		self.assertEqual(currency["fractionUnits"], 100)
+		self.assertEqual(Decimal(str(currency["smallestValue"])), Decimal("0.05"))
+
+	def test_books_manager_adds_a_currency_through_the_interface(self):
+		with self.set_user(ensure_user(BOOKS_MANAGER, "Books Manager")):
+			BooksDatabaseBridge().insert("Currency", {"name": "XBK", "symbol": "B"})
+
+		self.assertEqual(frappe.db.get_value("Currency", "XBK", "symbol"), "B")
+
+	def test_parties_link_to_frappe_currencies(self):
+		receivable = make_account("Currency Debtors", account_type="Receivable")
+		party = make_party(receivable.name, currency="EUR")
+
+		self.assertEqual(frappe.db.get_value("Books Party", party.name, "currency"), "EUR")
+		self.assertRaises(frappe.LinkValidationError, make_party, receivable.name, currency="XXX")

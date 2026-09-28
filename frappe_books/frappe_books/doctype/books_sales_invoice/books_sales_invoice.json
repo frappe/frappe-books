@@ -51,6 +51,8 @@
   "loyalty_points",
   "is_pos",
   "is_pricing_rule_applied",
+  "payments_section_break",
+  "payments",
   "references_section_break_46",
   "pricing_rule_detail",
   "amended_from"
@@ -361,6 +363,19 @@
    "label": "Is Pricing Rule Applied"
   },
   {
+   "fieldname": "payments_section_break",
+   "fieldtype": "Section Break",
+   "label": "Payments"
+  },
+  {
+   "description": "Payments tendered at the POS counter, made when the invoice is submitted.",
+   "fieldname": "payments",
+   "fieldtype": "Table",
+   "label": "Payments",
+   "no_copy": 1,
+   "options": "Books Sales Invoice Payment"
+  },
+  {
    "fieldname": "references_section_break_46",
    "fieldtype": "Section Break",
    "label": "References"
@@ -377,7 +392,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-29 10:00:00.000000",
+ "modified": "2026-09-29 12:10:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",

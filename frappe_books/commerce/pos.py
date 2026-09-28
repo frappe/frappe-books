@@ -34,6 +34,28 @@ def counter_cash_account():
 	return account
 
 
+def counter_payment_account(payment_method):
+	"""Cash goes through the counter; other methods use their own account."""
+	method = frappe.get_cached_doc("Books Payment Method", payment_method)
+	return counter_cash_account() if method.type == "Cash" else method.account
+
+
+def counter_payment_amounts(rows, due):
+	"""Return each tendered row with the amount it pays. Cash beyond what is due is change."""
+	amounts = []
+	for row in rows:
+		tendered = as_decimal(row.amount)
+		if tendered <= 0:
+			frappe.throw(_("Tendered amounts must be greater than zero."))
+		is_cash = frappe.get_cached_doc("Books Payment Method", row.payment_method).type == "Cash"
+		if tendered > due and not is_cash:
+			frappe.throw(_("Non-cash payment amount cannot exceed the outstanding amount."))
+		paid = min(tendered, due)
+		due -= paid
+		amounts.append((row, paid))
+	return [(row, paid) for row, paid in amounts if paid]
+
+
 def lock_pos_settings():
 	"""Lock POS Settings so shift state changes run one at a time."""
 	settings = frappe.get_doc("Books Pos Settings", for_update=True)

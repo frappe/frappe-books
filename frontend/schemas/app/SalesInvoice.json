@@ -82,6 +82,11 @@
       "hidden": true
     },
     {
+      "fieldname": "payments",
+      "label": "Payments",
+      "section": "Payments"
+    },
+    {
       "fieldname": "pricingRuleDetail",
       "label": "Pricing Rule Detail",
       "edit": false,

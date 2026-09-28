@@ -764,6 +764,7 @@
         "numberSeries": "number_series",
         "outstandingAmount": "outstanding_amount",
         "party": "party",
+        "payments": "payments",
         "priceList": "price_list",
         "pricingRuleDetail": "pricing_rule_detail",
         "quote": "quote",
@@ -805,6 +806,16 @@
         "unit": "unit",
         "unitConversionFactor": "unit_conversion_factor",
         "isManualRate": "is_manual_rate"
+      }
+    },
+    "SalesInvoicePayment": {
+      "doctype": "Books Sales Invoice Payment",
+      "fields": {
+        "amount": "amount",
+        "clearanceDate": "clearance_date",
+        "name": "name",
+        "paymentMethod": "payment_method",
+        "referenceId": "reference_id"
       }
     },
     "SalesQuote": {

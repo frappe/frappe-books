@@ -1,7 +1,6 @@
 import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
-import { getCountryInfo } from 'utils/misc';
 
 export class Address extends Doc {
   static lists: ListsMap = {
@@ -13,9 +12,6 @@ export class Address extends Doc {
         default:
           return [] as string[];
       }
-    },
-    country() {
-      return Object.keys(getCountryInfo()).sort();
     },
   };
 

@@ -237,6 +237,14 @@ test('the setup wizard offers the charts the server lists', async () => {
   );
 });
 
+test('the setup wizard fills in the currency for Frappe country names', async () => {
+  const fyo = await makeFyo();
+  fyo.db.exists = async () => true;
+  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Türkiye' });
+
+  assert.equal(await wizard.formulas.currency.formula(), 'TRY');
+});
+
 function chart(name, countryCode, language = null) {
   return { name, label: name, country_code: countryCode, language };
 }

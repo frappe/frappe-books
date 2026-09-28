@@ -113,7 +113,7 @@ class BooksDatabaseBridge:
 	def search_link(
 		self, source_schema: str, text: str, filters: dict[str, Any] | None, fields: list[str], limit: int
 	) -> list[dict]:
-		"""Return the link options Frappe's link search finds for the letters of `text`, in order."""
+		"""Return the link options Frappe's link search finds for `text`."""
 		rows = self._search_widget(source_schema, text.strip(), limit, filters or {}, fields)
 		return [self._row_to_source(source_schema, row, fields) for row in rows]
 
@@ -127,10 +127,14 @@ class BooksDatabaseBridge:
 		return [self._row_to_source(source_schema, row, requested) for row in rows]
 
 	def _search_widget(self, source_schema, text, limit, filters, fields):
+		doctype = target_doctype(source_schema)
 		# Frappe matches `%txt%`; a `%` between letters matches them in order.
+		# Translated doctypes match `txt` in Python, where `%` is literal.
+		if not frappe.get_meta(doctype).translated_doctype:
+			text = "%".join(text)
 		return search_widget(
-			target_doctype(source_schema),
-			"%".join(text),
+			doctype,
+			text,
 			page_length=limit,
 			filters=self._target_filters(source_schema, filters),
 			filter_fields=self._target_fields(source_schema, fields),

@@ -20,7 +20,7 @@ class BooksAddress(Document):
 		address_line1: DF.Data
 		address_line2: DF.Data | None
 		city: DF.Data
-		country: DF.Autocomplete
+		country: DF.Link
 		email_address: DF.Data | None
 		fax: DF.Data | None
 		phone: DF.Data | None

@@ -25,3 +25,14 @@ test('an Indian address offers the states the server sends', async () => {
     'Maharashtra',
   ]);
 });
+
+test('an address links its country to the server countries', async () => {
+  const fyo = await makeFyo();
+  const country = fyo.schemaMap.Address.fields.find(
+    ({ fieldname }) => fieldname === 'country'
+  );
+
+  assert.equal(country.fieldtype, 'Link');
+  assert.equal(country.target, 'Country');
+  assert.equal(fyo.models.Address.lists.country, undefined);
+});

@@ -34,10 +34,16 @@ def counter_cash_account():
 	return account
 
 
+def is_cash_method(payment_method):
+	"""Cash-type methods go through the counter, which the POS shift counts and reconciles."""
+	return frappe.get_cached_value("Books Payment Method", payment_method, "type") == "Cash"
+
+
 def counter_payment_account(payment_method):
 	"""Cash goes through the counter; other methods use their own account."""
-	method = frappe.get_cached_doc("Books Payment Method", payment_method)
-	return counter_cash_account() if method.type == "Cash" else method.account
+	if is_cash_method(payment_method):
+		return counter_cash_account()
+	return frappe.get_cached_value("Books Payment Method", payment_method, "account")
 
 
 def counter_payment_amounts(rows, due):
@@ -47,8 +53,7 @@ def counter_payment_amounts(rows, due):
 		tendered = as_decimal(row.amount)
 		if tendered <= 0:
 			frappe.throw(_("Tendered amounts must be greater than zero."))
-		is_cash = frappe.get_cached_doc("Books Payment Method", row.payment_method).type == "Cash"
-		if tendered > due and not is_cash:
+		if tendered > due and not is_cash_method(row.payment_method):
 			frappe.throw(_("Non-cash payment amount cannot exceed the outstanding amount."))
 		paid = min(tendered, due)
 		due -= paid

@@ -68,7 +68,7 @@ import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
-import { getPOSOpeningShiftDoc } from 'src/utils/pos';
+import { getCashPaymentMethods, getPOSOpeningShiftDoc } from 'src/utils/pos';
 
 export default defineComponent({
   name: 'OpenPOSShift',
@@ -88,6 +88,7 @@ export default defineComponent({
   data() {
     return {
       posShiftDoc: undefined as POSOpeningShift | undefined,
+      cashMethods: [] as string[],
 
       isValuesSeeded: false,
       isDismissed: false,
@@ -104,6 +105,7 @@ export default defineComponent({
   async mounted() {
     this.isValuesSeeded = false;
     this.posShiftDoc = await getPOSOpeningShiftDoc(fyo);
+    this.cashMethods = await getCashPaymentMethods(fyo);
 
     await this.seedDefaults();
     this.isValuesSeeded = true;
@@ -169,11 +171,13 @@ export default defineComponent({
         return;
       }
 
-      this.posShiftDoc.openingAmounts.map((row) => {
-        if (row.paymentMethod === 'Cash') {
-          row.amount = this.posShiftDoc?.openingCashAmount as Money;
-        }
-      });
+      // The counted cash fills the first cash row; the server checks all cash rows add up to it.
+      const cashRow = this.posShiftDoc.openingAmounts.find((row) =>
+        this.cashMethods.includes(row.paymentMethod as string)
+      );
+      if (cashRow) {
+        cashRow.amount = this.posShiftDoc.openingCashAmount;
+      }
     },
     handleChange() {
       this.setOpeningCashAmount();

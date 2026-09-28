@@ -63,7 +63,11 @@ import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
-import { validateClosingAmounts, getPOSOpeningShiftDoc } from 'src/utils/pos';
+import {
+  getCashPaymentMethods,
+  getPOSOpeningShiftDoc,
+  validateClosingAmounts,
+} from 'src/utils/pos';
 import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
 import { ForbiddenError } from 'fyo/utils/errors';
 
@@ -89,6 +93,7 @@ export default defineComponent({
       posOpeningShiftDoc: undefined as POSOpeningShift | undefined,
       posClosingShiftDoc: undefined as POSClosingShift | undefined,
       transactedAmount: {} as Record<string, Money> | undefined,
+      cashMethods: [] as string[],
     };
   },
   computed: {
@@ -111,6 +116,7 @@ export default defineComponent({
       this.posClosingShiftDoc = fyo.doc.getNewDoc(
         ModelNameEnum.POSClosingShift
       ) as POSClosingShift;
+      this.cashMethods = await getCashPaymentMethods(fyo);
       await this.setTransactedAmount();
       await this.seedValues();
     },
@@ -146,8 +152,12 @@ export default defineComponent({
         return;
       }
 
+      // The counted cash fills the first cash row; the server checks all cash rows add up to it.
+      const cashRow = this.posClosingShiftDoc.closingAmounts.find((row) =>
+        this.cashMethods.includes(row.paymentMethod as string)
+      );
       this.posClosingShiftDoc.closingAmounts.forEach((row) => {
-        if (row.paymentMethod === 'Cash') {
+        if (row === cashRow) {
           row.closingAmount = this.posClosingShiftDoc
             ?.closingCashAmount as Money;
         }

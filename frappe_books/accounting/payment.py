@@ -16,7 +16,7 @@ from frappe_books.accounting.accounts import (
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
-from frappe_books.commerce.pos import counter_cash_account
+from frappe_books.commerce.pos import counter_cash_account, is_cash_method
 from frappe_books.series import SeriesNamingMixin
 
 REFERENCE_DOCTYPES = {
@@ -66,7 +66,7 @@ class PaymentController(SeriesNamingMixin, Document):
 		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""
 		if not any(invoice.get("is_pos") for invoice in invoices):
 			return
-		if frappe.get_cached_value("Books Payment Method", self.payment_method, "type") != "Cash":
+		if not is_cash_method(self.payment_method):
 			return
 		counter = counter_cash_account()
 		if self.payment_account != counter:

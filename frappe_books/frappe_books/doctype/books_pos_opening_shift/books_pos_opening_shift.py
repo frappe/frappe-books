@@ -6,11 +6,12 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.commerce.pos import (
 	cancel_cash_journal,
 	cash_account,
 	cash_total,
+	is_cash_method,
 	lock_pos_settings,
 	make_cash_journal,
 	open_shift_name,
@@ -48,7 +49,8 @@ class BooksPosOpeningShift(Document):
 			self.opening_date = now_datetime()
 		validate_cash_rows(self.opening_cash)
 		amounts = self.get_opening_amounts()
-		if rounded(amounts.get("Cash", 0)) != cash_total(self.opening_cash):
+		cash = sum_decimal(amount for method, amount in amounts.items() if is_cash_method(method))
+		if rounded(cash) != cash_total(self.opening_cash):
 			frappe.throw(_("Opening Cash amount must equal the denomination total."))
 
 	def before_submit(self):

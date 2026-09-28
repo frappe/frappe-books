@@ -12,7 +12,6 @@ import { ModelNameEnum } from './types';
 import { DateTime } from 'luxon';
 import { Doc } from 'fyo/model/doc';
 import { Invoice } from './baseModels/Invoice/Invoice';
-import { Lead } from './baseModels/Lead/Lead';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';

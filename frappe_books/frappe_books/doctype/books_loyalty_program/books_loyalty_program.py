@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from frappe_books.accounting.money import as_decimal
+from frappe_books.settings import require_feature
 
 
 class BooksLoyaltyProgram(Document):
@@ -36,6 +37,7 @@ class BooksLoyaltyProgram(Document):
 	_DOCTYPE_NAME = "Books Loyalty Program"
 
 	def validate(self):
+		require_feature("enable_loyalty_program")
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("Loyalty program start date must be on or before its end date."))
 		if self.maximum_use < 0 or self.used < 0:

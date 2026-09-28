@@ -10,6 +10,16 @@ from frappe.utils import flt
 
 from frappe_books.accounting.accounts import validate_account
 from frappe_books.series import ITEM_SERIES
+from frappe_books.settings import require_features
+
+# Item fields the Books app offers only while their feature is on.
+ITEM_FEATURES = {
+	"track_item": "enable_inventory",
+	"has_batch": "enable_batches",
+	"has_serial_number": "enable_serial_number",
+	"uom_conversions": "enable_uom_conversions",
+	"item_group": "enableitem_group",
+}
 
 
 class BooksItem(Document):
@@ -56,6 +66,7 @@ class BooksItem(Document):
 				self.set(fieldname, series if series.endswith("-") else f"{series}-")
 
 	def validate(self):
+		require_features(self, ITEM_FEATURES)
 		self.validate_accounts()
 		if self.hsn_code and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code)):
 			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))

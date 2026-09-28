@@ -20,6 +20,7 @@ from frappe_books.inventory.invoice_balance import (
 from frappe_books.inventory.stock import validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.settings import require_feature, require_features
 
 
 class InvoiceController(SeriesNamingMixin, Document):
@@ -45,6 +46,11 @@ class InvoiceController(SeriesNamingMixin, Document):
 
 
 FOLLOW_UP_FIELDS = ("make_auto_payment", "make_auto_stock_transfer")
+INVOICE_FEATURES = {
+	"return_against": "enable_invoice_returns",
+	"coupons": "enable_coupon_code",
+	"is_pos": "enable_point_of_sale",
+}
 
 
 class PostingInvoiceController(InvoiceController):
@@ -198,6 +204,7 @@ def row_discount(invoice, row):
 def validate_invoice(invoice):
 	if not invoice.items:
 		frappe.throw(_("At least one invoice item is required."))
+	_validate_features(invoice)
 	_validate_party_and_account(invoice)
 	if as_decimal(invoice.exchange_rate) <= 0:
 		frappe.throw(
@@ -208,6 +215,24 @@ def validate_invoice(invoice):
 	validate_item_usage(invoice, invoice.transaction_type == "purchase")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
+
+
+def _validate_features(invoice):
+	"""Reject what the Books app offers only while its feature is on."""
+	require_features(invoice, INVOICE_FEATURES)
+	if invoice.get("reference_type") == "Books Lead":
+		require_feature("enable_lead")
+	if _has_manual_discount(invoice):
+		require_feature("enable_discounting")
+
+
+def _has_manual_discount(invoice):
+	"""Pricing rules discount rows under their own switch; other discounts need discounting."""
+	discounts = [invoice.get("discount_percent"), invoice.get("discount_amount")]
+	for row in invoice.items:
+		if not row.get("pricing_rule"):
+			discounts += [row.item_discount_percent, row.item_discount_amount]
+	return any(as_decimal(value) for value in discounts)
 
 
 def _validate_party_and_account(invoice):

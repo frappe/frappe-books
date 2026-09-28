@@ -1,6 +1,36 @@
 import frappe
 from frappe import _
 
+# Feature switches the server enforces, by the settings that hold them.
+FEATURES = {
+	"enable_discounting": "Books Accounting Settings",
+	"enable_invoice_returns": "Books Accounting Settings",
+	"enable_inventory": "Books Accounting Settings",
+	"enable_lead": "Books Accounting Settings",
+	"enable_loyalty_program": "Books Accounting Settings",
+	"enable_coupon_code": "Books Accounting Settings",
+	"enableitem_group": "Books Accounting Settings",
+	"enable_batches": "Books Inventory Settings",
+	"enable_serial_number": "Books Inventory Settings",
+	"enable_uom_conversions": "Books Inventory Settings",
+	"enable_point_of_sale": "Books Inventory Settings",
+}
+
+
+def require_feature(fieldname):
+	"""Reject using a feature that is switched off, as the Books app hides it then."""
+	settings = FEATURES[fieldname]
+	if not frappe.db.get_single_value(settings, fieldname):
+		label = _(frappe.get_meta(settings).get_label(fieldname))
+		frappe.throw(_("{0} is turned off in {1}.").format(label, _(settings)))
+
+
+def require_features(doc, features):
+	"""Reject a document that sets a field, as `{fieldname: feature}`, whose feature is off."""
+	for fieldname, feature in features.items():
+		if doc.get(fieldname):
+			require_feature(feature)
+
 
 def validate_one_way_switches(doc, fieldnames):
 	"""Reject turning off a feature that stays on once enabled."""

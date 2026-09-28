@@ -8,10 +8,12 @@ from frappe.utils import now_datetime
 from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import return_unreturned_rows
 from frappe_books.inventory.stock import parse_serial_numbers
+from frappe_books.settings import require_feature
 
 
 def map_transfer_return(doctype, name):
 	"""Return an unsaved return of what a transfer moved and earlier returns have not taken back."""
+	require_feature("enable_invoice_returns")
 	item_doctype = frappe.get_meta(doctype).get_field("items").options
 	return get_mapped_doc(
 		doctype,

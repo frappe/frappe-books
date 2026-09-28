@@ -30,7 +30,7 @@ jinja = {"methods": ["frappe_books.printing.get_print_settings"]}
 
 after_install = "frappe_books.setup.bootstrap"
 after_migrate = "frappe_books.setup.after_migrate"
-before_tests = "frappe_books.setup.bootstrap"
+before_tests = ["frappe_books.setup.bootstrap", "frappe_books.tests.accounting.enable_features"]
 
 doc_events = {
 	doctype: {"on_change": "frappe_books.status.on_change"}

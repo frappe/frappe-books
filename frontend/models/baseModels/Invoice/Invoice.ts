@@ -262,7 +262,9 @@ export abstract class Invoice extends Transactional {
 
       return (this.availableLoyaltyPoints ?? 0) <= 0;
     },
-    coupons: () => this.isSubmitted && !this.coupons?.length,
+    coupons: () =>
+      !this.fyo.singles.AccountingSettings?.enableCouponCode ||
+      (this.isSubmitted && !this.coupons?.length),
     priceList: () =>
       !this.fyo.singles.AccountingSettings?.enablePriceList ||
       (!this.canEdit && !this.priceList),

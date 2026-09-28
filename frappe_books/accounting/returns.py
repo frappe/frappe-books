@@ -9,10 +9,12 @@ from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, currency_unit, rounded, sum_decimal
 from frappe_books.inventory.stock import parse_serial_numbers
+from frappe_books.settings import require_feature
 
 
 def map_return(invoice_doctype, invoice_name):
 	"""Return an unsaved credit note or purchase return for the whole invoice."""
+	require_feature("enable_invoice_returns")
 	item_doctype = frappe.get_meta(invoice_doctype).get_field("items").options
 	return get_mapped_doc(
 		invoice_doctype,

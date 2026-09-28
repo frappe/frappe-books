@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
+
+from frappe_books.settings import require_feature
 
 
 class BooksLead(Document):
@@ -23,3 +24,6 @@ class BooksLead(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Lead"
+
+	def validate(self):
+		require_feature("enable_lead")

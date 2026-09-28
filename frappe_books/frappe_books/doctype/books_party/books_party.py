@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from frappe_books.accounting.accounts import validate_party_account
 from frappe_books.accounting.money import company_currency
 from frappe_books.regional import validate_gstin
+from frappe_books.settings import require_features
 
 
 class BooksParty(Document):
@@ -42,6 +43,7 @@ class BooksParty(Document):
 		self.currency = self.currency or company_currency()
 
 	def validate(self):
+		require_features(self, {"loyalty_program": "enable_loyalty_program"})
 		validate_party_account(self, "default_account", self.role)
 		if self.gst_type != "Registered Regular":
 			self.gstin = None

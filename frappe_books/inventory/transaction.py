@@ -27,6 +27,7 @@ from frappe_books.inventory.stock import (
 )
 from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.settings import require_feature, require_features
 
 STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
 
@@ -39,6 +40,7 @@ class StockMovementController(SeriesNamingMixin, Document):
 		self.amount = populate_stock_rows(self.items)
 
 	def validate(self):
+		require_feature("enable_inventory")
 		transfers = movement_transfers(self)
 		_validate_movement_locations(self, transfers)
 		validate_transfer_rows(transfers)
@@ -70,6 +72,8 @@ class StockTransferController(SeriesNamingMixin, Document):
 		self.grand_total = populate_stock_rows(self.items)
 
 	def validate(self):
+		require_feature("enable_inventory")
+		require_features(self, {"return_against": "enable_invoice_returns"})
 		validate_party_role(self, self.transfer_type == "purchase")
 		validate_item_usage(self, self.transfer_type == "purchase")
 		for row in self.items:

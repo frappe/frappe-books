@@ -4,8 +4,15 @@ import frappe
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.settings import FEATURES
 from frappe_books.setup_service import ensure_currency
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
+
+
+def enable_features():
+	"""Turn every feature switch on for the test site; a switch's own tests turn it off."""
+	for fieldname, settings in FEATURES.items():
+		frappe.db.set_single_value(settings, fieldname, 1)
 
 
 def make_account(label, root_type="Asset", **values):

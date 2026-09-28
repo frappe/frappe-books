@@ -10,6 +10,7 @@ from frappe.utils import getdate
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.commerce.pricing import validate_dates, validate_range
+from frappe_books.settings import require_feature
 
 
 class BooksCouponCode(Document):
@@ -41,6 +42,7 @@ class BooksCouponCode(Document):
 		self.name = code
 
 	def validate(self):
+		require_feature("enable_coupon_code")
 		validate_range(self.min_amount, self.max_amount, _("amount"), strict=True)
 		validate_dates(self.valid_from, self.valid_to)
 		if self.maximum_use < 0 or self.used < 0:

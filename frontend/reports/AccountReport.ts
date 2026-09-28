@@ -101,7 +101,7 @@ export abstract class AccountReport extends Report {
 
   getAccountRow({ name, level, isGroup, values }: ReportAccount): ReportRow {
     const nameCell = {
-      value: getAccountLabel(name),
+      value: getAccountLabel(this.fyo, name),
       rawValue: name,
       align: 'left',
       width: ACC_NAME_WIDTH,

@@ -31,12 +31,12 @@
             type="button"
             class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-base text-ink-gray-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
             :class="node.isGroup ? 'font-medium' : 'font-normal'"
-            :title="getAccountLabel(String(node.name))"
+            :title="accountLabel(String(node.name))"
             @keydown.enter.stop
             @keydown.space.stop
             @click.stop="onClick(node as AccountItem)"
           >
-            {{ getAccountLabel(String(node.name)) }}
+            {{ accountLabel(String(node.name)) }}
           </button>
         </template>
         <template #item-suffix="{ node }">
@@ -206,7 +206,9 @@ export default defineComponent({
     docsPathRef.value = '';
   },
   methods: {
-    getAccountLabel,
+    accountLabel(name: string) {
+      return getAccountLabel(fyo, name);
+    },
     getAccountActions(account: AccountItem): DropdownOptions {
       const actions: DropdownOptions = [];
       if (account.isGroup && fyo.can(ModelNameEnum.Account, 'create')) {
@@ -287,7 +289,7 @@ export default defineComponent({
       });
       const nodes = records.map((record) => ({
         ...record,
-        label: getAccountLabel(String(record.name)),
+        label: getAccountLabel(fyo, String(record.name)),
         children: [],
       })) as unknown as AccountItem[];
       const byName = new Map(nodes.map((node) => [node.name, node]));
@@ -416,7 +418,7 @@ export default defineComponent({
           (child) => {
             const existing = previous.get(child.name);
             return existing
-              ? Object.assign(existing, { label: getAccountLabel(child.name) })
+              ? Object.assign(existing, { label: getAccountLabel(fyo, child.name) })
               : child;
           }
         );
@@ -435,7 +437,7 @@ export default defineComponent({
       });
 
       return children.map((d) => {
-        d.label = getAccountLabel(String(d.name));
+        d.label = getAccountLabel(fyo, String(d.name));
         d.addingAccount = false;
         d.addingGroupAccount = false;
 

@@ -45,7 +45,7 @@ export default {
       const target = this.getTargetSchemaName();
       const linkDisplayField = fyo.schemaMap[target ?? '']?.linkDisplayField;
       if (!linkDisplayField) {
-        return (this.linkValue = target === 'Account' ? getAccountLabel(value || '') : value);
+        return (this.linkValue = target === 'Account' ? getAccountLabel(fyo, value || '') : value);
       }
 
       const linkDoc = await this.doc?.loadAndGetLink(fieldname);
@@ -79,7 +79,7 @@ export default {
         .map((r) => {
           const label = r[schema.titleField] || r.name;
           const option = {
-            label: schemaName === 'Account' ? getAccountLabel(label) : label,
+            label: schemaName === 'Account' ? getAccountLabel(fyo, label) : label,
             value: r.name,
           };
           if (this.df.groupBy) {

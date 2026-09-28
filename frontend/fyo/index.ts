@@ -211,6 +211,8 @@ export class Fyo {
     language: '',
     permissions: null as PermissionMap | null,
     chartsOfAccounts: [] as ChartOfAccounts[],
+    // Translated names of the standard chart's accounts, from the server
+    accountLabels: {} as Record<string, string>,
     // GST state codes and names, from the server
     indianStates: {} as Record<string, string>,
     reports: {} as Record<keyof typeof reports, Report | undefined>,

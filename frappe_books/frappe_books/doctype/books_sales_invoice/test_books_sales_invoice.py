@@ -290,6 +290,29 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				"Books Purchase Invoice", supplier.name, payable.name, sales_item.name, self.expense.name
 			)
 
+	def test_new_documents_start_with_the_default_terms(self):
+		frappe.db.set_single_value("Books Defaults", "sales_invoice_terms", "Pay within 30 days")
+		for doctype in ("Books Sales Invoice", "Books Sales Quote"):
+			with self.subTest(doctype=doctype):
+				invoice = make_invoice(
+					doctype, self.party.name, self.receivable.name, self.item.name, self.income.name
+				)
+				self.assertEqual(invoice.terms, "Pay within 30 days")
+
+		invoice = self._make_invoice()
+		invoice.terms = ""
+		invoice.save()
+		self.assertEqual(invoice.terms, "")
+		without_terms = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			terms="",
+		)
+		self.assertEqual(without_terms.terms, "")
+
 	def test_pos_invoice_keeps_rate_and_discount_when_profile_forbids(self):
 		frappe.db.set_single_value(
 			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 0, "can_edit_discount": 0}

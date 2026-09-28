@@ -44,11 +44,19 @@ test('the server decides required, default, read only and minimum value', () => 
 
 test('the server date defaults Now and Today give a new document the current date', async () => {
   const fyo = await makeFyo();
-  for (const schemaName of ['SalesInvoice', 'Payment', 'JournalEntry', 'Shipment']) {
+  for (const schemaName of [
+    'SalesInvoice',
+    'Payment',
+    'JournalEntry',
+    'Shipment',
+  ]) {
     const before = Date.now();
     const { date } = fyo.doc.getNewDoc(schemaName);
     assert.ok(date instanceof Date, schemaName);
-    assert.ok(date.getTime() >= before && date.getTime() <= Date.now(), schemaName);
+    assert.ok(
+      date.getTime() >= before && date.getTime() <= Date.now(),
+      schemaName
+    );
   }
 });
 

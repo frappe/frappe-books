@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice
 from frappe_books.tests.accounting import (
 	make_account,
 	make_item,
@@ -79,3 +80,13 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		)
 
 		self.assertEqual((item.batch_series, item.serial_number_series), (f"{prefix}-", "SERIAL"))
+
+	def test_item_maps_to_an_invoice_row(self):
+		income = make_account("Mapped Sales", root_type="Income")
+		expense = make_account("Mapped Expense", root_type="Expense")
+		item = make_item(income.name, expense.name, rate=40)
+
+		invoice = make_purchase_invoice(item.name)
+
+		row = invoice.items[0]
+		self.assertEqual((row.item, row.quantity, row.rate, row.account), (item.name, 1, 40, expense.name))

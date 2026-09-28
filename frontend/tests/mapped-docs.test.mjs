@@ -106,6 +106,48 @@ test('a fully billed shipment does not offer an invoice', async () => {
   assert.equal(makeInvoice.condition(shipment), false);
 });
 
+test('lead, party and item actions open documents from their server mappers', async () => {
+  const calls = [];
+  const fyo = await makeFyo((method, ...args) => {
+    calls.push(args);
+    return { party: 'Acme', items: [{ item: 'Pen', quantity: 1 }] };
+  });
+  const cases = [
+    ['Lead', 'Customer', 'books_lead.books_lead.make_customer', '/edit/Party/'],
+    [
+      'Lead',
+      'Sales Quote',
+      'books_lead.books_lead.make_sales_quote',
+      '/edit/SalesQuote/',
+    ],
+    [
+      'Party',
+      'Create Sale',
+      'books_party.books_party.make_sales_invoice',
+      '/edit/SalesInvoice/',
+    ],
+    [
+      'Item',
+      'Purchase Invoice',
+      'books_item.books_item.make_purchase_invoice',
+      '/edit/PurchaseInvoice/',
+    ],
+  ];
+  for (const [schemaName, label, mapper, path] of cases) {
+    const source = fyo.doc.getNewDoc(schemaName, { name: 'Acme' });
+    source._notInserted = false;
+    const { action } = fyo.models[schemaName]
+      .getActions(fyo)
+      .find((action) => action.label === label);
+    let route = '';
+    await action(source, { push: (to) => (route = to.path ?? to) });
+
+    const method = `frappe_books.frappe_books.doctype.${mapper}`;
+    assert.deepEqual(calls.at(-1), [method, 'Acme'], label);
+    assert.ok(route.startsWith(path), label);
+  }
+});
+
 async function makeFyo(call) {
   class Store {
     getSchemaMap() {

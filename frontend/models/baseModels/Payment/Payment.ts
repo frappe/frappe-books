@@ -98,7 +98,6 @@ export class Payment extends Transactional {
 
   static defaults: DefaultMap = {
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
-    date: () => new Date(),
   };
 
   /** Label the accounts by the way money moves, with From Account first. */

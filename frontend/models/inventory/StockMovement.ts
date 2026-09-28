@@ -48,7 +48,6 @@ export class StockMovement extends Transfer {
 
   static defaults: DefaultMap = {
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
-    date: () => new Date(),
   };
 
   static getListViewSettings(fyo: Fyo): ListViewSettings {

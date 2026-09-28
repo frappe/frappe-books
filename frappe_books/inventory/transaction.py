@@ -4,7 +4,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
@@ -152,7 +151,6 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 def _bill_transfer(transfer, invoice):
 	validate_billable(transfer)
 	bill_unbilled_rows(transfer, invoice)
-	invoice.date = now_datetime()
 	invoice.calculate()
 
 

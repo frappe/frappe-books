@@ -5,7 +5,6 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, currency_unit, rounded, sum_decimal
 from frappe_books.inventory.stock import parse_serial_numbers
@@ -44,7 +43,6 @@ def _prepare_return(invoice, credit_note):
 		frappe.throw(_("Create a return from the original invoice."))
 	if invoice.is_fully_returned:
 		frappe.throw(_("This invoice is already fully returned."))
-	credit_note.date = now_datetime()
 	return_unreturned_rows(invoice, credit_note)
 	credit_note.calculate()
 

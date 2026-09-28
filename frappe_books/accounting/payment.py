@@ -6,7 +6,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.accounts import (
 	PAYMENT_ACCOUNT_TYPES,
@@ -285,7 +284,6 @@ def _settle_invoice(invoice, payment):
 		frappe.throw(_("Invoice {0} has no outstanding amount.").format(invoice.name))
 	payment.update(
 		{
-			"date": now_datetime(),
 			"payment_type": payment_type_for(invoice.doctype, bool(invoice.return_against)),
 			"payment_method": "Cash",
 			"payment_account": _settling_account(invoice.doctype),

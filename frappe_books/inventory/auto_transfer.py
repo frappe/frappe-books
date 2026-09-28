@@ -5,7 +5,6 @@ from __future__ import annotations
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.invoice_balance import pending_quantities
@@ -78,7 +77,6 @@ def _transfer_pending_stock(invoice, transfer):
 	if not rows:
 		frappe.throw(_("Invoice {0} has no stock left to transfer.").format(invoice.name))
 	location = default_location(invoice)
-	transfer.date = now_datetime()
 	transfer.return_against = _returned_transfer(invoice)
 	transfer.set("items", [{**row, "location": location} for row in rows])
 	transfer.calculate()

@@ -297,7 +297,6 @@ export abstract class Invoice extends Transactional {
 
       return defaults?.purchaseInvoiceTerms ?? '';
     },
-    date: () => new Date(),
   };
 
   static filters: FiltersMap = {

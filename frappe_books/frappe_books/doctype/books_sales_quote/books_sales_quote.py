@@ -3,7 +3,6 @@
 
 import frappe
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import now_datetime
 
 from frappe_books.accounting.invoice import InvoiceController
 
@@ -77,6 +76,5 @@ def make_sales_invoice(source_name: str):
 
 
 def _set_invoice_details(quote, invoice):
-	invoice.date = now_datetime()
 	invoice.account = frappe.db.get_value("Books Party", quote.party, "default_account")
 	invoice.calculate()

@@ -63,6 +63,7 @@
    "reqd": 1
   },
   {
+   "default": "Now",
    "fieldname": "date",
    "fieldtype": "Datetime",
    "in_list_view": 1,

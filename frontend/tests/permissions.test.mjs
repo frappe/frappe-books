@@ -46,6 +46,20 @@ test('a saved document uses the rights the server returned for it', async () => 
   assert.equal(payment.canDelete, false);
 });
 
+test('printing a document needs the print permission', async () => {
+  const fyo = await makeFyo();
+  fyo.store.permissions = {
+    doctypes: { Payment: 'Books Payment' },
+    user: { can_read: ['Books Payment'] },
+  };
+  const payment = fyo.doc.getNewDoc('Payment', { name: 'PAY-0001' });
+  payment._notInserted = false;
+  assert.equal(payment.can('print'), false);
+
+  payment.docPermissions = { read: 1, print: 1 };
+  assert.equal(payment.can('print'), true);
+});
+
 test('export granted only to owners exports only the user’s documents', () => {
   const permissions = {
     doctypes,

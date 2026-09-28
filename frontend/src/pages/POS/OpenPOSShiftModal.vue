@@ -190,7 +190,6 @@ export default defineComponent({
           );
         }
 
-        await this.posShiftDoc?.set('openingDate', new Date());
         await this.posShiftDoc?.sync();
         await this.posShiftDoc?.submit();
 

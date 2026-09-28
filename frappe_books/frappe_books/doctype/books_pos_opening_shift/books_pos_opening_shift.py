@@ -45,7 +45,8 @@ class BooksPosOpeningShift(Document):
 	_DOCTYPE_NAME = "Books Pos Opening Shift"
 
 	def validate(self):
-		if not self.opening_date:
+		if self._action == "submit" or not self.opening_date:
+			# The shift opens when it is submitted, as its closing shift closes it.
 			self.opening_date = now_datetime()
 		validate_cash_rows(self.opening_cash)
 		amounts = self.get_opening_amounts()

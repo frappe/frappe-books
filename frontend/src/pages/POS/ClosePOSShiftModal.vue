@@ -219,7 +219,6 @@ export default defineComponent({
         }
 
         validateClosingAmounts(this.posClosingShiftDoc as POSClosingShift);
-        await this.posClosingShiftDoc?.set('closingDate', new Date());
         await this.posClosingShiftDoc?.set(
           'openingShift',
           this.posOpeningShiftDoc?.name

@@ -10,6 +10,7 @@ from frappe.query_builder.functions import Coalesce, Min, Sum
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.units import populate_units
 from frappe_books.inventory.valuation import delete_entries, insert_entry
+from frappe_books.series import new_item_names
 
 LEDGER = "Books Stock Ledger Entry"
 BATCH_RECEIVING_DOCTYPES = ("Books Purchase Invoice", "Books Purchase Receipt", "Books Stock Movement")
@@ -32,6 +33,20 @@ def validate_batches(rows):
 	batch_items = _items_of("Books Batch", [row.get("batch") for row in rows])
 	for row in rows:
 		_validate_batch(row, items[row["item"]], batch_items)
+
+
+def create_series_batches(rows):
+	"""Give rows of batch items without a batch a new batch named from the item's batch series.
+
+	Runs in validate: Frappe checks links before any hook, and an empty batch passes.
+	"""
+	rows = [row for row in rows if row.item and not row.batch]
+	batch_items = _items_with("has_batch", {row.item for row in rows})
+	for row in rows:
+		names = new_item_names("Books Batch", row.item, 1) if row.item in batch_items else []
+		if names:
+			frappe.get_doc({"doctype": "Books Batch", "name": names[0], "item": row.item}).insert()
+			row.batch = names[0]
 
 
 def create_missing_batches(doc):

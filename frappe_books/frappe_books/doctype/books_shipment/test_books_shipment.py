@@ -258,6 +258,30 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 
 		self.assertEqual(shipment.items[0].location, "Stores")
 
+	def test_empty_serial_numbers_are_the_earliest_in_stock_at_the_row_location(self):
+		item, _cogs, _stock = self._tracked_item(has_serial_number=1)
+		shelf = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shelf")}).insert().name
+		serials = [unique_name("SER") for _ in range(3)]
+		now = now_datetime()
+		seed_stock(item.name, quantity=1, rate=10, serial_number=serials[0], date=add_to_date(now, hours=-3))
+		for serial_number, hours in ((serials[2], -1), (serials[1], -2)):
+			row = {"item": item.name, "to_location": shelf, "quantity": 1, "rate": 10}
+			movement = frappe.get_doc(
+				{
+					"doctype": "Books Stock Movement",
+					"movement_type": "MaterialReceipt",
+					"date": add_to_date(now, hours=hours),
+					"items": [{**row, "serial_number": serial_number}],
+				}
+			).insert()
+			movement.submit()
+
+		shipment = self._make_shipment(
+			item, quantity=1, rate=25, items=[{"item": item.name, "location": shelf, "quantity": 1}]
+		)
+
+		self.assertEqual(shipment.items[0].serial_number, serials[1])
+
 	def test_return_must_reference_a_submitted_original(self):
 		item, _cogs, _stock = self._tracked_item()
 		draft = self._make_shipment(item, quantity=1, rate=25)

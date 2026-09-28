@@ -1,4 +1,5 @@
 import { t } from 'fyo';
+import { getImportableSchemaNames } from 'src/importer';
 import { routeFilters } from 'src/utils/filters';
 import { fyo } from '../initFyo';
 import { SidebarConfig, SidebarItem, SidebarRoot } from './types';
@@ -322,6 +323,7 @@ function getCompleteSidebar(): SidebarConfig {
           label: t`Import Wizard`,
           name: 'import-wizard',
           route: '/import-wizard',
+          hidden: () => !getImportableSchemaNames(fyo).length,
         },
         {
           label: t`Print Templates`,

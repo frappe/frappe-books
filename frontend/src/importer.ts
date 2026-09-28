@@ -4,6 +4,7 @@ import { DocValue, DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { getEmptyValuesByFieldTypes } from 'fyo/utils';
 import { ValidationError } from 'fyo/utils/errors';
+import { ModelNameEnum } from 'models/types';
 import {
   Field,
   FieldType,
@@ -17,6 +18,33 @@ import { generateCSV, parseCSV } from 'utils/csvParser';
 import { getValueMapFromList } from 'utils/index';
 
 export type TemplateField = Field & TemplateFieldProps;
+
+/** The schemas the Import Wizard offers that the user may import. */
+export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
+  const importables = [
+    ModelNameEnum.SalesInvoice,
+    ModelNameEnum.PurchaseInvoice,
+    ModelNameEnum.Payment,
+    ModelNameEnum.Party,
+    ModelNameEnum.Item,
+    ModelNameEnum.JournalEntry,
+    ModelNameEnum.Tax,
+    ModelNameEnum.Account,
+    ModelNameEnum.Address,
+    ModelNameEnum.NumberSeries,
+  ];
+
+  if (fyo.singles.AccountingSettings?.enableInventory) {
+    importables.push(
+      ModelNameEnum.StockMovement,
+      ModelNameEnum.Shipment,
+      ModelNameEnum.PurchaseReceipt,
+      ModelNameEnum.Location
+    );
+  }
+
+  return importables.filter((schemaName) => fyo.can(schemaName, 'import'));
+}
 
 export interface ImportResults {
   success: string[];

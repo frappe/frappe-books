@@ -4,6 +4,7 @@ import { groupBy } from 'lodash';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports';
 import { OptionField } from 'schemas/types';
+import { getImportableSchemaNames } from 'src/importer';
 import { createFilters, routeFilters } from 'src/utils/filters';
 import { safeParseFloat } from 'utils/index';
 import { fuzzyMatch } from '.';
@@ -294,8 +295,8 @@ function getListViewList(fyo: Fyo): SearchItem[] {
   return [standardLists, filteredLists].flat();
 }
 
-function getSetupList(): SearchItem[] {
-  return [
+function getSetupList(fyo: Fyo): SearchItem[] {
+  const pages: SearchItem[] = [
     {
       label: t`Dashboard`,
       route: '/',
@@ -317,6 +318,8 @@ function getSetupList(): SearchItem[] {
       group: 'Page',
     },
   ];
+  const canImport = getImportableSchemaNames(fyo).length > 0;
+  return pages.filter((page) => canImport || page.route !== '/import-wizard');
 }
 
 function getNonDocSearchList(fyo: Fyo) {
@@ -324,7 +327,7 @@ function getNonDocSearchList(fyo: Fyo) {
     getListViewList(fyo),
     getCreateList(fyo),
     getReportList(fyo),
-    getSetupList(),
+    getSetupList(fyo),
   ]
     .flat()
     .map((d) => {

@@ -14,7 +14,15 @@ from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_op
 	open_shift,
 	set_pos_accounts,
 )
-from frappe_books.tests.accounting import ledger_entries, make_account, make_invoice, make_item, make_party
+from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import pay_pos_invoice
+from frappe_books.tests.accounting import (
+	ledger_entries,
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	unique_name,
+)
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
@@ -123,6 +131,35 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		amounts = transacted_amounts(start, add_days(now_datetime(), 1))
 
 		self.assertEqual(amounts["Cash"], sum(invoice.base_grand_total for invoice in invoices))
+
+	def test_every_cash_type_method_is_reconciled_through_the_counter(self):
+		petty = frappe.get_doc(
+			{"doctype": "Books Payment Method", "name": unique_name("Petty Cash"), "type": "Cash"}
+		).insert()
+		opening = frappe.get_doc(
+			{
+				"doctype": "Books Pos Opening Shift",
+				"opening_cash": [{"denomination": 100, "count": 1}],
+				"opening_amounts": [
+					{"payment_method": "Cash", "amount": 60},
+					{"payment_method": petty.name, "amount": 40},
+				],
+			}
+		).insert()
+		opening.submit()
+		invoice = self._pos_invoice()
+		pay_pos_invoice(invoice.name, [{"payment_method": petty.name, "amount": invoice.base_grand_total}])
+
+		closing = make_closing_shift(opening, 280)
+		closing.closing_amounts[0].closing_amount = 60
+		closing.append("closing_amounts", {"payment_method": petty.name, "closing_amount": 220})
+		closing.insert().submit()
+
+		self.assertEqual([row.difference_amount for row in closing.closing_amounts], [0, 0])
+		entries = frappe.get_all(
+			"Books Ledger Entry", filters={"account": self.counter}, fields=["debit", "credit"]
+		)
+		self.assertEqual(sum(row.debit - row.credit for row in entries), 0)
 
 	def _pos_invoice(self):
 		income = make_account("POS Income", root_type="Income", account_type="Income Account")

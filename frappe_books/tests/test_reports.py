@@ -9,6 +9,7 @@ from frappe.utils import add_to_date, add_years, getdate, now_datetime, nowdate
 from frappe_books.reports import gst
 from frappe_books.reports.filters import get_default_filters
 from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
+from frappe_books.reports.gstr_json import get_gstr_json
 from frappe_books.reports.periods import get_periods
 from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_valuation import move
@@ -16,6 +17,7 @@ from frappe_books.tests.test_valuation import move
 VOUCHER = "Books Journal Entry"
 YEARS_2045_AND_2046 = {"based_on": "Until Date", "periodicity": "Yearly", "count": 2, "to_date": "2046-12-31"}
 PERIOD_KEYS = ("period_2046_12_31", "period_2045_12_31")
+GSTR_DATE = "2063-01-15"
 
 
 class IntegrationTestLedgerReports(IntegrationTestCase):
@@ -299,14 +301,72 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			[(first.name, first.party, Decimal(100)), (second.name, second.party, Decimal(200))],
 		)
 
-	def _invoice(self, *rows):
+	def test_json_takes_the_place_of_supply_and_amounts_from_the_rows(self):
+		self.party = self._party("Karnataka", gstin="27AAAAA0000A1Z5")
+		self._invoice((_tax(("IGST", 18)), 100, 1), (_tax(("IGST", 5)), 50, 1), date=GSTR_DATE)
+
+		(customer,) = self._json("B2B")["b2b"]
+
+		(invoice,) = customer["inv"]
+		self.assertEqual(
+			(customer["ctin"], invoice["pos"], invoice["idt"]), ("27AAAAA0000A1Z5", "29", "15-01-2063")
+		)
+		self.assertEqual(
+			[(item["num"], item["itm_det"]["txval"], item["itm_det"]["iamt"]) for item in invoice["itms"]],
+			[(1, *_decimals(100, 18)), (2, *_decimals(50, "2.5"))],
+		)
+
+	def test_json_sums_small_consumer_supplies_by_state_and_rate(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+		gst_18 = _tax(("CGST", 9), ("SGST", 9))
+		self.party = self._party("Karnataka")
+		self._invoice((gst_18, 100, 1), date=GSTR_DATE)
+		self._invoice((gst_18, 200, 1), date=GSTR_DATE)
+
+		(summary,) = self._json("B2CS")["b2cs"]
+
+		self.assertEqual((summary["sply_ty"], summary["pos"], summary["typ"]), ("INTRA", "29", "OE"))
+		self.assertEqual(
+			(summary["rt"], summary["txval"], summary["camt"], summary["samt"], summary["iamt"]),
+			_decimals(18, 300, 27, 27, 0),
+		)
+
+	def test_json_export_needs_the_company_gstin(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", None)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "GSTIN"):
+			self._json("B2B")
+
+	def test_json_export_needs_export_permission(self):
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			self._json("B2B")
+
+	def _json(self, transfer_type):
+		filters = {"from_date": GSTR_DATE, "to_date": GSTR_DATE, "transfer_type": transfer_type}
+		return get_gstr_json("Books GSTR-1", filters)
+
+	def _party(self, state, **values):
+		address = frappe.get_doc(
+			{
+				"doctype": "Books Address",
+				"name": unique_name("Address"),
+				"address_line1": "1 Road",
+				"city": "City",
+				"state": state,
+				"country": "India",
+			}
+		).insert()
+		gst_type = "Registered Regular" if values.get("gstin") else "Unregistered"
+		return make_party(self.receivable.name, address=address.name, gst_type=gst_type, **values)
+
+	def _invoice(self, *rows, date=None):
 		return (
 			frappe.get_doc(
 				{
 					"doctype": "Books Sales Invoice",
 					"party": self.party.name,
 					"account": self.receivable.name,
-					"date": now_datetime(),
+					"date": date or now_datetime(),
 					"items": [
 						{
 							"item": self.item,

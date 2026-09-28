@@ -7,6 +7,7 @@ import {
   getCsvData,
   getDocStatus,
   getDocStatusBadge,
+  getLoyaltyProgramBadge,
   getStateBadge,
 } from './helpers/accounting.mjs';
 import { reportResult, stubServer } from './helpers/server.mjs';
@@ -155,6 +156,14 @@ test('status badges use the status option label and the DocType state colour', a
     label: 'Do not Contact',
     theme: 'red',
   });
+  const program = fyo.schemaMap.LoyaltyProgram;
+  assert.deepEqual(
+    getLoyaltyProgramBadge({ schema: program, status: 'Maxed' }),
+    {
+      label: 'Maxed',
+      theme: 'amber',
+    }
+  );
 });
 
 test('currency formatting uses exactly the configured precision', async () => {

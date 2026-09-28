@@ -26,7 +26,17 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists", "preview", "getMapped"}
+READ_METHODS = {
+	"get",
+	"getAll",
+	"count",
+	"search",
+	"searchLink",
+	"getSingleValues",
+	"exists",
+	"preview",
+	"getMapped",
+}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
 INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__expectedModified"}
@@ -99,6 +109,13 @@ class BooksDatabaseBridge:
 		longest word in `text`, in order, as the interface's fuzzy search matches them."""
 		word = max(text.split(), key=len, default="")
 		return {source_schema: self._search_rows(source_schema, word, limit) for source_schema in schemas}
+
+	def search_link(
+		self, source_schema: str, text: str, filters: dict[str, Any] | None, fields: list[str], limit: int
+	) -> list[dict]:
+		"""Return the link options Frappe's link search finds for the letters of `text`, in order."""
+		rows = self._search_widget(source_schema, text.strip(), limit, filters or {}, fields)
+		return [self._row_to_source(source_schema, row, fields) for row in rows]
 
 	def _search_rows(self, source_schema, word, limit):
 		meta = frappe.get_meta(target_doctype(source_schema))

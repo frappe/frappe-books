@@ -30,6 +30,14 @@ export abstract class DatabaseBase {
     limit: number
   ): Promise<Record<string, UnknownMap[]>>;
 
+  abstract searchLink(
+    schemaName: string,
+    text: string,
+    filters: QueryFilter | null,
+    fields: string[],
+    limit: number
+  ): Promise<UnknownMap[]>;
+
   abstract getSingleValues(
     ...fieldnames: { fieldname: string; parent: string }[]
   ): Promise<{ fieldname: string; parent: string; value: unknown }[]>;

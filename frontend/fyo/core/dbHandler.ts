@@ -164,6 +164,28 @@ export class DatabaseHandler extends DatabaseBase {
     )) as Record<string, RawValueMap[]>;
   }
 
+  /** A page of link options that Frappe's link search finds for `text`. */
+  async searchLink(
+    schemaName: string,
+    text: string,
+    filters: QueryFilter | null,
+    fields: string[],
+    limit: number
+  ): Promise<DocValueMap[]> {
+    const rawValueMaps = (await this.#demux.call(
+      'searchLink',
+      schemaName,
+      text,
+      filters,
+      fields,
+      limit
+    )) as RawValueMap[];
+    return this.converter.toDocValueMap(
+      schemaName,
+      rawValueMaps
+    ) as DocValueMap[];
+  }
+
   // Update
   async rename(
     schemaName: string,

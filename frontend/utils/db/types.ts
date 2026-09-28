@@ -104,6 +104,8 @@ export abstract class DatabaseDemuxBase {
 
   abstract getDuplicate(schemaName: string, values: unknown): Promise<unknown>;
 
+  abstract getDocPermissions(doctype: string, name: string): Promise<unknown>;
+
   abstract runDocMethod(
     method: string,
     schemaName: string,

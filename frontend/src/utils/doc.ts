@@ -1,7 +1,5 @@
 import { Doc } from 'fyo/model/doc';
-import type { DocPermissionMap } from 'fyo/utils/permissions';
 import { Field } from 'schemas/types';
-import { call } from 'src/web/api';
 
 /** Loads the user's rights on a saved document, which shares, ownership and user permissions change. */
 export async function loadDocPermissions(doc: Doc) {
@@ -10,11 +8,7 @@ export async function loadDocPermissions(doc: Doc) {
     return;
   }
 
-  const { permissions } = await call<{ permissions: DocPermissionMap }>(
-    'frappe.client.get_doc_permissions',
-    { doctype, docname: doc.name }
-  );
-  doc.docPermissions = permissions;
+  doc.docPermissions = await doc.fyo.db.getDocPermissions(doctype, doc.name!);
 }
 
 /**
@@ -108,8 +102,7 @@ function evaluateFieldMeta(
   const docRecord = doc as Record<string, unknown> | undefined;
   const metaKey = meta as string;
   const metaObj = docRecord?.[metaKey] as
-    | Record<string, (() => boolean) | undefined>
-    | undefined;
+    Record<string, (() => boolean) | undefined> | undefined;
   const evalFunction = metaObj?.[field.fieldname];
   if (typeof evalFunction === 'function') {
     return evalFunction();

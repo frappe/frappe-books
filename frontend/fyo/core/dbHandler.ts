@@ -1,5 +1,6 @@
 import { Fyo } from 'fyo';
 import Observable from 'fyo/utils/observable';
+import type { DocPermissionMap } from 'fyo/utils/permissions';
 import { Field, RawValue, SchemaMap } from 'schemas/types';
 import { getMapFromList } from 'utils';
 import {
@@ -285,6 +286,15 @@ export class DatabaseHandler extends DatabaseBase {
       this.converter.toRawValueMap(schemaName, docValueMap)
     )) as RawValueMap;
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
+  }
+
+  /** The user's rights on one saved document, as Frappe grants them. */
+  async getDocPermissions(
+    doctype: string,
+    name: string
+  ): Promise<DocPermissionMap | undefined> {
+    return (await this.#demux.getDocPermissions(doctype, name)) as
+      DocPermissionMap | undefined;
   }
 
   // The Frappe adapter runs these complex queries on the server.

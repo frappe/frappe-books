@@ -25,6 +25,8 @@ add_to_apps_screen = [
 ]
 
 website_route_rules = [{"from_route": "/books/<path:app_path>", "to_route": "books"}]
+# A fresh site opens the Books setup wizard, which completes Frappe's setup too.
+setup_wizard_url = "/books"
 
 jinja = {"methods": ["frappe_books.printing.get_print_settings"]}
 

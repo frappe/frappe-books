@@ -1,6 +1,7 @@
 """Set up a Books company on the current Frappe site."""
 
 import frappe
+from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 
 from frappe_books.coa import (
 	ensure_bank_account,
@@ -16,6 +17,7 @@ from frappe_books.series import NUMBER_SERIES
 
 
 def run_setup(wizard):
+	complete_site_setup(wizard)
 	chart = load_chart(wizard.chart_of_accounts)
 	ensure_chart(chart)
 	ensure_regional_records(wizard.country)
@@ -30,6 +32,12 @@ def run_setup(wizard):
 	_update_pos_settings(accounts)
 	_update_defaults(bank_account, accounts)
 	return {"setup_complete": True, "bank_account": bank_account}
+
+
+def complete_site_setup(wizard):
+	"""Frappe's setup sets System Settings: country, currency, time zone and formats."""
+	if not frappe.is_setup_complete():
+		complete_app_setup(country=wizard.country, currency=wizard.currency, timezone=wizard.time_zone)
 
 
 def enable_currency(currency):

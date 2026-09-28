@@ -125,6 +125,12 @@
         "name": "name"
       }
     },
+    "Country": {
+      "doctype": "Country",
+      "fields": {
+        "name": "country_name"
+      }
+    },
     "CouponCode": {
       "doctype": "Books Coupon Code",
       "fields": {
@@ -877,7 +883,8 @@
         "fiscalYearStart": "fiscal_year_start",
         "fullname": "fullname",
         "logo": "logo",
-        "name": "name"
+        "name": "name",
+        "timeZone": "time_zone"
       }
     },
     "Shipment": {

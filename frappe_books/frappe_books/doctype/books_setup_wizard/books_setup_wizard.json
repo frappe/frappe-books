@@ -14,6 +14,7 @@
   "locale_section_break_6",
   "country",
   "currency",
+  "time_zone",
   "accounting_section_break_9",
   "bank_name",
   "chart_of_accounts",
@@ -64,17 +65,25 @@
   {
    "description": "Select Country",
    "fieldname": "country",
-   "fieldtype": "Autocomplete",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Country",
+   "options": "Country",
    "reqd": 1
   },
   {
    "description": "Currency",
    "fieldname": "currency",
-   "fieldtype": "Autocomplete",
+   "fieldtype": "Link",
    "label": "Currency",
+   "options": "Currency",
    "reqd": 1
+  },
+  {
+   "fieldname": "time_zone",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Time Zone"
   },
   {
    "fieldname": "accounting_section_break_9",
@@ -114,7 +123,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-27 20:00:00.000000",
+ "modified": "2026-09-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Setup Wizard",

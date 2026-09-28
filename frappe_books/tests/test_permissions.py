@@ -108,6 +108,14 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			self.assertEqual(_search_shipments(hidden), [])
 			self.assertEqual(_search_shipments(readable), [readable])
 
+	def test_link_search_skips_documents_the_user_cannot_read(self):
+		readable, hidden = _seed_shipment(), _seed_shipment()
+		add_user_permission("Books Shipment", readable, TEST_USER)
+		with self.set_user(TEST_USER):
+			found = BooksDatabaseBridge().call("searchLink", ["Shipment", "", {}, ["name"], 50])
+		self.assertIn(readable, [row["name"] for row in found])
+		self.assertNotIn(hidden, [row["name"] for row in found])
+
 	def test_linked_entries_need_the_document_and_hide_unreadable_links(self):
 		original = _seed_shipment()
 		readable_return = _seed_shipment(return_against=original)

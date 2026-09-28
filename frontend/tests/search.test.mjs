@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeFyo } from './helpers/accounting.mjs';
-import { Search } from './helpers/ui.mjs';
+import { Search, sortByFuzzyMatch } from './helpers/ui.mjs';
 
 test('search starts without loading documents and fetches a bounded match set', async () => {
   const fyo = await makeFyo();
@@ -76,4 +76,25 @@ test('the palette searches the schemas the DocType search fields name', async ()
   assert.deepEqual(fields('Tax'), ['name']);
   assert.deepEqual(fields('SalesInvoiceItem'), ['item', 'tax']);
   assert.equal(fields('Account'), undefined);
+});
+
+test('link options keep every server match, closest first', () => {
+  const options = [
+    { label: 'Acme Supplies' },
+    { label: 'Northwind' },
+    { label: 'ACME' },
+  ];
+  const labels = (items) => items.map(({ label }) => label);
+  const getValues = ({ label }) => [label];
+
+  assert.deepEqual(labels(sortByFuzzyMatch('acme', options, getValues)), [
+    'ACME',
+    'Acme Supplies',
+    'Northwind',
+  ]);
+  assert.deepEqual(
+    labels(sortByFuzzyMatch('acme', options, getValues, true)),
+    ['ACME', 'Acme Supplies']
+  );
+  assert.equal(sortByFuzzyMatch('', options, getValues), options);
 });

@@ -19,6 +19,7 @@ await build({
         getFieldsGroupedByTabAndSection,
       } from './src/utils/ui';
       export { Search } from './src/utils/search';
+      export { sortByFuzzyMatch } from './src/utils';
       export { fyo } from './src/initFyo';
       export { NotFoundError } from './fyo/utils/errors';
     `,
@@ -52,6 +53,7 @@ export const {
   getDocFromNameIfExistsElseNew,
   getFieldsGroupedByTabAndSection,
   Search,
+  sortByFuzzyMatch,
   fyo,
   NotFoundError,
 } = createRequire(import.meta.url)(output);

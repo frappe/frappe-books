@@ -477,6 +477,22 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 		self.assertEqual([(row["name"], row["email"]) for row in found], [(party, email)])
 
+	def test_link_search_matches_letters_in_order_within_the_link_filters(self):
+		account = make_account("Bridge Link Receivable", account_type="Receivable").name
+		prefix = frappe.generate_hash(length=6)
+		customers = [make_party(account, name=f"Qz{prefix} Customer {index}").name for index in range(3)]
+		payable = make_account("Bridge Link Payable", account_type="Payable").name
+		make_party(payable, "Supplier", name=f"Qz{prefix} Supplier")
+		filters = {"role": ["in", ["Customer", "Both"]]}
+
+		found = self.bridge.call("searchLink", ["Party", f"qz{prefix}cst", filters, ["name", "role"], 2])
+
+		self.assertEqual(len(found), 2)
+		self.assertTrue(all(row["name"] in customers and row["role"] == "Customer" for row in found))
+		self.assertEqual(
+			self.bridge.call("searchLink", ["Party", f"qz{prefix}spl", filters, ["name"], 5]), []
+		)
+
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])

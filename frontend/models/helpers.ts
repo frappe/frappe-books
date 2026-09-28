@@ -320,8 +320,7 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      (!!fyo.singles.AccountingSettings?.enableInvoiceReturns ||
-        !!fyo.singles.InventorySettings?.enableStockReturns) &&
+      !!fyo.singles.AccountingSettings?.enableInvoiceReturns &&
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {

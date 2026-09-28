@@ -1,5 +1,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import get_datetime, now_datetime, nowdate
+
+from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
 
 
 class IntegrationTestFieldRules(IntegrationTestCase):
@@ -27,3 +30,15 @@ class IntegrationTestFieldRules(IntegrationTestCase):
 		settings = frappe.get_single("Books Pos Settings")
 		settings.cash_account = None
 		self.assertRaises(frappe.MandatoryError, settings.save)
+
+	def test_documents_default_to_the_current_date(self):
+		receivable = make_account("Dated Receivable", account_type="Receivable").name
+		income = make_account("Dated Income", root_type="Income").name
+		item = make_item(income, make_account("Dated Expense", root_type="Expense").name).name
+		started = now_datetime().replace(microsecond=0)
+		invoice = make_invoice(
+			"Books Sales Invoice", make_party(receivable).name, receivable, item, income, date=None
+		)
+
+		self.assertGreaterEqual(get_datetime(invoice.date), started)
+		self.assertEqual(str(frappe.new_doc("Books Journal Entry").posting_date), nowdate())

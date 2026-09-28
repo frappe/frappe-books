@@ -154,7 +154,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 def _bill_transfer(transfer, invoice):
 	validate_billable(transfer)
 	bill_unbilled_rows(transfer, invoice)
-	invoice.calculate()
+	invoice.fill_mapped_values()
 
 
 def _items_doctype(doctype):

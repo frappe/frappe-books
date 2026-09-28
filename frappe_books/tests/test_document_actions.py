@@ -41,6 +41,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		quote = self._submitted_quote()
 		invoice = make_sales_invoice(quote.name)
 		self.assertEqual((invoice.grand_total, invoice.outstanding_amount), (150, 150))
+		# Paid by hand below, not by the automatic payment the defaults ask for.
+		invoice.make_auto_payment = 0
 		invoice.insert()
 		self.assertEqual(invoice.quote, quote.name)
 		self.assertEqual(invoice.account, self.receivable.name)
@@ -61,7 +63,9 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual((invoice["quote"], invoice["party"]), (quote.name, self.party.name))
 		self.assertEqual(invoice["items"][0]["rate"], 75)
 
-		submitted = make_sales_invoice(quote.name).insert().submit()
+		mapped = make_sales_invoice(quote.name)
+		mapped.make_auto_payment = 0
+		submitted = mapped.insert().submit()
 		payment = bridge.call(
 			"getMapped", [MAPPERS.format("books_sales_invoice", "make_payment"), submitted.name]
 		)

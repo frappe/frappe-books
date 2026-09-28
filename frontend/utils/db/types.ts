@@ -122,24 +122,3 @@ export abstract class DatabaseDemuxBase {
 
 /** A submitted document Frappe cancels along with the one it links to. */
 export type LinkedDoc = { doctype: string; name: string; docstatus: number };
-
-export type ReportQuery =
-  | 'getGeneralLedger'
-  | 'getTrialBalance'
-  | 'getProfitAndLoss'
-  | 'getBalanceSheet'
-  | 'getStockLedger'
-  | 'getStockBalance'
-  | 'getGSTRRows';
-
-// Return types of Bespoke Queries
-export type TopExpenses = { account: string; total: number }[];
-export type TotalOutstanding = { total: number; outstanding: number };
-export type Cashflow = { inflow: number; outflow: number; yearmonth: string }[];
-export type Balance = { balance: number; yearmonth: string }[];
-export type IncomeExpense = { income: Balance; expense: Balance };
-export type TotalCreditAndDebit = {
-  account: string;
-  totalCredit: number;
-  totalDebit: number;
-};

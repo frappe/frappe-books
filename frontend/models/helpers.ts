@@ -1,8 +1,4 @@
 import {
-  AccountRootType,
-  AccountRootTypeEnum,
-} from './baseModels/Account/types';
-import {
   Action,
   BadgeData,
   BadgeTheme,
@@ -510,23 +506,6 @@ async function fetchExchangeRate(
   } catch {
     // Offline or an unreadable reply: the user enters the rate instead.
     return undefined;
-  }
-}
-
-export function isCredit(rootType: AccountRootType) {
-  switch (rootType) {
-    case AccountRootTypeEnum.Asset:
-      return false;
-    case AccountRootTypeEnum.Liability:
-      return true;
-    case AccountRootTypeEnum.Equity:
-      return true;
-    case AccountRootTypeEnum.Expense:
-      return false;
-    case AccountRootTypeEnum.Income:
-      return true;
-    default:
-      return true;
   }
 }
 

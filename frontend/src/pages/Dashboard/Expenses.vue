@@ -26,9 +26,8 @@
 
 <script lang="ts">
 import { DonutChart as FrappeDonutChart } from 'frappe-ui/charts';
-import { fyo } from 'src/initFyo';
 import { uicolors } from 'src/utils/colors';
-import { getDatesAndPeriodList } from 'src/utils/misc';
+import { getDashboardData } from 'src/utils/dashboard';
 import { defineComponent } from 'vue';
 import DashboardChartBase from './BaseDashboardChart.vue';
 import SectionHeader from './SectionHeader.vue';
@@ -67,8 +66,9 @@ export default defineComponent({
   },
   methods: {
     async setData() {
-      const { fromDate, toDate } = getDatesAndPeriodList(this.period);
-      let topExpenses = await fyo.db.getTopExpenses(fromDate.toISO(), toDate.toISO());
+      const topExpenses = await getDashboardData<
+        { account: string; total: number }[]
+      >('get_top_expenses', this.period);
       const shades = [
         { class: 'bg-pink-500', hex: uicolors.pink['500'] },
         { class: 'bg-pink-400', hex: uicolors.pink['400'] },
@@ -88,16 +88,12 @@ export default defineComponent({
         },
       ];
 
-      this.expenses = topExpenses
-        .filter((e) => e.total > 0)
-        .map((d, i) => {
-          return {
-            account: d.account,
-            total: d.total,
-            color: { color: shades[i].hex, darkColor: darkshades[i].hex },
-            class: { class: shades[i].class, darkClass: darkshades[i].class },
-          };
-        });
+      this.expenses = topExpenses.map((d, i) => ({
+        account: d.account,
+        total: d.total,
+        color: { color: shades[i].hex, darkColor: darkshades[i].hex },
+        class: { class: shades[i].class, darkClass: darkshades[i].class },
+      }));
     },
   },
 });

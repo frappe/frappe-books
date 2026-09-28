@@ -15,12 +15,14 @@
         <div class="grid grid-cols-1 md:grid-cols-2">
           <UnpaidInvoices
             :schema-name="'SalesInvoice'"
+            doctype="Books Sales Invoice"
             :common-period="period"
             :dark-mode="darkMode"
             class="min-w-0 border-e border-outline-gray-1"
           />
           <UnpaidInvoices
             :schema-name="'PurchaseInvoice'"
+            doctype="Books Purchase Invoice"
             :common-period="period"
             :dark-mode="darkMode"
           />

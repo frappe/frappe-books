@@ -1,22 +1,19 @@
 import { t } from 'fyo';
-import { RawValueMap } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
-import { DateTime } from 'luxon';
 import { InventorySettings } from 'models/inventory/InventorySettings';
 import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
-import { ColumnField, ReportCell, ReportData, ReportRow } from 'reports/types';
+import { ColumnField, ReportCell } from 'reports/types';
 import { Field, RawValue } from 'schemas/types';
-import { isNumeric } from 'src/utils';
-import { ReferenceType, StockLedgerRow } from './types';
+import { ReferenceType } from './types';
 
 export class StockLedger extends Report {
   static title = t`Stock Ledger`;
   static reportName = 'stock-ledger';
+  static serverReportName = 'Books Stock Ledger';
   static isInventory = true;
 
   usePagination = true;
-  loading = false;
 
   item?: string;
   location?: string;
@@ -28,217 +25,41 @@ export class StockLedger extends Report {
   referenceType?: ReferenceType = 'All';
   referenceName?: string;
 
-  groupBy: 'none' | 'item' | 'location' = 'none';
+  groupBy: 'none' | 'item' | 'location' | 'reference_name' = 'none';
+
+  /** Columns coloured green or red; `null` colours by the sign of the value. */
+  colouredColumns: Record<string, 'red' | 'green' | null> = {
+    quantity: null,
+    value_change: null,
+  };
 
   get hasBatches(): boolean {
     return !!(this.fyo.singles.InventorySettings as InventorySettings)
       .enableBatches;
   }
 
-  get hasSerialNumbers(): boolean {
-    return !!(this.fyo.singles.InventorySettings as InventorySettings)
-      .enableSerialNumber;
-  }
-
-  setDefaultFilters() {
+  async setDefaultFilters() {
     if (!this.toDate) {
-      this.toDate = DateTime.now().plus({ days: 1 }).toISODate();
-      this.fromDate = DateTime.now().minus({ years: 1 }).toISODate();
+      const { fromDate, toDate } = await this.getDefaultFilters();
+      this.toDate = toDate as string;
+      this.fromDate = fromDate as string;
     }
   }
 
-  async setReportData(): Promise<void> {
-    this.loading = true;
-    this.reportData = await this._getReportData();
-    this.loading = false;
-  }
-
-  async _getReportData(): Promise<ReportData> {
-    const rows = await this.fyo.db.getReportData<StockLedgerRow[]>(
-      'getStockLedger',
-      this.filterMap
-    );
-    const numbered = rows.map((row, i) => ({ ...row, name: i + 1 }));
-    return this._getGroupedRawData(numbered).map((row) =>
-      this._convertRawDataRowToReportRow(row as RawValueMap, {
-        quantity: null,
-        valueChange: null,
-      })
-    );
-  }
-
-  _getGroupedRawData(rawData: StockLedgerRow[]) {
-    const groupBy = this.groupBy;
-    if (groupBy === 'none') {
-      return rawData;
+  getCell(column: ColumnField, rawValue: RawValue | undefined): ReportCell {
+    const cell = super.getCell(column, rawValue);
+    if (!(column.fieldname in this.colouredColumns)) {
+      return cell;
     }
 
-    const groups: Map<string, StockLedgerRow[]> = new Map();
-    for (const row of rawData) {
-      const key = row[groupBy];
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-
-      groups.get(key)?.push(row);
+    const colour = this.colouredColumns[column.fieldname];
+    if (colour) {
+      cell.color = colour;
+    } else if (typeof rawValue === 'number' && rawValue !== 0) {
+      cell.color = rawValue > 0 ? 'green' : 'red';
     }
 
-    const groupedRawData: (StockLedgerRow | { name: null })[] = [];
-    let i = 0;
-    for (const key of groups.keys()) {
-      for (const row of groups.get(key) ?? []) {
-        row.name = ++i;
-        groupedRawData.push(row);
-      }
-
-      groupedRawData.push({ name: null });
-    }
-
-    if (groupedRawData.at(-1)?.name === null) {
-      groupedRawData.pop();
-    }
-
-    return groupedRawData;
-  }
-
-  _convertRawDataRowToReportRow(
-    row: RawValueMap,
-    colouredMap: Record<string, 'red' | 'green' | null>
-  ): ReportRow {
-    const cells: ReportCell[] = [];
-    const columns = this.getColumns();
-
-    if (row.name === null) {
-      return {
-        isEmpty: true,
-        cells: columns.map((c) => ({
-          rawValue: '',
-          value: '',
-          width: c.width ?? 1,
-        })),
-      };
-    }
-
-    for (const col of columns) {
-      const fieldname = col.fieldname as keyof StockLedgerRow;
-      const fieldtype = col.fieldtype;
-
-      const rawValue = row[fieldname] as RawValue;
-
-      let value;
-      if (col.fieldname === 'referenceType' && typeof rawValue === 'string') {
-        value = this.fyo.schemaMap[rawValue]?.label ?? rawValue;
-      } else {
-        value = this.fyo.format(rawValue, fieldtype);
-      }
-
-      const align = isNumeric(fieldtype) ? 'right' : 'left';
-
-      const isColoured = fieldname in colouredMap;
-      const isNumber = typeof rawValue === 'number';
-      let color: 'red' | 'green' | undefined = undefined;
-
-      if (isColoured && colouredMap[fieldname]) {
-        color = colouredMap[fieldname]!;
-      } else if (isColoured && isNumber && rawValue > 0) {
-        color = 'green';
-      } else if (isColoured && isNumber && rawValue < 0) {
-        color = 'red';
-      }
-
-      cells.push({ rawValue, value, align, color, width: col.width });
-    }
-
-    return { cells };
-  }
-
-  getColumns(): ColumnField[] {
-    const batch: Field[] = [];
-    const serialNumber: Field[] = [];
-
-    if (this.hasBatches) {
-      batch.push({
-        fieldname: 'batch',
-        label: 'Batch',
-        fieldtype: 'Link',
-        target: 'Batch',
-      });
-    }
-
-    if (this.hasSerialNumbers) {
-      serialNumber.push({
-        fieldname: 'serialNumber',
-        label: 'Serial Number',
-        fieldtype: 'Data',
-      });
-    }
-
-    return [
-      {
-        fieldname: 'name',
-        label: '#',
-        fieldtype: 'Int',
-        width: 0.5,
-      },
-      {
-        fieldname: 'date',
-        label: 'Date',
-        fieldtype: 'Datetime',
-        width: 1.25,
-      },
-      {
-        fieldname: 'item',
-        label: 'Item',
-        fieldtype: 'Link',
-      },
-      {
-        fieldname: 'location',
-        label: 'Location',
-        fieldtype: 'Link',
-      },
-      ...batch,
-      ...serialNumber,
-      {
-        fieldname: 'quantity',
-        label: 'Quantity',
-        fieldtype: 'Float',
-      },
-      {
-        fieldname: 'balanceQuantity',
-        label: 'Balance Qty.',
-        fieldtype: 'Float',
-      },
-      {
-        fieldname: 'incomingRate',
-        label: 'Incoming rate',
-        fieldtype: 'Currency',
-      },
-      {
-        fieldname: 'valuationRate',
-        label: 'Valuation Rate',
-        fieldtype: 'Currency',
-      },
-      {
-        fieldname: 'balanceValue',
-        label: 'Balance Value',
-        fieldtype: 'Currency',
-      },
-      {
-        fieldname: 'valueChange',
-        label: 'Value Change',
-        fieldtype: 'Currency',
-      },
-      {
-        fieldname: 'referenceName',
-        label: 'Ref. Name',
-        fieldtype: 'DynamicLink',
-      },
-      {
-        fieldname: 'referenceType',
-        label: 'Ref. Type',
-        fieldtype: 'Data',
-      },
-    ];
+    return cell;
   }
 
   getFilters(): Field[] {
@@ -308,7 +129,7 @@ export class StockLedger extends Report {
           { label: t`None`, value: 'none' },
           { label: t`Item`, value: 'item' },
           { label: t`Location`, value: 'location' },
-          { label: t`Reference`, value: 'referenceName' },
+          { label: t`Reference`, value: 'reference_name' },
         ],
       },
       {

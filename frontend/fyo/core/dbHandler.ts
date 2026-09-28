@@ -3,18 +3,12 @@ import Observable from 'fyo/utils/observable';
 import { Field, RawValue, SchemaMap } from 'schemas/types';
 import { getMapFromList } from 'utils';
 import {
-  Cashflow,
   DatabaseBase,
   DatabaseDemuxBase,
   GetAllOptions,
-  IncomeExpense,
   LinkedDoc,
   QueryFilter,
-  ReportQuery,
   SingleValue,
-  TopExpenses,
-  TotalCreditAndDebit,
-  TotalOutstanding,
 } from 'utils/db/types';
 import { Converter } from './converter';
 import {
@@ -295,52 +289,6 @@ export class DatabaseHandler extends DatabaseBase {
 
   // The Frappe adapter runs these complex queries on the server.
 
-  async getTopExpenses(fromDate: string, toDate: string): Promise<TopExpenses> {
-    return (await this.#demux.callBespoke(
-      'getTopExpenses',
-      fromDate,
-      toDate
-    )) as TopExpenses;
-  }
-
-  async getTotalOutstanding(
-    schemaName: string,
-    fromDate: string,
-    toDate: string
-  ): Promise<TotalOutstanding> {
-    return (await this.#demux.callBespoke(
-      'getTotalOutstanding',
-      schemaName,
-      fromDate,
-      toDate
-    )) as TotalOutstanding;
-  }
-
-  async getCashflow(fromDate: string, toDate: string): Promise<Cashflow> {
-    return (await this.#demux.callBespoke(
-      'getCashflow',
-      fromDate,
-      toDate
-    )) as Cashflow;
-  }
-
-  async getIncomeAndExpenses(
-    fromDate: string,
-    toDate: string
-  ): Promise<IncomeExpense> {
-    return (await this.#demux.callBespoke(
-      'getIncomeAndExpenses',
-      fromDate,
-      toDate
-    )) as IncomeExpense;
-  }
-
-  async getTotalCreditAndDebit(): Promise<TotalCreditAndDebit[]> {
-    return (await this.#demux.callBespoke(
-      'getTotalCreditAndDebit'
-    )) as TotalCreditAndDebit[];
-  }
-
   async getStockQuantity(
     item: string,
     location?: string,
@@ -403,10 +351,6 @@ export class DatabaseHandler extends DatabaseBase {
       schemaName,
       name
     )) as Record<string, string[]>;
-  }
-
-  async getReportData<T>(query: ReportQuery, ...args: unknown[]): Promise<T> {
-    return (await this.#demux.callBespoke(query, ...args)) as T;
   }
 
   async getOpenPOSShift(): Promise<string | null> {

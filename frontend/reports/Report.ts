@@ -5,11 +5,21 @@ import { Action } from 'fyo/model/types';
 import Observable from 'fyo/utils/observable';
 import { Field, RawValue } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
-import { ColumnField, ReportData } from './types';
+import {
+  getServerDefaultFilters,
+  isBlankRow,
+  runServerReport,
+  ServerFilters,
+  ServerReportResult,
+  ServerRow,
+} from './serverReport';
+import { ColumnField, ReportCell, ReportData, ReportRow } from './types';
 
 export abstract class Report extends Observable<RawValue> {
   static title: string;
   static reportName: string;
+  /** The Script Report that computes this report on the server. */
+  static serverReportName: string;
   static isInventory = false;
 
   fyo: Fyo;
@@ -17,7 +27,8 @@ export abstract class Report extends Observable<RawValue> {
   filters: Field[] = [];
   reportData: ReportData;
   usePagination = false;
-  abstract loading: boolean;
+  loading = false;
+  serverDefaults?: ServerFilters;
 
   constructor(fyo: Fyo) {
     super();
@@ -31,6 +42,10 @@ export abstract class Report extends Observable<RawValue> {
 
   get reportName(): string {
     return (this.constructor as typeof Report).reportName;
+  }
+
+  get serverReportName(): string {
+    return (this.constructor as typeof Report).serverReportName;
   }
 
   async initialize() {
@@ -88,6 +103,74 @@ export abstract class Report extends Observable<RawValue> {
     await this.setReportData(key, force);
   }
 
+  /** Server columns replace these once the report data loads. */
+  getColumns(): ColumnField[] | Promise<ColumnField[]> {
+    return this.columns;
+  }
+
+  async setReportData(_filter?: string, _force?: boolean): Promise<void> {
+    this.loading = true;
+    const { columns, rows } = await this.runReport();
+    this.columns = columns;
+    this.reportData = rows.map((row) =>
+      isBlankRow(row) ? this.getEmptyRow() : this.getReportRow(row)
+    );
+    this.loading = false;
+  }
+
+  runReport(): Promise<ServerReportResult> {
+    return runServerReport(this.serverReportName, this.filterMap);
+  }
+
+  /** Filter values computed on the server, fetched once per report. */
+  async getDefaultFilters(): Promise<ServerFilters> {
+    this.serverDefaults ??= await getServerDefaultFilters(
+      this.serverReportName
+    );
+    return this.serverDefaults;
+  }
+
+  getReportRow(row: ServerRow): ReportRow {
+    return {
+      cells: this.columns.map((column) =>
+        this.getCell(column, row[column.fieldname])
+      ),
+    };
+  }
+
+  getCell(column: ColumnField, rawValue: RawValue | undefined): ReportCell {
+    return {
+      rawValue,
+      value: this.formatValue(column, rawValue),
+      align: column.align,
+      width: column.width,
+    };
+  }
+
+  formatValue(column: ColumnField, rawValue: RawValue | undefined): string {
+    if (rawValue === null || rawValue === undefined) {
+      return '';
+    }
+
+    if (column.fieldname === 'reference_type') {
+      return this.fyo.schemaMap[rawValue as string]?.label ?? String(rawValue);
+    }
+
+    return this.fyo.format(rawValue, column.fieldtype);
+  }
+
+  getEmptyRow(): ReportRow {
+    return {
+      isEmpty: true,
+      cells: this.columns.map((column) => ({
+        value: '',
+        rawValue: '',
+        width: column.width,
+        align: 'left',
+      })),
+    };
+  }
+
   /**
    * Should first check if filter value is set
    * and update only if it is not set.
@@ -95,6 +178,4 @@ export abstract class Report extends Observable<RawValue> {
   abstract setDefaultFilters(): void | Promise<void>;
   abstract getActions(): Action[];
   abstract getFilters(): Field[] | Promise<Field[]>;
-  abstract getColumns(): ColumnField[] | Promise<ColumnField[]>;
-  abstract setReportData(filter?: string, force?: boolean): Promise<void>;
 }

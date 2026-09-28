@@ -1,14 +1,10 @@
 import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
-import { DateTime } from 'luxon';
-import { ModelNameEnum } from 'models/types';
-import { codeStateMap } from 'regional/in';
 import { Report } from 'reports/Report';
-import { ColumnField, ReportData, ReportRow } from 'reports/types';
 import { Field, OptionField } from 'schemas/types';
-import { isNumeric } from 'src/utils';
 import getGSTRExportActions from './gstExporter';
-import { GSTRRow, GSTRType, TransferType, TransferTypeEnum } from './types';
+import { call } from 'src/web/api';
+import { GSTRType, TransferType } from './types';
 
 export abstract class BaseGSTR extends Report {
   place?: string;
@@ -16,8 +12,7 @@ export abstract class BaseGSTR extends Report {
   fromDate?: string;
   transferType?: TransferType;
   usePagination = true;
-  gstrRows?: GSTRRow[];
-  loading = false;
+  indianStates: Record<string, string> = {};
 
   abstract gstrType: GSTRType;
 
@@ -36,64 +31,20 @@ export abstract class BaseGSTR extends Report {
     };
   }
 
-  get schemaName() {
-    if (this.gstrType === 'GSTR-1') {
-      return ModelNameEnum.SalesInvoice;
-    }
-
-    return ModelNameEnum.PurchaseInvoice;
+  async setDefaultFilters() {
+    const defaults = await this.getDefaultFilters();
+    await this.setIndianStates();
+    this.toDate ??= defaults.toDate as string;
+    this.fromDate ??= defaults.fromDate as string;
+    this.transferType ??= defaults.transferType as TransferType;
   }
 
-  async setReportData(): Promise<void> {
-    this.loading = true;
-    this.gstrRows = await this.fyo.db.getReportData<GSTRRow[]>(
-      'getGSTRRows',
-      this.schemaName,
-      this.filterMap
-    );
-    this.reportData = this.getReportDataFromGSTRRows(this.gstrRows);
-    this.loading = false;
-  }
-
-  getReportDataFromGSTRRows(gstrRows: GSTRRow[]): ReportData {
-    const reportData: ReportData = [];
-    for (const row of gstrRows) {
-      const reportRow: ReportRow = { cells: [] };
-
-      for (const { fieldname, fieldtype, width } of this.columns) {
-        const align = isNumeric(fieldtype) ? 'right' : 'left';
-
-        const rawValue = row[fieldname as keyof GSTRRow];
-        let value = '';
-        if (rawValue !== undefined) {
-          value = this.fyo.format(rawValue, fieldtype);
-        }
-
-        reportRow.cells.push({
-          align,
-          rawValue,
-          value,
-          width: width ?? 1,
-        });
-      }
-
-      reportData.push(reportRow);
-    }
-
-    return reportData;
-  }
-
-  setDefaultFilters() {
-    if (!this.toDate) {
-      this.toDate = DateTime.local().toISODate();
-    }
-
-    if (!this.fromDate) {
-      this.fromDate = DateTime.local().minus({ months: 3 }).toISODate();
-    }
-
-    if (!this.transferType) {
-      this.transferType = 'B2B';
+  /** The place filter offers the states the server knows by GST state code. */
+  async setIndianStates() {
+    if (!Object.keys(this.indianStates).length) {
+      this.indianStates = await call<Record<string, string>>(
+        'frappe_books.regional.get_indian_states'
+      );
     }
   }
 
@@ -117,12 +68,10 @@ export abstract class BaseGSTR extends Report {
         label: t`Place`,
         placeholder: t`Place`,
         fieldname: 'place',
-        options: Object.keys(codeStateMap).map((code) => {
-          return {
-            value: code,
-            label: codeStateMap[code],
-          };
-        }),
+        options: Object.entries(this.indianStates).map(([code, state]) => ({
+          value: code,
+          label: state,
+        })),
       } as OptionField,
       {
         fieldtype: 'Date',
@@ -137,79 +86,6 @@ export abstract class BaseGSTR extends Report {
         fieldname: 'toDate',
       },
     ];
-  }
-
-  getColumns(): ColumnField[] | Promise<ColumnField[]> {
-    const columns = [
-      {
-        label: t`Party`,
-        fieldtype: 'Data',
-        fieldname: 'partyName',
-        width: 1.5,
-      },
-      {
-        label: t`Invoice No.`,
-        fieldname: 'invNo',
-        fieldtype: 'Data',
-      },
-      {
-        label: t`Invoice Value`,
-        fieldname: 'invAmt',
-        fieldtype: 'Currency',
-      },
-      {
-        label: t`Invoice Date`,
-        fieldname: 'invDate',
-        fieldtype: 'Date',
-      },
-      {
-        label: t`Place of supply`,
-        fieldname: 'place',
-        fieldtype: 'Data',
-      },
-      {
-        label: t`Rate`,
-        fieldname: 'rate',
-        width: 0.5,
-      },
-      {
-        label: t`Taxable Value`,
-        fieldname: 'taxVal',
-        fieldtype: 'Currency',
-      },
-      {
-        label: t`Reverse Chrg.`,
-        fieldname: 'reverseCharge',
-        fieldtype: 'Data',
-      },
-      {
-        label: t`Integrated Tax`,
-        fieldname: 'igstAmt',
-        fieldtype: 'Currency',
-      },
-      {
-        label: t`Central Tax`,
-        fieldname: 'cgstAmt',
-        fieldtype: 'Currency',
-      },
-      {
-        label: t`State Tax`,
-        fieldname: 'sgstAmt',
-        fieldtype: 'Currency',
-      },
-    ] as ColumnField[];
-
-    const transferType = this.transferType ?? TransferTypeEnum.B2B;
-    if (transferType === TransferTypeEnum.B2B) {
-      columns.unshift({
-        label: t`GSTIN No.`,
-        fieldname: 'gstin',
-        fieldtype: 'Data',
-        width: 1.5,
-      });
-    }
-
-    return columns;
   }
 
   getActions(): Action[] {

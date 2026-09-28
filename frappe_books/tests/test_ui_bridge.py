@@ -478,7 +478,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])
 		with self.assertRaises(frappe.ValidationError):
-			BooksBespokeQueries().call("getTopExpenses", ["2026-01-01"])
+			BooksBespokeQueries().call("getStockQuantity", [])
 
 	def test_non_string_names_are_rejected_before_reading_rows(self):
 		lookup = {"name": ["like", "%"]}

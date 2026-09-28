@@ -1,22 +1,27 @@
 from decimal import Decimal
-from itertools import pairwise
 from unittest.mock import patch
 
 import frappe
+from frappe.desk.query_report import run
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_to_date, now_datetime, nowdate
+from frappe.utils import add_to_date, add_years, getdate, now_datetime, nowdate
 
 from frappe_books.reports import gst
+from frappe_books.reports.filters import get_default_filters
+from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
+from frappe_books.reports.gstr_json import get_gstr_json
+from frappe_books.reports.periods import get_periods
 from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_valuation import move
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 VOUCHER = "Books Journal Entry"
+YEARS_2045_AND_2046 = {"based_on": "Until Date", "periodicity": "Yearly", "count": 2, "to_date": "2046-12-31"}
+PERIOD_KEYS = ("period_2046_12_31", "period_2045_12_31")
+GSTR_DATE = "2063-01-15"
 
 
 class IntegrationTestLedgerReports(IntegrationTestCase):
 	def setUp(self):
-		self.queries = BooksBespokeQueries()
 		self.assets = _group_account("Report Assets", "Asset")
 		self.cash = _account("Report Cash", "Asset", self.assets)
 		self.sales = make_account("Report Sales", root_type="Income")
@@ -27,14 +32,14 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 			_post(date, self.cash.name, debit, credit)
 		for ascending in (True, False):
 			rows = self._ledger(account=self.cash.name, ascending=ascending)
-			entries = [row for row in rows if row["type"] == "entry"]
-			self.assertEqual(rows[0], _row("opening", 0, 0, 100))
+			entries = [row for row in rows if row.get("type") == "entry"]
+			self.assertEqual(rows[0], _row("opening", "Opening", 0, 0, 100))
 			self.assertEqual(
 				sorted((row["date"].isoformat(), row["balance"]) for row in entries),
 				[("2045-01-05", Decimal(150)), ("2045-01-20", Decimal(130))],
 			)
 			self.assertEqual(entries[0]["date"].isoformat(), "2045-01-05" if ascending else "2045-01-20")
-			self.assertEqual(rows[-2:], [{"type": "blank"}, _row("closing", 50, 20, 130)])
+			self.assertEqual(rows[-2:], [{}, _row("closing", "Closing", 50, 20, 130)])
 
 	def test_general_ledger_groups_include_accounts_with_only_an_opening(self):
 		voucher = unique_name("JV")
@@ -42,14 +47,15 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		_post("2044-12-31", self.sales.name, 0, 100, voucher)
 		_post("2045-01-01", self.cash.name, 20, 0, voucher)
 
-		rows = self._ledger(referenceName=voucher, groupBy="account", ascending=True)
+		rows = self._ledger(reference_name=voucher, group_by="account", ascending=True)
 
-		totals = [row["balance"] for row in rows if row["type"] == "total"]
+		totals = [row["balance"] for row in rows if row.get("type") == "total"]
 		self.assertEqual(totals, [Decimal(120), Decimal(-100)])
 		self.assertEqual(
-			[row["account"] for row in rows if row["type"] == "opening"], [self.cash.name, self.sales.name]
+			[row["account"] for row in rows if row.get("type") == "opening"],
+			[f"Opening: {self.cash.name}", f"Opening: {self.sales.name}"],
 		)
-		self.assertEqual(rows[-1], _row("closing", 20, 0, 20))
+		self.assertEqual(rows[-1], _row("closing", "Closing", 20, 0, 20))
 
 	def test_trial_balance_splits_opening_and_closing_balances(self):
 		for date, debit, credit in (
@@ -60,25 +66,25 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		):
 			_post(date, self.cash.name, debit, credit)
 
-		sections = self.queries.call("getTrialBalance", ["2045-01-01", "2045-02-01"])["sections"]
+		rows = _rows_by_account(_run("Books Trial Balance", from_date="2045-01-01", to_date="2045-01-31"))
 
-		rows = _rows_by_account(sections)
-		expected = [Decimal(value) for value in (80, 0, 50, 30, 100, 0)]
-		self.assertEqual(rows[self.cash.name]["values"], expected)
-		self.assertEqual(rows[self.assets.name]["values"], expected)
-		self.assertEqual((rows[self.assets.name]["level"], rows[self.cash.name]["level"]), (0, 1))
+		expected = _decimals(80, 0, 50, 30, 100, 0)
+		self.assertEqual(_values(rows[self.cash.name], TRIAL_BALANCE_KEYS), expected)
+		self.assertEqual(_values(rows[self.assets.name], TRIAL_BALANCE_KEYS), expected)
+		self.assertEqual((rows[self.assets.name]["indent"], rows[self.cash.name]["indent"]), (0, 1))
 
 	def test_profit_and_loss_shows_each_period_and_the_profit(self):
 		_post("2045-02-01", self.sales.name, 0, 100)
 		_post("2045-03-01", self.rent.name, 30, 0)
 		_post("2046-02-01", self.sales.name, 0, 200)
 
-		report = self.queries.call("getProfitAndLoss", [_periods("2045-01-01", "2046-01-01", "2047-01-01")])
+		rows = _run("Books Profit and Loss", **YEARS_2045_AND_2046)
 
-		rows = _rows_by_account(report["sections"])
-		self.assertEqual(rows[self.sales.name]["values"], [Decimal(100), Decimal(200)])
-		self.assertEqual(rows[self.rent.name]["values"], [Decimal(30), Decimal(0)])
-		self.assertEqual(report["profit"], [Decimal(70), Decimal(200)])
+		accounts = _rows_by_account(rows)
+		self.assertEqual(_values(accounts[self.sales.name], PERIOD_KEYS), _decimals(200, 100))
+		self.assertEqual(_values(accounts[self.rent.name], PERIOD_KEYS), _decimals(0, 30))
+		self.assertEqual(_values(rows[-1], PERIOD_KEYS), _decimals(200, 70))
+		self.assertEqual(rows[-1]["account"], "Total Profit")
 
 	def test_balance_sheet_accumulates_from_the_first_entry(self):
 		for date, debit, credit in (
@@ -89,20 +95,17 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		):
 			_post(date, self.cash.name, debit, credit)
 
-		report = self.queries.call("getBalanceSheet", [_periods("2045-01-01", "2046-01-01", "2047-01-01")])
+		rows = _rows_by_account(_run("Books Balance Sheet", **YEARS_2045_AND_2046))
 
-		rows = _rows_by_account(report["sections"])
-		self.assertEqual(rows[self.cash.name]["values"], [Decimal(150), Decimal(130)])
-		self.assertEqual(rows[self.assets.name]["values"], [Decimal(150), Decimal(130)])
+		self.assertEqual(_values(rows[self.cash.name], PERIOD_KEYS), _decimals(130, 150))
+		self.assertEqual(_values(rows[self.assets.name], PERIOD_KEYS), _decimals(130, 150))
 
 	def test_ledger_reports_need_ledger_read_permission(self):
 		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
 			self._ledger()
 
 	def _ledger(self, **filters):
-		return self.queries.call(
-			"getGeneralLedger", [{"fromDate": "2045-01-01", "toDate": "2045-01-31", **filters}]
-		)
+		return _run("Books General Ledger", from_date="2045-01-01", to_date="2045-01-31", **filters)
 
 
 def _group_account(label, root_type):
@@ -135,39 +138,61 @@ def _post(date, account, debit, credit, voucher=None):
 	).insert(ignore_links=True)
 
 
-def _row(row_type, debit, credit, balance):
-	return {"type": row_type, "debit": Decimal(debit), "credit": Decimal(credit), "balance": Decimal(balance)}
+def _row(row_type, account, debit, credit, balance):
+	return {
+		"type": row_type,
+		"account": account,
+		"debit": Decimal(debit),
+		"credit": Decimal(credit),
+		"balance": Decimal(balance),
+	}
 
 
-def _periods(*dates):
-	return [{"fromDate": start, "toDate": end} for start, end in pairwise(dates)]
+def _run(report_name, **filters):
+	return run(report_name, filters)["result"]
 
 
-def _rows_by_account(sections):
-	return {row["name"]: row for section in sections for row in section["accounts"]}
+def _rows_by_account(rows):
+	return {row["account"]: row for row in rows if row}
+
+
+def _values(row, keys):
+	return tuple(row[key] for key in keys)
+
+
+class IntegrationTestReportDefaults(IntegrationTestCase):
+	def test_ledgers_open_on_the_year_up_to_today(self):
+		today = getdate()
+		for report in ("Books General Ledger", "Books Stock Ledger", "Books Stock Balance"):
+			self.assertEqual(
+				get_default_filters(report), {"from_date": add_years(today, -1), "to_date": today}
+			)
+
+	def test_default_filters_need_report_access(self):
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			get_default_filters("Books General Ledger")
 
 
 class IntegrationTestStockReports(IntegrationTestCase):
 	def setUp(self):
-		self.queries = BooksBespokeQueries()
-		income = make_account("Stock Report Income", root_type="Income")
-		received = make_account("Stock Report Received", root_type="Liability")
-		self.item = make_item(income.name, received.name, track_item=1).name
+		self.income = make_account("Stock Report Income", root_type="Income")
+		self.received = make_account("Stock Report Received", root_type="Liability")
+		self.item = self._item()
 		now = now_datetime()
 		move(self.item, "MaterialReceipt", 4, 10, add_to_date(now, days=-3))
 		move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, days=-2))
 		move(self.item, "MaterialIssue", 5, 99, now)
 
 	def test_stock_ledger_reads_the_stored_fifo_balances(self):
-		rows = self.queries.call("getStockLedger", [{"item": self.item, "ascending": True}])
+		rows = _run("Books Stock Ledger", item=self.item, ascending=True)
 
 		columns = (
 			"quantity",
-			"balanceQuantity",
-			"valueChange",
-			"balanceValue",
-			"incomingRate",
-			"valuationRate",
+			"balance_quantity",
+			"value_change",
+			"balance_value",
+			"incoming_rate",
+			"valuation_rate",
 		)
 		self.assertEqual(
 			[tuple(row[column] for column in columns) for row in rows],
@@ -179,24 +204,50 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		)
 
 	def test_stock_ledger_dates_are_iso_datetimes(self):
-		rows = self.queries.call("getStockLedger", [{"item": self.item}])
+		rows = _run("Books Stock Ledger", item=self.item)
 
 		for row in rows:
 			self.assertRegex(row["date"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[+-]\d{2}:\d{2}$")
 
+	def test_stock_ledger_groups_rows_and_numbers_them_in_order(self):
+		other = self._item()
+		for item, day in ((self.item, 1), (other, 2), (self.item, 3)):
+			move(item, "MaterialReceipt", 1, 10, f"2061-01-0{day} 10:00:00")
+
+		rows = _run(
+			"Books Stock Ledger",
+			from_date="2061-01-01",
+			to_date="2061-01-03",
+			group_by="item",
+			ascending=True,
+		)
+
+		self.assertEqual(
+			[(row.get("index"), row.get("item")) for row in rows],
+			[(1, self.item), (2, self.item), (None, None), (3, other)],
+		)
+
 	def test_stock_balance_splits_opening_and_period_movement(self):
 		today = nowdate()
-		rows = self.queries.call("getStockBalance", [{"item": self.item, "fromDate": today, "toDate": today}])
+		rows = _run("Books Stock Balance", item=self.item, from_date=today, to_date=today)
 
 		self.assertEqual(len(rows), 1)
-		columns = ("openingQuantity", "openingValue", "outgoingQuantity", "outgoingValue", "balanceValue")
+		columns = (
+			"opening_quantity",
+			"opening_value",
+			"outgoing_quantity",
+			"outgoing_value",
+			"balance_value",
+		)
 		self.assertEqual(tuple(rows[0][column] for column in columns), _decimals(6, 80, 5, 60, 20))
-		self.assertEqual((rows[0]["balanceQuantity"], rows[0]["valuationRate"]), _decimals(1, 20))
+		self.assertEqual((rows[0]["balance_quantity"], rows[0]["valuation_rate"]), _decimals(1, 20))
+
+	def _item(self):
+		return make_item(self.income.name, self.received.name, track_item=1).name
 
 
 class IntegrationTestGSTR(IntegrationTestCase):
 	def setUp(self):
-		self.queries = BooksBespokeQueries()
 		for account in ("CGST", "SGST", "IGST"):
 			if not frappe.db.exists("Books Account", account):
 				frappe.get_doc(
@@ -216,25 +267,25 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		rows = self._rows(invoice)
 
 		self.assertEqual(
-			{(row["rate"], row["taxVal"], row["cgstAmt"], row["sgstAmt"]) for row in rows},
+			{(row["rate"], row["taxable_value"], row["cgst_amount"], row["sgst_amount"]) for row in rows},
 			{_decimals(18, 300, 27, 27), _decimals(5, 100, "2.5", "2.5")},
 		)
-		self.assertTrue(all(row["invAmt"] == Decimal(459) for row in rows))
+		self.assertTrue(all(row["invoice_value"] == Decimal(459) for row in rows))
 
-	def test_invoice_dates_are_iso_dates(self):
+	def test_invoice_dates_are_dates(self):
 		invoice = self._invoice((_tax(("IGST", 18)), 100, 1))
 
 		(row,) = self._rows(invoice)
 
-		self.assertEqual(row["invDate"], nowdate())
+		self.assertEqual(row["invoice_date"], getdate())
 
 	def test_igst_rows_are_interstate(self):
 		invoice = self._invoice((_tax(("IGST", 18)), 100, 1))
 
 		(row,) = self._rows(invoice)
 
-		self.assertEqual((row["rate"], row["igstAmt"], row["inState"]), (*_decimals(18, 18), False))
-		self.assertNotIn("cgstAmt", row)
+		self.assertEqual((row["rate"], row["igst_amount"], row["in_state"]), (*_decimals(18, 18), False))
+		self.assertNotIn("cgst_amount", row)
 
 	def test_invoices_and_parties_are_read_in_batches(self):
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))
@@ -246,18 +297,76 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			rows = [*self._rows(first), *self._rows(second)]
 
 		self.assertEqual(
-			[(row["invNo"], row["partyName"], row["taxVal"]) for row in rows],
+			[(row["invoice_no"], row["party"], row["taxable_value"]) for row in rows],
 			[(first.name, first.party, Decimal(100)), (second.name, second.party, Decimal(200))],
 		)
 
-	def _invoice(self, *rows):
+	def test_json_takes_the_place_of_supply_and_amounts_from_the_rows(self):
+		self.party = self._party("Karnataka", gstin="27AAAAA0000A1Z5")
+		self._invoice((_tax(("IGST", 18)), 100, 1), (_tax(("IGST", 5)), 50, 1), date=GSTR_DATE)
+
+		(customer,) = self._json("B2B")["b2b"]
+
+		(invoice,) = customer["inv"]
+		self.assertEqual(
+			(customer["ctin"], invoice["pos"], invoice["idt"]), ("27AAAAA0000A1Z5", "29", "15-01-2063")
+		)
+		self.assertEqual(
+			[(item["num"], item["itm_det"]["txval"], item["itm_det"]["iamt"]) for item in invoice["itms"]],
+			[(1, *_decimals(100, 18)), (2, *_decimals(50, "2.5"))],
+		)
+
+	def test_json_sums_small_consumer_supplies_by_state_and_rate(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+		gst_18 = _tax(("CGST", 9), ("SGST", 9))
+		self.party = self._party("Karnataka")
+		self._invoice((gst_18, 100, 1), date=GSTR_DATE)
+		self._invoice((gst_18, 200, 1), date=GSTR_DATE)
+
+		(summary,) = self._json("B2CS")["b2cs"]
+
+		self.assertEqual((summary["sply_ty"], summary["pos"], summary["typ"]), ("INTRA", "29", "OE"))
+		self.assertEqual(
+			(summary["rt"], summary["txval"], summary["camt"], summary["samt"], summary["iamt"]),
+			_decimals(18, 300, 27, 27, 0),
+		)
+
+	def test_json_export_needs_the_company_gstin(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", None)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "GSTIN"):
+			self._json("B2B")
+
+	def test_json_export_needs_export_permission(self):
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			self._json("B2B")
+
+	def _json(self, transfer_type):
+		filters = {"from_date": GSTR_DATE, "to_date": GSTR_DATE, "transfer_type": transfer_type}
+		return get_gstr_json("Books GSTR-1", filters)
+
+	def _party(self, state, **values):
+		address = frappe.get_doc(
+			{
+				"doctype": "Books Address",
+				"name": unique_name("Address"),
+				"address_line1": "1 Road",
+				"city": "City",
+				"state": state,
+				"country": "India",
+			}
+		).insert()
+		gst_type = "Registered Regular" if values.get("gstin") else "Unregistered"
+		return make_party(self.receivable.name, address=address.name, gst_type=gst_type, **values)
+
+	def _invoice(self, *rows, date=None):
 		return (
 			frappe.get_doc(
 				{
 					"doctype": "Books Sales Invoice",
 					"party": self.party.name,
 					"account": self.receivable.name,
-					"date": now_datetime(),
+					"date": date or now_datetime(),
 					"items": [
 						{
 							"item": self.item,
@@ -276,8 +385,8 @@ class IntegrationTestGSTR(IntegrationTestCase):
 
 	def _rows(self, invoice):
 		today = nowdate()
-		rows = self.queries.call("getGSTRRows", ["SalesInvoice", {"fromDate": today, "toDate": today}])
-		return [row for row in rows if row["invNo"] == invoice.name]
+		rows = _run("Books GSTR-1", from_date=today, to_date=today)
+		return [row for row in rows if row["invoice_no"] == invoice.name]
 
 
 def _tax(*details):
@@ -296,3 +405,84 @@ def _tax(*details):
 
 def _decimals(*values):
 	return tuple(Decimal(str(value)) for value in values)
+
+
+class IntegrationTestReportPeriods(IntegrationTestCase):
+	def setUp(self):
+		_set_fiscal_year("2026-04-01", "2027-03-31")
+
+	def test_trial_balance_opens_on_the_whole_fiscal_year(self):
+		account = make_account("Period Cash")
+		_post("2027-03-31", account.name, 10, 0)
+
+		with self.freeze_time("2026-09-28"):
+			defaults = get_default_filters("Books Trial Balance")
+			rows = _rows_by_account(_run("Books Trial Balance"))
+
+		self.assertEqual(defaults, {"from_date": getdate("2026-04-01"), "to_date": getdate("2027-03-31")})
+		self.assertEqual(rows[account.name]["closing_debit"], Decimal(10))
+
+	def test_defaults_before_the_fiscal_year_ends_open_the_current_one(self):
+		with self.freeze_time("2027-02-15"):
+			statement = get_default_filters("Books Profit and Loss")
+			trial_balance = get_default_filters("Books Trial Balance")
+
+		self.assertEqual((statement["from_year"], statement["to_year"]), (2026, 2027))
+		self.assertEqual(trial_balance["from_date"], getdate("2026-04-01"))
+
+	def test_a_calendar_fiscal_year_is_one_year_of_twelve_months(self):
+		_set_fiscal_year("2026-01-01", "2026-12-31")
+		with self.freeze_time("2026-09-28"):
+			defaults = get_default_filters("Books Balance Sheet")
+		fiscal_year = frappe._dict(
+			based_on="Fiscal Year", periodicity="Monthly", from_year=2026, to_year=2026
+		)
+
+		periods = get_periods(fiscal_year)
+
+		self.assertEqual((defaults["from_year"], defaults["to_year"]), (2026, 2026))
+		self.assertEqual(len(periods), 12)
+		self.assertEqual((periods[-1].from_date, periods[0].to_date), _dates("2026-01-01", "2026-12-31"))
+
+	def test_until_date_defaults_to_today(self):
+		with self.freeze_time("2026-09-28"):
+			defaults = get_default_filters("Books Balance Sheet")
+
+		self.assertEqual((defaults["based_on"], defaults["to_date"]), ("Until Date", getdate("2026-09-28")))
+
+	def test_periods_count_back_from_the_until_date_and_keep_month_ends(self):
+		frappe.db.set_single_value("Books System Settings", "date_format", "dd/MM/yyyy")
+		until = frappe._dict(based_on="Until Date", periodicity="Monthly", count=3, to_date="2026-09-30")
+
+		periods = get_periods(until)
+
+		self.assertEqual(
+			[(period.from_date, period.to_date) for period in periods],
+			[
+				_dates("2026-09-01", "2026-09-30"),
+				_dates("2026-08-01", "2026-08-31"),
+				_dates("2026-07-01", "2026-07-31"),
+			],
+		)
+		self.assertEqual([period.label for period in periods], ["30/09/2026", "31/08/2026", "31/07/2026"])
+		(consolidated,) = get_periods(frappe._dict(until, consolidate_columns=1))
+		self.assertEqual((consolidated.from_date, consolidated.to_date), _dates("2026-07-01", "2026-09-30"))
+
+	def test_expense_only_profit_and_loss_has_no_profit_row(self):
+		rent = make_account("Period Rent", root_type="Expense")
+		_post("2062-06-01", rent.name, 30, 0)
+
+		rows = _run("Books Profit and Loss", periodicity="Yearly", count=1, to_date="2062-12-31")
+
+		self.assertEqual(rows[-1]["account"], "Total Expense (Debit)")
+		self.assertNotIn("Total Profit", [row.get("account") for row in rows])
+
+
+def _set_fiscal_year(start, end):
+	frappe.db.set_single_value(
+		"Books Accounting Settings", {"fiscal_year_start": start, "fiscal_year_end": end}
+	)
+
+
+def _dates(*dates):
+	return tuple(getdate(date) for date in dates)

@@ -7,18 +7,3 @@ export enum TransferTypeEnum {
 
 export type TransferType = keyof typeof TransferTypeEnum;
 export type GSTRType = 'GSTR-1' | 'GSTR-2';
-export interface GSTRRow {
-  gstin: string;
-  partyName: string;
-  invNo: string;
-  invDate: string;
-  rate: number;
-  reverseCharge: 'Y' | 'N';
-  inState: boolean;
-  place: string;
-  invAmt: number;
-  taxVal: number;
-  igstAmt?: number;
-  cgstAmt?: number;
-  sgstAmt?: number;
-}

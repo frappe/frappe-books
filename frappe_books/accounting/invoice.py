@@ -66,6 +66,15 @@ class PostingInvoiceController(InvoiceController):
 		super().calculate()
 		self.set_follow_up_defaults()
 
+	def fill_mapped_values(self):
+		"""Fill a mapped invoice as a save would, letting it choose its own follow-ups.
+
+		frappe.new_doc sets every check box to 0, so the follow-up checks are cleared first.
+		"""
+		for fieldname in FOLLOW_UP_FIELDS:
+			self.set(fieldname, None)
+		self.calculate()
+
 	def set_follow_up_defaults(self):
 		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
 		if self.get("make_auto_payment") is None:
@@ -137,16 +146,6 @@ class PostingInvoiceController(InvoiceController):
 		for doctype, names in ((transfer_doctype, transfers), ("Books Payment", set(payments))):
 			for name in names:
 				frappe.delete_doc(doctype, name)
-
-
-def fill_mapped_invoice(invoice):
-	"""Fill a mapped invoice as a save would, letting it choose its own follow-ups.
-
-	frappe.new_doc sets every check box to 0, so the follow-up checks are cleared first.
-	"""
-	for fieldname in FOLLOW_UP_FIELDS:
-		invoice.set(fieldname, None)
-	invoice.calculate()
 
 
 def calculate_invoice(invoice):

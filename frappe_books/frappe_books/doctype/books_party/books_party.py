@@ -7,7 +7,6 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_party_account
-from frappe_books.accounting.invoice import fill_mapped_invoice
 from frappe_books.accounting.money import company_currency
 from frappe_books.regional import validate_gstin
 from frappe_books.settings import require_features
@@ -99,5 +98,5 @@ def _map_invoice(party, invoice_doctype):
 				"field_no_map": ["loyalty_points"],
 			}
 		},
-		postprocess=lambda _party, invoice: fill_mapped_invoice(invoice),
+		postprocess=lambda _party, invoice: invoice.fill_mapped_values(),
 	)

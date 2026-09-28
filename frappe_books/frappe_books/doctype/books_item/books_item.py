@@ -10,7 +10,6 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
-from frappe_books.accounting.invoice import fill_mapped_invoice
 from frappe_books.series import ITEM_SERIES
 from frappe_books.settings import require_features
 
@@ -144,4 +143,4 @@ def _map_invoice(item, invoice_doctype):
 
 def _bill_item(item, invoice):
 	invoice.append("items", {"item": item.name, "quantity": 1})
-	fill_mapped_invoice(invoice)
+	invoice.fill_mapped_values()

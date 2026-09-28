@@ -24,6 +24,10 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 		child = make_account("Recovered Bank", parent_books_account=root.name)
 		self.assertEqual(child.root_type, root.root_type)
 
+	def test_root_accounts_must_be_groups(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "Only group accounts can be root accounts"):
+			make_account("Root Ledger", parent_books_account=None)
+
 	def test_child_inherits_root_type_from_group(self):
 		parent = make_account("Test Assets", is_group=1)
 		child = make_account(

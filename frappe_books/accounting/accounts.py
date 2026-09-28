@@ -41,6 +41,13 @@ def validate_changed_accounts(doc, rules):
 			validate_account(doc, fieldname, **types)
 
 
+def latest_ledger_account(account_type):
+	"""Return the newest ledger account of the type, the one the Books app offers first."""
+	return frappe.db.get_value(
+		"Books Account", {"account_type": account_type, "is_group": 0}, "name", order_by="creation desc"
+	)
+
+
 def validate_party_role(doc, is_purchase):
 	"""Sales go to customers and purchases come from suppliers; a party with both roles does either."""
 	role = doc.party and frappe.db.get_value("Books Party", doc.party, "role")

@@ -10,6 +10,7 @@ from frappe.utils import now_datetime
 
 from frappe_books.accounting.accounts import (
 	PAYMENT_ACCOUNT_TYPES,
+	latest_ledger_account,
 	validate_account,
 	validate_party_account,
 )
@@ -31,6 +32,27 @@ class PaymentController(SeriesNamingMixin, Document):
 		self.amount_paid = rounded(as_decimal(self.amount) - as_decimal(self.writeoff))
 		for row in self.payment_references:
 			row.reference_type = REFERENCE_DOCTYPES.get(row.reference_type, row.reference_type)
+		self.set_missing_values()
+
+	def set_missing_values(self):
+		"""Fill the payment type and accounts the way the Books app does while editing."""
+		fields = ["role", "default_account"]
+		party = self.party and frappe.db.get_value("Books Party", self.party, fields, as_dict=True)
+		invoice = self.get_first_invoice()
+		self.payment_type = self.payment_type or _default_payment_type(party, invoice)
+		self.account = self.account or _default_party_account(party, invoice, self.payment_type)
+		self.payment_account = self.payment_account or _default_payment_account(
+			self.payment_method, self.payment_type
+		)
+
+	def get_first_invoice(self):
+		"""Return the doctype, return link and account of the first referenced invoice."""
+		row = self.payment_references[0] if self.payment_references else None
+		if not row or row.reference_type not in REFERENCE_DOCTYPES.values():
+			return None
+		fields = ["return_against", "account"]
+		invoice = frappe.db.get_value(row.reference_type, row.reference_name, fields, as_dict=True)
+		return invoice and frappe._dict(invoice, doctype=row.reference_type)
 
 	def validate(self):
 		if as_decimal(self.amount) <= 0:
@@ -80,6 +102,36 @@ class PaymentController(SeriesNamingMixin, Document):
 
 	def on_trash(self):
 		delete_entries(self)
+
+
+def _default_payment_type(party, invoice):
+	if invoice:
+		return payment_type_for(invoice.doctype, bool(invoice.return_against))
+	if party:
+		return "Pay" if party.role == "Supplier" else "Receive"
+	return None
+
+
+def _default_party_account(party, invoice, payment_type):
+	"""The party's ledger, else the invoice's, else the newest payable or receivable ledger."""
+	if party and party.role != "Both" and party.default_account:
+		return party.default_account
+	if invoice:
+		return invoice.account
+	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
+
+
+def _default_payment_account(payment_method, payment_type):
+	"""Receipts go to the method's account, else to the newest ledger of the method's kind."""
+	fields = ["type", "account"]
+	method = payment_method and frappe.db.get_value(
+		"Books Payment Method", payment_method, fields, as_dict=True
+	)
+	if not method:
+		return None
+	if method.account and payment_type != "Pay":
+		return method.account
+	return latest_ledger_account("Cash" if method.type == "Cash" else "Bank")
 
 
 def _validate_allocations(payment):

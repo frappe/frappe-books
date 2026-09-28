@@ -16,6 +16,8 @@ def enable_features():
 
 
 def make_account(label, root_type="Asset", **values):
+	if not values.get("is_group"):
+		values.setdefault("parent_books_account", root_group(root_type))
 	return frappe.get_doc(
 		{
 			"doctype": "Books Account",
@@ -24,6 +26,15 @@ def make_account(label, root_type="Asset", **values):
 			**values,
 		}
 	).insert()
+
+
+def root_group(root_type):
+	"""Return the test root group of a root type, as ledger accounts need a parent group."""
+	name = f"Test {root_type}"
+	if not frappe.db.exists("Books Account", name):
+		values = {"account_name": name, "root_type": root_type, "is_group": 1}
+		frappe.get_doc({"doctype": "Books Account", **values}).insert()
+	return name
 
 
 def make_party(default_account, role="Customer", **values):

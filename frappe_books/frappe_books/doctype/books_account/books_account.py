@@ -68,6 +68,8 @@ class BooksAccount(NestedSet):
 		self.account_type = self.account_type or parent.account_type
 
 	def validate(self):
+		if not self.is_group and not self.parent_books_account:
+			frappe.throw(_("Only group accounts can be root accounts. Select a parent group."))
 		self.validate_account_type_change()
 
 	def validate_account_type_change(self):

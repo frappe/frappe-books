@@ -7,7 +7,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime, nowdate
 
 from frappe_books.reports import gst
-from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
+from frappe_books.tests.accounting import make_account, make_item, make_party, root_group, unique_name
 from frappe_books.tests.test_valuation import move
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
@@ -200,7 +200,11 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		for account in ("CGST", "SGST", "IGST"):
 			if not frappe.db.exists("Books Account", account):
 				frappe.get_doc(
-					{"doctype": "Books Account", "account_name": account, "root_type": "Liability"}
+					{
+						"doctype": "Books Account",
+						"account_name": account,
+						"parent_books_account": root_group("Liability"),
+					}
 				).insert()
 		self.receivable = make_account("GSTR Receivable", account_type="Receivable")
 		self.income = make_account("GSTR Income", root_type="Income", account_type="Income Account")

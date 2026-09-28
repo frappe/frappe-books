@@ -27,13 +27,14 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 
 	def test_account_tree_fields_cannot_change_after_insert(self):
 		group = make_account("Set Once Group", is_group=1)
-		for fieldname, value in (
-			("root_type", "Expense"),
-			("parent_books_account", group.name),
-			("is_group", 1),
+		for fieldname, value, is_group in (
+			# a ledger takes its parent's root type, so only a root group keeps its own
+			("root_type", "Expense", 1),
+			("parent_books_account", group.name, 0),
+			("is_group", 1, 0),
 		):
 			with self.subTest(fieldname=fieldname):
-				account = make_account("Set Once Account")
+				account = make_account("Set Once Account", is_group=is_group)
 				account.set(fieldname, value)
 				self.assertRaises(frappe.CannotChangeConstantError, account.save)
 

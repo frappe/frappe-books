@@ -26,6 +26,14 @@ def open_shift_name():
 	return names[0] if names else None
 
 
+def counter_cash_account():
+	"""Return the account that POS cash goes through until the shift closes."""
+	account = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+	if not account:
+		frappe.throw(_("Set a cash account in POS Settings."))
+	return account
+
+
 def lock_pos_settings():
 	"""Lock POS Settings so shift state changes run one at a time."""
 	settings = frappe.get_doc("Books Pos Settings", for_update=True)

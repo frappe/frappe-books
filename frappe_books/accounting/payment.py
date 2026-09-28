@@ -16,6 +16,7 @@ from frappe_books.accounting.accounts import (
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
+from frappe_books.commerce.pos import counter_cash_account
 from frappe_books.series import SeriesNamingMixin
 
 REFERENCE_DOCTYPES = {
@@ -41,7 +42,9 @@ class PaymentController(SeriesNamingMixin, Document):
 			frappe.throw(_("The From and To accounts cannot be the same."))
 		self.validate_accounts()
 		self.validate_payment_method()
-		self.set("taxes", _realised_taxes(_validate_allocations(self)))
+		allocations = _validate_allocations(self)
+		self.validate_counter_account([invoice for invoice, _amount in allocations])
+		self.set("taxes", _realised_taxes(allocations))
 
 	def validate_accounts(self):
 		"""The account is the party's ledger, the payment account its cash or bank."""
@@ -58,6 +61,18 @@ class PaymentController(SeriesNamingMixin, Document):
 			frappe.throw(_("Set a reference ID for {0} payments.").format(self.payment_method))
 		if method.requires_clearance_date and not self.clearance_date:
 			frappe.throw(_("Set a clearance date for {0} payments.").format(self.payment_method))
+
+	def validate_counter_account(self, invoices):
+		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""
+		if not any(invoice.get("is_pos") for invoice in invoices):
+			return
+		if frappe.get_cached_value("Books Payment Method", self.payment_method, "type") != "Cash":
+			return
+		counter = counter_cash_account()
+		if self.payment_account != counter:
+			frappe.throw(
+				_("Cash payments for POS invoices must use the counter cash account {0}.").format(counter)
+			)
 
 	def on_submit(self):
 		posting = LedgerPosting(self)
@@ -236,7 +251,7 @@ def _settle_invoice(invoice, payment):
 			"date": now_datetime(),
 			"payment_type": payment_type_for(invoice.doctype, bool(invoice.return_against)),
 			"payment_method": "Cash",
-			"payment_account": _settling_account(invoice.doctype),
+			"payment_account": _settling_account(invoice),
 			"amount": outstanding,
 		}
 	)
@@ -254,8 +269,10 @@ def default_payment_account(invoice_doctype) -> str | None:
 	return frappe.db.get_single_value("Books Defaults", fieldname)
 
 
-def _settling_account(invoice_doctype):
-	account = default_payment_account(invoice_doctype) or frappe.db.get_value(
+def _settling_account(invoice):
+	if invoice.get("is_pos"):
+		return counter_cash_account()
+	account = default_payment_account(invoice.doctype) or frappe.db.get_value(
 		"Books Payment Method", "Cash", "account"
 	)
 	if not account:

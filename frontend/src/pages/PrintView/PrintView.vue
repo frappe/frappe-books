@@ -16,12 +16,14 @@
         @change="onTemplateNameChange"
       />
       <DropdownWithActions :actions="actions" :label="t`More`" />
-      <FrappeButton variant="solid" @click="savePDF()">
-        {{ t`Save as PDF` }}
-      </FrappeButton>
-      <FrappeButton variant="solid" @click="savePDF(true)">
-        {{ t`Print` }}
-      </FrappeButton>
+      <template v-if="doc?.can('print')">
+        <FrappeButton variant="solid" @click="savePDF()">
+          {{ t`Save as PDF` }}
+        </FrappeButton>
+        <FrappeButton variant="solid" @click="savePDF(true)">
+          {{ t`Print` }}
+        </FrappeButton>
+      </template>
     </PageHeader>
 
     <!-- Template Display Area -->

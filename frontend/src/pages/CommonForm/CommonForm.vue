@@ -264,7 +264,12 @@ export default defineComponent({
         return false;
       }
 
-      return !this.doc.isCancelled && !this.doc.dirty && this.isPrintable;
+      return (
+        this.doc.can('print') &&
+        !this.doc.isCancelled &&
+        !this.doc.dirty &&
+        this.isPrintable
+      );
     },
     canShowLinks(): boolean {
       if (!this.hasDoc) {

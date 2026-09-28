@@ -203,12 +203,13 @@ async function makeInvoice(respond) {
       return getSchemas('-', []);
     }
 
+    async runDocMethod(method, schemaName, values, name) {
+      assert.deepEqual([method, schemaName], ['preview', 'SalesInvoice']);
+      calls.push({ values, name });
+      return await respond(structuredClone(values));
+    }
+
     async call(method, ...args) {
-      if (method === 'preview') {
-        const [, values, name] = args;
-        calls.push({ values, name });
-        return await respond(structuredClone(values));
-      }
       if (method === 'getAll') {
         await lookups;
         return [];

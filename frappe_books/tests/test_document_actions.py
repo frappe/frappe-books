@@ -5,6 +5,7 @@ from decimal import Decimal
 import frappe
 from frappe.client import insert
 from frappe.tests import IntegrationTestCase
+from frappe.utils import set_request
 
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
@@ -23,7 +24,7 @@ from frappe_books.tests.accounting import (
 	make_number_series,
 	make_party,
 )
-from frappe_books.ui_api import get_duplicate, get_submitted_linked_docs, lifecycle_action
+from frappe_books.ui_api import get_duplicate, get_submitted_linked_docs, lifecycle_action, run_doc_method
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 MAPPERS = "frappe_books.frappe_books.doctype.{0}.{0}.{1}"
@@ -340,7 +341,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 	def test_preview_shows_the_follow_up_defaults(self):
 		values = {"party": self.party.name, "items": [{"item": self.item.name, "quantity": 1}]}
-		preview = BooksDatabaseBridge().preview("SalesInvoice", values)
+		set_request(method="POST", path="/api/method/frappe_books.ui_api.run_doc_method")
+		preview = run_doc_method("preview", "SalesInvoice", values)
 		self.assertTrue(preview["makeAutoPayment"])
 
 	def _paid_invoice(self, make_auto_payment=1):

@@ -54,12 +54,6 @@ export abstract class DatabaseBase {
   // Other
   abstract exists(schemaName: string, name?: string): Promise<boolean>;
 
-  abstract preview(
-    schemaName: string,
-    fieldValueMap: UnknownMap,
-    name?: string
-  ): Promise<UnknownMap>;
-
   abstract getMapped(
     schemaName: string,
     method: string,
@@ -101,6 +95,13 @@ export abstract class DatabaseDemuxBase {
   abstract callBespoke(method: string, ...args: unknown[]): Promise<unknown>;
 
   abstract getDuplicate(schemaName: string, name: string): Promise<unknown>;
+
+  abstract runDocMethod(
+    method: string,
+    schemaName: string,
+    values: unknown,
+    name?: string
+  ): Promise<unknown>;
 
   abstract runLifecycleAction(
     action: 'submit' | 'cancel',

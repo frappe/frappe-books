@@ -396,7 +396,8 @@ export abstract class Invoice extends Transactional {
     }
 
     const edits = this._edits;
-    const sent = this.getValidDict(true, true);
+    // A saved invoice sends its `modified`, which the server checks is current.
+    const sent = this.getValidDict(false, true);
     const previewed = await this.fyo.db.preview(
       this.schemaName,
       sent,

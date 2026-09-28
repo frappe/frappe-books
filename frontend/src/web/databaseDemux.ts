@@ -66,6 +66,20 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
     });
   }
 
+  override async runDocMethod(
+    method: string,
+    schemaName: string,
+    values: unknown,
+    name?: string
+  ): Promise<unknown> {
+    return call('frappe_books.ui_api.run_doc_method', {
+      method,
+      source_schema: schemaName,
+      values,
+      name,
+    });
+  }
+
   override async runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,

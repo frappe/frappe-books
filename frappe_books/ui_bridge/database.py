@@ -5,11 +5,11 @@ from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 import frappe
+import frappe.handler
 from frappe.model.docstatus import DocStatus
 from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
-from frappe_books.accounting.invoice import InvoiceController
 from frappe_books.inventory.stock import create_missing_batches
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
@@ -25,7 +25,7 @@ from frappe_books.ui_bridge.mapping import (
 	target_reference,
 )
 
-READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists", "preview", "getMapped"}
+READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists", "getMapped"}
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
@@ -193,18 +193,16 @@ class BooksDatabaseBridge:
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
 
-	def preview(self, source_schema: str, values: dict[str, Any], name: str | None = None) -> dict:
-		"""Return the values a save would calculate for a new or edited invoice, without saving."""
-		target = target_doctype(source_schema)
-		doc = frappe.get_doc({"doctype": target, **self._target_values(source_schema, values), "name": name})
-		if not isinstance(doc, InvoiceController):
-			frappe.throw(f"Books cannot preview {source_schema} documents")
-		if name:
-			frappe.get_doc(target, name).check_permission("write")
-		else:
-			doc.check_permission("create")
-		doc.calculate()
-		return self._to_readable_source(source_schema, doc)
+	def run_doc_method(
+		self, method: str, source_schema: str, values: dict[str, Any], name: str | None = None
+	) -> dict:
+		"""Run a whitelisted controller method on the values with Frappe's run_doc_method.
+
+		The values edit the saved document `name`, or make a new document without it.
+		"""
+		frappe.handler.run_doc_method(method, docs=self._target_document(source_schema, values, name))
+		# Frappe responds with the document the method ran on.
+		return self._to_readable_source(source_schema, frappe.response.docs.pop())
 
 	def get_mapped(self, method: str, source_name: str) -> dict:
 		"""Return the unsaved document a whitelisted mapper, like make_return, builds."""
@@ -390,6 +388,12 @@ class BooksDatabaseBridge:
 			return None
 		fields = [group_by] if isinstance(group_by, str) else group_by
 		return ", ".join(target_field(source_schema, field) for field in fields)
+
+	def _target_document(self, source_schema, values, name):
+		document = {"doctype": target_doctype(source_schema), **self._target_values(source_schema, values)}
+		if name:
+			return {**document, "name": name, "modified": values.get("modified")}
+		return {**document, "__islocal": 1}
 
 	def _update_single(self, source_schema, values):
 		doc = frappe.get_single(target_doctype(source_schema))

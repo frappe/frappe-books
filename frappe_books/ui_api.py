@@ -49,6 +49,14 @@ def get_submitted_linked_docs(source_schema: str, name: str) -> list[dict[str, A
 
 
 @frappe.whitelist(methods=["POST"])
+def run_doc_method(
+	method: str, source_schema: str, values: dict[str, Any], name: str | None = None
+) -> dict[str, Any]:
+	"""Run a whitelisted controller method, such as an invoice's preview, on unsaved values."""
+	return BooksDatabaseBridge().run_doc_method(method, source_schema, values, name)
+
+
+@frappe.whitelist(methods=["POST"])
 def lifecycle_action(
 	action: LifecycleAction,
 	source_schema: str,

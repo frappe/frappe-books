@@ -235,7 +235,7 @@ export class DatabaseHandler extends DatabaseBase {
     name?: string
   ): Promise<DocValueMap> {
     const rawValueMap = this.converter.toRawValueMap(schemaName, docValueMap);
-    const previewed = (await this.#demux.call(
+    const previewed = (await this.#demux.runDocMethod(
       'preview',
       schemaName,
       rawValueMap,

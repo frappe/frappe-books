@@ -43,6 +43,15 @@ class InvoiceController(SeriesNamingMixin, Document):
 		validate_invoice(self)
 		loyalty.validate_invoice_loyalty(self)
 
+	@frappe.whitelist()
+	def preview(self):
+		"""Calculate what a save would store, without saving, for a new document or an edited draft."""
+		if self.is_new():
+			self.check_permission("create")
+		else:
+			frappe.has_permission(self.doctype, "write", doc=self.name, throw=True)
+		self.calculate()
+
 
 FOLLOW_UP_FIELDS = ("make_auto_payment", "make_auto_stock_transfer")
 

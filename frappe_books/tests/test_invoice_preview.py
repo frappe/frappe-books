@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, now_datetime, nowdate
+from frappe.utils import add_days, now_datetime, nowdate, set_request
 
 from frappe_books.tests.accounting import (
 	ensure_user,
@@ -10,6 +10,7 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
+from frappe_books.ui_api import run_doc_method
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 COMPARED_FIELDS = ("netTotal", "grandTotal", "baseGrandTotal", "outstandingAmount", "discountAmount")
@@ -30,6 +31,7 @@ NO_ROLE_USER = "books-preview-no-role@example.com"
 
 class IntegrationTestInvoicePreview(IntegrationTestCase):
 	def setUp(self):
+		set_request(method="POST", path="/api/method/frappe_books.ui_api.run_doc_method")
 		self.bridge = BooksDatabaseBridge()
 		self.receivable = make_account("Preview Receivable", account_type="Receivable")
 		self.income = make_account("Preview Sales", root_type="Income", account_type="Income Account")
@@ -44,7 +46,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		self.values = self._invoice_values()
 
 	def test_preview_matches_the_saved_calculation(self):
-		preview = self.bridge.preview("SalesInvoice", self.values)
+		preview = _preview(self.values)
 		saved = self.bridge.insert("SalesInvoice", self.values)
 
 		for field in COMPARED_FIELDS:
@@ -60,7 +62,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		self.assertTrue(preview["items"][-1]["isFreeItem"])
 
 	def test_preview_keeps_client_row_names(self):
-		preview = self.bridge.preview("SalesInvoice", self.values)
+		preview = _preview(self.values)
 
 		self.assertEqual([row["name"] for row in preview["items"]][:2], ["client-row-1", "client-row-2"])
 		self.assertIsNone(preview["name"])
@@ -69,7 +71,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		writes = frappe.db.transaction_writes
 		invoices = frappe.db.count("Books Sales Invoice")
 
-		self.bridge.preview("SalesInvoice", self.values)
+		_preview(self.values)
 
 		self.assertEqual(frappe.db.transaction_writes, writes)
 		self.assertEqual(frappe.db.count("Books Sales Invoice"), invoices)
@@ -78,7 +80,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		saved = self.bridge.insert("SalesInvoice", self.values)
 		edited = {**saved, "items": [{**saved["items"][0], "quantity": 4}]}
 
-		preview = self.bridge.preview("SalesInvoice", edited, saved["name"])
+		preview = _preview(edited, saved["name"])
 
 		self.assertEqual(preview["netTotal"], 320)
 		self.assertEqual(
@@ -88,14 +90,12 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 	def test_preview_requires_create_or_write_permission(self):
 		saved = self.bridge.insert("SalesInvoice", self.values)
 		with self.set_user(ensure_user(NO_ROLE_USER)):
-			self.assertRaises(frappe.PermissionError, self.bridge.preview, "SalesInvoice", self.values)
-			self.assertRaises(
-				frappe.PermissionError, self.bridge.preview, "SalesInvoice", saved, saved["name"]
-			)
+			self.assertRaises(frappe.PermissionError, _preview, self.values)
+			self.assertRaises(frappe.PermissionError, _preview, saved, saved["name"])
 
-	def test_preview_is_only_for_invoices(self):
-		with self.assertRaisesRegex(frappe.ValidationError, "cannot preview"):
-			self.bridge.preview("Party", {"role": "Customer"})
+	def test_only_whitelisted_methods_run(self):
+		with self.assertRaisesRegex(frappe.PermissionError, "not whitelisted"):
+			run_doc_method("calculate", "SalesInvoice", self.values)
 
 	def _invoice_values(self):
 		free_item = make_item(self.income.name, self.expense.name)
@@ -151,6 +151,10 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 				**values,
 			}
 		).insert()
+
+
+def _preview(values, name=None):
+	return run_doc_method("preview", "SalesInvoice", values, name)
 
 
 def _rows(rows, fields):

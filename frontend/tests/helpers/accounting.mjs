@@ -33,7 +33,6 @@ await build({
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
       export {
-        getExchangeRate,
         getItemQtyMap,
         getMappedDoc,
         getStockTransferActions,
@@ -119,7 +118,6 @@ export const {
   defaultCondition,
   isCompleteFilter,
   mergeQueryFilters,
-  getExchangeRate,
   getItemQtyMap,
   getMappedDoc,
   getStockTransferActions,

@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
 from frappe.model.document import Document
 
 
@@ -30,3 +30,31 @@ class BooksGetStarted(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Get Started"
+
+	@property
+	def sales_item_created(self):
+		return has_record("Books Item", item_usage=["in", ["Sales", "Both"]])
+
+	@property
+	def purchase_item_created(self):
+		return has_record("Books Item", item_usage=["in", ["Purchases", "Both"]])
+
+	@property
+	def customer_created(self):
+		return has_record("Books Party", role=["in", ["Customer", "Both"]])
+
+	@property
+	def supplier_created(self):
+		return has_record("Books Party", role=["in", ["Supplier", "Both"]])
+
+	@property
+	def invoice_created(self):
+		return has_record("Books Sales Invoice")
+
+	@property
+	def bill_created(self):
+		return has_record("Books Purchase Invoice")
+
+
+def has_record(doctype, **filters):
+	return int(bool(frappe.db.exists(doctype, filters or {"name": ["is", "set"]})))

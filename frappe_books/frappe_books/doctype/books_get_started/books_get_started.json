@@ -46,40 +46,46 @@
    "label": "Print Setup"
   },
   {
-   "default": "0",
    "fieldname": "sales_item_created",
    "fieldtype": "Check",
-   "label": "Purchase Item Created"
+   "is_virtual": 1,
+   "label": "Sales Item Created",
+   "read_only": 1
   },
   {
-   "default": "0",
    "fieldname": "purchase_item_created",
    "fieldtype": "Check",
-   "label": "Sales Item Created"
+   "is_virtual": 1,
+   "label": "Purchase Item Created",
+   "read_only": 1
   },
   {
-   "default": "0",
    "fieldname": "customer_created",
    "fieldtype": "Check",
-   "label": "Customer Created"
+   "is_virtual": 1,
+   "label": "Customer Created",
+   "read_only": 1
   },
   {
-   "default": "0",
    "fieldname": "supplier_created",
    "fieldtype": "Check",
-   "label": "Supplier Created"
+   "is_virtual": 1,
+   "label": "Supplier Created",
+   "read_only": 1
   },
   {
-   "default": "0",
    "fieldname": "invoice_created",
    "fieldtype": "Check",
-   "label": "Invoice Created"
+   "is_virtual": 1,
+   "label": "Invoice Created",
+   "read_only": 1
   },
   {
-   "default": "0",
    "fieldname": "bill_created",
    "fieldtype": "Check",
-   "label": "Bill Created"
+   "is_virtual": 1,
+   "label": "Bill Created",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -104,7 +110,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.102886",
+ "modified": "2026-09-29 12:10:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Get Started",

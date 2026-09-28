@@ -14,7 +14,7 @@ export type DocPermissionMap = Partial<Record<DocPermission, number>>;
 
 /** The doctypes the user has each right on, as `frappe.boot.user` lists them. */
 export type BootUserPermissions = Partial<
-  Record<`can_${DocPermission}`, string[]>
+  Record<`can_${DocPermission}` | 'can_export_owner_only', string[]>
 > & { roles?: string[] };
 
 export type Permissions = {
@@ -43,4 +43,13 @@ export function hasPermission(
 
   const doctype = permissions.doctypes[schemaName];
   return !!doctype && !!permissions.user[`can_${permission}`]?.includes(doctype);
+}
+
+/** Frappe exports only the user's own documents when export is granted only to owners. */
+export function exportsOwnDocumentsOnly(
+  permissions: Permissions | null,
+  schemaName: string
+): boolean {
+  const doctype = permissions?.doctypes[schemaName];
+  return !!doctype && !!permissions?.user.can_export_owner_only?.includes(doctype);
 }

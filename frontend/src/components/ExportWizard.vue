@@ -115,6 +115,7 @@
 <script lang="ts">
 import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
 import { t } from 'fyo';
+import { exportsOwnDocumentsOnly } from 'fyo/utils/permissions';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { fyo } from 'src/initFyo';
 import { saveExportData } from 'reports/commonExporter';
@@ -250,6 +251,9 @@ export default defineComponent({
       const filters = JSON.parse(
         JSON.stringify(this.useListFilters ? this.listFilters : {})
       );
+      if (exportsOwnDocumentsOnly(fyo.store.permissions, this.schemaName)) {
+        filters.createdBy = fyo.user;
+      }
 
       let data: string;
       if (this.exportFormat === 'json') {

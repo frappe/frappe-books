@@ -197,11 +197,11 @@ export default defineComponent({
 
       return fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
     },
-    /** The row title and the schema's keyword fields, as stored columns. */
+    /** The row title and the schema's search fields, as stored columns. */
     searchFields(): string[] {
       const columns = getListColumns(this.schemaName, this.listConfig);
       const title = getMobileRowLayout(this.schemaName, columns).title.fieldname;
-      const keywords = fyo.schemaMap[this.schemaName]?.keywordFields ?? [];
+      const keywords = fyo.store.searchFields[this.schemaName] ?? [];
       const stored = fyo.db.fieldMap[this.schemaName] ?? {};
       return [...new Set(['name', title, ...keywords])].filter(
         (fieldname) => stored[fieldname] && !stored[fieldname].computed

@@ -232,6 +232,16 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 			("Pay", self.payable.name, cash.name),
 		)
 
+	def test_pos_cash_defaults_to_the_counter_account(self):
+		counter = make_account("Rules Counter", account_type="Cash")
+		frappe.db.set_single_value("Books Pos Settings", "cash_account", counter.name)
+		self.invoice.db_set("is_pos", 1)
+		payment = self._payment(self.invoice, payment_account=None)
+
+		payment.set_missing_values()
+
+		self.assertEqual(payment.payment_account, counter.name)
+
 	def test_payment_method_requirements(self):
 		method = frappe.get_doc(
 			{"doctype": "Books Payment Method", "name": unique_name("Cheque"), "type": "Bank"}

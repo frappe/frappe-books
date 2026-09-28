@@ -72,10 +72,8 @@ test('a tap on a chart shows the tapped month', async ({ page }) => {
 
 test('a section that fails to load can be retried', async ({ page }) => {
   let fail = true;
-  await page.route(/bespoke_call/, (route) =>
-    fail && route.request().postData()?.includes('getTopExpenses')
-      ? route.abort()
-      : route.continue()
+  await page.route(/reports\.dashboard\.get_top_expenses/, (route) =>
+    fail ? route.abort() : route.continue()
   );
   await page.reload();
   await expect(page.getByText('Failed to load')).toBeVisible();

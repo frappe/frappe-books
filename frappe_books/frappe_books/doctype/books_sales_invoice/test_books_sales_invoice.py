@@ -339,6 +339,22 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		invoice.insert()
 
+	def test_pos_invoice_defaults_to_the_pos_customer_and_account(self):
+		frappe.db.set_single_value(
+			"Books Pos Settings", {"pos_profile": None, "default_account": self.receivable.name}
+		)
+		frappe.db.set_single_value("Books Defaults", "pos_customer", self.party.name)
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Books Sales Invoice",
+				"date": frappe.utils.now_datetime(),
+				"is_pos": 1,
+				"items": [{"item": self.item.name, "quantity": 1, "rate": 100}],
+			}
+		).insert()
+
+		self.assertEqual((invoice.party, invoice.account), (self.party.name, self.receivable.name))
+
 	def test_invoice_bills_in_the_party_currency(self):
 		currency = foreign_currency()
 		party = make_party(self.receivable.name, currency=currency)

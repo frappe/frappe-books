@@ -24,7 +24,6 @@ type PrintTotals = {
     payment_method: string;
     outstanding_amount: number;
   }[];
-  taxes?: { account: string; amount: number }[];
 };
 const GET_PRINT_TOTALS = 'frappe_books.ui_api.get_print_totals';
 const printSettingsFields = [
@@ -103,12 +102,6 @@ async function getTotalValues(doc: Doc): Promise<PrintTemplateData> {
           amountPaid: formatAmount(fyo, payment.amount_paid),
           paymentMethod: payment.payment_method,
           outstandingAmount: formatAmount(fyo, payment.outstanding_amount),
-        }))
-      : undefined,
-    taxes: totals.taxes?.length
-      ? totals.taxes.map(({ account, amount }) => ({
-          account,
-          amount: formatAmount(fyo, amount),
         }))
       : undefined,
   };

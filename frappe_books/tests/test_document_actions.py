@@ -370,6 +370,39 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
 		self.assertTrue(payment.startswith(series), payment)
 
+	def test_automatic_payment_method_matches_the_account_and_refers_to_the_invoice(self):
+		payable = make_account("Auto Payable", root_type="Liability", account_type="Payable")
+		bank = make_account("Auto Bank", account_type="Bank")
+		frappe.db.set_single_value("Books Defaults", "purchase_payment_account", bank.name)
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		supplier = make_party(payable.name, role="Supplier")
+		cases = (
+			("Books Sales Invoice", self.party.name, self.receivable.name, self.income.name, "Cash"),
+			("Books Purchase Invoice", supplier.name, payable.name, self.expense.name, "Bank"),
+		)
+		for doctype, party, account, item_account, method in cases:
+			with self.subTest(doctype=doctype):
+				invoice = make_invoice(
+					doctype, party, account, self.item.name, item_account, make_auto_payment=1
+				).submit()
+
+				payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+				self.assertEqual(
+					frappe.db.get_value("Books Payment", payment, ["payment_method", "reference_id"]),
+					(method, invoice.name),
+				)
+
+	def test_mapped_payment_needs_a_method_of_the_account_type(self):
+		frappe.db.set_single_value(
+			"Books Defaults", "sales_payment_account", make_account("Mapped Bank", account_type="Bank").name
+		)
+		invoice = self._paid_invoice(make_auto_payment=0)
+		self.assertEqual(map_invoice_payment(invoice.doctype, invoice.name).payment_method, "Bank")
+
+		frappe.db.set_value("Books Payment Method", "Bank", "type", "Transfer")
+		with self.assertRaisesRegex(frappe.ValidationError, "Add a Bank payment method"):
+			map_invoice_payment(invoice.doctype, invoice.name)
+
 	def test_new_invoices_follow_up_as_the_defaults_allow(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_inventory", 1)
 		frappe.db.set_single_value("Books Defaults", "shipment_location", "Stores")

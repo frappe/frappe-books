@@ -11,6 +11,7 @@ from frappe_books.accounting.money import as_decimal, company_currency, rounded,
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import loyalty, pricing
+from frappe_books.commerce.pos import pos_customer
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
 from frappe_books.inventory.invoice_balance import (
 	store_pending_quantities,
@@ -327,6 +328,7 @@ def _post_direction(posting, account, amount, party=None, credit=False, reverse=
 
 
 def _populate_invoice_defaults(invoice):
+	_populate_pos_defaults(invoice)
 	_populate_party_defaults(invoice)
 	populate_units(invoice.get("items", []))
 	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
@@ -334,6 +336,15 @@ def _populate_invoice_defaults(invoice):
 	for row in invoice.get("items", []):
 		if row.item in items:
 			_populate_row(invoice, row, items[row.item], rates)
+
+
+def _populate_pos_defaults(invoice):
+	"""A POS sale bills the POS customer to the POS Settings account, unless told otherwise."""
+	if not invoice.get("is_pos"):
+		return
+	invoice.party = invoice.party or pos_customer()
+	pos_account = frappe.db.get_single_value("Books Pos Settings", "default_account")
+	invoice.account = invoice.get("account") or pos_account
 
 
 def _populate_party_defaults(invoice):

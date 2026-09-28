@@ -26,6 +26,13 @@ def open_shift_name():
 	return names[0] if names else None
 
 
+def pos_customer():
+	"""Return the customer of the POS profile in use, else the Books Defaults POS customer."""
+	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
+	customer = profile and frappe.db.get_value("Books Pos Profile", profile, "pos_customer")
+	return customer or frappe.db.get_single_value("Books Defaults", "pos_customer")
+
+
 def lock_pos_settings():
 	"""Lock POS Settings so shift state changes run one at a time."""
 	settings = frappe.get_doc("Books Pos Settings", for_update=True)

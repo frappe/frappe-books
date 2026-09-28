@@ -3,6 +3,7 @@ import { Converter } from 'fyo/core/converter';
 import { DocValue, DocValueMap, RawValueMap } from 'fyo/core/types';
 import { MandatoryError, NotFoundError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
+import type { DocPermission, DocPermissionMap } from 'fyo/utils/permissions';
 import {
   DynamicLinkField,
   Field,
@@ -58,6 +59,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
   parentSchemaName?: string;
 
   links?: Record<string, Doc>;
+  /** The server's rights on this saved document; unset until a form loads them. */
+  docPermissions?: DocPermissionMap;
   _dirty = true;
   _notInserted = true;
 
@@ -137,7 +140,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canDelete() {
-    if (this.notInserted || !this.fyo.can(this.schemaName, 'delete')) {
+    if (this.notInserted || !this.can('delete')) {
       return false;
     }
 
@@ -194,7 +197,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canSubmit() {
-    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'submit')) {
+    if (!this.schema.isSubmittable || !this.can('submit')) {
       return false;
     }
 
@@ -218,7 +221,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   get canCancel() {
-    if (!this.schema.isSubmittable || !this.fyo.can(this.schemaName, 'cancel')) {
+    if (!this.schema.isSubmittable || !this.can('cancel')) {
       return false;
     }
 
@@ -241,14 +244,25 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return true;
   }
 
-  /** Create for a new document and write for a saved one. */
+  /** Create for a new document and write for a saved one or a single. */
   get canWrite(): boolean {
     if (this.schema.isChild) {
       // A row is saved with its parent; a detached row is never saved.
       return this.parentdoc?.canWrite ?? true;
     }
 
-    return this.fyo.can(this.schemaName, this.notInserted ? 'create' : 'write');
+    // Frappe lists singles under can_write, never can_create.
+    const isNew = this.notInserted && !this.schema.isSingle;
+    return this.can(isNew ? 'create' : 'write');
+  }
+
+  /** Rights on a saved document come from the server when loaded, else from the schema. */
+  can(permission: DocPermission): boolean {
+    if (this.docPermissions && this.inserted) {
+      return !!this.docPermissions[permission];
+    }
+
+    return this.fyo.can(this.schemaName, permission);
   }
 
   _setValuesWithoutChecks(data: DocValueMap, convertToDocValue: boolean) {

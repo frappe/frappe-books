@@ -10,7 +10,8 @@ from frappe import _
 from frappe.utils.jinja_globals import is_rtl
 
 from frappe_books.coa import chart_options
-from frappe_books.permissions import get_schema_permissions, has_app_permission
+from frappe_books.permissions import has_app_permission
+from frappe_books.ui_bridge.mapping import schema_mapping
 
 no_cache = 1
 SCRIPT_TAG_PATTERN = re.compile(r"\<script[^<]*\</script\>", re.IGNORECASE)
@@ -61,6 +62,6 @@ def _books_boot():
 		"setup_complete": bool(settings.setup_complete),
 		"app_version": frappe.get_attr("frappe_books.__version__"),
 		"developer_mode": bool(frappe.conf.developer_mode),
-		"permissions": get_schema_permissions(),
+		"doctypes": {schema: config["doctype"] for schema, config in schema_mapping().items()},
 		"charts_of_accounts": chart_options(),
 	}

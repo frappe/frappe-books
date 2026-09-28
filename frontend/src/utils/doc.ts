@@ -1,5 +1,21 @@
 import { Doc } from 'fyo/model/doc';
+import type { DocPermissionMap } from 'fyo/utils/permissions';
 import { Field } from 'schemas/types';
+import { call } from 'src/web/api';
+
+/** Loads the user's rights on a saved document, which shares, ownership and user permissions change. */
+export async function loadDocPermissions(doc: Doc) {
+  const doctype = doc.fyo.store.permissions?.doctypes[doc.schemaName];
+  if (!doctype || doc.notInserted) {
+    return;
+  }
+
+  const { permissions } = await call<{ permissions: DocPermissionMap }>(
+    'frappe.client.get_doc_permissions',
+    { doctype, docname: doc.name }
+  );
+  doc.docPermissions = permissions;
+}
 
 /**
  * Point a parent document's link field at a record created from a quick edit.

@@ -121,7 +121,10 @@ export default defineComponent({
       }
       fyo.store.isDevelopment = window.books_boot.developer_mode;
       fyo.store.appVersion = window.books_boot.app_version;
-      fyo.store.permissions = window.books_boot.permissions;
+      fyo.store.permissions = {
+        doctypes: window.books_boot.doctypes,
+        user: boot.user,
+      };
       fyo.store.chartsOfAccounts = window.books_boot.charts_of_accounts;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;

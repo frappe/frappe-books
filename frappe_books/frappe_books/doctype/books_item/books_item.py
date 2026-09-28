@@ -6,9 +6,11 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.accounting.invoice import fill_mapped_invoice
 from frappe_books.series import ITEM_SERIES
 from frappe_books.settings import require_features
 
@@ -121,3 +123,25 @@ def _default_expense_account(track_item):
 	if track_item:
 		return frappe.db.get_single_value("Books Inventory Settings", "stock_received_but_not_billed")
 	return latest_ledger_account("Cost of Goods Sold")
+
+
+@frappe.whitelist()
+def make_sales_invoice(source_name: str):
+	return _map_invoice(source_name, "Books Sales Invoice")
+
+
+@frappe.whitelist()
+def make_purchase_invoice(source_name: str):
+	return _map_invoice(source_name, "Books Purchase Invoice")
+
+
+def _map_invoice(item, invoice_doctype):
+	"""Return an unsaved invoice for one of the item, priced as a save would price it."""
+	return get_mapped_doc(
+		"Books Item", item, {"Books Item": {"doctype": invoice_doctype}}, postprocess=_bill_item
+	)
+
+
+def _bill_item(item, invoice):
+	invoice.append("items", {"item": item.name, "quantity": 1})
+	fill_mapped_invoice(invoice)

@@ -12,6 +12,8 @@ import {
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { Money } from 'pesa';
+import { getMappedDoc } from 'models/helpers';
+import { ModelNameEnum } from 'models/types';
 import { AccountRootTypeEnum, AccountTypeEnum } from '../Account/types';
 
 interface UOMConversionItem {
@@ -166,12 +168,11 @@ export class Item extends Doc {
         label: fyo.t`Sales Invoice`,
         condition: (doc) => !doc.notInserted && doc.for !== 'Purchases',
         action: async (doc, router) => {
-          const invoice = fyo.doc.getNewDoc('SalesInvoice');
-          await invoice.append('items', {
-            item: doc.name as string,
-            rate: doc.rate as Money,
-            tax: doc.tax as string,
-          });
+          const invoice = await getMappedDoc(
+            doc,
+            ModelNameEnum.SalesInvoice,
+            'make_sales_invoice'
+          );
           await router.push(`/edit/SalesInvoice/${invoice.name!}`);
         },
       },
@@ -180,12 +181,11 @@ export class Item extends Doc {
         label: fyo.t`Purchase Invoice`,
         condition: (doc) => !doc.notInserted && doc.for !== 'Sales',
         action: async (doc, router) => {
-          const invoice = fyo.doc.getNewDoc('PurchaseInvoice');
-          await invoice.append('items', {
-            item: doc.name as string,
-            rate: doc.rate as Money,
-            tax: doc.tax as string,
-          });
+          const invoice = await getMappedDoc(
+            doc,
+            ModelNameEnum.PurchaseInvoice,
+            'make_purchase_invoice'
+          );
           await router.push(`/edit/PurchaseInvoice/${invoice.name!}`);
         },
       },

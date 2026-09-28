@@ -139,6 +139,16 @@ class PostingInvoiceController(InvoiceController):
 				frappe.delete_doc(doctype, name)
 
 
+def fill_mapped_invoice(invoice):
+	"""Fill a mapped invoice as a save would, letting it choose its own follow-ups.
+
+	frappe.new_doc sets every check box to 0, so the follow-up checks are cleared first.
+	"""
+	for fieldname in FOLLOW_UP_FIELDS:
+		invoice.set(fieldname, None)
+	invoice.calculate()
+
+
 def calculate_invoice(invoice):
 	original = invoice.get("return_against") and frappe.get_doc(invoice.doctype, invoice.return_against)
 	if original:

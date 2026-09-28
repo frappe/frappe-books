@@ -31,12 +31,16 @@ from frappe_books.settings import require_feature, require_features
 
 STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
 
+# The row location an issue takes from and a receipt puts to, the default location when empty.
+DEFAULT_LOCATION_FIELDS = {"MaterialIssue": "from_location", "MaterialReceipt": "to_location"}
+
 # Fields an invoice and its transfer do not share when one is mapped from the other.
 UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
 
 class StockMovementController(SeriesNamingMixin, Document):
 	def before_validate(self):
+		fill_default_location(self.items, DEFAULT_LOCATION_FIELDS.get(self.movement_type))
 		self.amount = populate_stock_rows(self.items)
 
 	def validate(self):
@@ -69,6 +73,7 @@ class StockTransferController(SeriesNamingMixin, Document):
 
 	def calculate(self):
 		"""Fill row defaults and the grand total, without writing anything."""
+		fill_default_location(self.items, "location")
 		self.grand_total = populate_stock_rows(self.items)
 
 	def validate(self):
@@ -115,6 +120,14 @@ class StockTransferController(SeriesNamingMixin, Document):
 		frappe.db.set_value(
 			self.doctype, self.return_against, "is_returned", int(bool(is_returned)), update_modified=False
 		)
+
+
+def fill_default_location(rows, fieldname):
+	"""Set the Inventory Settings default location on rows that leave the field empty."""
+	location = fieldname and frappe.db.get_single_value("Books Inventory Settings", "default_location")
+	for row in rows:
+		if location and not row.get(fieldname):
+			row.set(fieldname, location)
 
 
 def map_transfer_invoice(transfer_doctype, transfer_name):

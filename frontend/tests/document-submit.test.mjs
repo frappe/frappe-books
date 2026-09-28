@@ -110,3 +110,26 @@ test('a failed submission callback cannot turn a posted document into a failed s
   assert.equal(warnings.length, 1);
   assert.equal(warnings[0].action, 'submit');
 });
+
+test('a cancel sends the linked documents to cancel with it', async () => {
+  const { fyo, payment } = await makePayment();
+  payment.submitted = true;
+  const linkedDocs = [
+    {
+      doctype: 'Books Sales Invoice',
+      name: 'SINV-0002',
+      docstatus: 1,
+      schemaName: 'SalesInvoice',
+    },
+  ];
+  const calls = [];
+  fyo.db.runLifecycleAction = async (...args) => {
+    calls.push(args);
+    return { ...payment.getValidDict(), cancelled: true };
+  };
+
+  await payment.cancel(linkedDocs);
+
+  assert.deepEqual(calls, [['cancel', 'Payment', 'PAY-0001', linkedDocs]]);
+  assert.equal(payment.cancelled, true);
+});

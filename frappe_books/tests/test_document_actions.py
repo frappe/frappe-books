@@ -16,12 +16,14 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchas
 )
 from frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote import make_sales_invoice
 from frappe_books.tests.accounting import (
+	ensure_user,
 	make_account,
 	make_invoice,
 	make_item,
 	make_number_series,
 	make_party,
 )
+from frappe_books.ui_api import get_submitted_linked_docs, lifecycle_action
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 MAPPERS = "frappe_books.frappe_books.doctype.{0}.{0}.{1}"
@@ -212,6 +214,27 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		):
 			self.assertFalse(frappe.db.exists(doctype, name), doctype)
 
+	def test_cancelling_a_paid_invoice_cancels_the_payments_it_lists(self):
+		invoice = self._paid_invoice()
+		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+		linked_docs = get_submitted_linked_docs("SalesInvoice", invoice.name)
+		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name, linked_docs)
+
+		self.assertEqual([(doc["schemaName"], doc["name"]) for doc in linked_docs], [("Payment", payment)])
+		self.assertTrue(cancelled["cancelled"])
+		self.assertEqual(frappe.db.get_value("Books Payment", payment, "docstatus"), 2)
+
+	def test_linked_documents_are_cancelled_with_the_users_rights(self):
+		invoice = self._paid_invoice()
+		linked_docs = get_submitted_linked_docs("SalesInvoice", invoice.name)
+
+		with self.set_user(ensure_user("books-cancel-user@example.com", "Books User")):
+			self.assertRaises(
+				frappe.PermissionError, lifecycle_action, "cancel", "SalesInvoice", invoice.name, linked_docs
+			)
+
+		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
+
 	def test_submit_makes_the_automatic_payment(self):
 		start_pos_shift()
 		frappe.db.set_single_value("Books Pos Settings", "pos_profile", None)
@@ -273,6 +296,18 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		values = {"party": self.party.name, "items": [{"item": self.item.name, "quantity": 1}]}
 		preview = BooksDatabaseBridge().preview("SalesInvoice", values)
 		self.assertTrue(preview["makeAutoPayment"])
+
+	def _paid_invoice(self):
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			make_auto_payment=1,
+		)
+		return invoice.submit()
 
 	def _invoice_values(self, **values):
 		return {

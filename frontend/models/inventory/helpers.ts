@@ -1,5 +1,9 @@
 import { Fyo } from 'fyo';
 import { ModelNameEnum } from 'models/types';
+import { call } from 'src/web/api';
+
+const AVAILABLE_SERIAL_NUMBERS =
+  'frappe_books.frappe_books.doctype.books_serial_number.books_serial_number.get_available_serial_numbers';
 
 /** The row's serial numbers resized to `quantity`, topped up with new ones from the item's series. */
 export async function getSerialNumbersForQuantity(
@@ -28,13 +32,15 @@ export async function getSerialNumbersForQuantity(
   return [...current, ...added].join('\n');
 }
 
-/** The item's earliest received serial numbers that are in stock. */
-export async function getExistingActiveSerialNumbersForItem(
+/** The item's earliest received serial numbers in stock at the location, as the server picks them. */
+export async function getAvailableSerialNumbers(
   fyo: Fyo,
   item: string,
+  location: string | undefined,
   quantity: number
 ): Promise<string> {
   if (
+    !location ||
     !quantity ||
     quantity <= 0 ||
     !(await fyo.getValue(ModelNameEnum.Item, item, 'hasSerialNumber'))
@@ -42,14 +48,12 @@ export async function getExistingActiveSerialNumbersForItem(
     return '';
   }
 
-  const serialNumbers = await fyo.db.getAllRaw(ModelNameEnum.SerialNumber, {
-    fields: ['name'],
-    filters: { item, status: 'Active' },
-    orderBy: 'created',
-    order: 'asc',
-    limit: quantity,
+  const serialNumbers = await call<string[]>(AVAILABLE_SERIAL_NUMBERS, {
+    item,
+    location,
+    quantity,
   });
-  return serialNumbers.map((row) => row.name as string).join('\n');
+  return serialNumbers.join('\n');
 }
 
 /** A new batch name from the item's batch series, reserved on the server. */

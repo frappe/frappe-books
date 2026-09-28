@@ -19,6 +19,7 @@ from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_stock_entries,
 	delete_stock_entries,
+	fill_serial_numbers,
 	populate_stock_rows,
 	reverse_transfers,
 	validate_stock_available,
@@ -75,6 +76,8 @@ class StockTransferController(SeriesNamingMixin, Document):
 		"""Fill row defaults and the grand total, without writing anything."""
 		fill_default_location(self.items, "location")
 		self.grand_total = populate_stock_rows(self.items)
+		if self.transfer_type == "sales" and not self.return_against:
+			fill_serial_numbers(self.items)
 
 	def validate(self):
 		require_feature("enable_inventory")

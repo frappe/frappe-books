@@ -113,6 +113,9 @@ test('dynamic links keep display text separate from their stored IDs', async ({
 
 test('free text autocomplete still accepts typing', async ({ page }) => {
   await openFixture(page, 'Address', addressName);
+  // Outside India the state is free text.
+  await page.getByRole('combobox', { name: /^Country/ }).fill('Canad');
+  await page.getByRole('option', { name: 'Canada', exact: true }).click();
   await page
     .getByRole('combobox', { name: 'State', exact: true })
     .fill('New Province');

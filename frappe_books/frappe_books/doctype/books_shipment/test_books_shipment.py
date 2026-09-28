@@ -233,6 +233,17 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, f"{serials[0]} is already returned"):
 			self._return_serial(item, shipment, serials[0])
 
+	def test_return_quantities_must_be_negative(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment.submit()
+
+		with self.assertRaisesRegex(frappe.ValidationError, "returned quantities must be negative"):
+			self._make_shipment(item, quantity=1, rate=25, return_against=shipment.name)
+		with self.assertRaisesRegex(frappe.ValidationError, "only returns can have negative"):
+			self._make_shipment(item, quantity=-1, rate=25)
+
 	def test_return_must_reference_a_submitted_original(self):
 		item, _cogs, _stock = self._tracked_item()
 		draft = self._make_shipment(item, quantity=1, rate=25)

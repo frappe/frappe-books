@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { hasPermission } from '../fyo/utils/permissions.ts';
+import {
+  exportsOwnDocumentsOnly,
+  hasPermission,
+} from '../fyo/utils/permissions.ts';
 import { makeFyo } from './helpers/accounting.mjs';
 
 const doctypes = { SalesInvoice: 'Books Sales Invoice', Tax: 'Books Tax' };
@@ -41,4 +44,14 @@ test('a saved document uses the rights the server returned for it', async () => 
   payment.docPermissions = { read: 1, write: 0, delete: 0 };
   assert.equal(payment.canWrite, false);
   assert.equal(payment.canDelete, false);
+});
+
+test('export granted only to owners exports only the user’s documents', () => {
+  const permissions = {
+    doctypes,
+    user: { can_export: ['Books Tax'], can_export_owner_only: ['Books Tax'] },
+  };
+  assert.equal(exportsOwnDocumentsOnly(permissions, 'Tax'), true);
+  assert.equal(exportsOwnDocumentsOnly(permissions, 'SalesInvoice'), false);
+  assert.equal(exportsOwnDocumentsOnly(null, 'Tax'), false);
 });

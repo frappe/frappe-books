@@ -27,7 +27,7 @@ await build({
       export { getAccountLabel } from './src/utils/accountLabel';
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getJsonData, getCsvData } from './reports/commonExporter';
-      export { getDocStatus } from './models/helpers';
+      export { getDocStatus, getDocStatusBadge, getStateBadge } from './models/helpers';
       export { getQuickEditFieldnames, getRowEditFieldnames } from './src/utils/sheetFields';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
@@ -108,6 +108,8 @@ export const {
   getJsonData,
   getCsvData,
   getDocStatus,
+  getDocStatusBadge,
+  getStateBadge,
   getQuickEditFieldnames,
   getRowEditFieldnames,
   getFilterFields,

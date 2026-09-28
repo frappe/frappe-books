@@ -8,6 +8,8 @@ import {
   getJsonData,
   getCsvData,
   getDocStatus,
+  getDocStatusBadge,
+  getStateBadge,
 } from './helpers/accounting.mjs';
 
 test('CSV and JSON retain hidden groups and visible leaf amounts', async () => {
@@ -121,6 +123,27 @@ test('list and form statuses come from the stored status', async () => {
     getDocStatus({ schema: fyo.schemaMap.Lead, status: 'Open' }),
     'Saved'
   );
+});
+
+test('status badges use the status option label and the DocType state colour', async () => {
+  const fyo = await makeFyo();
+  const schema = fyo.schemaMap.SalesInvoice;
+  assert.deepEqual(getDocStatusBadge({ schema, status: 'Partly Paid' }), {
+    label: 'Partly Paid',
+    theme: 'amber',
+  });
+  assert.deepEqual(getDocStatusBadge({ schema, status: 'Paid' }), {
+    label: 'Paid',
+    theme: 'green',
+  });
+  assert.deepEqual(getDocStatusBadge({ schema, notInserted: true }), {
+    label: 'Draft',
+    theme: 'gray',
+  });
+  assert.deepEqual(getStateBadge(fyo.schemaMap.Lead, 'Do not Contact'), {
+    label: 'Do not Contact',
+    theme: 'red',
+  });
 });
 
 test('currency formatting uses exactly the configured precision', async () => {

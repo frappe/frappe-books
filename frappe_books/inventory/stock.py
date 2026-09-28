@@ -10,9 +10,9 @@ from frappe.query_builder.functions import Coalesce, Min, Sum
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.units import populate_units
 from frappe_books.inventory.valuation import delete_entries, insert_entry
+from frappe_books.series import new_item_names
 
 LEDGER = "Books Stock Ledger Entry"
-BATCH_RECEIVING_DOCTYPES = ("Books Purchase Invoice", "Books Purchase Receipt", "Books Stock Movement")
 
 
 def validate_transfer_rows(transfers):
@@ -34,21 +34,18 @@ def validate_batches(rows):
 		_validate_batch(row, items[row["item"]], batch_items)
 
 
-def create_missing_batches(doc):
-	"""Insert the new batches a receiving document's rows name.
+def create_series_batches(rows):
+	"""Give rows of batch items without a batch a new batch named from the item's batch series.
 
-	Frappe checks links before any document hook, so a caller saving the document
-	creates them first, in the same transaction.
+	Runs in validate: Frappe checks links before any hook, and an empty batch passes.
 	"""
-	if doc.doctype not in BATCH_RECEIVING_DOCTYPES:
-		return
-	rows = [row for row in doc.items if row.item and row.batch]
-	batched_items = _items_with("has_batch", {row.item for row in rows})
-	existing = set(_items_of("Books Batch", [row.batch for row in rows]))
+	rows = [row for row in rows if row.item and not row.batch]
+	batch_items = _items_with("has_batch", {row.item for row in rows})
 	for row in rows:
-		if row.item in batched_items and row.batch not in existing:
-			frappe.get_doc({"doctype": "Books Batch", "name": row.batch, "item": row.item}).insert()
-			existing.add(row.batch)
+		names = new_item_names("Books Batch", row.item, 1) if row.item in batch_items else []
+		if names:
+			frappe.get_doc({"doctype": "Books Batch", "name": names[0], "item": row.item}).insert()
+			row.batch = names[0]
 
 
 def validate_stock_available(transfers, date):

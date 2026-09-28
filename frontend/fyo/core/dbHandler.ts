@@ -367,9 +367,9 @@ export class DatabaseHandler extends DatabaseBase {
     return (await this.#demux.callBespoke('getOpenPOSShift')) as string | null;
   }
 
-  /** Unused names from the item's batch or serial-number series, reserved on the server. */
+  /** Unused names from the item's serial-number series, reserved on the server. */
   async getNewSeriesNames(
-    schemaName: 'Batch' | 'SerialNumber',
+    schemaName: 'SerialNumber',
     item: string,
     count: number
   ): Promise<string[]> {

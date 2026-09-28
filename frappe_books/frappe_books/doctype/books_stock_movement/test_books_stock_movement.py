@@ -7,7 +7,6 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import convert_utc_to_system_timezone, now, now_datetime
 
-from frappe_books.inventory.stock import create_missing_batches
 from frappe_books.tests.accounting import make_account, make_item, stock_quantity, unique_name
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
@@ -244,20 +243,33 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertRaises(frappe.LinkValidationError, receipt.insert)
 
-	def test_interface_saves_create_the_new_batches_they_receive(self):
+	def test_interface_saves_refuse_unknown_batches(self):
 		item = make_item(self.item.income_account, self.item.expense_account, track_item=1, has_batch=1).name
-		row = {"item": item, "toLocation": "Stores", "quantity": 2, "rate": 12}
-		bridge = BooksDatabaseBridge()
-		first, second = unique_name("NEW-BATCH"), unique_name("NEW-BATCH")
+		row = {"item": item, "toLocation": "Stores", "quantity": 2, "rate": 12, "batch": unique_name("NEW")}
 
-		movement = bridge.insert(
+		self.assertRaises(
+			frappe.LinkValidationError,
+			BooksDatabaseBridge().insert,
 			"StockMovement",
-			{"movementType": "MaterialReceipt", "date": now(), "items": [{**row, "batch": first}]},
+			{"movementType": "MaterialReceipt", "date": now(), "items": [row]},
 		)
-		bridge.update("StockMovement", {**movement, "items": [*movement["items"], {**row, "batch": second}]})
 
-		self.assertEqual(frappe.db.get_value("Books Batch", first, "item"), item)
-		self.assertEqual(frappe.db.get_value("Books Batch", second, "item"), item)
+	def test_interface_saves_return_the_batch_the_server_named(self):
+		prefix = f"B{frappe.generate_hash(length=6)}-"
+		item = make_item(
+			self.item.income_account,
+			self.item.expense_account,
+			track_item=1,
+			has_batch=1,
+			batch_series=prefix,
+		).name
+		row = {"item": item, "toLocation": "Stores", "quantity": 2, "rate": 12}
+
+		movement = BooksDatabaseBridge().insert(
+			"StockMovement", {"movementType": "MaterialReceipt", "date": now(), "items": [row]}
+		)
+
+		self.assertEqual(movement["items"][0]["batch"], f"{prefix}1001")
 
 	def test_interface_datetimes_are_stored_in_system_time(self):
 		row = {"item": self.item.name, "toLocation": "Stores", "quantity": 1, "rate": 10}
@@ -268,16 +280,6 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		stored = frappe.db.get_value("Books Stock Movement", movement["name"], "date")
 		self.assertEqual(stored, convert_utc_to_system_timezone(datetime(2031, 1, 1)).replace(tzinfo=None))
-
-	def test_shipments_do_not_create_batches(self):
-		item = make_item(self.item.income_account, self.item.expense_account, track_item=1, has_batch=1).name
-		batch = unique_name("NEW-BATCH")
-
-		create_missing_batches(
-			frappe.get_doc({"doctype": "Books Shipment", "items": [{"item": item, "batch": batch}]})
-		)
-
-		self.assertFalse(frappe.db.exists("Books Batch", batch))
 
 	def test_untracked_item_cannot_move_stock(self):
 		expense = make_account("Service Expense", root_type="Expense")

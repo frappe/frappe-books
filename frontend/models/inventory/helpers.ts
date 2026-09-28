@@ -55,16 +55,3 @@ export async function getAvailableSerialNumbers(
   });
   return serialNumbers.join('\n');
 }
-
-/** A new batch name from the item's batch series, reserved on the server. */
-export async function getSuggestedBatchName(
-  fyo: Fyo,
-  item: string
-): Promise<string | undefined> {
-  if (!(await fyo.getValue(ModelNameEnum.Item, item, 'hasBatch'))) {
-    return undefined;
-  }
-
-  const [batch] = await fyo.db.getNewSeriesNames(ModelNameEnum.Batch, item, 1);
-  return batch;
-}

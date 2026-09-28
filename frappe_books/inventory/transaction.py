@@ -17,6 +17,7 @@ from frappe_books.inventory.invoice_balance import (
 from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
+	create_series_batches,
 	create_stock_entries,
 	delete_stock_entries,
 	fill_serial_numbers,
@@ -46,6 +47,8 @@ class StockMovementController(StatusMixin, SeriesNamingMixin, Document):
 
 	def validate(self):
 		require_feature("enable_inventory")
+		if self.movement_type == "MaterialReceipt":
+			create_series_batches(self.items)
 		transfers = movement_transfers(self)
 		_validate_movement_locations(self, transfers)
 		validate_transfer_rows(transfers)
@@ -87,6 +90,8 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 		validate_item_usage(self, self.transfer_type == "purchase")
 		for row in self.items:
 			validate_quantity_sign(row, bool(self.return_against))
+		if self.transfer_type == "purchase" and not self.return_against:
+			create_series_batches(self.items)
 		validate_transfer_rows(transfer_rows(self))
 		if self.return_against:
 			validate_transfer_return(self)

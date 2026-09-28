@@ -10,7 +10,6 @@ from frappe.desk.search import search_widget
 from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
-from frappe_books.inventory.stock import create_missing_batches
 from frappe_books.settings import update_system_settings
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
@@ -206,7 +205,6 @@ class BooksDatabaseBridge:
 		name_field = schema_mapping()[source_schema]["fields"].get("name")
 		if name and name_field != "name":
 			doc.set(name_field, name)
-		create_missing_batches(doc)
 		doc.insert(set_name=name)
 		return self._to_readable_source(source_schema, doc)
 
@@ -223,7 +221,6 @@ class BooksDatabaseBridge:
 		if "modified" in values:
 			# Frappe's check_if_latest refuses the save if the stored document changed since.
 			doc.modified = values["modified"]
-		create_missing_batches(doc)
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
 

@@ -19,7 +19,7 @@ from frappe_books.inventory.invoice_balance import (
 	update_billed_status,
 	validate_billed_quantities,
 )
-from frappe_books.inventory.stock import validate_batches
+from frappe_books.inventory.stock import create_series_batches, validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
@@ -96,6 +96,8 @@ class PostingInvoiceController(InvoiceController):
 
 	def validate(self):
 		super().validate()
+		if self.transaction_type == "purchase" and not self.return_against:
+			create_series_batches(self.items)
 		validate_batches([{"item": row.item, "batch": row.batch} for row in self.items])
 
 	def before_submit(self):

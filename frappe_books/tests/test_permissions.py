@@ -23,24 +23,28 @@ ROLE_MATRIX = {
 	"Books Print Template": (FULL, READ, READ),
 	"Books Custom Form": (FULL, READ, READ),
 	"Books Ledger Entry": (READ, READ, READ),
+	"Books Stock Ledger Entry": (READ, READ, READ),
+	"Books Loyalty Point Entry": (READ, READ, READ),
 }
 TEST_USER = "books-user-permissions@example.com"
+MANAGER = "books-manager-permissions@example.com"
 
 
 class IntegrationTestPermissions(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		if not frappe.db.exists("User", TEST_USER):
-			frappe.get_doc(
-				{
-					"doctype": "User",
-					"email": TEST_USER,
-					"first_name": "Books User",
-					"send_welcome_email": 0,
-					"roles": [{"role": "Books User"}],
-				}
-			).insert(ignore_permissions=True)
+		for email, role in ((TEST_USER, "Books User"), (MANAGER, "Books Manager")):
+			if not frappe.db.exists("User", email):
+				frappe.get_doc(
+					{
+						"doctype": "User",
+						"email": email,
+						"first_name": role,
+						"send_welcome_email": 0,
+						"roles": [{"role": role}],
+					}
+				).insert(ignore_permissions=True)
 
 	def test_role_matrix(self):
 		roles = ("System Manager", "Books Manager", "Books User")
@@ -66,6 +70,12 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(TEST_USER):
 			template.template = "<div>{{ doc.name }}</div>"
 			self.assertRaises(frappe.PermissionError, template.save)
+
+	def test_bridge_ledger_writes_follow_docperms(self):
+		with self.set_user(MANAGER):
+			for schema in ("AccountingLedgerEntry", "StockLedgerEntry", "LoyaltyPointEntry"):
+				with self.subTest(schema=schema):
+					self.assertRaises(frappe.PermissionError, BooksDatabaseBridge().insert, schema, {})
 
 	def test_bridge_hides_fields_above_the_users_permlevel(self):
 		party = make_party(make_account("Permlevel Receivable", account_type="Receivable").name)

@@ -68,6 +68,7 @@ def get_top_expenses(period: str) -> list[dict]:
 		filters=_ledger_filters(from_date, to_date, {"account.root_type": "Expense"}),
 		fields=["account", DEBIT_MINUS_CREDIT],
 		group_by="account",
+		order_by="account",
 	)
 	# The query engine wraps an ORDER BY on this expression alias in MAX() on Postgres.
 	rows.sort(key=lambda row: row.balance, reverse=True)
@@ -106,6 +107,7 @@ def _monthly_totals(from_date, to_date, filters, fields) -> dict:
 		filters=_ledger_filters(from_date, to_date, filters),
 		fields=fields,
 		group_by="year, month",
+		order_by="year, month",
 	)
 	return {f"{row.year:04d}-{row.month:02d}": row for row in rows}
 

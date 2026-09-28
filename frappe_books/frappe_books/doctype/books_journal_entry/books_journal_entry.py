@@ -13,9 +13,10 @@ from frappe_books.accounting.ledger import (
 )
 from frappe_books.accounting.money import as_decimal
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.status import StatusMixin
 
 
-class BooksJournalEntry(SeriesNamingMixin, Document):
+class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 

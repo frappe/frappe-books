@@ -17,6 +17,7 @@ from frappe_books.accounting.ledger import LedgerPosting, delete_entries, revers
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.series import SeriesNamingMixin
+from frappe_books.status import StatusMixin
 
 REFERENCE_DOCTYPES = {
 	"SalesInvoice": "Books Sales Invoice",
@@ -26,7 +27,7 @@ REFERENCE_DOCTYPES = {
 }
 
 
-class PaymentController(SeriesNamingMixin, Document):
+class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 	def before_validate(self):
 		self.amount_paid = rounded(as_decimal(self.amount) - as_decimal(self.writeoff))
 		for row in self.payment_references:

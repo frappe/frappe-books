@@ -11,7 +11,7 @@ from frappe.model.document import Document
 from frappe_books.ui_bridge import field_properties
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
-from frappe_books.ui_bridge.mapping import source_reference, target_doctype
+from frappe_books.ui_bridge.mapping import target_doctype
 
 LifecycleAction = Literal["submit", "cancel"]
 
@@ -42,10 +42,13 @@ def get_duplicate(source_schema: str, name: str) -> dict[str, Any]:
 
 
 @frappe.whitelist()
-def get_submitted_linked_docs(source_schema: str, name: str) -> list[dict[str, Any]]:
-	"""Return the submitted documents Frappe cancels with this one, with their interface schemas."""
+def get_invoice_payments(source_schema: str, name: str) -> list[dict[str, Any]]:
+	"""Return the submitted payments that cancelling an invoice also cancels.
+
+	Other submitted documents that link to the invoice, like returns, still block its cancellation.
+	"""
 	linked = linked_with.get_submitted_linked_docs(target_doctype(source_schema), name)
-	return [{**doc, "schemaName": source_reference(doc["doctype"])} for doc in linked["docs"]]
+	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment"]
 
 
 @frappe.whitelist(methods=["POST"])
@@ -67,7 +70,7 @@ def lifecycle_action(
 	"""Run accounting and stock lifecycle hooks in one server transaction.
 
 	Frappe refuses the action if the document changed after the client read `modified`. A cancel
-	first cancels `linked_docs`, the documents `get_submitted_linked_docs` listed.
+	first cancels `linked_docs`, the payments `get_invoice_payments` listed.
 	"""
 	# Frappe skips a bare Literal annotation because its values are strings.
 	if action not in get_args(LifecycleAction):

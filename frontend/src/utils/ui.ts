@@ -126,17 +126,21 @@ export async function deleteDocWithPrompt(doc: Doc) {
 }
 
 export async function cancelDocWithPrompt(doc: Doc) {
-  const linkedDocs = await getSubmittedLinkedDocs(doc);
+  let payments: LinkedDoc[] = [];
+  if (['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
+    payments = await getInvoicePayments(doc);
+  }
+
   return (await showDialog({
     title: t`Cancel ${getDocReferenceLabel(doc)}?`,
-    detail: getCancelDetail(linkedDocs),
+    detail: getCancelDetail(payments),
     type: 'warning',
     buttons: [
       {
         label: t`Yes`,
         async action() {
           try {
-            await doc.cancel(linkedDocs);
+            await doc.cancel(payments);
           } catch (err) {
             await handleErrorWithDialog(err as Error, doc);
             return false;
@@ -157,28 +161,21 @@ export async function cancelDocWithPrompt(doc: Doc) {
   })) as boolean;
 }
 
-/** The submitted documents Frappe cancels along with `doc`, such as an invoice's payments. */
-async function getSubmittedLinkedDocs(doc: Doc): Promise<LinkedDoc[]> {
-  return await call('frappe_books.ui_api.get_submitted_linked_docs', {
+/** The submitted payments that cancelling the invoice `doc` also cancels. */
+async function getInvoicePayments(doc: Doc): Promise<LinkedDoc[]> {
+  return await call('frappe_books.ui_api.get_invoice_payments', {
     source_schema: doc.schemaName,
     name: doc.name,
   });
 }
 
-function getCancelDetail(linkedDocs: LinkedDoc[]): string {
-  const names = linkedDocs.map(({ name }) => name).join(', ');
-  const arePayments = linkedDocs.every(
-    ({ schemaName }) => schemaName === ModelNameEnum.Payment
-  );
-  if (!linkedDocs.length) {
+function getCancelDetail(payments: LinkedDoc[]): string {
+  const names = payments.map(({ name }) => name).join(', ');
+  if (!payments.length) {
     return t`This action is permanent`;
   }
 
-  if (!arePayments) {
-    return t`This action is permanent and will cancel the following entries: ${names}`;
-  }
-
-  if (linkedDocs.length === 1) {
+  if (payments.length === 1) {
     return t`This action is permanent and will cancel the following payment: ${names}`;
   }
 

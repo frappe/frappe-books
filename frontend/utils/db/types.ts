@@ -113,12 +113,7 @@ export abstract class DatabaseDemuxBase {
 }
 
 /** A submitted document Frappe cancels along with the one it links to. */
-export type LinkedDoc = {
-  doctype: string;
-  name: string;
-  docstatus: number;
-  schemaName: string;
-};
+export type LinkedDoc = { doctype: string; name: string; docstatus: number };
 
 export type ReportQuery =
   | 'getGeneralLedger'

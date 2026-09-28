@@ -119,12 +119,7 @@ test('a cancel sends the linked documents to cancel with it', async () => {
   const { fyo, payment } = await makePayment();
   payment.submitted = true;
   const linkedDocs = [
-    {
-      doctype: 'Books Sales Invoice',
-      name: 'SINV-0002',
-      docstatus: 1,
-      schemaName: 'SalesInvoice',
-    },
+    { doctype: 'Books Payment', name: 'PAY-0002', docstatus: 1 },
   ];
   const calls = [];
   fyo.db.runLifecycleAction = async (...args) => {

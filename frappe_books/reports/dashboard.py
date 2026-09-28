@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import add_months, get_first_day, get_year_start, getdate, month_diff
+from frappe.utils import add_days, add_months, get_first_day, get_year_start, getdate, month_diff
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
@@ -78,7 +78,7 @@ def get_top_expenses(period: str) -> list[dict]:
 def get_invoice_summary(doctype: str, period: str) -> dict:
 	"""Return the paid and unpaid amounts and counts of the period's submitted invoices.
 
-	Credit notes count as positive amounts.
+	Credit notes count as positive amounts. `from_date` and `before_date` bound the invoice dates.
 	"""
 	if doctype not in INVOICE_DOCTYPES:
 		frappe.throw(_("{0} is not an invoice.").format(doctype))
@@ -97,6 +97,8 @@ def get_invoice_summary(doctype: str, period: str) -> dict:
 		"unpaid": rounded(unpaid),
 		"paid_count": paid_count,
 		"unpaid_count": unpaid_count,
+		"from_date": from_date,
+		"before_date": add_days(to_date, 1),
 	}
 
 

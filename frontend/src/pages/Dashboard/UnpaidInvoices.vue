@@ -67,7 +67,11 @@ import { t } from 'fyo';
 import { Button as FrappeButton, Tooltip as FrappeTooltip } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
-import { getInvoiceSummary, InvoiceSummary } from 'src/utils/dashboard';
+import {
+  getInvoiceListFilters,
+  getInvoiceSummary,
+  InvoiceSummary,
+} from 'src/utils/dashboard';
 import { PeriodKey } from 'src/utils/types';
 import { routeTo } from 'src/utils/ui';
 import { PropType, defineComponent } from 'vue';
@@ -149,18 +153,12 @@ export default defineComponent({
         return;
       }
 
-      const zero = this.fyo.pesa(0).store;
-      const filters = { outstandingAmount: ['=', zero] };
       const schemaLabel = fyo.schemaMap[this.schemaName]?.label ?? '';
-      let label = t`Paid ${schemaLabel}`;
-      if (type === 'unpaid') {
-        filters.outstandingAmount[0] = '!=';
-        label = t`Unpaid ${schemaLabel}`;
-      }
-
+      const label =
+        type === 'paid' ? t`Paid ${schemaLabel}` : t`Unpaid ${schemaLabel}`;
+      const filters = getInvoiceListFilters(this.summary, type === 'paid');
       const path = `/list/${this.schemaName}/${label}`;
-      const query = { filters: JSON.stringify(filters) };
-      await routeTo({ path, query });
+      await routeTo({ path, query: { filters: JSON.stringify(filters) } });
     },
     async setData() {
       this.summary = await getInvoiceSummary(this.doctype, this.period);

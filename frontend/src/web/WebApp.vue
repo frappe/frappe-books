@@ -133,13 +133,14 @@ export default defineComponent({
         models,
         await getRegionalModels(countryCode)
       );
-      await fyo.loadCurrencySymbols();
-      await fyo.loadDefaultNumberSeries();
-      for (const schema of Object.values(fyo.schemaMap)) {
-        if (schema?.isSingle && schema.name !== 'SetupWizard') {
-          await fyo.doc.getDoc(schema.name);
-        }
-      }
+      const singles = Object.values(fyo.schemaMap).filter(
+        (schema) => schema?.isSingle && schema.name !== 'SetupWizard'
+      );
+      await Promise.all([
+        fyo.loadCurrencySymbols(),
+        fyo.loadDefaultNumberSeries(),
+        ...singles.map((schema) => fyo.doc.getDoc(schema!.name)),
+      ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setupComplete;
       this.darkMode = Boolean(fyo.singles.SystemSettings?.darkMode);
       setDarkMode(this.darkMode);

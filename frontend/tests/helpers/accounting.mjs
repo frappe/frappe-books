@@ -50,7 +50,6 @@ await build({
         validateSinv,
       } from './src/utils/pos';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
-      export { getTaskChecks } from './src/utils/getStartedTasks';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { evaluateReadOnly, linkOnSave } from './src/utils/doc';
       export { loadListData, onListChange } from './src/utils/listData';
@@ -133,7 +132,6 @@ export const {
   fillRowSerialNumbers,
   getPOSRowItem,
   validatePOSCheckout,
-  getTaskChecks,
   getReportCellColorClass,
   evaluateReadOnly,
   linkOnSave,

@@ -9,6 +9,7 @@ from frappe.utils import add_to_date, add_years, getdate, now_datetime, nowdate
 from frappe_books.reports import gst
 from frappe_books.reports.filters import get_default_filters
 from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
+from frappe_books.reports.periods import get_periods
 from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_valuation import move
 
@@ -344,3 +345,84 @@ def _tax(*details):
 
 def _decimals(*values):
 	return tuple(Decimal(str(value)) for value in values)
+
+
+class IntegrationTestReportPeriods(IntegrationTestCase):
+	def setUp(self):
+		_set_fiscal_year("2026-04-01", "2027-03-31")
+
+	def test_trial_balance_opens_on_the_whole_fiscal_year(self):
+		account = make_account("Period Cash")
+		_post("2027-03-31", account.name, 10, 0)
+
+		with self.freeze_time("2026-09-28"):
+			defaults = get_default_filters("Books Trial Balance")
+			rows = _rows_by_account(_run("Books Trial Balance"))
+
+		self.assertEqual(defaults, {"from_date": getdate("2026-04-01"), "to_date": getdate("2027-03-31")})
+		self.assertEqual(rows[account.name]["closing_debit"], Decimal(10))
+
+	def test_defaults_before_the_fiscal_year_ends_open_the_current_one(self):
+		with self.freeze_time("2027-02-15"):
+			statement = get_default_filters("Books Profit and Loss")
+			trial_balance = get_default_filters("Books Trial Balance")
+
+		self.assertEqual((statement["from_year"], statement["to_year"]), (2026, 2027))
+		self.assertEqual(trial_balance["from_date"], getdate("2026-04-01"))
+
+	def test_a_calendar_fiscal_year_is_one_year_of_twelve_months(self):
+		_set_fiscal_year("2026-01-01", "2026-12-31")
+		with self.freeze_time("2026-09-28"):
+			defaults = get_default_filters("Books Balance Sheet")
+		fiscal_year = frappe._dict(
+			based_on="Fiscal Year", periodicity="Monthly", from_year=2026, to_year=2026
+		)
+
+		periods = get_periods(fiscal_year)
+
+		self.assertEqual((defaults["from_year"], defaults["to_year"]), (2026, 2026))
+		self.assertEqual(len(periods), 12)
+		self.assertEqual((periods[-1].from_date, periods[0].to_date), _dates("2026-01-01", "2026-12-31"))
+
+	def test_until_date_defaults_to_today(self):
+		with self.freeze_time("2026-09-28"):
+			defaults = get_default_filters("Books Balance Sheet")
+
+		self.assertEqual((defaults["based_on"], defaults["to_date"]), ("Until Date", getdate("2026-09-28")))
+
+	def test_periods_count_back_from_the_until_date_and_keep_month_ends(self):
+		frappe.db.set_single_value("Books System Settings", "date_format", "dd/MM/yyyy")
+		until = frappe._dict(based_on="Until Date", periodicity="Monthly", count=3, to_date="2026-09-30")
+
+		periods = get_periods(until)
+
+		self.assertEqual(
+			[(period.from_date, period.to_date) for period in periods],
+			[
+				_dates("2026-09-01", "2026-09-30"),
+				_dates("2026-08-01", "2026-08-31"),
+				_dates("2026-07-01", "2026-07-31"),
+			],
+		)
+		self.assertEqual([period.label for period in periods], ["30/09/2026", "31/08/2026", "31/07/2026"])
+		(consolidated,) = get_periods(frappe._dict(until, consolidate_columns=1))
+		self.assertEqual((consolidated.from_date, consolidated.to_date), _dates("2026-07-01", "2026-09-30"))
+
+	def test_expense_only_profit_and_loss_has_no_profit_row(self):
+		rent = make_account("Period Rent", root_type="Expense")
+		_post("2062-06-01", rent.name, 30, 0)
+
+		rows = _run("Books Profit and Loss", periodicity="Yearly", count=1, to_date="2062-12-31")
+
+		self.assertEqual(rows[-1]["account"], "Total Expense (Debit)")
+		self.assertNotIn("Total Profit", [row.get("account") for row in rows])
+
+
+def _set_fiscal_year(start, end):
+	frappe.db.set_single_value(
+		"Books Accounting Settings", {"fiscal_year_start": start, "fiscal_year_end": end}
+	)
+
+
+def _dates(*dates):
+	return tuple(getdate(date) for date in dates)

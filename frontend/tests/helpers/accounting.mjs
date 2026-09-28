@@ -67,7 +67,6 @@ await build({
         getSerialNumbersForQuantity,
         getSuggestedBatchName,
       } from './models/inventory/helpers';
-      export { getAmountInWords } from './src/utils/amountInWords';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { Importer, importDoc } from './src/importer';
     `,
@@ -152,7 +151,6 @@ export const {
   getExistingActiveSerialNumbersForItem,
   getSerialNumbersForQuantity,
   getSuggestedBatchName,
-  getAmountInWords,
   generateCSV,
   parseCSV,
   Importer,

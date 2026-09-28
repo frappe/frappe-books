@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import add_days, getdate, now_datetime
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
@@ -129,6 +129,25 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		self.assertEqual(cash_amounts(closing).difference_amount, 0)
 		self.assertEqual(account_balance(self.counter), 0)
+
+	def test_pos_invoice_is_dated_at_checkout(self):
+		yesterday = add_days(now_datetime(), -1)
+		held = self.make_pos_invoice(date=yesterday)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			date=yesterday,
+			make_auto_payment=0,
+		)
+
+		held.submit()
+		invoice.submit()
+
+		self.assertEqual(getdate(held.reload().date), getdate(now_datetime()))
+		self.assertEqual(getdate(invoice.reload().date), getdate(yesterday))
 
 	def make_pos_invoice(self, **values):
 		return make_invoice(

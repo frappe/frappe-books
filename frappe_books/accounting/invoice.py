@@ -119,6 +119,8 @@ class PostingInvoiceController(InvoiceController):
 
 	def pay_outstanding_amount(self):
 		payment = map_invoice_payment(self.doctype, self.name)
+		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
+		payment.reference_id = self.name
 		payment.insert()
 		payment.submit()
 		self.outstanding_amount = self.db_get("outstanding_amount")

@@ -309,11 +309,12 @@ def _settle_invoice(invoice, payment):
 	outstanding = abs(as_decimal(invoice.outstanding_amount))
 	if not outstanding:
 		frappe.throw(_("Invoice {0} has no outstanding amount.").format(invoice.name))
+	account = _settling_account(invoice)
 	payment.update(
 		{
 			"payment_type": payment_type_for(invoice.doctype, bool(invoice.return_against)),
-			"payment_method": "Cash",
-			"payment_account": _settling_account(invoice),
+			"payment_method": _settling_method(account),
+			"payment_account": account,
 			"amount": outstanding,
 		}
 	)
@@ -340,3 +341,14 @@ def _settling_account(invoice):
 	if not account:
 		frappe.throw(_("Set a default payment account in Books Defaults."))
 	return account
+
+
+def _settling_method(account):
+	"""Return the oldest payment method of the account's type: Cash for cash, Bank for bank."""
+	account_type = frappe.db.get_value("Books Account", account, "account_type")
+	method = frappe.db.get_value(
+		"Books Payment Method", {"type": account_type}, "name", order_by="creation asc"
+	)
+	if not method:
+		frappe.throw(_("Add a {0} payment method to pay from {1}.").format(_(account_type), account))
+	return method

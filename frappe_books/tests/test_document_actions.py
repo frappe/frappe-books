@@ -15,6 +15,10 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchas
 	set_inventory_accounts,
 )
 from frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote import make_sales_invoice
+from frappe_books.frappe_books.doctype.books_shipment.books_shipment import (
+	make_sales_invoice as make_shipment_invoice,
+)
+from frappe_books.frappe_books.doctype.books_shipment.test_books_shipment import seed_stock
 from frappe_books.tests.accounting import (
 	make_account,
 	make_invoice,
@@ -41,6 +45,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		quote = self._submitted_quote()
 		invoice = make_sales_invoice(quote.name)
 		self.assertEqual((invoice.grand_total, invoice.outstanding_amount), (150, 150))
+		self.assertEqual(invoice.make_auto_payment, 1)
 		# Paid by hand below, not by the automatic payment the defaults ask for.
 		invoice.make_auto_payment = 0
 		invoice.insert()
@@ -52,6 +57,19 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual(payment.payment_type, "Receive")
 		self.assertEqual(Decimal(str(payment.amount)), Decimal("150"))
 		self.assertEqual(payment.payment_references[0].reference_name, invoice.name)
+
+	def test_invoice_mapped_from_a_shipment_pays_automatically(self):
+		received = make_account("Mapped Received", root_type="Liability")
+		set_inventory_accounts(
+			make_account("Mapped Stock", account_type="Stock").name, received.name, self.expense.name
+		)
+		item = make_item(self.income.name, received.name, track_item=1)
+		seed_stock(item.name, quantity=1, rate=10)
+		row = {"item": item.name, "location": "Stores", "quantity": 1, "rate": 25}
+		shipment = frappe.get_doc({"doctype": "Books Shipment", "party": self.party.name, "items": [row]})
+		shipment.insert().submit()
+
+		self.assertEqual(make_shipment_invoice(shipment.name).make_auto_payment, 1)
 
 	def test_bridge_returns_mapped_documents_in_interface_fields(self):
 		quote = self._submitted_quote()

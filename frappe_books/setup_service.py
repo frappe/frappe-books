@@ -31,6 +31,7 @@ def run_setup(wizard):
 	_update_print_settings(wizard)
 	_update_inventory_settings(accounts)
 	_update_pos_settings(accounts)
+	_update_payment_methods(accounts["cash"], bank_account)
 	_update_defaults(bank_account, accounts)
 	return {"setup_complete": True, "bank_account": bank_account}
 
@@ -132,10 +133,12 @@ def _update_pos_settings(accounts):
 		}
 	)
 	settings.save(ignore_permissions=True)
-	if accounts["cash"]:
-		frappe.db.set_value(
-			"Books Payment Method", "Cash", "account", accounts["cash"], update_modified=False
-		)
+
+
+def _update_payment_methods(cash_account, bank_account):
+	"""Receipts by the seeded methods default to the company's cash and bank accounts."""
+	for method, account in (("Cash", cash_account), ("Bank", bank_account)):
+		frappe.db.set_value("Books Payment Method", method, "account", account, update_modified=False)
 
 
 def _update_defaults(bank_account, accounts):

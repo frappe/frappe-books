@@ -201,10 +201,18 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 	def test_account_is_the_party_ledger_and_payment_account_is_cash_or_bank(self):
 		for values, message in (
 			({"account": self.payable.name}, "must be of type Receivable"),
-			({"payment_account": self.income.name}, "must be of type Cash or Bank"),
+			({"payment_account": self.income.name, "payment_method": "Bank"}, "must be of type Cash or Bank"),
 		):
 			with self.subTest(values=values), self.assertRaisesRegex(frappe.ValidationError, message):
 				self._payment(self.invoice, **values).insert()
+
+	def test_cash_methods_pay_from_cash_accounts(self):
+		bank = make_account("Rules Bank", account_type="Bank")
+		with self.assertRaisesRegex(frappe.ValidationError, "must be of type Cash, but"):
+			self._payment(self.invoice, payment_account=bank.name).insert()
+
+		values = {"payment_account": bank.name, "payment_method": "Bank", "reference_id": "TRF-1"}
+		self._payment(self.invoice, **values).insert()
 
 	def test_partial_payment_needs_the_setting(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 0)

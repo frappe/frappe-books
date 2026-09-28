@@ -68,6 +68,9 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			"SINV-",
 		)
 		self.assertTrue(frappe.db.get_value("Currency", "INR", "enabled"))
+		cash = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+		for method, account in (("Cash", cash), ("Bank", wizard.bank_name)):
+			self.assertEqual(frappe.db.get_value("Books Payment Method", method, "account"), account)
 		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
 		self.assertTrue(frappe.db.exists("Books Tax", "GST-18"))
 		gst = frappe.get_doc("Books Tax", "GST-18")

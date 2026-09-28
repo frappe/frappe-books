@@ -103,8 +103,6 @@ def set_pos_accounts():
 				"account_type": "Cash",
 			}
 		).insert()
-	if not frappe.db.exists("Books Payment Method", "Bank"):
-		frappe.get_doc({"doctype": "Books Payment Method", "name": "Bank", "type": "Bank"}).insert()
 	return counter.name
 
 

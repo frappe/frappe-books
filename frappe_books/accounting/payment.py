@@ -41,15 +41,17 @@ class PaymentController(SeriesNamingMixin, Document):
 		self.payment_type = self.payment_type or _default_payment_type(party, invoice)
 		self.account = self.account or _default_party_account(party, invoice, self.payment_type)
 		self.payment_account = self.payment_account or _default_payment_account(
-			self.payment_method, self.payment_type
+			self.payment_method, self.payment_type, invoice
 		)
 
 	def get_first_invoice(self):
-		"""Return the doctype, return link and account of the first referenced invoice."""
+		"""Return the doctype, return link, account and POS flag of the first referenced invoice."""
 		row = self.payment_references[0] if self.payment_references else None
 		if not row or row.reference_type not in REFERENCE_DOCTYPES.values():
 			return None
 		fields = ["return_against", "account"]
+		if row.reference_type == "Books Sales Invoice":
+			fields.append("is_pos")
 		invoice = frappe.db.get_value(row.reference_type, row.reference_name, fields, as_dict=True)
 		return invoice and frappe._dict(invoice, doctype=row.reference_type)
 
@@ -120,14 +122,17 @@ def _default_party_account(party, invoice, payment_type):
 	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
 
 
-def _default_payment_account(payment_method, payment_type):
-	"""Receipts go to the method's account, else to the newest ledger of the method's kind."""
+def _default_payment_account(payment_method, payment_type, invoice):
+	"""POS cash goes to the counter, other receipts to the method's account, else the newest ledger
+	of the method's kind."""
 	fields = ["type", "account"]
 	method = payment_method and frappe.db.get_value(
 		"Books Payment Method", payment_method, fields, as_dict=True
 	)
 	if not method:
 		return None
+	if method.type == "Cash" and invoice and invoice.get("is_pos"):
+		return frappe.db.get_single_value("Books Pos Settings", "cash_account")
 	if method.account and payment_type != "Pay":
 		return method.account
 	return latest_ledger_account("Cash" if method.type == "Cash" else "Bank")

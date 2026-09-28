@@ -149,21 +149,28 @@ def _realised_taxes(allocations):
 
 def _invoice_realised_taxes(invoice, amount):
 	payment_accounts = _tax_payment_accounts(invoice)
-	total = abs(as_decimal(invoice.base_grand_total))
-	if not payment_accounts or not total:
+	if not payment_accounts:
 		return
-	paid = total - abs(as_decimal(invoice.outstanding_amount))
+	paid = abs(as_decimal(invoice.base_grand_total)) - abs(as_decimal(invoice.outstanding_amount))
+	for tax, share in invoice_tax_shares(invoice, amount, paid):
+		if tax.account in payment_accounts:
+			yield {
+				"account": payment_accounts[tax.account],
+				"from_account": tax.account,
+				"rate": tax.rate,
+				"amount": share,
+			}
+
+
+def invoice_tax_shares(invoice, amount, paid=0):
+	"""Yield each invoice tax with the base-currency share that `amount`, paid after `paid`, settles."""
+	total = abs(as_decimal(invoice.base_grand_total))
+	if not total:
+		return
 	for tax in invoice.taxes:
-		if tax.account not in payment_accounts:
-			continue
 		base_tax = abs(as_decimal(tax.amount)) * as_decimal(invoice.exchange_rate or 1)
-		yield {
-			"account": payment_accounts[tax.account],
-			"from_account": tax.account,
-			"rate": tax.rate,
-			# Realise the share paid so far, so partial payments add up to the full tax.
-			"amount": rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total),
-		}
+		# Share what is paid so far, so partial payments add up to the full tax.
+		yield tax, rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total)
 
 
 def _tax_payment_accounts(invoice):

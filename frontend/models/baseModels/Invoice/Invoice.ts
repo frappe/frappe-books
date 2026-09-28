@@ -153,20 +153,6 @@ export abstract class Invoice extends Transactional {
     this._setGetCurrencies();
   }
 
-  async getPaymentIds() {
-    const payments = (await this.fyo.db.getAll('PaymentFor', {
-      fields: ['parent'],
-      filters: { referenceType: this.schemaName, referenceName: this.name! },
-      orderBy: 'name',
-    })) as { parent: string }[];
-
-    if (payments.length != 0) {
-      return [...new Set(payments.map(({ parent }) => parent))];
-    }
-
-    return [];
-  }
-
   /** The server's rate on the invoice date, or null (with a warning) when the user must enter it. */
   async getExchangeRate(): Promise<number | null> {
     if (!this.currency || this.currency === this.companyCurrency) {

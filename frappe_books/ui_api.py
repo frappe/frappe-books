@@ -5,6 +5,7 @@ from typing import Any, Literal, get_args
 
 import frappe
 
+from frappe_books import printing
 from frappe_books.ui_bridge import field_properties
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
@@ -44,6 +45,14 @@ def lifecycle_action(action: LifecycleAction, source_schema: str, name: str) -> 
 	else:
 		doc.cancel()
 	return BooksDatabaseBridge().get(source_schema, name)
+
+
+@frappe.whitelist(methods=["POST"])
+def get_print_totals(source_schema: str, name: str) -> dict[str, Any]:
+	"""Return the totals a print template shows besides the document's own fields."""
+	doc = frappe.get_doc(target_doctype(source_schema), name)
+	doc.check_permission("print")
+	return printing.get_print_totals(doc)
 
 
 def _as_list(value: list[Any] | str | None) -> list[Any]:

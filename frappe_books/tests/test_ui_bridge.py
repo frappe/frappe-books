@@ -1,6 +1,5 @@
 """Integration coverage for the original Vue UI's Frappe compatibility layer."""
 
-from datetime import datetime, timedelta
 from unittest.mock import ANY
 
 import frappe
@@ -141,31 +140,13 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		row = next(row for row in rows if row["name"] == name)
 		self.assertEqual(row["createdBy"], frappe.session.user)
 
-		next_modified = datetime.fromisoformat(inserted["modified"]) + timedelta(seconds=1)
-		expected_modified = datetime.fromisoformat(inserted["modified"])
-		expected_modified = expected_modified.replace(
-			microsecond=expected_modified.microsecond // 1000 * 1000
-		)
 		updated = self.bridge.update(
-			"UOM",
-			{
-				"name": name,
-				"isWhole": False,
-				"modified": next_modified.isoformat(),
-				"__expectedModified": expected_modified.isoformat(),
-			},
+			"UOM", {"name": name, "isWhole": False, "modified": inserted["modified"]}
 		)
 		self.assertEqual(updated["modified"], self.bridge.get("UOM", name)["modified"])
 		self.assertEqual(self.bridge.get("UOM", name)["isWhole"], 0)
 		with self.assertRaises(frappe.TimestampMismatchError):
-			self.bridge.update(
-				"UOM",
-				{
-					"name": name,
-					"isWhole": True,
-					"__expectedModified": inserted["modified"],
-				},
-			)
+			self.bridge.update("UOM", {"name": name, "isWhole": True, "modified": inserted["modified"]})
 
 		self.bridge.delete("UOM", name)
 		self.assertFalse(self.bridge.exists("UOM", name))
@@ -274,7 +255,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				{
 					"name": name,
 					"rate": -1,
-					"__expectedModified": inserted["modified"],
+					"modified": inserted["modified"],
 				},
 			)
 
@@ -294,7 +275,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				"rate": "16.00000000000",
 				"trackItem": "1",
 				"uomConversions": [{"uom": "Kg", "conversionFactor": "2.5"}],
-				"__expectedModified": inserted["modified"],
+				"modified": inserted["modified"],
 			},
 		)
 
@@ -469,10 +450,10 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 	def test_api_endpoints_validate_argument_types(self):
 		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
-			lifecycle_action("submit", "SalesInvoice", {"name": ["like", "%"]})
+			lifecycle_action("submit", "SalesInvoice", {"name": ["like", "%"]}, "2026-01-01 00:00:00")
 		for action in ("Submit", "bogus"):
 			with self.subTest(action=action), self.assertRaises(frappe.FrappeTypeError):
-				lifecycle_action(action, "SalesInvoice", "SINV-0001")
+				lifecycle_action(action, "SalesInvoice", "SINV-0001", "2026-01-01 00:00:00")
 		for endpoint in (database_call, bespoke_call):
 			with self.subTest(endpoint=endpoint.__name__), self.assertRaises(frappe.FrappeTypeError):
 				endpoint("get", {"source_schema": "Party"})
@@ -545,7 +526,8 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				{"name": invoice.name, "submitted": True},
 			)
 
-		submitted = lifecycle_action("submit", "SalesInvoice", invoice.name)
+		modified = self.bridge.get("SalesInvoice", invoice.name)["modified"]
+		submitted = lifecycle_action("submit", "SalesInvoice", invoice.name, modified)
 		self.assertTrue(submitted["submitted"])
 		self.assertTrue(
 			frappe.db.exists(
@@ -554,7 +536,7 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 			)
 		)
 
-		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name)
+		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name, submitted["modified"])
 		self.assertTrue(cancelled["cancelled"])
 		self.assertTrue(
 			frappe.db.exists(

@@ -70,12 +70,14 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
     action: 'submit' | 'cancel',
     schemaName: string,
     name: string,
+    modified: string,
     linkedDocs?: LinkedDoc[]
   ): Promise<unknown> {
     return call('frappe_books.ui_api.lifecycle_action', {
       action,
       source_schema: schemaName,
       name,
+      modified,
       linked_docs: linkedDocs,
     });
   }

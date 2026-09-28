@@ -907,15 +907,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _update() {
-    const expectedModified = this.modified;
     await this._preSync();
 
+    // The data holds `modified`, which the server compares to refuse a stale save.
     let data = this.getValidDict(false, true);
-    data = await this.fyo.db.update(
-      this.schemaName,
-      data,
-      expectedModified instanceof Date ? expectedModified : undefined
-    );
+    data = await this.fyo.db.update(this.schemaName, data);
     await this._syncValues(data, 'save');
 
     return this;
@@ -961,7 +957,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
     const data = await this.fyo.db.runLifecycleAction(
       'submit',
       this.schemaName,
-      this.name!
+      this.name!,
+      this.modified as string
     );
     await this._syncValues(data, 'submit');
     this._notInserted = false;
@@ -1005,6 +1002,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       'cancel',
       this.schemaName,
       this.name!,
+      this.modified as string,
       linkedDocs
     );
     await this._syncValues(data);

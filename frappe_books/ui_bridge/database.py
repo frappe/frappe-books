@@ -1,6 +1,6 @@
 """Permission-aware database compatibility layer for the Books Vue SPA."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
@@ -29,7 +29,7 @@ READ_METHODS = {"get", "getAll", "count", "search", "getSingleValues", "exists",
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 PROTECTED_WRITE_SCHEMAS = {"AccountingLedgerEntry", "LoyaltyPointEntry", "StockLedgerEntry"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
-INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__expectedModified"}
+INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled"}
 # Frappe maintains nested-set indices when the document is saved.
 TREE_INDEX_FIELDS = {"lft", "rgt"}
 DOCSTATUS_FLAGS = {"submitted": {1, 2}, "cancelled": {2}}
@@ -184,9 +184,11 @@ class BooksDatabaseBridge:
 			frappe.throw("Books update values require a document name")
 		doc = frappe.get_doc(target, values["name"])
 		doc.check_permission("write")
-		self._validate_expected_modified(doc, values.get("__expectedModified"))
 		self._validate_docstatus_update(doc, values)
 		self._set_target_values(doc, source_schema, values)
+		if "modified" in values:
+			# Frappe's check_if_latest refuses the save if the stored document changed since.
+			doc.modified = values["modified"]
 		create_missing_batches(doc)
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
@@ -413,24 +415,6 @@ class BooksDatabaseBridge:
 		if ("submitted" in values or "cancelled" in values) and desired != doc.docstatus:
 			frappe.throw("Use the Books document action API to change document status")
 
-	def _validate_expected_modified(self, doc, expected):
-		if expected is None or doc.meta.issingle:
-			return
-		if not isinstance(expected, str):
-			frappe.throw("The expected Books modification time must be a string")
-		try:
-			expected_datetime = datetime.fromisoformat(expected.replace("Z", "+00:00"))
-		except ValueError:
-			frappe.throw("The expected Books modification time is invalid")
-		if expected_datetime.tzinfo is None:
-			expected_datetime = expected_datetime.replace(tzinfo=ZoneInfo(get_system_timezone()))
-		current_datetime = _aware_datetime(doc.modified)
-		if _javascript_datetime(current_datetime) != _javascript_datetime(expected_datetime):
-			frappe.throw(
-				f"{doc.doctype} {doc.name} changed after it was opened. Reload and try again.",
-				frappe.TimestampMismatchError,
-			)
-
 	def _is_password_field(self, meta, fieldname):
 		field = meta.get_field(fieldname)
 		return bool(field and field.fieldtype == "Password")
@@ -462,7 +446,10 @@ def _source_row_value(meta, source_name: str, target_name: str, row: dict) -> An
 		return cint(row.get("docstatus")) in DOCSTATUS_FLAGS[source_name]
 	value = row.get(target_name)
 	field = meta.get_field(target_name)
-	if value and (target_name in {"creation", "modified"} or (field and field.fieldtype == "Datetime")):
+	if value and target_name == "modified":
+		# The client sends it back unchanged, for Frappe to refuse saving a stale document.
+		return str(get_datetime(value))
+	if value and (target_name == "creation" or (field and field.fieldtype == "Datetime")):
 		return iso_datetime(value)
 	return _source_value(meta, target_name, value)
 
@@ -527,8 +514,3 @@ def _aware_datetime(value) -> datetime:
 	if datetime_value.tzinfo is None:
 		datetime_value = datetime_value.replace(tzinfo=ZoneInfo(get_system_timezone()))
 	return datetime_value
-
-
-def _javascript_datetime(value: datetime) -> datetime:
-	utc_value = value.astimezone(UTC)
-	return utc_value.replace(microsecond=utc_value.microsecond // 1000 * 1000)

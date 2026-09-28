@@ -43,8 +43,7 @@ export abstract class DatabaseBase {
 
   abstract update(
     schemaName: string,
-    fieldValueMap: UnknownMap,
-    expectedModified?: Date
+    fieldValueMap: UnknownMap
   ): Promise<UnknownMap>;
 
   // Delete
@@ -107,6 +106,7 @@ export abstract class DatabaseDemuxBase {
     action: 'submit' | 'cancel',
     schemaName: string,
     name: string,
+    modified: string,
     linkedDocs?: LinkedDoc[]
   ): Promise<unknown>;
 }

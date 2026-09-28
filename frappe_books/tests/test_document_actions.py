@@ -218,7 +218,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		invoice = self._paid_invoice()
 		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
 		linked_docs = get_submitted_linked_docs("SalesInvoice", invoice.name)
-		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name, linked_docs)
+		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name, _modified(invoice), linked_docs)
 
 		self.assertEqual([(doc["schemaName"], doc["name"]) for doc in linked_docs], [("Payment", payment)])
 		self.assertTrue(cancelled["cancelled"])
@@ -227,11 +227,10 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 	def test_linked_documents_are_cancelled_with_the_users_rights(self):
 		invoice = self._paid_invoice()
 		linked_docs = get_submitted_linked_docs("SalesInvoice", invoice.name)
+		args = ("cancel", "SalesInvoice", invoice.name, _modified(invoice), linked_docs)
 
 		with self.set_user(ensure_user("books-cancel-user@example.com", "Books User")):
-			self.assertRaises(
-				frappe.PermissionError, lifecycle_action, "cancel", "SalesInvoice", invoice.name, linked_docs
-			)
+			self.assertRaises(frappe.PermissionError, lifecycle_action, *args)
 
 		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
 
@@ -243,7 +242,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		values = get_duplicate("SalesInvoice", invoice.name)
 		duplicate = BooksDatabaseBridge().insert("SalesInvoice", values)
-		submitted = lifecycle_action("submit", "SalesInvoice", duplicate["name"])
+		submitted = lifecycle_action("submit", "SalesInvoice", duplicate["name"], duplicate["modified"])
 
 		self.assertEqual((submitted["isReturned"], submitted["status"]), (0, "Unpaid"))
 		self.assertEqual(submitted["outstandingAmount"], submitted["grandTotal"])
@@ -350,3 +349,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			.insert()
 			.submit()
 		)
+
+
+def _modified(doc):
+	"""Return the stored `modified` value, as the interface reads it."""
+	return str(frappe.db.get_value(doc.doctype, doc.name, "modified"))

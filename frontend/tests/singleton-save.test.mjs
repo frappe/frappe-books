@@ -25,7 +25,6 @@ for (const [schemaName, fieldname, value] of settings) {
     assert.equal(writes.length, 1);
     assert.equal(Object.hasOwn(writes[0], 'modified'), false);
     assert.equal(Object.hasOwn(writes[0], 'modifiedBy'), false);
-    assert.equal(Object.hasOwn(writes[0], '__expectedModified'), false);
     const saved = await fyo.db.get(schemaName, schemaName);
     assert.equal(saved[fieldname], value);
   });

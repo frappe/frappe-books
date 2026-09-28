@@ -5,6 +5,8 @@ from typing import Any, Literal, get_args
 
 import frappe
 from frappe.desk.form import linked_with
+from frappe.model.docstatus import DocStatus
+from frappe.model.document import Document
 
 from frappe_books.ui_bridge import field_properties
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
@@ -51,23 +53,35 @@ def lifecycle_action(
 	action: LifecycleAction,
 	source_schema: str,
 	name: str,
+	modified: str,
 	linked_docs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
 	"""Run accounting and stock lifecycle hooks in one server transaction.
 
-	A cancel first cancels `linked_docs`, the documents `get_submitted_linked_docs` listed.
+	Frappe refuses the action if the document changed after the client read `modified`. A cancel
+	first cancels `linked_docs`, the documents `get_submitted_linked_docs` listed.
 	"""
 	# Frappe skips a bare Literal annotation because its values are strings.
 	if action not in get_args(LifecycleAction):
 		frappe.throw(f"Unsupported Books lifecycle action: {action}", frappe.FrappeTypeError)
 	doc = frappe.get_doc(target_doctype(source_schema), name)
+	doc.modified = modified
 	if action == "submit":
 		doc.submit()
 	elif linked_docs:
-		linked_with.cancel_all_linked_docs(linked_docs, root_doctype=doc.doctype, root_name=doc.name)
+		cancel_with_linked_docs(doc, linked_docs)
 	else:
 		doc.cancel()
 	return BooksDatabaseBridge().get(source_schema, name)
+
+
+def cancel_with_linked_docs(doc: Document, linked_docs: list[dict[str, Any]]) -> None:
+	"""Cancel the linked documents and then `doc`, as Frappe's Cancel All does."""
+	# Frappe cancels a fresh copy of `doc`, so check this one is current first, as run_doc_method does.
+	doc.docstatus = DocStatus.CANCELLED
+	doc._original_modified = doc.modified
+	doc.check_if_latest()
+	linked_with.cancel_all_linked_docs(linked_docs, root_doctype=doc.doctype, root_name=doc.name)
 
 
 def _as_list(value: list[Any] | str | None) -> list[Any]:

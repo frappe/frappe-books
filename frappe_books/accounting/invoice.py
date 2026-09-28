@@ -353,8 +353,9 @@ def _populate_pos_defaults(invoice):
 	if not invoice.get("is_pos"):
 		return
 	invoice.party = invoice.party or pos_customer()
-	pos_account = frappe.db.get_single_value("Books Pos Settings", "default_account")
-	invoice.account = invoice.get("account") or pos_account
+	invoice.account = invoice.get("account") or frappe.db.get_single_value(
+		"Books Pos Settings", "default_account"
+	)
 
 
 def _populate_party_defaults(invoice):

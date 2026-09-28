@@ -116,7 +116,8 @@
    "fieldname": "is_returned",
    "fieldtype": "Check",
    "hidden": 1,
-   "label": "Is Returned"
+   "label": "Is Returned",
+   "no_copy": 1
   },
   {
    "default": "0",
@@ -131,6 +132,7 @@
    "fieldname": "back_reference",
    "fieldtype": "Link",
    "label": "Back Reference",
+   "no_copy": 1,
    "options": "Books Sales Invoice"
   },
   {
@@ -144,7 +146,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-28 07:12:48.316360",
+ "modified": "2026-09-30 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Shipment",

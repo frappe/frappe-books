@@ -1,15 +1,15 @@
 """Permission-aware database compatibility layer for the Books Vue SPA."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 import frappe
+import frappe.handler
 from frappe.desk.search import search_widget
 from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
-from frappe_books.accounting.invoice import InvoiceController
 from frappe_books.inventory.stock import create_missing_batches
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
@@ -34,12 +34,11 @@ READ_METHODS = {
 	"searchLink",
 	"getSingleValues",
 	"exists",
-	"preview",
 	"getMapped",
 }
 WRITE_METHODS = {"insert", "update", "rename", "delete", "deleteAll"}
 NUMERIC_FIELDTYPES = {"Check", "Currency", "Float", "Int", "Long Int", "Percent"}
-INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled", "__expectedModified"}
+INTERFACE_ONLY_FIELDS = {*SOURCE_META_TO_TARGET, "submitted", "cancelled"}
 # Frappe maintains nested-set indices when the document is saved.
 TREE_INDEX_FIELDS = {"lft", "rgt"}
 DOCSTATUS_FLAGS = {"submitted": {1, 2}, "cancelled": {2}}
@@ -218,30 +217,39 @@ class BooksDatabaseBridge:
 			frappe.throw("Books update values require a document name")
 		doc = frappe.get_doc(target, values["name"])
 		doc.check_permission("write")
-		self._validate_expected_modified(doc, values.get("__expectedModified"))
 		self._validate_docstatus_update(doc, values)
 		self._set_target_values(doc, source_schema, values)
+		if "modified" in values:
+			# Frappe's check_if_latest refuses the save if the stored document changed since.
+			doc.modified = values["modified"]
 		create_missing_batches(doc)
 		doc.save()
 		return self._to_readable_source(source_schema, doc)
 
-	def preview(self, source_schema: str, values: dict[str, Any], name: str | None = None) -> dict:
-		"""Return the values a save would calculate for a new or edited invoice, without saving."""
-		target = target_doctype(source_schema)
-		doc = frappe.get_doc({"doctype": target, **self._target_values(source_schema, values), "name": name})
-		if not isinstance(doc, InvoiceController):
-			frappe.throw(f"Books cannot preview {source_schema} documents")
-		if name:
-			frappe.get_doc(target, name).check_permission("write")
-		else:
-			doc.check_permission("create")
-		doc.calculate()
-		return self._to_readable_source(source_schema, doc)
+	def run_doc_method(
+		self, method: str, source_schema: str, values: dict[str, Any], name: str | None = None
+	) -> dict:
+		"""Run a whitelisted controller method on the values with Frappe's run_doc_method.
+
+		The values edit the saved document `name`, or make a new document without it.
+		"""
+		frappe.handler.run_doc_method(method, docs=self._target_document(source_schema, values, name))
+		# Frappe responds with the document the method ran on.
+		return self._to_readable_source(source_schema, frappe.response.docs.pop())
 
 	def get_mapped(self, method: str, source_name: str) -> dict:
 		"""Return the unsaved document a whitelisted mapper, like make_return, builds."""
 		doc = make_mapped_doc(method, source_name)
 		return self._to_readable_source(source_by_doctype()[doc.doctype], doc)
+
+	def get_duplicate(self, source_schema: str, values: dict[str, Any]) -> dict:
+		"""Return an unsaved copy of a document's values, without the fields Frappe marks no_copy."""
+		document = {"doctype": target_doctype(source_schema), **self._target_values(source_schema, values)}
+		duplicate = frappe.copy_doc(document, ignore_no_copy=False)
+		# The fields Frappe does not copy take a new document's defaults.
+		duplicate.update_if_missing(frappe.new_doc(duplicate.doctype, as_dict=True))
+		duplicate.check_permission("create")
+		return self._to_readable_source(source_schema, duplicate)
 
 	def rename(self, source_schema: str, old_name: str, new_name: str) -> None:
 		frappe.rename_doc(target_doctype(source_schema), old_name, new_name)
@@ -412,6 +420,12 @@ class BooksDatabaseBridge:
 		fields = [group_by] if isinstance(group_by, str) else group_by
 		return ", ".join(target_field(source_schema, field) for field in fields)
 
+	def _target_document(self, source_schema, values, name):
+		document = {"doctype": target_doctype(source_schema), **self._target_values(source_schema, values)}
+		if name:
+			return {**document, "name": name, "modified": values.get("modified")}
+		return {**document, "__islocal": 1}
+
 	def _update_single(self, source_schema, values):
 		doc = frappe.get_single(target_doctype(source_schema))
 		doc.check_permission("write")
@@ -436,24 +450,6 @@ class BooksDatabaseBridge:
 		if ("submitted" in values or "cancelled" in values) and desired != doc.docstatus:
 			frappe.throw("Use the Books document action API to change document status")
 
-	def _validate_expected_modified(self, doc, expected):
-		if expected is None or doc.meta.issingle:
-			return
-		if not isinstance(expected, str):
-			frappe.throw("The expected Books modification time must be a string")
-		try:
-			expected_datetime = datetime.fromisoformat(expected.replace("Z", "+00:00"))
-		except ValueError:
-			frappe.throw("The expected Books modification time is invalid")
-		if expected_datetime.tzinfo is None:
-			expected_datetime = expected_datetime.replace(tzinfo=ZoneInfo(get_system_timezone()))
-		current_datetime = _aware_datetime(doc.modified)
-		if _javascript_datetime(current_datetime) != _javascript_datetime(expected_datetime):
-			frappe.throw(
-				f"{doc.doctype} {doc.name} changed after it was opened. Reload and try again.",
-				frappe.TimestampMismatchError,
-			)
-
 	def _is_password_field(self, meta, fieldname):
 		field = meta.get_field(fieldname)
 		return bool(field and field.fieldtype == "Password")
@@ -473,7 +469,10 @@ def _source_row_value(meta, source_name: str, target_name: str, row: dict) -> An
 		return cint(row.get("docstatus")) in DOCSTATUS_FLAGS[source_name]
 	value = row.get(target_name)
 	field = meta.get_field(target_name)
-	if value and (target_name in {"creation", "modified"} or (field and field.fieldtype == "Datetime")):
+	if value and target_name == "modified":
+		# The client sends it back unchanged, for Frappe to refuse saving a stale document.
+		return str(get_datetime(value))
+	if value and (target_name == "creation" or (field and field.fieldtype == "Datetime")):
 		return iso_datetime(value)
 	return _source_value(meta, target_name, value)
 
@@ -538,8 +537,3 @@ def _aware_datetime(value) -> datetime:
 	if datetime_value.tzinfo is None:
 		datetime_value = datetime_value.replace(tzinfo=ZoneInfo(get_system_timezone()))
 	return datetime_value
-
-
-def _javascript_datetime(value: datetime) -> datetime:
-	utc_value = value.astimezone(UTC)
-	return utc_value.replace(microsecond=utc_value.microsecond // 1000 * 1000)

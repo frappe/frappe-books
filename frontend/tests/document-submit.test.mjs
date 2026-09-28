@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeFyo } from './helpers/accounting.mjs';
 
+// Frappe's stored value, which the server compares to refuse stale documents.
+const MODIFIED = '2026-09-28 10:00:00.123456';
+
 test('submission notifies listeners after the server accepts the document without rerunning model hooks', async () => {
   const { fyo, payment } = await makePayment();
   const calls = [];
@@ -15,7 +18,7 @@ test('submission notifies listeners after the server accepts the document withou
     calls.push('listener');
   });
   fyo.db.runLifecycleAction = async (...args) => {
-    assert.deepEqual(args, ['submit', 'Payment', payment.name]);
+    assert.deepEqual(args, ['submit', 'Payment', payment.name, MODIFIED]);
     assert.equal(payment.submitted, false);
     calls.push('server');
     return { ...payment.getValidDict(), submitted: true };
@@ -77,6 +80,7 @@ async function makePayment() {
   const fyo = await makeFyo();
   const payment = fyo.doc.getNewDoc('Payment', {
     name: 'PAY-0001',
+    modified: MODIFIED,
     amount: 100,
     paymentType: 'Pay',
     submitted: false,
@@ -109,4 +113,24 @@ test('a failed submission callback cannot turn a posted document into a failed s
   assert.equal(notified, true);
   assert.equal(warnings.length, 1);
   assert.equal(warnings[0].action, 'submit');
+});
+
+test('a cancel sends the linked documents to cancel with it', async () => {
+  const { fyo, payment } = await makePayment();
+  payment.submitted = true;
+  const linkedDocs = [
+    { doctype: 'Books Payment', name: 'PAY-0002', docstatus: 1 },
+  ];
+  const calls = [];
+  fyo.db.runLifecycleAction = async (...args) => {
+    calls.push(args);
+    return { ...payment.getValidDict(), cancelled: true };
+  };
+
+  await payment.cancel(linkedDocs);
+
+  assert.deepEqual(calls, [
+    ['cancel', 'Payment', 'PAY-0001', MODIFIED, linkedDocs],
+  ]);
+  assert.equal(payment.cancelled, true);
 });

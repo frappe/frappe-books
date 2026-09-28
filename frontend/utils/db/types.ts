@@ -51,8 +51,7 @@ export abstract class DatabaseBase {
 
   abstract update(
     schemaName: string,
-    fieldValueMap: UnknownMap,
-    expectedModified?: Date
+    fieldValueMap: UnknownMap
   ): Promise<UnknownMap>;
 
   // Delete
@@ -62,12 +61,6 @@ export abstract class DatabaseBase {
 
   // Other
   abstract exists(schemaName: string, name?: string): Promise<boolean>;
-
-  abstract preview(
-    schemaName: string,
-    fieldValueMap: UnknownMap,
-    name?: string
-  ): Promise<UnknownMap>;
 
   abstract getMapped(
     schemaName: string,
@@ -109,12 +102,26 @@ export abstract class DatabaseDemuxBase {
 
   abstract callBespoke(method: string, ...args: unknown[]): Promise<unknown>;
 
+  abstract getDuplicate(schemaName: string, values: unknown): Promise<unknown>;
+
+  abstract runDocMethod(
+    method: string,
+    schemaName: string,
+    values: unknown,
+    name?: string
+  ): Promise<unknown>;
+
   abstract runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,
-    name: string
+    name: string,
+    modified: string,
+    linkedDocs?: LinkedDoc[]
   ): Promise<unknown>;
 }
+
+/** A submitted document Frappe cancels along with the one it links to. */
+export type LinkedDoc = { doctype: string; name: string; docstatus: number };
 
 export type ReportQuery =
   | 'getGeneralLedger'

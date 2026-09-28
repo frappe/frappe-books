@@ -57,6 +57,11 @@ export class Converter {
   }
 
   static toDocValue(value: RawValue, field: Field, fyo: Fyo): DocValue {
+    if (field.fieldname === 'modified') {
+      // Frappe compares the stored value, down to microseconds, to refuse stale saves.
+      return toDocString(value, field);
+    }
+
     switch (field.fieldtype) {
       case FieldTypeEnum.Currency:
         return toDocCurrency(value, field, fyo);

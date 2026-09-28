@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import { DocValueMap } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { getMissingMandatoryMessage } from 'fyo/model/helpers';
+import { ConflictError } from 'fyo/utils/errors';
 import {
   ChangeArg,
   CurrenciesMap,
@@ -396,16 +397,30 @@ export abstract class Invoice extends Transactional {
     }
 
     const edits = this._edits;
-    const sent = this.getValidDict(true, true);
-    const previewed = await this.fyo.db.preview(
-      this.schemaName,
-      sent,
-      this.notInserted ? undefined : this.name
-    );
-    if (edits === this._edits && this.dirty) {
+    // A saved invoice sends its `modified`, which the server checks is current.
+    const sent = this.getValidDict(false, true);
+    const previewed = await this._fetchPreview(sent);
+    if (previewed && edits === this._edits && this.dirty) {
       applyPreview(this, sent, previewed);
       // Computed values are not sent, so the preview has none.
       await this._setComputedValuesFromFormulas();
+    }
+  }
+
+  /** The server's preview, or none for a draft changed elsewhere, which only its save reports. */
+  async _fetchPreview(sent: DocValueMap): Promise<DocValueMap | undefined> {
+    try {
+      return await this.fyo.db.preview(
+        this.schemaName,
+        sent,
+        this.notInserted ? undefined : this.name
+      );
+    } catch (error) {
+      if (error instanceof ConflictError) {
+        return;
+      }
+
+      throw error;
     }
   }
 

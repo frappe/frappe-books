@@ -19,7 +19,7 @@ async function makeFixture(storedForm) {
           return structuredClone(stored);
         }
         if (method === 'update') {
-          if (value.__expectedModified !== stored.modified) {
+          if (value.modified !== stored.modified) {
             throw new Error('Changed after it was opened');
           }
           updateCount++;
@@ -30,7 +30,6 @@ async function makeFixture(storedForm) {
           }
           const modified = Date.parse(stored.modified) + 1000;
           stored = structuredClone(value);
-          delete stored.__expectedModified;
           stored.modified = new Date(modified).toISOString();
           return structuredClone(stored);
         }

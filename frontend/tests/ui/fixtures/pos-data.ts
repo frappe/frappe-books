@@ -74,9 +74,9 @@ export async function preparePOSData() {
       return records[schema]?.find((row) => row.name === name) ?? { name };
     if (method === 'getSingleValues') return [];
     if (method === 'exists') return true;
-    if (method === 'preview') return {};
     throw new Error(`Unexpected database write or call: ${method}`);
   };
+  FrappeDatabaseDemux.prototype.runDocMethod = async () => ({});
   FrappeDatabaseDemux.prototype.callBespoke = async (method) => {
     if (method === 'getOpenPOSShift') return shift.open ? 'SHIFT-001' : null;
     if (method === 'getStockLocation') return null;

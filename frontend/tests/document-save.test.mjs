@@ -89,6 +89,18 @@ test('edits made while a cached document reloads are kept', async () => {
   assert.equal(doc.dirty, true);
 });
 
+test('an update sends back the modified value the server stored', async () => {
+  const { fyo, doc, writes, setStored } = await makeFixture('master');
+  await doc.sync();
+  setStored({ modified: '2026-09-28 10:00:00.123456' });
+  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
+
+  await doc.set('value', 'Updated');
+  await doc.sync();
+
+  assert.equal(writes[1].modified, '2026-09-28 10:00:00.123456');
+});
+
 for (const existing of [false, true]) {
   test(`a rejected ${existing ? 'update' : 'insert'} keeps edits and does not run post-save hooks`, async () => {
     const fixture = await makeFixture('transaction');

@@ -8,6 +8,7 @@ import {
   DatabaseDemuxBase,
   GetAllOptions,
   IncomeExpense,
+  LinkedDoc,
   QueryFilter,
   ReportQuery,
   SingleValue,
@@ -199,16 +200,12 @@ export class DatabaseHandler extends DatabaseBase {
 
   async update(
     schemaName: string,
-    docValueMap: DocValueMap,
-    expectedModified?: Date
+    docValueMap: DocValueMap
   ): Promise<DocValueMap> {
     const rawValueMap = this.converter.toRawValueMap(
       schemaName,
       docValueMap
     ) as RawValueMap;
-    if (expectedModified instanceof Date) {
-      rawValueMap.__expectedModified = expectedModified.toISOString();
-    }
     const updatedRawValueMap = (await this.#demux.call(
       'update',
       schemaName,
@@ -220,15 +217,20 @@ export class DatabaseHandler extends DatabaseBase {
     ) as DocValueMap;
   }
 
+  /** Submits or cancels a doc, which the server refuses if it changed after `modified`. */
   async runLifecycleAction(
     action: 'submit' | 'cancel',
     schemaName: string,
-    name: string
+    name: string,
+    modified: string,
+    linkedDocs?: LinkedDoc[]
   ): Promise<DocValueMap> {
     const rawValueMap = (await this.#demux.runLifecycleAction(
       action,
       schemaName,
-      name
+      name,
+      modified,
+      linkedDocs
     )) as RawValueMap;
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
@@ -256,7 +258,7 @@ export class DatabaseHandler extends DatabaseBase {
     name?: string
   ): Promise<DocValueMap> {
     const rawValueMap = this.converter.toRawValueMap(schemaName, docValueMap);
-    const previewed = (await this.#demux.call(
+    const previewed = (await this.#demux.runDocMethod(
       'preview',
       schemaName,
       rawValueMap,
@@ -275,6 +277,18 @@ export class DatabaseHandler extends DatabaseBase {
       'getMapped',
       method,
       sourceName
+    )) as RawValueMap;
+    return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
+  }
+
+  /** An unsaved copy of a document's values, without the values Frappe marks no_copy. */
+  async getDuplicate(
+    schemaName: string,
+    docValueMap: DocValueMap
+  ): Promise<DocValueMap> {
+    const rawValueMap = (await this.#demux.getDuplicate(
+      schemaName,
+      this.converter.toRawValueMap(schemaName, docValueMap)
     )) as RawValueMap;
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }

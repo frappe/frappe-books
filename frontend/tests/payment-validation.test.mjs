@@ -96,8 +96,7 @@ async function makePayment() {
     submitted: true,
     outstandingAmount: 490231,
   });
-  const original = fyo.doc.getNewDoc('Payment', {
-    name: 'DEMO-PAY-1001',
+  const values = {
     numberSeries: 'DEMO-PAY-',
     party: 'Supplier',
     paymentType: 'Pay',
@@ -105,7 +104,6 @@ async function makePayment() {
     account: 'Creditors',
     paymentAccount: 'Bank',
     amount: 910429,
-    submitted: true,
     for: [
       {
         referenceType: 'PurchaseInvoice',
@@ -113,7 +111,13 @@ async function makePayment() {
         amount: 910429,
       },
     ],
+  };
+  const original = fyo.doc.getNewDoc('Payment', {
+    ...structuredClone(values),
+    name: 'DEMO-PAY-1001',
+    submitted: true,
   });
   original._notInserted = false;
-  return { fyo, original, invoice, payment: original.duplicate(), stored };
+  const payment = fyo.doc.getNewDoc('Payment', values);
+  return { fyo, original, invoice, payment, stored };
 }

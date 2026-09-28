@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Fyo, getSchemas, models } from './helpers/accounting.mjs';
+import { Fyo, errors, getSchemas, models } from './helpers/accounting.mjs';
 
 test('a preview applies the values the server calculated', async () => {
   const { invoice, calls } = await makeInvoice((values) => ({
@@ -28,6 +28,34 @@ test('a preview applies the values the server calculated', async () => {
   assert.equal(row.amount.float, 200);
   assert.equal(invoice.items[1].isFreeItem, true);
   assert.ok(invoice.items[1].name);
+});
+
+test('a saved invoice previews its edits with the modified value it was read at', async () => {
+  const { invoice, calls } = await makeInvoice((values) => values);
+  invoice._notInserted = false;
+  invoice.modified = '2026-09-28 10:00:00.123456';
+  await invoice.set('terms', 'Edited');
+
+  await invoice.preview();
+
+  assert.equal(calls.at(-1).name, invoice.name);
+  assert.equal(calls.at(-1).values.modified, '2026-09-28 10:00:00.123456');
+});
+
+test('a draft changed elsewhere previews nothing and leaves the conflict to its save', async () => {
+  let error = new errors.ConflictError('Changed after it was opened');
+  const { invoice } = await makeInvoice(() => {
+    throw error;
+  });
+  await invoice.set('terms', 'Edited');
+
+  await invoice.preview();
+  assert.equal(invoice.terms, 'Edited');
+  assert.equal(invoice.grandTotal.float, 0);
+
+  error = new errors.ValidationError('Account is disabled');
+  await assert.rejects(invoice.preview(), /Account is disabled/);
+  clearTimeout(invoice._previewTimer);
 });
 
 test('a preview is dropped when the invoice changes while it runs', async () => {
@@ -203,12 +231,13 @@ async function makeInvoice(respond) {
       return getSchemas('-', []);
     }
 
+    async runDocMethod(method, schemaName, values, name) {
+      assert.deepEqual([method, schemaName], ['preview', 'SalesInvoice']);
+      calls.push({ values, name });
+      return await respond(structuredClone(values));
+    }
+
     async call(method, ...args) {
-      if (method === 'preview') {
-        const [, values, name] = args;
-        calls.push({ values, name });
-        return await respond(structuredClone(values));
-      }
       if (method === 'getAll') {
         await lookups;
         return [];

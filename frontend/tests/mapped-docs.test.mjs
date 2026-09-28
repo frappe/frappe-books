@@ -106,6 +106,61 @@ test('a fully billed shipment does not offer an invoice', async () => {
   assert.equal(makeInvoice.condition(shipment), false);
 });
 
+test('a duplicate is the copy the server makes, with its unset values left out', async () => {
+  const calls = [];
+  const fyo = await makeFyo((method, ...args) => {
+    calls.push([method, ...args]);
+    return {
+      name: null,
+      numberSeries: 'SINV-',
+      party: 'Customer',
+      isReturned: 0,
+      outstandingAmount: null,
+      items: [{ name: null, item: 'Pen', quantity: 1 }],
+    };
+  });
+  const invoice = fyo.doc.getNewDoc('SalesInvoice', {
+    name: 'SINV-1001',
+    numberSeries: 'SINV-',
+    isReturned: true,
+    outstandingAmount: 100,
+  });
+  invoice._notInserted = false;
+  await invoice.set('terms', 'Unsaved edit');
+  clearTimeout(invoice._previewTimer);
+
+  const duplicate = await invoice.duplicate();
+
+  const [[method, schemaName, values]] = calls;
+  assert.deepEqual([method, schemaName], ['getDuplicate', 'SalesInvoice']);
+  assert.equal(values.terms, 'Unsaved edit');
+  assert.equal(Object.hasOwn(values, 'modified'), false);
+  assert.equal(duplicate.notInserted, true);
+  assert.equal(duplicate.isReturned, false);
+  assert.equal(duplicate.outstandingAmount.float, 0);
+  assert.equal(duplicate.party, 'Customer');
+  assert.notEqual(duplicate.name, 'SINV-1001');
+  assert.ok(duplicate.items[0].name);
+});
+
+test('a duplicate of a named document is named after it', async () => {
+  const fyo = await makeFyo(() => ({
+    name: null,
+    type: 'SalesInvoice',
+    isCustom: 1,
+  }));
+  const template = fyo.doc.getNewDoc('PrintTemplate', {
+    name: 'Basic',
+    type: 'SalesInvoice',
+    isCustom: false,
+  });
+
+  const duplicate = await template.duplicate();
+
+  assert.equal(duplicate.name, 'Basic CPY');
+  assert.equal(duplicate.isCustom, true);
+});
+
 async function makeFyo(call) {
   class Store {
     getSchemaMap() {
@@ -114,6 +169,10 @@ async function makeFyo(call) {
 
     call(method, ...args) {
       return call(method, ...args);
+    }
+
+    getDuplicate(...args) {
+      return call('getDuplicate', ...args);
     }
   }
 

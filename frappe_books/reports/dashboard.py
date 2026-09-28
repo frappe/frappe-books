@@ -84,10 +84,8 @@ def get_invoice_summary(doctype: str, period: str) -> dict:
 		frappe.throw(_("{0} is not an invoice.").format(doctype))
 	from_date, to_date = get_period_dates(period)
 	conditions = [["docstatus", "=", 1], *datetime_conditions("date", from_date, to_date)]
-	total, unpaid = (
-		sum(abs(as_decimal(row[field])) for row in _invoice_totals(doctype, conditions))
-		for field in ("total", "outstanding")
-	)
+	totals = _invoice_totals(doctype, conditions)
+	total, unpaid = (sum(abs(as_decimal(row[field])) for row in totals) for field in ("total", "outstanding"))
 	paid_count, unpaid_count = (
 		_count(doctype, [*conditions, ["outstanding_amount", operator, 0]]) for operator in ("=", "!=")
 	)

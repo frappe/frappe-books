@@ -144,6 +144,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 			transfer_doctype: {
 				"doctype": invoice_doctype,
 				"validation": {"docstatus": ["=", 1]},
+				"field_map": {"name": "back_reference"},
 				"field_no_map": UNSHARED_FIELDS,
 			},
 			_items_doctype(transfer_doctype): {"doctype": _items_doctype(invoice_doctype)},

@@ -138,6 +138,14 @@ test('a custom field takes the server properties of its hosted column', () => {
   assert.equal(region.required, true);
 });
 
+test('a custom field without a Custom Field on the server is left out', () => {
+  const schemas = getSchemas('-', [{ parent: 'Party', fieldname: 'region' }]);
+  assert.equal(
+    schemas.Party.fields.some((field) => field.fieldname === 'region'),
+    false
+  );
+});
+
 test('a field set only once is read only after the first save', () => {
   const unit = getField('Item', 'unit', {
     fieldtype: 'Link',

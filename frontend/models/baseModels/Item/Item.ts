@@ -129,36 +129,6 @@ export class Item extends Doc {
         throw new ValidationError(this.fyo.t`Invalid HSN Code.`);
       }
     },
-    serialNumberSeries: (value: DocValue) => {
-      if (!value) {
-        return;
-      }
-
-      const series = (value as string).trim();
-      const invalidChars = /[/\=\?\&\%]/;
-
-      if (invalidChars.test(series)) {
-        throw new ValidationError(
-          this.fyo
-            .t`Serial Number Series cannot contain the following characters: /, ?, &, =, %`
-        );
-      }
-    },
-    batchSeries: (value: DocValue) => {
-      if (!value) {
-        return;
-      }
-
-      const series = (value as string).trim();
-      const invalidChars = /[/\=\?\&\%]/;
-
-      if (invalidChars.test(series)) {
-        throw new ValidationError(
-          this.fyo
-            .t`Batch Series cannot contain the following characters: /, ?, &, =, %`
-        );
-      }
-    },
   };
 
   static getActions(fyo: Fyo): Action[] {

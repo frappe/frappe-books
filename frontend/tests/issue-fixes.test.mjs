@@ -241,33 +241,30 @@ function chart(name, countryCode, language = null) {
   return { name, label: name, country_code: countryCode, language };
 }
 
-test('account translations change display labels while identifiers and custom names stay stable', async () => {
+test('account labels come from the server while identifiers and custom names stay stable', async () => {
   const fyo = await makeFyo();
   const account = fyo.doc.getNewDoc('Account', {
     name: 'Cash',
     parentAccount: 'Cash In Hand',
   });
+  fyo.store.accountLabels = { Cash: 'Trésorerie' };
+  assert.equal(getAccountLabel(fyo, account.name), 'Trésorerie');
+  assert.equal(getAccountLabel(fyo, 'Custom savings'), 'Custom savings');
+  const report = new TrialBalance(fyo);
+  report.columns = [{ fieldname: 'account', fieldtype: 'Link' }];
+  const cell = report.getReportRow({ account: account.name, indent: 0 })
+    .cells[0];
+  assert.equal(cell.value, 'Trésorerie');
+  assert.equal(cell.rawValue, 'Cash');
+  assert.equal(account.name, 'Cash');
+  assert.equal(account.parentAccount, 'Cash In Hand');
+});
+
+test('translations fill template values and skip empty ones', () => {
   try {
-    useTranslations({
-      Cash: 'Trésorerie',
-      'Custom savings': 'Do not use',
-      'Amount {0}': 'Montant {0}',
-    });
-    assert.equal(getAccountLabel(account.name), 'Trésorerie');
-    assert.equal(getAccountLabel('Custom savings'), 'Custom savings');
+    useTranslations({ 'Amount {0}': 'Montant {0}', Save: '' });
     assert.equal(t`Amount ${123}`, 'Montant 123');
-    useTranslations({ Cash: 'Trésorerie', Save: '' });
     assert.equal(t`Save`, 'Save');
-    const report = new TrialBalance(fyo);
-    report.columns = [{ fieldname: 'account', fieldtype: 'Link' }];
-    const cell = report.getReportRow({ account: account.name, indent: 0 })
-      .cells[0];
-    assert.equal(cell.value, 'Trésorerie');
-    assert.equal(cell.rawValue, 'Cash');
-    useTranslations({ Cash: 'Kasse' });
-    assert.equal(getAccountLabel(account.name), 'Kasse');
-    assert.equal(account.name, 'Cash');
-    assert.equal(account.parentAccount, 'Cash In Hand');
   } finally {
     setLanguageMapOnTranslationString(undefined);
   }

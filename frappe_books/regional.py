@@ -49,12 +49,6 @@ GSTIN_PATTERN = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
 GST_RATES = (28, 18, 12, 6, 5, 3, 0.25, 0)
 
 
-@frappe.whitelist()
-def get_indian_states() -> dict[str, str]:
-	"""Return the Indian states by their GST state code."""
-	return INDIAN_STATES
-
-
 def ensure_regional_records(country):
 	if country != "India":
 		return

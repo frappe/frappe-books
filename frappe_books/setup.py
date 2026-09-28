@@ -3,10 +3,11 @@
 from pathlib import Path
 
 import frappe
+from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
+from frappe.permissions import add_permission, update_permission_property
 
 from frappe_books.customization import sync_all_custom_forms
 from frappe_books.series import NUMBER_SERIES
-from frappe_books.setup_service import ensure_currency
 
 DEFAULT_SERIES_START = 1001
 DEFAULT_PRINT_TEMPLATES = {
@@ -27,6 +28,13 @@ DEFAULT_PRINT_TEMPLATE_FIELDS = {
 }
 PRINT_TEMPLATE_DIRECTORY = Path(__file__).with_name("data")
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
+# Rights Books roles need on core doctypes the Books interface uses
+CORE_PERMISSIONS = {
+	"Currency": {
+		"Books User": ("read", "report", "print", "export", "email"),
+		"Books Manager": ("read", "write", "create", "delete", "report", "print", "export", "email", "share"),
+	},
+}
 
 
 def bootstrap():
@@ -38,10 +46,27 @@ def bootstrap():
 		_insert_if_missing("Books Uom", name, {"is_whole": is_whole})
 	_insert_if_missing("Books Location", "Stores", {})
 	_insert_if_missing("Books Payment Method", "Cash", {"type": "Cash"})
-	ensure_currency(frappe.db.get_single_value("Books System Settings", "currency"))
+	grant_core_permissions()
 	for name in DEFAULT_PRINT_TEMPLATES:
 		_insert_if_missing("Books Print Template", name, standard_print_template_values(name))
 	_fill_default_print_templates()
+
+
+def before_tests():
+	"""Tests run on a site Frappe has set up for an Indian company."""
+	bootstrap()
+	if not frappe.is_setup_complete():
+		complete_app_setup(country="India", currency="INR", timezone="Asia/Kolkata")
+
+
+def grant_core_permissions():
+	"""Grant Books roles rights on core doctypes, as the Role Permission Manager does."""
+	for doctype, roles in CORE_PERMISSIONS.items():
+		for role, rights in roles.items():
+			if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0}):
+				add_permission(doctype, role)
+			for right in rights:
+				update_permission_property(doctype, role, 0, right, 1)
 
 
 def after_migrate():

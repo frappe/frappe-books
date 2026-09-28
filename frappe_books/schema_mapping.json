@@ -30,7 +30,6 @@
       "fields": {
         "bankName": "bank_name",
         "companyName": "company_name",
-        "country": "country",
         "discountAccount": "discount_account",
         "email": "email",
         "enableCouponCode": "enable_coupon_code",
@@ -55,6 +54,9 @@
         "setupComplete": "setup_complete",
         "taxId": "tax_id",
         "writeOffAccount": "write_off_account"
+      },
+      "system_settings": {
+        "country": "country"
       }
     },
     "Address": {
@@ -90,15 +92,6 @@
         "name": "name"
       }
     },
-    "BatchSeries": {
-      "doctype": "Books Batch Series",
-      "fields": {
-        "current": "current",
-        "name": "name",
-        "padZeros": "pad_zeros",
-        "start": "start"
-      }
-    },
     "ClosingAmounts": {
       "doctype": "Books Closing Amounts",
       "fields": {
@@ -127,11 +120,10 @@
         "tierName": "tier_name"
       }
     },
-    "Color": {
-      "doctype": "Books Color",
+    "Country": {
+      "doctype": "Country",
       "fields": {
-        "hexvalue": "hexvalue",
-        "name": "name"
+        "name": "country_name"
       }
     },
     "CouponCode": {
@@ -150,12 +142,12 @@
       }
     },
     "Currency": {
-      "doctype": "Books Currency",
+      "doctype": "Currency",
       "fields": {
         "fraction": "fraction",
         "fractionUnits": "fraction_units",
-        "name": "name",
-        "smallestValue": "smallest_value",
+        "name": "currency_name",
+        "smallestValue": "smallest_currency_fraction_value",
         "symbol": "symbol"
       }
     },
@@ -882,15 +874,6 @@
         "status": "status"
       }
     },
-    "SerialNumberSeries": {
-      "doctype": "Books Serial Number Series",
-      "fields": {
-        "current": "current",
-        "name": "name",
-        "padZeros": "pad_zeros",
-        "start": "start"
-      }
-    },
     "SetupWizard": {
       "doctype": "Books Setup Wizard",
       "fields": {
@@ -904,7 +887,8 @@
         "fiscalYearStart": "fiscal_year_start",
         "fullname": "fullname",
         "logo": "logo",
-        "name": "name"
+        "name": "name",
+        "timeZone": "time_zone"
       }
     },
     "Shipment": {
@@ -995,8 +979,6 @@
       "doctype": "Books System Settings",
       "fields": {
         "allowFilterBypass": "allow_filter_bypass",
-        "countryCode": "country_code",
-        "currency": "currency",
         "darkMode": "dark_mode",
         "dateFormat": "date_format",
         "displayPrecision": "display_precision",
@@ -1006,6 +988,9 @@
         "locale": "locale",
         "name": "name",
         "removeFilter": "remove_filter"
+      },
+      "system_settings": {
+        "currency": "currency"
       }
     },
     "Tax": {

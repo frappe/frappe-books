@@ -48,16 +48,15 @@
   {
    "fieldname": "current",
    "fieldtype": "Int",
-   "in_list_view": 1,
+   "is_virtual": 1,
    "label": "Current",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 07:07:21.281977",
+ "modified": "2026-09-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Number Series",

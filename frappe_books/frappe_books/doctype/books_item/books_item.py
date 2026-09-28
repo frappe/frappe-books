@@ -10,7 +10,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
-from frappe_books.series import ITEM_SERIES
+from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, validate_prefix
 from frappe_books.settings import require_features
 
 # Item fields the Books app offers only while their feature is on.
@@ -60,7 +60,7 @@ class BooksItem(Document):
 	_DOCTYPE_NAME = "Books Item"
 
 	def before_validate(self):
-		for flag, fieldname, _series_doctype in ITEM_SERIES.values():
+		for flag, fieldname in ITEM_SERIES.values():
 			series = (self.get(fieldname) or "").strip()
 			if self.get(flag) and series:
 				# A dash keeps the series prefix apart from its numbers.
@@ -77,6 +77,7 @@ class BooksItem(Document):
 		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
 			frappe.throw(_("Barcode must contain exactly 12 digits."))
 		self.validate_unit_conversions()
+		self.validate_series()
 
 	def validate_stock_settings(self):
 		if self.track_item and self.item_type != "Product":
@@ -91,24 +92,17 @@ class BooksItem(Document):
 		if any(flt(row.conversion_factor) <= 0 for row in self.uom_conversions):
 			frappe.throw(_("Conversion factors must be greater than zero."))
 
+	def validate_series(self):
+		for flag, fieldname in ITEM_SERIES.values():
+			if self.get(flag) and self.get(fieldname):
+				message = _("{0} cannot contain the following characters: {1}")
+				label = _(self.meta.get_label(fieldname))
+				validate_prefix(self.get(fieldname), message.format(label, INVALID_PREFIX_CHARACTERS))
+
 	def validate_accounts(self):
 		"""A tracked item is bought into stock received but not billed, a liability."""
 		validate_account(self, "income_account", root_types=("Income",))
 		validate_account(self, "expense_account", root_types=("Liability" if self.track_item else "Expense",))
-
-	def on_update(self):
-		if self.has_serial_number:
-			self._create_series("Books Serial Number Series", self.serial_number_series)
-		if self.has_batch:
-			self._create_series("Books Batch Series", self.batch_series)
-
-	def _create_series(self, doctype, name):
-		name = (name or "").strip()
-		if not name or frappe.db.exists(doctype, name):
-			return
-		frappe.get_doc({"doctype": doctype, "name": name, "start": 1001, "pad_zeros": 4}).insert(
-			ignore_if_duplicate=True
-		)
 
 
 def _default_income_account(item_type):

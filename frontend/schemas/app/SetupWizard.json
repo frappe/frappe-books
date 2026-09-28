@@ -39,6 +39,11 @@
       "section": "Locale"
     },
     {
+      "fieldname": "timeZone",
+      "label": "Time Zone",
+      "hidden": true
+    },
+    {
       "fieldname": "bankName",
       "label": "Bank Name",
       "placeholder": "Prime Bank",

@@ -125,6 +125,8 @@ export default defineComponent({
       fyo.store.permissions = { doctypes: books.doctypes, user: boot.user };
       fyo.store.searchFields = books.search_fields;
       fyo.store.chartsOfAccounts = books.charts_of_accounts;
+      fyo.store.accountLabels = books.account_labels;
+      fyo.store.indianStates = books.indian_states;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 

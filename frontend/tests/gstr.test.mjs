@@ -10,7 +10,6 @@ test('GSTR shows the server rows and asks the server for the JSON export', async
   const row = { gstin: GSTIN, invoice_no: 'SINV-1', igst_amount: undefined };
   const gstrJson = { gstin: GSTIN, fp: '012026', b2b: [] };
   const calls = stubServer((method) => {
-    if (method.endsWith('get_indian_states')) return { 27: 'Maharashtra' };
     if (method.endsWith('get_default_filters'))
       return {
         from_date: '2025-10-31',
@@ -32,6 +31,7 @@ test('GSTR shows the server rows and asks the server for the JSON export', async
       ]
     );
   });
+  fyo.store.indianStates = { 27: 'Maharashtra' };
   const report = new GSTR1(fyo);
 
   await report.initialize();

@@ -1,4 +1,4 @@
-"""Currency metadata for number display defaults, and exchange rates."""
+"""Currency precision from CLDR, which Frappe's Currency number formats do not match for every currency, and exchange rates."""
 
 from decimal import Decimal
 
@@ -19,15 +19,6 @@ def currency_precision(currency: str) -> int:
 
 def smallest_unit(currency: str) -> Decimal:
 	return Decimal(1).scaleb(-currency_precision(currency))
-
-
-def currency_fraction_values(currency: str) -> dict[str, int | Decimal]:
-	"""Return fractional-unit defaults from Babel's CLDR currency data."""
-	precision = currency_precision(currency)
-	return {
-		"fraction_units": 10**precision if precision else 0,
-		"smallest_value": smallest_unit(currency),
-	}
 
 
 @frappe.whitelist()

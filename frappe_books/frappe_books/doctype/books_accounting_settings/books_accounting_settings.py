@@ -7,7 +7,7 @@ from frappe.model.document import Document
 from frappe_books.accounting.accounts import validate_changed_accounts
 from frappe_books.coa import ensure_discount_account
 from frappe_books.regional import validate_gstin
-from frappe_books.settings import validate_one_way_switches
+from frappe_books.settings import company_country, validate_one_way_switches
 
 POINT_OF_SALE_FEATURES = (
 	"enable_batches",
@@ -44,7 +44,6 @@ class BooksAccountingSettings(Document):
 
 		bank_name: DF.Data
 		company_name: DF.Data
-		country: DF.Autocomplete
 		discount_account: DF.Link | None
 		email: DF.Data
 		enable_coupon_code: DF.Check
@@ -88,5 +87,5 @@ class BooksAccountingSettings(Document):
 	def validate(self):
 		validate_one_way_switches(self, ONE_WAY_SWITCHES)
 		validate_changed_accounts(self, ACCOUNT_TYPES)
-		if self.country == "India" and self.gstin:
+		if self.gstin and company_country() == "India":
 			self.gstin = validate_gstin(self.gstin)

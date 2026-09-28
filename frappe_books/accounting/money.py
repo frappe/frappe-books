@@ -26,7 +26,7 @@ def currency_unit(currency=None) -> Decimal:
 
 
 def company_currency() -> str:
-	currency = frappe.db.get_single_value("Books System Settings", "currency")
+	currency = frappe.db.get_single_value("System Settings", "currency")
 	if not currency:
-		frappe.throw(_("Set the company currency in Books System Settings."))
+		frappe.throw(_("Set the company currency in System Settings."))
 	return currency

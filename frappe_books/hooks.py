@@ -25,6 +25,8 @@ add_to_apps_screen = [
 ]
 
 website_route_rules = [{"from_route": "/books/<path:app_path>", "to_route": "books"}]
+# A fresh site opens the Books setup wizard, which completes Frappe's setup too.
+setup_wizard_url = "/books"
 
 extend_bootinfo = "frappe_books.boot.extend_bootinfo"
 
@@ -32,7 +34,7 @@ jinja = {"methods": ["frappe_books.printing.get_print_settings"]}
 
 after_install = "frappe_books.setup.bootstrap"
 after_migrate = "frappe_books.setup.after_migrate"
-before_tests = ["frappe_books.setup.bootstrap", "frappe_books.tests.accounting.enable_features"]
+before_tests = ["frappe_books.setup.before_tests", "frappe_books.tests.accounting.enable_features"]
 
 scheduler_events = {
 	"daily": ["frappe_books.commerce.loyalty.expire_programs_and_points"],

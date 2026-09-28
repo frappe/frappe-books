@@ -51,4 +51,5 @@ class IntegrationTestFieldProperties(IntegrationTestCase):
 		with self.set_user(BOOKS_USER):
 			self.assertIn("SalesInvoiceItem", get_field_properties())
 		with self.set_user(DESK_USER):
-			self.assertEqual(get_field_properties(), {})
+			# Every user may read Frappe's Country.
+			self.assertEqual(list(get_field_properties()), ["Country"])

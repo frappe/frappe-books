@@ -89,6 +89,11 @@ def is_searchable(source_schema: str) -> bool:
 	return bool(meta.search_fields or (meta.show_name_in_global_search and not meta.istable))
 
 
+def system_settings_fields(source_schema: str) -> dict[str, str]:
+	"""Fields of a Books settings schema that Frappe's System Settings stores."""
+	return schema_mapping()[source_schema].get("system_settings", {})
+
+
 def custom_field_mapping(source_schema: str) -> dict[str, str]:
 	"""Return Books custom field names mapped to their hosted columns."""
 	return custom_field_mappings().get(source_schema, {})

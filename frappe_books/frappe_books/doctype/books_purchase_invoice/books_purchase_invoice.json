@@ -176,7 +176,7 @@
    "fieldtype": "Link",
    "hidden": 1,
    "label": "Customer Currency",
-   "options": "Books Currency",
+   "options": "Currency",
    "read_only": 1
   },
   {

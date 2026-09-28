@@ -42,7 +42,7 @@ async function makeFixture(storedForm) {
   fyo.doc.registerModels({});
   const form = stored
     ? await fyo.doc.getDoc('CustomForm', stored.name)
-    : fyo.doc.getNewDoc('CustomForm', { name: 'Color' });
+    : fyo.doc.getNewDoc('CustomForm', { name: 'UOM' });
   if (!stored) {
     await form.append('customFields', {
       label: 'My Note',
@@ -77,7 +77,7 @@ test('editing a custom field label preserves its key and does not match itself',
 
 test('custom field names still reject another row and built-in fields', async () => {
   const { form, row } = await makeFixture();
-  await assert.rejects(row.set('fieldname', 'hexvalue'), /already exists/);
+  await assert.rejects(row.set('fieldname', 'isWhole'), /already exists/);
   await form.append('customFields', {
     label: 'Other Note',
     fieldname: 'otherNote',
@@ -101,7 +101,7 @@ test('optional custom fields retain their configured defaults', async () => {
   const { fyo, form, setDefinitions } = await makeFixture();
   setDefinitions([
     {
-      parent: 'Color',
+      parent: 'UOM',
       label: 'My Note',
       fieldname: 'myNote',
       fieldtype: 'Data',
@@ -110,19 +110,19 @@ test('optional custom fields retain their configured defaults', async () => {
     },
   ]);
   await form.afterSync();
-  const color = fyo.doc.getNewDoc('Color');
-  assert.equal(color.myNote, 'Optional default');
-  assert.equal(color.fieldMap.myNote.required, false);
+  const unit = fyo.doc.getNewDoc('UOM');
+  assert.equal(unit.myNote, 'Optional default');
+  assert.equal(unit.fieldMap.myNote.required, false);
 });
 
 test('saving and deleting customizations refresh cached documents without losing edits', async () => {
   const { fyo, form, setDefinitions } = await makeFixture();
-  const color = fyo.doc.getNewDoc('Color', {
-    name: 'Test Color',
-    hexvalue: '#123456',
+  const unit = fyo.doc.getNewDoc('UOM', {
+    name: 'Test Unit',
+    isWhole: true,
   });
   const field = {
-    parent: 'Color',
+    parent: 'UOM',
     label: 'My Note',
     fieldname: 'myNote',
     fieldtype: 'Data',
@@ -132,26 +132,26 @@ test('saving and deleting customizations refresh cached documents without losing
   };
   setDefinitions([field]);
   await form.afterSync();
-  assert.ok(color.fieldMap.myNote);
-  assert.equal(color.myNote, 'Initial note');
-  await color.set('myNote', 'Unsaved note');
+  assert.ok(unit.fieldMap.myNote);
+  assert.equal(unit.myNote, 'Initial note');
+  await unit.set('myNote', 'Unsaved note');
 
   setDefinitions([{ ...field, label: 'Updated label' }]);
   await form.afterSync();
-  assert.equal(color.fieldMap.myNote.label, 'Updated label');
-  assert.equal(color.myNote, 'Unsaved note');
-  assert.equal(color.hexvalue, '#123456');
-  assert.equal(fyo.docs.get('Color')['Test Color'], color);
+  assert.equal(unit.fieldMap.myNote.label, 'Updated label');
+  assert.equal(unit.myNote, 'Unsaved note');
+  assert.equal(unit.isWhole, true);
+  assert.equal(fyo.docs.get('UOM')['Test Unit'], unit);
 
   setDefinitions([]);
   await form.afterDelete();
-  assert.equal(color.fieldMap.myNote, undefined);
+  assert.equal(unit.fieldMap.myNote, undefined);
   assert.equal(
-    fyo.schemaMap.Color.fields.some((field) => field.fieldname === 'myNote'),
+    fyo.schemaMap.UOM.fields.some((field) => field.fieldname === 'myNote'),
     false
   );
-  assert.equal(color.getValidDict().myNote, undefined);
-  assert.equal(color.hexvalue, '#123456');
+  assert.equal(unit.getValidDict().myNote, undefined);
+  assert.equal(unit.isWhole, true);
 });
 
 test('customizing a child schema refreshes rows inside cached parent documents', async () => {
@@ -225,7 +225,7 @@ test('a real concurrent edit is rejected by the server check alone', async () =>
 
 function savedForm() {
   return {
-    name: 'Color',
+    name: 'UOM',
     created: '2026-09-05T01:00:00.000Z',
     createdBy: 'Original Editor',
     modified: '2026-09-05T01:00:00.000Z',

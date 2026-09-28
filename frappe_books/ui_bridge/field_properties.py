@@ -11,6 +11,7 @@ from frappe_books.ui_bridge.mapping import (
 	schema_mapping,
 	source_field,
 	source_reference,
+	system_settings_fields,
 	target_doctype,
 )
 
@@ -51,6 +52,9 @@ def get_schema_field_properties(schema: str) -> dict[str, dict[str, Any]]:
 	if "status" in properties and meta.states:
 		# Frappe colours a document's `status` by the DocType state of the same title.
 		properties["status"]["states"] = {state.title: state.color for state in meta.states}
+	system_settings = frappe.get_meta("System Settings")
+	for source, target in system_settings_fields(schema).items():
+		properties[source] = get_docfield_properties(schema, system_settings.get_field(target))
 	return properties
 
 

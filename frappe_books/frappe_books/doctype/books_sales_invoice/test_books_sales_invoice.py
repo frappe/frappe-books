@@ -13,7 +13,6 @@ from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_op
 	open_shift,
 	set_pos_accounts,
 )
-from frappe_books.setup_service import ensure_currency
 from frappe_books.tests.accounting import (
 	foreign_currency,
 	ledger_entries,
@@ -136,9 +135,8 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		for currency, rate, total in (("KWD", "1.2345", "2.469"), ("JPY", "10.25", "21")):
 			with (
 				self.subTest(currency=currency),
-				self.change_settings("Books System Settings", currency=currency),
+				self.change_settings("System Settings", currency=currency),
 			):
-				ensure_currency(currency)
 				invoice = make_invoice(
 					"Books Sales Invoice",
 					make_party(self.receivable.name).name,
@@ -155,8 +153,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_rounds_invoice_amounts_to_invoice_currency(self):
 		item = make_item(self.income.name, self.expense.name)
-		with self.change_settings("Books System Settings", currency="JPY"):
-			ensure_currency("JPY")
+		with self.change_settings("System Settings", currency="JPY"):
 			party = make_party(self.receivable.name, currency=foreign_currency())
 			invoice = make_invoice(
 				"Books Sales Invoice",

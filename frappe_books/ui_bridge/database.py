@@ -11,6 +11,7 @@ from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
 from frappe_books.inventory.stock import create_missing_batches
+from frappe_books.settings import update_system_settings
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
 from frappe_books.ui_bridge.mapping import (
@@ -21,6 +22,7 @@ from frappe_books.ui_bridge.mapping import (
 	source_by_doctype,
 	source_field,
 	source_reference,
+	system_settings_fields,
 	target_doctype,
 	target_field,
 	target_reference,
@@ -179,18 +181,17 @@ class BooksDatabaseBridge:
 		for request in requests:
 			parent, fieldname = request["parent"], request["fieldname"]
 			target = target_doctype(parent)
-			target_name = target_field(parent, fieldname)
-			meta = frappe.get_meta(target)
-			if not frappe.has_permission(target, ptype="read") or self._is_password_field(meta, target_name):
+			if not frappe.has_permission(target, ptype="read"):
 				continue
-			value = frappe.db.get_single_value(target, target_name)
-			values.append(
-				{
-					"parent": parent,
-					"fieldname": fieldname,
-					"value": _source_value(meta, target_name, value),
-				}
-			)
+			if fieldname in system_settings_fields(parent):
+				value = _system_setting(parent, fieldname)
+			else:
+				target_name = target_field(parent, fieldname)
+				meta = frappe.get_meta(target)
+				if self._is_password_field(meta, target_name):
+					continue
+				value = _source_value(meta, target_name, frappe.db.get_single_value(target, target_name))
+			values.append({"parent": parent, "fieldname": fieldname, "value": value})
 		return values
 
 	def insert(self, source_schema: str, values: dict[str, Any]) -> dict:
@@ -305,6 +306,7 @@ class BooksDatabaseBridge:
 		if requested:
 			available.intersection_update(requested)
 		values = self._row_to_source(source_schema, stored, sorted(available))
+		values.update(_system_settings_values(source_schema, requested))
 		return self._append_source_children(source_schema, doc, values, requested)
 
 	def _append_source_children(self, source_schema, doc, values, requested=None):
@@ -372,8 +374,7 @@ class BooksDatabaseBridge:
 		fields = {
 			target_field(source_schema, fieldname)
 			for fieldname in requested
-			if not (meta.get_field(target_field(source_schema, fieldname)) or frappe._dict()).get("fieldtype")
-			== "Table"
+			if _is_column(meta.get_field(target_field(source_schema, fieldname)))
 		}
 		fields.add("name")
 		return sorted(fields)
@@ -430,10 +431,15 @@ class BooksDatabaseBridge:
 		return {**document, "__islocal": 1}
 
 	def _update_single(self, source_schema, values):
+		system_fields = system_settings_fields(source_schema)
 		doc = frappe.get_single(target_doctype(source_schema))
 		doc.check_permission("write")
-		self._set_target_values(doc, source_schema, values)
+		own_values = {field: value for field, value in values.items() if field not in system_fields}
+		self._set_target_values(doc, source_schema, own_values)
 		doc.save()
+		update_system_settings(
+			{system_fields[field]: value for field, value in values.items() if field in system_fields}
+		)
 		return self.get(source_schema, source_schema)
 
 	def _set_target_values(self, doc, source_schema, values):
@@ -456,6 +462,25 @@ class BooksDatabaseBridge:
 	def _is_password_field(self, meta, fieldname):
 		field = meta.get_field(fieldname)
 		return bool(field and field.fieldtype == "Password")
+
+
+def _system_settings_values(source_schema: str, requested=None) -> dict:
+	fields = system_settings_fields(source_schema)
+	return {
+		field: _system_setting(source_schema, field)
+		for field in fields
+		if not requested or field in requested
+	}
+
+
+def _system_setting(source_schema: str, field: str) -> Any:
+	"""A System Settings value shown in a Books settings schema. Frappe boots it for every user."""
+	return frappe.db.get_single_value("System Settings", system_settings_fields(source_schema)[field])
+
+
+def _is_column(docfield) -> bool:
+	"""Standard fields have no DocField; tables and virtual fields have no column."""
+	return not docfield or not (docfield.fieldtype == "Table" or docfield.is_virtual)
 
 
 def _is_named_by_user(meta) -> bool:

@@ -1,6 +1,6 @@
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
-import { ListsMap, ValidationMap } from 'fyo/model/types';
+import { ListsMap, ReadOnlyMap, ValidationMap } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { t } from 'fyo/utils/translation';
 import { SelectOption } from 'schemas/types';
@@ -12,7 +12,6 @@ export default class SystemSettings extends Doc {
   displayPrecision?: number;
   internalPrecision?: number;
   hideGetStarted?: boolean;
-  countryCode?: string;
   currency?: string;
   darkMode?: boolean;
   displayTermsAndConditions?: boolean;
@@ -29,6 +28,11 @@ export default class SystemSettings extends Doc {
     },
   };
 
+  // Setup sets the company currency in Frappe's System Settings.
+  readOnly: ReadOnlyMap = {
+    currency: () => true,
+  };
+
   static lists: ListsMap = {
     locale() {
       const countryInfo = getCountryInfo();
@@ -41,13 +45,6 @@ export default class SystemSettings extends Doc {
               label: `${c} (${countryInfo[c]?.locale ?? t`Not Found`})`,
             } as SelectOption)
         );
-    },
-    currency() {
-      const countryInfo = getCountryInfo();
-      const currencies = Object.values(countryInfo)
-        .map((ci) => ci?.currency as string)
-        .filter(Boolean);
-      return [...new Set(currencies)];
     },
   };
 }

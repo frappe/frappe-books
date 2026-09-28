@@ -217,12 +217,12 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		self.assertNotEqual(inserted["name"], "999999999")
 
 	def test_draft_insert_runs_frappe_mandatory_validation(self):
-		name = unique_name("Invalid Bridge Color")
+		name = unique_name("Invalid Bridge Tax")
 
 		with self.assertRaises(frappe.MandatoryError):
-			self.bridge.insert("Color", {"name": name})
+			self.bridge.insert("Tax", {"name": name})
 
-		self.assertFalse(frappe.db.exists("Books Color", name))
+		self.assertFalse(frappe.db.exists("Books Tax", name))
 
 	def test_draft_writes_run_frappe_controller_validation(self):
 		income = make_account("Bridge Validation Income", root_type="Income", account_type="Income Account")
@@ -393,28 +393,24 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 	def test_count_matches_filtered_parent_and_child_rows(self):
 		prefix = unique_name("Bridge Count")
 		for index in range(3):
-			frappe.get_doc(
-				{"doctype": "Books Color", "name": f"{prefix} {index}", "hexvalue": "#000"}
-			).insert()
+			frappe.get_doc({"doctype": "Books Uom", "name": f"{prefix} {index}"}).insert()
 		income = make_account("Bridge Count Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Bridge Count Expense", root_type="Expense", account_type="Expense Account")
 		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
 
-		self.assertEqual(self.bridge.call("count", ["Color", {"name": ["like", f"{prefix}%"]}]), 3)
+		self.assertEqual(self.bridge.call("count", ["UOM", {"name": ["like", f"{prefix}%"]}]), 3)
 		self.assertEqual(self.bridge.call("count", ["UOMConversionItem", {"parent": item.name}]), 1)
 
 	def test_search_matches_keyword_letters_in_order_within_the_limit(self):
 		prefix = frappe.generate_hash(length=6)
 		for index in range(3):
-			frappe.get_doc(
-				{"doctype": "Books Color", "name": f"Qz{prefix} Marigold {index}", "hexvalue": "#000"}
-			).insert()
+			frappe.get_doc({"doctype": "Books Uom", "name": f"Qz{prefix} Marigold {index}"}).insert()
 
-		found = self.bridge.call("search", [f"qz{prefix} mrgld", ["Color"], 2])["Color"]
+		found = self.bridge.call("search", [f"qz{prefix} mrgld", ["UOM"], 2])["UOM"]
 
 		self.assertEqual(len(found), 2)
 		self.assertTrue(all(row["name"].startswith(f"Qz{prefix}") for row in found))
-		self.assertEqual(self.bridge.call("search", ["zzq", ["Color"], 2])["Color"], [])
+		self.assertEqual(self.bridge.call("search", ["zzq", ["UOM"], 2])["UOM"], [])
 
 	def test_search_returns_the_parent_of_matching_rows(self):
 		receivable = make_account("Bridge Search Receivable", account_type="Receivable")
@@ -490,29 +486,25 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				endpoint("get", {"source_schema": "Party"})
 
 	def test_list_reads_return_every_matching_row(self):
-		prefix = unique_name("Bridge Color")
+		prefix = unique_name("Bridge Unit")
 		for index in range(501):
-			frappe.get_doc(
-				{"doctype": "Books Color", "name": f"{prefix} {index}", "hexvalue": "#000000"}
-			).insert()
+			frappe.get_doc({"doctype": "Books Uom", "name": f"{prefix} {index}"}).insert()
 		filters = {"name": ["like", f"{prefix}%"]}
 
-		self.assertEqual(len(self.bridge.get_all("Color", {"filters": filters})), 501)
-		self.assertEqual(len(self.bridge.get_all("Color", {"filters": filters, "offset": 500})), 1)
-		self.assertEqual(
-			len(self.bridge.get_all("Color", {"filters": filters, "limit": 10, "offset": 495})), 6
-		)
+		self.assertEqual(len(self.bridge.get_all("UOM", {"filters": filters})), 501)
+		self.assertEqual(len(self.bridge.get_all("UOM", {"filters": filters, "offset": 500})), 1)
+		self.assertEqual(len(self.bridge.get_all("UOM", {"filters": filters, "limit": 10, "offset": 495})), 6)
 
 	def test_list_order_defaults_to_newest_first(self):
 		prefix = unique_name("Bridge Order")
 		for index, creation in enumerate(["2026-01-01", "2026-01-03", "2026-01-02"]):
 			name = f"{prefix} {index}"
-			frappe.get_doc({"doctype": "Books Color", "name": name, "hexvalue": "#000000"}).insert()
-			frappe.db.set_value("Books Color", name, "creation", creation, update_modified=False)
+			frappe.get_doc({"doctype": "Books Uom", "name": name}).insert()
+			frappe.db.set_value("Books Uom", name, "creation", creation, update_modified=False)
 		filters = {"name": ["like", f"{prefix}%"]}
 
 		def listed_indexes(**options):
-			rows = self.bridge.get_all("Color", {"filters": filters, **options})
+			rows = self.bridge.get_all("UOM", {"filters": filters, **options})
 			return [row["name"].removeprefix(f"{prefix} ") for row in rows]
 
 		self.assertEqual(listed_indexes(), ["1", "2", "0"])

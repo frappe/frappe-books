@@ -10,8 +10,7 @@ from frappe import _
 
 META_KEYS = {"accountType", "accountNumber", "rootType", "isGroup"}
 STANDARD_CHART = "Standard Chart of Accounts"
-# The interface bundles these fixtures for its setup wizard, so the repository keeps one copy.
-CHART_DIRECTORY = Path(__file__).resolve().parents[1] / "frontend" / "fixtures" / "verified"
+CHART_DIRECTORY = Path(__file__).with_name("data") / "charts"
 
 
 @dataclass(frozen=True)
@@ -35,6 +34,11 @@ def chart_options() -> list[dict]:
 		}
 		for chart in charts
 	]
+
+
+def standard_account_labels() -> dict[str, str]:
+	"""/books shows standard chart accounts by their translated names; custom accounts keep theirs."""
+	return {account.name: _(account.name) for account in load_chart(STANDARD_CHART)}
 
 
 def load_chart(chart_name) -> list[ChartAccount]:

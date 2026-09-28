@@ -29,7 +29,7 @@ export abstract class AccountReport extends Report {
     const level = Number(row.indent ?? 0);
     const reportRow = super.getReportRow(row);
     const [nameCell] = reportRow.cells;
-    nameCell.value = getAccountLabel(String(row.account));
+    nameCell.value = getAccountLabel(this.fyo, String(row.account));
     nameCell.bold = !level;
     nameCell.indent = level;
     return {

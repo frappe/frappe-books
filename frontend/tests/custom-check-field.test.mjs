@@ -7,7 +7,7 @@ test('a custom check field without a default starts unchecked and saves', async 
     getSchemaMap() {
       return getSchemas('-', [
         {
-          parent: 'Color',
+          parent: 'UOM',
           label: 'Fragile',
           fieldname: 'fragile',
           fieldtype: 'Check',
@@ -19,9 +19,9 @@ test('a custom check field without a default starts unchecked and saves', async 
   await fyo.db.init();
   fyo.doc.registerModels({});
 
-  const doc = fyo.doc.getNewDoc('Color', { name: 'Red' });
+  const doc = fyo.doc.getNewDoc('UOM', { name: 'Box' });
   assert.equal(doc.fragile, false);
 
-  const raw = fyo.db.converter.toRawValueMap('Color', doc.getValidDict());
+  const raw = fyo.db.converter.toRawValueMap('UOM', doc.getValidDict());
   assert.equal(raw.fragile, 0);
 });

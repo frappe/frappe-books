@@ -65,12 +65,6 @@
       "hidden": true
     },
     {
-      "fieldname": "countryCode",
-      "label": "Country Code",
-      "description": "Country code used to initialize regional settings.",
-      "hidden": true
-    },
-    {
       "fieldname": "darkMode",
       "label": "Dark mode",
       "description": "Sets the theme of the app.",

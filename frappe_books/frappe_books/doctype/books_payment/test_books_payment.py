@@ -213,6 +213,25 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		self._payment(self.invoice, amount=100).insert()
 
+	def test_missing_type_and_accounts_are_filled_like_the_app(self):
+		frappe.db.set_value("Books Payment Method", "Cash", "account", self.cash.name)
+		receipt = self._payment(self.invoice, payment_type=None, account=None, payment_account=None)
+		receipt.insert()
+		self.assertEqual(
+			(receipt.payment_type, receipt.account, receipt.payment_account),
+			("Receive", self.receivable.name, self.cash.name),
+		)
+
+		supplier = make_party(self.payable.name, role="Supplier")
+		cash = make_account("Rules Petty Cash", account_type="Cash")
+		payment = frappe.get_doc(
+			{"doctype": "Books Payment", "party": supplier.name, "date": now_datetime(), "amount": 10}
+		).insert()
+		self.assertEqual(
+			(payment.payment_type, payment.account, payment.payment_account),
+			("Pay", self.payable.name, cash.name),
+		)
+
 	def test_payment_method_requirements(self):
 		method = frappe.get_doc(
 			{"doctype": "Books Payment Method", "name": unique_name("Cheque"), "type": "Bank"}

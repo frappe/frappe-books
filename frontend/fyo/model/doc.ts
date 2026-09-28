@@ -1063,9 +1063,12 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return await this.sync();
   }
 
-  /** A new copy made on the server, without the values Frappe marks no_copy. */
+  /** A new copy of the doc, unsaved edits included, without the values Frappe marks no_copy. */
   async duplicate(): Promise<Doc> {
-    const values = await this.fyo.db.getDuplicate(this.schemaName, this.name!);
+    const values = await this.fyo.db.getDuplicate(
+      this.schemaName,
+      this.getValidDict(true, true)
+    );
     if (!this.numberSeries) {
       values.name = `${this.name!} CPY`;
     }

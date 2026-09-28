@@ -35,10 +35,10 @@ def get_field_properties() -> dict[str, dict[str, dict[str, Any]]]:
 	return field_properties.get_field_properties()
 
 
-@frappe.whitelist()
-def get_duplicate(source_schema: str, name: str) -> dict[str, Any]:
-	"""Return an unsaved copy of a document for the Duplicate action."""
-	return BooksDatabaseBridge().get_duplicate(source_schema, name)
+@frappe.whitelist(methods=["POST"])
+def get_duplicate(source_schema: str, values: dict[str, Any]) -> dict[str, Any]:
+	"""Return an unsaved copy of a document's values, with any unsaved edits, for Duplicate."""
+	return BooksDatabaseBridge().get_duplicate(source_schema, values)
 
 
 @frappe.whitelist()

@@ -58,11 +58,11 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
 
   override async getDuplicate(
     schemaName: string,
-    name: string
+    values: unknown
   ): Promise<unknown> {
     return call('frappe_books.ui_api.get_duplicate', {
       source_schema: schemaName,
-      name,
+      values,
     });
   }
 

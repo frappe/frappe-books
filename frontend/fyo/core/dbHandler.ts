@@ -258,11 +258,14 @@ export class DatabaseHandler extends DatabaseBase {
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }
 
-  /** An unsaved copy of a document, without the values Frappe marks no_copy. */
-  async getDuplicate(schemaName: string, name: string): Promise<DocValueMap> {
+  /** An unsaved copy of a document's values, without the values Frappe marks no_copy. */
+  async getDuplicate(
+    schemaName: string,
+    docValueMap: DocValueMap
+  ): Promise<DocValueMap> {
     const rawValueMap = (await this.#demux.getDuplicate(
       schemaName,
-      name
+      this.converter.toRawValueMap(schemaName, docValueMap)
     )) as RawValueMap;
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
   }

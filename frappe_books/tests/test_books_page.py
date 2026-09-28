@@ -37,6 +37,16 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 			boot = json.loads(books.get_context(frappe._dict()).books_boot)
 		self.assertEqual(boot["indian_states"], INDIAN_STATES)
 
+	def test_page_boot_sends_standard_account_names_in_the_users_language(self):
+		with (
+			self.set_user(BOOKS_USER),
+			patch("frappe.sessions.get", return_value={}),
+			patch.object(frappe.local, "lang", "de"),
+		):
+			labels = json.loads(books.get_context(frappe._dict()).books_boot)["account_labels"]
+		self.assertEqual(labels["Cash In Hand"], "Kassenbestand")
+		self.assertNotIn("Custom savings", labels)
+
 	def test_users_without_a_books_role_are_refused(self):
 		with self.set_user(DESK_USER):
 			self.assertRaises(frappe.PermissionError, books.get_context, frappe._dict())

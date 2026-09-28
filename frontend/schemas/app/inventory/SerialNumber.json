@@ -25,6 +25,5 @@
       "label": "Status"
     }
   ],
-  "quickEditFields": ["item", "description"],
-  "keywordFields": ["name"]
+  "quickEditFields": ["item", "description"]
 }

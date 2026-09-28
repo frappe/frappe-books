@@ -39,7 +39,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 07:12:48.316360",
+ "modified": "2026-09-28 07:25:34.948290",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Serial Number",
@@ -82,6 +82,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_name_in_global_search": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [

@@ -135,6 +135,5 @@
     "hsnCode",
     "trackItem",
     "uom"
-  ],
-  "keywordFields": ["name", "itemType", "for"]
+  ]
 }

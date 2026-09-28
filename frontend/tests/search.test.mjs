@@ -17,9 +17,9 @@ test('search starts without loading documents and fetches a bounded match set', 
 
   const stale = search.fetchDocs('SINV');
   const latest = search.fetchDocs('SINV-1001');
-  const [text, fields, limit] = requests.at(-1);
+  const [text, schemaNames, limit] = requests.at(-1);
   assert.equal(text, 'SINV-1001');
-  assert.deepEqual(fields.SalesInvoice, ['name', 'party']);
+  assert.ok(schemaNames.includes('SalesInvoice'));
   assert.equal(limit, 20);
 
   responses[1]({

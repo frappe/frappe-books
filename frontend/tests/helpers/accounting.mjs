@@ -17,7 +17,7 @@ await build({
     contents: `
       export { Fyo } from './fyo';
       export { getSchemas } from './schemas';
-      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
+      export { getDoctypeFieldProperties, getDoctypeSearchFields } from './tests/helpers/doctypeFieldProperties';
       export { models } from './models';
       export { BalanceSheet } from './reports/BalanceSheet/BalanceSheet';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
@@ -92,7 +92,8 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 const bundle = createRequire(import.meta.url)(output);
-export const { fieldProperties, getSchemas } = withFieldProperties(bundle);
+export const { fieldProperties, getSchemas, searchFields } =
+  withFieldProperties(bundle);
 export const {
   Fyo,
   models,
@@ -184,5 +185,6 @@ export async function makeFyo() {
   fyo.doc.registerModels(models);
   fyo.singles.AccountingSettings = { enableDiscounting: true };
   fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
+  fyo.store.searchFields = searchFields;
   return fyo;
 }

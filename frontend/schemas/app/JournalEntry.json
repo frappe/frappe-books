@@ -61,6 +61,5 @@
       "label": "Status",
       "hidden": true
     }
-  ],
-  "keywordFields": ["name", "entryType"]
+  ]
 }

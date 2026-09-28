@@ -111,7 +111,6 @@
     }
   ],
   "tableFields": ["item", "tax", "qty", "rate", "amount"],
-  "keywordFields": ["item", "tax"],
   "quickEditFields": [
     "item",
     "account",

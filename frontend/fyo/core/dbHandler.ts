@@ -150,15 +150,16 @@ export class DatabaseHandler extends DatabaseBase {
     )) as number;
   }
 
+  /** Rows of each schema whose DocType search fields match `text`, for the search palette. */
   async search(
     text: string,
-    fieldsBySchema: Record<string, string[]>,
+    schemaNames: string[],
     limit: number
   ): Promise<Record<string, RawValueMap[]>> {
     return (await this.#demux.call(
       'search',
       text,
-      fieldsBySchema,
+      schemaNames,
       limit
     )) as Record<string, RawValueMap[]>;
   }

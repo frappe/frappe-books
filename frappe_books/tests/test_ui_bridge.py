@@ -437,21 +437,35 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				{"doctype": "Books Color", "name": f"Qz{prefix} Marigold {index}", "hexvalue": "#000"}
 			).insert()
 
-		found = self.bridge.call("search", [f"qz{prefix} mrgld", {"Color": ["name"]}, 2])["Color"]
+		found = self.bridge.call("search", [f"qz{prefix} mrgld", ["Color"], 2])["Color"]
 
 		self.assertEqual(len(found), 2)
 		self.assertTrue(all(row["name"].startswith(f"Qz{prefix}") for row in found))
-		self.assertEqual(self.bridge.call("search", ["zzq", {"Color": ["name"]}, 2])["Color"], [])
+		self.assertEqual(self.bridge.call("search", ["zzq", ["Color"], 2])["Color"], [])
 
 	def test_search_returns_the_parent_of_matching_rows(self):
+		receivable = make_account("Bridge Search Receivable", account_type="Receivable")
 		income = make_account("Bridge Search Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Bridge Search Expense", root_type="Expense", account_type="Expense Account")
-		item = make_item(income.name, expense.name, uom_conversions=[{"uom": "Kg", "conversion_factor": 2}])
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		item = make_item(income.name, expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice", make_party(receivable.name).name, receivable.name, item.name, income.name
+		)
 
-		found = self.bridge.call("search", [item.name, {"UOMConversionItem": ["parent"]}, 5])
+		found = self.bridge.call("search", [item.name, ["SalesInvoiceItem"], 5])
 
 		self.assertEqual(
-			found["UOMConversionItem"], [{"parent": item.name, "parentSchemaName": "Item", "name": ANY}]
+			found["SalesInvoiceItem"],
+			[
+				{
+					"item": item.name,
+					"tax": None,
+					"parent": invoice.name,
+					"parentSchemaName": "SalesInvoice",
+					"name": ANY,
+				}
+			],
 		)
 
 	def test_calls_with_wrong_argument_counts_are_rejected(self):

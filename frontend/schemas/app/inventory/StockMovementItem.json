@@ -60,7 +60,6 @@
     }
   ],
   "tableFields": ["item", "fromLocation", "toLocation", "quantity", "rate"],
-  "keywordFields": ["item"],
   "quickEditFields": [
     "item",
     "fromLocation",

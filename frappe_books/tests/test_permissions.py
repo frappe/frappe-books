@@ -145,7 +145,7 @@ def _role_rights(doctype, role):
 
 
 def _search_shipments(name):
-	found = BooksDatabaseBridge().call("search", [name, {"Shipment": ["name"]}, 5])
+	found = BooksDatabaseBridge().call("search", [name, ["Shipment"], 5])
 	return [row["name"] for row in found["Shipment"]]
 
 

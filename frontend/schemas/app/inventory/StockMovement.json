@@ -58,6 +58,5 @@
     "movementType",
     "amount",
     "items"
-  ],
-  "keywordFields": ["name", "movementType"]
+  ]
 }

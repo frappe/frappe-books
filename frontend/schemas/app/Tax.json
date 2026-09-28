@@ -16,6 +16,5 @@
       "label": "Details"
     }
   ],
-  "keywordFields": ["name"],
   "quickEditFields": ["details"]
 }

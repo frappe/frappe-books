@@ -154,6 +154,5 @@
       "label": "Status",
       "hidden": true
     }
-  ],
-  "keywordFields": ["name", "party"]
+  ]
 }

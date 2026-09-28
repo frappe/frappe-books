@@ -210,6 +210,8 @@ export class Fyo {
     appVersion: '',
     language: '',
     permissions: null as Permissions | null,
+    /** The fields search matches and shows, by schema, from the DocType search fields. */
+    searchFields: {} as Record<string, string[] | undefined>,
     chartsOfAccounts: [] as ChartOfAccounts[],
     reports: {} as Record<keyof typeof reports, Report | undefined>,
   };

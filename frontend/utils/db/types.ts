@@ -26,7 +26,7 @@ export abstract class DatabaseBase {
 
   abstract search(
     text: string,
-    fieldsBySchema: Record<string, string[]>,
+    schemaNames: string[],
     limit: number
   ): Promise<Record<string, UnknownMap[]>>;
 

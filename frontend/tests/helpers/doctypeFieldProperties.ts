@@ -7,6 +7,9 @@ type DocField = DocFieldProperties & { fieldname: string };
 type DocType = {
   name: string;
   fields: DocField[];
+  istable?: number;
+  search_fields?: string;
+  show_name_in_global_search?: number;
   states?: { title: string; color: string }[];
 };
 type SchemaMapping = Record<
@@ -84,4 +87,35 @@ function getProperties(
     properties.default = toSchema(docfield.default);
   }
   return properties;
+}
+
+/**
+ * The fields the search palette matches and shows, by schema, as
+ * `frappe_books/boot.py` sends them from the DocType search fields.
+ */
+export function getDoctypeSearchFields(
+  doctypes: DocType[],
+  mapping: SchemaMapping
+): Record<string, string[]> {
+  const doctypeMap = Object.fromEntries(doctypes.map((d) => [d.name, d]));
+  const searchFields: Record<string, string[]> = {};
+  for (const [schemaName, config] of Object.entries(mapping)) {
+    const doctype = doctypeMap[config.doctype];
+    const targets = (doctype?.search_fields ?? '')
+      .split(',')
+      .map((fieldname) => fieldname.trim())
+      .filter(Boolean);
+    const fields = targets.map(
+      (target) =>
+        Object.keys(config.fields).find(
+          (source) => config.fields[source] === target
+        ) ?? target
+    );
+    if (doctype?.istable && fields.length) {
+      searchFields[schemaName] = fields;
+    } else if (fields.length || doctype?.show_name_in_global_search) {
+      searchFields[schemaName] = ['name', ...fields];
+    }
+  }
+  return searchFields;
 }

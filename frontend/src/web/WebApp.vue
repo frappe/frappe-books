@@ -123,6 +123,7 @@ export default defineComponent({
       fyo.store.isDevelopment = !!boot.developer_mode;
       fyo.store.appVersion = boot.versions?.frappe_books ?? '';
       fyo.store.permissions = { doctypes: books.doctypes, user: boot.user };
+      fyo.store.searchFields = books.search_fields;
       fyo.store.chartsOfAccounts = books.charts_of_accounts;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;

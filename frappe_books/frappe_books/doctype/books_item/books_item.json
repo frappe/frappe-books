@@ -139,6 +139,8 @@
   },
   {
    "description": "HSN/SAC Code",
+   "fetch_from": "item_group.hsn_code",
+   "fetch_if_empty": 1,
    "fieldname": "hsn_code",
    "fieldtype": "Data",
    "label": "HSN/SAC"
@@ -195,7 +197,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 07:07:21.281977",
+ "modified": "2026-09-30 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item",

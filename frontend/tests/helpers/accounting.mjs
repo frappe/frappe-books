@@ -69,7 +69,7 @@ await build({
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export {
-        getExistingActiveSerialNumbersForItem,
+        getAvailableSerialNumbers,
         getSerialNumbersForQuantity,
         getSuggestedBatchName,
       } from './models/inventory/helpers';
@@ -162,7 +162,7 @@ export const {
   call,
   errors,
   getInsufficientItems,
-  getExistingActiveSerialNumbersForItem,
+  getAvailableSerialNumbers,
   getSerialNumbersForQuantity,
   getSuggestedBatchName,
   getAmountInWords,

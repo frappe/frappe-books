@@ -11,28 +11,30 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 		expense = make_account("Set Once Expense", root_type="Expense").name
 		received = make_account("Set Once Received", root_type="Liability").name
 		unit = frappe.get_doc({"doctype": "Books Uom", "name": frappe.generate_hash()}).insert().name
-		for fieldname, changes in (
-			("unit", {"unit": unit}),
-			("item_type", {"item_type": "Service"}),
+		for fieldname, changes, is_tracked in (
+			("unit", {"unit": unit}, False),
+			("item_type", {"item_type": "Service"}, False),
 			# a tracked item needs a liability account, so only the locked field can fail
-			("track_item", {"track_item": 1, "expense_account": received}),
-			("has_batch", {"has_batch": 1}),
-			("has_serial_number", {"has_serial_number": 1}),
+			("track_item", {"track_item": 1, "expense_account": received}, False),
+			("has_batch", {"has_batch": 1}, False),
+			# only tracked items have serial numbers
+			("has_serial_number", {"has_serial_number": 1}, True),
 		):
 			with self.subTest(fieldname=fieldname):
-				item = make_item(income, expense)
+				item = make_item(income, received, track_item=1) if is_tracked else make_item(income, expense)
 				item.update(changes)
 				self.assertRaises(frappe.CannotChangeConstantError, item.save)
 
 	def test_account_tree_fields_cannot_change_after_insert(self):
 		group = make_account("Set Once Group", is_group=1)
-		for fieldname, value in (
-			("root_type", "Expense"),
-			("parent_books_account", group.name),
-			("is_group", 1),
+		for fieldname, value, is_group in (
+			# a ledger takes its parent's root type, so only a root group keeps its own
+			("root_type", "Expense", 1),
+			("parent_books_account", group.name, 0),
+			("is_group", 1, 0),
 		):
 			with self.subTest(fieldname=fieldname):
-				account = make_account("Set Once Account")
+				account = make_account("Set Once Account", is_group=is_group)
 				account.set(fieldname, value)
 				self.assertRaises(frappe.CannotChangeConstantError, account.save)
 

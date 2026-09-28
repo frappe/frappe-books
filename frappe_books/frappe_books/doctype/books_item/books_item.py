@@ -6,10 +6,21 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
-from frappe_books.accounting.accounts import validate_account
+from frappe_books.accounting.accounts import latest_ledger_account, validate_account
 from frappe_books.series import ITEM_SERIES
+from frappe_books.settings import require_features
+
+# Item fields the Books app offers only while their feature is on.
+ITEM_FEATURES = {
+	"track_item": "enable_inventory",
+	"has_batch": "enable_batches",
+	"has_serial_number": "enable_serial_number",
+	"uom_conversions": "enable_uom_conversions",
+	"item_group": "enableitem_group",
+}
 
 
 class BooksItem(Document):
@@ -54,14 +65,24 @@ class BooksItem(Document):
 			if self.get(flag) and series:
 				# A dash keeps the series prefix apart from its numbers.
 				self.set(fieldname, series if series.endswith("-") else f"{series}-")
+		self.income_account = self.income_account or _default_income_account(self.item_type)
+		self.expense_account = self.expense_account or _default_expense_account(self.track_item)
 
 	def validate(self):
+		require_features(self, ITEM_FEATURES)
+		self.validate_stock_settings()
 		self.validate_accounts()
 		if self.hsn_code and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code)):
 			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
 		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
 			frappe.throw(_("Barcode must contain exactly 12 digits."))
 		self.validate_unit_conversions()
+
+	def validate_stock_settings(self):
+		if self.track_item and self.item_type != "Product":
+			frappe.throw(_("Only products can track inventory."))
+		if self.has_serial_number and not self.track_item:
+			frappe.throw(_("Only items that track inventory can have serial numbers."))
 
 	def validate_unit_conversions(self):
 		units = [row.uom for row in self.uom_conversions]
@@ -88,3 +109,38 @@ class BooksItem(Document):
 		frappe.get_doc({"doctype": doctype, "name": name, "start": 1001, "pad_zeros": 4}).insert(
 			ignore_if_duplicate=True
 		)
+
+
+def _default_income_account(item_type):
+	"""Products sell into Sales and services into Service, when the chart has them."""
+	account = "Sales" if item_type == "Product" else "Service"
+	return account if frappe.db.exists("Books Account", account) else None
+
+
+def _default_expense_account(track_item):
+	"""Tracked items are bought into stock received but not billed, others into cost of goods sold."""
+	if track_item:
+		return frappe.db.get_single_value("Books Inventory Settings", "stock_received_but_not_billed")
+	return latest_ledger_account("Cost of Goods Sold")
+
+
+@frappe.whitelist()
+def make_sales_invoice(source_name: str):
+	return _map_invoice(source_name, "Books Sales Invoice")
+
+
+@frappe.whitelist()
+def make_purchase_invoice(source_name: str):
+	return _map_invoice(source_name, "Books Purchase Invoice")
+
+
+def _map_invoice(item, invoice_doctype):
+	"""Return an unsaved invoice for one of the item, priced as a save would price it."""
+	return get_mapped_doc(
+		"Books Item", item, {"Books Item": {"doctype": invoice_doctype}}, postprocess=_bill_item
+	)
+
+
+def _bill_item(item, invoice):
+	invoice.append("items", {"item": item.name, "quantity": 1})
+	invoice.fill_mapped_values()

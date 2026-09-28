@@ -18,6 +18,7 @@ import { markRaw, reactive } from 'vue';
 import { isPesa } from '../utils/index';
 import {
   areDocValuesEqual,
+  getFieldDefault,
   getFormulaSequence,
   getMissingMandatoryMessage,
   getPreDefaultValues,
@@ -425,7 +426,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       if (defaultFunction !== undefined) {
         defaultValue = defaultFunction(this);
       } else if (field.default !== undefined) {
-        defaultValue = field.default;
+        defaultValue = getFieldDefault(field) as DocValue;
       }
 
       if (field.fieldtype === FieldTypeEnum.Currency && !isPesa(defaultValue)) {

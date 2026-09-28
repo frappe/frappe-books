@@ -19,9 +19,11 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 	def test_item_creates_both_series_and_does_not_reset_existing_counters(self):
 		serial = f"{unique_name('Serial')}-"
 		batch = f"{unique_name('Batch')}-"
+		received = make_account("Series Received", root_type="Liability")
 		item = make_item(
 			self.income.name,
-			self.expense.name,
+			received.name,
+			track_item=1,
 			has_serial_number=1,
 			serial_number_series=serial,
 			has_batch=1,

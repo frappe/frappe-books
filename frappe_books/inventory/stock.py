@@ -43,7 +43,7 @@ def create_missing_batches(doc):
 	if doc.doctype not in BATCH_RECEIVING_DOCTYPES:
 		return
 	rows = [row for row in doc.items if row.item and row.batch]
-	batched_items = _items_with_batches({row.item for row in rows})
+	batched_items = _items_with("has_batch", {row.item for row in rows})
 	existing = set(_items_of("Books Batch", [row.batch for row in rows]))
 	for row in rows:
 		if row.item in batched_items and row.batch not in existing:
@@ -122,6 +122,36 @@ def populate_stock_rows(rows):
 				row.set(fieldname, item.get(fieldname))
 		row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
 	return rounded(sum((as_decimal(row.amount) for row in rows), as_decimal(0)))
+
+
+def fill_serial_numbers(rows):
+	"""Give serialised rows without serial numbers the earliest received ones in stock at their location."""
+	serialised = _items_with("has_serial_number", {row.item for row in rows if not row.serial_number})
+	taken = set(_all_serial_numbers(rows))
+	for row in rows:
+		if row.item in serialised and row.location and not row.serial_number:
+			count = int(abs(as_decimal(row.quantity)))
+			picked = available_serial_numbers(row.item, row.location, count, exclude=taken)
+			taken.update(picked)
+			row.serial_number = "\n".join(picked) or None
+
+
+def available_serial_numbers(item, location, count, exclude=()):
+	"""Return up to `count` of the item's serial numbers in stock at the location, earliest received first."""
+	if count <= 0:
+		return []
+	sle = frappe.qb.DocType(LEDGER)
+	in_stock = (
+		frappe.qb.from_(sle)
+		.select(sle.serial_number)
+		.where((sle.item == item) & (sle.location == location) & sle.serial_number.isnotnull())
+		.groupby(sle.serial_number)
+		.having(Sum(sle.quantity) > 0)
+		.orderby(Min(sle.date))
+		.orderby(sle.serial_number)
+		.limit(count + len(exclude))
+	).run(pluck=True)
+	return [serial_number for serial_number in in_stock if serial_number not in exclude][:count]
 
 
 def parse_serial_numbers(value):
@@ -299,12 +329,11 @@ def _item_defaults(rows):
 	return {item.name: item for item in items}
 
 
-def _items_with_batches(names):
+def _items_with(flag, names):
+	"""Return the named items that have the flag, such as has_batch, set."""
 	if not names:
 		return set()
-	return set(
-		frappe.get_all("Books Item", filters={"name": ["in", sorted(names)], "has_batch": 1}, pluck="name")
-	)
+	return set(frappe.get_all("Books Item", filters={"name": ["in", sorted(names)], flag: 1}, pluck="name"))
 
 
 def _items_of(doctype, names):

@@ -263,7 +263,9 @@ export abstract class Invoice extends Transactional {
 
       return (this.availableLoyaltyPoints ?? 0) <= 0;
     },
-    coupons: () => this.isSubmitted && !this.coupons?.length,
+    coupons: () =>
+      !this.fyo.singles.AccountingSettings?.enableCouponCode ||
+      (this.isSubmitted && !this.coupons?.length),
     priceList: () =>
       !this.fyo.singles.AccountingSettings?.enablePriceList ||
       (!this.canEdit && !this.priceList),
@@ -287,15 +289,15 @@ export abstract class Invoice extends Transactional {
       doc instanceof Invoice &&
       !!doc.autoStockTransferLocation,
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
+    // Mirrors the server's terms for a new document; quotes are sales too.
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
-      if (doc.schemaName === ModelNameEnum.SalesInvoice) {
+      if ((doc as Invoice).isSales) {
         return defaults?.salesInvoiceTerms ?? '';
       }
 
       return defaults?.purchaseInvoiceTerms ?? '';
     },
-    date: () => new Date(),
   };
 
   static filters: FiltersMap = {

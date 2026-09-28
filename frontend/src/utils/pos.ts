@@ -17,7 +17,7 @@ import { showToast } from './interactive';
 import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
 import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
 import { validateQty } from 'models/helpers';
-import { getExistingActiveSerialNumbersForItem } from 'models/inventory/helpers';
+import { getAvailableSerialNumbers } from 'models/inventory/helpers';
 
 export type POSPermissionSetting = 'canChangeRate' | 'canEditDiscount';
 export type POSQuantityField = 'quantity' | 'transferQuantity';
@@ -265,9 +265,10 @@ export async function fillRowSerialNumbers(
     return;
   }
 
-  const serialNumbers = await getExistingActiveSerialNumbersForItem(
+  const serialNumbers = await getAvailableSerialNumbers(
     row.fyo,
     item,
+    await getPOSInventory(row.fyo),
     quantity
   );
   if (serialNumbers) {

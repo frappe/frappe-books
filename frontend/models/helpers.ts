@@ -27,6 +27,9 @@ import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { getSerialNumbersForQuantity } from './inventory/helpers';
 
 const MAPPER_MODULES: Record<string, string> = {
+  Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
+  Lead: 'frappe_books.frappe_books.doctype.books_lead.books_lead',
+  Party: 'frappe_books.frappe_books.doctype.books_party.books_party',
   SalesInvoice:
     'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice',
   PurchaseInvoice:
@@ -198,12 +201,12 @@ export function getCreateCustomerAction(fyo: Fyo): Action {
     label: fyo.t`Customer`,
     condition: (doc: Doc) => !doc.notInserted,
     action: async (doc: Doc, router) => {
-      const customerData = (doc as Lead).createCustomer();
-
-      if (!customerData.name) {
-        return;
-      }
-      await router.push(`/edit/Party/${customerData.name}`);
+      const customer = await getMappedDoc(
+        doc,
+        ModelNameEnum.Party,
+        'make_customer'
+      );
+      await router.push(`/edit/Party/${customer.name!}`);
     },
   };
 }
@@ -214,11 +217,12 @@ export function getSalesQuoteAction(fyo: Fyo): Action {
     label: fyo.t`Sales Quote`,
     condition: (doc: Doc) => !doc.notInserted,
     action: async (doc, router) => {
-      const salesQuoteData = (doc as Lead).createSalesQuote();
-      if (!salesQuoteData.name) {
-        return;
-      }
-      await router.push(`/edit/SalesQuote/${salesQuoteData.name}`);
+      const quote = await getMappedDoc(
+        doc,
+        ModelNameEnum.SalesQuote,
+        'make_sales_quote'
+      );
+      await router.push(`/edit/SalesQuote/${quote.name!}`);
     },
   };
 }
@@ -301,8 +305,7 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      (!!fyo.singles.AccountingSettings?.enableInvoiceReturns ||
-        !!fyo.singles.InventorySettings?.enableStockReturns) &&
+      !!fyo.singles.AccountingSettings?.enableInvoiceReturns &&
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {

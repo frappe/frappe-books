@@ -22,6 +22,17 @@ export function areDocValuesEqual(
   return isEqual(dvOne, dvTwo);
 }
 
+/** A field's default, with Frappe's "Now" and "Today" taken when the document is made. */
+export function getFieldDefault(field: Field): DocValue | undefined {
+  const dateTypes: FieldType[] = [FieldTypeEnum.Date, FieldTypeEnum.Datetime];
+  const isDate = dateTypes.includes(field.fieldtype);
+  if (isDate && (field.default === 'Now' || field.default === 'Today')) {
+    return new Date();
+  }
+
+  return field.default as DocValue | undefined;
+}
+
 export function getPreDefaultValues(
   fieldtype: FieldType,
   fyo: Fyo

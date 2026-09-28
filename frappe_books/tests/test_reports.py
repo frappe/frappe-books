@@ -11,7 +11,7 @@ from frappe_books.reports.filters import get_default_filters
 from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
 from frappe_books.reports.gstr_json import get_gstr_json
 from frappe_books.reports.periods import get_periods
-from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
+from frappe_books.tests.accounting import make_account, make_item, make_party, root_group, unique_name
 from frappe_books.tests.test_valuation import move
 
 VOUCHER = "Books Journal Entry"
@@ -251,7 +251,11 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		for account in ("CGST", "SGST", "IGST"):
 			if not frappe.db.exists("Books Account", account):
 				frappe.get_doc(
-					{"doctype": "Books Account", "account_name": account, "root_type": "Liability"}
+					{
+						"doctype": "Books Account",
+						"account_name": account,
+						"parent_books_account": root_group("Liability"),
+					}
 				).insert()
 		self.receivable = make_account("GSTR Receivable", account_type="Receivable")
 		self.income = make_account("GSTR Income", root_type="Income", account_type="Income Account")

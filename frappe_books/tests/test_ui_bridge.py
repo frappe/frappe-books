@@ -192,19 +192,12 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 					}
 				],
 				"referenceType": "Party",
-				"entryCurrency": "Party",
 			},
 		)
 
 		self.assertEqual(inserted["referenceType"], "Party")
-		self.assertEqual(inserted["entryCurrency"], "Party")
 		self.assertEqual(
-			frappe.db.get_value(
-				"Books Sales Quote",
-				inserted["name"],
-				["reference_type", "entry_currency"],
-			),
-			("Books Party", "Party"),
+			frappe.db.get_value("Books Sales Quote", inserted["name"], "reference_type"), "Books Party"
 		)
 
 	def test_series_names_come_from_the_server(self):
@@ -360,7 +353,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				"party": party.name,
 				"account": receivable.name,
 				"date": now_datetime().isoformat(),
-				"entryCurrency": "Party",
 				"exchangeRate": 1,
 				"items": [
 					{
@@ -541,7 +533,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 				"party": party.name,
 				"account": receivable.name,
 				"date": now_datetime().isoformat(),
-				"entryCurrency": "Party",
 				"exchangeRate": 1,
 				"items": [
 					{
@@ -557,7 +548,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		invoice = frappe.get_doc("Books Sales Invoice", invoice_name)
 		self.assertEqual(len(invoice.items), 1)
 		self.assertEqual(invoice.items[0].parent, invoice_name)
-		self.assertEqual(invoice.entry_currency, "Party")
 
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.update(

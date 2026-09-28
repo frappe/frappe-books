@@ -130,7 +130,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 				"party": shipment.party,
 				"date": shipment.date,
 				"return_against": shipment.name,
-				"items": [{**shipment.items[0].as_dict(no_default_fields=True), "quantity": 1}],
+				"items": [{**shipment.items[0].as_dict(no_default_fields=True), "quantity": -1}],
 			}
 		)
 		return_shipment.insert().submit()
@@ -181,7 +181,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		receipt = make_purchase_receipt(purchase_return.name)
 
 		self.assertEqual(receipt.return_against, invoice.reload().back_reference)
-		self.assertEqual([row.quantity for row in receipt.items], [2])
+		self.assertEqual([row.quantity for row in receipt.items], [-2])
 
 	def test_return_shipment_reverses_the_shipment_made_by_hand(self):
 		invoice, _item = self._sales_invoice()
@@ -194,6 +194,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertEqual(make_shipment(credit_note.name).return_against, shipment.name)
 
 	def _purchase_invoice(self, **values):
+		# Inventory is on in tests, so a test asks for the automatic transfer it wants.
+		values.setdefault("make_auto_stock_transfer", 0)
 		payable = make_account("Map Payable", root_type="Liability", account_type="Payable")
 		stock = make_account("Map Stock", account_type="Stock")
 		received = make_account("Map Received", root_type="Liability")
@@ -213,6 +215,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		return invoice, item.name
 
 	def _sales_invoice(self, currency=None, **values):
+		# Inventory is on in tests, so a test asks for the automatic transfer it wants.
+		values.setdefault("make_auto_stock_transfer", 0)
 		receivable = make_account("Auto Receivable", account_type="Receivable")
 		income = make_account("Auto Sales", root_type="Income", account_type="Income Account")
 		cogs = make_account("Auto COGS", root_type="Expense", account_type="Cost of Goods Sold")

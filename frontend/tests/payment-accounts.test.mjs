@@ -39,6 +39,22 @@ for (const paymentType of ['Pay', 'Receive']) {
   });
 }
 
+test('a cash payment method offers only cash accounts', async () => {
+  const cases = [
+    ['Cash', 'Cash'],
+    ['Bank', ['in', ['Bank', 'Cash']]],
+  ];
+  for (const [paymentMethod, accountType] of cases) {
+    const payment = await makePayment('Receive', paymentMethod);
+    const { paymentAccount } = payment.fyo.models.Payment.filters;
+
+    assert.deepEqual(await paymentAccount(payment), {
+      accountType,
+      isGroup: false,
+    });
+  }
+});
+
 test('a refund against a returned sales invoice uses the invoice receivable account', async () => {
   const payment = await makePayment('Pay', 'Cash');
   const invoice = {

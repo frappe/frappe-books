@@ -14,6 +14,7 @@ import {
 import { Money } from 'pesa';
 import { PartyRole } from './types';
 import { ModelNameEnum } from 'models/types';
+import { getMappedDoc } from 'models/helpers';
 
 export class Party extends Doc {
   role?: PartyRole;
@@ -83,10 +84,11 @@ export class Party extends Doc {
         condition: (doc: Doc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
-          const doc = fyo.doc.getNewDoc('PurchaseInvoice', {
-            party: partyDoc.name,
-            account: partyDoc.defaultAccount as string,
-          });
+          const doc = await getMappedDoc(
+            partyDoc,
+            ModelNameEnum.PurchaseInvoice,
+            'make_purchase_invoice'
+          );
 
           await router.push({
             path: `/edit/PurchaseInvoice/${doc.name!}`,
@@ -116,10 +118,11 @@ export class Party extends Doc {
         condition: (doc: Doc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {
-          const doc = fyo.doc.getNewDoc('SalesInvoice', {
-            party: partyDoc.name,
-            account: partyDoc.defaultAccount as string,
-          });
+          const doc = await getMappedDoc(
+            partyDoc,
+            ModelNameEnum.SalesInvoice,
+            'make_sales_invoice'
+          );
 
           await router.push({
             path: `/edit/SalesInvoice/${doc.name!}`,

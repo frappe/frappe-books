@@ -4,11 +4,20 @@ import frappe
 from frappe.utils import now_datetime
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.settings import FEATURES
 from frappe_books.setup_service import ensure_currency
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
+def enable_features():
+	"""Turn every feature switch on for the test site; a switch's own tests turn it off."""
+	for fieldname, settings in FEATURES.items():
+		frappe.db.set_single_value(settings, fieldname, 1)
+
+
 def make_account(label, root_type="Asset", **values):
+	if not values.get("is_group"):
+		values.setdefault("parent_books_account", root_group(root_type))
 	return frappe.get_doc(
 		{
 			"doctype": "Books Account",
@@ -17,6 +26,15 @@ def make_account(label, root_type="Asset", **values):
 			**values,
 		}
 	).insert()
+
+
+def root_group(root_type):
+	"""Return the test root group of a root type, as ledger accounts need a parent group."""
+	name = f"Test {root_type}"
+	if not frappe.db.exists("Books Account", name):
+		values = {"account_name": name, "root_type": root_type, "is_group": 1}
+		frappe.get_doc({"doctype": "Books Account", **values}).insert()
+	return name
 
 
 def make_party(default_account, role="Customer", **values):

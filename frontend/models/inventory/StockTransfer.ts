@@ -78,7 +78,6 @@ export abstract class StockTransfer extends Transfer {
 
       return defaults?.purchaseReceiptTerms ?? '';
     },
-    date: () => new Date(),
   };
 
   static filters: FiltersMap = {

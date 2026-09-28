@@ -8,7 +8,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.commerce.pos import open_shift_name
-from frappe_books.tests.accounting import ledger_entries, make_account, unique_name
+from frappe_books.tests.accounting import ledger_entries, make_account, root_group, unique_name
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
@@ -86,7 +86,12 @@ def set_pos_accounts():
 	)
 	if not frappe.db.exists("Books Account", "Cash"):
 		frappe.get_doc(
-			{"doctype": "Books Account", "account_name": "Cash", "root_type": "Asset", "account_type": "Cash"}
+			{
+				"doctype": "Books Account",
+				"account_name": "Cash",
+				"parent_books_account": root_group("Asset"),
+				"account_type": "Cash",
+			}
 		).insert()
 	if not frappe.db.exists("Books Payment Method", "Bank"):
 		frappe.get_doc({"doctype": "Books Payment Method", "name": "Bank", "type": "Bank"}).insert()

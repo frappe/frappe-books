@@ -5,6 +5,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.frappe_books.doctype.books_lead.books_lead import make_customer, make_sales_quote
+from frappe_books.frappe_books.doctype.books_party.books_party import make_sales_invoice
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
 
 # On IntegrationTestCase, the doctype test records and all
@@ -111,3 +113,35 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 		purchase.save().submit()
 
 		self.assertEqual(party.db_get("outstanding_amount"), 180 - 90)
+
+	def test_lead_maps_to_a_customer_and_a_quote(self):
+		lead = frappe.get_doc(
+			{
+				"doctype": "Books Lead",
+				"name": unique_name("Lead"),
+				"email": "lead@example.com",
+				"mobile": "9876543210",
+			}
+		).insert()
+
+		customer = make_customer(lead.name)
+		quote = make_sales_quote(lead.name)
+
+		self.assertEqual(
+			(customer.name, customer.role, customer.email, customer.phone, customer.from_lead),
+			(lead.name, "Customer", lead.email, lead.mobile, lead.name),
+		)
+		self.assertEqual((quote.party, quote.reference_type), (lead.name, "Books Lead"))
+		customer.insert()
+		self.assertEqual(lead.reload().status, "Converted")
+
+	def test_party_maps_to_an_invoice_with_its_defaults(self):
+		receivable = make_account("Mapped Receivable", account_type="Receivable")
+		cash = make_account("Mapped Cash", account_type="Cash")
+		frappe.db.set_single_value("Books Defaults", "sales_payment_account", cash.name)
+		party = make_party(receivable.name)
+
+		invoice = make_sales_invoice(party.name)
+
+		self.assertEqual((invoice.party, invoice.account), (party.name, receivable.name))
+		self.assertEqual(invoice.make_auto_payment, 1)

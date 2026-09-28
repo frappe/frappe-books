@@ -80,11 +80,6 @@
       "hidden": true
     },
     {
-      "fieldname": "entryCurrency",
-      "label": "Entry Currency",
-      "hidden": true
-    },
-    {
       "fieldname": "currency",
       "label": "Customer Currency",
       "hidden": true

@@ -1,9 +1,13 @@
-"""Persist Books form customizations in hosted Frappe DocTypes."""
+"""Books form customizations, stored as Frappe Custom Fields.
+
+A Books Custom Field row's definition fields show its saved Custom Field, and `row.get` reads the
+values the form saves to it.
+"""
 
 import frappe
 from frappe import _
-from frappe.utils import now
 
+from frappe_books.ui_bridge.field_properties import get_docfield_properties
 from frappe_books.ui_bridge.mapping import (
 	CUSTOM_FIELD_PREFIX,
 	custom_target_field,
@@ -19,6 +23,9 @@ FIELD_TYPE_MAP = {
 	"AutoComplete": "Autocomplete",
 	"DynamicLink": "Dynamic Link",
 }
+BOOKS_FIELD_TYPES = {fieldtype: books_fieldtype for books_fieldtype, fieldtype in FIELD_TYPE_MAP.items()}
+# The row field that holds a Custom Field's options, by Books field type.
+ROW_OPTIONS_FIELDS = {"Link": "target", "Table": "target", "DynamicLink": "references"}
 PROTECTED_SCHEMAS = {
 	"AccountingLedgerEntry",
 	"CustomField",
@@ -37,7 +44,7 @@ def validate_custom_form(doc):
 		frappe.throw(_("{0} cannot be customized.").format(doc.name))
 	_validate_unique_fieldnames(doc.custom_fields)
 	for row in doc.custom_fields:
-		_validate_custom_field(row)
+		_validate_custom_field(doc.name, row)
 
 
 def _validate_unique_fieldnames(rows):
@@ -47,27 +54,42 @@ def _validate_unique_fieldnames(rows):
 		frappe.throw(_("Custom field names must be unique: {0}").format(", ".join(duplicates)))
 
 
-def _validate_custom_field(row):
-	if row.is_required and not row.default:
-		frappe.throw(_("Required custom field {0} needs a default value.").format(row.label))
-	options = [option for option in (row.options or "").split("\n") if option.strip()]
-	if row.fieldtype in OPTION_FIELDTYPES and len(options) < 2:
-		frappe.throw(_("Custom field {0} needs at least two options.").format(row.label))
+def _validate_custom_field(source_schema: str, row):
+	if row.fieldname in schema_mapping()[source_schema]["fields"]:
+		frappe.throw(f"Field {row.fieldname} already exists in Books schema {source_schema}")
+	if row.get("is_required") and not row.get("default"):
+		frappe.throw(_("Required custom field {0} needs a default value.").format(row.get("label")))
+	options = [option for option in (row.get("options") or "").split("\n") if option.strip()]
+	if row.get("fieldtype") in OPTION_FIELDTYPES and len(options) < 2:
+		frappe.throw(_("Custom field {0} needs at least two options.").format(row.get("label")))
 
 
-def sync_all_custom_forms():
-	for name in frappe.get_all("Books Custom Form", pluck="name"):
-		sync_custom_form(frappe.get_doc("Books Custom Form", name))
+def get_saved_definition(source_schema: str | None, fieldname: str | None) -> dict:
+	"""Return the Books values of a custom field's Custom Field, or none before it is saved."""
+	if not (source_schema and fieldname):
+		return {}
+	docfield = frappe.get_meta(target_doctype(source_schema)).get_field(custom_target_field(fieldname))
+	if not docfield:
+		return {}
+
+	fieldtype = BOOKS_FIELD_TYPES.get(docfield.fieldtype, docfield.fieldtype)
+	# Link, Table and Dynamic Link options take their /books names.
+	options = get_docfield_properties(source_schema, docfield).get("options")
+	return {
+		"label": docfield.label,
+		"fieldtype": fieldtype,
+		"is_required": docfield.reqd,
+		"default": docfield.default,
+		ROW_OPTIONS_FIELDS.get(fieldtype, "options"): options,
+	}
 
 
-def sync_custom_form(doc):
-	"""Create hosted columns for one Books Custom Form document."""
+def update_custom_fields(doc):
+	"""Save each row's definition in its Custom Field and delete those of removed rows."""
 	target = target_doctype(doc.name)
-	definitions = [_custom_field_definition(doc.name, row, doc.custom_fields) for row in doc.custom_fields]
-
-	for definition in definitions:
-		_upsert_custom_field(target, definition, doc.owner)
-	_remove_stale_custom_fields(target, {field["fieldname"] for field in definitions})
+	for row in doc.custom_fields:
+		_save_custom_field(target, _custom_field_values(doc.name, row, doc.custom_fields))
+	_remove_stale_custom_fields(target, {custom_target_field(row.fieldname) for row in doc.custom_fields})
 	frappe.clear_cache(doctype=target)
 
 
@@ -77,28 +99,24 @@ def remove_custom_fields(source_schema: str):
 	frappe.clear_cache(doctype=target)
 
 
-def _custom_field_definition(source_schema: str, row, rows) -> dict:
-	if row.fieldname in schema_mapping()[source_schema]["fields"]:
-		frappe.throw(f"Field {row.fieldname} already exists in Books schema {source_schema}")
-
-	fieldtype = FIELD_TYPE_MAP.get(row.fieldtype, row.fieldtype)
-	definition = {
+def _custom_field_values(source_schema: str, row, rows) -> dict:
+	fieldtype = FIELD_TYPE_MAP.get(row.get("fieldtype"), row.get("fieldtype"))
+	values = {
 		"fieldname": custom_target_field(row.fieldname),
-		"label": row.label,
+		"label": row.get("label"),
 		"fieldtype": fieldtype,
-		"reqd": row.is_required,
-		"default": row.default,
+		"reqd": row.get("is_required"),
+		"default": row.get("default"),
+		"options": row.get("options"),
 		"is_system_generated": 1,
 	}
 
-	if fieldtype in {"Link", "Table"} and row.target:
-		definition["options"] = target_reference(row.target)
-	elif fieldtype == "Dynamic Link" and row.references:
-		definition["options"] = _reference_target(source_schema, row.references, rows)
-	elif row.options:
-		definition["options"] = row.options
+	if fieldtype in {"Link", "Table"} and row.get("target"):
+		values["options"] = target_reference(row.get("target"))
+	elif fieldtype == "Dynamic Link" and row.get("references"):
+		values["options"] = _reference_target(source_schema, row.get("references"), rows)
 
-	return definition
+	return values
 
 
 def _reference_target(source_schema: str, references: str, rows) -> str:
@@ -107,19 +125,13 @@ def _reference_target(source_schema: str, references: str, rows) -> str:
 	return target_field(source_schema, references)
 
 
-def _upsert_custom_field(target: str, definition: dict, owner: str):
-	name = frappe.db.exists("Custom Field", {"dt": target, "fieldname": definition["fieldname"]})
-	if name:
+def _save_custom_field(target: str, values: dict):
+	if name := frappe.db.exists("Custom Field", {"dt": target, "fieldname": values["fieldname"]}):
 		field = frappe.get_doc("Custom Field", name)
-		field.update(definition)
+		field.update(values)
 		field.save()
-		return
-
-	# A request always stores the user saving the form. A migrate keeps a given owner and
-	# creation, so its fields belong to the form owner instead of Administrator, who alone
-	# could remove them.
-	field = {"doctype": "Custom Field", "dt": target, "owner": owner, "creation": now(), **definition}
-	frappe.get_doc(field).insert()
+	else:
+		frappe.get_doc({"doctype": "Custom Field", "dt": target, **values}).insert()
 
 
 def _remove_stale_custom_fields(target: str, desired: set[str]):

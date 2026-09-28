@@ -22,6 +22,7 @@
    "fieldname": "label",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "is_virtual": 1,
    "label": "Label",
    "reqd": 1
   },
@@ -37,6 +38,7 @@
    "fieldname": "fieldtype",
    "fieldtype": "Select",
    "in_list_view": 1,
+   "is_virtual": 1,
    "label": "Fieldtype",
    "options": "Data\nSelect\nLink\nDate\nDatetime\nTable\nAutoComplete\nCheck\nAttachImage\nDynamicLink\nInt\nFloat\nCurrency\nText\nColor\nAttachment",
    "reqd": 1
@@ -46,11 +48,13 @@
    "fieldname": "is_required",
    "fieldtype": "Check",
    "in_list_view": 1,
+   "is_virtual": 1,
    "label": "Is Required"
   },
   {
    "fieldname": "default",
    "fieldtype": "Data",
+   "is_virtual": 1,
    "label": "Default"
   },
   {
@@ -68,16 +72,19 @@
   {
    "fieldname": "options",
    "fieldtype": "Text",
+   "is_virtual": 1,
    "label": "Options"
   },
   {
    "fieldname": "target",
    "fieldtype": "Autocomplete",
+   "is_virtual": 1,
    "label": "Target"
   },
   {
    "fieldname": "references",
    "fieldtype": "Autocomplete",
+   "is_virtual": 1,
    "label": "References"
   }
  ],
@@ -85,7 +92,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:14.910081",
+ "modified": "2026-09-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Custom Field",

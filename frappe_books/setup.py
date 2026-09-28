@@ -6,7 +6,6 @@ import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 from frappe.permissions import add_permission, update_permission_property
 
-from frappe_books.customization import sync_all_custom_forms
 from frappe_books.series import NUMBER_SERIES
 
 DEFAULT_SERIES_START = 1001
@@ -72,7 +71,6 @@ def grant_core_permissions():
 def after_migrate():
 	"""Update shipped templates only. Records a user deleted or changed stay that way."""
 	update_standard_print_templates()
-	sync_all_custom_forms()
 
 
 def update_standard_print_templates():

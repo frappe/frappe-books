@@ -5,12 +5,9 @@ around DDL. Integration tests only roll back at the end of a class, so this test
 lives in its own class to keep that commit from persisting other tests' records.
 """
 
-from unittest.mock import patch
-
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.customization import sync_all_custom_forms
 from frappe_books.tests.accounting import unique_name
 from frappe_books.ui_api import get_field_properties
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
@@ -68,17 +65,6 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 
 			self.assertEqual(frappe.local.session.data.csrf_token, "books-token")
 		self.assertIsNone(_field_owner())
-
-	def test_migrate_creates_fields_owned_by_the_form_owner(self):
-		_make_system_manager()
-		with self.set_user(SYSTEM_MANAGER):
-			_custom_form("UOM", [FIELD]).insert()
-		frappe.db.delete("Custom Field", {"dt": "Books Uom", "fieldname": COLUMN})
-
-		with patch.dict(frappe.flags, {"in_migrate": True}):
-			sync_all_custom_forms()
-
-		self.assertEqual(_field_owner(), SYSTEM_MANAGER)
 
 	def _cleanup_custom_field_test(self):
 		# Custom field DDL commits, so undo what this class committed. `sql_ddl` commits before

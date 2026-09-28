@@ -3,7 +3,7 @@
 
 from frappe.model.document import Document
 
-from frappe_books.customization import remove_custom_fields, sync_custom_form, validate_custom_form
+from frappe_books.customization import remove_custom_fields, update_custom_fields, validate_custom_form
 
 
 class BooksCustomForm(Document):
@@ -28,7 +28,7 @@ class BooksCustomForm(Document):
 		validate_custom_form(self)
 
 	def on_update(self):
-		sync_custom_form(self)
+		update_custom_fields(self)
 
 	def on_trash(self):
 		remove_custom_fields(self.name)

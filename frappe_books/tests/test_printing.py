@@ -1,12 +1,21 @@
 """Native Frappe print formats for Books documents."""
 
+from decimal import Decimal
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import money_in_words, now_datetime
 from frappe.utils.print_utils import get_print
 
 from frappe_books.printing import get_print_totals
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, make_tax
+from frappe_books.tests.accounting import (
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	make_tax,
+	unique_name,
+)
 
 
 class IntegrationTestPrinting(IntegrationTestCase):
@@ -52,15 +61,29 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.assertEqual((totals["sub_total"], totals["total_discount"]), (180, 20))
 		self.assertEqual(totals["grand_total_in_words"], money_in_words(198, invoice.currency))
 
-	def test_payment_prints_the_tax_share_it_settles(self):
+	def test_payment_prints_the_taxes_it_realised(self):
+		paid_tax = make_account("Print Tax Paid", root_type="Liability", account_type="Tax")
+		tax = frappe.get_doc(
+			{
+				"doctype": "Books Tax",
+				"name": unique_name("Print Cash Tax"),
+				"details": [{"account": self.tax_account.name, "rate": 10, "payment_account": paid_tax.name}],
+			}
+		).insert()
+		self.item.db_set("tax", tax.name)
 		invoice = self.make_invoice()
-		payment = self.make_payment({invoice: 99})
+		self.make_payment({invoice: 50})
+		# A share of 18 * 50 / 198 would round to 4.55; the second payment realises 4.54.
+		payment = self.make_payment({invoice: 50})
 
 		totals = get_print_totals(payment)
 
-		self.assertEqual(totals["taxes"], [{"account": self.tax_account.name, "amount": 9}])
-		self.assertEqual(totals["sub_total"], 90)
-		self.assertEqual(totals["amount_paid_in_words"], money_in_words(99, invoice.currency))
+		self.assertEqual(
+			[(row.account, row.amount) for row in payment.taxes], [(paid_tax.name, Decimal("4.54"))]
+		)
+		self.assertEqual(totals["sub_total"], Decimal("45.46"))
+		self.assertNotIn("taxes", totals)
+		self.assertEqual(totals["amount_paid_in_words"], money_in_words(50, invoice.currency))
 
 	def make_invoice(self):
 		invoice = make_invoice(

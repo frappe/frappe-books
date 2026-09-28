@@ -86,18 +86,23 @@ test('invoice payment details show the amount allocated to it', async () => {
   ]);
 });
 
-test('Payment print values show the tax share it settles', async () => {
+test('Payment print values show the taxes it realised', async () => {
   respondWith({
     sub_total: 50,
     amount_paid_in_words: 'USD Fifty Five only.',
-    taxes: [{ account: 'CGST', amount: 5 }],
   });
 
-  const { doc } = await getValues('Payment', { amount: 55 });
+  const { doc } = await getValues('Payment', {
+    amount: 55,
+    taxes: [{ account: 'CGST', from_account: 'CGST Due', rate: 10, amount: 5 }],
+  });
 
   assert.equal(doc.subTotal, '50.00');
   assert.equal(doc.amountPaidInWords, 'USD Fifty Five only.');
-  assert.deepEqual(doc.taxes, [{ account: 'CGST', amount: '5.00' }]);
+  assert.deepEqual(
+    doc.taxes.map(({ account, amount }) => [account, amount]),
+    [['CGST', '5.00']]
+  );
 });
 
 test('print values use the date format setting', async () => {

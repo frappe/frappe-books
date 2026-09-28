@@ -1,8 +1,4 @@
-"""Books form customizations, stored as Frappe Custom Fields.
-
-A Books Custom Field row's definition fields show its saved Custom Field, and `row.get` reads the
-values the form saves to it.
-"""
+"""Books form customizations, stored as Frappe Custom Fields."""
 
 import frappe
 from frappe import _
@@ -57,31 +53,33 @@ def _validate_unique_fieldnames(rows):
 def _validate_custom_field(source_schema: str, row):
 	if row.fieldname in schema_mapping()[source_schema]["fields"]:
 		frappe.throw(f"Field {row.fieldname} already exists in Books schema {source_schema}")
-	if row.get("is_required") and not row.get("default"):
-		frappe.throw(_("Required custom field {0} needs a default value.").format(row.get("label")))
-	options = [option for option in (row.get("options") or "").split("\n") if option.strip()]
-	if row.get("fieldtype") in OPTION_FIELDTYPES and len(options) < 2:
-		frappe.throw(_("Custom field {0} needs at least two options.").format(row.get("label")))
+	if row.is_required and not row.default:
+		frappe.throw(_("Required custom field {0} needs a default value.").format(row.label))
+	options = [option for option in (row.options or "").split("\n") if option.strip()]
+	if row.fieldtype in OPTION_FIELDTYPES and len(options) < 2:
+		frappe.throw(_("Custom field {0} needs at least two options.").format(row.label))
 
 
-def get_saved_definition(source_schema: str | None, fieldname: str | None) -> dict:
-	"""Return the Books values of a custom field's Custom Field, or none before it is saved."""
-	if not (source_schema and fieldname):
-		return {}
+def get_saved_definition(source_schema: str, fieldname: str) -> dict:
+	"""Return the row values of a custom field's saved Custom Field, or none before it is saved."""
 	docfield = frappe.get_meta(target_doctype(source_schema)).get_field(custom_target_field(fieldname))
 	if not docfield:
 		return {}
 
 	fieldtype = BOOKS_FIELD_TYPES.get(docfield.fieldtype, docfield.fieldtype)
-	# Link, Table and Dynamic Link options take their /books names.
-	options = get_docfield_properties(source_schema, docfield).get("options")
-	return {
+	definition = {
 		"label": docfield.label,
 		"fieldtype": fieldtype,
 		"is_required": docfield.reqd,
 		"default": docfield.default,
-		ROW_OPTIONS_FIELDS.get(fieldtype, "options"): options,
+		"options": None,
+		"target": None,
+		"references": None,
 	}
+	# Link, Table and Dynamic Link options take their /books names.
+	options = get_docfield_properties(source_schema, docfield).get("options")
+	definition[ROW_OPTIONS_FIELDS.get(fieldtype, "options")] = options
+	return definition
 
 
 def update_custom_fields(doc):
@@ -100,21 +98,21 @@ def remove_custom_fields(source_schema: str):
 
 
 def _custom_field_values(source_schema: str, row, rows) -> dict:
-	fieldtype = FIELD_TYPE_MAP.get(row.get("fieldtype"), row.get("fieldtype"))
+	fieldtype = FIELD_TYPE_MAP.get(row.fieldtype, row.fieldtype)
 	values = {
 		"fieldname": custom_target_field(row.fieldname),
-		"label": row.get("label"),
+		"label": row.label,
 		"fieldtype": fieldtype,
-		"reqd": row.get("is_required"),
-		"default": row.get("default"),
-		"options": row.get("options"),
+		"reqd": row.is_required,
+		"default": row.default,
+		"options": row.options,
 		"is_system_generated": 1,
 	}
 
-	if fieldtype in {"Link", "Table"} and row.get("target"):
-		values["options"] = target_reference(row.get("target"))
-	elif fieldtype == "Dynamic Link" and row.get("references"):
-		values["options"] = _reference_target(source_schema, row.get("references"), rows)
+	if fieldtype in {"Link", "Table"} and row.target:
+		values["options"] = target_reference(row.target)
+	elif fieldtype == "Dynamic Link" and row.references:
+		values["options"] = _reference_target(source_schema, row.references, rows)
 
 	return values
 

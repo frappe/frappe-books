@@ -9,8 +9,9 @@ from frappe_books.customization import get_saved_definition
 class BooksCustomField(Document):
 	"""Places a Custom Field on a /books form.
 
-	The Custom Field owns the definition, which the virtual fields show. Values set on the row, read
-	with `get`, are what saving the form writes to the Custom Field.
+	The Custom Field owns the definition. The row's virtual fields hold it: loading fills them from
+	the Custom Field, and saving the form writes them back. Frappe reads a virtual field through its
+	property, so each property returns the row's value.
 	"""
 
 	# begin: auto-generated types
@@ -49,34 +50,36 @@ class BooksCustomField(Document):
 
 	_DOCTYPE_NAME = "Books Custom Field"
 
+	def __setup__(self):
+		# A row read from the database holds only its placement. Values a caller sets are kept.
+		if self.get("parent") and self.get("fieldname"):
+			for fieldname, value in get_saved_definition(self.parent, self.fieldname).items():
+				self.__dict__.setdefault(fieldname, value)
+
 	@property
 	def label(self):
-		return self.saved_definition.get("label")
+		return self.get("label")
 
 	@property
 	def fieldtype(self):
-		return self.saved_definition.get("fieldtype")
+		return self.get("fieldtype")
 
 	@property
 	def is_required(self):
-		return self.saved_definition.get("is_required")
+		return self.get("is_required")
 
 	@property
 	def default(self):
-		return self.saved_definition.get("default")
+		return self.get("default")
 
 	@property
 	def options(self):
-		return self.saved_definition.get("options")
+		return self.get("options")
 
 	@property
 	def target(self):
-		return self.saved_definition.get("target")
+		return self.get("target")
 
 	@property
 	def references(self):
-		return self.saved_definition.get("references")
-
-	@property
-	def saved_definition(self) -> dict:
-		return get_saved_definition(self.parent, self.fieldname)
+		return self.get("references")

@@ -118,7 +118,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 				"party": shipment.party,
 				"date": shipment.date,
 				"return_against": shipment.name,
-				"items": [{**shipment.items[0].as_dict(no_default_fields=True), "quantity": 1}],
+				"items": [{**shipment.items[0].as_dict(no_default_fields=True), "quantity": -1}],
 			}
 		)
 		return_shipment.insert().submit()
@@ -169,7 +169,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		receipt = make_purchase_receipt(purchase_return.name)
 
 		self.assertEqual(receipt.return_against, invoice.reload().back_reference)
-		self.assertEqual([row.quantity for row in receipt.items], [2])
+		self.assertEqual([row.quantity for row in receipt.items], [-2])
 
 	def test_return_shipment_reverses_the_shipment_made_by_hand(self):
 		invoice, _item = self._sales_invoice()

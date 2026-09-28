@@ -192,9 +192,17 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			self.income.name,
 			discount_percent=5,
 			return_against=invoice.name,
+			items=[
+				{
+					"item": item.name,
+					"account": self.income.name,
+					"rate": 100,
+					"quantity": -2,
+					"item_discount_percent": 10,
+				}
+			],
 		)
-		credit_note.items[0].quantity = -2
-		credit_note.save().submit()
+		credit_note.submit()
 
 		self.assertEqual(Decimal(str(credit_note.grand_total)), Decimal("-171"))
 		entries = ledger_entries(credit_note.doctype, credit_note.name)

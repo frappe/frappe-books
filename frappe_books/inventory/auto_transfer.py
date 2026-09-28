@@ -131,17 +131,19 @@ def _pos_location() -> str | None:
 
 
 def _stock_rows(invoice) -> list[dict]:
+	"""Return the rows still to transfer, negative for a return like the invoice's own."""
 	pending = pending_quantities(invoice)
+	sign = -1 if invoice.get("return_against") else 1
 	exchange_rate = as_decimal(invoice.exchange_rate or 1)
 	return [
 		{
 			"item": row.item,
 			"transfer_unit": row.transfer_unit or row.unit,
-			"transfer_quantity": pending[row.name] / as_decimal(row.unit_conversion_factor or 1),
+			"transfer_quantity": sign * pending[row.name] / as_decimal(row.unit_conversion_factor or 1),
 			"unit": row.unit,
 			"batch": row.batch,
 			"serial_number": row.serial_number,
-			"quantity": pending[row.name],
+			"quantity": sign * pending[row.name],
 			"unit_conversion_factor": row.unit_conversion_factor or 1,
 			"rate": rounded(as_decimal(row.rate) * exchange_rate),
 			"description": row.description,

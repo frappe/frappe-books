@@ -8,6 +8,7 @@ from frappe.utils import now_datetime
 
 from frappe_books.accounting.accounts import validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
+from frappe_books.accounting.returns import validate_quantity_sign
 from frappe_books.inventory.invoice_balance import (
 	bill_unbilled_rows,
 	update_invoice_balance,
@@ -70,6 +71,8 @@ class StockTransferController(SeriesNamingMixin, Document):
 
 	def validate(self):
 		validate_party_role(self, self.transfer_type == "purchase")
+		for row in self.items:
+			validate_quantity_sign(row, bool(self.return_against))
 		validate_transfer_rows(transfer_rows(self))
 		if self.return_against:
 			validate_transfer_return(self)

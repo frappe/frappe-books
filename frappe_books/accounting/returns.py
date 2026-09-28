@@ -72,6 +72,15 @@ def _negate_row(row, quantity, returned_serials):
 	row.serial_number = "\n".join(serials) or None
 
 
+def validate_quantity_sign(row, is_return):
+	"""A return takes quantities back, so its rows are negative and other rows positive."""
+	quantity = as_decimal(row.quantity)
+	if is_return and quantity > 0:
+		frappe.throw(_("Row {0}: returned quantities must be negative.").format(row.idx))
+	if not is_return and quantity < 0:
+		frappe.throw(_("Row {0}: only returns can have negative quantities.").format(row.idx))
+
+
 def validate_return(invoice):
 	original = frappe.get_doc(invoice.doctype, invoice.return_against, for_update=True)
 	if original.docstatus != 1 or original.get("return_against"):

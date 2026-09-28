@@ -78,7 +78,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		shipment = self._make_shipment(item, quantity=5, rate=25)
 		shipment.submit()
 
-		return_shipment = self._make_shipment(item, quantity=1, rate=25, return_against=shipment.name)
+		return_shipment = self._make_shipment(item, quantity=-1, rate=25, return_against=shipment.name)
 		return_shipment.submit()
 
 		entries = ledger_entries(return_shipment.doctype, return_shipment.name)
@@ -95,7 +95,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		shipment = self._make_shipment(item, quantity=2, rate=25)
 		shipment.submit()
 
-		return_shipment = self._make_shipment(item, quantity=1, rate=25, return_against=shipment.name)
+		return_shipment = self._make_shipment(item, quantity=-1, rate=25, return_against=shipment.name)
 		return_shipment.submit()
 
 		self.assertEqual(stock_value_change(return_shipment), Decimal("10"))
@@ -155,7 +155,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		shipment = self._make_shipment(item, quantity=2, rate=25)
 		shipment.submit()
 
-		return_shipment = self._make_shipment(item, quantity=1, rate=25, return_against=shipment.name)
+		return_shipment = self._make_shipment(item, quantity=-1, rate=25, return_against=shipment.name)
 		return_shipment.submit()
 		self.assertEqual(frappe.db.get_value(shipment.doctype, shipment.name, "is_returned"), 1)
 
@@ -194,10 +194,10 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		seed_stock(item.name, quantity=3, rate=10)
 		shipment = self._make_shipment(item, quantity=3, rate=25)
 		shipment.submit()
-		self._make_shipment(item, quantity=2, rate=25, return_against=shipment.name).submit()
+		self._make_shipment(item, quantity=-2, rate=25, return_against=shipment.name).submit()
 
 		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 3"):
-			self._make_shipment(item, quantity=2, rate=25, return_against=shipment.name)
+			self._make_shipment(item, quantity=-2, rate=25, return_against=shipment.name)
 
 	def test_return_takes_back_only_the_shipped_batch_quantity(self):
 		item, _cogs, _stock = self._tracked_item(has_batch=1)
@@ -215,7 +215,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 				quantity=2,
 				rate=25,
 				return_against=shipment.name,
-				items=[self._row(item, 2, batches[1])],
+				items=[self._row(item, -2, batches[1])],
 			)
 
 	def test_return_takes_back_only_shipped_serial_numbers(self):
@@ -238,7 +238,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		draft = self._make_shipment(item, quantity=1, rate=25)
 
 		with self.assertRaisesRegex(frappe.ValidationError, "submitted original"):
-			self._make_shipment(item, quantity=1, rate=25, return_against=draft.name)
+			self._make_shipment(item, quantity=-1, rate=25, return_against=draft.name)
 
 	def test_invoice_bills_a_shipment_without_shipping_again(self):
 		item, _cogs, _stock = self._tracked_item()
@@ -376,7 +376,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 			quantity=1,
 			rate=25,
 			return_against=shipment.name,
-			items=[self._row(item, 1, serial_number=serial_number)],
+			items=[self._row(item, -1, serial_number=serial_number)],
 		)
 
 	def _row(self, item, quantity, batch=None, serial_number=None):

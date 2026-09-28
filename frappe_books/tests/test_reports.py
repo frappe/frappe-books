@@ -5,9 +5,10 @@ from unittest.mock import patch
 import frappe
 from frappe.desk.query_report import run
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_to_date, getdate, now_datetime, nowdate
+from frappe.utils import add_to_date, add_years, getdate, now_datetime, nowdate
 
 from frappe_books.reports import gst
+from frappe_books.reports.filters import get_default_filters
 from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_valuation import move
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
@@ -157,11 +158,24 @@ def _rows_by_account(sections):
 	return {row["name"]: row for section in sections for row in section["accounts"]}
 
 
+class IntegrationTestReportDefaults(IntegrationTestCase):
+	def test_ledgers_open_on_the_year_up_to_today(self):
+		today = getdate()
+		for report in ("Books General Ledger", "Books Stock Ledger", "Books Stock Balance"):
+			self.assertEqual(
+				get_default_filters(report), {"from_date": add_years(today, -1), "to_date": today}
+			)
+
+	def test_default_filters_need_report_access(self):
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			get_default_filters("Books General Ledger")
+
+
 class IntegrationTestStockReports(IntegrationTestCase):
 	def setUp(self):
-		income = make_account("Stock Report Income", root_type="Income")
-		received = make_account("Stock Report Received", root_type="Liability")
-		self.item = make_item(income.name, received.name, track_item=1).name
+		self.income = make_account("Stock Report Income", root_type="Income")
+		self.received = make_account("Stock Report Received", root_type="Liability")
+		self.item = self._item()
 		now = now_datetime()
 		move(self.item, "MaterialReceipt", 4, 10, add_to_date(now, days=-3))
 		move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, days=-2))
@@ -193,6 +207,24 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		for row in rows:
 			self.assertRegex(row["date"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[+-]\d{2}:\d{2}$")
 
+	def test_stock_ledger_groups_rows_and_numbers_them_in_order(self):
+		other = self._item()
+		for item, day in ((self.item, 1), (other, 2), (self.item, 3)):
+			move(item, "MaterialReceipt", 1, 10, f"2061-01-0{day} 10:00:00")
+
+		rows = _run(
+			"Books Stock Ledger",
+			from_date="2061-01-01",
+			to_date="2061-01-03",
+			group_by="item",
+			ascending=True,
+		)
+
+		self.assertEqual(
+			[(row.get("index"), row.get("item")) for row in rows],
+			[(1, self.item), (2, self.item), (None, None), (3, other)],
+		)
+
 	def test_stock_balance_splits_opening_and_period_movement(self):
 		today = nowdate()
 		rows = _run("Books Stock Balance", item=self.item, from_date=today, to_date=today)
@@ -207,6 +239,9 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		)
 		self.assertEqual(tuple(rows[0][column] for column in columns), _decimals(6, 80, 5, 60, 20))
 		self.assertEqual((rows[0]["balance_quantity"], rows[0]["valuation_rate"]), _decimals(1, 20))
+
+	def _item(self):
+		return make_item(self.income.name, self.received.name, track_item=1).name
 
 
 class IntegrationTestGSTR(IntegrationTestCase):

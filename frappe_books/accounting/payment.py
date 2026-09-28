@@ -71,9 +71,10 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		self.set("taxes", _realised_taxes(allocations))
 
 	def validate_accounts(self):
-		"""The account is the party's ledger, the payment account its cash or bank."""
+		"""The account is the party's ledger, the payment account its cash or bank; cash methods take cash."""
 		validate_party_account(self, "account", frappe.db.get_value("Books Party", self.party, "role"))
-		validate_account(self, "payment_account", PAYMENT_ACCOUNT_TYPES)
+		is_cash = self.payment_method and is_cash_method(self.payment_method)
+		validate_account(self, "payment_account", ("Cash",) if is_cash else PAYMENT_ACCOUNT_TYPES)
 
 	def validate_payment_method(self):
 		method = frappe.db.get_value(

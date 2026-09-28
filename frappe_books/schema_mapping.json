@@ -90,15 +90,6 @@
         "name": "name"
       }
     },
-    "BatchSeries": {
-      "doctype": "Books Batch Series",
-      "fields": {
-        "current": "current",
-        "name": "name",
-        "padZeros": "pad_zeros",
-        "start": "start"
-      }
-    },
     "ClosingAmounts": {
       "doctype": "Books Closing Amounts",
       "fields": {
@@ -871,15 +862,6 @@
         "item": "item",
         "name": "name",
         "status": "status"
-      }
-    },
-    "SerialNumberSeries": {
-      "doctype": "Books Serial Number Series",
-      "fields": {
-        "current": "current",
-        "name": "name",
-        "padZeros": "pad_zeros",
-        "start": "start"
       }
     },
     "SetupWizard": {

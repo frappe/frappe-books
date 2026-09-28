@@ -3,7 +3,6 @@ import AccountingLedgerEntry from './app/AccountingLedgerEntry.json';
 import AccountingSettings from './app/AccountingSettings.json';
 import Address from './app/Address.json';
 import Batch from './app/Batch.json';
-import BatchSeries from './app/BatchSeries.json';
 import Color from './app/Color.json';
 import Currency from './app/Currency.json';
 import Defaults from './app/Defaults.json';
@@ -15,7 +14,6 @@ import JournalEntry from './app/JournalEntry.json';
 import JournalEntryAccount from './app/JournalEntryAccount.json';
 import Misc from './app/Misc.json';
 import NumberSeries from './app/NumberSeries.json';
-import SerialNumberSeries from './app/SerialNumberSeries.json';
 import Party from './app/Party.json';
 import Lead from './app/Lead.json';
 import LoyaltyProgram from './app/LoyaltyProgram.json';
@@ -102,8 +100,6 @@ export const appSchemas: SchemaFile[] = [
   Currency as SchemaFile,
   Defaults as SchemaFile,
   NumberSeries as SchemaFile,
-  SerialNumberSeries as SchemaFile,
-  BatchSeries as SchemaFile,
 
   PrintSettings as SchemaFile,
 

@@ -1,10 +1,11 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import NamingSeries
 
-from frappe_books.series import series_pattern, validate_prefix
+from frappe_books.series import INVALID_PREFIX_CHARACTERS, series_pattern, start_series, validate_prefix
 
 
 class BooksNumberSeries(Document):
@@ -41,17 +42,11 @@ class BooksNumberSeries(Document):
 		return NamingSeries(self.pattern).get_current_value()
 
 	def validate(self):
-		validate_prefix(self.name)
-		NamingSeries(self.pattern).validate()
+		message = _("The following characters cannot be used {0} in a Number Series name.")
+		validate_prefix(self.name, message.format(INVALID_PREFIX_CHARACTERS))
 
 	def after_insert(self):
-		self.start_counter()
+		start_series(self.pattern, self.start)
 
 	def after_rename(self, old, new, merge):
-		self.start_counter()
-
-	def start_counter(self):
-		"""Count from `start`, unless the prefix already counted past it."""
-		series = NamingSeries(self.pattern)
-		if series.get_current_value() < self.start - 1:
-			series.update_counter(self.start - 1)
+		start_series(self.pattern, self.start)

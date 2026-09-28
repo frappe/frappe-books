@@ -5,20 +5,15 @@ import { ExportExtension } from 'reports/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { showDialog } from 'src/utils/interactive';
 import { call } from 'src/web/api';
-import { getCsvData, saveExportData } from '../commonExporter';
+import {
+  getCsvData,
+  getExportActions,
+  saveExportData,
+} from '../commonExporter';
 import { BaseGSTR } from './BaseGSTR';
 
 export default function getGSTRExportActions(report: BaseGSTR): Action[] {
-  const exportExtension = ['csv', 'json'] as ExportExtension[];
-
-  return exportExtension.map((ext) => ({
-    group: `Export`,
-    label: ext.toUpperCase(),
-    type: 'primary',
-    action: async () => {
-      await exportReport(ext, report);
-    },
-  }));
+  return getExportActions(report, exportReport);
 }
 
 async function exportReport(extension: ExportExtension, report: BaseGSTR) {

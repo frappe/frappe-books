@@ -67,3 +67,22 @@ export function toColumnField(column: ServerColumn): ColumnField {
 export function isBlankRow(row: ServerRow) {
   return Object.keys(row).length === 0;
 }
+
+interface ReportBoot {
+  allowed_reports?: Record<string, { ref_doctype?: string } | undefined>;
+  user?: { can_export?: string[] };
+}
+
+/**
+ * Desk's rule: a report exports when the user can export its reference
+ * doctype. Without a Frappe boot (tests and scripts), nothing is restricted.
+ */
+export function canExportReport(reportName: string): boolean {
+  const boot = globalThis.window?.frappe?.boot as ReportBoot | undefined;
+  if (!boot) {
+    return true;
+  }
+
+  const doctype = boot.allowed_reports?.[reportName]?.ref_doctype;
+  return !!doctype && !!boot.user?.can_export?.includes(doctype);
+}

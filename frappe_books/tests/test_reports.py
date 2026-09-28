@@ -1,5 +1,4 @@
 from decimal import Decimal
-from itertools import pairwise
 from unittest.mock import patch
 
 import frappe
@@ -9,16 +8,17 @@ from frappe.utils import add_to_date, add_years, getdate, now_datetime, nowdate
 
 from frappe_books.reports import gst
 from frappe_books.reports.filters import get_default_filters
+from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
 from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_valuation import move
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 VOUCHER = "Books Journal Entry"
+YEARS_2045_AND_2046 = {"based_on": "Until Date", "periodicity": "Yearly", "count": 2, "to_date": "2046-12-31"}
+PERIOD_KEYS = ("period_2046_12_31", "period_2045_12_31")
 
 
 class IntegrationTestLedgerReports(IntegrationTestCase):
 	def setUp(self):
-		self.queries = BooksBespokeQueries()
 		self.assets = _group_account("Report Assets", "Asset")
 		self.cash = _account("Report Cash", "Asset", self.assets)
 		self.sales = make_account("Report Sales", root_type="Income")
@@ -63,25 +63,25 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		):
 			_post(date, self.cash.name, debit, credit)
 
-		sections = self.queries.call("getTrialBalance", ["2045-01-01", "2045-02-01"])["sections"]
+		rows = _rows_by_account(_run("Books Trial Balance", from_date="2045-01-01", to_date="2045-01-31"))
 
-		rows = _rows_by_account(sections)
-		expected = [Decimal(value) for value in (80, 0, 50, 30, 100, 0)]
-		self.assertEqual(rows[self.cash.name]["values"], expected)
-		self.assertEqual(rows[self.assets.name]["values"], expected)
-		self.assertEqual((rows[self.assets.name]["level"], rows[self.cash.name]["level"]), (0, 1))
+		expected = _decimals(80, 0, 50, 30, 100, 0)
+		self.assertEqual(_values(rows[self.cash.name], TRIAL_BALANCE_KEYS), expected)
+		self.assertEqual(_values(rows[self.assets.name], TRIAL_BALANCE_KEYS), expected)
+		self.assertEqual((rows[self.assets.name]["indent"], rows[self.cash.name]["indent"]), (0, 1))
 
 	def test_profit_and_loss_shows_each_period_and_the_profit(self):
 		_post("2045-02-01", self.sales.name, 0, 100)
 		_post("2045-03-01", self.rent.name, 30, 0)
 		_post("2046-02-01", self.sales.name, 0, 200)
 
-		report = self.queries.call("getProfitAndLoss", [_periods("2045-01-01", "2046-01-01", "2047-01-01")])
+		rows = _run("Books Profit and Loss", **YEARS_2045_AND_2046)
 
-		rows = _rows_by_account(report["sections"])
-		self.assertEqual(rows[self.sales.name]["values"], [Decimal(100), Decimal(200)])
-		self.assertEqual(rows[self.rent.name]["values"], [Decimal(30), Decimal(0)])
-		self.assertEqual(report["profit"], [Decimal(70), Decimal(200)])
+		accounts = _rows_by_account(rows)
+		self.assertEqual(_values(accounts[self.sales.name], PERIOD_KEYS), _decimals(200, 100))
+		self.assertEqual(_values(accounts[self.rent.name], PERIOD_KEYS), _decimals(0, 30))
+		self.assertEqual(_values(rows[-1], PERIOD_KEYS), _decimals(200, 70))
+		self.assertEqual(rows[-1]["account"], "Total Profit")
 
 	def test_balance_sheet_accumulates_from_the_first_entry(self):
 		for date, debit, credit in (
@@ -92,11 +92,10 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		):
 			_post(date, self.cash.name, debit, credit)
 
-		report = self.queries.call("getBalanceSheet", [_periods("2045-01-01", "2046-01-01", "2047-01-01")])
+		rows = _rows_by_account(_run("Books Balance Sheet", **YEARS_2045_AND_2046))
 
-		rows = _rows_by_account(report["sections"])
-		self.assertEqual(rows[self.cash.name]["values"], [Decimal(150), Decimal(130)])
-		self.assertEqual(rows[self.assets.name]["values"], [Decimal(150), Decimal(130)])
+		self.assertEqual(_values(rows[self.cash.name], PERIOD_KEYS), _decimals(130, 150))
+		self.assertEqual(_values(rows[self.assets.name], PERIOD_KEYS), _decimals(130, 150))
 
 	def test_ledger_reports_need_ledger_read_permission(self):
 		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
@@ -150,12 +149,12 @@ def _run(report_name, **filters):
 	return run(report_name, filters)["result"]
 
 
-def _periods(*dates):
-	return [{"fromDate": start, "toDate": end} for start, end in pairwise(dates)]
+def _rows_by_account(rows):
+	return {row["account"]: row for row in rows if row}
 
 
-def _rows_by_account(sections):
-	return {row["name"]: row for section in sections for row in section["accounts"]}
+def _values(row, keys):
+	return tuple(row[key] for key in keys)
 
 
 class IntegrationTestReportDefaults(IntegrationTestCase):

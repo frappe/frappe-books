@@ -16,7 +16,7 @@ export class ReportColumnWidths {
   }
 
   getKey(column: ColumnField) {
-    return column.key ?? column.fieldname;
+    return column.fieldname;
   }
 
   get(column: ColumnField) {

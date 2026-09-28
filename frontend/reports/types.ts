@@ -1,5 +1,3 @@
-import { DateTime } from 'luxon';
-import { AccountRootType } from 'models/baseModels/Account/types';
 import { BaseField, FieldType, RawValue } from 'schemas/types';
 
 export type ExportExtension = 'csv' | 'json';
@@ -25,8 +23,6 @@ export interface ReportRow {
 }
 export type ReportData = ReportRow[];
 export interface ColumnField extends Omit<BaseField, 'fieldtype'> {
-  // Distinguishes repeated fields, such as balances for different periods.
-  key?: string;
   fieldtype: FieldType;
   align?: 'left' | 'right' | 'center';
   width?: number;
@@ -34,18 +30,4 @@ export interface ColumnField extends Omit<BaseField, 'fieldtype'> {
 
 export type Periodicity = 'Monthly' | 'Quarterly' | 'Half Yearly' | 'Yearly';
 
-export type DateRange = { fromDate: DateTime; toDate: DateTime };
 export type BasedOn = 'Fiscal Year' | 'Until Date';
-
-export interface ReportAccount {
-  name: string;
-  level: number;
-  isGroup: boolean;
-  values: number[];
-}
-
-export interface AccountSection {
-  rootType: AccountRootType;
-  accounts: ReportAccount[];
-  total: number[];
-}

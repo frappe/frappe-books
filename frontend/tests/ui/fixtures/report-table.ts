@@ -2,9 +2,8 @@ import { createApp, h, reactive, ref } from 'vue';
 import { t } from 'fyo';
 import { StockLedger } from 'reports/inventory/StockLedger';
 import { BalanceSheet } from 'reports/BalanceSheet/BalanceSheet';
-import { DateTime } from 'luxon';
 import type { Report } from 'reports/Report';
-import { toColumnField } from 'reports/serverReport';
+import { toColumnField, type ServerColumn } from 'reports/serverReport';
 import ListReport from 'src/components/Report/ListReport.vue';
 import { fyo } from 'src/initFyo';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
@@ -96,11 +95,18 @@ app.mount('#app');
   },
   showBalanceSheet: () => {
     const report = new BalanceSheet(fyo);
-    report._dateRanges = ['2026-09-01', '2026-08-01'].map((date) => ({
-      toDate: DateTime.fromISO(date),
-      fromDate: DateTime.fromISO(date).minus({ months: 1 }),
-    }));
-    report.columns = report.getColumns();
+    report.columns = [
+      { fieldname: 'account', label: 'Account', fieldtype: 'Link', width: 240 },
+      ...[
+        ['period_2026_08_31', 'Aug 31, 2026'],
+        ['period_2026_07_31', 'Jul 31, 2026'],
+      ].map(([fieldname, label]) => ({
+        fieldname,
+        label,
+        fieldtype: 'Currency' as const,
+        width: 150,
+      })),
+    ].map((column) => toColumnField(column as ServerColumn));
     report.reportData = [
       {
         cells: report.columns.map((column, index) => ({

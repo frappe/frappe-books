@@ -412,6 +412,8 @@ def _populate_row(invoice, row, item, rates):
 		row.rate = pricing.standard_rate(invoice, row, rates)
 	if not row.account:
 		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
+	# The Qty column shows the quantity in the transfer unit.
+	row.qty = row.transfer_quantity
 
 
 def _item_details(names):

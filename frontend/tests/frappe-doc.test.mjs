@@ -310,6 +310,13 @@ test('a duplicate copies unsaved edits but not the no_copy fields', async () => 
   assert.equal(await getFrappeDoc('Item', 'Pen CPY'), copy);
 });
 
+test('a document takes its defaults from its own model, not a bridge model of its schema', (t) => {
+  fyo.doc.models.Order = { defaults: { customer: () => 'Bridge' } };
+  t.after(() => delete fyo.doc.models.Order);
+
+  assert.equal(newFrappeDoc('Order').customer, null);
+});
+
 async function waitFor(condition) {
   for (let attempt = 0; attempt < 50; attempt++) {
     if (condition()) {

@@ -64,7 +64,7 @@ export function toSchema(
     name,
     label: presentation.label,
     fields,
-    naming: getNaming(meta.autoname),
+    naming: getNaming(meta),
     titleField: meta.title_field || 'name',
     quickEditFields: presentation.quickEditFields,
     tableFields:
@@ -213,14 +213,22 @@ function getMetaFields(meta: DocTypeMeta): Field[] {
   return fields.map((field) => ({ ...field, meta: true }) as Field);
 }
 
-function getNaming(autoname = ''): Naming {
-  const rule = autoname.toLowerCase();
+function getNaming(meta: DocTypeMeta): Naming {
+  const rule = (meta.autoname ?? '').toLowerCase();
   if (rule === 'prompt') {
     return 'manual';
   }
 
   if (rule === 'autoincrement') {
     return 'autoincrement';
+  }
+
+  // Books names a document with a number series from that series, in its controller.
+  const hasSeries = meta.fields.some(
+    ({ fieldname }) => fieldname === 'number_series'
+  );
+  if (!rule && hasSeries) {
+    return 'numberSeries';
   }
 
   return !rule || rule === 'hash' ? 'random' : 'numberSeries';

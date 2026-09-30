@@ -18,7 +18,7 @@ from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings imp
 )
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
 from frappe_books.setup_service import default_accounts, run_setup
-from frappe_books.tests.accounting import unique_name
+from frappe_books.tests.accounting import ensure_user, unique_name
 
 # System Settings fields Frappe's setup fills; tests restore them so cached defaults stay right.
 FRAPPE_SETUP_FIELDS = (
@@ -175,6 +175,77 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		for values in ({"country": "Atlantis"}, {"currency": "XXX"}):
 			with self.subTest(values=values):
 				self.assertRaises(frappe.LinkValidationError, self._wizard(**values).save)
+
+	def test_preview_suggests_the_country_currency_chart_and_fiscal_year(self):
+		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "India"})
+		with self.freeze_time("2026-09-30"):
+			wizard.preview()
+		self.assertEqual(wizard.currency, "INR")
+		self.assertEqual(wizard.chart_of_accounts, "India - Chart of Accounts")
+		self.assertEqual(
+			(str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), ("2026-04-01", "2027-03-31")
+		)
+
+		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "India"})
+		with self.freeze_time("2027-02-10"):
+			wizard.preview()
+		self.assertEqual(
+			(str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), ("2026-04-01", "2027-03-31")
+		)
+
+	def test_preview_keeps_values_the_user_set(self):
+		wizard = frappe.get_doc(
+			{
+				"doctype": "Books Setup Wizard",
+				"country": "India",
+				"currency": "USD",
+				"chart_of_accounts": STANDARD_CHART,
+				"fiscal_year_start": "2026-07-01",
+			}
+		)
+		wizard.preview()
+		self.assertEqual((wizard.currency, wizard.chart_of_accounts), ("USD", STANDARD_CHART))
+		self.assertEqual(
+			(str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), ("2026-07-01", "2027-03-31")
+		)
+
+	def test_preview_takes_each_fiscal_date_from_the_other_without_country_dates(self):
+		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "Germany"})
+		wizard.preview()
+		self.assertEqual(
+			(wizard.currency, wizard.fiscal_year_start, wizard.fiscal_year_end), ("EUR", None, None)
+		)
+
+		wizard.fiscal_year_start = "2026-07-01"
+		wizard.preview()
+		self.assertEqual(str(wizard.fiscal_year_end), "2027-06-30")
+
+		wizard.fiscal_year_start, wizard.fiscal_year_end = None, "2026-12-31"
+		wizard.preview()
+		self.assertEqual(str(wizard.fiscal_year_start), "2026-01-01")
+
+	def test_preview_picks_a_country_chart_in_the_user_language(self):
+		for language, chart in (
+			("en", STANDARD_CHART),
+			("fr", "Canada - Plan comptable"),
+			("fr-CA", "Canada"),
+		):
+			with self.subTest(language=language):
+				frappe.local.lang = language
+				wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "Canada"})
+				wizard.preview()
+				self.assertTrue(wizard.chart_of_accounts.startswith(chart))
+		frappe.local.lang = "en"
+
+	def test_preview_suggests_the_currency_of_frappe_country_names(self):
+		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "Türkiye"})
+		wizard.preview()
+		self.assertEqual(wizard.currency, "TRY")
+
+	def test_preview_needs_the_right_to_set_up_books(self):
+		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "India"})
+		with self.set_user(ensure_user("books-wizard-user@example.com", "Books User")):
+			self.assertRaises(frappe.PermissionError, wizard.preview)
 
 	def test_setup_completes_only_once(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)

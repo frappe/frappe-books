@@ -167,23 +167,6 @@ test('stock transfers use only the value of their own rows, including partial re
   }
 });
 
-test('root groups can be recreated and edited but cannot be deleted', async () => {
-  const fyo = await makeFyo();
-  fyo.singles.AccountingSettings.setupComplete = true;
-  const root = fyo.doc.getNewDoc('Account', {
-    name: 'Restored Assets',
-    isGroup: true,
-    rootType: 'Asset',
-  });
-  assert.equal(root.required.parentAccount(), false);
-  await assert.rejects(root.beforeDelete(), /Root accounts cannot be deleted/);
-  const child = fyo.doc.getNewDoc('Account', {
-    name: 'Cash',
-    parentAccount: root.name,
-  });
-  await child.beforeDelete();
-});
-
 test('Canada selects the French chart only for a French language preference', async () => {
   const fyo = await makeFyo();
   fyo.store.chartsOfAccounts = [

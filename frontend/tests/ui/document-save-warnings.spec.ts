@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { routeAccounts } from './helpers/accounts';
 import { useBooksSession } from './helpers/session';
 
 useBooksSession();
@@ -121,32 +122,25 @@ test('a rejected settings save retains edits and does not offer a successful-sav
 test('account tree refresh failure reports the saved account and closes the creation form', async ({
   page,
 }) => {
-  await page.evaluate(async () => {
+  const root = {
+    name: 'Save Test Assets',
+    root_type: 'Asset',
+    is_group: 1 as const,
+  };
+  const writes: Record<string, unknown>[] = [];
+  await routeAccounts(page, [root], {
+    list: (filters) => {
+      if (writes.length) throw new Error('Account tree refresh failed');
+      return filters.length ? [] : [root];
+    },
+    insert: (values) => {
+      writes.push(values);
+      return { ...values, name: values.account_name };
+    },
+  });
+  await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
-    const fyo = app._context.mixins
-      .find((m: any) => m.computed?.fyo)
-      .computed.fyo();
-    const root = fyo.doc.getNewDoc('Account', {
-      name: 'Save Test Assets',
-      rootType: 'Asset',
-      isGroup: true,
-    });
-    root._dirty = false;
-    root._notInserted = false;
-    const fixture = ((window as any).accountSave = { writes: [] as any[] });
-    const getAll = fyo.db.getAll.bind(fyo.db);
-    fyo.db.getAll = (schema: string, options: any) => {
-      if (schema !== 'Account') return getAll(schema, options);
-      if (fixture.writes.length) throw new Error('Account tree refresh failed');
-      return options.filters?.parentAccount ? [] : [root.getValidDict()];
-    };
-    fyo.db.insert = async (schema: string, values: any) => {
-      if (schema !== 'Account')
-        throw new Error(`Unexpected write to ${schema}`);
-      fixture.writes.push({ ...values });
-      return { ...values };
-    };
-    await app.config.globalProperties.$router.push('/chart-of-accounts');
+    return app.config.globalProperties.$router.push('/chart-of-accounts');
   });
   await page
     .getByRole('button', { name: 'Actions for Save Test Assets', exact: true })
@@ -165,7 +159,5 @@ test('account tree refresh failure reports the saved account and closes the crea
     )
   ).toBeVisible();
   await expect(form).toHaveCount(0);
-  expect(
-    await page.evaluate(() => (window as any).accountSave.writes.length)
-  ).toBe(1);
+  expect(writes).toHaveLength(1);
 });

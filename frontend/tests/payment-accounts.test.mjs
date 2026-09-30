@@ -49,8 +49,8 @@ test('a cash payment method offers only cash accounts', async () => {
     const { paymentAccount } = payment.fyo.models.Payment.filters;
 
     assert.deepEqual(await paymentAccount(payment), {
-      accountType,
-      isGroup: false,
+      account_type: accountType,
+      is_group: false,
     });
   }
 });

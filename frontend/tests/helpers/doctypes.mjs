@@ -7,6 +7,27 @@ export const mapping = readJson(
 ).doctypes;
 export const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 
+/**
+ * A doctype's meta and its tables' meta, with fields in field order, as
+ * Frappe's getdoctype sends them.
+ */
+export function getMetaBundle(name) {
+  const meta = getMeta(name);
+  const tables = meta.fields
+    .filter((field) => field.fieldtype === 'Table')
+    .map((field) => getMeta(field.options));
+  return [meta, ...tables];
+}
+
+function getMeta(name) {
+  const meta = doctypes.find((meta) => meta.name === name);
+  const order = meta.field_order ?? [];
+  const fields = [...meta.fields].sort(
+    (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
+  );
+  return { ...meta, fields };
+}
+
 function readDoctypes(directory) {
   const entries = readdirSync(directory, { withFileTypes: true });
   return entries

@@ -29,12 +29,14 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | Validation and business rules | The controller. A client mirror is only for a message at its field. |
 | Link without "Create" | `only_select` on the DocField |
 | Table columns | `in_list_view` on the child DocFields |
-| Label, name field of a prompt-named doctype, quick edit fields | `static presentation` on the model |
+| Label, name field (asked for a prompt-named doctype, else only its label), quick edit fields, labels of Select options that are not words | `static presentation` on the model |
+| Fields the server fills from another field, filled again when the user edits it (a row's rate from its item) | `static derivedFields` |
+| Row link filters, create values, feature-hidden fields and row editor fields | A row model, named in the parent's `static rowModels` |
 | List columns, badges, actions, option lists, formatting | The model statics, as before: `getListViewSettings`, `getActions`, `lists`, `emptyMessages` |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |
 
-A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user.
+A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user. A value that the user entered and the server only corrected, such as the sign of a return quantity, stays the value of the user. Frappe sends no empty values, so a value that is missing from the preview is empty. A new document in a form is previewed once when it opens.
 
 ## Move a module
 

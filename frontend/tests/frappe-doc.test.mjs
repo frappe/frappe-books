@@ -11,9 +11,10 @@ import {
   loadTestDocTypes,
   newFrappeDoc,
   stubFrappe,
+  useBooksDoc,
 } from './helpers/frappe.mjs';
 
-await loadTestDocTypes();
+const { TestItem } = await loadTestDocTypes();
 const MODIFIED = '2026-09-30 10:00:00.123456';
 
 const savedPen = {
@@ -37,6 +38,11 @@ function stubDocument(doc = savedPen, respond = () => undefined) {
 
     if (request.method === 'GET') {
       return { data: doc };
+    }
+
+    // A preview that fills nothing.
+    if (request.path.endsWith('run_doc_method')) {
+      return { docs: [request.body.document] };
     }
 
     return { data: { ...doc, ...request.body, modified: MODIFIED } };
@@ -101,8 +107,8 @@ test('a new document is inserted whole; its rows go without client names', async
 
   await item.sync();
 
-  const insert = requests.find(({ method }) => method === 'POST');
-  assert.equal(insert.path, '/api/v2/document/Books Item');
+  const insert = requests.find(({ path }) => path.endsWith('/Books Item'));
+  assert.equal(insert.method, 'POST');
   assert.equal(insert.body.name, 'Pen');
   assert.equal(insert.body.income_account, 'Sales');
   assert.equal(insert.body.track_item, 0);
@@ -237,6 +243,46 @@ test('a save previews first when the server fills a missing value', async () => 
     ['POST /api/v2/method/run_doc_method', 'POST /api/v2/document/Books Item']
   );
   assert.equal(requests[1].body.income_account, 'Sales');
+});
+
+test('a save waits for the fills of the last edit', async () => {
+  const requests = stubDocument(savedPen, ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      const { document } = body;
+      const account = document.item_type === 'Service' ? 'Service' : 'Sales';
+      return {
+        docs: [
+          { ...document, income_account: document.income_account ?? account },
+        ],
+      };
+    }
+  });
+  const item = newFrappeDoc('Item', { name: 'Chai', income_account: 'Sales' });
+  TestItem.refills = { item_type: ['income_account'] };
+  await item.set('item_type', 'Service');
+  TestItem.refills = {};
+
+  await item.sync();
+  assert.deepEqual(
+    requests.map(({ path }) => path),
+    ['/api/v2/method/run_doc_method', '/api/v2/document/Books Item']
+  );
+  // The model refills the account after the type, though the user set it.
+  assert.equal('income_account' in requests[0].body.document, false);
+  assert.equal(requests[1].body.income_account, 'Service');
+});
+
+test('a new document previews once its form opens', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const requests = stubDocument(savedPen);
+  const { doc, load } = useBooksDoc();
+  const item = newFrappeDoc('Item', { name: 'Mocha' });
+
+  await load('Item', item.name, true);
+  assert.equal(doc.value, item);
+  t.mock.timers.tick(300);
+  await waitFor(() => requests.length === 1);
+  assert.equal(requests[0].body.method, 'preview');
 });
 
 test('submit and cancel run the document methods on the client copy', async () => {

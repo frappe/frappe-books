@@ -21,7 +21,7 @@ The app currently targets only the Frappe Framework `develop` branch. It uses Fr
 - POS shifts and checkout, pricing rules, coupons, and loyalty points
 - India GST fields and GSTR-1/GSTR-2 reports, plus Swiss regional schema fields
 - General Ledger, Trial Balance, Profit and Loss, Balance Sheet, Stock Ledger, and Stock Balance reports in the Books interface
-- Native Frappe print formats for invoices, quotes, payments, shipments, and receipts
+- Frappe print formats for invoices, quotes, payments, shipments, and POS receipts
 - Books workspace and Data Import/Data Export links in Desk
 
 The browser handles downloads, file selection, and printing. Company data belongs to the current Frappe site. The app does not contain a local company-database selector, device telemetry, an updater, or an ERPNext device-sync client.

@@ -16,7 +16,7 @@ await build({
     contents: `
       export { FrappeDoc } from './src/frappe/document';
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
-      export { getFrappeDoc, newFrappeDoc } from './src/frappe/documents';
+      export { getFrappeDoc, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, toFrappeFilters } from './src/frappe/list';
@@ -74,6 +74,7 @@ export const {
   isFrappeBacked,
   getDocType,
   getFrappeDoc,
+  getMappedFrappeDoc,
   newFrappeDoc,
   useBooksDoc,
   evaluateCondition,

@@ -31,13 +31,17 @@ ITEM_SERIES_DIGITS = 4
 
 class SeriesNamingMixin:
 	def autoname(self):
-		self.number_series = self.number_series or default_series(self.doctype)
+		self.set_number_series()
 		series = frappe.get_doc("Books Number Series", self.number_series)
 		if series.reference_type != NUMBER_SERIES[self.doctype][1]:
 			frappe.throw(
 				_("Number series {0} is not for {1} documents.").format(series.name, _(self.doctype))
 			)
 		self.name = make_autoname(series.pattern)
+
+	def set_number_series(self):
+		"""Use the Books Defaults series unless one is chosen."""
+		self.number_series = self.number_series or default_series(self.doctype)
 
 
 def default_series(doctype):

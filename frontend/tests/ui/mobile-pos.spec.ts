@@ -182,7 +182,7 @@ test('shift sheets count cash with steppers', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
   const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
   const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
-  const cash = sheet.getByRole('row', { name: /^Cash/ });
+  const cash = sheet.getByRole('listitem').filter({ hasText: /^\s*Cash/ });
   const before = Number(await count.inputValue());
   const counted = await cash.textContent();
   await sheet.getByRole('button', { name: 'Increase' }).last().click();
@@ -199,12 +199,33 @@ test('the counted drawer is shared by the cash methods', async ({ page }) => {
   await expect(sheet.getByText('Counted Cash')).toHaveCount(0);
   await expect(sheet.getByText('Counted Store Cash')).toHaveCount(0);
 
-  await expect(sheet.getByRole('row', { name: /^Cash/ })).toHaveText(
-    /1,000.00\s*1,260.00\s*260.00/
+  const row = (name: string) =>
+    sheet.getByRole('listitem').filter({ hasText: new RegExp(`^\\s*${name}`) });
+  await expect(row('Cash')).toHaveText(
+    /260.00\s*Expected 1,000.00\s*Counted 1,260.00/
   );
-  await expect(sheet.getByRole('row', { name: /^Store Cash/ })).toHaveText(
-    /500.00\s*500.00\s*0.00/
+  await expect(row('Store Cash')).toHaveText(
+    /0.00\s*Expected 500.00\s*Counted 500.00/
   );
+});
+
+test('large shift amounts fit a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
+  const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
+  const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
+  await count.fill('9999999');
+  await count.press('Tab');
+  await expect(
+    sheet.getByRole('listitem').filter({ hasText: /^\s*Cash/ })
+  ).toContainText(/Counted [\d,]{13,}\.00/);
+
+  const rows = await sheet
+    .getByRole('listitem')
+    .evaluateAll((items) =>
+      items.map((item) => item.scrollWidth <= item.clientWidth)
+    );
+  expect(rows.every(Boolean)).toBe(true);
 });
 
 test('leaving a sale with items asks in a sheet', async ({ page }) => {

@@ -168,3 +168,26 @@ test('a doctype named by script from its number series names by number series', 
     'random'
   );
 });
+
+test('a doctype named by the server shows its name read only when the model labels it', () => {
+  const context = { schemaNames: {}, roles: [], placements: {} };
+  const meta = {
+    name: 'Books Rule',
+    permissions: [],
+    fields: [{ fieldname: 'title', fieldtype: 'Data', label: 'Title' }],
+  };
+  const labelled = toSchema(
+    meta,
+    'Rule',
+    { label: 'Rule', nameField: { label: 'ID' } },
+    context
+  );
+  const [name] = labelled.fields;
+  assert.deepEqual(
+    [name.fieldname, name.label, name.readOnly, name.required, name.meta],
+    ['name', 'ID', true, true, undefined]
+  );
+
+  const plain = toSchema(meta, 'Rule', { label: 'Rule' }, context);
+  assert.equal(plain.fields.find((f) => f.fieldname === 'name').meta, true);
+});

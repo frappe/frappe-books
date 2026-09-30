@@ -8,5 +8,7 @@ export class Currency extends FrappeDoc {
     quickEditFields: ['symbol'],
     // Frappe's own settings for the currency, which Books does not use.
     omitFields: ['enabled', 'number_format', 'symbol_on_right'],
+    // Link pickers offer only enabled currencies, so a new one is enabled.
+    insertValues: { enabled: 1 },
   };
 }

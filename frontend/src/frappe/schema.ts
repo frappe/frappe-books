@@ -17,6 +17,8 @@ export interface Presentation {
    * like a tree's nested set, or fields of a Frappe doctype Books does not use.
    */
   omitFields?: string[];
+  /** Values of omitted fields that each document /books creates gets, e.g. an enabled Currency. */
+  insertValues?: Record<string, unknown>;
 }
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */

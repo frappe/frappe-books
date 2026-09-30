@@ -167,7 +167,9 @@ export class FrappeDoc extends Doc {
 
   override async _insert() {
     await this._preSync();
-    const values = this.getFrappeValues();
+    const { insertValues } = (this.constructor as typeof FrappeDoc)
+      .presentation;
+    const values = { ...insertValues, ...this.getFrappeValues() };
     await this._setSaved(await api.insertDocument(this.doctype, values));
     return this;
   }

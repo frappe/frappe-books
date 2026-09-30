@@ -18,6 +18,7 @@ from frappe_books.tests.accounting import (
 	make_party,
 	set_inventory_accounts,
 	stock_quantity,
+	unique_name,
 )
 
 
@@ -150,6 +151,38 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		)
 
 		self.assertRaisesRegex(frappe.ValidationError, "must be a Supplier", receipt.insert)
+
+	def test_receipt_names_missing_serial_numbers_from_the_item_series(self):
+		prefix = f"S{frappe.generate_hash(length=6)}-"
+		received = make_account("Received", root_type="Liability")
+		income = make_account("Income", root_type="Income")
+		item = make_item(
+			income.name,
+			received.name,
+			track_item=1,
+			has_serial_number=1,
+			serial_number_series=prefix,
+		)
+		typed = unique_name("SN")
+		payable = make_account("Payable", root_type="Liability", account_type="Payable")
+		row = {"item": item.name, "location": "Stores", "quantity": 3, "rate": 10}
+		receipt = frappe.get_doc(
+			{
+				"doctype": "Books Purchase Receipt",
+				"party": make_party(payable.name, role="Supplier").name,
+				"date": now_datetime(),
+				"items": [{**row, "serial_number": typed}, {**row, "quantity": 1}],
+			}
+		)
+
+		receipt.preview()
+		self.assertEqual([row.serial_number for row in receipt.items], [typed, None])
+
+		receipt.insert()
+		self.assertEqual(
+			receipt.items[0].serial_number.splitlines(), [typed, f"{prefix}1001", f"{prefix}1002"]
+		)
+		self.assertEqual(receipt.items[1].serial_number, f"{prefix}1003")
 
 
 def make_receipt(item, quantity, rate, return_against=None, date=None):

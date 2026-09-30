@@ -338,6 +338,20 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		with self.set_user(ensure_user(READ_ONLY_USER)), self.assertRaises(frappe.PermissionError):
 			movement.preview()
 
+	def test_receipt_names_missing_serial_numbers_from_the_item_series(self):
+		prefix = f"S{frappe.generate_hash(length=6)}-"
+		item = make_item(
+			self.item.income_account,
+			self.item.expense_account,
+			track_item=1,
+			has_serial_number=1,
+			serial_number_series=prefix,
+		).name
+
+		receipt = make_movement("MaterialReceipt", [{"item": item, "to_location": "Stores", "quantity": 2}])
+
+		self.assertEqual(receipt.items[0].serial_number.splitlines(), [f"{prefix}1001", f"{prefix}1002"])
+
 	def test_manufacture_row_cannot_both_consume_and_produce(self):
 		row = {"item": self.item.name, "quantity": 1, "rate": 10}
 		manufacture = frappe.get_doc(

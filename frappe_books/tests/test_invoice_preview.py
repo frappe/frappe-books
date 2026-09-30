@@ -111,6 +111,22 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 		self.assertRaises(frappe.TimestampMismatchError, _preview, saved, saved["name"])
 
+	def test_preview_starts_a_new_invoice_with_its_defaults(self):
+		frappe.db.set_single_value(
+			"Books Defaults",
+			{"sales_invoice_terms": "Pay in 30 days", "sales_payment_account": self.expense.name},
+		)
+		invoice = frappe.new_doc("Books Sales Invoice", party=self.party.name)
+		invoice.make_auto_payment = None
+
+		invoice.preview()
+
+		self.assertEqual(
+			invoice.number_series,
+			frappe.db.get_single_value("Books Defaults", "sales_invoice_number_series") or "SINV-",
+		)
+		self.assertEqual((invoice.terms, invoice.make_auto_payment), ("Pay in 30 days", 1))
+
 	def test_only_whitelisted_methods_run(self):
 		with self.assertRaisesRegex(frappe.PermissionError, "not whitelisted"):
 			run_doc_method("calculate", "SalesInvoice", self.values)

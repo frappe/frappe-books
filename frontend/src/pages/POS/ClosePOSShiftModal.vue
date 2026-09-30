@@ -166,8 +166,16 @@ export default defineComponent({
     closingAmounts(): ClosingAmounts[] {
       return (this.posClosingShiftDoc?.closingAmounts ?? []) as ClosingAmounts[];
     },
+    /** Cash methods share the drawer count; the others are counted one by one. */
+    cashClosingAmounts(): ClosingAmounts[] {
+      return this.closingAmounts.filter((row) =>
+        this.cashMethods.includes(row.paymentMethod as string)
+      );
+    },
     otherClosingAmounts(): ClosingAmounts[] {
-      return this.closingAmounts.filter((row) => row.paymentMethod !== 'Cash');
+      return this.closingAmounts.filter(
+        (row) => !this.cashClosingAmounts.includes(row)
+      );
     },
     isOnline() {
       return !!navigator.onLine;
@@ -224,21 +232,35 @@ export default defineComponent({
         return;
       }
 
-      // The counted cash fills the first cash row; the server checks all cash rows add up to it.
-      const cashRow = this.posClosingShiftDoc.closingAmounts.find((row) =>
-        this.cashMethods.includes(row.paymentMethod as string)
-      );
+      this.splitCountedCash(this.posClosingShiftDoc.closingCashAmount as Money);
       this.posClosingShiftDoc.closingAmounts.forEach((row) => {
-        if (row === cashRow) {
-          row.closingAmount = this.posClosingShiftDoc
-            ?.closingCashAmount as Money;
-        }
-
         row.closingAmount ??= fyo.pesa(0);
         row.differenceAmount = row.closingAmount.sub(
           row.expectedAmount as Money
         );
       });
+    },
+    /**
+     * Each cash method takes up to what it expects and the first also any
+     * surplus, so the rows add up to the count as the server checks.
+     */
+    splitCountedCash(counted: Money) {
+      let remaining = counted;
+      for (const row of this.cashClosingAmounts) {
+        const expected = row.expectedAmount ?? fyo.pesa(0);
+        const share = expected.isNegative()
+          ? fyo.pesa(0)
+          : expected.lt(remaining)
+          ? expected
+          : remaining;
+        row.closingAmount = share;
+        remaining = remaining.sub(share);
+      }
+
+      const [first] = this.cashClosingAmounts;
+      if (first) {
+        first.closingAmount = first.closingAmount!.add(remaining);
+      }
     },
     async seedClosingAmounts() {
       if (!this.posClosingShiftDoc || !this.posOpeningShiftDoc) {

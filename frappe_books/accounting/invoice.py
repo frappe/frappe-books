@@ -21,6 +21,7 @@ from frappe_books.inventory.invoice_balance import (
 )
 from frappe_books.inventory.stock import create_series_batches, validate_batches
 from frappe_books.inventory.units import populate_units
+from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
 from frappe_books.status import StatusMixin
@@ -56,10 +57,7 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	@frappe.whitelist()
 	def preview(self):
 		"""Calculate what a save would store, without saving, for a new document or an edited draft."""
-		if self.is_new():
-			self.check_permission("create")
-		else:
-			frappe.has_permission(self.doctype, "write", doc=self.name, throw=True)
+		check_preview_permission(self)
 		self.calculate()
 
 

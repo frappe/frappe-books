@@ -10,6 +10,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.permissions import check_preview_permission
 from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, validate_prefix
 from frappe_books.settings import require_features
 
@@ -65,8 +66,19 @@ class BooksItem(Document):
 			if self.get(flag) and series:
 				# A dash keeps the series prefix apart from its numbers.
 				self.set(fieldname, series if series.endswith("-") else f"{series}-")
+		self.set_missing_values()
+
+	def set_missing_values(self):
 		self.income_account = self.income_account or _default_income_account(self.item_type)
 		self.expense_account = self.expense_account or _default_expense_account(self.track_item)
+
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill the values a save would fill, without saving, for the form to show them."""
+		check_preview_permission(self)
+		# Frappe fills fetched values, like the item group's HSN code, while it checks the links.
+		self.get_invalid_links()
+		self.set_missing_values()
 
 	def validate(self):
 		require_features(self, ITEM_FEATURES)

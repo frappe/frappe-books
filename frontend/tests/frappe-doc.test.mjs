@@ -276,6 +276,25 @@ test('submit and cancel run the document methods on the client copy', async () =
   assert.equal(order.canDelete, true);
 });
 
+test('a cancel with linked documents runs the controller method that cancels them first', async () => {
+  const saved = { name: 'ORD-2', customer: 'Acme', docstatus: 1, modified: MODIFIED };
+  const requests = stubDocument(saved, ({ path, body }) =>
+    path.endsWith('run_doc_method')
+      ? { data: null, docs: [{ ...body.document, docstatus: 2 }] }
+      : undefined
+  );
+  const order = await getFrappeDoc('Order', 'ORD-2');
+  const payments = [{ doctype: 'Books Payment', name: 'PAY-1', docstatus: 1 }];
+
+  await order.cancel(payments);
+
+  const { method, document, kwargs } = requests.at(-1).body;
+  assert.equal(method, 'cancel_with_linked_docs');
+  assert.equal(document.modified, MODIFIED);
+  assert.deepEqual(kwargs, { linked_docs: payments });
+  assert.equal(order.cancelled, true);
+});
+
 test('delete removes the document and tells the lists', async () => {
   const requests = stubDocument(savedPen, ({ method }) =>
     method === 'DELETE' ? { data: 'ok' } : undefined

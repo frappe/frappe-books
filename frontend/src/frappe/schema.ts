@@ -12,6 +12,11 @@ export interface Presentation {
   optionLabels?: Record<string, Record<string, string>>;
   /** False when the list offers no new document, e.g. accounts made in the Chart of Accounts. */
   create?: boolean;
+  /**
+   * DocType fields /books neither shows nor saves: fields the server owns,
+   * like a tree's nested set, or fields of a Frappe doctype Books does not use.
+   */
+  omitFields?: string[];
 }
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
@@ -85,28 +90,29 @@ function getDocFields(
   context: SchemaContext,
   presentation: Presentation
 ): Field[] {
-  const levels = getPermlevels(meta, context.roles);
-  const namingField = getNamingField(meta);
+  const fieldContext: FieldContext = {
+    schemaNames: context.schemaNames,
+    levels: getPermlevels(meta, context.roles),
+    namingField: getNamingField(meta),
+    optionLabels: presentation.optionLabels ?? {},
+  };
   const fields: Field[] = [];
   const placed: Field[] = [];
   let tab: string | undefined;
   let section = DEFAULT_SECTION;
+  const omitted = presentation.omitFields ?? [];
   for (const docfield of meta.fields) {
+    if (omitted.includes(docfield.fieldname)) {
+      continue;
+    }
+
     if (docfield.fieldtype === 'Tab Break') {
       tab = docfield.label;
       section = DEFAULT_SECTION;
     } else if (docfield.fieldtype === 'Section Break') {
       section = docfield.label || DEFAULT_SECTION;
     } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
-      const optionLabels = presentation.optionLabels?.[docfield.fieldname];
-      const field = toField(
-        docfield,
-        context.schemaNames,
-        levels,
-        optionLabels
-      );
-      // The naming field is set once: changing it later would not rename the document.
-      field.setOnlyOnce ||= docfield.fieldname === namingField;
+      const field = toField(docfield, fieldContext);
       const placement = context.placements[docfield.fieldname];
       if (placement) {
         placed.push({
@@ -132,20 +138,20 @@ function getDocFields(
  * Dynamic properties (depends_on and the like) stay unset, so a doc's own
  * rules decide them; see `FrappeDoc`.
  */
-function toField(
-  docfield: DocField,
-  schemaNames: SchemaContext['schemaNames'],
-  levels: Permlevels,
-  optionLabels?: Record<string, string>
-): Field {
+function toField(docfield: DocField, context: FieldContext): Field {
+  const { fieldname } = docfield;
+  const optionLabels = context.optionLabels[fieldname];
   const properties = getFieldProperties(
-    { fieldname: docfield.fieldname, optionLabels } as Field,
+    { fieldname, optionLabels } as Field,
     docfield
   ) as Partial<Field> & { target?: string };
+  const { levels, schemaNames } = context;
   const level = docfield.permlevel ?? 0;
   const field = {
     ...properties,
-    fieldname: docfield.fieldname,
+    fieldname,
+    // The naming field is set once: changing it later would not rename the document.
+    setOnlyOnce: properties.setOnlyOnce || fieldname === context.namingField,
     label: docfield.label ?? docfield.fieldname,
     placeholder: docfield.placeholder,
     isCustom: !!docfield.is_custom_field,
@@ -224,6 +230,14 @@ function getNaming(autoname = ''): Naming {
 }
 
 type Permlevels = { read: Set<number>; write: Set<number> };
+
+/** What converting a DocField needs to know about its DocType and presentation. */
+interface FieldContext {
+  schemaNames: SchemaContext['schemaNames'];
+  levels: Permlevels;
+  namingField?: string;
+  optionLabels: NonNullable<Presentation['optionLabels']>;
+}
 
 /** The permission levels the user's roles can read and write; level 0 is the document's own. */
 function getPermlevels(meta: DocTypeMeta, roles: string[]): Permlevels {

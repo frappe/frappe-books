@@ -92,6 +92,11 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
     }
   }
 
+  // In the order of the Books Custom Form's rows.
+  const order = Object.keys(context.placements);
+  placed.sort(
+    (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
+  );
   return [...fields, ...placed];
 }
 

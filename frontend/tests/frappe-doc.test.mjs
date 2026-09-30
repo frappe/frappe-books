@@ -11,9 +11,10 @@ import {
   loadTestDocTypes,
   newFrappeDoc,
   stubFrappe,
+  useBooksDoc,
 } from './helpers/frappe.mjs';
 
-await loadTestDocTypes();
+const { TestItem } = await loadTestDocTypes();
 const MODIFIED = '2026-09-30 10:00:00.123456';
 
 const savedPen = {
@@ -293,6 +294,47 @@ test('a cancel with linked documents runs the controller method that cancels the
   assert.equal(document.modified, MODIFIED);
   assert.deepEqual(kwargs, { linked_docs: payments });
   assert.equal(order.cancelled, true);
+});
+
+test('a new document leaves its server defaults to the preview until set', async (t) => {
+  TestItem.serverDefaults = ['track_item'];
+  t.after(() => (TestItem.serverDefaults = []));
+  const sent = [];
+  stubDocument(savedPen, ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      sent.push(body.document);
+      return { data: null, docs: [{ ...body.document, track_item: 1 }] };
+    }
+  });
+
+  const item = newFrappeDoc('Item', { name: 'Kettle' });
+  await item.preview();
+  const copy = newFrappeDoc('Item', { name: 'Kettle Copy', track_item: false });
+  await copy.preview();
+
+  assert.equal('track_item' in sent[0], false);
+  assert.equal(item.track_item, true);
+  assert.equal(sent[1].track_item, 0);
+});
+
+test('a form previews a new document as it opens it, not a saved one', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const requests = stubDocument(savedPen, ({ path, body }) =>
+    path.endsWith('run_doc_method')
+      ? { data: null, docs: [{ ...body.document, income_account: 'Sales' }] }
+      : undefined
+  );
+  const previews = () =>
+    requests.filter(({ path }) => path.endsWith('run_doc_method')).length;
+  const { doc, load } = useBooksDoc();
+
+  await load('Item', undefined, true);
+  t.mock.timers.tick(0);
+  await waitFor(() => doc.value.income_account === 'Sales');
+  await load('Item', 'Pen');
+  t.mock.timers.tick(300);
+
+  assert.equal(previews(), 1);
 });
 
 test('delete removes the document and tells the lists', async () => {

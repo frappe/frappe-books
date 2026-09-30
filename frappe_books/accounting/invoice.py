@@ -58,6 +58,8 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	def preview(self):
 		"""Calculate what a save would store, without saving, for a new document or an edited draft."""
 		check_preview_permission(self)
+		self.set_default_series()
+		set_default_terms(self)
 		self.calculate()
 
 

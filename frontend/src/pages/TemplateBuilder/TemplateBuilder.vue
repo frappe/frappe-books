@@ -463,13 +463,13 @@ export default defineComponent({
     },
     async initialize() {
       await this.setDoc();
-      await this.setHints();
-      focusOrSelectFormControl(this.doc as Doc, this.$refs.nameField, false);
-
+      // The editor takes the template once, when the hints mount it.
       if (this.doc?.notInserted && !this.doc.html) {
         await this.doc.set('html', baseTemplate);
       }
 
+      await this.setHints();
+      focusOrSelectFormControl(this.doc as Doc, this.$refs.nameField, false);
       await this.setDisplayInitialDoc();
     },
     async setHints() {

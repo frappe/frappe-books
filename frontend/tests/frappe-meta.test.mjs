@@ -8,6 +8,7 @@ import {
   getSearchFields,
   isFrappeBacked,
   loadTestDocTypes,
+  toSchema,
 } from './helpers/frappe.mjs';
 
 const { TestItem } = await loadTestDocTypes();
@@ -117,4 +118,39 @@ test('conditions are evaluated as Frappe forms evaluate them', () => {
     true
   );
   assert.equal(evaluateCondition(undefined, {}), true);
+});
+
+test('a model presents option labels, row editing, state colours and help text', () => {
+  const meta = {
+    name: 'Books Rule',
+    autoname: 'hash',
+    permissions: [],
+    states: [{ title: 'Active', color: 'Green' }],
+    fields: [
+      { fieldname: 'status', fieldtype: 'Select', options: 'Active\nDone' },
+      { fieldname: 'kind', fieldtype: 'Select', options: 'rate\namount' },
+      { fieldname: 'rows', fieldtype: 'Table', options: 'Books Row' },
+      { fieldname: 'factor', fieldtype: 'Float', description: '1 or less' },
+    ],
+  };
+  const presentation = {
+    label: 'Rule',
+    linkDisplayField: 'kind',
+    fields: {
+      kind: { optionLabels: { rate: 'Rate' } },
+      rows: { edit: true },
+    },
+  };
+  const context = { schemaNames: {}, roles: [], placements: {} };
+  const rule = toSchema(meta, 'Rule', presentation, context);
+  const byName = Object.fromEntries(rule.fields.map((f) => [f.fieldname, f]));
+
+  assert.equal(rule.linkDisplayField, 'kind');
+  assert.deepEqual(byName.kind.options, [
+    { value: 'rate', label: 'Rate' },
+    { value: 'amount', label: 'amount' },
+  ]);
+  assert.equal(byName.rows.edit, true);
+  assert.deepEqual(byName.status.states, { Active: 'Green' });
+  assert.equal(byName.factor.sub_label, '1 or less');
 });

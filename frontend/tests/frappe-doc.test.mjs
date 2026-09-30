@@ -92,6 +92,14 @@ test('depends_on, read_only_depends_on and mandatory_depends_on apply to the for
   assert.equal(evaluateHidden(field(untracked, 'track_item'), untracked), true);
 });
 
+test('conditions read amounts as numbers and the docstatus, as Frappe forms do', () => {
+  const nib = newFrappeDoc('Item', { name: 'Nib', rate: fyo.pesa(0) });
+  const order = newFrappeDoc('Order', { amount: fyo.pesa(2.5), docstatus: 1 });
+
+  assert.deepEqual([nib.getEvalDoc().rate, nib.getEvalDoc().docstatus], [0, 0]);
+  assert.deepEqual([order.getEvalDoc().amount, order.getEvalDoc().docstatus], [2.5, 1]);
+});
+
 test('a new document is inserted whole; its rows go without client names', async () => {
   const requests = stubDocument(savedPen);
   const item = newFrappeDoc('Item', { name: 'Pen', income_account: 'Sales' });

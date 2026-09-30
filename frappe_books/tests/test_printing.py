@@ -8,8 +8,15 @@ from frappe.utils import money_in_words, now_datetime
 from frappe.utils.print_utils import get_print
 
 from frappe_books.accounting.money import company_currency
-from frappe_books.printing import books_format, get_print_settings, get_print_totals
+from frappe_books.printing import (
+	books_format,
+	get_print_hints,
+	get_print_settings,
+	get_print_totals,
+	preview_print_format,
+)
 from frappe_books.tests.accounting import (
+	ensure_user,
 	make_account,
 	make_invoice,
 	make_item,
@@ -17,6 +24,9 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
+
+MANAGER = "books-print-manager@example.com"
+USER = "books-print-user@example.com"
 
 
 class IntegrationTestPrinting(IntegrationTestCase):
@@ -159,6 +169,52 @@ class IntegrationTestPrinting(IntegrationTestCase):
 			],
 		)
 		self.assertEqual(totals["sub_total"], Decimal("8.72"))
+
+	def test_preview_renders_unsaved_html_for_a_document(self):
+		invoice = self.make_invoice()
+
+		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+			preview = preview_print_format(
+				invoice.doctype,
+				invoice.name,
+				"<p>{{ doc.name }} {{ doc.party }}</p>",
+				"@page { size: 8cm 22cm; }",
+			)
+
+		self.assertIn(f"<p>{invoice.name} {self.party.name}</p>", preview["html"])
+		self.assertIn("@page { size: 8cm 22cm; }", preview["style"])
+
+	def test_preview_needs_print_format_and_document_rights(self):
+		invoice = self.make_invoice()
+		log = frappe.get_doc({"doctype": "Error Log", "error": "Print preview test"}).insert()
+
+		with self.set_user(ensure_user(USER, "Books User")):
+			self.assertRaises(
+				frappe.PermissionError, preview_print_format, invoice.doctype, invoice.name, "<p></p>"
+			)
+		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+			self.assertRaises(frappe.PermissionError, preview_print_format, log.doctype, log.name, "<p></p>")
+
+	def test_preview_reports_the_template_error_line(self):
+		invoice = self.make_invoice()
+
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"Line 2",
+			preview_print_format,
+			invoice.doctype,
+			invoice.name,
+			"<p>\n{% if doc.name %}</p>",
+		)
+
+	def test_print_hints_list_document_and_print_settings_fields(self):
+		hints = get_print_hints("Books Sales Invoice")
+
+		self.assertEqual(hints["doc"]["party"], "Customer")
+		self.assertEqual(hints["doc"]["items"][0]["rate"], "Rate")
+		self.assertNotIn("items_section_break_7", hints["doc"])
+		self.assertEqual(hints["print"]["company_name"], "Company Name")
+		self.assertEqual(hints["print"]["gstin"], "GSTIN")
 
 	def make_invoice(self):
 		invoice = make_invoice(

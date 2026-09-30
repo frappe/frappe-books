@@ -132,9 +132,15 @@ export class FrappeDoc extends Doc {
   /** The document a controller method runs on, with what Frappe checks it by. */
   getMethodDocument(options: FrappeValueOptions = {}): DocValues {
     const values = this.getFrappeValues(options);
+    // Frappe refuses a saved copy whose modified time is stale, or whose creation or owner changed.
     const saved = this.notInserted
       ? { __islocal: 1 }
-      : { name: this.name, modified: this.modified };
+      : {
+          name: this.name,
+          modified: this.modified,
+          creation: this.creation,
+          owner: this.owner,
+        };
     return { ...values, ...saved, doctype: this.doctype };
   }
 

@@ -9,7 +9,8 @@ const DATETIME_FORMAT = 'yyyy-MM-dd HH:mm:ss.SSS';
 
 /**
  * The values a form edits, from a Frappe document or row. Datetimes, which
- * Frappe stores in the system time zone, become dates; `modified` stays as sent.
+ * Frappe stores in the system time zone, become dates; `modified` and
+ * `creation`, which Frappe compares with what it holds, stay as sent.
  */
 export function toDocValues(
   schema: Schema,
@@ -35,6 +36,10 @@ export function toDocValues(
 }
 
 export function toDocValue(value: RawValue, field: Field, fyo: Fyo): DocValue {
+  if (field.fieldname === 'creation') {
+    return value as DocValue;
+  }
+
   if (isZonedDatetime(field) && typeof value === 'string' && value) {
     return DateTime.fromSQL(value, { zone: getSystemZone() }).toJSDate();
   }

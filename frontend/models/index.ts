@@ -59,7 +59,6 @@ export const models = {
   AccountingLedgerEntry,
   AccountingSettings,
   Defaults,
-  ItemEnquiry,
   JournalEntry,
   JournalEntryAccount,
   Misc,
@@ -117,6 +116,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   PricingRule,
   CouponCode,
   LoyaltyProgram,
+  ItemEnquiry,
 };
 
 /** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */

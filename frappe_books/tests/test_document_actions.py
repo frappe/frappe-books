@@ -76,6 +76,21 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		self.assertEqual(make_shipment_invoice(shipment.name).make_auto_payment, 1)
 
+	def test_invoice_mapped_from_a_shipment_shows_the_shipped_qty(self):
+		received = make_account("Mapped Received", root_type="Liability")
+		set_inventory_accounts(
+			make_account("Mapped Stock", account_type="Stock").name, received.name, self.expense.name
+		)
+		item = make_item(self.income.name, received.name, track_item=1)
+		seed_stock(item.name, quantity=2, rate=10)
+		row = {"item": item.name, "location": "Stores", "quantity": 2, "rate": 25}
+		shipment = frappe.get_doc({"doctype": "Books Shipment", "party": self.party.name, "items": [row]})
+		shipment.insert().submit()
+
+		invoice_row = make_shipment_invoice(shipment.name).items[0]
+
+		self.assertEqual((invoice_row.qty, invoice_row.amount), (2, 50))
+
 	def test_bridge_returns_mapped_documents_in_interface_fields(self):
 		quote = self._submitted_quote()
 		bridge = BooksDatabaseBridge()

@@ -18,7 +18,7 @@ import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { Combobox as FrappeCombobox } from 'frappe-ui';
 import { isFrappeBacked } from 'src/frappe/doctypes';
-import { searchFrappeLink } from 'src/frappe/link';
+import { getLinkLabels, searchFrappeLink } from 'src/frappe/link';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH } from 'src/utils';
 
@@ -85,11 +85,18 @@ export default defineComponent({
           null,
           LINK_PAGE_LENGTH
         );
-        return options.map(({ label, value }) => ({
-          label,
-          value,
-          description: label !== value ? value : undefined,
-        }));
+        const labels = await getLinkLabels(
+          this.target,
+          options.map(({ value }) => value)
+        );
+        return options.map(({ label, value }) => {
+          const shown = labels[value] || label;
+          return {
+            label: shown,
+            value,
+            description: shown !== value ? value : undefined,
+          };
+        });
       }
 
       const schema = fyo.schemaMap[this.target];

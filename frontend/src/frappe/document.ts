@@ -86,10 +86,21 @@ export class FrappeDoc extends Doc {
     return rule === 'hidden' ? !isMet : isMet;
   }
 
-  /** The values Frappe's form conditions read. */
+  /** The values Frappe's form conditions read: amounts as numbers, and the docstatus. */
   getEvalDoc(): EvalDoc {
     const values = this.getFrappeValues({ keepRowNames: true });
-    return { ...values, name: this.name, __islocal: this.notInserted ? 1 : 0 };
+    for (const { fieldname, fieldtype } of this.schema.fields) {
+      if (fieldtype === 'Currency') {
+        values[fieldname] = Number(values[fieldname]);
+      }
+    }
+
+    return {
+      ...values,
+      name: this.name,
+      docstatus: this.docstatus ?? 0,
+      __islocal: this.notInserted ? 1 : 0,
+    };
   }
 
   /** The document as Frappe takes it; new rows go without their client names. */

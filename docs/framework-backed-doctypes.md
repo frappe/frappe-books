@@ -29,12 +29,16 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | Validation and business rules | The controller. A client mirror is only for a message at its field. |
 | Link without "Create" | `only_select` on the DocField |
 | Table columns | `in_list_view` on the child DocFields |
-| Label, name field of a prompt-named doctype, quick edit fields | `static presentation` on the model |
+| Label, name field (asked for when named by prompt, else read only or `hidden`), quick edit fields | `static presentation` on the model |
+| Field properties a DocField has no place for, like option labels or a link's `groupBy` | `presentation.fields` |
+| Link filters and presentation of table rows | A row model in `static rowModels`, by table fieldname |
+| Server fills that follow another field, like a payment account after its method | `static refills` on the model (the parent's or the row's) |
+| List order | The DocType's `sort_field`, else `date` |
 | List columns, badges, actions, option lists, formatting | The model statics, as before: `getListViewSettings`, `getActions`, `lists`, `emptyMessages` |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |
 
-A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user.
+A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. A new document previews when its form opens, and when the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user, until the user edits a field that `refills` names for it. A save waits for the preview of the last edit. A server mapper's document (`getMappedDoc`) comes from `frappe.model.mapper.make_mapped_doc`.
 
 ## Move a module
 

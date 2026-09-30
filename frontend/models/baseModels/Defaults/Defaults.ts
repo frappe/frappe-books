@@ -1,108 +1,76 @@
-import { DefaultCashDenominations } from 'models/inventory/Point of Sale/DefaultCashDenominations';
-import { Doc } from 'fyo/model/doc';
 import { FiltersMap, HiddenMap } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
+import { Money } from 'pesa';
+import { FrappeDoc } from 'src/frappe/document';
 import { PartyRoleEnum } from '../Party/types';
 
-export class Defaults extends Doc {
-  // Auto Payments
-  salesPaymentAccount?: string;
-  purchasePaymentAccount?: string;
+/** Books Defaults, served by Frappe: what new documents start with. */
+export class Defaults extends FrappeDoc {
+  static override doctype = 'Books Defaults';
+  static override presentation = { label: 'Defaults' };
 
-  // Auto Stock Transfer
-  shipmentLocation?: string;
-  purchaseReceiptLocation?: string;
+  declare sales_payment_account?: string;
+  declare purchase_payment_account?: string;
+  declare shipment_location?: string;
+  declare purchase_receipt_location?: string;
+  declare sales_invoice_terms?: string;
+  declare purchase_invoice_terms?: string;
+  declare shipment_terms?: string;
+  declare purchase_receipt_terms?: string;
+  declare pos_print_template?: string;
+  declare pos_customer?: string;
+  declare pos_cash_denominations?: (FrappeDoc & { denomination?: Money })[];
 
-  // Number Series
-  salesQuoteNumberSeries?: string;
-  salesInvoiceNumberSeries?: string;
-  purchaseInvoiceNumberSeries?: string;
-  journalEntryNumberSeries?: string;
-  paymentNumberSeries?: string;
-  stockMovementNumberSeries?: string;
-  shipmentNumberSeries?: string;
-  purchaseReceiptNumberSeries?: string;
-
-  // Terms
-  salesInvoiceTerms?: string;
-  purchaseInvoiceTerms?: string;
-  shipmentTerms?: string;
-  purchaseReceiptTerms?: string;
-
-  // Print Templates
-  salesQuotePrintTemplate?: string;
-  salesInvoicePrintTemplate?: string;
-  posPrintTemplate?: string;
-  purchaseInvoicePrintTemplate?: string;
-  journalEntryPrintTemplate?: string;
-  paymentPrintTemplate?: string;
-  shipmentPrintTemplate?: string;
-  purchaseReceiptPrintTemplate?: string;
-  stockMovementPrintTemplate?: string;
-
-  // Point of Sale
-  posCashDenominations?: DefaultCashDenominations[];
-  posCustomer?: string;
-
-  //Buttons
-  saveButtonColour?: string;
-  submitButtonColour?: string;
-  cancelButtonColour?: string;
-  heldButtonColour?: string;
-  returnButtonColour?: string;
-  payButtonColour?: string;
-  payAndPrintButtonColour?: string;
-
-  static commonFilters = {
-    // Auto Payments
-    salesPaymentAccount: () => ({
+  // Linked doctypes are still read through the bridge, so these use its field names.
+  static commonFilters: FiltersMap = {
+    sales_payment_account: () => ({
       isGroup: false,
       accountType: ['in', ['Cash', 'Bank']],
     }),
-    purchasePaymentAccount: () => ({
+    purchase_payment_account: () => ({
       isGroup: false,
       accountType: ['in', ['Cash', 'Bank']],
     }),
-    // Number Series
-    salesQuoteNumberSeries: () => ({
+    sales_quote_number_series: () => ({
       referenceType: ModelNameEnum.SalesQuote,
     }),
-    salesInvoiceNumberSeries: () => ({
+    sales_invoice_number_series: () => ({
       referenceType: ModelNameEnum.SalesInvoice,
     }),
-    purchaseInvoiceNumberSeries: () => ({
+    purchase_invoice_number_series: () => ({
       referenceType: ModelNameEnum.PurchaseInvoice,
     }),
-    journalEntryNumberSeries: () => ({
+    journal_entry_number_series: () => ({
       referenceType: ModelNameEnum.JournalEntry,
     }),
-    paymentNumberSeries: () => ({
+    payment_number_series: () => ({
       referenceType: ModelNameEnum.Payment,
     }),
-    stockMovementNumberSeries: () => ({
+    stock_movement_number_series: () => ({
       referenceType: ModelNameEnum.StockMovement,
     }),
-    shipmentNumberSeries: () => ({
+    shipment_number_series: () => ({
       referenceType: ModelNameEnum.Shipment,
     }),
-    purchaseReceiptNumberSeries: () => ({
+    purchase_receipt_number_series: () => ({
       referenceType: ModelNameEnum.PurchaseReceipt,
     }),
-    // Print Templates
-    salesQuotePrintTemplate: () => ({ type: ModelNameEnum.SalesQuote }),
-    salesInvoicePrintTemplate: () => ({ type: ModelNameEnum.SalesInvoice }),
-    posPrintTemplate: () => ({ type: ModelNameEnum.SalesInvoice }),
-    purchaseInvoicePrintTemplate: () => ({
+    sales_quote_print_template: () => ({ type: ModelNameEnum.SalesQuote }),
+    sales_invoice_print_template: () => ({ type: ModelNameEnum.SalesInvoice }),
+    pos_print_template: () => ({ type: ModelNameEnum.SalesInvoice }),
+    purchase_invoice_print_template: () => ({
       type: ModelNameEnum.PurchaseInvoice,
     }),
-    journalEntryPrintTemplate: () => ({ type: ModelNameEnum.JournalEntry }),
-    paymentPrintTemplate: () => ({ type: ModelNameEnum.Payment }),
-    shipmentPrintTemplate: () => ({ type: ModelNameEnum.Shipment }),
-    purchaseReceiptPrintTemplate: () => ({
+    journal_entry_print_template: () => ({ type: ModelNameEnum.JournalEntry }),
+    payment_print_template: () => ({ type: ModelNameEnum.Payment }),
+    shipment_print_template: () => ({ type: ModelNameEnum.Shipment }),
+    purchase_receipt_print_template: () => ({
       type: ModelNameEnum.PurchaseReceipt,
     }),
-    stockMovementPrintTemplate: () => ({ type: ModelNameEnum.StockMovement }),
-    posCustomer: () => ({ role: PartyRoleEnum.Customer }),
+    stock_movement_print_template: () => ({
+      type: ModelNameEnum.StockMovement,
+    }),
+    pos_customer: () => ({ role: PartyRoleEnum.Customer }),
   };
 
   static filters: FiltersMap = this.commonFilters;
@@ -117,23 +85,23 @@ export class Defaults extends Doc {
   }
 
   hidden: HiddenMap = {
-    stockMovementNumberSeries: this.getInventoryHidden(),
-    shipmentNumberSeries: this.getInventoryHidden(),
-    purchaseReceiptNumberSeries: this.getInventoryHidden(),
-    shipmentTerms: this.getInventoryHidden(),
-    purchaseReceiptTerms: this.getInventoryHidden(),
-    shipmentPrintTemplate: this.getInventoryHidden(),
-    purchaseReceiptPrintTemplate: this.getInventoryHidden(),
-    stockMovementPrintTemplate: this.getInventoryHidden(),
-    posCashDenominations: this.getPointOfSaleHidden(),
-    posCustomer: this.getPointOfSaleHidden(),
-    saveButtonColour: this.getPointOfSaleHidden(),
-    cancelButtonColour: this.getPointOfSaleHidden(),
-    submitButtonColour: this.getPointOfSaleHidden(),
-    heldButtonColour: this.getPointOfSaleHidden(),
-    returnButtonColour: this.getPointOfSaleHidden(),
-    payButtonColour: this.getPointOfSaleHidden(),
-    payAndPrintButtonColour: this.getPointOfSaleHidden(),
+    stock_movement_number_series: this.getInventoryHidden(),
+    shipment_number_series: this.getInventoryHidden(),
+    purchase_receipt_number_series: this.getInventoryHidden(),
+    shipment_terms: this.getInventoryHidden(),
+    purchase_receipt_terms: this.getInventoryHidden(),
+    shipment_print_template: this.getInventoryHidden(),
+    purchase_receipt_print_template: this.getInventoryHidden(),
+    stock_movement_print_template: this.getInventoryHidden(),
+    pos_cash_denominations: this.getPointOfSaleHidden(),
+    pos_customer: this.getPointOfSaleHidden(),
+    save_button_colour: this.getPointOfSaleHidden(),
+    cancel_button_colour: this.getPointOfSaleHidden(),
+    submit_button_colour: this.getPointOfSaleHidden(),
+    held_button_colour: this.getPointOfSaleHidden(),
+    return_button_colour: this.getPointOfSaleHidden(),
+    pay_button_colour: this.getPointOfSaleHidden(),
+    pay_and_print_button_colour: this.getPointOfSaleHidden(),
   };
 
   override async afterSync() {

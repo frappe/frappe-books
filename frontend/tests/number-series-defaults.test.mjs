@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Fyo, getSchemas, models } from './helpers/accounting.mjs';
+import {
+  Fyo,
+  frappeModels,
+  getSchemas,
+  models,
+} from './helpers/accounting.mjs';
 
 test('new documents take the number series the server resolves', async () => {
   const series = {
@@ -32,7 +37,8 @@ test('new documents take the number series the server resolves', async () => {
   }
 
   series.SalesInvoice = 'SALE-';
-  await fyo.doc.getNewDoc('Defaults').afterSync();
+  const schema = { name: 'Defaults', fields: [], isSingle: true };
+  await new frappeModels.Defaults(schema, {}, fyo, false).afterSync();
   assert.equal(fyo.doc.getNewDoc('SalesInvoice').numberSeries, 'SALE-');
   assert.deepEqual(calls, ['getDefaultNumberSeries', 'getDefaultNumberSeries']);
 });

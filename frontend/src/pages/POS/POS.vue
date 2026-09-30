@@ -740,7 +740,7 @@ export default defineComponent({
     setDefaultCustomer() {
       this.defaultCustomer =
         this.posProfile?.posCustomer ??
-        this.fyo.singles.Defaults?.posCustomer ??
+        this.fyo.singles.Defaults?.pos_customer ??
         '';
       this.sinvDoc.party = this.defaultCustomer;
     },

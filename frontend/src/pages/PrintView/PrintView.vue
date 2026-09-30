@@ -105,6 +105,7 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
+import { snakeCase } from 'lodash';
 import { PrintTemplate } from 'models/baseModels/PrintTemplate';
 import { ModelNameEnum } from 'models/types';
 import SelectControl from 'src/components/Controls/Select.vue';
@@ -344,10 +345,7 @@ export default defineComponent({
       await printContainer.savePDF(this.doc?.name, shouldPrint);
     },
     async setTemplateFromDefault() {
-      const defaultName =
-        this.schemaName[0].toLowerCase() +
-        this.schemaName.slice(1) +
-        ModelNameEnum.PrintTemplate;
+      const defaultName = `${snakeCase(this.schemaName)}_print_template`;
 
       let templateName;
 
@@ -355,7 +353,7 @@ export default defineComponent({
         this.schemaName == ModelNameEnum.SalesInvoice &&
         (this.doc as Doc).isPOS
       ) {
-        templateName = this.fyo.singles.Defaults?.posPrintTemplate;
+        templateName = this.fyo.singles.Defaults?.pos_print_template;
 
         const posProfileName = this.fyo.singles.POSSettings?.pos_profile;
 

@@ -54,9 +54,11 @@ const themeByColour: Record<string, 'green' | 'red'> = {
 };
 
 function colourProps(action: 'save' | 'cancel' | 'held' | 'return' | 'pay') {
-  const field = `${action}ButtonColour`;
+  // POS profiles are still read through the bridge; Defaults by Frappe fieldnames.
   const colour = String(
-    props.profile?.[field] || fyo.singles.Defaults?.[field] || ''
+    props.profile?.[`${action}ButtonColour`] ||
+      fyo.singles.Defaults?.get(`${action}_button_colour`) ||
+      ''
   ).toLowerCase();
   if (!colour) {
     return {};

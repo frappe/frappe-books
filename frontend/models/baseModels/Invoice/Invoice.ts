@@ -109,8 +109,8 @@ export abstract class Invoice extends Transactional {
 
   get autoPaymentAccount(): string | null {
     const fieldname = this.isSales
-      ? 'salesPaymentAccount'
-      : 'purchasePaymentAccount';
+      ? 'sales_payment_account'
+      : 'purchase_payment_account';
     const value = this.fyo.singles.Defaults?.[fieldname];
     if (typeof value === 'string' && value.length) {
       return value;
@@ -121,8 +121,8 @@ export abstract class Invoice extends Transactional {
 
   get autoStockTransferLocation(): string | null {
     const fieldname = this.isSales
-      ? 'shipmentLocation'
-      : 'purchaseReceiptLocation';
+      ? 'shipment_location'
+      : 'purchase_receipt_location';
     const value = this.fyo.singles.Defaults?.[fieldname];
     if (typeof value === 'string' && value.length) {
       return value;
@@ -272,10 +272,10 @@ export abstract class Invoice extends Transactional {
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
       if ((doc as Invoice).isSales) {
-        return defaults?.salesInvoiceTerms ?? '';
+        return defaults?.sales_invoice_terms ?? '';
       }
 
-      return defaults?.purchaseInvoiceTerms ?? '';
+      return defaults?.purchase_invoice_terms ?? '';
     },
   };
 

@@ -73,10 +73,10 @@ export abstract class StockTransfer extends Transfer {
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
       if (doc.schemaName === ModelNameEnum.Shipment) {
-        return defaults?.shipmentTerms ?? '';
+        return defaults?.shipment_terms ?? '';
       }
 
-      return defaults?.purchaseReceiptTerms ?? '';
+      return defaults?.purchase_receipt_terms ?? '';
     },
   };
 

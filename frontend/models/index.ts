@@ -63,7 +63,6 @@ export const models = {
   AccountingSettings,
   Address,
   Batch,
-  Defaults,
   ItemGroup,
   ItemEnquiry,
   JournalEntry,
@@ -120,6 +119,7 @@ export const models = {
 export const frappeModels: Record<string, FrappeModel> = {
   GetStarted,
   Item,
+  Defaults,
   InventorySettings,
   Misc,
   POSSettings,

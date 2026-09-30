@@ -327,6 +327,8 @@ test('submit and cancel run the document methods on the client copy', async () =
     amount: 5,
     docstatus: 0,
     modified: MODIFIED,
+    creation: '2026-09-29 09:00:00.654321',
+    owner: 'clerk@example.com',
   };
   const requests = stubDocument(saved, ({ path, body }) => {
     if (!path.endsWith('run_doc_method')) {
@@ -349,6 +351,11 @@ test('submit and cancel run the document methods on the client copy', async () =
   assert.deepEqual(
     [submit.document.doctype, submit.document.name, submit.document.modified],
     ['Books Order', 'ORD-1', MODIFIED]
+  );
+  // Frappe refuses to save a copy whose creation or owner differs.
+  assert.deepEqual(
+    [submit.document.creation, submit.document.owner],
+    [saved.creation, saved.owner]
   );
 
   await order.cancel();

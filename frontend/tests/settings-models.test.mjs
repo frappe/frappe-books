@@ -61,7 +61,9 @@ test('POS Settings hide barcode and visibility fields as the features they need 
   assert.equal(hidden(settings, 'item_visibility'), true);
 
   fyo.singles.InventorySettings = { enable_barcodes: true };
-  fyo.singles.AccountingSettings = { enablePointOfSaleWithOutInventory: true };
+  fyo.singles.AccountingSettings = {
+    enable_point_of_sale_with_out_inventory: true,
+  };
   assert.equal(hidden(settings, 'weight_enabled_barcode'), false);
   assert.equal(hidden(settings, 'check_digits'), true);
   assert.equal(hidden(settings, 'item_visibility'), false);
@@ -117,9 +119,56 @@ test('Defaults hide inventory and POS fields as those features are off', () => {
   assert.equal(hidden(defaults, 'pos_customer'), true);
   assert.equal(hidden(defaults, 'sales_invoice_terms'), false);
 
-  fyo.singles.AccountingSettings = { enableInventory: true };
+  fyo.singles.AccountingSettings = { enable_inventory: true };
   fyo.singles.InventorySettings = { enable_point_of_sale: true };
   assert.equal(hidden(defaults, 'shipment_terms'), false);
   assert.equal(hidden(defaults, 'pos_customer'), false);
   assert.equal(hidden(defaults, 'pos_cash_denominations'), false);
+});
+
+test('the General tab shows the fields, placeholders and sections it showed', () => {
+  const layout = getSchema('AccountingSettings')
+    .fields.filter((field) => !field.meta && !field.hidden)
+    .map(({ fieldname, placeholder, section, readOnly }) =>
+      [fieldname, placeholder ?? '', section, readOnly ? 'read only' : '']
+        .join(' | ')
+        .trim()
+    );
+  assert.deepEqual(layout.slice(0, 5), [
+    'fullname |  | Default |',
+    'company_name |  | Default | read only',
+    'bank_name |  | Default | read only',
+    'country | Select Country | Default | read only',
+    'email |  | Default |',
+  ]);
+  assert.deepEqual(layout.slice(-2), [
+    'tax_id | CHE-123.456.789 | Default |',
+    'gstin | 27AAAAA0000A1Z5 | Default |',
+  ]);
+});
+
+test('General settings show the regional tax ID of the company country', async () => {
+  const settings = newFrappeDoc('AccountingSettings', { country: 'India' });
+  assert.equal(hidden(settings, 'gstin'), false);
+  assert.equal(hidden(settings, 'tax_id'), true);
+
+  await settings.set('country', 'Switzerland');
+  assert.equal(hidden(settings, 'gstin'), true);
+  assert.equal(hidden(settings, 'tax_id'), false);
+});
+
+test('discounts lead to pricing rules, then coupons, and stay on once on', async () => {
+  const settings = newFrappeDoc('AccountingSettings');
+  assert.equal(hidden(settings, 'discount_account'), true);
+  assert.equal(hidden(settings, 'enable_pricing_rule'), true);
+
+  await settings.set('enable_discounting', true);
+  assert.equal(readOnly(settings, 'enable_discounting'), true);
+  assert.equal(hidden(settings, 'discount_account'), false);
+  assert.equal(hidden(settings, 'enable_pricing_rule'), false);
+  assert.equal(hidden(settings, 'enable_coupon_code'), true);
+
+  await settings.set('enable_pricing_rule', true);
+  assert.equal(hidden(settings, 'enable_coupon_code'), false);
+  assert.equal(readOnly(settings, 'enable_pricing_rule'), false);
 });

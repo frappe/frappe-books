@@ -90,7 +90,7 @@ test('a failed Submit retains the draft and panel for correction and retry', asy
   await page.evaluate(async () => {
     const fixture = (window as any).paymentFlow;
     fixture.failSubmit = false;
-    await fixture.payment.set('referenceId', 'Corrected reference');
+    await fixture.payment.set('reference_id', 'Corrected reference');
   });
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   expect(await state(page)).toMatchObject({ submissions: 1, refreshes: 0 });
@@ -219,61 +219,76 @@ async function installPaymentFixture(page: Page) {
     });
     invoice._dirty = false;
     invoice._notInserted = false;
-    fyo.db.getMapped = async (schemaName: string) => {
-      if (schemaName !== 'Payment')
-        throw new Error(`Unexpected mapping: ${schemaName}`);
-      return {
-        party: invoice.party,
-        date: new Date(),
-        paymentType: 'Pay',
-        paymentMethod: 'Cash',
-        account: 'Flow Creditors',
-        paymentAccount: 'Flow Cash',
-        amount: fyo.pesa(100),
-        for: [
-          {
-            referenceType: 'PurchaseInvoice',
-            referenceName: invoice.name,
-            amount: fyo.pesa(100),
+
+    // Frappe serves the payment; all fixture writes stay in memory.
+    const modified = '2026-09-30 10:00:00.000000';
+    const answer = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    const reject = (message: string) =>
+      answer({ errors: [{ type: 'ValidationError', message }] }, 417);
+    const handlers: Record<string, (body: any) => Response> = {
+      'POST /api/method/frappe.model.mapper.make_mapped_doc': () =>
+        answer({
+          message: {
+            doctype: 'Books Payment',
+            party: invoice.party,
+            date: '2026-09-30 10:00:00',
+            payment_type: 'Pay',
+            payment_method: 'Cash',
+            account: 'Flow Creditors',
+            payment_account: 'Flow Cash',
+            amount: 100,
+            payment_references: [
+              {
+                reference_type: 'Books Purchase Invoice',
+                reference_name: invoice.name,
+                amount: 100,
+              },
+            ],
           },
-        ],
-      };
-    };
-    const getNewDoc = fyo.doc.getNewDoc.bind(fyo.doc);
-    fyo.doc.getNewDoc = (schemaName: string, ...args: any[]) => {
-      const doc = getNewDoc(schemaName, ...args);
-      if (schemaName === 'Payment') {
-        fixture.payment = doc;
-        doc.afterSubmit = () => {
-          throw new Error('Browser accounting hooks must not run');
+        }),
+      'POST /api/v2/method/run_doc_method': ({ method, document }) => {
+        if (method === 'preview') {
+          const number_series = document.number_series || 'PAY-';
+          return answer({ docs: [{ ...document, number_series }] });
+        }
+
+        fixture.submissions++;
+        if (fixture.failSubmit) return reject('Payment submission rejected');
+        fixture.stored = { ...document, docstatus: 1, modified };
+        return answer({ docs: [fixture.stored] });
+      },
+      'POST /api/v2/document/Books Payment': (values) => {
+        fixture.inserts++;
+        if (fixture.failSave) return reject('Payment save rejected');
+        fixture.stored = {
+          ...values,
+          name: 'PAY-FLOW',
+          docstatus: 0,
+          modified,
         };
-      }
-      return doc;
+        return answer({ data: fixture.stored });
+      },
+      'PUT /api/v2/document/Books Payment/PAY-FLOW': (values) => {
+        fixture.stored = { ...values, docstatus: 0, modified };
+        return answer({ data: fixture.stored });
+      },
+      'GET /api/v2/document/Books Payment/PAY-FLOW': () =>
+        answer({ data: fixture.stored }),
+    };
+    const fetch = window.fetch.bind(window);
+    window.fetch = async (input: any, init: any = {}) => {
+      const url = new URL(String(input), window.location.origin);
+      const key = `${init.method ?? 'GET'} ${decodeURIComponent(url.pathname)}`;
+      const handler = handlers[key];
+      return handler
+        ? handler(JSON.parse(init.body ?? '{}'))
+        : fetch(input, init);
     };
 
-    // All fixture writes stay in memory; the server supplies only the app shell.
-    fyo.db.insert = async (schemaName: string, values: any) => {
-      if (schemaName !== 'Payment')
-        throw new Error(`Unexpected insert: ${schemaName}`);
-      fixture.inserts++;
-      if (fixture.failSave) throw new Error('Payment save rejected');
-      fixture.stored = { ...values, submitted: false };
-      return { ...fixture.stored };
-    };
-    fyo.db.update = async (schemaName: string, values: any) => {
-      if (schemaName !== 'Payment')
-        throw new Error(`Unexpected update: ${schemaName}`);
-      fixture.stored = { ...values };
-      return { ...fixture.stored };
-    };
-    fyo.db.runLifecycleAction = async (action: string, schemaName: string) => {
-      if (action !== 'submit' || schemaName !== 'Payment')
-        throw new Error('Unexpected lifecycle action');
-      fixture.submissions++;
-      if (fixture.failSubmit) throw new Error('Payment submission rejected');
-      fixture.stored = { ...fixture.stored, submitted: true };
-      return { ...fixture.stored };
-    };
     // Fixture records exist only in the browser, so they keep the doctype-level rights.
     fyo.db.getDocPermissions = async () => undefined;
     const getAll = fyo.db.getAll.bind(fyo.db);
@@ -281,12 +296,10 @@ async function installPaymentFixture(page: Page) {
       schemaName === 'Account' ? accounts : getAll(schemaName, ...args);
     const get = fyo.db.get.bind(fyo.db);
     fyo.db.get = async (schemaName: string, name: string, ...args: any[]) => {
-      if (schemaName === 'Payment' && name === fixture.payment?.name)
-        return { ...fixture.stored };
       if (schemaName === 'PurchaseInvoice' && name === invoice.name) {
         fixture.refreshes++;
         if (fixture.failRefresh) throw new Error('Invoice refresh rejected');
-        const outstandingAmount = fixture.stored?.submitted ? 0 : 100;
+        const outstandingAmount = fixture.stored?.docstatus ? 0 : 100;
         return {
           ...invoice.getValidDict(),
           outstandingAmount: fyo.pesa(outstandingAmount),
@@ -294,18 +307,30 @@ async function installPaymentFixture(page: Page) {
       }
       return get(schemaName, name, ...args);
     };
-    const exists = fyo.db.exists.bind(fyo.db);
-    fyo.db.exists = async (schemaName: string, name?: string) =>
-      (schemaName === 'PurchaseInvoice' && name === invoice.name) ||
-      exists(schemaName, name);
 
     fixture.openPayment = async () => {
       const action = fyo.models.PurchaseInvoice.getActions(fyo).find(
         (entry: any) => entry.label === 'Payment'
       );
       await action.action(invoice, router);
+      fixture.payment = findOpenPayment(app._instance);
     };
     await router.push(`/edit/PurchaseInvoice/${invoice.name}`);
+
+    /** The payment the quick edit shows, found in the component tree. */
+    function findOpenPayment(root: any): any {
+      const instances = [root];
+      while (instances.length) {
+        const instance = instances.pop();
+        const doc = instance.setupState?.doc ?? instance.props?.doc;
+        if (doc?.schemaName === 'Payment') return doc;
+        const visit = (vnode: any) => {
+          if (vnode?.component) instances.push(vnode.component);
+          if (Array.isArray(vnode?.children)) vnode.children.forEach(visit);
+        };
+        visit(instance.subTree);
+      }
+    }
   });
 
   // Opening the form reloads the invoice; count only the payment's reloads.
@@ -317,4 +342,7 @@ async function installPaymentFixture(page: Page) {
     fixture.refreshes = 0;
     return fixture.openPayment();
   });
+  await expect
+    .poll(() => page.evaluate(() => !!(window as any).paymentFlow.payment))
+    .toBe(true);
 }

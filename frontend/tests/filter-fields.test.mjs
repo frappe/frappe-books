@@ -15,7 +15,6 @@ for (const schemaName of [
   'SalesInvoice',
   'PurchaseInvoice',
   'SalesQuote',
-  'Payment',
   'Shipment',
   'PurchaseReceipt',
 ]) {

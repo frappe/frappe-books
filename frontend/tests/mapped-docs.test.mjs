@@ -9,45 +9,6 @@ import {
   getStockTransferActions,
 } from './helpers/accounting.mjs';
 
-test('a mapped payment comes from the server mapper and keeps unset defaults', async () => {
-  const calls = [];
-  const fyo = await makeFyo((method, ...args) => {
-    calls.push([method, ...args]);
-    return {
-      name: null,
-      numberSeries: null,
-      party: 'Supplier',
-      paymentType: 'Pay',
-      amount: 150,
-      for: [
-        {
-          name: null,
-          referenceType: 'PurchaseInvoice',
-          referenceName: 'PINV-1',
-          amount: 150,
-        },
-      ],
-    };
-  });
-  const invoice = fyo.doc.getNewDoc('PurchaseInvoice', { name: 'PINV-1' });
-
-  const payment = await getMappedDoc(invoice, 'Payment', 'make_payment');
-
-  assert.deepEqual(calls, [
-    [
-      'getMapped',
-      'frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice.make_payment',
-      'PINV-1',
-    ],
-  ]);
-  assert.equal(payment.numberSeries, 'PAY-');
-  assert.equal(payment.amount.float, 150);
-  assert.equal(payment.for[0].referenceName, 'PINV-1');
-  assert.ok(payment.name);
-  assert.ok(payment.for[0].name);
-  assert.equal(await fyo.doc.getDoc('Payment', payment.name), payment);
-});
-
 test('transfer invoices and returns come from the transfer mappers', async () => {
   const calls = [];
   const fyo = await makeFyo((method, ...args) => {
@@ -194,8 +155,9 @@ test('lead, party and item actions open documents from their server mappers', as
     source._notInserted = false;
     // A Frappe-backed model presents the doctype; the bridge doc stands in as the source.
     const Model = frappeModels[schemaName] ?? fyo.models[schemaName];
-    const { action } = Model.getActions(fyo)
-      .find((action) => action.label === label);
+    const { action } = Model.getActions(fyo).find(
+      (action) => action.label === label
+    );
     let route = '';
     await action(source, { push: (to) => (route = to.path ?? to) });
 
@@ -224,6 +186,5 @@ async function makeFyo(call) {
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
-  fyo.defaultNumberSeries = { Payment: 'PAY-' };
   return fyo;
 }

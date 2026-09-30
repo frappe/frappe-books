@@ -3,10 +3,9 @@ import type {
   FieldPropertyMap,
 } from '../../schemas/fieldProperties';
 
-type DocField = DocFieldProperties & { fieldname: string };
 type DocType = {
   name: string;
-  fields: DocField[];
+  fields: DocFieldProperties[];
   istable?: number;
   search_fields?: string;
   show_name_in_global_search?: number;
@@ -64,7 +63,7 @@ export function getDoctypeFieldProperties(
 }
 
 function getProperties(
-  docfield: DocField,
+  docfield: DocFieldProperties,
   fieldnames: Record<string, string>,
   toSchema: (value?: string) => string | undefined
 ): DocFieldProperties {
@@ -74,6 +73,7 @@ function getProperties(
       docfield[key],
     ])
   ) as DocFieldProperties;
+  properties.fieldname = docfield.fieldname;
 
   if (['Link', 'Table'].includes(docfield.fieldtype)) {
     properties.options = toSchema(docfield.options);

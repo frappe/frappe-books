@@ -20,9 +20,12 @@ class IntegrationTestFieldProperties(IntegrationTestCase):
 			properties = get_field_properties()
 
 		invoice = properties["SalesInvoice"]
-		self.assertEqual(invoice["party"], {"fieldtype": "Link", "options": "Party", "reqd": 1})
+		self.assertEqual(
+			invoice["party"], {"fieldname": "party", "fieldtype": "Link", "options": "Party", "reqd": 1}
+		)
+		self.assertEqual(properties["Payment"]["for"]["fieldname"], "payment_references")
 		self.assertEqual(invoice["items"]["options"], "SalesInvoiceItem")
-		self.assertEqual(invoice["isPOS"], {"fieldtype": "Check", "default": "0"})
+		self.assertEqual(invoice["isPOS"], {"fieldname": "is_pos", "fieldtype": "Check", "default": "0"})
 		self.assertEqual(properties["PaymentFor"]["referenceName"]["options"], "referenceType")
 		self.assertEqual(properties["SalesQuote"]["referenceType"]["default"], "Party")
 

@@ -25,38 +25,54 @@
         :border="true"
         @change="(amount: Money) => setClosingAmount(row, amount)"
       />
-      <table class="w-full rounded-6 bg-surface-gray-1 text-base tabular-nums">
-        <thead class="text-xs-medium text-ink-gray-5">
-          <tr class="h-11 border-b border-outline-gray-1">
-            <th class="ps-3 text-start font-medium">{{ t`Method` }}</th>
-            <th class="px-1.5 text-end font-medium">{{ t`Expected` }}</th>
-            <th class="px-1.5 text-end font-medium">{{ t`Counted` }}</th>
-            <th class="pe-3 text-end font-medium">{{ t`Difference` }}</th>
-          </tr>
-        </thead>
-        <tbody class="text-ink-gray-8">
-          <tr
+      <section
+        class="rounded-6 bg-surface-gray-1"
+        :aria-label="t`Closing Amounts`"
+      >
+        <div
+          class="flex h-9 items-center justify-between gap-3 border-b border-outline-gray-1 px-3 text-xs-medium text-ink-gray-5"
+        >
+          <span>{{ t`Method` }}</span>
+          <span>{{ t`Difference` }}</span>
+        </div>
+        <!-- One row per method, so long names and large amounts never squeeze columns. -->
+        <ul>
+          <li
             v-for="row in closingAmounts"
             :key="row.idx"
-            class="h-11 border-b border-outline-gray-1 last:border-b-0"
+            class="flex flex-col gap-1 border-b border-outline-gray-1 px-3 py-2.5 last:border-b-0"
           >
-            <td class="ps-3">{{ row.paymentMethod }}</td>
-            <td class="whitespace-nowrap px-1.5 text-end" dir="ltr">
-              {{ format(row.expectedAmount) }}
-            </td>
-            <td class="whitespace-nowrap px-1.5 text-end" dir="ltr">
-              {{ format(row.closingAmount) }}
-            </td>
-            <td
-              class="whitespace-nowrap pe-3 text-end"
-              :class="{ 'text-ink-red-4': row.differenceAmount?.isNegative() }"
-              dir="ltr"
+            <div class="flex items-baseline justify-between gap-3">
+              <span
+                class="min-w-0 text-base text-ink-gray-8 [overflow-wrap:anywhere]"
+              >
+                {{ row.paymentMethod }}
+              </span>
+              <span
+                class="shrink-0 text-base tabular-nums"
+                :class="
+                  row.differenceAmount?.isNegative()
+                    ? 'text-ink-red-4'
+                    : 'text-ink-gray-9'
+                "
+                dir="ltr"
+              >
+                {{ format(row.differenceAmount) }}
+              </span>
+            </div>
+            <p
+              class="flex flex-wrap gap-x-3 text-sm tabular-nums text-ink-gray-5"
             >
-              {{ format(row.differenceAmount) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <span class="whitespace-nowrap">
+                {{ t`Expected ${format(row.expectedAmount)}` }}
+              </span>
+              <span class="whitespace-nowrap">
+                {{ t`Counted ${format(row.closingAmount)}` }}
+              </span>
+            </p>
+          </li>
+        </ul>
+      </section>
     </template>
     <template v-else>
     <h2 class="mb-3 text-base font-medium text-ink-gray-8">

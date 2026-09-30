@@ -9,8 +9,8 @@ import {
   ValidationMap,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
+import { getTransferUnitFilter } from 'models/inventory/stockRows';
 import { validateTransferUnit } from 'models/inventory/units';
-import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
@@ -230,16 +230,7 @@ export class InvoiceItem extends FrappeDoc {
         .map((row) => row.batch as string);
       return { name: ['in', batches] };
     },
-    transfer_unit: async (doc: Doc): Promise<QueryFilter> => {
-      const item = doc.item as string;
-      const conversions = await doc.fyo.db.getAll(
-        ModelNameEnum.UOMConversionItem,
-        { fields: ['uom'], filters: { parent: item } }
-      );
-      const unit = await doc.fyo.getValue(ModelNameEnum.Item, item, 'unit');
-      const units = [...conversions.map(({ uom }) => uom), unit];
-      return { name: ['in', units.filter(Boolean) as string[]] };
-    },
+    transfer_unit: getTransferUnitFilter,
   };
 
   static override createFilters: FiltersMap = {

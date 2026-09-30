@@ -124,7 +124,7 @@ test('print values use the date format setting', async () => {
     'SalesInvoice',
     {},
     {
-      dateFormat: 'dd/MM/yyyy',
+      date_format: 'dd/MM/yyyy',
     }
   );
   assert.equal(doc.date, '02/01/2026');

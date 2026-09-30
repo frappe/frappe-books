@@ -24,7 +24,7 @@ export function format(
   const field: Field = getField(df);
 
   if (field.fieldtype === FieldTypeEnum.Float) {
-    return Number(value).toFixed(fyo.singles.SystemSettings?.displayPrecision);
+    return Number(value).toFixed(fyo.singles.SystemSettings?.display_precision);
   }
 
   if (field.fieldtype === FieldTypeEnum.Int) {
@@ -79,7 +79,7 @@ function formatDatetime(value: unknown, fyo: Fyo): string {
   }
 
   const dateFormat =
-    (fyo.singles.SystemSettings?.dateFormat as string) ?? DEFAULT_DATE_FORMAT;
+    (fyo.singles.SystemSettings?.date_format as string) ?? DEFAULT_DATE_FORMAT;
   const dateTime = toDatetime(value);
   if (!dateTime) {
     return '';
@@ -100,7 +100,7 @@ function formatDate(value: unknown, fyo: Fyo): string {
   }
 
   const dateFormat =
-    (fyo.singles.SystemSettings?.dateFormat as string) ?? DEFAULT_DATE_FORMAT;
+    (fyo.singles.SystemSettings?.date_format as string) ?? DEFAULT_DATE_FORMAT;
 
   const dateTime = toDatetime(value);
   if (!dateTime) {
@@ -174,7 +174,7 @@ function getNumberFormatter(fyo: Fyo) {
   const locale =
     (fyo.singles.SystemSettings?.locale as string) ?? DEFAULT_LOCALE;
   const display =
-    (fyo.singles.SystemSettings?.displayPrecision as number) ??
+    (fyo.singles.SystemSettings?.display_precision as number) ??
     DEFAULT_DISPLAY_PRECISION;
 
   // Force Latin (Western) digits for all locales by appending the Unicode

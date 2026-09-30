@@ -194,7 +194,7 @@ export async function makeFyo() {
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.AccountingSettings = { enable_discounting: true };
-  fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
+  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
   fyo.store.searchFields = searchFields;
   return fyo;
 }

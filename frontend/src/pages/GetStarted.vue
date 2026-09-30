@@ -163,9 +163,7 @@ export default defineComponent({
 
       if (onboardingComplete) {
         await this.updateChecks({ onboarding_complete: onboardingComplete });
-        const systemSettings = await fyo.doc.getDoc('SystemSettings');
-        await systemSettings.set('hideGetStarted', true);
-        await systemSettings.sync();
+        await fyo.singles.SystemSettings!.setAndSync('hide_get_started', true);
       }
 
       return onboardingComplete;

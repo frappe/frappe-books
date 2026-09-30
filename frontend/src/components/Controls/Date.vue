@@ -84,7 +84,7 @@ export default defineComponent({
       return date?.isValid ? date.toFormat('yyyy-MM-dd') : '';
     },
     frappeDateFormat(): string {
-      const format = fyo.singles.SystemSettings?.dateFormat ?? 'MMM d, y';
+      const format = fyo.singles.SystemSettings?.date_format ?? 'MMM d, y';
       return String(format)
         .replace(/yyyy|y/g, 'YYYY')
         .replace(/dd|d/g, 'DD');

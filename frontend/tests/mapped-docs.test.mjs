@@ -223,7 +223,7 @@ async function makeFyo(call) {
   const fyo = new Fyo({ DatabaseDemux: Store });
   await fyo.db.init();
   fyo.doc.registerModels(models);
-  fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
+  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
   fyo.defaultNumberSeries = { Payment: 'PAY-' };
   return fyo;
 }

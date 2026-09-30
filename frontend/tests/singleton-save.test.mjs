@@ -2,15 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Fyo, getSchemas } from './helpers/fyo.mjs';
 
+// Settings singles still served through the bridge; Frappe-backed ones are in frappe-singles.test.mjs.
 const settings = [
-  ['SystemSettings', 'darkMode', true],
-  ['AccountingSettings', 'enableFormCustomization', true],
-  ['InventorySettings', 'enableBarcodes', true],
-  ['POSSettings', 'canChangeRate', true],
   ['PrintSettings', 'displayLogo', true],
-  ['Defaults', 'salesInvoiceTerms', 'Payment within 30 days'],
-  ['GetStarted', 'onboardingComplete', true],
-  ['Misc', 'useFullWidth', true],
   ['SetupWizard', 'companyName', 'Test Company'],
 ];
 
@@ -30,21 +24,6 @@ for (const [schemaName, fieldname, value] of settings) {
   });
 }
 
-test('System Settings can save again after reload', async () => {
-  const { fyo, doc, writes } = await makeFixture('SystemSettings');
-  await doc.set('darkMode', true);
-  await doc.sync();
-  fyo.doc.removeFromCache('SystemSettings', 'SystemSettings');
-  const reloaded = await fyo.doc.getDoc('SystemSettings');
-  assert.equal(reloaded.darkMode, true);
-  await reloaded.set('darkMode', false);
-  await reloaded.set('displayPrecision', 3);
-  await reloaded.sync();
-  assert.equal(writes.length, 2);
-  assert.equal(reloaded.darkMode, false);
-  assert.equal(reloaded.displayPrecision, 3);
-});
-
 const setupValues = {
   fullname: 'Test Owner',
   companyName: 'Test Company',
@@ -56,11 +35,7 @@ const setupValues = {
   fiscalYearStart: '2026-04-01',
   fiscalYearEnd: '2027-03-31',
 };
-const requiredValues = {
-  AccountingSettings: setupValues,
-  SetupWizard: setupValues,
-  POSSettings: { cashAccount: 'Cash' },
-};
+const requiredValues = { SetupWizard: setupValues };
 
 async function makeFixture(schemaName) {
   const schemas = getSchemas('-', []);

@@ -80,7 +80,7 @@ async function makePayment() {
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.AccountingSettings = { enablePartialPayment: true };
-  fyo.singles.SystemSettings = { currency: 'INR', displayPrecision: 2 };
+  fyo.singles.SystemSettings = { currency: 'INR', display_precision: 2 };
   fyo.doc.getNewDoc('Party', { name: 'Supplier', role: 'Supplier' });
   fyo.doc.getNewDoc('Account', { name: 'Creditors' });
   fyo.doc.getNewDoc('Account', { name: 'Bank' });

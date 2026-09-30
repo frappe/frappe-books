@@ -79,7 +79,7 @@ export class PaymentFor extends Doc {
     referenceName: (doc) => {
       const zero =
         '0.' +
-        '0'.repeat(doc.fyo.singles.SystemSettings?.internalPrecision ?? 11);
+        '0'.repeat(doc.fyo.singles.SystemSettings?.internal_precision ?? 11);
 
       const baseFilters = {
         outstandingAmount: ['!=', zero],

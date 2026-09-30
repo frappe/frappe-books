@@ -255,7 +255,7 @@ async function makeInvoice(respond) {
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.AccountingSettings = {};
-  fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
+  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
   for (const name of ['Service', 'Consulting', 'Other Service']) {
     fyo.doc.getNewDoc('Item', { name });
   }

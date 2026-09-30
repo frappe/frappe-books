@@ -42,6 +42,7 @@
 import type { DocValueMap } from 'fyo/core/types';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { frappeModels, models, getRegionalModels } from 'models';
+import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import MobileDesk from 'src/mobile/MobileDesk.vue';
@@ -151,8 +152,13 @@ export default defineComponent({
       );
       registerFrappeModels(frappeModels);
       await loadFrappeDocTypes();
+      // Amounts load in the currency and precision the system settings set.
+      const systemSettings = ModelNameEnum.SystemSettings;
+      fyo.initializeMoneyMaker(
+        (await getBooksDoc(systemSettings, systemSettings)) as SystemSettings
+      );
       const singles = getSingleSchemaNames().filter(
-        (name) => name !== ModelNameEnum.SetupWizard
+        (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
       );
       await Promise.all([
         fyo.loadCurrencySymbols(),
@@ -160,7 +166,7 @@ export default defineComponent({
         ...singles.map((name) => getBooksDoc(name, name)),
       ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
-      this.darkMode = Boolean(fyo.singles.SystemSettings?.darkMode);
+      this.darkMode = Boolean(fyo.singles.SystemSettings?.dark_mode);
       setDarkMode(this.darkMode);
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);

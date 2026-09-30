@@ -33,6 +33,7 @@ import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem
 import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
 import { SalesQuoteItem } from './baseModels/SalesQuoteItem/SalesQuoteItem';
 import { SetupWizard } from './baseModels/SetupWizard/SetupWizard';
+import { SystemSettings } from './baseModels/SystemSettings/SystemSettings';
 import { ItemGroup } from './baseModels/ItemGroup/ItemGroup';
 import { Tax } from './baseModels/Tax/Tax';
 import { TaxSummary } from './baseModels/TaxSummary/TaxSummary';
@@ -123,6 +124,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   InventorySettings,
   Misc,
   POSSettings,
+  SystemSettings,
 };
 
 export async function getRegionalModels(

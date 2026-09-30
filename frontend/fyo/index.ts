@@ -24,6 +24,12 @@ import type { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
 import type { ChartOfAccounts } from 'utils/types';
 
+type MoneySettings = {
+  currency?: string;
+  internal_precision?: number;
+  display_precision?: number;
+};
+
 export class Fyo {
   t = t;
   T = T;
@@ -123,10 +129,7 @@ export class Fyo {
     if (this._initialized) return;
 
     this.#initializeModules();
-    await this.#initializeMoneyMaker();
-
     this.doc.registerModels(models, regionalModels);
-    await this.doc.getDoc('SystemSettings');
     this._initialized = true;
   }
 
@@ -137,38 +140,12 @@ export class Fyo {
     this.doc.init();
   }
 
-  async #initializeMoneyMaker() {
-    const values =
-      (await this.db?.getSingleValues(
-        {
-          fieldname: 'internalPrecision',
-          parent: 'SystemSettings',
-        },
-        {
-          fieldname: 'displayPrecision',
-          parent: 'SystemSettings',
-        },
-        {
-          fieldname: 'currency',
-          parent: 'SystemSettings',
-        }
-      )) ?? [];
-
-    const acc = values.reduce((acc, sv) => {
-      acc[sv.fieldname] = sv.value as string | number | undefined;
-      return acc;
-    }, {} as Record<string, string | number | undefined>);
-
-    const precision: number =
-      (acc.internalPrecision as number) ?? DEFAULT_INTERNAL_PRECISION;
-    const display: number =
-      (acc.displayPrecision as number) ?? DEFAULT_DISPLAY_PRECISION;
-    const currency: string = (acc.currency as string) ?? DEFAULT_CURRENCY;
-
+  /** Counts and shows amounts in the company currency, as the system settings say. */
+  initializeMoneyMaker(settings: MoneySettings) {
     this.pesa = getMoneyMaker({
-      currency,
-      precision,
-      display,
+      currency: settings.currency ?? DEFAULT_CURRENCY,
+      precision: settings.internal_precision ?? DEFAULT_INTERNAL_PRECISION,
+      display: settings.display_precision ?? DEFAULT_DISPLAY_PRECISION,
       wrapper: markRaw,
     });
   }

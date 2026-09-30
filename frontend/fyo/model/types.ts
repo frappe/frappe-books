@@ -1,7 +1,7 @@
 import type { BadgeProps } from 'frappe-ui';
 import type { Fyo } from 'fyo';
 import type { DocValue, DocValueMap } from 'fyo/core/types';
-import type SystemSettings from 'fyo/models/SystemSettings';
+import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import type { FieldType, Schema, SelectOption } from 'schemas/types';
 import type { QueryFilter } from 'utils/db/types';
 import type { RouteLocationRaw, Router } from 'vue-router';

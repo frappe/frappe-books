@@ -150,7 +150,7 @@ function getCompleteSidebar(): SidebarConfig {
       route: '/get-started',
       icon: 'lucide-wrench',
       hidden: () =>
-        !!fyo.singles.SystemSettings?.hideGetStarted ||
+        !!fyo.singles.SystemSettings?.hide_get_started ||
         !fyo.can('GetStarted', 'write'),
     },
     {

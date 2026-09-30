@@ -208,7 +208,7 @@ export default defineComponent({
       return 'justify-start text-start';
     },
     getCellColorClass(cell) {
-      const precision = this.fyo.singles.SystemSettings?.displayPrecision ?? 2;
+      const precision = this.fyo.singles.SystemSettings?.display_precision ?? 2;
       return getReportCellColorClass(cell, precision);
     },
   },

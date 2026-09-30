@@ -137,13 +137,11 @@ export default defineComponent({
   },
   computed: {
     isEditable(): boolean {
-      const field = this.fyo.getField(this.doc.schemaName, this.fieldname);
+      const field = this.doc.fieldMap[this.fieldname];
       return !!field && !evaluateReadOnly(field, this.doc);
     },
     fieldlabel() {
-      return (
-        this.fyo.getField(this.doc.schemaName, this.fieldname)?.label ?? ''
-      );
+      return this.doc.fieldMap[this.fieldname]?.label ?? '';
     },
     row() {
       const rows = this.doc.get(this.fieldname);
@@ -158,7 +156,7 @@ export default defineComponent({
     },
     fields() {
       const fieldnames = getRowEditFieldnames(this.row.schema);
-      return fieldnames.map((f) => this.fyo.getField(this.row.schemaName, f));
+      return fieldnames.map((f) => this.row.fieldMap[f]);
     },
     previous(): number {
       return this.index - 1;

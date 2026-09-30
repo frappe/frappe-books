@@ -1,5 +1,5 @@
 <script>
-import { fyo } from 'src/initFyo';
+import { getSchema } from 'src/frappe/registry';
 import Link from './Link.vue';
 export default {
   name: 'DynamicLink',
@@ -35,7 +35,7 @@ export default {
         return null;
       }
 
-      if (!fyo.schemaMap[schemaName]) {
+      if (!getSchema(schemaName)) {
         return null;
       }
 

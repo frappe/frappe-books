@@ -97,6 +97,7 @@ import { Doc } from 'fyo/model/doc';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { getRowSummary } from 'src/components/Controls/rowSummary';
 import Table from 'src/components/Controls/Table.vue';
+import { getFields, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { evaluateReadOnly, hasFieldValue } from 'src/utils/doc';
@@ -234,9 +235,7 @@ function getTotalLines(field: Field) {
   }
 
   const target = (field as { target?: string }).target ?? '';
-  const columns = (fyo.schemaMap[target]?.tableFields ?? []).map((fieldname) =>
-    fyo.getField(target, fieldname)
-  );
+  const columns = getFields(target, getSchema(target)?.tableFields ?? []);
   return (props.doc.get(field.fieldname) as Doc[]).map((row) => {
     const { title, meta, amount } = getRowSummary(row, columns);
     return {

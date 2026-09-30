@@ -4,6 +4,7 @@ import type {
   RenderData,
 } from 'fyo/model/types';
 import type { Field } from 'schemas/types';
+import { getFields, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 
 export type ListColumn = ColumnConfig | Field;
@@ -15,15 +16,13 @@ export function getListColumns(
 ): ListColumn[] {
   let columns = listConfig?.columns ?? [];
   if (columns.length === 0) {
-    columns = fyo.schemaMap[schemaName]?.quickEditFields ?? [];
+    columns = getSchema(schemaName)?.quickEditFields ?? [];
     columns = [...new Set(['name', ...columns])];
   }
 
-  return columns
-    .map((column) =>
-      typeof column === 'object' ? column : fyo.getField(schemaName, column)
-    )
-    .filter(Boolean);
+  return columns.flatMap((column): ListColumn[] =>
+    typeof column === 'object' ? [column] : getFields(schemaName, [column])
+  );
 }
 
 export function isField(column: ListColumn): column is Field {

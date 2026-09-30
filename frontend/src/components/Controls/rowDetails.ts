@@ -13,8 +13,8 @@ export interface RowDetail {
 
 /** Every column of a row, including those its summary leaves out. */
 export function getRowDetails(row: Doc): RowDetail[] {
-  const tableFields = (row.schema.tableFields ?? []).map((fieldname) =>
-    row.fyo.getField(row.schemaName, fieldname)
+  const tableFields = (row.schema.tableFields ?? []).map(
+    (fieldname) => row.fieldMap[fieldname]
   );
   const amountField = getAmountField(tableFields);
 

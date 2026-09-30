@@ -116,7 +116,6 @@
   </div>
 </template>
 <script lang="ts">
-import { Field } from 'schemas/types';
 import {
   Button as FrappeButton,
   Dropdown as FrappeDropdown,
@@ -126,6 +125,8 @@ import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 
+import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/registry';
+import { getBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, getCreateFiltersFromListViewFilters } from 'src/utils/misc';
@@ -195,27 +196,24 @@ export default defineComponent({
         return this.pageTitle;
       }
 
-      return fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
+      return getSchema(this.schemaName)?.label ?? this.schemaName;
     },
     /** The row title and the schema's search fields, as stored columns. */
     searchFields(): string[] {
       const columns = getListColumns(this.schemaName, this.listConfig);
       const title = getMobileRowLayout(this.schemaName, columns).title.fieldname;
-      const keywords = fyo.store.searchFields[this.schemaName] ?? [];
-      const stored = fyo.db.fieldMap[this.schemaName] ?? {};
-      return [...new Set(['name', title, ...keywords])].filter(
-        (fieldname) => stored[fieldname] && !stored[fieldname].computed
-      );
-    },
-    fields(): Field[] {
-      return fyo.schemaMap[this.schemaName]?.fields ?? [];
+      const keywords = getSearchFields(this.schemaName);
+      return [...new Set(['name', title, ...keywords])].filter((fieldname) => {
+        const field = getField(this.schemaName, fieldname);
+        return field && !field.computed;
+      });
     },
     canExport(): boolean {
       return fyo.can(this.schemaName, 'export');
     },
     canCreate(): boolean {
       return (
-        fyo.schemaMap[this.schemaName]?.create !== false &&
+        getSchema(this.schemaName)?.create !== false &&
         fyo.can(this.schemaName, 'create')
       );
     },
@@ -289,7 +287,7 @@ export default defineComponent({
         const doc = fyo.doc.getNewDoc(value);
 
         for (const itemName of this.selectedItems) {
-          const itemDoc = await fyo.doc.getDoc('Item', itemName);
+          const itemDoc = await getBooksDoc(ModelNameEnum.Item, itemName);
 
           const itemRow = {
             item: itemName,
@@ -315,7 +313,7 @@ export default defineComponent({
 });
 
 function getListConfig(schemaName: string) {
-  const listConfig = fyo.models[schemaName]?.getListViewSettings?.(fyo);
+  const listConfig = getModel(schemaName)?.getListViewSettings?.(fyo);
   if (listConfig?.columns === undefined) {
     return {
       columns: ['name'],

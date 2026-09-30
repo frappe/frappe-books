@@ -2,6 +2,8 @@ import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
 import { cloneDeep } from 'lodash';
 import type { QueryFilter } from 'utils/db/types';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { getFrappeListPage } from 'src/frappe/list';
 import { toRaw } from 'vue';
 import { mergeQueryFilters } from './filterQuery';
 
@@ -39,15 +41,26 @@ export async function loadListData(
     cloneDeep(toRaw(list.filters)),
     cloneDeep(toRaw(list.activeFilters))
   );
-  const [total, rows] = await Promise.all([
-    fyo.db.count(list.schemaName, {
-      filters: appliedFilters,
-      orFilters: list.orFilters,
-    }),
-    getListRows(fyo, list, appliedFilters),
-  ]);
+  const { rows, total } = await getListPage(fyo, list, appliedFilters);
   if (requestId !== list.requestId) return;
   return { rows, total, appliedFilters };
+}
+
+async function getListPage(fyo: Fyo, list: ListState, filters: QueryFilter) {
+  if (isFrappeBacked(list.schemaName)) {
+    return await getFrappeListPage(fyo, list.schemaName, {
+      filters,
+      orFilters: list.orFilters,
+      start: list.pageStart,
+      limit: list.pageLength,
+    });
+  }
+
+  const [total, rows] = await Promise.all([
+    fyo.db.count(list.schemaName, { filters, orFilters: list.orFilters }),
+    getListRows(fyo, list, filters),
+  ]);
+  return { rows, total };
 }
 
 async function getListRows(
@@ -82,6 +95,8 @@ export function onListChange(
   }
 
   fyo.doc.observer.on(`sync:${schemaName}`, listener);
-  fyo.db.observer.on(`delete:${schemaName}`, listener);
+  // A Frappe-backed document announces its own deletion; the bridge announces the rest.
+  const deletions = isFrappeBacked(schemaName) ? fyo.doc.observer : fyo.db.observer;
+  deletions.on(`delete:${schemaName}`, listener);
   fyo.doc.observer.on(`rename:${schemaName}`, listener);
 }

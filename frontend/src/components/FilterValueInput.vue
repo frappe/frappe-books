@@ -70,7 +70,7 @@ import {
 } from 'frappe-ui';
 import type { Field } from 'schemas/types';
 import type { FilterRow, FilterValue } from 'src/utils/filterQuery';
-import { fyo } from 'src/initFyo';
+import { getSchema } from 'src/frappe/registry';
 import { isMobile } from 'src/utils/viewport';
 import FilterLinkInput from './FilterLinkInput.vue';
 
@@ -124,7 +124,7 @@ export default defineComponent({
       );
       const targets = new Set(values.map((row) => String(row.value)));
       const target = targets.size === 1 ? [...targets][0] : '';
-      return fyo.schemaMap[target] ? target : '';
+      return getSchema(target) ? target : '';
     },
     /** Phones use the native date and time picker. */
     isNativeDate(): boolean {

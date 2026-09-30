@@ -17,6 +17,8 @@
 import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { Combobox as FrappeCombobox } from 'frappe-ui';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { searchFrappeLink } from 'src/frappe/link';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH } from 'src/utils';
 
@@ -66,29 +68,45 @@ export default defineComponent({
       this.loading = true;
       this.error = '';
       try {
-        const schema = fyo.schemaMap[this.target];
-        const title = schema?.linkDisplayField || schema?.titleField || 'name';
-        const rows = await fyo.db.searchLink(
-          this.target,
-          this.search,
-          null,
-          [...new Set(['name', title])],
-          LINK_PAGE_LENGTH
-        );
+        const records = await this.searchRecords();
         if (request !== this.request) return;
-        this.records = rows.map((row) => ({
-          label: String(row[title] || row.name),
-          value: String(row.name),
-          description:
-            row[title] && row[title] !== row.name
-              ? String(row.name)
-              : undefined,
-        }));
+        this.records = records;
       } catch {
         if (request === this.request) this.error = t`Unable to load options`;
       } finally {
         if (request === this.request) this.loading = false;
       }
+    },
+    async searchRecords(): Promise<Option[]> {
+      if (isFrappeBacked(this.target)) {
+        const options = await searchFrappeLink(
+          this.target,
+          this.search,
+          null,
+          LINK_PAGE_LENGTH
+        );
+        return options.map(({ label, value }) => ({
+          label,
+          value,
+          description: label !== value ? value : undefined,
+        }));
+      }
+
+      const schema = fyo.schemaMap[this.target];
+      const title = schema?.linkDisplayField || schema?.titleField || 'name';
+      const rows = await fyo.db.searchLink(
+        this.target,
+        this.search,
+        null,
+        [...new Set(['name', title])],
+        LINK_PAGE_LENGTH
+      );
+      return rows.map((row) => ({
+        label: String(row[title] || row.name),
+        value: String(row.name),
+        description:
+          row[title] && row[title] !== row.name ? String(row.name) : undefined,
+      }));
     },
   },
 });

@@ -1,6 +1,10 @@
 <script>
 import { t } from 'fyo';
 import { getAccountLabel } from 'src/utils/accountLabel';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { searchFrappeLink } from 'src/frappe/link';
+import { getModel, getSchema } from 'src/frappe/registry';
+import { newBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
@@ -40,7 +44,7 @@ export default {
       const value = newValue ?? this.value;
       const { fieldname } = this.df ?? {};
       const target = this.getTargetSchemaName();
-      const linkDisplayField = fyo.schemaMap[target ?? '']?.linkDisplayField;
+      const linkDisplayField = getSchema(target ?? '')?.linkDisplayField;
       if (!linkDisplayField) {
         return (this.linkValue = target === 'Account' ? getAccountLabel(fyo, value || '') : value);
       }
@@ -55,6 +59,15 @@ export default {
       const schemaName = this.getTargetSchemaName();
       if (!schemaName) {
         return [];
+      }
+
+      if (isFrappeBacked(schemaName)) {
+        return await searchFrappeLink(
+          schemaName,
+          keyword,
+          filters,
+          LINK_PAGE_LENGTH
+        );
       }
 
       const schema = fyo.schemaMap[schemaName];
@@ -133,11 +146,11 @@ export default {
       }
 
       const name =
-        this.searchQuery || fyo.doc.getTemporaryName(fyo.schemaMap[schemaName]);
+        this.searchQuery || fyo.doc.getTemporaryName(getSchema(schemaName));
       const filters = await this.getCreateFilters();
       const { openQuickEdit } = await import('src/utils/ui');
 
-      const doc = fyo.doc.getNewDoc(schemaName, { name, ...filters });
+      const doc = newBooksDoc(schemaName, { name, ...filters });
       openQuickEdit({ doc });
 
       linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
@@ -150,7 +163,7 @@ export default {
     async getCreateFilters() {
       const { schemaName, fieldname } = this.df;
       const getCreateFilters =
-        fyo.models[schemaName]?.createFilters?.[fieldname];
+        getModel(schemaName)?.createFilters?.[fieldname];
       let createFilters = await getCreateFilters?.(this.doc);
 
       if (createFilters !== undefined) {
@@ -170,7 +183,7 @@ export default {
       }
 
       const { schemaName, fieldname } = this.df;
-      const getFilters = fyo.models[schemaName]?.filters?.[fieldname];
+      const getFilters = getModel(schemaName)?.filters?.[fieldname];
 
       if (getFilters === undefined) {
         return null;

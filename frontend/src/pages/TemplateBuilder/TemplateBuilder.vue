@@ -196,11 +196,11 @@ import {
   ShortcutKey,
   focusOrSelectFormControl,
   getActionsForDoc,
-  getDocFromNameIfExistsElseNew,
   openSettings,
   selectTextFile,
 } from 'src/utils/ui';
 import { useDocShortcuts } from 'src/utils/vueUtils';
+import { getBooksDocOrNew } from 'src/frappe/useBooksDoc';
 import { getMapFromList } from 'utils/index';
 import { computed, defineComponent, inject, ref } from 'vue';
 import PrintContainer from './PrintContainer.vue';
@@ -586,7 +586,7 @@ export default defineComponent({
         return;
       }
 
-      this.doc = (await getDocFromNameIfExistsElseNew(
+      this.doc = (await getBooksDocOrNew(
         ModelNameEnum.PrintTemplate,
         this.name,
       )) as PrintTemplate;
@@ -612,7 +612,7 @@ export default defineComponent({
         return;
       }
 
-      const displayDoc = await getDocFromNameIfExistsElseNew(schemaName, value);
+      const displayDoc = await getBooksDocOrNew(schemaName, value);
       this.hints = getPrintTemplatePropHints(schemaName, this.fyo);
       this.values = await getPrintTemplatePropValues(displayDoc);
       this.displayDoc = displayDoc;

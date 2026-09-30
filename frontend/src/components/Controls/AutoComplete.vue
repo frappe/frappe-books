@@ -117,6 +117,7 @@ import { getOptionList } from 'fyo/utils';
 import { Button as FrappeButton, Combobox as FrappeCombobox } from 'frappe-ui';
 import { FieldTypeEnum } from 'schemas/types';
 import { fuzzyMatch } from 'src/utils';
+import { getModel, getSchema } from 'src/frappe/registry';
 import { h } from 'vue';
 import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
 import MobilePicker from 'src/mobile/MobilePicker.vue';
@@ -161,8 +162,7 @@ export default {
     comboboxOptions() {
       const suggestions = [...this.suggestions];
       const selected = this.findSuggestion(this.value, suggestions);
-      const displayField =
-        this.fyo.schemaMap[this.linkSchemaName]?.linkDisplayField;
+      const displayField = getSchema(this.linkSchemaName)?.linkDisplayField;
       if (selected && displayField && this.linkValue) {
         // Loading options must not replace the selected record's display label.
         suggestions[suggestions.indexOf(selected)] = {
@@ -180,8 +180,7 @@ export default {
     },
     emptyMessage() {
       const { schemaName, fieldname } = this.df ?? {};
-      const getMessage =
-        this.fyo.models[schemaName]?.emptyMessages?.[fieldname];
+      const getMessage = getModel(schemaName)?.emptyMessages?.[fieldname];
       return getMessage?.(this.doc) ?? this.t`No results found`;
     },
     linkSchemaName() {

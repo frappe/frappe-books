@@ -123,10 +123,9 @@ import AttachImage from 'src/components/Controls/AttachImage.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
-import { fyo } from 'src/initFyo';
-import { loadDocPermissions } from 'src/utils/doc';
+import { getField, getFields, getSchema } from 'src/frappe/registry';
+import { useBooksDoc } from 'src/frappe/useBooksDoc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
-import { DocRef } from 'src/utils/types';
 import {
   commonDocSubmit,
   commonDocSync,
@@ -159,7 +158,7 @@ export default defineComponent({
   },
   emits: ['close'],
   setup() {
-    const doc = ref(null) as DocRef;
+    const { doc, load: loadDoc } = useBooksDoc();
     const shortcuts = inject(shortcutsKey);
 
     let context = 'QuickEditForm';
@@ -170,6 +169,7 @@ export default defineComponent({
     return {
       form: ref<InstanceType<typeof TwoColumnForm> | null>(null),
       doc,
+      loadDoc,
       context,
       shortcuts,
       isMobile,
@@ -219,7 +219,7 @@ export default defineComponent({
       return [this.titleField!, ...fields];
     },
     schema(): Schema {
-      return fyo.schemaMap[this.schemaName]!;
+      return getSchema(this.schemaName)!;
     },
     fields() {
       if (!this.schema) {
@@ -231,7 +231,7 @@ export default defineComponent({
         this.hideFields as string[],
         this.showFields as string[]
       );
-      return fieldnames.map((f) => fyo.getField(this.schemaName, f));
+      return getFields(this.schemaName, fieldnames);
     },
   },
   activated() {
@@ -263,14 +263,12 @@ export default defineComponent({
     },
     setFields() {
       const titleFieldName = this.schema.titleField ?? 'name';
-      this.titleField = fyo.getField(this.schemaName, titleFieldName) ?? null;
-      this.imageField = fyo.getField(this.schemaName, 'image') ?? null;
+      this.titleField = getField(this.schemaName, titleFieldName) ?? null;
+      this.imageField = getField(this.schemaName, 'image') ?? null;
     },
     async setDoc() {
       try {
-        const doc = await fyo.doc.getDoc(this.schemaName, this.name);
-        await loadDocPermissions(doc);
-        this.doc = doc;
+        await this.loadDoc(this.schemaName, this.name);
       } catch (error) {
         await handleErrorWithDialog(error, undefined, true);
         return this.$router.back();

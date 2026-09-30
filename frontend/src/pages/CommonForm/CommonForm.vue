@@ -167,16 +167,17 @@ import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import { getSchema } from 'src/frappe/registry';
+import { useBooksDoc } from 'src/frappe/useBooksDoc';
 import { getErrorMessage } from 'src/utils';
 import { loadDocPermissions } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
-import { ActionGroup, DocRef, UIGroupedFields } from 'src/utils/types';
+import { ActionGroup, UIGroupedFields } from 'src/utils/types';
 import {
   commonDocSubmit,
   commonDocSync,
-  getDocFromNameIfExistsElseNew,
   getFieldsGroupedByTabAndSection,
   getFormRoute,
   getGroupedActionsForDoc,
@@ -185,7 +186,7 @@ import {
 } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { useDocShortcuts } from 'src/utils/vueUtils';
-import { computed, defineComponent, inject, nextTick, ref } from 'vue';
+import { computed, defineComponent, inject, nextTick } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
 import LinkedEntries from './LinkedEntries.vue';
 import MobileForm from './MobileForm.vue';
@@ -217,7 +218,7 @@ export default defineComponent({
   },
   setup() {
     const shortcuts = inject(shortcutsKey);
-    const docOrNull = ref(null) as DocRef;
+    const { doc: docOrNull, load: loadDoc } = useBooksDoc();
     let context = 'CommonForm';
     if (shortcuts) {
       context = useDocShortcuts(shortcuts, docOrNull, 'CommonForm', true);
@@ -225,6 +226,7 @@ export default defineComponent({
 
     return {
       docOrNull,
+      loadDoc,
       shortcuts,
       context,
       isMobile,
@@ -343,7 +345,7 @@ export default defineComponent({
       return this.docOrNull?.name || this.t`New Entry`;
     },
     schema(): Schema {
-      const schema = this.docOrNull?.schema ?? this.fyo.schemaMap[this.schemaName];
+      const schema = this.docOrNull?.schema ?? getSchema(this.schemaName);
       if (!schema) {
         throw new ValidationError(`no schema found with ${this.schemaName}`);
       }
@@ -487,9 +489,7 @@ export default defineComponent({
       }
 
       try {
-        const doc = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
-        await loadDocPermissions(doc);
-        this.docOrNull = doc;
+        await this.loadDoc(this.schemaName, this.name, true);
       } catch (error) {
         await handleErrorWithDialog(error);
       }

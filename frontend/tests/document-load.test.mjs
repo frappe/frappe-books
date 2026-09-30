@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   fyo,
-  getDocFromNameIfExistsElseNew,
+  getBooksDocOrNew,
   NotFoundError,
 } from './helpers/ui.mjs';
 
@@ -14,7 +14,7 @@ test('a missing document opens a new one, but other load errors surface', async 
     throw new NotFoundError('Not Found');
   };
   assert.equal(
-    await getDocFromNameIfExistsElseNew('SalesInvoice', 'SINV-1'),
+    await getBooksDocOrNew('SalesInvoice', 'SINV-1'),
     newDoc
   );
 
@@ -22,7 +22,7 @@ test('a missing document opens a new one, but other load errors surface', async 
     throw new Error('Server unavailable');
   };
   await assert.rejects(
-    getDocFromNameIfExistsElseNew('SalesInvoice', 'SINV-1'),
+    getBooksDocOrNew('SalesInvoice', 'SINV-1'),
     /Server unavailable/
   );
 });

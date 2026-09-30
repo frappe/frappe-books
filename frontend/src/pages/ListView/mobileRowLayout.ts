@@ -2,6 +2,7 @@ import type { ColumnConfig, RenderData } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import type { Field } from 'schemas/types';
+import { getFields } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { formatColumnValue, type ListColumn } from './listColumns';
@@ -60,9 +61,7 @@ export function getMobileRowLayout(
 function getMetaColumns(schemaName: string, columns: ListColumn[]) {
   const fieldnames = metaFieldnames[schemaName];
   if (fieldnames) {
-    return fieldnames
-      .map((fieldname) => fyo.getField(schemaName, fieldname))
-      .filter(Boolean);
+    return getFields(schemaName, fieldnames);
   }
 
   const isDate = (column: ListColumn) =>

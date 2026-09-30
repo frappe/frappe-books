@@ -7,7 +7,7 @@ import type { RawValueMap } from 'fyo/core/types';
 import type { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
-import { NotFoundError, ValueError } from 'fyo/utils/errors';
+import { ValueError } from 'fyo/utils/errors';
 import { Invoice } from 'models/baseModels/Invoice/Invoice';
 import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
@@ -18,6 +18,8 @@ import { Transactional } from 'models/Transactional/Transactional';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import { getModel } from 'src/frappe/registry';
+import { newBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import router from 'src/router';
 import { call } from 'src/web/api';
@@ -322,7 +324,7 @@ function getNewAction(doc: Doc): Action {
     condition: (doc: Doc) => fyo.can(doc.schemaName, 'create'),
     async action() {
       try {
-        const newDoc = fyo.doc.getNewDoc(doc.schemaName);
+        const newDoc = newBooksDoc(doc.schemaName);
         await openEdit(newDoc);
       } catch (err) {
         await handleErrorWithDialog(err as Error, doc);
@@ -383,7 +385,7 @@ export function getFieldsGroupedByTabAndSection(
 }
 
 export function getFormRoute(schemaName: string, name: string): string {
-  const route = fyo.models[schemaName]
+  const route = getModel(schemaName)
     ?.getListViewSettings(fyo)
     ?.formRoute?.(name);
 
@@ -396,27 +398,8 @@ export function getFormRoute(schemaName: string, name: string): string {
 }
 
 export async function openNewDoc(schemaName: string, initData?: RawValueMap) {
-  const doc = fyo.doc.getNewDoc(schemaName, initData);
+  const doc = newBooksDoc(schemaName, initData);
   await routeTo(getFormRoute(schemaName, doc.name!));
-}
-
-export async function getDocFromNameIfExistsElseNew(
-  schemaName: string,
-  name?: string,
-) {
-  if (!name) {
-    return fyo.doc.getNewDoc(schemaName);
-  }
-
-  try {
-    return await fyo.doc.getDoc(schemaName, name, { refresh: true });
-  } catch (error) {
-    if (error instanceof NotFoundError) {
-      return fyo.doc.getNewDoc(schemaName);
-    }
-
-    throw error;
-  }
 }
 
 export async function isPrintable(schemaName: string) {
@@ -443,8 +426,7 @@ export function focusOrSelectFormControl(
     return;
   }
 
-  const naming = doc.fyo.schemaMap[doc.schemaName]?.naming;
-  if (naming !== 'manual' || doc.inserted) {
+  if (doc.schema.naming !== 'manual' || doc.inserted) {
     return;
   }
 

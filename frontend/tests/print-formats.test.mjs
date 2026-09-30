@@ -4,6 +4,7 @@ import {
   getPageCSS,
   getPageSize,
   getPrintDocument,
+  getTemplateNameFromFile,
   setPageSize,
 } from '../src/utils/printFormats.ts';
 
@@ -49,4 +50,10 @@ test('a print page wraps the html in the print stylesheet', () => {
   assert.match(page, /<style>p \{\}<\/style>/);
   assert.match(page, /<div class="print-format"><p>SINV-1001<\/p><\/div>/);
   delete globalThis.window;
+});
+
+test('a template file name names the template', () => {
+  assert.equal(getTemplateNameFromFile('Invoice.template.html'), 'Invoice');
+  assert.equal(getTemplateNameFromFile('Receipt.html'), 'Receipt');
+  assert.equal(getTemplateNameFromFile('notes.txt'), null);
 });

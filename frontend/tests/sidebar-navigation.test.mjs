@@ -28,8 +28,8 @@ test('detail and print routes select their source list or report', () => {
     [
       '/template-builder/Invoice',
       {},
-      '/list/PrintTemplate',
-      '/list/PrintTemplate',
+      '/list/PrintFormat',
+      '/list/PrintFormat',
     ],
   ]) {
     assert.equal(

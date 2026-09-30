@@ -313,7 +313,7 @@ async function installPaymentFixture(page: Page) {
         (entry: any) => entry.label === 'Payment'
       );
       await action.action(invoice, router);
-      fixture.payment = findOpenPayment(app._instance);
+      fixture.payment = findOpenPayment(app._container._vnode.component);
     };
     await router.push(`/edit/PurchaseInvoice/${invoice.name}`);
 
@@ -327,6 +327,7 @@ async function installPaymentFixture(page: Page) {
         const visit = (vnode: any) => {
           if (vnode?.component) instances.push(vnode.component);
           if (Array.isArray(vnode?.children)) vnode.children.forEach(visit);
+          if (vnode?.suspense) visit(vnode.suspense.activeBranch);
         };
         visit(instance.subTree);
       }

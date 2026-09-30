@@ -44,6 +44,16 @@ for (const schemaName of [
   });
 }
 
+test('stored totals filter Frappe-backed lists by their Frappe names', () => {
+  const fields = ['net_total', 'grand_total', 'base_grand_total', 'balance'].map(
+    (fieldname) => ({ fieldname, fieldtype: 'Currency', readOnly: true })
+  );
+  assert.deepEqual(
+    getFilterFields(fields).map(({ fieldname }) => fieldname),
+    ['net_total', 'grand_total', 'base_grand_total']
+  );
+});
+
 test('unverified read-only fields, computed values, internal metadata and opt-outs stay excluded', () => {
   const fields = [
     { fieldname: 'name', fieldtype: 'Data', readOnly: true, hidden: true },

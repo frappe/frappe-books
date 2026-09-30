@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   fyo,
   getFrappeListPage,
+  ListFilters,
   loadTestDocTypes,
   searchFrappeLink,
   stubFrappe,
@@ -33,6 +34,29 @@ test('Books list filters become Frappe filters', () => {
       ['hsn_code', 'is', 'set'],
     ]
   );
+});
+
+test('Submitted and Cancelled filters become docstatus filters', () => {
+  assert.deepEqual(toFrappeFilters({ submitted: true, cancelled: ['=', 0] }), [
+    ['docstatus', '!=', 0],
+    ['docstatus', '!=', 2],
+  ]);
+  assert.deepEqual(
+    toFrappeFilters({ submitted: ['!=', 1], cancelled: ['=', 1] }),
+    [
+      ['docstatus', '=', 0],
+      ['docstatus', '=', 2],
+    ]
+  );
+});
+
+test('submittable lists offer the Submitted and Cancelled filters', () => {
+  const options = (schemaName) =>
+    new ListFilters(schemaName).fieldOptions.map(({ value }) => value);
+
+  assert.ok(options('Order').includes('submitted'));
+  assert.ok(options('Order').includes('cancelled'));
+  assert.ok(!options('Item').includes('submitted'));
 });
 
 test('a list page and its count come from the REST API, newest first', async () => {

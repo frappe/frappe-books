@@ -29,6 +29,7 @@ await build({
       export * as errors from './fyo/utils/errors';
       export { frappeModels, models } from './models';
       export { getMappedBooksDoc } from './models/helpers';
+      export { ListFilters } from './src/utils/listFilters';
     `,
     resolveDir: frontend,
   },
@@ -96,6 +97,7 @@ export const {
   frappeModels,
   models,
   getMappedBooksDoc,
+  ListFilters,
 } = createRequire(import.meta.url)(output);
 
 /**

@@ -420,8 +420,8 @@ export async function getDocFromNameIfExistsElseNew(
 }
 
 export async function isPrintable(schemaName: string) {
-  const numTemplates = await fyo.db.count(ModelNameEnum.PrintTemplate, {
-    filters: { type: schemaName },
+  const numTemplates = await fyo.db.count(ModelNameEnum.PrintFormat, {
+    filters: { docType: schemaName, disabled: false },
   });
   return numTemplates > 0;
 }

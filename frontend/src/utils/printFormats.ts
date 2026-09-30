@@ -33,3 +33,19 @@ export function setPageSize(css: string | undefined, size: PageSize): string {
   const rest = (css ?? '').replace(PAGE_RULES, '').trim();
   return [rest, getPageCSS(size)].filter(Boolean).join('\n');
 }
+
+/** A print as Frappe renders it: the body HTML and its stylesheet. */
+export type PrintHTML = { html: string | null; style: string };
+
+/** A page for a print, styled the way Frappe's print view styles it. */
+export function getPrintDocument({ html, style }: PrintHTML): string {
+  const boot = window.frappe?.boot;
+  const direction = boot?.layout_direction === 'rtl' ? 'rtl' : 'ltr';
+  const stylesheet = boot?.books?.print_style;
+  const link = stylesheet ? `<link rel="stylesheet" href="${stylesheet}">` : '';
+  return (
+    `<!DOCTYPE html><html lang="${boot?.lang ?? 'en'}" dir="${direction}">` +
+    `<head><meta charset="utf-8">${link}<style>${style}</style></head>` +
+    `<body><div class="print-format">${html ?? ''}</div></body></html>`
+  );
+}

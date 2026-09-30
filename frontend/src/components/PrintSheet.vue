@@ -1,13 +1,16 @@
 <template>
   <div class="overflow-hidden" :style="outerContainerStyle">
+    <!-- Server-rendered print documents run no scripts. -->
     <iframe
+      ref="frame"
       class="block border-0"
       :title="t`Print preview`"
-      :srcdoc="previewDocument"
+      :srcdoc="document ?? previewDocument"
+      :sandbox="document ? 'allow-same-origin allow-modals' : undefined"
       :style="innerContainerStyle"
       @load="onLoad"
     />
-    <Teleport v-if="frameBody" :to="frameBody">
+    <Teleport v-if="frameBody && !document" :to="frameBody">
       <div class="h-full w-full">
         <slot />
       </div>
@@ -24,6 +27,8 @@ export default defineComponent({
     height: { type: Number, default: 29.7 },
     width: { type: Number, default: 21 },
     scale: { type: Number, default: 0.65 },
+    /** A complete print document to show instead of the slot. */
+    document: { type: String, default: undefined },
   },
   data() {
     return { frameBody: null as HTMLElement | null };
@@ -61,6 +66,9 @@ export default defineComponent({
     },
     getHTML(): string | undefined {
       return this.frameBody?.innerHTML;
+    },
+    print() {
+      (this.$refs.frame as HTMLIFrameElement).contentWindow?.print();
     },
   },
 });

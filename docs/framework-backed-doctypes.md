@@ -29,10 +29,14 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | Validation and business rules | The controller. A client mirror is only for a message at its field. |
 | Link without "Create" | `only_select` on the DocField |
 | Table columns | `in_list_view` on the child DocFields |
-| Label, name field of a prompt-named doctype, quick edit fields | `static presentation` on the model |
+| Label, name field of a prompt-named doctype (Data or AutoComplete), quick edit fields | `static presentation` on the model |
+| Option labels, and Autocomplete values that are not options | `presentation.fields` |
+| Rows of a table | The model registered for the row's schema in `frappeModels`, else `FrappeDoc` |
 | List columns, badges, actions, option lists, formatting | The model statics, as before: `getListViewSettings`, `getActions`, `lists`, `emptyMessages` |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |
+
+A Frappe-backed single loads at startup under its doctype name. Its open document is `fyo.singles[schemaName]`, so every reader reads the same values, by Frappe fieldnames. Do not load it with `fyo.doc.getDoc`: that makes a second copy.
 
 A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user.
 

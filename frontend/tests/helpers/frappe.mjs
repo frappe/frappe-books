@@ -28,6 +28,7 @@ await build({
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, models } from './models';
+      export { getMappedBooksDoc } from './models/helpers';
     `,
     resolveDir: frontend,
   },
@@ -94,6 +95,7 @@ export const {
   errors,
   frappeModels,
   models,
+  getMappedBooksDoc,
 } = createRequire(import.meta.url)(output);
 
 /**

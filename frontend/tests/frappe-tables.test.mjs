@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   FrappeDoc,
+  getMappedBooksDoc,
   getSchema,
   loadFrappeDocTypes,
   newFrappeDoc,
@@ -132,4 +133,36 @@ test('without a presentation, table columns are the in_list_view fields', () => 
     placements: {},
   });
   assert.deepEqual(schema.tableFields, ['item', 'amount']);
+});
+
+test('a mapper builds an unsaved Frappe-backed document; unset values keep defaults', async () => {
+  const requests = stubFrappe(() => ({
+    message: {
+      name: null,
+      doctype: 'Books Bill',
+      party_type: null,
+      party: 'Acme',
+      lines: [{ name: null, item: 'Pen', amount: 3 }],
+    },
+  }));
+
+  const bill = await getMappedBooksDoc(
+    { schemaName: 'Item', name: 'Pen' },
+    'Bill',
+    'make_bill'
+  );
+
+  assert.equal(
+    requests[0].path,
+    '/api/method/frappe_books.frappe_books.doctype.books_item.books_item.make_bill'
+  );
+  assert.equal(requests[0].body.source_name, 'Pen');
+  assert.ok(bill instanceof Bill);
+  assert.equal(bill.notInserted, true);
+  assert.ok(bill.name);
+  assert.equal(bill.party, 'Acme');
+  assert.equal(bill.party_type, 'Books Party');
+  assert.ok(bill.lines[0] instanceof BillLine);
+  assert.equal(bill.lines[0].amount, 3);
+  assert.ok(bill.lines[0].name);
 });

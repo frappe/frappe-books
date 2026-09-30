@@ -5,7 +5,7 @@ import { Fyo, getSchemas, models } from './helpers/accounting.mjs';
 test('new documents take the number series the server resolves', async () => {
   const series = {
     SalesInvoice: 'INV-',
-    StockMovement: 'MOVE-',
+    JournalEntry: 'JOURNAL-',
     PricingRule: 'RULE-',
   };
   const calls = [];

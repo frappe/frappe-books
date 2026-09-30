@@ -19,12 +19,7 @@ async function makeRow(schemaName, values = {}) {
   return doc.items[0];
 }
 
-for (const schemaName of [
-  'Shipment',
-  'PurchaseReceipt',
-  'StockMovement',
-  'SalesInvoice',
-]) {
+for (const schemaName of ['SalesInvoice']) {
   test(`a ${schemaName} row converts with its transfer unit's factor`, async () => {
     const row = await makeRow(schemaName, { transferUnit: 'Pack' });
     assert.equal(await row.formulas.unitConversionFactor.formula(), 6);

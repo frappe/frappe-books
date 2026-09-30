@@ -67,10 +67,7 @@ await build({
       export { call } from './src/web/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
-      export {
-        getAvailableSerialNumbers,
-        getSerialNumbersForQuantity,
-      } from './models/inventory/helpers';
+      export { getAvailableSerialNumbers } from './models/inventory/helpers';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
       export { DataImport } from './src/dataImport';
@@ -164,7 +161,6 @@ export const {
   errors,
   getInsufficientItems,
   getAvailableSerialNumbers,
-  getSerialNumbersForQuantity,
   generateCSV,
   parseCSV,
   Importer,

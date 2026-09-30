@@ -21,7 +21,7 @@ const bundle = ['Books Item', 'Books Uom Conversion Item'].map((name) =>
 stubFrappe(({ path }) =>
   path.endsWith('getdoctype') ? { docs: bundle } : { data: [] }
 );
-registerFrappeModels(frappeModels);
+registerFrappeModels({ Item: frappeModels.Item });
 await loadFrappeDocTypes();
 
 const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);
@@ -106,7 +106,8 @@ test('the item form shows bad values at their fields, as the server refuses them
 test('item links filter and create items by Frappe fieldnames', async () => {
   const sale = { isSales: true };
   const purchase = { isSales: false };
-  const { SalesInvoiceItem, StockMovementItem } = models;
+  const { SalesInvoiceItem } = models;
+  const StockMovementItem = frappeModels.StockMovement.rowModels.items;
   assert.deepEqual(await SalesInvoiceItem.filters.item(sale), {
     item_usage: ['not in', ['Purchases']],
   });

@@ -100,10 +100,10 @@ test('an invoice maps its pending stock with the transfer mapper', async () => {
 test('a fully billed shipment does not offer an invoice', async () => {
   const fyo = await makeFyo(() => ({}));
   const [makeInvoice] = getStockTransferActions(fyo, 'Shipment');
-  const shipment = fyo.doc.getNewDoc('Shipment', { submitted: true });
+  const shipment = { isSubmitted: true, is_fully_billed: 0 };
 
   assert.equal(makeInvoice.condition(shipment), true);
-  shipment.isFullyBilled = true;
+  shipment.is_fully_billed = 1;
   assert.equal(makeInvoice.condition(shipment), false);
 });
 
@@ -194,8 +194,9 @@ test('lead, party and item actions open documents from their server mappers', as
     source._notInserted = false;
     // A Frappe-backed model presents the doctype; the bridge doc stands in as the source.
     const Model = frappeModels[schemaName] ?? fyo.models[schemaName];
-    const { action } = Model.getActions(fyo)
-      .find((action) => action.label === label);
+    const { action } = Model.getActions(fyo).find(
+      (action) => action.label === label
+    );
     let route = '';
     await action(source, { push: (to) => (route = to.path ?? to) });
 

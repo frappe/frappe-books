@@ -150,23 +150,6 @@ test('general ledger opens with the dates the server picks', async () => {
   assert.equal(report.toDate, '2026-09-28');
 });
 
-test('stock transfers use only the value of their own rows, including partial receipts and returns', async () => {
-  const fyo = await makeFyo();
-  fyo.doc.getDoc = async () => ({
-    taxes: [{ amount: fyo.pesa(18) }],
-    items: [],
-  });
-  for (const schema of ['PurchaseReceipt', 'Shipment']) {
-    for (const amount of [100, 50, -50, 0]) {
-      const transfer = fyo.doc.getNewDoc(schema, {
-        backReference: 'Invoice',
-        items: [{ amount: fyo.pesa(amount) }],
-      });
-      assert.equal((await transfer.getGrandTotal()).float, amount);
-    }
-  }
-});
-
 test('root groups can be recreated and edited but cannot be deleted', async () => {
   const fyo = await makeFyo();
   fyo.singles.AccountingSettings.setupComplete = true;

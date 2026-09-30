@@ -27,7 +27,8 @@ await build({
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, models } from './models';
-      export { getMappedDoc } from './models/helpers';
+      export { getMappedDoc, getStockTransferActions } from './models/helpers';
+      export { getFilterFields } from './src/utils/filterFields';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
     `,
     resolveDir: frontend,
@@ -94,6 +95,8 @@ export const {
   frappeModels,
   models,
   getMappedDoc,
+  getStockTransferActions,
+  getFilterFields,
   useBooksDoc,
 } = createRequire(import.meta.url)(output);
 

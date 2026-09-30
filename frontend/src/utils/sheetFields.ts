@@ -9,10 +9,14 @@ export function getQuickEditFieldnames(
   const fieldnames = (schema.quickEditFields ?? ['name']).filter(
     (fieldname) => !hideFields.includes(fieldname)
   );
+  // The header asks for the field a manually named document is named by.
+  const titleField = schema.naming === 'manual' ? schema.titleField : 'name';
 
   for (const field of schema.fields) {
     const { fieldname } = field;
-    const isRequired = needsInput(field) || (field.isCustom && field.required);
+    const isRequired =
+      (needsInput(field) && fieldname !== titleField) ||
+      (field.isCustom && field.required);
     const isAsked =
       showFields.includes(fieldname) ||
       (isRequired && !hideFields.includes(fieldname));

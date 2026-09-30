@@ -352,7 +352,8 @@ test("a price list row takes its item's unit from the server preview", async (t)
 });
 
 test('the pricing rule form shows each discount scheme as it did', async () => {
-  assert.deepEqual(getLayout('PricingRule').slice(0, 7), [
+  assert.deepEqual(getLayout('PricingRule').slice(0, 8), [
+    'name | ID |  | Default',
     'number_series | Number Series |  | Default',
     'is_enabled | Is Pricing Rule Enabled |  | Default',
     'title | Title |  | Default',

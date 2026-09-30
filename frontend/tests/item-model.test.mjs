@@ -21,7 +21,7 @@ const bundle = ['Books Item', 'Books Uom Conversion Item'].map((name) =>
 stubFrappe(({ path }) =>
   path.endsWith('getdoctype') ? { docs: bundle } : { data: [] }
 );
-registerFrappeModels(frappeModels);
+registerFrappeModels({ Item: frappeModels.Item });
 await loadFrappeDocTypes();
 
 const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);

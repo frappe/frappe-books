@@ -58,7 +58,6 @@ import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 
 export const models = {
   Account,
-  AccountingLedgerEntry,
   AccountingSettings,
   Address,
   Batch,
@@ -71,7 +70,6 @@ export const models = {
   Lead,
   Party,
   LoyaltyProgram,
-  LoyaltyPointEntry,
   CollectionRulesItems,
   CouponCode,
   Payment,
@@ -98,7 +96,6 @@ export const models = {
   InventorySettings,
   StockMovement,
   StockMovementItem,
-  StockLedgerEntry,
   Location,
   Shipment,
   ShipmentItem,
@@ -120,7 +117,10 @@ export const models = {
  * `models` when its module stops using the bridge; see docs/framework-backed-doctypes.md.
  */
 export const frappeModels: Record<string, FrappeModel> = {
+  AccountingLedgerEntry,
   Item,
+  LoyaltyPointEntry,
+  StockLedgerEntry,
 };
 
 export async function getRegionalModels(

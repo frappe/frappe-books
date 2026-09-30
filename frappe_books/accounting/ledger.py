@@ -114,6 +114,8 @@ def reverse_entries(voucher):
 			"reverted": 0,
 		},
 		fields=["name", "account", "party", "debit", "credit"],
+		# Reverse newest first, whatever order the list sorts by.
+		order_by="creation desc",
 	)
 	for entry in entries:
 		frappe.db.set_value("Books Ledger Entry", entry.name, "reverted", 1, update_modified=False)

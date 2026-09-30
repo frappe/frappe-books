@@ -1,61 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Importer, importDoc, makeFyo } from './helpers/accounting.mjs';
-
-test('import link checks query each linked schema once', async () => {
-  const fyo = await makeFyo();
-  const requests = [];
-  fyo.db.getAll = async (schemaName, { filters }) => {
-    requests.push([schemaName, filters.name[1]]);
-    return schemaName === 'Account' ? [{ name: 'Cash' }] : [];
-  };
-  const importer = new Importer('Party', fyo);
-  importer.assignedTemplateFields = [
-    'Party.name',
-    'Party.defaultAccount',
-    'Party.currency',
-  ];
-  importer.valueMatrix = [
-    [{ value: 'A' }, { value: 'Cash' }, { value: 'XYZ' }],
-    [{ value: 'B' }, { value: 'Bank' }, { value: 'XYZ' }],
-    [{ value: 'C' }, { value: 'Cash' }, { value: '' }],
-  ];
-
-  assert.deepEqual(await importer.checkLinks(), [
-    { schemaName: 'Account', schemaLabel: 'Account', name: 'Bank' },
-    { schemaName: 'Currency', schemaLabel: 'Currency', name: 'XYZ' },
-  ]);
-  assert.deepEqual(requests, [
-    ['Account', ['Cash', 'Bank']],
-    ['Currency', ['XYZ']],
-  ]);
-});
-
-test('an import that saves but fails to submit is reported as a draft', async () => {
-  const results = { success: [], successOldName: [], failed: [] };
-  const doc = {
-    name: 'New Invoice 01',
-    async sync() {
-      this.name = 'SINV-1';
-    },
-    async submit() {
-      throw new Error('Insufficient stock');
-    },
-  };
-
-  await importDoc(doc, true, results);
-  assert.deepEqual(results.success, []);
-  assert.deepEqual(results.successOldName, ['New Invoice 01']);
-  assert.deepEqual(
-    results.failed.map((failure) => ({ ...failure })),
-    [
-      {
-        name: 'SINV-1',
-        message: 'Saved as draft, but submit failed: Insufficient stock',
-      },
-    ]
-  );
-});
+import {
+  getGridRows,
+  Importer,
+  makeFyo,
+  parseCSV,
+} from './helpers/accounting.mjs';
 
 test('import columns report duplicates and missing required fields', async () => {
   const importer = new Importer('Party', await makeFyo());
@@ -102,23 +52,103 @@ test('leaving a column out moves the later picked columns up', async () => {
   assert.equal(importer.templateFieldsPicked.get(first), false);
 });
 
-test('a retry keeps the file columns and only the rows not imported', async () => {
+function importRows(importer) {
+  return parseCSV(importer.getImportFile().csv);
+}
+
+test('the import file puts each document’s rows together, its values on the first', async () => {
+  const importer = new Importer('SalesInvoice', await makeFyo());
+  importer.assignedTemplateFields = [
+    'SalesInvoice.name',
+    'SalesInvoice.party',
+    'SalesInvoiceItem.item',
+    'SalesInvoiceItem.quantity',
+  ];
+  importer.valueMatrix = [
+    [{ value: 'A' }, { value: 'Ann' }, { value: 'Pen' }, { value: 2 }],
+    [{ value: 'B' }, { value: 'Bob' }, { value: 'Ink' }, { value: 1 }],
+    [{ value: 'A' }, { value: 'Amy' }, { value: 'Pad' }, { value: 3 }],
+    [{ value: null }, { value: 'Cid' }, { value: 'Pen' }, { value: 1 }],
+  ];
+
+  const file = importer.getImportFile();
+  // Frappe names numbered documents, so their name only groups the rows.
+  assert.deepEqual(parseCSV(file.csv), [
+    ['docstatus', 'party', 'items.item', 'items.quantity'],
+    ['0', 'Amy', 'Pen', '2'],
+    ['', '', 'Pad', '3'],
+    ['0', 'Bob', 'Ink', '1'],
+  ]);
+  assert.deepEqual(file.gridRows, [0, 2, 1]);
+  assert.deepEqual(getGridRows(file, [2, 3]), [0, 2]);
+  assert.equal(importer.getRowName(2), 'A');
+});
+
+test('named documents import their name under the DocType’s fieldname', async () => {
+  const fyo = await makeFyo();
+  const party = new Importer('Party', fyo);
+  party.assignedTemplateFields = ['Party.name', 'Party.defaultAccount'];
+  party.valueMatrix = [[{ value: 'Ann' }, { value: 'Debtors' }]];
+  assert.deepEqual(importRows(party), [
+    ['docstatus', 'name', 'default_account'],
+    ['0', 'Ann', 'Debtors'],
+  ]);
+
+  const account = new Importer('Account', fyo);
+  account.assignedTemplateFields = ['Account.name', 'Account.parentAccount'];
+  account.valueMatrix = [[{ value: 'Petty Cash' }, { value: 'Cash' }]];
+  assert.deepEqual(importRows(account)[0], [
+    'docstatus',
+    'account_name',
+    'parent_books_account',
+  ]);
+});
+
+test('import cells are written as Frappe’s Data Import parses them', async (t) => {
+  const fyo = await makeFyo();
+  const importer = new Importer('SalesInvoice', fyo);
+  importer.assignedTemplateFields = [
+    'SalesInvoice.name',
+    'SalesInvoice.date',
+    'SalesInvoice.discountAfterTax',
+    'SalesInvoiceItem.rate',
+  ];
+  importer.valueMatrix = [
+    [
+      { value: 'A' },
+      { value: new Date(Date.UTC(2026, 8, 30, 4, 35)) },
+      { value: true },
+      { value: fyo.pesa(12.5) },
+    ],
+  ];
+  globalThis.window = {
+    frappe: { boot: { time_zone: { system: 'Asia/Kolkata' } } },
+  };
+  t.after(() => delete globalThis.window);
+
+  assert.deepEqual(importRows(importer)[1], [
+    '0',
+    '2026-09-30 10:05:00',
+    '1',
+    '12.5',
+  ]);
+});
+
+test('fix failed keeps the failed rows and the file columns', async () => {
   const importer = new Importer('Party', await makeFyo());
   importer.assignedTemplateFields = ['Party.role', 'Party.name'];
   importer.valueMatrix = [
     [{ value: 'Customer' }, { value: 'A' }],
     [{ value: 'Customer' }, { value: 'B' }],
-    [{ value: 'Customer' }, { value: null }],
+    [{ value: 'Customer' }, { value: 'C' }],
   ];
-  importer.docs = [{ name: 'A' }];
 
-  importer.retryRowsNotImported(['A']);
+  importer.keepRows([1, 2]);
 
   assert.deepEqual(
     importer.valueMatrix.map((row) => row[1].value),
-    ['B']
+    ['B', 'C']
   );
-  assert.deepEqual(importer.docs, []);
   assert.deepEqual(importer.assignedTemplateFields, [
     'Party.role',
     'Party.name',

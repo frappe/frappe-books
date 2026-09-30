@@ -42,6 +42,8 @@ test('breaks become Books sections and tabs; column breaks are dropped', () => {
       ['hidden_code', 'Default', 'Inventory'],
       ['released_on', 'Default', 'Inventory'],
       ['uom_conversions', 'Default', 'Inventory'],
+      // Placed as the Books Custom Form's rows say, in their order.
+      ['custom_books_shelf', 'Storage', 'Custom'],
       ['custom_books_colour', 'Extra', undefined],
     ]
   );

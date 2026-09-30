@@ -220,6 +220,12 @@ export const itemMeta = {
       label: 'Colour',
       is_custom_field: 1,
     },
+    {
+      fieldname: 'custom_books_shelf',
+      fieldtype: 'Data',
+      label: 'Shelf',
+      is_custom_field: 1,
+    },
   ],
 };
 
@@ -288,9 +294,12 @@ export async function loadTestDocTypes() {
     }
 
     if (path === '/api/v2/document/Books Custom Form') {
-      const row = { fieldname: 'Colour', section: 'Extra', tab: null };
+      const rows = [
+        { fieldname: 'Shelf', section: 'Storage', tab: 'Custom' },
+        { fieldname: 'Colour', section: 'Extra', tab: null },
+      ];
       const isItem = params.filters[0][2] === 'Item';
-      return { data: isItem ? [{ custom_fields: [row] }] : [] };
+      return { data: isItem ? [{ custom_fields: rows }] : [] };
     }
   });
   registerFrappeModels({ Item: TestItem, Order: TestOrder });

@@ -88,6 +88,18 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			with self.subTest(user=user, doctype=doctype), self.set_user(user):
 				self.assertEqual(frappe.has_permission(doctype, "import"), allowed)
 
+	def test_only_books_manager_starts_data_imports(self):
+		with self.set_user(MANAGER):
+			own = _new_data_import().insert()
+			self.assertTrue(own.has_permission("write"))
+		with self.set_user(TEST_USER):
+			self.assertRaises(frappe.PermissionError, _new_data_import().insert)
+
+	def test_books_manager_reads_only_its_own_data_imports(self):
+		other = _new_data_import().insert()
+		with self.set_user(MANAGER):
+			self.assertFalse(frappe.has_permission("Data Import", "read", other))
+
 	def test_bridge_ledger_writes_follow_docperms(self):
 		with self.set_user(MANAGER):
 			for schema in ("AccountingLedgerEntry", "StockLedgerEntry", "LoyaltyPointEntry"):
@@ -157,6 +169,12 @@ class IntegrationTestPermissions(IntegrationTestCase):
 def _role_rights(doctype, role):
 	rows = [row for row in frappe.get_meta(doctype).permissions if row.role == role and not row.permlevel]
 	return {right for right in RIGHTS for row in rows if row.get(right)}
+
+
+def _new_data_import():
+	return frappe.get_doc(
+		{"doctype": "Data Import", "reference_doctype": "Books Party", "import_type": "Insert New Records"}
+	)
 
 
 def _search_shipments(name):

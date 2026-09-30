@@ -11,7 +11,6 @@ import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEnt
 import { Misc } from './baseModels/Misc';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
-import { CollectionRulesItems } from './baseModels/CollectionRulesItems/CollectionRulesItems';
 import { Lead } from './baseModels/Lead/Lead';
 import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
@@ -64,10 +63,7 @@ export const models = {
   JournalEntry,
   JournalEntryAccount,
   Misc,
-  LoyaltyProgram,
   LoyaltyPointEntry,
-  CollectionRulesItems,
-  CouponCode,
   Payment,
   PaymentMethod,
   PaymentFor,
@@ -119,6 +115,8 @@ export const frappeModels: Record<string, FrappeModel> = {
   Party,
   PriceList,
   PricingRule,
+  CouponCode,
+  LoyaltyProgram,
 };
 
 /** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */

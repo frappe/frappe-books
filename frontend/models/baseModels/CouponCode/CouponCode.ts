@@ -1,37 +1,46 @@
-import { Doc } from 'fyo/model/doc';
-import { FiltersMap, FormulaMap, ListViewSettings } from 'fyo/model/types';
-import { Money } from 'pesa';
+import { ChangeArg, FiltersMap, ListViewSettings } from 'fyo/model/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class CouponCode extends Doc {
-  name?: string;
-  couponName?: string;
-  pricingRule?: string;
-
-  validFrom?: Date;
-  validTo?: Date;
-
-  minAmount?: Money;
-  maxAmount?: Money;
-
-  formulas: FormulaMap = {
-    name: {
-      formula: () => {
-        return this.couponName?.replace(/\s+/g, '').toUpperCase().slice(0, 8);
-      },
-      dependsOn: ['couponName'],
-    },
+/** Books Coupon Code, served by Frappe. The server names a coupon from its name. */
+export class CouponCode extends FrappeDoc {
+  static override doctype = 'Books Coupon Code';
+  static override presentation = {
+    label: 'Coupon Code',
+    nameField: { label: 'Coupon Code' },
+    quickEditFields: [
+      'name',
+      'pricing_rule',
+      'valid_from',
+      'valid_to',
+      'maximum_use',
+      'used',
+    ],
   };
 
+  coupon_name?: string;
+
+  override async change(change: ChangeArg) {
+    await super.change(change);
+    // Mirrors the server's naming, so a new coupon shows its code as its name is typed.
+    const code = this.coupon_name
+      ?.replace(/\s+/g, '')
+      .toUpperCase()
+      .slice(0, 8);
+    if (change.changed === 'coupon_name' && this.notInserted && code) {
+      this.name = code;
+    }
+  }
+
+  // Pricing rules are Frappe-backed, so their filters use Frappe fieldnames.
   static filters: FiltersMap = {
-    // Pricing rules are Frappe-backed, so their filters use Frappe fieldnames.
-    pricingRule: () => ({
+    pricing_rule: () => ({
       is_coupon_code_based: true,
     }),
   };
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'couponName', 'pricingRule', 'maximumUse', 'used'],
+      columns: ['name', 'coupon_name', 'pricing_rule', 'maximum_use', 'used'],
     };
   }
 }

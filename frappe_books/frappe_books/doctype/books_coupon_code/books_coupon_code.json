@@ -28,11 +28,11 @@
    "label": "Default"
   },
   {
-   "description": "Coupon Name",
    "fieldname": "coupon_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Name",
+   "placeholder": "Coupon Name",
    "reqd": 1
   },
   {
@@ -48,6 +48,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Pricing Rule",
+   "only_select": 1,
    "options": "Books Pricing Rule",
    "reqd": 1
   },
@@ -103,7 +104,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 07:25:34.948290",
+ "modified": "2026-09-30 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Coupon Code",

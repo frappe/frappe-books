@@ -18,7 +18,7 @@ export interface Presentation {
   rowEditTables?: string[];
   /** Choices of fields the DocType cannot list, like the doctypes a DocType reference allows. */
   options?: Record<string, SelectOption[]>;
-  /** The field that asks for a document's name when its DocType names by prompt. */
+  /** The name's field: it asks for the name when the DocType names by prompt, else labels it. */
   nameField?: { label: string; placeholder?: string };
 }
 
@@ -182,7 +182,8 @@ function getNameFields(
   fields: Field[]
 ): Field[] {
   if (meta.autoname?.toLowerCase() !== 'prompt') {
-    const idField = { fieldname: 'name', label: 'ID', fieldtype: 'Data' };
+    const label = presentation.nameField?.label ?? 'ID';
+    const idField = { fieldname: 'name', label, fieldtype: 'Data' };
     return [...fields, { ...idField, meta: true } as Field];
   }
 

@@ -26,7 +26,7 @@ await build({
       export { getMissingMandatoryFields } from './fyo/model/helpers';
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
-      export { frappeModels, models } from './models';
+      export { frappeModels, getRegionalFrappeModels, models } from './models';
     `,
     resolveDir: frontend,
   },
@@ -90,6 +90,7 @@ export const {
   evaluateRequired,
   errors,
   frappeModels,
+  getRegionalFrappeModels,
   models,
 } = createRequire(import.meta.url)(output);
 

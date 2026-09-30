@@ -4,8 +4,9 @@
 from decimal import Decimal
 
 import frappe
+from frappe.api.v2 import run_doc_method
 from frappe.tests import IntegrationTestCase
-from frappe.utils import flt, nowdate
+from frappe.utils import flt, nowdate, set_request
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, make_number_series
@@ -118,6 +119,35 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 			self.assertRaises(frappe.PermissionError),
 		):
 			journal_entry.preview()
+
+	def test_the_client_copy_submits_and_cancels_through_run_doc_method(self):
+		journal_entry = make_journal_entry(
+			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+		)
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
+		for method, docstatus in (("submit", 1), ("cancel", 2)):
+			# /books sends the DocType's fields, and the stamps Frappe compares.
+			document = client_copy(journal_entry)
+			run_doc_method(method, document)
+			journal_entry.reload()
+			self.assertEqual(journal_entry.docstatus, docstatus)
+
+		draft = make_journal_entry(
+			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+		)
+		without_creation = client_copy(draft)
+		without_creation.pop("creation")
+		with self.assertRaises(frappe.CannotChangeConstantError):
+			run_doc_method("submit", without_creation)
+
+
+def client_copy(doc):
+	fields = [df.fieldname for df in doc.meta.fields if df.fieldtype not in ("Section Break", "Column Break")]
+	values = {fieldname: doc.get(fieldname) for fieldname in fields}
+	values["accounts"] = [row.as_dict() for row in doc.accounts]
+	stamps = {key: str(doc.get(key)) for key in ("modified", "creation")}
+	standard = {"name": doc.name, "owner": doc.owner, "docstatus": doc.docstatus, "doctype": doc.doctype}
+	return {**values, **stamps, **standard}
 
 
 def make_journal_entry(accounts):

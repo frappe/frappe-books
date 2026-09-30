@@ -357,10 +357,13 @@ test('submit and cancel run the document methods on the client copy', async () =
     [submit.document.creation, submit.document.owner],
     [saved.creation, saved.owner]
   );
+  assert.equal(submit.document.docstatus, 0);
 
   await order.cancel();
   assert.equal(order.cancelled, true);
   assert.equal(requests.at(-1).body.method, 'cancel');
+  // Frappe refuses a copy whose status differs from the one it holds.
+  assert.equal(requests.at(-1).body.document.docstatus, 1);
   assert.equal(order.canDelete, true);
 });
 

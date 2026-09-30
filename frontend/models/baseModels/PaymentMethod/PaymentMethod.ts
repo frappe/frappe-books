@@ -8,6 +8,7 @@ export class PaymentMethod extends FrappeDoc {
     label: 'Payment Method',
     nameField: { label: 'Name' },
     quickEditFields: ['name', 'type', 'account', 'requires_clearance_date'],
+    fields: { account: { create: false } },
   };
 
   static getListViewSettings(): ListViewSettings {

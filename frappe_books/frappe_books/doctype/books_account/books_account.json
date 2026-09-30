@@ -42,7 +42,6 @@
    "fieldtype": "Link",
    "label": "Parent Account",
    "mandatory_depends_on": "eval:!doc.is_group",
-   "only_select": 1,
    "options": "Books Account",
    "set_only_once": 1
   },
@@ -89,7 +88,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-09-30 19:00:00.000000",
+ "modified": "2026-10-01 00:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Account",

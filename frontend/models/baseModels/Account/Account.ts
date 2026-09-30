@@ -26,6 +26,7 @@ export class Account extends FrappeDoc {
       'account_type',
       'is_group',
     ],
+    fields: { parent_books_account: { create: false } },
   };
   static override previewMethod = 'preview';
 

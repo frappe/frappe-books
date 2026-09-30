@@ -12,6 +12,7 @@ export class PaymentFor extends FrappeDoc {
           { value: 'Books Purchase Invoice', label: 'Purchase' },
         ],
       },
+      reference_name: { create: false },
     },
   };
   // A new invoice's outstanding amount, as Books formulas recalculated it.

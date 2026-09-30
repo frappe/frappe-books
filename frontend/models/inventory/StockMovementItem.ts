@@ -10,6 +10,7 @@ import {
 export class StockMovementItem extends FrappeDoc {
   static override presentation = {
     label: 'Stock Movement Item',
+    fields: { transfer_unit: { create: false } },
     quickEditFields: [
       'item',
       'from_location',

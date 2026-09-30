@@ -6,13 +6,14 @@ import {
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { PurchaseReceiptItem } from './PurchaseReceiptItem';
-import { StockTransfer } from './StockTransfer';
+import { StockTransfer, transferLinks } from './StockTransfer';
 
 export class PurchaseReceipt extends StockTransfer {
   static override doctype = 'Books Purchase Receipt';
   static override presentation = {
     label: 'Purchase Receipt',
     nameField: { label: 'Transfer No', hidden: true },
+    fields: transferLinks,
   };
   static override rowModels = { items: PurchaseReceiptItem };
   static override invoiceSchemaName = ModelNameEnum.PurchaseInvoice;

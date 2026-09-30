@@ -2,6 +2,10 @@ import type { ChangeArg, FiltersMap } from 'fyo/model/types';
 import { addItem, getMappedValues } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
+
+/** Links of a shipment or purchase receipt that offer no Create, as before. */
+export const transferLinks = withoutCreate(['back_reference', 'return_against']);
 
 /**
  * A shipment or purchase receipt, served by Frappe. Its `preview` fills the

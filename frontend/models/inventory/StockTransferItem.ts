@@ -1,6 +1,10 @@
 import type { HiddenMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 import { getStockRowHiddenMap, stockRowDerivedFields } from './stockRows';
+
+/** Links of a shipment or purchase receipt row that offer no Create, as before. */
+export const transferRowLinks = withoutCreate(['item', 'transfer_unit', 'batch']);
 
 /** The fields a shipment or purchase receipt row editor shows. */
 export const transferRowFields = [

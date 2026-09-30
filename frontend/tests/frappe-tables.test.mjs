@@ -189,3 +189,15 @@ test('a model labels the name of a doctype that names itself', () => {
   assert.equal(field('Bill', 'name').label, 'Bill No');
   assert.equal(field('Bill', 'name').meta, true);
 });
+
+test('a doctype named from its number series names new documents as Books does', () => {
+  const meta = {
+    name: 'Books Bill Run',
+    permissions: [],
+    fields: [{ fieldname: 'number_series', fieldtype: 'Link', label: 'Series' }],
+  };
+  const context = { schemaNames: {}, roles: [], placements: {} };
+
+  assert.equal(toSchema(meta, 'BillRun', { label: 'Bill Run' }, context).naming, 'numberSeries');
+  assert.equal(getSchema('Bill').naming, 'random');
+});

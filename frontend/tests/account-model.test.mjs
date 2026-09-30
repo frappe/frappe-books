@@ -163,3 +163,14 @@ test('the account list shows its name, root type, group and parent', () => {
     'parent_books_account',
   ]);
 });
+
+test('an account saves without the nested set Frappe keeps', () => {
+  const account = savedAccount({
+    account_name: 'Petty Cash',
+    parent_books_account: 'Cash In Hand',
+  });
+  const values = account.getFrappeValues();
+  for (const fieldname of ['lft', 'rgt', 'old_parent']) {
+    assert.equal(fieldname in values, false);
+  }
+});

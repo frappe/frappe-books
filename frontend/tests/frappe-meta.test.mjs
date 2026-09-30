@@ -69,10 +69,12 @@ test('DocField properties become Books field properties', () => {
   assert.equal(field('rate').minvalue, 0);
   assert.equal(field('income_account').placeholder, 'Income');
   assert.equal(field('income_account').required, true);
-  // Links and tables target Books schema names; `only_select` hides Create.
+  // Links and tables target Books schema names; a model can hide Create.
   assert.equal(field('income_account').target, 'Account');
   assert.equal(field('income_account').create, true);
   assert.equal(field('unit').create, false);
+  const rows = getSchema('UOMConversionItem').fields;
+  assert.equal(rows.find((f) => f.fieldname === 'uom').create, false);
   assert.equal(field('uom_conversions').target, 'UOMConversionItem');
   // Rules that depend on values are left to the doc.
   assert.equal(field('track_item').hidden, undefined);

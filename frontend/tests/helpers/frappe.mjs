@@ -173,7 +173,6 @@ export const itemMeta = {
       fieldtype: 'Link',
       label: 'Unit',
       options: 'Books Uom',
-      only_select: 1,
     },
     { fieldname: 'inventory_tab', fieldtype: 'Tab Break', label: 'Inventory' },
     {
@@ -280,6 +279,8 @@ export async function loadTestDocTypes() {
       label: 'Item',
       nameField: { label: 'Item Name', placeholder: 'Item Name' },
       quickEditFields: ['rate'],
+      fields: { unit: { create: false } },
+      tables: { uom_conversions: { uom: { create: false } } },
     };
     static previewMethod = 'preview';
   }

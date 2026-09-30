@@ -7,6 +7,7 @@ import {
   getSchema,
   loadFrappeDocTypes,
   models,
+  newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
@@ -135,4 +136,22 @@ test('number series links filter and create by reference_type', async () => {
   assert.deepEqual(Defaults.createFilters.shipmentNumberSeries(), {
     reference_type: 'Shipment',
   });
+});
+
+test('a currency created from /books is inserted enabled, for link pickers', async () => {
+  const requests = stubFrappe(({ body }) => ({
+    data: { ...body, name: body.currency_name, modified: '' },
+  }));
+  const currency = newFrappeDoc('Currency', { name: 'Test Coin' });
+  await currency.set('symbol', 'TC');
+  clearTimeout(currency._previewTimer);
+  await currency.sync();
+
+  const [insert] = requests.filter(({ method }) => method === 'POST');
+  assert.equal(insert.path, '/api/v2/document/Currency');
+  assert.deepEqual(
+    [insert.body.currency_name, insert.body.symbol, insert.body.enabled],
+    ['Test Coin', 'TC', 1]
+  );
+  assert.equal(currency.name, 'Test Coin');
 });

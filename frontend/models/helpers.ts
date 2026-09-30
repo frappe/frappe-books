@@ -23,6 +23,10 @@ import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
 import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { getSerialNumbersForQuantity } from './inventory/helpers';
+import type { DocValues } from 'src/frappe/api';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { newFrappeDocFromValues } from 'src/frappe/documents';
+import { call } from 'src/web/api';
 
 const MAPPER_MODULES: Record<string, string> = {
   Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
@@ -46,6 +50,11 @@ export async function getMappedDoc(
   mapper: string
 ): Promise<Doc> {
   const method = `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
+  if (isFrappeBacked(schemaName)) {
+    const mapped = await call<DocValues>(method, { source_name: source.name });
+    return newFrappeDocFromValues(schemaName, mapped);
+  }
+
   const values = await source.fyo.db.getMapped(
     schemaName,
     method,

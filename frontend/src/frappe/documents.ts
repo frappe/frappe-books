@@ -1,8 +1,10 @@
 import type { DocValueMap } from 'fyo/core/types';
 import { NotFoundError } from 'fyo/utils/errors';
 import { fyo } from 'src/initFyo';
+import type { DocValues } from './api';
 import type { FrappeDoc } from './document';
 import { getDocType } from './doctypes';
+import { toDocValues } from './values';
 
 /** Open Frappe documents by schema and name, so a form, a quick edit and a link share one. */
 const docs = new Map<string, FrappeDoc>();
@@ -17,6 +19,18 @@ export function newFrappeDoc(
   doc.name ??= fyo.doc.getTemporaryName(schema);
   keep(doc);
   return doc;
+}
+
+/** An unsaved document of the values Frappe sent, such as a mapper's. */
+export function newFrappeDocFromValues(
+  schemaName: string,
+  values: DocValues
+): FrappeDoc {
+  const { schema } = getDocType(schemaName);
+  const docValues = toDocValues(schema, values, fyo, (target) => {
+    return getDocType(target).schema;
+  });
+  return newFrappeDoc(schemaName, docValues);
 }
 
 /** An open document, reloaded if asked and unedited, or the saved one loaded. */

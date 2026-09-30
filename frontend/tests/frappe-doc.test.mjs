@@ -290,6 +290,8 @@ test('submit and cancel run the document methods on the client copy', async () =
   await order.cancel();
   assert.equal(order.cancelled, true);
   assert.equal(requests.at(-1).body.method, 'cancel');
+  // Frappe checks the copy moves from the saved docstatus.
+  assert.equal(requests.at(-1).body.document.docstatus, 1);
   assert.equal(order.canDelete, true);
 });
 

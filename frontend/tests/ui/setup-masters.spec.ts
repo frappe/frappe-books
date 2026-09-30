@@ -68,6 +68,30 @@ test('a new currency saves under the name typed', async ({ page }) => {
   ).toBeDisabled();
 });
 
+test('a new number series saves with a labelled reference type', async ({
+  page,
+}) => {
+  const name = `NS${Date.now()}-`;
+  await openNewEntry(page, 'NumberSeries');
+
+  await page.getByRole('textbox', { name: 'Prefix', exact: true }).fill(name);
+  await page.getByRole('combobox', { name: 'Reference Type' }).click();
+  await page
+    .getByRole('option', { name: 'Sales Invoice', exact: true })
+    .click();
+
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'Yes', exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/books/edit/NumberSeries/${encodeURIComponent(name)}$`)
+  );
+  const response = await page.request.get(
+    `/api/v2/document/Books Number Series/${encodeURIComponent(name)}`
+  );
+  const { data } = await response.json();
+  expect([data.reference_type, data.current]).toEqual(['SalesInvoice', 1000]);
+});
+
 async function openNewEntry(page: Page, schemaName: string) {
   await page.goto(`/books/list/${schemaName}`);
   await waitForBooks(page);

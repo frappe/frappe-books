@@ -6,6 +6,7 @@ import {
   fyo,
   getSchema,
   loadFrappeDocTypes,
+  models,
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
@@ -89,4 +90,49 @@ test('a currency shows its name, fraction and symbol, not Frappe-only settings',
   assert.deepEqual(currency.quickEditFields, ['symbol']);
   const name = currency.fields.find((field) => field.fieldname === 'name');
   assert.equal(name.label, 'Currency Name');
+});
+
+test('a number series shows its prefix, counter and labelled reference types', () => {
+  const series = getSchema('NumberSeries');
+  assert.deepEqual(getLayout('NumberSeries'), [
+    'name | Prefix | ',
+    'start | Start | ',
+    'pad_zeros | Pad Zeros | ',
+    'reference_type | Reference Type | ',
+    'current | Current | ',
+  ]);
+  assert.deepEqual(series.quickEditFields, [
+    'reference_type',
+    'start',
+    'pad_zeros',
+  ]);
+  const referenceType = series.fields.find(
+    (field) => field.fieldname === 'reference_type'
+  );
+  const labels = Object.fromEntries(
+    referenceType.options.map(({ value, label }) => [value, label])
+  );
+  assert.equal(labels.SalesInvoice, 'Sales Invoice');
+  assert.equal(labels.Payment, 'Payment');
+});
+
+test('number series links filter and create by reference_type', async () => {
+  const { Defaults, SalesInvoice, Payment, JournalEntry, StockMovement } =
+    models;
+  const invoice = { schemaName: 'SalesInvoice' };
+  assert.deepEqual(await SalesInvoice.filters.numberSeries(invoice), {
+    reference_type: 'SalesInvoice',
+  });
+  assert.deepEqual(Payment.filters.numberSeries(), {
+    reference_type: 'Payment',
+  });
+  assert.deepEqual(JournalEntry.filters.numberSeries(), {
+    reference_type: 'JournalEntry',
+  });
+  assert.deepEqual(StockMovement.filters.numberSeries(), {
+    reference_type: 'StockMovement',
+  });
+  assert.deepEqual(Defaults.createFilters.shipmentNumberSeries(), {
+    reference_type: 'Shipment',
+  });
 });

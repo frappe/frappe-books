@@ -12,6 +12,7 @@ from frappe_books.accounting.ledger import (
 	validate_leaf_accounts,
 )
 from frappe_books.accounting.money import as_decimal
+from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.status import StatusMixin
 
@@ -56,6 +57,12 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Journal Entry"
+
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill the values a save would fill, without saving, for the form to show them."""
+		check_preview_permission(self)
+		self.set_number_series()
 
 	def validate(self):
 		if len(self.accounts) < 2:

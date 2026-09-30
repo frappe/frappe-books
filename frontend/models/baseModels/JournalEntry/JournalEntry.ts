@@ -1,39 +1,55 @@
 import { Fyo } from 'fyo';
-import { Doc } from 'fyo/model/doc';
 import {
   Action,
-  DefaultMap,
+  ChangeArg,
   FiltersMap,
-  HiddenMap,
   ListViewSettings,
 } from 'fyo/model/types';
-import {
-  getDocStatusListColumn,
-  getLedgerLinkAction,
-  getNumberSeries,
-} from 'models/helpers';
-import { Transactional } from 'models/Transactional/Transactional';
+import { getDocStatusListColumn, getLedgerLinkAction } from 'models/helpers';
+import { Money } from 'pesa';
+import { FrappeDoc } from 'src/frappe/document';
+import { JournalEntryAccount } from '../JournalEntryAccount/JournalEntryAccount';
 
-export class JournalEntry extends Transactional {
-  accounts?: Doc[];
-
-  hidden: HiddenMap = {
-    referenceNumber: () =>
-      !(this.referenceNumber || !(this.isSubmitted || this.isCancelled)),
-    referenceDate: () =>
-      !(this.referenceDate || !(this.isSubmitted || this.isCancelled)),
-    userRemark: () =>
-      !(this.userRemark || !(this.isSubmitted || this.isCancelled)),
-    attachment: () =>
-      !(this.attachment || !(this.isSubmitted || this.isCancelled)),
+/**
+ * Books Journal Entry, served by Frappe. Its controller fills the number
+ * series and checks that debits equal credits.
+ */
+export class JournalEntry extends FrappeDoc {
+  static override doctype = 'Books Journal Entry';
+  static override presentation = {
+    label: 'Journal Entry',
+    nameField: { label: 'Entry No' },
   };
+  static override previewMethod = 'preview';
+  static override rowModels = { accounts: JournalEntryAccount };
 
-  static defaults: DefaultMap = {
-    numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
-  };
+  get isTransactional() {
+    return true;
+  }
 
+  override async change(arg: ChangeArg) {
+    if (arg.changed === 'accounts') {
+      this.fillBalancingAmount();
+    }
+
+    await super.change(arg);
+  }
+
+  /** Mirrors Books: the first row without amounts takes what balances the entry. The server checks the balance. */
+  fillBalancingAmount() {
+    const debit = this.getSum('accounts', 'debit', false) as Money;
+    const difference = debit.sub(this.getSum('accounts', 'credit', false));
+    const row = ((this.accounts ?? []) as FrappeDoc[]).find(
+      (row) => (row.debit as Money).isZero() && (row.credit as Money).isZero()
+    );
+    if (row && !difference.isZero()) {
+      row[difference.isNegative() ? 'debit' : 'credit'] = difference.abs();
+    }
+  }
+
+  // Number series are still read through the bridge, so this uses its field names.
   static filters: FiltersMap = {
-    numberSeries: () => ({ referenceType: 'JournalEntry' }),
+    number_series: () => ({ referenceType: 'JournalEntry' }),
   };
 
   static getActions(fyo: Fyo): Action[] {
@@ -45,9 +61,9 @@ export class JournalEntry extends Transactional {
       columns: [
         'name',
         getDocStatusListColumn(),
-        'date',
-        'entryType',
-        'referenceNumber',
+        'posting_date',
+        'entry_type',
+        'reference_number',
       ],
     };
   }

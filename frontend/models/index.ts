@@ -7,7 +7,6 @@ import { Address } from './baseModels/Address/Address';
 import { Defaults } from './baseModels/Defaults/Defaults';
 import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
-import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
 import { Party } from './baseModels/Party/Party';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
@@ -64,8 +63,6 @@ export const models = {
   Defaults,
   ItemGroup,
   ItemEnquiry,
-  JournalEntry,
-  JournalEntryAccount,
   Misc,
   Lead,
   Party,
@@ -119,6 +116,7 @@ export const models = {
 export const frappeModels: Record<string, FrappeModel> = {
   AccountingLedgerEntry,
   Item,
+  JournalEntry,
   LoyaltyPointEntry,
   StockLedgerEntry,
 };

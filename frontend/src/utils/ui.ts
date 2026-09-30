@@ -14,7 +14,6 @@ import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { getLedgerLink } from 'models/helpers';
 import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { Transfer } from 'models/inventory/Transfer';
-import { Transactional } from 'models/Transactional/Transactional';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -738,7 +737,6 @@ function showSubmitToast(doc: Doc) {
 
 function getSubmitSuccessToastAction(doc: Doc) {
   const isStockTransfer = doc instanceof Transfer;
-  const isTransactional = doc instanceof Transactional;
 
   if (isStockTransfer) {
     return {
@@ -750,7 +748,7 @@ function getSubmitSuccessToastAction(doc: Doc) {
     };
   }
 
-  if (isTransactional) {
+  if (doc.isTransactional) {
     return {
       async action() {
         const route = getLedgerLink(doc, 'GeneralLedger');

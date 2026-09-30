@@ -10,6 +10,7 @@ import {
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
+import { getQuickEditFieldnames } from './helpers/accounting.mjs';
 
 const regionMeta = {
   name: 'Books Region',
@@ -84,4 +85,11 @@ test('the presentation labels options and can turn off new documents', () => {
     { value: 'Depot', label: 'Depot' },
   ]);
   assert.equal(schema.create, false);
+});
+
+test('quick edit asks for the naming field only in its header', () => {
+  assert.deepEqual(
+    getQuickEditFieldnames({ ...schema, quickEditFields: ['kind'] }),
+    ['kind']
+  );
 });

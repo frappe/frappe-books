@@ -1,5 +1,5 @@
-import { getFieldProperties } from 'schemas/fieldProperties';
-import type { Field, Naming, Schema } from 'schemas/types';
+import { getFieldProperties, isReferenceField } from 'schemas/fieldProperties';
+import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -8,6 +8,8 @@ export interface Presentation {
   quickEditFields?: string[];
   /** The name field: asked for when the DocType names by prompt, else shown read only. */
   nameField?: { label: string; placeholder?: string };
+  /** Properties a field shows with that its DocField has none for, like option labels or a link's grouping. */
+  fields?: Record<string, Partial<Field>>;
 }
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
@@ -43,7 +45,11 @@ export function toSchema(
   context: SchemaContext
 ): Schema {
   const fields = [
-    ...getNameFields(meta, presentation, getDocFields(meta, context)),
+    ...getNameFields(
+      meta,
+      presentation,
+      getDocFields(meta, context, presentation.fields ?? {})
+    ),
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 
@@ -65,7 +71,11 @@ export function toSchema(
 }
 
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
-function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
+function getDocFields(
+  meta: DocTypeMeta,
+  context: SchemaContext,
+  presented: Record<string, Partial<Field>>
+): Field[] {
   const levels = getPermlevels(meta, context.roles);
   const fields: Field[] = [];
   const placed: Field[] = [];
@@ -78,7 +88,12 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
     } else if (docfield.fieldtype === 'Section Break') {
       section = docfield.label || DEFAULT_SECTION;
     } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
-      const field = toField(docfield, context.schemaNames, levels);
+      const field = toField(
+        docfield,
+        context.schemaNames,
+        levels,
+        presented[docfield.fieldname]
+      );
       const placement = context.placements[docfield.fieldname];
       if (placement) {
         placed.push({
@@ -107,15 +122,17 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
 function toField(
   docfield: DocField,
   schemaNames: SchemaContext['schemaNames'],
-  levels: Permlevels
+  levels: Permlevels,
+  presented: Partial<Field> = {}
 ): Field {
   const properties = getFieldProperties(
-    { fieldname: docfield.fieldname } as Field,
+    { ...presented, fieldname: docfield.fieldname } as Field,
     docfield
   ) as Partial<Field> & { target?: string };
   const level = docfield.permlevel ?? 0;
   const field = {
     ...properties,
+    ...(isReferenceField(docfield) && getReferenceProperties(schemaNames)),
     fieldname: docfield.fieldname,
     label: docfield.label ?? docfield.fieldname,
     placeholder: docfield.placeholder,
@@ -123,6 +140,7 @@ function toField(
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
+    ...presented,
   } as Field & { target?: string; create?: boolean };
 
   if (properties.target) {
@@ -134,6 +152,17 @@ function toField(
   }
 
   return field;
+}
+
+/** A field that holds a doctype offers the Books doctypes, shown by their schema names. */
+function getReferenceProperties(
+  schemaNames: SchemaContext['schemaNames']
+): Partial<OptionField> {
+  const options = Object.entries(schemaNames).map(([doctype, schemaName]) => ({
+    value: doctype,
+    label: schemaName ?? doctype,
+  }));
+  return { fieldtype: 'Select', options };
 }
 
 /**

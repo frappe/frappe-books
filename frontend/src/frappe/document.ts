@@ -43,6 +43,8 @@ export class FrappeDoc extends Doc {
   static presentation: Presentation = { label: '' };
   /** A whitelisted method that fills what a save would; previewed while the user edits. */
   static previewMethod?: string;
+  /** The models of a table's rows by table fieldname; other rows are plain `FrappeDoc`s. */
+  static rowModels: Record<string, typeof FrappeDoc> = {};
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();

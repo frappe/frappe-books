@@ -62,6 +62,16 @@ export function getSearchFields(schemaName: string): string[] {
     .filter(Boolean);
 }
 
+/** The schema that shows `name`: a schema name, or a DocType that a Frappe-backed document holds. */
+export function toSchemaName(name: string): string | undefined {
+  if (getSchema(name)) {
+    return name;
+  }
+
+  const schemaName = getSchemaNames()[name];
+  return schemaName && getSchema(schemaName) ? schemaName : undefined;
+}
+
 /** The model whose statics (actions, list settings, link filters) present a schema. */
 export function getModel(schemaName: string): typeof Doc | undefined {
   return isFrappeBacked(schemaName)
@@ -81,18 +91,23 @@ async function loadDocType(schemaName: string, Model: FrappeModel) {
     Model,
     placements
   );
-  docType.tables = getTables(docType.meta, byName);
+  docType.tables = getTables(docType.meta, byName, Model);
   setDocType(schemaName, docType);
 }
 
-function getTables(meta: DocTypeMeta, byName: Map<string, DocTypeMeta>) {
+function getTables(
+  meta: DocTypeMeta,
+  byName: Map<string, DocTypeMeta>,
+  Model: FrappeModel
+) {
   const tables: FrappeDocType['tables'] = {};
   for (const field of meta.fields) {
     const child =
       field.fieldtype === 'Table' ? byName.get(field.options!) : undefined;
     if (child) {
       const name = getSchemaNames()[child.name] ?? child.name;
-      tables[field.fieldname] = toDocType(child, name, FrappeDoc, {});
+      const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;
+      tables[field.fieldname] = toDocType(child, name, RowModel, {});
     }
   }
 
@@ -105,9 +120,10 @@ function toDocType(
   Model: FrappeModel,
   placements: Placements
 ): FrappeDocType {
-  const presentation: Presentation = meta.istable
-    ? { label: meta.name }
-    : Model.presentation;
+  const presentation: Presentation = {
+    ...Model.presentation,
+    label: Model.presentation.label || meta.name,
+  };
   const schema = toSchema(meta, schemaName, presentation, {
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],

@@ -1,5 +1,5 @@
 <script>
-import { getSchema } from 'src/frappe/registry';
+import { toSchemaName } from 'src/frappe/registry';
 import Link from './Link.vue';
 export default {
   name: 'DynamicLink',
@@ -35,11 +35,7 @@ export default {
         return null;
       }
 
-      if (!getSchema(schemaName)) {
-        return null;
-      }
-
-      return schemaName;
+      return toSchemaName(schemaName) ?? null;
     },
   },
 };

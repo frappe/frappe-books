@@ -16,7 +16,7 @@ export class SalesQuote extends Invoice {
     | ModelNameEnum.Lead;
 
   static filters: FiltersMap = {
-    numberSeries: (doc: Doc) => ({ referenceType: doc.schemaName }),
+    numberSeries: (doc: Doc) => ({ reference_type: doc.schemaName }),
   };
 
   static getListViewSettings(): ListViewSettings {

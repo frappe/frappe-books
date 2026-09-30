@@ -7,16 +7,67 @@ export const mapping = readJson(
 ).doctypes;
 export const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 
-/** A doctype's JSON, then those of its tables, as `getdoctype` sends them. */
+/**
+ * A doctype's meta and its tables' meta, with fields in field order, as
+ * Frappe's getdoctype sends them. Currency is Frappe's own doctype.
+ */
 export function getMetaBundle(name) {
-  const find = (doctypeName) =>
-    doctypes.find((doctype) => doctype.name === doctypeName);
-  const doctype = find(name);
-  const tables = doctype.fields
+  const meta = getMeta(name);
+  const tables = meta.fields
     .filter((field) => field.fieldtype === 'Table')
-    .map((field) => find(field.options));
-  return [doctype, ...tables];
+    .map((field) => getMeta(field.options));
+  return [meta, ...tables];
 }
+
+function getMeta(name) {
+  const meta = [...doctypes, currencyMeta].find((meta) => meta.name === name);
+  const order = meta.field_order ?? [];
+  const fields = [...meta.fields].sort(
+    (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
+  );
+  return { ...meta, fields };
+}
+
+// Frappe's Currency, which the app does not ship.
+const currencyMeta = {
+  name: 'Currency',
+  autoname: 'field:currency_name',
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'currency_name',
+      fieldtype: 'Data',
+      label: 'Currency Name',
+      reqd: 1,
+    },
+    {
+      fieldname: 'enabled',
+      fieldtype: 'Check',
+      label: 'Enabled',
+      default: '0',
+    },
+    { fieldname: 'fraction', fieldtype: 'Data', label: 'Fraction' },
+    { fieldname: 'fraction_units', fieldtype: 'Int', label: 'Fraction Units' },
+    {
+      fieldname: 'smallest_currency_fraction_value',
+      fieldtype: 'Currency',
+      label: 'Smallest Currency Fraction Value',
+    },
+    { fieldname: 'symbol', fieldtype: 'Data', label: 'Symbol' },
+    {
+      fieldname: 'number_format',
+      fieldtype: 'Select',
+      label: 'Number Format',
+      options: '\n#,###.##\n#.###,##',
+    },
+    {
+      fieldname: 'symbol_on_right',
+      fieldtype: 'Check',
+      label: 'Show Currency Symbol on Right Side',
+      default: '0',
+    },
+  ],
+};
 
 function readDoctypes(directory) {
   const entries = readdirSync(directory, { withFileTypes: true });

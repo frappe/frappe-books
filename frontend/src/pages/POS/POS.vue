@@ -245,12 +245,16 @@ import { shortcutsKey } from 'src/utils/injectionKeys';
 import PageHeader from 'src/components/PageHeader.vue';
 import { computed, defineComponent, inject, nextTick } from 'vue';
 import { call } from 'src/web/api';
-import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
 import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
 } from 'models/baseModels/PaymentMethod/requirements';
-import { BridgeItem, ModalName, modalNames } from 'src/components/POS/types';
+import {
+  BridgeItem,
+  ModalName,
+  modalNames,
+  PaymentMethodOption,
+} from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
@@ -921,10 +925,11 @@ export default defineComponent({
         throw new ValidationError(t`Please enter an amount greater than zero.`);
       }
 
+      // POS reads payment methods through the bridge, by Books field names.
       const paymentMethod = (await this.fyo.doc.getDoc(
         ModelNameEnum.PaymentMethod,
         this.paymentMethod
-      )) as PaymentMethod;
+      )) as PaymentMethodOption;
       const requirements = getPaymentMethodRequirements(
         paymentMethod.type,
         paymentMethod.requiresClearanceDate

@@ -62,12 +62,18 @@ export default {
       }
 
       if (isFrappeBacked(schemaName)) {
-        return await searchFrappeLink(
+        const options = await searchFrappeLink(
           schemaName,
           keyword,
           filters,
           LINK_PAGE_LENGTH
         );
+        return schemaName === 'Account'
+          ? options.map((option) => ({
+              ...option,
+              label: getAccountLabel(fyo, option.label),
+            }))
+          : options;
       }
 
       const schema = fyo.schemaMap[schemaName];

@@ -27,11 +27,11 @@
    "options": "Books Account"
   },
   {
-   "description": "0%",
    "fieldname": "rate",
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Rate",
+   "placeholder": "0%",
    "reqd": 1
   }
  ],
@@ -39,7 +39,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.720094",
+ "modified": "2026-09-30 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Tax Detail",

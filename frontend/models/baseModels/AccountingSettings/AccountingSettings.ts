@@ -45,11 +45,10 @@ export class AccountingSettings extends FrappeDoc {
   declare enable_point_of_sale_with_out_inventory?: boolean;
   declare enable_partial_payment?: boolean;
 
-  // Accounts are still read through the bridge, so these use its field names.
   static filters: FiltersMap = {
-    write_off_account: () => ({ isGroup: false, rootType: 'Expense' }),
-    round_off_account: () => ({ isGroup: false, rootType: 'Expense' }),
-    discount_account: () => ({ isGroup: false, rootType: 'Income' }),
+    write_off_account: () => ({ is_group: false, root_type: 'Expense' }),
+    round_off_account: () => ({ is_group: false, root_type: 'Expense' }),
+    discount_account: () => ({ is_group: false, root_type: 'Income' }),
   };
 
   // The server checks it too; mirrored to show the message at the field.

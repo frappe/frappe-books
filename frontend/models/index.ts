@@ -3,6 +3,7 @@ import type { FrappeModel } from 'src/frappe/doctypes';
 import { Account } from './baseModels/Account/Account';
 import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
+import { Currency } from './baseModels/Currency/Currency';
 import { Address } from './baseModels/Address/Address';
 import { CustomField } from './baseModels/CustomForm/CustomField';
 import { CustomForm } from './baseModels/CustomForm/CustomForm';
@@ -12,6 +13,7 @@ import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
 import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
+import { NumberSeries } from './baseModels/NumberSeries/NumberSeries';
 import { Party } from './baseModels/Party/Party';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
@@ -61,7 +63,6 @@ import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 
 export const models = {
-  Account,
   AccountingLedgerEntry,
   Address,
   Batch,
@@ -76,7 +77,6 @@ export const models = {
   CollectionRulesItems,
   CouponCode,
   Payment,
-  PaymentMethod,
   PaymentFor,
   PrintSettings,
   PriceList,
@@ -92,7 +92,6 @@ export const models = {
   SalesQuoteItem,
   SerialNumber,
   PrintTemplate,
-  Tax,
   TaxSummary,
   // Inventory Models
   StockMovement,
@@ -118,17 +117,22 @@ export const models = {
  * `models` when its module stops using the bridge; see docs/framework-backed-doctypes.md.
  */
 export const frappeModels: Record<string, FrappeModel> = {
+  Account,
   AccountingSettings,
+  Currency,
   CustomField,
   CustomForm,
-  GetStarted,
-  Item,
   Defaults,
+  GetStarted,
   InventorySettings,
+  Item,
   Misc,
+  NumberSeries,
   POSSettings,
+  PaymentMethod,
   SetupWizard,
   SystemSettings,
+  Tax,
 };
 
 export async function getRegionalModels(

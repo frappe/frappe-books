@@ -33,7 +33,7 @@ export class JournalEntry extends Transactional {
   };
 
   static filters: FiltersMap = {
-    numberSeries: () => ({ referenceType: 'JournalEntry' }),
+    numberSeries: () => ({ reference_type: 'JournalEntry' }),
   };
 
   static getActions(fyo: Fyo): Action[] {

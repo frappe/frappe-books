@@ -26,20 +26,19 @@ export class POSSettings extends FrappeDoc {
   declare hide_unavailable_items?: boolean;
   declare ignore_pricing_rule?: boolean;
 
-  // Accounts are still read through the bridge, so these use its field names.
   static filters: FiltersMap = {
     cash_account: () => ({
-      rootType: AccountRootTypeEnum.Asset,
-      accountType: AccountTypeEnum.Cash,
-      isGroup: false,
+      root_type: AccountRootTypeEnum.Asset,
+      account_type: AccountTypeEnum.Cash,
+      is_group: false,
     }),
     write_off_account: () => ({
-      isGroup: false,
-      rootType: AccountRootTypeEnum.Expense,
+      is_group: false,
+      root_type: AccountRootTypeEnum.Expense,
     }),
     default_account: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum.Receivable,
+      is_group: false,
+      account_type: AccountTypeEnum.Receivable,
     }),
   };
 

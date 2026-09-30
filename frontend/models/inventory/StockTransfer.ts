@@ -84,7 +84,7 @@ export abstract class StockTransfer extends Transfer {
     party: (doc: Doc) => ({
       role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
     }),
-    numberSeries: (doc: Doc) => ({ referenceType: doc.schemaName }),
+    numberSeries: (doc: Doc) => ({ reference_type: doc.schemaName }),
     backReference: () => ({
       stockNotTransferred: ['!=', 0],
       submitted: true,

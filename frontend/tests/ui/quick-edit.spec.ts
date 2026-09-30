@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { routeAccounts } from './helpers/accounts';
 import { useBooksSession } from './helpers/session';
 
 const accountNames = [
@@ -10,42 +11,26 @@ const accountNames = [
 useBooksSession();
 
 test.beforeEach(async ({ page }) => {
-  await page.evaluate(async (names) => {
+  // Fixture accounts exist only in these responses, not on the site.
+  const accounts = accountNames.map((name) => ({
+    name,
+    root_type: 'Asset',
+    account_type: 'Cash',
+    is_group: 0 as const,
+  }));
+  await routeAccounts(page, accounts);
+  await page.evaluate(async () => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins
       .find((m: any) => m.computed?.fyo)
       .computed.fyo();
-    const accounts = names.map((name) => {
-      const doc = fyo.doc.getNewDoc('Account', {
-        name,
-        rootType: 'Asset',
-        accountType: 'Cash',
-        isGroup: false,
-      });
-      // Keep fixture accounts in the browser cache without saving records.
-      doc._dirty = false;
-      doc._notInserted = false;
-      return doc;
-    });
-    // Fixture records exist only in the browser, so they keep the doctype-level rights.
+    // The fixture accounts keep the doctype-level rights.
     fyo.db.getDocPermissions = async () => undefined;
-    const getAll = fyo.db.getAll.bind(fyo.db);
-    fyo.db.getAll = (schemaName: string, ...args: unknown[]) => {
-      if (schemaName === 'Account') {
-        return accounts.map((doc: any) => ({
-          name: doc.name,
-          rootType: doc.rootType,
-          accountType: doc.accountType,
-          isGroup: doc.isGroup,
-        }));
-      }
-      return getAll(schemaName, ...args);
-    };
     await app.config.globalProperties.$router.push({
       path: '/chart-of-accounts',
       query: { source: 'sidebar-test' },
     });
-  }, accountNames);
+  });
 });
 
 for (const closeWith of ['button', 'Escape', 'Back']) {

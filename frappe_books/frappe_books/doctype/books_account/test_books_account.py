@@ -4,7 +4,9 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import make_account, unique_name
+from frappe_books.tests.accounting import ensure_user, make_account, unique_name
+
+READ_ONLY_USER = "books-account-preview-reader@example.com"
 
 
 class IntegrationTestBooksAccount(IntegrationTestCase):
@@ -12,7 +14,7 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 		root = make_account("Protected Assets", is_group=1)
 		child = make_account("Disposable Cash", parent_books_account=root.name)
 		child.delete()
-		with self.assertRaisesRegex(frappe.ValidationError, "Root.*cannot be deleted"):
+		with self.assertRaisesRegex(frappe.ValidationError, "Root accounts cannot be deleted"):
 			root.delete()
 		self.assertTrue(frappe.db.exists(root.doctype, root.name))
 
@@ -59,3 +61,18 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 		)
 
 		self.assertRaises(frappe.ValidationError, child.insert)
+
+	def test_preview_fills_the_group_types_without_saving(self):
+		parent = make_account("Preview Banks", is_group=1, account_type="Bank")
+		child = frappe.new_doc("Books Account", account_name=unique_name("Preview Current"))
+		child.update({"root_type": "Income", "parent_books_account": parent.name})
+
+		child.preview()
+
+		self.assertEqual((child.root_type, child.account_type), ("Asset", "Bank"))
+		self.assertFalse(frappe.db.exists("Books Account", child.account_name))
+
+	def test_preview_needs_the_right_to_make_accounts(self):
+		account = frappe.new_doc("Books Account")
+		with self.set_user(ensure_user(READ_ONLY_USER)), self.assertRaises(frappe.PermissionError):
+			account.preview()

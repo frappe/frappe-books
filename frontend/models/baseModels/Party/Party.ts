@@ -41,14 +41,14 @@ export class Party extends Doc {
       const role = doc.role as PartyRole;
       if (role === 'Both') {
         return {
-          isGroup: false,
-          accountType: ['in', ['Payable', 'Receivable']],
+          is_group: false,
+          account_type: ['in', ['Payable', 'Receivable']],
         };
       }
 
       return {
-        isGroup: false,
-        accountType: role === 'Customer' ? 'Receivable' : 'Payable',
+        is_group: false,
+        account_type: role === 'Customer' ? 'Receivable' : 'Payable',
       };
     },
   };

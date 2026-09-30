@@ -16,7 +16,7 @@ import { evaluateCondition, type EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
 import type { DocField } from './meta';
-import type { Presentation } from './schema';
+import { getNamingField, type Presentation } from './schema';
 import { toDocValues, toFrappeValue } from './values';
 
 const PREVIEW_DELAY = 300;
@@ -70,6 +70,10 @@ export class FrappeDoc extends Doc {
 
   get previewMethod(): string | undefined {
     return (this.constructor as typeof FrappeDoc).previewMethod;
+  }
+
+  get namingField(): string | undefined {
+    return getNamingField(getDocType(this.schemaName).meta);
   }
 
   /** Whether the DocField's depends_on, read_only_depends_on or mandatory_depends_on applies. */
@@ -170,7 +174,9 @@ export class FrappeDoc extends Doc {
 
   override async _insert() {
     await this._preSync();
-    const values = this.getFrappeValues();
+    const { insertValues } = (this.constructor as typeof FrappeDoc)
+      .presentation;
+    const values = { ...insertValues, ...this.getFrappeValues() };
     // A single always exists; a new copy of it replaces its values.
     const saved = this.schema.isSingle
       ? await api.updateDocument(this.doctype, this.frappeName, values)
@@ -326,6 +332,11 @@ export class FrappeDoc extends Doc {
   override async change({ changed }: ChangeArg) {
     if (changed) {
       this._serverFilled.delete(changed);
+    }
+
+    // An unsaved document shows the name Frappe will give it.
+    if (changed && changed === this.namingField && this.notInserted) {
+      this.name = this[changed] as string;
     }
 
     this.schedulePreview();

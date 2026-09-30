@@ -37,39 +37,38 @@ export class Defaults extends FrappeDoc {
   declare pos_customer?: string;
   declare pos_cash_denominations?: (FrappeDoc & { denomination?: Money })[];
 
-  // Linked doctypes are still read through the bridge, so these use its field names.
   static commonFilters: FiltersMap = {
     sales_payment_account: () => ({
-      isGroup: false,
-      accountType: ['in', ['Cash', 'Bank']],
+      is_group: false,
+      account_type: ['in', ['Cash', 'Bank']],
     }),
     purchase_payment_account: () => ({
-      isGroup: false,
-      accountType: ['in', ['Cash', 'Bank']],
+      is_group: false,
+      account_type: ['in', ['Cash', 'Bank']],
     }),
     sales_quote_number_series: () => ({
-      referenceType: ModelNameEnum.SalesQuote,
+      reference_type: ModelNameEnum.SalesQuote,
     }),
     sales_invoice_number_series: () => ({
-      referenceType: ModelNameEnum.SalesInvoice,
+      reference_type: ModelNameEnum.SalesInvoice,
     }),
     purchase_invoice_number_series: () => ({
-      referenceType: ModelNameEnum.PurchaseInvoice,
+      reference_type: ModelNameEnum.PurchaseInvoice,
     }),
     journal_entry_number_series: () => ({
-      referenceType: ModelNameEnum.JournalEntry,
+      reference_type: ModelNameEnum.JournalEntry,
     }),
     payment_number_series: () => ({
-      referenceType: ModelNameEnum.Payment,
+      reference_type: ModelNameEnum.Payment,
     }),
     stock_movement_number_series: () => ({
-      referenceType: ModelNameEnum.StockMovement,
+      reference_type: ModelNameEnum.StockMovement,
     }),
     shipment_number_series: () => ({
-      referenceType: ModelNameEnum.Shipment,
+      reference_type: ModelNameEnum.Shipment,
     }),
     purchase_receipt_number_series: () => ({
-      referenceType: ModelNameEnum.PurchaseReceipt,
+      reference_type: ModelNameEnum.PurchaseReceipt,
     }),
     sales_quote_print_template: () => ({ type: ModelNameEnum.SalesQuote }),
     sales_invoice_print_template: () => ({ type: ModelNameEnum.SalesInvoice }),

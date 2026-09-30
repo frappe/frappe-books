@@ -25,19 +25,18 @@ export class InventorySettings extends FrappeDoc {
   declare enable_uom_conversions?: boolean;
   declare enable_point_of_sale?: boolean;
 
-  // Accounts are still read through the bridge, so these use its field names.
   static filters: FiltersMap = {
     stock_in_hand: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum.Stock,
+      is_group: false,
+      account_type: AccountTypeEnum.Stock,
     }),
     stock_received_but_not_billed: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum['Stock Received But Not Billed'],
+      is_group: false,
+      account_type: AccountTypeEnum['Stock Received But Not Billed'],
     }),
     cost_of_goods_sold: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum['Cost of Goods Sold'],
+      is_group: false,
+      account_type: AccountTypeEnum['Cost of Goods Sold'],
     }),
   };
 }

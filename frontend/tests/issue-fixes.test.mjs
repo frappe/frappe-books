@@ -168,23 +168,6 @@ test('stock transfers use only the value of their own rows, including partial re
   }
 });
 
-test('root groups can be recreated and edited but cannot be deleted', async () => {
-  const fyo = await makeFyo();
-  fyo.singles.AccountingSettings.setup_complete = true;
-  const root = fyo.doc.getNewDoc('Account', {
-    name: 'Restored Assets',
-    isGroup: true,
-    rootType: 'Asset',
-  });
-  assert.equal(root.required.parentAccount(), false);
-  await assert.rejects(root.beforeDelete(), /Root accounts cannot be deleted/);
-  const child = fyo.doc.getNewDoc('Account', {
-    name: 'Cash',
-    parentAccount: root.name,
-  });
-  await child.beforeDelete();
-});
-
 // The server's preview picks a country's chart; see test_books_setup_wizard.py.
 test('the setup wizard offers the charts the server lists', async () => {
   const fyo = await makeFyo();

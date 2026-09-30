@@ -3,16 +3,25 @@ import { NotFoundError } from 'fyo/utils/errors';
 import { fyo } from 'src/initFyo';
 import type { FrappeDoc } from './document';
 import { getDocType } from './doctypes';
+import { getNamingField } from './schema';
 
 /** Open Frappe documents by schema and name, so a form, a quick edit and a link share one. */
 const docs = new Map<string, FrappeDoc>();
 
-/** An unsaved document with its defaults and `values`, kept until it is saved or dropped. */
+/**
+ * An unsaved document with its defaults and `values`, kept until it is saved
+ * or dropped. A name given for a document named by a field goes in that field.
+ */
 export function newFrappeDoc(
   schemaName: string,
   values: DocValueMap = {}
 ): FrappeDoc {
-  const { Model, schema } = getDocType(schemaName);
+  const { Model, schema, meta } = getDocType(schemaName);
+  const namingField = getNamingField(meta);
+  if (namingField && values.name) {
+    values = { ...values, [namingField]: values.name };
+  }
+
   const doc = new Model(schema, values, fyo, false) as FrappeDoc;
   doc.name ??= fyo.doc.getTemporaryName(schema);
   keep(doc);

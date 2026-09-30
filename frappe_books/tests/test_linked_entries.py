@@ -4,6 +4,7 @@ import re
 from unittest.mock import patch
 
 import frappe
+from frappe.core.doctype.permission_type.permission_type import get_doctype_ptype_map
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
@@ -114,7 +115,11 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		_ledger_entry(account.name, "2026-01-01")
 		linked_entries("Account", account.name)
 
-		with patch.object(frappe.db, "sql", wraps=frappe.db.sql) as sql:
+		# Any process on the bench can wipe Frappe's site cache mid-test, so pin the one it refills here.
+		with (
+			patch("frappe.permissions.get_doctype_ptype_map", return_value=get_doctype_ptype_map()),
+			patch.object(frappe.db, "sql", wraps=frappe.db.sql) as sql,
+		):
 			linked_entries("Account", account.name)
 
 		tables = {table for call in sql.call_args_list for table in QUOTED_TABLE.findall(str(call.args[0]))}

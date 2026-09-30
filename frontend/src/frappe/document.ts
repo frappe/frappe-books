@@ -45,6 +45,8 @@ export class FrappeDoc extends Doc {
   static previewMethod?: string;
   /** Models of the rows of the DocType's tables, by table fieldname; other rows are plain. */
   static tableModels: Record<string, typeof FrappeDoc> = {};
+  /** Fields whose default the server decides, like one that follows a setting; see `leaveToServer`. */
+  static serverDefaults: string[] = [];
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();
@@ -321,7 +323,7 @@ export class FrappeDoc extends Doc {
   }
 
   /** Previews once edits pause, so filled values follow the user without a request per keystroke. */
-  schedulePreview() {
+  schedulePreview(delay = PREVIEW_DELAY) {
     clearTimeout(this._previewTimer);
     if (!this.previewMethod || !this.canEdit || !this.dirty) {
       return;
@@ -329,7 +331,14 @@ export class FrappeDoc extends Doc {
 
     this._previewTimer = setTimeout(() => {
       this.preview().catch(showPreviewError);
-    }, PREVIEW_DELAY);
+    }, delay);
+  }
+
+  /** Leaves fields out of the next previews, so the server fills them, until the user edits one. */
+  leaveToServer(fieldnames: string[]) {
+    for (const fieldname of fieldnames) {
+      this._serverFilled.add(fieldname);
+    }
   }
 
   /** Shows what the server would fill for the unsaved values; dropped if they changed meanwhile. */

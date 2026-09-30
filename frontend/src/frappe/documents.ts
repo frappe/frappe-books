@@ -15,6 +15,9 @@ export function newFrappeDoc(
   const { Model, schema } = getDocType(schemaName);
   const doc = new Model(schema, values, fyo, false) as FrappeDoc;
   doc.name ??= fyo.doc.getTemporaryName(schema);
+  doc.leaveToServer(
+    Model.serverDefaults.filter((fieldname) => !(fieldname in values))
+  );
   keep(doc);
   return doc;
 }

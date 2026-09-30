@@ -5,6 +5,7 @@ import { fyo } from 'src/initFyo';
 import { loadDocPermissions } from 'src/utils/doc';
 import type { DocRef } from 'src/utils/types';
 import { ref } from 'vue';
+import { FrappeDoc } from './document';
 import { isFrappeBacked } from './doctypes';
 import { getFrappeDoc, getFrappeDocOrNew, newFrappeDoc } from './documents';
 
@@ -23,6 +24,10 @@ export function useBooksDoc() {
       : await getBooksDoc(schemaName, name!);
     await loadDocPermissions(loaded);
     doc.value = loaded;
+    // A new document shows what the server fills, like its defaults, from the start.
+    if (loaded instanceof FrappeDoc && loaded.notInserted) {
+      loaded.schedulePreview(0);
+    }
   }
 
   return { doc, load };

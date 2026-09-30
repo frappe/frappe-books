@@ -13,7 +13,8 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 
-const { CustomField, CustomForm } = frappeModels;
+const { CustomForm } = frappeModels;
+const CustomField = CustomForm.rowModels.custom_fields;
 window.frappe.boot.books.doctypes.CustomForm = 'Books Custom Form';
 window.frappe.boot.books.doctypes.CustomField = 'Books Custom Field';
 stubFrappe(({ path, body }) => {
@@ -28,7 +29,7 @@ stubFrappe(({ path, body }) => {
 
   return path.endsWith('get_field_properties') ? { message: {} } : { data: [] };
 });
-registerFrappeModels({ CustomField, CustomForm });
+registerFrappeModels({ CustomForm });
 await Promise.all([loadFrappeDocTypes(), fyo.db.init()]);
 
 const field = (doc, fieldname) => doc.fieldMap[fieldname];

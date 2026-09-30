@@ -38,7 +38,7 @@ class Region extends FrappeDoc {
   static presentation = {
     label: 'Region',
     create: false,
-    optionLabels: { kind: { SalesZone: 'Sales Zone' } },
+    fields: { kind: { optionLabels: { SalesZone: 'Sales Zone' } } },
     omitFields: ['lft'],
   };
 }

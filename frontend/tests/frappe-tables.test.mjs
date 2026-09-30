@@ -84,11 +84,13 @@ class Bill extends FrappeDoc {
   static presentation = {
     label: 'Bill',
     nameField: { label: 'Bill No', hidden: true },
-    rowEditTables: ['lines'],
-    noCreate: ['party'],
-    options: { party_type: [{ value: 'Books Party', label: 'Party' }] },
+    fields: {
+      lines: { edit: true },
+      party: { create: false },
+      party_type: { options: [{ value: 'Books Party', label: 'Party' }] },
+    },
   };
-  static tableModels = { lines: BillLine };
+  static rowModels = { lines: BillLine };
 }
 
 window.frappe.boot.books.doctypes = {

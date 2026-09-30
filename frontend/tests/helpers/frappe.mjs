@@ -290,6 +290,10 @@ const bundles = {
  * field) and a submittable order, and loads them as the app does at startup.
  */
 export async function loadTestDocTypes() {
+  class TestConversion extends FrappeDoc {
+    static presentation = { label: '', fields: { uom: { create: false } } };
+  }
+
   class TestItem extends FrappeDoc {
     static doctype = 'Books Item';
     static presentation = {
@@ -297,9 +301,9 @@ export async function loadTestDocTypes() {
       nameField: { label: 'Item Name', placeholder: 'Item Name' },
       quickEditFields: ['rate'],
       fields: { unit: { create: false } },
-      tables: { uom_conversions: { uom: { create: false } } },
     };
     static previewMethod = 'preview';
+    static rowModels = { uom_conversions: TestConversion };
   }
 
   class TestOrder extends FrappeDoc {

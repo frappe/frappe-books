@@ -6,7 +6,7 @@ import type { DocField, DocTypeMeta } from './meta';
 export interface Presentation {
   label: string;
   quickEditFields?: string[];
-  /** The field that asks for a document's name when its DocType names by prompt. */
+  /** The name field: asked for when the DocType names by prompt, else shown read only. */
   nameField?: { label: string; placeholder?: string };
 }
 
@@ -51,7 +51,7 @@ export function toSchema(
     name,
     label: presentation.label,
     fields,
-    naming: getNaming(meta.autoname),
+    naming: getNaming(meta),
     titleField: meta.title_field || 'name',
     quickEditFields: presentation.quickEditFields,
     tableFields: meta.fields
@@ -136,13 +136,17 @@ function toField(
   return field;
 }
 
-/** A prompt-named doctype asks for the name first, after an image that heads the form. */
+/**
+ * A prompt-named doctype asks for the name first, after an image that heads
+ * the form. A server-named one shows it there, read only, when the model labels it.
+ */
 function getNameFields(
   meta: DocTypeMeta,
   presentation: Presentation,
   fields: Field[]
 ): Field[] {
-  if (meta.autoname?.toLowerCase() !== 'prompt') {
+  const isPrompt = meta.autoname?.toLowerCase() === 'prompt';
+  if (!isPrompt && !presentation.nameField) {
     const idField = { fieldname: 'name', label: 'ID', fieldtype: 'Data' };
     return [...fields, { ...idField, meta: true } as Field];
   }
@@ -153,6 +157,7 @@ function getNameFields(
     label: presentation.nameField?.label ?? 'Name',
     placeholder: presentation.nameField?.placeholder,
     required: true,
+    readOnly: isPrompt ? undefined : true,
     section: fields[0]?.section ?? DEFAULT_SECTION,
     tab: fields[0]?.tab,
   } as Field;
@@ -173,7 +178,8 @@ function getMetaFields(meta: DocTypeMeta): Field[] {
   return fields.map((field) => ({ ...field, meta: true }) as Field);
 }
 
-function getNaming(autoname = ''): Naming {
+/** How /books names a new document; a controller that names by script numbers it as a series. */
+function getNaming({ autoname = '', naming_rule }: DocTypeMeta): Naming {
   const rule = autoname.toLowerCase();
   if (rule === 'prompt') {
     return 'manual';
@@ -181,6 +187,10 @@ function getNaming(autoname = ''): Naming {
 
   if (rule === 'autoincrement') {
     return 'autoincrement';
+  }
+
+  if (!rule && naming_rule === 'By script') {
+    return 'numberSeries';
   }
 
   return !rule || rule === 'hash' ? 'random' : 'numberSeries';

@@ -1,4 +1,4 @@
-"""Native Frappe print formats for Books documents."""
+"""Frappe print formats for Books documents."""
 
 from decimal import Decimal
 
@@ -8,7 +8,7 @@ from frappe.utils import money_in_words, now_datetime
 from frappe.utils.print_utils import get_print
 
 from frappe_books.accounting.money import company_currency
-from frappe_books.printing import get_print_totals
+from frappe_books.printing import books_format, get_print_settings, get_print_totals
 from frappe_books.tests.accounting import (
 	make_account,
 	make_invoice,
@@ -32,14 +32,72 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.tax_account = make_account("Print Tax", root_type="Liability", account_type="Tax")
 		self.item = make_item(self.income.name, expense.name, make_tax(self.tax_account.name).name)
 
-	def test_native_print_format_renders_invoice(self):
+	def test_built_in_formats_render_invoice_and_payment(self):
 		invoice = self.make_invoice()
+		payment = self.make_payment({invoice: 99})
+		grand_total = books_format(invoice.grand_total, "Currency", invoice.currency)
 
-		html = get_print(invoice.doctype, invoice.name, print_format="Frappe Books - Sales Invoice")
+		for doc, print_format, expected in (
+			(invoice, "Business - Sales Invoice", grand_total),
+			(invoice, "Business-POS - Sales Invoice", "Thank you! Please visit again."),
+			(payment, "Business - Payment", "Amount Paid"),
+		):
+			with self.subTest(print_format=print_format):
+				html = get_print(doc.doctype, doc.name, print_format=print_format)
 
-		self.assertIn(invoice.name, html)
-		self.assertIn(self.party.name, html)
-		self.assertIn("Grand Total", html)
+				self.assertIn(doc.name, html)
+				self.assertIn(self.party.name, html)
+				self.assertIn(expected, html)
+				# Jinja prints an undefined name back as its tag.
+				self.assertNotIn("{{", html)
+
+	def test_built_in_formats_print_their_doctype(self):
+		formats = dict(
+			frappe.get_all(
+				"Print Format", filters={"module": "Frappe Books"}, fields=["name", "doc_type"], as_list=True
+			)
+		)
+
+		self.assertEqual(
+			formats,
+			{
+				"Business - Quote": "Books Sales Quote",
+				"Business - Sales Invoice": "Books Sales Invoice",
+				"Business - Purchase Invoice": "Books Purchase Invoice",
+				"Business - Payment": "Books Payment",
+				"Business - Shipment": "Books Shipment",
+				"Business-POS - Sales Invoice": "Books Sales Invoice",
+			},
+		)
+
+	def test_books_format_follows_books_system_settings(self):
+		settings = {"locale": "en-IN", "display_precision": 2, "date_format": "MMM d, y"}
+		with self.change_settings("Books System Settings", settings):
+			self.assertEqual(books_format(1234567.125, "Currency", "INR"), "₹ 12,34,567.13")
+			self.assertEqual(books_format(10, "Float"), "10.00")
+			self.assertEqual(books_format("2026-09-30 13:45:00", "Date"), "Sep 30, 2026")
+			self.assertEqual(books_format(None, "Currency"), "")
+
+		with self.change_settings("Books System Settings", {"locale": "de-DE", "display_precision": 1}):
+			self.assertEqual(books_format(1234.56, "Currency", "EUR"), "€ 1.234,6")
+
+	def test_print_settings_show_the_company_address_and_gstin(self):
+		address = frappe.get_doc(
+			{
+				"doctype": "Books Address",
+				"name": unique_name("Print Address"),
+				"address_line1": "12 MG Road",
+				"city": "Mumbai",
+				"country": "India",
+			}
+		).insert()
+		frappe.db.set_single_value("Books Print Settings", "address", address.name)
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "27AAACB1234A1Z5")
+
+		settings = get_print_settings()
+
+		self.assertEqual(settings["address"], address.address_display)
+		self.assertEqual(settings["gstin"], "27AAACB1234A1Z5")
 
 	def test_invoice_prints_the_amount_each_payment_allocates_to_it(self):
 		invoice, other = self.make_invoice(), self.make_invoice()

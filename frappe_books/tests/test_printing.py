@@ -10,6 +10,7 @@ from frappe.utils.print_utils import get_print
 from frappe_books.accounting.money import company_currency
 from frappe_books.printing import (
 	books_format,
+	default_print_format,
 	get_print_hints,
 	get_print_settings,
 	get_print_totals,
@@ -24,6 +25,7 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 MANAGER = "books-print-manager@example.com"
 USER = "books-print-user@example.com"
@@ -64,7 +66,10 @@ class IntegrationTestPrinting(IntegrationTestCase):
 	def test_built_in_formats_print_their_doctype(self):
 		formats = dict(
 			frappe.get_all(
-				"Print Format", filters={"module": "Frappe Books"}, fields=["name", "doc_type"], as_list=True
+				"Print Format",
+				filters={"module": "Frappe Books", "standard": "Yes"},
+				fields=["name", "doc_type"],
+				as_list=True,
 			)
 		)
 
@@ -216,6 +221,47 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.assertEqual(hints["print"]["company_name"], "Company Name")
 		self.assertEqual(hints["print"]["gstin"], "GSTIN")
 
+	def test_books_defaults_show_and_set_the_doctype_default_print_format(self):
+		print_format = make_print_format("Books Journal Entry")
+
+		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+			BooksDatabaseBridge().update("Defaults", {"journalEntryPrintTemplate": print_format})
+			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
+			self.assertEqual(defaults()["journalEntryPrintTemplate"], print_format)
+
+			BooksDatabaseBridge().update("Defaults", {"salesInvoiceTerms": "Net 30"})
+			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
+
+			BooksDatabaseBridge().update("Defaults", {"journalEntryPrintTemplate": None})
+			self.assertIsNone(defaults()["journalEntryPrintTemplate"])
+
+	def test_print_formats_must_be_for_the_doctype_they_print(self):
+		message = "not a print format for Books Sales Invoice"
+		bridge = BooksDatabaseBridge()
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			message,
+			bridge.update,
+			"Defaults",
+			{"salesInvoicePrintTemplate": "Business - Payment"},
+		)
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			message,
+			bridge.update,
+			"Defaults",
+			{"posPrintTemplate": "Business - Payment"},
+		)
+		profile = frappe.get_doc(
+			{
+				"doctype": "Books Pos Profile",
+				"name": unique_name("Print Profile"),
+				"inventory": "Stores",
+				"pos_print_template": "Business - Payment",
+			}
+		)
+		self.assertRaisesRegex(frappe.ValidationError, message, profile.insert)
+
 	def make_invoice(self):
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -245,3 +291,23 @@ class IntegrationTestPrinting(IntegrationTestCase):
 			}
 		).insert()
 		return payment.submit()
+
+
+def make_print_format(doctype):
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Print Format",
+				"name": unique_name("Test Format"),
+				"doc_type": doctype,
+				"custom_format": 1,
+				"html": "<p>{{ doc.name }}</p>",
+			}
+		)
+		.insert()
+		.name
+	)
+
+
+def defaults():
+	return BooksDatabaseBridge().get("Defaults", "Defaults")

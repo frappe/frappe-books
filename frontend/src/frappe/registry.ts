@@ -110,9 +110,9 @@ function toDocType(
   Model: FrappeModel,
   placements: Placements
 ): FrappeDocType {
-  const presentation: Presentation = meta.istable
-    ? { label: meta.name }
-    : Model.presentation;
+  const presentation: Presentation = Model.presentation.label
+    ? Model.presentation
+    : { label: meta.name };
   const schema = toSchema(meta, schemaName, presentation, {
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],

@@ -6,8 +6,10 @@ import type { DocField, DocTypeMeta } from './meta';
 export interface Presentation {
   label: string;
   quickEditFields?: string[];
-  /** The field that asks for a document's name when its DocType names by prompt. */
+  /** The name field: it asks for the name when the DocType names by prompt, else only labels it. */
   nameField?: { label: string; placeholder?: string };
+  /** Labels of Select options whose values are not words, by fieldname then value. */
+  optionLabels?: Record<string, Record<string, string>>;
 }
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
@@ -43,7 +45,11 @@ export function toSchema(
   context: SchemaContext
 ): Schema {
   const fields = [
-    ...getNameFields(meta, presentation, getDocFields(meta, context)),
+    ...getNameFields(
+      meta,
+      presentation,
+      getDocFields(meta, presentation, context)
+    ),
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 
@@ -65,7 +71,11 @@ export function toSchema(
 }
 
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
-function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
+function getDocFields(
+  meta: DocTypeMeta,
+  presentation: Presentation,
+  context: SchemaContext
+): Field[] {
   const levels = getPermlevels(meta, context.roles);
   const fields: Field[] = [];
   const placed: Field[] = [];
@@ -78,7 +88,13 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
     } else if (docfield.fieldtype === 'Section Break') {
       section = docfield.label || DEFAULT_SECTION;
     } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
-      const field = toField(docfield, context.schemaNames, levels);
+      const optionLabels = presentation.optionLabels?.[docfield.fieldname];
+      const field = toField(
+        docfield,
+        context.schemaNames,
+        levels,
+        optionLabels
+      );
       const placement = context.placements[docfield.fieldname];
       if (placement) {
         placed.push({
@@ -107,10 +123,11 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
 function toField(
   docfield: DocField,
   schemaNames: SchemaContext['schemaNames'],
-  levels: Permlevels
+  levels: Permlevels,
+  optionLabels?: Record<string, string>
 ): Field {
   const properties = getFieldProperties(
-    { fieldname: docfield.fieldname } as Field,
+    { fieldname: docfield.fieldname, optionLabels } as Field,
     docfield
   ) as Partial<Field> & { target?: string };
   const level = docfield.permlevel ?? 0;
@@ -143,7 +160,8 @@ function getNameFields(
   fields: Field[]
 ): Field[] {
   if (meta.autoname?.toLowerCase() !== 'prompt') {
-    const idField = { fieldname: 'name', label: 'ID', fieldtype: 'Data' };
+    const label = presentation.nameField?.label ?? 'ID';
+    const idField = { fieldname: 'name', label, fieldtype: 'Data' };
     return [...fields, { ...idField, meta: true } as Field];
   }
 

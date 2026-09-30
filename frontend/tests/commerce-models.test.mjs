@@ -140,3 +140,48 @@ test('an address leaves its display text to the server', async () => {
   });
   assert.ok(!address.address_display);
 });
+
+test('the lead form and list show what they showed, status coloured by state', () => {
+  assert.deepEqual(getLayout('Lead'), [
+    'name | Name | Full Name | Default',
+    'status | Status |  | Default',
+    'email | Email | john@doe.com | Contacts',
+    'mobile | Mobile | Mobile | Contacts',
+    'address | Address |  | Contacts',
+  ]);
+  assert.deepEqual(getColumns('Lead'), ['name', 'status', 'email', 'mobile']);
+  const [, status] = getModel('Lead').getListViewSettings().columns;
+  const schema = getSchema('Lead');
+  assert.deepEqual(status.badge({ schema, status: 'Converted' }), {
+    label: 'Converted',
+    theme: 'green',
+  });
+  assert.deepEqual(status.badge({ schema, status: 'Do not Contact' }), {
+    label: 'Do not Contact',
+    theme: 'red',
+  });
+});
+
+test('a lead makes a customer or a quote once saved', () => {
+  const actions = getModel('Lead').getActions(fyo);
+  assert.deepEqual(
+    actions.map(({ label }) => label),
+    ['Customer', 'Sales Quote']
+  );
+  assert.ok(
+    actions.every(({ condition }) => !condition({ notInserted: true }))
+  );
+});
+
+test('lead contacts show the message Frappe refuses them with', async () => {
+  const lead = newFrappeDoc('Lead', { name: 'Asha' });
+  await assert.rejects(lead.set('email', 'asha@'), {
+    message: 'asha@ is not a valid Email Address',
+  });
+  await assert.rejects(lead.set('mobile', '98x'), {
+    message: '98x is not a valid Phone Number',
+  });
+  await lead.set('email', 'Asha <asha@example.com>, ops@example.com');
+  await lead.set('mobile', '+91 (22) 555-0199');
+  assert.equal(lead.mobile, '+91 (22) 555-0199');
+});

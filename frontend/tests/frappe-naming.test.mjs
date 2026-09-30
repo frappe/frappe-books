@@ -29,6 +29,7 @@ const regionMeta = {
       label: 'Kind',
       options: 'SalesZone\nDepot',
     },
+    { fieldname: 'lft', fieldtype: 'Int', label: 'Left', hidden: 1 },
   ],
 };
 
@@ -38,6 +39,7 @@ class Region extends FrappeDoc {
     label: 'Region',
     create: false,
     optionLabels: { kind: { SalesZone: 'Sales Zone' } },
+    omitFields: ['lft'],
   };
 }
 
@@ -92,4 +94,13 @@ test('quick edit asks for the naming field only in its header', () => {
     getQuickEditFieldnames({ ...schema, quickEditFields: ['kind'] }),
     ['kind']
   );
+});
+
+test('an omitted field is neither shown nor saved', async () => {
+  assert.equal(
+    schema.fields.some((field) => field.fieldname === 'lft'),
+    false
+  );
+  const north = await getFrappeDoc('Region', 'North');
+  assert.equal('lft' in north.getFrappeValues(), false);
 });

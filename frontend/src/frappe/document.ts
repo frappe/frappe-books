@@ -133,12 +133,20 @@ export class FrappeDoc extends Doc {
     });
   }
 
-  /** The document a controller method runs on, with what Frappe checks it by. */
+  /**
+   * The document a controller method runs on, with what Frappe checks it by:
+   * `modified`, and the `creation` and `owner` a saved document may not change.
+   */
   getMethodDocument(options: FrappeValueOptions = {}): DocValues {
     const values = this.getFrappeValues(options);
     const saved = this.notInserted
       ? { __islocal: 1 }
-      : { name: this.name, modified: this.modified };
+      : {
+          name: this.name,
+          modified: this.modified,
+          creation: this.creation,
+          owner: this.owner,
+        };
     return { ...values, ...saved, doctype: this.doctype };
   }
 

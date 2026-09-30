@@ -6,10 +6,13 @@ import type { Field, RawValue, Schema } from 'schemas/types';
 import type { DocValues } from './api';
 
 const DATETIME_FORMAT = 'yyyy-MM-dd HH:mm:ss.SSS';
+// Frappe compares these to the stored values as text, down to microseconds.
+const STAMPS = ['modified', 'creation'];
 
 /**
  * The values a form edits, from a Frappe document or row. Datetimes, which
- * Frappe stores in the system time zone, become dates; `modified` stays as sent.
+ * Frappe stores in the system time zone, become dates; `modified` and
+ * `creation`, which Frappe compares as sent, stay as sent.
  */
 export function toDocValues(
   schema: Schema,
@@ -35,6 +38,10 @@ export function toDocValues(
 }
 
 export function toDocValue(value: RawValue, field: Field, fyo: Fyo): DocValue {
+  if (STAMPS.includes(field.fieldname)) {
+    return value as DocValue;
+  }
+
   if (isZonedDatetime(field) && typeof value === 'string' && value) {
     return DateTime.fromSQL(value, { zone: getSystemZone() }).toJSDate();
   }
@@ -60,7 +67,7 @@ function getTableSchema(field: Field, getSchema: (target: string) => Schema) {
 }
 
 function isZonedDatetime(field: Field): boolean {
-  return field.fieldtype === 'Datetime' && field.fieldname !== 'modified';
+  return field.fieldtype === 'Datetime' && !STAMPS.includes(field.fieldname);
 }
 
 function getSystemZone(): string {

@@ -142,12 +142,15 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 
 
 def client_copy(doc):
-	fields = [df.fieldname for df in doc.meta.fields if df.fieldtype not in ("Section Break", "Column Break")]
-	values = {fieldname: doc.get(fieldname) for fieldname in fields}
-	values["accounts"] = [row.as_dict() for row in doc.accounts]
+	values = field_values(doc)
+	values["accounts"] = [{**field_values(row), "name": row.name} for row in doc.accounts]
 	stamps = {key: str(doc.get(key)) for key in ("modified", "creation")}
 	standard = {"name": doc.name, "owner": doc.owner, "docstatus": doc.docstatus, "doctype": doc.doctype}
 	return {**values, **stamps, **standard}
+
+
+def field_values(doc):
+	return {df.fieldname: doc.get(df.fieldname) for df in doc.meta.fields if df.fieldtype != "Section Break"}
 
 
 def make_journal_entry(accounts):

@@ -16,6 +16,7 @@ from frappe_books.printing import (
 	get_print_settings,
 	get_print_totals,
 	preview_print_format,
+	set_default_print_format,
 )
 from frappe_books.tests.accounting import (
 	ensure_user,
@@ -26,7 +27,6 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 MANAGER = "books-print-manager@example.com"
 USER = "books-print-user@example.com"
@@ -242,33 +242,32 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		print_format = make_print_format("Books Journal Entry")
 
 		with self.set_user(ensure_user(MANAGER, "Books Manager")):
-			BooksDatabaseBridge().update("Defaults", {"journalEntryPrintTemplate": print_format})
+			save_defaults({"journal_entry_print_template": print_format})
 			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
-			self.assertEqual(defaults()["journalEntryPrintTemplate"], print_format)
+			self.assertEqual(frappe.get_single("Books Defaults").journal_entry_print_template, print_format)
 
-			BooksDatabaseBridge().update("Defaults", {"salesInvoiceTerms": "Net 30"})
+			save_defaults({"sales_invoice_terms": "Net 30"})
 			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
 
-			BooksDatabaseBridge().update("Defaults", {"journalEntryPrintTemplate": None})
-			self.assertIsNone(defaults()["journalEntryPrintTemplate"])
+			save_defaults({"journal_entry_print_template": None})
+			self.assertIsNone(default_print_format("Books Journal Entry"))
+
+	def test_a_save_that_sets_no_print_format_keeps_the_doctype_default(self):
+		print_format = make_print_format("Books Journal Entry")
+		# As after install: the defaults were set, but Books Defaults never stored them.
+		frappe.db.delete("Singles", {"doctype": "Books Defaults", "field": "journal_entry_print_template"})
+		set_default_print_format("Books Journal Entry", print_format)
+
+		save_defaults({"sales_invoice_terms": "Net 30"})
+
+		self.assertEqual(default_print_format("Books Journal Entry"), print_format)
 
 	def test_print_formats_must_be_for_the_doctype_they_print(self):
 		message = "not a print format for Books Sales Invoice"
-		bridge = BooksDatabaseBridge()
-		self.assertRaisesRegex(
-			frappe.ValidationError,
-			message,
-			bridge.update,
-			"Defaults",
-			{"salesInvoicePrintTemplate": "Business - Payment"},
-		)
-		self.assertRaisesRegex(
-			frappe.ValidationError,
-			message,
-			bridge.update,
-			"Defaults",
-			{"posPrintTemplate": "Business - Payment"},
-		)
+		for fieldname in ("sales_invoice_print_template", "pos_print_template"):
+			self.assertRaisesRegex(
+				frappe.ValidationError, message, save_defaults, {fieldname: "Business - Payment"}
+			)
 		profile = frappe.get_doc(
 			{
 				"doctype": "Books Pos Profile",
@@ -326,5 +325,8 @@ def make_print_format(doctype):
 	)
 
 
-def defaults():
-	return BooksDatabaseBridge().get("Defaults", "Defaults")
+def save_defaults(values):
+	"""Save Books Defaults as /books does: the loaded copy with the changed values."""
+	defaults = frappe.get_single("Books Defaults")
+	defaults.update(values)
+	defaults.save()

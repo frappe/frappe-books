@@ -16,6 +16,8 @@ export interface Presentation {
   tableFields?: string[];
   /** Tables whose rows open in the row editor. */
   rowEditTables?: string[];
+  /** Links that offer no Create, which no DocField property says. */
+  noCreate?: string[];
   /** Choices of fields the DocType cannot list, like the doctypes a DocType reference allows. */
   options?: Record<string, SelectOption[]>;
   /** The name's field: it asks for the name when the DocType names by prompt, else labels it. */
@@ -98,6 +100,10 @@ function present(field: Field, presentation: Presentation): Field {
 
   if (presentation.rowEditTables?.includes(field.fieldname)) {
     return { ...field, edit: true } as Field;
+  }
+
+  if (presentation.noCreate?.includes(field.fieldname)) {
+    return { ...field, create: false } as Field;
   }
 
   return field;

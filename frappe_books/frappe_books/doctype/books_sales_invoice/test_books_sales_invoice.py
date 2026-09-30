@@ -49,6 +49,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("218"))
 		self.assertEqual(Decimal(str(invoice.db_get("outstanding_amount"))), Decimal("198"))
 
+	def test_total_discount_is_a_virtual_field(self):
+		invoice = self._make_invoice()
+		self.assertEqual(Decimal(str(invoice.as_dict().total_discount)), Decimal("20"))
+
 	def test_row_tax_defaults_to_the_item_group_tax(self):
 		group = frappe.get_doc(
 			{"doctype": "Books Item Group", "name": unique_name("Taxed Group"), "tax": self.tax.name}

@@ -53,6 +53,7 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 		stock_not_transferred: DF.Float
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None
+		total_discount: DF.Currency
 	# end: auto-generated types
 
 	transaction_type = "purchase"

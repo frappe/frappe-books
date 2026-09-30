@@ -9,7 +9,7 @@ from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
-from frappe_books.commerce import pricing
+from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
 from frappe_books.inventory.auto_transfer import map_invoice_transfer
 
@@ -59,6 +59,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		is_returned: DF.Check
 		items: DF.Table[BooksSalesInvoiceItem]
 		loyalty_points: DF.Int
+		loyalty_points_amount: DF.Currency
 		loyalty_program: DF.Link | None
 		make_auto_payment: DF.Check
 		make_auto_stock_transfer: DF.Check
@@ -77,9 +78,15 @@ class BooksSalesInvoice(PostingInvoiceController):
 		stock_not_transferred: DF.Float
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None
+		total_discount: DF.Currency
 	# end: auto-generated types
 
 	transaction_type = "sales"
+
+	@property
+	def loyalty_points_amount(self):
+		"""What the redeemed points take off the grand total, as a virtual field."""
+		return loyalty.redemption_amount(self)
 
 	def before_validate(self):
 		if self.is_pos and self._action == "submit":

@@ -18,7 +18,9 @@
   "items",
   "net_total",
   "tax_and_totals_section_break_10",
+  "total_discount",
   "taxes",
+  "loyalty_points_amount",
   "base_grand_total",
   "grand_total",
   "set_discount_amount",
@@ -149,10 +151,24 @@
    "label": "Tax and Totals"
   },
   {
+   "fieldname": "total_discount",
+   "fieldtype": "Currency",
+   "is_virtual": 1,
+   "label": "Discount",
+   "read_only": 1
+  },
+  {
    "fieldname": "taxes",
    "fieldtype": "Table",
    "label": "Taxes",
    "options": "Books Tax Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "loyalty_points_amount",
+   "fieldtype": "Currency",
+   "is_virtual": 1,
+   "label": "Loyalty Points Redeemed",
    "read_only": 1
   },
   {
@@ -385,7 +401,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-30 12:10:00.000000",
+ "modified": "2026-09-30 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",

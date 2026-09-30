@@ -99,14 +99,15 @@ import {
 } from 'frappe-ui';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { Money } from 'pesa';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import MobileStepper from 'src/components/POS/MobileStepper.vue';
 import { ItemSerialNumbers } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
+  CostLine,
   fillRowSerialNumbers,
+  getCostLines,
   getPOSQuantityField,
   setPOSRowQuantity,
 } from 'src/utils/pos';
@@ -124,27 +125,17 @@ defineEmits<{
 }>();
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
-const totalTaxedAmount = inject('totalTaxedAmount') as Ref<Money>;
-const itemDiscounts = inject('itemDiscounts') as Ref<Money>;
 const itemSerialNumbers = inject('itemSerialNumbers') as Ref<ItemSerialNumbers>;
 const quantityField = getPOSQuantityField(fyo);
 
-const totals = computed(() => {
-  const optional = [
-    { label: t`Taxes`, value: totalTaxedAmount.value },
-    { label: t`Item Discounts`, value: itemDiscounts.value },
-  ].filter(({ value }) => value && !value.isZero());
-
-  return [
-    { label: t`Net Total`, value: sinvDoc.value.netTotal ?? fyo.pesa(0) },
-    ...optional,
-    {
-      label: t`Grand Total`,
-      value: sinvDoc.value.grandTotal ?? fyo.pesa(0),
-      strong: true,
-    },
-  ];
-});
+const totals = computed<(CostLine & { strong?: boolean })[]>(() => [
+  ...getCostLines(sinvDoc.value),
+  {
+    label: t`Grand Total`,
+    value: sinvDoc.value.grandTotal ?? fyo.pesa(0),
+    strong: true,
+  },
+]);
 
 const payLabel = computed(() => {
   const amount = fyo.format(sinvDoc.value.grandTotal ?? 0, 'Currency');

@@ -49,6 +49,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 			loyalty_points=20,
 		)
 		self.assertEqual(Decimal(str(redemption.grand_total)), Decimal("170"))
+		self.assertEqual(Decimal(str(redemption.as_dict().loyalty_points_amount)), Decimal("10"))
 		redemption.submit()
 		self.assertEqual(frappe.db.get_value("Books Party", self.party.name, "loyalty_points"), 160)
 		entries = ledger_entries(redemption.doctype, redemption.name)

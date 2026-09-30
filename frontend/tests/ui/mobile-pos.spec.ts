@@ -71,6 +71,27 @@ test('the cart stepper turns minus into remove at one', async ({ page }) => {
   await expect(page.getByRole('button', { name: /\d+ items?/ })).toBeHidden();
 });
 
+test('the cart lists every amount between net and grand total', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const { fyo, state } = (window as any).posFixture;
+    (window as any).posFixture.fillCart();
+    state.invoice.totalDiscount = fyo.pesa(250);
+    state.invoice.loyaltyPointsAmount = fyo.pesa(50);
+  });
+  await page.getByRole('button', { name: /\d+ items?/ }).click();
+  const cart = page.getByRole('dialog', { name: 'Cart', exact: true });
+  for (const label of [
+    'Net Total',
+    'Discount',
+    'Loyalty Points Redeemed',
+    'Grand Total',
+  ]) {
+    await expect(cart.getByText(label, { exact: true })).toBeVisible();
+  }
+});
+
 test('payment methods wrap in a two-column grid', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   await page.getByRole('button', { name: /6 items/ }).click();

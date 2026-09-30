@@ -83,6 +83,10 @@
       <p>{{ tax.account }}</p>
       <p>{{ tax.amount }}</p>
     </div>
+    <div v-if="doc.loyaltyPointsAmount" class="flex justify-between">
+      <p>{{ t`Loyalty Points Redeemed` }}</p>
+      <p>{{ doc.loyaltyPointsAmount }}</p>
+    </div>
   </section>
 
   <!-- Grand Total -->

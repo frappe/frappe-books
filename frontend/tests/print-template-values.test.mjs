@@ -43,7 +43,6 @@ test('print values show the totals the server computes', async () => {
   respondWith({
     sub_total: 90,
     grand_total_in_words: 'USD One Hundred only.',
-    total_discount: 0,
   });
 
   const { doc, print } = await getValues('SalesInvoice');
@@ -60,6 +59,18 @@ test('print values show the totals the server computes', async () => {
   assert.equal(doc.paymentDetails, undefined);
   assert.equal(doc.date, 'Jan 2, 2026');
   assert.equal(print.companyName, 'Co');
+});
+
+test('invoice prints show only the deductions it has', async () => {
+  respondWith({});
+
+  const { doc } = await getValues('SalesInvoice', {
+    totalDiscount: 0,
+    loyaltyPointsAmount: 25,
+  });
+
+  assert.equal(doc.totalDiscount, '');
+  assert.equal(doc.loyaltyPointsAmount, '25.00');
 });
 
 test('invoice payment details show the amount allocated to it', async () => {

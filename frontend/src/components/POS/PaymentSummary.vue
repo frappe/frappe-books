@@ -54,43 +54,22 @@ import { SalesInvoice } from "models/baseModels/SalesInvoice/SalesInvoice";
 import { Money } from "pesa";
 import { fyo } from "src/initFyo";
 import { Badge as FrappeBadge, Divider as FrappeDivider } from "frappe-ui";
+import { CostLine, getCostLines } from "src/utils/pos";
 import { defineComponent, PropType } from "vue";
-
-type SummaryRow = {
-	label: string;
-	value: Money | undefined;
-};
 
 export default defineComponent({
 	name: "PaymentSummary",
 	components: { FrappeBadge, FrappeDivider },
 	props: {
 		sinvDoc: { type: Object as PropType<SalesInvoice>, required: true },
-		totalTaxedAmount: { type: Object as PropType<Money>, required: true },
-		itemDiscounts: { type: Object as PropType<Money>, required: true },
-		isDiscountingEnabled: { type: Boolean, default: false },
 	},
 	computed: {
-		detailRows(): SummaryRow[] {
-			const rows: SummaryRow[] = [
-				{ label: this.fyo.t`Net total`, value: this.sinvDoc.netTotal },
-				{
-					label: this.fyo.t`Taxes and charges`,
-					value: this.totalTaxedAmount,
-				},
-			];
-
-			if (this.isDiscountingEnabled) {
-				rows.push({
-					label: this.fyo.t`Discount`,
-					value: this.itemDiscounts,
-				});
-			}
-
+		detailRows(): CostLine[] {
+			const rows = getCostLines(this.sinvDoc);
 			if (this.hasDistinctBaseTotal) {
 				rows.push({
 					label: this.fyo.t`Base grand total`,
-					value: this.sinvDoc.baseGrandTotal,
+					value: this.sinvDoc.baseGrandTotal!,
 				});
 			}
 

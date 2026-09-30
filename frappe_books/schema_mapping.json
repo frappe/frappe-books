@@ -654,7 +654,8 @@
         "status": "status",
         "stockNotTransferred": "stock_not_transferred",
         "taxes": "taxes",
-        "terms": "terms"
+        "terms": "terms",
+        "totalDiscount": "total_discount"
       }
     },
     "PurchaseInvoiceItem": {
@@ -747,6 +748,7 @@
         "isReturned": "is_returned",
         "items": "items",
         "loyaltyPoints": "loyalty_points",
+        "loyaltyPointsAmount": "loyalty_points_amount",
         "loyaltyProgram": "loyalty_program",
         "makeAutoPayment": "make_auto_payment",
         "makeAutoStockTransfer": "make_auto_stock_transfer",
@@ -765,7 +767,8 @@
         "status": "status",
         "stockNotTransferred": "stock_not_transferred",
         "taxes": "taxes",
-        "terms": "terms"
+        "terms": "terms",
+        "totalDiscount": "total_discount"
       }
     },
     "SalesInvoiceItem": {
@@ -834,7 +837,8 @@
         "setDiscountAmount": "set_discount_amount",
         "status": "status",
         "taxes": "taxes",
-        "terms": "terms"
+        "terms": "terms",
+        "totalDiscount": "total_discount"
       }
     },
     "SalesQuoteItem": {

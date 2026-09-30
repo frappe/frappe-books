@@ -51,6 +51,9 @@ export abstract class Invoice extends Transactional {
   setDiscountAmount?: boolean;
   discountAmount?: Money;
   discountPercent?: number;
+  /** Item and invoice discounts, which the server calculates. */
+  totalDiscount?: Money;
+  loyaltyPointsAmount?: Money;
   loyaltyPoints?: number;
   availableLoyaltyPoints?: number;
   discountAfterTax?: boolean;
@@ -130,23 +133,6 @@ export abstract class Invoice extends Transactional {
 
   get isReturn(): boolean {
     return !!this.returnAgainst;
-  }
-
-  /** Row discounts, from the row totals the server calculated. */
-  get itemDiscount(): Money {
-    const zero = this.fyo.pesa(0);
-    const undiscounted = this.discountAfterTax ? 'itemTaxedTotal' : 'amount';
-    return (this.items ?? []).reduce(
-      (total, row) =>
-        total
-          .add(row[undiscounted] ?? zero)
-          .sub(row.itemDiscountedTotal ?? zero),
-      zero
-    );
-  }
-
-  get totalDiscount(): Money {
-    return this.itemDiscount.add(this.discountAmount ?? this.fyo.pesa(0));
   }
 
   constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
@@ -235,7 +221,10 @@ export abstract class Invoice extends Transactional {
     discountAmount: () => true,
     discountPercent: () => true,
     discountAfterTax: () => !this.enableDiscounting,
+    totalDiscount: () => !this.totalDiscount || this.totalDiscount.isZero(),
     taxes: () => !this.taxes?.length,
+    loyaltyPointsAmount: () =>
+      !this.loyaltyPointsAmount || this.loyaltyPointsAmount.isZero(),
     baseGrandTotal: () =>
       this.exchangeRate === 1 || this.baseGrandTotal!.isZero(),
     terms: () => !(this.terms || !(this.isSubmitted || this.isCancelled)),

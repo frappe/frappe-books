@@ -8,12 +8,13 @@
         </dd>
       </div>
       <div
-        v-if="itemDiscounts && !itemDiscounts.isZero()"
+        v-for="line in costLines"
+        :key="line.label"
         class="flex items-baseline justify-between gap-4"
       >
-        <dt class="text-ink-gray-6">{{ t`Item Discounts` }}</dt>
+        <dt class="text-ink-gray-6">{{ line.label }}</dt>
         <dd class="font-medium tabular-nums text-ink-gray-9">
-          {{ fyo.format(itemDiscounts, 'Currency') }}
+          {{ fyo.format(line.value, 'Currency') }}
         </dd>
       </div>
       <div
@@ -32,13 +33,17 @@
 
 <script setup lang="ts">
 import { t } from 'fyo';
-import { Money } from 'pesa';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { fyo } from 'src/initFyo';
+import { getCostLines } from 'src/utils/pos';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   sinvDoc?: SalesInvoice;
   totalQuantity?: number;
-  itemDiscounts?: Money;
 }>();
+
+const costLines = computed(() =>
+  props.sinvDoc ? getCostLines(props.sinvDoc) : []
+);
 </script>

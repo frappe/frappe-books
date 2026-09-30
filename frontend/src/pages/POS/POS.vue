@@ -116,7 +116,6 @@
         <POSOrderSummary
           :sinv-doc="sinvDoc as SalesInvoice"
           :total-quantity="totalQuantity"
-          :item-discounts="itemDiscounts as Money"
         />
         <POSInvoiceActions
           :profile="posProfile as POSProfile"
@@ -264,7 +263,6 @@ import {
   toPOSItem,
   validatePOSCheckout,
   getTotalQuantity,
-  getTotalTaxedAmount,
   validateIsPosSettingsSet,
   setPOSRowQuantity,
   isTypingInField,
@@ -331,9 +329,7 @@ export default defineComponent({
       paidAmount: computed(() => this.paidAmount),
       paymentMethod: computed(() => this.paymentMethod),
       transferRefNo: computed(() => this.transferRefNo),
-      itemDiscounts: computed(() => this.itemDiscounts),
       appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
-      totalTaxedAmount: computed(() => this.totalTaxedAmount),
       itemSerialNumbers: computed(() => this.itemSerialNumbers),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
       transferClearanceDate: computed(() => this.transferClearanceDate),
@@ -367,8 +363,6 @@ export default defineComponent({
 
       totalQuantity: 0,
       paidAmount: fyo.pesa(0),
-      itemDiscounts: fyo.pesa(0),
-      totalTaxedAmount: fyo.pesa(0),
 
       loyaltyPoints: 0,
       loyaltyProgram: '' as string,
@@ -751,9 +745,6 @@ export default defineComponent({
         '';
       this.sinvDoc.party = this.defaultCustomer;
     },
-    setItemDiscounts() {
-      this.itemDiscounts = (this.sinvDoc as SalesInvoice).itemDiscount;
-    },
     async setItemQtyMap() {
       this.itemQtyMap = await getItemQtyMap(this.sinvDoc as SalesInvoice);
     },
@@ -773,9 +764,6 @@ export default defineComponent({
       this.totalQuantity = getTotalQuantity(
         this.sinvDoc.items as SalesInvoiceItem[]
       );
-    },
-    setTotalTaxedAmount() {
-      this.totalTaxedAmount = getTotalTaxedAmount(this.sinvDoc as SalesInvoice);
     },
     setCouponsCount(value: number) {
       this.appliedCouponsCount = value;
@@ -1080,8 +1068,6 @@ export default defineComponent({
     },
     updateValues() {
       this.setTotalQuantity();
-      this.setItemDiscounts();
-      this.setTotalTaxedAmount();
     },
     async validate() {
       await validatePOSCheckout(

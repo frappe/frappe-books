@@ -476,6 +476,30 @@ export function getTotalTaxedAmount(sinvDoc: SalesInvoice): Money {
   return totalTaxedAmount;
 }
 
+export interface CostLine {
+  label: string;
+  value: Money;
+}
+
+/** The net total, then each amount that takes it to the grand total. */
+export function getCostLines(invoice: SalesInvoice): CostLine[] {
+  const getLabel = (fieldname: string) =>
+    fyo.getField(invoice.schemaName, fieldname)?.label ?? fieldname;
+  const changes = [
+    { label: getLabel('totalDiscount'), value: invoice.totalDiscount },
+    { label: getLabel('taxes'), value: getTotalTaxedAmount(invoice) },
+    {
+      label: getLabel('loyaltyPointsAmount'),
+      value: invoice.loyaltyPointsAmount,
+    },
+  ].filter((line): line is CostLine => !!line.value && !line.value.isZero());
+
+  return [
+    { label: getLabel('netTotal'), value: invoice.netTotal ?? fyo.pesa(0) },
+    ...changes,
+  ];
+}
+
 export function validateClosingAmounts(posShiftDoc: POSClosingShift) {
   if (!posShiftDoc) {
     throw new ValidationError(`POS Shift Document not loaded. Please reload.`);

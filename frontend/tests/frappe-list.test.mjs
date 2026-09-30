@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { getFilterFields } from './helpers/accounting.mjs';
 import {
   fyo,
+  getDocType,
   getFrappeListPage,
+  getSchema,
   loadTestDocTypes,
   searchFrappeLink,
   stubFrappe,
@@ -114,4 +117,46 @@ test("link options come from Frappe's link search, letters matched in order", as
     ],
     page_length: 50,
   });
+});
+
+test("a list is ordered by its DocType's sort field, newest first", async (t) => {
+  const { meta } = getDocType('Order');
+  t.after(() => delete meta.sort_field);
+  const requests = stubFrappe(({ path }) =>
+    path.endsWith('/count') ? { data: 0 } : { data: [] }
+  );
+  const page = { filters: {}, orFilters: {}, start: 0, limit: 20 };
+
+  meta.sort_field = 'creation';
+  await getFrappeListPage(fyo, 'Order', page);
+  meta.sort_field = 'customer';
+  await getFrappeListPage(fyo, 'Order', page);
+  assert.deepEqual(
+    requests
+      .filter(({ path }) => !path.endsWith('/count'))
+      .map(({ params }) => params.order_by),
+    ['creation desc', 'customer desc, creation desc']
+  );
+});
+
+test('a submittable list filters Submitted and Cancelled by docstatus', () => {
+  const fieldnames = getFilterFields(getSchema('Order').fields).map(
+    ({ fieldname }) => fieldname
+  );
+  assert.deepEqual(fieldnames.slice(-2), ['submitted', 'cancelled']);
+  assert.ok(!fieldnames.includes('docstatus'));
+
+  assert.deepEqual(
+    toFrappeFilters({
+      submitted: true,
+      cancelled: ['!=', 1],
+    }),
+    [
+      ['docstatus', 'in', [1, 2]],
+      ['docstatus', 'not in', [2]],
+    ]
+  );
+  assert.deepEqual(toFrappeFilters({ submitted: ['=', 0] }), [
+    ['docstatus', 'not in', [1, 2]],
+  ]);
 });

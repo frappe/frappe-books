@@ -40,9 +40,6 @@
       <PaymentSummary
         class="order-2 md:order-1"
         :sinv-doc="sinvDoc"
-        :total-taxed-amount="totalTaxedAmount"
-        :item-discounts="itemDiscounts"
-        :is-discounting-enabled="isDiscountingEnabled"
       />
 
       <section class="order-1 min-w-0 space-y-5 md:order-2" aria-label="Payment details">
@@ -210,12 +207,9 @@ export default defineComponent({
       isMobile,
       paidAmount: inject('paidAmount') as Money,
       paymentMethod: inject('paymentMethod') as string,
-      isDiscountingEnabled: inject('isDiscountingEnabled') as boolean,
-      itemDiscounts: inject('itemDiscounts') as Money,
       sinvDoc: inject('sinvDoc') as SalesInvoice,
       transferRefNo: inject('transferRefNo') as string,
       transferClearanceDate: inject('transferClearanceDate') as Date,
-      totalTaxedAmount: inject('totalTaxedAmount') as Money,
     };
   },
   data() {

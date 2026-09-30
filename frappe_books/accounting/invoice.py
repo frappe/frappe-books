@@ -48,6 +48,11 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 		validate_invoice(self)
 		loyalty.validate_invoice_loyalty(self)
 
+	@property
+	def total_discount(self):
+		"""Item and invoice discounts, as a virtual field."""
+		return sum_decimal(row_discount(self, row) for row in self.items) + as_decimal(self.discount_amount)
+
 	@frappe.whitelist()
 	def preview(self):
 		"""Calculate what a save would store, without saving, for a new document or an edited draft."""
@@ -203,13 +208,9 @@ def _add_row_taxes(row, base, taxes, currency):
 def _calculate_totals(invoice, original):
 	currency = invoice.get("currency")
 	invoice.net_total = sum_decimal(row.amount for row in invoice.items)
-	item_discount = sum_decimal(row_discount(invoice, row) for row in invoice.items)
 	invoice.discount_amount = _invoice_discount(invoice, original, currency)
 	grand_total = (
-		invoice.net_total
-		+ sum_decimal(tax.amount for tax in invoice.taxes)
-		- item_discount
-		- invoice.discount_amount
+		invoice.net_total + sum_decimal(tax.amount for tax in invoice.taxes) - invoice.total_discount
 	)
 	if invoice.transaction_type == "sales" and invoice.get("return_against"):
 		loyalty.set_return_redemption(invoice, grand_total)

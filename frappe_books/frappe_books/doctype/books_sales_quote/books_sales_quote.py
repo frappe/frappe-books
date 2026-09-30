@@ -46,6 +46,7 @@ class BooksSalesQuote(InvoiceController):
 		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None
+		total_discount: DF.Currency
 	# end: auto-generated types
 
 	transaction_type = "quote"

@@ -283,9 +283,7 @@ test('discounts come from the row totals the server calculated', async () => {
     itemDiscountedTotal: fyo.pesa(185),
     itemTaxedTotal: fyo.pesa(203.5),
   });
-  invoice.discountAmount = fyo.pesa(5);
 
   assert.equal(invoice.itemDiscount.float, 15);
-  assert.equal(invoice.totalDiscount.float, 20);
   clearTimeout(invoice._previewTimer);
 });

@@ -57,6 +57,7 @@
     "backReference",
     "makeAutoStockTransfer",
     "returnAgainst",
-    "isReturned"
+    "isReturned",
+    "loyaltyPointsAmount"
   ]
 }

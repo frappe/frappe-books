@@ -43,5 +43,6 @@
       "label": "Return Against",
       "section": "References"
     }
-  ]
+  ],
+  "removeFields": ["loyaltyPointsAmount"]
 }

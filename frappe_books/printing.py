@@ -8,7 +8,7 @@ from typing import Any
 import frappe
 from frappe.utils import flt, money_in_words
 
-from frappe_books.accounting.invoice import InvoiceController, row_discount
+from frappe_books.accounting.invoice import InvoiceController
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
 from frappe_books.accounting.payment import PaymentController, tax_share
 from frappe_books.inventory.transaction import StockMovementController, StockTransferController
@@ -54,10 +54,9 @@ def _amount_totals(amount, currency) -> dict[str, Any]:
 
 def _invoice_totals(invoice) -> dict[str, Any]:
 	tax = sum_decimal(row.amount for row in invoice.taxes)
-	item_discount = sum_decimal(row_discount(invoice, row) for row in invoice.items)
 	totals = _amount_totals(invoice.grand_total, invoice.currency)
 	totals["sub_total"] = as_decimal(invoice.grand_total) - tax
-	totals["total_discount"] = item_discount + as_decimal(invoice.discount_amount)
+	totals["total_discount"] = invoice.total_discount
 	if invoice.transaction_type != "quote":
 		totals["payment_details"] = _payment_details(invoice)
 	return totals

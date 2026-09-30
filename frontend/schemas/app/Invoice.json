@@ -50,8 +50,18 @@
       "section": "Items"
     },
     {
+      "fieldname": "totalDiscount",
+      "label": "Discount",
+      "section": "Tax and Totals"
+    },
+    {
       "fieldname": "taxes",
       "label": "Taxes",
+      "section": "Tax and Totals"
+    },
+    {
+      "fieldname": "loyaltyPointsAmount",
+      "label": "Loyalty Points Redeemed",
       "section": "Tax and Totals"
     },
     {

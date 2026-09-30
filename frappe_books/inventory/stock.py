@@ -48,6 +48,20 @@ def create_series_batches(rows):
 			row.batch = names[0]
 
 
+def create_series_serial_numbers(rows):
+	"""Top up the serial numbers of rows of serialised items to their quantity from the item's series.
+
+	The serial numbers themselves are created when the stock arrives, on submit.
+	"""
+	serialised = _items_with("has_serial_number", {row.item for row in rows if row.item})
+	for row in rows:
+		serial_numbers = parse_serial_numbers(row.serial_number)
+		missing = int(abs(as_decimal(row.quantity))) - len(serial_numbers)
+		if row.item in serialised and missing > 0:
+			added = new_item_names("Books Serial Number", row.item, missing)
+			row.serial_number = "\n".join(serial_numbers + added) or None
+
+
 def validate_stock_available(transfers, date):
 	"""Lock the items, then check that outgoing rows have the stock they take at the date.
 

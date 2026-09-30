@@ -1,5 +1,6 @@
-import type { Fyo } from 'fyo';
+import { t, type Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
+import type { Field } from 'schemas/types';
 import type { QueryFilter } from 'utils/db/types';
 import { getCount, getDocuments, type Filter } from './api';
 import { getDocType } from './doctypes';
@@ -57,11 +58,24 @@ export function toFrappeFilters(query: QueryFilter): Filter[] {
   return filters;
 }
 
+/** The Submitted and Cancelled filters of Books lists, which Frappe keeps as `docstatus`. */
+export function getDocstatusFilterFields(): Field[] {
+  return [
+    { fieldname: 'submitted', label: t`Submitted`, fieldtype: 'Check' },
+    { fieldname: 'cancelled', label: t`Cancelled`, fieldtype: 'Check' },
+  ].map((field) => ({ ...field, meta: true }) as Field);
+}
+
 function toFrappeFilter(
   fieldname: string,
   operator: string,
   value: unknown
 ): Filter {
+  if (fieldname === 'submitted' || fieldname === 'cancelled') {
+    const isSet = Boolean(Number(value));
+    return toDocstatusFilter(fieldname, operator === '=' ? isSet : !isSet);
+  }
+
   if (operator === 'is null' || operator === 'is not null') {
     return [fieldname, 'is', operator === 'is null' ? 'not set' : 'set'];
   }
@@ -71,6 +85,16 @@ function toFrappeFilter(
   }
 
   return [fieldname, operator, typeof value === 'boolean' ? +value : value];
+}
+
+/** A submitted document is submitted or cancelled; a cancelled one is only cancelled. */
+function toDocstatusFilter(
+  fieldname: 'submitted' | 'cancelled',
+  isSet: boolean
+): Filter {
+  const docstatus = fieldname === 'submitted' ? 0 : 2;
+  const matches = fieldname === 'submitted' ? !isSet : isSet;
+  return ['docstatus', matches ? '=' : '!=', docstatus];
 }
 
 /** All of `filters`, and one of `orFilters` when there are any. */

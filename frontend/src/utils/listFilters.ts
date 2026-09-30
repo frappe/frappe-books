@@ -1,4 +1,6 @@
 import type { Field } from 'schemas/types';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { getDocstatusFilterFields } from 'src/frappe/list';
 import { getModel, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import type { QueryFilter } from 'utils/db/types';
@@ -24,7 +26,7 @@ export class ListFilters {
   constructor(schemaName: string) {
     this.fields = markRaw(
       getFilterFields(
-        getSchema(schemaName)?.fields ?? [],
+        getListFields(schemaName),
         getModel(schemaName)?.getListViewSettings?.(fyo)?.columns
       )
     );
@@ -107,4 +109,14 @@ export class ListFilters {
       this.error = (error as Error).message;
     }
   }
+}
+
+/** A schema's fields, and for a submittable Frappe-backed one the filters Books keeps for its docstatus. */
+function getListFields(schemaName: string): Field[] {
+  const schema = getSchema(schemaName);
+  if (!schema?.isSubmittable || !isFrappeBacked(schemaName)) {
+    return schema?.fields ?? [];
+  }
+
+  return [...schema.fields, ...getDocstatusFilterFields()];
 }

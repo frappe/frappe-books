@@ -47,6 +47,29 @@ test('a new journal entry is numbered as before, and its accounts group by root 
   assert.equal(getSchema('JournalEntryAccount').fields[0].groupBy, 'rootType');
 });
 
+test('a new journal entry is saved without its temporary name, which the server replaces', async () => {
+  const requests = stubFrappe(({ path, body }) =>
+    path.endsWith('run_doc_method')
+      ? { docs: [body.document] }
+      : { data: { ...body, name: 'JV-1001', modified: '2026-09-30 10:00:00' } }
+  );
+  const entry = newFrappeDoc('JournalEntry', {
+    number_series: 'JV-',
+    entry_type: 'Journal Entry',
+    accounts: [
+      { account: 'Cash', debit: fyo.pesa(5) },
+      { account: 'Capital', credit: fyo.pesa(5) },
+    ],
+  });
+  await entry.sync();
+
+  const insert = requests.find(
+    ({ method, path }) => method === 'POST' && path.endsWith('Entry')
+  );
+  assert.equal('name' in insert.body, false);
+  assert.equal(entry.name, 'JV-1001');
+});
+
 test('references and attachments hide on a submitted entry without them', () => {
   const entry = newFrappeDoc('JournalEntry', { reference_number: 'CHQ-1' });
   const hidden = (fieldname) =>

@@ -17,11 +17,15 @@ export interface Presentation {
   fields?: Record<string, FieldPresentation>;
 }
 
-/** Option labels, and whether an Autocomplete takes values that are not options. */
+/**
+ * Option labels, whether an Autocomplete takes values that are not options,
+ * and whether a Link offers to create a document. `getdoctype` does not send
+ * `only_select`, so a Link without Create says so here.
+ */
 export type FieldPresentation = Pick<
   OptionField,
   'optionLabels' | 'allowCustom'
->;
+> & { create?: boolean };
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
 export type Placements = Record<string, { section?: string; tab?: string }>;
@@ -157,7 +161,7 @@ function toField(
   }
 
   if (docfield.fieldtype === 'Link') {
-    field.create = !docfield.only_select;
+    field.create = shown.create ?? !docfield.only_select;
   }
 
   if (shown.allowCustom) {

@@ -7,7 +7,23 @@ import { PartyRoleEnum } from '../Party/types';
 /** Books Defaults, served by Frappe: what new documents start with. */
 export class Defaults extends FrappeDoc {
   static override doctype = 'Books Defaults';
-  static override presentation = { label: 'Defaults' };
+  // Print templates are picked, not created, from the settings.
+  static override presentation = {
+    label: 'Defaults',
+    fields: Object.fromEntries(
+      [
+        'sales_quote_print_template',
+        'sales_invoice_print_template',
+        'purchase_invoice_print_template',
+        'journal_entry_print_template',
+        'payment_print_template',
+        'shipment_print_template',
+        'purchase_receipt_print_template',
+        'stock_movement_print_template',
+        'pos_print_template',
+      ].map((fieldname) => [fieldname, { create: false }])
+    ),
+  };
 
   declare sales_payment_account?: string;
   declare purchase_payment_account?: string;

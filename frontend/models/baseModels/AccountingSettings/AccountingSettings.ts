@@ -8,7 +8,15 @@ import { FrappeDoc } from 'src/frappe/document';
  */
 export class AccountingSettings extends FrappeDoc {
   static override doctype = 'Books Accounting Settings';
-  static override presentation = { label: 'Accounting Settings' };
+  // These accounts are picked, not created, from the settings.
+  static override presentation = {
+    label: 'Accounting Settings',
+    fields: {
+      write_off_account: { create: false },
+      round_off_account: { create: false },
+      discount_account: { create: false },
+    },
+  };
 
   declare fullname?: string;
   declare company_name?: string;

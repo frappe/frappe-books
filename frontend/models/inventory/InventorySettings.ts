@@ -5,7 +5,15 @@ import { FrappeDoc } from 'src/frappe/document';
 /** Books Inventory Settings, served by Frappe. */
 export class InventorySettings extends FrappeDoc {
   static override doctype = 'Books Inventory Settings';
-  static override presentation = { label: 'Inventory Settings' };
+  // These accounts are picked, not created, from the settings.
+  static override presentation = {
+    label: 'Inventory Settings',
+    fields: {
+      stock_in_hand: { create: false },
+      stock_received_but_not_billed: { create: false },
+      cost_of_goods_sold: { create: false },
+    },
+  };
 
   declare default_location?: string;
   declare stock_in_hand?: string;

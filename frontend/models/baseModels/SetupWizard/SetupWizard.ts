@@ -8,7 +8,10 @@ import { FrappeDoc } from 'src/frappe/document';
  */
 export class SetupWizard extends FrappeDoc {
   static override doctype = 'Books Setup Wizard';
-  static override presentation = { label: 'Setup Wizard' };
+  static override presentation = {
+    label: 'Setup Wizard',
+    fields: { country: { create: false }, currency: { create: false } },
+  };
   static override previewMethod = 'preview';
 
   // The server checks it too; mirrored to show the message at the field.

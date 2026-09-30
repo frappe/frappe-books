@@ -39,5 +39,5 @@ Use a dynamic import when a model action must open part of the interface.
 Regional models should as far as possible extend the base model and override
 what's required.
 
-They should then be imported dynamicall and returned from `getRegionalModels` in
-`models/index.ts` on the basis of `countryCode`.
+They should then be imported dynamically and returned from
+`getRegionalFrappeModels` in `models/index.ts` on the basis of `countryCode`.

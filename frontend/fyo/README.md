@@ -51,8 +51,8 @@ other things.
 
 - Read `countryCode` from the Frappe boot response.
 - Call `fyo.db.connect(countryCode)`.
-- Get `regionalModels` from `models/index.ts/getRegionalModels`.
-- Call `fyo.initializeAndRegister` with the models and regional models.
+- Call `fyo.initializeAndRegister` with the models.
+- Register `frappeModels`, then the regional ones from `models/index.ts/getRegionalFrappeModels`.
 
 _Note: since **SystemSettings** are initialized on `fyo.initializeAndRegister`
 db needs to be set first else an error will be thrown_

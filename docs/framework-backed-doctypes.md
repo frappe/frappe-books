@@ -24,12 +24,15 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | Part | Frappe-backed place |
 | --- | --- |
 | Fields, labels, placeholders, options, defaults, required, set once | The DocType JSON (`placeholder`, not `description`) |
+| Help text under a field, status badge colours | The DocField `description`, the DocType `states` |
 | Visibility, read only and required that depend on the document | `depends_on`, `read_only_depends_on`, `mandatory_depends_on` |
 | Values the server fills (defaults, accounts, totals, fetched values) | A whitelisted controller method named in `static previewMethod`, for example `preview`. It fills values and does not save. `fetch_from` values come from `get_invalid_links()`. |
 | Validation and business rules | The controller. A client mirror is only for a message at its field. |
-| Link without "Create" | `create: false` in `presentation.fields`, or in `presentation.tables` for a table's rows |
+| Link without "Create", Select option labels, a table's row form (`edit`) | `presentation.fields`, and `presentation.tables` for a table's rows |
 | Table columns | `in_list_view` on the child DocFields |
-| Label, name field of a prompt-named doctype, quick edit fields | `static presentation` on the model |
+| Label, name field, quick edit fields, a link's display field, no Create on the list | `static presentation` on the model. A prompt asks for the name; another doctype shows it read only when `nameField` labels it. |
+| Regional fields | A model that extends the base one, returned by `getRegionalFrappeModels` |
+| Actions that open a mapped document | `getMappedDoc`; a Frappe-backed target runs through `frappe.model.mapper.make_mapped_doc` |
 | List columns, badges, actions, option lists, formatting | The model statics, as before: `getListViewSettings`, `getActions`, `lists`, `emptyMessages` |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |

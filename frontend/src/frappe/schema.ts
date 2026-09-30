@@ -10,6 +10,8 @@ export interface Presentation {
   nameField?: { label: string; placeholder?: string };
   /** The field a link to the doctype shows instead of the name. */
   linkDisplayField?: string;
+  /** False when its list offers no Create, as for records made elsewhere. */
+  create?: boolean;
   fields?: Record<string, FieldPresentation>;
 }
 
@@ -67,6 +69,7 @@ export function toSchema(
     titleField: meta.title_field || 'name',
     quickEditFields: presentation.quickEditFields,
     linkDisplayField: presentation.linkDisplayField,
+    create: presentation.create,
     tableFields: meta.fields
       .filter((field) => field.in_list_view)
       .map((field) => field.fieldname),

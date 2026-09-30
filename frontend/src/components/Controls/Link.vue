@@ -74,7 +74,8 @@ export default {
           schemaName,
           keyword,
           filters,
-          LINK_PAGE_LENGTH
+          LINK_PAGE_LENGTH,
+          this.df.groupBy
         );
         return schemaName === 'Account'
           ? options.map((option) => ({

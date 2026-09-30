@@ -5,7 +5,7 @@ import { FrappeDoc } from 'src/frappe/document';
 export class JournalEntryAccount extends FrappeDoc {
   static override presentation = {
     label: 'Journal Entry Account',
-    fields: { account: { groupBy: 'rootType', create: false } },
+    fields: { account: { groupBy: 'root_type', create: false } },
   };
 
   static filters: FiltersMap = {

@@ -32,6 +32,34 @@ export function validatePhoneNumber(value: DocValue) {
   }
 }
 
+// Frappe checks Data fields with the Email and Phone options by these patterns.
+const FRAPPE_EMAIL =
+  /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+const FRAPPE_PHONE = /^[0-9 +_\-,.*#()]{1,20}$/;
+
+/** Frappe's check of an Email field, with its message, to show it at the field. */
+export function validateFrappeEmail(value: DocValue) {
+  const addresses = String(value ?? '')
+    .split(',')
+    .map((address) => address.trim())
+    .filter(Boolean);
+  for (const address of addresses) {
+    // Frappe also takes a named address, e.g. `Jo <jo@example.com>`.
+    const email = /<([^>]*)>$/.exec(address)?.[1] ?? address;
+    if (!FRAPPE_EMAIL.test(email)) {
+      throw new ValidationError(t`${email} is not a valid Email Address`);
+    }
+  }
+}
+
+/** Frappe's check of a Phone field, with its message, to show it at the field. */
+export function validateFrappePhone(value: DocValue) {
+  const phone = String(value ?? '').trim();
+  if (phone && !FRAPPE_PHONE.test(phone)) {
+    throw new ValidationError(t`${phone} is not a valid Phone Number`);
+  }
+}
+
 export function validateOptions(field: OptionField, value: string, doc: Doc) {
   const options = getOptionList(field, doc);
   if (!options.length) {

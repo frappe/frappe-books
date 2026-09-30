@@ -8,6 +8,17 @@ export interface Presentation {
   quickEditFields?: string[];
   /** The field that asks for a document's name when its DocType names by prompt. */
   nameField?: { label: string; placeholder?: string };
+  /** The field a link to the doctype shows instead of the name. */
+  linkDisplayField?: string;
+  fields?: Record<string, FieldPresentation>;
+}
+
+/** How a form shows a field, where the DocField has no property for it. */
+export interface FieldPresentation {
+  /** Labels of Select values, e.g. `percentage` as `Discount Percentage`. */
+  optionLabels?: Record<string, string>;
+  /** A table whose rows also open in a form. */
+  edit?: boolean;
 }
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
@@ -42,8 +53,9 @@ export function toSchema(
   presentation: Presentation,
   context: SchemaContext
 ): Schema {
+  const docFields = getDocFields(meta, presentation, context);
   const fields = [
-    ...getNameFields(meta, presentation, getDocFields(meta, context)),
+    ...getNameFields(meta, presentation, docFields),
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 
@@ -54,6 +66,7 @@ export function toSchema(
     naming: getNaming(meta.autoname),
     titleField: meta.title_field || 'name',
     quickEditFields: presentation.quickEditFields,
+    linkDisplayField: presentation.linkDisplayField,
     tableFields: meta.fields
       .filter((field) => field.in_list_view)
       .map((field) => field.fieldname),
@@ -65,7 +78,11 @@ export function toSchema(
 }
 
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
-function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
+function getDocFields(
+  meta: DocTypeMeta,
+  presentation: Presentation,
+  context: SchemaContext
+): Field[] {
   const levels = getPermlevels(meta, context.roles);
   const fields: Field[] = [];
   const placed: Field[] = [];
@@ -78,7 +95,8 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
     } else if (docfield.fieldtype === 'Section Break') {
       section = docfield.label || DEFAULT_SECTION;
     } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
-      const field = toField(docfield, context.schemaNames, levels);
+      const shown = getFieldPresentation(meta, docfield, presentation);
+      const field = toField(docfield, shown, context.schemaNames, levels);
       const placement = context.placements[docfield.fieldname];
       if (placement) {
         placed.push({
@@ -100,25 +118,45 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
   return [...fields, ...placed];
 }
 
+/** A field's option labels, state colours and row editing, as /books shows them. */
+function getFieldPresentation(
+  meta: DocTypeMeta,
+  docfield: DocField,
+  presentation: Presentation
+): FieldPresentation & { states?: Record<string, string> } {
+  const shown = presentation.fields?.[docfield.fieldname] ?? {};
+  if (docfield.fieldname !== 'status' || !meta.states?.length) {
+    return shown;
+  }
+
+  // Frappe colours a document's `status` by the DocType state of the same title.
+  const states = meta.states.map(({ title, color }) => [title, color]);
+  return { ...shown, states: Object.fromEntries(states) };
+}
+
 /**
  * Dynamic properties (depends_on and the like) stay unset, so a doc's own
  * rules decide them; see `FrappeDoc`.
  */
 function toField(
   docfield: DocField,
+  shown: ReturnType<typeof getFieldPresentation>,
   schemaNames: SchemaContext['schemaNames'],
   levels: Permlevels
 ): Field {
+  const { optionLabels, states, edit } = shown;
   const properties = getFieldProperties(
-    { fieldname: docfield.fieldname } as Field,
-    docfield
+    { fieldname: docfield.fieldname, optionLabels } as Field,
+    { ...docfield, states }
   ) as Partial<Field> & { target?: string };
   const level = docfield.permlevel ?? 0;
   const field = {
     ...properties,
+    edit,
     fieldname: docfield.fieldname,
     label: docfield.label ?? docfield.fieldname,
     placeholder: docfield.placeholder,
+    sub_label: docfield.description,
     isCustom: !!docfield.is_custom_field,
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,

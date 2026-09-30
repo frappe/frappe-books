@@ -8,6 +8,7 @@ export interface DocField {
   options?: string;
   default?: string;
   placeholder?: string;
+  description?: string;
   reqd?: number;
   read_only?: number;
   hidden?: number;
@@ -30,10 +31,17 @@ export interface DocPerm {
   write?: number;
 }
 
+/** A DocType state: the colour of a `status` option. */
+export interface DocTypeState {
+  title: string;
+  color: string;
+}
+
 export interface DocTypeMeta {
   name: string;
   fields: DocField[];
   permissions: DocPerm[];
+  states?: DocTypeState[];
   autoname?: string;
   title_field?: string;
   /** Comma separated fieldnames that search matches besides the name. */

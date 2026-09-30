@@ -27,6 +27,14 @@
   "shipment_terms",
   "purchase_receipt_terms",
   "print_templates_section_break_21",
+  "sales_quote_print_template",
+  "sales_invoice_print_template",
+  "purchase_invoice_print_template",
+  "journal_entry_print_template",
+  "payment_print_template",
+  "shipment_print_template",
+  "purchase_receipt_print_template",
+  "stock_movement_print_template",
   "pos_print_template",
   "point_of_sale_section_break_31",
   "pos_customer",
@@ -158,6 +166,62 @@
    "label": "Print Templates"
   },
   {
+   "fieldname": "sales_quote_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Sales Quote Print Template",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "sales_invoice_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Sales Invoice Print Template",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "purchase_invoice_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Purchase Invoice Print Template",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "journal_entry_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Journal Entry Print Template",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "payment_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Payment Print Template",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "shipment_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Shipment Print Template",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "purchase_receipt_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Purchase Receipt Print Template",
+   "options": "Print Format"
+  },
+  {
+   "fieldname": "stock_movement_print_template",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Stock Movement Print Template",
+   "options": "Print Format"
+  },
+  {
    "fieldname": "pos_print_template",
    "fieldtype": "Link",
    "label": "POS Print Template",
@@ -234,7 +298,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-30 16:00:00.000000",
+ "modified": "2026-09-30 23:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Defaults",

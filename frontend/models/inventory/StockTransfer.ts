@@ -85,8 +85,9 @@ export abstract class StockTransfer extends Transfer {
       role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
     }),
     numberSeries: (doc: Doc) => ({ referenceType: doc.schemaName }),
+    // Invoices are Frappe-backed, so their filters use Frappe fieldnames.
     backReference: () => ({
-      stockNotTransferred: ['!=', 0],
+      stock_not_transferred: ['!=', 0],
       submitted: true,
       cancelled: false,
     }),

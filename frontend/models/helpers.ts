@@ -11,6 +11,7 @@ import { ModelNameEnum } from './types';
 
 import { Doc } from 'fyo/model/doc';
 import { Invoice } from './baseModels/Invoice/Invoice';
+import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
@@ -163,9 +164,9 @@ export function getMakeStockTransferAction(
   return {
     label,
     group: fyo.t`Create`,
-    condition: (doc: Doc) => doc.isSubmitted && !!doc.stockNotTransferred,
+    condition: (doc: Doc) => doc.isSubmitted && !!doc.stock_not_transferred,
     action: async (doc: Doc) => {
-      const invoice = doc as Invoice;
+      const invoice = doc as InvoiceDoc;
       const transfer = await getMappedBooksDoc(
         invoice,
         invoice.stockTransferSchemaName,
@@ -258,7 +259,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     label: fyo.t`Payment`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
+      doc.isSubmitted && !(doc.outstanding_amount as Money).isZero(),
     action: async (doc, router) => {
       const payment = await getMappedBooksDoc(
         doc,

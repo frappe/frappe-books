@@ -81,8 +81,9 @@ export class PaymentFor extends Doc {
         '0.' +
         '0'.repeat(doc.fyo.singles.SystemSettings?.internalPrecision ?? 11);
 
+      // Invoices are Frappe-backed, so their filters use Frappe fieldnames.
       const baseFilters = {
-        outstandingAmount: ['!=', zero],
+        outstanding_amount: ['!=', zero],
         submitted: true,
         cancelled: false,
       };

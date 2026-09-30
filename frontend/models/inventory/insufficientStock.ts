@@ -1,4 +1,4 @@
-import type { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 
 type ItemQuantity = { item: string; batch?: string; quantity: number };
@@ -10,7 +10,7 @@ export async function getInsufficientItems(
   const date = invoice.date!.toISOString();
   const location = await invoice.fyo.db.getStockLocation(
     invoice.schemaName,
-    !!invoice.isPOS
+    !!invoice.is_pos
   );
   const shortfalls = await Promise.all(
     (await getTrackedItemQuantities(invoice)).map(async (row) => {

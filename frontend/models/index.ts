@@ -55,6 +55,7 @@ import { POSProfile } from './baseModels/POSProfile/PosProfile';
 import { POSOpeningShift } from './inventory/Point of Sale/POSOpeningShift';
 import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
+import * as invoices from './invoices';
 
 export const models = {
   Account,
@@ -121,6 +122,9 @@ export const models = {
  */
 export const frappeModels: Record<string, FrappeModel> = {
   Item,
+  SalesInvoice: invoices.SalesInvoice,
+  PurchaseInvoice: invoices.PurchaseInvoice,
+  SalesQuote: invoices.SalesQuote,
 };
 
 export async function getRegionalModels(

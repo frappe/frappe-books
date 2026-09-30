@@ -16,7 +16,17 @@ const billMeta = {
   name: 'Books Bill',
   autoname: 'hash',
   permissions: [],
+  states: [
+    { title: 'Paid', color: 'Green' },
+    { title: 'Unpaid', color: 'Orange' },
+  ],
   fields: [
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Unpaid\nPaid',
+    },
     {
       fieldname: 'party_type',
       fieldtype: 'Link',
@@ -165,4 +175,11 @@ test('a mapper builds an unsaved Frappe-backed document; unset values keep defau
   assert.ok(bill.lines[0] instanceof BillLine);
   assert.equal(bill.lines[0].amount, 3);
   assert.ok(bill.lines[0].name);
+});
+
+test('the status takes the colours of the DocType states', () => {
+  assert.deepEqual(field('Bill', 'status').states, {
+    Paid: 'Green',
+    Unpaid: 'Orange',
+  });
 });

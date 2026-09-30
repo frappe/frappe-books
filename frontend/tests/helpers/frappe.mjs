@@ -16,17 +16,20 @@ await build({
     contents: `
       export { FrappeDoc } from './src/frappe/document';
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
-      export { getFrappeDoc, newFrappeDoc } from './src/frappe/documents';
+      export { getFrappeDoc, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
+      export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, toFrappeFilters } from './src/frappe/list';
       export { getLinkLabels, searchFrappeLink } from './src/frappe/link';
-      export { getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes } from './src/frappe/registry';
+      export { getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { getMissingMandatoryFields } from './fyo/model/helpers';
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels, models } from './models';
+      export { getMappedDoc } from './models/helpers';
+      export { createFilters, routeFilters } from './src/utils/filters';
     `,
     resolveDir: frontend,
   },
@@ -73,7 +76,9 @@ export const {
   isFrappeBacked,
   getDocType,
   getFrappeDoc,
+  getMappedFrappeDoc,
   newFrappeDoc,
+  useBooksDoc,
   evaluateCondition,
   getFrappeListPage,
   toFrappeFilters,
@@ -84,6 +89,7 @@ export const {
   getSearchFields,
   getSingleSchemaNames,
   loadFrappeDocTypes,
+  toSchemaName,
   toSchema,
   fyo,
   getMissingMandatoryFields,
@@ -94,6 +100,9 @@ export const {
   frappeModels,
   getRegionalFrappeModels,
   models,
+  getMappedDoc,
+  createFilters,
+  routeFilters,
 } = createRequire(import.meta.url)(output);
 
 /**

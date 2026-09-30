@@ -1,5 +1,6 @@
 import type { DocValueMap } from 'fyo/core/types';
 import { NotFoundError } from 'fyo/utils/errors';
+import { getIsNullOrUndef } from 'utils';
 import { fyo } from 'src/initFyo';
 import { call } from 'src/web/api';
 import type { DocValues } from './api';
@@ -31,21 +32,27 @@ export function newFrappeDoc(
   return doc;
 }
 
-/** The unsaved document a whitelisted server mapper, like make_customer, builds from `sourceName`. */
-export async function newFrappeMappedDoc(
+/** The unsaved document a whitelisted server mapper, like an invoice's make_payment, builds. */
+export async function getMappedFrappeDoc(
   schemaName: string,
   method: string,
   sourceName: string
 ): Promise<FrappeDoc> {
-  const values = await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
+  const mapped = await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
     method,
     source_name: sourceName,
   });
-  const getSchema = (target: string) => getDocType(target).schema;
-  return newFrappeDoc(
-    schemaName,
-    toDocValues(getSchema(schemaName), values, fyo, getSchema)
+  const values = toDocValues(
+    getDocType(schemaName).schema,
+    mapped,
+    fyo,
+    (target) => getDocType(target).schema
   );
+  // Values the mapper left unset keep the new document's defaults.
+  const setValues = Object.entries(values).filter(
+    ([, value]) => !getIsNullOrUndef(value)
+  );
+  return newFrappeDoc(schemaName, Object.fromEntries(setValues));
 }
 
 /** An open document, reloaded if asked and unedited, or the saved one loaded. */

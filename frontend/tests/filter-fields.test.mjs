@@ -15,8 +15,6 @@ for (const schemaName of [
   'SalesInvoice',
   'PurchaseInvoice',
   'SalesQuote',
-  'JournalEntry',
-  'Payment',
   'Shipment',
   'PurchaseReceipt',
 ]) {
@@ -90,7 +88,6 @@ for (const [schemaName, values] of [
       'Cancelled',
     ],
   ],
-  ['JournalEntry', ['Saved', 'Submitted', 'Cancelled']],
   ['Shipment', ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled']],
 ]) {
   test(`${schemaName} supplies stored status values and display labels to the filter`, async () => {

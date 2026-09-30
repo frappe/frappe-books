@@ -117,7 +117,7 @@ import { getOptionList } from 'fyo/utils';
 import { Button as FrappeButton, Combobox as FrappeCombobox } from 'frappe-ui';
 import { FieldTypeEnum } from 'schemas/types';
 import { fuzzyMatch } from 'src/utils';
-import { getModel, getSchema } from 'src/frappe/registry';
+import { getModel, getSchema, toSchemaName } from 'src/frappe/registry';
 import { h } from 'vue';
 import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
 import MobilePicker from 'src/mobile/MobilePicker.vue';
@@ -187,7 +187,8 @@ export default {
       let schemaName = this.df?.target;
       if (!schemaName) {
         const references = this.df?.references ?? '';
-        schemaName = this.doc?.[references];
+        const reference = this.doc?.[references];
+        schemaName = reference && (toSchemaName(reference) ?? reference);
       }
       return schemaName;
     },

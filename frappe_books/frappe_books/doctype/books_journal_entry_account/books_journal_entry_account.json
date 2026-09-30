@@ -12,12 +12,12 @@
  ],
  "fields": [
   {
-   "description": "Account",
    "fieldname": "account",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Account",
    "options": "Books Account",
+   "placeholder": "Account",
    "reqd": 1
   },
   {
@@ -37,7 +37,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.330668",
+ "modified": "2026-09-30 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Journal Entry Account",

@@ -2,8 +2,14 @@ import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
 import type { QueryFilter } from 'utils/db/types';
 import { getCount, getDocuments, type Filter } from './api';
-import { getDocType } from './doctypes';
+import { getDocType, type FrappeDocType } from './doctypes';
 import { toDocValues } from './values';
+
+// Books' Submitted and Cancelled list filters, as the docstatus values they match.
+const DOCSTATUS_FLAGS: Record<string, number[]> = {
+  submitted: [1, 2],
+  cancelled: [2],
+};
 
 export interface ListPage {
   filters: QueryFilter;
@@ -19,15 +25,15 @@ export async function getFrappeListPage(
   schemaName: string,
   page: ListPage
 ): Promise<{ rows: RenderData[]; total: number }> {
-  const { doctype, schema } = getDocType(schemaName);
+  const docType = getDocType(schemaName);
+  const { doctype, schema } = docType;
   const filters = toFrappeFilters(page.filters);
   const orFilters = toFrappeFilters(page.orFilters);
-  const hasDate = schema.fields.some(({ fieldname }) => fieldname === 'date');
   const [rows, total] = await Promise.all([
     getDocuments(doctype, {
       fields: ['*'],
       filters: combineFilters(filters, orFilters),
-      orderBy: hasDate ? 'date desc, creation desc' : 'creation desc',
+      orderBy: getOrderBy(docType),
       start: page.start,
       limit: page.limit,
     }),
@@ -41,6 +47,16 @@ export async function getFrappeListPage(
     })) as RenderData[],
     total,
   };
+}
+
+/** By the DocType's sort field when it sets one, else by the date; newest first. */
+function getOrderBy({ meta, schema }: FrappeDocType): string {
+  const fieldnames = schema.fields.map(({ fieldname }) => fieldname);
+  const sortField = [meta.sort_field, 'date'].find(
+    (fieldname) =>
+      fieldname && fieldname !== 'creation' && fieldnames.includes(fieldname)
+  );
+  return sortField ? `${sortField} desc, creation desc` : 'creation desc';
 }
 
 /** Frappe filters for a Books list filter whose fields are Frappe fieldnames. */
@@ -64,6 +80,11 @@ function toFrappeFilter(
 ): Filter {
   if (operator === 'is null' || operator === 'is not null') {
     return [fieldname, 'is', operator === 'is null' ? 'not set' : 'set'];
+  }
+
+  if (fieldname in DOCSTATUS_FLAGS) {
+    const isSet = (operator === '=') === !!value;
+    return ['docstatus', isSet ? 'in' : 'not in', DOCSTATUS_FLAGS[fieldname]];
   }
 
   if (operator === 'includes') {

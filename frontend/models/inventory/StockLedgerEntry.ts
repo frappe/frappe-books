@@ -1,17 +1,13 @@
-import { Doc } from 'fyo/model/doc';
 import { ListViewSettings } from 'fyo/model/types';
-import { Money } from 'pesa';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class StockLedgerEntry extends Doc {
-  date?: Date;
-  item?: string;
-  rate?: Money;
-  quantity?: number;
-  location?: string;
-  referenceName?: string;
-  referenceType?: string;
-  batch?: string;
-  serialNumber?: string;
+/** Books Stock Ledger Entry, served by Frappe. Only the server posts entries. */
+export class StockLedgerEntry extends FrappeDoc {
+  static override doctype = 'Books Stock Ledger Entry';
+  static override presentation = {
+    label: 'Stock Ledger Entry',
+    nameField: { label: 'Entry No.' },
+  };
 
   static override getListViewSettings(): ListViewSettings {
     return {
@@ -21,7 +17,7 @@ export class StockLedgerEntry extends Doc {
         'location',
         'rate',
         'quantity',
-        'referenceName',
+        'reference_name',
       ],
     };
   }

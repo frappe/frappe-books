@@ -114,7 +114,8 @@ test('the parent picker offers groups of the account root type', () => {
 });
 
 test('account links in other forms filter by Frappe fieldnames', async () => {
-  const { PurchaseInvoice, JournalEntryAccount } = models;
+  const { PurchaseInvoice } = models;
+  const JournalEntryAccount = frappeModels.JournalEntry.rowModels.accounts;
   const { Party, AccountingSettings, Defaults, InventorySettings, POSSettings } =
     frappeModels;
   const ledger = { is_group: false };

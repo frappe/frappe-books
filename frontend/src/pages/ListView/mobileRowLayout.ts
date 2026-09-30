@@ -20,7 +20,7 @@ export interface MobileRowLayout {
 const metaFieldnames: Record<string, string[]> = {
   [ModelNameEnum.Party]: ['role', 'phone'],
   [ModelNameEnum.Item]: ['item_type', 'tax'],
-  [ModelNameEnum.Payment]: ['name', 'date', 'paymentType'],
+  [ModelNameEnum.Payment]: ['name', 'date', 'payment_type'],
 };
 
 /** Schemas whose rows start with an initials avatar. */
@@ -83,7 +83,7 @@ export function getRowAmount(row: RenderData, column?: ListColumn): string {
     return '';
   }
 
-  const signed = row.paymentType === 'Pay' ? amount.neg() : amount;
+  const signed = row.payment_type === 'Pay' ? amount.neg() : amount;
   return fyo.format(signed, column as Field);
 }
 

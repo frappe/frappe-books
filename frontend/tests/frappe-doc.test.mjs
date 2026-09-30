@@ -2,18 +2,21 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   errors,
+  evaluateCondition,
   evaluateHidden,
   evaluateReadOnly,
   evaluateRequired,
   fyo,
   getFrappeDoc,
+  getMappedFrappeDoc,
   getMissingMandatoryFields,
   loadTestDocTypes,
   newFrappeDoc,
   stubFrappe,
+  useBooksDoc,
 } from './helpers/frappe.mjs';
 
-await loadTestDocTypes();
+const { TestItem } = await loadTestDocTypes();
 const MODIFIED = '2026-09-30 10:00:00.123456';
 
 const savedPen = {
@@ -37,6 +40,11 @@ function stubDocument(doc = savedPen, respond = () => undefined) {
 
     if (request.method === 'GET') {
       return { data: doc };
+    }
+
+    // A preview that fills nothing.
+    if (request.path.endsWith('run_doc_method')) {
+      return { docs: [request.body.document] };
     }
 
     return { data: { ...doc, ...request.body, modified: MODIFIED } };
@@ -91,6 +99,19 @@ test('depends_on, read_only_depends_on and mandatory_depends_on apply to the for
   assert.equal(evaluateHidden(field(untracked, 'track_item'), untracked), true);
 });
 
+test('form conditions read the document status, as Frappe forms do', () => {
+  const order = newFrappeDoc('Order', { customer: 'Acme' });
+  assert.equal(
+    evaluateCondition('eval:!doc.docstatus', order.getEvalDoc()),
+    true
+  );
+  order.docstatus = 1;
+  assert.equal(
+    evaluateCondition('eval:!doc.docstatus', order.getEvalDoc()),
+    false
+  );
+});
+
 test('a new document is inserted whole; its rows go without client names', async () => {
   const requests = stubDocument(savedPen);
   const item = newFrappeDoc('Item', { name: 'Pen', income_account: 'Sales' });
@@ -101,8 +122,8 @@ test('a new document is inserted whole; its rows go without client names', async
 
   await item.sync();
 
-  const insert = requests.find(({ method }) => method === 'POST');
-  assert.equal(insert.path, '/api/v2/document/Books Item');
+  const insert = requests.find(({ path }) => path.endsWith('/Books Item'));
+  assert.equal(insert.method, 'POST');
   assert.equal(insert.body.name, 'Pen');
   assert.equal(insert.body.income_account, 'Sales');
   assert.equal(insert.body.track_item, 0);
@@ -239,6 +260,66 @@ test('a save previews first when the server fills a missing value', async () => 
   assert.equal(requests[1].body.income_account, 'Sales');
 });
 
+test('a save waits for the fills of the last edit', async () => {
+  const requests = stubDocument(savedPen, ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      const { document } = body;
+      const account = document.item_type === 'Service' ? 'Service' : 'Sales';
+      return {
+        docs: [
+          { ...document, income_account: document.income_account ?? account },
+        ],
+      };
+    }
+  });
+  const item = newFrappeDoc('Item', { name: 'Chai', income_account: 'Sales' });
+  TestItem.refills = { item_type: ['income_account'] };
+  await item.set('item_type', 'Service');
+  TestItem.refills = {};
+
+  await item.sync();
+  assert.deepEqual(
+    requests.map(({ path }) => path),
+    ['/api/v2/method/run_doc_method', '/api/v2/document/Books Item']
+  );
+  // The model refills the account after the type, though the user set it.
+  assert.equal('income_account' in requests[0].body.document, false);
+  assert.equal(requests[1].body.income_account, 'Service');
+});
+
+test('a new document previews once its form opens', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const requests = stubDocument(savedPen);
+  const { doc, load } = useBooksDoc();
+  const item = newFrappeDoc('Item', { name: 'Mocha' });
+
+  await load('Item', item.name, true);
+  assert.equal(doc.value, item);
+  t.mock.timers.tick(300);
+  await waitFor(() => requests.length === 1);
+  assert.equal(requests[0].body.method, 'preview');
+});
+
+test("a server mapper's document is a new document with the mapped values", async () => {
+  const requests = stubFrappe(() => ({
+    message: { doctype: 'Books Order', name: null, customer: 'Acme' },
+  }));
+  const order = await getMappedFrappeDoc('Order', 'app.make_order', 'Q-1');
+
+  assert.equal(
+    requests[0].path,
+    '/api/method/frappe.model.mapper.make_mapped_doc'
+  );
+  assert.deepEqual(requests[0].body, {
+    method: 'app.make_order',
+    source_name: 'Q-1',
+  });
+  assert.equal(order.customer, 'Acme');
+  assert.equal(order.amount.float, 0);
+  assert.equal(order.notInserted, true);
+  assert.equal(order, await getFrappeDoc('Order', order.name));
+});
+
 test('submit and cancel run the document methods on the client copy', async () => {
   const saved = {
     name: 'ORD-1',
@@ -246,6 +327,8 @@ test('submit and cancel run the document methods on the client copy', async () =
     amount: 5,
     docstatus: 0,
     modified: MODIFIED,
+    creation: '2026-09-29 09:00:00.654321',
+    owner: 'clerk@example.com',
   };
   const requests = stubDocument(saved, ({ path, body }) => {
     if (!path.endsWith('run_doc_method')) {
@@ -269,10 +352,18 @@ test('submit and cancel run the document methods on the client copy', async () =
     [submit.document.doctype, submit.document.name, submit.document.modified],
     ['Books Order', 'ORD-1', MODIFIED]
   );
+  // Frappe refuses to save a copy whose creation or owner differs.
+  assert.deepEqual(
+    [submit.document.creation, submit.document.owner],
+    [saved.creation, saved.owner]
+  );
+  assert.equal(submit.document.docstatus, 0);
 
   await order.cancel();
   assert.equal(order.cancelled, true);
   assert.equal(requests.at(-1).body.method, 'cancel');
+  // Frappe refuses a copy whose status differs from the one it holds.
+  assert.equal(requests.at(-1).body.document.docstatus, 1);
   assert.equal(order.canDelete, true);
 });
 

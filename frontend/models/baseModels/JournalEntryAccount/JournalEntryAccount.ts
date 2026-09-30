@@ -1,39 +1,12 @@
-import { Doc } from 'fyo/model/doc';
-import { FiltersMap, FormulaMap } from 'fyo/model/types';
-import { Money } from 'pesa';
+import { FiltersMap } from 'fyo/model/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class JournalEntryAccount extends Doc {
-  getAutoDebitCredit(type: 'debit' | 'credit') {
-    const currentValue = this.get(type) as Money;
-    if (!currentValue.isZero()) {
-      return;
-    }
-
-    const otherType = type === 'debit' ? 'credit' : 'debit';
-    const otherTypeValue = this.get(otherType) as Money;
-    if (!otherTypeValue.isZero()) {
-      return this.fyo.pesa(0);
-    }
-
-    const totalType = this.parentdoc!.getSum('accounts', type, false) as Money;
-    const totalOtherType = this.parentdoc!.getSum(
-      'accounts',
-      otherType,
-      false
-    ) as Money;
-
-    if (totalType.lt(totalOtherType)) {
-      return totalOtherType.sub(totalType);
-    }
-  }
-
-  formulas: FormulaMap = {
-    debit: {
-      formula: () => this.getAutoDebitCredit('debit'),
-    },
-    credit: {
-      formula: () => this.getAutoDebitCredit('credit'),
-    },
+/** A Books Journal Entry Account row. */
+export class JournalEntryAccount extends FrappeDoc {
+  static override presentation = {
+    label: 'Journal Entry Account',
+    // Getdoctype sends no only_select, so the model says the link offers no Create, as before.
+    fields: { account: { groupBy: 'rootType', create: false } },
   };
 
   static filters: FiltersMap = {

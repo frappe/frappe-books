@@ -11,7 +11,6 @@ import { Defaults } from './baseModels/Defaults/Defaults';
 import { GetStarted } from './baseModels/GetStarted/GetStarted';
 import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
-import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
 import { NumberSeries } from './baseModels/NumberSeries/NumberSeries';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
@@ -22,7 +21,6 @@ import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { Payment } from './baseModels/Payment/Payment';
 import { Party } from './baseModels/Party/Party';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
-import { PaymentFor } from './baseModels/PaymentFor/PaymentFor';
 import { PriceList } from './baseModels/PriceList/PriceList';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
 import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
@@ -61,12 +59,6 @@ import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 
 export const models = {
-  AccountingLedgerEntry,
-  JournalEntry,
-  JournalEntryAccount,
-  LoyaltyPointEntry,
-  Payment,
-  PaymentFor,
   PrintSettings,
   PurchaseInvoice,
   PurchaseInvoiceItem,
@@ -80,7 +72,6 @@ export const models = {
   // Inventory Models
   StockMovement,
   StockMovementItem,
-  StockLedgerEntry,
   Shipment,
   ShipmentItem,
   PurchaseReceipt,
@@ -101,6 +92,7 @@ export const models = {
  */
 export const frappeModels: Record<string, FrappeModel> = {
   Account,
+  AccountingLedgerEntry,
   AccountingSettings,
   Address,
   Batch,
@@ -114,18 +106,22 @@ export const frappeModels: Record<string, FrappeModel> = {
   Item,
   ItemEnquiry,
   ItemGroup,
+  JournalEntry,
   Lead,
   Location,
+  LoyaltyPointEntry,
   LoyaltyProgram,
   Misc,
   NumberSeries,
   POSSettings,
   Party,
+  Payment,
   PaymentMethod,
   PriceList,
   PricingRule,
   SerialNumber,
   SetupWizard,
+  StockLedgerEntry,
   SystemSettings,
   Tax,
   UOM,

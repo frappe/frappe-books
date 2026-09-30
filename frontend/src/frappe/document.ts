@@ -43,12 +43,18 @@ export class FrappeDoc extends Doc {
   static presentation: Presentation = { label: '' };
   /** A whitelisted method that fills what a save would; previewed while the user edits. */
   static previewMethod?: string;
+  /** The models of a table's rows by table fieldname; other rows are plain `FrappeDoc`s. */
+  static rowModels: Record<string, typeof FrappeDoc> = {};
+  /** Fields the preview fills again after the user edits the field they follow, e.g. an account after its method. */
+  static refills: Record<string, string[]> = {};
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();
   /** Fields the last preview filled; the next preview fills them again until the user edits one. */
   _serverFilled = new Set<string>();
   _previewTimer?: ReturnType<typeof setTimeout>;
+  /** An edit's fills are not back from the server yet. */
+  _isPreviewDue = false;
   _edits = 0;
 
   get doctype(): string {
@@ -94,7 +100,12 @@ export class FrappeDoc extends Doc {
   /** The values Frappe's form conditions read. */
   getEvalDoc(): EvalDoc {
     const values = this.getFrappeValues({ keepRowNames: true });
-    return { ...values, name: this.name, __islocal: this.notInserted ? 1 : 0 };
+    return {
+      ...values,
+      name: this.name,
+      docstatus: this.docstatus ?? 0,
+      __islocal: this.notInserted ? 1 : 0,
+    };
   }
 
   /** The document as Frappe takes it; new rows go without their client names. */
@@ -130,9 +141,16 @@ export class FrappeDoc extends Doc {
   /** The document a controller method runs on, with what Frappe checks it by. */
   getMethodDocument(options: FrappeValueOptions = {}): DocValues {
     const values = this.getFrappeValues(options);
+    // Frappe refuses a saved copy whose modified time is stale, or whose status, creation or owner changed.
     const saved = this.notInserted
       ? { __islocal: 1 }
-      : { name: this.frappeName, modified: this.modified };
+      : {
+          name: this.frappeName,
+          modified: this.modified,
+          docstatus: this.docstatus ?? 0,
+          creation: this.creation,
+          owner: this.owner,
+        };
     return { ...values, ...saved, doctype: this.doctype };
   }
 
@@ -157,9 +175,10 @@ export class FrappeDoc extends Doc {
     this._rememberSavedRows();
   }
 
+  /** A save takes the fills of the last edit, and those of missing values. */
   override async beforeSync() {
     await super.beforeSync();
-    if (this.previewMethod && this.hasMissingValues) {
+    if (this.previewMethod && (this._isPreviewDue || this.hasMissingValues)) {
       await this.preview();
     }
   }
@@ -177,6 +196,11 @@ export class FrappeDoc extends Doc {
     const { insertValues } = (this.constructor as typeof FrappeDoc)
       .presentation;
     const values = { ...insertValues, ...this.getFrappeValues() };
+    // Frappe keeps a name it is sent, so only a name the user gives goes with the document.
+    if (this.schema.naming !== 'manual') {
+      delete values.name;
+    }
+
     // A single always exists; a new copy of it replaces its values.
     const saved = this.schema.isSingle
       ? await api.updateDocument(this.doctype, this.frappeName, values)
@@ -199,6 +223,7 @@ export class FrappeDoc extends Doc {
 
   async _setSaved(values: DocValues, action: 'save' | 'submit' = 'save') {
     clearTimeout(this._previewTimer);
+    this._isPreviewDue = false;
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
     this._rememberSavedRows();
@@ -332,6 +357,10 @@ export class FrappeDoc extends Doc {
   override async change({ changed }: ChangeArg) {
     if (changed) {
       this._serverFilled.delete(changed);
+      const { refills } = this.constructor as typeof FrappeDoc;
+      for (const fieldname of refills[changed] ?? []) {
+        this._serverFilled.add(fieldname);
+      }
     }
 
     // An unsaved document shows the name Frappe will give it.
@@ -349,6 +378,7 @@ export class FrappeDoc extends Doc {
       return;
     }
 
+    this._isPreviewDue = true;
     this._previewTimer = setTimeout(() => {
       this.preview().catch(showPreviewError);
     }, PREVIEW_DELAY);
@@ -367,7 +397,12 @@ export class FrappeDoc extends Doc {
       clearServerFilled: true,
     });
     const previewed = await this._fetchPreview(document);
-    if (previewed && edits === this._edits && this.dirty) {
+    if (edits !== this._edits || !this.dirty) {
+      return;
+    }
+
+    this._isPreviewDue = false;
+    if (previewed) {
       this.applyPreview(this.toDocValues(previewed));
     }
   }

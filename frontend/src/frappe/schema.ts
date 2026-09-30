@@ -1,4 +1,4 @@
-import { getFieldProperties } from 'schemas/fieldProperties';
+import { getFieldProperties, isReferenceField } from 'schemas/fieldProperties';
 import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
@@ -6,12 +6,13 @@ import type { DocField, DocTypeMeta } from './meta';
 export interface Presentation {
   label: string;
   quickEditFields?: string[];
-  /** The name field: asked for when the DocType names by prompt, else shown read only. */
+  /** The name field: asked for when the DocType names by prompt, else shown read only, or only in lists when hidden. */
   nameField?: {
     label: string;
     placeholder?: string;
     /** An AutoComplete offers the names the model's `lists.name` gives. */
     fieldtype?: 'Data' | 'AutoComplete';
+    hidden?: boolean;
   };
   /** How fields show what their DocFields cannot say, by fieldname. */
   fields?: Record<string, FieldPresentation>;
@@ -33,15 +34,17 @@ export interface Presentation {
 }
 
 /**
- * Option labels, whether an Autocomplete takes values that are not options,
- * whether a table's rows also open in a form, and whether a Link offers to
- * create a document. `getdoctype` does not send `only_select`, so a Link
- * without Create says so here.
+ * Properties a field shows with that its DocField has none for: option
+ * labels, whether an Autocomplete takes values that are not options, whether
+ * a table's rows also open in a form, a link's grouping, and whether a Link
+ * offers to create a document. `getdoctype` does not send `only_select`, so a
+ * Link without Create says so here.
  */
-export type FieldPresentation = Pick<
-  OptionField,
-  'optionLabels' | 'allowCustom'
-> & { create?: boolean; edit?: boolean };
+export type FieldPresentation = Partial<Field> &
+  Pick<OptionField, 'optionLabels' | 'allowCustom'> & {
+    create?: boolean;
+    edit?: boolean;
+  };
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
 export type Placements = Record<string, { section?: string; tab?: string }>;
@@ -176,6 +179,7 @@ function toField(docfield: DocField, context: FieldContext): Field {
   const level = docfield.permlevel ?? 0;
   const field = {
     ...properties,
+    ...(isReferenceField(docfield) && getReferenceProperties(schemaNames)),
     edit: shown.edit,
     fieldname,
     // The naming field is set once: changing it later would not rename the document.
@@ -187,21 +191,26 @@ function toField(docfield: DocField, context: FieldContext): Field {
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
+    create: docfield.fieldtype === 'Link' ? !docfield.only_select : undefined,
+    ...shown,
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
   if (properties.target) {
     field.target = schemaNames[properties.target] ?? properties.target;
   }
 
-  if (docfield.fieldtype === 'Link') {
-    field.create = shown.create ?? !docfield.only_select;
-  }
-
-  if (shown.allowCustom) {
-    field.allowCustom = true;
-  }
-
   return field;
+}
+
+/** A field that holds a doctype offers the Books doctypes, shown by their schema names. */
+function getReferenceProperties(
+  schemaNames: SchemaContext['schemaNames']
+): Partial<OptionField> {
+  const options = Object.entries(schemaNames).map(([doctype, schemaName]) => ({
+    value: doctype,
+    label: schemaName ?? doctype,
+  }));
+  return { fieldtype: 'Select', options };
 }
 
 /**
@@ -239,6 +248,7 @@ function getNameFields(
     placeholder: presentation.nameField?.placeholder,
     required: true,
     readOnly: isPrompt ? undefined : true,
+    hidden: presentation.nameField?.hidden,
     section: fields[0]?.section ?? DEFAULT_SECTION,
     tab: fields[0]?.tab,
   } as Field;
@@ -259,6 +269,7 @@ function getMetaFields(meta: DocTypeMeta): Field[] {
   return fields.map((field) => ({ ...field, meta: true }) as Field);
 }
 
+/** How /books names a new document; a controller that names by script numbers it as a series. */
 function getNaming(meta: DocTypeMeta): Naming {
   const rule = (meta.autoname ?? '').toLowerCase();
   if (rule === 'prompt' || rule.startsWith('field:')) {
@@ -270,7 +281,10 @@ function getNaming(meta: DocTypeMeta): Naming {
   }
 
   // Books names these by script from their number series; see SeriesNamingMixin.
-  if (meta.fields.some(({ fieldname }) => fieldname === 'number_series')) {
+  const hasSeries = meta.fields.some(
+    ({ fieldname }) => fieldname === 'number_series'
+  );
+  if (hasSeries || (!rule && meta.naming_rule === 'By script')) {
     return 'numberSeries';
   }
 

@@ -43,7 +43,9 @@ export interface DocTypeMeta {
   permissions: DocPerm[];
   states?: DocTypeState[];
   autoname?: string;
+  naming_rule?: string;
   title_field?: string;
+  sort_field?: string;
   /** Comma separated fieldnames that search matches besides the name. */
   search_fields?: string;
   istable?: number;

@@ -24,7 +24,7 @@ import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
 import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { getSerialNumbersForQuantity } from './inventory/helpers';
 import { isFrappeBacked } from 'src/frappe/doctypes';
-import { newFrappeMappedDoc } from 'src/frappe/documents';
+import { getMappedFrappeDoc } from 'src/frappe/documents';
 
 const MAPPER_MODULES: Record<string, string> = {
   Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
@@ -49,7 +49,7 @@ export async function getMappedDoc(
 ): Promise<Doc> {
   const method = `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
   if (isFrappeBacked(schemaName)) {
-    return await newFrappeMappedDoc(schemaName, method, source.name!);
+    return await getMappedFrappeDoc(schemaName, method, source.name!);
   }
 
   const values = await source.fyo.db.getMapped(
@@ -248,7 +248,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
         ModelNameEnum.Payment,
         'make_payment'
       );
-      await payment.set('referenceType', doc.schemaName);
+      await payment.set('reference_type', doc.schemaName);
       const currentRoute = router.currentRoute.value.fullPath;
       payment.once('afterSubmit', async () => {
         await doc.load();
@@ -256,13 +256,12 @@ export function getMakePaymentAction(fyo: Fyo): Action {
       });
 
       // The party account comes from the invoice.
-      const hideFields = ['party', 'for', 'account'];
+      const hideFields = ['party', 'payment_references', 'account'];
 
       if (!fyo.singles.AccountingSettings?.enable_invoice_returns) {
-        hideFields.push('paymentType');
+        hideFields.push('payment_type');
       }
 
-      await payment.runFormulas();
       const { openQuickEdit } = await import('src/utils/ui');
       await openQuickEdit({
         doc: payment,

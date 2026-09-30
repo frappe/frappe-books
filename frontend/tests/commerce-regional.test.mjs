@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   evaluateHidden,
   frappeModels,
+  fyo,
   getRegionalFrappeModels,
   getSchema,
   newFrappeDoc,
@@ -28,4 +29,37 @@ test('an Indian address shows its place of supply, in quick edit too', () => {
     'postal_code',
     'pos',
   ]);
+});
+
+test('an Indian party asks for its GST registration instead of a tax ID', async () => {
+  const party = newFrappeDoc('Party', { role: 'Customer' });
+  assert.equal(hidden(party, 'tax_id'), true);
+  assert.equal(hidden(party, 'gst_type'), false);
+  assert.equal(hidden(party, 'gstin'), true);
+  await party.set('gst_type', 'Registered Regular');
+  assert.equal(hidden(party, 'gstin'), false);
+  assert.deepEqual(getSchema('Party').quickEditFields, [
+    'email',
+    'phone',
+    'address',
+    'default_account',
+    'currency',
+    'role',
+    'gst_type',
+    'gstin',
+  ]);
+});
+
+test('an Indian customer shows loyalty fields when the program is on', async () => {
+  fyo.singles.AccountingSettings = { enableLoyaltyProgram: true };
+  const party = newFrappeDoc('Party', { role: 'Customer' });
+  assert.equal(hidden(party, 'loyalty_program'), false);
+  assert.equal(hidden(party, 'loyalty_points'), true);
+  await party.set('loyalty_program', 'Gold');
+  assert.equal(hidden(party, 'loyalty_points'), false);
+  await party.set('role', 'Supplier');
+  assert.equal(hidden(party, 'loyalty_program'), true);
+  assert.equal(hidden(party, 'loyalty_points'), true);
+  fyo.singles.AccountingSettings = {};
+  assert.equal(hidden(newFrappeDoc('Party'), 'loyalty_program'), true);
 });

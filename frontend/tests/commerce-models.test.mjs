@@ -4,6 +4,7 @@ import {
   evaluateHidden,
   frappeModels,
   fyo,
+  getFrappeDoc,
   getModel,
   getSchema,
   newFrappeDoc,
@@ -14,7 +15,11 @@ import {
   loadFrappeModels,
 } from './helpers/frappeModels.mjs';
 
-await loadFrappeModels(frappeModels);
+// Each test answers the requests after startup its own way.
+let respond = () => ({ data: [] });
+const requests = await loadFrappeModels(frappeModels, (request) =>
+  respond(request)
+);
 
 const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);
 
@@ -184,4 +189,119 @@ test('lead contacts show the message Frappe refuses them with', async () => {
   await lead.set('email', 'Asha <asha@example.com>, ops@example.com');
   await lead.set('mobile', '+91 (22) 555-0199');
   assert.equal(lead.mobile, '+91 (22) 555-0199');
+});
+
+test('a lead makes its customer with the server mapper, as an unsaved party', async () => {
+  const mapped = { doctype: 'Books Party', name: 'Asha', role: 'Customer' };
+  respond = () => ({ message: { ...mapped, from_lead: 'Asha', __islocal: 1 } });
+  const lead = newFrappeDoc('Lead', { name: 'Asha' });
+  lead._notInserted = false;
+  const { action } = getModel('Lead')
+    .getActions(fyo)
+    .find(({ label }) => label === 'Customer');
+  let route = '';
+  await action(lead, { push: (to) => (route = to) });
+
+  assert.deepEqual(requests.at(-1).body, {
+    method:
+      'frappe_books.frappe_books.doctype.books_lead.books_lead.make_customer',
+    source_name: 'Asha',
+  });
+  assert.equal(route, '/edit/Party/Asha');
+  const party = await getFrappeDoc('Party', 'Asha');
+  assert.deepEqual(
+    [party.role, party.from_lead, party.notInserted],
+    ['Customer', 'Asha', true]
+  );
+});
+
+test('a party leaves its default account and currency to the server', async () => {
+  const party = newFrappeDoc('Party', {
+    name: 'Acme',
+    role: 'Customer',
+    default_account: 'Debtors',
+  });
+  await party.set('role', 'Supplier');
+  assert.equal(party.default_account, undefined);
+  assert.ok(!party.currency);
+});
+
+test('saving or deleting a converted party refreshes its open lead only', async () => {
+  let leadStatus = 'Open';
+  const saved = { name: 'Ravi', role: 'Customer', from_lead: 'Ravi' };
+  respond = ({ method, path }) => {
+    if (path === '/api/v2/document/Books Lead/Ravi') {
+      return { data: { name: 'Ravi', status: leadStatus, modified: 'x' } };
+    }
+    return method === 'DELETE' ? { data: 'ok' } : { data: saved };
+  };
+  requests.length = 0;
+  const lead = await getFrappeDoc('Lead', 'Ravi');
+  const party = newFrappeDoc('Party', { ...saved, role: 'Customer' });
+  const writes = () =>
+    requests
+      .filter(({ method }) => method !== 'GET')
+      .map(({ method, path }) => `${method} ${path}`);
+
+  leadStatus = 'Converted';
+  await party.sync();
+  assert.equal(lead.status, 'Converted');
+  leadStatus = 'Interested';
+  await party.delete();
+  assert.equal(lead.status, 'Interested');
+  assert.deepEqual(writes(), [
+    'POST /api/v2/document/Books Party',
+    'DELETE /api/v2/document/Books Party/Ravi',
+  ]);
+});
+
+test('the party form and list show what they showed, GST fields hidden', () => {
+  assert.deepEqual(getLayout('Party'), [
+    'image | Image |  | Default',
+    'name | Name | Full Name | Default',
+    'role | Role |  | Default',
+    'email | Email | john@doe.com | Contacts',
+    'phone | Phone | Phone | Contacts',
+    'address | Address |  | Contacts',
+    'default_account | Default Account |  | Billing',
+    'currency | Currency | INR | Billing',
+    'from_lead | From Lead |  | References',
+    'loyalty_program | Loyalty Program |  | Loyalty Program',
+    'loyalty_points | Loyalty Points |  | Loyalty Program',
+    'tax_id | Tax ID |  | Billing',
+    'outstanding_amount | Outstanding Amount |  | Billing',
+    'gst_type | GST Registration | GST Registration | Billing',
+    'gstin | GSTIN No. |  | Billing',
+  ]);
+  const party = newFrappeDoc('Party', { gst_type: 'Registered Regular' });
+  for (const fieldname of ['gst_type', 'gstin', 'outstanding_amount']) {
+    assert.equal(hidden(party, fieldname), true, fieldname);
+  }
+  for (const fieldname of ['tax_id', 'loyalty_program', 'loyalty_points']) {
+    assert.equal(hidden(party, fieldname), false, fieldname);
+  }
+  assert.deepEqual(getColumns('Party'), [
+    'name',
+    'email',
+    'phone',
+    'outstanding_amount',
+  ]);
+});
+
+test('a party makes and lists the invoices its role allows', () => {
+  const actions = getModel('Party').getActions(fyo);
+  const labels = (role) =>
+    actions
+      .filter(({ condition }) => condition({ notInserted: false, role }))
+      .map(({ label }) => label);
+  assert.deepEqual(labels('Customer'), ['Create Sale', 'View Sales']);
+  assert.deepEqual(labels('Supplier'), ['Create Purchase', 'View Purchases']);
+  assert.equal(labels('Both').length, 4);
+  assert.deepEqual(
+    getModel('Party').filters.default_account({ role: 'Both' }),
+    {
+      isGroup: false,
+      accountType: ['in', ['Payable', 'Receivable']],
+    }
+  );
 });

@@ -48,7 +48,6 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Pricing Rule",
-   "only_select": 1,
    "options": "Books Pricing Rule",
    "reqd": 1
   },

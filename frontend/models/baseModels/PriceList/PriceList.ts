@@ -11,6 +11,7 @@ export class PriceList extends FrappeDoc {
   static override presentation = {
     label: 'Price List',
     nameField: { label: 'Name' },
+    tables: { price_list_item: { unit: { create: false } } },
   };
   static override previewMethod = 'preview';
 

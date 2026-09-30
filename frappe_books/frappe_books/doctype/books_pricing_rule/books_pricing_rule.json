@@ -147,7 +147,6 @@
    "fieldname": "free_item",
    "fieldtype": "Link",
    "label": "Free Item",
-   "only_select": 1,
    "options": "Books Item"
   },
   {
@@ -161,7 +160,6 @@
    "fieldname": "free_item_unit",
    "fieldtype": "Link",
    "label": "UOM",
-   "only_select": 1,
    "options": "Books Uom"
   },
   {

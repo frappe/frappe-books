@@ -15,6 +15,7 @@ export class CouponCode extends FrappeDoc {
       'maximum_use',
       'used',
     ],
+    fields: { pricing_rule: { create: false } },
   };
 
   coupon_name?: string;

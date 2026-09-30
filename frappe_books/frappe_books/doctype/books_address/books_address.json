@@ -51,7 +51,6 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Country",
-   "only_select": 1,
    "options": "Country",
    "placeholder": "Country",
    "reqd": 1

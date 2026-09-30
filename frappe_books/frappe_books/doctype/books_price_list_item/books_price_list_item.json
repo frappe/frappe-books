@@ -26,7 +26,6 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Unit Type",
-   "only_select": 1,
    "options": "Books Uom"
   },
   {

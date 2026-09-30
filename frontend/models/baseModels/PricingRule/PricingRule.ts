@@ -27,7 +27,10 @@ export class PricingRule extends FrappeDoc {
       rounding_method: {
         optionLabels: { floor: 'Floor', round: 'Round', ceil: 'Ceil' },
       },
+      free_item: { create: false },
+      free_item_unit: { create: false },
     },
+    tables: { applied_items: { item: { create: false } } },
   };
   static override previewMethod = 'preview';
 

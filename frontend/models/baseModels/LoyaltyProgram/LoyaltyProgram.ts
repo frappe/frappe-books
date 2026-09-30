@@ -20,6 +20,7 @@ export class LoyaltyProgram extends FrappeDoc {
       'maximum_use',
       'used',
     ],
+    fields: { expense_account: { create: false } },
   };
 
   maximum_use?: number;

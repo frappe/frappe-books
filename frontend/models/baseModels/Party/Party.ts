@@ -37,6 +37,7 @@ export class Party extends FrappeDoc {
       'role',
       'tax_id',
     ],
+    fields: { from_lead: { create: false } },
   };
 
   role?: PartyRole;

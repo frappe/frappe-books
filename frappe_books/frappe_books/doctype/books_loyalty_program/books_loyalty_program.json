@@ -81,7 +81,6 @@
    "fieldname": "expense_account",
    "fieldtype": "Link",
    "label": "Expense Account",
-   "only_select": 1,
    "options": "Books Account",
    "reqd": 1
   },

@@ -26,6 +26,7 @@ export class Address extends FrappeDoc {
       'postal_code',
     ],
     linkDisplayField: 'address_display',
+    fields: { country: { create: false } },
   };
 
   // Place of supply is an Indian GST field; see the Indian Address.

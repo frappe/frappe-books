@@ -15,7 +15,6 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Item",
-   "only_select": 1,
    "options": "Books Item",
    "reqd": 1,
    "search_index": 1

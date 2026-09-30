@@ -66,7 +66,6 @@ export const models = {
   JournalEntry,
   JournalEntryAccount,
   Misc,
-  Lead,
   Party,
   LoyaltyProgram,
   LoyaltyPointEntry,
@@ -123,6 +122,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   Batch,
   SerialNumber,
   Address,
+  Lead,
 };
 
 export async function getRegionalModels(

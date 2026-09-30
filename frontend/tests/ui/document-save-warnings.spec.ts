@@ -1,9 +1,65 @@
 import { expect, test } from '@playwright/test';
+import { holdOpenDoc } from './helpers/openDoc';
 import { useBooksSession } from './helpers/session';
 
 useBooksSession();
 
-for (const schemaName of ['UOM', 'PrintSettings']) {
+test('a Frappe-served quick edit reports post-save warnings without leaving an unsaved document', async ({
+  page,
+}) => {
+  let writes = 0;
+  // Frappe serves units; the insert is answered here so no record is stored.
+  await page.route('**/api/v2/document/Books%20Uom', async (route) => {
+    if (route.request().method() !== 'POST') {
+      return route.fallback();
+    }
+
+    writes++;
+    const values = route.request().postDataJSON();
+    await route.fulfill({
+      json: { data: { ...values, modified: '2026-01-01 00:00:00.000000' } },
+    });
+  });
+  await page.evaluate(() => {
+    const app = (document.querySelector('#app') as any).__vue_app__;
+    return app.config.globalProperties.$router.push({
+      path: '/list/UOM',
+      query: { edit: '1', schemaName: 'UOM', name: 'Warning Unit' },
+    });
+  });
+  await holdOpenDoc(page, 'UOM');
+  await page.evaluate(async () => {
+    const doc = (window as any).openDoc;
+    const fixture = ((window as any).saveWarning = { doc, notifications: 0 });
+    doc.afterSync = () => {
+      throw new Error('Form refresh failed');
+    };
+    doc.once('afterSync', () => {
+      throw new Error('Linked view failed');
+    });
+    doc.once('afterSync', () => {
+      fixture.notifications++;
+    });
+    await doc.set('name', 'Warning Unit');
+  });
+
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(
+    page.getByText(/was saved, but the view could not be fully updated/)
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Save', exact: true })
+  ).toHaveCount(0);
+  expect(writes).toBe(1);
+  expect(
+    await page.evaluate(() => {
+      const { doc, notifications } = (window as any).saveWarning;
+      return { inserted: doc.inserted, dirty: doc.dirty, notifications };
+    })
+  ).toEqual({ inserted: true, dirty: false, notifications: 1 });
+});
+
+for (const schemaName of ['PrintSettings']) {
   test(`${schemaName} reports post-save warnings without leaving an unsaved document`, async ({
     page,
   }) => {
@@ -13,10 +69,7 @@ for (const schemaName of ['UOM', 'PrintSettings']) {
         .find((m: any) => m.computed?.fyo)
         .computed.fyo();
       const router = app.config.globalProperties.$router;
-      const doc =
-        schemaName === 'UOM'
-          ? fyo.doc.getNewDoc('UOM', { name: 'Warning Unit', isWhole: false })
-          : fyo.singles.PrintSettings;
+      const doc = fyo.singles.PrintSettings;
       const fixture = ((window as any).saveWarning = {
         doc,
         writes: 0,
@@ -41,24 +94,15 @@ for (const schemaName of ['UOM', 'PrintSettings']) {
       doc.once('afterSync', () => {
         fixture.notifications++;
       });
-      if (schemaName === 'PrintSettings') {
-        await doc.set('displayLogo', !doc.displayLogo);
-        await router.push({ path: '/settings', query: { tab: schemaName } });
-      } else {
-        await router.push({
-          path: `/list/${schemaName}`,
-          query: { edit: '1', schemaName, name: doc.name },
-        });
-      }
+      await doc.set('displayLogo', !doc.displayLogo);
+      await router.push({ path: '/settings', query: { tab: schemaName } });
     }, schemaName);
 
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(
       page.getByText(/was saved, but the view could not be fully updated/)
     ).toBeVisible();
-    if (schemaName === 'PrintSettings') {
-      await page.getByRole('button', { name: 'No', exact: true }).click();
-    }
+    await page.getByRole('button', { name: 'No', exact: true }).click();
     await expect(
       page.getByRole('button', { name: 'Save', exact: true })
     ).toHaveCount(0);

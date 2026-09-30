@@ -1,7 +1,7 @@
 # Browser regression tests
 
 Run the link control tests against a configured local Books test site after `yarn build`.
-The tests create documents in browser memory. They do not save fixture records.
+Most tests create documents in browser memory. Frappe serves some doctypes, such as Party and Address, from their stored records, so tests that open them save their fixture records first.
 
 ```sh
 yarn playwright install chromium

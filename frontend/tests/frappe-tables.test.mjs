@@ -84,6 +84,7 @@ class Bill extends FrappeDoc {
   static doctype = 'Books Bill';
   static presentation = {
     label: 'Bill',
+    nameField: { label: 'Bill No' },
     rowEditTables: ['lines'],
     options: { party_type: [{ value: 'Books Party', label: 'Party' }] },
   };
@@ -182,4 +183,9 @@ test('the status takes the colours of the DocType states', () => {
     Paid: 'Green',
     Unpaid: 'Orange',
   });
+});
+
+test('a model labels the name of a doctype that names itself', () => {
+  assert.equal(field('Bill', 'name').label, 'Bill No');
+  assert.equal(field('Bill', 'name').meta, true);
 });

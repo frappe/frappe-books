@@ -1,6 +1,6 @@
 import { call } from 'src/web/api';
 import { downloadFile } from './browser';
-import type { PrintHTML } from './printFormats';
+import type { PrintHints, PrintHTML } from './printFormats';
 
 /** A saved document printed with a saved print format. */
 export async function getPrintHTML(
@@ -12,6 +12,28 @@ export async function getPrintHTML(
     doc: doctype,
     name,
     print_format: printFormat,
+  });
+}
+
+/** A saved document printed with unsaved print format HTML and CSS. */
+export async function previewPrintHTML(
+  doctype: string,
+  name: string,
+  html: string,
+  css?: string
+): Promise<PrintHTML> {
+  return await call<PrintHTML>('frappe_books.printing.preview_print_format', {
+    doctype,
+    name,
+    html,
+    css,
+  });
+}
+
+/** The values a print format for the doctype can show, by name. */
+export async function getPrintHints(doctype: string): Promise<PrintHints> {
+  return await call<PrintHints>('frappe_books.printing.get_print_hints', {
+    doctype,
   });
 }
 

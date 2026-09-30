@@ -17,23 +17,28 @@
     },
     {
       "fieldname": "html",
-      "label": "Template"
+      "label": "Template",
+      "fieldtype": "Text"
     },
     {
       "fieldname": "css",
-      "label": "Page Setup"
+      "label": "Page Setup",
+      "fieldtype": "Text"
     },
     {
       "fieldname": "standard",
-      "label": "Standard"
+      "label": "Standard",
+      "fieldtype": "Data"
     },
     {
       "fieldname": "customFormat",
-      "label": "Custom Format"
+      "label": "Custom Format",
+      "fieldtype": "Check"
     },
     {
       "fieldname": "disabled",
-      "label": "Disabled"
+      "label": "Disabled",
+      "fieldtype": "Check"
     }
   ]
 }

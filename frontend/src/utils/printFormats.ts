@@ -34,6 +34,17 @@ export function setPageSize(css: string | undefined, size: PageSize): string {
   return [rest, getPageCSS(size)].filter(Boolean).join('\n');
 }
 
+/** Labels of the values a print format can show: a table is a list of its row's labels. */
+export type PrintHints = {
+  [key: string]: string | PrintHints | PrintHints[];
+};
+
+/** The template name that a `.template.html` or `.html` file name gives. */
+export function getTemplateNameFromFile(fileName: string): string | null {
+  const name = fileName.replace(/(\.template)?\.html$/, '');
+  return name && name !== fileName ? name : null;
+}
+
 /** A print as Frappe renders it: the body HTML and its stylesheet. */
 export type PrintHTML = { html: string | null; style: string };
 
@@ -49,3 +60,28 @@ export function getPrintDocument({ html, style }: PrintHTML): string {
     `<body><div class="print-format">${html ?? ''}</div></body></html>`
   );
 }
+
+export const baseTemplate = `{%- set print = get_print_settings() -%}
+<style>
+  .template { font-family: {{ print.font }}; }
+  .template table { width: 100%; border-bottom: 1px solid #ededed; }
+  .template td { padding: 16px; font-size: 24px; font-weight: bold; }
+  .template p { padding: 16px; color: #525252; }
+</style>
+<main class="template">
+
+  <!-- Edit This Code -->
+  <table>
+    <tr>
+      <td style="color: {{ print.color }}">{{ print.company_name }}</td>
+      <td style="text-align: right">{{ doc.name }}</td>
+    </tr>
+  </table>
+
+  <p>
+    Edit the code in the Template Editor on the right
+    to create your own personalized custom template.
+  </p>
+
+</main>
+`;

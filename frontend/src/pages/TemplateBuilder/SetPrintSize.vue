@@ -21,7 +21,7 @@
       <div class="flex gap-4 w-full">
         <Float
           class="w-full"
-          :df="fyo.getField('PrintTemplate', 'height')"
+          :df="heightField"
           :border="true"
           :show-label="true"
           :value="height"
@@ -29,7 +29,7 @@
         />
         <Float
           class="w-full"
-          :df="fyo.getField('PrintTemplate', 'width')"
+          :df="widthField"
           :border="true"
           :show-label="true"
           :value="width"
@@ -46,10 +46,11 @@
 </template>
 <script lang="ts">
 import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
-import { PrintTemplate } from 'models/baseModels/PrintTemplate';
-import { OptionField } from 'schemas/types';
+import { PrintFormat } from 'models/baseModels/PrintFormat';
+import { Field, OptionField } from 'schemas/types';
 import Float from 'src/components/Controls/Float.vue';
 import Select from 'src/components/Controls/Select.vue';
+import { getPageSize, setPageSize } from 'src/utils/printFormats';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { defineComponent } from 'vue';
 
@@ -58,7 +59,7 @@ export default defineComponent({
   components: { Float, FrappeDialog, Select, FrappeButton },
   props: {
     open: { type: Boolean, default: false },
-    doc: { type: PrintTemplate, required: true },
+    doc: { type: PrintFormat, required: true },
   },
   emits: ['update:open'],
   data() {
@@ -74,6 +75,12 @@ export default defineComponent({
         default: 'A4',
       };
     },
+    heightField(): Field {
+      return { fieldname: 'height', label: this.t`Height (in cm)`, fieldtype: 'Float' };
+    },
+    widthField(): Field {
+      return { fieldname: 'width', label: this.t`Width (in cm)`, fieldtype: 'Float' };
+    },
   },
   watch: {
     open: {
@@ -87,8 +94,9 @@ export default defineComponent({
   },
   methods: {
     setSizeFromDoc() {
-      this.width = this.doc.width ?? 21;
-      this.height = this.doc.height ?? 29.7;
+      const { width, height } = getPageSize(this.doc.css);
+      this.width = width;
+      this.height = height;
 
       this.size = '';
       Object.entries(paperSizeMap).forEach(([name, { width, height }]) => {
@@ -117,8 +125,8 @@ export default defineComponent({
       this[name] = v;
     },
     async done() {
-      await this.doc.set('width', this.width);
-      await this.doc.set('height', this.height);
+      const size = { width: this.width, height: this.height };
+      await this.doc.set('css', setPageSize(this.doc.css, size));
       this.$emit('update:open', false);
     },
   },

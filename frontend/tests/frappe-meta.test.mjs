@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   evaluateCondition,
   fyo,
+  getFieldModel,
   getModel,
   getSchema,
   getSearchFields,
@@ -117,4 +118,14 @@ test('conditions are evaluated as Frappe forms evaluate them', () => {
     true
   );
   assert.equal(evaluateCondition(undefined, {}), true);
+});
+
+test("a field is filtered by its document's own model, else its schema's", () => {
+  class BridgeItem {
+    schemaName = 'Item';
+  }
+
+  assert.equal(getFieldModel('Item', new BridgeItem()), BridgeItem);
+  assert.equal(getFieldModel('Item', { schemaName: 'Order' }), TestItem);
+  assert.equal(getFieldModel('Item'), TestItem);
 });

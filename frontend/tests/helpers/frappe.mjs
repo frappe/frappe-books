@@ -21,7 +21,7 @@ await build({
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, toFrappeFilters } from './src/frappe/list';
       export { searchFrappeLink } from './src/frappe/link';
-      export { getModel, getSchema, getSearchFields, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
+      export { getFieldModel, getModel, getSchema, getSearchFields, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { getMissingMandatoryFields } from './fyo/model/helpers';
@@ -82,6 +82,7 @@ export const {
   getFrappeListPage,
   toFrappeFilters,
   searchFrappeLink,
+  getFieldModel,
   getModel,
   getSchema,
   getSearchFields,

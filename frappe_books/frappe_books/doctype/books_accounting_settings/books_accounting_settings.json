@@ -10,6 +10,7 @@
   "fullname",
   "company_name",
   "bank_name",
+  "country",
   "email",
   "accounts_section_break_7",
   "write_off_account",
@@ -67,6 +68,15 @@
    "reqd": 1
   },
   {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "is_virtual": 1,
+   "label": "Country",
+   "options": "Country",
+   "placeholder": "Select Country",
+   "read_only": 1
+  },
+  {
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email",
@@ -91,6 +101,7 @@
    "options": "Books Account"
   },
   {
+   "depends_on": "enable_discounting",
    "fieldname": "discount_account",
    "fieldtype": "Link",
    "label": "Discount Account",
@@ -105,13 +116,15 @@
    "default": "0",
    "fieldname": "enable_discounting",
    "fieldtype": "Check",
-   "label": "Enable Discount Accounting"
+   "label": "Enable Discount Accounting",
+   "read_only_depends_on": "enable_discounting"
   },
   {
    "default": "0",
    "fieldname": "enable_inventory",
    "fieldtype": "Check",
-   "label": "Enable Inventory"
+   "label": "Enable Inventory",
+   "read_only_depends_on": "enable_inventory"
   },
   {
    "default": "0",
@@ -123,7 +136,8 @@
    "default": "0",
    "fieldname": "enable_invoice_returns",
    "fieldtype": "Check",
-   "label": "Enable Invoice Returns"
+   "label": "Enable Invoice Returns",
+   "read_only_depends_on": "enable_invoice_returns"
   },
   {
    "default": "0",
@@ -135,10 +149,12 @@
    "default": "0",
    "fieldname": "enable_lead",
    "fieldtype": "Check",
-   "label": "Enable Lead"
+   "label": "Enable Lead",
+   "read_only_depends_on": "enable_lead"
   },
   {
    "default": "0",
+   "depends_on": "enable_discounting",
    "fieldname": "enable_pricing_rule",
    "fieldtype": "Check",
    "label": "Enable Pricing Rule"
@@ -153,10 +169,12 @@
    "default": "0",
    "fieldname": "enable_loyalty_program",
    "fieldtype": "Check",
-   "label": "Enable Loyalty Program"
+   "label": "Enable Loyalty Program",
+   "read_only_depends_on": "enable_loyalty_program"
   },
   {
    "default": "0",
+   "depends_on": "enable_pricing_rule",
    "fieldname": "enable_coupon_code",
    "fieldtype": "Check",
    "label": "Enable Coupon Code"
@@ -165,13 +183,15 @@
    "default": "0",
    "fieldname": "enableitem_group",
    "fieldtype": "Check",
-   "label": "Enable Item Group"
+   "label": "Enable Item Group",
+   "read_only_depends_on": "enableitem_group"
   },
   {
    "default": "0",
    "fieldname": "enable_point_of_sale_with_out_inventory",
    "fieldtype": "Check",
-   "label": "Enable POS Without Inventory"
+   "label": "Enable POS Without Inventory",
+   "read_only_depends_on": "enable_point_of_sale_with_out_inventory"
   },
   {
    "default": "0",
@@ -209,23 +229,25 @@
    "label": "Default"
   },
   {
-   "description": "CHE-123.456.789",
+   "depends_on": "eval:doc.country == \"Switzerland\"",
    "fieldname": "tax_id",
    "fieldtype": "Data",
-   "label": "Tax ID"
+   "label": "Tax ID",
+   "placeholder": "CHE-123.456.789"
   },
   {
-   "description": "27AAAAA0000A1Z5",
+   "depends_on": "eval:doc.country == \"India\"",
    "fieldname": "gstin",
    "fieldtype": "Data",
-   "label": "GSTIN"
+   "label": "GSTIN",
+   "placeholder": "27AAAAA0000A1Z5"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-29 12:00:00.000000",
+ "modified": "2026-09-30 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Accounting Settings",

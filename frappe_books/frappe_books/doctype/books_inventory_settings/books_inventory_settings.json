@@ -63,25 +63,29 @@
    "default": "0",
    "fieldname": "enable_barcodes",
    "fieldtype": "Check",
-   "label": "Enable Barcodes"
+   "label": "Enable Barcodes",
+   "read_only_depends_on": "enable_barcodes"
   },
   {
    "default": "0",
    "fieldname": "enable_batches",
    "fieldtype": "Check",
-   "label": "Enable Batches"
+   "label": "Enable Batches",
+   "read_only_depends_on": "enable_batches"
   },
   {
    "default": "0",
    "fieldname": "enable_serial_number",
    "fieldtype": "Check",
-   "label": "Enable Serial Number"
+   "label": "Enable Serial Number",
+   "read_only_depends_on": "enable_serial_number"
   },
   {
    "default": "0",
    "fieldname": "enable_uom_conversions",
    "fieldtype": "Check",
-   "label": "Enable UOM Conversion"
+   "label": "Enable UOM Conversion",
+   "read_only_depends_on": "enable_uom_conversions"
   },
   {
    "default": "0",
@@ -94,7 +98,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.159054",
+ "modified": "2026-09-30 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Inventory Settings",

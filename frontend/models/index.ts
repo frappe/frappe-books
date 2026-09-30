@@ -5,6 +5,7 @@ import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/Accoun
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
 import { Address } from './baseModels/Address/Address';
 import { Defaults } from './baseModels/Defaults/Defaults';
+import { GetStarted } from './baseModels/GetStarted/GetStarted';
 import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
 import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
@@ -119,6 +120,7 @@ export const models = {
  * `models` when its module stops using the bridge; see docs/framework-backed-doctypes.md.
  */
 export const frappeModels: Record<string, FrappeModel> = {
+  GetStarted,
   Item,
   Misc,
 };

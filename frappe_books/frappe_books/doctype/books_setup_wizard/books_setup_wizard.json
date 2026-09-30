@@ -33,28 +33,28 @@
    "label": "Company Logo"
   },
   {
-   "description": "Company Name",
    "fieldname": "company_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Company Name",
+   "placeholder": "Company Name",
    "reqd": 1
   },
   {
-   "description": "John Doe",
    "fieldname": "fullname",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Full Name",
+   "placeholder": "John Doe",
    "reqd": 1
   },
   {
-   "description": "john@doe.com",
    "fieldname": "email",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Email",
    "options": "Email",
+   "placeholder": "john@doe.com",
    "reqd": 1
   },
   {
@@ -63,20 +63,20 @@
    "label": "Locale"
   },
   {
-   "description": "Select Country",
    "fieldname": "country",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Country",
    "options": "Country",
+   "placeholder": "Select Country",
    "reqd": 1
   },
   {
-   "description": "Currency",
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
    "options": "Currency",
+   "placeholder": "Currency",
    "reqd": 1
   },
   {
@@ -91,31 +91,31 @@
    "label": "Accounting"
   },
   {
-   "description": "Prime Bank",
    "fieldname": "bank_name",
    "fieldtype": "Data",
    "label": "Bank Name",
+   "placeholder": "Prime Bank",
    "reqd": 1
   },
   {
-   "description": "Select CoA",
    "fieldname": "chart_of_accounts",
    "fieldtype": "Autocomplete",
    "label": "Chart of Accounts",
+   "placeholder": "Select CoA",
    "reqd": 1
   },
   {
-   "description": "Fiscal Year Start Date",
    "fieldname": "fiscal_year_start",
    "fieldtype": "Date",
    "label": "Fiscal Year Start Date",
+   "placeholder": "Fiscal Year Start Date",
    "reqd": 1
   },
   {
-   "description": "Fiscal Year End Date",
    "fieldname": "fiscal_year_end",
    "fieldtype": "Date",
    "label": "Fiscal Year End Date",
+   "placeholder": "Fiscal Year End Date",
    "reqd": 1
   }
  ],
@@ -123,7 +123,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-29 12:00:00.000000",
+ "modified": "2026-09-30 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Setup Wizard",

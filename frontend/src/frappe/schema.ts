@@ -8,6 +8,10 @@ export interface Presentation {
   quickEditFields?: string[];
   /** The field that asks for a document's name when its DocType names by prompt. */
   nameField?: { label: string; placeholder?: string };
+  /** Labels of Select option values, by fieldname, e.g. `SalesInvoice` as `Sales Invoice`. */
+  optionLabels?: Record<string, Record<string, string>>;
+  /** False when the list offers no new document, e.g. accounts made in the Chart of Accounts. */
+  create?: boolean;
 }
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
@@ -43,16 +47,21 @@ export function toSchema(
   context: SchemaContext
 ): Schema {
   const fields = [
-    ...getNameFields(meta, presentation, getDocFields(meta, context)),
+    ...getNameFields(
+      meta,
+      presentation,
+      getDocFields(meta, context, presentation)
+    ),
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 
   return {
     name,
     label: presentation.label,
+    create: presentation.create,
     fields,
     naming: getNaming(meta.autoname),
-    titleField: meta.title_field || 'name',
+    titleField: meta.title_field || getNamingField(meta) || 'name',
     quickEditFields: presentation.quickEditFields,
     tableFields: meta.fields
       .filter((field) => field.in_list_view)
@@ -64,9 +73,20 @@ export function toSchema(
   };
 }
 
+/** The field that names a document of a DocType named `field:<fieldname>`. */
+export function getNamingField(meta: DocTypeMeta): string | undefined {
+  const [rule, fieldname] = (meta.autoname ?? '').split(':');
+  return rule.toLowerCase() === 'field' ? fieldname : undefined;
+}
+
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
-function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
+function getDocFields(
+  meta: DocTypeMeta,
+  context: SchemaContext,
+  presentation: Presentation
+): Field[] {
   const levels = getPermlevels(meta, context.roles);
+  const namingField = getNamingField(meta);
   const fields: Field[] = [];
   const placed: Field[] = [];
   let tab: string | undefined;
@@ -78,7 +98,15 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
     } else if (docfield.fieldtype === 'Section Break') {
       section = docfield.label || DEFAULT_SECTION;
     } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
-      const field = toField(docfield, context.schemaNames, levels);
+      const optionLabels = presentation.optionLabels?.[docfield.fieldname];
+      const field = toField(
+        docfield,
+        context.schemaNames,
+        levels,
+        optionLabels
+      );
+      // The naming field is set once: changing it later would not rename the document.
+      field.setOnlyOnce ||= docfield.fieldname === namingField;
       const placement = context.placements[docfield.fieldname];
       if (placement) {
         placed.push({
@@ -107,10 +135,11 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
 function toField(
   docfield: DocField,
   schemaNames: SchemaContext['schemaNames'],
-  levels: Permlevels
+  levels: Permlevels,
+  optionLabels?: Record<string, string>
 ): Field {
   const properties = getFieldProperties(
-    { fieldname: docfield.fieldname } as Field,
+    { fieldname: docfield.fieldname, optionLabels } as Field,
     docfield
   ) as Partial<Field> & { target?: string };
   const level = docfield.permlevel ?? 0;
@@ -143,7 +172,15 @@ function getNameFields(
   fields: Field[]
 ): Field[] {
   if (meta.autoname?.toLowerCase() !== 'prompt') {
-    const idField = { fieldname: 'name', label: 'ID', fieldtype: 'Data' };
+    const namingField = getNamingField(meta);
+    const label = fields.find(
+      ({ fieldname }) => fieldname === namingField
+    )?.label;
+    const idField = {
+      fieldname: 'name',
+      label: label ?? 'ID',
+      fieldtype: 'Data',
+    };
     return [...fields, { ...idField, meta: true } as Field];
   }
 
@@ -175,7 +212,7 @@ function getMetaFields(meta: DocTypeMeta): Field[] {
 
 function getNaming(autoname = ''): Naming {
   const rule = autoname.toLowerCase();
-  if (rule === 'prompt') {
+  if (rule === 'prompt' || rule.startsWith('field:')) {
     return 'manual';
   }
 

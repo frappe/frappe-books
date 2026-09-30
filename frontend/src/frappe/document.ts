@@ -91,7 +91,12 @@ export class FrappeDoc extends Doc {
   /** The values Frappe's form conditions read. */
   getEvalDoc(): EvalDoc {
     const values = this.getFrappeValues({ keepRowNames: true });
-    return { ...values, name: this.name, __islocal: this.notInserted ? 1 : 0 };
+    return {
+      ...values,
+      name: this.name,
+      docstatus: this.docstatus ?? 0,
+      __islocal: this.notInserted ? 1 : 0,
+    };
   }
 
   /** The document as Frappe takes it; new rows go without their client names. */

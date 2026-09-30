@@ -1,12 +1,13 @@
 import type { BadgeProps } from 'frappe-ui';
 import type { Fyo } from 'fyo';
 import type { DocValue, DocValueMap } from 'fyo/core/types';
-import type SystemSettings from 'fyo/models/SystemSettings';
+import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import type { FieldType, Schema, SelectOption } from 'schemas/types';
 import type { QueryFilter } from 'utils/db/types';
 import type { RouteLocationRaw, Router } from 'vue-router';
 import type { Doc } from './doc';
 import type { AccountingSettings } from 'models/baseModels/AccountingSettings/AccountingSettings';
+import type { GetStarted } from 'models/baseModels/GetStarted/GetStarted';
 import type { Defaults } from 'models/baseModels/Defaults/Defaults';
 import type { PrintSettings } from 'models/baseModels/PrintSettings/PrintSettings';
 import type { InventorySettings } from 'models/inventory/InventorySettings';
@@ -75,6 +76,7 @@ export interface SinglesMap {
   PrintSettings?: PrintSettings;
   Defaults?: Defaults;
   Misc?: Misc;
+  GetStarted?: GetStarted;
   [key: string]: Doc | undefined;
 }
 

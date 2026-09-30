@@ -136,7 +136,7 @@ export default defineComponent({
   },
   computed: {
     getDefaultCashDenominations() {
-      return this.fyo.singles.Defaults?.posCashDenominations;
+      return this.fyo.singles.Defaults?.pos_cash_denominations;
     },
     openingCash(): OpeningCash[] {
       return (this.posShiftDoc?.openingCash ?? []) as OpeningCash[];

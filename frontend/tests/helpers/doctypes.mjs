@@ -7,6 +7,17 @@ export const mapping = readJson(
 ).doctypes;
 export const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 
+/** A doctype's JSON, then those of its tables, as `getdoctype` sends them. */
+export function getMetaBundle(name) {
+  const find = (doctypeName) =>
+    doctypes.find((doctype) => doctype.name === doctypeName);
+  const doctype = find(name);
+  const tables = doctype.fields
+    .filter((field) => field.fieldtype === 'Table')
+    .map((field) => find(field.options));
+  return [doctype, ...tables];
+}
+
 function readDoctypes(directory) {
   const entries = readdirSync(directory, { withFileTypes: true });
   return entries

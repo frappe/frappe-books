@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { doctypes } from './helpers/doctypes.mjs';
+import { getMetaBundle } from './helpers/doctypes.mjs';
 import {
   errors,
   evaluateHidden,
@@ -15,11 +15,10 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 
-const bundle = ['Books Item', 'Books Uom Conversion Item'].map((name) =>
-  doctypes.find((doctype) => doctype.name === name)
-);
-stubFrappe(({ path }) =>
-  path.endsWith('getdoctype') ? { docs: bundle } : { data: [] }
+stubFrappe(({ path, body }) =>
+  path.endsWith('getdoctype')
+    ? { docs: getMetaBundle(body.doctype) }
+    : { data: [] }
 );
 registerFrappeModels(frappeModels);
 await loadFrappeDocTypes();
@@ -61,8 +60,8 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
 });
 
 test('item fields hide by the item and by the features turned on', async () => {
-  fyo.singles.AccountingSettings = { enableInventory: true };
-  fyo.singles.InventorySettings = { enableSerialNumber: true };
+  fyo.singles.AccountingSettings = { enable_inventory: true };
+  fyo.singles.InventorySettings = { enable_serial_number: true };
   const item = newFrappeDoc('Item', { name: 'Tea' });
 
   assert.equal(hidden(item, 'track_item'), false);
@@ -85,7 +84,7 @@ test('item fields hide by the item and by the features turned on', async () => {
 });
 
 test('a saved item keeps its set-once fields and hides tracking it did not use', () => {
-  fyo.singles.AccountingSettings = { enableInventory: true };
+  fyo.singles.AccountingSettings = { enable_inventory: true };
   const item = newFrappeDoc('Item', { name: 'Kettle', track_item: false });
   item._notInserted = false;
   for (const fieldname of ['unit', 'item_type', 'track_item', 'has_batch']) {

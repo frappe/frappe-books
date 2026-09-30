@@ -41,8 +41,8 @@ const stockLedgerColumns = (
 
 // Reports and rows exist only in browser memory. No database calls are needed.
 fyo.singles.InventorySettings = {
-  enableBatches: true,
-  enableSerialNumber: true,
+  enable_batches: true,
+  enable_serial_number: true,
 } as any;
 function makeReport(ReportClass = StockLedger) {
   const report = new ReportClass(fyo);

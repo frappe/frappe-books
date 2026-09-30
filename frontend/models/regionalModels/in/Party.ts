@@ -21,7 +21,7 @@ export class Party extends BaseParty {
   hidden: HiddenMap = {
     gstin: () => (this.gstType as GSTType) !== 'Registered Regular',
     loyaltyProgram: () => {
-      if (!this.fyo.singles.AccountingSettings?.enableLoyaltyProgram) {
+      if (!this.fyo.singles.AccountingSettings?.enable_loyalty_program) {
         return true;
       }
       return this.role === 'Supplier';

@@ -253,12 +253,12 @@ async function mount() {
   fyo.singles.SystemSettings = {
     currency: 'INR',
     locale: 'en-IN',
-    displayPrecision: 2,
-    dateFormat: 'MMM d, y',
+    display_precision: 2,
+    date_format: 'MMM d, y',
   } as any;
   fyo.singles.InventorySettings = {
-    enableBatches: false,
-    enableSerialNumber: false,
+    enable_batches: false,
+    enable_serial_number: false,
   } as any;
 
   const report = await makeProfitAndLoss();

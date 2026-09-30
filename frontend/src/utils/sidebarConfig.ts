@@ -56,7 +56,7 @@ function getRegionalSidebar(): SidebarRoot[] {
 }
 
 function getInventorySidebar(): SidebarRoot[] {
-  const hasInventory = !!fyo.singles.AccountingSettings?.enableInventory;
+  const hasInventory = !!fyo.singles.AccountingSettings?.enable_inventory;
   if (!hasInventory) {
     return [];
   }
@@ -107,7 +107,7 @@ function getPOSSidebar() {
     name: 'pos',
     route: '/pos',
     icon: 'lucide-store',
-    hidden: () => !fyo.singles.InventorySettings?.enablePointOfSale,
+    hidden: () => !fyo.singles.InventorySettings?.enable_point_of_sale,
   };
 }
 
@@ -150,7 +150,7 @@ function getCompleteSidebar(): SidebarConfig {
       route: '/get-started',
       icon: 'lucide-wrench',
       hidden: () =>
-        !!fyo.singles.SystemSettings?.hideGetStarted ||
+        !!fyo.singles.SystemSettings?.hide_get_started ||
         !fyo.can('GetStarted', 'write'),
     },
     {
@@ -203,28 +203,28 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'loyalty-program',
           route: '/list/LoyaltyProgram',
           schemaName: 'LoyaltyProgram',
-          hidden: () => !fyo.singles.AccountingSettings?.enableLoyaltyProgram,
+          hidden: () => !fyo.singles.AccountingSettings?.enable_loyalty_program,
         },
         {
           label: t`Lead`,
           name: 'lead',
           route: '/list/Lead',
           schemaName: 'Lead',
-          hidden: () => !fyo.singles.AccountingSettings?.enableLead,
+          hidden: () => !fyo.singles.AccountingSettings?.enable_lead,
         },
         {
           label: t`Pricing Rule`,
           name: 'pricing-rule',
           route: '/list/PricingRule',
           schemaName: 'PricingRule',
-          hidden: () => !fyo.singles.AccountingSettings?.enablePricingRule,
+          hidden: () => !fyo.singles.AccountingSettings?.enable_pricing_rule,
         },
         {
           label: t`Coupon Code`,
           name: 'coupon-code',
           route: `/list/CouponCode`,
           schemaName: 'CouponCode',
-          hidden: () => !fyo.singles.AccountingSettings?.enableCouponCode,
+          hidden: () => !fyo.singles.AccountingSettings?.enable_coupon_code,
         },
       ] as SidebarItem[],
     },
@@ -294,7 +294,7 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'price-list',
           route: '/list/PriceList',
           schemaName: 'PriceList',
-          hidden: () => !fyo.singles.AccountingSettings?.enablePriceList,
+          hidden: () => !fyo.singles.AccountingSettings?.enable_price_list,
         },
       ] as SidebarItem[],
     },
@@ -335,7 +335,7 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'customize-form',
           route: `/list/CustomForm/${t`Customize Form`}`,
           hidden: () =>
-            !fyo.singles.AccountingSettings?.enableFormCustomization ||
+            !fyo.singles.AccountingSettings?.enable_form_customization ||
             !fyo.can('CustomForm', 'create'),
         },
         {

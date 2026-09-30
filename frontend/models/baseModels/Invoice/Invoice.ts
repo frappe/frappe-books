@@ -82,7 +82,7 @@ export abstract class Invoice extends Transactional {
   }
 
   get enableDiscounting() {
-    return !!this.fyo.singles?.AccountingSettings?.enableDiscounting;
+    return !!this.fyo.singles?.AccountingSettings?.enable_discounting;
   }
 
   get isMultiCurrency() {
@@ -109,8 +109,8 @@ export abstract class Invoice extends Transactional {
 
   get autoPaymentAccount(): string | null {
     const fieldname = this.isSales
-      ? 'salesPaymentAccount'
-      : 'purchasePaymentAccount';
+      ? 'sales_payment_account'
+      : 'purchase_payment_account';
     const value = this.fyo.singles.Defaults?.[fieldname];
     if (typeof value === 'string' && value.length) {
       return value;
@@ -121,8 +121,8 @@ export abstract class Invoice extends Transactional {
 
   get autoStockTransferLocation(): string | null {
     const fieldname = this.isSales
-      ? 'shipmentLocation'
-      : 'purchaseReceiptLocation';
+      ? 'shipment_location'
+      : 'purchase_receipt_location';
     const value = this.fyo.singles.Defaults?.[fieldname];
     if (typeof value === 'string' && value.length) {
       return value;
@@ -211,7 +211,7 @@ export abstract class Invoice extends Transactional {
         return true;
       }
 
-      if (!this.fyo.singles.AccountingSettings?.enableInventory) {
+      if (!this.fyo.singles.AccountingSettings?.enable_inventory) {
         return true;
       }
 
@@ -243,15 +243,15 @@ export abstract class Invoice extends Transactional {
       return (this.availableLoyaltyPoints ?? 0) <= 0;
     },
     coupons: () =>
-      !this.fyo.singles.AccountingSettings?.enableCouponCode ||
+      !this.fyo.singles.AccountingSettings?.enable_coupon_code ||
       (this.isSubmitted && !this.coupons?.length),
     priceList: () =>
-      !this.fyo.singles.AccountingSettings?.enablePriceList ||
+      !this.fyo.singles.AccountingSettings?.enable_price_list ||
       (!this.canEdit && !this.priceList),
     returnAgainst: () =>
       (this.isSubmitted || this.isCancelled) && !this.returnAgainst,
     pricingRuleDetail: () =>
-      !this.fyo.singles.AccountingSettings?.enablePricingRule ||
+      !this.fyo.singles.AccountingSettings?.enable_pricing_rule ||
       !this.pricingRuleDetail?.length,
   };
 
@@ -264,7 +264,7 @@ export abstract class Invoice extends Transactional {
     makeAutoPayment: (doc) =>
       doc instanceof Invoice && !!doc.autoPaymentAccount,
     makeAutoStockTransfer: (doc) =>
-      !!doc.fyo.singles.AccountingSettings?.enableInventory &&
+      !!doc.fyo.singles.AccountingSettings?.enable_inventory &&
       doc instanceof Invoice &&
       !!doc.autoStockTransferLocation,
     numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
@@ -272,10 +272,10 @@ export abstract class Invoice extends Transactional {
     terms: (doc) => {
       const defaults = doc.fyo.singles.Defaults;
       if ((doc as Invoice).isSales) {
-        return defaults?.salesInvoiceTerms ?? '';
+        return defaults?.sales_invoice_terms ?? '';
       }
 
-      return defaults?.purchaseInvoiceTerms ?? '';
+      return defaults?.purchase_invoice_terms ?? '';
     },
   };
 

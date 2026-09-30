@@ -100,7 +100,7 @@ export default {
       options = sortByFuzzyMatch(keyword, options, (item) => [item.label]);
 
       if (options.length === 0 && !this.df.emptyMessage) {
-        if (filters && !!fyo.singles.SystemSettings?.allowFilterBypass) {
+        if (filters && !!fyo.singles.SystemSettings?.allow_filter_bypass) {
           options = [
             {
               label: t`Show unfiltered results`,
@@ -178,7 +178,7 @@ export default {
         return this.df.filters;
       }
 
-      if (fyo.singles.SystemSettings?.removeFilter) {
+      if (fyo.singles.SystemSettings?.remove_filter) {
         return null;
       }
 

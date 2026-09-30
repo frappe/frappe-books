@@ -39,16 +39,21 @@
 </template>
 
 <script lang="ts">
-import type { DocValueMap } from 'fyo/core/types';
+import type { Doc } from 'fyo/model/doc';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { frappeModels, models, getRegionalModels } from 'models';
+import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import MobileDesk from 'src/mobile/MobileDesk.vue';
 import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
 import { registerFrappeModels } from 'src/frappe/doctypes';
-import { loadFrappeDocTypes } from 'src/frappe/registry';
+import {
+  getSingleSchemaNames,
+  loadFrappeDocTypes,
+} from 'src/frappe/registry';
+import { getBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
@@ -147,16 +152,21 @@ export default defineComponent({
       );
       registerFrappeModels(frappeModels);
       await loadFrappeDocTypes();
-      const singles = Object.values(fyo.schemaMap).filter(
-        (schema) => schema?.isSingle && schema.name !== 'SetupWizard'
+      // Amounts load in the currency and precision the system settings set.
+      const systemSettings = ModelNameEnum.SystemSettings;
+      fyo.initializeMoneyMaker(
+        (await getBooksDoc(systemSettings, systemSettings)) as SystemSettings
+      );
+      const singles = getSingleSchemaNames().filter(
+        (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
       );
       await Promise.all([
         fyo.loadCurrencySymbols(),
         fyo.loadDefaultNumberSeries(),
-        ...singles.map((schema) => fyo.doc.getDoc(schema!.name)),
+        ...singles.map((name) => getBooksDoc(name, name)),
       ]);
-      this.needsSetup = !fyo.singles.AccountingSettings?.setupComplete;
-      this.darkMode = Boolean(fyo.singles.SystemSettings?.darkMode);
+      this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
+      this.darkMode = Boolean(fyo.singles.SystemSettings?.dark_mode);
       setDarkMode(this.darkMode);
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
@@ -164,8 +174,8 @@ export default defineComponent({
       }
       this.loading = false;
     },
-    async completeSetup(values: DocValueMap) {
-      await fyo.db.insert(ModelNameEnum.SetupWizard, values);
+    async completeSetup(wizard: Doc) {
+      await wizard.sync();
       await call(
         'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
       );

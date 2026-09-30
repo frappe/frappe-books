@@ -74,7 +74,7 @@ export function getJsonData(report: Report): string {
 
   const columns = report.columns;
   const displayPrecision =
-    (report.fyo.singles.SystemSettings?.displayPrecision as number) ?? 2;
+    (report.fyo.singles.SystemSettings?.display_precision as number) ?? 2;
 
   /**
    * Set columns as list of fieldname, label
@@ -140,7 +140,7 @@ export function getCsvData(report: Report): string {
 
 function convertReportToCSVMatrix(report: Report): unknown[][] {
   const displayPrecision =
-    (report.fyo.singles.SystemSettings?.displayPrecision as number) ?? 2;
+    (report.fyo.singles.SystemSettings?.display_precision as number) ?? 2;
   const reportData = report.reportData;
   const columns = report.columns;
 

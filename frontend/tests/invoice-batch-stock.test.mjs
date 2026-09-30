@@ -4,7 +4,7 @@ import { makeFyo } from './helpers/accounting.mjs';
 
 async function makeRow(values = {}) {
   const fyo = await makeFyo();
-  fyo.singles.InventorySettings = { enableBatches: true };
+  fyo.singles.InventorySettings = { enable_batches: true };
   fyo.db.getStockLocation = async (schemaName, isPOS) =>
     schemaName === 'SalesInvoice' && isPOS ? 'Counter' : 'Stores';
   const locations = [];

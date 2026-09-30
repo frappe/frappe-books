@@ -17,6 +17,7 @@ class BooksSystemSettings(Document):
 		from frappe.types import DF
 
 		allow_filter_bypass: DF.Check
+		currency: DF.Link | None
 		dark_mode: DF.Check
 		date_format: DF.Autocomplete
 		display_precision: DF.Int
@@ -29,7 +30,11 @@ class BooksSystemSettings(Document):
 
 	_DOCTYPE_NAME = "Books System Settings"
 
+	@property
+	def currency(self):
+		"""The company currency, which Frappe's System Settings holds."""
+		return frappe.db.get_single_value("System Settings", "currency")
+
 	def validate(self):
-		# negatives are rejected by the field's non_negative flag
-		if cint(self.display_precision) > 9:
-			frappe.throw(_("Display Precision cannot be more than 9."))
+		if not 0 <= cint(self.display_precision) <= 9:
+			frappe.throw(_("Display Precision should have a value between 0 and 9."))

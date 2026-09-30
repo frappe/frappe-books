@@ -28,6 +28,28 @@ class IntegrationTestSystemSettings(IntegrationTestCase):
 				[{"parent": "SystemSettings", "fieldname": "currency", "value": "CHF"}],
 			)
 
+	def test_settings_show_system_settings_country_and_currency(self):
+		with self.change_settings("System Settings", country="Switzerland", currency="CHF"):
+			self.assertEqual(frappe.get_single("Books System Settings").as_dict()["currency"], "CHF")
+			self.assertEqual(
+				frappe.get_single("Books Accounting Settings").as_dict()["country"], "Switzerland"
+			)
+
+	def test_saving_settings_leaves_system_settings_country_and_currency(self):
+		with self.change_settings("System Settings", country="Switzerland", currency="CHF"):
+			system_settings = frappe.get_single("Books System Settings")
+			system_settings.update({"currency": "EUR"})
+			system_settings.save()
+			frappe.db.set_single_value("Books Accounting Settings", COMPANY)
+			accounting_settings = frappe.get_single("Books Accounting Settings")
+			accounting_settings.update({"country": "Germany"})
+			accounting_settings.save()
+
+			self.assertEqual(frappe.db.get_single_value("System Settings", "currency"), "CHF")
+			self.assertEqual(frappe.db.get_single_value("System Settings", "country"), "Switzerland")
+			self.assertEqual(frappe.get_single("Books System Settings").currency, "CHF")
+			self.assertEqual(frappe.get_single("Books Accounting Settings").country, "Switzerland")
+
 	def test_interface_links_country_and_currency_to_frappe(self):
 		self.assertEqual(get_schema_field_properties("SystemSettings")["currency"]["options"], "Currency")
 		self.assertEqual(get_schema_field_properties("AccountingSettings")["country"]["options"], "Country")

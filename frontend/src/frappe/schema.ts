@@ -1,5 +1,5 @@
 import { getFieldProperties } from 'schemas/fieldProperties';
-import type { Field, Naming, Schema } from 'schemas/types';
+import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -7,8 +7,25 @@ export interface Presentation {
   label: string;
   quickEditFields?: string[];
   /** The field that asks for a document's name when its DocType names by prompt. */
-  nameField?: { label: string; placeholder?: string };
+  nameField?: {
+    label: string;
+    placeholder?: string;
+    /** An AutoComplete offers the names the model's `lists.name` gives. */
+    fieldtype?: 'Data' | 'AutoComplete';
+  };
+  /** How fields show what their DocFields cannot say, by fieldname. */
+  fields?: Record<string, FieldPresentation>;
 }
+
+/**
+ * Option labels, whether an Autocomplete takes values that are not options,
+ * and whether a Link offers to create a document. `getdoctype` does not send
+ * `only_select`, so a Link without Create says so here.
+ */
+export type FieldPresentation = Pick<
+  OptionField,
+  'optionLabels' | 'allowCustom'
+> & { create?: boolean };
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
 export type Placements = Record<string, { section?: string; tab?: string }>;
@@ -43,7 +60,11 @@ export function toSchema(
   context: SchemaContext
 ): Schema {
   const fields = [
-    ...getNameFields(meta, presentation, getDocFields(meta, context)),
+    ...getNameFields(
+      meta,
+      presentation,
+      getDocFields(meta, presentation, context)
+    ),
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 
@@ -65,7 +86,11 @@ export function toSchema(
 }
 
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
-function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
+function getDocFields(
+  meta: DocTypeMeta,
+  presentation: Presentation,
+  context: SchemaContext
+): Field[] {
   const levels = getPermlevels(meta, context.roles);
   const fields: Field[] = [];
   const placed: Field[] = [];
@@ -78,7 +103,12 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
     } else if (docfield.fieldtype === 'Section Break') {
       section = docfield.label || DEFAULT_SECTION;
     } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
-      const field = toField(docfield, context.schemaNames, levels);
+      const field = toField(
+        docfield,
+        context.schemaNames,
+        levels,
+        presentation.fields?.[docfield.fieldname]
+      );
       const placement = context.placements[docfield.fieldname];
       if (placement) {
         placed.push({
@@ -107,10 +137,11 @@ function getDocFields(meta: DocTypeMeta, context: SchemaContext): Field[] {
 function toField(
   docfield: DocField,
   schemaNames: SchemaContext['schemaNames'],
-  levels: Permlevels
+  levels: Permlevels,
+  shown: FieldPresentation = {}
 ): Field {
   const properties = getFieldProperties(
-    { fieldname: docfield.fieldname } as Field,
+    { fieldname: docfield.fieldname, ...shown } as Field,
     docfield
   ) as Partial<Field> & { target?: string };
   const level = docfield.permlevel ?? 0;
@@ -123,25 +154,33 @@ function toField(
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
-  } as Field & { target?: string; create?: boolean };
+  } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
   if (properties.target) {
     field.target = schemaNames[properties.target] ?? properties.target;
   }
 
   if (docfield.fieldtype === 'Link') {
-    field.create = !docfield.only_select;
+    field.create = shown.create ?? !docfield.only_select;
+  }
+
+  if (shown.allowCustom) {
+    field.allowCustom = true;
   }
 
   return field;
 }
 
-/** A prompt-named doctype asks for the name first, after an image that heads the form. */
+/** A prompt-named doctype asks for the name first, after an image that heads the form. A single has no ID. */
 function getNameFields(
   meta: DocTypeMeta,
   presentation: Presentation,
   fields: Field[]
 ): Field[] {
+  if (meta.issingle) {
+    return fields;
+  }
+
   if (meta.autoname?.toLowerCase() !== 'prompt') {
     const idField = { fieldname: 'name', label: 'ID', fieldtype: 'Data' };
     return [...fields, { ...idField, meta: true } as Field];
@@ -149,7 +188,7 @@ function getNameFields(
 
   const nameField = {
     fieldname: 'name',
-    fieldtype: 'Data',
+    fieldtype: presentation.nameField?.fieldtype ?? 'Data',
     label: presentation.nameField?.label ?? 'Name',
     placeholder: presentation.nameField?.placeholder,
     required: true,

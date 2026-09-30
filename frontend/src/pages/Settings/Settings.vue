@@ -115,6 +115,7 @@ import { shortcutsKey } from 'src/utils/injectionKeys';
 import { showDialog } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
+import { getSchema } from 'src/frappe/registry';
 import { UIGroupedFields } from 'src/utils/types';
 import { isMobile } from 'src/utils/viewport';
 import { canInstall, isInstallSheetOpen } from 'src/web/pwa';
@@ -189,8 +190,8 @@ export default defineComponent({
       }));
     },
     schemas(): Schema[] {
-      const enableInventory = !!this.fyo.singles.AccountingSettings?.enableInventory;
-      const enablePOS = !!this.fyo.singles.InventorySettings?.enablePointOfSale;
+      const enableInventory = !!this.fyo.singles.AccountingSettings?.enable_inventory;
+      const enablePOS = !!this.fyo.singles.InventorySettings?.enable_point_of_sale;
       return [
         ModelNameEnum.AccountingSettings,
         ModelNameEnum.InventorySettings,
@@ -210,7 +211,7 @@ export default defineComponent({
 
           return true;
         })
-        .map((s) => this.fyo.schemaMap[s]!);
+        .map((s) => getSchema(s)!);
     },
     activeGroup(): Map<string, Field[]> {
       if (!this.groupedFields) {

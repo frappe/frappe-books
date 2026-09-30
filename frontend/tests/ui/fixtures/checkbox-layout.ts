@@ -20,10 +20,10 @@ async function mount() {
   await fyo.db.init();
   fyo.doc.registerModels(models);
   fyo.singles.InventorySettings = {
-    enableBatches: true,
-    enableSerialNumber: true,
+    enable_batches: true,
+    enable_serial_number: true,
   } as any;
-  fyo.singles.SystemSettings = { dateFormat: 'MMM d, y' } as any;
+  fyo.singles.SystemSettings = { date_format: 'MMM d, y' } as any;
   const report = reactive(new StockBalance(fyo));
   // Only the server calls are stubbed; filters and their updates use the real model.
   report.getDefaultFilters = async () => ({});

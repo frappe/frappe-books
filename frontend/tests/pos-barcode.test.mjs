@@ -11,10 +11,10 @@ const rice = {
 const eggs = { name: 'Eggs', itemCode: '54321', unit: 'Unit' };
 const items = [rice, eggs];
 const scale = {
-  weightEnabledBarcode: true,
-  checkDigits: 21,
-  itemCodeDigits: 5,
-  itemWeightDigits: 5,
+  weight_enabled_barcode: true,
+  check_digits: 21,
+  item_code_digits: 5,
+  item_weight_digits: 5,
 };
 
 test('a scale barcode adds its weight, in kilograms for kg items', () => {

@@ -255,7 +255,7 @@ export default defineComponent({
   },
   computed: {
     canShowBarcode(): boolean {
-      if (!this.fyo.singles.InventorySettings?.enableBarcodes) {
+      if (!this.fyo.singles.InventorySettings?.enable_barcodes) {
         return false;
       }
 
@@ -383,7 +383,7 @@ export default defineComponent({
     'docOrNull.schema': 'updateGroupedFields',
   },
   beforeMount() {
-    this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
+    this.useFullWidth = !!this.fyo.singles.Misc?.use_full_width;
   },
   async mounted() {
     await this.setDoc();
@@ -398,7 +398,7 @@ export default defineComponent({
     if (this.hasDoc) {
       void this.refreshDoc();
     }
-    this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
+    this.useFullWidth = !!this.fyo.singles.Misc?.use_full_width;
     docsPathRef.value = docsPathMap[this.schemaName] ?? '';
     this.shortcuts?.pmod.set(this.context, ['KeyP'], () => {
       if (!this.canPrint) {
@@ -435,7 +435,7 @@ export default defineComponent({
     async toggleWidth() {
       const value = !this.useFullWidth;
       if (this.fyo.can('Misc', 'write')) {
-        await this.fyo.singles.Misc?.setAndSync('useFullWidth', value);
+        await this.fyo.singles.Misc?.setAndSync('use_full_width', value);
       }
       this.useFullWidth = value;
     },

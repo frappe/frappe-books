@@ -193,8 +193,8 @@ export async function makeFyo() {
   const fyo = new Fyo({ DatabaseDemux: Store });
   await fyo.db.init();
   fyo.doc.registerModels(models);
-  fyo.singles.AccountingSettings = { enableDiscounting: true };
-  fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 };
+  fyo.singles.AccountingSettings = { enable_discounting: true };
+  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
   fyo.store.searchFields = searchFields;
   return fyo;
 }

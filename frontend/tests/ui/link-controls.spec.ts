@@ -270,9 +270,9 @@ test('one notification renders once and dismisses on click', async ({
       .computed.fyo();
     fyo.db.getOpenPOSShift = async () => 'Fixture Shift';
     fyo.singles.POSSettings.inventory = 'Stores';
-    fyo.singles.POSSettings.cashAccount = 'Fixture Cash';
-    fyo.singles.POSSettings.writeOffAccount = 'Fixture Write Off';
-    fyo.singles.AccountingSettings.enableCouponCode = true;
+    fyo.singles.POSSettings.cash_account = 'Fixture Cash';
+    fyo.singles.POSSettings.write_off_account = 'Fixture Write Off';
+    fyo.singles.AccountingSettings.enable_coupon_code = true;
     return app.config.globalProperties.$router.push('/pos');
   });
   await expect(

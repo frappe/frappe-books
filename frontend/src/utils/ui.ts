@@ -564,7 +564,7 @@ export async function commonDocSubmit(doc: Doc): Promise<boolean> {
   let success = true;
   if (
     doc instanceof SalesInvoice &&
-    fyo.singles.AccountingSettings?.enableInventory
+    fyo.singles.AccountingSettings?.enable_inventory
   ) {
     success = await showInsufficientInventoryDialog(doc);
   }

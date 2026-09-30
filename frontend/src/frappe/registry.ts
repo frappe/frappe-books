@@ -7,6 +7,7 @@ import { getDocuments } from './api';
 import { FrappeDoc } from './document';
 import {
   getDocType,
+  getFrappeModel,
   getFrappeModels,
   isFrappeBacked,
   setDocType,
@@ -62,6 +63,15 @@ export function getSearchFields(schemaName: string): string[] {
     .filter(Boolean);
 }
 
+/** The single schemas, Frappe-backed or not, e.g. to load the settings at startup. */
+export function getSingleSchemaNames(): string[] {
+  const names = new Set([
+    ...Object.keys(fyo.schemaMap),
+    ...getFrappeModels().map(([name]) => name),
+  ]);
+  return [...names].filter((name) => getSchema(name)?.isSingle);
+}
+
 /** The model whose statics (actions, list settings, link filters) present a schema. */
 export function getModel(schemaName: string): typeof Doc | undefined {
   return isFrappeBacked(schemaName)
@@ -92,7 +102,8 @@ function getTables(meta: DocTypeMeta, byName: Map<string, DocTypeMeta>) {
       field.fieldtype === 'Table' ? byName.get(field.options!) : undefined;
     if (child) {
       const name = getSchemaNames()[child.name] ?? child.name;
-      tables[field.fieldname] = toDocType(child, name, FrappeDoc, {});
+      const Model = getFrappeModel(name) ?? FrappeDoc;
+      tables[field.fieldname] = toDocType(child, name, Model, {});
     }
   }
 
@@ -105,9 +116,11 @@ function toDocType(
   Model: FrappeModel,
   placements: Placements
 ): FrappeDocType {
-  const presentation: Presentation = meta.istable
-    ? { label: meta.name }
-    : Model.presentation;
+  // Rows without a model of their own are labelled by their doctype.
+  const presentation: Presentation =
+    meta.istable && Model === FrappeDoc
+      ? { label: meta.name }
+      : Model.presentation;
   const schema = toSchema(meta, schemaName, presentation, {
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],

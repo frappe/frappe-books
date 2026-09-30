@@ -225,7 +225,7 @@ export class StockTransferItem extends TransferItem {
         }
 
         const defaultLocation =
-          this.fyo.singles.InventorySettings?.defaultLocation;
+          this.fyo.singles.InventorySettings?.default_location;
 
         if (defaultLocation && !this.location) {
           return defaultLocation;
@@ -267,13 +267,14 @@ export class StockTransferItem extends TransferItem {
       return true;
     },
     itemDiscountPercent: () => !this.itemDiscountPercent,
-    batch: () => !this.fyo.singles.InventorySettings?.enableBatches,
-    serialNumber: () => !this.fyo.singles.InventorySettings?.enableSerialNumber,
+    batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
+    serialNumber: () =>
+      !this.fyo.singles.InventorySettings?.enable_serial_number,
     transferUnit: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
+      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
     transferQuantity: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
+      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
     unitConversionFactor: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
+      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
   };
 }

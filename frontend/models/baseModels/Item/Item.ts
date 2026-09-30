@@ -62,14 +62,14 @@ export class Item extends FrappeDoc {
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
-    track_item: () => !this.fyo.singles.AccountingSettings?.enableInventory,
-    barcode: () => !this.fyo.singles.InventorySettings?.enableBarcodes,
-    has_batch: () => !this.fyo.singles.InventorySettings?.enableBatches,
+    track_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
+    barcode: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
+    has_batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
     has_serial_number: () =>
-      !this.fyo.singles.InventorySettings?.enableSerialNumber,
+      !this.fyo.singles.InventorySettings?.enable_serial_number,
     uom_conversions: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
-    item_group: () => !this.fyo.singles.AccountingSettings?.enableitemGroup,
+      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
+    item_group: () => !this.fyo.singles.AccountingSettings?.enableitem_group,
   };
 
   // Accounts are still read through the bridge, so these use its field names.

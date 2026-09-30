@@ -66,16 +66,12 @@ export async function getPrintTemplatePropValues(
 }
 
 async function getPrintValues(printSettings: Doc): Promise<PrintTemplateData> {
-  const accountingSettings = await printSettings.fyo.doc.getDoc(
-    ModelNameEnum.AccountingSettings
-  );
-
+  // Templates name the company's tax IDs as the bridge schema did.
+  const { gstin, tax_id } = printSettings.fyo.singles.AccountingSettings!;
   return {
     ...(await getPrintTemplateDocValues(printSettings, printSettingsFields)),
-    ...(await getPrintTemplateDocValues(
-      accountingSettings,
-      accountingSettingsFields
-    )),
+    gstin: gstin || '',
+    taxId: tax_id || '',
   };
 }
 

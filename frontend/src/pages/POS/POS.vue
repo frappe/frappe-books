@@ -392,14 +392,14 @@ export default defineComponent({
   computed: {
     layout(): POSLayout {
       const posUI =
-        this.posProfile?.posUI || fyo.singles.POSSettings?.posUI;
+        this.posProfile?.posUI || fyo.singles.POSSettings?.pos_ui;
       return posUI === 'Classic' ? 'Classic' : 'Modern';
     },
     isDiscountingEnabled(): boolean {
-      return !!fyo.singles.AccountingSettings?.enableDiscounting;
+      return !!fyo.singles.AccountingSettings?.enable_discounting;
     },
     enableReturns(): boolean {
-      return !!fyo.singles.AccountingSettings?.enableInvoiceReturns;
+      return !!fyo.singles.AccountingSettings?.enable_invoice_returns;
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
@@ -559,7 +559,7 @@ export default defineComponent({
     },
 
     async loadPOSProfile() {
-      const posProfileName = fyo.singles.POSSettings?.posProfile;
+      const posProfileName = fyo.singles.POSSettings?.pos_profile;
 
       if (!posProfileName) {
         return;
@@ -635,7 +635,7 @@ export default defineComponent({
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyL'], () => {
         if (
-          this.fyo.singles.AccountingSettings?.enablePriceList &&
+          this.fyo.singles.AccountingSettings?.enable_price_list &&
           this.loyaltyPoints &&
           this.sinvDoc.party &&
           this.sinvDoc.items?.length &&
@@ -647,7 +647,7 @@ export default defineComponent({
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyC'], () => {
         if (
-          this.fyo.singles.AccountingSettings?.enableCouponCode &&
+          this.fyo.singles.AccountingSettings?.enable_coupon_code &&
           this.sinvDoc?.party &&
           this.sinvDoc?.items?.length
         ) {
@@ -688,7 +688,7 @@ export default defineComponent({
       const filters = await this.getItemFilters();
       const hideUnavailable =
         this.posProfile?.hideUnavailableItems ??
-        this.fyo.singles.POSSettings?.hideUnavailableItems;
+        this.fyo.singles.POSSettings?.hide_unavailable_items;
       const items = (await fyo.db.getAll(ModelNameEnum.Item, {
         fields: [],
         filters,
@@ -740,7 +740,7 @@ export default defineComponent({
     setDefaultCustomer() {
       this.defaultCustomer =
         this.posProfile?.posCustomer ??
-        this.fyo.singles.Defaults?.posCustomer ??
+        this.fyo.singles.Defaults?.pos_customer ??
         '';
       this.sinvDoc.party = this.defaultCustomer;
     },
@@ -749,7 +749,7 @@ export default defineComponent({
     },
     setSinvDoc() {
       this.sinvDoc = this.fyo.doc.getNewDoc(ModelNameEnum.SalesInvoice, {
-        account: this.fyo.singles.POSSettings?.defaultAccount,
+        account: this.fyo.singles.POSSettings?.default_account,
         party: this.sinvDoc.party ?? this.defaultCustomer,
         isPOS: true,
       }) as SalesInvoice;

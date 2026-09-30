@@ -102,7 +102,7 @@ export async function getItemQtyMap(
 }
 
 export async function getItemVisibility(fyo: Fyo): Promise<ItemVisibility> {
-  const posProfileName = fyo.singles.POSSettings?.posProfile as string;
+  const posProfileName = fyo.singles.POSSettings?.pos_profile;
 
   if (posProfileName) {
     const posProfile = await fyo.doc.getDoc(
@@ -110,10 +110,10 @@ export async function getItemVisibility(fyo: Fyo): Promise<ItemVisibility> {
       posProfileName
     );
     return (posProfile?.itemVisibility ??
-      fyo.singles.POSSettings?.itemVisibility) as ItemVisibility;
+      fyo.singles.POSSettings?.item_visibility) as ItemVisibility;
   }
 
-  return fyo.singles.POSSettings?.itemVisibility as ItemVisibility;
+  return fyo.singles.POSSettings?.item_visibility as ItemVisibility;
 }
 
 export function getStockTransferActions(
@@ -252,7 +252,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
       // The party account comes from the invoice.
       const hideFields = ['party', 'for', 'account'];
 
-      if (!fyo.singles.AccountingSettings?.enableInvoiceReturns) {
+      if (!fyo.singles.AccountingSettings?.enable_invoice_returns) {
         hideFields.push('paymentType');
       }
 
@@ -308,7 +308,7 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      !!fyo.singles.AccountingSettings?.enableInvoiceReturns &&
+      !!fyo.singles.AccountingSettings?.enable_invoice_returns &&
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {

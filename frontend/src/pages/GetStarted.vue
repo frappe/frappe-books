@@ -82,6 +82,7 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import PageHeader from 'src/components/PageHeader.vue';
+import { getBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { getGetStartedConfig } from 'src/utils/getStartedConfig';
 import { GetStartedConfigItem } from 'src/utils/types';
@@ -106,7 +107,7 @@ export default defineComponent({
   },
   async activated() {
     // The server checks the record tasks each time the page loads them.
-    await fyo.doc.getDoc('GetStarted', undefined, { refresh: true });
+    await getBooksDoc('GetStarted', 'GetStarted', { refresh: true });
     if (fyo.can('GetStarted', 'write')) {
       await this.checkIsOnboardingComplete();
     }
@@ -119,7 +120,7 @@ export default defineComponent({
 
       switch (key) {
         case 'Opening Balances':
-          await this.updateChecks({ openingBalanceChecked: true });
+          await this.updateChecks({ opening_balance_checked: true });
           break;
       }
     },
@@ -131,38 +132,38 @@ export default defineComponent({
 
       switch (key) {
         case 'Print':
-          await this.updateChecks({ printSetup: true });
+          await this.updateChecks({ print_setup: true });
           break;
         case 'General':
-          await this.updateChecks({ companySetup: true });
+          await this.updateChecks({ company_setup: true });
           break;
         case 'System':
-          await this.updateChecks({ systemSetup: true });
+          await this.updateChecks({ system_setup: true });
           break;
         case 'Review Accounts':
-          await this.updateChecks({ chartOfAccountsReviewed: true });
+          await this.updateChecks({ chart_of_accounts_reviewed: true });
           break;
         case 'Add Taxes':
-          await this.updateChecks({ taxesAdded: true });
+          await this.updateChecks({ taxes_added: true });
           break;
       }
     },
     async checkIsOnboardingComplete() {
-      if (fyo.singles.GetStarted?.onboardingComplete) {
+      const doc = fyo.singles.GetStarted!;
+      if (doc.onboarding_complete) {
         return true;
       }
 
-      const doc = await fyo.doc.getDoc('GetStarted');
-      const onboardingComplete = fyo.schemaMap.GetStarted?.fields
-        .filter(({ fieldname }) => fieldname !== 'onboardingComplete')
+      const onboardingComplete = doc.schema.fields
+        .filter(
+          ({ fieldname, meta }) => !meta && fieldname !== 'onboarding_complete'
+        )
         .map(({ fieldname }) => doc.get(fieldname))
         .every(Boolean);
 
       if (onboardingComplete) {
-        await this.updateChecks({ onboardingComplete });
-        const systemSettings = await fyo.doc.getDoc('SystemSettings');
-        await systemSettings.set('hideGetStarted', true);
-        await systemSettings.sync();
+        await this.updateChecks({ onboarding_complete: onboardingComplete });
+        await fyo.singles.SystemSettings!.setAndSync('hide_get_started', true);
       }
 
       return onboardingComplete;
@@ -173,7 +174,6 @@ export default defineComponent({
       }
 
       await fyo.singles.GetStarted?.setAndSync(toUpdate);
-      await fyo.doc.getDoc('GetStarted');
     },
     isCompleted(item: ListItem) {
       return fyo.singles.GetStarted?.get(item.fieldname) || false;

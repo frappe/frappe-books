@@ -55,7 +55,8 @@
    "fieldname": "default",
    "fieldtype": "Data",
    "is_virtual": 1,
-   "label": "Default"
+   "label": "Default",
+   "mandatory_depends_on": "is_required"
   },
   {
    "default": "Default",
@@ -70,29 +71,35 @@
    "label": "Form Tab"
   },
   {
+   "depends_on": "eval:[\"Select\", \"AutoComplete\", \"Color\"].includes(doc.fieldtype)",
    "fieldname": "options",
    "fieldtype": "Text",
    "is_virtual": 1,
-   "label": "Options"
+   "label": "Options",
+   "mandatory_depends_on": "eval:[\"Select\", \"AutoComplete\"].includes(doc.fieldtype)"
   },
   {
+   "depends_on": "eval:[\"Link\", \"Table\"].includes(doc.fieldtype)",
    "fieldname": "target",
    "fieldtype": "Autocomplete",
    "is_virtual": 1,
-   "label": "Target"
+   "label": "Target",
+   "mandatory_depends_on": "eval:[\"Link\", \"Table\"].includes(doc.fieldtype)"
   },
   {
+   "depends_on": "eval:doc.fieldtype == \"DynamicLink\"",
    "fieldname": "references",
    "fieldtype": "Autocomplete",
    "is_virtual": 1,
-   "label": "References"
+   "label": "References",
+   "mandatory_depends_on": "eval:doc.fieldtype == \"DynamicLink\""
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-28 12:00:00.000000",
+ "modified": "2026-09-30 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Custom Field",

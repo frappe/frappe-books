@@ -1,11 +1,14 @@
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
+import { newBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { QueryFilter } from 'utils/db/types';
 
+/** A new wizard, in the browser's time zone until Frappe's setup sets the system one. */
 export function getSetupWizardDoc() {
-  return fyo.doc.getNewDoc(ModelNameEnum.SetupWizard, {}, false);
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return newBooksDoc(ModelNameEnum.SetupWizard, { time_zone: timeZone });
 }
 
 export const docsPathMap: Record<string, string | undefined> = {

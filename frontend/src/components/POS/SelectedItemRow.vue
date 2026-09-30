@@ -330,7 +330,7 @@ export default defineComponent({
       return this.layout === 'Classic';
     },
     isUOMConversionEnabled(): boolean {
-      return !!fyo.singles.InventorySettings?.enableUomConversions;
+      return !!fyo.singles.InventorySettings?.enable_uom_conversions;
     },
     isReadOnly(): boolean {
       return !!this.row.isFreeItem;

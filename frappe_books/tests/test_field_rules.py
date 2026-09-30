@@ -17,11 +17,15 @@ class IntegrationTestFieldRules(IntegrationTestCase):
 
 	def test_precision_cannot_be_negative(self):
 		settings = frappe.get_single("Books System Settings")
-		for fieldname in ("display_precision", "internal_precision"):
+		# The display precision's own range check, with the form's message, comes first.
+		for fieldname, error in (
+			("display_precision", frappe.ValidationError),
+			("internal_precision", frappe.NonNegativeError),
+		):
 			with self.subTest(fieldname=fieldname):
 				settings.reload()
 				settings.set(fieldname, -1)
-				self.assertRaises(frappe.NonNegativeError, settings.save)
+				self.assertRaises(error, settings.save)
 
 	def test_pos_settings_need_a_cash_account(self):
 		settings = frappe.get_single("Books Pos Settings")

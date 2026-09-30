@@ -55,6 +55,11 @@ export class FrappeDoc extends Doc {
     return getDocType(this.schemaName).doctype;
   }
 
+  /** The name Frappe knows the document by; a single's is its doctype. */
+  get frappeName(): string {
+    return this.schema.isSingle ? this.doctype : this.name!;
+  }
+
   get submitted(): boolean {
     return Number(this.docstatus ?? 0) > 0;
   }
@@ -123,7 +128,7 @@ export class FrappeDoc extends Doc {
     const values = this.getFrappeValues(options);
     const saved = this.notInserted
       ? { __islocal: 1 }
-      : { name: this.name, modified: this.modified };
+      : { name: this.frappeName, modified: this.modified };
     return { ...values, ...saved, doctype: this.doctype };
   }
 
@@ -138,7 +143,9 @@ export class FrappeDoc extends Doc {
   }
 
   override async _fetchSaved(): Promise<DocValueMap> {
-    return this.toDocValues(await api.getDocument(this.doctype, this.name!));
+    return this.toDocValues(
+      await api.getDocument(this.doctype, this.frappeName)
+    );
   }
 
   override async _setLoadedValues(data: DocValueMap) {
@@ -164,14 +171,22 @@ export class FrappeDoc extends Doc {
   override async _insert() {
     await this._preSync();
     const values = this.getFrappeValues();
-    await this._setSaved(await api.insertDocument(this.doctype, values));
+    // A single always exists; a new copy of it replaces its values.
+    const saved = this.schema.isSingle
+      ? await api.updateDocument(this.doctype, this.frappeName, values)
+      : await api.insertDocument(this.doctype, values);
+    await this._setSaved(saved);
     return this;
   }
 
   override async _update() {
     await this._preSync();
     const values = { ...this.getFrappeValues(), modified: this.modified };
-    const saved = await api.updateDocument(this.doctype, this.name!, values);
+    const saved = await api.updateDocument(
+      this.doctype,
+      this.frappeName,
+      values
+    );
     await this._setSaved(saved);
     return this;
   }

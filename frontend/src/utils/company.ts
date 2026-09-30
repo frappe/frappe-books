@@ -20,10 +20,7 @@ export function useCompanyIdentity() {
   }
 
   onMounted(async () => {
-    const { companyName: name } = await fyo.doc.getDoc(
-      ModelNameEnum.AccountingSettings
-    );
-    companyName.value = name as string;
+    companyName.value = fyo.singles.AccountingSettings?.company_name ?? '';
     await setCompanyLogo();
     fyo.doc.observer.on(printSettingsSync, setCompanyLogo);
   });

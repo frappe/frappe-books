@@ -32,6 +32,11 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	"""Totals and validation shared by quotes and invoices."""
 
 	transaction_type: str
+	follow_up_fields = ("make_auto_payment",)
+
+	def __setup__(self):
+		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
+		self.dont_update_if_missing.extend(self.follow_up_fields)
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -45,6 +50,15 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 		_populate_invoice_defaults(self)
 		calculate_invoice(self)
 		loyalty.set_available_points(self)
+		self.set_follow_up_defaults()
+
+	def set_follow_up_defaults(self):
+		"""Pay on submit when Books Defaults says where to, unless the caller chose.
+
+		A quote offers it too, as its invoice would; the invoice decides again when it is made.
+		"""
+		if self.get("make_auto_payment") is None:
+			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
 
 	def validate(self):
 		validate_invoice(self)
@@ -64,7 +78,6 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 		self.calculate()
 
 
-FOLLOW_UP_FIELDS = ("make_auto_payment", "make_auto_stock_transfer")
 INVOICE_FEATURES = {
 	"return_against": "enable_invoice_returns",
 	"coupons": "enable_coupon_code",
@@ -75,27 +88,20 @@ INVOICE_FEATURES = {
 class PostingInvoiceController(InvoiceController):
 	"""Ledger, outstanding and follow-up effects of submitting an invoice."""
 
-	def __setup__(self):
-		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
-		self.dont_update_if_missing.extend(FOLLOW_UP_FIELDS)
-
-	def calculate(self):
-		super().calculate()
-		self.set_follow_up_defaults()
+	follow_up_fields = ("make_auto_payment", "make_auto_stock_transfer")
 
 	def fill_mapped_values(self):
 		"""Fill a mapped invoice as a save would, letting it choose its own follow-ups.
 
 		frappe.new_doc sets every check box to 0, so the follow-up checks are cleared first.
 		"""
-		for fieldname in FOLLOW_UP_FIELDS:
+		for fieldname in self.follow_up_fields:
 			self.set(fieldname, None)
 		self.calculate()
 
 	def set_follow_up_defaults(self):
-		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
-		if self.get("make_auto_payment") is None:
-			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
+		"""Also transfer stock on submit when Books Defaults says where to, unless the caller chose."""
+		super().set_follow_up_defaults()
 		if self.get("make_auto_stock_transfer") is None:
 			inventory = frappe.db.get_single_value("Books Accounting Settings", "enable_inventory")
 			self.make_auto_stock_transfer = int(bool(inventory and default_location(self)))

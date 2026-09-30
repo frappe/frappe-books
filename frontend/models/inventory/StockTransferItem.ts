@@ -1,7 +1,7 @@
 import type { HiddenMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
-import { getStockRowHiddenMap, stockRowDerivedFields } from './stockRows';
+import { getStockRowHiddenMap, stockRowRefills } from './stockRows';
 
 /** Links of a shipment or purchase receipt row that offer no Create, as before. */
 export const transferRowLinks = withoutCreate(['item', 'transfer_unit', 'batch']);
@@ -27,9 +27,9 @@ export const transferRowFields = [
 
 /** A shipment or purchase receipt row. The server fills its units, rate, location and serial numbers. */
 export abstract class StockTransferItem extends FrappeDoc {
-  static override derivedFields = {
-    ...stockRowDerivedFields,
-    item: [...stockRowDerivedFields.item, 'description', 'hsn_code'],
+  static override refills = {
+    ...stockRowRefills,
+    item: [...stockRowRefills.item, 'description', 'hsn_code'],
   };
 
   override hidden: HiddenMap = getStockRowHiddenMap(this);

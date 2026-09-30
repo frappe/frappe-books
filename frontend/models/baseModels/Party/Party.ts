@@ -2,7 +2,6 @@ import { Fyo } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import {
   Action,
-  ChangeArg,
   FiltersMap,
   HiddenMap,
   ListViewSettings,
@@ -39,17 +38,11 @@ export class Party extends FrappeDoc {
     ],
     fields: { from_lead: { create: false } },
   };
+  // The server sets the new role's default account on save.
+  static override refills = { role: ['default_account'] };
 
   role?: PartyRole;
   from_lead?: string;
-
-  override async change(change: ChangeArg) {
-    await super.change(change);
-    if (change.changed === 'role') {
-      // The server sets the new role's default account on save.
-      this.default_account = undefined;
-    }
-  }
 
   // Frappe checks these on save; mirrored to show its message at the field.
   validations: ValidationMap = {

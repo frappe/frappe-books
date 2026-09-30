@@ -43,6 +43,7 @@ export abstract class Invoice extends FrappeDoc {
     'make_auto_payment',
     'make_auto_stock_transfer',
   ];
+  static override refills = { party: PARTY_FIELDS };
 
   items?: InvoiceItem[];
   date?: Date;
@@ -169,10 +170,6 @@ export abstract class Invoice extends FrappeDoc {
   };
 
   override async change(arg: ChangeArg) {
-    if (arg.changed === 'party') {
-      this.leaveToServer(PARTY_FIELDS);
-    }
-
     if (arg.changed && RATE_SOURCE_FIELDS.includes(arg.changed)) {
       this.repriceRows();
     }

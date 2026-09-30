@@ -62,6 +62,14 @@ export class InvoiceItem extends FrappeDoc {
     tableFields: ['item', 'tax', 'qty', 'rate', 'amount'],
     fields: withoutCreate(['transfer_unit', 'unit', 'account']),
   };
+  // The server prices the row and derives the other quantities again.
+  static override refills = {
+    item: ['rate', ...ITEM_DETAILS],
+    transfer_unit: ['rate', 'quantity'],
+    quantity: ['qty', 'transfer_quantity'],
+    qty: ['quantity'],
+    transfer_quantity: ['quantity'],
+  };
 
   parentdoc?: Invoice;
   item?: string;
@@ -94,7 +102,7 @@ export class InvoiceItem extends FrappeDoc {
     this.followEdit(arg.changed);
   }
 
-  /** What an edit asks of the server: a new price, the item's details or the other quantities. */
+  /** What an edit asks of the server besides its refills: a price of its own or the server's. */
   followEdit(fieldname?: string) {
     if (fieldname === 'rate') {
       this.is_manual_rate = true;
@@ -102,7 +110,6 @@ export class InvoiceItem extends FrappeDoc {
       this.followItem();
     } else if (fieldname === 'transfer_unit') {
       this.is_manual_rate = false;
-      this.leaveToServer(['rate', 'quantity']);
     } else if (fieldname && QUANTITY_FIELDS.includes(fieldname)) {
       this.followQuantity(fieldname);
     }
@@ -110,7 +117,6 @@ export class InvoiceItem extends FrappeDoc {
 
   followItem() {
     this.is_manual_rate = false;
-    this.leaveToServer(['rate', ...ITEM_DETAILS]);
     // The server names an empty purchase batch from the new item's series on save.
     if (!this.isSales) {
       this.batch = undefined;
@@ -121,14 +127,10 @@ export class InvoiceItem extends FrappeDoc {
   followQuantity(fieldname: string) {
     const quantity = Math.abs(this[fieldname] as number);
     this[fieldname] = this.isReturn ? -quantity : quantity;
-    if (fieldname === 'quantity') {
-      this.leaveToServer(['qty', 'transfer_quantity']);
-      return;
-    }
-
     // Qty is the quantity in the transfer unit, as the item table shows it.
-    this.qty = this.transfer_quantity = this[fieldname] as number;
-    this.leaveToServer(['quantity']);
+    if (fieldname !== 'quantity') {
+      this.qty = this.transfer_quantity = this[fieldname] as number;
+    }
   }
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.

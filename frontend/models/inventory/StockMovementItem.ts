@@ -3,7 +3,7 @@ import { FrappeDoc } from 'src/frappe/document';
 import {
   getStockRowHiddenMap,
   getTransferUnitFilter,
-  stockRowDerivedFields,
+  stockRowRefills,
 } from './stockRows';
 
 /** A Books Stock Movement row. The server fills its units, rate and locations. */
@@ -26,7 +26,7 @@ export class StockMovementItem extends FrappeDoc {
       'amount',
     ],
   };
-  static override derivedFields = stockRowDerivedFields;
+  static override refills = stockRowRefills;
 
   override hidden: HiddenMap = getStockRowHiddenMap(this);
 

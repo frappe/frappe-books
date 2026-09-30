@@ -23,13 +23,8 @@ export function useBooksDoc() {
       ? await getBooksDocOrNew(schemaName, name)
       : await getBooksDoc(schemaName, name!);
     await loadDocPermissions(loaded);
-    // A new document shows what the server fills, like its number series, once it opens.
-    if (loaded instanceof FrappeDoc && loaded.notInserted) {
-      loaded.schedulePreview();
-    }
-
     doc.value = loaded;
-    // A new document shows what the server fills, like its defaults, from the start.
+    // A new document shows what the server fills, like its number series and defaults, from the start.
     if (loaded instanceof FrappeDoc && loaded.notInserted) {
       loaded.schedulePreview(0);
     }

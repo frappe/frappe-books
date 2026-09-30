@@ -46,10 +46,11 @@ export class FrappeDoc extends Doc {
   static previewMethod?: string;
   /** The models of a table's rows by table fieldname; other rows are plain `FrappeDoc`s. */
   static rowModels: Record<string, typeof FrappeDoc> = {};
-  /** Fields the preview fills again after the user edits the field they follow, e.g. an account after its method. */
+  /**
+   * Fields the server fills again after the user edits the field they follow,
+   * by that field, e.g. a payment account after its method; see `leaveToServer`.
+   */
   static refills: Record<string, string[]> = {};
-  /** Fields the server fills from another field, by that field: editing it has them filled again. */
-  static derivedFields: Record<string, string[]> = {};
   /** Fields whose default the server decides, like one that follows a setting; see `leaveToServer`. */
   static serverDefaults: string[] = [];
 
@@ -378,13 +379,8 @@ export class FrappeDoc extends Doc {
   override async change({ changed }: ChangeArg) {
     if (changed) {
       this._serverFilled.delete(changed);
-      const { refills, derivedFields } = this.constructor as typeof FrappeDoc;
-      for (const fieldname of [
-        ...(refills[changed] ?? []),
-        ...(derivedFields[changed] ?? []),
-      ]) {
-        this._serverFilled.add(fieldname);
-      }
+      const { refills } = this.constructor as typeof FrappeDoc;
+      this.leaveToServer(refills[changed] ?? []);
     }
 
     // An unsaved document shows the name Frappe will give it.
@@ -408,11 +404,24 @@ export class FrappeDoc extends Doc {
     }, delay);
   }
 
-  /** Leaves fields out of the next previews, so the server fills them, until the user edits one. */
+  /**
+   * Leaves fields to the server until the user edits one: previews send them
+   * empty, so the server fills them. A document without a preview clears
+   * them, so its save sends them empty.
+   */
   leaveToServer(fieldnames: string[]) {
     for (const fieldname of fieldnames) {
       this._serverFilled.add(fieldname);
+      if (!this.isPreviewed) {
+        this[fieldname] = null;
+      }
     }
+  }
+
+  /** Whether the server previews the document, or the document its row is in. */
+  get isPreviewed(): boolean {
+    const parent = this.parentdoc as FrappeDoc | undefined;
+    return !!(this.previewMethod ?? parent?.previewMethod);
   }
 
   /** Shows what the server would fill for the unsaved values; dropped if they changed meanwhile. */

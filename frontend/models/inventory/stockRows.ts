@@ -3,7 +3,7 @@ import type { HiddenMap } from 'fyo/model/types';
 import { getDocuments } from 'src/frappe/api';
 
 /** Fields a stock row takes from its item and quantities again when the user edits them. */
-export const stockRowDerivedFields: Record<string, string[]> = {
+export const stockRowRefills: Record<string, string[]> = {
   item: [
     'rate',
     'unit',

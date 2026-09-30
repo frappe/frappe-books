@@ -49,7 +49,8 @@ export function getFilterFields(
     if (typeof f.filter === 'boolean') return f.filter;
 
     if (f.computed) return false;
-    if (f.meta) return auditFields.has(f.fieldname);
+    // A Frappe-backed document the server names keeps its name as a standard column.
+    if (f.meta) return f.fieldname === 'name' || auditFields.has(f.fieldname);
     if (f.readOnly) return storedReadOnlyFields.has(f.fieldname);
 
     return true;

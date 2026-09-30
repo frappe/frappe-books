@@ -87,7 +87,7 @@ function getMandatory(doc: Doc): Field[] {
     }
 
     const requiredFunction = doc.required[field.fieldname];
-    if (requiredFunction?.()) {
+    if (requiredFunction?.() || doc.hasFieldRule(field.fieldname, 'required')) {
       mandatoryFields.push(field);
     }
   }

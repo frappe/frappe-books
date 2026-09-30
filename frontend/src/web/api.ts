@@ -43,13 +43,33 @@ export async function call<T>(
   args: Record<string, unknown> = {}
 ): Promise<T> {
   try {
-    const response = await frappeCall<T>(method, args);
+    return await reachServer(() => frappeCall<T>(method, args));
+  } catch (error) {
+    throw toBooksError(error);
+  }
+}
+
+/** Runs a request and notes whether the server could be reached. */
+export async function reachServer<T>(request: () => Promise<T>): Promise<T> {
+  try {
+    const response = await request();
     hasLostConnection.value = false;
     return response;
   } catch (error) {
     hasLostConnection.value = isConnectionFailure(error);
-    throw toBooksError(error);
+    throw error;
   }
+}
+
+/** A fyo error for a server error, so forms treat it like their own. */
+export function getServerError(
+  message: string,
+  excType?: string,
+  status?: number
+): Error {
+  const ServerError =
+    errorClassByType[excType ?? ''] ?? errorClassByStatus[status ?? 0];
+  return ServerError ? new ServerError(message, false) : new Error(message);
 }
 
 /** Any answer from the server, even an error, means the connection is back. */
@@ -61,17 +81,16 @@ function isConnectionFailure(error: unknown): boolean {
   return error instanceof TypeError && CONNECTION_FAILURE.test(error.message);
 }
 
-/** Server errors become fyo errors, so forms treat them like their own. */
 function toBooksError(error: unknown): unknown {
   if (!isServerError(error)) {
     return error;
   }
 
-  const message = error.messages.join('\n');
-  const ServerError =
-    errorClassByType[error.exc_type ?? ''] ??
-    errorClassByStatus[error.status ?? 0];
-  return ServerError ? new ServerError(message, false) : new Error(message);
+  return getServerError(
+    error.messages.join('\n'),
+    error.exc_type,
+    error.status
+  );
 }
 
 function isServerError(error: unknown): error is FrappeResourceError {
@@ -92,6 +111,7 @@ declare global {
         versions?: Record<string, string | undefined>;
         user?: BootUserPermissions & { name?: string };
         user_info?: Record<string, { fullname?: string }>;
+        time_zone?: { system: string; user?: string };
         /** Added by `frappe_books.boot.extend_bootinfo`. */
         books?: {
           country_code: string;

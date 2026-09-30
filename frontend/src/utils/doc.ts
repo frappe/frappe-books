@@ -99,6 +99,10 @@ function evaluateFieldMeta(
     return value;
   }
 
+  if (meta !== 'invisible' && doc?.hasFieldRule(field.fieldname, meta)) {
+    return true;
+  }
+
   const docRecord = doc as Record<string, unknown> | undefined;
   const metaKey = meta as string;
   const metaObj = docRecord?.[metaKey] as

@@ -1,4 +1,5 @@
 import { ModelMap } from 'fyo/model/types';
+import type { FrappeModel } from 'src/frappe/doctypes';
 import { Account } from './baseModels/Account/Account';
 import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
@@ -114,6 +115,12 @@ export const models = {
   POSOpeningShift,
   POSClosingShift,
 } as ModelMap;
+
+/**
+ * Models of the schemas Frappe serves directly. A schema moves here from
+ * `models` when its module stops using the bridge; see docs/framework-backed-doctypes.md.
+ */
+export const frappeModels: Record<string, FrappeModel> = {};
 
 export async function getRegionalModels(
   countryCode: string

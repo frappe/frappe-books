@@ -76,7 +76,8 @@ export function isReferenceField(docfield: DocFieldProperties): boolean {
   return docfield.fieldtype === 'Link' && docfield.options === 'DocType';
 }
 
-function getFieldProperties(
+/** A Books field's data properties from its DocField. */
+export function getFieldProperties(
   field: Field,
   docfield: DocFieldProperties
 ): Partial<Field> {

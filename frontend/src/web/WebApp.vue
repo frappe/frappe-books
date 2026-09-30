@@ -41,12 +41,14 @@
 <script lang="ts">
 import type { DocValueMap } from 'fyo/core/types';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
-import { models, getRegionalModels } from 'models';
+import { frappeModels, models, getRegionalModels } from 'models';
 import { ModelNameEnum } from 'models/types';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import MobileDesk from 'src/mobile/MobileDesk.vue';
 import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
+import { registerFrappeModels } from 'src/frappe/doctypes';
+import { loadFrappeDocTypes } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
@@ -143,6 +145,8 @@ export default defineComponent({
         models,
         await getRegionalModels(countryCode)
       );
+      registerFrappeModels(frappeModels);
+      await loadFrappeDocTypes();
       const singles = Object.values(fyo.schemaMap).filter(
         (schema) => schema?.isSingle && schema.name !== 'SetupWizard'
       );

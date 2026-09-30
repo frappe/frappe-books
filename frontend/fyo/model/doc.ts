@@ -399,7 +399,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   refreshSchema(schemaName: string) {
     if (this.schemaName === schemaName) {
       const previousFields = this.fieldMap;
-      this.schema = this.fyo.schemaMap[schemaName] ?? this.schema;
+      this.schema = this._getSchema(schemaName) ?? this.schema;
       this.fieldMap = getMapFromList(this.schema.fields, 'fieldname');
       // Preserve entered values when a customization changes the definition.
       this._setDefaults(
@@ -412,6 +412,16 @@ export class Doc extends Observable<DocValue | Doc[]> {
         row.refreshSchema(schemaName);
       }
     }
+  }
+
+  _getSchema(schemaName: string): Schema | undefined {
+    return this.fyo.schemaMap[schemaName];
+  }
+
+  /** Whether the doctype's own rules make a field hidden, read only or required. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  hasFieldRule(fieldname: string, rule: 'hidden' | 'readOnly' | 'required') {
+    return false;
   }
 
   _setDefaults(fields = this.schema.fields) {

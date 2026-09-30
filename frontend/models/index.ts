@@ -20,9 +20,7 @@ import { Party } from './baseModels/Party/Party';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
 import { PaymentFor } from './baseModels/PaymentFor/PaymentFor';
 import { PriceList } from './baseModels/PriceList/PriceList';
-import { PriceListItem } from './baseModels/PriceList/PriceListItem';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
-import { PricingRuleItem } from './baseModels/PricingRuleItem/PricingRuleItem';
 import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
 import { PrintTemplate } from './baseModels/PrintTemplate';
 import { PurchaseInvoice } from './baseModels/PurchaseInvoice/PurchaseInvoice';
@@ -74,10 +72,6 @@ export const models = {
   PaymentMethod,
   PaymentFor,
   PrintSettings,
-  PriceList,
-  PriceListItem,
-  PricingRule,
-  PricingRuleItem,
   PurchaseInvoice,
   PurchaseInvoiceItem,
   SalesInvoice,
@@ -123,6 +117,8 @@ export const frappeModels: Record<string, FrappeModel> = {
   Address,
   Lead,
   Party,
+  PriceList,
+  PricingRule,
 };
 
 /** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */

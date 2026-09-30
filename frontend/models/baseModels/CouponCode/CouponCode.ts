@@ -23,8 +23,9 @@ export class CouponCode extends Doc {
   };
 
   static filters: FiltersMap = {
+    // Pricing rules are Frappe-backed, so their filters use Frappe fieldnames.
     pricingRule: () => ({
-      isCouponCodeBased: true,
+      is_coupon_code_based: true,
     }),
   };
 

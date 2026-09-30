@@ -1,172 +1,92 @@
-import { Doc } from 'fyo/model/doc';
-import { Money } from 'pesa';
-import { PricingRuleItem } from '../PricingRuleItem/PricingRuleItem';
-import { getIsDocEnabledColumn, getNumberSeries } from 'models/helpers';
-import {
-  DefaultMap,
-  HiddenMap,
-  ListViewSettings,
-  RequiredMap,
-  ValidationMap,
-} from 'fyo/model/types';
-import { DocValue } from 'fyo/core/types';
-import { ValidationError } from 'fyo/utils/errors';
 import { t } from 'fyo';
+import { DocValue } from 'fyo/core/types';
+import { HiddenMap, ListViewSettings, ValidationMap } from 'fyo/model/types';
+import { ValidationError } from 'fyo/utils/errors';
+import { getIsDocEnabledColumn } from 'models/helpers';
+import { Money } from 'pesa';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class PricingRule extends Doc {
-  isEnabled?: boolean;
-  title?: string;
-  appliedItems?: PricingRuleItem[];
-  discountType?: 'Price Discount' | 'Product Discount';
+/**
+ * Books Pricing Rule, served by Frappe. The DocType shows each discount
+ * scheme's fields; its preview fills each applied item's unit.
+ */
+export class PricingRule extends FrappeDoc {
+  static override doctype = 'Books Pricing Rule';
+  static override presentation = {
+    label: 'Pricing Rule',
+    fields: {
+      applied_items: { edit: true },
+      price_discount_type: {
+        optionLabels: {
+          rate: 'Rate',
+          percentage: 'Discount Percentage',
+          amount: 'Discount Amount',
+        },
+      },
+      rounding_method: {
+        optionLabels: { floor: 'Floor', round: 'Round', ceil: 'Ceil' },
+      },
+    },
+  };
+  static override previewMethod = 'preview';
 
-  priceDiscountType?: 'rate' | 'percentage' | 'amount';
-  discountRate?: Money;
-  discountPercentage?: number;
-  discountAmount?: Money;
+  min_quantity?: number;
+  max_quantity?: number;
+  min_amount?: Money;
+  max_amount?: Money;
+  valid_from?: Date;
+  valid_to?: Date;
 
-  isCouponCodeBased?: boolean;
-
-  forPriceList?: string;
-
-  freeItem?: string;
-  freeItemQuantity?: number;
-  freeItemUnit?: string;
-  roundFreeItemQty?: number;
-  roundingMethod?: string;
-
-  isRecursive?: boolean;
-  recurseEvery?: number;
-  recurseOver?: number;
-
-  minQuantity?: number;
-  maxQuantity?: number;
-
-  minAmount?: Money;
-  maxAmount?: Money;
-
-  validFrom?: Date;
-  validTo?: Date;
-
-  thresholdForSuggestion?: number;
-  priority?: number;
-
-  get isDiscountTypeIsPriceDiscount() {
-    return this.discountType === 'Price Discount';
-  }
-
+  // The server checks these too; mirrored to show its message at the field.
   validations: ValidationMap = {
-    minQuantity: (value: DocValue) => {
-      if (!value || !this.maxQuantity) {
-        return;
-      }
-
-      if ((value as number) > this.maxQuantity) {
-        throw new ValidationError(
-          t`Minimum Quantity should be less than the Maximum Quantity.`
-        );
-      }
-    },
-    maxQuantity: (value: DocValue) => {
-      if (!this.minQuantity || !value) {
-        return;
-      }
-
-      if ((value as number) < this.minQuantity) {
-        throw new ValidationError(
-          t`Maximum Quantity should be greater than the Minimum Quantity.`
-        );
-      }
-    },
-    minAmount: (value: DocValue) => {
-      if (!value || !this.maxAmount) {
-        return;
-      }
-
-      if ((value as Money).isZero() || this.maxAmount.isZero()) {
-        return;
-      }
-
-      if ((value as Money).gte(this.maxAmount)) {
-        throw new ValidationError(
-          t`Minimum Amount should be less than the Maximum Amount.`
-        );
-      }
-    },
-    maxAmount: (value: DocValue) => {
-      if (!this.minAmount || !value) {
-        return;
-      }
-
-      if (this.minAmount.isZero() || (value as Money).isZero()) {
-        return;
-      }
-
-      if ((value as Money).lte(this.minAmount)) {
-        throw new ValidationError(
-          t`Maximum Amount should be greater than the Minimum Amount.`
-        );
-      }
-    },
-    validFrom: (value: DocValue) => {
-      if (!value || !this.validTo) {
-        return;
-      }
-      if ((value as Date).toISOString() > this.validTo.toISOString()) {
-        throw new ValidationError(
-          t`Valid From Date should be less than Valid To Date.`
-        );
-      }
-    },
-    validTo: (value: DocValue) => {
-      if (!this.validFrom || !value) {
-        return;
-      }
-      if ((value as Date).toISOString() < this.validFrom.toISOString()) {
-        throw new ValidationError(
-          t`Valid To Date should be greater than Valid From Date.`
-        );
-      }
-    },
+    min_quantity: (value: DocValue) =>
+      validateQuantities(value as number, this.max_quantity),
+    max_quantity: (value: DocValue) =>
+      validateQuantities(this.min_quantity, value as number),
+    min_amount: (value: DocValue) =>
+      validateAmounts(value as Money, this.max_amount),
+    max_amount: (value: DocValue) =>
+      validateAmounts(this.min_amount, value as Money),
+    valid_from: (value: DocValue) =>
+      validateDates(value as Date, this.valid_to),
+    valid_to: (value: DocValue) =>
+      validateDates(this.valid_from, value as Date),
   };
 
-  required: RequiredMap = {
-    priceDiscountType: () => this.isDiscountTypeIsPriceDiscount,
-  };
-
-  static defaults: DefaultMap = {
-    numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
+  hidden: HiddenMap = {
+    is_coupon_code_based: () =>
+      !this.fyo.singles.AccountingSettings?.enableCouponCode,
   };
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'title', getIsDocEnabledColumn(), 'discountType'],
+      columns: ['name', 'title', getIsDocEnabledColumn(), 'discount_type'],
     };
   }
+}
 
-  hidden: HiddenMap = {
-    location: () => !this.fyo.singles.AccountingSettings?.enableInventory,
-    isCouponCodeBased: () =>
-      !this.fyo.singles.AccountingSettings?.enableCouponCode,
-    priceDiscountType: () => !this.isDiscountTypeIsPriceDiscount,
-    discountRate: () =>
-      !this.isDiscountTypeIsPriceDiscount || this.priceDiscountType !== 'rate',
-    discountPercentage: () =>
-      !this.isDiscountTypeIsPriceDiscount ||
-      this.priceDiscountType !== 'percentage',
-    discountAmount: () =>
-      !this.isDiscountTypeIsPriceDiscount ||
-      this.priceDiscountType !== 'amount',
-    forPriceList: () =>
-      !this.isDiscountTypeIsPriceDiscount || this.priceDiscountType === 'rate',
+function validateQuantities(minimum?: number, maximum?: number) {
+  if (minimum && maximum && minimum > maximum) {
+    throw new ValidationError(
+      t`Minimum quantity must be less than maximum quantity.`
+    );
+  }
+}
 
-    freeItem: () => this.isDiscountTypeIsPriceDiscount,
-    freeItemQuantity: () => this.isDiscountTypeIsPriceDiscount,
-    freeItemUnit: () => this.isDiscountTypeIsPriceDiscount,
-    roundFreeItemQty: () => this.isDiscountTypeIsPriceDiscount,
-    roundingMethod: () =>
-      this.isDiscountTypeIsPriceDiscount || !this.roundFreeItemQty,
-    isRecursive: () => this.isDiscountTypeIsPriceDiscount,
-    recurseEvery: () => this.isDiscountTypeIsPriceDiscount || !this.isRecursive,
-    recurseOver: () => this.isDiscountTypeIsPriceDiscount || !this.isRecursive,
-  };
+function validateAmounts(minimum?: Money, maximum?: Money) {
+  if (!minimum || !maximum || minimum.isZero() || maximum.isZero()) {
+    return;
+  }
+
+  if (minimum.gte(maximum)) {
+    throw new ValidationError(
+      t`Minimum amount must be less than maximum amount.`
+    );
+  }
+}
+
+function validateDates(validFrom?: Date, validTo?: Date) {
+  if (validFrom && validTo && validFrom > validTo) {
+    throw new ValidationError(t`Valid From must be on or before Valid To.`);
+  }
 }

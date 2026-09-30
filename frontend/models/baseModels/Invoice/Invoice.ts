@@ -288,9 +288,10 @@ export abstract class Invoice extends Transactional {
       accountType: doc.isSales ? 'Receivable' : 'Payable',
     }),
     numberSeries: (doc: Doc) => ({ referenceType: doc.schemaName }),
+    // Price lists are Frappe-backed, so their filters use Frappe fieldnames.
     priceList: (doc: Doc) => ({
-      isEnabled: true,
-      ...(doc.isSales ? { isSales: true } : { isPurchase: true }),
+      is_enabled: true,
+      ...(doc.isSales ? { is_sales: true } : { is_purchase: true }),
     }),
   };
 

@@ -442,7 +442,7 @@ export function getPriceListStatusColumn(): ColumnConfig {
     label: t`Enabled For`,
     fieldname: 'enabledFor',
     fieldtype: 'Select',
-    badge({ isSales, isPurchase }) {
+    badge({ is_sales: isSales, is_purchase: isPurchase }) {
       let label = t`None`;
 
       if (isSales && isPurchase) {
@@ -464,7 +464,7 @@ export function getIsDocEnabledColumn(): ColumnConfig {
     fieldname: 'enabled',
     fieldtype: 'Data',
     badge(doc) {
-      if (doc.isEnabled) {
+      if (doc.is_enabled) {
         return { theme: 'green', label: t`Enabled` };
       }
 

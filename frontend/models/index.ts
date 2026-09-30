@@ -3,6 +3,7 @@ import type { FrappeModel } from 'src/frappe/doctypes';
 import { Account } from './baseModels/Account/Account';
 import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
+import { Currency } from './baseModels/Currency/Currency';
 import { Address } from './baseModels/Address/Address';
 import { Defaults } from './baseModels/Defaults/Defaults';
 import { Item } from './baseModels/Item/Item';
@@ -118,6 +119,7 @@ export const models = {
  */
 export const frappeModels: Record<string, FrappeModel> = {
   Account,
+  Currency,
   Item,
   PaymentMethod,
   Tax,

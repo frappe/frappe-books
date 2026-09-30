@@ -18,7 +18,7 @@ await build({
       export { Fyo } from './fyo';
       export { getSchemas } from './schemas';
       export { getDoctypeFieldProperties, getDoctypeSearchFields } from './tests/helpers/doctypeFieldProperties';
-      export { models } from './models';
+      export { frappeModels, models } from './models';
       export { BalanceSheet } from './reports/BalanceSheet/BalanceSheet';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
@@ -99,6 +99,7 @@ export const { fieldProperties, getSchemas, searchFields } =
 export const {
   Fyo,
   models,
+  frappeModels,
   BalanceSheet,
   ProfitAndLoss,
   GeneralLedger,

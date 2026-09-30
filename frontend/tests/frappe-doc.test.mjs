@@ -140,7 +140,9 @@ test('a stale save shows as a conflict', async () => {
     method === 'PUT'
       ? {
           status: 417,
-          body: { errors: [{ type: 'TimestampMismatchError', message: 'Stale' }] },
+          body: {
+            errors: [{ type: 'TimestampMismatchError', message: 'Stale' }],
+          },
         }
       : undefined
   );
@@ -163,7 +165,9 @@ test('a preview fills what the server fills, again until the user edits it', asy
     const account = document.item_type === 'Service' ? 'Service' : 'Sales';
     return {
       data: null,
-      docs: [{ ...document, income_account: document.income_account ?? account }],
+      docs: [
+        { ...document, income_account: document.income_account ?? account },
+      ],
     };
   });
   const item = newFrappeDoc('Item', { name: 'Tea' });
@@ -201,7 +205,10 @@ test('a preview is dropped when the values changed meanwhile or the draft is sta
     }
 
     await edit?.();
-    return { data: null, docs: [{ ...body.document, income_account: 'Sales' }] };
+    return {
+      data: null,
+      docs: [{ ...body.document, income_account: 'Sales' }],
+    };
   });
   const item = newFrappeDoc('Item', { name: 'Coffee' });
   edit = () => item.set('rate', fyo.pesa(2));
@@ -233,7 +240,13 @@ test('a save previews first when the server fills a missing value', async () => 
 });
 
 test('submit and cancel run the document methods on the client copy', async () => {
-  const saved = { name: 'ORD-1', customer: 'Acme', amount: 5, docstatus: 0, modified: MODIFIED };
+  const saved = {
+    name: 'ORD-1',
+    customer: 'Acme',
+    amount: 5,
+    docstatus: 0,
+    modified: MODIFIED,
+  };
   const requests = stubDocument(saved, ({ path, body }) => {
     if (!path.endsWith('run_doc_method')) {
       return;

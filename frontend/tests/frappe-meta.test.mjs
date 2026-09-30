@@ -101,11 +101,18 @@ test('search fields come from the DocType', () => {
 
 test('conditions are evaluated as Frappe forms evaluate them', () => {
   const product = { item_type: 'Product', track_item: 0, __islocal: 1 };
-  const condition = "eval:doc.item_type == 'Product' && (doc.__islocal || doc.track_item)";
+  const condition =
+    "eval:doc.item_type == 'Product' && (doc.__islocal || doc.track_item)";
   assert.equal(evaluateCondition(condition, product), true);
-  assert.equal(evaluateCondition(condition, { ...product, __islocal: 0 }), false);
+  assert.equal(
+    evaluateCondition(condition, { ...product, __islocal: 0 }),
+    false
+  );
   assert.equal(evaluateCondition('track_item', { track_item: 1 }), true);
   assert.equal(evaluateCondition('rows', { rows: [] }), false);
-  assert.equal(evaluateCondition('eval:parent.is_return', {}, { is_return: 1 }), true);
+  assert.equal(
+    evaluateCondition('eval:parent.is_return', {}, { is_return: 1 }),
+    true
+  );
   assert.equal(evaluateCondition(undefined, {}), true);
 });

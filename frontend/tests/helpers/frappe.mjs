@@ -26,12 +26,14 @@ await build({
       export { getMissingMandatoryFields } from './fyo/model/helpers';
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
+      export { frappeModels, models } from './models';
     `,
     resolveDir: frontend,
   },
   bundle: true,
   platform: 'node',
   format: 'cjs',
+  define: { 'import.meta.env.VITE_ROUTER_BASE': '"/books"' },
   outfile: output,
   plugins: [
     {
@@ -87,6 +89,8 @@ export const {
   evaluateReadOnly,
   evaluateRequired,
   errors,
+  frappeModels,
+  models,
 } = createRequire(import.meta.url)(output);
 
 /**
@@ -134,21 +138,88 @@ export const itemMeta = {
     { role: 'Books Manager', permlevel: 1, read: 1 },
   ],
   fields: [
-    { fieldname: 'details_section', fieldtype: 'Section Break', label: 'Details' },
+    {
+      fieldname: 'details_section',
+      fieldtype: 'Section Break',
+      label: 'Details',
+    },
     { fieldname: 'image', fieldtype: 'Attach Image', label: 'Image' },
-    { fieldname: 'item_type', fieldtype: 'Select', label: 'Type', options: 'Product\nService', default: 'Product', set_only_once: 1 },
+    {
+      fieldname: 'item_type',
+      fieldtype: 'Select',
+      label: 'Type',
+      options: 'Product\nService',
+      default: 'Product',
+      set_only_once: 1,
+    },
     { fieldname: 'column', fieldtype: 'Column Break' },
-    { fieldname: 'rate', fieldtype: 'Currency', label: 'Rate', non_negative: 1 },
-    { fieldname: 'income_account', fieldtype: 'Link', label: 'Sales Acc.', options: 'Books Account', reqd: 1, placeholder: 'Income' },
-    { fieldname: 'unit', fieldtype: 'Link', label: 'Unit', options: 'Books Uom', only_select: 1 },
+    {
+      fieldname: 'rate',
+      fieldtype: 'Currency',
+      label: 'Rate',
+      non_negative: 1,
+    },
+    {
+      fieldname: 'income_account',
+      fieldtype: 'Link',
+      label: 'Sales Acc.',
+      options: 'Books Account',
+      reqd: 1,
+      placeholder: 'Income',
+    },
+    {
+      fieldname: 'unit',
+      fieldtype: 'Link',
+      label: 'Unit',
+      options: 'Books Uom',
+      only_select: 1,
+    },
     { fieldname: 'inventory_tab', fieldtype: 'Tab Break', label: 'Inventory' },
-    { fieldname: 'track_item', fieldtype: 'Check', label: 'Track Inventory', default: '0', depends_on: "eval:doc.item_type == 'Product' && (doc.__islocal || doc.track_item)" },
-    { fieldname: 'batch_series', fieldtype: 'Data', label: 'Batch Series', read_only_depends_on: 'track_item', mandatory_depends_on: 'eval:doc.track_item' },
-    { fieldname: 'secret_code', fieldtype: 'Data', label: 'Secret', permlevel: 1 },
-    { fieldname: 'hidden_code', fieldtype: 'Data', label: 'Hidden', permlevel: 2 },
-    { fieldname: 'released_on', fieldtype: 'Datetime', label: 'Released', no_copy: 1 },
-    { fieldname: 'uom_conversions', fieldtype: 'Table', label: 'UOM Conversions', options: 'Books Uom Conversion Item' },
-    { fieldname: 'custom_books_colour', fieldtype: 'Data', label: 'Colour', is_custom_field: 1 },
+    {
+      fieldname: 'track_item',
+      fieldtype: 'Check',
+      label: 'Track Inventory',
+      default: '0',
+      depends_on:
+        "eval:doc.item_type == 'Product' && (doc.__islocal || doc.track_item)",
+    },
+    {
+      fieldname: 'batch_series',
+      fieldtype: 'Data',
+      label: 'Batch Series',
+      read_only_depends_on: 'track_item',
+      mandatory_depends_on: 'eval:doc.track_item',
+    },
+    {
+      fieldname: 'secret_code',
+      fieldtype: 'Data',
+      label: 'Secret',
+      permlevel: 1,
+    },
+    {
+      fieldname: 'hidden_code',
+      fieldtype: 'Data',
+      label: 'Hidden',
+      permlevel: 2,
+    },
+    {
+      fieldname: 'released_on',
+      fieldtype: 'Datetime',
+      label: 'Released',
+      no_copy: 1,
+    },
+    {
+      fieldname: 'uom_conversions',
+      fieldtype: 'Table',
+      label: 'UOM Conversions',
+      options: 'Books Uom Conversion Item',
+    },
+    {
+      fieldname: 'custom_books_colour',
+      fieldtype: 'Data',
+      label: 'Colour',
+      is_custom_field: 1,
+    },
   ],
 };
 
@@ -157,8 +228,21 @@ export const conversionMeta = {
   istable: 1,
   permissions: [],
   fields: [
-    { fieldname: 'uom', fieldtype: 'Link', label: 'UOM', options: 'Books Uom', reqd: 1, in_list_view: 1 },
-    { fieldname: 'conversion_factor', fieldtype: 'Float', label: 'Conversion Factor', default: '1', in_list_view: 1 },
+    {
+      fieldname: 'uom',
+      fieldtype: 'Link',
+      label: 'UOM',
+      options: 'Books Uom',
+      reqd: 1,
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'conversion_factor',
+      fieldtype: 'Float',
+      label: 'Conversion Factor',
+      default: '1',
+      in_list_view: 1,
+    },
   ],
 };
 

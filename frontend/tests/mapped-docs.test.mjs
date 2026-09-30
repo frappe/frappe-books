@@ -4,6 +4,7 @@ import {
   Fyo,
   getSchemas,
   models,
+  frappeModels,
   getMappedDoc,
   getStockTransferActions,
 } from './helpers/accounting.mjs';
@@ -191,8 +192,9 @@ test('lead, party and item actions open documents from their server mappers', as
   for (const [schemaName, label, mapper, path] of cases) {
     const source = fyo.doc.getNewDoc(schemaName, { name: 'Acme' });
     source._notInserted = false;
-    const { action } = fyo.models[schemaName]
-      .getActions(fyo)
+    // A Frappe-backed model presents the doctype; the bridge doc stands in as the source.
+    const Model = frappeModels[schemaName] ?? fyo.models[schemaName];
+    const { action } = Model.getActions(fyo)
       .find((action) => action.label === label);
     let route = '';
     await action(source, { push: (to) => (route = to.path ?? to) });

@@ -8,7 +8,9 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, nowdate
 
 from frappe_books.accounting.money import as_decimal
-from frappe_books.tests.accounting import ledger_entries, make_account
+from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, make_number_series
+
+READ_ONLY_USER = "books-journal-preview-reader@example.com"
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -92,6 +94,30 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		entries = ledger_entries(journal_entry.doctype, journal_entry.name)
 		self.assertEqual(sum(as_decimal(entry.debit) for entry in entries), Decimal("10.01"))
 		self.assertEqual(sum(as_decimal(entry.credit) for entry in entries), Decimal("10.01"))
+
+	def test_preview_fills_the_default_series_without_saving(self):
+		series = make_number_series("JournalEntry")
+		frappe.db.set_single_value("Books Defaults", "journal_entry_number_series", series)
+		journal_entry = frappe.new_doc("Books Journal Entry")
+		entries = frappe.db.count("Books Journal Entry")
+
+		journal_entry.preview()
+
+		self.assertEqual(journal_entry.number_series, series)
+		self.assertEqual(frappe.db.count("Books Journal Entry"), entries)
+
+	def test_preview_keeps_a_chosen_series(self):
+		journal_entry = frappe.new_doc("Books Journal Entry", number_series="JV-")
+		journal_entry.preview()
+		self.assertEqual(journal_entry.number_series, "JV-")
+
+	def test_preview_needs_the_right_to_make_journal_entries(self):
+		journal_entry = frappe.new_doc("Books Journal Entry")
+		with (
+			self.set_user(ensure_user(READ_ONLY_USER, "Books User")),
+			self.assertRaises(frappe.PermissionError),
+		):
+			journal_entry.preview()
 
 
 def make_journal_entry(accounts):

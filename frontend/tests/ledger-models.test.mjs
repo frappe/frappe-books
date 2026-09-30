@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fieldProperties, getSchemas } from './helpers/accounting.mjs';
-import { getMetaBundle, mapping } from './helpers/doctypes.mjs';
+import {
+  bridgeSchemas,
+  getFrappeFieldnames,
+  getLayout,
+  loadFrappeModels,
+} from './helpers/models.mjs';
 import {
   frappeModels,
   fyo,
   getFrappeListPage,
   getSchema,
-  loadFrappeDocTypes,
-  registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
 
@@ -38,47 +40,23 @@ const bridgeColumns = {
   ],
 };
 const ledgers = Object.keys(bridgeColumns);
-window.frappe.boot.books.doctypes = Object.fromEntries(
-  Object.entries(mapping).map(([schemaName, { doctype }]) => [
-    schemaName,
-    doctype,
-  ])
-);
-stubFrappe(({ path, body }) =>
-  path.endsWith('getdoctype')
-    ? { docs: getMetaBundle(body.doctype) }
-    : { data: [] }
-);
-registerFrappeModels(frappeModels);
-await loadFrappeDocTypes();
-const bridgeSchemas = getSchemas('in', [], fieldProperties);
-
-/** The fields a form shows, by Frappe fieldname, with their labels and sections. */
-function getLayout(schema, fieldnames = {}) {
-  return schema.fields
-    .filter((field) => !field.meta && !field.hidden)
-    .map(({ fieldname, label, section }) =>
-      [fieldnames[fieldname] ?? fieldname, label, section ?? 'Default'].join(
-        ' | '
-      )
-    );
-}
+await loadFrappeModels();
 
 for (const schemaName of ledgers) {
   test(`the ${schemaName} form shows the fields, labels and sections it showed`, () => {
     assert.deepEqual(
       getLayout(getSchema(schemaName)),
-      getLayout(bridgeSchemas[schemaName], mapping[schemaName].fields)
+      getLayout(bridgeSchemas[schemaName], getFrappeFieldnames(schemaName))
     );
     assert.equal(getSchema(schemaName).label, bridgeSchemas[schemaName].label);
   });
 
   test(`the ${schemaName} list shows the columns it showed`, () => {
     const { columns } = frappeModels[schemaName].getListViewSettings(fyo);
-    const { fields } = mapping[schemaName];
+    const fieldnames = getFrappeFieldnames(schemaName);
     assert.deepEqual(
       columns,
-      bridgeColumns[schemaName].map((fieldname) => fields[fieldname])
+      bridgeColumns[schemaName].map((fieldname) => fieldnames[fieldname])
     );
   });
 }

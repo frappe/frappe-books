@@ -7,6 +7,23 @@ export const mapping = readJson(
 ).doctypes;
 export const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 
+/** What getdoctype answers: a doctype's meta, then its tables', with fields in field_order. */
+export function getMetaBundle(doctype) {
+  const meta = getMeta(doctype);
+  const tables = meta.fields
+    .filter(({ fieldtype }) => fieldtype === 'Table')
+    .map(({ options }) => getMeta(options));
+  return [meta, ...tables];
+}
+
+function getMeta(name) {
+  const doctype = doctypes.find((meta) => meta.name === name);
+  const order = doctype.field_order ?? [];
+  const position = ({ fieldname }) => order.indexOf(fieldname);
+  const fields = [...doctype.fields].sort((a, b) => position(a) - position(b));
+  return { ...doctype, fields };
+}
+
 function readDoctypes(directory) {
   const entries = readdirSync(directory, { withFileTypes: true });
   return entries

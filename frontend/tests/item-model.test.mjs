@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { doctypes } from './helpers/doctypes.mjs';
+import { getMetaBundle } from './helpers/doctypes.mjs';
 import {
   errors,
   evaluateHidden,
@@ -15,11 +15,10 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 
-const bundle = ['Books Item', 'Books Uom Conversion Item'].map((name) =>
-  doctypes.find((doctype) => doctype.name === name)
-);
-stubFrappe(({ path }) =>
-  path.endsWith('getdoctype') ? { docs: bundle } : { data: [] }
+stubFrappe(({ path, body }) =>
+  path.endsWith('getdoctype')
+    ? { docs: getMetaBundle(body.doctype) }
+    : { data: [] }
 );
 registerFrappeModels(frappeModels);
 await loadFrappeDocTypes();

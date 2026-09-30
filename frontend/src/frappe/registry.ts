@@ -62,6 +62,15 @@ export function getSearchFields(schemaName: string): string[] {
     .filter(Boolean);
 }
 
+/** The single schemas, Frappe-backed or not, e.g. to load the settings at startup. */
+export function getSingleSchemaNames(): string[] {
+  const names = new Set([
+    ...Object.keys(fyo.schemaMap),
+    ...getFrappeModels().map(([name]) => name),
+  ]);
+  return [...names].filter((name) => getSchema(name)?.isSingle);
+}
+
 /** The model whose statics (actions, list settings, link filters) present a schema. */
 export function getModel(schemaName: string): typeof Doc | undefined {
   return isFrappeBacked(schemaName)

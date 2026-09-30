@@ -76,6 +76,11 @@ export function getOpenFrappeDocs(schemaName: string): FrappeDoc[] {
 
 function keep(doc: FrappeDoc) {
   docs.set(getKey(doc.schemaName, doc.name!), doc);
+  // Settings are read from `fyo.singles`; it holds the same open document.
+  if (doc.schema.isSingle) {
+    fyo.doc.singles[doc.schemaName] = doc;
+  }
+
   // A saved document is found by its saved name, not its temporary one.
   doc.on('afterSync', () => {
     forgetFrappeDoc(doc);

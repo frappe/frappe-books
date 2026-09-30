@@ -48,7 +48,11 @@ import MobileDesk from 'src/mobile/MobileDesk.vue';
 import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
 import { registerFrappeModels } from 'src/frappe/doctypes';
-import { loadFrappeDocTypes } from 'src/frappe/registry';
+import {
+  getSingleSchemaNames,
+  loadFrappeDocTypes,
+} from 'src/frappe/registry';
+import { getBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
@@ -147,13 +151,13 @@ export default defineComponent({
       );
       registerFrappeModels(frappeModels);
       await loadFrappeDocTypes();
-      const singles = Object.values(fyo.schemaMap).filter(
-        (schema) => schema?.isSingle && schema.name !== 'SetupWizard'
+      const singles = getSingleSchemaNames().filter(
+        (name) => name !== ModelNameEnum.SetupWizard
       );
       await Promise.all([
         fyo.loadCurrencySymbols(),
         fyo.loadDefaultNumberSeries(),
-        ...singles.map((schema) => fyo.doc.getDoc(schema!.name)),
+        ...singles.map((name) => getBooksDoc(name, name)),
       ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setupComplete;
       this.darkMode = Boolean(fyo.singles.SystemSettings?.darkMode);

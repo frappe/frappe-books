@@ -45,12 +45,16 @@ export class FrappeDoc extends Doc {
   static previewMethod?: string;
   /** The models of a table's rows by table fieldname; other rows are plain `FrappeDoc`s. */
   static rowModels: Record<string, typeof FrappeDoc> = {};
+  /** Fields the preview fills again after the user edits the field they follow, e.g. an account after its method. */
+  static refills: Record<string, string[]> = {};
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();
   /** Fields the last preview filled; the next preview fills them again until the user edits one. */
   _serverFilled = new Set<string>();
   _previewTimer?: ReturnType<typeof setTimeout>;
+  /** An edit's fills are not back from the server yet. */
+  _isPreviewDue = false;
   _edits = 0;
 
   get doctype(): string {
@@ -148,9 +152,10 @@ export class FrappeDoc extends Doc {
     this._rememberSavedRows();
   }
 
+  /** A save takes the fills of the last edit, and those of missing values. */
   override async beforeSync() {
     await super.beforeSync();
-    if (this.previewMethod && this.hasMissingValues) {
+    if (this.previewMethod && (this._isPreviewDue || this.hasMissingValues)) {
       await this.preview();
     }
   }
@@ -180,6 +185,7 @@ export class FrappeDoc extends Doc {
 
   async _setSaved(values: DocValues, action: 'save' | 'submit' = 'save') {
     clearTimeout(this._previewTimer);
+    this._isPreviewDue = false;
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
     this._rememberSavedRows();
@@ -313,6 +319,10 @@ export class FrappeDoc extends Doc {
   override async change({ changed }: ChangeArg) {
     if (changed) {
       this._serverFilled.delete(changed);
+      const { refills } = this.constructor as typeof FrappeDoc;
+      for (const fieldname of refills[changed] ?? []) {
+        this._serverFilled.add(fieldname);
+      }
     }
 
     this.schedulePreview();
@@ -325,6 +335,7 @@ export class FrappeDoc extends Doc {
       return;
     }
 
+    this._isPreviewDue = true;
     this._previewTimer = setTimeout(() => {
       this.preview().catch(showPreviewError);
     }, PREVIEW_DELAY);
@@ -343,7 +354,12 @@ export class FrappeDoc extends Doc {
       clearServerFilled: true,
     });
     const previewed = await this._fetchPreview(document);
-    if (previewed && edits === this._edits && this.dirty) {
+    if (edits !== this._edits || !this.dirty) {
+      return;
+    }
+
+    this._isPreviewDue = false;
+    if (previewed) {
       this.applyPreview(this.toDocValues(previewed));
     }
   }

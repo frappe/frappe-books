@@ -19,7 +19,7 @@ await build({
       export { getFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, toFrappeFilters } from './src/frappe/list';
-      export { searchFrappeLink } from './src/frappe/link';
+      export { getLinkLabels, searchFrappeLink } from './src/frappe/link';
       export { getModel, getSchema, getSearchFields, loadFrappeDocTypes } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
@@ -78,6 +78,7 @@ export const {
   getFrappeListPage,
   toFrappeFilters,
   searchFrappeLink,
+  getLinkLabels,
   getModel,
   getSchema,
   getSearchFields,

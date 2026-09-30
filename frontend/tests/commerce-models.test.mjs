@@ -6,6 +6,7 @@ import {
   frappeModels,
   fyo,
   getFrappeDoc,
+  getLinkLabels,
   getModel,
   getSchema,
   models,
@@ -120,6 +121,22 @@ test('the address form shows what it showed, and links show its display text', (
     'state',
     'country',
   ]);
+});
+
+test('address options show their display text, fetched for the names found', async () => {
+  respond = ({ path }) =>
+    path === '/api/v2/document/Books Address'
+      ? {
+          data: [{ name: 'Office', address_display: '42 Market Road, Mumbai' }],
+        }
+      : { data: [] };
+  requests.length = 0;
+  assert.deepEqual(await getLinkLabels('Address', ['Office']), {
+    Office: '42 Market Road, Mumbai',
+  });
+  assert.deepEqual(requests[0].params.fields, ['name', 'address_display']);
+  assert.deepEqual(requests[0].params.filters, [['name', 'in', ['Office']]]);
+  assert.deepEqual(await getLinkLabels('Party', ['Asha']), {});
 });
 
 test('an address lists Indian states for India and hides the place of supply', () => {

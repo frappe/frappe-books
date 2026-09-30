@@ -242,7 +242,7 @@ test('a party leaves its default account and currency to the server', async () =
     default_account: 'Debtors',
   });
   await party.set('role', 'Supplier');
-  assert.equal(party.default_account, undefined);
+  assert.ok(!party.default_account);
   assert.ok(!party.currency);
 });
 

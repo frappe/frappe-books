@@ -40,7 +40,7 @@ const rowMeta = {
 };
 
 class MoveRow extends FrappeDoc {
-  static derivedFields = { item: ['rate'] };
+  static refills = { item: ['rate'] };
 }
 
 class Move extends FrappeDoc {

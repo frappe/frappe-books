@@ -10,12 +10,14 @@ from frappe.desk.search import search_widget
 from frappe.model.mapper import make_mapped_doc
 from frappe.utils import cast, cint, get_datetime, get_system_timezone
 
+from frappe_books.printing import default_print_format, update_default_print_formats
 from frappe_books.settings import update_system_settings
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.filters import docstatus_filter, filter_pairs, validate_filter_value
 from frappe_books.ui_bridge.mapping import (
 	SOURCE_META_TO_TARGET,
 	custom_field_mapping,
+	print_format_fields,
 	schema_mapping,
 	search_fields,
 	source_by_doctype,
@@ -196,6 +198,8 @@ class BooksDatabaseBridge:
 				continue
 			if fieldname in system_settings_fields(parent):
 				value = _system_setting(parent, fieldname)
+			elif fieldname in print_format_fields(parent):
+				value = default_print_format(print_format_fields(parent)[fieldname])
 			else:
 				target_name = target_field(parent, fieldname)
 				meta = frappe.get_meta(target)
@@ -316,6 +320,7 @@ class BooksDatabaseBridge:
 			available.intersection_update(requested)
 		values = self._row_to_source(source_schema, stored, sorted(available))
 		values.update(_system_settings_values(source_schema, requested))
+		values.update(_print_format_values(source_schema, requested))
 		return self._append_source_children(source_schema, doc, values, requested)
 
 	def _append_source_children(self, source_schema, doc, values, requested=None):
@@ -441,13 +446,22 @@ class BooksDatabaseBridge:
 
 	def _update_single(self, source_schema, values):
 		system_fields = system_settings_fields(source_schema)
+		print_formats = print_format_fields(source_schema)
 		doc = frappe.get_single(target_doctype(source_schema))
 		doc.check_permission("write")
-		own_values = {field: value for field, value in values.items() if field not in system_fields}
+		own_values = {
+			field: value
+			for field, value in values.items()
+			if field not in system_fields and field not in print_formats
+		}
 		self._set_target_values(doc, source_schema, own_values)
 		doc.save()
 		update_system_settings(
 			{system_fields[field]: value for field, value in values.items() if field in system_fields}
+		)
+		# The write right on the settings is the right to choose their print formats.
+		update_default_print_formats(
+			{print_formats[field]: value for field, value in values.items() if field in print_formats}
 		)
 		return self.get(source_schema, source_schema)
 
@@ -478,6 +492,15 @@ def _system_settings_values(source_schema: str, requested=None) -> dict:
 	return {
 		field: _system_setting(source_schema, field)
 		for field in fields
+		if not requested or field in requested
+	}
+
+
+def _print_format_values(source_schema: str, requested=None) -> dict:
+	fields = print_format_fields(source_schema)
+	return {
+		field: default_print_format(doctype)
+		for field, doctype in fields.items()
 		if not requested or field in requested
 	}
 

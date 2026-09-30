@@ -8,6 +8,7 @@ from frappe.model import table_fields
 from frappe_books.series import NUMBER_SERIES
 from frappe_books.ui_bridge.mapping import (
 	custom_field_mapping,
+	print_format_fields,
 	schema_mapping,
 	source_field,
 	source_reference,
@@ -55,6 +56,10 @@ def get_schema_field_properties(schema: str) -> dict[str, dict[str, Any]]:
 	system_settings = frappe.get_meta("System Settings")
 	for source, target in system_settings_fields(schema).items():
 		properties[source] = get_docfield_properties(schema, system_settings.get_field(target))
+	# Customize Form edits a DocType's default print format as a link.
+	print_format = frappe.get_meta("Customize Form").get_field("default_print_format")
+	for source in print_format_fields(schema):
+		properties[source] = get_docfield_properties(schema, print_format)
 	return properties
 
 

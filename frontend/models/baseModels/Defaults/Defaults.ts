@@ -89,19 +89,21 @@ export class Defaults extends Doc {
       referenceType: ModelNameEnum.PurchaseReceipt,
     }),
     // Print Templates
-    salesQuotePrintTemplate: () => ({ type: ModelNameEnum.SalesQuote }),
-    salesInvoicePrintTemplate: () => ({ type: ModelNameEnum.SalesInvoice }),
-    posPrintTemplate: () => ({ type: ModelNameEnum.SalesInvoice }),
+    salesQuotePrintTemplate: () => ({ docType: ModelNameEnum.SalesQuote }),
+    salesInvoicePrintTemplate: () => ({ docType: ModelNameEnum.SalesInvoice }),
+    posPrintTemplate: () => ({ docType: ModelNameEnum.SalesInvoice }),
     purchaseInvoicePrintTemplate: () => ({
-      type: ModelNameEnum.PurchaseInvoice,
+      docType: ModelNameEnum.PurchaseInvoice,
     }),
-    journalEntryPrintTemplate: () => ({ type: ModelNameEnum.JournalEntry }),
-    paymentPrintTemplate: () => ({ type: ModelNameEnum.Payment }),
-    shipmentPrintTemplate: () => ({ type: ModelNameEnum.Shipment }),
+    journalEntryPrintTemplate: () => ({ docType: ModelNameEnum.JournalEntry }),
+    paymentPrintTemplate: () => ({ docType: ModelNameEnum.Payment }),
+    shipmentPrintTemplate: () => ({ docType: ModelNameEnum.Shipment }),
     purchaseReceiptPrintTemplate: () => ({
-      type: ModelNameEnum.PurchaseReceipt,
+      docType: ModelNameEnum.PurchaseReceipt,
     }),
-    stockMovementPrintTemplate: () => ({ type: ModelNameEnum.StockMovement }),
+    stockMovementPrintTemplate: () => ({
+      docType: ModelNameEnum.StockMovement,
+    }),
     posCustomer: () => ({ role: PartyRoleEnum.Customer }),
   };
 

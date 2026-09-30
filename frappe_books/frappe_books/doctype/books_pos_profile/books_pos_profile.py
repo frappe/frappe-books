@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
+
+from frappe_books.printing import validate_print_format
 
 
 class BooksPosProfile(Document):
@@ -33,3 +34,6 @@ class BooksPosProfile(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Pos Profile"
+
+	def validate(self):
+		validate_print_format(self.pos_print_template, "Books Sales Invoice")

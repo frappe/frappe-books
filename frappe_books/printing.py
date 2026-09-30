@@ -10,6 +10,7 @@ import frappe
 from babel import Locale
 from babel.numbers import parse_pattern
 from frappe import _
+from frappe.custom.doctype.property_setter.property_setter import delete_property_setter, make_property_setter
 from frappe.model import no_value_fields, table_fields
 from frappe.utils import flt, formatdate, money_in_words
 from frappe.www.printview import get_print_style, get_rendered_template
@@ -146,6 +147,31 @@ def _payment_taxes(payment) -> list[dict[str, Any]]:
 
 def amount_in_words(amount, currency) -> str:
 	return money_in_words(abs(flt(amount)), currency)
+
+
+def default_print_format(doctype: str) -> str | None:
+	return frappe.get_meta(doctype).default_print_format or None
+
+
+def set_default_print_format(doctype: str, print_format: str | None) -> None:
+	"""Set or clear a DocType's default print format, as Frappe's Set as Default does."""
+	if print_format:
+		make_property_setter(doctype, None, "default_print_format", print_format, "Data", for_doctype=True)
+	else:
+		delete_property_setter(doctype, "default_print_format")
+
+
+def update_default_print_formats(print_formats: dict[str, str | None]) -> None:
+	"""Set the default print formats that change, by DocType."""
+	for doctype, print_format in print_formats.items():
+		if (print_format or None) != default_print_format(doctype):
+			validate_print_format(print_format, doctype)
+			set_default_print_format(doctype, print_format)
+
+
+def validate_print_format(print_format: str | None, doctype: str) -> None:
+	if print_format and frappe.db.get_value("Print Format", print_format, "doc_type") != doctype:
+		frappe.throw(_("{0} is not a print format for {1}.").format(print_format, _(doctype)))
 
 
 @frappe.whitelist(methods=["POST"])

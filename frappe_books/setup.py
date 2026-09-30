@@ -6,6 +6,7 @@ import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 from frappe.permissions import add_permission, update_permission_property
 
+from frappe_books.printing import default_print_format, set_default_print_format
 from frappe_books.series import NUMBER_SERIES
 
 DEFAULT_SERIES_START = 1001
@@ -17,14 +18,14 @@ DEFAULT_PRINT_TEMPLATES = {
 	"Business - Shipment": ("Shipment", "business_shipment_print_template.html", 21, 29.7),
 	"Business-POS - Sales Invoice": ("SalesInvoice", "business_pos_print_template.html", 8, 22),
 }
-DEFAULT_PRINT_TEMPLATE_FIELDS = {
-	"sales_quote_print_template": "Business - Quote",
-	"sales_invoice_print_template": "Business - Sales Invoice",
-	"purchase_invoice_print_template": "Business - Purchase Invoice",
-	"payment_print_template": "Business - Payment",
-	"shipment_print_template": "Business - Shipment",
-	"pos_print_template": "Business-POS - Sales Invoice",
+DEFAULT_PRINT_FORMATS = {
+	"Books Sales Quote": "Business - Quote",
+	"Books Sales Invoice": "Business - Sales Invoice",
+	"Books Purchase Invoice": "Business - Purchase Invoice",
+	"Books Payment": "Business - Payment",
+	"Books Shipment": "Business - Shipment",
 }
+POS_PRINT_FORMAT = "Business-POS - Sales Invoice"
 PRINT_TEMPLATE_DIRECTORY = Path(__file__).with_name("data")
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
 # Rights Books roles need on core doctypes the Books interface uses
@@ -53,7 +54,7 @@ def bootstrap():
 	grant_core_permissions()
 	for name in DEFAULT_PRINT_TEMPLATES:
 		_insert_if_missing("Books Print Template", name, standard_print_template_values(name))
-	_fill_default_print_templates()
+	set_default_print_formats()
 
 
 def before_tests():
@@ -88,12 +89,13 @@ def update_standard_print_templates():
 			template.save(ignore_permissions=True)
 
 
-def _fill_default_print_templates():
-	defaults = frappe.get_single("Books Defaults")
-	empty = {field: name for field, name in DEFAULT_PRINT_TEMPLATE_FIELDS.items() if not defaults.get(field)}
-	if empty:
-		defaults.update(empty)
-		defaults.save(ignore_permissions=True)
+def set_default_print_formats():
+	"""Give each Books DocType and the POS a built-in print format, unless one is chosen."""
+	for doctype, print_format in DEFAULT_PRINT_FORMATS.items():
+		if not default_print_format(doctype):
+			set_default_print_format(doctype, print_format)
+	if not frappe.db.get_single_value("Books Defaults", "pos_print_template"):
+		frappe.db.set_single_value("Books Defaults", "pos_print_template", POS_PRINT_FORMAT)
 
 
 def standard_print_template_values(name):

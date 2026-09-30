@@ -51,7 +51,7 @@
    "fieldname": "pos_print_template",
    "fieldtype": "Link",
    "label": "POS Print Template",
-   "options": "Books Print Template"
+   "options": "Print Format"
   },
   {
    "default": "Classic",
@@ -153,7 +153,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-26 22:11:26.502504",
+ "modified": "2026-09-30 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Profile",

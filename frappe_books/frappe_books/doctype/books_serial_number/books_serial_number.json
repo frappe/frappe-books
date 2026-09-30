@@ -22,10 +22,10 @@
    "reqd": 1
   },
   {
-   "description": "Serial Number Description",
    "fieldname": "description",
    "fieldtype": "Text",
-   "label": "Description"
+   "label": "Description",
+   "placeholder": "Serial Number Description"
   },
   {
    "default": "Inactive",
@@ -39,7 +39,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 07:25:34.948290",
+ "modified": "2026-09-30 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Serial Number",

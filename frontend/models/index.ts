@@ -34,6 +34,7 @@ import { SalesQuoteItem } from './baseModels/SalesQuoteItem/SalesQuoteItem';
 import { SetupWizard } from './baseModels/SetupWizard/SetupWizard';
 import { ItemGroup } from './baseModels/ItemGroup/ItemGroup';
 import { Tax } from './baseModels/Tax/Tax';
+import { UOM } from './baseModels/UOM/UOM';
 import { TaxSummary } from './baseModels/TaxSummary/TaxSummary';
 import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
@@ -61,9 +62,7 @@ export const models = {
   AccountingLedgerEntry,
   AccountingSettings,
   Address,
-  Batch,
   Defaults,
-  ItemGroup,
   ItemEnquiry,
   JournalEntry,
   JournalEntryAccount,
@@ -89,7 +88,6 @@ export const models = {
   AppliedCouponCodes,
   SalesQuote,
   SalesQuoteItem,
-  SerialNumber,
   SetupWizard,
   PrintTemplate,
   Tax,
@@ -99,7 +97,6 @@ export const models = {
   StockMovement,
   StockMovementItem,
   StockLedgerEntry,
-  Location,
   Shipment,
   ShipmentItem,
   PurchaseReceipt,
@@ -121,6 +118,11 @@ export const models = {
  */
 export const frappeModels: Record<string, FrappeModel> = {
   Item,
+  ItemGroup,
+  UOM,
+  Location,
+  Batch,
+  SerialNumber,
 };
 
 export async function getRegionalModels(

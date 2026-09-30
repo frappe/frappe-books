@@ -11,6 +11,7 @@ import {
   models,
   newFrappeDoc,
 } from './helpers/frappe.mjs';
+import { getFilterFields } from './helpers/accounting.mjs';
 import {
   getColumns,
   getLayout,
@@ -421,7 +422,7 @@ test('pricing rule limits show the message the server refuses them with', async 
 });
 
 test('coupon and invoice links filter pricing rules and price lists by Frappe fieldnames', () => {
-  assert.deepEqual(models.CouponCode.filters.pricingRule(), {
+  assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), {
     is_coupon_code_based: true,
   });
   assert.deepEqual(models.SalesInvoice.filters.priceList({ isSales: true }), {
@@ -435,6 +436,119 @@ test('coupon and invoice links filter pricing rules and price lists by Frappe fi
       is_purchase: true,
     }
   );
+});
+
+test('the coupon form shows what it showed and names a new coupon from its name', async () => {
+  assert.deepEqual(getLayout('CouponCode'), [
+    'name | Coupon Code |  | Default',
+    'coupon_name | Name | Coupon Name | Default',
+    'is_enabled | Is Enabled |  | Default',
+    'pricing_rule | Pricing Rule |  | Default',
+    'min_amount | Min Amount |  | Amount',
+    'max_amount | Max Amount |  | Amount',
+    'valid_from | Valid From |  | Validity and Usage',
+    'valid_to | Valid To |  | Validity and Usage',
+    'maximum_use | Maximum Use |  | Validity and Usage',
+    'used | Used |  | Validity and Usage',
+  ]);
+  assert.deepEqual(getColumns('CouponCode'), [
+    'name',
+    'coupon_name',
+    'pricing_rule',
+    'maximum_use',
+    'used',
+  ]);
+  const pricingRule = getSchema('CouponCode').fields.find(
+    ({ fieldname }) => fieldname === 'pricing_rule'
+  );
+  assert.equal(pricingRule.create, false);
+
+  const coupon = newFrappeDoc('CouponCode');
+  await coupon.set('coupon_name', 'Save Twenty Five');
+  assert.equal(coupon.name, 'SAVETWEN');
+  coupon._notInserted = false;
+  await coupon.set('coupon_name', 'Other');
+  assert.equal(coupon.name, 'SAVETWEN');
+});
+
+test('a coupon code leaves its amount and date rules to the server', async () => {
+  const coupon = newFrappeDoc('CouponCode', {
+    pricing_rule: 'Promotion',
+    valid_from: new Date('2026-06-01'),
+    min_amount: fyo.pesa(20),
+  });
+  await coupon.set('valid_to', new Date('2026-05-01'));
+  await coupon.set('max_amount', fyo.pesa(5));
+  assert.equal(coupon.max_amount.float, 5);
+});
+
+test('the loyalty program form and list show what they showed', async () => {
+  assert.deepEqual(getLayout('LoyaltyProgram'), [
+    'name | Name | Name | Default',
+    'from_date | From Date |  | Default',
+    'to_date | To Date |  | Default',
+    'is_enabled | Is Enabled |  | Default',
+    'status | Status |  | Default',
+    'collection_rules | Collection Rules |  | Default',
+    'conversion_factor | Conversion Factor |  | Default',
+    'expiry_duration | Expiry Duration |  | Default',
+    'expense_account | Expense Account |  | Default',
+    'maximum_use | Maximum Use |  | Validity and Usage',
+    'used | Used |  | Validity and Usage',
+  ]);
+  const schema = getSchema('LoyaltyProgram');
+  const field = (s, fieldname) =>
+    s.fields.find((f) => f.fieldname === fieldname);
+  assert.equal(field(schema, 'status').hidden, true);
+  assert.equal(field(schema, 'expense_account').create, false);
+  assert.equal(
+    field(schema, 'conversion_factor').sub_label,
+    '100 Points → 100 (Factor 1), 50 (Factor 0.5)'
+  );
+  const tiers = getSchema('CollectionRulesItems');
+  assert.deepEqual(tiers.tableFields, [
+    'tier_name',
+    'collection_factor',
+    'minimum_total_spent',
+  ]);
+  assert.equal(
+    field(tiers, 'collection_factor').sub_label,
+    'Sale 100→ 100 (1), 50 (0.5)'
+  );
+
+  const [, status] = getModel('LoyaltyProgram').getListViewSettings().columns;
+  assert.deepEqual(status.badge({ schema, status: 'Maxed' }), {
+    label: 'Maxed',
+    theme: 'amber',
+  });
+  assert.deepEqual(getColumns('LoyaltyProgram'), [
+    'name',
+    'status',
+    'from_date',
+    'to_date',
+  ]);
+});
+
+test('stored loyalty program statuses are offered as filters', () => {
+  const fields = getFilterFields(
+    getSchema('LoyaltyProgram').fields,
+    getModel('LoyaltyProgram').getListViewSettings().columns
+  );
+  const status = fields.find((field) => field.fieldname === 'status');
+  assert.deepEqual(
+    status.options.map(({ value }) => value),
+    ['Active', 'Disabled', 'Expired', 'Maxed']
+  );
+});
+
+test('loyalty program usage shows the message the server refuses it with', async () => {
+  const program = newFrappeDoc('LoyaltyProgram', { maximum_use: 2 });
+  await assert.rejects(program.set('maximum_use', -1), {
+    message: 'Loyalty-program usage counts cannot be negative.',
+  });
+  await assert.rejects(program.set('used', 3), {
+    message: 'Loyalty-program usage cannot exceed its maximum.',
+  });
 });
 
 async function waitFor(isDone) {

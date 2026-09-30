@@ -122,6 +122,24 @@ test('a value the user entered stays theirs when the server only corrects it', a
   assert.equal('series' in previews[1], false);
 });
 
+test('a value the server leaves empty is cleared, as Frappe sends no empty values', async () => {
+  stubFrappe(({ path, body }) => {
+    if (!path.endsWith('run_doc_method')) {
+      return { data: [] };
+    }
+
+    const { kind, ...document } = body.document;
+    return { data: null, docs: [kind === 'Return' ? document : body.document] };
+  });
+  const move = newFrappeDoc('Move', { kind: 'Return' });
+  await move.set('series', 'OLD-');
+
+  await move.preview();
+  clearTimeout(move._previewTimer);
+  assert.equal(move.kind, null);
+  assert.equal(move.series, 'OLD-');
+});
+
 test('a form previews a new document once it opens', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const { previews } = stubServer();

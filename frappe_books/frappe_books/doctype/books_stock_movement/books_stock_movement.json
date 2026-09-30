@@ -40,7 +40,8 @@
    "in_list_view": 1,
    "label": "Number Series",
    "options": "Books Number Series",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "movement_type",
@@ -95,7 +96,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-30 19:00:00.000000",
+ "modified": "2026-09-30 19:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Stock Movement",

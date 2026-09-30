@@ -109,7 +109,6 @@ export const models = {
   ClosingCash,
   OpeningAmounts,
   OpeningCash,
-  POSSettings,
   POSProfile,
   POSOpeningShift,
   POSClosingShift,
@@ -123,6 +122,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   GetStarted,
   Item,
   Misc,
+  POSSettings,
 };
 
 export async function getRegionalModels(

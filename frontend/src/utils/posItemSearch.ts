@@ -7,7 +7,10 @@ export type ScannableItem = POSItemSearchRecord & Pick<POSItem, 'unit'>;
 
 type BarcodeSettings = Pick<
   POSSettings,
-  'weightEnabledBarcode' | 'checkDigits' | 'itemCodeDigits' | 'itemWeightDigits'
+  | 'weight_enabled_barcode'
+  | 'check_digits'
+  | 'item_code_digits'
+  | 'item_weight_digits'
 >;
 
 type WeightBarcode = { itemCode: string; weight?: number };
@@ -93,13 +96,13 @@ function parseWeightBarcode(
   code: string,
   settings?: BarcodeSettings
 ): WeightBarcode | undefined {
-  if (!settings?.weightEnabledBarcode) {
+  if (!settings?.weight_enabled_barcode) {
     return;
   }
 
-  const prefix = String(settings.checkDigits || '');
-  const codeEnd = prefix.length + Number(settings.itemCodeDigits || 0);
-  const length = codeEnd + Number(settings.itemWeightDigits || 0);
+  const prefix = String(settings.check_digits || '');
+  const codeEnd = prefix.length + Number(settings.item_code_digits || 0);
+  const length = codeEnd + Number(settings.item_weight_digits || 0);
   const weight = code.slice(codeEnd);
   if (
     !code.startsWith(prefix) ||

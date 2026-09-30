@@ -357,8 +357,7 @@ export default defineComponent({
       ) {
         templateName = this.fyo.singles.Defaults?.posPrintTemplate;
 
-        const posProfileName = this.fyo.singles.POSSettings
-          ?.posProfile as string;
+        const posProfileName = this.fyo.singles.POSSettings?.pos_profile;
 
         if (posProfileName) {
           const posProfile = await this.fyo.doc.getDoc(

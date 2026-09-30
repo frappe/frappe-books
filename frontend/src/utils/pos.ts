@@ -74,6 +74,12 @@ export function getPOSQuantityField(fyo: Fyo): POSQuantityField {
 
 export type POSPermissions = Record<POSPermissionSetting, boolean>;
 
+// POS profiles are still read through the bridge; POS Settings by Frappe fieldnames.
+const posSettingsFields: Record<POSPermissionSetting, string> = {
+  canChangeRate: 'can_change_rate',
+  canEditDiscount: 'can_edit_discount',
+};
+
 export function isPOSRowFieldReadOnly(
   row: SalesInvoiceItem,
   field: POSRowField,
@@ -109,7 +115,7 @@ export async function getPOSPermissionSetting(
   fyo: Fyo,
   fieldname: POSPermissionSetting
 ): Promise<boolean> {
-  const profileName = fyo.singles.POSSettings?.posProfile;
+  const profileName = fyo.singles.POSSettings?.pos_profile;
 
   if (profileName) {
     return !!(await fyo.getValue(
@@ -119,7 +125,7 @@ export async function getPOSPermissionSetting(
     ));
   }
 
-  return !!fyo.singles.POSSettings?.[fieldname];
+  return !!fyo.singles.POSSettings?.get(posSettingsFields[fieldname]);
 }
 
 /** Whether a key press types into a field, which POS shortcuts must leave alone. */
@@ -449,14 +455,14 @@ export function validateIsPosSettingsSet(fyo: Fyo) {
       );
     }
 
-    const cashAccount = fyo.singles.POSSettings?.cashAccount;
+    const cashAccount = fyo.singles.POSSettings?.cash_account;
     if (!cashAccount) {
       throw new ValidationError(
         t`POS Counter Cash Account is not set. Please set it on POS Settings`
       );
     }
 
-    const writeOffAccount = fyo.singles.POSSettings?.writeOffAccount;
+    const writeOffAccount = fyo.singles.POSSettings?.write_off_account;
     if (!writeOffAccount) {
       throw new ValidationError(
         t`POS Write Off Account is not set. Please set it on POS Settings`

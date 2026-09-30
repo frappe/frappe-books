@@ -412,7 +412,7 @@ export class FrappeDoc extends Doc {
       if (field.fieldtype === 'Table') {
         this._applyPreviewRows(fieldname, value as DocValueMap[]);
       } else if (
-        !areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)
+        !isSameValue(value as DocValue, this[fieldname] as DocValue)
       ) {
         this[fieldname] = value;
         this._serverFilled.add(fieldname);
@@ -442,6 +442,15 @@ export interface FrappeValueOptions {
   keepRowNames?: boolean;
   /** Leaves out the values a preview filled, so the server fills them again. */
   clearServerFilled?: boolean;
+}
+
+/** Whether a previewed value is the one the document has; dates by their time. */
+function isSameValue(previewed: DocValue, current: DocValue): boolean {
+  if (previewed instanceof Date && current instanceof Date) {
+    return previewed.getTime() === current.getTime();
+  }
+
+  return areDocValuesEqual(previewed, current);
 }
 
 async function showPreviewError(error: unknown) {

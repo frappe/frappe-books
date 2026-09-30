@@ -18,6 +18,11 @@ export class Payment extends FrappeDoc {
   static override presentation = {
     label: 'Payment',
     nameField: { label: 'Payment No', hidden: true },
+    fields: {
+      reference_type: {
+        optionLabels: { SalesInvoice: 'Sales', PurchaseInvoice: 'Purchase' },
+      },
+    },
     quickEditFields: [
       'number_series',
       'party',

@@ -191,6 +191,22 @@ test('shift sheets count cash with steppers', async ({ page }) => {
   await page.screenshot({ path: test.info().outputPath('close-shift.png') });
 });
 
+test('the counted drawer is shared by the cash methods', async ({ page }) => {
+  // Cash expects 1,000.00 and Store Cash 500.00; the opening 1,760.00 is counted.
+  await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
+  const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
+  await expect(sheet.getByText('Counted Credit Card')).toBeVisible();
+  await expect(sheet.getByText('Counted Cash')).toHaveCount(0);
+  await expect(sheet.getByText('Counted Store Cash')).toHaveCount(0);
+
+  await expect(sheet.getByRole('row', { name: /^Cash/ })).toHaveText(
+    /1,000.00\s*1,260.00\s*260.00/
+  );
+  await expect(sheet.getByRole('row', { name: /^Store Cash/ })).toHaveText(
+    /500.00\s*500.00\s*0.00/
+  );
+});
+
 test('leaving a sale with items asks in a sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   await page.getByRole('button', { name: 'Exit POS' }).click();

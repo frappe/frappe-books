@@ -45,13 +45,17 @@ export async function preparePOSData() {
       {
         name: 'SHIFT-001',
         openingDate: '2026-09-06',
+        submitted: true,
         openingCash: [10, 20, 50, 100, 200, 500].map((denomination) => ({
           denomination: String(denomination),
           count: 2,
         })),
-        openingAmounts: ['Cash', 'Credit Card', 'Bank Transfer'].map(
-          (paymentMethod) => ({ paymentMethod, amount: '0' })
-        ),
+        openingAmounts: [
+          ['Cash', '1000'],
+          ['Credit Card', '0'],
+          ['Bank Transfer', '0'],
+          ['Store Cash', '500'],
+        ].map(([paymentMethod, amount]) => ({ paymentMethod, amount })),
       },
     ],
     SalesInvoice: Array.from({ length: 24 }, (_, index) => ({
@@ -68,8 +72,9 @@ export async function preparePOSData() {
   FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
   FrappeDatabaseDemux.prototype.call = async (method, ...args) => {
     const [schema, name] = args as string[];
-    if (method === 'getAll' || method === 'searchLink')
-      return records[schema] ?? [];
+    if (method === 'getAll')
+      return filterRecords(records[schema] ?? [], args[1]);
+    if (method === 'searchLink') return records[schema] ?? [];
     if (method === 'get')
       return records[schema]?.find((row) => row.name === name) ?? { name };
     if (method === 'getSingleValues') return [];
@@ -126,4 +131,15 @@ export async function preparePOSData() {
     ...item,
     rate: fyo.pesa(item.rate),
   }));
+}
+
+/** Applies a query's plain equality filters to the fields a record has. */
+function filterRecords(rows: any[], options: unknown) {
+  const filters = (options as { filters?: Record<string, unknown> })?.filters;
+  return rows.filter((row) =>
+    Object.entries(filters ?? {}).every(
+      ([key, value]) =>
+        typeof value !== 'string' || !(key in row) || row[key] === value
+    )
+  );
 }

@@ -1,11 +1,17 @@
 import { getFieldProperties } from 'schemas/fieldProperties';
-import type { Field, Naming, Schema } from 'schemas/types';
+import type { Field, Naming, Schema, SelectOption } from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
 export interface Presentation {
   label: string;
   quickEditFields?: string[];
+  /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
+  tableFields?: string[];
+  /** Tables whose rows open in the row editor. */
+  rowEditTables?: string[];
+  /** Choices of fields the DocType cannot list, like the doctypes a DocType reference allows. */
+  options?: Record<string, SelectOption[]>;
   /** The field that asks for a document's name when its DocType names by prompt. */
   nameField?: { label: string; placeholder?: string };
 }
@@ -45,7 +51,7 @@ export function toSchema(
   const fields = [
     ...getNameFields(meta, presentation, getDocFields(meta, context)),
     ...getMetaFields(meta),
-  ].map((field) => ({ ...field, schemaName: name }) as Field);
+  ].map((field) => ({ ...present(field, presentation), schemaName: name }));
 
   return {
     name,
@@ -54,14 +60,30 @@ export function toSchema(
     naming: getNaming(meta.autoname),
     titleField: meta.title_field || 'name',
     quickEditFields: presentation.quickEditFields,
-    tableFields: meta.fields
-      .filter((field) => field.in_list_view)
-      .map((field) => field.fieldname),
+    tableFields:
+      presentation.tableFields ??
+      meta.fields
+        .filter((field) => field.in_list_view)
+        .map((field) => field.fieldname),
     isChild: !!meta.istable,
     isSingle: !!meta.issingle,
     isSubmittable: !!meta.is_submittable,
     isTree: !!meta.is_tree,
   };
+}
+
+/** A field with what the model's presentation adds to it. */
+function present(field: Field, presentation: Presentation): Field {
+  const options = presentation.options?.[field.fieldname];
+  if (options) {
+    return { ...field, fieldtype: 'Select', options } as Field;
+  }
+
+  if (presentation.rowEditTables?.includes(field.fieldname)) {
+    return { ...field, edit: true } as Field;
+  }
+
+  return field;
 }
 
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
@@ -129,7 +151,7 @@ function toField(
     field.target = schemaNames[properties.target] ?? properties.target;
   }
 
-  if (docfield.fieldtype === 'Link') {
+  if (docfield.fieldtype === 'Link' || docfield.fieldtype === 'Dynamic Link') {
     field.create = !docfield.only_select;
   }
 

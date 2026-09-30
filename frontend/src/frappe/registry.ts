@@ -81,18 +81,23 @@ async function loadDocType(schemaName: string, Model: FrappeModel) {
     Model,
     placements
   );
-  docType.tables = getTables(docType.meta, byName);
+  docType.tables = getTables(docType.meta, byName, Model);
   setDocType(schemaName, docType);
 }
 
-function getTables(meta: DocTypeMeta, byName: Map<string, DocTypeMeta>) {
+function getTables(
+  meta: DocTypeMeta,
+  byName: Map<string, DocTypeMeta>,
+  Model: FrappeModel
+) {
   const tables: FrappeDocType['tables'] = {};
   for (const field of meta.fields) {
     const child =
       field.fieldtype === 'Table' ? byName.get(field.options!) : undefined;
     if (child) {
-      const name = getSchemaNames()[child.name] ?? child.name;
-      tables[field.fieldname] = toDocType(child, name, FrappeDoc, {});
+      const name = toSchemaName(child.name);
+      const RowModel = Model.tableModels[field.fieldname] ?? FrappeDoc;
+      tables[field.fieldname] = toDocType(child, name, RowModel, {});
     }
   }
 
@@ -105,9 +110,10 @@ function toDocType(
   Model: FrappeModel,
   placements: Placements
 ): FrappeDocType {
-  const presentation: Presentation = meta.istable
-    ? { label: meta.name }
-    : Model.presentation;
+  const presentation: Presentation =
+    meta.istable && Model === FrappeDoc
+      ? { label: meta.name }
+      : Model.presentation;
   const schema = toSchema(meta, schemaName, presentation, {
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],
@@ -145,6 +151,11 @@ type Placement = { fieldname: string; section?: string; tab?: string };
 /** The Custom Field that holds a Books custom field, as `frappe_books.customization` names it. */
 function getCustomFieldname(fieldname: string): string {
   return `custom_books_${fieldname.replace(/[ -]/g, '_').toLowerCase()}`;
+}
+
+/** The schema a Frappe-backed document refers to by doctype, e.g. in a Dynamic Link's type. */
+export function toSchemaName(name: string): string {
+  return getSchemaNames()[name] ?? name;
 }
 
 /** Books schema names by doctype, from the boot. */

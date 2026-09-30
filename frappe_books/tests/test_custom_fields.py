@@ -74,7 +74,7 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 
 		self.assertEqual(
 			get_field_properties()["UOM"][FIELD["fieldname"]],
-			{"fieldtype": "Data", "label": FIELD["label"]},
+			{"fieldname": COLUMN, "fieldtype": "Data", "label": FIELD["label"]},
 		)
 
 	def test_system_manager_removes_fields_without_switching_user(self):

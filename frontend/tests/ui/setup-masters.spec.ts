@@ -47,6 +47,27 @@ test('a new payment method saves with its account', async ({ page }) => {
   );
 });
 
+test('a new currency saves under the name typed', async ({ page }) => {
+  const name = `Coin ${Date.now()}`;
+  await openNewEntry(page, 'Currency');
+
+  await page
+    .getByRole('textbox', { name: 'Currency Name', exact: true })
+    .fill(name);
+  await page.getByRole('textbox', { name: 'Symbol', exact: true }).fill('C');
+  await page.keyboard.press('Tab');
+  await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'Yes', exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/books/edit/Currency/${encodeURIComponent(name)}$`)
+  );
+  await expect(
+    page.getByRole('textbox', { name: 'Currency Name', exact: true })
+  ).toBeDisabled();
+});
+
 async function openNewEntry(page: Page, schemaName: string) {
   await page.goto(`/books/list/${schemaName}`);
   await waitForBooks(page);

@@ -75,3 +75,18 @@ test('a payment method shows its type, account and clearance date as before', ()
     ['name', 'type']
   );
 });
+
+test('a currency shows its name, fraction and symbol, not Frappe-only settings', () => {
+  const currency = getSchema('Currency');
+  assert.equal(currency.naming, 'manual');
+  assert.deepEqual(getLayout('Currency'), [
+    'currency_name | Currency Name | ',
+    'fraction | Fraction | ',
+    'fraction_units | Fraction Units | ',
+    'smallest_currency_fraction_value | Smallest Currency Fraction Value | ',
+    'symbol | Symbol | ',
+  ]);
+  assert.deepEqual(currency.quickEditFields, ['symbol']);
+  const name = currency.fields.find((field) => field.fieldname === 'name');
+  assert.equal(name.label, 'Currency Name');
+});

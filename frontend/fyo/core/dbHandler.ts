@@ -368,20 +368,6 @@ export class DatabaseHandler extends DatabaseBase {
     return (await this.#demux.callBespoke('getOpenPOSShift')) as string | null;
   }
 
-  /** Unused names from the item's serial-number series, reserved on the server. */
-  async getNewSeriesNames(
-    schemaName: 'SerialNumber',
-    item: string,
-    count: number
-  ): Promise<string[]> {
-    return (await this.#demux.callBespoke(
-      'getNewSeriesNames',
-      schemaName,
-      item,
-      count
-    )) as string[];
-  }
-
   async getDefaultNumberSeries(): Promise<Record<string, string>> {
     return (await this.#demux.callBespoke('getDefaultNumberSeries')) as Record<
       string,

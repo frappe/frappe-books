@@ -6,7 +6,7 @@ import frappe
 
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.inventory.auto_transfer import default_location
-from frappe_books.series import default_series_by_schema, new_item_names
+from frappe_books.series import default_series_by_schema
 from frappe_books.ui_bridge.database import system_datetime
 from frappe_books.ui_bridge.dispatch import call_handler
 from frappe_books.ui_bridge.linked_entries import linked_entries
@@ -82,9 +82,6 @@ class BooksBespokeQueries:
 	def linked_entries(self, source_schema: str, name: str):
 		return linked_entries(source_schema, name)
 
-	def new_series_names(self, source_schema: Literal["Batch", "SerialNumber"], item: str, count: int):
-		return new_item_names(target_doctype(source_schema), item, count)
-
 	def default_number_series(self):
 		frappe.has_permission("Books Defaults", "read", throw=True)
 		return default_series_by_schema()
@@ -97,6 +94,5 @@ _METHODS = {
 	"getPOSTransactedAmount": "pos_transacted_amount",
 	"getOpenPOSShift": "open_pos_shift",
 	"getLinkedEntries": "linked_entries",
-	"getNewSeriesNames": "new_series_names",
 	"getDefaultNumberSeries": "default_number_series",
 }

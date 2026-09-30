@@ -29,8 +29,8 @@ import PriceListItem from './app/PriceListItem.json';
 import PricingRule from './app/PricingRule.json';
 import PricingRuleItem from './app/PricingRuleItem.json';
 import PricingRuleDetail from './app/PricingRuleDetail.json';
+import PrintFormat from './app/PrintFormat.json';
 import PrintSettings from './app/PrintSettings.json';
-import PrintTemplate from './app/PrintTemplate.json';
 import PurchaseInvoice from './app/PurchaseInvoice.json';
 import PurchaseInvoiceItem from './app/PurchaseInvoiceItem.json';
 import SalesInvoice from './app/SalesInvoice.json';
@@ -95,7 +95,7 @@ export const appSchemas: SchemaFile[] = [
   Misc as SchemaFile,
   SetupWizard as SchemaFile,
   GetStarted as SchemaFile,
-  PrintTemplate as SchemaFile,
+  PrintFormat as SchemaFile,
 
   Country as SchemaFile,
   Currency as SchemaFile,

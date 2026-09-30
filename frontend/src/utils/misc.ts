@@ -39,7 +39,7 @@ export const docsPathMap: Record<string, string | undefined> = {
   [ModelNameEnum.Party]: 'books/party',
   [ModelNameEnum.Item]: 'books/items',
   [ModelNameEnum.Tax]: 'books/taxes',
-  [ModelNameEnum.PrintTemplate]: 'books/print-templates',
+  [ModelNameEnum.PrintFormat]: 'books/print-templates',
 
   // Miscellaneous
   Search: 'books/quick-search',

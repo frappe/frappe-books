@@ -27,14 +27,6 @@
   "shipment_terms",
   "purchase_receipt_terms",
   "print_templates_section_break_21",
-  "sales_quote_print_template",
-  "sales_invoice_print_template",
-  "purchase_invoice_print_template",
-  "journal_entry_print_template",
-  "payment_print_template",
-  "shipment_print_template",
-  "purchase_receipt_print_template",
-  "stock_movement_print_template",
   "pos_print_template",
   "point_of_sale_section_break_31",
   "pos_customer",
@@ -166,58 +158,10 @@
    "label": "Print Templates"
   },
   {
-   "fieldname": "sales_quote_print_template",
-   "fieldtype": "Link",
-   "label": "Sales Quote Print Template",
-   "options": "Books Print Template"
-  },
-  {
-   "fieldname": "sales_invoice_print_template",
-   "fieldtype": "Link",
-   "label": "Sales Invoice Print Template",
-   "options": "Books Print Template"
-  },
-  {
-   "fieldname": "purchase_invoice_print_template",
-   "fieldtype": "Link",
-   "label": "Purchase Invoice Print Template",
-   "options": "Books Print Template"
-  },
-  {
-   "fieldname": "journal_entry_print_template",
-   "fieldtype": "Link",
-   "label": "Journal Entry Print Template",
-   "options": "Books Print Template"
-  },
-  {
-   "fieldname": "payment_print_template",
-   "fieldtype": "Link",
-   "label": "Payment Print Template",
-   "options": "Books Print Template"
-  },
-  {
-   "fieldname": "shipment_print_template",
-   "fieldtype": "Link",
-   "label": "Shipment Print Template",
-   "options": "Books Print Template"
-  },
-  {
-   "fieldname": "purchase_receipt_print_template",
-   "fieldtype": "Link",
-   "label": "Purchase Receipt Print Template",
-   "options": "Books Print Template"
-  },
-  {
-   "fieldname": "stock_movement_print_template",
-   "fieldtype": "Link",
-   "label": "Stock Movement Print Template",
-   "options": "Books Print Template"
-  },
-  {
    "fieldname": "pos_print_template",
    "fieldtype": "Link",
    "label": "POS Print Template",
-   "options": "Books Print Template"
+   "options": "Print Format"
   },
   {
    "fieldname": "point_of_sale_section_break_31",

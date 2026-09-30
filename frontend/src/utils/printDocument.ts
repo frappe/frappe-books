@@ -1,3 +1,7 @@
+import { t } from 'fyo';
+import { printHtml } from './browser';
+import { showToast } from './interactive';
+
 export function constructPrintDocument(
   name: string,
   innerHTML: string,
@@ -71,4 +75,26 @@ function getAllCSSAsStyleElem() {
   const styleElem = document.createElement('style');
   styleElem.innerHTML = cssTexts.join('\n');
   return styleElem;
+}
+
+/** Opens the browser's print dialog for the HTML, as a PDF or on paper. */
+export async function getPathAndMakePDF(
+  name: string,
+  innerHTML: string,
+  width: number,
+  height: number,
+  shouldPrint?: boolean
+) {
+  const html = constructPrintDocument(name, innerHTML, width, height);
+  const success = await printHtml(html);
+  if (success) {
+    showToast({
+      message: shouldPrint
+        ? t`Print dialog opened`
+        : t`Save as PDF dialog opened`,
+      type: 'success',
+    });
+  } else {
+    showToast({ message: t`Pop-up blocked`, type: 'error' });
+  }
 }

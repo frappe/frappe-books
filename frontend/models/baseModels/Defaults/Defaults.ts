@@ -70,20 +70,20 @@ export class Defaults extends FrappeDoc {
     purchase_receipt_number_series: () => ({
       reference_type: ModelNameEnum.PurchaseReceipt,
     }),
-    sales_quote_print_template: () => ({ type: ModelNameEnum.SalesQuote }),
-    sales_invoice_print_template: () => ({ type: ModelNameEnum.SalesInvoice }),
-    pos_print_template: () => ({ type: ModelNameEnum.SalesInvoice }),
+    sales_quote_print_template: () => ({ docType: ModelNameEnum.SalesQuote }),
+    sales_invoice_print_template: () => ({ docType: ModelNameEnum.SalesInvoice }),
+    pos_print_template: () => ({ docType: ModelNameEnum.SalesInvoice }),
     purchase_invoice_print_template: () => ({
-      type: ModelNameEnum.PurchaseInvoice,
+      docType: ModelNameEnum.PurchaseInvoice,
     }),
-    journal_entry_print_template: () => ({ type: ModelNameEnum.JournalEntry }),
-    payment_print_template: () => ({ type: ModelNameEnum.Payment }),
-    shipment_print_template: () => ({ type: ModelNameEnum.Shipment }),
+    journal_entry_print_template: () => ({ docType: ModelNameEnum.JournalEntry }),
+    payment_print_template: () => ({ docType: ModelNameEnum.Payment }),
+    shipment_print_template: () => ({ docType: ModelNameEnum.Shipment }),
     purchase_receipt_print_template: () => ({
-      type: ModelNameEnum.PurchaseReceipt,
+      docType: ModelNameEnum.PurchaseReceipt,
     }),
     stock_movement_print_template: () => ({
-      type: ModelNameEnum.StockMovement,
+      docType: ModelNameEnum.StockMovement,
     }),
     pos_customer: () => ({ role: PartyRoleEnum.Customer }),
   };

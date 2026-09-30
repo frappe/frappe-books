@@ -183,7 +183,7 @@ import Int from 'src/components/Controls/Int.vue';
 import Select from 'src/components/Controls/Select.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { getReport } from 'src/utils/misc';
-import { getPathAndMakePDF } from 'src/utils/printTemplates';
+import { getPathAndMakePDF } from 'src/utils/printDocument';
 import { showSidebar } from 'src/utils/refs';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';

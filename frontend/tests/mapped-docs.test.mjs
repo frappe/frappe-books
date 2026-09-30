@@ -108,19 +108,22 @@ test('a duplicate is the copy the server makes, with its unset values left out',
 test('a duplicate of a named document is named after it', async () => {
   const fyo = await makeFyo(() => ({
     name: null,
-    type: 'SalesInvoice',
-    isCustom: 1,
+    docType: 'SalesInvoice',
+    standard: 'No',
+    customFormat: 1,
   }));
-  const template = fyo.doc.getNewDoc('PrintTemplate', {
+  const template = fyo.doc.getNewDoc('PrintFormat', {
     name: 'Basic',
-    type: 'SalesInvoice',
-    isCustom: false,
+    docType: 'SalesInvoice',
+    standard: 'Yes',
+    customFormat: true,
   });
 
   const duplicate = await template.duplicate();
 
   assert.equal(duplicate.name, 'Basic CPY');
-  assert.equal(duplicate.isCustom, true);
+  assert.equal(duplicate.isEditable, true);
+  assert.equal(template.isEditable, false);
 });
 
 test('lead, party and item actions open documents from their server mappers', async () => {

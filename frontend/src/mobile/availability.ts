@@ -2,7 +2,7 @@ import type { RouteLocationNormalized } from 'vue-router';
 
 type PhoneRoute = Pick<RouteLocationNormalized, 'meta' | 'params'>;
 
-const desktopOnlySchemas = ['PrintTemplate', 'CustomForm'];
+const desktopOnlySchemas = ['PrintFormat', 'CustomForm'];
 const desktopOnlyReports = ['GSTR1', 'GSTR2'];
 
 /** Pages that are left out of the phone layout. */

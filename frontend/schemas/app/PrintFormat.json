@@ -1,0 +1,44 @@
+{
+  "name": "PrintFormat",
+  "label": "Print Template",
+  "naming": "manual",
+  "isSingle": false,
+  "fields": [
+    {
+      "fieldname": "name",
+      "label": "Template Name",
+      "fieldtype": "Data",
+      "required": true
+    },
+    {
+      "fieldname": "docType",
+      "label": "Template Type",
+      "fieldtype": "AutoComplete"
+    },
+    {
+      "fieldname": "html",
+      "label": "Template",
+      "fieldtype": "Text"
+    },
+    {
+      "fieldname": "css",
+      "label": "Page Setup",
+      "fieldtype": "Text"
+    },
+    {
+      "fieldname": "standard",
+      "label": "Standard",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "customFormat",
+      "label": "Custom Format",
+      "fieldtype": "Check"
+    },
+    {
+      "fieldname": "disabled",
+      "label": "Disabled",
+      "fieldtype": "Check"
+    }
+  ]
+}

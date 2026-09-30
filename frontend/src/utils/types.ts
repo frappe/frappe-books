@@ -88,11 +88,6 @@ export type UIGroupedFields = Map<string, Map<string, Field[]>>;
 export type ExportFormat = 'csv' | 'json';
 export type PeriodKey = 'This Year' | 'This Quarter' | 'This Month' | 'YTD';
 
-export type PrintValues = {
-  print: Record<string, unknown>;
-  doc: Record<string, unknown>;
-};
-
 export interface DialogOptions {
   title: string;
   type?: ToastType;

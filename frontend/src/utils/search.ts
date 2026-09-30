@@ -205,7 +205,7 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     ModelNameEnum.AccountingLedgerEntry,
     ModelNameEnum.Currency,
     ModelNameEnum.NumberSeries,
-    ModelNameEnum.PrintTemplate,
+    ModelNameEnum.PrintFormat,
   ];
 
   if (fyo.doc.singles.AccountingSettings?.enable_inventory) {

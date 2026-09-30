@@ -187,38 +187,40 @@
         "cancelButtonColour": "cancel_button_colour",
         "heldButtonColour": "held_button_colour",
         "journalEntryNumberSeries": "journal_entry_number_series",
-        "journalEntryPrintTemplate": "journal_entry_print_template",
         "name": "name",
         "payAndPrintButtonColour": "pay_and_print_button_colour",
         "payButtonColour": "pay_button_colour",
         "paymentNumberSeries": "payment_number_series",
-        "paymentPrintTemplate": "payment_print_template",
         "posCashDenominations": "pos_cash_denominations",
         "posCustomer": "pos_customer",
         "posPrintTemplate": "pos_print_template",
         "purchaseInvoiceNumberSeries": "purchase_invoice_number_series",
-        "purchaseInvoicePrintTemplate": "purchase_invoice_print_template",
         "purchaseInvoiceTerms": "purchase_invoice_terms",
         "purchasePaymentAccount": "purchase_payment_account",
         "purchaseReceiptLocation": "purchase_receipt_location",
         "purchaseReceiptNumberSeries": "purchase_receipt_number_series",
-        "purchaseReceiptPrintTemplate": "purchase_receipt_print_template",
         "purchaseReceiptTerms": "purchase_receipt_terms",
         "returnButtonColour": "return_button_colour",
         "salesInvoiceNumberSeries": "sales_invoice_number_series",
-        "salesInvoicePrintTemplate": "sales_invoice_print_template",
         "salesInvoiceTerms": "sales_invoice_terms",
         "salesPaymentAccount": "sales_payment_account",
         "salesQuoteNumberSeries": "sales_quote_number_series",
-        "salesQuotePrintTemplate": "sales_quote_print_template",
         "saveButtonColour": "save_button_colour",
         "shipmentLocation": "shipment_location",
         "shipmentNumberSeries": "shipment_number_series",
-        "shipmentPrintTemplate": "shipment_print_template",
         "shipmentTerms": "shipment_terms",
         "stockMovementNumberSeries": "stock_movement_number_series",
-        "stockMovementPrintTemplate": "stock_movement_print_template",
         "submitButtonColour": "submit_button_colour"
+      },
+      "print_formats": {
+        "journalEntryPrintTemplate": "Books Journal Entry",
+        "paymentPrintTemplate": "Books Payment",
+        "purchaseInvoicePrintTemplate": "Books Purchase Invoice",
+        "purchaseReceiptPrintTemplate": "Books Purchase Receipt",
+        "salesInvoicePrintTemplate": "Books Sales Invoice",
+        "salesQuotePrintTemplate": "Books Sales Quote",
+        "shipmentPrintTemplate": "Books Shipment",
+        "stockMovementPrintTemplate": "Books Stock Movement"
       }
     },
     "GetStarted": {
@@ -593,6 +595,18 @@
         "unit": "unit"
       }
     },
+    "PrintFormat": {
+      "doctype": "Print Format",
+      "fields": {
+        "css": "css",
+        "customFormat": "custom_format",
+        "disabled": "disabled",
+        "docType": "doc_type",
+        "html": "html",
+        "name": "name",
+        "standard": "standard"
+      }
+    },
     "PrintSettings": {
       "doctype": "Books Print Settings",
       "fields": {
@@ -611,17 +625,6 @@
         "phone": "phone",
         "posPrintWidth": "pos_print_width",
         "termsAndConditions": "terms_and_conditions"
-      }
-    },
-    "PrintTemplate": {
-      "doctype": "Books Print Template",
-      "fields": {
-        "height": "height",
-        "isCustom": "is_custom",
-        "name": "name",
-        "template": "template",
-        "type": "type",
-        "width": "width"
       }
     },
     "PurchaseInvoice": {

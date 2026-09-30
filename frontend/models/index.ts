@@ -23,8 +23,8 @@ import { Party } from './baseModels/Party/Party';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
 import { PriceList } from './baseModels/PriceList/PriceList';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
+import { PrintFormat } from './baseModels/PrintFormat';
 import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
-import { PrintTemplate } from './baseModels/PrintTemplate';
 import { PurchaseInvoice } from './baseModels/PurchaseInvoice/PurchaseInvoice';
 import { PurchaseInvoiceItem } from './baseModels/PurchaseInvoiceItem/PurchaseInvoiceItem';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
@@ -65,7 +65,7 @@ export const models = {
   AppliedCouponCodes,
   SalesQuote,
   SalesQuoteItem,
-  PrintTemplate,
+  PrintFormat,
   TaxSummary,
   // POS Models
   ClosingAmounts,

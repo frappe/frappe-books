@@ -12,29 +12,6 @@ const colorNames =
   'gray|red|orange|yellow|green|teal|blue|indigo|purple|pink|violet|cyan|amber';
 const colorSteps = '25|50|100|200|300|400|500|600|700|800|850|875|890|900';
 
-// Print templates are saved on the site, so the build cannot see their classes.
-const scale =
-  '(0|px|0\\.5|1|1\\.5|2|2\\.5|3|3\\.5|4|5|6|7|8|9|10|11|12|14|16|18|20|24|28|32|36|40|44|48|52|56|60|64|72|80|96|auto)';
-export const printTemplateUtilities = [
-  new RegExp(`^-?m[xytrbl]?-${scale}$`),
-  new RegExp(`^p[xytrbl]?-${scale}$`),
-  new RegExp(`^(gap|space)(-[xy])?-${scale}$`),
-  new RegExp(`^[wh]-(${scale}|\\d+/\\d+|full|fit|min|max)$`),
-  /^(min|max)-[wh]-(0|full|none|fit|min|max|xs|sm|md|lg|xl|[2-7]xl)$/,
-  /^grid-(cols|rows)-(\d+|none)$/,
-  /^(col|row)-(span|start|end)-(\d+|full|auto)$/,
-  /^(block|inline|inline-block|flex|inline-flex|grid|table|hidden)$/,
-  /^(flex|grow|shrink|order|justify|items|self|content)-/,
-  /^text-(xs|sm|base|lg|\d?xl|left|center|right|justify)$/,
-  /^font-(normal|medium|semibold|bold|mono)$/,
-  /^(leading|tracking|whitespace|break|object|overflow)-/,
-  /^(uppercase|lowercase|capitalize|italic|underline|truncate)$/,
-  /^border(-[xytrbl])?(-\d)?$/,
-  /^border-(solid|dashed|dotted|collapse)$/,
-  /^rounded(-[a-z]+)?$/,
-  /^table-(auto|fixed)$/,
-];
-
 export default {
   presets: [frappeUIPreset],
   content: [
@@ -42,7 +19,6 @@ export default {
     './src/**/*.{vue,js,ts,jsx,tsx}',
     // Phone layouts name their icons.
     './reports/**/*.ts',
-    '../frappe_books/data/**/*.html',
   ],
   darkMode: 'class',
   safelist: [
@@ -53,7 +29,6 @@ export default {
     'text-start',
     'text-center',
     'text-end',
-    ...printTemplateUtilities.map((pattern) => ({ pattern })),
   ],
   theme: {
     fontFamily: {
@@ -66,7 +41,7 @@ export default {
       xl: '1280px',
     },
     extend: {
-      // Compatibility shades used by Books layouts and print templates.
+      // Compatibility shades used by Books layouts.
       colors: {
         gray: Object.fromEntries(
           ['25', '850', '875', '890'].map((shade) => [

@@ -87,6 +87,12 @@ test('a request that cannot reach the server shows the offline screen', async ({
 test('the print view has a template picker and a bottom bar', async ({
   page,
 }) => {
+  // The document exists only in the browser, so Frappe cannot render it.
+  await page.route(/frappe\.www\.printview\.get_html_and_style/, (route) =>
+    route.fulfill({
+      json: { message: { html: '<p>Phone Print Test</p>', style: '' } },
+    })
+  );
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins
@@ -101,6 +107,11 @@ test('the print view has a template picker and a bottom bar', async ({
   );
   const picker = page.getByRole('button', { name: /^Template/ });
   await expect(picker).toBeVisible();
+  await expect(
+    page.frameLocator('iframe[title="Print preview"]').getByText(
+      'Phone Print Test'
+    )
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Print', exact: true })

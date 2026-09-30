@@ -1,15 +1,24 @@
-"""Native Frappe print formats for Books documents."""
+"""Frappe print formats for Books documents."""
 
 from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import money_in_words, now_datetime
+from frappe.utils.pdf import read_options_from_html
 from frappe.utils.print_utils import get_print
 
 from frappe_books.accounting.money import company_currency
-from frappe_books.printing import get_print_totals
+from frappe_books.printing import (
+	books_format,
+	default_print_format,
+	get_print_hints,
+	get_print_settings,
+	get_print_totals,
+	preview_print_format,
+)
 from frappe_books.tests.accounting import (
+	ensure_user,
 	make_account,
 	make_invoice,
 	make_item,
@@ -17,6 +26,10 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
+from frappe_books.ui_bridge.database import BooksDatabaseBridge
+
+MANAGER = "books-print-manager@example.com"
+USER = "books-print-user@example.com"
 
 
 class IntegrationTestPrinting(IntegrationTestCase):
@@ -32,14 +45,91 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.tax_account = make_account("Print Tax", root_type="Liability", account_type="Tax")
 		self.item = make_item(self.income.name, expense.name, make_tax(self.tax_account.name).name)
 
-	def test_native_print_format_renders_invoice(self):
+	def test_built_in_formats_render_invoice_and_payment(self):
+		invoice = self.make_invoice()
+		payment = self.make_payment({invoice: 99})
+		grand_total = books_format(invoice.grand_total, "Currency", invoice.currency)
+
+		for doc, print_format, expected in (
+			(invoice, "Business - Sales Invoice", grand_total),
+			(invoice, "Business-POS - Sales Invoice", "Thank you! Please visit again."),
+			(payment, "Business - Payment", "Amount Paid"),
+		):
+			with self.subTest(print_format=print_format):
+				html = get_print(doc.doctype, doc.name, print_format=print_format)
+
+				self.assertIn(doc.name, html)
+				self.assertIn(self.party.name, html)
+				self.assertIn(expected, html)
+				# Jinja prints an undefined name back as its tag.
+				self.assertNotIn("{{", html)
+
+	def test_built_in_formats_set_their_borderless_pdf_page(self):
 		invoice = self.make_invoice()
 
-		html = get_print(invoice.doctype, invoice.name, print_format="Frappe Books - Sales Invoice")
+		for print_format, width, height in (
+			("Business - Sales Invoice", "21cm", "29.7cm"),
+			("Business-POS - Sales Invoice", "8cm", "22cm"),
+		):
+			with self.subTest(print_format=print_format):
+				html = get_print(invoice.doctype, invoice.name, print_format=print_format)
+				_html, options = read_options_from_html(html)
 
-		self.assertIn(invoice.name, html)
-		self.assertIn(self.party.name, html)
-		self.assertIn("Grand Total", html)
+				self.assertEqual(options["page-width"], width)
+				self.assertEqual(options["page-height"], height)
+				self.assertEqual(options["margin-left"], "0")
+				self.assertEqual(options["margin-top"], "0")
+
+	def test_built_in_formats_print_their_doctype(self):
+		formats = dict(
+			frappe.get_all(
+				"Print Format",
+				filters={"module": "Frappe Books", "standard": "Yes"},
+				fields=["name", "doc_type"],
+				as_list=True,
+			)
+		)
+
+		self.assertEqual(
+			formats,
+			{
+				"Business - Quote": "Books Sales Quote",
+				"Business - Sales Invoice": "Books Sales Invoice",
+				"Business - Purchase Invoice": "Books Purchase Invoice",
+				"Business - Payment": "Books Payment",
+				"Business - Shipment": "Books Shipment",
+				"Business-POS - Sales Invoice": "Books Sales Invoice",
+			},
+		)
+
+	def test_books_format_follows_books_system_settings(self):
+		settings = {"locale": "en-IN", "display_precision": 2, "date_format": "MMM d, y"}
+		with self.change_settings("Books System Settings", settings):
+			self.assertEqual(books_format(1234567.125, "Currency", "INR"), "₹ 12,34,567.13")
+			self.assertEqual(books_format(10, "Float"), "10.00")
+			self.assertEqual(books_format("2026-09-30 13:45:00", "Date"), "Sep 30, 2026")
+			self.assertEqual(books_format(None, "Currency"), "")
+
+		with self.change_settings("Books System Settings", {"locale": "de-DE", "display_precision": 1}):
+			self.assertEqual(books_format(1234.56, "Currency", "EUR"), "€ 1.234,6")
+
+	def test_print_settings_show_the_company_address_and_gstin(self):
+		address = frappe.get_doc(
+			{
+				"doctype": "Books Address",
+				"name": unique_name("Print Address"),
+				"address_line1": "12 MG Road",
+				"city": "Mumbai",
+				"country": "India",
+			}
+		).insert()
+		frappe.db.set_single_value("Books Print Settings", "address", address.name)
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "27AAACB1234A1Z5")
+
+		settings = get_print_settings()
+
+		self.assertEqual(settings["address"], address.address_display)
+		self.assertEqual(settings["gstin"], "27AAACB1234A1Z5")
 
 	def test_invoice_prints_the_amount_each_payment_allocates_to_it(self):
 		invoice, other = self.make_invoice(), self.make_invoice()
@@ -102,6 +192,93 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		)
 		self.assertEqual(totals["sub_total"], Decimal("8.72"))
 
+	def test_preview_renders_unsaved_html_for_a_document(self):
+		invoice = self.make_invoice()
+
+		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+			preview = preview_print_format(
+				invoice.doctype,
+				invoice.name,
+				"<p>{{ doc.name }} {{ doc.party }}</p>",
+				"@page { size: 8cm 22cm; }",
+			)
+
+		self.assertIn(f"<p>{invoice.name} {self.party.name}</p>", preview["html"])
+		self.assertIn("@page { size: 8cm 22cm; }", preview["style"])
+
+	def test_preview_needs_print_format_and_document_rights(self):
+		invoice = self.make_invoice()
+		log = frappe.get_doc({"doctype": "Error Log", "error": "Print preview test"}).insert()
+
+		with self.set_user(ensure_user(USER, "Books User")):
+			self.assertRaises(
+				frappe.PermissionError, preview_print_format, invoice.doctype, invoice.name, "<p></p>"
+			)
+		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+			self.assertRaises(frappe.PermissionError, preview_print_format, log.doctype, log.name, "<p></p>")
+
+	def test_preview_reports_the_template_error_line(self):
+		invoice = self.make_invoice()
+
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"Line 2",
+			preview_print_format,
+			invoice.doctype,
+			invoice.name,
+			"<p>\n{% if doc.name %}</p>",
+		)
+
+	def test_print_hints_list_document_and_print_settings_fields(self):
+		hints = get_print_hints("Books Sales Invoice")
+
+		self.assertEqual(hints["doc"]["party"], "Customer")
+		self.assertEqual(hints["doc"]["items"][0]["rate"], "Rate")
+		self.assertNotIn("items_section_break_7", hints["doc"])
+		self.assertEqual(hints["print"]["company_name"], "Company Name")
+		self.assertEqual(hints["print"]["gstin"], "GSTIN")
+
+	def test_books_defaults_show_and_set_the_doctype_default_print_format(self):
+		print_format = make_print_format("Books Journal Entry")
+
+		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+			BooksDatabaseBridge().update("Defaults", {"journalEntryPrintTemplate": print_format})
+			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
+			self.assertEqual(defaults()["journalEntryPrintTemplate"], print_format)
+
+			BooksDatabaseBridge().update("Defaults", {"salesInvoiceTerms": "Net 30"})
+			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
+
+			BooksDatabaseBridge().update("Defaults", {"journalEntryPrintTemplate": None})
+			self.assertIsNone(defaults()["journalEntryPrintTemplate"])
+
+	def test_print_formats_must_be_for_the_doctype_they_print(self):
+		message = "not a print format for Books Sales Invoice"
+		bridge = BooksDatabaseBridge()
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			message,
+			bridge.update,
+			"Defaults",
+			{"salesInvoicePrintTemplate": "Business - Payment"},
+		)
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			message,
+			bridge.update,
+			"Defaults",
+			{"posPrintTemplate": "Business - Payment"},
+		)
+		profile = frappe.get_doc(
+			{
+				"doctype": "Books Pos Profile",
+				"name": unique_name("Print Profile"),
+				"inventory": "Stores",
+				"pos_print_template": "Business - Payment",
+			}
+		)
+		self.assertRaisesRegex(frappe.ValidationError, message, profile.insert)
+
 	def make_invoice(self):
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -131,3 +308,23 @@ class IntegrationTestPrinting(IntegrationTestCase):
 			}
 		).insert()
 		return payment.submit()
+
+
+def make_print_format(doctype):
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Print Format",
+				"name": unique_name("Test Format"),
+				"doc_type": doctype,
+				"custom_format": 1,
+				"html": "<p>{{ doc.name }}</p>",
+			}
+		)
+		.insert()
+		.name
+	)
+
+
+def defaults():
+	return BooksDatabaseBridge().get("Defaults", "Defaults")

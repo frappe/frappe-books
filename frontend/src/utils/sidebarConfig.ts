@@ -328,7 +328,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Print Templates`,
           name: 'print-template',
-          route: `/list/PrintTemplate/${t`Print Templates`}`,
+          route: `/list/PrintFormat/${t`Print Templates`}`,
         },
         {
           label: t`Customize Form`,

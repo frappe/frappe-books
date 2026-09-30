@@ -94,6 +94,11 @@ def system_settings_fields(source_schema: str) -> dict[str, str]:
 	return schema_mapping()[source_schema].get("system_settings", {})
 
 
+def print_format_fields(source_schema: str) -> dict[str, str]:
+	"""Fields of a Books settings schema that show and set a DocType's default print format."""
+	return schema_mapping()[source_schema].get("print_formats", {})
+
+
 def custom_field_mapping(source_schema: str) -> dict[str, str]:
 	"""Return Books custom field names mapped to their hosted columns."""
 	return custom_field_mappings().get(source_schema, {})

@@ -16,6 +16,6 @@ export class POSProfile extends Doc {
   ignorePricingRule?: boolean;
 
   static filters: FiltersMap = {
-    posPrintTemplate: () => ({ type: ModelNameEnum.SalesInvoice }),
+    posPrintTemplate: () => ({ docType: ModelNameEnum.SalesInvoice }),
   };
 }

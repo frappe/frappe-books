@@ -14,10 +14,10 @@
           @change="setTemplateName"
         />
       </template>
-      <FrappeButton v-if="displayDoc && doc?.template" @click="savePDF()">
+      <FrappeButton v-if="printDocument" @click="savePDF()">
         {{ t`Save as PDF` }}
       </FrappeButton>
-      <FrappeButton v-if="displayDoc && doc?.template" @click="savePDF(true)">
+      <FrappeButton v-if="printDocument" @click="savePDF(true)">
         {{ t`Print` }}
       </FrappeButton>
       <FrappeButton
@@ -43,15 +43,20 @@
       <div class="flex min-h-0 flex-col overflow-auto no-scrollbar">
         <!-- Template Container -->
         <div v-if="canDisplayPreview" class="p-4 overflow-auto custom-scroll custom-scroll-thumb1">
-          <PrintContainer
-            ref="printContainer"
-            :print-schema-name="displayDoc!.schemaName"
-            :template="doc.template!"
-            :values="values!"
-            :scale="scale"
-            :height="doc.height"
-            :width="doc.width"
+          <PrintSheet
+            v-if="printDocument"
+            ref="printSheet"
+            class="mx-auto shadow-lg border"
+            :document="printDocument"
+            :scale="Math.max(scale, 0.1)"
+            :width="pageSize.width"
+            :height="pageSize.height"
           />
+          <FrappeAlert v-else class="m-4" theme="red" :title="t`Template Error`">
+            <template #description>
+              <p class="whitespace-pre-wrap">{{ error }}</p>
+            </template>
+          </FrappeAlert>
         </div>
 
         <!-- Display Hints -->
@@ -66,14 +71,14 @@
           <!-- Entry Type -->
           <FormControl
             class="w-44 flex-shrink-0"
-            :df="fields.type"
+            :df="fields.docType"
             :border="true"
-            :value="doc.get('type')"
+            :value="doc.get('docType')"
             @change="async (value: unknown) => await setType(value)"
           />
           <!-- Display Doc -->
           <Link
-            v-if="doc.type"
+            v-if="doc.docType"
             class="w-48 min-w-0"
             :df="displayDocField"
             :border="true"
@@ -118,10 +123,10 @@
         <!-- Template Editor -->
         <div class="min-h-0">
           <TemplateEditor
-            v-if="typeof doc.template === 'string' && hints"
+            v-if="hints"
             ref="templateEditor"
             class="overflow-auto custom-scroll custom-scroll-thumb1 h-full"
-            :initial-value="doc.template"
+            :initial-value="doc.html ?? ''"
             :disabled="!canEditTemplate"
             :hints="hints"
             @input="() => (templateChanged = true)"
@@ -167,31 +172,43 @@
 import { EditorView } from '@codemirror/view';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
-import { PrintTemplate } from 'models/baseModels/PrintTemplate';
+import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { ModelNameEnum } from 'models/types';
 import { saveExportData } from 'reports/commonExporter';
 import { Field, TargetField } from 'schemas/types';
-import { TextInput as FrappeTextInput, Button as FrappeButton } from 'frappe-ui';
+import {
+  Alert as FrappeAlert,
+  Button as FrappeButton,
+  TextInput as FrappeTextInput,
+} from 'frappe-ui';
 import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import HorizontalResizer from 'src/components/HorizontalResizer.vue';
 import PageHeader from 'src/components/PageHeader.vue';
+import PrintSheet from 'src/components/PrintSheet.vue';
 import ShortcutKeys from 'src/components/ShortcutKeys.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { showDialog, showToast } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
 import {
-  PrintTemplateHint,
+  getPrintHints,
+  getPrintHTML,
+  previewPrintHTML,
+} from 'src/utils/printFormatApi';
+import {
+  PageSize,
+  PrintHints,
+  PrintHTML,
   baseTemplate,
-  getPrintTemplatePropHints,
-  getPrintTemplatePropValues,
+  getPageSize,
+  getPrintDocument,
   getTemplateNameFromFile,
-} from 'src/utils/printTemplates';
+} from 'src/utils/printFormats';
 import { docsPathRef, showSidebar } from 'src/utils/refs';
-import { DocRef, PrintValues } from 'src/utils/types';
+import { DocRef } from 'src/utils/types';
 import {
   ShortcutKey,
   focusOrSelectFormControl,
@@ -203,7 +220,6 @@ import { useDocShortcuts } from 'src/utils/vueUtils';
 import { getBooksDocOrNew } from 'src/frappe/useBooksDoc';
 import { getMapFromList } from 'utils/index';
 import { computed, defineComponent, inject, ref } from 'vue';
-import PrintContainer from './PrintContainer.vue';
 import SetPrintSize from './SetPrintSize.vue';
 import SetType from './SetType.vue';
 import TemplateBuilderHint from './TemplateBuilderHint.vue';
@@ -214,8 +230,9 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
     FrappeAccordion,
+    FrappeAlert,
     DropdownWithActions,
-    PrintContainer,
+    PrintSheet,
     HorizontalResizer,
     TemplateEditor,
     FormControl,
@@ -231,7 +248,7 @@ export default defineComponent({
   },
   props: { name: { type: String, required: true } },
   setup() {
-    const doc = ref(null) as DocRef<PrintTemplate>;
+    const doc = ref(null) as DocRef<PrintFormat>;
     const shortcuts = inject(shortcutsKey);
 
     let context = 'TemplateBuilder';
@@ -250,7 +267,9 @@ export default defineComponent({
       editMode: false,
       showHints: false,
       hints: undefined,
-      values: null,
+      print: null,
+      error: '',
+      previewRequest: 0,
       displayDoc: null,
       scale: 0.6,
       panelWidth: 22 /** rem */ * 16 /** px */,
@@ -265,9 +284,11 @@ export default defineComponent({
     } as {
       editMode: boolean;
       showHints: boolean;
-      hints?: PrintTemplateHint;
-      values: null | PrintValues;
-      displayDoc: PrintTemplate | null;
+      hints?: PrintHints;
+      print: null | PrintHTML;
+      error: string;
+      previewRequest: number;
+      displayDoc: Doc | null;
       showTypeModal: boolean;
       showSizeModal: boolean;
       scale: number;
@@ -282,18 +303,22 @@ export default defineComponent({
   },
   computed: {
     canEditTemplate(): boolean {
-      return !!this.doc?.isCustom && !!this.doc?.canEdit;
+      return !!this.doc?.isEditable && !!this.doc?.canEdit;
     },
     canDisplayPreview(): boolean {
-      if (!this.displayDoc || !this.values) {
-        return false;
-      }
-
-      if (!this.doc?.template) {
-        return false;
-      }
-
-      return true;
+      return !!this.printDocument || !!this.error;
+    },
+    printDocument(): string | null {
+      return this.print && getPrintDocument(this.print);
+    },
+    pageSize(): PageSize {
+      return getPageSize(this.doc?.css);
+    },
+    doctype(): string {
+      return this.fyo.store.permissions?.doctypes[this.doc?.docType ?? ''] ?? '';
+    },
+    previewSource(): unknown[] {
+      return [this.doc?.html, this.doc?.css, this.displayDoc];
     },
     applyChangesShortcut() {
       return [ShortcutKey.ctrl, ShortcutKey.enter];
@@ -357,10 +382,10 @@ export default defineComponent({
       return actions;
     },
     fields(): Record<string, Field> {
-      return getMapFromList(this.fyo.schemaMap.PrintTemplate?.fields ?? [], 'fieldname');
+      return getMapFromList(this.fyo.schemaMap.PrintFormat?.fields ?? [], 'fieldname');
     },
     displayDocField(): TargetField {
-      const target = this.doc?.type ?? ModelNameEnum.SalesInvoice;
+      const target = this.doc?.docType ?? ModelNameEnum.SalesInvoice;
       return {
         fieldname: 'displayDoc',
         label: this.t`Display Doc`,
@@ -373,7 +398,7 @@ export default defineComponent({
         return '';
       }
 
-      if (!this.doc.type) {
+      if (!this.doc.docType) {
         return this.t`Select a Template type`;
       }
 
@@ -381,7 +406,7 @@ export default defineComponent({
         return this.t`Select a Display Doc to view the Template`;
       }
 
-      if (!this.doc.template) {
+      if (this.doc.isEditable && !this.doc.html) {
         return this.t`Set a Template value to see the Print Template`;
       }
 
@@ -391,12 +416,17 @@ export default defineComponent({
       return { 'grid-template-columns': `auto 0px ${this.panelWidth}px` };
     },
   },
+  watch: {
+    previewSource() {
+      void this.setPreview();
+    },
+  },
   async mounted() {
     await this.initialize();
   },
   async activated(): Promise<void> {
     await this.initialize();
-    docsPathRef.value = docsPathMap.PrintTemplate ?? '';
+    docsPathRef.value = docsPathMap.PrintFormat ?? '';
     this.setShortcuts();
   },
   deactivated(): void {
@@ -433,24 +463,60 @@ export default defineComponent({
     },
     async initialize() {
       await this.setDoc();
-      if (this.doc?.type) {
-        this.hints = getPrintTemplatePropHints(this.doc.type, this.fyo);
+      // The editor takes the template once, when the hints mount it.
+      if (this.doc?.notInserted && !this.doc.html) {
+        await this.doc.set('html', baseTemplate);
       }
 
+      await this.setHints();
       focusOrSelectFormControl(this.doc as Doc, this.$refs.nameField, false);
-
-      if (!this.doc?.template) {
-        await this.doc?.set('template', baseTemplate);
+      await this.setDisplayInitialDoc();
+    },
+    async setHints() {
+      if (this.doctype) {
+        this.hints = await getPrintHints(this.doctype);
+      }
+    },
+    async setPreview() {
+      const request = ++this.previewRequest;
+      try {
+        const print = await this.getPreview();
+        if (request === this.previewRequest) {
+          this.print = print;
+          this.error = '';
+        }
+      } catch (error) {
+        if (request === this.previewRequest) {
+          this.print = null;
+          this.error = (error as Error).message;
+        }
+      }
+    },
+    async getPreview(): Promise<PrintHTML | null> {
+      const doc = this.doc;
+      const name = this.displayDoc?.name;
+      if (!doc || !name) {
+        return null;
       }
 
-      await this.setDisplayInitialDoc();
+      if (!doc.isEditable) {
+        return await getPrintHTML(this.doctype, name, doc.name!);
+      }
+
+      if (!doc.html) {
+        return null;
+      }
+
+      return await previewPrintHTML(this.doctype, name, doc.html, doc.css);
     },
     reset() {
       this.doc = null;
       this.displayDoc = null;
+      this.print = null;
+      this.error = '';
     },
     getTemplateEditorState() {
-      const fallback = this.doc?.template ?? '';
+      const fallback = this.doc?.html ?? '';
 
       if (!this.view) {
         return fallback;
@@ -465,7 +531,7 @@ export default defineComponent({
       }
 
       value ??= this.getTemplateEditorState();
-      await this.doc?.set('template', value);
+      await this.doc?.set('html', value);
     },
     setScale(e: Event | number | string) {
       let value = this.scale;
@@ -519,7 +585,7 @@ export default defineComponent({
     },
     getEditModeScale(): number {
       // @ts-expect-error template refs are untyped
-      const div = this.$refs.printContainer.$el as unknown;
+      const div = this.$refs.printSheet?.$el as unknown;
       if (!(div instanceof HTMLDivElement)) {
         return this.scale;
       }
@@ -532,18 +598,22 @@ export default defineComponent({
       return Number(targetScale.toFixed(2));
     },
     savePDF(shouldPrint?: boolean) {
-      const printContainer = this.$refs.printContainer as {
-        savePDF: (name?: string, shouldPrint?: boolean) => void;
-      };
-
-      if (!printContainer?.savePDF) {
+      const printSheet = this.$refs.printSheet as { print?: () => void };
+      if (!printSheet?.print) {
         return;
       }
 
-      printContainer.savePDF(this.doc?.name, shouldPrint);
+      // Unsaved edits print from the preview, so the browser saves the PDF.
+      showToast({
+        message: shouldPrint
+          ? this.t`Print dialog opened`
+          : this.t`Save as PDF dialog opened`,
+        type: 'success',
+      });
+      printSheet.print();
     },
     async setDisplayInitialDoc() {
-      const schemaName = this.doc?.type;
+      const schemaName = this.doc?.docType;
       if (!schemaName || this.displayDoc?.schemaName === schemaName) {
         return;
       }
@@ -587,38 +657,31 @@ export default defineComponent({
       }
 
       this.doc = (await getBooksDocOrNew(
-        ModelNameEnum.PrintTemplate,
+        ModelNameEnum.PrintFormat,
         this.name,
-      )) as PrintTemplate;
+      )) as PrintFormat;
     },
     async setType(value: unknown) {
       if (typeof value !== 'string') {
         return;
       }
 
-      await this.doc?.set('type', value);
+      await this.doc?.set('docType', value);
+      await this.setHints();
       await this.setDisplayInitialDoc();
     },
     async setDisplayDoc(value: string) {
       if (!value) {
-        delete this.hints;
-        this.values = null;
         this.displayDoc = null;
         return;
       }
 
-      const schemaName = this.doc?.type;
+      const schemaName = this.doc?.docType;
       if (!schemaName) {
         return;
       }
 
-      // Templates read their document through the bridge, by Books field names.
-      const displayDoc = await this.fyo.doc.getDoc(schemaName, value, {
-        refresh: true,
-      });
-      this.hints = getPrintTemplatePropHints(schemaName, this.fyo);
-      this.values = await getPrintTemplatePropValues(displayDoc);
-      this.displayDoc = displayDoc;
+      this.displayDoc = await getBooksDocOrNew(schemaName, value);
     },
     async selectFile() {
       const { name: fileName, text } = await selectTextFile([
@@ -629,7 +692,7 @@ export default defineComponent({
         return;
       }
 
-      await this.doc?.set('template', text);
+      await this.doc?.set('html', text);
       this.view?.dispatch({
         changes: { from: 0, to: this.view.state.doc.length, insert: text },
       });

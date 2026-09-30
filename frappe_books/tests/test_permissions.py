@@ -4,7 +4,14 @@ import frappe
 from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, make_tax
+from frappe_books.tests.accounting import (
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	make_tax,
+	unique_name,
+)
 from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 from frappe_books.ui_bridge.linked_entries import linked_entries
@@ -20,7 +27,7 @@ ROLE_MATRIX = {
 	"Books Party": (FULL, FULL, {"read", "write", "create"}),
 	"Books Tax": (FULL, FULL, READ),
 	"Books Defaults": (FULL, FULL, READ),
-	"Books Print Template": (FULL, READ, READ),
+	"Print Format": (FULL, FULL, READ),
 	"Books Custom Form": (FULL, READ, READ),
 	"Books Ledger Entry": (READ, READ, READ),
 	"Books Stock Ledger Entry": (READ, READ, READ),
@@ -65,11 +72,21 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(TEST_USER):
 			self.assertRaises(frappe.PermissionError, make_tax, account.name)
 
-	def test_books_user_cannot_write_print_template(self):
-		template = frappe.get_last_doc("Books Print Template")
+	def test_books_manager_writes_print_formats_books_user_prints(self):
+		with self.set_user(MANAGER):
+			print_format = frappe.get_doc(
+				{
+					"doctype": "Print Format",
+					"name": unique_name("Manager Format"),
+					"doc_type": "Books Sales Invoice",
+					"custom_format": 1,
+					"html": "<div>{{ doc.name }}</div>",
+				}
+			).insert()
 		with self.set_user(TEST_USER):
-			template.template = "<div>{{ doc.name }}</div>"
-			self.assertRaises(frappe.PermissionError, template.save)
+			self.assertTrue(frappe.has_permission("Print Format", "print"))
+			print_format.html = "<p>{{ doc.name }}</p>"
+			self.assertRaises(frappe.PermissionError, print_format.save)
 
 	def test_only_books_manager_imports(self):
 		importable = frappe.get_all(

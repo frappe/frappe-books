@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 import frappe
+from frappe.api.v2 import run_doc_method as run_doc_method_v2
 from frappe.client import insert
 from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
@@ -248,6 +249,30 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertTrue(cancelled["cancelled"])
 		self.assertEqual(frappe.db.get_value("Books Payment", payment, "docstatus"), 2)
 
+	def test_an_invoice_cancels_the_payments_it_lists_through_its_controller(self):
+		invoice = self._paid_invoice()
+		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
+
+		cancelled = run_invoice_method(invoice, "cancel_with_linked_docs", linked_docs=linked_docs)
+
+		self.assertEqual(cancelled.docstatus, 2)
+		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 2)
+
+	def test_an_invoice_copy_older_than_the_saved_one_cancels_nothing(self):
+		invoice = self._paid_invoice()
+		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
+		frappe.db.set_value(invoice.doctype, invoice.name, "terms", "Changed elsewhere")
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
+
+		self.assertRaises(
+			frappe.TimestampMismatchError,
+			run_invoice_method,
+			*(invoice, "cancel_with_linked_docs"),
+			linked_docs=linked_docs,
+		)
+		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
+
 	def test_a_return_still_blocks_cancelling_a_paid_invoice(self):
 		invoice = self._paid_invoice()
 		credit_note = map_return(invoice.doctype, invoice.name)
@@ -461,6 +486,12 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			.insert()
 			.submit()
 		)
+
+
+def run_invoice_method(invoice, method, **kwargs):
+	"""Run a controller method on the client's copy of `invoice`, as /books does."""
+	run_doc_method_v2(method, invoice.as_dict(convert_dates_to_str=True), kwargs)
+	return frappe.get_doc(invoice.doctype, invoice.name)
 
 
 def _modified(doc):

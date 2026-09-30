@@ -44,7 +44,9 @@ test('a new journal entry is numbered as before, and its accounts group by root 
   const entry = newFrappeDoc('JournalEntry');
   assert.match(entry.name, /^New Journal Entry \d{2}$/);
   assert.equal(entry.isTransactional, true);
-  assert.equal(getSchema('JournalEntryAccount').fields[0].groupBy, 'rootType');
+  const [account] = getSchema('JournalEntryAccount').fields;
+  assert.deepEqual([account.groupBy, account.create], ['rootType', false]);
+  assert.equal(getSchema('JournalEntry').fields[1].create, true);
 });
 
 test('a new journal entry is saved without its temporary name, which the server replaces', async () => {

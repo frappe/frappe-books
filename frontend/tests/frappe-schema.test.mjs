@@ -93,7 +93,7 @@ test('a model presents fields its DocType has no property for, and a field that 
   const presentation = {
     label: 'Voucher',
     fields: {
-      account: { groupBy: 'rootType' },
+      account: { groupBy: 'rootType', create: false },
       kind: { optionLabels: { In: 'Receipt' } },
     },
   };
@@ -106,6 +106,7 @@ test('a model presents fields its DocType has no property for, and a field that 
     schema.fields.find((f) => f.fieldname === fieldname);
 
   assert.equal(field('account').groupBy, 'rootType');
+  assert.equal(field('account').create, false);
   assert.deepEqual(field('kind').options, [
     { value: 'In', label: 'Receipt' },
     { value: 'Out', label: 'Out' },

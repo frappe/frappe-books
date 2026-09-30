@@ -51,7 +51,7 @@ async function mount() {
   };
   await fyo.db.init();
   fyo.doc.registerModels(models);
-  fyo.singles.SystemSettings = { currency: 'USD', displayPrecision: 2 } as any;
+  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 } as any;
   const state = reactive({
     applied: {} as QueryFilter,
     schemaName: 'SalesInvoice',

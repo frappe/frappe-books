@@ -21,7 +21,7 @@ async function mount() {
   FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
   await fyo.db.init();
   fyo.doc.registerModels(models);
-  fyo.singles.SystemSettings = { dateFormat: 'MMM d, y' } as any;
+  fyo.singles.SystemSettings = { date_format: 'MMM d, y' } as any;
   fyo.db.getAll = async () => [{ name: 'Cash' }];
   fyo.db.searchLink = async () => [{ name: 'Cash' }];
   showSidebar.value = false;

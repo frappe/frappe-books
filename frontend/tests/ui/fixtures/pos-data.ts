@@ -99,30 +99,32 @@ export async function preparePOSData() {
     if (schema?.isSingle) fyo.doc.getNewDoc(schema.name);
   }
   Object.assign(fyo.singles.AccountingSettings!, {
-    enableInvoiceReturns: true,
-    enableCouponCode: true,
-    enablePriceList: true,
-    enableItemEnquiry: true,
-    enableLoyaltyProgram: true,
-    enableDiscounting: true,
+    enable_invoice_returns: true,
+    enable_coupon_code: true,
+    enable_price_list: true,
+    enable_item_enquiry: true,
+    enable_loyalty_program: true,
+    enable_discounting: true,
   });
   Object.assign(fyo.singles.POSSettings!, {
-    posUI: 'Modern',
-    canChangeRate: true,
-    canEditDiscount: true,
+    pos_ui: 'Modern',
+    can_change_rate: true,
+    can_edit_discount: true,
   });
   Object.assign(fyo.singles.InventorySettings!, {
-    enableUomConversions: false,
+    enable_uom_conversions: false,
   });
   Object.assign(fyo.singles.Defaults!, {
-    posCashDenominations: [1, 2, 5, 10, 20, 50, 100, 200, 500].map((value) => ({
-      denomination: fyo.pesa(value),
-    })),
-    saveButtonColour: '',
-    cancelButtonColour: '',
-    heldButtonColour: '',
-    returnButtonColour: '',
-    payButtonColour: '',
+    pos_cash_denominations: [1, 2, 5, 10, 20, 50, 100, 200, 500].map(
+      (value) => ({
+        denomination: fyo.pesa(value),
+      })
+    ),
+    save_button_colour: '',
+    cancel_button_colour: '',
+    held_button_colour: '',
+    return_button_colour: '',
+    pay_button_colour: '',
   });
   for (const schema of ['Party', 'Item', 'PaymentMethod', 'POSOpeningShift']) {
     records[schema].forEach((row) => fyo.doc.getNewDoc(schema, row));

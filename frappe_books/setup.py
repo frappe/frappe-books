@@ -33,6 +33,10 @@ CORE_PERMISSIONS = {
 		"Books User": ("read", "report", "print", "export", "email"),
 		"Books Manager": ("read", "write", "create", "delete", "report", "print", "export", "email", "share"),
 	},
+	"Print Format": {
+		"Books User": ("read", "print"),
+		"Books Manager": ("read", "write", "create", "delete", "print"),
+	},
 }
 
 

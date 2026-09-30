@@ -6,8 +6,8 @@ import type { DocField, DocTypeMeta } from './meta';
 export interface Presentation {
   label: string;
   quickEditFields?: string[];
-  /** The name field: asked for when the DocType names by prompt, else shown read only. */
-  nameField?: { label: string; placeholder?: string };
+  /** The name field: asked for when the DocType names by prompt, else shown read only, or only in lists when hidden. */
+  nameField?: { label: string; placeholder?: string; hidden?: boolean };
   /** Properties a field shows with that its DocField has none for, like option labels or a link's grouping. */
   fields?: Record<string, Partial<Field>>;
 }
@@ -187,6 +187,7 @@ function getNameFields(
     placeholder: presentation.nameField?.placeholder,
     required: true,
     readOnly: isPrompt ? undefined : true,
+    hidden: presentation.nameField?.hidden,
     section: fields[0]?.section ?? DEFAULT_SECTION,
     tab: fields[0]?.tab,
   } as Field;

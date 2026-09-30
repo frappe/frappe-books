@@ -52,3 +52,26 @@ test('a tax template shows its name and detail rows as before', () => {
   );
   assert.deepEqual(frappeModels.Tax.getListViewSettings(fyo).columns, ['name']);
 });
+
+test('a payment method shows its type, account and clearance date as before', () => {
+  const method = getSchema('PaymentMethod');
+  assert.equal(method.label, 'Payment Method');
+  assert.deepEqual(getLayout('PaymentMethod'), [
+    'name | Name | ',
+    'type | Type | ',
+    'account | Account | ',
+    'requires_clearance_date | Requires Clearance Date | ',
+  ]);
+  assert.deepEqual(method.quickEditFields, [
+    'name',
+    'type',
+    'account',
+    'requires_clearance_date',
+  ]);
+  const account = method.fields.find((field) => field.fieldname === 'account');
+  assert.equal(account.create, false);
+  assert.deepEqual(
+    frappeModels.PaymentMethod.getListViewSettings(fyo).columns,
+    ['name', 'type']
+  );
+});

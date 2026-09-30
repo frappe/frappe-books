@@ -86,3 +86,40 @@ test('an inventory feature cannot be turned off once it is on', async () => {
 
   assert.equal(readOnly(settings, 'enable_point_of_sale'), false);
 });
+
+test('the rules of each Frappe-backed model name fields of its DocType', () => {
+  const problems = Object.entries(frappeModels).flatMap(
+    ([schemaName, Model]) => {
+      const known = fieldnames(schemaName);
+      const doc = newFrappeDoc(schemaName);
+      const maps = {
+        filters: Model.filters,
+        createFilters: Model.createFilters,
+        hidden: doc.hidden,
+        readOnly: doc.readOnly,
+        validations: doc.validations,
+      };
+      return Object.entries(maps).flatMap(([map, rules]) =>
+        Object.keys(rules ?? {})
+          .filter((fieldname) => !known.includes(fieldname))
+          .map((fieldname) => `${schemaName}.${map}.${fieldname}`)
+      );
+    }
+  );
+  assert.deepEqual(problems, []);
+});
+
+test('Defaults hide inventory and POS fields as those features are off', () => {
+  fyo.singles.AccountingSettings = {};
+  fyo.singles.InventorySettings = {};
+  const defaults = newFrappeDoc('Defaults');
+  assert.equal(hidden(defaults, 'shipment_terms'), true);
+  assert.equal(hidden(defaults, 'pos_customer'), true);
+  assert.equal(hidden(defaults, 'sales_invoice_terms'), false);
+
+  fyo.singles.AccountingSettings = { enableInventory: true };
+  fyo.singles.InventorySettings = { enable_point_of_sale: true };
+  assert.equal(hidden(defaults, 'shipment_terms'), false);
+  assert.equal(hidden(defaults, 'pos_customer'), false);
+  assert.equal(hidden(defaults, 'pos_cash_denominations'), false);
+});

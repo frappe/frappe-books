@@ -1,8 +1,11 @@
 import type { DocValueMap } from 'fyo/core/types';
 import { NotFoundError } from 'fyo/utils/errors';
 import { fyo } from 'src/initFyo';
+import { call } from 'src/web/api';
+import type { DocValues } from './api';
 import type { FrappeDoc } from './document';
 import { getDocType } from './doctypes';
+import { toDocValues } from './values';
 
 /** Open Frappe documents by schema and name, so a form, a quick edit and a link share one. */
 const docs = new Map<string, FrappeDoc>();
@@ -17,6 +20,23 @@ export function newFrappeDoc(
   doc.name ??= fyo.doc.getTemporaryName(schema);
   keep(doc);
   return doc;
+}
+
+/** The unsaved document a whitelisted server mapper, like make_customer, builds from `sourceName`. */
+export async function newFrappeMappedDoc(
+  schemaName: string,
+  method: string,
+  sourceName: string
+): Promise<FrappeDoc> {
+  const values = await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
+    method,
+    source_name: sourceName,
+  });
+  const getSchema = (target: string) => getDocType(target).schema;
+  return newFrappeDoc(
+    schemaName,
+    toDocValues(getSchema(schemaName), values, fyo, getSchema)
+  );
 }
 
 /** An open document, reloaded if asked and unedited, or the saved one loaded. */

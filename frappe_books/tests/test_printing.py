@@ -5,6 +5,7 @@ from decimal import Decimal
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import money_in_words, now_datetime
+from frappe.utils.pdf import read_options_from_html
 from frappe.utils.print_utils import get_print
 
 from frappe_books.accounting.money import company_currency
@@ -62,6 +63,22 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				self.assertIn(expected, html)
 				# Jinja prints an undefined name back as its tag.
 				self.assertNotIn("{{", html)
+
+	def test_built_in_formats_set_their_borderless_pdf_page(self):
+		invoice = self.make_invoice()
+
+		for print_format, width, height in (
+			("Business - Sales Invoice", "21cm", "29.7cm"),
+			("Business-POS - Sales Invoice", "8cm", "22cm"),
+		):
+			with self.subTest(print_format=print_format):
+				html = get_print(invoice.doctype, invoice.name, print_format=print_format)
+				_html, options = read_options_from_html(html)
+
+				self.assertEqual(options["page-width"], width)
+				self.assertEqual(options["page-height"], height)
+				self.assertEqual(options["margin-left"], "0")
+				self.assertEqual(options["margin-top"], "0")
 
 	def test_built_in_formats_print_their_doctype(self):
 		formats = dict(

@@ -220,6 +220,11 @@ test('the payment lists show, filter and open as they did', () => {
   );
   for (const fieldname of ['name', 'number_series', 'submitted', 'cancelled'])
     assert.ok(filters.some((field) => field.fieldname === fieldname));
+  const type = filters.find(({ fieldname }) => fieldname === 'reference_type');
+  assert.deepEqual(
+    type.options.map(({ label }) => label),
+    ['Sales', 'Purchase']
+  );
 });
 
 async function waitFor(condition) {

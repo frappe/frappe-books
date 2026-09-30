@@ -18,6 +18,8 @@ export class Account extends FrappeDoc {
   static override presentation = {
     label: 'Account',
     create: false,
+    // Frappe moves the nested set as accounts are added; a client copy would be stale.
+    omitFields: ['lft', 'rgt', 'old_parent'],
     quickEditFields: [
       'root_type',
       'parent_books_account',

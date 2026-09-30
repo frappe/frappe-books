@@ -12,7 +12,8 @@ from frappe import client
 from frappe.api.v1 import update_doc
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import unique_name
+from frappe_books.customization import camel_case
+from frappe_books.tests.accounting import ensure_user, unique_name
 from frappe_books.ui_api import get_field_properties
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
@@ -202,12 +203,52 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
 		cases = {
 			"needs a default": [{**FIELD, "is_required": 1}],
-			"must be unique": [FIELD, {**FIELD, "label": "Duplicate"}],
+			"already used for Custom Field 1": [FIELD, {**FIELD, "label": "Duplicate"}],
+			"already exists for UOM": [{**FIELD, "fieldname": "isWhole"}],
 			"at least two options": [{**FIELD, "fieldtype": "Select", "options": "Only\n "}],
+			"needs a Target": [{**PARTY_FIELD, "target": None}],
+			"needs a References": [{**REFERENCE_FIELD, "references": None}],
 		}
 		for message, fields in cases.items():
 			with self.subTest(message=message):
 				self.assertRaisesRegex(frappe.ValidationError, message, _custom_form("UOM", fields).insert)
+
+
+class IntegrationTestCustomFieldnames(IntegrationTestCase):
+	def test_a_new_row_is_named_after_its_label_as_lodash_camel_case_names_it(self):
+		# Expected names are lodash's camelCase of each label.
+		for label, fieldname in (
+			("Delivery Date", "deliveryDate"),
+			("GST No.", "gstNo"),
+			("HTTPServer Port", "httpServerPort"),
+			("crème brûlée", "cremeBrulee"),
+			("Customer's PO", "customersPo"),
+			("2nd Contact", "2ndContact"),
+			("Straße Nr", "strasseNr"),
+			("ÆON flux", "aeOnFlux"),
+			("Имя Клиента", "имяКлиента"),
+			("ग्राहक नाम", "ग्राहकनाम"),
+			("Size (cm)", "sizeCm"),
+		):
+			with self.subTest(label=label):
+				self.assertEqual(camel_case(label), fieldname)
+
+	def test_preview_names_new_rows_and_keeps_named_ones(self):
+		form = _new_custom_form([{**FIELD, "fieldname": None}, {**SIZE_FIELD, "label": "Renamed Size"}])
+		form.preview()
+		self.assertEqual(
+			[row.fieldname for row in form.custom_fields], ["hostedBridgeTestValue", "hostedBridgeTestSize"]
+		)
+
+	def test_preview_needs_the_right_to_customize(self):
+		form = _new_custom_form([{**FIELD, "fieldname": None}])
+		with self.set_user(ensure_user("books-custom-form-user@example.com", "Books User")):
+			self.assertRaises(frappe.PermissionError, form.preview)
+
+
+def _new_custom_form(fields):
+	"""An unsaved form, as /books sends one to preview."""
+	return frappe.get_doc({**_form_values("UOM", fields), "__islocal": 1})
 
 
 def _custom_form(schema, fields):

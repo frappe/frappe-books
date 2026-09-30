@@ -5,7 +5,8 @@ import { FrappeDoc } from 'src/frappe/document';
 export class JournalEntryAccount extends FrappeDoc {
   static override presentation = {
     label: 'Journal Entry Account',
-    fields: { account: { groupBy: 'rootType' } },
+    // Getdoctype sends no only_select, so the model says the link offers no Create, as before.
+    fields: { account: { groupBy: 'rootType', create: false } },
   };
 
   // Accounts are still read through the bridge, so this uses its field names.

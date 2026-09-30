@@ -140,15 +140,12 @@ function toField(
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
+    create: docfield.fieldtype === 'Link' ? !docfield.only_select : undefined,
     ...presented,
   } as Field & { target?: string; create?: boolean };
 
   if (properties.target) {
     field.target = schemaNames[properties.target] ?? properties.target;
-  }
-
-  if (docfield.fieldtype === 'Link') {
-    field.create = !docfield.only_select;
   }
 
   return field;

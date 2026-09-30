@@ -28,12 +28,12 @@
    "unique": 1
   },
   {
-   "description": "Root Type",
    "fieldname": "root_type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Root Type",
    "options": "Asset\nLiability\nEquity\nIncome\nExpense",
+   "placeholder": "Root Type",
    "reqd": 1,
    "set_only_once": 1
   },
@@ -41,8 +41,18 @@
    "fieldname": "parent_books_account",
    "fieldtype": "Link",
    "label": "Parent Account",
+   "mandatory_depends_on": "eval:!doc.is_group",
+   "only_select": 1,
    "options": "Books Account",
    "set_only_once": 1
+  },
+  {
+   "fieldname": "account_type",
+   "fieldtype": "Select",
+   "label": "Account Type",
+   "options": "\nAccumulated Depreciation\nBank\nCash\nChargeable\nCost of Goods Sold\nDepreciation\nEquity\nExpense Account\nExpenses Included In Valuation\nFixed Asset\nIncome Account\nPayable\nReceivable\nRound Off\nStock\nStock Adjustment\nStock Received But Not Billed\nTax\nTemporary",
+   "placeholder": "Account Type",
+   "read_only_depends_on": "eval:!doc.__islocal && doc.account_type"
   },
   {
    "default": "0",
@@ -73,20 +83,13 @@
    "hidden": 1,
    "label": "Old Parent",
    "options": "Books Account"
-  },
-  {
-   "description": "Account Type",
-   "fieldname": "account_type",
-   "fieldtype": "Select",
-   "label": "Account Type",
-   "options": "\nAccumulated Depreciation\nBank\nCash\nChargeable\nCost of Goods Sold\nDepreciation\nEquity\nExpense Account\nExpenses Included In Valuation\nFixed Asset\nIncome Account\nPayable\nReceivable\nRound Off\nStock\nStock Adjustment\nStock Received But Not Billed\nTax\nTemporary"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-09-30 17:00:00.000000",
+ "modified": "2026-09-30 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Account",

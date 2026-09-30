@@ -14,6 +14,7 @@ export class PricingRule extends FrappeDoc {
   static override doctype = 'Books Pricing Rule';
   static override presentation = {
     label: 'Pricing Rule',
+    nameField: { label: 'ID' },
     fields: {
       applied_items: { edit: true },
       price_discount_type: {

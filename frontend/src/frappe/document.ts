@@ -176,6 +176,11 @@ export class FrappeDoc extends Doc {
   override async _insert() {
     await this._preSync();
     const values = this.getFrappeValues();
+    // Frappe keeps a name it is sent, so only a name the user gives goes with the document.
+    if (this.schema.naming !== 'manual') {
+      delete values.name;
+    }
+
     await this._setSaved(await api.insertDocument(this.doctype, values));
     return this;
   }

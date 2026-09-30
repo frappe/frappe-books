@@ -4,7 +4,6 @@ import json
 from typing import Any, Literal, get_args
 
 import frappe
-from frappe.desk.form import linked_with
 from frappe.model.docstatus import DocStatus
 from frappe.model.document import Document
 
@@ -42,16 +41,6 @@ def get_duplicate(source_schema: str, values: dict[str, Any]) -> dict[str, Any]:
 	return BooksDatabaseBridge().get_duplicate(source_schema, values)
 
 
-@frappe.whitelist()
-def get_invoice_payments(source_schema: str, name: str) -> list[dict[str, Any]]:
-	"""Return the submitted payments that cancelling an invoice also cancels.
-
-	Other submitted documents that link to the invoice, like returns, still block its cancellation.
-	"""
-	linked = linked_with.get_submitted_linked_docs(target_doctype(source_schema), name)
-	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment"]
-
-
 @frappe.whitelist(methods=["POST"])
 def run_doc_method(
 	method: str, source_schema: str, values: dict[str, Any], name: str | None = None
@@ -71,7 +60,7 @@ def lifecycle_action(
 	"""Run accounting and stock lifecycle hooks in one server transaction.
 
 	Frappe refuses the action if the document changed after the client read `modified`. A cancel
-	first cancels `linked_docs`, the payments `get_invoice_payments` listed.
+	first cancels `linked_docs`, the payments `get_payments_to_cancel` listed.
 	"""
 	# Frappe skips a bare Literal annotation because its values are strings.
 	if action not in get_args(LifecycleAction):
@@ -93,7 +82,7 @@ def cancel_with_linked_docs(doc: Document, linked_docs: list[dict[str, Any]]) ->
 	doc.docstatus = DocStatus.CANCELLED
 	doc._original_modified = doc.modified
 	doc.check_if_latest()
-	linked_with.cancel_all_linked_docs(linked_docs, root_doctype=doc.doctype, root_name=doc.name)
+	doc.cancel_with_linked_docs(linked_docs)
 
 
 @frappe.whitelist(methods=["POST"])

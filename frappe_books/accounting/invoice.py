@@ -2,6 +2,7 @@
 
 import frappe
 from frappe import _
+from frappe.desk.form import linked_with
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns
@@ -132,6 +133,15 @@ class PostingInvoiceController(InvoiceController):
 		payment.submit()
 		self.outstanding_amount = self.db_get("outstanding_amount")
 
+	@frappe.whitelist()
+	def cancel_with_linked_docs(self, linked_docs: list[dict]):
+		"""Cancel `linked_docs`, the payments `get_payments_to_cancel` listed, and then the invoice.
+
+		Frappe's Cancel All does it in one transaction, on a fresh copy of the invoice.
+		"""
+		linked_with.cancel_all_linked_docs(linked_docs, root_doctype=self.doctype, root_name=self.name)
+		self.reload()
+
 	def before_cancel(self):
 		cancel_auto_transfer(self)
 		self.outstanding_amount = 0
@@ -166,6 +176,16 @@ class PostingInvoiceController(InvoiceController):
 		for doctype, names in ((transfer_doctype, transfers), ("Books Payment", set(payments))):
 			for name in names:
 				frappe.delete_doc(doctype, name)
+
+
+@frappe.whitelist()
+def get_payments_to_cancel(doctype: str, name: str) -> list[dict]:
+	"""Return the submitted payments that cancelling an invoice also cancels.
+
+	Other submitted documents that link to the invoice, like returns, still block its cancellation.
+	"""
+	linked = linked_with.get_submitted_linked_docs(doctype, name)
+	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment"]
 
 
 def calculate_invoice(invoice):

@@ -166,8 +166,8 @@ export async function cancelDocWithPrompt(doc: Doc) {
 
 /** The submitted payments that cancelling the invoice `doc` also cancels. */
 async function getInvoicePayments(doc: Doc): Promise<LinkedDoc[]> {
-  return await call('frappe_books.ui_api.get_invoice_payments', {
-    source_schema: doc.schemaName,
+  return await call('frappe_books.accounting.invoice.get_payments_to_cancel', {
+    doctype: fyo.store.permissions?.doctypes[doc.schemaName],
     name: doc.name,
   });
 }

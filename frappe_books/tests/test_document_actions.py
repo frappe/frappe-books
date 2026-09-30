@@ -7,6 +7,7 @@ from frappe.client import insert
 from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
 
+from frappe_books.accounting.invoice import get_payments_to_cancel
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
@@ -28,7 +29,7 @@ from frappe_books.tests.accounting import (
 	make_number_series,
 	make_party,
 )
-from frappe_books.ui_api import get_duplicate, get_invoice_payments, lifecycle_action, run_doc_method
+from frappe_books.ui_api import get_duplicate, lifecycle_action, run_doc_method
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 MAPPERS = "frappe_books.frappe_books.doctype.{0}.{0}.{1}"
@@ -240,7 +241,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 	def test_cancelling_a_paid_invoice_cancels_the_payments_it_lists(self):
 		invoice = self._paid_invoice()
 		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
-		linked_docs = get_invoice_payments("SalesInvoice", invoice.name)
+		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name, _modified(invoice), linked_docs)
 
 		self.assertEqual([doc["name"] for doc in linked_docs], [payment])
@@ -253,7 +254,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		credit_note.make_auto_payment = 0
 		credit_note.insert().submit()
 
-		payments = get_invoice_payments("SalesInvoice", invoice.name)
+		payments = get_payments_to_cancel(invoice.doctype, invoice.name)
 
 		self.assertEqual([doc["doctype"] for doc in payments], ["Books Payment"])
 		self.assertRaises(
@@ -264,7 +265,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 	def test_linked_documents_are_cancelled_with_the_users_rights(self):
 		invoice = self._paid_invoice()
-		linked_docs = get_invoice_payments("SalesInvoice", invoice.name)
+		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		args = ("cancel", "SalesInvoice", invoice.name, _modified(invoice), linked_docs)
 
 		with self.set_user(ensure_user("books-cancel-user@example.com", "Books User")):
@@ -312,7 +313,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 	def test_cancel_refuses_a_document_changed_since_it_was_read(self):
 		invoice = self._paid_invoice()
 		read = _modified(invoice)
-		linked_docs = get_invoice_payments("SalesInvoice", invoice.name)
+		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		frappe.db.set_value(invoice.doctype, invoice.name, "terms", "Changed elsewhere")
 
 		for docs in ([], linked_docs):

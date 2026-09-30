@@ -172,3 +172,27 @@ test('discounts lead to pricing rules, then coupons, and stay on once on', async
   assert.equal(hidden(settings, 'enable_coupon_code'), false);
   assert.equal(readOnly(settings, 'enable_pricing_rule'), false);
 });
+
+test('the System tab offers sample dates and takes custom formats and locales', async () => {
+  const field = (fieldname) =>
+    getSchema('SystemSettings').fields.find((f) => f.fieldname === fieldname);
+  assert.deepEqual(field('date_format').options.slice(0, 2), [
+    { value: 'dd/MM/yyyy', label: '23/03/2022' },
+    { value: 'MM/dd/yyyy', label: '03/23/2022' },
+  ]);
+  assert.equal(field('currency').readOnly, true);
+  assert.deepEqual(fieldnames('SystemSettings').slice(4, 8), [
+    'locale',
+    'display_precision',
+    'currency',
+    'internal_precision',
+  ]);
+
+  const settings = newFrappeDoc('SystemSettings');
+  await settings.set('date_format', 'EEE, d MMM y');
+  await settings.set('locale', 'de-CH');
+  await assert.rejects(
+    settings.set('display_precision', 10),
+    /between 0 and 9/
+  );
+});

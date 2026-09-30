@@ -13,21 +13,25 @@ import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 import type { InvoiceItem } from './InvoiceItem';
 
 // A new rate for rows priced by the server follows these.
 const RATE_SOURCE_FIELDS = ['party', 'price_list', 'currency', 'exchange_rate'];
 // The server fills these from the party.
 const PARTY_FIELDS = ['account', 'currency', 'exchange_rate'];
-/** Links of invoices and quotes that offer no Create. */
-export const NO_CREATE = [
-  'price_list',
-  'currency',
-  'back_reference',
-  'return_against',
-  'quote',
-  'loyalty_program',
-];
+/** Invoice and quote fields: links that offer no Create, and items edited in the row editor. */
+export const INVOICE_FIELDS = {
+  ...withoutCreate([
+    'price_list',
+    'currency',
+    'back_reference',
+    'return_against',
+    'quote',
+    'loyalty_program',
+  ]),
+  items: { edit: true },
+};
 
 /**
  * An invoice or quote served by Frappe. Its controller fills defaults,

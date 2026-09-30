@@ -5,6 +5,8 @@ import { ValidationError } from 'fyo/utils/errors';
 import { getIsDocEnabledColumn } from 'models/helpers';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
+import { PricingRuleItem } from '../PricingRuleItem/PricingRuleItem';
 
 /**
  * Books Pricing Rule, served by Frappe. The DocType shows each discount
@@ -27,12 +29,11 @@ export class PricingRule extends FrappeDoc {
       rounding_method: {
         optionLabels: { floor: 'Floor', round: 'Round', ceil: 'Ceil' },
       },
-      free_item: { create: false },
-      free_item_unit: { create: false },
+      ...withoutCreate(['free_item', 'free_item_unit']),
     },
-    tables: { applied_items: { item: { create: false } } },
   };
   static override previewMethod = 'preview';
+  static override rowModels = { applied_items: PricingRuleItem };
 
   min_quantity?: number;
   max_quantity?: number;

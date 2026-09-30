@@ -7,15 +7,17 @@ export class NumberSeries extends FrappeDoc {
     label: 'Number Series',
     nameField: { label: 'Prefix' },
     quickEditFields: ['reference_type', 'start', 'pad_zeros'],
-    optionLabels: {
+    fields: {
       reference_type: {
-        SalesInvoice: 'Sales Invoice',
-        SalesQuote: 'Sales Quote',
-        PurchaseInvoice: 'Purchase Invoice',
-        JournalEntry: 'Journal Entry',
-        StockMovement: 'Stock Movement',
-        PurchaseReceipt: 'Purchase Receipt',
-        PricingRule: 'Pricing Rule',
+        optionLabels: {
+          SalesInvoice: 'Sales Invoice',
+          SalesQuote: 'Sales Quote',
+          PurchaseInvoice: 'Purchase Invoice',
+          JournalEntry: 'Journal Entry',
+          StockMovement: 'Stock Movement',
+          PurchaseReceipt: 'Purchase Receipt',
+          PricingRule: 'Pricing Rule',
+        },
       },
     },
   };

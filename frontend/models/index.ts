@@ -5,7 +5,6 @@ import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/Accoun
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
 import { Currency } from './baseModels/Currency/Currency';
 import { Address } from './baseModels/Address/Address';
-import { CustomField } from './baseModels/CustomForm/CustomField';
 import { CustomForm } from './baseModels/CustomForm/CustomForm';
 import { Defaults } from './baseModels/Defaults/Defaults';
 import { GetStarted } from './baseModels/GetStarted/GetStarted';
@@ -89,7 +88,6 @@ export const frappeModels: Record<string, FrappeModel> = {
   Batch,
   CouponCode,
   Currency,
-  CustomField,
   CustomForm,
   Defaults,
   GetStarted,

@@ -2,7 +2,8 @@ import { ListsMap, ValidationMap } from 'fyo/model/types';
 import { ValueError } from 'fyo/utils/errors';
 import { FieldTypeEnum } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
-import { getCustomizableSchemas, type CustomForm } from './CustomForm';
+import type { CustomForm } from './CustomForm';
+import { getCustomizableSchemas } from './customizable';
 
 const REFERENCE_FIELDTYPES: string[] = [
   FieldTypeEnum.AutoComplete,
@@ -13,7 +14,6 @@ const REFERENCE_FIELDTYPES: string[] = [
 
 /** A Books Custom Field row. Its Custom Field holds the definition; the row places it. */
 export class CustomField extends FrappeDoc {
-  static override doctype = 'Books Custom Field';
   static override presentation = {
     label: 'Custom Field',
     quickEditFields: [

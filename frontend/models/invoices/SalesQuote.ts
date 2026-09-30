@@ -3,7 +3,7 @@ import type { Doc } from 'fyo/model/doc';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getQuoteActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { Invoice, NO_CREATE } from './Invoice';
+import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { SalesQuoteItem } from './InvoiceItem';
 import { TaxSummary } from './TaxSummary';
 
@@ -13,16 +13,17 @@ export class SalesQuote extends Invoice {
   static override presentation = {
     label: 'Quote',
     nameField: { label: 'Invoice No', hidden: true },
-    rowEditTables: ['items'],
-    noCreate: NO_CREATE,
-    options: {
-      reference_type: [
-        { value: 'Books Party', label: 'Party' },
-        { value: 'Books Lead', label: 'Lead' },
-      ],
+    fields: {
+      ...INVOICE_FIELDS,
+      reference_type: {
+        options: [
+          { value: 'Books Party', label: 'Party' },
+          { value: 'Books Lead', label: 'Lead' },
+        ],
+      },
     },
   };
-  static override tableModels = { items: SalesQuoteItem, taxes: TaxSummary };
+  static override rowModels = { items: SalesQuoteItem, taxes: TaxSummary };
 
   // A quote's party may be a lead, so it is not filtered by role.
   static override filters: FiltersMap = {

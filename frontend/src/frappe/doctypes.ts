@@ -36,11 +36,6 @@ export function getFrappeModels(): [string, FrappeModel][] {
   return [...models.entries()];
 }
 
-/** The model registered for a schema, e.g. for the rows of a table. */
-export function getFrappeModel(schemaName: string): FrappeModel | undefined {
-  return models.get(schemaName);
-}
-
 export function getDocType(schemaName: string): FrappeDocType {
   const docType = docTypes.get(schemaName);
   if (!docType) {

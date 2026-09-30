@@ -1,11 +1,5 @@
 import { getFieldProperties, isReferenceField } from 'schemas/fieldProperties';
-import type {
-  Field,
-  Naming,
-  OptionField,
-  Schema,
-  SelectOption,
-} from 'schemas/types';
+import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -22,8 +16,6 @@ export interface Presentation {
   };
   /** How fields show what their DocFields cannot say, by fieldname. */
   fields?: Record<string, FieldPresentation>;
-  /** Labels of Select option values, by fieldname, e.g. `SalesInvoice` as `Sales Invoice`. */
-  optionLabels?: Record<string, Record<string, string>>;
   /** False when the list offers no new document, e.g. accounts made in the Chart of Accounts. */
   create?: boolean;
   /**
@@ -35,30 +27,31 @@ export interface Presentation {
   insertValues?: Record<string, unknown>;
   /** The field a link to the doctype shows instead of the name. */
   linkDisplayField?: string;
-  /** How each table's rows, by the table's fieldname, show their fields. */
-  tables?: Record<string, Record<string, FieldPresentation>>;
   /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
   tableFields?: string[];
-  /** Tables whose rows open in the row editor. */
-  rowEditTables?: string[];
-  /** Links that offer no Create, which no DocField property says. */
-  noCreate?: string[];
-  /** Choices of fields the DocType cannot list, like the doctypes a DocType reference allows. */
-  options?: Record<string, SelectOption[]>;
 }
 
 /**
- * Properties a field shows with that its DocField has none for: option
- * labels, whether an Autocomplete takes values that are not options, whether
- * a table's rows also open in a form, a link's grouping, and whether a Link
- * offers to create a document. `getdoctype` does not send `only_select`, so a
- * Link without Create says so here.
+ * Field properties that no DocField property says, like Select option labels,
+ * the doctypes a DocType reference offers (`options`), whether an Autocomplete
+ * takes values that are not options, a link's grouping, a table whose rows
+ * open in the row editor (`edit`), and a Link that offers no Create (`create:
+ * false`). A Link offers Create unless its presentation says not.
  */
 export type FieldPresentation = Partial<Field> &
   Pick<OptionField, 'optionLabels' | 'allowCustom'> & {
     create?: boolean;
     edit?: boolean;
   };
+
+/** Presentations of Links that offer no Create, by fieldname. */
+export function withoutCreate(
+  fieldnames: string[]
+): Record<string, FieldPresentation> {
+  return Object.fromEntries(
+    fieldnames.map((fieldname) => [fieldname, { create: false }])
+  );
+}
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
 export type Placements = Record<string, { section?: string; tab?: string }>;
@@ -96,7 +89,7 @@ export function toSchema(
   const fields = [
     ...getNameFields(meta, presentation, docFields),
     ...getMetaFields(meta),
-  ].map((field) => ({ ...present(field, presentation), schemaName: name }));
+  ].map((field) => ({ ...field, schemaName: name }) as Field);
 
   return {
     name,
@@ -125,24 +118,6 @@ export function getNamingField(meta: DocTypeMeta): string | undefined {
   return rule.toLowerCase() === 'field' ? fieldname : undefined;
 }
 
-/** A field with what the model's presentation adds to it. */
-function present(field: Field, presentation: Presentation): Field {
-  const options = presentation.options?.[field.fieldname];
-  if (options) {
-    return { ...field, fieldtype: 'Select', options } as Field;
-  }
-
-  if (presentation.rowEditTables?.includes(field.fieldname)) {
-    return { ...field, edit: true } as Field;
-  }
-
-  if (presentation.noCreate?.includes(field.fieldname)) {
-    return { ...field, create: false } as Field;
-  }
-
-  return field;
-}
-
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
 function getDocFields(
   meta: DocTypeMeta,
@@ -153,7 +128,6 @@ function getDocFields(
     schemaNames: context.schemaNames,
     levels: getPermlevels(meta, context.roles),
     namingField: getNamingField(meta),
-    optionLabels: presentation.optionLabels ?? {},
     fields: presentation.fields ?? {},
     states: getStates(meta),
   };
@@ -202,11 +176,10 @@ function getDocFields(
 function toField(docfield: DocField, context: FieldContext): Field {
   const { fieldname } = docfield;
   const shown = context.fields[fieldname] ?? {};
-  const optionLabels = shown.optionLabels ?? context.optionLabels[fieldname];
   // Frappe colours a document's `status` by the DocType state of the same title.
   const states = fieldname === 'status' ? context.states : undefined;
   const properties = getFieldProperties(
-    { fieldname, ...shown, optionLabels } as Field,
+    { fieldname, optionLabels: shown.optionLabels } as Field,
     { ...docfield, states }
   ) as Partial<Field> & { target?: string };
   const { levels, schemaNames } = context;
@@ -214,7 +187,6 @@ function toField(docfield: DocField, context: FieldContext): Field {
   const field = {
     ...properties,
     ...(isReferenceField(docfield) && getReferenceProperties(schemaNames)),
-    edit: shown.edit,
     fieldname,
     // The naming field is set once: changing it later would not rename the document.
     setOnlyOnce: properties.setOnlyOnce || fieldname === context.namingField,
@@ -225,7 +197,7 @@ function toField(docfield: DocField, context: FieldContext): Field {
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
-    create: isLink(docfield) ? !docfield.only_select : undefined,
+    create: isLink(docfield) || undefined,
     ...shown,
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
@@ -335,7 +307,6 @@ interface FieldContext {
   schemaNames: SchemaContext['schemaNames'];
   levels: Permlevels;
   namingField?: string;
-  optionLabels: NonNullable<Presentation['optionLabels']>;
   fields: NonNullable<Presentation['fields']>;
   states?: Record<string, string>;
 }

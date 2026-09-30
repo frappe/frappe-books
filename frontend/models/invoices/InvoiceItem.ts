@@ -14,6 +14,7 @@ import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 import type { QueryFilter } from 'utils/db/types';
 import type { Invoice } from './Invoice';
 import { setCurrencies } from './Invoice';
@@ -59,7 +60,7 @@ export class InvoiceItem extends FrappeDoc {
       'item_taxed_total',
     ],
     tableFields: ['item', 'tax', 'qty', 'rate', 'amount'],
-    noCreate: ['transfer_unit', 'unit', 'account'],
+    fields: withoutCreate(['transfer_unit', 'unit', 'account']),
   };
 
   parentdoc?: Invoice;

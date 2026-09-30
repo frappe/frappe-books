@@ -50,8 +50,6 @@ export class FrappeDoc extends Doc {
   static refills: Record<string, string[]> = {};
   /** Fields the server fills from another field, by that field: editing it has them filled again. */
   static derivedFields: Record<string, string[]> = {};
-  /** Models of the rows of the DocType's tables, by table fieldname; other rows are plain. */
-  static tableModels: Record<string, typeof FrappeDoc> = {};
   /** Fields whose default the server decides, like one that follows a setting; see `leaveToServer`. */
   static serverDefaults: string[] = [];
 

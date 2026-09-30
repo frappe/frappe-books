@@ -3,7 +3,7 @@ import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { AppliedCouponCode } from './AppliedCouponCode';
-import { Invoice, NO_CREATE } from './Invoice';
+import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { SalesInvoiceItem } from './InvoiceItem';
 import { TaxSummary } from './TaxSummary';
 
@@ -12,10 +12,9 @@ export class SalesInvoice extends Invoice {
   static override presentation = {
     label: 'Sales Invoice',
     nameField: { label: 'Invoice No', hidden: true },
-    rowEditTables: ['items'],
-    noCreate: NO_CREATE,
+    fields: INVOICE_FIELDS,
   };
-  static override tableModels = {
+  static override rowModels = {
     items: SalesInvoiceItem,
     taxes: TaxSummary,
     coupons: AppliedCouponCode,

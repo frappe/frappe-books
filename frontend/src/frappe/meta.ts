@@ -15,7 +15,6 @@ export interface DocField {
   set_only_once?: number;
   non_negative?: number;
   no_copy?: number;
-  only_select?: number;
   in_list_view?: number;
   is_custom_field?: number;
   permlevel?: number;

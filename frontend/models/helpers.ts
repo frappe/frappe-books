@@ -10,7 +10,6 @@ import { OptionField, Schema } from 'schemas/types';
 import { ModelNameEnum } from './types';
 
 import { Doc } from 'fyo/model/doc';
-import { Invoice } from './baseModels/Invoice/Invoice';
 import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';

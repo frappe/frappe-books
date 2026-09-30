@@ -2,6 +2,7 @@ import { FiltersMap, HiddenMap } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 import { PartyRoleEnum } from '../Party/types';
 
 /** Books Defaults, served by Frappe: what new documents start with. */
@@ -10,19 +11,17 @@ export class Defaults extends FrappeDoc {
   // Print templates are picked, not created, from the settings.
   static override presentation = {
     label: 'Defaults',
-    fields: Object.fromEntries(
-      [
-        'sales_quote_print_template',
-        'sales_invoice_print_template',
-        'purchase_invoice_print_template',
-        'journal_entry_print_template',
-        'payment_print_template',
-        'shipment_print_template',
-        'purchase_receipt_print_template',
-        'stock_movement_print_template',
-        'pos_print_template',
-      ].map((fieldname) => [fieldname, { create: false }])
-    ),
+    fields: withoutCreate([
+      'sales_quote_print_template',
+      'sales_invoice_print_template',
+      'purchase_invoice_print_template',
+      'journal_entry_print_template',
+      'payment_print_template',
+      'shipment_print_template',
+      'purchase_receipt_print_template',
+      'stock_movement_print_template',
+      'pos_print_template',
+    ]),
   };
 
   declare sales_payment_account?: string;

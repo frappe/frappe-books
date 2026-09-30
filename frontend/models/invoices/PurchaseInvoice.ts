@@ -2,7 +2,7 @@ import { Fyo } from 'fyo';
 import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { Invoice, NO_CREATE } from './Invoice';
+import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { PurchaseInvoiceItem } from './InvoiceItem';
 import { TaxSummary } from './TaxSummary';
 
@@ -11,10 +11,9 @@ export class PurchaseInvoice extends Invoice {
   static override presentation = {
     label: 'Purchase Invoice',
     nameField: { label: 'Invoice No', hidden: true },
-    rowEditTables: ['items'],
-    noCreate: NO_CREATE,
+    fields: INVOICE_FIELDS,
   };
-  static override tableModels = {
+  static override rowModels = {
     items: PurchaseInvoiceItem,
     taxes: TaxSummary,
   };

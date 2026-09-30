@@ -7,6 +7,7 @@ import { Field } from 'schemas/types';
 import { QueryFilter } from 'utils/db/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { PaymentFor } from '../PaymentFor/PaymentFor';
+import { TaxSummary } from 'models/invoices/TaxSummary';
 import { AccountFieldEnum, PaymentTypeEnum } from './types';
 
 /**
@@ -42,7 +43,10 @@ export class Payment extends FrappeDoc {
     ],
   };
   static override previewMethod = 'preview';
-  static override rowModels = { payment_references: PaymentFor };
+  static override rowModels = {
+    payment_references: PaymentFor,
+    taxes: TaxSummary,
+  };
   // What Books formulas recalculated after each edit.
   static override refills = {
     party: ['payment_type', 'account'],

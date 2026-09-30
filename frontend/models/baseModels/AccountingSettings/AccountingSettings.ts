@@ -1,6 +1,7 @@
 import { FiltersMap, ValidationMap } from 'fyo/model/types';
 import { validateEmail } from 'fyo/model/validationFunction';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 
 /**
  * Books Accounting Settings, served by Frappe. Its country is Frappe's
@@ -11,11 +12,11 @@ export class AccountingSettings extends FrappeDoc {
   // These accounts are picked, not created, from the settings.
   static override presentation = {
     label: 'Accounting Settings',
-    fields: {
-      write_off_account: { create: false },
-      round_off_account: { create: false },
-      discount_account: { create: false },
-    },
+    fields: withoutCreate([
+      'write_off_account',
+      'round_off_account',
+      'discount_account',
+    ]),
   };
 
   declare fullname?: string;

@@ -26,11 +26,13 @@ export class StockMovement extends FrappeDoc {
       'amount',
       'items',
     ],
-    optionLabels: {
+    fields: {
       movement_type: {
-        [MovementTypeEnum.MaterialIssue]: 'Material Issue',
-        [MovementTypeEnum.MaterialReceipt]: 'Material Receipt',
-        [MovementTypeEnum.MaterialTransfer]: 'Material Transfer',
+        optionLabels: {
+          [MovementTypeEnum.MaterialIssue]: 'Material Issue',
+          [MovementTypeEnum.MaterialReceipt]: 'Material Receipt',
+          [MovementTypeEnum.MaterialTransfer]: 'Material Transfer',
+        },
       },
     },
   };

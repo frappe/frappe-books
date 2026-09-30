@@ -1,6 +1,7 @@
 import { FiltersMap } from 'fyo/model/types';
 import { AccountTypeEnum } from 'models/baseModels/Account/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 
 /** Books Inventory Settings, served by Frappe. */
 export class InventorySettings extends FrappeDoc {
@@ -8,11 +9,11 @@ export class InventorySettings extends FrappeDoc {
   // These accounts are picked, not created, from the settings.
   static override presentation = {
     label: 'Inventory Settings',
-    fields: {
-      stock_in_hand: { create: false },
-      stock_received_but_not_billed: { create: false },
-      cost_of_goods_sold: { create: false },
-    },
+    fields: withoutCreate([
+      'stock_in_hand',
+      'stock_received_but_not_billed',
+      'cost_of_goods_sold',
+    ]),
   };
 
   declare default_location?: string;

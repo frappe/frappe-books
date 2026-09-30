@@ -1,29 +1,11 @@
 import { Fyo } from 'fyo';
 import { HiddenMap, ListsMap, ListViewSettings } from 'fyo/model/types';
-import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import type { Presentation } from 'src/frappe/schema';
 import { getMapFromList } from 'utils/index';
-import type { CustomField } from './CustomField';
-
-// Books' own records, which have no form to customize.
-const UNCUSTOMIZABLE: string[] = [
-  ModelNameEnum.SingleValue,
-  ModelNameEnum.CustomField,
-  ModelNameEnum.CustomForm,
-  ModelNameEnum.SetupWizard,
-];
-
-/** The schemas a Custom Form can add fields to, or link a field to. */
-export function getCustomizableSchemas(fyo: Fyo): Schema[] {
-  return Object.values(fyo.schemaMap).filter(
-    (schema): schema is Schema =>
-      !!schema?.label &&
-      !schema.isSingle &&
-      !UNCUSTOMIZABLE.includes(schema.name)
-  );
-}
+import { CustomField } from './CustomField';
+import { getCustomizableSchemas } from './customizable';
 
 /**
  * Books Custom Form, served by Frappe. It is named after the schema whose
@@ -36,6 +18,7 @@ export class CustomForm extends FrappeDoc {
     nameField: { label: 'Form Type', fieldtype: 'AutoComplete' },
   };
   static override previewMethod = 'preview';
+  static override rowModels = { custom_fields: CustomField };
 
   declare custom_fields?: CustomField[];
 

@@ -7,7 +7,6 @@ import { getDocuments } from './api';
 import { FrappeDoc } from './document';
 import {
   getDocType,
-  getFrappeModel,
   getFrappeModels,
   isFrappeBacked,
   setDocType,
@@ -128,13 +127,8 @@ function getTables(
       field.fieldtype === 'Table' ? byName.get(field.options!) : undefined;
     if (child) {
       const name = getSchemaNames()[child.name] ?? child.name;
-      const RowModel =
-        Model.rowModels[field.fieldname] ??
-        Model.tableModels[field.fieldname] ??
-        getFrappeModel(name) ??
-        FrappeDoc;
-      const fields = Model.presentation.tables?.[field.fieldname];
-      tables[field.fieldname] = toDocType(child, name, RowModel, {}, fields);
+      const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;
+      tables[field.fieldname] = toDocType(child, name, RowModel, {});
     }
   }
 
@@ -145,14 +139,13 @@ function toDocType(
   meta: DocTypeMeta,
   schemaName: string,
   Model: FrappeModel,
-  placements: Placements,
-  tableFields?: Presentation['fields']
+  placements: Placements
 ): FrappeDocType {
   // Rows without a model of their own are labelled by their doctype.
-  const presentation: Presentation =
-    meta.istable && Model === FrappeDoc
-      ? { label: meta.name, fields: tableFields }
-      : { ...Model.presentation, label: Model.presentation.label || meta.name };
+  const presentation: Presentation = {
+    ...Model.presentation,
+    label: Model.presentation.label || meta.name,
+  };
   const schema = toSchema(meta, schemaName, presentation, {
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],

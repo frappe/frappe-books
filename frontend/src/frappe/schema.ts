@@ -63,7 +63,7 @@ export function toSchema(
     name,
     label: presentation.label,
     fields,
-    naming: getNaming(meta.autoname),
+    naming: getNaming(meta),
     titleField: meta.title_field || 'name',
     quickEditFields: presentation.quickEditFields,
     linkDisplayField: presentation.linkDisplayField,
@@ -211,14 +211,19 @@ function getMetaFields(meta: DocTypeMeta): Field[] {
   return fields.map((field) => ({ ...field, meta: true }) as Field);
 }
 
-function getNaming(autoname = ''): Naming {
-  const rule = autoname.toLowerCase();
+function getNaming(meta: DocTypeMeta): Naming {
+  const rule = (meta.autoname ?? '').toLowerCase();
   if (rule === 'prompt') {
     return 'manual';
   }
 
   if (rule === 'autoincrement') {
     return 'autoincrement';
+  }
+
+  // Books names these by script from their number series; see SeriesNamingMixin.
+  if (meta.fields.some(({ fieldname }) => fieldname === 'number_series')) {
+    return 'numberSeries';
   }
 
   return !rule || rule === 'hash' ? 'random' : 'numberSeries';

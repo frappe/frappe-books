@@ -15,6 +15,7 @@
   "qty",
   "unit",
   "batch",
+  "serial_number",
   "quantity",
   "unit_conversion_factor",
   "account",
@@ -29,7 +30,6 @@
   "stock_not_transferred",
   "is_free_item",
   "pricing_rule",
-  "serial_number",
   "is_manual_rate"
  ],
  "fields": [
@@ -60,13 +60,15 @@
    "reqd": 1
   },
   {
-   "description": "Unit",
    "fieldname": "transfer_unit",
    "fieldtype": "Link",
    "label": "Transfer Unit",
-   "options": "Books Uom"
+   "only_select": 1,
+   "options": "Books Uom",
+   "placeholder": "Unit"
   },
   {
+   "default": "1",
    "fieldname": "transfer_quantity",
    "fieldtype": "Float",
    "label": "Qty. in Transfer Unit",
@@ -77,25 +79,32 @@
    "fieldname": "qty",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Qty",
-   "read_only": 1
+   "label": "Qty"
   },
   {
-   "description": "Unit",
    "fieldname": "unit",
    "fieldtype": "Link",
    "label": "Stock Unit",
+   "only_select": 1,
    "options": "Books Uom",
+   "placeholder": "Unit",
    "read_only": 1
   },
   {
-   "description": "Batch",
    "fieldname": "batch",
    "fieldtype": "Link",
    "label": "Batch",
-   "options": "Books Batch"
+   "options": "Books Batch",
+   "placeholder": "Batch"
   },
   {
+   "fieldname": "serial_number",
+   "fieldtype": "Text",
+   "label": "Serial Number",
+   "placeholder": "Serial Number"
+  },
+  {
+   "default": "1",
    "fieldname": "quantity",
    "fieldtype": "Float",
    "label": "Quantity",
@@ -112,6 +121,7 @@
    "fieldname": "account",
    "fieldtype": "Link",
    "label": "Account",
+   "only_select": 1,
    "options": "Books Account",
    "reqd": 1
   },
@@ -136,16 +146,19 @@
    "label": "Set Discount Amount"
   },
   {
+   "depends_on": "set_item_discount_amount",
    "fieldname": "item_discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount"
   },
   {
+   "depends_on": "eval:!doc.set_item_discount_amount",
    "fieldname": "item_discount_percent",
    "fieldtype": "Float",
    "label": "Discount Percent"
   },
   {
+   "depends_on": "eval:doc.set_item_discount_amount ? doc.item_discount_amount : doc.item_discount_percent",
    "fieldname": "item_discounted_total",
    "fieldtype": "Currency",
    "label": "Discounted Amount",
@@ -158,10 +171,10 @@
    "read_only": 1
   },
   {
-   "description": "HSN/SAC Code",
    "fieldname": "hsn_code",
    "fieldtype": "Int",
-   "label": "HSN/SAC"
+   "label": "HSN/SAC",
+   "placeholder": "HSN/SAC Code"
   },
   {
    "fieldname": "stock_not_transferred",
@@ -184,11 +197,6 @@
    "label": "Pricing Rule"
   },
   {
-   "fieldname": "serial_number",
-   "fieldtype": "Text",
-   "label": "Serial Number"
-  },
-  {
    "default": "0",
    "fieldname": "is_manual_rate",
    "fieldtype": "Check",
@@ -200,7 +208,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-28 12:00:00.000000",
+ "modified": "2026-09-30 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice Item",

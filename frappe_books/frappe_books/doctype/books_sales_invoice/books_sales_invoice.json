@@ -28,10 +28,6 @@
   "discount_percent",
   "currency",
   "exchange_rate",
-  "settings_tab_break_20",
-  "discount_after_tax",
-  "make_auto_payment",
-  "make_auto_stock_transfer",
   "outstanding_section_break_24",
   "outstanding_amount",
   "stock_not_transferred",
@@ -57,19 +53,13 @@
   "payments",
   "references_section_break_46",
   "pricing_rule_detail",
-  "amended_from"
+  "amended_from",
+  "settings_tab_break_20",
+  "discount_after_tax",
+  "make_auto_payment",
+  "make_auto_stock_transfer"
  ],
  "fields": [
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Books Sales Invoice",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
   {
    "fieldname": "default_section_break_1",
    "fieldtype": "Section Break",
@@ -81,7 +71,8 @@
    "in_list_view": 1,
    "label": "Number Series",
    "options": "Books Number Series",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "party",
@@ -112,6 +103,7 @@
    "default": "Saved",
    "fieldname": "status",
    "fieldtype": "Select",
+   "hidden": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
@@ -125,6 +117,7 @@
    "fieldname": "price_list",
    "fieldtype": "Link",
    "label": "Price List",
+   "only_select": 1,
    "options": "Books Price List"
   },
   {
@@ -151,6 +144,7 @@
    "label": "Tax and Totals"
   },
   {
+   "depends_on": "total_discount",
    "fieldname": "total_discount",
    "fieldtype": "Currency",
    "is_virtual": 1,
@@ -158,6 +152,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "taxes",
    "fieldname": "taxes",
    "fieldtype": "Table",
    "label": "Taxes",
@@ -165,6 +160,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "loyalty_points_amount",
    "fieldname": "loyalty_points_amount",
    "fieldtype": "Currency",
    "is_virtual": 1,
@@ -172,6 +168,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.exchange_rate != 1 && doc.base_grand_total",
    "fieldname": "base_grand_total",
    "fieldtype": "Currency",
    "label": "Base Grand Total",
@@ -218,29 +215,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "settings_tab_break_20",
-   "fieldtype": "Tab Break",
-   "label": "Settings"
-  },
-  {
-   "default": "0",
-   "fieldname": "discount_after_tax",
-   "fieldtype": "Check",
-   "label": "Apply Discount After Tax"
-  },
-  {
-   "default": "0",
-   "fieldname": "make_auto_payment",
-   "fieldtype": "Check",
-   "label": "Make Payment On Submit"
-  },
-  {
-   "default": "0",
-   "fieldname": "make_auto_stock_transfer",
-   "fieldtype": "Check",
-   "label": "Make Shipment On Submit"
-  },
-  {
    "fieldname": "outstanding_section_break_24",
    "fieldtype": "Section Break",
    "label": "Outstanding"
@@ -265,16 +239,18 @@
    "label": "References"
   },
   {
-   "description": "Add invoice terms",
+   "depends_on": "eval:doc.terms || !doc.docstatus",
    "fieldname": "terms",
    "fieldtype": "Text",
-   "label": "Notes"
+   "label": "Notes",
+   "placeholder": "Add invoice terms"
   },
   {
-   "description": "Add attachment",
+   "depends_on": "eval:doc.attachment || !doc.docstatus",
    "fieldname": "attachment",
    "fieldtype": "Attach",
-   "label": "Attachment"
+   "label": "Attachment",
+   "placeholder": "Add attachment"
   },
   {
    "default": "0",
@@ -293,16 +269,20 @@
    "no_copy": 1
   },
   {
+   "depends_on": "back_reference",
    "fieldname": "back_reference",
    "fieldtype": "Link",
    "label": "Back Reference",
    "no_copy": 1,
+   "only_select": 1,
    "options": "Books Shipment"
   },
   {
+   "depends_on": "eval:!doc.docstatus || doc.return_against",
    "fieldname": "return_against",
    "fieldtype": "Link",
    "label": "Return Against",
+   "only_select": 1,
    "options": "Books Sales Invoice",
    "search_index": 1
   },
@@ -312,6 +292,7 @@
    "label": "Coupons"
   },
   {
+   "depends_on": "eval:doc.docstatus != 1 || doc.coupons.length",
    "fieldname": "coupons",
    "fieldtype": "Table",
    "label": "Coupons",
@@ -323,9 +304,11 @@
    "label": "References"
   },
   {
+   "depends_on": "quote",
    "fieldname": "quote",
    "fieldtype": "Link",
    "label": "Quote Reference",
+   "only_select": 1,
    "options": "Books Sales Quote"
   },
   {
@@ -334,6 +317,7 @@
    "label": "Loyalty Points Redemption"
   },
   {
+   "depends_on": "loyalty_program",
    "fieldname": "loyalty_program",
    "fieldtype": "Link",
    "label": "Loyalty Program",
@@ -341,6 +325,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.loyalty_program && !doc.return_against",
    "fieldname": "available_loyalty_points",
    "fieldtype": "Int",
    "label": "Available Loyalty Points",
@@ -348,11 +333,13 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.loyalty_program && !doc.return_against && doc.available_loyalty_points > 0",
    "fieldname": "redeem_loyalty_points",
    "fieldtype": "Check",
    "label": "Redeem Loyalty Points"
   },
   {
+   "depends_on": "eval:doc.redeem_loyalty_points && !doc.return_against",
    "fieldname": "loyalty_points",
    "fieldtype": "Int",
    "label": "Loyalty Points"
@@ -380,6 +367,7 @@
    "description": "Payments tendered at the POS counter, made when the invoice is submitted.",
    "fieldname": "payments",
    "fieldtype": "Table",
+   "hidden": 1,
    "label": "Payments",
    "no_copy": 1,
    "options": "Books Sales Invoice Payment"
@@ -390,18 +378,55 @@
    "label": "References"
   },
   {
+   "depends_on": "pricing_rule_detail",
    "fieldname": "pricing_rule_detail",
    "fieldtype": "Table",
    "label": "Pricing Rule Detail",
    "options": "Books Pricing Rule Detail",
    "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Books Sales Invoice",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "settings_tab_break_20",
+   "fieldtype": "Tab Break",
+   "label": "Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "discount_after_tax",
+   "fieldtype": "Check",
+   "label": "Apply Discount After Tax"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!doc.docstatus",
+   "fieldname": "make_auto_payment",
+   "fieldtype": "Check",
+   "label": "Make Payment On Submit"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!doc.docstatus",
+   "fieldname": "make_auto_stock_transfer",
+   "fieldtype": "Check",
+   "label": "Make Shipment On Submit"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-30 17:00:00.000000",
+ "modified": "2026-09-30 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",

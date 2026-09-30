@@ -12,6 +12,7 @@
   "date",
   "status",
   "price_list",
+  "reference_type",
   "items_section_break_6",
   "items",
   "net_total",
@@ -25,29 +26,18 @@
   "discount_percent",
   "currency",
   "exchange_rate",
-  "settings_tab_break_19",
-  "discount_after_tax",
-  "make_auto_payment",
   "outstanding_section_break_22",
   "outstanding_amount",
   "references_section_break_24",
   "terms",
   "attachment",
   "is_fully_returned",
-  "reference_type",
-  "amended_from"
+  "amended_from",
+  "settings_tab_break_19",
+  "discount_after_tax",
+  "make_auto_payment"
  ],
  "fields": [
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Books Sales Quote",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
   {
    "fieldname": "default_section_break_1",
    "fieldtype": "Section Break",
@@ -59,7 +49,8 @@
    "in_list_view": 1,
    "label": "Number Series",
    "options": "Books Number Series",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "party",
@@ -81,6 +72,7 @@
    "default": "Saved",
    "fieldname": "status",
    "fieldtype": "Select",
+   "hidden": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
@@ -94,7 +86,18 @@
    "fieldname": "price_list",
    "fieldtype": "Link",
    "label": "Price List",
+   "only_select": 1,
    "options": "Books Price List"
+  },
+  {
+   "default": "Books Party",
+   "fieldname": "reference_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "DocType",
+   "placeholder": "Type",
+   "reqd": 1
   },
   {
    "fieldname": "items_section_break_6",
@@ -120,6 +123,7 @@
    "label": "Tax and Totals"
   },
   {
+   "depends_on": "total_discount",
    "fieldname": "total_discount",
    "fieldtype": "Currency",
    "is_virtual": 1,
@@ -127,6 +131,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "taxes",
    "fieldname": "taxes",
    "fieldtype": "Table",
    "label": "Taxes",
@@ -134,6 +139,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.exchange_rate != 1 && doc.base_grand_total",
    "fieldname": "base_grand_total",
    "fieldtype": "Currency",
    "label": "Base Grand Total",
@@ -180,23 +186,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "settings_tab_break_19",
-   "fieldtype": "Tab Break",
-   "label": "Settings"
-  },
-  {
-   "default": "0",
-   "fieldname": "discount_after_tax",
-   "fieldtype": "Check",
-   "label": "Apply Discount After Tax"
-  },
-  {
-   "default": "0",
-   "fieldname": "make_auto_payment",
-   "fieldtype": "Check",
-   "label": "Make Payment On Submit"
-  },
-  {
    "fieldname": "outstanding_section_break_22",
    "fieldtype": "Section Break",
    "label": "Outstanding"
@@ -214,16 +203,18 @@
    "label": "References"
   },
   {
-   "description": "Add quote terms",
+   "depends_on": "eval:doc.terms || !doc.docstatus",
    "fieldname": "terms",
    "fieldtype": "Text",
-   "label": "Notes"
+   "label": "Notes",
+   "placeholder": "Add quote terms"
   },
   {
-   "description": "Add attachment",
+   "depends_on": "eval:doc.attachment || !doc.docstatus",
    "fieldname": "attachment",
    "fieldtype": "Attach",
-   "label": "Attachment"
+   "label": "Attachment",
+   "placeholder": "Add attachment"
   },
   {
    "default": "0",
@@ -234,21 +225,40 @@
    "no_copy": 1
   },
   {
-   "default": "Books Party",
-   "description": "Type",
-   "fieldname": "reference_type",
+   "fieldname": "amended_from",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Type",
-   "options": "DocType",
-   "reqd": 1
+   "hidden": 1,
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Books Sales Quote",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "settings_tab_break_19",
+   "fieldtype": "Tab Break",
+   "label": "Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "discount_after_tax",
+   "fieldtype": "Check",
+   "label": "Apply Discount After Tax"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!doc.docstatus",
+   "fieldname": "make_auto_payment",
+   "fieldtype": "Check",
+   "label": "Make Payment On Submit"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-30 16:00:00.000000",
+ "modified": "2026-09-30 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Quote",

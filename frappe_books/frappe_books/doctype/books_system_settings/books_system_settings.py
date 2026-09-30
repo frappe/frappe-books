@@ -36,6 +36,5 @@ class BooksSystemSettings(Document):
 		return frappe.db.get_single_value("System Settings", "currency")
 
 	def validate(self):
-		# negatives are rejected by the field's non_negative flag
-		if cint(self.display_precision) > 9:
-			frappe.throw(_("Display Precision cannot be more than 9."))
+		if not 0 <= cint(self.display_precision) <= 9:
+			frappe.throw(_("Display Precision should have a value between 0 and 9."))

@@ -552,6 +552,36 @@ test('loyalty program usage shows the message the server refuses it with', async
   });
 });
 
+test('item enquiries list as before and are recorded through the REST API', async () => {
+  assert.deepEqual(getLayout('ItemEnquiry'), [
+    'name | ID |  | Default',
+    'item | Item |  | Default',
+    'customer | Customer |  | Default',
+    'contact | Contact |  | Default',
+    'description | Description |  | Default',
+    'similar_product | Similar Product |  | Default',
+  ]);
+  assert.equal(getSchema('ItemEnquiry').create, false);
+  assert.deepEqual(getColumns('ItemEnquiry'), [
+    'item',
+    'customer',
+    'contact',
+    'description',
+    'similar_product',
+  ]);
+
+  respond = ({ body }) => ({ data: { ...body, name: '0000000001' } });
+  requests.length = 0;
+  const enquiry = newFrappeDoc('ItemEnquiry', {
+    item: 'Pen',
+    similar_product: 'Pencil',
+  });
+  await enquiry.sync();
+  assert.equal(requests[0].path, '/api/v2/document/Books Item Enquiry');
+  assert.equal(requests[0].body.similar_product, 'Pencil');
+  assert.equal(enquiry.name, '0000000001');
+});
+
 async function waitFor(isDone) {
   for (let tries = 0; tries < 50 && !isDone(); tries++) {
     await new Promise((resolve) => setImmediate(resolve));

@@ -9,7 +9,11 @@ from typing import Any
 import frappe
 from babel import Locale
 from babel.numbers import parse_pattern
+from frappe import _
+from frappe.model import no_value_fields, table_fields
 from frappe.utils import flt, formatdate, money_in_words
+from frappe.www.printview import get_print_style, get_rendered_template
+from jinja2 import TemplateError
 
 from frappe_books.accounting.invoice import InvoiceController
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
@@ -142,3 +146,54 @@ def _payment_taxes(payment) -> list[dict[str, Any]]:
 
 def amount_in_words(amount, currency) -> str:
 	return money_in_words(abs(flt(amount)), currency)
+
+
+@frappe.whitelist(methods=["POST"])
+def preview_print_format(doctype: str, name: str, html: str, css: str | None = None) -> dict[str, str]:
+	"""Render unsaved print format HTML for a document, as Frappe's print preview does."""
+	frappe.has_permission("Print Format", "write", throw=True)
+	print_format = frappe.get_doc(
+		{
+			"doctype": "Print Format",
+			"name": "Books Print Preview",
+			"doc_type": doctype,
+			"custom_format": 1,
+			"html": html,
+			"css": css,
+		}
+	)
+	try:
+		body = get_rendered_template(frappe.get_doc(doctype, name), print_format=print_format)
+	except TemplateError as error:
+		frappe.throw(template_error_message(error), title=_("Template Error"))
+	return {"html": body, "style": get_print_style(print_format=print_format)}
+
+
+def template_error_message(error: TemplateError) -> str:
+	line = getattr(error, "lineno", None)
+	return _("Line {0}: {1}").format(line, error.message) if line else str(error)
+
+
+@frappe.whitelist()
+def get_print_hints(doctype: str) -> dict[str, Any]:
+	"""The values a print format for `doctype` can show, with their labels."""
+	frappe.has_permission(doctype, "read", throw=True)
+	accounting = frappe.get_meta("Books Accounting Settings")
+	return {
+		"doc": {"name": _("Name"), **field_hints(frappe.get_meta(doctype))},
+		"print": {
+			**field_hints(frappe.get_meta("Books Print Settings")),
+			**{fieldname: _(accounting.get_label(fieldname)) for fieldname in TAX_ID_FIELDS},
+		},
+	}
+
+
+def field_hints(meta) -> dict[str, Any]:
+	"""Field labels by fieldname, with a child table as a list of its row's labels."""
+	hints = {}
+	for field in meta.fields:
+		if field.fieldtype in table_fields:
+			hints[field.fieldname] = [field_hints(frappe.get_meta(field.options))]
+		elif field.fieldtype not in no_value_fields:
+			hints[field.fieldname] = _(field.label)
+	return hints

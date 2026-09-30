@@ -1,31 +1,28 @@
 import { HiddenMap } from 'fyo/model/types';
 import { Party as BaseParty } from 'models/baseModels/Party/Party';
-import { GSTType } from './types';
-import { PartyRole } from 'models/baseModels/Party/types';
 
+/** An Indian party: GST registration instead of a tax ID; loyalty for customers only. */
 export class Party extends BaseParty {
-  gstin?: string;
-  role?: PartyRole;
-  gstType?: GSTType;
-  loyaltyProgram?: string;
+  static override presentation = {
+    ...BaseParty.presentation,
+    quickEditFields: [
+      'email',
+      'phone',
+      'address',
+      'default_account',
+      'currency',
+      'role',
+      'gst_type',
+      'gstin',
+    ],
+  };
 
-  async beforeSync() {
-    const gstin = this.get('gstin') as string | undefined;
-    const gstType = this.get('gstType') as GSTType;
-
-    if (gstin && gstType !== 'Registered Regular') {
-      this.gstin = '';
-    }
-  }
-
+  // The DocType shows GSTIN for a registered party only.
   hidden: HiddenMap = {
-    gstin: () => (this.gstType as GSTType) !== 'Registered Regular',
-    loyaltyProgram: () => {
-      if (!this.fyo.singles.AccountingSettings?.enableLoyaltyProgram) {
-        return true;
-      }
-      return this.role === 'Supplier';
-    },
-    loyaltyPoints: () => !this.loyaltyProgram || this.role === 'Supplier',
+    tax_id: () => true,
+    loyalty_program: () =>
+      !this.fyo.singles.AccountingSettings?.enableLoyaltyProgram ||
+      this.role === 'Supplier',
+    loyalty_points: () => !this.loyalty_program || this.role === 'Supplier',
   };
 }

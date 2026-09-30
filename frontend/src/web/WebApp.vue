@@ -41,12 +41,7 @@
 <script lang="ts">
 import type { DocValueMap } from 'fyo/core/types';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
-import {
-  frappeModels,
-  models,
-  getRegionalFrappeModels,
-  getRegionalModels,
-} from 'models';
+import { frappeModels, models, getRegionalFrappeModels } from 'models';
 import { ModelNameEnum } from 'models/types';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import MobileDesk from 'src/mobile/MobileDesk.vue';
@@ -146,10 +141,7 @@ export default defineComponent({
 
       const countryCode = books.country_code || '-';
       await fyo.db.connect(countryCode);
-      await fyo.initializeAndRegister(
-        models,
-        await getRegionalModels(countryCode)
-      );
+      await fyo.initializeAndRegister(models);
       registerFrappeModels(frappeModels);
       registerFrappeModels(await getRegionalFrappeModels(countryCode));
       await loadFrappeDocTypes();

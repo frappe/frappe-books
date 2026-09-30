@@ -33,7 +33,8 @@ export default defineComponent({
         return getLoyaltyProgramBadge(this.doc);
       }
 
-      const outstanding = this.doc.outstandingAmount as Money | undefined;
+      // Frappe serves parties, so this is the Frappe fieldname.
+      const outstanding = this.doc.outstanding_amount as Money | undefined;
       if (
         status === 'Saved' &&
         this.doc instanceof Party &&

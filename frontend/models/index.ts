@@ -9,7 +9,6 @@ import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
 import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
-import { Party } from './baseModels/Party/Party';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
 import { CollectionRulesItems } from './baseModels/CollectionRulesItems/CollectionRulesItems';
@@ -17,6 +16,7 @@ import { Lead } from './baseModels/Lead/Lead';
 import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { Payment } from './baseModels/Payment/Payment';
+import { Party } from './baseModels/Party/Party';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
 import { PaymentFor } from './baseModels/PaymentFor/PaymentFor';
 import { PriceList } from './baseModels/PriceList/PriceList';
@@ -66,7 +66,6 @@ export const models = {
   JournalEntry,
   JournalEntryAccount,
   Misc,
-  Party,
   LoyaltyProgram,
   LoyaltyPointEntry,
   CollectionRulesItems,
@@ -123,18 +122,8 @@ export const frappeModels: Record<string, FrappeModel> = {
   SerialNumber,
   Address,
   Lead,
+  Party,
 };
-
-export async function getRegionalModels(
-  countryCode: string
-): Promise<ModelMap> {
-  if (countryCode !== 'in') {
-    return {};
-  }
-
-  const { Party } = await import('./regionalModels/in/Party');
-  return { Party };
-}
 
 /** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */
 export async function getRegionalFrappeModels(
@@ -144,6 +133,9 @@ export async function getRegionalFrappeModels(
     return {};
   }
 
-  const { Address } = await import('./regionalModels/in/Address');
-  return { Address };
+  const [{ Address }, { Party }] = await Promise.all([
+    import('./regionalModels/in/Address'),
+    import('./regionalModels/in/Party'),
+  ]);
+  return { Address, Party };
 }

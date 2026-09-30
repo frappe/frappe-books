@@ -54,6 +54,11 @@ export class FrappeDoc extends Doc {
   /** Fields the last preview filled; the next preview fills them again until the user edits one. */
   _serverFilled = new Set<string>();
   _previewTimer?: ReturnType<typeof setTimeout>;
+  /**
+   * When and by whom Frappe made the saved document. Frappe refuses a method
+   * that changes them once the doctype has a set-once field, so they go back as sent.
+   */
+  _origin: DocValues = {};
   _edits = 0;
 
   get doctype(): string {
@@ -136,7 +141,7 @@ export class FrappeDoc extends Doc {
     const values = this.getFrappeValues(options);
     const saved = this.notInserted
       ? { __islocal: 1 }
-      : { name: this.name, modified: this.modified };
+      : { ...this._origin, name: this.name, modified: this.modified };
     return { ...values, ...saved, doctype: this.doctype };
   }
 
@@ -151,7 +156,13 @@ export class FrappeDoc extends Doc {
   }
 
   override async _fetchSaved(): Promise<DocValueMap> {
-    return this.toDocValues(await api.getDocument(this.doctype, this.name!));
+    const values = await api.getDocument(this.doctype, this.name!);
+    this._rememberOrigin(values);
+    return this.toDocValues(values);
+  }
+
+  _rememberOrigin(values: DocValues) {
+    this._origin = { creation: values.creation, owner: values.owner };
   }
 
   override async _setLoadedValues(data: DocValueMap) {
@@ -191,6 +202,7 @@ export class FrappeDoc extends Doc {
 
   async _setSaved(values: DocValues, action: 'save' | 'submit' = 'save') {
     clearTimeout(this._previewTimer);
+    this._rememberOrigin(values);
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
     this._rememberSavedRows();
@@ -227,6 +239,7 @@ export class FrappeDoc extends Doc {
       'cancel',
       this.getMethodDocument()
     );
+    this._rememberOrigin(cancelled);
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();

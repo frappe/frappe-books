@@ -16,6 +16,7 @@ import {
 
 const { TestItem } = await loadTestDocTypes();
 const MODIFIED = '2026-09-30 10:00:00.123456';
+const CREATION = '2026-09-29 09:00:00.654321';
 
 const savedPen = {
   name: 'Pen',
@@ -255,6 +256,8 @@ test('submit and cancel run the document methods on the client copy', async () =
     amount: 5,
     docstatus: 0,
     modified: MODIFIED,
+    creation: CREATION,
+    owner: 'Administrator',
   };
   const requests = stubDocument(saved, ({ path, body }) => {
     if (!path.endsWith('run_doc_method')) {
@@ -277,6 +280,11 @@ test('submit and cancel run the document methods on the client copy', async () =
   assert.deepEqual(
     [submit.document.doctype, submit.document.name, submit.document.modified],
     ['Books Order', 'ORD-1', MODIFIED]
+  );
+  // Frappe refuses a change to them, compared as text.
+  assert.deepEqual(
+    [submit.document.creation, submit.document.owner],
+    [CREATION, 'Administrator']
   );
 
   await order.cancel();

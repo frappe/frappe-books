@@ -155,13 +155,6 @@ test('a transfer row shows the item discounts of its invoice only when it has th
   assert.equal(hidden('item_discount_percent'), false);
 });
 
-test('a new stock row starts at a quantity of one', () => {
-  for (const name of stockSchemas) {
-    const row = newFrappeDoc(name)._getChildDoc({}, 'items');
-    assert.equal(row.quantity, 1, name);
-  }
-});
-
 test('a row takes its item defaults again when its item changes', async () => {
   const movement = newFrappeDoc('StockMovement');
   await movement.append('items', { item: 'Pen', batch: 'PEN-1' });

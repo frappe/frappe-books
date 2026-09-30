@@ -247,6 +247,17 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		self.assertEqual((shipment.items[0].quantity, shipment.items[0].transfer_quantity), (2, 2))
 		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
 
+	def test_rows_without_quantities_move_one_of_their_unit(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_shipment(item, quantity=None, rate=25)
+		shipment.submit()
+
+		returned = self._make_shipment(item, quantity=None, rate=25, return_against=shipment.name)
+
+		self.assertEqual((shipment.items[0].quantity, shipment.items[0].transfer_quantity), (1, 1))
+		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
+
 	def test_preview_fills_what_a_save_would_without_saving(self):
 		item, _cogs, _stock = self._tracked_item(has_serial_number=1, hsn_code="123456")
 		serial_numbers = [unique_name("SN"), unique_name("SN")]

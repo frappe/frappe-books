@@ -135,7 +135,8 @@ export class FrappeDoc extends Doc {
 
   /**
    * The document a controller method runs on, with what Frappe checks it by:
-   * `modified`, and the `creation` and `owner` a saved document may not change.
+   * its docstatus and `modified`, and the `creation` and `owner` a saved
+   * document may not change.
    */
   getMethodDocument(options: FrappeValueOptions = {}): DocValues {
     const values = this.getFrappeValues(options);
@@ -147,7 +148,8 @@ export class FrappeDoc extends Doc {
           creation: this.creation,
           owner: this.owner,
         };
-    return { ...values, ...saved, doctype: this.doctype };
+    const docstatus = this.docstatus ?? 0;
+    return { ...values, ...saved, docstatus, doctype: this.doctype };
   }
 
   override _getSchema(schemaName: string): Schema {

@@ -287,7 +287,7 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'common-items',
           route: `/list/Item/${t`Items`}`,
           schemaName: 'Item',
-          filters: { for: 'Both' },
+          filters: { item_usage: 'Both' },
         },
         {
           label: t`Price List`,

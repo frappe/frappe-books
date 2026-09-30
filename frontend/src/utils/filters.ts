@@ -1,9 +1,10 @@
 import { ModelNameEnum } from 'models/types';
 
+// Items are Frappe-backed, so their filters use Frappe fieldnames.
 export const routeFilters = {
-  SalesItems: { for: ['in', ['Sales', 'Both']] },
-  PurchaseItems: { for: ['in', ['Purchases', 'Both']] },
-  Items: { for: 'Both' },
+  SalesItems: { item_usage: ['in', ['Sales', 'Both']] },
+  PurchaseItems: { item_usage: ['in', ['Purchases', 'Both']] },
+  Items: { item_usage: 'Both' },
   PurchasePayments: {
     referenceType: ModelNameEnum.PurchaseInvoice,
   },
@@ -16,9 +17,9 @@ export const routeFilters = {
 };
 
 export const createFilters = {
-  SalesItems: { for: 'Sales' },
-  PurchaseItems: { for: 'Purchases' },
-  Items: { for: 'Both' },
+  SalesItems: { item_usage: 'Sales' },
+  PurchaseItems: { item_usage: 'Purchases' },
+  Items: { item_usage: 'Both' },
   PurchasePayments: { paymentType: 'Pay' },
   SalesPayments: { paymentType: 'Receive' },
   Suppliers: { role: 'Supplier' },

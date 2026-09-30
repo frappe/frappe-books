@@ -78,7 +78,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
             routeTo({
               path: `/list/Item/${t`Sales Items`}`,
               query: {
-                filters: JSON.stringify({ for: 'Sales' }),
+                filters: JSON.stringify({ item_usage: 'Sales' }),
               },
             }),
           fieldname: 'salesItemCreated',
@@ -124,7 +124,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
             routeTo({
               path: `/list/Item/${t`Purchase Items`}`,
               query: {
-                filters: JSON.stringify({ for: 'Purchases' }),
+                filters: JSON.stringify({ item_usage: 'Purchases' }),
               },
             }),
           fieldname: 'purchaseItemCreated',

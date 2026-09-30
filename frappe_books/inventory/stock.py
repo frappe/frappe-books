@@ -136,6 +136,13 @@ def populate_stock_rows(rows):
 	return rounded(sum((as_decimal(row.amount) for row in rows), as_decimal(0)))
 
 
+def start_row_quantities(rows):
+	"""A row without either quantity moves one of its unit, as a new row in /books starts."""
+	for row in rows:
+		if not row.quantity and not row.transfer_quantity:
+			row.quantity = 1
+
+
 def fill_serial_numbers(rows):
 	"""Give serialised rows without serial numbers the earliest received ones in stock at their location."""
 	serialised = _items_with("has_serial_number", {row.item for row in rows if not row.serial_number})

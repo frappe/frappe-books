@@ -23,6 +23,7 @@ from frappe_books.inventory.stock import (
 	fill_serial_numbers,
 	populate_stock_rows,
 	reverse_transfers,
+	start_row_quantities,
 	validate_stock_available,
 	validate_transfer_rows,
 )
@@ -51,6 +52,7 @@ class StockMovementController(StatusMixin, SeriesNamingMixin, Document):
 	def calculate(self):
 		"""Fill row locations, defaults and the total, without writing anything."""
 		set_movement_locations(self)
+		start_row_quantities(self.items)
 		self.amount = populate_stock_rows(self.items)
 
 	@frappe.whitelist()
@@ -95,6 +97,7 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 	def calculate(self):
 		"""Fill row defaults and the grand total, without writing anything."""
 		fill_default_location(self.items, "location")
+		start_row_quantities(self.items)
 		set_quantity_signs(self.items, bool(self.return_against))
 		self.grand_total = populate_stock_rows(self.items)
 		if self.transfer_type == "sales" and not self.return_against:

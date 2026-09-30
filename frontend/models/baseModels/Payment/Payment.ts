@@ -292,7 +292,7 @@ export class Payment extends Transactional {
       return {};
     },
     numberSeries: () => {
-      return { referenceType: 'Payment' };
+      return { reference_type: 'Payment' };
     },
     account: (doc: Doc) => ({
       account_type:

@@ -65,28 +65,28 @@ export class Defaults extends Doc {
     }),
     // Number Series
     salesQuoteNumberSeries: () => ({
-      referenceType: ModelNameEnum.SalesQuote,
+      reference_type: ModelNameEnum.SalesQuote,
     }),
     salesInvoiceNumberSeries: () => ({
-      referenceType: ModelNameEnum.SalesInvoice,
+      reference_type: ModelNameEnum.SalesInvoice,
     }),
     purchaseInvoiceNumberSeries: () => ({
-      referenceType: ModelNameEnum.PurchaseInvoice,
+      reference_type: ModelNameEnum.PurchaseInvoice,
     }),
     journalEntryNumberSeries: () => ({
-      referenceType: ModelNameEnum.JournalEntry,
+      reference_type: ModelNameEnum.JournalEntry,
     }),
     paymentNumberSeries: () => ({
-      referenceType: ModelNameEnum.Payment,
+      reference_type: ModelNameEnum.Payment,
     }),
     stockMovementNumberSeries: () => ({
-      referenceType: ModelNameEnum.StockMovement,
+      reference_type: ModelNameEnum.StockMovement,
     }),
     shipmentNumberSeries: () => ({
-      referenceType: ModelNameEnum.Shipment,
+      reference_type: ModelNameEnum.Shipment,
     }),
     purchaseReceiptNumberSeries: () => ({
-      referenceType: ModelNameEnum.PurchaseReceipt,
+      reference_type: ModelNameEnum.PurchaseReceipt,
     }),
     // Print Templates
     salesQuotePrintTemplate: () => ({ type: ModelNameEnum.SalesQuote }),

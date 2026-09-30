@@ -43,7 +43,7 @@ export class StockMovement extends Transfer {
   };
 
   static filters: FiltersMap = {
-    numberSeries: () => ({ referenceType: ModelNameEnum.StockMovement }),
+    numberSeries: () => ({ reference_type: ModelNameEnum.StockMovement }),
   };
 
   static defaults: DefaultMap = {

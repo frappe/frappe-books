@@ -10,6 +10,7 @@ import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
 import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
+import { NumberSeries } from './baseModels/NumberSeries/NumberSeries';
 import { Party } from './baseModels/Party/Party';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
@@ -121,6 +122,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   Account,
   Currency,
   Item,
+  NumberSeries,
   PaymentMethod,
   Tax,
 };

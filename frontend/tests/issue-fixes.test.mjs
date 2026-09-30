@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  frappeModels,
   makeFyo,
   GeneralLedger,
   TrialBalance,
@@ -184,38 +185,7 @@ test('root groups can be recreated and edited but cannot be deleted', async () =
   await child.beforeDelete();
 });
 
-test('Canada selects the French chart only for a French language preference', async () => {
-  const fyo = await makeFyo();
-  fyo.store.chartsOfAccounts = [
-    chart('Standard Chart of Accounts', ''),
-    chart(
-      'Canada - Plan comptable pour les provinces francophones',
-      'ca',
-      'fr'
-    ),
-  ];
-  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Canada' });
-  for (const language of ['en', 'en-CA', 'English', '']) {
-    fyo.store.language = language;
-    assert.equal(
-      wizard.formulas.chartOfAccounts.formula(),
-      'Standard Chart of Accounts'
-    );
-  }
-  for (const language of ['fr', 'fr-CA', 'fr_CA']) {
-    fyo.store.language = language;
-    assert.match(
-      wizard.formulas.chartOfAccounts.formula(),
-      /Canada - Plan comptable/
-    );
-  }
-  assert.ok(
-    wizard.constructor.lists
-      .chartOfAccounts(wizard)
-      .some(({ value }) => value.startsWith('Canada'))
-  );
-});
-
+// The server's preview picks a country's chart; see test_books_setup_wizard.py.
 test('the setup wizard offers the charts the server lists', async () => {
   const fyo = await makeFyo();
   const swiss = 'Switzerland - General Chart of Accounts';
@@ -223,26 +193,11 @@ test('the setup wizard offers the charts the server lists', async () => {
     { ...chart('Standard Chart of Accounts', ''), label: 'Plan standard' },
     chart(swiss, 'ch'),
   ];
-  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Switzerland' });
 
-  assert.deepEqual(wizard.constructor.lists.chartOfAccounts(wizard), [
+  assert.deepEqual(frappeModels.SetupWizard.lists.chart_of_accounts({ fyo }), [
     { value: 'Standard Chart of Accounts', label: 'Plan standard' },
     { value: swiss, label: swiss },
   ]);
-  assert.equal(wizard.formulas.chartOfAccounts.formula(), swiss);
-  wizard.country = 'Japan';
-  assert.equal(
-    wizard.formulas.chartOfAccounts.formula(),
-    'Standard Chart of Accounts'
-  );
-});
-
-test('the setup wizard fills in the currency for Frappe country names', async () => {
-  const fyo = await makeFyo();
-  fyo.db.exists = async () => true;
-  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Türkiye' });
-
-  assert.equal(await wizard.formulas.currency.formula(), 'TRY');
 });
 
 function chart(name, countryCode, language = null) {

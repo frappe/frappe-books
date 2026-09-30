@@ -39,7 +39,7 @@
 </template>
 
 <script lang="ts">
-import type { DocValueMap } from 'fyo/core/types';
+import type { Doc } from 'fyo/model/doc';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { frappeModels, models, getRegionalModels } from 'models';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
@@ -174,8 +174,8 @@ export default defineComponent({
       }
       this.loading = false;
     },
-    async completeSetup(values: DocValueMap) {
-      await fyo.db.insert(ModelNameEnum.SetupWizard, values);
+    async completeSetup(wizard: Doc) {
+      await wizard.sync();
       await call(
         'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
       );

@@ -251,10 +251,10 @@ export default defineComponent({
         return;
       }
 
-      await this.doc.set('companyName', "Lin's Things");
+      await this.doc.set('company_name', "Lin's Things");
       await this.doc.set('email', 'lin@lthings.com');
       await this.doc.set('fullname', 'Lin Slovenly');
-      await this.doc.set('bankName', 'Max Finance');
+      await this.doc.set('bank_name', 'Max Finance');
       await this.doc.set('country', 'India');
     },
     async onValueChange(field: Field, value: DocValue) {
@@ -289,7 +289,7 @@ export default defineComponent({
       }
 
       this.loading = true;
-      this.$emit('setup-complete', this.doc.getValidDict());
+      this.$emit('setup-complete', this.doc);
     },
     cancel() {
       this.$emit('setup-canceled');

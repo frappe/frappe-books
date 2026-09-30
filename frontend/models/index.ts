@@ -89,7 +89,6 @@ export const models = {
   SalesQuote,
   SalesQuoteItem,
   SerialNumber,
-  SetupWizard,
   PrintTemplate,
   Tax,
   TaxSummary,
@@ -124,6 +123,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   InventorySettings,
   Misc,
   POSSettings,
+  SetupWizard,
   SystemSettings,
 };
 

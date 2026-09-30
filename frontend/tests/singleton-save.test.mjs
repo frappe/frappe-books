@@ -3,10 +3,7 @@ import { test } from 'node:test';
 import { Fyo, getSchemas } from './helpers/fyo.mjs';
 
 // Settings singles still served through the bridge; Frappe-backed ones are in frappe-singles.test.mjs.
-const settings = [
-  ['PrintSettings', 'displayLogo', true],
-  ['SetupWizard', 'companyName', 'Test Company'],
-];
+const settings = [['PrintSettings', 'displayLogo', true]];
 
 for (const [schemaName, fieldname, value] of settings) {
   test(`${schemaName} saves only defined fields and retains the saved value`, async () => {
@@ -23,19 +20,6 @@ for (const [schemaName, fieldname, value] of settings) {
     assert.equal(saved[fieldname], value);
   });
 }
-
-const setupValues = {
-  fullname: 'Test Owner',
-  companyName: 'Test Company',
-  bankName: 'Test Bank',
-  country: 'India',
-  email: 'test@example.com',
-  currency: 'INR',
-  chartOfAccounts: 'Standard',
-  fiscalYearStart: '2026-04-01',
-  fiscalYearEnd: '2027-03-31',
-};
-const requiredValues = { SetupWizard: setupValues };
 
 async function makeFixture(schemaName) {
   const schemas = getSchemas('-', []);
@@ -63,7 +47,7 @@ async function makeFixture(schemaName) {
   const fyo = new Fyo({ DatabaseDemux: SettingsStore });
   await fyo.db.init();
   fyo.doc.registerModels({});
-  const doc = fyo.doc.getNewDoc(schemaName, requiredValues[schemaName] ?? {});
+  const doc = fyo.doc.getNewDoc(schemaName);
   stored = fyo.db.converter.toRawValueMap(schemaName, doc.getValidDict());
   // The fixture represents an existing singleton without loading linked records.
   doc._notInserted = false;

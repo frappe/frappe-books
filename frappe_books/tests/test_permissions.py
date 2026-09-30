@@ -71,11 +71,18 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			template.template = "<div>{{ doc.name }}</div>"
 			self.assertRaises(frappe.PermissionError, template.save)
 
-	def test_roles_import_the_doctypes_they_create(self):
+	def test_only_books_manager_imports(self):
+		importable = frappe.get_all(
+			"DocType", filters={"module": "Frappe Books", "allow_import": 1}, pluck="name"
+		)
+		for doctype in importable:
+			with self.subTest(doctype=doctype):
+				importers = {perm.role for perm in frappe.get_meta(doctype).permissions if perm.get("import")}
+				self.assertEqual(importers, {"Books Manager"})
+
 		for user, doctype, allowed in (
-			(TEST_USER, "Books Sales Invoice", True),
-			(TEST_USER, "Books Tax", False),
-			(MANAGER, "Books Tax", True),
+			(TEST_USER, "Books Sales Invoice", False),
+			(MANAGER, "Books Sales Invoice", True),
 			(MANAGER, "Books Ledger Entry", False),
 		):
 			with self.subTest(user=user, doctype=doctype), self.set_user(user):

@@ -27,11 +27,14 @@ DEFAULT_PRINT_TEMPLATE_FIELDS = {
 }
 PRINT_TEMPLATE_DIRECTORY = Path(__file__).with_name("data")
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
-# Rights Books roles need on core doctypes the Books interface uses
+# Rights Books roles need on core doctypes the Books interface uses; if_owner limits them to own records
 CORE_PERMISSIONS = {
 	"Currency": {
 		"Books User": ("read", "report", "print", "export", "email"),
 		"Books Manager": ("read", "write", "create", "delete", "report", "print", "export", "email", "share"),
+	},
+	"Data Import": {
+		"Books Manager": ("read", "write", "create", "if_owner"),
 	},
 }
 

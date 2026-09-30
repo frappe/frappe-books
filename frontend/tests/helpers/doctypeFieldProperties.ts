@@ -14,7 +14,11 @@ type DocType = {
 };
 type SchemaMapping = Record<
   string,
-  { doctype: string; fields: Record<string, string> }
+  {
+    doctype: string;
+    fields: Record<string, string>;
+    print_formats?: Record<string, string>;
+  }
 >;
 
 const DATA_PROPERTIES = [
@@ -52,6 +56,13 @@ export function getDoctypeFieldProperties(
         if (docfield) {
           properties[source] = getProperties(docfield, config.fields, toSchema);
         }
+      }
+      // Customize Form's link to a DocType's default print format
+      for (const source of Object.keys(config.print_formats ?? {})) {
+        properties[source] = {
+          fieldtype: 'Link',
+          options: toSchema('Print Format'),
+        };
       }
       if (properties.status && doctype?.states?.length) {
         properties.status.states = Object.fromEntries(

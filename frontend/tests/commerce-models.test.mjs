@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   evaluateHidden,
+  evaluateRequired,
   frappeModels,
   fyo,
   getFrappeDoc,
   getModel,
   getSchema,
+  models,
   newFrappeDoc,
 } from './helpers/frappe.mjs';
 import {
@@ -305,3 +307,139 @@ test('a party makes and lists the invoices its role allows', () => {
     }
   );
 });
+
+test('the price list form shows its item prices; the list shows its use', () => {
+  assert.deepEqual(getLayout('PriceList'), [
+    'name | Name |  | Default',
+    'is_enabled | Is Price List Enabled |  | Default',
+    'is_sales | For Sales |  | Default',
+    'is_purchase | For Purchase |  | Default',
+    'price_list_item | Item Prices |  | Item Prices',
+  ]);
+  assert.deepEqual(getSchema('PriceListItem').tableFields, [
+    'item',
+    'unit',
+    'rate',
+  ]);
+  const [, enabled, usage] =
+    getModel('PriceList').getListViewSettings().columns;
+  const row = { is_enabled: 1, is_sales: 1, is_purchase: 1 };
+  assert.equal(enabled.badge(row).label, 'Enabled');
+  assert.equal(enabled.badge({}).label, 'Disabled');
+  assert.equal(usage.badge(row).label, 'Sales and Purchase');
+  assert.equal(usage.badge({ is_purchase: 1 }).label, 'Purchase');
+});
+
+test("a price list row takes its item's unit from the server preview", async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  respond = ({ path, body }) => {
+    if (path !== '/api/v2/method/run_doc_method') {
+      return { data: [] };
+    }
+    const [row] = body.document.price_list_item;
+    return {
+      docs: [{ ...body.document, price_list_item: [{ ...row, unit: 'Kg' }] }],
+    };
+  };
+  const prices = newFrappeDoc('PriceList', { name: 'Retail' });
+  await prices.append('price_list_item', { item: 'Sugar' });
+  await prices.price_list_item[0].set('rate', fyo.pesa(5));
+
+  t.mock.timers.tick(300);
+  await waitFor(() => prices.price_list_item[0].unit === 'Kg');
+  assert.equal(requests.at(-1).body.method, 'preview');
+});
+
+test('the pricing rule form shows each discount scheme as it did', async () => {
+  assert.deepEqual(getLayout('PricingRule').slice(0, 7), [
+    'number_series | Number Series |  | Default',
+    'is_enabled | Is Pricing Rule Enabled |  | Default',
+    'title | Title |  | Default',
+    'applied_items | Applied Items |  | Items',
+    'discount_type | Discount Type |  | Default',
+    'is_coupon_code_based | Is Coupon Code Based |  | Default',
+    'priority | Priority |  | Default',
+  ]);
+  const schema = getSchema('PricingRule');
+  const field = (fieldname) =>
+    schema.fields.find((f) => f.fieldname === fieldname);
+  assert.equal(schema.naming, 'numberSeries');
+  assert.equal(field('applied_items').edit, true);
+  assert.deepEqual(
+    field('price_discount_type').options.map(({ label }) => label),
+    ['Rate', 'Discount Percentage', 'Discount Amount']
+  );
+  assert.equal(field('number_series').setOnlyOnce, true);
+
+  const rule = newFrappeDoc('PricingRule');
+  assert.equal(rule.number_series, 'PRLE-');
+  const shown = () =>
+    rule.schema.fields
+      .filter(
+        (f) => !f.meta && f.section !== 'Default' && f.section !== 'Items'
+      )
+      .filter((f) => !hidden(rule, f.fieldname))
+      .map((f) => f.fieldname);
+  await rule.set('discount_type', 'Price Discount');
+  await rule.set('price_discount_type', 'percentage');
+  assert.deepEqual(shown().slice(0, 2), [
+    'price_discount_type',
+    'discount_percentage',
+  ]);
+  assert.equal(evaluateRequired(rule.fieldMap.price_discount_type, rule), true);
+  await rule.set('discount_type', 'Product Discount');
+  await rule.set('is_recursive', true);
+  assert.deepEqual(shown().slice(0, 6), [
+    'free_item',
+    'free_item_quantity',
+    'free_item_unit',
+    'round_free_item_qty',
+    'is_recursive',
+    'recurse_every',
+  ]);
+  assert.equal(
+    evaluateRequired(rule.fieldMap.price_discount_type, rule),
+    false
+  );
+  clearTimeout(rule._previewTimer);
+});
+
+test('pricing rule limits show the message the server refuses them with', async () => {
+  const rule = newFrappeDoc('PricingRule', { max_quantity: 5 });
+  await assert.rejects(rule.set('min_quantity', 6), {
+    message: 'Minimum quantity must be less than maximum quantity.',
+  });
+  await rule.set('max_amount', fyo.pesa(10));
+  await assert.rejects(rule.set('min_amount', fyo.pesa(10)), {
+    message: 'Minimum amount must be less than maximum amount.',
+  });
+  await rule.set('valid_to', new Date('2026-01-01'));
+  await assert.rejects(rule.set('valid_from', new Date('2026-02-01')), {
+    message: 'Valid From must be on or before Valid To.',
+  });
+  clearTimeout(rule._previewTimer);
+});
+
+test('coupon and invoice links filter pricing rules and price lists by Frappe fieldnames', () => {
+  assert.deepEqual(models.CouponCode.filters.pricingRule(), {
+    is_coupon_code_based: true,
+  });
+  assert.deepEqual(models.SalesInvoice.filters.priceList({ isSales: true }), {
+    is_enabled: true,
+    is_sales: true,
+  });
+  assert.deepEqual(
+    models.PurchaseInvoice.filters.priceList({ isSales: false }),
+    {
+      is_enabled: true,
+      is_purchase: true,
+    }
+  );
+});
+
+async function waitFor(isDone) {
+  for (let tries = 0; tries < 50 && !isDone(); tries++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.ok(isDone());
+}

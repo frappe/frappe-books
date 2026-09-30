@@ -182,13 +182,50 @@ test('shift sheets count cash with steppers', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
   const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
   const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
-  const cash = sheet.getByRole('row', { name: /^Cash/ });
+  const cash = sheet.getByRole('listitem').filter({ hasText: /^\s*Cash/ });
   const before = Number(await count.inputValue());
   const counted = await cash.textContent();
   await sheet.getByRole('button', { name: 'Increase' }).last().click();
   await expect(count).toHaveValue(String(before + 1));
   await expect(cash).not.toHaveText(counted!);
   await page.screenshot({ path: test.info().outputPath('close-shift.png') });
+});
+
+test('the counted drawer is shared by the cash methods', async ({ page }) => {
+  // Cash expects 1,000.00 and Store Cash 500.00; the opening 1,760.00 is counted.
+  await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
+  const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
+  await expect(sheet.getByText('Counted Credit Card')).toBeVisible();
+  await expect(sheet.getByText('Counted Cash')).toHaveCount(0);
+  await expect(sheet.getByText('Counted Store Cash')).toHaveCount(0);
+
+  const row = (name: string) =>
+    sheet.getByRole('listitem').filter({ hasText: new RegExp(`^\\s*${name}`) });
+  await expect(row('Cash')).toHaveText(
+    /260.00\s*Expected 1,000.00\s*Counted 1,260.00/
+  );
+  await expect(row('Store Cash')).toHaveText(
+    /0.00\s*Expected 500.00\s*Counted 500.00/
+  );
+});
+
+test('large shift amounts fit a narrow phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
+  const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
+  const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
+  await count.fill('9999999');
+  await count.press('Tab');
+  await expect(
+    sheet.getByRole('listitem').filter({ hasText: /^\s*Cash/ })
+  ).toContainText(/Counted [\d,]{13,}\.00/);
+
+  const rows = await sheet
+    .getByRole('listitem')
+    .evaluateAll((items) =>
+      items.map((item) => item.scrollWidth <= item.clientWidth)
+    );
+  expect(rows.every(Boolean)).toBe(true);
 });
 
 test('leaving a sale with items asks in a sheet', async ({ page }) => {

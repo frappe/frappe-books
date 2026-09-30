@@ -20,7 +20,6 @@ await build({
       export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
       export { dataProperties, isReferenceField } from './schemas/fieldProperties';
       export { FieldTypeEnum } from './schemas/types';
-      export { getPrintTemplateDocValues } from './src/utils/printTemplateData';
     `,
     resolveDir: frontend,
   },
@@ -32,7 +31,6 @@ await build({
 const bundle = createRequire(import.meta.url)(output);
 export const {
   Fyo,
-  getPrintTemplateDocValues,
   dataProperties,
   isReferenceField,
   FieldTypeEnum,

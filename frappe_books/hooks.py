@@ -44,7 +44,6 @@ jinja = {
 }
 
 after_install = "frappe_books.setup.bootstrap"
-after_migrate = "frappe_books.setup.after_migrate"
 before_tests = ["frappe_books.setup.before_tests", "frappe_books.tests.accounting.enable_features"]
 
 scheduler_events = {

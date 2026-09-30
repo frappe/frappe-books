@@ -24,7 +24,6 @@ import { PricingRule } from './baseModels/PricingRule/PricingRule';
 import { PricingRuleItem } from './baseModels/PricingRuleItem/PricingRuleItem';
 import { PrintFormat } from './baseModels/PrintFormat';
 import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
-import { PrintTemplate } from './baseModels/PrintTemplate';
 import { PurchaseInvoice } from './baseModels/PurchaseInvoice/PurchaseInvoice';
 import { PurchaseInvoiceItem } from './baseModels/PurchaseInvoiceItem/PurchaseInvoiceItem';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
@@ -92,7 +91,6 @@ export const models = {
   SalesQuoteItem,
   SerialNumber,
   SetupWizard,
-  PrintTemplate,
   PrintFormat,
   Tax,
   TaxSummary,

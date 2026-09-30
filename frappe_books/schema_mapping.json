@@ -627,17 +627,6 @@
         "termsAndConditions": "terms_and_conditions"
       }
     },
-    "PrintTemplate": {
-      "doctype": "Books Print Template",
-      "fields": {
-        "height": "height",
-        "isCustom": "is_custom",
-        "name": "name",
-        "template": "template",
-        "type": "type",
-        "width": "width"
-      }
-    },
     "PurchaseInvoice": {
       "doctype": "Books Purchase Invoice",
       "fields": {

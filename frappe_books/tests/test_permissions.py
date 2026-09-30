@@ -27,7 +27,6 @@ ROLE_MATRIX = {
 	"Books Party": (FULL, FULL, {"read", "write", "create"}),
 	"Books Tax": (FULL, FULL, READ),
 	"Books Defaults": (FULL, FULL, READ),
-	"Books Print Template": (FULL, READ, READ),
 	"Print Format": (FULL, FULL, READ),
 	"Books Custom Form": (FULL, READ, READ),
 	"Books Ledger Entry": (READ, READ, READ),
@@ -72,12 +71,6 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		account = make_account("Permission Tax", account_type="Tax")
 		with self.set_user(TEST_USER):
 			self.assertRaises(frappe.PermissionError, make_tax, account.name)
-
-	def test_books_user_cannot_write_print_template(self):
-		template = frappe.get_last_doc("Books Print Template")
-		with self.set_user(TEST_USER):
-			template.template = "<div>{{ doc.name }}</div>"
-			self.assertRaises(frappe.PermissionError, template.save)
 
 	def test_books_manager_writes_print_formats_books_user_prints(self):
 		with self.set_user(MANAGER):

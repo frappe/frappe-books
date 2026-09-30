@@ -1,7 +1,5 @@
 """Install and test bootstrap data for Frappe Books."""
 
-from pathlib import Path
-
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 from frappe.permissions import add_permission, update_permission_property
@@ -10,14 +8,6 @@ from frappe_books.printing import default_print_format, set_default_print_format
 from frappe_books.series import NUMBER_SERIES
 
 DEFAULT_SERIES_START = 1001
-DEFAULT_PRINT_TEMPLATES = {
-	"Business - Quote": ("SalesQuote", "business_print_template.html", 21, 29.7),
-	"Business - Sales Invoice": ("SalesInvoice", "business_print_template.html", 21, 29.7),
-	"Business - Purchase Invoice": ("PurchaseInvoice", "business_print_template.html", 21, 29.7),
-	"Business - Payment": ("Payment", "business_payment_print_template.html", 21, 29.7),
-	"Business - Shipment": ("Shipment", "business_shipment_print_template.html", 21, 29.7),
-	"Business-POS - Sales Invoice": ("SalesInvoice", "business_pos_print_template.html", 8, 22),
-}
 DEFAULT_PRINT_FORMATS = {
 	"Books Sales Quote": "Business - Quote",
 	"Books Sales Invoice": "Business - Sales Invoice",
@@ -26,7 +16,6 @@ DEFAULT_PRINT_FORMATS = {
 	"Books Shipment": "Business - Shipment",
 }
 POS_PRINT_FORMAT = "Business-POS - Sales Invoice"
-PRINT_TEMPLATE_DIRECTORY = Path(__file__).with_name("data")
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
 # Rights Books roles need on core doctypes the Books interface uses
 CORE_PERMISSIONS = {
@@ -52,8 +41,6 @@ def bootstrap():
 	for method_type in ("Cash", "Bank"):
 		_insert_if_missing("Books Payment Method", method_type, {"type": method_type})
 	grant_core_permissions()
-	for name in DEFAULT_PRINT_TEMPLATES:
-		_insert_if_missing("Books Print Template", name, standard_print_template_values(name))
 	set_default_print_formats()
 
 
@@ -74,21 +61,6 @@ def grant_core_permissions():
 				update_permission_property(doctype, role, 0, right, 1)
 
 
-def after_migrate():
-	"""Update shipped templates only. Records a user deleted or changed stay that way."""
-	update_standard_print_templates()
-
-
-def update_standard_print_templates():
-	filters = {"name": ["in", list(DEFAULT_PRINT_TEMPLATES)], "is_custom": 0}
-	for name in frappe.get_all("Books Print Template", filters=filters, pluck="name"):
-		template = frappe.get_doc("Books Print Template", name)
-		values = standard_print_template_values(name)
-		if any(template.get(fieldname) != value for fieldname, value in values.items()):
-			template.update(values)
-			template.save(ignore_permissions=True)
-
-
 def set_default_print_formats():
 	"""Give each Books DocType and the POS a built-in print format, unless one is chosen."""
 	for doctype, print_format in DEFAULT_PRINT_FORMATS.items():
@@ -96,17 +68,6 @@ def set_default_print_formats():
 			set_default_print_format(doctype, print_format)
 	if not frappe.db.get_single_value("Books Defaults", "pos_print_template"):
 		frappe.db.set_single_value("Books Defaults", "pos_print_template", POS_PRINT_FORMAT)
-
-
-def standard_print_template_values(name):
-	document_type, filename, width, height = DEFAULT_PRINT_TEMPLATES[name]
-	return {
-		"type": document_type,
-		"template": (PRINT_TEMPLATE_DIRECTORY / filename).read_text(),
-		"width": width,
-		"height": height,
-		"is_custom": 0,
-	}
 
 
 def _insert_if_missing(doctype, name, values):

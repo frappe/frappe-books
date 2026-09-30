@@ -63,7 +63,7 @@ def format_amount(value, currency: str, settings) -> str:
 
 
 def get_print_totals(doc) -> dict[str, Any]:
-	"""Return the totals a print template shows besides the document's own fields."""
+	"""Return the totals a print format shows besides the document's own fields."""
 	if isinstance(doc, InvoiceController):
 		return _invoice_totals(doc)
 	if isinstance(doc, PaymentController):

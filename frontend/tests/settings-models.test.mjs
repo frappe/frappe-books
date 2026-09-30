@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { getMetaBundle } from './helpers/doctypes.mjs';
+import { getMetaBundle, mapping } from './helpers/doctypes.mjs';
 import {
   evaluateHidden,
   evaluateReadOnly,
@@ -216,4 +216,35 @@ test('the setup wizard shows the fields, placeholders and sections it showed', (
     'fiscal_year_end | Fiscal Year End Date | Accounting',
   ]);
   assert.equal(frappeModels.SetupWizard.previewMethod, 'preview');
+});
+
+test('settings links offer Create where the settings schema files offered it', () => {
+  const schemaFiles = new URL('../schemas/', import.meta.url);
+  const files = readdirSync(schemaFiles, { recursive: true });
+  const problems = [
+    'AccountingSettings',
+    'InventorySettings',
+    'Defaults',
+    'POSSettings',
+    'SetupWizard',
+  ].flatMap((schemaName) => {
+    const file = files.find((path) => path.endsWith(`/${schemaName}.json`));
+    const old = JSON.parse(readFileSync(new URL(file, schemaFiles), 'utf8'));
+    const oldNames = Object.fromEntries(
+      Object.entries(mapping[schemaName].fields).map(([name, fieldname]) => [
+        fieldname,
+        name,
+      ])
+    );
+    return getSchema(schemaName)
+      .fields.filter((field) => field.fieldtype === 'Link' && !field.readOnly)
+      .filter(({ fieldname, create }) => {
+        const oldField = old.fields.find(
+          (field) => field.fieldname === oldNames[fieldname]
+        );
+        return create !== !!oldField?.create;
+      })
+      .map(({ fieldname }) => `${schemaName}.${fieldname}`);
+  });
+  assert.deepEqual(problems, []);
 });

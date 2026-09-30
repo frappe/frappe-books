@@ -185,6 +185,12 @@ export class FrappeDoc extends Doc {
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
     this._rememberSavedRows();
+    this._forgetBridgeCopy();
+  }
+
+  /** Bridge readers of the schema, like the POS and print, load the saved document again. */
+  _forgetBridgeCopy() {
+    this.fyo.doc.removeFromCache(this.schemaName, this.name!);
   }
 
   _rememberSavedRows() {
@@ -223,6 +229,7 @@ export class FrappeDoc extends Doc {
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();
+    this._forgetBridgeCopy();
     this.fyo.doc.observer.trigger(`cancel:${this.schemaName}`, this.name);
   }
 

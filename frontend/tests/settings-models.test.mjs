@@ -196,3 +196,24 @@ test('the System tab offers sample dates and takes custom formats and locales', 
     /between 0 and 9/
   );
 });
+
+test('the setup wizard shows the fields, placeholders and sections it showed', () => {
+  const layout = getSchema('SetupWizard')
+    .fields.filter((field) => !field.meta && !field.hidden)
+    .map(({ fieldname, placeholder, section }) =>
+      [fieldname, placeholder ?? '', section].join(' | ')
+    );
+  assert.deepEqual(layout, [
+    'logo |  | Default',
+    'company_name | Company Name | Default',
+    'fullname | John Doe | Default',
+    'email | john@doe.com | Default',
+    'country | Select Country | Locale',
+    'currency | Currency | Locale',
+    'bank_name | Prime Bank | Accounting',
+    'chart_of_accounts | Select CoA | Accounting',
+    'fiscal_year_start | Fiscal Year Start Date | Accounting',
+    'fiscal_year_end | Fiscal Year End Date | Accounting',
+  ]);
+  assert.equal(frappeModels.SetupWizard.previewMethod, 'preview');
+});

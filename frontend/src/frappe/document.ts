@@ -18,7 +18,7 @@ import { getDocType } from './doctypes';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
 import type { DocField } from './meta';
 import type { Presentation } from './schema';
-import { toDocValues, toFrappeValue } from './values';
+import { toDocValue, toDocValues, toFrappeValue } from './values';
 
 const PREVIEW_DELAY = 300;
 
@@ -384,16 +384,22 @@ export class FrappeDoc extends Doc {
   applyPreview(previewed: DocValueMap) {
     for (const field of this.schema.fields) {
       const { fieldname } = field;
-      if (field.meta || fieldname === 'name' || !(fieldname in previewed)) {
+      if (field.meta || fieldname === 'name') {
         continue;
       }
 
-      const value = previewed[fieldname];
       if (field.fieldtype === 'Table') {
-        this._applyPreviewRows(fieldname, value as DocValueMap[]);
-      } else if (
-        !areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)
-      ) {
+        const rows = previewed[fieldname] as DocValueMap[] | undefined;
+        if (rows) {
+          this._applyPreviewRows(fieldname, rows);
+        }
+
+        continue;
+      }
+
+      // Frappe leaves empty values out of the documents it sends.
+      const value = previewed[fieldname] ?? toDocValue(null, field, this.fyo);
+      if (!areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)) {
         this._rememberFilled(fieldname);
         this[fieldname] = value;
       }

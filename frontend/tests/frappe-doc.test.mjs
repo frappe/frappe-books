@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   errors,
+  evaluateCondition,
   evaluateHidden,
   evaluateReadOnly,
   evaluateRequired,
@@ -96,6 +97,19 @@ test('depends_on, read_only_depends_on and mandatory_depends_on apply to the for
   stubDocument({ ...savedPen, track_item: 0 });
   const untracked = await getFrappeDoc('Item', 'Untracked');
   assert.equal(evaluateHidden(field(untracked, 'track_item'), untracked), true);
+});
+
+test('form conditions read the document status, as Frappe forms do', () => {
+  const order = newFrappeDoc('Order', { customer: 'Acme' });
+  assert.equal(
+    evaluateCondition('eval:!doc.docstatus', order.getEvalDoc()),
+    true
+  );
+  order.docstatus = 1;
+  assert.equal(
+    evaluateCondition('eval:!doc.docstatus', order.getEvalDoc()),
+    false
+  );
 });
 
 test('a new document is inserted whole; its rows go without client names', async () => {

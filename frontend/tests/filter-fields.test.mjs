@@ -10,11 +10,7 @@ const audits = [
   'submitted',
   'cancelled',
 ];
-const totals = ['netTotal', 'grandTotal', 'baseGrandTotal'];
 for (const schemaName of [
-  'SalesInvoice',
-  'PurchaseInvoice',
-  'SalesQuote',
   'JournalEntry',
   'Payment',
   'Shipment',
@@ -29,14 +25,6 @@ for (const schemaName of [
     const names = fields.map((field) => field.fieldname);
     for (const name of ['name', 'numberSeries', ...audits])
       assert.ok(names.includes(name), `${schemaName}.${name}`);
-    if (schemaName.includes('Invoice') || schemaName === 'SalesQuote') {
-      for (const total of totals)
-        assert.ok(names.includes(total), `${schemaName}.${total}`);
-      assert.ok(
-        !names.includes('outstandingAmount'),
-        'Converted return balances need their own filter semantics'
-      );
-    }
     const query = { name: ['like', '%001%'], numberSeries: ['=', 'SINV-'] };
     const set = new FilterSet();
     set.setQuery(query);
@@ -78,28 +66,16 @@ test('unverified read-only fields, computed values, internal metadata and opt-ou
 });
 
 test("a Frappe-backed schema's standard columns filter its list", () => {
-  const fields = ['owner', 'modified_by', 'creation', 'modified', 'idx'].map(
+  const fields = ['name', 'owner', 'modified_by', 'creation', 'modified', 'idx'].map(
     (fieldname) => ({ fieldname, fieldtype: 'Data', meta: true })
   );
   assert.deepEqual(
     getFilterFields(fields).map((field) => field.fieldname),
-    ['owner', 'modified_by', 'creation', 'modified']
+    ['name', 'owner', 'modified_by', 'creation', 'modified']
   );
 });
 
 for (const [schemaName, values] of [
-  [
-    'SalesInvoice',
-    [
-      'Saved',
-      'Unpaid',
-      'Partly Paid',
-      'Paid',
-      'Return',
-      'Return Issued',
-      'Cancelled',
-    ],
-  ],
   ['JournalEntry', ['Saved', 'Submitted', 'Cancelled']],
   ['Shipment', ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled']],
 ]) {

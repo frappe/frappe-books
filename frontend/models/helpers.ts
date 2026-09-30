@@ -23,6 +23,10 @@ import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
 import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { getSerialNumbersForQuantity } from './inventory/helpers';
+import type { DocValues } from 'src/frappe/api';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { newFrappeDocFromServer } from 'src/frappe/documents';
+import { call } from 'src/web/api';
 
 const MAPPER_MODULES: Record<string, string> = {
   Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
@@ -45,13 +49,32 @@ export async function getMappedDoc(
   schemaName: string,
   mapper: string
 ): Promise<Doc> {
-  const method = `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
   const values = await source.fyo.db.getMapped(
     schemaName,
-    method,
+    getMapperMethod(source, mapper),
     source.name!
   );
   return source.fyo.doc.getNewDocFromServer(schemaName, values);
+}
+
+/** Like `getMappedDoc`, but a document of the kind the /books forms open for `schemaName`. */
+export async function getMappedBooksDoc(
+  source: Doc,
+  schemaName: string,
+  mapper: string
+): Promise<Doc> {
+  if (!isFrappeBacked(schemaName)) {
+    return await getMappedDoc(source, schemaName, mapper);
+  }
+
+  const values = await call<DocValues>(getMapperMethod(source, mapper), {
+    source_name: source.name,
+  });
+  return newFrappeDocFromServer(schemaName, values);
+}
+
+function getMapperMethod(source: Doc, mapper: string): string {
+  return `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
 }
 
 export function getQuoteActions(
@@ -143,7 +166,7 @@ export function getMakeStockTransferAction(
     condition: (doc: Doc) => doc.isSubmitted && !!doc.stockNotTransferred,
     action: async (doc: Doc) => {
       const invoice = doc as Invoice;
-      const transfer = await getMappedDoc(
+      const transfer = await getMappedBooksDoc(
         invoice,
         invoice.stockTransferSchemaName,
         invoice.stockTransferMapper
@@ -186,7 +209,7 @@ export function getMakeInvoiceAction(
       }
     },
     action: async (doc: Doc) => {
-      const invoice = await getMappedDoc(doc, invoiceSchemaName, mapper);
+      const invoice = await getMappedBooksDoc(doc, invoiceSchemaName, mapper);
       if (!invoice.name) {
         return;
       }
@@ -204,7 +227,7 @@ export function getCreateCustomerAction(fyo: Fyo): Action {
     label: fyo.t`Customer`,
     condition: (doc: Doc) => !doc.notInserted,
     action: async (doc: Doc, router) => {
-      const customer = await getMappedDoc(
+      const customer = await getMappedBooksDoc(
         doc,
         ModelNameEnum.Party,
         'make_customer'
@@ -220,7 +243,7 @@ export function getSalesQuoteAction(fyo: Fyo): Action {
     label: fyo.t`Sales Quote`,
     condition: (doc: Doc) => !doc.notInserted,
     action: async (doc, router) => {
-      const quote = await getMappedDoc(
+      const quote = await getMappedBooksDoc(
         doc,
         ModelNameEnum.SalesQuote,
         'make_sales_quote'
@@ -237,7 +260,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     condition: (doc: Doc) =>
       doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
     action: async (doc, router) => {
-      const payment = await getMappedDoc(
+      const payment = await getMappedBooksDoc(
         doc,
         ModelNameEnum.Payment,
         'make_payment'
@@ -312,7 +335,7 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {
-      const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
+      const returnDoc = await getMappedBooksDoc(doc, doc.schemaName, 'make_return');
       if (!returnDoc.name) {
         return;
       }

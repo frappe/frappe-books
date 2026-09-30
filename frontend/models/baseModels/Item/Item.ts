@@ -8,7 +8,7 @@ import {
   ValidationMap,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { getMappedDoc } from 'models/helpers';
+import { getMappedBooksDoc } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
@@ -93,7 +93,7 @@ export class Item extends FrappeDoc {
         label: fyo.t`Sales Invoice`,
         condition: (doc) => !doc.notInserted && doc.item_usage !== 'Purchases',
         action: async (doc, router) => {
-          const invoice = await getMappedDoc(
+          const invoice = await getMappedBooksDoc(
             doc,
             ModelNameEnum.SalesInvoice,
             'make_sales_invoice'
@@ -106,7 +106,7 @@ export class Item extends FrappeDoc {
         label: fyo.t`Purchase Invoice`,
         condition: (doc) => !doc.notInserted && doc.item_usage !== 'Sales',
         action: async (doc, router) => {
-          const invoice = await getMappedDoc(
+          const invoice = await getMappedBooksDoc(
             doc,
             ModelNameEnum.PurchaseInvoice,
             'make_purchase_invoice'

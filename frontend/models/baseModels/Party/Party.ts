@@ -14,7 +14,7 @@ import {
 import { Money } from 'pesa';
 import { PartyRole } from './types';
 import { ModelNameEnum } from 'models/types';
-import { getMappedDoc } from 'models/helpers';
+import { getMappedBooksDoc } from 'models/helpers';
 
 export class Party extends Doc {
   role?: PartyRole;
@@ -84,7 +84,7 @@ export class Party extends Doc {
         condition: (doc: Doc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
-          const doc = await getMappedDoc(
+          const doc = await getMappedBooksDoc(
             partyDoc,
             ModelNameEnum.PurchaseInvoice,
             'make_purchase_invoice'
@@ -118,7 +118,7 @@ export class Party extends Doc {
         condition: (doc: Doc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {
-          const doc = await getMappedDoc(
+          const doc = await getMappedBooksDoc(
             partyDoc,
             ModelNameEnum.SalesInvoice,
             'make_sales_invoice'

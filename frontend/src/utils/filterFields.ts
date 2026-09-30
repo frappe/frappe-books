@@ -8,6 +8,7 @@ const storedReadOnlyFields = new Set([
   'grandTotal',
   'baseGrandTotal',
 ]);
+// Books names, then the Frappe names Frappe-backed schemas keep.
 const auditFields = new Set([
   'created',
   'modified',
@@ -15,6 +16,9 @@ const auditFields = new Set([
   'modifiedBy',
   'submitted',
   'cancelled',
+  'creation',
+  'owner',
+  'modified_by',
 ]);
 
 export function getFilterFields(

@@ -72,7 +72,8 @@ await build({
         getSerialNumbersForQuantity,
       } from './models/inventory/helpers';
       export { generateCSV, parseCSV } from './utils/csvParser';
-      export { Importer, getImportableSchemaNames, importDoc } from './src/importer';
+      export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
+      export { DataImport } from './src/dataImport';
     `,
     resolveDir: frontend,
   },
@@ -167,8 +168,9 @@ export const {
   generateCSV,
   parseCSV,
   Importer,
+  getGridRows,
   getImportableSchemaNames,
-  importDoc,
+  DataImport,
 } = bundle;
 
 export async function makeFyo() {

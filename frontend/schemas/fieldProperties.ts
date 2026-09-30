@@ -10,6 +10,8 @@ import type {
 
 /** Data properties the server's DocType meta sets on a field. */
 export type DocFieldProperties = {
+  /** The DocType's own fieldname, for framework APIs. */
+  fieldname: string;
   fieldtype: string;
   /** Custom fields only, as no schema file labels them. */
   label?: string;
@@ -30,6 +32,7 @@ export type FieldPropertyMap = Record<
 
 /** Field properties the DocType owns. Schema files may not set them. */
 export const dataProperties = [
+  'frappeFieldname',
   'fieldtype',
   'options',
   'target',
@@ -82,6 +85,7 @@ export function getFieldProperties(
   docfield: DocFieldProperties
 ): Partial<Field> {
   const properties = {
+    frappeFieldname: docfield.fieldname,
     required: !!docfield.reqd,
     readOnly: !!docfield.read_only,
     setOnlyOnce: !!docfield.set_only_once,

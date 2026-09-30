@@ -1,9 +1,9 @@
-import { Fyo, t } from 'fyo';
+import { Fyo } from 'fyo';
 import { Converter } from 'fyo/core/converter';
-import { DocValue, DocValueMap } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
-import { getEmptyValuesByFieldTypes } from 'fyo/utils';
+import { DocValue } from 'fyo/core/types';
+import { getEmptyValuesByFieldTypes, isPesa } from 'fyo/utils';
 import { ValidationError } from 'fyo/utils/errors';
+import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import {
   Field,
@@ -46,10 +46,15 @@ export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
   return importables.filter((schemaName) => fyo.can(schemaName, 'import'));
 }
 
-export interface ImportResults {
-  success: string[];
-  successOldName: string[];
-  failed: { name: string; message: string }[];
+/** A CSV that Frappe's Data Import reads, and the grid row of each of its data rows. */
+export interface ImportFile {
+  csv: string;
+  gridRows: number[];
+}
+
+/** The grid rows behind file rows Frappe names, counting the header as row 1. */
+export function getGridRows(file: ImportFile, fileRows: number[]): number[] {
+  return fileRows.map((row) => file.gridRows[row - 2]);
 }
 
 type TemplateFieldProps = {
@@ -69,8 +74,7 @@ type ValueMatrixItem =
 
 type ValueMatrix = ValueMatrixItem[][];
 
-/** Child rows by doc name, child schema name and child row name. */
-type ChildTableMap = Record<string, Record<string, Map<string, DocValueMap>>>;
+type ImportColumn = { index: number; field: TemplateField; key: string };
 
 const skippedFieldsTypes: FieldType[] = [
   FieldTypeEnum.AttachImage,
@@ -79,10 +83,9 @@ const skippedFieldsTypes: FieldType[] = [
 ];
 
 /**
- * Tool that
- * - Can make bulk entries for any kind of Doc
- * - Takes in unstructured CSV data, converts it into Docs
- * - Saves and or Submits the converted Docs
+ * Grid of the Import Wizard
+ * - Takes in unstructured CSV data and maps its columns to template fields
+ * - Writes the grid as a file for Frappe's Data Import, which saves the documents
  */
 export class Importer {
   schemaName: string;
@@ -123,12 +126,6 @@ export class Importer {
   valueMatrix: ValueMatrix;
 
   /**
-   * Data from the valueMatrix rows will be converted into Docs
-   * which will be stored in this array.
-   */
-  docs: Doc[];
-
-  /**
    * Used if an options field is imported where the import data
    * provided maybe the label and not the value
    */
@@ -146,7 +143,6 @@ export class Importer {
 
     this.schemaName = schemaName;
     this.fyo = fyo;
-    this.docs = [];
     this.valueMatrix = [];
     this.optionsMap = {
       values: {},
@@ -171,61 +167,6 @@ export class Importer {
 
   selectFile(data: string) {
     this.selectParsed(parseCSV(data));
-  }
-
-  async checkLinks() {
-    const doesNotExist = [];
-    for (const [target, values] of this.getLinkValues()) {
-      for (const name of await this.getMissingNames(target, values)) {
-        doesNotExist.push({
-          schemaName: target,
-          schemaLabel: this.fyo.schemaMap[target]?.label,
-          name,
-        });
-      }
-    }
-
-    return doesNotExist;
-  }
-
-  /** Values of the picked Link columns, grouped by linked schema. */
-  getLinkValues(): Map<string, Set<string>> {
-    const linkColumns = this.assignedTemplateFields
-      .map((key, index) => ({
-        index,
-        tf: this.templateFieldsMap.get(key ?? ''),
-      }))
-      .filter(({ tf }) => tf?.fieldtype === FieldTypeEnum.Link) as {
-      index: number;
-      tf: TargetField;
-    }[];
-
-    const linkValues: Map<string, Set<string>> = new Map();
-    for (const row of this.valueMatrix) {
-      for (const { tf, index } of linkColumns) {
-        const value = row[index]?.value;
-        if (typeof value !== 'string' || !value) {
-          continue;
-        }
-
-        if (!linkValues.has(tf.target)) {
-          linkValues.set(tf.target, new Set());
-        }
-
-        linkValues.get(tf.target)!.add(value);
-      }
-    }
-
-    return linkValues;
-  }
-
-  async getMissingNames(target: string, names: Set<string>) {
-    const existing = await this.fyo.db.getAll(target, {
-      fields: ['name'],
-      filters: { name: ['in', [...names]] },
-    });
-    const existingNames = new Set(existing.map(({ name }) => name));
-    return [...names].filter((name) => !existingNames.has(name));
   }
 
   /** Labels of the template fields assigned to more than one column. */
@@ -282,16 +223,11 @@ export class Importer {
     );
   }
 
-  /** Keeps only the rows whose name is not among the imported names, to import them again. */
-  retryRowsNotImported(importedNames: string[]) {
-    this.docs = [];
-    const nameIndex = this.assignedTemplateFields.indexOf(
-      `${this.schemaName}.name`
+  /** Keeps only the rows at `indexes`, to import them again. */
+  keepRows(indexes: number[]) {
+    this.valueMatrix = this.valueMatrix.filter((_, index) =>
+      indexes.includes(index)
     );
-    this.valueMatrix = this.valueMatrix.filter((row) => {
-      const name = row[nameIndex].value;
-      return typeof name === 'string' && !importedNames.includes(name);
-    });
   }
 
   checkCellErrors() {
@@ -324,83 +260,107 @@ export class Importer {
     return cellErrors;
   }
 
-  populateDocs() {
-    const { dataMap, childTableMap } =
-      this.getDataAndChildTableMapFromValueMatrix();
-
-    const schema = this.fyo.schemaMap[this.schemaName];
-    const targetFieldnameMap = schema?.fields
-      .filter((f) => f.fieldtype === FieldTypeEnum.Table)
-      .reduce((acc, f) => {
-        const { target, fieldname } = f as TargetField;
-        acc[target] = fieldname;
-        return acc;
-      }, {} as Record<string, string>);
-
-    for (const [name, data] of dataMap.entries()) {
-      const doc = this.fyo.doc.getNewDoc(this.schemaName, data, false);
-      for (const schemaName in targetFieldnameMap) {
-        const fieldname = targetFieldnameMap[schemaName];
-        const childTable = childTableMap[name]?.[schemaName];
-        if (!childTable) {
-          continue;
-        }
-
-        for (const childData of childTable.values()) {
-          doc.push(fieldname, childData);
-        }
-      }
-
-      this.docs.push(doc);
-    }
-  }
-
-  /** Parent values by doc name, and child rows by doc name and child schema. */
-  getDataAndChildTableMapFromValueMatrix() {
-    const dataMap: Map<string, DocValueMap> = new Map();
-    const childTableMap: ChildTableMap = {};
-    const nameIndices = this.getNameIndices();
-    const nameIndex = nameIndices[this.schemaName];
-
-    for (const [rowIndex, row] of this.valueMatrix.entries()) {
-      const name = row[nameIndex]?.value;
-      if (typeof name !== 'string') {
-        continue;
-      }
-
-      for (const [column, vmi] of row.entries()) {
-        const tf = this.templateFieldsMap.get(
-          this.assignedTemplateFields[column] ?? ''
+  /**
+   * The grid as Frappe's Data Import reads it: the rows of a document follow
+   * each other, and only the first holds the document's own values.
+   */
+  getImportFile(): ImportFile {
+    const columns = this.getImportColumns();
+    const rows = [['docstatus', ...columns.map(({ key }) => key)]];
+    const gridRows: number[] = [];
+    for (const indexes of this.getDocumentRows()) {
+      const parentTexts = columns.map((column) =>
+        this.getParentText(indexes, column)
+      );
+      for (const [position, index] of indexes.entries()) {
+        rows.push(
+          this.getImportRow(index, columns, position ? null : parentTexts)
         );
-        if (!tf || vmi.value == null) {
-          continue;
-        }
-
-        const values = this.fyo.schemaMap[tf.schemaName]?.isChild
-          ? getChildValues(
-              childTableMap,
-              name,
-              tf.schemaName,
-              getChildName(row, nameIndices[tf.schemaName], tf, rowIndex)
-            )
-          : getOrSet(dataMap, name, {});
-        values[tf.fieldname] = vmi.value;
+        gridRows.push(index);
       }
     }
 
-    return { dataMap, childTableMap };
+    return { csv: generateCSV(rows), gridRows };
   }
 
-  /** The column of each schema's name field. */
-  getNameIndices(): Record<string, number> {
-    const nameIndices: Record<string, number> = {};
-    for (const [index, key] of this.assignedTemplateFields.entries()) {
-      if (key?.endsWith('.name')) {
-        nameIndices[key.split('.')[0]] = index;
+  /**
+   * One grid row as a file row. A document's first row gets `parentTexts` and
+   * its docstatus, so Frappe starts a new document there even if the other
+   * parent cells are empty; later rows leave the parent cells empty.
+   */
+  getImportRow(
+    index: number,
+    columns: ImportColumn[],
+    parentTexts: string[] | null
+  ): string[] {
+    const cells = columns.map((column, i) =>
+      column.field.parentSchemaChildField
+        ? this.getCellText(this.valueMatrix[index], column)
+        : (parentTexts?.[i] ?? '')
+    );
+    return [parentTexts ? '0' : '', ...cells];
+  }
+
+  /** The assigned columns Frappe imports, with the column key it reads each from. */
+  getImportColumns(): ImportColumn[] {
+    const schema = this.fyo.schemaMap[this.schemaName]!;
+    return this.assignedTemplateFields.flatMap((fieldKey, index) => {
+      const field = this.templateFieldsMap.get(fieldKey ?? '');
+      const key = field && getImportColumnKey(field, schema);
+      return key ? [{ index, field, key }] : [];
+    });
+  }
+
+  /** Grid rows by document, as the name column groups them. Rows without a name are left out. */
+  getDocumentRows(): number[][] {
+    const nameIndex = this.getNameIndex();
+    const documents = new Map<string, number[]>();
+    for (const [index, row] of this.valueMatrix.entries()) {
+      const name = row[nameIndex]?.value;
+      if (typeof name === 'string') {
+        documents.set(name, [...(documents.get(name) ?? []), index]);
       }
     }
 
-    return nameIndices;
+    return [...documents.values()];
+  }
+
+  /** The name a grid row gives its document. */
+  getRowName(index: number): string {
+    return String(this.valueMatrix[index]?.[this.getNameIndex()]?.value ?? '');
+  }
+
+  getNameIndex(): number {
+    return this.assignedTemplateFields.indexOf(`${this.schemaName}.name`);
+  }
+
+  /** A document's value in a parent column: its last row with one wins. */
+  getParentText(indexes: number[], column: ImportColumn): string {
+    const texts = indexes.map((index) =>
+      this.getCellText(this.valueMatrix[index], column)
+    );
+    return texts.findLast(Boolean) ?? '';
+  }
+
+  /** A cell as text Frappe's Data Import parses. */
+  getCellText(
+    row: ValueMatrix[number],
+    { index, field }: ImportColumn
+  ): string {
+    const value = row[index]?.value;
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    if (isPesa(value)) {
+      return String(value.float);
+    }
+
+    if (field.fieldtype === FieldTypeEnum.Datetime && value instanceof Date) {
+      return getSystemDatetime(value);
+    }
+
+    return String(Converter.toRawValue(value, field, this.fyo) ?? '');
   }
 
   selectParsed(parsed: string[][]): void {
@@ -627,37 +587,6 @@ export class Importer {
   }
 }
 
-function getChildName(
-  row: ValueMatrix[number],
-  nameIndex: number | undefined,
-  tf: TemplateField,
-  rowIndex: number
-): string {
-  const childName = nameIndex === undefined ? null : row[nameIndex]?.value;
-  return typeof childName === 'string'
-    ? childName
-    : `${tf.schemaName}-${rowIndex}`;
-}
-
-function getChildValues(
-  childTableMap: ChildTableMap,
-  name: string,
-  schemaName: string,
-  childName: string
-): DocValueMap {
-  childTableMap[name] ??= {};
-  childTableMap[name][schemaName] ??= new Map();
-  return getOrSet(childTableMap[name][schemaName], childName, {});
-}
-
-function getOrSet<K, V>(map: Map<K, V>, key: K, value: V): V {
-  if (!map.has(key)) {
-    map.set(key, value);
-  }
-
-  return map.get(key)!;
-}
-
 function getTemplateHeaderMaps(fields: TemplateField[]) {
   const headerCounts = new Map<string, number>();
   for (const field of fields) {
@@ -758,38 +687,36 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
   return false;
 }
 
-/** Save `doc`, then submit it if asked, and record the outcome in `results`. */
-export async function importDoc(
-  doc: Doc,
-  shouldSubmit: boolean,
-  results: ImportResults
-): Promise<void> {
-  const oldName = doc.name ?? '';
-  try {
-    await doc.sync();
-  } catch (error) {
-    results.failed.push({ name: doc.name!, message: getMessage(error) });
-    return;
+/**
+ * The column Frappe's Data Import reads a template field from. Frappe names
+ * numbered documents itself, so their name only groups the rows and is not
+ * imported, and neither are child row names.
+ */
+function getImportColumnKey(
+  field: TemplateField,
+  schema: Schema
+): string | null {
+  if (field.parentSchemaChildField) {
+    const table = field.parentSchemaChildField.frappeFieldname;
+    return field.frappeFieldname ? `${table}.${field.frappeFieldname}` : null;
   }
 
-  // A saved draft must not be imported again by Fix Failed.
-  results.successOldName.push(oldName);
-  try {
-    if (shouldSubmit) {
-      await doc.submit();
-    }
-  } catch (error) {
-    const message = getMessage(error);
-    results.failed.push({
-      name: doc.name!,
-      message: t`Saved as draft, but submit failed: ${message}`,
-    });
-    return;
+  if (field.frappeFieldname) {
+    return field.frappeFieldname;
   }
 
-  results.success.push(doc.name!);
+  if (field.fieldname !== 'name') {
+    throw new Error(`${field.fieldKey} has no DocType field to import`);
+  }
+
+  return schema.naming === 'manual' ? 'name' : null;
 }
 
-function getMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+/** A datetime as the naive system time Frappe stores. */
+function getSystemDatetime(date: Date): string {
+  const timeZone = globalThis.window?.frappe?.boot?.time_zone as
+    { system?: string } | undefined;
+  return DateTime.fromJSDate(date, { zone: timeZone?.system }).toFormat(
+    'yyyy-MM-dd HH:mm:ss'
+  );
 }

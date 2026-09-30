@@ -60,6 +60,7 @@ export type RawCustomField = {
 
 export interface BaseField {
   fieldname: string;             // Column name in the db
+  frappeFieldname?: string;      // The DocType's fieldname, for framework APIs
   fieldtype: BaseFieldType;      // UI Descriptive field types that map to column types
   label: string;                 // Translateable UI facing name
   schemaName?: string;           // Convenient access to schemaName incase just the field is passed

@@ -93,6 +93,17 @@ test('Frappe field types and links become Books field types and targets', () => 
   assert.equal(check.default, true);
 });
 
+test('fields keep the DocType fieldname for framework APIs', () => {
+  const schemas = getSchemas('-', []);
+  const field = (schemaName, fieldname) =>
+    schemas[schemaName].fields.find((f) => f.fieldname === fieldname);
+
+  assert.equal(field('Account', 'name').frappeFieldname, 'account_name');
+  assert.equal(field('Payment', 'for').frappeFieldname, 'payment_references');
+  assert.equal(field('JournalEntry', 'date').frappeFieldname, 'posting_date');
+  assert.equal(field('Party', 'name').frappeFieldname, undefined);
+});
+
 test('option values come from the server and labels from the schema file', () => {
   const movementType = getField('StockMovement', 'movementType', {
     fieldtype: 'Select',

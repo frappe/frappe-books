@@ -71,15 +71,34 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			template.template = "<div>{{ doc.name }}</div>"
 			self.assertRaises(frappe.PermissionError, template.save)
 
-	def test_roles_import_the_doctypes_they_create(self):
+	def test_only_books_manager_imports(self):
+		importable = frappe.get_all(
+			"DocType", filters={"module": "Frappe Books", "allow_import": 1}, pluck="name"
+		)
+		for doctype in importable:
+			with self.subTest(doctype=doctype):
+				importers = {perm.role for perm in frappe.get_meta(doctype).permissions if perm.get("import")}
+				self.assertEqual(importers, {"Books Manager"})
+
 		for user, doctype, allowed in (
-			(TEST_USER, "Books Sales Invoice", True),
-			(TEST_USER, "Books Tax", False),
-			(MANAGER, "Books Tax", True),
+			(TEST_USER, "Books Sales Invoice", False),
+			(MANAGER, "Books Sales Invoice", True),
 			(MANAGER, "Books Ledger Entry", False),
 		):
 			with self.subTest(user=user, doctype=doctype), self.set_user(user):
 				self.assertEqual(frappe.has_permission(doctype, "import"), allowed)
+
+	def test_only_books_manager_starts_data_imports(self):
+		with self.set_user(MANAGER):
+			own = _new_data_import().insert()
+			self.assertTrue(own.has_permission("write"))
+		with self.set_user(TEST_USER):
+			self.assertRaises(frappe.PermissionError, _new_data_import().insert)
+
+	def test_books_manager_reads_only_its_own_data_imports(self):
+		other = _new_data_import().insert()
+		with self.set_user(MANAGER):
+			self.assertFalse(frappe.has_permission("Data Import", "read", other))
 
 	def test_bridge_ledger_writes_follow_docperms(self):
 		with self.set_user(MANAGER):
@@ -150,6 +169,12 @@ class IntegrationTestPermissions(IntegrationTestCase):
 def _role_rights(doctype, role):
 	rows = [row for row in frappe.get_meta(doctype).permissions if row.role == role and not row.permlevel]
 	return {right for right in RIGHTS for row in rows if row.get(right)}
+
+
+def _new_data_import():
+	return frappe.get_doc(
+		{"doctype": "Data Import", "reference_doctype": "Books Party", "import_type": "Insert New Records"}
+	)
 
 
 def _search_shipments(name):

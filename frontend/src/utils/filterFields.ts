@@ -1,4 +1,5 @@
 import type { ListViewColumn } from 'fyo/model/types';
+import { t } from 'fyo/utils/translation';
 import { Field, FieldTypeEnum } from 'schemas/types';
 
 // These values have direct database mappings. Other read-only values may be derived.
@@ -37,7 +38,7 @@ export function getFilterFields(
     (column) => typeof column === 'object' && column.fieldname === 'status'
   ) as Field | undefined;
 
-  const filteredFields = fields.filter((f) => {
+  const filteredFields = fields.flatMap(toFilterFields).filter((f) => {
     if (excludedFieldsTypes.includes(f.fieldtype)) {
       return false;
     }
@@ -60,6 +61,18 @@ export function getFilterFields(
   }
 
   return filteredFields;
+}
+
+/** A Frappe-backed schema keeps docstatus, which lists filter as Books' Submitted and Cancelled. */
+function toFilterFields(field: Field): Field[] {
+  if (!field.meta || field.fieldname !== 'docstatus') {
+    return [field];
+  }
+
+  return [
+    { fieldname: 'submitted', label: t`Submitted`, fieldtype: 'Check' },
+    { fieldname: 'cancelled', label: t`Cancelled`, fieldtype: 'Check' },
+  ].map((flag) => ({ ...flag, meta: true }) as Field);
 }
 
 const fieldLabelAcronyms = new Set([

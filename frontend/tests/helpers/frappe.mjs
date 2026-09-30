@@ -28,8 +28,9 @@ await build({
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels, models } from './models';
-      export { getMappedDoc } from './models/helpers';
+      export { getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
+      export { getFilterFields } from './src/utils/filterFields';
     `,
     resolveDir: frontend,
   },
@@ -103,6 +104,8 @@ export const {
   getMappedDoc,
   createFilters,
   routeFilters,
+  getStockTransferActions,
+  getFilterFields,
 } = createRequire(import.meta.url)(output);
 
 /**

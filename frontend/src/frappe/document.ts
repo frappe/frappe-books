@@ -3,6 +3,7 @@ import { Doc } from 'fyo/model/doc';
 import {
   areDocValuesEqual,
   getMissingMandatoryMessage,
+  isDocValueTruthy,
   setChildDocIdx,
 } from 'fyo/model/helpers';
 import type { ChangeArg } from 'fyo/model/types';
@@ -17,7 +18,7 @@ import { getDocType } from './doctypes';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
 import type { DocField } from './meta';
 import { getNamingField, type Presentation } from './schema';
-import { toDocValues, toFrappeValue } from './values';
+import { toDocValue, toDocValues, toFrappeValue } from './values';
 
 const PREVIEW_DELAY = 300;
 
@@ -47,6 +48,8 @@ export class FrappeDoc extends Doc {
   static rowModels: Record<string, typeof FrappeDoc> = {};
   /** Fields the preview fills again after the user edits the field they follow, e.g. an account after its method. */
   static refills: Record<string, string[]> = {};
+  /** Fields the server fills from another field, by that field: editing it has them filled again. */
+  static derivedFields: Record<string, string[]> = {};
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();
@@ -97,15 +100,18 @@ export class FrappeDoc extends Doc {
     return rule === 'hidden' ? !isMet : isMet;
   }
 
-  /** The values Frappe's form conditions read. */
+  /** The values Frappe's form conditions read; amounts are numbers there. */
   getEvalDoc(): EvalDoc {
     const values = this.getFrappeValues({ keepRowNames: true });
-    return {
-      ...values,
-      name: this.name,
-      docstatus: this.docstatus ?? 0,
-      __islocal: this.notInserted ? 1 : 0,
-    };
+    for (const { fieldname, fieldtype } of this.schema.fields) {
+      if (fieldtype === 'Currency' && fieldname in values) {
+        values[fieldname] = Number(values[fieldname]);
+      }
+    }
+
+    const docstatus = this.docstatus ?? 0;
+    const __islocal = this.notInserted ? 1 : 0;
+    return { ...values, name: this.name, docstatus, __islocal };
   }
 
   /** The document as Frappe takes it; new rows go without their client names. */
@@ -357,8 +363,11 @@ export class FrappeDoc extends Doc {
   override async change({ changed }: ChangeArg) {
     if (changed) {
       this._serverFilled.delete(changed);
-      const { refills } = this.constructor as typeof FrappeDoc;
-      for (const fieldname of refills[changed] ?? []) {
+      const { refills, derivedFields } = this.constructor as typeof FrappeDoc;
+      for (const fieldname of [
+        ...(refills[changed] ?? []),
+        ...(derivedFields[changed] ?? []),
+      ]) {
         this._serverFilled.add(fieldname);
       }
     }
@@ -420,23 +429,41 @@ export class FrappeDoc extends Doc {
     }
   }
 
-  /** Takes the values the server filled, and remembers them as the server's. */
+  /**
+   * Takes the values the server returned, and remembers the ones it filled
+   * as the server's. A value the user entered and the server only corrected,
+   * like a return's sign, stays the user's.
+   */
   applyPreview(previewed: DocValueMap) {
     for (const field of this.schema.fields) {
       const { fieldname } = field;
-      if (field.meta || fieldname === 'name' || !(fieldname in previewed)) {
+      if (field.meta || fieldname === 'name') {
         continue;
       }
 
-      const value = previewed[fieldname];
       if (field.fieldtype === 'Table') {
-        this._applyPreviewRows(fieldname, value as DocValueMap[]);
-      } else if (
-        !areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)
-      ) {
-        this[fieldname] = value;
-        this._serverFilled.add(fieldname);
+        const rows = previewed[fieldname] as DocValueMap[] | undefined;
+        if (rows) {
+          this._applyPreviewRows(fieldname, rows);
+        }
+
+        continue;
       }
+
+      // Frappe leaves empty values out of the documents it sends.
+      const value = previewed[fieldname] ?? toDocValue(null, field, this.fyo);
+      if (!areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)) {
+        this._rememberFilled(fieldname);
+        this[fieldname] = value;
+      }
+    }
+  }
+
+  /** A value the server filled: one it was sent empty. */
+  _rememberFilled(fieldname: string) {
+    const sent = this[fieldname] as DocValue;
+    if (this._serverFilled.has(fieldname) || !isDocValueTruthy(sent)) {
+      this._serverFilled.add(fieldname);
     }
   }
 

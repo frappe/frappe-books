@@ -15,8 +15,6 @@ for (const schemaName of [
   'SalesInvoice',
   'PurchaseInvoice',
   'SalesQuote',
-  'Shipment',
-  'PurchaseReceipt',
 ]) {
   test(`${schemaName} exposes its document number and audit fields`, async () => {
     const fyo = await makeFyo();
@@ -88,7 +86,6 @@ for (const [schemaName, values] of [
       'Cancelled',
     ],
   ],
-  ['Shipment', ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled']],
 ]) {
   test(`${schemaName} supplies stored status values and display labels to the filter`, async () => {
     const fyo = await makeFyo();

@@ -1,15 +1,22 @@
-import { Action, ListViewSettings } from 'fyo/model/types';
+import type { Fyo } from 'fyo';
+import type { Action, ListViewSettings } from 'fyo/model/types';
 import {
-  getStockTransferActions,
   getDocStatusListColumn,
+  getStockTransferActions,
 } from 'models/helpers';
+import { ModelNameEnum } from 'models/types';
 import { PurchaseReceiptItem } from './PurchaseReceiptItem';
 import { StockTransfer } from './StockTransfer';
-import { Fyo } from 'fyo';
-import { ModelNameEnum } from 'models/types';
 
 export class PurchaseReceipt extends StockTransfer {
-  items?: PurchaseReceiptItem[];
+  static override doctype = 'Books Purchase Receipt';
+  static override presentation = {
+    label: 'Purchase Receipt',
+    nameField: { label: 'Transfer No', hidden: true },
+  };
+  static override rowModels = { items: PurchaseReceiptItem };
+  static override invoiceSchemaName = ModelNameEnum.PurchaseInvoice;
+  static override invoiceMapper = 'make_purchase_receipt';
 
   static getListViewSettings(): ListViewSettings {
     return {
@@ -18,7 +25,7 @@ export class PurchaseReceipt extends StockTransfer {
         getDocStatusListColumn(),
         'party',
         'date',
-        'grandTotal',
+        'grand_total',
       ],
     };
   }

@@ -10,7 +10,6 @@ import {
 test('new documents take the number series the server resolves', async () => {
   const series = {
     SalesInvoice: 'INV-',
-    StockMovement: 'MOVE-',
   };
   const calls = [];
   class Store {

@@ -13,7 +13,6 @@ import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoi
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { getLedgerLink } from 'models/helpers';
 import { getInsufficientItems } from 'models/inventory/insufficientStock';
-import { Transfer } from 'models/inventory/Transfer';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -735,8 +734,15 @@ function showSubmitToast(doc: Doc) {
   showToast(toastOption);
 }
 
+// Documents that move stock; their submit toast opens their stock entries.
+const stockSchemas: string[] = [
+  ModelNameEnum.StockMovement,
+  ModelNameEnum.Shipment,
+  ModelNameEnum.PurchaseReceipt,
+];
+
 function getSubmitSuccessToastAction(doc: Doc) {
-  const isStockTransfer = doc instanceof Transfer;
+  const isStockTransfer = stockSchemas.includes(doc.schemaName);
 
   if (isStockTransfer) {
     return {

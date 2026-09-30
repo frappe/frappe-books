@@ -1,15 +1,22 @@
-import { Fyo } from 'fyo';
-import { Action, ListViewSettings } from 'fyo/model/types';
+import type { Fyo } from 'fyo';
+import type { Action, ListViewSettings } from 'fyo/model/types';
 import {
-  getStockTransferActions,
   getDocStatusListColumn,
+  getStockTransferActions,
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { ShipmentItem } from './ShipmentItem';
 import { StockTransfer } from './StockTransfer';
 
 export class Shipment extends StockTransfer {
-  items?: ShipmentItem[];
+  static override doctype = 'Books Shipment';
+  static override presentation = {
+    label: 'Shipment',
+    nameField: { label: 'Transfer No', hidden: true },
+  };
+  static override rowModels = { items: ShipmentItem };
+  static override invoiceSchemaName = ModelNameEnum.SalesInvoice;
+  static override invoiceMapper = 'make_shipment';
 
   static getListViewSettings(): ListViewSettings {
     return {
@@ -18,7 +25,7 @@ export class Shipment extends StockTransfer {
         getDocStatusListColumn(),
         'party',
         'date',
-        'grandTotal',
+        'grand_total',
       ],
     };
   }

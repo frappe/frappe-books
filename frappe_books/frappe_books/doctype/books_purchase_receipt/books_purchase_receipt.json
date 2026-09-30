@@ -28,6 +28,7 @@
   {
    "fieldname": "amended_from",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Amended From",
    "no_copy": 1,
    "options": "Books Purchase Receipt",
@@ -46,7 +47,8 @@
    "in_list_view": 1,
    "label": "Number Series",
    "options": "Books Number Series",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "party",
@@ -68,6 +70,7 @@
    "default": "Saved",
    "fieldname": "status",
    "fieldtype": "Select",
+   "hidden": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
@@ -101,16 +104,18 @@
    "label": "References"
   },
   {
-   "description": "Add transfer terms",
+   "depends_on": "eval:doc.terms || !doc.docstatus",
    "fieldname": "terms",
    "fieldtype": "Text",
-   "label": "Notes"
+   "label": "Notes",
+   "placeholder": "Add transfer terms"
   },
   {
-   "description": "Add attachment",
+   "depends_on": "eval:doc.attachment || !doc.docstatus",
    "fieldname": "attachment",
    "fieldtype": "Attach",
-   "label": "Attachment"
+   "label": "Attachment",
+   "placeholder": "Add attachment"
   },
   {
    "default": "0",
@@ -130,6 +135,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.back_reference || !doc.docstatus",
    "fieldname": "back_reference",
    "fieldtype": "Link",
    "label": "Back Reference",
@@ -137,6 +143,7 @@
    "options": "Books Purchase Invoice"
   },
   {
+   "depends_on": "eval:doc.return_against || !doc.docstatus",
    "fieldname": "return_against",
    "fieldtype": "Link",
    "label": "Return Against",
@@ -147,7 +154,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-30 17:00:00.000000",
+ "modified": "2026-09-30 19:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Purchase Receipt",

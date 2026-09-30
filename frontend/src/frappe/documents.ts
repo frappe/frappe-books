@@ -32,16 +32,24 @@ export function newFrappeDoc(
   return doc;
 }
 
+/** What a whitelisted server mapper, like an invoice's make_payment, builds from `sourceName`. */
+export async function getMapperValues(
+  method: string,
+  sourceName: string
+): Promise<DocValues> {
+  return await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
+    method,
+    source_name: sourceName,
+  });
+}
+
 /** The unsaved document a whitelisted server mapper, like an invoice's make_payment, builds. */
 export async function getMappedFrappeDoc(
   schemaName: string,
   method: string,
   sourceName: string
 ): Promise<FrappeDoc> {
-  const mapped = await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
-    method,
-    source_name: sourceName,
-  });
+  const mapped = await getMapperValues(method, sourceName);
   const values = toDocValues(
     getDocType(schemaName).schema,
     mapped,

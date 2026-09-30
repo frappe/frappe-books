@@ -8,6 +8,7 @@ const storedReadOnlyFields = new Set([
   'netTotal',
   'grandTotal',
   'baseGrandTotal',
+  'grand_total',
 ]);
 // Books names, then the Frappe names Frappe-backed schemas keep.
 const auditFields = new Set([
@@ -46,7 +47,8 @@ export function getFilterFields(
     if (typeof f.filter === 'boolean') return f.filter;
 
     if (f.computed) return false;
-    if (f.meta) return auditFields.has(f.fieldname);
+    // A Frappe-backed schema's name is a meta field, as it is not entered.
+    if (f.meta) return auditFields.has(f.fieldname) || f.fieldname === 'name';
     if (f.readOnly) return storedReadOnlyFields.has(f.fieldname);
 
     return true;

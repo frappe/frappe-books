@@ -42,6 +42,9 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | Link filters and presentation of table rows | A row model in `static rowModels`, by table fieldname |
 | Server fills that follow another field, like a payment account after its method | `static refills` on the model (the parent's or the row's) |
 | List order | The DocType's `sort_field`, else `date` |
+| Label, name field (asked for a prompt-named doctype, else only its label), quick edit fields, labels of Select options that are not words | `static presentation` on the model |
+| Fields the server fills from another field, filled again when the user edits it (a row's rate from its item) | `static derivedFields` |
+| Row link filters, create values, feature-hidden fields and row editor fields | A row model, named in the parent's `static rowModels` |
 | List columns, badges, actions, option lists, formatting | The model statics, as before: `getListViewSettings`, `getActions`, `lists`, `emptyMessages` |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |
@@ -52,6 +55,7 @@ A doctype named by a field (`field:<fieldname>`, for example Books Account and C
 
 A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user.
 A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. A new document previews when its form opens, and when the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user, until the user edits a field that `refills` names for it. A save waits for the preview of the last edit. A server mapper's document (`getMappedDoc`) comes from `frappe.model.mapper.make_mapped_doc`.
+A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user. A value that the user entered and the server only corrected, such as the sign of a return quantity, stays the value of the user. Frappe sends no empty values, so a value that is missing from the preview is empty. A new document in a form is previewed once when it opens.
 
 ## Move a module
 

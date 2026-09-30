@@ -7,8 +7,11 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import convert_utc_to_system_timezone, now, now_datetime
 
-from frappe_books.tests.accounting import make_account, make_item, stock_quantity, unique_name
+from frappe_books.series import default_series
+from frappe_books.tests.accounting import ensure_user, make_account, make_item, stock_quantity, unique_name
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
+
+READ_ONLY_USER = "books-movement-preview-reader@example.com"
 
 
 class IntegrationTestBooksStockMovement(IntegrationTestCase):
@@ -300,6 +303,54 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 
 		self.assertEqual(receipt.items[0].to_location, self.warehouse.name)
 		self.assertEqual(issue.items[0].from_location, self.warehouse.name)
+
+	def test_issues_and_receipts_keep_only_the_location_they_use(self):
+		frappe.db.set_single_value("Books Inventory Settings", "default_location", self.warehouse.name)
+		row = {"item": self.item.name, "from_location": "Stores", "to_location": "Stores", "quantity": 1}
+		receipt = make_movement("MaterialReceipt", [row])
+		issue = frappe.get_doc(movement_values("MaterialIssue", [{**row, "from_location": None}]))
+		issue.calculate()
+
+		self.assertEqual((receipt.items[0].from_location, receipt.items[0].to_location), (None, "Stores"))
+		self.assertEqual(
+			(issue.items[0].from_location, issue.items[0].to_location), (self.warehouse.name, None)
+		)
+
+	def test_preview_fills_what_a_save_would_without_saving(self):
+		frappe.db.set_single_value("Books Inventory Settings", "default_location", self.warehouse.name)
+		self.item.db_set("rate", 15)
+		movement = frappe.get_doc(
+			movement_values("MaterialReceipt", [{"item": self.item.name, "quantity": 2}])
+		)
+
+		movement.preview()
+
+		row = movement.items[0]
+		self.assertEqual(movement.number_series, default_series("Books Stock Movement"))
+		self.assertEqual(
+			(row.to_location, row.rate, row.amount, row.unit), (self.warehouse.name, 15, 30, "Unit")
+		)
+		self.assertEqual(movement.amount, 30)
+		self.assertIsNone(movement.name)
+
+	def test_preview_needs_the_right_to_make_movements(self):
+		movement = frappe.get_doc(movement_values("MaterialReceipt", []))
+		with self.set_user(ensure_user(READ_ONLY_USER)), self.assertRaises(frappe.PermissionError):
+			movement.preview()
+
+	def test_receipt_names_missing_serial_numbers_from_the_item_series(self):
+		prefix = f"S{frappe.generate_hash(length=6)}-"
+		item = make_item(
+			self.item.income_account,
+			self.item.expense_account,
+			track_item=1,
+			has_serial_number=1,
+			serial_number_series=prefix,
+		).name
+
+		receipt = make_movement("MaterialReceipt", [{"item": item, "to_location": "Stores", "quantity": 2}])
+
+		self.assertEqual(receipt.items[0].serial_number.splitlines(), [f"{prefix}1001", f"{prefix}1002"])
 
 	def test_manufacture_row_cannot_both_consume_and_produce(self):
 		row = {"item": self.item.name, "quantity": 1, "rate": 10}

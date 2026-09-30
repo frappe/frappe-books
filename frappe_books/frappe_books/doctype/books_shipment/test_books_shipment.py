@@ -14,6 +14,7 @@ from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchas
 )
 from frappe_books.frappe_books.doctype.books_shipment.books_shipment import make_return, make_sales_invoice
 from frappe_books.tests.accounting import (
+	ensure_user,
 	ledger_entries,
 	make_account,
 	make_invoice,
@@ -24,6 +25,8 @@ from frappe_books.tests.accounting import (
 	unique_name,
 )
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
+
+READ_ONLY_USER = "books-shipment-preview-reader@example.com"
 
 
 class IntegrationTestBooksShipment(IntegrationTestCase):
@@ -233,16 +236,52 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, f"{serials[0]} is already returned"):
 			self._return_serial(item, shipment, serials[0])
 
-	def test_return_quantities_must_be_negative(self):
+	def test_returns_take_quantities_back_and_other_shipments_send_them(self):
 		item, _cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=2, rate=10)
-		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment = self._make_shipment(item, quantity=-2, rate=25)
 		shipment.submit()
 
-		with self.assertRaisesRegex(frappe.ValidationError, "returned quantities must be negative"):
-			self._make_shipment(item, quantity=1, rate=25, return_against=shipment.name)
-		with self.assertRaisesRegex(frappe.ValidationError, "only returns can have negative"):
-			self._make_shipment(item, quantity=-1, rate=25)
+		returned = self._make_shipment(item, quantity=1, rate=25, return_against=shipment.name)
+
+		self.assertEqual((shipment.items[0].quantity, shipment.items[0].transfer_quantity), (2, 2))
+		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
+
+	def test_rows_without_quantities_move_one_of_their_unit(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_shipment(item, quantity=None, rate=25)
+		shipment.submit()
+
+		returned = self._make_shipment(item, quantity=None, rate=25, return_against=shipment.name)
+
+		self.assertEqual((shipment.items[0].quantity, shipment.items[0].transfer_quantity), (1, 1))
+		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
+
+	def test_preview_fills_what_a_save_would_without_saving(self):
+		item, _cogs, _stock = self._tracked_item(has_serial_number=1, hsn_code="123456")
+		serial_numbers = [unique_name("SN"), unique_name("SN")]
+		seed_stock(item.name, quantity=2, rate=10, serial_number="\n".join(serial_numbers))
+		frappe.db.set_single_value("Books Inventory Settings", "default_location", "Stores")
+		frappe.db.set_single_value("Books Defaults", "shipment_terms", "Ships in a week")
+		shipment = frappe.get_doc(
+			{"doctype": "Books Shipment", "items": [{"item": item.name, "quantity": 2, "rate": 25}]}
+		)
+		shipment.set("__islocal", 1)
+
+		shipment.preview()
+
+		row = shipment.items[0]
+		self.assertEqual((shipment.number_series, shipment.terms), ("SHPM-", "Ships in a week"))
+		self.assertEqual((row.location, row.hsn_code, row.amount), ("Stores", 123456, 50))
+		self.assertEqual(row.serial_number.splitlines(), sorted(serial_numbers))
+		self.assertEqual(shipment.grand_total, 50)
+		self.assertIsNone(shipment.name)
+
+	def test_preview_needs_the_right_to_make_shipments(self):
+		shipment = frappe.new_doc("Books Shipment")
+		with self.set_user(ensure_user(READ_ONLY_USER)), self.assertRaises(frappe.PermissionError):
+			shipment.preview()
 
 	def test_shipments_take_only_items_kept_for_sales(self):
 		item, _cogs, _stock = self._tracked_item(item_usage="Purchases")

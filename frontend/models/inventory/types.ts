@@ -5,12 +5,6 @@ export enum MovementTypeEnum {
   'Manufacture' = 'Manufacture',
 }
 
-export type MovementType =
-  | 'MaterialIssue'
-  | 'MaterialReceipt'
-  | 'MaterialTransfer'
-  | 'Manufacture';
-
 export type SerialNumberStatus =
   | 'Inactive'
   | 'Active'

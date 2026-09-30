@@ -1,280 +1,32 @@
-import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
-import {
-  FiltersMap,
-  FormulaMap,
-  HiddenMap,
-  ValidationMap,
-} from 'fyo/model/types';
-import { ModelNameEnum } from 'models/types';
-import { Money } from 'pesa';
-import { safeParseFloat } from 'utils/index';
-import { StockTransfer } from './StockTransfer';
-import { TransferItem } from './TransferItem';
-import type { Invoice } from 'models/baseModels/Invoice/Invoice';
-import type { InvoiceItem } from 'models/baseModels/InvoiceItem/InvoiceItem';
-import {
-  getAvailableSerialNumbers,
-  getSerialNumbersForQuantity,
-} from './helpers';
-import { getUnitConversionFactor, validateTransferUnit } from './units';
+import type { HiddenMap } from 'fyo/model/types';
+import { FrappeDoc } from 'src/frappe/document';
+import { getStockRowHiddenMap, stockRowDerivedFields } from './stockRows';
 
-export class StockTransferItem extends TransferItem {
-  item?: string;
-  location?: string;
+/** The fields a shipment or purchase receipt row editor shows. */
+export const transferRowFields = [
+  'item',
+  'transfer_quantity',
+  'transfer_unit',
+  'batch',
+  'serial_number',
+  'quantity',
+  'unit',
+  'unit_conversion_factor',
+  'description',
+  'hsn_code',
+  'location',
+  'rate',
+  'amount',
+  'item_discount_amount',
+  'item_discount_percent',
+];
 
-  unit?: string;
-  transferUnit?: string;
-  quantity?: number;
-  transferQuantity?: number;
-  unitConversionFactor?: number;
-
-  itemDiscountAmount?: Money;
-  itemDiscountPercent?: number;
-
-  rate?: Money;
-  amount?: Money;
-
-  description?: string;
-  hsnCode?: number;
-
-  batch?: string;
-  serialNumber?: string;
-
-  parentdoc?: StockTransfer;
-
-  get isSales() {
-    return this.schemaName === ModelNameEnum.ShipmentItem;
-  }
-
-  get isReturn(): boolean {
-    return !!this.parentdoc?.isReturn;
-  }
-
-  /** The row of the invoice this transfer was made from, for the same item. */
-  async getInvoiceRow(): Promise<InvoiceItem | undefined> {
-    const backReference = this.parentdoc?.backReference;
-    if (!backReference || !this.parentdoc) {
-      return undefined;
-    }
-
-    const invoice = (await this.fyo.doc.getDoc(
-      this.parentdoc.invoiceSchemaName,
-      backReference
-    )) as Invoice;
-    return invoice.items?.find((row) => row.item === this.item);
-  }
-
-  /** New series numbers on receipts; invoiced ones, else those in stock at the row location, on shipments. */
-  async getDefaultSerialNumbers(): Promise<string | undefined> {
-    const quantity = Math.abs(this.quantity ?? 0);
-    if (!this.item || !this.parentdoc?.backReference || quantity <= 0) {
-      return undefined;
-    }
-
-    if (!this.isSales) {
-      return await getSerialNumbersForQuantity(
-        this.fyo,
-        this.item,
-        undefined,
-        quantity
-      );
-    }
-
-    return (
-      (await this.getInvoiceRow())?.serialNumber ||
-      (await getAvailableSerialNumbers(
-        this.fyo,
-        this.item,
-        this.location,
-        quantity
-      ))
-    );
-  }
-
-  formulas: FormulaMap = {
-    description: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'description'
-        )) as string,
-      dependsOn: ['item'],
-    },
-    unit: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'unit'
-        )) as string,
-      dependsOn: ['item'],
-    },
-    transferUnit: {
-      formula: async (fieldname) => {
-        if (fieldname === 'quantity' || fieldname === 'unit') {
-          return this.unit;
-        }
-
-        return (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'unit'
-        )) as string;
-      },
-      dependsOn: ['item', 'unit'],
-    },
-    transferQuantity: {
-      formula: (fieldname) => {
-        if (fieldname === 'quantity' || this.unit === this.transferUnit) {
-          return this.quantity;
-        }
-
-        return this.transferQuantity;
-      },
-      dependsOn: ['item', 'quantity'],
-    },
-    quantity: {
-      formula: (fieldname) => {
-        if (!this.item) {
-          return this.quantity as number;
-        }
-
-        let quantity: number = this.quantity ?? 1;
-
-        if (this.isReturn && quantity > 0) {
-          quantity *= -1;
-        }
-
-        if (!this.isReturn && quantity < 0) {
-          quantity *= -1;
-        }
-
-        if (fieldname === 'transferQuantity') {
-          quantity = this.transferQuantity! * this.unitConversionFactor!;
-        }
-
-        return safeParseFloat(quantity);
-      },
-      dependsOn: [
-        'quantity',
-        'transferQuantity',
-        'transferUnit',
-        'unitConversionFactor',
-        'isReturn',
-      ],
-    },
-    unitConversionFactor: {
-      formula: async () => await getUnitConversionFactor(this),
-      dependsOn: ['transferUnit'],
-    },
-    hsnCode: {
-      formula: async () =>
-        (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'hsnCode'
-        )) as string,
-      dependsOn: ['item'],
-    },
-    amount: {
-      formula: () => {
-        return this.rate?.mul(this.quantity ?? 0) ?? this.fyo.pesa(0);
-      },
-      dependsOn: ['rate', 'quantity'],
-    },
-    itemDiscountAmount: {
-      formula: async () => (await this.getInvoiceRow())?.itemDiscountAmount,
-      dependsOn: ['items'],
-    },
-    itemDiscountPercent: {
-      formula: async () => (await this.getInvoiceRow())?.itemDiscountPercent,
-      dependsOn: ['items'],
-    },
-    rate: {
-      formula: async () => {
-        const rate = (await this.fyo.getValue(
-          'Item',
-          this.item as string,
-          'rate'
-        )) as undefined | Money;
-
-        if (!rate?.float && this.rate?.float) {
-          return this.rate;
-        }
-
-        return rate ?? this.fyo.pesa(0);
-      },
-      dependsOn: ['item'],
-    },
-    account: {
-      formula: () => {
-        let accountType = 'expenseAccount';
-        if (this.isSales) {
-          accountType = 'incomeAccount';
-        }
-        return this.fyo.getValue('Item', this.item as string, accountType);
-      },
-      dependsOn: ['item'],
-    },
-    location: {
-      formula: () => {
-        if (this.location) {
-          return;
-        }
-
-        const defaultLocation =
-          this.fyo.singles.InventorySettings?.default_location;
-
-        if (defaultLocation && !this.location) {
-          return defaultLocation;
-        }
-      },
-    },
-    serialNumber: {
-      formula: async () =>
-        this.serialNumber ||
-        (await this.getDefaultSerialNumbers()) ||
-        undefined,
-      dependsOn: ['item', 'quantity'],
-    },
+/** A shipment or purchase receipt row. The server fills its units, rate, location and serial numbers. */
+export abstract class StockTransferItem extends FrappeDoc {
+  static override derivedFields = {
+    ...stockRowDerivedFields,
+    item: [...stockRowDerivedFields.item, 'description', 'hsn_code'],
   };
 
-  validations: ValidationMap = {
-    transferUnit: async (value: DocValue) =>
-      await validateTransferUnit(this, value as string),
-  };
-
-  static filters: FiltersMap = {
-    item: (doc: Doc) => {
-      let itemNotFor = 'Sales';
-      if (doc.isSales) {
-        itemNotFor = 'Purchases';
-      }
-
-      // Items are Frappe-backed, so their filters use Frappe fieldnames.
-      return { item_usage: ['not in', [itemNotFor]], track_item: true };
-    },
-  };
-
-  override hidden: HiddenMap = {
-    itemDiscountAmount: () => {
-      if (this.itemDiscountAmount && !this.itemDiscountAmount?.isZero()) {
-        return false;
-      }
-
-      return true;
-    },
-    itemDiscountPercent: () => !this.itemDiscountPercent,
-    batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
-    serialNumber: () =>
-      !this.fyo.singles.InventorySettings?.enable_serial_number,
-    transferUnit: () =>
-      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
-    transferQuantity: () =>
-      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
-    unitConversionFactor: () =>
-      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
-  };
+  override hidden: HiddenMap = getStockRowHiddenMap(this);
 }

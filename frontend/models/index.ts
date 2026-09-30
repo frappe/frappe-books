@@ -41,13 +41,10 @@ import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
 import { Location } from './inventory/Location';
 import { PurchaseReceipt } from './inventory/PurchaseReceipt';
-import { PurchaseReceiptItem } from './inventory/PurchaseReceiptItem';
 import { SerialNumber } from './inventory/SerialNumber';
 import { Shipment } from './inventory/Shipment';
-import { ShipmentItem } from './inventory/ShipmentItem';
 import { StockLedgerEntry } from './inventory/StockLedgerEntry';
 import { StockMovement } from './inventory/StockMovement';
-import { StockMovementItem } from './inventory/StockMovementItem';
 import { ClosingAmounts } from './inventory/Point of Sale/ClosingAmounts';
 import { ClosingCash } from './inventory/Point of Sale/ClosingCash';
 import { OpeningAmounts } from './inventory/Point of Sale/OpeningAmounts';
@@ -69,13 +66,6 @@ export const models = {
   SalesQuoteItem,
   PrintTemplate,
   TaxSummary,
-  // Inventory Models
-  StockMovement,
-  StockMovementItem,
-  Shipment,
-  ShipmentItem,
-  PurchaseReceipt,
-  PurchaseReceiptItem,
   // POS Models
   ClosingAmounts,
   ClosingCash,
@@ -119,9 +109,12 @@ export const frappeModels: Record<string, FrappeModel> = {
   PaymentMethod,
   PriceList,
   PricingRule,
+  PurchaseReceipt,
   SerialNumber,
   SetupWizard,
+  Shipment,
   StockLedgerEntry,
+  StockMovement,
   SystemSettings,
   Tax,
   UOM,

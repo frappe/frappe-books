@@ -18,6 +18,7 @@ import {
 
 const { TestItem } = await loadTestDocTypes();
 const MODIFIED = '2026-09-30 10:00:00.123456';
+const CREATED = '2026-09-29 09:00:00.654321';
 
 const savedPen = {
   name: 'Pen',

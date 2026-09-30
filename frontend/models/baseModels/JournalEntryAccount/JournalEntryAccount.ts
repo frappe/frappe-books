@@ -37,6 +37,6 @@ export class JournalEntryAccount extends Doc {
   };
 
   static filters: FiltersMap = {
-    account: () => ({ isGroup: false }),
+    account: () => ({ is_group: false }),
   };
 }

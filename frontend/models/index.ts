@@ -57,7 +57,6 @@ import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 
 export const models = {
-  Account,
   AccountingLedgerEntry,
   AccountingSettings,
   Address,
@@ -120,6 +119,7 @@ export const models = {
  * `models` when its module stops using the bridge; see docs/framework-backed-doctypes.md.
  */
 export const frappeModels: Record<string, FrappeModel> = {
+  Account,
   Item,
 };
 

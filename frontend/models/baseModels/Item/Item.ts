@@ -72,15 +72,14 @@ export class Item extends FrappeDoc {
     item_group: () => !this.fyo.singles.AccountingSettings?.enableitemGroup,
   };
 
-  // Accounts are still read through the bridge, so these use its field names.
   static filters: FiltersMap = {
     income_account: () => ({
-      isGroup: false,
-      rootType: AccountRootTypeEnum.Income,
+      is_group: false,
+      root_type: AccountRootTypeEnum.Income,
     }),
     expense_account: (doc) => ({
-      isGroup: false,
-      rootType: doc.track_item
+      is_group: false,
+      root_type: doc.track_item
         ? AccountRootTypeEnum.Liability
         : AccountRootTypeEnum.Expense,
     }),

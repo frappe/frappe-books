@@ -56,12 +56,12 @@ export class Defaults extends Doc {
   static commonFilters = {
     // Auto Payments
     salesPaymentAccount: () => ({
-      isGroup: false,
-      accountType: ['in', ['Cash', 'Bank']],
+      is_group: false,
+      account_type: ['in', ['Cash', 'Bank']],
     }),
     purchasePaymentAccount: () => ({
-      isGroup: false,
-      accountType: ['in', ['Cash', 'Bank']],
+      is_group: false,
+      account_type: ['in', ['Cash', 'Bank']],
     }),
     // Number Series
     salesQuoteNumberSeries: () => ({

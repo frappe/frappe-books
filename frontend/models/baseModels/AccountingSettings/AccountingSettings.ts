@@ -24,16 +24,16 @@ export class AccountingSettings extends Doc {
 
   static filters: FiltersMap = {
     writeOffAccount: () => ({
-      isGroup: false,
-      rootType: 'Expense',
+      is_group: false,
+      root_type: 'Expense',
     }),
     roundOffAccount: () => ({
-      isGroup: false,
-      rootType: 'Expense',
+      is_group: false,
+      root_type: 'Expense',
     }),
     discountAccount: () => ({
-      isGroup: false,
-      rootType: 'Income',
+      is_group: false,
+      root_type: 'Income',
     }),
   };
 

@@ -295,9 +295,9 @@ export class Payment extends Transactional {
       return { referenceType: 'Payment' };
     },
     account: (doc: Doc) => ({
-      accountType:
+      account_type:
         doc.paymentType === PaymentTypeEnum.Pay ? 'Payable' : 'Receivable',
-      isGroup: false,
+      is_group: false,
     }),
     paymentAccount: async (doc: Doc) => {
       const method = doc.paymentMethod as string | undefined;
@@ -305,10 +305,10 @@ export class Payment extends Transactional {
         method &&
         (await doc.fyo.getValue(ModelNameEnum.PaymentMethod, method, 'type'));
       if (type === 'Cash') {
-        return { accountType: 'Cash', isGroup: false };
+        return { account_type: 'Cash', is_group: false };
       }
 
-      return { accountType: ['in', ['Bank', 'Cash']], isGroup: false };
+      return { account_type: ['in', ['Bank', 'Cash']], is_group: false };
     },
   };
 

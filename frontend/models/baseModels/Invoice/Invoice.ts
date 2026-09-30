@@ -284,8 +284,8 @@ export abstract class Invoice extends Transactional {
       role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
     }),
     account: (doc: Doc) => ({
-      isGroup: false,
-      accountType: doc.isSales ? 'Receivable' : 'Payable',
+      is_group: false,
+      account_type: doc.isSales ? 'Receivable' : 'Payable',
     }),
     numberSeries: (doc: Doc) => ({ referenceType: doc.schemaName }),
     priceList: (doc: Doc) => ({

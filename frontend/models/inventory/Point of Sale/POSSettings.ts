@@ -22,17 +22,17 @@ export class POSSettings extends Doc {
 
   static filters: FiltersMap = {
     cashAccount: () => ({
-      rootType: AccountRootTypeEnum.Asset,
-      accountType: AccountTypeEnum.Cash,
-      isGroup: false,
+      root_type: AccountRootTypeEnum.Asset,
+      account_type: AccountTypeEnum.Cash,
+      is_group: false,
     }),
     writeOffAccount: () => ({
-      isGroup: false,
-      rootType: AccountRootTypeEnum.Expense,
+      is_group: false,
+      root_type: AccountRootTypeEnum.Expense,
     }),
     defaultAccount: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum.Receivable,
+      is_group: false,
+      account_type: AccountTypeEnum.Receivable,
     }),
   };
 

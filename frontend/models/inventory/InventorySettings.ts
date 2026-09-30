@@ -15,16 +15,16 @@ export class InventorySettings extends Doc {
 
   static filters: FiltersMap = {
     stockInHand: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum.Stock,
+      is_group: false,
+      account_type: AccountTypeEnum.Stock,
     }),
     stockReceivedButNotBilled: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum['Stock Received But Not Billed'],
+      is_group: false,
+      account_type: AccountTypeEnum['Stock Received But Not Billed'],
     }),
     costOfGoodsSold: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum['Cost of Goods Sold'],
+      is_group: false,
+      account_type: AccountTypeEnum['Cost of Goods Sold'],
     }),
   };
 

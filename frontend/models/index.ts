@@ -61,7 +61,6 @@ export const models = {
   Account,
   AccountingLedgerEntry,
   AccountingSettings,
-  Address,
   Defaults,
   ItemEnquiry,
   JournalEntry,
@@ -123,6 +122,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   Location,
   Batch,
   SerialNumber,
+  Address,
 };
 
 export async function getRegionalModels(
@@ -134,4 +134,16 @@ export async function getRegionalModels(
 
   const { Party } = await import('./regionalModels/in/Party');
   return { Party };
+}
+
+/** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */
+export async function getRegionalFrappeModels(
+  countryCode: string
+): Promise<Record<string, FrappeModel>> {
+  if (countryCode !== 'in') {
+    return {};
+  }
+
+  const { Address } = await import('./regionalModels/in/Address');
+  return { Address };
 }

@@ -117,7 +117,6 @@
    "fieldname": "price_list",
    "fieldtype": "Link",
    "label": "Price List",
-   "only_select": 1,
    "options": "Books Price List"
   },
   {
@@ -274,7 +273,6 @@
    "fieldtype": "Link",
    "label": "Back Reference",
    "no_copy": 1,
-   "only_select": 1,
    "options": "Books Shipment"
   },
   {
@@ -282,7 +280,6 @@
    "fieldname": "return_against",
    "fieldtype": "Link",
    "label": "Return Against",
-   "only_select": 1,
    "options": "Books Sales Invoice",
    "search_index": 1
   },
@@ -308,7 +305,6 @@
    "fieldname": "quote",
    "fieldtype": "Link",
    "label": "Quote Reference",
-   "only_select": 1,
    "options": "Books Sales Quote"
   },
   {
@@ -426,7 +422,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-30 18:00:00.000000",
+ "modified": "2026-09-30 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",

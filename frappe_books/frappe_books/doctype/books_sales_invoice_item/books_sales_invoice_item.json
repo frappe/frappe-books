@@ -63,7 +63,6 @@
    "fieldname": "transfer_unit",
    "fieldtype": "Link",
    "label": "Transfer Unit",
-   "only_select": 1,
    "options": "Books Uom",
    "placeholder": "Unit"
   },
@@ -85,7 +84,6 @@
    "fieldname": "unit",
    "fieldtype": "Link",
    "label": "Stock Unit",
-   "only_select": 1,
    "options": "Books Uom",
    "placeholder": "Unit",
    "read_only": 1
@@ -121,7 +119,6 @@
    "fieldname": "account",
    "fieldtype": "Link",
    "label": "Account",
-   "only_select": 1,
    "options": "Books Account",
    "reqd": 1
   },
@@ -208,7 +205,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-30 18:00:00.000000",
+ "modified": "2026-09-30 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice Item",

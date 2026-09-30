@@ -67,6 +67,16 @@ test('unverified read-only fields, computed values, internal metadata and opt-ou
   );
 });
 
+test("a Frappe-backed schema's standard columns filter its list", () => {
+  const fields = ['owner', 'modified_by', 'creation', 'modified', 'idx'].map(
+    (fieldname) => ({ fieldname, fieldtype: 'Data', meta: true })
+  );
+  assert.deepEqual(
+    getFilterFields(fields).map((field) => field.fieldname),
+    ['owner', 'modified_by', 'creation', 'modified']
+  );
+});
+
 for (const [schemaName, values] of [
   [
     'SalesInvoice',

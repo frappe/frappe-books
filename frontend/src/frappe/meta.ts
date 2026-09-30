@@ -44,6 +44,8 @@ export interface DocTypeMeta {
   is_tree?: number;
   /** Frappe searches a translated doctype's names in Python, where `%` is literal. */
   translated_doctype?: number;
+  /** Colours of the values of the `status` field. */
+  states?: { title: string; color: string }[];
 }
 
 const bundles = new Map<string, Promise<DocTypeMeta[]>>();

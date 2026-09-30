@@ -1,5 +1,11 @@
 import { getFieldProperties } from 'schemas/fieldProperties';
-import type { Field, Naming, Schema, SelectOption } from 'schemas/types';
+import type {
+  Field,
+  Naming,
+  OptionField,
+  Schema,
+  SelectOption,
+} from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -52,6 +58,7 @@ export function toSchema(
     ...getNameFields(meta, presentation, getDocFields(meta, context)),
     ...getMetaFields(meta),
   ].map((field) => ({ ...present(field, presentation), schemaName: name }));
+  setStatusStates(fields, meta);
 
   return {
     name,
@@ -70,6 +77,16 @@ export function toSchema(
     isSubmittable: !!meta.is_submittable,
     isTree: !!meta.is_tree,
   };
+}
+
+/** Frappe colours a document's `status` by the DocType state of the same title. */
+function setStatusStates(fields: Field[], meta: DocTypeMeta) {
+  const status = fields.find(({ fieldname }) => fieldname === 'status');
+  if (status && meta.states?.length) {
+    (status as OptionField).states = Object.fromEntries(
+      meta.states.map(({ title, color }) => [title, color])
+    );
+  }
 }
 
 /** A field with what the model's presentation adds to it. */

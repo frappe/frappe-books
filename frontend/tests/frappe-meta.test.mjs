@@ -154,3 +154,17 @@ test('a model presents option labels, row editing, state colours and help text',
   assert.deepEqual(byName.status.states, { Active: 'Green' });
   assert.equal(byName.factor.sub_label, '1 or less');
 });
+
+test('a doctype named by script from its number series names by number series', () => {
+  const context = { schemaNames: {}, roles: [], placements: {} };
+  const meta = (fields) => ({ name: 'Books Rule', permissions: [], fields });
+  const series = [{ fieldname: 'number_series', fieldtype: 'Link' }];
+  assert.equal(
+    toSchema(meta(series), 'Rule', { label: 'Rule' }, context).naming,
+    'numberSeries'
+  );
+  assert.equal(
+    toSchema(meta([]), 'Rule', { label: 'Rule' }, context).naming,
+    'random'
+  );
+});

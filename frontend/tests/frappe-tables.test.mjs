@@ -86,6 +86,7 @@ class Bill extends FrappeDoc {
     label: 'Bill',
     nameField: { label: 'Bill No' },
     rowEditTables: ['lines'],
+    noCreate: ['party'],
     options: { party_type: [{ value: 'Books Party', label: 'Party' }] },
   };
   static tableModels = { lines: BillLine };
@@ -114,7 +115,7 @@ test('a model lists the choices of a DocType reference, which a Dynamic Link fol
     { value: 'Books Party', label: 'Party' },
   ]);
   assert.equal(field('Bill', 'party_type').default, 'Books Party');
-  assert.equal(field('Bill', 'party').create, true);
+  assert.equal(field('Bill', 'party').create, false);
   assert.equal(toSchemaName('Books Party'), 'Party');
   assert.equal(toSchemaName('Party'), 'Party');
 });
@@ -200,4 +201,14 @@ test('a doctype named from its number series names new documents as Books does',
 
   assert.equal(toSchema(meta, 'BillRun', { label: 'Bill Run' }, context).naming, 'numberSeries');
   assert.equal(getSchema('Bill').naming, 'random');
+});
+
+test('a Dynamic Link offers Create unless the model says not', () => {
+  const meta = { ...billMeta, name: 'Books Bill Draft' };
+  const context = { schemaNames: {}, roles: [], placements: {} };
+  const schema = toSchema(meta, 'BillDraft', { label: 'Draft' }, context);
+  assert.equal(
+    schema.fields.find(({ fieldname }) => fieldname === 'party').create,
+    true
+  );
 });

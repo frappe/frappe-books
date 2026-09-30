@@ -27,14 +27,18 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | Visibility, read only and required that depend on the document | `depends_on`, `read_only_depends_on`, `mandatory_depends_on` |
 | Values the server fills (defaults, accounts, totals, fetched values) | A whitelisted controller method named in `static previewMethod`, for example `preview`. It fills values and does not save. `fetch_from` values come from `get_invalid_links()`. |
 | Validation and business rules | The controller. A client mirror is only for a message at its field. |
-| Link without "Create" | `only_select` on the DocField |
-| Table columns | `in_list_view` on the child DocFields |
-| Label, name field of a prompt-named doctype, quick edit fields | `static presentation` on the model |
+| Link without "Create" | `noCreate` in `static presentation` (`only_select` is not a DocField property) |
+| Table columns | `in_list_view` on the child DocFields, or `tableFields` in the row model's presentation when /books orders them differently |
+| Row behaviour and presentation | A row model in the parent's `static tableModels`, by table fieldname |
+| Tables whose rows open in the row editor | `rowEditTables` in `static presentation` |
+| Choices of a DocType reference (Link to DocType) | `options` in `static presentation` |
+| Defaults that follow /books settings | The controller fills them in `preview`; list the fields in `static serverDefaults` so a new document leaves them to it |
+| Label, the name field's label, quick edit fields | `static presentation` on the model |
 | List columns, badges, actions, option lists, formatting | The model statics, as before: `getListViewSettings`, `getActions`, `lists`, `emptyMessages` |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |
 
-A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user.
+A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code. A new document previews when a form opens it. When the user edits a field, the preview runs after a pause. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user. A model calls `leaveToServer` when an edit makes other values stale, for example a new item makes the row's details stale. A cancel that also cancels linked documents runs the controller's whitelisted `cancel_with_linked_docs`. Create actions build Frappe-backed documents with `getMappedBooksDoc`.
 
 ## Move a module
 

@@ -30,7 +30,7 @@ test('paid and unpaid lists show the submitted invoices of the period', () => {
   const filters = (outstanding) => ({
     submitted: ['=', 1],
     cancelled: ['=', 0],
-    outstandingAmount: outstanding,
+    outstanding_amount: outstanding,
     date: ['>=', '2031-09-01', '<', '2031-10-01'],
   });
 

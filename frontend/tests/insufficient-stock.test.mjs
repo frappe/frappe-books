@@ -14,8 +14,9 @@ async function getShortfalls(items, stock, values = {}) {
   };
   const invoice = fyo.doc.getNewDoc('SalesInvoice', {
     date: new Date('2026-01-01'),
-    ...values,
   });
+  // The Frappe-backed invoice's own fields, like is_pos.
+  Object.assign(invoice, values);
   invoice.items = items.map(([item, quantity, batch]) => ({
     item,
     quantity,
@@ -51,6 +52,6 @@ test('rows of the same item and batch share the stock where the invoice ships fr
 });
 
 test('a POS sale checks the stock of the POS location', async () => {
-  const { requests } = await getShortfalls([['Pen', 1]], {}, { isPOS: true });
+  const { requests } = await getShortfalls([['Pen', 1]], {}, { is_pos: true });
   assert.deepEqual(requests, [['Pen', 'Counter', undefined]]);
 });

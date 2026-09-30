@@ -49,3 +49,21 @@ function withCustomFields(properties, customFields) {
   }
   return merged;
 }
+
+/** A doctype's meta and its child doctypes', as Frappe's getdoctype sends them. */
+export function getMetaBundle(name) {
+  const meta = getMeta(name);
+  const children = meta.fields
+    .filter(({ fieldtype }) => fieldtype === 'Table')
+    .map(({ options }) => getMeta(options));
+  return [meta, ...children];
+}
+
+function getMeta(name) {
+  const doctype = doctypes.find((doctype) => doctype.name === name);
+  const order = doctype.field_order ?? [];
+  const fields = [...doctype.fields].sort(
+    (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
+  );
+  return { permissions: [], ...doctype, fields };
+}

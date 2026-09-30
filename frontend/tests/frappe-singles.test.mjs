@@ -123,6 +123,15 @@ test('a single saves by its doctype name and refuses a stale copy by modified', 
   assert.equal(save.body.date_format, 'MMM d, y');
   assert.equal(save.body.modified, MODIFIED);
   assert.equal(settings.dirty, false);
+
+  const later = '2026-09-30 11:00:00.000000';
+  const next = stubFrappe(({ body }) => ({
+    data: { name: 'Books Test Settings', ...body, modified: later },
+  }));
+  await settings.set('dark_mode', true);
+  await settings.sync();
+  assert.equal(next[0].body.modified, MODIFIED);
+  assert.equal(settings.modified, later);
 });
 
 test('a new copy of a single replaces its values', async () => {

@@ -185,6 +185,7 @@ async function installPaymentFixture(page: Page) {
       payment: null as any,
       stored: null as any,
       openPayment: null as any,
+      findPayment: null as any,
     });
     const accounts = [
       {
@@ -313,7 +314,11 @@ async function installPaymentFixture(page: Page) {
         (entry: any) => entry.label === 'Payment'
       );
       await action.action(invoice, router);
+    };
+    // The quick edit mounts after the action returns.
+    fixture.findPayment = () => {
       fixture.payment = findOpenPayment(app._container._vnode.component);
+      return !!fixture.payment;
     };
     await router.push(`/edit/PurchaseInvoice/${invoice.name}`);
 
@@ -344,6 +349,6 @@ async function installPaymentFixture(page: Page) {
     return fixture.openPayment();
   });
   await expect
-    .poll(() => page.evaluate(() => !!(window as any).paymentFlow.payment))
+    .poll(() => page.evaluate(() => (window as any).paymentFlow.findPayment()))
     .toBe(true);
 }

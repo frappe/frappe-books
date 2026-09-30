@@ -74,7 +74,6 @@ export const models = {
   CollectionRulesItems,
   CouponCode,
   Payment,
-  PaymentMethod,
   PaymentFor,
   PrintSettings,
   PriceList,
@@ -120,6 +119,7 @@ export const models = {
 export const frappeModels: Record<string, FrappeModel> = {
   Account,
   Item,
+  PaymentMethod,
   Tax,
 };
 

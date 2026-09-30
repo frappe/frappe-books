@@ -43,6 +43,10 @@ export class FrappeDoc extends Doc {
   static presentation: Presentation = { label: '' };
   /** A whitelisted method that fills what a save would; previewed while the user edits. */
   static previewMethod?: string;
+  /** Models of the rows of its tables, by table fieldname; other rows are plain. */
+  static rowModels: Record<string, typeof FrappeDoc> = {};
+  /** Fields the server fills from another field, by that field: editing it has them filled again. */
+  static derivedFields: Record<string, string[]> = {};
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();
@@ -311,6 +315,10 @@ export class FrappeDoc extends Doc {
   override async change({ changed }: ChangeArg) {
     if (changed) {
       this._serverFilled.delete(changed);
+      const { derivedFields } = this.constructor as typeof FrappeDoc;
+      for (const fieldname of derivedFields[changed] ?? []) {
+        this._serverFilled.add(fieldname);
+      }
     }
 
     this.schedulePreview();

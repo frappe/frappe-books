@@ -81,18 +81,23 @@ async function loadDocType(schemaName: string, Model: FrappeModel) {
     Model,
     placements
   );
-  docType.tables = getTables(docType.meta, byName);
+  docType.tables = getTables(docType.meta, byName, Model);
   setDocType(schemaName, docType);
 }
 
-function getTables(meta: DocTypeMeta, byName: Map<string, DocTypeMeta>) {
+function getTables(
+  meta: DocTypeMeta,
+  byName: Map<string, DocTypeMeta>,
+  Model: FrappeModel
+) {
   const tables: FrappeDocType['tables'] = {};
   for (const field of meta.fields) {
     const child =
       field.fieldtype === 'Table' ? byName.get(field.options!) : undefined;
     if (child) {
       const name = getSchemaNames()[child.name] ?? child.name;
-      tables[field.fieldname] = toDocType(child, name, FrappeDoc, {});
+      const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;
+      tables[field.fieldname] = toDocType(child, name, RowModel, {});
     }
   }
 

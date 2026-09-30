@@ -207,6 +207,25 @@ test('a preview fills what the server fills, again until the user edits it', asy
   assert.equal(item.income_account, 'Consulting');
 });
 
+test('a preview leaves the dates it returns unchanged to the user', async () => {
+  const sent = [];
+  stubDocument(savedPen, ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      sent.push(body.document);
+      return { data: null, docs: [{ ...body.document }] };
+    }
+  });
+  const item = newFrappeDoc('Item', {
+    name: 'Clock',
+    released_on: new Date('2026-09-30T10:00:00.250Z'),
+  });
+
+  await item.preview();
+  await item.preview();
+
+  assert.equal(sent[1].released_on, '2026-09-30 15:30:00.250');
+});
+
 test('a preview is dropped when the values changed meanwhile or the draft is stale', async () => {
   let edit;
   stubDocument(savedPen, async ({ path, body }) => {

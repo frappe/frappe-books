@@ -47,6 +47,20 @@ export interface POSItem {
   itemGroup?: string;
 }
 
+/** An item's values as POS reads them through the bridge, by Books field name. */
+export interface BridgeItem {
+  name?: string;
+  itemCode?: string;
+  barcode?: string;
+  image?: string;
+  rate?: Money;
+  unit?: string;
+  trackItem?: boolean;
+  hasBatch?: boolean;
+  hasSerialNumber?: boolean;
+  uomConversions?: { uom: string }[];
+}
+
 export type PaymentMethodOption = {
   name: string;
   type?: PaymentMethodType;

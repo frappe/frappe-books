@@ -57,7 +57,8 @@ export class StockMovementItem extends TransferItem {
   }
 
   static filters: FiltersMap = {
-    item: () => ({ trackItem: true }),
+    // Items are Frappe-backed, so their filters use Frappe fieldnames.
+    item: () => ({ track_item: true }),
     transferUnit: async (doc: Doc) => {
       const conversionItems = await doc.fyo.db.getAll(
         ModelNameEnum.UOMConversionItem,
@@ -228,7 +229,7 @@ export class StockMovementItem extends TransferItem {
   };
 
   static createFilters: FiltersMap = {
-    item: () => ({ trackItem: true, itemType: 'Product' }),
+    item: () => ({ track_item: true, item_type: 'Product' }),
   };
 
   override async change(ch: ChangeArg): Promise<void> {

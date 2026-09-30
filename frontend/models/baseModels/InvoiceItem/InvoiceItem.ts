@@ -347,8 +347,9 @@ export abstract class InvoiceItem extends Doc {
         itemNotFor = 'Purchases';
       }
 
+      // Items are Frappe-backed, so their filters use Frappe fieldnames.
       const filters: QueryFilter = {
-        for: ['not in', [itemNotFor]],
+        item_usage: ['not in', [itemNotFor]],
       };
 
       return filters;
@@ -393,7 +394,7 @@ export abstract class InvoiceItem extends Doc {
 
   static createFilters: FiltersMap = {
     item: (doc: Doc) => {
-      return { for: doc.isSales ? 'Sales' : 'Purchases' };
+      return { item_usage: doc.isSales ? 'Sales' : 'Purchases' };
     },
   };
 

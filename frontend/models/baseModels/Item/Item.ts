@@ -1,116 +1,45 @@
 import { Fyo } from 'fyo';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
 import {
   Action,
   FiltersMap,
-  FormulaMap,
   HiddenMap,
   ListViewSettings,
-  ReadOnlyMap,
   ValidationMap,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { Money } from 'pesa';
 import { getMappedDoc } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { AccountRootTypeEnum, AccountTypeEnum } from '../Account/types';
+import { Money } from 'pesa';
+import { FrappeDoc } from 'src/frappe/document';
+import { AccountRootTypeEnum } from '../Account/types';
 
-interface UOMConversionItem {
-  name: string;
-  uom: string;
-  conversionFactor: number;
-}
-
-export class Item extends Doc {
-  itemCode?: string;
-  trackItem?: boolean;
-  itemType?: 'Product' | 'Service';
-  for?: 'Purchases' | 'Sales' | 'Both';
-  hasBatch?: boolean;
-  batchSeries?: string;
-  itemGroup?: string;
-  hsnCode?: number;
-  hasSerialNumber?: boolean;
-  serialNumberSeries?: string;
-  uomConversions: UOMConversionItem[] = [];
-
-  formulas: FormulaMap = {
-    incomeAccount: {
-      formula: async () => {
-        let accountName = 'Service';
-        if (this.itemType === 'Product') {
-          accountName = 'Sales';
-        }
-
-        const accountExists = await this.fyo.db.exists('Account', accountName);
-        return accountExists ? accountName : '';
-      },
-      dependsOn: ['itemType'],
-    },
-    expenseAccount: {
-      formula: async () => {
-        if (this.trackItem) {
-          return this.fyo.singles.InventorySettings
-            ?.stockReceivedButNotBilled as string;
-        }
-
-        const cogs = await this.fyo.db.getAllRaw('Account', {
-          filters: {
-            accountType: AccountTypeEnum['Cost of Goods Sold'],
-          },
-        });
-
-        if (cogs.length === 0) {
-          return '';
-        } else {
-          return cogs[0].name as string;
-        }
-      },
-      dependsOn: ['itemType', 'trackItem'],
-    },
-    hsnCode: {
-      formula: async () => {
-        if (!this.itemGroup) {
-          return '';
-        }
-
-        const itemGroupDoc = await this.fyo.doc.getDoc(
-          'ItemGroup',
-          this.itemGroup
-        );
-        return itemGroupDoc?.hsnCode as string;
-      },
-      dependsOn: ['itemGroup'],
-    },
+/**
+ * Books Item, served by Frappe. The DocType owns its fields, defaults and
+ * rules; its `preview` fills accounts and fetched values while the user edits.
+ */
+export class Item extends FrappeDoc {
+  static override doctype = 'Books Item';
+  static override presentation = {
+    label: 'Item',
+    nameField: { label: 'Item Name', placeholder: 'Item Name' },
+    quickEditFields: [
+      'rate',
+      'unit',
+      'item_type',
+      'item_usage',
+      'tax',
+      'description',
+      'income_account',
+      'expense_account',
+      'barcode',
+      'hsn_code',
+      'track_item',
+    ],
   };
+  static override previewMethod = 'preview';
 
-  async beforeSync(): Promise<void> {
-    await super.beforeSync();
-    const latestByUom = new Map<string, UOMConversionItem>();
-
-    this.uomConversions.forEach((item) => {
-      if (item.conversionFactor > 0) {
-        latestByUom.set(item.uom, item);
-      }
-    });
-
-    this.uomConversions = Array.from(latestByUom.values());
-  }
-
-  static filters: FiltersMap = {
-    incomeAccount: () => ({
-      isGroup: false,
-      rootType: AccountRootTypeEnum.Income,
-    }),
-    expenseAccount: (doc) => ({
-      isGroup: false,
-      rootType: doc.trackItem
-        ? AccountRootTypeEnum.Liability
-        : AccountRootTypeEnum.Expense,
-    }),
-  };
-
+  // The server checks these too; mirrored to show the message at the field.
   validations: ValidationMap = {
     barcode: (value: DocValue) => {
       if (value && !(value as string).match(/^\d{12}$/)) {
@@ -124,11 +53,37 @@ export class Item extends Doc {
         throw new ValidationError(this.fyo.t`Rate can't be negative.`);
       }
     },
-    hsnCode: (value: DocValue) => {
+    hsn_code: (value: DocValue) => {
       if (value && !(value as string).match(/^\d{4,8}$/)) {
         throw new ValidationError(this.fyo.t`Invalid HSN Code.`);
       }
     },
+  };
+
+  // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
+  hidden: HiddenMap = {
+    track_item: () => !this.fyo.singles.AccountingSettings?.enableInventory,
+    barcode: () => !this.fyo.singles.InventorySettings?.enableBarcodes,
+    has_batch: () => !this.fyo.singles.InventorySettings?.enableBatches,
+    has_serial_number: () =>
+      !this.fyo.singles.InventorySettings?.enableSerialNumber,
+    uom_conversions: () =>
+      !this.fyo.singles.InventorySettings?.enableUomConversions,
+    item_group: () => !this.fyo.singles.AccountingSettings?.enableitemGroup,
+  };
+
+  // Accounts are still read through the bridge, so these use its field names.
+  static filters: FiltersMap = {
+    income_account: () => ({
+      isGroup: false,
+      rootType: AccountRootTypeEnum.Income,
+    }),
+    expense_account: (doc) => ({
+      isGroup: false,
+      rootType: doc.track_item
+        ? AccountRootTypeEnum.Liability
+        : AccountRootTypeEnum.Expense,
+    }),
   };
 
   static getActions(fyo: Fyo): Action[] {
@@ -136,7 +91,7 @@ export class Item extends Doc {
       {
         group: fyo.t`Create`,
         label: fyo.t`Sales Invoice`,
-        condition: (doc) => !doc.notInserted && doc.for !== 'Purchases',
+        condition: (doc) => !doc.notInserted && doc.item_usage !== 'Purchases',
         action: async (doc, router) => {
           const invoice = await getMappedDoc(
             doc,
@@ -149,7 +104,7 @@ export class Item extends Doc {
       {
         group: fyo.t`Create`,
         label: fyo.t`Purchase Invoice`,
-        condition: (doc) => !doc.notInserted && doc.for !== 'Sales',
+        condition: (doc) => !doc.notInserted && doc.item_usage !== 'Sales',
         action: async (doc, router) => {
           const invoice = await getMappedDoc(
             doc,
@@ -167,30 +122,4 @@ export class Item extends Doc {
       columns: ['name', 'unit', 'tax', 'rate'],
     };
   }
-
-  hidden: HiddenMap = {
-    trackItem: () =>
-      !this.fyo.singles.AccountingSettings?.enableInventory ||
-      this.itemType !== 'Product' ||
-      (this.inserted && !this.trackItem),
-    barcode: () => !this.fyo.singles.InventorySettings?.enableBarcodes,
-    hasBatch: () => !this.fyo.singles.InventorySettings?.enableBatches,
-    hasSerialNumber: () =>
-      !(
-        this.fyo.singles.InventorySettings?.enableSerialNumber && this.trackItem
-      ),
-    serialNumberSeries: () => !this.hasSerialNumber,
-    batchSeries: () => !this.hasBatch,
-    uomConversions: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
-    itemGroup: () => !this.fyo.singles.AccountingSettings?.enableitemGroup,
-  };
-
-  readOnly: ReadOnlyMap = {
-    unit: () => this.inserted,
-    itemType: () => this.inserted,
-    trackItem: () => this.inserted,
-    hasBatch: () => this.inserted,
-    hasSerialNumber: () => this.inserted,
-  };
 }

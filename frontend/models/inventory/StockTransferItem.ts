@@ -253,7 +253,8 @@ export class StockTransferItem extends TransferItem {
         itemNotFor = 'Purchases';
       }
 
-      return { for: ['not in', [itemNotFor]], trackItem: true };
+      // Items are Frappe-backed, so their filters use Frappe fieldnames.
+      return { item_usage: ['not in', [itemNotFor]], track_item: true };
     },
   };
 

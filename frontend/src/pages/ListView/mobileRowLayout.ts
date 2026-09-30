@@ -19,7 +19,7 @@ export interface MobileRowLayout {
 /** Line 2 fields where the phone design differs from the list columns. */
 const metaFieldnames: Record<string, string[]> = {
   [ModelNameEnum.Party]: ['role', 'phone'],
-  [ModelNameEnum.Item]: ['itemType', 'tax'],
+  [ModelNameEnum.Item]: ['item_type', 'tax'],
   [ModelNameEnum.Payment]: ['name', 'date', 'paymentType'],
 };
 

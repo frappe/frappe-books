@@ -240,7 +240,6 @@ import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { ModelNameEnum } from 'models/types';
 import { showDialog, showToast } from 'src/utils/interactive';
 import { isMobile } from 'src/utils/viewport';
-import { Item } from 'models/baseModels/Item/Item';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import PageHeader from 'src/components/PageHeader.vue';
@@ -251,7 +250,7 @@ import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
 } from 'models/baseModels/PaymentMethod/requirements';
-import { ModalName, modalNames } from 'src/components/POS/types';
+import { BridgeItem, ModalName, modalNames } from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
@@ -693,7 +692,7 @@ export default defineComponent({
       const items = (await fyo.db.getAll(ModelNameEnum.Item, {
         fields: [],
         filters,
-      })) as Item[];
+      })) as BridgeItem[];
 
       this.items = items
         .map((item) => toPOSItem(item, this.itemQtyMap))

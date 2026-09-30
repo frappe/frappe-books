@@ -63,7 +63,6 @@ export const models = {
   Address,
   Batch,
   Defaults,
-  Item,
   ItemGroup,
   ItemEnquiry,
   JournalEntry,
@@ -120,7 +119,9 @@ export const models = {
  * Models of the schemas Frappe serves directly. A schema moves here from
  * `models` when its module stops using the bridge; see docs/framework-backed-doctypes.md.
  */
-export const frappeModels: Record<string, FrappeModel> = {};
+export const frappeModels: Record<string, FrappeModel> = {
+  Item,
+};
 
 export async function getRegionalModels(
   countryCode: string

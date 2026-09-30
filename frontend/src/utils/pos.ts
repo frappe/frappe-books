@@ -1,12 +1,13 @@
 import { Fyo, t } from 'fyo';
+import type { Doc } from 'fyo/model/doc';
 import { ValidationError } from 'fyo/utils/errors';
-import { Item } from 'models/baseModels/Item/Item';
 import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import {
+  BridgeItem,
   ItemQtyMap,
   ItemSerialNumbers,
   POSItem,
@@ -277,8 +278,9 @@ export async function getPOSRowItem(
     return { hasBatch: false, hasSerialNumber: false, units: [] };
   }
 
-  const doc = (await fyo.doc.getDoc(ModelNameEnum.Item, item)) as Item;
-  const units = [doc.unit, ...doc.uomConversions.map(({ uom }) => uom)];
+  const doc = await getBridgeItem(fyo, item);
+  const conversions = doc.uomConversions ?? [];
+  const units = [doc.unit, ...conversions.map(({ uom }) => uom)];
   return {
     hasBatch: !!doc.hasBatch,
     hasSerialNumber: !!doc.hasSerialNumber,
@@ -312,7 +314,7 @@ export function getQuickPaymentAmounts(due: number, count = 2): number[] {
   return amounts.slice(0, count);
 }
 
-export function toPOSItem(item: Item, itemQtyMap: ItemQtyMap): POSItem {
+export function toPOSItem(item: BridgeItem, itemQtyMap: ItemQtyMap): POSItem {
   return {
     availableQty: itemQtyMap[item.name as string]?.availableQty ?? 0,
     trackItem: !!item.trackItem,
@@ -408,7 +410,12 @@ export async function addBatchItem(
 }
 
 async function getItemDoc(sinvDoc: SalesInvoice, item: POSItem) {
-  return (await sinvDoc.fyo.doc.getDoc(ModelNameEnum.Item, item.name)) as Item;
+  return await getBridgeItem(sinvDoc.fyo, item.name);
+}
+
+/** POS still reads items through the bridge, with Books field names. */
+async function getBridgeItem(fyo: Fyo, name: string) {
+  return (await fyo.doc.getDoc(ModelNameEnum.Item, name)) as Doc & BridgeItem;
 }
 
 /** The cart rows of `item` that are not free items, from `batch` if given. */

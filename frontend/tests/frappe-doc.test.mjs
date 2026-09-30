@@ -285,6 +285,8 @@ test('a cancel with linked documents runs the controller method that cancels the
       : undefined
   );
   const order = await getFrappeDoc('Order', 'ORD-2');
+  // A copy the POS or print loaded through the bridge.
+  fyo.doc.docs.set('Order', { 'ORD-2': {} });
   const payments = [{ doctype: 'Books Payment', name: 'PAY-1', docstatus: 1 }];
 
   await order.cancel(payments);
@@ -294,6 +296,7 @@ test('a cancel with linked documents runs the controller method that cancels the
   assert.equal(document.modified, MODIFIED);
   assert.deepEqual(kwargs, { linked_docs: payments });
   assert.equal(order.cancelled, true);
+  assert.equal(fyo.doc.docs.get('Order')['ORD-2'], undefined);
 });
 
 test('a new document leaves its server defaults to the preview until set', async (t) => {

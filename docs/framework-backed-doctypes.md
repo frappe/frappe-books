@@ -27,7 +27,7 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | Visibility, read only and required that depend on the document | `depends_on`, `read_only_depends_on`, `mandatory_depends_on` |
 | Values the server fills (defaults, accounts, totals, fetched values) | A whitelisted controller method named in `static previewMethod`, for example `preview`. It fills values and does not save. `fetch_from` values come from `get_invalid_links()`. |
 | Validation and business rules | The controller. A client mirror is only for a message at its field. |
-| Link without "Create" | `only_select` on the DocField |
+| Link without "Create" | `create: false` in `presentation.fields`, or in `presentation.tables` for a table's rows |
 | Table columns | `in_list_view` on the child DocFields |
 | Label, name field of a prompt-named doctype, quick edit fields | `static presentation` on the model |
 | List columns, badges, actions, option lists, formatting | The model statics, as before: `getListViewSettings`, `getActions`, `lists`, `emptyMessages` |

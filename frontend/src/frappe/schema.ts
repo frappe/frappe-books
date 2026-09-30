@@ -13,6 +13,8 @@ export interface Presentation {
   /** False when its list offers no Create, as for records made elsewhere. */
   create?: boolean;
   fields?: Record<string, FieldPresentation>;
+  /** How each table's rows, by the table's fieldname, show their fields. */
+  tables?: Record<string, Record<string, FieldPresentation>>;
 }
 
 /** How a form shows a field, where the DocField has no property for it. */
@@ -21,6 +23,8 @@ export interface FieldPresentation {
   optionLabels?: Record<string, string>;
   /** A table whose rows also open in a form. */
   edit?: boolean;
+  /** False for a link that only picks, without a Create option. */
+  create?: boolean;
 }
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
@@ -171,7 +175,7 @@ function toField(
   }
 
   if (docfield.fieldtype === 'Link') {
-    field.create = !docfield.only_select;
+    field.create = shown.create ?? true;
   }
 
   return field;

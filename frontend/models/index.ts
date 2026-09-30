@@ -95,7 +95,6 @@ export const models = {
   Tax,
   TaxSummary,
   // Inventory Models
-  InventorySettings,
   StockMovement,
   StockMovementItem,
   StockLedgerEntry,
@@ -121,6 +120,7 @@ export const models = {
 export const frappeModels: Record<string, FrappeModel> = {
   GetStarted,
   Item,
+  InventorySettings,
   Misc,
   POSSettings,
 };

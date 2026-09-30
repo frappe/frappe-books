@@ -255,7 +255,7 @@ export default defineComponent({
   },
   computed: {
     canShowBarcode(): boolean {
-      if (!this.fyo.singles.InventorySettings?.enableBarcodes) {
+      if (!this.fyo.singles.InventorySettings?.enable_barcodes) {
         return false;
       }
 

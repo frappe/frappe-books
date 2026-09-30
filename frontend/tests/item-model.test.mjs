@@ -61,7 +61,7 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
 
 test('item fields hide by the item and by the features turned on', async () => {
   fyo.singles.AccountingSettings = { enableInventory: true };
-  fyo.singles.InventorySettings = { enableSerialNumber: true };
+  fyo.singles.InventorySettings = { enable_serial_number: true };
   const item = newFrappeDoc('Item', { name: 'Tea' });
 
   assert.equal(hidden(item, 'track_item'), false);

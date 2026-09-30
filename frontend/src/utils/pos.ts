@@ -67,7 +67,7 @@ export async function setPOSRowQuantity(
 
 /** The quantity field the POS edits: the transfer quantity with UOM conversions. */
 export function getPOSQuantityField(fyo: Fyo): POSQuantityField {
-  return fyo.singles.InventorySettings?.enableUomConversions
+  return fyo.singles.InventorySettings?.enable_uom_conversions
     ? 'transferQuantity'
     : 'quantity';
 }

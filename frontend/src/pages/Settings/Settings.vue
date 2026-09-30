@@ -191,7 +191,7 @@ export default defineComponent({
     },
     schemas(): Schema[] {
       const enableInventory = !!this.fyo.singles.AccountingSettings?.enableInventory;
-      const enablePOS = !!this.fyo.singles.InventorySettings?.enablePointOfSale;
+      const enablePOS = !!this.fyo.singles.InventorySettings?.enable_point_of_sale;
       return [
         ModelNameEnum.AccountingSettings,
         ModelNameEnum.InventorySettings,

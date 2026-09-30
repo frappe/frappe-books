@@ -222,11 +222,11 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     schemaNames.push(ModelNameEnum.PriceList);
   }
 
-  if (fyo.singles.InventorySettings?.enableBatches) {
+  if (fyo.singles.InventorySettings?.enable_batches) {
     schemaNames.push(ModelNameEnum.Batch);
   }
 
-  if (fyo.singles.InventorySettings?.enableSerialNumber) {
+  if (fyo.singles.InventorySettings?.enable_serial_number) {
     schemaNames.push(ModelNameEnum.SerialNumber);
   }
 

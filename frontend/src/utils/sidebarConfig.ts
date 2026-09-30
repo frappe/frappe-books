@@ -107,7 +107,7 @@ function getPOSSidebar() {
     name: 'pos',
     route: '/pos',
     icon: 'lucide-store',
-    hidden: () => !fyo.singles.InventorySettings?.enablePointOfSale,
+    hidden: () => !fyo.singles.InventorySettings?.enable_point_of_sale,
   };
 }
 

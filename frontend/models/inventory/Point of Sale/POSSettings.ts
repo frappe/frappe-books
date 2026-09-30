@@ -46,11 +46,12 @@ export class POSSettings extends FrappeDoc {
   // Fields of features turned off in other settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     weight_enabled_barcode: () =>
-      !this.fyo.singles.InventorySettings?.enableBarcodes,
-    check_digits: () => !this.fyo.singles.InventorySettings?.enableBarcodes,
-    item_code_digits: () => !this.fyo.singles.InventorySettings?.enableBarcodes,
+      !this.fyo.singles.InventorySettings?.enable_barcodes,
+    check_digits: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
+    item_code_digits: () =>
+      !this.fyo.singles.InventorySettings?.enable_barcodes,
     item_weight_digits: () =>
-      !this.fyo.singles.InventorySettings?.enableBarcodes,
+      !this.fyo.singles.InventorySettings?.enable_barcodes,
     item_visibility: () =>
       !this.fyo.singles.AccountingSettings?.enablePointOfSaleWithOutInventory,
   };

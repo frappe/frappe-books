@@ -1,6 +1,5 @@
 import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
-import { InventorySettings } from 'models/inventory/InventorySettings';
 import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
 import { ColumnField, PhoneLayout, ReportCell } from 'reports/types';
@@ -43,8 +42,7 @@ export class StockLedger extends Report {
   };
 
   get hasBatches(): boolean {
-    return !!(this.fyo.singles.InventorySettings as InventorySettings)
-      .enableBatches;
+    return !!this.fyo.singles.InventorySettings?.enable_batches;
   }
 
   async setDefaultFilters() {

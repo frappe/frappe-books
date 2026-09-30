@@ -1,45 +1,35 @@
-import { Doc } from 'fyo/model/doc';
-import { FiltersMap, ReadOnlyMap } from 'fyo/model/types';
+import { FiltersMap } from 'fyo/model/types';
 import { AccountTypeEnum } from 'models/baseModels/Account/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class InventorySettings extends Doc {
-  defaultLocation?: string;
-  stockInHand?: string;
-  stockReceivedButNotBilled?: string;
-  costOfGoodsSold?: string;
-  enableBarcodes?: boolean;
-  enableBatches?: boolean;
-  enableSerialNumber?: boolean;
-  enableUomConversions?: boolean;
-  enablePointOfSale?: boolean;
+/** Books Inventory Settings, served by Frappe. */
+export class InventorySettings extends FrappeDoc {
+  static override doctype = 'Books Inventory Settings';
+  static override presentation = { label: 'Inventory Settings' };
 
+  declare default_location?: string;
+  declare stock_in_hand?: string;
+  declare stock_received_but_not_billed?: string;
+  declare cost_of_goods_sold?: string;
+  declare enable_barcodes?: boolean;
+  declare enable_batches?: boolean;
+  declare enable_serial_number?: boolean;
+  declare enable_uom_conversions?: boolean;
+  declare enable_point_of_sale?: boolean;
+
+  // Accounts are still read through the bridge, so these use its field names.
   static filters: FiltersMap = {
-    stockInHand: () => ({
+    stock_in_hand: () => ({
       isGroup: false,
       accountType: AccountTypeEnum.Stock,
     }),
-    stockReceivedButNotBilled: () => ({
+    stock_received_but_not_billed: () => ({
       isGroup: false,
       accountType: AccountTypeEnum['Stock Received But Not Billed'],
     }),
-    costOfGoodsSold: () => ({
+    cost_of_goods_sold: () => ({
       isGroup: false,
       accountType: AccountTypeEnum['Cost of Goods Sold'],
     }),
-  };
-
-  readOnly: ReadOnlyMap = {
-    enableBarcodes: () => {
-      return !!this.enableBarcodes;
-    },
-    enableBatches: () => {
-      return !!this.enableBatches;
-    },
-    enableSerialNumber: () => {
-      return !!this.enableSerialNumber;
-    },
-    enableUomConversions: () => {
-      return !!this.enableUomConversions;
-    },
   };
 }

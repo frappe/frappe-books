@@ -282,7 +282,7 @@ export abstract class InvoiceItem extends Doc {
       !this.item ||
       !this.isSales ||
       this.isReturn ||
-      !this.fyo.singles.InventorySettings?.enableBatches
+      !this.fyo.singles.InventorySettings?.enable_batches
     ) {
       return;
     }
@@ -325,13 +325,13 @@ export abstract class InvoiceItem extends Doc {
       !(this.enableDiscounting && !!this.setItemDiscountAmount),
     itemDiscountPercent: () =>
       !(this.enableDiscounting && !this.setItemDiscountAmount),
-    batch: () => !this.fyo.singles.InventorySettings?.enableBatches,
+    batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
     transferUnit: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
+      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
     transferQuantity: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
+      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
     unitConversionFactor: () =>
-      !this.fyo.singles.InventorySettings?.enableUomConversions,
+      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
   };
 
   // The server derives a missing quantity from the other, so a new row's start is set here.

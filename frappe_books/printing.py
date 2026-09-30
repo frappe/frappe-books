@@ -56,7 +56,6 @@ def _invoice_totals(invoice) -> dict[str, Any]:
 	tax = sum_decimal(row.amount for row in invoice.taxes)
 	totals = _amount_totals(invoice.grand_total, invoice.currency)
 	totals["sub_total"] = as_decimal(invoice.grand_total) - tax
-	totals["total_discount"] = invoice.total_discount
 	if invoice.transaction_type != "quote":
 		totals["payment_details"] = _payment_details(invoice)
 	return totals

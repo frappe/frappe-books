@@ -59,7 +59,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 		totals = get_print_totals(invoice)
 
-		self.assertEqual((totals["sub_total"], totals["total_discount"]), (180, 20))
+		self.assertEqual(totals["sub_total"], 180)
 		self.assertEqual(totals["grand_total_in_words"], money_in_words(198, invoice.currency))
 
 	def test_payment_prints_every_invoice_tax(self):

@@ -1,6 +1,7 @@
 import { Fyo, t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import { ModelNameEnum } from 'models/types';
+import { Money } from 'pesa';
 import { FieldTypeEnum, Schema, TargetField } from 'schemas/types';
 import { call } from 'src/web/api';
 import { printHtml } from './browser';
@@ -17,7 +18,6 @@ type PrintTotals = {
   sub_total?: number;
   grand_total_in_words?: string;
   amount_paid_in_words?: string;
-  total_discount?: number;
   payment_details?: {
     amount: number;
     amount_paid: number;
@@ -48,6 +48,7 @@ export async function getPrintTemplatePropValues(
   const printSettings = await doc.fyo.doc.getDoc(ModelNameEnum.PrintSettings);
   const values: PrintTemplateData = {
     ...(await getPrintTemplateDocValues(doc)),
+    ...getBlankDeductions(doc),
     ...(await getTotalValues(doc)),
     date: doc.fyo.format(doc.date, FieldTypeEnum.Date),
     showHSN: showHSN(doc),
@@ -93,10 +94,6 @@ async function getTotalValues(doc: Doc): Promise<PrintTemplateData> {
     subTotal: formatAmount(fyo, totals.sub_total),
     grandTotalInWords: totals.grand_total_in_words,
     amountPaidInWords: totals.amount_paid_in_words,
-    totalDiscount:
-      totals.total_discount === 0
-        ? ''
-        : formatAmount(fyo, totals.total_discount),
     paymentDetails: totals.payment_details?.length
       ? totals.payment_details.map((payment) => ({
           amount: formatAmount(fyo, payment.amount),
@@ -116,6 +113,16 @@ async function getTotalValues(doc: Doc): Promise<PrintTemplateData> {
   // Totals a document does not have leave its own values in place.
   return Object.fromEntries(
     Object.entries(values).filter(([, value]) => value !== undefined)
+  );
+}
+
+/** Templates show a deduction only when the document has one. */
+function getBlankDeductions(doc: Doc): PrintTemplateData {
+  const fieldnames = ['totalDiscount', 'loyaltyPointsAmount'];
+  return Object.fromEntries(
+    fieldnames
+      .filter((fieldname) => (doc[fieldname] as Money | undefined)?.isZero())
+      .map((fieldname) => [fieldname, ''])
   );
 }
 
@@ -155,7 +162,6 @@ export function getPrintTemplatePropHints(schemaName: string, fyo: Fyo) {
   };
 
   if (schemaName?.endsWith('Invoice')) {
-    (hints.doc as PrintTemplateData).totalDiscount = fyo.t`Total Discount`;
     (hints.doc as PrintTemplateData).showHSN = fyo.t`Show HSN`;
   }
 

@@ -17,7 +17,6 @@ import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCoupo
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { Payment } from './baseModels/Payment/Payment';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
-import { PaymentFor } from './baseModels/PaymentFor/PaymentFor';
 import { PriceList } from './baseModels/PriceList/PriceList';
 import { PriceListItem } from './baseModels/PriceList/PriceListItem';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
@@ -69,9 +68,7 @@ export const models = {
   LoyaltyProgram,
   CollectionRulesItems,
   CouponCode,
-  Payment,
   PaymentMethod,
-  PaymentFor,
   PrintSettings,
   PriceList,
   PriceListItem,
@@ -118,6 +115,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   Item,
   JournalEntry,
   LoyaltyPointEntry,
+  Payment,
   StockLedgerEntry,
 };
 

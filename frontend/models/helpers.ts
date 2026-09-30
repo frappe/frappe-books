@@ -248,7 +248,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
         ModelNameEnum.Payment,
         'make_payment'
       );
-      await payment.set('referenceType', doc.schemaName);
+      await payment.set('reference_type', doc.schemaName);
       const currentRoute = router.currentRoute.value.fullPath;
       payment.once('afterSubmit', async () => {
         await doc.load();
@@ -256,13 +256,12 @@ export function getMakePaymentAction(fyo: Fyo): Action {
       });
 
       // The party account comes from the invoice.
-      const hideFields = ['party', 'for', 'account'];
+      const hideFields = ['party', 'payment_references', 'account'];
 
       if (!fyo.singles.AccountingSettings?.enableInvoiceReturns) {
-        hideFields.push('paymentType');
+        hideFields.push('payment_type');
       }
 
-      await payment.runFormulas();
       const { openQuickEdit } = await import('src/utils/ui');
       await openQuickEdit({
         doc: payment,

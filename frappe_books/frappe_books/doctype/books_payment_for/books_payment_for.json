@@ -12,21 +12,21 @@
  ],
  "fields": [
   {
-   "description": "Type",
    "fieldname": "reference_type",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Type",
    "options": "DocType",
+   "placeholder": "Type",
    "reqd": 1
   },
   {
-   "description": "Name",
    "fieldname": "reference_name",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
    "label": "Name",
    "options": "reference_type",
+   "placeholder": "Name",
    "reqd": 1,
    "search_index": 1
   },
@@ -42,7 +42,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:15.797467",
+ "modified": "2026-09-30 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Payment For",

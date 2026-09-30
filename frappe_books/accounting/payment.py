@@ -16,6 +16,7 @@ from frappe_books.accounting.ledger import LedgerPosting, delete_entries, revers
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.commerce.pos import counter_cash_account, is_cash_method
+from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.status import StatusMixin
 
@@ -29,28 +30,66 @@ REFERENCE_DOCTYPES = {
 
 class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 	def before_validate(self):
-		self.amount_paid = rounded(as_decimal(self.amount) - as_decimal(self.writeoff))
 		for row in self.payment_references:
 			row.reference_type = REFERENCE_DOCTYPES.get(row.reference_type, row.reference_type)
 		self.set_missing_values()
 
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill the values a save would fill, without saving, for the form to show them."""
+		check_preview_permission(self)
+		self.set_number_series()
+		self.set_missing_values()
+		# The fills show what the invoices hold, which only their readers may see.
+		for row in self.payment_references:
+			if row.reference_name:
+				frappe.has_permission(row.reference_type, "read", doc=row.reference_name, throw=True)
+		self.settle_only_reference()
+
+	def settle_only_reference(self):
+		"""In the form, a payment's only reference settles all of it, as the Books app kept them equal."""
+		if len(self.payment_references) == 1 and self.amount:
+			self.payment_references[0].amount = self.amount
+
 	def set_missing_values(self):
-		"""Fill the payment type and accounts the way the Books app does while editing."""
-		fields = ["role", "default_account"]
-		party = self.party and frappe.db.get_value("Books Party", self.party, fields, as_dict=True)
+		"""Fill the party, payment type, accounts and amounts the way the Books app does while editing."""
+		party = self.get_party()
+		self.set_reference_types(party)
 		invoice = self.get_first_invoice()
+		if not party and invoice:
+			self.party = invoice.party
+			party = self.get_party()
 		self.payment_type = self.payment_type or _default_payment_type(party, invoice)
 		self.account = self.account or _default_party_account(party, invoice, self.payment_type)
 		self.payment_account = self.payment_account or _default_payment_account(
 			self.payment_method, self.payment_type, invoice
 		)
+		self.set_amounts()
+
+	def get_party(self):
+		fields = ["role", "default_account"]
+		return self.party and frappe.db.get_value("Books Party", self.party, fields, as_dict=True)
+
+	def set_reference_types(self, party):
+		"""A reference without a type is a supplier's purchase invoice, else a sales invoice."""
+		is_supplier = party and party.role == "Supplier"
+		doctype = "Books Purchase Invoice" if is_supplier else "Books Sales Invoice"
+		for row in self.payment_references:
+			row.reference_type = row.reference_type or doctype
+
+	def set_amounts(self):
+		"""Allocate each invoice what it owes, and settle what is allocated unless an amount is set."""
+		for row in self.payment_references:
+			row.amount = row.amount or _outstanding(row)
+		self.amount = self.amount or sum_decimal(row.amount for row in self.payment_references)
+		self.amount_paid = rounded(as_decimal(self.amount) - as_decimal(self.writeoff))
 
 	def get_first_invoice(self):
-		"""Return the doctype, return link, account and POS flag of the first referenced invoice."""
+		"""Return the doctype, party, return link, account and POS flag of the first referenced invoice."""
 		row = self.payment_references[0] if self.payment_references else None
 		if not row or row.reference_type not in REFERENCE_DOCTYPES.values():
 			return None
-		fields = ["return_against", "account"]
+		fields = ["party", "return_against", "account"]
 		if row.reference_type == "Books Sales Invoice":
 			fields.append("is_pos")
 		invoice = frappe.db.get_value(row.reference_type, row.reference_name, fields, as_dict=True)
@@ -121,6 +160,13 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 
 	def on_trash(self):
 		delete_entries(self)
+
+
+def _outstanding(row):
+	"""What the referenced invoice owes; returns owe a negative balance, but allocations are positive."""
+	if not row.reference_name or row.reference_type not in REFERENCE_DOCTYPES.values():
+		return 0
+	return abs(as_decimal(frappe.db.get_value(row.reference_type, row.reference_name, "outstanding_amount")))
 
 
 def _default_payment_type(party, invoice):

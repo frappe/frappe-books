@@ -203,19 +203,21 @@ export class FrappeDoc extends Doc {
     await this._notifyAfterAction('submit');
   }
 
+  /**
+   * Cancels the document, after `linkedDocs` when there are some: the
+   * controller's whitelisted `cancel_with_linked_docs` cancels them first.
+   */
   override async cancel(linkedDocs: LinkedDoc[] = []) {
     if (!this.schema.isSubmittable || !this.submitted || this.cancelled) {
       return;
     }
 
-    if (linkedDocs.length) {
-      throw new ValueError(`${this.schemaName} cannot cancel linked documents`);
-    }
-
-    const cancelled = await api.runDocMethod(
-      'cancel',
-      this.getMethodDocument()
-    );
+    const document = this.getMethodDocument();
+    const cancelled = linkedDocs.length
+      ? await api.runDocMethod('cancel_with_linked_docs', document, {
+          linked_docs: linkedDocs,
+        })
+      : await api.runDocMethod('cancel', document);
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();

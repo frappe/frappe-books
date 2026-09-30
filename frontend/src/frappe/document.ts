@@ -3,6 +3,7 @@ import { Doc } from 'fyo/model/doc';
 import {
   areDocValuesEqual,
   getMissingMandatoryMessage,
+  isDocValueTruthy,
   setChildDocIdx,
 } from 'fyo/model/helpers';
 import type { ChangeArg } from 'fyo/model/types';
@@ -367,7 +368,11 @@ export class FrappeDoc extends Doc {
     }
   }
 
-  /** Takes the values the server filled, and remembers them as the server's. */
+  /**
+   * Takes the values the server returned, and remembers the ones it filled
+   * as the server's. A value the user entered and the server only corrected,
+   * like a return's sign, stays the user's.
+   */
   applyPreview(previewed: DocValueMap) {
     for (const field of this.schema.fields) {
       const { fieldname } = field;
@@ -381,9 +386,17 @@ export class FrappeDoc extends Doc {
       } else if (
         !areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)
       ) {
+        this._rememberFilled(fieldname);
         this[fieldname] = value;
-        this._serverFilled.add(fieldname);
       }
+    }
+  }
+
+  /** A value the server filled: one it was sent empty. */
+  _rememberFilled(fieldname: string) {
+    const sent = this[fieldname] as DocValue;
+    if (this._serverFilled.has(fieldname) || !isDocValueTruthy(sent)) {
+      this._serverFilled.add(fieldname);
     }
   }
 

@@ -91,7 +91,6 @@ export const models = {
   SerialNumber,
   SetupWizard,
   PrintTemplate,
-  Tax,
   TaxSummary,
   // Inventory Models
   InventorySettings,
@@ -121,6 +120,7 @@ export const models = {
 export const frappeModels: Record<string, FrappeModel> = {
   Account,
   Item,
+  Tax,
 };
 
 export async function getRegionalModels(

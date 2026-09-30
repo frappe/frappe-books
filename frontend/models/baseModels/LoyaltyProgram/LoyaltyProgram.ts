@@ -1,42 +1,61 @@
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
 import { ListViewSettings, ValidationMap } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { CollectionRulesItems } from '../CollectionRulesItems/CollectionRulesItems';
-import { getLoyaltyProgramStatusColumn } from '../../helpers';
+import { t } from 'fyo';
+import { getLoyaltyProgramStatusColumn } from 'models/helpers';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class LoyaltyProgram extends Doc {
-  collectionRules?: CollectionRulesItems[];
-  expiryDuration?: number;
-  maximumUse?: number;
-  used?: number;
+/** Books Loyalty Program, served by Frappe. The server keeps its status. */
+export class LoyaltyProgram extends FrappeDoc {
+  static override doctype = 'Books Loyalty Program';
+  static override presentation = {
+    label: 'Loyalty Program',
+    nameField: { label: 'Name', placeholder: 'Name' },
+    quickEditFields: [
+      'name',
+      'from_date',
+      'to_date',
+      'conversion_factor',
+      'expense_account',
+      'maximum_use',
+      'used',
+    ],
+    fields: { expense_account: { create: false } },
+  };
+
+  maximum_use?: number;
   status?: 'Active' | 'Expired' | 'Disabled' | 'Maxed';
 
+  // The server checks these too; mirrored to show its message at the field.
   validations: ValidationMap = {
     used: (value: DocValue) => {
-      const used = value as number;
-      const maximumUse = this.maximumUse as number;
-
-      if (used < 0) {
-        throw new ValidationError('Used count cannot be negative');
-      }
-
-      if (maximumUse > 0 && used > maximumUse) {
-        throw new ValidationError('Used count cannot exceed maximum use limit');
+      validateUsage(value as number);
+      const maximumUse = this.maximum_use ?? 0;
+      if (maximumUse > 0 && (value as number) > maximumUse) {
+        throw new ValidationError(
+          t`Loyalty-program usage cannot exceed its maximum.`
+        );
       }
     },
-    maximumUse: (value: DocValue) => {
-      const maximumUse = value as number;
-
-      if (maximumUse < 0) {
-        throw new ValidationError('Maximum use cannot be negative');
-      }
-    },
+    maximum_use: (value: DocValue) => validateUsage(value as number),
   };
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', getLoyaltyProgramStatusColumn(), 'fromDate', 'toDate'],
+      columns: [
+        'name',
+        getLoyaltyProgramStatusColumn(),
+        'from_date',
+        'to_date',
+      ],
     };
+  }
+}
+
+function validateUsage(count: number) {
+  if (count < 0) {
+    throw new ValidationError(
+      t`Loyalty-program usage counts cannot be negative.`
+    );
   }
 }

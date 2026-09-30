@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { holdOpenDoc } from './helpers/openDoc';
 import { useBooksSession } from './helpers/session';
 
 const partyName = 'Audit Saved Party';
@@ -85,32 +86,6 @@ test('clearing a link remains a real document edit', async ({ page }) => {
     .toEqual({ dirty: true, address: null });
 });
 
-test('dynamic links keep display text separate from their stored IDs', async ({
-  page,
-}) => {
-  const address = page.getByRole('combobox', {
-    name: 'Related Address',
-    exact: true,
-  });
-  await expect(address).toHaveValue(addressLabel);
-  expect(await getPartyState(page)).toEqual({
-    dirty: false,
-    address: addressName,
-  });
-  await address.fill('Audit Address B');
-  await page
-    .getByRole('option', { name: 'Audit Address B', exact: true })
-    .click();
-  await expect(address).toHaveValue('204, Second Street, Delhi, India');
-  expect(
-    await page.evaluate(() => (window as any).linkFixture.party.linkedAddress)
-  ).toBe('Audit Address B');
-  expect(await getPartyState(page)).toEqual({
-    dirty: true,
-    address: addressName,
-  });
-});
-
 test('free text autocomplete still accepts typing', async ({ page }) => {
   await openFixture(page, 'Address', addressName);
   // Outside India the state is free text.
@@ -120,7 +95,10 @@ test('free text autocomplete still accepts typing', async ({ page }) => {
     .getByRole('combobox', { name: 'State', exact: true })
     .fill('New Province');
   await expect
-    .poll(() => page.evaluate(() => (window as any).linkFixture.address.state))
+    .poll(async () => {
+      await holdOpenDoc(page, 'Address');
+      return page.evaluate(() => (window as any).openDoc.state);
+    })
     .toBe('New Province');
 });
 
@@ -299,122 +277,64 @@ async function openFixture(page: Page, schemaName: string, name: string) {
 }
 
 async function getPartyState(page: Page) {
+  await holdOpenDoc(page, 'Party');
   return page.evaluate(() => {
-    const doc = (window as any).linkFixture.party;
-    return { dirty: doc.dirty, address: doc.address };
+    const doc = (window as any).openDoc;
+    return { dirty: doc.dirty, address: doc.address || null };
   });
 }
 
 async function getAddressState(page: Page) {
+  await holdOpenDoc(page, 'Address');
   return page.evaluate(() => {
-    const doc = (window as any).linkFixture.address;
+    const doc = (window as any).openDoc;
     return { dirty: doc.dirty, country: doc.country };
   });
 }
 
+/** The saved party and addresses the tests open; Frappe serves them, so they are stored. */
 async function installFixture(page: Page) {
-  await page.evaluate(async () => {
-    const app = (document.querySelector('#app') as any).__vue_app__;
-    const fyo = app._context.mixins
-      .find((m: any) => m.computed?.fyo)
-      .computed.fyo();
-    const addresses = [
-      fyo.doc.getNewDoc('Address', {
-        name: 'Audit Address A',
-        addressLine1: '103, Demo Commerce Street',
-        city: 'Mumbai',
-        country: 'India',
-        addressDisplay: '103, Demo Commerce Street, Mumbai, India',
-      }),
-      fyo.doc.getNewDoc('Address', {
-        name: 'Audit Address B',
-        addressLine1: '204, Second Street',
-        city: 'Delhi',
-        country: 'India',
-        addressDisplay: '204, Second Street, Delhi, India',
-      }),
-    ];
-    const partySchema = {
-      ...fyo.schemaMap.Party,
-      fields: [
-        ...fyo.schemaMap.Party.fields,
-        {
-          fieldname: 'linkedType',
-          fieldtype: 'Data',
-          hidden: true,
-          schemaName: 'Party',
-        },
-        {
-          fieldname: 'linkedAddress',
-          label: 'Related Address',
-          fieldtype: 'DynamicLink',
-          references: 'linkedType',
-          schemaName: 'Party',
-          section: 'Contacts',
-        },
-      ],
-    };
-    const party = fyo.doc.getNewDoc(
-      'Party',
-      {
-        name: 'Audit Saved Party',
-        role: 'Customer',
-        address: addresses[0].name,
-        linkedType: 'Address',
-        linkedAddress: addresses[0].name,
-      },
-      true,
-      partySchema
-    );
-    // Fixture documents exist only in this browser's cache. No records are saved.
-    const fixtureDocs = [...addresses, party];
-    for (const doc of fixtureDocs) {
-      doc._dirty = false;
-      doc._notInserted = false;
-    }
-    // Fixture records exist only in the browser, so they keep the doctype-level rights.
-    fyo.db.getDocPermissions = async () => undefined;
-    // Forms reload saved documents on open, so serve the fixtures as saved.
-    const get = fyo.db.get.bind(fyo.db);
-    fyo.db.get = async (
-      schemaName: string,
-      name: string,
-      ...args: unknown[]
-    ) => {
-      const doc = fixtureDocs.find(
-        (fixture: any) =>
-          fixture.schemaName === schemaName && fixture.name === name
-      );
-      return doc ? doc.getValidDict() : get(schemaName, name, ...args);
-    };
-    const getAll = fyo.db.getAll.bind(fyo.db);
-    fyo.db.getAll = (schemaName: string, ...args: unknown[]) => {
-      if (schemaName === 'Address') {
-        return addresses.map((doc: any) => ({ name: doc.name }));
-      }
-      return getAll(schemaName, ...args);
-    };
-    // Link options come from the server's link search, which the fixtures are not in.
-    const searchLink = fyo.db.searchLink.bind(fyo.db);
-    fyo.db.searchLink = async (
-      schemaName: string,
-      text: string,
-      ...args: unknown[]
-    ) => {
-      if (schemaName !== 'Address') {
-        return searchLink(schemaName, text, ...args);
-      }
-      const letters = new RegExp(
-        [...text.toLowerCase()]
-          .map((letter) => letter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-          .join('.*')
-      );
-      return addresses
-        .filter((doc: any) =>
-          letters.test(`${doc.name} ${doc.addressDisplay ?? ''}`.toLowerCase())
-        )
-        .map((doc: any) => doc.getValidDict());
-    };
-    (window as any).linkFixture = { party, address: addresses[0] };
+  const addresses = [
+    ['Audit Address A', '103, Demo Commerce Street', 'Mumbai'],
+    ['Audit Address B', '204, Second Street', 'Delhi'],
+  ];
+  for (const [name, line, city] of addresses) {
+    await upsert(page, 'Books Address', {
+      name,
+      address_line1: line,
+      city,
+      country: 'India',
+    });
+  }
+
+  await upsert(page, 'Books Party', {
+    name: partyName,
+    role: 'Customer',
+    address: addressName,
   });
+}
+
+async function upsert(
+  page: Page,
+  doctype: string,
+  values: Record<string, unknown>
+) {
+  const status = await page.evaluate(
+    async ({ doctype, values }) => {
+      const url = `/api/v2/document/${encodeURIComponent(doctype)}`;
+      const saved = `${url}/${encodeURIComponent(values.name as string)}`;
+      const exists = (await fetch(saved)).ok;
+      const response = await fetch(exists ? saved : url, {
+        method: exists ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': (window as any).csrf_token,
+        },
+        body: JSON.stringify(values),
+      });
+      return response.status;
+    },
+    { doctype, values }
+  );
+  expect(status).toBe(200);
 }

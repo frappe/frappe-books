@@ -45,12 +45,14 @@
    "label": "Default"
   },
   {
+   "default": "PRLE-",
    "fieldname": "number_series",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Number Series",
    "options": "Books Number Series",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "default": "1",
@@ -110,22 +112,27 @@
    "label": "Price Discount Scheme"
   },
   {
+   "depends_on": "eval:doc.discount_type == 'Price Discount'",
    "fieldname": "price_discount_type",
    "fieldtype": "Select",
    "label": "Price Discount Type",
+   "mandatory_depends_on": "eval:doc.discount_type == 'Price Discount'",
    "options": "rate\npercentage\namount"
   },
   {
+   "depends_on": "eval:doc.discount_type == 'Price Discount' && doc.price_discount_type == 'rate'",
    "fieldname": "discount_rate",
    "fieldtype": "Currency",
    "label": "Rate"
   },
   {
+   "depends_on": "eval:doc.discount_type == 'Price Discount' && doc.price_discount_type == 'percentage'",
    "fieldname": "discount_percentage",
    "fieldtype": "Float",
    "label": "Discount Percentage"
   },
   {
+   "depends_on": "eval:doc.discount_type == 'Price Discount' && doc.price_discount_type == 'amount'",
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount"
@@ -136,17 +143,20 @@
    "label": "Product Discount Scheme"
   },
   {
+   "depends_on": "eval:doc.discount_type != 'Price Discount'",
    "fieldname": "free_item",
    "fieldtype": "Link",
    "label": "Free Item",
    "options": "Books Item"
   },
   {
+   "depends_on": "eval:doc.discount_type != 'Price Discount'",
    "fieldname": "free_item_quantity",
    "fieldtype": "Float",
    "label": "Quantity"
   },
   {
+   "depends_on": "eval:doc.discount_type != 'Price Discount'",
    "fieldname": "free_item_unit",
    "fieldtype": "Link",
    "label": "UOM",
@@ -154,12 +164,14 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.discount_type != 'Price Discount'",
    "fieldname": "round_free_item_qty",
    "fieldtype": "Check",
    "label": "Round Free Item Quantity"
   },
   {
    "default": "round",
+   "depends_on": "eval:doc.discount_type != 'Price Discount' && doc.round_free_item_qty",
    "fieldname": "rounding_method",
    "fieldtype": "Select",
    "label": "Rounding Method",
@@ -168,11 +180,13 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.discount_type != 'Price Discount'",
    "fieldname": "is_recursive",
    "fieldtype": "Check",
    "label": "Is Recursive"
   },
   {
+   "depends_on": "eval:doc.discount_type != 'Price Discount' && doc.is_recursive",
    "fieldname": "recurse_every",
    "fieldtype": "Float",
    "label": "Recurse Every (As Per Transaction Unit)"
@@ -221,7 +235,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 07:25:34.948290",
+ "modified": "2026-09-30 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pricing Rule",

@@ -14,20 +14,17 @@ import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
 import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
 import { NumberSeries } from './baseModels/NumberSeries/NumberSeries';
-import { Party } from './baseModels/Party/Party';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
-import { CollectionRulesItems } from './baseModels/CollectionRulesItems/CollectionRulesItems';
 import { Lead } from './baseModels/Lead/Lead';
 import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { Payment } from './baseModels/Payment/Payment';
+import { Party } from './baseModels/Party/Party';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
 import { PaymentFor } from './baseModels/PaymentFor/PaymentFor';
 import { PriceList } from './baseModels/PriceList/PriceList';
-import { PriceListItem } from './baseModels/PriceList/PriceListItem';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
-import { PricingRuleItem } from './baseModels/PricingRuleItem/PricingRuleItem';
 import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
 import { PrintTemplate } from './baseModels/PrintTemplate';
 import { PurchaseInvoice } from './baseModels/PurchaseInvoice/PurchaseInvoice';
@@ -40,6 +37,7 @@ import { SetupWizard } from './baseModels/SetupWizard/SetupWizard';
 import { SystemSettings } from './baseModels/SystemSettings/SystemSettings';
 import { ItemGroup } from './baseModels/ItemGroup/ItemGroup';
 import { Tax } from './baseModels/Tax/Tax';
+import { UOM } from './baseModels/UOM/UOM';
 import { TaxSummary } from './baseModels/TaxSummary/TaxSummary';
 import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
@@ -64,25 +62,12 @@ import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 
 export const models = {
   AccountingLedgerEntry,
-  Address,
-  Batch,
-  ItemGroup,
-  ItemEnquiry,
   JournalEntry,
   JournalEntryAccount,
-  Lead,
-  Party,
-  LoyaltyProgram,
   LoyaltyPointEntry,
-  CollectionRulesItems,
-  CouponCode,
   Payment,
   PaymentFor,
   PrintSettings,
-  PriceList,
-  PriceListItem,
-  PricingRule,
-  PricingRuleItem,
   PurchaseInvoice,
   PurchaseInvoiceItem,
   SalesInvoice,
@@ -90,14 +75,12 @@ export const models = {
   AppliedCouponCodes,
   SalesQuote,
   SalesQuoteItem,
-  SerialNumber,
   PrintTemplate,
   TaxSummary,
   // Inventory Models
   StockMovement,
   StockMovementItem,
   StockLedgerEntry,
-  Location,
   Shipment,
   ShipmentItem,
   PurchaseReceipt,
@@ -119,6 +102,9 @@ export const models = {
 export const frappeModels: Record<string, FrappeModel> = {
   Account,
   AccountingSettings,
+  Address,
+  Batch,
+  CouponCode,
   Currency,
   CustomField,
   CustomForm,
@@ -126,22 +112,36 @@ export const frappeModels: Record<string, FrappeModel> = {
   GetStarted,
   InventorySettings,
   Item,
+  ItemEnquiry,
+  ItemGroup,
+  Lead,
+  Location,
+  LoyaltyProgram,
   Misc,
   NumberSeries,
   POSSettings,
+  Party,
   PaymentMethod,
+  PriceList,
+  PricingRule,
+  SerialNumber,
   SetupWizard,
   SystemSettings,
   Tax,
+  UOM,
 };
 
-export async function getRegionalModels(
+/** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */
+export async function getRegionalFrappeModels(
   countryCode: string
-): Promise<ModelMap> {
+): Promise<Record<string, FrappeModel>> {
   if (countryCode !== 'in') {
     return {};
   }
 
-  const { Party } = await import('./regionalModels/in/Party');
-  return { Party };
+  const [{ Address }, { Party }] = await Promise.all([
+    import('./regionalModels/in/Address'),
+    import('./regionalModels/in/Party'),
+  ]);
+  return { Address, Party };
 }

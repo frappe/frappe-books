@@ -23,6 +23,8 @@ import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
 import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import { getSerialNumbersForQuantity } from './inventory/helpers';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { newFrappeMappedDoc } from 'src/frappe/documents';
 
 const MAPPER_MODULES: Record<string, string> = {
   Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
@@ -46,6 +48,10 @@ export async function getMappedDoc(
   mapper: string
 ): Promise<Doc> {
   const method = `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
+  if (isFrappeBacked(schemaName)) {
+    return await newFrappeMappedDoc(schemaName, method, source.name!);
+  }
+
   const values = await source.fyo.db.getMapped(
     schemaName,
     method,
@@ -436,7 +442,7 @@ export function getPriceListStatusColumn(): ColumnConfig {
     label: t`Enabled For`,
     fieldname: 'enabledFor',
     fieldtype: 'Select',
-    badge({ isSales, isPurchase }) {
+    badge({ is_sales: isSales, is_purchase: isPurchase }) {
       let label = t`None`;
 
       if (isSales && isPurchase) {
@@ -458,7 +464,7 @@ export function getIsDocEnabledColumn(): ColumnConfig {
     fieldname: 'enabled',
     fieldtype: 'Data',
     badge(doc) {
-      if (doc.isEnabled) {
+      if (doc.is_enabled) {
         return { theme: 'green', label: t`Enabled` };
       }
 

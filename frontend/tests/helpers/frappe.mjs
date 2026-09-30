@@ -19,14 +19,14 @@ await build({
       export { getFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, toFrappeFilters } from './src/frappe/list';
-      export { searchFrappeLink } from './src/frappe/link';
+      export { getLinkLabels, searchFrappeLink } from './src/frappe/link';
       export { getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { getMissingMandatoryFields } from './fyo/model/helpers';
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
-      export { frappeModels, models } from './models';
+      export { frappeModels, getRegionalFrappeModels, models } from './models';
     `,
     resolveDir: frontend,
   },
@@ -78,6 +78,7 @@ export const {
   getFrappeListPage,
   toFrappeFilters,
   searchFrappeLink,
+  getLinkLabels,
   getModel,
   getSchema,
   getSearchFields,
@@ -91,6 +92,7 @@ export const {
   evaluateRequired,
   errors,
   frappeModels,
+  getRegionalFrappeModels,
   models,
 } = createRequire(import.meta.url)(output);
 
@@ -173,7 +175,6 @@ export const itemMeta = {
       fieldtype: 'Link',
       label: 'Unit',
       options: 'Books Uom',
-      only_select: 1,
     },
     { fieldname: 'inventory_tab', fieldtype: 'Tab Break', label: 'Inventory' },
     {
@@ -280,6 +281,8 @@ export async function loadTestDocTypes() {
       label: 'Item',
       nameField: { label: 'Item Name', placeholder: 'Item Name' },
       quickEditFields: ['rate'],
+      fields: { unit: { create: false } },
+      tables: { uom_conversions: { uom: { create: false } } },
     };
     static previewMethod = 'preview';
   }

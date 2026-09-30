@@ -8,6 +8,7 @@ import {
   getSearchFields,
   isFrappeBacked,
   loadTestDocTypes,
+  toSchema,
 } from './helpers/frappe.mjs';
 
 const { TestItem } = await loadTestDocTypes();
@@ -68,10 +69,12 @@ test('DocField properties become Books field properties', () => {
   assert.equal(field('rate').minvalue, 0);
   assert.equal(field('income_account').placeholder, 'Income');
   assert.equal(field('income_account').required, true);
-  // Links and tables target Books schema names; `only_select` hides Create.
+  // Links and tables target Books schema names; a model can hide Create.
   assert.equal(field('income_account').target, 'Account');
   assert.equal(field('income_account').create, true);
   assert.equal(field('unit').create, false);
+  const rows = getSchema('UOMConversionItem').fields;
+  assert.equal(rows.find((f) => f.fieldname === 'uom').create, false);
   assert.equal(field('uom_conversions').target, 'UOMConversionItem');
   // Rules that depend on values are left to the doc.
   assert.equal(field('track_item').hidden, undefined);
@@ -117,4 +120,76 @@ test('conditions are evaluated as Frappe forms evaluate them', () => {
     true
   );
   assert.equal(evaluateCondition(undefined, {}), true);
+});
+
+test('a model presents option labels, row editing, state colours and help text', () => {
+  const meta = {
+    name: 'Books Rule',
+    autoname: 'hash',
+    permissions: [],
+    states: [{ title: 'Active', color: 'Green' }],
+    fields: [
+      { fieldname: 'status', fieldtype: 'Select', options: 'Active\nDone' },
+      { fieldname: 'kind', fieldtype: 'Select', options: 'rate\namount' },
+      { fieldname: 'rows', fieldtype: 'Table', options: 'Books Row' },
+      { fieldname: 'factor', fieldtype: 'Float', description: '1 or less' },
+    ],
+  };
+  const presentation = {
+    label: 'Rule',
+    linkDisplayField: 'kind',
+    fields: {
+      kind: { optionLabels: { rate: 'Rate' } },
+      rows: { edit: true },
+    },
+  };
+  const context = { schemaNames: {}, roles: [], placements: {} };
+  const rule = toSchema(meta, 'Rule', presentation, context);
+  const byName = Object.fromEntries(rule.fields.map((f) => [f.fieldname, f]));
+
+  assert.equal(rule.linkDisplayField, 'kind');
+  assert.deepEqual(byName.kind.options, [
+    { value: 'rate', label: 'Rate' },
+    { value: 'amount', label: 'amount' },
+  ]);
+  assert.equal(byName.rows.edit, true);
+  assert.deepEqual(byName.status.states, { Active: 'Green' });
+  assert.equal(byName.factor.sub_label, '1 or less');
+});
+
+test('a doctype named by script from its number series names by number series', () => {
+  const context = { schemaNames: {}, roles: [], placements: {} };
+  const meta = (fields) => ({ name: 'Books Rule', permissions: [], fields });
+  const series = [{ fieldname: 'number_series', fieldtype: 'Link' }];
+  assert.equal(
+    toSchema(meta(series), 'Rule', { label: 'Rule' }, context).naming,
+    'numberSeries'
+  );
+  assert.equal(
+    toSchema(meta([]), 'Rule', { label: 'Rule' }, context).naming,
+    'random'
+  );
+});
+
+test('a doctype named by the server shows its name read only when the model labels it', () => {
+  const context = { schemaNames: {}, roles: [], placements: {} };
+  const meta = {
+    name: 'Books Rule',
+    permissions: [],
+    fields: [{ fieldname: 'title', fieldtype: 'Data', label: 'Title' }],
+  };
+  const labelled = toSchema(
+    meta,
+    'Rule',
+    { label: 'Rule', nameField: { label: 'ID' } },
+    context
+  );
+  const [name] = labelled.fields;
+  assert.deepEqual(
+    [name.fieldname, name.label, name.readOnly, name.required, name.meta],
+    ['name', 'ID', true, true, undefined]
+  );
+
+  const plain = toSchema(meta, 'Rule', { label: 'Rule' }, context);
+  assert.equal(plain.fields.find((f) => f.fieldname === 'name').meta, true);
 });

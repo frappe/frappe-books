@@ -6,7 +6,7 @@ import type { DocField, DocTypeMeta } from './meta';
 export interface Presentation {
   label: string;
   quickEditFields?: string[];
-  /** The field that asks for a document's name when its DocType names by prompt. */
+  /** The name field: asked for when the DocType names by prompt, else shown read only. */
   nameField?: {
     label: string;
     placeholder?: string;
@@ -26,17 +26,22 @@ export interface Presentation {
   omitFields?: string[];
   /** Values of omitted fields that each document /books creates gets, e.g. an enabled Currency. */
   insertValues?: Record<string, unknown>;
+  /** The field a link to the doctype shows instead of the name. */
+  linkDisplayField?: string;
+  /** How each table's rows, by the table's fieldname, show their fields. */
+  tables?: Record<string, Record<string, FieldPresentation>>;
 }
 
 /**
  * Option labels, whether an Autocomplete takes values that are not options,
- * and whether a Link offers to create a document. `getdoctype` does not send
- * `only_select`, so a Link without Create says so here.
+ * whether a table's rows also open in a form, and whether a Link offers to
+ * create a document. `getdoctype` does not send `only_select`, so a Link
+ * without Create says so here.
  */
 export type FieldPresentation = Pick<
   OptionField,
   'optionLabels' | 'allowCustom'
-> & { create?: boolean };
+> & { create?: boolean; edit?: boolean };
 
 /** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
 export type Placements = Record<string, { section?: string; tab?: string }>;
@@ -70,23 +75,21 @@ export function toSchema(
   presentation: Presentation,
   context: SchemaContext
 ): Schema {
+  const docFields = getDocFields(meta, context, presentation);
   const fields = [
-    ...getNameFields(
-      meta,
-      presentation,
-      getDocFields(meta, context, presentation)
-    ),
+    ...getNameFields(meta, presentation, docFields),
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 
   return {
     name,
     label: presentation.label,
-    create: presentation.create,
     fields,
-    naming: getNaming(meta.autoname),
+    naming: getNaming(meta),
     titleField: meta.title_field || getNamingField(meta) || 'name',
     quickEditFields: presentation.quickEditFields,
+    linkDisplayField: presentation.linkDisplayField,
+    create: presentation.create,
     tableFields: meta.fields
       .filter((field) => field.in_list_view)
       .map((field) => field.fieldname),
@@ -115,6 +118,7 @@ function getDocFields(
     namingField: getNamingField(meta),
     optionLabels: presentation.optionLabels ?? {},
     fields: presentation.fields ?? {},
+    states: getStates(meta),
   };
   const fields: Field[] = [];
   const placed: Field[] = [];
@@ -162,19 +166,23 @@ function toField(docfield: DocField, context: FieldContext): Field {
   const { fieldname } = docfield;
   const shown = context.fields[fieldname] ?? {};
   const optionLabels = shown.optionLabels ?? context.optionLabels[fieldname];
+  // Frappe colours a document's `status` by the DocType state of the same title.
+  const states = fieldname === 'status' ? context.states : undefined;
   const properties = getFieldProperties(
     { fieldname, ...shown, optionLabels } as Field,
-    docfield
+    { ...docfield, states }
   ) as Partial<Field> & { target?: string };
   const { levels, schemaNames } = context;
   const level = docfield.permlevel ?? 0;
   const field = {
     ...properties,
+    edit: shown.edit,
     fieldname,
     // The naming field is set once: changing it later would not rename the document.
     setOnlyOnce: properties.setOnlyOnce || fieldname === context.namingField,
     label: docfield.label ?? docfield.fieldname,
     placeholder: docfield.placeholder,
+    sub_label: docfield.description,
     isCustom: !!docfield.is_custom_field,
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
@@ -196,7 +204,11 @@ function toField(docfield: DocField, context: FieldContext): Field {
   return field;
 }
 
-/** A prompt-named doctype asks for the name first, after an image that heads the form. A single has no ID. */
+/**
+ * A prompt-named doctype asks for the name first, after an image that heads
+ * the form. Another doctype shows its name read only, first, when the model
+ * labels it; otherwise the name is a meta field. A single has no ID.
+ */
 function getNameFields(
   meta: DocTypeMeta,
   presentation: Presentation,
@@ -206,7 +218,8 @@ function getNameFields(
     return fields;
   }
 
-  if (meta.autoname?.toLowerCase() !== 'prompt') {
+  const isPrompt = meta.autoname?.toLowerCase() === 'prompt';
+  if (!isPrompt && !presentation.nameField) {
     const namingField = getNamingField(meta);
     const label = fields.find(
       ({ fieldname }) => fieldname === namingField
@@ -225,10 +238,11 @@ function getNameFields(
     label: presentation.nameField?.label ?? 'Name',
     placeholder: presentation.nameField?.placeholder,
     required: true,
+    readOnly: isPrompt ? undefined : true,
     section: fields[0]?.section ?? DEFAULT_SECTION,
     tab: fields[0]?.tab,
   } as Field;
-  const index = fields[0]?.fieldtype === 'AttachImage' ? 1 : 0;
+  const index = isPrompt && fields[0]?.fieldtype === 'AttachImage' ? 1 : 0;
   return [...fields.slice(0, index), nameField, ...fields.slice(index)];
 }
 
@@ -245,14 +259,19 @@ function getMetaFields(meta: DocTypeMeta): Field[] {
   return fields.map((field) => ({ ...field, meta: true }) as Field);
 }
 
-function getNaming(autoname = ''): Naming {
-  const rule = autoname.toLowerCase();
+function getNaming(meta: DocTypeMeta): Naming {
+  const rule = (meta.autoname ?? '').toLowerCase();
   if (rule === 'prompt' || rule.startsWith('field:')) {
     return 'manual';
   }
 
   if (rule === 'autoincrement') {
     return 'autoincrement';
+  }
+
+  // Books names these by script from their number series; see SeriesNamingMixin.
+  if (meta.fields.some(({ fieldname }) => fieldname === 'number_series')) {
+    return 'numberSeries';
   }
 
   return !rule || rule === 'hash' ? 'random' : 'numberSeries';
@@ -267,6 +286,16 @@ interface FieldContext {
   namingField?: string;
   optionLabels: NonNullable<Presentation['optionLabels']>;
   fields: NonNullable<Presentation['fields']>;
+  states?: Record<string, string>;
+}
+
+/** The colours of the DocType's states, by title. */
+function getStates(meta: DocTypeMeta): Record<string, string> | undefined {
+  if (!meta.states?.length) {
+    return undefined;
+  }
+
+  return Object.fromEntries(meta.states.map(({ title, color }) => [title, color]));
 }
 
 /** The permission levels the user's roles can read and write; level 0 is the document's own. */

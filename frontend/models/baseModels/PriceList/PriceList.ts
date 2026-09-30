@@ -1,16 +1,19 @@
-import { Doc } from 'fyo/model/doc';
 import { ListViewSettings } from 'fyo/model/types';
-import { PriceListItem } from './PriceListItem';
 import {
   getIsDocEnabledColumn,
   getPriceListStatusColumn,
 } from 'models/helpers';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class PriceList extends Doc {
-  isEnabled?: boolean;
-  isSales?: boolean;
-  isPurchase?: boolean;
-  priceListItem?: PriceListItem[];
+/** Books Price List, served by Frappe. Its preview fills each row's unit from the item. */
+export class PriceList extends FrappeDoc {
+  static override doctype = 'Books Price List';
+  static override presentation = {
+    label: 'Price List',
+    nameField: { label: 'Name' },
+    tables: { price_list_item: { unit: { create: false } } },
+  };
+  static override previewMethod = 'preview';
 
   static getListViewSettings(): ListViewSettings {
     return {

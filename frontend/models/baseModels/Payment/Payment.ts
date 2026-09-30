@@ -21,10 +21,9 @@ import { Field } from 'schemas/types';
 import { QueryFilter } from 'utils/db/types';
 import { AccountTypeEnum } from '../Account/types';
 import { Invoice } from '../Invoice/Invoice';
-import { Party } from '../Party/Party';
 import { PaymentFor } from '../PaymentFor/PaymentFor';
 import { AccountFieldEnum, PaymentType, PaymentTypeEnum } from './types';
-import { PartyRoleEnum } from '../Party/types';
+import { BridgeParty, PartyRoleEnum } from '../Party/types';
 import { TaxSummary } from '../TaxSummary/TaxSummary';
 import { PaymentMethod } from '../PaymentMethod/PaymentMethod';
 
@@ -172,7 +171,7 @@ export class Payment extends Transactional {
   }
 
   async _getAccountFromParty() {
-    const party = (await this.loadAndGetLink('party')) as Party | null;
+    const party = (await this.loadAndGetLink('party')) as BridgeParty | null;
     if (!party || party.role === 'Both') {
       return null;
     }
@@ -244,7 +243,7 @@ export class Payment extends Transactional {
           return getPaymentType(invoice);
         }
 
-        const party = (await this.loadAndGetLink('party')) as Party;
+        const party = (await this.loadAndGetLink('party')) as BridgeParty;
         if (party.role === PartyRoleEnum.Both) {
           return this.paymentType ?? PaymentTypeEnum.Receive;
         }

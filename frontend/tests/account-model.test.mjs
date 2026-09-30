@@ -114,15 +114,11 @@ test('the parent picker offers groups of the account root type', () => {
 });
 
 test('account links in other forms filter by Frappe fieldnames', async () => {
-  const {
-    Party,
-    PurchaseInvoice,
-    JournalEntryAccount,
-    AccountingSettings,
-    Defaults,
-  } = models;
+  const { PurchaseInvoice, JournalEntryAccount } = models;
+  const { Party, AccountingSettings, Defaults, InventorySettings, POSSettings } =
+    frappeModels;
   const ledger = { is_group: false };
-  assert.deepEqual(await Party.filters.defaultAccount({ role: 'Customer' }), {
+  assert.deepEqual(await Party.filters.default_account({ role: 'Customer' }), {
     ...ledger,
     account_type: 'Receivable',
   });
@@ -131,19 +127,19 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     account_type: 'Payable',
   });
   assert.deepEqual(JournalEntryAccount.filters.account(), ledger);
-  assert.deepEqual(AccountingSettings.filters.discountAccount(), {
+  assert.deepEqual(AccountingSettings.filters.discount_account(), {
     ...ledger,
     root_type: 'Income',
   });
-  assert.deepEqual(Defaults.filters.salesPaymentAccount(), {
+  assert.deepEqual(Defaults.filters.sales_payment_account(), {
     ...ledger,
     account_type: ['in', ['Cash', 'Bank']],
   });
-  assert.deepEqual(models.InventorySettings.filters.stockInHand(), {
+  assert.deepEqual(InventorySettings.filters.stock_in_hand(), {
     ...ledger,
     account_type: 'Stock',
   });
-  assert.deepEqual(models.POSSettings.filters.cashAccount(), {
+  assert.deepEqual(POSSettings.filters.cash_account(), {
     ...ledger,
     root_type: 'Asset',
     account_type: 'Cash',

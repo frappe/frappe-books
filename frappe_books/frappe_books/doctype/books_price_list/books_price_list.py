@@ -1,8 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
 from frappe.model.document import Document
+
+from frappe_books.permissions import check_preview_permission
 
 
 class BooksPriceList(Document):
@@ -25,3 +27,10 @@ class BooksPriceList(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Price List"
+
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill each row's unit from its item, as a save would, for the form to show it."""
+		check_preview_permission(self)
+		for row in self.price_list_item:
+			row.get_invalid_links()

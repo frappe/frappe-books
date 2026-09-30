@@ -41,7 +41,7 @@
 <script lang="ts">
 import type { Doc } from 'fyo/model/doc';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
-import { frappeModels, models, getRegionalModels } from 'models';
+import { frappeModels, models, getRegionalFrappeModels } from 'models';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
@@ -146,11 +146,9 @@ export default defineComponent({
 
       const countryCode = books.country_code || '-';
       await fyo.db.connect(countryCode);
-      await fyo.initializeAndRegister(
-        models,
-        await getRegionalModels(countryCode)
-      );
+      await fyo.initializeAndRegister(models);
       registerFrappeModels(frappeModels);
+      registerFrappeModels(await getRegionalFrappeModels(countryCode));
       await loadFrappeDocTypes();
       // Amounts load in the currency and precision the system settings set.
       const systemSettings = ModelNameEnum.SystemSettings;

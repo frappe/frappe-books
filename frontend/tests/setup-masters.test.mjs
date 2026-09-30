@@ -118,8 +118,8 @@ test('a number series shows its prefix, counter and labelled reference types', (
 });
 
 test('number series links filter and create by reference_type', async () => {
-  const { Defaults, SalesInvoice, Payment, JournalEntry, StockMovement } =
-    models;
+  const { SalesInvoice, Payment, JournalEntry, StockMovement } = models;
+  const { Defaults } = frappeModels;
   const invoice = { schemaName: 'SalesInvoice' };
   assert.deepEqual(await SalesInvoice.filters.numberSeries(invoice), {
     reference_type: 'SalesInvoice',
@@ -133,7 +133,7 @@ test('number series links filter and create by reference_type', async () => {
   assert.deepEqual(StockMovement.filters.numberSeries(), {
     reference_type: 'StockMovement',
   });
-  assert.deepEqual(Defaults.createFilters.shipmentNumberSeries(), {
+  assert.deepEqual(Defaults.createFilters.shipment_number_series(), {
     reference_type: 'Shipment',
   });
 });

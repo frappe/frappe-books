@@ -20,7 +20,7 @@ stubFrappe(({ path, body }) =>
     ? { docs: getMetaBundle(body.doctype) }
     : { data: [] }
 );
-registerFrappeModels(frappeModels);
+registerFrappeModels({ Item: frappeModels.Item });
 await loadFrappeDocTypes();
 
 const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);

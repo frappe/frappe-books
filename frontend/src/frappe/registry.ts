@@ -91,11 +91,15 @@ async function loadDocType(schemaName: string, Model: FrappeModel) {
     Model,
     placements
   );
-  docType.tables = getTables(docType.meta, byName);
+  docType.tables = getTables(docType.meta, byName, Model.presentation.tables);
   setDocType(schemaName, docType);
 }
 
-function getTables(meta: DocTypeMeta, byName: Map<string, DocTypeMeta>) {
+function getTables(
+  meta: DocTypeMeta,
+  byName: Map<string, DocTypeMeta>,
+  presentations: Presentation['tables'] = {}
+) {
   const tables: FrappeDocType['tables'] = {};
   for (const field of meta.fields) {
     const child =
@@ -103,7 +107,8 @@ function getTables(meta: DocTypeMeta, byName: Map<string, DocTypeMeta>) {
     if (child) {
       const name = getSchemaNames()[child.name] ?? child.name;
       const Model = getFrappeModel(name) ?? FrappeDoc;
-      tables[field.fieldname] = toDocType(child, name, Model, {});
+      const fields = presentations[field.fieldname];
+      tables[field.fieldname] = toDocType(child, name, Model, {}, fields);
     }
   }
 
@@ -114,12 +119,13 @@ function toDocType(
   meta: DocTypeMeta,
   schemaName: string,
   Model: FrappeModel,
-  placements: Placements
+  placements: Placements,
+  tableFields?: Presentation['fields']
 ): FrappeDocType {
   // Rows without a model of their own are labelled by their doctype.
   const presentation: Presentation =
     meta.istable && Model === FrappeDoc
-      ? { label: meta.name }
+      ? { label: meta.name, fields: tableFields }
       : Model.presentation;
   const schema = toSchema(meta, schemaName, presentation, {
     schemaNames: getSchemaNames(),

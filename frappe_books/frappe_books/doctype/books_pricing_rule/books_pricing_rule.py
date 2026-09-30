@@ -7,6 +7,7 @@ from frappe.model.document import Document
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.commerce.pricing import validate_dates, validate_range
+from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 
 
@@ -69,6 +70,13 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 		valid_from: DF.Date | None
 		valid_to: DF.Date | None
 	# end: auto-generated types
+
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill each applied item's unit from its item, as a save would, for the form to show it."""
+		check_preview_permission(self)
+		for row in self.applied_items:
+			row.get_invalid_links()
 
 	def validate(self):
 		validate_range(self.min_quantity, self.max_quantity, _("quantity"))

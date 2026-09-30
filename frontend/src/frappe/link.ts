@@ -1,5 +1,6 @@
 import { call } from 'src/web/api';
 import type { QueryFilter } from 'utils/db/types';
+import { getDocuments } from './api';
 import { getDocType } from './doctypes';
 import { toFrappeFilters } from './list';
 
@@ -24,4 +25,25 @@ export async function searchFrappeLink(
     page_length: limit,
   });
   return results.map(({ value, label }) => ({ label: label || value, value }));
+}
+
+/** Each record's display field value by name, e.g. an address's text, for a schema that has one. */
+export async function getLinkLabels(
+  schemaName: string,
+  names: string[]
+): Promise<Record<string, string>> {
+  const { doctype, schema } = getDocType(schemaName);
+  const field = schema.linkDisplayField;
+  if (!field || !names.length) {
+    return {};
+  }
+
+  const rows = await getDocuments(doctype, {
+    fields: ['name', field],
+    filters: [['name', 'in', names]],
+    limit: names.length,
+  });
+  return Object.fromEntries(
+    rows.map((row) => [String(row.name), String(row[field] ?? '')])
+  );
 }

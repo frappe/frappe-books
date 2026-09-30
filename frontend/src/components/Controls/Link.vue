@@ -4,7 +4,7 @@ import { getAccountLabel } from 'src/utils/accountLabel';
 import { isFrappeBacked } from 'src/frappe/doctypes';
 import { searchFrappeLink } from 'src/frappe/link';
 import { getModel, getSchema } from 'src/frappe/registry';
-import { newBooksDoc } from 'src/frappe/useBooksDoc';
+import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
@@ -49,8 +49,16 @@ export default {
         return (this.linkValue = target === 'Account' ? getAccountLabel(fyo, value || '') : value);
       }
 
-      const linkDoc = await this.doc?.loadAndGetLink(fieldname);
+      const linkDoc = await this.getLinkDoc(target, value, fieldname);
       this.linkValue = linkDoc?.get(linkDisplayField) ?? '';
+    },
+    async getLinkDoc(target, value, fieldname) {
+      if (!value || !isFrappeBacked(target)) {
+        return await this.doc?.loadAndGetLink(fieldname);
+      }
+
+      // Frappe serves the target, so its display field has its Frappe fieldname.
+      return await getBooksDoc(target, value);
     },
     getTargetSchemaName() {
       return this.df.target;

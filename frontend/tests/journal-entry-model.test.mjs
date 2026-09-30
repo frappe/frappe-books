@@ -45,7 +45,7 @@ test('a new journal entry is numbered as before, and its accounts group by root 
   assert.match(entry.name, /^New Journal Entry \d{2}$/);
   assert.equal(entry.isTransactional, true);
   const [account] = getSchema('JournalEntryAccount').fields;
-  assert.deepEqual([account.groupBy, account.create], ['rootType', false]);
+  assert.deepEqual([account.groupBy, account.create], ['root_type', false]);
   assert.equal(getSchema('JournalEntry').fields[1].create, true);
 });
 

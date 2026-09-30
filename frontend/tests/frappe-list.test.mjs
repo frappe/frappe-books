@@ -143,6 +143,22 @@ test("link options come from Frappe's link search, letters matched in order", as
   });
 });
 
+test('link options are grouped by a field of their records, as the journal entry groups accounts', async () => {
+  const requests = stubFrappe(({ path }) =>
+    path.endsWith('search_link')
+      ? { message: [{ value: 'Pen' }, { value: 'Ink' }] }
+      : { data: [{ name: 'Ink', item_type: 'Product' }, { name: 'Pen', item_type: 'Service' }] }
+  );
+  const options = await searchFrappeLink('Item', '', null, 50, 'item_type');
+
+  assert.deepEqual(options, [
+    { label: 'Pen', value: 'Pen', group: 'Service' },
+    { label: 'Ink', value: 'Ink', group: 'Product' },
+  ]);
+  assert.deepEqual(requests[1].params.fields, ['name', 'item_type']);
+  assert.deepEqual(requests[1].params.filters, [['name', 'in', ['Pen', 'Ink']]]);
+});
+
 test("a list is ordered by its DocType's sort field, newest first", async (t) => {
   const { meta } = getDocType('Order');
   t.after(() => delete meta.sort_field);

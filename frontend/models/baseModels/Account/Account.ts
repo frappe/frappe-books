@@ -37,7 +37,7 @@ export class Account extends Doc {
 
   required: RequiredMap = {
     parentAccount: () =>
-      !this.isGroup && !!this.fyo.singles?.AccountingSettings?.setupComplete,
+      !this.isGroup && !!this.fyo.singles?.AccountingSettings?.setup_complete,
   };
 
   static defaults: DefaultMap = {
@@ -65,9 +65,10 @@ export class Account extends Doc {
   static getTreeSettings(fyo: Fyo): void | TreeViewSettings {
     return {
       parentField: 'parentAccount',
-      async getRootLabel(): Promise<string> {
-        const accountingSettings = await fyo.doc.getDoc('AccountingSettings');
-        return accountingSettings.companyName as string;
+      getRootLabel(): Promise<string> {
+        return Promise.resolve(
+          fyo.singles.AccountingSettings?.company_name ?? ''
+        );
       },
     };
   }

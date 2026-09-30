@@ -36,7 +36,7 @@ export abstract class StockTransfer extends Transfer {
   }
 
   get enableDiscounting() {
-    return !!this.fyo.singles?.AccountingSettings?.enableDiscounting;
+    return !!this.fyo.singles?.AccountingSettings?.enable_discounting;
   }
 
   get invoiceSchemaName() {

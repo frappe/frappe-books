@@ -224,9 +224,9 @@ const transferClearanceDate = inject('transferClearanceDate') as Ref<
 
 const settings = fyo.singles.AccountingSettings;
 const showLoyalty = computed(
-  () => !!settings?.enableLoyaltyProgram && !!props.loyaltyProgram
+  () => !!settings?.enable_loyalty_program && !!props.loyaltyProgram
 );
-const showCoupon = computed(() => !!settings?.enableCouponCode);
+const showCoupon = computed(() => !!settings?.enable_coupon_code);
 
 const summary = computed(() => {
   const quantity = getTotalQuantity(

@@ -53,6 +53,7 @@ export class POSSettings extends FrappeDoc {
     item_weight_digits: () =>
       !this.fyo.singles.InventorySettings?.enable_barcodes,
     item_visibility: () =>
-      !this.fyo.singles.AccountingSettings?.enablePointOfSaleWithOutInventory,
+      !this.fyo.singles.AccountingSettings
+        ?.enable_point_of_sale_with_out_inventory,
   };
 }

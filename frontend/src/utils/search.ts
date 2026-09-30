@@ -89,7 +89,7 @@ export const groupThemeMap: Record<
 };
 
 function getCreateList(fyo: Fyo): SearchItem[] {
-  const hasInventory = fyo.doc.singles.AccountingSettings?.enableInventory;
+  const hasInventory = fyo.doc.singles.AccountingSettings?.enable_inventory;
   const formEditCreateList = [
     ModelNameEnum.SalesInvoice,
     ModelNameEnum.PurchaseInvoice,
@@ -169,7 +169,7 @@ function getCreateList(fyo: Fyo): SearchItem[] {
 
 function getReportList(fyo: Fyo): SearchItem[] {
   const hasGstin = !!fyo.singles?.AccountingSettings?.gstin;
-  const hasInventory = !!fyo.singles?.AccountingSettings?.enableInventory;
+  const hasInventory = !!fyo.singles?.AccountingSettings?.enable_inventory;
   const reportNames = Object.keys(reports) as (keyof typeof reports)[];
   return reportNames
     .filter((r) => {
@@ -208,7 +208,7 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     ModelNameEnum.PrintTemplate,
   ];
 
-  if (fyo.doc.singles.AccountingSettings?.enableInventory) {
+  if (fyo.doc.singles.AccountingSettings?.enable_inventory) {
     schemaNames.push(
       ModelNameEnum.StockMovement,
       ModelNameEnum.Shipment,
@@ -218,7 +218,7 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     );
   }
 
-  if (fyo.doc.singles.AccountingSettings?.enablePriceList) {
+  if (fyo.doc.singles.AccountingSettings?.enable_price_list) {
     schemaNames.push(ModelNameEnum.PriceList);
   }
 
@@ -230,7 +230,7 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     schemaNames.push(ModelNameEnum.SerialNumber);
   }
 
-  if (fyo.doc.singles.AccountingSettings?.enableFormCustomization) {
+  if (fyo.doc.singles.AccountingSettings?.enable_form_customization) {
     schemaNames.push(ModelNameEnum.CustomForm);
   }
 

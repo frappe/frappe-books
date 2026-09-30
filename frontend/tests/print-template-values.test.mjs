@@ -29,11 +29,11 @@ function respondWith(totals) {
 async function getValues(schemaName, values = {}, systemSettings = {}) {
   const fyo = await makeFyo();
   Object.assign(fyo.singles.SystemSettings, systemSettings);
-  const singles = {
-    PrintSettings: fyo.doc.getNewDoc('PrintSettings', { companyName: 'Co' }),
-    AccountingSettings: fyo.doc.getNewDoc('AccountingSettings'),
-  };
-  fyo.doc.getDoc = async (schemaName) => singles[schemaName];
+  const printSettings = fyo.doc.getNewDoc('PrintSettings', {
+    companyName: 'Co',
+  });
+  fyo.singles.AccountingSettings = { gstin: '27AAAAA0000A1Z5' };
+  fyo.doc.getDoc = async () => printSettings;
   const doc = fyo.doc.getNewDoc(schemaName, { name: 'DOC-1', date, ...values });
   doc._notInserted = false;
   return await getPrintTemplatePropValues(doc);
@@ -59,6 +59,8 @@ test('print values show the totals the server computes', async () => {
   assert.equal(doc.paymentDetails, undefined);
   assert.equal(doc.date, 'Jan 2, 2026');
   assert.equal(print.companyName, 'Co');
+  assert.equal(print.gstin, '27AAAAA0000A1Z5');
+  assert.equal(print.taxId, '');
 });
 
 test('invoice prints show only the deductions it has', async () => {

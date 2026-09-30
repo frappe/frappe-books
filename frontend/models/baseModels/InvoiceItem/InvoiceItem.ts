@@ -72,11 +72,11 @@ export abstract class InvoiceItem extends Doc {
   }
 
   get enableDiscounting() {
-    return !!this.fyo.singles?.AccountingSettings?.enableDiscounting;
+    return !!this.fyo.singles?.AccountingSettings?.enable_discounting;
   }
 
   get enableInventory() {
-    return !!this.fyo.singles?.AccountingSettings?.enableInventory;
+    return !!this.fyo.singles?.AccountingSettings?.enable_inventory;
   }
 
   get currency() {

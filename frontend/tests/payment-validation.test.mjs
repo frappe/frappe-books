@@ -22,7 +22,7 @@ test('changing an invoice reference refreshes the payment amount', async () => {
 
 test('a full payment takes the newly selected invoice balance', async () => {
   const { fyo, payment } = await makePayment();
-  fyo.singles.AccountingSettings.enablePartialPayment = false;
+  fyo.singles.AccountingSettings.enable_partial_payment = false;
   await payment.set('amount', fyo.pesa(490231));
   fyo.doc.getNewDoc('PurchaseInvoice', {
     name: 'SMALLER-PI',

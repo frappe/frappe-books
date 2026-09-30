@@ -77,7 +77,7 @@ export class Defaults extends FrappeDoc {
   static createFilters: FiltersMap = this.commonFilters;
 
   getInventoryHidden() {
-    return () => !this.fyo.singles.AccountingSettings?.enableInventory;
+    return () => !this.fyo.singles.AccountingSettings?.enable_inventory;
   }
 
   getPointOfSaleHidden() {

@@ -159,7 +159,7 @@ export default defineComponent({
         fyo.loadDefaultNumberSeries(),
         ...singles.map((name) => getBooksDoc(name, name)),
       ]);
-      this.needsSetup = !fyo.singles.AccountingSettings?.setupComplete;
+      this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
       this.darkMode = Boolean(fyo.singles.SystemSettings?.darkMode);
       setDarkMode(this.darkMode);
       if (!this.needsSetup) {

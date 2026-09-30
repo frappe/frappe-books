@@ -21,7 +21,7 @@
     />
 
     <Link
-      v-if="fyo.singles.AccountingSettings?.enableitemGroup"
+      v-if="fyo.singles.AccountingSettings?.enableitem_group"
       class="w-40 min-w-0"
       :df="{
         label: t`Filter by Group`,

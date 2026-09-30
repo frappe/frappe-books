@@ -76,7 +76,7 @@ export class GeneralLedger extends Report {
       { label: t`Journal Entries`, value: 'JournalEntry' },
     ];
 
-    if (this.fyo.singles.AccountingSettings?.enableInventory) {
+    if (this.fyo.singles.AccountingSettings?.enable_inventory) {
       refTypeOptions.push(
         { label: t`Shipment`, value: 'Shipment' },
         { label: t`Purchase Receipt`, value: 'PurchaseReceipt' }

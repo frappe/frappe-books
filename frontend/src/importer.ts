@@ -34,7 +34,7 @@ export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
     ModelNameEnum.NumberSeries,
   ];
 
-  if (fyo.singles.AccountingSettings?.enableInventory) {
+  if (fyo.singles.AccountingSettings?.enable_inventory) {
     importables.push(
       ModelNameEnum.StockMovement,
       ModelNameEnum.Shipment,

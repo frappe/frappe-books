@@ -396,10 +396,10 @@ export default defineComponent({
       return posUI === 'Classic' ? 'Classic' : 'Modern';
     },
     isDiscountingEnabled(): boolean {
-      return !!fyo.singles.AccountingSettings?.enableDiscounting;
+      return !!fyo.singles.AccountingSettings?.enable_discounting;
     },
     enableReturns(): boolean {
-      return !!fyo.singles.AccountingSettings?.enableInvoiceReturns;
+      return !!fyo.singles.AccountingSettings?.enable_invoice_returns;
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
@@ -635,7 +635,7 @@ export default defineComponent({
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyL'], () => {
         if (
-          this.fyo.singles.AccountingSettings?.enablePriceList &&
+          this.fyo.singles.AccountingSettings?.enable_price_list &&
           this.loyaltyPoints &&
           this.sinvDoc.party &&
           this.sinvDoc.items?.length &&
@@ -647,7 +647,7 @@ export default defineComponent({
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyC'], () => {
         if (
-          this.fyo.singles.AccountingSettings?.enableCouponCode &&
+          this.fyo.singles.AccountingSettings?.enable_coupon_code &&
           this.sinvDoc?.party &&
           this.sinvDoc?.items?.length
         ) {

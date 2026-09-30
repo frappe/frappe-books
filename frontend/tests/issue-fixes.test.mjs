@@ -169,7 +169,7 @@ test('stock transfers use only the value of their own rows, including partial re
 
 test('root groups can be recreated and edited but cannot be deleted', async () => {
   const fyo = await makeFyo();
-  fyo.singles.AccountingSettings.setupComplete = true;
+  fyo.singles.AccountingSettings.setup_complete = true;
   const root = fyo.doc.getNewDoc('Account', {
     name: 'Restored Assets',
     isGroup: true,
@@ -286,9 +286,9 @@ test('general ledger offers stock reference types only with inventory', async ()
       .find(({ fieldname }) => fieldname === 'referenceType')
       .options.map(({ value }) => value);
 
-  fyo.singles.AccountingSettings.enableInventory = false;
+  fyo.singles.AccountingSettings.enable_inventory = false;
   assert.ok(!referenceTypes().includes('Shipment'));
-  fyo.singles.AccountingSettings.enableInventory = true;
+  fyo.singles.AccountingSettings.enable_inventory = true;
   assert.ok(referenceTypes().includes('Shipment'));
   assert.ok(referenceTypes().includes('PurchaseReceipt'));
 });

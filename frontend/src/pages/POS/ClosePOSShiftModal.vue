@@ -41,14 +41,14 @@
             class="h-11 border-b border-outline-gray-1 last:border-b-0"
           >
             <td class="ps-3">{{ row.paymentMethod }}</td>
-            <td class="px-1.5 text-end" dir="ltr">
+            <td class="whitespace-nowrap px-1.5 text-end" dir="ltr">
               {{ format(row.expectedAmount) }}
             </td>
-            <td class="px-1.5 text-end" dir="ltr">
+            <td class="whitespace-nowrap px-1.5 text-end" dir="ltr">
               {{ format(row.closingAmount) }}
             </td>
             <td
-              class="pe-3 text-end"
+              class="whitespace-nowrap pe-3 text-end"
               :class="{ 'text-ink-red-4': row.differenceAmount?.isNegative() }"
               dir="ltr"
             >

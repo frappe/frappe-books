@@ -67,7 +67,6 @@ export const models = {
   ItemEnquiry,
   JournalEntry,
   JournalEntryAccount,
-  Misc,
   Lead,
   Party,
   LoyaltyProgram,
@@ -121,6 +120,7 @@ export const models = {
  */
 export const frappeModels: Record<string, FrappeModel> = {
   Item,
+  Misc,
 };
 
 export async function getRegionalModels(

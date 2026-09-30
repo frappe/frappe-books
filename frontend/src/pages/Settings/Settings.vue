@@ -115,6 +115,7 @@ import { shortcutsKey } from 'src/utils/injectionKeys';
 import { showDialog } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
+import { getSchema } from 'src/frappe/registry';
 import { UIGroupedFields } from 'src/utils/types';
 import { isMobile } from 'src/utils/viewport';
 import { canInstall, isInstallSheetOpen } from 'src/web/pwa';
@@ -210,7 +211,7 @@ export default defineComponent({
 
           return true;
         })
-        .map((s) => this.fyo.schemaMap[s]!);
+        .map((s) => getSchema(s)!);
     },
     activeGroup(): Map<string, Field[]> {
       if (!this.groupedFields) {

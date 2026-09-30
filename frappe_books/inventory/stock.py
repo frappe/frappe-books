@@ -114,9 +114,10 @@ def populate_stock_rows(rows):
 		item = items.get(row.item)
 		if not item:
 			continue
-		for fieldname in ("description", "rate"):
-			if not row.get(fieldname):
-				row.set(fieldname, item.get(fieldname))
+		for fieldname in ("description", "rate", "hsn_code"):
+			df = row.meta.get_field(fieldname)
+			if df and not row.get(fieldname):
+				row.set(fieldname, row.cast(item.get(fieldname), df))
 		row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
 	return rounded(sum((as_decimal(row.amount) for row in rows), as_decimal(0)))
 
@@ -321,7 +322,7 @@ def _item_defaults(rows):
 	if not names:
 		return {}
 	items = frappe.get_all(
-		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate"]
+		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate", "hsn_code"]
 	)
 	return {item.name: item for item in items}
 

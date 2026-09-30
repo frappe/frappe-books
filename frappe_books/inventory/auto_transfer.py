@@ -146,6 +146,8 @@ def _stock_rows(invoice) -> list[dict]:
 			"rate": rounded(as_decimal(row.rate) * exchange_rate),
 			"description": row.description,
 			"hsn_code": row.hsn_code,
+			"item_discount_amount": row.item_discount_amount,
+			"item_discount_percent": row.item_discount_percent,
 		}
 		for row in invoice.items
 		if pending.get(row.name)

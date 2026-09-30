@@ -3,6 +3,7 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
+from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import return_unreturned_rows
@@ -38,6 +39,15 @@ def _prepare_return(transfer, return_transfer):
 	if not return_transfer.items:
 		frappe.throw(_("{0} is already fully returned.").format(transfer.name))
 	return_transfer.calculate()
+
+
+def set_quantity_signs(rows, is_return):
+	"""A return takes stock back, so its quantities are negative, and every other transfer's positive."""
+	sign = -1 if is_return else 1
+	for row in rows:
+		for fieldname in ("quantity", "transfer_quantity"):
+			if row.get(fieldname):
+				row.set(fieldname, sign * abs(flt(row.get(fieldname))))
 
 
 def validate_transfer_return(transfer):

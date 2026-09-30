@@ -7,14 +7,13 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.returns import validate_quantity_sign
 from frappe_books.inventory.invoice_balance import (
 	bill_unbilled_rows,
 	update_invoice_balance,
 	validate_billable,
 	validate_invoice_balance,
 )
-from frappe_books.inventory.returns import validate_transfer_return
+from frappe_books.inventory.returns import set_quantity_signs, validate_transfer_return
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_series_batches,
@@ -94,6 +93,7 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 	def calculate(self):
 		"""Fill row defaults and the grand total, without writing anything."""
 		fill_default_location(self.items, "location")
+		set_quantity_signs(self.items, bool(self.return_against))
 		self.grand_total = populate_stock_rows(self.items)
 		if self.transfer_type == "sales" and not self.return_against:
 			fill_serial_numbers(self.items)
@@ -103,8 +103,6 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 		require_features(self, {"return_against": "enable_invoice_returns"})
 		validate_party_role(self, self.transfer_type == "purchase")
 		validate_item_usage(self, self.transfer_type == "purchase")
-		for row in self.items:
-			validate_quantity_sign(row, bool(self.return_against))
 		if self.transfer_type == "purchase" and not self.return_against:
 			create_series_batches(self.items)
 		validate_transfer_rows(transfer_rows(self))
@@ -135,6 +133,13 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 	def on_trash(self):
 		repost_stock_accounts(delete_stock_entries(self))
 		delete_entries(self)
+
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill what a save would store, without saving, for the form to show it."""
+		check_preview_permission(self)
+		self.set_number_series()
+		self.before_validate()
 
 	def update_returned_status(self):
 		"""Flag the original transfer as returned while a submitted return against it remains."""

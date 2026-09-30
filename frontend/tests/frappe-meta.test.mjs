@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   evaluateCondition,
   fyo,
+  getFieldModel,
   getModel,
   getSchema,
   getSearchFields,
@@ -192,4 +193,14 @@ test('a doctype named by the server shows its name read only when the model labe
 
   const plain = toSchema(meta, 'Rule', { label: 'Rule' }, context);
   assert.equal(plain.fields.find((f) => f.fieldname === 'name').meta, true);
+});
+
+test("a field is filtered by its document's own model, else its schema's", () => {
+  class BridgeItem {
+    schemaName = 'Item';
+  }
+
+  assert.equal(getFieldModel('Item', new BridgeItem()), BridgeItem);
+  assert.equal(getFieldModel('Item', { schemaName: 'Order' }), TestItem);
+  assert.equal(getFieldModel('Item'), TestItem);
 });

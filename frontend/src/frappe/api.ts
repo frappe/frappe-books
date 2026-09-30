@@ -61,10 +61,11 @@ export async function deleteDocument(
  */
 export async function runDocMethod(
   method: string,
-  document: DocValues
+  document: DocValues,
+  kwargs?: Record<string, unknown>
 ): Promise<DocValues> {
   const { docs } = await request('POST', ['method', 'run_doc_method'], {
-    body: { method, document },
+    body: { method, document, kwargs },
   });
   return docs![0];
 }

@@ -25,7 +25,7 @@ function getMeta(name) {
   const fields = [...meta.fields].sort(
     (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
   );
-  return { ...meta, fields };
+  return { permissions: [], ...meta, fields };
 }
 
 // Frappe's Currency, which the app does not ship.

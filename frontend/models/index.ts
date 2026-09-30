@@ -54,6 +54,7 @@ import { POSProfile } from './baseModels/POSProfile/PosProfile';
 import { POSOpeningShift } from './inventory/Point of Sale/POSOpeningShift';
 import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
+import * as invoices from './invoices';
 
 export const models = {
   PrintSettings,
@@ -118,6 +119,9 @@ export const frappeModels: Record<string, FrappeModel> = {
   SystemSettings,
   Tax,
   UOM,
+  SalesInvoice: invoices.SalesInvoice,
+  PurchaseInvoice: invoices.PurchaseInvoice,
+  SalesQuote: invoices.SalesQuote,
 };
 
 /** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */

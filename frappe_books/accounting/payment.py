@@ -373,9 +373,9 @@ def _settle_invoice(invoice, payment):
 
 
 def default_payment_account(invoice_doctype) -> str | None:
-	"""Return the Books Defaults account that pays invoices of the doctype."""
+	"""Return the Books Defaults account that pays invoices, or quotes, of the doctype."""
 	fieldname = (
-		"sales_payment_account" if invoice_doctype == "Books Sales Invoice" else "purchase_payment_account"
+		"purchase_payment_account" if invoice_doctype == "Books Purchase Invoice" else "sales_payment_account"
 	)
 	return frappe.db.get_single_value("Books Defaults", fieldname)
 

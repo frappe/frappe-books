@@ -3,12 +3,15 @@ import { t } from 'fyo/utils/translation';
 import { Field, FieldTypeEnum } from 'schemas/types';
 
 // These values have direct database mappings. Other read-only values may be derived.
+// Books names, then the Frappe names Frappe-backed schemas keep.
 const storedReadOnlyFields = new Set([
   'name',
   'netTotal',
   'grandTotal',
   'baseGrandTotal',
+  'net_total',
   'grand_total',
+  'base_grand_total',
 ]);
 // Books names, then the Frappe names Frappe-backed schemas keep.
 const auditFields = new Set([

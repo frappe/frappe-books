@@ -83,7 +83,7 @@ function toFrappeFilter(
   }
 
   if (fieldname in DOCSTATUS_FLAGS) {
-    const isSet = (operator === '=') === !!value;
+    const isSet = (operator === '=') === Boolean(Number(value));
     return ['docstatus', isSet ? 'in' : 'not in', DOCSTATUS_FLAGS[fieldname]];
   }
 

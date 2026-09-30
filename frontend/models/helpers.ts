@@ -11,6 +11,7 @@ import { ModelNameEnum } from './types';
 
 import { Doc } from 'fyo/model/doc';
 import { Invoice } from './baseModels/Invoice/Invoice';
+import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
 import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
@@ -45,17 +46,12 @@ export async function getMappedDoc(
   schemaName: string,
   mapper: string
 ): Promise<Doc> {
-  if (isFrappeBacked(schemaName)) {
-    const method = getMapperMethod(source.schemaName, mapper);
-    return await getMappedFrappeDoc(schemaName, method, source.name!);
+  if (!isFrappeBacked(schemaName)) {
+    return await getMappedBridgeDoc(source, schemaName, mapper);
   }
 
-  const values = await source.fyo.db.getMapped(
-    schemaName,
-    getMapperMethod(source.schemaName, mapper),
-    source.name!
-  );
-  return source.fyo.doc.getNewDocFromServer(schemaName, values);
+  const method = getMapperMethod(source.schemaName, mapper);
+  return await getMappedFrappeDoc(schemaName, method, source.name!);
 }
 
 /** What a server mapper builds from the `sourceSchemaName` document `sourceName`, in Frappe fieldnames. */
@@ -70,6 +66,20 @@ export async function getMappedValues(
 
 function getMapperMethod(sourceSchemaName: string, mapper: string) {
   return `${MAPPER_MODULES[sourceSchemaName]}.${mapper}`;
+}
+
+/** A bridge document of what a server mapper builds, for screens still on the bridge, like the POS. */
+export async function getMappedBridgeDoc(
+  source: Doc,
+  schemaName: string,
+  mapper: string
+): Promise<Doc> {
+  const values = await source.fyo.db.getMapped(
+    schemaName,
+    getMapperMethod(source.schemaName, mapper),
+    source.name!
+  );
+  return source.fyo.doc.getNewDocFromServer(schemaName, values);
 }
 
 export function getQuoteActions(
@@ -158,9 +168,9 @@ export function getMakeStockTransferAction(
   return {
     label,
     group: fyo.t`Create`,
-    condition: (doc: Doc) => doc.isSubmitted && !!doc.stockNotTransferred,
+    condition: (doc: Doc) => doc.isSubmitted && !!doc.stock_not_transferred,
     action: async (doc: Doc) => {
-      const invoice = doc as Invoice;
+      const invoice = doc as InvoiceDoc;
       const transfer = await getMappedDoc(
         invoice,
         invoice.stockTransferSchemaName,
@@ -254,7 +264,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     label: fyo.t`Payment`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
+      doc.isSubmitted && !(doc.outstanding_amount as Money).isZero(),
     action: async (doc, router) => {
       const payment = await getMappedDoc(
         doc,

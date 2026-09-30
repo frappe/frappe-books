@@ -431,8 +431,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
         this.fyo
       );
 
-      const defaultFunction =
-        this.fyo.models[this.schemaName]?.defaults?.[field.fieldname];
+      const defaultFunction = (this.constructor as typeof Doc).defaults[
+        field.fieldname
+      ];
       if (defaultFunction !== undefined) {
         defaultValue = defaultFunction(this);
       } else if (field.default !== undefined) {

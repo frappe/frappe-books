@@ -1,5 +1,11 @@
 import { getFieldProperties, isReferenceField } from 'schemas/fieldProperties';
-import type { Field, Naming, OptionField, Schema } from 'schemas/types';
+import type {
+  Field,
+  Naming,
+  OptionField,
+  Schema,
+  SelectOption,
+} from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -31,6 +37,14 @@ export interface Presentation {
   linkDisplayField?: string;
   /** How each table's rows, by the table's fieldname, show their fields. */
   tables?: Record<string, Record<string, FieldPresentation>>;
+  /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
+  tableFields?: string[];
+  /** Tables whose rows open in the row editor. */
+  rowEditTables?: string[];
+  /** Links that offer no Create, which no DocField property says. */
+  noCreate?: string[];
+  /** Choices of fields the DocType cannot list, like the doctypes a DocType reference allows. */
+  options?: Record<string, SelectOption[]>;
 }
 
 /**
@@ -82,7 +96,7 @@ export function toSchema(
   const fields = [
     ...getNameFields(meta, presentation, docFields),
     ...getMetaFields(meta),
-  ].map((field) => ({ ...field, schemaName: name }) as Field);
+  ].map((field) => ({ ...present(field, presentation), schemaName: name }));
 
   return {
     name,
@@ -93,9 +107,11 @@ export function toSchema(
     quickEditFields: presentation.quickEditFields,
     linkDisplayField: presentation.linkDisplayField,
     create: presentation.create,
-    tableFields: meta.fields
-      .filter((field) => field.in_list_view)
-      .map((field) => field.fieldname),
+    tableFields:
+      presentation.tableFields ??
+      meta.fields
+        .filter((field) => field.in_list_view)
+        .map((field) => field.fieldname),
     isChild: !!meta.istable,
     isSingle: !!meta.issingle,
     isSubmittable: !!meta.is_submittable,
@@ -107,6 +123,24 @@ export function toSchema(
 export function getNamingField(meta: DocTypeMeta): string | undefined {
   const [rule, fieldname] = (meta.autoname ?? '').split(':');
   return rule.toLowerCase() === 'field' ? fieldname : undefined;
+}
+
+/** A field with what the model's presentation adds to it. */
+function present(field: Field, presentation: Presentation): Field {
+  const options = presentation.options?.[field.fieldname];
+  if (options) {
+    return { ...field, fieldtype: 'Select', options } as Field;
+  }
+
+  if (presentation.rowEditTables?.includes(field.fieldname)) {
+    return { ...field, edit: true } as Field;
+  }
+
+  if (presentation.noCreate?.includes(field.fieldname)) {
+    return { ...field, create: false } as Field;
+  }
+
+  return field;
 }
 
 /** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
@@ -191,7 +225,7 @@ function toField(docfield: DocField, context: FieldContext): Field {
     required: docfield.reqd ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
-    create: docfield.fieldtype === 'Link' ? !docfield.only_select : undefined,
+    create: isLink(docfield) ? !docfield.only_select : undefined,
     ...shown,
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
@@ -200,6 +234,10 @@ function toField(docfield: DocField, context: FieldContext): Field {
   }
 
   return field;
+}
+
+function isLink({ fieldtype }: DocField): boolean {
+  return fieldtype === 'Link' || fieldtype === 'Dynamic Link';
 }
 
 /** A field that holds a doctype offers the Books doctypes, shown by their schema names. */
@@ -228,14 +266,14 @@ function getNameFields(
   }
 
   const isPrompt = meta.autoname?.toLowerCase() === 'prompt';
-  if (!isPrompt && !presentation.nameField) {
+  if (!isPrompt && (!presentation.nameField || presentation.nameField.hidden)) {
     const namingField = getNamingField(meta);
     const label = fields.find(
       ({ fieldname }) => fieldname === namingField
     )?.label;
     const idField = {
       fieldname: 'name',
-      label: label ?? 'ID',
+      label: presentation.nameField?.label ?? label ?? 'ID',
       fieldtype: 'Data',
     };
     return [...fields, { ...idField, meta: true } as Field];
@@ -248,7 +286,6 @@ function getNameFields(
     placeholder: presentation.nameField?.placeholder,
     required: true,
     readOnly: isPrompt ? undefined : true,
-    hidden: presentation.nameField?.hidden,
     section: fields[0]?.section ?? DEFAULT_SECTION,
     tab: fields[0]?.tab,
   } as Field;

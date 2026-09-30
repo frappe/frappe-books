@@ -89,6 +89,18 @@ export function getModel(schemaName: string): typeof Doc | undefined {
     : fyo.models[schemaName];
 }
 
+/** The model whose statics filter a field: its document's own class, like the POS's bridge invoice's. */
+export function getFieldModel(
+  schemaName: string,
+  doc?: Doc | null
+): typeof Doc | undefined {
+  if (doc?.schemaName === schemaName) {
+    return doc.constructor as typeof Doc;
+  }
+
+  return getModel(schemaName);
+}
+
 async function loadDocType(schemaName: string, Model: FrappeModel) {
   const [bundle, placements] = await Promise.all([
     getMetaBundle(Model.doctype),
@@ -117,7 +129,10 @@ function getTables(
     if (child) {
       const name = getSchemaNames()[child.name] ?? child.name;
       const RowModel =
-        Model.rowModels[field.fieldname] ?? getFrappeModel(name) ?? FrappeDoc;
+        Model.rowModels[field.fieldname] ??
+        Model.tableModels[field.fieldname] ??
+        getFrappeModel(name) ??
+        FrappeDoc;
       const fields = Model.presentation.tables?.[field.fieldname];
       tables[field.fieldname] = toDocType(child, name, RowModel, {}, fields);
     }

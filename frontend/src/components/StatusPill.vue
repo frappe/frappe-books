@@ -53,8 +53,8 @@ export default defineComponent({
   },
   methods: {
     getAmountLabel(status: string): string | undefined {
-      const outstanding = this.doc.outstandingAmount as Money | undefined;
-      const grandTotal = this.doc.grandTotal as Money | undefined;
+      const outstanding = this.doc.outstanding_amount as Money | undefined;
+      const grandTotal = this.doc.grand_total as Money | undefined;
       if (status === 'Unpaid' && outstanding) {
         return this.t`Unpaid ${this.formatAmount(outstanding)}`;
       }

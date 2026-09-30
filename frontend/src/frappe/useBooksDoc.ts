@@ -29,6 +29,10 @@ export function useBooksDoc() {
     }
 
     doc.value = loaded;
+    // A new document shows what the server fills, like its defaults, from the start.
+    if (loaded instanceof FrappeDoc && loaded.notInserted) {
+      loaded.schedulePreview(0);
+    }
   }
 
   return { doc, load };

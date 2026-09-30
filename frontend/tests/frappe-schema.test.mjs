@@ -46,7 +46,7 @@ test('a server-named document shows its name first, read only, when its model la
   const unlabelled = toSchema(voucherMeta, 'Voucher', { label: '' }, context);
   assert.deepEqual(fieldnames(unlabelled), ['posting_date']);
 
-  // A hidden name still labels list columns and filters.
+  // A hidden name is not in the form, but still labels list columns and filters.
   const nameField = { label: 'Voucher No', hidden: true };
   const listed = toSchema(
     voucherMeta,
@@ -54,10 +54,8 @@ test('a server-named document shows its name first, read only, when its model la
     { label: '', nameField },
     context
   );
-  assert.deepEqual(
-    [listed.fields[0].label, listed.fields[0].hidden],
-    ['Voucher No', true]
-  );
+  const listedName = listed.fields.find(({ fieldname }) => fieldname === 'name');
+  assert.deepEqual([listedName.label, listedName.meta], ['Voucher No', true]);
 });
 
 test('a model presents fields its DocType has no property for, and a field that holds a doctype', () => {

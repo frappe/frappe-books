@@ -50,6 +50,10 @@ export class FrappeDoc extends Doc {
   static refills: Record<string, string[]> = {};
   /** Fields the server fills from another field, by that field: editing it has them filled again. */
   static derivedFields: Record<string, string[]> = {};
+  /** Models of the rows of the DocType's tables, by table fieldname; other rows are plain. */
+  static tableModels: Record<string, typeof FrappeDoc> = {};
+  /** Fields whose default the server decides, like one that follows a setting; see `leaveToServer`. */
+  static serverDefaults: string[] = [];
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();
@@ -144,7 +148,11 @@ export class FrappeDoc extends Doc {
     });
   }
 
-  /** The document a controller method runs on, with what Frappe checks it by. */
+  /**
+   * The document a controller method runs on, with what Frappe checks it by:
+   * its docstatus and `modified`, and the `creation` and `owner` a saved
+   * document may not change.
+   */
   getMethodDocument(options: FrappeValueOptions = {}): DocValues {
     const values = this.getFrappeValues(options);
     // Frappe refuses a saved copy whose modified time is stale, or whose status, creation or owner changed.
@@ -233,6 +241,12 @@ export class FrappeDoc extends Doc {
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
     this._rememberSavedRows();
+    this._forgetBridgeCopy();
+  }
+
+  /** Bridge readers of the schema, like the POS and print, load the saved document again. */
+  _forgetBridgeCopy() {
+    this.fyo.doc.removeFromCache(this.schemaName, this.name!);
   }
 
   _rememberSavedRows() {
@@ -253,22 +267,25 @@ export class FrappeDoc extends Doc {
     await this._notifyAfterAction('submit');
   }
 
+  /**
+   * Cancels the document, after `linkedDocs` when there are some: the
+   * controller's whitelisted `cancel_with_linked_docs` cancels them first.
+   */
   override async cancel(linkedDocs: LinkedDoc[] = []) {
     if (!this.schema.isSubmittable || !this.submitted || this.cancelled) {
       return;
     }
 
-    if (linkedDocs.length) {
-      throw new ValueError(`${this.schemaName} cannot cancel linked documents`);
-    }
-
-    const cancelled = await api.runDocMethod(
-      'cancel',
-      this.getMethodDocument()
-    );
+    const document = this.getMethodDocument();
+    const cancelled = linkedDocs.length
+      ? await api.runDocMethod('cancel_with_linked_docs', document, {
+          linked_docs: linkedDocs,
+        })
+      : await api.runDocMethod('cancel', document);
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();
+    this._forgetBridgeCopy();
     this.fyo.doc.observer.trigger(`cancel:${this.schemaName}`, this.name);
   }
 
@@ -381,7 +398,7 @@ export class FrappeDoc extends Doc {
   }
 
   /** Previews once edits pause, so filled values follow the user without a request per keystroke. */
-  schedulePreview() {
+  schedulePreview(delay = PREVIEW_DELAY) {
     clearTimeout(this._previewTimer);
     if (!this.previewMethod || !this.canEdit || !this.dirty) {
       return;
@@ -390,7 +407,14 @@ export class FrappeDoc extends Doc {
     this._isPreviewDue = true;
     this._previewTimer = setTimeout(() => {
       this.preview().catch(showPreviewError);
-    }, PREVIEW_DELAY);
+    }, delay);
+  }
+
+  /** Leaves fields out of the next previews, so the server fills them, until the user edits one. */
+  leaveToServer(fieldnames: string[]) {
+    for (const fieldname of fieldnames) {
+      this._serverFilled.add(fieldname);
+    }
   }
 
   /** Shows what the server would fill for the unsaved values; dropped if they changed meanwhile. */
@@ -452,7 +476,7 @@ export class FrappeDoc extends Doc {
 
       // Frappe leaves empty values out of the documents it sends.
       const value = previewed[fieldname] ?? toDocValue(null, field, this.fyo);
-      if (!areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)) {
+      if (!isSameValue(value as DocValue, this[fieldname] as DocValue)) {
         this._rememberFilled(fieldname);
         this[fieldname] = value;
       }
@@ -489,6 +513,15 @@ export interface FrappeValueOptions {
   keepRowNames?: boolean;
   /** Leaves out the values a preview filled, so the server fills them again. */
   clearServerFilled?: boolean;
+}
+
+/** Whether a previewed value is the one the document has; dates by their time. */
+function isSameValue(previewed: DocValue, current: DocValue): boolean {
+  if (previewed instanceof Date && current instanceof Date) {
+    return previewed.getTime() === current.getTime();
+  }
+
+  return areDocValuesEqual(previewed, current);
 }
 
 async function showPreviewError(error: unknown) {

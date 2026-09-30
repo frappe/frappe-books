@@ -8,11 +8,11 @@ import type { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
 import { ValueError } from 'fyo/utils/errors';
-import { Invoice } from 'models/baseModels/Invoice/Invoice';
-import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
 import { getLedgerLink } from 'models/helpers';
 import { getInsufficientItems } from 'models/inventory/insufficientStock';
+import { Invoice } from 'models/invoices/Invoice';
+import { PurchaseInvoice } from 'models/invoices/PurchaseInvoice';
+import { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -164,8 +164,8 @@ export async function cancelDocWithPrompt(doc: Doc) {
 
 /** The submitted payments that cancelling the invoice `doc` also cancels. */
 async function getInvoicePayments(doc: Doc): Promise<LinkedDoc[]> {
-  return await call('frappe_books.ui_api.get_invoice_payments', {
-    source_schema: doc.schemaName,
+  return await call('frappe_books.accounting.invoice.get_payments_to_cancel', {
+    doctype: fyo.store.permissions?.doctypes[doc.schemaName],
     name: doc.name,
   });
 }
@@ -676,8 +676,8 @@ function getDocSyncMessage(doc: Doc): string {
     return t`Save changes made to ${label}?`;
   }
 
-  if (doc instanceof Invoice && doc.grandTotal?.isZero()) {
-    const gt = doc.fyo.format(doc.grandTotal ?? doc.fyo.pesa(0), 'Currency');
+  if (doc instanceof Invoice && doc.grand_total?.isZero()) {
+    const gt = doc.fyo.format(doc.grand_total ?? doc.fyo.pesa(0), 'Currency');
     return [
       detail,
       t`Entry has Grand Total ${gt}. Please verify amounts.`,
@@ -690,18 +690,18 @@ function getDocSyncMessage(doc: Doc): string {
 function getDocSubmitMessage(doc: Doc): string {
   const details = [t`Mark ${doc.schema.label} as submitted?`];
 
-  if (doc instanceof SalesInvoice && doc.makeAutoPayment) {
+  if (doc instanceof SalesInvoice && doc.make_auto_payment) {
     const toAccount = doc.autoPaymentAccount!;
     const fromAccount = doc.account!;
-    const amount = fyo.format(doc.outstandingAmount, 'Currency');
+    const amount = fyo.format(doc.outstanding_amount, 'Currency');
 
     details.push(
       t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,
     );
-  } else if (doc instanceof PurchaseInvoice && doc.makeAutoPayment) {
+  } else if (doc instanceof PurchaseInvoice && doc.make_auto_payment) {
     const fromAccount = doc.autoPaymentAccount!;
     const toAccount = doc.account!;
-    const amount = fyo.format(doc.outstandingAmount, 'Currency');
+    const amount = fyo.format(doc.outstanding_amount, 'Currency');
 
     details.push(
       t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,

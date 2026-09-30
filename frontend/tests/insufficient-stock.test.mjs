@@ -16,8 +16,9 @@ async function getShortfalls(items, values = {}) {
   const fyo = await makeFyo();
   const invoice = fyo.doc.getNewDoc('SalesInvoice', {
     date: new Date('2026-01-01T00:00:00Z'),
-    ...values,
   });
+  // The Frappe-backed invoice's own fields, like is_pos.
+  Object.assign(invoice, values);
   invoice.items = items.map(([item, quantity, batch]) => ({
     item,
     quantity,
@@ -49,6 +50,6 @@ test('the server tells a sale what its rows lack where it ships from, in one req
 });
 
 test('a POS sale asks about the POS location', async () => {
-  const { requests } = await getShortfalls([['Pen', 1]], { isPOS: true });
+  const { requests } = await getShortfalls([['Pen', 1]], { is_pos: true });
   assert.equal(requests[0].body.is_pos, true);
 });

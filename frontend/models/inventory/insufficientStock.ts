@@ -1,4 +1,4 @@
-import type { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { toFrappeValue } from 'src/frappe/values';
 import { call } from 'src/web/api';
 
@@ -20,6 +20,6 @@ export async function getInsufficientItems(
   return await call<ItemQuantity[]>(SALE_SHORTFALLS, {
     items,
     date,
-    is_pos: !!invoice.isPOS,
+    is_pos: !!invoice.is_pos,
   });
 }

@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice
+from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice, make_sales_invoice
 from frappe_books.tests.accounting import (
 	ensure_user,
 	make_account,
@@ -84,6 +84,15 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 
 		row = invoice.items[0]
 		self.assertEqual((row.item, row.quantity, row.rate, row.account), (item.name, 1, 40, expense.name))
+
+	def test_item_invoice_row_shows_its_quantity(self):
+		income = make_account("Mapped Sales", root_type="Income")
+		expense = make_account("Mapped Expense", root_type="Expense")
+		item = make_item(income.name, expense.name, rate=40)
+
+		row = make_sales_invoice(item.name).items[0]
+
+		self.assertEqual((row.qty, row.transfer_quantity), (1, 1))
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
 		cogs, received, group = self.make_default_sources()

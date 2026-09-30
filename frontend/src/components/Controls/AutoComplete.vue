@@ -190,7 +190,7 @@ export default {
         const reference = this.doc?.[references];
         schemaName = reference && (toSchemaName(reference) ?? reference);
       }
-      return schemaName;
+      return schemaName && toSchemaName(schemaName);
     },
     options() {
       return this.df ? getOptionList(this.df, this.doc) : [];

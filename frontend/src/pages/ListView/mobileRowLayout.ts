@@ -79,12 +79,17 @@ export function getRowAmount(row: RenderData, column?: ListColumn): string {
     return '';
   }
 
-  if (column.fieldname === 'outstandingAmount' && amount.isZero()) {
+  if (isOutstanding(column.fieldname) && amount.isZero()) {
     return '';
   }
 
   const signed = row.payment_type === 'Pay' ? amount.neg() : amount;
   return fyo.format(signed, column as Field);
+}
+
+/** Books' name of the column, then the Frappe name of Frappe-backed lists. */
+function isOutstanding(fieldname: string): boolean {
+  return fieldname === 'outstandingAmount' || fieldname === 'outstanding_amount';
 }
 
 export function getRowMeta(row: RenderData, columns: ListColumn[]): string {

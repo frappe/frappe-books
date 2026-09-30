@@ -27,7 +27,7 @@ export abstract class StockTransfer extends FrappeDoc {
     }),
     number_series: (doc) => ({ reference_type: doc.schemaName }),
     back_reference: () => ({
-      stockNotTransferred: ['!=', 0],
+      stock_not_transferred: ['!=', 0],
       submitted: true,
       cancelled: false,
     }),

@@ -17,13 +17,12 @@ export class PaymentFor extends FrappeDoc {
   // A new invoice's outstanding amount, as Books formulas recalculated it.
   static override refills = { reference_name: ['amount'] };
 
-  // Invoices are still read through the bridge, so this uses their field names.
   static filters: FiltersMap = {
     reference_name: (doc) => {
       const precision = doc.fyo.singles.SystemSettings?.internal_precision;
       const zero = '0.' + '0'.repeat(precision ?? 11);
       const filters = {
-        outstandingAmount: ['!=', zero],
+        outstanding_amount: ['!=', zero],
         submitted: true,
         cancelled: false,
       };

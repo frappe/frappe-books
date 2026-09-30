@@ -1,11 +1,10 @@
-import { Fyo } from 'fyo';
-import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
+import { Doc } from 'fyo/model/doc';
+import { FiltersMap } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
-import { getDocStatusListColumn, getQuoteActions } from '../../helpers';
 import { Invoice } from '../Invoice/Invoice';
 import { SalesQuoteItem } from '../SalesQuoteItem/SalesQuoteItem';
-import { Doc } from 'fyo/model/doc';
 
+/** A quote read through the bridge; /books forms use models/invoices. */
 export class SalesQuote extends Invoice {
   items?: SalesQuoteItem[];
   party?: string;
@@ -18,20 +17,4 @@ export class SalesQuote extends Invoice {
   static filters: FiltersMap = {
     numberSeries: (doc: Doc) => ({ reference_type: doc.schemaName }),
   };
-
-  static getListViewSettings(): ListViewSettings {
-    return {
-      columns: [
-        'name',
-        getDocStatusListColumn(),
-        'party',
-        'date',
-        'baseGrandTotal',
-      ],
-    };
-  }
-
-  static getActions(fyo: Fyo): Action[] {
-    return getQuoteActions(fyo, ModelNameEnum.SalesQuote);
-  }
 }

@@ -113,6 +113,14 @@ test('form conditions read the document status, as Frappe forms do', () => {
   );
 });
 
+test('conditions read amounts as numbers and the docstatus, as Frappe forms do', () => {
+  const nib = newFrappeDoc('Item', { name: 'Nib', rate: fyo.pesa(0) });
+  const order = newFrappeDoc('Order', { amount: fyo.pesa(2.5), docstatus: 1 });
+
+  assert.deepEqual([nib.getEvalDoc().rate, nib.getEvalDoc().docstatus], [0, 0]);
+  assert.deepEqual([order.getEvalDoc().amount, order.getEvalDoc().docstatus], [2.5, 1]);
+});
+
 test('a new document is inserted whole; its rows go without client names', async () => {
   const requests = stubDocument(savedPen);
   const item = newFrappeDoc('Item', { name: 'Pen', income_account: 'Sales' });
@@ -217,6 +225,25 @@ test('a preview fills what the server fills, again until the user edits it', asy
   await waitFor(() => previews.length === 3);
   assert.equal(previews[2].document.income_account, 'Consulting');
   assert.equal(item.income_account, 'Consulting');
+});
+
+test('a preview leaves the dates it returns unchanged to the user', async () => {
+  const sent = [];
+  stubDocument(savedPen, ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      sent.push(body.document);
+      return { data: null, docs: [{ ...body.document }] };
+    }
+  });
+  const item = newFrappeDoc('Item', {
+    name: 'Clock',
+    released_on: new Date('2026-09-30T10:00:00.250Z'),
+  });
+
+  await item.preview();
+  await item.preview();
+
+  assert.equal(sent[1].released_on, '2026-09-30 15:30:00.250');
 });
 
 test('a preview is dropped when the values changed meanwhile or the draft is stale', async () => {
@@ -368,6 +395,69 @@ test('submit and cancel run the document methods on the client copy', async () =
   assert.equal(order.canDelete, true);
 });
 
+test('a cancel with linked documents runs the controller method that cancels them first', async () => {
+  const saved = { name: 'ORD-2', customer: 'Acme', docstatus: 1, modified: MODIFIED };
+  const requests = stubDocument(saved, ({ path, body }) =>
+    path.endsWith('run_doc_method')
+      ? { data: null, docs: [{ ...body.document, docstatus: 2 }] }
+      : undefined
+  );
+  const order = await getFrappeDoc('Order', 'ORD-2');
+  // A copy the POS or print loaded through the bridge.
+  fyo.doc.docs.set('Order', { 'ORD-2': {} });
+  const payments = [{ doctype: 'Books Payment', name: 'PAY-1', docstatus: 1 }];
+
+  await order.cancel(payments);
+
+  const { method, document, kwargs } = requests.at(-1).body;
+  assert.equal(method, 'cancel_with_linked_docs');
+  assert.equal(document.modified, MODIFIED);
+  assert.deepEqual(kwargs, { linked_docs: payments });
+  assert.equal(order.cancelled, true);
+  assert.equal(fyo.doc.docs.get('Order')['ORD-2'], undefined);
+});
+
+test('a new document leaves its server defaults to the preview until set', async (t) => {
+  TestItem.serverDefaults = ['track_item'];
+  t.after(() => (TestItem.serverDefaults = []));
+  const sent = [];
+  stubDocument(savedPen, ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      sent.push(body.document);
+      return { data: null, docs: [{ ...body.document, track_item: 1 }] };
+    }
+  });
+
+  const item = newFrappeDoc('Item', { name: 'Kettle' });
+  await item.preview();
+  const copy = newFrappeDoc('Item', { name: 'Kettle Copy', track_item: false });
+  await copy.preview();
+
+  assert.equal('track_item' in sent[0], false);
+  assert.equal(item.track_item, true);
+  assert.equal(sent[1].track_item, 0);
+});
+
+test('a form previews a new document as it opens it, not a saved one', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const requests = stubDocument(savedPen, ({ path, body }) =>
+    path.endsWith('run_doc_method')
+      ? { data: null, docs: [{ ...body.document, income_account: 'Sales' }] }
+      : undefined
+  );
+  const previews = () =>
+    requests.filter(({ path }) => path.endsWith('run_doc_method')).length;
+  const { doc, load } = useBooksDoc();
+
+  await load('Item', undefined, true);
+  t.mock.timers.tick(0);
+  await waitFor(() => doc.value.income_account === 'Sales');
+  await load('Item', 'Pen');
+  t.mock.timers.tick(300);
+
+  assert.equal(previews(), 1);
+});
+
 test('delete removes the document and tells the lists', async () => {
   const requests = stubDocument(savedPen, ({ method }) =>
     method === 'DELETE' ? { data: 'ok' } : undefined
@@ -400,6 +490,13 @@ test('a duplicate copies unsaved edits but not the no_copy fields', async () => 
   assert.equal(copy.uom_conversions[0].uom, 'Box');
   assert.notEqual(copy.uom_conversions[0].name, 'row-1');
   assert.equal(await getFrappeDoc('Item', 'Pen CPY'), copy);
+});
+
+test('a document takes its defaults from its own model, not a bridge model of its schema', (t) => {
+  fyo.doc.models.Order = { defaults: { customer: () => 'Bridge' } };
+  t.after(() => delete fyo.doc.models.Order);
+
+  assert.equal(newFrappeDoc('Order').customer, null);
 });
 
 async function waitFor(condition) {

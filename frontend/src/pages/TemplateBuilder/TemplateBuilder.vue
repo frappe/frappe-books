@@ -612,7 +612,10 @@ export default defineComponent({
         return;
       }
 
-      const displayDoc = await getBooksDocOrNew(schemaName, value);
+      // Templates read their document through the bridge, by Books field names.
+      const displayDoc = await this.fyo.doc.getDoc(schemaName, value, {
+        refresh: true,
+      });
       this.hints = getPrintTemplatePropHints(schemaName, this.fyo);
       this.values = await getPrintTemplatePropValues(displayDoc);
       this.displayDoc = displayDoc;

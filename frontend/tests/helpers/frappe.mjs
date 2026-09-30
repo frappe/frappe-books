@@ -21,7 +21,7 @@ await build({
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, toFrappeFilters } from './src/frappe/list';
       export { getLinkLabels, searchFrappeLink } from './src/frappe/link';
-      export { getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
+      export { getFieldModel, getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { getMissingMandatoryFields } from './fyo/model/helpers';
@@ -31,6 +31,7 @@ await build({
       export { getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getFilterFields } from './src/utils/filterFields';
+      export { ListFilters } from './src/utils/listFilters';
     `,
     resolveDir: frontend,
   },
@@ -85,6 +86,7 @@ export const {
   toFrappeFilters,
   searchFrappeLink,
   getLinkLabels,
+  getFieldModel,
   getModel,
   getSchema,
   getSearchFields,
@@ -106,6 +108,7 @@ export const {
   routeFilters,
   getStockTransferActions,
   getFilterFields,
+  ListFilters,
 } = createRequire(import.meta.url)(output);
 
 /**

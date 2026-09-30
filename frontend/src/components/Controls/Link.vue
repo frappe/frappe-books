@@ -3,7 +3,7 @@ import { t } from 'fyo';
 import { getAccountLabel } from 'src/utils/accountLabel';
 import { isFrappeBacked } from 'src/frappe/doctypes';
 import { searchFrappeLink } from 'src/frappe/link';
-import { getModel, getSchema } from 'src/frappe/registry';
+import { getFieldModel, getSchema } from 'src/frappe/registry';
 import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
@@ -176,8 +176,8 @@ export default {
     },
     async getCreateFilters() {
       const { schemaName, fieldname } = this.df;
-      const getCreateFilters =
-        getModel(schemaName)?.createFilters?.[fieldname];
+      const getCreateFilters = getFieldModel(schemaName, this.doc)
+        ?.createFilters?.[fieldname];
       let createFilters = await getCreateFilters?.(this.doc);
 
       if (createFilters !== undefined) {
@@ -197,7 +197,9 @@ export default {
       }
 
       const { schemaName, fieldname } = this.df;
-      const getFilters = getModel(schemaName)?.filters?.[fieldname];
+      const getFilters = getFieldModel(schemaName, this.doc)?.filters?.[
+        fieldname
+      ];
 
       if (getFilters === undefined) {
         return null;

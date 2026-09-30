@@ -275,7 +275,7 @@ import {
 import {
   getItemQtyMap,
   getItemVisibility,
-  getMappedDoc,
+  getMappedBridgeDoc,
 } from 'models/helpers';
 import {
   POSItem,
@@ -726,7 +726,7 @@ export default defineComponent({
         invoiceName
       )) as SalesInvoice;
 
-      this.sinvDoc = (await getMappedDoc(
+      this.sinvDoc = (await getMappedBridgeDoc(
         salesInvoiceDoc,
         ModelNameEnum.SalesInvoice,
         'make_return'

@@ -7,7 +7,12 @@ export interface Presentation {
   label: string;
   quickEditFields?: string[];
   /** The field that asks for a document's name when its DocType names by prompt. */
-  nameField?: { label: string; placeholder?: string };
+  nameField?: {
+    label: string;
+    placeholder?: string;
+    /** An AutoComplete offers the names the model's `lists.name` gives. */
+    fieldtype?: 'Data' | 'AutoComplete';
+  };
   /** How fields show what their DocFields cannot say, by fieldname. */
   fields?: Record<string, FieldPresentation>;
 }
@@ -179,7 +184,7 @@ function getNameFields(
 
   const nameField = {
     fieldname: 'name',
-    fieldtype: 'Data',
+    fieldtype: presentation.nameField?.fieldtype ?? 'Data',
     label: presentation.nameField?.label ?? 'Name',
     placeholder: presentation.nameField?.placeholder,
     required: true,

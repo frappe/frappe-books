@@ -4,6 +4,8 @@ import { Account } from './baseModels/Account/Account';
 import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
 import { Address } from './baseModels/Address/Address';
+import { CustomField } from './baseModels/CustomForm/CustomField';
+import { CustomForm } from './baseModels/CustomForm/CustomForm';
 import { Defaults } from './baseModels/Defaults/Defaults';
 import { GetStarted } from './baseModels/GetStarted/GetStarted';
 import { Item } from './baseModels/Item/Item';
@@ -117,6 +119,8 @@ export const models = {
  */
 export const frappeModels: Record<string, FrappeModel> = {
   AccountingSettings,
+  CustomField,
+  CustomForm,
   GetStarted,
   Item,
   Defaults,

@@ -448,12 +448,23 @@ def _populate_row(invoice, row, item, rates):
 	for fieldname in ("item_code", "description", "unit", "tax", "hsn_code"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
+	_populate_rate_from_transfer_rate(row)
 	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
 		row.rate = pricing.standard_rate(invoice, row, rates)
 	if not row.account:
 		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
 	# The Qty column shows the quantity in the transfer unit.
 	row.qty = row.transfer_quantity
+
+
+def _populate_rate_from_transfer_rate(row):
+	"""Take a manual rate sent only per transfer unit, as /books sends an edited one, per stock unit.
+
+	A sent rate wins over the virtual `transfer_rate`, which `row.get` reads as sent.
+	"""
+	transfer_rate = row.get("transfer_rate")
+	if row.is_manual_rate and row.get("rate") is None and transfer_rate is not None:
+		row.rate = as_decimal(transfer_rate) / as_decimal(row.unit_conversion_factor or 1)
 
 
 def _item_details(names):

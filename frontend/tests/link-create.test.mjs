@@ -35,7 +35,9 @@ test('links of Frappe-backed forms and rows offer Create where the schema files 
     );
     return getSchema(schemaName)
       .fields.filter(({ fieldtype, readOnly, meta }) => {
-        return ['Link', 'DynamicLink'].includes(fieldtype) && !readOnly && !meta;
+        return (
+          ['Link', 'DynamicLink'].includes(fieldtype) && !readOnly && !meta
+        );
       })
       .filter(({ fieldname, create }) => {
         const old = bridge[schemaName]?.fields.find(

@@ -4,7 +4,11 @@ import { withoutCreate } from 'src/frappe/schema';
 import { getStockRowHiddenMap, stockRowRefills } from './stockRows';
 
 /** Links of a shipment or purchase receipt row that offer no Create, as before. */
-export const transferRowLinks = withoutCreate(['item', 'transfer_unit', 'batch']);
+export const transferRowLinks = withoutCreate([
+  'item',
+  'transfer_unit',
+  'batch',
+]);
 
 /** The fields a shipment or purchase receipt row editor shows. */
 export const transferRowFields = [

@@ -70,12 +70,16 @@ export class Defaults extends FrappeDoc {
       reference_type: ModelNameEnum.PurchaseReceipt,
     }),
     sales_quote_print_template: () => ({ docType: ModelNameEnum.SalesQuote }),
-    sales_invoice_print_template: () => ({ docType: ModelNameEnum.SalesInvoice }),
+    sales_invoice_print_template: () => ({
+      docType: ModelNameEnum.SalesInvoice,
+    }),
     pos_print_template: () => ({ docType: ModelNameEnum.SalesInvoice }),
     purchase_invoice_print_template: () => ({
       docType: ModelNameEnum.PurchaseInvoice,
     }),
-    journal_entry_print_template: () => ({ docType: ModelNameEnum.JournalEntry }),
+    journal_entry_print_template: () => ({
+      docType: ModelNameEnum.JournalEntry,
+    }),
     payment_print_template: () => ({ docType: ModelNameEnum.Payment }),
     shipment_print_template: () => ({ docType: ModelNameEnum.Shipment }),
     purchase_receipt_print_template: () => ({

@@ -317,7 +317,9 @@ function getStates(meta: DocTypeMeta): Record<string, string> | undefined {
     return undefined;
   }
 
-  return Object.fromEntries(meta.states.map(({ title, color }) => [title, color]));
+  return Object.fromEntries(
+    meta.states.map(({ title, color }) => [title, color])
+  );
 }
 
 /** The permission levels the user's roles can read and write; level 0 is the document's own. */

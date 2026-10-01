@@ -22,6 +22,7 @@
   <FrappeSettingsRow v-else :title="field.label" :description="field.sub_label">
     <div class="space-y-1" :class="{ 'w-60': hasInputWidth }">
       <FormControl
+        :class="{ 'w-full': hasInputWidth }"
         size="small"
         :border="true"
         :df="field"

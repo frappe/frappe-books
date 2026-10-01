@@ -42,10 +42,13 @@ class BooksLoyaltyProgram(Document):
 		require_feature("enable_loyalty_program")
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("Loyalty program start date must be on or before its end date."))
-		if self.maximum_use < 0 or self.used < 0:
-			frappe.throw(_("Loyalty-program usage counts cannot be negative."))
+		# The messages /books shows at these fields.
+		if self.used < 0:
+			frappe.throw(_("Used count cannot be negative"))
+		if self.maximum_use < 0:
+			frappe.throw(_("Maximum use cannot be negative"))
 		if self.maximum_use and self.used > self.maximum_use:
-			frappe.throw(_("Loyalty-program usage cannot exceed its maximum."))
+			frappe.throw(_("Used count cannot exceed maximum use limit"))
 		if as_decimal(self.conversion_factor) < 0:
 			frappe.throw(_("Loyalty conversion factor cannot be negative."))
 		self.validate_tiers()

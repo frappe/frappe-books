@@ -79,9 +79,23 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 			row.get_invalid_links()
 
 	def validate(self):
-		validate_range(self.min_quantity, self.max_quantity, _("quantity"))
-		validate_range(self.min_amount, self.max_amount, _("amount"), strict=True)
-		validate_dates(self.valid_from, self.valid_to)
+		# The messages /books shows at these fields.
+		validate_range(
+			self.min_quantity,
+			self.max_quantity,
+			_("quantity"),
+			message=_("Minimum Quantity should be less than the Maximum Quantity."),
+		)
+		validate_range(
+			self.min_amount,
+			self.max_amount,
+			_("amount"),
+			strict=True,
+			message=_("Minimum Amount should be less than the Maximum Amount."),
+		)
+		validate_dates(
+			self.valid_from, self.valid_to, _("Valid From Date should be less than Valid To Date.")
+		)
 		if not self.applied_items:
 			frappe.throw(_("Add at least one item to the pricing rule."))
 		if self.discount_type == "Price Discount":

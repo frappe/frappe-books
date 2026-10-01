@@ -43,19 +43,44 @@ export class PricingRule extends FrappeDoc {
   valid_to?: Date;
 
   // The server checks these too; mirrored to show its message at the field.
+  // The server checks these too; mirrored to show a message at each field.
   validations: ValidationMap = {
     min_quantity: (value: DocValue) =>
-      validateQuantities(value as number, this.max_quantity),
+      validateQuantities(
+        value as number,
+        this.max_quantity,
+        t`Minimum Quantity should be less than the Maximum Quantity.`
+      ),
     max_quantity: (value: DocValue) =>
-      validateQuantities(this.min_quantity, value as number),
+      validateQuantities(
+        this.min_quantity,
+        value as number,
+        t`Maximum Quantity should be greater than the Minimum Quantity.`
+      ),
     min_amount: (value: DocValue) =>
-      validateAmounts(value as Money, this.max_amount),
+      validateAmounts(
+        value as Money,
+        this.max_amount,
+        t`Minimum Amount should be less than the Maximum Amount.`
+      ),
     max_amount: (value: DocValue) =>
-      validateAmounts(this.min_amount, value as Money),
+      validateAmounts(
+        this.min_amount,
+        value as Money,
+        t`Maximum Amount should be greater than the Minimum Amount.`
+      ),
     valid_from: (value: DocValue) =>
-      validateDates(value as Date, this.valid_to),
+      validateDates(
+        value as Date,
+        this.valid_to,
+        t`Valid From Date should be less than Valid To Date.`
+      ),
     valid_to: (value: DocValue) =>
-      validateDates(this.valid_from, value as Date),
+      validateDates(
+        this.valid_from,
+        value as Date,
+        t`Valid To Date should be greater than Valid From Date.`
+      ),
   };
 
   hidden: HiddenMap = {
@@ -70,28 +95,36 @@ export class PricingRule extends FrappeDoc {
   }
 }
 
-function validateQuantities(minimum?: number, maximum?: number) {
+function validateQuantities(
+  minimum: number | undefined,
+  maximum: number | undefined,
+  message: string
+) {
   if (minimum && maximum && minimum > maximum) {
-    throw new ValidationError(
-      t`Minimum quantity must be less than maximum quantity.`
-    );
+    throw new ValidationError(message);
   }
 }
 
-function validateAmounts(minimum?: Money, maximum?: Money) {
+function validateAmounts(
+  minimum: Money | undefined,
+  maximum: Money | undefined,
+  message: string
+) {
   if (!minimum || !maximum || minimum.isZero() || maximum.isZero()) {
     return;
   }
 
   if (minimum.gte(maximum)) {
-    throw new ValidationError(
-      t`Minimum amount must be less than maximum amount.`
-    );
+    throw new ValidationError(message);
   }
 }
 
-function validateDates(validFrom?: Date, validTo?: Date) {
+function validateDates(
+  validFrom: Date | undefined,
+  validTo: Date | undefined,
+  message: string
+) {
   if (validFrom && validTo && validFrom > validTo) {
-    throw new ValidationError(t`Valid From must be on or before Valid To.`);
+    throw new ValidationError(message);
   }
 }

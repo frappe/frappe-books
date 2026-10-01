@@ -29,15 +29,22 @@ export class LoyaltyProgram extends FrappeDoc {
   // The server checks these too; mirrored to show its message at the field.
   validations: ValidationMap = {
     used: (value: DocValue) => {
-      validateUsage(value as number);
       const maximumUse = this.maximum_use ?? 0;
+      if ((value as number) < 0) {
+        throw new ValidationError(t`Used count cannot be negative`);
+      }
+
       if (maximumUse > 0 && (value as number) > maximumUse) {
         throw new ValidationError(
-          t`Loyalty-program usage cannot exceed its maximum.`
+          t`Used count cannot exceed maximum use limit`
         );
       }
     },
-    maximum_use: (value: DocValue) => validateUsage(value as number),
+    maximum_use: (value: DocValue) => {
+      if ((value as number) < 0) {
+        throw new ValidationError(t`Maximum use cannot be negative`);
+      }
+    },
   };
 
   static getListViewSettings(): ListViewSettings {
@@ -49,13 +56,5 @@ export class LoyaltyProgram extends FrappeDoc {
         'to_date',
       ],
     };
-  }
-}
-
-function validateUsage(count: number) {
-  if (count < 0) {
-    throw new ValidationError(
-      t`Loyalty-program usage counts cannot be negative.`
-    );
   }
 }

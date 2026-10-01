@@ -278,17 +278,17 @@ def _ignore_pos_pricing(invoice):
 	return bool(invoice.get("is_pos") and pos_setting("ignore_pricing_rule"))
 
 
-def validate_range(minimum, maximum, label, strict=False):
+def validate_range(minimum, maximum, label, strict=False, message=None):
 	minimum = as_decimal(minimum)
 	maximum = as_decimal(maximum)
 	if minimum < 0 or maximum < 0:
 		frappe.throw(_("Pricing {0} limits cannot be negative.").format(label))
 	if minimum and maximum and (minimum >= maximum if strict else minimum > maximum):
-		frappe.throw(_("Minimum {0} must be less than maximum {0}.").format(label))
+		frappe.throw(message or _("Minimum {0} must be less than maximum {0}.").format(label))
 
 
-def validate_dates(valid_from, valid_to):
+def validate_dates(valid_from, valid_to, message=None):
 	if not (valid_from and valid_to):
 		return
 	if frappe.utils.getdate(valid_from) > frappe.utils.getdate(valid_to):
-		frappe.throw(_("Valid From must be on or before Valid To."))
+		frappe.throw(message or _("Valid From must be on or before Valid To."))

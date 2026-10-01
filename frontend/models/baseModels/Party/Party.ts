@@ -8,8 +8,8 @@ import {
   ValidationMap,
 } from 'fyo/model/types';
 import {
-  validateFrappeEmail,
-  validateFrappePhone,
+  validateEmail,
+  validatePhoneNumber,
 } from 'fyo/model/validationFunction';
 import { getMappedDoc } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
@@ -46,8 +46,8 @@ export class Party extends FrappeDoc {
 
   // Frappe checks these on save; mirrored to show its message at the field.
   validations: ValidationMap = {
-    email: validateFrappeEmail,
-    phone: validateFrappePhone,
+    email: validateEmail,
+    phone: validatePhoneNumber,
   };
 
   // GST fields are Indian; see the Indian Party.

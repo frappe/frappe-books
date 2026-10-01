@@ -1,8 +1,8 @@
 import { Fyo } from 'fyo';
 import { Action, ListViewSettings, ValidationMap } from 'fyo/model/types';
 import {
-  validateFrappeEmail,
-  validateFrappePhone,
+  validateEmail,
+  validatePhoneNumber,
 } from 'fyo/model/validationFunction';
 import { getLeadActions, getLeadStatusColumn } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
@@ -17,8 +17,8 @@ export class Lead extends FrappeDoc {
 
   // Frappe checks these on save; mirrored to show its message at the field.
   validations: ValidationMap = {
-    email: validateFrappeEmail,
-    mobile: validateFrappePhone,
+    email: validateEmail,
+    mobile: validatePhoneNumber,
   };
 
   static getActions(fyo: Fyo): Action[] {

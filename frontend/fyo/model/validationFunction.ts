@@ -6,39 +6,13 @@ import { Field, OptionField } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
 import { Doc } from './doc';
 
-export function validateEmail(value: DocValue) {
-  if (typeof value !== 'string') {
-    throw new TypeError(
-      `Invalid email ${String(value)} of type ${typeof value}`
-    );
-  }
-
-  const isValid = /(.+)@(.+){2,}\.(.+){2,}/.test(value);
-  if (!isValid) {
-    throw new ValidationError(`Invalid email: ${value}`);
-  }
-}
-
-export function validatePhoneNumber(value: DocValue) {
-  if (typeof value !== 'string') {
-    throw new TypeError(
-      `Invalid phone ${String(value)} of type ${typeof value}`
-    );
-  }
-
-  const isValid = /[+]{0,1}[\d ]+/.test(value);
-  if (!isValid) {
-    throw new ValidationError(`Invalid phone: ${value}`);
-  }
-}
-
 // Frappe checks Data fields with the Email and Phone options by these patterns.
 const FRAPPE_EMAIL =
   /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
 const FRAPPE_PHONE = /^[0-9 +_\-,.*#()]{1,20}$/;
 
-/** Frappe's check of an Email field, with its message, to show it at the field. */
-export function validateFrappeEmail(value: DocValue) {
+/** Frappe's check of an Email field, shown at the field with the Books message. */
+export function validateEmail(value: DocValue) {
   const addresses = String(value ?? '')
     .split(',')
     .map((address) => address.trim())
@@ -47,16 +21,16 @@ export function validateFrappeEmail(value: DocValue) {
     // Frappe also takes a named address, e.g. `Jo <jo@example.com>`.
     const email = /<([^>]*)>$/.exec(address)?.[1] ?? address;
     if (!FRAPPE_EMAIL.test(email)) {
-      throw new ValidationError(t`${email} is not a valid Email Address`);
+      throw new ValidationError(t`Invalid email: ${email}`);
     }
   }
 }
 
-/** Frappe's check of a Phone field, with its message, to show it at the field. */
-export function validateFrappePhone(value: DocValue) {
+/** Frappe's check of a Phone field, shown at the field with the Books message. */
+export function validatePhoneNumber(value: DocValue) {
   const phone = String(value ?? '').trim();
   if (phone && !FRAPPE_PHONE.test(phone)) {
-    throw new ValidationError(t`${phone} is not a valid Phone Number`);
+    throw new ValidationError(t`Invalid phone: ${phone}`);
   }
 }
 

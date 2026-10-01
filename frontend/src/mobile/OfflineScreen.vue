@@ -6,7 +6,7 @@
     <span class="rounded-full bg-surface-gray-2 p-3 text-ink-gray-5">
       <span class="lucide-wifi-off size-6" aria-hidden="true" />
     </span>
-    <h2 class="mt-1 text-3xl-semibold text-ink-gray-9">
+    <h2 class="mt-1 text-3xl-semibold text-ink-gray-8">
       {{ t`No connection` }}
     </h2>
     <p class="text-p-base text-ink-gray-6">

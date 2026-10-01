@@ -55,7 +55,7 @@
 
     <p
       v-if="!query && rows.length"
-      class="px-4 pb-1.5 pt-3.5 text-sm-medium text-ink-gray-5"
+      class="px-4 pb-1.5 pt-3.5 text-sm text-ink-gray-5"
     >
       {{ t`Recent` }}
     </p>

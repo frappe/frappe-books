@@ -26,7 +26,7 @@
       >
         <h2
           v-if="activeGroup.size > 1 && name !== t`Default`"
-          class="text-base-semibold text-ink-gray-9"
+          class="text-lg-semibold text-ink-gray-8"
         >
           {{ name }}
         </h2>

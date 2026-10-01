@@ -13,17 +13,11 @@
       />
       <h2
         v-if="title"
-        class="min-w-0 flex-1 truncate text-base-semibold text-ink-gray-9"
+        class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-8"
       >
         {{ title }}
       </h2>
-      <span
-        :class="
-          title
-            ? 'text-sm text-ink-gray-5'
-            : 'flex-1 text-sm-medium text-ink-gray-6'
-        "
-      >
+      <span class="text-sm text-ink-gray-5" :class="{ 'flex-1': !title }">
         {{ rowCount }}
       </span>
     </div>

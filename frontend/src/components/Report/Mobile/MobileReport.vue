@@ -138,7 +138,7 @@ const isEmpty = computed(
 );
 const skeleton = computed(() => {
   if (!tree.value) {
-    return { values: [104], height: 64, lines: 2 as const };
+    return { values: [104], height: 68, lines: 2 as const };
   }
 
   const values = valueColumns.value.map(({ width }) => width);

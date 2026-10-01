@@ -37,6 +37,8 @@ export class Party extends FrappeDoc {
       'tax_id',
     ],
     fields: { from_lead: { create: false } },
+    // Not phone, a search field only so that POS finds customers by it.
+    paletteFields: ['email', 'role'],
   };
   // The server sets the new role's default account on save.
   static override refills = { role: ['default_account'] };

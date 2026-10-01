@@ -34,6 +34,8 @@ export interface Presentation {
    * form's; names the DocType lacks are skipped, and custom fields follow.
    */
   quickViewFields?: string[];
+  /** The search fields the search palette shows and matches, where they are fewer than the DocType's. */
+  paletteFields?: string[];
 }
 
 /**

@@ -25,7 +25,7 @@ test('the palette searches the schemas the DocType search fields name', () => {
 
   assert.equal(requests.length, 0);
   assert.deepEqual(fields('SalesInvoice'), ['name', 'party']);
-  assert.deepEqual(fields('Party'), ['name', 'email', 'role', 'phone']);
+  assert.deepEqual(fields('Party'), ['name', 'email', 'role']);
   assert.deepEqual(fields('Tax'), ['name']);
   assert.deepEqual(fields('SalesInvoiceItem'), ['item', 'tax']);
   assert.equal(fields('Account'), undefined);

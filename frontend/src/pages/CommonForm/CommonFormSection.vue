@@ -18,7 +18,7 @@
               'min-w-0 self-start w-full',
               field.fieldtype === 'Table' ? 'md:col-span-2 text-base' : '',
               field.fieldtype === 'AttachImage' ? 'md:row-span-2' : '',
-              field.fieldname === 'termsAndConditions' ? 'md:col-span-2' : '',
+              field.fieldname === 'terms_and_conditions' ? 'md:col-span-2' : '',
               field.invisible ? 'invisible' : '',
             ]"
             :style="field.invisible ? 'visibility: hidden;' : ''"

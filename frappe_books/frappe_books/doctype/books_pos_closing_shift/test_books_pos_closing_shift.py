@@ -23,7 +23,6 @@ from frappe_books.tests.accounting import (
 	make_party,
 	unique_name,
 )
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
 class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
@@ -110,17 +109,43 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 
 		self.assertRaises(frappe.LinkExistsError, frappe.get_doc(opening.doctype, opening.name).cancel)
 
-	def test_interface_expected_amounts_match_closing_shift_totals(self):
-		open_shift(0)
-		start = now_datetime()
+	def test_preview_fills_the_open_shift_amounts_without_saving(self):
+		opening = open_shift(100)
 		invoice = self._pos_invoice()
 		self._cash_payment([invoice]).submit()
-		end = add_days(now_datetime(), 1)
+		draft = frappe.get_doc({"doctype": "Books Pos Closing Shift"})
 
-		amounts = BooksBespokeQueries().pos_transacted_amount(start.isoformat(), end.isoformat())
+		draft.preview()
 
-		self.assertEqual(amounts, transacted_amounts(start, end))
-		self.assertEqual(amounts["Cash"], invoice.base_grand_total)
+		self.assertIsNone(draft.name)
+		self.assertEqual(draft.opening_shift, opening.name)
+		cash_row = cash_amounts(draft)
+		self.assertEqual(cash_row.opening_amount, 100)
+		self.assertEqual(cash_row.expected_amount, 100 + invoice.base_grand_total)
+		self.assertEqual(cash_row.difference_amount, -cash_row.expected_amount)
+
+	def test_preview_keeps_the_counted_rows_it_was_sent(self):
+		open_shift(100)
+		draft = frappe.get_doc(
+			{
+				"doctype": "Books Pos Closing Shift",
+				"closing_amounts": [
+					{"name": "counted-bank", "payment_method": "Bank", "closing_amount": 5},
+					{"name": "counted-cash", "payment_method": "Cash", "closing_amount": 90},
+				],
+			}
+		)
+
+		draft.preview()
+
+		rows = [(row.name, row.idx, row.payment_method) for row in draft.closing_amounts]
+		self.assertEqual(rows, [("counted-cash", 1, "Cash"), ("counted-bank", 2, "Bank")])
+		self.assertEqual(cash_amounts(draft).difference_amount, -10)
+
+	def test_preview_needs_an_open_shift(self):
+		draft = frappe.get_doc({"doctype": "Books Pos Closing Shift"})
+
+		self.assertRaisesRegex(frappe.ValidationError, "no open POS shift", draft.preview)
 
 	def test_payment_for_several_invoices_is_counted_once(self):
 		open_shift(0)

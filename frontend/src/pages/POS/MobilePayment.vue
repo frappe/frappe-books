@@ -10,6 +10,19 @@
         {{ format(dueAmount) }}
       </span>
       <span class="text-sm text-ink-gray-5">{{ summary }}</span>
+      <dl
+        v-if="costLines.length > 1"
+        class="mt-3 flex w-full flex-col gap-1.5 text-sm tabular-nums text-ink-gray-6"
+      >
+        <div
+          v-for="line in costLines"
+          :key="line.label"
+          class="flex justify-between gap-4"
+        >
+          <dt class="min-w-0 text-start">{{ line.label }}</dt>
+          <dd class="shrink-0" dir="ltr">{{ format(line.value) }}</dd>
+        </div>
+      </dl>
     </div>
 
     <section class="flex flex-col gap-4 p-4">
@@ -180,7 +193,11 @@ import { PaymentMethodOption } from 'src/components/POS/types';
 import { getField } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
-import { getQuickPaymentAmounts, getTotalQuantity } from 'src/utils/pos';
+import {
+  getCostLines,
+  getQuickPaymentAmounts,
+  getTotalQuantity,
+} from 'src/utils/pos';
 import { computed, inject, type Ref } from 'vue';
 
 /** The phone payment screen; PaymentModal owns its state and checks. */
@@ -232,6 +249,9 @@ const summary = computed(() => {
   const items = quantity === 1 ? t`1 item` : t`${quantity} items`;
   return [sinvDoc.value.party, items].filter(Boolean).join(' · ');
 });
+
+// Only Net Total means nothing changed it, so the amount due says it all.
+const costLines = computed(() => getCostLines(sinvDoc.value));
 
 const quickAmounts = computed(() => {
   if (sinvDoc.value.isReturn || !props.requirements.isCash) {

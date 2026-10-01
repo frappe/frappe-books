@@ -61,26 +61,11 @@
       />
     </template>
 
-    <!-- Filters -->
-    <div
+    <ReportFilters
       v-else-if="report && report.filters.length"
-      class="grid grid-cols-5 gap-4 border-b border-outline-gray-1 px-3 py-4 sm:px-5"
-    >
-      <FormControl
-        v-for="field in report.filters"
-        :key="field.fieldname + '-filter'"
-        :border="true"
-        size="small"
-        class="min-w-0 self-start w-full"
-        :show-label="true"
-        :df="field"
-        :value="report.get(field.fieldname)"
-        :read-only="loading"
-        @change="
-          async (value: DocValue) => await report?.set(field.fieldname, value)
-        "
-      />
-    </div>
+      :report="(report as Report)"
+      :loading="loading"
+    />
 
     <!-- Report Body -->
     <ListReport v-if="report && !isMobile" :report="report" class="" />
@@ -92,10 +77,10 @@ import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { reports } from 'reports';
 import { Report } from 'reports/Report';
-import FormControl from 'src/components/Controls/FormControl.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ListReport from 'src/components/Report/ListReport.vue';
+import ReportFilters from 'src/components/Report/ReportFilters.vue';
 import {
   FilterValues,
   MobileFilters,
@@ -115,8 +100,8 @@ import { PropType, computed, defineComponent, inject } from 'vue';
 export default defineComponent({
   components: {
     PageHeader,
-    FormControl,
     ListReport,
+    ReportFilters,
     DropdownWithActions,
     FrappeButton,
     MobileReport,

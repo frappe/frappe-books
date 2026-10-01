@@ -17,15 +17,22 @@ const DOCSTATUS_FLAGS: Record<string, number[]> = {
   cancelled: [2],
 };
 
+/** A column the list is ordered by in place of its default order. */
+export interface ListSort {
+  fieldname: string;
+  direction: 'asc' | 'desc';
+}
+
 export interface ListPage {
   filters: QueryFilter;
   /** Rows also have to match one of these, e.g. a search over several fields. */
   orFilters: QueryFilter;
   start: number;
   limit: number;
+  sort?: ListSort | null;
 }
 
-/** A page of a Frappe-backed list, newest first, and how many rows match in all. */
+/** A page of a Frappe-backed list, newest first unless sorted, and how many rows match in all. */
 export async function getFrappeListPage(
   fyo: Fyo,
   schemaName: string,
@@ -39,7 +46,7 @@ export async function getFrappeListPage(
       fields: ['*'],
       filters,
       orFilters,
-      orderBy: getOrderBy(docType),
+      orderBy: page.sort ? getSortOrderBy(page.sort) : getOrderBy(docType),
       start: page.start,
       limit: page.limit,
     }),
@@ -85,6 +92,25 @@ export function getOrderBy({ meta, schema }: FrappeDocType): string {
       fieldname && fieldname !== 'creation' && fieldnames.includes(fieldname)
   );
   return sortField ? `${sortField} desc, creation desc` : 'creation desc';
+}
+
+/** By the picked column, newest first among equal values. */
+export function getSortOrderBy({ fieldname, direction }: ListSort): string {
+  const order = `${fieldname} ${direction}`;
+  return fieldname === 'creation' ? order : `${order}, creation desc`;
+}
+
+/** Whether a list can be ordered by the field: a column its DocType stores. */
+export function isSortableField(
+  schemaName: string,
+  fieldname: string
+): boolean {
+  const { meta, schema } = getDocType(schemaName);
+  const docField = meta.fields.find((field) => field.fieldname === fieldname);
+  return (
+    !docField?.is_virtual &&
+    schema.fields.some((field) => field.fieldname === fieldname)
+  );
 }
 
 /** Frappe filters for a Books list filter whose fields are Frappe fieldnames. */

@@ -53,9 +53,9 @@
 <script lang="ts">
 import { DatePicker, DateTimePicker, TextInput } from 'frappe-ui';
 import { DateTime } from 'luxon';
-import { fyo } from 'src/initFyo';
 import { defineComponent } from 'vue';
 import Base from './Base.vue';
+import { getDatePickerFormat } from './datePickerFormat';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
 export default defineComponent({
@@ -84,10 +84,7 @@ export default defineComponent({
       return date?.isValid ? date.toFormat('yyyy-MM-dd') : '';
     },
     frappeDateFormat(): string {
-      const format = fyo.singles.SystemSettings?.date_format ?? 'MMM d, y';
-      return String(format)
-        .replace(/yyyy|y/g, 'YYYY')
-        .replace(/dd|d/g, 'DD');
+      return getDatePickerFormat();
     },
   },
   methods: {

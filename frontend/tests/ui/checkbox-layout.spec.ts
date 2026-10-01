@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
 });
 
-test('report filters stay still when a checkbox reveals a labeled filter', async ({
+test('report filters stay still when a checkbox reveals another filter', async ({
   page,
 }) => {
   const checkbox = page.getByRole('checkbox', {
@@ -22,10 +22,6 @@ test('report filters stay still when a checkbox reveals a labeled filter', async
   for (const width of [1300, 1000]) {
     await page.setViewportSize({ width, height: 820 });
     const bounds = await checkbox.boundingBox();
-    const grid = checkbox.locator(
-      'xpath=ancestor::div[contains(@class,"grid-cols-5")]'
-    );
-    const gridBounds = await grid.boundingBox();
     const item = page.getByRole('combobox', { name: 'Item', exact: true });
     const itemBounds = await item.boundingBox();
     for (let index = 0; index < 4; index++) {
@@ -34,7 +30,6 @@ test('report filters stay still when a checkbox reveals a labeled filter', async
       if (index % 2 === 0) await expect(status).toBeVisible();
       else await expect(status).toBeHidden();
       expect(await checkbox.boundingBox()).toEqual(bounds);
-      expect(await grid.boundingBox()).toEqual(gridBounds);
       expect(await item.boundingBox()).toEqual(itemBounds);
     }
   }

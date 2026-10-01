@@ -1,7 +1,7 @@
 # Browser regression tests
 
 Run the link control tests against a configured local Books test site after `yarn build`.
-Most tests create documents in browser memory. Frappe serves some doctypes, such as Party and Address, from their stored records, so tests that open them save their fixture records first.
+Tests that open stored records save them first through `/api/v2` (`helpers/records.ts`), or answer their requests in the browser.
 
 ```sh
 yarn playwright install chromium

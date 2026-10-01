@@ -122,7 +122,7 @@ Use standard Frappe **Data Import** and **Data Export** for CSV-based transfers.
 
 ## Schema changes
 
-The DocType JSON files are the source of truth. When you change a DocType field that the Vue app uses, update the matching file in `frontend/schemas` and `frappe_books/schema_mapping.json`. `yarn --cwd frontend test` checks that the three agree.
+The DocType JSON files are the source of truth. /books builds its forms from the DocType meta and addresses fields by their Frappe fieldnames, so a field change needs no second copy. When /books shows a field differently from its DocField, change the model's `presentation` in `frontend/models`; see `docs/framework-backed-doctypes.md`.
 
 ## Tests and checks
 

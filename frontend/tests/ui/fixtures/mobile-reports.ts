@@ -57,6 +57,7 @@ function makeProfitAndLoss() {
     indent,
     is_group: isGroup,
     ...Object.fromEntries(periods.map((key, i) => [key, values[i]])),
+    total: values[0] + values[1],
   });
   return load(
     new ProfitAndLoss(fyo),

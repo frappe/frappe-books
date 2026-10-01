@@ -15,6 +15,8 @@ export interface ReportCell {
 
 export interface ReportRow {
   cells: ReportCell[];
+  /** The server's total of the row's period columns. */
+  total?: ReportCell;
   level?: number;
   isGroup?: boolean;
   isEmpty?: boolean;

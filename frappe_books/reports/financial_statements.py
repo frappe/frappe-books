@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, getdate
 
-from frappe_books.accounting.money import as_decimal
+from frappe_books.accounting.money import as_decimal, sum_decimal
 from frappe_books.reports.periods import get_fiscal_year
 
 LEDGER = "Books Ledger Entry"
@@ -53,9 +53,11 @@ def get_trial_balance_columns() -> list[dict]:
 
 
 def get_profit_and_loss(filters, periods) -> list[dict]:
-	"""Return income and expense accounts with the net movement of each period, and the profit."""
-	sections = _statement(("Income", "Expense"), [(period.from_date, period.to_date) for period in periods])
-	keys = [period.key for period in periods]
+	"""Return income and expense accounts with the net movement of each period and in total, and the profit."""
+	sections = _with_totals(
+		_statement(("Income", "Expense"), [(period.from_date, period.to_date) for period in periods])
+	)
+	keys = [*(period.key for period in periods), "total"]
 	totals = {"Income": _("Total Income (Credit)"), "Expense": _("Total Expense (Debit)")}
 	rows = _rows(sections, keys, filters.hide_group_amounts, totals)
 	if len(sections) < 2:
@@ -214,6 +216,15 @@ def _total(rows, width):
 		if row["indent"] == 0:
 			total = [amount + value for amount, value in zip(total, row["values"], strict=True)]
 	return total
+
+
+def _with_totals(sections):
+	"""Add the sum of the periods after the values of each account and section."""
+	for section in sections:
+		for account in section["accounts"]:
+			account["values"] = [*account["values"], sum_decimal(account["values"])]
+		section["total"] = [*section["total"], sum_decimal(section["total"])]
+	return sections
 
 
 def _rows(sections, keys, hide_group_amounts, total_labels=None):

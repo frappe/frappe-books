@@ -45,6 +45,8 @@ await build({
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { Search } from './src/utils/search';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
+      export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
+      export { MobileTree } from './src/components/Report/Mobile/MobileTree';
       export { getCsvData, getJsonData } from './reports/commonExporter';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
       export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
@@ -154,6 +156,8 @@ export const {
   getInsufficientItems,
   Search,
   GeneralLedger,
+  ProfitAndLoss,
+  MobileTree,
   getCsvData,
   getJsonData,
   getRowReference,

@@ -3,6 +3,9 @@
     <template #prefix>
       <slot name="mobile-prefix"><PageHeaderLead /></slot>
     </template>
+    <template v-if="$slots['mobile-title']" #default>
+      <slot name="mobile-title" />
+    </template>
     <template v-if="$slots.mobile" #suffix>
       <div class="flex items-center gap-2">
         <slot name="mobile" />

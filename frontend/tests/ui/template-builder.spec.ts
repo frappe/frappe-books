@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { insertDocument } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 useBooksSession();
@@ -9,6 +10,8 @@ const preview = (page: Page) =>
 test('a shipped template is read-only and its duplicate edits, previews and saves', async ({
   page,
 }) => {
+  // The preview shows the latest payment, so one must exist.
+  await insertPayment(page);
   await routeTo(page, '/template-builder/Business - Payment');
   await expect(preview(page).getByText('Amount Paid')).toBeVisible();
   await expect(page.locator('.cm-content')).toHaveAttribute(
@@ -21,7 +24,9 @@ test('a shipped template is read-only and its duplicate edits, previews and save
 
   await page.getByRole('button', { name: 'Actions' }).click();
   await page.getByRole('menuitem', { name: 'Duplicate' }).click();
-  await expect(page).toHaveURL(/template-builder\/Business%20-%20Payment%20CPY$/);
+  await expect(page).toHaveURL(
+    /template-builder\/Business%20-%20Payment%20CPY$/
+  );
   const name = `Payment ${Date.now()}`;
   const nameField = page.locator('header input').first();
   await nameField.fill(name);
@@ -33,16 +38,16 @@ test('a shipped template is read-only and its duplicate edits, previews and save
   await page.keyboard.press('ControlOrMeta+End');
   // insertText skips the editor's bracket closing.
   await page.keyboard.insertText('<p>Signed by the cashier</p>');
-  await page.keyboard.press('ControlOrMeta+Enter');
+  await page.keyboard.press('Control+Enter');
   await expect(preview(page).getByText('Signed by the cashier')).toBeVisible();
 
   await page.keyboard.insertText('{% if doc.name %}');
-  await page.keyboard.press('ControlOrMeta+Enter');
+  await page.keyboard.press('Control+Enter');
   await expect(page.getByText('Template Error')).toBeVisible();
   for (let i = 0; i < '{% if doc.name %}'.length; i++) {
     await page.keyboard.press('Backspace');
   }
-  await page.keyboard.press('ControlOrMeta+Enter');
+  await page.keyboard.press('Control+Enter');
   await expect(preview(page).getByText('Signed by the cashier')).toBeVisible();
 
   const save = page.getByRole('button', { name: 'Save', exact: true });
@@ -93,4 +98,17 @@ async function routeTo(page: Page, path: string) {
     void app.config.globalProperties.$router.push(path);
   }, path);
   await waitForBooks(page);
+}
+
+/** A submitted payment from a new customer. */
+async function insertPayment(page: Page) {
+  const party = `Template Customer ${Date.now()}`;
+  await insertDocument(page, 'Books Party', { name: party, role: 'Customer' });
+  await insertDocument(page, 'Books Payment', {
+    party,
+    payment_type: 'Receive',
+    payment_method: 'Cash',
+    amount: 10,
+    docstatus: 1,
+  });
 }

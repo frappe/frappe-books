@@ -12,11 +12,13 @@ test('a new customer saves with an address made from its link', async ({
   const addressName = `${name} Office`;
   await page.getByRole('button', { name: 'Create new entry' }).click();
   await expect(page).toHaveURL(/\/books\/edit\/Party\//);
-  await page.getByRole('textbox', { name: 'Full Name' }).fill(name);
+  await page
+    .getByRole('textbox', { name: 'Name (required)', exact: true })
+    .fill(name);
 
   const address = page.getByRole('combobox', { name: 'Address', exact: true });
   await address.fill(addressName);
-  await page.getByText('Create', { exact: true }).last().click();
+  await page.getByRole('option', { name: /^Create/ }).click();
   await expect(
     page.getByRole('textbox', { name: 'Address Name', exact: true })
   ).toHaveValue(addressName);
@@ -45,7 +47,7 @@ test('a party email is checked as Frappe checks it, with the Books message', asy
   page,
 }) => {
   await page.getByRole('button', { name: 'Create new entry' }).click();
-  await page.getByRole('textbox', { name: 'john@doe.com' }).fill('asha@');
+  await page.getByRole('textbox', { name: 'Email', exact: true }).fill('asha@');
   await page.keyboard.press('Tab');
   await expect(
     page.getByText('Invalid email: asha@', { exact: true })
@@ -107,6 +109,8 @@ test.describe('on a phone', () => {
     await page.goto(`/books/edit/Party/${encodeURIComponent(name)}`);
     await waitForBooks(page);
 
+    // Phones collapse sections that hold no value.
+    await page.getByRole('button', { name: 'Contacts', exact: true }).click();
     await page.getByRole('textbox', { name: 'Phone' }).fill('+91 98200 00000');
     await page.keyboard.press('Tab');
     await page.getByRole('button', { name: 'Save', exact: true }).click();

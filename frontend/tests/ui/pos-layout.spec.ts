@@ -131,6 +131,27 @@ test('cart values fit and expanded item fields open a usable keypad', async ({
   await expect(keypad).toBeHidden();
 });
 
+test('a cart row in boxes shows and takes its rate per box', async ({
+  page,
+}) => {
+  await page.evaluate(() => (window as any).posFixture.fillBoxRow());
+  const row = page.locator('[data-slot="list-row"]').filter({
+    has: page.getByRole('button', { name: 'Expand item', exact: true }),
+  });
+  await expect(row).toContainText('6.003,100.0018,600.00');
+
+  await row.getByRole('button', { name: 'Expand item', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'Rate', exact: true }).click();
+  const keypad = page.getByRole('dialog', { name: 'Edit Rate', exact: true });
+  await keypad.getByRole('textbox', { name: 'Rate', exact: true }).fill('3000');
+  await keypad.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(keypad).toBeHidden();
+  const rate = await page.evaluate(
+    () => (window as any).posFixture.state.invoice.items[0].rate.float
+  );
+  expect(rate).toBe(60);
+});
+
 for (const modern of [true, false]) {
   test(`${modern ? 'Modern' : 'Classic'} cart actions have balanced hover insets`, async ({
     page,

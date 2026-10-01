@@ -9,12 +9,13 @@ test.use({
 
 useBooksSession();
 
-const header = (page: Page) => page.locator('header:visible');
 const createButton = (page: Page) =>
-  page.getByRole('button', { name: 'Create', exact: true });
+  page
+    .locator('header:visible')
+    .getByRole('button', { name: 'Create', exact: true });
 
 test('the period sheet changes the dashboard period', async ({ page }) => {
-  await header(page).getByRole('button', { name: 'This Year' }).click();
+  await page.getByRole('button', { name: 'This Year' }).click();
   const sheet = page.getByRole('dialog', { name: 'Period' });
   await expect(
     sheet.getByRole('option', { name: 'This Year' })
@@ -23,13 +24,13 @@ test('the period sheet changes the dashboard period', async ({ page }) => {
   await sheet.getByRole('option', { name: 'This Quarter' }).click();
   await expect(sheet).toBeHidden();
   await expect(
-    header(page).getByRole('button', { name: 'This Quarter' })
+    page.getByRole('button', { name: 'This Quarter' })
   ).toBeVisible();
 });
 
-test('the create button opens a new sales invoice', async ({ page }) => {
+test('the create menu opens a new sales invoice', async ({ page }) => {
   await createButton(page).click();
-  const sheet = page.getByRole('dialog', { name: 'Create' });
+  const menu = page.getByRole('menu');
   for (const name of [
     'Sales Invoice',
     'Receive Payment',
@@ -38,23 +39,29 @@ test('the create button opens a new sales invoice', async ({ page }) => {
     'Customer',
     'Item',
   ]) {
-    await expect(sheet.getByRole('button', { name })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name })).toBeVisible();
   }
-  await expect(createButton(page)).toBeHidden();
 
-  await sheet.getByRole('button', { name: 'Sales Invoice' }).click();
+  await menu.getByRole('menuitem', { name: 'Sales Invoice' }).click();
   await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\/[^/]+$/);
-  await expect(createButton(page)).toBeHidden();
-});
-
-test('the create button hides while the drawer is open', async ({ page }) => {
-  await expect(createButton(page)).toBeVisible();
-  await header(page).getByRole('button', { name: 'Menu' }).click();
-  await expect(createButton(page)).toBeHidden();
 });
 
 test('a tap on a chart shows the tapped month', async ({ page }) => {
-  const plot = page.locator('[data-slot="chart-container"]').first();
+  // An empty period draws no plot, so the cashflow gets months of its own.
+  const months = [1, 2, 3, 4, 5, 6].map((month) => ({
+    yearmonth: `2031-0${month}`,
+    inflow: month * 100,
+    outflow: month * 40,
+  }));
+  await page.route(/reports\.dashboard\.get_cashflow/, (route) =>
+    route.fulfill({ json: { message: { months, has_data: true } } })
+  );
+  await page.reload();
+
+  const plot = page.locator('[data-slot="chart-container"]', {
+    hasText: 'Cashflow',
+  });
+  await plot.scrollIntoViewIfNeeded();
   await expect(plot.locator('svg, canvas').first()).toBeVisible();
   const box = (await plot.boundingBox())!;
   const tapAt = (share: number) =>
@@ -81,5 +88,7 @@ test('a section that fails to load can be retried', async ({ page }) => {
   fail = false;
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByText('Failed to load')).toBeHidden();
-  await expect(page.getByText('Top Expenses')).toBeVisible();
+  await expect(
+    page.locator('[data-slot="chart-container"]', { hasText: 'Top Expenses' })
+  ).toHaveAttribute('data-state', /ready|empty/);
 });

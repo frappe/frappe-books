@@ -39,11 +39,7 @@ export function formatXLabels(label: string) {
  * formatter only, so tooltips keep the axis `format`.
  */
 export function getPhoneAxisLabels(locale: string) {
-  const compact = Intl.NumberFormat(`${locale}-u-nu-latn`, {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  });
-
+  const compact = getCompactFormat(locale);
   return {
     x: {
       axisLabel: {
@@ -54,4 +50,18 @@ export function getPhoneAxisLabels(locale: string) {
     },
     y: { axisLabel: { formatter: (value: number) => compact.format(value) } },
   };
+}
+
+/** Amounts short enough for a phone tile, e.g. "₹ 1.2L". */
+export function getCompactCurrencyFormat(locale: string, symbol?: string) {
+  const compact = getCompactFormat(locale);
+  return (value: number) =>
+    symbol ? `${symbol} ${compact.format(value)}` : compact.format(value);
+}
+
+function getCompactFormat(locale: string) {
+  return Intl.NumberFormat(`${locale}-u-nu-latn`, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  });
 }

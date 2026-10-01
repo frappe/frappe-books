@@ -1,6 +1,5 @@
 <script lang="ts">
 import { DEFAULT_LOCALE } from 'fyo/utils/consts';
-import { useResolvedColorScheme } from 'frappe-ui';
 import { fyo } from 'src/initFyo';
 import { getPhoneAxisLabels } from 'src/utils/chart';
 import { PeriodKey } from 'src/utils/types';
@@ -10,32 +9,23 @@ import { defineComponent } from 'vue';
 
 export default defineComponent({
   props: {
-    commonPeriod: { type: String as PropType<PeriodKey>, default: 'This Year' },
+    period: { type: String as PropType<PeriodKey>, default: 'This Year' },
   },
-  emits: ['period-change'],
   data() {
     return {
-      period: 'This Year' as PeriodKey,
-      periodOptions: [
-        'This Year',
-        'YTD',
-        'This Quarter',
-        'This Month',
-      ] as PeriodKey[],
       isLoaded: false,
-      hasFailed: false,
+      error: null as string | null,
     };
   },
   computed: {
     isMobile(): boolean {
       return isMobile.value;
     },
-    darkMode(): boolean {
-      return useResolvedColorScheme().value === 'dark';
-    },
-    /** Phones replace a section's body while it first loads or after it fails. */
-    showLoadState(): boolean {
-      return this.isMobile && (!this.isLoaded || this.hasFailed);
+    /** Phones set each widget on its own card. */
+    cardClass(): string | undefined {
+      return this.isMobile
+        ? 'overflow-hidden rounded-6 border bg-surface-base p-3'
+        : undefined;
     },
     /**
      * frappe-ui charts mishandle taps: the tooltip closes when the finger
@@ -55,38 +45,30 @@ export default defineComponent({
         onMousedown: (event: Event) => event.preventDefault(),
       };
     },
-    phoneAxisLabels() {
-      const locale =
+    locale(): string {
+      return (
         (fyo.singles.SystemSettings?.locale as string | undefined) ??
-        DEFAULT_LOCALE;
-      return getPhoneAxisLabels(locale);
+        DEFAULT_LOCALE
+      );
+    },
+    phoneAxisLabels() {
+      return getPhoneAxisLabels(this.locale);
     },
   },
   watch: {
-    period: 'periodChange',
-    commonPeriod(val: PeriodKey) {
-      if (!this.periodOptions.includes(val)) {
-        return;
-      }
-
-      this.period = val;
-    },
+    period: 'loadData',
   },
   async activated() {
     await this.loadData();
   },
   methods: {
-    async periodChange() {
-      this.$emit('period-change', this.period);
-      await this.loadData();
-    },
     async loadData() {
-      this.hasFailed = false;
+      this.error = null;
       try {
         await this.setData();
         this.isLoaded = true;
       } catch (error) {
-        this.hasFailed = true;
+        this.error = String(error);
         console.error(error);
       }
     },

@@ -17,9 +17,6 @@ export default {
     './reports/**/*.ts',
   ],
   safelist: [
-    // Dashboard invoice bars build their colour classes at runtime.
-    { pattern: /^bg-(blue|pink)-(200|500|600|700)$/ },
-    { pattern: /^bg-gray-(200|800)$/ },
     // Report print cells align with `text-${align}`.
     'text-start',
     'text-center',

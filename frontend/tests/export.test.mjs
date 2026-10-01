@@ -28,7 +28,13 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
     ({ fieldname }) => fieldname === 'items'
   );
 
-  assert.ok(exported.some(({ fieldname }) => fieldname === 'party'));
+  assert.deepEqual(
+    exported.slice(0, 2).map(({ fieldname, label }) => [fieldname, label]),
+    [
+      ['name', 'Invoice No'],
+      ['number_series', 'Number Series'],
+    ]
+  );
   assert.equal(
     exported.find(({ fieldname }) => fieldname === 'attachment').export,
     false

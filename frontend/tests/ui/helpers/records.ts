@@ -70,3 +70,22 @@ export async function getLeafAccounts(
     return data.map(({ name }: { name: string }) => name);
   }, rootType);
 }
+
+/** Answers the read of a sales invoice that exists only in the test. */
+export async function routeInvoice(page: Page, name: string) {
+  const path = `/api/v2/document/Books%20Sales%20Invoice/${encodeURIComponent(name)}`;
+  await page.route(
+    (url) => url.pathname === path,
+    (route) =>
+      route.fulfill({
+        json: {
+          data: {
+            name,
+            docstatus: 1,
+            is_pos: 0,
+            modified: '2026-10-01 00:00:00.000000',
+          },
+        },
+      })
+  );
+}

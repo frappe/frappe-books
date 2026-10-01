@@ -1,7 +1,8 @@
 <template>
   <div v-for="card in cards" :key="card.title" :class="cardClass">
     <!-- The card clips at its top edge and the link button overflows the
-      title row; the negative margin makes room without moving the card. -->
+      title row; the negative margin makes room without moving the card
+      (frappe/frappe-ui#1255). -->
     <FrappeNumberCard
       :title="card.title"
       :value="card.value"

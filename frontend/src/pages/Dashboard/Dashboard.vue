@@ -22,13 +22,13 @@
     <component
       :is="isMobile ? 'div' : 'FrappeScrollArea'"
       class="min-h-0 flex-1"
-      :viewport-class="isMobile ? undefined : 'pb-10'"
+      :viewport-class="isMobile ? undefined : 'px-3 pb-10 pt-5 sm:px-5'"
     >
-      <div class="min-w-0 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)]">
-        <Cashflow class="h-72 p-4 md:px-5" :period="period" />
-        <hr class="border-outline-gray-1" />
+      <div
+        class="space-y-4 px-4 pt-3 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)] md:mx-auto md:max-w-4xl md:space-y-6 md:p-0"
+      >
         <div
-          class="grid grid-cols-2 gap-3 p-4 md:gap-x-8 md:gap-y-6 md:px-5 xl:grid-cols-4"
+          class="grid grid-cols-2 gap-3 md:gap-x-8 md:gap-y-6 xl:grid-cols-4"
         >
           <InvoiceCards
             doctype="Books Sales Invoice"
@@ -41,18 +41,13 @@
             :period="period"
           />
         </div>
-        <hr class="border-outline-gray-1" />
-        <div class="grid grid-cols-1 xl:grid-cols-2">
-          <ProfitAndLoss
-            class="h-80 min-w-0 w-full p-4 border-outline-gray-1 max-md:border-b md:border-e md:px-5"
-            :period="period"
-          />
-          <Expenses
-            class="h-80 min-w-0 w-full p-4 md:px-5"
-            :period="period"
-          />
+        <div class="border-t border-outline-gray-2 max-md:hidden" />
+        <Cashflow class="h-64 md:h-72" :period="period" />
+        <div class="border-t border-outline-gray-2 max-md:hidden" />
+        <div class="grid gap-4 md:gap-8 lg:grid-cols-2">
+          <ProfitAndLoss class="h-64 min-w-0 md:h-80" :period="period" />
+          <Expenses class="h-96 min-w-0 md:h-80" :period="period" />
         </div>
-        <hr class="border-outline-gray-1" />
       </div>
     </component>
     <MobileCreateButton v-if="isMobile" />

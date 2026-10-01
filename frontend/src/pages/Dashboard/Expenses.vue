@@ -1,5 +1,5 @@
 <template>
-  <div v-bind="phoneChartListeners">
+  <div v-bind="phoneChartListeners" :class="cardClass">
     <FrappeDonutChart
       :title="t`Top Expenses`"
       :loading="!isLoaded"

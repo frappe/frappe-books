@@ -1,10 +1,9 @@
 <script>
 import { t } from 'fyo';
 import { getAccountLabel } from 'src/utils/accountLabel';
-import { isFrappeBacked } from 'src/frappe/doctypes';
-import { searchFrappeLink } from 'src/frappe/link';
+import { getLinkDisplayValue, searchFrappeLink } from 'src/frappe/link';
 import { getFieldModel, getSchema } from 'src/frappe/registry';
-import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { newBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
@@ -42,23 +41,11 @@ export default {
   methods: {
     async setLinkValue(newValue) {
       const value = newValue ?? this.value;
-      const { fieldname } = this.df ?? {};
       const target = this.getTargetSchemaName();
-      const linkDisplayField = getSchema(target ?? '')?.linkDisplayField;
-      if (!linkDisplayField) {
-        return (this.linkValue = target === 'Account' ? getAccountLabel(fyo, value || '') : value);
-      }
-
-      const linkDoc = await this.getLinkDoc(target, value, fieldname);
-      this.linkValue = linkDoc?.get(linkDisplayField) ?? '';
-    },
-    async getLinkDoc(target, value, fieldname) {
-      if (!value || !isFrappeBacked(target)) {
-        return await this.doc?.loadAndGetLink(fieldname);
-      }
-
-      // Frappe serves the target, so its display field has its Frappe fieldname.
-      return await getBooksDoc(target, value);
+      this.linkValue =
+        target === 'Account'
+          ? getAccountLabel(fyo, value || '')
+          : await getLinkDisplayValue(target, value);
     },
     getTargetSchemaName() {
       return this.df.target;
@@ -69,45 +56,19 @@ export default {
         return [];
       }
 
-      if (isFrappeBacked(schemaName)) {
-        const options = await searchFrappeLink(
-          schemaName,
-          keyword,
-          filters,
-          LINK_PAGE_LENGTH,
-          this.df.groupBy
-        );
-        return schemaName === 'Account'
-          ? options.map((option) => ({
-              ...option,
-              label: getAccountLabel(fyo, option.label),
-            }))
-          : options;
-      }
-
-      const schema = fyo.schemaMap[schemaName];
-      const fields = [
-        ...new Set(['name', schema.titleField, this.df.groupBy]),
-      ].filter(Boolean);
-      const rows = await fyo.db.searchLink(
+      const options = await searchFrappeLink(
         schemaName,
         keyword,
         filters,
-        fields,
-        LINK_PAGE_LENGTH
+        LINK_PAGE_LENGTH,
+        this.df.groupBy
       );
-
-      return rows.map((r) => {
-        const label = r[schema.titleField] || r.name;
-        const option = {
-          label: schemaName === 'Account' ? getAccountLabel(fyo, label) : label,
-          value: r.name,
-        };
-        if (this.df.groupBy) {
-          option.group = r[this.df.groupBy];
-        }
-        return option;
-      });
+      return schemaName === 'Account'
+        ? options.map((option) => ({
+            ...option,
+            label: getAccountLabel(fyo, option.label),
+          }))
+        : options;
     },
     async getSuggestions(keyword = '') {
       const filters = this.filtersDisabled ? null : await this.getFilters();

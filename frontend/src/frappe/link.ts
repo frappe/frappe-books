@@ -3,6 +3,8 @@ import type { QueryFilter } from 'utils/db/types';
 import { getDocuments } from './api';
 import { getDocType } from './doctypes';
 import { toFrappeFilters } from './list';
+import { getSchema } from './registry';
+import { getBooksDoc } from './useBooksDoc';
 
 type SearchResult = { value: string; label?: string };
 type LinkOption = { label: string; value: string; group?: string };
@@ -37,6 +39,24 @@ export async function searchFrappeLink(
 
   const groups = await getFieldValues(schemaName, results, groupBy);
   return options.map((option) => ({ ...option, group: groups[option.value] }));
+}
+
+/**
+ * What a link to `name` shows: the record's display field, like an address's
+ * text, when its schema has one, else the name. The record is the open one,
+ * so it shows what a quick edit just saved.
+ */
+export async function getLinkDisplayValue(
+  schemaName: string | undefined,
+  name: string | undefined
+): Promise<string | undefined> {
+  const field = schemaName && getSchema(schemaName)?.linkDisplayField;
+  if (!field) {
+    return name;
+  }
+
+  const doc = name ? await getBooksDoc(schemaName, name) : undefined;
+  return (doc?.get(field) as string | undefined) ?? '';
 }
 
 /** Each record's display field value by name, e.g. an address's text, for a schema that has one. */

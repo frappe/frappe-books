@@ -124,17 +124,18 @@ test('remaining filters can be edited and removed after an incomplete row is dis
   expect(await appliedFilters(page)).toEqual([]);
 });
 
+// Each condition, the value typed, the Frappe filter it sends and the matches.
 const operatorCases = [
-  ['Is', '=', 'Paid', 20],
-  ['Is Not', '!=', 'Paid', 40],
-  ['Contains', 'like', 'Paid', 60],
-  ['Does Not Contain', 'not like', 'Paid', 0],
-  ['Greater Than', '>', 'Paid', 40],
-  ['Less Than', '<', 'Paid', 0],
-  ['Is Empty', 'is null', null, 0],
-  ['Is Not Empty', 'is not null', null, 60],
+  ['Is', 'Paid', ['=', 'Paid'], 20],
+  ['Is Not', 'Paid', ['!=', 'Paid'], 40],
+  ['Contains', 'Paid', ['like', '%Paid%'], 60],
+  ['Does Not Contain', 'Paid', ['not like', '%Paid%'], 0],
+  ['Greater Than', 'Paid', ['>', 'Paid'], 40],
+  ['Less Than', 'Paid', ['<', 'Paid'], 0],
+  ['Is Empty', null, ['is', 'not set'], 0],
+  ['Is Not Empty', null, ['is', 'set'], 60],
 ] as const;
-for (const [label, operator, value, count] of operatorCases) {
+for (const [label, value, [operator, sent], count] of operatorCases) {
   test(`status ${label} produces the expected list records`, async ({
     page,
   }) => {
@@ -150,9 +151,7 @@ for (const [label, operator, value, count] of operatorCases) {
     await expect
       .poll(() => listSize(page))
       .toEqual({ total: count, rows: Math.min(count, pageLength) });
-    expect(await appliedFilters(page)).toEqual([
-      ['status', operator, operator.includes('like') ? `%${value}%` : value],
-    ]);
+    expect(await appliedFilters(page)).toEqual([['status', operator, sent]]);
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
       .click();

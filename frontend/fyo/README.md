@@ -42,7 +42,7 @@ Frappe site. Frappe owns database creation and migration.
 #### 2. Initialize and Register
 
 Done using `fyo.initializeAndRegister` after a database is connected, this should be
-passed the models and regional models.
+passed the bridge models.
 
 This sets the schemas and associated models on the `fyo` object along with a few
 other things.
@@ -53,9 +53,7 @@ other things.
 - Call `fyo.db.connect(countryCode)`.
 - Call `fyo.initializeAndRegister` with the models.
 - Register `frappeModels`, then the regional ones from `models/index.ts/getRegionalFrappeModels`.
-
-_Note: since **SystemSettings** are initialized on `fyo.initializeAndRegister`
-db needs to be set first else an error will be thrown_
+- Call `loadFrappeDocTypes`, then `fyo.initializeMoneyMaker` with the Frappe-backed System Settings, then load the other singles into `fyo.singles`.
 
 ## Translations
 

@@ -129,7 +129,7 @@ test('creating a linked entry uses the search text without changing the saved li
   const address = page.getByRole('combobox', { name: 'Address', exact: true });
   await expect(address).toHaveValue(addressLabel);
   await address.fill('New Audit Address');
-  await page.getByText('Create', { exact: true }).last().click();
+  await page.getByRole('option', { name: /^Create/ }).click();
   await expect(
     page.getByRole('textbox', { name: 'Address Name', exact: true })
   ).toHaveValue('New Audit Address');
@@ -158,7 +158,7 @@ test('cancelling a new linked record returns to its parent quick edit', async ({
   const parentUrl = page.url();
   const address = page.getByRole('combobox', { name: 'Address', exact: true });
   await address.fill(partyName);
-  await page.getByText('Create', { exact: true }).last().click();
+  await page.getByRole('option', { name: /^Create/ }).click();
   await expect(
     page.getByRole('textbox', { name: 'Address Name', exact: true })
   ).toHaveValue(partyName);

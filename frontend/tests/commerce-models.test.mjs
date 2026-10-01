@@ -6,11 +6,13 @@ import {
   frappeModels,
   fyo,
   getFrappeDoc,
+  getLinkDisplayValue,
   getLinkLabels,
   getModel,
   getSchema,
   models,
   newFrappeDoc,
+  searchFrappeLink,
 } from './helpers/frappe.mjs';
 import { getFilterFields } from './helpers/accounting.mjs';
 import {
@@ -137,6 +139,40 @@ test('address options show their display text, fetched for the names found', asy
   assert.deepEqual(requests[0].params.fields, ['name', 'address_display']);
   assert.deepEqual(requests[0].params.filters, [['name', 'in', ['Office']]]);
   assert.deepEqual(await getLinkLabels('Party', ['Asha']), {});
+});
+
+test("a link shows an address's display text and other records' names", async () => {
+  respond = ({ path }) =>
+    path === '/api/v2/document/Books Address/Home'
+      ? { data: { name: 'Home', address_display: '7 Hill Street' } }
+      : { data: [] };
+  requests.length = 0;
+
+  assert.equal(await getLinkDisplayValue('Address', 'Home'), '7 Hill Street');
+  assert.equal(await getLinkDisplayValue('Address', undefined), '');
+  assert.equal(await getLinkDisplayValue('Party', 'Asha'), 'Asha');
+  assert.deepEqual(
+    requests.map(({ path }) => path),
+    ['/api/v2/document/Books Address/Home']
+  );
+});
+
+test("countries are Frappe's, shown and searched by their names", async () => {
+  assert.deepEqual(getLayout('Country'), [
+    'country_name | Country Name |  | Default',
+  ]);
+  respond = () => ({ message: [{ value: 'India' }] });
+  requests.length = 0;
+
+  assert.deepEqual(await searchFrappeLink('Country', 'Ind', null, 10), [
+    { label: 'India', value: 'India' },
+  ]);
+  assert.equal(requests[0].path, '/api/method/frappe.desk.search.search_link');
+  // Frappe matches a translated doctype's names in Python, so letters are not spread.
+  assert.deepEqual(
+    [requests[0].body.doctype, requests[0].body.txt],
+    ['Country', 'Ind']
+  );
 });
 
 test('an address lists Indian states for India and hides the place of supply', () => {

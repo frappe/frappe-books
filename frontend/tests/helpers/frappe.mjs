@@ -20,7 +20,7 @@ await build({
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, toFrappeFilters } from './src/frappe/list';
-      export { getLinkLabels, searchFrappeLink } from './src/frappe/link';
+      export { getLinkDisplayValue, getLinkLabels, searchFrappeLink } from './src/frappe/link';
       export { getFieldModel, getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
@@ -85,6 +85,7 @@ export const {
   getFrappeListPage,
   toFrappeFilters,
   searchFrappeLink,
+  getLinkDisplayValue,
   getLinkLabels,
   getFieldModel,
   getModel,

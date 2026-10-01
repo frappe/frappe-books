@@ -20,7 +20,9 @@ export function getMetaBundle(name) {
 }
 
 function getMeta(name) {
-  const meta = [...doctypes, currencyMeta].find((meta) => meta.name === name);
+  const meta = [...doctypes, currencyMeta, countryMeta].find(
+    (meta) => meta.name === name
+  );
   const order = meta.field_order ?? [];
   const fields = [...meta.fields].sort(
     (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
@@ -66,6 +68,26 @@ const currencyMeta = {
       label: 'Show Currency Symbol on Right Side',
       default: '0',
     },
+  ],
+};
+
+// Frappe's Country, which the app does not ship.
+const countryMeta = {
+  name: 'Country',
+  autoname: 'field:country_name',
+  translated_doctype: 1,
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'country_name',
+      fieldtype: 'Data',
+      label: 'Country Name',
+      reqd: 1,
+    },
+    { fieldname: 'date_format', fieldtype: 'Data', label: 'Date Format' },
+    { fieldname: 'time_format', fieldtype: 'Data', label: 'Time format' },
+    { fieldname: 'time_zones', fieldtype: 'Text', label: 'Time Zones' },
+    { fieldname: 'code', fieldtype: 'Data', label: 'Code' },
   ],
 };
 

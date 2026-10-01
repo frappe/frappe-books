@@ -7,12 +7,15 @@ import {
   evaluateRequired,
   frappeModels,
   fyo,
+  getFrappeDoc,
   getMappedDoc,
   getSchema,
   ListFilters,
+  ListView,
   loadFrappeDocTypes,
   newFrappeDoc,
   registerFrappeModels,
+  router,
   stubFrappe,
 } from './helpers/frappe.mjs';
 
@@ -308,6 +311,33 @@ test('a scanned item is priced by the server, and scanning it again adds to its 
     [['Pen', 3]]
   );
   clearTimeout(invoice._previewTimer);
+});
+
+test('an invoice from selected items leaves their pricing to the server', async () => {
+  setSettings();
+  const requests = stubFrappe(() => ({ data: [] }));
+  const routes = [];
+  router.currentRoute = { value: { fullPath: '/list/Item' } };
+  router.push = async (route) => routes.push(route);
+  const list = { selectedItems: ['Pen', 'Ink'], isSelectionMode: true };
+
+  await ListView.methods.createInvoice.call(list, 'SalesInvoice');
+
+  const name = decodeURIComponent(routes[0].split('/').at(-1));
+  const invoice = await getFrappeDoc('SalesInvoice', name);
+  clearTimeout(invoice._previewTimer);
+  const { items } = invoice.getMethodDocument({
+    keepRowNames: true,
+    clearServerFilled: true,
+  });
+  assert.deepEqual(
+    items.map((row) => [row.item, 'rate' in row, !!row.is_manual_rate]),
+    [
+      ['Pen', false, false],
+      ['Ink', false, false],
+    ]
+  );
+  assert.deepEqual(requests, []);
 });
 
 test('a return takes quantities back, however they are typed', async () => {

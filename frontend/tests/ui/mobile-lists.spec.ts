@@ -73,6 +73,12 @@ test('selected items start a new sales invoice', async ({ page }) => {
     await page.getByRole('checkbox', { name }).tap();
   }
   await expect(page.getByText('2 selected')).toBeVisible();
+  const itemLoads: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/v2/document/Books%20Item/')) {
+      itemLoads.push(request.url());
+    }
+  });
   await page.getByRole('button', { name: 'Create', exact: true }).tap();
   await page
     .getByRole('dialog', { name: 'Create' })
@@ -81,6 +87,9 @@ test('selected items start a new sales invoice', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\//);
   await expect(page.getByText('2 rows', { exact: true })).toBeVisible();
+  // The server's preview prices the rows; no item is loaded one by one.
+  await expect(page.getByText(/^1\.00 × .*100\.00$/)).toHaveCount(2);
+  expect(itemLoads).toEqual([]);
 });
 
 test('a filter chip narrows the list until it is removed', async ({ page }) => {

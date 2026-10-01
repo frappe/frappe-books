@@ -22,7 +22,7 @@ await build({
       export { getFrappeListPage, getFrappeRows, toFrappeFilters } from './src/frappe/list';
       export { getLinkDisplayValue, getLinkLabels, searchFrappeLink } from './src/frappe/link';
       export { loadListData, onListChange } from './src/utils/listData';
-      export { getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
+      export { getModel, getQuickViewFields, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { setLanguageMapOnTranslationString } from './fyo/utils/translation';
@@ -109,6 +109,7 @@ export const {
   loadListData,
   onListChange,
   getModel,
+  getQuickViewFields,
   getSchema,
   getSearchFields,
   getSingleSchemaNames,

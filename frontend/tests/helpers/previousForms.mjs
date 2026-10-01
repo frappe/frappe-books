@@ -2,7 +2,8 @@
  * What the /books forms showed before they moved to Frappe's meta, taken
  * from the old schema files: each form's `fieldname | label | placeholder |
  * section` layout in Frappe fieldnames, labels, table and quick edit
- * columns, list filters, colours, and whether each link offered Create.
+ * columns, list filters, colours, whether each link offered Create, and
+ * quick view fields.
  * Tests check the Frappe-backed forms still show the same.
  */
 export const previousForms = {
@@ -490,5 +491,86 @@ export const previousForms = {
     'PurchaseReceiptItem.location': true,
     'PurchaseReceiptItem.transfer_unit': false,
     'PurchaseReceiptItem.batch': false,
+  },
+  // What quick views listed, as `fieldname | label`, where the form shows others.
+  quickViews: {
+    Payment: [
+      'number_series | Number Series',
+      'party | Party',
+      'date | Posting Date',
+      'payment_type | Payment Type',
+      'account | Party Account',
+      'payment_account | Payment Account',
+      'payment_method | Payment Method',
+      'clearance_date | Clearance Date',
+      'reference_id | Ref. / Cheque No.',
+      'reference_date | Reference Date',
+      'amount | Amount',
+      'writeoff | Write Off',
+    ],
+    POSOpeningShift: ['opening_date | Opening Date'],
+    POSClosingShift: [
+      'closing_date | Closing Date',
+      'opening_shift | Opening Shift',
+    ],
+    SalesInvoice: [
+      'number_series | Number Series',
+      'party | Customer',
+      'account | Account',
+      'date | Date',
+      'price_list | Price List',
+      'net_total | Net Total',
+      'total_discount | Discount',
+      'loyalty_points_amount | Loyalty Points Redeemed',
+      'base_grand_total | Base Grand Total',
+      'grand_total | Grand Total',
+      'discount_after_tax | Apply Discount After Tax',
+      'make_auto_payment | Make Payment On Submit',
+      'make_auto_stock_transfer | Make Shipment On Submit',
+      'outstanding_amount | Outstanding Amount',
+      'stock_not_transferred | Stock Not Shipped',
+      'terms | Notes',
+      'back_reference | Back Reference',
+      'return_against | Return Against',
+      'quote | Quote Reference',
+      'loyalty_program | Loyalty Program',
+      'available_loyalty_points | Available Loyalty Points',
+      'redeem_loyalty_points | Redeem Loyalty Points',
+      'loyalty_points | Loyalty Points',
+    ],
+    PurchaseInvoice: [
+      'number_series | Number Series',
+      'party | Supplier',
+      'account | Account',
+      'date | Date',
+      'price_list | Price List',
+      'net_total | Net Total',
+      'total_discount | Discount',
+      'base_grand_total | Base Grand Total',
+      'grand_total | Grand Total',
+      'discount_after_tax | Apply Discount After Tax',
+      'make_auto_payment | Make Payment On Submit',
+      'make_auto_stock_transfer | Make Purchase Receipt On Submit',
+      'outstanding_amount | Outstanding Amount',
+      'stock_not_transferred | Stock Not Received',
+      'terms | Notes',
+      'back_reference | Back Reference',
+      'return_against | Return Against',
+    ],
+    SalesQuote: [
+      'number_series | Number Series',
+      'party | Customer',
+      'date | Date',
+      'price_list | Price List',
+      'net_total | Net Total',
+      'total_discount | Discount',
+      'base_grand_total | Base Grand Total',
+      'grand_total | Grand Total',
+      'discount_after_tax | Apply Discount After Tax',
+      'make_auto_payment | Make Payment On Submit',
+      'outstanding_amount | Outstanding Amount',
+      'terms | Notes',
+      'reference_type | Type',
+    ],
   },
 };

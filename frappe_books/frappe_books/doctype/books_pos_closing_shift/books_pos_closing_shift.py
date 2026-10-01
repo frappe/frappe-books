@@ -139,6 +139,6 @@ def _closing_journal_rows(cash_rows):
 	difference = _cash_sum(cash_rows, "difference_amount")
 	if difference:
 		if not settings.write_off_account:
-			frappe.throw(_("Set a write-off account in POS Settings."))
+			frappe.throw(_("POS Write Off Account is not set. Please set it on POS Settings"))
 		rows.append((settings.write_off_account, max(-difference, 0), max(difference, 0)))
 	return rows

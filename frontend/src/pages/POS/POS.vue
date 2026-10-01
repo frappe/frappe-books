@@ -452,9 +452,9 @@ export default defineComponent({
   },
   async activated() {
     toggleSidebar(false);
-    validateIsPosSettingsSet();
     await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
+    validateIsPosSettingsSet(this.posProfile as POSProfile | null);
     this.setSinvDoc();
     this.setDefaultCustomer();
     this.setShortcuts();

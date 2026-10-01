@@ -15,6 +15,7 @@ from frappe_books.tests.accounting import (
 	make_account,
 	make_invoice,
 	make_item,
+	make_number_series,
 	make_party,
 	unique_name,
 )
@@ -184,6 +185,11 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		refund.payment_references[0].amount = outstanding
 		with self.assertRaisesRegex(frappe.ValidationError, "Allocated amounts must be greater than zero"):
 			refund.insert()
+
+	def test_number_series_cannot_change_after_insert(self):
+		payment = self._payment(self.invoice).insert()
+		payment.number_series = make_number_series("Payment")
+		self.assertRaises(frappe.CannotChangeConstantError, payment.save)
 
 	def test_payment_needs_read_access_to_the_invoice(self):
 		user = ensure_user("books-payment-reader@example.com", "Books User")

@@ -107,6 +107,13 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		self.assertEqual(journal_entry.number_series, series)
 		self.assertEqual(frappe.db.count("Books Journal Entry"), entries)
 
+	def test_number_series_cannot_change_after_insert(self):
+		journal_entry = make_journal_entry(
+			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+		)
+		journal_entry.number_series = make_number_series("JournalEntry")
+		self.assertRaises(frappe.CannotChangeConstantError, journal_entry.save)
+
 	def test_preview_keeps_a_chosen_series(self):
 		journal_entry = frappe.new_doc("Books Journal Entry", number_series="JV-")
 		journal_entry.preview()

@@ -13,27 +13,25 @@
     />
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="px-2 pt-0.5 pb-10">
-      <div v-for="group in groups" :key="group.label">
-        <FrappeSidebarItem
-          :label="group.label"
-          :route="getPath(group)"
-          :active="Boolean(isGroupActive(group) && !group.items)"
-          :icon="group.icon"
-          class="mb-1"
-        />
-
-        <div v-if="group.items && isGroupActive(group)" class="mb-1">
+      <div class="space-y-0.5">
+        <template v-for="group in groups" :key="group.label">
           <FrappeSidebarItem
-            v-for="item in group.items"
-            :key="item.label"
-            :label="item.label"
-            :route="getPath(item)"
-            :active="Boolean(isItemActive(item))"
-            class="mb-1 ps-6"
-          >
-            <template #prefix><span class="w-0" /></template>
-          </FrappeSidebarItem>
-        </div>
+            :label="group.label"
+            :route="getPath(group)"
+            :active="Boolean(isGroupActive(group) && !group.items)"
+            :icon="group.icon"
+          />
+          <template v-if="group.items && isGroupActive(group)">
+            <FrappeSidebarItem
+              v-for="item in group.items"
+              :key="item.label"
+              :label="item.label"
+              :route="getPath(item)"
+              :active="Boolean(isItemActive(item))"
+              class="ps-6"
+            />
+          </template>
+        </template>
       </div>
     </FrappeScrollArea>
 

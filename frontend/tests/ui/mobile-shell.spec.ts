@@ -83,6 +83,31 @@ test('pushed pages show a back button instead of the menu', async ({
   await expect(tabs(page)).toHaveCount(0);
 });
 
+test('a report title switches to the other reports', async ({ page }) => {
+  await tab(page, 'Reports').click();
+  await page
+    .getByRole('button', { name: 'General Ledger', exact: true })
+    .click();
+
+  const sheet = page.getByRole('dialog', { name: 'Reports' });
+  await expect(sheet.getByRole('option')).toHaveText([
+    'General Ledger',
+    'Profit And Loss',
+    'Balance Sheet',
+    'Trial Balance',
+  ]);
+  await expect(
+    sheet.getByRole('option', { name: 'General Ledger' })
+  ).toHaveAttribute('aria-selected', 'true');
+
+  await sheet.getByRole('option', { name: 'Balance Sheet' }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page).toHaveURL(/\/books\/report\/BalanceSheet$/);
+  await expect(
+    page.getByRole('button', { name: 'Balance Sheet', exact: true })
+  ).toBeVisible();
+});
+
 test('back closes the nav sheet before leaving the page', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
   await navSheet(page)

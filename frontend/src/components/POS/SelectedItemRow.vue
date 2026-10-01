@@ -391,7 +391,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    this.permissions = await getPOSPermissions(this.fyo);
+    this.permissions = await getPOSPermissions();
   },
   methods: {
     toggleExpand() {

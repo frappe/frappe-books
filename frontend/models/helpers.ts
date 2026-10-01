@@ -18,7 +18,6 @@ import { ValidationError } from 'fyo/utils/errors';
 import { safeParseFloat } from 'utils/index';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { ItemVisibility } from 'src/components/POS/types';
 import {
   getItemQtyMap,
   getPOSInventory,
@@ -111,21 +110,6 @@ export function getInvoiceActions(
     getLedgerLinkAction(fyo),
     getMakeReturnDocAction(fyo),
   ];
-}
-
-export async function getItemVisibility(fyo: Fyo): Promise<ItemVisibility> {
-  const posProfileName = fyo.singles.POSSettings?.pos_profile;
-
-  if (posProfileName) {
-    const posProfile = await fyo.doc.getDoc(
-      ModelNameEnum.POSProfile,
-      posProfileName
-    );
-    return (posProfile?.itemVisibility ??
-      fyo.singles.POSSettings?.item_visibility) as ItemVisibility;
-  }
-
-  return fyo.singles.POSSettings?.item_visibility as ItemVisibility;
 }
 
 export function getStockTransferActions(

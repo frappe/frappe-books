@@ -1,21 +1,41 @@
-import { Doc } from 'fyo/model/doc';
 import { FiltersMap } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
+import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 
-export class POSProfile extends Doc {
-  posProfile?: string;
-  posCustomer?: string;
-  defaultLocation?: string;
-  posPrintTemplate?: string;
-  inventory?: string;
-  posUI?: 'Classic' | 'Modern';
-  itemVisibility?: string;
-  canChangeRate?: boolean;
-  hideUnavailableItems?: boolean;
-  canEditDiscount?: boolean;
-  ignorePricingRule?: boolean;
+/** Books Pos Profile, served by Frappe: what a POS counter sells and allows. */
+export class POSProfile extends FrappeDoc {
+  static override doctype = 'Books Pos Profile';
+  static override presentation = {
+    label: 'POS Profile',
+    nameField: { label: 'Profile' },
+    quickEditFields: [
+      'name',
+      'pos_customer',
+      'inventory',
+      'pos_print_template',
+      'pos_ui',
+      'item_visibility',
+      'can_change_rate',
+      'hide_unavailable_items',
+      'can_edit_discount',
+      'ignore_pricing_rule',
+    ],
+    fields: withoutCreate(['pos_print_template']),
+  };
 
+  declare pos_customer?: string;
+  declare inventory?: string;
+  declare pos_print_template?: string;
+  declare pos_ui?: 'Classic' | 'Modern';
+  declare item_visibility?: string;
+  declare can_change_rate?: boolean;
+  declare hide_unavailable_items?: boolean;
+  declare can_edit_discount?: boolean;
+  declare ignore_pricing_rule?: boolean;
+
+  // Print formats are still read through the bridge, so this uses its field names.
   static filters: FiltersMap = {
-    posPrintTemplate: () => ({ docType: ModelNameEnum.SalesInvoice }),
+    pos_print_template: () => ({ docType: ModelNameEnum.SalesInvoice }),
   };
 }

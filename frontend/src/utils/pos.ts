@@ -10,8 +10,10 @@ import {
   BridgeItem,
   ItemQtyMap,
   ItemSerialNumbers,
+  ItemVisibility,
   POSItem,
 } from 'src/components/POS/types';
+import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
 import { showToast } from './interactive';
@@ -23,7 +25,6 @@ import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
 import { validateQty } from 'models/helpers';
 import { getAvailableSerialNumbers } from 'models/inventory/helpers';
 
-export type POSPermissionSetting = 'canChangeRate' | 'canEditDiscount';
 export type POSQuantityField = 'quantity' | 'transferQuantity';
 export type POSRowField =
   POSQuantityField | 'rate' | 'itemDiscountAmount' | 'itemDiscountPercent';
@@ -75,13 +76,7 @@ export function getPOSQuantityField(fyo: Fyo): POSQuantityField {
     : 'quantity';
 }
 
-export type POSPermissions = Record<POSPermissionSetting, boolean>;
-
-// POS profiles are still read through the bridge; POS Settings by Frappe fieldnames.
-const posSettingsFields: Record<POSPermissionSetting, string> = {
-  canChangeRate: 'can_change_rate',
-  canEditDiscount: 'can_edit_discount',
-};
+export type POSPermissions = { canChangeRate: boolean; canEditDiscount: boolean };
 
 export function isPOSRowFieldReadOnly(
   row: SalesInvoiceItem,
@@ -106,29 +101,30 @@ export function isPOSRowFieldReadOnly(
   }
 }
 
-export async function getPOSPermissions(fyo: Fyo): Promise<POSPermissions> {
-  const [canChangeRate, canEditDiscount] = await Promise.all([
-    getPOSPermissionSetting(fyo, 'canChangeRate'),
-    getPOSPermissionSetting(fyo, 'canEditDiscount'),
-  ]);
-  return { canChangeRate, canEditDiscount };
+/** What the POS profile in use, else POS Settings, lets the cashier change. */
+export async function getPOSPermissions(): Promise<POSPermissions> {
+  const source = (await getPOSProfile()) ?? fyo.singles.POSSettings;
+  return {
+    canChangeRate: !!source?.can_change_rate,
+    canEditDiscount: !!source?.can_edit_discount,
+  };
 }
 
-export async function getPOSPermissionSetting(
-  fyo: Fyo,
-  fieldname: POSPermissionSetting
-): Promise<boolean> {
-  const profileName = fyo.singles.POSSettings?.pos_profile;
-
-  if (profileName) {
-    return !!(await fyo.getValue(
-      ModelNameEnum.POSProfile,
-      profileName as string,
-      fieldname
-    ));
+/** The POS profile that POS Settings names, if any. */
+export async function getPOSProfile(): Promise<POSProfile | undefined> {
+  const name = fyo.singles.POSSettings?.pos_profile;
+  if (!name) {
+    return undefined;
   }
 
-  return !!fyo.singles.POSSettings?.get(posSettingsFields[fieldname]);
+  return (await getBooksDoc(ModelNameEnum.POSProfile, name)) as POSProfile;
+}
+
+/** The items the POS lists: its profile's choice, else POS Settings'. */
+export async function getItemVisibility(): Promise<ItemVisibility> {
+  const profile = await getPOSProfile();
+  return (profile?.item_visibility ??
+    fyo.singles.POSSettings?.item_visibility) as ItemVisibility;
 }
 
 /** Whether a key press types into a field, which POS shortcuts must leave alone. */

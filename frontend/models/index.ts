@@ -62,7 +62,6 @@ export const models = {
   SalesQuoteItem,
   PrintFormat,
   TaxSummary,
-  POSProfile,
 } as ModelMap;
 
 /**
@@ -93,6 +92,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   NumberSeries,
   POSClosingShift,
   POSOpeningShift,
+  POSProfile,
   POSSettings,
   Party,
   Payment,

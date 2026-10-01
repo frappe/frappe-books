@@ -272,10 +272,12 @@ import {
   getQuickQtyBuffer,
   getPOSQuantityField,
   getOpenPOSShift,
+  getItemVisibility,
+  getPOSProfile,
 } from 'src/utils/pos';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { getBooksDoc } from 'src/frappe/useBooksDoc';
-import { getItemVisibility, getMappedBridgeDoc } from 'models/helpers';
+import { getMappedBridgeDoc } from 'models/helpers';
 import { getItemQtyMap } from 'models/inventory/posStock';
 import {
   POSItem,
@@ -396,7 +398,7 @@ export default defineComponent({
   computed: {
     layout(): POSLayout {
       const posUI =
-        this.posProfile?.posUI || fyo.singles.POSSettings?.pos_ui;
+        this.posProfile?.pos_ui || fyo.singles.POSSettings?.pos_ui;
       return posUI === 'Classic' ? 'Classic' : 'Modern';
     },
     isDiscountingEnabled(): boolean {
@@ -563,16 +565,7 @@ export default defineComponent({
     },
 
     async loadPOSProfile() {
-      const posProfileName = fyo.singles.POSSettings?.pos_profile;
-
-      if (!posProfileName) {
-        return;
-      }
-
-      this.posProfile = (await fyo.doc.getDoc(
-        ModelNameEnum.POSProfile,
-        posProfileName as string
-      )) as POSProfile;
+      this.posProfile = (await getPOSProfile()) ?? null;
     },
 
     async handleItemSearch(searchTerm: string | null, addItem = false) {
@@ -691,7 +684,7 @@ export default defineComponent({
     async setItems() {
       const filters = await this.getItemFilters();
       const hideUnavailable =
-        this.posProfile?.hideUnavailableItems ??
+        this.posProfile?.hide_unavailable_items ??
         this.fyo.singles.POSSettings?.hide_unavailable_items;
       const items = (await fyo.db.getAll(ModelNameEnum.Item, {
         fields: [],
@@ -707,7 +700,7 @@ export default defineComponent({
     },
     async getItemFilters(): Promise<Record<string, boolean | string>> {
       const filters: Record<string, boolean | string> = {};
-      const itemVisibility = await getItemVisibility(this.fyo);
+      const itemVisibility = await getItemVisibility();
       if (itemVisibility === 'Inventory Items') {
         filters.trackItem = true;
       } else if (itemVisibility === 'Non-Inventory Items') {
@@ -743,7 +736,7 @@ export default defineComponent({
     },
     setDefaultCustomer() {
       this.defaultCustomer =
-        this.posProfile?.posCustomer ??
+        this.posProfile?.pos_customer ??
         this.fyo.singles.Defaults?.pos_customer ??
         '';
       this.sinvDoc.party = this.defaultCustomer;

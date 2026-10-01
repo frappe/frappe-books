@@ -13,7 +13,6 @@ import type { PrintSettings } from 'models/baseModels/PrintSettings/PrintSetting
 import type { InventorySettings } from 'models/inventory/InventorySettings';
 import type { Misc } from 'models/baseModels/Misc';
 import type { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
-import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 
 /**
  * The functions below are used for dynamic evaluation
@@ -68,7 +67,6 @@ export interface SinglesMap {
   AccountingSettings?: AccountingSettings;
   InventorySettings?: InventorySettings;
   POSSettings?: POSSettings;
-  POSProfile?: POSProfile;
   PrintSettings?: PrintSettings;
   Defaults?: Defaults;
   Misc?: Misc;

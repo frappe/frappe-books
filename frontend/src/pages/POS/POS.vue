@@ -276,7 +276,7 @@ import {
 } from 'src/utils/posSetup';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { getAllDocuments, getDocuments } from 'src/frappe/api';
-import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { getMappedDoc } from 'models/helpers';
 import { getItemQtyMap } from 'models/inventory/posStock';
 import {
@@ -693,7 +693,7 @@ export default defineComponent({
         .filter(({ availableQty }) => !(hideUnavailable && availableQty <= 0));
     },
     async selectedReturnInvoice(invoiceName: string) {
-      const invoice = await getBooksDoc(ModelNameEnum.SalesInvoice, invoiceName);
+      const invoice = await getFrappeDoc(ModelNameEnum.SalesInvoice, invoiceName);
       this.sinvDoc = (await getMappedDoc(
         invoice,
         ModelNameEnum.SalesInvoice,
@@ -721,7 +721,7 @@ export default defineComponent({
     },
     /** A new POS sale; the server bills it to the POS account. */
     setSinvDoc() {
-      this.sinvDoc = newBooksDoc(ModelNameEnum.SalesInvoice, {
+      this.sinvDoc = newFrappeDoc(ModelNameEnum.SalesInvoice, {
         party: this.sinvDoc.party ?? this.defaultCustomer,
         is_pos: true,
       }) as SalesInvoice;
@@ -749,7 +749,7 @@ export default defineComponent({
     },
     /** Opens a held sale; a submitted one goes on to its payment. */
     async selectedInvoiceName(invoice: { name: string; docstatus: number }) {
-      this.sinvDoc = (await getBooksDoc(
+      this.sinvDoc = (await getFrappeDoc(
         ModelNameEnum.SalesInvoice,
         invoice.name
       )) as SalesInvoice;
@@ -878,7 +878,7 @@ export default defineComponent({
         throw new ValidationError(t`Please enter an amount greater than zero.`);
       }
 
-      const paymentMethod = (await getBooksDoc(
+      const paymentMethod = (await getFrappeDoc(
         ModelNameEnum.PaymentMethod,
         this.paymentMethod
       )) as PaymentMethod;
@@ -995,7 +995,7 @@ export default defineComponent({
       this.isPosShiftOpen = !!shift;
       this.shiftOpenedAt = shift
         ? (
-            (await getBooksDoc(
+            (await getFrappeDoc(
               ModelNameEnum.POSOpeningShift,
               shift
             )) as POSOpeningShift

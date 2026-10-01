@@ -113,7 +113,7 @@ import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getAllDocuments, getValue } from 'src/frappe/api';
 import { getSchema } from 'src/frappe/registry';
-import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { showToast } from 'src/utils/interactive';
 import {
   downloadPDF,
@@ -241,7 +241,7 @@ export default defineComponent({
           label: this.t`New Template`,
           group: this.t`Create`,
           action: async () => {
-            const doc = newBooksDoc(ModelNameEnum.PrintFormat, {
+            const doc = newFrappeDoc(ModelNameEnum.PrintFormat, {
               doc_type: this.doctype,
             });
 
@@ -256,7 +256,7 @@ export default defineComponent({
           label: this.t`Duplicate Template`,
           group: this.t`Create`,
           action: async () => {
-            const doc = newBooksDoc(ModelNameEnum.PrintFormat, {
+            const doc = newFrappeDoc(ModelNameEnum.PrintFormat, {
               doc_type: this.doctype,
               html: this.templateDoc?.html,
               css: this.templateDoc?.css,
@@ -271,7 +271,7 @@ export default defineComponent({
       return actions;
     },
     async initialize() {
-      this.doc = await getBooksDoc(this.schemaName, this.name);
+      this.doc = await getFrappeDoc(this.schemaName, this.name);
       await this.setTemplateList();
       await this.setTemplateFromDefault();
       if (!this.templateDoc && this.templateList.length) {
@@ -314,7 +314,7 @@ export default defineComponent({
       this.templateName = value;
       try {
         const [templateDoc, print] = await Promise.all([
-          getBooksDoc(ModelNameEnum.PrintFormat, value),
+          getFrappeDoc(ModelNameEnum.PrintFormat, value),
           getPrintHTML(this.doctype, this.name, value),
         ]);
         if (request !== this.templateRequest) {

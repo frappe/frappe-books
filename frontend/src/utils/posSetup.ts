@@ -6,7 +6,7 @@ import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift'
 import { ModelNameEnum } from 'models/types';
 import { ItemVisibility } from 'src/components/POS/types';
 import { getAllDocuments } from 'src/frappe/api';
-import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { call } from 'src/web/api';
 import { showToast } from './interactive';
@@ -26,7 +26,7 @@ export async function getPOSProfile(): Promise<POSProfile | undefined> {
     return undefined;
   }
 
-  return (await getBooksDoc(ModelNameEnum.POSProfile, name)) as POSProfile;
+  return (await getFrappeDoc(ModelNameEnum.POSProfile, name)) as POSProfile;
 }
 
 /** What the POS profile in use, else POS Settings, lets the cashier change. */
@@ -54,10 +54,10 @@ export async function getOpenPOSShift(): Promise<string | null> {
 export async function getPOSOpeningShiftDoc(): Promise<POSOpeningShift> {
   const openShift = await getOpenPOSShift();
   if (!openShift) {
-    return newBooksDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
+    return newFrappeDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
   }
 
-  return (await getBooksDoc(
+  return (await getFrappeDoc(
     ModelNameEnum.POSOpeningShift,
     openShift
   )) as POSOpeningShift;

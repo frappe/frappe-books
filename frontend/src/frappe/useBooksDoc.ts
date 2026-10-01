@@ -1,9 +1,7 @@
-import type { DocValueMap } from 'fyo/core/types';
-import type { Doc } from 'fyo/model/doc';
 import { loadDocPermissions } from 'src/utils/doc';
 import type { DocRef } from 'src/utils/types';
 import { ref } from 'vue';
-import { getFrappeDoc, getFrappeDocOrNew, newFrappeDoc } from './documents';
+import { getFrappeDoc, getFrappeDocOrNew } from './documents';
 
 /** A form's document with the user's rights on it. */
 export function useBooksDoc() {
@@ -23,25 +21,4 @@ export function useBooksDoc() {
   }
 
   return { doc, load };
-}
-
-export function newBooksDoc(schemaName: string, values: DocValueMap = {}): Doc {
-  return newFrappeDoc(schemaName, values);
-}
-
-/** An open or saved document, reloaded when asked and unedited. */
-export async function getBooksDoc(
-  schemaName: string,
-  name: string,
-  options: { refresh?: boolean } = {}
-): Promise<Doc> {
-  return await getFrappeDoc(schemaName, name, options);
-}
-
-/** The saved document by `name`, or a new one when there is none. */
-export async function getBooksDocOrNew(
-  schemaName: string,
-  name?: string
-): Promise<Doc> {
-  return await getFrappeDocOrNew(schemaName, name);
 }

@@ -82,7 +82,7 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import PageHeader from 'src/components/PageHeader.vue';
-import { getBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { getGetStartedConfig } from 'src/utils/getStartedConfig';
 import { GetStartedConfigItem } from 'src/utils/types';
@@ -107,7 +107,7 @@ export default defineComponent({
   },
   async activated() {
     // The server checks the record tasks each time the page loads them.
-    await getBooksDoc('GetStarted', 'GetStarted', { refresh: true });
+    await getFrappeDoc('GetStarted', 'GetStarted', { refresh: true });
     if (fyo.can('GetStarted', 'write')) {
       await this.checkIsOnboardingComplete();
     }

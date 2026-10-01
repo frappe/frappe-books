@@ -122,7 +122,7 @@ import {
 import { ModelNameEnum } from 'models/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import { getModel } from 'src/frappe/registry';
-import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
@@ -304,7 +304,7 @@ export default defineComponent({
         return;
       }
 
-      const doc = await getBooksDoc(ModelNameEnum.Account, account.name);
+      const doc = await getFrappeDoc(ModelNameEnum.Account, account.name);
       this.setOpenAccountDocListener(doc, account);
       await openQuickEdit({ doc });
     },
@@ -327,13 +327,13 @@ export default defineComponent({
         return;
       }
 
-      const doc = await getBooksDoc(ModelNameEnum.Account, account.name);
+      const doc = await getFrappeDoc(ModelNameEnum.Account, account.name);
       this.setOpenAccountDocListener(doc, account);
 
       await commonDocDelete(doc, false);
     },
     async addRootGroup() {
-      const doc = newBooksDoc(ModelNameEnum.Account, { is_group: true });
+      const doc = newFrappeDoc(ModelNameEnum.Account, { is_group: true });
       doc.once('afterSync', () => this.fetchAccounts());
       await openQuickEdit({ doc });
     },
@@ -473,7 +473,7 @@ export default defineComponent({
       this.insertingAccount = true;
 
       const accountName = this.newAccountName.trim();
-      const doc = newBooksDoc(ModelNameEnum.Account);
+      const doc = newFrappeDoc(ModelNameEnum.Account);
       try {
         const { name, root_type, account_type } = parentAccount;
         await doc.set({

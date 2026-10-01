@@ -20,7 +20,7 @@ import {
 import type { DocValueMap } from 'fyo/core/types';
 import { getAllDocuments, type DocValues, type Filter } from 'src/frappe/api';
 import { getField, getSchema } from 'src/frappe/registry';
-import { getBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc } from 'src/frappe/documents';
 import { toDocValues } from 'src/frappe/values';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
@@ -449,7 +449,7 @@ export async function getPOSInvoices(
 
 /** An item the server serves, for its stock tracking, batches and units. */
 async function getItemDoc(name: string): Promise<Item> {
-  return (await getBooksDoc(ModelNameEnum.Item, name)) as Item;
+  return (await getFrappeDoc(ModelNameEnum.Item, name)) as Item;
 }
 
 /** The cart rows of `item` that are not free items, from `batch` if given. */

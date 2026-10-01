@@ -54,7 +54,7 @@ import {
   getSingleSchemaNames,
   loadFrappeDocTypes,
 } from 'src/frappe/registry';
-import { getBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
@@ -150,14 +150,14 @@ export default defineComponent({
       // Amounts load in the currency and precision the system settings set.
       const systemSettings = ModelNameEnum.SystemSettings;
       fyo.initializeMoneyMaker(
-        (await getBooksDoc(systemSettings, systemSettings)) as SystemSettings
+        (await getFrappeDoc(systemSettings, systemSettings)) as SystemSettings
       );
       const singles = getSingleSchemaNames().filter(
         (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
       );
       await Promise.all([
         fyo.loadCurrencySymbols(),
-        ...singles.map((name) => getBooksDoc(name, name)),
+        ...singles.map((name) => getFrappeDoc(name, name)),
       ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
       this.darkMode = Boolean(fyo.singles.SystemSettings?.dark_mode);

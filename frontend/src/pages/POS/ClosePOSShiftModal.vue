@@ -137,7 +137,7 @@ import {
   POSClosingShift,
 } from 'models/inventory/Point of Sale/POSClosingShift';
 import { getField } from 'src/frappe/registry';
-import { newBooksDoc } from 'src/frappe/useBooksDoc';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { computed } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
@@ -217,7 +217,7 @@ export default defineComponent({
       const closingCash = (opening.opening_cash ?? []).map(
         ({ count, denomination }) => ({ count, denomination })
       );
-      this.posClosingShiftDoc = newBooksDoc(ModelNameEnum.POSClosingShift, {
+      this.posClosingShiftDoc = newFrappeDoc(ModelNameEnum.POSClosingShift, {
         closing_cash: closingCash,
       }) as POSClosingShift;
       try {

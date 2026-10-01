@@ -220,7 +220,7 @@ import { useDocShortcuts } from 'src/utils/vueUtils';
 import { getDocuments } from 'src/frappe/api';
 import { toFrappeFilters } from 'src/frappe/list';
 import { getSchema } from 'src/frappe/registry';
-import { getBooksDocOrNew } from 'src/frappe/useBooksDoc';
+import { getFrappeDocOrNew } from 'src/frappe/documents';
 import { getMapFromList } from 'utils/index';
 import { computed, defineComponent, inject, ref } from 'vue';
 import SetPrintSize from './SetPrintSize.vue';
@@ -660,7 +660,7 @@ export default defineComponent({
         return;
       }
 
-      this.doc = (await getBooksDocOrNew(
+      this.doc = (await getFrappeDocOrNew(
         ModelNameEnum.PrintFormat,
         this.name,
       )) as PrintFormat;
@@ -685,7 +685,7 @@ export default defineComponent({
         return;
       }
 
-      this.displayDoc = await getBooksDocOrNew(schemaName, value);
+      this.displayDoc = await getFrappeDocOrNew(schemaName, value);
     },
     async selectFile() {
       const { name: fileName, text } = await selectTextFile([

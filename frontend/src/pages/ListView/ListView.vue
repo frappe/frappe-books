@@ -126,7 +126,7 @@ import FilterDropdown from 'src/components/FilterDropdown.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 
 import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/registry';
-import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, getCreateFiltersFromListViewFilters } from 'src/utils/misc';
@@ -284,10 +284,10 @@ export default defineComponent({
         value === ModelNameEnum.SalesInvoice ||
         value === ModelNameEnum.PurchaseInvoice
       ) {
-        const doc = newBooksDoc(value);
+        const doc = newFrappeDoc(value);
 
         for (const itemName of this.selectedItems) {
-          const itemDoc = await getBooksDoc(ModelNameEnum.Item, itemName);
+          const itemDoc = await getFrappeDoc(ModelNameEnum.Item, itemName);
 
           // Invoices are Frappe-backed, so their rows use Frappe fieldnames.
           const itemRow = {

@@ -100,7 +100,7 @@ import Text from 'src/components/Controls/Text.vue';
 import Data from 'src/components/Controls/Data.vue';
 import { ModelNameEnum } from 'models/types';
 import { getDocuments } from 'src/frappe/api';
-import { newBooksDoc } from 'src/frappe/useBooksDoc';
+import { newFrappeDoc } from 'src/frappe/documents';
 
 /** An enquiry's values by Books Item Enquiry fieldname. */
 type Enquiry = Partial<
@@ -157,7 +157,7 @@ export default defineComponent({
 
     async submitForm() {
       try {
-        const itemEnquiryDoc = newBooksDoc(
+        const itemEnquiryDoc = newFrappeDoc(
           ModelNameEnum.ItemEnquiry,
           this.ItemEnquiry
         );

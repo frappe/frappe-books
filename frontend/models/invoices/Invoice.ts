@@ -156,7 +156,6 @@ export abstract class Invoice extends FrappeDoc {
     exchange_rate: () => this.isMultiCurrency,
   };
 
-  // Parties, accounts and price lists are still read through the bridge, so these use its field names.
   static override filters: FiltersMap = {
     party: (doc: Doc) => ({
       role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],

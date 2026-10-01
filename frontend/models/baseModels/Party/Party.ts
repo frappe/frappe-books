@@ -56,7 +56,6 @@ export class Party extends FrappeDoc {
     gstin: () => true,
   };
 
-  // Accounts are still read through the bridge, so these use its field names.
   static filters: FiltersMap = {
     default_account: (doc: Doc) => {
       const role = doc.role as PartyRole;

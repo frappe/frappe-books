@@ -18,7 +18,7 @@ import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getCount, type Filter } from 'src/frappe/api';
 import { getModel } from 'src/frappe/registry';
-import { newBooksDoc } from 'src/frappe/useBooksDoc';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import router from 'src/router';
 import { call } from 'src/web/api';
@@ -323,7 +323,7 @@ function getNewAction(doc: Doc): Action {
     condition: (doc: Doc) => fyo.can(doc.schemaName, 'create'),
     async action() {
       try {
-        const newDoc = newBooksDoc(doc.schemaName);
+        const newDoc = newFrappeDoc(doc.schemaName);
         await openEdit(newDoc);
       } catch (err) {
         await handleErrorWithDialog(err as Error, doc);
@@ -397,7 +397,7 @@ export function getFormRoute(schemaName: string, name: string): string {
 }
 
 export async function openNewDoc(schemaName: string, initData?: RawValueMap) {
-  const doc = newBooksDoc(schemaName, initData);
+  const doc = newFrappeDoc(schemaName, initData);
   await routeTo(getFormRoute(schemaName, doc.name!));
 }
 

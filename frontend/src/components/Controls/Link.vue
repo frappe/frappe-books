@@ -3,7 +3,7 @@ import { t } from 'fyo';
 import { getAccountLabel } from 'src/utils/accountLabel';
 import { getLinkDisplayValue, searchFrappeLink } from 'src/frappe/link';
 import { getModel, getSchema } from 'src/frappe/registry';
-import { newBooksDoc } from 'src/frappe/useBooksDoc';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
@@ -126,7 +126,7 @@ export default {
       const filters = await this.getCreateFilters();
       const { openQuickEdit } = await import('src/utils/ui');
 
-      const doc = newBooksDoc(schemaName, { name, ...filters });
+      const doc = newFrappeDoc(schemaName, { name, ...filters });
       openQuickEdit({ doc });
 
       linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {

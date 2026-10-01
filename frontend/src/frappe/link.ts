@@ -4,7 +4,7 @@ import { getDocuments } from './api';
 import { getDocType } from './doctypes';
 import { toFrappeFilters } from './list';
 import { getSchema } from './registry';
-import { getBooksDoc } from './useBooksDoc';
+import { getFrappeDoc } from './documents';
 
 type SearchResult = { value: string; label?: string };
 type LinkOption = { label: string; value: string; group?: string };
@@ -55,7 +55,7 @@ export async function getLinkDisplayValue(
     return name;
   }
 
-  const doc = name ? await getBooksDoc(schemaName, name) : undefined;
+  const doc = name ? await getFrappeDoc(schemaName, name) : undefined;
   return (doc?.get(field) as string | undefined) ?? '';
 }
 

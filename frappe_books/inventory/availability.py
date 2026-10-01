@@ -20,7 +20,6 @@ def get_stock_location(doctype: str, is_pos: bool = False) -> str | None:
 	return default_location(invoice)
 
 
-@frappe.whitelist()
 def get_stock_quantities(
 	location: str | None = None, items: list[str] | None = None, date: str | None = None
 ) -> list[dict]:

@@ -53,6 +53,10 @@ const records: Record<string, Row[]> = {
     { name: 'Store UPI', type: 'Transfer' },
   ],
   'Books Item': items,
+  'Books Stock Ledger Entry': items.map((item) => ({
+    item: item.name,
+    quantity: item.availableQty,
+  })),
   'Books Party': [
     {
       name: 'Aarav Shah',
@@ -127,8 +131,6 @@ function answer(path: string, body: Row, params: Row): unknown {
     get_open_shift: () => (shift.open ? openingShift.name : null),
     get_stock_location: () => null,
     get_sale_shortfalls: () => [],
-    get_stock_quantities: () =>
-      items.map((item) => ({ item: item.name, quantity: item.availableQty })),
   };
   const answerMethod = methods[method] ?? methods[method.split('.').pop()!];
   if (answerMethod) {

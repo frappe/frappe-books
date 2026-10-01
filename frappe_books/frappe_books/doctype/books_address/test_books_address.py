@@ -2,11 +2,10 @@
 # See license.txt
 
 import frappe
+from frappe.desk.search import search_link
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import ensure_user, unique_name
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
-from frappe_books.ui_bridge.field_properties import get_schema_field_properties
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -25,10 +24,10 @@ class IntegrationTestBooksAddress(IntegrationTestCase):
 		self.assertRaises(frappe.LinkValidationError, _address(country="Narnia").insert)
 
 	def test_books_user_picks_the_country_from_frappe_countries(self):
-		self.assertEqual(get_schema_field_properties("Address")["country"]["options"], "Country")
+		self.assertEqual(frappe.get_meta("Books Address").get_field("country").options, "Country")
 		with self.set_user(ensure_user("books-address-user@example.com", "Books User")):
-			found = BooksDatabaseBridge().call("searchLink", ["Country", "indi", {}, ["name"], 5])
-		self.assertIn({"name": "India"}, found)
+			found = search_link("Country", "indi", page_length=5)
+		self.assertIn("India", [row["value"] for row in found])
 
 
 def _address(country):

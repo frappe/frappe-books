@@ -5,6 +5,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import frappe
+from frappe.model.mapper import make_mapped_doc
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime
 
@@ -24,7 +25,6 @@ from frappe_books.tests.accounting import (
 	stock_quantity,
 	unique_name,
 )
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 READ_ONLY_USER = "books-shipment-preview-reader@example.com"
 
@@ -446,17 +446,17 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		second.insert().submit()
 		self.assertRaisesRegex(frappe.ValidationError, "fully returned", make_return, shipment.name)
 
-	def test_bridge_maps_shipment_returns(self):
+	def test_frappe_mapper_makes_shipment_returns(self):
 		item, _cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=1, rate=10)
 		shipment = self._make_shipment(item, quantity=1, rate=25)
 		shipment.submit()
 		method = "frappe_books.frappe_books.doctype.books_shipment.books_shipment.make_return"
 
-		shipment_return = BooksDatabaseBridge().call("getMapped", [method, shipment.name])
+		shipment_return = make_mapped_doc(method, shipment.name)
 
-		self.assertEqual(shipment_return["returnAgainst"], shipment.name)
-		self.assertEqual(shipment_return["items"][0]["quantity"], -1)
+		self.assertEqual(shipment_return.return_against, shipment.name)
+		self.assertEqual(shipment_return.items[0].quantity, -1)
 
 	def _return_serial(self, item, shipment, serial_number):
 		return self._make_shipment(

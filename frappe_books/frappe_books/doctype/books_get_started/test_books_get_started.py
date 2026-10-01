@@ -5,7 +5,6 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import make_account, make_item, make_party
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestBooksGetStarted(IntegrationTestCase):
@@ -15,19 +14,17 @@ class IntegrationTestBooksGetStarted(IntegrationTestCase):
 		make_item(income.name, expense.name, item_usage="Both")
 		make_party(make_account("Get Started Receivable", account_type="Receivable").name, role="Customer")
 
-		checks = BooksDatabaseBridge().get("GetStarted", "GetStarted")
+		checks = frappe.get_single("Books Get Started").as_dict()
 
-		self.assertTrue(checks["salesItemCreated"])
-		self.assertTrue(checks["purchaseItemCreated"])
-		self.assertTrue(checks["customerCreated"])
-		self.assertEqual(frappe.get_single("Books Get Started").customer_created, 1)
+		self.assertEqual(
+			(checks.sales_item_created, checks.purchase_item_created, checks.customer_created), (1, 1, 1)
+		)
 
 	def test_saving_a_task_keeps_the_record_checks_computed(self):
 		make_party(make_account("Get Started Payable", account_type="Payable").name, role="Supplier")
 
-		checks = BooksDatabaseBridge().update(
-			"GetStarted", {"name": "GetStarted", "printSetup": True, "supplierCreated": False}
-		)
+		checks = frappe.get_single("Books Get Started")
+		checks.update({"print_setup": 1, "supplier_created": 0})
+		checks.save()
 
-		self.assertTrue(checks["printSetup"])
-		self.assertTrue(checks["supplierCreated"])
+		self.assertEqual((checks.print_setup, checks.supplier_created), (1, 1))

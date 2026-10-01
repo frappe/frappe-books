@@ -242,8 +242,11 @@ test('a cart discount edit picks amount or percent discounts', async () => {
     [row.set_item_discount_amount, row.item_discount_percent],
     [false, 10]
   );
-  await pos.setPOSRowValue(row, 'rate', 7);
-  assert.deepEqual([row.set_item_discount_amount, row.rate], [false, 7]);
+  await pos.setPOSRowValue(row, 'transfer_rate', 7);
+  assert.deepEqual(
+    [row.set_item_discount_amount, row.transfer_rate],
+    [false, 7]
+  );
 });
 
 test('adding an item already in the cart checks the POS warehouse for the new total', async () => {

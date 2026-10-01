@@ -11,13 +11,13 @@
       <div class="grid grid-cols-2 gap-3">
         <FormControl
           :class="isDiscountingEnabled ? '' : 'col-span-2'"
-          :df="row.fieldMap.rate"
-          :value="row.rate"
+          :df="row.fieldMap.transfer_rate"
+          :value="row.transfer_rate"
           :show-label="true"
           :border="true"
           :required="false"
-          :read-only="isPOSRowFieldReadOnly(row, 'rate', permissions)"
-          @change="(value: Money) => setValue('rate', value)"
+          :read-only="isPOSRowFieldReadOnly(row, 'transfer_rate', permissions)"
+          @change="(value: Money) => setValue('transfer_rate', value)"
         />
         <FormControl
           v-if="isDiscountingEnabled"

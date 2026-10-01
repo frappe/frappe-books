@@ -31,6 +31,7 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
+from frappe_books.tests.test_units import make_uom
 
 MANAGER = "books-print-manager@example.com"
 USER = "books-print-user@example.com"
@@ -40,14 +41,14 @@ class IntegrationTestPrinting(IntegrationTestCase):
 	def setUp(self):
 		self.receivable = make_account("Print Receivable", account_type="Receivable")
 		self.income = make_account("Print Sales", root_type="Income", account_type="Income Account")
-		expense = make_account("Print Expense", root_type="Expense", account_type="Expense Account")
+		self.expense = make_account("Print Expense", root_type="Expense", account_type="Expense Account")
 		self.cash = make_account("Print Cash", account_type="Cash")
 		frappe.db.set_single_value(
-			"Books Accounting Settings", {"discount_account": expense.name, "enable_partial_payment": 1}
+			"Books Accounting Settings", {"discount_account": self.expense.name, "enable_partial_payment": 1}
 		)
 		self.party = make_party(self.receivable.name)
 		self.tax_account = make_account("Print Tax", root_type="Liability", account_type="Tax")
-		self.item = make_item(self.income.name, expense.name, make_tax(self.tax_account.name).name)
+		self.item = make_item(self.income.name, self.expense.name, make_tax(self.tax_account.name).name)
 
 	def test_built_in_formats_render_invoice_and_payment(self):
 		invoice = self.make_invoice()
@@ -83,6 +84,29 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				self.assertEqual(options["page-height"], height)
 				self.assertEqual(options["margin-left"], "0")
 				self.assertEqual(options["margin-top"], "0")
+
+	def test_invoice_formats_print_the_rate_per_unit_of_the_quantity(self):
+		box = make_uom("Box")
+		item = make_item(
+			self.income.name, self.expense.name, uom_conversions=[{"uom": box, "conversion_factor": 50}]
+		)
+		party = make_party(self.receivable.name, role="Both").name
+		payable = make_account("Print Payable", root_type="Liability", account_type="Payable").name
+		row = {"item": item.name, "transfer_unit": box, "transfer_quantity": 6, "rate": 62}
+		for doctype, print_format, values in (
+			("Books Sales Invoice", "Business - Sales Invoice", {}),
+			("Books Sales Invoice", "Business-POS - Sales Invoice", {}),
+			("Books Sales Quote", "Business - Quote", {}),
+			("Books Purchase Invoice", "Business - Purchase Invoice", {"account": payable}),
+		):
+			with self.subTest(print_format=print_format):
+				doc = frappe.get_doc(
+					{"doctype": doctype, "party": party, "date": now_datetime(), "items": [row], **values}
+				).insert()
+				html = get_print(doctype, doc.name, print_format=print_format)
+
+				self.assertIn(books_format(3100, "Currency", doc.currency), html)
+				self.assertNotIn(books_format(62, "Currency", doc.currency), html)
 
 	def test_built_in_formats_print_their_doctype(self):
 		formats = dict(

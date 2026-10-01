@@ -114,6 +114,7 @@ async function mount() {
           quantity: 2,
           transfer_quantity: 2,
           rate: item.rate,
+          transfer_rate: item.rate,
           amount: item.rate.mul(2),
           item_discounted_total: item.rate.mul(2),
           unit: 'Unit',
@@ -127,6 +128,23 @@ async function mount() {
       ]) {
         state.invoice[field] = fyo.pesa(2250);
       }
+    },
+    /** A row sold in boxes of 50, as the server prices it: 62 a unit, 3,100 a box. */
+    fillBoxRow() {
+      fyo.singles.InventorySettings!.enable_uom_conversions = true;
+      state.invoice.items = [];
+      state.invoice.push('items', {
+        name: 'row-box',
+        item: items[0].name,
+        unit: 'Unit',
+        transfer_unit: 'Box',
+        unit_conversion_factor: 50,
+        transfer_quantity: 6,
+        quantity: 300,
+        rate: fyo.pesa(62),
+        transfer_rate: fyo.pesa(3100),
+        amount: fyo.pesa(18600),
+      });
     },
   };
 }

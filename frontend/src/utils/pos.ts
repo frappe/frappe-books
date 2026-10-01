@@ -29,8 +29,12 @@ import { showToast } from './interactive';
 import type { POSPermissions } from './posSetup';
 
 export type POSQuantityField = 'quantity' | 'transfer_quantity';
+// The rate is per transfer unit, as the quantity is.
 export type POSRowField =
-  POSQuantityField | 'rate' | 'item_discount_amount' | 'item_discount_percent';
+  | POSQuantityField
+  | 'transfer_rate'
+  | 'item_discount_amount'
+  | 'item_discount_percent';
 
 /** The item fields the POS lists, searches and adds items by. */
 export const POS_ITEM_FIELDS = [
@@ -60,7 +64,7 @@ export async function setPOSRowValue(
     return await setPOSRowQuantity(row, field, value as number);
   }
 
-  if (field !== 'rate') {
+  if (field !== 'transfer_rate') {
     await row.set('set_item_discount_amount', field === 'item_discount_amount');
   }
   await row.set(field, value);
@@ -121,7 +125,7 @@ export function isPOSRowFieldReadOnly(
   switch (field) {
     case 'quantity':
       return getPOSQuantityField() === 'transfer_quantity';
-    case 'rate':
+    case 'transfer_rate':
       return !permissions.canChangeRate;
     case 'item_discount_amount':
       return (

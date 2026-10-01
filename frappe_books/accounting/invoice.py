@@ -185,6 +185,16 @@ class PostingInvoiceController(InvoiceController):
 				frappe.delete_doc(doctype, name)
 
 
+class InvoiceItemController(Document):
+	"""A quote or invoice row, priced per stock unit."""
+
+	@property
+	def transfer_rate(self):
+		"""The rate per transfer unit, as a virtual field, to show next to the transfer quantity."""
+		currency = getattr(getattr(self, "parent_doc", None), "currency", None)
+		return rounded(as_decimal(self.rate) * as_decimal(self.unit_conversion_factor or 1), currency)
+
+
 @frappe.whitelist()
 def get_payments_to_cancel(doctype: str, name: str) -> list[dict]:
 	"""Return the submitted payments that cancelling an invoice also cancels.

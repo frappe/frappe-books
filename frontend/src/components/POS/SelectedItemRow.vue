@@ -68,8 +68,8 @@
   <FrappeListCell class="min-h-12"
     ><span
       class="w-full min-w-0 truncate px-2 text-end text-sm tabular-nums text-ink-gray-9"
-      :title="fyo.format(row.rate, 'Currency')"
-      >{{ fyo.format(row.rate, 'Currency') }}</span
+      :title="fyo.format(row.transfer_rate, 'Currency')"
+      >{{ fyo.format(row.transfer_rate, 'Currency') }}</span
     ></FrappeListCell
   >
   <FrappeListCell class="min-h-12"
@@ -155,16 +155,16 @@
       <Currency
         :df="{
           fieldtype: 'Currency',
-          fieldname: 'rate',
+          fieldname: 'transfer_rate',
           label: t`Rate`,
         }"
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.rate"
-        :read-only="isFieldReadOnly('rate')"
-        @click="openKeypad('rate')"
-        @change="(value: Money) => editInline('rate', value)"
+        :value="row.transfer_rate"
+        :read-only="isFieldReadOnly('transfer_rate')"
+        @click="openKeypad('transfer_rate')"
+        @change="(value: Money) => editInline('transfer_rate', value)"
       />
     </div>
 

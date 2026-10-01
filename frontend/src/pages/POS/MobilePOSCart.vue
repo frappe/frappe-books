@@ -147,7 +147,7 @@ function getQuantity(row: SalesInvoiceItem): number {
 }
 
 function getRowMeta(row: SalesInvoiceItem): string {
-  const rate = fyo.format(row.rate ?? 0, 'Currency');
+  const rate = fyo.format(row.transfer_rate ?? 0, 'Currency');
   return [rate, row.tax, row.pricing_rule].filter(Boolean).join(' · ');
 }
 

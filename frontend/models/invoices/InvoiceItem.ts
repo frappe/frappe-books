@@ -49,7 +49,7 @@ export class InvoiceItem extends FrappeDoc {
       'description',
       'hsn_code',
       'tax',
-      'rate',
+      'transfer_rate',
       'transfer_quantity',
       'transfer_unit',
       'batch',
@@ -64,8 +64,12 @@ export class InvoiceItem extends FrappeDoc {
       'item_discounted_total',
       'item_taxed_total',
     ],
-    tableFields: ['item', 'tax', 'qty', 'rate', 'amount'],
-    fields: withoutCreate(['transfer_unit', 'unit', 'account']),
+    tableFields: ['item', 'tax', 'qty', 'transfer_rate', 'amount'],
+    fields: {
+      ...withoutCreate(['transfer_unit', 'unit', 'account']),
+      // The server computes it from the rate; an edit here sets the rate instead.
+      transfer_rate: { readOnly: false },
+    },
     // Without `qty`: the server sets it from the quantity.
     fileFields: [
       'item',
@@ -104,6 +108,7 @@ export class InvoiceItem extends FrappeDoc {
   parentdoc?: Invoice;
   item?: string;
   rate?: Money;
+  transfer_rate?: Money;
   amount?: Money;
   tax?: string;
   qty?: number;
@@ -138,7 +143,17 @@ export class InvoiceItem extends FrappeDoc {
 
   override async change(arg: ChangeArg) {
     await super.change(arg);
+    if (arg.changed === 'transfer_rate') {
+      await this.set('rate', this.getStockUnitRate());
+    }
+
     this.followEdit(arg.changed);
+  }
+
+  /** The rate per stock unit of the rate per transfer unit, which the table shows. */
+  getStockUnitRate(): Money {
+    const transferRate = this.transfer_rate ?? this.fyo.pesa(0);
+    return transferRate.div(this.unit_conversion_factor || 1);
   }
 
   /** What an edit asks of the server besides its refills: a price of its own or the server's. */
@@ -172,8 +187,10 @@ export class InvoiceItem extends FrappeDoc {
     }
   }
 
-  // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
+  // Fields of features turned off in the settings, and the rate per stock unit,
+  // which the row shows per transfer unit. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
+    rate: () => true,
     item_discounted_total: () => !this.enableDiscounting,
     set_item_discount_amount: () => !this.enableDiscounting,
     item_discount_amount: () => !this.enableDiscounting,

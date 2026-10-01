@@ -60,7 +60,7 @@ export class JournalEntry extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    number_series: () => ({ reference_type: 'JournalEntry' }),
+    number_series: () => [['reference_type', '=', 'JournalEntry']],
   };
 
   static getActions(fyo: Fyo): Action[] {

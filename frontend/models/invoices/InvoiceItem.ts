@@ -20,7 +20,6 @@ import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
-import type { QueryFilter } from 'utils/db/types';
 import type { Invoice } from './Invoice';
 import { setCurrencies } from './Invoice';
 
@@ -254,13 +253,13 @@ export class InvoiceItem extends FrappeDoc {
 
   // Items, batches and units are Frappe-backed and filter by Frappe fieldnames.
   static override filters: FiltersMap = {
-    item: (doc: Doc): QueryFilter => ({
-      item_usage: ['not in', [doc.isSales ? 'Purchases' : 'Sales']],
-    }),
-    batch: async (doc: Doc): Promise<QueryFilter> => {
+    item: (doc: Doc) => [
+      ['item_usage', 'not in', [doc.isSales ? 'Purchases' : 'Sales']],
+    ],
+    batch: async (doc: Doc) => {
       const item = doc.item as string;
       if (!doc.isSales || doc.isReturn) {
-        return { item };
+        return [['item', '=', item]];
       }
 
       const location = await (doc as InvoiceItem).getStockLocation();
@@ -268,13 +267,15 @@ export class InvoiceItem extends FrappeDoc {
       const batches = rows
         .filter((row) => row.batch && row.quantity > 0)
         .map((row) => row.batch as string);
-      return { name: ['in', batches] };
+      return [['name', 'in', batches]];
     },
     transfer_unit: getTransferUnitFilter,
   };
 
   static override createFilters: FiltersMap = {
-    item: (doc: Doc) => ({ item_usage: doc.isSales ? 'Sales' : 'Purchases' }),
+    item: (doc: Doc) => [
+      ['item_usage', '=', doc.isSales ? 'Sales' : 'Purchases'],
+    ],
   };
 }
 

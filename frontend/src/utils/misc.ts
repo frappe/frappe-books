@@ -1,12 +1,13 @@
-import { DocValue, RawValueMap } from 'fyo/core/types';
+import { DocValue, DocValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
 import type { Filter } from 'src/frappe/api';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { getField } from 'src/frappe/registry';
+import { toDocValue } from 'src/frappe/values';
 import { fyo } from 'src/initFyo';
-import { QueryFilter } from 'utils/db/types';
+import type { RawValue } from 'schemas/types';
 
 /** A new wizard, in the browser's time zone until Frappe's setup sets the system one. */
 export function getSetupWizardDoc() {
@@ -52,41 +53,21 @@ export const docsPathMap: Record<string, string | undefined> = {
   ChartOfAccounts: 'books/chart-of-accounts',
 };
 
-export function getCreateFiltersFromListViewFilters(filters: QueryFilter) {
-  const createFilters: Record<string, string | number | boolean | null> = {};
-
-  for (const key in filters) {
-    let value: (typeof filters)[string] | undefined | number = filters[key];
-
-    if (Array.isArray(value) && value[0] === 'in' && Array.isArray(value[1])) {
-      value = value[1].filter((v) => v !== 'Both')[0];
-    }
-
-    if (value === undefined || Array.isArray(value)) {
-      continue;
-    }
-
-    createFilters[key] = value;
-  }
-
-  return createFilters;
-}
-
 /**
- * Values a new document takes from its list's filters, as Frappe's list does:
- * each `=` filter, or an `in` filter's first value but Both, on a field users
- * enter.
+ * Values a new document takes from the filters of its list or link, as
+ * Frappe's list does: each `=` filter, or an `in` filter's first value but
+ * Both, on a field users enter.
  */
 export function getNewDocValues(
   schemaName: string,
   filters: Filter[]
-): RawValueMap {
-  const values: RawValueMap = {};
+): DocValueMap {
+  const values: DocValueMap = {};
   for (const filter of filters) {
     const field = getField(schemaName, filter[0]);
     const value = getFilterChoice(filter);
     if (field && !field.meta && !field.readOnly && value !== undefined) {
-      values[field.fieldname] = value as RawValueMap[string];
+      values[field.fieldname] = toDocValue(value as RawValue, field, fyo);
     }
   }
 

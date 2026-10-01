@@ -106,15 +106,15 @@ test('print template pickers offer the Print Formats of the doctype they print',
   const linkFilters = (fieldname) =>
     getSchema('Defaults').fields.find((f) => f.fieldname === fieldname)
       .linkFilters;
-  assert.deepEqual(linkFilters('payment_print_template'), {
-    doc_type: ['=', 'Books Payment'],
-  });
-  assert.deepEqual(linkFilters('pos_print_template'), {
-    doc_type: ['=', 'Books Sales Invoice'],
-  });
-  assert.deepEqual(frappeModels.POSProfile.filters.pos_print_template(), {
-    doc_type: 'Books Sales Invoice',
-  });
+  const sales = [['doc_type', '=', 'Books Sales Invoice']];
+  assert.deepEqual(linkFilters('payment_print_template'), [
+    ['doc_type', '=', 'Books Payment'],
+  ]);
+  assert.deepEqual(linkFilters('pos_print_template'), sales);
+  assert.deepEqual(
+    frappeModels.POSProfile.filters.pos_print_template(),
+    sales
+  );
 });
 
 test("a settings save first sets the doctypes' print formats through their method", async () => {

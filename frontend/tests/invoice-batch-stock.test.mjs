@@ -52,7 +52,7 @@ function getStockLocations() {
 test('sales batch choices are the batches in stock where the invoice ships from', async () => {
   const row = makeRow();
   const filters = await row.constructor.filters.batch(row);
-  assert.deepEqual(filters, { name: ['in', ['B1']] });
+  assert.deepEqual(filters, [['name', 'in', ['B1']]]);
   assert.deepEqual(getStockLocations(), [['Stores', ['Pen']]]);
 });
 
@@ -71,7 +71,9 @@ test('a POS row checks its batch at the POS location', async () => {
 
 test('returns may use any batch of the item and skip the stock check', async () => {
   const row = makeRow({ return_against: 'SINV-1' });
-  assert.deepEqual(await row.constructor.filters.batch(row), { item: 'Pen' });
+  assert.deepEqual(await row.constructor.filters.batch(row), [
+    ['item', '=', 'Pen'],
+  ]);
   await row.validateBatchQuantity('B1', 30);
   assert.deepEqual(requests, []);
 });

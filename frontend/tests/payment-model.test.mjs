@@ -154,19 +154,23 @@ test('payment links filter as they did', async () => {
     party: 'Supplier',
   });
   const { filters } = Payment;
-  assert.deepEqual(filters.party(pay), { role: ['in', ['Supplier', 'Both']] });
-  assert.deepEqual(filters.account(pay), {
-    account_type: 'Payable',
-    is_group: false,
-  });
-  assert.deepEqual(filters.number_series(pay), { reference_type: 'Payment' });
+  assert.deepEqual(filters.party(pay), [
+    ['role', 'in', ['Supplier', 'Both']],
+  ]);
+  assert.deepEqual(filters.account(pay), [
+    ['account_type', '=', 'Payable'],
+    ['is_group', '=', 0],
+  ]);
+  assert.deepEqual(filters.number_series(pay), [
+    ['reference_type', '=', 'Payment'],
+  ]);
 
   const requests = stubFrappe(() => ({ data: [{ type: 'Cash' }] }));
   await pay.set('payment_method', 'Cash');
-  assert.deepEqual(await filters.payment_account(pay), {
-    account_type: 'Cash',
-    is_group: false,
-  });
+  assert.deepEqual(await filters.payment_account(pay), [
+    ['account_type', '=', 'Cash'],
+    ['is_group', '=', 0],
+  ]);
   const [read] = requests.filter(({ path }) => path.includes('Payment Method'));
   assert.equal(read.path, '/api/v2/document/Books Payment Method');
   assert.deepEqual(read.params, {
@@ -180,8 +184,10 @@ test('payment links filter as they did', async () => {
   const referenceFilters = PaymentFor.filters.reference_name(
     pay.payment_references[0]
   );
-  assert.equal(referenceFilters.party, 'Supplier');
-  assert.equal(referenceFilters.submitted, true);
+  assert.deepEqual(referenceFilters.slice(1), [
+    ['docstatus', '=', 1],
+    ['party', '=', 'Supplier'],
+  ]);
   clearTimeout(pay._previewTimer);
 });
 

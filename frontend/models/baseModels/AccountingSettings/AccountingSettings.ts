@@ -47,9 +47,18 @@ export class AccountingSettings extends FrappeDoc {
   declare enable_partial_payment?: boolean;
 
   static filters: FiltersMap = {
-    write_off_account: () => ({ is_group: false, root_type: 'Expense' }),
-    round_off_account: () => ({ is_group: false, root_type: 'Expense' }),
-    discount_account: () => ({ is_group: false, root_type: 'Income' }),
+    write_off_account: () => [
+      ['is_group', '=', 0],
+      ['root_type', '=', 'Expense'],
+    ],
+    round_off_account: () => [
+      ['is_group', '=', 0],
+      ['root_type', '=', 'Expense'],
+    ],
+    discount_account: () => [
+      ['is_group', '=', 0],
+      ['root_type', '=', 'Income'],
+    ],
   };
 
   // The server checks it too; mirrored to show the message at the field.

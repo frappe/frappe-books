@@ -94,12 +94,12 @@ test('a row without amounts takes what balances the entry, as Books did', async 
 
 test('journal entry links filter accounts and series as before', async () => {
   const JournalEntryAccount = getModel('JournalEntryAccount');
-  assert.deepEqual(await JournalEntryAccount.filters.account(), {
-    is_group: false,
-  });
-  assert.deepEqual(await JournalEntry.filters.number_series(), {
-    reference_type: 'JournalEntry',
-  });
+  assert.deepEqual(await JournalEntryAccount.filters.account(), [
+    ['is_group', '=', 0],
+  ]);
+  assert.deepEqual(await JournalEntry.filters.number_series(), [
+    ['reference_type', '=', 'JournalEntry'],
+  ]);
 });
 
 test('the journal entry list shows and filters what it did', () => {

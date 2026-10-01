@@ -1,7 +1,5 @@
 import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
-import type { QueryFilter } from 'utils/db/types';
-import { toDocStatusFilter } from 'src/utils/filterFields';
 import {
   getCount,
   getDocuments,
@@ -79,38 +77,4 @@ export function getOrderBy({ meta, schema }: FrappeDocType): string {
       fieldname && fieldname !== 'creation' && fieldnames.includes(fieldname)
   );
   return sortField ? `${sortField} desc, creation desc` : 'creation desc';
-}
-
-/** Frappe filters for a Books list filter whose fields are Frappe fieldnames. */
-export function toFrappeFilters(query: QueryFilter): Filter[] {
-  const filters: Filter[] = [];
-  for (const [fieldname, value] of Object.entries(query)) {
-    const conditions = Array.isArray(value) ? value : ['=', value];
-    for (let index = 0; index < conditions.length; index += 2) {
-      const operator = String(conditions[index]);
-      filters.push(toFrappeFilter(fieldname, operator, conditions[index + 1]));
-    }
-  }
-
-  return filters;
-}
-
-function toFrappeFilter(
-  fieldname: string,
-  operator: string,
-  value: unknown
-): Filter {
-  if (operator === 'is null' || operator === 'is not null') {
-    return [fieldname, 'is', operator === 'is null' ? 'not set' : 'set'];
-  }
-
-  if (fieldname === 'submitted' || fieldname === 'cancelled') {
-    return toDocStatusFilter(fieldname, operator, Number(value));
-  }
-
-  if (operator === 'includes') {
-    return [fieldname, 'like', `%${String(value)}%`];
-  }
-
-  return [fieldname, operator, typeof value === 'boolean' ? +value : value];
 }

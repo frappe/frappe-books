@@ -58,6 +58,6 @@ export class POSProfile extends FrappeDoc {
   declare ignore_pricing_rule?: boolean;
 
   static filters: FiltersMap = {
-    pos_print_template: () => ({ doc_type: 'Books Sales Invoice' }),
+    pos_print_template: () => [['doc_type', '=', 'Books Sales Invoice']],
   };
 }

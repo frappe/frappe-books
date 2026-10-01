@@ -3,7 +3,7 @@ import type { Fyo } from 'fyo';
 import type { DocValue } from 'fyo/core/types';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import type { FieldType, Schema, SelectOption } from 'schemas/types';
-import type { QueryFilter } from 'utils/db/types';
+import type { Filter } from 'src/frappe/api';
 import type { RouteLocationRaw, Router } from 'vue-router';
 import type { Doc } from './doc';
 import type { AccountingSettings } from 'models/baseModels/AccountingSettings/AccountingSettings';
@@ -56,7 +56,7 @@ export interface SinglesMap {
 
 // Static Config properties
 
-export type FilterFunction = (doc: Doc) => QueryFilter | Promise<QueryFilter>;
+export type FilterFunction = (doc: Doc) => Filter[] | Promise<Filter[]>;
 export type FiltersMap = Record<string, FilterFunction>;
 
 export type EmptyMessageFunction = (doc: Doc) => string;

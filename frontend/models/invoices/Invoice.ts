@@ -157,24 +157,22 @@ export abstract class Invoice extends FrappeDoc {
   };
 
   static override filters: FiltersMap = {
-    party: (doc: Doc) => ({
-      role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
-    }),
-    account: (doc: Doc) => ({
-      is_group: false,
-      account_type: doc.isSales ? 'Receivable' : 'Payable',
-    }),
-    number_series: (doc: Doc) => ({ reference_type: doc.schemaName }),
-    price_list: (doc: Doc) => ({
-      is_enabled: true,
-      ...(doc.isSales ? { is_sales: true } : { is_purchase: true }),
-    }),
+    party: (doc: Doc) => [
+      ['role', 'in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
+    ],
+    account: (doc: Doc) => [
+      ['is_group', '=', 0],
+      ['account_type', '=', doc.isSales ? 'Receivable' : 'Payable'],
+    ],
+    number_series: (doc: Doc) => [['reference_type', '=', doc.schemaName]],
+    price_list: (doc: Doc) => [
+      ['is_enabled', '=', 1],
+      [doc.isSales ? 'is_sales' : 'is_purchase', '=', 1],
+    ],
   };
 
   static override createFilters: FiltersMap = {
-    party: (doc: Doc) => ({
-      role: doc.isSales ? 'Customer' : 'Supplier',
-    }),
+    party: (doc: Doc) => [['role', '=', doc.isSales ? 'Customer' : 'Supplier']],
   };
 
   override async change(arg: ChangeArg) {

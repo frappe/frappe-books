@@ -58,31 +58,31 @@ export class Defaults extends FrappeDoc {
 
   // The payment accounts and print templates filter by their link_filters.
   static commonFilters: FiltersMap = {
-    sales_quote_number_series: () => ({
-      reference_type: ModelNameEnum.SalesQuote,
-    }),
-    sales_invoice_number_series: () => ({
-      reference_type: ModelNameEnum.SalesInvoice,
-    }),
-    purchase_invoice_number_series: () => ({
-      reference_type: ModelNameEnum.PurchaseInvoice,
-    }),
-    journal_entry_number_series: () => ({
-      reference_type: ModelNameEnum.JournalEntry,
-    }),
-    payment_number_series: () => ({
-      reference_type: ModelNameEnum.Payment,
-    }),
-    stock_movement_number_series: () => ({
-      reference_type: ModelNameEnum.StockMovement,
-    }),
-    shipment_number_series: () => ({
-      reference_type: ModelNameEnum.Shipment,
-    }),
-    purchase_receipt_number_series: () => ({
-      reference_type: ModelNameEnum.PurchaseReceipt,
-    }),
-    pos_customer: () => ({ role: PartyRoleEnum.Customer }),
+    sales_quote_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.SalesQuote],
+    ],
+    sales_invoice_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.SalesInvoice],
+    ],
+    purchase_invoice_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.PurchaseInvoice],
+    ],
+    journal_entry_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.JournalEntry],
+    ],
+    payment_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.Payment],
+    ],
+    stock_movement_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.StockMovement],
+    ],
+    shipment_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.Shipment],
+    ],
+    purchase_receipt_number_series: () => [
+      ['reference_type', '=', ModelNameEnum.PurchaseReceipt],
+    ],
+    pos_customer: () => [['role', '=', PartyRoleEnum.Customer]],
   };
 
   static filters: FiltersMap = this.commonFilters;

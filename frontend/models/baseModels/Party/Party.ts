@@ -57,16 +57,16 @@ export class Party extends FrappeDoc {
     default_account: (doc: Doc) => {
       const role = doc.role as PartyRole;
       if (role === 'Both') {
-        return {
-          is_group: false,
-          account_type: ['in', ['Payable', 'Receivable']],
-        };
+        return [
+          ['is_group', '=', 0],
+          ['account_type', 'in', ['Payable', 'Receivable']],
+        ];
       }
 
-      return {
-        is_group: false,
-        account_type: role === 'Customer' ? 'Receivable' : 'Payable',
-      };
+      return [
+        ['is_group', '=', 0],
+        ['account_type', '=', role === 'Customer' ? 'Receivable' : 'Payable'],
+      ];
     },
   };
 

@@ -44,19 +44,18 @@ export abstract class StockTransfer extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    party: (doc) => ({
-      role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
-    }),
-    number_series: (doc) => ({ reference_type: doc.schemaName }),
-    back_reference: () => ({
-      stock_not_transferred: ['!=', 0],
-      submitted: true,
-      cancelled: false,
-    }),
+    party: (doc) => [
+      ['role', 'in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
+    ],
+    number_series: (doc) => [['reference_type', '=', doc.schemaName]],
+    back_reference: () => [
+      ['stock_not_transferred', '!=', 0],
+      ['docstatus', '=', 1],
+    ],
   };
 
   static createFilters: FiltersMap = {
-    party: (doc) => ({ role: doc.isSales ? 'Customer' : 'Supplier' }),
+    party: (doc) => [['role', '=', doc.isSales ? 'Customer' : 'Supplier']],
   };
 
   async addItem(name: string, quantity?: number) {

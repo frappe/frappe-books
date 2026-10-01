@@ -6,8 +6,8 @@ import {
   TreeViewSettings,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
+import type { Filter } from 'src/frappe/api';
 import { FrappeDoc } from 'src/frappe/document';
-import { QueryFilter } from 'utils/db/types';
 
 /**
  * Books Account, served by Frappe. The DocType owns its fields and rules;
@@ -56,12 +56,12 @@ export class Account extends FrappeDoc {
 
   static filters: FiltersMap = {
     parent_books_account: (doc: Doc) => {
-      const filter: QueryFilter = { is_group: true };
+      const filters: Filter[] = [['is_group', '=', 1]];
       if (doc?.root_type) {
-        filter.root_type = doc.root_type as string;
+        filters.push(['root_type', '=', doc.root_type]);
       }
 
-      return filter;
+      return filters;
     },
   };
 }

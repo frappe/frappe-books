@@ -358,10 +358,10 @@ test('a party makes and lists the invoices its role allows', () => {
   assert.equal(labels('Both').length, 4);
   assert.deepEqual(
     getModel('Party').filters.default_account({ role: 'Both' }),
-    {
-      is_group: false,
-      account_type: ['in', ['Payable', 'Receivable']],
-    }
+    [
+      ['is_group', '=', 0],
+      ['account_type', 'in', ['Payable', 'Receivable']],
+    ]
   );
 });
 
@@ -538,22 +538,22 @@ test('pricing rule limits show the message /books showed at each field', async (
 });
 
 test('coupon and invoice links filter pricing rules and price lists by Frappe fieldnames', () => {
-  assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), {
-    is_coupon_code_based: true,
-  });
+  assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), [
+    ['is_coupon_code_based', '=', 1],
+  ]);
   assert.deepEqual(
     frappeModels.SalesInvoice.filters.price_list({ isSales: true }),
-    {
-      is_enabled: true,
-      is_sales: true,
-    }
+    [
+      ['is_enabled', '=', 1],
+      ['is_sales', '=', 1],
+    ]
   );
   assert.deepEqual(
     frappeModels.PurchaseInvoice.filters.price_list({ isSales: false }),
-    {
-      is_enabled: true,
-      is_purchase: true,
-    }
+    [
+      ['is_enabled', '=', 1],
+      ['is_purchase', '=', 1],
+    ]
   );
 });
 

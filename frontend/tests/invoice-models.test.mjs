@@ -397,30 +397,32 @@ test('links filter by the doctypes they point to', async () => {
   const purchase = newInvoice('PurchaseInvoice');
   const { filters, createFilters } = frappeModels.SalesInvoice;
 
-  assert.deepEqual(filters.party(purchase), {
-    role: ['in', ['Supplier', 'Both']],
-  });
-  assert.deepEqual(filters.account(sale), {
-    is_group: false,
-    account_type: 'Receivable',
-  });
-  assert.deepEqual(filters.number_series(sale), {
-    reference_type: 'SalesInvoice',
-  });
-  assert.deepEqual(filters.price_list(purchase), {
-    is_enabled: true,
-    is_purchase: true,
-  });
-  assert.deepEqual(createFilters.party(sale), { role: 'Customer' });
+  assert.deepEqual(filters.party(purchase), [
+    ['role', 'in', ['Supplier', 'Both']],
+  ]);
+  assert.deepEqual(filters.account(sale), [
+    ['is_group', '=', 0],
+    ['account_type', '=', 'Receivable'],
+  ]);
+  assert.deepEqual(filters.number_series(sale), [
+    ['reference_type', '=', 'SalesInvoice'],
+  ]);
+  assert.deepEqual(filters.price_list(purchase), [
+    ['is_enabled', '=', 1],
+    ['is_purchase', '=', 1],
+  ]);
+  assert.deepEqual(createFilters.party(sale), [['role', '=', 'Customer']]);
   assert.deepEqual(frappeModels.SalesQuote.filters.party, undefined);
 
   sale.push('items', { item: 'Pen' });
   const row = sale.items[0];
   const RowModel = row.constructor;
-  assert.deepEqual(await RowModel.filters.item(row), {
-    item_usage: ['not in', ['Purchases']],
-  });
-  assert.deepEqual(RowModel.createFilters.item(row), { item_usage: 'Sales' });
+  assert.deepEqual(await RowModel.filters.item(row), [
+    ['item_usage', 'not in', ['Purchases']],
+  ]);
+  assert.deepEqual(RowModel.createFilters.item(row), [
+    ['item_usage', '=', 'Sales'],
+  ]);
 });
 
 test("a row's transfer unit is its item's stock unit or one of its conversions", async () => {

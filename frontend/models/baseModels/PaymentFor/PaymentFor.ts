@@ -1,4 +1,5 @@
 import { FiltersMap } from 'fyo/model/types';
+import type { Filter } from 'src/frappe/api';
 import { FrappeDoc } from 'src/frappe/document';
 
 /** A Books Payment For row: an invoice the payment settles. */
@@ -22,13 +23,12 @@ export class PaymentFor extends FrappeDoc {
     reference_name: (doc) => {
       const precision = doc.fyo.singles.SystemSettings?.internal_precision;
       const zero = '0.' + '0'.repeat(precision ?? 11);
-      const filters = {
-        outstanding_amount: ['!=', zero],
-        submitted: true,
-        cancelled: false,
-      };
+      const filters: Filter[] = [
+        ['outstanding_amount', '!=', zero],
+        ['docstatus', '=', 1],
+      ];
       const party = doc.parentdoc?.party as string | undefined;
-      return party ? { ...filters, party } : filters;
+      return party ? [...filters, ['party', '=', party]] : filters;
     },
   };
 }

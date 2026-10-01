@@ -19,7 +19,7 @@ await build({
       export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
-      export { getFrappeListPage, getFrappeRows, toFrappeFilters } from './src/frappe/list';
+      export { getFrappeListPage, getFrappeRows } from './src/frappe/list';
       export { getLinkDisplayValue, searchFrappeLink } from './src/frappe/link';
       export { loadListData, onListChange } from './src/utils/listData';
       export { getModel, getQuickViewFields, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
@@ -120,7 +120,6 @@ export const {
   evaluateCondition,
   getFrappeListPage,
   getFrappeRows,
-  toFrappeFilters,
   searchFrappeLink,
   getLinkDisplayValue,
   loadListData,

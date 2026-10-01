@@ -13,47 +13,22 @@ import {
   onListChange,
   searchFrappeLink,
   stubFrappe,
-  toFrappeFilters,
 } from './helpers/frappe.mjs';
 
 await loadTestDocTypes();
 
-test('Books list filters become Frappe filters', () => {
-  assert.deepEqual(
-    toFrappeFilters({
-      item_type: 'Product',
-      track_item: true,
-      rate: ['>=', 5, '<=', 10],
-      item_usage: ['not in', ['Sales']],
-      description: ['includes', 'blue'],
-      barcode: ['is null', null],
-      hsn_code: ['is not null', null],
-    }),
-    [
-      ['item_type', '=', 'Product'],
-      ['track_item', '=', 1],
-      ['rate', '>=', 5],
-      ['rate', '<=', 10],
-      ['item_usage', 'not in', ['Sales']],
-      ['description', 'like', '%blue%'],
-      ['barcode', 'is', 'not set'],
-      ['hsn_code', 'is', 'set'],
-    ]
-  );
-});
-
 test('Submitted and Cancelled filters become docstatus filters', () => {
-  assert.deepEqual(toFrappeFilters({ submitted: true, cancelled: ['=', 0] }), [
+  const filters = new ListFilters('Order');
+  filters.filterSet.add('submitted', '=', true);
+  filters.filterSet.add('cancelled', '=', 0);
+  filters.filterSet.add('submitted', '!=', 1);
+  filters.filterSet.add('cancelled', '=', '1');
+  assert.deepEqual(filters.apply(), [
     ['docstatus', 'in', [1, 2]],
     ['docstatus', 'not in', [2]],
+    ['docstatus', 'not in', [1, 2]],
+    ['docstatus', 'in', [2]],
   ]);
-  assert.deepEqual(
-    toFrappeFilters({ submitted: ['!=', 1], cancelled: ['=', '1'] }),
-    [
-      ['docstatus', 'not in', [1, 2]],
-      ['docstatus', 'in', [2]],
-    ]
-  );
 });
 
 test('submittable lists offer the Submitted and Cancelled filters', () => {
@@ -200,7 +175,10 @@ test("link options come from Frappe's link search, letters matched in order", as
   const options = await searchFrappeLink(
     'Item',
     ' rce ',
-    { item_usage: ['not in', ['Purchases']], track_item: true },
+    [
+      ['item_usage', 'not in', ['Purchases']],
+      ['track_item', '=', 1],
+    ],
     50
   );
 
@@ -251,18 +229,4 @@ test('a submittable list filters Submitted and Cancelled by docstatus', () => {
   );
   assert.deepEqual(fieldnames.slice(-2), ['submitted', 'cancelled']);
   assert.ok(!fieldnames.includes('docstatus'));
-
-  assert.deepEqual(
-    toFrappeFilters({
-      submitted: true,
-      cancelled: ['!=', 1],
-    }),
-    [
-      ['docstatus', 'in', [1, 2]],
-      ['docstatus', 'not in', [2]],
-    ]
-  );
-  assert.deepEqual(toFrappeFilters({ submitted: ['=', 0] }), [
-    ['docstatus', 'not in', [1, 2]],
-  ]);
 });

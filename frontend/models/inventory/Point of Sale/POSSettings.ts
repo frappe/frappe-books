@@ -27,19 +27,19 @@ export class POSSettings extends FrappeDoc {
   declare ignore_pricing_rule?: boolean;
 
   static filters: FiltersMap = {
-    cash_account: () => ({
-      root_type: AccountRootTypeEnum.Asset,
-      account_type: AccountTypeEnum.Cash,
-      is_group: false,
-    }),
-    write_off_account: () => ({
-      is_group: false,
-      root_type: AccountRootTypeEnum.Expense,
-    }),
-    default_account: () => ({
-      is_group: false,
-      account_type: AccountTypeEnum.Receivable,
-    }),
+    cash_account: () => [
+      ['root_type', '=', AccountRootTypeEnum.Asset],
+      ['account_type', '=', AccountTypeEnum.Cash],
+      ['is_group', '=', 0],
+    ],
+    write_off_account: () => [
+      ['is_group', '=', 0],
+      ['root_type', '=', AccountRootTypeEnum.Expense],
+    ],
+    default_account: () => [
+      ['is_group', '=', 0],
+      ['account_type', '=', AccountTypeEnum.Receivable],
+    ],
   };
 
   // Fields of features turned off in other settings. The DocType's depends_on hides the rest.

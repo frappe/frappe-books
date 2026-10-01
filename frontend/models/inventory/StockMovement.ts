@@ -49,7 +49,7 @@ export class StockMovement extends FrappeDoc {
   static override rowModels = { items: StockMovementItem };
 
   static filters: FiltersMap = {
-    number_series: () => ({ reference_type: ModelNameEnum.StockMovement }),
+    number_series: () => [['reference_type', '=', ModelNameEnum.StockMovement]],
   };
 
   static getListViewSettings(fyo: Fyo): ListViewSettings {

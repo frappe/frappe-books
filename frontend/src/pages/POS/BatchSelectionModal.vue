@@ -15,7 +15,7 @@
           target: 'Batch',
           label: t`Batch`,
           required: true,
-          filters: { item: itemCode },
+          filters: [['item', '=', itemCode]],
         }"
         :value="selectedBatch"
         :border="true"

@@ -14,6 +14,9 @@ export class ShipmentItem extends StockTransferItem {
 
   // Items are Frappe-backed.
   static filters: FiltersMap = {
-    item: () => ({ item_usage: ['not in', ['Purchases']], track_item: true }),
+    item: () => [
+      ['item_usage', 'not in', ['Purchases']],
+      ['track_item', '=', 1],
+    ],
   };
 }

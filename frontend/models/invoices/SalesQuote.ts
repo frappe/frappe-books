@@ -52,7 +52,7 @@ export class SalesQuote extends Invoice {
 
   // A quote's party may be a lead, so it is not filtered by role.
   static override filters: FiltersMap = {
-    number_series: (doc: Doc) => ({ reference_type: doc.schemaName }),
+    number_series: (doc: Doc) => [['reference_type', '=', doc.schemaName]],
   };
 
   static getListViewSettings(): ListViewSettings {

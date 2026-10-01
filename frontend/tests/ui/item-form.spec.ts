@@ -14,15 +14,15 @@ test('a new item takes its accounts from the server and saves', async ({
   await page.getByRole('textbox', { name: 'Item Name' }).fill(name);
   await page.keyboard.press('Tab');
   // The server's preview fills the accounts a save would.
-  await expect(page.getByRole('combobox', { name: 'Income' })).toHaveValue(
-    'Sales'
-  );
+  await expect(
+    page.getByRole('combobox', { name: 'Sales Acc. (required)' })
+  ).toHaveValue('Sales');
 
-  await page.getByRole('combobox', { name: 'Type' }).click();
+  await page.getByRole('combobox', { name: 'Type', exact: true }).click();
   await page.getByRole('option', { name: 'Service', exact: true }).click();
-  await expect(page.getByRole('combobox', { name: 'Income' })).toHaveValue(
-    'Service'
-  );
+  await expect(
+    page.getByRole('combobox', { name: 'Sales Acc. (required)' })
+  ).toHaveValue('Service');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
@@ -45,7 +45,7 @@ test.describe('on a phone', () => {
     await page.goto(`/books/edit/Item/${encodeURIComponent(name)}`);
     await waitForBooks(page);
 
-    await page.getByRole('textbox', { name: 'Rate' }).fill('45');
+    await page.getByRole('spinbutton', { name: 'Rate' }).fill('45');
     await page.keyboard.press('Tab');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByText(`${name} saved`)).toBeVisible();

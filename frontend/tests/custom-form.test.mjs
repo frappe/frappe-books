@@ -67,6 +67,25 @@ test('optional custom fields retain their configured defaults', async () => {
   await customize('Books Uom', []);
 });
 
+test('a custom check field without a default starts unchecked and saves', async () => {
+  await customize('Books Uom', [
+    {
+      fieldname: 'fragile',
+      docfield: {
+        fieldname: 'custom_books_fragile',
+        fieldtype: 'Check',
+        label: 'Fragile',
+        is_custom_field: 1,
+      },
+    },
+  ]);
+
+  const unit = newFrappeDoc('UOM', { name: 'Box' });
+  assert.equal(unit.custom_books_fragile, false);
+  assert.equal(unit.getFrappeValues().custom_books_fragile, 0);
+  await customize('Books Uom', []);
+});
+
 test('saving and deleting customizations refresh open documents without losing edits', async () => {
   const unit = newFrappeDoc('UOM', { name: 'Test Unit', is_whole: true });
   await customize('Books Uom', [note({ reqd: 1, default: 'Initial note' })]);

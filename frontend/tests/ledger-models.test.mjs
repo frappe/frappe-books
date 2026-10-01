@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-  bridgeSchemas,
-  getFrappeFieldnames,
-  getLayout,
-  loadFrappeModels,
-} from './helpers/models.mjs';
+import { getLayout, loadFrappeModels } from './helpers/models.mjs';
+import { previousForms } from './helpers/previousForms.mjs';
 import {
   frappeModels,
   fyo,
@@ -14,15 +10,15 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 
-// The list columns of the bridge models.
-const bridgeColumns = {
+// The list columns the ledgers showed.
+const previousColumns = {
   AccountingLedgerEntry: [
-    'date',
+    'posting_date',
     'account',
     'party',
     'debit',
     'credit',
-    'referenceName',
+    'voucher_no',
   ],
   StockLedgerEntry: [
     'date',
@@ -30,34 +26,30 @@ const bridgeColumns = {
     'location',
     'rate',
     'quantity',
-    'referenceName',
+    'reference_name',
   ],
   LoyaltyPointEntry: [
-    'loyaltyProgram',
+    'loyalty_program',
     'customer',
-    'purchaseAmount',
-    'loyaltyPoints',
+    'purchase_amount',
+    'loyalty_points',
   ],
 };
-const ledgers = Object.keys(bridgeColumns);
+const ledgers = Object.keys(previousColumns);
 await loadFrappeModels();
 
 for (const schemaName of ledgers) {
   test(`the ${schemaName} form shows the fields, labels and sections it showed`, () => {
     assert.deepEqual(
       getLayout(getSchema(schemaName)),
-      getLayout(bridgeSchemas[schemaName], getFrappeFieldnames(schemaName))
+      previousForms.layouts[schemaName]
     );
-    assert.equal(getSchema(schemaName).label, bridgeSchemas[schemaName].label);
+    assert.equal(getSchema(schemaName).label, previousForms.labels[schemaName]);
   });
 
   test(`the ${schemaName} list shows the columns it showed`, () => {
     const { columns } = frappeModels[schemaName].getListViewSettings(fyo);
-    const fieldnames = getFrappeFieldnames(schemaName);
-    assert.deepEqual(
-      columns,
-      bridgeColumns[schemaName].map((fieldname) => fieldnames[fieldname])
-    );
+    assert.deepEqual(columns, previousColumns[schemaName]);
   });
 }
 

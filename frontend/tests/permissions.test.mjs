@@ -4,9 +4,24 @@ import {
   exportsOwnDocumentsOnly,
   hasPermission,
 } from '../fyo/utils/permissions.ts';
-import { getImportableSchemaNames, makeFyo } from './helpers/accounting.mjs';
+import {
+  fyo,
+  getImportableSchemaNames,
+  loadDocPermissions,
+  newFrappeDoc,
+  stubFrappe,
+} from './helpers/frappe.mjs';
+import { loadFrappeModels } from './helpers/models.mjs';
 
 const doctypes = { SalesInvoice: 'Books Sales Invoice', Tax: 'Books Tax' };
+await loadFrappeModels();
+
+/** A saved document of the schema, as a form loads it. */
+function getSaved(schemaName, name) {
+  const doc = newFrappeDoc(schemaName, { name });
+  doc._notInserted = false;
+  return doc;
+}
 
 test('permissions come from the boot lists of frappe.boot.user', () => {
   const user = {
@@ -30,14 +45,12 @@ test('without boot permissions nothing is restricted', () => {
   assert.equal(hasPermission(null, 'Tax', 'delete'), true);
 });
 
-test('a saved document uses the rights the server returned for it', async () => {
-  const fyo = await makeFyo();
+test('a saved document uses the rights the server returned for it', () => {
   fyo.store.permissions = {
     doctypes: { Payment: 'Books Payment' },
     user: { can_write: ['Books Payment'], can_delete: ['Books Payment'] },
   };
-  const payment = fyo.doc.getNewDoc('Payment', { name: 'PAY-0001' });
-  payment._notInserted = false;
+  const payment = getSaved('Payment', 'PAY-0001');
   assert.equal(payment.canWrite, true);
   assert.equal(payment.canDelete, true);
 
@@ -46,22 +59,42 @@ test('a saved document uses the rights the server returned for it', async () => 
   assert.equal(payment.canDelete, false);
 });
 
-test('printing a document needs the print permission', async () => {
-  const fyo = await makeFyo();
+test("a form loads the user's rights on its saved document from Frappe", async () => {
+  fyo.store.permissions = {
+    doctypes: { Payment: 'Books Payment' },
+    user: { can_write: ['Books Payment'] },
+  };
+  const requests = stubFrappe(() => ({
+    message: { permissions: { read: 1, write: 0 } },
+  }));
+  const payment = getSaved('Payment', 'PAY-0002');
+
+  await loadDocPermissions(payment);
+
+  assert.equal(
+    requests[0].path,
+    '/api/method/frappe.client.get_doc_permissions'
+  );
+  assert.deepEqual(requests[0].body, {
+    doctype: 'Books Payment',
+    docname: 'PAY-0002',
+  });
+  assert.equal(payment.canWrite, false);
+});
+
+test('printing a document needs the print permission', () => {
   fyo.store.permissions = {
     doctypes: { Payment: 'Books Payment' },
     user: { can_read: ['Books Payment'] },
   };
-  const payment = fyo.doc.getNewDoc('Payment', { name: 'PAY-0001' });
-  payment._notInserted = false;
+  const payment = getSaved('Payment', 'PAY-0001');
   assert.equal(payment.can('print'), false);
 
   payment.docPermissions = { read: 1, print: 1 };
   assert.equal(payment.can('print'), true);
 });
 
-test('the import wizard offers only the schemas the user may import', async () => {
-  const fyo = await makeFyo();
+test('the import wizard offers only the schemas the user may import', () => {
   fyo.store.permissions = {
     doctypes: { Party: 'Books Party', Tax: 'Books Tax' },
     user: { can_import: ['Books Party'] },
@@ -79,13 +112,12 @@ test('export granted only to owners exports only the user’s documents', () => 
   assert.equal(exportsOwnDocumentsOnly(null, 'Tax'), false);
 });
 
-test('a new single document is writable with the write permission', async () => {
-  const fyo = await makeFyo();
+test('a new single document is writable with the write permission', () => {
   fyo.store.permissions = {
     doctypes: { SetupWizard: 'Books Setup Wizard' },
     user: { can_write: ['Books Setup Wizard'] },
   };
-  const wizard = fyo.doc.getNewDoc('SetupWizard');
+  const wizard = newFrappeDoc('SetupWizard');
   assert.equal(wizard.notInserted, true);
   assert.equal(wizard.canWrite, true);
 });

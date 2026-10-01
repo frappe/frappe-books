@@ -14,11 +14,8 @@ import {
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
-import {
-  bridgeSchemas,
-  getFrappeFieldnames,
-  getLayout,
-} from './helpers/models.mjs';
+import { getLayout } from './helpers/models.mjs';
+import { previousForms } from './helpers/previousForms.mjs';
 
 stubFrappe(({ path, body }) =>
   path.endsWith('get_books_meta')
@@ -224,17 +221,14 @@ test('the setup wizard shows the fields, placeholders and sections it showed', (
 });
 
 test('the Print tab shows the fields, placeholders, colours and sections it showed', () => {
-  const fieldnames = getFrappeFieldnames('PrintSettings');
   assert.deepEqual(
     getLayout(getSchema('PrintSettings')),
-    getLayout(bridgeSchemas.PrintSettings, fieldnames)
+    previousForms.layouts.PrintSettings
   );
-  const color = (schema) =>
-    schema.fields.find(({ fieldname }) => fieldname === 'color');
-  assert.deepEqual(
-    color(getSchema('PrintSettings')).options,
-    color(bridgeSchemas.PrintSettings).options
+  const color = getSchema('PrintSettings').fields.find(
+    ({ fieldname }) => fieldname === 'color'
   );
+  assert.deepEqual(color.options, previousForms.colors.PrintSettings);
 
   const settings = newFrappeDoc('PrintSettings');
   assert.equal(hidden(settings, 'terms_and_conditions'), true);

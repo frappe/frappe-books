@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getSchemas } from './helpers/accounting.mjs';
-import { getBooksMeta, mapping } from './helpers/doctypes.mjs';
+import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
   frappeModels,
-  getDocType,
   getSchema,
   loadFrappeDocTypes,
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
+import { previousForms } from './helpers/previousForms.mjs';
 
 stubFrappe(({ path, body }) =>
   path.endsWith('get_books_meta')
@@ -19,38 +18,15 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels(frappeModels);
 await loadFrappeDocTypes();
 
-test('links of Frappe-backed forms and rows offer Create where the schema files did', () => {
-  const bridge = getSchemas('in', [], {});
-  const problems = getShownSchemaNames().flatMap((schemaName) => {
-    const oldNames = Object.fromEntries(
-      Object.entries(mapping[schemaName]?.fields ?? {}).map(
-        ([name, fieldname]) => [fieldname, name]
-      )
-    );
-    return getSchema(schemaName)
-      .fields.filter(({ fieldtype, readOnly, meta }) => {
-        return (
-          ['Link', 'DynamicLink'].includes(fieldtype) && !readOnly && !meta
-        );
-      })
-      .filter(({ fieldname, create }) => {
-        const old = bridge[schemaName]?.fields.find(
-          (field) => field.fieldname === oldNames[fieldname]
-        );
-        return old && !!create !== !!old.create;
-      })
-      .map(({ fieldname }) => `${schemaName}.${fieldname}`);
-  });
+test('links of forms and rows offer Create where the schema files did', () => {
+  const problems = Object.entries(previousForms.linkCreate)
+    .filter(([key, create]) => {
+      const [schemaName, fieldname] = key.split('.');
+      const field = getSchema(schemaName).fields.find(
+        (field) => field.fieldname === fieldname
+      );
+      return !!field.create !== create;
+    })
+    .map(([key]) => key);
   assert.deepEqual(problems, []);
 });
-
-/** The Frappe-backed schemas and the rows of the tables their forms show. */
-function getShownSchemaNames() {
-  return Object.keys(frappeModels).flatMap((schemaName) => {
-    const { schema, tables } = getDocType(schemaName);
-    const rows = schema.fields
-      .filter(({ fieldtype, hidden }) => fieldtype === 'Table' && !hidden)
-      .map(({ fieldname }) => tables[fieldname].schema.name);
-    return [schemaName, ...rows];
-  });
-}

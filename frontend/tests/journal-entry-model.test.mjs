@@ -10,12 +10,8 @@ import {
   newFrappeDoc,
   stubFrappe,
 } from './helpers/frappe.mjs';
-import {
-  bridgeSchemas,
-  getFrappeFieldnames,
-  getLayout,
-  loadFrappeModels,
-} from './helpers/models.mjs';
+import { getLayout, loadFrappeModels } from './helpers/models.mjs';
+import { previousForms } from './helpers/previousForms.mjs';
 
 await loadFrappeModels();
 const { JournalEntry } = frappeModels;
@@ -23,20 +19,15 @@ const { JournalEntry } = frappeModels;
 for (const schemaName of ['JournalEntry', 'JournalEntryAccount']) {
   test(`the ${schemaName} form shows the fields, labels, placeholders and sections it showed`, () => {
     const schema = getSchema(schemaName);
-    const bridgeSchema = bridgeSchemas[schemaName];
-    const fieldnames = getFrappeFieldnames(schemaName);
-    assert.deepEqual(getLayout(schema), getLayout(bridgeSchema, fieldnames));
-    assert.equal(schema.label, bridgeSchema.label);
+    assert.deepEqual(getLayout(schema), previousForms.layouts[schemaName]);
+    assert.equal(schema.label, previousForms.labels[schemaName]);
   });
 }
 
 test('journal entry rows show the columns they showed', () => {
-  const fieldnames = getFrappeFieldnames('JournalEntryAccount');
   assert.deepEqual(
     getSchema('JournalEntryAccount').tableFields,
-    bridgeSchemas.JournalEntryAccount.tableFields.map(
-      (name) => fieldnames[name]
-    )
+    previousForms.tableFields.JournalEntryAccount
   );
 });
 
@@ -120,20 +111,10 @@ test('the journal entry list shows and filters what it did', () => {
     ['name', 'status', 'posting_date', 'entry_type', 'reference_number']
   );
 
-  const fieldnames = getFrappeFieldnames('JournalEntry');
-  const bridgeFilters = getFilterFields(
-    bridgeSchemas.JournalEntry.fields,
-    columns
-  ).map(({ fieldname }) => fieldnames[fieldname] ?? fieldname);
   const filters = getFilterFields(getSchema('JournalEntry').fields, columns);
-  const standard = {
-    created: 'creation',
-    createdBy: 'owner',
-    modifiedBy: 'modified_by',
-  };
   assert.deepEqual(
     filters.map(({ fieldname }) => fieldname).sort(),
-    bridgeFilters.map((fieldname) => standard[fieldname] ?? fieldname).sort()
+    previousForms.listFilters.JournalEntry
   );
   const status = filters.find(({ fieldname }) => fieldname === 'status');
   assert.deepEqual(

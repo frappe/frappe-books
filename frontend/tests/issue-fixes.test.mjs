@@ -174,21 +174,14 @@ function chart(name, countryCode, language = null) {
 
 test('account labels come from the server while identifiers and custom names stay stable', async () => {
   const fyo = await makeFyo();
-  const account = fyo.doc.getNewDoc('Account', {
-    name: 'Cash',
-    parentAccount: 'Cash In Hand',
-  });
   fyo.store.accountLabels = { Cash: 'Trésorerie' };
-  assert.equal(getAccountLabel(fyo, account.name), 'Trésorerie');
+  assert.equal(getAccountLabel(fyo, 'Cash'), 'Trésorerie');
   assert.equal(getAccountLabel(fyo, 'Custom savings'), 'Custom savings');
   const report = new TrialBalance(fyo);
   report.columns = [{ fieldname: 'account', fieldtype: 'Link' }];
-  const cell = report.getReportRow({ account: account.name, indent: 0 })
-    .cells[0];
+  const cell = report.getReportRow({ account: 'Cash', indent: 0 }).cells[0];
   assert.equal(cell.value, 'Trésorerie');
   assert.equal(cell.rawValue, 'Cash');
-  assert.equal(account.name, 'Cash');
-  assert.equal(account.parentAccount, 'Cash In Hand');
 });
 
 test('translations fill template values and skip empty ones', () => {

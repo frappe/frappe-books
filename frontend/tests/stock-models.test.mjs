@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getSchemas } from './helpers/accounting.mjs';
 import { getBooksMeta } from './helpers/doctypes.mjs';
+import { previousForms } from './helpers/previousForms.mjs';
 import {
   evaluateHidden,
   evaluateReadOnly,
@@ -25,33 +25,29 @@ const rowSchemas = {
   PurchaseReceipt: 'PurchaseReceiptItem',
 };
 stubFrappe(({ path, body }) =>
-  path.endsWith('get_books_meta') ? { message: getBooksMeta(body.doctypes) } : { data: [] }
+  path.endsWith('get_books_meta')
+    ? { message: getBooksMeta(body.doctypes) }
+    : { data: [] }
 );
 registerFrappeModels(
   Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]]))
 );
 await loadFrappeDocTypes();
-const bridgeSchemas = getSchemas('-', []);
-
-test('stock forms, row editors and tables show what the bridge schemas showed', () => {
+test('stock forms, row editors and tables show what they showed', () => {
   for (const name of [...stockSchemas, ...Object.values(rowSchemas)]) {
-    const frappe = getSchema(name);
-    const bridge = bridgeSchemas[name];
-    assert.deepEqual(
-      getLayout(frappe, (field) => field.fieldname),
-      getLayout(bridge, (field) => field.frappeFieldname),
-      name
-    );
-    if (frappe.isChild) {
+    const schema = getSchema(name);
+    const previous = previousForms.stock[name];
+    assert.deepEqual(getLayout(schema), previous.layout, name);
+    if (schema.isChild) {
       assert.deepEqual(
-        frappe.tableFields,
-        toFrappeNames(bridge, bridge.tableFields),
+        schema.tableFields,
+        previous.tableFields,
         `${name} table`
       );
     }
     assert.deepEqual(
-      frappe.quickEditFields ?? [],
-      toFrappeNames(bridge, bridge.quickEditFields ?? []),
+      schema.quickEditFields ?? [],
+      previous.quickEditFields,
       `${name} quick edit`
     );
   }
@@ -266,26 +262,18 @@ test('a submitted shipment offers an invoice and a return by Frappe fieldnames',
 });
 
 /** The form fields in order: fieldname, label, placeholder, section and tab. */
-function getLayout(schema, getFieldname) {
+function getLayout(schema) {
   return schema.fields
     .filter(
       (field) => !field.meta && !field.hidden && field.fieldname !== 'name'
     )
     .map((field) =>
       [
-        getFieldname(field),
+        field.fieldname,
         field.label,
         field.placeholder ?? '',
         field.section ?? 'Default',
         field.tab ?? '',
       ].join(' | ')
     );
-}
-
-function toFrappeNames(schema, fieldnames) {
-  return fieldnames.map(
-    (fieldname) =>
-      schema.fields.find((field) => field.fieldname === fieldname)
-        .frappeFieldname
-  );
 }

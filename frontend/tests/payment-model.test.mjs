@@ -13,26 +13,21 @@ import {
   routeFilters,
   stubFrappe,
 } from './helpers/frappe.mjs';
-import {
-  bridgeSchemas,
-  getFrappeFieldnames,
-  getLayout,
-  loadFrappeModels,
-} from './helpers/models.mjs';
+import { getLayout, loadFrappeModels } from './helpers/models.mjs';
+import { previousForms } from './helpers/previousForms.mjs';
 
 await loadFrappeModels();
 const { Payment } = frappeModels;
 
 for (const schemaName of ['Payment', 'PaymentFor']) {
   test(`the ${schemaName} form shows the fields, labels, placeholders and sections it showed`, () => {
-    const fieldnames = getFrappeFieldnames(schemaName);
     assert.deepEqual(
       getLayout(getSchema(schemaName)),
-      getLayout(bridgeSchemas[schemaName], fieldnames)
+      previousForms.layouts[schemaName]
     );
     assert.deepEqual(
       getSchema(schemaName).quickEditFields,
-      bridgeSchemas[schemaName].quickEditFields?.map((name) => fieldnames[name])
+      previousForms.quickEditFields[schemaName]
     );
   });
 }

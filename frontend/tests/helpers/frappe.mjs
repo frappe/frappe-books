@@ -27,7 +27,8 @@ await build({
       export { fyo } from './src/initFyo';
       export { setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getMissingMandatoryFields } from './fyo/model/helpers';
-      export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
+      export { evaluateHidden, evaluateReadOnly, evaluateRequired, loadDocPermissions } from './src/utils/doc';
+      export { getRowDetails } from './src/components/Controls/rowDetails';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels } from './models';
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
@@ -37,10 +38,11 @@ await build({
       export * as pos from './src/utils/pos';
       export * as posSetup from './src/utils/posSetup';
       export * as posStock from './models/inventory/posStock';
+      export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { Search } from './src/utils/search';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
-      export { Importer, getGridRows } from './src/importer';
+      export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
       export {
         getCsvExportData,
         getExportFields,
@@ -119,6 +121,8 @@ export const {
   evaluateHidden,
   evaluateReadOnly,
   evaluateRequired,
+  loadDocPermissions,
+  getRowDetails,
   errors,
   frappeModels,
   getRegionalFrappeModels,
@@ -131,12 +135,14 @@ export const {
   pos,
   posSetup,
   posStock,
+  getInsufficientItems,
   Search,
   GeneralLedger,
   getRowReference,
   getLedgerLink,
   Importer,
   getGridRows,
+  getImportableSchemaNames,
   getCsvExportData,
   getExportFields,
   getExportTableFields,

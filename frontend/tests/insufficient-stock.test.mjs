@@ -1,24 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getInsufficientItems, makeFyo } from './helpers/accounting.mjs';
+import {
+  getInsufficientItems,
+  newFrappeDoc,
+  stubFrappe,
+} from './helpers/frappe.mjs';
+import { loadFrappeModels } from './helpers/models.mjs';
+
+await loadFrappeModels();
 
 /** Asks the server for the invoice's shortfalls and records the request. */
 async function getShortfalls(items, values = {}) {
-  const requests = [];
-  globalThis.window = {
-    location: { hostname: 'books.localhost' },
-    frappe: { boot: { time_zone: { system: 'Asia/Kolkata' } } },
-  };
-  globalThis.fetch = async (url, { body }) => {
-    requests.push({ url, body: JSON.parse(body) });
-    return Response.json({ message: [{ item: 'Pen', quantity: 1 }] });
-  };
-  const fyo = await makeFyo();
-  const invoice = fyo.doc.getNewDoc('SalesInvoice', {
+  const requests = stubFrappe(() => ({
+    message: [{ item: 'Pen', quantity: 1 }],
+  }));
+  const invoice = newFrappeDoc('SalesInvoice', {
     date: new Date('2026-01-01T00:00:00Z'),
+    ...values,
   });
-  // The Frappe-backed invoice's own fields, like is_pos.
-  Object.assign(invoice, values);
   invoice.items = items.map(([item, quantity, batch]) => ({
     item,
     quantity,
@@ -35,9 +34,9 @@ test('the server tells a sale what its rows lack where it ships from, in one req
 
   assert.deepEqual(insufficient, [{ item: 'Pen', quantity: 1 }]);
   assert.equal(requests.length, 1);
-  assert.match(
-    requests[0].url,
-    /frappe_books\.inventory\.availability\.get_sale_shortfalls$/
+  assert.equal(
+    requests[0].path,
+    '/api/method/frappe_books.inventory.availability.get_sale_shortfalls'
   );
   assert.deepEqual(requests[0].body, {
     items: [

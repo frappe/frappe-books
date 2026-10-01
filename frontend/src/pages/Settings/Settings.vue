@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isMobile" ref="mobileSettings" class="flex min-h-full flex-col">
+  <div ref="mobileSettings" class="flex min-h-full flex-col">
     <PageHeader :title="t`Settings`">
       <template #mobile>
         <FrappeButton
@@ -34,7 +34,9 @@
           :fields="fields"
           :doc="doc"
           :errors="errors"
-          @value-change="onValueChange"
+          @value-change="
+            (field: Field, value: DocValue) => onValueChange(doc!, field, value)
+          "
         />
       </section>
     </template>
@@ -48,35 +50,9 @@
       />
     </div>
   </div>
-  <FormContainer v-else>
-    <template #header>
-      <PageHeader :title="t`Settings`">
-        <FrappeButton v-if="canSave" variant="solid" @click="sync">
-          {{ t`Save` }}
-        </FrappeButton>
-      </PageHeader>
-    </template>
-    <template v-if="doc" #body>
-      <div class="divide-y divide-outline-gray-1">
-        <CommonFormSection
-          v-for="([name, fields], idx) in activeGroup.entries()"
-          :key="name + idx"
-          class="py-5"
-          :show-title="activeGroup.size > 1 && name !== t`Default`"
-          :title="name"
-          :fields="fields"
-          :doc="doc"
-          :errors="errors"
-          @value-change="onValueChange"
-        />
-      </div>
-    </template>
-    <template v-if="groupedFields && groupedFields.size > 1" #footer>
-      <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
-    </template>
-  </FormContainer>
 </template>
 <script lang="ts">
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { ValidationError } from 'fyo/utils/errors';
@@ -86,28 +62,18 @@ import {
   shellScrollContainer,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
-import { Field, Schema } from 'schemas/types';
-import FormContainer from 'src/components/FormContainer.vue';
+import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
-import { handleErrorWithDialog } from 'src/errorHandling';
-import { getErrorMessage } from 'src/utils';
-import { evaluateHidden } from 'src/utils/doc';
-import { shortcutsKey } from 'src/utils/injectionKeys';
-import { showDialog } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
-import { getSchema } from 'src/frappe/registry';
-import { UIGroupedFields } from 'src/utils/types';
-import { isMobile } from 'src/utils/viewport';
 import { canInstall, isInstallSheetOpen } from 'src/web/pwa';
-import { computed, defineComponent, inject, nextTick } from 'vue';
+import { computed, defineComponent, nextTick } from 'vue';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
+import { useSettings } from './useSettings';
 
-const COMPONENT_NAME = 'Settings';
-
+/** Phones; desktop shows settings in SettingsDialog. */
 export default defineComponent({
   components: {
-    FormContainer,
     FrappeButton,
     CommonFormSection,
     FrappeTabButtons,
@@ -117,90 +83,24 @@ export default defineComponent({
     return { doc: computed(() => this.doc) };
   },
   setup() {
-    return {
-      shortcuts: inject(shortcutsKey),
-      isMobile,
-      isInstallSheetOpen,
-    };
+    return { ...useSettings(), isInstallSheetOpen };
   },
   data() {
-    return {
-      errors: {},
-      activeTab: ModelNameEnum.AccountingSettings,
-      groupedFields: null,
-    } as {
-      errors: Record<string, string>;
-      activeTab: string;
-      groupedFields: null | UIGroupedFields;
-    };
+    return { activeTab: ModelNameEnum.AccountingSettings as string };
   },
   computed: {
-    canSave() {
-      return [
-        ModelNameEnum.AccountingSettings,
-        ModelNameEnum.InventorySettings,
-        ModelNameEnum.Defaults,
-        ModelNameEnum.POSSettings,
-        ModelNameEnum.PrintSettings,
-        ModelNameEnum.SystemSettings,
-      ].some((s) => this.fyo.singles[s]?.canSave);
-    },
     doc(): Doc | null {
-      const doc = this.fyo.singles[this.activeTab];
-      if (!doc) {
-        return null;
-      }
-
-      return doc;
-    },
-    tabLabels(): Record<string, string> {
-      return {
-        [ModelNameEnum.AccountingSettings]: this.t`General`,
-        [ModelNameEnum.PrintSettings]: this.t`Print`,
-        [ModelNameEnum.InventorySettings]: this.t`Inventory`,
-        [ModelNameEnum.Defaults]: this.t`Defaults`,
-        [ModelNameEnum.POSSettings]: this.t`POS Settings`,
-        [ModelNameEnum.SystemSettings]: this.t`System`,
-      };
+      return this.fyo.singles[this.activeTab] ?? null;
     },
     tabOptions(): { value: string; label: string }[] {
-      return [...(this.groupedFields?.keys() ?? [])].map((value) => ({
-        value,
-        label: this.tabLabels[value] ?? value,
-      }));
-    },
-    schemas(): Schema[] {
-      const enableInventory = !!this.fyo.singles.AccountingSettings?.enable_inventory;
-      const enablePOS = !!this.fyo.singles.InventorySettings?.enable_point_of_sale;
-      return [
-        ModelNameEnum.AccountingSettings,
-        ModelNameEnum.InventorySettings,
-        ModelNameEnum.Defaults,
-        ModelNameEnum.POSSettings,
-        ModelNameEnum.PrintSettings,
-        ModelNameEnum.SystemSettings,
-      ]
-        .filter((s) => {
-          if (s === ModelNameEnum.InventorySettings && !enableInventory) {
-            return false;
-          }
-
-          if (s === ModelNameEnum.POSSettings && !enablePOS) {
-            return false;
-          }
-
-          return true;
-        })
-        .map((s) => getSchema(s)!);
+      return this.tabs.map(({ value, label }) => ({ value, label }));
     },
     activeGroup(): Map<string, Field[]> {
-      if (!this.groupedFields) {
-        return new Map();
-      }
-
       const group = this.groupedFields.get(this.activeTab);
       if (!group) {
-        throw new ValidationError(`Tab group ${this.activeTab} has no value set`);
+        throw new ValidationError(
+          `Tab group ${this.activeTab} has no value set`
+        );
       }
 
       return group;
@@ -218,10 +118,6 @@ export default defineComponent({
   },
   watch: {
     async activeTab() {
-      if (!this.isMobile) {
-        return;
-      }
-
       shellScrollContainer.value?.scrollTo({ top: 0 });
       await nextTick();
       (this.$refs.mobileTabs as HTMLElement | undefined)
@@ -229,77 +125,29 @@ export default defineComponent({
         ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     },
   },
-  mounted() {
-    this.update();
-  },
   activated(): void {
     const tab = this.$route.query.tab;
-    if (typeof tab === 'string' && this.tabLabels[tab]) {
+    if (
+      typeof tab === 'string' &&
+      this.tabs.some(({ value }) => value === tab)
+    ) {
       this.activeTab = tab;
     }
 
     docsPathRef.value = docsPathMap.Settings ?? '';
-    this.shortcuts?.pmod.set(COMPONENT_NAME, ['KeyS'], async () => {
-      if (!this.canSave) {
-        return;
-      }
-
-      await this.sync();
-    });
+    this.setSaveShortcut();
   },
   async deactivated(): Promise<void> {
     docsPathRef.value = '';
-    this.shortcuts?.delete(COMPONENT_NAME);
-    if (!this.canSave) {
-      return;
-    }
+    this.deleteSaveShortcut();
     await this.reset();
   },
   methods: {
-    async reset() {
-      const resetableDocs = this.schemas
-        .map(({ name }) => this.fyo.singles[name])
-        .filter((doc) => doc?.dirty) as Doc[];
-
-      for (const doc of resetableDocs) {
-        await doc.load();
-      }
-
-      this.update();
-    },
-    async sync(): Promise<void> {
-      const syncableDocs = this.schemas
-        .map(({ name }) => this.fyo.singles[name])
-        .filter((doc) => doc?.canSave) as Doc[];
-
-      for (const doc of syncableDocs) {
-        if (!(await this.syncDoc(doc))) {
-          return;
-        }
-      }
-
-      await showDialog({
-        title: this.t`Reload Frappe Books?`,
-        detail: this.t`Changes made to settings will be visible on reload.`,
-        type: 'info',
-        buttons: [
-          {
-            label: this.t`Yes`,
-            isPrimary: true,
-            action: () => window.location.reload(),
-          },
-          {
-            label: this.t`No`,
-            action: () => null,
-            isEscape: true,
-          },
-        ],
-      });
-    },
-    /** Phones scroll to the first invalid field instead of saving. */
+    /** Scrolls to the first invalid field instead of saving. */
     async saveOnPhone(): Promise<void> {
-      const field = (this.$refs.mobileSettings as HTMLElement | undefined)
-        ?.querySelector('[role="alert"]')?.parentElement;
+      const field = (
+        this.$refs.mobileSettings as HTMLElement | undefined
+      )?.querySelector('[role="alert"]')?.parentElement;
       if (!field) {
         await this.sync();
         return;
@@ -314,70 +162,6 @@ export default defineComponent({
         top: offset - container.clientHeight / 3,
         behavior: 'smooth',
       });
-    },
-    async syncDoc(doc: Doc): Promise<boolean> {
-      try {
-        await doc.sync();
-      } catch (error) {
-        await handleErrorWithDialog(error, doc, true);
-        return false;
-      }
-
-      try {
-        this.updateGroupedFields();
-      } catch (error) {
-        this.fyo.reportDocumentActionWarning(doc, 'save', [error]);
-      }
-      return true;
-    },
-    async onValueChange(field: Field, value: DocValue): Promise<void> {
-      const { fieldname } = field;
-      delete this.errors[fieldname];
-
-      try {
-        await this.doc?.set(fieldname, value ?? '');
-      } catch (err) {
-        if (!(err instanceof Error)) {
-          return;
-        }
-
-        this.errors[fieldname] = getErrorMessage(err, this.doc ?? undefined);
-      }
-
-      this.update();
-    },
-    update(): void {
-      this.updateGroupedFields();
-    },
-    updateGroupedFields(): void {
-      const grouped: UIGroupedFields = new Map();
-      const fields: Field[] = this.schemas.map((s) => s.fields).flat();
-
-      for (const field of fields) {
-        const schemaName = field.schemaName!;
-        if (!grouped.has(schemaName)) {
-          grouped.set(schemaName, new Map());
-        }
-
-        const tabbed = grouped.get(schemaName)!;
-        const section = field.section ?? this.t`Miscellaneous`;
-        if (!tabbed.has(section)) {
-          tabbed.set(section, []);
-        }
-
-        if (field.meta) {
-          continue;
-        }
-
-        const doc = this.fyo.singles[schemaName];
-        if (evaluateHidden(field, doc)) {
-          continue;
-        }
-
-        tabbed.get(section)!.push(field);
-      }
-
-      this.groupedFields = grouped;
     },
   },
 });

@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   evaluateCondition,
+  getCsvExportData,
   getExportFields,
   getModel,
   getSchema,
   getSearchFields,
   isFrappeBacked,
   loadTestDocTypes,
+  stubFrappe,
   toSchema,
 } from './helpers/frappe.mjs';
 
@@ -210,5 +212,19 @@ test('a list export offers custom fields last, as Books did', () => {
     'modified',
     'custom_books_shelf',
     'custom_books_colour',
+  ]);
+});
+
+test("a list export keys custom fields by their Books Custom Field's fieldname", async () => {
+  stubFrappe(() => ({ data: [{ name: 'Pen', custom_books_shelf: 'A1' }] }));
+  const fields = getExportFields('Item').filter((field) =>
+    ['name', 'custom_books_shelf'].includes(field.fieldname)
+  );
+  const query = { schemaName: 'Item', fields, tableFields: [], limit: null };
+
+  const csv = await getCsvExportData({ ...query, filters: {} });
+  assert.deepEqual(csv.split('\r\n').slice(1), [
+    'Item.name,Item.shelf',
+    'Pen,A1',
   ]);
 });

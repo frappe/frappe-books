@@ -368,8 +368,16 @@ export async function loadTestDocTypes() {
   stubFrappe(({ body }) => {
     const metas = body.doctypes.flatMap((doctype) => bundles[doctype]);
     const item = {
-      custom_books_shelf: { section: 'Storage', tab: 'Custom' },
-      custom_books_colour: { section: 'Extra', tab: null },
+      custom_books_shelf: {
+        section: 'Storage',
+        tab: 'Custom',
+        books_fieldname: 'shelf',
+      },
+      custom_books_colour: {
+        section: 'Extra',
+        tab: null,
+        books_fieldname: 'colour',
+      },
     };
     return {
       message: {

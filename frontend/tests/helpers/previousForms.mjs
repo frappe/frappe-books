@@ -191,6 +191,19 @@ export const previousForms = {
         value: '#112B42',
       },
     ],
+    // The POS button colour fields of Defaults and POS Profile.
+    Buttons: [
+      { label: 'Red', value: '#f98080' },
+      { label: 'Orange', value: '#fbbf70' },
+      { label: 'Yellow', value: '#fde047' },
+      { label: 'Green', value: '#86efac' },
+      { label: 'Teal', value: '#5eead4' },
+      { label: 'Blue', value: '#60a5fa' },
+      { label: 'Indigo', value: '#818cf8' },
+      { label: 'Purple', value: '#a78bfa' },
+      { label: 'Pink', value: '#f472b6' },
+      { label: 'Black', value: '#9ca3af' },
+    ],
   },
   stock: {
     StockMovement: {

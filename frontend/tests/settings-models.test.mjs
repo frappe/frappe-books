@@ -128,6 +128,18 @@ test('Defaults hide inventory and POS fields as those features are off', () => {
   assert.equal(hidden(defaults, 'pos_cash_denominations'), false);
 });
 
+test('Defaults and POS profiles offer the button colours they offered', () => {
+  for (const schemaName of ['Defaults', 'POSProfile']) {
+    const colourFields = getSchema(schemaName).fields.filter(({ fieldname }) =>
+      fieldname.endsWith('_button_colour')
+    );
+    assert.equal(colourFields.length, 7);
+    for (const { fieldname, options } of colourFields) {
+      assert.deepEqual(options, previousForms.colors.Buttons, fieldname);
+    }
+  }
+});
+
 test('the General tab shows the fields, placeholders and sections it showed', () => {
   const layout = getSchema('AccountingSettings')
     .fields.filter((field) => !field.meta && !field.hidden)

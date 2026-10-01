@@ -1,7 +1,7 @@
 import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
 import type { QueryFilter } from 'utils/db/types';
-import { getCount, getDocuments, type Filter } from './api';
+import { getCount, getDocuments, type DocValues, type Filter } from './api';
 import { getDocType, type FrappeDocType } from './doctypes';
 import { toDocValues } from './values';
 
@@ -26,27 +26,48 @@ export async function getFrappeListPage(
   page: ListPage
 ): Promise<{ rows: RenderData[]; total: number }> {
   const docType = getDocType(schemaName);
-  const { doctype, schema } = docType;
   const filters = toFrappeFilters(page.filters);
   const orFilters = toFrappeFilters(page.orFilters);
   const [rows, total] = await Promise.all([
-    getDocuments(doctype, {
+    getDocuments(docType.doctype, {
       fields: ['*'],
       filters: combineFilters(filters, orFilters),
       orderBy: getOrderBy(docType),
       start: page.start,
       limit: page.limit,
     }),
-    getCount(doctype, filters, orFilters),
+    getCount(docType.doctype, filters, orFilters),
   ]);
+  return { rows: toRenderData(fyo, docType, rows), total };
+}
+
+/** Documents of a Frappe-backed schema by name, newest first, with the values forms show. */
+export async function getFrappeRows(
+  fyo: Fyo,
+  schemaName: string,
+  names: string[],
+  fields: string[] = ['*']
+): Promise<RenderData[]> {
+  const docType = getDocType(schemaName);
+  const rows = await getDocuments(docType.doctype, {
+    fields,
+    filters: [['name', 'in', names]],
+    orderBy: 'creation desc',
+    limit: names.length,
+  });
+  return toRenderData(fyo, docType, rows);
+}
+
+function toRenderData(
+  fyo: Fyo,
+  { schema }: FrappeDocType,
+  rows: DocValues[]
+): RenderData[] {
   const getSchema = (target: string) => getDocType(target).schema;
-  return {
-    rows: rows.map((row) => ({
-      ...toDocValues(schema, row, fyo, getSchema),
-      schema,
-    })) as RenderData[],
-    total,
-  };
+  return rows.map((row) => ({
+    ...toDocValues(schema, row, fyo, getSchema),
+    schema,
+  })) as RenderData[];
 }
 
 /** By the DocType's sort field when it sets one, else by the date; newest first. */

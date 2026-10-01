@@ -1,4 +1,4 @@
-import { getFieldProperties, isReferenceField } from 'schemas/fieldProperties';
+import { getFieldProperties, isReferenceField } from './fieldProperties';
 import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 

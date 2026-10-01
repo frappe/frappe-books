@@ -50,17 +50,8 @@ type BaseFieldType = Exclude<
 
 export type RawValue = string | number | boolean | null;
 
-/** Where /books places a custom field. Its Custom Field defines it. */
-export type RawCustomField = {
-  parent: string;
-  fieldname: string;
-  section?: string;
-  tab?: string;
-};
-
 export interface BaseField {
-  fieldname: string;             // Column name in the db
-  frappeFieldname?: string;      // The DocType's fieldname, for framework APIs
+  fieldname: string;             // The DocType's fieldname
   fieldtype: BaseFieldType;      // UI Descriptive field types that map to column types
   label: string;                 // Translateable UI facing name
   schemaName?: string;           // Convenient access to schemaName incase just the field is passed
@@ -78,7 +69,6 @@ export interface BaseField {
   computed?: boolean;            // Computed values are not stored in the database.
   section?: string;              // UI Facing config, for grouping by sections
   tab?: string;                  // UI Facing config, for grouping by tabs
-  abstract?: string;             // Used to mark the location of a field in an Abstract schema
   isCustom?: boolean;            // Whether the field is a custom field
   bold?: boolean;                // UI Facing config, whether to make the label bold
   sub_label?: string;
@@ -124,14 +114,12 @@ export type Field =
 export type Naming = 'autoincrement' | 'random' | 'numberSeries' | 'manual';
 
 export interface Schema {
-  name: string;                  // Table name
+  name: string;                  // Schema name, e.g. SalesInvoice
   label: string;                 // Translateable UI facing name
   fields: Field[];               // Maps to database columns
   isTree?: boolean;              // Used for nested set, eg for Chart of Accounts
-  extends?: string;              // Value points to an Abstract schema. Indicates Subclass schema
   isChild?: boolean;             // Indicates a child table, i.e table with "parent" FK column
-  isSingle?: boolean;            // Fields will be values in SingleValue, i.e. an Entity Attr. Value
-  isAbstract?: boolean;          // Not entered into db, used to extend a Subclass schema
+  isSingle?: boolean;            // A single, like a settings DocType
   tableFields?: string[]         // Used for displaying childTableFields
   isSubmittable?: boolean;       // For transactional types, values considered only after submit
   quickEditFields?: string[];    // Used to get fields for the quickEditForm
@@ -139,16 +127,4 @@ export interface Schema {
   create?: boolean               // Whether the user can create an entry from the ListView
   naming?: Naming;               // Used for assigning name, default is 'random' else 'numberSeries' if present
   titleField?: string;           // Main display field
-  removeFields?: string[];       // Used by the builder to remove fields.
 }
-
-export interface SchemaStub extends Partial<Schema> {
-  name: string;
-}
-
-/** A schema file. The server's DocType meta supplies its fields' data properties. */
-export type SchemaFile = Omit<SchemaStub, 'fields'> & {
-  fields?: Partial<Field>[];
-};
-export type SchemaMap = Record<string, Schema | undefined>;
-export type SchemaStubMap = Record<string, SchemaStub>;

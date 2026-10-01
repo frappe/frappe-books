@@ -159,6 +159,122 @@ test('Submitted and Cancelled follow the docstatus', async () => {
   ]);
 });
 
+const pick = (fields, fieldnames) =>
+  fields
+    .filter(({ fieldname }) => fieldnames.includes(fieldname))
+    .map((f) => ({ ...f, export: true }));
+
+test('files hold Books’ keys and values', async () => {
+  stubFrappe(() => ({
+    data: [
+      {
+        name: 'PAY-1',
+        date: '2026-09-30 10:00:00',
+        creation: '2026-09-30 10:00:01.123456',
+        modified: '2026-09-30 10:00:02.5',
+        docstatus: 1,
+        payment_references: [
+          {
+            reference_type: 'Books Sales Invoice',
+            reference_name: 'SINV-1',
+            amount: 10,
+          },
+        ],
+      },
+      {
+        name: 'PAY-2',
+        date: null,
+        creation: '2026-10-01 09:00:00',
+        modified: '2026-10-01 09:00:00',
+        docstatus: 0,
+        payment_references: [],
+      },
+    ],
+  }));
+  const [references] = getExportTableFields('Payment').filter(
+    ({ fieldname }) => fieldname === 'payment_references'
+  );
+  const query = {
+    schemaName: 'Payment',
+    fields: pick(getExportFields('Payment'), [
+      'date',
+      'payment_references',
+      'creation',
+      'modified',
+      'submitted',
+    ]),
+    tableFields: [
+      {
+        ...references,
+        fields: pick(references.fields, ['reference_type', 'reference_name']),
+      },
+    ],
+    limit: null,
+    filters: {},
+  };
+
+  const [paid, draft] = JSON.parse(await getJsonExportData(query));
+  assert.deepEqual(Object.keys(paid), [
+    'name',
+    'date',
+    'created',
+    'modified',
+    'submitted',
+    'for',
+  ]);
+  assert.deepEqual(paid, {
+    name: 'PAY-1',
+    date: '2026-09-30T10:00:00+05:30',
+    created: '2026-09-30T10:00:01.123456+05:30',
+    modified: '2026-09-30 10:00:02.5',
+    submitted: true,
+    for: [{ referenceType: 'SalesInvoice', referenceName: 'SINV-1' }],
+  });
+  assert.deepEqual(draft, {
+    name: 'PAY-2',
+    date: null,
+    created: '2026-10-01T09:00:00+05:30',
+    modified: '2026-10-01 09:00:00',
+    submitted: false,
+  });
+
+  const [, keys, row] = parseCSV(await getCsvExportData(query));
+  assert.deepEqual(keys, [
+    'Payment.date',
+    'Payment.created',
+    'Payment.modified',
+    'Payment.submitted',
+    'PaymentFor.referenceType',
+    'PaymentFor.referenceName',
+  ]);
+  assert.deepEqual(row.slice(-2), ['SalesInvoice', 'SINV-1']);
+});
+
+test('files keep the keys Books renamed', async () => {
+  stubFrappe(() => ({ data: [] }));
+  const keys = async (schemaName, fieldnames) => {
+    const fields = pick(getExportFields(schemaName), fieldnames);
+    const tableFields = getExportTableFields(schemaName)
+      .filter((table) => fieldnames.includes(table.fieldname))
+      .map((table) => ({ ...table, fields: table.fields.slice(0, 1) }));
+    const query = { schemaName, fields, tableFields, limit: 1, filters: {} };
+    return parseCSV(await getCsvExportData(query))[1];
+  };
+
+  assert.deepEqual(
+    await keys('Account', ['account_name', 'parent_books_account', 'owner']),
+    ['Account.name', 'Account.parentAccount', 'Account.createdBy']
+  );
+  assert.deepEqual(await keys('Item', ['item_usage', 'uom_conversions']), [
+    'Item.for',
+    'UOMConversionItem.uom',
+  ]);
+  assert.deepEqual(
+    await keys('AccountingLedgerEntry', ['posting_date', 'voucher_type']),
+    ['AccountingLedgerEntry.date', 'AccountingLedgerEntry.referenceType']
+  );
+});
+
 test('every exported table is headed by the label of its rows, not their doctype', () => {
   const lists = Object.keys(frappeModels).filter(
     (schemaName) => !getDocType(schemaName).meta.issingle

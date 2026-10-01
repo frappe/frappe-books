@@ -33,8 +33,6 @@ from frappe_books.tests.accounting import (
 	stock_quantity,
 	unique_name,
 )
-from frappe_books.ui_api import get_duplicate
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestAutoTransfer(IntegrationTestCase):
@@ -80,11 +78,12 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
 		invoice.submit()
 
-		shipment = BooksDatabaseBridge().get("Shipment", invoice.reload().back_reference)
-		duplicate = get_duplicate("Shipment", shipment)
+		shipment = frappe.get_doc("Books Shipment", invoice.reload().back_reference)
+		# /books copies a document without the fields its DocType marks no_copy.
+		duplicate = frappe.copy_doc(shipment, ignore_no_copy=False)
 
-		self.assertIsNone(duplicate["backReference"])
-		self.assertEqual(duplicate["items"][0]["quantity"], 2)
+		self.assertIsNone(duplicate.back_reference)
+		self.assertEqual(duplicate.items[0].quantity, 2)
 
 	def test_invoice_submit_stores_its_own_quantity_to_transfer(self):
 		invoice, _item = self._sales_invoice()

@@ -3,12 +3,12 @@
 from decimal import Decimal
 
 import frappe
+from frappe import client
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
 from frappe_books.currency import currency_precision
 from frappe_books.setup_service import _update_books_system_settings, enable_currency
 from frappe_books.tests.accounting import ensure_user, make_account, make_party
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 CURRENCIES = (("JPY", 0), ("VUV", 0), ("USD", 2), ("BHD", 3), ("CLF", 4))
 BOOKS_USER = "books-currency-user@example.com"
@@ -40,15 +40,15 @@ class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 
 	def test_books_user_reads_frappe_currencies(self):
 		with self.set_user(ensure_user(BOOKS_USER, "Books User")):
-			currency = BooksDatabaseBridge().get("Currency", "CHF")
+			currency = client.get("Currency", "CHF")
 
 		self.assertEqual(currency["name"], "CHF")
-		self.assertEqual(currency["fractionUnits"], 100)
-		self.assertEqual(Decimal(str(currency["smallestValue"])), Decimal("0.05"))
+		self.assertEqual(currency["fraction_units"], 100)
+		self.assertEqual(Decimal(str(currency["smallest_currency_fraction_value"])), Decimal("0.05"))
 
 	def test_books_manager_adds_a_currency_through_the_interface(self):
 		with self.set_user(ensure_user(BOOKS_MANAGER, "Books Manager")):
-			BooksDatabaseBridge().insert("Currency", {"name": "XBK", "symbol": "B"})
+			client.insert({"doctype": "Currency", "currency_name": "XBK", "symbol": "B", "enabled": 1})
 
 		self.assertEqual(frappe.db.get_value("Currency", "XBK", "symbol"), "B")
 

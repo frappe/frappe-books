@@ -1,8 +1,8 @@
 import frappe
+from frappe import client
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import make_account, make_item, make_number_series
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestSetOnceFields(IntegrationTestCase):
@@ -61,11 +61,10 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 				series.set(fieldname, value)
 				self.assertRaises(frappe.CannotChangeConstantError, series.save)
 
-	def test_interface_can_save_unchanged_locked_fields(self):
-		bridge = BooksDatabaseBridge()
+	def test_a_whole_document_save_keeps_unchanged_locked_fields(self):
 		account = make_account("Set Once Root", is_group=1)
-		values = bridge.get("Account", account.name)
+		values = client.get("Books Account", account.name)
 
-		bridge.update("Account", {**values, "accountType": "Bank"})
+		client.save({**values, "account_type": "Bank"})
 
 		self.assertEqual(frappe.db.get_value("Books Account", account.name, "account_type"), "Bank")

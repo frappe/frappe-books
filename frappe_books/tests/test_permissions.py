@@ -1,7 +1,9 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.desk.search import search_widget
+from frappe import client
+from frappe.api.v2 import count, read_doc
+from frappe.desk.search import search_link, search_widget
 from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
@@ -14,7 +16,6 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 RIGHTS = ("read", "write", "create", "delete", "submit", "cancel", "amend")
 FULL = {"read", "write", "create", "delete"}
@@ -117,25 +118,25 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(MANAGER):
 			self.assertFalse(frappe.has_permission("Data Import", "read", other))
 
-	def test_bridge_ledger_writes_follow_docperms(self):
+	def test_ledger_writes_follow_docperms(self):
 		with self.set_user(MANAGER):
-			for schema in ("AccountingLedgerEntry", "StockLedgerEntry", "LoyaltyPointEntry"):
-				with self.subTest(schema=schema):
-					self.assertRaises(frappe.PermissionError, BooksDatabaseBridge().insert, schema, {})
+			for doctype in ("Books Ledger Entry", "Books Stock Ledger Entry", "Books Loyalty Point Entry"):
+				with self.subTest(doctype=doctype):
+					self.assertRaises(frappe.PermissionError, client.insert, {"doctype": doctype})
 
-	def test_bridge_hides_fields_above_the_users_permlevel(self):
+	def test_documents_hide_fields_above_the_users_permlevel(self):
 		party = make_party(make_account("Permlevel Receivable", account_type="Receivable").name)
 		party.db_set("email", "hidden@example.com")
 		email = frappe.get_meta("Books Party").get_field("email")
 		with patch.object(email, "permlevel", 1), self.set_user(TEST_USER):
-			self.assertIsNone(BooksDatabaseBridge().get("Party", party.name).get("email"))
+			self.assertIsNone(read_doc("Books Party", party.name).get("email"))
 
-	def test_bridge_count_skips_documents_the_user_cannot_read(self):
+	def test_counts_skip_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
 		add_user_permission("Books Shipment", readable, TEST_USER)
-		with self.set_user(TEST_USER):
-			count = BooksDatabaseBridge().call("count", ["Shipment", {"name": ["in", [readable, hidden]]}])
-		self.assertEqual(count, 1)
+		filters = [["name", "in", [readable, hidden]]]
+		with self.set_user(TEST_USER), patch.dict(frappe.form_dict, {"filters": filters}):
+			self.assertEqual(count("Books Shipment"), 1)
 
 	def test_search_skips_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
@@ -148,9 +149,9 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		readable, hidden = _seed_shipment(), _seed_shipment()
 		add_user_permission("Books Shipment", readable, TEST_USER)
 		with self.set_user(TEST_USER):
-			found = BooksDatabaseBridge().call("searchLink", ["Shipment", "", {}, ["name"], 50])
-		self.assertIn(readable, [row["name"] for row in found])
-		self.assertNotIn(hidden, [row["name"] for row in found])
+			found = [row["value"] for row in search_link("Books Shipment", "", page_length=50)]
+		self.assertIn(readable, found)
+		self.assertNotIn(hidden, found)
 
 	def test_linked_entries_need_the_document_and_hide_unreadable_links(self):
 		original = _seed_shipment()

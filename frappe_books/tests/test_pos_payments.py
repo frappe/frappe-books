@@ -1,6 +1,7 @@
 import frappe
+from frappe.api.v2 import run_doc_method
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, getdate, now_datetime
+from frappe.utils import add_days, getdate, now_datetime, set_request
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
@@ -16,8 +17,6 @@ from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice i
 	pay_pos_invoice,
 )
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
-from frappe_books.ui_api import lifecycle_action
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestPosPayments(IntegrationTestCase):
@@ -58,20 +57,14 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual((payment.amount, payment.payment_account), (180, self.counter))
 		self.assertEqual((invoice.outstanding_amount, invoice.reload().status), (0, "Paid"))
 
-	def test_interface_submit_pays_the_tendered_rows(self):
-		values = {
-			"party": self.party.name,
-			"account": self.receivable.name,
-			"date": now_datetime().isoformat(),
-			"isPOS": True,
-			"items": [{"item": self.item.name, "rate": 90, "quantity": 2}],
-			"payments": [{"paymentMethod": "Cash", "amount": 200}],
-		}
-		inserted = BooksDatabaseBridge().insert("SalesInvoice", values)
+	def test_a_submit_of_the_client_copy_pays_the_tendered_rows(self):
+		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
-		invoice = lifecycle_action("submit", "SalesInvoice", inserted["name"], inserted["modified"])
+		run_doc_method("submit", invoice.as_dict(convert_dates_to_str=True))
 
-		self.assertEqual((invoice["outstandingAmount"], invoice["status"]), (0, "Paid"))
+		invoice.reload()
+		self.assertEqual((invoice.outstanding_amount, invoice.status), (0, "Paid"))
 
 	def test_failed_payment_fails_the_submit(self):
 		invoice = self.make_pos_invoice(payments=[{"payment_method": "Bank", "amount": 180}])

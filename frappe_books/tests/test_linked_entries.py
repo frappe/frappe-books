@@ -1,4 +1,4 @@
-"""Regression coverage for document IDs returned to the linked entries panel."""
+"""Regression coverage for the documents the linked entries panel lists."""
 
 import re
 from unittest.mock import patch
@@ -11,31 +11,11 @@ from frappe.utils import now_datetime
 from frappe_books import linked_entries as linked_entries_module
 from frappe_books.linked_entries import get_linked_entries
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 QUOTED_TABLE = re.compile(r'[`"](tab[^`"]+)[`"]')
 
 
 class IntegrationTestLinkedEntries(IntegrationTestCase):
-	def setUp(self):
-		self.bridge = BooksDatabaseBridge()
-
-	def test_numeric_record_names_are_strings_in_list_responses(self):
-		for schema in ("AccountingLedgerEntry", "StockLedgerEntry", "ItemEnquiry"):
-			with self.subTest(schema=schema), patch("frappe.get_list", return_value=[{"name": 193}]):
-				rows = self.bridge.get_all(schema, {"fields": ["name"]})
-				self.assertEqual(rows, [{"name": "193"}])
-
-	def test_numeric_record_names_are_strings_in_document_responses(self):
-		for schema, doctype in (
-			("AccountingLedgerEntry", "Books Ledger Entry"),
-			("StockLedgerEntry", "Books Stock Ledger Entry"),
-			("ItemEnquiry", "Books Item Enquiry"),
-		):
-			with self.subTest(schema=schema):
-				doc = frappe.get_doc({"doctype": doctype, "name": 193})
-				self.assertEqual(self.bridge._to_source_document(schema, doc, ["name"]), {"name": "193"})
-
 	def test_linked_ledger_names_can_be_used_to_fetch_display_details(self):
 		account = make_account("Linked entry IDs")
 		entry = frappe.get_doc(
@@ -46,20 +26,18 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 				"debit": 12.5,
 			}
 		).insert()
-		links = self.bridge.get_all(
-			"AccountingLedgerEntry", {"fields": ["name", "created"], "filters": {"account": account.name}}
+
+		names = get_linked_entries(account.doctype, account.name)["Books Ledger Entry"]
+		# The panel then lists them by name, as getFrappeRows does.
+		details = frappe.get_list(
+			"Books Ledger Entry",
+			filters={"name": ["in", names]},
+			fields=["name", "posting_date", "account", "debit", "credit"],
 		)
-		self.assertEqual([row["name"] for row in links], [str(entry.name)])
-		details = self.bridge.get_all(
-			"AccountingLedgerEntry",
-			{
-				"fields": ["name", "date", "account", "debit", "credit"],
-				"filters": {"name": ["in", [row["name"] for row in links]]},
-			},
-		)
-		self.assertEqual(details[0]["name"], str(entry.name))
-		self.assertEqual(details[0]["debit"], 12.5)
-		self.assertEqual(self.bridge.get("AccountingLedgerEntry", str(entry.name))["name"], str(entry.name))
+
+		self.assertEqual(names, [str(entry.name)])
+		self.assertEqual([str(row.name) for row in details], [str(entry.name)])
+		self.assertEqual(details[0].debit, 12.5)
 
 	def test_linked_entries_include_links_made_after_the_first_lookup(self):
 		receivable = make_account("Linked Receivable", account_type="Receivable")

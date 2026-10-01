@@ -48,8 +48,12 @@ def complete_site_setup(wizard):
 
 
 def enable_currency(currency):
-	"""Frappe offers only enabled currencies in Link searches."""
-	frappe.db.set_value("Currency", currency, "enabled", 1)
+	"""Frappe offers only enabled currencies in Link searches and in the boot /books formats with."""
+	doc = frappe.get_doc("Currency", currency)
+	if not doc.enabled:
+		doc.enabled = 1
+		# Saving clears the cached boots, so the next page load has the currency.
+		doc.save()
 
 
 def default_accounts(chart):

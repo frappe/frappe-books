@@ -1,30 +1,15 @@
 <template>
   <div class="flex flex-1 flex-col bg-surface-base">
     <PageHeader :title="title">
-      <template #mobile>
-        <FrappeButton
-          v-if="actionGroups.length"
-          variant="ghost"
-          size="md"
-          icon="lucide-ellipsis"
-          :label="t`More actions`"
-          @click="showActions = true"
-        />
-        <FrappeButton
-          v-if="doc.canSave"
-          variant="solid"
-          size="md"
-          :label="t`Save`"
-          :disabled="doc.isSyncing"
-          @click="$emit('sync')"
-        />
-        <FrappeButton
-          v-else-if="doc.canSubmit"
-          variant="solid"
-          size="md"
-          :label="t`Submit`"
-          @click="$emit('submit')"
-        />
+      <template v-if="menuOptions.length" #mobile>
+        <FrappeDropdown :options="menuOptions" align="end">
+          <FrappeButton
+            variant="ghost"
+            size="md"
+            icon="lucide-ellipsis"
+            :label="t`More actions`"
+          />
+        </FrappeDropdown>
       </template>
     </PageHeader>
 
@@ -88,57 +73,50 @@
     </MobileFormSection>
 
     <div class="h-10 flex-none" />
-    <MobileFooter v-if="nextStep">
+    <MobileFooter v-if="canPrint || doc.canSave || doc.canSubmit || footerStep">
       <FrappeButton
         v-if="canPrint"
+        class="flex-1"
         size="lg"
-        icon="lucide-printer"
+        icon-left="lucide-printer"
         :label="t`Print`"
         @click="$emit('print')"
       />
       <FrappeButton
+        v-if="doc.canSave"
         class="flex-1"
         size="lg"
         variant="solid"
-        :label="nextStep.nextStep"
-        @click="run(nextStep)"
+        :label="t`Save`"
+        :disabled="doc.isSyncing"
+        @click="$emit('sync')"
+      />
+      <FrappeButton
+        v-else-if="doc.canSubmit"
+        class="flex-1"
+        size="lg"
+        variant="solid"
+        :label="t`Submit`"
+        @click="$emit('submit')"
+      />
+      <FrappeButton
+        v-else-if="footerStep"
+        class="flex-1"
+        size="lg"
+        variant="solid"
+        :label="footerStep.nextStep"
+        @click="run(footerStep)"
       />
     </MobileFooter>
-
-    <FrappeBottomSheet v-model:open="showActions" :title="doc.formTitle">
-      <div
-        class="flex flex-col px-2 pb-[max(env(safe-area-inset-bottom),1rem)]"
-      >
-        <template v-for="group in actionGroups" :key="group.key">
-          <div v-if="group.divider" class="mx-3 my-1 h-px bg-outline-gray-1" />
-          <div
-            v-if="group.label"
-            class="px-3 pb-1.5 pt-3 text-xs-medium text-ink-gray-5"
-          >
-            {{ group.label }}
-          </div>
-          <button
-            v-for="action in group.actions"
-            :key="action.label"
-            class="flex h-[52px] items-center rounded-5 px-3 text-start text-lg active:bg-surface-gray-2"
-            :class="
-              action.theme === 'red' ? 'text-ink-red-4' : 'text-ink-gray-8'
-            "
-            @click="run(action)"
-          >
-            {{ action.label }}
-          </button>
-        </template>
-      </div>
-    </FrappeBottomSheet>
   </div>
 </template>
 <script setup lang="ts">
 import {
   Alert as FrappeAlert,
-  BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
+  Dropdown as FrappeDropdown,
   TabButtons as FrappeTabButtons,
+  type DropdownOptions,
 } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
@@ -151,11 +129,11 @@ import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { hasFieldValue } from 'src/utils/doc';
 import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc } from 'src/utils/ui';
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import MobileFormSection from './MobileFormSection.vue';
 
-type SheetAction = Pick<Action, 'label' | 'group' | 'theme' | 'nextStep'> & {
+type FormAction = Pick<Action, 'label' | 'group' | 'theme' | 'nextStep'> & {
   action: (doc: Doc, router: ReturnType<typeof useRouter>) => unknown;
 };
 
@@ -182,7 +160,6 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
-const showActions = ref(false);
 
 // A finished document hides empty fields, so tabs without values go too.
 const tabOptions = computed(() => {
@@ -226,41 +203,45 @@ const errorTabs = computed(() => {
   return tabs;
 });
 
-const actions = computed(() => getActionsForDoc(props.doc) as SheetAction[]);
-const nextStep = computed(() => actions.value.find((a) => a.nextStep));
+const actions = computed(() => getActionsForDoc(props.doc) as FormAction[]);
 
-/** Print and links, then each action group, then destructive actions. */
-const actionGroups = computed(() => {
-  const view: SheetAction[] = [];
-  if (props.canPrint) {
-    view.push({ label: t`Print`, action: () => emit('print') });
-  }
+/** The next step runs from the footer unless saving or submitting comes first. */
+const footerStep = computed(() =>
+  props.doc.canSave || props.doc.canSubmit
+    ? undefined
+    : actions.value.find((action) => action.nextStep)
+);
 
-  if (props.canShowLinks) {
-    view.push({ label: t`Linked Entries`, action: () => emit('show-links') });
-  }
-
-  const rest = actions.value.filter((action) => action !== nextStep.value);
+/** Linked entries, then each action group, then destructive actions. */
+const menuOptions = computed<DropdownOptions>(() => {
+  const rest = actions.value.filter((action) => action !== footerStep.value);
   const labels = [...new Set(rest.map((a) => a.group ?? ''))].sort();
+  const links: FormAction[] = props.canShowLinks
+    ? [{ label: t`Linked Entries`, action: () => emit('show-links') }]
+    : [];
   const groups = [
-    { key: 'view', label: '', divider: false, actions: view },
+    { label: '', actions: links },
     ...labels.map((label) => ({
-      key: `group-${label}`,
       label,
-      divider: false,
       actions: rest.filter(
         (a) => (a.group ?? '') === label && a.theme !== 'red'
       ),
     })),
-    {
-      key: 'destructive',
-      label: '',
-      divider: true,
-      actions: rest.filter((a) => a.theme === 'red'),
-    },
+    { label: '', actions: rest.filter((a) => a.theme === 'red') },
   ];
 
-  return groups.filter((group) => group.actions.length);
+  return groups
+    .filter((group) => group.actions.length)
+    .map((group, index) => ({
+      key: index,
+      group: group.label,
+      hideLabel: !group.label,
+      options: group.actions.map((action) => ({
+        label: action.label,
+        theme: action.theme,
+        onClick: () => run(action),
+      })),
+    }));
 });
 
 function hasItemsTable(fields: Field[]) {
@@ -289,8 +270,7 @@ async function showFirstError() {
     ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
-async function run(action: SheetAction) {
-  showActions.value = false;
+async function run(action: FormAction) {
   await action.action(props.doc, router);
 }
 

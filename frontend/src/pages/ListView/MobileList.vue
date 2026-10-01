@@ -1,24 +1,34 @@
 <template>
   <MobilePullToRefresh :refresh="refresh" class="flex flex-col">
-    <div v-if="isLoading" aria-busy="true" :aria-label="t`Loading`">
-      <div
+    <FrappeList
+      v-if="isLoading"
+      class="list-row-px-4"
+      :columns="['minmax(0,1fr)', 'auto']"
+      aria-busy="true"
+      :aria-label="t`Loading`"
+    >
+      <FrappeListRow
         v-for="(width, index) in skeletonWidths"
         :key="index"
-        class="flex h-[68px] flex-col justify-center gap-2.5 border-b border-outline-gray-1 px-4"
+        class="h-17"
       >
-        <span class="flex justify-between">
-          <span
-            class="h-[13px] rounded-[6px] bg-surface-gray-2"
-            :style="{ width: `${width}px` }"
-          />
-          <span class="h-[13px] w-[84px] rounded-[6px] bg-surface-gray-2" />
-        </span>
-        <span class="flex justify-between">
-          <span class="h-[11px] w-[120px] rounded-[6px] bg-surface-gray-1" />
-          <span class="h-[11px] w-12 rounded-full bg-surface-gray-1" />
-        </span>
-      </div>
-    </div>
+        <FrappeListCell>
+          <div class="flex flex-col gap-2">
+            <FrappeSkeleton
+              class="h-4 rounded-4"
+              :style="{ width: `${width}px` }"
+            />
+            <FrappeSkeleton class="h-3.5 w-28 rounded-4" />
+          </div>
+        </FrappeListCell>
+        <FrappeListCell class="justify-end">
+          <div class="flex flex-col items-end gap-2">
+            <FrappeSkeleton class="h-4 w-20 rounded-4" />
+            <FrappeSkeleton class="h-3.5 w-12 rounded-full" />
+          </div>
+        </FrappeListCell>
+      </FrappeListRow>
+    </FrappeList>
 
     <template v-else-if="rows.length">
       <FrappeList
@@ -74,8 +84,12 @@
   </MobilePullToRefresh>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
-import { List as FrappeList } from 'frappe-ui/list';
+import { Button as FrappeButton, Skeleton as FrappeSkeleton } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import type { RenderData } from 'fyo/model/types';
 import MobilePullToRefresh from 'src/mobile/MobilePullToRefresh.vue';
 import { defineComponent, type PropType } from 'vue';
@@ -85,7 +99,15 @@ import { getMobileRowLayout, type MobileRowLayout } from './mobileRowLayout';
 
 export default defineComponent({
   name: 'MobileList',
-  components: { FrappeButton, FrappeList, MobileListRow, MobilePullToRefresh },
+  components: {
+    FrappeButton,
+    FrappeList,
+    FrappeListCell,
+    FrappeListRow,
+    FrappeSkeleton,
+    MobileListRow,
+    MobilePullToRefresh,
+  },
   props: {
     schemaName: { type: String, required: true },
     rows: { type: Array as PropType<RenderData[]>, required: true },

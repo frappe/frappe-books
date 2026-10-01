@@ -7,16 +7,21 @@
       class="grid content-center items-center gap-x-2 gap-y-2.5 border-b border-outline-gray-1 px-4"
       :style="{ gridTemplateColumns, height: `${height}px` }"
     >
-      <span :class="bar" :style="{ width: `${width}px` }" />
-      <span v-for="(_, index) in values" :key="index" :class="bar" />
+      <FrappeSkeleton :class="bar" :style="{ width: `${width}px` }" />
+      <FrappeSkeleton v-for="(_, index) in values" :key="index" :class="bar" />
       <template v-if="lines === 2">
-        <span :class="bar" :style="{ width: `${width - 40}px` }" />
-        <span v-for="(_, index) in values" :key="index" :class="bar" />
+        <FrappeSkeleton :class="bar" :style="{ width: `${width - 40}px` }" />
+        <FrappeSkeleton
+          v-for="(_, index) in values"
+          :key="index"
+          :class="bar"
+        />
       </template>
     </div>
   </div>
 </template>
 <script setup lang="ts">
+import { Skeleton as FrappeSkeleton } from 'frappe-ui';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -26,7 +31,7 @@ const props = defineProps<{
   lines: 1 | 2;
 }>();
 
-const bar = 'h-[13px] max-w-full rounded-[6px] bg-surface-gray-2';
+const bar = 'h-3.5 max-w-full rounded-4';
 const labelWidths = [150, 120, 170, 110, 140];
 
 const gridTemplateColumns = computed(() =>

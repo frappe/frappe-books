@@ -165,8 +165,10 @@ test('a rejected settings save retains edits and does not offer a successful-sav
     });
   });
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  const error = page.getByRole('dialog');
-  await expect(error).toContainText('Settings write rejected');
+  const error = page
+    .getByRole('dialog')
+    .filter({ hasText: 'Settings write rejected' });
+  await expect(error).toBeVisible();
   await error.getByRole('button', { name: 'Okay', exact: true }).click();
   await expect(
     page.getByText('Reload Frappe Books?', { exact: true })

@@ -76,8 +76,9 @@ export async function openQuickEdit({
   await router.push({ query, replace });
 }
 
-export async function openSettings(tab: SettingsTab) {
-  await routeTo({ path: '/settings', query: { tab } });
+/** Desktop shows settings in a dialog, phones on a page (see the router). */
+export async function openSettings(tab?: SettingsTab) {
+  await routeTo({ path: '/settings', query: tab ? { tab } : {} });
 }
 
 export async function routeTo(route: RouteLocationRaw) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { showSidebar } from 'src/utils/refs';
+import { settingsDialog, showSidebar } from 'src/utils/refs';
 </script>
 <template>
   <FrappeDesktopShell :scroll="false">
@@ -23,9 +23,10 @@ import { showSidebar } from 'src/utils/refs';
         </keep-alive>
       </router-view>
 
+      <!-- The settings dialog shows the records its fields create. -->
       <router-view v-slot="{ Component, route }" name="edit">
         <Transition name="quickedit">
-          <div v-if="route?.query?.edit">
+          <div v-if="route?.query?.edit && !settingsDialog.open">
             <component
               :is="Component"
               :key="
@@ -37,16 +38,19 @@ import { showSidebar } from 'src/utils/refs';
         </Transition>
       </router-view>
     </div>
+    <SettingsDialog />
   </FrappeDesktopShell>
 </template>
 <script lang="ts">
 import { DesktopShell as FrappeDesktopShell } from 'frappe-ui';
 import { defineComponent } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
+import SettingsDialog from './Settings/SettingsDialog.vue';
 export default defineComponent({
   name: 'Desk',
   components: {
     FrappeDesktopShell,
+    SettingsDialog,
     Sidebar,
   },
   async mounted() {

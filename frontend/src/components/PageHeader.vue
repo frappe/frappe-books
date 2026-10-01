@@ -9,11 +9,7 @@
       </div>
     </template>
   </FrappePageHeaderMobile>
-  <FrappePageHeader
-    v-else-if="isActive"
-    class="w-full min-w-0 flex-shrink-0"
-    :class="border ? '' : '!border-b-0'"
-  >
+  <FrappePageHeader v-else-if="isActive" class="w-full min-w-0 flex-shrink-0">
     <div class="me-auto flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
       <FrappeButton
         v-if="!showSidebar"
@@ -30,7 +26,7 @@
         <FrappePageHeaderTitle :title="title" class="block select-none" />
       </h1>
 
-      <div class="flex min-w-0 items-stretch gap-3">
+      <div class="flex min-w-0 items-center gap-3">
         <slot name="left" />
       </div>
     </div>
@@ -65,7 +61,6 @@ export default defineComponent({
   },
   props: {
     title: { type: String, default: '' },
-    border: { type: Boolean, default: true },
   },
   setup() {
     // A teleported header stays in the shell when keep-alive caches its page.

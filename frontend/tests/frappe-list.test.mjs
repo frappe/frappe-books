@@ -7,6 +7,7 @@ import {
   getFrappeListPage,
   getFrappeRows,
   getSchema,
+  isSortableField,
   ListFilters,
   loadListData,
   loadTestDocTypes,
@@ -252,6 +253,44 @@ test("a list is ordered by its DocType's sort field, newest first", async (t) =>
       .map(({ body }) => body.order_by),
     ['creation desc', 'customer desc, creation desc']
   );
+});
+
+test('a sorted list is ordered by its column, newest first among equal values', async () => {
+  const requests = stubFrappe(({ path }) =>
+    path.endsWith('/count') ? { data: 0 } : { message: [] }
+  );
+  const list = {
+    schemaName: 'Order',
+    filters: {},
+    activeFilters: {},
+    orFilters: {},
+    requestId: 0,
+    pageStart: 0,
+    pageLength: 20,
+    sort: { fieldname: 'customer', direction: 'asc' },
+  };
+
+  await loadListData(fyo, list);
+  list.sort = { fieldname: 'creation', direction: 'asc' };
+  await loadListData(fyo, list);
+  assert.deepEqual(
+    requests
+      .filter(({ path }) => !path.endsWith('/count'))
+      .map(({ body }) => body.order_by),
+    ['customer asc, creation desc', 'creation asc']
+  );
+});
+
+test('a list sorts only by the columns its DocType stores', (t) => {
+  const customer = getDocType('Order').meta.fields[0];
+  t.after(() => delete customer.is_virtual);
+
+  assert.ok(isSortableField('Order', 'customer'));
+  assert.ok(isSortableField('Order', 'name'));
+  assert.ok(isSortableField('Order', 'creation'));
+  assert.ok(!isSortableField('Order', 'status'));
+  customer.is_virtual = 1;
+  assert.ok(!isSortableField('Order', 'customer'));
 });
 
 test('a submittable list filters Submitted and Cancelled by docstatus', () => {

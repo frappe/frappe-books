@@ -8,7 +8,6 @@ from frappe_books.inventory.auto_transfer import default_location
 from frappe_books.series import default_series_by_schema
 from frappe_books.ui_bridge.database import system_datetime
 from frappe_books.ui_bridge.dispatch import call_handler
-from frappe_books.ui_bridge.linked_entries import linked_entries
 from frappe_books.ui_bridge.mapping import target_doctype
 
 
@@ -67,9 +66,6 @@ class BooksBespokeQueries:
 		frappe.has_permission(invoice.doctype, "read", throw=True)
 		return default_location(invoice)
 
-	def linked_entries(self, source_schema: str, name: str):
-		return linked_entries(source_schema, name)
-
 	def default_number_series(self):
 		frappe.has_permission("Books Defaults", "read", throw=True)
 		return default_series_by_schema()
@@ -79,6 +75,5 @@ _METHODS = {
 	"getStockQuantity": "stock_quantity",
 	"getStockQuantities": "stock_quantities",
 	"getStockLocation": "stock_location",
-	"getLinkedEntries": "linked_entries",
 	"getDefaultNumberSeries": "default_number_series",
 }

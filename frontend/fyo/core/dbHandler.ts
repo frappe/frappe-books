@@ -327,17 +327,6 @@ export class DatabaseHandler extends DatabaseBase {
     )) as string | null;
   }
 
-  async getLinkedEntries(
-    schemaName: string,
-    name: string
-  ): Promise<Record<string, string[]>> {
-    return (await this.#demux.callBespoke(
-      'getLinkedEntries',
-      schemaName,
-      name
-    )) as Record<string, string[]>;
-  }
-
   async getDefaultNumberSeries(): Promise<Record<string, string>> {
     return (await this.#demux.callBespoke('getDefaultNumberSeries')) as Record<
       string,

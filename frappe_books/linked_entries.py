@@ -2,21 +2,19 @@ from collections import defaultdict
 
 import frappe
 
-from frappe_books.ui_bridge.mapping import source_by_doctype, target_doctype
-
 LINKED_ENTRIES_LIMIT = 100
 
 
-def linked_entries(source_schema: str, name: str) -> dict[str, list[str]]:
-	"""Return the Books documents that link to a document by schema, newest first, without cancelled ones."""
-	doctype = target_doctype(source_schema)
+@frappe.whitelist()
+def get_linked_entries(doctype: str, name: str) -> dict[str, list[str]]:
+	"""Names of the Books documents that link to a document, by doctype, newest first, without cancelled ones."""
 	frappe.has_permission(doctype, doc=name, throw=True)
 	creation_by_doctype = defaultdict(dict)
 	for linked_doctype, filters, or_filters in _link_queries(doctype, name):
 		for row in _linked_rows(linked_doctype, filters, or_filters):
 			creation_by_doctype[linked_doctype][row.name] = row.creation
 	return {
-		source_by_doctype()[linked_doctype]: _newest(creation_by_name)
+		linked_doctype: _newest(creation_by_name)
 		for linked_doctype, creation_by_name in creation_by_doctype.items()
 	}
 
@@ -38,10 +36,10 @@ def _link_queries(doctype: str, name: str):
 
 
 def _document_metas():
-	for doctype in source_by_doctype():
-		meta = frappe.get_meta(doctype)
-		if not (meta.istable or meta.issingle):
-			yield meta
+	doctypes = frappe.get_all(
+		"DocType", filters={"module": "Frappe Books", "istable": 0, "issingle": 0}, pluck="name"
+	)
+	return [frappe.get_meta(doctype) for doctype in doctypes]
 
 
 def _linked_rows(doctype: str, filters: list, or_filters: list) -> list:

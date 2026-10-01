@@ -7,13 +7,14 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
+from frappe_books.accounting.returns import set_quantity_signs
 from frappe_books.inventory.invoice_balance import (
 	bill_unbilled_rows,
 	update_invoice_balance,
 	validate_billable,
 	validate_invoice_balance,
 )
-from frappe_books.inventory.returns import set_quantity_signs, validate_transfer_return
+from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
 	create_series_batches,

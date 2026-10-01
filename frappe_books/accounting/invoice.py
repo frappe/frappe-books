@@ -44,6 +44,7 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 
 	def calculate(self):
 		"""Fill defaults, apply pricing and set the totals, without writing anything."""
+		returns.set_quantity_signs(self.items, bool(self.get("return_against")))
 		pricing.reset_pricing(self)
 		_populate_invoice_defaults(self)
 		pricing.apply_pricing(self)
@@ -303,7 +304,6 @@ def _validate_row(invoice, row):
 	quantity = as_decimal(row.quantity)
 	if quantity == 0:
 		frappe.throw(_("Item quantity cannot be zero."))
-	returns.validate_quantity_sign(row, bool(invoice.get("return_against")))
 	if as_decimal(row.rate) < 0:
 		frappe.throw(_("Item rate cannot be negative."))
 	_validate_row_discount(row)

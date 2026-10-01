@@ -5,6 +5,7 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
+from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal, currency_unit, rounded, sum_decimal
 from frappe_books.inventory.stock import parse_serial_numbers
@@ -72,13 +73,13 @@ def _negate_row(row, quantity, returned_serials):
 	row.serial_number = "\n".join(serials) or None
 
 
-def validate_quantity_sign(row, is_return):
-	"""A return takes quantities back, so its rows are negative and other rows positive."""
-	quantity = as_decimal(row.quantity)
-	if is_return and quantity > 0:
-		frappe.throw(_("Row {0}: returned quantities must be negative.").format(row.idx))
-	if not is_return and quantity < 0:
-		frappe.throw(_("Row {0}: only returns can have negative quantities.").format(row.idx))
+def set_quantity_signs(rows, is_return):
+	"""A return takes quantities back, so its quantities are negative, and every other document's positive."""
+	sign = -1 if is_return else 1
+	for row in rows:
+		for fieldname in ("quantity", "transfer_quantity"):
+			if row.get(fieldname):
+				row.set(fieldname, sign * abs(flt(row.get(fieldname))))
 
 
 def validate_return(invoice):

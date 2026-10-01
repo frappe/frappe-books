@@ -6,7 +6,6 @@ import {
   conditionsForField,
   defaultCondition,
   mergeQueryFilters,
-  makeFyo,
   getFilterFields,
   getFieldLabel,
 } from './helpers/accounting.mjs';

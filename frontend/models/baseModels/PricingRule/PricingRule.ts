@@ -42,8 +42,7 @@ export class PricingRule extends FrappeDoc {
   valid_from?: Date;
   valid_to?: Date;
 
-  // The server checks these too; mirrored to show its message at the field.
-  // The server checks these too; mirrored to show a message at each field.
+  // The server checks these too, with the message of the edited field.
   validations: ValidationMap = {
     min_quantity: (value: DocValue) =>
       validateQuantities(

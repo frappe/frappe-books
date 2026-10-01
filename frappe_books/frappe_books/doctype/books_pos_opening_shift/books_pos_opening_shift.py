@@ -48,6 +48,8 @@ class BooksPosOpeningShift(Document):
 		if self._action == "submit" or not self.opening_date:
 			# The shift opens when it is submitted, as its closing shift closes it.
 			self.opening_date = now_datetime()
+		if cash_total(self.opening_cash) < 0:
+			frappe.throw(_("Opening Cash Amount can not be negative."))
 		validate_cash_rows(self.opening_cash)
 		amounts = self.get_opening_amounts()
 		cash = sum_decimal(amount for method, amount in amounts.items() if is_cash_method(method))

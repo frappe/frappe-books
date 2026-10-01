@@ -24,16 +24,6 @@ const rowSchemas = {
   Shipment: 'ShipmentItem',
   PurchaseReceipt: 'PurchaseReceiptItem',
 };
-window.frappe.boot.books.doctypes = {
-  ...window.frappe.boot.books.doctypes,
-  StockMovement: 'Books Stock Movement',
-  StockMovementItem: 'Books Stock Movement Item',
-  Shipment: 'Books Shipment',
-  ShipmentItem: 'Books Shipment Item',
-  PurchaseReceipt: 'Books Purchase Receipt',
-  PurchaseReceiptItem: 'Books Purchase Receipt Item',
-};
-
 stubFrappe(({ path, body }) =>
   path.endsWith('getdoctype') ? { docs: getMetaBundle(body.doctype) } : { data: [] }
 );

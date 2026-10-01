@@ -94,7 +94,6 @@ test('a shipped template is read only, and its duplicate is an editable copy nam
 });
 
 test('the template list labels each type as its schema and marks custom templates', () => {
-  window.frappe.boot.books.doctypes.Payment = 'Books Payment';
   const [, type, custom] =
     getDocType('PrintFormat').Model.getListViewSettings(fyo).columns;
   assert.equal(type.display('Books Payment'), 'Payment');

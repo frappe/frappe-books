@@ -1,4 +1,4 @@
-import { getMetaBundle, mapping } from './doctypes.mjs';
+import { getMetaBundle } from './doctypes.mjs';
 import {
   getModel,
   getSchema,
@@ -13,12 +13,6 @@ import {
  * sends them. Returns the requests made after loading.
  */
 export async function loadFrappeModels(models, respond = () => ({ data: [] })) {
-  window.frappe.boot.books.doctypes = Object.fromEntries(
-    Object.entries(mapping).map(([schemaName, { doctype }]) => [
-      schemaName,
-      doctype,
-    ])
-  );
   const requests = stubFrappe((request) =>
     request.path.endsWith('getdoctype')
       ? { docs: getMetaBundle(request.body.doctype) }

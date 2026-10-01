@@ -86,7 +86,7 @@ test('table rows are presented by the row model their parent names', async () =>
   await move.append('rows', { item: 'Pen' });
   clearTimeout(move._previewTimer);
 
-  assert.equal(getModel('Books Move Row'), MoveRow);
+  assert.equal(getModel('MoveRow'), MoveRow);
   assert.ok(move.rows[0] instanceof MoveRow);
 });
 

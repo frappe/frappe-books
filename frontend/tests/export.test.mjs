@@ -57,7 +57,7 @@ test('every exported table is headed by the label of its rows, not their doctype
 
   assert.deepEqual(doctypeLabels, []);
   assert.equal(getSchema('TaxDetail').label, 'Tax Detail');
-  assert.equal(getSchema('UOMConversionItem').label, 'UOM Conversion Item');
+  assert.equal(getSchema('UomConversionItem').label, 'UOM Conversion Item');
 });
 
 test('a list exports from the framework a page at a time, in list order', async () => {

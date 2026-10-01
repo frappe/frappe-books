@@ -1,107 +1,115 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { Fyo, frappeModels, getSchemas } from './helpers/accounting.mjs';
+import { before, test } from 'node:test';
+import { getMetaBundle } from './helpers/doctypes.mjs';
+import {
+  frappeModels,
+  fyo,
+  loadFrappeDocTypes,
+  newFrappeDoc,
+  registerFrappeModels,
+  stubFrappe,
+} from './helpers/frappe.mjs';
 
-// Saving a Custom Form shows its fields on the forms the bridge still serves.
-async function makeFixture() {
-  let definitions = [];
-  class DefinitionStore {
-    getSchemaMap() {
-      return getSchemas('-', definitions);
+// Custom fields by doctype, and where each Custom Form places them.
+const customFields = {};
+const placements = {};
+
+/** Answers the meta of each doctype with its custom fields, and its Custom Form's placements. */
+function serveCustomizedMeta() {
+  stubFrappe(({ path, body, params }) => {
+    if (path.endsWith('getdoctype')) {
+      return {
+        docs: getMetaBundle(body.doctype).map((meta) => ({
+          ...meta,
+          fields: [...meta.fields, ...(customFields[meta.name] ?? [])],
+        })),
+      };
     }
-    call(method) {
-      throw new Error(`Unexpected database call: ${method}`);
-    }
-  }
-  const fyo = new Fyo({ DatabaseDemux: DefinitionStore });
-  await fyo.db.init();
-  fyo.doc.registerModels({});
-  const schema = { name: 'CustomForm', fields: [] };
-  const form = new frappeModels.CustomForm(schema, {}, fyo, false);
-  form.name = 'UOM';
-  return {
-    fyo,
-    form,
-    setDefinitions: (values) => {
-      definitions = values;
-    },
-  };
+
+    const [[, , formName]] = params.filters;
+    const rows = placements[formName];
+    return { data: rows ? [{ custom_fields: rows }] : [] };
+  });
 }
 
+/** Saves a customization, as the Custom Form's save announces it. */
+async function customize(schemaName, doctype, fields) {
+  customFields[doctype] = fields.map(({ docfield }) => docfield);
+  placements[schemaName] = fields.map(({ fieldname }) => ({
+    fieldname,
+    section: 'Default',
+    tab: 'Custom',
+  }));
+  await fyo.doc.observer.trigger('sync:CustomForm', schemaName);
+}
+
+before(async () => {
+  serveCustomizedMeta();
+  registerFrappeModels({
+    UOM: frappeModels.UOM,
+    SalesInvoice: frappeModels.SalesInvoice,
+  });
+  await loadFrappeDocTypes();
+});
+
+const note = (docfield = {}) => ({
+  fieldname: 'myNote',
+  docfield: {
+    fieldname: 'custom_books_mynote',
+    fieldtype: 'Data',
+    label: 'My Note',
+    is_custom_field: 1,
+    ...docfield,
+  },
+});
+
 test('optional custom fields retain their configured defaults', async () => {
-  const { fyo, form, setDefinitions } = await makeFixture();
-  setDefinitions([
+  await customize('UOM', 'Books Uom', [note({ default: 'Optional default' })]);
+
+  const unit = newFrappeDoc('UOM');
+  assert.equal(unit.custom_books_mynote, 'Optional default');
+  assert.equal(unit.fieldMap.custom_books_mynote.required, undefined);
+  await customize('UOM', 'Books Uom', []);
+});
+
+test('saving and deleting customizations refresh open documents without losing edits', async () => {
+  const unit = newFrappeDoc('UOM', { name: 'Test Unit', is_whole: true });
+  await customize('UOM', 'Books Uom', [
+    note({ reqd: 1, default: 'Initial note' }),
+  ]);
+  assert.equal(unit.fieldMap.custom_books_mynote.tab, 'Custom');
+  assert.equal(unit.custom_books_mynote, 'Initial note');
+  await unit.set('custom_books_mynote', 'Unsaved note');
+
+  await customize('UOM', 'Books Uom', [note({ label: 'Updated label' })]);
+  assert.equal(unit.fieldMap.custom_books_mynote.label, 'Updated label');
+  assert.equal(unit.custom_books_mynote, 'Unsaved note');
+  assert.equal(unit.is_whole, true);
+
+  await customize('UOM', 'Books Uom', []);
+  assert.equal(unit.fieldMap.custom_books_mynote, undefined);
+  assert.equal('custom_books_mynote' in unit.getFrappeValues(), false);
+  assert.equal(unit.is_whole, true);
+});
+
+test('customizing a table refreshes the rows of open documents', async () => {
+  const invoice = newFrappeDoc('SalesInvoice');
+  clearTimeout(invoice._previewTimer);
+  invoice.push('items', { item: 'Test Item', quantity: 2 });
+  const [row] = invoice.items;
+
+  await customize('SalesInvoiceItem', 'Books Sales Invoice Item', [
     {
-      parent: 'UOM',
-      fieldname: 'myNote',
+      fieldname: 'packingNote',
       docfield: {
+        fieldname: 'custom_books_packingnote',
         fieldtype: 'Data',
-        label: 'My Note',
-        default: 'Optional default',
+        label: 'Packing Note',
+        is_custom_field: 1,
       },
     },
   ]);
-  await form.afterSync();
-  const unit = fyo.doc.getNewDoc('UOM');
-  assert.equal(unit.myNote, 'Optional default');
-  assert.equal(unit.fieldMap.myNote.required, false);
-});
 
-test('saving and deleting customizations refresh cached documents without losing edits', async () => {
-  const { fyo, form, setDefinitions } = await makeFixture();
-  const unit = fyo.doc.getNewDoc('UOM', {
-    name: 'Test Unit',
-    isWhole: true,
-  });
-  const docfield = {
-    fieldtype: 'Data',
-    label: 'My Note',
-    reqd: 1,
-    default: 'Initial note',
-  };
-  const field = { parent: 'UOM', fieldname: 'myNote', tab: 'Custom', docfield };
-  setDefinitions([field]);
-  await form.afterSync();
-  assert.ok(unit.fieldMap.myNote);
-  assert.equal(unit.myNote, 'Initial note');
-  await unit.set('myNote', 'Unsaved note');
-
-  setDefinitions([
-    { ...field, docfield: { ...docfield, label: 'Updated label' } },
-  ]);
-  await form.afterSync();
-  assert.equal(unit.fieldMap.myNote.label, 'Updated label');
-  assert.equal(unit.myNote, 'Unsaved note');
-  assert.equal(unit.isWhole, true);
-  assert.equal(fyo.docs.get('UOM')['Test Unit'], unit);
-
-  setDefinitions([]);
-  await form.afterDelete();
-  assert.equal(unit.fieldMap.myNote, undefined);
-  assert.equal(
-    fyo.schemaMap.UOM.fields.some((field) => field.fieldname === 'myNote'),
-    false
-  );
-  assert.equal(unit.getValidDict().myNote, undefined);
-  assert.equal(unit.isWhole, true);
-});
-
-test('customizing a child schema refreshes rows inside cached parent documents', async () => {
-  const { fyo, form, setDefinitions } = await makeFixture();
-  const invoice = fyo.doc.getNewDoc('SalesInvoice');
-  await invoice.append('items', { item: 'Test Item', quantity: 2 });
-  const row = invoice.items[0];
-  form.name = 'SalesInvoiceItem';
-  setDefinitions([
-    {
-      parent: 'SalesInvoiceItem',
-      fieldname: 'packingNote',
-      tab: 'Custom',
-      docfield: { fieldtype: 'Data', label: 'Packing Note' },
-    },
-  ]);
-  await form.afterSync();
-  assert.ok(row.fieldMap.packingNote);
-  assert.equal(row.item, 'Test Item');
-  assert.equal(row.quantity, 2);
+  assert.ok(row.fieldMap.custom_books_packingnote);
+  assert.deepEqual([row.item, row.quantity], ['Test Item', 2]);
 });

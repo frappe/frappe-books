@@ -93,12 +93,6 @@ class Bill extends FrappeDoc {
   static rowModels = { lines: BillLine };
 }
 
-window.frappe.boot.books.doctypes = {
-  ...window.frappe.boot.books.doctypes,
-  Bill: 'Books Bill',
-  BillLine: 'Books Bill Line',
-  Party: 'Books Party',
-};
 stubFrappe(({ path }) =>
   path.endsWith('getdoctype')
     ? { docs: [billMeta, lineMeta, noteMeta] }
@@ -129,7 +123,7 @@ test('rows of a table take the model its parent names, with its presentation', (
   assert.equal(getSchema('BillLine').label, 'Bill Line');
   assert.deepEqual(getSchema('BillLine').quickEditFields, ['amount', 'item']);
   assert.deepEqual(getSchema('BillLine').tableFields, ['amount', 'item']);
-  assert.equal(getSchema('Books Bill Note').label, 'Books Bill Note');
+  assert.equal(getSchema('BillNote').label, 'Books Bill Note');
 });
 
 test('a model opens the rows of the tables it names in the row editor', () => {

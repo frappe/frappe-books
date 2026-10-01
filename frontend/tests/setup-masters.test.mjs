@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getMetaBundle, mapping } from './helpers/doctypes.mjs';
+import { getMetaBundle } from './helpers/doctypes.mjs';
 import {
   frappeModels,
   fyo,
@@ -10,11 +10,6 @@ import {
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
-
-// Books schema names by doctype, as the boot sends them.
-for (const [schemaName, { doctype }] of Object.entries(mapping)) {
-  window.frappe.boot.books.doctypes[schemaName] = doctype;
-}
 
 stubFrappe(({ path, body }) =>
   path.endsWith('getdoctype')

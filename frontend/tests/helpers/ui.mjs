@@ -15,14 +15,12 @@ await build({
   stdin: {
     contents: `
       export { getFieldsGroupedByTabAndSection } from './src/utils/ui';
-      export { getBooksDocOrNew } from './src/frappe/useBooksDoc';
       export { FrappeDoc } from './src/frappe/document';
       export { registerFrappeModels } from './src/frappe/doctypes';
       export { loadFrappeDocTypes } from './src/frappe/registry';
       export { Search } from './src/utils/search';
       export { sortByFuzzyMatch } from './src/utils';
       export { fyo } from './src/initFyo';
-      export { NotFoundError } from './fyo/utils/errors';
       export { default as FilterLinkInput } from './src/components/FilterLinkInput.vue';
     `,
     resolveDir: frontend,
@@ -59,7 +57,6 @@ await build({
 });
 globalThis.history = { state: null };
 export const {
-  getBooksDocOrNew,
   FrappeDoc,
   registerFrappeModels,
   loadFrappeDocTypes,
@@ -67,6 +64,5 @@ export const {
   Search,
   sortByFuzzyMatch,
   fyo,
-  NotFoundError,
   FilterLinkInput,
 } = createRequire(import.meta.url)(output);

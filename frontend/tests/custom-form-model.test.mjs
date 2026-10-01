@@ -1,36 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getMetaBundle } from './helpers/doctypes.mjs';
 import {
   evaluateHidden,
   evaluateRequired,
   frappeModels,
-  fyo,
   getSchema,
-  loadFrappeDocTypes,
   newFrappeDoc,
-  registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
+import { loadFrappeModels } from './helpers/models.mjs';
 
 const { CustomForm } = frappeModels;
 const CustomField = CustomForm.rowModels.custom_fields;
-window.frappe.boot.books.doctypes.CustomForm = 'Books Custom Form';
-window.frappe.boot.books.doctypes.CustomField = 'Books Custom Field';
-stubFrappe(({ path, body }) => {
-  if (path.endsWith('getdoctype')) {
-    return { docs: getMetaBundle(body.doctype) };
-  }
-
-  // The bridge schemas the Custom Form's rows name, without custom fields.
-  if (path.endsWith('database_call')) {
-    return { message: [] };
-  }
-
-  return path.endsWith('get_field_properties') ? { message: {} } : { data: [] };
-});
-registerFrappeModels({ CustomForm });
-await Promise.all([loadFrappeDocTypes(), fyo.db.init()]);
+await loadFrappeModels();
 
 const field = (doc, fieldname) => doc.fieldMap[fieldname];
 
@@ -111,8 +93,8 @@ test('a row asks for options, a target or references as its field type needs', a
 test('custom field names still reject another row and built-in fields', async () => {
   const form = await newForm();
   await assert.rejects(
-    form.custom_fields[0].set('fieldname', 'isWhole'),
-    /Fieldname isWhole already exists for UOM/
+    form.custom_fields[0].set('fieldname', 'is_whole'),
+    /Fieldname is_whole already exists for UOM/
   );
   await form.append('custom_fields', { label: 'Other', fieldname: 'other' });
   await assert.rejects(

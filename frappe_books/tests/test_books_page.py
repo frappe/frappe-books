@@ -28,10 +28,9 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 			self.assertTrue(context.csrf_token)
 			self.assertEqual(context.csrf_token, frappe.local.session.data.csrf_token)
 
-	def test_boot_maps_books_schemas_to_doctypes(self):
+	def test_boot_sends_the_indian_states(self):
 		bootinfo = frappe._dict()
 		extend_bootinfo(bootinfo)
-		self.assertEqual(bootinfo.books["doctypes"]["SalesInvoice"], "Books Sales Invoice")
 		self.assertEqual(bootinfo.books["indian_states"], INDIAN_STATES)
 
 	def test_boot_country_code_comes_from_the_system_settings_country(self):

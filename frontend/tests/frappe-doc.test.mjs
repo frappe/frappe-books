@@ -8,6 +8,7 @@ import {
   evaluateRequired,
   fyo,
   getFrappeDoc,
+  getFrappeDocOrNew,
   getMappedFrappeDoc,
   getMissingMandatoryFields,
   loadTestDocTypes,
@@ -75,6 +76,24 @@ test('a missing document is not found', async () => {
     body: { errors: [{ type: 'DoesNotExistError', message: 'Not found' }] },
   }));
   await assert.rejects(getFrappeDoc('Item', 'Nothing'), errors.NotFoundError);
+});
+
+test('a missing document opens a new one, but other load errors surface', async () => {
+  stubFrappe(() => ({
+    status: 404,
+    body: { errors: [{ type: 'DoesNotExistError', message: 'Not found' }] },
+  }));
+  const created = await getFrappeDocOrNew('Item', 'Nothing');
+  assert.ok(created.notInserted);
+
+  stubFrappe(() => ({
+    status: 500,
+    body: { errors: [{ message: 'Server unavailable' }] },
+  }));
+  await assert.rejects(
+    getFrappeDocOrNew('Item', 'Unreachable'),
+    /Server unavailable/
+  );
 });
 
 test('depends_on, read_only_depends_on and mandatory_depends_on apply to the form', async () => {

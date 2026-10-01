@@ -16,13 +16,13 @@ await build({
     contents: `
       export { FrappeDoc } from './src/frappe/document';
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
-      export { getFrappeDoc, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
+      export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, getFrappeRows, toFrappeFilters } from './src/frappe/list';
       export { getLinkDisplayValue, getLinkLabels, searchFrappeLink } from './src/frappe/link';
       export { loadListData, onListChange } from './src/utils/listData';
-      export { getFieldModel, getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
+      export { getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { getMissingMandatoryFields } from './fyo/model/helpers';
@@ -81,15 +81,7 @@ globalThis.window = {
     boot: {
       time_zone: { system: 'Asia/Kolkata' },
       user: { name: 'Administrator', roles: ['Books Manager'] },
-      books: {
-        doctypes: {
-          Item: 'Books Item',
-          UOMConversionItem: 'Books Uom Conversion Item',
-          Account: 'Books Account',
-          UOM: 'Books Uom',
-          Order: 'Books Order',
-        },
-      },
+      books: {},
     },
   },
 };
@@ -100,6 +92,7 @@ export const {
   isFrappeBacked,
   getDocType,
   getFrappeDoc,
+  getFrappeDocOrNew,
   getMappedFrappeDoc,
   newFrappeDoc,
   useBooksDoc,
@@ -112,7 +105,6 @@ export const {
   getLinkLabels,
   loadListData,
   onListChange,
-  getFieldModel,
   getModel,
   getSchema,
   getSearchFields,
@@ -318,7 +310,15 @@ export const orderMeta = {
   ],
 };
 
+const accountMeta = {
+  name: 'Books Account',
+  autoname: 'Prompt',
+  permissions: [],
+  fields: [],
+};
+
 const bundles = {
+  'Books Account': [accountMeta],
   'Books Item': [itemMeta, conversionMeta],
   'Books Order': [orderMeta],
 };
@@ -349,6 +349,11 @@ export async function loadTestDocTypes() {
     static presentation = { label: 'Order' };
   }
 
+  class TestAccount extends FrappeDoc {
+    static doctype = 'Books Account';
+    static presentation = { label: 'Account' };
+  }
+
   stubFrappe(({ path, params, body }) => {
     if (path.endsWith('getdoctype')) {
       return { docs: bundles[body.doctype] };
@@ -363,7 +368,11 @@ export async function loadTestDocTypes() {
       return { data: isItem ? [{ custom_fields: rows }] : [] };
     }
   });
-  registerFrappeModels({ Item: TestItem, Order: TestOrder });
+  registerFrappeModels({
+    Account: TestAccount,
+    Item: TestItem,
+    Order: TestOrder,
+  });
   await loadFrappeDocTypes();
   return { TestItem, TestOrder };
 }

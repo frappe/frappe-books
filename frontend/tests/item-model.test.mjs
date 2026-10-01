@@ -52,7 +52,7 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
     'serial_number_series | Serial Number Series |  | Inventory',
     'uom_conversions | UOM Conversions |  | Inventory',
   ]);
-  assert.deepEqual(getSchema('UOMConversionItem').tableFields, [
+  assert.deepEqual(getSchema('UomConversionItem').tableFields, [
     'uom',
     'conversion_factor',
   ]);

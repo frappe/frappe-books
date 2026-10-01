@@ -11,14 +11,21 @@ const taxMeta = {
   name: 'Books Tax',
   autoname: 'Prompt',
   permissions: [],
-  fields: [{ fieldname: 'details', fieldtype: 'Table', label: 'Details' }],
+  fields: [
+    {
+      fieldname: 'details',
+      fieldtype: 'Table',
+      label: 'Details',
+      options: 'Books Tax Detail',
+    },
+  ],
 };
 const searches = [];
 let search = async () => [];
 
 globalThis.window = {
   location: { hostname: 'books.localhost' },
-  frappe: { boot: { user: { roles: [] }, books: { doctypes: {} } } },
+  frappe: { boot: { user: { roles: [] }, books: {} } },
 };
 globalThis.fetch = async (url, { body } = {}) => {
   const path = decodeURIComponent(url);

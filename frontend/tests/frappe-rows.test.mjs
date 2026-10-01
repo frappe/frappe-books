@@ -51,8 +51,6 @@ class Voucher extends FrappeDoc {
   static rowModels = { lines: VoucherLine };
 }
 
-window.frappe.boot.books.doctypes.Voucher = 'Books Voucher';
-window.frappe.boot.books.doctypes.VoucherLine = 'Books Voucher Line';
 stubFrappe(({ path }) =>
   path.endsWith('getdoctype') ? { docs: [voucherMeta, lineMeta] } : { data: [] }
 );

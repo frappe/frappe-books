@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   evaluateCondition,
-  fyo,
-  getFieldModel,
   getModel,
   getSchema,
   getSearchFields,
@@ -17,13 +15,13 @@ const schema = getSchema('Item');
 const field = (fieldname) =>
   schema.fields.find((field) => field.fieldname === fieldname);
 
-test('a registered schema and its tables are Frappe-backed, the rest use the bridge', () => {
+test('a registered schema and its tables are known, by their schema names', () => {
   assert.ok(isFrappeBacked('Item'));
-  assert.ok(isFrappeBacked('UOMConversionItem'));
-  assert.ok(!isFrappeBacked('Account'));
+  assert.ok(isFrappeBacked('UomConversionItem'));
+  assert.ok(!isFrappeBacked('Party'));
   assert.equal(getModel('Item'), TestItem);
-  fyo.doc.models.Account = class Account {};
-  assert.equal(getModel('Account'), fyo.doc.models.Account);
+  assert.equal(getModel('Party'), undefined);
+  assert.equal(getSchema('Party'), undefined);
 });
 
 test('breaks become Books sections and tabs; column breaks are dropped', () => {
@@ -74,9 +72,9 @@ test('DocField properties become Books field properties', () => {
   assert.equal(field('income_account').target, 'Account');
   assert.equal(field('income_account').create, true);
   assert.equal(field('unit').create, false);
-  const rows = getSchema('UOMConversionItem').fields;
+  const rows = getSchema('UomConversionItem').fields;
   assert.equal(rows.find((f) => f.fieldname === 'uom').create, false);
-  assert.equal(field('uom_conversions').target, 'UOMConversionItem');
+  assert.equal(field('uom_conversions').target, 'UomConversionItem');
   // Rules that depend on values are left to the doc.
   assert.equal(field('track_item').hidden, undefined);
   assert.equal(field('batch_series').readOnly, undefined);
@@ -94,11 +92,11 @@ test('standard columns are meta fields and a table lists its in_list_view fields
     schema.fields.filter((field) => field.meta).map((field) => field.fieldname),
     ['owner', 'modified_by', 'creation', 'modified']
   );
-  assert.deepEqual(getSchema('UOMConversionItem').tableFields, [
+  assert.deepEqual(getSchema('UomConversionItem').tableFields, [
     'uom',
     'conversion_factor',
   ]);
-  assert.equal(getSchema('UOMConversionItem').isChild, true);
+  assert.equal(getSchema('UomConversionItem').isChild, true);
 });
 
 test('search fields come from the DocType', () => {
@@ -195,14 +193,8 @@ test('a doctype named by the server shows its name read only when the model labe
   assert.equal(plain.fields.find((f) => f.fieldname === 'name').meta, true);
 });
 
-test("a field is filtered by its document's own model, else its schema's", () => {
-  class BridgeItem {
-    schemaName = 'Item';
-  }
-
-  assert.equal(getFieldModel('Item', new BridgeItem()), BridgeItem);
-  assert.equal(getFieldModel('Item', { schemaName: 'Order' }), TestItem);
-  assert.equal(getFieldModel('Item'), TestItem);
-  // A report's link filter has neither a document nor a schema.
-  assert.equal(getFieldModel(undefined, undefined), undefined);
+test("a field is filtered by its schema's model", () => {
+  assert.equal(getModel('Item'), TestItem);
+  // A report's link filter has no schema.
+  assert.equal(getModel(undefined), undefined);
 });

@@ -11,12 +11,6 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 
-window.frappe.boot.books.doctypes = Object.fromEntries(
-  Object.entries(mapping).map(([schemaName, { doctype }]) => [
-    schemaName,
-    doctype,
-  ])
-);
 stubFrappe(({ path, body }) =>
   path.endsWith('getdoctype')
     ? { docs: getMetaBundle(body.doctype) }

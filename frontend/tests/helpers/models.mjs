@@ -12,12 +12,6 @@ export const bridgeSchemas = getSchemas('in', [], fieldProperties);
 
 /** Loads every Frappe-backed model with its DocType files, as the app does at startup. */
 export async function loadFrappeModels() {
-  window.frappe.boot.books.doctypes = Object.fromEntries(
-    Object.entries(mapping).map(([schemaName, { doctype }]) => [
-      schemaName,
-      doctype,
-    ])
-  );
   stubFrappe(({ path, body }) =>
     path.endsWith('getdoctype')
       ? { docs: getMetaBundle(body.doctype) }

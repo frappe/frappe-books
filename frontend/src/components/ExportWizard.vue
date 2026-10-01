@@ -152,16 +152,12 @@ export default defineComponent({
   },
   emits: ['update:open'],
   data() {
-    const fields = getSchema(this.schemaName)?.fields ?? [];
-    const exportFields = getExportFields(fields);
-    const exportTableFields = getExportTableFields(fields);
-
     return {
       limit: null,
       useListFilters: true,
       exportFormat: 'csv',
-      fields: exportFields,
-      tableFields: exportTableFields,
+      fields: getExportFields(this.schemaName),
+      tableFields: getExportTableFields(this.schemaName),
     } as ExportWizardData;
   },
   computed: {

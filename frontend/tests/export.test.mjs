@@ -23,9 +23,8 @@ const field = (fieldname, label, fieldtype = 'Data') => ({
 });
 
 test('the wizard offers the fields of the DocType and of its tables', () => {
-  const fields = getSchema('SalesInvoice').fields;
-  const exported = getExportFields(fields);
-  const items = getExportTableFields(fields).find(
+  const exported = getExportFields('SalesInvoice');
+  const items = getExportTableFields('SalesInvoice').find(
     ({ fieldname }) => fieldname === 'items'
   );
 
@@ -47,7 +46,7 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
 
 test('party and address exports leave out Indian GST fields', () => {
   const exported = (schemaName) =>
-    getExportFields(getSchema(schemaName).fields).map((f) => f.fieldname);
+    getExportFields(schemaName).map((f) => f.fieldname);
 
   assert.ok(exported('Party').includes('tax_id'));
   assert.ok(!exported('Party').includes('gst_type'));

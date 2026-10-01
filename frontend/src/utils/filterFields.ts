@@ -42,7 +42,7 @@ export function getFilterFields(
     (column) => typeof column === 'object' && column.fieldname === 'status'
   ) as Field | undefined;
 
-  const filteredFields = fields.flatMap(toFilterFields).filter((f) => {
+  const filteredFields = fields.flatMap(expandDocStatus).filter((f) => {
     if (excludedFieldsTypes.includes(f.fieldtype)) {
       return false;
     }
@@ -68,8 +68,8 @@ export function getFilterFields(
   return filteredFields;
 }
 
-/** A Frappe-backed schema keeps docstatus, which lists filter as Books' Submitted and Cancelled. */
-function toFilterFields(field: Field): Field[] {
+/** A Frappe-backed schema keeps docstatus, which Books lists and files show as Submitted and Cancelled. */
+export function expandDocStatus(field: Field): Field[] {
   if (!field.meta || field.fieldname !== 'docstatus') {
     return [field];
   }

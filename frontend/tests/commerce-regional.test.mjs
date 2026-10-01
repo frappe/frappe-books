@@ -68,7 +68,7 @@ test('an Indian customer shows loyalty fields when the program is on', async () 
 
 test('Indian party and address files hold GST fields, not a tax ID', () => {
   const exported = (schemaName) =>
-    getExportFields(getSchema(schemaName).fields).map((f) => f.fieldname);
+    getExportFields(schemaName).map((f) => f.fieldname);
   const headers = [...new Importer('Party', fyo).templateFieldsMap.values()];
   const labels = headers.map(({ label }) => label);
 

@@ -223,7 +223,7 @@ export default defineComponent({
         { value: ModelNameEnum.SalesQuote, label: this.t`Sales Quote` },
         { value: ModelNameEnum.SalesInvoice, label: this.t`Sales Invoice` },
         { value: ModelNameEnum.PurchaseInvoice, label: this.t`Purchase Invoice` },
-      ];
+      ].filter((option) => fyo.can(option.value, 'create'));
     },
     actionOptions(): DropdownOptions {
       return this.createOptions.map((option) => ({

@@ -76,14 +76,14 @@ async function mount() {
   await loadFrappeFixture(
     (path, body, params) => {
       // The server's link search takes `%` as any text, so typed letters match in order.
-      if (path.endsWith('frappe.desk.search.search_link')) {
+      if (path.endsWith('frappe.desk.search.search_widget')) {
         const words = body.txt.toLowerCase().split('%').map(escapeRegExp);
         const pattern = new RegExp(words.join('.*'));
         const rows = lookupRows(getSchemaName(body.doctype));
         const found = rows.filter(({ name }) =>
           pattern.test(name.toLowerCase())
         );
-        return { message: found.map(({ name }) => ({ value: name })) };
+        return { message: found };
       }
 
       // The list's own page; other doctypes are looked up.

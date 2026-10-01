@@ -136,7 +136,7 @@ export default defineComponent({
       fyo.store.chartsOfAccounts = books.charts_of_accounts;
       fyo.store.accountLabels = books.account_labels;
       fyo.store.indianStates = books.indian_states;
-      fyo.store.language = boot.lang || 'English';
+      fyo.setCurrencySymbols(boot.docs);
       fyo.user = boot.user.name;
 
       registerFrappeModels(frappeModels);
@@ -151,10 +151,7 @@ export default defineComponent({
       const singles = getSingleSchemaNames().filter(
         (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
       );
-      await Promise.all([
-        fyo.loadCurrencySymbols(),
-        ...singles.map((name) => getFrappeDoc(name, name)),
-      ]);
+      await Promise.all(singles.map((name) => getFrappeDoc(name, name)));
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
       this.darkMode = Boolean(fyo.singles.SystemSettings?.dark_mode);
       setDarkMode(this.darkMode);

@@ -15,6 +15,8 @@ export interface FilterChip {
 export async function getDefaultFilters(report: Report): Promise<FilterValues> {
   const ReportClass = report.constructor as new (fyo: Fyo) => Report;
   const fresh = new ReportClass(report.fyo);
+  // The server defaults are already fetched.
+  fresh.serverDefaults = report.serverDefaults;
   await fresh.refreshFilters();
   return getFilterValues(fresh);
 }

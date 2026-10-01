@@ -7,11 +7,11 @@ import {
   fyo,
   getFrappeDoc,
   getLinkDisplayValue,
-  getLinkLabels,
   getModel,
   getSchema,
   newFrappeDoc,
   searchFrappeLink,
+  setLanguageMapOnTranslationString,
 } from './helpers/frappe.mjs';
 import { getFilterFields } from './helpers/accounting.mjs';
 import {
@@ -123,26 +123,10 @@ test('the address form shows what it showed, and links show its display text', (
   ]);
 });
 
-test('address options show their display text, fetched for the names found', async () => {
-  respond = ({ path }) =>
-    path === '/api/v2/document/Books Address'
-      ? {
-          data: [{ name: 'Office', address_display: '42 Market Road, Mumbai' }],
-        }
-      : { data: [] };
-  requests.length = 0;
-  assert.deepEqual(await getLinkLabels('Address', ['Office']), {
-    Office: '42 Market Road, Mumbai',
-  });
-  assert.deepEqual(requests[0].params.fields, ['name', 'address_display']);
-  assert.deepEqual(requests[0].params.filters, [['name', 'in', ['Office']]]);
-  assert.deepEqual(await getLinkLabels('Party', ['Asha']), {});
-});
-
 test("a link shows an address's display text and other records' names", async () => {
   respond = ({ path }) =>
-    path === '/api/v2/document/Books Address/Home'
-      ? { data: { name: 'Home', address_display: '7 Hill Street' } }
+    path === '/api/v2/document/Books Address'
+      ? { data: [{ address_display: '7 Hill Street' }] }
       : { data: [] };
   requests.length = 0;
 
@@ -151,26 +135,51 @@ test("a link shows an address's display text and other records' names", async ()
   assert.equal(await getLinkDisplayValue('Party', 'Asha'), 'Asha');
   assert.deepEqual(
     requests.map(({ path }) => path),
-    ['/api/v2/document/Books Address/Home']
+    ['/api/v2/document/Books Address']
   );
+  assert.deepEqual(requests[0].params.fields, ['address_display']);
+  assert.deepEqual(requests[0].params.filters, [['name', '=', 'Home']]);
+});
+
+test('a link to an open address shows its text without a request', async () => {
+  const address = newFrappeDoc('Address', { address_display: '9 Lake Road' });
+  requests.length = 0;
+
+  assert.equal(
+    await getLinkDisplayValue('Address', address.name),
+    '9 Lake Road'
+  );
+  assert.deepEqual(requests, []);
 });
 
 test("countries are Frappe's, shown and searched by their names", async () => {
   assert.deepEqual(getLayout('Country'), [
     'country_name | Country Name |  | Default',
   ]);
-  respond = () => ({ message: [{ value: 'India' }] });
+  respond = () => ({ message: [{ name: 'India' }] });
   requests.length = 0;
 
   assert.deepEqual(await searchFrappeLink('Country', 'Ind', null, 10), [
-    { label: 'India', value: 'India' },
+    { label: 'India', value: 'India', record: { name: 'India' } },
   ]);
-  assert.equal(requests[0].path, '/api/method/frappe.desk.search.search_link');
+  assert.equal(
+    requests[0].path,
+    '/api/method/frappe.desk.search.search_widget'
+  );
   // Frappe matches a translated doctype's names in Python, so letters are not spread.
   assert.deepEqual(
     [requests[0].body.doctype, requests[0].body.txt],
     ['Country', 'Ind']
   );
+
+  // As Frappe's link search, a translated doctype's names show translated.
+  setLanguageMapOnTranslationString({ India: { translation: 'Indien' } });
+  try {
+    const [india] = await searchFrappeLink('Country', 'Ind', null, 10);
+    assert.deepEqual([india.label, india.value], ['Indien', 'India']);
+  } finally {
+    setLanguageMapOnTranslationString(undefined);
+  }
 });
 
 test('an address lists Indian states for India and has no place of supply', () => {

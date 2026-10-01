@@ -56,9 +56,10 @@ class BooksSetupWizard(Document):
 
 	def set_country_defaults(self):
 		"""Suggest the country's currency, chart and fiscal year; each date also follows the other."""
+		country_info = get_country_info(self.country)
 		info = get_books_country_info().get(self.country) or {}
-		self.currency = self.currency or get_country_currency(info)
-		self.chart_of_accounts = self.chart_of_accounts or get_country_chart(info.get("code"))
+		self.currency = self.currency or get_country_currency(country_info)
+		self.chart_of_accounts = self.chart_of_accounts or get_country_chart(country_info.get("code"))
 		self.fiscal_year_start = self.fiscal_year_start or get_fiscal_year_date(info, "fiscal_year_start")
 		if not self.fiscal_year_start and self.fiscal_year_end:
 			self.fiscal_year_start = add_days(add_years(self.fiscal_year_end, -1), 1)
@@ -75,7 +76,7 @@ class BooksSetupWizard(Document):
 
 @cache
 def get_books_country_info() -> dict:
-	"""Books' country data, by Frappe country name, with the fiscal years Frappe's lacks."""
+	"""The fiscal years and locales Frappe's country data lacks, by Frappe country name."""
 	path = frappe.get_app_path("frappe_books", "data", "country_info.json")
 	with open(path) as file:
 		return json.load(file)

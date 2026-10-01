@@ -24,6 +24,8 @@ export interface DocField {
   depends_on?: string;
   read_only_depends_on?: string;
   mandatory_depends_on?: string;
+  /** JSON of `[doctype, fieldname, operator, value]` filters a Link's search applies. */
+  link_filters?: string;
 }
 
 export interface DocPerm {

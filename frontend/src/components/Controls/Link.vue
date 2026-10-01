@@ -51,6 +51,18 @@ export default {
       return this.df.target;
     },
     async getOptions(keyword, filters) {
+      const { groupBy } = this.df;
+      const options = await this.searchOptions(
+        keyword,
+        filters,
+        groupBy ? [groupBy] : []
+      );
+      return options.map(({ record, ...option }) =>
+        groupBy ? { ...option, group: record[groupBy] } : option
+      );
+    },
+    /** Options from Frappe's link search, each with its record's `fields`. */
+    async searchOptions(keyword, filters, fields) {
       const schemaName = this.getTargetSchemaName();
       if (!schemaName) {
         return [];
@@ -61,7 +73,7 @@ export default {
         keyword,
         filters,
         LINK_PAGE_LENGTH,
-        this.df.groupBy
+        fields
       );
       return schemaName === 'Account'
         ? options.map((option) => ({
@@ -161,7 +173,7 @@ export default {
       const getFilters = getModel(schemaName)?.filters?.[fieldname];
 
       if (getFilters === undefined) {
-        return null;
+        return this.df.linkFilters ?? null;
       }
 
       if (this.doc) {

@@ -115,7 +115,7 @@ test('the parent picker offers groups of the account root type', () => {
 test('account links in other forms filter by Frappe fieldnames', async () => {
   const { PurchaseInvoice } = frappeModels;
   const JournalEntryAccount = frappeModels.JournalEntry.rowModels.accounts;
-  const { Party, AccountingSettings, Defaults, InventorySettings, POSSettings } =
+  const { Party, AccountingSettings, InventorySettings, POSSettings } =
     frappeModels;
   const ledger = { is_group: false };
   assert.deepEqual(await Party.filters.default_account({ role: 'Customer' }), {
@@ -131,10 +131,12 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     ...ledger,
     root_type: 'Income',
   });
-  assert.deepEqual(Defaults.filters.sales_payment_account(), {
-    ...ledger,
-    account_type: ['in', ['Cash', 'Bank']],
-  });
+  // As the DocField's link_filters say.
+  const defaults = getSchema('Defaults').fields;
+  assert.deepEqual(
+    defaults.find((f) => f.fieldname === 'sales_payment_account').linkFilters,
+    { is_group: ['=', 0], account_type: ['in', ['Cash', 'Bank']] }
+  );
   assert.deepEqual(InventorySettings.filters.stock_in_hand(), {
     ...ledger,
     account_type: 'Stock',

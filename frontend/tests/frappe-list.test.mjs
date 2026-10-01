@@ -192,9 +192,8 @@ test('documents by name come newest first, with the values forms show', async ()
 });
 
 test("link options come from Frappe's link search, letters matched in order", async () => {
-  const requests = stubFrappe(() => ({
-    message: [{ value: 'Rice' }, { value: 'RICE-1', label: 'Basmati Rice' }],
-  }));
+  const rice = { name: 'RICE-1', label: 'Basmati Rice' };
+  const requests = stubFrappe(() => ({ message: [{ name: 'Rice' }, rice] }));
   const options = await searchFrappeLink(
     'Item',
     ' rce ',
@@ -203,10 +202,13 @@ test("link options come from Frappe's link search, letters matched in order", as
   );
 
   assert.deepEqual(options, [
-    { label: 'Rice', value: 'Rice' },
-    { label: 'Basmati Rice', value: 'RICE-1' },
+    { label: 'Rice', value: 'Rice', record: { name: 'Rice' } },
+    { label: 'Basmati Rice', value: 'RICE-1', record: rice },
   ]);
-  assert.equal(requests[0].path, '/api/method/frappe.desk.search.search_link');
+  assert.equal(
+    requests[0].path,
+    '/api/method/frappe.desk.search.search_widget'
+  );
   assert.deepEqual(requests[0].body, {
     doctype: 'Books Item',
     txt: 'r%c%e',
@@ -214,24 +216,10 @@ test("link options come from Frappe's link search, letters matched in order", as
       ['item_usage', 'not in', ['Purchases']],
       ['track_item', '=', 1],
     ],
+    filter_fields: [],
     page_length: 50,
+    as_dict: true,
   });
-});
-
-test('link options are grouped by a field of their records, as the journal entry groups accounts', async () => {
-  const requests = stubFrappe(({ path }) =>
-    path.endsWith('search_link')
-      ? { message: [{ value: 'Pen' }, { value: 'Ink' }] }
-      : { data: [{ name: 'Ink', item_type: 'Product' }, { name: 'Pen', item_type: 'Service' }] }
-  );
-  const options = await searchFrappeLink('Item', '', null, 50, 'item_type');
-
-  assert.deepEqual(options, [
-    { label: 'Pen', value: 'Pen', group: 'Service' },
-    { label: 'Ink', value: 'Ink', group: 'Product' },
-  ]);
-  assert.deepEqual(requests[1].params.fields, ['name', 'item_type']);
-  assert.deepEqual(requests[1].params.filters, [['name', 'in', ['Pen', 'Ink']]]);
 });
 
 test("a list is ordered by its DocType's sort field, newest first", async (t) => {

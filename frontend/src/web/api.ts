@@ -150,6 +150,7 @@ declare global {
           print_style: string;
         };
         app_data?: { app_name: string; app_logo_url?: string | null }[];
+        docs?: { doctype: string; name: string; symbol?: string | null }[];
         [key: string]: unknown;
       };
     };

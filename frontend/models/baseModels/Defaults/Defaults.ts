@@ -1,6 +1,7 @@
 import { FiltersMap, HiddenMap } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
+import { getDocType } from 'src/frappe/doctypes';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import { call } from 'src/web/api';
@@ -10,22 +11,18 @@ import { BUTTON_COLOUR_FIELDS } from '../POSProfile/PosProfile';
 const SET_PRINT_FORMATS =
   'frappe_books.frappe_books.doctype.books_defaults.books_defaults.set_print_formats';
 
-// Fields that show the default print format each doctype keeps, by fieldname.
-const DOCTYPE_PRINT_FORMATS: Record<string, string> = {
-  sales_quote_print_template: 'Books Sales Quote',
-  sales_invoice_print_template: 'Books Sales Invoice',
-  purchase_invoice_print_template: 'Books Purchase Invoice',
-  journal_entry_print_template: 'Books Journal Entry',
-  payment_print_template: 'Books Payment',
-  shipment_print_template: 'Books Shipment',
-  purchase_receipt_print_template: 'Books Purchase Receipt',
-  stock_movement_print_template: 'Books Stock Movement',
-};
-
-/** Print Formats of `doctype`, which a print template picker offers. */
-function printFormatFilter(doctype: string) {
-  return () => ({ doc_type: doctype });
-}
+// The pickers offer the Print Formats their DocFields' link_filters name.
+const PRINT_TEMPLATE_FIELDS = [
+  'sales_quote_print_template',
+  'sales_invoice_print_template',
+  'purchase_invoice_print_template',
+  'journal_entry_print_template',
+  'payment_print_template',
+  'shipment_print_template',
+  'purchase_receipt_print_template',
+  'stock_movement_print_template',
+  'pos_print_template',
+];
 
 /** A Books Default Cash Denominations row. */
 export class DefaultCashDenominations extends FrappeDoc {
@@ -39,10 +36,7 @@ export class Defaults extends FrappeDoc {
   static override presentation = {
     label: 'Defaults',
     fields: {
-      ...withoutCreate([
-        ...Object.keys(DOCTYPE_PRINT_FORMATS),
-        'pos_print_template',
-      ]),
+      ...withoutCreate(PRINT_TEMPLATE_FIELDS),
       ...BUTTON_COLOUR_FIELDS,
     },
   };
@@ -62,15 +56,8 @@ export class Defaults extends FrappeDoc {
   declare pos_customer?: string;
   declare pos_cash_denominations?: (FrappeDoc & { denomination?: Money })[];
 
+  // The payment accounts and print templates filter by their link_filters.
   static commonFilters: FiltersMap = {
-    sales_payment_account: () => ({
-      is_group: false,
-      account_type: ['in', ['Cash', 'Bank']],
-    }),
-    purchase_payment_account: () => ({
-      is_group: false,
-      account_type: ['in', ['Cash', 'Bank']],
-    }),
     sales_quote_number_series: () => ({
       reference_type: ModelNameEnum.SalesQuote,
     }),
@@ -95,13 +82,6 @@ export class Defaults extends FrappeDoc {
     purchase_receipt_number_series: () => ({
       reference_type: ModelNameEnum.PurchaseReceipt,
     }),
-    ...Object.fromEntries(
-      Object.entries(DOCTYPE_PRINT_FORMATS).map(([fieldname, doctype]) => [
-        fieldname,
-        printFormatFilter(doctype),
-      ])
-    ),
-    pos_print_template: printFormatFilter('Books Sales Invoice'),
     pos_customer: () => ({ role: PartyRoleEnum.Customer }),
   };
 
@@ -136,13 +116,14 @@ export class Defaults extends FrappeDoc {
     pay_and_print_button_colour: this.getPointOfSaleHidden(),
   };
 
-  /** The print formats are the doctypes'; a save of the settings sets them first. */
+  /** The virtual print format fields are the doctypes'; a save of the settings sets them first. */
   override async beforeSync() {
     await super.beforeSync();
-    const printFormats = Object.keys(DOCTYPE_PRINT_FORMATS).map((fieldname) => [
-      fieldname,
-      this[fieldname] || null,
-    ]);
+    const printFormats = getDocType(this.schemaName)
+      .meta.fields.filter(
+        (df) => df.is_virtual && df.options === 'Print Format'
+      )
+      .map(({ fieldname }) => [fieldname, this[fieldname] || null]);
     await call(SET_PRINT_FORMATS, {
       print_formats: Object.fromEntries(printFormats),
     });

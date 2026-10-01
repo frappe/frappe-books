@@ -69,15 +69,6 @@ export function titleCase(phrase: string): string {
     .join(' ');
 }
 
-export function time<K, T>(func: (...args: K[]) => T, ...args: K[]): T {
-  /* eslint-disable no-console */
-  const name = func.name;
-  console.time(name);
-  const stuff = func(...args);
-  console.timeEnd(name);
-  return stuff;
-}
-
 function safeParseNumber(value: unknown, parser: (v: string) => number) {
   let parsed: number;
   switch (typeof value) {

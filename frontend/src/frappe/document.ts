@@ -297,12 +297,9 @@ export class FrappeDoc extends Doc {
     this.fyo.observer.trigger(`delete:${this.schemaName}`, this.name);
   }
 
-  /** A new copy with unsaved edits, without the fields the DocType marks no_copy. */
+  /** A new copy with unsaved edits, as Desk's Duplicate copies a document. */
   override duplicate(): Promise<Doc> {
-    const noCopy = getDocType(this.schemaName).meta.fields.filter(
-      (field) => field.no_copy
-    );
-    const values = this.getDocValueCopy(noCopy.map((field) => field.fieldname));
+    const values = this.getDocValueCopy();
     if (this.schema.naming === 'manual') {
       values.name = `${this.name!} CPY`;
     }
@@ -310,20 +307,24 @@ export class FrappeDoc extends Doc {
     return Promise.resolve(newFrappeDoc(this.schemaName, values));
   }
 
-  getDocValueCopy(skipped: string[]): DocValueMap {
+  /** Values for a copy: none of the fields the DocTypes mark no_copy, in rows too. */
+  getDocValueCopy(): DocValueMap {
+    const noCopy = getDocType(this.schemaName)
+      .meta.fields.filter((field) => field.no_copy)
+      .map((field) => field.fieldname);
     const values: DocValueMap = {};
     for (const field of this.schema.fields) {
       if (
         field.meta ||
         field.fieldname === 'name' ||
-        skipped.includes(field.fieldname)
+        noCopy.includes(field.fieldname)
       ) {
         continue;
       }
 
       const value = this[field.fieldname];
       values[field.fieldname] = Array.isArray(value)
-        ? (value as FrappeDoc[]).map((row) => row.getDocValueCopy([]))
+        ? (value as FrappeDoc[]).map((row) => row.getDocValueCopy())
         : (value as DocValue);
     }
 

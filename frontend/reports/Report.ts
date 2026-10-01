@@ -60,13 +60,10 @@ export abstract class Report extends Observable<RawValue> {
     return (this.constructor as typeof Report).phoneLayout;
   }
 
-  async initialize() {
-    /**
-     * Not in constructor cause possibly async.
-     */
-
-    await this.setDefaultFilters();
-    this.filters = await this.getFilters();
+  /** Loads the report once with the given filter values set. */
+  async initialize(filters: Record<string, DocValue> = {}) {
+    await this.refreshFilters();
+    await this.setFilters(filters);
     this.columns = await this.getColumns();
     await this.setReportData();
   }

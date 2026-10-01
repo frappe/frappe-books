@@ -7,6 +7,7 @@ import {
   evaluateReadOnly,
   evaluateRequired,
   fyo,
+  getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
   getMappedFrappeDoc,
@@ -554,6 +555,22 @@ test('a duplicate copies unsaved edits but not the no_copy fields', async () => 
   assert.equal(copy.uom_conversions[0].uom, 'Box');
   assert.notEqual(copy.uom_conversions[0].name, 'row-1');
   assert.equal(await getFrappeDoc('Item', 'Pen CPY'), copy);
+});
+
+test('a duplicate leaves out the no_copy fields of its rows too', async (t) => {
+  const { meta } = getDocType('Item').tables.uom_conversions;
+  const factor = meta.fields.find((f) => f.fieldname === 'conversion_factor');
+  factor.no_copy = 1;
+  t.after(() => delete factor.no_copy);
+  stubDocument();
+  const pen = await getFrappeDoc('Item', 'Pen', { refresh: true });
+
+  const copy = await pen.duplicate();
+
+  assert.equal(pen.uom_conversions[0].conversion_factor, 10);
+  assert.equal(copy.uom_conversions[0].uom, 'Box');
+  // The row's default, not the copied 10.
+  assert.equal(copy.uom_conversions[0].conversion_factor, 1);
 });
 
 async function waitFor(condition) {

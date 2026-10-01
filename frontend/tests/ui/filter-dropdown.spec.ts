@@ -180,7 +180,9 @@ test('Is Empty on User Remark hides Value and sends the unary condition', async 
     animations: 'disabled',
   });
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({ userRemark: ['is null', null] });
+  expect(await appliedFilters(page)).toEqual({
+    user_remark: ['is null', null],
+  });
 });
 
 test('date filters use the calendar and reset incompatible field values', async ({
@@ -213,7 +215,9 @@ test('date filters use the calendar and reset incompatible field values', async 
   await expect(input).toHaveValue('2024-02-29');
   await expect(panel).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({ date: ['=', '2024-02-29'] });
+  expect(await appliedFilters(page)).toEqual({
+    posting_date: ['=', '2024-02-29'],
+  });
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
@@ -287,8 +291,8 @@ async function dismissFilters(page: Page) {
 for (const [field, value, expected] of [
   ['Rate', '0', { rate: ['=', 0] }],
   ['Rate', '-12.5', { rate: ['=', -12.5] }],
-  ['Track Inventory', 'No', { trackItem: ['=', '0'] }],
-  ['Track Inventory', 'Yes', { trackItem: ['=', '1'] }],
+  ['Track Inventory', 'No', { track_item: ['=', '0'] }],
+  ['Track Inventory', 'Yes', { track_item: ['=', '1'] }],
 ] as const) {
   test(`${field} accepts ${value} and counts the applied filter`, async ({
     page,
@@ -308,7 +312,7 @@ for (const [field, value, expected] of [
     const query = await appliedFilters(page);
     const numericExpected = JSON.parse(JSON.stringify(expected));
     if (field === 'Track Inventory')
-      numericExpected.trackItem[1] = Number(numericExpected.trackItem[1]);
+      numericExpected.track_item[1] = Number(numericExpected.track_item[1]);
     expect(query).toEqual(numericExpected);
     await expect(
       page.getByRole('button', { name: '1 filter applied', exact: true })
@@ -364,6 +368,12 @@ test('datetime filters select both calendar date and time and preserve SQL round
   });
 });
 
+// Journal entries filter on their posting date.
+const dateFields: Record<string, string> = {
+  JournalEntry: 'posting_date',
+  SalesInvoice: 'date',
+};
+
 for (const schema of ['JournalEntry', 'SalesInvoice']) {
   test(`${schema} date picker supports keyboard selection, Escape, clearing and empty conditions`, async ({
     page,
@@ -408,7 +418,9 @@ for (const schema of ['JournalEntry', 'SalesInvoice']) {
     await choose(page, 'Condition', 'Is Empty');
     await expect(input).toHaveCount(0);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({ date: ['is null', null] });
+    expect(await appliedFilters(page)).toEqual({
+      [dateFields[schema]]: ['is null', null],
+    });
   });
 }
 
@@ -434,7 +446,7 @@ for (const [schema, first, second] of [
     await input.fill(first);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
     expect(await appliedFilters(page)).toEqual({
-      date: ['=', first.replace('T', ' ')],
+      [dateFields[schema]]: ['=', first.replace('T', ' ')],
     });
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
@@ -448,7 +460,7 @@ for (const [schema, first, second] of [
       page.getByRole('region', { name: 'Filters', exact: true })
     ).toBeHidden();
     expect(await appliedFilters(page)).toEqual({
-      date: ['=', second.replace('T', ' ')],
+      [dateFields[schema]]: ['=', second.replace('T', ' ')],
     });
   });
 }

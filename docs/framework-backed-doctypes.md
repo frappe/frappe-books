@@ -14,12 +14,13 @@ The /books screens are moving off the camelCase bridge (`ui_api.database_call`, 
 | `schema.ts` | Turns the meta and the model's `presentation` into the schema that forms, tables and lists render. Breaks become tabs and sections. Permission levels make fields read only or hidden. |
 | `document.ts` | `FrappeDoc`. It loads, inserts and saves the whole document, with `modified` so that Frappe refuses a stale copy. Submit, cancel and preview run as document methods on the client copy through `run_doc_method`. |
 | `documents.ts` | The open documents, so that a form, a quick edit and a link share one. A mapped document (`getMappedFrappeDoc`) comes from `frappe.model.mapper.make_mapped_doc`. |
-| `list.ts`, `link.ts` | List pages and counts over `/api/v2`, and link options from `search_link`. |
+| `api.ts` | `/api/v2` requests: documents, lists, counts and one field's value (`getValue`). |
+| `list.ts`, `link.ts` | List pages, counts and documents by name (`getFrappeRows`) over `/api/v2`. Link options from `search_link`, and the text a link shows (`getLinkDisplayValue`). |
 | `values.ts` | Frappe values to form values and back. |
 | `dependsOn.ts` | Evaluates `depends_on` conditions as Frappe forms do. |
 | `useBooksDoc.ts` | `useBooksDoc`, `newBooksDoc`, `getBooksDoc`, `getBooksDocOrNew`: the one way screens get a document of either kind. |
 
-A schema is Frappe-backed when its model is in `frappeModels` in `frontend/models/index.ts`. Everything else still uses the bridge. The schema name stays the route key, for example `Item` in `/edit/Item/Pen`. The model names the DocType. `getRegionalFrappeModels` gives the regional models, for example the Indian Party, which replace their `frappeModels` entries.
+A schema is Frappe-backed when its model is in `frappeModels` in `frontend/models/index.ts`. Everything else still uses the bridge. The schema name stays the route key, for example `Item` in `/edit/Item/Pen`. The model names the DocType. `getRegionalFrappeModels` gives the regional models, for example the Indian Party, which replace their `frappeModels` entries. A model can show a Frappe doctype that the app does not ship, like Currency, Country or Print Format; its `presentation` gives the labels, options and defaults that /books shows, and `omitFields` leaves out the rest.
 
 ## Where each part goes
 
@@ -59,7 +60,7 @@ The naming rule of the DocType decides how a new document is named. A doctype na
 
 A submittable list filters by Submitted and Cancelled, which become `docstatus` filters. The `name` of a server-named document is a list filter field.
 
-A Frappe-backed single loads at startup under its schema name. Its open document is `fyo.singles[schemaName]`, so every reader reads the same values, by Frappe fieldnames. Do not load it with `fyo.doc.getDoc`, because that makes a second copy. A value that another doctype keeps is a virtual field with a controller property, for example the System Settings currency, the Accounting Settings country and the Defaults print formats.
+A Frappe-backed single loads at startup under its schema name. Its open document is `fyo.singles[schemaName]`, so every reader reads the same values, by Frappe fieldnames. Do not load it with `fyo.doc.getDoc`, because that makes a second copy. A value that another doctype keeps is a virtual field with a controller property, for example the System Settings currency, the Accounting Settings country and the Defaults print formats. A save never sets a virtual field: before frappe#43435, Frappe stored a single's virtual values, so a loaded copy held stale ones. A virtual field that /books edits has its own whitelisted method, which the model calls before it saves, for example `set_print_formats` for the Defaults print formats.
 
 ## Guards
 

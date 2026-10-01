@@ -1,5 +1,6 @@
 import { getFieldProperties, isReferenceField } from './fieldProperties';
 import type { Field, Naming, OptionField, Schema } from 'schemas/types';
+import type { QueryFilter } from 'utils/db/types';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -213,6 +214,7 @@ function toField(docfield: DocField, context: FieldContext): Field {
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
     create: isLink(docfield) || undefined,
+    linkFilters: getLinkFilters(docfield),
     ...shown,
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
@@ -233,6 +235,25 @@ export function getCustomFieldname(fieldname: string): string {
 /** The schema of a table's rows: its DocType without `Books ` and spaces, e.g. `SalesInvoiceItem`. */
 export function getTableSchemaName(doctype: string): string {
   return doctype.replace(/^Books /, '').replaceAll(' ', '');
+}
+
+/** A DocField's link_filters as list filters; `eval:` values need Desk's form script, so they are left out. */
+function getLinkFilters({ link_filters }: DocField): QueryFilter | undefined {
+  if (!link_filters) {
+    return undefined;
+  }
+
+  type LinkFilter = [string, string, string, unknown];
+  const query: Record<string, unknown[]> = {};
+  for (const [, fieldname, operator, value] of JSON.parse(
+    link_filters
+  ) as LinkFilter[]) {
+    if (!String(value).startsWith('eval:')) {
+      (query[fieldname] ??= []).push(operator, value);
+    }
+  }
+
+  return query as QueryFilter;
 }
 
 function isLink({ fieldtype }: DocField): boolean {

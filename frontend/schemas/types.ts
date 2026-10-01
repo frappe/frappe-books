@@ -1,3 +1,4 @@
+import type { QueryFilter } from 'utils/db/types';
 import { PropertyEnum } from 'utils/types';
 
 export type FieldType =
@@ -73,6 +74,7 @@ export interface BaseField {
   bold?: boolean;                // UI Facing config, whether to make the label bold
   sub_label?: string;
   filters?: Record<string, string>;
+  linkFilters?: QueryFilter;     // A Link's search filters, from its DocField's link_filters
   getOptions?: () => Promise<{ label: string; value: string }[]>;
   rows?: number;                 // UI Facing config, number of rows for Text field (default 3)
 }

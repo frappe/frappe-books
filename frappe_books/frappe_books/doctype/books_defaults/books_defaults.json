@@ -57,12 +57,14 @@
    "fieldname": "sales_payment_account",
    "fieldtype": "Link",
    "label": "Sales Payment Account",
+   "link_filters": "[[\"Books Account\",\"is_group\",\"=\",0],[\"Books Account\",\"account_type\",\"in\",[\"Cash\",\"Bank\"]]]",
    "options": "Books Account"
   },
   {
    "fieldname": "purchase_payment_account",
    "fieldtype": "Link",
    "label": "Purchase Payment Account",
+   "link_filters": "[[\"Books Account\",\"is_group\",\"=\",0],[\"Books Account\",\"account_type\",\"in\",[\"Cash\",\"Bank\"]]]",
    "options": "Books Account"
   },
   {
@@ -170,6 +172,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Sales Quote Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Sales Quote\"]]",
    "options": "Print Format"
   },
   {
@@ -177,6 +180,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Sales Invoice Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Sales Invoice\"]]",
    "options": "Print Format"
   },
   {
@@ -184,6 +188,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Purchase Invoice Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Purchase Invoice\"]]",
    "options": "Print Format"
   },
   {
@@ -191,6 +196,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Journal Entry Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Journal Entry\"]]",
    "options": "Print Format"
   },
   {
@@ -198,6 +204,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Payment Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Payment\"]]",
    "options": "Print Format"
   },
   {
@@ -205,6 +212,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Shipment Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Shipment\"]]",
    "options": "Print Format"
   },
   {
@@ -212,6 +220,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Purchase Receipt Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Purchase Receipt\"]]",
    "options": "Print Format"
   },
   {
@@ -219,12 +228,14 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Stock Movement Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Stock Movement\"]]",
    "options": "Print Format"
   },
   {
    "fieldname": "pos_print_template",
    "fieldtype": "Link",
    "label": "POS Print Template",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Sales Invoice\"]]",
    "options": "Print Format"
   },
   {
@@ -298,7 +309,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-30 23:30:00.000000",
+ "modified": "2026-10-01 20:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Defaults",

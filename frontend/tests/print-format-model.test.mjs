@@ -102,12 +102,15 @@ test('the template list labels each type as its schema and marks custom template
 });
 
 test('print template pickers offer the Print Formats of the doctype they print', () => {
-  const { filters } = frappeModels.Defaults;
-  assert.deepEqual(filters.payment_print_template(), {
-    doc_type: 'Books Payment',
+  // As the DocFields' link_filters say.
+  const linkFilters = (fieldname) =>
+    getSchema('Defaults').fields.find((f) => f.fieldname === fieldname)
+      .linkFilters;
+  assert.deepEqual(linkFilters('payment_print_template'), {
+    doc_type: ['=', 'Books Payment'],
   });
-  assert.deepEqual(filters.pos_print_template(), {
-    doc_type: 'Books Sales Invoice',
+  assert.deepEqual(linkFilters('pos_print_template'), {
+    doc_type: ['=', 'Books Sales Invoice'],
   });
   assert.deepEqual(frappeModels.POSProfile.filters.pos_print_template(), {
     doc_type: 'Books Sales Invoice',

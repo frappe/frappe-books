@@ -173,7 +173,7 @@ export default {
       const getFilters = getModel(schemaName)?.filters?.[fieldname];
 
       if (getFilters === undefined) {
-        return null;
+        return this.df.linkFilters ?? null;
       }
 
       if (this.doc) {

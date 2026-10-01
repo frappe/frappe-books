@@ -2,7 +2,16 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parseCSV } from './helpers/accounting.mjs';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, fyo, getGridRows, Importer } from './helpers/frappe.mjs';
+import {
+  frappeModels,
+  fyo,
+  getCsvExportData,
+  getExportFields,
+  getExportTableFields,
+  getGridRows,
+  Importer,
+  stubFrappe,
+} from './helpers/frappe.mjs';
 
 await loadFrappeModels(frappeModels);
 
@@ -102,6 +111,48 @@ test('each table’s columns start with its row ID, which is not imported', () =
     ['docstatus', 'items.item'],
     ['0', 'Pen'],
   ]);
+});
+
+test('a list export’s CSV maps onto the template by its keys', async () => {
+  const pick = (fields, fieldnames) =>
+    fields.filter(({ fieldname }) => fieldnames.includes(fieldname));
+  const [items] = getExportTableFields('SalesInvoice');
+  stubFrappe(() => ({
+    data: [
+      {
+        name: 'SINV-1',
+        number_series: 'SINV-',
+        items: [{ item: 'Pen', quantity: 2 }],
+      },
+    ],
+  }));
+  const csv = await getCsvExportData({
+    schemaName: 'SalesInvoice',
+    fields: pick(getExportFields('SalesInvoice'), [
+      'name',
+      'number_series',
+      'items',
+    ]),
+    tableFields: [
+      { ...items, fields: pick(items.fields, ['item', 'quantity']) },
+    ],
+    limit: null,
+    filters: {},
+  });
+  const importer = new Importer('SalesInvoice', fyo);
+
+  importer.selectFile(csv);
+
+  assert.deepEqual(importer.assignedTemplateFields.slice(0, 4), [
+    'SalesInvoice.name',
+    'SalesInvoice.number_series',
+    'SalesInvoiceItem.item',
+    'SalesInvoiceItem.quantity',
+  ]);
+  assert.deepEqual(
+    importer.valueMatrix.map((row) => row.map(({ value }) => value)),
+    [['SINV-1', 'SINV-', 'Pen', 2]]
+  );
 });
 
 test('leaving a column out moves the later picked columns up', async () => {

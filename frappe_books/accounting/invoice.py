@@ -15,6 +15,7 @@ from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.currency import get_exchange_rate
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
+from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.invoice_balance import (
 	store_pending_quantities,
 	update_billed_status,
@@ -112,6 +113,7 @@ class PostingInvoiceController(InvoiceController):
 		if self.transaction_type == "purchase" and not self.return_against:
 			create_series_batches(self.items)
 		validate_batches([{"item": row.item, "batch": row.batch} for row in self.items])
+		validate_sale_batch_stock(self)
 
 	def before_submit(self):
 		validate_billed_quantities(self)

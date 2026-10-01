@@ -211,7 +211,7 @@ async function validateSinvItems(
   itemQtyMap: ItemQtyMap,
   isReturn?: string
 ) {
-  const inventory = await getPOSInventory(fyo);
+  const inventory = await getPOSInventory();
   const requested: ItemQtyMap = {};
   for (const item of sinvItems) {
     const trackItem = await fyo.getValue(
@@ -352,7 +352,7 @@ export async function fillRowSerialNumbers(
   const serialNumbers = await getAvailableSerialNumbers(
     row.fyo,
     item,
-    await getPOSInventory(row.fyo),
+    await getPOSInventory(),
     quantity
   );
   if (serialNumbers) {
@@ -403,7 +403,7 @@ export async function addBatchItem(
       (total, row) => total + (row.quantity ?? 0),
       quantity
     );
-    const inventory = await getPOSInventory(sinvDoc.fyo);
+    const inventory = await getPOSInventory();
     validatePOSStock(item.name, required, itemQtyMap, inventory, batch);
   }
 

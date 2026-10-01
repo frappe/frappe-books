@@ -434,7 +434,7 @@ export default defineComponent({
       }
     },
     async getAvailableQtyInBatch(): Promise<number> {
-      return getPOSBatchQuantity(fyo, this.row.item as string, this.row.batch);
+      return getPOSBatchQuantity(this.row.item as string, this.row.batch);
     },
     async setSerialNumber(serialNumber: string) {
       if (!serialNumber) {

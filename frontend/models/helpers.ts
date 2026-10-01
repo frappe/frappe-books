@@ -18,8 +18,12 @@ import { ValidationError } from 'fyo/utils/errors';
 import { safeParseFloat } from 'utils/index';
 import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
 import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
-import { getPOSInventory, validatePOSStock } from './inventory/posStock';
+import { ItemVisibility } from 'src/components/POS/types';
+import {
+  getItemQtyMap,
+  getPOSInventory,
+  validatePOSStock,
+} from './inventory/posStock';
 import type { DocValues } from 'src/frappe/api';
 import { isFrappeBacked } from 'src/frappe/doctypes';
 import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
@@ -107,25 +111,6 @@ export function getInvoiceActions(
     getLedgerLinkAction(fyo),
     getMakeReturnDocAction(fyo),
   ];
-}
-
-/** Stock of each item, and of each of its batches, at the POS location. */
-export async function getItemQtyMap(
-  doc: SalesInvoice,
-  items?: string[]
-): Promise<ItemQtyMap> {
-  const location = await getPOSInventory(doc.fyo);
-  const rows = await doc.fyo.db.getStockQuantities(location, items);
-  const itemQtyMap: ItemQtyMap = {};
-  for (const { item, batch, quantity } of rows) {
-    itemQtyMap[item] ??= { availableQty: 0 };
-    itemQtyMap[item].availableQty += quantity;
-    if (batch) {
-      itemQtyMap[item][batch] = quantity;
-    }
-  }
-
-  return itemQtyMap;
 }
 
 export async function getItemVisibility(fyo: Fyo): Promise<ItemVisibility> {
@@ -577,7 +562,7 @@ export async function validateQty(
       (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
       0
     );
-  const itemQtyMap = await getItemQtyMap(sinvDoc, [item]);
-  const location = await getPOSInventory(fyo);
+  const itemQtyMap = await getItemQtyMap([item]);
+  const location = await getPOSInventory();
   validatePOSStock(item, quantity, itemQtyMap, location, row.batch);
 }

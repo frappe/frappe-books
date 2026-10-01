@@ -272,11 +272,8 @@ import {
   getQuickQtyBuffer,
   getPOSQuantityField,
 } from 'src/utils/pos';
-import {
-  getItemQtyMap,
-  getItemVisibility,
-  getMappedBridgeDoc,
-} from 'models/helpers';
+import { getItemVisibility, getMappedBridgeDoc } from 'models/helpers';
+import { getItemQtyMap } from 'models/inventory/posStock';
 import {
   POSItem,
   POSLayout,
@@ -749,7 +746,7 @@ export default defineComponent({
       this.sinvDoc.party = this.defaultCustomer;
     },
     async setItemQtyMap() {
-      this.itemQtyMap = await getItemQtyMap(this.sinvDoc as SalesInvoice);
+      this.itemQtyMap = await getItemQtyMap();
     },
     setSinvDoc() {
       this.sinvDoc = this.fyo.doc.getNewDoc(ModelNameEnum.SalesInvoice, {

@@ -9,6 +9,11 @@ import {
   ValidationMap,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
+import {
+  getBatchQuantity,
+  getStockLocation,
+  getStockQuantities,
+} from 'models/inventory/availability';
 import { getTransferUnitFilter } from 'models/inventory/stockRows';
 import { validateTransferUnit } from 'models/inventory/units';
 import type { Money } from 'pesa';
@@ -179,11 +184,7 @@ export class InvoiceItem extends FrappeDoc {
       return undefined;
     }
 
-    const location = await this.fyo.db.getStockLocation(
-      invoice.schemaName,
-      !!invoice.is_pos
-    );
-    return location ?? undefined;
+    return await getStockLocation(invoice.doctype, !!invoice.is_pos);
   }
 
   async validateBatchQuantity(batch: string, quantity: number) {
@@ -196,14 +197,8 @@ export class InvoiceItem extends FrappeDoc {
       return;
     }
 
-    const available =
-      (await this.fyo.db.getStockQuantity(
-        this.item,
-        await this.getStockLocation(),
-        undefined,
-        undefined,
-        batch
-      )) ?? 0;
+    const location = await this.getStockLocation();
+    const available = await getBatchQuantity(this.item, batch, location);
     if (quantity > available) {
       throw new ValidationError(
         this.fyo
@@ -212,7 +207,7 @@ export class InvoiceItem extends FrappeDoc {
     }
   }
 
-  // Items are Frappe-backed and filter by Frappe fieldnames; batches and units are read through the bridge.
+  // Items, batches and units are Frappe-backed and filter by Frappe fieldnames.
   static override filters: FiltersMap = {
     item: (doc: Doc): QueryFilter => ({
       item_usage: ['not in', [doc.isSales ? 'Purchases' : 'Sales']],
@@ -224,7 +219,7 @@ export class InvoiceItem extends FrappeDoc {
       }
 
       const location = await (doc as InvoiceItem).getStockLocation();
-      const rows = await doc.fyo.db.getStockQuantities(location, [item]);
+      const rows = await getStockQuantities(location, [item]);
       const batches = rows
         .filter((row) => row.batch && row.quantity > 0)
         .map((row) => row.batch as string);

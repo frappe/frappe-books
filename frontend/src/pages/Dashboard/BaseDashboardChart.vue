@@ -23,7 +23,7 @@ export default defineComponent({
         'This Month',
       ] as PeriodKey[],
       isLoaded: false,
-      hasFailed: false,
+      error: null as string | null,
     };
   },
   computed: {
@@ -35,7 +35,7 @@ export default defineComponent({
     },
     /** Phones replace a section's body while it first loads or after it fails. */
     showLoadState(): boolean {
-      return this.isMobile && (!this.isLoaded || this.hasFailed);
+      return this.isMobile && (!this.isLoaded || !!this.error);
     },
     /**
      * frappe-ui charts mishandle taps: the tooltip closes when the finger
@@ -81,12 +81,12 @@ export default defineComponent({
       await this.loadData();
     },
     async loadData() {
-      this.hasFailed = false;
+      this.error = null;
       try {
         await this.setData();
         this.isLoaded = true;
       } catch (error) {
-        this.hasFailed = true;
+        this.error = String(error);
         console.error(error);
       }
     },

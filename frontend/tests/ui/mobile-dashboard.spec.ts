@@ -81,5 +81,7 @@ test('a section that fails to load can be retried', async ({ page }) => {
   fail = false;
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByText('Failed to load')).toBeHidden();
-  await expect(page.getByText('Top Expenses')).toBeVisible();
+  await expect(
+    page.locator('[data-slot="chart-container"]', { hasText: 'Top Expenses' })
+  ).toHaveAttribute('data-state', /ready|empty/);
 });

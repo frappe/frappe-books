@@ -8,7 +8,7 @@
     <MobileSectionState
       v-if="showLoadState"
       class="mt-4 min-h-14"
-      :has-failed="hasFailed"
+      :has-failed="!!error"
       @retry="loadData"
     >
       <div class="flex h-8 items-center justify-between">

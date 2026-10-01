@@ -25,7 +25,7 @@
       :viewport-class="isMobile ? undefined : 'pb-10'"
     >
       <div class="min-w-0 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)]">
-        <Cashflow class="p-4 md:px-5" :common-period="period" />
+        <Cashflow class="h-72 p-4 md:px-5" :common-period="period" />
         <hr class="border-outline-gray-1" />
         <div class="grid grid-cols-1 md:grid-cols-2">
           <UnpaidInvoices
@@ -41,11 +41,11 @@
         <hr class="border-outline-gray-1" />
         <div class="grid grid-cols-1 xl:grid-cols-2">
           <ProfitAndLoss
-            class="min-w-0 w-full p-4 border-outline-gray-1 max-md:border-b md:border-e md:px-5"
+            class="h-80 min-w-0 w-full p-4 border-outline-gray-1 max-md:border-b md:border-e md:px-5"
             :common-period="period"
           />
           <Expenses
-            class="min-w-0 w-full p-4 md:px-5"
+            class="h-80 min-w-0 w-full p-4 md:px-5"
             :common-period="period"
           />
         </div>

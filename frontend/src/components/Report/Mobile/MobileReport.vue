@@ -32,19 +32,23 @@
     </div>
 
     <MobileReportSkeleton v-if="loading" v-bind="skeleton" />
-    <div
+    <MobileEmptyState
       v-else-if="isEmpty"
-      class="flex flex-1 flex-col items-center justify-center gap-3 px-8 pb-28 pt-8"
+      class="flex-1 pb-28 pt-8"
+      :icon="filters.hasChanges ? 'lucide-search-x' : 'lucide-inbox'"
+      :title="t`No entries found`"
+      :description="
+        filters.hasChanges ? t`No results match the current filters` : ''
+      "
     >
-      <img src="../../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="text-base text-ink-gray-8">{{ t`No entries found` }}</p>
       <FrappeButton
         v-if="filters.hasChanges"
+        class="mt-2"
         size="lg"
         :label="t`Clear filters`"
         @click="emit('clear-filters')"
       />
-    </div>
+    </MobileEmptyState>
     <MobileReportTree
       v-else-if="tree"
       :rows="treeRows"
@@ -81,6 +85,7 @@ import { useLocalStorage } from '@vueuse/core';
 import { Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import type { Report } from 'reports/Report';
 import type { ReportRow } from 'reports/types';
+import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import { computed, ref } from 'vue';
 import { MobileEntries } from './MobileEntries';

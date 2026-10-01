@@ -104,20 +104,20 @@
         @click="showAll = true"
       />
     </div>
-    <div
+    <MobileEmptyState
       v-else-if="query"
-      class="flex flex-1 flex-col items-center justify-center gap-2 px-8 pb-40 pt-8 text-center"
+      class="flex-1 pb-40 pt-8"
+      icon="lucide-search-x"
+      :title="t`No results`"
     >
-      <FrappeIcon icon="lucide-search-x" class="size-7 text-ink-gray-4" />
-      <p class="text-md-medium text-ink-gray-8">{{ t`No results` }}</p>
       <FrappeButton
         v-if="changedFilterCount"
-        class="mt-1"
+        class="mt-2"
         size="lg"
         :label="t`Reset filters`"
         @click="resetSearchFilters"
       />
-    </div>
+    </MobileEmptyState>
 
     <SearchFilterSheet
       v-model:open="isFilterSheetOpen"
@@ -158,6 +158,7 @@ import {
 } from 'vue';
 import { useRouter } from 'vue-router';
 import { isDesktopOnly } from '../availability';
+import MobileEmptyState from '../MobileEmptyState.vue';
 import SearchFilterSheet from './SearchFilterSheet.vue';
 
 type SearchItem = SearchItems[number];

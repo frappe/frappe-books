@@ -76,13 +76,12 @@
         />
       </button>
     </div>
-    <div
+    <MobileEmptyState
       v-else
-      class="flex flex-1 flex-col items-center justify-center gap-3 px-10 pb-16 text-center"
-    >
-      <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="text-base text-ink-gray-8">{{ t`No items found` }}</p>
-    </div>
+      class="flex-1 pb-16"
+      :icon="searchTerm ? 'lucide-search-x' : 'lucide-package'"
+      :title="t`No items found`"
+    />
 
     <div
       v-if="sinvDoc.items?.length"
@@ -128,6 +127,7 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { POSItem } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
+import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { getItemInitials } from 'src/utils/pos';
 import {

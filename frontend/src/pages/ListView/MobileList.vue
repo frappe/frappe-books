@@ -60,14 +60,16 @@
       </div>
     </template>
 
-    <div
+    <MobileEmptyState
       v-else
-      class="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-8"
+      class="flex-1 py-16"
+      :icon="isFiltered ? 'lucide-search-x' : 'lucide-inbox'"
+      :title="t`No entries found`"
+      :description="isFiltered ? t`No results match the current filters` : ''"
     >
-      <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="text-base text-ink-gray-8">{{ t`No entries found` }}</p>
       <FrappeButton
         v-if="isFiltered"
+        class="mt-2"
         variant="solid"
         size="lg"
         :label="t`Clear filters`"
@@ -75,12 +77,14 @@
       />
       <FrappeButton
         v-else-if="canCreate"
+        class="mt-2"
         variant="solid"
         size="lg"
+        icon-left="lucide-plus"
         :label="t`Make Entry`"
         @click="$emit('makeNewDoc')"
       />
-    </div>
+    </MobileEmptyState>
   </MobilePullToRefresh>
 </template>
 <script lang="ts">
@@ -91,6 +95,7 @@ import {
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
 import type { RenderData } from 'fyo/model/types';
+import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
 import MobilePullToRefresh from 'src/mobile/MobilePullToRefresh.vue';
 import { defineComponent, type PropType } from 'vue';
 import type { ListColumn } from './listColumns';
@@ -105,6 +110,7 @@ export default defineComponent({
     FrappeListCell,
     FrappeListRow,
     FrappeSkeleton,
+    MobileEmptyState,
     MobileListRow,
     MobilePullToRefresh,
   },

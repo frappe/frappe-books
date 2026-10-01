@@ -87,13 +87,13 @@
           </FrappeList>
           <p
             v-if="loading && !options.length"
-            class="p-4 text-base text-ink-gray-5"
+            class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
           >
             {{ t`Loading...` }}
           </p>
           <p
             v-else-if="!sortedOptions.length"
-            class="p-4 text-base text-ink-gray-5"
+            class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
           >
             {{ emptyText }}
           </p>

@@ -1,7 +1,12 @@
 import { ConflictError } from 'fyo/utils/errors';
 import type { DocPermissionMap } from 'fyo/utils/permissions';
 import { t } from 'fyo/utils/translation';
-import { call, getServerError, reachServer } from 'src/web/api';
+import {
+  call,
+  getServerError,
+  leaveIfSessionExpired,
+  reachServer,
+} from 'src/web/api';
 
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
 export type DocValues = Record<string, unknown>;
@@ -175,6 +180,7 @@ async function request<T>(
 
   const body = (await response.json()) as ResponseBody<T>;
   if (!response.ok) {
+    await leaveIfSessionExpired(response.status);
     const [error] = body.errors ?? [];
     const message = error?.message ?? error?.type ?? response.statusText;
     throw getServerError(message, error?.type, response.status);

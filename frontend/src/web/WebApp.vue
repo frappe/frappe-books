@@ -76,7 +76,7 @@ import {
   FrappeUIProvider,
   Spinner as FrappeSpinner,
 } from 'frappe-ui';
-import { call } from './api';
+import { call, redirectToLogin } from './api';
 
 export default defineComponent({
   name: 'WebApp',
@@ -129,9 +129,7 @@ export default defineComponent({
     async initializeBooks() {
       const boot = window.frappe.boot || {};
       if (!boot.user?.name || boot.user.name === 'Guest') {
-        window.location.href = `/login?redirect-to=${encodeURIComponent(
-          '/books'
-        )}`;
+        redirectToLogin();
         return;
       }
       const books = boot.books!;

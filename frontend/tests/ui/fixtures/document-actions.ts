@@ -34,9 +34,10 @@ async function mount() {
   const persist = async (values: Record<string, unknown>) => {
     state.calls++;
     if (state.pending) await new Promise<void>((resolve) => (release = resolve));
+    // An untyped server failure, which /books shows as a plain error.
     if (state.fail) {
       const errors = [{ message: 'Write rejected' }];
-      return Response.json({ errors }, { status: 417 });
+      return Response.json({ errors }, { status: 500 });
     }
 
     stored = { ...values, modified: '2026-10-01 10:00:00.000000' };

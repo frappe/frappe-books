@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import frappe
+from frappe.desk.search import search_widget
 from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
@@ -185,8 +186,8 @@ def _new_data_import():
 
 
 def _search_shipments(name):
-	found = BooksDatabaseBridge().call("search", [name, ["Shipment"], 5])
-	return [row["name"] for row in found["Shipment"]]
+	found = search_widget("Books Shipment", name, page_length=5, filter_fields=["name"], as_dict=True)
+	return [row.name for row in found]
 
 
 def _seed_shipment(return_against=None):

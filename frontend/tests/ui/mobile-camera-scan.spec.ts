@@ -25,6 +25,15 @@ useBooksSession();
 test('the camera reads a barcode that fills the view', async ({ page }) => {
   // iOS Safari has no BarcodeDetector, so decode with the library alone.
   await page.addInitScript(() => delete (window as any).BarcodeDetector);
+  // Forms offer scanning only when barcodes are on.
+  await page.route(
+    '**/api/v2/document/Books%20Inventory%20Settings/**',
+    async (route) => {
+      const json = await (await route.fetch()).json();
+      json.data.enable_barcodes = 1;
+      await route.fulfill({ json });
+    }
+  );
   await page.goto(`/books/edit/SalesInvoice/new-camera-${Date.now()}`);
   await waitForBooks(page);
 

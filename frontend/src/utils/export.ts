@@ -1,4 +1,3 @@
-import { Fyo } from 'fyo';
 import {
   Field,
   FieldType,
@@ -7,12 +6,11 @@ import {
   TargetField,
 } from 'schemas/types';
 import { getDocuments, type DocValues, type ListQuery } from 'src/frappe/api';
-import { getDocType, isFrappeBacked } from 'src/frappe/doctypes';
+import { getDocType } from 'src/frappe/doctypes';
 import { getOrderBy, toFrappeFilters } from 'src/frappe/list';
 import { getSchema } from 'src/frappe/registry';
 import { generateCSV } from 'utils/csvParser';
-import { GetAllOptions, QueryFilter } from 'utils/db/types';
-import { getMapFromList, safeParseFloat } from 'utils/index';
+import { QueryFilter } from 'utils/db/types';
 import { ExportField, ExportTableField } from './types';
 
 const EXPORT_PAGE_SIZE = 500;
@@ -78,22 +76,16 @@ export function getExportTableFields(fields: Field[]): ExportTableField[] {
 }
 
 /** The documents as a JSON list; each table's rows are a list in its document. */
-export async function getJsonExportData(
-  query: ExportQuery,
-  fyo: Fyo
-): Promise<string> {
-  return JSON.stringify(await getExportRows(query, fyo));
+export async function getJsonExportData(query: ExportQuery): Promise<string> {
+  return JSON.stringify(await getExportRows(query));
 }
 
 /**
  * The documents as CSV: a row of labels, a row of `schema.fieldname` keys,
  * then a row for each table row, which repeats its document's values.
  */
-export async function getCsvExportData(
-  query: ExportQuery,
-  fyo: Fyo
-): Promise<string> {
-  const documents = await getExportRows(query, fyo);
+export async function getCsvExportData(query: ExportQuery): Promise<string> {
+  const documents = await getExportRows(query);
   const headers = getCsvHeaders(query);
   const rows = documents.flatMap((document) => getCsvRows(document, headers));
   const flatHeaders = [headers.parent, headers.child].flat();
@@ -174,10 +166,7 @@ function getExportedFieldnames(fields: ExportField[]): string[] {
 }
 
 /** The documents, each with the rows of its picked tables, a page at a time. */
-async function getExportRows(
-  query: ExportQuery,
-  fyo: Fyo
-): Promise<DocValues[]> {
+async function getExportRows(query: ExportQuery): Promise<DocValues[]> {
   const rows: DocValues[] = [];
   const { limit } = query;
   while (!limit || rows.length < limit) {
@@ -186,9 +175,7 @@ async function getExportRows(
       (limit || Infinity) - rows.length
     );
     const page = { start: rows.length, limit: pageSize };
-    const pageRows = isFrappeBacked(query.schemaName)
-      ? await getFrappeRows(query, page)
-      : await getBridgeRows(query, page, fyo);
+    const pageRows = await getFrappeRows(query, page);
     rows.push(...pageRows);
     if (pageRows.length < pageSize) {
       break;
@@ -228,66 +215,4 @@ function getStoredFieldnames(
     .meta.fields.filter((field) => field.is_virtual)
     .map(({ fieldname }) => fieldname);
   return getExportedFieldnames(fields).filter((f) => !virtual.includes(f));
-}
-
-/** The documents of a schema still on the bridge, nested as Frappe sends them. */
-async function getBridgeRows(
-  { schemaName, fields, tableFields, filters }: ExportQuery,
-  page: { start: number; limit: number },
-  fyo: Fyo
-): Promise<DocValues[]> {
-  const orderBy = ['created'];
-  if (fyo.db.fieldMap[schemaName]['date']) {
-    orderBy.unshift('date');
-  }
-
-  const options: GetAllOptions = {
-    filters,
-    orderBy,
-    order: 'desc',
-    offset: page.start,
-    limit: page.limit,
-    fields: [...new Set(['name', ...getExportedFieldnames(fields)])],
-  };
-  const parents = await fyo.db.getAllRaw(schemaName, options);
-  convertRawPesaToFloat(parents, fields);
-  if (parents.length) {
-    for (const tf of getExportedTables(fields, tableFields)) {
-      await addBridgeTableRows(parents, tf, fyo);
-    }
-  }
-
-  return parents;
-}
-
-async function addBridgeTableRows(
-  parents: DocValues[],
-  { fieldname, target, fields }: ExportTableField,
-  fyo: Fyo
-) {
-  const nameMap = getMapFromList(parents, 'name');
-  const rows = await fyo.db.getAllRaw(target, {
-    orderBy: 'idx',
-    fields: ['parent', ...getExportedFieldnames(fields)],
-    filters: { parent: ['in', Object.keys(nameMap)] },
-  });
-  convertRawPesaToFloat(rows, fields);
-  for (const { parent, ...row } of rows) {
-    delete row.name;
-    const document = nameMap[parent as string];
-    document[fieldname] ??= [];
-    (document[fieldname] as DocValues[]).push(row);
-  }
-}
-
-function convertRawPesaToFloat(data: DocValues[], fields: ExportField[]) {
-  const currencyFields = fields.filter(
-    (f) => f.fieldtype === FieldTypeEnum.Currency
-  );
-
-  for (const row of data) {
-    for (const { fieldname } of currencyFields) {
-      row[fieldname] = safeParseFloat((row[fieldname] ?? '0') as string);
-    }
-  }
 }

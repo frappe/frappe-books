@@ -117,7 +117,6 @@ import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
 import { t } from 'fyo';
 import { exportsOwnDocumentsOnly } from 'fyo/utils/permissions';
 import { Field, FieldTypeEnum } from 'schemas/types';
-import { isFrappeBacked } from 'src/frappe/doctypes';
 import { getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { saveExportData } from 'reports/commonExporter';
@@ -257,8 +256,7 @@ export default defineComponent({
         JSON.stringify(this.useListFilters ? this.listFilters : {})
       );
       if (exportsOwnDocumentsOnly(fyo.store.permissions, this.schemaName)) {
-        const owner = isFrappeBacked(this.schemaName) ? 'owner' : 'createdBy';
-        filters[owner] = fyo.user;
+        filters.owner = fyo.user;
       }
 
       const query = {
@@ -270,8 +268,8 @@ export default defineComponent({
       };
       const data =
         this.exportFormat === 'json'
-          ? await getJsonExportData(query, fyo)
-          : await getCsvExportData(query, fyo);
+          ? await getJsonExportData(query)
+          : await getCsvExportData(query);
 
       await this.saveExportData(data);
     },

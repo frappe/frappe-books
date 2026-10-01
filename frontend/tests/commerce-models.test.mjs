@@ -368,6 +368,48 @@ test("a price list row takes its item's unit from the server preview", async (t)
   assert.equal(requests.at(-1).body.method, 'preview');
 });
 
+test('a price list or pricing rule row takes the unit of each item it is given', async () => {
+  const units = { Sugar: 'Kg', Salt: 'Gram' };
+  const sent = [];
+  respond = ({ path, body }) => {
+    if (path !== '/api/v2/method/run_doc_method') {
+      return { data: [] };
+    }
+    // As the server's fetch_if_empty: an empty unit is the item's.
+    const table = body.document.price_list_item ? 'price_list_item' : 'applied_items';
+    const rows = body.document[table].map((row) => {
+      sent.push(row.unit ?? null);
+      return { ...row, unit: row.unit || units[row.item] };
+    });
+    return { docs: [{ ...body.document, [table]: rows }] };
+  };
+  for (const [schemaName, table] of [
+    ['PriceList', 'price_list_item'],
+    ['PricingRule', 'applied_items'],
+  ]) {
+    sent.length = 0;
+    const doc = newFrappeDoc(schemaName);
+    await doc.append(table, { item: 'Sugar' });
+    const row = doc[table][0];
+    await doc.preview();
+    assert.equal(row.unit, 'Kg');
+
+    await row.set('unit', 'Gram');
+    await doc.preview();
+    assert.equal(row.unit, 'Gram');
+
+    await row.set('item', 'Salt');
+    await doc.preview();
+    assert.equal(row.unit, 'Gram');
+
+    await row.set('unit', 'Kg');
+    await doc.preview();
+    clearTimeout(doc._previewTimer);
+    assert.equal(row.unit, 'Kg');
+    assert.deepEqual(sent, [null, 'Gram', null, 'Kg']);
+  }
+});
+
 test('the pricing rule form shows each discount scheme as it did', async () => {
   assert.deepEqual(getLayout('PricingRule').slice(0, 8), [
     'name | ID |  | Default',

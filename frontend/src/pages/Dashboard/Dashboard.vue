@@ -1,15 +1,8 @@
 <template>
   <div class="flex min-h-0 flex-col">
-    <PageHeader :title="t`Dashboard`" title-start>
+    <PageHeader :title="t`Dashboard`">
       <template #mobile>
-        <FrappeButton
-          variant="ghost"
-          size="md"
-          icon="lucide-search"
-          :label="t`Search`"
-          @click="$router.push('/search')"
-        />
-        <PeriodSelector :value="period" @change="(value) => (period = value)" />
+        <MobileCreateMenu />
       </template>
       <PeriodSelector
         :value="period"
@@ -25,8 +18,13 @@
       :viewport-class="isMobile ? undefined : 'px-3 pb-10 pt-5 sm:px-5'"
     >
       <div
-        class="space-y-4 px-4 pt-3 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)] md:mx-auto md:max-w-4xl md:space-y-6 md:p-0"
+        class="space-y-4 px-4 pb-6 pt-3 md:mx-auto md:max-w-4xl md:space-y-6 md:p-0"
       >
+        <PeriodSelector
+          v-if="isMobile"
+          :value="period"
+          @change="(value) => (period = value)"
+        />
         <div
           class="grid grid-cols-2 gap-3 md:gap-x-8 md:gap-y-6 xl:grid-cols-4"
         >
@@ -50,20 +48,16 @@
         </div>
       </div>
     </component>
-    <MobileCreateButton v-if="isMobile" />
   </div>
 </template>
 
 <script>
-import {
-  Button as FrappeButton,
-  ScrollArea as FrappeScrollArea,
-} from 'frappe-ui';
+import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import PageHeader from 'src/components/PageHeader.vue';
 import Cashflow from './Cashflow.vue';
 import Expenses from './Expenses.vue';
 import InvoiceCards from './InvoiceCards.vue';
-import MobileCreateButton from './MobileCreateButton.vue';
+import MobileCreateMenu from './MobileCreateMenu.vue';
 import PeriodSelector from './PeriodSelector.vue';
 import ProfitAndLoss from './ProfitAndLoss.vue';
 import { docsPathRef } from 'src/utils/refs';
@@ -72,14 +66,13 @@ import { isMobile } from 'src/utils/viewport';
 export default {
   name: 'Dashboard',
   components: {
-    FrappeButton,
     FrappeScrollArea,
     PageHeader,
     Cashflow,
     ProfitAndLoss,
     Expenses,
     InvoiceCards,
-    MobileCreateButton,
+    MobileCreateMenu,
     PeriodSelector,
   },
   setup() {

@@ -34,19 +34,12 @@ async function openSearch(page: Page, query: string) {
   await searchbox(page).fill(query);
 }
 
-test('the drawer and the Dashboard open search with the input focused', async ({
-  page,
-}) => {
+test('the drawer opens search with the input focused', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
   await page
     .getByRole('dialog', { name: 'Books' })
     .getByRole('button', { name: 'Search' })
     .click();
-  await expect(page).toHaveURL(/\/books\/search$/);
-  await expect(searchbox(page)).toBeFocused();
-
-  await page.getByRole('button', { name: 'Back' }).click();
-  await page.getByRole('button', { name: 'Search' }).click();
   await expect(page).toHaveURL(/\/books\/search$/);
   await expect(searchbox(page)).toBeFocused();
 });

@@ -32,6 +32,7 @@ await build({
       export { getMappedDoc, getStockTransferActions } from './models/helpers';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
+      export { getDateRangePresets, getFilterItems } from './src/components/Report/filterToolbar';
       export {
         evaluateHidden,
         evaluateReadOnly,
@@ -120,6 +121,8 @@ export const {
   getPOSRowItem,
   validatePOSCheckout,
   getReportCellColorClass,
+  getDateRangePresets,
+  getFilterItems,
   getDashboardData,
   getInvoiceListFilters,
   getInvoiceSummary,

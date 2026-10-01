@@ -17,6 +17,7 @@ import {
 import { getDocType } from 'src/frappe/doctypes';
 import { getFileFields, getSchema } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
+import { getCsvKey } from 'src/utils/export';
 import { generateCSV, parseCSV } from 'utils/csvParser';
 import { getValueMapFromList } from 'utils/index';
 
@@ -619,7 +620,21 @@ function getTemplateHeaderMaps(fields: TemplateField[]) {
     headersByFieldKey.set(field.fieldKey, header);
   }
 
+  setCsvKeys(fieldKeysByHeader, fields);
   return { fieldKeysByHeader, headersByFieldKey };
+}
+
+/** A list export's CSV names its columns by key, e.g. `SalesInvoice.numberSeries`. */
+function setCsvKeys(
+  fieldKeysByHeader: Map<string, string>,
+  fields: TemplateField[]
+) {
+  for (const field of fields) {
+    const key = getCsvKey(field.schemaName, field.fieldname);
+    if (!fieldKeysByHeader.has(key)) {
+      fieldKeysByHeader.set(key, field.fieldKey);
+    }
+  }
 }
 
 function getTemplateFields(schemaName: string): TemplateField[] {

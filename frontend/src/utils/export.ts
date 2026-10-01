@@ -213,16 +213,18 @@ function getTableColumns({
 
 /** The picked fields that hold values, as columns. */
 function getColumns(schemaName: string, fields: ExportField[]): ExportColumn[] {
+  return getPickedFields(fields).map((field) => ({
+    label: field.label,
+    key: getExportKey(schemaName, field.fieldname),
+    csvKey: getCsvKey(schemaName, field.fieldname),
+    getValue: getValueReader(schemaName, field),
+  }));
+}
+
+/** A field's key in an exported CSV, e.g. `SalesInvoice.numberSeries`. */
+export function getCsvKey(schemaName: string, fieldname: string): string {
   const schemaKey = RENAMED_SCHEMAS[schemaName] ?? schemaName;
-  return getPickedFields(fields).map((field) => {
-    const key = getExportKey(schemaName, field.fieldname);
-    return {
-      label: field.label,
-      key,
-      csvKey: `${schemaKey}.${key}`,
-      getValue: getValueReader(schemaName, field),
-    };
-  });
+  return `${schemaKey}.${getExportKey(schemaName, fieldname)}`;
 }
 
 function getExportKey(schemaName: string, fieldname: string): string {

@@ -104,7 +104,6 @@ test('the address form shows what it showed, and links show its display text', (
     'phone | Phone | Phone | Contacts',
     'fax | Fax |  | Contacts',
     'address_display | Address Display |  | Miscellaneous',
-    'pos | Place of Supply | Place of Supply | Miscellaneous',
   ]);
   const schema = getSchema('Address');
   const country = schema.fields.find((f) => f.fieldname === 'country');
@@ -174,7 +173,7 @@ test("countries are Frappe's, shown and searched by their names", async () => {
   );
 });
 
-test('an address lists Indian states for India and hides the place of supply', () => {
+test('an address lists Indian states for India and has no place of supply', () => {
   fyo.store.indianStates = { 27: 'Maharashtra', '07': 'Delhi' };
   const address = newFrappeDoc('Address', { country: 'India' });
   const { lists, emptyMessages } = getModel('Address');
@@ -188,7 +187,7 @@ test('an address lists Indian states for India and hides the place of supply', (
     emptyMessages.state(newFrappeDoc('Address')),
     'Enter Country to load States'
   );
-  assert.equal(hidden(address, 'pos'), true);
+  assert.equal(address.fieldMap.pos, undefined);
 });
 
 test('an address leaves its display text to the server', async () => {
@@ -310,7 +309,7 @@ test('saving or deleting a converted party refreshes its open lead only', async 
   ]);
 });
 
-test('the party form and list show what they showed, GST fields hidden', () => {
+test('the party form and list show what they showed, without GST fields', () => {
   assert.deepEqual(getLayout('Party'), [
     'image | Image |  | Default',
     'name | Name | Full Name | Default',
@@ -325,13 +324,9 @@ test('the party form and list show what they showed, GST fields hidden', () => {
     'loyalty_points | Loyalty Points |  | Loyalty Program',
     'tax_id | Tax ID |  | Billing',
     'outstanding_amount | Outstanding Amount |  | Billing',
-    'gst_type | GST Registration | GST Registration | Billing',
-    'gstin | GSTIN No. |  | Billing',
   ]);
-  const party = newFrappeDoc('Party', { gst_type: 'Registered Regular' });
-  for (const fieldname of ['gst_type', 'gstin', 'outstanding_amount']) {
-    assert.equal(hidden(party, fieldname), true, fieldname);
-  }
+  const party = newFrappeDoc('Party');
+  assert.equal(hidden(party, 'outstanding_amount'), true);
   for (const fieldname of ['tax_id', 'loyalty_program', 'loyalty_points']) {
     assert.equal(hidden(party, fieldname), false, fieldname);
   }

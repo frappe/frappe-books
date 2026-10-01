@@ -33,7 +33,7 @@ test('an Indian address shows its place of supply, in quick edit too', () => {
 
 test('an Indian party asks for its GST registration instead of a tax ID', async () => {
   const party = newFrappeDoc('Party', { role: 'Customer' });
-  assert.equal(hidden(party, 'tax_id'), true);
+  assert.equal(party.fieldMap.tax_id, undefined);
   assert.equal(hidden(party, 'gst_type'), false);
   assert.equal(hidden(party, 'gstin'), true);
   await party.set('gst_type', 'Registered Regular');

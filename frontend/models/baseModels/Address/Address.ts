@@ -1,11 +1,6 @@
 import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
-import {
-  EmptyMessageMap,
-  HiddenMap,
-  ListViewSettings,
-  ListsMap,
-} from 'fyo/model/types';
+import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 
 /**
@@ -27,11 +22,8 @@ export class Address extends FrappeDoc {
     ],
     linkDisplayField: 'address_display',
     fields: { country: { create: false } },
-  };
-
-  // Place of supply is an Indian GST field; see the Indian Address.
-  hidden: HiddenMap = {
-    pos: () => true,
+    // Place of supply is an Indian GST field; see the Indian Address.
+    omitFields: ['pos'],
   };
 
   static lists: ListsMap = {

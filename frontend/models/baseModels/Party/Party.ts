@@ -3,7 +3,6 @@ import { Doc } from 'fyo/model/doc';
 import {
   Action,
   FiltersMap,
-  HiddenMap,
   ListViewSettings,
   ValidationMap,
 } from 'fyo/model/types';
@@ -37,6 +36,8 @@ export class Party extends FrappeDoc {
       'tax_id',
     ],
     fields: { from_lead: { create: false } },
+    // GST fields are Indian; see the Indian Party.
+    omitFields: ['gst_type', 'gstin'],
   };
   // The server sets the new role's default account on save.
   static override refills = { role: ['default_account'] };
@@ -48,12 +49,6 @@ export class Party extends FrappeDoc {
   validations: ValidationMap = {
     email: validateEmail,
     phone: validatePhoneNumber,
-  };
-
-  // GST fields are Indian; see the Indian Party.
-  hidden: HiddenMap = {
-    gst_type: () => true,
-    gstin: () => true,
   };
 
   static filters: FiltersMap = {

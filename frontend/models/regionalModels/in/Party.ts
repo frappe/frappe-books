@@ -15,11 +15,11 @@ export class Party extends BaseParty {
       'gst_type',
       'gstin',
     ],
+    omitFields: ['tax_id'],
   };
 
   // The DocType shows GSTIN for a registered party only.
   hidden: HiddenMap = {
-    tax_id: () => true,
     loyalty_program: () =>
       !this.fyo.singles.AccountingSettings?.enable_loyalty_program ||
       this.role === 'Supplier',

@@ -257,8 +257,8 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import {
   addBatchItem,
   addPOSItem,
-  fillRowSerialNumbers,
   getPOSItemFilters,
+  refillSerialNumbers,
   POS_ITEM_FIELDS,
   toPOSItem,
   validatePOSCheckout,
@@ -284,7 +284,6 @@ import {
   POSItem,
   POSLayout,
   ItemQtyMap,
-  ItemSerialNumbers,
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
@@ -336,7 +335,6 @@ export default defineComponent({
       paymentMethod: computed(() => this.paymentMethod),
       transferRefNo: computed(() => this.transferRefNo),
       appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
-      itemSerialNumbers: computed(() => this.itemSerialNumbers),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
       transferClearanceDate: computed(() => this.transferClearanceDate),
     };
@@ -385,7 +383,6 @@ export default defineComponent({
       sinvDoc: {} as SalesInvoice,
       posProfile: null as POSProfile | null,
       itemQtyMap: {} as ItemQtyMap,
-      itemSerialNumbers: {} as ItemSerialNumbers,
       quickQtyActive: false,
       quickQtyBuffer: '' as string,
       selectedRow: null as SalesInvoiceItem | null,
@@ -445,18 +442,16 @@ export default defineComponent({
   async mounted() {
     await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
-    this.setSinvDoc();
-    this.setDefaultCustomer();
+    await this.setDefaultCustomer();
     await this.setItemQtyMap();
     await this.setItems();
   },
   async activated() {
     toggleSidebar(false);
-    validateIsPosSettingsSet();
     await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
-    this.setSinvDoc();
-    this.setDefaultCustomer();
+    validateIsPosSettingsSet(this.posProfile as POSProfile | null);
+    await this.setDefaultCustomer();
     this.setShortcuts();
     this.addQuickQtyListeners();
 
@@ -551,7 +546,8 @@ export default defineComponent({
         return;
       }
 
-      this.sinvDoc.party = value;
+      // Set as the user's choice, which previews keep instead of the POS customer.
+      await this.sinvDoc.set('party', value);
 
       const [party] = await getDocuments('Books Party', {
         fields: ['loyalty_program', 'loyalty_points'],
@@ -710,12 +706,13 @@ export default defineComponent({
     setPaymentMethod(method: string) {
       this.paymentMethod = method;
     },
-    setDefaultCustomer() {
-      this.defaultCustomer =
-        this.posProfile?.pos_customer ??
-        this.fyo.singles.Defaults?.pos_customer ??
-        '';
-      this.sinvDoc.party = this.defaultCustomer;
+    /** A new sale for the POS customer, whom the server's preview picks. */
+    async setDefaultCustomer() {
+      this.sinvDoc = newFrappeDoc(ModelNameEnum.SalesInvoice, {
+        is_pos: true,
+      }) as SalesInvoice;
+      await this.previewInvoice();
+      this.defaultCustomer = this.sinvDoc.party ?? '';
     },
     async setItemQtyMap() {
       this.itemQtyMap = await getItemQtyMap();
@@ -797,7 +794,7 @@ export default defineComponent({
           quantity,
           this.itemQtyMap
         );
-        await fillRowSerialNumbers(row, this.itemSerialNumbers);
+        refillSerialNumbers(row);
         await this.previewInvoice();
       } catch (error) {
         showToast({ type: 'error', message: t`${error as string}` });
@@ -820,14 +817,11 @@ export default defineComponent({
       this.pendingBatchItem = null;
 
       try {
-        await this.setItemQtyMap();
-        await this.setItems();
         await addBatchItem(
           this.sinvDoc as SalesInvoice,
           item as POSItem,
           batchName,
-          quantity ?? 1,
-          this.itemQtyMap
+          quantity ?? 1
         );
         await this.previewInvoice();
       } catch (error) {
@@ -990,7 +984,6 @@ export default defineComponent({
     },
     async clearValues() {
       this.setSinvDoc();
-      this.itemSerialNumbers = {};
 
       this.paidAmount = fyo.pesa(0);
       this.paymentMethod = undefined;
@@ -1037,14 +1030,7 @@ export default defineComponent({
       this.setTotalQuantity();
     },
     async validate() {
-      await validatePOSCheckout(
-        this.sinvDoc as SalesInvoice,
-        async () => {
-          await this.setItemQtyMap();
-          await this.setItems();
-          return this.itemQtyMap;
-        }
-      );
+      await validatePOSCheckout(this.sinvDoc as SalesInvoice);
     },
     async previewInvoice() {
       try {

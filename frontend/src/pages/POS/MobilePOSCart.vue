@@ -101,14 +101,13 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import MobileStepper from 'src/components/POS/MobileStepper.vue';
-import { ItemSerialNumbers } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
   CostLine,
-  fillRowSerialNumbers,
   getCostLines,
   getPOSQuantityField,
+  refillSerialNumbers,
   setPOSRowQuantity,
 } from 'src/utils/pos';
 import { computed, inject, type Ref } from 'vue';
@@ -125,7 +124,6 @@ defineEmits<{
 }>();
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
-const itemSerialNumbers = inject('itemSerialNumbers') as Ref<ItemSerialNumbers>;
 const quantityField = getPOSQuantityField();
 
 const totals = computed<(CostLine & { strong?: boolean })[]>(() => [
@@ -154,7 +152,7 @@ function getRowMeta(row: SalesInvoiceItem): string {
 async function setQuantity(row: SalesInvoiceItem, quantity: number) {
   try {
     await setPOSRowQuantity(row, quantityField, quantity);
-    await fillRowSerialNumbers(row, itemSerialNumbers.value);
+    refillSerialNumbers(row);
   } catch (error) {
     showToast({ type: 'error', message: t`${error as string}` });
   }

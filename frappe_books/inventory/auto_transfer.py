@@ -103,17 +103,23 @@ def _returned_transfer(invoice) -> str | None:
 
 def _stock_location(invoice) -> str:
 	location = default_location(invoice)
-	if not location:
-		label = frappe.get_meta("Books Defaults").get_label(_location_field(invoice))
-		frappe.throw(_("Set {0} in Books Defaults to transfer stock automatically.").format(label))
-	return location
+	if location:
+		return location
+	if _is_pos_sale(invoice):
+		frappe.throw(_("POS Inventory is not set. Please set it on POS Settings"))
+	label = frappe.get_meta("Books Defaults").get_label(_location_field(invoice))
+	frappe.throw(_("Set {0} in Books Defaults to transfer stock automatically.").format(label))
 
 
 def default_location(invoice) -> str | None:
 	"""Return the POS inventory of a POS sale, else the Books Defaults transfer location."""
-	if invoice.transaction_type == "sales" and invoice.get("is_pos") and (location := _pos_location()):
+	if _is_pos_sale(invoice) and (location := _pos_location()):
 		return location
 	return frappe.db.get_single_value("Books Defaults", _location_field(invoice))
+
+
+def _is_pos_sale(invoice) -> bool:
+	return invoice.transaction_type == "sales" and bool(invoice.get("is_pos"))
 
 
 def _location_field(invoice) -> str:

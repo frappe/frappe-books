@@ -10,13 +10,21 @@ const stock = [
   { item: 'Pen', batch: null, quantity: 5 },
 ];
 
+/** A request for the stock ledger's sums by item and batch. */
+function isLedgerSum({ path, body }) {
+  return (
+    path === '/api/method/frappe.client.get_list' &&
+    body.doctype === 'Books Stock Ledger Entry'
+  );
+}
+
 const requests = await loadFrappeModels(frappeModels, ({ path, body }) => {
   if (path === `${AVAILABILITY}.get_stock_location`) {
     const isPOSSale = body.doctype === 'Books Sales Invoice' && body.is_pos;
     return { message: isPOSSale ? 'Counter' : 'Stores' };
   }
 
-  if (path.endsWith('get_stock_quantities')) {
+  if (isLedgerSum({ path, body })) {
     return { message: stock };
   }
 
@@ -37,8 +45,8 @@ function makeRow(values = {}) {
 /** The locations the stock requests asked about. */
 function getStockLocations() {
   return requests
-    .filter(({ path }) => path.endsWith('get_stock_quantities'))
-    .map(({ body }) => [body.location, body.items]);
+    .filter(isLedgerSum)
+    .map(({ body }) => body.filters.map(([, , value]) => value));
 }
 
 test('sales batch choices are the batches in stock where the invoice ships from', async () => {

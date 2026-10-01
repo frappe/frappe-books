@@ -72,9 +72,10 @@ export async function getCashPaymentMethods(): Promise<string[]> {
   return methods.map(({ name }) => name as string);
 }
 
-export function validateIsPosSettingsSet() {
+/** Warns of POS settings that a sale needs; the profile's inventory stands in for POS Settings', as on the server. */
+export function validateIsPosSettingsSet(profile?: POSProfile | null) {
   try {
-    const inventory = fyo.singles.POSSettings?.inventory;
+    const inventory = profile?.inventory || fyo.singles.POSSettings?.inventory;
     if (!inventory) {
       throw new ValidationError(
         t`POS Inventory is not set. Please set it on POS Settings`

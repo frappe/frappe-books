@@ -129,9 +129,10 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		draft = frappe.get_doc(
 			{
 				"doctype": "Books Pos Closing Shift",
+				"closing_cash": [{"denomination": 90, "count": 1}],
 				"closing_amounts": [
 					{"name": "counted-bank", "payment_method": "Bank", "closing_amount": 5},
-					{"name": "counted-cash", "payment_method": "Cash", "closing_amount": 90},
+					{"name": "counted-cash", "payment_method": "Cash", "closing_amount": 0},
 				],
 			}
 		)
@@ -141,6 +142,37 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		rows = [(row.name, row.idx, row.payment_method) for row in draft.closing_amounts]
 		self.assertEqual(rows, [("counted-cash", 1, "Cash"), ("counted-bank", 2, "Bank")])
 		self.assertEqual(cash_amounts(draft).difference_amount, -10)
+		self.assertEqual(draft.closing_amounts[1].difference_amount, 5)
+
+	def test_preview_shares_the_counted_cash_among_the_cash_methods(self):
+		petty = frappe.get_doc(
+			{"doctype": "Books Payment Method", "name": unique_name("Petty Cash"), "type": "Cash"}
+		).insert()
+		opening = frappe.get_doc(
+			{
+				"doctype": "Books Pos Opening Shift",
+				"opening_cash": [{"denomination": 100, "count": 1}],
+				"opening_amounts": [
+					{"payment_method": "Cash", "amount": 60},
+					{"payment_method": petty.name, "amount": 40},
+				],
+			}
+		).insert()
+		opening.submit()
+
+		shares = []
+		for counted in (130, 50):
+			draft = frappe.get_doc(
+				{
+					"doctype": "Books Pos Closing Shift",
+					"closing_cash": [{"denomination": counted, "count": 1}],
+				}
+			)
+			draft.preview()
+			shares.append([(row.closing_amount, row.difference_amount) for row in draft.closing_amounts])
+
+		# Each takes up to what it expects; the first also takes the surplus.
+		self.assertEqual(shares, [[(90, 30), (40, 0)], [(50, -10), (0, -40)]])
 
 	def test_preview_needs_an_open_shift(self):
 		draft = frappe.get_doc({"doctype": "Books Pos Closing Shift"})
@@ -156,6 +188,21 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		amounts = transacted_amounts(start, add_days(now_datetime(), 1))
 
 		self.assertEqual(amounts["Cash"], sum(invoice.base_grand_total for invoice in invoices))
+
+	def test_a_cash_difference_needs_the_write_off_account(self):
+		opening = open_shift(100)
+		frappe.db.set_single_value("Books Pos Settings", "write_off_account", None)
+
+		message = "POS Write Off Account is not set. Please set it on POS Settings"
+		self.assertRaisesRegex(frappe.ValidationError, message, close_shift, opening, 90)
+
+	def test_a_closing_amount_cannot_be_negative(self):
+		closing = make_closing_shift(open_shift(100), 100)
+		closing.closing_amounts[1].closing_amount = -5
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, "Closing Bank Amount can not be negative.", closing.insert
+		)
 
 	def test_every_cash_type_method_is_reconciled_through_the_counter(self):
 		petty = frappe.get_doc(

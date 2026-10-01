@@ -21,7 +21,6 @@ def get_stock_location(doctype: str, is_pos: bool = False) -> str | None:
 	return default_location(invoice)
 
 
-@frappe.whitelist()
 def get_stock_quantities(
 	location: str | None = None, items: list[str] | None = None, date: str | None = None
 ) -> list[dict]:
@@ -43,14 +42,9 @@ def get_stock_quantities(
 
 
 @frappe.whitelist()
-def get_sale_shortfalls(items: list[dict], date: str, is_pos: bool = False) -> list[dict]:
-	"""Return how much of each tracked item, or of its batch, a sale lacks where it ships from on the date."""
-	required = _tracked_quantities(items)
-	if not required:
-		return []
-	location = get_stock_location("Books Sales Invoice", is_pos)
-	stock = get_stock_quantities(location, sorted({item for item, _batch in required}), date)
-	available = _available(stock)
+def get_sale_shortfalls(items: list[dict], date: str | None = None, is_pos: bool = False) -> list[dict]:
+	"""Return how much of each tracked item, or of its batch, a sale lacks where it ships from, on the date when given."""
+	required, available = _sale_stock(items, date, is_pos)
 	return [
 		{"item": item, "batch": batch or None, "quantity": quantity - available[item, batch]}
 		for (item, batch), quantity in required.items()
@@ -109,6 +103,24 @@ def _batch_stock(rows, location):
 	return {(row.item, row.batch): as_decimal(row.quantity) for row in stock}
 
 
+def validate_pos_stock(rows):
+	"""Reject a POS sale of a tracked item without a batch that the POS location has none of, as the POS does."""
+	required, available = _sale_stock(rows, None, is_pos=True)
+	for item, batch in required:
+		if not batch and available[item, batch] <= 0:
+			frappe.throw(_("Item {0} is out of stock (quantity is zero)").format(item))
+
+
+def _sale_stock(rows, date, is_pos):
+	"""Return what the rows need of each tracked item and batch, and the stock where the sale ships from."""
+	required = _tracked_quantities(rows)
+	if not required:
+		return required, defaultdict(float)
+	location = get_stock_location("Books Sales Invoice", is_pos)
+	stock = get_stock_quantities(location, sorted({item for item, _batch in required}), date)
+	return required, _available(stock)
+
+
 def _tracked_quantities(rows):
 	"""Sum the rows' quantities of stock-tracked items by item and batch."""
 	names = sorted({row.get("item") for row in rows if row.get("item")})
@@ -120,7 +132,7 @@ def _tracked_quantities(rows):
 	quantities = defaultdict(float)
 	for row in rows:
 		if row.get("item") in tracked:
-			quantities[row["item"], row.get("batch") or ""] += flt(row.get("quantity"))
+			quantities[row.get("item"), row.get("batch") or ""] += flt(row.get("quantity"))
 	return quantities
 
 

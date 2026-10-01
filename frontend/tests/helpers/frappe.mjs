@@ -42,6 +42,7 @@ await build({
       export * as pos from './src/utils/pos';
       export * as posSetup from './src/utils/posSetup';
       export * as posStock from './models/inventory/posStock';
+      export * as posItemSearch from './src/utils/posItemSearch';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { Search } from './src/utils/search';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
@@ -153,6 +154,7 @@ export const {
   pos,
   posSetup,
   posStock,
+  posItemSearch,
   getInsufficientItems,
   Search,
   GeneralLedger,

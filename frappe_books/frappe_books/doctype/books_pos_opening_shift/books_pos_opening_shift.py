@@ -17,6 +17,7 @@ from frappe_books.commerce.pos import (
 	open_shift_name,
 	validate_cash_rows,
 )
+from frappe_books.permissions import check_preview_permission
 
 
 class BooksPosOpeningShift(Document):
@@ -48,11 +49,25 @@ class BooksPosOpeningShift(Document):
 		if self._action == "submit" or not self.opening_date:
 			# The shift opens when it is submitted, as its closing shift closes it.
 			self.opening_date = now_datetime()
+		if cash_total(self.opening_cash) < 0:
+			frappe.throw(_("Opening Cash Amount can not be negative."))
 		validate_cash_rows(self.opening_cash)
 		amounts = self.get_opening_amounts()
 		cash = sum_decimal(amount for method, amount in amounts.items() if is_cash_method(method))
 		if rounded(cash) != cash_total(self.opening_cash):
 			frappe.throw(_("Opening Cash amount must equal the denomination total."))
+
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill the opening cash amount a save expects, without saving."""
+		check_preview_permission(self)
+		self.set_opening_cash_amount()
+
+	def set_opening_cash_amount(self):
+		"""The counted cash is the first cash method's opening amount."""
+		cash_row = next((row for row in self.opening_amounts if is_cash_method(row.payment_method)), None)
+		if cash_row:
+			cash_row.amount = cash_total(self.opening_cash)
 
 	def before_submit(self):
 		lock_pos_settings()

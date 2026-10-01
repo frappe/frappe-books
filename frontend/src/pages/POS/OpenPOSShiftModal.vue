@@ -7,11 +7,7 @@
     @closemodal="handleDismiss"
   >
     <template v-if="isMobile && posShiftDoc">
-      <MobileCashCount
-        :heading="t`Opening cash`"
-        :rows="openingCash"
-        @change="handleChange"
-      />
+      <MobileCashCount :heading="t`Opening cash`" :rows="openingCash" />
       <FormControl
         v-for="row in otherOpeningAmounts"
         :key="row.idx"
@@ -51,7 +47,6 @@
           :show-header="true"
           :border="true"
           :value="posShiftDoc?.opening_cash"
-          @row-change="handleChange"
         />
       </div>
 
@@ -69,7 +64,6 @@
           :value="posShiftDoc?.opening_amounts"
           :read-only="false"
           :allow-add-remove-rows="false"
-          @row-change="handleChange"
         />
       </div>
     </div>
@@ -111,10 +105,7 @@ import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
-import {
-  getCashPaymentMethods,
-  getPOSOpeningShiftDoc,
-} from 'src/utils/posSetup';
+import { getPOSOpeningShiftDoc } from 'src/utils/posSetup';
 
 export default defineComponent({
   name: 'OpenPOSShift',
@@ -137,7 +128,6 @@ export default defineComponent({
   data() {
     return {
       posShiftDoc: undefined as POSOpeningShift | undefined,
-      cashMethods: [] as string[],
 
       isValuesSeeded: false,
       isDismissed: false,
@@ -162,7 +152,6 @@ export default defineComponent({
   async mounted() {
     this.isValuesSeeded = false;
     this.posShiftDoc = await getPOSOpeningShiftDoc();
-    this.cashMethods = await getCashPaymentMethods();
 
     await this.seedDefaults();
     this.isValuesSeeded = true;
@@ -223,22 +212,6 @@ export default defineComponent({
     },
     getField(fieldname: string): Field {
       return getField(ModelNameEnum.POSOpeningShift, fieldname)!;
-    },
-    setOpeningCashAmount() {
-      if (!this.posShiftDoc?.opening_amounts) {
-        return;
-      }
-
-      // The counted cash fills the first cash row; the server checks all cash rows add up to it.
-      const cashRow = this.posShiftDoc.opening_amounts.find((row) =>
-        this.cashMethods.includes(row.payment_method as string)
-      );
-      if (cashRow) {
-        cashRow.amount = this.posShiftDoc.openingCashAmount;
-      }
-    },
-    handleChange() {
-      this.setOpeningCashAmount();
     },
     async handleSubmit() {
       try {

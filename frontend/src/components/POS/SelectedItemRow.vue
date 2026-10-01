@@ -269,18 +269,18 @@ import Text from 'src/components/Controls/Text.vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
-  fillRowSerialNumbers,
   getPOSQuantityField,
   getPOSRowItem,
   isPOSRowFieldReadOnly,
   POSRowItem,
   POSRowField,
+  refillSerialNumbers,
   setPOSRowValue,
   validateSerialNumberCount,
 } from 'src/utils/pos';
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { defineComponent, inject, PropType } from 'vue';
-import { ItemSerialNumbers, POSLayout } from './types';
+import { POSLayout } from './types';
 
 /** A cart row: edited inline in the Classic layout, with the keypad in Modern. */
 export default defineComponent({
@@ -306,7 +306,6 @@ export default defineComponent({
   setup() {
     return {
       isDiscountingEnabled: inject('isDiscountingEnabled') as boolean,
-      itemSerialNumbers: inject('itemSerialNumbers') as ItemSerialNumbers,
     };
   },
   data() {
@@ -381,12 +380,10 @@ export default defineComponent({
       },
       immediate: true,
     },
-    'row.quantity': {
-      async handler(quantity?: number, previous?: number) {
-        if (this.hasSerialNumber && quantity !== previous) {
-          await fillRowSerialNumbers(this.row, this.itemSerialNumbers);
-        }
-      },
+    'row.quantity'(quantity?: number, previous?: number) {
+      if (this.hasSerialNumber && quantity !== previous) {
+        refillSerialNumbers(this.row);
+      }
     },
   },
   async mounted() {
@@ -441,7 +438,6 @@ export default defineComponent({
       }
 
       await this.row.set('serial_number', serialNumber);
-      this.itemSerialNumbers[this.row.item as string] = serialNumber;
       validateSerialNumberCount(
         serialNumber,
         Math.abs(this.row.quantity ?? 0),

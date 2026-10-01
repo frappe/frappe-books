@@ -1,5 +1,6 @@
 """Integration coverage for invoice-driven stock transfers."""
 
+import re
 from decimal import Decimal
 
 import frappe
@@ -44,10 +45,45 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 	def test_pos_shipment_still_rejects_insufficient_inventory(self):
 		invoice, item, location = self._make_pos_invoice(use_profile=True, opening_quantity=1)
-		with self.assertRaisesRegex(frappe.ValidationError, f"at {location.name}:"):
+		with self.assertRaisesRegex(
+			frappe.ValidationError, f"in {location.name}. Available: 1; required: 2."
+		):
 			invoice.submit()
 		self.assertEqual(stock_quantity(item.name, location.name), 1)
 		self.assertEqual(stock_quantity(item.name, "Stores"), 0)
+
+	def test_pos_sale_of_an_item_out_of_stock_is_refused_as_the_pos_says(self):
+		invoice, item, location = self._make_pos_invoice(use_profile=False)
+		make_movement(
+			"MaterialIssue",
+			[{"item": item.name, "from_location": location.name, "quantity": 5, "rate": 10}],
+		).submit()
+
+		message = f"Item {item.name} is out of stock (quantity is zero)"
+		self.assertRaisesRegex(frappe.ValidationError, re.escape(message), invoice.submit)
+
+	def test_pos_sale_without_a_location_asks_for_the_pos_inventory(self):
+		invoice, _item, _location = self._make_pos_invoice(use_profile=False)
+		frappe.db.set_single_value("Books Pos Settings", "inventory", None)
+		frappe.db.set_single_value("Books Defaults", "shipment_location", None)
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, "POS Inventory is not set. Please set it on POS Settings", invoice.submit
+		)
+
+	def test_pos_sale_preview_fills_serial_numbers_in_stock_at_the_pos(self):
+		invoice, item, location = self._make_pos_invoice(use_profile=False)
+		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)
+		serial_numbers = sorted(unique_name("SN") for _ in range(3))
+		row = {"item": item.name, "to_location": location.name, "quantity": 3, "rate": 10}
+		make_movement("MaterialReceipt", [{**row, "serial_number": "\n".join(serial_numbers)}]).submit()
+		invoice.items[0].quantity = 1
+		invoice.items[0].serial_number = serial_numbers[0]
+		invoice.append("items", {"item": item.name, "quantity": 2})
+
+		invoice.preview()
+
+		self.assertEqual(invoice.items[1].serial_number, "\n".join(serial_numbers[1:]))
 
 	def test_pos_invoice_submit_rejects_serial_numbers_out_of_stock(self):
 		invoice, item, _location = self._make_pos_invoice(use_profile=False)
@@ -99,7 +135,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, item = self._sales_invoice()
 		frappe.db.set_value("Books Item", item, "has_batch", 1)
 
-		self.assertRaisesRegex(frappe.ValidationError, "requires a batch", invoice.save)
+		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", invoice.save)
 
 	def test_return_without_original_transfer_does_not_ship_again(self):
 		original, item = self._sales_invoice()

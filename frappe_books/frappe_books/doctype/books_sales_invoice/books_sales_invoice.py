@@ -7,11 +7,13 @@ from frappe.utils import now_datetime
 
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.accounting.payment import map_invoice_payment
+from frappe_books.accounting.payment import map_invoice_payment, validate_payment_details
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
-from frappe_books.inventory.auto_transfer import map_invoice_transfer
+from frappe_books.inventory.auto_transfer import default_location, map_invoice_transfer
+from frappe_books.inventory.availability import validate_pos_stock
+from frappe_books.inventory.stock import fill_serial_numbers
 
 
 class BooksSalesInvoice(PostingInvoiceController):
@@ -88,6 +90,13 @@ class BooksSalesInvoice(PostingInvoiceController):
 		"""What the redeemed points take off the grand total, as a virtual field."""
 		return loyalty.redemption_amount(self)
 
+	@frappe.whitelist()
+	def preview(self):
+		"""Also give a POS sale's serialised rows serial numbers in stock where it ships from."""
+		super().preview()
+		if self.is_pos and not self.return_against:
+			fill_serial_numbers(self.items, default_location(self))
+
 	def before_validate(self):
 		if self.is_pos and self._action == "submit":
 			# A POS sale is dated when it is checked out.
@@ -106,12 +115,16 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def validate_payments(self):
 		if self.payments and not self.is_pos:
 			frappe.throw(_("Only POS invoices take counter payments."))
+		for row in self.payments:
+			validate_payment_details(row.payment_method, row.reference_id, row.clearance_date)
 		counter_payment_amounts(self.payments, abs(as_decimal(self.outstanding_amount)))
 
 	def before_submit(self):
 		super().before_submit()
-		if self.is_pos and not self.return_against and not open_shift_name():
-			frappe.throw(_("Open a POS shift before submitting a POS invoice."))
+		if self.is_pos and not self.return_against:
+			if not open_shift_name():
+				frappe.throw(_("Open a POS shift before submitting a POS invoice."))
+			validate_pos_stock(self.items)
 
 	def on_submit(self):
 		super().on_submit()

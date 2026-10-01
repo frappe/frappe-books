@@ -52,7 +52,6 @@ await build({
       export { getDocuments } from './src/frappe/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
-      export { getAvailableSerialNumbers } from './models/inventory/helpers';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { getImportableSchemaNames } from './src/importer';
       export { DataImport } from './src/dataImport';
@@ -119,7 +118,6 @@ export const {
   validateSinv,
   addBatchItem,
   addPOSItem,
-  fillRowSerialNumbers,
   getPOSRowItem,
   validatePOSCheckout,
   getReportCellColorClass,
@@ -140,7 +138,6 @@ export const {
   getDocuments,
   errors,
   getInsufficientItems,
-  getAvailableSerialNumbers,
   generateCSV,
   parseCSV,
   getImportableSchemaNames,

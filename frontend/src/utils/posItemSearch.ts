@@ -1,6 +1,6 @@
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { POSItem } from 'src/components/POS/types';
-import { getAllDocuments } from 'src/frappe/api';
+import { getList, type Filter } from 'src/frappe/api';
 import { fuzzyMatch } from 'src/utils';
 
 type POSItemSearchRecord = Pick<POSItem, 'name' | 'itemCode' | 'barcode'>;
@@ -21,10 +21,28 @@ type POSItemSearchMatch = {
   isMatch: boolean;
 };
 
-/** Every item, with what a scanned code may name it by. */
-export async function getScannableItems(): Promise<ScannableItem[]> {
-  const items = await getAllDocuments('Books Item', {
-    fields: ['name', 'item_code', 'barcode', 'unit'],
+const SCANNED_FIELDS = ['name', 'item_code', 'barcode'];
+
+/**
+ * The items a scanned code, or the item code in a scale barcode, may name:
+ * those whose name, item code or barcode is the code in any case.
+ * `findScannedPOSItem` picks the item among them.
+ */
+export async function getScannableItems(
+  code: string,
+  settings?: BarcodeSettings
+): Promise<ScannableItem[]> {
+  const codes = [code, parseWeightBarcode(code, settings)?.itemCode];
+  const orFilters = codes
+    .filter((value): value is string => !!value)
+    .flatMap((value) =>
+      SCANNED_FIELDS.map((field): Filter => [field, 'like', value])
+    );
+  const items = await getList('Books Item', {
+    fields: [...SCANNED_FIELDS, 'unit'],
+    orFilters,
+    orderBy: 'creation desc',
+    limit: 0,
   });
   return items.map((item) => ({
     name: item.name as string,

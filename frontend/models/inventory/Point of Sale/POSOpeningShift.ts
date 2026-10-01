@@ -21,7 +21,7 @@ export class OpeningAmounts extends FrappeDoc {
   static override presentation = { label: 'Opening Amount' };
 }
 
-/** Books Pos Opening Shift, served by Frappe. */
+/** Books Pos Opening Shift, served by Frappe; its preview fills the opening cash amount. */
 export class POSOpeningShift extends FrappeDoc {
   static override doctype = 'Books Pos Opening Shift';
   static override presentation = {
@@ -32,6 +32,7 @@ export class POSOpeningShift extends FrappeDoc {
     opening_cash: OpeningCash,
     opening_amounts: OpeningAmounts,
   };
+  static override previewMethod = 'preview';
 
   declare opening_date?: Date;
   declare opening_cash?: CashCount[];

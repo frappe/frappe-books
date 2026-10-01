@@ -6,12 +6,14 @@ import { frappeModels, fyo, pos, posStock } from './helpers/frappe.mjs';
 const item = 'Demo - Coffee Beans';
 const service = 'Demo - Gift Wrapping';
 const flour = 'Demo - Flour';
+const tea = 'Demo - Tea';
 const batch = 'DEMO-COFFEE-2026';
 const inventory = 'POS Counter';
 
 const items = {
   [item]: { track_item: 1, has_batch: 1, unit: 'Unit' },
   [service]: { track_item: 0, has_batch: 0, unit: 'Unit' },
+  [tea]: { track_item: 1, has_batch: 0, unit: 'Unit' },
   [flour]: {
     track_item: 1,
     has_batch: 1,
@@ -143,6 +145,19 @@ test('checkout combines repeated item rows, including free items', async () => {
   await assert.rejects(
     pos.validateSinv(invoice),
     /batch DEMO-COFFEE-2026.*Available: 4; required: 5/
+  );
+});
+
+test('an item the POS location has none of is out of stock, the error the server gives first', async () => {
+  const invoice = {
+    items: [
+      { item, batch, quantity: 5 },
+      { item: tea, quantity: 1 },
+    ],
+  };
+  await assert.rejects(
+    pos.validateSinv(invoice),
+    /^ValidationError: Item Demo - Tea is out of stock \(quantity is zero\)$/
   );
 });
 

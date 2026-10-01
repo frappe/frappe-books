@@ -96,10 +96,26 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual((invoice.outstanding_amount, invoice.status), (0, "Paid"))
 
 	def test_failed_payment_fails_the_submit(self):
-		invoice = self.make_pos_invoice(payments=[{"payment_method": "Bank", "amount": 180}])
+		card = make_payment_method("Card", make_account("Card Clearing", account_type="Bank").name)
+		# A card payment's account must be a bank or cash account, which this is not.
+		card.db_set("account", self.income.name)
+		invoice = self.make_pos_invoice(
+			payments=[{"payment_method": card.name, "amount": 180, "reference_id": "R1"}]
+		)
 
 		# Raised inside the submit, so the request rolls the sale back with the payment.
-		self.assertRaisesRegex(frappe.ValidationError, "Please enter a reference number.", invoice.submit)
+		self.assertRaises(frappe.ValidationError, invoice.submit)
+
+	def test_a_tendered_payment_needs_what_its_method_asks_for(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "Please enter a reference number."):
+			self.make_pos_invoice(payments=[{"payment_method": "Bank", "amount": 180}])
+
+		card = make_payment_method("Card", make_account("Card Clearing", account_type="Bank").name)
+		card.db_set("requires_clearance_date", 1)
+		with self.assertRaisesRegex(frappe.ValidationError, "Please select a clearance date."):
+			self.make_pos_invoice(
+				payments=[{"payment_method": card.name, "amount": 180, "reference_id": "R1"}]
+			)
 
 	def test_a_tendered_amount_must_be_above_zero(self):
 		invoice = self.make_pos_invoice()

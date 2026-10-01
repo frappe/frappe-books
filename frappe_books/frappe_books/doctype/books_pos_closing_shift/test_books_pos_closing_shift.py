@@ -157,6 +157,13 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 
 		self.assertEqual(amounts["Cash"], sum(invoice.base_grand_total for invoice in invoices))
 
+	def test_a_cash_difference_needs_the_write_off_account(self):
+		opening = open_shift(100)
+		frappe.db.set_single_value("Books Pos Settings", "write_off_account", None)
+
+		message = "POS Write Off Account is not set. Please set it on POS Settings"
+		self.assertRaisesRegex(frappe.ValidationError, message, close_shift, opening, 90)
+
 	def test_a_closing_amount_cannot_be_negative(self):
 		closing = make_closing_shift(open_shift(100), 100)
 		closing.closing_amounts[1].closing_amount = -5

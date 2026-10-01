@@ -35,6 +35,20 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 
 		self.assertEqual(getdate(draft.reload().opening_date), getdate(now_datetime()))
 
+	def test_opening_cash_cannot_be_negative(self):
+		shift = make_opening_shift(100)
+		shift.opening_cash[0].count = -1
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, "Opening Cash Amount can not be negative.", shift.insert
+		)
+
+	def test_a_shift_needs_the_counter_cash_account(self):
+		frappe.db.set_single_value("Books Pos Settings", "cash_account", None)
+
+		message = "POS Counter Cash Account is not set. Please set it on POS Settings"
+		self.assertRaisesRegex(frappe.ValidationError, message, open_shift, 0)
+
 	def test_draft_shift_is_not_open(self):
 		make_opening_shift(100).insert()
 

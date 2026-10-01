@@ -122,7 +122,7 @@ test('Print Settings report post-save warnings without leaving an unsaved docume
   await page.getByRole('button', { name: 'No', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Save', exact: true })
-  ).toHaveCount(0);
+  ).toBeDisabled();
   await expect(
     page.getByRole('button', { name: 'Submit', exact: true })
   ).toHaveCount(0);
@@ -175,7 +175,7 @@ test('a rejected settings save retains edits and does not offer a successful-sav
   ).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Save', exact: true })
-  ).toBeVisible();
+  ).toBeEnabled();
 });
 
 test('account tree refresh failure reports the saved account and closes the creation form', async ({

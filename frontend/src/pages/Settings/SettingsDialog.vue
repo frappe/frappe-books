@@ -33,8 +33,13 @@
       >
         <!-- Gap on the fixed header, so scrolled rows clip below Save (frappe/frappe-ui#1254). -->
         <FrappeSettingsHeader :title="tab.label" class="pb-6">
-          <template v-if="canSave" #actions>
-            <FrappeButton variant="solid" :label="t`Save`" @click="sync" />
+          <template #actions>
+            <FrappeButton
+              variant="solid"
+              :label="t`Save`"
+              :disabled="!canSave"
+              @click="sync"
+            />
           </template>
         </FrappeSettingsHeader>
         <FrappeSettingsBody>

@@ -1,4 +1,5 @@
 import { call } from 'src/web/api';
+import type { Placements } from './schema';
 
 /** The DocField properties /books reads. Custom fields and property setters are applied. */
 export interface DocField {
@@ -57,30 +58,16 @@ export interface DocTypeMeta {
   translated_doctype?: number;
 }
 
-const bundles = new Map<string, Promise<DocTypeMeta[]>>();
-
-/** A doctype's meta, then the meta of each child doctype it holds. Loaded once per doctype. */
-export function getMetaBundle(doctype: string): Promise<DocTypeMeta[]> {
-  let bundle = bundles.get(doctype);
-  if (!bundle) {
-    bundle = loadMetaBundle(doctype);
-    bundles.set(doctype, bundle);
-    // A failed load is tried again next time.
-    bundle.catch(() => bundles.delete(doctype));
-  }
-
-  return bundle;
+/** What /books builds its forms from: the meta of each doctype and its tables, and custom field placements. */
+export interface BooksMeta {
+  metas: DocTypeMeta[];
+  /** Where Books Custom Forms put custom fields, by doctype and fieldname. */
+  placements: Record<string, Placements | undefined>;
 }
 
-/** Forgets a doctype's meta, e.g. after its form is customized. */
-export function clearMeta(doctype: string) {
-  bundles.delete(doctype);
-}
-
-async function loadMetaBundle(doctype: string): Promise<DocTypeMeta[]> {
-  const { docs } = await call<{ docs: DocTypeMeta[] }>(
-    'frappe.desk.form.load.getdoctype',
-    { doctype, with_parent: 1 }
-  );
-  return docs;
+/** The meta of the doctypes, as Frappe's getdoctype sends it, in one request. */
+export async function getBooksMeta(doctypes: string[]): Promise<BooksMeta> {
+  return await call<BooksMeta>('frappe_books.meta.get_books_meta', {
+    doctypes,
+  });
 }

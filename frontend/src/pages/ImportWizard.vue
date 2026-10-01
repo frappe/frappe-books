@@ -51,10 +51,7 @@
             fieldname: 'importType',
             label: t`Import Type`,
             fieldtype: 'AutoComplete',
-            options: importableSchemaNames.map((value) => ({
-              value,
-              label: fyo.schemaMap[value]?.label ?? value,
-            })),
+            options: importTypeOptions,
           }"
           class="w-40 shrink-0"
           :border="true"
@@ -346,6 +343,8 @@ import Select from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { DataImport, MissingLink } from 'src/dataImport';
+import { getDocType } from 'src/frappe/doctypes';
+import { getDoctypeLabel, getSchema } from 'src/frappe/registry';
 import {
   ImportFile,
   Importer,
@@ -499,6 +498,12 @@ export default defineComponent({
     importableSchemaNames(): ModelNameEnum[] {
       return getImportableSchemaNames(fyo);
     },
+    importTypeOptions(): SelectOption[] {
+      return this.importableSchemaNames.map((value) => ({
+        value,
+        label: getSchema(value)?.label ?? value,
+      }));
+    },
     actions(): Action[] {
       const actions: Action[] = [];
 
@@ -545,8 +550,7 @@ export default defineComponent({
       return this.fileName;
     },
     isSubmittable(): boolean {
-      const schemaName = this.importer.schemaName;
-      return fyo.schemaMap[schemaName]?.isSubmittable ?? false;
+      return !!getSchema(this.importer.schemaName)?.isSubmittable;
     },
     gridColumnTitleDf(): OptionField {
       const options: SelectOption[] = [];
@@ -708,12 +712,7 @@ export default defineComponent({
       return this.dataImport;
     },
     getDoctype(): string {
-      const doctype = fyo.store.permissions?.doctypes[this.importType];
-      if (!doctype) {
-        throw new ValidationError(this.t`Cannot import ${this.importType}`);
-      }
-
-      return doctype;
+      return getDocType(this.importType).doctype;
     },
     async checkImportFile(dataImport: DataImport): Promise<boolean> {
       const { missingLinks } = dataImport;
@@ -738,16 +737,9 @@ export default defineComponent({
         const names = links
           .filter((link) => link.doctype === doctype)
           .map(({ name }) => name);
-        const label = this.getSchemaLabel(doctype);
+        const label = getDoctypeLabel(doctype);
         return [...new Set(names)].map((name) => `(${label}, ${name})`);
       });
-    },
-    getSchemaLabel(doctype: string): string {
-      const doctypes = fyo.store.permissions?.doctypes ?? {};
-      const schemaName = Object.keys(doctypes).find(
-        (name) => doctypes[name] === doctype
-      );
-      return (schemaName && fyo.schemaMap[schemaName]?.label) || doctype;
     },
     async runImport(dataImport: DataImport): Promise<string[]> {
       const progress = toast.loading(this.t`Importing entries...`);
@@ -776,7 +768,7 @@ export default defineComponent({
       this.failedRows = failedRows.flat();
     },
     async askShouldSubmit(): Promise<boolean> {
-      if (!this.fyo.schemaMap[this.importType]?.isSubmittable) {
+      if (!getSchema(this.importType)?.isSubmittable) {
         return false;
       }
 

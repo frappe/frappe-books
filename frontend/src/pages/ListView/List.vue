@@ -22,7 +22,7 @@
     <FrappeScrollArea
       v-if="data.length"
       class="min-h-0 flex-1"
-      viewport-class="pb-10"
+      viewport-class="px-3 pb-10 sm:px-5"
     >
       <FrappeList
         :columns="listColumns"
@@ -30,7 +30,7 @@
         :selection="selectedItems"
         :row-height="48"
         divider="full"
-        class="text-ink-gray-8 list-gap-4 list-row-px-3"
+        class="-mx-3 text-ink-gray-7 list-gap-4 list-row-px-3"
         @update:selection="updateSelection"
       >
         <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
@@ -54,9 +54,12 @@
                 {{ index + pageStart + 1 }}
               </FrappeListCell>
               <FrappeListCell
-                v-for="column in columns"
+                v-for="(column, columnIndex) in columns"
                 :key="column.label"
-                :class="isNumeric(column.fieldtype) ? 'justify-end text-end' : ''"
+                :class="[
+                  isNumeric(column.fieldtype) ? 'justify-end text-end' : '',
+                  columnIndex === 0 ? 'text-ink-gray-8' : '',
+                ]"
               >
                 <ListCell
                   class="min-w-0 flex-1"
@@ -77,7 +80,7 @@
         ref="paginator"
         :item-count="total"
         :allowed-counts="[50, 100, 500]"
-        class="px-4"
+        class="px-3 sm:px-5"
         @index-change="setPageIndices"
       />
     </div>
@@ -119,7 +122,11 @@ import { isMobile } from 'src/utils/viewport';
 import { QueryFilter } from 'utils/db/types';
 import { PropType, defineComponent } from 'vue';
 import ListCell from './ListCell.vue';
-import { getListColumns, type ListColumn } from './listColumns';
+import {
+  getColumnTrack,
+  getListColumns,
+  type ListColumn,
+} from './listColumns';
 import MobileList from './MobileList.vue';
 
 const mobilePageLength = 20;
@@ -178,7 +185,7 @@ export default defineComponent({
   },
   computed: {
     listColumns(): string[] {
-      return ['2rem', ...this.columns.map(() => 'minmax(0, 1fr)')];
+      return ['2rem', ...this.columns.map(getColumnTrack)];
     },
     columns(): ListColumn[] {
       return getListColumns(this.schemaName, this.listConfig);

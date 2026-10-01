@@ -4,13 +4,14 @@
       v-if="dataSlice.length"
       orientation="both"
       class="min-h-0 flex-1"
-      viewport-class="px-4 pb-10"
+      viewport-class="px-3 pb-10 sm:px-5"
     >
       <FrappeList
+        ref="list"
         :columns="listColumns"
-        :row-height="hconst"
+        :row-height="40"
         divider="full"
-        class="list-gap-0 [--list-row-padding-x:0px]"
+        class="-mx-3 text-base list-gap-4 list-row-px-3"
       >
         <FrappeListHeader class="sticky top-0 z-10 min-w-max bg-surface-base">
           <ReportColumnHeader
@@ -35,14 +36,17 @@
               v-if="!row.folded"
               :value="value"
               :on-click="row.isGroup ? () => onRowClick(row, index) : undefined"
-              :class="row.isGroup ? 'font-medium' : ''"
             >
               <FrappeListCell
                 v-for="(cell, cellIndex) in row.cells"
                 :key="`${cellIndex}-${index}-cell`"
-                class="min-w-0 px-3 text-base"
-                :class="[getCellColorClass(cell), getAlignmentClass(cell)]"
-                :style="getCellStyle(cell)"
+                class="min-w-0"
+                :class="[
+                  getCellColorClass(cell, row),
+                  getCellTypeClass(cell, row),
+                  getAlignmentClass(cell),
+                ]"
+                :style="getIndentStyle(cell)"
               >
                 <ReportOverflowText :value="cell.value" />
               </FrappeListCell>
@@ -65,11 +69,10 @@
       <Paginator
         ref="paginator"
         :item-count="report?.reportData?.length ?? 0"
-        class="px-4"
+        class="px-3 sm:px-5"
         @index-change="setPageIndices"
       />
     </div>
-    <div v-else class="h-4" />
   </div>
 </template>
 <script>
@@ -120,7 +123,6 @@ export default defineComponent({
     return {
       columnWidths: new ReportColumnWidths(this.report.reportName),
       columnHeaders: {},
-      hconst: 48,
       pageStart: 0,
       pageEnd: 0,
     };
@@ -155,7 +157,8 @@ export default defineComponent({
         column,
         index,
         this.report.reportData,
-        this.columnHeaders[this.columnWidths.getKey(column)].$el
+        this.columnHeaders[this.columnWidths.getKey(column)].$el,
+        this.$refs.list.$el
       );
     },
     getRowKey(row, index) {
@@ -181,26 +184,17 @@ export default defineComponent({
         row = this.dataSlice[r];
       }
     },
-    getCellStyle(cell) {
-      const styles = {};
-
-      if (cell.bold) {
-        styles['font-weight'] = 'bold';
+    getIndentStyle(cell) {
+      return cell.indent
+        ? { paddingInlineStart: `${cell.indent * 2}rem` }
+        : undefined;
+    },
+    getCellTypeClass(cell, row) {
+      const italics = cell.italics ? 'italic' : '';
+      if (row.isGroup) {
+        return [cell.bold ? 'text-sm-bold' : 'text-sm-semibold', italics];
       }
-
-      if (cell.italics) {
-        styles['font-style'] = 'oblique 15deg';
-      }
-
-      if (cell.indent) {
-        if (this.languageDirection === 'rtl') {
-          styles['padding-right'] = `${cell.indent * 2}rem`;
-        } else {
-          styles['padding-left'] = `${cell.indent * 2}rem`;
-        }
-      }
-
-      return styles;
+      return [cell.bold ? 'text-base-bold' : '', italics];
     },
     getAlignmentClass(cell) {
       if (this.languageDirection === 'rtl') {
@@ -217,9 +211,9 @@ export default defineComponent({
       }
       return 'justify-start text-start';
     },
-    getCellColorClass(cell) {
+    getCellColorClass(cell, row) {
       const precision = this.fyo.singles.SystemSettings?.display_precision ?? 2;
-      return getReportCellColorClass(cell, precision);
+      return getReportCellColorClass(cell, precision, row.isGroup);
     },
   },
 });

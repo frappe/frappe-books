@@ -1,5 +1,5 @@
 <template>
-  <FrappeListHeaderCell class="relative group px-3 text-base">
+  <FrappeListHeaderCell class="group relative">
     <ReportOverflowText :value="label" />
     <template #suffix>
       <span
@@ -13,7 +13,7 @@
         :title="
           t`Drag to resize. Double-click or press Enter to fit contents. Use arrow keys to resize.`
         "
-        class="absolute inset-y-0 end-0 z-10 flex w-2 cursor-col-resize touch-none select-none items-center justify-center outline-none group/resize"
+        class="absolute inset-y-0 -end-3 z-10 flex w-2 cursor-col-resize touch-none select-none items-center justify-center outline-none group/resize"
         @pointerdown="startResize"
         @pointermove="resize"
         @pointerup="finishResize"

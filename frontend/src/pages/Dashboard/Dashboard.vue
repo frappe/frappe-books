@@ -25,28 +25,31 @@
       :viewport-class="isMobile ? undefined : 'pb-10'"
     >
       <div class="min-w-0 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)]">
-        <Cashflow class="h-72 p-4 md:px-5" :common-period="period" />
+        <Cashflow class="h-72 p-4 md:px-5" :period="period" />
         <hr class="border-outline-gray-1" />
-        <div class="grid grid-cols-1 md:grid-cols-2">
-          <UnpaidInvoices
+        <div
+          class="grid grid-cols-2 gap-3 p-4 md:gap-x-8 md:gap-y-6 md:px-5 xl:grid-cols-4"
+        >
+          <InvoiceCards
             doctype="Books Sales Invoice"
-            :common-period="period"
-            class="min-w-0 border-outline-gray-1 max-md:border-b md:border-e"
+            :label="t`Sales`"
+            :period="period"
           />
-          <UnpaidInvoices
+          <InvoiceCards
             doctype="Books Purchase Invoice"
-            :common-period="period"
+            :label="t`Purchases`"
+            :period="period"
           />
         </div>
         <hr class="border-outline-gray-1" />
         <div class="grid grid-cols-1 xl:grid-cols-2">
           <ProfitAndLoss
             class="h-80 min-w-0 w-full p-4 border-outline-gray-1 max-md:border-b md:border-e md:px-5"
-            :common-period="period"
+            :period="period"
           />
           <Expenses
             class="h-80 min-w-0 w-full p-4 md:px-5"
-            :common-period="period"
+            :period="period"
           />
         </div>
         <hr class="border-outline-gray-1" />
@@ -62,9 +65,9 @@ import {
   ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import PageHeader from 'src/components/PageHeader.vue';
-import UnpaidInvoices from './UnpaidInvoices.vue';
 import Cashflow from './Cashflow.vue';
 import Expenses from './Expenses.vue';
+import InvoiceCards from './InvoiceCards.vue';
 import MobileCreateButton from './MobileCreateButton.vue';
 import PeriodSelector from './PeriodSelector.vue';
 import ProfitAndLoss from './ProfitAndLoss.vue';
@@ -80,9 +83,9 @@ export default {
     Cashflow,
     ProfitAndLoss,
     Expenses,
+    InvoiceCards,
     MobileCreateButton,
     PeriodSelector,
-    UnpaidInvoices,
   },
   setup() {
     return { isMobile };

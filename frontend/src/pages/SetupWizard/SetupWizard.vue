@@ -61,66 +61,31 @@
       />
     </div>
   </div>
-  <FormContainer
-    v-else
-    :show-header="false"
-    class="justify-content items-center h-full"
-  >
-    <template #body>
-      <FormHeader
-        :form-title="t`Set up your organization`"
-        class="
-          sticky
-          top-0
-          bg-surface-base
-          border-b
-          border-outline-gray-1
-        "
-      >
-      </FormHeader>
-
-      <!-- Section Container -->
-      <FrappeScrollArea
-        v-if="hasDoc"
-        class="min-h-0 flex-1"
-        viewport-class="pb-10"
-      >
+  <FormContainer v-else>
+    <template #header>
+      <FrappePageHeader>
+        <h1 class="min-w-0">
+          <FrappePageHeaderTitle :title="t`Set up your organization`" />
+        </h1>
+      </FrappePageHeader>
+    </template>
+    <template v-if="hasDoc" #body>
+      <div class="divide-y divide-outline-gray-1">
         <CommonFormSection
           v-for="([name, fields], idx) in activeGroup.entries()"
           :key="name + idx"
-          ref="section"
-          class="px-3 py-4 sm:px-5"
-          :class="
-            idx !== 0 && activeGroup.size > 1
-              ? 'border-t border-outline-gray-1'
-              : ''
-          "
+          class="py-5"
           :show-title="activeGroup.size > 1 && name !== t`Default`"
           :title="name"
           :fields="fields"
           :doc="doc"
           :errors="errors"
-          :collapsible="false"
           @value-change="onValueChange"
         />
-      </FrappeScrollArea>
-
-      <!-- Buttons Bar -->
-      <div
-        class="
-          mt-auto
-          px-3 py-4 sm:px-5
-          flex
-          items-center
-          justify-between
-          border-t
-          border-outline-gray-1
-          flex-shrink-0
-          sticky
-          bottom-0
-          bg-surface-base
-        "
-      >
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex items-center justify-between">
         <FrappeButton
           variant="outline"
           class="w-24"
@@ -149,14 +114,14 @@
 <script lang="ts">
 import {
   Button as FrappeButton,
+  PageHeader as FrappePageHeader,
+  PageHeaderTitle as FrappePageHeaderTitle,
   Progress as FrappeProgress,
-  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { Field } from 'schemas/types';
 import FormContainer from 'src/components/FormContainer.vue';
-import FormHeader from 'src/components/FormHeader.vue';
 import { getErrorMessage } from 'src/utils';
 import { showDialog } from 'src/utils/interactive';
 import { getSetupWizardDoc } from 'src/utils/misc';
@@ -170,10 +135,10 @@ export default defineComponent({
   name: 'SetupWizard',
   components: {
     FrappeButton,
+    FrappePageHeader,
+    FrappePageHeaderTitle,
     FrappeProgress,
-    FrappeScrollArea,
     FormContainer,
-    FormHeader,
     CommonFormSection,
   },
   provide() {

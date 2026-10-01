@@ -3,7 +3,7 @@
     class="flex flex-col flex-1"
     :class="isMobile ? 'min-h-full bg-surface-gray-2' : 'bg-surface-gray-1'"
   >
-    <PageHeader :border="true" :title="isMobile ? name : t`Print View`">
+    <PageHeader :title="isMobile ? name : t`Print View`">
       <SelectControl
         v-if="templateList.length"
         :df="{

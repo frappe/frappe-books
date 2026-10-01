@@ -50,30 +50,18 @@
   </div>
   <FormContainer v-else>
     <template #header>
-      <FrappeButton v-if="canSave" variant="solid" @click="sync">
-        {{ t`Save` }}
-      </FrappeButton>
+      <PageHeader :title="t`Settings`">
+        <FrappeButton v-if="canSave" variant="solid" @click="sync">
+          {{ t`Save` }}
+        </FrappeButton>
+      </PageHeader>
     </template>
-    <template #body>
-      <FormHeader
-        :form-title="tabLabels[activeTab] ?? ''"
-        :form-sub-title="t`Settings`"
-        class="sticky top-0 bg-surface-base border-b border-outline-gray-1"
-      >
-      </FormHeader>
-
-      <!-- Section Container -->
-      <FrappeScrollArea
-        v-if="doc"
-        class="min-h-0 flex-1"
-        viewport-class="pb-10"
-      >
+    <template v-if="doc" #body>
+      <div class="divide-y divide-outline-gray-1">
         <CommonFormSection
           v-for="([name, fields], idx) in activeGroup.entries()"
           :key="name + idx"
-          ref="section"
-          class="px-3 py-4 sm:px-5"
-          :class="idx !== 0 && activeGroup.size > 1 ? 'border-t border-outline-gray-1' : ''"
+          class="py-5"
           :show-title="activeGroup.size > 1 && name !== t`Default`"
           :title="name"
           :fields="fields"
@@ -81,15 +69,10 @@
           :errors="errors"
           @value-change="onValueChange"
         />
-      </FrappeScrollArea>
-
-      <!-- Tab Bar -->
-      <div
-        v-if="groupedFields && groupedFields.size > 1"
-        class="sticky bottom-0 mt-auto flex-shrink-0 border-t border-outline-gray-1 bg-surface-base px-3 py-4 sm:px-5"
-      >
-        <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
       </div>
+    </template>
+    <template v-if="groupedFields && groupedFields.size > 1" #footer>
+      <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
     </template>
   </FormContainer>
 </template>
@@ -100,13 +83,11 @@ import { ValidationError } from 'fyo/utils/errors';
 import {
   TabButtons as FrappeTabButtons,
   Button as FrappeButton,
-  ScrollArea as FrappeScrollArea,
   shellScrollContainer,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import FormContainer from 'src/components/FormContainer.vue';
-import FormHeader from 'src/components/FormHeader.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getErrorMessage } from 'src/utils';
@@ -128,8 +109,6 @@ export default defineComponent({
   components: {
     FormContainer,
     FrappeButton,
-    FrappeScrollArea,
-    FormHeader,
     CommonFormSection,
     FrappeTabButtons,
     PageHeader,

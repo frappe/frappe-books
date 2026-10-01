@@ -9,7 +9,10 @@ test.beforeEach(async ({ page }) => {
       document.querySelector('#app') as any
     ).__vue_app__.config.globalProperties.$router.push('/edit/SalesInvoice/new')
   );
-  await page.getByRole('heading', { name: 'New Entry', exact: true }).waitFor();
+  await page
+    .getByRole('navigation', { name: 'Breadcrumb' })
+    .getByText('New Entry', { exact: true })
+    .waitFor();
 });
 
 async function addRows(page: Page, count: number) {

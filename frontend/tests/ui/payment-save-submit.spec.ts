@@ -320,7 +320,9 @@ async function installPaymentFixture(page: Page) {
 
   // Opening the form reloads the invoice; count only the payment's reloads.
   await expect(
-    page.getByRole('heading', { name: 'PAYMENT-FLOW-INVOICE', exact: true })
+    page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .getByText('PAYMENT-FLOW-INVOICE', { exact: true })
   ).toBeVisible();
   await page.evaluate(() => {
     const fixture = (window as any).paymentFlow;

@@ -92,6 +92,25 @@ test('the cart lists every amount between net and grand total', async ({
   }
 });
 
+test('the payment screen explains the amount due', async ({ page }) => {
+  await page.evaluate(() => (window as any).posFixture.fillCart());
+  await page.getByRole('button', { name: /6 items/ }).click();
+  await page.getByRole('button', { name: /^Pay / }).click();
+  const payment = page.getByRole('heading', { name: 'Payment' });
+  await expect(payment).toBeVisible();
+  // Nothing changes the net total yet, so the amount due stands alone.
+  await expect(page.getByText('Net Total', { exact: true })).toBeHidden();
+
+  await page.evaluate(() => {
+    const { fyo, state } = (window as any).posFixture;
+    state.invoice.total_discount = fyo.pesa(250);
+    state.invoice.loyalty_points_amount = fyo.pesa(50);
+  });
+  for (const label of ['Net Total', 'Discount', 'Loyalty Points Redeemed']) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  }
+});
+
 test('payment methods wrap in a two-column grid', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   await page.getByRole('button', { name: /6 items/ }).click();

@@ -250,6 +250,27 @@ test('files hold Books’ keys and values', async () => {
   assert.deepEqual(row.slice(-2), ['SalesInvoice', 'SINV-1']);
 });
 
+test('files hold virtual amounts as 0 and other unread values as null', async () => {
+  stubFrappe(() => ({ data: [{ name: 'SINV-' }] }));
+  const series = await getJsonExportData({
+    schemaName: 'NumberSeries',
+    fields: pick(getExportFields('NumberSeries'), ['name', 'current']),
+    tableFields: [],
+    limit: null,
+    filters: {},
+  });
+  const invoice = await getJsonExportData({
+    schemaName: 'SalesInvoice',
+    fields: pick(getExportFields('SalesInvoice'), ['total_discount']),
+    tableFields: [],
+    limit: null,
+    filters: {},
+  });
+
+  assert.deepEqual(JSON.parse(series), [{ name: 'SINV-', current: null }]);
+  assert.deepEqual(JSON.parse(invoice), [{ name: 'SINV-', totalDiscount: 0 }]);
+});
+
 test('files keep the keys Books renamed', async () => {
   stubFrappe(() => ({ data: [] }));
   const keys = async (schemaName, fieldnames) => {

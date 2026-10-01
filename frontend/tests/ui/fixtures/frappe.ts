@@ -8,7 +8,12 @@ type DocField = {
   options?: string;
   [property: string]: unknown;
 };
-type Meta = { name: string; fields: DocField[]; field_order?: string[] };
+type Meta = {
+  name: string;
+  fields: DocField[];
+  field_order?: string[];
+  autoname?: string;
+};
 type Answer = (
   path: string,
   body: Record<string, any>,
@@ -22,11 +27,30 @@ const doctypes = Object.values(
   })
 ) as Meta[];
 
-// Frappe's Currency, which the app does not ship.
-const currencyMeta: Meta = {
-  name: 'Currency',
-  fields: [{ fieldname: 'currency_name', fieldtype: 'Data' }],
-};
+// Frappe's doctypes that models name, which the app does not ship.
+const frappeMetas: Meta[] = [
+  {
+    name: 'Currency',
+    fields: [{ fieldname: 'currency_name', fieldtype: 'Data' }],
+  },
+  {
+    name: 'Country',
+    autoname: 'field:country_name',
+    fields: [{ fieldname: 'country_name', fieldtype: 'Data' }],
+  },
+  {
+    name: 'Print Format',
+    autoname: 'Prompt',
+    fields: [
+      { fieldname: 'doc_type', fieldtype: 'Link', options: 'DocType' },
+      { fieldname: 'standard', fieldtype: 'Select', options: 'No\nYes' },
+      { fieldname: 'custom_format', fieldtype: 'Check' },
+      { fieldname: 'html', fieldtype: 'Code' },
+      { fieldname: 'css', fieldtype: 'Code' },
+      { fieldname: 'disabled', fieldtype: 'Check' },
+    ],
+  },
+];
 
 /**
  * Serves the models from the DocType files, with `customFields` added by
@@ -84,7 +108,11 @@ function getMetaBundle(name: string): Meta[] {
 }
 
 function getMeta(name: string): Meta {
-  const meta = [...doctypes, currencyMeta].find((meta) => meta.name === name)!;
+  const meta = [...doctypes, ...frappeMetas].find((meta) => meta.name === name);
+  if (!meta) {
+    throw new Error(`The fixture has no meta for ${name}`);
+  }
+
   const order = meta.field_order ?? [];
   const fields = [...meta.fields].sort(
     (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)

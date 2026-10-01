@@ -1,12 +1,8 @@
 <template>
-  <!-- A scrolling tree scrolls both ways itself, so its header still sticks. -->
-  <component
-    :is="scroll ? FrappeScrollArea : 'div'"
-    v-bind="scroll ? { orientation: 'both', class: 'min-h-0 flex-1' } : {}"
-  >
+  <!-- The tree scrolls both ways itself, so its header still sticks. -->
+  <FrappeScrollArea orientation="both" class="min-h-0 flex-1">
     <div
-      class="grid gap-x-2"
-      :class="{ 'w-max min-w-full pb-12': scroll }"
+      class="grid w-max min-w-full gap-x-6 pb-12"
       :style="{ gridTemplateColumns }"
     >
       <div
@@ -67,7 +63,7 @@
         </span>
       </button>
     </div>
-  </component>
+  </FrappeScrollArea>
 </template>
 <script setup lang="ts">
 import { Icon as FrappeIcon, ScrollArea as FrappeScrollArea } from 'frappe-ui';
@@ -86,17 +82,16 @@ const props = defineProps<{
   /** Rows grouped on the client: groups start collapsed. */
   grouped?: boolean;
   icon?: string;
-  /** Labels keep their full width and the tree scrolls sideways. */
-  scroll?: boolean;
 }>();
 
 const emit = defineEmits<{ open: [row: ReportRow] }>();
 
 const toggled = ref(new Set<string>());
 
+/** Labels keep their full width; the tree scrolls sideways when they don't fit. */
 const gridTemplateColumns = computed(() =>
   [
-    props.scroll ? 'max-content' : 'minmax(0, 1fr)',
+    'minmax(max-content, 1fr)',
     ...props.values.map(({ width }) => `minmax(${width}px, max-content)`),
   ].join(' ')
 );

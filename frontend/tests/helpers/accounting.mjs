@@ -53,7 +53,6 @@ await build({
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { evaluateHidden, evaluateReadOnly, linkOnSave } from './src/utils/doc';
-      export { loadListData, onListChange } from './src/utils/listData';
       export { showReport } from './src/utils/misc';
       export {
         getDashboardData,
@@ -148,8 +147,6 @@ export const {
   evaluateHidden,
   evaluateReadOnly,
   linkOnSave,
-  loadListData,
-  onListChange,
   showReport,
   FrappeDatabaseDemux,
   GSTR1,

@@ -5,9 +5,12 @@ import {
   fyo,
   getDocType,
   getFrappeListPage,
+  getFrappeRows,
   getSchema,
   ListFilters,
+  loadListData,
   loadTestDocTypes,
+  onListChange,
   searchFrappeLink,
   stubFrappe,
   toFrappeFilters,
@@ -100,6 +103,90 @@ test('a list page and its count come from the REST API, newest first', async () 
       ['name', 'like', '%pe%'],
       ['item_usage', 'like', '%pe%'],
     ],
+  });
+});
+
+test('a list keeps its filters on refresh and drops a stale page', async () => {
+  const pages = [];
+  const requests = stubFrappe(({ path }) =>
+    path.endsWith('/count')
+      ? { data: 2 }
+      : new Promise((resolve) => pages.push(resolve))
+  );
+  const list = {
+    schemaName: 'Order',
+    filters: { customer: ['like', 'Acme%'] },
+    activeFilters: {},
+    orFilters: {},
+    requestId: 0,
+    pageStart: 100,
+    pageLength: 50,
+  };
+  const query = { amount: ['>', 5] };
+  const first = loadListData(fyo, list, query);
+  pages.shift()({ data: [{ name: 'ORD-1', customer: 'Acme' }] });
+  const loaded = await first;
+
+  assert.deepEqual(
+    loaded.rows.map((row) => row.name),
+    ['ORD-1']
+  );
+  assert.equal(loaded.total, 2);
+  assert.deepEqual(loaded.appliedFilters, { ...list.filters, ...query });
+  assert.deepEqual(requests[0].params.filters, [
+    ['customer', 'like', 'Acme%'],
+    ['amount', '>', 5],
+  ]);
+  assert.deepEqual(
+    [requests[0].params.start, requests[0].params.limit],
+    [0, 50]
+  );
+
+  const refresh = loadListData(fyo, list);
+  pages.shift()({ data: [] });
+  await refresh;
+  assert.deepEqual(list.activeFilters, query);
+
+  const old = loadListData(fyo, list, { customer: 'Old' });
+  const latest = loadListData(fyo, list, {});
+  const oldPage = pages.shift();
+  pages.shift()({ data: [{ name: 'ORD-2' }] });
+  assert.equal((await latest).rows[0].name, 'ORD-2');
+  oldPage({ data: [{ name: 'ORD-0' }] });
+  assert.equal(await old, undefined);
+  assert.deepEqual(list.activeFilters, {});
+});
+
+test('a submittable list refreshes after a submit, cancel, save, delete or rename', () => {
+  const events = [];
+  const fyoStub = { doc: { observer: { on: (event) => events.push(event) } } };
+  onListChange(fyoStub, 'Order', async () => {});
+  assert.deepEqual(events, [
+    'submit:Order',
+    'cancel:Order',
+    'sync:Order',
+    'delete:Order',
+    'rename:Order',
+  ]);
+});
+
+test('documents by name come newest first, with the values forms show', async () => {
+  const requests = stubFrappe(() => ({
+    data: [{ name: 'Pen', rate: 12.5, track_item: 1 }],
+  }));
+  const fields = ['name', 'rate', 'track_item'];
+  const [pen] = await getFrappeRows(fyo, 'Item', ['Pen', 'Ink'], fields);
+
+  assert.deepEqual(
+    [pen.name, pen.rate.float, pen.track_item],
+    ['Pen', 12.5, true]
+  );
+  assert.equal(requests[0].path, '/api/v2/document/Books Item');
+  assert.deepEqual(requests[0].params, {
+    fields,
+    filters: [['name', 'in', ['Pen', 'Ink']]],
+    order_by: 'creation desc',
+    limit: 2,
   });
 });
 

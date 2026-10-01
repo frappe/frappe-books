@@ -86,8 +86,16 @@ async function mount() {
         return { message: found.map(({ name }) => ({ value: name })) };
       }
 
+      // The list's own page; other doctypes are looked up.
       if (path.endsWith('frappe.client.get_list')) {
-        return { message: lookupRows(getSchemaName(body.doctype)) };
+        const schemaName = getSchemaName(body.doctype);
+        if (schemaName !== state.schemaName) {
+          return { message: lookupRows(schemaName) };
+        }
+
+        const start = body.limit_start ?? 0;
+        const end = start + body.limit_page_length;
+        return { message: queryRows(body.filters).slice(start, end) };
       }
 
       if (path.endsWith('/count')) {

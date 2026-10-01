@@ -6,8 +6,8 @@ import { call, getServerError, reachServer } from 'src/web/api';
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
 export type DocValues = Record<string, unknown>;
 
-/** A Frappe list filter, `[fieldname, operator, value]`, or an `and`/`or` group of them. */
-export type Filter = [string, string, unknown] | (Filter | 'and' | 'or')[];
+/** A Frappe list filter, `[fieldname, operator, value]`. */
+export type Filter = [string, string, unknown];
 
 export interface ListQuery {
   /** Fieldnames, or `{ table: [fieldnames] }` for a table's rows. */
@@ -108,18 +108,32 @@ export async function getValue(
   return row?.[fieldname];
 }
 
-/** Every document that matches, newest first unless ordered; for short lists, like payment methods. */
-export async function getAllDocuments(
+/**
+ * Documents as Frappe's list views and `getCount` match them: a blank value
+ * is empty text, so `!=`, `not like` and `<` match it, unlike in `getDocuments`.
+ */
+export async function getList(
   doctype: string,
-  query: Pick<ListQuery, 'fields' | 'filters' | 'orderBy'>
+  query: ListQuery & { orFilters?: Filter[] }
 ): Promise<DocValues[]> {
   return await call<DocValues[]>('frappe.client.get_list', {
     doctype,
     fields: query.fields,
     filters: query.filters,
-    order_by: query.orderBy ?? 'creation desc',
-    limit_page_length: 0,
+    or_filters: query.orFilters,
+    order_by: query.orderBy,
+    limit_start: query.start,
+    limit_page_length: query.limit,
   });
+}
+
+/** Every document that matches, newest first unless ordered; for short lists, like payment methods. */
+export async function getAllDocuments(
+  doctype: string,
+  query: Pick<ListQuery, 'fields' | 'filters' | 'orderBy'>
+): Promise<DocValues[]> {
+  const orderBy = query.orderBy ?? 'creation desc';
+  return await getList(doctype, { ...query, orderBy, limit: 0 });
 }
 
 /** The user's rights on one saved document, which shares, ownership and user permissions change. */

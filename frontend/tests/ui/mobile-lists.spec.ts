@@ -140,8 +140,10 @@ test('a filtered empty list clears its search', async ({ page }) => {
 
 test('an empty list offers Make Entry', async ({ page }) => {
   // Frappe serves the journal entry list and its count.
-  await page.route(/\/api\/v2\/document\/Books%20Journal%20Entry\?/, (route) =>
-    route.fulfill({ json: { data: [] } })
+  await page.route('**/api/method/frappe.client.get_list', (route) =>
+    route.request().postDataJSON().doctype === 'Books Journal Entry'
+      ? route.fulfill({ json: { message: [] } })
+      : route.fallback()
   );
   await page.route(
     /\/api\/v2\/doctype\/Books%20Journal%20Entry\/count\?/,

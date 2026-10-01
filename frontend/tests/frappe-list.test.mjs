@@ -65,11 +65,11 @@ test('submittable lists offer the Submitted and Cancelled filters', () => {
   assert.ok(!options('Item').includes('submitted'));
 });
 
-test('a list page and its count come from the REST API, newest first', async () => {
+test("a list page and its count come from Frappe's list query, newest first", async () => {
   const requests = stubFrappe(({ path }) =>
     path.endsWith('/count')
       ? { data: 42 }
-      : { data: [{ name: 'Pen', rate: 12.5, track_item: 1 }] }
+      : { message: [{ name: 'Pen', rate: 12.5, track_item: 1 }] }
   );
   const { rows, total } = await getFrappeListPage(fyo, 'Item', {
     filters: { item_type: 'Product' },
@@ -84,17 +84,18 @@ test('a list page and its count come from the REST API, newest first', async () 
   assert.equal(rows[0].schema.name, 'Item');
 
   const [list, count] = requests;
-  assert.equal(list.path, '/api/v2/document/Books Item');
-  assert.deepEqual(list.params, {
+  assert.equal(list.path, '/api/method/frappe.client.get_list');
+  assert.deepEqual(list.body, {
+    doctype: 'Books Item',
     fields: ['*'],
-    filters: [
-      ['item_type', '=', 'Product'],
-      'and',
-      [['name', 'like', '%pe%'], 'or', ['item_usage', 'like', '%pe%']],
+    filters: [['item_type', '=', 'Product']],
+    or_filters: [
+      ['name', 'like', '%pe%'],
+      ['item_usage', 'like', '%pe%'],
     ],
     order_by: 'creation desc',
-    start: 50,
-    limit: 50,
+    limit_start: 50,
+    limit_page_length: 50,
   });
   assert.equal(count.path, '/api/v2/doctype/Books Item/count');
   assert.deepEqual(count.params, {
@@ -124,7 +125,7 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
   };
   const query = { amount: ['>', 5] };
   const first = loadListData(fyo, list, query);
-  pages.shift()({ data: [{ name: 'ORD-1', customer: 'Acme' }] });
+  pages.shift()({ message: [{ name: 'ORD-1', customer: 'Acme' }] });
   const loaded = await first;
 
   assert.deepEqual(
@@ -133,26 +134,26 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
   );
   assert.equal(loaded.total, 2);
   assert.deepEqual(loaded.appliedFilters, { ...list.filters, ...query });
-  assert.deepEqual(requests[0].params.filters, [
+  assert.deepEqual(requests[0].body.filters, [
     ['customer', 'like', 'Acme%'],
     ['amount', '>', 5],
   ]);
   assert.deepEqual(
-    [requests[0].params.start, requests[0].params.limit],
+    [requests[0].body.limit_start, requests[0].body.limit_page_length],
     [0, 50]
   );
 
   const refresh = loadListData(fyo, list);
-  pages.shift()({ data: [] });
+  pages.shift()({ message: [] });
   await refresh;
   assert.deepEqual(list.activeFilters, query);
 
   const old = loadListData(fyo, list, { customer: 'Old' });
   const latest = loadListData(fyo, list, {});
   const oldPage = pages.shift();
-  pages.shift()({ data: [{ name: 'ORD-2' }] });
+  pages.shift()({ message: [{ name: 'ORD-2' }] });
   assert.equal((await latest).rows[0].name, 'ORD-2');
-  oldPage({ data: [{ name: 'ORD-0' }] });
+  oldPage({ message: [{ name: 'ORD-0' }] });
   assert.equal(await old, undefined);
   assert.deepEqual(list.activeFilters, {});
 });
@@ -188,19 +189,6 @@ test('documents by name come newest first, with the values forms show', async ()
     order_by: 'creation desc',
     limit: 2,
   });
-});
-
-test('a single search filter is ANDed without a group', async () => {
-  const requests = stubFrappe(({ path }) =>
-    path.endsWith('/count') ? { data: 0 } : { data: [] }
-  );
-  await getFrappeListPage(fyo, 'Item', {
-    filters: {},
-    orFilters: { name: ['like', '%pe%'] },
-    start: 0,
-    limit: 20,
-  });
-  assert.deepEqual(requests[0].params.filters, [['name', 'like', '%pe%']]);
 });
 
 test("link options come from Frappe's link search, letters matched in order", async () => {
@@ -250,7 +238,7 @@ test("a list is ordered by its DocType's sort field, newest first", async (t) =>
   const { meta } = getDocType('Order');
   t.after(() => delete meta.sort_field);
   const requests = stubFrappe(({ path }) =>
-    path.endsWith('/count') ? { data: 0 } : { data: [] }
+    path.endsWith('/count') ? { data: 0 } : { message: [] }
   );
   const page = { filters: {}, orFilters: {}, start: 0, limit: 20 };
 
@@ -261,7 +249,7 @@ test("a list is ordered by its DocType's sort field, newest first", async (t) =>
   assert.deepEqual(
     requests
       .filter(({ path }) => !path.endsWith('/count'))
-      .map(({ params }) => params.order_by),
+      .map(({ body }) => body.order_by),
     ['creation desc', 'customer desc, creation desc']
   );
 });

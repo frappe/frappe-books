@@ -17,7 +17,7 @@
       class="flex max-h-[var(--reka-popover-content-available-height)] w-[40rem] max-w-[calc(100vw-1.5rem)] flex-col"
     >
       <h2
-        class="shrink-0 px-4 pb-3 pt-4 text-base font-semibold text-ink-gray-9"
+        class="shrink-0 px-4 pb-3 pt-4 text-base-semibold text-ink-gray-8"
       >
         {{ t`Filters` }}
       </h2>

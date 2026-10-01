@@ -68,7 +68,7 @@
         />
         <h2
           v-if="titleField && (doc.inserted || doc.schema.naming !== 'manual')"
-          class="min-w-0 break-words text-lg font-semibold text-ink-gray-9"
+          class="min-w-0 break-words text-lg-semibold text-ink-gray-8"
         >
           {{ doc[titleField.fieldname] || titleField.label }}
         </h2>

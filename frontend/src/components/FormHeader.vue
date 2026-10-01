@@ -2,8 +2,6 @@
   <div
     class="
       px-3 sm:px-5
-      text-xl
-      font-semibold
       flex
       justify-between
       h-14
@@ -11,9 +9,11 @@
       flex-shrink-0
     "
   >
-    <h1 v-if="formTitle" class="text-ink-gray-8">{{ formTitle }}</h1>
+    <h1 v-if="formTitle" class="text-xl-semibold text-ink-gray-8">
+      {{ formTitle }}
+    </h1>
     <slot />
-    <p v-if="formSubTitle" class="text-ink-gray-6">
+    <p v-if="formSubTitle" class="text-base text-ink-gray-5">
       {{ formSubTitle }}
     </p>
   </div>

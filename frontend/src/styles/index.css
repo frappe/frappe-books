@@ -6,7 +6,7 @@ body {
 }
 
 html {
-  @apply text-ink-gray-9 bg-surface-base;
+  @apply text-ink-gray-8 bg-surface-base;
 }
 
 [data-theme='dark'] {

@@ -30,8 +30,8 @@
         <template #item-label="{ node }">
           <button
             type="button"
-            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-base text-ink-gray-8"
-            :class="node.is_group ? 'font-medium' : 'font-normal'"
+            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-ink-gray-8"
+            :class="node.is_group ? 'text-base-medium' : 'text-base'"
             :title="accountLabel(String(node.name))"
             @keydown.enter.stop
             @keydown.space.stop

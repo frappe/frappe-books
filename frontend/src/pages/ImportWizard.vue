@@ -67,11 +67,11 @@
         />
         <p
           v-else
-          class="text-base ms-2"
+          class="ms-2"
           :class="
             fileName
-              ? 'text-ink-gray-9 font-semibold'
-              : 'text-ink-gray-7'
+              ? 'text-base-semibold text-ink-gray-8'
+              : 'text-base text-ink-gray-7'
           "
         >
           <span v-if="fileName" class="font-normal">{{ t`Selected` }} </span>
@@ -202,7 +202,7 @@
       <FrappeScrollArea viewport-class="max-h-80">
         <div class="space-y-4">
           <div v-for="[key, value] of columnPickerFieldsMap.entries()" :key="key">
-            <h2 class="text-sm font-semibold text-ink-gray-8">
+            <h2 class="text-sm-semibold text-ink-gray-8">
               {{ key }}
             </h2>
             <div
@@ -249,7 +249,7 @@
         <!-- Success -->
         <div v-if="success.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
-            <p class="font-semibold text-ink-gray-8">{{ t`Success` }}</p>
+            <p class="text-base-semibold text-ink-gray-8">{{ t`Success` }}</p>
             <p class="text-sm text-ink-gray-6">
               {{
                 success.length === 1
@@ -275,7 +275,7 @@
         <!-- Failed -->
         <div v-if="failed.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
-            <p class="font-semibold text-ink-gray-8">{{ t`Failed` }}</p>
+            <p class="text-base-semibold text-ink-gray-8">{{ t`Failed` }}</p>
             <p class="text-sm text-ink-gray-6">
               {{
                 failed.length === 1

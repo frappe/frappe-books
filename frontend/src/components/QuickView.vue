@@ -3,7 +3,7 @@
     <header class="border-b border-outline-gray-1 px-3 py-2.5">
       <p
         v-if="schema?.naming !== 'random' && !schema?.isChild"
-        class="truncate text-base font-medium text-ink-gray-9"
+        class="truncate text-base-medium text-ink-gray-8"
         :title="name"
       >
         {{ name }}

@@ -7,7 +7,7 @@
         :key="section.label"
         class="border-b border-outline-gray-1 px-3 py-4 sm:px-5"
       >
-        <h2 class="font-medium text-ink-gray-8">{{ section.label }}</h2>
+        <h2 class="text-lg-semibold text-ink-gray-8">{{ section.label }}</h2>
         <div class="flex mt-4 gap-4">
           <div
             v-for="item in section.items"
@@ -39,7 +39,7 @@
                   class="lucide-circle-check-big mb-4 block size-5 text-ink-green-5"
                   aria-hidden="true"
                 />
-                <h3 class="font-medium">{{ item.label }}</h3>
+                <h3 class="text-base-medium">{{ item.label }}</h3>
                 <p class="mt-2 text-sm text-ink-gray-8">
                   {{ item.description }}
                 </p>

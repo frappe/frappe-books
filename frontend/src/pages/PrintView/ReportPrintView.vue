@@ -130,7 +130,7 @@
 
         <!-- Pick Columns -->
         <div class="border-t border-outline-gray-1 p-4">
-          <h2 class="text-sm text-ink-gray-6">
+          <h2 class="text-sm text-ink-gray-5">
             {{ t`Pick Columns` }}
           </h2>
           <div

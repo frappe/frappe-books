@@ -46,12 +46,10 @@
         v-bind="exchangeRateProps"
         @change="setExchangeRate"
       />
-      <p
+      <FrappePageHeaderTitle
         v-if="schema.label && !(canShowBarcode || canShowExchangeRate)"
-        class="text-xl font-semibold items-center text-ink-gray-6"
-      >
-        {{ schema.label }}
-      </p>
+        :title="schema.label"
+      />
     </template>
     <template v-if="hasDoc" #header>
       <FrappeButton
@@ -164,6 +162,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import {
   TabButtons as FrappeTabButtons,
   Button as FrappeButton,
+  PageHeaderTitle as FrappePageHeaderTitle,
   ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
@@ -206,6 +205,7 @@ export default defineComponent({
     FormHeader,
     CommonFormSection,
     FrappeButton,
+    FrappePageHeaderTitle,
     FrappeScrollArea,
     DropdownWithActions,
     Barcode,

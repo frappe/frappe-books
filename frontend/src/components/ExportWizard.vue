@@ -43,7 +43,7 @@
       <div class="space-y-4">
         <!-- Main Fields -->
         <div>
-          <h2 class="text-sm font-semibold text-ink-gray-8">
+          <h2 class="text-sm-semibold text-ink-gray-8">
             {{ getSchemaLabel(schemaName) }}
           </h2>
           <div
@@ -61,7 +61,7 @@
               v-for="ef of fields"
               :key="ef.fieldname"
               class="min-w-0"
-              :class="ef.fieldtype === 'Table' ? '[&_label]:font-semibold' : ''"
+              :class="{ '[&_[data-slot=label]]:font-semibold': ef.fieldtype === 'Table' }"
               :df="getField(ef)"
               :show-label="true"
               :value="ef.export"
@@ -72,7 +72,7 @@
 
         <!-- Table Fields -->
         <div v-for="efs of filteredTableFields" :key="efs.fieldname">
-          <h2 class="text-sm font-semibold text-ink-gray-8">
+          <h2 class="text-sm-semibold text-ink-gray-8">
             {{ getSchemaLabel(efs.target) }}
           </h2>
           <div

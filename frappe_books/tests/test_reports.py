@@ -97,6 +97,23 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		self.assertEqual(_values(rows[-1], PERIOD_KEYS), _decimals(200, 70))
 		self.assertEqual(rows[-1]["account"], "Total Profit")
 
+	def test_profit_and_loss_totals_each_row_over_its_periods(self):
+		_post("2049-02-01", self.sales.name, 0, "0.1")
+		_post("2050-02-01", self.sales.name, 0, "0.2")
+		_post("2050-03-01", self.rent.name, "0.05", 0)
+		income = root_group("Income")
+		years = {**YEARS_2045_AND_2046, "to_date": "2050-12-31"}
+
+		rows = _run("Books Profit and Loss", **years)
+
+		accounts = _rows_by_account(rows)
+		for account in (self.sales.name, income, "Total Income (Credit)"):
+			self.assertEqual(accounts[account]["total"], Decimal("0.3"))
+		self.assertEqual(rows[-1]["total"], Decimal("0.25"))
+		hidden = _rows_by_account(_run("Books Profit and Loss", hide_group_amounts=1, **years))
+		self.assertIsNone(hidden[income]["total"])
+		self.assertEqual(hidden[self.sales.name]["total"], Decimal("0.3"))
+
 	def test_balance_sheet_accumulates_from_the_first_entry(self):
 		for date, debit, credit in (
 			("2044-01-01", 100, 0),

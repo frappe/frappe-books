@@ -8,6 +8,11 @@ test('an account added under a group takes its types and opens in quick edit', a
   page,
 }) => {
   const name = `Tree Cash ${Date.now()}`;
+  // The tree opens with its roots collapsed.
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Expand', exact: true })
+    .click();
   await page
     .getByRole('button', { name: 'Actions for Cash In Hand', exact: true })
     .click();
@@ -63,10 +68,10 @@ test('the account list makes no accounts and opens one by name', async ({
 
   await page.goto('/books/edit/Account/Cash');
   await waitForBooks(page);
-  await expect(
-    page.getByRole('textbox', { name: 'Account Name', exact: true })
-  ).toHaveValue('Cash');
-  await expect(
-    page.getByRole('textbox', { name: 'Account Name', exact: true })
-  ).toBeDisabled();
+  const accountName = page.getByRole('textbox', {
+    name: 'Account Name (required)',
+    exact: true,
+  });
+  await expect(accountName).toHaveValue('Cash');
+  await expect(accountName).toBeDisabled();
 });

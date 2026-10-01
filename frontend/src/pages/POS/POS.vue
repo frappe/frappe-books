@@ -848,9 +848,12 @@ export default defineComponent({
           await this.setTenderedPayments(payments);
           await this.submitSinvDoc();
           if (payments.length) {
-            this.showPaymentToasts(
-              await getInvoicePayments(this.sinvDoc.name!)
-            );
+            // The sale is done; a failed lookup must not keep its cart open.
+            getInvoicePayments(this.sinvDoc.name!)
+              .then((names) => this.showPaymentToasts(names))
+              .catch((error) =>
+                showToast({ type: 'error', message: t`${error as string}` })
+              );
           }
         }
 

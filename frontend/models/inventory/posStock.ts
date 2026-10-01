@@ -41,22 +41,50 @@ export async function getPOSBatchQuantity(
   return await getBatchQuantity(item, batch, inventory);
 }
 
-/** Checks, on the server, that the POS location has what the rows need of each tracked item, or batch. */
+/**
+ * Checks, on the server, that the POS location has what the rows need of
+ * each tracked item, or batch. An item it has none of is out of stock, as
+ * when it is added; the server says so first too.
+ */
 export async function validatePOSStock(rows: ItemQuantity[]) {
-  const [shortfall] = await getSaleShortfalls(rows, true);
+  const shortfalls = (await getSaleShortfalls(rows, true)).map(
+    ({ item, batch, quantity }) => {
+      const required = getRequiredQuantity(rows, item!, batch);
+      const available = safeParseFloat(required - (quantity ?? 0));
+      return { item: item!, batch, required, available };
+    }
+  );
+  const shortfall =
+    shortfalls.find(({ batch, available }) => !batch && available <= 0) ??
+    shortfalls[0];
   if (!shortfall) {
     return;
   }
 
-  const { item, batch, quantity: missing } = shortfall;
-  const required = rows
-    .filter((row) => row.item === item && (row.batch || '') === (batch || ''))
-    .reduce((total, row) => safeParseFloat(total + (row.quantity ?? 0)), 0);
-  const available = safeParseFloat(required - (missing ?? 0));
+  const { item, batch, required, available } = shortfall;
+  if (!batch && available <= 0) {
+    throw new ValidationError(getOutOfStockMessage(item));
+  }
+
   const inventory = await getPOSInventory();
   const locationText = inventory ? ' ' + t`in ${inventory}` : '';
   const batchText = batch ? ' ' + t`for batch ${batch}` : '';
   throw new ValidationError(
-    t`Insufficient stock for ${item!}${locationText}${batchText}. Available: ${available}; required: ${required}.`
+    t`Insufficient stock for ${item}${locationText}${batchText}. Available: ${available}; required: ${required}.`
   );
+}
+
+export function getOutOfStockMessage(item: string): string {
+  return t`Item ${item} is out of stock (quantity is zero)`;
+}
+
+/** What the rows of the item, from the batch or without one, add up to, as the server sums them. */
+function getRequiredQuantity(
+  rows: ItemQuantity[],
+  item: string,
+  batch?: string | null
+): number {
+  return rows
+    .filter((row) => row.item === item && (row.batch || '') === (batch || ''))
+    .reduce((total, row) => safeParseFloat(total + (row.quantity ?? 0)), 0);
 }

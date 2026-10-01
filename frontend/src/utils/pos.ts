@@ -2,7 +2,11 @@ import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import type { Item } from 'models/baseModels/Item/Item';
 import { getAvailableSerialNumbers } from 'models/inventory/helpers';
-import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
+import {
+  getOutOfStockMessage,
+  getPOSInventory,
+  validatePOSStock,
+} from 'models/inventory/posStock';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
@@ -339,9 +343,7 @@ export async function addPOSItem(
   itemQtyMap: ItemQtyMap
 ): Promise<SalesInvoiceItem> {
   if (item.trackItem && (itemQtyMap[item.name]?.availableQty ?? 0) <= 0) {
-    throw new ValidationError(
-      t`Item ${item.name} is out of stock (quantity is zero)`
-    );
+    throw new ValidationError(getOutOfStockMessage(item.name));
   }
 
   const row = getItemRows(sinvDoc, item.name)[0];

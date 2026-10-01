@@ -12,6 +12,7 @@ from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
 from frappe_books.inventory.auto_transfer import map_invoice_transfer
+from frappe_books.inventory.availability import validate_pos_stock
 
 
 class BooksSalesInvoice(PostingInvoiceController):
@@ -110,8 +111,10 @@ class BooksSalesInvoice(PostingInvoiceController):
 
 	def before_submit(self):
 		super().before_submit()
-		if self.is_pos and not self.return_against and not open_shift_name():
-			frappe.throw(_("Open a POS shift before submitting a POS invoice."))
+		if self.is_pos and not self.return_against:
+			if not open_shift_name():
+				frappe.throw(_("Open a POS shift before submitting a POS invoice."))
+			validate_pos_stock(self.items)
 
 	def on_submit(self):
 		super().on_submit()

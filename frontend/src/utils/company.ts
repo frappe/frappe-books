@@ -10,18 +10,13 @@ export function useCompanyIdentity() {
   const userName = window.frappe.boot?.user_info?.[user]?.fullname ?? user;
   const printSettingsSync = `sync:${ModelNameEnum.PrintSettings}`;
 
-  async function setCompanyLogo() {
-    // Skipped by the server when the user cannot read Print Settings.
-    const [logo] = await fyo.db.getSingleValues({
-      fieldname: 'logo',
-      parent: ModelNameEnum.PrintSettings,
-    });
-    companyLogo.value = (logo?.value as string | undefined) ?? '';
+  function setCompanyLogo() {
+    companyLogo.value = fyo.singles.PrintSettings?.logo ?? '';
   }
 
-  onMounted(async () => {
+  onMounted(() => {
     companyName.value = fyo.singles.AccountingSettings?.company_name ?? '';
-    await setCompanyLogo();
+    setCompanyLogo();
     fyo.doc.observer.on(printSettingsSync, setCompanyLogo);
   });
   onUnmounted(() => fyo.doc.observer.off(printSettingsSync, setCompanyLogo));

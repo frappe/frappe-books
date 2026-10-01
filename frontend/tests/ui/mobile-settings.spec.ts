@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { routeInvoice } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 test.use({
@@ -93,13 +94,7 @@ test('the print view has a template picker and a bottom bar', async ({
       json: { message: { html: '<p>Phone Print Test</p>', style: '' } },
     })
   );
-  await page.evaluate(() => {
-    const app = (document.querySelector('#app') as any).__vue_app__;
-    const fyo = app._context.mixins
-      .find((mixin: any) => mixin.computed?.fyo)
-      .computed.fyo();
-    fyo.doc.getNewDoc('SalesInvoice', { name: 'Phone Print Test' });
-  });
+  await routeInvoice(page, 'Phone Print Test');
   await routeTo(page, '/print/SalesInvoice/Phone Print Test');
 
   await expect(page.locator('header:visible')).toContainText(

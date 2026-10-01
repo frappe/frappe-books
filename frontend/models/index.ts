@@ -3,6 +3,7 @@ import type { FrappeModel } from 'src/frappe/doctypes';
 import { Account } from './baseModels/Account/Account';
 import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
+import { Country } from './baseModels/Country';
 import { Currency } from './baseModels/Currency/Currency';
 import { Address } from './baseModels/Address/Address';
 import { CustomForm } from './baseModels/CustomForm/CustomForm';
@@ -56,7 +57,6 @@ import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 import * as invoices from './invoices';
 
 export const models = {
-  PrintSettings,
   PurchaseInvoice,
   PurchaseInvoiceItem,
   SalesInvoice,
@@ -64,7 +64,6 @@ export const models = {
   AppliedCouponCodes,
   SalesQuote,
   SalesQuoteItem,
-  PrintFormat,
   TaxSummary,
   // POS Models
   ClosingAmounts,
@@ -86,6 +85,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   AccountingSettings,
   Address,
   Batch,
+  Country,
   CouponCode,
   Currency,
   CustomForm,
@@ -108,6 +108,8 @@ export const frappeModels: Record<string, FrappeModel> = {
   PaymentMethod,
   PriceList,
   PricingRule,
+  PrintFormat,
+  PrintSettings,
   PurchaseReceipt,
   SerialNumber,
   SetupWizard,

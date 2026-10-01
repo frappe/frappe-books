@@ -9,6 +9,10 @@ from frappe.utils.pdf import read_options_from_html
 from frappe.utils.print_utils import get_print
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.frappe_books.doctype.books_defaults.books_defaults import (
+	PRINT_FORMAT_FIELDS,
+	set_print_formats,
+)
 from frappe_books.printing import (
 	books_format,
 	default_print_format,
@@ -240,34 +244,51 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 	def test_books_defaults_show_and_set_the_doctype_default_print_format(self):
 		print_format = make_print_format("Books Journal Entry")
+		# Frappe stores no virtual single values since frappe#43435; the fields need none.
+		frappe.db.delete("Singles", {"doctype": "Books Defaults", "field": ("in", list(PRINT_FORMAT_FIELDS))})
 
 		with self.set_user(ensure_user(MANAGER, "Books Manager")):
-			save_defaults({"journal_entry_print_template": print_format})
+			set_print_formats({"journal_entry_print_template": print_format})
 			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
-			self.assertEqual(frappe.get_single("Books Defaults").journal_entry_print_template, print_format)
+			shown = frappe.get_single("Books Defaults").as_dict()
+			self.assertEqual(shown.journal_entry_print_template, print_format)
 
-			save_defaults({"sales_invoice_terms": "Net 30"})
-			self.assertEqual(default_print_format("Books Journal Entry"), print_format)
-
-			save_defaults({"journal_entry_print_template": None})
+			set_print_formats({"journal_entry_print_template": None})
 			self.assertIsNone(default_print_format("Books Journal Entry"))
 
-	def test_a_save_that_sets_no_print_format_keeps_the_doctype_default(self):
+	def test_a_settings_save_keeps_the_default_print_formats_set_elsewhere(self):
+		# Frappe before frappe#43435 stores virtual single values; this copy holds none.
+		frappe.db.set_single_value("Books Defaults", "journal_entry_print_template", None)
 		print_format = make_print_format("Books Journal Entry")
-		# As after install: the defaults were set, but Books Defaults never stored them.
-		frappe.db.delete("Singles", {"doctype": "Books Defaults", "field": "journal_entry_print_template"})
 		set_default_print_format("Books Journal Entry", print_format)
 
-		save_defaults({"sales_invoice_terms": "Net 30"})
+		save_defaults({"sales_invoice_terms": "Net 30", "journal_entry_print_template": None})
 
 		self.assertEqual(default_print_format("Books Journal Entry"), print_format)
 
+	def test_only_settings_writers_set_print_formats_of_the_fields_shown(self):
+		with self.set_user(ensure_user(USER, "Books User")):
+			self.assertRaises(
+				frappe.PermissionError, set_print_formats, {"journal_entry_print_template": None}
+			)
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"no print format field sales_terms",
+			set_print_formats,
+			{"sales_terms": None},
+		)
+
 	def test_print_formats_must_be_for_the_doctype_they_print(self):
 		message = "not a print format for Books Sales Invoice"
-		for fieldname in ("sales_invoice_print_template", "pos_print_template"):
-			self.assertRaisesRegex(
-				frappe.ValidationError, message, save_defaults, {fieldname: "Business - Payment"}
-			)
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			message,
+			set_print_formats,
+			{"sales_invoice_print_template": "Business - Payment"},
+		)
+		self.assertRaisesRegex(
+			frappe.ValidationError, message, save_defaults, {"pos_print_template": "Business - Payment"}
+		)
 		profile = frappe.get_doc(
 			{
 				"doctype": "Books Pos Profile",

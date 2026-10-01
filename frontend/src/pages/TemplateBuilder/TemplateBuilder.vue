@@ -71,14 +71,14 @@
           <!-- Entry Type -->
           <FormControl
             class="w-44 flex-shrink-0"
-            :df="fields.docType"
+            :df="fields.doc_type"
             :border="true"
-            :value="doc.get('docType')"
+            :value="doc.get('doc_type')"
             @change="async (value: unknown) => await setType(value)"
           />
           <!-- Display Doc -->
           <Link
-            v-if="doc.docType"
+            v-if="doc.doc_type"
             class="w-48 min-w-0"
             :df="displayDocField"
             :border="true"
@@ -217,6 +217,9 @@ import {
   selectTextFile,
 } from 'src/utils/ui';
 import { useDocShortcuts } from 'src/utils/vueUtils';
+import { getDocuments } from 'src/frappe/api';
+import { toFrappeFilters } from 'src/frappe/list';
+import { getSchema } from 'src/frappe/registry';
 import { getBooksDocOrNew } from 'src/frappe/useBooksDoc';
 import { getMapFromList } from 'utils/index';
 import { computed, defineComponent, inject, ref } from 'vue';
@@ -315,7 +318,7 @@ export default defineComponent({
       return getPageSize(this.doc?.css);
     },
     doctype(): string {
-      return this.fyo.store.permissions?.doctypes[this.doc?.docType ?? ''] ?? '';
+      return this.doc?.doc_type ?? '';
     },
     previewSource(): unknown[] {
       return [this.doc?.html, this.doc?.css, this.displayDoc];
@@ -382,10 +385,11 @@ export default defineComponent({
       return actions;
     },
     fields(): Record<string, Field> {
-      return getMapFromList(this.fyo.schemaMap.PrintFormat?.fields ?? [], 'fieldname');
+      const fields = getSchema(ModelNameEnum.PrintFormat)?.fields ?? [];
+      return getMapFromList(fields, 'fieldname');
     },
     displayDocField(): TargetField {
-      const target = this.doc?.docType ?? ModelNameEnum.SalesInvoice;
+      const target = this.doc?.printedSchemaName ?? ModelNameEnum.SalesInvoice;
       return {
         fieldname: 'displayDoc',
         label: this.t`Display Doc`,
@@ -398,7 +402,7 @@ export default defineComponent({
         return '';
       }
 
-      if (!this.doc.docType) {
+      if (!this.doc.doc_type) {
         return this.t`Select a Template type`;
       }
 
@@ -613,21 +617,21 @@ export default defineComponent({
       printSheet.print();
     },
     async setDisplayInitialDoc() {
-      const schemaName = this.doc?.docType;
+      const schemaName = this.doc?.printedSchemaName;
       if (!schemaName || this.displayDoc?.schemaName === schemaName) {
         return;
       }
 
-      const names = (await this.fyo.db.getAll(schemaName, {
+      const [latest] = await getDocuments(this.doctype, {
+        fields: ['name'],
+        filters: toFrappeFilters({ cancelled: false }),
+        orderBy: 'creation desc',
         limit: 1,
-        order: 'desc',
-        orderBy: 'created',
-        filters: { cancelled: false },
-      })) as { name: string }[];
+      });
 
-      const name = names[0]?.name;
+      const name = latest?.name as string | undefined;
       if (!name) {
-        const label = this.fyo.schemaMap[schemaName]?.label ?? schemaName;
+        const label = getSchema(schemaName)?.label ?? schemaName;
         await showDialog({
           title: this.t`No Display Entries Found`,
           detail: this.t`Please create a ${label} entry to view Template Preview.`,
@@ -666,7 +670,7 @@ export default defineComponent({
         return;
       }
 
-      await this.doc?.set('docType', value);
+      await this.doc?.set('doc_type', value);
       await this.setHints();
       await this.setDisplayInitialDoc();
     },
@@ -676,7 +680,7 @@ export default defineComponent({
         return;
       }
 
-      const schemaName = this.doc?.docType;
+      const schemaName = this.doc?.printedSchemaName;
       if (!schemaName) {
         return;
       }

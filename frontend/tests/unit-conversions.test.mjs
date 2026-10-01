@@ -2,17 +2,23 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeFyo } from './helpers/accounting.mjs';
 
-const conversions = [
-  { parent: 'Pen', uom: 'Box', conversionFactor: 12 },
-  { parent: 'Pen', uom: 'Pack', conversionFactor: 6 },
-];
+const pen = {
+  unit: 'Unit',
+  uom_conversions: [
+    { uom: 'Box', conversion_factor: 12 },
+    { uom: 'Pack', conversion_factor: 6 },
+  ],
+};
 
 async function makeRow(schemaName, values = {}) {
   const fyo = await makeFyo();
-  fyo.db.getAll = async (_schemaName, { filters }) =>
-    conversions.filter((row) =>
-      Object.entries(filters).every(([key, value]) => row[key] === value)
-    );
+  globalThis.window = { location: { hostname: 'books.localhost' } };
+  globalThis.fetch = async (url) => {
+    const { pathname, searchParams } = new URL(url, 'http://books.localhost');
+    assert.equal(decodeURIComponent(pathname), '/api/v2/document/Books Item');
+    assert.equal(searchParams.get('filters'), '[["name","=","Pen"]]');
+    return Response.json({ data: [pen] });
+  };
   const doc = fyo.doc.getNewDoc(schemaName, {
     items: [{ item: 'Pen', unit: 'Unit', ...values }],
   });

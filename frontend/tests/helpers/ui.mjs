@@ -16,6 +16,9 @@ await build({
     contents: `
       export { getFieldsGroupedByTabAndSection } from './src/utils/ui';
       export { getBooksDocOrNew } from './src/frappe/useBooksDoc';
+      export { FrappeDoc } from './src/frappe/document';
+      export { registerFrappeModels } from './src/frappe/doctypes';
+      export { loadFrappeDocTypes } from './src/frappe/registry';
       export { Search } from './src/utils/search';
       export { sortByFuzzyMatch } from './src/utils';
       export { fyo } from './src/initFyo';
@@ -57,6 +60,9 @@ await build({
 globalThis.history = { state: null };
 export const {
   getBooksDocOrNew,
+  FrappeDoc,
+  registerFrappeModels,
+  loadFrappeDocTypes,
   getFieldsGroupedByTabAndSection,
   Search,
   sortByFuzzyMatch,

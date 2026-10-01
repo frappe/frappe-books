@@ -9,7 +9,7 @@ import {
   LinkValidationError,
 } from 'fyo/utils/errors';
 import { Field, FieldType, FieldTypeEnum, NumberField } from 'schemas/types';
-import { fyo } from 'src/initFyo';
+import { getSchema } from 'src/frappe/registry';
 
 export function fuzzyMatch(input: string, target: string) {
   const keywordLetters = [...input];
@@ -89,7 +89,7 @@ export function getErrorMessage(e: Error, doc?: Doc): string {
     return errorMessage;
   }
 
-  const label = fyo.db.schemaMap[schemaName]?.label ?? schemaName;
+  const label = getSchema(schemaName)?.label ?? schemaName;
   if (e instanceof LinkValidationError) {
     return t`${label} ${name} is linked with existing records.`;
   } else if (e instanceof DuplicateEntryError) {

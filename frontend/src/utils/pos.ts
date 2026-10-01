@@ -350,7 +350,6 @@ export async function fillRowSerialNumbers(
   }
 
   const serialNumbers = await getAvailableSerialNumbers(
-    row.fyo,
     item,
     await getPOSInventory(row.fyo),
     quantity

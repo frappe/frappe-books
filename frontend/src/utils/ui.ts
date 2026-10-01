@@ -16,6 +16,7 @@ import { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import { getCount, type Filter } from 'src/frappe/api';
 import { getModel } from 'src/frappe/registry';
 import { newBooksDoc } from 'src/frappe/useBooksDoc';
 import { fyo } from 'src/initFyo';
@@ -401,10 +402,16 @@ export async function openNewDoc(schemaName: string, initData?: RawValueMap) {
 }
 
 export async function isPrintable(schemaName: string) {
-  const numTemplates = await fyo.db.count(ModelNameEnum.PrintFormat, {
-    filters: { docType: schemaName, disabled: false },
-  });
-  return numTemplates > 0;
+  const doctype = fyo.store.permissions?.doctypes[schemaName];
+  if (!doctype) {
+    return false;
+  }
+
+  const filters: Filter[] = [
+    ['doc_type', '=', doctype],
+    ['disabled', '=', 0],
+  ];
+  return (await getCount('Print Format', filters, [])) > 0;
 }
 
 export function toggleSidebar(value?: boolean) {

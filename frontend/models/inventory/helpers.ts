@@ -1,5 +1,4 @@
-import { Fyo } from 'fyo';
-import { ModelNameEnum } from 'models/types';
+import { getValue } from 'src/frappe/api';
 import { call } from 'src/web/api';
 
 const AVAILABLE_SERIAL_NUMBERS =
@@ -7,7 +6,6 @@ const AVAILABLE_SERIAL_NUMBERS =
 
 /** The item's earliest received serial numbers in stock at the location, as the server picks them. */
 export async function getAvailableSerialNumbers(
-  fyo: Fyo,
   item: string,
   location: string | undefined,
   quantity: number
@@ -16,7 +14,7 @@ export async function getAvailableSerialNumbers(
     !location ||
     !quantity ||
     quantity <= 0 ||
-    !(await fyo.getValue(ModelNameEnum.Item, item, 'hasSerialNumber'))
+    !(await getValue('Books Item', item, 'has_serial_number'))
   ) {
     return '';
   }

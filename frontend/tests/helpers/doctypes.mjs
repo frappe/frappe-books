@@ -20,7 +20,9 @@ export function getMetaBundle(name) {
 }
 
 function getMeta(name) {
-  const meta = [...doctypes, currencyMeta].find((meta) => meta.name === name);
+  const meta = [...doctypes, currencyMeta, countryMeta, printFormatMeta].find(
+    (meta) => meta.name === name
+  );
   const order = meta.field_order ?? [];
   const fields = [...meta.fields].sort(
     (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
@@ -65,6 +67,90 @@ const currencyMeta = {
       fieldtype: 'Check',
       label: 'Show Currency Symbol on Right Side',
       default: '0',
+    },
+  ],
+};
+
+// Frappe's Country, which the app does not ship.
+const countryMeta = {
+  name: 'Country',
+  autoname: 'field:country_name',
+  translated_doctype: 1,
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'country_name',
+      fieldtype: 'Data',
+      label: 'Country Name',
+      reqd: 1,
+    },
+    { fieldname: 'date_format', fieldtype: 'Data', label: 'Date Format' },
+    { fieldname: 'time_format', fieldtype: 'Data', label: 'Time format' },
+    { fieldname: 'time_zones', fieldtype: 'Text', label: 'Time Zones' },
+    { fieldname: 'code', fieldtype: 'Data', label: 'Code' },
+  ],
+};
+
+// Frappe's Print Format, which the app does not ship; its builder fields are left out.
+const printFormatMeta = {
+  name: 'Print Format',
+  autoname: 'Prompt',
+  sort_field: 'creation',
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'doc_type',
+      fieldtype: 'Link',
+      label: 'DocType',
+      options: 'DocType',
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'module',
+      fieldtype: 'Link',
+      label: 'Module',
+      options: 'Module Def',
+    },
+    {
+      fieldname: 'disabled',
+      fieldtype: 'Check',
+      label: 'Disabled',
+      default: '0',
+    },
+    {
+      fieldname: 'standard',
+      fieldtype: 'Select',
+      label: 'Standard',
+      options: 'No\nYes',
+      default: 'No',
+      reqd: 1,
+      no_copy: 1,
+    },
+    {
+      fieldname: 'custom_format',
+      fieldtype: 'Check',
+      label: 'Custom Format',
+      default: '0',
+    },
+    {
+      fieldname: 'print_format_type',
+      fieldtype: 'Select',
+      label: 'Print Format Type',
+      options: 'Jinja\nJS',
+      default: 'Jinja',
+    },
+    { fieldname: 'html', fieldtype: 'Code', label: 'HTML', options: 'Jinja' },
+    { fieldname: 'css_section', fieldtype: 'Section Break' },
+    {
+      fieldname: 'css',
+      fieldtype: 'Code',
+      label: 'Custom CSS',
+      options: 'CSS',
+    },
+    {
+      fieldname: 'custom_html_help',
+      fieldtype: 'HTML',
+      label: 'Custom HTML Help',
     },
   ],
 };

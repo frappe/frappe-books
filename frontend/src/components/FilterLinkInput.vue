@@ -17,9 +17,7 @@
 import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { Combobox as FrappeCombobox } from 'frappe-ui';
-import { isFrappeBacked } from 'src/frappe/doctypes';
 import { getLinkLabels, searchFrappeLink } from 'src/frappe/link';
-import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH } from 'src/utils';
 
 type Option = { label: string; value: string; description?: string };
@@ -78,42 +76,24 @@ export default defineComponent({
       }
     },
     async searchRecords(): Promise<Option[]> {
-      if (isFrappeBacked(this.target)) {
-        const options = await searchFrappeLink(
-          this.target,
-          this.search,
-          null,
-          LINK_PAGE_LENGTH
-        );
-        const labels = await getLinkLabels(
-          this.target,
-          options.map(({ value }) => value)
-        );
-        return options.map(({ label, value }) => {
-          const shown = labels[value] || label;
-          return {
-            label: shown,
-            value,
-            description: shown !== value ? value : undefined,
-          };
-        });
-      }
-
-      const schema = fyo.schemaMap[this.target];
-      const title = schema?.linkDisplayField || schema?.titleField || 'name';
-      const rows = await fyo.db.searchLink(
+      const options = await searchFrappeLink(
         this.target,
         this.search,
         null,
-        [...new Set(['name', title])],
         LINK_PAGE_LENGTH
       );
-      return rows.map((row) => ({
-        label: String(row[title] || row.name),
-        value: String(row.name),
-        description:
-          row[title] && row[title] !== row.name ? String(row.name) : undefined,
-      }));
+      const labels = await getLinkLabels(
+        this.target,
+        options.map(({ value }) => value)
+      );
+      return options.map(({ label, value }) => {
+        const shown = labels[value] || label;
+        return {
+          label: shown,
+          value,
+          description: shown !== value ? value : undefined,
+        };
+      });
     },
   },
 });

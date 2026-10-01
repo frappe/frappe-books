@@ -29,7 +29,7 @@
             <div class="p-2">
               <div class="font-semibold text-xl w-full flex justify-between">
                 <h1>
-                  {{ `${fyo.singles.PrintSettings?.companyName}` }}
+                  {{ `${fyo.singles.PrintSettings?.company_name}` }}
                 </h1>
                 <p class="text-gray-600">
                   {{ title }}

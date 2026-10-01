@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { routeInvoice } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 useBooksSession();
@@ -17,13 +18,7 @@ test.beforeEach(async ({ page }) => {
       },
     })
   );
-  await page.evaluate((name) => {
-    const app = (document.querySelector('#app') as any).__vue_app__;
-    const fyo = app._context.mixins
-      .find((mixin: any) => mixin.computed?.fyo)
-      .computed.fyo();
-    fyo.doc.getNewDoc('SalesInvoice', { name });
-  }, NAME);
+  await routeInvoice(page, NAME);
   await routeTo(page, `/print/SalesInvoice/${NAME}`);
 });
 

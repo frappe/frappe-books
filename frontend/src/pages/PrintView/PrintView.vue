@@ -111,7 +111,10 @@ import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
-import { fyo } from 'src/initFyo';
+import { getValue } from 'src/frappe/api';
+import { getSchema } from 'src/frappe/registry';
+import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { call } from 'src/web/api';
 import { showToast } from 'src/utils/interactive';
 import {
   downloadPDF,
@@ -170,8 +173,7 @@ export default defineComponent({
   computed: {
     helperMessage() {
       if (!this.templateList.length) {
-        const label =
-          this.fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
+        const label = getSchema(this.schemaName)?.label ?? this.schemaName;
 
         return this.t`No Print Templates not found for entry type ${label}`;
       }
@@ -240,8 +242,8 @@ export default defineComponent({
           label: this.t`New Template`,
           group: this.t`Create`,
           action: async () => {
-            const doc = this.fyo.doc.getNewDoc(ModelNameEnum.PrintFormat, {
-              docType: this.schemaName,
+            const doc = newBooksDoc(ModelNameEnum.PrintFormat, {
+              doc_type: this.doctype,
             });
 
             const route = getFormRoute(doc.schemaName, doc.name!);
@@ -255,8 +257,8 @@ export default defineComponent({
           label: this.t`Duplicate Template`,
           group: this.t`Create`,
           action: async () => {
-            const doc = this.fyo.doc.getNewDoc(ModelNameEnum.PrintFormat, {
-              docType: this.schemaName,
+            const doc = newBooksDoc(ModelNameEnum.PrintFormat, {
+              doc_type: this.doctype,
               html: this.templateDoc?.html,
               css: this.templateDoc?.css,
             });
@@ -270,7 +272,7 @@ export default defineComponent({
       return actions;
     },
     async initialize() {
-      this.doc = await fyo.doc.getDoc(this.schemaName, this.name);
+      this.doc = await getBooksDoc(this.schemaName, this.name);
       await this.setTemplateList();
       await this.setTemplateFromDefault();
       if (!this.templateDoc && this.templateList.length) {
@@ -313,7 +315,7 @@ export default defineComponent({
       this.templateName = value;
       try {
         const [templateDoc, print] = await Promise.all([
-          this.fyo.doc.getDoc(ModelNameEnum.PrintFormat, value),
+          getBooksDoc(ModelNameEnum.PrintFormat, value),
           getPrintHTML(this.doctype, this.name, value),
         ]);
         if (request !== this.templateRequest) {
@@ -330,10 +332,12 @@ export default defineComponent({
       }
     },
     async setTemplateList(): Promise<void> {
-      const list = (await this.fyo.db.getAllRaw(ModelNameEnum.PrintFormat, {
-        filters: { docType: this.schemaName, disabled: false },
-      })) as { name: string }[];
-
+      const list = await call<{ name: string }[]>('frappe.client.get_list', {
+        doctype: 'Print Format',
+        filters: { doc_type: this.doctype, disabled: 0 },
+        order_by: 'creation desc',
+        limit_page_length: 0,
+      });
       this.templateList = list.map(({ name }) => name);
     },
     async savePDF() {
@@ -364,23 +368,19 @@ export default defineComponent({
 
       let templateName;
 
-      if (
-        this.schemaName == ModelNameEnum.SalesInvoice &&
-        (this.doc as Doc).isPOS
-      ) {
+      if (this.schemaName == ModelNameEnum.SalesInvoice && this.doc?.is_pos) {
         templateName = this.fyo.singles.Defaults?.pos_print_template;
 
         const posProfileName = this.fyo.singles.POSSettings?.pos_profile;
-
-        if (posProfileName) {
-          const posProfile = await this.fyo.doc.getDoc(
-            ModelNameEnum.POSProfile,
-            posProfileName
-          );
-
-          if (posProfile.posPrintTemplate) {
-            templateName = posProfile.posPrintTemplate;
-          }
+        const profileTemplate =
+          posProfileName &&
+          (await getValue(
+            'Books Pos Profile',
+            posProfileName,
+            'pos_print_template'
+          ));
+        if (profileTemplate) {
+          templateName = profileTemplate;
         }
       } else {
         templateName = this.fyo.singles.Defaults?.get(defaultName);

@@ -1,5 +1,6 @@
 <script>
 import { t } from 'fyo';
+import { getLinkDisplayValue } from 'src/frappe/link';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
@@ -41,15 +42,7 @@ export default {
   methods: {
     async setLinkValue(newValue) {
       const value = newValue ?? this.value;
-      const { fieldname, target } = this.df ?? {};
-      const linkDisplayField = fyo.schemaMap[target ?? '']?.linkDisplayField;
-
-      if (!linkDisplayField) {
-        return (this.linkValue = value);
-      }
-
-      const linkDoc = await this.doc?.loadAndGetLink(fieldname);
-      this.linkValue = linkDoc?.get(linkDisplayField) ?? '';
+      this.linkValue = await getLinkDisplayValue(this.df?.target, value);
     },
     getTargetSchemaName() {
       return this.df.target;

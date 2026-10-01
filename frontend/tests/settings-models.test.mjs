@@ -14,6 +14,11 @@ import {
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
+import {
+  bridgeSchemas,
+  getFrappeFieldnames,
+  getLayout,
+} from './helpers/models.mjs';
 
 stubFrappe(({ path, body }) =>
   path.endsWith('getdoctype')
@@ -216,4 +221,23 @@ test('the setup wizard shows the fields, placeholders and sections it showed', (
     'fiscal_year_end | Fiscal Year End Date | Accounting',
   ]);
   assert.equal(frappeModels.SetupWizard.previewMethod, 'preview');
+});
+
+test('the Print tab shows the fields, placeholders, colours and sections it showed', () => {
+  const fieldnames = getFrappeFieldnames('PrintSettings');
+  assert.deepEqual(
+    getLayout(getSchema('PrintSettings')),
+    getLayout(bridgeSchemas.PrintSettings, fieldnames)
+  );
+  const color = (schema) =>
+    schema.fields.find(({ fieldname }) => fieldname === 'color');
+  assert.deepEqual(
+    color(getSchema('PrintSettings')).options,
+    color(bridgeSchemas.PrintSettings).options
+  );
+
+  const settings = newFrappeDoc('PrintSettings');
+  assert.equal(hidden(settings, 'terms_and_conditions'), true);
+  settings.displaytermsandconditions = true;
+  assert.equal(hidden(settings, 'terms_and_conditions'), false);
 });

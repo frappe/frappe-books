@@ -85,6 +85,20 @@ export async function getDocuments(
   return (await request<DocValues[]>('GET', path, { params })).data;
 }
 
+/** A field's value of one document, or undefined when the document is not found. */
+export async function getValue(
+  doctype: string,
+  name: string,
+  fieldname: string
+): Promise<unknown> {
+  const [row] = await getDocuments(doctype, {
+    fields: [fieldname],
+    filters: [['name', '=', name]],
+    limit: 1,
+  });
+  return row?.[fieldname];
+}
+
 /** Counts the documents that match every filter and, if given, one of `orFilters`. */
 export async function getCount(
   doctype: string,

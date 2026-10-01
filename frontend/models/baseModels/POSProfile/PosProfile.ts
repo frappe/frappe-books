@@ -1,6 +1,5 @@
 import { Doc } from 'fyo/model/doc';
 import { FiltersMap } from 'fyo/model/types';
-import { ModelNameEnum } from 'models/types';
 
 export class POSProfile extends Doc {
   posProfile?: string;
@@ -16,6 +15,7 @@ export class POSProfile extends Doc {
   ignorePricingRule?: boolean;
 
   static filters: FiltersMap = {
-    posPrintTemplate: () => ({ docType: ModelNameEnum.SalesInvoice }),
+    // Print Formats are Frappe-backed, so they filter by Frappe fieldnames.
+    posPrintTemplate: () => ({ doc_type: 'Books Sales Invoice' }),
   };
 }

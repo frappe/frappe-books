@@ -1,6 +1,46 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { FilterLinkInput, fyo } from './helpers/ui.mjs';
+import {
+  FilterLinkInput,
+  FrappeDoc,
+  loadFrappeDocTypes,
+  registerFrappeModels,
+} from './helpers/ui.mjs';
+
+const taxMeta = {
+  name: 'Books Tax',
+  autoname: 'Prompt',
+  permissions: [],
+  fields: [{ fieldname: 'details', fieldtype: 'Table', label: 'Details' }],
+};
+const searches = [];
+let search = async () => [];
+
+globalThis.window = {
+  location: { hostname: 'books.localhost' },
+  frappe: { boot: { user: { roles: [] }, books: { doctypes: {} } } },
+};
+globalThis.fetch = async (url, { body } = {}) => {
+  const path = decodeURIComponent(url);
+  if (path.endsWith('getdoctype')) {
+    return Response.json({ docs: [taxMeta] });
+  }
+
+  if (path.startsWith('/api/v2/document/Books Custom Form')) {
+    return Response.json({ data: [] });
+  }
+
+  const args = JSON.parse(body);
+  searches.push(args);
+  return Response.json({ message: await search(args) });
+};
+
+class Tax extends FrappeDoc {
+  static doctype = 'Books Tax';
+  static presentation = { label: 'Tax' };
+}
+registerFrappeModels({ Tax });
+await loadFrappeDocTypes();
 
 function makeInput(target) {
   const input = { target, value: '', search: '', records: [], request: 0 };
@@ -11,28 +51,23 @@ function makeInput(target) {
   return input;
 }
 
-test('list filter values come from a page of the server link search', async () => {
-  const searches = [];
-  fyo.db.getAll = () => assert.fail('The whole table must not be loaded');
-  fyo.db.searchLink = async (...args) => {
-    searches.push(args);
-    return [{ name: 'Tax-002' }];
-  };
+test("list filter values come from a page of Frappe's link search", async () => {
+  searches.length = 0;
+  search = async () => [{ value: 'Tax-002' }];
   const input = makeInput('Tax');
 
   await input.onOpen(true);
   await input.onInput({ target: { value: '002' } });
 
   assert.deepEqual(
-    searches.map(([schemaName, text, filters, , limit]) => [
-      schemaName,
-      text,
-      filters,
-      limit,
+    searches.map(({ doctype, txt, page_length }) => [
+      doctype,
+      txt,
+      page_length,
     ]),
     [
-      ['Tax', '', null, 50],
-      ['Tax', '002', null, 50],
+      ['Books Tax', '', 50],
+      ['Books Tax', '0%0%2', 50],
     ]
   );
   assert.deepEqual(input.records, [
@@ -42,14 +77,15 @@ test('list filter values come from a page of the server link search', async () =
 
 test('a slower earlier search does not replace newer results', async () => {
   const pending = [];
-  fyo.db.searchLink = () => new Promise((resolve) => pending.push(resolve));
+  search = () => new Promise((resolve) => pending.push(resolve));
   const input = makeInput('Tax');
 
   const first = input.onOpen(true);
   const second = input.onInput({ target: { value: '2' } });
-  pending[1]([{ name: 'Tax-002' }]);
+  await new Promise((resolve) => setTimeout(resolve));
+  pending[1]([{ value: 'Tax-002' }]);
   await second;
-  pending[0]([{ name: 'Tax-001' }, { name: 'Tax-002' }]);
+  pending[0]([{ value: 'Tax-001' }, { value: 'Tax-002' }]);
   await first;
 
   assert.deepEqual(

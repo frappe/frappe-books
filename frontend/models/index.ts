@@ -57,7 +57,6 @@ import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 import * as invoices from './invoices';
 
 export const models = {
-  PrintSettings,
   PurchaseInvoice,
   PurchaseInvoiceItem,
   SalesInvoice,
@@ -110,6 +109,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   PaymentMethod,
   PriceList,
   PricingRule,
+  PrintSettings,
   PurchaseReceipt,
   SerialNumber,
   SetupWizard,

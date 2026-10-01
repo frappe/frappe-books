@@ -46,16 +46,16 @@
    "label": "Contacts"
   },
   {
-   "description": "john@doe.com",
    "fieldname": "email",
    "fieldtype": "Data",
-   "label": "Email"
+   "label": "Email",
+   "placeholder": "john@doe.com"
   },
   {
-   "description": "9888900000",
    "fieldname": "phone",
    "fieldtype": "Data",
-   "label": "Phone"
+   "label": "Phone",
+   "placeholder": "9888900000"
   },
   {
    "fieldname": "address",
@@ -70,18 +70,18 @@
   },
   {
    "default": "#112B42",
-   "description": "Select Color",
    "fieldname": "color",
    "fieldtype": "Color",
-   "label": "Color"
+   "label": "Color",
+   "placeholder": "Select Color"
   },
   {
    "default": "Arial",
-   "description": "Font",
    "fieldname": "font",
    "fieldtype": "Select",
    "label": "Font",
-   "options": "Arial\nTimes New Roman\nCourier"
+   "options": "Arial\nTimes New Roman\nCourier",
+   "placeholder": "Font"
   },
   {
    "default": "0",
@@ -120,6 +120,7 @@
    "label": "Pos Print Width"
   },
   {
+   "depends_on": "eval:doc.displaytermsandconditions",
    "fieldname": "terms_and_conditions",
    "fieldtype": "Text",
    "label": "Terms and Conditions"
@@ -129,7 +130,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.012251",
+ "modified": "2026-10-01 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Print Settings",

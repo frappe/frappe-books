@@ -58,12 +58,7 @@ export function validateRequired(field: Field, value: DocValue, doc: Doc) {
     return;
   }
 
-  if (field.required) {
-    throw new ValidationError(`${field.label} is required`);
-  }
-
-  const requiredFunction = doc.required[field.fieldname];
-  if (requiredFunction && requiredFunction()) {
-    throw new ValidationError(`${field.label} is required`);
+  if (field.required || doc.required[field.fieldname]?.()) {
+    throw new ValidationError(t`${field.label} is required`);
   }
 }

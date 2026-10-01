@@ -73,6 +73,92 @@ test('the file fields of every model are fields of its schema', () => {
   assert.ok(getSchema('SalesQuoteItem').fileFields.length > 0);
 });
 
+test('the wizard offers Books’ fields in Books’ order', () => {
+  const fieldnames = (schemaName) =>
+    getExportFields(schemaName).map(({ fieldname }) => fieldname);
+  const invoice = fieldnames('SalesInvoice');
+  const items = getExportTableFields('SalesInvoice')[0];
+  const account = getExportFields('Account');
+
+  assert.deepEqual(invoice.slice(-6), [
+    'owner',
+    'modified_by',
+    'creation',
+    'modified',
+    'submitted',
+    'cancelled',
+  ]);
+  assert.deepEqual(
+    getExportFields('SalesInvoice')
+      .slice(-2)
+      .map(({ label }) => label),
+    ['Submitted', 'Cancelled']
+  );
+  assert.deepEqual(invoice.slice(18, 21), [
+    'discount_after_tax',
+    'make_auto_payment',
+    'make_auto_stock_transfer',
+  ]);
+  assert.equal(
+    invoice.indexOf('status'),
+    invoice.indexOf('return_against') + 1
+  );
+  for (const fieldname of [
+    'amended_from',
+    'is_returned',
+    'is_pos',
+    'docstatus',
+  ]) {
+    assert.ok(!invoice.includes(fieldname), fieldname);
+  }
+  assert.ok(!fieldnames('JournalEntry').includes('total_debit'));
+  assert.ok(!fieldnames('StockLedgerEntry').includes('stock_queue'));
+  assert.equal(items.fieldname, 'items');
+  assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'qty'));
+  assert.deepEqual(fieldnames('Party').slice(0, 2), ['image', 'name']);
+  assert.deepEqual(
+    account
+      .map(({ label }) => label)
+      .filter((label) => label === 'Account Name'),
+    ['Account Name']
+  );
+  assert.deepEqual(
+    account.slice(-2).map(({ fieldname, label }) => [fieldname, label]),
+    [
+      ['lft', 'Left Index'],
+      ['rgt', 'Right Index'],
+    ]
+  );
+});
+
+test('Submitted and Cancelled follow the docstatus', async () => {
+  const requests = stubFrappe(() => ({
+    data: [
+      { name: 'JV-1', docstatus: 0 },
+      { name: 'JV-2', docstatus: 1 },
+      { name: 'JV-3', docstatus: 2 },
+    ],
+  }));
+  const csv = await getCsvExportData({
+    schemaName: 'JournalEntry',
+    fields: [
+      field('name', 'Entry No'),
+      field('submitted', 'Submitted', 'Check'),
+      field('cancelled', 'Cancelled', 'Check'),
+    ],
+    tableFields: [],
+    limit: null,
+    filters: {},
+  });
+
+  assert.deepEqual(requests[0].params.fields, ['name', 'docstatus']);
+  assert.deepEqual(parseCSV(csv).slice(2), [
+    ['JV-1', 'false', 'false'],
+    ['JV-2', 'true', 'false'],
+    ['JV-3', 'true', 'true'],
+  ]);
+});
+
 test('every exported table is headed by the label of its rows, not their doctype', () => {
   const lists = Object.keys(frappeModels).filter(
     (schemaName) => !getDocType(schemaName).meta.issingle

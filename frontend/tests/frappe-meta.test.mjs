@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   evaluateCondition,
+  getExportFields,
   getModel,
   getSchema,
   getSearchFields,
@@ -197,4 +198,17 @@ test("a field is filtered by its schema's model", () => {
   assert.equal(getModel('Item'), TestItem);
   // A report's link filter has no schema.
   assert.equal(getModel(undefined), undefined);
+});
+
+test('a list export offers custom fields last, as Books did', () => {
+  const fieldnames = getExportFields('Item').map(({ fieldname }) => fieldname);
+
+  assert.deepEqual(fieldnames.slice(-6), [
+    'owner',
+    'modified_by',
+    'creation',
+    'modified',
+    'custom_books_shelf',
+    'custom_books_colour',
+  ]);
 });

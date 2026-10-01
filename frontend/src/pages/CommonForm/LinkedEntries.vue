@@ -153,7 +153,7 @@
     class="flex h-full w-quick-edit flex-col border-l border-outline-gray-1 bg-surface-base"
   >
     <!-- Page Header -->
-    <div class="flex h-row-largest shrink-0 items-center justify-between px-4">
+    <div class="flex h-16 shrink-0 items-center justify-between px-4">
       <div class="flex items-center justify-between w-full">
         <FrappeButton
           icon="lucide-x"

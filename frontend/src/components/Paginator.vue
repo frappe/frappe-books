@@ -30,7 +30,7 @@
         <FrappeTextInput
           type="number"
           aria-label="Page number"
-          class="min-w-0 [&_input]:text-center [&_input]:tabular-nums"
+          class="min-w-0"
           variant="ghost"
           size="sm"
           :model-value="pageNo"

@@ -31,9 +31,10 @@
         :columns="listColumns"
         :row-height="rowHeight"
         divider="full"
-        class="list-gap-2 [--list-row-padding-x:0px]"
+        class="list-gap-2 list-row-px-0"
         :style="{ minWidth: minimumWidth }"
       >
+        <!-- frappe-ui headers are one fixed line; field descriptions and long labels wrap here. -->
         <FrappeListHeader v-if="showHeader" class="!h-auto min-h-8 py-1">
           <FrappeListHeaderCell class="justify-center">#</FrappeListHeaderCell>
           <FrappeListHeaderCell

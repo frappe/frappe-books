@@ -44,7 +44,7 @@
     <div class="flex min-h-0 w-full flex-1 flex-col text-base">
       <!-- Select Import Type -->
       <div
-        class="h-row-largest flex flex-row justify-start items-center w-full gap-2 border-b border-outline-gray-1 px-3 py-4 sm:px-5"
+        class="h-16 flex flex-row justify-start items-center w-full gap-2 border-b border-outline-gray-1 px-3 py-4 sm:px-5"
       >
         <AutoComplete
           :df="{
@@ -98,9 +98,9 @@
           v-if="importer.valueMatrix.length"
           :columns="listColumns"
           divider="full"
-          class="w-max min-w-full list-gap-4"
+          class="w-max min-w-full list-gap-4 list-row-px-3 sm:list-row-px-5"
         >
-          <FrappeListHeader class="sticky top-0 z-10 !h-auto bg-surface-base px-4 py-3">
+          <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
             <FrappeListHeaderCell class="justify-center">#</FrappeListHeaderCell>
             <FrappeListHeaderCell v-for="index in columnIterator" :key="index">
               <Select
@@ -116,7 +116,7 @@
 
           <FrappeListRows :items="importer.valueMatrix" :row-key="getImportRowKey">
             <template #default="{ item: row, index: ridx, value }">
-              <FrappeListRow :value="value" class="min-h-12 px-4 py-2">
+              <FrappeListRow :value="value" class="min-h-12 py-2">
                 <FrappeListCell class="justify-center">
                   <FrappeButton
                     icon="lucide-x"
@@ -185,7 +185,7 @@
 
         <div
           v-else
-          class="ps-4 text-ink-gray-7 sticky left-0 flex items-center"
+          class="ps-3 sm:ps-5 text-ink-gray-7 sticky left-0 flex items-center"
           style="height: 62.5px"
         >
           {{ t`No rows added. Select a file or add rows.` }}

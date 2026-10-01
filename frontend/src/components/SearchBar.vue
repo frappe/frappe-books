@@ -1,7 +1,7 @@
 <template>
   <FrappeButton
     icon="lucide-search"
-    class="rounded-e-none"
+    variant="ghost"
     :tooltip="t`Search`"
     :aria-label="t`Search`"
     @click="open"
@@ -46,7 +46,7 @@
     <CommandPaletteEmpty>{{ t`No results` }}</CommandPaletteEmpty>
 
     <!-- Footer -->
-    <CommandPaletteFooter class="!py-3">
+    <CommandPaletteFooter>
       <div class="flex min-w-0 w-full flex-col gap-3 text-sm select-none">
         <!-- Group Filters -->
         <div class="flex flex-wrap items-center justify-between gap-2">

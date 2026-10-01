@@ -37,7 +37,7 @@
   >
     <!-- Row Edit Tool bar -->
     <div class="shrink-0 border-b border-outline-gray-1">
-      <div class="flex items-center justify-between px-4 h-row-largest">
+      <div class="flex items-center justify-between px-4 h-16">
         <!-- Close Button -->
         <FrappeButton
           icon="lucide-x"

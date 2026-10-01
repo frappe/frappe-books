@@ -6,7 +6,7 @@
       font-semibold
       flex
       justify-between
-      h-row-large
+      h-14
       items-center
       flex-shrink-0
     "

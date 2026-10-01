@@ -33,7 +33,7 @@
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Quick edit Tool bar -->
-    <div class="flex h-row-largest shrink-0 items-center justify-between px-4">
+    <div class="flex h-16 shrink-0 items-center justify-between px-4">
       <!-- Close Button  -->
       <FrappeButton
         icon="lucide-x"

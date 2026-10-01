@@ -64,7 +64,7 @@
     :required="isRequired"
     :size="frappeSize"
     :variant="frappeVariant"
-    class="books-autocomplete min-w-0"
+    class="min-w-0"
     :class="controlClasses"
     :style="containerStyles"
     @focus="onComboboxFocus"
@@ -424,16 +424,3 @@ export default {
   },
 };
 </script>
-
-<style>
-/* Match the vertical inset of 24px actions in 32px/28px controls, including the border. */
-.books-autocomplete[data-slot='trigger'][data-size='md'],
-.books-autocomplete [data-slot='trigger'][data-size='md'] {
-  padding-inline-end: 3px;
-}
-
-.books-autocomplete[data-slot='trigger'][data-size='sm'],
-.books-autocomplete [data-slot='trigger'][data-size='sm'] {
-  padding-inline-end: 1px;
-}
-</style>

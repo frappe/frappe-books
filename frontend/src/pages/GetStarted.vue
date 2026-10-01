@@ -50,7 +50,6 @@
               >
                 <FrappeButton
                   v-if="item.action"
-                  class="leading-tight text-base"
                   variant="solid"
                   @click="handleAction(item)"
                 >
@@ -58,7 +57,6 @@
                 </FrappeButton>
                 <FrappeButton
                   v-if="item.documentation"
-                  class="leading-tight text-base"
                   @click="handleDocumentation(item)"
                 >
                   {{ t`Documentation` }}

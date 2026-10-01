@@ -1,11 +1,10 @@
 <template>
-  <div class="flex">
+  <div class="flex gap-1">
     <SearchBar />
     <!-- Back Button -->
     <FrappeButton
       icon="lucide-chevron-left"
-      variant="subtle"
-    class="rounded-none border-x border-outline-gray-1"
+      variant="ghost"
       :disabled="!historyState.back"
       :tooltip="t`Back`"
       :aria-label="t`Back`"
@@ -14,8 +13,7 @@
     <!-- Forward Button -->
     <FrappeButton
       icon="lucide-chevron-right"
-      variant="subtle"
-    class="rounded-s-none"
+      variant="ghost"
       :disabled="!historyState.forward"
       :tooltip="t`Forward`"
       :aria-label="t`Forward`"

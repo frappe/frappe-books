@@ -48,11 +48,6 @@ html {
   justify-content: center;
 }
 
-/* Table rows belong to one continuous surface; rounded-2 rows are for standalone lists. */
-[data-slot='list'][role='table'] [data-slot='list-row'] {
-  border-radius: 0;
-}
-
 input[type='number'] {
   appearance: textfield;
   -moz-appearance: textfield;
@@ -64,91 +59,25 @@ input[type='number']::-webkit-outer-spin-button {
   margin: 0;
 }
 
-.grid {
-  display: grid;
-}
-
-.inline-grid {
-  display: inline-grid;
-}
-
 .flex-center {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.frappe-chart .chart-legend {
-  display: none;
-}
-
 :root {
   --w-form: 800px;
   --w-sidebar: 14rem;
   --w-quick-edit: 22rem;
-
-  /* Row Heights */
-  --h-row-smallest: 2rem;
-  --h-row-small: 2.5rem;
-  --h-row-mid: 3rem;
-  --h-row-large: 3.5rem;
-  --h-row-largest: 4rem;
-  --h-app: 800px;
-}
-
-.backdrop {
-  position: fixed;
-  top: 0px;
-  left: 0px;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(2px);
 }
 
 .w-form {
   width: min(var(--w-form), calc(100% - 2rem));
 }
 
-.w-dialog {
-  width: 24rem;
-}
-
-.w-toast {
-  width: 24rem;
-}
-
 .w-quick-edit {
   width: var(--w-quick-edit);
   flex-shrink: 0;
-}
-
-.h-form {
-  height: 800px;
-}
-
-.h-row-smallest {
-  height: var(--h-row-smallest);
-}
-
-.h-row-small {
-  height: var(--h-row-small);
-}
-
-.h-row-mid {
-  height: var(--h-row-mid);
-}
-
-.h-row-large {
-  height: var(--h-row-large);
-}
-
-.h-row-largest {
-  height: var(--h-row-largest);
-}
-
-.w-sidebar {
-  width: var(--w-sidebar);
 }
 
 /*
@@ -182,8 +111,3 @@ input[type='number']::-webkit-outer-spin-button {
   transform: rotate(180deg);
 }
 
-.pill {
-  @apply py-0.5 px-1.5 rounded-4  text-xs;
-  width: fit-content;
-  height: fit-content;
-}

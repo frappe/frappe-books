@@ -137,6 +137,23 @@ class IntegrationTestUnits(IntegrationTestCase):
 		saved = frappe.get_doc("Books Sales Invoice", invoice["name"]).items[0]
 		self.assertEqual(saved.transfer_rate, 40)
 
+	def test_a_manual_rate_sent_per_transfer_unit_sets_the_rate(self):
+		party = make_party(make_account("Unit Receivable", account_type="Receivable").name).name
+		row = {"item": self.item.name, "transfer_unit": self.box, "transfer_quantity": 2, "is_manual_rate": 1}
+		values = {"doctype": "Books Sales Invoice", "party": party, "date": frappe.utils.now_datetime()}
+		# /books leaves the rate out when the user types the rate per box.
+		previewed = frappe.get_doc({**values, "items": [{**row, "transfer_rate": 100}]})
+		previewed.preview()
+		saved = insert({**values, "items": [{**row, "transfer_rate": 100}]})["items"][0]
+		for result in (previewed.items[0].as_dict(), saved):
+			self.assertEqual(
+				(round(result["rate"], 9), result["transfer_rate"], result["amount"]), (8.333333333, 100, 200)
+			)
+
+		# A sent rate wins over a rate per box sent with it.
+		saved = insert({**values, "items": [{**row, "rate": 10, "transfer_rate": 999}]})["items"][0]
+		self.assertEqual((saved["rate"], saved["transfer_rate"]), (10, 120))
+
 	def test_row_unit_must_be_a_unit_of_the_item(self):
 		crate = make_uom("Crate")
 		movement = self._receipt({"transfer_unit": crate, "unit_conversion_factor": 6})

@@ -1,3 +1,4 @@
+import { escapeRegExp } from 'lodash';
 import { createApp, h, reactive, ref } from 'vue';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import { fyo } from 'src/initFyo';
@@ -40,6 +41,8 @@ async function mount() {
       ...Item.presentation.fields,
       customChoice: {
         optionLabels: { 'code-one': 'First label', 'code-two': 'Second label' },
+        // A read-only field filters lists only when it says so.
+        filter: true,
       },
     },
   };
@@ -72,9 +75,10 @@ async function mount() {
   const getSchemaName = (doctype: string) => toSchemaName(doctype) ?? doctype;
   await loadFrappeFixture(
     (path, body, params) => {
-      // The server's link search matches the typed letters in order.
+      // The server's link search takes `%` as any text, so typed letters match in order.
       if (path.endsWith('frappe.desk.search.search_link')) {
-        const pattern = new RegExp([...body.txt.toLowerCase()].join('.*'));
+        const words = body.txt.toLowerCase().split('%').map(escapeRegExp);
+        const pattern = new RegExp(words.join('.*'));
         const rows = lookupRows(getSchemaName(body.doctype));
         const found = rows.filter(({ name }) =>
           pattern.test(name.toLowerCase())

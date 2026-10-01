@@ -18,42 +18,49 @@
         />
       </div>
 
-      <div
-        v-for="row in sinvDoc.items ?? []"
-        :key="row.name"
-        class="flex items-center gap-3 border-t border-outline-gray-1 px-4 py-2.5"
-      >
-        <button
-          type="button"
-          class="flex min-w-0 flex-1 flex-col gap-1.5 text-start"
-          :disabled="!!row.is_free_item"
-          @click="$emit('edit', row)"
+      <!-- Rows hold a stepper, so a stretched button under it opens the row. -->
+      <FrappeList class="list-row-px-4" :columns="['minmax(0,1fr)', 'auto']">
+        <FrappeListRow
+          v-for="row in sinvDoc.items ?? []"
+          :key="row.name"
+          class="py-2.5"
         >
-          <span class="truncate text-md-medium text-ink-gray-9">
-            {{ row.item }}
-          </span>
-          <span class="truncate text-sm tabular-nums text-ink-gray-5">
-            {{ getRowMeta(row) }}
-          </span>
-        </button>
-        <MobileStepper
-          v-if="!row.is_free_item"
-          class="w-32 shrink-0"
-          removable
-          :min="1"
-          :value="getQuantity(row)"
-          :df="{
-            fieldname: quantityField,
-            fieldtype: 'Float',
-            label: t`Quantity of ${row.item ?? ''}`,
-          }"
-          @change="(quantity: number) => setQuantity(row, quantity)"
-          @remove="row.parentdoc?.remove('items', row.idx as number)"
-        />
-        <span v-else class="text-md tabular-nums text-ink-gray-7">
-          {{ getQuantity(row) }}
-        </span>
-      </div>
+          <FrappeListCell>
+            <button
+              type="button"
+              class="absolute inset-0"
+              :aria-label="row.item"
+              :disabled="!!row.is_free_item"
+              @click="$emit('edit', row)"
+            />
+            <div class="min-w-0">
+              <div class="truncate text-lg text-ink-gray-8">{{ row.item }}</div>
+              <div class="mt-0.5 truncate text-md tabular-nums text-ink-gray-5">
+                {{ getRowMeta(row) }}
+              </div>
+            </div>
+          </FrappeListCell>
+          <FrappeListCell class="justify-end">
+            <MobileStepper
+              v-if="!row.is_free_item"
+              class="relative w-32"
+              removable
+              :min="1"
+              :value="getQuantity(row)"
+              :df="{
+                fieldname: quantityField,
+                fieldtype: 'Float',
+                label: t`Quantity of ${row.item ?? ''}`,
+              }"
+              @change="(quantity: number) => setQuantity(row, quantity)"
+              @remove="row.parentdoc?.remove('items', row.idx as number)"
+            />
+            <span v-else class="text-lg tabular-nums text-ink-gray-7">
+              {{ getQuantity(row) }}
+            </span>
+          </FrappeListCell>
+        </FrappeListRow>
+      </FrappeList>
 
       <dl
         class="flex flex-col gap-2 border-t border-outline-gray-1 px-4 py-3 text-md tabular-nums"
@@ -97,6 +104,11 @@ import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
 } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';

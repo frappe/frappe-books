@@ -29,6 +29,13 @@ export class POSClosingShift extends FrappeDoc {
   static override presentation = {
     label: 'POS Closing Shift',
     fields: withoutCreate(['opening_shift']),
+    fileFields: [
+      'name',
+      'closing_date',
+      'closing_cash',
+      'closing_amounts',
+      'opening_shift',
+    ],
   };
   static override rowModels = {
     closing_cash: ClosingCash,

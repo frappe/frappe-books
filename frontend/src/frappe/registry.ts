@@ -52,6 +52,23 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
     .filter((field): field is Field => !!field);
 }
 
+/**
+ * The fields of export and import files: the schema's `fileFields` in their
+ * order, then its custom and meta fields; else all its fields.
+ */
+export function getFileFields(schemaName: string): Field[] {
+  const { fields, fileFields } = getSchema(schemaName)!;
+  if (!fileFields) {
+    return fields;
+  }
+
+  const listed = getFields(schemaName, fileFields);
+  const rest = fields.filter(
+    (field) => (field.isCustom || field.meta) && !listed.includes(field)
+  );
+  return [...listed, ...rest];
+}
+
 /** The fields list and global search match besides the name. */
 export function getSearchFields(schemaName: string): string[] {
   const { search_fields = '' } = getDocType(schemaName).meta;

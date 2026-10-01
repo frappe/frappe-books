@@ -29,6 +29,11 @@ export interface Presentation {
   linkDisplayField?: string;
   /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
   tableFields?: string[];
+  /**
+   * The fields of list exports and import templates, in Books' order, where
+   * it differs from the DocType's; fields the server fills are left out.
+   */
+  fileFields?: string[];
 }
 
 /**
@@ -100,6 +105,7 @@ export function toSchema(
     quickEditFields: presentation.quickEditFields,
     linkDisplayField: presentation.linkDisplayField,
     create: presentation.create,
+    fileFields: presentation.fileFields,
     tableFields:
       presentation.tableFields ??
       meta.fields

@@ -7,6 +7,18 @@ export class StockLedgerEntry extends FrappeDoc {
   static override presentation = {
     label: 'Stock Ledger Entry',
     nameField: { label: 'Entry No.' },
+    fileFields: [
+      'name',
+      'date',
+      'location',
+      'batch',
+      'serial_number',
+      'item',
+      'rate',
+      'quantity',
+      'reference_type',
+      'reference_name',
+    ],
   };
 
   static override getListViewSettings(): ListViewSettings {

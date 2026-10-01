@@ -10,6 +10,21 @@ export const transferLinks = withoutCreate([
   'return_against',
 ]);
 
+/** The fields of a shipment's or purchase receipt's files, as Books ordered them. */
+export const transferFileFields = [
+  'name',
+  'number_series',
+  'party',
+  'date',
+  'items',
+  'grand_total',
+  'terms',
+  'attachment',
+  'back_reference',
+  'return_against',
+  'status',
+];
+
 /**
  * A shipment or purchase receipt, served by Frappe. Its `preview` fills the
  * number series, terms, row units, rates, locations and the grand total.

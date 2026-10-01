@@ -66,6 +66,31 @@ export class InvoiceItem extends FrappeDoc {
     ],
     tableFields: ['item', 'tax', 'qty', 'rate', 'amount'],
     fields: withoutCreate(['transfer_unit', 'unit', 'account']),
+    // Without `qty`: the server sets it from the quantity.
+    fileFields: [
+      'item',
+      'item_code',
+      'description',
+      'rate',
+      'transfer_unit',
+      'transfer_quantity',
+      'unit',
+      'batch',
+      'serial_number',
+      'quantity',
+      'unit_conversion_factor',
+      'account',
+      'tax',
+      'amount',
+      'set_item_discount_amount',
+      'item_discount_amount',
+      'item_discount_percent',
+      'item_discounted_total',
+      'item_taxed_total',
+      'hsn_code',
+      'stock_not_transferred',
+      'is_manual_rate',
+    ],
   };
   // The server prices the row and derives the other quantities again.
   static override refills = {
@@ -261,6 +286,9 @@ export class SalesQuoteItem extends InvoiceItem {
     ...InvoiceItem.presentation,
     label: 'Sales Quote Item',
     quickEditFields: InvoiceItem.presentation.quickEditFields.filter(
+      (fieldname) => fieldname !== 'serial_number'
+    ),
+    fileFields: InvoiceItem.presentation.fileFields.filter(
       (fieldname) => fieldname !== 'serial_number'
     ),
   };

@@ -35,6 +35,15 @@ export class StockMovement extends FrappeDoc {
         },
       },
     },
+    fileFields: [
+      'name',
+      'number_series',
+      'movement_type',
+      'date',
+      'items',
+      'amount',
+      'status',
+    ],
   };
   static override previewMethod = 'preview';
   static override rowModels = { items: StockMovementItem };

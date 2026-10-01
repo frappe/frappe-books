@@ -15,7 +15,7 @@ import {
   TargetField,
 } from 'schemas/types';
 import { getDocType } from 'src/frappe/doctypes';
-import { getSchema } from 'src/frappe/registry';
+import { getFileFields, getSchema } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
 import { generateCSV, parseCSV } from 'utils/csvParser';
 import { getValueMapFromList } from 'utils/index';
@@ -629,7 +629,7 @@ function getTemplateFields(schemaName: string): TemplateField[] {
   ];
   while (schemas.length) {
     const { schema, parentSchemaChildField } = schemas.pop()!;
-    for (const field of schema.fields) {
+    for (const field of getFileFields(schema.name)) {
       if (shouldSkipField(field, schema)) {
         continue;
       }

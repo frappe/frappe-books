@@ -123,6 +123,7 @@ export interface Schema {
   tableFields?: string[]         // Used for displaying childTableFields
   isSubmittable?: boolean;       // For transactional types, values considered only after submit
   quickEditFields?: string[];    // Used to get fields for the quickEditForm
+  fileFields?: string[];         // Fields of export and import files, in order
   linkDisplayField?:string;      // Display field if inline editable
   create?: boolean               // Whether the user can create an entry from the ListView
   naming?: Naming;               // Used for assigning name, default is 'random' else 'numberSeries' if present

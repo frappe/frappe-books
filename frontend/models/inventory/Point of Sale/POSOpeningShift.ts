@@ -24,7 +24,10 @@ export class OpeningAmounts extends FrappeDoc {
 /** Books Pos Opening Shift, served by Frappe. */
 export class POSOpeningShift extends FrappeDoc {
   static override doctype = 'Books Pos Opening Shift';
-  static override presentation = { label: 'POS Opening Shift' };
+  static override presentation = {
+    label: 'POS Opening Shift',
+    fileFields: ['name', 'opening_date', 'opening_cash', 'opening_amounts'],
+  };
   static override rowModels = {
     opening_cash: OpeningCash,
     opening_amounts: OpeningAmounts,

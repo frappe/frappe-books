@@ -19,6 +19,18 @@ export class JournalEntry extends FrappeDoc {
   static override presentation = {
     label: 'Journal Entry',
     nameField: { label: 'Entry No' },
+    fileFields: [
+      'name',
+      'number_series',
+      'entry_type',
+      'posting_date',
+      'accounts',
+      'reference_number',
+      'reference_date',
+      'user_remark',
+      'attachment',
+      'status',
+    ],
   };
   static override previewMethod = 'preview';
   static override rowModels = { accounts: JournalEntryAccount };

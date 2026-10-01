@@ -4,11 +4,7 @@
       <template #mobile>
         <MobileCreateMenu />
       </template>
-      <PeriodSelector
-        :value="period"
-        :options="['This Year', 'This Quarter', 'This Month', 'YTD']"
-        @change="(value) => (period = value)"
-      />
+      <PeriodSelector :value="period" @change="(value) => (period = value)" />
     </PageHeader>
 
     <!-- Phones scroll in the shell. -->

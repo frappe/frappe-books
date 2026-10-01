@@ -19,8 +19,6 @@
     v-else
     :model-value="value"
     :options="periodOptions"
-    size="md"
-    variant="subtle"
     side="bottom"
     align="end"
     @update:model-value="selectOption"

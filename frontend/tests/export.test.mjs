@@ -5,6 +5,7 @@ import { loadFrappeModels } from './helpers/frappeModels.mjs';
 import {
   frappeModels,
   getCsvExportData,
+  getDocType,
   getExportFields,
   getExportTableFields,
   getJsonExportData,
@@ -42,6 +43,21 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
   assert.equal(items.target, 'SalesInvoiceItem');
   assert.ok(items.fields.some(({ fieldname }) => fieldname === 'item'));
   assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'name'));
+});
+
+test('every exported table is headed by the label of its rows, not their doctype', () => {
+  const lists = Object.keys(frappeModels).filter(
+    (schemaName) => !getDocType(schemaName).meta.issingle
+  );
+  const doctypeLabels = lists.flatMap((schemaName) =>
+    Object.values(getDocType(schemaName).tables)
+      .filter(({ doctype, schema }) => schema.label === doctype)
+      .map(({ doctype }) => `${schemaName}: ${doctype}`)
+  );
+
+  assert.deepEqual(doctypeLabels, []);
+  assert.equal(getSchema('TaxDetail').label, 'Tax Detail');
+  assert.equal(getSchema('UOMConversionItem').label, 'UOM Conversion Item');
 });
 
 test('a list exports from the framework a page at a time, in list order', async () => {

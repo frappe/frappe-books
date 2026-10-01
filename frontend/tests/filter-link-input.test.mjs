@@ -29,12 +29,8 @@ globalThis.window = {
 };
 globalThis.fetch = async (url, { body } = {}) => {
   const path = decodeURIComponent(url);
-  if (path.endsWith('getdoctype')) {
-    return Response.json({ docs: [taxMeta] });
-  }
-
-  if (path.startsWith('/api/v2/document/Books Custom Form')) {
-    return Response.json({ data: [] });
+  if (path.endsWith('get_books_meta')) {
+    return Response.json({ message: { metas: [taxMeta], placements: {} } });
   }
 
   const args = JSON.parse(body);

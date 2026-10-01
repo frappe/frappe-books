@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getSchemas } from './helpers/accounting.mjs';
-import { getMetaBundle, mapping } from './helpers/doctypes.mjs';
+import { getBooksMeta, mapping } from './helpers/doctypes.mjs';
 import {
   frappeModels,
   getDocType,
@@ -12,8 +12,8 @@ import {
 } from './helpers/frappe.mjs';
 
 stubFrappe(({ path, body }) =>
-  path.endsWith('getdoctype')
-    ? { docs: getMetaBundle(body.doctype) }
+  path.endsWith('get_books_meta')
+    ? { message: getBooksMeta(body.doctypes) }
     : { data: [] }
 );
 registerFrappeModels(frappeModels);

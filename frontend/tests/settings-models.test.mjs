@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { getMetaBundle } from './helpers/doctypes.mjs';
+import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
   evaluateHidden,
   evaluateReadOnly,
@@ -21,8 +21,8 @@ import {
 } from './helpers/models.mjs';
 
 stubFrappe(({ path, body }) =>
-  path.endsWith('getdoctype')
-    ? { docs: getMetaBundle(body.doctype) }
+  path.endsWith('get_books_meta')
+    ? { message: getBooksMeta(body.doctypes) }
     : { data: [] }
 );
 registerFrappeModels(frappeModels);

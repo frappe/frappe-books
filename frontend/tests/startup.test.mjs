@@ -1,43 +1,38 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
-  Fyo,
-  FrappeDatabaseDemux,
-  fieldProperties,
+  frappeModels,
+  getSchema,
+  loadFrappeDocTypes,
+  registerFrappeModels,
   setLanguageMapOnTranslationString,
-  useTranslations,
-} from './helpers/accounting.mjs';
+  stubFrappe,
+} from './helpers/frappe.mjs';
 
-test('startup builds one translated schema map for a non-English language', async () => {
-  const calls = [];
-  class Demux extends FrappeDatabaseDemux {
-    call(method, schemaName) {
-      calls.push([method, schemaName]);
-      return method === 'get' ? {} : [];
-    }
-    async getFieldProperties() {
-      calls.push(['getFieldProperties']);
-      return fieldProperties;
-    }
-  }
-  globalThis.window = { frappe: { boot: { books: { country_code: '-' } } } };
-  useTranslations({ Date: 'Datum' });
+test('startup loads every schema in one request, translated for a non-English language', async () => {
+  const requests = stubFrappe(({ body }) => ({
+    message: getBooksMeta(body.doctypes),
+  }));
+  setLanguageMapOnTranslationString({ Date: { translation: 'Datum' } });
   try {
-    const fyo = new Fyo({ DatabaseDemux: Demux });
-    await fyo.db.connect('-');
-    await fyo.initializeAndRegister();
-
-    const field = fyo.getField('SalesInvoice', 'date');
-    assert.equal(field.label, 'Datum');
-    assert.ok(Object.isFrozen(field));
-    const customFieldCalls = calls.filter(([, name]) => name === 'CustomField');
-    assert.equal(customFieldCalls.length, 1);
-    const propertyCalls = calls.filter(
-      ([method]) => method === 'getFieldProperties'
-    );
-    assert.equal(propertyCalls.length, 1);
+    registerFrappeModels(frappeModels);
+    await loadFrappeDocTypes();
   } finally {
     setLanguageMapOnTranslationString(undefined);
-    delete globalThis.window;
   }
+
+  assert.deepEqual(
+    requests.map(({ path }) => path),
+    ['/api/method/frappe_books.meta.get_books_meta']
+  );
+  assert.deepEqual(
+    requests[0].body.doctypes,
+    Object.values(frappeModels).map(({ doctype }) => doctype)
+  );
+  const date = getSchema('SalesInvoice').fields.find(
+    (field) => field.fieldname === 'date'
+  );
+  assert.equal(date.label, 'Datum');
+  assert.equal(getSchema('SalesInvoiceItem').isChild, true);
 });

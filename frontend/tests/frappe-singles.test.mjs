@@ -53,7 +53,9 @@ class TestSettings extends FrappeDoc {
 }
 
 stubFrappe(({ path }) =>
-  path.endsWith('getdoctype') ? { docs: [settingsMeta] } : { data: [] }
+  path.endsWith('get_books_meta')
+    ? { message: { metas: [settingsMeta], placements: {} } }
+    : { data: [] }
 );
 registerFrappeModels({ TestSettings });
 await loadFrappeDocTypes();

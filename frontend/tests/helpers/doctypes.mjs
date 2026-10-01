@@ -19,6 +19,13 @@ export function getMetaBundle(name) {
   return [meta, ...tables];
 }
 
+/** What frappe_books.meta.get_books_meta answers for the doctypes, from the DocType files. */
+export function getBooksMeta(doctypes, placements = {}) {
+  const metas = doctypes.flatMap(getMetaBundle);
+  const byName = new Map(metas.map((meta) => [meta.name, meta]));
+  return { metas: [...byName.values()], placements };
+}
+
 function getMeta(name) {
   const meta = [...doctypes, currencyMeta, countryMeta, printFormatMeta].find(
     (meta) => meta.name === name
@@ -170,10 +177,7 @@ function readJson(url) {
  * The field properties the server sends for the DocType files, and schemas built with them.
  * A custom field's `docfield` stands for the properties of its Custom Field.
  */
-export function withFieldProperties({
-  getSchemas,
-  getDoctypeFieldProperties,
-}) {
+export function withFieldProperties({ getSchemas, getDoctypeFieldProperties }) {
   const fieldProperties = getDoctypeFieldProperties(doctypes, mapping);
   return {
     fieldProperties,

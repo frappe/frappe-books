@@ -4,6 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.boot import extend_bootinfo
+from frappe_books.meta import get_books_meta
 from frappe_books.permissions import has_app_permission
 from frappe_books.regional import INDIAN_STATES
 from frappe_books.tests.accounting import make_account
@@ -32,6 +33,17 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 		bootinfo = frappe._dict()
 		extend_bootinfo(bootinfo)
 		self.assertEqual(bootinfo.books["indian_states"], INDIAN_STATES)
+
+	def test_books_meta_holds_each_doctype_and_its_tables_once(self):
+		with self.set_user(BOOKS_USER):
+			metas = get_books_meta(["Books Sales Invoice", "Books Purchase Invoice"])["metas"]
+
+		names = [meta["name"] for meta in metas]
+		self.assertEqual(len(names), len(set(names)))
+		for doctype in ("Books Sales Invoice", "Books Sales Invoice Item", "Books Tax Summary"):
+			self.assertIn(doctype, names)
+		invoice = next(meta for meta in metas if meta["name"] == "Books Sales Invoice")
+		self.assertIn("party", [field["fieldname"] for field in invoice["fields"]])
 
 	def test_boot_country_code_comes_from_the_system_settings_country(self):
 		bootinfo = frappe._dict()

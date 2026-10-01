@@ -56,8 +56,8 @@ const rates = { Pen: 10, Ink: 20 };
 function stubServer() {
   const previews = [];
   const requests = stubFrappe(({ path, body }) => {
-    if (path.endsWith('getdoctype')) {
-      return { docs: [moveMeta, rowMeta] };
+    if (path.endsWith('get_books_meta')) {
+      return { message: { metas: [moveMeta, rowMeta], placements: {} } };
     }
 
     if (!path.endsWith('run_doc_method')) {

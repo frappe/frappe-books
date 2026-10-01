@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { before, test } from 'node:test';
-import { getMetaBundle } from './helpers/doctypes.mjs';
+import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
   frappeModels,
   fyo,
@@ -10,36 +10,31 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 
-// Custom fields by doctype, and where each Custom Form places them.
+// Custom fields by doctype, and where each Custom Form places them by fieldname.
 const customFields = {};
 const placements = {};
 
-/** Answers the meta of each doctype with its custom fields, and its Custom Form's placements. */
+/** Answers the meta of each doctype with its custom fields, and the Custom Forms' placements. */
 function serveCustomizedMeta() {
-  stubFrappe(({ path, body, params }) => {
-    if (path.endsWith('getdoctype')) {
-      return {
-        docs: getMetaBundle(body.doctype).map((meta) => ({
-          ...meta,
-          fields: [...meta.fields, ...(customFields[meta.name] ?? [])],
-        })),
-      };
-    }
-
-    const [[, , formName]] = params.filters;
-    const rows = placements[formName];
-    return { data: rows ? [{ custom_fields: rows }] : [] };
+  stubFrappe(({ body }) => {
+    const { metas } = getBooksMeta(body.doctypes);
+    const customized = metas.map((meta) => ({
+      ...meta,
+      fields: [...meta.fields, ...(customFields[meta.name] ?? [])],
+    }));
+    return { message: { metas: customized, placements } };
   });
 }
 
 /** Saves a customization of a doctype, as its Custom Form's save announces it. */
 async function customize(doctype, fields) {
   customFields[doctype] = fields.map(({ docfield }) => docfield);
-  placements[doctype] = fields.map(({ fieldname }) => ({
-    fieldname,
-    section: 'Default',
-    tab: 'Custom',
-  }));
+  placements[doctype] = Object.fromEntries(
+    fields.map(({ docfield }) => [
+      docfield.fieldname,
+      { section: 'Default', tab: 'Custom' },
+    ])
+  );
   await fyo.doc.observer.trigger('sync:CustomForm', doctype);
 }
 

@@ -1,4 +1,4 @@
-import { getMetaBundle } from './doctypes.mjs';
+import { getBooksMeta } from './doctypes.mjs';
 import {
   getModel,
   getSchema,
@@ -14,8 +14,8 @@ import {
  */
 export async function loadFrappeModels(models, respond = () => ({ data: [] })) {
   const requests = stubFrappe((request) =>
-    request.path.endsWith('getdoctype')
-      ? { docs: getMetaBundle(request.body.doctype) }
+    request.path.endsWith('get_books_meta')
+      ? { message: getBooksMeta(request.body.doctypes) }
       : respond(request)
   );
   registerFrappeModels(models);

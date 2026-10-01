@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getSchemas } from './helpers/accounting.mjs';
-import { getMetaBundle } from './helpers/doctypes.mjs';
+import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
   evaluateHidden,
   evaluateReadOnly,
@@ -25,7 +25,7 @@ const rowSchemas = {
   PurchaseReceipt: 'PurchaseReceiptItem',
 };
 stubFrappe(({ path, body }) =>
-  path.endsWith('getdoctype') ? { docs: getMetaBundle(body.doctype) } : { data: [] }
+  path.endsWith('get_books_meta') ? { message: getBooksMeta(body.doctypes) } : { data: [] }
 );
 registerFrappeModels(
   Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]]))

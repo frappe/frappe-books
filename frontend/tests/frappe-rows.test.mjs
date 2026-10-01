@@ -52,7 +52,9 @@ class Voucher extends FrappeDoc {
 }
 
 stubFrappe(({ path }) =>
-  path.endsWith('getdoctype') ? { docs: [voucherMeta, lineMeta] } : { data: [] }
+  path.endsWith('get_books_meta')
+    ? { message: { metas: [voucherMeta, lineMeta], placements: {} } }
+    : { data: [] }
 );
 registerFrappeModels({ Voucher });
 await loadFrappeDocTypes();

@@ -44,8 +44,8 @@ class Region extends FrappeDoc {
 }
 
 stubFrappe(({ path, method }) => {
-  if (path.endsWith('getdoctype')) {
-    return { docs: [regionMeta] };
+  if (path.endsWith('get_books_meta')) {
+    return { message: { metas: [regionMeta], placements: {} } };
   }
 
   if (method === 'GET' && path === '/api/v2/document/Books Region/North') {

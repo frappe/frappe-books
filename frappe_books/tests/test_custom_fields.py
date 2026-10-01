@@ -13,6 +13,7 @@ from frappe.api.v1 import update_doc
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.customization import camel_case
+from frappe_books.meta import get_books_meta
 from frappe_books.tests.accounting import ensure_user, unique_name
 
 COLUMN = "custom_books_hostedbridgetestvalue"
@@ -58,6 +59,19 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 		frappe.get_doc({"doctype": "Books Uom", "name": unit_name, COLUMN: "persisted"}).insert()
 
 		self.assertEqual(frappe.db.get_value("Books Uom", unit_name, COLUMN), "persisted")
+
+	def test_books_meta_places_custom_fields_as_their_form_says(self):
+		_custom_form("Books Uom", [FIELD]).insert()
+
+		books_meta = get_books_meta(["Books Uom"])
+
+		self.assertEqual(
+			books_meta["placements"], {"Books Uom": {COLUMN: {"section": "Default", "tab": "Custom"}}}
+		)
+		(unit,) = books_meta["metas"]
+		self.assertIn(COLUMN, [field["fieldname"] for field in unit["fields"]])
+		with self.set_user(ensure_user("books-meta-outsider@example.com", "Translator")):
+			self.assertEqual(get_books_meta(["Books Uom"])["placements"], {})
 
 	def test_system_manager_removes_fields_without_switching_user(self):
 		_make_system_manager()

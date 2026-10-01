@@ -1,5 +1,5 @@
 import { fieldProperties, getSchemas } from './accounting.mjs';
-import { getMetaBundle, mapping } from './doctypes.mjs';
+import { getBooksMeta, mapping } from './doctypes.mjs';
 import {
   frappeModels,
   loadFrappeDocTypes,
@@ -13,8 +13,8 @@ export const bridgeSchemas = getSchemas('in', [], fieldProperties);
 /** Loads every Frappe-backed model with its DocType files, as the app does at startup. */
 export async function loadFrappeModels() {
   stubFrappe(({ path, body }) =>
-    path.endsWith('getdoctype')
-      ? { docs: getMetaBundle(body.doctype) }
+    path.endsWith('get_books_meta')
+      ? { message: getBooksMeta(body.doctypes) }
       : { data: [] }
   );
   registerFrappeModels(frappeModels);

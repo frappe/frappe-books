@@ -94,8 +94,8 @@ class Bill extends FrappeDoc {
 }
 
 stubFrappe(({ path }) =>
-  path.endsWith('getdoctype')
-    ? { docs: [billMeta, lineMeta, noteMeta] }
+  path.endsWith('get_books_meta')
+    ? { message: { metas: [billMeta, lineMeta, noteMeta], placements: {} } }
     : { data: [] }
 );
 registerFrappeModels({ Bill });

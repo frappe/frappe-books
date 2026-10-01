@@ -25,6 +25,7 @@ await build({
       export { getModel, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
+      export { setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getMissingMandatoryFields } from './fyo/model/helpers';
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
@@ -113,6 +114,7 @@ export const {
   toSchemaName,
   toSchema,
   fyo,
+  setLanguageMapOnTranslationString,
   getMissingMandatoryFields,
   evaluateHidden,
   evaluateReadOnly,
@@ -354,19 +356,18 @@ export async function loadTestDocTypes() {
     static presentation = { label: 'Account' };
   }
 
-  stubFrappe(({ path, params, body }) => {
-    if (path.endsWith('getdoctype')) {
-      return { docs: bundles[body.doctype] };
-    }
-
-    if (path === '/api/v2/document/Books Custom Form') {
-      const rows = [
-        { fieldname: 'Shelf', section: 'Storage', tab: 'Custom' },
-        { fieldname: 'Colour', section: 'Extra', tab: null },
-      ];
-      const isItem = params.filters[0][2] === 'Books Item';
-      return { data: isItem ? [{ custom_fields: rows }] : [] };
-    }
+  stubFrappe(({ body }) => {
+    const metas = body.doctypes.flatMap((doctype) => bundles[doctype]);
+    const item = {
+      custom_books_shelf: { section: 'Storage', tab: 'Custom' },
+      custom_books_colour: { section: 'Extra', tab: null },
+    };
+    return {
+      message: {
+        metas: [...new Set(metas)],
+        placements: { 'Books Item': item },
+      },
+    };
   });
   registerFrappeModels({
     Account: TestAccount,

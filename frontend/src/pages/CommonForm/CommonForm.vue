@@ -99,7 +99,6 @@
         <CommonFormSection
           v-for="([n, fields], idx) in activeGroup.entries()"
           :key="n + idx"
-          ref="section"
           class="py-5"
           :show-title="activeGroup.size > 1 && n !== t`Default`"
           :title="n"

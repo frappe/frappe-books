@@ -3,10 +3,8 @@
     v-if="isVisible"
     class="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-surface-base px-10 pb-24 text-center"
   >
-    <span
-      class="flex size-12 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-7"
-    >
-      <span class="lucide-wifi-off size-[22px]" aria-hidden="true" />
+    <span class="rounded-full bg-surface-gray-2 p-3 text-ink-gray-5">
+      <span class="lucide-wifi-off size-6" aria-hidden="true" />
     </span>
     <h2 class="mt-1 text-3xl-semibold text-ink-gray-9">
       {{ t`No connection` }}

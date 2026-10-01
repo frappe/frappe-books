@@ -29,7 +29,7 @@
         >
           <span class="w-6 font-semibold text-ink-gray-5">{{ index + 1 }}</span>
           <span class="flex-1">{{ step.label }}</span>
-          <span :class="step.icon" class="size-[18px]" aria-hidden="true" />
+          <span :class="step.icon" class="size-5" aria-hidden="true" />
         </li>
       </ol>
       <div class="flex w-full flex-col gap-2 pt-1">

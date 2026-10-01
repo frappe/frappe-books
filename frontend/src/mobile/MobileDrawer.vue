@@ -45,7 +45,7 @@
             >
               <button
                 v-if="group.items"
-                class="flex h-11 w-full items-center gap-2.5 rounded-4 px-2.5 text-start text-md active:bg-surface-gray-3"
+                class="flex h-11 w-full items-center gap-2.5 rounded-4 px-2.5 text-start text-lg active:bg-surface-gray-3"
                 :class="
                   isGroupActive(group) ? 'text-ink-gray-9' : 'text-ink-gray-7'
                 "
@@ -54,7 +54,7 @@
               >
                 <FrappeIcon
                   :icon="group.icon"
-                  class="size-[18px]"
+                  class="size-5"
                   :class="iconClasses(isGroupActive(group))"
                 />
                 <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
@@ -72,13 +72,13 @@
               <RouterLink
                 v-else
                 :to="getSidebarLocation(group)"
-                class="flex h-11 items-center gap-2.5 rounded-4 px-2.5 text-md"
+                class="flex h-11 items-center gap-2.5 rounded-4 px-2.5 text-lg"
                 :class="linkClasses(isGroupActive(group))"
                 @click="close"
               >
                 <FrappeIcon
                   :icon="group.icon"
-                  class="size-[18px]"
+                  class="size-5"
                   :class="iconClasses(isGroupActive(group))"
                 />
                 <span class="min-w-0 flex-1 truncate">{{ group.label }}</span>
@@ -92,7 +92,7 @@
                   v-for="item in group.items"
                   :key="item.name"
                   :to="getSidebarLocation(item)"
-                  class="flex h-10 items-center rounded-4 pe-2.5 ps-[38px] text-base"
+                  class="flex h-10 items-center rounded-4 pe-2.5 ps-10 text-lg"
                   :class="linkClasses(isItemActive(item))"
                   @click="close"
                 >

@@ -75,7 +75,7 @@
       :class="{ 'border-t': rows.length }"
       @click="$emit('add')"
     >
-      <span class="lucide-plus size-[18px]" aria-hidden="true" />
+      <span class="lucide-plus size-5" aria-hidden="true" />
       {{ t`Add Row` }}
     </button>
   </div>

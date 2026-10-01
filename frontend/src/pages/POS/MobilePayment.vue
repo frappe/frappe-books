@@ -36,7 +36,7 @@
           >
             <FrappeIcon
               :icon="methodIcons[method.type ?? 'Cash']"
-              class="size-[18px] shrink-0"
+              class="size-5 shrink-0"
             />
             <span class="min-w-0 flex-1 truncate">{{ method.name }}</span>
             <FrappeIcon
@@ -122,7 +122,7 @@
       >
         <FrappeIcon
           icon="lucide-ticket-percent"
-          class="size-[18px] text-ink-gray-6"
+          class="size-5 text-ink-gray-5"
         />
         <span class="flex-1">{{ t`Apply coupon code` }}</span>
         <span v-if="appliedCouponsCount" class="text-base text-ink-gray-5">

@@ -122,6 +122,21 @@ class IntegrationTestUnits(IntegrationTestCase):
 				saved = invoice["items"][0]
 				self.assertEqual((saved["rate"], saved["transfer_rate"], saved["amount"]), (10, 120, 240))
 
+	def test_invoice_row_rate_per_transfer_unit_is_rounded(self):
+		party = make_party(make_account("Unit Receivable", account_type="Receivable").name).name
+		row = {"item": self.item.name, "transfer_unit": self.box, "transfer_quantity": 1, "rate": 10 / 3}
+		invoice = insert(
+			{
+				"doctype": "Books Sales Invoice",
+				"party": party,
+				"date": frappe.utils.now_datetime(),
+				"items": [row],
+			}
+		)
+		# The saved rate keeps 9 decimals, so 3.333333333 x 12 must still read 40.
+		saved = frappe.get_doc("Books Sales Invoice", invoice["name"]).items[0]
+		self.assertEqual(saved.transfer_rate, 40)
+
 	def test_row_unit_must_be_a_unit_of_the_item(self):
 		movement = self._receipt({"transfer_unit": make_uom("Crate"), "unit_conversion_factor": 6})
 

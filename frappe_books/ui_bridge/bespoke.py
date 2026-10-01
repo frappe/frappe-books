@@ -4,7 +4,6 @@ from typing import Any, Literal
 
 import frappe
 
-from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.inventory.auto_transfer import default_location
 from frappe_books.series import default_series_by_schema
 from frappe_books.ui_bridge.database import system_datetime
@@ -68,17 +67,6 @@ class BooksBespokeQueries:
 		frappe.has_permission(invoice.doctype, "read", throw=True)
 		return default_location(invoice)
 
-	def pos_transacted_amount(self, from_date: str, to_date: str):
-		"""Return the same expected amounts the closing shift stores on the server."""
-		for doctype in ("Books Payment", "Books Sales Invoice"):
-			frappe.has_permission(doctype, ptype="read", throw=True)
-		return transacted_amounts(system_datetime(from_date), system_datetime(to_date))
-
-	def open_pos_shift(self):
-		if not frappe.has_permission("Books Pos Opening Shift", ptype="read"):
-			raise frappe.PermissionError
-		return open_shift_name()
-
 	def linked_entries(self, source_schema: str, name: str):
 		return linked_entries(source_schema, name)
 
@@ -91,8 +79,6 @@ _METHODS = {
 	"getStockQuantity": "stock_quantity",
 	"getStockQuantities": "stock_quantities",
 	"getStockLocation": "stock_location",
-	"getPOSTransactedAmount": "pos_transacted_amount",
-	"getOpenPOSShift": "open_pos_shift",
 	"getLinkedEntries": "linked_entries",
 	"getDefaultNumberSeries": "default_number_series",
 }

@@ -12,7 +12,6 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 from frappe_books.ui_bridge.linked_entries import linked_entries
 
@@ -162,15 +161,6 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(TEST_USER):
 			self.assertEqual(linked_entries("Shipment", original), {"Shipment": [readable_return]})
 			self.assertRaises(frappe.PermissionError, linked_entries, "Shipment", hidden)
-
-	def test_pos_amounts_require_invoice_read(self):
-		def has_permission(doctype, ptype="read", throw=False, **kwargs):
-			if doctype == "Books Sales Invoice":
-				raise frappe.PermissionError
-			return True
-
-		with patch("frappe.has_permission", has_permission), self.assertRaises(frappe.PermissionError):
-			BooksBespokeQueries().call("getPOSTransactedAmount", ["2031-01-01", "2031-01-02"])
 
 	def _make_invoice_as_books_user(self):
 		receivable = make_account("Permission Receivable", account_type="Receivable")

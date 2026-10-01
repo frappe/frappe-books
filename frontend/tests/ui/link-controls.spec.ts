@@ -241,12 +241,23 @@ test('one action opens one dismissible confirmation', async ({ page }) => {
 test('one notification renders once and dismisses on click', async ({
   page,
 }) => {
+  // The POS opens on an open shift; these answers stand in for one.
+  await page.route('**/*.get_open_shift', (route) =>
+    route.fulfill({ json: { message: 'Fixture Shift' } })
+  );
+  await page.route(
+    (url) =>
+      url.pathname.endsWith('/Books%20Pos%20Opening%20Shift/Fixture%20Shift'),
+    (route) =>
+      route.fulfill({
+        json: { data: { name: 'Fixture Shift', docstatus: 1 } },
+      })
+  );
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins
       .find((m: any) => m.computed?.fyo)
       .computed.fyo();
-    fyo.db.getOpenPOSShift = async () => 'Fixture Shift';
     fyo.singles.POSSettings.inventory = 'Stores';
     fyo.singles.POSSettings.cash_account = 'Fixture Cash';
     fyo.singles.POSSettings.write_off_account = 'Fixture Write Off';

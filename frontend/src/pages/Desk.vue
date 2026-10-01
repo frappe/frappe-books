@@ -18,7 +18,6 @@ import { showSidebar } from 'src/utils/refs';
           <component
             :is="Component"
             :key="$route.path"
-            :dark-mode="darkMode"
             class="min-w-0 flex-1"
           />
         </keep-alive>
@@ -33,7 +32,6 @@ import { showSidebar } from 'src/utils/refs';
                 String(route.query.schemaName ?? '') +
                 String(route.query.name ?? '')
               "
-              :dark-mode="darkMode"
             />
           </div>
         </Transition>
@@ -50,9 +48,6 @@ export default defineComponent({
   components: {
     FrappeDesktopShell,
     Sidebar,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
   },
   async mounted() {
     // The viewport can grow while a phone-only page is open.

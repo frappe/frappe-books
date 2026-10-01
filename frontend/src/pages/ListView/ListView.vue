@@ -57,9 +57,8 @@
       <FrappeButton
         v-if="canCreate"
         variant="solid"
-        icon="lucide-plus"
-        :label="t`Create new entry`"
-        :tooltip="t`Create new entry`"
+        icon-left="lucide-plus"
+        :label="t`New`"
         @click="handleMakeNewDoc"
       />
     </PageHeader>

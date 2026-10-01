@@ -1,6 +1,7 @@
 <template>
-  <div
-    class="gap-4 py-3 w-full flex flex-col items-center rounded-t-4 text-ink-gray-9 min-h-0 flex-1 overflow-y-auto custom-scroll custom-scroll-thumb2"
+  <FrappeScrollArea
+    class="w-full min-h-0 flex-1 rounded-t-4 text-ink-gray-9"
+    viewport-class="py-3"
   >
     <!-- Items Grid -->
     <div
@@ -55,18 +56,22 @@
         </div>
       </FrappeButton>
     </div>
-  </div>
+  </FrappeScrollArea>
 </template>
 
 <script lang="ts">
 import { defineComponent, PropType } from 'vue';
-import { Badge as FrappeBadge, Button as FrappeButton } from 'frappe-ui';
+import {
+  Badge as FrappeBadge,
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { getItemInitials } from 'src/utils/pos';
 import { POSItem } from './types';
 
 export default defineComponent({
   name: 'ItemsGrid',
-  components: { FrappeBadge, FrappeButton },
+  components: { FrappeBadge, FrappeButton, FrappeScrollArea },
   emits: ['addItem'],
   props: {
     items: {

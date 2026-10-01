@@ -63,12 +63,16 @@
       </FormHeader>
 
       <!-- Section Container -->
-      <div v-if="doc" class="overflow-auto custom-scroll custom-scroll-thumb1">
+      <FrappeScrollArea
+        v-if="doc"
+        class="min-h-0 flex-1"
+        viewport-class="pb-10"
+      >
         <CommonFormSection
           v-for="([name, fields], idx) in activeGroup.entries()"
           :key="name + idx"
           ref="section"
-          class="p-4"
+          class="px-3 py-4 sm:px-5"
           :class="idx !== 0 && activeGroup.size > 1 ? 'border-t border-outline-gray-1' : ''"
           :show-title="activeGroup.size > 1 && name !== t`Default`"
           :title="name"
@@ -77,12 +81,12 @@
           :errors="errors"
           @value-change="onValueChange"
         />
-      </div>
+      </FrappeScrollArea>
 
       <!-- Tab Bar -->
       <div
         v-if="groupedFields && groupedFields.size > 1"
-        class="sticky bottom-0 mt-auto flex-shrink-0 border-t bg-surface-base p-4 border-outline-gray-1"
+        class="sticky bottom-0 mt-auto flex-shrink-0 border-t border-outline-gray-1 bg-surface-base px-3 py-4 sm:px-5"
       >
         <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
       </div>
@@ -96,6 +100,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import {
   TabButtons as FrappeTabButtons,
   Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
   shellScrollContainer,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
@@ -123,6 +128,7 @@ export default defineComponent({
   components: {
     FormContainer,
     FrappeButton,
+    FrappeScrollArea,
     FormHeader,
     CommonFormSection,
     FrappeTabButtons,

@@ -34,7 +34,7 @@
         v-else-if="appliedCoupons.length"
         :columns="['minmax(0, 1fr)', '2rem']"
         divider="full"
-        class="custom-scroll custom-scroll-thumb2 max-h-40 overflow-y-auto rounded-4 border border-outline-gray-1"
+        class="max-h-40 overflow-y-auto rounded-4 border border-outline-gray-1"
       >
         <FrappeListRows
           :items="appliedCoupons as AppliedCouponCode[]"

@@ -46,12 +46,10 @@
         v-bind="exchangeRateProps"
         @change="setExchangeRate"
       />
-      <p
+      <FrappePageHeaderTitle
         v-if="schema.label && !(canShowBarcode || canShowExchangeRate)"
-        class="text-xl font-semibold items-center text-ink-gray-6"
-      >
-        {{ schema.label }}
-      </p>
+        :title="schema.label"
+      />
     </template>
     <template v-if="hasDoc" #header>
       <FrappeButton
@@ -101,12 +99,16 @@
       </FormHeader>
 
       <!-- Section Container -->
-      <div v-if="hasDoc" class="overflow-auto custom-scroll custom-scroll-thumb1">
+      <FrappeScrollArea
+        v-if="hasDoc"
+        class="min-h-0 flex-1"
+        viewport-class="pb-10"
+      >
         <CommonFormSection
           v-for="([n, fields], idx) in activeGroup.entries()"
           :key="n + idx"
           ref="section"
-          class="p-4"
+          class="px-3 py-4 sm:px-5"
           :class="idx !== 0 && activeGroup.size > 1 ? 'border-t border-outline-gray-1' : ''"
           :show-title="activeGroup.size > 1 && n !== t`Default`"
           :title="n"
@@ -118,12 +120,12 @@
           @value-change="onValueChange"
           @row-change="updateGroupedFields"
         />
-      </div>
+      </FrappeScrollArea>
 
       <!-- Tab Bar -->
       <div
         v-if="groupedFields && groupedFields.size > 1"
-        class="sticky bottom-0 mt-auto flex-shrink-0 border-t bg-surface-base p-4 border-outline-gray-1"
+        class="sticky bottom-0 mt-auto flex-shrink-0 border-t border-outline-gray-1 bg-surface-base px-3 py-4 sm:px-5"
       >
         <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
       </div>
@@ -157,7 +159,12 @@ import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { getMissingMandatoryFields } from 'fyo/model/helpers';
 import { ValidationError } from 'fyo/utils/errors';
-import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
+import {
+  TabButtons as FrappeTabButtons,
+  Button as FrappeButton,
+  PageHeaderTitle as FrappePageHeaderTitle,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import Barcode from 'src/components/Controls/Barcode.vue';
@@ -198,6 +205,8 @@ export default defineComponent({
     FormHeader,
     CommonFormSection,
     FrappeButton,
+    FrappePageHeaderTitle,
+    FrappeScrollArea,
     DropdownWithActions,
     Barcode,
     ExchangeRate,

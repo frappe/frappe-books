@@ -2,7 +2,7 @@
   <div>
     <!-- Title and Period Selector -->
     <div class="flex items-center justify-between">
-      <div class="font-semibold text-base text-ink-gray-9">
+      <div class="text-lg-semibold text-ink-gray-8">
         {{ t`Cashflow` }}
       </div>
     </div>
@@ -50,9 +50,6 @@ export default defineComponent({
     MobileSectionState,
   },
   extends: DashboardChartBase,
-  props: {
-    darkMode: { type: Boolean, default: false },
-  },
   data: () => ({
     data: [] as MonthlyCashflow[],
     hasData: false,

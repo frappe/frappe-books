@@ -72,6 +72,11 @@ export async function showDialog(options: DialogOptions) {
     const detail = Array.isArray(options.detail)
       ? options.detail.join('\n')
       : options.detail;
+    const isDestructive = Boolean(
+      options.destructive ||
+        options.type === 'warning' ||
+        options.type === 'error'
+    );
 
     if (isMobile.value) {
       dialogSheet.value = {
@@ -79,7 +84,7 @@ export async function showDialog(options: DialogOptions) {
         detail,
         actions: getSheetActions(
           preWrappedButtons,
-          options.type,
+          isDestructive,
           settleFromAction
         ),
         dismissible: Boolean(escapeButton),
@@ -88,14 +93,29 @@ export async function showDialog(options: DialogOptions) {
       return;
     }
 
+    // Frappe UI renders `message` as a Vue child, although its public type
+    // currently only declares strings. Passing a VNode lets us retain a
+    // small safe formatting allowlist without using v-html.
+    const message = detail
+      ? (renderSafeRichText(detail) as unknown as string)
+      : undefined;
+
+    if (options.destructive) {
+      const confirmButton = getPrimaryButton(preWrappedButtons);
+      dialog.danger({
+        title: options.title,
+        message,
+        confirmLabel: confirmButton.label,
+        cancelLabel: escapeButton?.label,
+        onConfirm: async () => await settleFromAction(confirmButton),
+        onCancel: settleFromDismiss,
+      });
+      return;
+    }
+
     dialog.confirm({
       title: options.title,
-      // Frappe UI renders `message` as a Vue child, although its public type
-      // currently only declares strings. Passing a VNode lets us retain a
-      // small safe formatting allowlist without using v-html.
-      message: detail
-        ? (renderSafeRichText(detail) as unknown as string)
-        : undefined,
+      message,
       theme: getDialogTheme(options.type),
       actions,
       dismissible: true,
@@ -140,12 +160,19 @@ export function showToast(options: ToastOptions) {
   return toast.info(options.message, toastOptions);
 }
 
+function getPrimaryButton(buttons: DialogButton[]): DialogButton {
+  const button = buttons.find(({ isPrimary }) => isPrimary);
+  if (!button) {
+    throw new Error('A destructive dialog needs a primary button.');
+  }
+  return button;
+}
+
 function getSheetActions(
   buttons: DialogButton[],
-  type: ToastType | undefined,
+  isDestructive: boolean,
   settle: (button: DialogButton) => Promise<void>
 ): DialogSheetAction[] {
-  const isDestructive = type === 'warning' || type === 'error';
   return buttons.map((button) => ({
     label: button.label,
     variant: button.isPrimary ? 'solid' : 'subtle',

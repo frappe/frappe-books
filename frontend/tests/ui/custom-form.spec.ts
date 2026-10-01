@@ -5,7 +5,7 @@ import { useBooksSession } from './helpers/session';
 useBooksSession('/books/list/CustomForm/Customize%20Form');
 
 test('a new custom field is named after its label', async ({ page }) => {
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/CustomForm\//);
 
   const formType = page.getByRole('combobox', { name: 'Form Type' });

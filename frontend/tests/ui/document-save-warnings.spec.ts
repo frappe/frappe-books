@@ -23,7 +23,7 @@ test('a Frappe-served quick edit reports post-save warnings without leaving an u
   });
   // A new unit, opened in a quick edit by the name it is kept under.
   await page.goto('/books/list/UOM');
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/UOM\//);
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;

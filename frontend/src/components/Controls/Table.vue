@@ -24,16 +24,17 @@
     />
 
     <div
-      class="max-w-full overflow-x-auto custom-scroll custom-scroll-thumb1"
+      class="max-w-full overflow-x-auto"
       :class="border ? 'rounded-4 border border-outline-gray-1' : ''"
     >
       <FrappeList
         :columns="listColumns"
         :row-height="rowHeight"
         divider="full"
-        class="list-gap-2 [--list-row-padding-x:0px]"
+        class="list-gap-2 list-row-px-0"
         :style="{ minWidth: minimumWidth }"
       >
+        <!-- frappe-ui headers are one fixed line; field descriptions and long labels wrap here. -->
         <FrappeListHeader v-if="showHeader" class="!h-auto min-h-8 py-1">
           <FrappeListHeaderCell class="justify-center">#</FrappeListHeaderCell>
           <FrappeListHeaderCell
@@ -66,7 +67,7 @@
         <div
           v-if="value"
           :class="{
-            'overflow-x-hidden overflow-y-auto custom-scroll custom-scroll-thumb1':
+            'overflow-x-hidden overflow-y-auto':
               rowsOverflow,
             'overscroll-contain': rowsOverflow,
           }"
@@ -89,7 +90,7 @@
         <!-- Add Row and Row Count -->
         <FrappeListRow
           v-if="canAddRemoveRows"
-          class="border-t border-outline-gray-1 text-ink-gray-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+          class="border-t border-outline-gray-1 text-ink-gray-5"
           @click="addRow"
         >
           <FrappeListCell class="justify-center">

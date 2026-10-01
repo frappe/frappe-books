@@ -8,10 +8,6 @@ const colors = JSON.parse(
   })
 );
 
-const colorNames =
-  'gray|red|orange|yellow|green|teal|blue|indigo|purple|pink|violet|cyan|amber';
-const colorSteps = '25|50|100|200|300|400|500|600|700|800|850|875|890|900';
-
 export default {
   presets: [frappeUIPreset],
   content: [
@@ -20,12 +16,11 @@ export default {
     // Phone layouts name their icons.
     './reports/**/*.ts',
   ],
-  darkMode: 'class',
   safelist: [
-    {
-      pattern: new RegExp(`^(bg|text|border)-(${colorNames})-(${colorSteps})$`),
-      variants: ['dark', 'hover', 'focus', 'focus-within', 'group-hover'],
-    },
+    // Dashboard invoice bars build their colour classes at runtime.
+    { pattern: /^bg-(blue|pink)-(200|500|600|700)$/ },
+    { pattern: /^bg-gray-(200|800)$/ },
+    // Report print cells align with `text-${align}`.
     'text-start',
     'text-center',
     'text-end',
@@ -34,45 +29,9 @@ export default {
     fontFamily: {
       sans: ['InterVar', 'sans-serif'],
     },
-    screens: {
-      sm: '640px',
-      md: '768px',
-      lg: '1024px',
-      xl: '1280px',
-    },
     extend: {
-      // Compatibility shades used by Books layouts.
-      colors: {
-        gray: Object.fromEntries(
-          ['25', '850', '875', '890'].map((shade) => [
-            shade,
-            colors.gray[shade],
-          ])
-        ),
-        indigo: colors.indigo,
-      },
-      maxHeight: {
-        64: '16rem',
-      },
-      minWidth: {
-        40: '10rem',
-        56: '14rem',
-      },
-      maxWidth: {
-        32: '8rem',
-        56: '14rem',
-      },
-      spacing: {
-        7: '1.75rem',
-        14: '3.5rem',
-        18: '4.5rem',
-        28: '7rem',
-        72: '18rem',
-        80: '20rem',
-      },
-      gridColumn: {
-        'span-full': '1 / -1',
-      },
+      // The colour picker's selected swatch ring in dark mode.
+      colors: { gray: { 850: colors.gray['850'] } },
     },
   },
   plugins: [tailwindRtl],

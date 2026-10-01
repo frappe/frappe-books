@@ -1,5 +1,6 @@
 <script lang="ts">
 import { DEFAULT_LOCALE } from 'fyo/utils/consts';
+import { useResolvedColorScheme } from 'frappe-ui';
 import { fyo } from 'src/initFyo';
 import { getPhoneAxisLabels } from 'src/utils/chart';
 import { PeriodKey } from 'src/utils/types';
@@ -28,6 +29,9 @@ export default defineComponent({
   computed: {
     isMobile(): boolean {
       return isMobile.value;
+    },
+    darkMode(): boolean {
+      return useResolvedColorScheme().value === 'dark';
     },
     /** Phones replace a section's body while it first loads or after it fails. */
     showLoadState(): boolean {

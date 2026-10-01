@@ -9,7 +9,7 @@ test('a new sales invoice takes its account, rows and totals from the server', a
   page,
 }) => {
   const { party, item } = await insertParties(page);
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\/New%20Sales%20Invoice/);
   // The server fills the number series of a new invoice.
   await expect(page.getByRole('combobox', { name: 'Number Series' })).toHaveValue(

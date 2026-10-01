@@ -80,15 +80,16 @@
       </FormHeader>
 
       <!-- Section Container -->
-      <div
+      <FrappeScrollArea
         v-if="hasDoc"
-        class="overflow-auto custom-scroll custom-scroll-thumb1"
+        class="min-h-0 flex-1"
+        viewport-class="pb-10"
       >
         <CommonFormSection
           v-for="([name, fields], idx) in activeGroup.entries()"
           :key="name + idx"
           ref="section"
-          class="p-4"
+          class="px-3 py-4 sm:px-5"
           :class="
             idx !== 0 && activeGroup.size > 1
               ? 'border-t border-outline-gray-1'
@@ -102,13 +103,13 @@
           :collapsible="false"
           @value-change="onValueChange"
         />
-      </div>
+      </FrappeScrollArea>
 
       <!-- Buttons Bar -->
       <div
         class="
           mt-auto
-          p-4
+          px-3 py-4 sm:px-5
           flex
           items-center
           justify-between
@@ -146,7 +147,11 @@
   </FormContainer>
 </template>
 <script lang="ts">
-import { Button as FrappeButton, Progress as FrappeProgress } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  Progress as FrappeProgress,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import { Doc } from 'fyo/model/doc';
 import { Field } from 'schemas/types';
@@ -166,6 +171,7 @@ export default defineComponent({
   components: {
     FrappeButton,
     FrappeProgress,
+    FrappeScrollArea,
     FormContainer,
     FormHeader,
     CommonFormSection,

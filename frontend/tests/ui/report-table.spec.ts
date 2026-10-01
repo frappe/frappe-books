@@ -23,7 +23,7 @@ test('defaults show complete timestamps and more of item names in compact rows',
   expect(await columnWidth(page, 'Item')).toBeGreaterThan(
     await columnWidth(page, 'Quantity')
   );
-  expect((await row.boundingBox())!.height).toBe(48);
+  expect((await row.boundingBox())!.height).toBe(40);
   await handle(page, 'Item').hover();
   await page.screenshot({ path: test.info().outputPath('report-columns.png') });
 });

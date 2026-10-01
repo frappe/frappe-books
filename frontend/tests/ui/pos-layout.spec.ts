@@ -286,7 +286,6 @@ test('invoice selection and bank payment fields work in a small dialog', async (
   });
   await page.evaluate(() => {
     (window as any).posFixture.state.invoice.return_against = 'SINV-2026-0001';
-    document.documentElement.classList.add('dark');
     document.documentElement.dataset.theme = 'dark';
   });
   await expect(
@@ -332,7 +331,6 @@ async function showModal(page: Page, name: string) {
 for (const dark of [false, true]) {
   test(`link actions share their size and hover styling in ${dark ? 'dark' : 'light'} mode`, async ({ page }) => {
     await page.evaluate((dark) => {
-      document.documentElement.classList.toggle('dark', dark);
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     }, dark);
     const clear = page.getByRole('button', { name: 'Clear value', exact: true }).first();
@@ -377,7 +375,7 @@ for (const dark of [false, true]) {
 }
 
 for (const size of ['large', 'small']) {
-  test(`${size} link actions have equal top, bottom, and end insets`, async ({
+  test(`${size} link actions have equal top and bottom insets`, async ({
     page,
   }) => {
     for (const dir of ['ltr', 'rtl']) {
@@ -408,7 +406,7 @@ for (const size of ['large', 'small']) {
           expect(button.height).toBe(24);
           expect(top).toBe(size === 'large' ? 4 : 2);
           expect(bottom).toBe(top);
-          expect(end).toBe(top);
+          expect(end).toBe(size === 'large' ? 11 : 9);
           const linked = control.getByRole('button', {
             name: 'Open linked entry',
             exact: true,

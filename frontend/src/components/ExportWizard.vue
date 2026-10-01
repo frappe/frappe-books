@@ -39,66 +39,66 @@
     </div>
 
     <!-- Fields Selection -->
-    <div
-      class="mt-4 max-h-80 space-y-4 overflow-auto custom-scroll custom-scroll-thumb2"
-    >
-      <!-- Main Fields -->
-      <div>
-        <h2 class="text-sm font-semibold text-ink-gray-8">
-          {{ getSchemaLabel(schemaName) }}
-        </h2>
-        <div
-          class="
-            mt-2
-            grid grid-cols-3
-            gap-x-6 gap-y-2
-            rounded-2
-            border
-            p-3
-            border-outline-gray-1
-          "
-        >
-          <Check
-            v-for="ef of fields"
-            :key="ef.fieldname"
-            class="min-w-0"
-            :class="ef.fieldtype === 'Table' ? '[&_label]:font-semibold' : ''"
-            :df="getField(ef)"
-            :show-label="true"
-            :value="ef.export"
-            @change="(value: boolean) => setExportFieldValue(ef, value)"
-          />
+    <FrappeScrollArea class="mt-4" viewport-class="max-h-80">
+      <div class="space-y-4">
+        <!-- Main Fields -->
+        <div>
+          <h2 class="text-sm-semibold text-ink-gray-8">
+            {{ getSchemaLabel(schemaName) }}
+          </h2>
+          <div
+            class="
+              mt-2
+              grid grid-cols-3
+              gap-x-6 gap-y-2
+              rounded-2
+              border
+              p-3
+              border-outline-gray-1
+            "
+          >
+            <Check
+              v-for="ef of fields"
+              :key="ef.fieldname"
+              class="min-w-0"
+              :class="{ '[&_[data-slot=label]]:font-semibold': ef.fieldtype === 'Table' }"
+              :df="getField(ef)"
+              :show-label="true"
+              :value="ef.export"
+              @change="(value: boolean) => setExportFieldValue(ef, value)"
+            />
+          </div>
         </div>
-      </div>
 
-      <!-- Table Fields -->
-      <div v-for="efs of filteredTableFields" :key="efs.fieldname">
-        <h2 class="text-sm font-semibold text-ink-gray-8">
-          {{ getSchemaLabel(efs.target) }}
-        </h2>
-        <div
-          class="
-            mt-2
-            grid grid-cols-3
-            gap-x-6 gap-y-2
-            rounded-2
-            border
-            p-3
-            border-outline-gray-1
-          "
-        >
-          <Check
-            v-for="ef of efs.fields"
-            :key="ef.fieldname"
-            class="min-w-0"
-            :df="getField(ef)"
-            :show-label="true"
-            :value="ef.export"
-            @change="(value: boolean) => setExportFieldValue(ef, value, efs.target)"
-          />
+        <!-- Table Fields -->
+        <div v-for="efs of filteredTableFields" :key="efs.fieldname">
+          <h2 class="text-sm-semibold text-ink-gray-8">
+            {{ getSchemaLabel(efs.target) }}
+          </h2>
+          <div
+            class="
+              mt-2
+              grid grid-cols-3
+              gap-x-6 gap-y-2
+              rounded-2
+              border
+              p-3
+              border-outline-gray-1
+            "
+          >
+            <Check
+              v-for="ef of efs.fields"
+              :key="ef.fieldname"
+              class="min-w-0"
+              :df="getField(ef)"
+              :show-label="true"
+              :value="ef.export"
+              @change="(value: boolean) => setExportFieldValue(ef, value, efs.target)"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </FrappeScrollArea>
 
     <template #actions>
       <div class="flex items-center justify-between">
@@ -113,7 +113,11 @@
   </FrappeDialog>
 </template>
 <script lang="ts">
-import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  Dialog as FrappeDialog,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { t } from 'fyo';
 import { exportsOwnDocumentsOnly } from 'fyo/utils/permissions';
 import { Field, FieldTypeEnum } from 'schemas/types';
@@ -143,7 +147,14 @@ interface ExportWizardData {
 }
 
 export default defineComponent({
-  components: { FrappeDialog, Check, Select, FrappeButton, Int },
+  components: {
+    FrappeDialog,
+    FrappeScrollArea,
+    Check,
+    Select,
+    FrappeButton,
+    Int,
+  },
   props: {
     open: { type: Boolean, default: false },
     schemaName: { type: String, required: true },

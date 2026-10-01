@@ -1,19 +1,13 @@
 <template>
   <div class="flex flex-col overflow-y-hidden">
     <PageHeader :title="t`Set Up Your Workspace`" />
-    <div
-      class="
-        flex-1
-        overflow-y-auto overflow-x-hidden
-        custom-scroll custom-scroll-thumb1
-      "
-    >
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
       <div
         v-for="section in sections"
         :key="section.label"
-        class="p-4 border-b border-outline-gray-1"
+        class="border-b border-outline-gray-1 px-3 py-4 sm:px-5"
       >
-        <h2 class="font-medium text-ink-gray-8">{{ section.label }}</h2>
+        <h2 class="text-lg-semibold text-ink-gray-8">{{ section.label }}</h2>
         <div class="flex mt-4 gap-4">
           <div
             v-for="item in section.items"
@@ -45,7 +39,7 @@
                   class="lucide-circle-check-big mb-4 block size-5 text-ink-green-5"
                   aria-hidden="true"
                 />
-                <h3 class="font-medium">{{ item.label }}</h3>
+                <h3 class="text-base-medium">{{ item.label }}</h3>
                 <p class="mt-2 text-sm text-ink-gray-8">
                   {{ item.description }}
                 </p>
@@ -56,7 +50,6 @@
               >
                 <FrappeButton
                   v-if="item.action"
-                  class="leading-tight text-base"
                   variant="solid"
                   @click="handleAction(item)"
                 >
@@ -64,7 +57,6 @@
                 </FrappeButton>
                 <FrappeButton
                   v-if="item.documentation"
-                  class="leading-tight text-base"
                   @click="handleDocumentation(item)"
                 >
                   {{ t`Documentation` }}
@@ -74,12 +66,15 @@
           </div>
         </div>
       </div>
-    </div>
+    </FrappeScrollArea>
   </div>
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import { getFrappeDoc } from 'src/frappe/documents';
@@ -95,9 +90,7 @@ export default defineComponent({
   components: {
     PageHeader,
     FrappeButton,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
+    FrappeScrollArea,
   },
   data() {
     return {

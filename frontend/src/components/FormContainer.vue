@@ -8,7 +8,6 @@
       w-full
       bg-surface-gray-1
       overflow-x-auto
-      custom-scroll custom-scroll-thumb1
     "
   >
     <div class="flex min-w-0 flex-1 flex-col">

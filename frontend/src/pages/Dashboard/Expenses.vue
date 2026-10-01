@@ -56,9 +56,6 @@ export default defineComponent({
     SectionHeader,
   },
   extends: DashboardChartBase,
-  props: {
-    darkMode: { type: Boolean, default: false },
-  },
   data: () => ({
     expenses: [] as {
       account: string;

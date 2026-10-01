@@ -10,12 +10,12 @@
     </PageHeader>
 
     <div
-      class="outer-container overflow-y-auto custom-scroll custom-scroll-thumb1"
+      class="outer-container overflow-y-auto"
     >
       <!-- Report Print Display Area -->
       <div
         ref="previewContainer"
-        class="p-4 bg-surface-gray-1 overflow-auto custom-scroll custom-scroll-thumb1"
+        class="p-4 bg-surface-gray-1 overflow-auto"
       >
         <!-- Report Print Display Container -->
         <PrintSheet
@@ -130,7 +130,7 @@
 
         <!-- Pick Columns -->
         <div class="border-t border-outline-gray-1 p-4">
-          <h2 class="text-sm text-ink-gray-6">
+          <h2 class="text-sm text-ink-gray-5">
             {{ t`Pick Columns` }}
           </h2>
           <div

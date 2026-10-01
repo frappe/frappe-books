@@ -9,9 +9,10 @@
         t`Collapse`
       }}</FrappeButton>
     </PageHeader>
-    <div
+    <FrappeScrollArea
       v-if="root"
-      class="books-account-tree relative flex-1 overflow-y-auto p-4 custom-scroll custom-scroll-thumb1"
+      class="books-account-tree min-h-0 flex-1"
+      viewport-class="px-3 pt-4 pb-10 sm:px-5"
     >
       <FrappeTree
         v-model:expanded="expandedAccounts"
@@ -29,8 +30,8 @@
         <template #item-label="{ node }">
           <button
             type="button"
-            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-base text-ink-gray-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
-            :class="node.is_group ? 'font-medium' : 'font-normal'"
+            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-ink-gray-8"
+            :class="node.is_group ? 'text-base-medium' : 'text-base'"
             :title="accountLabel(String(node.name))"
             @keydown.enter.stop
             @keydown.space.stop
@@ -70,7 +71,7 @@
           </div>
         </template>
       </FrappeTree>
-    </div>
+    </FrappeScrollArea>
     <FrappeDialog
       :open="!!addingParent"
       :title="newAccountTitle"
@@ -114,6 +115,7 @@ import { getAccountLabel } from 'src/utils/accountLabel';
 import {
   Dialog as FrappeDialog,
   Dropdown as FrappeDropdown,
+  ScrollArea as FrappeScrollArea,
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
   type DropdownOptions,
@@ -169,13 +171,11 @@ export default defineComponent({
   components: {
     FrappeButton,
     PageHeader,
+    FrappeScrollArea,
     FrappeTextInput,
     FrappeTree,
     FrappeDialog,
     FrappeDropdown,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
   },
   data() {
     return {

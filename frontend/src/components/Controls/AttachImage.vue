@@ -53,7 +53,7 @@
     <div v-else :class="[!isReadOnly ? 'group-hover:opacity-90' : '']">
       <div
         v-if="letterPlaceholder"
-        class="flex h-full items-center justify-center text-ink-gray-4 font-semibold w-full text-4xl select-none"
+        class="flex h-full w-full select-none items-center justify-center text-4xl-semibold text-ink-gray-4"
       >
         {{ letterPlaceholder }}
       </div>

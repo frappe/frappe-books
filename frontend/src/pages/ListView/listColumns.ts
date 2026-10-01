@@ -5,6 +5,7 @@ import type {
 } from 'fyo/model/types';
 import type { Field } from 'schemas/types';
 import { getFields, getSchema } from 'src/frappe/registry';
+import { isNumeric } from 'src/utils';
 import { fyo } from 'src/initFyo';
 
 export type ListColumn = ColumnConfig | Field;
@@ -23,6 +24,20 @@ export function getListColumns(
   return columns.flatMap((column): ListColumn[] =>
     typeof column === 'object' ? [column] : getFields(schemaName, [column])
   );
+}
+
+/** Fixed tracks for dates, numbers and badges; text shares what is left. */
+export function getColumnTrack(column: ListColumn): string {
+  if ((column as ColumnConfig).badge) {
+    return '7rem';
+  }
+  if (column.fieldtype === 'Date') {
+    return '8rem';
+  }
+  if (isNumeric(column.fieldtype)) {
+    return '9rem';
+  }
+  return 'minmax(0, 1fr)';
 }
 
 export function isField(column: ListColumn): column is Field {

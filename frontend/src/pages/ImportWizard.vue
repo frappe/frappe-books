@@ -44,7 +44,7 @@
     <div class="flex min-h-0 w-full flex-1 flex-col text-base">
       <!-- Select Import Type -->
       <div
-        class="h-row-largest flex flex-row justify-start items-center w-full gap-2 border-b border-outline-gray-1 p-4"
+        class="h-16 flex flex-row justify-start items-center w-full gap-2 border-b border-outline-gray-1 px-3 py-4 sm:px-5"
       >
         <AutoComplete
           :df="{
@@ -67,11 +67,11 @@
         />
         <p
           v-else
-          class="text-base ms-2"
+          class="ms-2"
           :class="
             fileName
-              ? 'text-ink-gray-9 font-semibold'
-              : 'text-ink-gray-7'
+              ? 'text-base-semibold text-ink-gray-8'
+              : 'text-base text-ink-gray-7'
           "
         >
           <span v-if="fileName" class="font-normal">{{ t`Selected` }} </span>
@@ -88,17 +88,19 @@
       </div>
 
       <!-- Assignment Row and Value Grid container -->
-      <div
+      <FrappeScrollArea
         v-if="hasImporter"
-        class="min-h-0 flex-1 overflow-auto custom-scroll custom-scroll-thumb1"
+        orientation="both"
+        class="min-h-0 flex-1"
+        viewport-class="pb-10"
       >
         <FrappeList
           v-if="importer.valueMatrix.length"
           :columns="listColumns"
           divider="full"
-          class="w-max min-w-full list-gap-4"
+          class="w-max min-w-full list-gap-4 list-row-px-3 sm:list-row-px-5"
         >
-          <FrappeListHeader class="sticky top-0 z-10 !h-auto bg-surface-base px-4 py-3">
+          <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
             <FrappeListHeaderCell class="justify-center">#</FrappeListHeaderCell>
             <FrappeListHeaderCell v-for="index in columnIterator" :key="index">
               <Select
@@ -114,7 +116,7 @@
 
           <FrappeListRows :items="importer.valueMatrix" :row-key="getImportRowKey">
             <template #default="{ item: row, index: ridx, value }">
-              <FrappeListRow :value="value" class="min-h-12 px-4 py-2">
+              <FrappeListRow :value="value" class="min-h-12 py-2">
                 <FrappeListCell class="justify-center">
                   <FrappeButton
                     icon="lucide-x"
@@ -183,12 +185,12 @@
 
         <div
           v-else
-          class="ps-4 text-ink-gray-7 sticky left-0 flex items-center"
+          class="ps-3 sm:ps-5 text-ink-gray-7 sticky left-0 flex items-center"
           style="height: 62.5px"
         >
           {{ t`No rows added. Select a file or add rows.` }}
         </div>
-      </div>
+      </FrappeScrollArea>
     </div>
 
     <!-- Pick Column Dialog -->
@@ -197,31 +199,33 @@
       :title="t`Pick Import Columns`"
       size="3xl"
     >
-      <div class="max-h-80 space-y-4 overflow-auto custom-scroll custom-scroll-thumb1">
-        <div v-for="[key, value] of columnPickerFieldsMap.entries()" :key="key">
-          <h2 class="text-sm font-semibold text-ink-gray-8">
-            {{ key }}
-          </h2>
-          <div
-            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 border border-outline-gray-1 rounded-2 mt-1 p-3"
-          >
-            <div v-for="tf of value" :key="tf.fieldKey" class="min-w-0">
-              <Check
-                :df="{
-                  fieldtype: 'Check',
-                  fieldname: tf.fieldname,
-                  label: tf.label,
-                  required: tf.required,
-                }"
-                :show-label="true"
-                :read-only="tf.required"
-                :value="importer.templateFieldsPicked.get(tf.fieldKey)"
-                @change="(value: boolean) => pickColumn(tf.fieldKey, value)"
-              />
+      <FrappeScrollArea viewport-class="max-h-80">
+        <div class="space-y-4">
+          <div v-for="[key, value] of columnPickerFieldsMap.entries()" :key="key">
+            <h2 class="text-sm-semibold text-ink-gray-8">
+              {{ key }}
+            </h2>
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 border border-outline-gray-1 rounded-2 mt-1 p-3"
+            >
+              <div v-for="tf of value" :key="tf.fieldKey" class="min-w-0">
+                <Check
+                  :df="{
+                    fieldtype: 'Check',
+                    fieldname: tf.fieldname,
+                    label: tf.label,
+                    required: tf.required,
+                  }"
+                  :show-label="true"
+                  :read-only="tf.required"
+                  :value="importer.templateFieldsPicked.get(tf.fieldKey)"
+                  @change="(value: boolean) => pickColumn(tf.fieldKey, value)"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </FrappeScrollArea>
       <template #actions>
         <div class="flex items-center justify-between">
           <p class="text-sm text-ink-gray-6">
@@ -245,7 +249,7 @@
         <!-- Success -->
         <div v-if="success.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
-            <p class="font-semibold text-ink-gray-8">{{ t`Success` }}</p>
+            <p class="text-base-semibold text-ink-gray-8">{{ t`Success` }}</p>
             <p class="text-sm text-ink-gray-6">
               {{
                 success.length === 1
@@ -271,7 +275,7 @@
         <!-- Failed -->
         <div v-if="failed.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
-            <p class="font-semibold text-ink-gray-8">{{ t`Failed` }}</p>
+            <p class="text-base-semibold text-ink-gray-8">{{ t`Failed` }}</p>
             <p class="text-sm text-ink-gray-6">
               {{
                 failed.length === 1
@@ -323,6 +327,7 @@ import {
   Button as FrappeButton,
   Dialog as FrappeDialog,
   ErrorMessage as FrappeErrorMessage,
+  ScrollArea as FrappeScrollArea,
   toast,
 } from 'frappe-ui';
 import {
@@ -395,6 +400,7 @@ export default defineComponent({
     FrappeListHeaderCell,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
   },
   data() {
     return {

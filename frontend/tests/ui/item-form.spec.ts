@@ -8,7 +8,7 @@ test('a new item takes its accounts from the server and saves', async ({
   page,
 }) => {
   const name = `Form Item ${Date.now()}`;
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/Item\//);
 
   await page.getByRole('textbox', { name: 'Item Name' }).fill(name);

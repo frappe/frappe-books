@@ -1,11 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
-from frappe.model.document import Document
+from frappe_books.accounting.invoice import InvoiceItemController
 
 
-class BooksPurchaseInvoiceItem(Document):
+class BooksPurchaseInvoiceItem(InvoiceItemController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -37,6 +36,7 @@ class BooksPurchaseInvoiceItem(Document):
 		stock_not_transferred: DF.Float
 		tax: DF.Link | None
 		transfer_quantity: DF.Float
+		transfer_rate: DF.Currency
 		transfer_unit: DF.Link | None
 		unit: DF.Link | None
 		unit_conversion_factor: DF.Float

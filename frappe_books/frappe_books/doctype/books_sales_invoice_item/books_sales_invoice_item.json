@@ -10,6 +10,7 @@
   "item_code",
   "description",
   "rate",
+  "transfer_rate",
   "transfer_unit",
   "transfer_quantity",
   "qty",
@@ -58,6 +59,13 @@
    "in_list_view": 1,
    "label": "Rate",
    "reqd": 1
+  },
+  {
+   "fieldname": "transfer_rate",
+   "fieldtype": "Currency",
+   "is_virtual": 1,
+   "label": "Rate",
+   "read_only": 1
   },
   {
    "fieldname": "transfer_unit",
@@ -205,7 +213,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-30 19:00:00.000000",
+ "modified": "2026-10-01 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice Item",

@@ -32,6 +32,7 @@ await build({
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getFilterFields } from './src/utils/filterFields';
       export { ListFilters } from './src/utils/listFilters';
+      export { Search } from './src/utils/search';
     `,
     resolveDir: frontend,
   },
@@ -44,6 +45,13 @@ await build({
     {
       name: 'browser-boundaries',
       setup(builder) {
+        builder.onResolve({ filter: /^src\/router$/ }, () => ({
+          path: 'router',
+          namespace: 'stub',
+        }));
+        builder.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
+          contents: 'export default {}',
+        }));
         builder.onLoad({ filter: /\.vue$/ }, () => ({
           contents: 'export default {}',
         }));
@@ -53,6 +61,7 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 
+globalThis.history = { state: null };
 globalThis.window = {
   location: { hostname: 'books.localhost' },
   frappe: {
@@ -109,6 +118,7 @@ export const {
   getStockTransferActions,
   getFilterFields,
   ListFilters,
+  Search,
 } = createRequire(import.meta.url)(output);
 
 /**

@@ -27,6 +27,17 @@ await build({
   platform: 'node',
   format: 'cjs',
   outfile: output,
+  plugins: [
+    {
+      name: 'browser-boundaries',
+      setup(builder) {
+        builder.onLoad({ filter: /\.vue$/ }, () => ({
+          contents: 'export default {}',
+        }));
+      },
+    },
+  ],
+  loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 const bundle = createRequire(import.meta.url)(output);
 export const {

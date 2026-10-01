@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getSchemas } from './helpers/accounting.mjs';
-import { doctypes } from './helpers/doctypes.mjs';
+import { getMetaBundle } from './helpers/doctypes.mjs';
 import {
   evaluateHidden,
   evaluateReadOnly,
@@ -35,7 +35,7 @@ window.frappe.boot.books.doctypes = {
 };
 
 stubFrappe(({ path, body }) =>
-  path.endsWith('getdoctype') ? { docs: getBundle(body.doctype) } : { data: [] }
+  path.endsWith('getdoctype') ? { docs: getMetaBundle(body.doctype) } : { data: [] }
 );
 registerFrappeModels(
   Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]]))
@@ -274,24 +274,6 @@ test('a submitted shipment offers an invoice and a return by Frappe fieldnames',
     [false, false]
   );
 });
-
-/** A DocType's meta and its tables' metas, fields in their DocType order, as getdoctype sends them. */
-function getBundle(doctype) {
-  const meta = getMeta(doctype);
-  const tables = meta.fields
-    .filter(({ fieldtype }) => fieldtype === 'Table')
-    .map(({ options }) => getMeta(options));
-  return [meta, ...tables];
-}
-
-function getMeta(name) {
-  const meta = doctypes.find((doctype) => doctype.name === name);
-  const order = meta.field_order;
-  const fields = [...meta.fields].sort(
-    (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
-  );
-  return { ...meta, fields };
-}
 
 /** The form fields in order: fieldname, label, placeholder, section and tab. */
 function getLayout(schema, getFieldname) {

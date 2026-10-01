@@ -143,14 +143,15 @@ def start_row_quantities(rows):
 			row.quantity = 1
 
 
-def fill_serial_numbers(rows):
-	"""Give serialised rows without serial numbers the earliest received ones in stock at their location."""
+def fill_serial_numbers(rows, location=None):
+	"""Give serialised rows without serial numbers the earliest received ones in stock at their location, else at `location`."""
 	serialised = _items_with("has_serial_number", {row.item for row in rows if not row.serial_number})
 	taken = set(_all_serial_numbers(rows))
 	for row in rows:
-		if row.item in serialised and row.location and not row.serial_number:
+		row_location = row.get("location") or location
+		if row.item in serialised and row_location and not row.serial_number:
 			count = int(abs(as_decimal(row.quantity)))
-			picked = available_serial_numbers(row.item, row.location, count, exclude=taken)
+			picked = available_serial_numbers(row.item, row_location, count, exclude=taken)
 			taken.update(picked)
 			row.serial_number = "\n".join(picked) or None
 

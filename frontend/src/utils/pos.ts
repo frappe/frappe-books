@@ -1,22 +1,15 @@
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import type { Item } from 'models/baseModels/Item/Item';
-import { getAvailableSerialNumbers } from 'models/inventory/helpers';
 import {
   getOutOfStockMessage,
-  getPOSInventory,
   validatePOSStock,
 } from 'models/inventory/posStock';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import {
-  ItemQtyMap,
-  ItemSerialNumbers,
-  ItemVisibility,
-  POSItem,
-} from 'src/components/POS/types';
+import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
 import type { DocValueMap } from 'fyo/core/types';
 import type { Field } from 'schemas/types';
 import {
@@ -310,28 +303,18 @@ export function toPOSItem(item: DocValues, itemQtyMap: ItemQtyMap): POSItem {
   };
 }
 
-/** Fills a sale row with in-stock serial numbers; a return row keeps the sold ones. */
-export async function fillRowSerialNumbers(
-  row: SalesInvoiceItem,
-  itemSerialNumbers: ItemSerialNumbers
-) {
-  const item = row.item as string;
+/**
+ * Leaves a sale row's serial numbers to the server's preview, which picks
+ * those in stock, when they no longer match its quantity; a return row
+ * keeps the sold ones.
+ */
+export function refillSerialNumbers(row: SalesInvoiceItem) {
   const quantity = row.quantity ?? 0;
-  const existing = (itemSerialNumbers[item] ?? '')
+  const count = (row.serial_number ?? '')
     .split('\n')
-    .filter((serialNumber) => serialNumber.trim());
-  if (quantity <= 0 || existing.length === quantity) {
-    return;
-  }
-
-  const serialNumbers = await getAvailableSerialNumbers(
-    item,
-    await getPOSInventory(),
-    quantity
-  );
-  if (serialNumbers) {
-    await row.set('serial_number', serialNumbers);
-    itemSerialNumbers[item] = serialNumbers;
+    .filter((serialNumber) => serialNumber.trim()).length;
+  if (quantity > 0 && count !== quantity) {
+    row.leaveToServer(['serial_number']);
   }
 }
 

@@ -11,8 +11,9 @@ from frappe_books.accounting.payment import map_invoice_payment, validate_paymen
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
-from frappe_books.inventory.auto_transfer import map_invoice_transfer
+from frappe_books.inventory.auto_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.availability import validate_pos_stock
+from frappe_books.inventory.stock import fill_serial_numbers
 
 
 class BooksSalesInvoice(PostingInvoiceController):
@@ -88,6 +89,13 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def loyalty_points_amount(self):
 		"""What the redeemed points take off the grand total, as a virtual field."""
 		return loyalty.redemption_amount(self)
+
+	@frappe.whitelist()
+	def preview(self):
+		"""Also give a POS sale's serialised rows serial numbers in stock where it ships from."""
+		super().preview()
+		if self.is_pos and not self.return_against:
+			fill_serial_numbers(self.items, default_location(self))
 
 	def before_validate(self):
 		if self.is_pos and self._action == "submit":

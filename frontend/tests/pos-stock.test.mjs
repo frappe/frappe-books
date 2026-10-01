@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, fyo, pos, posStock } from './helpers/frappe.mjs';
+import { frappeModels, pos, posStock } from './helpers/frappe.mjs';
 
 const item = 'Demo - Coffee Beans';
 const service = 'Demo - Gift Wrapping';
@@ -33,28 +33,19 @@ await loadFrappeModels(frappeModels, (request) => server(request));
 beforeEach(() => stubServer());
 
 /**
- * Answers the item, stock availability and serial number requests from the
- * ledger, with `location` as where POS sales ship from. Item lookups by
- * filter (the serial number check) find a serial-numbered item.
+ * Answers the item and stock availability requests from the ledger, with
+ * `location` as where POS sales ship from.
  */
-function stubServer({ location = inventory, serialNumbers, stock = ledger } = {}) {
+function stubServer({ location = inventory, stock = ledger } = {}) {
   const requests = [];
   const methods = {
     get_stock_location: () => location,
     get_list: ({ doctype, filters }) =>
       doctype === 'Books Stock Ledger Entry' ? getSums(stock, filters) : [],
     get_sale_shortfalls: (args) => getShortfalls(args.items, stock, location),
-    get_available_serial_numbers: (args) => {
-      assert.equal(args.location, inventory);
-      return serialNumbers(args.quantity);
-    },
   };
   server = async ({ path, body }) => {
     requests.push([path.split('/').pop(), body]);
-    if (path.endsWith('/document/Books Item')) {
-      return { data: [{ has_serial_number: 1 }] };
-    }
-
     const name = decodeURIComponent(path.split('/Books Item/')[1] ?? '');
     if (name) {
       return { data: { name, ...items[name] } };
@@ -326,39 +317,6 @@ test('a new cart row needs the item in stock', async () => {
   );
 });
 
-test('a cart row fills serial numbers for sales and keeps a return row’s', async () => {
-  const requested = [];
-  stubServer({
-    serialNumbers: async (quantity) => {
-      requested.push(quantity);
-      return ['SN-1', 'SN-2'];
-    },
-  });
-  const serials = {};
-  const sale = makeSerialRow({ quantity: 2 });
-  await pos.fillRowSerialNumbers(sale, serials);
-  assert.equal(sale.serial_number, 'SN-1\nSN-2');
-  assert.equal(serials[item], 'SN-1\nSN-2');
-  await pos.fillRowSerialNumbers(sale, serials);
-
-  const returned = makeSerialRow({ quantity: -2, serial_number: 'SOLD-1' });
-  await pos.fillRowSerialNumbers(returned, {});
-  assert.equal(returned.serial_number, 'SOLD-1');
-  assert.deepEqual(requested, [2]);
-});
-
-test('a cart row reports serial number lookup failures', async () => {
-  stubServer({
-    serialNumbers: async () => {
-      throw new Error('Serial numbers unavailable');
-    },
-  });
-  await assert.rejects(
-    pos.fillRowSerialNumbers(makeSerialRow({ quantity: 1 }), {}),
-    /Serial numbers unavailable/
-  );
-});
-
 test('a cart row reads batch, serial and unit settings from its item', async () => {
   assert.deepEqual(await pos.getPOSRowItem(flour), {
     hasBatch: true,
@@ -371,17 +329,6 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
     units: [],
   });
 });
-
-function makeSerialRow(values) {
-  return {
-    fyo,
-    item,
-    ...values,
-    async set(field, value) {
-      this[field] = value;
-    },
-  };
-}
 
 function makeRow(values = {}) {
   const invoice = { items: [] };

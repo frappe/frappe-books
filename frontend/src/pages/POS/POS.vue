@@ -257,8 +257,8 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import {
   addBatchItem,
   addPOSItem,
-  fillRowSerialNumbers,
   getPOSItemFilters,
+  refillSerialNumbers,
   POS_ITEM_FIELDS,
   toPOSItem,
   validatePOSCheckout,
@@ -284,7 +284,6 @@ import {
   POSItem,
   POSLayout,
   ItemQtyMap,
-  ItemSerialNumbers,
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
@@ -336,7 +335,6 @@ export default defineComponent({
       paymentMethod: computed(() => this.paymentMethod),
       transferRefNo: computed(() => this.transferRefNo),
       appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
-      itemSerialNumbers: computed(() => this.itemSerialNumbers),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
       transferClearanceDate: computed(() => this.transferClearanceDate),
     };
@@ -385,7 +383,6 @@ export default defineComponent({
       sinvDoc: {} as SalesInvoice,
       posProfile: null as POSProfile | null,
       itemQtyMap: {} as ItemQtyMap,
-      itemSerialNumbers: {} as ItemSerialNumbers,
       quickQtyActive: false,
       quickQtyBuffer: '' as string,
       selectedRow: null as SalesInvoiceItem | null,
@@ -797,7 +794,7 @@ export default defineComponent({
           quantity,
           this.itemQtyMap
         );
-        await fillRowSerialNumbers(row, this.itemSerialNumbers);
+        refillSerialNumbers(row);
         await this.previewInvoice();
       } catch (error) {
         showToast({ type: 'error', message: t`${error as string}` });
@@ -987,7 +984,6 @@ export default defineComponent({
     },
     async clearValues() {
       this.setSinvDoc();
-      this.itemSerialNumbers = {};
 
       this.paidAmount = fyo.pesa(0);
       this.paymentMethod = undefined;

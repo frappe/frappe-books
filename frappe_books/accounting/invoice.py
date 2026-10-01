@@ -191,7 +191,8 @@ class InvoiceItemController(Document):
 	@property
 	def transfer_rate(self):
 		"""The rate per transfer unit, as a virtual field, to show next to the transfer quantity."""
-		return as_decimal(self.rate) * as_decimal(self.unit_conversion_factor or 1)
+		currency = getattr(getattr(self, "parent_doc", None), "currency", None)
+		return rounded(as_decimal(self.rate) * as_decimal(self.unit_conversion_factor or 1), currency)
 
 
 @frappe.whitelist()

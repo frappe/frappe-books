@@ -1,7 +1,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { fyo } from 'src/initFyo';
 import DateVue from './Date.vue';
+import { getDatePickerFormat } from './datePickerFormat';
 
 export default defineComponent({
   extends: DateVue,
@@ -21,11 +21,7 @@ export default defineComponent({
       return date?.isValid ? date.toFormat('yyyy-MM-dd HH:mm:ss') : '';
     },
     frappeDateFormat(): string {
-      const format = fyo.singles.SystemSettings?.date_format ?? 'MMM d, y';
-      const dateFormat = String(format)
-        .replace(/yyyy|y/g, 'YYYY')
-        .replace(/dd|d/g, 'DD');
-      return `${dateFormat} HH:mm:ss`;
+      return `${getDatePickerFormat()} HH:mm:ss`;
     },
   },
 });

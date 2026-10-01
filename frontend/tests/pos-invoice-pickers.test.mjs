@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, pos } from './helpers/frappe.mjs';
+import {
+  frappeModels,
+  pos,
+  setLanguageMapOnTranslationString,
+} from './helpers/frappe.mjs';
 
 const invoice = {
   name: 'SINV-1001',
@@ -53,4 +57,21 @@ test('without a search a picker loads every matching POS invoice', async () => {
     ['docstatus', '=', 1],
   ]);
   assert.equal(body.limit_page_length, 0);
+});
+
+test('the picker columns are translated', () => {
+  setLanguageMapOnTranslationString({
+    Name: { translation: 'Nom' },
+    Customer: { translation: 'Client' },
+    Date: { translation: 'Date' },
+    'Grand Total': { translation: 'Total général' },
+  });
+  try {
+    assert.deepEqual(
+      pos.getPOSInvoiceFields().map(({ label }) => label),
+      ['Nom', 'Client', 'Date', 'Total général']
+    );
+  } finally {
+    setLanguageMapOnTranslationString(undefined);
+  }
 });

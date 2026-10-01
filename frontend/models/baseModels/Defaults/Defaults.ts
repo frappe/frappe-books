@@ -5,6 +5,7 @@ import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import { call } from 'src/web/api';
 import { PartyRoleEnum } from '../Party/types';
+import { BUTTON_COLOUR_FIELDS } from '../POSProfile/PosProfile';
 
 const SET_PRINT_FORMATS =
   'frappe_books.frappe_books.doctype.books_defaults.books_defaults.set_print_formats';
@@ -37,10 +38,13 @@ export class Defaults extends FrappeDoc {
   // Print templates are picked, not created, from the settings.
   static override presentation = {
     label: 'Defaults',
-    fields: withoutCreate([
-      ...Object.keys(DOCTYPE_PRINT_FORMATS),
-      'pos_print_template',
-    ]),
+    fields: {
+      ...withoutCreate([
+        ...Object.keys(DOCTYPE_PRINT_FORMATS),
+        'pos_print_template',
+      ]),
+      ...BUTTON_COLOUR_FIELDS,
+    },
   };
   static override rowModels = {
     pos_cash_denominations: DefaultCashDenominations,

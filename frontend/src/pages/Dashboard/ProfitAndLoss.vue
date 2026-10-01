@@ -15,7 +15,9 @@
       :y-axis="chartData.yAxis"
     >
       <template #empty>
-        <span class="text-p-sm text-ink-gray-5">{{ t`No transactions yet` }}</span>
+        <span class="text-p-sm text-ink-gray-5">
+          {{ t`No transactions yet` }}
+        </span>
       </template>
       <template #error>
         <ChartLoadError @retry="loadData" />
@@ -51,7 +53,9 @@ export default defineComponent({
       return {
         // A month is a profit or a loss, so it fills one of the two series.
         rows: this.data.map(({ yearmonth, balance }) =>
-          balance < 0 ? { yearmonth, loss: balance } : { yearmonth, profit: balance }
+          balance < 0
+            ? { yearmonth, loss: balance }
+            : { yearmonth, profit: balance }
         ),
         seriesConfig: {
           profit: { label: this.t`Profit` },

@@ -11,10 +11,7 @@
 <script setup lang="ts">
 import { t } from 'fyo';
 import type { RawValueMap } from 'fyo/core/types';
-import {
-  Button as FrappeButton,
-  Dropdown as FrappeDropdown,
-} from 'frappe-ui';
+import { Button as FrappeButton, Dropdown as FrappeDropdown } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
 import { createFilters } from 'src/utils/filters';

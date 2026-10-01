@@ -14,7 +14,9 @@
       :y-axis="chartData.yAxis"
     >
       <template #empty>
-        <span class="text-p-sm text-ink-gray-5">{{ t`No transactions yet` }}</span>
+        <span class="text-p-sm text-ink-gray-5">
+          {{ t`No transactions yet` }}
+        </span>
       </template>
       <template #error>
         <ChartLoadError @retry="loadData" />

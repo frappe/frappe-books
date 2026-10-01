@@ -26,7 +26,10 @@
 
 <script lang="ts">
 import { showToast } from 'src/utils/interactive';
-import { findScannedPOSItem, type ScannableItem } from 'src/utils/posItemSearch';
+import {
+  findScannedPOSItem,
+  getScannableItems,
+} from 'src/utils/posItemSearch';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { isMobile } from 'src/utils/viewport';
@@ -84,9 +87,7 @@ export default defineComponent({
       this.cooldown = barcode;
       setTimeout(() => (this.cooldown = ''), 100);
 
-      const items = (await this.fyo.db.getAll('Item', {
-        fields: ['name', 'itemCode', 'barcode', 'unit'],
-      })) as ScannableItem[];
+      const items = await getScannableItems();
       const scanned = findScannedPOSItem(
         items,
         barcode,

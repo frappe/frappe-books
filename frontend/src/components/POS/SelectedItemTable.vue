@@ -68,8 +68,8 @@ import {
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
 import { t } from 'fyo';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
+import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { defineComponent, inject, PropType } from 'vue';
 import SelectedItemRow from './SelectedItemRow.vue';
 import { POSLayout } from './types';

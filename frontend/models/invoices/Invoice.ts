@@ -15,6 +15,7 @@ import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import type { InvoiceItem } from './InvoiceItem';
+import type { TaxSummary } from './TaxSummary';
 
 // A new rate for rows priced by the server follows these.
 const RATE_SOURCE_FIELDS = ['party', 'price_list', 'currency', 'exchange_rate'];
@@ -52,8 +53,15 @@ export abstract class Invoice extends FrappeDoc {
   currency?: string;
   exchange_rate?: number;
   price_list?: string;
+  net_total?: Money;
+  total_discount?: Money;
+  loyalty_points_amount?: Money;
   grand_total?: Money;
+  base_grand_total?: Money;
   outstanding_amount?: Money;
+  taxes?: TaxSummary[];
+  loyalty_points?: number;
+  redeem_loyalty_points?: boolean;
   return_against?: string;
   make_auto_payment?: boolean;
   is_pos?: boolean;

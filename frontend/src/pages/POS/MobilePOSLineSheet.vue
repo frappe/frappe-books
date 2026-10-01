@@ -26,13 +26,13 @@
             fieldtype: 'Float',
             label: t`Discount %`,
           }"
-          :value="row.itemDiscountPercent"
+          :value="row.item_discount_percent"
           :show-label="true"
           :border="true"
           :read-only="
-            isPOSRowFieldReadOnly(row, 'itemDiscountPercent', permissions)
+            isPOSRowFieldReadOnly(row, 'item_discount_percent', permissions)
           "
-          @change="(value: number) => setValue('itemDiscountPercent', value)"
+          @change="(value: number) => setValue('item_discount_percent', value)"
         />
       </div>
       <div
@@ -68,18 +68,17 @@ import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
 } from 'frappe-ui';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { Money } from 'pesa';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
-  getPOSPermissions,
   isPOSRowFieldReadOnly,
-  POSPermissions,
   POSRowField,
   setPOSRowValue,
 } from 'src/utils/pos';
+import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { inject, onMounted, ref, type Ref } from 'vue';
 
 /** Edits a cart line's rate and discount. */

@@ -237,7 +237,7 @@ import ClosePOSShiftModal from './ClosePOSShiftModal.vue';
 import BatchSelectionModal from './BatchSelectionModal.vue';
 import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
 import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
-import { ModelNameEnum } from 'models/types';
+import { ModelNameEnum, PaymentMethodType } from 'models/types';
 import { showDialog, showToast } from 'src/utils/interactive';
 import { isMobile } from 'src/utils/viewport';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
@@ -249,35 +249,35 @@ import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
 } from 'models/baseModels/PaymentMethod/requirements';
-import {
-  BridgeItem,
-  ModalName,
-  modalNames,
-  PaymentMethodOption,
-} from 'src/components/POS/types';
+import { ModalName, modalNames } from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
+import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
+import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import {
   addBatchItem,
   addPOSItem,
   fillRowSerialNumbers,
+  getPOSItemFilters,
+  POS_ITEM_FIELDS,
   toPOSItem,
   validatePOSCheckout,
   getTotalQuantity,
-  validateIsPosSettingsSet,
   setPOSRowQuantity,
   isTypingInField,
   getQuickQtyBuffer,
   getPOSQuantityField,
-  getOpenPOSShift,
-  getItemVisibility,
-  getPOSProfile,
 } from 'src/utils/pos';
+import {
+  getItemVisibility,
+  getOpenPOSShift,
+  getPOSProfile,
+  validateIsPosSettingsSet,
+} from 'src/utils/posSetup';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
-import { getBooksDoc } from 'src/frappe/useBooksDoc';
-import { getMappedBridgeDoc } from 'models/helpers';
+import { getAllDocuments, getDocuments } from 'src/frappe/api';
+import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { getMappedDoc } from 'models/helpers';
 import { getItemQtyMap } from 'models/inventory/posStock';
 import {
   POSItem,
@@ -292,11 +292,12 @@ const COMPONENT_NAME = 'POS';
 const PAY_POS_INVOICE =
   'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice.pay_pos_invoice';
 
+/** A payment the cashier takes, by Books Sales Invoice Payment fieldnames. */
 type TenderedPayment = {
-  paymentMethod?: string;
+  payment_method?: string;
   amount: Money;
-  referenceId?: string;
-  clearanceDate?: Date;
+  reference_id?: string;
+  clearance_date?: Date;
 };
 
 export default defineComponent({
@@ -330,7 +331,6 @@ export default defineComponent({
     return {
       doc: computed(() => this.sinvDoc),
       sinvDoc: computed(() => this.sinvDoc),
-      coupons: computed(() => this.coupons),
       paidAmount: computed(() => this.paidAmount),
       paymentMethod: computed(() => this.paymentMethod),
       transferRefNo: computed(() => this.transferRefNo),
@@ -384,7 +384,6 @@ export default defineComponent({
       sinvDoc: {} as SalesInvoice,
       posProfile: null as POSProfile | null,
       itemQtyMap: {} as ItemQtyMap,
-      coupons: {} as AppliedCouponCodes,
       itemSerialNumbers: {} as ItemSerialNumbers,
       quickQtyActive: false,
       quickQtyBuffer: '' as string,
@@ -445,7 +444,6 @@ export default defineComponent({
   async mounted() {
     await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
-    this.setCouponCodeDoc();
     this.setSinvDoc();
     this.setDefaultCustomer();
     await this.setItemQtyMap();
@@ -453,10 +451,9 @@ export default defineComponent({
   },
   async activated() {
     toggleSidebar(false);
-    validateIsPosSettingsSet(fyo);
+    validateIsPosSettingsSet();
     await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
-    this.setCouponCodeDoc();
     this.setSinvDoc();
     this.setDefaultCustomer();
     this.setShortcuts();
@@ -528,7 +525,7 @@ export default defineComponent({
       }
 
       try {
-        await setPOSRowQuantity(row, getPOSQuantityField(fyo), Number(buffer));
+        await setPOSRowQuantity(row, getPOSQuantityField(), Number(buffer));
       } catch (error) {
         showToast({
           type: 'error',
@@ -545,7 +542,7 @@ export default defineComponent({
         return selected;
       }
 
-      return items.filter((row) => !row.isFreeItem).at(-1);
+      return items.filter((row) => !row.is_free_item).at(-1);
     },
     async setCustomer(value: string) {
       if (!value) {
@@ -555,13 +552,13 @@ export default defineComponent({
 
       this.sinvDoc.party = value;
 
-      const party = await this.fyo.db.getAll(ModelNameEnum.Party, {
-        fields: ['loyaltyProgram', 'loyaltyPoints'],
-        filters: { name: value },
+      const [party] = await getDocuments('Books Party', {
+        fields: ['loyalty_program', 'loyalty_points'],
+        filters: [['name', '=', value]],
       });
 
-      this.loyaltyProgram = party[0]?.loyaltyProgram as string;
-      this.loyaltyPoints = party[0]?.loyaltyPoints as number;
+      this.loyaltyProgram = party?.loyalty_program as string;
+      this.loyaltyPoints = party?.loyalty_points as number;
     },
 
     async loadPOSProfile() {
@@ -655,7 +652,6 @@ export default defineComponent({
     async saveOrder() {
       try {
         await this.validate();
-        await this.sinvDoc.runFormulas();
         await this.sinvDoc.sync();
       } catch (error) {
         return showToast({
@@ -682,45 +678,24 @@ export default defineComponent({
       await this.setItems();
     },
     async setItems() {
-      const filters = await this.getItemFilters();
+      const visibility = await getItemVisibility();
+      const items = await getAllDocuments('Books Item', {
+        fields: POS_ITEM_FIELDS,
+        filters: getPOSItemFilters(visibility, this.selectedItemGroup),
+      });
       const hideUnavailable =
-        this.posProfile?.hide_unavailable_items ??
-        this.fyo.singles.POSSettings?.hide_unavailable_items;
-      const items = (await fyo.db.getAll(ModelNameEnum.Item, {
-        fields: [],
-        filters,
-      })) as BridgeItem[];
+        visibility === 'Inventory Items' &&
+        (this.posProfile?.hide_unavailable_items ??
+          this.fyo.singles.POSSettings?.hide_unavailable_items);
 
       this.items = items
         .map((item) => toPOSItem(item, this.itemQtyMap))
-        .filter(
-          ({ availableQty }) =>
-            !(hideUnavailable && filters.trackItem && availableQty <= 0)
-        );
-    },
-    async getItemFilters(): Promise<Record<string, boolean | string>> {
-      const filters: Record<string, boolean | string> = {};
-      const itemVisibility = await getItemVisibility();
-      if (itemVisibility === 'Inventory Items') {
-        filters.trackItem = true;
-      } else if (itemVisibility === 'Non-Inventory Items') {
-        filters.trackItem = false;
-      }
-
-      if (this.selectedItemGroup) {
-        filters.itemGroup = this.selectedItemGroup;
-      }
-
-      return filters;
+        .filter(({ availableQty }) => !(hideUnavailable && availableQty <= 0));
     },
     async selectedReturnInvoice(invoiceName: string) {
-      const salesInvoiceDoc = (await this.fyo.doc.getDoc(
-        ModelNameEnum.SalesInvoice,
-        invoiceName
-      )) as SalesInvoice;
-
-      this.sinvDoc = (await getMappedBridgeDoc(
-        salesInvoiceDoc,
+      const invoice = await getBooksDoc(ModelNameEnum.SalesInvoice, invoiceName);
+      this.sinvDoc = (await getMappedDoc(
+        invoice,
         ModelNameEnum.SalesInvoice,
         'make_return'
       )) as SalesInvoice;
@@ -744,21 +719,16 @@ export default defineComponent({
     async setItemQtyMap() {
       this.itemQtyMap = await getItemQtyMap();
     },
+    /** A new POS sale; the server bills it to the POS account. */
     setSinvDoc() {
-      this.sinvDoc = this.fyo.doc.getNewDoc(ModelNameEnum.SalesInvoice, {
-        account: this.fyo.singles.POSSettings?.default_account,
+      this.sinvDoc = newBooksDoc(ModelNameEnum.SalesInvoice, {
         party: this.sinvDoc.party ?? this.defaultCustomer,
-        isPOS: true,
+        is_pos: true,
       }) as SalesInvoice;
-    },
-    setCouponCodeDoc() {
-      this.coupons = this.fyo.doc.getNewDoc(
-        ModelNameEnum.AppliedCouponCodes
-      ) as AppliedCouponCodes;
     },
     setTotalQuantity() {
       this.totalQuantity = getTotalQuantity(
-        this.sinvDoc.items as SalesInvoiceItem[]
+        (this.sinvDoc.items ?? []) as SalesInvoiceItem[]
       );
     },
     setCouponsCount(value: number) {
@@ -770,23 +740,22 @@ export default defineComponent({
         return this.openLoyaltyProgram();
       }
 
-      this.sinvDoc.loyaltyPoints = 0;
       await this.setLoyaltyPoints(0);
     },
     async setLoyaltyPoints(value: number) {
-      await this.sinvDoc.set('redeemLoyaltyPoints', value > 0);
+      await this.sinvDoc.set('loyalty_points', value);
+      await this.sinvDoc.set('redeem_loyalty_points', value > 0);
       await this.previewInvoice();
     },
-    async selectedInvoiceName(doc: SalesInvoice) {
-      const salesInvoiceDoc = (await this.fyo.doc.getDoc(
+    /** Opens a held sale; a submitted one goes on to its payment. */
+    async selectedInvoiceName(invoice: { name: string; docstatus: number }) {
+      this.sinvDoc = (await getBooksDoc(
         ModelNameEnum.SalesInvoice,
-        doc.name
+        invoice.name
       )) as SalesInvoice;
-
-      this.sinvDoc = salesInvoiceDoc;
       this.toggleModal('SavedInvoice', false);
 
-      if (doc.submitted) {
+      if (invoice.docstatus === 1) {
         this.toggleModal('Payment');
       }
     },
@@ -803,7 +772,7 @@ export default defineComponent({
         );
       }
 
-      if (this.sinvDoc.returnAgainst) {
+      if (this.sinvDoc.return_against) {
         throw new ValidationError(
           t`Unable to add an item to the return invoice.`
         );
@@ -811,13 +780,12 @@ export default defineComponent({
     },
     async addItem(item: POSItem | undefined, quantity = 1) {
       try {
-        await this.sinvDoc.runFormulas();
         this.validateInvoice();
         if (!item) {
           return;
         }
 
-        if (await this.isBatchItem(item)) {
+        if (item.hasBatch) {
           this.selectBatch(item, quantity);
           return;
         }
@@ -830,16 +798,9 @@ export default defineComponent({
         );
         await fillRowSerialNumbers(row, this.itemSerialNumbers);
         await this.previewInvoice();
-        await this.sinvDoc.runFormulas();
       } catch (error) {
         showToast({ type: 'error', message: t`${error as string}` });
       }
-    },
-    async isBatchItem(item: POSItem): Promise<boolean> {
-      return (
-        item.hasBatch ||
-        !!(await this.fyo.getValue(ModelNameEnum.Item, item.name, 'hasBatch'))
-      );
     },
     selectBatch(item: POSItem, quantity: number) {
       this.selectedItemForBatch = item.name;
@@ -868,7 +829,6 @@ export default defineComponent({
           this.itemQtyMap
         );
         await this.previewInvoice();
-        await this.sinvDoc.runFormulas();
       } catch (error) {
         showToast({ type: 'error', message: t`${error as string}` });
       }
@@ -918,14 +878,13 @@ export default defineComponent({
         throw new ValidationError(t`Please enter an amount greater than zero.`);
       }
 
-      // POS reads payment methods through the bridge, by Books field names.
-      const paymentMethod = (await this.fyo.doc.getDoc(
+      const paymentMethod = (await getBooksDoc(
         ModelNameEnum.PaymentMethod,
         this.paymentMethod
-      )) as PaymentMethodOption;
+      )) as PaymentMethod;
       const requirements = getPaymentMethodRequirements(
-        paymentMethod.type,
-        paymentMethod.requiresClearanceDate
+        paymentMethod.type as PaymentMethodType,
+        !!paymentMethod.requires_clearance_date
       );
       if (!requirements.isCash) {
         this.validateTransfer(paidAmount, requirements);
@@ -936,9 +895,9 @@ export default defineComponent({
       requirements: PaymentMethodRequirements
     ) {
       const outstandingAmount = (
-        this.sinvDoc.outstandingAmount?.isZero()
-          ? this.sinvDoc.grandTotal
-          : this.sinvDoc.outstandingAmount
+        this.sinvDoc.outstanding_amount?.isZero()
+          ? this.sinvDoc.grand_total
+          : this.sinvDoc.outstanding_amount
       )?.abs();
       if (outstandingAmount && paidAmount.gt(outstandingAmount)) {
         throw new ValidationError(
@@ -956,10 +915,10 @@ export default defineComponent({
     },
     getTenderedPayment(): TenderedPayment {
       return {
-        paymentMethod: this.paymentMethod,
+        payment_method: this.paymentMethod,
         amount: this.fyo.pesa(this.paidAmount.float).abs(),
-        referenceId: this.transferRefNo,
-        clearanceDate: this.transferClearanceDate,
+        reference_id: this.transferRefNo,
+        clearance_date: this.transferClearanceDate,
       };
     },
     /** The server pays the invoice with these when it submits it. */
@@ -978,11 +937,10 @@ export default defineComponent({
       const names = await call<string[]>(PAY_POS_INVOICE, {
         invoice: this.sinvDoc.name,
         payments: payments.map((payment) => ({
-          payment_method: payment.paymentMethod,
+          ...payment,
           amount: payment.amount.float,
-          reference_id: payment.referenceId,
-          clearance_date: payment.clearanceDate
-            ? DateTime.fromJSDate(payment.clearanceDate).toISODate()
+          clearance_date: payment.clearance_date
+            ? DateTime.fromJSDate(payment.clearance_date).toISODate()
             : null,
         })),
       });
@@ -1004,7 +962,6 @@ export default defineComponent({
       });
 
       await this.validate();
-      await this.sinvDoc.runFormulas();
       await this.sinvDoc.sync();
       await this.sinvDoc.submit();
     },

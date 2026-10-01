@@ -57,11 +57,10 @@
 <script lang="ts">
 import Modal from 'src/components/POS/POSDialog.vue';
 import InvoiceSelectionTable from 'src/components/POS/InvoiceSelectionTable.vue';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { DocValueMap } from 'fyo/core/types';
 import { defineComponent } from 'vue';
-import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
-import { Money } from 'pesa';
+import { getPOSInvoices } from 'src/utils/pos';
 import Paginator from 'src/components/Paginator.vue';
 import { TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
@@ -85,7 +84,7 @@ export default defineComponent({
   },
   data() {
     return {
-      returnedInvoices: [] as SalesInvoice[],
+      returnedInvoices: [] as DocValueMap[],
       invoiceSearchTerm: '',
       pageStart: 0,
       pageEnd: 20,
@@ -118,7 +117,7 @@ export default defineComponent({
           readOnly: true,
         },
         {
-          fieldname: 'grandTotal',
+          fieldname: 'grand_total',
           label: 'Grand Total',
           fieldtype: 'Currency',
           readOnly: true,
@@ -179,40 +178,13 @@ export default defineComponent({
       this.pageEnd = end;
       this.selectedInvoiceName = '';
     },
+    /** Submitted sales that are not returns and have something left to return. */
     async setReturnedInvoices() {
-      const allInvoices = await this.fyo.db.getAll(ModelNameEnum.SalesInvoice, {
-        fields: [],
-        filters: {
-          isPOS: true,
-          submitted: true,
-          cancelled: false,
-        },
-      });
-
-      const returnedInvoiceNames = allInvoices
-        .filter((inv) => {
-          if (inv.isFullyReturned || inv.returnAgainst) {
-            return false;
-          }
-
-          if (inv.isReturned && !inv.isFullyReturned) {
-            return true;
-          }
-
-          if (!inv.isReturned && !inv.returnAgainst) {
-            return true;
-          }
-
-          if (!inv.isReturned && !(inv.outstandingAmount as Money).isZero()) {
-            return true;
-          }
-
-          return false;
-        })
-        .map((inv) => inv.name);
-      this.returnedInvoices = allInvoices.filter((inv) =>
-        returnedInvoiceNames.includes(inv.name)
-      ) as SalesInvoice[];
+      this.returnedInvoices = await getPOSInvoices([
+        ['docstatus', '=', 1],
+        ['return_against', 'is', 'not set'],
+        ['is_fully_returned', '=', 0],
+      ]);
     },
   },
 });

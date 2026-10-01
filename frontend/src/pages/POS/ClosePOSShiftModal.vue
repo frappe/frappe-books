@@ -147,7 +147,7 @@ import {
   getCashPaymentMethods,
   getPOSOpeningShiftDoc,
   validateClosingAmounts,
-} from 'src/utils/pos';
+} from 'src/utils/posSetup';
 import { ForbiddenError } from 'fyo/utils/errors';
 
 export default defineComponent({

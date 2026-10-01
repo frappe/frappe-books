@@ -50,7 +50,7 @@
 
       <Data
         v-if="requirements.requiresReferenceId"
-        :df="fyo.fieldMap.Payment.referenceId"
+        :df="getField('Payment', 'reference_id')!"
         :show-label="true"
         :border="true"
         :required="true"
@@ -60,7 +60,7 @@
       />
       <DateControl
         v-if="requirements.requiresClearanceDate"
-        :df="fyo.fieldMap.Payment.clearanceDate"
+        :df="getField('Payment', 'clearance_date')!"
         :show-label="true"
         :border="true"
         :required="true"
@@ -71,7 +71,7 @@
 
       <Currency
         :df="{
-          ...fyo.fieldMap.PaymentFor.amount,
+          ...getField('PaymentFor', 'amount')!,
           label: sinvDoc.isReturn ? t`Refund amount` : t`Amount paid`,
         }"
         :show-label="true"
@@ -111,7 +111,7 @@
         size="md"
         :label="t`Redeem loyalty points`"
         :description="t`${loyaltyPoints} points available`"
-        :model-value="!!sinvDoc.redeemLoyaltyPoints"
+        :model-value="!!sinvDoc.redeem_loyalty_points"
         @update:model-value="(on: boolean) => $emit('setLoyalty', on)"
       />
       <button
@@ -172,14 +172,14 @@ import {
   Switch as FrappeSwitch,
 } from 'frappe-ui';
 import { PaymentMethodRequirements } from 'models/baseModels/PaymentMethod/requirements';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { PaymentMethodType } from 'models/types';
 import { Money } from 'pesa';
 import Currency from 'src/components/Controls/Currency.vue';
 import Data from 'src/components/Controls/Data.vue';
 import DateControl from 'src/components/Controls/Date.vue';
 import { PaymentMethodOption } from 'src/components/POS/types';
+import { getField } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { getQuickPaymentAmounts, getTotalQuantity } from 'src/utils/pos';
 import { computed, inject, type Ref } from 'vue';
@@ -229,9 +229,7 @@ const showLoyalty = computed(
 const showCoupon = computed(() => !!settings?.enable_coupon_code);
 
 const summary = computed(() => {
-  const quantity = getTotalQuantity(
-    (sinvDoc.value.items ?? []) as SalesInvoiceItem[]
-  );
+  const quantity = getTotalQuantity(sinvDoc.value.items ?? []);
   const items = quantity === 1 ? t`1 item` : t`${quantity} items`;
   return [sinvDoc.value.party, items].filter(Boolean).join(' · ');
 });

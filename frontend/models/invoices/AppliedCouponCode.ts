@@ -7,4 +7,6 @@ export class AppliedCouponCode extends FrappeDoc {
     label: 'Applied Coupon Codes',
     fields: withoutCreate(['coupons']),
   };
+
+  coupons?: string;
 }

@@ -15,7 +15,6 @@
           target: 'Batch',
           label: t`Batch`,
           required: true,
-          getOptions: getBatchOptions,
           filters: { item: itemCode },
         }"
         :value="selectedBatch"
@@ -42,12 +41,8 @@
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
 import { defineComponent } from 'vue';
-import { t } from 'fyo';
-import { showToast } from 'src/utils/interactive';
 import Modal from 'src/components/POS/POSDialog.vue';
 import Link from 'src/components/Controls/Link.vue';
-import { ModelNameEnum } from 'models/types';
-import { fyo } from 'src/initFyo';
 
 export default defineComponent({
   name: 'BatchSelectionModal',
@@ -73,23 +68,6 @@ export default defineComponent({
     };
   },
   methods: {
-    async getBatchOptions() {
-      if (!this.itemCode) {
-        return [];
-      }
-
-      try {
-        const batches = (await fyo.db.getAll(ModelNameEnum.Batch, {
-          filters: { item: this.itemCode },
-          fields: ['name'],
-        })) as { name: string; itemCode: string }[];
-
-        return batches.map((b) => ({ label: b.name, value: b.name }));
-      } catch {
-        showToast({ type: 'error', message: t`Failed to load batches` });
-        return [];
-      }
-    },
     submitSelection() {
       this.$emit('batchSelected', this.selectedBatch);
       this.$emit('toggleModal', 'BatchSelection');

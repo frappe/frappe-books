@@ -35,7 +35,7 @@
 
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { FieldTypeEnum } from 'schemas/types';
 import Modal from 'src/components/POS/POSDialog.vue';
 import NumericKeypad from 'src/components/POS/NumericKeypad.vue';
@@ -76,7 +76,7 @@ export default defineComponent({
       return this.t`Edit ${this.fieldLabel}`;
     },
     allowNegative(): boolean {
-      const isQuantity = ['quantity', 'transferQuantity'].includes(
+      const isQuantity = ['quantity', 'transfer_quantity'].includes(
         this.selectedItemField
       );
       return isQuantity && !!this.selectedItemRow?.isReturn;
@@ -145,7 +145,7 @@ export default defineComponent({
         return null;
       }
 
-      if (this.selectedItemField === 'itemDiscountPercent' && value > 100) {
+      if (this.selectedItemField === 'item_discount_percent' && value > 100) {
         this.validationError = this.t`Discount percent cannot be greater than 100.`;
         return null;
       }

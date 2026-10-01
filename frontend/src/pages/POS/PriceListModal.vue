@@ -12,7 +12,7 @@
         :show-label="true"
         :value="selectedPriceList"
         :focus-input="!isMobile"
-        :df="sinvDoc.fieldMap.priceList"
+        :df="sinvDoc.fieldMap.price_list"
         @change="(value) => (selectedPriceList = value ?? '')"
       />
       <FrappeButton
@@ -48,7 +48,7 @@ import { showToast } from 'src/utils/interactive';
 import Link from 'src/components/Controls/Link.vue';
 import { Button as FrappeButton } from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 
 export default defineComponent({
   name: 'PriceListModal',
@@ -75,7 +75,7 @@ export default defineComponent({
   watch: {
     openModal(value: boolean) {
       if (value) {
-        this.selectedPriceList = this.sinvDoc.priceList ?? '';
+        this.selectedPriceList = this.sinvDoc.price_list ?? '';
       }
     },
   },
@@ -85,7 +85,7 @@ export default defineComponent({
     },
     async setPriceList() {
       try {
-        await this.sinvDoc.set('priceList', this.selectedPriceList);
+        await this.sinvDoc.set('price_list', this.selectedPriceList);
         this.$emit('toggleModal', 'PriceList');
       } catch (error) {
         showToast({

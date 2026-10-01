@@ -79,13 +79,22 @@ export class InvoiceItem extends FrappeDoc {
   parentdoc?: Invoice;
   item?: string;
   rate?: Money;
+  amount?: Money;
+  tax?: string;
   qty?: number;
   quantity?: number;
   transfer_quantity?: number;
   unit?: string;
+  transfer_unit?: string;
+  unit_conversion_factor?: number;
   batch?: string;
+  serial_number?: string;
+  set_item_discount_amount?: boolean;
+  item_discount_amount?: Money;
+  item_discount_percent?: number;
   is_manual_rate?: boolean;
   is_free_item?: boolean;
+  pricing_rule?: string;
 
   getCurrencies: CurrenciesMap = {};
 

@@ -96,7 +96,7 @@
         <FrappeIcon icon="lucide-shopping-cart" class="size-[18px]" />
         <span class="flex-1 text-start">{{ itemCountLabel }}</span>
         <span class="tabular-nums" dir="ltr">
-          {{ fyo.format(sinvDoc.grandTotal ?? fyo.pesa(0), 'Currency') }}
+          {{ fyo.format(sinvDoc.grand_total ?? fyo.pesa(0), 'Currency') }}
         </span>
       </button>
     </div>
@@ -124,8 +124,8 @@ import {
   Icon as FrappeIcon,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { POSItem } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
@@ -184,7 +184,7 @@ watch(sinvDoc, (doc) => {
 const cartQuantities = computed(() => {
   const quantities: Record<string, number> = {};
   for (const row of sinvDoc.value.items ?? []) {
-    if (row.item && !row.isFreeItem) {
+    if (row.item && !row.is_free_item) {
       quantities[row.item] =
         (quantities[row.item] ?? 0) + Math.abs(row.quantity ?? 0);
     }

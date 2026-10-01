@@ -16,7 +16,7 @@
         class="-mt-2 flex flex-wrap gap-2"
       >
         <span
-          v-for="coupon in appliedCoupons as AppliedCouponCodes[]"
+          v-for="coupon in appliedCoupons as AppliedCouponCode[]"
           :key="coupon.coupons"
           class="flex h-8 items-center gap-1 rounded-full bg-surface-gray-2 pe-1 ps-3 text-sm-medium text-ink-gray-8"
         >
@@ -37,7 +37,7 @@
         class="custom-scroll custom-scroll-thumb2 max-h-40 overflow-y-auto rounded-4 border border-outline-gray-1"
       >
         <FrappeListRows
-          :items="appliedCoupons as AppliedCouponCodes[]"
+          :items="appliedCoupons as AppliedCouponCode[]"
           row-key="coupons"
         >
           <template #default="{ item: coupon, value }">
@@ -73,13 +73,13 @@
       </FrappeList>
 
       <Link
-        v-if="coupons.fieldMap"
+        v-if="couponField"
         class="min-w-0 w-full"
         :show-label="true"
         :border="true"
         :value="couponCode"
         :focus-input="!isMobile"
-        :df="coupons.fieldMap.coupons"
+        :df="couponField"
         @change="updateCouponCode"
       />
     </div>
@@ -100,11 +100,12 @@
 
 <script lang="ts">
 import Modal from 'src/components/POS/POSDialog.vue';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { defineComponent, inject } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
-import { AppliedCouponCodes } from 'models/baseModels/AppliedCouponCodes/AppliedCouponCodes';
+import type { AppliedCouponCode } from 'models/invoices/AppliedCouponCode';
+import { getField } from 'src/frappe/registry';
 import Link from 'src/components/Controls/Link.vue';
 import { Field } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
@@ -138,8 +139,7 @@ export default defineComponent({
     return {
       isMobile,
       sinvDoc: inject('sinvDoc') as SalesInvoice,
-      coupons: inject('coupons') as AppliedCouponCodes,
-      appliedCoupons: inject('appliedCoupons') as AppliedCouponCodes[],
+      appliedCoupons: inject('appliedCoupons') as AppliedCouponCode[],
     };
   },
   data() {
@@ -150,6 +150,9 @@ export default defineComponent({
     };
   },
   computed: {
+    couponField(): Field | undefined {
+      return getField('AppliedCouponCodes', 'coupons');
+    },
     tableFields() {
       return [
         {
@@ -213,7 +216,7 @@ export default defineComponent({
     setCouponCode() {
       this.$emit('toggleModal', 'CouponCode');
     },
-    async removeAppliedCoupon(coupon: AppliedCouponCodes) {
+    async removeAppliedCoupon(coupon: AppliedCouponCode) {
       await coupon?.parentdoc?.remove('coupons', coupon.idx as number);
       this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
     },

@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import type { DocValueMap } from 'fyo/core/types';
 import { CurrenciesMap } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
+import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
@@ -16,6 +17,7 @@ export class TaxSummary extends FrappeDoc {
   };
 
   parentdoc?: Invoice;
+  amount?: Money;
   getCurrencies: CurrenciesMap = {};
 
   constructor(schema: Schema, data: DocValueMap, fyo: Fyo, convert = true) {

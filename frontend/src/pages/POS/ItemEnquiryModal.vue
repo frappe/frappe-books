@@ -99,6 +99,7 @@ import Link from 'src/components/Controls/Link.vue';
 import Text from 'src/components/Controls/Text.vue';
 import Data from 'src/components/Controls/Data.vue';
 import { ModelNameEnum } from 'models/types';
+import { getDocuments } from 'src/frappe/api';
 import { newBooksDoc } from 'src/frappe/useBooksDoc';
 
 /** An enquiry's values by Books Item Enquiry fieldname. */
@@ -147,8 +148,11 @@ export default defineComponent({
   },
   methods: {
     async updateCustomerContact(customer: string) {
-      this.ItemEnquiry.contact =
-        ((await this.fyo.getValue('Party', customer, 'phone')) as string) || '';
+      const [party] = await getDocuments('Books Party', {
+        fields: ['phone'],
+        filters: [['name', '=', customer]],
+      });
+      this.ItemEnquiry.contact = (party?.phone as string) || '';
     },
 
     async submitForm() {

@@ -111,7 +111,10 @@ import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
-import { getCashPaymentMethods, getPOSOpeningShiftDoc } from 'src/utils/pos';
+import {
+  getCashPaymentMethods,
+  getPOSOpeningShiftDoc,
+} from 'src/utils/posSetup';
 
 export default defineComponent({
   name: 'OpenPOSShift',

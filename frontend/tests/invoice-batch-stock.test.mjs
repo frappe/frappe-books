@@ -67,3 +67,18 @@ test('returns may use any batch of the item and skip the stock check', async () 
   await row.validateBatchQuantity('B1', 30);
   assert.deepEqual(requests, []);
 });
+
+test('a Qty in another unit checks its batch in stock units', async () => {
+  const row = makeRow();
+  Object.assign(row, {
+    batch: 'B1',
+    transfer_unit: 'Box',
+    unit_conversion_factor: 2,
+  });
+  await assert.rejects(
+    row.set('qty', 2),
+    /Batch B1 only has 2 quantity available but 4 is required/
+  );
+  await row.set('qty', 1);
+  clearTimeout(row.parentdoc._previewTimer);
+});

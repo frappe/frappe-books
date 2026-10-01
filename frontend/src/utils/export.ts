@@ -22,7 +22,8 @@ const excludedFieldTypes: FieldType[] = [
 
 /*
  * Files hold the keys Books named fields by: camelCased Frappe fieldnames,
- * except these, by schema. CSV keys start with the schema name.
+ * except these, by schema, and custom fields by their Books Custom Field
+ * fieldname. CSV keys start with the schema name.
  */
 const RENAMED_KEYS: Record<string, Record<string, string>> = {
   Account: { account_name: 'name', parent_books_account: 'parentAccount' },
@@ -224,8 +225,10 @@ function getColumns(schemaName: string, fields: ExportField[]): ExportColumn[] {
 }
 
 function getExportKey(schemaName: string, fieldname: string): string {
+  const { placements } = getDocType(schemaName);
   return (
     RENAMED_KEYS[schemaName]?.[fieldname] ??
+    placements[fieldname]?.books_fieldname ??
     AUDIT_KEYS[fieldname] ??
     camelCase(fieldname)
   );

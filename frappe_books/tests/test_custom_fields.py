@@ -65,9 +65,8 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 
 		books_meta = get_books_meta(["Books Uom"])
 
-		self.assertEqual(
-			books_meta["placements"], {"Books Uom": {COLUMN: {"section": "Default", "tab": "Custom"}}}
-		)
+		placement = {"section": "Default", "tab": "Custom", "books_fieldname": FIELD["fieldname"]}
+		self.assertEqual(books_meta["placements"], {"Books Uom": {COLUMN: placement}})
 		(unit,) = books_meta["metas"]
 		self.assertIn(COLUMN, [field["fieldname"] for field in unit["fields"]])
 		with self.set_user(ensure_user("books-meta-outsider@example.com", "Translator")):

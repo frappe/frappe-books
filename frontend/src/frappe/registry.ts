@@ -181,7 +181,7 @@ function toDocType(
     );
   }
 
-  return { doctype: meta.name, meta, schema, Model, tables: {} };
+  return { doctype: meta.name, meta, schema, Model, tables: {}, placements };
 }
 
 /** Schema names by doctype: each model's. */

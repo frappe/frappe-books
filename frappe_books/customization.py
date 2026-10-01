@@ -155,7 +155,10 @@ def remove_custom_fields(doctype: str):
 
 
 def get_placements() -> dict[str, dict[str, dict]]:
-	"""Where /books puts each custom field: its tab and section, by DocType and fieldname, in row order."""
+	"""Where /books puts each custom field: its tab and section, by DocType and fieldname, in row order.
+
+	`books_fieldname` is the row's own fieldname, which Books' export files key the field by.
+	"""
 	if not frappe.has_permission("Books Custom Form", "read"):
 		return {}
 	rows = frappe.get_list(
@@ -166,7 +169,7 @@ def get_placements() -> dict[str, dict[str, dict]]:
 	)
 	placements = {}
 	for row in rows:
-		placement = {"section": row.section, "tab": row.tab}
+		placement = {"section": row.section, "tab": row.tab, "books_fieldname": row.fieldname}
 		placements.setdefault(row.parent, {})[custom_target_field(row.fieldname)] = placement
 	return placements
 

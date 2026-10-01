@@ -1,6 +1,7 @@
 import type { Schema } from 'schemas/types';
 import type { FrappeDoc } from './document';
 import type { DocTypeMeta } from './meta';
+import type { Placements } from './schema';
 
 export type FrappeModel = typeof FrappeDoc;
 
@@ -11,6 +12,7 @@ export interface FrappeDocType {
   schema: Schema;
   Model: FrappeModel;
   tables: Record<string, FrappeDocType | undefined>;
+  placements: Placements;
 }
 
 const models = new Map<string, FrappeModel>();

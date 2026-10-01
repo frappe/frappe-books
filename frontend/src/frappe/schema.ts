@@ -58,8 +58,14 @@ export function withoutCreate(
   );
 }
 
-/** The tab and section a Books Custom Form puts each custom field in, by fieldname. */
-export type Placements = Record<string, { section?: string; tab?: string }>;
+/**
+ * The tab and section a Books Custom Form puts each custom field in, by
+ * fieldname, and the row's own fieldname, which export files key it by.
+ */
+export type Placements = Record<
+  string,
+  { section?: string; tab?: string; books_fieldname?: string }
+>;
 
 export interface SchemaContext {
   /** Books schema names by doctype; link targets use them. */

@@ -35,7 +35,12 @@ await build({
       export { getMappedDoc, getStockTransferActions } from './models/helpers';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
-      export { evaluateHidden, evaluateReadOnly, linkOnSave } from './src/utils/doc';
+      export {
+        evaluateHidden,
+        evaluateReadOnly,
+        getLinkedEntries,
+        linkOnSave,
+      } from './src/utils/doc';
       export { showReport } from './src/utils/misc';
       export {
         getDashboardData,
@@ -128,6 +133,7 @@ export const {
 
   evaluateHidden,
   evaluateReadOnly,
+  getLinkedEntries,
   linkOnSave,
   showReport,
   FrappeDatabaseDemux,

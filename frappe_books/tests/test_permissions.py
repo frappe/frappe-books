@@ -5,6 +5,7 @@ from frappe.desk.search import search_widget
 from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.linked_entries import get_linked_entries
 from frappe_books.tests.accounting import (
 	make_account,
 	make_invoice,
@@ -14,7 +15,6 @@ from frappe_books.tests.accounting import (
 	unique_name,
 )
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
-from frappe_books.ui_bridge.linked_entries import linked_entries
 
 RIGHTS = ("read", "write", "create", "delete", "submit", "cancel", "amend")
 FULL = {"read", "write", "create", "delete"}
@@ -160,8 +160,10 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			add_user_permission("Books Shipment", name, TEST_USER)
 		hidden = _seed_shipment()
 		with self.set_user(TEST_USER):
-			self.assertEqual(linked_entries("Shipment", original), {"Shipment": [readable_return]})
-			self.assertRaises(frappe.PermissionError, linked_entries, "Shipment", hidden)
+			self.assertEqual(
+				get_linked_entries("Books Shipment", original), {"Books Shipment": [readable_return]}
+			)
+			self.assertRaises(frappe.PermissionError, get_linked_entries, "Books Shipment", hidden)
 
 	def _make_invoice_as_books_user(self):
 		receivable = make_account("Permission Receivable", account_type="Receivable")

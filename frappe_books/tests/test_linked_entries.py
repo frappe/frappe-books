@@ -8,11 +8,10 @@ from frappe.core.doctype.permission_type.permission_type import get_doctype_ptyp
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
+from frappe_books import linked_entries as linked_entries_module
+from frappe_books.linked_entries import get_linked_entries
 from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party
-from frappe_books.ui_bridge import linked_entries as linked_entries_module
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
-from frappe_books.ui_bridge.linked_entries import linked_entries
 
 QUOTED_TABLE = re.compile(r'[`"](tab[^`"]+)[`"]')
 
@@ -72,7 +71,7 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
 		invoice.submit()
-		self.assertNotIn("Payment", linked_entries("SalesInvoice", invoice.name))
+		self.assertNotIn("Books Payment", get_linked_entries(invoice.doctype, invoice.name))
 
 		payment = frappe.get_doc(
 			{
@@ -95,36 +94,41 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		).insert()
 		payment.submit()
 
-		entries = BooksBespokeQueries().call("getLinkedEntries", ["SalesInvoice", invoice.name])
-		self.assertEqual(entries["Payment"], [payment.name])
-		self.assertIn("AccountingLedgerEntry", entries)
+		entries = get_linked_entries(invoice.doctype, invoice.name)
+		self.assertEqual(entries["Books Payment"], [payment.name])
+		self.assertIn("Books Ledger Entry", entries)
 
 		payment.cancel()
-		self.assertNotIn("Payment", linked_entries("SalesInvoice", invoice.name))
+		self.assertNotIn("Books Payment", get_linked_entries(invoice.doctype, invoice.name))
 
 	def test_linked_entries_list_the_newest_within_the_limit(self):
 		account = make_account("Linked limit")
 		older, newer = (_ledger_entry(account.name, creation) for creation in ("2026-01-01", "2026-01-02"))
 
 		with patch.object(linked_entries_module, "LINKED_ENTRIES_LIMIT", 1):
-			self.assertEqual(linked_entries("Account", account.name), {"AccountingLedgerEntry": [newer]})
-		self.assertEqual(linked_entries("Account", account.name), {"AccountingLedgerEntry": [newer, older]})
+			self.assertEqual(
+				get_linked_entries(account.doctype, account.name), {"Books Ledger Entry": [newer]}
+			)
+		self.assertEqual(
+			get_linked_entries(account.doctype, account.name), {"Books Ledger Entry": [newer, older]}
+		)
 
 	def test_linked_entries_read_only_books_tables(self):
 		account = make_account("Linked tables")
 		_ledger_entry(account.name, "2026-01-01")
-		linked_entries("Account", account.name)
+		get_linked_entries(account.doctype, account.name)
 
 		# Any process on the bench can wipe Frappe's site cache mid-test, so pin the one it refills here.
 		with (
 			patch("frappe.permissions.get_doctype_ptype_map", return_value=get_doctype_ptype_map()),
 			patch.object(frappe.db, "sql", wraps=frappe.db.sql) as sql,
 		):
-			linked_entries("Account", account.name)
+			get_linked_entries(account.doctype, account.name)
 
 		tables = {table for call in sql.call_args_list for table in QUOTED_TABLE.findall(str(call.args[0]))}
 		self.assertTrue(tables)
-		self.assertEqual({table for table in tables if not table.startswith("tabBooks ")}, set())
+		# Besides Books tables, only the DocType list of the Books module.
+		self.assertEqual({table for table in tables if not table.startswith("tabBooks ")}, {"tabDocType"})
 
 
 def _ledger_entry(account, creation):

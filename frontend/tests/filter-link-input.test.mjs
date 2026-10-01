@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   FilterLinkInput,
+  FilterValueInput,
   FrappeDoc,
   loadFrappeDocTypes,
   registerFrappeModels,
@@ -95,4 +96,19 @@ test('a slower earlier search does not replace newer results', async () => {
     input.records.map(({ value }) => value),
     ['Tax-002']
   );
+});
+
+test('a dynamic link filter searches the schema its type filter names by doctype', () => {
+  const field = {
+    fieldtype: 'DynamicLink',
+    fieldname: 'party',
+    references: 'reference_type',
+  };
+  const filters = [
+    { fieldname: 'reference_type', condition: '=', value: 'Books Tax' },
+  ];
+
+  const target = FilterValueInput.computed.linkTarget.call({ field, filters });
+
+  assert.equal(target, 'Tax');
 });

@@ -55,6 +55,29 @@ export async function routeAccounts(
       await fulfill(route, { data });
     }
   );
+  await page.route('**/api/v2/method/run_doc_method', async (route) => {
+    const { method, document } = route.request().postDataJSON();
+    if (method !== 'preview' || document.doctype !== 'Books Account') {
+      return route.fallback();
+    }
+
+    await fulfill(route, { docs: [previewAccount(accounts, document)] });
+  });
+}
+
+/** A new account with its group's types, as the server's preview fills them. */
+function previewAccount(
+  accounts: FixtureAccount[],
+  document: Record<string, unknown>
+) {
+  const parent = accounts.find(
+    (account) => account.name === document.parent_books_account
+  );
+  return {
+    ...document,
+    root_type: parent?.root_type ?? document.root_type,
+    account_type: document.account_type || parent?.account_type,
+  };
 }
 
 function fulfill(route: Route, body: unknown) {

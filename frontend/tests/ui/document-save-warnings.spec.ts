@@ -21,13 +21,22 @@ test('a Frappe-served quick edit reports post-save warnings without leaving an u
       json: { data: { ...values, modified: '2026-01-01 00:00:00.000000' } },
     });
   });
+  // A new unit, opened in a quick edit by the name it is kept under.
+  await page.goto('/books/list/UOM');
+  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await expect(page).toHaveURL(/\/books\/edit\/UOM\//);
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
-    return app.config.globalProperties.$router.push({
+    const router = app.config.globalProperties.$router;
+    const { name } = router.currentRoute.value.params;
+    return router.push({
       path: '/list/UOM',
-      query: { edit: '1', schemaName: 'UOM', name: 'Warning Unit' },
+      query: { edit: '1', schemaName: 'UOM', name },
     });
   });
+  await expect(
+    page.getByRole('button', { name: 'Close quick edit' })
+  ).toBeVisible();
   await holdOpenDoc(page, 'UOM');
   await page.evaluate(async () => {
     const doc = (window as any).openDoc;

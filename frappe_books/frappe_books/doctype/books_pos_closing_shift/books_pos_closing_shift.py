@@ -82,10 +82,11 @@ class BooksPosClosingShift(Document):
 
 	@frappe.whitelist()
 	def preview(self):
-		"""Fill the closing amounts a save would store, without saving."""
+		"""Fill the closing amounts a save would store, with the counted cash as the cash methods' amounts, without saving."""
 		check_preview_permission(self)
 		self.set_opening_shift()
 		self.set_closing_amounts()
+		self.split_counted_cash()
 
 	def set_opening_shift(self):
 		if not self.opening_shift:
@@ -120,6 +121,18 @@ class BooksPosClosingShift(Document):
 			)
 			rows.append(closing_row)
 		self.set("closing_amounts", rows)
+
+	def split_counted_cash(self):
+		"""Share the counted cash among the cash methods: each up to what it expects, the first also any surplus."""
+		cash_rows = self.get_cash_rows()
+		remaining = cash_total(self.closing_cash)
+		for row in cash_rows:
+			row.closing_amount = min(max(rounded(row.expected_amount), 0), remaining)
+			remaining -= row.closing_amount
+		if cash_rows:
+			cash_rows[0].closing_amount += remaining
+		for row in cash_rows:
+			row.difference_amount = row.closing_amount - rounded(row.expected_amount)
 
 	def get_cash_rows(self):
 		return [row for row in self.closing_amounts if is_cash_method(row.payment_method)]

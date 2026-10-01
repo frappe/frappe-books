@@ -154,7 +154,10 @@ function getDocuments(path: string, params: Row): unknown {
   return name ? getRecord(doctype, name) : getList(doctype, params.filters);
 }
 
-/** Totals as the server leaves them; a closing shift expects what its shift opened with. */
+/**
+ * Totals as the server leaves them. A closing shift expects what its shift
+ * opened with and shares the counted cash among the cash methods.
+ */
 function preview(document: Row): Row {
   if (document.doctype !== 'Books Pos Closing Shift') {
     return document;
@@ -168,21 +171,51 @@ function preview(document: Row): Row {
   );
   const closingAmounts = openingShift.opening_amounts.map((row) => {
     const sent = (counted.get(row.payment_method) ?? {}) as Row;
-    const closing = Number(sent.closing_amount ?? 0);
     return {
       name: sent.name ?? null,
       payment_method: row.payment_method,
       opening_amount: row.amount,
-      closing_amount: closing,
+      closing_amount: Number(sent.closing_amount ?? 0),
       expected_amount: row.amount,
-      difference_amount: closing - Number(row.amount),
     };
   });
+  shareCountedCash(closingAmounts, getCashTotal(document.closing_cash));
   return {
     ...document,
     opening_shift: openingShift.name,
-    closing_amounts: closingAmounts,
+    closing_amounts: closingAmounts.map((row) => ({
+      ...row,
+      difference_amount: row.closing_amount - Number(row.expected_amount),
+    })),
   };
+}
+
+/** Each cash method takes up to what it expects, the first also any surplus. */
+function shareCountedCash(rows: Row[], counted: number) {
+  const cashRows = getCashRows(rows);
+  let remaining = counted;
+  for (const row of cashRows) {
+    row.closing_amount = Math.min(Math.max(row.expected_amount, 0), remaining);
+    remaining -= row.closing_amount;
+  }
+
+  if (cashRows.length) {
+    cashRows[0].closing_amount += remaining;
+  }
+}
+
+function getCashRows(rows: Row[]): Row[] {
+  const cashMethods = getList('Books Payment Method', [['type', '=', 'Cash']]);
+  return rows.filter((row) =>
+    cashMethods.some(({ name }) => name === row.payment_method)
+  );
+}
+
+function getCashTotal(cash: Row[] = []): number {
+  return cash.reduce(
+    (total, row) => total + Number(row.denomination) * Number(row.count ?? 0),
+    0
+  );
 }
 
 function getRecord(doctype: string, name: string): Row | undefined {

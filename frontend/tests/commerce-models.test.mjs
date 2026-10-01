@@ -198,13 +198,13 @@ test('a lead makes a customer or a quote once saved', () => {
   );
 });
 
-test('lead contacts show the message Frappe refuses them with', async () => {
+test('lead contacts are checked as Frappe checks them, with the Books messages', async () => {
   const lead = newFrappeDoc('Lead', { name: 'Asha' });
   await assert.rejects(lead.set('email', 'asha@'), {
-    message: 'asha@ is not a valid Email Address',
+    message: 'Invalid email: asha@',
   });
   await assert.rejects(lead.set('mobile', '98x'), {
-    message: '98x is not a valid Phone Number',
+    message: 'Invalid phone: 98x',
   });
   await lead.set('email', 'Asha <asha@example.com>, ops@example.com');
   await lead.set('mobile', '+91 (22) 555-0199');
@@ -435,18 +435,23 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
   clearTimeout(rule._previewTimer);
 });
 
-test('pricing rule limits show the message the server refuses them with', async () => {
+test('pricing rule limits show the message /books showed at each field', async () => {
   const rule = newFrappeDoc('PricingRule', { max_quantity: 5 });
   await assert.rejects(rule.set('min_quantity', 6), {
-    message: 'Minimum quantity must be less than maximum quantity.',
+    message: 'Minimum Quantity should be less than the Maximum Quantity.',
+  });
+  await rule.set('max_quantity', 0);
+  await rule.set('min_quantity', 6);
+  await assert.rejects(rule.set('max_quantity', 5), {
+    message: 'Maximum Quantity should be greater than the Minimum Quantity.',
   });
   await rule.set('max_amount', fyo.pesa(10));
   await assert.rejects(rule.set('min_amount', fyo.pesa(10)), {
-    message: 'Minimum amount must be less than maximum amount.',
+    message: 'Minimum Amount should be less than the Maximum Amount.',
   });
   await rule.set('valid_to', new Date('2026-01-01'));
   await assert.rejects(rule.set('valid_from', new Date('2026-02-01')), {
-    message: 'Valid From must be on or before Valid To.',
+    message: 'Valid From Date should be less than Valid To Date.',
   });
   clearTimeout(rule._previewTimer);
 });
@@ -571,13 +576,16 @@ test('stored loyalty program statuses are offered as filters', () => {
   );
 });
 
-test('loyalty program usage shows the message the server refuses it with', async () => {
+test('loyalty program usage shows the message /books showed, as the server does', async () => {
   const program = newFrappeDoc('LoyaltyProgram', { maximum_use: 2 });
   await assert.rejects(program.set('maximum_use', -1), {
-    message: 'Loyalty-program usage counts cannot be negative.',
+    message: 'Maximum use cannot be negative',
+  });
+  await assert.rejects(program.set('used', -1), {
+    message: 'Used count cannot be negative',
   });
   await assert.rejects(program.set('used', 3), {
-    message: 'Loyalty-program usage cannot exceed its maximum.',
+    message: 'Used count cannot exceed maximum use limit',
   });
 });
 

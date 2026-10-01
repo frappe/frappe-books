@@ -88,6 +88,22 @@ class IntegrationTestPricing(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "on or before Valid To"):
 			self._coupon(rule, valid_from=nowdate(), valid_to=add_days(nowdate(), -1))
 
+	def test_rule_limits_say_what_books_says_at_their_fields(self):
+		for values, message in (
+			(
+				{"min_quantity": 6, "max_quantity": 5},
+				"Minimum Quantity should be less than the Maximum Quantity.",
+			),
+			({"min_amount": 10, "max_amount": 10}, "Minimum Amount should be less than the Maximum Amount."),
+			(
+				{"valid_from": nowdate(), "valid_to": add_days(nowdate(), -1)},
+				"Valid From Date should be less than Valid To Date.",
+			),
+		):
+			with self.subTest(message=message), self.assertRaises(frappe.ValidationError) as raised:
+				self._pricing_rule(**values)
+			self.assertEqual(str(raised.exception), message)
+
 	def test_product_discount_adds_free_item(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		free_item = make_item(self.income.name, self.expense.name)

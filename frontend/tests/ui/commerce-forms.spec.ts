@@ -41,14 +41,14 @@ test('a new customer saves with an address made from its link', async ({
   );
 });
 
-test('a party email shows the message Frappe refuses it with', async ({
+test('a party email is checked as Frappe checks it, with the Books message', async ({
   page,
 }) => {
   await page.getByRole('button', { name: 'Create new entry' }).click();
   await page.getByRole('textbox', { name: 'john@doe.com' }).fill('asha@');
   await page.keyboard.press('Tab');
   await expect(
-    page.getByText('asha@ is not a valid Email Address', { exact: true })
+    page.getByText('Invalid email: asha@', { exact: true })
   ).toBeVisible();
 });
 

@@ -125,7 +125,6 @@ export class Fyo {
   store = {
     isDevelopment: false,
     appVersion: '',
-    language: '',
     permissions: null as Permissions | null,
     chartsOfAccounts: [] as ChartOfAccounts[],
     // Translated names of the standard chart's accounts, from the server

@@ -1,7 +1,6 @@
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import { getDocuments } from 'src/frappe/api';
-import { safeParseFloat } from 'utils/index';
 
 type UnitRow = {
   item?: string;
@@ -31,16 +30,6 @@ export async function getItemUnits(item: string): Promise<ItemUnits> {
       conversions.map(({ uom, conversion_factor }) => [uom, conversion_factor])
     ),
   };
-}
-
-/** The item's conversion factor for the row's transfer unit, as the server derives it on save. */
-export async function getUnitConversionFactor(row: UnitRow): Promise<number> {
-  if (!row.item || !row.transferUnit || row.transferUnit === row.unit) {
-    return 1;
-  }
-
-  const { factors } = await getItemUnits(row.item);
-  return safeParseFloat(factors[row.transferUnit] ?? 1);
 }
 
 /** Rejects a transfer unit that is neither the item's stock unit nor one of its conversions. */

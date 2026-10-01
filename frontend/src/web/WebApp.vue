@@ -141,7 +141,6 @@ export default defineComponent({
       fyo.store.accountLabels = books.account_labels;
       fyo.store.indianStates = books.indian_states;
       fyo.setCurrencySymbols(boot.docs);
-      fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 
       registerFrappeModels(frappeModels);

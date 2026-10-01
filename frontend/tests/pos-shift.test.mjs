@@ -111,7 +111,10 @@ test('the POS opens a new shift unless one is open', async () => {
 
 test('cash methods are all the payment methods of the Cash type', async () => {
   requests.length = 0;
-  assert.deepEqual(await posSetup.getCashPaymentMethods(), ['Cash', 'Petty Cash']);
+  assert.deepEqual(await posSetup.getCashPaymentMethods(), [
+    'Cash',
+    'Petty Cash',
+  ]);
   assert.deepEqual(requests[0].body, {
     doctype: 'Books Payment Method',
     fields: ['name'],

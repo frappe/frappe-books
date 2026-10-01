@@ -29,10 +29,7 @@ import type { POSPermissions } from './posSetup';
 
 export type POSQuantityField = 'quantity' | 'transfer_quantity';
 export type POSRowField =
-  | POSQuantityField
-  | 'rate'
-  | 'item_discount_amount'
-  | 'item_discount_percent';
+  POSQuantityField | 'rate' | 'item_discount_amount' | 'item_discount_percent';
 
 /** The item fields the POS lists, searches and adds items by. */
 export const POS_ITEM_FIELDS = [
@@ -93,7 +90,10 @@ export async function setPOSRowQuantity(
       row.quantity = quantity * (row.unit_conversion_factor || 1);
     }
 
-    await validateQty(row, getItemRows(row.parentdoc as SalesInvoice, row.item));
+    await validateQty(
+      row,
+      getItemRows(row.parentdoc as SalesInvoice, row.item)
+    );
   } catch (error) {
     await row.set(field, previous[field]);
     row.quantity = previous.quantity;
@@ -210,7 +210,13 @@ async function validateSinvItems(
 
     if (row.batch) {
       total[row.batch] = safeParseFloat((total[row.batch] ?? 0) + quantity);
-      validatePOSStock(item, total[row.batch], itemQtyMap, inventory, row.batch);
+      validatePOSStock(
+        item,
+        total[row.batch],
+        itemQtyMap,
+        inventory,
+        row.batch
+      );
     }
   }
 }
@@ -219,7 +225,9 @@ async function validateSinvItems(
 async function getTrackedItems(rows: SalesInvoiceItem[]): Promise<Set<string>> {
   const names = [...new Set(rows.map((row) => row.item!).filter(Boolean))];
   const items = await Promise.all(names.map(getItemDoc));
-  return new Set(items.filter((item) => item.track_item).map((item) => item.name!));
+  return new Set(
+    items.filter((item) => item.track_item).map((item) => item.name!)
+  );
 }
 
 /**
@@ -427,7 +435,9 @@ export async function addBatchItem(
 }
 
 /** POS invoices that match, newest first, with the values their lists show. */
-export async function getPOSInvoices(filters: Filter[]): Promise<DocValueMap[]> {
+export async function getPOSInvoices(
+  filters: Filter[]
+): Promise<DocValueMap[]> {
   const schema = getSchema(ModelNameEnum.SalesInvoice)!;
   const rows = await getAllDocuments('Books Sales Invoice', {
     fields: ['name', 'party', 'date', 'grand_total', 'docstatus'],

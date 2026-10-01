@@ -14,7 +14,10 @@ import { showToast } from './interactive';
 const GET_OPEN_SHIFT =
   'frappe_books.frappe_books.doctype.books_pos_opening_shift.books_pos_opening_shift.get_open_shift';
 
-export type POSPermissions = { canChangeRate: boolean; canEditDiscount: boolean };
+export type POSPermissions = {
+  canChangeRate: boolean;
+  canEditDiscount: boolean;
+};
 
 /** The POS profile that POS Settings names, if any. */
 export async function getPOSProfile(): Promise<POSProfile | undefined> {

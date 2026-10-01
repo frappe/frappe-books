@@ -41,7 +41,11 @@ export default {
       }));
     },
     async searchOptions(keyword, filters) {
-      const options = await Link.methods.getOptions.call(this, keyword, filters);
+      const options = await Link.methods.getOptions.call(
+        this,
+        keyword,
+        filters
+      );
       const records = await this.getRecords(options.map(({ value }) => value));
       return options.map((option) => ({
         ...option,

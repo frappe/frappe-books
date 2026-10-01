@@ -22,7 +22,7 @@
         @click="() => setPageNo(Math.max(1, pageNo - 1))"
       />
       <div
-        class="grid items-center gap-1 rounded-4 bg-surface-gray-2 px-1 text-base tabular-nums focus-within:outline focus-within:outline-2 focus-within:outline-outline-gray-3"
+        class="grid items-center gap-1 rounded-4 bg-surface-gray-2 px-1 text-base tabular-nums"
         :style="{
           gridTemplateColumns: `${pageNumberWidth} auto ${pageNumberWidth}`,
         }"

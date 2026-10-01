@@ -89,7 +89,7 @@
         <!-- Add Row and Row Count -->
         <FrappeListRow
           v-if="canAddRemoveRows"
-          class="border-t border-outline-gray-1 text-ink-gray-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+          class="border-t border-outline-gray-1 text-ink-gray-5"
           @click="addRow"
         >
           <FrappeListCell class="justify-center">

@@ -156,16 +156,6 @@ input[type='number']::-webkit-outer-spin-button {
   width: var(--w-sidebar);
 }
 
-.show-mandatory::after {
-  content: '*';
-  display: inline-block;
-  width: 0px;
-  height: 0px;
-  margin-left: -0.875rem;
-  vertical-align: -3px;
-  @apply text-red-500;
-}
-
 .custom-scroll::-webkit-scrollbar {
   width: var(--w-scrollbar);
   height: var(--w-scrollbar);

@@ -6,10 +6,10 @@ export function getReportCellColorClass(
   displayPrecision: number
 ): string {
   if (cell.color === 'red') {
-    return 'text-red-600';
+    return 'text-ink-red-5';
   }
   if (cell.color === 'green') {
-    return 'text-green-600';
+    return 'text-ink-green-5';
   }
   if (!cell.rawValue) {
     return 'text-ink-gray-6';

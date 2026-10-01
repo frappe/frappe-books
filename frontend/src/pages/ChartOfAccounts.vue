@@ -29,7 +29,7 @@
         <template #item-label="{ node }">
           <button
             type="button"
-            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-base text-ink-gray-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
+            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-base text-ink-gray-8"
             :class="node.is_group ? 'font-medium' : 'font-normal'"
             :title="accountLabel(String(node.name))"
             @keydown.enter.stop

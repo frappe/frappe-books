@@ -11,6 +11,7 @@ import {
   getSchema,
   newFrappeDoc,
   searchFrappeLink,
+  setLanguageMapOnTranslationString,
 } from './helpers/frappe.mjs';
 import { getFilterFields } from './helpers/accounting.mjs';
 import {
@@ -136,6 +137,19 @@ test("a link shows an address's display text and other records' names", async ()
     requests.map(({ path }) => path),
     ['/api/v2/document/Books Address']
   );
+  assert.deepEqual(requests[0].params.fields, ['address_display']);
+  assert.deepEqual(requests[0].params.filters, [['name', '=', 'Home']]);
+});
+
+test('a link to an open address shows its text without a request', async () => {
+  const address = newFrappeDoc('Address', { address_display: '9 Lake Road' });
+  requests.length = 0;
+
+  assert.equal(
+    await getLinkDisplayValue('Address', address.name),
+    '9 Lake Road'
+  );
+  assert.deepEqual(requests, []);
 });
 
 test("countries are Frappe's, shown and searched by their names", async () => {
@@ -157,6 +171,15 @@ test("countries are Frappe's, shown and searched by their names", async () => {
     [requests[0].body.doctype, requests[0].body.txt],
     ['Country', 'Ind']
   );
+
+  // As Frappe's link search, a translated doctype's names show translated.
+  setLanguageMapOnTranslationString({ India: { translation: 'Indien' } });
+  try {
+    const [india] = await searchFrappeLink('Country', 'Ind', null, 10);
+    assert.deepEqual([india.label, india.value], ['Indien', 'India']);
+  } finally {
+    setLanguageMapOnTranslationString(undefined);
+  }
 });
 
 test('an address lists Indian states for India and has no place of supply', () => {

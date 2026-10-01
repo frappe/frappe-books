@@ -39,6 +39,8 @@ await build({
         linkOnSave,
       } from './src/utils/doc';
       export { showReport } from './src/utils/misc';
+      export { fyo as appFyo } from './src/initFyo';
+      export { getDefaultFilters as getReportDefaultFilters } from './src/components/Report/Mobile/MobileFilters';
       export {
         getDashboardData,
         getInvoiceListFilters,
@@ -129,6 +131,8 @@ export const {
   getLinkedEntries,
   linkOnSave,
   showReport,
+  appFyo,
+  getReportDefaultFilters,
   GSTR1,
   getGstrJsonData,
   call,

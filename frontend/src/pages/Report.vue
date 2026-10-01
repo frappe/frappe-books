@@ -186,28 +186,6 @@ export default defineComponent({
       docsPathMap[this.reportClassName] ?? docsPathMap.Reports!;
     await this.setReportData();
 
-    const filters = this.$route.query as Record<string, DocValue>;
-    const validFilters: Record<string, DocValue> = {};
-
-    if (filters.defaultFilters && typeof filters.defaultFilters === 'string') {
-      const parsed = JSON.parse(filters.defaultFilters);
-      Object.assign(validFilters, parsed);
-    }
-
-    for (const [key, value] of Object.entries(filters)) {
-      if (key !== 'defaultFilters' && typeof value === 'string') {
-        validFilters[key] = value;
-      }
-    }
-    const filterKeys = Object.keys(validFilters);
-    for (const key of filterKeys) {
-      await this.report?.set(key, validFilters[key]);
-    }
-
-    if (filterKeys.length) {
-      await this.report?.updateData();
-    }
-
     this.shortcuts?.pmod.set(this.reportClassName, ['KeyP'], async () => {
       await routeTo(`/report-print/${this.reportClassName}`);
     });
@@ -221,12 +199,27 @@ export default defineComponent({
     async setReportData() {
       const isNew = !this.report;
       this.report = await showReport(
-        this.report as Report | null,
-        this.reportClassName
+        this.reportClassName,
+        this.getRouteFilters()
       );
       if (isNew) {
         this.filterDefaults = await getDefaultFilters(this.report as Report);
       }
+    },
+    getRouteFilters(): Record<string, DocValue> {
+      const query = this.$route.query as Record<string, DocValue>;
+      const filters: Record<string, DocValue> = {};
+      if (query.defaultFilters && typeof query.defaultFilters === 'string') {
+        Object.assign(filters, JSON.parse(query.defaultFilters));
+      }
+
+      for (const [key, value] of Object.entries(query)) {
+        if (key !== 'defaultFilters' && typeof value === 'string') {
+          filters[key] = value;
+        }
+      }
+
+      return filters;
     },
     async reload() {
       this.loading = true;

@@ -1,3 +1,4 @@
+import { DocValue } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
@@ -73,27 +74,35 @@ export function getIsMac() {
   return navigator.userAgent.indexOf('Mac') !== -1;
 }
 
-export async function getReport(name: keyof typeof reports) {
+export async function getReport(
+  name: keyof typeof reports,
+  filters: Record<string, DocValue> = {}
+) {
   const cachedReport = fyo.store.reports[name];
   if (cachedReport) {
     return cachedReport;
   }
 
   const report = new reports[name](fyo);
-  await report.initialize();
+  await report.initialize(filters);
   fyo.store.reports[name] = report;
   return report;
 }
 
-/** Load a report when it is first shown, and refetch its data when shown again. */
+/**
+ * Load a report when it is first shown, and refetch its data when shown
+ * again. Either way the server runs it once, with the filters set.
+ */
 export async function showReport(
-  report: Report | null,
-  name: keyof typeof reports
+  name: keyof typeof reports,
+  filters: Record<string, DocValue> = {}
 ): Promise<Report> {
-  if (report === null) {
-    return getReport(name);
+  const report = fyo.store.reports[name];
+  if (!report) {
+    return getReport(name, filters);
   }
 
+  await report.setFilters(filters);
   await report.setReportData(undefined, true);
   return report;
 }

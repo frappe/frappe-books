@@ -9,6 +9,7 @@ from frappe.utils.pdf import read_options_from_html
 from frappe.utils.print_utils import get_print
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.frappe_books.doctype.books_defaults.books_defaults import PRINT_FORMAT_FIELDS
 from frappe_books.printing import (
 	books_format,
 	default_print_format,
@@ -261,6 +262,19 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		save_defaults({"sales_invoice_terms": "Net 30"})
 
 		self.assertEqual(default_print_format("Books Journal Entry"), print_format)
+
+	def test_print_format_pickers_need_no_stored_copy(self):
+		print_format = make_print_format("Books Journal Entry")
+		set_default_print_format("Books Journal Entry", print_format)
+		# Frappe stores no virtual single values since frappe#43435.
+		frappe.db.delete("Singles", {"doctype": "Books Defaults", "field": ("in", list(PRINT_FORMAT_FIELDS))})
+
+		shown = frappe.get_single("Books Defaults").as_dict()
+		self.assertEqual(shown.journal_entry_print_template, print_format)
+
+		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+			save_defaults({**shown, "journal_entry_print_template": None})
+		self.assertIsNone(default_print_format("Books Journal Entry"))
 
 	def test_print_formats_must_be_for_the_doctype_they_print(self):
 		message = "not a print format for Books Sales Invoice"

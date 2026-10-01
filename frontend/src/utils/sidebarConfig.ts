@@ -37,7 +37,7 @@ function isVisible(item: SidebarItem | SidebarRoot): boolean {
 }
 
 /** Whether the user can read the list or open the report the route shows. */
-function canOpen(route: string): boolean {
+export function canOpen(route: string): boolean {
   const [, page, name] = route.split('/');
   if (page === 'list') {
     return fyo.can(name, 'read');

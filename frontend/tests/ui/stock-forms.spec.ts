@@ -36,7 +36,7 @@ test('a stock movement takes its series, rate and locations from the server', as
   await expect(page.getByRole('combobox', { name: 'To' })).toHaveValue(
     'Stores'
   );
-  await expect(page.getByRole('textbox', { name: 'Rate' })).toHaveValue(
+  await expect(page.getByRole('spinbutton', { name: 'Rate' })).toHaveValue(
     '12.00'
   );
 
@@ -45,7 +45,9 @@ test('a stock movement takes its series, rate and locations from the server', as
   await expect(page.getByRole('combobox', { name: 'From' })).toHaveValue(
     'Stores'
   );
-  await expect(page.getByRole('combobox', { name: 'To' })).toHaveValue('');
+  // The destination turns read only and empty.
+  await expect(page.getByRole('combobox', { name: 'To' })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: '—' })).toBeDisabled();
 
   await choose(page, 'Movement Type', 'Material Receipt');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -69,7 +71,7 @@ test('a purchase receipt return keeps its quantities negative', async ({
   await expect(
     page.getByRole('combobox', { name: 'Return Against' })
   ).toHaveValue(receipt);
-  const quantity = page.getByRole('textbox', { name: 'Quantity' });
+  const quantity = page.getByRole('spinbutton', { name: 'Quantity' });
   await expect(quantity).toHaveValue('-2');
 
   await quantity.fill('1');
@@ -90,7 +92,7 @@ test.describe('on a phone', () => {
     await page.goto('/books/list/PurchaseReceipt');
     await waitForBooks(page);
 
-    await page.getByText(receipt, { exact: true }).click();
+    await page.getByRole('button').filter({ hasText: receipt }).click();
     await expect(page).toHaveURL(
       new RegExp(`/books/edit/PurchaseReceipt/${receipt}$`)
     );

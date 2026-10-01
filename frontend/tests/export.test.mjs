@@ -45,6 +45,16 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
   assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'name'));
 });
 
+test('party and address exports leave out Indian GST fields', () => {
+  const exported = (schemaName) =>
+    getExportFields(getSchema(schemaName).fields).map((f) => f.fieldname);
+
+  assert.ok(exported('Party').includes('tax_id'));
+  assert.ok(!exported('Party').includes('gst_type'));
+  assert.ok(!exported('Party').includes('gstin'));
+  assert.ok(!exported('Address').includes('pos'));
+});
+
 test('every exported table is headed by the label of its rows, not their doctype', () => {
   const lists = Object.keys(frappeModels).filter(
     (schemaName) => !getDocType(schemaName).meta.issingle

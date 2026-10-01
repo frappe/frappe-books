@@ -57,6 +57,16 @@ test('a template starts with the name that groups each document’s rows', () =>
   );
 });
 
+test('a party template holds a tax ID, not Indian GST fields', () => {
+  const labels = [...new Importer('Party', fyo).templateFieldsMap.values()].map(
+    ({ label }) => label
+  );
+
+  assert.ok(labels.includes('Tax ID'));
+  assert.ok(!labels.includes('GST Registration'));
+  assert.ok(!labels.includes('GSTIN No.'));
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;

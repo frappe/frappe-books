@@ -4,8 +4,10 @@ import {
   evaluateHidden,
   frappeModels,
   fyo,
+  getExportFields,
   getRegionalFrappeModels,
   getSchema,
+  Importer,
   newFrappeDoc,
 } from './helpers/frappe.mjs';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
@@ -62,4 +64,18 @@ test('an Indian customer shows loyalty fields when the program is on', async () 
   assert.equal(hidden(party, 'loyalty_points'), true);
   fyo.singles.AccountingSettings = {};
   assert.equal(hidden(newFrappeDoc('Party'), 'loyalty_program'), true);
+});
+
+test('Indian party and address files hold GST fields, not a tax ID', () => {
+  const exported = (schemaName) =>
+    getExportFields(getSchema(schemaName).fields).map((f) => f.fieldname);
+  const headers = [...new Importer('Party', fyo).templateFieldsMap.values()];
+  const labels = headers.map(({ label }) => label);
+
+  assert.ok(labels.includes('GST Registration'));
+  assert.ok(labels.includes('GSTIN No.'));
+  assert.ok(!labels.includes('Tax ID'));
+  assert.deepEqual(exported('Party').slice(-6, -4), ['gst_type', 'gstin']);
+  assert.ok(!exported('Party').includes('tax_id'));
+  assert.ok(exported('Address').includes('pos'));
 });

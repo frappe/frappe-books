@@ -1,5 +1,6 @@
 import frappe
 from frappe.api.v2 import run_doc_method
+from frappe.client import get_list
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, now_datetime, set_request
 
@@ -16,7 +17,14 @@ from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice i
 	make_payment,
 	pay_pos_invoice,
 )
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
+from frappe_books.tests.accounting import (
+	ensure_user,
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	unique_name,
+)
 
 
 class IntegrationTestPosPayments(IntegrationTestCase):
@@ -56,6 +64,27 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		payment = frappe.get_doc("Books Payment", counter_payments(invoice)[0])
 		self.assertEqual((payment.amount, payment.payment_account), (180, self.counter))
 		self.assertEqual((invoice.outstanding_amount, invoice.reload().status), (0, "Paid"))
+
+	def test_a_cashier_lists_the_payments_a_paid_sale_made(self):
+		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])
+		invoice.submit()
+
+		# The query the POS runs after checkout to toast each payment.
+		with self.set_user(ensure_user("pos-cashier@example.com", "Books User")):
+			rows = get_list(
+				"Books Payment For",
+				parent="Books Payment",
+				fields=["parent"],
+				filters=[
+					["reference_type", "=", "Books Sales Invoice"],
+					["reference_name", "=", invoice.name],
+				],
+				order_by="creation asc",
+				limit_page_length=0,
+			)
+
+		self.assertEqual(len(rows), 1)
+		self.assertEqual([row.parent for row in rows], counter_payments(invoice))
 
 	def test_a_submit_of_the_client_copy_pays_the_tendered_rows(self):
 		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])

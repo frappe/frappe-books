@@ -1,4 +1,6 @@
+import { ConflictError } from 'fyo/utils/errors';
 import type { DocPermissionMap } from 'fyo/utils/permissions';
+import { t } from 'fyo/utils/translation';
 import { call, getServerError, reachServer } from 'src/web/api';
 
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
@@ -46,7 +48,8 @@ export async function updateDocument(
   values: DocValues
 ): Promise<DocValues> {
   const path = ['document', doctype, name];
-  return (await request<DocValues>('PUT', path, { body: values })).data;
+  const saving = request<DocValues>('PUT', path, { body: values });
+  return (await checkLatest(doctype, name, saving)).data;
 }
 
 export async function deleteDocument(
@@ -65,9 +68,14 @@ export async function runDocMethod(
   document: DocValues,
   kwargs?: Record<string, unknown>
 ): Promise<DocValues> {
-  const { docs } = await request('POST', ['method', 'run_doc_method'], {
+  const running = request('POST', ['method', 'run_doc_method'], {
     body: { method, document, kwargs },
   });
+  const { docs } = await checkLatest(
+    String(document.doctype),
+    String(document.name),
+    running
+  );
   return docs![0];
 }
 
@@ -159,6 +167,24 @@ async function request<T>(
   }
 
   return body;
+}
+
+/** Frappe refuses a copy older than the saved one; /books says so in its own words. */
+async function checkLatest<T>(
+  doctype: string,
+  name: string,
+  response: Promise<T>
+): Promise<T> {
+  try {
+    return await response;
+  } catch (error) {
+    if (error instanceof ConflictError) {
+      const message = t`${doctype} ${name} changed after it was opened. Reload and try again.`;
+      throw new ConflictError(message, false);
+    }
+
+    throw error;
+  }
 }
 
 function getQueryString(params: Record<string, unknown> = {}): string {

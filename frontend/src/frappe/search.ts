@@ -37,10 +37,11 @@ export function getSearchables(): Searchable[] {
 
 function addSearchable(
   searchables: Map<string, Searchable>,
-  { doctype, meta, schema }: FrappeDocType,
+  { doctype, meta, schema, Model }: FrappeDocType,
   parent?: string
 ) {
-  const searchFields = getSearchFields(schema.name);
+  const searchFields =
+    Model.presentation.paletteFields ?? getSearchFields(schema.name);
   const isChild = !!meta.istable;
   const known = searchables.get(schema.name);
   if (known) {

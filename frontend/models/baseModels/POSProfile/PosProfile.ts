@@ -1,6 +1,27 @@
 import { FiltersMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
-import { withoutCreate } from 'src/frappe/schema';
+import { FieldPresentation, withoutCreate } from 'src/frappe/schema';
+
+const BUTTON_COLOURS = [
+  { label: 'Red', value: '#f98080' },
+  { label: 'Orange', value: '#fbbf70' },
+  { label: 'Yellow', value: '#fde047' },
+  { label: 'Green', value: '#86efac' },
+  { label: 'Teal', value: '#5eead4' },
+  { label: 'Blue', value: '#60a5fa' },
+  { label: 'Indigo', value: '#818cf8' },
+  { label: 'Purple', value: '#a78bfa' },
+  { label: 'Pink', value: '#f472b6' },
+  { label: 'Black', value: '#9ca3af' },
+];
+
+/** The POS button colour fields, by fieldname, with the colours they offer. */
+export const BUTTON_COLOUR_FIELDS: Record<string, FieldPresentation> =
+  Object.fromEntries(
+    ['save', 'cancel', 'submit', 'held', 'return', 'pay', 'pay_and_print'].map(
+      (action) => [`${action}_button_colour`, { options: BUTTON_COLOURS }]
+    )
+  );
 
 /** Books Pos Profile, served by Frappe: what a POS counter sells and allows. */
 export class POSProfile extends FrappeDoc {
@@ -20,7 +41,10 @@ export class POSProfile extends FrappeDoc {
       'can_edit_discount',
       'ignore_pricing_rule',
     ],
-    fields: withoutCreate(['pos_print_template']),
+    fields: {
+      ...withoutCreate(['pos_print_template']),
+      ...BUTTON_COLOUR_FIELDS,
+    },
   };
 
   declare pos_customer?: string;

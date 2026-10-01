@@ -267,6 +267,7 @@ import {
   isTypingInField,
   getQuickQtyBuffer,
   getPOSQuantityField,
+  getInvoicePayments,
 } from 'src/utils/pos';
 import {
   getItemVisibility,
@@ -846,6 +847,14 @@ export default defineComponent({
         } else {
           await this.setTenderedPayments(payments);
           await this.submitSinvDoc();
+          if (payments.length) {
+            // The sale is done; a failed lookup must not keep its cart open.
+            getInvoicePayments(this.sinvDoc.name!)
+              .then((names) => this.showPaymentToasts(names))
+              .catch((error) =>
+                showToast({ type: 'error', message: t`${error as string}` })
+              );
+          }
         }
 
         this.closeAllModals();
@@ -944,6 +953,9 @@ export default defineComponent({
             : null,
         })),
       });
+      this.showPaymentToasts(names);
+    },
+    showPaymentToasts(names: string[]) {
       for (const name of names) {
         showToast({
           type: 'success',

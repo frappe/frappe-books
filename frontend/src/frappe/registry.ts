@@ -15,11 +15,14 @@ import {
 import { getOpenFrappeDocs } from './documents';
 import { getBooksMeta, type BooksMeta, type DocTypeMeta } from './meta';
 import {
+  getNamingField,
   getTableSchemaName,
   toSchema,
   type Placements,
   type Presentation,
 } from './schema';
+
+const QUICK_VIEW_SKIPPED_FIELDTYPES = ['Table', 'AttachImage', 'Attachment'];
 
 /** Loads the meta of every model's schema in one request. Screens read it synchronously after this. */
 export async function loadFrappeDocTypes() {
@@ -67,6 +70,21 @@ export function getFileFields(schemaName: string): Field[] {
     (field) => (field.isCustom || field.meta) && !listed.includes(field)
   );
   return [...listed, ...rest];
+}
+
+/**
+ * The fields a quick view of a document lists, in file order. The quick view
+ * heads with the name, so the naming field is left out.
+ */
+export function getQuickViewFields(schemaName: string): Field[] {
+  const names = ['name', getNamingField(getDocType(schemaName).meta)];
+  return getFileFields(schemaName).filter(
+    (field) =>
+      !QUICK_VIEW_SKIPPED_FIELDTYPES.includes(field.fieldtype) &&
+      !names.includes(field.fieldname) &&
+      !field.hidden &&
+      !field.meta
+  );
 }
 
 /** The fields list and global search match besides the name. */

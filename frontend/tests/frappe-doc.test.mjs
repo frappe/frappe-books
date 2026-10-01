@@ -197,8 +197,40 @@ test('a stale save shows as a conflict', async () => {
   const pen = await getFrappeDoc('Item', 'Pen', { refresh: true });
   await pen.set('rate', fyo.pesa(16));
   clearTimeout(pen._previewTimer);
-  await assert.rejects(pen.sync(), errors.ConflictError);
+  await assert.rejects(
+    pen.sync(),
+    staleError(
+      'Books Item Pen changed after it was opened. Reload and try again.'
+    )
+  );
 });
+
+test('a stale submit says the document changed, as a stale save does', async () => {
+  const saved = { name: 'ORD-3', customer: 'Acme', modified: MODIFIED };
+  stubDocument(saved, ({ path }) =>
+    path.endsWith('run_doc_method')
+      ? {
+          status: 417,
+          body: {
+            errors: [{ type: 'TimestampMismatchError', message: 'Stale' }],
+          },
+        }
+      : undefined
+  );
+  const order = await getFrappeDoc('Order', 'ORD-3');
+  await assert.rejects(
+    order.submit(),
+    staleError(
+      'Books Order ORD-3 changed after it was opened. Reload and try again.'
+    )
+  );
+});
+
+/** A conflict, worded as /books worded a stale copy. */
+function staleError(message) {
+  return (error) =>
+    error instanceof errors.ConflictError && error.message === message;
+}
 
 test('a preview fills what the server fills, again until the user edits it', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });

@@ -30,10 +30,13 @@ export interface Presentation {
   /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
   tableFields?: string[];
   /**
-   * The fields of list exports and import templates, in Books' order, where
-   * it differs from the DocType's; fields the server fills are left out.
+   * The fields of list exports, import templates and quick views, in Books'
+   * order, where it differs from the DocType's; fields the server fills are
+   * left out.
    */
   fileFields?: string[];
+  /** The search fields the search palette shows and matches, where they are fewer than the DocType's. */
+  paletteFields?: string[];
 }
 
 /**

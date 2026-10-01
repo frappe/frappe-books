@@ -25,7 +25,7 @@ test('the palette searches the schemas the DocType search fields name', () => {
 
   assert.equal(requests.length, 0);
   assert.deepEqual(fields('SalesInvoice'), ['name', 'party']);
-  assert.deepEqual(fields('Party'), ['name', 'email', 'role', 'phone']);
+  assert.deepEqual(fields('Party'), ['name', 'email', 'role']);
   assert.deepEqual(fields('Tax'), ['name']);
   assert.deepEqual(fields('SalesInvoiceItem'), ['item', 'tax']);
   assert.equal(fields('Account'), undefined);
@@ -141,6 +141,29 @@ test('a table row is found by its search fields and opens its parent', async () 
       '/edit/Payment/PAY-1001',
     ]
   );
+});
+
+test('a party shows its email and role, and is not found by its phone', async () => {
+  const party = {
+    name: 'Acme',
+    email: 'acme@example.com',
+    role: 'Customer',
+    phone: '9876543210',
+  };
+  const { search, requests } = makeSearch(({ body }) =>
+    body.doctype === 'Books Party' ? [party] : []
+  );
+  await search.fetchDocs('Acme');
+  const sent = requests.find(({ body }) => body.doctype === 'Books Party');
+
+  assert.deepEqual(sent.body.filter_fields, ['name', 'email', 'role']);
+  assert.deepEqual(
+    docs(search, 'Acme').map(({ label, more }) => [label, more]),
+    [['Acme', ['acme@example.com', 'Customer']]]
+  );
+
+  await search.fetchDocs('98765');
+  assert.deepEqual(docs(search, '98765'), []);
 });
 
 test('recent records reopen the record instead of a list', async () => {

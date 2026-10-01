@@ -14,7 +14,7 @@ The /books screens are moving off the camelCase bridge (`ui_api.database_call`, 
 | `schema.ts` | Turns the meta and the model's `presentation` into the schema that forms, tables and lists render. Breaks become tabs and sections. Permission levels make fields read only or hidden. |
 | `document.ts` | `FrappeDoc`. It loads, inserts and saves the whole document, with `modified` so that Frappe refuses a stale copy. Submit, cancel and preview run as document methods on the client copy through `run_doc_method`. |
 | `documents.ts` | The open documents, so that a form, a quick edit and a link share one. A mapped document (`getMappedFrappeDoc`) comes from `frappe.model.mapper.make_mapped_doc`. |
-| `api.ts` | `/api/v2` requests: documents, lists, counts and one field's value (`getValue`). |
+| `api.ts` | `/api/v2` requests: documents, lists, counts and one field's value (`getValue`). `getAllDocuments` reads every row of a short list, like payment methods, through `frappe.client.get_list`. |
 | `list.ts`, `link.ts` | List pages, counts and documents by name (`getFrappeRows`) over `/api/v2`. Link options from `search_link`, and the text a link shows (`getLinkDisplayValue`). |
 | `values.ts` | Frappe values to form values and back. |
 | `dependsOn.ts` | Evaluates `depends_on` conditions as Frappe forms do. |
@@ -43,7 +43,8 @@ A schema is Frappe-backed when its model is in `frappeModels` in `frontend/model
 | List order | The DocType's `sort_field`, else `date`, newest first |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |
-| Actions that open a mapped document | `getMappedDoc`. A Frappe-backed target runs through `frappe.model.mapper.make_mapped_doc`. A screen that is still on the bridge, like the POS, uses `getMappedBridgeDoc`. |
+| Actions that open a mapped document | `getMappedDoc`. A Frappe-backed target runs through `frappe.model.mapper.make_mapped_doc`. |
+| Rows a screen adds for the user, like a scanned item | Append the row, then `set` its item, so the `refills` of the item leave the price and details to the server. A row appended with its item sends an empty rate as 0, which the server keeps. |
 | A cancel that also cancels linked documents | The controller's whitelisted `cancel_with_linked_docs` |
 
 ## How a document behaves

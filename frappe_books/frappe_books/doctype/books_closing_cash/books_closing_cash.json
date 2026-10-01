@@ -11,20 +11,20 @@
  ],
  "fields": [
   {
-   "description": "Denomination",
    "fieldname": "denomination",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Denomination",
+   "placeholder": "Denomination",
    "reqd": 1
   },
   {
    "default": "0",
-   "description": "Count",
    "fieldname": "count",
    "fieldtype": "Int",
    "in_list_view": 1,
    "label": "Count",
+   "placeholder": "Count",
    "reqd": 1
   }
  ],
@@ -32,7 +32,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:14.776956",
+ "modified": "2026-10-01 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Closing Cash",

@@ -16,11 +16,11 @@
         v-for="row in otherClosingAmounts"
         :key="row.idx"
         :df="{
-          fieldname: 'closingAmount',
+          fieldname: 'closing_amount',
           fieldtype: 'Currency',
-          label: t`Counted ${row.paymentMethod ?? ''}`,
+          label: t`Counted ${row.payment_method ?? ''}`,
         }"
-        :value="row.closingAmount"
+        :value="row.closing_amount"
         :show-label="true"
         :border="true"
         @change="(amount: Money) => setClosingAmount(row, amount)"
@@ -46,28 +46,28 @@
               <span
                 class="min-w-0 text-base text-ink-gray-8 [overflow-wrap:anywhere]"
               >
-                {{ row.paymentMethod }}
+                {{ row.payment_method }}
               </span>
               <span
                 class="shrink-0 text-base tabular-nums"
                 :class="
-                  row.differenceAmount?.isNegative()
+                  row.difference_amount?.isNegative()
                     ? 'text-ink-red-4'
                     : 'text-ink-gray-9'
                 "
                 dir="ltr"
               >
-                {{ format(row.differenceAmount) }}
+                {{ format(row.difference_amount) }}
               </span>
             </div>
             <p
               class="flex flex-wrap gap-x-3 text-sm tabular-nums text-ink-gray-5"
             >
               <span class="whitespace-nowrap">
-                {{ t`Expected ${format(row.expectedAmount)}` }}
+                {{ t`Expected ${format(row.expected_amount)}` }}
               </span>
               <span class="whitespace-nowrap">
-                {{ t`Counted ${format(row.closingAmount)}` }}
+                {{ t`Counted ${format(row.closing_amount)}` }}
               </span>
             </p>
           </li>
@@ -81,10 +81,10 @@
     <Table
       v-if="isValuesSeeded"
       class="text-base"
-      :df="getField('closingCash')"
+      :df="getField('closing_cash')"
       :show-header="true"
       :border="true"
-      :value="posClosingShiftDoc?.closingCash ?? []"
+      :value="posClosingShiftDoc?.closing_cash ?? []"
       :read-only="false"
       @row-change="updateClosingAmounts"
     />
@@ -95,10 +95,10 @@
     <Table
       v-if="isValuesSeeded"
       class="text-base"
-      :df="getField('closingAmounts')"
+      :df="getField('closing_amounts')"
       :show-header="true"
       :border="true"
-      :value="posClosingShiftDoc?.closingAmounts"
+      :value="posClosingShiftDoc?.closing_amounts"
       :read-only="false"
       :allow-add-remove-rows="false"
       @row-change="updateClosingAmounts"
@@ -128,12 +128,16 @@ import Table from 'src/components/Controls/Table.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
-import { ClosingCash } from 'models/inventory/Point of Sale/ClosingCash';
-import { ClosingAmounts } from 'models/inventory/Point of Sale/ClosingAmounts';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { OpeningAmounts } from 'models/inventory/Point of Sale/OpeningAmounts';
-import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
+import { Field } from 'schemas/types';
+import { CashCount } from 'models/inventory/Point of Sale/POSOpeningShift';
+import {
+  ClosingAmount,
+  POSClosingShift,
+} from 'models/inventory/Point of Sale/POSClosingShift';
+import { getField } from 'src/frappe/registry';
+import { newBooksDoc } from 'src/frappe/useBooksDoc';
 import { computed } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
@@ -143,8 +147,7 @@ import {
   getCashPaymentMethods,
   getPOSOpeningShiftDoc,
   validateClosingAmounts,
-} from 'src/utils/pos';
-import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
+} from 'src/utils/posSetup';
 import { ForbiddenError } from 'fyo/utils/errors';
 
 export default defineComponent({
@@ -169,26 +172,25 @@ export default defineComponent({
     return {
       isValuesSeeded: false,
 
-      posOpeningShiftDoc: undefined as POSOpeningShift | undefined,
       posClosingShiftDoc: undefined as POSClosingShift | undefined,
-      transactedAmount: {} as Record<string, Money> | undefined,
       cashMethods: [] as string[],
     };
   },
   computed: {
-    closingCash(): ClosingCash[] {
-      return (this.posClosingShiftDoc?.closingCash ?? []) as ClosingCash[];
+    closingCash(): CashCount[] {
+      return (this.posClosingShiftDoc?.closing_cash ?? []) as CashCount[];
     },
-    closingAmounts(): ClosingAmounts[] {
-      return (this.posClosingShiftDoc?.closingAmounts ?? []) as ClosingAmounts[];
+    closingAmounts(): ClosingAmount[] {
+      return (this.posClosingShiftDoc?.closing_amounts ??
+        []) as ClosingAmount[];
     },
     /** Cash methods share the drawer count; the others are counted one by one. */
-    cashClosingAmounts(): ClosingAmounts[] {
+    cashClosingAmounts(): ClosingAmount[] {
       return this.closingAmounts.filter((row) =>
-        this.cashMethods.includes(row.paymentMethod as string)
+        this.cashMethods.includes(row.payment_method as string)
       );
     },
-    otherClosingAmounts(): ClosingAmounts[] {
+    otherClosingAmounts(): ClosingAmount[] {
       return this.closingAmounts.filter(
         (row) => !this.cashClosingAmounts.includes(row)
       );
@@ -207,52 +209,36 @@ export default defineComponent({
     },
   },
   methods: {
+    /** Counts start from the opening cash; the server's preview fills the expected amounts. */
     async prepareShift() {
       this.isValuesSeeded = false;
-      this.posClosingShiftDoc = fyo.doc.getNewDoc(
-        ModelNameEnum.POSClosingShift
-      ) as POSClosingShift;
-      this.cashMethods = await getCashPaymentMethods(fyo);
-      await this.setTransactedAmount();
-      await this.seedValues();
-    },
-    async setTransactedAmount() {
-      this.posOpeningShiftDoc = await getPOSOpeningShiftDoc(fyo);
-
-      const fromDate = this.posOpeningShiftDoc?.openingDate as Date;
-      if (!fromDate) {
-        return;
-      }
-
-      this.transactedAmount = await fyo.db.getPOSTransactedAmount(
-        fromDate,
-        new Date()
+      this.cashMethods = await getCashPaymentMethods();
+      const opening = await getPOSOpeningShiftDoc();
+      const closingCash = (opening.opening_cash ?? []).map(
+        ({ count, denomination }) => ({ count, denomination })
       );
-    },
-    async seedClosingCash() {
-      if (!this.posClosingShiftDoc) {
-        return;
+      this.posClosingShiftDoc = newBooksDoc(ModelNameEnum.POSClosingShift, {
+        closing_cash: closingCash,
+      }) as POSClosingShift;
+      try {
+        await this.posClosingShiftDoc.preview();
+      } catch (error) {
+        showToast({ type: 'error', message: t`${error as string}` });
       }
 
-      this.posClosingShiftDoc.closingCash = [];
-
-      for (const row of this.posOpeningShiftDoc?.openingCash ?? []) {
-        await this.posClosingShiftDoc?.append('closingCash', {
-          count: row.count,
-          denomination: row.denomination as Money,
-        });
-      }
+      this.updateClosingAmounts();
+      this.isValuesSeeded = true;
     },
     updateClosingAmounts() {
-      if (!this.posClosingShiftDoc?.closingAmounts) {
+      if (!this.posClosingShiftDoc?.closing_amounts) {
         return;
       }
 
       this.splitCountedCash(this.posClosingShiftDoc.closingCashAmount as Money);
-      this.posClosingShiftDoc.closingAmounts.forEach((row) => {
-        row.closingAmount ??= fyo.pesa(0);
-        row.differenceAmount = row.closingAmount.sub(
-          row.expectedAmount as Money
+      this.posClosingShiftDoc.closing_amounts.forEach((row) => {
+        row.closing_amount ??= fyo.pesa(0);
+        row.difference_amount = row.closing_amount.sub(
+          (row.expected_amount as Money | undefined) ?? fyo.pesa(0)
         );
       });
     },
@@ -263,68 +249,29 @@ export default defineComponent({
     splitCountedCash(counted: Money) {
       let remaining = counted;
       for (const row of this.cashClosingAmounts) {
-        const expected = row.expectedAmount ?? fyo.pesa(0);
+        const expected = row.expected_amount ?? fyo.pesa(0);
         const share = expected.isNegative()
           ? fyo.pesa(0)
           : expected.lt(remaining)
           ? expected
           : remaining;
-        row.closingAmount = share;
+        row.closing_amount = share;
         remaining = remaining.sub(share);
       }
 
       const [first] = this.cashClosingAmounts;
       if (first) {
-        first.closingAmount = first.closingAmount!.add(remaining);
+        first.closing_amount = first.closing_amount!.add(remaining);
       }
     },
-    async seedClosingAmounts() {
-      if (!this.posClosingShiftDoc || !this.posOpeningShiftDoc) {
-        return;
-      }
-
-      this.posClosingShiftDoc.closingAmounts = [];
-
-      const openingAmounts = this.posOpeningShiftDoc
-        ?.openingAmounts as OpeningAmounts[];
-
-      for (const row of openingAmounts) {
-        if (!row.paymentMethod) {
-          return;
-        }
-
-        let expectedAmount = row.amount ?? fyo.pesa(0);
-
-        if (this.transactedAmount) {
-          expectedAmount = expectedAmount.add(
-            this.transactedAmount[row.paymentMethod] ?? fyo.pesa(0)
-          );
-        }
-
-        await this.posClosingShiftDoc.append('closingAmounts', {
-          paymentMethod: row.paymentMethod,
-          openingAmount: row.amount,
-          closingAmount: fyo.pesa(0),
-          expectedAmount: expectedAmount,
-          differenceAmount: fyo.pesa(0),
-        });
-      }
-    },
-    async seedValues() {
-      this.isValuesSeeded = false;
-      await this.seedClosingCash();
-      await this.seedClosingAmounts();
-      this.updateClosingAmounts();
-      this.isValuesSeeded = true;
-    },
-    getField(fieldname: string) {
-      return fyo.getField(ModelNameEnum.POSClosingShift, fieldname);
+    getField(fieldname: string): Field {
+      return getField(ModelNameEnum.POSClosingShift, fieldname)!;
     },
     format(amount?: Money): string {
       return fyo.format(amount ?? fyo.pesa(0), 'Currency');
     },
-    async setClosingAmount(row: ClosingAmounts, amount: Money) {
-      await row.set('closingAmount', amount);
+    async setClosingAmount(row: ClosingAmount, amount: Money) {
+      await row.set('closing_amount', amount);
       this.updateClosingAmounts();
     },
     async handleSubmit() {
@@ -336,10 +283,6 @@ export default defineComponent({
         }
 
         validateClosingAmounts(this.posClosingShiftDoc as POSClosingShift);
-        await this.posClosingShiftDoc?.set(
-          'openingShift',
-          this.posOpeningShiftDoc?.name
-        );
         await this.posClosingShiftDoc?.sync();
         await this.posClosingShiftDoc?.submit();
 

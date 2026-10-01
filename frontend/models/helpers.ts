@@ -13,13 +13,6 @@ import { Doc } from 'fyo/model/doc';
 import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
-import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
-import { ValidationError } from 'fyo/utils/errors';
-import { safeParseFloat } from 'utils/index';
-import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
-import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
-import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import type { DocValues } from 'src/frappe/api';
 import { isFrappeBacked } from 'src/frappe/doctypes';
 import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
@@ -107,40 +100,6 @@ export function getInvoiceActions(
     getLedgerLinkAction(fyo),
     getMakeReturnDocAction(fyo),
   ];
-}
-
-/** Stock of each item, and of each of its batches, at the POS location. */
-export async function getItemQtyMap(
-  doc: SalesInvoice,
-  items?: string[]
-): Promise<ItemQtyMap> {
-  const location = await getPOSInventory(doc.fyo);
-  const rows = await doc.fyo.db.getStockQuantities(location, items);
-  const itemQtyMap: ItemQtyMap = {};
-  for (const { item, batch, quantity } of rows) {
-    itemQtyMap[item] ??= { availableQty: 0 };
-    itemQtyMap[item].availableQty += quantity;
-    if (batch) {
-      itemQtyMap[item][batch] = quantity;
-    }
-  }
-
-  return itemQtyMap;
-}
-
-export async function getItemVisibility(fyo: Fyo): Promise<ItemVisibility> {
-  const posProfileName = fyo.singles.POSSettings?.pos_profile;
-
-  if (posProfileName) {
-    const posProfile = await fyo.doc.getDoc(
-      ModelNameEnum.POSProfile,
-      posProfileName
-    );
-    return (posProfile?.itemVisibility ??
-      fyo.singles.POSSettings?.item_visibility) as ItemVisibility;
-  }
-
-  return fyo.singles.POSSettings?.item_visibility as ItemVisibility;
 }
 
 export function getStockTransferActions(
@@ -546,38 +505,4 @@ export async function addItem(name: string, doc: Doc, quantity = 1) {
   if (quantity !== 1) {
     await added.set('quantity', quantity);
   }
-}
-
-/** Checks the POS location has the stock that a row's item, or its batch, needs. */
-export async function validateQty(
-  sinvDoc: SalesInvoice,
-  row: SalesInvoiceItem,
-  existingItems: InvoiceItem[]
-) {
-  const { fyo } = sinvDoc;
-  const item = row.item;
-  if (!item) {
-    return;
-  }
-
-  if (
-    !row.batch &&
-    (await fyo.getValue(ModelNameEnum.Item, item, 'hasBatch'))
-  ) {
-    throw new ValidationError(t`Please select a batch first`);
-  }
-
-  if (!(await fyo.getValue(ModelNameEnum.Item, item, 'trackItem'))) {
-    return;
-  }
-
-  const quantity = existingItems
-    .filter((existing) => !row.batch || existing.batch === row.batch)
-    .reduce(
-      (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
-      0
-    );
-  const itemQtyMap = await getItemQtyMap(sinvDoc, [item]);
-  const location = await getPOSInventory(fyo);
-  validatePOSStock(item, quantity, itemQtyMap, location, row.batch);
 }

@@ -9,6 +9,7 @@ import Link from 'src/components/Controls/Link.vue';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { isMobile } from 'src/utils/viewport';
+import { newBooksDoc } from 'src/frappe/useBooksDoc';
 import { preparePOSData, shift } from './pos-data';
 import 'src/styles/index.css';
 
@@ -88,7 +89,7 @@ async function mount() {
       pos.toggleModal(name, true);
     },
     setLayout(modern: boolean) {
-      pos.posProfile = { posUI: modern ? 'Modern' : 'Classic' };
+      pos.posProfile = { pos_ui: modern ? 'Modern' : 'Classic' };
     },
     closeShift() {
       shift.open = false;
@@ -96,35 +97,33 @@ async function mount() {
     },
     /** Loads a saved, unsubmitted invoice as the Saved Invoices sheet does. */
     openSavedInvoice() {
-      const invoice = fyo.doc.getNewDoc('SalesInvoice', {
+      const invoice = newBooksDoc('SalesInvoice', {
         name: 'SINV-SAVED',
-        isPOS: true,
-        items: [{ item: items[0].name, quantity: 1, transferQuantity: 1 }],
+        is_pos: true,
+        items: [{ item: items[0].name, quantity: 1, transfer_quantity: 1 }],
       });
       invoice._notInserted = false;
       pos.sinvDoc = invoice;
     },
     fillCart() {
-      state.invoice.items = items.slice(0, 3).map((item, index) =>
-        fyo.doc.getNewDoc('SalesInvoiceItem', {
+      state.invoice.items = [];
+      items.slice(0, 3).forEach((item, index) =>
+        state.invoice.push('items', {
           name: `row-${index}`,
           item: item.name,
           quantity: 2,
-          transferQuantity: 2,
-          rate: String(item.rate),
-          amount: String(item.rate.mul(2)),
-          itemDiscountedTotal: String(item.rate.mul(2)),
+          transfer_quantity: 2,
+          rate: item.rate,
+          amount: item.rate.mul(2),
+          item_discounted_total: item.rate.mul(2),
           unit: 'Unit',
-          parent: 'POS-AUDIT',
-          parentSchemaName: 'SalesInvoice',
-          parentFieldname: 'items',
         })
-      ) as any;
+      );
       for (const field of [
-        'netTotal',
-        'grandTotal',
-        'baseGrandTotal',
-        'outstandingAmount',
+        'net_total',
+        'grand_total',
+        'base_grand_total',
+        'outstanding_amount',
       ]) {
         state.invoice[field] = fyo.pesa(2250);
       }

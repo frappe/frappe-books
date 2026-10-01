@@ -1,15 +1,31 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateHidden, makeFyo } from './helpers/accounting.mjs';
+import { loadFrappeModels } from './helpers/frappeModels.mjs';
+import {
+  evaluateHidden,
+  frappeModels,
+  fyo,
+  getSchema,
+  newFrappeDoc,
+} from './helpers/frappe.mjs';
 
-test('the invoice form keeps the POS payment rows hidden', async () => {
-  const fyo = await makeFyo();
-  const invoice = fyo.doc.getNewDoc('SalesInvoice', {
-    isPOS: true,
-    payments: [{ paymentMethod: 'Cash', amount: 150 }],
+await loadFrappeModels(frappeModels);
+
+test('the invoice form keeps the POS payment rows hidden, and saves them', () => {
+  fyo.singles.AccountingSettings = {};
+  const invoice = newFrappeDoc('SalesInvoice', {
+    is_pos: true,
+    payments: [{ payment_method: 'Cash', amount: fyo.pesa(150) }],
   });
-  const field = fyo.getField('SalesInvoice', 'payments');
+  clearTimeout(invoice._previewTimer);
+  const field = getSchema('SalesInvoice').fields.find(
+    ({ fieldname }) => fieldname === 'payments'
+  );
 
-  assert.equal(invoice.payments.length, 1);
   assert.equal(evaluateHidden(field, invoice), true);
+  const [payment] = invoice.getFrappeValues().payments;
+  assert.deepEqual(
+    [payment.payment_method, Number(payment.amount)],
+    ['Cash', 150]
+  );
 });

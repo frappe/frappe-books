@@ -1,29 +1,53 @@
-import { Fyo, t } from 'fyo';
-import type { Doc } from 'fyo/model/doc';
+import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
+import type { Item } from 'models/baseModels/Item/Item';
+import { getAvailableSerialNumbers } from 'models/inventory/helpers';
+import {
+  getItemQtyMap,
+  getPOSInventory,
+  validatePOSStock,
+} from 'models/inventory/posStock';
+import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import {
-  BridgeItem,
   ItemQtyMap,
   ItemSerialNumbers,
+  ItemVisibility,
   POSItem,
 } from 'src/components/POS/types';
+import type { DocValueMap } from 'fyo/core/types';
+import { getAllDocuments, type DocValues, type Filter } from 'src/frappe/api';
+import { getField, getSchema } from 'src/frappe/registry';
+import { getBooksDoc } from 'src/frappe/useBooksDoc';
+import { toDocValues } from 'src/frappe/values';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
 import { showToast } from './interactive';
-import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
-import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
-import { validateQty } from 'models/helpers';
-import { getAvailableSerialNumbers } from 'models/inventory/helpers';
+import type { POSPermissions } from './posSetup';
 
-export type POSPermissionSetting = 'canChangeRate' | 'canEditDiscount';
-export type POSQuantityField = 'quantity' | 'transferQuantity';
+export type POSQuantityField = 'quantity' | 'transfer_quantity';
 export type POSRowField =
-  POSQuantityField | 'rate' | 'itemDiscountAmount' | 'itemDiscountPercent';
+  POSQuantityField | 'rate' | 'item_discount_amount' | 'item_discount_percent';
+
+/** The item fields the POS lists, searches and adds items by. */
+export const POS_ITEM_FIELDS = [
+  'name',
+  'item_code',
+  'barcode',
+  'image',
+  'rate',
+  'unit',
+  'track_item',
+  'has_batch',
+  'has_serial_number',
+];
+
+const TRACKED_ITEMS: Partial<Record<ItemVisibility, number>> = {
+  'Inventory Items': 1,
+  'Non-Inventory Items': 0,
+};
 
 /** Sets a cart row value as the POS edits it. */
 export async function setPOSRowValue(
@@ -31,17 +55,21 @@ export async function setPOSRowValue(
   field: POSRowField,
   value: number | Money
 ) {
-  if (field === 'quantity' || field === 'transferQuantity') {
+  if (field === 'quantity' || field === 'transfer_quantity') {
     return await setPOSRowQuantity(row, field, value as number);
   }
 
   if (field !== 'rate') {
-    await row.set('setItemDiscountAmount', field === 'itemDiscountAmount');
+    await row.set('set_item_discount_amount', field === 'item_discount_amount');
   }
   await row.set(field, value);
 }
 
-/** Sets a cart row's quantity, restoring it if the POS warehouse cannot supply it. */
+/**
+ * Sets a cart row's quantity, restoring it if the POS warehouse cannot
+ * supply it. A transfer quantity's stock quantity shows at once, for the
+ * stock check; the server derives it again.
+ */
 export async function setPOSRowQuantity(
   row: SalesInvoiceItem,
   field: POSQuantityField,
@@ -51,81 +79,60 @@ export async function setPOSRowQuantity(
     throw new ValidationError(t`Quantity must be greater than zero.`);
   }
 
-  const invoice = row.parentdoc as SalesInvoice;
   const previous = {
     quantity: row.quantity,
-    transferQuantity: row.transferQuantity,
+    transfer_quantity: row.transfer_quantity,
   };
+  const quantity = row.isReturn ? -Math.abs(value) : value;
   try {
-    await row.set(field, row.isReturn ? -Math.abs(value) : value);
-    await validateQty(invoice, row, getItemRows(invoice, row.item));
+    await row.set(field, quantity);
+    if (field === 'transfer_quantity') {
+      row.quantity = quantity * (row.unit_conversion_factor || 1);
+    }
+
+    await validateQty(
+      row,
+      getItemRows(row.parentdoc as SalesInvoice, row.item)
+    );
   } catch (error) {
-    await row.setMultiple(previous);
+    await row.set(field, previous[field]);
+    row.quantity = previous.quantity;
     throw error;
   }
 }
 
 /** The quantity field the POS edits: the transfer quantity with UOM conversions. */
-export function getPOSQuantityField(fyo: Fyo): POSQuantityField {
+export function getPOSQuantityField(): POSQuantityField {
   return fyo.singles.InventorySettings?.enable_uom_conversions
-    ? 'transferQuantity'
+    ? 'transfer_quantity'
     : 'quantity';
 }
-
-export type POSPermissions = Record<POSPermissionSetting, boolean>;
-
-// POS profiles are still read through the bridge; POS Settings by Frappe fieldnames.
-const posSettingsFields: Record<POSPermissionSetting, string> = {
-  canChangeRate: 'can_change_rate',
-  canEditDiscount: 'can_edit_discount',
-};
 
 export function isPOSRowFieldReadOnly(
   row: SalesInvoiceItem,
   field: POSRowField,
   permissions: POSPermissions
 ): boolean {
-  if (row.isFreeItem) {
+  if (row.is_free_item) {
     return true;
   }
 
   switch (field) {
     case 'quantity':
-      return getPOSQuantityField(row.fyo) === 'transferQuantity';
+      return getPOSQuantityField() === 'transfer_quantity';
     case 'rate':
       return !permissions.canChangeRate;
-    case 'itemDiscountAmount':
-      return !permissions.canEditDiscount || (row.itemDiscountPercent ?? 0) > 0;
-    case 'itemDiscountPercent':
-      return !permissions.canEditDiscount || !row.itemDiscountAmount?.isZero();
+    case 'item_discount_amount':
+      return (
+        !permissions.canEditDiscount || (row.item_discount_percent ?? 0) > 0
+      );
+    case 'item_discount_percent':
+      return (
+        !permissions.canEditDiscount || !row.item_discount_amount?.isZero()
+      );
     default:
       return false;
   }
-}
-
-export async function getPOSPermissions(fyo: Fyo): Promise<POSPermissions> {
-  const [canChangeRate, canEditDiscount] = await Promise.all([
-    getPOSPermissionSetting(fyo, 'canChangeRate'),
-    getPOSPermissionSetting(fyo, 'canEditDiscount'),
-  ]);
-  return { canChangeRate, canEditDiscount };
-}
-
-export async function getPOSPermissionSetting(
-  fyo: Fyo,
-  fieldname: POSPermissionSetting
-): Promise<boolean> {
-  const profileName = fyo.singles.POSSettings?.pos_profile;
-
-  if (profileName) {
-    return !!(await fyo.getValue(
-      ModelNameEnum.POSProfile,
-      profileName as string,
-      fieldname
-    ));
-  }
-
-  return !!fyo.singles.POSSettings?.get(posSettingsFields[fieldname]);
 }
 
 /** Whether a key press types into a field, which POS shortcuts must leave alone. */
@@ -152,41 +159,13 @@ export function getQuickQtyBuffer(
   }
 }
 
-export async function getPOSOpeningShiftDoc(
-  fyo: Fyo
-): Promise<POSOpeningShift> {
-  const openShift = await fyo.db.getOpenPOSShift();
-  if (!openShift) {
-    return fyo.doc.getNewDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
-  }
-
-  return (await fyo.doc.getDoc(
-    ModelNameEnum.POSOpeningShift,
-    openShift
-  )) as POSOpeningShift;
-}
-
-/** Cash-type payment methods, whose amounts the counted denominations cover. */
-export async function getCashPaymentMethods(fyo: Fyo): Promise<string[]> {
-  const methods = (await fyo.db.getAll(ModelNameEnum.PaymentMethod, {
-    fields: ['name'],
-    filters: { type: 'Cash' },
-  })) as { name: string }[];
-  return methods.map(({ name }) => name);
-}
-
-export function getTotalQuantity(items: SalesInvoiceItem[]): number {
-  let totalQuantity = safeParseFloat(0);
-
-  if (!items.length) {
-    return totalQuantity;
-  }
-
-  for (const item of items) {
-    const quantity = item.transferQuantity ?? item.quantity ?? 0;
-    totalQuantity = safeParseFloat(totalQuantity + quantity);
-  }
-  return totalQuantity;
+/** The cart's quantity, in the unit the POS edits. */
+export function getTotalQuantity(rows: SalesInvoiceItem[]): number {
+  const field = getPOSQuantityField();
+  return rows.reduce(
+    (total, row) => safeParseFloat(total + (row[field] ?? row.quantity ?? 0)),
+    0
+  );
 }
 
 export async function validateSinv(
@@ -197,61 +176,58 @@ export async function validateSinv(
     return;
   }
 
+  const rows = sinvDoc.items ?? [];
+  const tracked = await getTrackedItems(rows);
   await validateSinvItems(
-    sinvDoc.fyo,
-    sinvDoc.items as SalesInvoiceItem[],
+    rows.filter((row) => tracked.has(row.item!)),
     itemQtyMap,
-    sinvDoc.returnAgainst as string
+    !!sinvDoc.return_against
   );
 }
 
+/** Checks the tracked rows' quantities, and that the POS location has them. */
 async function validateSinvItems(
-  fyo: Fyo,
-  sinvItems: SalesInvoiceItem[],
+  rows: SalesInvoiceItem[],
   itemQtyMap: ItemQtyMap,
-  isReturn?: string
+  isReturn: boolean
 ) {
-  const inventory = await getPOSInventory(fyo);
+  const inventory = await getPOSInventory();
   const requested: ItemQtyMap = {};
-  for (const item of sinvItems) {
-    const trackItem = await fyo.getValue(
-      ModelNameEnum.Item,
-      item.item as string,
-      'trackItem'
-    );
-
-    if (!trackItem) {
-      continue;
-    }
-
-    if (!item.quantity || (item.quantity < 0 && !isReturn)) {
-      throw new ValidationError(
-        t`Invalid Quantity for Item ${item.item as string}`
-      );
+  for (const row of rows) {
+    const item = row.item!;
+    const quantity = row.quantity ?? 0;
+    if (!quantity || (quantity < 0 && !isReturn)) {
+      throw new ValidationError(t`Invalid Quantity for Item ${item}`);
     }
 
     if (isReturn) {
       continue;
     }
 
-    const itemName = item.item as string;
-    const total = (requested[itemName] ??= { availableQty: 0 });
-    total.availableQty = safeParseFloat(total.availableQty + item.quantity);
-    validatePOSStock(itemName, total.availableQty, itemQtyMap, inventory);
+    const total = (requested[item] ??= { availableQty: 0 });
+    total.availableQty = safeParseFloat(total.availableQty + quantity);
+    validatePOSStock(item, total.availableQty, itemQtyMap, inventory);
 
-    if (item.batch) {
-      total[item.batch] = safeParseFloat(
-        (total[item.batch] ?? 0) + item.quantity
-      );
+    if (row.batch) {
+      total[row.batch] = safeParseFloat((total[row.batch] ?? 0) + quantity);
       validatePOSStock(
-        itemName,
-        total[item.batch],
+        item,
+        total[row.batch],
         itemQtyMap,
         inventory,
-        item.batch
+        row.batch
       );
     }
   }
+}
+
+/** The rows' items whose stock is tracked. */
+async function getTrackedItems(rows: SalesInvoiceItem[]): Promise<Set<string>> {
+  const names = [...new Set(rows.map((row) => row.item!).filter(Boolean))];
+  const items = await Promise.all(names.map(getItemDoc));
+  return new Set(
+    items.filter((item) => item.track_item).map((item) => item.name!)
+  );
 }
 
 /**
@@ -269,6 +245,35 @@ export async function validatePOSCheckout(
   await validateSinv(sinvDoc, await loadStock());
 }
 
+/** Checks the POS location has the stock that a row's item, or its batch, needs. */
+export async function validateQty(
+  row: SalesInvoiceItem,
+  itemRows: SalesInvoiceItem[]
+) {
+  if (!row.item) {
+    return;
+  }
+
+  const item = await getItemDoc(row.item);
+  if (!row.batch && item.has_batch) {
+    throw new ValidationError(t`Please select a batch first`);
+  }
+
+  if (!item.track_item) {
+    return;
+  }
+
+  const quantity = itemRows
+    .filter((existing) => !row.batch || existing.batch === row.batch)
+    .reduce(
+      (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
+      0
+    );
+  const itemQtyMap = await getItemQtyMap([row.item]);
+  const location = await getPOSInventory();
+  validatePOSStock(row.item, quantity, itemQtyMap, location, row.batch);
+}
+
 export type POSRowItem = {
   hasBatch: boolean;
   hasSerialNumber: boolean;
@@ -276,20 +281,17 @@ export type POSRowItem = {
 };
 
 /** A cart row item's batch and serial number tracking, and the units it sells in. */
-export async function getPOSRowItem(
-  fyo: Fyo,
-  item?: string
-): Promise<POSRowItem> {
+export async function getPOSRowItem(item?: string): Promise<POSRowItem> {
   if (!item) {
     return { hasBatch: false, hasSerialNumber: false, units: [] };
   }
 
-  const doc = await getBridgeItem(fyo, item);
-  const conversions = doc.uomConversions ?? [];
-  const units = [doc.unit, ...conversions.map(({ uom }) => uom)];
+  const doc = await getItemDoc(item);
+  const conversions = (doc.uom_conversions ?? []) as { uom?: string }[];
+  const units = [doc.unit as string, ...conversions.map(({ uom }) => uom)];
   return {
-    hasBatch: !!doc.hasBatch,
-    hasSerialNumber: !!doc.hasSerialNumber,
+    hasBatch: !!doc.has_batch,
+    hasSerialNumber: !!doc.has_serial_number,
     units: [...new Set(units.filter((unit): unit is string => !!unit))],
   };
 }
@@ -320,18 +322,38 @@ export function getQuickPaymentAmounts(due: number, count = 2): number[] {
   return amounts.slice(0, count);
 }
 
-export function toPOSItem(item: BridgeItem, itemQtyMap: ItemQtyMap): POSItem {
+/** The items the POS lists: those its visibility setting tracks, of the group when given. */
+export function getPOSItemFilters(
+  visibility: ItemVisibility | undefined,
+  itemGroup?: string
+): Filter[] {
+  const filters: Filter[] = [];
+  const tracked = visibility && TRACKED_ITEMS[visibility];
+  if (tracked !== undefined) {
+    filters.push(['track_item', '=', tracked]);
+  }
+
+  if (itemGroup) {
+    filters.push(['item_group', '=', itemGroup]);
+  }
+
+  return filters;
+}
+
+/** An item as the POS lists it, from its `POS_ITEM_FIELDS`. */
+export function toPOSItem(item: DocValues, itemQtyMap: ItemQtyMap): POSItem {
+  const name = item.name as string;
   return {
-    availableQty: itemQtyMap[item.name as string]?.availableQty ?? 0,
-    trackItem: !!item.trackItem,
-    name: item.name as string,
-    itemCode: item.itemCode as string,
+    availableQty: itemQtyMap[name]?.availableQty ?? 0,
+    trackItem: !!item.track_item,
+    name,
+    itemCode: item.item_code as string,
     barcode: item.barcode as string,
     image: item.image as string,
-    rate: item.rate as Money,
+    rate: fyo.pesa((item.rate as number) ?? 0),
     unit: item.unit as string,
-    hasBatch: !!item.hasBatch,
-    hasSerialNumber: !!item.hasSerialNumber,
+    hasBatch: !!item.has_batch,
+    hasSerialNumber: !!item.has_serial_number,
   };
 }
 
@@ -351,11 +373,11 @@ export async function fillRowSerialNumbers(
 
   const serialNumbers = await getAvailableSerialNumbers(
     item,
-    await getPOSInventory(row.fyo),
+    await getPOSInventory(),
     quantity
   );
   if (serialNumbers) {
-    await row.set('serialNumber', serialNumbers);
+    await row.set('serial_number', serialNumbers);
     itemSerialNumbers[item] = serialNumbers;
   }
 }
@@ -367,8 +389,7 @@ export async function addPOSItem(
   quantity: number,
   itemQtyMap: ItemQtyMap
 ): Promise<SalesInvoiceItem> {
-  const itemDoc = await getItemDoc(sinvDoc, item);
-  if (itemDoc.trackItem && (itemQtyMap[item.name]?.availableQty ?? 0) <= 0) {
+  if (item.trackItem && (itemQtyMap[item.name]?.availableQty ?? 0) <= 0) {
     throw new ValidationError(
       t`Item ${item.name} is out of stock (quantity is zero)`
     );
@@ -380,8 +401,7 @@ export async function addPOSItem(
     return row;
   }
 
-  await sinvDoc.append('items', newItemRow(item, quantity));
-  return sinvDoc.items!.at(-1)!;
+  return await appendItemRow(sinvDoc, item, quantity);
 }
 
 /**
@@ -395,14 +415,13 @@ export async function addBatchItem(
   quantity: number,
   itemQtyMap: ItemQtyMap
 ) {
-  const itemDoc = await getItemDoc(sinvDoc, item);
   const rows = getItemRows(sinvDoc, item.name, batch);
-  if (itemDoc.trackItem) {
+  if (item.trackItem) {
     const required = rows.reduce(
       (total, row) => total + (row.quantity ?? 0),
       quantity
     );
-    const inventory = await getPOSInventory(sinvDoc.fyo);
+    const inventory = await getPOSInventory();
     validatePOSStock(item.name, required, itemQtyMap, inventory, batch);
   }
 
@@ -411,16 +430,26 @@ export async function addBatchItem(
     return;
   }
 
-  await sinvDoc.append('items', newItemRow(item, quantity, batch));
+  await appendItemRow(sinvDoc, item, quantity, batch);
 }
 
-async function getItemDoc(sinvDoc: SalesInvoice, item: POSItem) {
-  return await getBridgeItem(sinvDoc.fyo, item.name);
+/** POS invoices that match, newest first, with the values their lists show. */
+export async function getPOSInvoices(
+  filters: Filter[]
+): Promise<DocValueMap[]> {
+  const schema = getSchema(ModelNameEnum.SalesInvoice)!;
+  const rows = await getAllDocuments('Books Sales Invoice', {
+    fields: ['name', 'party', 'date', 'grand_total', 'docstatus'],
+    filters: [['is_pos', '=', 1], ...filters],
+  });
+  return rows.map((row) =>
+    toDocValues(schema, row, fyo, (target) => getSchema(target)!)
+  );
 }
 
-/** POS still reads items through the bridge, with Books field names. */
-async function getBridgeItem(fyo: Fyo, name: string) {
-  return (await fyo.doc.getDoc(ModelNameEnum.Item, name)) as Doc & BridgeItem;
+/** An item the server serves, for its stock tracking, batches and units. */
+async function getItemDoc(name: string): Promise<Item> {
+  return (await getBooksDoc(ModelNameEnum.Item, name)) as Item;
 }
 
 /** The cart rows of `item` that are not free items, from `batch` if given. */
@@ -431,49 +460,22 @@ function getItemRows(
 ): SalesInvoiceItem[] {
   return (sinvDoc.items ?? []).filter(
     (row) =>
-      row.item === item && !row.isFreeItem && (!batch || row.batch === batch)
+      row.item === item && !row.is_free_item && (!batch || row.batch === batch)
   );
 }
 
-function newItemRow(item: POSItem, quantity: number, batch?: string) {
-  return {
-    item: item.name,
-    quantity,
-    transferQuantity: quantity,
-    transferUnit: item.unit,
-    batch,
-  };
-}
-
-export function validateIsPosSettingsSet(fyo: Fyo) {
-  try {
-    const inventory = fyo.singles.POSSettings?.inventory;
-    if (!inventory) {
-      throw new ValidationError(
-        t`POS Inventory is not set. Please set it on POS Settings`
-      );
-    }
-
-    const cashAccount = fyo.singles.POSSettings?.cash_account;
-    if (!cashAccount) {
-      throw new ValidationError(
-        t`POS Counter Cash Account is not set. Please set it on POS Settings`
-      );
-    }
-
-    const writeOffAccount = fyo.singles.POSSettings?.write_off_account;
-    if (!writeOffAccount) {
-      throw new ValidationError(
-        t`POS Write Off Account is not set. Please set it on POS Settings`
-      );
-    }
-  } catch (error) {
-    showToast({
-      type: 'error',
-      message: t`${error as string}`,
-      duration: 'long',
-    });
-  }
+/** A new row of the item, set as a cashier picks it, so the server prices it and fills its details. */
+async function appendItemRow(
+  sinvDoc: SalesInvoice,
+  item: POSItem,
+  quantity: number,
+  batch?: string
+): Promise<SalesInvoiceItem> {
+  await sinvDoc.append('items', { batch });
+  const row = sinvDoc.items!.at(-1)!;
+  await row.set('item', item.name);
+  await row.set('quantity', quantity);
+  return row;
 }
 
 export function getTotalTaxedAmount(sinvDoc: SalesInvoice): Money {
@@ -483,7 +485,7 @@ export function getTotalTaxedAmount(sinvDoc: SalesInvoice): Money {
   }
 
   for (const row of sinvDoc.taxes) {
-    totalTaxedAmount = totalTaxedAmount.add(row.amount as Money);
+    totalTaxedAmount = totalTaxedAmount.add(row.amount ?? 0);
   }
   return totalTaxedAmount;
 }
@@ -496,34 +498,20 @@ export interface CostLine {
 /** The net total, then each amount that takes it to the grand total. */
 export function getCostLines(invoice: SalesInvoice): CostLine[] {
   const getLabel = (fieldname: string) =>
-    fyo.getField(invoice.schemaName, fieldname)?.label ?? fieldname;
+    getField(invoice.schemaName, fieldname)?.label ?? fieldname;
   const changes = [
-    { label: getLabel('totalDiscount'), value: invoice.totalDiscount },
+    { label: getLabel('total_discount'), value: invoice.total_discount },
     { label: getLabel('taxes'), value: getTotalTaxedAmount(invoice) },
     {
-      label: getLabel('loyaltyPointsAmount'),
-      value: invoice.loyaltyPointsAmount,
+      label: getLabel('loyalty_points_amount'),
+      value: invoice.loyalty_points_amount,
     },
   ].filter((line): line is CostLine => !!line.value && !line.value.isZero());
 
   return [
-    { label: getLabel('netTotal'), value: invoice.netTotal ?? fyo.pesa(0) },
+    { label: getLabel('net_total'), value: invoice.net_total ?? fyo.pesa(0) },
     ...changes,
   ];
-}
-
-export function validateClosingAmounts(posShiftDoc: POSClosingShift) {
-  if (!posShiftDoc) {
-    throw new ValidationError(`POS Shift Document not loaded. Please reload.`);
-  }
-
-  posShiftDoc.closingAmounts?.forEach((row) => {
-    if (row.closingAmount?.isNegative()) {
-      throw new ValidationError(
-        t`Closing ${row.paymentMethod as string} Amount can not be negative.`
-      );
-    }
-  });
 }
 
 export function validateSerialNumberCount(

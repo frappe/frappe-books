@@ -8,8 +8,8 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, now_datetime
 
 from frappe_books.commerce.pos import open_shift_name
-from frappe_books.tests.accounting import ledger_entries, make_account, root_group, unique_name
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
+from frappe_books.frappe_books.doctype.books_pos_opening_shift.books_pos_opening_shift import get_open_shift
+from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, root_group, unique_name
 
 
 class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
@@ -20,7 +20,7 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		shift = open_shift(100)
 
 		self.assertEqual(open_shift_name(), shift.name)
-		self.assertEqual(BooksBespokeQueries().call("getOpenPOSShift", []), shift.name)
+		self.assertEqual(get_open_shift(), shift.name)
 		entries = ledger_entries("Books Journal Entry", shift.journal_entry)
 		self.assertEqual(debits(entries, self.counter), Decimal("100"))
 		self.assertEqual(credits(entries, "Cash"), Decimal("100"))
@@ -69,6 +69,12 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 
 		settings.enable_point_of_sale = 0
 		self.assertRaisesRegex(frappe.ValidationError, "Close the open POS shift", settings.save)
+
+	def test_open_shift_is_read_with_shift_permission(self):
+		open_shift(0)
+
+		with self.set_user(ensure_user("books-pos-shift-no-role@example.com")):
+			self.assertRaises(frappe.PermissionError, get_open_shift)
 
 	def test_user_cannot_cancel_shift(self):
 		shift = open_shift(0)

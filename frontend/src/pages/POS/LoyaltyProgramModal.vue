@@ -25,7 +25,7 @@
         :border="true"
         :focus-input="!isMobile"
         :value="pendingLoyaltyPoints"
-        :df="sinvDoc.fieldMap.loyaltyPoints"
+        :df="sinvDoc.fieldMap.loyalty_points"
         @keydown.enter="saveLoyaltyPoints"
         @change="setPendingLoyaltyPoints"
       />
@@ -48,7 +48,7 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
 import Modal from 'src/components/POS/POSDialog.vue';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { defineComponent, inject } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
@@ -96,7 +96,7 @@ export default defineComponent({
         return;
       }
 
-      this.initialLoyaltyPoints = this.sinvDoc.loyaltyPoints ?? 0;
+      this.initialLoyaltyPoints = this.sinvDoc.loyalty_points ?? 0;
       this.pendingLoyaltyPoints = this.initialLoyaltyPoints;
       this.validationError = false;
     },
@@ -107,7 +107,6 @@ export default defineComponent({
       this.validationError = false;
     },
     cancelLoyaltyProgram() {
-      this.sinvDoc.loyaltyPoints = this.initialLoyaltyPoints;
       this.$emit('setLoyaltyPoints', this.initialLoyaltyPoints);
       this.$emit('toggleModal', 'LoyaltyProgram', false);
     },
@@ -119,7 +118,6 @@ export default defineComponent({
         return false;
       }
 
-      this.sinvDoc.loyaltyPoints = newValue;
       this.$emit('setLoyaltyPoints', newValue);
       this.validationError = false;
       return true;

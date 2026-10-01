@@ -36,13 +36,13 @@
 			<div class="flex items-baseline justify-between gap-4">
 				<dt class="font-medium text-ink-gray-8">{{ t`Grand total` }}</dt>
 				<dd class="text-lg font-semibold tabular-nums text-ink-gray-9">
-					{{ formatAmount(sinvDoc.grandTotal) }}
+					{{ formatAmount(sinvDoc.grand_total) }}
 				</dd>
 			</div>
 			<div class="flex items-baseline justify-between gap-4">
 				<dt class="text-sm text-ink-gray-6">{{ t`Outstanding` }}</dt>
 				<dd class="text-sm font-medium tabular-nums text-ink-gray-8">
-					{{ formatAmount(sinvDoc.outstandingAmount) }}
+					{{ formatAmount(sinvDoc.outstanding_amount) }}
 				</dd>
 			</div>
 		</dl>
@@ -50,7 +50,7 @@
 </template>
 
 <script lang="ts">
-import { SalesInvoice } from "models/baseModels/SalesInvoice/SalesInvoice";
+import type { SalesInvoice } from "models/invoices/SalesInvoice";
 import { Money } from "pesa";
 import { fyo } from "src/initFyo";
 import { Badge as FrappeBadge, Divider as FrappeDivider } from "frappe-ui";
@@ -69,15 +69,15 @@ export default defineComponent({
 			if (this.hasDistinctBaseTotal) {
 				rows.push({
 					label: this.fyo.t`Base grand total`,
-					value: this.sinvDoc.baseGrandTotal!,
+					value: this.sinvDoc.base_grand_total!,
 				});
 			}
 
 			return rows;
 		},
 		hasDistinctBaseTotal(): boolean {
-			const baseTotal = this.sinvDoc.baseGrandTotal;
-			const grandTotal = this.sinvDoc.grandTotal;
+			const baseTotal = this.sinvDoc.base_grand_total;
+			const grandTotal = this.sinvDoc.grand_total;
 			return Boolean(baseTotal && grandTotal && !baseTotal.eq(grandTotal));
 		},
 	},

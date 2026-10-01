@@ -9,12 +9,14 @@ import {
   RequiredMap,
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
+import { addItem } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import type { InvoiceItem } from './InvoiceItem';
+import type { TaxSummary } from './TaxSummary';
 
 // A new rate for rows priced by the server follows these.
 const RATE_SOURCE_FIELDS = ['party', 'price_list', 'currency', 'exchange_rate'];
@@ -52,8 +54,15 @@ export abstract class Invoice extends FrappeDoc {
   currency?: string;
   exchange_rate?: number;
   price_list?: string;
+  net_total?: Money;
+  total_discount?: Money;
+  loyalty_points_amount?: Money;
   grand_total?: Money;
+  base_grand_total?: Money;
   outstanding_amount?: Money;
+  taxes?: TaxSummary[];
+  loyalty_points?: number;
+  redeem_loyalty_points?: boolean;
   return_against?: string;
   make_auto_payment?: boolean;
   is_pos?: boolean;
@@ -211,17 +220,7 @@ export abstract class Invoice extends FrappeDoc {
 
   /** Adds a row for the item, or more of it to its row, as a barcode scan does. */
   async addItem(name: string, quantity = 1) {
-    if (!this.canEdit) {
-      return;
-    }
-
-    const row = this.items?.find(({ item }) => item === name);
-    if (row) {
-      await row.set('quantity', (row.quantity ?? 0) + quantity);
-      return;
-    }
-
-    await this.append('items', { item: name, quantity });
+    await addItem(name, this, quantity);
   }
 }
 

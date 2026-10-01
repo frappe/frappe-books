@@ -33,23 +33,7 @@ await build({
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
-      export {
-        getItemQtyMap,
-        getMappedDoc,
-        getStockTransferActions,
-        validateQty,
-      } from './models/helpers';
-      export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
-      export {
-        addBatchItem,
-        addPOSItem,
-        fillRowSerialNumbers,
-        getPOSRowItem,
-        setPOSRowQuantity,
-        setPOSRowValue,
-        validatePOSCheckout,
-        validateSinv,
-      } from './src/utils/pos';
+      export { getMappedDoc, getStockTransferActions } from './models/helpers';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { evaluateHidden, evaluateReadOnly, linkOnSave } from './src/utils/doc';

@@ -20,6 +20,8 @@ export class SalesInvoice extends Invoice {
     coupons: AppliedCouponCode,
   };
 
+  coupons?: AppliedCouponCode[];
+
   override hidden: HiddenMap = {
     ...this.hidden,
     make_auto_stock_transfer: () => this.isAutoStockTransferHidden,

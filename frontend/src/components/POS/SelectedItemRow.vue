@@ -22,11 +22,11 @@
         <span class="truncate text-sm text-ink-gray-9">{{ row.item }}</span>
       </FrappeButton>
       <p
-        v-if="row.isFreeItem"
+        v-if="row.is_free_item"
         class="truncate text-xs text-ink-green-7"
-        :title="String(row.pricingRule ?? '')"
+        :title="String(row.pricing_rule ?? '')"
       >
-        {{ row.pricingRule }}
+        {{ row.pricing_rule }}
       </p>
     </div></FrappeListCell
   >
@@ -61,8 +61,8 @@
   <FrappeListCell v-if="isClassic" class="min-h-12"
     ><span
       class="w-full min-w-0 truncate px-2 text-sm text-ink-gray-9"
-      :title="row.transferUnit || row.unit"
-      >{{ row.transferUnit || row.unit }}</span
+      :title="row.transfer_unit || row.unit"
+      >{{ row.transfer_unit || row.unit }}</span
     ></FrappeListCell
   >
   <FrappeListCell class="min-h-12"
@@ -99,16 +99,16 @@
       <Float
         :df="{
           fieldtype: 'Float',
-          fieldname: 'transferQuantity',
+          fieldname: 'transfer_quantity',
           label: t`Transfer Quantity`,
         }"
         size="medium"
         :border="true"
         :show-label="true"
-        :value="row.transferQuantity"
-        :read-only="isFieldReadOnly('transferQuantity')"
-        @click="openKeypad('transferQuantity')"
-        @change="(value: number) => editInline('transferQuantity', value)"
+        :value="row.transfer_quantity"
+        :read-only="isFieldReadOnly('transfer_quantity')"
+        @click="openKeypad('transfer_quantity')"
+        @change="(value: number) => editInline('transfer_quantity', value)"
       />
     </div>
 
@@ -120,16 +120,16 @@
         :key="row.item"
         :df="{
           fieldtype: 'AutoComplete',
-          fieldname: 'transferUnit',
+          fieldname: 'transfer_unit',
           label: t`Transfer Unit`,
           options: transferUnitOptions,
         }"
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.transferUnit ?? ''"
+        :value="row.transfer_unit ?? ''"
         :read-only="isReadOnly"
-        @change="(value: string) => row.set('transferUnit', value)"
+        @change="(value: string) => row.set('transfer_unit', value)"
       />
     </div>
 
@@ -179,10 +179,10 @@
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.itemDiscountAmount"
-        :read-only="isFieldReadOnly('itemDiscountAmount')"
-        @click="openKeypad('itemDiscountAmount')"
-        @change="(value: Money) => editInline('itemDiscountAmount', value)"
+        :value="row.item_discount_amount"
+        :read-only="isFieldReadOnly('item_discount_amount')"
+        @click="openKeypad('item_discount_amount')"
+        @change="(value: Money) => editInline('item_discount_amount', value)"
       />
     </div>
 
@@ -196,10 +196,10 @@
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.itemDiscountPercent"
-        :read-only="isFieldReadOnly('itemDiscountPercent')"
-        @click="openKeypad('itemDiscountPercent')"
-        @change="(value: number) => editInline('itemDiscountPercent', value)"
+        :value="row.item_discount_percent"
+        :read-only="isFieldReadOnly('item_discount_percent')"
+        @click="openKeypad('item_discount_percent')"
+        @change="(value: number) => editInline('item_discount_percent', value)"
       />
     </div>
 
@@ -245,7 +245,7 @@
           fieldtype: 'Text',
           fieldname: 'serialNumber',
         }"
-        :value="String(row.serialNumber ?? '')"
+        :value="String(row.serial_number ?? '')"
         :show-label="true"
         :border="true"
         :required="hasSerialNumber"
@@ -258,7 +258,7 @@
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { getPOSBatchQuantity } from 'models/inventory/posStock';
 import { Money } from 'pesa';
 import AutoComplete from 'src/components/Controls/AutoComplete.vue';
@@ -270,16 +270,15 @@ import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
   fillRowSerialNumbers,
-  getPOSPermissions,
   getPOSQuantityField,
   getPOSRowItem,
   isPOSRowFieldReadOnly,
-  POSPermissions,
   POSRowItem,
   POSRowField,
   setPOSRowValue,
   validateSerialNumberCount,
 } from 'src/utils/pos';
+import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { defineComponent, inject, PropType } from 'vue';
 import { ItemSerialNumbers, POSLayout } from './types';
 
@@ -333,7 +332,7 @@ export default defineComponent({
       return !!fyo.singles.InventorySettings?.enable_uom_conversions;
     },
     isReadOnly(): boolean {
-      return !!this.row.isFreeItem;
+      return !!this.row.is_free_item;
     },
     hasBatch(): boolean {
       return this.itemSettings.hasBatch;
@@ -352,7 +351,7 @@ export default defineComponent({
         return this.row.quantity;
       }
 
-      const transferQuantity = this.row.transferQuantity;
+      const transferQuantity = this.row.transfer_quantity;
       if (this.row.isReturn && transferQuantity) {
         return -Math.abs(transferQuantity);
       }
@@ -378,7 +377,7 @@ export default defineComponent({
     },
     'row.item': {
       async handler(item?: string) {
-        this.itemSettings = await getPOSRowItem(fyo, item);
+        this.itemSettings = await getPOSRowItem(item);
       },
       immediate: true,
     },
@@ -391,7 +390,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    this.permissions = await getPOSPermissions(this.fyo);
+    this.permissions = await getPOSPermissions();
   },
   methods: {
     toggleExpand() {
@@ -427,21 +426,21 @@ export default defineComponent({
       }
     },
     async adjustQuantity(change: number) {
-      const field = getPOSQuantityField(fyo);
+      const field = getPOSQuantityField();
       const quantity = (this.row[field] ?? this.row.quantity ?? 1) + change;
       if (quantity !== 0) {
         await this.setValue(field, quantity);
       }
     },
     async getAvailableQtyInBatch(): Promise<number> {
-      return getPOSBatchQuantity(fyo, this.row.item as string, this.row.batch);
+      return getPOSBatchQuantity(this.row.item as string, this.row.batch);
     },
     async setSerialNumber(serialNumber: string) {
       if (!serialNumber) {
         return;
       }
 
-      await this.row.set('serialNumber', serialNumber);
+      await this.row.set('serial_number', serialNumber);
       this.itemSerialNumbers[this.row.item as string] = serialNumber;
       validateSerialNumberCount(
         serialNumber,

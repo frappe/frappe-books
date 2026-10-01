@@ -19,7 +19,6 @@ import {
   RawValueMap,
 } from './types';
 import { StockQuantity } from 'models/inventory/types';
-import { Money } from 'pesa';
 
 type FieldMap = Record<string, Record<string, Field>>;
 
@@ -342,17 +341,6 @@ export class DatabaseHandler extends DatabaseBase {
     )) as string | null;
   }
 
-  async getPOSTransactedAmount(
-    fromDate: Date,
-    toDate: Date
-  ): Promise<Record<string, Money> | undefined> {
-    return (await this.#demux.callBespoke(
-      'getPOSTransactedAmount',
-      fromDate,
-      toDate
-    )) as Promise<Record<string, Money> | undefined>;
-  }
-
   async getLinkedEntries(
     schemaName: string,
     name: string
@@ -362,10 +350,6 @@ export class DatabaseHandler extends DatabaseBase {
       schemaName,
       name
     )) as Record<string, string[]>;
-  }
-
-  async getOpenPOSShift(): Promise<string | null> {
-    return (await this.#demux.callBespoke('getOpenPOSShift')) as string | null;
   }
 
   async getDefaultNumberSeries(): Promise<Record<string, string>> {

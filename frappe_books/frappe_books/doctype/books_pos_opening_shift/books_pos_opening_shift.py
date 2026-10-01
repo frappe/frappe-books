@@ -81,3 +81,10 @@ class BooksPosOpeningShift(Document):
 				frappe.throw(_("POS amounts cannot be negative."))
 			amounts[row.payment_method] = as_decimal(row.amount)
 		return amounts
+
+
+@frappe.whitelist()
+def get_open_shift() -> str | None:
+	"""Return the name of the open POS shift, if there is one."""
+	frappe.has_permission("Books Pos Opening Shift", "read", throw=True)
+	return open_shift_name()

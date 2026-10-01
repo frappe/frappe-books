@@ -7,7 +7,6 @@ import {
   getDocType,
   getFrappeDoc,
   getSchema,
-  models,
   newFrappeDoc,
 } from './helpers/frappe.mjs';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
@@ -111,7 +110,7 @@ test('print template pickers offer the Print Formats of the doctype they print',
   assert.deepEqual(filters.pos_print_template(), {
     doc_type: 'Books Sales Invoice',
   });
-  assert.deepEqual(models.POSProfile.filters.posPrintTemplate(), {
+  assert.deepEqual(frappeModels.POSProfile.filters.pos_print_template(), {
     doc_type: 'Books Sales Invoice',
   });
 });

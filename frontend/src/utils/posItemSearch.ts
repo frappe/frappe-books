@@ -1,5 +1,6 @@
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { POSItem } from 'src/components/POS/types';
+import { getAllDocuments } from 'src/frappe/api';
 import { fuzzyMatch } from 'src/utils';
 
 type POSItemSearchRecord = Pick<POSItem, 'name' | 'itemCode' | 'barcode'>;
@@ -19,6 +20,19 @@ type POSItemSearchMatch = {
   distance: number;
   isMatch: boolean;
 };
+
+/** Every item, with what a scanned code may name it by. */
+export async function getScannableItems(): Promise<ScannableItem[]> {
+  const items = await getAllDocuments('Books Item', {
+    fields: ['name', 'item_code', 'barcode', 'unit'],
+  });
+  return items.map((item) => ({
+    name: item.name as string,
+    itemCode: item.item_code as string,
+    barcode: item.barcode as string,
+    unit: item.unit as string,
+  }));
+}
 
 export function filterPOSItems<T extends POSItemSearchRecord>(
   items: T[],

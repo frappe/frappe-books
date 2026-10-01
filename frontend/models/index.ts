@@ -45,10 +45,6 @@ import { SerialNumber } from './inventory/SerialNumber';
 import { Shipment } from './inventory/Shipment';
 import { StockLedgerEntry } from './inventory/StockLedgerEntry';
 import { StockMovement } from './inventory/StockMovement';
-import { ClosingAmounts } from './inventory/Point of Sale/ClosingAmounts';
-import { ClosingCash } from './inventory/Point of Sale/ClosingCash';
-import { OpeningAmounts } from './inventory/Point of Sale/OpeningAmounts';
-import { OpeningCash } from './inventory/Point of Sale/OpeningCash';
 import { POSSettings } from './inventory/Point of Sale/POSSettings';
 import { POSProfile } from './baseModels/POSProfile/PosProfile';
 import { POSOpeningShift } from './inventory/Point of Sale/POSOpeningShift';
@@ -65,14 +61,6 @@ export const models = {
   SalesQuote,
   SalesQuoteItem,
   TaxSummary,
-  // POS Models
-  ClosingAmounts,
-  ClosingCash,
-  OpeningAmounts,
-  OpeningCash,
-  POSProfile,
-  POSOpeningShift,
-  POSClosingShift,
 } as ModelMap;
 
 /**
@@ -102,6 +90,9 @@ export const frappeModels: Record<string, FrappeModel> = {
   LoyaltyProgram,
   Misc,
   NumberSeries,
+  POSClosingShift,
+  POSOpeningShift,
+  POSProfile,
   POSSettings,
   Party,
   Payment,

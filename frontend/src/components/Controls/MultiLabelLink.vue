@@ -1,108 +1,78 @@
 <script>
 import { t } from 'fyo';
-import { getLinkDisplayValue } from 'src/frappe/link';
-import { fyo } from 'src/initFyo';
-import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
-import { linkOnSave } from 'src/utils/doc';
-import { getCreateFiltersFromListViewFilters } from 'src/utils/misc';
-import AutoComplete from './AutoComplete.vue';
+import { getDocuments } from 'src/frappe/api';
+import { getDocType } from 'src/frappe/doctypes';
+import { getSchema } from 'src/frappe/registry';
+import { sortByFuzzyMatch } from 'src/utils';
+import Link from './Link.vue';
 
+/**
+ * A Link whose options also match other fields of their records, like a
+ * party's phone, or the given `optionRecords` instead of a search.
+ */
 export default {
   name: 'MultiLabelLink',
-  extends: AutoComplete,
-  watch: {
-    value: {
-      immediate: true,
-      handler(newValue) {
-        this.setLinkValue(newValue);
-      },
-    },
-  },
+  extends: Link,
   props: {
     optionRecords: {
       type: Array,
       default: null,
     },
-    thirdLink: String,
-    showSecondaryLink: {
-      type: Boolean,
-      default: false,
-    },
     secondaryLink: String,
-    showClearButton: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  mounted() {
-    if (this.value) {
-      this.setLinkValue();
-    }
+    thirdLink: String,
   },
   methods: {
-    async setLinkValue(newValue) {
-      const value = newValue ?? this.value;
-      this.linkValue = await getLinkDisplayValue(this.df?.target, value);
+    async getOptions(keyword, filters) {
+      const options = this.optionRecords
+        ? this.getRecordOptions()
+        : await this.searchOptions(keyword, filters);
+      return options.map(({ record, ...option }) => ({
+        ...option,
+        value2: record[this.secondaryLink],
+        value3: record[this.thirdLink],
+      }));
     },
-    getTargetSchemaName() {
-      return this.df.target;
+    getRecordOptions() {
+      const { titleField } = getSchema(this.getTargetSchemaName());
+      return this.optionRecords.map((record) => ({
+        label: record[titleField],
+        value: record.name,
+        record,
+      }));
     },
-    async getOptions(keyword) {
-      const schemaName = this.getTargetSchemaName();
-
-      if (!schemaName) {
-        return [];
+    async searchOptions(keyword, filters) {
+      const options = await Link.methods.getOptions.call(
+        this,
+        keyword,
+        filters
+      );
+      const records = await this.getRecords(options.map(({ value }) => value));
+      return options.map((option) => ({
+        ...option,
+        record: records[option.value] ?? {},
+      }));
+    },
+    /** The records' secondary and third fields, by name. */
+    async getRecords(names) {
+      const fields = [this.secondaryLink, this.thirdLink].filter(Boolean);
+      if (!fields.length || !names.length) {
+        return {};
       }
 
-      const schema = fyo.schemaMap[schemaName];
-      const records =
-        this.optionRecords ??
-        (await this.searchRecords(schemaName, schema, keyword));
-
-      return records
-        .map((r) => {
-          const option = {
-            label:
-              r[this.secondaryLink] && this.showSecondaryLink
-                ? `${r[schema.titleField]}  ` + `  ${r[this.secondaryLink]}`
-                : r[schema.titleField],
-            value: r.name,
-            value2: r[this.secondaryLink],
-            value3: r[this.thirdLink],
-          };
-
-          if (this.df.groupBy) {
-            option.group = r[this.df.groupBy];
-          }
-          return option;
-        })
-        .filter(Boolean);
-    },
-    async searchRecords(schemaName, schema, keyword) {
-      const filters = await this.getFilters();
-      const fields = [
-        ...new Set([
-          'name',
-          this.secondaryLink,
-          this.thirdLink,
-          schema.titleField,
-          this.df.groupBy,
-        ]),
-      ].filter(Boolean);
-
-      return await fyo.db.searchLink(
-        schemaName,
-        keyword,
-        filters,
-        fields,
-        LINK_PAGE_LENGTH
-      );
+      const { doctype } = getDocType(this.getTargetSchemaName());
+      const rows = await getDocuments(doctype, {
+        fields: ['name', ...fields],
+        filters: [['name', 'in', names]],
+        limit: names.length,
+      });
+      return Object.fromEntries(rows.map((row) => [row.name, row]));
     },
     async getSuggestions(keyword = '') {
+      const filters = await this.getFilters();
       // Given records are filtered here; searched ones were matched by the server.
       let options = sortByFuzzyMatch(
         keyword,
-        await this.getOptions(keyword),
+        await this.getOptions(keyword, filters),
         (item) => [item.label, item.value2, item.value3],
         !!this.optionRecords
       );
@@ -113,10 +83,6 @@ export default {
 
       return options;
     },
-    canCreateTarget() {
-      const target = this.getTargetSchemaName();
-      return !!target && fyo.can(target, 'create');
-    },
     getCreateNewOption() {
       return {
         label: t`Create`,
@@ -124,50 +90,6 @@ export default {
         action: () => this.openNewDoc(),
         actionOnly: true,
       };
-    },
-    async openNewDoc() {
-      const schemaName = this.df.target;
-      const name =
-        this.searchQuery || fyo.doc.getTemporaryName(fyo.schemaMap[schemaName]);
-      const filters = await this.getCreateFilters();
-      const { openQuickEdit } = await import('src/utils/ui');
-
-      const doc = fyo.doc.getNewDoc(schemaName, { name, ...filters });
-      openQuickEdit({ doc });
-
-      linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
-        this.$router.back();
-        this.triggerChange(savedName);
-      });
-    },
-    async getCreateFilters() {
-      const { schemaName, fieldname } = this.df;
-
-      const getCreateFilters =
-        fyo.models[schemaName]?.createFilters?.[fieldname];
-      let createFilters = await getCreateFilters?.(this.doc);
-
-      if (createFilters !== undefined) {
-        return createFilters;
-      }
-
-      const filters = await this.getFilters();
-      return getCreateFiltersFromListViewFilters(filters);
-    },
-    async getFilters() {
-      const { schemaName, fieldname } = this.df;
-      const getFilters = fyo.models[schemaName]?.filters?.[fieldname];
-
-      if (getFilters === undefined) {
-        return {};
-      }
-
-      if (this.doc) {
-        return (await getFilters(this.doc)) ?? {};
-      }
-
-      // Filters that read the document cannot apply without one.
-      return getFilters.length ? {} : ((await getFilters()) ?? {});
     },
   },
 };

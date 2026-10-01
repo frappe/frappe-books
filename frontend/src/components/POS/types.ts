@@ -47,22 +47,9 @@ export interface POSItem {
   itemGroup?: string;
 }
 
-/** An item's values as POS reads them through the bridge, by Books field name. */
-export interface BridgeItem {
-  name?: string;
-  itemCode?: string;
-  barcode?: string;
-  image?: string;
-  rate?: Money;
-  unit?: string;
-  trackItem?: boolean;
-  hasBatch?: boolean;
-  hasSerialNumber?: boolean;
-  uomConversions?: { uom: string }[];
-}
-
+/** A payment method the cashier picks, by Books Payment Method fieldnames. */
 export type PaymentMethodOption = {
   name: string;
   type?: PaymentMethodType;
-  requiresClearanceDate?: boolean;
+  requires_clearance_date?: boolean;
 };

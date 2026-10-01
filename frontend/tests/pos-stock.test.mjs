@@ -1,116 +1,163 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import {
-  addBatchItem,
-  addPOSItem,
-  fillRowSerialNumbers,
-  getItemQtyMap,
-  getPOSRowItem,
-  validateQty,
-  getPOSInventory,
-  getPOSBatchQuantity,
-  setPOSRowQuantity,
-  setPOSRowValue,
-  validateSinv,
-  validatePOSCheckout,
-} from './helpers/accounting.mjs';
+import { beforeEach, test } from 'node:test';
+import { loadFrappeModels } from './helpers/frappeModels.mjs';
+import { frappeModels, fyo, pos, posStock } from './helpers/frappe.mjs';
 
 const item = 'Demo - Coffee Beans';
+const service = 'Demo - Gift Wrapping';
+const flour = 'Demo - Flour';
 const batch = 'DEMO-COFFEE-2026';
 const inventory = 'POS Counter';
 
-test('the card and batch quantities use the location the server ships POS sales from', async () => {
-  const fyo = makeFyo();
+const items = {
+  [item]: { track_item: 1, has_batch: 1, unit: 'Unit' },
+  [service]: { track_item: 0, has_batch: 0, unit: 'Unit' },
+  [flour]: {
+    track_item: 1,
+    has_batch: 1,
+    has_serial_number: 1,
+    unit: 'Kg',
+    uom_conversions: [{ uom: 'Box' }, { uom: 'Kg' }],
+  },
+};
+const ledger = [
+  { location: inventory, quantity: 4 },
+  { location: 'Warehouse', quantity: 128 },
+].map((row) => ({ item, batch, ...row }));
+
+let server;
+stubServer();
+await loadFrappeModels(frappeModels, (request) => server(request));
+beforeEach(() => stubServer());
+
+/**
+ * Answers the item, stock availability and serial number requests from the
+ * ledger, with `location` as where POS sales ship from. Item lookups by
+ * filter (the serial number check) find a serial-numbered item.
+ */
+function stubServer({ location = inventory, serialNumbers } = {}) {
   const requests = [];
-  fyo.db.getStockLocation = async (...args) => {
-    requests.push(args);
-    return inventory;
+  const methods = {
+    get_stock_location: () => location,
+    get_stock_quantities: (args) =>
+      ledger
+        .filter((row) => !args.location || row.location === args.location)
+        .filter((row) => !args.items || args.items.includes(row.item))
+        .map(({ item, batch, quantity }) => ({ item, batch, quantity })),
+    get_available_serial_numbers: (args) => {
+      assert.equal(args.location, inventory);
+      return serialNumbers(args.quantity);
+    },
   };
-  assert.equal(await getPOSInventory(fyo), inventory);
-  const quantities = await getItemQtyMap({ fyo });
+  server = async ({ path, body }) => {
+    requests.push([path.split('/').pop(), body]);
+    if (path.endsWith('/document/Books Item')) {
+      return { data: [{ has_serial_number: 1 }] };
+    }
+
+    const name = decodeURIComponent(path.split('/Books Item/')[1] ?? '');
+    if (name) {
+      return { data: { name, ...items[name] } };
+    }
+
+    const method = methods[path.split('.').pop()];
+    return method ? { message: await method(body) } : { data: [] };
+  };
+  return requests;
+}
+
+test('the card and batch quantities use the location the server ships POS sales from', async () => {
+  const requests = stubServer();
+  assert.equal(await posStock.getPOSInventory(), inventory);
+  const quantities = await posStock.getItemQtyMap();
   assert.equal(quantities[item].availableQty, 4);
   assert.equal(quantities[item][batch], 4);
-  assert.equal(await getPOSBatchQuantity(fyo, item, batch), 4);
-  assert.deepEqual(requests[0], ['SalesInvoice', true]);
+  assert.equal(await posStock.getPOSBatchQuantity(item, batch), 4);
+  assert.deepEqual(requests[0], [
+    'frappe_books.inventory.availability.get_stock_location',
+    { doctype: 'Books Sales Invoice', is_pos: true },
+  ]);
 });
 
 test('checkout accepts stocked batches and rejects stock held elsewhere', async () => {
-  const fyo = makeFyo();
-  const invoice = { fyo, items: [{ item, batch, quantity: 2 }] };
-  await validateSinv(invoice, await getItemQtyMap(invoice));
+  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  await pos.validateSinv(invoice, await posStock.getItemQtyMap());
 
-  fyo.db.getStockLocation = async () => 'Empty Counter';
+  stubServer({ location: 'Empty Counter' });
   await assert.rejects(
-    validateSinv(invoice, await getItemQtyMap(invoice)),
+    pos.validateSinv(invoice, await posStock.getItemQtyMap()),
     /Demo - Coffee Beans in Empty Counter.*Available: 0; required: 2/
   );
 });
 
 test('checkout checks the selected batch instead of just total item stock', async () => {
-  const fyo = makeFyo();
-  const invoice = { fyo, items: [{ item, batch, quantity: 2 }] };
+  const invoice = { items: [{ item, batch, quantity: 2 }] };
   await assert.rejects(
-    validateSinv(invoice, { [item]: { availableQty: 132, [batch]: 1 } }),
+    pos.validateSinv(invoice, { [item]: { availableQty: 132, [batch]: 1 } }),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 1; required: 2/
   );
 });
 
 test('checkout combines repeated item rows, including free items', async () => {
-  const fyo = makeFyo();
   const invoice = {
-    fyo,
     items: [
       { item, batch, quantity: 3 },
-      { item, batch, quantity: 2, isFreeItem: true },
+      { item, batch, quantity: 2, is_free_item: true },
     ],
   };
   await assert.rejects(
-    validateSinv(invoice, { [item]: { availableQty: 132, [batch]: 4 } }),
+    pos.validateSinv(invoice, { [item]: { availableQty: 132, [batch]: 4 } }),
     /batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
 });
 
+test('checkout needs no stock of untracked items', async () => {
+  const invoice = {
+    items: [
+      { item: service, quantity: 99 },
+      { item, batch, quantity: 2 },
+    ],
+  };
+  await pos.validateSinv(invoice, stockMap(4));
+});
+
 test('fractional sales and returns do not produce false stock errors', async () => {
-  const fyo = makeFyo();
-  const invoice = { fyo, items: [{ item, batch, quantity: 0.5 }] };
-  await validateSinv(invoice, await getItemQtyMap(invoice));
-  invoice.returnAgainst = 'Original Invoice';
+  const invoice = { items: [{ item, batch, quantity: 0.5 }] };
+  await pos.validateSinv(invoice, await posStock.getItemQtyMap());
+  invoice.return_against = 'Original Invoice';
   invoice.items[0].quantity = -2;
-  await validateSinv(invoice, {});
+  await pos.validateSinv(invoice, {});
 });
 
 test('a row may not ask for more of its batch than the POS warehouse has', async () => {
-  const fyo = makeFyo();
   const rows = [
     { item, batch, quantity: 3 },
     { item, batch, quantity: 1 },
   ];
-  await validateQty({ fyo }, rows[0], rows);
+  await pos.validateQty(rows[0], rows);
   rows[1].quantity = 2;
   await assert.rejects(
-    validateQty({ fyo }, rows[0], rows),
+    pos.validateQty(rows[0], rows),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
 });
 
 test('a batched row needs a batch and untracked items need no stock', async () => {
-  const fyo = makeFyo();
   const row = { item, quantity: 999 };
-  await assert.rejects(validateQty({ fyo }, row, [row]), /select a batch/);
-  fyo.getValue = async () => false;
-  await validateQty({ fyo }, row, [row]);
+  await assert.rejects(pos.validateQty(row, [row]), /select a batch/);
+  const untracked = { item: service, quantity: 999 };
+  await pos.validateQty(untracked, [untracked]);
 });
 
 test('a row without a batch shows no batch stock', async () => {
-  const fyo = makeFyo();
-  assert.equal(await getPOSBatchQuantity(fyo, item, batch), 4);
-  assert.equal(await getPOSBatchQuantity(fyo, item, undefined), 0);
+  assert.equal(await posStock.getPOSBatchQuantity(item, batch), 4);
+  assert.equal(await posStock.getPOSBatchQuantity(item, undefined), 0);
 });
 
 test('selecting an unavailable batch cannot use stock from other warehouses', async () => {
   const invoice = makeInvoice();
   await assert.rejects(
-    addBatchItem(invoice, product, batch, 2, stockMap(0)),
+    pos.addBatchItem(invoice, product, batch, 2, stockMap(0)),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 0/
   );
   assert.equal(invoice.items.length, 0);
@@ -118,41 +165,37 @@ test('selecting an unavailable batch cannot use stock from other warehouses', as
 
 test('selecting a stocked batch adds to its row and checks the added quantity', async () => {
   const invoice = makeInvoice();
-  await addBatchItem(invoice, product, batch, 2, stockMap(4));
+  await pos.addBatchItem(invoice, product, batch, 2, stockMap(4));
   assert.equal(invoice.items[0].quantity, 2);
 
   await assert.rejects(
-    addBatchItem(invoice, product, batch, 3, stockMap(4)),
+    pos.addBatchItem(invoice, product, batch, 3, stockMap(4)),
     /Available: 4; required: 5/
   );
   assert.equal(invoice.items[0].quantity, 2);
 });
 
 test('checkout validates against freshly loaded stock', async () => {
-  const invoice = { fyo: makeFyo(), items: [{ item, batch, quantity: 2 }] };
-  await validatePOSCheckout(invoice, async () => stockMap(4));
+  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  await pos.validatePOSCheckout(invoice, async () => stockMap(4));
   await assert.rejects(
-    validatePOSCheckout(invoice, async () => stockMap(1)),
+    pos.validatePOSCheckout(invoice, async () => stockMap(1)),
     /Available: 1; required: 2/
   );
 });
 
 test('a payment retry does not require stock that has already shipped', async () => {
-  const invoice = {
-    fyo: makeFyo(),
-    isSubmitted: true,
-    items: [{ item, batch, quantity: 2 }],
-  };
-  await validatePOSCheckout(invoice, async () =>
+  const invoice = { isSubmitted: true, items: [{ item, batch, quantity: 2 }] };
+  await pos.validatePOSCheckout(invoice, async () =>
     assert.fail('Stock already shipped')
   );
 });
 
 test('a cart quantity must be above zero unless the row is a return', async () => {
-  const row = makeRow({ quantity: 2, transferQuantity: 2 });
+  const row = makeRow({ quantity: 2, transfer_quantity: 2 });
   for (const quantity of [0, -1]) {
     await assert.rejects(
-      setPOSRowQuantity(row, 'quantity', quantity),
+      pos.setPOSRowQuantity(row, 'quantity', quantity),
       /greater than zero/
     );
   }
@@ -161,46 +204,56 @@ test('a cart quantity must be above zero unless the row is a return', async () =
   const returned = makeRow({
     isReturn: true,
     quantity: -1,
-    transferQuantity: -1,
+    transfer_quantity: -1,
   });
-  await setPOSRowQuantity(returned, 'transferQuantity', 3);
-  assert.deepEqual([returned.quantity, returned.transferQuantity], [-3, -3]);
+  await pos.setPOSRowQuantity(returned, 'transfer_quantity', 3);
+  assert.deepEqual([returned.quantity, returned.transfer_quantity], [-3, -3]);
 });
 
 test('a cart quantity the POS warehouse cannot supply is restored', async () => {
-  const row = makeRow({ quantity: 2, transferQuantity: 2 });
+  const row = makeRow({ quantity: 2, transfer_quantity: 2 });
   await assert.rejects(
-    setPOSRowQuantity(row, 'transferQuantity', 5),
+    pos.setPOSRowQuantity(row, 'transfer_quantity', 5),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
-  assert.deepEqual([row.quantity, row.transferQuantity], [2, 2]);
+  assert.deepEqual([row.quantity, row.transfer_quantity], [2, 2]);
 
-  await setPOSRowQuantity(row, 'quantity', 4);
-  assert.deepEqual([row.quantity, row.transferQuantity], [4, 4]);
+  await pos.setPOSRowQuantity(row, 'quantity', 4);
+  assert.equal(row.quantity, 4);
+});
+
+test('a transfer quantity is checked by the stock quantity it converts to', async () => {
+  const row = makeRow({ unit_conversion_factor: 2 });
+  await pos.setPOSRowQuantity(row, 'transfer_quantity', 2);
+  assert.deepEqual([row.transfer_quantity, row.quantity], [2, 4]);
+  await assert.rejects(
+    pos.setPOSRowQuantity(row, 'transfer_quantity', 3),
+    /Available: 4; required: 6/
+  );
+  assert.deepEqual([row.transfer_quantity, row.quantity], [2, 4]);
 });
 
 test('a cart discount edit picks amount or percent discounts', async () => {
   const row = makeRow();
-  await setPOSRowValue(row, 'itemDiscountAmount', 5);
-  assert.equal(row.setItemDiscountAmount, true);
-  await setPOSRowValue(row, 'itemDiscountPercent', 10);
+  await pos.setPOSRowValue(row, 'item_discount_amount', 5);
+  assert.equal(row.set_item_discount_amount, true);
+  await pos.setPOSRowValue(row, 'item_discount_percent', 10);
   assert.deepEqual(
-    [row.setItemDiscountAmount, row.itemDiscountPercent],
+    [row.set_item_discount_amount, row.item_discount_percent],
     [false, 10]
   );
-  await setPOSRowValue(row, 'rate', 7);
-  assert.deepEqual([row.setItemDiscountAmount, row.rate], [false, 7]);
+  await pos.setPOSRowValue(row, 'rate', 7);
+  assert.deepEqual([row.set_item_discount_amount, row.rate], [false, 7]);
 });
 
 test('adding an item already in the cart checks the POS warehouse for the new total', async () => {
-  const row = makeRow({ quantity: 3, transferQuantity: 3 });
+  const row = makeRow({ quantity: 3, transfer_quantity: 3 });
   const invoice = row.parentdoc;
-  invoice.fyo.doc.getDoc = async () => ({ trackItem: true, inventory });
   const stock = { [item]: { availableQty: 4 } };
-  assert.equal(await addPOSItem(invoice, product, 1, stock), row);
+  assert.equal(await pos.addPOSItem(invoice, product, 1, stock), row);
   assert.equal(row.quantity, 4);
   await assert.rejects(
-    addPOSItem(invoice, product, 1, stock),
+    pos.addPOSItem(invoice, product, 1, stock),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
   assert.equal(row.quantity, 4);
@@ -208,81 +261,61 @@ test('adding an item already in the cart checks the POS warehouse for the new to
 
 test('a new cart row needs the item in stock', async () => {
   const invoice = makeInvoice();
-  await assert.rejects(addPOSItem(invoice, product, 1, {}), /out of stock/);
-  const row = await addPOSItem(invoice, product, 2, stockMap(0));
+  await assert.rejects(pos.addPOSItem(invoice, product, 1, {}), /out of stock/);
+  const row = await pos.addPOSItem(invoice, product, 2, stockMap(0));
   assert.deepEqual(
-    [invoice.items.length, row.quantity, row.transferUnit],
-    [1, 2, 'Unit']
+    [invoice.items.length, row.item, row.quantity],
+    [1, item, 2]
   );
 });
 
 test('a cart row fills serial numbers for sales and keeps a return row’s', async () => {
   const requested = [];
-  const fyo = makeSerialFyo(async (quantity) => {
-    requested.push(quantity);
-    return ['SN-1', 'SN-2'];
+  stubServer({
+    serialNumbers: async (quantity) => {
+      requested.push(quantity);
+      return ['SN-1', 'SN-2'];
+    },
   });
   const serials = {};
-  const sale = makeSerialRow(fyo, { quantity: 2 });
-  await fillRowSerialNumbers(sale, serials);
-  assert.equal(sale.serialNumber, 'SN-1\nSN-2');
+  const sale = makeSerialRow({ quantity: 2 });
+  await pos.fillRowSerialNumbers(sale, serials);
+  assert.equal(sale.serial_number, 'SN-1\nSN-2');
   assert.equal(serials[item], 'SN-1\nSN-2');
-  await fillRowSerialNumbers(sale, serials);
+  await pos.fillRowSerialNumbers(sale, serials);
 
-  const returned = makeSerialRow(fyo, { quantity: -2, serialNumber: 'SOLD-1' });
-  await fillRowSerialNumbers(returned, {});
-  assert.equal(returned.serialNumber, 'SOLD-1');
+  const returned = makeSerialRow({ quantity: -2, serial_number: 'SOLD-1' });
+  await pos.fillRowSerialNumbers(returned, {});
+  assert.equal(returned.serial_number, 'SOLD-1');
   assert.deepEqual(requested, [2]);
 });
 
 test('a cart row reports serial number lookup failures', async () => {
-  const fyo = makeSerialFyo(async () => {
-    throw new Error('Serial numbers unavailable');
+  stubServer({
+    serialNumbers: async () => {
+      throw new Error('Serial numbers unavailable');
+    },
   });
   await assert.rejects(
-    fillRowSerialNumbers(makeSerialRow(fyo, { quantity: 1 }), {}),
+    pos.fillRowSerialNumbers(makeSerialRow({ quantity: 1 }), {}),
     /Serial numbers unavailable/
   );
 });
 
 test('a cart row reads batch, serial and unit settings from its item', async () => {
-  const fyo = makeFyo();
-  fyo.doc.getDoc = async (schema, name) => ({
-    schema,
-    name,
-    unit: 'Kg',
-    hasBatch: true,
-    hasSerialNumber: true,
-    uomConversions: [{ uom: 'Box' }, { uom: 'Kg' }],
-  });
-  assert.deepEqual(await getPOSRowItem(fyo, item), {
+  assert.deepEqual(await pos.getPOSRowItem(flour), {
     hasBatch: true,
     hasSerialNumber: true,
     units: ['Kg', 'Box'],
   });
-  assert.deepEqual(await getPOSRowItem(fyo, undefined), {
+  assert.deepEqual(await pos.getPOSRowItem(undefined), {
     hasBatch: false,
     hasSerialNumber: false,
     units: [],
   });
 });
 
-/** Serial numbers come from the server pick at the POS inventory. */
-function makeSerialFyo(getSerialNumbers) {
-  globalThis.window = { location: { hostname: 'books.localhost' } };
-  globalThis.fetch = async (url, { body }) => {
-    if (url.startsWith('/api/v2/document/')) {
-      return Response.json({ data: [{ has_serial_number: 1 }] });
-    }
-
-    const { location, quantity } = JSON.parse(body);
-    assert.equal(location, inventory);
-    return Response.json({ message: await getSerialNumbers(quantity) });
-  };
-  return { db: { getStockLocation: async () => inventory } };
-}
-
-function makeSerialRow(fyo, values) {
+function makeSerialRow(values) {
   return {
     fyo,
     item,
@@ -294,70 +327,32 @@ function makeSerialRow(fyo, values) {
 }
 
 function makeRow(values = {}) {
-  const invoice = { fyo: makeFyo(), items: [] };
+  const invoice = { items: [] };
   const row = {
     item,
     batch,
     quantity: 1,
-    transferQuantity: 1,
+    transfer_quantity: 1,
     parentdoc: invoice,
     ...values,
     async set(field, value) {
       this[field] = value;
-      if (field === 'quantity') this.transferQuantity = value;
-      if (field === 'transferQuantity') this.quantity = value;
-    },
-    async setMultiple(values) {
-      Object.assign(this, values);
     },
   };
   invoice.items.push(row);
   return row;
 }
 
-function makeFyo() {
-  const ledger = [
-    { location: inventory, quantity: 4 },
-    { location: 'Warehouse', quantity: 128 },
-  ].map((row, index) => ({
-    name: String(index + 1),
-    date: '2026-09-06T09:00:00Z',
-    item,
-    batch,
-    rate: '600',
-    ...row,
-  }));
-  return {
-    singles: {},
-    doc: { getDoc: async () => ({}) },
-    getValue: async () => true,
-    db: {
-      getStockLocation: async () => inventory,
-      getStockQuantities: async (location, items) =>
-        ledger
-          .filter((row) => !location || row.location === location)
-          .filter((row) => !items || items.includes(row.item))
-          .map(({ item, batch, quantity }) => ({ item, batch, quantity })),
-      getStockQuantity: async (name, location, _from, _to, selectedBatch) =>
-        ledger
-          .filter(
-            (row) =>
-              row.item === name &&
-              (!location || row.location === location) &&
-              row.batch === selectedBatch
-          )
-          .reduce((total, row) => total + row.quantity, 0),
-    },
-  };
-}
-
-const product = { name: item, rate: 600, unit: 'Unit' };
+const product = {
+  name: item,
+  rate: 600,
+  unit: 'Unit',
+  trackItem: true,
+  hasBatch: true,
+};
 
 function makeInvoice() {
-  const fyo = makeFyo();
-  fyo.doc.getDoc = async () => ({ trackItem: true, inventory });
   return {
-    fyo,
     items: [],
     async append(_field, row) {
       this.items.push({

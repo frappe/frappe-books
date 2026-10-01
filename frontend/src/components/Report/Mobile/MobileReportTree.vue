@@ -127,13 +127,13 @@ function getIndent(row: MobileTreeRow) {
 function getRowClass(row: MobileTreeRow) {
   if (row.isTotal) {
     const background = props.grouped ? '' : 'bg-surface-gray-1';
-    return `min-h-[52px] text-md-semibold text-ink-gray-9 ${background}`;
+    return `min-h-[52px] text-md-semibold text-ink-gray-8 ${background}`;
   }
 
   if (row.isGroup) {
     return row.subtitle
-      ? 'min-h-[60px] py-2.5 text-md-medium text-ink-gray-9'
-      : 'min-h-12 py-1.5 text-md-semibold text-ink-gray-9';
+      ? 'min-h-[60px] py-2.5 text-md-medium text-ink-gray-8'
+      : 'min-h-12 py-1.5 text-md-semibold text-ink-gray-8';
   }
 
   const background = row.isChild ? 'bg-surface-gray-1' : '';

@@ -7,7 +7,7 @@
     >
       <dt class="shrink-0 text-ink-gray-5">{{ detail.label }}</dt>
       <dd
-        class="min-w-0 text-end tabular-nums text-ink-gray-9 [overflow-wrap:anywhere]"
+        class="min-w-0 text-end tabular-nums text-ink-gray-8 [overflow-wrap:anywhere]"
         :class="{ 'font-semibold': detail.emphasis }"
         dir="auto"
       >

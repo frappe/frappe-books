@@ -70,7 +70,7 @@
           :key="total.label"
           class="flex justify-between gap-4"
           :class="
-            total.strong ? 'font-semibold text-ink-gray-9' : 'text-ink-gray-8'
+            total.strong ? 'font-semibold text-ink-gray-8' : 'text-ink-gray-7'
           "
         >
           <dt>{{ total.label }}</dt>

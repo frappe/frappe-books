@@ -92,7 +92,7 @@
       </div>
       <div
         v-if="settlement"
-        class="flex justify-between gap-4 py-1 text-lg-semibold tabular-nums text-ink-gray-9"
+        class="flex justify-between gap-4 py-1 text-lg-semibold tabular-nums text-ink-gray-8"
         role="status"
       >
         <span>{{ settlement.label }}</span>
@@ -117,7 +117,7 @@
       <button
         v-if="showCoupon"
         type="button"
-        class="flex h-14 w-full items-center gap-3 border-b border-outline-gray-1 px-4 text-start text-md-medium text-ink-gray-9"
+        class="flex h-14 w-full items-center gap-3 border-b border-outline-gray-1 px-4 text-start text-lg text-ink-gray-8"
         @click="$emit('applyCoupon')"
       >
         <FrappeIcon

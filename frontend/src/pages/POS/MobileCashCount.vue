@@ -10,7 +10,7 @@
     <div
       v-for="row in rows"
       :key="row.idx"
-      class="grid grid-cols-[minmax(0,1fr)_8.5rem_6.5rem] items-center gap-2 text-md tabular-nums text-ink-gray-9"
+      class="grid grid-cols-[minmax(0,1fr)_8.5rem_6.5rem] items-center gap-2 text-md tabular-nums text-ink-gray-8"
     >
       <span class="truncate" dir="ltr">{{ format(row.denomination) }}</span>
       <MobileStepper

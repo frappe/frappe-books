@@ -44,7 +44,7 @@
   </FrappeTextInput>
 </template>
 <script lang="ts">
-import { Doc } from 'fyo/model/doc';
+import { FrappeDoc } from 'src/frappe/document';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { Field } from 'schemas/types';
 import { isNumeric } from 'src/utils';
@@ -133,10 +133,10 @@ export default defineComponent({
       }
       return classes;
     },
-    doc(): Doc | undefined {
+    doc(): FrappeDoc | undefined {
       const doc = this.injectedDoc;
 
-      if (doc instanceof Doc) {
+      if (doc instanceof FrappeDoc) {
         return doc;
       }
 

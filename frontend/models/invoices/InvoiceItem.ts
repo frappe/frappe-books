@@ -1,6 +1,5 @@
 import { Fyo } from 'fyo';
 import type { DocValue, DocValueMap } from 'fyo/core/types';
-import type { Doc } from 'fyo/model/doc';
 import {
   ChangeArg,
   CurrenciesMap,
@@ -253,10 +252,10 @@ export class InvoiceItem extends FrappeDoc {
 
   // Items, batches and units are Frappe-backed and filter by Frappe fieldnames.
   static override filters: FiltersMap = {
-    item: (doc: Doc) => [
+    item: (doc: FrappeDoc) => [
       ['item_usage', 'not in', [doc.isSales ? 'Purchases' : 'Sales']],
     ],
-    batch: async (doc: Doc) => {
+    batch: async (doc: FrappeDoc) => {
       const item = doc.item as string;
       if (!doc.isSales || doc.isReturn) {
         return [['item', '=', item]];
@@ -273,7 +272,7 @@ export class InvoiceItem extends FrappeDoc {
   };
 
   static override createFilters: FiltersMap = {
-    item: (doc: Doc) => [
+    item: (doc: FrappeDoc) => [
       ['item_usage', '=', doc.isSales ? 'Sales' : 'Purchases'],
     ],
   };

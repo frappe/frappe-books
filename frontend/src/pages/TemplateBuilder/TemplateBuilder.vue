@@ -76,7 +76,7 @@
             :value="doc.get('doc_type')"
             @change="async (value: unknown) => await setType(value)"
           />
-          <!-- Display Doc -->
+          <!-- Display FrappeDoc -->
           <Link
             v-if="doc.doc_type"
             class="w-48 min-w-0"
@@ -171,7 +171,7 @@
 <script lang="ts">
 import { EditorView } from '@codemirror/view';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { ModelNameEnum } from 'models/types';
 import { saveExportData } from 'reports/commonExporter';
@@ -290,7 +290,7 @@ export default defineComponent({
       print: null | PrintHTML;
       error: string;
       previewRequest: number;
-      displayDoc: Doc | null;
+      displayDoc: FrappeDoc | null;
       showTypeModal: boolean;
       showSizeModal: boolean;
       scale: number;
@@ -342,7 +342,7 @@ export default defineComponent({
         return [];
       }
 
-      const actions = getActionsForDoc(this.doc as Doc);
+      const actions = getActionsForDoc(this.doc as FrappeDoc);
       actions.push({
         label: this.t`Print Settings`,
         group: this.t`View`,
@@ -472,7 +472,7 @@ export default defineComponent({
       }
 
       await this.setHints();
-      focusOrSelectFormControl(this.doc as Doc, this.$refs.nameField, false);
+      focusOrSelectFormControl(this.doc as FrappeDoc, this.$refs.nameField, false);
       await this.setDisplayInitialDoc();
     },
     async setHints() {
@@ -651,7 +651,7 @@ export default defineComponent({
       try {
         await doc.sync();
       } catch (error) {
-        await handleErrorWithDialog(error, doc as Doc);
+        await handleErrorWithDialog(error, doc as FrappeDoc);
       }
     },
     async setDoc() {

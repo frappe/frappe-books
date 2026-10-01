@@ -1,5 +1,4 @@
 import { t } from 'fyo';
-import { Doc } from 'fyo/model/doc';
 import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 
@@ -27,7 +26,7 @@ export class Address extends FrappeDoc {
   };
 
   static lists: ListsMap = {
-    state(doc?: Doc) {
+    state(doc?: FrappeDoc) {
       const country = doc?.country as string | undefined;
       switch (country) {
         case 'India':
@@ -39,7 +38,7 @@ export class Address extends FrappeDoc {
   };
 
   static emptyMessages: EmptyMessageMap = {
-    state: (doc: Doc) => {
+    state: (doc: FrappeDoc) => {
       if (doc.country) {
         return t`Enter State`;
       }

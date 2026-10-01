@@ -1,5 +1,4 @@
 import { Fyo } from 'fyo';
-import { Doc } from 'fyo/model/doc';
 import {
   FiltersMap,
   ListViewSettings,
@@ -55,7 +54,7 @@ export class Account extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    parent_books_account: (doc: Doc) => {
+    parent_books_account: (doc: FrappeDoc) => {
       const filters: Filter[] = [['is_group', '=', 1]];
       if (doc?.root_type) {
         filters.push(['root_type', '=', doc.root_type]);

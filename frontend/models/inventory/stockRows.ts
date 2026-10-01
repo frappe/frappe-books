@@ -1,4 +1,4 @@
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import type { HiddenMap } from 'fyo/model/types';
 import type { Filter } from 'src/frappe/api';
 import { getItemUnits } from './units';
@@ -20,7 +20,7 @@ export const stockRowRefills: Record<string, string[]> = {
 };
 
 /** Stock row fields of the inventory features turned off. */
-export function getStockRowHiddenMap(doc: Doc): HiddenMap {
+export function getStockRowHiddenMap(doc: FrappeDoc): HiddenMap {
   const settings = () => doc.fyo.singles.InventorySettings;
   return {
     batch: () => !settings()?.enable_batches,
@@ -32,7 +32,7 @@ export function getStockRowHiddenMap(doc: Doc): HiddenMap {
 }
 
 /** The units a row can move its item in: the stock unit and the item's conversions. */
-export async function getTransferUnitFilter(doc: Doc): Promise<Filter[]> {
+export async function getTransferUnitFilter(doc: FrappeDoc): Promise<Filter[]> {
   const { unit, factors } = await getItemUnits(doc.item as string);
   const units = [unit, ...Object.keys(factors)];
   return [['name', 'in', units.filter(Boolean)]];

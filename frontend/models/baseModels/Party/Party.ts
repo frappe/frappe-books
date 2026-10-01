@@ -1,5 +1,4 @@
 import { Fyo } from 'fyo';
-import { Doc } from 'fyo/model/doc';
 import {
   Action,
   FiltersMap,
@@ -54,7 +53,7 @@ export class Party extends FrappeDoc {
   };
 
   static filters: FiltersMap = {
-    default_account: (doc: Doc) => {
+    default_account: (doc: FrappeDoc) => {
       const role = doc.role as PartyRole;
       if (role === 'Both') {
         return [
@@ -96,7 +95,7 @@ export class Party extends FrappeDoc {
     return [
       {
         label: fyo.t`Create Purchase`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
           const doc = await getMappedDoc(
@@ -119,7 +118,7 @@ export class Party extends FrappeDoc {
       },
       {
         label: fyo.t`View Purchases`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
           await router.push({
@@ -130,7 +129,7 @@ export class Party extends FrappeDoc {
       },
       {
         label: fyo.t`Create Sale`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {
           const doc = await getMappedDoc(
@@ -153,7 +152,7 @@ export class Party extends FrappeDoc {
       },
       {
         label: fyo.t`View Sales`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {
           await router.push({

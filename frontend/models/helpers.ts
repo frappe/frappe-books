@@ -9,7 +9,7 @@ import { Fyo, t } from 'fyo';
 import { OptionField, Schema } from 'schemas/types';
 import { ModelNameEnum } from './types';
 
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
@@ -34,10 +34,10 @@ const MAPPER_MODULES: Record<string, string> = {
 
 /** The unsaved `schemaName` document a server mapper, such as make_return, builds from `source`. */
 export async function getMappedDoc(
-  source: Doc,
+  source: FrappeDoc,
   schemaName: string,
   mapper: string
-): Promise<Doc> {
+): Promise<FrappeDoc> {
   const method = getMapperMethod(source.schemaName, mapper);
   return await getMappedFrappeDoc(schemaName, method, source.name!);
 }
@@ -108,8 +108,8 @@ export function getMakeStockTransferAction(
   return {
     label,
     group: fyo.t`Create`,
-    condition: (doc: Doc) => doc.isSubmitted && !!doc.stock_not_transferred,
-    action: async (doc: Doc) => {
+    condition: (doc: FrappeDoc) => doc.isSubmitted && !!doc.stock_not_transferred,
+    action: async (doc: FrappeDoc) => {
       const invoice = doc as InvoiceDoc;
       const transfer = await getMappedDoc(
         invoice,
@@ -141,7 +141,7 @@ export function getMakeInvoiceAction(
   return {
     label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
-    condition: (doc: Doc) => {
+    condition: (doc: FrappeDoc) => {
       if (schemaName === ModelNameEnum.SalesQuote) {
         return doc.isSubmitted;
       }
@@ -154,7 +154,7 @@ export function getMakeInvoiceAction(
         !doc.is_fully_billed
       );
     },
-    action: async (doc: Doc) => {
+    action: async (doc: FrappeDoc) => {
       const invoice = await getMappedDoc(doc, invoiceSchemaName, mapper);
       if (!invoice.name) {
         return;
@@ -171,8 +171,8 @@ export function getCreateCustomerAction(fyo: Fyo): Action {
   return {
     group: fyo.t`Create`,
     label: fyo.t`Customer`,
-    condition: (doc: Doc) => !doc.notInserted,
-    action: async (doc: Doc, router) => {
+    condition: (doc: FrappeDoc) => !doc.notInserted,
+    action: async (doc: FrappeDoc, router) => {
       const customer = await getMappedDoc(
         doc,
         ModelNameEnum.Party,
@@ -187,7 +187,7 @@ export function getSalesQuoteAction(fyo: Fyo): Action {
   return {
     group: fyo.t`Create`,
     label: fyo.t`Sales Quote`,
-    condition: (doc: Doc) => !doc.notInserted,
+    condition: (doc: FrappeDoc) => !doc.notInserted,
     action: async (doc, router) => {
       const quote = await getMappedDoc(
         doc,
@@ -203,7 +203,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
   return {
     label: fyo.t`Payment`,
     group: fyo.t`Create`,
-    condition: (doc: Doc) =>
+    condition: (doc: FrappeDoc) =>
       doc.isSubmitted && !(doc.outstanding_amount as Money).isZero(),
     action: async (doc, router) => {
       const payment = await getMappedDoc(
@@ -246,8 +246,8 @@ export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
   return {
     label,
     group: fyo.t`View`,
-    condition: (doc: Doc) => doc.isSubmitted,
-    action: async (doc: Doc, router: Router) => {
+    condition: (doc: FrappeDoc) => doc.isSubmitted,
+    action: async (doc: FrappeDoc, router: Router) => {
       const route = getLedgerLink(doc, reportClassName);
       await router.push(route);
     },
@@ -255,7 +255,7 @@ export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
 }
 
 export function getLedgerLink(
-  doc: Doc,
+  doc: FrappeDoc,
   reportClassName: 'GeneralLedger' | 'StockLedger'
 ) {
   return {
@@ -275,11 +275,11 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
   return {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
-    condition: (doc: Doc) =>
+    condition: (doc: FrappeDoc) =>
       !!fyo.singles.AccountingSettings?.enable_invoice_returns &&
       doc.isSubmitted &&
       !doc.isReturn,
-    action: async (doc: Doc) => {
+    action: async (doc: FrappeDoc) => {
       const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
       if (!returnDoc.name) {
         return;
@@ -353,12 +353,12 @@ function getDocstatusBadge(status: string): BadgeData {
   }
 }
 
-export function getDocStatusBadge(doc: RenderData | Doc): BadgeData {
+export function getDocStatusBadge(doc: RenderData | FrappeDoc): BadgeData {
   const status = getDocStatus(doc);
   return getStateBadge(doc.schema, status) ?? getDocstatusBadge(status);
 }
 
-export function getDocStatus(doc?: RenderData | Doc): string {
+export function getDocStatus(doc?: RenderData | FrappeDoc): string {
   if (!doc) {
     return '';
   }
@@ -453,7 +453,7 @@ export function getLoyaltyProgramStatusColumn(): ColumnConfig {
   };
 }
 
-export function getLoyaltyProgramBadge(doc: RenderData | Doc): BadgeData {
+export function getLoyaltyProgramBadge(doc: RenderData | FrappeDoc): BadgeData {
   const status = doc.status as string;
   return (
     getStateBadge(doc.schema, status) ?? { theme: 'gray', label: status ?? '' }
@@ -461,12 +461,12 @@ export function getLoyaltyProgramBadge(doc: RenderData | Doc): BadgeData {
 }
 
 /** Adds `quantity` of an item to a document's rows, to its row of the item if it has one. */
-export async function addItem(name: string, doc: Doc, quantity = 1) {
+export async function addItem(name: string, doc: FrappeDoc, quantity = 1) {
   if (!doc.canEdit) {
     return;
   }
 
-  const rows = (doc.items ?? []) as Doc[];
+  const rows = (doc.items ?? []) as FrappeDoc[];
   const row = rows.find((existing) => existing.item === name);
   if (row) {
     await row.set('quantity', ((row.quantity as number) ?? 0) + quantity);
@@ -474,7 +474,7 @@ export async function addItem(name: string, doc: Doc, quantity = 1) {
   }
 
   await doc.append('items');
-  const added = (doc.items as Doc[] | undefined)?.at(-1);
+  const added = (doc.items as FrappeDoc[] | undefined)?.at(-1);
   if (!added) {
     return;
   }

@@ -98,7 +98,7 @@ import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
 } from 'frappe-ui';
-import { Doc } from 'fyo/model/doc';
+import { FrappeDoc } from 'src/frappe/document';
 import { ValueError } from 'fyo/utils/errors';
 import FormHeader from 'src/components/FormHeader.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
@@ -127,7 +127,7 @@ export default defineComponent({
     };
   },
   props: {
-    doc: { type: Object as PropType<Doc>, required: true },
+    doc: { type: Object as PropType<FrappeDoc>, required: true },
     index: { type: Number, required: true },
     fieldname: { type: String, required: true },
   },
@@ -145,7 +145,7 @@ export default defineComponent({
     },
     row() {
       const rows = this.doc.get(this.fieldname);
-      if (Array.isArray(rows) && rows[this.index] instanceof Doc) {
+      if (Array.isArray(rows) && rows[this.index] instanceof FrappeDoc) {
         return rows[this.index];
       }
 

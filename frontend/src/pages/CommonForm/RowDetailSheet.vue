@@ -17,13 +17,13 @@ import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
 } from 'frappe-ui';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { getRowDetails } from 'src/components/Controls/rowDetails';
 import MobileDetailList from 'src/mobile/MobileDetailList.vue';
 import { computed } from 'vue';
 
 /** A read-only row, opened from a submitted document's table. */
-const props = defineProps<{ row: Doc; title: string }>();
+const props = defineProps<{ row: FrappeDoc; title: string }>();
 defineEmits<{ close: [] }>();
 
 const details = computed(() => getRowDetails(props.row));

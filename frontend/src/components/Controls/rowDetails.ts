@@ -1,5 +1,5 @@
 import { t } from 'fyo';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { evaluateHidden } from 'src/utils/doc';
 import { getAmountField } from './rowSummary';
@@ -12,7 +12,7 @@ export interface RowDetail {
 }
 
 /** Every column of a row, including those its summary leaves out. */
-export function getRowDetails(row: Doc): RowDetail[] {
+export function getRowDetails(row: FrappeDoc): RowDetail[] {
   const tableFields = (row.schema.tableFields ?? []).map(
     (fieldname) => row.fieldMap[fieldname]
   );
@@ -28,7 +28,7 @@ export function getRowDetails(row: Doc): RowDetail[] {
     }));
 }
 
-function isShown(row: Doc, field: Field) {
+function isShown(row: FrappeDoc, field: Field) {
   return (
     !field.meta &&
     field.fieldname !== 'name' &&
@@ -37,7 +37,7 @@ function isShown(row: Doc, field: Field) {
   );
 }
 
-function formatValue(row: Doc, field: Field): string {
+function formatValue(row: FrappeDoc, field: Field): string {
   const value = row.get(field.fieldname);
   if (field.fieldtype === FieldTypeEnum.Check) {
     return value ? t`Yes` : t`No`;

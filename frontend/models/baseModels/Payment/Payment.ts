@@ -1,5 +1,4 @@
 import { Fyo, t } from 'fyo';
-import { Doc } from 'fyo/model/doc';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getLedgerLinkAction } from 'models/helpers';
 import { Field } from 'schemas/types';
@@ -113,7 +112,7 @@ export class Payment extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    party: (doc: Doc) => {
+    party: (doc: FrappeDoc) => {
       if (doc.payment_type === PaymentTypeEnum.Pay) {
         return [['role', 'in', ['Supplier', 'Both']]];
       }
@@ -125,7 +124,7 @@ export class Payment extends FrappeDoc {
       return [];
     },
     number_series: () => [['reference_type', '=', 'Payment']],
-    account: (doc: Doc) => [
+    account: (doc: FrappeDoc) => [
       [
         'account_type',
         '=',
@@ -133,7 +132,7 @@ export class Payment extends FrappeDoc {
       ],
       ['is_group', '=', 0],
     ],
-    payment_account: async (doc: Doc) => {
+    payment_account: async (doc: FrappeDoc) => {
       const method = doc.payment_method as string | undefined;
       const type =
         method && (await getValue('Books Payment Method', method, 'type'));

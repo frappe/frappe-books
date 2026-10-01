@@ -1,4 +1,4 @@
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import type { Action } from 'fyo/model/types';
 import type { ModelNameEnum } from 'models/types';
 import type { Field, FieldType } from 'schemas/types';
@@ -6,7 +6,7 @@ import type { Filter } from 'src/frappe/api';
 import type { Ref } from 'vue';
 import type { toastDurationMap } from './ui';
 
-export type DocRef<D extends Doc = Doc> = Ref<D | null>;
+export type DocRef<D extends FrappeDoc = FrappeDoc> = Ref<D | null>;
 
 export type ToastType = 'info' | 'warning' | 'error' | 'success';
 export type ToastDuration = keyof typeof toastDurationMap;
@@ -37,7 +37,7 @@ export type SettingsTab =
   | ModelNameEnum.SystemSettings;
 
 export interface QuickEditOptions {
-  doc: Doc;
+  doc: FrappeDoc;
   hideFields?: string[];
   showFields?: string[];
   defaults?: Record<string, unknown>;

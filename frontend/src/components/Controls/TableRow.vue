@@ -62,7 +62,7 @@
   </FrappeListRow>
 </template>
 <script>
-import { Doc } from 'fyo/model/doc';
+import { FrappeDoc } from 'src/frappe/document';
 import {
   Button as FrappeButton,
   ErrorMessage as FrappeErrorMessage,
@@ -90,7 +90,7 @@ export default {
     };
   },
   props: {
-    row: Doc,
+    row: FrappeDoc,
     tableFields: Array,
     size: String,
     readOnly: Boolean,

@@ -23,6 +23,7 @@ await build({
       export { fyo } from './src/initFyo';
       export { default as FilterLinkInput } from './src/components/FilterLinkInput.vue';
       export { default as FilterValueInput } from './src/components/FilterValueInput.vue';
+      export { default as StatusPill } from './src/components/StatusPill.vue';
     `,
     resolveDir: frontend,
   },
@@ -42,7 +43,7 @@ await build({
           contents: 'export default {}',
         }));
         // Components under test keep their script; the rest are stubs.
-        builder.onLoad({ filter: /Filter(Link|Value)Input\.vue$/ }, async (args) => ({
+        builder.onLoad({ filter: /(Filter(Link|Value)Input|StatusPill)\.vue$/ }, async (args) => ({
           contents: (await readFile(args.path, 'utf8')).match(
             /<script[^>]*>([\s\S]*?)<\/script>/
           )[1],
@@ -67,4 +68,5 @@ export const {
   fyo,
   FilterLinkInput,
   FilterValueInput,
+  StatusPill,
 } = createRequire(import.meta.url)(output);

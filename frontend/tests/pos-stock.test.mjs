@@ -39,11 +39,8 @@ function stubServer({ location = inventory, serialNumbers, stock = ledger } = {}
   const requests = [];
   const methods = {
     get_stock_location: () => location,
-    get_stock_quantities: (args) =>
-      stock
-        .filter((row) => !args.location || row.location === args.location)
-        .filter((row) => !args.items || args.items.includes(row.item))
-        .map(({ item, batch, quantity }) => ({ item, batch, quantity })),
+    get_list: ({ doctype, filters }) =>
+      doctype === 'Books Stock Ledger Entry' ? getSums(stock, filters) : [],
     get_sale_shortfalls: (args) => getShortfalls(args.items, stock, location),
     get_available_serial_numbers: (args) => {
       assert.equal(args.location, inventory);
@@ -77,6 +74,25 @@ test('the card and batch quantities use the location the server ships POS sales 
   assert.deepEqual(requests[0], [
     'frappe_books.inventory.availability.get_stock_location',
     { doctype: 'Books Sales Invoice', is_pos: true },
+  ]);
+});
+
+test('stock sums come from the ledger through frappe.client.get_list', async () => {
+  const requests = stubServer();
+  await posStock.getItemQtyMap([item]);
+  assert.deepEqual(requests[1], [
+    'frappe.client.get_list',
+    {
+      doctype: 'Books Stock Ledger Entry',
+      fields: ['item', 'batch', { SUM: 'quantity', as: 'quantity' }],
+      filters: [
+        ['location', '=', inventory],
+        ['item', 'in', [item]],
+      ],
+      group_by: 'item, batch',
+      order_by: 'item, batch',
+      limit_page_length: 0,
+    },
   ]);
 });
 
@@ -389,6 +405,15 @@ function makeInvoice() {
       });
     },
   };
+}
+
+/** The ledger rows that match the location and item filters, as their sums. */
+function getSums(stock, filters) {
+  const values = Object.fromEntries(filters.map(([field, , value]) => [field, value]));
+  return stock
+    .filter((row) => !values.location || row.location === values.location)
+    .filter((row) => !values.item || values.item.includes(row.item))
+    .map(({ item, batch, quantity }) => ({ item, batch, quantity }));
 }
 
 /** What the rows lack of each tracked item, or batch, at the location, as the server sums them. */

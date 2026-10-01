@@ -17,7 +17,7 @@
 import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { Combobox as FrappeCombobox } from 'frappe-ui';
-import { searchFrappeLink } from 'src/frappe/link';
+import { getLinkLabel, searchFrappeLink } from 'src/frappe/link';
 import { getSchema } from 'src/frappe/registry';
 import { LINK_PAGE_LENGTH } from 'src/utils';
 
@@ -47,7 +47,10 @@ export default defineComponent({
         !this.search &&
         !options.some((option) => option.value === this.value)
       )
-        options.unshift({ label: this.value, value: this.value });
+        options.unshift({
+          label: getLinkLabel(this.target, this.value),
+          value: this.value,
+        });
       return options;
     },
   },

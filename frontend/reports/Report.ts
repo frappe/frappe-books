@@ -4,6 +4,7 @@ import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import Observable from 'fyo/utils/observable';
 import { Field, RawValue } from 'schemas/types';
+import { getLinkLabel } from 'src/frappe/link';
 import { getDoctypeLabel } from 'src/frappe/registry';
 import { getIsNullOrUndef } from 'utils';
 import {
@@ -179,6 +180,10 @@ export abstract class Report extends Observable<RawValue> {
 
     if (column.fieldname === 'reference_type') {
       return getDoctypeLabel(String(rawValue));
+    }
+
+    if (column.target) {
+      return getLinkLabel(column.target, String(rawValue));
     }
 
     return this.fyo.format(rawValue, column.fieldtype);

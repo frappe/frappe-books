@@ -110,7 +110,6 @@
 </template>
 <script lang="ts">
 import { t } from 'fyo';
-import { getAccountLabel } from 'src/utils/accountLabel';
 import {
   Dialog as FrappeDialog,
   Dropdown as FrappeDropdown,
@@ -121,6 +120,7 @@ import {
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import PageHeader from 'src/components/PageHeader.vue';
+import { getLinkLabel } from 'src/frappe/link';
 import { getModel } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -217,7 +217,7 @@ export default defineComponent({
   },
   methods: {
     accountLabel(name: string) {
-      return getAccountLabel(fyo, name);
+      return getLinkLabel(ModelNameEnum.Account, name);
     },
     getAccountActions(account: AccountItem): DropdownOptions {
       const actions: DropdownOptions = [];
@@ -413,7 +413,7 @@ export default defineComponent({
           (child) => {
             const existing = previous.get(child.name);
             return existing
-              ? Object.assign(existing, { label: getAccountLabel(fyo, child.name) })
+              ? Object.assign(existing, { label: this.accountLabel(child.name) })
               : child;
           }
         );
@@ -431,7 +431,7 @@ export default defineComponent({
         addingGroupAccount: false,
       }));
     },
-    /** Every account the filters match, by name, labelled as /books labels standard accounts. */
+    /** Every account the filters match, by name, labelled in the user's language. */
     async getAccounts(filters: string[][] = []): Promise<AccountItem[]> {
       const accounts = await call<AccountItem[]>('frappe.client.get_list', {
         doctype: 'Books Account',
@@ -442,7 +442,7 @@ export default defineComponent({
       });
       return accounts.map((account) => ({
         ...account,
-        label: getAccountLabel(fyo, account.name),
+        label: this.accountLabel(account.name),
       }));
     },
     async addAccount(parentAccount: AccountItem, key: AccKey) {

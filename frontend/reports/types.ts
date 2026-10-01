@@ -29,6 +29,8 @@ export interface ColumnField extends Omit<BaseField, 'fieldtype'> {
   fieldtype: FieldType;
   align?: 'left' | 'right' | 'center';
   width?: number;
+  /** The schema whose records a Link column names. */
+  target?: string;
 }
 
 export type Periodicity = 'Monthly' | 'Quarterly' | 'Half Yearly' | 'Yearly';

@@ -1,6 +1,5 @@
 <script>
 import { t } from 'fyo';
-import { getAccountLabel } from 'src/utils/accountLabel';
 import { getLinkDisplayValue, searchFrappeLink } from 'src/frappe/link';
 import { getModel, getSchema } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
@@ -41,11 +40,10 @@ export default {
   methods: {
     async setLinkValue(newValue) {
       const value = newValue ?? this.value;
-      const target = this.getTargetSchemaName();
-      this.linkValue =
-        target === 'Account'
-          ? getAccountLabel(fyo, value || '')
-          : await getLinkDisplayValue(target, value);
+      this.linkValue = await getLinkDisplayValue(
+        this.getTargetSchemaName(),
+        value
+      );
     },
     getTargetSchemaName() {
       return this.df.target;
@@ -68,19 +66,13 @@ export default {
         return [];
       }
 
-      const options = await searchFrappeLink(
+      return await searchFrappeLink(
         schemaName,
         keyword,
         filters,
         LINK_PAGE_LENGTH,
         fields
       );
-      return schemaName === 'Account'
-        ? options.map((option) => ({
-            ...option,
-            label: getAccountLabel(fyo, option.label),
-          }))
-        : options;
     },
     async getSuggestions(keyword = '') {
       const filters = this.filtersDisabled ? null : await this.getFilters();

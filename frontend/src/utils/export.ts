@@ -38,11 +38,14 @@ interface ExportQuery {
   filters: QueryFilter;
 }
 
+/** The fields an export offers; the name comes first, as a document's number. */
 export function getExportFields(
   fields: Field[],
   exclude: string[] = []
 ): ExportField[] {
-  return fields
+  const isName = (field: Field) => Number(field.fieldname === 'name');
+  return [...fields]
+    .sort((a, b) => isName(b) - isName(a))
     .filter((f) => !f.computed && f.label && !exclude.includes(f.fieldname))
     .map((field) => {
       const { fieldname, label } = field;

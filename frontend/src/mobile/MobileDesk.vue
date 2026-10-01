@@ -18,60 +18,30 @@
       "
     />
   </router-view>
-  <MobileDrawer v-model:open="isDrawerOpen" />
+  <MobileNavSheet v-model:open="isNavSheetOpen" />
   <InstallSheet />
   <OfflineScreen />
 </template>
 <script setup lang="ts">
-import { useSwipe } from '@vueuse/core';
 import { MobileShell as FrappeMobileShell } from 'frappe-ui';
-import {
-  isDrawerOpenKey,
-  languageDirectionKey,
-  openDrawerKey,
-} from 'src/utils/injectionKeys';
-import { inject, onMounted, provide, readonly, ref } from 'vue';
+import { isDrawerOpenKey, openNavSheetKey } from 'src/utils/injectionKeys';
+import { onMounted, provide, readonly, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { isDesktopOnly } from './availability';
 import InstallSheet from './InstallSheet.vue';
-import MobileDrawer from './MobileDrawer.vue';
+import MobileNavSheet from './MobileNavSheet.vue';
 import MobileTabs from './MobileTabs.vue';
 import { useBackClosesSheets } from './useBackClosesSheets';
 import OfflineScreen from './OfflineScreen.vue';
 
 defineProps<{ darkMode: boolean }>();
 
-const EDGE_WIDTH = 24;
-const MIN_SWIPE = 60;
-
 const route = useRoute();
 const router = useRouter();
-const direction = inject(languageDirectionKey, ref<'ltr' | 'rtl'>('ltr'));
-const isDrawerOpen = ref(false);
+const isNavSheetOpen = ref(false);
 useBackClosesSheets();
-provide(openDrawerKey, () => (isDrawerOpen.value = true));
-provide(isDrawerOpenKey, readonly(isDrawerOpen));
-
-const {
-  coordsStart,
-  direction: swipeDirection,
-  lengthX,
-} = useSwipe(document, { onSwipeEnd: openOnEdgeSwipe });
-
-function openOnEdgeSwipe() {
-  const isRtl = direction.value === 'rtl';
-  const fromEdge = isRtl
-    ? window.innerWidth - coordsStart.x <= EDGE_WIDTH
-    : coordsStart.x <= EDGE_WIDTH;
-  const towardsEnd = isRtl ? 'left' : 'right';
-  if (
-    fromEdge &&
-    swipeDirection.value === towardsEnd &&
-    Math.abs(lengthX.value) > MIN_SWIPE
-  ) {
-    isDrawerOpen.value = true;
-  }
-}
+provide(openNavSheetKey, () => (isNavSheetOpen.value = true));
+provide(isDrawerOpenKey, readonly(isNavSheetOpen));
 
 onMounted(async () => {
   // The viewport can shrink while a desktop-only page is open.

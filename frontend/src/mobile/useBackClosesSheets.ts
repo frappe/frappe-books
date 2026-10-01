@@ -2,7 +2,7 @@ import { onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 
 /**
- * The phone's back gesture closes the top sheet, drawer or picker before it
+ * The phone's back gesture closes the top sheet or picker before it
  * leaves the page. Sheets that are routes themselves close by navigating.
  */
 export function useBackClosesSheets() {

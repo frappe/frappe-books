@@ -47,7 +47,9 @@ test('the create button opens a new sales invoice', async ({ page }) => {
   await expect(createButton(page)).toBeHidden();
 });
 
-test('the create button hides while the drawer is open', async ({ page }) => {
+test('the create button hides while the nav sheet is open', async ({
+  page,
+}) => {
   await expect(createButton(page)).toBeVisible();
   await header(page).getByRole('button', { name: 'Menu' }).click();
   await expect(createButton(page)).toBeHidden();

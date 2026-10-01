@@ -31,13 +31,14 @@
         :key="tab.value"
         :value="tab.value"
       >
-        <FrappeSettingsHeader :title="tab.label">
+        <!-- Gap on the fixed header, so scrolled rows clip below Save (frappe/frappe-ui#1254). -->
+        <FrappeSettingsHeader :title="tab.label" class="pb-6">
           <template v-if="canSave" #actions>
             <FrappeButton variant="solid" :label="t`Save`" @click="sync" />
           </template>
         </FrappeSettingsHeader>
         <FrappeSettingsBody>
-          <div v-if="doc" class="space-y-11 pt-6">
+          <div v-if="doc" class="space-y-11">
             <section v-for="[name, fields] in sections" :key="name">
               <h2
                 v-if="name !== t`Default`"

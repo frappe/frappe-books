@@ -245,6 +245,27 @@ test('row edits ask the server for the price, details and quantities that follow
   clearTimeout(invoice._previewTimer);
 });
 
+test('a scanned item is priced by the server, and scanning it again adds to its row', async () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice');
+  await invoice.addItem('Pen', 2);
+  const [sent] = invoice.getMethodDocument({
+    keepRowNames: true,
+    clearServerFilled: true,
+  }).items;
+  assert.deepEqual([sent.item, sent.quantity], ['Pen', 2]);
+  for (const fieldname of ['rate', 'account', 'unit']) {
+    assert.equal(fieldname in sent, false, fieldname);
+  }
+
+  await invoice.addItem('Pen');
+  assert.deepEqual(
+    invoice.items.map(({ item, quantity }) => [item, quantity]),
+    [['Pen', 3]]
+  );
+  clearTimeout(invoice._previewTimer);
+});
+
 test('a return takes quantities back, however they are typed', async () => {
   setSettings();
   const invoice = newInvoice('SalesInvoice', { return_against: 'SINV-1001' });

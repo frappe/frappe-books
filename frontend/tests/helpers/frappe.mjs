@@ -41,6 +41,7 @@ await build({
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { Search } from './src/utils/search';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
+      export { getCsvData, getJsonData } from './reports/commonExporter';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
       export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
       export {
@@ -138,6 +139,8 @@ export const {
   getInsufficientItems,
   Search,
   GeneralLedger,
+  getCsvData,
+  getJsonData,
   getRowReference,
   getLedgerLink,
   Importer,

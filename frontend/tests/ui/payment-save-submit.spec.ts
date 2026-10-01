@@ -22,14 +22,17 @@ test('Save retains the draft until explicit Submit refreshes the invoice and clo
 
   await submitPayment(page);
 
+  // The confirmation hides the quick edit from the accessibility tree until the submit ends.
+  await expect
+    .poll(() => state(page))
+    .toMatchObject({
+      submissions: 1,
+      refreshes: 1,
+      submitted: true,
+    });
   await expect(
     page.getByRole('button', { name: 'Close quick edit' })
   ).toHaveCount(0);
-  expect(await state(page)).toMatchObject({
-    submissions: 1,
-    refreshes: 1,
-    submitted: true,
-  });
   expect(new URL(page.url()).searchParams.has('edit')).toBe(false);
 });
 
@@ -96,14 +99,16 @@ test('a failed Submit retains the draft and panel for correction and retry', asy
   expect(await state(page)).toMatchObject({ submissions: 1, refreshes: 0 });
   await submitPayment(page);
 
+  await expect
+    .poll(() => state(page))
+    .toMatchObject({
+      submissions: 2,
+      refreshes: 1,
+      submitted: true,
+    });
   await expect(
     page.getByRole('button', { name: 'Close quick edit' })
   ).toHaveCount(0);
-  expect(await state(page)).toMatchObject({
-    submissions: 2,
-    refreshes: 1,
-    submitted: true,
-  });
 });
 
 test('an invoice refresh failure reports that the payment was submitted', async ({

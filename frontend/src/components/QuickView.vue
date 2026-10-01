@@ -40,10 +40,8 @@
 import { isFalsy } from 'fyo/utils';
 import { Spinner as FrappeSpinner } from 'frappe-ui';
 import { Field, Schema } from 'schemas/types';
-import { getDocType } from 'src/frappe/doctypes';
 import { getFrappeRows } from 'src/frappe/list';
-import { getSchema } from 'src/frappe/registry';
-import { getNamingField } from 'src/frappe/schema';
+import { getQuickViewFields, getSchema } from 'src/frappe/registry';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
@@ -68,19 +66,8 @@ export default defineComponent({
     schema(): Schema | undefined {
       return getSchema(this.schemaName);
     },
-    /** The fields worth a glance; the header already shows the name. */
     fields(): Field[] {
-      const namingField = getNamingField(getDocType(this.schemaName).meta);
-      return (this.schema?.fields ?? []).filter(
-        (f) =>
-          f.fieldtype !== 'Table' &&
-          f.fieldtype !== 'AttachImage' &&
-          f.fieldtype !== 'Attachment' &&
-          f.fieldname !== 'name' &&
-          f.fieldname !== namingField &&
-          !f.hidden &&
-          !f.meta
-      );
+      return getQuickViewFields(this.schemaName);
     },
   },
   watch: {

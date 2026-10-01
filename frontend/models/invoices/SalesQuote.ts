@@ -3,7 +3,7 @@ import type { Doc } from 'fyo/model/doc';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getQuoteActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { INVOICE_FIELDS, Invoice } from './Invoice';
+import { INVOICE_FIELDS, INVOICE_QUICK_VIEW_FIELDS, Invoice } from './Invoice';
 import { SalesQuoteItem } from './InvoiceItem';
 import { TaxSummary } from './TaxSummary';
 
@@ -22,6 +22,7 @@ export class SalesQuote extends Invoice {
         ],
       },
     },
+    quickViewFields: [...INVOICE_QUICK_VIEW_FIELDS, 'reference_type'],
   };
   static override rowModels = { items: SalesQuoteItem, taxes: TaxSummary };
 

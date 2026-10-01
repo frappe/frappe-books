@@ -29,6 +29,11 @@ export interface Presentation {
   linkDisplayField?: string;
   /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
   tableFields?: string[];
+  /**
+   * The fields a quick view lists, in order, where they differ from the
+   * form's; names the DocType lacks are skipped, and custom fields follow.
+   */
+  quickViewFields?: string[];
 }
 
 /**

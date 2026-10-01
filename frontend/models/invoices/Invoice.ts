@@ -35,6 +35,33 @@ export const INVOICE_FIELDS = {
   items: { edit: true },
 };
 
+/** What a quick view of an invoice or quote lists, in the order it listed them. */
+export const INVOICE_QUICK_VIEW_FIELDS = [
+  'number_series',
+  'party',
+  'account',
+  'date',
+  'price_list',
+  'net_total',
+  'total_discount',
+  'loyalty_points_amount',
+  'base_grand_total',
+  'grand_total',
+  'discount_after_tax',
+  'make_auto_payment',
+  'make_auto_stock_transfer',
+  'outstanding_amount',
+  'stock_not_transferred',
+  'terms',
+  'back_reference',
+  'return_against',
+  'quote',
+  'loyalty_program',
+  'available_loyalty_points',
+  'redeem_loyalty_points',
+  'loyalty_points',
+];
+
 /**
  * An invoice or quote served by Frappe. Its controller fills defaults,
  * prices, taxes and totals; the `preview` shows them while the user edits.

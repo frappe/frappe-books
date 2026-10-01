@@ -2,7 +2,7 @@ import { Fyo } from 'fyo';
 import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { INVOICE_FIELDS, Invoice } from './Invoice';
+import { INVOICE_FIELDS, INVOICE_QUICK_VIEW_FIELDS, Invoice } from './Invoice';
 import { PurchaseInvoiceItem } from './InvoiceItem';
 import { TaxSummary } from './TaxSummary';
 
@@ -12,6 +12,7 @@ export class PurchaseInvoice extends Invoice {
     label: 'Purchase Invoice',
     nameField: { label: 'Invoice No', hidden: true },
     fields: INVOICE_FIELDS,
+    quickViewFields: INVOICE_QUICK_VIEW_FIELDS,
   };
   static override rowModels = {
     items: PurchaseInvoiceItem,

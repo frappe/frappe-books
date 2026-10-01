@@ -3,7 +3,7 @@ import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { AppliedCouponCode } from './AppliedCouponCode';
-import { INVOICE_FIELDS, Invoice } from './Invoice';
+import { INVOICE_FIELDS, INVOICE_QUICK_VIEW_FIELDS, Invoice } from './Invoice';
 import { SalesInvoiceItem } from './InvoiceItem';
 import { PricingRuleDetail } from './PricingRuleDetail';
 import { SalesInvoicePayment } from './SalesInvoicePayment';
@@ -15,6 +15,7 @@ export class SalesInvoice extends Invoice {
     label: 'Sales Invoice',
     nameField: { label: 'Invoice No', hidden: true },
     fields: INVOICE_FIELDS,
+    quickViewFields: INVOICE_QUICK_VIEW_FIELDS,
   };
   static override rowModels = {
     items: SalesInvoiceItem,

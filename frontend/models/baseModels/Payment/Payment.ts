@@ -41,6 +41,21 @@ export class Payment extends FrappeDoc {
       'attachment',
       'payment_references',
     ],
+    // Books computed Amount Paid, so quick views left it out.
+    quickViewFields: [
+      'number_series',
+      'party',
+      'date',
+      'payment_type',
+      'account',
+      'payment_account',
+      'payment_method',
+      'clearance_date',
+      'reference_id',
+      'reference_date',
+      'amount',
+      'writeoff',
+    ],
   };
   static override previewMethod = 'preview';
   static override rowModels = {

@@ -13,7 +13,6 @@ from frappe_books.reports.dashboard import (
 )
 from frappe_books.reports.financial_statements import get_account_balances
 from frappe_books.tests.accounting import make_account
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 TODAY = "2031-12-15"
 PERIODS = ("This Year", "This Quarter", "This Month", "YTD")
@@ -108,16 +107,16 @@ class IntegrationTestInvoiceDrillDown(IntegrationTestCase):
 			summary = get_invoice_summary("Books Sales Invoice", "This Month")
 
 		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (1, 1))
-		dates = [">=", str(summary["from_date"]), "<", str(summary["before_date"])]
 		for operator, count in (("=", summary["paid_count"]), ("!=", summary["unpaid_count"])):
 			# The filters the Paid and Unpaid buttons open the invoice list with.
-			filters = {
-				"submitted": ["=", 1],
-				"cancelled": ["=", 0],
-				"outstandingAmount": [operator, 0],
-				"date": dates,
-			}
-			self.assertEqual(BooksDatabaseBridge().count("SalesInvoice", filters), count)
+			filters = [
+				["docstatus", "in", [1, 2]],
+				["docstatus", "not in", [2]],
+				["outstanding_amount", operator, 0],
+				["date", ">=", summary["from_date"]],
+				["date", "<", summary["before_date"]],
+			]
+			self.assertEqual(len(frappe.get_list("Books Sales Invoice", filters=filters)), count)
 
 
 class IntegrationTestAccountBalances(IntegrationTestCase):

@@ -33,6 +33,9 @@ await build({
       export { getFilterFields } from './src/utils/filterFields';
       export { ListFilters } from './src/utils/listFilters';
       export { Search } from './src/utils/search';
+      export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
+      export { getRowReference } from './src/components/Report/Mobile/mobileRows';
+      export { getLedgerLink } from './models/helpers';
     `,
     resolveDir: frontend,
   },
@@ -119,6 +122,9 @@ export const {
   getFilterFields,
   ListFilters,
   Search,
+  GeneralLedger,
+  getRowReference,
+  getLedgerLink,
 } = createRequire(import.meta.url)(output);
 
 /**

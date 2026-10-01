@@ -1,61 +1,13 @@
 import { Fyo } from 'fyo';
-import { Doc } from 'fyo/model/doc';
+import { DocValue } from 'fyo/core/types';
 import { isPesa } from 'fyo/utils';
 import { ValueError } from 'fyo/utils/errors';
 import { DateTime } from 'luxon';
-import { Field, FieldTypeEnum, RawValue, TargetField } from 'schemas/types';
+import { Field, FieldTypeEnum, RawValue } from 'schemas/types';
 import { getIsNullOrUndef, safeParseFloat, safeParseInt } from 'utils';
-import { DatabaseHandler } from './dbHandler';
-import { DocValue, DocValueMap, RawValueMap } from './types';
 
-/**
- * # Converter
- *
- * Basically converts serializable RawValues from the db to DocValues used
- * by the frontend and vice versa.
- *
- * ## Value Conversion
- * It exposes two static methods: `toRawValue` and `toDocValue` that can be
- * used elsewhere given the fieldtype.
- *
- * ## Map Conversion
- * Two methods `toDocValueMap` and `toRawValueMap` are exposed but should be
- * used only from the `dbHandler`.
- */
-
+/** Converts a field's raw value, as text or a number, to the value a form edits, and back. */
 export class Converter {
-  db: DatabaseHandler;
-  fyo: Fyo;
-
-  constructor(db: DatabaseHandler, fyo: Fyo) {
-    this.db = db;
-    this.fyo = fyo;
-  }
-
-  toDocValueMap(
-    schemaName: string,
-    rawValueMap: RawValueMap | RawValueMap[]
-  ): DocValueMap | DocValueMap[] {
-    rawValueMap ??= {};
-    if (Array.isArray(rawValueMap)) {
-      return rawValueMap.map((dv) => this.#toDocValueMap(schemaName, dv));
-    } else {
-      return this.#toDocValueMap(schemaName, rawValueMap);
-    }
-  }
-
-  toRawValueMap(
-    schemaName: string,
-    docValueMap: DocValueMap | DocValueMap[]
-  ): RawValueMap | RawValueMap[] {
-    docValueMap ??= {};
-    if (Array.isArray(docValueMap)) {
-      return docValueMap.map((dv) => this.#toRawValueMap(schemaName, dv));
-    } else {
-      return this.#toRawValueMap(schemaName, docValueMap);
-    }
-  }
-
   static toDocValue(value: RawValue, field: Field, fyo: Fyo): DocValue {
     if (field.fieldname === 'modified') {
       // Frappe compares the stored value, down to microseconds, to refuse stale saves.
@@ -101,64 +53,6 @@ export class Converter {
       default:
         return toRawString(value, field);
     }
-  }
-
-  #toDocValueMap(schemaName: string, rawValueMap: RawValueMap): DocValueMap {
-    const fieldValueMap = this.db.fieldMap[schemaName];
-    const docValueMap: DocValueMap = {};
-
-    for (const fieldname in rawValueMap) {
-      const field = fieldValueMap[fieldname];
-      const rawValue = rawValueMap[fieldname];
-      if (!field) {
-        continue;
-      }
-
-      if (Array.isArray(rawValue)) {
-        const parentSchemaName = (field as TargetField).target;
-        docValueMap[fieldname] = rawValue.map((rv) =>
-          this.#toDocValueMap(parentSchemaName, rv)
-        );
-      } else {
-        docValueMap[fieldname] = Converter.toDocValue(
-          rawValue,
-          field,
-          this.fyo
-        );
-      }
-    }
-
-    return docValueMap;
-  }
-
-  #toRawValueMap(schemaName: string, docValueMap: DocValueMap): RawValueMap {
-    const fieldValueMap = this.db.fieldMap[schemaName];
-    const rawValueMap: RawValueMap = {};
-
-    for (const fieldname in docValueMap) {
-      const field = fieldValueMap[fieldname];
-      const docValue = docValueMap[fieldname];
-
-      if (Array.isArray(docValue)) {
-        const parentSchemaName = (field as TargetField).target;
-
-        rawValueMap[fieldname] = docValue.map((value) => {
-          if (value instanceof Doc) {
-            return this.#toRawValueMap(parentSchemaName, value.getValidDict());
-          }
-
-          return this.#toRawValueMap(parentSchemaName, value);
-        });
-      } else {
-        rawValueMap[fieldname] = Converter.toRawValue(
-          docValue,
-          field,
-          this.fyo
-        );
-      }
-    }
-
-    return rawValueMap;
   }
 }
 

@@ -435,7 +435,7 @@ export function focusOrSelectFormControl(
     return;
   }
 
-  if (!doc.fyo.doc.isTemporaryName(doc.name ?? '', doc.schema)) {
+  if (!doc.fyo.isTemporaryName(doc.name ?? '', doc.schema)) {
     return;
   }
 

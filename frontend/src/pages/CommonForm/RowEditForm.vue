@@ -109,7 +109,7 @@ import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getRowEditFieldnames } from 'src/utils/sheetFields';
 import { computed } from 'vue';
 import { inject } from 'vue';
-import { defineComponent } from 'vue';
+import { defineComponent, PropType } from 'vue';
 
 const COMPONENT_NAME = 'RowEditForm';
 
@@ -127,7 +127,7 @@ export default defineComponent({
     };
   },
   props: {
-    doc: { type: Doc, required: true },
+    doc: { type: Object as PropType<Doc>, required: true },
     index: { type: Number, required: true },
     fieldname: { type: String, required: true },
   },

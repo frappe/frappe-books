@@ -1,39 +1,27 @@
 import { Fyo } from 'fyo';
-import { Converter } from 'fyo/core/converter';
-import { DocValue, DocValueMap, RawValueMap } from 'fyo/core/types';
-import { MandatoryError, NotFoundError } from 'fyo/utils/errors';
+import { DocValue, DocValueMap } from 'fyo/core/types';
+import { MandatoryError } from 'fyo/utils/errors';
 import Observable from 'fyo/utils/observable';
 import type { DocPermission, DocPermissionMap } from 'fyo/utils/permissions';
-import {
-  DynamicLinkField,
-  Field,
-  FieldTypeEnum,
-  RawValue,
-  Schema,
-  TargetField,
-} from 'schemas/types';
-import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
+import { Field, FieldTypeEnum, Schema, TargetField } from 'schemas/types';
+import { getIsNullOrUndef, getMapFromList } from 'utils';
 import type { LinkedDoc } from 'utils/db/types';
 import { markRaw, reactive } from 'vue';
 import { isPesa } from '../utils/index';
 import {
   areDocValuesEqual,
   getFieldDefault,
-  getFormulaSequence,
   getMissingMandatoryMessage,
   getPreDefaultValues,
   setChildDocIdx,
-  shouldApplyFormula,
 } from './helpers';
 import {
   Action,
   ChangeArg,
   CurrenciesMap,
-  DefaultMap,
   DocumentActionWarning,
   EmptyMessageMap,
   FiltersMap,
-  FormulaMap,
   HiddenMap,
   ListViewSettings,
   ListsMap,
@@ -44,8 +32,11 @@ import {
 } from './types';
 import { validateOptions, validateRequired } from './validationFunction';
 
-export class Doc extends Observable<DocValue | Doc[]> {
-   
+/**
+ * A document a form edits: its values, unsaved edits, rights and save
+ * lifecycle. `FrappeDoc` loads and saves it through Frappe.
+ */
+export abstract class Doc extends Observable<DocValue | Doc[]> {
   name?: string;
   schema: Readonly<Schema>;
   fyo: Fyo;
@@ -60,7 +51,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
   parentFieldname?: string;
   parentSchemaName?: string;
 
-  links?: Record<string, Doc>;
   /** The server's rights on this saved document; unset until a form loads them. */
   docPermissions?: DocPermissionMap;
   _dirty = true;
@@ -68,12 +58,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
   _syncPromise?: Promise<Doc>;
 
-  constructor(
-    schema: Schema,
-    data: DocValueMap,
-    fyo: Fyo,
-    convertToDocValue = true
-  ) {
+  constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
     super();
     this.fyo = markRaw(fyo);
     this.schema = schema;
@@ -84,7 +69,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
 
     this._setDefaults();
-    this._setValuesWithoutChecks(data, convertToDocValue);
+    this._setValuesWithoutChecks(data);
     return reactive(this) as Doc;
   }
 
@@ -151,27 +136,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return false;
     }
 
-    if (this.schema.isSingle) {
+    if (this.schema.isSingle || this.schema.isChild) {
       return false;
     }
 
-    if (this.schema.isChild) {
-      return false;
-    }
-
-    if (!this.schema.isSubmittable) {
-      return true;
-    }
-
-    if (this.schema.isSubmittable && this.isCancelled) {
-      return true;
-    }
-
-    if (this.schema.isSubmittable && !this.isSubmitted) {
-      return true;
-    }
-
-    return false;
+    return !this.schema.isSubmittable || !this.isSubmitted;
   }
 
   get canEdit(): boolean {
@@ -184,19 +153,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
   get canSave() {
     const isSubmittable = this.schema.isSubmittable;
-    if (isSubmittable && !!this.submitted) {
+    if (isSubmittable && (!!this.submitted || !!this.cancelled)) {
       return false;
     }
 
-    if (isSubmittable && !!this.cancelled) {
-      return false;
-    }
-
-    if (!this.dirty) {
-      return false;
-    }
-
-    if (this.schema.isChild) {
+    if (!this.dirty || this.schema.isChild) {
       return false;
     }
 
@@ -208,23 +169,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return false;
     }
 
-    if (this.dirty) {
+    if (this.dirty || this.notInserted) {
       return false;
     }
 
-    if (this.notInserted) {
-      return false;
-    }
-
-    if (!!this.submitted) {
-      return false;
-    }
-
-    if (!!this.cancelled) {
-      return false;
-    }
-
-    return true;
+    return !this.submitted && !this.cancelled;
   }
 
   get canCancel() {
@@ -232,23 +181,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
       return false;
     }
 
-    if (this.dirty) {
+    if (this.dirty || this.notInserted) {
       return false;
     }
 
-    if (this.notInserted) {
-      return false;
-    }
-
-    if (!!this.cancelled) {
-      return false;
-    }
-
-    if (!this.submitted) {
-      return false;
-    }
-
-    return true;
+    return !this.cancelled && !!this.submitted;
   }
 
   /** Create for a new document and write for a saved one or a single. */
@@ -272,28 +209,22 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return this.fyo.can(this.schemaName, permission);
   }
 
-  _setValuesWithoutChecks(data: DocValueMap, convertToDocValue: boolean) {
+  _setValuesWithoutChecks(data: DocValueMap) {
     for (const field of this.schema.fields) {
       const { fieldname, fieldtype } = field;
       const value = data[field.fieldname];
 
       if (Array.isArray(value)) {
         for (const row of value) {
-          this.push(fieldname, row, convertToDocValue);
+          this.push(fieldname, row as Doc | DocValueMap);
         }
       } else if (
         fieldtype === FieldTypeEnum.Currency &&
         typeof value === 'number'
       ) {
         this[fieldname] = this.fyo.pesa(value);
-      } else if (value !== undefined && !convertToDocValue) {
-        this[fieldname] = value;
       } else if (value !== undefined) {
-        this[fieldname] = Converter.toDocValue(
-          value as RawValue,
-          field,
-          this.fyo
-        );
+        this[fieldname] = value;
       } else {
         this[fieldname] = this[fieldname] ?? null;
       }
@@ -314,8 +245,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   // set value and trigger change
   async set(
     fieldname: string | DocValueMap,
-    value?: DocValue | Doc[] | DocValueMap[],
-    retriggerChildDocApplyChange = false
+    value?: DocValue | Doc[] | DocValueMap[]
   ): Promise<boolean> {
     if (typeof fieldname === 'object') {
       return await this.setMultiple(fieldname);
@@ -345,7 +275,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
       await this._applyChange(fieldname);
       await this.parentdoc._applyChange(this.parentFieldname as string);
     } else {
-      await this._applyChange(fieldname, retriggerChildDocApplyChange);
+      await this._applyChange(fieldname);
     }
 
     return true;
@@ -368,15 +298,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     fieldname: string,
     value?: DocValue | Doc[] | DocValueMap[]
   ): boolean {
-    if (fieldname === 'numberSeries' && !this.notInserted) {
-      return false;
-    }
-
-    if (value === undefined) {
-      return false;
-    }
-
-    if (this.fieldMap[fieldname] === undefined) {
+    if (value === undefined || this.fieldMap[fieldname] === undefined) {
       return false;
     }
 
@@ -388,11 +310,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return !areDocValuesEqual(currentValue as DocValue, value as DocValue);
   }
 
-  async _applyChange(
-    changedFieldname: string,
-    retriggerChildDocApplyChange?: boolean
-  ): Promise<boolean> {
-    await this._applyFormula(changedFieldname, retriggerChildDocApplyChange);
+  async _applyChange(changedFieldname: string): Promise<boolean> {
     await this.trigger('change', {
       doc: this,
       changed: changedFieldname,
@@ -419,15 +337,13 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
   }
 
-  _getSchema(schemaName: string): Schema | undefined {
-    return this.fyo.schemaMap[schemaName];
-  }
+  abstract _getSchema(schemaName: string): Schema | undefined;
 
   /** Whether the doctype's own rules make a field hidden, read only or required. */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  hasFieldRule(fieldname: string, rule: 'hidden' | 'readOnly' | 'required') {
-    return false;
-  }
+  abstract hasFieldRule(
+    fieldname: string,
+    rule: 'hidden' | 'readOnly' | 'required'
+  ): boolean;
 
   _setDefaults(fields = this.schema.fields) {
     for (const field of fields) {
@@ -436,12 +352,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
         this.fyo
       );
 
-      const defaultFunction = (this.constructor as typeof Doc).defaults[
-        field.fieldname
-      ];
-      if (defaultFunction !== undefined) {
-        defaultValue = defaultFunction(this);
-      } else if (field.default !== undefined) {
+      if (field.default !== undefined) {
         defaultValue = getFieldDefault(field) as DocValue;
       }
 
@@ -470,70 +381,18 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return await this._applyChange(fieldname);
   }
 
-  push(
-    fieldname: string,
-    docValueMap: Doc | DocValueMap | RawValueMap = {},
-    convertToDocValue = false
-  ) {
+  push(fieldname: string, docValueMap: Doc | DocValueMap = {}) {
     const childDocs = [
       (this[fieldname] ?? []) as Doc[],
-      this._getChildDoc(docValueMap, fieldname, convertToDocValue),
+      this._getChildDoc(docValueMap, fieldname),
     ].flat();
 
     setChildDocIdx(childDocs);
     this[fieldname] = childDocs;
   }
 
-  _setChildDocsParent() {
-    for (const { fieldname } of this.tableFields) {
-      const value = this.get(fieldname);
-      if (!Array.isArray(value)) {
-        continue;
-      }
-
-      for (const childDoc of value) {
-        if (childDoc.parent) {
-          continue;
-        }
-
-        childDoc.parent = this.name;
-      }
-    }
-  }
-
-  _getChildDoc(
-    docValueMap: Doc | DocValueMap | RawValueMap,
-    fieldname: string,
-    convertToDocValue = false
-  ): Doc {
-    if (!this.name && this.schema.naming !== 'manual') {
-      this.name = this.fyo.doc.getTemporaryName(this.schema);
-    }
-
-    docValueMap.name ??= getRandomString();
-
-    // Child Meta Fields
-    docValueMap.parent ??= this.name;
-    docValueMap.parentSchemaName ??= this.schemaName;
-    docValueMap.parentFieldname ??= fieldname;
-
-    if (docValueMap instanceof Doc) {
-      docValueMap.parentdoc ??= this;
-      return docValueMap;
-    }
-
-    const childSchemaName = (this.fieldMap[fieldname] as TargetField).target;
-    const childDoc = this.fyo.doc.getNewDoc(
-      childSchemaName,
-      docValueMap,
-      false,
-      undefined,
-      undefined,
-      convertToDocValue
-    );
-    childDoc.parentdoc = this;
-    return childDoc;
-  }
+  /** A row of the table `fieldname`, made from its values. */
+  abstract _getChildDoc(values: Doc | DocValueMap, fieldname: string): Doc;
 
   async _validateSync() {
     this._validateMandatory();
@@ -542,11 +401,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
 
   _validateMandatory() {
     const checkForMandatory: Doc[] = [this];
-    const tableFields = this.schema.fields.filter(
-      (f) => f.fieldtype === FieldTypeEnum.Table
-    ) as TargetField[];
-
-    for (const field of tableFields) {
+    for (const field of this.tableFields) {
       const childDocs = this.get(field.fieldname) as Doc[];
       if (!childDocs) {
         continue;
@@ -567,8 +422,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   async _validateFields() {
-    const fields = this.schema.fields;
-    for (const field of fields) {
+    for (const field of this.schema.fields) {
       if (field.fieldtype === FieldTypeEnum.Table) {
         continue;
       }
@@ -599,46 +453,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
     await validator(value);
   }
 
-  getValidDict(filterMeta = false, filterComputed = false): DocValueMap {
-    let fields = this.schema.fields;
-    if (filterMeta) {
-      fields = this.schema.fields.filter((f) => !f.meta);
-    }
-
-    if (filterComputed) {
-      fields = fields.filter((f) => !f.computed);
-    }
-
-    const data: DocValueMap = {};
-    for (const field of fields) {
-      let value = this[field.fieldname] as DocValue | DocValueMap[];
-
-      if (Array.isArray(value)) {
-        value = value.map((doc) =>
-          (doc as Doc).getValidDict(filterMeta, filterComputed)
-        );
-      }
-
-      if (isPesa(value)) {
-        value = value.copy();
-      }
-
-      if (value === null && this.schema.isSingle) {
-        continue;
-      }
-
-      data[field.fieldname] = value;
-    }
-    return data;
-  }
-
-  _setBaseMetaValues() {
-    if (this.schema.isSubmittable) {
-      this.submitted = false;
-      this.cancelled = false;
-    }
-  }
-
   async load() {
     if (this.name === undefined) {
       return;
@@ -664,18 +478,8 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return !this.notInserted && !this.dirty && !this.isSyncing;
   }
 
-  async _fetchSaved(): Promise<DocValueMap> {
-    const data = await this.fyo.db.get(this.schemaName, this.name!);
-    if (this.schema.isSingle && !data?.name) {
-      data.name = this.name!;
-    }
-
-    if (!data?.name) {
-      throw new NotFoundError(`Not Found: ${this.schemaName} ${this.name}`);
-    }
-
-    return data;
-  }
+  /** The saved document's values. */
+  abstract _fetchSaved(): Promise<DocValueMap>;
 
   async _setLoadedValues(data: DocValueMap) {
     await this._syncValues(data);
@@ -683,83 +487,12 @@ export class Doc extends Observable<DocValue | Doc[]> {
     this._notInserted = false;
   }
 
-  /** Loads every linked doc; `loadAndGetLink` loads one. */
-  async loadLinks() {
-    const linkFields = this.schema.fields.filter(
-      ({ fieldtype }) =>
-        fieldtype === FieldTypeEnum.Link ||
-        fieldtype === FieldTypeEnum.DynamicLink
-    );
-
-    for (const field of linkFields) {
-      await this._loadLink(field);
-    }
-  }
-
-  async _loadLink(field: Field) {
-    if (field.fieldtype === FieldTypeEnum.Link) {
-      return await this._loadLinkField(field);
-    }
-
-    if (field.fieldtype === FieldTypeEnum.DynamicLink) {
-      return await this._loadDynamicLinkField(field);
-    }
-  }
-
-  async _loadLinkField(field: TargetField) {
-    const { fieldname, target } = field;
-    const value = this.get(fieldname) as string | undefined;
-    if (!value || !target) {
-      return;
-    }
-
-    await this._loadLinkDoc(fieldname, target, value);
-  }
-
-  async _loadDynamicLinkField(field: DynamicLinkField) {
-    const { fieldname, references } = field;
-    const value = this.get(fieldname) as string | undefined;
-    const reference = this.get(references) as string | undefined;
-    if (!value || !reference) {
-      return;
-    }
-
-    await this._loadLinkDoc(fieldname, reference, value);
-  }
-
-  async _loadLinkDoc(fieldname: string, schemaName: string, name: string) {
-    const linkDoc = await this.fyo.doc.getDoc(schemaName, name);
-    this.links ??= {};
-    this.links[fieldname] = linkDoc;
-  }
-
-  async loadAndGetLink(fieldname: string): Promise<Doc | null> {
-    if (!this?.[fieldname]) {
-      return null;
-    }
-
-    if (this.links?.[fieldname]?.name !== this[fieldname]) {
-      await this._loadLink(this.fieldMap[fieldname]);
-    }
-
-    return this.links?.[fieldname] ?? null;
-  }
-
   async _syncValues(
     data: DocValueMap,
     savedAction?: DocumentActionWarning['action']
   ) {
     this._clearValues();
-    this._setValuesWithoutChecks(data, false);
-    const errors: unknown[] = [];
-    try {
-      await this._setComputedValuesFromFormulas();
-    } catch (error) {
-      if (!savedAction) {
-        throw error;
-      }
-      errors.push(error);
-    }
+    this._setValuesWithoutChecks(data);
     this._dirty = false;
     const change = { doc: this };
     if (!savedAction) {
@@ -768,6 +501,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     }
 
     this._notInserted = false;
+    const errors: unknown[] = [];
     try {
       await this.change(change);
     } catch (error) {
@@ -776,29 +510,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
     errors.push(...(await super.triggerSafely('change', change)));
     if (errors.length) {
       this.fyo.reportDocumentActionWarning(this, savedAction, errors);
-    }
-  }
-
-  async _setComputedValuesFromFormulas() {
-    for (const field of this.schema.fields) {
-      await this._setComputedValuesForChildren(field);
-      if (!field.computed) {
-        continue;
-      }
-
-      const value = await this._getValueFromFormula(field, this);
-      this[field.fieldname] = value ?? null;
-    }
-  }
-
-  async _setComputedValuesForChildren(field: Field) {
-    if (field.fieldtype !== 'Table') {
-      return;
-    }
-
-    const childDocs: Doc[] = (this[field.fieldname] as Doc[]) ?? [];
-    for (const doc of childDocs) {
-      await doc._setComputedValuesFromFormulas();
     }
   }
 
@@ -812,141 +523,21 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   _setChildDocsIdx() {
-    const childFields = this.schema.fields.filter(
-      (f) => f.fieldtype === FieldTypeEnum.Table
-    ) as TargetField[];
-
-    for (const field of childFields) {
+    for (const field of this.tableFields) {
       const childDocs = (this.get(field.fieldname) as Doc[]) ?? [];
       setChildDocIdx(childDocs);
     }
   }
 
-  async runFormulas() {
-    await this._applyFormula();
-  }
-
-  async _applyFormula(
-    changedFieldname?: string,
-    retriggerChildDocApplyChange?: boolean
-  ): Promise<boolean> {
-    let changed = await this._callAllTableFieldsApplyFormula(changedFieldname);
-    changed =
-      (await this._applyFormulaForFields(this, changedFieldname)) || changed;
-
-    if (changed && retriggerChildDocApplyChange) {
-      await this._callAllTableFieldsApplyFormula(changedFieldname);
-      await this._applyFormulaForFields(this, changedFieldname);
-    }
-
-    return changed;
-  }
-
-  async _callAllTableFieldsApplyFormula(
-    changedFieldname?: string
-  ): Promise<boolean> {
-    let changed = false;
-
-    for (const { fieldname } of this.tableFields) {
-      const childDocs = this.get(fieldname) as Doc[];
-      if (!childDocs) {
-        continue;
-      }
-
-      changed =
-        (await this._callChildDocApplyFormula(childDocs, changedFieldname)) ||
-        changed;
-    }
-
-    return changed;
-  }
-
-  async _callChildDocApplyFormula(
-    childDocs: Doc[],
-    fieldname?: string
-  ): Promise<boolean> {
-    let changed = false;
-    for (const childDoc of childDocs) {
-      if (!childDoc._applyFormula) {
-        continue;
-      }
-
-      changed = (await childDoc._applyFormula(fieldname)) || changed;
-    }
-
-    return changed;
-  }
-
-  async _applyFormulaForFields(doc: Doc, fieldname?: string) {
-    const formulaFields = getFormulaSequence(this.formulas)
-      .map((f) => this.fyo.getField(this.schemaName, f))
-      .filter(Boolean);
-
-    let changed = false;
-    for (const field of formulaFields) {
-      const shouldApply = shouldApplyFormula(field, doc, fieldname);
-      if (!shouldApply) {
-        continue;
-      }
-
-      const newVal = await this._getValueFromFormula(field, doc, fieldname);
-      const previousVal = doc.get(field.fieldname);
-      const isSame = areDocValuesEqual(newVal as DocValue, previousVal);
-      if (newVal === undefined || isSame) {
-        continue;
-      }
-
-      doc[field.fieldname] = newVal;
-      changed ||= true;
-    }
-
-    return changed;
-  }
-
-  async _getValueFromFormula(field: Field, doc: Doc, fieldname?: string) {
-    const { formula } = doc.formulas[field.fieldname] ?? {};
-    if (formula === undefined) {
-      return;
-    }
-
-    let value = await formula(fieldname);
-
-    if (Array.isArray(value) && field.fieldtype === FieldTypeEnum.Table) {
-      value = value.map((row) => this._getChildDoc(row, field.fieldname));
-    }
-
-    return value;
-  }
-
   async _preSync() {
     this._setChildDocsIdx();
-    this._setChildDocsParent();
-    await this._applyFormula();
     await this._validateSync();
     await this.trigger('validate');
   }
 
-  async _insert() {
-    this._setBaseMetaValues();
-    await this._preSync();
+  abstract _insert(): Promise<Doc>;
 
-    const validDict = this.getValidDict(false, true);
-    const data = await this.fyo.db.insert(this.schemaName, validDict);
-    await this._syncValues(data, 'save');
-
-    return this;
-  }
-
-  async _update() {
-    await this._preSync();
-
-    // The data holds `modified`, which the server compares to refuse a stale save.
-    let data = this.getValidDict(false, true);
-    data = await this.fyo.db.update(this.schemaName, data);
-    await this._syncValues(data, 'save');
-
-    return this;
-  }
+  abstract _update(): Promise<Doc>;
 
   /** Saves the doc; a save already in progress is returned instead of starting another. */
   async sync(): Promise<Doc> {
@@ -964,37 +555,9 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return doc;
   }
 
-  async delete() {
-    if (this.notInserted && this.name) {
-      this.fyo.doc.removeFromCache(this.schemaName, this.name);
-    }
+  abstract delete(): Promise<void>;
 
-    if (!this.canDelete) {
-      return;
-    }
-
-    await this.trigger('beforeDelete');
-    await this.fyo.db.delete(this.schemaName, this.name!);
-    await this.trigger('afterDelete');
-
-    this.fyo.doc.observer.trigger(`delete:${this.schemaName}`, this.name);
-  }
-
-  async submit() {
-    if (!this.schema.isSubmittable || this.submitted || this.cancelled) {
-      return;
-    }
-
-    const data = await this.fyo.db.runLifecycleAction(
-      'submit',
-      this.schemaName,
-      this.name!,
-      this.modified as string
-    );
-    await this._syncValues(data, 'submit');
-    this._notInserted = false;
-    await this._notifyAfterAction('submit');
-  }
+  abstract submit(): Promise<void>;
 
   async _notifyAfterAction(action: 'sync' | 'submit') {
     const errors: unknown[] = [];
@@ -1009,7 +572,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
     const event = action === 'sync' ? 'afterSync' : 'afterSubmit';
     errors.push(...(await super.triggerSafely(event)));
     errors.push(
-      ...(await this.fyo.doc.observer.triggerSafely(
+      ...(await this.fyo.observer.triggerSafely(
         `${action}:${this.schemaName}`,
         this.name
       ))
@@ -1024,35 +587,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   /** Cancels the doc after `linkedDocs`, the submitted documents that link to it. */
-  async cancel(linkedDocs: LinkedDoc[] = []) {
-    if (!this.schema.isSubmittable || !this.submitted || this.cancelled) {
-      return;
-    }
-
-    const data = await this.fyo.db.runLifecycleAction(
-      'cancel',
-      this.schemaName,
-      this.name!,
-      this.modified as string,
-      linkedDocs
-    );
-    await this._syncValues(data);
-    this._notInserted = false;
-    this.fyo.doc.observer.trigger(`cancel:${this.schemaName}`, this.name);
-  }
-
-  async rename(newName: string) {
-    if (this.submitted) {
-      return;
-    }
-
-    const oldName = this.name;
-    await this.trigger('beforeRename', { oldName, newName });
-    await this.fyo.db.rename(this.schemaName, this.name!, newName);
-    this.name = newName;
-    await this.trigger('afterRename', { oldName, newName });
-    this.fyo.doc.observer.trigger(`rename:${this.schemaName}`, this.name);
-  }
+  abstract cancel(linkedDocs?: LinkedDoc[]): Promise<void>;
 
   async trigger(event: string, params?: unknown) {
     if (this[event]) {
@@ -1095,17 +630,7 @@ export class Doc extends Observable<DocValue | Doc[]> {
   }
 
   /** A new copy of the doc, unsaved edits included, without the values Frappe marks no_copy. */
-  async duplicate(): Promise<Doc> {
-    const values = await this.fyo.db.getDuplicate(
-      this.schemaName,
-      this.getValidDict(true, true)
-    );
-    if (!this.numberSeries) {
-      values.name = `${this.name!} CPY`;
-    }
-
-    return this.fyo.doc.getNewDocFromServer(this.schemaName, values);
-  }
+  abstract duplicate(): Promise<Doc>;
 
   /**
    * Lifecycle Methods
@@ -1126,14 +651,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
   async afterSync() {}
   async beforeSubmit() {}
   async afterSubmit() {}
-  async beforeRename() {}
-  async afterRename() {}
   async beforeCancel() {}
   async afterCancel() {}
   async beforeDelete() {}
   async afterDelete() {}
 
-  formulas: FormulaMap = {};
   validations: ValidationMap = {};
   required: RequiredMap = {};
   hidden: HiddenMap = {};
@@ -1143,7 +665,6 @@ export class Doc extends Observable<DocValue | Doc[]> {
   static lists: ListsMap = {};
   static filters: FiltersMap = {};
   static createFilters: FiltersMap = {}; // Used by the *Create* dropdown option
-  static defaults: DefaultMap = {};
   static emptyMessages: EmptyMessageMap = {};
 
   static getListViewSettings(fyo: Fyo): ListViewSettings {

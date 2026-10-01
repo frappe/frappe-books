@@ -20,8 +20,8 @@ export class TaxSummary extends FrappeDoc {
   amount?: Money;
   getCurrencies: CurrenciesMap = {};
 
-  constructor(schema: Schema, data: DocValueMap, fyo: Fyo, convert = true) {
-    super(schema, data, fyo, convert);
+  constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
+    super(schema, data, fyo);
     setCurrencies(this, () => this.currency);
   }
 

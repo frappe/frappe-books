@@ -1,5 +1,5 @@
 import { Fyo } from 'fyo';
-import { Converter } from 'fyo/core/converter';
+import { Converter } from 'fyo/utils/converter';
 import { DocValue } from 'fyo/core/types';
 import { getEmptyValuesByFieldTypes, isPesa } from 'fyo/utils';
 import { ValidationError } from 'fyo/utils/errors';

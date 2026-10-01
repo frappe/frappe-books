@@ -5,7 +5,7 @@
 </template>
 <script lang="ts">
 import { Badge as FrappeBadge } from 'frappe-ui';
-import { Doc } from 'fyo/model/doc';
+import type { Doc } from 'fyo/model/doc';
 import { BadgeData } from 'fyo/model/types';
 import { LoyaltyProgram } from 'models/baseModels/LoyaltyProgram/LoyaltyProgram';
 import { Party } from 'models/baseModels/Party/Party';
@@ -16,11 +16,11 @@ import {
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { defineComponent } from 'vue';
+import { defineComponent, PropType } from 'vue';
 
 export default defineComponent({
   components: { FrappeBadge },
-  props: { doc: { type: Doc, required: true } },
+  props: { doc: { type: Object as PropType<Doc>, required: true } },
   computed: {
     showStatus(): boolean {
       return !(

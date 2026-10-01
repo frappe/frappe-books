@@ -27,8 +27,8 @@ export async function loadFrappeDocTypes() {
   const doctypes = models.map(([, Model]) => Model.doctype);
   setDocTypes(models, await getBooksMeta(doctypes));
 
-  fyo.doc.observer.on('sync:CustomForm', reloadCustomized);
-  fyo.doc.observer.on('delete:CustomForm', reloadCustomized);
+  fyo.observer.on('sync:CustomForm', reloadCustomized);
+  fyo.observer.on('delete:CustomForm', reloadCustomized);
 }
 
 /** A schema by name, as its DocType's meta and model's presentation make it. */

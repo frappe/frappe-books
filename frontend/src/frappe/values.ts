@@ -1,5 +1,5 @@
 import type { Fyo } from 'fyo';
-import { Converter } from 'fyo/core/converter';
+import { Converter } from 'fyo/utils/converter';
 import type { DocValue, DocValueMap } from 'fyo/core/types';
 import { DateTime } from 'luxon';
 import type { Field, RawValue, Schema } from 'schemas/types';

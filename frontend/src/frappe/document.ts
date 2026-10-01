@@ -240,12 +240,6 @@ export class FrappeDoc extends Doc {
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
     this._rememberSavedRows();
-    this._forgetBridgeCopy();
-  }
-
-  /** Bridge readers of the schema, like the POS and print, load the saved document again. */
-  _forgetBridgeCopy() {
-    this.fyo.doc.removeFromCache(this.schemaName, this.name!);
   }
 
   _rememberSavedRows() {
@@ -284,8 +278,7 @@ export class FrappeDoc extends Doc {
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();
-    this._forgetBridgeCopy();
-    this.fyo.doc.observer.trigger(`cancel:${this.schemaName}`, this.name);
+    this.fyo.observer.trigger(`cancel:${this.schemaName}`, this.name);
   }
 
   override async delete() {
@@ -301,7 +294,7 @@ export class FrappeDoc extends Doc {
     await api.deleteDocument(this.doctype, this.name!);
     forgetFrappeDoc(this);
     await this.trigger('afterDelete');
-    this.fyo.doc.observer.trigger(`delete:${this.schemaName}`, this.name);
+    this.fyo.observer.trigger(`delete:${this.schemaName}`, this.name);
   }
 
   /** A new copy with unsaved edits, without the fields the DocType marks no_copy. */
@@ -337,11 +330,7 @@ export class FrappeDoc extends Doc {
     return values;
   }
 
-  override _getChildDoc(
-    values: Doc | DocValueMap,
-    fieldname: string,
-    convertToDocValue = false
-  ): Doc {
+  override _getChildDoc(values: Doc | DocValueMap, fieldname: string): Doc {
     if (values instanceof Doc) {
       values.parentdoc ??= this;
       return values;
@@ -355,8 +344,7 @@ export class FrappeDoc extends Doc {
     const row = new table.Model(
       table.schema,
       { ...values, name: values.name ?? getRandomString() },
-      this.fyo,
-      convertToDocValue
+      this.fyo
     );
     row.parentdoc = this;
     row.parentFieldname = fieldname;
@@ -364,16 +352,10 @@ export class FrappeDoc extends Doc {
     return row;
   }
 
-  // Frappe keeps the document status; there are no client-side flags to set.
-  override _setBaseMetaValues() {}
-
   /** Counts edits as they start, so a preview sent before one is dropped. */
-  override async _applyChange(
-    fieldname: string,
-    retriggerChildDocApplyChange?: boolean
-  ) {
+  override async _applyChange(fieldname: string) {
     this._edits += 1;
-    return await super._applyChange(fieldname, retriggerChildDocApplyChange);
+    return await super._applyChange(fieldname);
   }
 
   override async change({ changed }: ChangeArg) {

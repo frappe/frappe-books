@@ -70,8 +70,8 @@ export abstract class Invoice extends FrappeDoc {
 
   getCurrencies: CurrenciesMap = {};
 
-  constructor(schema: Schema, data: DocValueMap, fyo: Fyo, convert = true) {
-    super(schema, data, fyo, convert);
+  constructor(schema: Schema, data: DocValueMap, fyo: Fyo) {
+    super(schema, data, fyo);
     setCurrencies(this, () => this.documentCurrency);
     this.getCurrencies.base_grand_total = () => this.companyCurrency;
     this.getCurrencies.outstanding_amount = () => this.companyCurrency;

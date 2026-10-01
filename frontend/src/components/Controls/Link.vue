@@ -122,7 +122,7 @@ export default {
       }
 
       const name =
-        this.searchQuery || fyo.doc.getTemporaryName(getSchema(schemaName));
+        this.searchQuery || fyo.getTemporaryName(getSchema(schemaName));
       const filters = await this.getCreateFilters();
       const { openQuickEdit } = await import('src/utils/ui');
 

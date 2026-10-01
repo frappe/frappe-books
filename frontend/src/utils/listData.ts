@@ -58,11 +58,11 @@ export function onListChange(
   listener: () => Promise<void>
 ) {
   if (getSchema(schemaName)?.isSubmittable) {
-    fyo.doc.observer.on(`submit:${schemaName}`, listener);
-    fyo.doc.observer.on(`cancel:${schemaName}`, listener);
+    fyo.observer.on(`submit:${schemaName}`, listener);
+    fyo.observer.on(`cancel:${schemaName}`, listener);
   }
 
-  fyo.doc.observer.on(`sync:${schemaName}`, listener);
-  fyo.doc.observer.on(`delete:${schemaName}`, listener);
-  fyo.doc.observer.on(`rename:${schemaName}`, listener);
+  fyo.observer.on(`sync:${schemaName}`, listener);
+  fyo.observer.on(`delete:${schemaName}`, listener);
+  fyo.observer.on(`rename:${schemaName}`, listener);
 }

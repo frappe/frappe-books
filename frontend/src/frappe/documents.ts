@@ -26,8 +26,8 @@ export function newFrappeDoc(
     values = { ...values, [namingField]: values.name };
   }
 
-  const doc = new Model(schema, values, fyo, false) as FrappeDoc;
-  doc.name ??= fyo.doc.getTemporaryName(schema);
+  const doc = new Model(schema, values, fyo) as FrappeDoc;
+  doc.name ??= fyo.getTemporaryName(schema);
   doc.leaveToServer(
     Model.serverDefaults.filter((fieldname) => !(fieldname in values))
   );
@@ -99,7 +99,7 @@ export async function getFrappeDoc(
   }
 
   const { Model, schema } = getDocType(schemaName);
-  const doc = new Model(schema, { name }, fyo, false) as FrappeDoc;
+  const doc = new Model(schema, { name }, fyo) as FrappeDoc;
   await doc.load();
   keep(doc);
   return doc;
@@ -142,7 +142,7 @@ function keep(doc: FrappeDoc) {
   docs.set(getKey(doc.schemaName, doc.name!), doc);
   // Settings are read from `fyo.singles`; it holds the same open document.
   if (doc.schema.isSingle) {
-    fyo.doc.singles[doc.schemaName] = doc;
+    fyo.singles[doc.schemaName] = doc;
   }
 
   // A saved document is found by its saved name, not its temporary one.

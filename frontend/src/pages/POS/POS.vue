@@ -32,12 +32,12 @@
         </span>
       </template>
       <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>
-        <FrappeButton
-          variant="ghost"
-          size="md"
-          icon="lucide-ellipsis"
-          :label="t`POS actions`"
-          @click="isMenuOpen = true"
+        <MobilePOSMenu
+          v-model:open="isMenuOpen"
+          :enable-returns="enableReturns"
+          :loyalty-program="loyaltyProgram"
+          :applied-coupons-count="appliedCouponsCount"
+          @select="openMenuAction"
         />
       </template>
       <slot>
@@ -130,14 +130,6 @@
       </template>
     </component>
 
-    <MobilePOSMenu
-      v-if="isMobile"
-      v-model:open="isMenuOpen"
-      :enable-returns="enableReturns"
-      :loyalty-program="loyaltyProgram"
-      :applied-coupons-count="appliedCouponsCount"
-      @select="openMenuAction"
-    />
     <OpenPOSShiftModal
       v-if="!isPosShiftOpen"
       :open-modal="!isPosShiftOpen"

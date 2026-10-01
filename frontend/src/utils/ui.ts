@@ -100,10 +100,10 @@ export async function deleteDocWithPrompt(doc: Doc) {
   return (await showDialog({
     title: t`Delete ${getDocReferenceLabel(doc)}?`,
     detail,
-    type: 'warning',
+    destructive: true,
     buttons: [
       {
-        label: t`Yes`,
+        label: t`Delete`,
         async action() {
           try {
             await doc.delete();
@@ -117,7 +117,7 @@ export async function deleteDocWithPrompt(doc: Doc) {
         isPrimary: true,
       },
       {
-        label: t`No`,
+        label: t`Cancel`,
         action() {
           return false;
         },

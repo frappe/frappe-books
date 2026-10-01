@@ -99,7 +99,15 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		invoice = self.make_pos_invoice(payments=[{"payment_method": "Bank", "amount": 180}])
 
 		# Raised inside the submit, so the request rolls the sale back with the payment.
-		self.assertRaisesRegex(frappe.ValidationError, "reference ID", invoice.submit)
+		self.assertRaisesRegex(frappe.ValidationError, "Please enter a reference number.", invoice.submit)
+
+	def test_a_tendered_amount_must_be_above_zero(self):
+		invoice = self.make_pos_invoice()
+		invoice.append("payments", {"payment_method": "Cash", "amount": -5})
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, "Please enter an amount greater than zero.", invoice.save
+		)
 
 	def test_non_cash_cannot_pay_more_than_is_due(self):
 		invoice = self.make_pos_invoice()

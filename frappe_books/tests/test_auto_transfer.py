@@ -44,7 +44,9 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 	def test_pos_shipment_still_rejects_insufficient_inventory(self):
 		invoice, item, location = self._make_pos_invoice(use_profile=True, opening_quantity=1)
-		with self.assertRaisesRegex(frappe.ValidationError, f"at {location.name}:"):
+		with self.assertRaisesRegex(
+			frappe.ValidationError, f"in {location.name}. Available: 1; required: 2."
+		):
 			invoice.submit()
 		self.assertEqual(stock_quantity(item.name, location.name), 1)
 		self.assertEqual(stock_quantity(item.name, "Stores"), 0)
@@ -99,7 +101,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, item = self._sales_invoice()
 		frappe.db.set_value("Books Item", item, "has_batch", 1)
 
-		self.assertRaisesRegex(frappe.ValidationError, "requires a batch", invoice.save)
+		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", invoice.save)
 
 	def test_return_without_original_transfer_does_not_ship_again(self):
 		original, item = self._sales_invoice()

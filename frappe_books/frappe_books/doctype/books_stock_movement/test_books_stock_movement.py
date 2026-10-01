@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
+import re
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -62,7 +63,8 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 			[{"item": self.item.name, "from_location": "Stores", "quantity": 5, "rate": 10}] * 2,
 		)
 
-		self.assertRaisesRegex(frappe.ValidationError, "Insufficient stock", issue.submit)
+		message = f"Insufficient stock for {self.item.name} in Stores. Available: 6; required: 10."
+		self.assertRaisesRegex(frappe.ValidationError, re.escape(message), issue.submit)
 		self.assertEqual(stock_quantity(self.item.name, "Stores"), 6)
 
 	def test_serial_number_cannot_repeat_in_a_row(self):
@@ -83,6 +85,14 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		)
 
 		self.assertRaisesRegex(frappe.ValidationError, "more than once", receipt.insert)
+
+	def test_serial_numbers_must_match_the_quantity(self):
+		item = self._serial_item()
+		row = {"item": item, "from_location": "Stores", "quantity": 2, "rate": 5, "serial_number": "S1"}
+		issue = frappe.get_doc(movement_values("MaterialIssue", [row]))
+
+		message = f"Need 2 Serial Numbers for Item {item}. You have provided 1"
+		self.assertRaisesRegex(frappe.ValidationError, re.escape(message), issue.insert)
 
 	def test_serial_number_cannot_repeat_across_rows(self):
 		item = self._serial_item()

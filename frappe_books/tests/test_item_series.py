@@ -108,7 +108,7 @@ class IntegrationTestSeriesBatches(IntegrationTestCase):
 			movement_values("MaterialIssue", {"item": self.item, "quantity": 1, "rate": 10})
 		)
 
-		self.assertRaisesRegex(frappe.ValidationError, "requires a batch", issue.insert)
+		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", issue.insert)
 		self.assertFalse(frappe.db.exists("Books Batch", {"item": self.item}))
 
 	def test_item_without_a_batch_series_still_requires_a_batch(self):
@@ -117,7 +117,7 @@ class IntegrationTestSeriesBatches(IntegrationTestCase):
 			movement_values("MaterialReceipt", {"item": item, "quantity": 1, "rate": 10})
 		)
 
-		self.assertRaisesRegex(frappe.ValidationError, "requires a batch", receipt.insert)
+		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", receipt.insert)
 
 	def _purchase(self, doctype, row):
 		return {"doctype": doctype, "party": self.supplier, "date": now_datetime(), "items": [row]}

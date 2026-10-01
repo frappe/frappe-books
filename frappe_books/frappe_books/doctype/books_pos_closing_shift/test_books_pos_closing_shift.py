@@ -157,6 +157,14 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 
 		self.assertEqual(amounts["Cash"], sum(invoice.base_grand_total for invoice in invoices))
 
+	def test_a_closing_amount_cannot_be_negative(self):
+		closing = make_closing_shift(open_shift(100), 100)
+		closing.closing_amounts[1].closing_amount = -5
+
+		self.assertRaisesRegex(
+			frappe.ValidationError, "Closing Bank Amount can not be negative.", closing.insert
+		)
+
 	def test_every_cash_type_method_is_reconciled_through_the_counter(self):
 		petty = frappe.get_doc(
 			{"doctype": "Books Payment Method", "name": unique_name("Petty Cash"), "type": "Cash"}

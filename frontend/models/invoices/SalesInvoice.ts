@@ -5,6 +5,8 @@ import { ModelNameEnum } from 'models/types';
 import { AppliedCouponCode } from './AppliedCouponCode';
 import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { SalesInvoiceItem } from './InvoiceItem';
+import { PricingRuleDetail } from './PricingRuleDetail';
+import { SalesInvoicePayment } from './SalesInvoicePayment';
 import { TaxSummary } from './TaxSummary';
 
 export class SalesInvoice extends Invoice {
@@ -18,6 +20,8 @@ export class SalesInvoice extends Invoice {
     items: SalesInvoiceItem,
     taxes: TaxSummary,
     coupons: AppliedCouponCode,
+    payments: SalesInvoicePayment,
+    pricing_rule_detail: PricingRuleDetail,
   };
 
   override hidden: HiddenMap = {

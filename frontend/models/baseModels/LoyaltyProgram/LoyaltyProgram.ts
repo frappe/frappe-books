@@ -4,6 +4,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import { t } from 'fyo';
 import { getLoyaltyProgramStatusColumn } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
+import { CollectionRulesItems } from './CollectionRulesItems';
 
 /** Books Loyalty Program, served by Frappe. The server keeps its status. */
 export class LoyaltyProgram extends FrappeDoc {
@@ -22,6 +23,7 @@ export class LoyaltyProgram extends FrappeDoc {
     ],
     fields: { expense_account: { create: false } },
   };
+  static override rowModels = { collection_rules: CollectionRulesItems };
 
   maximum_use?: number;
   status?: 'Active' | 'Expired' | 'Disabled' | 'Maxed';

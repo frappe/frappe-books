@@ -13,6 +13,7 @@ import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 import { AccountRootTypeEnum } from '../Account/types';
+import { UOMConversionItem } from './UOMConversionItem';
 
 /**
  * Books Item, served by Frappe. The DocType owns its fields, defaults and
@@ -37,6 +38,7 @@ export class Item extends FrappeDoc {
       'track_item',
     ],
   };
+  static override rowModels = { uom_conversions: UOMConversionItem };
   static override previewMethod = 'preview';
 
   // The server checks these too; mirrored to show the message at the field.

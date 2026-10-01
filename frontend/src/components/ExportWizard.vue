@@ -45,7 +45,7 @@
       <!-- Main Fields -->
       <div>
         <h2 class="text-sm font-semibold text-ink-gray-8">
-          {{ fyo.schemaMap[schemaName]?.label ?? schemaName }}
+          {{ getSchemaLabel(schemaName) }}
         </h2>
         <div
           class="
@@ -74,7 +74,7 @@
       <!-- Table Fields -->
       <div v-for="efs of filteredTableFields" :key="efs.fieldname">
         <h2 class="text-sm font-semibold text-ink-gray-8">
-          {{ fyo.schemaMap[efs.target]?.label ?? schemaName }}
+          {{ getSchemaLabel(efs.target) }}
         </h2>
         <div
           class="
@@ -216,6 +216,9 @@ export default defineComponent({
     },
   },
   methods: {
+    getSchemaLabel(schemaName: string): string {
+      return getSchema(schemaName)?.label ?? schemaName;
+    },
     getField(ef: ExportField): Field {
       return {
         fieldtype: 'Check',

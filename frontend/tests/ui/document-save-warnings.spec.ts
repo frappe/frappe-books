@@ -60,92 +60,96 @@ test('a Frappe-served quick edit reports post-save warnings without leaving an u
   ).toEqual({ inserted: true, dirty: false, notifications: 1 });
 });
 
-for (const schemaName of ['PrintSettings']) {
-  test(`${schemaName} reports post-save warnings without leaving an unsaved document`, async ({
-    page,
-  }) => {
-    await page.evaluate(async (schemaName) => {
-      const app = (document.querySelector('#app') as any).__vue_app__;
-      const fyo = app._context.mixins
-        .find((m: any) => m.computed?.fyo)
-        .computed.fyo();
-      const router = app.config.globalProperties.$router;
-      const doc = fyo.singles.PrintSettings;
-      const fixture = ((window as any).saveWarning = {
-        doc,
-        writes: 0,
-        notifications: 0,
-        stored: null as any,
-      });
-      const persist = async (target: string, values: any) => {
-        if (target !== schemaName)
-          throw new Error(`Unexpected write to ${target}`);
-        fixture.writes++;
-        fixture.stored = { ...values };
-        return { ...values };
-      };
-      fyo.db.insert = persist;
-      fyo.db.update = persist;
-      doc.afterSync = () => {
-        throw new Error('Form refresh failed');
-      };
-      doc.once('afterSync', () => {
-        throw new Error('Linked view failed');
-      });
-      doc.once('afterSync', () => {
-        fixture.notifications++;
-      });
-      await doc.set('displayLogo', !doc.displayLogo);
-      await router.push({ path: '/settings', query: { tab: schemaName } });
-    }, schemaName);
+const PRINT_SETTINGS_URL =
+  /\/api\/v2\/document\/Books%20Print%20Settings\/Books%20Print%20Settings/;
 
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(
-      page.getByText(/was saved, but the view could not be fully updated/)
-    ).toBeVisible();
-    await page.getByRole('button', { name: 'No', exact: true }).click();
-    await expect(
-      page.getByRole('button', { name: 'Save', exact: true })
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: 'Submit', exact: true })
-    ).toHaveCount(0);
-    expect(
-      await page.evaluate(() => {
-        const { doc, writes, notifications, stored } = (window as any)
-          .saveWarning;
-        return {
-          inserted: doc.inserted,
-          dirty: doc.dirty,
-          writes,
-          notifications,
-          savedName: stored.name,
-        };
-      })
-    ).toMatchObject({
-      inserted: true,
-      dirty: false,
-      writes: 1,
-      notifications: 1,
+test('Print Settings report post-save warnings without leaving an unsaved document', async ({
+  page,
+}) => {
+  const writes: Record<string, unknown>[] = [];
+  // Frappe serves the settings; the save is answered here so nothing is stored.
+  await page.route(PRINT_SETTINGS_URL, async (route) => {
+    if (route.request().method() !== 'PUT') {
+      return route.fallback();
+    }
+
+    const values = route.request().postDataJSON();
+    writes.push(values);
+    await route.fulfill({
+      json: {
+        data: {
+          ...values,
+          name: 'Books Print Settings',
+          modified: '2026-10-01 00:00:00.000000',
+        },
+      },
     });
   });
-}
+  await page.evaluate(async () => {
+    const app = (document.querySelector('#app') as any).__vue_app__;
+    const fyo = app._context.mixins
+      .find((m: any) => m.computed?.fyo)
+      .computed.fyo();
+    const router = app.config.globalProperties.$router;
+    const doc = fyo.singles.PrintSettings;
+    const fixture = ((window as any).saveWarning = { doc, notifications: 0 });
+    doc.afterSync = () => {
+      throw new Error('Form refresh failed');
+    };
+    doc.once('afterSync', () => {
+      throw new Error('Linked view failed');
+    });
+    doc.once('afterSync', () => {
+      fixture.notifications++;
+    });
+    await doc.set('display_logo', !doc.display_logo);
+    await router.push({ path: '/settings', query: { tab: 'PrintSettings' } });
+  });
+
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(
+    page.getByText(/was saved, but the view could not be fully updated/)
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'No', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Save', exact: true })
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Submit', exact: true })
+  ).toHaveCount(0);
+  expect(writes).toHaveLength(1);
+  expect(
+    await page.evaluate(() => {
+      const { doc, notifications } = (window as any).saveWarning;
+      return { inserted: doc.inserted, dirty: doc.dirty, notifications };
+    })
+  ).toEqual({ inserted: true, dirty: false, notifications: 1 });
+});
 
 test('a rejected settings save retains edits and does not offer a successful-save reload', async ({
   page,
 }) => {
+  await page.route(PRINT_SETTINGS_URL, (route) =>
+    route.request().method() === 'PUT'
+      ? route.fulfill({
+          status: 417,
+          json: {
+            errors: [
+              { type: 'ValidationError', message: 'Settings write rejected' },
+            ],
+          },
+        })
+      : route.fallback()
+  );
   await page.evaluate(async () => {
     const app = (document.querySelector('#app') as any).__vue_app__;
     const fyo = app._context.mixins
       .find((m: any) => m.computed?.fyo)
       .computed.fyo();
     await fyo.singles.PrintSettings.set(
-      'displayLogo',
-      !fyo.singles.PrintSettings.displayLogo
+      'display_logo',
+      !fyo.singles.PrintSettings.display_logo
     );
-    fyo.db.update = () => {
-      throw new Error('Settings write rejected');
-    };
     await app.config.globalProperties.$router.push({
       path: '/settings',
       query: { tab: 'PrintSettings' },

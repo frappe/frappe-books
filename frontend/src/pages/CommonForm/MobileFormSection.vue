@@ -71,7 +71,7 @@
               :data-fieldname="group[0].fieldname"
             >
               <span class="min-w-0 truncate">{{ line.label }}</span>
-              <span dir="ltr">{{ line.value }}</span>
+              <span class="tabular-nums" dir="ltr">{{ line.value }}</span>
             </div>
           </template>
           <MobileFormField

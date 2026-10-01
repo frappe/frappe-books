@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-w-0 overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-base"
+    class="min-w-0 overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-base"
   >
     <div
       class="flex items-center gap-2 border-b border-outline-gray-2 bg-surface-gray-1 px-3"
@@ -25,12 +25,12 @@
       <FrappeListRow
         v-for="{ row, title: rowTitle, meta, amount } of summaries"
         :key="row.name"
-        :class="title ? 'min-h-16 py-2.5' : 'min-h-[52px] py-2'"
+        :class="title ? 'min-h-16 py-2.5' : 'min-h-13 py-2'"
         @click="$emit('edit', row)"
       >
         <FrappeListCell>
           <span
-            class="grid size-[22px] shrink-0 place-items-center rounded-[6px] bg-surface-gray-2 text-xs-medium tabular-nums text-ink-gray-6"
+            class="grid size-5.5 shrink-0 place-items-center rounded-3 bg-surface-gray-2 text-xs-medium tabular-nums text-ink-gray-6"
           >
             {{ (row.idx ?? 0) + 1 }}
           </span>

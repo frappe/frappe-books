@@ -10,7 +10,7 @@
       :key="getRowName(row)"
       type="button"
       role="radio"
-      class="flex min-h-[60px] w-full items-center gap-3 border-t border-outline-gray-1 px-4 py-2 text-start"
+      class="flex min-h-15 w-full items-center gap-3 border-t border-outline-gray-1 px-4 py-2 text-start"
       :class="isSelected(row) ? 'bg-surface-gray-1' : ''"
       :aria-checked="isSelected(row)"
       @click="setSelected(row, !isSelected(row))"

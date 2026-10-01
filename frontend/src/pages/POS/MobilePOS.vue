@@ -42,7 +42,7 @@
         @click="$emit('addItem', item)"
       >
         <span
-          class="flex h-[84px] items-center justify-center overflow-hidden rounded-4 bg-surface-gray-2 text-3xl-semibold text-ink-gray-5"
+          class="flex h-21 items-center justify-center overflow-hidden rounded-4 bg-surface-gray-2 text-3xl-semibold text-ink-gray-5"
         >
           <img
             v-if="item.image"

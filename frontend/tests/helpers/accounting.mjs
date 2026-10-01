@@ -34,12 +34,11 @@ await build({
       export * from './src/utils/filterFields';
       export { getJsonExportData } from './src/utils/export';
       export {
-        getItemQtyMap,
         getMappedDoc,
         getStockTransferActions,
         validateQty,
       } from './models/helpers';
-      export { getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
+      export { getItemQtyMap, getPOSInventory, getPOSBatchQuantity, validatePOSStock } from './models/inventory/posStock';
       export {
         addBatchItem,
         addPOSItem,

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { beforeEach, test } from 'node:test';
 import {
   addBatchItem,
   addPOSItem,
@@ -19,29 +19,28 @@ const item = 'Demo - Coffee Beans';
 const batch = 'DEMO-COFFEE-2026';
 const inventory = 'POS Counter';
 
+beforeEach(() => stubServer());
+
 test('the card and batch quantities use the location the server ships POS sales from', async () => {
-  const fyo = makeFyo();
-  const requests = [];
-  fyo.db.getStockLocation = async (...args) => {
-    requests.push(args);
-    return inventory;
-  };
-  assert.equal(await getPOSInventory(fyo), inventory);
-  const quantities = await getItemQtyMap({ fyo });
+  const requests = stubServer();
+  assert.equal(await getPOSInventory(), inventory);
+  const quantities = await getItemQtyMap();
   assert.equal(quantities[item].availableQty, 4);
   assert.equal(quantities[item][batch], 4);
-  assert.equal(await getPOSBatchQuantity(fyo, item, batch), 4);
-  assert.deepEqual(requests[0], ['SalesInvoice', true]);
+  assert.equal(await getPOSBatchQuantity(item, batch), 4);
+  assert.deepEqual(requests[0], [
+    'frappe_books.inventory.availability.get_stock_location',
+    { doctype: 'Books Sales Invoice', is_pos: true },
+  ]);
 });
 
 test('checkout accepts stocked batches and rejects stock held elsewhere', async () => {
-  const fyo = makeFyo();
-  const invoice = { fyo, items: [{ item, batch, quantity: 2 }] };
-  await validateSinv(invoice, await getItemQtyMap(invoice));
+  const invoice = { fyo: makeFyo(), items: [{ item, batch, quantity: 2 }] };
+  await validateSinv(invoice, await getItemQtyMap());
 
-  fyo.db.getStockLocation = async () => 'Empty Counter';
+  stubServer({ location: 'Empty Counter' });
   await assert.rejects(
-    validateSinv(invoice, await getItemQtyMap(invoice)),
+    validateSinv(invoice, await getItemQtyMap()),
     /Demo - Coffee Beans in Empty Counter.*Available: 0; required: 2/
   );
 });
@@ -71,9 +70,8 @@ test('checkout combines repeated item rows, including free items', async () => {
 });
 
 test('fractional sales and returns do not produce false stock errors', async () => {
-  const fyo = makeFyo();
-  const invoice = { fyo, items: [{ item, batch, quantity: 0.5 }] };
-  await validateSinv(invoice, await getItemQtyMap(invoice));
+  const invoice = { fyo: makeFyo(), items: [{ item, batch, quantity: 0.5 }] };
+  await validateSinv(invoice, await getItemQtyMap());
   invoice.returnAgainst = 'Original Invoice';
   invoice.items[0].quantity = -2;
   await validateSinv(invoice, {});
@@ -102,9 +100,8 @@ test('a batched row needs a batch and untracked items need no stock', async () =
 });
 
 test('a row without a batch shows no batch stock', async () => {
-  const fyo = makeFyo();
-  assert.equal(await getPOSBatchQuantity(fyo, item, batch), 4);
-  assert.equal(await getPOSBatchQuantity(fyo, item, undefined), 0);
+  assert.equal(await getPOSBatchQuantity(item, batch), 4);
+  assert.equal(await getPOSBatchQuantity(item, undefined), 0);
 });
 
 test('selecting an unavailable batch cannot use stock from other warehouses', async () => {
@@ -218,10 +215,13 @@ test('a new cart row needs the item in stock', async () => {
 
 test('a cart row fills serial numbers for sales and keeps a return row’s', async () => {
   const requested = [];
-  const fyo = makeSerialFyo(async (quantity) => {
-    requested.push(quantity);
-    return ['SN-1', 'SN-2'];
+  stubServer({
+    serialNumbers: async (quantity) => {
+      requested.push(quantity);
+      return ['SN-1', 'SN-2'];
+    },
   });
+  const fyo = makeSerialFyo();
   const serials = {};
   const sale = makeSerialRow(fyo, { quantity: 2 });
   await fillRowSerialNumbers(sale, serials);
@@ -236,9 +236,12 @@ test('a cart row fills serial numbers for sales and keeps a return row’s', asy
 });
 
 test('a cart row reports serial number lookup failures', async () => {
-  const fyo = makeSerialFyo(async () => {
-    throw new Error('Serial numbers unavailable');
+  stubServer({
+    serialNumbers: async () => {
+      throw new Error('Serial numbers unavailable');
+    },
   });
+  const fyo = makeSerialFyo();
   await assert.rejects(
     fillRowSerialNumbers(makeSerialRow(fyo, { quantity: 1 }), {}),
     /Serial numbers unavailable/
@@ -267,18 +270,8 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
   });
 });
 
-/** Serial numbers come from the server pick at the POS inventory. */
-function makeSerialFyo(getSerialNumbers) {
-  globalThis.window = { location: { hostname: 'books.localhost' } };
-  globalThis.fetch = async (_url, { body }) => {
-    const { location, quantity } = JSON.parse(body);
-    assert.equal(location, inventory);
-    return Response.json({ message: await getSerialNumbers(quantity) });
-  };
-  return {
-    getValue: async () => true,
-    db: { getStockLocation: async () => inventory },
-  };
+function makeSerialFyo() {
+  return { getValue: async () => true };
 }
 
 function makeSerialRow(fyo, values) {
@@ -314,39 +307,45 @@ function makeRow(values = {}) {
   return row;
 }
 
+const ledger = [
+  { location: inventory, quantity: 4 },
+  { location: 'Warehouse', quantity: 128 },
+].map((row) => ({ item, batch, ...row }));
+
+/**
+ * Answers the stock availability API from the ledger, with `location` as
+ * where POS sales ship from, and the serial number pick with `serialNumbers`.
+ */
+function stubServer({ location = inventory, serialNumbers } = {}) {
+  const requests = [];
+  const answers = {
+    get_stock_location: () => location,
+    get_stock_quantities: (args) =>
+      ledger
+        .filter((row) => !args.location || row.location === args.location)
+        .filter((row) => !args.items || args.items.includes(row.item))
+        .map(({ item, batch, quantity }) => ({ item, batch, quantity })),
+    get_available_serial_numbers: (args) => {
+      assert.equal(args.location, inventory);
+      return serialNumbers(args.quantity);
+    },
+  };
+  globalThis.window = { location: { hostname: 'books.localhost' } };
+  globalThis.fetch = async (url, { body }) => {
+    const method = url.split('/').pop();
+    const args = JSON.parse(body);
+    requests.push([method, args]);
+    const answer = answers[method.split('.').pop()];
+    return Response.json({ message: await answer(args) });
+  };
+  return requests;
+}
+
 function makeFyo() {
-  const ledger = [
-    { location: inventory, quantity: 4 },
-    { location: 'Warehouse', quantity: 128 },
-  ].map((row, index) => ({
-    name: String(index + 1),
-    date: '2026-09-06T09:00:00Z',
-    item,
-    batch,
-    rate: '600',
-    ...row,
-  }));
   return {
     singles: {},
     doc: { getDoc: async () => ({}) },
     getValue: async () => true,
-    db: {
-      getStockLocation: async () => inventory,
-      getStockQuantities: async (location, items) =>
-        ledger
-          .filter((row) => !location || row.location === location)
-          .filter((row) => !items || items.includes(row.item))
-          .map(({ item, batch, quantity }) => ({ item, batch, quantity })),
-      getStockQuantity: async (name, location, _from, _to, selectedBatch) =>
-        ledger
-          .filter(
-            (row) =>
-              row.item === name &&
-              (!location || row.location === location) &&
-              row.batch === selectedBatch
-          )
-          .reduce((total, row) => total + row.quantity, 0),
-    },
   };
 }
 

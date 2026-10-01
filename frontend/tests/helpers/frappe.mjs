@@ -35,6 +35,7 @@ await build({
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getFilterFields } from './src/utils/filterFields';
+      export { getSidebarConfig } from './src/utils/sidebarConfig';
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
       export * as posSetup from './src/utils/posSetup';
@@ -153,6 +154,7 @@ export const {
   getExportFields,
   getExportTableFields,
   getJsonExportData,
+  getSidebarConfig,
 } = createRequire(import.meta.url)(output);
 
 /**

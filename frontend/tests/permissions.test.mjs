@@ -7,6 +7,7 @@ import {
 import {
   fyo,
   getImportableSchemaNames,
+  getSidebarConfig,
   loadDocPermissions,
   newFrappeDoc,
   stubFrappe,
@@ -120,4 +121,41 @@ test('a new single document is writable with the write permission', () => {
   const wizard = newFrappeDoc('SetupWizard');
   assert.equal(wizard.notInserted, true);
   assert.equal(wizard.canWrite, true);
+});
+
+test('the sidebar shows only the lists and reports the user can open', () => {
+  const lists = ['SalesQuote', 'SalesInvoice', 'Party', 'Item', 'Account'];
+  fyo.store.permissions = {
+    doctypes: Object.fromEntries(lists.map((name) => [name, `Books ${name}`])),
+    user: { can_read: ['Books SalesQuote', 'Books Party'] },
+  };
+  window.frappe.boot.allowed_reports = { 'Books Trial Balance': {} };
+
+  const sidebar = getSidebarConfig().map(({ label, route, items }) => ({
+    label,
+    route,
+    items: items?.map((item) => item.label),
+  }));
+
+  delete window.frappe.boot.allowed_reports;
+  assert.deepEqual(sidebar, [
+    { label: 'Dashboard', route: '/', items: undefined },
+    {
+      label: 'Sales',
+      route: '/list/SalesQuote',
+      items: ['Sales Quotes', 'Customers'],
+    },
+    {
+      label: 'Purchases',
+      route: '/list/Party/Suppliers',
+      items: ['Suppliers'],
+    },
+    { label: 'Common', route: '/list/Party', items: ['Party'] },
+    {
+      label: 'Reports',
+      route: '/report/TrialBalance',
+      items: ['Trial Balance'],
+    },
+    { label: 'Setup', route: '/settings', items: ['Settings'] },
+  ]);
 });

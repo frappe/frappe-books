@@ -24,7 +24,7 @@ declare module 'vue-router' {
     sidebarPath?: string;
     /** Left out of the phone layout. */
     desktopOnly?: boolean;
-    /** Phones show a back button instead of the menu. */
+    /** Phones show a back button instead of the menu, and no tabs. */
     pushed?: boolean;
     /** Left out of the desktop layout. */
     phoneOnly?: boolean;
@@ -159,6 +159,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/pos',
     name: 'Point of Sale',
+    meta: { pushed: true },
     components: {
       default: POS,
       edit: QuickEditForm,

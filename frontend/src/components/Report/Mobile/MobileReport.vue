@@ -4,8 +4,13 @@
     :class="isScrollable ? 'min-h-0 flex-1' : 'min-h-full pb-12'"
   >
     <div
-      class="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none]"
+      class="sticky top-0 z-10 flex shrink-0 gap-2 overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none] *:shrink-0"
     >
+      <MobileFiltersButton
+        size="md"
+        :count="changedCount"
+        @click="emit('open-filters')"
+      />
       <FrappeButton
         v-if="columnOptions.length > 1"
         size="md"
@@ -15,15 +20,18 @@
         <span class="text-ink-gray-5">{{ t`Column` }}</span>
         {{ valueColumns[0]?.label }}
       </FrappeButton>
-      <FrappeButton
-        v-for="chip in filters.chips"
-        :key="chip.fieldname"
-        size="md"
-        @click="emit('open-filters')"
-      >
-        <span class="text-ink-gray-5">{{ chip.label }}</span>
-        {{ chip.value }}
-      </FrappeButton>
+      <template v-for="chip in filters.chips" :key="chip.fieldname">
+        <MobileFilterChip
+          v-if="chip.isChanged"
+          :label="chip.label"
+          :value="chip.value"
+          @click="emit('reset-filter', chip.fieldname)"
+        />
+        <FrappeButton v-else size="md" @click="emit('open-filters')">
+          <span class="text-ink-gray-5">{{ chip.label }}</span>
+          {{ chip.value }}
+        </FrappeButton>
+      </template>
     </div>
 
     <MobileReportSkeleton v-if="loading" v-bind="skeleton" />
@@ -81,6 +89,8 @@ import { Button as FrappeButton } from 'frappe-ui';
 import type { Report } from 'reports/Report';
 import type { ReportRow } from 'reports/types';
 import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import MobileFilterChip from 'src/mobile/MobileFilterChip.vue';
+import MobileFiltersButton from 'src/mobile/MobileFiltersButton.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import { computed, ref } from 'vue';
 import { MobileEntries } from './MobileEntries';
@@ -97,7 +107,11 @@ const props = defineProps<{
   defaults: FilterValues;
   loading: boolean;
 }>();
-const emit = defineEmits<{ 'open-filters': []; 'clear-filters': [] }>();
+const emit = defineEmits<{
+  'open-filters': [];
+  'clear-filters': [];
+  'reset-filter': [fieldname: string];
+}>();
 
 const columnChoices = useLocalStorage<Record<string, string>>(
   'books:report-phone-columns',
@@ -120,6 +134,9 @@ const entries = computed(() =>
 );
 const filters = computed(
   () => new MobileFilters(props.report, props.defaults, layout.value.chips)
+);
+const changedCount = computed(
+  () => filters.value.chips.filter((chip) => chip.isChanged).length
 );
 
 const columnOptions = computed(() => tree.value?.columnOptions ?? []);

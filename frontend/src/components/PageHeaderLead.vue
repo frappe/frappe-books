@@ -9,9 +9,9 @@
     v-else
     variant="ghost"
     size="md"
-    icon="lucide-menu"
+    icon="lucide-panel-left"
     :label="t`Menu`"
-    @click="openDrawer?.()"
+    @click="openNavSheet?.()"
   />
 </template>
 <script setup lang="ts">
@@ -19,9 +19,9 @@ import {
   Button as FrappeButton,
   PageHeaderBackButton as FrappePageHeaderBackButton,
 } from 'frappe-ui';
-import { openDrawerKey } from 'src/utils/injectionKeys';
+import { openNavSheetKey } from 'src/utils/injectionKeys';
 import { inject } from 'vue';
 
-/** Phone top bars lead with back on pushed pages and the menu elsewhere. */
-const openDrawer = inject(openDrawerKey, undefined);
+/** Phone top bars lead with back on pushed pages and the nav sheet elsewhere. */
+const openNavSheet = inject(openNavSheetKey, undefined);
 </script>

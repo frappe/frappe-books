@@ -136,8 +136,7 @@ test('the menu opens each quick action as a sheet', async ({ page }) => {
     ['Close POS Shift', 'Close POS Shift'],
   ]) {
     await page.getByRole('button', { name: 'POS actions' }).click();
-    const menu = page.getByRole('dialog', { name: 'Point of Sale' });
-    await menu.getByRole('button', { name: row }).click();
+    await page.getByRole('menuitem', { name: row }).click();
     await expectSheet(page.getByRole('dialog', { name: title, exact: true }));
     await closeSheets(page);
   }

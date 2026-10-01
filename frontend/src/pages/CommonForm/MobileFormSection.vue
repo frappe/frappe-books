@@ -1,6 +1,6 @@
 <template>
   <section v-if="visibleFields.length" class="border-b border-outline-gray-1">
-    <!-- The press state is inset, as on drawer rows, so it keeps clear of the fields. -->
+    <!-- The press state is inset, as on nav sheet rows, so it keeps clear of the fields. -->
     <div v-if="kind === 'collapsible'" class="px-2 py-1">
       <button
         class="flex h-11 w-full items-center gap-2 rounded-4 px-2 text-start text-lg-semibold text-ink-gray-8 active:bg-surface-gray-1"

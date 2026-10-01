@@ -34,7 +34,7 @@ async function openSearch(page: Page, query: string) {
   await searchbox(page).fill(query);
 }
 
-test('the drawer opens search with the input focused', async ({ page }) => {
+test('the nav sheet opens search with the input focused', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
   await page
     .getByRole('dialog', { name: 'Books' })

@@ -135,9 +135,7 @@
       </button>
     </section>
 
-    <div
-      class="sticky bottom-0 mt-auto flex flex-col gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
+    <MobileFooter class="flex-col">
       <FrappeButton
         size="lg"
         variant="solid"
@@ -160,7 +158,7 @@
           @click="$emit('submit')"
         />
       </div>
-    </div>
+    </MobileFooter>
   </div>
 </template>
 
@@ -181,6 +179,7 @@ import DateControl from 'src/components/Controls/Date.vue';
 import { PaymentMethodOption } from 'src/components/POS/types';
 import { getField } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getQuickPaymentAmounts, getTotalQuantity } from 'src/utils/pos';
 import { computed, inject, type Ref } from 'vue';
 

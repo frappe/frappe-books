@@ -9,21 +9,6 @@
           :label="t`Print`"
           @click="routeTo(`/report-print/${reportClassName}`)"
         />
-        <span class="relative">
-          <FrappeButton
-            variant="ghost"
-            size="md"
-            icon="lucide-list-filter"
-            :label="t`Filters`"
-            :disabled="!report"
-            @click="filtersOpen = true"
-          />
-          <span
-            v-if="hasFilterChanges"
-            data-testid="filters-set"
-            class="pointer-events-none absolute end-1 top-1 size-2 rounded-full bg-surface-gray-7 shadow-[0_0_0_1.5px_var(--surface-base)]"
-          />
-        </span>
       </template>
       <DropdownWithActions
         v-for="group of groupedActions"
@@ -50,6 +35,7 @@
         :loading="loading || (report.loading && !report.reportData.length)"
         @open-filters="filtersOpen = true"
         @clear-filters="clearFilters"
+        @reset-filter="resetFilter"
       />
       <MobileReportSkeleton v-else :values="[128]" :height="48" :lines="1" />
       <MobileReportFilters
@@ -83,7 +69,6 @@ import ListReport from 'src/components/Report/ListReport.vue';
 import ReportFilters from 'src/components/Report/ReportFilters.vue';
 import {
   FilterValues,
-  MobileFilters,
   getDefaultFilters,
 } from 'src/components/Report/Mobile/MobileFilters';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
@@ -158,13 +143,6 @@ export default defineComponent({
 
       return Object.values(actionsMap);
     },
-    hasFilterChanges(): boolean {
-      return (
-        !!this.report &&
-        new MobileFilters(this.report as Report, this.filterDefaults)
-          .hasChanges
-      );
-    },
   },
   async activated() {
     docsPathRef.value =
@@ -223,6 +201,12 @@ export default defineComponent({
     },
     async clearFilters() {
       await this.report?.setFilters(this.filterDefaults);
+      await this.reload();
+    },
+    async resetFilter(fieldname: string) {
+      await this.report?.setFilters({
+        [fieldname]: this.filterDefaults[fieldname],
+      });
       await this.reload();
     },
   },

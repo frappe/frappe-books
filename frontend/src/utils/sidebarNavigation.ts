@@ -48,3 +48,25 @@ export function getSidebarLocation(
 
   return { path, query: { filters: JSON.stringify(filters) } };
 }
+
+export interface SidebarEntry {
+  group: SidebarRoot;
+  item: SidebarRoot | SidebarItem;
+}
+
+/** The entry that owns the route: its exact path first, else a list of its schema. */
+export function findSidebarEntry(
+  groups: SidebarRoot[],
+  route: SidebarRoute
+): SidebarEntry | undefined {
+  const path = getSidebarPath(route);
+  const exactPath = decodeURI(path);
+  const entries = groups.flatMap((group) =>
+    (group.items ?? [group]).map((item) => ({ group, item }))
+  );
+
+  return (
+    entries.find(({ item }) => decodeURI(item.route) === exactPath) ??
+    entries.find(({ item }) => matchesSidebarPath(path, item.route))
+  );
+}

@@ -68,12 +68,13 @@ test('selected items start a new sales invoice', async ({ page }) => {
   await search(page, run);
   await expect(rows(page)).toHaveCount(2);
 
-  await page.getByRole('button', { name: 'Select items' }).tap();
+  await page.getByRole('button', { name: 'Select', exact: true }).tap();
   for (const name of items) {
     await rows(page).filter({ hasText: name }).tap();
   }
   await expect(page.getByRole('checkbox', { checked: true })).toHaveCount(2);
   await expect(page.getByText('2 selected')).toBeVisible();
+  await expect(page.locator('[data-slot="mobile-nav"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Create', exact: true }).tap();
   await page
     .getByRole('dialog', { name: 'Create' })

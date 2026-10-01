@@ -20,37 +20,21 @@
           />
         </template>
       </FrappeTextInput>
-      <FrappeButton
-        v-if="chips.length"
+      <MobileFiltersButton
         size="lg"
-        icon-left="lucide-list-filter"
-        :label="t`Filters (${chips.length})`"
-        @click="isSheetOpen = true"
-      >
-        {{ chips.length }}
-      </FrappeButton>
-      <FrappeButton
-        v-else
-        size="lg"
-        icon="lucide-list-filter"
-        :label="t`Filters`"
+        :count="chips.length"
         @click="isSheetOpen = true"
       />
+      <slot />
     </div>
     <div v-if="chips.length" class="-mx-4 flex gap-2 overflow-x-auto px-4">
-      <FrappeButton
+      <MobileFilterChip
         v-for="chip in chips"
         :key="chip.id"
-        size="md"
-        :label="t`Remove filter ${chip.label}`"
+        :label="chip.label"
+        :value="chip.value"
         @click="removeFilter(chip.id)"
-      >
-        <span class="text-ink-gray-5">{{ chip.label }}</span>
-        {{ chip.value }}
-        <template #suffix>
-          <span class="lucide-x size-4 text-ink-gray-5" aria-hidden="true" />
-        </template>
-      </FrappeButton>
+      />
     </div>
   </div>
   <MobileFilterSheet
@@ -60,14 +44,13 @@
   />
 </template>
 <script lang="ts">
-import {
-  Button as FrappeButton,
-  TextInput as FrappeTextInput,
-} from 'frappe-ui';
+import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { t } from 'fyo';
 import { getOptionList } from 'fyo/utils';
 import type { Field } from 'schemas/types';
 import { fyo } from 'src/initFyo';
+import MobileFilterChip from 'src/mobile/MobileFilterChip.vue';
+import MobileFiltersButton from 'src/mobile/MobileFiltersButton.vue';
 import { getFieldLabel } from 'src/utils/filterFields';
 import {
   filterConditions,
@@ -79,10 +62,15 @@ import type { QueryFilter } from 'utils/db/types';
 import { defineComponent, type PropType } from 'vue';
 import MobileFilterSheet from './MobileFilterSheet.vue';
 
-/** Search box, Filters button and filter chips above a phone list. */
+/** Search, Filters, the page's own buttons and filter chips above a phone list. */
 export default defineComponent({
   name: 'MobileListToolbar',
-  components: { FrappeButton, FrappeTextInput, MobileFilterSheet },
+  components: {
+    FrappeTextInput,
+    MobileFilterChip,
+    MobileFilterSheet,
+    MobileFiltersButton,
+  },
   props: {
     schemaName: { type: String, required: true },
     searchFields: { type: Array as PropType<string[]>, required: true },

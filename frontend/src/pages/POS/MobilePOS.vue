@@ -83,12 +83,9 @@
       :title="t`No items found`"
     />
 
-    <div
-      v-if="sinvDoc.items?.length"
-      class="sticky bottom-0 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
+    <MobileFooter v-if="sinvDoc.items?.length">
       <FrappeButton
-        class="w-full"
+        class="flex-1"
         variant="solid"
         size="lg"
         icon-left="lucide-shopping-cart"
@@ -103,7 +100,7 @@
           </span>
         </template>
       </FrappeButton>
-    </div>
+    </MobileFooter>
 
     <MobilePOSCart
       :open="sheet === 'cart'"
@@ -134,6 +131,7 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { POSItem } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { getItemInitials } from 'src/utils/pos';
 import {

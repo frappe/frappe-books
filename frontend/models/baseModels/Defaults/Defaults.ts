@@ -3,7 +3,23 @@ import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
+import { call } from 'src/web/api';
 import { PartyRoleEnum } from '../Party/types';
+
+const SET_PRINT_FORMATS =
+  'frappe_books.frappe_books.doctype.books_defaults.books_defaults.set_print_formats';
+
+// Fields that show the default print format each doctype keeps, by fieldname.
+const DOCTYPE_PRINT_FORMATS: Record<string, string> = {
+  sales_quote_print_template: 'Books Sales Quote',
+  sales_invoice_print_template: 'Books Sales Invoice',
+  purchase_invoice_print_template: 'Books Purchase Invoice',
+  journal_entry_print_template: 'Books Journal Entry',
+  payment_print_template: 'Books Payment',
+  shipment_print_template: 'Books Shipment',
+  purchase_receipt_print_template: 'Books Purchase Receipt',
+  stock_movement_print_template: 'Books Stock Movement',
+};
 
 /** Print Formats of `doctype`, which a print template picker offers. */
 function printFormatFilter(doctype: string) {
@@ -17,14 +33,7 @@ export class Defaults extends FrappeDoc {
   static override presentation = {
     label: 'Defaults',
     fields: withoutCreate([
-      'sales_quote_print_template',
-      'sales_invoice_print_template',
-      'purchase_invoice_print_template',
-      'journal_entry_print_template',
-      'payment_print_template',
-      'shipment_print_template',
-      'purchase_receipt_print_template',
-      'stock_movement_print_template',
+      ...Object.keys(DOCTYPE_PRINT_FORMATS),
       'pos_print_template',
     ]),
   };
@@ -74,19 +83,13 @@ export class Defaults extends FrappeDoc {
     purchase_receipt_number_series: () => ({
       reference_type: ModelNameEnum.PurchaseReceipt,
     }),
-    sales_quote_print_template: printFormatFilter('Books Sales Quote'),
-    sales_invoice_print_template: printFormatFilter('Books Sales Invoice'),
+    ...Object.fromEntries(
+      Object.entries(DOCTYPE_PRINT_FORMATS).map(([fieldname, doctype]) => [
+        fieldname,
+        printFormatFilter(doctype),
+      ])
+    ),
     pos_print_template: printFormatFilter('Books Sales Invoice'),
-    purchase_invoice_print_template: printFormatFilter(
-      'Books Purchase Invoice'
-    ),
-    journal_entry_print_template: printFormatFilter('Books Journal Entry'),
-    payment_print_template: printFormatFilter('Books Payment'),
-    shipment_print_template: printFormatFilter('Books Shipment'),
-    purchase_receipt_print_template: printFormatFilter(
-      'Books Purchase Receipt'
-    ),
-    stock_movement_print_template: printFormatFilter('Books Stock Movement'),
     pos_customer: () => ({ role: PartyRoleEnum.Customer }),
   };
 
@@ -120,6 +123,18 @@ export class Defaults extends FrappeDoc {
     pay_button_colour: this.getPointOfSaleHidden(),
     pay_and_print_button_colour: this.getPointOfSaleHidden(),
   };
+
+  /** The print formats are the doctypes'; a save of the settings sets them first. */
+  override async beforeSync() {
+    await super.beforeSync();
+    const printFormats = Object.keys(DOCTYPE_PRINT_FORMATS).map((fieldname) => [
+      fieldname,
+      this[fieldname] || null,
+    ]);
+    await call(SET_PRINT_FORMATS, {
+      print_formats: Object.fromEntries(printFormats),
+    });
+  }
 
   override async afterSync() {
     await this.fyo.loadDefaultNumberSeries();

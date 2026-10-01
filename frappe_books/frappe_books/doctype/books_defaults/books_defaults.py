@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import frappe
+from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.accounts import PAYMENT_ACCOUNT_TYPES, validate_changed_accounts
@@ -10,7 +12,7 @@ ACCOUNT_TYPES = {
 	"sales_payment_account": {"account_types": PAYMENT_ACCOUNT_TYPES},
 	"purchase_payment_account": {"account_types": PAYMENT_ACCOUNT_TYPES},
 }
-# Virtual fields that show and set the default print format each DocType keeps.
+# Virtual fields that show the default print format each DocType keeps; set_print_formats sets it.
 PRINT_FORMAT_FIELDS = {
 	"sales_quote_print_template": "Books Sales Quote",
 	"sales_invoice_print_template": "Books Sales Invoice",
@@ -91,18 +93,17 @@ class BooksDefaults(Document):
 		validate_changed_accounts(self, ACCOUNT_TYPES)
 		validate_print_format(self.pos_print_template, "Books Sales Invoice")
 
-	def before_save(self):
-		# The write right on the settings is the right to choose their print formats.
-		update_default_print_formats(self.get_set_print_formats())
 
-	def get_set_print_formats(self) -> dict[str, str | None]:
-		"""The print formats given to this copy, by DocType; the properties read the saved ones.
+@frappe.whitelist(methods=["POST"])
+def set_print_formats(print_formats: dict[str, str | None]) -> None:
+	"""Set the default print formats Books Defaults shows, by its fieldnames.
 
-		A field no one set has no value at all, as Frappe stores no virtual single values since
-		frappe#43435. Before it, a loaded copy held the print formats of its last save.
-		"""
-		unset = object()
-		values = {
-			doctype: self.get(fieldname, default=unset) for fieldname, doctype in PRINT_FORMAT_FIELDS.items()
-		}
-		return {doctype: value for doctype, value in values.items() if value is not unset}
+	A save of the settings leaves them alone, so no stored copy can set them back.
+	"""
+	# The write right on the settings is the right to choose their print formats.
+	frappe.has_permission("Books Defaults", "write", throw=True)
+	if unknown := set(print_formats) - set(PRINT_FORMAT_FIELDS):
+		frappe.throw(_("Books Defaults has no print format field {0}.").format(", ".join(sorted(unknown))))
+	update_default_print_formats(
+		{PRINT_FORMAT_FIELDS[fieldname]: value for fieldname, value in print_formats.items()}
+	)

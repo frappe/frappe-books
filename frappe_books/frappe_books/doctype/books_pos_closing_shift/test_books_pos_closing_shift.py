@@ -129,9 +129,10 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		draft = frappe.get_doc(
 			{
 				"doctype": "Books Pos Closing Shift",
+				"closing_cash": [{"denomination": 90, "count": 1}],
 				"closing_amounts": [
 					{"name": "counted-bank", "payment_method": "Bank", "closing_amount": 5},
-					{"name": "counted-cash", "payment_method": "Cash", "closing_amount": 90},
+					{"name": "counted-cash", "payment_method": "Cash", "closing_amount": 0},
 				],
 			}
 		)
@@ -141,6 +142,37 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		rows = [(row.name, row.idx, row.payment_method) for row in draft.closing_amounts]
 		self.assertEqual(rows, [("counted-cash", 1, "Cash"), ("counted-bank", 2, "Bank")])
 		self.assertEqual(cash_amounts(draft).difference_amount, -10)
+		self.assertEqual(draft.closing_amounts[1].difference_amount, 5)
+
+	def test_preview_shares_the_counted_cash_among_the_cash_methods(self):
+		petty = frappe.get_doc(
+			{"doctype": "Books Payment Method", "name": unique_name("Petty Cash"), "type": "Cash"}
+		).insert()
+		opening = frappe.get_doc(
+			{
+				"doctype": "Books Pos Opening Shift",
+				"opening_cash": [{"denomination": 100, "count": 1}],
+				"opening_amounts": [
+					{"payment_method": "Cash", "amount": 60},
+					{"payment_method": petty.name, "amount": 40},
+				],
+			}
+		).insert()
+		opening.submit()
+
+		shares = []
+		for counted in (130, 50):
+			draft = frappe.get_doc(
+				{
+					"doctype": "Books Pos Closing Shift",
+					"closing_cash": [{"denomination": counted, "count": 1}],
+				}
+			)
+			draft.preview()
+			shares.append([(row.closing_amount, row.difference_amount) for row in draft.closing_amounts])
+
+		# Each takes up to what it expects; the first also takes the surplus.
+		self.assertEqual(shares, [[(90, 30), (40, 0)], [(50, -10), (0, -40)]])
 
 	def test_preview_needs_an_open_shift(self):
 		draft = frappe.get_doc({"doctype": "Books Pos Closing Shift"})

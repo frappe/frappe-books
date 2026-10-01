@@ -49,6 +49,20 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		message = "POS Counter Cash Account is not set. Please set it on POS Settings"
 		self.assertRaisesRegex(frappe.ValidationError, message, open_shift, 0)
 
+	def test_preview_fills_the_cash_amount_with_the_counted_cash(self):
+		draft = make_opening_shift(0)
+		draft.opening_cash = []
+		draft.append("opening_cash", {"denomination": 50, "count": 3})
+
+		draft.preview()
+
+		self.assertIsNone(draft.name)
+		self.assertEqual([row.amount for row in draft.opening_amounts], [150, 0])
+
+	def test_preview_needs_the_right_to_open_a_shift(self):
+		with self.set_user(ensure_user("books-pos-shift-preview-stranger@example.com")):
+			self.assertRaises(frappe.PermissionError, make_opening_shift(100).preview)
+
 	def test_draft_shift_is_not_open(self):
 		make_opening_shift(100).insert()
 

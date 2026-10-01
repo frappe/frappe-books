@@ -61,8 +61,6 @@ export interface PhoneTreeLayout {
   icon?: string;
   /** Filters shown as chips even when they are empty. */
   chips?: string[];
-  /** Scroll sideways instead of cutting off the labels. */
-  scroll?: boolean;
 }
 
 /** Ledgers: entries grouped under their dates. */

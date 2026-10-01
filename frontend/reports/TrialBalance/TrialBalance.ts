@@ -15,7 +15,6 @@ export class TrialBalance extends AccountReport {
       { fieldname: 'closing_credit', width: 100 },
     ],
     chips: ['fromDate', 'toDate'],
-    scroll: true,
   };
 
   fromDate?: string;

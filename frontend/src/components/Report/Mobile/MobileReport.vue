@@ -59,7 +59,6 @@
       :label-header="report.columns[tree.headerIndex]?.label ?? ''"
       :grouped="!!tree.layout.groupBy"
       :icon="tree.layout.icon"
-      :scroll="isScrollable"
       @open="openDetail"
     />
     <MobileReportEntries
@@ -146,7 +145,7 @@ const valueColumns = computed(
     []
 );
 const treeRows = computed(() => tree.value?.getRows(valueColumns.value) ?? []);
-const isScrollable = computed(() => !!tree.value?.layout.scroll);
+const isScrollable = computed(() => !!tree.value);
 const isEmpty = computed(
   () => !props.report.reportData.some((row) => !row.isEmpty)
 );

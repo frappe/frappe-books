@@ -1,6 +1,9 @@
 <template>
   <!-- A scrolling tree scrolls both ways itself, so its header still sticks. -->
-  <div :class="{ 'min-h-0 flex-1 overflow-auto': scroll }">
+  <component
+    :is="scroll ? FrappeScrollArea : 'div'"
+    v-bind="scroll ? { orientation: 'both', class: 'min-h-0 flex-1' } : {}"
+  >
     <div
       class="grid gap-x-2"
       :class="{ 'w-max min-w-full pb-12': scroll }"
@@ -64,10 +67,10 @@
         </span>
       </button>
     </div>
-  </div>
+  </component>
 </template>
 <script setup lang="ts">
-import { Icon as FrappeIcon } from 'frappe-ui';
+import { Icon as FrappeIcon, ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import type { ReportRow } from 'reports/types';
 import { computed, ref } from 'vue';
 import {

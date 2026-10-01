@@ -135,7 +135,9 @@ test('trial balance scrolls sideways instead of cutting off accounts', async ({
     true
   );
 
-  const scroller = page.locator('.overflow-auto').filter({ has: name });
+  const scroller = page
+    .locator('[data-slot="scroll-area-viewport"]')
+    .filter({ has: name });
   expect(await scroller.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
     true
   );

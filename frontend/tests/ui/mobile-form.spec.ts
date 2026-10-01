@@ -16,13 +16,29 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('saving marks missing fields in place', async ({ page }) => {
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page
+    .locator('footer')
+    .getByRole('button', { name: 'Save', exact: true })
+    .click();
 
   await expect(
     page.getByRole('alert').filter({ hasText: 'Value missing for' })
   ).toContainText('Customer');
   await expect(page.getByText('Customer is required')).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('one header menu holds the document actions', async ({ page }) => {
+  const name = `Phone Menu Customer ${Date.now()}`;
+  await insertDocument(page, 'Books Party', { name, role: 'Customer' });
+  await page.goto(`/books/edit/Party/${encodeURIComponent(name)}`);
+  await waitForBooks(page);
+
+  await page.getByRole('button', { name: 'More actions' }).click();
+  await expect(
+    page.getByRole('menuitem', { name: 'General Ledger' })
+  ).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
 });
 
 test('a link field searches full screen and creates a record in a sheet', async ({

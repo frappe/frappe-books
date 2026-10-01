@@ -118,11 +118,6 @@ test('a right-to-left language lays Books out right to left', async ({
   await expect(page.locator('#books-app')).toHaveAttribute('dir', 'rtl');
 
   await page.getByRole('button', { name: 'Menu' }).click();
-  // The drawer slides in from the right edge.
-  await expect
-    .poll(async () => {
-      const box = (await drawer(page).boundingBox())!;
-      return Math.round(box.x + box.width);
-    })
-    .toBe(page.viewportSize()!.width);
+  await expect(navSheet(page)).toBeVisible();
+  await expect(navSheet(page)).toHaveCSS('direction', 'rtl');
 });

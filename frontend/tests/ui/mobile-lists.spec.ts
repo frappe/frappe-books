@@ -68,7 +68,7 @@ test('selected items start a new sales invoice', async ({ page }) => {
   await search(page, run);
   await expect(rows(page)).toHaveCount(2);
 
-  await page.getByRole('button', { name: 'Select items' }).tap();
+  await page.getByRole('button', { name: 'Select', exact: true }).tap();
   for (const name of items) {
     await rows(page).filter({ hasText: name }).tap();
   }

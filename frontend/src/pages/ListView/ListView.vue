@@ -3,30 +3,13 @@
     <PageHeader :title="title">
       <template #mobile>
         <FrappeButton
-          v-if="isSelectionMode"
+          v-if="canCreate && !isSelectionMode"
           variant="ghost"
           size="md"
-          :label="t`Cancel`"
-          @click="toggleSelectionMode"
+          icon="lucide-plus"
+          :label="t`New`"
+          @click="handleMakeNewDoc"
         />
-        <template v-else>
-          <FrappeButton
-            v-if="schemaName === 'Item'"
-            variant="ghost"
-            size="md"
-            icon="lucide-list-checks"
-            :label="t`Select items`"
-            @click="toggleSelectionMode"
-          />
-          <FrappeButton
-            v-if="canCreate"
-            variant="solid"
-            size="md"
-            icon-left="lucide-plus"
-            :label="t`New`"
-            @click="handleMakeNewDoc"
-          />
-        </template>
       </template>
       <FrappeButton
         v-if="
@@ -69,7 +52,14 @@
       :schema-name="schemaName"
       :search-fields="searchFields"
       @change="applyFilter"
-    />
+    >
+      <FrappeButton
+        v-if="schemaName === 'Item'"
+        size="lg"
+        :label="isSelectionMode ? t`Cancel` : t`Select`"
+        @click="toggleSelectionMode"
+      />
+    </MobileListToolbar>
     <List
       ref="list"
       :schema-name="schemaName"

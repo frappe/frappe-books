@@ -36,6 +36,7 @@
         :label="t`Filters`"
         @click="isSheetOpen = true"
       />
+      <slot />
     </div>
     <div v-if="chips.length" class="-mx-4 flex gap-2 overflow-x-auto px-4">
       <FrappeButton
@@ -79,7 +80,7 @@ import type { QueryFilter } from 'utils/db/types';
 import { defineComponent, type PropType } from 'vue';
 import MobileFilterSheet from './MobileFilterSheet.vue';
 
-/** Search box, Filters button and filter chips above a phone list. */
+/** Search, Filters, the page's own buttons and filter chips above a phone list. */
 export default defineComponent({
   name: 'MobileListToolbar',
   components: { FrappeButton, FrappeTextInput, MobileFilterSheet },

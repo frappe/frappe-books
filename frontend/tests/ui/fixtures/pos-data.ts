@@ -155,10 +155,19 @@ function getDocuments(path: string, params: Row): unknown {
 }
 
 /**
- * Totals as the server leaves them. A closing shift expects what its shift
- * opened with and shares the counted cash among the cash methods.
+ * Totals as the server leaves them. An opening shift's first cash row takes
+ * the counted cash; a closing shift expects what its shift opened with and
+ * shares the counted cash among the cash methods.
  */
 function preview(document: Row): Row {
+  if (document.doctype === 'Books Pos Opening Shift') {
+    const [cashRow] = getCashRows(document.opening_amounts ?? []);
+    if (cashRow) {
+      cashRow.amount = getCashTotal(document.opening_cash);
+    }
+    return document;
+  }
+
   if (document.doctype !== 'Books Pos Closing Shift') {
     return document;
   }

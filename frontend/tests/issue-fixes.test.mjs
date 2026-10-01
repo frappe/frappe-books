@@ -54,7 +54,7 @@ test('trial balance sends its dates as they are and renders six amounts', async 
   );
 });
 
-test('general ledger runs its Script Report and styles the server rows', async () => {
+test('general ledger runs its Script Report and styles the server rows', async (t) => {
   const fyo = await makeFyo();
   const report = new GeneralLedger(fyo);
   report.fromDate = '2026-01-01';
@@ -89,7 +89,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
           debit: 50,
           credit: 0,
           balance: 150,
-          reference_type: 'JournalEntry',
+          reference_type: 'Books Journal Entry',
         },
         {},
         {
@@ -102,6 +102,8 @@ test('general ledger runs its Script Report and styles the server rows', async (
       ]
     )
   );
+  window.frappe = { boot: {} };
+  t.after(() => delete window.frappe);
   await report.setReportData();
   const [{ method, args }] = calls;
   assert.equal(method, 'frappe.desk.query_report.run');
@@ -129,7 +131,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
   assert.equal(cell(opening, 'balance').rawValue, 100);
   assert.equal(cell(opening, 'account').italics, true);
   assert.equal(cell(entry, 'index').value, '1');
-  assert.equal(cell(entry, 'reference_type').value, 'Journal Entry');
+  assert.equal(cell(entry, 'reference_type').rawValue, 'Books Journal Entry');
   assert.equal(blank.isEmpty, true);
   assert.equal(cell(closing, 'account').value, 'Closing');
   assert.equal(cell(closing, 'balance').bold, true);
@@ -199,7 +201,7 @@ test('translations fill template values and skip empty ones', () => {
   }
 });
 
-test('general ledger offers stock reference types only with inventory', async () => {
+test('general ledger offers stock reference doctypes only with inventory', async () => {
   const fyo = await makeFyo();
   const referenceTypes = () =>
     new GeneralLedger(fyo)
@@ -208,8 +210,16 @@ test('general ledger offers stock reference types only with inventory', async ()
       .options.map(({ value }) => value);
 
   fyo.singles.AccountingSettings.enable_inventory = false;
-  assert.ok(!referenceTypes().includes('Shipment'));
+  assert.deepEqual(referenceTypes(), [
+    'All',
+    'Books Sales Invoice',
+    'Books Purchase Invoice',
+    'Books Payment',
+    'Books Journal Entry',
+  ]);
   fyo.singles.AccountingSettings.enable_inventory = true;
-  assert.ok(referenceTypes().includes('Shipment'));
-  assert.ok(referenceTypes().includes('PurchaseReceipt'));
+  assert.deepEqual(referenceTypes().slice(-2), [
+    'Books Shipment',
+    'Books Purchase Receipt',
+  ]);
 });

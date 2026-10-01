@@ -1,20 +1,10 @@
 import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
-import { ModelNameEnum } from 'models/types';
 import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
 import { ServerRow } from 'reports/serverReport';
 import { ColumnField, PhoneLayout, ReportRow } from 'reports/types';
 import { Field, RawValue } from 'schemas/types';
-
-type ReferenceType =
-  | ModelNameEnum.SalesInvoice
-  | ModelNameEnum.PurchaseInvoice
-  | ModelNameEnum.Payment
-  | ModelNameEnum.JournalEntry
-  | ModelNameEnum.Shipment
-  | ModelNameEnum.PurchaseReceipt
-  | 'All';
 
 export class GeneralLedger extends Report {
   static title = t`General Ledger`;
@@ -34,7 +24,8 @@ export class GeneralLedger extends Report {
 
   ascending = false;
   reverted = false;
-  referenceType: ReferenceType = 'All';
+  /** The doctype of the entries' documents, or `All`. */
+  referenceType = 'All';
   groupBy: 'none' | 'party' | 'account' | 'reference_name' = 'none';
 
   async setDefaultFilters() {
@@ -70,16 +61,16 @@ export class GeneralLedger extends Report {
   getFilters() {
     const refTypeOptions = [
       { label: t`All`, value: 'All' },
-      { label: t`Sales Invoices`, value: 'SalesInvoice' },
-      { label: t`Purchase Invoices`, value: 'PurchaseInvoice' },
-      { label: t`Payments`, value: 'Payment' },
-      { label: t`Journal Entries`, value: 'JournalEntry' },
+      { label: t`Sales Invoices`, value: 'Books Sales Invoice' },
+      { label: t`Purchase Invoices`, value: 'Books Purchase Invoice' },
+      { label: t`Payments`, value: 'Books Payment' },
+      { label: t`Journal Entries`, value: 'Books Journal Entry' },
     ];
 
     if (this.fyo.singles.AccountingSettings?.enable_inventory) {
       refTypeOptions.push(
-        { label: t`Shipment`, value: 'Shipment' },
-        { label: t`Purchase Receipt`, value: 'PurchaseReceipt' }
+        { label: t`Shipment`, value: 'Books Shipment' },
+        { label: t`Purchase Receipt`, value: 'Books Purchase Receipt' }
       );
     }
 

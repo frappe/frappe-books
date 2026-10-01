@@ -17,7 +17,7 @@ await build({
     contents: `
       export { Fyo } from './fyo';
       export { getSchemas } from './schemas';
-      export { getDoctypeFieldProperties, getDoctypeSearchFields } from './tests/helpers/doctypeFieldProperties';
+      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
       export { frappeModels, models } from './models';
       export { BalanceSheet } from './reports/BalanceSheet/BalanceSheet';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
@@ -32,7 +32,6 @@ await build({
       export { getRowDetails } from './src/components/Controls/rowDetails';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
-      export { getJsonExportData } from './src/utils/export';
       export { getMappedDoc, getStockTransferActions } from './models/helpers';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
@@ -51,7 +50,7 @@ await build({
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { getAvailableSerialNumbers } from './models/inventory/helpers';
       export { generateCSV, parseCSV } from './utils/csvParser';
-      export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
+      export { getImportableSchemaNames } from './src/importer';
       export { DataImport } from './src/dataImport';
     `,
     resolveDir: frontend,
@@ -74,7 +73,7 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 const bundle = createRequire(import.meta.url)(output);
-export const { fieldProperties, getSchemas, searchFields } =
+export const { fieldProperties, getSchemas } =
   withFieldProperties(bundle);
 export const {
   Fyo,
@@ -100,7 +99,6 @@ export const {
   getRowDetails,
   getFilterFields,
   getFieldLabel,
-  getJsonExportData,
   FilterSet,
   filterConditions,
   conditionsForField,
@@ -141,8 +139,6 @@ export const {
   getAvailableSerialNumbers,
   generateCSV,
   parseCSV,
-  Importer,
-  getGridRows,
   getImportableSchemaNames,
   DataImport,
 } = bundle;
@@ -169,6 +165,5 @@ export async function makeFyo() {
   fyo.doc.registerModels(models);
   fyo.singles.AccountingSettings = { enable_discounting: true };
   fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
-  fyo.store.searchFields = searchFields;
   return fyo;
 }

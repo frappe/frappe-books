@@ -71,7 +71,7 @@ function toRenderData(
 }
 
 /** By the DocType's sort field when it sets one, else by the date; newest first. */
-function getOrderBy({ meta, schema }: FrappeDocType): string {
+export function getOrderBy({ meta, schema }: FrappeDocType): string {
   const fieldnames = schema.fields.map(({ fieldname }) => fieldname);
   const sortField = [meta.sort_field, 'date'].find(
     (fieldname) =>

@@ -1,7 +1,5 @@
 """Integration coverage for the original Vue UI's Frappe compatibility layer."""
 
-from unittest.mock import ANY
-
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
@@ -400,51 +398,6 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 
 		self.assertEqual(self.bridge.call("count", ["UOM", {"name": ["like", f"{prefix}%"]}]), 3)
 		self.assertEqual(self.bridge.call("count", ["UOMConversionItem", {"parent": item.name}]), 1)
-
-	def test_search_matches_keyword_letters_in_order_within_the_limit(self):
-		prefix = frappe.generate_hash(length=6)
-		for index in range(3):
-			frappe.get_doc({"doctype": "Books Uom", "name": f"Qz{prefix} Marigold {index}"}).insert()
-
-		found = self.bridge.call("search", [f"qz{prefix} mrgld", ["UOM"], 2])["UOM"]
-
-		self.assertEqual(len(found), 2)
-		self.assertTrue(all(row["name"].startswith(f"Qz{prefix}") for row in found))
-		self.assertEqual(self.bridge.call("search", ["zzq", ["UOM"], 2])["UOM"], [])
-
-	def test_search_returns_the_parent_of_matching_rows(self):
-		receivable = make_account("Bridge Search Receivable", account_type="Receivable")
-		income = make_account("Bridge Search Income", root_type="Income", account_type="Income Account")
-		expense = make_account("Bridge Search Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
-		item = make_item(income.name, expense.name)
-		invoice = make_invoice(
-			"Books Sales Invoice", make_party(receivable.name).name, receivable.name, item.name, income.name
-		)
-
-		found = self.bridge.call("search", [item.name, ["SalesInvoiceItem"], 5])
-
-		self.assertEqual(
-			found["SalesInvoiceItem"],
-			[
-				{
-					"item": item.name,
-					"tax": None,
-					"parent": invoice.name,
-					"parentSchemaName": "SalesInvoice",
-					"name": ANY,
-				}
-			],
-		)
-
-	def test_search_matches_the_doctype_search_fields(self):
-		account = make_account("Bridge Search Receivable", account_type="Receivable").name
-		email = f"{frappe.generate_hash(length=8)}@example.com"
-		party = make_party(account, email=email).name
-
-		found = self.bridge.call("search", [email, ["Party"], 5])["Party"]
-
-		self.assertEqual([(row["name"], row["email"]) for row in found], [(party, email)])
 
 	def test_link_search_matches_letters_in_order_within_the_link_filters(self):
 		account = make_account("Bridge Link Receivable", account_type="Receivable").name

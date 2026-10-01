@@ -116,7 +116,6 @@ declare global {
         books?: {
           country_code: string;
           doctypes: Record<string, string>;
-          search_fields: Record<string, string[]>;
           charts_of_accounts: ChartOfAccounts[];
           account_labels: Record<string, string>;
           indian_states: Record<string, string>;

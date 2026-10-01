@@ -4,7 +4,7 @@ import getCommonExportActions from 'reports/commonExporter';
 import { PhoneLayout } from 'reports/types';
 import { Field } from 'schemas/types';
 import { StockLedger } from './StockLedger';
-import { ReferenceType, SerialNumberStatus } from './types';
+import { SerialNumberStatus } from './types';
 
 export class StockBalance extends StockLedger {
   static title = t`Stock Balance`;
@@ -26,7 +26,7 @@ export class StockBalance extends StockLedger {
   static isInventory = true;
 
   override ascending = true;
-  override referenceType: ReferenceType = 'All';
+  override referenceType = 'All';
   override referenceName = '';
 
   showSerialNumbers = false;

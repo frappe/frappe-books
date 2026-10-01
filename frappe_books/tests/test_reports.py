@@ -57,6 +57,17 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		)
 		self.assertEqual(rows[-1], _row("closing", "Closing", 20, 0, 20))
 
+	def test_general_ledger_filters_and_shows_documents_by_doctype(self):
+		_post("2045-01-05", self.cash.name, 50, 0)
+		_post("2045-01-06", self.cash.name, 30, 0, voucher_type="Books Payment")
+
+		rows = self._ledger(account=self.cash.name, reference_type="Books Payment")
+
+		entries = [row for row in rows if row.get("type") == "entry"]
+		self.assertEqual(
+			[(row["reference_type"], row["debit"]) for row in entries], [("Books Payment", Decimal(30))]
+		)
+
 	def test_trial_balance_splits_opening_and_closing_balances(self):
 		for date, debit, credit in (
 			("2044-12-31", 100, 20),
@@ -124,7 +135,7 @@ def _account(label, root_type, parent=None, is_group=0):
 	).insert()
 
 
-def _post(date, account, debit, credit, voucher=None):
+def _post(date, account, debit, credit, voucher=None, voucher_type=VOUCHER):
 	frappe.get_doc(
 		{
 			"doctype": "Books Ledger Entry",
@@ -132,7 +143,7 @@ def _post(date, account, debit, credit, voucher=None):
 			"account": account,
 			"debit": debit,
 			"credit": credit,
-			"voucher_type": VOUCHER,
+			"voucher_type": voucher_type,
 			"voucher_no": voucher or unique_name("JV"),
 		}
 	).insert(ignore_links=True)
@@ -208,6 +219,12 @@ class IntegrationTestStockReports(IntegrationTestCase):
 
 		for row in rows:
 			self.assertRegex(row["date"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[+-]\d{2}:\d{2}$")
+
+	def test_stock_ledger_filters_and_shows_documents_by_doctype(self):
+		rows = _run("Books Stock Ledger", item=self.item, reference_type="Books Stock Movement")
+
+		self.assertEqual([row["reference_type"] for row in rows], ["Books Stock Movement"] * 3)
+		self.assertEqual(_run("Books Stock Ledger", item=self.item, reference_type="Books Shipment"), [])
 
 	def test_stock_ledger_groups_rows_and_numbers_them_in_order(self):
 		other = self._item()

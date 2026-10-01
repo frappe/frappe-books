@@ -1,0 +1,193 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { parseCSV } from './helpers/accounting.mjs';
+import { loadFrappeModels } from './helpers/frappeModels.mjs';
+import {
+  frappeModels,
+  getCsvExportData,
+  getDocType,
+  getExportFields,
+  getExportTableFields,
+  getJsonExportData,
+  getSchema,
+  stubFrappe,
+} from './helpers/frappe.mjs';
+
+await loadFrappeModels(frappeModels);
+
+const field = (fieldname, label, fieldtype = 'Data') => ({
+  fieldname,
+  label,
+  fieldtype,
+  export: true,
+});
+
+test('the wizard offers the fields of the DocType and of its tables', () => {
+  const fields = getSchema('SalesInvoice').fields;
+  const exported = getExportFields(fields);
+  const items = getExportTableFields(fields).find(
+    ({ fieldname }) => fieldname === 'items'
+  );
+
+  assert.deepEqual(
+    exported.slice(0, 2).map(({ fieldname, label }) => [fieldname, label]),
+    [
+      ['name', 'Invoice No'],
+      ['number_series', 'Number Series'],
+    ]
+  );
+  assert.equal(
+    exported.find(({ fieldname }) => fieldname === 'attachment').export,
+    false
+  );
+  assert.equal(items.target, 'SalesInvoiceItem');
+  assert.ok(items.fields.some(({ fieldname }) => fieldname === 'item'));
+  assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'name'));
+});
+
+test('every exported table is headed by the label of its rows, not their doctype', () => {
+  const lists = Object.keys(frappeModels).filter(
+    (schemaName) => !getDocType(schemaName).meta.issingle
+  );
+  const doctypeLabels = lists.flatMap((schemaName) =>
+    Object.values(getDocType(schemaName).tables)
+      .filter(({ doctype, schema }) => schema.label === doctype)
+      .map(({ doctype }) => `${schemaName}: ${doctype}`)
+  );
+
+  assert.deepEqual(doctypeLabels, []);
+  assert.equal(getSchema('TaxDetail').label, 'Tax Detail');
+  assert.equal(getSchema('UOMConversionItem').label, 'UOM Conversion Item');
+});
+
+test('a list exports from the framework a page at a time, in list order', async () => {
+  const names = Array.from({ length: 700 }, (_, i) => ({ name: `JV-${i}` }));
+  const requests = stubFrappe(({ params }) => ({
+    data: names.slice(params.start, params.start + params.limit),
+  }));
+  const query = {
+    schemaName: 'JournalEntry',
+    fields: [field('name', 'Entry No')],
+    tableFields: [],
+    filters: { name: ['like', 'JV%'], submitted: ['=', 1] },
+  };
+
+  const limited = await getJsonExportData({ ...query, limit: 1 });
+  assert.deepEqual(JSON.parse(limited), [{ name: 'JV-0' }]);
+  assert.equal(requests[0].path, '/api/v2/document/Books Journal Entry');
+  assert.deepEqual(requests[0].params, {
+    fields: ['name'],
+    filters: [
+      ['name', 'like', 'JV%'],
+      ['docstatus', 'in', [1, 2]],
+    ],
+    order_by: 'posting_date desc, creation desc',
+    start: 0,
+    limit: 1,
+  });
+
+  requests.length = 0;
+  const all = await getJsonExportData({ ...query, limit: null });
+  assert.equal(JSON.parse(all).length, 700);
+  assert.deepEqual(
+    requests.map(({ params }) => [params.start, params.limit]),
+    [
+      [0, 500],
+      [500, 500],
+    ]
+  );
+});
+
+test("CSV repeats a document's values on each row of its tables", async () => {
+  const requests = stubFrappe(() => ({
+    data: [
+      {
+        name: 'SINV-1',
+        party: 'Acme',
+        items: [
+          { item: 'Pen', rate: 10 },
+          { item: 'Ink', rate: 5 },
+        ],
+      },
+      { name: 'SINV-2', party: 'Bolt', items: [] },
+    ],
+  }));
+  const csv = await getCsvExportData({
+    schemaName: 'SalesInvoice',
+    fields: [
+      field('name', 'Invoice No'),
+      field('party', 'Customer'),
+      field('total_discount', 'Discount', 'Currency'),
+      field('items', 'Items', 'Table'),
+    ],
+    tableFields: [
+      {
+        fieldname: 'items',
+        label: 'Items',
+        target: 'SalesInvoiceItem',
+        fields: [field('item', 'Item'), field('rate', 'Rate', 'Currency')],
+      },
+    ],
+    limit: null,
+    filters: {},
+  });
+
+  // A virtual field has no column to read.
+  assert.deepEqual(requests[0].params.fields, [
+    'name',
+    'party',
+    { items: ['item', 'rate'] },
+  ]);
+  assert.deepEqual(parseCSV(csv), [
+    ['Invoice No', 'Customer', 'Discount', 'Item', 'Rate'],
+    [
+      'SalesInvoice.name',
+      'SalesInvoice.party',
+      'SalesInvoice.total_discount',
+      'SalesInvoiceItem.item',
+      'SalesInvoiceItem.rate',
+    ],
+    ['SINV-1', 'Acme', '', 'Pen', '10'],
+    ['SINV-1', 'Acme', '', 'Ink', '5'],
+    ['SINV-2', 'Bolt', '', '', ''],
+  ]);
+});
+
+test('a schema still on the bridge exports the same nested documents', async () => {
+  const calls = [];
+  const fyo = {
+    db: {
+      fieldMap: { POSOpeningShift: { date: {} } },
+      async getAllRaw(schemaName, options) {
+        calls.push([schemaName, options]);
+        return schemaName === 'POSOpeningShift'
+          ? [{ name: 'POS-1' }, { name: 'POS-2' }]
+          : [{ name: 'row-1', parent: 'POS-1', amount: '12.50' }];
+      },
+    },
+  };
+  const json = await getJsonExportData(
+    {
+      schemaName: 'POSOpeningShift',
+      fields: [field('openingCash', 'Opening Cash', 'Table')],
+      tableFields: [
+        {
+          fieldname: 'openingCash',
+          label: 'Opening Cash',
+          target: 'OpeningCash',
+          fields: [field('amount', 'Amount', 'Currency')],
+        },
+      ],
+      limit: null,
+      filters: {},
+    },
+    fyo
+  );
+
+  assert.deepEqual(JSON.parse(json), [
+    { name: 'POS-1', openingCash: [{ amount: 12.5 }] },
+    { name: 'POS-2' },
+  ]);
+  assert.deepEqual(calls[0][1].orderBy, ['date', 'created']);
+  assert.deepEqual(calls[1][1].filters, { parent: ['in', ['POS-1', 'POS-2']] });
+});

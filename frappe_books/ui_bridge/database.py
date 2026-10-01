@@ -17,7 +17,6 @@ from frappe_books.ui_bridge.mapping import (
 	SOURCE_META_TO_TARGET,
 	custom_field_mapping,
 	schema_mapping,
-	search_fields,
 	source_by_doctype,
 	source_field,
 	source_reference,
@@ -31,7 +30,6 @@ READ_METHODS = {
 	"get",
 	"getAll",
 	"count",
-	"search",
 	"searchLink",
 	"getSingleValues",
 	"exists",
@@ -112,27 +110,12 @@ class BooksDatabaseBridge:
 		)
 		return sum(row.count for row in rows)
 
-	def search(self, text: str, schemas: list[str], limit: int) -> dict[str, list[dict]]:
-		"""Return up to `limit` rows of each schema whose search fields hold the letters of the
-		longest word in `text`, in order, as the interface's fuzzy search matches them."""
-		word = max(text.split(), key=len, default="")
-		return {source_schema: self._search_rows(source_schema, word, limit) for source_schema in schemas}
-
 	def search_link(
 		self, source_schema: str, text: str, filters: dict[str, Any] | None, fields: list[str], limit: int
 	) -> list[dict]:
 		"""Return the link options Frappe's link search finds for `text`."""
 		rows = self._search_widget(source_schema, text.strip(), limit, filters or {}, fields)
 		return [self._row_to_source(source_schema, row, fields) for row in rows]
-
-	def _search_rows(self, source_schema, word, limit):
-		meta = frappe.get_meta(target_doctype(source_schema))
-		fields = search_fields(source_schema)
-		if meta.istable:
-			return self._search_table_rows(source_schema, fields, word, limit)
-		requested = [*fields, "submitted", "cancelled"] if meta.is_submittable else fields
-		rows = self._search_widget(source_schema, word, limit, {}, requested)
-		return [self._row_to_source(source_schema, row, requested) for row in rows]
 
 	def _search_widget(self, source_schema, text, limit, filters, fields):
 		doctype = target_doctype(source_schema)
@@ -148,23 +131,6 @@ class BooksDatabaseBridge:
 			filter_fields=self._target_fields(source_schema, fields),
 			as_dict=True,
 		)
-
-	def _search_table_rows(self, source_schema, fields, word, limit):
-		"""Frappe's search needs a parent doctype for table rows, so their rows are listed directly."""
-		if not fields:
-			return []
-		requested = [*fields, "parent", "parentSchemaName"]
-		pattern = f"%{'%'.join(word)}%"
-		rows = self._get_list_rows(
-			target_doctype(source_schema),
-			fields=self._target_fields(source_schema, requested),
-			filters=[],
-			or_filters=[[target_field(source_schema, field), "like", pattern] for field in fields],
-			order_by="idx",
-			offset=None,
-			limit=limit,
-		)
-		return [self._row_to_source(source_schema, row, requested) for row in rows]
 
 	def _get_list_rows(self, target, **query):
 		if not frappe.get_meta(target).istable:

@@ -29,13 +29,23 @@ await build({
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels, models } from './models';
-      export { getMappedDoc, getStockTransferActions } from './models/helpers';
+      export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getFilterFields } from './src/utils/filterFields';
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
       export * as posSetup from './src/utils/posSetup';
       export * as posStock from './models/inventory/posStock';
+      export { Search } from './src/utils/search';
+      export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
+      export { getRowReference } from './src/components/Report/Mobile/mobileRows';
+      export { Importer, getGridRows } from './src/importer';
+      export {
+        getCsvExportData,
+        getExportFields,
+        getExportTableFields,
+        getJsonExportData,
+      } from './src/utils/export';
     `,
     resolveDir: frontend,
   },
@@ -48,6 +58,13 @@ await build({
     {
       name: 'browser-boundaries',
       setup(builder) {
+        builder.onResolve({ filter: /^src\/router$/ }, () => ({
+          path: 'router',
+          namespace: 'stub',
+        }));
+        builder.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
+          contents: 'export default {}',
+        }));
         builder.onLoad({ filter: /\.vue$/ }, () => ({
           contents: 'export default {}',
         }));
@@ -57,6 +74,7 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 
+globalThis.history = { state: null };
 globalThis.window = {
   location: { hostname: 'books.localhost' },
   frappe: {
@@ -120,6 +138,16 @@ export const {
   pos,
   posSetup,
   posStock,
+  Search,
+  GeneralLedger,
+  getRowReference,
+  getLedgerLink,
+  Importer,
+  getGridRows,
+  getCsvExportData,
+  getExportFields,
+  getExportTableFields,
+  getJsonExportData,
 } = createRequire(import.meta.url)(output);
 
 /**

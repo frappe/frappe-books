@@ -173,12 +173,10 @@ function readJson(url) {
 export function withFieldProperties({
   getSchemas,
   getDoctypeFieldProperties,
-  getDoctypeSearchFields,
 }) {
   const fieldProperties = getDoctypeFieldProperties(doctypes, mapping);
   return {
     fieldProperties,
-    searchFields: getDoctypeSearchFields?.(doctypes, mapping),
     getSchemas: (countryCode, customFields, properties = fieldProperties) =>
       getSchemas(
         countryCode,

@@ -4,7 +4,6 @@ import getCommonExportActions from 'reports/commonExporter';
 import { Report } from 'reports/Report';
 import { ColumnField, PhoneLayout, ReportCell } from 'reports/types';
 import { Field, RawValue } from 'schemas/types';
-import { ReferenceType } from './types';
 
 export class StockLedger extends Report {
   static title = t`Stock Ledger`;
@@ -30,7 +29,8 @@ export class StockLedger extends Report {
   fromDate?: string;
   toDate?: string;
   ascending?: boolean;
-  referenceType?: ReferenceType = 'All';
+  /** The doctype of the entries' documents, or `All`. */
+  referenceType?: string = 'All';
   referenceName?: string;
 
   groupBy: 'none' | 'item' | 'location' | 'reference_name' = 'none';
@@ -75,9 +75,9 @@ export class StockLedger extends Report {
         fieldtype: 'Select',
         options: [
           { label: t`All`, value: 'All' },
-          { label: t`Stock Movements`, value: 'StockMovement' },
-          { label: t`Shipment`, value: 'Shipment' },
-          { label: t`Purchase Receipt`, value: 'PurchaseReceipt' },
+          { label: t`Stock Movements`, value: 'Books Stock Movement' },
+          { label: t`Shipment`, value: 'Books Shipment' },
+          { label: t`Purchase Receipt`, value: 'Books Purchase Receipt' },
         ],
         label: t`Ref Type`,
         fieldname: 'referenceType',

@@ -18,6 +18,7 @@ export interface DocField {
   in_list_view?: number;
   is_custom_field?: number;
   permlevel?: number;
+  is_virtual?: number;
   depends_on?: string;
   read_only_depends_on?: string;
   mandatory_depends_on?: string;
@@ -47,6 +48,7 @@ export interface DocTypeMeta {
   sort_field?: string;
   /** Comma separated fieldnames that search matches besides the name. */
   search_fields?: string;
+  show_name_in_global_search?: number;
   istable?: number;
   issingle?: number;
   is_submittable?: number;

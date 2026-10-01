@@ -14,6 +14,9 @@ import {
   Schema,
   TargetField,
 } from 'schemas/types';
+import { getDocType } from 'src/frappe/doctypes';
+import { getSchema } from 'src/frappe/registry';
+import { getNamingField } from 'src/frappe/schema';
 import { generateCSV, parseCSV } from 'utils/csvParser';
 import { getValueMapFromList } from 'utils/index';
 
@@ -135,7 +138,7 @@ export class Importer {
   };
 
   constructor(schemaName: string, fyo: Fyo) {
-    if (!fyo.schemaMap[schemaName]) {
+    if (!getSchema(schemaName)) {
       throw new ValidationError(
         `Invalid schemaName ${schemaName} found in importer`
       );
@@ -149,7 +152,7 @@ export class Importer {
       labelValueMap: {},
     };
 
-    const templateFields = getTemplateFields(schemaName, fyo);
+    const templateFields = getTemplateFields(schemaName);
     this.assignedTemplateFields = templateFields.map((f) => f.fieldKey);
     this.templateFieldsMap = new Map();
     this.templateFieldsPicked = new Map();
@@ -303,7 +306,7 @@ export class Importer {
 
   /** The assigned columns Frappe imports, with the column key it reads each from. */
   getImportColumns(): ImportColumn[] {
-    const schema = this.fyo.schemaMap[this.schemaName]!;
+    const schema = getSchema(this.schemaName)!;
     return this.assignedTemplateFields.flatMap((fieldKey, index) => {
       const field = this.templateFieldsMap.get(fieldKey ?? '');
       const key = field && getImportColumnKey(field, schema);
@@ -330,8 +333,13 @@ export class Importer {
     return String(this.valueMatrix[index]?.[this.getNameIndex()]?.value ?? '');
   }
 
+  /** The column of the field that names a document: its naming field, or its name. */
   getNameIndex(): number {
-    return this.assignedTemplateFields.indexOf(`${this.schemaName}.name`);
+    const { meta } = getDocType(this.schemaName);
+    const fieldname = getNamingField(meta) ?? 'name';
+    return this.assignedTemplateFields.indexOf(
+      `${this.schemaName}.${fieldname}`
+    );
   }
 
   /** A document's value in a parent column: its last row with one wins. */
@@ -614,10 +622,10 @@ function getTemplateHeaderMaps(fields: TemplateField[]) {
   return { fieldKeysByHeader, headersByFieldKey };
 }
 
-function getTemplateFields(schemaName: string, fyo: Fyo): TemplateField[] {
+function getTemplateFields(schemaName: string): TemplateField[] {
   const fields: TemplateField[] = [];
   const schemas: { schema: Schema; parentSchemaChildField?: TargetField }[] = [
-    { schema: fyo.schemaMap[schemaName]! },
+    { schema: getSchema(schemaName)! },
   ];
   while (schemas.length) {
     const { schema, parentSchemaChildField } = schemas.pop()!;
@@ -628,7 +636,7 @@ function getTemplateFields(schemaName: string, fyo: Fyo): TemplateField[] {
 
       if (field.fieldtype === FieldTypeEnum.Table) {
         schemas.push({
-          schema: fyo.schemaMap[field.target]!,
+          schema: getSchema(field.target)!,
           parentSchemaChildField: field,
         });
       }
@@ -639,10 +647,19 @@ function getTemplateFields(schemaName: string, fyo: Fyo): TemplateField[] {
     }
   }
 
-  return fields;
+  // The name groups a document's rows, so it comes first.
+  const nameIndex = fields.findIndex(
+    (field) => field.fieldKey === `${schemaName}.name`
+  );
+  return nameIndex > 0
+    ? [fields[nameIndex], ...fields.filter((_, i) => i !== nameIndex)]
+    : fields;
 }
 
-/** An editable copy of the field. Child rows are checked on save, so none is required here. */
+/**
+ * An editable copy of the field. Child rows are checked on save, so none is
+ * required here; a document's name groups its rows, so it is.
+ */
 function getTemplateField(
   field: Field,
   schema: Schema,
@@ -651,7 +668,7 @@ function getTemplateField(
   return {
     ...field,
     readOnly: false,
-    required: schema.isChild ? false : field.required,
+    required: !schema.isChild && (field.required || field.fieldname === 'name'),
     schemaName: schema.name,
     schemaLabel: schema.label,
     fieldKey: `${schema.name}.${field.fieldname}`,
@@ -668,12 +685,13 @@ export function getColumnLabel(field: TemplateField): string {
 }
 
 function shouldSkipField(field: Field, schema: Schema): boolean {
-  if (field.computed || field.meta) {
-    return true;
-  }
-
+  // The name of a numbered document only groups its rows.
   if (schema.naming === 'numberSeries' && field.fieldname === 'name') {
     return false;
+  }
+
+  if (field.computed || field.meta) {
+    return true;
   }
 
   if (field.hidden) {
@@ -690,23 +708,18 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
 /**
  * The column Frappe's Data Import reads a template field from. Frappe names
  * numbered documents itself, so their name only groups the rows and is not
- * imported, and neither are child row names.
+ * imported.
  */
 function getImportColumnKey(
   field: TemplateField,
   schema: Schema
 ): string | null {
   if (field.parentSchemaChildField) {
-    const table = field.parentSchemaChildField.frappeFieldname;
-    return field.frappeFieldname ? `${table}.${field.frappeFieldname}` : null;
-  }
-
-  if (field.frappeFieldname) {
-    return field.frappeFieldname;
+    return `${field.parentSchemaChildField.fieldname}.${field.fieldname}`;
   }
 
   if (field.fieldname !== 'name') {
-    throw new Error(`${field.fieldKey} has no DocType field to import`);
+    return field.fieldname;
   }
 
   return schema.naming === 'manual' ? 'name' : null;

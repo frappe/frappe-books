@@ -188,7 +188,7 @@ test('changing report filters resets the page even when the row count is unchang
   page,
 }) => {
   for (const [field, value] of [
-    ['referenceType', 'Shipment'],
+    ['referenceType', 'Books Shipment'],
     ['item', 'Keyboard'],
     ['fromDate', '2026-09-01'],
     ['groupBy', 'item'],

@@ -203,4 +203,6 @@ test("a field is filtered by its document's own model, else its schema's", () =>
   assert.equal(getFieldModel('Item', new BridgeItem()), BridgeItem);
   assert.equal(getFieldModel('Item', { schemaName: 'Order' }), TestItem);
   assert.equal(getFieldModel('Item'), TestItem);
+  // A report's link filter has neither a document nor a schema.
+  assert.equal(getFieldModel(undefined, undefined), undefined);
 });

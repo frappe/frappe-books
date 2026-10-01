@@ -107,6 +107,6 @@ test('a new number series saves with a labelled reference type', async ({
 async function openNewEntry(page: Page, schemaName: string) {
   await page.goto(`/books/list/${schemaName}`);
   await waitForBooks(page);
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/books/edit/${schemaName}/`));
 }

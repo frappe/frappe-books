@@ -11,7 +11,7 @@ test('a new customer saves with an address made from its link', async ({
 }) => {
   const name = `Form Customer ${Date.now()}`;
   const addressName = `${name} Office`;
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/Party\//);
   await page
     .getByRole('textbox', { name: 'Name (required)', exact: true })
@@ -47,7 +47,7 @@ test('a new customer saves with an address made from its link', async ({
 test('a party email is checked as Frappe checks it, with the Books message', async ({
   page,
 }) => {
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill('asha@');
   await page.keyboard.press('Tab');
   await expect(
@@ -83,7 +83,7 @@ test('a pricing rule shows the fields of its discount scheme', async ({
 }) => {
   await page.goto('/books/list/PricingRule');
   await waitForBooks(page);
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'ID' })).toBeVisible();
   await expect(page.getByText('Free Item', { exact: true })).toBeVisible();
 

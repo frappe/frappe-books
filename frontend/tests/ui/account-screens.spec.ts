@@ -62,7 +62,7 @@ test('the account list makes no accounts and opens one by name', async ({
   await page.goto('/books/list/Account');
   await waitForBooks(page);
   await expect(
-    page.getByRole('button', { name: 'Create new entry' })
+    page.getByRole('button', { name: 'New', exact: true })
   ).toHaveCount(0);
   await expect(page.getByText('Account Name', { exact: true })).toBeVisible();
 

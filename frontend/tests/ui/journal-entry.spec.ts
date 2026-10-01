@@ -10,7 +10,7 @@ const run = Date.now().toString(36);
 test('a new journal entry takes its series and balances its rows', async ({
   page,
 }) => {
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/JournalEntry\//);
   await expect(
     page.getByRole('textbox', { name: 'Entry No (required)', exact: true })

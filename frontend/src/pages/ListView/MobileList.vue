@@ -1,36 +1,51 @@
 <template>
   <MobilePullToRefresh :refresh="refresh" class="flex flex-col">
-    <div v-if="isLoading" aria-busy="true" :aria-label="t`Loading`">
-      <div
+    <FrappeList
+      v-if="isLoading"
+      class="list-row-px-4"
+      :columns="['minmax(0,1fr)', 'auto']"
+      aria-busy="true"
+      :aria-label="t`Loading`"
+    >
+      <FrappeListRow
         v-for="(width, index) in skeletonWidths"
         :key="index"
-        class="flex h-[68px] flex-col justify-center gap-2.5 border-b border-outline-gray-1 px-4"
+        class="h-17"
       >
-        <span class="flex justify-between">
-          <span
-            class="h-[13px] rounded-[6px] bg-surface-gray-2"
-            :style="{ width: `${width}px` }"
-          />
-          <span class="h-[13px] w-[84px] rounded-[6px] bg-surface-gray-2" />
-        </span>
-        <span class="flex justify-between">
-          <span class="h-[11px] w-[120px] rounded-[6px] bg-surface-gray-1" />
-          <span class="h-[11px] w-12 rounded-full bg-surface-gray-1" />
-        </span>
-      </div>
-    </div>
+        <FrappeListCell>
+          <div class="flex flex-col gap-2">
+            <FrappeSkeleton
+              class="h-4 rounded-4"
+              :style="{ width: `${width}px` }"
+            />
+            <FrappeSkeleton class="h-3.5 w-28 rounded-4" />
+          </div>
+        </FrappeListCell>
+        <FrappeListCell class="justify-end">
+          <div class="flex flex-col items-end gap-2">
+            <FrappeSkeleton class="h-4 w-20 rounded-4" />
+            <FrappeSkeleton class="h-3.5 w-12 rounded-full" />
+          </div>
+        </FrappeListCell>
+      </FrappeListRow>
+    </FrappeList>
 
     <template v-else-if="rows.length">
-      <MobileListRow
-        v-for="row in rows"
-        :key="String(row.name)"
-        :row="row"
-        :layout="layout"
-        :selected="
-          isSelectionMode ? selectedItems.includes(String(row.name)) : undefined
-        "
-        @open="onTap(String(row.name))"
-      />
+      <FrappeList
+        class="list-row-px-4"
+        :columns="['minmax(0,1fr)', 'auto']"
+        :selectable="isSelectionMode"
+        :selection="selectedItems"
+        @update:selection="(items: string[]) => $emit('updateSelection', items)"
+      >
+        <MobileListRow
+          v-for="row in rows"
+          :key="String(row.name)"
+          :row="row"
+          :layout="layout"
+          @open="$emit('openDoc', String(row.name))"
+        />
+      </FrappeList>
       <div class="flex flex-col items-center gap-2.5 px-4 pb-6 pt-4">
         <p class="text-sm tabular-nums text-ink-gray-5">
           {{ t`${rows.length} of ${total}` }}
@@ -45,14 +60,16 @@
       </div>
     </template>
 
-    <div
+    <MobileEmptyState
       v-else
-      class="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-8"
+      class="flex-1 py-16"
+      :icon="isFiltered ? 'lucide-search-x' : 'lucide-inbox'"
+      :title="t`No entries found`"
+      :description="isFiltered ? t`No results match the current filters` : ''"
     >
-      <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="text-base text-ink-gray-8">{{ t`No entries found` }}</p>
       <FrappeButton
         v-if="isFiltered"
+        class="mt-2"
         variant="solid"
         size="lg"
         :label="t`Clear filters`"
@@ -60,17 +77,25 @@
       />
       <FrappeButton
         v-else-if="canCreate"
+        class="mt-2"
         variant="solid"
         size="lg"
+        icon-left="lucide-plus"
         :label="t`Make Entry`"
         @click="$emit('makeNewDoc')"
       />
-    </div>
+    </MobileEmptyState>
   </MobilePullToRefresh>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import { Button as FrappeButton, Skeleton as FrappeSkeleton } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import type { RenderData } from 'fyo/model/types';
+import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
 import MobilePullToRefresh from 'src/mobile/MobilePullToRefresh.vue';
 import { defineComponent, type PropType } from 'vue';
 import type { ListColumn } from './listColumns';
@@ -79,7 +104,16 @@ import { getMobileRowLayout, type MobileRowLayout } from './mobileRowLayout';
 
 export default defineComponent({
   name: 'MobileList',
-  components: { FrappeButton, MobileListRow, MobilePullToRefresh },
+  components: {
+    FrappeButton,
+    FrappeList,
+    FrappeListCell,
+    FrappeListRow,
+    FrappeSkeleton,
+    MobileEmptyState,
+    MobileListRow,
+    MobilePullToRefresh,
+  },
   props: {
     schemaName: { type: String, required: true },
     rows: { type: Array as PropType<RenderData[]>, required: true },
@@ -109,19 +143,6 @@ export default defineComponent({
   computed: {
     layout(): MobileRowLayout {
       return getMobileRowLayout(this.schemaName, this.columns);
-    },
-  },
-  methods: {
-    onTap(name: string) {
-      if (!this.isSelectionMode) {
-        this.$emit('openDoc', name);
-        return;
-      }
-
-      const selected = this.selectedItems.includes(name)
-        ? this.selectedItems.filter((item) => item !== name)
-        : [...this.selectedItems, name];
-      this.$emit('updateSelection', selected);
     },
   },
 });

@@ -31,8 +31,8 @@
         @setup-complete="completeSetup"
         @setup-canceled="leaveBooks"
       />
-      <MobileDesk v-else-if="isMobile" :dark-mode="darkMode" />
-      <Desk v-else class="flex-1" :dark-mode="darkMode" />
+      <MobileDesk v-else-if="isMobile" />
+      <Desk v-else class="flex-1" />
       <DialogSheet v-if="isMobile" />
     </div>
   </FrappeUIProvider>
@@ -58,7 +58,6 @@ import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
-import { setDarkMode } from 'src/utils/theme';
 import { systemLanguageRef } from 'src/utils/refs';
 import { isMobile } from 'src/utils/viewport';
 import { useKeys } from 'src/utils/vueUtils';
@@ -75,6 +74,7 @@ import {
   Alert as FrappeAlert,
   FrappeUIProvider,
   Spinner as FrappeSpinner,
+  useColorScheme,
 } from 'frappe-ui';
 import { call } from './api';
 
@@ -108,7 +108,6 @@ export default defineComponent({
     return {
       loading: true,
       needsSetup: false,
-      darkMode: false,
       startupError: '',
     };
   },
@@ -160,8 +159,9 @@ export default defineComponent({
         ...singles.map((name) => getFrappeDoc(name, name)),
       ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
-      this.darkMode = Boolean(fyo.singles.SystemSettings?.dark_mode);
-      setDarkMode(this.darkMode);
+      useColorScheme().setColorScheme(
+        fyo.singles.SystemSettings?.dark_mode ? 'dark' : 'light'
+      );
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
         this.searcher.initialize();

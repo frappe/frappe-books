@@ -76,8 +76,9 @@ export async function openQuickEdit({
   await router.push({ query, replace });
 }
 
-export async function openSettings(tab: SettingsTab) {
-  await routeTo({ path: '/settings', query: { tab } });
+/** Desktop shows settings in a dialog, phones on a page (see the router). */
+export async function openSettings(tab?: SettingsTab) {
+  await routeTo({ path: '/settings', query: tab ? { tab } : {} });
 }
 
 export async function routeTo(route: RouteLocationRaw) {
@@ -100,10 +101,10 @@ export async function deleteDocWithPrompt(doc: Doc) {
   return (await showDialog({
     title: t`Delete ${getDocReferenceLabel(doc)}?`,
     detail,
-    type: 'warning',
+    destructive: true,
     buttons: [
       {
-        label: t`Yes`,
+        label: t`Delete`,
         async action() {
           try {
             await doc.delete();
@@ -117,7 +118,7 @@ export async function deleteDocWithPrompt(doc: Doc) {
         isPrimary: true,
       },
       {
-        label: t`No`,
+        label: t`Cancel`,
         action() {
           return false;
         },

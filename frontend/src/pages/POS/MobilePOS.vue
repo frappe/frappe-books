@@ -42,7 +42,7 @@
         @click="$emit('addItem', item)"
       >
         <span
-          class="flex h-[84px] items-center justify-center overflow-hidden rounded-4 bg-surface-gray-2 text-3xl-semibold text-ink-gray-5"
+          class="flex h-21 items-center justify-center overflow-hidden rounded-4 bg-surface-gray-2 text-3xl-semibold text-ink-gray-5"
         >
           <img
             v-if="item.image"
@@ -53,7 +53,7 @@
           <template v-else>{{ getItemInitials(item.name) }}</template>
         </span>
         <span
-          class="line-clamp-2 min-h-[35px] px-1 text-base-medium leading-tight text-ink-gray-9"
+          class="line-clamp-2 min-h-[35px] px-1 text-base-medium leading-tight text-ink-gray-8"
         >
           {{ item.name }}
         </span>
@@ -76,30 +76,31 @@
         />
       </button>
     </div>
-    <div
+    <MobileEmptyState
       v-else
-      class="flex flex-1 flex-col items-center justify-center gap-3 px-10 pb-16 text-center"
-    >
-      <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="text-base text-ink-gray-8">{{ t`No items found` }}</p>
-    </div>
+      class="flex-1 pb-16"
+      :icon="searchTerm ? 'lucide-search-x' : 'lucide-package'"
+      :title="t`No items found`"
+    />
 
-    <div
-      v-if="sinvDoc.items?.length"
-      class="sticky bottom-0 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
-      <button
-        type="button"
-        class="flex h-12 w-full items-center gap-3 rounded-5 bg-surface-gray-10 px-4 text-md-medium text-ink-base hover:bg-surface-gray-9 active:bg-surface-gray-8"
+    <MobileFooter v-if="sinvDoc.items?.length">
+      <FrappeButton
+        class="flex-1"
+        variant="solid"
+        size="lg"
+        icon-left="lucide-shopping-cart"
         @click="sheet = 'cart'"
       >
-        <FrappeIcon icon="lucide-shopping-cart" class="size-[18px]" />
-        <span class="flex-1 text-start">{{ itemCountLabel }}</span>
-        <span class="tabular-nums" dir="ltr">
-          {{ fyo.format(sinvDoc.grand_total ?? fyo.pesa(0), 'Currency') }}
-        </span>
-      </button>
-    </div>
+        {{ itemCountLabel }}
+        <template #suffix>
+          <span class="ms-auto tabular-nums">
+            <span dir="ltr">
+              {{ fyo.format(sinvDoc.grand_total ?? fyo.pesa(0), 'Currency') }}
+            </span>
+          </span>
+        </template>
+      </FrappeButton>
+    </MobileFooter>
 
     <MobilePOSCart
       :open="sheet === 'cart'"
@@ -121,6 +122,7 @@
 import { t } from 'fyo';
 import {
   Badge as FrappeBadge,
+  Button as FrappeButton,
   Icon as FrappeIcon,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
@@ -128,6 +130,8 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { POSItem } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
+import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { getItemInitials } from 'src/utils/pos';
 import {

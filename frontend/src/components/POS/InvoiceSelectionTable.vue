@@ -10,22 +10,22 @@
       :key="getRowName(row)"
       type="button"
       role="radio"
-      class="flex min-h-[60px] w-full items-center gap-3 border-t border-outline-gray-1 px-4 py-2 text-start"
+      class="flex min-h-15 w-full items-center gap-3 border-t border-outline-gray-1 px-4 py-2 text-start"
       :class="isSelected(row) ? 'bg-surface-gray-1' : ''"
       :aria-checked="isSelected(row)"
       @click="setSelected(row, !isSelected(row))"
     >
-      <span class="flex min-w-0 flex-1 flex-col gap-1">
-        <span class="truncate text-md-medium text-ink-gray-9">
+      <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span class="truncate text-lg text-ink-gray-8">
           {{ getRowName(row) }}
         </span>
-        <span class="truncate text-sm text-ink-gray-5">
+        <span class="truncate text-md text-ink-gray-5">
           {{ getRowMeta(row) }}
         </span>
       </span>
       <span
         v-if="amountField"
-        class="shrink-0 text-md-medium tabular-nums text-ink-gray-9"
+        class="shrink-0 text-lg font-medium tabular-nums text-ink-gray-8"
         dir="ltr"
       >
         {{ formatCell(row, amountField) }}
@@ -71,7 +71,7 @@
 
 		<div
 			v-if="rows.length"
-			class="custom-scroll custom-scroll-thumb2 min-h-0 w-full flex-1 overflow-y-auto"
+			class="min-h-0 w-full flex-1 overflow-y-auto"
 		>
 			<FrappeListRows :items="rows" row-key="name">
 				<template #default="{ item: row, value }">

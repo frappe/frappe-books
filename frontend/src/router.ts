@@ -13,10 +13,10 @@ import Settings from 'src/pages/Settings/Settings.vue';
 import TemplateBuilder from 'src/pages/TemplateBuilder/TemplateBuilder.vue';
 import { t } from 'fyo';
 import POS from 'src/pages/POS/POS.vue';
-import type { HistoryState } from 'vue-router';
+import type { HistoryState, RouteLocationNormalized } from 'vue-router';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { isDesktopOnly } from './mobile/availability';
-import { historyState } from './utils/refs';
+import { historyState, settingsDialog } from './utils/refs';
 import { isMobile } from './utils/viewport';
 
 declare module 'vue-router' {
@@ -24,7 +24,7 @@ declare module 'vue-router' {
     sidebarPath?: string;
     /** Left out of the phone layout. */
     desktopOnly?: boolean;
-    /** Phones show a back button instead of the menu. */
+    /** Phones show a back button instead of the menu, and no tabs. */
     pushed?: boolean;
     /** Left out of the desktop layout. */
     phoneOnly?: boolean;
@@ -141,6 +141,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/settings',
     name: 'Settings',
+    meta: { phoneOnly: true },
     components: {
       default: Settings,
       edit: QuickEditForm,
@@ -159,6 +160,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/pos',
     name: 'Point of Sale',
+    meta: { pushed: true },
     components: {
       default: POS,
       edit: QuickEditForm,
@@ -175,7 +177,12 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.VITE_ROUTER_BASE || '/'),
 });
 
-router.beforeEach((to) => {
+router.beforeEach((to, from) => {
+  // SettingsDialog doesn't fit phones yet (frappe/frappe-ui#1244).
+  if (to.name === 'Settings' && !isMobile.value) {
+    return openSettingsDialog(to, from);
+  }
+
   if (isMobile.value ? isDesktopOnly(to) : to.meta.phoneOnly) {
     return '/';
   }
@@ -186,5 +193,19 @@ router.afterEach(() => {
   historyState.forward = !!state.forward;
   historyState.back = !!state.back;
 });
+
+/** Opens over the current page, or over the dashboard on a cold load. */
+function openSettingsDialog(
+  to: RouteLocationNormalized,
+  from: RouteLocationNormalized
+) {
+  const { tab } = to.query;
+  if (typeof tab === 'string') {
+    settingsDialog.tab = tab;
+  }
+
+  settingsDialog.open = true;
+  return from.matched.length ? false : '/';
+}
 
 export default router;

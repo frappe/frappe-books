@@ -40,9 +40,14 @@
       :style="templateBuilderBodyStyles"
     >
       <!-- Template Display Area -->
-      <div class="flex min-h-0 flex-col overflow-auto no-scrollbar">
+      <div class="flex min-h-0 flex-col overflow-hidden">
         <!-- Template Container -->
-        <div v-if="canDisplayPreview" class="p-4 overflow-auto custom-scroll custom-scroll-thumb1">
+        <FrappeScrollArea
+          v-if="canDisplayPreview"
+          orientation="both"
+          class="min-h-0 flex-1"
+          viewport-class="p-4 pb-10"
+        >
           <PrintSheet
             v-if="printDocument"
             ref="printSheet"
@@ -57,7 +62,7 @@
               <p class="whitespace-pre-wrap">{{ error }}</p>
             </template>
           </FrappeAlert>
-        </div>
+        </FrappeScrollArea>
 
         <!-- Display Hints -->
         <p v-else-if="helperMessage" class="text-sm text-ink-gray-7 p-4">
@@ -125,7 +130,7 @@
           <TemplateEditor
             v-if="hints"
             ref="templateEditor"
-            class="overflow-auto custom-scroll custom-scroll-thumb1 h-full"
+            class="h-full overflow-auto"
             :initial-value="doc.html ?? ''"
             :disabled="!canEditTemplate"
             :hints="hints"
@@ -154,7 +159,7 @@
           >
             <template #item-content>
               <div
-                class="overflow-auto custom-scroll custom-scroll-thumb1"
+                class="overflow-auto"
                 style="max-height: 30vh"
               >
                 <TemplateBuilderHint :hints="hints" />
@@ -179,6 +184,7 @@ import { Field, TargetField } from 'schemas/types';
 import {
   Alert as FrappeAlert,
   Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
 import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
@@ -234,6 +240,7 @@ export default defineComponent({
     FrappeButton,
     FrappeAccordion,
     FrappeAlert,
+    FrappeScrollArea,
     DropdownWithActions,
     PrintSheet,
     HorizontalResizer,
@@ -594,7 +601,7 @@ export default defineComponent({
         return this.scale;
       }
 
-      const padding = 16 * 2 /** p-4 */ + 16 * 0.6; /** w-scrollbar */
+      const padding = 16 * 2; /** p-4 */
       const targetWidth = window.innerWidth / 2 - padding;
       const currentWidth = div.getBoundingClientRect().width;
       const targetScale = (targetWidth * this.scale) / currentWidth;

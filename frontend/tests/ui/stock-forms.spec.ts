@@ -21,7 +21,7 @@ test('a stock movement takes its series, rate and locations from the server', as
   const item = await insertItem(page, 'Movement Item', 12);
   await page.goto('/books/list/StockMovement');
   await waitForBooks(page);
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(
     page.getByRole('combobox', { name: 'Number Series' })
   ).toHaveValue('SMOV-');
@@ -88,7 +88,7 @@ test.describe('on a phone', () => {
     await page.goto('/books/list/PurchaseReceipt');
     await waitForBooks(page);
 
-    await page.getByRole('button').filter({ hasText: receipt }).click();
+    await page.getByRole('listitem').filter({ hasText: receipt }).click();
     await expect(page).toHaveURL(
       new RegExp(`/books/edit/PurchaseReceipt/${receipt}$`)
     );

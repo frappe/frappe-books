@@ -19,51 +19,79 @@
     @update-selection="updateSelection"
   />
   <div v-else class="flex flex-col overflow-hidden text-base">
-    <FrappeList
+    <FrappeScrollArea
       v-if="data.length"
-      :columns="listColumns"
-      :selectable="isSelectionMode"
-      :selection="selectedItems"
-      :row-height="48"
-      divider="full"
-      class="custom-scroll custom-scroll-thumb1 min-h-0 flex-1 overflow-y-auto text-ink-gray-8 list-gap-4 list-row-px-3"
-      @update:selection="updateSelection"
+      class="min-h-0 flex-1"
+      viewport-class="px-3 pb-10 sm:px-5"
     >
-      <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
-        <FrappeListHeaderCell class="justify-end pe-2">#</FrappeListHeaderCell>
-        <FrappeListHeaderCell
-          v-for="column in columns"
-          :key="column.label"
-          :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
-        >
-          {{ column.label }}
-        </FrappeListHeaderCell>
-      </FrappeListHeader>
-
-      <FrappeListRows :items="data" row-key="name">
-        <template #default="{ item: row, index, value }">
-          <FrappeListRow
-            :value="value"
-            @click="isSelectionMode ? undefined : $emit('openDoc', row.name)"
-          >
-            <FrappeListCell class="justify-end pe-2 text-ink-gray-5">
-              {{ index + pageStart + 1 }}
-            </FrappeListCell>
-            <FrappeListCell
-              v-for="column in columns"
-              :key="column.label"
-              :class="isNumeric(column.fieldtype) ? 'justify-end text-end' : ''"
+      <FrappeList
+        :columns="listColumns"
+        :selectable="isSelectionMode"
+        :selection="selectedItems"
+        :row-height="48"
+        divider="full"
+        class="-mx-3 text-ink-gray-7 list-gap-4 list-row-px-3"
+        @update:selection="updateSelection"
+      >
+        <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
+          <FrappeListHeaderCell class="justify-end pe-2">#</FrappeListHeaderCell>
+          <template v-for="column in columns" :key="column.label">
+            <FrappeListHeaderCellSort
+              v-if="isSortableField(schemaName, column.fieldname)"
+              :direction="getSortDirection(column.fieldname)"
+              :align="isNumeric(column.fieldtype) ? 'end' : 'start'"
+              @click="sortBy(column.fieldname)"
             >
-              <ListCell
-                class="min-w-0 flex-1"
-                :row="row as RenderData"
-                :column="column"
-              />
-            </FrappeListCell>
-          </FrappeListRow>
-        </template>
-      </FrappeListRows>
-    </FrappeList>
+              {{ column.label }}
+            </FrappeListHeaderCellSort>
+            <FrappeListHeaderCell
+              v-else
+              :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
+            >
+              {{ column.label }}
+            </FrappeListHeaderCell>
+          </template>
+        </FrappeListHeader>
+
+        <FrappeListRows :items="data" row-key="name">
+          <template #default="{ item: row, index, value }">
+            <FrappeListRow
+              :value="value"
+              @click="isSelectionMode ? undefined : $emit('openDoc', row.name)"
+            >
+              <FrappeListCell class="justify-end pe-2 text-ink-gray-5">
+                {{ index + pageStart + 1 }}
+              </FrappeListCell>
+              <FrappeListCell
+                v-for="(column, columnIndex) in columns"
+                :key="column.label"
+                :class="[
+                  isNumeric(column.fieldtype) ? 'justify-end text-end' : '',
+                  columnIndex === 0 ? 'text-ink-gray-8' : '',
+                ]"
+              >
+                <ListCell
+                  class="min-w-0 flex-1"
+                  :row="row as RenderData"
+                  :column="column"
+                />
+              </FrappeListCell>
+            </FrappeListRow>
+          </template>
+        </FrappeListRows>
+      </FrappeList>
+    </FrappeScrollArea>
+
+    <!-- First Load -->
+    <div v-else-if="isLoading" class="px-3 pt-8 sm:px-5" aria-hidden="true">
+      <div
+        v-for="row in 8"
+        :key="row"
+        class="flex h-12 items-center border-b border-outline-gray-1"
+      >
+        <FrappeSkeleton class="h-4 w-full" />
+      </div>
+    </div>
 
     <!-- Pagination Footer -->
     <div v-if="total" class="mt-auto">
@@ -72,38 +100,53 @@
         ref="paginator"
         :item-count="total"
         :allowed-counts="[50, 100, 500]"
-        class="px-4"
+        class="px-3 sm:px-5"
         @index-change="setPageIndices"
       />
     </div>
 
     <!-- Empty State -->
     <div
-      v-if="!total"
-      class="flex flex-col items-center justify-center my-auto"
+      v-if="!isLoading && !total"
+      class="my-auto flex flex-col items-center justify-center gap-3 py-16 text-center"
     >
-      <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="my-3 text-ink-gray-8">
-        {{ t`No entries found` }}
-      </p>
-      <FrappeButton v-if="canCreate" variant="solid" @click="$emit('makeNewDoc')">
-        {{ t`Make Entry` }}
-      </FrappeButton>
+      <div class="rounded-full bg-surface-gray-2 p-3 text-ink-gray-5">
+        <span class="lucide-inbox size-6" aria-hidden="true" />
+      </div>
+      <p class="text-base text-ink-gray-7">{{ t`No entries found` }}</p>
+      <template v-if="canCreate">
+        <p class="text-sm text-ink-gray-5">
+          {{ t`Create one to get started.` }}
+        </p>
+        <FrappeButton
+          class="mt-2"
+          variant="solid"
+          icon-left="lucide-plus"
+          :label="t`Make Entry`"
+          @click="$emit('makeNewDoc')"
+        />
+      </template>
     </div>
   </div>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+  Skeleton as FrappeSkeleton,
+} from 'frappe-ui';
 import { ListViewSettings, RenderData } from 'fyo/model/types';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
   ListHeader as FrappeListHeader,
   ListHeaderCell as FrappeListHeaderCell,
+  ListHeaderCellSort as FrappeListHeaderCellSort,
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
 import Paginator from 'src/components/Paginator.vue';
+import { isSortableField, type ListSort } from 'src/frappe/list';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { loadListData, onListChange } from 'src/utils/listData';
@@ -111,7 +154,11 @@ import { isMobile } from 'src/utils/viewport';
 import { QueryFilter } from 'utils/db/types';
 import { PropType, defineComponent } from 'vue';
 import ListCell from './ListCell.vue';
-import { getListColumns, type ListColumn } from './listColumns';
+import {
+  getColumnTrack,
+  getListColumns,
+  type ListColumn,
+} from './listColumns';
 import MobileList from './MobileList.vue';
 
 const mobilePageLength = 20;
@@ -123,8 +170,11 @@ export default defineComponent({
     FrappeListCell,
     FrappeListHeader,
     FrappeListHeaderCell,
+    FrappeListHeaderCellSort,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
+    FrappeSkeleton,
     ListCell,
     FrappeButton,
     MobileList,
@@ -164,12 +214,13 @@ export default defineComponent({
       selectedItems: [] as string[],
       activeFilters: {} as QueryFilter,
       orFilters: {} as QueryFilter,
+      sort: null as ListSort | null,
       requestId: 0,
     };
   },
   computed: {
     listColumns(): string[] {
-      return ['2rem', ...this.columns.map(() => 'minmax(0, 1fr)')];
+      return ['2rem', ...this.columns.map(getColumnTrack)];
     },
     columns(): ListColumn[] {
       return getListColumns(this.schemaName, this.listConfig);
@@ -192,6 +243,7 @@ export default defineComponent({
         return;
       }
 
+      this.sort = null;
       await this.updateData({});
     },
     filters: {
@@ -207,6 +259,16 @@ export default defineComponent({
   },
   methods: {
     isNumeric,
+    isSortableField,
+    getSortDirection(fieldname: string): ListSort['direction'] | null {
+      return this.sort?.fieldname === fieldname ? this.sort.direction : null;
+    },
+    /** Ascending first, then flips; a new order starts from the first page. */
+    async sortBy(fieldname: string) {
+      const isAscending = this.getSortDirection(fieldname) === 'asc';
+      this.sort = { fieldname, direction: isAscending ? 'desc' : 'asc' };
+      await this.updateData(this.activeFilters, this.orFilters);
+    },
     async setPageIndices({ start, end }: { start: number; end: number }) {
       if (start === this.pageStart && end - start === this.pageLength) {
         return;

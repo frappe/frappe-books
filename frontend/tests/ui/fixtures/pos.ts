@@ -7,6 +7,7 @@ import 'src/router';
 import POS from 'src/pages/POS/POS.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
+import { provideMobileFooter } from 'src/mobile/provideMobileFooter';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { isMobile } from 'src/utils/viewport';
 import { newFrappeDoc } from 'src/frappe/documents';
@@ -21,6 +22,7 @@ async function mount() {
   });
   const posRef = ref<any>();
   const app = createApp({
+    setup: () => ({ footer: provideMobileFooter() }),
     render() {
       if (state.linkControl) {
         return h(ConfigProvider, { dir: state.linkControl.dir as 'ltr' | 'rtl' }, {
@@ -52,7 +54,13 @@ async function mount() {
       return h(FrappeUIProvider, {}, {
         default: () =>
           isMobile.value
-            ? [h(MobileShell, {}, { default: pos }), h(DialogSheet)]
+            ? [
+                h(MobileShell, {}, {
+                  default: pos,
+                  nav: () => h('div', { ref: this.footer.target }),
+                }),
+                h(DialogSheet),
+              ]
             : h('div', { class: 'flex h-screen overflow-hidden' }, [pos()]),
       });
     },

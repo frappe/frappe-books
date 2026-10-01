@@ -129,6 +129,7 @@ export default defineComponent({
         classes.push('[&_input]:text-end');
       }
       if (this.isMobile ? this.invalid : this.showMandatory) {
+        // TextInput's `error` shows a message, not a border (frappe/frappe-ui#1252).
         classes.push('[&_[data-slot=control]]:border-outline-red-3');
       }
       return classes;

@@ -48,7 +48,11 @@
     @update:model-value="selectOption"
     @update:open="onOpenChange"
     @focus="onFocus"
-  />
+  >
+    <template v-if="inlineLabel" #prefix>
+      <span class="text-ink-gray-5">{{ df.label }}</span>
+    </template>
+  </FrappeSelect>
 </template>
 
 <script lang="ts">
@@ -75,6 +79,8 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    /** Names the value inside the trigger where no label is shown. */
+    inlineLabel: Boolean,
   },
   data() {
     return {

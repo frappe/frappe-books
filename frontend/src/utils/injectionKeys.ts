@@ -17,8 +17,12 @@ export const searcherKey = Symbol('searcher') as InjectionKey<
 
 export const shortcutsKey = Symbol('shortcuts') as InjectionKey<Shortcuts>;
 
-export const openDrawerKey = Symbol('openDrawer') as InjectionKey<() => void>;
-
-export const isDrawerOpenKey = Symbol('isDrawerOpen') as InjectionKey<
-  Readonly<Ref<boolean>>
+export const openNavSheetKey = Symbol('openNavSheet') as InjectionKey<
+  () => void
 >;
+
+/** Where phone pages pin their footer, and which pages show one. */
+export const mobileFooterKey = Symbol('mobileFooter') as InjectionKey<{
+  target: Readonly<Ref<HTMLElement | null>>;
+  owners: Set<symbol>;
+}>;

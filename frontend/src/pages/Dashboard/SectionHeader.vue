@@ -1,6 +1,0 @@
-<template>
-  <div class="flex items-baseline justify-between text-ink-gray-9">
-    <span class="font-semibold text-base"><slot name="title"></slot></span>
-    <slot name="action"></slot>
-  </div>
-</template>

@@ -18,7 +18,7 @@
       v-else-if="sequence.length"
       v-model="openGroups"
       type="multiple"
-      class="w-full overflow-y-auto custom-scroll custom-scroll-thumb2 border-t border-outline-gray-1 px-2"
+      class="w-full border-t border-outline-gray-1 px-2"
       :items="groupItems"
     >
       <template #item-suffix="{ item }">
@@ -27,114 +27,110 @@
         </span>
       </template>
       <template #item-content="{ item }">
-        <!-- Entry list -->
-        <div
-          class="entry-container rounded-4 border border-outline-gray-1 overflow-hidden"
-        >
-          <!-- Entry -->
-          <FrappeItemListRow
+        <FrappeList :columns="['minmax(0,1fr)']">
+          <FrappeListRow
             v-for="e of entries[item.value].details"
             :key="String(e.name) + item.value"
-            as="button"
-            type="button"
-            size="md"
-            class="!rounded-none text-start border-b last:border-0 border-outline-gray-1 hover:bg-surface-gray-2"
             @click="routeTo(item.value, String(e.name))"
           >
-            <div class="flex justify-between">
-              <!-- Name -->
-              <p class="font-semibold text-ink-gray-8">
+            <FrappeListCell class="min-w-0 flex-col items-start py-2.5">
+              <p
+                class="max-w-full truncate text-ink-gray-8"
+                :class="isMobile ? 'text-lg' : 'text-base'"
+              >
                 {{ e.name }}
               </p>
-
-              <!-- Date -->
-              <p v-if="getDate(e)" class="text-xs text-ink-gray-6">
+              <p
+                v-if="getDate(e)"
+                class="mt-1.5 text-ink-gray-5"
+                :class="isMobile ? 'text-md' : 'text-sm'"
+              >
                 {{ fyo.format(getDate(e), 'Date') }}
               </p>
-            </div>
-            <div class="flex gap-2 mt-1 pill-container flex-wrap">
-              <!-- Credit or Debit (GLE) -->
-              <FrappeBadge
-                v-if="isPesa(e.credit) && e.credit.isPositive()"
-                theme="gray"
-                variant="subtle"
-              >
-                {{ t`Cr. ${fyo.format(e.credit, 'Currency')}` }}
-              </FrappeBadge>
-              <FrappeBadge
-                v-else-if="isPesa(e.debit) && e.debit.isPositive()"
-                theme="gray"
-                variant="subtle"
-              >
-                {{ t`Dr. ${fyo.format(e.debit, 'Currency')}` }}
-              </FrappeBadge>
+              <div class="mt-1.5 flex flex-wrap gap-1.5 empty:hidden">
+                <!-- Credit or Debit (GLE) -->
+                <FrappeBadge
+                  v-if="isPesa(e.credit) && e.credit.isPositive()"
+                  theme="gray"
+                  variant="subtle"
+                >
+                  {{ t`Cr. ${fyo.format(e.credit, 'Currency')}` }}
+                </FrappeBadge>
+                <FrappeBadge
+                  v-else-if="isPesa(e.debit) && e.debit.isPositive()"
+                  theme="gray"
+                  variant="subtle"
+                >
+                  {{ t`Dr. ${fyo.format(e.debit, 'Currency')}` }}
+                </FrappeBadge>
 
-              <!-- Party or EntryType or Account -->
-              <FrappeBadge
-                v-if="e.party || e.entry_type || e.account"
-                theme="gray"
-                variant="subtle"
-              >
-                {{ e.party || e.entry_type || e.account }}
-              </FrappeBadge>
+                <!-- Party or EntryType or Account -->
+                <FrappeBadge
+                  v-if="e.party || e.entry_type || e.account"
+                  theme="gray"
+                  variant="subtle"
+                >
+                  {{ e.party || e.entry_type || e.account }}
+                </FrappeBadge>
 
-              <FrappeBadge v-if="e.item" theme="gray" variant="subtle">
-                {{ e.item }}
-              </FrappeBadge>
-              <FrappeBadge v-if="e.location" theme="gray" variant="subtle">
-                {{ e.location }}
-              </FrappeBadge>
+                <FrappeBadge v-if="e.item" theme="gray" variant="subtle">
+                  {{ e.item }}
+                </FrappeBadge>
+                <FrappeBadge v-if="e.location" theme="gray" variant="subtle">
+                  {{ e.location }}
+                </FrappeBadge>
 
-              <!-- Amounts -->
-              <FrappeBadge
-                v-if="
-                  isPesa(e.outstanding_amount) && !e.outstanding_amount.isZero()
-                "
-                theme="amber"
-                variant="subtle"
-              >
-                {{
-                  t`Unpaid ${fyo.format(e.outstanding_amount.abs(), 'Currency')}`
-                }}
-              </FrappeBadge>
-              <FrappeBadge
-                v-else-if="isPesa(e.grand_total) && e.grand_total.isPositive()"
-                theme="green"
-                variant="subtle"
-              >
-                {{ fyo.format(e.grand_total, 'Currency') }}
-              </FrappeBadge>
-              <FrappeBadge
-                v-else-if="isPesa(e.amount) && e.amount.isPositive()"
-                theme="green"
-                variant="subtle"
-              >
-                {{ fyo.format(e.amount, 'Currency') }}
-              </FrappeBadge>
+                <!-- Amounts -->
+                <FrappeBadge
+                  v-if="
+                    isPesa(e.outstanding_amount) && !e.outstanding_amount.isZero()
+                  "
+                  theme="amber"
+                  variant="subtle"
+                >
+                  {{
+                    t`Unpaid ${fyo.format(e.outstanding_amount.abs(), 'Currency')}`
+                  }}
+                </FrappeBadge>
+                <FrappeBadge
+                  v-else-if="isPesa(e.grand_total) && e.grand_total.isPositive()"
+                  theme="green"
+                  variant="subtle"
+                >
+                  {{ fyo.format(e.grand_total, 'Currency') }}
+                </FrappeBadge>
+                <FrappeBadge
+                  v-else-if="isPesa(e.amount) && e.amount.isPositive()"
+                  theme="green"
+                  variant="subtle"
+                >
+                  {{ fyo.format(e.amount, 'Currency') }}
+                </FrappeBadge>
 
-              <!-- Quantities -->
-              <FrappeBadge
-                v-if="e.stock_not_transferred"
-                theme="amber"
-                variant="subtle"
-              >
-                {{
-                  t`Pending qty. ${fyo.format(e.stock_not_transferred, 'Float')}`
-                }}
-              </FrappeBadge>
-              <FrappeBadge
-                v-else-if="typeof e.quantity === 'number' && e.quantity"
-                theme="gray"
-                variant="subtle"
-              >
-                {{ t`Qty. ${fyo.format(e.quantity, 'Float')}` }}
-              </FrappeBadge>
-            </div>
-          </FrappeItemListRow>
-        </div>
+                <!-- Quantities -->
+                <FrappeBadge
+                  v-if="e.stock_not_transferred"
+                  theme="amber"
+                  variant="subtle"
+                >
+                  {{
+                    t`Pending qty. ${fyo.format(e.stock_not_transferred, 'Float')}`
+                  }}
+                </FrappeBadge>
+                <FrappeBadge
+                  v-else-if="typeof e.quantity === 'number' && e.quantity"
+                  theme="gray"
+                  variant="subtle"
+                >
+                  {{ t`Qty. ${fyo.format(e.quantity, 'Float')}` }}
+                </FrappeBadge>
+              </div>
+            </FrappeListCell>
+          </FrappeListRow>
+        </FrappeList>
       </template>
     </FrappeAccordion>
-    <p v-else class="p-4 text-sm text-ink-gray-6">
+    <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
       {{ t`No linked entries found` }}
     </p>
   </component>
@@ -150,28 +146,20 @@
   </FrappeBottomSheet>
   <div
     v-else
-    class="w-quick-edit bg-surface-base border-l border-outline-gray-1 overflow-y-auto custom-scroll custom-scroll-thumb2"
+    class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Page Header -->
-    <div
-      class="flex items-center justify-between px-4 h-row-largest sticky top-0 bg-surface-base"
-      style="z-index: 1"
-    >
-      <div class="flex items-center justify-between w-full">
-        <FrappeButton
-          icon="lucide-x"
-          :label="t`Close`"
-          @click="$emit('close')"
-        />
-        <p class="text-xl font-semibold text-ink-gray-6">
-          {{ t`Linked Entries` }}
-        </p>
-      </div>
+    <div class="flex h-12 shrink-0 items-center gap-2 px-3">
+      <FrappeButton icon="lucide-x" :label="t`Close`" @click="$emit('close')" />
+      <h2 class="truncate text-lg-semibold text-ink-gray-8">
+        {{ t`Linked Entries` }}
+      </h2>
     </div>
 
-    <component :is="ReuseEntries" />
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
+      <component :is="ReuseEntries" />
+    </FrappeScrollArea>
   </div>
-
 </template>
 <script lang="ts">
 import { createReusableTemplate } from '@vueuse/core';
@@ -182,9 +170,14 @@ import {
   Badge as FrappeBadge,
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
-  ItemListRow as FrappeItemListRow,
   LoadingText as FrappeLoadingText,
+  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import { Accordion as FrappeAccordion, type AccordionItem } from 'frappe-ui-accordion';
 import { ModelNameEnum } from 'models/types';
 import { getFrappeRows } from 'src/frappe/list';
@@ -204,8 +197,11 @@ export default defineComponent({
     FrappeBadge,
     FrappeBottomSheet,
     FrappeButton,
-    FrappeItemListRow,
+    FrappeList,
+    FrappeListCell,
+    FrappeListRow,
     FrappeLoadingText,
+    FrappeScrollArea,
   },
   props: { doc: { type: Object as PropType<Doc>, required: true } },
   emits: ['close'],
@@ -349,8 +345,3 @@ const linkEntryDisplayFields: Record<string, string[]> = {
   [ModelNameEnum.StockLedgerEntry]: ['name', 'date', 'item', 'location', 'quantity'],
 };
 </script>
-<style scoped>
-.pill-container:empty {
-  display: none;
-}
-</style>

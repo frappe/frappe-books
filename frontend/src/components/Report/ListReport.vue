@@ -1,56 +1,66 @@
 <template>
   <div class="overflow-hidden flex flex-col h-full">
-    <FrappeList
+    <FrappeScrollArea
       v-if="dataSlice.length"
-      :columns="listColumns"
-      :row-height="hconst"
-      divider="full"
-      class="custom-scroll custom-scroll-thumb1 min-h-0 flex-1 overflow-auto px-4 list-gap-0 [--list-row-padding-x:0px]"
+      orientation="both"
+      class="min-h-0 flex-1"
+      viewport-class="px-3 pb-10 sm:px-5"
     >
-      <FrappeListHeader class="sticky top-0 z-10 min-w-max bg-surface-base">
-        <ReportColumnHeader
-          v-for="(column, index) in report.columns"
-          :key="columnWidths.getKey(column)"
-          :ref="
-            (header) => (columnHeaders[columnWidths.getKey(column)] = header)
-          "
-          :label="column.label"
-          :width="columnWidths.get(column)"
-          :direction="languageDirection"
-          :class="getAlignmentClass(column)"
-          @resize="columnWidths.set(column, $event)"
-          @commit="columnWidths.set(column, $event, true)"
-          @fit="fitColumn(column, index)"
-        />
-      </FrappeListHeader>
+      <FrappeList
+        ref="list"
+        :columns="listColumns"
+        :row-height="40"
+        divider="full"
+        class="-mx-3 text-base list-gap-4 list-row-px-3"
+      >
+        <FrappeListHeader class="sticky top-0 z-10 min-w-max bg-surface-base">
+          <ReportColumnHeader
+            v-for="(column, index) in report.columns"
+            :key="columnWidths.getKey(column)"
+            :ref="
+              (header) => (columnHeaders[columnWidths.getKey(column)] = header)
+            "
+            :label="column.label"
+            :width="columnWidths.get(column)"
+            :direction="languageDirection"
+            :class="getAlignmentClass(column)"
+            @resize="columnWidths.set(column, $event)"
+            @commit="columnWidths.set(column, $event, true)"
+            @fit="fitColumn(column, index)"
+          />
+        </FrappeListHeader>
 
-      <FrappeListRows :items="dataSlice" :row-key="getRowKey">
-        <template #default="{ item: row, index, value }">
-          <FrappeListRow
-            v-if="!row.folded"
-            :value="value"
-            :on-click="row.isGroup ? () => onRowClick(row, index) : undefined"
-            :class="row.isGroup ? 'font-medium' : ''"
-          >
-            <FrappeListCell
-              v-for="(cell, cellIndex) in row.cells"
-              :key="`${cellIndex}-${index}-cell`"
-              class="min-w-0 px-3 text-base"
-              :class="[getCellColorClass(cell), getAlignmentClass(cell)]"
-              :style="getCellStyle(cell)"
+        <FrappeListRows :items="dataSlice" :row-key="getRowKey">
+          <template #default="{ item: row, index, value }">
+            <FrappeListRow
+              v-if="!row.folded"
+              :value="value"
+              :on-click="row.isGroup ? () => onRowClick(row, index) : undefined"
             >
-              <ReportOverflowText :value="cell.value" />
-            </FrappeListCell>
-          </FrappeListRow>
-        </template>
-      </FrappeListRows>
-    </FrappeList>
+              <FrappeListCell
+                v-for="(cell, cellIndex) in row.cells"
+                :key="`${cellIndex}-${index}-cell`"
+                class="min-w-0"
+                :class="[
+                  getCellColorClass(cell, row),
+                  getCellTypeClass(cell, row),
+                  getAlignmentClass(cell),
+                ]"
+                :style="getIndentStyle(cell)"
+              >
+                <ReportOverflowText :value="cell.value" />
+              </FrappeListCell>
+            </FrappeListRow>
+          </template>
+        </FrappeListRows>
+      </FrappeList>
+    </FrappeScrollArea>
     <FrappeLoadingText
       v-else-if="report.loading"
       class="mt-20 w-full justify-center"
       :text="t`Loading Report...`"
     />
-    <p v-else class="w-full text-center mt-20 text-ink-gray-8 text-base">
+    <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
       {{ t`No Values to be Displayed` }}
     </p>
 
@@ -59,15 +69,17 @@
       <Paginator
         ref="paginator"
         :item-count="report?.reportData?.length ?? 0"
-        class="px-4"
+        class="px-3 sm:px-5"
         @index-change="setPageIndices"
       />
     </div>
-    <div v-else class="h-4" />
   </div>
 </template>
 <script>
-import { LoadingText as FrappeLoadingText } from 'frappe-ui';
+import {
+  LoadingText as FrappeLoadingText,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { Report } from 'reports/Report';
 import {
   List as FrappeList,
@@ -96,6 +108,7 @@ export default defineComponent({
     ReportOverflowText,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
     Paginator,
   },
   props: {
@@ -110,7 +123,6 @@ export default defineComponent({
     return {
       columnWidths: new ReportColumnWidths(this.report.reportName),
       columnHeaders: {},
-      hconst: 48,
       pageStart: 0,
       pageEnd: 0,
     };
@@ -145,7 +157,8 @@ export default defineComponent({
         column,
         index,
         this.report.reportData,
-        this.columnHeaders[this.columnWidths.getKey(column)].$el
+        this.columnHeaders[this.columnWidths.getKey(column)].$el,
+        this.$refs.list.$el
       );
     },
     getRowKey(row, index) {
@@ -171,26 +184,17 @@ export default defineComponent({
         row = this.dataSlice[r];
       }
     },
-    getCellStyle(cell) {
-      const styles = {};
-
-      if (cell.bold) {
-        styles['font-weight'] = 'bold';
+    getIndentStyle(cell) {
+      return cell.indent
+        ? { paddingInlineStart: `${cell.indent * 2}rem` }
+        : undefined;
+    },
+    getCellTypeClass(cell, row) {
+      const italics = cell.italics ? 'italic' : '';
+      if (row.isGroup) {
+        return [cell.bold ? 'text-sm-bold' : 'text-sm-semibold', italics];
       }
-
-      if (cell.italics) {
-        styles['font-style'] = 'oblique 15deg';
-      }
-
-      if (cell.indent) {
-        if (this.languageDirection === 'rtl') {
-          styles['padding-right'] = `${cell.indent * 2}rem`;
-        } else {
-          styles['padding-left'] = `${cell.indent * 2}rem`;
-        }
-      }
-
-      return styles;
+      return [cell.bold ? 'text-base-bold' : '', italics];
     },
     getAlignmentClass(cell) {
       if (this.languageDirection === 'rtl') {
@@ -207,9 +211,9 @@ export default defineComponent({
       }
       return 'justify-start text-start';
     },
-    getCellColorClass(cell) {
+    getCellColorClass(cell, row) {
       const precision = this.fyo.singles.SystemSettings?.display_precision ?? 2;
-      return getReportCellColorClass(cell, precision);
+      return getReportCellColorClass(cell, precision, row.isGroup);
     },
   },
 });

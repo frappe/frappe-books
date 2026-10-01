@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-w-0 overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-base"
+    class="min-w-0 overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-base"
   >
     <div
       class="flex items-center gap-2 border-b border-outline-gray-2 bg-surface-gray-1 px-3"
@@ -13,69 +13,74 @@
       />
       <h2
         v-if="title"
-        class="min-w-0 flex-1 truncate text-base-semibold text-ink-gray-9"
+        class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-8"
       >
         {{ title }}
       </h2>
-      <span
-        :class="
-          title
-            ? 'text-sm text-ink-gray-5'
-            : 'flex-1 text-sm-medium text-ink-gray-6'
-        "
-      >
+      <span class="text-sm text-ink-gray-5" :class="{ 'flex-1': !title }">
         {{ rowCount }}
       </span>
     </div>
-    <button
-      v-for="({ row, title: rowTitle, meta, amount }, index) of summaries"
-      :key="row.name"
-      type="button"
-      class="flex w-full items-center gap-2.5 border-outline-gray-1 px-3 text-start active:bg-surface-gray-1"
-      :class="[
-        title ? 'min-h-16 py-2.5' : 'min-h-[52px] py-2',
-        { 'border-t': index > 0 },
-      ]"
-      @click="$emit('edit', row)"
-    >
-      <span
-        class="grid size-[22px] shrink-0 place-items-center rounded-[6px] bg-surface-gray-2 text-xs-medium tabular-nums text-ink-gray-6"
+    <FrappeList class="list-gap-2.5 list-row-px-3">
+      <FrappeListRow
+        v-for="{ row, title: rowTitle, meta, amount } of summaries"
+        :key="row.name"
+        :class="title ? 'min-h-16 py-2.5' : 'min-h-13 py-2'"
+        @click="$emit('edit', row)"
       >
-        {{ (row.idx ?? 0) + 1 }}
-      </span>
-      <span class="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span class="truncate text-md-medium text-ink-gray-9">
-          {{ rowTitle || t`Row ${(row.idx ?? 0) + 1}` }}
-        </span>
-        <span v-if="meta" class="truncate text-sm tabular-nums text-ink-gray-5">
-          {{ meta }}
-        </span>
-      </span>
-      <span
-        v-if="amount"
-        class="text-md-medium tabular-nums text-ink-gray-9"
-        dir="ltr"
-      >
-        {{ amount }}
-      </span>
-      <span
-        class="lucide-chevron-right size-4 shrink-0 text-ink-gray-4 rtl-rotate-180"
-        aria-hidden="true"
-      />
-    </button>
+        <FrappeListCell>
+          <span
+            class="grid size-5.5 shrink-0 place-items-center rounded-3 bg-surface-gray-2 text-xs-medium tabular-nums text-ink-gray-6"
+          >
+            {{ (row.idx ?? 0) + 1 }}
+          </span>
+        </FrappeListCell>
+        <FrappeListCell>
+          <div class="min-w-0">
+            <div class="truncate text-lg text-ink-gray-8">
+              {{ rowTitle || t`Row ${(row.idx ?? 0) + 1}` }}
+            </div>
+            <div
+              v-if="meta"
+              class="mt-0.5 truncate text-md tabular-nums text-ink-gray-5"
+            >
+              {{ meta }}
+            </div>
+          </div>
+        </FrappeListCell>
+        <FrappeListCell class="justify-end gap-2.5">
+          <span
+            v-if="amount"
+            class="text-lg font-medium tabular-nums text-ink-gray-8"
+            dir="ltr"
+          >
+            {{ amount }}
+          </span>
+          <span
+            class="lucide-chevron-right size-4 shrink-0 text-ink-gray-4 rtl-rotate-180"
+            aria-hidden="true"
+          />
+        </FrappeListCell>
+      </FrappeListRow>
+    </FrappeList>
     <button
       v-if="canAdd"
       class="flex h-11 w-full items-center gap-2 border-outline-gray-1 px-3 text-md-medium text-ink-gray-8 active:bg-surface-gray-1"
       :class="{ 'border-t': rows.length }"
       @click="$emit('add')"
     >
-      <span class="lucide-plus size-[18px]" aria-hidden="true" />
+      <span class="lucide-plus size-5" aria-hidden="true" />
       {{ t`Add Row` }}
     </button>
   </div>
 </template>
 <script setup lang="ts">
 import { Icon as FrappeIcon } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import { Field } from 'schemas/types';

@@ -93,6 +93,8 @@ export interface DialogOptions {
   type?: ToastType;
   detail?: string | string[];
   buttons?: DialogButton[];
+  /** Confirms an irreversible action: its primary button is red. */
+  destructive?: boolean;
 }
 
 export type DialogButton = {

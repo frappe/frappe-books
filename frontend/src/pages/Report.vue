@@ -9,21 +9,6 @@
           :label="t`Print`"
           @click="routeTo(`/report-print/${reportClassName}`)"
         />
-        <span class="relative">
-          <FrappeButton
-            variant="ghost"
-            size="md"
-            icon="lucide-list-filter"
-            :label="t`Filters`"
-            :disabled="!report"
-            @click="filtersOpen = true"
-          />
-          <span
-            v-if="hasFilterChanges"
-            data-testid="filters-set"
-            class="pointer-events-none absolute end-1 top-1 size-2 rounded-full bg-surface-gray-7 shadow-[0_0_0_1.5px_var(--surface-base)]"
-          />
-        </span>
       </template>
       <DropdownWithActions
         v-for="group of groupedActions"
@@ -50,6 +35,7 @@
         :loading="loading || (report.loading && !report.reportData.length)"
         @open-filters="filtersOpen = true"
         @clear-filters="clearFilters"
+        @reset-filter="resetFilter"
       />
       <MobileReportSkeleton v-else :values="[128]" :height="48" :lines="1" />
       <MobileReportFilters
@@ -61,26 +47,11 @@
       />
     </template>
 
-    <!-- Filters -->
-    <div
+    <ReportFilters
       v-else-if="report && report.filters.length"
-      class="grid grid-cols-5 gap-4 p-4 border-b border-outline-gray-1"
-    >
-      <FormControl
-        v-for="field in report.filters"
-        :key="field.fieldname + '-filter'"
-        :border="true"
-        size="small"
-        class="min-w-0 self-start w-full"
-        :show-label="true"
-        :df="field"
-        :value="report.get(field.fieldname)"
-        :read-only="loading"
-        @change="
-          async (value: DocValue) => await report?.set(field.fieldname, value)
-        "
-      />
-    </div>
+      :report="(report as Report)"
+      :loading="loading"
+    />
 
     <!-- Report Body -->
     <ListReport v-if="report && !isMobile" :report="report" class="" />
@@ -92,13 +63,12 @@ import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { reports } from 'reports';
 import { Report } from 'reports/Report';
-import FormControl from 'src/components/Controls/FormControl.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ListReport from 'src/components/Report/ListReport.vue';
+import ReportFilters from 'src/components/Report/ReportFilters.vue';
 import {
   FilterValues,
-  MobileFilters,
   getDefaultFilters,
 } from 'src/components/Report/Mobile/MobileFilters';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
@@ -115,8 +85,8 @@ import { PropType, computed, defineComponent, inject } from 'vue';
 export default defineComponent({
   components: {
     PageHeader,
-    FormControl,
     ListReport,
+    ReportFilters,
     DropdownWithActions,
     FrappeButton,
     MobileReport,
@@ -172,13 +142,6 @@ export default defineComponent({
       }, {} as Record<string, ActionGroup>);
 
       return Object.values(actionsMap);
-    },
-    hasFilterChanges(): boolean {
-      return (
-        !!this.report &&
-        new MobileFilters(this.report as Report, this.filterDefaults)
-          .hasChanges
-      );
     },
   },
   async activated() {
@@ -238,6 +201,12 @@ export default defineComponent({
     },
     async clearFilters() {
       await this.report?.setFilters(this.filterDefaults);
+      await this.reload();
+    },
+    async resetFilter(fieldname: string) {
+      await this.report?.setFilters({
+        [fieldname]: this.filterDefaults[fieldname],
+      });
       await this.reload();
     },
   },

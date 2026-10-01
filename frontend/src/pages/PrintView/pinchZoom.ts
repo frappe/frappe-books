@@ -4,7 +4,8 @@ const MAX_ZOOM = 4;
 
 /**
  * Two-finger zoom for one element. frappe-ui's MobileShell sets
- * `touch-action: none`, which turns off the browser's own pinch zoom.
+ * `touch-action: none`, which turns off the browser's own pinch zoom
+ * (frappe/frappe-ui#1223).
  */
 export function usePinchZoom() {
   const zoom = ref(1);

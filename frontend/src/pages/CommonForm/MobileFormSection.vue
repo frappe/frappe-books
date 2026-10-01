@@ -1,16 +1,16 @@
 <template>
   <section v-if="visibleFields.length" class="border-b border-outline-gray-1">
-    <!-- The press state is inset, as on drawer rows, so it keeps clear of the fields. -->
+    <!-- The press state is inset, as on nav sheet rows, so it keeps clear of the fields. -->
     <div v-if="kind === 'collapsible'" class="px-2 py-1">
       <button
-        class="flex h-11 w-full items-center gap-2 rounded-4 px-2 text-start text-base-semibold text-ink-gray-9 active:bg-surface-gray-1"
+        class="flex h-11 w-full items-center gap-2 rounded-4 px-2 text-start text-lg-semibold text-ink-gray-8 active:bg-surface-gray-1"
         :aria-expanded="isOpen"
         @click="isOpen = !isOpen"
       >
         <span class="min-w-0 flex-1 truncate">{{ title }}</span>
         <span
           v-if="hasError"
-          class="size-1.5 rounded-full bg-surface-red-4"
+          class="size-1.5 rounded-full bg-surface-red-7"
           :aria-label="t`Has errors`"
         />
         <span
@@ -65,13 +65,13 @@
               class="flex justify-between gap-3"
               :class="
                 line.emphasis
-                  ? 'border-t border-outline-gray-1 pt-2.5 font-semibold text-ink-gray-9 first:border-t-0 first:pt-0'
-                  : 'text-ink-gray-8'
+                  ? 'border-t border-outline-gray-1 pt-2.5 font-semibold text-ink-gray-8 first:border-t-0 first:pt-0'
+                  : 'text-ink-gray-7'
               "
               :data-fieldname="group[0].fieldname"
             >
               <span class="min-w-0 truncate">{{ line.label }}</span>
-              <span dir="ltr">{{ line.value }}</span>
+              <span class="tabular-nums" dir="ltr">{{ line.value }}</span>
             </div>
           </template>
           <MobileFormField

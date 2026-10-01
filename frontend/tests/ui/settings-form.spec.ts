@@ -1,13 +1,37 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
-// Frappe serves the settings singles; the Settings page looks and saves as before.
+// Frappe serves the settings singles; desktop shows them in a dialog over the dashboard.
 useBooksSession('/books/settings');
+
+const settings = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
+
+test('settings open over the page they were opened from', async ({ page }) => {
+  await expect(page).toHaveURL(/\/books\/?$/);
+  await expect(settings(page)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(settings(page)).toHaveCount(0);
+
+  await page.goto('/books/list/SalesInvoice');
+  await waitForBooks(page);
+  await page.evaluate(() =>
+    (
+      document.querySelector('#app') as any
+    ).__vue_app__.config.globalProperties.$router.push({
+      path: '/settings',
+      query: { tab: 'PrintSettings' },
+    })
+  );
+  await expect(
+    settings(page).getByRole('tab', { name: 'Print' })
+  ).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/books\/list\/SalesInvoice$/);
+});
 
 test('the System tab saves through Frappe and keeps the value after a reload', async ({
   page,
 }) => {
-  await page.getByRole('radio', { name: 'System' }).click();
+  await settings(page).getByRole('tab', { name: 'System' }).click();
   const bypass = page.getByRole('checkbox', {
     name: 'Allow to bypass filters',
   });
@@ -30,7 +54,8 @@ test('the System tab saves through Frappe and keeps the value after a reload', a
   await reloaded;
   await waitForBooks(page);
 
-  await page.getByRole('radio', { name: 'System' }).click();
+  await page.goto('/books/settings?tab=SystemSettings');
+  await waitForBooks(page);
   await expect(bypass).toBeChecked({ checked: !wasChecked });
   await bypass.click();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -41,7 +66,9 @@ test('the System tab saves through Frappe and keeps the value after a reload', a
 test('the General tab shows the company country read only', async ({
   page,
 }) => {
-  await expect(page.getByRole('radio', { name: 'General' })).toBeChecked();
+  await expect(
+    settings(page).getByRole('tab', { name: 'General' })
+  ).toHaveAttribute('aria-selected', 'true');
   const country = page.getByRole('textbox', { name: 'Country' });
   await expect(country).toBeDisabled();
   await expect(country).not.toHaveValue('');

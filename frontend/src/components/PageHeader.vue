@@ -1,25 +1,7 @@
 <template>
-  <FrappePageHeaderBase
-    v-if="isActive && isMobile && (titleStart || $slots['mobile-bar'])"
-    class="z-10 flex h-[52px] items-center gap-1 bg-surface-base px-3"
-    :class="{ 'border-b': !$slots['mobile-bar'] }"
-  >
-    <slot name="mobile-prefix"><PageHeaderLead /></slot>
-    <slot name="mobile-bar">
-      <h1 class="min-w-0 flex-1 truncate ps-1 text-xl-semibold text-ink-gray-9">
-        {{ title }}
-      </h1>
-      <div class="flex items-center gap-2">
-        <slot name="mobile" />
-      </div>
-    </slot>
-  </FrappePageHeaderBase>
-  <FrappePageHeaderMobile v-else-if="isActive && isMobile" :title="title">
+  <FrappePageHeaderMobile v-if="isActive && isMobile" :title="title">
     <template #prefix>
       <slot name="mobile-prefix"><PageHeaderLead /></slot>
-    </template>
-    <template v-if="$slots['mobile-title']" #default>
-      <slot name="mobile-title" />
     </template>
     <template v-if="$slots.mobile" #suffix>
       <div class="flex items-center gap-2">
@@ -27,11 +9,7 @@
       </div>
     </template>
   </FrappePageHeaderMobile>
-  <FrappePageHeader
-    v-else-if="isActive"
-    class="w-full min-w-0 flex-shrink-0"
-    :class="border ? '' : '!border-b-0'"
-  >
+  <FrappePageHeader v-else-if="isActive" class="w-full min-w-0 flex-shrink-0">
     <div class="me-auto flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
       <FrappeButton
         v-if="!showSidebar"
@@ -48,7 +26,7 @@
         <FrappePageHeaderTitle :title="title" class="block select-none" />
       </h1>
 
-      <div class="flex min-w-0 items-stretch gap-3">
+      <div class="flex min-w-0 items-center gap-3">
         <slot name="left" />
       </div>
     </div>
@@ -61,7 +39,6 @@
 <script lang="ts">
 import {
   PageHeader as FrappePageHeader,
-  PageHeaderBase as FrappePageHeaderBase,
   PageHeaderMobile as FrappePageHeaderMobile,
   PageHeaderTitle as FrappePageHeaderTitle,
   Button as FrappeButton,
@@ -77,7 +54,6 @@ export default defineComponent({
   components: {
     FrappeButton,
     FrappePageHeader,
-    FrappePageHeaderBase,
     FrappePageHeaderMobile,
     FrappePageHeaderTitle,
     PageHeaderLead,
@@ -85,9 +61,6 @@ export default defineComponent({
   },
   props: {
     title: { type: String, default: '' },
-    border: { type: Boolean, default: true },
-    /** Phones start-align the title to fit more actions. */
-    titleStart: Boolean,
   },
   setup() {
     // A teleported header stays in the shell when keep-alive caches its page.

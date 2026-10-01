@@ -8,7 +8,7 @@
         :key="section.title"
         class="flex flex-col gap-2.5"
       >
-        <h3 class="text-sm-medium text-ink-gray-5">{{ section.title }}</h3>
+        <h3 class="text-sm text-ink-gray-5">{{ section.title }}</h3>
         <div class="flex flex-wrap gap-2">
           <FrappeButton
             v-for="filter in section.filters"

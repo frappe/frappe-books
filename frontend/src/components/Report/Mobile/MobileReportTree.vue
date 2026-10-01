@@ -1,6 +1,9 @@
 <template>
   <!-- A scrolling tree scrolls both ways itself, so its header still sticks. -->
-  <div :class="{ 'min-h-0 flex-1 overflow-auto': scroll }">
+  <component
+    :is="scroll ? FrappeScrollArea : 'div'"
+    v-bind="scroll ? { orientation: 'both', class: 'min-h-0 flex-1' } : {}"
+  >
     <div
       class="grid gap-x-2"
       :class="{ 'w-max min-w-full pb-12': scroll }"
@@ -64,10 +67,10 @@
         </span>
       </button>
     </div>
-  </div>
+  </component>
 </template>
 <script setup lang="ts">
-import { Icon as FrappeIcon } from 'frappe-ui';
+import { Icon as FrappeIcon, ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import type { ReportRow } from 'reports/types';
 import { computed, ref } from 'vue';
 import {
@@ -127,13 +130,13 @@ function getIndent(row: MobileTreeRow) {
 function getRowClass(row: MobileTreeRow) {
   if (row.isTotal) {
     const background = props.grouped ? '' : 'bg-surface-gray-1';
-    return `min-h-[52px] text-md-semibold text-ink-gray-9 ${background}`;
+    return `min-h-13 text-md-semibold text-ink-gray-8 ${background}`;
   }
 
   if (row.isGroup) {
     return row.subtitle
-      ? 'min-h-[60px] py-2.5 text-md-medium text-ink-gray-9'
-      : 'min-h-12 py-1.5 text-md-semibold text-ink-gray-9';
+      ? 'min-h-15 py-2.5 text-md-medium text-ink-gray-8'
+      : 'min-h-12 py-1.5 text-md-semibold text-ink-gray-8';
   }
 
   const background = row.isChild ? 'bg-surface-gray-1' : '';

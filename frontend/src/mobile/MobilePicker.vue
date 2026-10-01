@@ -7,7 +7,7 @@
         @open-auto-focus="focusSearch"
       >
         <div
-          class="relative flex h-[52px] shrink-0 items-center border-b border-outline-gray-1 px-3"
+          class="relative flex h-13 shrink-0 items-center border-b border-outline-gray-1 px-3"
         >
           <FrappeButton
             variant="ghost"
@@ -43,50 +43,59 @@
         </div>
 
         <div
-          role="listbox"
-          :aria-label="title"
           class="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-outline-gray-1 pb-[env(safe-area-inset-bottom)]"
         >
-          <button
-            v-for="option in sortedOptions"
-            :key="getKey(option)"
-            role="option"
-            class="flex w-full items-center gap-3 border-b border-outline-gray-1 px-4 text-start active:bg-surface-gray-1"
-            :class="option.actionOnly ? 'h-[52px]' : 'min-h-[60px] py-2'"
-            @click="$emit('select', option)"
+          <FrappeList
+            role="listbox"
+            :aria-label="title"
+            class="list-gap-3 list-row-px-4"
           >
-            <span
-              class="grid size-8 shrink-0 place-items-center rounded-full bg-surface-gray-2 text-sm-semibold text-ink-gray-7"
-              aria-hidden="true"
+            <FrappeListRow
+              v-for="option in sortedOptions"
+              :key="getKey(option)"
+              role="option"
+              :class="option.actionOnly ? 'h-13' : 'min-h-15 py-2'"
+              @click="$emit('select', option)"
             >
-              <span
-                v-if="option.actionOnly"
-                :class="option.icon ?? 'lucide-plus'"
-                class="size-4 text-ink-gray-8"
-              />
-              <template v-else>{{ getInitial(option) }}</template>
-            </span>
-            <span class="flex min-w-0 flex-1 flex-col gap-1">
-              <span class="truncate text-md-medium text-ink-gray-9">
-                {{ getLabel(option) }}
-              </span>
-              <span
-                v-if="getMeta(option)"
-                class="truncate text-sm text-ink-gray-5"
-              >
-                {{ getMeta(option) }}
-              </span>
-            </span>
-          </button>
+              <FrappeListCell>
+                <FrappeAvatar
+                  v-if="option.actionOnly"
+                  size="xl"
+                  aria-hidden="true"
+                >
+                  <span :class="option.icon ?? 'lucide-plus'" class="size-4" />
+                </FrappeAvatar>
+                <FrappeAvatar
+                  v-else
+                  size="xl"
+                  aria-hidden="true"
+                  :label="getLabel(option)"
+                />
+              </FrappeListCell>
+              <FrappeListCell>
+                <div class="min-w-0">
+                  <div class="truncate text-lg text-ink-gray-8">
+                    {{ getLabel(option) }}
+                  </div>
+                  <div
+                    v-if="getMeta(option)"
+                    class="mt-0.5 truncate text-md text-ink-gray-5"
+                  >
+                    {{ getMeta(option) }}
+                  </div>
+                </div>
+              </FrappeListCell>
+            </FrappeListRow>
+          </FrappeList>
           <p
             v-if="loading && !options.length"
-            class="p-4 text-base text-ink-gray-5"
+            class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
           >
             {{ t`Loading...` }}
           </p>
           <p
             v-else-if="!sortedOptions.length"
-            class="p-4 text-base text-ink-gray-5"
+            class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
           >
             {{ emptyText }}
           </p>
@@ -97,10 +106,16 @@
 </template>
 <script setup lang="ts">
 import {
+  Avatar as FrappeAvatar,
   Button as FrappeButton,
   TextInput as FrappeTextInput,
   usePortalTarget,
 } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import { DialogContent, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
 import { computed, ref } from 'vue';
 
@@ -157,10 +172,6 @@ function getMeta(option: PickerOption) {
   }
 
   return option.value !== option.label ? String(option.value ?? '') : '';
-}
-
-function getInitial(option: PickerOption) {
-  return getLabel(option).trim().charAt(0).toUpperCase();
 }
 
 function getKey(option: PickerOption) {

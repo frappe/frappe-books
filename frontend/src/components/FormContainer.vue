@@ -1,63 +1,41 @@
 <template>
-  <div
-    class="
-      flex
-      h-full
-      min-h-0
-      min-w-0
-      w-full
-      bg-surface-gray-1
-      overflow-x-auto
-      custom-scroll custom-scroll-thumb1
-    "
-  >
+  <div class="flex h-full min-h-0 w-full min-w-0 overflow-x-auto">
     <div class="flex min-w-0 flex-1 flex-col">
-      <!-- Page Header (Title, Buttons, etc) -->
-      <PageHeader
-        v-if="showHeader"
-        :title="title"
-        :border="false"
-      >
-        <template #left>
-          <slot name="header-left" />
-        </template>
-        <slot name="header" />
-      </PageHeader>
-
-      <!-- Common Form -->
+      <slot name="header" />
+      <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
+        <div :class="columnClasses">
+          <slot name="body" />
+        </div>
+      </FrappeScrollArea>
       <div
-        class="
-          flex flex-col
-          self-center
-          flex-1
-          min-h-0
-          overflow-auto
-          bg-surface-base
-        "
-        :class="
-          useFullWidth
-            ? 'w-full border-t border-outline-gray-1'
-            : 'w-form border border-outline-gray-1 rounded-6 shadow-lg m-4'
-        "
+        v-if="$slots.footer"
+        class="shrink-0 border-t border-outline-gray-1 py-4"
       >
-        <slot name="body" />
+        <div :class="columnClasses">
+          <slot name="footer" />
+        </div>
       </div>
     </div>
 
-    <!-- Invoice Quick Edit -->
+    <!-- Side panels: quick edit, row editor, linked entries -->
     <slot name="quickedit" />
   </div>
 </template>
 <script lang="ts">
+import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import { defineComponent } from 'vue';
-import PageHeader from './PageHeader.vue';
 
 export default defineComponent({
-  components: { PageHeader },
-  props: {
-    title: { type: String, default: '' },
-    useFullWidth: { type: Boolean, default: false },
-    showHeader: { type: Boolean, default: true },
+  components: { FrappeScrollArea },
+  props: { useFullWidth: Boolean },
+  computed: {
+    /** Full width lifts the reading-width cap. */
+    columnClasses(): string[] {
+      return [
+        'mx-auto w-full px-3 sm:px-5',
+        this.useFullWidth ? '' : 'max-w-[940px]',
+      ];
+    },
   },
 });
 </script>

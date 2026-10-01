@@ -49,7 +49,7 @@
           >
             <FrappeIcon
               :icon="methodIcons[method.type ?? 'Cash']"
-              class="size-[18px] shrink-0"
+              class="size-5 shrink-0"
             />
             <span class="min-w-0 flex-1 truncate">{{ method.name }}</span>
             <FrappeIcon
@@ -105,7 +105,7 @@
       </div>
       <div
         v-if="settlement"
-        class="flex justify-between gap-4 py-1 text-lg-semibold tabular-nums text-ink-gray-9"
+        class="flex justify-between gap-4 py-1 text-lg-semibold tabular-nums text-ink-gray-8"
         role="status"
       >
         <span>{{ settlement.label }}</span>
@@ -130,12 +130,12 @@
       <button
         v-if="showCoupon"
         type="button"
-        class="flex h-14 w-full items-center gap-3 border-b border-outline-gray-1 px-4 text-start text-md-medium text-ink-gray-9"
+        class="flex h-14 w-full items-center gap-3 border-b border-outline-gray-1 px-4 text-start text-lg text-ink-gray-8"
         @click="$emit('applyCoupon')"
       >
         <FrappeIcon
           icon="lucide-ticket-percent"
-          class="size-[18px] text-ink-gray-6"
+          class="size-5 text-ink-gray-5"
         />
         <span class="flex-1">{{ t`Apply coupon code` }}</span>
         <span v-if="appliedCouponsCount" class="text-base text-ink-gray-5">
@@ -148,9 +148,7 @@
       </button>
     </section>
 
-    <div
-      class="sticky bottom-0 mt-auto flex flex-col gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
+    <MobileFooter class="flex-col">
       <FrappeButton
         size="lg"
         variant="solid"
@@ -173,7 +171,7 @@
           @click="$emit('submit')"
         />
       </div>
-    </div>
+    </MobileFooter>
   </div>
 </template>
 
@@ -194,6 +192,7 @@ import DateControl from 'src/components/Controls/Date.vue';
 import { PaymentMethodOption } from 'src/components/POS/types';
 import { getField } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import {
   getCostLines,
   getQuickPaymentAmounts,

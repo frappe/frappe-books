@@ -6,7 +6,7 @@
       :aria-label="group.label"
       class="flex flex-col"
     >
-      <h3 class="px-3 pb-1.5 pt-3 text-xs-medium text-ink-gray-5">
+      <h3 class="px-3 pb-1.5 pt-3 text-sm text-ink-gray-5">
         {{ group.label }}
       </h3>
       <FrappeItemListRow

@@ -39,16 +39,19 @@ export class ReportColumnWidths {
     if (persist) this.save();
   }
 
+  /** Fits the label in the header's font and the values in the body's. */
   fit(
     column: ColumnField,
     index: number,
     rows: ReportData,
-    header: HTMLElement
+    header: HTMLElement,
+    body: HTMLElement
   ) {
     const context = document.createElement('canvas').getContext('2d');
     if (!context) return;
 
     const style = getComputedStyle(header);
+    const bodyStyle = getComputedStyle(body);
     const padding =
       parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
     context.font = style.font;
@@ -57,13 +60,14 @@ export class ReportColumnWidths {
     for (const row of rows) {
       const cell = row.cells[index];
       if (!cell) continue;
-      const weight = cell.bold ? '700' : row.isGroup ? '500' : style.fontWeight;
-      const slant = cell.italics ? 'italic' : style.fontStyle;
-      context.font = `${slant} ${weight} ${style.fontSize} ${style.fontFamily}`;
+      const { fontSize, fontFamily, fontStyle, fontWeight } = bodyStyle;
+      const weight = cell.bold ? '700' : row.isGroup ? '600' : fontWeight;
+      const slant = cell.italics ? 'italic' : fontStyle;
+      context.font = `${slant} ${weight} ${fontSize} ${fontFamily}`;
       const indent = (cell.indent ?? 0) * 2 * this.remSize;
       width = Math.max(
         width,
-        this.measure(context, cell.value, style) + indent
+        this.measure(context, cell.value, bodyStyle) + indent
       );
     }
 

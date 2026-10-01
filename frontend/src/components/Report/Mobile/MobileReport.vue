@@ -4,47 +4,54 @@
     :class="isScrollable ? 'min-h-0 flex-1' : 'min-h-full pb-12'"
   >
     <div
-      class="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none]"
+      class="sticky top-0 z-10 flex shrink-0 gap-2 overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none] *:shrink-0"
     >
-      <button
+      <MobileFiltersButton
+        size="md"
+        :count="changedCount"
+        @click="emit('open-filters')"
+      />
+      <FrappeButton
         v-if="columnOptions.length > 1"
-        type="button"
-        :class="chipClass"
+        size="md"
+        icon-right="lucide-chevron-down"
         @click="columnSheetOpen = true"
       >
         <span class="text-ink-gray-5">{{ t`Column` }}</span>
         {{ valueColumns[0]?.label }}
-        <FrappeIcon
-          icon="lucide-chevron-down"
-          class="size-3.5 text-ink-gray-5"
+      </FrappeButton>
+      <template v-for="chip in filters.chips" :key="chip.fieldname">
+        <MobileFilterChip
+          v-if="chip.isChanged"
+          :label="chip.label"
+          :value="chip.value"
+          @click="emit('reset-filter', chip.fieldname)"
         />
-      </button>
-      <button
-        v-for="chip in filters.chips"
-        :key="chip.fieldname"
-        type="button"
-        :class="chipClass"
-        @click="emit('open-filters')"
-      >
-        <span class="text-ink-gray-5">{{ chip.label }}</span>
-        {{ chip.value }}
-      </button>
+        <FrappeButton v-else size="md" @click="emit('open-filters')">
+          <span class="text-ink-gray-5">{{ chip.label }}</span>
+          {{ chip.value }}
+        </FrappeButton>
+      </template>
     </div>
 
     <MobileReportSkeleton v-if="loading" v-bind="skeleton" />
-    <div
+    <MobileEmptyState
       v-else-if="isEmpty"
-      class="flex flex-1 flex-col items-center justify-center gap-3 px-8 pb-28 pt-8"
+      class="flex-1 pb-28 pt-8"
+      :icon="filters.hasChanges ? 'lucide-search-x' : 'lucide-inbox'"
+      :title="t`No entries found`"
+      :description="
+        filters.hasChanges ? t`No results match the current filters` : ''
+      "
     >
-      <img src="../../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="text-base text-ink-gray-8">{{ t`No entries found` }}</p>
       <FrappeButton
         v-if="filters.hasChanges"
+        class="mt-2"
         size="lg"
         :label="t`Clear filters`"
         @click="emit('clear-filters')"
       />
-    </div>
+    </MobileEmptyState>
     <MobileReportTree
       v-else-if="tree"
       :rows="treeRows"
@@ -78,9 +85,12 @@
 </template>
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core';
-import { Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
+import { Button as FrappeButton } from 'frappe-ui';
 import type { Report } from 'reports/Report';
 import type { ReportRow } from 'reports/types';
+import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import MobileFilterChip from 'src/mobile/MobileFilterChip.vue';
+import MobileFiltersButton from 'src/mobile/MobileFiltersButton.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import { computed, ref } from 'vue';
 import { MobileEntries } from './MobileEntries';
@@ -97,10 +107,11 @@ const props = defineProps<{
   defaults: FilterValues;
   loading: boolean;
 }>();
-const emit = defineEmits<{ 'open-filters': []; 'clear-filters': [] }>();
-
-const chipClass =
-  'flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-gray-2 px-3 text-sm text-ink-gray-8 active:bg-surface-gray-4';
+const emit = defineEmits<{
+  'open-filters': [];
+  'clear-filters': [];
+  'reset-filter': [fieldname: string];
+}>();
 
 const columnChoices = useLocalStorage<Record<string, string>>(
   'books:report-phone-columns',
@@ -124,6 +135,9 @@ const entries = computed(() =>
 const filters = computed(
   () => new MobileFilters(props.report, props.defaults, layout.value.chips)
 );
+const changedCount = computed(
+  () => filters.value.chips.filter((chip) => chip.isChanged).length
+);
 
 const columnOptions = computed(() => tree.value?.columnOptions ?? []);
 const valueColumns = computed(
@@ -138,7 +152,7 @@ const isEmpty = computed(
 );
 const skeleton = computed(() => {
   if (!tree.value) {
-    return { values: [104], height: 64, lines: 2 as const };
+    return { values: [104], height: 68, lines: 2 as const };
   }
 
   const values = valueColumns.value.map(({ width }) => width);

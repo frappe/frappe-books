@@ -10,12 +10,12 @@
     </PageHeader>
 
     <div
-      class="outer-container overflow-y-auto custom-scroll custom-scroll-thumb1"
+      class="outer-container overflow-y-auto"
     >
       <!-- Report Print Display Area -->
       <div
         ref="previewContainer"
-        class="p-4 bg-surface-gray-1 overflow-auto custom-scroll custom-scroll-thumb1"
+        class="p-4 bg-surface-gray-1 overflow-auto"
       >
         <!-- Report Print Display Container -->
         <PrintSheet
@@ -130,7 +130,7 @@
 
         <!-- Pick Columns -->
         <div class="border-t border-outline-gray-1 p-4">
-          <h2 class="text-sm text-ink-gray-6">
+          <h2 class="text-sm text-ink-gray-5">
             {{ t`Pick Columns` }}
           </h2>
           <div
@@ -153,24 +153,23 @@
       </div>
     </div>
 
-    <div
-      v-if="isMobile"
-      class="sticky bottom-0 grid grid-cols-2 gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
-    >
+    <MobileFooter v-if="isMobile">
       <FrappeButton
+        class="flex-1"
         size="lg"
         icon-left="lucide-file-down"
         :label="t`Save as PDF`"
         @click="savePDF()"
       />
       <FrappeButton
+        class="flex-1"
         size="lg"
         variant="solid"
         icon-left="lucide-printer"
         :label="t`Print`"
         @click="savePDF(true)"
       />
-    </div>
+    </MobileFooter>
   </div>
 </template>
 <script lang="ts">
@@ -182,6 +181,7 @@ import Check from 'src/components/Controls/Check.vue';
 import Int from 'src/components/Controls/Int.vue';
 import Select from 'src/components/Controls/Select.vue';
 import PageHeader from 'src/components/PageHeader.vue';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getReport } from 'src/utils/misc';
 import { getPathAndMakePDF } from 'src/utils/printDocument';
 import { showSidebar } from 'src/utils/refs';
@@ -191,7 +191,15 @@ import { PropType, defineComponent } from 'vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 
 export default defineComponent({
-  components: { PageHeader, FrappeButton, Check, Int, PrintSheet, Select },
+  components: {
+    PageHeader,
+    FrappeButton,
+    Check,
+    Int,
+    MobileFooter,
+    PrintSheet,
+    Select,
+  },
   props: {
     reportName: {
       type: String as PropType<keyof typeof reports>,

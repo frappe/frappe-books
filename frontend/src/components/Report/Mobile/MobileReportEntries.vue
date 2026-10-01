@@ -1,49 +1,55 @@
 <template>
   <div>
-    <template v-for="section in sections" :key="section.key">
-      <div v-if="section.date">
-        <div
-          class="sticky top-0 z-[1] border-y border-outline-gray-1 bg-surface-gray-1 px-4 py-2 text-xs-medium text-ink-gray-6"
-        >
-          {{ section.date }}
-        </div>
-        <button
-          v-for="entry in section.entries"
-          :key="entry.key"
-          type="button"
-          data-testid="report-row"
-          class="flex min-h-16 w-full flex-col justify-center gap-1.5 border-b border-outline-gray-1 px-4 py-2.5 text-start active:bg-surface-gray-1"
-          @click="emit('open', entry.source)"
-        >
-          <span
-            class="flex w-full items-baseline gap-3 text-md-medium text-ink-gray-9"
+    <FrappeList class="list-row-px-4" :columns="['minmax(0,1fr)', 'auto']">
+      <template v-for="section in sections" :key="section.key">
+        <FrappeListGroup v-if="section.date" :label="section.date" sticky>
+          <FrappeListRow
+            v-for="entry in section.entries"
+            :key="entry.key"
+            data-testid="report-row"
+            class="h-17"
+            @click="emit('open', entry.source)"
           >
-            <span class="min-w-0 flex-1 truncate">{{ entry.title }}</span>
-            <span class="tabular-nums" dir="ltr">{{ entry.amount }}</span>
-          </span>
-          <span class="flex w-full items-center gap-3 text-sm text-ink-gray-5">
-            <span class="min-w-0 flex-1 truncate">{{ entry.meta }}</span>
-            <span class="whitespace-nowrap tabular-nums">
-              {{ t`Balance` }} <span dir="ltr">{{ entry.balance }}</span>
-            </span>
-          </span>
-        </button>
-      </div>
-      <button
-        v-else
-        type="button"
-        data-testid="report-row"
-        class="flex min-h-[52px] w-full items-center gap-3 border-b border-outline-gray-1 bg-surface-gray-1 px-4 text-start text-md-semibold text-ink-gray-9 active:bg-surface-gray-2"
-        @click="emit('open', section.entries[0].source)"
-      >
-        <span class="min-w-0 flex-1 truncate">
-          {{ section.entries[0].title }}
-        </span>
-        <span class="tabular-nums" dir="ltr">
-          {{ section.entries[0].balance }}
-        </span>
-      </button>
-    </template>
+            <FrappeListCell>
+              <div class="min-w-0">
+                <div class="truncate text-lg text-ink-gray-8">
+                  {{ entry.title }}
+                </div>
+                <div
+                  v-if="entry.meta"
+                  class="mt-0.5 truncate text-md text-ink-gray-5"
+                >
+                  {{ entry.meta }}
+                </div>
+              </div>
+            </FrappeListCell>
+            <FrappeListCell class="justify-end">
+              <div class="whitespace-nowrap text-end tabular-nums">
+                <div class="text-lg font-medium text-ink-gray-8">
+                  <span dir="ltr">{{ entry.amount }}</span>
+                </div>
+                <div class="mt-0.5 text-md text-ink-gray-5">
+                  {{ t`Balance` }} <span dir="ltr">{{ entry.balance }}</span>
+                </div>
+              </div>
+            </FrappeListCell>
+          </FrappeListRow>
+        </FrappeListGroup>
+        <FrappeListRow
+          v-else
+          data-testid="report-row"
+          class="h-13 bg-surface-gray-1 text-lg-semibold text-ink-gray-8"
+          @click="emit('open', section.entries[0].source)"
+        >
+          <FrappeListCell>
+            <span class="truncate">{{ section.entries[0].title }}</span>
+          </FrappeListCell>
+          <FrappeListCell class="justify-end tabular-nums">
+            <span dir="ltr">{{ section.entries[0].balance }}</span>
+          </FrappeListCell>
+        </FrappeListRow>
+      </template>
+    </FrappeList>
 
     <div v-if="hasMore" class="flex justify-center px-4 pt-4">
       <FrappeButton
@@ -56,6 +62,12 @@
 </template>
 <script setup lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListGroup as FrappeListGroup,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import { isEqual } from 'lodash';
 import type { ReportRow } from 'reports/types';
 import { computed, ref, watch } from 'vue';

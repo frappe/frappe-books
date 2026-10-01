@@ -12,32 +12,28 @@
       :menu-items="menuItems"
     />
 
-    <div
-      class="min-h-0 flex-1 overflow-y-auto px-2 py-2 custom-scroll custom-scroll-thumb1"
-    >
-      <div v-for="group in groups" :key="group.label">
-        <FrappeSidebarItem
-          :label="group.label"
-          :route="getPath(group)"
-          :active="Boolean(isGroupActive(group) && !group.items)"
-          :icon="group.icon"
-          class="mb-1"
-        />
-
-        <div v-if="group.items && isGroupActive(group)" class="mb-1">
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="px-2 pt-0.5 pb-10">
+      <div class="space-y-0.5">
+        <template v-for="group in groups" :key="group.label">
           <FrappeSidebarItem
-            v-for="item in group.items"
-            :key="item.label"
-            :label="item.label"
-            :route="getPath(item)"
-            :active="Boolean(isItemActive(item))"
-            class="mb-1 ps-6"
-          >
-            <template #prefix><span class="w-0" /></template>
-          </FrappeSidebarItem>
-        </div>
+            :label="group.label"
+            :route="getPath(group)"
+            :active="Boolean(isGroupActive(group) && !group.items)"
+            :icon="group.icon"
+          />
+          <template v-if="group.items && isGroupActive(group)">
+            <FrappeSidebarItem
+              v-for="item in group.items"
+              :key="item.label"
+              :label="item.label"
+              :route="getPath(item)"
+              :active="Boolean(isItemActive(item))"
+              class="ps-6"
+            />
+          </template>
+        </template>
       </div>
-    </div>
+    </FrappeScrollArea>
 
     <div class="flex-shrink-0 px-2 py-2">
       <FrappeSidebarItem
@@ -64,6 +60,7 @@
 <script lang="ts">
 import {
   KeyboardShortcutsDialog as FrappeKeyboardShortcutsDialog,
+  ScrollArea as FrappeScrollArea,
   Sidebar as FrappeSidebar,
   SidebarHeader as FrappeSidebarHeader,
   SidebarItem as FrappeSidebarItem,
@@ -92,6 +89,7 @@ export default defineComponent({
     FrappeSidebarHeader,
     FrappeSidebarItem,
     FrappeKeyboardShortcutsDialog,
+    FrappeScrollArea,
     ShortcutsHelper,
   },
   setup() {

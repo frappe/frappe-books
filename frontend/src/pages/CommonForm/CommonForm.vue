@@ -39,75 +39,67 @@
     />
   </div>
   <FormContainer v-else :use-full-width="useFullWidth">
-    <template v-if="hasDoc" #header-left>
-      <Barcode v-if="canShowBarcode" @item-selected="addItem" />
-      <ExchangeRate
-        v-if="canShowExchangeRate"
-        v-bind="exchangeRateProps"
-        @change="setExchangeRate"
-      />
-      <p
-        v-if="schema.label && !(canShowBarcode || canShowExchangeRate)"
-        class="text-xl font-semibold items-center text-ink-gray-6"
-      >
-        {{ schema.label }}
-      </p>
+    <template #header>
+      <PageHeader>
+        <template #left>
+          <nav :aria-label="t`Breadcrumb`" class="flex min-w-0">
+            <FrappeBreadcrumbs :items="breadcrumbs" />
+          </nav>
+          <StatusPill v-if="hasDoc" :doc="doc" />
+          <Barcode v-if="canShowBarcode" @item-selected="addItem" />
+          <ExchangeRate
+            v-if="canShowExchangeRate"
+            v-bind="exchangeRateProps"
+            @change="setExchangeRate"
+          />
+        </template>
+        <template v-if="hasDoc">
+          <FrappeButton
+            v-if="canShowLinks"
+            icon="lucide-link"
+            :label="t`View linked entries`"
+            :tooltip="t`View linked entries`"
+            @click="showLinks = true"
+          />
+          <FrappeButton
+            v-if="canPrint"
+            icon="lucide-printer"
+            :label="t`Open Print View`"
+            :tooltip="t`Open Print View`"
+            @click="openPrintView"
+          />
+          <FrappeButton
+            :icon="useFullWidth ? 'lucide-minimize-2' : 'lucide-maximize-2'"
+            :label="t`Toggle between form and full width`"
+            :tooltip="t`Toggle between form and full width`"
+            @click="toggleWidth"
+          />
+          <DropdownWithActions
+            v-for="group of groupedActions"
+            :key="group.label"
+            :type="group.type"
+            :actions="group.actions"
+          >
+            <template v-if="group.group" #default>{{ group.group }}</template>
+          </DropdownWithActions>
+          <FrappeButton
+            v-if="doc.canSave"
+            variant="solid"
+            :disabled="doc.isSyncing"
+            @click="sync"
+          >
+            {{ t`Save` }}
+          </FrappeButton>
+          <FrappeButton v-else-if="doc.canSubmit" variant="solid" @click="submit">{{ t`Submit` }}</FrappeButton>
+        </template>
+      </PageHeader>
     </template>
-    <template v-if="hasDoc" #header>
-      <FrappeButton
-        v-if="canShowLinks"
-        icon="lucide-link"
-        :label="t`View linked entries`"
-        :tooltip="t`View linked entries`"
-        @click="showLinks = true"
-      />
-      <FrappeButton
-        v-if="canPrint"
-        icon="lucide-printer"
-        :label="t`Open Print View`"
-        :tooltip="t`Open Print View`"
-        @click="openPrintView"
-      />
-      <FrappeButton
-        :icon="useFullWidth ? 'lucide-minimize-2' : 'lucide-maximize-2'"
-        :label="t`Toggle between form and full width`"
-        :tooltip="t`Toggle between form and full width`"
-        @click="toggleWidth"
-      />
-      <DropdownWithActions
-        v-for="group of groupedActions"
-        :key="group.label"
-        :type="group.type"
-        :actions="group.actions"
-      >
-        <template v-if="group.group" #default>{{ group.group }}</template>
-      </DropdownWithActions>
-      <FrappeButton
-        v-if="doc?.canSave"
-        variant="solid"
-        :disabled="doc.isSyncing"
-        @click="sync"
-      >
-        {{ t`Save` }}
-      </FrappeButton>
-      <FrappeButton v-else-if="doc?.canSubmit" variant="solid" @click="submit">{{ t`Submit` }}</FrappeButton>
-    </template>
-    <template #body>
-      <FormHeader
-        :form-title="title"
-        class="sticky top-0 bg-surface-base border-b border-outline-gray-1"
-      >
-        <StatusPill v-if="hasDoc" :doc="doc" />
-      </FormHeader>
-
-      <!-- Section Container -->
-      <div v-if="hasDoc" class="overflow-auto custom-scroll custom-scroll-thumb1">
+    <template v-if="hasDoc" #body>
+      <div class="divide-y divide-outline-gray-1">
         <CommonFormSection
           v-for="([n, fields], idx) in activeGroup.entries()"
           :key="n + idx"
-          ref="section"
-          class="p-4"
-          :class="idx !== 0 && activeGroup.size > 1 ? 'border-t border-outline-gray-1' : ''"
+          class="py-5"
           :show-title="activeGroup.size > 1 && n !== t`Default`"
           :title="n"
           :fields="fields"
@@ -119,14 +111,9 @@
           @row-change="updateGroupedFields"
         />
       </div>
-
-      <!-- Tab Bar -->
-      <div
-        v-if="groupedFields && groupedFields.size > 1"
-        class="sticky bottom-0 mt-auto flex-shrink-0 border-t bg-surface-base p-4 border-outline-gray-1"
-      >
-        <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
-      </div>
+    </template>
+    <template v-if="groupedFields && groupedFields.size > 1" #footer>
+      <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
     </template>
     <template #quickedit>
       <Transition name="quickedit">
@@ -157,14 +144,19 @@ import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { getMissingMandatoryFields } from 'fyo/model/helpers';
 import { ValidationError } from 'fyo/utils/errors';
-import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
+import {
+  Breadcrumbs as FrappeBreadcrumbs,
+  Button as FrappeButton,
+  TabButtons as FrappeTabButtons,
+  type BreadcrumbsProps,
+} from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import Barcode from 'src/components/Controls/Barcode.vue';
 import ExchangeRate from 'src/components/Controls/ExchangeRate.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import FormContainer from 'src/components/FormContainer.vue';
-import FormHeader from 'src/components/FormHeader.vue';
+import PageHeader from 'src/components/PageHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getSchema } from 'src/frappe/registry';
@@ -195,9 +187,10 @@ import RowEditForm from './RowEditForm.vue';
 export default defineComponent({
   components: {
     FormContainer,
-    FormHeader,
     CommonFormSection,
+    FrappeBreadcrumbs,
     FrappeButton,
+    PageHeader,
     DropdownWithActions,
     Barcode,
     ExchangeRate,
@@ -343,6 +336,12 @@ export default defineComponent({
       }
 
       return this.docOrNull?.formTitle || this.t`New Entry`;
+    },
+    breadcrumbs(): BreadcrumbsProps['items'] {
+      return [
+        { label: this.schema.label, route: `/list/${this.schemaName}` },
+        { label: this.title },
+      ];
     },
     schema(): Schema {
       const schema = this.docOrNull?.schema ?? getSchema(this.schemaName);

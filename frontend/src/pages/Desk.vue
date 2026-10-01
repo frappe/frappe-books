@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { showSidebar } from 'src/utils/refs';
+import { settingsDialog, showSidebar } from 'src/utils/refs';
 </script>
 <template>
   <FrappeDesktopShell :scroll="false">
     <template #sidebar>
+      <!-- frappe-ui's Sidebar can't hide fully (frappe/frappe-ui#1251). -->
       <Transition name="sidebar">
         <Sidebar
           v-show="showSidebar"
@@ -18,41 +19,40 @@ import { showSidebar } from 'src/utils/refs';
           <component
             :is="Component"
             :key="$route.path"
-            :dark-mode="darkMode"
             class="min-w-0 flex-1"
           />
         </keep-alive>
       </router-view>
 
+      <!-- The settings dialog shows the records its fields create. -->
       <router-view v-slot="{ Component, route }" name="edit">
         <Transition name="quickedit">
-          <div v-if="route?.query?.edit">
+          <div v-if="route?.query?.edit && !settingsDialog.open">
             <component
               :is="Component"
               :key="
                 String(route.query.schemaName ?? '') +
                 String(route.query.name ?? '')
               "
-              :dark-mode="darkMode"
             />
           </div>
         </Transition>
       </router-view>
     </div>
+    <SettingsDialog />
   </FrappeDesktopShell>
 </template>
 <script lang="ts">
 import { DesktopShell as FrappeDesktopShell } from 'frappe-ui';
 import { defineComponent } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
+import SettingsDialog from './Settings/SettingsDialog.vue';
 export default defineComponent({
   name: 'Desk',
   components: {
     FrappeDesktopShell,
+    SettingsDialog,
     Sidebar,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
   },
   async mounted() {
     // The viewport can grow while a phone-only page is open.

@@ -23,7 +23,7 @@ test('a Frappe-served quick edit reports post-save warnings without leaving an u
   });
   // A new unit, opened in a quick edit by the name it is kept under.
   await page.goto('/books/list/UOM');
-  await page.getByRole('button', { name: 'Create new entry' }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/UOM\//);
   await page.evaluate(() => {
     const app = (document.querySelector('#app') as any).__vue_app__;
@@ -165,8 +165,10 @@ test('a rejected settings save retains edits and does not offer a successful-sav
     });
   });
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  const error = page.getByRole('dialog');
-  await expect(error).toContainText('Settings write rejected');
+  const error = page
+    .getByRole('dialog')
+    .filter({ hasText: 'Settings write rejected' });
+  await expect(error).toBeVisible();
   await error.getByRole('button', { name: 'Okay', exact: true }).click();
   await expect(
     page.getByText('Reload Frappe Books?', { exact: true })

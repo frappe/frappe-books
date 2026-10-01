@@ -22,7 +22,7 @@
         @click="() => setPageNo(Math.max(1, pageNo - 1))"
       />
       <div
-        class="grid items-center gap-1 rounded-4 bg-surface-gray-2 px-1 text-base tabular-nums focus-within:outline focus-within:outline-2 focus-within:outline-outline-gray-3"
+        class="grid items-center gap-1 rounded-4 bg-surface-gray-2 px-1 text-base tabular-nums"
         :style="{
           gridTemplateColumns: `${pageNumberWidth} auto ${pageNumberWidth}`,
         }"
@@ -30,7 +30,7 @@
         <FrappeTextInput
           type="number"
           aria-label="Page number"
-          class="min-w-0 [&_input]:text-center [&_input]:tabular-nums"
+          class="min-w-0"
           variant="ghost"
           size="sm"
           :model-value="pageNo"

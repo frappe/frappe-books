@@ -36,7 +36,7 @@
         />
       </div>
       <div
-        class="flex justify-between gap-4 text-lg-semibold tabular-nums text-ink-gray-9"
+        class="flex justify-between gap-4 text-lg-semibold tabular-nums text-ink-gray-8"
       >
         <span>{{ t`Amount` }}</span>
         <span dir="ltr">{{ fyo.format(row.amount ?? 0, 'Currency') }}</span>

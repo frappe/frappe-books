@@ -9,38 +9,63 @@ test.use({
 
 useBooksSession();
 
-const drawer = (page: Page) => page.getByRole('dialog', { name: 'Books' });
+const navSheet = (page: Page) => page.getByRole('dialog', { name: 'Books' });
+const tabs = (page: Page) => page.locator('[data-slot="mobile-nav"]');
+const tab = (page: Page, name: string) =>
+  tabs(page).getByRole('button', { name, exact: true });
 
-test('the menu opens a drawer that works as an accordion', async ({ page }) => {
+test('bottom tabs open each section and light the page owner', async ({
+  page,
+}) => {
+  await expect(tab(page, 'Dashboard')).toHaveAttribute('data-state', 'active');
+
+  await tab(page, 'Purchases').click();
+  await expect(page).toHaveURL(/\/books\/list\/PurchaseInvoice$/);
+  await expect(tab(page, 'Purchases')).toHaveAttribute('data-state', 'active');
+
+  await tab(page, 'Sales').click();
+  await expect(page).toHaveURL(/\/books\/list\/SalesInvoice$/);
+  await tab(page, 'Reports').click();
+  await expect(page).toHaveURL(/\/books\/report\/GeneralLedger$/);
+  await expect(tab(page, 'Reports')).toHaveAttribute('data-state', 'active');
+
+  await page.goto('/books/list/Payment/Purchase%20Payments');
+  await expect(tab(page, 'Purchases')).toHaveAttribute('data-state', 'active');
+  await expect(tab(page, 'Sales')).toHaveAttribute('data-state', 'inactive');
+});
+
+test('the menu opens a nav sheet that works as an accordion', async ({
+  page,
+}) => {
   await page.getByRole('button', { name: 'Menu' }).click();
-  await expect(drawer(page)).toBeVisible();
+  await expect(navSheet(page)).toBeVisible();
 
-  const sales = drawer(page).getByRole('button', {
+  const sales = navSheet(page).getByRole('button', {
     name: 'Sales',
     exact: true,
   });
   await sales.click();
   await expect(sales).toHaveAttribute('aria-expanded', 'true');
-  await drawer(page).getByRole('button', { name: 'Purchases' }).click();
+  await navSheet(page).getByRole('button', { name: 'Purchases' }).click();
   await expect(sales).toHaveAttribute('aria-expanded', 'false');
 
-  await drawer(page).getByRole('link', { name: 'Purchase Invoices' }).click();
-  await expect(drawer(page)).toBeHidden();
+  await navSheet(page).getByRole('link', { name: 'Purchase Invoices' }).click();
+  await expect(navSheet(page)).toBeHidden();
   await expect(page).toHaveURL(/\/books\/list\/PurchaseInvoice$/);
 });
 
 test('desktop-only pages are left out and redirect home', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
-  await drawer(page).getByRole('button', { name: 'Setup' }).click();
+  await navSheet(page).getByRole('button', { name: 'Setup' }).click();
   await expect(
-    drawer(page).getByRole('link', { name: 'Settings' })
+    navSheet(page).getByRole('link', { name: 'Settings' })
   ).toBeVisible();
   for (const name of [
     'Chart of Accounts',
     'Import Wizard',
     'Print Templates',
   ]) {
-    await expect(drawer(page).getByRole('link', { name })).toHaveCount(0);
+    await expect(navSheet(page).getByRole('link', { name })).toHaveCount(0);
   }
 
   await page.goto('/books/chart-of-accounts');
@@ -55,20 +80,21 @@ test('pushed pages show a back button instead of the menu', async ({
   await waitForBooks(page);
   await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(0);
+  await expect(tabs(page)).toHaveCount(0);
 });
 
-test('back closes the drawer before leaving the page', async ({ page }) => {
+test('back closes the nav sheet before leaving the page', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
-  await drawer(page)
+  await navSheet(page)
     .getByRole('button', { name: 'Sales', exact: true })
     .click();
-  await drawer(page).getByRole('link', { name: 'Sales Quotes' }).click();
+  await navSheet(page).getByRole('link', { name: 'Sales Quotes' }).click();
   await expect(page).toHaveURL(/\/books\/list\/SalesQuote$/);
 
   await page.getByRole('button', { name: 'Menu' }).click();
-  await expect(drawer(page)).toBeVisible();
+  await expect(navSheet(page)).toBeVisible();
   await page.evaluate(() => history.back());
 
-  await expect(drawer(page)).toBeHidden();
+  await expect(navSheet(page)).toBeHidden();
   await expect(page).toHaveURL(/\/books\/list\/SalesQuote$/);
 });

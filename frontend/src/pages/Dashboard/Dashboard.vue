@@ -1,67 +1,59 @@
 <template>
   <div class="flex min-h-0 flex-col">
-    <PageHeader :title="t`Dashboard`" title-start>
+    <PageHeader :title="t`Dashboard`">
       <template #mobile>
-        <FrappeButton
-          variant="ghost"
-          size="md"
-          icon="lucide-search"
-          :label="t`Search`"
-          @click="$router.push('/search')"
-        />
-        <PeriodSelector :value="period" @change="(value) => (period = value)" />
+        <MobileCreateMenu />
       </template>
-      <PeriodSelector
-        :value="period"
-        :options="['This Year', 'This Quarter', 'This Month', 'YTD']"
-        @change="(value) => (period = value)"
-      />
+      <PeriodSelector :value="period" @change="(value) => (period = value)" />
     </PageHeader>
 
-    <div class="no-scrollbar min-h-0 flex-1 overflow-auto bg-surface-base">
-      <div class="min-w-0 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)]">
-        <Cashflow class="p-4" :common-period="period" :dark-mode="darkMode" />
-        <hr class="border-outline-gray-1" />
-        <div class="grid grid-cols-1 md:grid-cols-2">
-          <UnpaidInvoices
+    <!-- Phones scroll in the shell. -->
+    <component
+      :is="isMobile ? 'div' : 'FrappeScrollArea'"
+      class="min-h-0 flex-1"
+      :viewport-class="isMobile ? undefined : 'px-3 pb-10 pt-5 sm:px-5'"
+    >
+      <div
+        class="space-y-4 px-4 pb-6 pt-3 md:mx-auto md:max-w-4xl md:space-y-6 md:p-0"
+      >
+        <PeriodSelector
+          v-if="isMobile"
+          :value="period"
+          @change="(value) => (period = value)"
+        />
+        <div
+          class="grid grid-cols-2 gap-3 md:gap-x-8 md:gap-y-6 xl:grid-cols-4"
+        >
+          <InvoiceCards
             doctype="Books Sales Invoice"
-            :common-period="period"
-            :dark-mode="darkMode"
-            class="min-w-0 border-outline-gray-1 max-md:border-b md:border-e"
+            :label="t`Sales`"
+            :period="period"
           />
-          <UnpaidInvoices
+          <InvoiceCards
             doctype="Books Purchase Invoice"
-            :common-period="period"
-            :dark-mode="darkMode"
+            :label="t`Purchases`"
+            :period="period"
           />
         </div>
-        <hr class="border-outline-gray-1" />
-        <div class="grid grid-cols-1 xl:grid-cols-2">
-          <ProfitAndLoss
-            class="min-w-0 w-full p-4 border-outline-gray-1 max-md:border-b md:border-e"
-            :common-period="period"
-            :dark-mode="darkMode"
-          />
-          <Expenses
-            class="min-w-0 w-full p-4"
-            :common-period="period"
-            :dark-mode="darkMode"
-          />
+        <div class="border-t border-outline-gray-2 max-md:hidden" />
+        <Cashflow class="h-64 md:h-72" :period="period" />
+        <div class="border-t border-outline-gray-2 max-md:hidden" />
+        <div class="grid gap-4 md:gap-8 lg:grid-cols-2">
+          <ProfitAndLoss class="h-64 min-w-0 md:h-80" :period="period" />
+          <Expenses class="h-96 min-w-0 md:h-80" :period="period" />
         </div>
-        <hr class="border-outline-gray-1" />
       </div>
-    </div>
-    <MobileCreateButton v-if="isMobile" />
+    </component>
   </div>
 </template>
 
 <script>
-import { Button as FrappeButton } from 'frappe-ui';
+import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import PageHeader from 'src/components/PageHeader.vue';
-import UnpaidInvoices from './UnpaidInvoices.vue';
 import Cashflow from './Cashflow.vue';
 import Expenses from './Expenses.vue';
-import MobileCreateButton from './MobileCreateButton.vue';
+import InvoiceCards from './InvoiceCards.vue';
+import MobileCreateMenu from './MobileCreateMenu.vue';
 import PeriodSelector from './PeriodSelector.vue';
 import ProfitAndLoss from './ProfitAndLoss.vue';
 import { docsPathRef } from 'src/utils/refs';
@@ -70,17 +62,14 @@ import { isMobile } from 'src/utils/viewport';
 export default {
   name: 'Dashboard',
   components: {
-    FrappeButton,
+    FrappeScrollArea,
     PageHeader,
     Cashflow,
     ProfitAndLoss,
     Expenses,
-    MobileCreateButton,
+    InvoiceCards,
+    MobileCreateMenu,
     PeriodSelector,
-    UnpaidInvoices,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
   },
   setup() {
     return { isMobile };

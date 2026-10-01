@@ -20,9 +20,7 @@
         </FrappeListHeaderCell>
       </FrappeListHeader>
 
-      <div
-        class="custom-scroll custom-scroll-thumb1 min-h-0 flex-1 overflow-auto"
-      >
+      <FrappeScrollArea class="min-h-0 flex-1">
         <FrappeListRows :items="sinvDoc.items ?? []" :row-key="getRowKey">
           <template #default="{ item: row, value }">
             <FrappeListRow :value="value" class="hover:bg-surface-gray-1">
@@ -39,7 +37,7 @@
             </FrappeListRow>
           </template>
         </FrappeListRows>
-      </div>
+      </FrappeScrollArea>
     </FrappeList>
     <div
       v-else
@@ -60,6 +58,7 @@
 </template>
 
 <script lang="ts">
+import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import {
   List as FrappeList,
   ListHeader as FrappeListHeader,
@@ -85,6 +84,7 @@ export default defineComponent({
     FrappeListHeaderCell,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
     SelectedItemRow,
   },
   props: {

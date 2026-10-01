@@ -1,7 +1,6 @@
 <template>
   <MobilePayment
-    v-if="isMobile"
-    v-show="openModal"
+    v-if="isMobile && openModal"
     :methods="paymentMethods"
     :requirements="paymentRequirements"
     :due-amount="getDefaultPaymentAmount()"
@@ -27,7 +26,7 @@
     @submit="submitTransaction"
   />
   <Modal
-    v-else
+    v-else-if="!isMobile"
     :open-modal="openModal"
     :title="paymentTitle"
     size="2xl"

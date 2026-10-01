@@ -3,30 +3,13 @@
     <PageHeader :title="title">
       <template #mobile>
         <FrappeButton
-          v-if="isSelectionMode"
+          v-if="canCreate && !isSelectionMode"
           variant="ghost"
           size="md"
-          :label="t`Cancel`"
-          @click="toggleSelectionMode"
+          icon="lucide-plus"
+          :label="t`New`"
+          @click="handleMakeNewDoc"
         />
-        <template v-else>
-          <FrappeButton
-            v-if="schemaName === 'Item'"
-            variant="ghost"
-            size="md"
-            icon="lucide-list-checks"
-            :label="t`Select items`"
-            @click="toggleSelectionMode"
-          />
-          <FrappeButton
-            v-if="canCreate"
-            variant="solid"
-            size="md"
-            icon-left="lucide-plus"
-            :label="t`New`"
-            @click="handleMakeNewDoc"
-          />
-        </template>
       </template>
       <FrappeButton
         v-if="
@@ -57,9 +40,8 @@
       <FrappeButton
         v-if="canCreate"
         variant="solid"
-        icon="lucide-plus"
-        :label="t`Create new entry`"
-        :tooltip="t`Create new entry`"
+        icon-left="lucide-plus"
+        :label="t`New`"
         @click="handleMakeNewDoc"
       />
     </PageHeader>
@@ -69,7 +51,14 @@
       :schema-name="schemaName"
       :search-fields="searchFields"
       @change="applyFilter"
-    />
+    >
+      <FrappeButton
+        v-if="schemaName === 'Item'"
+        size="lg"
+        :label="isSelectionMode ? t`Cancel` : t`Select`"
+        @click="toggleSelectionMode"
+      />
+    </MobileListToolbar>
     <List
       ref="list"
       :schema-name="schemaName"
@@ -84,10 +73,7 @@
       @clear-filters="mobileToolbar?.clear()"
       @selected-items-changed="updateSelectedItems"
     />
-    <div
-      v-if="isMobile && isSelectionMode"
-      class="sticky bottom-0 mt-auto flex items-center gap-3 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
+    <MobileFooter v-if="isMobile && isSelectionMode" class="items-center">
       <span class="min-w-0 flex-1 text-base text-ink-gray-7">
         {{ t`${selectedItems.length} selected` }}
       </span>
@@ -98,7 +84,7 @@
         :disabled="!selectedItems.length"
         @click="isCreateSheetOpen = true"
       />
-    </div>
+    </MobileFooter>
     <MobileOptionsSheet
       v-if="isMobile"
       v-model:open="isCreateSheetOpen"
@@ -137,6 +123,7 @@ import { QueryFilter } from 'utils/db/types';
 import { defineComponent, inject, ref } from 'vue';
 import List from './List.vue';
 import { getListColumns } from './listColumns';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import MobileListToolbar from './MobileListToolbar.vue';
 import { getMobileRowLayout } from './mobileRowLayout';
@@ -152,6 +139,7 @@ export default defineComponent({
     FrappeButton,
     ExportWizard,
     FrappeDropdown,
+    MobileFooter,
     MobileListToolbar,
     MobileOptionsSheet,
   },

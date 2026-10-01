@@ -1,30 +1,15 @@
 <template>
   <div class="flex flex-1 flex-col bg-surface-base">
     <PageHeader :title="title">
-      <template #mobile>
-        <FrappeButton
-          v-if="actionGroups.length"
-          variant="ghost"
-          size="md"
-          icon="lucide-ellipsis"
-          :label="t`More actions`"
-          @click="showActions = true"
-        />
-        <FrappeButton
-          v-if="doc.canSave"
-          variant="solid"
-          size="md"
-          :label="t`Save`"
-          :disabled="doc.isSyncing"
-          @click="$emit('sync')"
-        />
-        <FrappeButton
-          v-else-if="doc.canSubmit"
-          variant="solid"
-          size="md"
-          :label="t`Submit`"
-          @click="$emit('submit')"
-        />
+      <template v-if="menuOptions.length" #mobile>
+        <FrappeDropdown :options="menuOptions" align="end">
+          <FrappeButton
+            variant="ghost"
+            size="md"
+            icon="lucide-ellipsis"
+            :label="t`More actions`"
+          />
+        </FrappeDropdown>
       </template>
     </PageHeader>
 
@@ -35,44 +20,32 @@
 
     <div
       v-if="tabOptions.length > 1"
-      class="sticky top-0 z-[2] mt-1 overflow-x-auto bg-surface-base shadow-[inset_0_-1px_0_var(--outline-gray-1)] [scrollbar-width:none]"
+      class="sticky top-0 z-10 mt-1 flex items-center overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none]"
     >
+      <!-- md is the largest TabButtons size (frappe/frappe-ui#1221). -->
       <FrappeTabButtons
-        class="px-4"
         :model-value="activeTab"
         :options="tabOptions"
-        variant="underline"
         size="md"
         @update:model-value="(tab) => $emit('update:activeTab', String(tab))"
       >
         <template #suffix="{ button }">
           <span
             v-if="errorTabs.has(String(button.value))"
-            class="size-1.5 rounded-full bg-surface-red-4"
+            class="size-1.5 rounded-full bg-surface-red-7"
             :aria-label="t`Has errors`"
           />
         </template>
       </FrappeTabButtons>
     </div>
 
-    <button
+    <FrappeAlert
       v-if="missingLabels"
-      role="alert"
-      class="mx-4 mt-3 flex items-start gap-2 rounded-5 bg-surface-red-1 px-3 py-2.5 text-start text-p-base text-ink-red-4"
-      @click="showFirstError"
-    >
-      <span
-        class="lucide-circle-alert mt-0.5 size-4 shrink-0"
-        aria-hidden="true"
-      />
-      <span class="flex-1">{{ t`Value missing for ${missingLabels}` }}</span>
-      <span
-        v-if="firstErrorTab && firstErrorTab !== activeTab"
-        class="shrink-0 font-medium underline"
-      >
-        {{ t`Show` }}
-      </span>
-    </button>
+      class="mx-4 mt-3"
+      theme="red"
+      :title="t`Value missing for ${missingLabels}`"
+      :primary-action="{ label: t`Show`, onClick: () => showFirstError() }"
+    />
 
     <MobileFormSection
       v-for="([section, fields], index) of activeSections"
@@ -100,60 +73,51 @@
       </template>
     </MobileFormSection>
 
-    <div
-      v-if="nextStep"
-      class="sticky bottom-0 mt-auto flex gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
+    <div class="h-10 flex-none" />
+    <MobileFooter v-if="canPrint || doc.canSave || doc.canSubmit || footerStep">
       <FrappeButton
         v-if="canPrint"
+        class="flex-1"
         size="lg"
-        icon="lucide-printer"
+        icon-left="lucide-printer"
         :label="t`Print`"
         @click="$emit('print')"
       />
       <FrappeButton
+        v-if="doc.canSave"
         class="flex-1"
         size="lg"
         variant="solid"
-        :label="nextStep.nextStep"
-        @click="run(nextStep)"
+        :label="t`Save`"
+        :disabled="doc.isSyncing"
+        @click="$emit('sync')"
       />
-    </div>
-    <div v-else class="h-10 flex-none" />
-
-    <FrappeBottomSheet v-model:open="showActions" :title="doc.formTitle">
-      <div
-        class="flex flex-col px-2 pb-[max(env(safe-area-inset-bottom),1rem)]"
-      >
-        <template v-for="group in actionGroups" :key="group.key">
-          <div v-if="group.divider" class="mx-3 my-1 h-px bg-outline-gray-1" />
-          <div
-            v-if="group.label"
-            class="px-3 pb-1.5 pt-3 text-xs-medium text-ink-gray-5"
-          >
-            {{ group.label }}
-          </div>
-          <button
-            v-for="action in group.actions"
-            :key="action.label"
-            class="flex h-[52px] items-center rounded-5 px-3 text-start text-lg active:bg-surface-gray-2"
-            :class="
-              action.theme === 'red' ? 'text-ink-red-4' : 'text-ink-gray-8'
-            "
-            @click="run(action)"
-          >
-            {{ action.label }}
-          </button>
-        </template>
-      </div>
-    </FrappeBottomSheet>
+      <FrappeButton
+        v-else-if="doc.canSubmit"
+        class="flex-1"
+        size="lg"
+        variant="solid"
+        :label="t`Submit`"
+        @click="$emit('submit')"
+      />
+      <FrappeButton
+        v-else-if="footerStep"
+        class="flex-1"
+        size="lg"
+        variant="solid"
+        :label="footerStep.nextStep"
+        @click="run(footerStep)"
+      />
+    </MobileFooter>
   </div>
 </template>
 <script setup lang="ts">
 import {
-  BottomSheet as FrappeBottomSheet,
+  Alert as FrappeAlert,
   Button as FrappeButton,
+  Dropdown as FrappeDropdown,
   TabButtons as FrappeTabButtons,
+  type DropdownOptions,
 } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
@@ -162,14 +126,15 @@ import { Action } from 'fyo/model/types';
 import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { hasFieldValue } from 'src/utils/doc';
 import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc } from 'src/utils/ui';
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import MobileFormSection from './MobileFormSection.vue';
 
-type SheetAction = Pick<Action, 'label' | 'group' | 'theme' | 'nextStep'> & {
+type FormAction = Pick<Action, 'label' | 'group' | 'theme' | 'nextStep'> & {
   action: (doc: Doc, router: ReturnType<typeof useRouter>) => unknown;
 };
 
@@ -196,7 +161,6 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
-const showActions = ref(false);
 
 // A finished document hides empty fields, so tabs without values go too.
 const tabOptions = computed(() => {
@@ -240,46 +204,45 @@ const errorTabs = computed(() => {
   return tabs;
 });
 
-const firstErrorTab = computed(() => {
-  const [field] = unresolvedFields.value;
-  return field ? getTabOf(field) : undefined;
-});
+const actions = computed(() => getActionsForDoc(props.doc) as FormAction[]);
 
-const actions = computed(() => getActionsForDoc(props.doc) as SheetAction[]);
-const nextStep = computed(() => actions.value.find((a) => a.nextStep));
+/** The next step runs from the footer unless saving or submitting comes first. */
+const footerStep = computed(() =>
+  props.doc.canSave || props.doc.canSubmit
+    ? undefined
+    : actions.value.find((action) => action.nextStep)
+);
 
-/** Print and links, then each action group, then destructive actions. */
-const actionGroups = computed(() => {
-  const view: SheetAction[] = [];
-  if (props.canPrint) {
-    view.push({ label: t`Print`, action: () => emit('print') });
-  }
-
-  if (props.canShowLinks) {
-    view.push({ label: t`Linked Entries`, action: () => emit('show-links') });
-  }
-
-  const rest = actions.value.filter((action) => action !== nextStep.value);
+/** Linked entries, then each action group, then destructive actions. */
+const menuOptions = computed<DropdownOptions>(() => {
+  const rest = actions.value.filter((action) => action !== footerStep.value);
   const labels = [...new Set(rest.map((a) => a.group ?? ''))].sort();
+  const links: FormAction[] = props.canShowLinks
+    ? [{ label: t`Linked Entries`, action: () => emit('show-links') }]
+    : [];
   const groups = [
-    { key: 'view', label: '', divider: false, actions: view },
+    { label: '', actions: links },
     ...labels.map((label) => ({
-      key: `group-${label}`,
       label,
-      divider: false,
       actions: rest.filter(
         (a) => (a.group ?? '') === label && a.theme !== 'red'
       ),
     })),
-    {
-      key: 'destructive',
-      label: '',
-      divider: true,
-      actions: rest.filter((a) => a.theme === 'red'),
-    },
+    { label: '', actions: rest.filter((a) => a.theme === 'red') },
   ];
 
-  return groups.filter((group) => group.actions.length);
+  return groups
+    .filter((group) => group.actions.length)
+    .map((group, index) => ({
+      key: index,
+      group: group.label,
+      hideLabel: !group.label,
+      options: group.actions.map((action) => ({
+        label: action.label,
+        theme: action.theme,
+        onClick: () => run(action),
+      })),
+    }));
 });
 
 function hasItemsTable(fields: Field[]) {
@@ -308,8 +271,7 @@ async function showFirstError() {
     ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
-async function run(action: SheetAction) {
-  showActions.value = false;
+async function run(action: FormAction) {
   await action.action(props.doc, router);
 }
 

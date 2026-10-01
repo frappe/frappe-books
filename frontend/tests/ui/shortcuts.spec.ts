@@ -5,7 +5,7 @@ useBooksSession('/books/list/SalesInvoice');
 
 test('the new entry shortcut opens a new document', async ({ page }) => {
   await expect(
-    page.getByRole('button', { name: 'Create new entry' })
+    page.getByRole('button', { name: 'New', exact: true })
   ).toBeVisible();
 
   await page.keyboard.press('ControlOrMeta+n');

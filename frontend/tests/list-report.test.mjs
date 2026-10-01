@@ -5,10 +5,10 @@ import { getReportCellColorClass } from './helpers/accounting.mjs';
 test('report cells round with the system display precision', () => {
   assert.equal(
     getReportCellColorClass({ rawValue: 0.004 }, 3),
-    'text-ink-gray-9'
+    'text-ink-gray-7'
   );
   assert.equal(
     getReportCellColorClass({ rawValue: 0.0004 }, 3),
-    'text-ink-gray-6'
+    'text-ink-gray-5'
   );
 });

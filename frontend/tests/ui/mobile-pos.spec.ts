@@ -38,7 +38,7 @@ test('items fill a two-column grid and a tap adds to the cart bar', async ({
   await tea.click();
   await expect(tea.getByText('2', { exact: true })).toBeVisible();
   await expect(cartBar).toContainText('2 items');
-  expect((await cartBar.boundingBox())!.height).toBe(48);
+  expect((await cartBar.boundingBox())!.height).toBe(40);
   await expect(cartBar).toBeInViewport();
   await page.screenshot({ path: test.info().outputPath('items.png') });
 });
@@ -155,8 +155,7 @@ test('the menu opens each quick action as a sheet', async ({ page }) => {
     ['Close POS Shift', 'Close POS Shift'],
   ]) {
     await page.getByRole('button', { name: 'POS actions' }).click();
-    const menu = page.getByRole('dialog', { name: 'Point of Sale' });
-    await menu.getByRole('button', { name: row }).click();
+    await page.getByRole('menuitem', { name: row }).click();
     await expectSheet(page.getByRole('dialog', { name: title, exact: true }));
     await closeSheets(page);
   }

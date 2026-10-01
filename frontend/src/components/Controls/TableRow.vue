@@ -14,7 +14,6 @@
         :icon="showDeleteButton ? 'lucide-x' : undefined"
         variant="ghost"
         size="xs"
-        class="!size-5 !p-0"
         aria-label="Delete row"
         @focus="isDeleteFocused = true"
         @blur="isDeleteFocused = false"

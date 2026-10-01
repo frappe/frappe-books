@@ -1,15 +1,18 @@
 <template>
   <div class="flex min-h-full flex-col">
-    <PageHeader>
-      <template #mobile-bar>
+    <PageHeader :title="t`Search`" />
+
+    <div
+      class="sticky top-0 z-10 border-b border-outline-gray-1 bg-surface-base"
+    >
+      <div class="px-4 pt-2">
         <FrappeTextInput
           ref="input"
           v-model="query"
           type="search"
           enterkeyhint="search"
           size="lg"
-          variant="outline"
-          class="min-w-0 flex-1"
+          variant="subtle"
           :placeholder="t`Type to search...`"
           :aria-label="t`Search Frappe Books`"
           @keydown.enter="input?.inputElement?.blur()"
@@ -18,72 +21,76 @@
             <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
           </template>
         </FrappeTextInput>
-      </template>
-    </PageHeader>
-
-    <div
-      class="sticky top-0 z-10 flex items-center border-b border-outline-gray-1 bg-surface-base"
-    >
-      <div
-        class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-2.5 pe-2 ps-4 pt-1 [scrollbar-width:none]"
-      >
-        <FrappeButton
-          v-for="group in groups"
-          :key="group"
-          class="shrink-0"
-          size="md"
-          :variant="isFilterOn(group) ? 'subtle' : 'outline'"
-          :aria-pressed="isFilterOn(group)"
-          :label="groupLabelMap[group]"
-          @click="setSearchFilter(group, !isFilterOn(group))"
-        />
       </div>
-      <div class="mb-2.5 me-3 mt-1 shrink-0 border-s border-outline-gray-1 ps-1">
-        <FrappeButton
-          size="md"
-          variant="ghost"
-          icon-left="lucide-sliders-horizontal"
-          :label="
-            changedFilterCount ? t`Filters · ${changedFilterCount}` : t`Filters`
-          "
-          @click="isFilterSheetOpen = true"
-        />
+      <div class="flex items-center">
+        <div
+          class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-2.5 pe-2 ps-4 pt-2 [scrollbar-width:none]"
+        >
+          <FrappeButton
+            v-for="group in groups"
+            :key="group"
+            class="shrink-0"
+            size="md"
+            :variant="isFilterOn(group) ? 'subtle' : 'outline'"
+            :aria-pressed="isFilterOn(group)"
+            :label="groupLabelMap[group]"
+            @click="setSearchFilter(group, !isFilterOn(group))"
+          />
+        </div>
+        <div
+          class="mb-2.5 me-3 mt-2 shrink-0 border-s border-outline-gray-1 ps-1"
+        >
+          <FrappeButton
+            size="md"
+            variant="ghost"
+            icon-left="lucide-sliders-horizontal"
+            :label="
+              changedFilterCount
+                ? t`Filters · ${changedFilterCount}`
+                : t`Filters`
+            "
+            @click="isFilterSheetOpen = true"
+          />
+        </div>
       </div>
     </div>
 
     <p
       v-if="!query && rows.length"
-      class="px-4 pb-1.5 pt-3.5 text-sm-medium text-ink-gray-5"
+      class="px-4 pb-1.5 pt-3.5 text-sm text-ink-gray-5"
     >
       {{ t`Recent` }}
     </p>
-    <ul v-if="rows.length" :aria-label="t`Results`">
-      <li v-for="(item, index) in rows" :key="`${index}-${item.label}`">
-        <button
-          type="button"
-          class="flex min-h-14 w-full items-center gap-3 border-b border-outline-gray-1 px-4 py-2 text-start active:bg-surface-gray-1"
-          @click="openSearchItem(item)"
-        >
-          <span class="flex min-w-0 flex-1 flex-col gap-1">
-            <span class="truncate text-md-medium text-ink-gray-9">
-              {{ item.label }}
-            </span>
-            <span
+    <FrappeList
+      v-if="rows.length"
+      class="list-row-px-4"
+      :columns="['minmax(0,1fr)', 'auto']"
+      :aria-label="t`Results`"
+    >
+      <FrappeListRow
+        v-for="(item, index) in rows"
+        :key="`${index}-${item.label}`"
+        class="min-h-14 py-2"
+        @click="openSearchItem(item)"
+      >
+        <FrappeListCell>
+          <div class="min-w-0">
+            <div class="truncate text-lg text-ink-gray-8">{{ item.label }}</div>
+            <div
               v-if="getDetail(item)"
-              class="truncate text-sm text-ink-gray-5"
+              class="mt-0.5 truncate text-md text-ink-gray-5"
             >
               {{ getDetail(item) }}
-            </span>
-          </span>
-          <FrappeBadge
-            :theme="groupThemeMap[item.group]"
-            class="max-w-[132px] shrink-0"
-          >
+            </div>
+          </div>
+        </FrappeListCell>
+        <FrappeListCell class="justify-end">
+          <FrappeBadge :theme="groupThemeMap[item.group]" class="max-w-[132px]">
             <span class="truncate">{{ getBadgeLabel(item) }}</span>
           </FrappeBadge>
-        </button>
-      </li>
-    </ul>
+        </FrappeListCell>
+      </FrappeListRow>
+    </FrappeList>
 
     <div
       v-if="query && total"
@@ -99,20 +106,20 @@
         @click="showAll = true"
       />
     </div>
-    <div
+    <MobileEmptyState
       v-else-if="query"
-      class="flex flex-1 flex-col items-center justify-center gap-2 px-8 pb-40 pt-8 text-center"
+      class="flex-1 pb-40 pt-8"
+      icon="lucide-search-x"
+      :title="t`No results`"
     >
-      <FrappeIcon icon="lucide-search-x" class="size-7 text-ink-gray-4" />
-      <p class="text-md-medium text-ink-gray-8">{{ t`No results` }}</p>
       <FrappeButton
         v-if="changedFilterCount"
-        class="mt-1"
+        class="mt-2"
         size="lg"
         :label="t`Reset filters`"
         @click="resetSearchFilters"
       />
-    </div>
+    </MobileEmptyState>
 
     <SearchFilterSheet
       v-model:open="isFilterSheetOpen"
@@ -129,6 +136,11 @@ import {
   Icon as FrappeIcon,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import PageHeader from 'src/components/PageHeader.vue';
 import { historyState } from 'src/utils/refs';
 import {
@@ -148,6 +160,7 @@ import {
 } from 'vue';
 import { useRouter } from 'vue-router';
 import { isDesktopOnly } from '../availability';
+import MobileEmptyState from '../MobileEmptyState.vue';
 import SearchFilterSheet from './SearchFilterSheet.vue';
 
 type SearchItem = SearchItems[number];
@@ -194,7 +207,6 @@ onActivated(async () => {
   }
 
   query.value = '';
-  // The header bar renders again once the page is active.
   await nextTick();
   input.value?.focus();
 });

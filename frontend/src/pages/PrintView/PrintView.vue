@@ -3,7 +3,7 @@
     class="flex flex-col flex-1"
     :class="isMobile ? 'min-h-full bg-surface-gray-2' : 'bg-surface-gray-1'"
   >
-    <PageHeader :border="true" :title="isMobile ? name : t`Print View`">
+    <PageHeader :title="isMobile ? name : t`Print View`">
       <SelectControl
         v-if="templateList.length"
         :df="{
@@ -42,7 +42,7 @@
 
     <!-- Template Display Area -->
     <div
-      class="overflow-auto custom-scroll custom-scroll-thumb1 p-4"
+      class="overflow-auto p-4"
       :class="isMobile ? 'flex-1' : ''"
     >
       <!-- Display Hints -->
@@ -75,10 +75,7 @@
       </div>
     </div>
 
-    <div
-      v-if="isMobile"
-      class="sticky bottom-0 flex gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)]"
-    >
+    <MobileFooter v-if="isMobile">
       <FrappeButton
         class="flex-1"
         size="lg"
@@ -96,7 +93,7 @@
         :disabled="!printDocument"
         @click="openPrintDialog()"
       />
-    </div>
+    </MobileFooter>
   </div>
 </template>
 <script lang="ts">
@@ -111,6 +108,7 @@ import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getAllDocuments, getValue } from 'src/frappe/api';
 import { getSchema } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
@@ -141,6 +139,7 @@ export default defineComponent({
     SelectControl,
     PrintSheet,
     DropdownWithActions,
+    MobileFooter,
     MobilePrintTemplatePicker,
   },
   props: {

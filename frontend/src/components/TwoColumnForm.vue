@@ -47,7 +47,7 @@
       <div
         v-else
         :key="`${df.fieldname}-regular`"
-        class="grid min-h-14 items-start gap-x-3 border-b border-outline-gray-1 px-4 py-3"
+        class="grid min-h-14 items-start gap-x-3 border-b border-outline-gray-1 px-3 py-3"
         :style="style"
       >
         <div class="flex min-h-8 min-w-0 items-center break-words text-ink-gray-6">

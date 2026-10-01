@@ -261,14 +261,14 @@ test('a row in another unit shows and takes its rate per that unit', async () =>
   assert.equal(transfer_rate.label, 'Rate');
   assert.ok(row.schema.quickEditFields.includes('transfer_rate'));
 
-  // The server priced the row, and a typed rate per box replaces its price.
-  row.leaveToServer(['rate']);
+  // A typed rate per box replaces the price; the server sets the rate from it.
   await row.set('transfer_rate', fyo.pesa(3000));
   const [sent] = invoice.getMethodDocument({
     keepRowNames: true,
     clearServerFilled: true,
   }).items;
-  assert.equal(Number(sent.rate), 60);
+  assert.equal(sent.rate, undefined);
+  assert.equal(Number(sent.transfer_rate), 3000);
   assert.equal(row.is_manual_rate, true);
   clearTimeout(invoice._previewTimer);
 });

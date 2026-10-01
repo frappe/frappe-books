@@ -34,21 +34,20 @@
 
 <script setup lang="ts">
 import { t } from 'fyo';
-import { ClosingCash } from 'models/inventory/Point of Sale/ClosingCash';
-import { OpeningCash } from 'models/inventory/Point of Sale/OpeningCash';
+import { CashCount } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { Money } from 'pesa';
 import MobileStepper from 'src/components/POS/MobileStepper.vue';
 import { fyo } from 'src/initFyo';
 
 /** Cash counted by denomination, with a stepper per note. */
-defineProps<{ heading: string; rows: (OpeningCash | ClosingCash)[] }>();
+defineProps<{ heading: string; rows: CashCount[] }>();
 const emit = defineEmits<{ change: [] }>();
 
 function format(amount?: Money): string {
   return fyo.format(amount ?? fyo.pesa(0), 'Currency');
 }
 
-async function setCount(row: OpeningCash | ClosingCash, count: number) {
+async function setCount(row: CashCount, count: number) {
   await row.set('count', Math.max(count, 0));
   emit('change');
 }

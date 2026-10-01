@@ -1,4 +1,4 @@
-import { getServerError, reachServer } from 'src/web/api';
+import { call, getServerError, reachServer } from 'src/web/api';
 
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
 export type DocValues = Record<string, unknown>;
@@ -83,6 +83,20 @@ export async function getDocuments(
   };
   const path = ['document', doctype];
   return (await request<DocValues[]>('GET', path, { params })).data;
+}
+
+/** Every document that matches, newest first unless ordered; for short lists, like payment methods. */
+export async function getAllDocuments(
+  doctype: string,
+  query: Pick<ListQuery, 'fields' | 'filters' | 'orderBy'>
+): Promise<DocValues[]> {
+  return await call<DocValues[]>('frappe.client.get_list', {
+    doctype,
+    fields: query.fields,
+    filters: query.filters,
+    order_by: query.orderBy ?? 'creation desc',
+    limit_page_length: 0,
+  });
 }
 
 /** Counts the documents that match every filter and, if given, one of `orFilters`. */

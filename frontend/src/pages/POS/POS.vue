@@ -271,7 +271,10 @@ import {
   isTypingInField,
   getQuickQtyBuffer,
   getPOSQuantityField,
+  getOpenPOSShift,
 } from 'src/utils/pos';
+import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
+import { getBooksDoc } from 'src/frappe/useBooksDoc';
 import { getItemVisibility, getMappedBridgeDoc } from 'models/helpers';
 import { getItemQtyMap } from 'models/inventory/posStock';
 import {
@@ -1038,14 +1041,15 @@ export default defineComponent({
       }
     },
     async setIsPosShiftOpen() {
-      const shift = await fyo.db.getOpenPOSShift();
+      const shift = await getOpenPOSShift();
       this.isPosShiftOpen = !!shift;
       this.shiftOpenedAt = shift
-        ? ((await fyo.getValue(
-            ModelNameEnum.POSOpeningShift,
-            shift,
-            'openingDate'
-          )) as Date)
+        ? (
+            (await getBooksDoc(
+              ModelNameEnum.POSOpeningShift,
+              shift
+            )) as POSOpeningShift
+          ).opening_date
         : undefined;
     },
     toggleModal(modal: ModalName | 'ShiftOpen', value?: boolean) {

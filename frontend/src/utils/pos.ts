@@ -16,6 +16,9 @@ import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
 import { showToast } from './interactive';
 import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
+import { getAllDocuments } from 'src/frappe/api';
+import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
+import { call } from 'src/web/api';
 import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
 import { validateQty } from 'models/helpers';
 import { getAvailableSerialNumbers } from 'models/inventory/helpers';
@@ -152,27 +155,34 @@ export function getQuickQtyBuffer(
   }
 }
 
-export async function getPOSOpeningShiftDoc(
-  fyo: Fyo
-): Promise<POSOpeningShift> {
-  const openShift = await fyo.db.getOpenPOSShift();
+const GET_OPEN_SHIFT =
+  'frappe_books.frappe_books.doctype.books_pos_opening_shift.books_pos_opening_shift.get_open_shift';
+
+/** The name of the open POS shift, if there is one. */
+export async function getOpenPOSShift(): Promise<string | null> {
+  return await call<string | null>(GET_OPEN_SHIFT);
+}
+
+/** The open POS shift, or a new one to open. */
+export async function getPOSOpeningShiftDoc(): Promise<POSOpeningShift> {
+  const openShift = await getOpenPOSShift();
   if (!openShift) {
-    return fyo.doc.getNewDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
+    return newBooksDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
   }
 
-  return (await fyo.doc.getDoc(
+  return (await getBooksDoc(
     ModelNameEnum.POSOpeningShift,
     openShift
   )) as POSOpeningShift;
 }
 
 /** Cash-type payment methods, whose amounts the counted denominations cover. */
-export async function getCashPaymentMethods(fyo: Fyo): Promise<string[]> {
-  const methods = (await fyo.db.getAll(ModelNameEnum.PaymentMethod, {
+export async function getCashPaymentMethods(): Promise<string[]> {
+  const methods = await getAllDocuments('Books Payment Method', {
     fields: ['name'],
-    filters: { type: 'Cash' },
-  })) as { name: string }[];
-  return methods.map(({ name }) => name);
+    filters: [['type', '=', 'Cash']],
+  });
+  return methods.map(({ name }) => name as string);
 }
 
 export function getTotalQuantity(items: SalesInvoiceItem[]): number {
@@ -518,10 +528,10 @@ export function validateClosingAmounts(posShiftDoc: POSClosingShift) {
     throw new ValidationError(`POS Shift Document not loaded. Please reload.`);
   }
 
-  posShiftDoc.closingAmounts?.forEach((row) => {
-    if (row.closingAmount?.isNegative()) {
+  posShiftDoc.closing_amounts?.forEach((row) => {
+    if (row.closing_amount?.isNegative()) {
       throw new ValidationError(
-        t`Closing ${row.paymentMethod as string} Amount can not be negative.`
+        t`Closing ${row.payment_method as string} Amount can not be negative.`
       );
     }
   });

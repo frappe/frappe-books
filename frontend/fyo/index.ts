@@ -1,6 +1,7 @@
 import { getMoneyMaker, MoneyMaker } from 'pesa';
 import { Field, FieldType } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
+import { getAllDocuments } from 'src/frappe/api';
 import { markRaw } from 'vue';
 import { DatabaseHandler } from './core/dbHandler';
 import { DocHandler } from './core/docHandler';
@@ -66,7 +67,7 @@ export class Fyo {
 
   /** Loads the symbols that formatted amounts carry, e.g. ₹. */
   async loadCurrencySymbols() {
-    const currencies = (await this.db.getAll('Currency', {
+    const currencies = (await getAllDocuments('Currency', {
       fields: ['name', 'symbol'],
     })) as { name: string; symbol?: string | null }[];
 

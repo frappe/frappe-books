@@ -1,3 +1,4 @@
+import type { DocPermissionMap } from 'fyo/utils/permissions';
 import { call, getServerError, reachServer } from 'src/web/api';
 
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
@@ -111,6 +112,18 @@ export async function getAllDocuments(
     order_by: query.orderBy ?? 'creation desc',
     limit_page_length: 0,
   });
+}
+
+/** The user's rights on one saved document, which shares, ownership and user permissions change. */
+export async function getDocPermissions(
+  doctype: string,
+  name: string
+): Promise<DocPermissionMap> {
+  const { permissions } = await call<{ permissions: DocPermissionMap }>(
+    'frappe.client.get_doc_permissions',
+    { doctype, docname: name }
+  );
+  return permissions;
 }
 
 /** Counts the documents that match every filter and, if given, one of `orFilters`. */

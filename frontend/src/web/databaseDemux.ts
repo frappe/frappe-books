@@ -54,17 +54,6 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
     });
   }
 
-  override async getDocPermissions(
-    doctype: string,
-    name: string
-  ): Promise<unknown> {
-    const { permissions } = await call<{ permissions: unknown }>(
-      'frappe.client.get_doc_permissions',
-      { doctype, docname: name }
-    );
-    return permissions;
-  }
-
   override async runDocMethod(
     method: string,
     schemaName: string,

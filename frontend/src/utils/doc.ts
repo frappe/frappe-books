@@ -1,5 +1,6 @@
 import { Doc } from 'fyo/model/doc';
 import { Field } from 'schemas/types';
+import { getDocPermissions } from 'src/frappe/api';
 import { call } from 'src/web/api';
 
 /** Loads the user's rights on a saved document, which shares, ownership and user permissions change. */
@@ -9,7 +10,7 @@ export async function loadDocPermissions(doc: Doc) {
     return;
   }
 
-  doc.docPermissions = await doc.fyo.db.getDocPermissions(doctype, doc.name!);
+  doc.docPermissions = await getDocPermissions(doctype, doc.name!);
 }
 
 /**

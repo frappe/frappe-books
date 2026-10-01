@@ -21,16 +21,21 @@
     </div>
 
     <template v-else-if="rows.length">
-      <MobileListRow
-        v-for="row in rows"
-        :key="String(row.name)"
-        :row="row"
-        :layout="layout"
-        :selected="
-          isSelectionMode ? selectedItems.includes(String(row.name)) : undefined
-        "
-        @open="onTap(String(row.name))"
-      />
+      <FrappeList
+        class="list-row-px-4"
+        :columns="['minmax(0,1fr)', 'auto']"
+        :selectable="isSelectionMode"
+        :selection="selectedItems"
+        @update:selection="(items: string[]) => $emit('updateSelection', items)"
+      >
+        <MobileListRow
+          v-for="row in rows"
+          :key="String(row.name)"
+          :row="row"
+          :layout="layout"
+          @open="$emit('openDoc', String(row.name))"
+        />
+      </FrappeList>
       <div class="flex flex-col items-center gap-2.5 px-4 pb-6 pt-4">
         <p class="text-sm tabular-nums text-ink-gray-5">
           {{ t`${rows.length} of ${total}` }}
@@ -70,6 +75,7 @@
 </template>
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import { List as FrappeList } from 'frappe-ui/list';
 import type { RenderData } from 'fyo/model/types';
 import MobilePullToRefresh from 'src/mobile/MobilePullToRefresh.vue';
 import { defineComponent, type PropType } from 'vue';
@@ -79,7 +85,7 @@ import { getMobileRowLayout, type MobileRowLayout } from './mobileRowLayout';
 
 export default defineComponent({
   name: 'MobileList',
-  components: { FrappeButton, MobileListRow, MobilePullToRefresh },
+  components: { FrappeButton, FrappeList, MobileListRow, MobilePullToRefresh },
   props: {
     schemaName: { type: String, required: true },
     rows: { type: Array as PropType<RenderData[]>, required: true },
@@ -109,19 +115,6 @@ export default defineComponent({
   computed: {
     layout(): MobileRowLayout {
       return getMobileRowLayout(this.schemaName, this.columns);
-    },
-  },
-  methods: {
-    onTap(name: string) {
-      if (!this.isSelectionMode) {
-        this.$emit('openDoc', name);
-        return;
-      }
-
-      const selected = this.selectedItems.includes(name)
-        ? this.selectedItems.filter((item) => item !== name)
-        : [...this.selectedItems, name];
-      this.$emit('updateSelection', selected);
     },
   },
 });

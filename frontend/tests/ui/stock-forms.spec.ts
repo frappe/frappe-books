@@ -88,7 +88,7 @@ test.describe('on a phone', () => {
     await page.goto('/books/list/PurchaseReceipt');
     await waitForBooks(page);
 
-    await page.getByRole('button').filter({ hasText: receipt }).click();
+    await page.getByRole('listitem').filter({ hasText: receipt }).click();
     await expect(page).toHaveURL(
       new RegExp(`/books/edit/PurchaseReceipt/${receipt}$`)
     );

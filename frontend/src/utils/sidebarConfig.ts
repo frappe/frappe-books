@@ -1,4 +1,6 @@
 import { t } from 'fyo';
+import { reports } from 'reports';
+import { canOpenReport } from 'reports/serverReport';
 import { getImportableSchemaNames } from 'src/importer';
 import { routeFilters } from 'src/utils/filters';
 import { fyo } from '../initFyo';
@@ -9,22 +11,44 @@ export function getSidebarConfig(): SidebarConfig {
   return getFilteredSidebar(sideBar);
 }
 
+/** Leaves out what is turned off or the user cannot read, and groups left empty. */
 function getFilteredSidebar(sideBar: SidebarConfig): SidebarConfig {
   return sideBar.filter((root) => {
-    root.items = root.items?.filter((item) => {
-      if (item.hidden !== undefined) {
-        return !item.hidden();
-      }
+    if (!root.items) {
+      return isVisible(root);
+    }
 
-      return true;
-    });
+    root.items = root.items.filter(isVisible);
+    if (!root.items.length || root.hidden?.()) {
+      return false;
+    }
 
-    if (root.hidden !== undefined) {
-      return !root.hidden();
+    // A group opens one of the items it shows.
+    if (!root.items.some(({ route }) => route === root.route)) {
+      root.route = root.items[0].route;
     }
 
     return true;
   });
+}
+
+function isVisible(item: SidebarItem | SidebarRoot): boolean {
+  return !item.hidden?.() && canOpen(item.route);
+}
+
+/** Whether the user can read the list or open the report the route shows. */
+function canOpen(route: string): boolean {
+  const [, page, name] = route.split('/');
+  if (page === 'list') {
+    return fyo.can(name, 'read');
+  }
+
+  if (page === 'report') {
+    const report = reports[name as keyof typeof reports];
+    return canOpenReport(report.serverReportName);
+  }
+
+  return true;
 }
 
 function getRegionalSidebar(): SidebarRoot[] {
@@ -312,6 +336,7 @@ function getCompleteSidebar(): SidebarConfig {
           label: t`Chart of Accounts`,
           name: 'chart-of-accounts',
           route: '/chart-of-accounts',
+          hidden: () => !fyo.can('Account', 'read'),
         },
         {
           label: t`Tax Templates`,

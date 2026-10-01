@@ -53,15 +53,16 @@ export default defineComponent({
   },
   methods: {
     getAmountLabel(status: string): string | undefined {
+      // Both in the company currency, as the server keeps them.
       const outstanding = this.doc.outstanding_amount as Money | undefined;
-      const grandTotal = this.doc.grand_total as Money | undefined;
+      const baseGrandTotal = this.doc.base_grand_total as Money | undefined;
       if (status === 'Unpaid' && outstanding) {
         return this.t`Unpaid ${this.formatAmount(outstanding)}`;
       }
 
-      if (status === 'Partly Paid' && outstanding && grandTotal) {
-        return this
-          .t`Partly Paid ${this.formatAmount(grandTotal.sub(outstanding))}`;
+      if (status === 'Partly Paid' && outstanding && baseGrandTotal) {
+        const paid = baseGrandTotal.sub(outstanding);
+        return this.t`Partly Paid ${this.formatAmount(paid)}`;
       }
 
       return undefined;

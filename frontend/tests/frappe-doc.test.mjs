@@ -13,6 +13,7 @@ import {
   getMissingMandatoryFields,
   loadTestDocTypes,
   newFrappeDoc,
+  setLanguageMapOnTranslationString,
   stubFrappe,
   useBooksDoc,
 } from './helpers/frappe.mjs';
@@ -116,6 +117,22 @@ test('depends_on, read_only_depends_on and mandatory_depends_on apply to the for
   stubDocument({ ...savedPen, track_item: 0 });
   const untracked = await getFrappeDoc('Item', 'Untracked');
   assert.equal(evaluateHidden(field(untracked, 'track_item'), untracked), true);
+});
+
+test('a missing required value is reported in the user’s language', async () => {
+  const doc = newFrappeDoc('Item');
+  clearTimeout(doc._previewTimer);
+  const field = doc.schema.fields.find(({ required }) => required);
+  setLanguageMapOnTranslationString({
+    '${0} is required': { translation: '${0} est obligatoire' },
+  });
+  try {
+    await assert.rejects(doc._validateField(field, null), {
+      message: `${field.label} est obligatoire`,
+    });
+  } finally {
+    setLanguageMapOnTranslationString(undefined);
+  }
 });
 
 test('form conditions read the document status, as Frappe forms do', () => {

@@ -1,5 +1,5 @@
 import { after } from 'node:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -35,6 +35,9 @@ await build({
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getFilterFields } from './src/utils/filterFields';
+      export { getSidebarConfig } from './src/utils/sidebarConfig';
+      export { default as ListView } from './src/pages/ListView/ListView.vue';
+      export { default as router } from 'src/router';
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
       export * as posSetup from './src/utils/posSetup';
@@ -70,6 +73,16 @@ await build({
         builder.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
           contents: 'export default {}',
         }));
+        // Components under test keep their script; the rest are stubs.
+        builder.onLoad(
+          { filter: /ListView\/ListView\.vue$/ },
+          async (args) => ({
+            contents: (await readFile(args.path, 'utf8')).match(
+              /<script[^>]*>([\s\S]*?)<\/script>/
+            )[1],
+            loader: 'ts',
+          })
+        );
         builder.onLoad({ filter: /\.vue$/ }, () => ({
           contents: 'export default {}',
         }));
@@ -153,6 +166,9 @@ export const {
   getExportFields,
   getExportTableFields,
   getJsonExportData,
+  getSidebarConfig,
+  ListView,
+  router,
 } = createRequire(import.meta.url)(output);
 
 /**

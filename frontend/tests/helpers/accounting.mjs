@@ -47,6 +47,7 @@ await build({
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
       export { call } from './src/web/api';
+      export { getDocuments } from './src/frappe/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { getAvailableSerialNumbers } from './models/inventory/helpers';
@@ -132,6 +133,7 @@ export const {
   GSTR1,
   getGstrJsonData,
   call,
+  getDocuments,
   errors,
   getInsufficientItems,
   getAvailableSerialNumbers,

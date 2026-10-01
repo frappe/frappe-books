@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
   evaluateHidden,
+  evaluateReadOnly,
   evaluateRequired,
   frappeModels,
   fyo,
@@ -236,6 +237,39 @@ test('row edits ask the server for the price, details and quantities that follow
   for (const fieldname of ['rate', 'account', 'tax', 'description', 'unit']) {
     assert.equal(fieldname in sent(), false, fieldname);
   }
+  clearTimeout(invoice._previewTimer);
+});
+
+test('a row in another unit shows and takes its rate per that unit', async () => {
+  setSettings({ inventory: { enable_uom_conversions: true } });
+  const invoice = newInvoice('PurchaseInvoice');
+  invoice.push('items', {
+    item: 'Paper',
+    unit: 'Unit',
+    transfer_unit: 'Box',
+    unit_conversion_factor: 50,
+    transfer_quantity: 6,
+    quantity: 300,
+    rate: fyo.pesa(62),
+    transfer_rate: fyo.pesa(3100),
+  });
+  const row = invoice.items[0];
+  const { rate, transfer_rate } = row.fieldMap;
+  assert.equal(evaluateHidden(rate, row), true);
+  assert.equal(evaluateHidden(transfer_rate, row), false);
+  assert.equal(evaluateReadOnly(transfer_rate, row), false);
+  assert.equal(transfer_rate.label, 'Rate');
+  assert.ok(row.schema.quickEditFields.includes('transfer_rate'));
+
+  // The server priced the row, and a typed rate per box replaces its price.
+  row.leaveToServer(['rate']);
+  await row.set('transfer_rate', fyo.pesa(3000));
+  const [sent] = invoice.getMethodDocument({
+    keepRowNames: true,
+    clearServerFilled: true,
+  }).items;
+  assert.equal(Number(sent.rate), 60);
+  assert.equal(row.is_manual_rate, true);
   clearTimeout(invoice._previewTimer);
 });
 

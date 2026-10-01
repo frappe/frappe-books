@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fyo, getRowDetails, newFrappeDoc } from './helpers/frappe.mjs';
+import {
+  fyo,
+  getRowDetails,
+  getRowSummary,
+  newFrappeDoc,
+} from './helpers/frappe.mjs';
 import { loadFrappeModels } from './helpers/models.mjs';
 
 await loadFrappeModels();
@@ -32,4 +37,26 @@ test('row details list every visible column of a row', () => {
     details.filter((detail) => detail.emphasis).map((detail) => detail.key),
     ['amount']
   );
+});
+
+test('a row summary pairs the quantity with the rate in its unit', () => {
+  const invoice = newFrappeDoc('SalesInvoice', {
+    items: [
+      {
+        item: 'Paper',
+        qty: 6,
+        transfer_quantity: 6,
+        transfer_unit: 'Box',
+        quantity: 300,
+        unit_conversion_factor: 50,
+        rate: fyo.pesa(62),
+        transfer_rate: fyo.pesa(3100),
+        amount: fyo.pesa(18600),
+      },
+    ],
+  });
+  const row = invoice.items[0];
+  const fields = row.schema.tableFields.map((name) => row.fieldMap[name]);
+
+  assert.equal(getRowSummary(row, fields).meta, '6 × 3,100.00');
 });

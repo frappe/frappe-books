@@ -29,6 +29,7 @@ await build({
       export { getMissingMandatoryFields } from './fyo/model/helpers';
       export { evaluateHidden, evaluateReadOnly, evaluateRequired, loadDocPermissions } from './src/utils/doc';
       export { getRowDetails } from './src/components/Controls/rowDetails';
+      export { getRowSummary } from './src/components/Controls/rowSummary';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels } from './models';
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
@@ -125,6 +126,7 @@ export const {
   evaluateRequired,
   loadDocPermissions,
   getRowDetails,
+  getRowSummary,
   errors,
   frappeModels,
   getRegionalFrappeModels,

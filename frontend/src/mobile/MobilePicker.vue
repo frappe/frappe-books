@@ -7,7 +7,7 @@
         @open-auto-focus="focusSearch"
       >
         <div
-          class="relative flex h-[52px] shrink-0 items-center border-b border-outline-gray-1 px-3"
+          class="relative flex h-13 shrink-0 items-center border-b border-outline-gray-1 px-3"
         >
           <FrappeButton
             variant="ghost"
@@ -58,17 +58,19 @@
               @click="$emit('select', option)"
             >
               <FrappeListCell>
-                <span
-                  class="grid size-8 shrink-0 place-items-center rounded-full bg-surface-gray-2 text-sm-semibold text-ink-gray-7"
+                <FrappeAvatar
+                  v-if="option.actionOnly"
+                  size="xl"
                   aria-hidden="true"
                 >
-                  <span
-                    v-if="option.actionOnly"
-                    :class="option.icon ?? 'lucide-plus'"
-                    class="size-4 text-ink-gray-8"
-                  />
-                  <template v-else>{{ getInitial(option) }}</template>
-                </span>
+                  <span :class="option.icon ?? 'lucide-plus'" class="size-4" />
+                </FrappeAvatar>
+                <FrappeAvatar
+                  v-else
+                  size="xl"
+                  aria-hidden="true"
+                  :label="getLabel(option)"
+                />
               </FrappeListCell>
               <FrappeListCell>
                 <div class="min-w-0">
@@ -104,6 +106,7 @@
 </template>
 <script setup lang="ts">
 import {
+  Avatar as FrappeAvatar,
   Button as FrappeButton,
   TextInput as FrappeTextInput,
   usePortalTarget,
@@ -169,10 +172,6 @@ function getMeta(option: PickerOption) {
   }
 
   return option.value !== option.label ? String(option.value ?? '') : '';
-}
-
-function getInitial(option: PickerOption) {
-  return getLabel(option).trim().charAt(0).toUpperCase();
 }
 
 function getKey(option: PickerOption) {

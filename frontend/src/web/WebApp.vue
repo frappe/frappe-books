@@ -40,7 +40,6 @@
 
 <script lang="ts">
 import type { Doc } from 'fyo/model/doc';
-import { RTL_LANGUAGES } from 'fyo/utils/consts';
 import { frappeModels, getRegionalFrappeModels } from 'models';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
@@ -59,7 +58,6 @@ import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
 import { setDarkMode } from 'src/utils/theme';
-import { systemLanguageRef } from 'src/utils/refs';
 import { isMobile } from 'src/utils/viewport';
 import { useKeys } from 'src/utils/vueUtils';
 import * as injectionKeys from 'src/utils/injectionKeys';
@@ -96,7 +94,7 @@ export default defineComponent({
     onMounted(() => shortcuts.start());
     onUnmounted(() => shortcuts.stop());
     const languageDirection = ref(
-      getLanguageDirection(systemLanguageRef.value)
+      window.frappe.boot?.layout_direction ?? 'ltr'
     );
     provide(injectionKeys.keysKey, keys);
     provide(injectionKeys.searcherKey, searcher);
@@ -178,10 +176,6 @@ export default defineComponent({
     },
   },
 });
-
-function getLanguageDirection(language: string): 'ltr' | 'rtl' {
-  return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
-}
 </script>
 
 <style>

@@ -134,6 +134,8 @@ declare global {
       csrf_token?: string;
       boot?: {
         lang?: string;
+        /** Added by the Books page from the user's language. */
+        layout_direction?: 'ltr' | 'rtl';
         developer_mode?: number;
         versions?: Record<string, string | undefined>;
         user?: BootUserPermissions & { name?: string };

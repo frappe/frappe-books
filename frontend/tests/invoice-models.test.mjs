@@ -245,6 +245,22 @@ test('row edits ask the server for the price, details and quantities that follow
   clearTimeout(invoice._previewTimer);
 });
 
+test('a new item on a purchase row leaves its batch for the server to name', async () => {
+  setSettings();
+  const invoices = ['PurchaseInvoice', 'SalesInvoice'].map((schemaName) =>
+    newInvoice(schemaName, { items: [{ item: 'Pen', batch: 'PEN-1001' }] })
+  );
+  for (const invoice of invoices) {
+    await invoice.items[0].set('item', 'Ink');
+    clearTimeout(invoice._previewTimer);
+  }
+
+  assert.deepEqual(
+    invoices.map((invoice) => invoice.items[0].batch ?? ''),
+    ['', 'PEN-1001']
+  );
+});
+
 test('a scanned item is priced by the server, and scanning it again adds to its row', async () => {
   setSettings();
   const invoice = newInvoice('SalesInvoice');

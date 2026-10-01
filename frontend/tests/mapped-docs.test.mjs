@@ -1,21 +1,42 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { before, test } from 'node:test';
+import { loadFrappeModels } from './helpers/models.mjs';
 import {
-  Fyo,
-  getSchemas,
-  models,
   frappeModels,
+  fyo,
   getMappedDoc,
   getStockTransferActions,
-} from './helpers/accounting.mjs';
+  newFrappeDoc,
+  stubFrappe,
+} from './helpers/frappe.mjs';
+
+const DOCTYPES = 'frappe_books.frappe_books.doctype';
+
+before(loadFrappeModels);
+
+/** Answers each mapper request with `mapped`; returns the requests. */
+function stubMapper(mapped) {
+  const requests = [];
+  stubFrappe((request) => {
+    requests.push(request);
+    return { message: mapped };
+  });
+  return requests;
+}
+
+function getSaved(schemaName, name) {
+  const doc = newFrappeDoc(schemaName, { name });
+  doc._notInserted = false;
+  return doc;
+}
 
 test('transfer invoices and returns come from the transfer mappers', async () => {
-  const calls = [];
-  const fyo = await makeFyo((method, ...args) => {
-    calls.push([method, ...args]);
-    return { party: 'Supplier', items: [{ item: 'Pen', quantity: -2 }] };
+  const requests = stubMapper({
+    doctype: 'Books Purchase Receipt',
+    party: 'Supplier',
+    items: [{ item: 'Pen', quantity: -2 }],
   });
-  const receipt = fyo.doc.getNewDoc('PurchaseReceipt', { name: 'PREC-1' });
+  const receipt = getSaved('PurchaseReceipt', 'PREC-1');
 
   await getMappedDoc(receipt, 'PurchaseInvoice', 'make_purchase_invoice');
   const purchaseReturn = await getMappedDoc(
@@ -24,22 +45,24 @@ test('transfer invoices and returns come from the transfer mappers', async () =>
     'make_return'
   );
 
-  const module =
-    'frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt';
-  assert.deepEqual(calls, [
-    ['getMapped', `${module}.make_purchase_invoice`, 'PREC-1'],
-    ['getMapped', `${module}.make_return`, 'PREC-1'],
-  ]);
+  const module = `${DOCTYPES}.books_purchase_receipt.books_purchase_receipt`;
+  assert.deepEqual(
+    requests.map(({ body }) => body),
+    [
+      { method: `${module}.make_purchase_invoice`, source_name: 'PREC-1' },
+      { method: `${module}.make_return`, source_name: 'PREC-1' },
+    ]
+  );
   assert.equal(purchaseReturn.items[0].quantity, -2);
 });
 
 test('an invoice maps its pending stock with the transfer mapper', async () => {
-  const calls = [];
-  const fyo = await makeFyo((method, ...args) => {
-    calls.push([method, ...args]);
-    return { party: 'Supplier', items: [{ item: 'Pen', quantity: 2 }] };
+  const requests = stubMapper({
+    doctype: 'Books Purchase Receipt',
+    party: 'Supplier',
+    items: [{ item: 'Pen', quantity: 2 }],
   });
-  const invoice = fyo.doc.getNewDoc('PurchaseInvoice', { name: 'PINV-1' });
+  const invoice = getSaved('PurchaseInvoice', 'PINV-1');
 
   const receipt = await getMappedDoc(
     invoice,
@@ -47,19 +70,15 @@ test('an invoice maps its pending stock with the transfer mapper', async () => {
     invoice.stockTransferMapper
   );
 
-  assert.deepEqual(calls, [
-    [
-      'getMapped',
-      'frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice.make_purchase_receipt',
-      'PINV-1',
-    ],
-  ]);
+  assert.deepEqual(requests[0].body, {
+    method: `${DOCTYPES}.books_purchase_invoice.books_purchase_invoice.make_purchase_receipt`,
+    source_name: 'PINV-1',
+  });
   assert.equal(receipt.schemaName, 'PurchaseReceipt');
   assert.equal(receipt.items[0].quantity, 2);
 });
 
-test('a fully billed shipment does not offer an invoice', async () => {
-  const fyo = await makeFyo(() => ({}));
+test('a fully billed shipment does not offer an invoice', () => {
   const [makeInvoice] = getStockTransferActions(fyo, 'Shipment');
   const shipment = { isSubmitted: true, is_fully_billed: 0 };
 
@@ -68,48 +87,10 @@ test('a fully billed shipment does not offer an invoice', async () => {
   assert.equal(makeInvoice.condition(shipment), false);
 });
 
-test('a duplicate is the copy the server makes, with its unset values left out', async () => {
-  const calls = [];
-  const fyo = await makeFyo((method, ...args) => {
-    calls.push([method, ...args]);
-    return {
-      name: null,
-      numberSeries: 'SINV-',
-      party: 'Customer',
-      isReturned: 0,
-      outstandingAmount: null,
-      items: [{ name: null, item: 'Pen', quantity: 1 }],
-    };
-  });
-  const invoice = fyo.doc.getNewDoc('SalesInvoice', {
-    name: 'SINV-1001',
-    numberSeries: 'SINV-',
-    isReturned: true,
-    outstandingAmount: 100,
-  });
-  invoice._notInserted = false;
-  await invoice.set('terms', 'Unsaved edit');
-  clearTimeout(invoice._previewTimer);
-
-  const duplicate = await invoice.duplicate();
-
-  const [[method, schemaName, values]] = calls;
-  assert.deepEqual([method, schemaName], ['getDuplicate', 'SalesInvoice']);
-  assert.equal(values.terms, 'Unsaved edit');
-  assert.equal(Object.hasOwn(values, 'modified'), false);
-  assert.equal(duplicate.notInserted, true);
-  assert.equal(duplicate.isReturned, false);
-  assert.equal(duplicate.outstandingAmount.float, 0);
-  assert.equal(duplicate.party, 'Customer');
-  assert.notEqual(duplicate.name, 'SINV-1001');
-  assert.ok(duplicate.items[0].name);
-});
-
 test('lead, party and item actions open documents from their server mappers', async () => {
-  const calls = [];
-  const fyo = await makeFyo((method, ...args) => {
-    calls.push(args);
-    return { party: 'Acme', items: [{ item: 'Pen', quantity: 1 }] };
+  const requests = stubMapper({
+    party: 'Acme',
+    items: [{ item: 'Pen', quantity: 1 }],
   });
   const cases = [
     ['Lead', 'Customer', 'books_lead.books_lead.make_customer', '/edit/Party/'],
@@ -133,40 +114,18 @@ test('lead, party and item actions open documents from their server mappers', as
     ],
   ];
   for (const [schemaName, label, mapper, path] of cases) {
-    const source = fyo.doc.getNewDoc(schemaName, { name: 'Acme' });
-    source._notInserted = false;
-    // A Frappe-backed model presents the doctype; the bridge doc stands in as the source.
-    const Model = frappeModels[schemaName] ?? fyo.models[schemaName];
-    const { action } = Model.getActions(fyo).find(
-      (action) => action.label === label
-    );
+    const source = getSaved(schemaName, 'Acme');
+    const { action } = frappeModels[schemaName]
+      .getActions(fyo)
+      .find((action) => action.label === label);
     let route = '';
     await action(source, { push: (to) => (route = to.path ?? to) });
 
-    const method = `frappe_books.frappe_books.doctype.${mapper}`;
-    assert.deepEqual(calls.at(-1), [method, 'Acme'], label);
+    assert.deepEqual(
+      requests.at(-1).body,
+      { method: `${DOCTYPES}.${mapper}`, source_name: 'Acme' },
+      label
+    );
     assert.ok(route.startsWith(path), label);
   }
 });
-
-async function makeFyo(call) {
-  class Store {
-    getSchemaMap() {
-      return getSchemas('-', []);
-    }
-
-    call(method, ...args) {
-      return call(method, ...args);
-    }
-
-    getDuplicate(...args) {
-      return call('getDuplicate', ...args);
-    }
-  }
-
-  const fyo = new Fyo({ DatabaseDemux: Store });
-  await fyo.db.init();
-  fyo.doc.registerModels(models);
-  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
-  return fyo;
-}

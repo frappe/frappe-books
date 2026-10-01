@@ -10,7 +10,6 @@ import {
   getLinkLabels,
   getModel,
   getSchema,
-  models,
   newFrappeDoc,
   searchFrappeLink,
 } from './helpers/frappe.mjs';
@@ -538,12 +537,15 @@ test('coupon and invoice links filter pricing rules and price lists by Frappe fi
   assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), {
     is_coupon_code_based: true,
   });
-  assert.deepEqual(models.SalesInvoice.filters.priceList({ isSales: true }), {
-    is_enabled: true,
-    is_sales: true,
-  });
   assert.deepEqual(
-    models.PurchaseInvoice.filters.priceList({ isSales: false }),
+    frappeModels.SalesInvoice.filters.price_list({ isSales: true }),
+    {
+      is_enabled: true,
+      is_sales: true,
+    }
+  );
+  assert.deepEqual(
+    frappeModels.PurchaseInvoice.filters.price_list({ isSales: false }),
     {
       is_enabled: true,
       is_purchase: true,

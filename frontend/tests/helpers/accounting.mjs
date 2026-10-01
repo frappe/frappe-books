@@ -18,7 +18,7 @@ await build({
       export { Fyo } from './fyo';
       export { getSchemas } from './schemas';
       export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
-      export { frappeModels, models } from './models';
+      export { frappeModels } from './models';
       export { BalanceSheet } from './reports/BalanceSheet/BalanceSheet';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
@@ -82,7 +82,6 @@ export const { fieldProperties, getSchemas } =
   withFieldProperties(bundle);
 export const {
   Fyo,
-  models,
   frappeModels,
   BalanceSheet,
   ProfitAndLoss,
@@ -168,7 +167,7 @@ export async function makeFyo() {
   }
   const fyo = new Fyo({ DatabaseDemux: Store });
   await fyo.db.init();
-  fyo.doc.registerModels(models);
+  fyo.doc.registerModels({});
   fyo.singles.AccountingSettings = { enable_discounting: true };
   fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
   return fyo;

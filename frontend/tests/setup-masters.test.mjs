@@ -6,7 +6,6 @@ import {
   fyo,
   getSchema,
   loadFrappeDocTypes,
-  models,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -118,10 +117,10 @@ test('a number series shows its prefix, counter and labelled reference types', (
 });
 
 test('number series links filter and create by reference_type', async () => {
-  const { SalesInvoice } = models;
-  const { Defaults, Payment, JournalEntry, StockMovement } = frappeModels;
+  const { SalesInvoice, Defaults, Payment, JournalEntry, StockMovement } =
+    frappeModels;
   const invoice = { schemaName: 'SalesInvoice' };
-  assert.deepEqual(await SalesInvoice.filters.numberSeries(invoice), {
+  assert.deepEqual(await SalesInvoice.filters.number_series(invoice), {
     reference_type: 'SalesInvoice',
   });
   assert.deepEqual(Payment.filters.number_series(), {

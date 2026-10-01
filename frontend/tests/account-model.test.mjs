@@ -8,7 +8,6 @@ import {
   fyo,
   getSchema,
   loadFrappeDocTypes,
-  models,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -114,7 +113,7 @@ test('the parent picker offers groups of the account root type', () => {
 });
 
 test('account links in other forms filter by Frappe fieldnames', async () => {
-  const { PurchaseInvoice } = models;
+  const { PurchaseInvoice } = frappeModels;
   const JournalEntryAccount = frappeModels.JournalEntry.rowModels.accounts;
   const { Party, AccountingSettings, Defaults, InventorySettings, POSSettings } =
     frappeModels;

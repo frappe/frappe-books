@@ -28,7 +28,7 @@ await build({
       export { getMissingMandatoryFields } from './fyo/model/helpers';
       export { evaluateHidden, evaluateReadOnly, evaluateRequired } from './src/utils/doc';
       export * as errors from './fyo/utils/errors';
-      export { frappeModels, getRegionalFrappeModels, models } from './models';
+      export { frappeModels, getRegionalFrappeModels } from './models';
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getFilterFields } from './src/utils/filterFields';
@@ -128,7 +128,6 @@ export const {
   errors,
   frappeModels,
   getRegionalFrappeModels,
-  models,
   getMappedDoc,
   createFilters,
   routeFilters,

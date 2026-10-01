@@ -9,7 +9,6 @@ import {
   fyo,
   getSchema,
   loadFrappeDocTypes,
-  models,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -105,7 +104,7 @@ test('the item form shows bad values at their fields, as the server refuses them
 test('item links filter and create items by Frappe fieldnames', async () => {
   const sale = { isSales: true };
   const purchase = { isSales: false };
-  const { SalesInvoiceItem } = models;
+  const SalesInvoiceItem = frappeModels.SalesInvoice.rowModels.items;
   const StockMovementItem = frappeModels.StockMovement.rowModels.items;
   assert.deepEqual(await SalesInvoiceItem.filters.item(sale), {
     item_usage: ['not in', ['Purchases']],

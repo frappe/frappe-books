@@ -1,8 +1,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.inventory.availability import get_stock_location
 from frappe_books.tests.accounting import unique_name
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
 class IntegrationTestStockLocation(IntegrationTestCase):
@@ -39,7 +39,7 @@ class IntegrationTestStockLocation(IntegrationTestCase):
 
 
 def stock_location(source_schema, is_pos):
-	return BooksBespokeQueries().call("getStockLocation", [source_schema, is_pos])
+	return get_stock_location(f"Books {source_schema[:-7]} Invoice", is_pos)
 
 
 def make_location(label):

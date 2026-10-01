@@ -13,8 +13,7 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
-from frappe_books.ui_api import bespoke_call, database_call, lifecycle_action
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
+from frappe_books.ui_api import database_call, lifecycle_action
 from frappe_books.ui_bridge.database import BooksDatabaseBridge
 from frappe_books.ui_bridge.mapping import source_by_doctype
 
@@ -423,15 +422,11 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 	def test_calls_with_wrong_argument_counts_are_rejected(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.bridge.call("get", [])
-		with self.assertRaises(frappe.ValidationError):
-			BooksBespokeQueries().call("getStockQuantity", [])
 
 	def test_non_string_names_are_rejected_before_reading_rows(self):
 		lookup = {"name": ["like", "%"]}
 		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
 			self.bridge.call("get", ["Party", lookup])
-		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
-			BooksBespokeQueries().call("getStockQuantity", [lookup])
 
 	def test_api_endpoints_validate_argument_types(self):
 		with self.assertQueryCount(0), self.assertRaises(frappe.FrappeTypeError):
@@ -439,9 +434,8 @@ class IntegrationTestUiBridge(IntegrationTestCase):
 		for action in ("Submit", "bogus"):
 			with self.subTest(action=action), self.assertRaises(frappe.FrappeTypeError):
 				lifecycle_action(action, "SalesInvoice", "SINV-0001", "2026-01-01 00:00:00")
-		for endpoint in (database_call, bespoke_call):
-			with self.subTest(endpoint=endpoint.__name__), self.assertRaises(frappe.FrappeTypeError):
-				endpoint("get", {"source_schema": "Party"})
+		with self.assertRaises(frappe.FrappeTypeError):
+			database_call("get", {"source_schema": "Party"})
 
 	def test_list_reads_return_every_matching_row(self):
 		prefix = unique_name("Bridge Unit")

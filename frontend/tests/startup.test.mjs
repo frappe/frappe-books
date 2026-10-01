@@ -4,7 +4,6 @@ import {
   Fyo,
   FrappeDatabaseDemux,
   fieldProperties,
-  models,
   setLanguageMapOnTranslationString,
   useTranslations,
 } from './helpers/accounting.mjs';
@@ -26,7 +25,7 @@ test('startup builds one translated schema map for a non-English language', asyn
   try {
     const fyo = new Fyo({ DatabaseDemux: Demux });
     await fyo.db.connect('-');
-    await fyo.initializeAndRegister(models);
+    await fyo.initializeAndRegister();
 
     const field = fyo.getField('SalesInvoice', 'date');
     assert.equal(field.label, 'Datum');

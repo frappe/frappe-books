@@ -9,6 +9,7 @@ export interface FilterChip {
   fieldname: string;
   label: string;
   value: string;
+  isChanged: boolean;
 }
 
 /** Filter values of a new report of the same kind. */
@@ -54,6 +55,7 @@ export class MobileFilters {
       fieldname: field.fieldname,
       label: field.label,
       value: this.format(field),
+      isChanged: this.isChanged(field),
     }));
   }
 

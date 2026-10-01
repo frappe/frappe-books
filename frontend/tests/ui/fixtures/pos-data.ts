@@ -117,8 +117,7 @@ function answer(path: string, body: Row, params: Row): unknown {
   const method = path.split('/').pop()!;
   const methods: Record<string, () => unknown> = {
     'frappe.client.get_list': () => getList(body.doctype, body.filters),
-    'frappe.desk.search.search_link': () =>
-      getList(body.doctype).map(({ name }) => ({ value: name })),
+    'frappe.desk.search.search_widget': () => getList(body.doctype),
     get_open_shift: () => (shift.open ? openingShift.name : null),
     get_stock_location: () => null,
     get_stock_quantities: () =>

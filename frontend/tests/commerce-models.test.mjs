@@ -7,7 +7,6 @@ import {
   fyo,
   getFrappeDoc,
   getLinkDisplayValue,
-  getLinkLabels,
   getModel,
   getSchema,
   newFrappeDoc,
@@ -123,26 +122,10 @@ test('the address form shows what it showed, and links show its display text', (
   ]);
 });
 
-test('address options show their display text, fetched for the names found', async () => {
-  respond = ({ path }) =>
-    path === '/api/v2/document/Books Address'
-      ? {
-          data: [{ name: 'Office', address_display: '42 Market Road, Mumbai' }],
-        }
-      : { data: [] };
-  requests.length = 0;
-  assert.deepEqual(await getLinkLabels('Address', ['Office']), {
-    Office: '42 Market Road, Mumbai',
-  });
-  assert.deepEqual(requests[0].params.fields, ['name', 'address_display']);
-  assert.deepEqual(requests[0].params.filters, [['name', 'in', ['Office']]]);
-  assert.deepEqual(await getLinkLabels('Party', ['Asha']), {});
-});
-
 test("a link shows an address's display text and other records' names", async () => {
   respond = ({ path }) =>
-    path === '/api/v2/document/Books Address/Home'
-      ? { data: { name: 'Home', address_display: '7 Hill Street' } }
+    path === '/api/v2/document/Books Address'
+      ? { data: [{ address_display: '7 Hill Street' }] }
       : { data: [] };
   requests.length = 0;
 
@@ -151,7 +134,7 @@ test("a link shows an address's display text and other records' names", async ()
   assert.equal(await getLinkDisplayValue('Party', 'Asha'), 'Asha');
   assert.deepEqual(
     requests.map(({ path }) => path),
-    ['/api/v2/document/Books Address/Home']
+    ['/api/v2/document/Books Address']
   );
 });
 
@@ -159,13 +142,16 @@ test("countries are Frappe's, shown and searched by their names", async () => {
   assert.deepEqual(getLayout('Country'), [
     'country_name | Country Name |  | Default',
   ]);
-  respond = () => ({ message: [{ value: 'India' }] });
+  respond = () => ({ message: [{ name: 'India' }] });
   requests.length = 0;
 
   assert.deepEqual(await searchFrappeLink('Country', 'Ind', null, 10), [
-    { label: 'India', value: 'India' },
+    { label: 'India', value: 'India', record: { name: 'India' } },
   ]);
-  assert.equal(requests[0].path, '/api/method/frappe.desk.search.search_link');
+  assert.equal(
+    requests[0].path,
+    '/api/method/frappe.desk.search.search_widget'
+  );
   // Frappe matches a translated doctype's names in Python, so letters are not spread.
   assert.deepEqual(
     [requests[0].body.doctype, requests[0].body.txt],

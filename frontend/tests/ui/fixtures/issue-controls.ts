@@ -17,11 +17,10 @@ import { loadFrappeFixture } from './frappe';
 
 async function mount() {
   // Every link search and list finds the Cash account.
-  await loadFrappeFixture((path) =>
-    path.endsWith('search_link')
-      ? { message: [{ value: 'Cash' }] }
-      : { message: [{ name: 'Cash' }], data: [{ name: 'Cash' }] }
-  );
+  await loadFrappeFixture(() => ({
+    message: [{ name: 'Cash' }],
+    data: [{ name: 'Cash' }],
+  }));
   fyo.singles.SystemSettings = { date_format: 'MMM d, y' } as any;
   showSidebar.value = false;
   const state = reactive({

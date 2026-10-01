@@ -67,6 +67,28 @@ test('a party template holds a tax ID, not Indian GST fields', () => {
   assert.ok(!labels.includes('GSTIN No.'));
 });
 
+test('an invoice template keeps Books’ column order, without the quantity the server sets', () => {
+  const importer = new Importer('SalesInvoice', fyo);
+  const headers = parseCSV(importer.getCSVTemplate())[0];
+
+  assert.deepEqual(headers.slice(0, 12), [
+    'Invoice No',
+    'Number Series',
+    'Customer',
+    'Account',
+    'Date',
+    'Price List',
+    'Apply Discount After Tax',
+    'Make Payment On Submit',
+    'Make Shipment On Submit',
+    'Notes',
+    'Back Reference',
+    'Return Against',
+  ]);
+  assert.ok(headers.includes('Quantity (Items)'));
+  assert.ok(!headers.includes('Qty (Items)'));
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;

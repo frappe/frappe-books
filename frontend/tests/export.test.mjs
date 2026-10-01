@@ -55,6 +55,25 @@ test('party and address exports leave out Indian GST fields', () => {
   assert.ok(!exported('Address').includes('pos'));
 });
 
+test('the file fields of every model are fields of its schema', () => {
+  const schemaNames = Object.keys(frappeModels).flatMap((schemaName) => [
+    schemaName,
+    ...Object.values(getDocType(schemaName).tables).map(
+      ({ schema }) => schema.name
+    ),
+  ]);
+  const missing = schemaNames.flatMap((schemaName) => {
+    const { fields, fileFields = [] } = getSchema(schemaName);
+    return fileFields
+      .filter((fieldname) => !fields.some((f) => f.fieldname === fieldname))
+      .map((fieldname) => `${schemaName}.${fieldname}`);
+  });
+
+  assert.deepEqual(missing, []);
+  assert.ok(getSchema('SalesInvoice').fileFields.length > 0);
+  assert.ok(getSchema('SalesQuoteItem').fileFields.length > 0);
+});
+
 test('every exported table is headed by the label of its rows, not their doctype', () => {
   const lists = Object.keys(frappeModels).filter(
     (schemaName) => !getDocType(schemaName).meta.issingle

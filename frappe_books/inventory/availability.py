@@ -14,11 +14,12 @@ INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
 @frappe.whitelist()
 def get_stock_location(doctype: str, is_pos: bool = False) -> str | None:
 	"""Return where an invoice of the doctype moves its stock, as its stock transfer would."""
-	if doctype not in INVOICE_DOCTYPES:
+	# A quote ships like the sales invoice made from it.
+	invoice_doctype = "Books Sales Invoice" if doctype == "Books Sales Quote" else doctype
+	if invoice_doctype not in INVOICE_DOCTYPES:
 		frappe.throw(_("Only invoices move stock from a default location."))
-	invoice = frappe.new_doc(doctype, is_pos=is_pos)
 	frappe.has_permission(doctype, "read", throw=True)
-	return default_location(invoice)
+	return default_location(frappe.new_doc(invoice_doctype, is_pos=is_pos))
 
 
 def get_stock_quantities(

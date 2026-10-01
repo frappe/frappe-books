@@ -111,10 +111,9 @@ import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
-import { getValue } from 'src/frappe/api';
+import { getAllDocuments, getValue } from 'src/frappe/api';
 import { getSchema } from 'src/frappe/registry';
 import { getBooksDoc, newBooksDoc } from 'src/frappe/useBooksDoc';
-import { call } from 'src/web/api';
 import { showToast } from 'src/utils/interactive';
 import {
   downloadPDF,
@@ -332,13 +331,14 @@ export default defineComponent({
       }
     },
     async setTemplateList(): Promise<void> {
-      const list = await call<{ name: string }[]>('frappe.client.get_list', {
-        doctype: 'Print Format',
-        filters: { doc_type: this.doctype, disabled: 0 },
-        order_by: 'creation desc',
-        limit_page_length: 0,
+      const list = await getAllDocuments('Print Format', {
+        fields: ['name'],
+        filters: [
+          ['doc_type', '=', this.doctype],
+          ['disabled', '=', 0],
+        ],
       });
-      this.templateList = list.map(({ name }) => name);
+      this.templateList = list.map(({ name }) => name as string);
     },
     async savePDF() {
       if (!this.templateName) {

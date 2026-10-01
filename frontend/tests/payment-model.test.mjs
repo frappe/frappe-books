@@ -228,9 +228,9 @@ test('the payment lists show, filter and open as they did', () => {
     'date',
     'amount',
   ]);
-  assert.deepEqual(routeFilters.SalesPayments, {
-    reference_type: 'SalesInvoice',
-  });
+  assert.deepEqual(routeFilters.SalesPayments, [
+    ['reference_type', '=', 'SalesInvoice'],
+  ]);
   assert.deepEqual(createFilters.PurchasePayments, { payment_type: 'Pay' });
 
   const filters = getFilterFields(getSchema('Payment').fields, columns);

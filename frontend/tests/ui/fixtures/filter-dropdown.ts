@@ -10,7 +10,6 @@ import { frappeModels } from 'models';
 import type { Filter } from 'src/frappe/api';
 import { toSchemaName } from 'src/frappe/registry';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
-import type { QueryFilter } from 'utils/db/types';
 import 'src/styles/index.css';
 import { loadFrappeFixture } from './frappe';
 
@@ -47,7 +46,7 @@ async function mount() {
     },
   };
   const state = reactive({
-    applied: {} as QueryFilter,
+    applied: [] as Filter[],
     schemaName: 'SalesInvoice',
     lookupFailure: false,
     lookupCalls: [] as string[],
@@ -131,9 +130,9 @@ async function mount() {
                   h(FilterDropdown, {
                     ref: filter,
                     schemaName: state.schemaName,
-                    onChange: (query: QueryFilter) => {
-                      state.applied = query;
-                      void list.value?.updateData(query);
+                    onChange: (filters: Filter[]) => {
+                      state.applied = filters;
+                      void list.value?.updateData(filters);
                     },
                   }),
                 ]

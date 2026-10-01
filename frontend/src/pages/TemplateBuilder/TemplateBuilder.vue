@@ -218,7 +218,6 @@ import {
 } from 'src/utils/ui';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { getDocuments } from 'src/frappe/api';
-import { toFrappeFilters } from 'src/frappe/list';
 import { getSchema } from 'src/frappe/registry';
 import { getFrappeDocOrNew } from 'src/frappe/documents';
 import { getMapFromList } from 'utils/index';
@@ -624,7 +623,7 @@ export default defineComponent({
 
       const [latest] = await getDocuments(this.doctype, {
         fields: ['name'],
-        filters: toFrappeFilters({ cancelled: false }),
+        filters: [['docstatus', '!=', 2]],
         orderBy: 'creation desc',
         limit: 1,
       });

@@ -148,7 +148,7 @@ test('Submitted and Cancelled follow the docstatus', async () => {
     ],
     tableFields: [],
     limit: null,
-    filters: {},
+    filters: [],
   });
 
   assert.deepEqual(requests[0].body.fields, ['name', 'docstatus']);
@@ -210,7 +210,7 @@ test('files hold Books’ keys and values', async () => {
       },
     ],
     limit: null,
-    filters: {},
+    filters: [],
   };
 
   const [paid, draft] = JSON.parse(await getJsonExportData(query));
@@ -257,14 +257,14 @@ test('files hold virtual amounts as 0 and other unread values as null', async ()
     fields: pick(getExportFields('NumberSeries'), ['name', 'current']),
     tableFields: [],
     limit: null,
-    filters: {},
+    filters: [],
   });
   const invoice = await getJsonExportData({
     schemaName: 'SalesInvoice',
     fields: pick(getExportFields('SalesInvoice'), ['total_discount']),
     tableFields: [],
     limit: null,
-    filters: {},
+    filters: [],
   });
 
   assert.deepEqual(JSON.parse(series), [{ name: 'SINV-', current: null }]);
@@ -278,7 +278,7 @@ test('files keep the keys Books renamed', async () => {
     const tableFields = getExportTableFields(schemaName)
       .filter((table) => fieldnames.includes(table.fieldname))
       .map((table) => ({ ...table, fields: table.fields.slice(0, 1) }));
-    const query = { schemaName, fields, tableFields, limit: 1, filters: {} };
+    const query = { schemaName, fields, tableFields, limit: 1, filters: [] };
     return parseCSV(await getCsvExportData(query))[1];
   };
 
@@ -323,7 +323,10 @@ test('a list exports from the framework a page at a time, in list order', async 
     schemaName: 'JournalEntry',
     fields: [field('name', 'Entry No')],
     tableFields: [],
-    filters: { name: ['like', 'JV%'], submitted: ['=', 1] },
+    filters: [
+      ['name', 'like', 'JV%'],
+      ['docstatus', 'in', [1, 2]],
+    ],
   };
 
   const limited = await getJsonExportData({ ...query, limit: 1 });
@@ -384,7 +387,7 @@ test("CSV repeats a document's values on each row of its tables", async () => {
       },
     ],
     limit: null,
-    filters: {},
+    filters: [],
   });
 
   // A virtual field has no column to read.

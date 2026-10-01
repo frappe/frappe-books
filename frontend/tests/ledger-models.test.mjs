@@ -64,7 +64,7 @@ test('the accounting ledger lists newest posting first', async () => {
   const requests = stubFrappe(({ path }) =>
     path.endsWith('/count') ? { data: 0 } : { message: [] }
   );
-  const page = { filters: {}, orFilters: {}, start: 0, limit: 20 };
+  const page = { filters: [], orFilters: [], start: 0, limit: 20 };
   await getFrappeListPage(fyo, 'AccountingLedgerEntry', page);
   await getFrappeListPage(fyo, 'StockLedgerEntry', page);
   await getFrappeListPage(fyo, 'LoyaltyPointEntry', page);

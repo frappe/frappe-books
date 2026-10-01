@@ -1,6 +1,7 @@
 import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
 import type { QueryFilter } from 'utils/db/types';
+import { toDocStatusFilter } from 'src/utils/filterFields';
 import {
   getCount,
   getDocuments,
@@ -11,16 +12,10 @@ import {
 import { getDocType, type FrappeDocType } from './doctypes';
 import { toDocValues } from './values';
 
-// Books' Submitted and Cancelled list filters, as the docstatus values they match.
-const DOCSTATUS_FLAGS: Record<string, number[]> = {
-  submitted: [1, 2],
-  cancelled: [2],
-};
-
 export interface ListPage {
-  filters: QueryFilter;
+  filters: Filter[];
   /** Rows also have to match one of these, e.g. a search over several fields. */
-  orFilters: QueryFilter;
+  orFilters: Filter[];
   start: number;
   limit: number;
 }
@@ -32,8 +27,7 @@ export async function getFrappeListPage(
   page: ListPage
 ): Promise<{ rows: RenderData[]; total: number }> {
   const docType = getDocType(schemaName);
-  const filters = toFrappeFilters(page.filters);
-  const orFilters = toFrappeFilters(page.orFilters);
+  const { filters, orFilters } = page;
   const [rows, total] = await Promise.all([
     getList(docType.doctype, {
       fields: ['*'],
@@ -110,9 +104,8 @@ function toFrappeFilter(
     return [fieldname, 'is', operator === 'is null' ? 'not set' : 'set'];
   }
 
-  if (fieldname in DOCSTATUS_FLAGS) {
-    const isSet = (operator === '=') === Boolean(Number(value));
-    return ['docstatus', isSet ? 'in' : 'not in', DOCSTATUS_FLAGS[fieldname]];
+  if (fieldname === 'submitted' || fieldname === 'cancelled') {
+    return toDocStatusFilter(fieldname, operator, Number(value));
   }
 
   if (operator === 'includes') {

@@ -72,8 +72,11 @@ test("a list page and its count come from Frappe's list query, newest first", as
       : { message: [{ name: 'Pen', rate: 12.5, track_item: 1 }] }
   );
   const { rows, total } = await getFrappeListPage(fyo, 'Item', {
-    filters: { item_type: 'Product' },
-    orFilters: { name: ['like', '%pe%'], item_usage: ['like', '%pe%'] },
+    filters: [['item_type', '=', 'Product']],
+    orFilters: [
+      ['name', 'like', '%pe%'],
+      ['item_usage', 'like', '%pe%'],
+    ],
     start: 50,
     limit: 50,
   });
@@ -116,14 +119,14 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
   );
   const list = {
     schemaName: 'Order',
-    filters: { customer: ['like', 'Acme%'] },
-    activeFilters: {},
-    orFilters: {},
+    filters: [['customer', 'like', 'Acme%']],
+    activeFilters: [],
+    orFilters: [],
     requestId: 0,
     pageStart: 100,
     pageLength: 50,
   };
-  const query = { amount: ['>', 5] };
+  const query = [['amount', '>', 5]];
   const first = loadListData(fyo, list, query);
   pages.shift()({ message: [{ name: 'ORD-1', customer: 'Acme' }] });
   const loaded = await first;
@@ -133,7 +136,7 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
     ['ORD-1']
   );
   assert.equal(loaded.total, 2);
-  assert.deepEqual(loaded.appliedFilters, { ...list.filters, ...query });
+  assert.deepEqual(loaded.appliedFilters, [...list.filters, ...query]);
   assert.deepEqual(requests[0].body.filters, [
     ['customer', 'like', 'Acme%'],
     ['amount', '>', 5],
@@ -148,14 +151,14 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
   await refresh;
   assert.deepEqual(list.activeFilters, query);
 
-  const old = loadListData(fyo, list, { customer: 'Old' });
-  const latest = loadListData(fyo, list, {});
+  const old = loadListData(fyo, list, [['customer', '=', 'Old']]);
+  const latest = loadListData(fyo, list, []);
   const oldPage = pages.shift();
   pages.shift()({ message: [{ name: 'ORD-2' }] });
   assert.equal((await latest).rows[0].name, 'ORD-2');
   oldPage({ message: [{ name: 'ORD-0' }] });
   assert.equal(await old, undefined);
-  assert.deepEqual(list.activeFilters, {});
+  assert.deepEqual(list.activeFilters, []);
 });
 
 test('a submittable list refreshes after a submit, cancel, save, delete or rename', () => {
@@ -228,7 +231,7 @@ test("a list is ordered by its DocType's sort field, newest first", async (t) =>
   const requests = stubFrappe(({ path }) =>
     path.endsWith('/count') ? { data: 0 } : { message: [] }
   );
-  const page = { filters: {}, orFilters: {}, start: 0, limit: 20 };
+  const page = { filters: [], orFilters: [], start: 0, limit: 20 };
 
   meta.sort_field = 'creation';
   await getFrappeListPage(fyo, 'Order', page);

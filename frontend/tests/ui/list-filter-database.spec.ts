@@ -87,7 +87,7 @@ for (const [schema, field, condition, value, matches] of cases) {
 
 /** Opens the list limited to this run's seeded records. */
 async function openSeededList(page: Page, schema: string) {
-  const filters = JSON.stringify({ name: ['like', `% ${run}`] });
+  const filters = JSON.stringify([['name', 'like', `% ${run}`]]);
   await page.goto(
     `/books/list/${schema}?filters=${encodeURIComponent(filters)}`
   );

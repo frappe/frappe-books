@@ -1,18 +1,15 @@
 import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
-import { cloneDeep } from 'lodash';
-import type { QueryFilter } from 'utils/db/types';
+import type { Filter } from 'src/frappe/api';
 import { getFrappeListPage } from 'src/frappe/list';
 import { getSchema } from 'src/frappe/registry';
-import { toRaw } from 'vue';
-import { mergeQueryFilters } from './filterQuery';
 
 export interface ListState {
   schemaName: string;
-  filters: QueryFilter;
-  activeFilters: QueryFilter;
+  filters: Filter[];
+  activeFilters: Filter[];
   /** Rows match at least one of these, e.g. a search over several fields. */
-  orFilters: QueryFilter;
+  orFilters: Filter[];
   requestId: number;
   pageStart: number;
   pageLength: number;
@@ -26,21 +23,18 @@ export interface ListState {
 export async function loadListData(
   fyo: Fyo,
   list: ListState,
-  filters?: QueryFilter,
-  orFilters: QueryFilter = {}
+  filters?: Filter[],
+  orFilters: Filter[] = []
 ): Promise<
-  { rows: RenderData[]; total: number; appliedFilters: QueryFilter } | undefined
+  { rows: RenderData[]; total: number; appliedFilters: Filter[] } | undefined
 > {
   if (filters !== undefined) {
-    list.activeFilters = cloneDeep(toRaw(filters));
-    list.orFilters = cloneDeep(toRaw(orFilters));
+    list.activeFilters = filters;
+    list.orFilters = orFilters;
     list.pageStart = 0;
   }
   const requestId = ++list.requestId;
-  const appliedFilters = mergeQueryFilters(
-    cloneDeep(toRaw(list.filters)),
-    cloneDeep(toRaw(list.activeFilters))
-  );
+  const appliedFilters = [...list.filters, ...list.activeFilters];
   const { rows, total } = await getFrappeListPage(fyo, list.schemaName, {
     filters: appliedFilters,
     orFilters: list.orFilters,

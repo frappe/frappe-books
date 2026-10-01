@@ -1,8 +1,10 @@
-import { DocValue } from 'fyo/core/types';
+import { DocValue, RawValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
+import type { Filter } from 'src/frappe/api';
 import { newFrappeDoc } from 'src/frappe/documents';
+import { getField } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { QueryFilter } from 'utils/db/types';
 
@@ -68,6 +70,37 @@ export function getCreateFiltersFromListViewFilters(filters: QueryFilter) {
   }
 
   return createFilters;
+}
+
+/**
+ * Values a new document takes from its list's filters, as Frappe's list does:
+ * each `=` filter, or an `in` filter's first value but Both, on a field users
+ * enter.
+ */
+export function getNewDocValues(
+  schemaName: string,
+  filters: Filter[]
+): RawValueMap {
+  const values: RawValueMap = {};
+  for (const filter of filters) {
+    const field = getField(schemaName, filter[0]);
+    const value = getFilterChoice(filter);
+    if (field && !field.meta && !field.readOnly && value !== undefined) {
+      values[field.fieldname] = value as RawValueMap[string];
+    }
+  }
+
+  return values;
+}
+
+function getFilterChoice([, operator, value]: Filter): unknown {
+  if (operator === '=') {
+    return value;
+  }
+
+  if (operator === 'in' && Array.isArray(value)) {
+    return value.find((option) => option !== 'Both');
+  }
 }
 
 export function getIsMac() {

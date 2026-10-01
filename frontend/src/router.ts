@@ -69,11 +69,10 @@ const routes: RouteRecordRaw[] = [
         const { schemaName } = route.params;
         const pageTitle = route.params.pageTitle ?? '';
 
-        const filters = {};
+        // Frappe filters, as JSON.
         const filterString = route.query.filters;
-        if (typeof filterString === 'string') {
-          Object.assign(filters, JSON.parse(filterString));
-        }
+        const filters =
+          typeof filterString === 'string' ? JSON.parse(filterString) : [];
 
         return {
           schemaName,

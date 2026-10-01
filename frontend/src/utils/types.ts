@@ -2,7 +2,7 @@ import type { Doc } from 'fyo/model/doc';
 import type { Action } from 'fyo/model/types';
 import type { ModelNameEnum } from 'models/types';
 import type { Field, FieldType } from 'schemas/types';
-import type { QueryFilter } from 'utils/db/types';
+import type { Filter } from 'src/frappe/api';
 import type { Ref } from 'vue';
 import type { toastDurationMap } from './ui';
 
@@ -51,7 +51,7 @@ export interface SidebarRoot {
   icon: string;
   hidden?: () => boolean;
   items?: SidebarItem[];
-  filters?: QueryFilter;
+  filters?: Filter[];
 }
 
 export interface SidebarItem {
@@ -60,7 +60,7 @@ export interface SidebarItem {
   route: string;
   schemaName?: string;
   hidden?: () => boolean;
-  filters?: QueryFilter;
+  filters?: Filter[];
 }
 
 export interface ExportField {

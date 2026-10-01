@@ -124,7 +124,7 @@ export class Party extends FrappeDoc {
         action: async (partyDoc, router) => {
           await router.push({
             path: '/list/PurchaseInvoice',
-            query: { filters: JSON.stringify({ party: partyDoc.name }) },
+            query: { filters: JSON.stringify([['party', '=', partyDoc.name]]) },
           });
         },
       },
@@ -158,7 +158,7 @@ export class Party extends FrappeDoc {
         action: async (partyDoc, router) => {
           await router.push({
             path: '/list/SalesInvoice',
-            query: { filters: JSON.stringify({ party: partyDoc.name }) },
+            query: { filters: JSON.stringify([['party', '=', partyDoc.name]]) },
           });
         },
       },

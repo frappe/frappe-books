@@ -67,6 +67,7 @@ import {
 import { t } from 'fyo';
 import { getOptionList } from 'fyo/utils';
 import type { Field } from 'schemas/types';
+import type { Filter } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
 import { getFieldLabel } from 'src/utils/filterFields';
 import {
@@ -75,7 +76,6 @@ import {
   type FilterRow,
 } from 'src/utils/filterQuery';
 import { ListFilters } from 'src/utils/listFilters';
-import type { QueryFilter } from 'utils/db/types';
 import { defineComponent, type PropType } from 'vue';
 import MobileFilterSheet from './MobileFilterSheet.vue';
 
@@ -91,7 +91,7 @@ export default defineComponent({
   data() {
     return {
       filters: new ListFilters(this.schemaName),
-      filterQuery: {} as QueryFilter,
+      appliedFilters: [] as Filter[],
       search: '',
       searchTimer: 0,
       isSheetOpen: false,
@@ -109,18 +109,17 @@ export default defineComponent({
       });
     },
     /** Rows whose number, title or keyword fields contain the text. */
-    searchQuery(): QueryFilter {
+    searchFilters(): Filter[] {
       const text = this.search.trim();
       if (!text) {
-        return {};
+        return [];
       }
 
-      return Object.fromEntries(
-        this.searchFields.map((fieldname: string) => [
-          fieldname,
-          ['like', `%${text}%`],
-        ])
-      );
+      return this.searchFields.map((fieldname): Filter => [
+        fieldname,
+        'like',
+        `%${text}%`,
+      ]);
     },
   },
   methods: {
@@ -129,23 +128,23 @@ export default defineComponent({
       window.clearTimeout(this.searchTimer);
       this.searchTimer = window.setTimeout(this.emitChange, 300);
     },
-    onApply(query: QueryFilter) {
-      this.filterQuery = query;
+    onApply(filters: Filter[]) {
+      this.appliedFilters = filters;
       this.emitChange();
     },
     removeFilter(id: number) {
       this.filters.remove(id);
-      const query = this.filters.apply();
-      if (query) this.onApply(query);
+      const filters = this.filters.apply();
+      if (filters) this.onApply(filters);
     },
     clear() {
       window.clearTimeout(this.searchTimer);
       this.search = '';
       this.filters.clear();
-      this.onApply(this.filters.apply() ?? {});
+      this.onApply(this.filters.apply() ?? []);
     },
     emitChange() {
-      this.$emit('change', this.filterQuery, this.searchQuery);
+      this.$emit('change', this.appliedFilters, this.searchFilters);
     },
   },
 });

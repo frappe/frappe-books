@@ -107,8 +107,8 @@ import Paginator from 'src/components/Paginator.vue';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { loadListData, onListChange } from 'src/utils/listData';
+import type { Filter } from 'src/frappe/api';
 import { isMobile } from 'src/utils/viewport';
-import { QueryFilter } from 'utils/db/types';
 import { PropType, defineComponent } from 'vue';
 import ListCell from './ListCell.vue';
 import { getListColumns, type ListColumn } from './listColumns';
@@ -136,8 +136,8 @@ export default defineComponent({
       default: () => ({ columns: [] }),
     },
     filters: {
-      type: Object as PropType<QueryFilter>,
-      default: () => ({}),
+      type: Array as PropType<Filter[]>,
+      default: () => [],
     },
     schemaName: { type: String, required: true },
     canCreate: Boolean,
@@ -162,8 +162,8 @@ export default defineComponent({
       pageStart: 0,
       pageLength: isMobile.value ? mobilePageLength : 50,
       selectedItems: [] as string[],
-      activeFilters: {} as QueryFilter,
-      orFilters: {} as QueryFilter,
+      activeFilters: [] as Filter[],
+      orFilters: [] as Filter[],
       requestId: 0,
     };
   },
@@ -175,10 +175,7 @@ export default defineComponent({
       return getListColumns(this.schemaName, this.listConfig);
     },
     isFiltered(): boolean {
-      return (
-        Object.keys(this.activeFilters).length > 0 ||
-        Object.keys(this.orFilters).length > 0
-      );
+      return this.activeFilters.length > 0 || this.orFilters.length > 0;
     },
   },
   watch: {
@@ -192,7 +189,7 @@ export default defineComponent({
         return;
       }
 
-      await this.updateData({});
+      await this.updateData([]);
     },
     filters: {
       deep: true,
@@ -221,7 +218,7 @@ export default defineComponent({
         onListChange(fyo, this.schemaName, () => this.updateData());
       }
     },
-    async updateData(filters?: QueryFilter, orFilters?: QueryFilter) {
+    async updateData(filters?: Filter[], orFilters?: Filter[]) {
       if (filters !== undefined) {
         this.isLoading = true;
         if (isMobile.value) this.pageLength = mobilePageLength;

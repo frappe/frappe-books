@@ -304,14 +304,14 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'party',
           route: '/list/Party',
           schemaName: 'Party',
-          filters: { role: ['in', ['Customer', 'Supplier', 'Both']] },
+          filters: [['role', 'in', ['Customer', 'Supplier', 'Both']]],
         },
         {
           label: t`Items`,
           name: 'common-items',
           route: `/list/Item/${t`Items`}`,
           schemaName: 'Item',
-          filters: { item_usage: 'Both' },
+          filters: [['item_usage', '=', 'Both']],
         },
         {
           label: t`Price List`,

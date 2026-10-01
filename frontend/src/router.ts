@@ -178,6 +178,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from) => {
+  // SettingsDialog doesn't fit phones yet (frappe/frappe-ui#1244).
   if (to.name === 'Settings' && !isMobile.value) {
     return openSettingsDialog(to, from);
   }

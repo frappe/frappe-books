@@ -4,6 +4,7 @@ import { settingsDialog, showSidebar } from 'src/utils/refs';
 <template>
   <FrappeDesktopShell :scroll="false">
     <template #sidebar>
+      <!-- frappe-ui's Sidebar can't hide fully (frappe/frappe-ui#1251). -->
       <Transition name="sidebar">
         <Sidebar
           v-show="showSidebar"

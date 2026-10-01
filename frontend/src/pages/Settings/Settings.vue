@@ -16,6 +16,7 @@
       ref="mobileTabs"
       class="sticky top-0 z-10 flex shrink-0 items-center overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2"
     >
+      <!-- md is the largest TabButtons size (frappe/frappe-ui#1221). -->
       <FrappeTabButtons v-model="activeTab" :options="tabOptions" size="md" />
     </div>
     <template v-if="doc">

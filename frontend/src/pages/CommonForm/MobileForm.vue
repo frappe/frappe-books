@@ -22,6 +22,7 @@
       v-if="tabOptions.length > 1"
       class="sticky top-0 z-10 mt-1 flex items-center overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none]"
     >
+      <!-- md is the largest TabButtons size (frappe/frappe-ui#1221). -->
       <FrappeTabButtons
         :model-value="activeTab"
         :options="tabOptions"

@@ -26,6 +26,7 @@ export default defineConfig(async () => {
         models: path.resolve(frontendRoot, 'models'),
         utils: path.resolve(frontendRoot, 'utils'),
         reports: path.resolve(frontendRoot, 'reports'),
+        // `frappe-ui/experimental` fails vue-tsc (frappe/frappe-ui#1247).
         'frappe-ui-command-palette': path.resolve(
           frontendRoot,
           'node_modules/frappe-ui/experimental/CommandPalette/index.ts',

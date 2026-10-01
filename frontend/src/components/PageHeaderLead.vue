@@ -22,6 +22,9 @@ import {
 import { openNavSheetKey } from 'src/utils/injectionKeys';
 import { inject } from 'vue';
 
-/** Phone top bars lead with back on pushed pages and the nav sheet elsewhere. */
+/**
+ * Phone top bars lead with back on pushed pages and the nav sheet elsewhere.
+ * The back chevron is flipped for RTL by hand (frappe/frappe-ui#1220).
+ */
 const openNavSheet = inject(openNavSheetKey, undefined);
 </script>

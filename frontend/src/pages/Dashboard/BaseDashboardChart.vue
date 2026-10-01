@@ -30,7 +30,8 @@ export default defineComponent({
     /**
      * frappe-ui charts mishandle taps: the tooltip closes when the finger
      * lifts, and the focus that follows moves it to the first month. Keeping
-     * touch events from the chart lets the tap's mouse events show it instead.
+     * touch events from the chart lets the tap's mouse events show it instead
+     * (frappe/frappe-ui#1222).
      */
     phoneChartListeners() {
       if (!this.isMobile) {

@@ -27,7 +27,8 @@ const router = useRouter();
 const { groups, active } = usePhoneSidebar();
 const tabs = groups.filter((group) => TAB_GROUPS.includes(group.name));
 
-// MobileNavItem's `route` matches by route name, so any two lists are one page.
+// MobileNavItem's `route` matches by route name, so any two lists are one page
+// (frappe/frappe-ui#1245).
 async function openTab(tab: SidebarRoot) {
   if (router.resolve(tab.route).path !== route.path) {
     await router.push(tab.route);

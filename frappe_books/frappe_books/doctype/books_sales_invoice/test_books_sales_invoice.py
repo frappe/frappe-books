@@ -362,6 +362,23 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 		self.assertEqual((invoice.party, invoice.account), (self.party.name, self.receivable.name))
 
+	def test_a_new_pos_sale_previews_the_customer_of_the_pos_profile(self):
+		profile = frappe.get_doc(
+			{
+				"doctype": "Books Pos Profile",
+				"name": unique_name("POS Profile"),
+				"inventory": "Stores",
+				"pos_customer": self.party.name,
+			}
+		).insert()
+		frappe.db.set_single_value("Books Pos Settings", "pos_profile", profile.name)
+		frappe.db.set_single_value("Books Defaults", "pos_customer", make_party(self.receivable.name).name)
+		invoice = frappe.get_doc({"doctype": "Books Sales Invoice", "is_pos": 1})
+
+		invoice.preview()
+
+		self.assertEqual(invoice.party, self.party.name)
+
 	def test_invoice_bills_in_the_party_currency(self):
 		currency = foreign_currency()
 		party = make_party(self.receivable.name, currency=currency)

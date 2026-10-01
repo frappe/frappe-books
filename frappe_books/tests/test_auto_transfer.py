@@ -71,6 +71,20 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 			frappe.ValidationError, "POS Inventory is not set. Please set it on POS Settings", invoice.submit
 		)
 
+	def test_pos_sale_preview_fills_serial_numbers_in_stock_at_the_pos(self):
+		invoice, item, location = self._make_pos_invoice(use_profile=False)
+		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)
+		serial_numbers = sorted(unique_name("SN") for _ in range(3))
+		row = {"item": item.name, "to_location": location.name, "quantity": 3, "rate": 10}
+		make_movement("MaterialReceipt", [{**row, "serial_number": "\n".join(serial_numbers)}]).submit()
+		invoice.items[0].quantity = 1
+		invoice.items[0].serial_number = serial_numbers[0]
+		invoice.append("items", {"item": item.name, "quantity": 2})
+
+		invoice.preview()
+
+		self.assertEqual(invoice.items[1].serial_number, "\n".join(serial_numbers[1:]))
+
 	def test_pos_invoice_submit_rejects_serial_numbers_out_of_stock(self):
 		invoice, item, _location = self._make_pos_invoice(use_profile=False)
 		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)

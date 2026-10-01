@@ -317,6 +317,18 @@ test('a new cart row needs the item in stock', async () => {
   );
 });
 
+test('a sale row leaves serial numbers that miss its quantity to the server', () => {
+  const left = [];
+  const makeSerialRow = (values) => ({
+    ...values,
+    leaveToServer: (fieldnames) => left.push([values.quantity, fieldnames]),
+  });
+  pos.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1' }));
+  pos.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1\nS2' }));
+  pos.refillSerialNumbers(makeSerialRow({ quantity: -2, serial_number: 'SOLD-1' }));
+  assert.deepEqual(left, [[2, ['serial_number']]]);
+});
+
 test('a cart row reads batch, serial and unit settings from its item', async () => {
   assert.deepEqual(await pos.getPOSRowItem(flour), {
     hasBatch: true,

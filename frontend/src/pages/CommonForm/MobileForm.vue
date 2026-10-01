@@ -87,10 +87,8 @@
       </template>
     </MobileFormSection>
 
-    <div
-      v-if="nextStep"
-      class="sticky bottom-0 mt-auto flex gap-2 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
+    <div class="h-10 flex-none" />
+    <MobileFooter v-if="nextStep">
       <FrappeButton
         v-if="canPrint"
         size="lg"
@@ -105,8 +103,7 @@
         :label="nextStep.nextStep"
         @click="run(nextStep)"
       />
-    </div>
-    <div v-else class="h-10 flex-none" />
+    </MobileFooter>
 
     <FrappeBottomSheet v-model:open="showActions" :title="doc.formTitle">
       <div
@@ -150,6 +147,7 @@ import { Action } from 'fyo/model/types';
 import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { hasFieldValue } from 'src/utils/doc';
 import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc } from 'src/utils/ui';

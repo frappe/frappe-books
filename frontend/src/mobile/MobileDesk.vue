@@ -6,7 +6,8 @@
       </keep-alive>
     </router-view>
     <template #nav>
-      <MobileTabs v-if="!$route.meta.pushed" />
+      <div ref="footerTarget" />
+      <MobileTabs v-if="showTabs" />
     </template>
   </FrappeMobileShell>
   <router-view v-slot="{ Component, route }" name="edit">
@@ -25,7 +26,7 @@
 <script setup lang="ts">
 import { MobileShell as FrappeMobileShell } from 'frappe-ui';
 import { isDrawerOpenKey, openNavSheetKey } from 'src/utils/injectionKeys';
-import { onMounted, provide, readonly, ref } from 'vue';
+import { computed, onMounted, provide, readonly, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { isDesktopOnly } from './availability';
 import InstallSheet from './InstallSheet.vue';
@@ -33,6 +34,7 @@ import MobileNavSheet from './MobileNavSheet.vue';
 import MobileTabs from './MobileTabs.vue';
 import { useBackClosesSheets } from './useBackClosesSheets';
 import OfflineScreen from './OfflineScreen.vue';
+import { provideMobileFooter } from './provideMobileFooter';
 
 defineProps<{ darkMode: boolean }>();
 
@@ -42,6 +44,9 @@ const isNavSheetOpen = ref(false);
 useBackClosesSheets();
 provide(openNavSheetKey, () => (isNavSheetOpen.value = true));
 provide(isDrawerOpenKey, readonly(isNavSheetOpen));
+
+const { target: footerTarget, hasFooter } = provideMobileFooter();
+const showTabs = computed(() => !route.meta.pushed && !hasFooter.value);
 
 onMounted(async () => {
   // The viewport can shrink while a desktop-only page is open.

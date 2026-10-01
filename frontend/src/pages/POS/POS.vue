@@ -49,8 +49,7 @@
       </slot>
     </PageHeader>
     <MobilePOS
-      v-if="isMobile"
-      v-show="!openPaymentModal"
+      v-if="isMobile && !openPaymentModal"
       :items="filteredItems as POSItem[]"
       :search-term="itemSearchTerm"
       :total-quantity="totalQuantity"
@@ -63,7 +62,7 @@
     />
     <component
       :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'"
-      v-else
+      v-else-if="!isMobile"
     >
       <template #items>
         <POSItemPicker

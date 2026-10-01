@@ -24,3 +24,9 @@ export const openNavSheetKey = Symbol('openNavSheet') as InjectionKey<
 export const isDrawerOpenKey = Symbol('isDrawerOpen') as InjectionKey<
   Readonly<Ref<boolean>>
 >;
+
+/** Where phone pages pin their footer, and which pages show one. */
+export const mobileFooterKey = Symbol('mobileFooter') as InjectionKey<{
+  target: Readonly<Ref<HTMLElement | null>>;
+  owners: Set<symbol>;
+}>;

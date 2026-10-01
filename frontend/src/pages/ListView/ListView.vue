@@ -84,10 +84,7 @@
       @clear-filters="mobileToolbar?.clear()"
       @selected-items-changed="updateSelectedItems"
     />
-    <div
-      v-if="isMobile && isSelectionMode"
-      class="sticky bottom-0 mt-auto flex items-center gap-3 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
-    >
+    <MobileFooter v-if="isMobile && isSelectionMode" class="items-center">
       <span class="min-w-0 flex-1 text-base text-ink-gray-7">
         {{ t`${selectedItems.length} selected` }}
       </span>
@@ -98,7 +95,7 @@
         :disabled="!selectedItems.length"
         @click="isCreateSheetOpen = true"
       />
-    </div>
+    </MobileFooter>
     <MobileOptionsSheet
       v-if="isMobile"
       v-model:open="isCreateSheetOpen"
@@ -137,6 +134,7 @@ import { QueryFilter } from 'utils/db/types';
 import { defineComponent, inject, ref } from 'vue';
 import List from './List.vue';
 import { getListColumns } from './listColumns';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import MobileListToolbar from './MobileListToolbar.vue';
 import { getMobileRowLayout } from './mobileRowLayout';
@@ -152,6 +150,7 @@ export default defineComponent({
     FrappeButton,
     ExportWizard,
     FrappeDropdown,
+    MobileFooter,
     MobileListToolbar,
     MobileOptionsSheet,
   },

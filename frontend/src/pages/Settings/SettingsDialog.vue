@@ -1,8 +1,10 @@
 <template>
+  <!-- Books lists its own shortcuts, so the built-in toggle stays off. -->
   <FrappeSettingsDialog
     v-model:tab="activeTab"
     :open="settingsDialog.open"
     :size="isQuickEditOpen ? '7xl' : '4xl'"
+    :keyboard-shortcut="false"
     @update:open="onOpenChange"
   >
     <FrappeSettingsSidebar>
@@ -144,14 +146,18 @@ export default defineComponent({
     },
   },
   watch: {
-    async 'settingsDialog.open'(open: boolean) {
-      if (open) {
-        this.setSaveShortcut();
-        return;
-      }
+    // Immediate: a deep link opens the dialog before it mounts.
+    'settingsDialog.open': {
+      immediate: true,
+      async handler(open: boolean) {
+        if (open) {
+          this.setSaveShortcut();
+          return;
+        }
 
-      this.deleteSaveShortcut();
-      await this.reset();
+        this.deleteSaveShortcut();
+        await this.reset();
+      },
     },
     '$route.path'() {
       settingsDialog.open = false;

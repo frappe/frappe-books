@@ -216,7 +216,7 @@ test('a list export offers custom fields last, as Books did', () => {
 });
 
 test("a list export keys custom fields by their Books Custom Field's fieldname", async () => {
-  stubFrappe(() => ({ data: [{ name: 'Pen', custom_books_shelf: 'A1' }] }));
+  stubFrappe(() => ({ message: [{ name: 'Pen', custom_books_shelf: 'A1' }] }));
   const fields = getExportFields('Item').filter((field) =>
     ['name', 'custom_books_shelf'].includes(field.fieldname)
   );

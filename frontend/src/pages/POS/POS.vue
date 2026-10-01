@@ -442,8 +442,7 @@ export default defineComponent({
   async mounted() {
     await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
-    this.setSinvDoc();
-    this.setDefaultCustomer();
+    await this.setDefaultCustomer();
     await this.setItemQtyMap();
     await this.setItems();
   },
@@ -452,8 +451,7 @@ export default defineComponent({
     await this.setIsPosShiftOpen();
     await this.loadPOSProfile();
     validateIsPosSettingsSet(this.posProfile as POSProfile | null);
-    this.setSinvDoc();
-    this.setDefaultCustomer();
+    await this.setDefaultCustomer();
     this.setShortcuts();
     this.addQuickQtyListeners();
 
@@ -548,7 +546,8 @@ export default defineComponent({
         return;
       }
 
-      this.sinvDoc.party = value;
+      // Set as the user's choice, which previews keep instead of the POS customer.
+      await this.sinvDoc.set('party', value);
 
       const [party] = await getDocuments('Books Party', {
         fields: ['loyalty_program', 'loyalty_points'],
@@ -707,12 +706,13 @@ export default defineComponent({
     setPaymentMethod(method: string) {
       this.paymentMethod = method;
     },
-    setDefaultCustomer() {
-      this.defaultCustomer =
-        this.posProfile?.pos_customer ??
-        this.fyo.singles.Defaults?.pos_customer ??
-        '';
-      this.sinvDoc.party = this.defaultCustomer;
+    /** A new sale for the POS customer, whom the server's preview picks. */
+    async setDefaultCustomer() {
+      this.sinvDoc = newFrappeDoc(ModelNameEnum.SalesInvoice, {
+        is_pos: true,
+      }) as SalesInvoice;
+      await this.previewInvoice();
+      this.defaultCustomer = this.sinvDoc.party ?? '';
     },
     async setItemQtyMap() {
       this.itemQtyMap = await getItemQtyMap();

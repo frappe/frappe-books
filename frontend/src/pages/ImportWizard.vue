@@ -44,7 +44,7 @@
     <div class="flex min-h-0 w-full flex-1 flex-col text-base">
       <!-- Select Import Type -->
       <div
-        class="h-row-largest flex flex-row justify-start items-center w-full gap-2 border-b border-outline-gray-1 p-4"
+        class="h-row-largest flex flex-row justify-start items-center w-full gap-2 border-b border-outline-gray-1 px-3 py-4 sm:px-5"
       >
         <AutoComplete
           :df="{

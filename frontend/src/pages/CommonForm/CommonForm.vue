@@ -110,7 +110,7 @@
           v-for="([n, fields], idx) in activeGroup.entries()"
           :key="n + idx"
           ref="section"
-          class="p-4"
+          class="px-3 py-4 sm:px-5"
           :class="idx !== 0 && activeGroup.size > 1 ? 'border-t border-outline-gray-1' : ''"
           :show-title="activeGroup.size > 1 && n !== t`Default`"
           :title="n"
@@ -127,7 +127,7 @@
       <!-- Tab Bar -->
       <div
         v-if="groupedFields && groupedFields.size > 1"
-        class="sticky bottom-0 mt-auto flex-shrink-0 border-t bg-surface-base p-4 border-outline-gray-1"
+        class="sticky bottom-0 mt-auto flex-shrink-0 border-t border-outline-gray-1 bg-surface-base px-3 py-4 sm:px-5"
       >
         <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
       </div>

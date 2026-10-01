@@ -12,7 +12,7 @@
     <FrappeScrollArea
       v-if="root"
       class="books-account-tree min-h-0 flex-1"
-      viewport-class="p-4 pb-10"
+      viewport-class="px-3 pt-4 pb-10 sm:px-5"
     >
       <FrappeTree
         v-model:expanded="expandedAccounts"

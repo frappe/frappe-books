@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-col justify-between w-full p-4">
+  <div class="flex-col justify-between w-full p-4 md:px-5">
     <!-- Title and Period Selector -->
     <SectionHeader>
       <template #title>{{ title }}</template>

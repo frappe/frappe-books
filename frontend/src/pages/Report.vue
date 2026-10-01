@@ -64,7 +64,7 @@
     <!-- Filters -->
     <div
       v-else-if="report && report.filters.length"
-      class="grid grid-cols-5 gap-4 p-4 border-b border-outline-gray-1"
+      class="grid grid-cols-5 gap-4 border-b border-outline-gray-1 px-3 py-4 sm:px-5"
     >
       <FormControl
         v-for="field in report.filters"

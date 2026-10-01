@@ -1,7 +1,7 @@
 <template>
   <div
     class="
-      px-4
+      px-3 sm:px-5
       text-xl
       font-semibold
       flex

@@ -89,7 +89,7 @@
           v-for="([name, fields], idx) in activeGroup.entries()"
           :key="name + idx"
           ref="section"
-          class="p-4"
+          class="px-3 py-4 sm:px-5"
           :class="
             idx !== 0 && activeGroup.size > 1
               ? 'border-t border-outline-gray-1'
@@ -109,7 +109,7 @@
       <div
         class="
           mt-auto
-          p-4
+          px-3 py-4 sm:px-5
           flex
           items-center
           justify-between

@@ -5,7 +5,7 @@
       <div
         v-for="section in sections"
         :key="section.label"
-        class="p-4 border-b border-outline-gray-1"
+        class="border-b border-outline-gray-1 px-3 py-4 sm:px-5"
       >
         <h2 class="font-medium text-ink-gray-8">{{ section.label }}</h2>
         <div class="flex mt-4 gap-4">

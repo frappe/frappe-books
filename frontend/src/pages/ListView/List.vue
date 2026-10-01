@@ -19,51 +19,56 @@
     @update-selection="updateSelection"
   />
   <div v-else class="flex flex-col overflow-hidden text-base">
-    <FrappeList
+    <FrappeScrollArea
       v-if="data.length"
-      :columns="listColumns"
-      :selectable="isSelectionMode"
-      :selection="selectedItems"
-      :row-height="48"
-      divider="full"
-      class="custom-scroll custom-scroll-thumb1 min-h-0 flex-1 overflow-y-auto text-ink-gray-8 list-gap-4 list-row-px-3"
-      @update:selection="updateSelection"
+      class="min-h-0 flex-1"
+      viewport-class="pb-10"
     >
-      <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
-        <FrappeListHeaderCell class="justify-end pe-2">#</FrappeListHeaderCell>
-        <FrappeListHeaderCell
-          v-for="column in columns"
-          :key="column.label"
-          :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
-        >
-          {{ column.label }}
-        </FrappeListHeaderCell>
-      </FrappeListHeader>
-
-      <FrappeListRows :items="data" row-key="name">
-        <template #default="{ item: row, index, value }">
-          <FrappeListRow
-            :value="value"
-            @click="isSelectionMode ? undefined : $emit('openDoc', row.name)"
+      <FrappeList
+        :columns="listColumns"
+        :selectable="isSelectionMode"
+        :selection="selectedItems"
+        :row-height="48"
+        divider="full"
+        class="text-ink-gray-8 list-gap-4 list-row-px-3"
+        @update:selection="updateSelection"
+      >
+        <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
+          <FrappeListHeaderCell class="justify-end pe-2">#</FrappeListHeaderCell>
+          <FrappeListHeaderCell
+            v-for="column in columns"
+            :key="column.label"
+            :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
           >
-            <FrappeListCell class="justify-end pe-2 text-ink-gray-5">
-              {{ index + pageStart + 1 }}
-            </FrappeListCell>
-            <FrappeListCell
-              v-for="column in columns"
-              :key="column.label"
-              :class="isNumeric(column.fieldtype) ? 'justify-end text-end' : ''"
+            {{ column.label }}
+          </FrappeListHeaderCell>
+        </FrappeListHeader>
+
+        <FrappeListRows :items="data" row-key="name">
+          <template #default="{ item: row, index, value }">
+            <FrappeListRow
+              :value="value"
+              @click="isSelectionMode ? undefined : $emit('openDoc', row.name)"
             >
-              <ListCell
-                class="min-w-0 flex-1"
-                :row="row as RenderData"
-                :column="column"
-              />
-            </FrappeListCell>
-          </FrappeListRow>
-        </template>
-      </FrappeListRows>
-    </FrappeList>
+              <FrappeListCell class="justify-end pe-2 text-ink-gray-5">
+                {{ index + pageStart + 1 }}
+              </FrappeListCell>
+              <FrappeListCell
+                v-for="column in columns"
+                :key="column.label"
+                :class="isNumeric(column.fieldtype) ? 'justify-end text-end' : ''"
+              >
+                <ListCell
+                  class="min-w-0 flex-1"
+                  :row="row as RenderData"
+                  :column="column"
+                />
+              </FrappeListCell>
+            </FrappeListRow>
+          </template>
+        </FrappeListRows>
+      </FrappeList>
+    </FrappeScrollArea>
 
     <!-- Pagination Footer -->
     <div v-if="total" class="mt-auto">
@@ -93,7 +98,10 @@
   </div>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { ListViewSettings, RenderData } from 'fyo/model/types';
 import {
   List as FrappeList,
@@ -125,6 +133,7 @@ export default defineComponent({
     FrappeListHeaderCell,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
     ListCell,
     FrappeButton,
     MobileList,

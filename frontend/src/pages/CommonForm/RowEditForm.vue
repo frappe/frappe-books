@@ -33,27 +33,10 @@
   </FrappeBottomSheet>
   <div
     v-else
-    class="
-      border-s
-      border-outline-gray-1
-      h-full
-      overflow-auto
-      w-quick-edit
-      bg-surface-base
-      custom-scroll custom-scroll-thumb2
-    "
+    class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Row Edit Tool bar -->
-    <div
-      class="
-        sticky
-        top-0
-        border-b
-        border-outline-gray-1
-        bg-surface-base
-      "
-      style="z-index: 1"
-    >
+    <div class="shrink-0 border-b border-outline-gray-1">
       <div class="flex items-center justify-between px-4 h-row-largest">
         <!-- Close Button -->
         <FrappeButton
@@ -84,19 +67,22 @@
         :form-sub-title="fieldlabel"
       />
     </div>
-    <TwoColumnForm
-      ref="form"
-      class="w-full"
-      :doc="row"
-      :fields="fields"
-      :column-ratio="[1.1, 2]"
-    />
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
+      <TwoColumnForm
+        ref="form"
+        class="w-full"
+        :doc="row"
+        :fields="fields"
+        :column-ratio="[1.1, 2]"
+      />
+    </FrappeScrollArea>
   </div>
 </template>
 <script lang="ts">
 import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { ValueError } from 'fyo/utils/errors';
@@ -117,6 +103,7 @@ export default defineComponent({
   components: {
     FrappeBottomSheet,
     FrappeButton,
+    FrappeScrollArea,
     FormHeader,
     RowDetailSheet,
     TwoColumnForm,

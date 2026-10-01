@@ -18,7 +18,7 @@
       v-else-if="sequence.length"
       v-model="openGroups"
       type="multiple"
-      class="w-full overflow-y-auto custom-scroll custom-scroll-thumb2 border-t border-outline-gray-1 px-2"
+      class="w-full border-t border-outline-gray-1 px-2"
       :items="groupItems"
     >
       <template #item-suffix="{ item }">
@@ -150,13 +150,10 @@
   </FrappeBottomSheet>
   <div
     v-else
-    class="w-quick-edit bg-surface-base border-l border-outline-gray-1 overflow-y-auto custom-scroll custom-scroll-thumb2"
+    class="flex h-full w-quick-edit flex-col border-l border-outline-gray-1 bg-surface-base"
   >
     <!-- Page Header -->
-    <div
-      class="flex items-center justify-between px-4 h-row-largest sticky top-0 bg-surface-base"
-      style="z-index: 1"
-    >
+    <div class="flex h-row-largest shrink-0 items-center justify-between px-4">
       <div class="flex items-center justify-between w-full">
         <FrappeButton
           icon="lucide-x"
@@ -169,9 +166,10 @@
       </div>
     </div>
 
-    <component :is="ReuseEntries" />
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
+      <component :is="ReuseEntries" />
+    </FrappeScrollArea>
   </div>
-
 </template>
 <script lang="ts">
 import { createReusableTemplate } from '@vueuse/core';
@@ -184,6 +182,7 @@ import {
   Button as FrappeButton,
   ItemListRow as FrappeItemListRow,
   LoadingText as FrappeLoadingText,
+  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { Accordion as FrappeAccordion, type AccordionItem } from 'frappe-ui-accordion';
 import { ModelNameEnum } from 'models/types';
@@ -206,6 +205,7 @@ export default defineComponent({
     FrappeButton,
     FrappeItemListRow,
     FrappeLoadingText,
+    FrappeScrollArea,
   },
   props: { doc: { type: Object as PropType<Doc>, required: true } },
   emits: ['close'],

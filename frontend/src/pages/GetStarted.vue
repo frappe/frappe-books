@@ -1,13 +1,7 @@
 <template>
   <div class="flex flex-col overflow-y-hidden">
     <PageHeader :title="t`Set Up Your Workspace`" />
-    <div
-      class="
-        flex-1
-        overflow-y-auto overflow-x-hidden
-        custom-scroll custom-scroll-thumb1
-      "
-    >
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
       <div
         v-for="section in sections"
         :key="section.label"
@@ -74,12 +68,15 @@
           </div>
         </div>
       </div>
-    </div>
+    </FrappeScrollArea>
   </div>
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import { getFrappeDoc } from 'src/frappe/documents';
@@ -95,6 +92,7 @@ export default defineComponent({
   components: {
     PageHeader,
     FrappeButton,
+    FrappeScrollArea,
   },
   data() {
     return {

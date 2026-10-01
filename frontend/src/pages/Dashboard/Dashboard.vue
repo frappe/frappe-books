@@ -18,7 +18,12 @@
       />
     </PageHeader>
 
-    <div class="no-scrollbar min-h-0 flex-1 overflow-auto bg-surface-base">
+    <!-- Phones scroll in the shell. -->
+    <component
+      :is="isMobile ? 'div' : 'FrappeScrollArea'"
+      class="min-h-0 flex-1"
+      :viewport-class="isMobile ? undefined : 'pb-10'"
+    >
       <div class="min-w-0 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)]">
         <Cashflow class="p-4" :common-period="period" />
         <hr class="border-outline-gray-1" />
@@ -46,13 +51,16 @@
         </div>
         <hr class="border-outline-gray-1" />
       </div>
-    </div>
+    </component>
     <MobileCreateButton v-if="isMobile" />
   </div>
 </template>
 
 <script>
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import PageHeader from 'src/components/PageHeader.vue';
 import UnpaidInvoices from './UnpaidInvoices.vue';
 import Cashflow from './Cashflow.vue';
@@ -67,6 +75,7 @@ export default {
   name: 'Dashboard',
   components: {
     FrappeButton,
+    FrappeScrollArea,
     PageHeader,
     Cashflow,
     ProfitAndLoss,

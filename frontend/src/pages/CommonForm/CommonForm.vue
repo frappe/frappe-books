@@ -101,7 +101,11 @@
       </FormHeader>
 
       <!-- Section Container -->
-      <div v-if="hasDoc" class="overflow-auto custom-scroll custom-scroll-thumb1">
+      <FrappeScrollArea
+        v-if="hasDoc"
+        class="min-h-0 flex-1"
+        viewport-class="pb-10"
+      >
         <CommonFormSection
           v-for="([n, fields], idx) in activeGroup.entries()"
           :key="n + idx"
@@ -118,7 +122,7 @@
           @value-change="onValueChange"
           @row-change="updateGroupedFields"
         />
-      </div>
+      </FrappeScrollArea>
 
       <!-- Tab Bar -->
       <div
@@ -157,7 +161,11 @@ import { Doc } from 'fyo/model/doc';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { getMissingMandatoryFields } from 'fyo/model/helpers';
 import { ValidationError } from 'fyo/utils/errors';
-import { TabButtons as FrappeTabButtons, Button as FrappeButton } from 'frappe-ui';
+import {
+  TabButtons as FrappeTabButtons,
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import Barcode from 'src/components/Controls/Barcode.vue';
@@ -198,6 +206,7 @@ export default defineComponent({
     FormHeader,
     CommonFormSection,
     FrappeButton,
+    FrappeScrollArea,
     DropdownWithActions,
     Barcode,
     ExchangeRate,

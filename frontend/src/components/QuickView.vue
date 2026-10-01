@@ -19,7 +19,7 @@
 
     <dl
       v-else-if="values.length"
-      class="custom-scroll custom-scroll-thumb1 max-h-64 overflow-y-auto py-1"
+      class="max-h-64 overflow-y-auto py-1"
     >
       <div
         v-for="v of values"

@@ -71,7 +71,7 @@
 
 		<div
 			v-if="rows.length"
-			class="custom-scroll custom-scroll-thumb2 min-h-0 w-full flex-1 overflow-y-auto"
+			class="min-h-0 w-full flex-1 overflow-y-auto"
 		>
 			<FrappeListRows :items="rows" row-key="name">
 				<template #default="{ item: row, value }">

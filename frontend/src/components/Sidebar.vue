@@ -12,9 +12,7 @@
       :menu-items="menuItems"
     />
 
-    <div
-      class="min-h-0 flex-1 overflow-y-auto px-2 py-2 custom-scroll custom-scroll-thumb1"
-    >
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="px-2 pt-0.5 pb-10">
       <div v-for="group in groups" :key="group.label">
         <FrappeSidebarItem
           :label="group.label"
@@ -37,7 +35,7 @@
           </FrappeSidebarItem>
         </div>
       </div>
-    </div>
+    </FrappeScrollArea>
 
     <div class="flex-shrink-0 px-2 py-2">
       <FrappeSidebarItem
@@ -64,6 +62,7 @@
 <script lang="ts">
 import {
   KeyboardShortcutsDialog as FrappeKeyboardShortcutsDialog,
+  ScrollArea as FrappeScrollArea,
   Sidebar as FrappeSidebar,
   SidebarHeader as FrappeSidebarHeader,
   SidebarItem as FrappeSidebarItem,
@@ -92,6 +91,7 @@ export default defineComponent({
     FrappeSidebarHeader,
     FrappeSidebarItem,
     FrappeKeyboardShortcutsDialog,
+    FrappeScrollArea,
     ShortcutsHelper,
   },
   setup() {

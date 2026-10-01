@@ -42,7 +42,7 @@
 
     <!-- Template Display Area -->
     <div
-      class="overflow-auto custom-scroll custom-scroll-thumb1 p-4"
+      class="overflow-auto p-4"
       :class="isMobile ? 'flex-1' : ''"
     >
       <!-- Display Hints -->

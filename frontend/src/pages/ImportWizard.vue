@@ -88,9 +88,11 @@
       </div>
 
       <!-- Assignment Row and Value Grid container -->
-      <div
+      <FrappeScrollArea
         v-if="hasImporter"
-        class="min-h-0 flex-1 overflow-auto custom-scroll custom-scroll-thumb1"
+        orientation="both"
+        class="min-h-0 flex-1"
+        viewport-class="pb-10"
       >
         <FrappeList
           v-if="importer.valueMatrix.length"
@@ -188,7 +190,7 @@
         >
           {{ t`No rows added. Select a file or add rows.` }}
         </div>
-      </div>
+      </FrappeScrollArea>
     </div>
 
     <!-- Pick Column Dialog -->
@@ -197,31 +199,33 @@
       :title="t`Pick Import Columns`"
       size="3xl"
     >
-      <div class="max-h-80 space-y-4 overflow-auto custom-scroll custom-scroll-thumb1">
-        <div v-for="[key, value] of columnPickerFieldsMap.entries()" :key="key">
-          <h2 class="text-sm font-semibold text-ink-gray-8">
-            {{ key }}
-          </h2>
-          <div
-            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 border border-outline-gray-1 rounded-2 mt-1 p-3"
-          >
-            <div v-for="tf of value" :key="tf.fieldKey" class="min-w-0">
-              <Check
-                :df="{
-                  fieldtype: 'Check',
-                  fieldname: tf.fieldname,
-                  label: tf.label,
-                  required: tf.required,
-                }"
-                :show-label="true"
-                :read-only="tf.required"
-                :value="importer.templateFieldsPicked.get(tf.fieldKey)"
-                @change="(value: boolean) => pickColumn(tf.fieldKey, value)"
-              />
+      <FrappeScrollArea viewport-class="max-h-80">
+        <div class="space-y-4">
+          <div v-for="[key, value] of columnPickerFieldsMap.entries()" :key="key">
+            <h2 class="text-sm font-semibold text-ink-gray-8">
+              {{ key }}
+            </h2>
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 border border-outline-gray-1 rounded-2 mt-1 p-3"
+            >
+              <div v-for="tf of value" :key="tf.fieldKey" class="min-w-0">
+                <Check
+                  :df="{
+                    fieldtype: 'Check',
+                    fieldname: tf.fieldname,
+                    label: tf.label,
+                    required: tf.required,
+                  }"
+                  :show-label="true"
+                  :read-only="tf.required"
+                  :value="importer.templateFieldsPicked.get(tf.fieldKey)"
+                  @change="(value: boolean) => pickColumn(tf.fieldKey, value)"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </FrappeScrollArea>
       <template #actions>
         <div class="flex items-center justify-between">
           <p class="text-sm text-ink-gray-6">
@@ -323,6 +327,7 @@ import {
   Button as FrappeButton,
   Dialog as FrappeDialog,
   ErrorMessage as FrappeErrorMessage,
+  ScrollArea as FrappeScrollArea,
   toast,
 } from 'frappe-ui';
 import {
@@ -395,6 +400,7 @@ export default defineComponent({
     FrappeListHeaderCell,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
   },
   data() {
     return {

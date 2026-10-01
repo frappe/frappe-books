@@ -26,9 +26,7 @@
           </FrappeListHeaderCell>
         </FrappeListHeader>
 
-        <div
-          class="custom-scroll custom-scroll-thumb2 min-h-0 flex-1 overflow-y-auto"
-        >
+        <FrappeScrollArea class="min-h-0 flex-1">
           <FrappeListRows :items="columnItems" row-key="name">
             <template #default="{ item: row, value }">
               <FrappeListRow
@@ -53,13 +51,14 @@
               </FrappeListRow>
             </template>
           </FrappeListRows>
-        </div>
+        </FrappeScrollArea>
       </FrappeList>
     </div>
   </div>
 </template>
 
 <script lang="ts">
+import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -84,6 +83,7 @@ export default defineComponent({
     FrappeListHeaderCell,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
   },
   emits: ['addItem'],
   props: {

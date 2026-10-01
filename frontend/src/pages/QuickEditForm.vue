@@ -30,29 +30,10 @@
   </FrappeBottomSheet>
   <div
     v-else
-    class="
-      border-s
-      border-outline-gray-1
-      h-full
-      overflow-auto
-      w-quick-edit
-      bg-surface-base
-    "
+    class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Quick edit Tool bar -->
-    <div
-      class="
-        flex
-        items-center
-        justify-between
-        px-4
-        h-row-largest
-        sticky
-        top-0
-        bg-surface-base
-      "
-      style="z-index: 1"
-    >
+    <div class="flex h-row-largest shrink-0 items-center justify-between px-4">
       <!-- Close Button  -->
       <FrappeButton
         icon="lucide-x"
@@ -70,52 +51,55 @@
       </FrappeButton>
     </div>
 
-    <!-- Name and image -->
-    <div
-      v-if="doc && (titleField || imageField)"
-      class="flex min-h-14 items-center gap-3 border-b border-t border-outline-gray-1 px-4 py-3"
-    >
-      <AttachImage
-        v-if="imageField"
-        class="shrink-0"
-        size="small"
-        :df="imageField"
-        :value="String(doc[imageField.fieldname] ?? '')"
-        :letter-placeholder="letterPlaceHolder"
-        @change="(value: DocValue) => valueChange(imageField as Field, value)"
-      />
-      <h2
-        v-if="titleField && (doc.inserted || doc.schema.naming !== 'manual')"
-        class="min-w-0 break-words text-lg font-semibold text-ink-gray-9"
+    <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
+      <!-- Name and image -->
+      <div
+        v-if="doc && (titleField || imageField)"
+        class="flex min-h-14 items-center gap-3 border-b border-t border-outline-gray-1 px-4 py-3"
       >
-        {{ doc[titleField.fieldname] || titleField.label }}
-      </h2>
-      <FormControl
-        v-else-if="titleField"
-        ref="titleControl"
-        class="min-w-0 flex-1"
-        :border="true"
-        :df="titleField"
-        :value="doc[titleField.fieldname]"
-        @change="(value: DocValue) => valueChange(titleField as Field, value)"
-      />
-    </div>
+        <AttachImage
+          v-if="imageField"
+          class="shrink-0"
+          size="small"
+          :df="imageField"
+          :value="String(doc[imageField.fieldname] ?? '')"
+          :letter-placeholder="letterPlaceHolder"
+          @change="(value: DocValue) => valueChange(imageField as Field, value)"
+        />
+        <h2
+          v-if="titleField && (doc.inserted || doc.schema.naming !== 'manual')"
+          class="min-w-0 break-words text-lg font-semibold text-ink-gray-9"
+        >
+          {{ doc[titleField.fieldname] || titleField.label }}
+        </h2>
+        <FormControl
+          v-else-if="titleField"
+          ref="titleControl"
+          class="min-w-0 flex-1"
+          :border="true"
+          :df="titleField"
+          :value="doc[titleField.fieldname]"
+          @change="(value: DocValue) => valueChange(titleField as Field, value)"
+        />
+      </div>
 
-    <!-- Rest of the form -->
-    <TwoColumnForm
-      v-if="doc"
-      ref="form"
-      class="w-full"
-      :doc="doc"
-      :fields="fields"
-      :column-ratio="[1.1, 2]"
-    />
+      <!-- Rest of the form -->
+      <TwoColumnForm
+        v-if="doc"
+        ref="form"
+        class="w-full"
+        :doc="doc"
+        :fields="fields"
+        :column-ratio="[1.1, 2]"
+      />
+    </FrappeScrollArea>
   </div>
 </template>
 <script lang="ts">
 import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
 import { Field, Schema } from 'schemas/types';
@@ -141,6 +125,7 @@ export default defineComponent({
   components: {
     FrappeBottomSheet,
     FrappeButton,
+    FrappeScrollArea,
     FormControl,
     TwoColumnForm,
     AttachImage,

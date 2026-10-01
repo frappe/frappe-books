@@ -10,12 +10,12 @@
     </PageHeader>
 
     <div
-      class="outer-container overflow-y-auto custom-scroll custom-scroll-thumb1"
+      class="outer-container overflow-y-auto"
     >
       <!-- Report Print Display Area -->
       <div
         ref="previewContainer"
-        class="p-4 bg-surface-gray-1 overflow-auto custom-scroll custom-scroll-thumb1"
+        class="p-4 bg-surface-gray-1 overflow-auto"
       >
         <!-- Report Print Display Container -->
         <PrintSheet

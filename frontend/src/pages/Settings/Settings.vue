@@ -68,7 +68,11 @@
       </FormHeader>
 
       <!-- Section Container -->
-      <div v-if="doc" class="overflow-auto custom-scroll custom-scroll-thumb1">
+      <FrappeScrollArea
+        v-if="doc"
+        class="min-h-0 flex-1"
+        viewport-class="pb-10"
+      >
         <CommonFormSection
           v-for="([name, fields], idx) in activeGroup.entries()"
           :key="name + idx"
@@ -82,7 +86,7 @@
           :errors="errors"
           @value-change="onValueChange"
         />
-      </div>
+      </FrappeScrollArea>
 
       <!-- Tab Bar -->
       <div
@@ -101,6 +105,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import {
   TabButtons as FrappeTabButtons,
   Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
   shellScrollContainer,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
@@ -128,6 +133,7 @@ export default defineComponent({
   components: {
     FormContainer,
     FrappeButton,
+    FrappeScrollArea,
     FormHeader,
     CommonFormSection,
     FrappeTabButtons,

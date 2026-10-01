@@ -24,7 +24,7 @@
     />
 
     <div
-      class="max-w-full overflow-x-auto custom-scroll custom-scroll-thumb1"
+      class="max-w-full overflow-x-auto"
       :class="border ? 'rounded-4 border border-outline-gray-1' : ''"
     >
       <FrappeList
@@ -66,7 +66,7 @@
         <div
           v-if="value"
           :class="{
-            'overflow-x-hidden overflow-y-auto custom-scroll custom-scroll-thumb1':
+            'overflow-x-hidden overflow-y-auto':
               rowsOverflow,
             'overscroll-contain': rowsOverflow,
           }"

@@ -82,15 +82,10 @@ input[type='number']::-webkit-outer-spin-button {
   display: none;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
 :root {
   --w-form: 800px;
   --w-sidebar: 14rem;
   --w-quick-edit: 22rem;
-  --w-scrollbar: 0.6rem;
 
   /* Row Heights */
   --h-row-smallest: 2rem;
@@ -156,31 +151,6 @@ input[type='number']::-webkit-outer-spin-button {
   width: var(--w-sidebar);
 }
 
-.custom-scroll::-webkit-scrollbar {
-  width: var(--w-scrollbar);
-  height: var(--w-scrollbar);
-}
-
-.custom-scroll::-webkit-scrollbar-track:vertical {
-  border-left: solid 1px theme('colors.gray.100');
-}
-
-.custom-scroll::-webkit-scrollbar-track:horizontal {
-  border-top: solid 1px theme('colors.gray.100');
-}
-
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: theme('colors.gray.100');
-}
-
-.custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: theme('colors.gray.200');
-}
-
-.custom-scroll::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
 /*
   Transitions
  */
@@ -210,10 +180,6 @@ input[type='number']::-webkit-outer-spin-button {
 
 [dir='rtl'] .rtl-rotate-180 {
   transform: rotate(180deg);
-}
-
-[dir='rtl'] .custom-scroll::-webkit-scrollbar-track:vertical {
-  border-right: solid 1px theme('colors.gray.200');
 }
 
 .pill {

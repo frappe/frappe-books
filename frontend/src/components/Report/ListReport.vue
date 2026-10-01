@@ -1,50 +1,56 @@
 <template>
   <div class="overflow-hidden flex flex-col h-full">
-    <FrappeList
+    <FrappeScrollArea
       v-if="dataSlice.length"
-      :columns="listColumns"
-      :row-height="hconst"
-      divider="full"
-      class="custom-scroll custom-scroll-thumb1 min-h-0 flex-1 overflow-auto px-4 list-gap-0 [--list-row-padding-x:0px]"
+      orientation="both"
+      class="min-h-0 flex-1"
+      viewport-class="px-4 pb-10"
     >
-      <FrappeListHeader class="sticky top-0 z-10 min-w-max bg-surface-base">
-        <ReportColumnHeader
-          v-for="(column, index) in report.columns"
-          :key="columnWidths.getKey(column)"
-          :ref="
-            (header) => (columnHeaders[columnWidths.getKey(column)] = header)
-          "
-          :label="column.label"
-          :width="columnWidths.get(column)"
-          :direction="languageDirection"
-          :class="getAlignmentClass(column)"
-          @resize="columnWidths.set(column, $event)"
-          @commit="columnWidths.set(column, $event, true)"
-          @fit="fitColumn(column, index)"
-        />
-      </FrappeListHeader>
+      <FrappeList
+        :columns="listColumns"
+        :row-height="hconst"
+        divider="full"
+        class="list-gap-0 [--list-row-padding-x:0px]"
+      >
+        <FrappeListHeader class="sticky top-0 z-10 min-w-max bg-surface-base">
+          <ReportColumnHeader
+            v-for="(column, index) in report.columns"
+            :key="columnWidths.getKey(column)"
+            :ref="
+              (header) => (columnHeaders[columnWidths.getKey(column)] = header)
+            "
+            :label="column.label"
+            :width="columnWidths.get(column)"
+            :direction="languageDirection"
+            :class="getAlignmentClass(column)"
+            @resize="columnWidths.set(column, $event)"
+            @commit="columnWidths.set(column, $event, true)"
+            @fit="fitColumn(column, index)"
+          />
+        </FrappeListHeader>
 
-      <FrappeListRows :items="dataSlice" :row-key="getRowKey">
-        <template #default="{ item: row, index, value }">
-          <FrappeListRow
-            v-if="!row.folded"
-            :value="value"
-            :on-click="row.isGroup ? () => onRowClick(row, index) : undefined"
-            :class="row.isGroup ? 'font-medium' : ''"
-          >
-            <FrappeListCell
-              v-for="(cell, cellIndex) in row.cells"
-              :key="`${cellIndex}-${index}-cell`"
-              class="min-w-0 px-3 text-base"
-              :class="[getCellColorClass(cell), getAlignmentClass(cell)]"
-              :style="getCellStyle(cell)"
+        <FrappeListRows :items="dataSlice" :row-key="getRowKey">
+          <template #default="{ item: row, index, value }">
+            <FrappeListRow
+              v-if="!row.folded"
+              :value="value"
+              :on-click="row.isGroup ? () => onRowClick(row, index) : undefined"
+              :class="row.isGroup ? 'font-medium' : ''"
             >
-              <ReportOverflowText :value="cell.value" />
-            </FrappeListCell>
-          </FrappeListRow>
-        </template>
-      </FrappeListRows>
-    </FrappeList>
+              <FrappeListCell
+                v-for="(cell, cellIndex) in row.cells"
+                :key="`${cellIndex}-${index}-cell`"
+                class="min-w-0 px-3 text-base"
+                :class="[getCellColorClass(cell), getAlignmentClass(cell)]"
+                :style="getCellStyle(cell)"
+              >
+                <ReportOverflowText :value="cell.value" />
+              </FrappeListCell>
+            </FrappeListRow>
+          </template>
+        </FrappeListRows>
+      </FrappeList>
+    </FrappeScrollArea>
     <FrappeLoadingText
       v-else-if="report.loading"
       class="mt-20 w-full justify-center"
@@ -67,7 +73,10 @@
   </div>
 </template>
 <script>
-import { LoadingText as FrappeLoadingText } from 'frappe-ui';
+import {
+  LoadingText as FrappeLoadingText,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { Report } from 'reports/Report';
 import {
   List as FrappeList,
@@ -96,6 +105,7 @@ export default defineComponent({
     ReportOverflowText,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
     Paginator,
   },
   props: {

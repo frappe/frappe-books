@@ -175,6 +175,16 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		refund.cancel()
 		self.assertEqual(credit_note.db_get("outstanding_amount"), -180)
 
+	def test_a_refund_allocates_a_credit_note_as_a_positive_amount(self):
+		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
+		outstanding = credit_note.db_get("outstanding_amount")
+		self.assertLess(outstanding, 0)
+
+		refund = self._payment(credit_note, payment_type="Pay")
+		refund.payment_references[0].amount = outstanding
+		with self.assertRaisesRegex(frappe.ValidationError, "Allocated amounts must be greater than zero"):
+			refund.insert()
+
 	def test_payment_needs_read_access_to_the_invoice(self):
 		user = ensure_user("books-payment-reader@example.com", "Books User")
 		own_party = make_party(self.receivable.name)

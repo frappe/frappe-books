@@ -60,9 +60,18 @@ import InvoiceSelectionTable from 'src/components/POS/InvoiceSelectionTable.vue'
 import type { DocValueMap } from 'fyo/core/types';
 import { defineComponent } from 'vue';
 import { Field } from 'schemas/types';
-import { getPOSInvoices } from 'src/utils/pos';
+import type { Filter } from 'src/frappe/api';
+import { getPOSInvoiceFields, getPOSInvoices } from 'src/utils/pos';
 import { TabButtons as FrappeTabButtons, TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
+
+const SAVED_FILTERS: Filter[] = [['docstatus', '=', 0]];
+/** Submitted sales still owed, which the POS takes payment for. */
+const SUBMITTED_FILTERS: Filter[] = [
+  ['docstatus', 'in', [1, 2]],
+  ['return_against', 'is', 'not set'],
+  ['outstanding_amount', '!=', 0],
+];
 
 export default defineComponent({
   name: 'SavedInvoiceModal',
@@ -88,6 +97,7 @@ export default defineComponent({
       submittedInvoices: [] as DocValueMap[],
       invoiceSearchTerm: '',
       selectedInvoiceName: '',
+      loading: undefined as Promise<void> | undefined,
     };
   },
   computed: {
@@ -100,74 +110,41 @@ export default defineComponent({
         { value: 'submitted', label: this.t`Submitted` },
       ];
     },
-    tableFields() {
-      return [
-        {
-          fieldname: 'name',
-          label: 'Name',
-          fieldtype: 'Data',
-          readOnly: true,
-        },
-        {
-          fieldname: 'party',
-          fieldtype: 'Data',
-          label: 'Customer',
-          placeholder: 'Customer',
-          readOnly: true,
-        },
-        {
-          fieldname: 'date',
-          label: 'Date',
-          fieldtype: 'Date',
-          readOnly: true,
-        },
-        {
-          fieldname: 'grand_total',
-          label: 'Grand Total',
-          fieldtype: 'Currency',
-          readOnly: true,
-        },
-      ] as Field[];
+    tableFields(): Field[] {
+      return getPOSInvoiceFields();
     },
     filteredInvoices() {
-      const invoices = this.savedInvoiceList ? this.savedInvoices : this.submittedInvoices;
-      return invoices.filter((invoice) =>
-        (invoice.name as string).toLowerCase().includes(this.invoiceSearchTerm.toLowerCase()),
-      );
+      return this.savedInvoiceList ? this.savedInvoices : this.submittedInvoices;
     },
   },
   watch: {
     async openModal(newVal) {
       if (newVal) {
         this.selectedInvoiceName = '';
-        await this.setSavedInvoices();
-        await this.setSubmittedInvoices();
+        await this.setInvoices();
       }
     },
-    invoiceSearchTerm() {
+    async invoiceSearchTerm() {
       this.selectedInvoiceName = '';
+      await this.setInvoices();
     },
-  },
-  async mounted() {
-    await this.setSavedInvoices();
-    await this.setSubmittedInvoices();
-  },
-  async activated() {
-    await this.setSavedInvoices();
-    await this.setSubmittedInvoices();
   },
 
   methods: {
-    async setSavedInvoices() {
-      this.savedInvoices = await getPOSInvoices([['docstatus', '=', 0]]);
-    },
-    /** Submitted sales still owed, which the POS takes payment for. */
-    async setSubmittedInvoices() {
-      this.submittedInvoices = await getPOSInvoices([
-        ['docstatus', 'in', [1, 2]],
-        ['return_against', 'is', 'not set'],
-        ['outstanding_amount', '!=', 0],
-      ]);
+    /** Both tabs' invoices whose name has the search term; a later search replaces them. */
+    async setInvoices() {
+      const search = this.invoiceSearchTerm;
+      const loading = Promise.all([
+        getPOSInvoices(SAVED_FILTERS, search),
+        getPOSInvoices(SUBMITTED_FILTERS, search),
+      ]).then(([saved, submitted]) => {
+        if (this.loading === loading) {
+          this.savedInvoices = saved;
+          this.submittedInvoices = submitted;
+        }
+      });
+      this.loading = loading;
+      await loading;
     },
     closeModal() {
       this.selectedInvoiceName = '';
@@ -188,7 +165,8 @@ export default defineComponent({
       this.savedInvoiceList = saved;
       this.selectedInvoiceName = '';
     },
-    handleEnterKey() {
+    async handleEnterKey() {
+      await this.loading;
       if (this.filteredInvoices.length === 1) {
         this.selectedInvoiceName = String(this.filteredInvoices[0].name);
       }

@@ -116,7 +116,12 @@ export async function preparePOSData() {
 function answer(path: string, body: Row, params: Row): unknown {
   const method = path.split('/').pop()!;
   const methods: Record<string, () => unknown> = {
-    'frappe.client.get_list': () => getList(body.doctype, body.filters),
+    'frappe.client.get_list': () =>
+      getPage(
+        getList(body.doctype, body.filters),
+        body.limit_start,
+        body.limit_page_length
+      ),
     'frappe.desk.search.search_link': () =>
       getList(body.doctype).map(({ name }) => ({ value: name })),
     get_open_shift: () => (shift.open ? openingShift.name : null),
@@ -194,8 +199,17 @@ function getList(doctype: string, filters: Filter[] = []): Row[] {
   );
 }
 
+/** The rows from `start`, `length` of them unless it is 0. */
+function getPage(rows: Row[], start = 0, length = 0): Row[] {
+  return rows.slice(start, length ? start + length : undefined);
+}
+
 function matches(actual: unknown, operator: string, value: unknown) {
   switch (operator) {
+    case 'like':
+      return String(actual ?? '')
+        .toLowerCase()
+        .includes(String(value).replaceAll('%', '').toLowerCase());
     case '=':
       return (actual ?? 0) == value;
     case '!=':

@@ -18,7 +18,13 @@ import {
   POSItem,
 } from 'src/components/POS/types';
 import type { DocValueMap } from 'fyo/core/types';
-import { getAllDocuments, type DocValues, type Filter } from 'src/frappe/api';
+import type { Field } from 'schemas/types';
+import {
+  getCount,
+  getList,
+  type DocValues,
+  type Filter,
+} from 'src/frappe/api';
 import { getField, getSchema } from 'src/frappe/registry';
 import { getFrappeDoc } from 'src/frappe/documents';
 import { toDocValues } from 'src/frappe/values';
@@ -438,18 +444,61 @@ export async function addBatchItem(
   await appendItemRow(sinvDoc, item, quantity, batch);
 }
 
-/** POS invoices that match, newest first, with the values their lists show. */
+/** The columns of the POS invoice pickers. */
+export function getPOSInvoiceFields(): Field[] {
+  return [
+    { fieldname: 'name', label: 'Name', fieldtype: 'Data', readOnly: true },
+    {
+      fieldname: 'party',
+      label: 'Customer',
+      fieldtype: 'Data',
+      readOnly: true,
+    },
+    { fieldname: 'date', label: 'Date', fieldtype: 'Date', readOnly: true },
+    {
+      fieldname: 'grand_total',
+      label: 'Grand Total',
+      fieldtype: 'Currency',
+      readOnly: true,
+    },
+  ];
+}
+
+/**
+ * A page of the POS invoices that match and whose name has `search`, newest
+ * first, with the values their lists show; every one without a `limit`.
+ */
 export async function getPOSInvoices(
-  filters: Filter[]
+  filters: Filter[],
+  search = '',
+  start = 0,
+  limit = 0
 ): Promise<DocValueMap[]> {
   const schema = getSchema(ModelNameEnum.SalesInvoice)!;
-  const rows = await getAllDocuments('Books Sales Invoice', {
+  const rows = await getList('Books Sales Invoice', {
     fields: ['name', 'party', 'date', 'grand_total', 'docstatus'],
-    filters: [['is_pos', '=', 1], ...filters],
+    filters: getPOSInvoiceFilters(filters, search),
+    orderBy: 'creation desc',
+    start,
+    limit,
   });
   return rows.map((row) =>
     toDocValues(schema, row, fyo, (target) => getSchema(target)!)
   );
+}
+
+/** How many POS invoices match and have `search` in their name. */
+export async function getPOSInvoiceCount(
+  filters: Filter[],
+  search = ''
+): Promise<number> {
+  const filtersWithSearch = getPOSInvoiceFilters(filters, search);
+  return await getCount('Books Sales Invoice', filtersWithSearch, []);
+}
+
+function getPOSInvoiceFilters(filters: Filter[], search: string): Filter[] {
+  const nameFilters: Filter[] = search ? [['name', 'like', `%${search}%`]] : [];
+  return [['is_pos', '=', 1], ...filters, ...nameFilters];
 }
 
 /** The payments of a sales invoice, oldest first; at checkout, those the server made with its submit. */

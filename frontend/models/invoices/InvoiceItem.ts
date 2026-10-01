@@ -218,7 +218,9 @@ export class InvoiceItem extends FrappeDoc {
       ),
     qty: async (value: DocValue) => {
       if (this.batch) {
-        await this.validateBatchQuantity(this.batch, value as number);
+        // Qty is in the transfer unit; the batch holds stock units.
+        const quantity = (value as number) * (this.unit_conversion_factor || 1);
+        await this.validateBatchQuantity(this.batch, quantity);
       }
     },
     batch: async (value: DocValue) => {

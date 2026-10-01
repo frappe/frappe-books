@@ -9,7 +9,7 @@ import Link from 'src/components/Controls/Link.vue';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { isMobile } from 'src/utils/viewport';
-import { newBooksDoc } from 'src/frappe/useBooksDoc';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { preparePOSData, shift } from './pos-data';
 import 'src/styles/index.css';
 
@@ -97,7 +97,7 @@ async function mount() {
     },
     /** Loads a saved, unsubmitted invoice as the Saved Invoices sheet does. */
     openSavedInvoice() {
-      const invoice = newBooksDoc('SalesInvoice', {
+      const invoice = newFrappeDoc('SalesInvoice', {
         name: 'SINV-SAVED',
         is_pos: true,
         items: [{ item: items[0].name, quantity: 1, transfer_quantity: 1 }],

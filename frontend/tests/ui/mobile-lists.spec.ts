@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { insert } from './helpers/records';
+import { insertDocument } from './helpers/records';
 import { useBooksSession } from './helpers/session';
 
 test.use({
@@ -16,13 +16,16 @@ let hasParties = false;
 
 test.beforeEach(async ({ page }) => {
   if (hasParties) return;
-  await insert(page, 'Party', {
+  await insertDocument(page, 'Books Party', {
     name: customer,
     role: 'Customer',
     phone: '98765 43210',
     email: `${run}@example.com`,
   });
-  await insert(page, 'Party', { name: supplier, role: 'Supplier' });
+  await insertDocument(page, 'Books Party', {
+    name: supplier,
+    role: 'Supplier',
+  });
   hasParties = true;
 });
 
@@ -54,11 +57,11 @@ test('search also matches keyword fields', async ({ page }) => {
 test('selected items start a new sales invoice', async ({ page }) => {
   const items = [`Phone Item A ${run}`, `Phone Item B ${run}`];
   for (const name of items) {
-    await insert(page, 'Item', {
+    await insertDocument(page, 'Books Item', {
       name,
       rate: 100,
-      incomeAccount: 'Sales',
-      expenseAccount: 'Cost of Goods Sold',
+      income_account: 'Sales',
+      expense_account: 'Cost of Goods Sold',
     });
   }
   await page.goto('/books/list/Item');

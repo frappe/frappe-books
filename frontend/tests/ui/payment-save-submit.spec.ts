@@ -187,40 +187,17 @@ async function installPaymentFixture(page: Page) {
       openPayment: null as any,
       findPayment: null as any,
     });
-    const accounts = [
-      {
-        name: 'Flow Cash',
-        accountType: 'Cash',
-        rootType: 'Asset',
-        isGroup: false,
-      },
-      {
-        name: 'Flow Creditors',
-        accountType: 'Payable',
-        rootType: 'Liability',
-        isGroup: false,
-      },
-    ];
-    for (const account of accounts) fyo.doc.getNewDoc('Account', account);
-    fyo.doc.getNewDoc('PaymentMethod', { name: 'Cash', type: 'Cash' });
-    fyo.doc.getNewDoc('Party', {
-      name: 'Flow Supplier',
-      role: 'Supplier',
-      defaultAccount: 'Flow Creditors',
-      outstandingAmount: 100,
-    });
-    const invoice = fyo.doc.getNewDoc('PurchaseInvoice', {
+    // The invoice exists only in this fixture; it is paid once the payment is submitted.
+    const invoice = {
       name: 'PAYMENT-FLOW-INVOICE',
       party: 'Flow Supplier',
       account: 'Flow Creditors',
-      submitted: true,
-      outstandingAmount: 100,
-      grandTotal: 100,
-      date: new Date().toISOString(),
-    });
-    invoice._dirty = false;
-    invoice._notInserted = false;
-
+      date: '2026-09-30 10:00:00',
+      docstatus: 1,
+      grand_total: 100,
+      base_grand_total: 100,
+      modified: '2026-09-30 09:00:00.000000',
+    };
     // Frappe serves the payment; all fixture writes stay in memory.
     const modified = '2026-09-30 10:00:00.000000';
     const answer = (body: unknown, status = 200) =>
@@ -279,6 +256,19 @@ async function installPaymentFixture(page: Page) {
       },
       'GET /api/v2/document/Books Payment/PAY-FLOW': () =>
         answer({ data: fixture.stored }),
+      [`GET /api/v2/document/Books Purchase Invoice/${invoice.name}`]: () => {
+        fixture.refreshes++;
+        if (fixture.failRefresh) return reject('Invoice refresh rejected');
+        const outstanding_amount = fixture.stored?.docstatus ? 0 : 100;
+        return answer({ data: { ...invoice, outstanding_amount } });
+      },
+      // Fixture records exist only in the browser; the signed-in manager may do anything with them.
+      'POST /api/method/frappe.client.get_doc_permissions': () =>
+        answer({
+          message: {
+            permissions: { read: 1, write: 1, create: 1, submit: 1, cancel: 1 },
+          },
+        }),
     };
     const fetch = window.fetch.bind(window);
     window.fetch = async (input: any, init: any = {}) => {
@@ -290,45 +280,29 @@ async function installPaymentFixture(page: Page) {
         : fetch(input, init);
     };
 
-    // Fixture records exist only in the browser, so they keep the doctype-level rights.
-    fyo.db.getDocPermissions = async () => undefined;
-    const getAll = fyo.db.getAll.bind(fyo.db);
-    fyo.db.getAll = (schemaName: string, ...args: any[]) =>
-      schemaName === 'Account' ? accounts : getAll(schemaName, ...args);
-    const get = fyo.db.get.bind(fyo.db);
-    fyo.db.get = async (schemaName: string, name: string, ...args: any[]) => {
-      if (schemaName === 'PurchaseInvoice' && name === invoice.name) {
-        fixture.refreshes++;
-        if (fixture.failRefresh) throw new Error('Invoice refresh rejected');
-        const outstandingAmount = fixture.stored?.docstatus ? 0 : 100;
-        return {
-          ...invoice.getValidDict(),
-          outstandingAmount: fyo.pesa(outstandingAmount),
-        };
-      }
-      return get(schemaName, name, ...args);
-    };
-
     fixture.openPayment = async () => {
-      const action = fyo.models.PurchaseInvoice.getActions(fyo).find(
-        (entry: any) => entry.label === 'Payment'
-      );
-      await action.action(invoice, router);
+      const root = app._container._vnode.component;
+      const invoiceDoc = findOpenDoc(root, 'PurchaseInvoice');
+      const action = invoiceDoc.constructor
+        .getActions(fyo)
+        .find((entry: any) => entry.label === 'Payment');
+      await action.action(invoiceDoc, router);
     };
     // The quick edit mounts after the action returns.
     fixture.findPayment = () => {
-      fixture.payment = findOpenPayment(app._container._vnode.component);
+      const root = app._container._vnode.component;
+      fixture.payment = findOpenDoc(root, 'Payment');
       return !!fixture.payment;
     };
     await router.push(`/edit/PurchaseInvoice/${invoice.name}`);
 
-    /** The payment the quick edit shows, found in the component tree. */
-    function findOpenPayment(root: any): any {
+    /** The open document of a schema, like the payment the quick edit shows, found in the component tree. */
+    function findOpenDoc(root: any, schemaName: string): any {
       const instances = [root];
       while (instances.length) {
         const instance = instances.pop();
         const doc = instance.setupState?.doc ?? instance.props?.doc;
-        if (doc?.schemaName === 'Payment') return doc;
+        if (doc?.schemaName === schemaName) return doc;
         const visit = (vnode: any) => {
           if (vnode?.component) instances.push(vnode.component);
           if (Array.isArray(vnode?.children)) vnode.children.forEach(visit);

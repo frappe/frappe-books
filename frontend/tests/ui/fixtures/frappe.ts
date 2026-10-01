@@ -1,9 +1,13 @@
 import { frappeModels } from 'models';
 import { registerFrappeModels } from 'src/frappe/doctypes';
 import { loadFrappeDocTypes } from 'src/frappe/registry';
-import schemaMapping from '../../../../frappe_books/schema_mapping.json';
 
-type DocField = { fieldname: string; fieldtype: string; options?: string };
+type DocField = {
+  fieldname: string;
+  fieldtype: string;
+  options?: string;
+  [property: string]: unknown;
+};
 type Meta = { name: string; fields: DocField[]; field_order?: string[] };
 type Answer = (
   path: string,
@@ -25,13 +29,17 @@ const currencyMeta: Meta = {
 };
 
 /**
- * Serves the Frappe-backed models from the DocType files and answers every
- * other request with `answer(path, body, params)`, as the server would.
+ * Serves the models from the DocType files, with `customFields` added by
+ * doctype, and answers every other request with `answer(path, body, params)`,
+ * as the server would.
  */
-export async function loadFrappeFixture(answer: Answer) {
+export async function loadFrappeFixture(
+  answer: Answer,
+  customFields: Record<string, DocField[]> = {}
+) {
   (window as any).frappe = {
     boot: {
-      books: { doctypes: getBootDoctypes() },
+      books: {},
       user: { name: 'Administrator', roles: ['Books Manager'] },
       time_zone: { system: 'Asia/Kolkata' },
     },
@@ -43,8 +51,8 @@ export async function loadFrappeFixture(answer: Answer) {
       [...url.searchParams].map(([key, value]) => [key, parseParam(value)])
     );
     const path = decodeURIComponent(url.pathname);
-    const json = path.endsWith('getdoctype')
-      ? { docs: getMetaBundle(body.doctype) }
+    const json = path.endsWith('get_books_meta')
+      ? { message: getBooksMeta(body.doctypes, customFields) }
       : await answer(path, body, params);
     return Response.json(json ?? {});
   };
@@ -52,14 +60,18 @@ export async function loadFrappeFixture(answer: Answer) {
   await loadFrappeDocTypes();
 }
 
-/** Books schema names by doctype, as the boot sends them. */
-function getBootDoctypes(): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(schemaMapping.doctypes).map(([schemaName, { doctype }]) => [
-      schemaName,
-      doctype,
-    ])
+/** What frappe_books.meta.get_books_meta sends: each doctype's meta and its tables', once each. */
+function getBooksMeta(
+  names: string[],
+  customFields: Record<string, DocField[]>
+) {
+  const metas = new Map(
+    names.flatMap(getMetaBundle).map((meta) => {
+      const fields = [...meta.fields, ...(customFields[meta.name] ?? [])];
+      return [meta.name, { ...meta, fields }];
+    })
   );
+  return { metas: [...metas.values()], placements: {} };
 }
 
 /** A doctype's meta and its tables' meta, as Frappe's getdoctype sends them. */

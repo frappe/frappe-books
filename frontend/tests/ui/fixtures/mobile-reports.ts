@@ -12,11 +12,10 @@ import {
   type ServerColumn,
   type ServerRow,
 } from 'reports/serverReport';
-import { getTestSchemas } from './schemas';
+import { loadFrappeFixture } from './frappe';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
 import { getFilterValues } from 'src/components/Report/Mobile/MobileFilters';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
-import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 import { createApp, h, markRaw, reactive, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import 'src/styles/index.css';
@@ -246,8 +245,7 @@ const makers: Record<string, () => Promise<Report>> = {
 };
 
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
-  await fyo.db.init();
+  await loadFrappeFixture(() => ({ message: [], data: [] }));
   // The app's documents mark fyo raw; reactive reports rely on it.
   markRaw(fyo);
   fyo.singles.SystemSettings = {

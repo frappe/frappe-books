@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { insert } from './helpers/records';
+import { insertDocument } from './helpers/records';
 import { useBooksSession } from './helpers/session';
 
 useBooksSession('/books/import-wizard');
@@ -63,14 +63,14 @@ test('links Frappe cannot find stop the import', async ({ page }) => {
 
 test('rows of one invoice become one submitted invoice', async ({ page }) => {
   const item = `Import Pen ${run}`;
-  await insert(page, 'Item', {
+  await insertDocument(page, 'Books Item', {
     name: item,
-    for: 'Both',
+    item_usage: 'Both',
     rate: 10,
-    incomeAccount: 'Sales',
-    expenseAccount: 'Cost of Goods Sold',
+    income_account: 'Sales',
+    expense_account: 'Cost of Goods Sold',
   });
-  await insert(page, 'Party', {
+  await insertDocument(page, 'Books Party', {
     name: `Import Dan ${run}`,
     role: 'Customer',
   });
@@ -99,7 +99,10 @@ test('Fix Failed keeps only the rows Frappe could not save', async ({
   page,
 }) => {
   const existing = `Import Eve ${run}`;
-  await insert(page, 'Party', { name: existing, role: 'Customer' });
+  await insertDocument(page, 'Books Party', {
+    name: existing,
+    role: 'Customer',
+  });
   await selectImportFile(
     page,
     'Party',

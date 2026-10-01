@@ -1,92 +1,65 @@
 import { createApp, h, reactive, ref } from 'vue';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
-import type { DocValueMap } from 'fyo/core/types';
-import { chunk } from 'lodash';
 import { fyo } from 'src/initFyo';
 // Load the router before the controls that import it, as the app does.
 import 'src/router';
 import List from 'src/pages/ListView/List.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
-import { models } from 'models';
-import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
+import { frappeModels } from 'models';
+import type { Filter } from 'src/frappe/api';
+import { toSchemaName } from 'src/frappe/registry';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
 import type { QueryFilter } from 'utils/db/types';
 import 'src/styles/index.css';
-import { getTestSchemas } from './schemas';
+import { loadFrappeFixture } from './frappe';
+
+// Fields only this fixture adds to items, to filter by an option label and a suggestion.
+const itemFields = [
+  {
+    fieldname: 'customChoice',
+    fieldtype: 'Select',
+    label: 'Custom Choice',
+    read_only: 1,
+    reqd: 1,
+    default: 'code-one',
+    options: 'code-one\ncode-two',
+  },
+  {
+    fieldname: 'customSuggestion',
+    fieldtype: 'Autocomplete',
+    label: 'Custom Suggestion',
+    options: 'One\nTwo',
+  },
+];
 
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => {
-    const schemas = getTestSchemas();
-    return {
-      ...schemas,
-      Item: {
-        ...schemas.Item,
-        fields: [
-          ...schemas.Item.fields,
-          {
-            fieldname: 'customChoice',
-            fieldtype: 'Select',
-            label: 'Custom Choice',
-            filter: true,
-            readOnly: true,
-            required: true,
-            default: 'code-one',
-            options: [
-              { label: 'First label', value: 'code-one' },
-              { label: 'Second label', value: 'code-two' },
-            ],
-          },
-          {
-            fieldname: 'customSuggestion',
-            fieldtype: 'AutoComplete',
-            label: 'Custom Suggestion',
-            options: [
-              { label: 'One', value: 'One' },
-              { label: 'Two', value: 'Two' },
-            ],
-          },
-        ],
+  const { Item } = frappeModels;
+  Item.presentation = {
+    ...Item.presentation,
+    fields: {
+      ...Item.presentation.fields,
+      customChoice: {
+        optionLabels: { 'code-one': 'First label', 'code-two': 'Second label' },
       },
-    };
+    },
   };
-  await fyo.db.init();
-  fyo.doc.registerModels(models);
-  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 } as any;
   const state = reactive({
     applied: {} as QueryFilter,
     schemaName: 'SalesInvoice',
-    useDatabase: false,
     lookupFailure: false,
     lookupCalls: [] as string[],
   });
   const invoices = Array.from({ length: 60 }, (_, index) => ({
     name: `INV-${index + 1}`,
     party: 'Test customer',
-    date: '2024-01-01',
-    submitted: true,
-    cancelled: false,
-    grandTotal: fyo.pesa(100),
-    baseGrandTotal: fyo.pesa(100),
+    date: '2024-01-01 00:00:00',
+    docstatus: 1,
+    grand_total: 100,
+    base_grand_total: 100,
     status: ['Paid', 'Partly Paid', 'Unpaid'][index % 3],
   }));
-  const fetchRows = async (filters: QueryFilter): Promise<DocValueMap[]> => {
-    if (!state.useDatabase)
-      return invoices.filter((row) => matchesStatus(row.status, filters));
-    const response = await fetch('/__filter_database_test', {
-      method: 'POST',
-      body: JSON.stringify(filters),
-    });
-    if (!response.ok) throw new Error(await response.text());
-    return response.json();
-  };
-  // A list load asks for its page and its count; answer both from one query.
-  let lastQuery = { key: '', rows: Promise.resolve([] as DocValueMap[]) };
-  const queryRows = (schemaName: string, filters: QueryFilter = {}) => {
-    const key = JSON.stringify([schemaName, state.useDatabase, filters]);
-    if (key !== lastQuery.key) lastQuery = { key, rows: fetchRows(filters) };
-    return lastQuery.rows;
-  };
-  const list = ref<InstanceType<typeof List>>();
+  const queryRows = (filters: Filter[] = []) =>
+    invoices.filter((row) => matchesStatus(row.status, filters));
   const lookupRows = (schemaName: string) => {
     state.lookupCalls.push(schemaName);
     if (state.lookupFailure) throw new Error('Lookup unavailable');
@@ -96,24 +69,36 @@ async function mount() {
       ? [{ name: 'JV-' }, { name: 'BANK-' }]
       : [{ name: `${schemaName}-001` }, { name: `${schemaName}-002` }];
   };
-  // The server's link search matches the typed letters in order.
-  fyo.db.searchLink = async (schemaName, text) => {
-    const letters = [...text.toLowerCase()].map((letter) =>
-      letter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    );
-    const pattern = new RegExp(letters.join('.*'));
-    return lookupRows(schemaName).filter(({ name }) =>
-      pattern.test(name.toLowerCase())
-    );
-  };
-  fyo.db.getAll = async (_schema, options = {}) => {
-    if (options.fields?.[0] !== '*') return lookupRows(_schema);
-    const rows = await queryRows(_schema, options.filters);
-    const start = options.offset ?? 0;
-    return rows.slice(start, options.limit ? start + options.limit : undefined);
-  };
-  fyo.db.count = async (schemaName, options = {}) =>
-    (await queryRows(schemaName, options.filters)).length;
+  const getSchemaName = (doctype: string) => toSchemaName(doctype) ?? doctype;
+  await loadFrappeFixture(
+    (path, body, params) => {
+      // The server's link search matches the typed letters in order.
+      if (path.endsWith('frappe.desk.search.search_link')) {
+        const pattern = new RegExp([...body.txt.toLowerCase()].join('.*'));
+        const rows = lookupRows(getSchemaName(body.doctype));
+        const found = rows.filter(({ name }) =>
+          pattern.test(name.toLowerCase())
+        );
+        return { message: found.map(({ name }) => ({ value: name })) };
+      }
+
+      if (path.endsWith('frappe.client.get_list')) {
+        return { message: lookupRows(getSchemaName(body.doctype)) };
+      }
+
+      if (path.endsWith('/count')) {
+        return { data: queryRows(params.filters).length };
+      }
+
+      const start = params.start ?? 0;
+      return {
+        data: queryRows(params.filters).slice(start, start + params.limit),
+      };
+    },
+    { 'Books Item': itemFields }
+  );
+  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 } as any;
+  const list = ref<InstanceType<typeof List>>();
   const filter = ref<InstanceType<typeof FilterDropdown>>();
   const app = createApp({
     render: () =>
@@ -162,12 +147,12 @@ async function mount() {
 }
 
 /** Match a stored status the way the server's SQL filter does. */
-function matchesStatus(status: string, filters: QueryFilter) {
-  const filter = filters.status ?? [];
-  const conditions = Array.isArray(filter) ? filter : ['=', filter];
-  return chunk(conditions, 2).every(([operator, value]) =>
-    matchesCondition(status, String(operator), String(value))
-  );
+function matchesStatus(status: string, filters: Filter[]) {
+  return filters
+    .filter((filter) => filter[0] === 'status')
+    .every(([, operator, value]) =>
+      matchesCondition(status, String(operator), String(value))
+    );
 }
 
 function matchesCondition(status: string, operator: string, value: string) {
@@ -185,10 +170,8 @@ function matchesCondition(status: string, operator: string, value: string) {
       return status > value;
     case '<':
       return status < value;
-    case 'is null':
-      return !status;
-    case 'is not null':
-      return !!status;
+    case 'is':
+      return value === 'set' ? !!status : !status;
   }
   throw new Error(`Unsupported status filter: ${operator}`);
 }

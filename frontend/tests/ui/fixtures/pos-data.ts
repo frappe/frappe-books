@@ -1,8 +1,7 @@
 import { fyo } from 'src/initFyo';
-import { models } from 'models';
-import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
+import { newFrappeDoc } from 'src/frappe/documents';
+import { getSingleSchemaNames } from 'src/frappe/registry';
 import { loadFrappeFixture } from './frappe';
-import { getTestSchemas } from './schemas';
 
 export const shift = { open: true };
 
@@ -77,19 +76,10 @@ const records: Record<string, Row[]> = {
 };
 
 export async function preparePOSData() {
-  // The real schemas and models use an in-memory database for this fixture.
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
-  FrappeDatabaseDemux.prototype.call = async (method, ...args) => {
-    const [schema, name] = args as string[];
-    if (method === 'get') return getRecord(`Books ${schema}`, name) ?? { name };
-    if (method === 'getSingleValues') return [];
-    throw new Error(`Unexpected database call: ${method}`);
-  };
-  await fyo.db.init();
-  fyo.doc.registerModels(models);
   await loadFrappeFixture(answer);
-  for (const schema of Object.values(fyo.schemaMap)) {
-    if (schema?.isSingle) fyo.doc.getNewDoc(schema.name);
+  // New settings documents, which the fixture fills in below.
+  for (const name of getSingleSchemaNames()) {
+    newFrappeDoc(name);
   }
   Object.assign(fyo.singles.AccountingSettings!, {
     enable_invoice_returns: true,

@@ -19,13 +19,16 @@ test.beforeEach(async ({ page }) => {
     is_group: 0 as const,
   }));
   await routeAccounts(page, accounts);
+  // The fixture accounts get full rights, as the signed-in manager has on accounts.
+  await page.route('**/api/method/frappe.client.get_doc_permissions', (route) =>
+    route.fulfill({
+      json: {
+        message: { permissions: { read: 1, write: 1, create: 1, delete: 1 } },
+      },
+    })
+  );
   await page.evaluate(async () => {
     const app = (document.querySelector('#app') as any).__vue_app__;
-    const fyo = app._context.mixins
-      .find((m: any) => m.computed?.fyo)
-      .computed.fyo();
-    // The fixture accounts keep the doctype-level rights.
-    fyo.db.getDocPermissions = async () => undefined;
     await app.config.globalProperties.$router.push({
       path: '/chart-of-accounts',
       query: { source: 'sidebar-test' },

@@ -1,32 +1,27 @@
 import { Button, FrappeUI, FrappeUIProvider } from 'frappe-ui';
 import { createApp, h, reactive } from 'vue';
-import { fyo } from 'src/initFyo';
 import 'src/router';
+import { FrappeDoc } from 'src/frappe/document';
+import { registerFrappeModels } from 'src/frappe/doctypes';
+import { newFrappeDoc } from 'src/frappe/documents';
+import { loadFrappeDocTypes } from 'src/frappe/registry';
 import { commonDocSubmit, commonDocSync } from 'src/utils/ui';
-import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 import 'src/styles/index.css';
 
+const recordMeta = {
+  name: 'Books Record',
+  autoname: 'Prompt',
+  is_submittable: 1,
+  permissions: [],
+  fields: [{ fieldname: 'value', fieldtype: 'Data', label: 'Value' }],
+};
+
+class TestRecord extends FrappeDoc {
+  static doctype = 'Books Record';
+  static presentation = { label: 'Record' };
+}
+
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => ({
-    Record: {
-      name: 'Record',
-      label: 'Record',
-      naming: 'manual',
-      isSubmittable: true,
-      fields: [
-        { fieldname: 'name', fieldtype: 'Data', required: true },
-        { fieldname: 'value', fieldtype: 'Data' },
-        { fieldname: 'submitted', fieldtype: 'Check' },
-        { fieldname: 'cancelled', fieldtype: 'Check' },
-      ],
-    },
-  });
-  await fyo.db.init();
-  fyo.doc.registerModels({});
-  const doc = fyo.doc.getNewDoc('Record', {
-    name: 'Dialog record',
-    value: 'Unsaved edit',
-  });
   const state = reactive({
     fail: false,
     pending: false,
@@ -34,18 +29,40 @@ async function mount() {
     result: null as boolean | null,
   });
   let release: (() => void) | undefined;
-  const persist = async () => {
+  let stored: Record<string, unknown> = {};
+  // Saves and submits store what they are sent, unless the fixture rejects them.
+  const persist = async (values: Record<string, unknown>) => {
     state.calls++;
     if (state.pending) await new Promise<void>((resolve) => (release = resolve));
-    if (state.fail) throw new Error('Write rejected');
-    return doc.getValidDict();
+    if (state.fail) {
+      const errors = [{ message: 'Write rejected' }];
+      return Response.json({ errors }, { status: 417 });
+    }
+
+    stored = { ...values, modified: '2026-10-01 10:00:00.000000' };
+    return Response.json({ data: stored, docs: [stored] });
   };
-  fyo.db.get = async () => doc.getValidDict();
-  fyo.db.insert = persist;
-  fyo.db.update = persist;
-  fyo.db.runLifecycleAction = async () => ({
-    ...(await persist()),
-    submitted: true,
+  (window as any).frappe = {
+    boot: { user: { name: 'Administrator', roles: [] } },
+  };
+  window.fetch = async (input, init = {}) => {
+    const path = decodeURIComponent(new URL(String(input), location.href).pathname);
+    const body = init.body ? JSON.parse(String(init.body)) : {};
+    if (path.endsWith('get_books_meta')) {
+      return Response.json({ message: { metas: [recordMeta], placements: {} } });
+    }
+
+    if (path.endsWith('run_doc_method')) {
+      return await persist({ ...body.document, docstatus: 1 });
+    }
+
+    return init.method === 'GET' ? Response.json({ data: stored }) : await persist(body);
+  };
+  registerFrappeModels({ Record: TestRecord });
+  await loadFrappeDocTypes();
+  const doc = newFrappeDoc('Record', {
+    name: 'Dialog record',
+    value: 'Unsaved edit',
   });
 
   const app = createApp({

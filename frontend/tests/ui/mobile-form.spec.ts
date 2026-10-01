@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { insert } from './helpers/records';
+import { insertDocument } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 test.use({
@@ -92,8 +92,12 @@ test('a foreign-currency customer shows the exchange rate', async ({
 }) => {
   const code = `Z${Date.now().toString(36).toUpperCase()}`;
   const customer = `Phone Foreign ${code}`;
-  await insert(page, 'Currency', { name: code, symbol: code });
-  await insert(page, 'Party', {
+  await insertDocument(page, 'Currency', {
+    currency_name: code,
+    symbol: code,
+    enabled: 1,
+  });
+  await insertDocument(page, 'Books Party', {
     name: customer,
     role: 'Customer',
     currency: code,

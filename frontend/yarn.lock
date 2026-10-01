@@ -1832,10 +1832,10 @@ fraction.js@^5.3.4:
   resolved "https://registry.yarnpkg.com/fraction.js/-/fraction.js-5.3.4.tgz#8c0fcc6a9908262df4ed197427bdeef563e0699a"
   integrity sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ==
 
-frappe-ui@1.0.0-rc.2:
-  version "1.0.0-rc.2"
-  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-1.0.0-rc.2.tgz#03e2c8be7d9e18cd2a0c4d09b78df91d37bd81bb"
-  integrity sha512-sLsoWGmgzhdeyfOmwzDwD5ZrJh3VZ0mA2a7lf9rwxyYCfZKSGAp/qXSO002+CbVuIWqYA3sGuPbl9Dn2+m1n/A==
+frappe-ui@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-1.0.0.tgz#6af1f17800ed2b3eb382feb9895baad7293eb673"
+  integrity sha512-xtT57o06Cfy03TrJMl/HKwO6LfiphnlQrokIII/7PI51P0v3ZH77Gg6tsrtQczlE53D3+BE0Nm8f1MS6jiceHA==
   dependencies:
     "@codemirror/autocomplete" "^6.0.0"
     "@codemirror/commands" "^6.0.0"

@@ -4,7 +4,7 @@ import frappe
 from frappe.core.doctype.data_import.data_import import form_start_import, get_import_status
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import make_account, make_item, make_party
+from frappe_books.tests.accounting import make_account, make_item, make_party, unique_name
 from frappe_books.tests.test_books_page import _make_user
 
 MANAGER = "books-data-import-manager@example.com"
@@ -39,7 +39,11 @@ class IntegrationTestDataImport(IntegrationTestCase):
 
 
 def _run_import(doctype, csv):
-	"""Import `csv` as the Import Wizard does, submitting what it inserts."""
+	"""Import `csv` as the Import Wizard does, submitting what it inserts.
+
+	MariaDB keeps Data Import Logs (MyISAM) past the test's rollback, so each run names its own
+	import: one reusing a rolled-back name would read the old logs as rows already imported.
+	"""
 	data_import = frappe.get_doc(
 		{
 			"doctype": "Data Import",
@@ -47,7 +51,7 @@ def _run_import(doctype, csv):
 			"import_type": "Insert New Records",
 			"submit_after_import": 1,
 		}
-	).insert()
+	).insert(set_name=unique_name(f"{doctype} Import"))
 	file = frappe.get_doc(
 		{
 			"doctype": "File",

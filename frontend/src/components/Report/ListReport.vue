@@ -60,7 +60,7 @@
       class="mt-20 w-full justify-center"
       :text="t`Loading Report...`"
     />
-    <p v-else class="w-full text-center mt-20 text-ink-gray-8 text-base">
+    <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
       {{ t`No Values to be Displayed` }}
     </p>
 

@@ -130,7 +130,7 @@
         </FrappeList>
       </template>
     </FrappeAccordion>
-    <p v-else class="p-4 text-sm text-ink-gray-6">
+    <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
       {{ t`No linked entries found` }}
     </p>
   </component>

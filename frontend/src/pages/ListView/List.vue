@@ -73,6 +73,17 @@
       </FrappeList>
     </FrappeScrollArea>
 
+    <!-- First Load -->
+    <div v-else-if="isLoading" class="px-3 pt-8 sm:px-5" aria-hidden="true">
+      <div
+        v-for="row in 8"
+        :key="row"
+        class="flex h-12 items-center border-b border-outline-gray-1"
+      >
+        <FrappeSkeleton class="h-4 w-full" />
+      </div>
+    </div>
+
     <!-- Pagination Footer -->
     <div v-if="total" class="mt-auto">
       <hr class="border-outline-gray-1" />
@@ -87,16 +98,25 @@
 
     <!-- Empty State -->
     <div
-      v-if="!total"
-      class="flex flex-col items-center justify-center my-auto"
+      v-if="!isLoading && !total"
+      class="my-auto flex flex-col items-center justify-center gap-3 py-16 text-center"
     >
-      <img src="../../assets/img/list-empty-state.svg" alt="" class="w-24" />
-      <p class="my-3 text-ink-gray-8">
-        {{ t`No entries found` }}
-      </p>
-      <FrappeButton v-if="canCreate" variant="solid" @click="$emit('makeNewDoc')">
-        {{ t`Make Entry` }}
-      </FrappeButton>
+      <div class="rounded-full bg-surface-gray-2 p-3 text-ink-gray-5">
+        <span class="lucide-inbox size-6" aria-hidden="true" />
+      </div>
+      <p class="text-base text-ink-gray-7">{{ t`No entries found` }}</p>
+      <template v-if="canCreate">
+        <p class="text-sm text-ink-gray-5">
+          {{ t`Create one to get started.` }}
+        </p>
+        <FrappeButton
+          class="mt-2"
+          variant="solid"
+          icon-left="lucide-plus"
+          :label="t`Make Entry`"
+          @click="$emit('makeNewDoc')"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -104,6 +124,7 @@
 import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
+  Skeleton as FrappeSkeleton,
 } from 'frappe-ui';
 import { ListViewSettings, RenderData } from 'fyo/model/types';
 import {
@@ -141,6 +162,7 @@ export default defineComponent({
     FrappeListRow,
     FrappeListRows,
     FrappeScrollArea,
+    FrappeSkeleton,
     ListCell,
     FrappeButton,
     MobileList,

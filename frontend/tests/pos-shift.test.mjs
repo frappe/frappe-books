@@ -60,7 +60,7 @@ function previewClosing(document) {
   };
 }
 
-test('shift tables show the columns their bridge schemas showed', () => {
+test('shift tables show the columns they showed', () => {
   const columns = Object.fromEntries(
     ['OpeningCash', 'OpeningAmounts', 'ClosingCash', 'ClosingAmounts'].map(
       (schemaName) => [schemaName, getSchema(schemaName).tableFields]

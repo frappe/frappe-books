@@ -35,13 +35,11 @@
 
     <div
       v-if="tabOptions.length > 1"
-      class="sticky top-0 z-[2] mt-1 overflow-x-auto bg-surface-base shadow-[inset_0_-1px_0_var(--outline-gray-1)] [scrollbar-width:none]"
+      class="sticky top-0 z-10 mt-1 flex items-center overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none]"
     >
       <FrappeTabButtons
-        class="px-4"
         :model-value="activeTab"
         :options="tabOptions"
-        variant="underline"
         size="md"
         @update:model-value="(tab) => $emit('update:activeTab', String(tab))"
       >

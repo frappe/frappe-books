@@ -14,14 +14,9 @@
     <div
       v-if="tabOptions.length > 1"
       ref="mobileTabs"
-      class="sticky top-0 z-10 flex-shrink-0 overflow-x-auto bg-surface-base px-4 pt-3 shadow-[inset_0_-1px_0_var(--outline-gray-1)]"
+      class="sticky top-0 z-10 flex shrink-0 items-center overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2"
     >
-      <FrappeTabButtons
-        v-model="activeTab"
-        :options="tabOptions"
-        variant="underline"
-        size="md"
-      />
+      <FrappeTabButtons v-model="activeTab" :options="tabOptions" size="md" />
     </div>
     <template v-if="doc">
       <section

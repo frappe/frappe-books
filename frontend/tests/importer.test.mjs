@@ -137,7 +137,7 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
       { ...items, fields: pick(items.fields, ['item', 'quantity']) },
     ],
     limit: null,
-    filters: {},
+    filters: [],
   });
   const importer = new Importer('SalesInvoice', fyo);
 

@@ -1,4 +1,3 @@
-import { getAccountLabel } from 'src/utils/accountLabel';
 import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
 import getCommonExportActions from 'reports/commonExporter';
@@ -41,7 +40,6 @@ export abstract class AccountReport extends Report {
     const level = Number(row.indent ?? 0);
     const reportRow = super.getReportRow(row);
     const [nameCell] = reportRow.cells;
-    nameCell.value = getAccountLabel(this.fyo, String(row.account));
     nameCell.bold = !level;
     nameCell.indent = level;
     return {

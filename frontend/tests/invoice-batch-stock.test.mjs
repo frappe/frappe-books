@@ -10,13 +10,21 @@ const stock = [
   { item: 'Pen', batch: null, quantity: 5 },
 ];
 
+/** A request for the stock ledger's sums by item and batch. */
+function isLedgerSum({ path, body }) {
+  return (
+    path === '/api/method/frappe.client.get_list' &&
+    body.doctype === 'Books Stock Ledger Entry'
+  );
+}
+
 const requests = await loadFrappeModels(frappeModels, ({ path, body }) => {
   if (path === `${AVAILABILITY}.get_stock_location`) {
     const isPOSSale = body.doctype === 'Books Sales Invoice' && body.is_pos;
     return { message: isPOSSale ? 'Counter' : 'Stores' };
   }
 
-  if (path.endsWith('get_stock_quantities')) {
+  if (isLedgerSum({ path, body })) {
     return { message: stock };
   }
 
@@ -37,14 +45,14 @@ function makeRow(values = {}) {
 /** The locations the stock requests asked about. */
 function getStockLocations() {
   return requests
-    .filter(({ path }) => path.endsWith('get_stock_quantities'))
-    .map(({ body }) => [body.location, body.items]);
+    .filter(isLedgerSum)
+    .map(({ body }) => body.filters.map(([, , value]) => value));
 }
 
 test('sales batch choices are the batches in stock where the invoice ships from', async () => {
   const row = makeRow();
   const filters = await row.constructor.filters.batch(row);
-  assert.deepEqual(filters, { name: ['in', ['B1']] });
+  assert.deepEqual(filters, [['name', 'in', ['B1']]]);
   assert.deepEqual(getStockLocations(), [['Stores', ['Pen']]]);
 });
 
@@ -63,7 +71,24 @@ test('a POS row checks its batch at the POS location', async () => {
 
 test('returns may use any batch of the item and skip the stock check', async () => {
   const row = makeRow({ return_against: 'SINV-1' });
-  assert.deepEqual(await row.constructor.filters.batch(row), { item: 'Pen' });
+  assert.deepEqual(await row.constructor.filters.batch(row), [
+    ['item', '=', 'Pen'],
+  ]);
   await row.validateBatchQuantity('B1', 30);
   assert.deepEqual(requests, []);
+});
+
+test('a Qty in another unit checks its batch in stock units', async () => {
+  const row = makeRow();
+  Object.assign(row, {
+    batch: 'B1',
+    transfer_unit: 'Box',
+    unit_conversion_factor: 2,
+  });
+  await assert.rejects(
+    row.set('qty', 2),
+    /Batch B1 only has 2 quantity available but 4 is required/
+  );
+  await row.set('qty', 1);
+  clearTimeout(row.parentdoc._previewTimer);
 });

@@ -1,4 +1,3 @@
-import type { Doc } from 'fyo/model/doc';
 import { translateSchema, TranslationString } from 'fyo/utils/translation';
 import type { Field, Schema } from 'schemas/types';
 import { fyo } from 'src/initFyo';
@@ -131,7 +130,7 @@ export function getDoctypeLabel(doctype: string): string {
 }
 
 /** The model whose statics (actions, list settings, link filters) present a schema. */
-export function getModel(schemaName: string): typeof Doc | undefined {
+export function getModel(schemaName: string): typeof FrappeDoc | undefined {
   return isFrappeBacked(schemaName) ? getDocType(schemaName).Model : undefined;
 }
 

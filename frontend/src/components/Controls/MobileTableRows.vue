@@ -82,21 +82,21 @@ import {
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
 import { t } from 'fyo';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import { computed } from 'vue';
 import { getRowSummary } from './rowSummary';
 
 /** A child table as a card of rows, numbered like the desktop idx column. */
 const props = defineProps<{
-  rows: Doc[];
+  rows: FrappeDoc[];
   fields: Field[];
   canAdd: boolean;
   /** A section's table names itself; a field's table has a label above. */
   title?: string;
 }>();
 
-defineEmits<{ edit: [row: Doc]; add: [] }>();
+defineEmits<{ edit: [row: FrappeDoc]; add: [] }>();
 
 const summaries = computed(() =>
   props.rows.map((row) => ({ row, ...getRowSummary(row, props.fields) }))

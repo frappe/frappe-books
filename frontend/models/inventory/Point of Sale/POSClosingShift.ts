@@ -2,7 +2,7 @@ import { ListViewSettings } from 'fyo/model/types';
 import type { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
-import { CashCount, getCashTotal } from './POSOpeningShift';
+import { CashCount } from './POSOpeningShift';
 
 /** A payment method's counted amount against what the shift expects. */
 export type ClosingAmount = FrappeDoc & {
@@ -23,7 +23,7 @@ export class ClosingAmounts extends FrappeDoc {
   static override presentation = { label: 'Closing Amount' };
 }
 
-/** Books Pos Closing Shift, served by Frappe; its preview fills the expected amounts. */
+/** Books Pos Closing Shift, served by Frappe; its preview fills the expected, counted cash and difference amounts. */
 export class POSClosingShift extends FrappeDoc {
   static override doctype = 'Books Pos Closing Shift';
   static override presentation = {
@@ -47,11 +47,6 @@ export class POSClosingShift extends FrappeDoc {
   declare closing_cash?: CashCount[];
   declare closing_amounts?: ClosingAmount[];
   declare opening_shift?: string;
-
-  /** The cash the counted denominations add up to. */
-  get closingCashAmount(): Money {
-    return getCashTotal(this.fyo.pesa(0), this.closing_cash);
-  }
 
   static getListViewSettings(): ListViewSettings {
     return { columns: ['name', 'closing_date'] };

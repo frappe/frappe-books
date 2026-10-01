@@ -4,7 +4,7 @@ import { ValidationError, ValueError } from 'fyo/utils/errors';
 import { t } from 'fyo/utils/translation';
 import { Field, OptionField } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
-import { Doc } from './doc';
+import type { FrappeDoc } from 'src/frappe/document';
 
 // Frappe checks Data fields with the Email and Phone options by these patterns.
 const FRAPPE_EMAIL =
@@ -34,7 +34,7 @@ export function validatePhoneNumber(value: DocValue) {
   }
 }
 
-export function validateOptions(field: OptionField, value: string, doc: Doc) {
+export function validateOptions(field: OptionField, value: string, doc: FrappeDoc) {
   const options = getOptionList(field, doc);
   if (!options.length) {
     return;
@@ -53,17 +53,12 @@ export function validateOptions(field: OptionField, value: string, doc: Doc) {
   throw new ValueError(t`Invalid value ${value} for ${field.label}`);
 }
 
-export function validateRequired(field: Field, value: DocValue, doc: Doc) {
+export function validateRequired(field: Field, value: DocValue, doc: FrappeDoc) {
   if (!getIsNullOrUndef(value)) {
     return;
   }
 
-  if (field.required) {
-    throw new ValidationError(`${field.label} is required`);
-  }
-
-  const requiredFunction = doc.required[field.fieldname];
-  if (requiredFunction && requiredFunction()) {
-    throw new ValidationError(`${field.label} is required`);
+  if (field.required || doc.required[field.fieldname]?.()) {
+    throw new ValidationError(t`${field.label} is required`);
   }
 }

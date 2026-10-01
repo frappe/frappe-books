@@ -91,6 +91,11 @@ export function t(...args: TranslationLiteral[]): string {
   return new TranslationString(...args).s;
 }
 
+/** A stored value, like a country's name, in the user's language, as Frappe's `_()` gives it. */
+export function translateValue(value: string): string {
+  return TranslationString.prototype.languageMap?.[value]?.translation ?? value;
+}
+
 export function setLanguageMapOnTranslationString(
   languageMap: LanguageMap | undefined
 ) {

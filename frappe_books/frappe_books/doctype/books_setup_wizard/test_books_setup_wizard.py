@@ -193,6 +193,12 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			(str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), ("2026-04-01", "2027-03-31")
 		)
 
+	def test_preview_suggests_the_currency_from_frappe_country_data(self):
+		# Books' own copy had Croatia's old kuna, which is no Frappe Currency.
+		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "Croatia"})
+		wizard.preview()
+		self.assertEqual(wizard.currency, "EUR")
+
 	def test_preview_keeps_values_the_user_set(self):
 		wizard = frappe.get_doc(
 			{

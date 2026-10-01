@@ -1,4 +1,4 @@
-import type { QueryFilter } from 'utils/db/types';
+import type { Filter } from 'src/frappe/api';
 import { call } from 'src/web/api';
 import type { PeriodKey } from './types';
 
@@ -45,12 +45,11 @@ export function getInvoiceSummary(
 export function getInvoiceListFilters(
   summary: InvoiceSummary,
   paid: boolean
-): QueryFilter {
-  // Invoices are Frappe-backed, so their filters use Frappe fieldnames.
-  return {
-    submitted: ['=', 1],
-    cancelled: ['=', 0],
-    outstanding_amount: [paid ? '=' : '!=', 0],
-    date: ['>=', summary.from_date, '<', summary.before_date],
-  };
+): Filter[] {
+  return [
+    ['docstatus', '=', 1],
+    ['outstanding_amount', paid ? '=' : '!=', 0],
+    ['date', '>=', summary.from_date],
+    ['date', '<', summary.before_date],
+  ];
 }

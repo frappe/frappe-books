@@ -7,12 +7,16 @@ import {
   evaluateRequired,
   frappeModels,
   fyo,
+  getFrappeDoc,
   getMappedDoc,
+  getNewDocValues,
   getSchema,
   ListFilters,
+  ListView,
   loadFrappeDocTypes,
   newFrappeDoc,
   registerFrappeModels,
+  router,
   stubFrappe,
 } from './helpers/frappe.mjs';
 
@@ -261,14 +265,14 @@ test('a row in another unit shows and takes its rate per that unit', async () =>
   assert.equal(transfer_rate.label, 'Rate');
   assert.ok(row.schema.quickEditFields.includes('transfer_rate'));
 
-  // The server priced the row, and a typed rate per box replaces its price.
-  row.leaveToServer(['rate']);
+  // A typed rate per box replaces the price; the server sets the rate from it.
   await row.set('transfer_rate', fyo.pesa(3000));
   const [sent] = invoice.getMethodDocument({
     keepRowNames: true,
     clearServerFilled: true,
   }).items;
-  assert.equal(Number(sent.rate), 60);
+  assert.equal(sent.rate, undefined);
+  assert.equal(Number(sent.transfer_rate), 3000);
   assert.equal(row.is_manual_rate, true);
   clearTimeout(invoice._previewTimer);
 });
@@ -308,6 +312,33 @@ test('a scanned item is priced by the server, and scanning it again adds to its 
     [['Pen', 3]]
   );
   clearTimeout(invoice._previewTimer);
+});
+
+test('an invoice from selected items leaves their pricing to the server', async () => {
+  setSettings();
+  const requests = stubFrappe(() => ({ data: [] }));
+  const routes = [];
+  router.currentRoute = { value: { fullPath: '/list/Item' } };
+  router.push = async (route) => routes.push(route);
+  const list = { selectedItems: ['Pen', 'Ink'], isSelectionMode: true };
+
+  await ListView.methods.createInvoice.call(list, 'SalesInvoice');
+
+  const name = decodeURIComponent(routes[0].split('/').at(-1));
+  const invoice = await getFrappeDoc('SalesInvoice', name);
+  clearTimeout(invoice._previewTimer);
+  const { items } = invoice.getMethodDocument({
+    keepRowNames: true,
+    clearServerFilled: true,
+  });
+  assert.deepEqual(
+    items.map((row) => [row.item, 'rate' in row, !!row.is_manual_rate]),
+    [
+      ['Pen', false, false],
+      ['Ink', false, false],
+    ]
+  );
+  assert.deepEqual(requests, []);
 });
 
 test('a return takes quantities back, however they are typed', async () => {
@@ -367,30 +398,79 @@ test('links filter by the doctypes they point to', async () => {
   const purchase = newInvoice('PurchaseInvoice');
   const { filters, createFilters } = frappeModels.SalesInvoice;
 
-  assert.deepEqual(filters.party(purchase), {
-    role: ['in', ['Supplier', 'Both']],
-  });
-  assert.deepEqual(filters.account(sale), {
-    is_group: false,
-    account_type: 'Receivable',
-  });
-  assert.deepEqual(filters.number_series(sale), {
-    reference_type: 'SalesInvoice',
-  });
-  assert.deepEqual(filters.price_list(purchase), {
-    is_enabled: true,
-    is_purchase: true,
-  });
-  assert.deepEqual(createFilters.party(sale), { role: 'Customer' });
+  assert.deepEqual(filters.party(purchase), [
+    ['role', 'in', ['Supplier', 'Both']],
+  ]);
+  assert.deepEqual(filters.account(sale), [
+    ['is_group', '=', 0],
+    ['account_type', '=', 'Receivable'],
+  ]);
+  assert.deepEqual(filters.number_series(sale), [
+    ['reference_type', '=', 'SalesInvoice'],
+  ]);
+  assert.deepEqual(filters.price_list(purchase), [
+    ['is_enabled', '=', 1],
+    ['is_purchase', '=', 1],
+  ]);
+  assert.deepEqual(createFilters.party(sale), [['role', '=', 'Customer']]);
   assert.deepEqual(frappeModels.SalesQuote.filters.party, undefined);
 
   sale.push('items', { item: 'Pen' });
   const row = sale.items[0];
   const RowModel = row.constructor;
-  assert.deepEqual(await RowModel.filters.item(row), {
-    item_usage: ['not in', ['Purchases']],
+  assert.deepEqual(await RowModel.filters.item(row), [
+    ['item_usage', 'not in', ['Purchases']],
+  ]);
+  assert.deepEqual(RowModel.createFilters.item(row), [
+    ['item_usage', '=', 'Sales'],
+  ]);
+});
+
+test('a new invoice from a filtered list takes the values users enter', async () => {
+  setSettings();
+  stubFrappe(() => ({ data: [] }));
+  const routes = [];
+  router.currentRoute = { value: { fullPath: '/list/SalesInvoice' } };
+  router.push = async (route) => routes.push(route);
+  // A party's sales, as the dashboard's paid list narrows them.
+  const filters = [
+    ['party', '=', 'Acme'],
+    ['docstatus', '=', 1],
+    ['outstanding_amount', '=', 0],
+    ['date', '>=', '2031-09-01'],
+  ];
+  const list = { schemaName: 'SalesInvoice', canCreate: true, filters };
+
+  await ListView.methods.makeNewDoc.call(list);
+
+  const name = decodeURIComponent(routes[0].split('/').at(-1));
+  const invoice = await getFrappeDoc('SalesInvoice', name);
+  clearTimeout(invoice._previewTimer);
+  assert.equal(invoice.party, 'Acme');
+  assert.equal(invoice.docstatus, 0);
+  assert.deepEqual(getNewDocValues('SalesInvoice', filters), {
+    party: 'Acme',
   });
-  assert.deepEqual(RowModel.createFilters.item(row), { item_usage: 'Sales' });
+});
+
+test('a record created from a link takes the values its filters choose', () => {
+  const sale = newInvoice('SalesInvoice');
+  const { filters, createFilters } = frappeModels.SalesInvoice;
+
+  assert.deepEqual(getNewDocValues('Account', filters.account(sale)), {
+    is_group: false,
+    account_type: 'Receivable',
+  });
+  assert.deepEqual(getNewDocValues('Party', filters.party(sale)), {
+    role: 'Customer',
+  });
+  assert.deepEqual(getNewDocValues('Party', createFilters.party(sale)), {
+    role: 'Customer',
+  });
+  assert.deepEqual(getNewDocValues('PriceList', filters.price_list(sale)), {
+    is_enabled: true,
+    is_sales: true,
+  });
 });
 
 test("a row's transfer unit is its item's stock unit or one of its conversions", async () => {

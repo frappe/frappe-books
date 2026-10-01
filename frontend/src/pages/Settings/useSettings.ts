@@ -1,6 +1,6 @@
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -48,13 +48,13 @@ export function useSettings() {
     groupedFields.value = groupFields(schemas.value);
   }
 
-  function getDocs(): Doc[] {
+  function getDocs(): FrappeDoc[] {
     return schemas.value
       .map(({ name }) => fyo.singles[name])
-      .filter((doc): doc is Doc => !!doc);
+      .filter((doc): doc is FrappeDoc => !!doc);
   }
 
-  async function onValueChange(doc: Doc, field: Field, value: DocValue) {
+  async function onValueChange(doc: FrappeDoc, field: Field, value: DocValue) {
     const { fieldname } = field;
     delete errors.value[fieldname];
 
@@ -71,7 +71,7 @@ export function useSettings() {
     update();
   }
 
-  async function syncDoc(doc: Doc): Promise<boolean> {
+  async function syncDoc(doc: FrappeDoc): Promise<boolean> {
     try {
       await doc.sync();
     } catch (error) {

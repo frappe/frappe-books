@@ -4,6 +4,7 @@ import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import Observable from 'fyo/utils/observable';
 import { Field, RawValue } from 'schemas/types';
+import { getLinkLabel } from 'src/frappe/link';
 import { getDoctypeLabel } from 'src/frappe/registry';
 import { getIsNullOrUndef } from 'utils';
 import {
@@ -60,13 +61,10 @@ export abstract class Report extends Observable<RawValue> {
     return (this.constructor as typeof Report).phoneLayout;
   }
 
-  async initialize() {
-    /**
-     * Not in constructor cause possibly async.
-     */
-
-    await this.setDefaultFilters();
-    this.filters = await this.getFilters();
+  /** Loads the report once with the given filter values set. */
+  async initialize(filters: Record<string, DocValue> = {}) {
+    await this.refreshFilters();
+    await this.setFilters(filters);
     this.columns = await this.getColumns();
     await this.setReportData();
   }
@@ -182,6 +180,10 @@ export abstract class Report extends Observable<RawValue> {
 
     if (column.fieldname === 'reference_type') {
       return getDoctypeLabel(String(rawValue));
+    }
+
+    if (column.target) {
+      return getLinkLabel(column.target, String(rawValue));
     }
 
     return this.fyo.format(rawValue, column.fieldtype);

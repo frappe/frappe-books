@@ -163,7 +163,7 @@
 </template>
 <script lang="ts">
 import { createReusableTemplate } from '@vueuse/core';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { isPesa } from 'fyo/utils';
 import {
   Alert as FrappeAlert,
@@ -203,7 +203,7 @@ export default defineComponent({
     FrappeLoadingText,
     FrappeScrollArea,
   },
-  props: { doc: { type: Object as PropType<Doc>, required: true } },
+  props: { doc: { type: Object as PropType<FrappeDoc>, required: true } },
   emits: ['close'],
   setup() {
     // Phones show the entries in a sheet, desktop in a side panel.

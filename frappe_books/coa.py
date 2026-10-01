@@ -36,11 +36,6 @@ def chart_options() -> list[dict]:
 	]
 
 
-def standard_account_labels() -> dict[str, str]:
-	"""/books shows standard chart accounts by their translated names; custom accounts keep theirs."""
-	return {account.name: _(account.name) for account in load_chart(STANDARD_CHART)}
-
-
 def load_chart(chart_name) -> list[ChartAccount]:
 	"""Return the named chart's accounts in tree order."""
 	if chart_name == STANDARD_CHART:

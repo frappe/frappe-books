@@ -1,7 +1,6 @@
 import { t } from 'fyo';
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { BaseError, ConflictError } from 'fyo/utils/errors';
-import { ErrorLog } from 'fyo/utils/types';
 import { showDialog } from 'src/utils/interactive';
 import { fyo } from './initFyo';
 import { getErrorMessage } from './utils';
@@ -12,31 +11,9 @@ function shouldNotStore(error: Error) {
   return !shouldLog;
 }
 
-function getToastProps(errorLogObj: ErrorLog) {
-  const props: ToastOptions = {
-    message: errorLogObj.name ?? t`Error`,
-    type: 'error',
-  };
-
-  return props;
-}
-
-export function getErrorLogObject(
-  error: Error,
-  more: Record<string, unknown>
-): ErrorLog {
-  const { name, stack, message, cause } = error;
-  if (cause) {
-    more.cause = cause;
-  }
-
-  return { name, stack, message, more };
-}
-
 export async function handleError(
   logToConsole: boolean,
   error: Error,
-  more: Record<string, unknown> = {},
   notifyUser = true
 ) {
   if (logToConsole) {
@@ -48,18 +25,19 @@ export async function handleError(
     return;
   }
 
-  const errorLogObj = getErrorLogObject(error, more);
-
   if (notifyUser) {
-    const toastProps = getToastProps(errorLogObj);
+    const toast: ToastOptions = {
+      message: error.name ?? t`Error`,
+      type: 'error',
+    };
     const { showToast } = await import('src/utils/interactive');
-    showToast(toastProps);
+    showToast(toast);
   }
 }
 
 export async function handleErrorWithDialog(
   error: unknown,
-  doc?: Doc,
+  doc?: FrappeDoc,
   dontThrow?: boolean
 ) {
   if (!(error instanceof Error)) {
@@ -67,7 +45,7 @@ export async function handleErrorWithDialog(
   }
 
   const errorMessage = getErrorMessage(error, doc);
-  await handleError(false, error, { errorMessage, doc });
+  await handleError(false, error);
 
   const label = getErrorLabel(error);
   const options: DialogOptions = {

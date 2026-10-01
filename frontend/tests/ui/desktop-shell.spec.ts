@@ -89,3 +89,13 @@ test('chart of accounts groups expand from a row, Expand and Collapse', async ({
   await headerButton('Collapse').click();
   await expect(rows).toHaveCount(rootCount);
 });
+
+test('a logout elsewhere sends the next action to the login page', async ({
+  page,
+}) => {
+  await page.context().clearCookies();
+
+  await sidebar(page).getByRole('link', { name: 'Sales', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/login\?redirect-to=%2Fbooks$/);
+});

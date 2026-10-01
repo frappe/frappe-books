@@ -121,7 +121,7 @@ import {
 } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
@@ -135,11 +135,11 @@ import { useRouter } from 'vue-router';
 import MobileFormSection from './MobileFormSection.vue';
 
 type FormAction = Pick<Action, 'label' | 'group' | 'theme' | 'nextStep'> & {
-  action: (doc: Doc, router: ReturnType<typeof useRouter>) => unknown;
+  action: (doc: FrappeDoc, router: ReturnType<typeof useRouter>) => unknown;
 };
 
 const props = defineProps<{
-  doc: Doc;
+  doc: FrappeDoc;
   title: string;
   groupedFields: UIGroupedFields | null;
   activeTab: string;
@@ -153,7 +153,7 @@ const emit = defineEmits<{
   'update:activeTab': [tab: string];
   'value-change': [field: Field, value: DocValue];
   'row-change': [field: Field, value: DocValue, parentfield: Field];
-  editrow: [row: Doc];
+  editrow: [row: FrappeDoc];
   sync: [];
   submit: [];
   print: [];

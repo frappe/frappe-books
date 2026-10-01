@@ -40,7 +40,7 @@ import {
 } from 'frappe-ui';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Table from 'src/components/Controls/Table.vue';
@@ -55,7 +55,7 @@ export default defineComponent({
   components: { FormControl, FrappeErrorMessage, FrappeSettingsRow, Table },
   props: {
     field: { type: Object as PropType<Field>, required: true },
-    doc: { type: Object as PropType<Doc>, required: true },
+    doc: { type: Object as PropType<FrappeDoc>, required: true },
     error: { type: String, default: '' },
   },
   emits: ['change'],

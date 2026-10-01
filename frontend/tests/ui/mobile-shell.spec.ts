@@ -98,3 +98,31 @@ test('back closes the nav sheet before leaving the page', async ({ page }) => {
   await expect(navSheet(page)).toBeHidden();
   await expect(page).toHaveURL(/\/books\/list\/SalesQuote$/);
 });
+
+test('a right-to-left language lays Books out right to left', async ({
+  page,
+}) => {
+  // Frappe sets the direction from the user's language, as for Arabic.
+  await page.route(
+    (url) => url.pathname === '/books',
+    async (route) => {
+      const response = await route.fetch();
+      const body = (await response.text())
+        .replace('dir="ltr"', 'dir="rtl"')
+        .replace("layout_direction = 'ltr'", "layout_direction = 'rtl'");
+      await route.fulfill({ response, body });
+    }
+  );
+  await page.goto('/books');
+  await waitForBooks(page);
+  await expect(page.locator('#books-app')).toHaveAttribute('dir', 'rtl');
+
+  await page.getByRole('button', { name: 'Menu' }).click();
+  // The drawer slides in from the right edge.
+  await expect
+    .poll(async () => {
+      const box = (await drawer(page).boundingBox())!;
+      return Math.round(box.x + box.width);
+    })
+    .toBe(page.viewportSize()!.width);
+});

@@ -88,7 +88,7 @@ import {
 } from 'frappe-ui';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import QuickEditForm from 'src/pages/QuickEditForm.vue';
 import { settingsDialog } from 'src/utils/refs';
@@ -129,7 +129,7 @@ export default defineComponent({
         settingsDialog.tab = tab;
       },
     },
-    doc(): Doc | null {
+    doc(): FrappeDoc | null {
       return this.fyo.singles[this.activeTab] ?? null;
     },
     sections(): [string, Field[]][] {

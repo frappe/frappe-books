@@ -5,8 +5,6 @@ export type ItemQtyMap = {
   [item: string]: { availableQty: number; [batch: string]: number };
 };
 
-export type ItemSerialNumbers = { [item: string]: string };
-
 export type ItemGroupMap = Record<string, string>;
 
 export type DiscountType = 'percent' | 'amount';

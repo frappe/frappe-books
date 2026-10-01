@@ -144,7 +144,7 @@ def _opening_row(key, opening, group_by):
 	row = {"type": "opening", "debit": as_decimal(0), "credit": as_decimal(0), "balance": opening}
 	if group_by in GROUP_FIELDS:
 		row[group_by] = key
-	row["account"] = _("Opening: {0}").format(key) if group_by == "account" else _("Opening")
+	row["account"] = _("Opening: {0}").format(_(key)) if group_by == "account" else _("Opening")
 	return row
 
 

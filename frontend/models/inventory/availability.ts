@@ -1,3 +1,4 @@
+import type { Filter } from 'src/frappe/api';
 import { call } from 'src/web/api';
 
 const AVAILABILITY = 'frappe_books.inventory.availability';
@@ -21,14 +22,27 @@ export async function getStockLocation(
   return location ?? undefined;
 }
 
-/** The stock of each item and batch, at the location when given. */
+/** The stock of each item and batch, as the ledger sums it, at the location when given. */
 export async function getStockQuantities(
   location?: string,
   items?: string[]
 ): Promise<StockQuantity[]> {
-  return await call<StockQuantity[]>(`${AVAILABILITY}.get_stock_quantities`, {
-    location,
-    items,
+  const filters: Filter[] = [];
+  if (location) {
+    filters.push(['location', '=', location]);
+  }
+
+  if (items?.length) {
+    filters.push(['item', 'in', items]);
+  }
+
+  return await call<StockQuantity[]>('frappe.client.get_list', {
+    doctype: 'Books Stock Ledger Entry',
+    fields: ['item', 'batch', { SUM: 'quantity', as: 'quantity' }],
+    filters,
+    group_by: 'item, batch',
+    order_by: 'item, batch',
+    limit_page_length: 0,
   });
 }
 

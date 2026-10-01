@@ -1,4 +1,4 @@
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { fyo } from 'src/initFyo';
 
@@ -13,7 +13,7 @@ const quantityFields = ['qty', 'quantity'];
 const rateFields = ['rate', 'transfer_rate'];
 
 /** Phone summary of a table row: the first column, a closing amount, the rest. */
-export function getRowSummary(row: Doc, fields: Field[]): RowSummary {
+export function getRowSummary(row: FrappeDoc, fields: Field[]): RowSummary {
   const [titleField, ...rest] = fields;
   const amountField = getAmountField(fields);
   const metaFields = rest.filter((field) => field !== amountField);
@@ -31,7 +31,7 @@ export function getAmountField(fields: Field[]): Field | undefined {
   return last?.fieldtype === FieldTypeEnum.Currency ? last : undefined;
 }
 
-function getMeta(row: Doc, fields: Field[]) {
+function getMeta(row: FrappeDoc, fields: Field[]) {
   const quantity = fields.find((f) => quantityFields.includes(f.fieldname));
   const rate = fields.find(
     (f) =>
@@ -51,7 +51,7 @@ function getMeta(row: Doc, fields: Field[]) {
   return parts.filter(Boolean).join(' · ');
 }
 
-function formatCell(row: Doc, field: Field): string {
+function formatCell(row: FrappeDoc, field: Field): string {
   const value = row.get(field.fieldname);
   if (value === null || value === undefined || value === '') {
     return '';

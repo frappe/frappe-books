@@ -2,13 +2,23 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
+from frappe import _, _lt
 from frappe.model.document import Document
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.commerce.pricing import validate_dates, validate_range
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
+
+# What /books says at each limit when it crosses the other limit of its pair.
+LIMIT_MESSAGES = {
+	"min_quantity": _lt("Minimum Quantity should be less than the Maximum Quantity."),
+	"max_quantity": _lt("Maximum Quantity should be greater than the Minimum Quantity."),
+	"min_amount": _lt("Minimum Amount should be less than the Maximum Amount."),
+	"max_amount": _lt("Maximum Amount should be greater than the Minimum Amount."),
+	"valid_from": _lt("Valid From Date should be less than Valid To Date."),
+	"valid_to": _lt("Valid To Date should be greater than Valid From Date."),
+}
 
 
 class BooksPricingRule(SeriesNamingMixin, Document):
@@ -79,29 +89,31 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 			row.get_invalid_links()
 
 	def validate(self):
-		# The messages /books shows at these fields.
 		validate_range(
 			self.min_quantity,
 			self.max_quantity,
 			_("quantity"),
-			message=_("Minimum Quantity should be less than the Maximum Quantity."),
+			message=self.get_limit_message("min_quantity", "max_quantity"),
 		)
 		validate_range(
 			self.min_amount,
 			self.max_amount,
 			_("amount"),
 			strict=True,
-			message=_("Minimum Amount should be less than the Maximum Amount."),
+			message=self.get_limit_message("min_amount", "max_amount"),
 		)
-		validate_dates(
-			self.valid_from, self.valid_to, _("Valid From Date should be less than Valid To Date.")
-		)
+		validate_dates(self.valid_from, self.valid_to, self.get_limit_message("valid_from", "valid_to"))
 		if not self.applied_items:
 			frappe.throw(_("Add at least one item to the pricing rule."))
 		if self.discount_type == "Price Discount":
 			self.validate_price_discount()
 		elif self.discount_type == "Product Discount":
 			self.validate_product_discount()
+
+	def get_limit_message(self, lower, upper):
+		"""The message /books shows at the edited limit: the upper one's when only it changed."""
+		is_upper_edit = self.has_value_changed(upper) and not self.has_value_changed(lower)
+		return str(LIMIT_MESSAGES[upper if is_upper_edit else lower])
 
 	def validate_price_discount(self):
 		value_by_type = {

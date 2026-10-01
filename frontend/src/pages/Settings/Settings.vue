@@ -55,7 +55,7 @@
 <script lang="ts">
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { ValidationError } from 'fyo/utils/errors';
 import {
   TabButtons as FrappeTabButtons,
@@ -90,7 +90,7 @@ export default defineComponent({
     return { activeTab: ModelNameEnum.AccountingSettings as string };
   },
   computed: {
-    doc(): Doc | null {
+    doc(): FrappeDoc | null {
       return this.fyo.singles[this.activeTab] ?? null;
     },
     tabOptions(): { value: string; label: string }[] {

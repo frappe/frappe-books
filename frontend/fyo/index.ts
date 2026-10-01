@@ -1,9 +1,8 @@
 import { getMoneyMaker, MoneyMaker } from 'pesa';
 import { Field, FieldType, Schema } from 'schemas/types';
-import { getAllDocuments } from 'src/frappe/api';
 import { getRandomString } from 'utils';
 import { markRaw } from 'vue';
-import { Doc } from './model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { DocumentActionWarning, SinglesMap } from './model/types';
 import {
   DEFAULT_CURRENCY,
@@ -22,6 +21,9 @@ import { t, T } from './utils/translation';
 import type { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
 import type { ChartOfAccounts } from 'utils/types';
+
+/** A record Frappe's boot sends; currencies come as `:Currency`. */
+type BootDoc = { doctype: string; name: string; symbol?: string | null };
 
 type MoneySettings = {
   currency?: string;
@@ -58,19 +60,17 @@ export class Fyo {
     });
   }
 
-  /** Loads the symbols that formatted amounts carry, e.g. ₹. */
-  async loadCurrencySymbols() {
-    const currencies = (await getAllDocuments('Currency', {
-      fields: ['name', 'symbol'],
-    })) as { name: string; symbol?: string | null }[];
-
+  /** The symbols formatted amounts carry, e.g. ₹, of the enabled currencies Frappe's boot sends. */
+  setCurrencySymbols(bootDocs: BootDoc[] = []) {
     this.currencySymbols = Object.fromEntries(
-      currencies.map(({ name, symbol }) => [name, symbol || undefined])
+      bootDocs
+        .filter(({ doctype }) => doctype === ':Currency')
+        .map(({ name, symbol }) => [name, symbol || undefined])
     );
   }
 
   reportDocumentActionWarning(
-    doc: Doc,
+    doc: FrappeDoc,
     action: DocumentActionWarning['action'],
     errors: unknown[]
   ) {
@@ -87,7 +87,7 @@ export class Fyo {
     }
   }
 
-  format(value: unknown, field: FieldType | Field, doc?: Doc) {
+  format(value: unknown, field: FieldType | Field, doc?: FrappeDoc) {
     return format(value, field, doc ?? null, this);
   }
 
@@ -125,11 +125,8 @@ export class Fyo {
   store = {
     isDevelopment: false,
     appVersion: '',
-    language: '',
     permissions: null as Permissions | null,
     chartsOfAccounts: [] as ChartOfAccounts[],
-    // Translated names of the standard chart's accounts, from the server
-    accountLabels: {} as Record<string, string>,
     // GST state codes and names, from the server
     indianStates: {} as Record<string, string>,
     reports: {} as Record<keyof typeof reports, Report | undefined>,

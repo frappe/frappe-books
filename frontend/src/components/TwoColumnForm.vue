@@ -8,7 +8,7 @@
         :show-label="true"
         :value="(doc[df.fieldname] ?? []) as unknown[]"
         @change="
-          async (value: Doc[] | DocValueMap[]) => await onChange(df, value)
+          async (value: FrappeDoc[] | DocValueMap[]) => await onChange(df, value)
         "
       />
       <div v-else class="min-w-0">
@@ -39,7 +39,7 @@
         :df="df"
         :value="(doc[df.fieldname] ?? []) as unknown[]"
         @change="
-          async (value: Doc[] | DocValueMap[]) => await onChange(df, value)
+          async (value: FrappeDoc[] | DocValueMap[]) => await onChange(df, value)
         "
       />
 
@@ -74,7 +74,7 @@
 </template>
 <script lang="ts">
 import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { getErrorMessage } from 'src/utils';
 import { evaluateHidden } from 'src/utils/doc';
@@ -93,7 +93,7 @@ export default defineComponent({
     Table,
   },
   props: {
-    doc: { type: Object as PropType<Doc>, required: true },
+    doc: { type: Object as PropType<FrappeDoc>, required: true },
     fields: { type: Array as PropType<Field[]>, default: () => [] },
     columnRatio: {
       type: Array as PropType<number[]>,
@@ -128,7 +128,7 @@ export default defineComponent({
     this.setFormFields();
   },
   methods: {
-    async onChange(field: Field, value: DocValue | Doc[] | DocValueMap[]) {
+    async onChange(field: Field, value: DocValue | FrappeDoc[] | DocValueMap[]) {
       const { fieldname } = field;
       delete this.errors[fieldname];
 

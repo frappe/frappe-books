@@ -1,24 +1,23 @@
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import type { Item } from 'models/baseModels/Item/Item';
-import { getAvailableSerialNumbers } from 'models/inventory/helpers';
 import {
-  getItemQtyMap,
-  getPOSInventory,
+  getOutOfStockMessage,
   validatePOSStock,
 } from 'models/inventory/posStock';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import {
-  ItemQtyMap,
-  ItemSerialNumbers,
-  ItemVisibility,
-  POSItem,
-} from 'src/components/POS/types';
+import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
 import type { DocValueMap } from 'fyo/core/types';
-import { getAllDocuments, type DocValues, type Filter } from 'src/frappe/api';
+import type { Field } from 'schemas/types';
+import {
+  getCount,
+  getList,
+  type DocValues,
+  type Filter,
+} from 'src/frappe/api';
 import { getField, getSchema } from 'src/frappe/registry';
 import { getFrappeDoc } from 'src/frappe/documents';
 import { toDocValues } from 'src/frappe/values';
@@ -173,81 +172,31 @@ export function getTotalQuantity(rows: SalesInvoiceItem[]): number {
   );
 }
 
-export async function validateSinv(
-  sinvDoc: SalesInvoice,
-  itemQtyMap: ItemQtyMap
-) {
-  if (!sinvDoc) {
-    return;
-  }
-
-  const rows = sinvDoc.items ?? [];
-  const tracked = await getTrackedItems(rows);
-  await validateSinvItems(
-    rows.filter((row) => tracked.has(row.item!)),
-    itemQtyMap,
-    !!sinvDoc.return_against
-  );
-}
-
-/** Checks the tracked rows' quantities, and that the POS location has them. */
-async function validateSinvItems(
-  rows: SalesInvoiceItem[],
-  itemQtyMap: ItemQtyMap,
-  isReturn: boolean
-) {
-  const inventory = await getPOSInventory();
-  const requested: ItemQtyMap = {};
-  for (const row of rows) {
-    const item = row.item!;
-    const quantity = row.quantity ?? 0;
-    if (!quantity || (quantity < 0 && !isReturn)) {
-      throw new ValidationError(t`Invalid Quantity for Item ${item}`);
-    }
-
-    if (isReturn) {
-      continue;
-    }
-
-    const total = (requested[item] ??= { availableQty: 0 });
-    total.availableQty = safeParseFloat(total.availableQty + quantity);
-    validatePOSStock(item, total.availableQty, itemQtyMap, inventory);
-
-    if (row.batch) {
-      total[row.batch] = safeParseFloat((total[row.batch] ?? 0) + quantity);
-      validatePOSStock(
-        item,
-        total[row.batch],
-        itemQtyMap,
-        inventory,
-        row.batch
-      );
-    }
-  }
-}
-
-/** The rows' items whose stock is tracked. */
-async function getTrackedItems(rows: SalesInvoiceItem[]): Promise<Set<string>> {
-  const names = [...new Set(rows.map((row) => row.item!).filter(Boolean))];
-  const items = await Promise.all(names.map(getItemDoc));
-  return new Set(
-    items.filter((item) => item.track_item).map((item) => item.name!)
-  );
-}
-
 /**
- * Check a POS checkout against freshly loaded stock. A submitted invoice has
- * shipped, so a payment retry skips the check.
+ * Checks the sale's quantities, and on the server that the POS location has
+ * the stock it ships; a return brings stock back.
  */
-export async function validatePOSCheckout(
-  sinvDoc: SalesInvoice,
-  loadStock: () => Promise<ItemQtyMap>
-) {
+export async function validateSinv(sinvDoc: SalesInvoice) {
+  const rows = (sinvDoc.items ?? []).filter((row) => row.item);
+  const isReturn = !!sinvDoc.return_against;
+  for (const { item, quantity = 0 } of rows) {
+    if (!quantity || (quantity < 0 && !isReturn)) {
+      throw new ValidationError(t`Invalid Quantity for Item ${item!}`);
+    }
+  }
+
+  if (!isReturn) {
+    await validatePOSStock(rows);
+  }
+}
+
+/** Checks a POS checkout. A submitted invoice has shipped, so a payment retry skips the check. */
+export async function validatePOSCheckout(sinvDoc: SalesInvoice) {
   if (sinvDoc.isSubmitted) {
     return;
   }
 
-  await validateSinv(sinvDoc, await loadStock());
+  await validateSinv(sinvDoc);
 }
 
 /** Checks the POS location has the stock that a row's item, or its batch, needs. */
@@ -264,19 +213,11 @@ export async function validateQty(
     throw new ValidationError(t`Please select a batch first`);
   }
 
-  if (!item.track_item) {
-    return;
-  }
-
-  const quantity = itemRows
-    .filter((existing) => !row.batch || existing.batch === row.batch)
-    .reduce(
-      (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
-      0
+  if (item.track_item) {
+    await validatePOSStock(
+      itemRows.filter((existing) => !row.batch || existing.batch === row.batch)
     );
-  const itemQtyMap = await getItemQtyMap([row.item]);
-  const location = await getPOSInventory();
-  validatePOSStock(row.item, quantity, itemQtyMap, location, row.batch);
+  }
 }
 
 export type POSRowItem = {
@@ -362,28 +303,18 @@ export function toPOSItem(item: DocValues, itemQtyMap: ItemQtyMap): POSItem {
   };
 }
 
-/** Fills a sale row with in-stock serial numbers; a return row keeps the sold ones. */
-export async function fillRowSerialNumbers(
-  row: SalesInvoiceItem,
-  itemSerialNumbers: ItemSerialNumbers
-) {
-  const item = row.item as string;
+/**
+ * Leaves a sale row's serial numbers to the server's preview, which picks
+ * those in stock, when they no longer match its quantity; a return row
+ * keeps the sold ones.
+ */
+export function refillSerialNumbers(row: SalesInvoiceItem) {
   const quantity = row.quantity ?? 0;
-  const existing = (itemSerialNumbers[item] ?? '')
+  const count = (row.serial_number ?? '')
     .split('\n')
-    .filter((serialNumber) => serialNumber.trim());
-  if (quantity <= 0 || existing.length === quantity) {
-    return;
-  }
-
-  const serialNumbers = await getAvailableSerialNumbers(
-    item,
-    await getPOSInventory(),
-    quantity
-  );
-  if (serialNumbers) {
-    await row.set('serial_number', serialNumbers);
-    itemSerialNumbers[item] = serialNumbers;
+    .filter((serialNumber) => serialNumber.trim()).length;
+  if (quantity > 0 && count !== quantity) {
+    row.leaveToServer(['serial_number']);
   }
 }
 
@@ -395,9 +326,7 @@ export async function addPOSItem(
   itemQtyMap: ItemQtyMap
 ): Promise<SalesInvoiceItem> {
   if (item.trackItem && (itemQtyMap[item.name]?.availableQty ?? 0) <= 0) {
-    throw new ValidationError(
-      t`Item ${item.name} is out of stock (quantity is zero)`
-    );
+    throw new ValidationError(getOutOfStockMessage(item.name));
   }
 
   const row = getItemRows(sinvDoc, item.name)[0];
@@ -417,17 +346,11 @@ export async function addBatchItem(
   sinvDoc: SalesInvoice,
   item: POSItem,
   batch: string,
-  quantity: number,
-  itemQtyMap: ItemQtyMap
+  quantity: number
 ) {
   const rows = getItemRows(sinvDoc, item.name, batch);
   if (item.trackItem) {
-    const required = rows.reduce(
-      (total, row) => total + (row.quantity ?? 0),
-      quantity
-    );
-    const inventory = await getPOSInventory();
-    validatePOSStock(item.name, required, itemQtyMap, inventory, batch);
+    await validatePOSStock([...rows, { item: item.name, batch, quantity }]);
   }
 
   if (rows.length) {
@@ -438,18 +361,61 @@ export async function addBatchItem(
   await appendItemRow(sinvDoc, item, quantity, batch);
 }
 
-/** POS invoices that match, newest first, with the values their lists show. */
+/** The columns of the POS invoice pickers. */
+export function getPOSInvoiceFields(): Field[] {
+  return [
+    { fieldname: 'name', label: t`Name`, fieldtype: 'Data', readOnly: true },
+    {
+      fieldname: 'party',
+      label: t`Customer`,
+      fieldtype: 'Data',
+      readOnly: true,
+    },
+    { fieldname: 'date', label: t`Date`, fieldtype: 'Date', readOnly: true },
+    {
+      fieldname: 'grand_total',
+      label: t`Grand Total`,
+      fieldtype: 'Currency',
+      readOnly: true,
+    },
+  ];
+}
+
+/**
+ * A page of the POS invoices that match and whose name has `search`, newest
+ * first, with the values their lists show; every one without a `limit`.
+ */
 export async function getPOSInvoices(
-  filters: Filter[]
+  filters: Filter[],
+  search = '',
+  start = 0,
+  limit = 0
 ): Promise<DocValueMap[]> {
   const schema = getSchema(ModelNameEnum.SalesInvoice)!;
-  const rows = await getAllDocuments('Books Sales Invoice', {
+  const rows = await getList('Books Sales Invoice', {
     fields: ['name', 'party', 'date', 'grand_total', 'docstatus'],
-    filters: [['is_pos', '=', 1], ...filters],
+    filters: getPOSInvoiceFilters(filters, search),
+    orderBy: 'creation desc',
+    start,
+    limit,
   });
   return rows.map((row) =>
     toDocValues(schema, row, fyo, (target) => getSchema(target)!)
   );
+}
+
+/** How many POS invoices match and have `search` in their name. */
+export async function getPOSInvoiceCount(
+  filters: Filter[],
+  search = ''
+): Promise<number> {
+  const filtersWithSearch = getPOSInvoiceFilters(filters, search);
+  return await getCount('Books Sales Invoice', filtersWithSearch, []);
+}
+
+function getPOSInvoiceFilters(filters: Filter[], search: string): Filter[] {
+  const nameFilters: Filter[] = search ? [['name', 'like', `%${search}%`]] : [];
+  return [['is_pos', '=', 1], ...filters, ...nameFilters];
 }
 
 /** The payments of a sales invoice, oldest first; at checkout, those the server made with its submit. */

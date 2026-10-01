@@ -20,6 +20,7 @@ import { getImportableSchemaNames } from 'src/importer';
 import { createFilters, routeFilters } from 'src/utils/filters';
 import { safeParseFloat } from 'utils/index';
 import { fuzzyMatch } from '.';
+import { canOpen } from './sidebarConfig';
 import { getFormRoute, openNewDoc, routeTo } from './ui';
 import { searchGroups } from '../../utils/types';
 import type { SearchGroup, SearchItem } from '../../utils/types';
@@ -193,8 +194,9 @@ function getReportList(fyo: Fyo): SearchItem[] {
         label: report.title,
         route: `/report/${r}`,
         group: 'Report',
-      };
-    });
+      } as SearchItem;
+    })
+    .filter((item) => canOpen(item.route!));
 }
 
 function getListViewList(fyo: Fyo): SearchItem[] {
@@ -300,7 +302,9 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     return { label, route, group: 'List' } as SearchItem;
   });
 
-  return [standardLists, filteredLists].flat();
+  return [standardLists, filteredLists]
+    .flat()
+    .filter((item) => canOpen(item.route!));
 }
 
 function getSetupList(fyo: Fyo): SearchItem[] {

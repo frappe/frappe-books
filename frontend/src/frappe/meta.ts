@@ -15,6 +15,7 @@ export interface DocField {
   hidden?: number;
   set_only_once?: number;
   non_negative?: number;
+  max_value?: number;
   no_copy?: number;
   in_list_view?: number;
   is_custom_field?: number;
@@ -23,6 +24,8 @@ export interface DocField {
   depends_on?: string;
   read_only_depends_on?: string;
   mandatory_depends_on?: string;
+  /** JSON of `[doctype, fieldname, operator, value]` filters a Link's search applies. */
+  link_filters?: string;
 }
 
 export interface DocPerm {

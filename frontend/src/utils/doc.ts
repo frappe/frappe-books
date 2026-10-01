@@ -1,10 +1,10 @@
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import { getDocPermissions } from 'src/frappe/api';
 import { call } from 'src/web/api';
 
 /** Loads the user's rights on a saved document, which shares, ownership and user permissions change. */
-export async function loadDocPermissions(doc: Doc) {
+export async function loadDocPermissions(doc: FrappeDoc) {
   const doctype = doc.fyo.store.permissions?.doctypes[doc.schemaName];
   if (!doctype || doc.notInserted) {
     return;
@@ -18,7 +18,7 @@ export async function loadDocPermissions(doc: Doc) {
  * The parent may reject the value, so the failure is shown instead of dropped.
  */
 export async function setLinkOnParent(
-  parentDoc: Doc | undefined,
+  parentDoc: FrappeDoc | undefined,
   fieldname: string | undefined,
   name: string
 ) {
@@ -39,8 +39,8 @@ export async function setLinkOnParent(
  * it was created, even if the control has unmounted before the record saves.
  */
 export function linkOnSave(
-  doc: Doc,
-  parentDoc: Doc | undefined,
+  doc: FrappeDoc,
+  parentDoc: FrappeDoc | undefined,
   fieldname: string | undefined,
   afterLink: (name: string) => void
 ) {
@@ -50,9 +50,8 @@ export function linkOnSave(
   });
 }
 
-export function evaluateReadOnly(field: Field, doc?: Doc) {
-  const isSetOnce = field.setOnlyOnce || field.fieldname === 'numberSeries';
-  if (doc?.inserted && isSetOnce) {
+export function evaluateReadOnly(field: Field, doc?: FrappeDoc) {
+  if (doc?.inserted && field.setOnlyOnce) {
     return true;
   }
 
@@ -78,17 +77,17 @@ export function evaluateReadOnly(field: Field, doc?: Doc) {
   return evaluateFieldMeta(field, doc, 'readOnly');
 }
 
-export function evaluateHidden(field: Field, doc?: Doc) {
+export function evaluateHidden(field: Field, doc?: FrappeDoc) {
   return evaluateFieldMeta(field, doc, 'hidden');
 }
 
-export function evaluateRequired(field: Field, doc?: Doc) {
+export function evaluateRequired(field: Field, doc?: FrappeDoc) {
   return evaluateFieldMeta(field, doc, 'required');
 }
 
 function evaluateFieldMeta(
   field: Field,
-  doc?: Doc,
+  doc?: FrappeDoc,
   meta?: 'required' | 'hidden' | 'invisible' | 'readOnly',
   defaultValue = false
 ) {
@@ -119,7 +118,7 @@ function evaluateFieldMeta(
 
 /** Names of the documents linking to `doc`, newest first, by schema in schema order. */
 export async function getLinkedEntries(
-  doc: Doc
+  doc: FrappeDoc
 ): Promise<Record<string, string[]>> {
   const doctypes = doc.fyo.store.permissions?.doctypes ?? {};
   const linked = await call<Record<string, string[]>>(
@@ -139,7 +138,7 @@ export async function getLinkedEntries(
 }
 
 /** Whether a field holds a value worth showing; an unchecked box does not. */
-export function hasFieldValue(doc: Doc, field: Field): boolean {
+export function hasFieldValue(doc: FrappeDoc, field: Field): boolean {
   const value = doc.get(field.fieldname);
   if (Array.isArray(value)) {
     return value.length > 0;

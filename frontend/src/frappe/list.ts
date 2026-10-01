@@ -1,6 +1,5 @@
 import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
-import type { QueryFilter } from 'utils/db/types';
 import {
   getCount,
   getDocuments,
@@ -11,12 +10,6 @@ import {
 import { getDocType, type FrappeDocType } from './doctypes';
 import { toDocValues } from './values';
 
-// Books' Submitted and Cancelled list filters, as the docstatus values they match.
-const DOCSTATUS_FLAGS: Record<string, number[]> = {
-  submitted: [1, 2],
-  cancelled: [2],
-};
-
 /** A column the list is ordered by in place of its default order. */
 export interface ListSort {
   fieldname: string;
@@ -24,9 +17,9 @@ export interface ListSort {
 }
 
 export interface ListPage {
-  filters: QueryFilter;
+  filters: Filter[];
   /** Rows also have to match one of these, e.g. a search over several fields. */
-  orFilters: QueryFilter;
+  orFilters: Filter[];
   start: number;
   limit: number;
   sort?: ListSort | null;
@@ -39,8 +32,7 @@ export async function getFrappeListPage(
   page: ListPage
 ): Promise<{ rows: RenderData[]; total: number }> {
   const docType = getDocType(schemaName);
-  const filters = toFrappeFilters(page.filters);
-  const orFilters = toFrappeFilters(page.orFilters);
+  const { filters, orFilters } = page;
   const [rows, total] = await Promise.all([
     getList(docType.doctype, {
       fields: ['*'],
@@ -111,39 +103,4 @@ export function isSortableField(
     !docField?.is_virtual &&
     schema.fields.some((field) => field.fieldname === fieldname)
   );
-}
-
-/** Frappe filters for a Books list filter whose fields are Frappe fieldnames. */
-export function toFrappeFilters(query: QueryFilter): Filter[] {
-  const filters: Filter[] = [];
-  for (const [fieldname, value] of Object.entries(query)) {
-    const conditions = Array.isArray(value) ? value : ['=', value];
-    for (let index = 0; index < conditions.length; index += 2) {
-      const operator = String(conditions[index]);
-      filters.push(toFrappeFilter(fieldname, operator, conditions[index + 1]));
-    }
-  }
-
-  return filters;
-}
-
-function toFrappeFilter(
-  fieldname: string,
-  operator: string,
-  value: unknown
-): Filter {
-  if (operator === 'is null' || operator === 'is not null') {
-    return [fieldname, 'is', operator === 'is null' ? 'not set' : 'set'];
-  }
-
-  if (fieldname in DOCSTATUS_FLAGS) {
-    const isSet = (operator === '=') === Boolean(Number(value));
-    return ['docstatus', isSet ? 'in' : 'not in', DOCSTATUS_FLAGS[fieldname]];
-  }
-
-  if (operator === 'includes') {
-    return [fieldname, 'like', `%${String(value)}%`];
-  }
-
-  return [fieldname, operator, typeof value === 'boolean' ? +value : value];
 }

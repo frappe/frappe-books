@@ -121,7 +121,6 @@ import {
 import { defineComponent } from 'vue';
 import Select from './Controls/Select.vue';
 import FilterValueInput from './FilterValueInput.vue';
-import { QueryFilter } from 'utils/db/types';
 import { t } from 'fyo';
 import {
   isValuelessCondition,
@@ -161,7 +160,7 @@ export default defineComponent({
     schemaName(schemaName: string) {
       this.filters = new ListFilters(schemaName);
       this.isOpen = false;
-      this.$emit('change', {});
+      this.$emit('change', []);
     },
   },
   methods: {
@@ -189,14 +188,10 @@ export default defineComponent({
     applyFilters() {
       if (this.emitFilterChange()) this.isOpen = false;
     },
-    setFilter(filters: QueryFilter, implicit = false) {
-      this.filters.filterSet.setQuery(filters, implicit);
-      this.emitFilterChange();
-    },
     emitFilterChange(): boolean {
-      const query = this.filters.apply();
-      if (query) this.$emit('change', query);
-      return query !== undefined;
+      const filters = this.filters.apply();
+      if (filters) this.$emit('change', filters);
+      return filters !== undefined;
     },
   },
 });

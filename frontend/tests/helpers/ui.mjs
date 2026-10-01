@@ -24,6 +24,10 @@ await build({
       export { fyo } from './src/initFyo';
       export { default as FilterLinkInput } from './src/components/FilterLinkInput.vue';
       export { default as FilterValueInput } from './src/components/FilterValueInput.vue';
+      export { default as StatusPill } from './src/components/StatusPill.vue';
+      export { default as Link } from './src/components/Controls/Link.vue';
+      export { default as MultiLabelLink } from './src/components/Controls/MultiLabelLink.vue';
+      export { default as GetStarted } from './src/pages/GetStarted.vue';
     `,
     resolveDir: frontend,
   },
@@ -43,7 +47,9 @@ await build({
           contents: 'export default {}',
         }));
         // Components under test keep their script; the rest are stubs.
-        builder.onLoad({ filter: /Filter(Link|Value)Input\.vue$/ }, async (args) => ({
+        const tested =
+          /\/(FilterLinkInput|FilterValueInput|Link|MultiLabelLink|GetStarted|StatusPill)\.vue$/;
+        builder.onLoad({ filter: tested }, async (args) => ({
           contents: (await readFile(args.path, 'utf8')).match(
             /<script[^>]*>([\s\S]*?)<\/script>/
           )[1],
@@ -70,4 +76,8 @@ export const {
   fyo,
   FilterLinkInput,
   FilterValueInput,
+  StatusPill,
+  Link,
+  MultiLabelLink,
+  GetStarted,
 } = createRequire(import.meta.url)(output);

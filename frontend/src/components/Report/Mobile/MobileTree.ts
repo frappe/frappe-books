@@ -1,6 +1,11 @@
 import { t } from 'fyo';
 import type { Report } from 'reports/Report';
-import type { ColumnField, PhoneTreeLayout, ReportRow } from 'reports/types';
+import type {
+  ColumnField,
+  PhoneTreeLayout,
+  ReportCell,
+  ReportRow,
+} from 'reports/types';
 import type { FieldType } from 'schemas/types';
 import { getColumnIndex } from './mobileRows';
 
@@ -12,8 +17,8 @@ export interface MobileValueColumn {
   label: string;
   width: number;
   fieldtype: FieldType;
-  /** Cells summed into the value. */
-  indexes: number[];
+  /** The cell of a row shown in this column. */
+  getCell: (row: ReportRow) => ReportCell | undefined;
 }
 
 export interface MobileValue {
@@ -70,7 +75,7 @@ export class MobileTree {
       label: t`Total`,
       width: DEFAULT_WIDTH,
       fieldtype: 'Currency',
-      indexes: periods.flatMap((column) => column.indexes),
+      getCell: (row) => row.total,
     };
     return [total, ...periods];
   }
@@ -178,11 +183,9 @@ export class MobileTree {
     };
   }
 
-  /** A cell's own value, or the sum of several cells. */
+  /** A row's own cell, or the sum of a group's cells. */
   getValue(rows: ReportRow[], column: MobileValueColumn): MobileValue {
-    const cells = rows.flatMap((row) =>
-      column.indexes.map((index) => row.cells[index])
-    );
+    const cells = rows.map((row) => column.getCell(row));
     const sum = cells.reduce(
       (total, cell) => total + Number(cell?.rawValue ?? 0),
       0
@@ -210,7 +213,7 @@ export class MobileTree {
       label: value?.label ?? column.label,
       width: value?.width ?? DEFAULT_WIDTH,
       fieldtype: column.fieldtype,
-      indexes: [index],
+      getCell: (row) => row.cells[index],
     };
   }
 }

@@ -7,12 +7,14 @@ import {
   evaluateReadOnly,
   evaluateRequired,
   fyo,
+  getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
   getMappedFrappeDoc,
   getMissingMandatoryFields,
   loadTestDocTypes,
   newFrappeDoc,
+  setLanguageMapOnTranslationString,
   stubFrappe,
   useBooksDoc,
 } from './helpers/frappe.mjs';
@@ -116,6 +118,22 @@ test('depends_on, read_only_depends_on and mandatory_depends_on apply to the for
   stubDocument({ ...savedPen, track_item: 0 });
   const untracked = await getFrappeDoc('Item', 'Untracked');
   assert.equal(evaluateHidden(field(untracked, 'track_item'), untracked), true);
+});
+
+test('a missing required value is reported in the user’s language', async () => {
+  const doc = newFrappeDoc('Item');
+  clearTimeout(doc._previewTimer);
+  const field = doc.schema.fields.find(({ required }) => required);
+  setLanguageMapOnTranslationString({
+    '${0} is required': { translation: '${0} est obligatoire' },
+  });
+  try {
+    await assert.rejects(doc._validateField(field, null), {
+      message: `${field.label} est obligatoire`,
+    });
+  } finally {
+    setLanguageMapOnTranslationString(undefined);
+  }
 });
 
 test('form conditions read the document status, as Frappe forms do', () => {
@@ -537,6 +555,22 @@ test('a duplicate copies unsaved edits but not the no_copy fields', async () => 
   assert.equal(copy.uom_conversions[0].uom, 'Box');
   assert.notEqual(copy.uom_conversions[0].name, 'row-1');
   assert.equal(await getFrappeDoc('Item', 'Pen CPY'), copy);
+});
+
+test('a duplicate leaves out the no_copy fields of its rows too', async (t) => {
+  const { meta } = getDocType('Item').tables.uom_conversions;
+  const factor = meta.fields.find((f) => f.fieldname === 'conversion_factor');
+  factor.no_copy = 1;
+  t.after(() => delete factor.no_copy);
+  stubDocument();
+  const pen = await getFrappeDoc('Item', 'Pen', { refresh: true });
+
+  const copy = await pen.duplicate();
+
+  assert.equal(pen.uom_conversions[0].conversion_factor, 10);
+  assert.equal(copy.uom_conversions[0].uom, 'Box');
+  // The row's default, not the copied 10.
+  assert.equal(copy.uom_conversions[0].conversion_factor, 1);
 });
 
 async function waitFor(condition) {

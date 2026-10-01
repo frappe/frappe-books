@@ -1,7 +1,5 @@
 <script>
 import { t } from 'fyo';
-import { getDocuments } from 'src/frappe/api';
-import { getDocType } from 'src/frappe/doctypes';
 import { getSchema } from 'src/frappe/registry';
 import { sortByFuzzyMatch } from 'src/utils';
 import Link from './Link.vue';
@@ -23,9 +21,10 @@ export default {
   },
   methods: {
     async getOptions(keyword, filters) {
+      const fields = [this.secondaryLink, this.thirdLink].filter(Boolean);
       const options = this.optionRecords
         ? this.getRecordOptions()
-        : await this.searchOptions(keyword, filters);
+        : await this.searchOptions(keyword, filters, fields);
       return options.map(({ record, ...option }) => ({
         ...option,
         value2: record[this.secondaryLink],
@@ -39,33 +38,6 @@ export default {
         value: record.name,
         record,
       }));
-    },
-    async searchOptions(keyword, filters) {
-      const options = await Link.methods.getOptions.call(
-        this,
-        keyword,
-        filters
-      );
-      const records = await this.getRecords(options.map(({ value }) => value));
-      return options.map((option) => ({
-        ...option,
-        record: records[option.value] ?? {},
-      }));
-    },
-    /** The records' secondary and third fields, by name. */
-    async getRecords(names) {
-      const fields = [this.secondaryLink, this.thirdLink].filter(Boolean);
-      if (!fields.length || !names.length) {
-        return {};
-      }
-
-      const { doctype } = getDocType(this.getTargetSchemaName());
-      const rows = await getDocuments(doctype, {
-        fields: ['name', ...fields],
-        filters: [['name', 'in', names]],
-        limit: names.length,
-      });
-      return Object.fromEntries(rows.map((row) => [row.name, row]));
     },
     async getSuggestions(keyword = '') {
       const filters = await this.getFilters();

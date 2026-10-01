@@ -115,21 +115,21 @@ test('number series links filter and create by reference_type', async () => {
   const { SalesInvoice, Defaults, Payment, JournalEntry, StockMovement } =
     frappeModels;
   const invoice = { schemaName: 'SalesInvoice' };
-  assert.deepEqual(await SalesInvoice.filters.number_series(invoice), {
-    reference_type: 'SalesInvoice',
-  });
-  assert.deepEqual(Payment.filters.number_series(), {
-    reference_type: 'Payment',
-  });
-  assert.deepEqual(JournalEntry.filters.number_series(), {
-    reference_type: 'JournalEntry',
-  });
-  assert.deepEqual(StockMovement.filters.number_series(), {
-    reference_type: 'StockMovement',
-  });
-  assert.deepEqual(Defaults.createFilters.shipment_number_series(), {
-    reference_type: 'Shipment',
-  });
+  const series = (schemaName) => [['reference_type', '=', schemaName]];
+  assert.deepEqual(
+    await SalesInvoice.filters.number_series(invoice),
+    series('SalesInvoice')
+  );
+  assert.deepEqual(Payment.filters.number_series(), series('Payment'));
+  assert.deepEqual(JournalEntry.filters.number_series(), series('JournalEntry'));
+  assert.deepEqual(
+    StockMovement.filters.number_series(),
+    series('StockMovement')
+  );
+  assert.deepEqual(
+    Defaults.createFilters.shipment_number_series(),
+    series('Shipment')
+  );
 });
 
 test('a currency created from /books is inserted enabled, for link pickers', async () => {

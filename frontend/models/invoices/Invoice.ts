@@ -1,6 +1,5 @@
 import { Fyo } from 'fyo';
 import type { DocValueMap } from 'fyo/core/types';
-import type { Doc } from 'fyo/model/doc';
 import {
   ChangeArg,
   CurrenciesMap,
@@ -157,24 +156,22 @@ export abstract class Invoice extends FrappeDoc {
   };
 
   static override filters: FiltersMap = {
-    party: (doc: Doc) => ({
-      role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
-    }),
-    account: (doc: Doc) => ({
-      is_group: false,
-      account_type: doc.isSales ? 'Receivable' : 'Payable',
-    }),
-    number_series: (doc: Doc) => ({ reference_type: doc.schemaName }),
-    price_list: (doc: Doc) => ({
-      is_enabled: true,
-      ...(doc.isSales ? { is_sales: true } : { is_purchase: true }),
-    }),
+    party: (doc: FrappeDoc) => [
+      ['role', 'in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
+    ],
+    account: (doc: FrappeDoc) => [
+      ['is_group', '=', 0],
+      ['account_type', '=', doc.isSales ? 'Receivable' : 'Payable'],
+    ],
+    number_series: (doc: FrappeDoc) => [['reference_type', '=', doc.schemaName]],
+    price_list: (doc: FrappeDoc) => [
+      ['is_enabled', '=', 1],
+      [doc.isSales ? 'is_sales' : 'is_purchase', '=', 1],
+    ],
   };
 
   static override createFilters: FiltersMap = {
-    party: (doc: Doc) => ({
-      role: doc.isSales ? 'Customer' : 'Supplier',
-    }),
+    party: (doc: FrappeDoc) => [['role', '=', doc.isSales ? 'Customer' : 'Supplier']],
   };
 
   override async change(arg: ChangeArg) {
@@ -224,7 +221,7 @@ export abstract class Invoice extends FrappeDoc {
 }
 
 /** Shows a currency field of `doc` in the currency `getCurrency` names. */
-export function setCurrencies(doc: Doc, getCurrency: () => string) {
+export function setCurrencies(doc: FrappeDoc, getCurrency: () => string) {
   for (const { fieldname, fieldtype } of doc.schema.fields) {
     if (fieldtype === 'Currency') {
       doc.getCurrencies[fieldname] = getCurrency;

@@ -12,7 +12,7 @@
       :can-show-links="canShowLinks"
       @value-change="onValueChange"
       @row-change="updateGroupedFields"
-      @editrow="(doc: Doc) => showRowEditForm(doc)"
+      @editrow="(doc: FrappeDoc) => showRowEditForm(doc)"
       @sync="sync"
       @submit="submit"
       @print="openPrintView"
@@ -105,7 +105,7 @@
           :fields="fields"
           :doc="doc"
           :errors="errors"
-          @editrow="(doc: Doc) => showRowEditForm(doc)"
+          @editrow="(doc: FrappeDoc) => showRowEditForm(doc)"
           @row-remove="onRowRemove"
           @value-change="onValueChange"
           @row-change="updateGroupedFields"
@@ -140,7 +140,7 @@
 </template>
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import { FrappeDoc } from 'src/frappe/document';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { getMissingMandatoryFields } from 'fyo/model/helpers';
 import { ValidationError } from 'fyo/utils/errors';
@@ -321,9 +321,9 @@ export default defineComponent({
       return this.doc.inserted;
     },
     hasDoc(): boolean {
-      return this.docOrNull instanceof Doc;
+      return this.docOrNull instanceof FrappeDoc;
     },
-    doc(): Doc {
+    doc(): FrappeDoc {
       const doc = this.docOrNull;
       if (!doc) {
         throw new ValidationError(this.t`Doc ${this.schema.label} ${this.name} not set`);
@@ -511,7 +511,7 @@ export default defineComponent({
         await this.$router.replace(route);
       });
     },
-    async showRowEditForm(doc: Doc) {
+    async showRowEditForm(doc: FrappeDoc) {
       if (this.showLinks) {
         this.showLinks = false;
         await nextTick();
@@ -524,7 +524,7 @@ export default defineComponent({
         this.row = { index, fieldname };
       }
     },
-    onRowRemove({ idx, parentFieldname }: Doc) {
+    onRowRemove({ idx, parentFieldname }: FrappeDoc) {
       const row = this.row;
       if (!row || row.fieldname !== parentFieldname || typeof idx !== 'number') {
         return;

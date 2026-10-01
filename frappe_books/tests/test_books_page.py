@@ -51,13 +51,6 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 			extend_bootinfo(bootinfo)
 		self.assertEqual(bootinfo.books["country_code"], "ch")
 
-	def test_boot_sends_standard_account_names_in_the_users_language(self):
-		bootinfo = frappe._dict()
-		with patch.object(frappe.local, "lang", "de"):
-			extend_bootinfo(bootinfo)
-		self.assertEqual(bootinfo.books["account_labels"]["Cash In Hand"], "Kassenbestand")
-		self.assertNotIn("Custom savings", bootinfo.books["account_labels"])
-
 	def test_users_without_a_books_role_are_refused(self):
 		with self.set_user(DESK_USER):
 			self.assertRaises(frappe.PermissionError, books.get_context, frappe._dict())

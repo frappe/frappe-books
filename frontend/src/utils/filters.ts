@@ -1,20 +1,16 @@
 import { ModelNameEnum } from 'models/types';
+import type { Filter } from 'src/frappe/api';
 
-// Items and payments are Frappe-backed, so their filters use Frappe fieldnames.
 export const routeFilters = {
-  SalesItems: { item_usage: ['in', ['Sales', 'Both']] },
-  PurchaseItems: { item_usage: ['in', ['Purchases', 'Both']] },
-  Items: { item_usage: 'Both' },
-  PurchasePayments: {
-    reference_type: ModelNameEnum.PurchaseInvoice,
-  },
-  SalesPayments: {
-    reference_type: ModelNameEnum.SalesInvoice,
-  },
-  Suppliers: { role: ['in', ['Supplier', 'Both']] },
-  Customers: { role: ['in', ['Customer', 'Both']] },
-  Party: { role: 'Both' },
-};
+  SalesItems: [['item_usage', 'in', ['Sales', 'Both']]],
+  PurchaseItems: [['item_usage', 'in', ['Purchases', 'Both']]],
+  Items: [['item_usage', '=', 'Both']],
+  PurchasePayments: [['reference_type', '=', ModelNameEnum.PurchaseInvoice]],
+  SalesPayments: [['reference_type', '=', ModelNameEnum.SalesInvoice]],
+  Suppliers: [['role', 'in', ['Supplier', 'Both']]],
+  Customers: [['role', 'in', ['Customer', 'Both']]],
+  Party: [['role', '=', 'Both']],
+} satisfies Record<string, Filter[]>;
 
 export const createFilters = {
   SalesItems: { item_usage: 'Sales' },

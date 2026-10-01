@@ -119,7 +119,7 @@ import {
   Progress as FrappeProgress,
 } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import FormContainer from 'src/components/FormContainer.vue';
 import { getErrorMessage } from 'src/utils';
@@ -158,17 +158,17 @@ export default defineComponent({
       step: 0,
     } as {
       errors: Record<string, string>;
-      docOrNull: null | Doc;
+      docOrNull: null | FrappeDoc;
       loading: boolean;
       step: number;
     };
   },
   computed: {
     hasDoc(): boolean {
-      return this.docOrNull instanceof Doc;
+      return this.docOrNull instanceof FrappeDoc;
     },
-    doc(): Doc {
-      if (this.docOrNull instanceof Doc) {
+    doc(): FrappeDoc {
+      if (this.docOrNull instanceof FrappeDoc) {
         return this.docOrNull;
       }
 

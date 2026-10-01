@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "onboarding_complete",
+  "tasks_complete",
   "company_setup",
   "system_setup",
   "print_setup",
@@ -26,6 +27,13 @@
    "fieldname": "onboarding_complete",
    "fieldtype": "Check",
    "label": "Onboarding Complete"
+  },
+  {
+   "fieldname": "tasks_complete",
+   "fieldtype": "Check",
+   "is_virtual": 1,
+   "label": "Tasks Complete",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -110,7 +118,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-29 12:10:00.000000",
+ "modified": "2026-10-01 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Get Started",

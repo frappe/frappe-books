@@ -1,3 +1,4 @@
+import type { Filter } from 'src/frappe/api';
 import { PropertyEnum } from 'utils/types';
 
 export type FieldType =
@@ -72,7 +73,8 @@ export interface BaseField {
   isCustom?: boolean;            // Whether the field is a custom field
   bold?: boolean;                // UI Facing config, whether to make the label bold
   sub_label?: string;
-  filters?: Record<string, string>;
+  filters?: Filter[];            // A Link's own search filters
+  linkFilters?: Filter[];        // A Link's search filters, from its DocField's link_filters
   getOptions?: () => Promise<{ label: string; value: string }[]>;
   rows?: number;                 // UI Facing config, number of rows for Text field (default 3)
 }

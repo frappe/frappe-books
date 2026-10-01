@@ -7,11 +7,7 @@
     @closemodal="$emit('toggleModal', 'ShiftClose', false)"
   >
     <template v-if="isMobile && posClosingShiftDoc">
-      <MobileCashCount
-        :heading="t`Closing cash`"
-        :rows="closingCash"
-        @change="updateClosingAmounts"
-      />
+      <MobileCashCount :heading="t`Closing cash`" :rows="closingCash" />
       <FormControl
         v-for="row in otherClosingAmounts"
         :key="row.idx"
@@ -86,7 +82,6 @@
       :border="true"
       :value="posClosingShiftDoc?.closing_cash ?? []"
       :read-only="false"
-      @row-change="updateClosingAmounts"
     />
 
     <h2 class="mt-6 mb-3 text-base text-ink-gray-8 font-medium">
@@ -101,7 +96,6 @@
       :value="posClosingShiftDoc?.closing_amounts"
       :read-only="false"
       :allow-add-remove-rows="false"
-      @row-change="updateClosingAmounts"
     />
     </template>
 
@@ -209,7 +203,11 @@ export default defineComponent({
     },
   },
   methods: {
-    /** Counts start from the opening cash; the server's preview fills the expected amounts. */
+    /**
+     * Counts start from the opening cash. The server's preview, again after
+     * each edit, fills the expected amounts, shares the counted cash among the
+     * cash methods and works out the differences.
+     */
     async prepareShift() {
       this.isValuesSeeded = false;
       this.cashMethods = await getCashPaymentMethods();
@@ -226,43 +224,7 @@ export default defineComponent({
         showToast({ type: 'error', message: t`${error as string}` });
       }
 
-      this.updateClosingAmounts();
       this.isValuesSeeded = true;
-    },
-    updateClosingAmounts() {
-      if (!this.posClosingShiftDoc?.closing_amounts) {
-        return;
-      }
-
-      this.splitCountedCash(this.posClosingShiftDoc.closingCashAmount as Money);
-      this.posClosingShiftDoc.closing_amounts.forEach((row) => {
-        row.closing_amount ??= fyo.pesa(0);
-        row.difference_amount = row.closing_amount.sub(
-          (row.expected_amount as Money | undefined) ?? fyo.pesa(0)
-        );
-      });
-    },
-    /**
-     * Each cash method takes up to what it expects and the first also any
-     * surplus, so the rows add up to the count as the server checks.
-     */
-    splitCountedCash(counted: Money) {
-      let remaining = counted;
-      for (const row of this.cashClosingAmounts) {
-        const expected = row.expected_amount ?? fyo.pesa(0);
-        const share = expected.isNegative()
-          ? fyo.pesa(0)
-          : expected.lt(remaining)
-          ? expected
-          : remaining;
-        row.closing_amount = share;
-        remaining = remaining.sub(share);
-      }
-
-      const [first] = this.cashClosingAmounts;
-      if (first) {
-        first.closing_amount = first.closing_amount!.add(remaining);
-      }
     },
     getField(fieldname: string): Field {
       return getField(ModelNameEnum.POSClosingShift, fieldname)!;
@@ -272,7 +234,6 @@ export default defineComponent({
     },
     async setClosingAmount(row: ClosingAmount, amount: Money) {
       await row.set('closing_amount', amount);
-      this.updateClosingAmounts();
     },
     async handleSubmit() {
       try {

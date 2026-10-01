@@ -325,13 +325,13 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 			{"doctype": "Books Payment Method", "name": unique_name("Cheque"), "type": "Bank"}
 		).insert()
 		payment = self._payment(self.invoice, payment_method=method.name)
-		with self.assertRaisesRegex(frappe.ValidationError, "reference ID"):
+		with self.assertRaisesRegex(frappe.ValidationError, "Please enter a reference number."):
 			payment.insert()
 		payment.reference_id = "CHQ-1"
 		payment.insert()
 
 		method.db_set("requires_clearance_date", 1)
-		with self.assertRaisesRegex(frappe.ValidationError, "clearance date"):
+		with self.assertRaisesRegex(frappe.ValidationError, "Please select a clearance date."):
 			payment.save()
 		payment.reload()
 		payment.clearance_date = frappe.utils.nowdate()

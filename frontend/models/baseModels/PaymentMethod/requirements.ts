@@ -6,6 +6,7 @@ export type PaymentMethodRequirements = {
   requiresClearanceDate: boolean;
 };
 
+/** What a payment by the method needs, as the server's validate_payment_details checks it. */
 export function getPaymentMethodRequirements(
   type?: PaymentMethodType,
   requiresClearanceDate = false

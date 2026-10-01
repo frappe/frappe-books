@@ -1,13 +1,12 @@
 <script>
 import { t } from 'fyo';
-import { getAccountLabel } from 'src/utils/accountLabel';
 import { getLinkDisplayValue, searchFrappeLink } from 'src/frappe/link';
 import { getModel, getSchema } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
-import { getCreateFiltersFromListViewFilters } from 'src/utils/misc';
+import { getNewDocValues } from 'src/utils/misc';
 import AutoComplete from './AutoComplete.vue';
 
 export default {
@@ -41,34 +40,39 @@ export default {
   methods: {
     async setLinkValue(newValue) {
       const value = newValue ?? this.value;
-      const target = this.getTargetSchemaName();
-      this.linkValue =
-        target === 'Account'
-          ? getAccountLabel(fyo, value || '')
-          : await getLinkDisplayValue(target, value);
+      this.linkValue = await getLinkDisplayValue(
+        this.getTargetSchemaName(),
+        value
+      );
     },
     getTargetSchemaName() {
       return this.df.target;
     },
     async getOptions(keyword, filters) {
+      const { groupBy } = this.df;
+      const options = await this.searchOptions(
+        keyword,
+        filters,
+        groupBy ? [groupBy] : []
+      );
+      return options.map(({ record, ...option }) =>
+        groupBy ? { ...option, group: record[groupBy] } : option
+      );
+    },
+    /** Options from Frappe's link search, each with its record's `fields`. */
+    async searchOptions(keyword, filters, fields) {
       const schemaName = this.getTargetSchemaName();
       if (!schemaName) {
         return [];
       }
 
-      const options = await searchFrappeLink(
+      return await searchFrappeLink(
         schemaName,
         keyword,
         filters,
         LINK_PAGE_LENGTH,
-        this.df.groupBy
+        fields
       );
-      return schemaName === 'Account'
-        ? options.map((option) => ({
-            ...option,
-            label: getAccountLabel(fyo, option.label),
-          }))
-        : options;
     },
     async getSuggestions(keyword = '') {
       const filters = this.filtersDisabled ? null : await this.getFilters();
@@ -123,10 +127,10 @@ export default {
 
       const name =
         this.searchQuery || fyo.getTemporaryName(getSchema(schemaName));
-      const filters = await this.getCreateFilters();
+      const values = await this.getCreateValues(schemaName);
       const { openQuickEdit } = await import('src/utils/ui');
 
-      const doc = newFrappeDoc(schemaName, { name, ...filters });
+      const doc = newFrappeDoc(schemaName, { name, ...values });
       openQuickEdit({ doc });
 
       linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
@@ -136,17 +140,14 @@ export default {
         this.triggerChange(savedName);
       });
     },
-    async getCreateFilters() {
+    /** Values a record created from the link takes from its create filters, else its filters. */
+    async getCreateValues(target) {
       const { schemaName, fieldname } = this.df;
       const getCreateFilters = getModel(schemaName)?.createFilters?.[fieldname];
-      let createFilters = await getCreateFilters?.(this.doc);
-
-      if (createFilters !== undefined) {
-        return createFilters;
-      }
-
-      const filters = (await this.getFilters()) ?? {};
-      return getCreateFiltersFromListViewFilters(filters);
+      const filters = getCreateFilters
+        ? await getCreateFilters(this.doc)
+        : await this.getFilters();
+      return getNewDocValues(target, filters ?? []);
     },
     async getFilters() {
       if (this.df.filters) {
@@ -161,7 +162,7 @@ export default {
       const getFilters = getModel(schemaName)?.filters?.[fieldname];
 
       if (getFilters === undefined) {
-        return null;
+        return this.df.linkFilters ?? null;
       }
 
       if (this.doc) {

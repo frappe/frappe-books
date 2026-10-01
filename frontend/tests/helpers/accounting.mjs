@@ -21,7 +21,6 @@ await build({
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { TrialBalance } from './reports/TrialBalance/TrialBalance';
       export { loadTranslations, useTranslations } from './src/web/translations';
-      export { getAccountLabel } from './src/utils/accountLabel';
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getJsonData, getCsvData } from './reports/commonExporter';
       export { getDocStatus, getDocStatusBadge, getLoyaltyProgramBadge, getStateBadge } from './models/helpers';
@@ -40,6 +39,8 @@ await build({
         linkOnSave,
       } from './src/utils/doc';
       export { showReport } from './src/utils/misc';
+      export { fyo as appFyo } from './src/initFyo';
+      export { getDefaultFilters as getReportDefaultFilters } from './src/components/Report/Mobile/MobileFilters';
       export {
         getDashboardData,
         getInvoiceListFilters,
@@ -48,9 +49,9 @@ await build({
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
       export { call } from './src/web/api';
+      export { getDocuments } from './src/frappe/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
-      export { getAvailableSerialNumbers } from './models/inventory/helpers';
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { getImportableSchemaNames } from './src/importer';
       export { DataImport } from './src/dataImport';
@@ -84,7 +85,6 @@ export const {
   TrialBalance,
   loadTranslations,
   useTranslations,
-  getAccountLabel,
   t,
   setLanguageMapOnTranslationString,
   getJsonData,
@@ -103,7 +103,6 @@ export const {
   conditionsForField,
   defaultCondition,
   isCompleteFilter,
-  mergeQueryFilters,
   getItemQtyMap,
   getMappedDoc,
   getStockTransferActions,
@@ -117,7 +116,6 @@ export const {
   validateSinv,
   addBatchItem,
   addPOSItem,
-  fillRowSerialNumbers,
   getPOSRowItem,
   validatePOSCheckout,
   getReportCellColorClass,
@@ -132,12 +130,14 @@ export const {
   getLinkedEntries,
   linkOnSave,
   showReport,
+  appFyo,
+  getReportDefaultFilters,
   GSTR1,
   getGstrJsonData,
   call,
+  getDocuments,
   errors,
   getInsufficientItems,
-  getAvailableSerialNumbers,
   generateCSV,
   parseCSV,
   getImportableSchemaNames,

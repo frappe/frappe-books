@@ -34,9 +34,7 @@ export class CouponCode extends FrappeDoc {
 
   // Pricing rules are Frappe-backed, so their filters use Frappe fieldnames.
   static filters: FiltersMap = {
-    pricing_rule: () => ({
-      is_coupon_code_based: true,
-    }),
+    pricing_rule: () => [['is_coupon_code_based', '=', 1]],
   };
 
   static getListViewSettings(): ListViewSettings {

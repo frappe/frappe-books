@@ -17,7 +17,8 @@
 import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { Combobox as FrappeCombobox } from 'frappe-ui';
-import { getLinkLabels, searchFrappeLink } from 'src/frappe/link';
+import { getLinkLabel, searchFrappeLink } from 'src/frappe/link';
+import { getSchema } from 'src/frappe/registry';
 import { LINK_PAGE_LENGTH } from 'src/utils';
 
 type Option = { label: string; value: string; description?: string };
@@ -46,7 +47,10 @@ export default defineComponent({
         !this.search &&
         !options.some((option) => option.value === this.value)
       )
-        options.unshift({ label: this.value, value: this.value });
+        options.unshift({
+          label: getLinkLabel(this.target, this.value),
+          value: this.value,
+        });
       return options;
     },
   },
@@ -76,18 +80,16 @@ export default defineComponent({
       }
     },
     async searchRecords(): Promise<Option[]> {
+      const displayField = getSchema(this.target)?.linkDisplayField;
       const options = await searchFrappeLink(
         this.target,
         this.search,
         null,
-        LINK_PAGE_LENGTH
+        LINK_PAGE_LENGTH,
+        displayField ? [displayField] : []
       );
-      const labels = await getLinkLabels(
-        this.target,
-        options.map(({ value }) => value)
-      );
-      return options.map(({ label, value }) => {
-        const shown = labels[value] || label;
+      return options.map(({ label, value, record }) => {
+        const shown = (displayField && record[displayField]) || label;
         return {
           label: shown,
           value,

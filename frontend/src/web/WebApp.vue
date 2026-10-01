@@ -39,8 +39,7 @@
 </template>
 
 <script lang="ts">
-import type { Doc } from 'fyo/model/doc';
-import { RTL_LANGUAGES } from 'fyo/utils/consts';
+import type { FrappeDoc } from 'src/frappe/document';
 import { frappeModels, getRegionalFrappeModels } from 'models';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
@@ -58,7 +57,6 @@ import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
-import { systemLanguageRef } from 'src/utils/refs';
 import { isMobile } from 'src/utils/viewport';
 import { useKeys } from 'src/utils/vueUtils';
 import * as injectionKeys from 'src/utils/injectionKeys';
@@ -76,7 +74,7 @@ import {
   Spinner as FrappeSpinner,
   useColorScheme,
 } from 'frappe-ui';
-import { call } from './api';
+import { call, redirectToLogin } from './api';
 
 export default defineComponent({
   name: 'WebApp',
@@ -96,7 +94,7 @@ export default defineComponent({
     onMounted(() => shortcuts.start());
     onUnmounted(() => shortcuts.stop());
     const languageDirection = ref(
-      getLanguageDirection(systemLanguageRef.value)
+      window.frappe.boot?.layout_direction ?? 'ltr'
     );
     provide(injectionKeys.keysKey, keys);
     provide(injectionKeys.searcherKey, searcher);
@@ -128,18 +126,15 @@ export default defineComponent({
     async initializeBooks() {
       const boot = window.frappe.boot || {};
       if (!boot.user?.name || boot.user.name === 'Guest') {
-        window.location.href = `/login?redirect-to=${encodeURIComponent(
-          '/books'
-        )}`;
+        redirectToLogin();
         return;
       }
       const books = boot.books!;
       fyo.store.isDevelopment = !!boot.developer_mode;
       fyo.store.appVersion = boot.versions?.frappe_books ?? '';
       fyo.store.chartsOfAccounts = books.charts_of_accounts;
-      fyo.store.accountLabels = books.account_labels;
       fyo.store.indianStates = books.indian_states;
-      fyo.store.language = boot.lang || 'English';
+      fyo.setCurrencySymbols(boot.docs);
       fyo.user = boot.user.name;
 
       registerFrappeModels(frappeModels);
@@ -154,10 +149,7 @@ export default defineComponent({
       const singles = getSingleSchemaNames().filter(
         (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
       );
-      await Promise.all([
-        fyo.loadCurrencySymbols(),
-        ...singles.map((name) => getFrappeDoc(name, name)),
-      ]);
+      await Promise.all(singles.map((name) => getFrappeDoc(name, name)));
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
       useColorScheme().setColorScheme(
         fyo.singles.SystemSettings?.dark_mode ? 'dark' : 'light'
@@ -168,7 +160,7 @@ export default defineComponent({
       }
       this.loading = false;
     },
-    async completeSetup(wizard: Doc) {
+    async completeSetup(wizard: FrappeDoc) {
       await wizard.sync();
       await call(
         'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
@@ -180,10 +172,6 @@ export default defineComponent({
     },
   },
 });
-
-function getLanguageDirection(language: string): 'ltr' | 'rtl' {
-  return RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
-}
 </script>
 
 <style>

@@ -112,22 +112,22 @@ import FilterDropdown from 'src/components/FilterDropdown.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 
 import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/registry';
-import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
-import { docsPathMap, getCreateFiltersFromListViewFilters } from 'src/utils/misc';
+import { docsPathMap, getNewDocValues } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { getFormRoute, openNewDoc, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
-import { QueryFilter } from 'utils/db/types';
-import { defineComponent, inject, ref } from 'vue';
+import type { Filter } from 'src/frappe/api';
+import { defineComponent, inject, ref, type PropType } from 'vue';
 import List from './List.vue';
 import { getListColumns } from './listColumns';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import MobileListToolbar from './MobileListToolbar.vue';
 import { getMobileRowLayout } from './mobileRowLayout';
-import { Money } from 'pesa';
+import type { Invoice } from 'models/invoices/Invoice';
 import { ModelNameEnum } from 'models/types';
 
 export default defineComponent({
@@ -145,7 +145,7 @@ export default defineComponent({
   },
   props: {
     schemaName: { type: String, required: true },
-    filters: { type: Object, default: undefined },
+    filters: { type: Array as PropType<Filter[]>, default: () => [] },
     pageTitle: { type: String, default: '' },
   },
   setup() {
@@ -162,14 +162,14 @@ export default defineComponent({
     return {
       listConfig: undefined,
       openExportModal: false,
-      listFilters: {},
+      listFilters: [],
       isSelectionMode: false,
       selectedItems: [] as string[],
       isCreateSheetOpen: false,
     } as {
       listConfig: undefined | ReturnType<typeof getListConfig>;
       openExportModal: boolean;
-      listFilters: QueryFilter;
+      listFilters: Filter[];
       isSelectionMode: boolean;
       selectedItems: string[];
       isCreateSheetOpen: boolean;
@@ -211,7 +211,7 @@ export default defineComponent({
         { value: ModelNameEnum.SalesQuote, label: this.t`Sales Quote` },
         { value: ModelNameEnum.SalesInvoice, label: this.t`Sales Invoice` },
         { value: ModelNameEnum.PurchaseInvoice, label: this.t`Purchase Invoice` },
-      ];
+      ].filter((option) => fyo.can(option.value, 'create'));
     },
     actionOptions(): DropdownOptions {
       return this.createOptions.map((option) => ({
@@ -239,7 +239,7 @@ export default defineComponent({
       this.shortcuts.pmod.set(this.context, ['KeyN'], () => this.makeNewDoc());
       this.shortcuts.pmod.set(this.context, ['KeyE'], () => this.exportButton?.$el.click());
     },
-    updatedData(listFilters: QueryFilter) {
+    updatedData(listFilters: Filter[]) {
       this.listFilters = listFilters;
     },
     async openDoc(name: string) {
@@ -251,13 +251,13 @@ export default defineComponent({
         return;
       }
 
-      const filters = getCreateFiltersFromListViewFilters(this.filters ?? {});
-      await openNewDoc(this.schemaName, filters);
+      const values = getNewDocValues(this.schemaName, this.filters);
+      await openNewDoc(this.schemaName, values);
     },
     async handleMakeNewDoc() {
       await this.makeNewDoc();
     },
-    applyFilter(filters: QueryFilter, orFilters?: QueryFilter) {
+    applyFilter(filters: Filter[], orFilters?: Filter[]) {
       this.list?.updateData(filters, orFilters);
     },
     toggleSelectionMode() {
@@ -272,20 +272,10 @@ export default defineComponent({
         value === ModelNameEnum.SalesInvoice ||
         value === ModelNameEnum.PurchaseInvoice
       ) {
-        const doc = newFrappeDoc(value);
-
+        // The server prices the rows, as when the items are added in the form.
+        const doc = newFrappeDoc(value) as Invoice;
         for (const itemName of this.selectedItems) {
-          const itemDoc = await getFrappeDoc(ModelNameEnum.Item, itemName);
-
-          // Invoices are Frappe-backed, so their rows use Frappe fieldnames.
-          const itemRow = {
-            item: itemName,
-            rate: (itemDoc.rate as Money) || fyo.pesa(0),
-            quantity: 1,
-            transfer_quantity: 1,
-          };
-
-          await doc.append('items', itemRow);
+          await doc.addItem(itemName);
         }
 
         const route = getFormRoute(value, doc.name!);

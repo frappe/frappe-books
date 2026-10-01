@@ -1,90 +1,78 @@
+import { translateValue } from 'fyo/utils/translation';
 import { call } from 'src/web/api';
-import type { QueryFilter } from 'utils/db/types';
-import { getDocuments } from './api';
-import { getDocType } from './doctypes';
-import { toFrappeFilters } from './list';
+import { getValue, type Filter } from './api';
+import { getDocType, isFrappeBacked } from './doctypes';
+import { getOpenFrappeDocs } from './documents';
 import { getSchema } from './registry';
-import { getFrappeDoc } from './documents';
 
-type SearchResult = { value: string; label?: string };
-type LinkOption = { label: string; value: string; group?: string };
+export type LinkRecord = Record<string, string | null | undefined> & {
+  name: string;
+  label?: string | null;
+};
+export type LinkOption = { label: string; value: string; record: LinkRecord };
 
 /**
- * Link options from Frappe's link search. Letters typed are matched in
- * order, e.g. `rce` finds `Rice`, as Books' link search always has. With
- * `groupBy`, each option is grouped by that field of its record.
+ * Link options from Frappe's link search, each with its record's `fields`.
+ * Letters typed are matched in order, e.g. `rce` finds `Rice`, as Books'
+ * link search always has; Frappe matches a translated doctype's names, in the
+ * user's language, by the text typed. Labels are those of Frappe's link search.
  */
 export async function searchFrappeLink(
   schemaName: string,
   text: string,
-  filters: QueryFilter | null,
+  filters: Filter[] | null,
   limit: number,
-  groupBy?: string
+  fields: string[] = []
 ): Promise<LinkOption[]> {
   const { doctype, meta } = getDocType(schemaName);
   const words = text.trim();
-  const results = await call<SearchResult[]>('frappe.desk.search.search_link', {
+  const records = await call<LinkRecord[]>('frappe.desk.search.search_widget', {
     doctype,
     txt: meta.translated_doctype ? words : [...words].join('%'),
-    filters: toFrappeFilters(filters ?? {}),
+    filters: filters ?? [],
+    filter_fields: fields,
     page_length: limit,
+    as_dict: true,
   });
-  const options = results.map(({ value, label }) => ({
-    label: label || value,
-    value,
+  return records.map((record) => ({
+    label: getLinkLabel(schemaName, record.label || record.name),
+    value: record.name,
+    record,
   }));
-  if (!groupBy) {
-    return options;
-  }
+}
 
-  const groups = await getFieldValues(schemaName, results, groupBy);
-  return options.map((option) => ({ ...option, group: groups[option.value] }));
+/** A linked record's name or title as Frappe shows it: in the user's language for a translated doctype. */
+export function getLinkLabel(schemaName: string, label: string): string {
+  return getDocType(schemaName).meta.translated_doctype
+    ? translateValue(label)
+    : label;
 }
 
 /**
  * What a link to `name` shows: the record's display field, like an address's
- * text, when its schema has one, else the name. The record is the open one,
- * so it shows what a quick edit just saved.
+ * text, when its schema has one, else its label. An open record shows what a
+ * quick edit just saved; otherwise only that field is fetched.
  */
 export async function getLinkDisplayValue(
   schemaName: string | undefined,
   name: string | undefined
 ): Promise<string | undefined> {
-  const field = schemaName && getSchema(schemaName)?.linkDisplayField;
-  if (!field) {
+  if (!schemaName || !isFrappeBacked(schemaName)) {
     return name;
   }
 
-  const doc = name ? await getFrappeDoc(schemaName, name) : undefined;
-  return (doc?.get(field) as string | undefined) ?? '';
-}
-
-/** Each record's display field value by name, e.g. an address's text, for a schema that has one. */
-export async function getLinkLabels(
-  schemaName: string,
-  names: string[]
-): Promise<Record<string, string>> {
-  const field = getDocType(schemaName).schema.linkDisplayField;
-  const records = names.map((value) => ({ value }));
-  return field ? await getFieldValues(schemaName, records, field) : {};
-}
-
-/** A field's value of each record by name. */
-async function getFieldValues(
-  schemaName: string,
-  records: SearchResult[],
-  fieldname: string
-): Promise<Record<string, string>> {
-  if (!records.length) {
-    return {};
+  const field = getSchema(schemaName)?.linkDisplayField;
+  if (!field) {
+    return name && getLinkLabel(schemaName, name);
   }
 
-  const rows = await getDocuments(getDocType(schemaName).doctype, {
-    fields: ['name', fieldname],
-    filters: [['name', 'in', records.map(({ value }) => value)]],
-    limit: records.length,
-  });
-  return Object.fromEntries(
-    rows.map((row) => [String(row.name), String(row[fieldname] ?? '')])
-  );
+  if (!name) {
+    return '';
+  }
+
+  const open = getOpenFrappeDocs(schemaName).find((doc) => doc.name === name);
+  const value = open
+    ? open.get(field)
+    : await getValue(getDocType(schemaName).doctype, name, field);
+  return (value as string | undefined) ?? '';
 }

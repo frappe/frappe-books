@@ -170,7 +170,6 @@ import { getField } from 'src/frappe/registry';
 import { isMobile } from 'src/utils/viewport';
 import MobilePayment from './MobilePayment.vue';
 import { fyo } from 'src/initFyo';
-import { showToast } from 'src/utils/interactive';
 import { Button as FrappeButton } from 'frappe-ui';
 import { defineComponent, inject } from 'vue';
 
@@ -339,33 +338,12 @@ export default defineComponent({
     submitTransaction() {
       this.$emit('createTransaction');
     },
+    /** POS checks the payment details before it takes the payment. */
     payTransaction() {
-      if (this.validatePaymentDetails()) {
-        this.$emit('createTransaction', false, true);
-      }
+      this.$emit('createTransaction', false, true);
     },
     payAndPrintTransaction() {
-      if (this.validatePaymentDetails()) {
-        this.$emit('createTransaction', true, true);
-      }
-    },
-    validatePaymentDetails(): boolean {
-      let message = '';
-
-      if (!this.paymentMethod) {
-        message = this.fyo.t`Please select a payment method.`;
-      } else if (this.showReferenceField && !this.transferRefNo) {
-        message = this.fyo.t`Please enter a reference number.`;
-      } else if (this.showClearanceDate && !this.transferClearanceDate) {
-        message = this.fyo.t`Please select a clearance date.`;
-      }
-
-      if (!message) {
-        return true;
-      }
-
-      showToast({ type: 'error', message });
-      return false;
+      this.$emit('createTransaction', true, true);
     },
     cancelTransaction() {
       this.$emit('setPaidAmount', fyo.pesa(0));

@@ -37,6 +37,14 @@ test('the server decides required, default, read only and minimum value', () => 
   assert.equal(role.default, undefined);
 });
 
+test('a DocField max_value limits the number, and 0 sets no limit', () => {
+  assert.equal(getField({ fieldtype: 'Int', max_value: 9 }).maxvalue, 9);
+  assert.equal(
+    getField({ fieldtype: 'Int', max_value: 0 }).maxvalue,
+    undefined
+  );
+});
+
 test('the server date defaults Now and Today give a new document the current date', async () => {
   await loadFrappeModels();
   for (const [schemaName, fieldname] of [

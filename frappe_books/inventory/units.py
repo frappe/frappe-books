@@ -48,7 +48,7 @@ def _conversion_factor(row, factors):
 		return 1
 	if row.transfer_unit not in factors:
 		frappe.throw(
-			_("Transfer unit {0} is not applicable for item {1}.").format(row.transfer_unit, row.item)
+			_("Transfer Unit {0} is not applicable for Item {1}").format(row.transfer_unit, row.item)
 		)
 	return as_decimal(factors[row.transfer_unit])
 

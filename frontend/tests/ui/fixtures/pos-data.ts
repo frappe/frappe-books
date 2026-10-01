@@ -53,6 +53,10 @@ const records: Record<string, Row[]> = {
     { name: 'Store UPI', type: 'Transfer' },
   ],
   'Books Item': items,
+  'Books Stock Ledger Entry': items.map((item) => ({
+    item: item.name,
+    quantity: item.availableQty,
+  })),
   'Books Party': [
     {
       name: 'Aarav Shah',
@@ -116,13 +120,16 @@ export async function preparePOSData() {
 function answer(path: string, body: Row, params: Row): unknown {
   const method = path.split('/').pop()!;
   const methods: Record<string, () => unknown> = {
-    'frappe.client.get_list': () => getList(body.doctype, body.filters),
-    'frappe.desk.search.search_link': () =>
-      getList(body.doctype).map(({ name }) => ({ value: name })),
+    'frappe.client.get_list': () =>
+      getPage(
+        getList(body.doctype, body.filters),
+        body.limit_start,
+        body.limit_page_length
+      ),
+    'frappe.desk.search.search_widget': () => getList(body.doctype),
     get_open_shift: () => (shift.open ? openingShift.name : null),
     get_stock_location: () => null,
-    get_stock_quantities: () =>
-      items.map((item) => ({ item: item.name, quantity: item.availableQty })),
+    get_sale_shortfalls: () => [],
   };
   const answerMethod = methods[method] ?? methods[method.split('.').pop()!];
   if (answerMethod) {
@@ -146,8 +153,20 @@ function getDocuments(path: string, params: Row): unknown {
   return name ? getRecord(doctype, name) : getList(doctype, params.filters);
 }
 
-/** Totals as the server leaves them; a closing shift expects what its shift opened with. */
+/**
+ * Totals as the server leaves them. An opening shift's first cash row takes
+ * the counted cash; a closing shift expects what its shift opened with and
+ * shares the counted cash among the cash methods.
+ */
 function preview(document: Row): Row {
+  if (document.doctype === 'Books Pos Opening Shift') {
+    const [cashRow] = getCashRows(document.opening_amounts ?? []);
+    if (cashRow) {
+      cashRow.amount = getCashTotal(document.opening_cash);
+    }
+    return document;
+  }
+
   if (document.doctype !== 'Books Pos Closing Shift') {
     return document;
   }
@@ -160,21 +179,51 @@ function preview(document: Row): Row {
   );
   const closingAmounts = openingShift.opening_amounts.map((row) => {
     const sent = (counted.get(row.payment_method) ?? {}) as Row;
-    const closing = Number(sent.closing_amount ?? 0);
     return {
       name: sent.name ?? null,
       payment_method: row.payment_method,
       opening_amount: row.amount,
-      closing_amount: closing,
+      closing_amount: Number(sent.closing_amount ?? 0),
       expected_amount: row.amount,
-      difference_amount: closing - Number(row.amount),
     };
   });
+  shareCountedCash(closingAmounts, getCashTotal(document.closing_cash));
   return {
     ...document,
     opening_shift: openingShift.name,
-    closing_amounts: closingAmounts,
+    closing_amounts: closingAmounts.map((row) => ({
+      ...row,
+      difference_amount: row.closing_amount - Number(row.expected_amount),
+    })),
   };
+}
+
+/** Each cash method takes up to what it expects, the first also any surplus. */
+function shareCountedCash(rows: Row[], counted: number) {
+  const cashRows = getCashRows(rows);
+  let remaining = counted;
+  for (const row of cashRows) {
+    row.closing_amount = Math.min(Math.max(row.expected_amount, 0), remaining);
+    remaining -= row.closing_amount;
+  }
+
+  if (cashRows.length) {
+    cashRows[0].closing_amount += remaining;
+  }
+}
+
+function getCashRows(rows: Row[]): Row[] {
+  const cashMethods = getList('Books Payment Method', [['type', '=', 'Cash']]);
+  return rows.filter((row) =>
+    cashMethods.some(({ name }) => name === row.payment_method)
+  );
+}
+
+function getCashTotal(cash: Row[] = []): number {
+  return cash.reduce(
+    (total, row) => total + Number(row.denomination) * Number(row.count ?? 0),
+    0
+  );
 }
 
 function getRecord(doctype: string, name: string): Row | undefined {
@@ -194,8 +243,17 @@ function getList(doctype: string, filters: Filter[] = []): Row[] {
   );
 }
 
+/** The rows from `start`, `length` of them unless it is 0. */
+function getPage(rows: Row[], start = 0, length = 0): Row[] {
+  return rows.slice(start, length ? start + length : undefined);
+}
+
 function matches(actual: unknown, operator: string, value: unknown) {
   switch (operator) {
+    case 'like':
+      return String(actual ?? '')
+        .toLowerCase()
+        .includes(String(value).replaceAll('%', '').toLowerCase());
     case '=':
       return (actual ?? 0) == value;
     case '!=':

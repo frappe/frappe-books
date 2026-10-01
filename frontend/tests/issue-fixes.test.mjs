@@ -6,7 +6,6 @@ import {
   GeneralLedger,
   TrialBalance,
   useTranslations,
-  getAccountLabel,
   t,
   setLanguageMapOnTranslationString,
 } from './helpers/accounting.mjs';
@@ -171,18 +170,6 @@ test('the setup wizard offers the charts the server lists', async () => {
 function chart(name, countryCode, language = null) {
   return { name, label: name, country_code: countryCode, language };
 }
-
-test('account labels come from the server while identifiers and custom names stay stable', async () => {
-  const fyo = await makeFyo();
-  fyo.store.accountLabels = { Cash: 'Trésorerie' };
-  assert.equal(getAccountLabel(fyo, 'Cash'), 'Trésorerie');
-  assert.equal(getAccountLabel(fyo, 'Custom savings'), 'Custom savings');
-  const report = new TrialBalance(fyo);
-  report.columns = [{ fieldname: 'account', fieldtype: 'Link' }];
-  const cell = report.getReportRow({ account: 'Cash', indent: 0 }).cells[0];
-  assert.equal(cell.value, 'Trésorerie');
-  assert.equal(cell.rawValue, 'Cash');
-});
 
 test('translations fill template values and skip empty ones', () => {
   try {

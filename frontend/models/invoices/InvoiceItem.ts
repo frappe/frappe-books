@@ -1,6 +1,5 @@
 import { Fyo } from 'fyo';
 import type { DocValue, DocValueMap } from 'fyo/core/types';
-import type { Doc } from 'fyo/model/doc';
 import {
   ChangeArg,
   CurrenciesMap,
@@ -20,7 +19,6 @@ import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
-import type { QueryFilter } from 'utils/db/types';
 import type { Invoice } from './Invoice';
 import { setCurrencies } from './Invoice';
 
@@ -96,9 +94,11 @@ export class InvoiceItem extends FrappeDoc {
       'is_manual_rate',
     ],
   };
-  // The server prices the row and derives the other quantities again.
+  // The server prices the row, turns a typed rate per transfer unit into the
+  // rate, and derives the other quantities again.
   static override refills = {
     item: ['rate', ...ITEM_DETAILS],
+    transfer_rate: ['rate'],
     transfer_unit: ['rate', 'quantity'],
     quantity: ['qty', 'transfer_quantity'],
     qty: ['quantity'],
@@ -143,22 +143,12 @@ export class InvoiceItem extends FrappeDoc {
 
   override async change(arg: ChangeArg) {
     await super.change(arg);
-    if (arg.changed === 'transfer_rate') {
-      await this.set('rate', this.getStockUnitRate());
-    }
-
     this.followEdit(arg.changed);
-  }
-
-  /** The rate per stock unit of the rate per transfer unit, which the table shows. */
-  getStockUnitRate(): Money {
-    const transferRate = this.transfer_rate ?? this.fyo.pesa(0);
-    return transferRate.div(this.unit_conversion_factor || 1);
   }
 
   /** What an edit asks of the server besides its refills: a price of its own or the server's. */
   followEdit(fieldname?: string) {
-    if (fieldname === 'rate') {
+    if (fieldname === 'rate' || fieldname === 'transfer_rate') {
       this.is_manual_rate = true;
     } else if (fieldname === 'item') {
       this.followItem();
@@ -218,7 +208,9 @@ export class InvoiceItem extends FrappeDoc {
       ),
     qty: async (value: DocValue) => {
       if (this.batch) {
-        await this.validateBatchQuantity(this.batch, value as number);
+        // Qty is in the transfer unit; the batch holds stock units.
+        const quantity = (value as number) * (this.unit_conversion_factor || 1);
+        await this.validateBatchQuantity(this.batch, quantity);
       }
     },
     batch: async (value: DocValue) => {
@@ -260,13 +252,13 @@ export class InvoiceItem extends FrappeDoc {
 
   // Items, batches and units are Frappe-backed and filter by Frappe fieldnames.
   static override filters: FiltersMap = {
-    item: (doc: Doc): QueryFilter => ({
-      item_usage: ['not in', [doc.isSales ? 'Purchases' : 'Sales']],
-    }),
-    batch: async (doc: Doc): Promise<QueryFilter> => {
+    item: (doc: FrappeDoc) => [
+      ['item_usage', 'not in', [doc.isSales ? 'Purchases' : 'Sales']],
+    ],
+    batch: async (doc: FrappeDoc) => {
       const item = doc.item as string;
       if (!doc.isSales || doc.isReturn) {
-        return { item };
+        return [['item', '=', item]];
       }
 
       const location = await (doc as InvoiceItem).getStockLocation();
@@ -274,13 +266,15 @@ export class InvoiceItem extends FrappeDoc {
       const batches = rows
         .filter((row) => row.batch && row.quantity > 0)
         .map((row) => row.batch as string);
-      return { name: ['in', batches] };
+      return [['name', 'in', batches]];
     },
     transfer_unit: getTransferUnitFilter,
   };
 
   static override createFilters: FiltersMap = {
-    item: (doc: Doc) => ({ item_usage: doc.isSales ? 'Sales' : 'Purchases' }),
+    item: (doc: FrappeDoc) => [
+      ['item_usage', '=', doc.isSales ? 'Sales' : 'Purchases'],
+    ],
   };
 }
 

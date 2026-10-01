@@ -29,9 +29,9 @@
         <Table
           :data-fieldname="tableField.fieldname"
           :df="tableField"
-          :value="(doc[tableField.fieldname] ?? []) as Doc[]"
+          :value="(doc[tableField.fieldname] ?? []) as FrappeDoc[]"
           :title="tableTitle"
-          @editrow="(row: Doc) => $emit('editrow', row)"
+          @editrow="(row: FrappeDoc) => $emit('editrow', row)"
           @change="
             (value: DocValue) => $emit('value-change', tableField!, value)
           "
@@ -93,7 +93,7 @@
 import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { getRowSummary } from 'src/components/Controls/rowSummary';
 import Table from 'src/components/Controls/Table.vue';
@@ -107,14 +107,14 @@ import MobileFormField from './MobileFormField.vue';
 const props = defineProps<{
   title: string;
   fields: Field[];
-  doc: Doc;
+  doc: FrappeDoc;
   errors: Record<string, string>;
 }>();
 
 defineEmits<{
   'value-change': [field: Field, value: DocValue];
   'row-change': [field: Field, value: DocValue, parentfield: Field];
-  editrow: [row: Doc];
+  editrow: [row: FrappeDoc];
 }>();
 
 const dateTypes: string[] = [FieldTypeEnum.Date, FieldTypeEnum.Datetime];
@@ -236,7 +236,7 @@ function getTotalLines(field: Field) {
 
   const target = (field as { target?: string }).target ?? '';
   const columns = getFields(target, getSchema(target)?.tableFields ?? []);
-  return (props.doc.get(field.fieldname) as Doc[]).map((row) => {
+  return (props.doc.get(field.fieldname) as FrappeDoc[]).map((row) => {
     const { title, meta, amount } = getRowSummary(row, columns);
     return {
       label: [title, meta].filter(Boolean).join(' '),

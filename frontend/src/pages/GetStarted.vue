@@ -102,7 +102,7 @@ export default defineComponent({
     // The server checks the record tasks each time the page loads them.
     await getFrappeDoc('GetStarted', 'GetStarted', { refresh: true });
     if (fyo.can('GetStarted', 'write')) {
-      await this.checkIsOnboardingComplete();
+      await this.hideWhenComplete();
     }
   },
   methods: {
@@ -141,25 +141,15 @@ export default defineComponent({
           break;
       }
     },
-    async checkIsOnboardingComplete() {
+    /** Once the server finds every task done, Get Started hides itself, only the first time. */
+    async hideWhenComplete() {
       const doc = fyo.singles.GetStarted!;
-      if (doc.onboarding_complete) {
-        return true;
+      if (doc.onboarding_complete || !doc.tasks_complete) {
+        return;
       }
 
-      const onboardingComplete = doc.schema.fields
-        .filter(
-          ({ fieldname, meta }) => !meta && fieldname !== 'onboarding_complete'
-        )
-        .map(({ fieldname }) => doc.get(fieldname))
-        .every(Boolean);
-
-      if (onboardingComplete) {
-        await this.updateChecks({ onboarding_complete: onboardingComplete });
-        await fyo.singles.SystemSettings!.setAndSync('hide_get_started', true);
-      }
-
-      return onboardingComplete;
+      await this.updateChecks({ onboarding_complete: true });
+      await fyo.singles.SystemSettings!.setAndSync('hide_get_started', true);
     },
     async updateChecks(toUpdate: Record<string, DocValue>) {
       if (!fyo.can('GetStarted', 'write')) {

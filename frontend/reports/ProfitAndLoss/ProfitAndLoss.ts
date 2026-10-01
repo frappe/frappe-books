@@ -1,7 +1,14 @@
 import { t } from 'fyo';
 import { AccountReport } from 'reports/AccountReport';
 import { ServerRow } from 'reports/serverReport';
-import { ReportRow } from 'reports/types';
+import { ColumnField, ReportRow } from 'reports/types';
+
+const TOTAL_COLUMN: ColumnField = {
+  fieldname: 'total',
+  label: t`Total`,
+  fieldtype: 'Currency',
+  align: 'right',
+};
 
 export class ProfitAndLoss extends AccountReport {
   static title = t`Profit And Loss`;
@@ -12,9 +19,15 @@ export class ProfitAndLoss extends AccountReport {
     periods: { total: true },
   };
 
-  /** The profit row is bold, with profits in green and losses in red. */
+  /**
+   * Rows keep the server's total. The profit row is bold, with profits in
+   * green and losses in red.
+   */
   getReportRow(row: ServerRow): ReportRow {
-    const reportRow = super.getReportRow(row);
+    const reportRow = {
+      ...super.getReportRow(row),
+      total: this.getCell(TOTAL_COLUMN, row.total),
+    };
     if (!row.bold) {
       return reportRow;
     }

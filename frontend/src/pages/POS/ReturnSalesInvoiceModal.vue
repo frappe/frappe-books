@@ -25,15 +25,15 @@
 
     <InvoiceSelectionTable
       v-model="selectedInvoiceName"
-      :rows="paginatedInvoices"
+      :rows="invoices"
       :fields="tableFields"
       :ratios="ratio"
       :empty-text="t`No invoices found`"
     />
 
-    <div v-if="filteredInvoices.length" class="shrink-0">
+    <div v-if="invoiceCount" class="shrink-0">
       <Paginator
-        :item-count="filteredInvoices.length"
+        :item-count="invoiceCount"
         :allowed-counts="[20, 40, -1]"
         @index-change="setPageIndices"
       />
@@ -60,10 +60,22 @@ import InvoiceSelectionTable from 'src/components/POS/InvoiceSelectionTable.vue'
 import type { DocValueMap } from 'fyo/core/types';
 import { defineComponent } from 'vue';
 import { Field } from 'schemas/types';
-import { getPOSInvoices } from 'src/utils/pos';
+import type { Filter } from 'src/frappe/api';
+import {
+  getPOSInvoiceCount,
+  getPOSInvoiceFields,
+  getPOSInvoices,
+} from 'src/utils/pos';
 import Paginator from 'src/components/Paginator.vue';
 import { TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
+
+/** Submitted sales that are not returns and have something left to return. */
+const RETURNABLE_FILTERS: Filter[] = [
+  ['docstatus', '=', 1],
+  ['return_against', 'is', 'not set'],
+  ['is_fully_returned', '=', 0],
+];
 
 export default defineComponent({
   name: 'ReturnSalesInvoice',
@@ -84,75 +96,36 @@ export default defineComponent({
   },
   data() {
     return {
-      returnedInvoices: [] as DocValueMap[],
+      invoices: [] as DocValueMap[],
+      invoiceCount: 0,
       invoiceSearchTerm: '',
       pageStart: 0,
       pageEnd: 20,
       selectedInvoiceName: '',
+      loading: undefined as Promise<void> | undefined,
     };
   },
   computed: {
     ratio() {
       return [1, 1, 1, 0.8];
     },
-    tableFields() {
-      return [
-        {
-          fieldname: 'name',
-          label: 'Name',
-          fieldtype: 'Data',
-          readOnly: true,
-        },
-        {
-          fieldname: 'party',
-          fieldtype: 'Data',
-          label: 'Customer',
-          placeholder: 'Customer',
-          readOnly: true,
-        },
-        {
-          fieldname: 'date',
-          label: 'Date',
-          fieldtype: 'Date',
-          readOnly: true,
-        },
-        {
-          fieldname: 'grand_total',
-          label: 'Grand Total',
-          fieldtype: 'Currency',
-          readOnly: true,
-        },
-      ] as Field[];
-    },
-    filteredInvoices() {
-      return this.returnedInvoices.filter((invoice) =>
-        (invoice.name as string)
-          .toLowerCase()
-          .includes(this.invoiceSearchTerm.toLowerCase())
-      );
-    },
-    paginatedInvoices() {
-      return this.filteredInvoices.slice(this.pageStart, this.pageEnd);
+    tableFields(): Field[] {
+      return getPOSInvoiceFields();
     },
   },
   watch: {
     async openModal(newVal) {
       if (newVal) {
         this.selectedInvoiceName = '';
-        await this.setReturnedInvoices();
+        await this.setInvoices();
       }
     },
-    invoiceSearchTerm() {
+    async invoiceSearchTerm() {
       this.pageStart = 0;
       this.pageEnd = this.pageEnd - this.pageStart || 20;
       this.selectedInvoiceName = '';
+      await this.setInvoices();
     },
-  },
-  async mounted() {
-    await this.setReturnedInvoices();
-  },
-  async activated() {
-    await this.setReturnedInvoices();
   },
 
   methods: {
@@ -168,23 +141,37 @@ export default defineComponent({
       this.$emit('selectedReturnInvoice', this.selectedInvoiceName);
       this.closeModal();
     },
-    handleSearchEnter() {
-      if (this.filteredInvoices.length === 1) {
-        this.selectedInvoiceName = String(this.filteredInvoices[0].name);
+    async handleSearchEnter() {
+      await this.loading;
+      if (this.invoiceCount === 1) {
+        this.selectedInvoiceName = String(this.invoices[0].name);
       }
     },
-    setPageIndices({ start, end }: { start: number; end: number }) {
+    async setPageIndices({ start, end }: { start: number; end: number }) {
+      if (start === this.pageStart && end === this.pageEnd) {
+        return;
+      }
+
       this.pageStart = start;
       this.pageEnd = end;
       this.selectedInvoiceName = '';
+      await this.setInvoices();
     },
-    /** Submitted sales that are not returns and have something left to return. */
-    async setReturnedInvoices() {
-      this.returnedInvoices = await getPOSInvoices([
-        ['docstatus', '=', 1],
-        ['return_against', 'is', 'not set'],
-        ['is_fully_returned', '=', 0],
-      ]);
+    /** The page's invoices whose name has the search term, and how many match; a later load replaces them. */
+    async setInvoices() {
+      const search = this.invoiceSearchTerm;
+      const length = this.pageEnd - this.pageStart;
+      const loading = Promise.all([
+        getPOSInvoices(RETURNABLE_FILTERS, search, this.pageStart, length),
+        getPOSInvoiceCount(RETURNABLE_FILTERS, search),
+      ]).then(([invoices, invoiceCount]) => {
+        if (this.loading === loading) {
+          this.invoices = invoices;
+          this.invoiceCount = invoiceCount;
+        }
+      });
+      this.loading = loading;
+      await loading;
     },
   },
 });

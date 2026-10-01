@@ -1,5 +1,5 @@
 import { after } from 'node:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -19,8 +19,8 @@ await build({
       export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
-      export { getFrappeListPage, getFrappeRows, isSortableField, toFrappeFilters } from './src/frappe/list';
-      export { getLinkDisplayValue, getLinkLabels, searchFrappeLink } from './src/frappe/link';
+      export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';
+      export { getLinkDisplayValue, searchFrappeLink } from './src/frappe/link';
       export { loadListData, onListChange } from './src/utils/listData';
       export { getModel, getQuickViewFields, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
@@ -34,14 +34,21 @@ await build({
       export { frappeModels, getRegionalFrappeModels } from './models';
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
+      export { getNewDocValues } from './src/utils/misc';
       export { getFilterFields } from './src/utils/filterFields';
+      export { getSidebarConfig } from './src/utils/sidebarConfig';
+      export { default as ListView } from './src/pages/ListView/ListView.vue';
+      export { default as router } from 'src/router';
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
       export * as posSetup from './src/utils/posSetup';
       export * as posStock from './models/inventory/posStock';
+      export * as posItemSearch from './src/utils/posItemSearch';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { Search } from './src/utils/search';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
+      export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
+      export { MobileTree } from './src/components/Report/Mobile/MobileTree';
       export { getCsvData, getJsonData } from './reports/commonExporter';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
       export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
@@ -70,6 +77,16 @@ await build({
         builder.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
           contents: 'export default {}',
         }));
+        // Components under test keep their script; the rest are stubs.
+        builder.onLoad(
+          { filter: /ListView\/ListView\.vue$/ },
+          async (args) => ({
+            contents: (await readFile(args.path, 'utf8')).match(
+              /<script[^>]*>([\s\S]*?)<\/script>/
+            )[1],
+            loader: 'ts',
+          })
+        );
         builder.onLoad({ filter: /\.vue$/ }, () => ({
           contents: 'export default {}',
         }));
@@ -105,10 +122,8 @@ export const {
   getFrappeListPage,
   getFrappeRows,
   isSortableField,
-  toFrappeFilters,
   searchFrappeLink,
   getLinkDisplayValue,
-  getLinkLabels,
   loadListData,
   onListChange,
   getModel,
@@ -134,15 +149,19 @@ export const {
   getMappedDoc,
   createFilters,
   routeFilters,
+  getNewDocValues,
   getStockTransferActions,
   getFilterFields,
   ListFilters,
   pos,
   posSetup,
   posStock,
+  posItemSearch,
   getInsufficientItems,
   Search,
   GeneralLedger,
+  ProfitAndLoss,
+  MobileTree,
   getCsvData,
   getJsonData,
   getRowReference,
@@ -154,6 +173,9 @@ export const {
   getExportFields,
   getExportTableFields,
   getJsonExportData,
+  getSidebarConfig,
+  ListView,
+  router,
 } = createRequire(import.meta.url)(output);
 
 /**

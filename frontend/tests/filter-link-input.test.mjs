@@ -57,7 +57,7 @@ function makeInput(target) {
 
 test("list filter values come from a page of Frappe's link search", async () => {
   searches.length = 0;
-  search = async () => [{ value: 'Tax-002' }];
+  search = async () => [{ name: 'Tax-002' }];
   const input = makeInput('Tax');
 
   await input.onOpen(true);
@@ -87,9 +87,9 @@ test('a slower earlier search does not replace newer results', async () => {
   const first = input.onOpen(true);
   const second = input.onInput({ target: { value: '2' } });
   await new Promise((resolve) => setTimeout(resolve));
-  pending[1]([{ value: 'Tax-002' }]);
+  pending[1]([{ name: 'Tax-002' }]);
   await second;
-  pending[0]([{ value: 'Tax-001' }, { value: 'Tax-002' }]);
+  pending[0]([{ name: 'Tax-001' }, { name: 'Tax-002' }]);
   await first;
 
   assert.deepEqual(

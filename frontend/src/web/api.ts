@@ -35,6 +35,8 @@ const errorClassByStatus: Record<number, ErrorClass | undefined> = {
 /** Browsers reject fetch with these messages when the network is down. */
 const CONNECTION_FAILURE = /failed to fetch|load failed|networkerror/i;
 
+const LOGIN_URL = `/login?redirect-to=${encodeURIComponent('/books')}`;
+
 /** Whether the last request failed because the server could not be reached. */
 export const hasLostConnection = ref(false);
 
@@ -45,6 +47,7 @@ export async function call<T>(
   try {
     return await reachServer(() => frappeCall<T>(method, args));
   } catch (error) {
+    await leaveIfSessionExpired((error as FrappeResourceError).status);
     throw toBooksError(error);
   }
 }
@@ -70,6 +73,30 @@ export function getServerError(
   const ServerError =
     errorClassByType[excType ?? ''] ?? errorClassByStatus[status ?? 0];
   return ServerError ? new ServerError(message, false) : new Error(message);
+}
+
+/** Sends the user to log in, and back to Books after. */
+export function redirectToLogin() {
+  window.location.href = LOGIN_URL;
+}
+
+/**
+ * Frappe answers 401 when the session has ended, and 403 once the session is
+ * gone from the browser, as after a logout elsewhere. As in Desk, the user goes
+ * to log in and the request never settles, so no error shows meanwhile.
+ */
+export async function leaveIfSessionExpired(status?: number): Promise<void> {
+  if (status === 401 || (status === 403 && hasGuestCookie())) {
+    redirectToLogin();
+    await new Promise(() => {});
+  }
+}
+
+/** Frappe deletes the `user_id` cookie, or sets it to Guest, when a session ends. */
+function hasGuestCookie(): boolean {
+  const cookies = new URLSearchParams(document.cookie.split('; ').join('&'));
+  const user = cookies.get('user_id');
+  return !user || user === 'Guest';
 }
 
 /** Any answer from the server, even an error, means the connection is back. */
@@ -107,6 +134,8 @@ declare global {
       csrf_token?: string;
       boot?: {
         lang?: string;
+        /** Added by the Books page from the user's language. */
+        layout_direction?: 'ltr' | 'rtl';
         developer_mode?: number;
         versions?: Record<string, string | undefined>;
         user?: BootUserPermissions & { name?: string };
@@ -116,11 +145,11 @@ declare global {
         books?: {
           country_code: string;
           charts_of_accounts: ChartOfAccounts[];
-          account_labels: Record<string, string>;
           indian_states: Record<string, string>;
           print_style: string;
         };
         app_data?: { app_name: string; app_logo_url?: string | null }[];
+        docs?: { doctype: string; name: string; symbol?: string | null }[];
         [key: string]: unknown;
       };
     };

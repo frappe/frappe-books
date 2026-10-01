@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils.nestedset import NestedSetChildExistsError
 
 from frappe_books.tests.accounting import ensure_user, make_account, unique_name
 
@@ -17,6 +18,14 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Root accounts cannot be deleted"):
 			root.delete()
 		self.assertTrue(frappe.db.exists(root.doctype, root.name))
+
+	def test_a_group_with_children_says_what_the_books_chart_says(self):
+		root = make_account("Kept Assets", is_group=1)
+		group = make_account("Kept Bank Accounts", is_group=1, parent_books_account=root.name)
+		make_account("Kept Bank", parent_books_account=group.name)
+		with self.assertRaises(NestedSetChildExistsError) as raised:
+			group.delete()
+		self.assertEqual(str(raised.exception), f"{group.name} has linked child accounts.")
 
 	def test_root_group_can_be_created_and_edited_after_setup(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 1)

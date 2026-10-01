@@ -146,10 +146,24 @@ test('a cart row in boxes shows and takes its rate per box', async ({
   await keypad.getByRole('textbox', { name: 'Rate', exact: true }).fill('3000');
   await keypad.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(keypad).toBeHidden();
-  const rate = await page.evaluate(
-    () => (window as any).posFixture.state.invoice.items[0].rate.float
-  );
-  expect(rate).toBe(60);
+  // The server's preview sets the rate per stock unit from the rate per box.
+  const sent = await page.evaluate(() => {
+    const { invoice } = (window as any).posFixture.state;
+    const [row] = invoice.getMethodDocument({
+      keepRowNames: true,
+      clearServerFilled: true,
+    }).items;
+    return {
+      hasRate: 'rate' in row,
+      transferRate: Number(row.transfer_rate),
+      isManualRate: invoice.items[0].is_manual_rate,
+    };
+  });
+  expect(sent).toEqual({
+    hasRate: false,
+    transferRate: 3000,
+    isManualRate: true,
+  });
 });
 
 for (const modern of [true, false]) {

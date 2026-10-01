@@ -98,7 +98,7 @@
 </template>
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { snakeCase } from 'lodash';
 import { PrintFormat } from 'models/baseModels/PrintFormat';
@@ -159,7 +159,7 @@ export default defineComponent({
       templateList: [],
       templateRequest: 0,
     } as {
-      doc: null | Doc;
+      doc: null | FrappeDoc;
       scale: number;
       print: null | PrintHTML;
       templateDoc: null | PrintFormat;

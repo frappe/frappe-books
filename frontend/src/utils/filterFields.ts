@@ -1,24 +1,17 @@
 import type { ListViewColumn } from 'fyo/model/types';
 import { t } from 'fyo/utils/translation';
 import { Field, FieldTypeEnum } from 'schemas/types';
+import type { Filter } from 'src/frappe/api';
 
 // These values have direct database mappings. Other read-only values may be derived.
-// Books names, then the Frappe names Frappe-backed schemas keep.
 const storedReadOnlyFields = new Set([
   'name',
-  'netTotal',
-  'grandTotal',
-  'baseGrandTotal',
   'net_total',
   'grand_total',
   'base_grand_total',
 ]);
-// Books names, then the Frappe names Frappe-backed schemas keep.
 const auditFields = new Set([
-  'created',
   'modified',
-  'createdBy',
-  'modifiedBy',
   'submitted',
   'cancelled',
   'creation',
@@ -66,6 +59,22 @@ export function getFilterFields(
   }
 
   return filteredFields;
+}
+
+/** Books' Submitted and Cancelled, by the docstatus values that set them. */
+export const DOCSTATUS_FLAGS: Record<string, number[] | undefined> = {
+  submitted: [1, 2],
+  cancelled: [2],
+};
+
+/** A Submitted or Cancelled filter as the docstatus filter it means. */
+export function toDocStatusFilter(
+  flag: string,
+  operator: string,
+  value: number
+): Filter {
+  const isSet = (operator === '=') === Boolean(value);
+  return ['docstatus', isSet ? 'in' : 'not in', DOCSTATUS_FLAGS[flag]];
 }
 
 /** A Frappe-backed schema keeps docstatus, which Books lists and files show as Submitted and Cancelled. */

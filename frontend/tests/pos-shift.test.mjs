@@ -35,11 +35,23 @@ const requests = await loadFrappeModels(frappeModels, (request) => {
   }
 
   if (path.endsWith('run_doc_method')) {
-    return { docs: [previewClosing(body.document)] };
+    const { document } = body;
+    const isOpening = document.doctype === 'Books Pos Opening Shift';
+    return { docs: [isOpening ? previewOpening(document) : previewClosing(document)] };
   }
 
   return { data: [] };
 });
+
+/** The server's opening preview: the first row takes the counted cash. */
+function previewOpening(document) {
+  const [first, ...rest] = document.opening_amounts;
+  const counted = document.opening_cash.reduce(
+    (total, row) => total + Number(row.denomination) * row.count,
+    0
+  );
+  return { ...document, opening_amounts: [{ ...first, amount: counted }, ...rest] };
+}
 
 /** The server's closing preview: the open shift's rows, keeping the rows it was sent. */
 function previewClosing(document) {
@@ -131,7 +143,6 @@ test('a closing shift shows the server expected amounts and keeps its rows', asy
   clearTimeout(closing._previewTimer);
   await closing.preview();
   assert.equal(closing.opening_shift, 'SHIFT-1');
-  assert.equal(closing.closingCashAmount.float, 300);
 
   const [row] = closing.closing_amounts;
   assert.equal(row.expected_amount.float, 350);
@@ -140,4 +151,21 @@ test('a closing shift shows the server expected amounts and keeps its rows', asy
   await closing.preview();
   assert.equal(closing.closing_amounts[0], row);
   assert.equal(row.difference_amount.float, -50);
+});
+
+test('an opening shift takes its cash amount from the server preview', async () => {
+  const opening = newFrappeDoc('POSOpeningShift', {
+    opening_cash: [{ denomination: fyo.pesa(50), count: 3 }],
+    opening_amounts: [{ payment_method: 'Cash', amount: fyo.pesa(0) }],
+  });
+  clearTimeout(opening._previewTimer);
+  requests.length = 0;
+  await opening.preview();
+
+  assert.equal(opening.opening_amounts[0].amount.float, 150);
+  const [{ body }] = requests;
+  assert.deepEqual(
+    [body.method, body.document.doctype],
+    ['preview', 'Books Pos Opening Shift']
+  );
 });

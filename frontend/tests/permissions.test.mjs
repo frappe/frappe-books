@@ -9,6 +9,7 @@ import {
   getImportableSchemaNames,
   getSidebarConfig,
   loadDocPermissions,
+  Search,
   newFrappeDoc,
   stubFrappe,
 } from './helpers/frappe.mjs';
@@ -158,4 +159,25 @@ test('the sidebar shows only the lists and reports the user can open', () => {
     },
     { label: 'Setup', route: '/settings', items: ['Settings'] },
   ]);
+});
+
+test('the search palette offers only the lists and reports the user can open', () => {
+  const lists = ['SalesQuote', 'SalesInvoice', 'Party', 'Item', 'Account'];
+  fyo.store.permissions = {
+    doctypes: Object.fromEntries(lists.map((name) => [name, `Books ${name}`])),
+    user: { can_read: ['Books SalesQuote', 'Books Party'] },
+  };
+  window.frappe.boot.allowed_reports = { 'Books Trial Balance': {} };
+
+  const routes = new Search(fyo)._nonDocSearchList
+    .filter(({ group }) => group === 'List' || group === 'Report')
+    .map(({ route }) => decodeURI(route).split('?')[0]);
+
+  delete window.frappe.boot.allowed_reports;
+  assert.ok(routes.includes('/list/SalesQuote'));
+  assert.ok(routes.includes('/list/Party/Customers'));
+  assert.ok(routes.includes('/report/TrialBalance'));
+  assert.ok(!routes.includes('/list/SalesInvoice'));
+  assert.ok(!routes.some((route) => route.startsWith('/list/Item')));
+  assert.ok(!routes.includes('/report/GeneralLedger'));
 });

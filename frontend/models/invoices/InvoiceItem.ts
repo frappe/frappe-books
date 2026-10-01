@@ -157,7 +157,7 @@ export class InvoiceItem extends FrappeDoc {
   validations: ValidationMap = {
     transfer_unit: async (value: DocValue) =>
       await validateTransferUnit(
-        { fyo: this.fyo, item: this.item, unit: this.unit },
+        { item: this.item, unit: this.unit },
         value as string
       ),
     qty: async (value: DocValue) => {

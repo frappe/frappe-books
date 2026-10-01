@@ -2,9 +2,9 @@ import { Fyo, t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getLedgerLinkAction } from 'models/helpers';
-import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
 import { QueryFilter } from 'utils/db/types';
+import { getValue } from 'src/frappe/api';
 import { FrappeDoc } from 'src/frappe/document';
 import { PaymentFor } from '../PaymentFor/PaymentFor';
 import { TaxSummary } from 'models/invoices/TaxSummary';
@@ -114,8 +114,7 @@ export class Payment extends FrappeDoc {
     payment_account: async (doc: Doc) => {
       const method = doc.payment_method as string | undefined;
       const type =
-        method &&
-        (await doc.fyo.getValue(ModelNameEnum.PaymentMethod, method, 'type'));
+        method && (await getValue('Books Payment Method', method, 'type'));
       if (type === 'Cash') {
         return { account_type: 'Cash', is_group: false };
       }

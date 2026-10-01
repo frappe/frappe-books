@@ -1,6 +1,6 @@
 import type { Doc } from 'fyo/model/doc';
 import type { HiddenMap } from 'fyo/model/types';
-import { getDocuments } from 'src/frappe/api';
+import { getItemUnits } from './units';
 
 /** Fields a stock row takes from its item and quantities again when the user edits them. */
 export const stockRowRefills: Record<string, string[]> = {
@@ -32,11 +32,7 @@ export function getStockRowHiddenMap(doc: Doc): HiddenMap {
 
 /** The units a row can move its item in: the stock unit and the item's conversions. */
 export async function getTransferUnitFilter(doc: Doc) {
-  const [item] = await getDocuments('Books Item', {
-    fields: ['unit', { uom_conversions: ['uom'] }],
-    filters: [['name', '=', doc.item as string]],
-  });
-  const conversions = (item?.uom_conversions ?? []) as { uom: string }[];
-  const units = [item?.unit, ...conversions.map(({ uom }) => uom)];
+  const { unit, factors } = await getItemUnits(doc.item as string);
+  const units = [unit, ...Object.keys(factors)];
   return { name: ['in', units.filter(Boolean) as string[]] };
 }

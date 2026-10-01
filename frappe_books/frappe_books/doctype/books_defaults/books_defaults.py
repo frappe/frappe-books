@@ -98,8 +98,8 @@ class BooksDefaults(Document):
 	def get_set_print_formats(self) -> dict[str, str | None]:
 		"""The print formats given to this copy, by DocType; the properties read the saved ones.
 
-		A field no one set has no value at all. Frappe stores a single's virtual values when it
-		saves, so a loaded copy holds the print formats as they were then.
+		A field no one set has no value at all, as Frappe stores no virtual single values since
+		frappe#43435. Before it, a loaded copy held the print formats of its last save.
 		"""
 		unset = object()
 		values = {

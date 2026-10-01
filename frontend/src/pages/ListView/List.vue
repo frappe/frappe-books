@@ -35,13 +35,22 @@
       >
         <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
           <FrappeListHeaderCell class="justify-end pe-2">#</FrappeListHeaderCell>
-          <FrappeListHeaderCell
-            v-for="column in columns"
-            :key="column.label"
-            :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
-          >
-            {{ column.label }}
-          </FrappeListHeaderCell>
+          <template v-for="column in columns" :key="column.label">
+            <FrappeListHeaderCellSort
+              v-if="isSortableField(schemaName, column.fieldname)"
+              :direction="getSortDirection(column.fieldname)"
+              :align="isNumeric(column.fieldtype) ? 'end' : 'start'"
+              @click="sortBy(column.fieldname)"
+            >
+              {{ column.label }}
+            </FrappeListHeaderCellSort>
+            <FrappeListHeaderCell
+              v-else
+              :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
+            >
+              {{ column.label }}
+            </FrappeListHeaderCell>
+          </template>
         </FrappeListHeader>
 
         <FrappeListRows :items="data" row-key="name">
@@ -132,10 +141,12 @@ import {
   ListCell as FrappeListCell,
   ListHeader as FrappeListHeader,
   ListHeaderCell as FrappeListHeaderCell,
+  ListHeaderCellSort as FrappeListHeaderCellSort,
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
 import Paginator from 'src/components/Paginator.vue';
+import { isSortableField, type ListSort } from 'src/frappe/list';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { loadListData, onListChange } from 'src/utils/listData';
@@ -159,6 +170,7 @@ export default defineComponent({
     FrappeListCell,
     FrappeListHeader,
     FrappeListHeaderCell,
+    FrappeListHeaderCellSort,
     FrappeListRow,
     FrappeListRows,
     FrappeScrollArea,
@@ -202,6 +214,7 @@ export default defineComponent({
       selectedItems: [] as string[],
       activeFilters: {} as QueryFilter,
       orFilters: {} as QueryFilter,
+      sort: null as ListSort | null,
       requestId: 0,
     };
   },
@@ -230,6 +243,7 @@ export default defineComponent({
         return;
       }
 
+      this.sort = null;
       await this.updateData({});
     },
     filters: {
@@ -245,6 +259,16 @@ export default defineComponent({
   },
   methods: {
     isNumeric,
+    isSortableField,
+    getSortDirection(fieldname: string): ListSort['direction'] | null {
+      return this.sort?.fieldname === fieldname ? this.sort.direction : null;
+    },
+    /** Ascending first, then flips; a new order starts from the first page. */
+    async sortBy(fieldname: string) {
+      const isAscending = this.getSortDirection(fieldname) === 'asc';
+      this.sort = { fieldname, direction: isAscending ? 'desc' : 'asc' };
+      await this.updateData(this.activeFilters, this.orFilters);
+    },
     async setPageIndices({ start, end }: { start: number; end: number }) {
       if (start === this.pageStart && end - start === this.pageLength) {
         return;

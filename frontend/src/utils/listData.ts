@@ -2,7 +2,7 @@ import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
 import { cloneDeep } from 'lodash';
 import type { QueryFilter } from 'utils/db/types';
-import { getFrappeListPage } from 'src/frappe/list';
+import { getFrappeListPage, type ListSort } from 'src/frappe/list';
 import { getSchema } from 'src/frappe/registry';
 import { toRaw } from 'vue';
 import { mergeQueryFilters } from './filterQuery';
@@ -16,6 +16,7 @@ export interface ListState {
   requestId: number;
   pageStart: number;
   pageLength: number;
+  sort?: ListSort | null;
 }
 
 /**
@@ -46,6 +47,7 @@ export async function loadListData(
     orFilters: list.orFilters,
     start: list.pageStart,
     limit: list.pageLength,
+    sort: list.sort,
   });
   if (requestId !== list.requestId) return;
   return { rows, total, appliedFilters };

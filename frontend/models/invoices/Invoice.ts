@@ -9,6 +9,7 @@ import {
   RequiredMap,
 } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
+import { addItem } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
@@ -219,17 +220,7 @@ export abstract class Invoice extends FrappeDoc {
 
   /** Adds a row for the item, or more of it to its row, as a barcode scan does. */
   async addItem(name: string, quantity = 1) {
-    if (!this.canEdit) {
-      return;
-    }
-
-    const row = this.items?.find(({ item }) => item === name);
-    if (row) {
-      await row.set('quantity', (row.quantity ?? 0) + quantity);
-      return;
-    }
-
-    await this.append('items', { item: name, quantity });
+    await addItem(name, this, quantity);
   }
 }
 

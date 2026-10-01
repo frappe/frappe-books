@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getFilterFields } from './helpers/accounting.mjs';
+import { doctypes } from './helpers/doctypes.mjs';
 import {
   createFilters,
   evaluateHidden,
@@ -41,6 +42,26 @@ test('a payment reference shows its invoice type as Sales or Purchase', () => {
     'reference_name',
     'amount',
   ]);
+});
+
+test('the payment type offers Receive and Pay only, and starts empty', () => {
+  // The empty first option keeps Frappe from defaulting new payments to Receive.
+  const docfield = doctypes
+    .find(({ name }) => name === 'Books Payment')
+    .fields.find(({ fieldname }) => fieldname === 'payment_type');
+  assert.equal(docfield.options, '\nReceive\nPay');
+
+  const field = getSchema('Payment').fields.find(
+    ({ fieldname }) => fieldname === 'payment_type'
+  );
+  assert.deepEqual(
+    field.options.map(({ value, label }) => [value, label]),
+    [
+      ['Receive', 'Receive'],
+      ['Pay', 'Pay'],
+    ]
+  );
+  assert.equal(newFrappeDoc('Payment').payment_type, null);
 });
 
 test('payment fields hide as they did', () => {

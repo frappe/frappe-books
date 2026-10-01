@@ -53,6 +53,7 @@
         size="small"
         :df="item.field"
         :show-label="item.field.fieldtype === 'Check'"
+        :inline-label="item.field.fieldtype === 'Select'"
         :layout="item.field.fieldtype === 'Check' ? 'inline' : undefined"
         :value="report.get(item.field.fieldname)"
         :read-only="loading"

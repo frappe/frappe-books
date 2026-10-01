@@ -3,8 +3,7 @@ import countryInfo from '../../frappe_books/data/country_info.json';
 import { CountryInfoMap } from './types';
 
 export function getCountryInfo(): CountryInfoMap {
-  // @ts-expect-error some countries have no fiscal year dates
-  return countryInfo as CountryInfoMap;
+  return countryInfo;
 }
 
 export function getFiscalYear(

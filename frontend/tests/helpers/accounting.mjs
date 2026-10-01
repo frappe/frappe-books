@@ -5,7 +5,6 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { withFieldProperties } from './doctypes.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'books-accounting-tests-'));
 after(() => rm(directory, { recursive: true, force: true }));
@@ -16,8 +15,6 @@ await build({
   stdin: {
     contents: `
       export { Fyo } from './fyo';
-      export { getSchemas } from './schemas';
-      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
       export { frappeModels } from './models';
       export { BalanceSheet } from './reports/BalanceSheet/BalanceSheet';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
@@ -77,8 +74,6 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 const bundle = createRequire(import.meta.url)(output);
-export const { fieldProperties, getSchemas } =
-  withFieldProperties(bundle);
 export const {
   Fyo,
   frappeModels,

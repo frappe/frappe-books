@@ -1,14 +1,10 @@
-import { fieldProperties, getSchemas } from './accounting.mjs';
-import { getBooksMeta, mapping } from './doctypes.mjs';
+import { getBooksMeta } from './doctypes.mjs';
 import {
   frappeModels,
   loadFrappeDocTypes,
   registerFrappeModels,
   stubFrappe,
 } from './frappe.mjs';
-
-/** The schemas the bridge built for each model, to compare Frappe-backed ones with. */
-export const bridgeSchemas = getSchemas('in', [], fieldProperties);
 
 /** Loads every Frappe-backed model with its DocType files, as the app does at startup. */
 export async function loadFrappeModels() {
@@ -21,13 +17,8 @@ export async function loadFrappeModels() {
   await loadFrappeDocTypes();
 }
 
-/** A schema's DocType fieldname for each of its bridge fieldnames. */
-export function getFrappeFieldnames(schemaName) {
-  return mapping[schemaName].fields;
-}
-
-/** The fields a form shows, by Frappe fieldname, with their labels, placeholders and sections. */
-export function getLayout(schema, fieldnames = {}) {
+/** The fields a form shows, with their labels, placeholders and sections. */
+export function getLayout(schema) {
   return (
     schema.fields
       // Rows never show their name.
@@ -35,7 +26,7 @@ export function getLayout(schema, fieldnames = {}) {
       .filter((field) => !field.meta && !field.hidden)
       .map(({ fieldname, label, placeholder, section }) =>
         [
-          fieldnames[fieldname] ?? fieldname,
+          fieldname,
           label,
           placeholder ?? '',
           section ?? 'Default',

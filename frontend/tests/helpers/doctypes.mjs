@@ -2,9 +2,6 @@ import { readFileSync, readdirSync } from 'node:fs';
 
 const appRoot = new URL('../../../frappe_books/', import.meta.url);
 
-export const mapping = readJson(
-  new URL('schema_mapping.json', appRoot)
-).doctypes;
 export const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 
 /**
@@ -177,25 +174,3 @@ function readJson(url) {
  * The field properties the server sends for the DocType files, and schemas built with them.
  * A custom field's `docfield` stands for the properties of its Custom Field.
  */
-export function withFieldProperties({ getSchemas, getDoctypeFieldProperties }) {
-  const fieldProperties = getDoctypeFieldProperties(doctypes, mapping);
-  return {
-    fieldProperties,
-    getSchemas: (countryCode, customFields, properties = fieldProperties) =>
-      getSchemas(
-        countryCode,
-        customFields,
-        withCustomFields(properties, customFields)
-      ),
-  };
-}
-
-function withCustomFields(properties, customFields) {
-  const merged = { ...properties };
-  for (const { parent, fieldname, docfield } of customFields) {
-    if (docfield) {
-      merged[parent] = { ...merged[parent], [fieldname]: docfield };
-    }
-  }
-  return merged;
-}

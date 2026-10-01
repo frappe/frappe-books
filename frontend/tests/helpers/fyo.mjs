@@ -5,7 +5,6 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { withFieldProperties } from './doctypes.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'books-model-tests-'));
 after(() => rm(directory, { recursive: true, force: true }));
@@ -16,9 +15,6 @@ await build({
   stdin: {
     contents: `
       export { Fyo } from './fyo';
-      export { getSchemas } from './schemas';
-      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
-      export { dataProperties, isReferenceField } from './schemas/fieldProperties';
       export { FieldTypeEnum } from './schemas/types';
     `,
     resolveDir: frontend,
@@ -40,10 +36,4 @@ await build({
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 const bundle = createRequire(import.meta.url)(output);
-export const {
-  Fyo,
-  dataProperties,
-  isReferenceField,
-  FieldTypeEnum,
-} = bundle;
-export const { fieldProperties, getSchemas } = withFieldProperties(bundle);
+export const { Fyo, FieldTypeEnum } = bundle;

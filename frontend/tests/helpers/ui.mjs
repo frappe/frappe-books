@@ -25,6 +25,7 @@ await build({
       export { default as FilterValueInput } from './src/components/FilterValueInput.vue';
       export { default as Link } from './src/components/Controls/Link.vue';
       export { default as MultiLabelLink } from './src/components/Controls/MultiLabelLink.vue';
+      export { default as GetStarted } from './src/pages/GetStarted.vue';
     `,
     resolveDir: frontend,
   },
@@ -45,7 +46,7 @@ await build({
         }));
         // Components under test keep their script; the rest are stubs.
         const tested =
-          /\/(FilterLinkInput|FilterValueInput|Link|MultiLabelLink)\.vue$/;
+          /\/(FilterLinkInput|FilterValueInput|Link|MultiLabelLink|GetStarted)\.vue$/;
         builder.onLoad({ filter: tested }, async (args) => ({
           contents: (await readFile(args.path, 'utf8')).match(
             /<script[^>]*>([\s\S]*?)<\/script>/
@@ -73,4 +74,5 @@ export const {
   FilterValueInput,
   Link,
   MultiLabelLink,
+  GetStarted,
 } = createRequire(import.meta.url)(output);

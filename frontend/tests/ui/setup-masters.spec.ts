@@ -7,7 +7,9 @@ useBooksSession();
 test('a new tax template saves its detail rows', async ({ page }) => {
   const name = `Form Tax ${Date.now()}`;
   await openNewEntry(page, 'Tax');
-  await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
+  await page
+    .getByRole('textbox', { name: 'Name (required)', exact: true })
+    .fill(name);
   await page.getByText('Add Row', { exact: true }).click();
   const account = page.getByRole('combobox', { name: 'Tax Invoice Account' });
   await account.fill('CGST');
@@ -33,8 +35,12 @@ test('a new payment method saves with its account', async ({ page }) => {
   const name = `Form Method ${Date.now()}`;
   await openNewEntry(page, 'PaymentMethod');
 
-  await page.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
-  await page.getByRole('combobox', { name: 'Type', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'Name (required)', exact: true })
+    .fill(name);
+  await page
+    .getByRole('combobox', { name: 'Type (required)', exact: true })
+    .click();
   await page.getByRole('option', { name: 'Bank', exact: true }).click();
   const account = page.getByRole('combobox', { name: 'Account', exact: true });
   await account.fill('UI Test Bank');
@@ -52,7 +58,7 @@ test('a new currency saves under the name typed', async ({ page }) => {
   await openNewEntry(page, 'Currency');
 
   const currencyName = page.getByRole('textbox', {
-    name: 'Currency Name',
+    name: 'Currency Name (required)',
     exact: true,
   });
   await expect(currencyName).toBeFocused();
@@ -67,9 +73,7 @@ test('a new currency saves under the name typed', async ({ page }) => {
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/Currency/${encodeURIComponent(name)}$`)
   );
-  await expect(
-    page.getByRole('textbox', { name: 'Currency Name', exact: true })
-  ).toBeDisabled();
+  await expect(currencyName).toBeDisabled();
 });
 
 test('a new number series saves with a labelled reference type', async ({
@@ -78,8 +82,12 @@ test('a new number series saves with a labelled reference type', async ({
   const name = `NS${Date.now()}-`;
   await openNewEntry(page, 'NumberSeries');
 
-  await page.getByRole('textbox', { name: 'Prefix', exact: true }).fill(name);
-  await page.getByRole('combobox', { name: 'Reference Type' }).click();
+  await page
+    .getByRole('textbox', { name: 'Prefix (required)', exact: true })
+    .fill(name);
+  await page
+    .getByRole('combobox', { name: 'Reference Type (required)' })
+    .click();
   await page
     .getByRole('option', { name: 'Sales Invoice', exact: true })
     .click();

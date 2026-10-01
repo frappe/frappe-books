@@ -447,17 +447,17 @@ export async function addBatchItem(
 /** The columns of the POS invoice pickers. */
 export function getPOSInvoiceFields(): Field[] {
   return [
-    { fieldname: 'name', label: 'Name', fieldtype: 'Data', readOnly: true },
+    { fieldname: 'name', label: t`Name`, fieldtype: 'Data', readOnly: true },
     {
       fieldname: 'party',
-      label: 'Customer',
+      label: t`Customer`,
       fieldtype: 'Data',
       readOnly: true,
     },
-    { fieldname: 'date', label: 'Date', fieldtype: 'Date', readOnly: true },
+    { fieldname: 'date', label: t`Date`, fieldtype: 'Date', readOnly: true },
     {
       fieldname: 'grand_total',
-      label: 'Grand Total',
+      label: t`Grand Total`,
       fieldtype: 'Currency',
       readOnly: true,
     },

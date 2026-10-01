@@ -104,7 +104,7 @@ export function getFieldModel(
   schemaName: string,
   doc?: Doc | null
 ): typeof Doc | undefined {
-  if (doc?.schemaName === schemaName) {
+  if (doc && doc.schemaName === schemaName) {
     return doc.constructor as typeof Doc;
   }
 

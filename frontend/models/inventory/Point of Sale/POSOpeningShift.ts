@@ -11,10 +11,24 @@ export type ShiftAmount = FrappeDoc & {
   amount?: Money;
 };
 
+/** A Books Opening Cash row. */
+export class OpeningCash extends FrappeDoc {
+  static override presentation = { label: 'Opening Cash In Denominations' };
+}
+
+/** A Books Opening Amounts row. */
+export class OpeningAmounts extends FrappeDoc {
+  static override presentation = { label: 'Opening Amount' };
+}
+
 /** Books Pos Opening Shift, served by Frappe. */
 export class POSOpeningShift extends FrappeDoc {
   static override doctype = 'Books Pos Opening Shift';
   static override presentation = { label: 'POS Opening Shift' };
+  static override rowModels = {
+    opening_cash: OpeningCash,
+    opening_amounts: OpeningAmounts,
+  };
 
   declare opening_date?: Date;
   declare opening_cash?: CashCount[];

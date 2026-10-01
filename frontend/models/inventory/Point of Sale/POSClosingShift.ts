@@ -13,12 +13,26 @@ export type ClosingAmount = FrappeDoc & {
   difference_amount?: Money;
 };
 
+/** A Books Closing Cash row. */
+export class ClosingCash extends FrappeDoc {
+  static override presentation = { label: 'Closing Cash In Denominations' };
+}
+
+/** A Books Closing Amounts row. */
+export class ClosingAmounts extends FrappeDoc {
+  static override presentation = { label: 'Closing Amount' };
+}
+
 /** Books Pos Closing Shift, served by Frappe; its preview fills the expected amounts. */
 export class POSClosingShift extends FrappeDoc {
   static override doctype = 'Books Pos Closing Shift';
   static override presentation = {
     label: 'POS Closing Shift',
     fields: withoutCreate(['opening_shift']),
+  };
+  static override rowModels = {
+    closing_cash: ClosingCash,
+    closing_amounts: ClosingAmounts,
   };
   static override previewMethod = 'preview';
 

@@ -267,6 +267,7 @@ import {
   isTypingInField,
   getQuickQtyBuffer,
   getPOSQuantityField,
+  getInvoicePayments,
 } from 'src/utils/pos';
 import {
   getItemVisibility,
@@ -846,6 +847,11 @@ export default defineComponent({
         } else {
           await this.setTenderedPayments(payments);
           await this.submitSinvDoc();
+          if (payments.length) {
+            this.showPaymentToasts(
+              await getInvoicePayments(this.sinvDoc.name!)
+            );
+          }
         }
 
         this.closeAllModals();
@@ -944,6 +950,9 @@ export default defineComponent({
             : null,
         })),
       });
+      this.showPaymentToasts(names);
+    },
+    showPaymentToasts(names: string[]) {
       for (const name of names) {
         showToast({
           type: 'success',

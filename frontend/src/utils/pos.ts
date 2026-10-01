@@ -23,6 +23,7 @@ import { getField, getSchema } from 'src/frappe/registry';
 import { getFrappeDoc } from 'src/frappe/documents';
 import { toDocValues } from 'src/frappe/values';
 import { fyo } from 'src/initFyo';
+import { call } from 'src/web/api';
 import { safeParseFloat } from 'utils/index';
 import { showToast } from './interactive';
 import type { POSPermissions } from './posSetup';
@@ -445,6 +446,22 @@ export async function getPOSInvoices(
   return rows.map((row) =>
     toDocValues(schema, row, fyo, (target) => getSchema(target)!)
   );
+}
+
+/** The payments of a sales invoice, oldest first; at checkout, those the server made with its submit. */
+export async function getInvoicePayments(invoice: string): Promise<string[]> {
+  const rows = await call<DocValues[]>('frappe.client.get_list', {
+    doctype: 'Books Payment For',
+    parent: 'Books Payment',
+    fields: ['parent'],
+    filters: [
+      ['reference_type', '=', 'Books Sales Invoice'],
+      ['reference_name', '=', invoice],
+    ],
+    order_by: 'creation asc',
+    limit_page_length: 0,
+  });
+  return rows.map(({ parent }) => parent as string);
 }
 
 /** An item the server serves, for its stock tracking, batches and units. */

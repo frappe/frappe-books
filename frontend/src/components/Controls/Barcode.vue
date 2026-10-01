@@ -87,12 +87,9 @@ export default defineComponent({
       this.cooldown = barcode;
       setTimeout(() => (this.cooldown = ''), 100);
 
-      const items = await getScannableItems();
-      const scanned = findScannedPOSItem(
-        items,
-        barcode,
-        this.fyo.singles.POSSettings
-      );
+      const settings = this.fyo.singles.POSSettings;
+      const items = await getScannableItems(barcode, settings);
+      const scanned = findScannedPOSItem(items, barcode, settings);
       if (!scanned) {
         return this.error(this.t`Item with barcode ${barcode} not found.`);
       }

@@ -133,7 +133,7 @@ test('the wizard offers Books’ fields in Books’ order', () => {
 
 test('Submitted and Cancelled follow the docstatus', async () => {
   const requests = stubFrappe(() => ({
-    data: [
+    message: [
       { name: 'JV-1', docstatus: 0 },
       { name: 'JV-2', docstatus: 1 },
       { name: 'JV-3', docstatus: 2 },
@@ -151,7 +151,7 @@ test('Submitted and Cancelled follow the docstatus', async () => {
     filters: {},
   });
 
-  assert.deepEqual(requests[0].params.fields, ['name', 'docstatus']);
+  assert.deepEqual(requests[0].body.fields, ['name', 'docstatus']);
   assert.deepEqual(parseCSV(csv).slice(2), [
     ['JV-1', 'false', 'false'],
     ['JV-2', 'true', 'false'],
@@ -166,7 +166,7 @@ const pick = (fields, fieldnames) =>
 
 test('files hold Books’ keys and values', async () => {
   stubFrappe(() => ({
-    data: [
+    message: [
       {
         name: 'PAY-1',
         date: '2026-09-30 10:00:00',
@@ -251,7 +251,7 @@ test('files hold Books’ keys and values', async () => {
 });
 
 test('files hold virtual amounts as 0 and other unread values as null', async () => {
-  stubFrappe(() => ({ data: [{ name: 'SINV-' }] }));
+  stubFrappe(() => ({ message: [{ name: 'SINV-' }] }));
   const series = await getJsonExportData({
     schemaName: 'NumberSeries',
     fields: pick(getExportFields('NumberSeries'), ['name', 'current']),
@@ -272,7 +272,7 @@ test('files hold virtual amounts as 0 and other unread values as null', async ()
 });
 
 test('files keep the keys Books renamed', async () => {
-  stubFrappe(() => ({ data: [] }));
+  stubFrappe(() => ({ message: [] }));
   const keys = async (schemaName, fieldnames) => {
     const fields = pick(getExportFields(schemaName), fieldnames);
     const tableFields = getExportTableFields(schemaName)
@@ -313,8 +313,11 @@ test('every exported table is headed by the label of its rows, not their doctype
 
 test('a list exports from the framework a page at a time, in list order', async () => {
   const names = Array.from({ length: 700 }, (_, i) => ({ name: `JV-${i}` }));
-  const requests = stubFrappe(({ params }) => ({
-    data: names.slice(params.start, params.start + params.limit),
+  const requests = stubFrappe(({ body }) => ({
+    message: names.slice(
+      body.limit_start,
+      body.limit_start + body.limit_page_length
+    ),
   }));
   const query = {
     schemaName: 'JournalEntry',
@@ -325,23 +328,24 @@ test('a list exports from the framework a page at a time, in list order', async 
 
   const limited = await getJsonExportData({ ...query, limit: 1 });
   assert.deepEqual(JSON.parse(limited), [{ name: 'JV-0' }]);
-  assert.equal(requests[0].path, '/api/v2/document/Books Journal Entry');
-  assert.deepEqual(requests[0].params, {
+  assert.equal(requests[0].path, '/api/method/frappe.client.get_list');
+  assert.deepEqual(requests[0].body, {
+    doctype: 'Books Journal Entry',
     fields: ['name'],
     filters: [
       ['name', 'like', 'JV%'],
       ['docstatus', 'in', [1, 2]],
     ],
     order_by: 'posting_date desc, creation desc',
-    start: 0,
-    limit: 1,
+    limit_start: 0,
+    limit_page_length: 1,
   });
 
   requests.length = 0;
   const all = await getJsonExportData({ ...query, limit: null });
   assert.equal(JSON.parse(all).length, 700);
   assert.deepEqual(
-    requests.map(({ params }) => [params.start, params.limit]),
+    requests.map(({ body }) => [body.limit_start, body.limit_page_length]),
     [
       [0, 500],
       [500, 500],
@@ -351,7 +355,7 @@ test('a list exports from the framework a page at a time, in list order', async 
 
 test("CSV repeats a document's values on each row of its tables", async () => {
   const requests = stubFrappe(() => ({
-    data: [
+    message: [
       {
         name: 'SINV-1',
         party: 'Acme',
@@ -384,7 +388,7 @@ test("CSV repeats a document's values on each row of its tables", async () => {
   });
 
   // A virtual field has no column to read.
-  assert.deepEqual(requests[0].params.fields, [
+  assert.deepEqual(requests[0].body.fields, [
     'name',
     'party',
     { items: ['item', 'rate'] },

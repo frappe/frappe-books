@@ -1,7 +1,13 @@
 import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
 import type { QueryFilter } from 'utils/db/types';
-import { getCount, getDocuments, type DocValues, type Filter } from './api';
+import {
+  getCount,
+  getDocuments,
+  getList,
+  type DocValues,
+  type Filter,
+} from './api';
 import { getDocType, type FrappeDocType } from './doctypes';
 import { toDocValues } from './values';
 
@@ -29,9 +35,10 @@ export async function getFrappeListPage(
   const filters = toFrappeFilters(page.filters);
   const orFilters = toFrappeFilters(page.orFilters);
   const [rows, total] = await Promise.all([
-    getDocuments(docType.doctype, {
+    getList(docType.doctype, {
       fields: ['*'],
-      filters: combineFilters(filters, orFilters),
+      filters,
+      orFilters,
       orderBy: getOrderBy(docType),
       start: page.start,
       limit: page.limit,
@@ -113,21 +120,4 @@ function toFrappeFilter(
   }
 
   return [fieldname, operator, typeof value === 'boolean' ? +value : value];
-}
-
-/** All of `filters`, and one of `orFilters` when there are any. */
-function combineFilters(filters: Filter[], orFilters: Filter[]): Filter[] {
-  if (!orFilters.length) {
-    return filters;
-  }
-
-  const anyOf = orFilters.length === 1 ? orFilters[0] : join(orFilters, 'or');
-  return join([...filters, anyOf], 'and');
-}
-
-/** Frappe's nested filter form: `[filter, 'and', filter, ...]`. */
-function join(filters: Filter[], operator: 'and' | 'or'): Filter[] {
-  return filters.flatMap((filter, index) =>
-    index ? [operator, filter] : [filter]
-  ) as Filter[];
 }

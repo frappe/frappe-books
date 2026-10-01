@@ -1,7 +1,7 @@
 import { t } from 'fyo/utils/translation';
 import { camelCase } from 'lodash';
 import { Field, FieldType, FieldTypeEnum, TargetField } from 'schemas/types';
-import { getDocuments, type DocValues, type ListQuery } from 'src/frappe/api';
+import { getList, type DocValues, type ListQuery } from 'src/frappe/api';
 import { getDocType } from 'src/frappe/doctypes';
 import { isReferenceField } from 'src/frappe/fieldProperties';
 import { getOrderBy, toFrappeFilters } from 'src/frappe/list';
@@ -327,7 +327,7 @@ async function getFrappeRows(
     ...getStoredFieldnames(schemaName, fields).filter((f) => f !== 'name'),
     ...tables,
   ];
-  return await getDocuments(docType.doctype, {
+  return await getList(docType.doctype, {
     fields: queryFields,
     filters: toFrappeFilters(filters),
     orderBy: getOrderBy(docType),

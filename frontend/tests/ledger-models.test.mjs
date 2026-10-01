@@ -62,7 +62,7 @@ test('a ledger entry shows the schema of its voucher as Books did', () => {
 
 test('the accounting ledger lists newest posting first', async () => {
   const requests = stubFrappe(({ path }) =>
-    path.endsWith('/count') ? { data: 0 } : { data: [] }
+    path.endsWith('/count') ? { data: 0 } : { message: [] }
   );
   const page = { filters: {}, orFilters: {}, start: 0, limit: 20 };
   await getFrappeListPage(fyo, 'AccountingLedgerEntry', page);
@@ -71,7 +71,7 @@ test('the accounting ledger lists newest posting first', async () => {
   assert.deepEqual(
     requests
       .filter(({ path }) => !path.endsWith('/count'))
-      .map(({ params }) => params.order_by),
+      .map(({ body }) => body.order_by),
     [
       'posting_date desc, creation desc',
       'date desc, creation desc',

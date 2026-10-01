@@ -118,7 +118,7 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
     fields.filter(({ fieldname }) => fieldnames.includes(fieldname));
   const [items] = getExportTableFields('SalesInvoice');
   stubFrappe(() => ({
-    data: [
+    message: [
       {
         name: 'SINV-1',
         number_series: 'SINV-',

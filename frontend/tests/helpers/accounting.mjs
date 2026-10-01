@@ -21,7 +21,6 @@ await build({
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { TrialBalance } from './reports/TrialBalance/TrialBalance';
       export { loadTranslations, useTranslations } from './src/web/translations';
-      export { getAccountLabel } from './src/utils/accountLabel';
       export { t, setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { getJsonData, getCsvData } from './reports/commonExporter';
       export { getDocStatus, getDocStatusBadge, getLoyaltyProgramBadge, getStateBadge } from './models/helpers';
@@ -85,7 +84,6 @@ export const {
   TrialBalance,
   loadTranslations,
   useTranslations,
-  getAccountLabel,
   t,
   setLanguageMapOnTranslationString,
   getJsonData,

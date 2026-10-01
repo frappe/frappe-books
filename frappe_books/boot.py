@@ -1,6 +1,6 @@
 from frappe.utils.jinja_globals import bundled_asset
 
-from frappe_books.coa import chart_options, standard_account_labels
+from frappe_books.coa import chart_options
 from frappe_books.regional import INDIAN_STATES
 from frappe_books.settings import regional_code
 
@@ -10,7 +10,6 @@ def extend_bootinfo(bootinfo):
 	bootinfo.books = {
 		"country_code": regional_code(),
 		"charts_of_accounts": chart_options(),
-		"account_labels": standard_account_labels(),
 		"indian_states": INDIAN_STATES,
 		# The stylesheet Frappe prints with, for print previews in /books
 		"print_style": bundled_asset("print.bundle.css"),

@@ -134,7 +134,6 @@ export default defineComponent({
       fyo.store.isDevelopment = !!boot.developer_mode;
       fyo.store.appVersion = boot.versions?.frappe_books ?? '';
       fyo.store.chartsOfAccounts = books.charts_of_accounts;
-      fyo.store.accountLabels = books.account_labels;
       fyo.store.indianStates = books.indian_states;
       fyo.setCurrencySymbols(boot.docs);
       fyo.user = boot.user.name;

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.client import get_list
 from frappe.desk.search import search_widget
@@ -60,6 +62,23 @@ class IntegrationTestSearchPalette(IntegrationTestCase):
 			[(row.item, row.parent, row.parenttype) for row in found], [(item, invoice.name, INVOICE)]
 		)
 		self.assertEqual(self._search(INVOICE, invoice.name, ["name", "docstatus"])[0].docstatus, 1)
+
+	def test_accounts_are_found_by_their_names_in_the_users_language(self):
+		account = make_account(f"Search Cash {frappe.generate_hash(length=6)}").name
+		translated = f"Suchkasse {frappe.generate_hash(length=6)}"
+		frappe.get_doc(
+			{
+				"doctype": "Translation",
+				"language": "de",
+				"source_text": account,
+				"translated_text": translated,
+			}
+		).insert()
+
+		with self.set_user(ensure_user(USER, "Books User")), patch.object(frappe.local, "lang", "de"):
+			found = search_widget("Books Account", translated.lower(), page_length=5, as_dict=True)
+
+		self.assertEqual([row.name for row in found], [account])
 
 	def _search(self, doctype, word, fields):
 		with self.set_user(ensure_user(USER, "Books User")):

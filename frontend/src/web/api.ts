@@ -145,7 +145,6 @@ declare global {
         books?: {
           country_code: string;
           charts_of_accounts: ChartOfAccounts[];
-          account_labels: Record<string, string>;
           indian_states: Record<string, string>;
           print_style: string;
         };

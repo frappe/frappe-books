@@ -1,5 +1,6 @@
 import { camelCase, mapKeys, snakeCase } from 'lodash';
 import { FieldType, RawValue } from 'schemas/types';
+import { toSchemaName } from 'src/frappe/registry';
 import { isNumeric } from 'src/utils';
 import { call } from 'src/web/api';
 import { ColumnField } from './types';
@@ -11,6 +12,7 @@ export interface ServerColumn {
   fieldname: string;
   label: string;
   fieldtype: FieldType;
+  options?: string;
   width?: number;
 }
 
@@ -60,6 +62,10 @@ export function toColumnField(column: ServerColumn): ColumnField {
     fieldtype: column.fieldtype,
     align: isNumeric(column.fieldtype) ? 'right' : 'left',
     width: (column.width ?? COLUMN_UNIT) / COLUMN_UNIT,
+    target:
+      column.fieldtype === 'Link' && column.options
+        ? toSchemaName(column.options)
+        : undefined,
   };
 }
 

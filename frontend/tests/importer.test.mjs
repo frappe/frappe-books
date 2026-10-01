@@ -84,6 +84,26 @@ test('an invoice template keeps Books’ column order, without the quantity the 
   assert.ok(!headers.includes('Qty (Items)'));
 });
 
+test('each table’s columns start with its row ID, which is not imported', () => {
+  const importer = new Importer('SalesInvoice', fyo);
+  const headers = parseCSV(importer.getCSVTemplate())[0];
+  const items = headers.filter((header) => header.endsWith('(Items)'));
+
+  assert.deepEqual(items.slice(0, 2), ['ID (Items)', 'Item (Items)']);
+  assert.ok(headers.includes('ID (Coupons)'));
+
+  importer.assignedTemplateFields = [
+    'SalesInvoice.name',
+    'SalesInvoiceItem.name',
+    'SalesInvoiceItem.item',
+  ];
+  importer.valueMatrix = [[{ value: 'A' }, { value: 'R-1' }, { value: 'Pen' }]];
+  assert.deepEqual(parseCSV(importer.getImportFile().csv), [
+    ['docstatus', 'items.item'],
+    ['0', 'Pen'],
+  ]);
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;

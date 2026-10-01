@@ -138,9 +138,12 @@ class IntegrationTestUnits(IntegrationTestCase):
 		self.assertEqual(saved.transfer_rate, 40)
 
 	def test_row_unit_must_be_a_unit_of_the_item(self):
-		movement = self._receipt({"transfer_unit": make_uom("Crate"), "unit_conversion_factor": 6})
+		crate = make_uom("Crate")
+		movement = self._receipt({"transfer_unit": crate, "unit_conversion_factor": 6})
 
-		self.assertRaisesRegex(frappe.ValidationError, "not applicable", movement.insert)
+		# The text the /books row form shows at the field.
+		message = f"^Transfer Unit {crate} is not applicable for Item {self.item.name}$"
+		self.assertRaisesRegex(frappe.ValidationError, message, movement.insert)
 
 	def test_whole_number_units_take_whole_quantities(self):
 		piece = make_uom("Piece", is_whole=1)

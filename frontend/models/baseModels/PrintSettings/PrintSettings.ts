@@ -1,22 +1,29 @@
-import { Doc } from 'fyo/model/doc';
-import { HiddenMap } from 'fyo/model/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class PrintSettings extends Doc {
-  logo?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  companyName?: string;
-  color?: string;
-  font?: string;
-  displayLogo?: boolean;
-  displayTime?: boolean;
-  displayDescription?: boolean;
-  displaytermsandconditions?: boolean;
-  termsAndConditions?: string;
-  posPrintWidth?: number;
-  amountInWords?: boolean;
-  override hidden: HiddenMap = {
-    termsAndConditions: () => !this.displaytermsandconditions,
+/** Books Print Settings, served by Frappe: what print formats show of the company. */
+export class PrintSettings extends FrappeDoc {
+  static override doctype = 'Books Print Settings';
+  static override presentation = {
+    label: 'Print Settings',
+    fields: {
+      color: {
+        options: [
+          { label: 'Red', value: '#f56565' },
+          { label: 'Orange', value: '#ed8936' },
+          { label: 'Yellow', value: '#ecc94b' },
+          { label: 'Green', value: '#48bb78' },
+          { label: 'Teal', value: '#38b2ac' },
+          { label: 'Blue', value: '#33a1ff' },
+          { label: 'Indigo', value: '#667eea' },
+          { label: 'Purple', value: '#9f7aea' },
+          { label: 'Pink', value: '#ed64a6' },
+          { label: 'Black', value: '#112B42' },
+        ],
+      },
+    },
   };
+
+  declare logo?: string;
+  declare company_name?: string;
+  declare display_logo?: boolean;
 }

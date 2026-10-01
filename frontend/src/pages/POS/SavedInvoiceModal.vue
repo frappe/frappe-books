@@ -57,11 +57,10 @@
 <script lang="ts">
 import Modal from 'src/components/POS/POSDialog.vue';
 import InvoiceSelectionTable from 'src/components/POS/InvoiceSelectionTable.vue';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { DocValueMap } from 'fyo/core/types';
 import { defineComponent } from 'vue';
-import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
-import { Money } from 'pesa';
+import { getPOSInvoices } from 'src/utils/pos';
 import { TabButtons as FrappeTabButtons, TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
 
@@ -85,8 +84,8 @@ export default defineComponent({
   data() {
     return {
       savedInvoiceList: true,
-      savedInvoices: [] as SalesInvoice[],
-      submittedInvoices: [] as SalesInvoice[],
+      savedInvoices: [] as DocValueMap[],
+      submittedInvoices: [] as DocValueMap[],
       invoiceSearchTerm: '',
       selectedInvoiceName: '',
     };
@@ -123,7 +122,7 @@ export default defineComponent({
           readOnly: true,
         },
         {
-          fieldname: 'grandTotal',
+          fieldname: 'grand_total',
           label: 'Grand Total',
           fieldtype: 'Currency',
           readOnly: true,
@@ -160,20 +159,15 @@ export default defineComponent({
 
   methods: {
     async setSavedInvoices() {
-      this.savedInvoices = (await this.fyo.db.getAll(ModelNameEnum.SalesInvoice, {
-        fields: [],
-        filters: { isPOS: true, submitted: false },
-      })) as SalesInvoice[];
+      this.savedInvoices = await getPOSInvoices([['docstatus', '=', 0]]);
     },
+    /** Submitted sales still owed, which the POS takes payment for. */
     async setSubmittedInvoices() {
-      const invoices = (await this.fyo.db.getAll(ModelNameEnum.SalesInvoice, {
-        fields: [],
-        filters: { isPOS: true, submitted: true, returnAgainst: null },
-      })) as SalesInvoice[];
-
-      this.submittedInvoices = invoices.filter(
-        (invoice) => !(invoice.outstandingAmount as Money).isZero(),
-      );
+      this.submittedInvoices = await getPOSInvoices([
+        ['docstatus', 'in', [1, 2]],
+        ['return_against', 'is', 'not set'],
+        ['outstanding_amount', '!=', 0],
+      ]);
     },
     closeModal() {
       this.selectedInvoiceName = '';

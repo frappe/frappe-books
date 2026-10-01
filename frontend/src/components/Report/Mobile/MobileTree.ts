@@ -187,7 +187,7 @@ export class MobileTree {
       (total, cell) => total + Number(cell?.rawValue ?? 0),
       0
     );
-    const precision = this.report.fyo.singles.SystemSettings?.displayPrecision;
+    const precision = this.report.fyo.singles.SystemSettings?.display_precision;
     const isZero = Number(sum.toFixed(precision ?? 2)) === 0;
     if (cells.length === 1) {
       return { text: cells[0]?.value ?? '', isZero };

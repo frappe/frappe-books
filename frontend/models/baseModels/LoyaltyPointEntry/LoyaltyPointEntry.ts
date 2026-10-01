@@ -1,22 +1,21 @@
-import { Doc } from 'fyo/model/doc';
 import { ListViewSettings } from 'fyo/model/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class LoyaltyPointEntry extends Doc {
-  loyaltyProgram?: string;
-  loyaltyProgramTier?: string;
-  customer?: string;
-  invoice?: string;
-  purchaseAmount?: number;
-  postingDate?: Date;
-  expiryDate?: Date;
+/** Books Loyalty Point Entry, served by Frappe. Only the server posts entries. */
+export class LoyaltyPointEntry extends FrappeDoc {
+  static override doctype = 'Books Loyalty Point Entry';
+  static override presentation = {
+    label: 'Loyalty Point Entry',
+    nameField: { label: 'Entry No.' },
+  };
 
   static override getListViewSettings(): ListViewSettings {
     return {
       columns: [
-        'loyaltyProgram',
+        'loyalty_program',
         'customer',
-        'purchaseAmount',
-        'loyaltyPoints',
+        'purchase_amount',
+        'loyalty_points',
       ],
     };
   }

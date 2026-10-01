@@ -56,18 +56,18 @@
    "label": "Contacts"
   },
   {
-   "description": "john@doe.com",
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email",
-   "options": "Email"
+   "options": "Email",
+   "placeholder": "john@doe.com"
   },
   {
-   "description": "Phone",
    "fieldname": "phone",
    "fieldtype": "Data",
    "label": "Phone",
-   "options": "Phone"
+   "options": "Phone",
+   "placeholder": "Phone"
   },
   {
    "fieldname": "address",
@@ -87,11 +87,11 @@
    "options": "Books Account"
   },
   {
-   "description": "INR",
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
-   "options": "Currency"
+   "options": "Currency",
+   "placeholder": "INR"
   },
   {
    "fieldname": "references_section_break_11",
@@ -141,13 +141,14 @@
   },
   {
    "default": "Unregistered",
-   "description": "GST Registration",
    "fieldname": "gst_type",
    "fieldtype": "Select",
    "label": "GST Registration",
-   "options": "Unregistered\nRegistered Regular\nConsumer"
+   "options": "Unregistered\nRegistered Regular\nConsumer",
+   "placeholder": "GST Registration"
   },
   {
+   "depends_on": "eval:doc.gst_type == 'Registered Regular'",
    "fieldname": "gstin",
    "fieldtype": "Data",
    "label": "GSTIN No."
@@ -156,7 +157,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-29 12:00:00.000000",
+ "modified": "2026-09-30 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Party",
@@ -167,7 +168,6 @@
    "delete": 1,
    "email": 1,
    "export": 1,
-   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
@@ -192,7 +192,6 @@
    "create": 1,
    "email": 1,
    "export": 1,
-   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,

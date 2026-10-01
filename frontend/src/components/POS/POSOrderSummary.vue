@@ -24,7 +24,7 @@
           {{ t`Grand Total` }}
         </dt>
         <dd class="text-xl font-semibold tabular-nums text-ink-gray-9">
-          {{ fyo.format(sinvDoc?.grandTotal ?? fyo.pesa(0), 'Currency') }}
+          {{ fyo.format(sinvDoc?.grand_total ?? fyo.pesa(0), 'Currency') }}
         </dd>
       </div>
     </dl>
@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { t } from 'fyo';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { fyo } from 'src/initFyo';
 import { getCostLines } from 'src/utils/pos';
 import { computed } from 'vue';

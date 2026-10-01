@@ -26,7 +26,7 @@
         <button
           type="button"
           class="flex min-w-0 flex-1 flex-col gap-1.5 text-start"
-          :disabled="!!row.isFreeItem"
+          :disabled="!!row.is_free_item"
           @click="$emit('edit', row)"
         >
           <span class="truncate text-md-medium text-ink-gray-9">
@@ -37,7 +37,7 @@
           </span>
         </button>
         <MobileStepper
-          v-if="!row.isFreeItem"
+          v-if="!row.is_free_item"
           class="w-32 shrink-0"
           removable
           :min="1"
@@ -97,8 +97,8 @@ import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
 } from 'frappe-ui';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from 'models/baseModels/SalesInvoiceItem/SalesInvoiceItem';
+import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import MobileStepper from 'src/components/POS/MobileStepper.vue';
 import { ItemSerialNumbers } from 'src/components/POS/types';
@@ -126,19 +126,19 @@ defineEmits<{
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
 const itemSerialNumbers = inject('itemSerialNumbers') as Ref<ItemSerialNumbers>;
-const quantityField = getPOSQuantityField(fyo);
+const quantityField = getPOSQuantityField();
 
 const totals = computed<(CostLine & { strong?: boolean })[]>(() => [
   ...getCostLines(sinvDoc.value),
   {
     label: t`Grand Total`,
-    value: sinvDoc.value.grandTotal ?? fyo.pesa(0),
+    value: sinvDoc.value.grand_total ?? fyo.pesa(0),
     strong: true,
   },
 ]);
 
 const payLabel = computed(() => {
-  const amount = fyo.format(sinvDoc.value.grandTotal ?? 0, 'Currency');
+  const amount = fyo.format(sinvDoc.value.grand_total ?? 0, 'Currency');
   return sinvDoc.value.isReturn ? t`Refund ${amount}` : t`Pay ${amount}`;
 });
 
@@ -148,7 +148,7 @@ function getQuantity(row: SalesInvoiceItem): number {
 
 function getRowMeta(row: SalesInvoiceItem): string {
   const rate = fyo.format(row.rate ?? 0, 'Currency');
-  return [rate, row.tax, row.pricingRule].filter(Boolean).join(' · ');
+  return [rate, row.tax, row.pricing_rule].filter(Boolean).join(' · ');
 }
 
 async function setQuantity(row: SalesInvoiceItem, quantity: number) {

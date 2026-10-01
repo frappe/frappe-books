@@ -7,8 +7,8 @@ from frappe_books.frappe_books.doctype.books_accounting_settings.books_accountin
 	POINT_OF_SALE_FEATURES,
 )
 from frappe_books.frappe_books.doctype.books_inventory_settings import books_inventory_settings
-from frappe_books.tests.accounting import ensure_user, make_number_series, unique_name
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
+from frappe_books.series import default_series
+from frappe_books.tests.accounting import make_number_series, unique_name
 
 COMPANY = {
 	"company_name": "Settings Test Company",
@@ -85,28 +85,27 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		self.assertRaises(frappe.InvalidEmailAddressError, settings.save)
 
 	def test_display_precision_stays_between_zero_and_nine(self):
-		for precision, error in ((-1, frappe.NonNegativeError), (10, frappe.ValidationError)):
+		for precision in (-1, 10):
 			with self.subTest(precision=precision):
 				settings = frappe.get_single("Books System Settings")
 				settings.display_precision = precision
-				self.assertRaises(error, settings.save)
+				self.assertRaisesRegex(
+					frappe.ValidationError, "should have a value between 0 and 9", settings.save
+				)
 
-	def test_the_interface_gets_default_number_series_from_the_server(self):
+	def test_default_number_series_come_from_books_defaults_else_the_standard_prefix(self):
 		series = make_number_series("SalesInvoice")
 		frappe.db.set_single_value(
 			"Books Defaults", {"sales_invoice_number_series": series, "payment_number_series": None}
 		)
 
-		defaults = BooksBespokeQueries().call("getDefaultNumberSeries", [])
-
 		self.assertEqual(
-			(defaults["SalesInvoice"], defaults["Payment"], defaults["PricingRule"]),
-			(series, "PAY-", "PRLE-"),
+			[
+				default_series(doctype)
+				for doctype in ("Books Sales Invoice", "Books Payment", "Books Pricing Rule")
+			],
+			[series, "PAY-", "PRLE-"],
 		)
-		with self.set_user(ensure_user("no-books-roles@example.com")):
-			self.assertRaises(
-				frappe.PermissionError, BooksBespokeQueries().call, "getDefaultNumberSeries", []
-			)
 
 
 def _accounting_settings(**values):

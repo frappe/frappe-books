@@ -1,54 +1,58 @@
-import { Doc } from 'fyo/model/doc';
 import { FiltersMap, HiddenMap } from 'fyo/model/types';
 import {
   AccountRootTypeEnum,
   AccountTypeEnum,
 } from 'models/baseModels/Account/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class POSSettings extends Doc {
-  inventory?: string;
-  cashAccount?: string;
-  writeOffAccount?: string;
-  weightEnabledBarcode?: boolean;
-  checkDigits?: number;
-  itemCodeDigits?: number;
-  itemWeightDigits?: number;
-  defaultAccount?: string;
-  itemVisibility?: string;
-  posUI?: 'Classic' | 'Modern';
-  canChangeRate?: boolean;
-  canEditDiscount?: boolean;
-  ignorePricingRule?: boolean;
+/** Books Pos Settings, served by Frappe. */
+export class POSSettings extends FrappeDoc {
+  static override doctype = 'Books Pos Settings';
+  static override presentation = { label: 'POS Settings' };
+
+  declare inventory?: string;
+  declare pos_profile?: string;
+  declare cash_account?: string;
+  declare write_off_account?: string;
+  declare default_account?: string;
+  declare pos_ui?: 'Classic' | 'Modern';
+  declare weight_enabled_barcode?: boolean;
+  declare check_digits?: number;
+  declare item_code_digits?: number;
+  declare item_weight_digits?: number;
+  declare item_visibility?: string;
+  declare can_change_rate?: boolean;
+  declare can_edit_discount?: boolean;
+  declare hide_unavailable_items?: boolean;
+  declare ignore_pricing_rule?: boolean;
 
   static filters: FiltersMap = {
-    cashAccount: () => ({
-      rootType: AccountRootTypeEnum.Asset,
-      accountType: AccountTypeEnum.Cash,
-      isGroup: false,
+    cash_account: () => ({
+      root_type: AccountRootTypeEnum.Asset,
+      account_type: AccountTypeEnum.Cash,
+      is_group: false,
     }),
-    writeOffAccount: () => ({
-      isGroup: false,
-      rootType: AccountRootTypeEnum.Expense,
+    write_off_account: () => ({
+      is_group: false,
+      root_type: AccountRootTypeEnum.Expense,
     }),
-    defaultAccount: () => ({
-      isGroup: false,
-      accountType: AccountTypeEnum.Receivable,
+    default_account: () => ({
+      is_group: false,
+      account_type: AccountTypeEnum.Receivable,
     }),
   };
 
+  // Fields of features turned off in other settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
-    weightEnabledBarcode: () =>
-      !this.fyo.singles.InventorySettings?.enableBarcodes,
-    checkDigits: () =>
-      !this.fyo.singles.InventorySettings?.enableBarcodes ||
-      !this.weightEnabledBarcode,
-    itemCodeDigits: () =>
-      !this.fyo.singles.InventorySettings?.enableBarcodes ||
-      !this.weightEnabledBarcode,
-    itemWeightDigits: () =>
-      !this.fyo.singles.InventorySettings?.enableBarcodes ||
-      !this.weightEnabledBarcode,
-    itemVisibility: () =>
-      !this.fyo.singles.AccountingSettings?.enablePointOfSaleWithOutInventory,
+    weight_enabled_barcode: () =>
+      !this.fyo.singles.InventorySettings?.enable_barcodes,
+    check_digits: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
+    item_code_digits: () =>
+      !this.fyo.singles.InventorySettings?.enable_barcodes,
+    item_weight_digits: () =>
+      !this.fyo.singles.InventorySettings?.enable_barcodes,
+    item_visibility: () =>
+      !this.fyo.singles.AccountingSettings
+        ?.enable_point_of_sale_with_out_inventory,
   };
 }

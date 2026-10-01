@@ -1,45 +1,55 @@
-import { Doc } from 'fyo/model/doc';
-import { OpeningAmounts } from './OpeningAmounts';
-import { OpeningCash } from './OpeningCash';
 import { ListViewSettings } from 'fyo/model/types';
+import type { Money } from 'pesa';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class POSOpeningShift extends Doc {
-  openingAmounts?: OpeningAmounts[];
-  openingCash?: OpeningCash[];
-  openingDate?: Date;
+/** A row of cash counted by denomination. */
+export type CashCount = FrappeDoc & { denomination?: Money; count?: number };
 
-  get openingCashAmount() {
-    if (!this.openingCash) {
-      return this.fyo.pesa(0);
-    }
+/** A payment method's amount in a shift. */
+export type ShiftAmount = FrappeDoc & {
+  payment_method?: string;
+  amount?: Money;
+};
 
-    let openingAmount = this.fyo.pesa(0);
+/** A Books Opening Cash row. */
+export class OpeningCash extends FrappeDoc {
+  static override presentation = { label: 'Opening Cash In Denominations' };
+}
 
-    this.openingCash.map((row: OpeningCash) => {
-      const denomination = row.denomination ?? this.fyo.pesa(0);
-      const count = row.count ?? 0;
+/** A Books Opening Amounts row. */
+export class OpeningAmounts extends FrappeDoc {
+  static override presentation = { label: 'Opening Amount' };
+}
 
-      const amount = denomination.mul(count);
-      openingAmount = openingAmount.add(amount);
-    });
-    return openingAmount;
-  }
+/** Books Pos Opening Shift, served by Frappe. */
+export class POSOpeningShift extends FrappeDoc {
+  static override doctype = 'Books Pos Opening Shift';
+  static override presentation = {
+    label: 'POS Opening Shift',
+    fileFields: ['name', 'opening_date', 'opening_cash', 'opening_amounts'],
+  };
+  static override rowModels = {
+    opening_cash: OpeningCash,
+    opening_amounts: OpeningAmounts,
+  };
 
-  get openingTransferAmount() {
-    if (!this.openingAmounts) {
-      return this.fyo.pesa(0);
-    }
+  declare opening_date?: Date;
+  declare opening_cash?: CashCount[];
+  declare opening_amounts?: ShiftAmount[];
 
-    const transferAmountRow = this.openingAmounts.filter(
-      (row) => row.paymentMethod === 'Transfer'
-    )[0];
-
-    return transferAmountRow.amount ?? this.fyo.pesa(0);
+  /** The cash the counted denominations add up to. */
+  get openingCashAmount(): Money {
+    return getCashTotal(this.fyo.pesa(0), this.opening_cash);
   }
 
   static getListViewSettings(): ListViewSettings {
-    return {
-      columns: ['name', 'openingDate'],
-    };
+    return { columns: ['name', 'opening_date'] };
   }
+}
+
+export function getCashTotal(zero: Money, rows: CashCount[] = []): Money {
+  return rows.reduce(
+    (total, row) => total.add((row.denomination ?? zero).mul(row.count ?? 0)),
+    zero
+  );
 }

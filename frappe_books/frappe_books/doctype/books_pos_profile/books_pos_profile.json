@@ -51,7 +51,7 @@
    "fieldname": "pos_print_template",
    "fieldtype": "Link",
    "label": "POS Print Template",
-   "options": "Books Print Template"
+   "options": "Print Format"
   },
   {
    "default": "Classic",
@@ -102,58 +102,58 @@
   },
   {
    "default": "#86efac",
-   "description": "Select Colour",
    "fieldname": "save_button_colour",
    "fieldtype": "Color",
-   "label": "Save Button Colour"
+   "label": "Save Button Colour",
+   "placeholder": "Select Colour"
   },
   {
    "default": "#f98080",
-   "description": "Select Colour",
    "fieldname": "cancel_button_colour",
    "fieldtype": "Color",
-   "label": "Cancel Button Colour"
+   "label": "Cancel Button Colour",
+   "placeholder": "Select Colour"
   },
   {
    "default": "#86efac",
-   "description": "Select Colour",
    "fieldname": "submit_button_colour",
    "fieldtype": "Color",
-   "label": "Submit Button Colour"
+   "label": "Submit Button Colour",
+   "placeholder": "Select Colour"
   },
   {
    "default": "#f98080",
-   "description": "Select Colour",
    "fieldname": "held_button_colour",
    "fieldtype": "Color",
-   "label": "Held Button Colour"
+   "label": "Held Button Colour",
+   "placeholder": "Select Colour"
   },
   {
    "default": "#f98080",
-   "description": "Select Colour",
    "fieldname": "return_button_colour",
    "fieldtype": "Color",
-   "label": "Return Button Colour"
+   "label": "Return Button Colour",
+   "placeholder": "Select Colour"
   },
   {
    "default": "#86efac",
-   "description": "Select Colour",
    "fieldname": "pay_button_colour",
    "fieldtype": "Color",
-   "label": "Pay Button Colour"
+   "label": "Pay Button Colour",
+   "placeholder": "Select Colour"
   },
   {
    "default": "#86efac",
-   "description": "Select Colour",
    "fieldname": "pay_and_print_button_colour",
    "fieldtype": "Color",
-   "label": "Pay And Print Button Colour"
+   "label": "Pay And Print Button Colour",
+   "placeholder": "Select Colour"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-26 22:11:26.502504",
+ "modified": "2026-10-01 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Profile",

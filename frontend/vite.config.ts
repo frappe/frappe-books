@@ -20,14 +20,12 @@ export default defineConfig(async () => {
     plugins: [lucideIconsPlugin(), vue()],
     resolve: {
       alias: {
-        vue: 'vue/dist/vue.esm-bundler.js',
         fyo: path.resolve(frontendRoot, 'fyo'),
         src: path.resolve(frontendRoot, 'src'),
         schemas: path.resolve(frontendRoot, 'schemas'),
         models: path.resolve(frontendRoot, 'models'),
         utils: path.resolve(frontendRoot, 'utils'),
         reports: path.resolve(frontendRoot, 'reports'),
-        fixtures: path.resolve(frontendRoot, 'fixtures'),
         'frappe-ui-command-palette': path.resolve(
           frontendRoot,
           'node_modules/frappe-ui/experimental/CommandPalette/index.ts',

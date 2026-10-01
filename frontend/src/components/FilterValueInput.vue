@@ -70,7 +70,7 @@ import {
 } from 'frappe-ui';
 import type { Field } from 'schemas/types';
 import type { FilterRow, FilterValue } from 'src/utils/filterQuery';
-import { fyo } from 'src/initFyo';
+import { toSchemaName } from 'src/frappe/registry';
 import { isMobile } from 'src/utils/viewport';
 import FilterLinkInput from './FilterLinkInput.vue';
 
@@ -123,8 +123,9 @@ export default defineComponent({
           row.fieldname === reference && row.condition === '=' && row.value
       );
       const targets = new Set(values.map((row) => String(row.value)));
+      // The type filter holds a DocType, e.g. `Books Lead`; links search its schema.
       const target = targets.size === 1 ? [...targets][0] : '';
-      return fyo.schemaMap[target] ? target : '';
+      return toSchemaName(target) ?? '';
     },
     /** Phones use the native date and time picker. */
     isNativeDate(): boolean {

@@ -5,7 +5,6 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { withFieldProperties } from './doctypes.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'books-model-tests-'));
 after(() => rm(directory, { recursive: true, force: true }));
@@ -16,11 +15,7 @@ await build({
   stdin: {
     contents: `
       export { Fyo } from './fyo';
-      export { getSchemas } from './schemas';
-      export { getDoctypeFieldProperties } from './tests/helpers/doctypeFieldProperties';
-      export { dataProperties, isReferenceField } from './schemas/fieldProperties';
       export { FieldTypeEnum } from './schemas/types';
-      export { getPrintTemplateDocValues } from './src/utils/printTemplateData';
     `,
     resolveDir: frontend,
   },
@@ -28,13 +23,17 @@ await build({
   platform: 'node',
   format: 'cjs',
   outfile: output,
+  plugins: [
+    {
+      name: 'browser-boundaries',
+      setup(builder) {
+        builder.onLoad({ filter: /\.vue$/ }, () => ({
+          contents: 'export default {}',
+        }));
+      },
+    },
+  ],
+  loader: { '.svg': 'dataurl', '.png': 'dataurl', '.css': 'empty' },
 });
 const bundle = createRequire(import.meta.url)(output);
-export const {
-  Fyo,
-  getPrintTemplateDocValues,
-  dataProperties,
-  isReferenceField,
-  FieldTypeEnum,
-} = bundle;
-export const { fieldProperties, getSchemas } = withFieldProperties(bundle);
+export const { Fyo, FieldTypeEnum } = bundle;

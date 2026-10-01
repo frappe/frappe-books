@@ -18,7 +18,7 @@
         :df="{
           fieldname: 'amount',
           fieldtype: 'Currency',
-          label: row.paymentMethod,
+          label: row.payment_method,
         }"
         :value="row.amount"
         :show-label="true"
@@ -27,11 +27,11 @@
       />
       <dl class="flex flex-col rounded-6 bg-surface-gray-1 text-md tabular-nums">
         <div
-          v-for="row in posShiftDoc.openingAmounts"
+          v-for="row in posShiftDoc.opening_amounts"
           :key="row.idx"
           class="flex min-h-11 items-center justify-between gap-2 border-b border-outline-gray-1 px-3 last:border-b-0"
         >
-          <dt class="text-ink-gray-8">{{ row.paymentMethod }}</dt>
+          <dt class="text-ink-gray-8">{{ row.payment_method }}</dt>
           <dd class="text-ink-gray-9" dir="ltr">
             {{ fyo.format(row.amount ?? 0, 'Currency') }}
           </dd>
@@ -47,10 +47,10 @@
         <Table
           v-if="isValuesSeeded"
           class="text-base"
-          :df="getField('openingCash')"
+          :df="getField('opening_cash')"
           :show-header="true"
           :border="true"
-          :value="posShiftDoc?.openingCash"
+          :value="posShiftDoc?.opening_cash"
           @row-change="handleChange"
         />
       </div>
@@ -63,10 +63,10 @@
         <Table
           v-if="isValuesSeeded"
           class="text-base"
-          :df="getField('openingAmounts')"
+          :df="getField('opening_amounts')"
           :show-header="true"
           :border="true"
-          :value="posShiftDoc?.openingAmounts"
+          :value="posShiftDoc?.opening_amounts"
           :read-only="false"
           :allow-add-remove-rows="false"
           @row-change="handleChange"
@@ -97,15 +97,24 @@ import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
-import { OpeningCash } from 'models/inventory/Point of Sale/OpeningCash';
+import { Field } from 'schemas/types';
+import {
+  CashCount,
+  POSOpeningShift,
+  ShiftAmount,
+} from 'models/inventory/Point of Sale/POSOpeningShift';
+import { getAllDocuments } from 'src/frappe/api';
+import { getField } from 'src/frappe/registry';
 import { computed } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
-import { getCashPaymentMethods, getPOSOpeningShiftDoc } from 'src/utils/pos';
+import {
+  getCashPaymentMethods,
+  getPOSOpeningShiftDoc,
+} from 'src/utils/posSetup';
 
 export default defineComponent({
   name: 'OpenPOSShift',
@@ -136,14 +145,14 @@ export default defineComponent({
   },
   computed: {
     getDefaultCashDenominations() {
-      return this.fyo.singles.Defaults?.posCashDenominations;
+      return this.fyo.singles.Defaults?.pos_cash_denominations;
     },
-    openingCash(): OpeningCash[] {
-      return (this.posShiftDoc?.openingCash ?? []) as OpeningCash[];
+    openingCash(): CashCount[] {
+      return (this.posShiftDoc?.opening_cash ?? []) as CashCount[];
     },
-    otherOpeningAmounts() {
-      return (this.posShiftDoc?.openingAmounts ?? []).filter(
-        (row) => row.paymentMethod !== 'Cash'
+    otherOpeningAmounts(): ShiftAmount[] {
+      return ((this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]).filter(
+        (row) => row.payment_method !== 'Cash'
       );
     },
     posOpeningCashAmount(): Money {
@@ -152,8 +161,8 @@ export default defineComponent({
   },
   async mounted() {
     this.isValuesSeeded = false;
-    this.posShiftDoc = await getPOSOpeningShiftDoc(fyo);
-    this.cashMethods = await getCashPaymentMethods(fyo);
+    this.posShiftDoc = await getPOSOpeningShiftDoc();
+    this.cashMethods = await getCashPaymentMethods();
 
     await this.seedDefaults();
     this.isValuesSeeded = true;
@@ -174,7 +183,7 @@ export default defineComponent({
         return;
       }
 
-      this.posShiftDoc.openingCash = [];
+      this.posShiftDoc.opening_cash = [];
       const denominations = this.getDefaultCashDenominations;
 
       if (!denominations) {
@@ -182,7 +191,7 @@ export default defineComponent({
       }
 
       for (const row of denominations) {
-        await this.posShiftDoc.append('openingCash', {
+        await this.posShiftDoc.append('opening_cash', {
           denomination: row.denomination,
           count: 0,
         });
@@ -193,15 +202,16 @@ export default defineComponent({
         return;
       }
 
-      this.posShiftDoc.openingAmounts = [];
+      this.posShiftDoc.opening_amounts = [];
 
       const paymentMethods = (
-        (await this.fyo.db.getAll(ModelNameEnum.PaymentMethod, {
-          fields: ['name'],
-        })) as { name: string }[]
-      ).map((doc) => ({ paymentMethod: doc.name, amount: fyo.pesa(0) }));
+        await getAllDocuments('Books Payment Method', { fields: ['name'] })
+      ).map(({ name }) => ({
+        payment_method: name as string,
+        amount: fyo.pesa(0),
+      }));
 
-      await this.posShiftDoc.set('openingAmounts', paymentMethods);
+      await this.posShiftDoc.set('opening_amounts', paymentMethods);
     },
     async seedDefaults() {
       if (this.posShiftDoc?.isSubmitted) {
@@ -211,17 +221,17 @@ export default defineComponent({
       await this.seedDefaultCashDenomiations();
       await this.seedPaymentMethods();
     },
-    getField(fieldname: string) {
-      return this.fyo.getField(ModelNameEnum.POSOpeningShift, fieldname);
+    getField(fieldname: string): Field {
+      return getField(ModelNameEnum.POSOpeningShift, fieldname)!;
     },
     setOpeningCashAmount() {
-      if (!this.posShiftDoc?.openingAmounts) {
+      if (!this.posShiftDoc?.opening_amounts) {
         return;
       }
 
       // The counted cash fills the first cash row; the server checks all cash rows add up to it.
-      const cashRow = this.posShiftDoc.openingAmounts.find((row) =>
-        this.cashMethods.includes(row.paymentMethod as string)
+      const cashRow = this.posShiftDoc.opening_amounts.find((row) =>
+        this.cashMethods.includes(row.payment_method as string)
       );
       if (cashRow) {
         cashRow.amount = this.posShiftDoc.openingCashAmount;

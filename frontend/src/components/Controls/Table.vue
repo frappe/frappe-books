@@ -128,7 +128,7 @@ import {
   ListHeaderCell as FrappeListHeaderCell,
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
-import { fyo } from 'src/initFyo';
+import { getFields, getSchema } from 'src/frappe/registry';
 import { nextTick } from 'vue';
 import Base from './Base.vue';
 import MobileTableRows from './MobileTableRows.vue';
@@ -224,8 +224,8 @@ export default {
       return this.size === 'small' ? 'px-2' : 'px-3';
     },
     tableFields() {
-      const fields = fyo.schemaMap[this.df.target].tableFields ?? [];
-      return fields.map((fieldname) => fyo.getField(this.df.target, fieldname));
+      const fieldnames = getSchema(this.df.target)?.tableFields ?? [];
+      return getFields(this.df.target, fieldnames);
     },
   },
   methods: {

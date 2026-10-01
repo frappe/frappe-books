@@ -6,7 +6,6 @@ from frappe.model.naming import InvalidNamingSeriesError, make_autoname
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.tests.accounting import make_number_series
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 
 class IntegrationTestBooksNumberSeries(IntegrationTestCase):
@@ -29,10 +28,9 @@ class IntegrationTestBooksNumberSeries(IntegrationTestCase):
 
 	def test_interface_reads_the_counter_from_frappe_series(self):
 		series = make_series(f"TEST-{frappe.generate_hash(length=6)}-", start=1001)
-		bridge = BooksDatabaseBridge()
 
-		self.assertEqual(bridge.get("NumberSeries", series.name)["current"], 1000)
-		self.assertIn(series.name, [row["name"] for row in bridge.get_all("NumberSeries")])
+		self.assertEqual(frappe.get_doc("Books Number Series", series.name).as_dict().current, 1000)
+		self.assertIn(series.name, frappe.get_list("Books Number Series", pluck="name"))
 
 	def test_saving_the_series_does_not_change_its_counter(self):
 		series = frappe.get_doc("Books Number Series", make_number_series("SalesInvoice"))

@@ -1,12 +1,11 @@
 import frappe
+from frappe import client
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.money import company_currency
 from frappe_books.settings import regional_code
 from frappe_books.tests.accounting import ensure_user
 from frappe_books.tests.test_settings_rules import COMPANY
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
-from frappe_books.ui_bridge.field_properties import get_schema_field_properties
 
 BOOKS_MANAGER = "books-settings-manager@example.com"
 
@@ -18,38 +17,40 @@ class IntegrationTestSystemSettings(IntegrationTestCase):
 		with self.change_settings("System Settings", currency="EUR"):
 			self.assertEqual(company_currency(), "EUR")
 
-	def test_interface_shows_system_settings_country_and_currency(self):
-		bridge = BooksDatabaseBridge()
+	def test_settings_show_system_settings_country_and_currency(self):
 		with self.change_settings("System Settings", country="Switzerland", currency="CHF"):
-			self.assertEqual(bridge.get("SystemSettings", "SystemSettings")["currency"], "CHF")
-			self.assertEqual(bridge.get("AccountingSettings", "AccountingSettings")["country"], "Switzerland")
+			self.assertEqual(frappe.get_single("Books System Settings").as_dict()["currency"], "CHF")
 			self.assertEqual(
-				bridge.get_single_values([{"parent": "SystemSettings", "fieldname": "currency"}]),
-				[{"parent": "SystemSettings", "fieldname": "currency", "value": "CHF"}],
+				frappe.get_single("Books Accounting Settings").as_dict()["country"], "Switzerland"
 			)
 
-	def test_interface_links_country_and_currency_to_frappe(self):
-		self.assertEqual(get_schema_field_properties("SystemSettings")["currency"]["options"], "Currency")
-		self.assertEqual(get_schema_field_properties("AccountingSettings")["country"]["options"], "Country")
+	def test_saving_settings_leaves_system_settings_country_and_currency(self):
+		with self.change_settings("System Settings", country="Switzerland", currency="CHF"):
+			system_settings = frappe.get_single("Books System Settings")
+			system_settings.update({"currency": "EUR"})
+			system_settings.save()
+			frappe.db.set_single_value("Books Accounting Settings", COMPANY)
+			accounting_settings = frappe.get_single("Books Accounting Settings")
+			accounting_settings.update({"country": "Germany"})
+			accounting_settings.save()
+
+			self.assertEqual(frappe.db.get_single_value("System Settings", "currency"), "CHF")
+			self.assertEqual(frappe.db.get_single_value("System Settings", "country"), "Switzerland")
+			self.assertEqual(frappe.get_single("Books System Settings").currency, "CHF")
+			self.assertEqual(frappe.get_single("Books Accounting Settings").country, "Switzerland")
+
+	def test_settings_link_country_and_currency_to_frappe(self):
+		self.assertEqual(frappe.get_meta("Books System Settings").get_field("currency").options, "Currency")
+		self.assertEqual(frappe.get_meta("Books Accounting Settings").get_field("country").options, "Country")
 
 	def test_books_manager_saves_settings_without_changing_system_settings(self):
-		bridge = BooksDatabaseBridge()
+		currency = frappe.db.get_single_value("System Settings", "currency")
 		with self.set_user(ensure_user(BOOKS_MANAGER, "Books Manager")):
-			values = bridge.get("SystemSettings", "SystemSettings")
-			bridge.update("SystemSettings", {**values, "darkMode": 1})
-			self.assertEqual(frappe.db.get_single_value("Books System Settings", "dark_mode"), 1)
-			self.assertRaises(
-				frappe.PermissionError, bridge.update, "SystemSettings", {**values, "currency": "EUR"}
-			)
+			values = client.get("Books System Settings")
+			client.save({**values, "dark_mode": 1, "currency": "EUR" if currency != "EUR" else "CHF"})
 
-	def test_system_manager_changes_the_currency_through_the_interface(self):
-		bridge = BooksDatabaseBridge()
-		values = bridge.get("SystemSettings", "SystemSettings")
-
-		# Restoring the currency keeps Frappe's cached defaults right for later tests.
-		with self.change_settings("System Settings", currency=values["currency"]):
-			bridge.update("SystemSettings", {**values, "currency": "EUR"})
-			self.assertEqual(frappe.db.get_single_value("System Settings", "currency"), "EUR")
+		self.assertEqual(frappe.db.get_single_value("Books System Settings", "dark_mode"), 1)
+		self.assertEqual(frappe.db.get_single_value("System Settings", "currency"), currency)
 
 	def test_regional_code_comes_from_the_country(self):
 		for country, code in (("India", "in"), ("Switzerland", "ch"), ("Germany", "-"), (None, "-")):

@@ -1,5 +1,11 @@
-import { Doc } from 'fyo/model/doc';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class Location extends Doc {
-  item?: string;
+/** Books Location, served by Frappe. */
+export class Location extends FrappeDoc {
+  static override doctype = 'Books Location';
+  static override presentation = {
+    label: 'Location',
+    nameField: { label: 'Location Name' },
+    quickEditFields: ['address'],
+  };
 }

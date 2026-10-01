@@ -1,13 +1,15 @@
-import { Doc } from 'fyo/model/doc';
 import { ListViewSettings } from 'fyo/model/types';
 import { getSerialNumberStatusColumn } from 'models/helpers';
-import { SerialNumberStatus } from './types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class SerialNumber extends Doc {
-  name?: string;
-  item?: string;
-  description?: string;
-  status?: SerialNumberStatus;
+/** Books Serial Number, served by Frappe. Stock moves set its status on the server. */
+export class SerialNumber extends FrappeDoc {
+  static override doctype = 'Books Serial Number';
+  static override presentation = {
+    label: 'Serial Number',
+    nameField: { label: 'Serial Number' },
+    quickEditFields: ['item', 'description'],
+  };
 
   static getListViewSettings(): ListViewSettings {
     return {
@@ -16,7 +18,6 @@ export class SerialNumber extends Doc {
         getSerialNumberStatusColumn(),
         'item',
         'description',
-        'party',
       ],
     };
   }

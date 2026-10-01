@@ -1,5 +1,8 @@
 frontend/tests/**,ignore
+frontend/models/**.ts,frappe_books.translation_extractors.extract_model_strings
+frontend/src/frappe/schema.ts,frappe_books.translation_extractors.extract_model_strings
 frontend/**.ts,frappe_books.translation_extractors.extract_template_strings
 frontend/**.vue,frappe_books.translation_extractors.extract_template_strings
-frontend/schemas/**.json,frappe_books.translation_extractors.extract_schema_labels
+frappe_books/frappe_books/doctype/*/*.json,frappe_books.translation_extractors.extract_doctype_messages
+frappe_books/frappe_books/print_format/*/*.json,frappe_books.translation_extractors.extract_print_format_messages
 frappe_books/data/charts/*.json,frappe_books.translation_extractors.extract_chart_names

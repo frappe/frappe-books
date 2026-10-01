@@ -1,12 +1,10 @@
 import { getMoneyMaker, MoneyMaker } from 'pesa';
-import { Field, FieldType } from 'schemas/types';
-import { getIsNullOrUndef } from 'utils';
+import { Field, FieldType, Schema } from 'schemas/types';
+import { getAllDocuments } from 'src/frappe/api';
+import { getRandomString } from 'utils';
 import { markRaw } from 'vue';
-import { DatabaseHandler } from './core/dbHandler';
-import { DocHandler } from './core/docHandler';
-import { DocValue, FyoConfig } from './core/types';
 import { Doc } from './model/doc';
-import { DocumentActionWarning, ModelMap } from './model/types';
+import { DocumentActionWarning, SinglesMap } from './model/types';
 import {
   DEFAULT_CURRENCY,
   DEFAULT_DISPLAY_PRECISION,
@@ -14,6 +12,7 @@ import {
 } from './utils/consts';
 import * as errors from './utils/errors';
 import { format } from './utils/format';
+import Observable from './utils/observable';
 import {
   DocPermission,
   hasPermission,
@@ -24,6 +23,12 @@ import type { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
 import type { ChartOfAccounts } from 'utils/types';
 
+type MoneySettings = {
+  currency?: string;
+  internal_precision?: number;
+  display_precision?: number;
+};
+
 export class Fyo {
   t = t;
   T = T;
@@ -33,45 +38,35 @@ export class Fyo {
   pesa: MoneyMaker;
 
   user = '';
-  doc: DocHandler;
-  db: DatabaseHandler;
-
-  _initialized = false;
+  /** Document events, like `sync:SalesInvoice`, that lists and screens follow. */
+  observer: Observable<never> = new Observable();
+  /** The open settings documents, by schema name. */
+  singles: SinglesMap = {};
 
   onDocumentActionWarning?: (warning: DocumentActionWarning) => void;
-  temp?: Record<string, unknown>;
 
   currencyFormatter?: Intl.NumberFormat;
   currencySymbols: Record<string, string | undefined> = {};
-  defaultNumberSeries: Record<string, string | undefined> = {};
+  #temporaryNameCounters: Record<string, number> = {};
 
-  constructor(conf: FyoConfig) {
-    this.db = new DatabaseHandler(this, conf.DatabaseDemux);
-    this.doc = new DocHandler(this);
-
+  constructor() {
     this.pesa = getMoneyMaker({
       currency: DEFAULT_CURRENCY,
       precision: DEFAULT_INTERNAL_PRECISION,
       display: DEFAULT_DISPLAY_PRECISION,
       wrapper: markRaw,
     });
-
   }
 
   /** Loads the symbols that formatted amounts carry, e.g. ₹. */
   async loadCurrencySymbols() {
-    const currencies = (await this.db.getAll('Currency', {
+    const currencies = (await getAllDocuments('Currency', {
       fields: ['name', 'symbol'],
     })) as { name: string; symbol?: string | null }[];
 
     this.currencySymbols = Object.fromEntries(
       currencies.map(({ name, symbol }) => [name, symbol || undefined])
     );
-  }
-
-  /** Loads the series the server names new documents with, by schema. */
-  async loadDefaultNumberSeries() {
-    this.defaultNumberSeries = await this.db.getDefaultNumberSeries();
   }
 
   reportDocumentActionWarning(
@@ -92,83 +87,16 @@ export class Fyo {
     }
   }
 
-  get docs() {
-    return this.doc.docs;
-  }
-
-  get models() {
-    return this.doc.models;
-  }
-
-  get singles() {
-    return this.doc.singles;
-  }
-
-  get schemaMap() {
-    return this.db.schemaMap;
-  }
-
-  get fieldMap() {
-    return this.db.fieldMap;
-  }
-
   format(value: unknown, field: FieldType | Field, doc?: Doc) {
     return format(value, field, doc ?? null, this);
   }
 
-  async initializeAndRegister(
-    models: ModelMap = {},
-    regionalModels: ModelMap = {}
-  ) {
-    if (this._initialized) return;
-
-    this.#initializeModules();
-    await this.#initializeMoneyMaker();
-
-    this.doc.registerModels(models, regionalModels);
-    await this.doc.getDoc('SystemSettings');
-    this._initialized = true;
-  }
-
-  #initializeModules() {
-    // temp params while calling routes
-    this.temp = {};
-
-    this.doc.init();
-  }
-
-  async #initializeMoneyMaker() {
-    const values =
-      (await this.db?.getSingleValues(
-        {
-          fieldname: 'internalPrecision',
-          parent: 'SystemSettings',
-        },
-        {
-          fieldname: 'displayPrecision',
-          parent: 'SystemSettings',
-        },
-        {
-          fieldname: 'currency',
-          parent: 'SystemSettings',
-        }
-      )) ?? [];
-
-    const acc = values.reduce((acc, sv) => {
-      acc[sv.fieldname] = sv.value as string | number | undefined;
-      return acc;
-    }, {} as Record<string, string | number | undefined>);
-
-    const precision: number =
-      (acc.internalPrecision as number) ?? DEFAULT_INTERNAL_PRECISION;
-    const display: number =
-      (acc.displayPrecision as number) ?? DEFAULT_DISPLAY_PRECISION;
-    const currency: string = (acc.currency as string) ?? DEFAULT_CURRENCY;
-
+  /** Counts and shows amounts in the company currency, as the system settings say. */
+  initializeMoneyMaker(settings: MoneySettings) {
     this.pesa = getMoneyMaker({
-      currency,
-      precision,
-      display,
+      currency: settings.currency ?? DEFAULT_CURRENCY,
+      precision: settings.internal_precision ?? DEFAULT_INTERNAL_PRECISION,
+      display: settings.display_precision ?? DEFAULT_DISPLAY_PRECISION,
       wrapper: markRaw,
     });
   }
@@ -177,32 +105,21 @@ export class Fyo {
     return hasPermission(this.store.permissions, schemaName, permission);
   }
 
-  getField(schemaName: string, fieldname: string) {
-    return this.fieldMap[schemaName]?.[fieldname];
+  /** The name a new document shows until the server names it, e.g. `New Sales Invoice 01`. */
+  getTemporaryName(schema: Schema): string {
+    if (schema.naming === 'random') {
+      return getRandomString();
+    }
+
+    const index = (this.#temporaryNameCounters[schema.name] ?? 0) + 1;
+    this.#temporaryNameCounters[schema.name] = index;
+    const label = schema.label ?? schema.name;
+    return this.t`New ${label} ${String(index).padStart(2, '0')}`;
   }
 
-  async getValue(
-    schemaName: string,
-    name: string,
-    fieldname?: string
-  ): Promise<DocValue | Doc[]> {
-    if (fieldname === undefined && this.schemaMap[schemaName]?.isSingle) {
-      fieldname = name;
-      name = schemaName;
-    }
-
-    if (getIsNullOrUndef(name) || getIsNullOrUndef(fieldname)) {
-      return undefined;
-    }
-
-    const cachedDoc = this.docs.get(schemaName)?.[name];
-    if (cachedDoc) {
-      return cachedDoc.get(fieldname);
-    }
-
-    // A missing document reads as an empty map.
-    const values = await this.db.get(schemaName, name, fieldname);
-    return values[fieldname] as DocValue | undefined;
+  isTemporaryName(name: string, schema: Schema): boolean {
+    const label = schema.label ?? schema.name;
+    return name.includes(this.t`New ${label} `);
   }
 
   store = {
@@ -210,8 +127,6 @@ export class Fyo {
     appVersion: '',
     language: '',
     permissions: null as Permissions | null,
-    /** The fields search matches and shows, by schema, from the DocType search fields. */
-    searchFields: {} as Record<string, string[] | undefined>,
     chartsOfAccounts: [] as ChartOfAccounts[],
     // Translated names of the standard chart's accounts, from the server
     accountLabels: {} as Record<string, string>,

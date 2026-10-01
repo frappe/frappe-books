@@ -1,11 +1,17 @@
+import io
 import json
 import re
+
+from frappe.gettext.extractors import doctype, html_template
 
 from frappe_books.coa import META_KEYS, STANDARD_CHART
 
 TEMPLATE_TAG = re.compile(r"(?<![\w$])t`")
-TRANSLATED_SCHEMA_KEYS = {"label", "description", "placeholder", "section", "tab"}
 ESCAPES = {"n": "\n", "r": "\r", "t": "\t"}
+# A string a model's presentation shows, e.g. `label: 'Quote'`, and the labels in its optionLabels.
+PRESENTATION_STRING = re.compile(r"\b(?:label|placeholder|sub_label|description)\s*:\s*'((?:\\.|[^'\\])*)'")
+OPTION_LABELS = re.compile(r"\boptionLabels\s*:\s*\{([^}]*)\}")
+OPTION_LABEL = re.compile(r":\s*'((?:\\.|[^'\\])*)'")
 
 
 def extract_template_strings(fileobj, keywords, comment_tags, options):
@@ -58,20 +64,41 @@ def skip_string(code, index, quote):
 	return index + 1
 
 
-def extract_schema_labels(fileobj, keywords, comment_tags, options):
-	"""Babel extractor for the labels /books translates in its schema files."""
-	yield from ((None, "_", message, []) for message in schema_labels(json.load(fileobj)))
+def extract_model_strings(fileobj, keywords, comment_tags, options):
+	"""Babel extractor for /books models and schemas: t`...` messages, and the labels a presentation shows."""
+	content = fileobj.read()
+	yield from extract_template_strings(io.BytesIO(content), keywords, comment_tags, options)
+	code = content.decode("utf-8")
+	for match in PRESENTATION_STRING.finditer(code):
+		yield line_of(code, match.start()), "_", unescape(match[1]), []
+	for block in OPTION_LABELS.finditer(code):
+		for match in OPTION_LABEL.finditer(block[1]):
+			yield line_of(code, block.start(1) + match.start()), "_", unescape(match[1]), []
 
 
-def schema_labels(value):
-	if isinstance(value, list):
-		for item in value:
-			yield from schema_labels(item)
-	elif isinstance(value, dict):
-		for key, item in value.items():
-			if key in TRANSLATED_SCHEMA_KEYS and isinstance(item, str) and item:
-				yield item
-			yield from schema_labels(item)
+def line_of(code, index):
+	return code.count("\n", 0, index) + 1
+
+
+def unescape(text):
+	return re.sub(r"\\(.)", lambda match: ESCAPES.get(match[1], match[1]), text)
+
+
+def extract_doctype_messages(fileobj, keywords, comment_tags, options):
+	"""Babel extractor for Books DocTypes: Frappe's DocType messages, and the field placeholders it skips."""
+	content = fileobj.read()
+	yield from doctype.extract(io.BytesIO(content), keywords, comment_tags, options)
+	data = json.loads(content)
+	for field in data.get("fields", []) if isinstance(data, dict) else []:
+		if placeholder := field.get("placeholder"):
+			comment = f"Placeholder of the {field['fieldname']} field in DocType '{data['name']}'"
+			yield None, "_", placeholder, [comment]
+
+
+def extract_print_format_messages(fileobj, keywords, comment_tags, options):
+	"""Babel extractor for the messages of a Print Format's Jinja HTML, which Frappe's extractors skip."""
+	html = json.load(fileobj).get("html") or ""
+	yield from html_template.extract(io.BytesIO(html.encode()), keywords, comment_tags, options)
 
 
 def extract_chart_names(fileobj, keywords, comment_tags, options):

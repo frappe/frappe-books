@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, nowdate
 
 from frappe_books.tests.accounting import (
+	ensure_user,
 	foreign_currency,
 	make_account,
 	make_invoice,
@@ -86,6 +87,22 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self._coupon(rule, valid_from=nowdate(), valid_to=nowdate())
 		with self.assertRaisesRegex(frappe.ValidationError, "on or before Valid To"):
 			self._coupon(rule, valid_from=nowdate(), valid_to=add_days(nowdate(), -1))
+
+	def test_rule_limits_say_what_books_says_at_their_fields(self):
+		for values, message in (
+			(
+				{"min_quantity": 6, "max_quantity": 5},
+				"Minimum Quantity should be less than the Maximum Quantity.",
+			),
+			({"min_amount": 10, "max_amount": 10}, "Minimum Amount should be less than the Maximum Amount."),
+			(
+				{"valid_from": nowdate(), "valid_to": add_days(nowdate(), -1)},
+				"Valid From Date should be less than Valid To Date.",
+			),
+		):
+			with self.subTest(message=message), self.assertRaises(frappe.ValidationError) as raised:
+				self._pricing_rule(**values)
+			self.assertEqual(str(raised.exception), message)
 
 	def test_product_discount_adds_free_item(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
@@ -294,6 +311,27 @@ class IntegrationTestPricing(IntegrationTestCase):
 				**values,
 			}
 		).insert()
+
+	def test_price_list_and_pricing_rule_previews_fill_units_without_saving(self):
+		sugar = make_item(self.income.name, self.expense.name, unit="Kg")
+		price_list = frappe.new_doc("Books Price List")
+		price_list.name = unique_name("Preview Prices")
+		price_list.append("price_list_item", {"item": sugar.name, "rate": 5})
+		rule = frappe.new_doc("Books Pricing Rule")
+		rule.append("applied_items", {"item": sugar.name})
+
+		price_list.preview()
+		rule.preview()
+
+		self.assertEqual(price_list.price_list_item[0].unit, "Kg")
+		self.assertEqual(rule.applied_items[0].unit, "Kg")
+		self.assertFalse(frappe.db.exists("Books Price List", price_list.name))
+
+	def test_previews_need_the_right_to_make_the_document(self):
+		with self.set_user(ensure_user("books-pricing-preview@example.com")):
+			for doctype in ("Books Price List", "Books Pricing Rule"):
+				with self.assertRaises(frappe.PermissionError):
+					frappe.new_doc(doctype).preview()
 
 	def _pricing_rule(self, **values):
 		data = {

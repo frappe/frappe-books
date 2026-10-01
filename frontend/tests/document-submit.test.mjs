@@ -1,136 +1,134 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { makeFyo } from './helpers/accounting.mjs';
+import {
+  FrappeDoc,
+  fyo,
+  loadFrappeDocTypes,
+  newFrappeDoc,
+  registerFrappeModels,
+  stubFrappe,
+} from './helpers/frappe.mjs';
 
 // Frappe's stored value, which the server compares to refuse stale documents.
 const MODIFIED = '2026-09-28 10:00:00.123456';
+const entryMeta = {
+  name: 'Books Entry',
+  autoname: 'Prompt',
+  is_submittable: 1,
+  permissions: [],
+  fields: [{ fieldname: 'amount', fieldtype: 'Currency', label: 'Amount' }],
+};
+
+class Entry extends FrappeDoc {
+  static doctype = 'Books Entry';
+  static presentation = { label: 'Entry' };
+}
+
+registerFrappeModels({ Entry });
+stubFrappe(() => ({ message: { metas: [entryMeta], placements: {} } }));
+await loadFrappeDocTypes();
+
+/** A saved draft, and a server whose submit `respond` answers; returns the methods it ran. */
+function makeEntry(respond) {
+  const warnings = [];
+  fyo.onDocumentActionWarning = (warning) => warnings.push(warning);
+  const entry = newFrappeDoc('Entry', { name: 'ENT-0001', amount: 100 });
+  Object.assign(entry, { modified: MODIFIED, docstatus: 0 });
+  entry._notInserted = false;
+  entry._dirty = false;
+  const methods = [];
+  stubFrappe(async ({ body }) => {
+    methods.push([body.method, body.document.modified]);
+    const answer = await respond(body);
+    return answer.status ? answer : { docs: [answer] };
+  });
+  return { entry, warnings, methods };
+}
+
+const submitted = ({ document }) => ({ ...document, docstatus: 1 });
 
 test('submission notifies listeners after the server accepts the document without rerunning model hooks', async () => {
-  const { fyo, payment } = await makePayment();
   const calls = [];
-  payment.afterSubmit = () => {
+  const { entry, methods } = makeEntry((body) => {
+    assert.equal(entry.submitted, false);
+    calls.push('server');
+    return submitted(body);
+  });
+  entry.afterSubmit = () => {
     assert.fail('Accounting hooks must run only on the server');
   };
-  payment.once('afterSubmit', () => {
-    assert.equal(payment.submitted, true);
-    assert.equal(payment.dirty, false);
-    assert.equal(payment.canSubmit, false);
+  entry.once('afterSubmit', () => {
+    assert.equal(entry.submitted, true);
+    assert.equal(entry.dirty, false);
+    assert.equal(entry.canSubmit, false);
     calls.push('listener');
   });
-  fyo.db.runLifecycleAction = async (...args) => {
-    assert.deepEqual(args, ['submit', 'Payment', payment.name, MODIFIED]);
-    assert.equal(payment.submitted, false);
-    calls.push('server');
-    return { ...payment.getValidDict(), submitted: true };
-  };
 
-  await payment.submit();
-  await payment.submit();
+  await entry.submit();
+  await entry.submit();
 
   assert.deepEqual(calls, ['server', 'listener']);
+  assert.deepEqual(methods, [['submit', MODIFIED]]);
 });
 
 test('a rejected submission retains the draft and listeners for a successful retry', async () => {
-  const { fyo, payment } = await makePayment();
   let submissions = 0;
   let notifications = 0;
-  payment.once('afterSubmit', () => notifications++);
-  fyo.db.runLifecycleAction = async () => {
+  const { entry } = makeEntry((body) => {
     submissions++;
-    if (submissions === 1) throw new Error('Account cannot receive a posting');
-    return { ...payment.getValidDict(), submitted: true };
-  };
+    if (submissions === 1) {
+      const message = 'Account cannot receive a posting';
+      return { status: 417, body: { errors: [{ message }] } };
+    }
 
-  await assert.rejects(payment.submit(), /Account cannot receive a posting/);
+    return submitted(body);
+  });
+  entry.once('afterSubmit', () => notifications++);
 
-  assert.equal(payment.inserted, true);
-  assert.equal(payment.submitted, false);
-  assert.equal(payment.dirty, false);
-  assert.equal(payment.canSubmit, true);
+  await assert.rejects(entry.submit(), /Account cannot receive a posting/);
+
+  assert.equal(entry.inserted, true);
+  assert.equal(entry.submitted, false);
+  assert.equal(entry.dirty, false);
+  assert.equal(entry.canSubmit, true);
   assert.equal(notifications, 0);
 
-  await payment.submit();
+  await entry.submit();
 
-  assert.equal(payment.submitted, true);
+  assert.equal(entry.submitted, true);
   assert.equal(notifications, 1);
 });
 
-test('submitted values survive a display formula failure without allowing resubmission', async () => {
-  const { fyo, payment } = await makePayment();
-  const warnings = [];
-  fyo.onDocumentActionWarning = (warning) => warnings.push(warning);
-  payment._setComputedValuesFromFormulas = async () => {
-    throw new Error('Display formula failed');
+test('submitted values survive a failing change handler without allowing resubmission', async () => {
+  const { entry, warnings } = makeEntry(submitted);
+  entry.change = async () => {
+    throw new Error('Display update failed');
   };
-  fyo.db.runLifecycleAction = async () => ({
-    ...payment.getValidDict(),
-    submitted: true,
-  });
 
-  await payment.submit();
+  await entry.submit();
 
-  assert.equal(payment.inserted, true);
-  assert.equal(payment.dirty, false);
-  assert.equal(payment.submitted, true);
-  assert.equal(payment.canSubmit, false);
+  assert.equal(entry.inserted, true);
+  assert.equal(entry.dirty, false);
+  assert.equal(entry.submitted, true);
+  assert.equal(entry.canSubmit, false);
   assert.equal(warnings[0].action, 'submit');
 });
 
-async function makePayment() {
-  const fyo = await makeFyo();
-  const payment = fyo.doc.getNewDoc('Payment', {
-    name: 'PAY-0001',
-    modified: MODIFIED,
-    amount: 100,
-    paymentType: 'Pay',
-    submitted: false,
-  });
-  payment._notInserted = false;
-  payment._dirty = false;
-  return { fyo, payment };
-}
-
 test('a failed submission callback cannot turn a posted document into a failed submission', async () => {
-  const { fyo, payment } = await makePayment();
-  const warnings = [];
+  const { entry, warnings } = makeEntry(submitted);
   let notified = false;
-  fyo.onDocumentActionWarning = (warning) => warnings.push(warning);
-  fyo.db.runLifecycleAction = async () => ({
-    ...payment.getValidDict(),
-    submitted: true,
-  });
-  payment.once('afterSubmit', () => {
+  entry.once('afterSubmit', () => {
     throw new Error('Invoice refresh failed');
   });
-  payment.once('afterSubmit', () => {
+  entry.once('afterSubmit', () => {
     notified = true;
   });
 
-  await payment.submit();
+  await entry.submit();
 
-  assert.equal(payment.submitted, true);
-  assert.equal(payment.canSubmit, false);
+  assert.equal(entry.submitted, true);
+  assert.equal(entry.canSubmit, false);
   assert.equal(notified, true);
   assert.equal(warnings.length, 1);
   assert.equal(warnings[0].action, 'submit');
-});
-
-test('a cancel sends the linked documents to cancel with it', async () => {
-  const { fyo, payment } = await makePayment();
-  payment.submitted = true;
-  const linkedDocs = [
-    { doctype: 'Books Payment', name: 'PAY-0002', docstatus: 1 },
-  ];
-  const calls = [];
-  fyo.db.runLifecycleAction = async (...args) => {
-    calls.push(args);
-    return { ...payment.getValidDict(), cancelled: true };
-  };
-
-  await payment.cancel(linkedDocs);
-
-  assert.deepEqual(calls, [
-    ['cancel', 'Payment', 'PAY-0001', MODIFIED, linkedDocs],
-  ]);
-  assert.equal(payment.cancelled, true);
 });

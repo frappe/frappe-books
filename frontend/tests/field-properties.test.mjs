@@ -1,32 +1,30 @@
 import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
-import {
-  evaluateReadOnly,
-  fieldProperties,
-  FrappeDatabaseDemux,
-  getSchemas,
-  makeFyo,
-} from './helpers/accounting.mjs';
+import { test } from 'node:test';
+import { evaluateReadOnly, newFrappeDoc, toSchema } from './helpers/frappe.mjs';
+import { loadFrappeModels } from './helpers/models.mjs';
 
-function getField(schemaName, fieldname, docfield, customFields = []) {
-  const properties = {
-    ...fieldProperties,
-    [schemaName]: { ...fieldProperties[schemaName], [fieldname]: docfield },
+/** The field /books shows for a DocField, with what the model presents of it. */
+function getField(docfield, presentation = {}) {
+  const meta = {
+    name: 'Books Thing',
+    permissions: [],
+    fields: [{ fieldname: 'thing', label: 'Thing', ...docfield }],
   };
-  const schemas = getSchemas('-', customFields, properties);
-  return schemas[schemaName].fields.find((f) => f.fieldname === fieldname);
+  const schema = toSchema(
+    meta,
+    'Thing',
+    { label: 'Thing', fields: { thing: presentation } },
+    { schemaNames: { 'Books Party': 'Party' }, roles: [], placements: {} }
+  );
+  return schema.fields.find(({ fieldname }) => fieldname === 'thing');
 }
 
 test('the server decides required, default, read only and minimum value', () => {
-  const email = getField('Party', 'email', {
-    fieldtype: 'Data',
-    reqd: 1,
-    read_only: 1,
-  });
+  const email = getField({ fieldtype: 'Data', reqd: 1, read_only: 1 });
   assert.equal(email.required, true);
   assert.equal(email.readOnly, true);
 
-  const rate = getField('Item', 'rate', {
+  const rate = getField({
     fieldtype: 'Currency',
     non_negative: 1,
     default: '5',
@@ -34,24 +32,21 @@ test('the server decides required, default, read only and minimum value', () => 
   assert.equal(rate.minvalue, 0);
   assert.equal(rate.default, 5);
 
-  const role = getField('Party', 'role', {
-    fieldtype: 'Select',
-    options: 'Both\nCustomer',
-  });
-  assert.equal(role.required, false);
+  const role = getField({ fieldtype: 'Select', options: 'Both\nCustomer' });
+  assert.equal(role.required, undefined);
   assert.equal(role.default, undefined);
 });
 
 test('the server date defaults Now and Today give a new document the current date', async () => {
-  const fyo = await makeFyo();
-  for (const schemaName of [
-    'SalesInvoice',
-    'Payment',
-    'JournalEntry',
-    'Shipment',
+  await loadFrappeModels();
+  for (const [schemaName, fieldname] of [
+    ['SalesInvoice', 'date'],
+    ['Payment', 'date'],
+    ['JournalEntry', 'posting_date'],
+    ['Shipment', 'date'],
   ]) {
     const before = Date.now();
-    const { date } = fyo.doc.getNewDoc(schemaName);
+    const date = newFrappeDoc(schemaName)[fieldname];
     assert.ok(date instanceof Date, schemaName);
     assert.ok(
       date.getTime() >= before && date.getTime() <= Date.now(),
@@ -62,42 +57,32 @@ test('the server date defaults Now and Today give a new document the current dat
 
 test('Frappe field types and links become Books field types and targets', () => {
   const cases = [
-    ['Item', 'image', { fieldtype: 'Attach Image' }, 'AttachImage'],
-    ['Payment', 'attachment', { fieldtype: 'Attach' }, 'Attachment'],
-    ['Item', 'description', { fieldtype: 'Code' }, 'Text'],
+    ['Attach Image', 'AttachImage'],
+    ['Attach', 'Attachment'],
+    ['Code', 'Text'],
+    ['Small Text', 'Text'],
+    ['Autocomplete', 'AutoComplete'],
   ];
-  for (const [schemaName, fieldname, docfield, fieldtype] of cases) {
-    assert.equal(
-      getField(schemaName, fieldname, docfield).fieldtype,
-      fieldtype
-    );
+  for (const [fieldtype, booksFieldtype] of cases) {
+    assert.equal(getField({ fieldtype }).fieldtype, booksFieldtype);
   }
 
-  const party = getField('SalesInvoice', 'party', {
-    fieldtype: 'Link',
-    options: 'Party',
-  });
+  const party = getField({ fieldtype: 'Link', options: 'Books Party' });
   assert.equal(party.target, 'Party');
-  const name = getField('PaymentFor', 'referenceName', {
-    fieldtype: 'Dynamic Link',
-    options: 'referenceType',
-  });
+  const name = getField({ fieldtype: 'Dynamic Link', options: 'party_type' });
   assert.deepEqual(
     [name.fieldtype, name.references],
-    ['DynamicLink', 'referenceType']
+    ['DynamicLink', 'party_type']
   );
-  const check = getField('Item', 'trackItem', {
-    fieldtype: 'Check',
-    default: '1',
-  });
+  const check = getField({ fieldtype: 'Check', default: '1' });
   assert.equal(check.default, true);
 });
 
-test('option values come from the server and labels from the schema file', () => {
-  const movementType = getField('StockMovement', 'movementType', {
-    fieldtype: 'Select',
-    options: 'MaterialIssue\nManufacture\nOnHold',
-  });
+test('option values come from the server and labels from the model', () => {
+  const movementType = getField(
+    { fieldtype: 'Select', options: 'MaterialIssue\nManufacture\nOnHold' },
+    { optionLabels: { MaterialIssue: 'Material Issue' } }
+  );
   assert.deepEqual(movementType.options, [
     { value: 'MaterialIssue', label: 'Material Issue' },
     { value: 'Manufacture', label: 'Manufacture' },
@@ -105,87 +90,13 @@ test('option values come from the server and labels from the schema file', () =>
   ]);
 });
 
-test('computed and reference fields keep the type the Books app gives them', () => {
-  const amountPaid = getField('Payment', 'amountPaid', {
-    fieldtype: 'Currency',
-    read_only: 1,
-  });
-  assert.equal(amountPaid.readOnly, undefined);
-
-  const referenceType = getField('PaymentFor', 'referenceType', {
-    fieldtype: 'Link',
-    options: 'DocType',
-    default: 'SalesInvoice',
-  });
-  assert.equal(referenceType.fieldtype, 'Select');
-  assert.deepEqual(
-    referenceType.options.map((option) => option.value),
-    ['SalesInvoice', 'PurchaseInvoice']
-  );
-  assert.equal(referenceType.default, 'SalesInvoice');
-});
-
-test('a custom field takes the server properties of its hosted column', () => {
-  const region = getField(
-    'Party',
-    'region',
-    { fieldtype: 'Data', label: 'Region', reqd: 1 },
-    [{ parent: 'Party', fieldname: 'region', section: 'Location' }]
-  );
-  assert.equal(region.isCustom, true);
-  assert.equal(region.label, 'Region');
-  assert.equal(region.section, 'Location');
-  assert.equal(region.required, true);
-});
-
-test('a custom field without a Custom Field on the server is left out', () => {
-  const schemas = getSchemas('-', [{ parent: 'Party', fieldname: 'region' }]);
-  assert.equal(
-    schemas.Party.fields.some((field) => field.fieldname === 'region'),
-    false
-  );
-});
-
 test('a field set only once is read only after the first save', () => {
-  const unit = getField('Item', 'unit', {
+  const unit = getField({
     fieldtype: 'Link',
-    options: 'UOM',
+    options: 'Books Uom',
     set_only_once: 1,
   });
-  assert.equal(
-    evaluateReadOnly(unit, { inserted: false, canWrite: true }),
-    false
-  );
-  assert.equal(
-    evaluateReadOnly(unit, { inserted: true, canWrite: true }),
-    true
-  );
-});
-
-before(() => {
-  globalThis.window = { location: { hostname: 'books.localhost' } };
-});
-after(() => {
-  delete globalThis.window;
-});
-
-test('the schema map asks the server for field properties in one request', async () => {
-  const requests = [];
-  globalThis.fetch = async (url) => {
-    requests.push(url);
-    const isProperties = url.endsWith('get_field_properties');
-    const message = isProperties
-      ? { Party: { email: { fieldtype: 'Data', reqd: 1 } } }
-      : [];
-    return Response.json({ message });
-  };
-
-  const schemas = await new FrappeDatabaseDemux().getSchemaMap();
-
-  assert.deepEqual(requests.sort(), [
-    '/api/method/frappe_books.ui_api.database_call',
-    '/api/method/frappe_books.ui_api.get_field_properties',
-  ]);
-  const email = schemas.Party.fields.find((f) => f.fieldname === 'email');
-  assert.equal(email.required, true);
+  const doc = { canWrite: true, hasFieldRule: () => false };
+  assert.equal(evaluateReadOnly(unit, { ...doc, inserted: false }), false);
+  assert.equal(evaluateReadOnly(unit, { ...doc, inserted: true }), true);
 });

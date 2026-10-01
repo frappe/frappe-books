@@ -2,7 +2,6 @@ import { Fyo } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import {
   Action,
-  ChangeArg,
   FiltersMap,
   ListViewSettings,
   ValidationMap,
@@ -11,51 +10,69 @@ import {
   validateEmail,
   validatePhoneNumber,
 } from 'fyo/model/validationFunction';
-import { Money } from 'pesa';
-import { PartyRole } from './types';
-import { ModelNameEnum } from 'models/types';
 import { getMappedDoc } from 'models/helpers';
+import { ModelNameEnum } from 'models/types';
+import { FrappeDoc } from 'src/frappe/document';
+import { getFrappeDoc } from 'src/frappe/documents';
+import { PartyRole } from './types';
 
-export class Party extends Doc {
+/**
+ * Books Party, a customer or supplier, served by Frappe. The server fills
+ * its default account and currency on save, and marks its lead converted.
+ */
+export class Party extends FrappeDoc {
+  static override doctype = 'Books Party';
+  static override presentation = {
+    label: 'Party',
+    nameField: { label: 'Name', placeholder: 'Full Name' },
+    quickEditFields: [
+      'email',
+      'phone',
+      'address',
+      'default_account',
+      'loyalty_program',
+      'currency',
+      'role',
+      'tax_id',
+    ],
+    fields: { from_lead: { create: false } },
+    // GST fields are Indian; see the Indian Party.
+    omitFields: ['gst_type', 'gstin'],
+    // Not phone, a search field only so that POS finds customers by it.
+    paletteFields: ['email', 'role'],
+  };
+  // The server sets the new role's default account on save.
+  static override refills = { role: ['default_account'] };
+
   role?: PartyRole;
-  party?: string;
-  fromLead?: string;
-  defaultAccount?: string;
-  loyaltyPoints?: number;
-  outstandingAmount?: Money;
+  from_lead?: string;
 
-  override async change({ changed }: ChangeArg) {
-    if (changed === 'role') {
-      // The server sets the new role's default account on save.
-      this.defaultAccount = undefined;
-    }
-  }
-
+  // Frappe checks these on save; mirrored to show its message at the field.
   validations: ValidationMap = {
     email: validateEmail,
     phone: validatePhoneNumber,
   };
 
   static filters: FiltersMap = {
-    defaultAccount: (doc: Doc) => {
+    default_account: (doc: Doc) => {
       const role = doc.role as PartyRole;
       if (role === 'Both') {
         return {
-          isGroup: false,
-          accountType: ['in', ['Payable', 'Receivable']],
+          is_group: false,
+          account_type: ['in', ['Payable', 'Receivable']],
         };
       }
 
       return {
-        isGroup: false,
-        accountType: role === 'Customer' ? 'Receivable' : 'Payable',
+        is_group: false,
+        account_type: role === 'Customer' ? 'Receivable' : 'Payable',
       };
     },
   };
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'email', 'phone', 'outstandingAmount'],
+      columns: ['name', 'email', 'phone', 'outstanding_amount'],
     };
   }
 
@@ -70,11 +87,9 @@ export class Party extends Doc {
 
   /** Shows the lead status the server set when this party was saved or deleted. */
   async reloadLead() {
-    if (!this.fromLead) {
-      return;
+    if (this.from_lead) {
+      await getFrappeDoc(ModelNameEnum.Lead, this.from_lead, { refresh: true });
     }
-    const lead = await this.fyo.doc.getDoc(ModelNameEnum.Lead, this.fromLead);
-    await lead.load();
   }
 
   static getActions(fyo: Fyo): Action[] {

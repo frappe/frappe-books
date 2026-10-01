@@ -1,5 +1,0 @@
-{
-  "name": "PurchaseInvoiceItem",
-  "label": "Purchase Invoice Item",
-  "extends": "InvoiceItem"
-}

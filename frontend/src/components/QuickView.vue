@@ -39,7 +39,9 @@
 <script lang="ts">
 import { isFalsy } from 'fyo/utils';
 import { Spinner as FrappeSpinner } from 'frappe-ui';
-import { Field } from 'schemas/types';
+import { Field, Schema } from 'schemas/types';
+import { getFrappeRows } from 'src/frappe/list';
+import { getQuickViewFields, getSchema } from 'src/frappe/registry';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
@@ -61,8 +63,11 @@ export default defineComponent({
     };
   },
   computed: {
-    schema() {
-      return this.fyo.schemaMap[this.schemaName];
+    schema(): Schema | undefined {
+      return getSchema(this.schemaName);
+    },
+    fields(): Field[] {
+      return getQuickViewFields(this.schemaName);
     },
   },
   watch: {
@@ -82,53 +87,28 @@ export default defineComponent({
       const request = ++this.valueRequest;
       this.isLoading = true;
       try {
-        const fields: Field[] = (this.schema?.fields ?? []).filter(
-          (f) =>
-            f &&
-            f.fieldtype !== 'Table' &&
-            f.fieldtype !== 'AttachImage' &&
-            f.fieldtype !== 'Attachment' &&
-            f.fieldname !== 'name' &&
-            !f.hidden &&
-            !f.meta &&
-            !f.abstract &&
-            !f.computed
-        );
-
-        const data = (
-          await this.fyo.db.getAll(this.schemaName, {
-            fields: fields.map((f) => f.fieldname),
-            filters: { name: this.name },
-          })
-        )[0];
-
+        const [data] = await getFrappeRows(this.fyo, this.schemaName, [
+          this.name,
+        ]);
         if (request !== this.valueRequest) {
           return;
         }
 
-        if (!data) {
-          this.values = [];
-          return;
-        }
-
-        this.values = fields
-          .map((f) => {
-            const value = data[f.fieldname];
-            if (isFalsy(value)) {
-              return { value: '', label: '' };
-            }
-
-            return {
-              value: this.fyo.format(data[f.fieldname], f),
-              label: f.label,
-            };
-          })
-          .filter((i) => !!i.value);
+        this.values = data ? this.getValues(data) : [];
       } finally {
         if (request === this.valueRequest) {
           this.isLoading = false;
         }
       }
+    },
+    getValues(data: Record<string, unknown>) {
+      return this.fields
+        .filter((f) => !isFalsy(data[f.fieldname]))
+        .map((f) => ({
+          value: this.fyo.format(data[f.fieldname], f),
+          label: f.label,
+        }))
+        .filter((i) => !!i.value);
     },
   },
 });

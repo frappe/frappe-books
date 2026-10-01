@@ -1,9 +1,10 @@
 import { Fyo } from 'fyo';
-import { Converter } from 'fyo/core/converter';
+import { Converter } from 'fyo/utils/converter';
 import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import Observable from 'fyo/utils/observable';
 import { Field, RawValue } from 'schemas/types';
+import { getDoctypeLabel } from 'src/frappe/registry';
 import { getIsNullOrUndef } from 'utils';
 import {
   getServerDefaultFilters,
@@ -180,7 +181,7 @@ export abstract class Report extends Observable<RawValue> {
     }
 
     if (column.fieldname === 'reference_type') {
-      return this.fyo.schemaMap[rawValue as string]?.label ?? String(rawValue);
+      return getDoctypeLabel(String(rawValue));
     }
 
     return this.fyo.format(rawValue, column.fieldtype);

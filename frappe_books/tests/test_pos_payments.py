@@ -1,6 +1,8 @@
 import frappe
+from frappe.api.v2 import run_doc_method
+from frappe.client import get_list
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, getdate, now_datetime
+from frappe.utils import add_days, getdate, now_datetime, set_request
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
@@ -15,9 +17,14 @@ from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice i
 	make_payment,
 	pay_pos_invoice,
 )
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
-from frappe_books.ui_api import lifecycle_action
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
+from frappe_books.tests.accounting import (
+	ensure_user,
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	unique_name,
+)
 
 
 class IntegrationTestPosPayments(IntegrationTestCase):
@@ -58,20 +65,35 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual((payment.amount, payment.payment_account), (180, self.counter))
 		self.assertEqual((invoice.outstanding_amount, invoice.reload().status), (0, "Paid"))
 
-	def test_interface_submit_pays_the_tendered_rows(self):
-		values = {
-			"party": self.party.name,
-			"account": self.receivable.name,
-			"date": now_datetime().isoformat(),
-			"isPOS": True,
-			"items": [{"item": self.item.name, "rate": 90, "quantity": 2}],
-			"payments": [{"paymentMethod": "Cash", "amount": 200}],
-		}
-		inserted = BooksDatabaseBridge().insert("SalesInvoice", values)
+	def test_a_cashier_lists_the_payments_a_paid_sale_made(self):
+		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])
+		invoice.submit()
 
-		invoice = lifecycle_action("submit", "SalesInvoice", inserted["name"], inserted["modified"])
+		# The query the POS runs after checkout to toast each payment.
+		with self.set_user(ensure_user("pos-cashier@example.com", "Books User")):
+			rows = get_list(
+				"Books Payment For",
+				parent="Books Payment",
+				fields=["parent"],
+				filters=[
+					["reference_type", "=", "Books Sales Invoice"],
+					["reference_name", "=", invoice.name],
+				],
+				order_by="creation asc",
+				limit_page_length=0,
+			)
 
-		self.assertEqual((invoice["outstandingAmount"], invoice["status"]), (0, "Paid"))
+		self.assertEqual(len(rows), 1)
+		self.assertEqual([row.parent for row in rows], counter_payments(invoice))
+
+	def test_a_submit_of_the_client_copy_pays_the_tendered_rows(self):
+		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
+
+		run_doc_method("submit", invoice.as_dict(convert_dates_to_str=True))
+
+		invoice.reload()
+		self.assertEqual((invoice.outstanding_amount, invoice.status), (0, "Paid"))
 
 	def test_failed_payment_fails_the_submit(self):
 		invoice = self.make_pos_invoice(payments=[{"payment_method": "Bank", "amount": 180}])

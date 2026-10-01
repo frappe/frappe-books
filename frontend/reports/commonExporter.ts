@@ -1,5 +1,6 @@
 import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
+import { toSchemaName } from 'src/frappe/registry';
 import { downloadFile } from 'src/utils/browser';
 import { showToast } from 'src/utils/interactive';
 import { getIsNullOrUndef } from 'utils';
@@ -7,6 +8,9 @@ import { generateCSV } from 'utils/csvParser';
 import { Report } from './Report';
 import { canExportReport } from './serverReport';
 import { ExportExtension, ReportCell } from './types';
+
+// Reports hold reference types as doctypes; files name them by schema, e.g. `SalesInvoice`.
+const REFERENCE_FIELDNAMES = ['reference_type', 'referenceType'];
 
 interface JSONExport {
   columns: { fieldname: string; label: string }[];
@@ -74,7 +78,7 @@ export function getJsonData(report: Report): string {
 
   const columns = report.columns;
   const displayPrecision =
-    (report.fyo.singles.SystemSettings?.displayPrecision as number) ?? 2;
+    (report.fyo.singles.SystemSettings?.display_precision as number) ?? 2;
 
   /**
    * Set columns as list of fieldname, label
@@ -94,7 +98,7 @@ export function getJsonData(report: Report): string {
 
     const rowObj: Record<string, unknown> = {};
     for (let c = 0; c < row.cells.length; c++) {
-      const { label } = columns[c];
+      const { label, fieldname } = columns[c];
       const cell = row.cells[c];
       // If the cell's display value is empty (due to hideGroupAmounts or similar),
       // export empty string instead of the rawValue
@@ -102,7 +106,7 @@ export function getJsonData(report: Report): string {
       if (cell.value === '' && row.isGroup) {
         cellValue = '';
       } else {
-        cellValue = getValueFromCell(cell, displayPrecision);
+        cellValue = getValueFromCell(cell, fieldname, displayPrecision);
       }
       rowObj[label] = cellValue;
     }
@@ -119,7 +123,7 @@ export function getJsonData(report: Report): string {
       continue;
     }
 
-    exportObject.filters[fieldname] = String(value);
+    exportObject.filters[fieldname] = String(toExportValue(fieldname, value));
   }
 
   /**
@@ -140,7 +144,7 @@ export function getCsvData(report: Report): string {
 
 function convertReportToCSVMatrix(report: Report): unknown[][] {
   const displayPrecision =
-    (report.fyo.singles.SystemSettings?.displayPrecision as number) ?? 2;
+    (report.fyo.singles.SystemSettings?.display_precision as number) ?? 2;
   const reportData = report.reportData;
   const columns = report.columns;
 
@@ -160,7 +164,9 @@ function convertReportToCSVMatrix(report: Report): unknown[][] {
       if (cell.value === '' && row.isGroup) {
         csvrow.push('');
       } else {
-        csvrow.push(getValueFromCell(cell, displayPrecision));
+        csvrow.push(
+          getValueFromCell(cell, columns[c].fieldname, displayPrecision)
+        );
       }
     }
 
@@ -170,8 +176,12 @@ function convertReportToCSVMatrix(report: Report): unknown[][] {
   return csvdata;
 }
 
-function getValueFromCell(cell: ReportCell, displayPrecision: number) {
-  const rawValue = cell.rawValue;
+function getValueFromCell(
+  cell: ReportCell,
+  fieldname: string,
+  displayPrecision: number
+) {
+  const rawValue = toExportValue(fieldname, cell.rawValue);
 
   if (rawValue instanceof Date) {
     return rawValue.toISOString();
@@ -198,6 +208,14 @@ function getValueFromCell(cell: ReportCell, displayPrecision: number) {
   }
 
   return rawValue;
+}
+
+function toExportValue<T>(fieldname: string, value: T): T | string {
+  if (!REFERENCE_FIELDNAMES.includes(fieldname)) {
+    return value;
+  }
+
+  return toSchemaName(String(value)) ?? value;
 }
 
 export function saveExportData(

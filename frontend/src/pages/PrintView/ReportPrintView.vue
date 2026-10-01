@@ -29,7 +29,7 @@
             <div class="p-2">
               <div class="font-semibold text-xl w-full flex justify-between">
                 <h1>
-                  {{ `${fyo.singles.PrintSettings?.companyName}` }}
+                  {{ `${fyo.singles.PrintSettings?.company_name}` }}
                 </h1>
                 <p class="text-gray-600">
                   {{ title }}
@@ -183,7 +183,7 @@ import Int from 'src/components/Controls/Int.vue';
 import Select from 'src/components/Controls/Select.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { getReport } from 'src/utils/misc';
-import { getPathAndMakePDF } from 'src/utils/printTemplates';
+import { getPathAndMakePDF } from 'src/utils/printDocument';
 import { showSidebar } from 'src/utils/refs';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';

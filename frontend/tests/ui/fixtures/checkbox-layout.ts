@@ -3,7 +3,6 @@ import 'src/router';
 import { createApp, h, reactive, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { FrappeUI, FrappeUIProvider } from 'frappe-ui';
-import { models } from 'models';
 import { StockBalance } from 'reports/inventory/StockBalance';
 import { toColumnField } from 'reports/serverReport';
 import type { Field } from 'schemas/types';
@@ -11,19 +10,17 @@ import Check from 'src/components/Controls/Check.vue';
 import CommonFormSection from 'src/pages/CommonForm/CommonFormSection.vue';
 import ReportPage from 'src/pages/Report.vue';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
-import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
+import { newFrappeDoc } from 'src/frappe/documents';
 import 'src/styles/index.css';
-import { getTestSchemas } from './schemas';
+import { loadFrappeFixture } from './frappe';
 
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
-  await fyo.db.init();
-  fyo.doc.registerModels(models);
+  await loadFrappeFixture(() => ({ data: [] }));
   fyo.singles.InventorySettings = {
-    enableBatches: true,
-    enableSerialNumber: true,
+    enable_batches: true,
+    enable_serial_number: true,
   } as any;
-  fyo.singles.SystemSettings = { dateFormat: 'MMM d, y' } as any;
+  fyo.singles.SystemSettings = { date_format: 'MMM d, y' } as any;
   const report = reactive(new StockBalance(fyo));
   // Only the server calls are stubbed; filters and their updates use the real model.
   report.getDefaultFilters = async () => ({});
@@ -43,9 +40,7 @@ async function mount() {
     ...ReportPage,
     data: () => ({ report, loading: false }),
   };
-  const doc = reactive(
-    fyo.doc.getNewDoc('Item', { name: 'Wireless Keyboard' })
-  );
+  const doc = reactive(newFrappeDoc('Item', { name: 'Wireless Keyboard' }));
   const state = reactive({
     view: 'report',
     value: false,

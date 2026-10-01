@@ -48,8 +48,8 @@
               </p>
 
               <!-- Date -->
-              <p v-if="e.date" class="text-xs text-ink-gray-6">
-                {{ fyo.format(e.date, 'Date') }}
+              <p v-if="getDate(e)" class="text-xs text-ink-gray-6">
+                {{ fyo.format(getDate(e), 'Date') }}
               </p>
             </div>
             <div class="flex gap-2 mt-1 pill-container flex-wrap">
@@ -71,11 +71,11 @@
 
               <!-- Party or EntryType or Account -->
               <FrappeBadge
-                v-if="e.party || e.entryType || e.account"
+                v-if="e.party || e.entry_type || e.account"
                 theme="gray"
                 variant="subtle"
               >
-                {{ e.party || e.entryType || e.account }}
+                {{ e.party || e.entry_type || e.account }}
               </FrappeBadge>
 
               <FrappeBadge v-if="e.item" theme="gray" variant="subtle">
@@ -87,18 +87,22 @@
 
               <!-- Amounts -->
               <FrappeBadge
-                v-if="isPesa(e.outstandingAmount) && !e.outstandingAmount.isZero()"
+                v-if="
+                  isPesa(e.outstanding_amount) && !e.outstanding_amount.isZero()
+                "
                 theme="amber"
                 variant="subtle"
               >
-                {{ t`Unpaid ${fyo.format(e.outstandingAmount.abs(), 'Currency')}` }}
+                {{
+                  t`Unpaid ${fyo.format(e.outstanding_amount.abs(), 'Currency')}`
+                }}
               </FrappeBadge>
               <FrappeBadge
-                v-else-if="isPesa(e.grandTotal) && e.grandTotal.isPositive()"
+                v-else-if="isPesa(e.grand_total) && e.grand_total.isPositive()"
                 theme="green"
                 variant="subtle"
               >
-                {{ fyo.format(e.grandTotal, 'Currency') }}
+                {{ fyo.format(e.grand_total, 'Currency') }}
               </FrappeBadge>
               <FrappeBadge
                 v-else-if="isPesa(e.amount) && e.amount.isPositive()"
@@ -109,8 +113,14 @@
               </FrappeBadge>
 
               <!-- Quantities -->
-              <FrappeBadge v-if="e.stockNotTransferred" theme="amber" variant="subtle">
-                {{ t`Pending qty. ${fyo.format(e.stockNotTransferred, 'Float')}` }}
+              <FrappeBadge
+                v-if="e.stock_not_transferred"
+                theme="amber"
+                variant="subtle"
+              >
+                {{
+                  t`Pending qty. ${fyo.format(e.stock_not_transferred, 'Float')}`
+                }}
               </FrappeBadge>
               <FrappeBadge
                 v-else-if="typeof e.quantity === 'number' && e.quantity"
@@ -177,6 +187,8 @@ import {
 } from 'frappe-ui';
 import { Accordion as FrappeAccordion, type AccordionItem } from 'frappe-ui-accordion';
 import { ModelNameEnum } from 'models/types';
+import { getFrappeRows } from 'src/frappe/list';
+import { getSchema } from 'src/frappe/registry';
 import { getLinkedEntries } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getFormRoute, routeTo } from 'src/utils/ui';
@@ -231,7 +243,7 @@ export default defineComponent({
     groupItems(): AccordionItem[] {
       return this.sequence.map((schemaName) => ({
         value: schemaName,
-        title: this.fyo.schemaMap[schemaName]?.label ?? schemaName,
+        title: getSchema(schemaName)?.label ?? schemaName,
       }));
     },
   },
@@ -244,6 +256,10 @@ export default defineComponent({
   },
   methods: {
     isPesa,
+    /** Ledger entries are dated by their posting date. */
+    getDate(entry: Record<string, unknown>) {
+      return entry.date ?? entry.posting_date;
+    },
     async routeTo(schemaName: string, name: string) {
       const route = getFormRoute(schemaName, name);
       await routeTo(route);
@@ -262,11 +278,12 @@ export default defineComponent({
           }
 
           const fields = linkEntryDisplayFields[key] ?? ['name'];
-          const details = await this.fyo.db.getAll(key, {
-            fields,
-            filters: { name: ['in', entryNames] },
-          });
-
+          const details = await getFrappeRows(
+            this.fyo,
+            key,
+            entryNames,
+            fields
+          );
           entries[key] = { details };
         }
         this.entries = entries;
@@ -308,27 +325,27 @@ const linkEntryDisplayFields: Record<string, string[]> = {
     'name',
     'date',
     'party',
-    'grandTotal',
-    'outstandingAmount',
-    'stockNotTransferred',
+    'grand_total',
+    'outstanding_amount',
+    'stock_not_transferred',
   ],
   [ModelNameEnum.PurchaseInvoice]: [
     'name',
     'date',
     'party',
-    'grandTotal',
-    'outstandingAmount',
-    'stockNotTransferred',
+    'grand_total',
+    'outstanding_amount',
+    'stock_not_transferred',
   ],
   // Stock Transfers
-  [ModelNameEnum.Shipment]: ['name', 'date', 'party', 'grandTotal'],
-  [ModelNameEnum.PurchaseReceipt]: ['name', 'date', 'party', 'grandTotal'],
+  [ModelNameEnum.Shipment]: ['name', 'date', 'party', 'grand_total'],
+  [ModelNameEnum.PurchaseReceipt]: ['name', 'date', 'party', 'grand_total'],
   // Other Transactional
   [ModelNameEnum.Payment]: ['name', 'date', 'party', 'amount'],
-  [ModelNameEnum.JournalEntry]: ['name', 'date', 'entryType'],
+  [ModelNameEnum.JournalEntry]: ['name', 'date', 'entry_type'],
   [ModelNameEnum.StockMovement]: ['name', 'date', 'amount'],
   // Ledgers
-  [ModelNameEnum.AccountingLedgerEntry]: ['name', 'date', 'account', 'credit', 'debit'],
+  [ModelNameEnum.AccountingLedgerEntry]: ['name', 'posting_date', 'account', 'credit', 'debit'],
   [ModelNameEnum.StockLedgerEntry]: ['name', 'date', 'item', 'location', 'quantity'],
 };
 </script>

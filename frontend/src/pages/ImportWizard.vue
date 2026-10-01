@@ -51,10 +51,7 @@
             fieldname: 'importType',
             label: t`Import Type`,
             fieldtype: 'AutoComplete',
-            options: importableSchemaNames.map((value) => ({
-              value,
-              label: fyo.schemaMap[value]?.label ?? value,
-            })),
+            options: importTypeOptions,
           }"
           class="w-40 shrink-0"
           :border="true"
@@ -345,12 +342,16 @@ import FormControl from 'src/components/Controls/FormControl.vue';
 import Select from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
+import { DataImport, MissingLink } from 'src/dataImport';
+import { getDocType } from 'src/frappe/doctypes';
+import { getDoctypeLabel, getSchema } from 'src/frappe/registry';
 import {
+  ImportFile,
   Importer,
   TemplateField,
   getColumnLabel,
+  getGridRows,
   getImportableSchemaNames,
-  importDoc,
 } from 'src/importer';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
@@ -365,8 +366,11 @@ type ImportWizardData = {
   showColumnPicker: boolean;
   complete: boolean;
   success: string[];
-  successOldName: string[];
   failed: { name: string; message: string }[];
+  /** Grid rows of the failed documents, which Fix Failed keeps. */
+  failedRows: number[];
+  /** The Data Import the next import runs, until it has run. */
+  dataImport: DataImport | null;
   file: null | { name: string; filePath: string; text: string };
   nullOrImporter: null | Importer;
   importType: string;
@@ -397,8 +401,9 @@ export default defineComponent({
       showColumnPicker: false,
       complete: false,
       success: [],
-      successOldName: [],
       failed: [],
+      failedRows: [],
+      dataImport: null,
       file: null,
       nullOrImporter: null,
       importType: '',
@@ -493,6 +498,12 @@ export default defineComponent({
     importableSchemaNames(): ModelNameEnum[] {
       return getImportableSchemaNames(fyo);
     },
+    importTypeOptions(): SelectOption[] {
+      return this.importableSchemaNames.map((value) => ({
+        value,
+        label: getSchema(value)?.label ?? value,
+      }));
+    },
     actions(): Action[] {
       const actions: Action[] = [];
 
@@ -539,8 +550,7 @@ export default defineComponent({
       return this.fileName;
     },
     isSubmittable(): boolean {
-      const schemaName = this.importer.schemaName;
-      return fyo.schemaMap[schemaName]?.isSubmittable ?? false;
+      return !!getSchema(this.importer.schemaName)?.isSubmittable;
     },
     gridColumnTitleDf(): OptionField {
       const options: SelectOption[] = [];
@@ -630,8 +640,9 @@ export default defineComponent({
     clear(): void {
       this.file = null;
       this.success = [];
-      this.successOldName = [];
       this.failed = [];
+      this.failedRows = [];
+      this.dataImport = null;
       this.nullOrImporter = null;
       this.importType = '';
       this.complete = false;
@@ -643,39 +654,23 @@ export default defineComponent({
       downloadFile(template, `${templateName}.csv`, 'text/csv;charset=utf-8');
     },
     async preImportValidations(): Promise<boolean> {
-      const title = this.t`Cannot Import`;
       if (this.errorMessage.length) {
-        await showDialog({
-          title,
-          type: 'error',
-          detail: this.errorMessage,
-        });
-        return false;
+        return await this.showCannotImport(this.errorMessage);
       }
 
       const cellErrors = this.importer.checkCellErrors();
       if (cellErrors.length) {
-        await showDialog({
-          title,
-          type: 'error',
-          detail: this.t`Following cells have errors: ${cellErrors.join(', ')}.`,
-        });
-        return false;
-      }
-
-      const absentLinks = await this.importer.checkLinks();
-      if (absentLinks.length) {
-        await showDialog({
-          title,
-          type: 'error',
-          detail: this.t`Following links do not exist: ${absentLinks
-            .map((l) => `(${l.schemaLabel ?? l.schemaName}, ${l.name})`)
-            .join(', ')}.`,
-        });
-        return false;
+        return await this.showCannotImport(
+          this.t`Following cells have errors: ${cellErrors.join(', ')}.`
+        );
       }
 
       return true;
+    },
+    /** Shows why the entries cannot be imported; resolves false. */
+    async showCannotImport(detail: string): Promise<false> {
+      await showDialog({ title: this.t`Cannot Import`, type: 'error', detail });
+      return false;
     },
     async importData(): Promise<void> {
       const isValid = await this.preImportValidations();
@@ -684,29 +679,96 @@ export default defineComponent({
       }
 
       this.isMakingEntries = true;
-      this.importer.populateDocs();
+      try {
+        await this.importFile(this.importer.getImportFile());
+      } finally {
+        this.isMakingEntries = false;
+      }
+    },
+    /** Frappe's Data Import checks and saves the grid's rows. */
+    async importFile(file: ImportFile): Promise<void> {
+      const dataImport = await this.getDataImport(await this.askShouldSubmit());
+      await dataImport.setFile(file.csv, `${this.importType}.csv`);
+      if (!(await this.checkImportFile(dataImport))) {
+        return;
+      }
 
-      const shouldSubmit = await this.askShouldSubmit();
+      const warnings = await this.runImport(dataImport);
+      if (warnings.length) {
+        await this.showCannotImport(warnings.join('\n'));
+        return;
+      }
 
-      const { docs } = this.importer;
+      await this.setResults(dataImport, file);
+      this.dataImport = null;
+      this.complete = true;
+    },
+    /** A file Frappe refused is fixed and sent again to the same Data Import, which keeps its submit choice. */
+    async getDataImport(submit: boolean): Promise<DataImport> {
+      if (this.dataImport?.submit !== submit) {
+        this.dataImport = await DataImport.insert(this.getDoctype(), submit);
+      }
+
+      return this.dataImport;
+    },
+    getDoctype(): string {
+      return getDocType(this.importType).doctype;
+    },
+    async checkImportFile(dataImport: DataImport): Promise<boolean> {
+      const { missingLinks } = dataImport;
+      if (missingLinks.length) {
+        const links = this.getLinkLabels(missingLinks).join(', ');
+        return await this.showCannotImport(
+          this.t`Following links do not exist: ${links}.`
+        );
+      }
+
+      const warnings = await dataImport.getWarnings();
+      if (warnings.length) {
+        return await this.showCannotImport(warnings.join('\n'));
+      }
+
+      return true;
+    },
+    /** Missing links as (schema, name), grouped by schema. */
+    getLinkLabels(links: MissingLink[]): string[] {
+      const doctypes = [...new Set(links.map(({ doctype }) => doctype))];
+      return doctypes.flatMap((doctype) => {
+        const names = links
+          .filter((link) => link.doctype === doctype)
+          .map(({ name }) => name);
+        const label = getDoctypeLabel(doctype);
+        return [...new Set(names)].map((name) => `(${label}, ${name})`);
+      });
+    },
+    async runImport(dataImport: DataImport): Promise<string[]> {
       const progress = toast.loading(this.t`Importing entries...`);
       try {
-        for (const [index, doc] of docs.entries()) {
+        return await dataImport.run(({ processed, total }) => {
           toast.loading(
-            this.t`${index} entries made out of ${docs.length}...`,
+            this.t`${processed} entries made out of ${total}...`,
             { id: progress }
           );
-          await importDoc(doc, shouldSubmit, this);
-        }
+        });
       } finally {
         toast.dismiss(progress);
       }
-
-      this.isMakingEntries = false;
-      this.complete = true;
+    },
+    async setResults(dataImport: DataImport, file: ImportFile): Promise<void> {
+      const [imported, failed] = await Promise.all([
+        dataImport.getLogs('success'),
+        dataImport.getLogs('failed'),
+      ]);
+      const failedRows = failed.map(({ rows }) => getGridRows(file, rows));
+      this.success = imported.map(({ docname }) => docname ?? '');
+      this.failed = failed.map(({ message }, index) => ({
+        name: this.importer.getRowName(failedRows[index][0]),
+        message,
+      }));
+      this.failedRows = failedRows.flat();
     },
     async askShouldSubmit(): Promise<boolean> {
-      if (!this.fyo.schemaMap[this.importType]?.isSubmittable) {
+      if (!getSchema(this.importType)?.isSubmittable) {
         return false;
       }
 
@@ -737,7 +799,7 @@ export default defineComponent({
     },
     clearSuccessfullyImportedEntries() {
       const importer = this.importer;
-      importer.retryRowsNotImported(this.successOldName);
+      importer.keepRows(this.failedRows);
       this.clear();
       this.importType = importer.schemaName;
       this.nullOrImporter = importer;

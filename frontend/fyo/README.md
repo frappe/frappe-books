@@ -1,83 +1,34 @@
 # Fyo
 
-This is the underlying framework that runs **Books**, at some point it may be
-removed into a separate repo, but as of now it's in gestation.
+`fyo` holds what every /books screen shares: translations (`t`, `T`), money (`pesa`), formatting, the user's rights, the open settings documents and the document events. Documents load and save through Frappe; see `docs/framework-backed-doctypes.md` and `src/frappe/`.
 
-The framework separates the Books interface from its data backend. This app
-uses a Frappe database adapter for all document and query operations.
+## The parts
 
-## Pre Req
+| Part | Job |
+| --- | --- |
+| `index.ts` | The `Fyo` class. `src/initFyo.ts` makes the one instance that screens use. |
+| `model/doc.ts` | `Doc`, the abstract document a form edits: values, unsaved edits, rights and the save lifecycle. `FrappeDoc` in `src/frappe/document.ts` loads and saves it through Frappe. |
+| `model/types.ts` | The statics and dynamic rules a model sets (`hidden`, `readOnly`, `required`, `validations`, list settings, actions). |
+| `utils/converter.ts` | A field's raw value to the value a form edits, and back. |
+| `utils/format.ts` | How values show, by field type. |
+| `utils/translation.ts` | Runtime translations. |
 
-**Singleton**: The `Fyo` class is used as a singleton throughout Books, this
-allows for a single source of truth and a common interface to access the `db`
-and `doc` modules.
+## Startup
 
-**Localization**: Since Books' functionality changes depending on region,
-regional information (`countryCode`) is required in the initialization process.
+`src/web/WebApp.vue` starts /books:
 
-**`Doc`**: This is `fyo`'s abstraction for an ORM, the associated files are
-located in `model/doc.ts`, all classes exported from `books/models` extend this.
-
-### Terminology
-
-- **Schema**: object that defines shape of the data in the database.
-- **Model**: the controller class that extends the `Doc` class, or the `Doc`
-  class itself (if a specific controller doesn't exist).
-- **doc** (not `Doc`): instance of a Model, i.e. what has the data.
-
-If you are confused, I understand.
-
-## Initialization
-
-Core models are maintained in the `fyo/models` subdirectory. The Frappe site
-provides `countryCode` during boot so that Books can load regional models.
-
-A few things have to be done on initialization:
-
-#### 1. Connect To DB
-
-Call `fyo.db.connect(countryCode)` to connect the interface to the current
-Frappe site. Frappe owns database creation and migration.
-
-#### 2. Initialize and Register
-
-Done using `fyo.initializeAndRegister` after a database is connected, this should be
-passed the models and regional models.
-
-This sets the schemas and associated models on the `fyo` object along with a few
-other things.
-
-### Sequence
-
-- Read `countryCode` from the Frappe boot response.
-- Call `fyo.db.connect(countryCode)`.
-- Get `regionalModels` from `models/index.ts/getRegionalModels`.
-- Call `fyo.initializeAndRegister` with the models and regional models.
-
-_Note: since **SystemSettings** are initialized on `fyo.initializeAndRegister`
-db needs to be set first else an error will be thrown_
+- Read the user, language and `country_code` from the Frappe boot.
+- Register `frappeModels`, then the regional ones from `getRegionalFrappeModels` in `models/index.ts`.
+- Set `fyo.store.permissions` with the models' doctypes (`getSchemaDoctypes`) and the boot's `can_*` lists.
+- Call `loadFrappeDocTypes`, which loads every DocType meta in one request (`frappe_books.meta.get_books_meta`).
+- Call `fyo.initializeMoneyMaker` with System Settings, then load the other singles into `fyo.singles` and the currency symbols.
 
 ## Translations
 
-All translations take place during runtime, for translations to work, a
-`LanguageMap` (for def check `utils/types.ts`) has to be set.
+All translations take place during runtime. For translations to work, a `LanguageMap` (see `utils/types.ts`) has to be set with `setLanguageMapOnTranslationString` in `fyo/utils/translation.ts`.
 
-This can be done using `fyo/utils/translation.ts/setLanguageMapOnTranslationString`.
+Since translations are runtime, code evaluated before the language map loads is not translated. Do not keep translated strings in module-level constants.
 
-Since translations are runtime, if the code is evaluated before the language map
-is loaded, translations won't work. To prevent this, don't maintain translation
-strings globally since this will be evaluated before the map is loaded.
+## Document events
 
-## Observers
-
-The doc and db handlers have observers (instances of `Observable`) as
-properties, these can be accessed using
-
-- `fyo.db.observer`
-- `fyo.doc.observer`
-
-The purpose of the observer is to trigger registered callbacks when some `doc`
-operation or `db` operation takes place.
-
-These are schema level observers i.e. they are registered like so:
-`method:schemaName`. The callbacks receive args passed to the functions.
+`fyo.observer` triggers the callbacks registered for an event of a schema, like `sync:SalesInvoice`, `submit:SalesInvoice`, `cancel:SalesInvoice` and `delete:SalesInvoice`. Lists and screens use them to refresh. The callbacks receive the document's name.

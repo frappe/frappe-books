@@ -1,7 +1,7 @@
 import { fyo } from 'src/initFyo';
-import { models } from 'models';
-import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
-import { getTestSchemas } from './schemas';
+import { newFrappeDoc } from 'src/frappe/documents';
+import { getSingleSchemaNames } from 'src/frappe/registry';
+import { loadFrappeFixture } from './frappe';
 
 export const shift = { open: true };
 
@@ -14,132 +14,197 @@ export const products = [
   'Reusable Glass Water Bottle',
 ];
 
+type Row = Record<string, any>;
+type Filter = [string, string, unknown];
+
+const items = products.map((name, index) => ({
+  name,
+  rate: 240 + index * 135,
+  unit: 'Unit',
+  availableQty: 24 + index,
+  has_batch: 0,
+  has_serial_number: 0,
+}));
+
+const openingShift = {
+  name: 'SHIFT-001',
+  docstatus: 1,
+  opening_date: '2026-09-06 09:00:00',
+  opening_cash: [10, 20, 50, 100, 200, 500].map((denomination, index) => ({
+    name: `cash-${index}`,
+    denomination,
+    count: 2,
+  })),
+  opening_amounts: [
+    ['Cash', 1000],
+    ['Credit Card', 0],
+    ['Bank Transfer', 0],
+    ['Store Cash', 500],
+  ].map(([payment_method, amount]) => ({ payment_method, amount })),
+};
+
+/** Frappe's records by doctype, which the fixture's server answers from. */
+const records: Record<string, Row[]> = {
+  'Books Payment Method': [
+    { name: 'Cash', type: 'Cash' },
+    { name: 'Credit Card', type: 'Transfer' },
+    { name: 'Bank Transfer', type: 'Transfer', requires_clearance_date: 1 },
+    { name: 'Store Cash', type: 'Cash' },
+    { name: 'Store UPI', type: 'Transfer' },
+  ],
+  'Books Item': items,
+  'Books Party': [
+    {
+      name: 'Aarav Shah',
+      role: 'Customer',
+      loyalty_program: 'Store Rewards',
+      loyalty_points: 1250,
+    },
+  ],
+  'Books Price List': [{ name: 'Retail' }, { name: 'Members' }],
+  'Books Batch': [{ name: 'TEA-2026-09' }],
+  'Books Pos Opening Shift': [openingShift],
+  'Books Sales Invoice': Array.from({ length: 24 }, (_, index) => ({
+    name: `SINV-2026-${String(index + 1).padStart(4, '0')}`,
+    party: index % 2 ? 'Aarav Shah' : 'Meera Patel',
+    date: '2026-09-06 10:00:00',
+    grand_total: 1250,
+    outstanding_amount: 0,
+    docstatus: 1,
+    is_pos: 1,
+  })),
+};
+
 export async function preparePOSData() {
-  const records: Record<string, any[]> = {
-    PaymentMethod: [
-      { name: 'Cash', type: 'Cash' },
-      { name: 'Credit Card', type: 'Transfer' },
-      { name: 'Bank Transfer', type: 'Transfer', requiresClearanceDate: true },
-      { name: 'Store Cash', type: 'Cash' },
-      { name: 'Store UPI', type: 'Transfer' },
-    ],
-    Item: products.map((name, index) => ({
-      name,
-      rate: String(240 + index * 135),
-      unit: 'Unit',
-      availableQty: 24 + index,
-      hasBatch: false,
-      hasSerialNumber: false,
-    })),
-    Party: [
-      {
-        name: 'Aarav Shah',
-        role: 'Customer',
-        loyaltyProgram: 'Store Rewards',
-        loyaltyPoints: 1250,
-      },
-    ],
-    PriceList: [{ name: 'Retail' }, { name: 'Members' }],
-    Batch: [{ name: 'TEA-2026-09' }],
-    POSOpeningShift: [
-      {
-        name: 'SHIFT-001',
-        openingDate: '2026-09-06',
-        submitted: true,
-        openingCash: [10, 20, 50, 100, 200, 500].map((denomination) => ({
-          denomination: String(denomination),
-          count: 2,
-        })),
-        openingAmounts: [
-          ['Cash', '1000'],
-          ['Credit Card', '0'],
-          ['Bank Transfer', '0'],
-          ['Store Cash', '500'],
-        ].map(([paymentMethod, amount]) => ({ paymentMethod, amount })),
-      },
-    ],
-    SalesInvoice: Array.from({ length: 24 }, (_, index) => ({
-      name: `SINV-2026-${String(index + 1).padStart(4, '0')}`,
-      party: index % 2 ? 'Aarav Shah' : 'Meera Patel',
-      date: '2026-09-06',
-      grandTotal: '1250',
-      outstandingAmount: '0',
-      submitted: true,
-      isPOS: true,
-    })),
-  };
-  // The real schemas and models use an in-memory database for this fixture.
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
-  FrappeDatabaseDemux.prototype.call = async (method, ...args) => {
-    const [schema, name] = args as string[];
-    if (method === 'getAll')
-      return filterRecords(records[schema] ?? [], args[1]);
-    if (method === 'searchLink') return records[schema] ?? [];
-    if (method === 'get')
-      return records[schema]?.find((row) => row.name === name) ?? { name };
-    if (method === 'getSingleValues') return [];
-    if (method === 'exists') return true;
-    if (method === 'count') return records[schema]?.length ?? 0;
-    throw new Error(`Unexpected database write or call: ${method}`);
-  };
-  FrappeDatabaseDemux.prototype.runDocMethod = async () => ({});
-  FrappeDatabaseDemux.prototype.callBespoke = async (method) => {
-    if (method === 'getOpenPOSShift') return shift.open ? 'SHIFT-001' : null;
-    if (method === 'getStockLocation') return null;
-    if (method === 'getStockQuantities')
-      return records.Item.map((item) => ({
-        item: item.name,
-        quantity: item.availableQty,
-      }));
-    return {};
-  };
-  await fyo.db.init();
-  fyo.doc.registerModels(models);
-  for (const schema of Object.values(fyo.schemaMap)) {
-    if (schema?.isSingle) fyo.doc.getNewDoc(schema.name);
+  await loadFrappeFixture(answer);
+  // New settings documents, which the fixture fills in below.
+  for (const name of getSingleSchemaNames()) {
+    newFrappeDoc(name);
   }
   Object.assign(fyo.singles.AccountingSettings!, {
-    enableInvoiceReturns: true,
-    enableCouponCode: true,
-    enablePriceList: true,
-    enableItemEnquiry: true,
-    enableLoyaltyProgram: true,
-    enableDiscounting: true,
+    enable_invoice_returns: true,
+    enable_coupon_code: true,
+    enable_price_list: true,
+    enable_item_enquiry: true,
+    enable_loyalty_program: true,
+    enable_discounting: true,
   });
   Object.assign(fyo.singles.POSSettings!, {
-    posUI: 'Modern',
-    canChangeRate: true,
-    canEditDiscount: true,
+    pos_ui: 'Modern',
+    can_change_rate: true,
+    can_edit_discount: true,
   });
   Object.assign(fyo.singles.InventorySettings!, {
-    enableUomConversions: false,
+    enable_uom_conversions: false,
   });
   Object.assign(fyo.singles.Defaults!, {
-    posCashDenominations: [1, 2, 5, 10, 20, 50, 100, 200, 500].map((value) => ({
-      denomination: fyo.pesa(value),
-    })),
-    saveButtonColour: '',
-    cancelButtonColour: '',
-    heldButtonColour: '',
-    returnButtonColour: '',
-    payButtonColour: '',
+    pos_cash_denominations: [1, 2, 5, 10, 20, 50, 100, 200, 500].map(
+      (value) => ({
+        denomination: fyo.pesa(value),
+      })
+    ),
+    save_button_colour: '',
+    cancel_button_colour: '',
+    held_button_colour: '',
+    return_button_colour: '',
+    pay_button_colour: '',
   });
-  for (const schema of ['Party', 'Item', 'PaymentMethod', 'POSOpeningShift']) {
-    records[schema].forEach((row) => fyo.doc.getNewDoc(schema, row));
-  }
-  return records.Item.map((item) => ({
-    ...item,
-    rate: fyo.pesa(item.rate),
-  }));
+  return items.map((item) => ({ ...item, rate: fyo.pesa(item.rate) }));
 }
 
-/** Applies a query's plain equality filters to the fields a record has. */
-function filterRecords(rows: any[], options: unknown) {
-  const filters = (options as { filters?: Record<string, unknown> })?.filters;
-  return rows.filter((row) =>
-    Object.entries(filters ?? {}).every(
-      ([key, value]) =>
-        typeof value !== 'string' || !(key in row) || row[key] === value
+/** What the server answers each request the POS makes. */
+function answer(path: string, body: Row, params: Row): unknown {
+  const method = path.split('/').pop()!;
+  const methods: Record<string, () => unknown> = {
+    'frappe.client.get_list': () => getList(body.doctype, body.filters),
+    'frappe.desk.search.search_link': () =>
+      getList(body.doctype).map(({ name }) => ({ value: name })),
+    get_open_shift: () => (shift.open ? openingShift.name : null),
+    get_stock_location: () => null,
+    get_stock_quantities: () =>
+      items.map((item) => ({ item: item.name, quantity: item.availableQty })),
+  };
+  const answerMethod = methods[method] ?? methods[method.split('.').pop()!];
+  if (answerMethod) {
+    return { message: answerMethod() };
+  }
+
+  if (method === 'run_doc_method') {
+    return { docs: [preview(body.document)] };
+  }
+
+  return { data: getDocuments(path, params) };
+}
+
+/** A document by its path, a list by its query, or a count. */
+function getDocuments(path: string, params: Row): unknown {
+  const [, , , route, doctype, name] = path.split('/');
+  if (route === 'doctype') {
+    return getList(doctype, params.filters).length;
+  }
+
+  return name ? getRecord(doctype, name) : getList(doctype, params.filters);
+}
+
+/** Totals as the server leaves them; a closing shift expects what its shift opened with. */
+function preview(document: Row): Row {
+  if (document.doctype !== 'Books Pos Closing Shift') {
+    return document;
+  }
+
+  const counted = new Map(
+    (document.closing_amounts ?? []).map((row: Row) => [
+      row.payment_method,
+      row,
+    ])
+  );
+  const closingAmounts = openingShift.opening_amounts.map((row) => {
+    const sent = (counted.get(row.payment_method) ?? {}) as Row;
+    const closing = Number(sent.closing_amount ?? 0);
+    return {
+      name: sent.name ?? null,
+      payment_method: row.payment_method,
+      opening_amount: row.amount,
+      closing_amount: closing,
+      expected_amount: row.amount,
+      difference_amount: closing - Number(row.amount),
+    };
+  });
+  return {
+    ...document,
+    opening_shift: openingShift.name,
+    closing_amounts: closingAmounts,
+  };
+}
+
+function getRecord(doctype: string, name: string): Row | undefined {
+  return records[doctype]?.find((row) => row.name === name);
+}
+
+/**
+ * The doctype's records that match each `[field, operator, value]` filter on
+ * a field they have; the items have no `track_item`, so every item lists.
+ */
+function getList(doctype: string, filters: Filter[] = []): Row[] {
+  return (records[doctype] ?? []).filter((row) =>
+    filters.every(
+      ([field, operator, value]) =>
+        !(field in row) || matches(row[field], operator, value)
     )
   );
+}
+
+function matches(actual: unknown, operator: string, value: unknown) {
+  switch (operator) {
+    case '=':
+      return (actual ?? 0) == value;
+    case '!=':
+      return (actual ?? 0) != value;
+    case 'in':
+      return (value as unknown[]).includes(actual ?? 0);
+    case 'is':
+      return value === 'set' ? !!actual : !actual;
+    default:
+      return true;
+  }
 }

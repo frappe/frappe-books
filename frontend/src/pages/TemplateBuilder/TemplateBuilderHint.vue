@@ -26,7 +26,7 @@
 </template>
 <script lang="ts">
 import { Badge as FrappeBadge, Tree as FrappeTree } from 'frappe-ui';
-import { PrintTemplateHint } from 'src/utils/printTemplates';
+import { PrintHints } from 'src/utils/printFormats';
 import { defineComponent, PropType } from 'vue';
 
 type HintNode = {
@@ -42,7 +42,7 @@ export default defineComponent({
   components: { FrappeBadge, FrappeTree },
   props: {
     hints: {
-      type: Object as PropType<PrintTemplateHint>,
+      type: Object as PropType<PrintHints>,
       required: true,
     },
   },
@@ -67,7 +67,7 @@ export default defineComponent({
 });
 
 /** Leaf keys first, then objects and arrays, as template paths. */
-function getHintNodes(hints: PrintTemplateHint, prefix: string): HintNode[] {
+function getHintNodes(hints: PrintHints, prefix: string): HintNode[] {
   return Object.entries(hints)
     .map(([key, value]): HintNode => {
       if (typeof value === 'string') {

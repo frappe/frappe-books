@@ -1,127 +1,111 @@
-import { ModelMap } from 'fyo/model/types';
+import type { FrappeModel } from 'src/frappe/doctypes';
 import { Account } from './baseModels/Account/Account';
 import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
+import { Country } from './baseModels/Country';
+import { Currency } from './baseModels/Currency/Currency';
 import { Address } from './baseModels/Address/Address';
+import { CustomForm } from './baseModels/CustomForm/CustomForm';
 import { Defaults } from './baseModels/Defaults/Defaults';
+import { GetStarted } from './baseModels/GetStarted/GetStarted';
 import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
-import { JournalEntryAccount } from './baseModels/JournalEntryAccount/JournalEntryAccount';
 import { Misc } from './baseModels/Misc';
-import { Party } from './baseModels/Party/Party';
+import { NumberSeries } from './baseModels/NumberSeries/NumberSeries';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
-import { CollectionRulesItems } from './baseModels/CollectionRulesItems/CollectionRulesItems';
 import { Lead } from './baseModels/Lead/Lead';
-import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { Payment } from './baseModels/Payment/Payment';
+import { Party } from './baseModels/Party/Party';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
-import { PaymentFor } from './baseModels/PaymentFor/PaymentFor';
 import { PriceList } from './baseModels/PriceList/PriceList';
-import { PriceListItem } from './baseModels/PriceList/PriceListItem';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
-import { PricingRuleItem } from './baseModels/PricingRuleItem/PricingRuleItem';
+import { PrintFormat } from './baseModels/PrintFormat';
 import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
-import { PrintTemplate } from './baseModels/PrintTemplate';
-import { PurchaseInvoice } from './baseModels/PurchaseInvoice/PurchaseInvoice';
-import { PurchaseInvoiceItem } from './baseModels/PurchaseInvoiceItem/PurchaseInvoiceItem';
-import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
-import { SalesQuoteItem } from './baseModels/SalesQuoteItem/SalesQuoteItem';
 import { SetupWizard } from './baseModels/SetupWizard/SetupWizard';
+import { SystemSettings } from './baseModels/SystemSettings/SystemSettings';
 import { ItemGroup } from './baseModels/ItemGroup/ItemGroup';
 import { Tax } from './baseModels/Tax/Tax';
-import { TaxSummary } from './baseModels/TaxSummary/TaxSummary';
+import { UOM } from './baseModels/UOM/UOM';
 import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
 import { Location } from './inventory/Location';
 import { PurchaseReceipt } from './inventory/PurchaseReceipt';
-import { PurchaseReceiptItem } from './inventory/PurchaseReceiptItem';
 import { SerialNumber } from './inventory/SerialNumber';
 import { Shipment } from './inventory/Shipment';
-import { ShipmentItem } from './inventory/ShipmentItem';
 import { StockLedgerEntry } from './inventory/StockLedgerEntry';
 import { StockMovement } from './inventory/StockMovement';
-import { StockMovementItem } from './inventory/StockMovementItem';
-import { ClosingAmounts } from './inventory/Point of Sale/ClosingAmounts';
-import { ClosingCash } from './inventory/Point of Sale/ClosingCash';
-import { OpeningAmounts } from './inventory/Point of Sale/OpeningAmounts';
-import { OpeningCash } from './inventory/Point of Sale/OpeningCash';
 import { POSSettings } from './inventory/Point of Sale/POSSettings';
 import { POSProfile } from './baseModels/POSProfile/PosProfile';
 import { POSOpeningShift } from './inventory/Point of Sale/POSOpeningShift';
 import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
+import * as invoices from './invoices';
 
-export const models = {
-  Account,
-  AccountingLedgerEntry,
-  AccountingSettings,
-  Address,
-  Batch,
-  Defaults,
-  Item,
-  ItemGroup,
-  ItemEnquiry,
-  JournalEntry,
-  JournalEntryAccount,
+/**
+ * The model of each schema, by schema name; see docs/framework-backed-doctypes.md.
+ * The search palette lists the schemas in this order.
+ */
+export const frappeModels: Record<string, FrappeModel> = {
   Misc,
-  Lead,
+  SetupWizard,
+  GetStarted,
+  PrintFormat,
+  Country,
+  Currency,
+  Defaults,
+  NumberSeries,
+  PrintSettings,
+  Account,
+  AccountingSettings,
+  AccountingLedgerEntry,
   Party,
+  Lead,
+  Address,
+  ItemGroup,
+  Item,
+  UOM,
   LoyaltyProgram,
   LoyaltyPointEntry,
-  CollectionRulesItems,
-  CouponCode,
   Payment,
   PaymentMethod,
-  PaymentFor,
-  PrintSettings,
+  JournalEntry,
+  ItemEnquiry,
+  CouponCode,
   PriceList,
-  PriceListItem,
   PricingRule,
-  PricingRuleItem,
-  PurchaseInvoice,
-  PurchaseInvoiceItem,
-  SalesInvoice,
-  SalesInvoiceItem,
-  AppliedCouponCodes,
-  SalesQuote,
-  SalesQuoteItem,
-  SerialNumber,
-  SetupWizard,
-  PrintTemplate,
   Tax,
-  TaxSummary,
-  // Inventory Models
   InventorySettings,
-  StockMovement,
-  StockMovementItem,
-  StockLedgerEntry,
   Location,
-  Shipment,
-  ShipmentItem,
-  PurchaseReceipt,
-  PurchaseReceiptItem,
-  // POS Models
-  ClosingAmounts,
-  ClosingCash,
-  OpeningAmounts,
-  OpeningCash,
+  StockLedgerEntry,
+  StockMovement,
+  Batch,
+  SerialNumber,
+  CustomForm,
   POSSettings,
   POSProfile,
   POSOpeningShift,
   POSClosingShift,
-} as ModelMap;
+  SalesInvoice: invoices.SalesInvoice,
+  PurchaseInvoice: invoices.PurchaseInvoice,
+  SalesQuote: invoices.SalesQuote,
+  Shipment,
+  PurchaseReceipt,
+  SystemSettings,
+};
 
-export async function getRegionalModels(
+/** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */
+export async function getRegionalFrappeModels(
   countryCode: string
-): Promise<ModelMap> {
+): Promise<Record<string, FrappeModel>> {
   if (countryCode !== 'in') {
     return {};
   }
 
-  const { Party } = await import('./regionalModels/in/Party');
-  return { Party };
+  const [{ Address }, { Party }] = await Promise.all([
+    import('./regionalModels/in/Address'),
+    import('./regionalModels/in/Party'),
+  ]);
+  return { Address, Party };
 }

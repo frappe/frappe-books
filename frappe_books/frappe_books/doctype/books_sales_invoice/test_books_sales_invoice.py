@@ -257,21 +257,26 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
 			credit_note.insert()
 
-	def test_return_quantities_must_be_negative(self):
+	def test_return_quantities_are_negative(self):
 		invoice = self._make_invoice()
 		invoice.submit()
 		credit_note = map_return(invoice.doctype, invoice.name)
-		credit_note.items[0].quantity = 2
+		credit_note.items[0].quantity = 1
 
-		with self.assertRaisesRegex(frappe.ValidationError, "returned quantities must be negative"):
-			credit_note.insert()
+		credit_note.insert()
 
-	def test_only_returns_have_negative_quantities(self):
+		row = credit_note.items[0]
+		self.assertEqual((row.quantity, row.transfer_quantity, row.qty), (-1, -1, -1))
+		self.assertLess(credit_note.grand_total, 0)
+
+	def test_other_invoices_have_positive_quantities(self):
 		invoice = self._make_invoice()
 		invoice.items[0].quantity = -2
 
-		with self.assertRaisesRegex(frappe.ValidationError, "only returns can have negative"):
-			invoice.save()
+		invoice.save()
+
+		row = invoice.items[0]
+		self.assertEqual((row.quantity, row.transfer_quantity, row.qty), (2, 2, 2))
 
 	def test_items_follow_their_item_usage(self):
 		purchase_item = make_item(self.income.name, self.expense.name, item_usage="Purchases")

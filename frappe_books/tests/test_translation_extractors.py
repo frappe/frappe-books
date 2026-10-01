@@ -7,7 +7,9 @@ from frappe.translate import get_boot_translations
 from frappe_books.coa import STANDARD_CHART
 from frappe_books.translation_extractors import (
 	extract_chart_names,
-	extract_schema_labels,
+	extract_doctype_messages,
+	extract_model_strings,
+	extract_print_format_messages,
 	extract_template_strings,
 )
 
@@ -37,9 +39,39 @@ class UnitTestTranslationExtractors(UnitTestCase):
 		lines = [line for line, *_ in extract_template_strings(to_file("\n\nt`Save`"), None, None, None)]
 		self.assertEqual(lines, [3])
 
-	def test_schema_labels_are_messages(self):
-		schema = {"label": "Item", "fields": [{"label": "Rate", "placeholder": "Rate", "fieldname": "rate"}]}
-		self.assertEqual(messages(extract_schema_labels, json.dumps(schema)), ["Item", "Rate", "Rate"])
+	def test_doctypes_give_frappes_messages_and_field_placeholders(self):
+		doctype = {
+			"name": "Books Thing",
+			"fields": [
+				{"fieldname": "rate", "fieldtype": "Currency", "label": "Rate", "placeholder": "0.00"},
+				{"fieldname": "note", "fieldtype": "Data", "label": "Note"},
+			],
+		}
+		self.assertEqual(
+			messages(extract_doctype_messages, json.dumps(doctype)), ["Books Thing", "Rate", "Note", "0.00"]
+		)
+
+	def test_print_formats_give_the_messages_of_their_html(self):
+		print_format = {
+			"html": '<th>{{ _("Grand Total") }}</th>{% if doc.terms %}{{ _("Notes") }}{% endif %}'
+		}
+		self.assertEqual(
+			messages(extract_print_format_messages, json.dumps(print_format)), ["Grand Total", "Notes"]
+		)
+
+	def test_models_give_the_labels_their_presentation_shows(self):
+		code = """
+		static override presentation = {
+			label: 'Quote',
+			nameField: { label: 'Form Type', placeholder: 'Pick one' },
+			fields: { kind: { optionLabels: { Datetime: 'Date Time', DynamicLink: 'Dynamic Link' } } },
+		};
+		message = t`Saved`;
+		"""
+		self.assertEqual(
+			messages(extract_model_strings, code),
+			["Saved", "Quote", "Form Type", "Pick one", "Date Time", "Dynamic Link"],
+		)
 
 	def test_chart_names_and_standard_account_names_are_messages(self):
 		country_chart = {"name": "India - Chart of Accounts", "tree": {"Assets": {"rootType": "Asset"}}}
@@ -53,7 +85,7 @@ class UnitTestTranslationExtractors(UnitTestCase):
 
 
 def messages(extractor, text):
-	return [message for _line, _function, message, _comments in extractor(to_file(text), None, None, None)]
+	return [message for _line, _function, message, _comments in extractor(to_file(text), [], [], {})]
 
 
 def to_file(text):

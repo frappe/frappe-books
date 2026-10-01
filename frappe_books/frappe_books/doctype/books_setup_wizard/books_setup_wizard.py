@@ -1,12 +1,18 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import json
+from datetime import date
+from functools import cache
+
 import frappe
 from frappe import _
 from frappe.geo.country_info import get_country_info
 from frappe.model.document import Document
-from frappe.utils import getdate, momentjs
+from frappe.utils import add_days, add_years, getdate, momentjs
 
+from frappe_books.coa import chart_options
+from frappe_books.permissions import check_preview_permission
 from frappe_books.setup_service import run_setup
 
 
@@ -33,6 +39,7 @@ class BooksSetupWizard(Document):
 	# end: auto-generated types
 
 	def before_validate(self):
+		self.set_country_defaults()
 		if not self.time_zone and self.country:
 			# Frappe's setup wizard also starts from the country's first time zone.
 			time_zones = sorted(get_country_info(self.country).get("timezones") or [])
@@ -41,11 +48,74 @@ class BooksSetupWizard(Document):
 			# Browsers and Frappe's country data may use an old alias, e.g. Asia/Calcutta.
 			self.time_zone = momentjs.data["links"].get(self.time_zone, self.time_zone)
 
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill what a save would take from the country, without saving, for the form to show it."""
+		check_preview_permission(self)
+		self.set_country_defaults()
+
+	def set_country_defaults(self):
+		"""Suggest the country's currency, chart and fiscal year; each date also follows the other."""
+		info = get_books_country_info().get(self.country) or {}
+		self.currency = self.currency or get_country_currency(info)
+		self.chart_of_accounts = self.chart_of_accounts or get_country_chart(info.get("code"))
+		self.fiscal_year_start = self.fiscal_year_start or get_fiscal_year_date(info, "fiscal_year_start")
+		if not self.fiscal_year_start and self.fiscal_year_end:
+			self.fiscal_year_start = add_days(add_years(self.fiscal_year_end, -1), 1)
+		self.fiscal_year_end = self.fiscal_year_end or get_fiscal_year_date(info, "fiscal_year_end")
+		if not self.fiscal_year_end and self.fiscal_year_start:
+			self.fiscal_year_end = add_days(add_years(self.fiscal_year_start, 1), -1)
+
 	def validate(self):
 		if getdate(self.fiscal_year_end) <= getdate(self.fiscal_year_start):
 			frappe.throw(_("Fiscal Year End Date must be after Fiscal Year Start Date."))
 		if self.time_zone and self.time_zone not in momentjs.get_all_timezones():
 			frappe.throw(_("{0} is not a valid time zone.").format(self.time_zone))
+
+
+@cache
+def get_books_country_info() -> dict:
+	"""Books' country data, by Frappe country name, with the fiscal years Frappe's lacks."""
+	path = frappe.get_app_path("frappe_books", "data", "country_info.json")
+	with open(path) as file:
+		return json.load(file)
+
+
+def get_country_currency(info: dict) -> str | None:
+	currency = info.get("currency")
+	return currency if currency and frappe.db.exists("Currency", currency) else None
+
+
+def get_country_chart(code: str | None) -> str | None:
+	"""The country's chart in the user's language, else the standard chart."""
+	if not code:
+		return None
+	language = (frappe.local.lang or "en").lower().replace("_", "-").split("-")[0]
+	charts = chart_options()
+	chart = next(
+		(
+			chart
+			for chart in charts
+			if chart["country_code"] == code and chart["language"] in (None, language)
+		),
+		charts[0],
+	)
+	return chart["name"]
+
+
+def get_fiscal_year_date(info: dict, fieldname: str) -> date | None:
+	"""The fiscal year that is current in Books' reckoning: before April it began last year."""
+	month_day = info.get(fieldname)
+	if not month_day:
+		return None
+	today = getdate()
+	month, day = (int(part) for part in month_day.split("-"))
+	is_first_quarter = today.month <= 3
+	if fieldname == "fiscal_year_start":
+		year = today.year - 1 if is_first_quarter else today.year
+	else:
+		year = today.year if is_first_quarter else today.year + 1
+	return date(year, month, day)
 
 
 @frappe.whitelist(methods=["POST"])

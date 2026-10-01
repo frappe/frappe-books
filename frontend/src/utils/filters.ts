@@ -1,14 +1,15 @@
 import { ModelNameEnum } from 'models/types';
 
+// Items and payments are Frappe-backed, so their filters use Frappe fieldnames.
 export const routeFilters = {
-  SalesItems: { for: ['in', ['Sales', 'Both']] },
-  PurchaseItems: { for: ['in', ['Purchases', 'Both']] },
-  Items: { for: 'Both' },
+  SalesItems: { item_usage: ['in', ['Sales', 'Both']] },
+  PurchaseItems: { item_usage: ['in', ['Purchases', 'Both']] },
+  Items: { item_usage: 'Both' },
   PurchasePayments: {
-    referenceType: ModelNameEnum.PurchaseInvoice,
+    reference_type: ModelNameEnum.PurchaseInvoice,
   },
   SalesPayments: {
-    referenceType: ModelNameEnum.SalesInvoice,
+    reference_type: ModelNameEnum.SalesInvoice,
   },
   Suppliers: { role: ['in', ['Supplier', 'Both']] },
   Customers: { role: ['in', ['Customer', 'Both']] },
@@ -16,11 +17,11 @@ export const routeFilters = {
 };
 
 export const createFilters = {
-  SalesItems: { for: 'Sales' },
-  PurchaseItems: { for: 'Purchases' },
-  Items: { for: 'Both' },
-  PurchasePayments: { paymentType: 'Pay' },
-  SalesPayments: { paymentType: 'Receive' },
+  SalesItems: { item_usage: 'Sales' },
+  PurchaseItems: { item_usage: 'Purchases' },
+  Items: { item_usage: 'Both' },
+  PurchasePayments: { payment_type: 'Pay' },
+  SalesPayments: { payment_type: 'Receive' },
   Suppliers: { role: 'Supplier' },
   Customers: { role: 'Customer' },
   Party: { role: 'Both' },

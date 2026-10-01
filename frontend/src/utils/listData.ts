@@ -2,6 +2,8 @@ import type { Fyo } from 'fyo';
 import type { RenderData } from 'fyo/model/types';
 import { cloneDeep } from 'lodash';
 import type { QueryFilter } from 'utils/db/types';
+import { getFrappeListPage } from 'src/frappe/list';
+import { getSchema } from 'src/frappe/registry';
 import { toRaw } from 'vue';
 import { mergeQueryFilters } from './filterQuery';
 
@@ -39,35 +41,14 @@ export async function loadListData(
     cloneDeep(toRaw(list.filters)),
     cloneDeep(toRaw(list.activeFilters))
   );
-  const [total, rows] = await Promise.all([
-    fyo.db.count(list.schemaName, {
-      filters: appliedFilters,
-      orFilters: list.orFilters,
-    }),
-    getListRows(fyo, list, appliedFilters),
-  ]);
-  if (requestId !== list.requestId) return;
-  return { rows, total, appliedFilters };
-}
-
-async function getListRows(
-  fyo: Fyo,
-  list: ListState,
-  filters: QueryFilter
-): Promise<RenderData[]> {
-  const orderBy = fyo.db.fieldMap[list.schemaName].date
-    ? ['date', 'created']
-    : ['created'];
-  const schema = fyo.schemaMap[list.schemaName];
-  const rows = await fyo.db.getAll(list.schemaName, {
-    fields: ['*'],
-    filters,
+  const { rows, total } = await getFrappeListPage(fyo, list.schemaName, {
+    filters: appliedFilters,
     orFilters: list.orFilters,
-    orderBy,
-    offset: list.pageStart,
+    start: list.pageStart,
     limit: list.pageLength,
   });
-  return rows.map((row) => ({ ...row, schema })) as RenderData[];
+  if (requestId !== list.requestId) return;
+  return { rows, total, appliedFilters };
 }
 
 /** Call `listener` when documents shown in a list of `schemaName` change. */
@@ -76,12 +57,12 @@ export function onListChange(
   schemaName: string,
   listener: () => Promise<void>
 ) {
-  if (fyo.schemaMap[schemaName]?.isSubmittable) {
-    fyo.doc.observer.on(`submit:${schemaName}`, listener);
-    fyo.doc.observer.on(`cancel:${schemaName}`, listener);
+  if (getSchema(schemaName)?.isSubmittable) {
+    fyo.observer.on(`submit:${schemaName}`, listener);
+    fyo.observer.on(`cancel:${schemaName}`, listener);
   }
 
-  fyo.doc.observer.on(`sync:${schemaName}`, listener);
-  fyo.db.observer.on(`delete:${schemaName}`, listener);
-  fyo.doc.observer.on(`rename:${schemaName}`, listener);
+  fyo.observer.on(`sync:${schemaName}`, listener);
+  fyo.observer.on(`delete:${schemaName}`, listener);
+  fyo.observer.on(`rename:${schemaName}`, listener);
 }

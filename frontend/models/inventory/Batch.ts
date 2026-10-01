@@ -1,10 +1,18 @@
-import { Doc } from 'fyo/model/doc';
 import { ListViewSettings } from 'fyo/model/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class Batch extends Doc {
+/** Books Batch, served by Frappe. */
+export class Batch extends FrappeDoc {
+  static override doctype = 'Books Batch';
+  static override presentation = {
+    label: 'Batch',
+    nameField: { label: 'Batch' },
+    quickEditFields: ['item', 'expiry_date', 'manufacture_date'],
+  };
+
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'expiryDate', 'manufactureDate'],
+      columns: ['name', 'expiry_date', 'manufacture_date'],
     };
   }
 }

@@ -5,8 +5,8 @@ from frappe_books.frappe_books.doctype.books_shipment.test_books_shipment import
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
 )
+from frappe_books.inventory.availability import get_stock_quantities
 from frappe_books.tests.accounting import make_account, make_item
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
 class IntegrationTestStockQuantities(IntegrationTestCase):
@@ -35,6 +35,6 @@ class IntegrationTestStockQuantities(IntegrationTestCase):
 			],
 		).submit()
 
-		rows = BooksBespokeQueries().call("getStockQuantities", ["Stores", [item]])
+		rows = get_stock_quantities("Stores", [item])
 
 		self.assertEqual({(row.batch, row.quantity) for row in rows}, {(first, 5), (second, 3)})

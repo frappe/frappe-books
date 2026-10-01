@@ -10,19 +10,12 @@ import { OptionField, Schema } from 'schemas/types';
 import { ModelNameEnum } from './types';
 
 import { Doc } from 'fyo/model/doc';
-import { Invoice } from './baseModels/Invoice/Invoice';
+import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
-import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
-import { StockMovement } from './inventory/StockMovement';
-import { StockTransfer } from './inventory/StockTransfer';
-import { ValidationError } from 'fyo/utils/errors';
-import { safeParseFloat } from 'utils/index';
-import { InvoiceItem } from './baseModels/InvoiceItem/InvoiceItem';
-import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
-import { getPOSInventory, validatePOSStock } from './inventory/posStock';
-import { getSerialNumbersForQuantity } from './inventory/helpers';
+import type { DocValues } from 'src/frappe/api';
+import { getDocType } from 'src/frappe/doctypes';
+import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
 
 const MAPPER_MODULES: Record<string, string> = {
   Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
@@ -45,13 +38,22 @@ export async function getMappedDoc(
   schemaName: string,
   mapper: string
 ): Promise<Doc> {
-  const method = `${MAPPER_MODULES[source.schemaName]}.${mapper}`;
-  const values = await source.fyo.db.getMapped(
-    schemaName,
-    method,
-    source.name!
-  );
-  return source.fyo.doc.getNewDocFromServer(schemaName, values);
+  const method = getMapperMethod(source.schemaName, mapper);
+  return await getMappedFrappeDoc(schemaName, method, source.name!);
+}
+
+/** What a server mapper builds from the `sourceSchemaName` document `sourceName`, in Frappe fieldnames. */
+export async function getMappedValues(
+  sourceSchemaName: string,
+  sourceName: string,
+  mapper: string
+): Promise<DocValues> {
+  const method = getMapperMethod(sourceSchemaName, mapper);
+  return await getMapperValues(method, sourceName);
+}
+
+function getMapperMethod(sourceSchemaName: string, mapper: string) {
+  return `${MAPPER_MODULES[sourceSchemaName]}.${mapper}`;
 }
 
 export function getQuoteActions(
@@ -82,40 +84,6 @@ export function getInvoiceActions(
   ];
 }
 
-/** Stock of each item, and of each of its batches, at the POS location. */
-export async function getItemQtyMap(
-  doc: SalesInvoice,
-  items?: string[]
-): Promise<ItemQtyMap> {
-  const location = await getPOSInventory(doc.fyo);
-  const rows = await doc.fyo.db.getStockQuantities(location, items);
-  const itemQtyMap: ItemQtyMap = {};
-  for (const { item, batch, quantity } of rows) {
-    itemQtyMap[item] ??= { availableQty: 0 };
-    itemQtyMap[item].availableQty += quantity;
-    if (batch) {
-      itemQtyMap[item][batch] = quantity;
-    }
-  }
-
-  return itemQtyMap;
-}
-
-export async function getItemVisibility(fyo: Fyo): Promise<ItemVisibility> {
-  const posProfileName = fyo.singles.POSSettings?.posProfile as string;
-
-  if (posProfileName) {
-    const posProfile = await fyo.doc.getDoc(
-      ModelNameEnum.POSProfile,
-      posProfileName
-    );
-    return (posProfile?.itemVisibility ??
-      fyo.singles.POSSettings?.itemVisibility) as ItemVisibility;
-  }
-
-  return fyo.singles.POSSettings?.itemVisibility as ItemVisibility;
-}
-
 export function getStockTransferActions(
   fyo: Fyo,
   schemaName: ModelNameEnum.Shipment | ModelNameEnum.PurchaseReceipt
@@ -140,9 +108,9 @@ export function getMakeStockTransferAction(
   return {
     label,
     group: fyo.t`Create`,
-    condition: (doc: Doc) => doc.isSubmitted && !!doc.stockNotTransferred,
+    condition: (doc: Doc) => doc.isSubmitted && !!doc.stock_not_transferred,
     action: async (doc: Doc) => {
-      const invoice = doc as Invoice;
+      const invoice = doc as InvoiceDoc;
       const transfer = await getMappedDoc(
         invoice,
         invoice.stockTransferSchemaName,
@@ -176,14 +144,15 @@ export function getMakeInvoiceAction(
     condition: (doc: Doc) => {
       if (schemaName === ModelNameEnum.SalesQuote) {
         return doc.isSubmitted;
-      } else {
-        return (
-          doc.isSubmitted &&
-          !doc.backReference &&
-          !doc.returnAgainst &&
-          !doc.isFullyBilled
-        );
       }
+
+      // Shipments and receipts are Frappe-backed.
+      return (
+        doc.isSubmitted &&
+        !doc.back_reference &&
+        !doc.return_against &&
+        !doc.is_fully_billed
+      );
     },
     action: async (doc: Doc) => {
       const invoice = await getMappedDoc(doc, invoiceSchemaName, mapper);
@@ -235,14 +204,14 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     label: fyo.t`Payment`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      doc.isSubmitted && !(doc.outstandingAmount as Money).isZero(),
+      doc.isSubmitted && !(doc.outstanding_amount as Money).isZero(),
     action: async (doc, router) => {
       const payment = await getMappedDoc(
         doc,
         ModelNameEnum.Payment,
         'make_payment'
       );
-      await payment.set('referenceType', doc.schemaName);
+      await payment.set('reference_type', doc.schemaName);
       const currentRoute = router.currentRoute.value.fullPath;
       payment.once('afterSubmit', async () => {
         await doc.load();
@@ -250,13 +219,12 @@ export function getMakePaymentAction(fyo: Fyo): Action {
       });
 
       // The party account comes from the invoice.
-      const hideFields = ['party', 'for', 'account'];
+      const hideFields = ['party', 'payment_references', 'account'];
 
-      if (!fyo.singles.AccountingSettings?.enableInvoiceReturns) {
-        hideFields.push('paymentType');
+      if (!fyo.singles.AccountingSettings?.enable_invoice_returns) {
+        hideFields.push('payment_type');
       }
 
-      await payment.runFormulas();
       const { openQuickEdit } = await import('src/utils/ui');
       await openQuickEdit({
         doc: payment,
@@ -297,7 +265,7 @@ export function getLedgerLink(
     },
     query: {
       defaultFilters: JSON.stringify({
-        referenceType: doc.schemaName,
+        referenceType: getDocType(doc.schemaName).doctype,
         referenceName: doc.name,
       }),
     },
@@ -308,7 +276,7 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: Doc) =>
-      !!fyo.singles.AccountingSettings?.enableInvoiceReturns &&
+      !!fyo.singles.AccountingSettings?.enable_invoice_returns &&
       doc.isSubmitted &&
       !doc.isReturn,
     action: async (doc: Doc) => {
@@ -436,7 +404,7 @@ export function getPriceListStatusColumn(): ColumnConfig {
     label: t`Enabled For`,
     fieldname: 'enabledFor',
     fieldtype: 'Select',
-    badge({ isSales, isPurchase }) {
+    badge({ is_sales: isSales, is_purchase: isPurchase }) {
       let label = t`None`;
 
       if (isSales && isPurchase) {
@@ -458,17 +426,13 @@ export function getIsDocEnabledColumn(): ColumnConfig {
     fieldname: 'enabled',
     fieldtype: 'Data',
     badge(doc) {
-      if (doc.isEnabled) {
+      if (doc.is_enabled) {
         return { theme: 'green', label: t`Enabled` };
       }
 
       return { theme: 'amber', label: t`Disabled` };
     },
   };
-}
-
-export function getNumberSeries(schemaName: string, fyo: Fyo) {
-  return fyo.defaultNumberSeries[schemaName];
 }
 
 export function getDocStatusListColumn(): ColumnConfig {
@@ -496,81 +460,27 @@ export function getLoyaltyProgramBadge(doc: RenderData | Doc): BadgeData {
   );
 }
 
-type ModelsWithItems = Invoice | StockTransfer | StockMovement;
-export async function addItem<M extends ModelsWithItems>(
-  name: string,
-  doc: M,
-  quantity = 1
-) {
+/** Adds `quantity` of an item to a document's rows, to its row of the item if it has one. */
+export async function addItem(name: string, doc: Doc, quantity = 1) {
   if (!doc.canEdit) {
     return;
   }
 
-  const items = (doc.items ?? []) as NonNullable<M['items']>[number][];
-
-  let item = items.find((i) => i.item === name);
-  if (item) {
-    await item.set('quantity', (item.quantity ?? 0) + quantity);
+  const rows = (doc.items ?? []) as Doc[];
+  const row = rows.find((existing) => existing.item === name);
+  if (row) {
+    await row.set('quantity', ((row.quantity as number) ?? 0) + quantity);
     return;
   }
 
   await doc.append('items');
-  item = doc.items?.at(-1);
-  if (!item) {
+  const added = (doc.items as Doc[] | undefined)?.at(-1);
+  if (!added) {
     return;
   }
 
-  await item.set('item', name);
+  await added.set('item', name);
   if (quantity !== 1) {
-    await item.set('quantity', quantity);
+    await added.set('quantity', quantity);
   }
-
-  if (
-    doc instanceof StockTransfer &&
-    doc.schemaName === ModelNameEnum.PurchaseReceipt
-  ) {
-    const serialNumbers = await getSerialNumbersForQuantity(
-      doc.fyo,
-      name,
-      undefined,
-      quantity
-    );
-    if (serialNumbers) {
-      await item.set('serialNumber', serialNumbers);
-    }
-  }
-}
-
-/** Checks the POS location has the stock that a row's item, or its batch, needs. */
-export async function validateQty(
-  sinvDoc: SalesInvoice,
-  row: SalesInvoiceItem,
-  existingItems: InvoiceItem[]
-) {
-  const { fyo } = sinvDoc;
-  const item = row.item;
-  if (!item) {
-    return;
-  }
-
-  if (
-    !row.batch &&
-    (await fyo.getValue(ModelNameEnum.Item, item, 'hasBatch'))
-  ) {
-    throw new ValidationError(t`Please select a batch first`);
-  }
-
-  if (!(await fyo.getValue(ModelNameEnum.Item, item, 'trackItem'))) {
-    return;
-  }
-
-  const quantity = existingItems
-    .filter((existing) => !row.batch || existing.batch === row.batch)
-    .reduce(
-      (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
-      0
-    );
-  const itemQtyMap = await getItemQtyMap(sinvDoc, [item]);
-  const location = await getPOSInventory(fyo);
-  validatePOSStock(item, quantity, itemQtyMap, location, row.batch);
 }

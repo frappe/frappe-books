@@ -1,15 +1,17 @@
-import { Fyo } from 'fyo';
-import { RawValueMap } from 'fyo/core/types';
-import {
-  Field,
-  FieldType,
-  FieldTypeEnum,
-  RawValue,
-  TargetField,
-} from 'schemas/types';
+import { t } from 'fyo/utils/translation';
+import { camelCase } from 'lodash';
+import { Field, FieldType, FieldTypeEnum, TargetField } from 'schemas/types';
+import { getList, type DocValues, type ListQuery } from 'src/frappe/api';
+import { getDocType } from 'src/frappe/doctypes';
+import { isReferenceField } from 'src/frappe/fieldProperties';
+import { getOrderBy, toFrappeFilters } from 'src/frappe/list';
+import { getFileFields, getSchema, toSchemaName } from 'src/frappe/registry';
+import { getNamingField } from 'src/frappe/schema';
+import { toIsoDatetime } from 'src/frappe/values';
 import { generateCSV } from 'utils/csvParser';
-import { GetAllOptions, QueryFilter } from 'utils/db/types';
-import { getMapFromList, safeParseFloat } from 'utils/index';
+import { QueryFilter } from 'utils/db/types';
+import { safeParseFloat } from 'utils/index';
+import { expandDocStatus } from './filterFields';
 import { ExportField, ExportTableField } from './types';
 
 const EXPORT_PAGE_SIZE = 500;
@@ -19,344 +21,366 @@ const excludedFieldTypes: FieldType[] = [
   FieldTypeEnum.Attachment,
 ];
 
-interface CsvHeader {
-  label: string;
+/*
+ * Files hold the keys Books named fields by: camelCased Frappe fieldnames,
+ * except these, by schema, and custom fields by their Books Custom Field
+ * fieldname. CSV keys start with the schema name.
+ */
+const RENAMED_KEYS: Record<string, Record<string, string>> = {
+  Account: { account_name: 'name', parent_books_account: 'parentAccount' },
+  AccountingLedgerEntry: {
+    posting_date: 'date',
+    voucher_no: 'referenceName',
+    voucher_type: 'referenceType',
+  },
+  Country: { country_name: 'name' },
+  Currency: {
+    currency_name: 'name',
+    smallest_currency_fraction_value: 'smallestValue',
+  },
+  Item: { item_usage: 'for' },
+  JournalEntry: { posting_date: 'date' },
+  Payment: { payment_references: 'for' },
+  POSProfile: { pos_ui: 'posUI' },
+  TaxDetail: { payment_account: 'payment_account' },
+  TaxSummary: { from_account: 'from_account' },
+};
+const AUDIT_KEYS: Record<string, string> = {
+  owner: 'createdBy',
+  creation: 'created',
+};
+const RENAMED_SCHEMAS: Record<string, string> = {
+  UomConversionItem: 'UOMConversionItem',
+};
+
+// Books' Submitted and Cancelled, by the docstatus values that set them.
+const DOCSTATUS_FLAGS: Record<string, number[]> = {
+  submitted: [1, 2],
+  cancelled: [2],
+};
+
+/** What an export reads: a page at a time, newest first. */
+interface ExportQuery {
   schemaName: string;
-  fieldname: string;
-  parentFieldname?: string;
+  fields: ExportField[];
+  tableFields: ExportTableField[];
+  limit: number | null;
+  filters: QueryFilter;
 }
 
-export function getExportFields(
-  fields: Field[],
-  exclude: string[] = []
-): ExportField[] {
-  return fields
-    .filter((f) => !f.computed && f.label && !exclude.includes(f.fieldname))
-    .map((field) => {
-      const { fieldname, label } = field;
-      const fieldtype = field.fieldtype as FieldType;
-      return {
-        fieldname,
-        fieldtype,
-        label,
-        export: !excludedFieldTypes.includes(fieldtype),
-      };
-    });
+/**
+ * The fields an export offers, as Books listed them: the document's own,
+ * its audit fields, a tree's nested set, then its custom fields.
+ */
+export function getExportFields(schemaName: string): ExportField[] {
+  const fields = getFileFields(schemaName);
+  const own = fields.filter((field) => !field.meta && !field.isCustom);
+  const custom = fields.filter((field) => field.isCustom);
+  if (getSchema(schemaName)!.isChild) {
+    return toExportFields([...own, ...custom]);
+  }
+
+  const audit = fields
+    .filter((field) => field.meta && field.fieldname !== 'name')
+    .flatMap(expandDocStatus);
+  return toExportFields([
+    ...getNameField(schemaName, fields),
+    ...own,
+    ...audit,
+    ...getTreeFields(schemaName),
+    ...custom,
+  ]);
 }
 
-export function getExportTableFields(
-  fields: Field[],
-  fyo: Fyo
-): ExportTableField[] {
-  return fields
-    .filter((f) => f.fieldtype === FieldTypeEnum.Table)
-    .map((f) => {
-      const target = (f as TargetField).target;
-      const tableFields = fyo.schemaMap[target]?.fields ?? [];
-      const exportTableFields = getExportFields(tableFields, ['name']);
-
-      return {
-        fieldname: f.fieldname,
-        label: f.label,
-        target,
-        fields: exportTableFields,
-      };
-    })
+/** The tables an export offers, in the order of its fields. */
+export function getExportTableFields(schemaName: string): ExportTableField[] {
+  return getFileFields(schemaName)
+    .filter((f): f is TargetField => f.fieldtype === FieldTypeEnum.Table)
+    .map(({ fieldname, label, target }) => ({
+      fieldname,
+      label,
+      target,
+      fields: getExportFields(target),
+    }))
     .filter((f) => !!f.fields.length);
 }
 
-export async function getJsonExportData(
-  schemaName: string,
-  fields: ExportField[],
-  tableFields: ExportTableField[],
-  limit: number | null,
-  filters: QueryFilter,
-  fyo: Fyo
-): Promise<string> {
-  const data = await getExportData(
-    schemaName,
-    fields,
-    tableFields,
-    limit,
-    filters,
-    fyo
+/** The documents as a JSON list; each table's rows are a list in its document. */
+export async function getJsonExportData(query: ExportQuery): Promise<string> {
+  const documents = await getExportRows(query);
+  const columns = getColumns(query.schemaName, query.fields);
+  const tables = getTableColumns(query);
+  return JSON.stringify(
+    documents.map((document) => toJsonDocument(document, columns, tables))
   );
-  convertParentDataToJsonExport(data.parentData, data.childTableData);
-  return JSON.stringify(data.parentData);
 }
 
-export async function getCsvExportData(
-  schemaName: string,
-  fields: ExportField[],
-  tableFields: ExportTableField[],
-  limit: number | null,
-  filters: QueryFilter,
-  fyo: Fyo
-): Promise<string> {
-  const { childTableData, parentData } = await getExportData(
-    schemaName,
-    fields,
-    tableFields,
-    limit,
-    filters,
-    fyo
+/**
+ * The documents as CSV: a row of labels, a row of `schema.key` keys, then a
+ * row for each table row, which repeats its document's values.
+ */
+export async function getCsvExportData(query: ExportQuery): Promise<string> {
+  const documents = await getExportRows(query);
+  const columns = getColumns(query.schemaName, query.fields);
+  const tables = getTableColumns(query);
+  const flatColumns = [columns, ...tables.map((table) => table.columns)].flat();
+  const labels = flatColumns.map((column) => column.label);
+  const keys = flatColumns.map((column) => column.csvKey);
+  const rows = documents.flatMap((document) =>
+    getCsvRows(document, columns, tables)
   );
-  /**
-   * parentNameMap: Record<ParentName, Record<ParentFieldName, Rows[]>>
-   */
-  const parentNameMap = getParentNameMap(childTableData);
-  const headers = getCsvHeaders(schemaName, fields, tableFields);
+  return generateCSV([labels, keys, ...rows]);
+}
 
-  const rows: RawValue[][] = [];
-  for (const parentRow of parentData) {
-    const parentName = parentRow.name as string;
-    if (!parentName) {
-      continue;
-    }
+/** A field's key in an exported CSV, e.g. `SalesInvoice.numberSeries`. */
+export function getCsvKey(schemaName: string, fieldname: string): string {
+  const schemaKey = RENAMED_SCHEMAS[schemaName] ?? schemaName;
+  return `${schemaKey}.${getExportKey(schemaName, fieldname)}`;
+}
 
-    const baseRowData = headers.parent.map(
-      (f) => (parentRow[f.fieldname] as RawValue) ?? ''
-    );
+/** A picked field as a file holds it: its label, keys and value. */
+interface ExportColumn {
+  label: string;
+  /** The key of the value in a JSON document. */
+  key: string;
+  /** The key of the column in CSV, `schema.key`. */
+  csvKey: string;
+  getValue: (values: DocValues) => unknown;
+}
 
-    const tableFieldRowMap = parentNameMap[parentName];
-    if (!tableFieldRowMap || !Object.keys(tableFieldRowMap ?? {}).length) {
-      rows.push([baseRowData, headers.child.map(() => '')].flat());
-      continue;
-    }
+interface TableColumns {
+  fieldname: string;
+  key: string;
+  columns: ExportColumn[];
+}
 
-    for (const tableFieldName in tableFieldRowMap) {
-      const tableRows = tableFieldRowMap[tableFieldName] ?? [];
-
-      for (const tableRow of tableRows) {
-        const tableRowData = headers.child.map((f) => {
-          if (f.parentFieldname !== tableFieldName) {
-            return '';
-          }
-
-          return (tableRow[f.fieldname] as RawValue) ?? '';
-        });
-
-        rows.push([baseRowData, tableRowData].flat());
-      }
+/** A document as Books wrote it: always with its name, and tables that have rows. */
+function toJsonDocument(
+  document: DocValues,
+  columns: ExportColumn[],
+  tables: TableColumns[]
+): DocValues {
+  const hasName = columns.some(({ key }) => key === 'name');
+  const values: DocValues = {
+    ...(!hasName && { name: document.name }),
+    ...toJsonValues(document, columns),
+  };
+  for (const { fieldname, key, columns } of tables) {
+    const rows = (document[fieldname] as DocValues[] | undefined) ?? [];
+    if (rows.length) {
+      values[key] = rows.map((row) => toJsonValues(row, columns));
     }
   }
 
-  const flatHeaders = [headers.parent, headers.child].flat();
-  const labels = flatHeaders.map((f) => f.label);
-  const keys = flatHeaders.map((f) => `${f.schemaName}.${f.fieldname}`);
-
-  rows.unshift(keys);
-  rows.unshift(labels);
-
-  return generateCSV(rows);
+  return values;
 }
 
-function getCsvHeaders(
+function toJsonValues(values: DocValues, columns: ExportColumn[]): DocValues {
+  return Object.fromEntries(
+    columns.map(({ key, getValue }) => [key, getValue(values)])
+  );
+}
+
+function getCsvRows(
+  document: DocValues,
+  columns: ExportColumn[],
+  tables: TableColumns[]
+): unknown[][] {
+  const getCell = (values: DocValues, column: ExportColumn) =>
+    column.getValue(values) ?? '';
+  const parentCells = columns.map((column) => getCell(document, column));
+  const tableColumns = tables.flatMap((table) => table.columns);
+  const childCells = tables.flatMap(({ fieldname, columns }) =>
+    ((document[fieldname] as DocValues[] | undefined) ?? []).map((row) =>
+      tableColumns.map((column) =>
+        columns.includes(column) ? getCell(row, column) : ''
+      )
+    )
+  );
+  if (!childCells.length) {
+    return [[...parentCells, ...tableColumns.map(() => '')]];
+  }
+
+  return childCells.map((cells) => [...parentCells, ...cells]);
+}
+
+/** The columns of the picked tables. */
+function getTableColumns({
+  schemaName,
+  fields,
+  tableFields,
+}: ExportQuery): TableColumns[] {
+  return getExportedTables(fields, tableFields).map((tf) => ({
+    fieldname: tf.fieldname,
+    key: getExportKey(schemaName, tf.fieldname),
+    columns: getColumns(tf.target, tf.fields),
+  }));
+}
+
+/** The picked fields that hold values, as columns. */
+function getColumns(schemaName: string, fields: ExportField[]): ExportColumn[] {
+  return getPickedFields(fields).map((field) => ({
+    label: field.label,
+    key: getExportKey(schemaName, field.fieldname),
+    csvKey: getCsvKey(schemaName, field.fieldname),
+    getValue: getValueReader(schemaName, field),
+  }));
+}
+
+function getExportKey(schemaName: string, fieldname: string): string {
+  const { placements } = getDocType(schemaName);
+  return (
+    RENAMED_KEYS[schemaName]?.[fieldname] ??
+    placements[fieldname]?.books_fieldname ??
+    AUDIT_KEYS[fieldname] ??
+    camelCase(fieldname)
+  );
+}
+
+/**
+ * How a file holds a field's value, as Books wrote it: Submitted and
+ * Cancelled for the docstatus, datetimes in ISO with the system offset
+ * (`modified` as Frappe sends it), doctypes by their schema names, amounts
+ * as numbers (0 for a virtual one, which a list does not read), and null
+ * for another value it does not read.
+ */
+function getValueReader(
   schemaName: string,
+  { fieldname, fieldtype }: ExportField
+): (values: DocValues) => unknown {
+  const flag = DOCSTATUS_FLAGS[fieldname];
+  if (flag) {
+    return (values) => flag.includes(values.docstatus as number);
+  }
+
+  if (fieldtype === FieldTypeEnum.Datetime && fieldname !== 'modified') {
+    return (values) => values[fieldname] && toIsoDatetime(values[fieldname]);
+  }
+
+  if (isReference(schemaName, fieldname)) {
+    return (values) => toSchemaReference(values[fieldname]);
+  }
+
+  if (fieldtype === FieldTypeEnum.Currency) {
+    return (values) => safeParseFloat(values[fieldname] ?? 0);
+  }
+
+  return (values) => values[fieldname] ?? null;
+}
+
+function isReference(schemaName: string, fieldname: string): boolean {
+  const docfield = getDocType(schemaName).meta.fields.find(
+    (field) => field.fieldname === fieldname
+  );
+  return !!docfield && isReferenceField(docfield);
+}
+
+function toSchemaReference(value: unknown): unknown {
+  return typeof value === 'string' ? (toSchemaName(value) ?? value) : value;
+}
+
+/** The tables whose field is picked for export. */
+function getExportedTables(
   fields: ExportField[],
   tableFields: ExportTableField[]
-) {
-  const headers = {
-    parent: [] as CsvHeader[],
-    child: [] as CsvHeader[],
-  };
-  for (const { label, fieldname, fieldtype, export: shouldExport } of fields) {
-    if (!shouldExport || fieldtype === FieldTypeEnum.Table) {
-      continue;
-    }
-
-    headers.parent.push({ schemaName, label, fieldname });
-  }
-
-  for (const tf of tableFields) {
-    if (!fields.find((f) => f.fieldname === tf.fieldname)?.export) {
-      continue;
-    }
-
-    for (const field of tf.fields) {
-      if (!field.export) {
-        continue;
-      }
-
-      headers.child.push({
-        schemaName: tf.target,
-        label: field.label,
-        fieldname: field.fieldname,
-        parentFieldname: tf.fieldname,
-      });
-    }
-  }
-
-  return headers;
+): ExportTableField[] {
+  return tableFields.filter(
+    (tf) => fields.find((f) => f.fieldname === tf.fieldname)?.export
+  );
 }
 
-function getParentNameMap(childTableData: Record<string, RawValueMap[]>) {
-  const parentNameMap: Record<string, Record<string, RawValueMap[]>> = {};
-  for (const key in childTableData) {
-    for (const row of childTableData[key]) {
-      const parent = row.parent as string;
-      if (!parent) {
-        continue;
-      }
-
-      parentNameMap[parent] ??= {};
-      parentNameMap[parent][key] ??= [];
-      parentNameMap[parent][key].push(row);
-    }
-  }
-  return parentNameMap;
+/** The picked fields that hold values, leaving out tables. */
+function getPickedFields(fields: ExportField[]): ExportField[] {
+  return fields.filter((f) => f.export && f.fieldtype !== FieldTypeEnum.Table);
 }
 
-async function getExportData(
-  schemaName: string,
-  fields: ExportField[],
-  tableFields: ExportTableField[],
-  limit: number | null,
-  filters: QueryFilter,
-  fyo: Fyo
-) {
-  const parentData: RawValueMap[] = [];
-  const childTableData: Record<string, RawValueMap[]> = {};
-  while (!limit || parentData.length < limit) {
+/** The documents, each with the rows of its picked tables, a page at a time. */
+async function getExportRows(query: ExportQuery): Promise<DocValues[]> {
+  const rows: DocValues[] = [];
+  const { limit } = query;
+  while (!limit || rows.length < limit) {
     const pageSize = Math.min(
       EXPORT_PAGE_SIZE,
-      (limit || Infinity) - parentData.length
+      (limit || Infinity) - rows.length
     );
-    const page = await getParentData(
-      schemaName,
-      filters,
-      fields,
-      { offset: parentData.length, limit: pageSize },
-      fyo
-    );
-    if (!page.length) {
-      break;
-    }
-
-    const parentNames = page.map((f) => f.name as string).filter(Boolean);
-    const children = await getAllChildTableData(
-      tableFields,
-      fields,
-      parentNames,
-      fyo
-    );
-    parentData.push(...page);
-    for (const fieldname in children) {
-      childTableData[fieldname] ??= [];
-      childTableData[fieldname].push(...children[fieldname]);
-    }
-
-    if (page.length < pageSize) {
+    const page = { start: rows.length, limit: pageSize };
+    const pageRows = await getFrappeRows(query, page);
+    rows.push(...pageRows);
+    if (pageRows.length < pageSize) {
       break;
     }
   }
 
-  return { parentData, childTableData };
+  return rows;
 }
 
-function convertParentDataToJsonExport(
-  parentData: RawValueMap[],
-  childTableData: Record<string, RawValueMap[]>
-) {
-  /**
-   * Map from List does not create copies. Map is a
-   * map of references, hence parentData is altered.
-   */
-
-  const nameMap = getMapFromList(parentData, 'name');
-  for (const fieldname in childTableData) {
-    const data = childTableData[fieldname];
-
-    for (const row of data) {
-      const parent = row.parent as string | undefined;
-      if (!parent || !nameMap?.[parent]) {
-        continue;
-      }
-
-      nameMap[parent][fieldname] ??= [];
-
-      delete row.parent;
-      delete row.name;
-
-      (nameMap[parent][fieldname] as RawValueMap[]).push(row);
-    }
-  }
-}
-
-async function getParentData(
-  schemaName: string,
-  filters: QueryFilter,
-  fields: ExportField[],
-  page: { offset: number; limit: number },
-  fyo: Fyo
-) {
-  const orderBy = ['created'];
-  if (fyo.db.fieldMap[schemaName]['date']) {
-    orderBy.unshift('date');
-  }
-
-  const options: GetAllOptions = { filters, orderBy, order: 'desc', ...page };
-  options.fields = fields
-    .filter((f) => f.export && f.fieldtype !== FieldTypeEnum.Table)
-    .map((f) => f.fieldname);
-  if (!options.fields.includes('name')) {
-    options.fields.unshift('name');
-  }
-  const data = await fyo.db.getAllRaw(schemaName, options);
-  convertRawPesaToFloat(data, fields);
-  return data;
-}
-
-async function getAllChildTableData(
-  tableFields: ExportTableField[],
-  parentFields: ExportField[],
-  parentNames: string[],
-  fyo: Fyo
-) {
-  const childTables: Record<string, RawValueMap[]> = {};
-
-  // Getting Child Row data
-  for (const tf of tableFields) {
-    const f = parentFields.find((f) => f.fieldname === tf.fieldname);
-    if (!f?.export) {
-      continue;
-    }
-
-    childTables[tf.fieldname] = await getChildTableData(tf, parentNames, fyo);
-  }
-
-  return childTables;
-}
-
-async function getChildTableData(
-  exportTableField: ExportTableField,
-  parentNames: string[],
-  fyo: Fyo
-) {
-  const exportTableFields = exportTableField.fields
-    .filter((f) => f.export && f.fieldtype !== FieldTypeEnum.Table)
-    .map((f) => f.fieldname);
-  if (!exportTableFields.includes('parent')) {
-    exportTableFields.unshift('parent');
-  }
-
-  const data = await fyo.db.getAllRaw(exportTableField.target, {
-    orderBy: 'idx',
-    fields: exportTableFields,
-    filters: { parent: ['in', parentNames] },
+async function getFrappeRows(
+  { schemaName, fields, tableFields, filters }: ExportQuery,
+  page: { start: number; limit: number }
+): Promise<DocValues[]> {
+  const docType = getDocType(schemaName);
+  const tables = getExportedTables(fields, tableFields).map((tf) => ({
+    [tf.fieldname]: getStoredFieldnames(tf.target, tf.fields),
+  }));
+  const queryFields: ListQuery['fields'] = [
+    'name',
+    ...getStoredFieldnames(schemaName, fields).filter((f) => f !== 'name'),
+    ...tables,
+  ];
+  return await getList(docType.doctype, {
+    fields: queryFields,
+    filters: toFrappeFilters(filters),
+    orderBy: getOrderBy(docType),
+    ...page,
   });
-  convertRawPesaToFloat(data, exportTableField.fields);
-  return data;
 }
 
-function convertRawPesaToFloat(data: RawValueMap[], fields: ExportField[]) {
-  const currencyFields = fields.filter(
-    (f) => f.fieldtype === FieldTypeEnum.Currency
+/**
+ * The columns the picked fields read: Submitted and Cancelled read the
+ * docstatus, and virtual fields have no stored value to read.
+ */
+function getStoredFieldnames(
+  schemaName: string,
+  fields: ExportField[]
+): string[] {
+  const virtual = getDocType(schemaName)
+    .meta.fields.filter((field) => field.is_virtual)
+    .map(({ fieldname }) => fieldname);
+  const fieldnames = getPickedFields(fields).map(({ fieldname }) =>
+    DOCSTATUS_FLAGS[fieldname] ? 'docstatus' : fieldname
   );
+  return [...new Set(fieldnames)].filter((f) => !virtual.includes(f));
+}
 
-  for (const row of data) {
-    for (const { fieldname } of currencyFields) {
-      row[fieldname] = safeParseFloat((row[fieldname] ?? '0') as string);
-    }
+function toExportFields(fields: Field[]): ExportField[] {
+  return fields
+    .filter((f) => !f.computed && f.label)
+    .map(({ fieldname, label, fieldtype }) => ({
+      fieldname,
+      fieldtype,
+      label,
+      export: !excludedFieldTypes.includes(fieldtype),
+    }));
+}
+
+/**
+ * A numbered document's name, which leads; a document named by a field
+ * exports that field as its name, and a prompted name is an own field.
+ */
+function getNameField(schemaName: string, fields: Field[]): Field[] {
+  const name = fields.find((f) => f.meta && f.fieldname === 'name');
+  const namingField = getNamingField(getDocType(schemaName).meta);
+  return name && !namingField ? [name] : [];
+}
+
+/** Books exported a tree's nested set, which /books otherwise leaves to the server. */
+function getTreeFields(schemaName: string): Field[] {
+  if (!getSchema(schemaName)!.isTree) {
+    return [];
   }
+
+  return [
+    { fieldname: 'lft', label: t`Left Index`, fieldtype: 'Int' },
+    { fieldname: 'rgt', label: t`Right Index`, fieldtype: 'Int' },
+  ] as Field[];
 }

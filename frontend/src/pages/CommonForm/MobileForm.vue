@@ -121,7 +121,7 @@
     </div>
     <div v-else class="h-10 flex-none" />
 
-    <FrappeBottomSheet v-model:open="showActions" :title="doc.name">
+    <FrappeBottomSheet v-model:open="showActions" :title="doc.formTitle">
       <div
         class="flex flex-col px-2 pb-[max(env(safe-area-inset-bottom),1rem)]"
       >

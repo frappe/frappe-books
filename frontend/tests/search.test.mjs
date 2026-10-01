@@ -1,48 +1,177 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { makeFyo } from './helpers/accounting.mjs';
-import { Search, sortByFuzzyMatch } from './helpers/ui.mjs';
+import { loadFrappeModels } from './helpers/frappeModels.mjs';
+import { frappeModels, fyo, Search, stubFrappe } from './helpers/frappe.mjs';
+import { sortByFuzzyMatch } from './helpers/ui.mjs';
 
-test('search starts without loading documents and fetches a bounded match set', async () => {
-  const fyo = await makeFyo();
-  const requests = [];
-  const responses = [];
-  fyo.db.search = (...args) => {
-    requests.push(args);
-    return new Promise((resolve) => responses.push(resolve));
-  };
+await loadFrappeModels(frappeModels);
+
+/** A search whose server answers `rows(request)` for each doctype's search. */
+function makeSearch(rows = () => []) {
+  const requests = stubFrappe(async (request) => ({
+    message: await rows(request),
+  }));
   const search = new Search(fyo);
   search.initialize();
+  return { search, requests };
+}
+
+const docs = (search, input) =>
+  search.search(input).filter((item) => item.group === 'Docs');
+
+test('the palette searches the schemas the DocType search fields name', () => {
+  const { search, requests } = makeSearch();
+  const fields = (schemaName) => search.searchables[schemaName]?.fields;
+
   assert.equal(requests.length, 0);
+  assert.deepEqual(fields('SalesInvoice'), ['name', 'party']);
+  assert.deepEqual(fields('Party'), ['name', 'email', 'role']);
+  assert.deepEqual(fields('Tax'), ['name']);
+  assert.deepEqual(fields('SalesInvoiceItem'), ['item', 'tax']);
+  assert.equal(fields('Account'), undefined);
+});
 
-  const stale = search.fetchDocs('SINV');
-  const latest = search.fetchDocs('SINV-1001');
-  const [text, schemaNames, limit] = requests.at(-1);
-  assert.equal(text, 'SINV-1001');
-  assert.ok(schemaNames.includes('SalesInvoice'));
-  assert.equal(limit, 20);
+test('filter chips show transactions first and table rows last, by schema label', () => {
+  const { search } = makeSearch();
+  const labels = search.schemaFilterOptions.map(({ label }) => label);
 
-  responses[1]({
-    SalesInvoice: [{ name: 'SINV-1001', party: 'Acme', submitted: true }],
+  assert.deepEqual(labels.slice(0, 3), [
+    'Journal Entry',
+    'Payment',
+    'Purchase Invoice',
+  ]);
+  assert.deepEqual(labels.slice(-2), [
+    'Sales Quote Item',
+    'Stock Movement Item',
+  ]);
+  assert.equal(labels.length, 24);
+});
+
+test('each doctype is searched for the letters of the longest word in order', async () => {
+  const { search, requests } = makeSearch();
+  search.set('skipTables', true);
+  await search.fetchDocs(' ac SINV-1 ');
+  const invoice = requests.find(
+    ({ body }) => body.doctype === 'Books Sales Invoice'
+  );
+
+  assert.equal(invoice.path, '/api/method/frappe.desk.search.search_widget');
+  assert.deepEqual(invoice.body, {
+    doctype: 'Books Sales Invoice',
+    txt: 'S%I%N%V%-%1',
+    page_length: 20,
+    filter_fields: ['name', 'party', 'docstatus'],
+    as_dict: true,
   });
+  assert.equal(requests.length, 18);
+});
+
+test('a superseded search is dropped and documents rank by status', async () => {
+  const pending = [];
+  const { search } = makeSearch((request) =>
+    request.body.doctype === 'Books Sales Invoice'
+      ? new Promise((resolve) => pending.push(resolve))
+      : []
+  );
+  const stale = search.fetchDocs('SINV');
+  const latest = search.fetchDocs('SINV-100');
+  pending[1]([
+    { name: 'SINV-1003', party: 'Acme', docstatus: 2 },
+    { name: 'SINV-1001', party: 'Acme', docstatus: 0 },
+    { name: 'SINV-1002', party: 'Acme', docstatus: 1 },
+  ]);
   assert.equal(await latest, true);
-  responses[0]({ SalesInvoice: [{ name: 'SINV-9', party: 'Old' }] });
+  pending[0]([{ name: 'SINV-9', party: 'Old', docstatus: 1 }]);
   assert.equal(await stale, false);
 
-  const docs = search
-    .search('SINV-1001')
-    .filter((item) => item.group === 'Docs');
   assert.deepEqual(
-    docs.map((item) => [item.label, item.more]),
-    [['SINV-1001', ['Acme']]]
+    docs(search, 'SINV-100').map((item) => [item.label, item.more]),
+    [
+      ['SINV-1002', ['Acme']],
+      ['SINV-1001', ['Acme']],
+      ['SINV-1003', ['Acme']],
+    ]
   );
 });
 
-test('recent records reopen the record instead of a list', async () => {
-  const fyo = await makeFyo();
-  fyo.db.search = async () => ({
-    SalesInvoice: [{ name: 'SINV-1001', party: 'Acme' }],
+test('a table row is found by its search fields and opens its parent', async () => {
+  const { search, requests } = makeSearch(({ body }) =>
+    body.doctype === 'Books Payment For'
+      ? [
+          {
+            reference_name: 'SINV-1001',
+            reference_type: 'Books Sales Invoice',
+            parent: 'PAY-1001',
+            parenttype: 'Books Payment',
+          },
+        ]
+      : []
+  );
+  await search.fetchDocs('SINV-1001');
+  const rows = requests.find(
+    ({ body }) => body.doctype === 'Books Payment For'
+  );
+
+  assert.equal(rows.path, '/api/method/frappe.client.get_list');
+  assert.deepEqual(rows.body, {
+    doctype: 'Books Payment For',
+    parent: 'Books Payment',
+    fields: [
+      'name',
+      'reference_name',
+      'reference_type',
+      'parent',
+      'parenttype',
+    ],
+    filters: [['parenttype', '=', 'Books Payment']],
+    or_filters: [
+      ['reference_name', 'like', '%S%I%N%V%-%1%0%0%1%'],
+      ['reference_type', 'like', '%S%I%N%V%-%1%0%0%1%'],
+    ],
+    order_by: 'idx',
+    limit_page_length: 20,
   });
+  const [row] = docs(search, 'SINV-1001');
+  assert.deepEqual(
+    [row.label, row.more, row.schemaLabel, row.route],
+    [
+      'PAY-1001',
+      ['SINV-1001', 'Sales'],
+      'Payment For',
+      '/edit/Payment/PAY-1001',
+    ]
+  );
+});
+
+test('a party shows its email and role, and is not found by its phone', async () => {
+  const party = {
+    name: 'Acme',
+    email: 'acme@example.com',
+    role: 'Customer',
+    phone: '9876543210',
+  };
+  const { search, requests } = makeSearch(({ body }) =>
+    body.doctype === 'Books Party' ? [party] : []
+  );
+  await search.fetchDocs('Acme');
+  const sent = requests.find(({ body }) => body.doctype === 'Books Party');
+
+  assert.deepEqual(sent.body.filter_fields, ['name', 'email', 'role']);
+  assert.deepEqual(
+    docs(search, 'Acme').map(({ label, more }) => [label, more]),
+    [['Acme', ['acme@example.com', 'Customer']]]
+  );
+
+  await search.fetchDocs('98765');
+  assert.deepEqual(docs(search, '98765'), []);
+});
+
+test('recent records reopen the record instead of a list', async () => {
+  const { search } = makeSearch(({ body }) =>
+    body.doctype === 'Books Sales Invoice'
+      ? [{ name: 'SINV-1001', party: 'Acme', docstatus: 1 }]
+      : []
+  );
   const stored = new Map();
   Object.defineProperty(globalThis, 'localStorage', {
     configurable: true,
@@ -51,31 +180,14 @@ test('recent records reopen the record instead of a list', async () => {
       setItem: (key, value) => stored.set(key, value),
     },
   });
-  const search = new Search(fyo);
-  search.initialize();
   await search.fetchDocs('SINV-1001');
 
-  const [record] = search
-    .search('SINV-1001')
-    .filter((item) => item.group === 'Docs');
+  const [record] = docs(search, 'SINV-1001');
   search.addToRecent(record);
   assert.equal(
     search.getRecentItems()[0].route,
     '/edit/SalesInvoice/SINV-1001'
   );
-});
-
-test('the palette searches the schemas the DocType search fields name', async () => {
-  const fyo = await makeFyo();
-  const search = new Search(fyo);
-  search.initialize();
-  const fields = (schemaName) => search.searchables[schemaName]?.fields;
-
-  assert.deepEqual(fields('SalesInvoice'), ['name', 'party']);
-  assert.deepEqual(fields('Party'), ['name', 'email', 'role', 'phone']);
-  assert.deepEqual(fields('Tax'), ['name']);
-  assert.deepEqual(fields('SalesInvoiceItem'), ['item', 'tax']);
-  assert.equal(fields('Account'), undefined);
 });
 
 test('link options keep every server match, closest first', () => {
@@ -92,9 +204,9 @@ test('link options keep every server match, closest first', () => {
     'Acme Supplies',
     'Northwind',
   ]);
-  assert.deepEqual(
-    labels(sortByFuzzyMatch('acme', options, getValues, true)),
-    ['ACME', 'Acme Supplies']
-  );
+  assert.deepEqual(labels(sortByFuzzyMatch('acme', options, getValues, true)), [
+    'ACME',
+    'Acme Supplies',
+  ]);
   assert.equal(sortByFuzzyMatch('', options, getValues), options);
 });

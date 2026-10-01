@@ -4,7 +4,7 @@
 from decimal import Decimal
 
 import frappe
-from frappe.permissions import add_user_permission
+from frappe.permissions import add_permission, add_user_permission, update_permission_property
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
@@ -15,6 +15,7 @@ from frappe_books.tests.accounting import (
 	make_account,
 	make_invoice,
 	make_item,
+	make_number_series,
 	make_party,
 	unique_name,
 )
@@ -175,6 +176,21 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		refund.cancel()
 		self.assertEqual(credit_note.db_get("outstanding_amount"), -180)
 
+	def test_a_refund_allocates_a_credit_note_as_a_positive_amount(self):
+		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
+		outstanding = credit_note.db_get("outstanding_amount")
+		self.assertLess(outstanding, 0)
+
+		refund = self._payment(credit_note, payment_type="Pay")
+		refund.payment_references[0].amount = outstanding
+		with self.assertRaisesRegex(frappe.ValidationError, "Allocated amounts must be greater than zero"):
+			refund.insert()
+
+	def test_number_series_cannot_change_after_insert(self):
+		payment = self._payment(self.invoice).insert()
+		payment.number_series = make_number_series("Payment")
+		self.assertRaises(frappe.CannotChangeConstantError, payment.save)
+
 	def test_payment_needs_read_access_to_the_invoice(self):
 		user = ensure_user("books-payment-reader@example.com", "Books User")
 		own_party = make_party(self.receivable.name)
@@ -249,6 +265,60 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		payment.set_missing_values()
 
 		self.assertEqual(payment.payment_account, counter.name)
+
+	def test_preview_fills_a_payment_from_its_invoice_without_saving(self):
+		frappe.db.set_value("Books Payment Method", "Cash", "account", self.cash.name)
+		payment = frappe.new_doc("Books Payment", payment_method="Cash")
+		payment.append("payment_references", {"reference_name": self.invoice.name})
+		payments = frappe.db.count("Books Payment")
+
+		payment.preview()
+
+		self.assertEqual(
+			(payment.party, payment.payment_type, payment.account, payment.payment_account),
+			(self.party.name, "Receive", self.receivable.name, self.cash.name),
+		)
+		row = payment.payment_references[0]
+		self.assertEqual((row.reference_type, row.amount), (self.invoice.doctype, 180))
+		self.assertEqual((payment.amount, payment.amount_paid), (180, 180))
+		self.assertEqual(payment.number_series, "PAY-")
+		self.assertEqual(frappe.db.count("Books Payment"), payments)
+
+	def test_preview_settles_the_only_reference_with_the_amount(self):
+		payment = self._payment(self.invoice, amount=100)
+		payment.payment_references[0].amount = 180
+		payment.preview()
+		self.assertEqual(payment.payment_references[0].amount, 100)
+
+		payment.append("payment_references", {"reference_name": self.invoice.name, "amount": 180})
+		payment.preview()
+		self.assertEqual([row.amount for row in payment.payment_references], [100, 180])
+
+	def test_a_supplier_reference_is_a_purchase_invoice(self):
+		supplier = make_party(self.payable.name, role="Supplier")
+		payment = frappe.new_doc("Books Payment", party=supplier.name)
+		payment.append("payment_references", {})
+		payment.set_missing_values()
+		self.assertEqual(payment.payment_references[0].reference_type, "Books Purchase Invoice")
+
+	def test_a_save_allocates_what_the_invoice_owes(self):
+		payment = self._payment(self.invoice, amount=None)
+		payment.amount = None
+		payment.payment_references[0].amount = None
+		payment.insert()
+		self.assertEqual((payment.amount, payment.payment_references[0].amount), (180, 180))
+
+	def test_preview_needs_the_right_to_make_payments_and_read_their_invoices(self):
+		role = frappe.get_doc({"doctype": "Role", "role_name": unique_name("Books Payer")}).insert()
+		add_permission("Books Payment", role.name)
+		update_permission_property("Books Payment", role.name, 0, "create", 1)
+		payment = self._payment(self.invoice)
+		with self.set_user(
+			ensure_user(f"books-payer-{frappe.generate_hash(length=8)}@example.com", role.name)
+		):
+			self.assertRaises(frappe.PermissionError, payment.preview)
+		with self.set_user(ensure_user("books-payment-preview-stranger@example.com")):
+			self.assertRaises(frappe.PermissionError, payment.preview)
 
 	def test_payment_method_requirements(self):
 		method = frappe.get_doc(

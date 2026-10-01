@@ -44,6 +44,7 @@ class BooksAccountingSettings(Document):
 
 		bank_name: DF.Data
 		company_name: DF.Data
+		country: DF.Link | None
 		discount_account: DF.Link | None
 		email: DF.Data
 		enable_coupon_code: DF.Check
@@ -70,6 +71,11 @@ class BooksAccountingSettings(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Accounting Settings"
+
+	@property
+	def country(self):
+		"""The company country, which Frappe's System Settings holds."""
+		return company_country()
 
 	def before_validate(self):
 		if self.is_enabled_now("enable_discounting") and not self.discount_account:

@@ -38,13 +38,9 @@ export function isFalsy(value: unknown): boolean {
   return false;
 }
 
+/** The actions of the doc's model; a doc's statics come from its own class. */
 export function getActions(doc: Doc): Action[] {
-  const Model = doc.fyo.models[doc.schemaName];
-  if (Model === undefined) {
-    return [];
-  }
-
-  return Model.getActions(doc.fyo);
+  return (doc.constructor as typeof Doc).getActions(doc.fyo);
 }
 
 export function getOptionList(
@@ -74,12 +70,7 @@ function getRawOptionList(field: Field, doc: Doc | undefined | null) {
     return [];
   }
 
-  const Model = doc.fyo.models[doc.schemaName];
-  if (Model === undefined) {
-    return [];
-  }
-
-  const getList = Model.lists[field.fieldname];
+  const getList = (doc.constructor as typeof Doc).lists[field.fieldname];
   if (getList === undefined) {
     return [];
   }

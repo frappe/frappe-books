@@ -39,14 +39,22 @@
 </template>
 
 <script lang="ts">
-import type { DocValueMap } from 'fyo/core/types';
+import type { Doc } from 'fyo/model/doc';
 import { RTL_LANGUAGES } from 'fyo/utils/consts';
-import { models, getRegionalModels } from 'models';
+import { frappeModels, getRegionalFrappeModels } from 'models';
+import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import MobileDesk from 'src/mobile/MobileDesk.vue';
 import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
+import { registerFrappeModels } from 'src/frappe/doctypes';
+import {
+  getSchemaDoctypes,
+  getSingleSchemaNames,
+  loadFrappeDocTypes,
+} from 'src/frappe/registry';
+import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
@@ -129,30 +137,30 @@ export default defineComponent({
       const books = boot.books!;
       fyo.store.isDevelopment = !!boot.developer_mode;
       fyo.store.appVersion = boot.versions?.frappe_books ?? '';
-      fyo.store.permissions = { doctypes: books.doctypes, user: boot.user };
-      fyo.store.searchFields = books.search_fields;
       fyo.store.chartsOfAccounts = books.charts_of_accounts;
       fyo.store.accountLabels = books.account_labels;
       fyo.store.indianStates = books.indian_states;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 
-      const countryCode = books.country_code || '-';
-      await fyo.db.connect(countryCode);
-      await fyo.initializeAndRegister(
-        models,
-        await getRegionalModels(countryCode)
+      registerFrappeModels(frappeModels);
+      registerFrappeModels(await getRegionalFrappeModels(books.country_code));
+      fyo.store.permissions = { doctypes: getSchemaDoctypes(), user: boot.user };
+      await loadFrappeDocTypes();
+      // Amounts load in the currency and precision the system settings set.
+      const systemSettings = ModelNameEnum.SystemSettings;
+      fyo.initializeMoneyMaker(
+        (await getFrappeDoc(systemSettings, systemSettings)) as SystemSettings
       );
-      const singles = Object.values(fyo.schemaMap).filter(
-        (schema) => schema?.isSingle && schema.name !== 'SetupWizard'
+      const singles = getSingleSchemaNames().filter(
+        (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
       );
       await Promise.all([
         fyo.loadCurrencySymbols(),
-        fyo.loadDefaultNumberSeries(),
-        ...singles.map((schema) => fyo.doc.getDoc(schema!.name)),
+        ...singles.map((name) => getFrappeDoc(name, name)),
       ]);
-      this.needsSetup = !fyo.singles.AccountingSettings?.setupComplete;
-      this.darkMode = Boolean(fyo.singles.SystemSettings?.darkMode);
+      this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
+      this.darkMode = Boolean(fyo.singles.SystemSettings?.dark_mode);
       setDarkMode(this.darkMode);
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
@@ -160,8 +168,8 @@ export default defineComponent({
       }
       this.loading = false;
     },
-    async completeSetup(values: DocValueMap) {
-      await fyo.db.insert(ModelNameEnum.SetupWizard, values);
+    async completeSetup(wizard: Doc) {
+      await wizard.sync();
       await call(
         'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
       );

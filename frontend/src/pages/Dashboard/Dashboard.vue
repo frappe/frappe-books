@@ -24,14 +24,12 @@
         <hr class="border-outline-gray-1" />
         <div class="grid grid-cols-1 md:grid-cols-2">
           <UnpaidInvoices
-            :schema-name="'SalesInvoice'"
             doctype="Books Sales Invoice"
             :common-period="period"
             :dark-mode="darkMode"
             class="min-w-0 border-outline-gray-1 max-md:border-b md:border-e"
           />
           <UnpaidInvoices
-            :schema-name="'PurchaseInvoice'"
             doctype="Books Purchase Invoice"
             :common-period="period"
             :dark-mode="darkMode"

@@ -1,13 +1,19 @@
 import type { ListViewColumn } from 'fyo/model/types';
+import { t } from 'fyo/utils/translation';
 import { Field, FieldTypeEnum } from 'schemas/types';
 
 // These values have direct database mappings. Other read-only values may be derived.
+// Books names, then the Frappe names Frappe-backed schemas keep.
 const storedReadOnlyFields = new Set([
   'name',
   'netTotal',
   'grandTotal',
   'baseGrandTotal',
+  'net_total',
+  'grand_total',
+  'base_grand_total',
 ]);
+// Books names, then the Frappe names Frappe-backed schemas keep.
 const auditFields = new Set([
   'created',
   'modified',
@@ -15,6 +21,9 @@ const auditFields = new Set([
   'modifiedBy',
   'submitted',
   'cancelled',
+  'creation',
+  'owner',
+  'modified_by',
 ]);
 
 export function getFilterFields(
@@ -33,7 +42,7 @@ export function getFilterFields(
     (column) => typeof column === 'object' && column.fieldname === 'status'
   ) as Field | undefined;
 
-  const filteredFields = fields.filter((f) => {
+  const filteredFields = fields.flatMap(expandDocStatus).filter((f) => {
     if (excludedFieldsTypes.includes(f.fieldtype)) {
       return false;
     }
@@ -41,7 +50,8 @@ export function getFilterFields(
     if (typeof f.filter === 'boolean') return f.filter;
 
     if (f.computed) return false;
-    if (f.meta) return auditFields.has(f.fieldname);
+    // A Frappe-backed schema's name is a meta field, as it is not entered.
+    if (f.meta) return auditFields.has(f.fieldname) || f.fieldname === 'name';
     if (f.readOnly) return storedReadOnlyFields.has(f.fieldname);
 
     return true;
@@ -56,6 +66,18 @@ export function getFilterFields(
   }
 
   return filteredFields;
+}
+
+/** A Frappe-backed schema keeps docstatus, which Books lists and files show as Submitted and Cancelled. */
+export function expandDocStatus(field: Field): Field[] {
+  if (!field.meta || field.fieldname !== 'docstatus') {
+    return [field];
+  }
+
+  return [
+    { fieldname: 'submitted', label: t`Submitted`, fieldtype: 'Check' },
+    { fieldname: 'cancelled', label: t`Cancelled`, fieldtype: 'Check' },
+  ].map((flag) => ({ ...flag, meta: true }) as Field);
 }
 
 const fieldLabelAcronyms = new Set([

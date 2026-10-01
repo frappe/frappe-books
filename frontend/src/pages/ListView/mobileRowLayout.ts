@@ -2,6 +2,7 @@ import type { ColumnConfig, RenderData } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import type { Field } from 'schemas/types';
+import { getFields } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { formatColumnValue, type ListColumn } from './listColumns';
@@ -18,8 +19,8 @@ export interface MobileRowLayout {
 /** Line 2 fields where the phone design differs from the list columns. */
 const metaFieldnames: Record<string, string[]> = {
   [ModelNameEnum.Party]: ['role', 'phone'],
-  [ModelNameEnum.Item]: ['itemType', 'tax'],
-  [ModelNameEnum.Payment]: ['name', 'date', 'paymentType'],
+  [ModelNameEnum.Item]: ['item_type', 'tax'],
+  [ModelNameEnum.Payment]: ['name', 'date', 'payment_type'],
 };
 
 /** Schemas whose rows start with an initials avatar. */
@@ -60,9 +61,7 @@ export function getMobileRowLayout(
 function getMetaColumns(schemaName: string, columns: ListColumn[]) {
   const fieldnames = metaFieldnames[schemaName];
   if (fieldnames) {
-    return fieldnames
-      .map((fieldname) => fyo.getField(schemaName, fieldname))
-      .filter(Boolean);
+    return getFields(schemaName, fieldnames);
   }
 
   const isDate = (column: ListColumn) =>
@@ -80,12 +79,17 @@ export function getRowAmount(row: RenderData, column?: ListColumn): string {
     return '';
   }
 
-  if (column.fieldname === 'outstandingAmount' && amount.isZero()) {
+  if (isOutstanding(column.fieldname) && amount.isZero()) {
     return '';
   }
 
-  const signed = row.paymentType === 'Pay' ? amount.neg() : amount;
+  const signed = row.payment_type === 'Pay' ? amount.neg() : amount;
   return fyo.format(signed, column as Field);
+}
+
+/** Books' name of the column, then the Frappe name of Frappe-backed lists. */
+function isOutstanding(fieldname: string): boolean {
+  return fieldname === 'outstandingAmount' || fieldname === 'outstanding_amount';
 }
 
 export function getRowMeta(row: RenderData, columns: ListColumn[]): string {

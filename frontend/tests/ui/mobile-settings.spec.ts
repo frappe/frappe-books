@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { routeInvoice } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 test.use({
@@ -73,13 +74,13 @@ test('the offline screen covers the page until the connection returns', async ({
 test('a request that cannot reach the server shows the offline screen', async ({
   page,
 }) => {
-  await page.route('**/api/method/**', (route) =>
+  await page.route('**/api/**', (route) =>
     route.abort('internetdisconnected')
   );
   await routeTo(page, '/list/SalesInvoice');
   await expect(noConnection(page)).toBeVisible();
 
-  await page.unroute('**/api/method/**');
+  await page.unroute('**/api/**');
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(noConnection(page)).toHaveCount(0);
 });
@@ -87,13 +88,13 @@ test('a request that cannot reach the server shows the offline screen', async ({
 test('the print view has a template picker and a bottom bar', async ({
   page,
 }) => {
-  await page.evaluate(() => {
-    const app = (document.querySelector('#app') as any).__vue_app__;
-    const fyo = app._context.mixins
-      .find((mixin: any) => mixin.computed?.fyo)
-      .computed.fyo();
-    fyo.doc.getNewDoc('SalesInvoice', { name: 'Phone Print Test' });
-  });
+  // The document exists only in the browser, so Frappe cannot render it.
+  await page.route(/frappe\.www\.printview\.get_html_and_style/, (route) =>
+    route.fulfill({
+      json: { message: { html: '<p>Phone Print Test</p>', style: '' } },
+    })
+  );
+  await routeInvoice(page, 'Phone Print Test');
   await routeTo(page, '/print/SalesInvoice/Phone Print Test');
 
   await expect(page.locator('header:visible')).toContainText(
@@ -101,6 +102,11 @@ test('the print view has a template picker and a bottom bar', async ({
   );
   const picker = page.getByRole('button', { name: /^Template/ });
   await expect(picker).toBeVisible();
+  await expect(
+    page.frameLocator('iframe[title="Print preview"]').getByText(
+      'Phone Print Test'
+    )
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Print', exact: true })

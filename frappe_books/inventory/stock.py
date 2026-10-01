@@ -48,6 +48,20 @@ def create_series_batches(rows):
 			row.batch = names[0]
 
 
+def create_series_serial_numbers(rows):
+	"""Top up the serial numbers of rows of serialised items to their quantity from the item's series.
+
+	The serial numbers themselves are created when the stock arrives, on submit.
+	"""
+	serialised = _items_with("has_serial_number", {row.item for row in rows if row.item})
+	for row in rows:
+		serial_numbers = parse_serial_numbers(row.serial_number)
+		missing = int(abs(as_decimal(row.quantity))) - len(serial_numbers)
+		if row.item in serialised and missing > 0:
+			added = new_item_names("Books Serial Number", row.item, missing)
+			row.serial_number = "\n".join(serial_numbers + added) or None
+
+
 def validate_stock_available(transfers, date):
 	"""Lock the items, then check that outgoing rows have the stock they take at the date.
 
@@ -114,11 +128,19 @@ def populate_stock_rows(rows):
 		item = items.get(row.item)
 		if not item:
 			continue
-		for fieldname in ("description", "rate"):
-			if not row.get(fieldname):
-				row.set(fieldname, item.get(fieldname))
+		for fieldname in ("description", "rate", "hsn_code"):
+			df = row.meta.get_field(fieldname)
+			if df and not row.get(fieldname):
+				row.set(fieldname, row.cast(item.get(fieldname), df))
 		row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity))
 	return rounded(sum((as_decimal(row.amount) for row in rows), as_decimal(0)))
+
+
+def start_row_quantities(rows):
+	"""A row without either quantity moves one of its unit, as a new row in /books starts."""
+	for row in rows:
+		if not row.quantity and not row.transfer_quantity:
+			row.quantity = 1
 
 
 def fill_serial_numbers(rows):
@@ -321,7 +343,7 @@ def _item_defaults(rows):
 	if not names:
 		return {}
 	items = frappe.get_all(
-		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate"]
+		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate", "hsn_code"]
 	)
 	return {item.name: item for item in items}
 

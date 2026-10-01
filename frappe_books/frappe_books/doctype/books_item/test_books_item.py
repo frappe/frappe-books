@@ -4,14 +4,17 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice
+from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice, make_sales_invoice
 from frappe_books.tests.accounting import (
+	ensure_user,
 	make_account,
 	make_item,
 	root_group,
 	set_inventory_accounts,
 	unique_name,
 )
+
+READ_ONLY_USER = "books-item-preview-reader@example.com"
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -34,16 +37,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual(item.hsn_code, "123456")
 
 	def test_missing_accounts_and_hsn_code_get_the_app_defaults(self):
-		for name in ("Sales", "Service"):
-			if not frappe.db.exists("Books Account", name):
-				values = {"account_name": name, "parent_books_account": root_group("Income")}
-				frappe.get_doc({"doctype": "Books Account", **values}).insert()
-		cogs = make_account("Item COGS", root_type="Expense", account_type="Cost of Goods Sold")
-		received = make_account("Item Received", root_type="Liability")
-		set_inventory_accounts(None, received.name, cogs.name)
-		group = frappe.get_doc(
-			{"doctype": "Books Item Group", "name": unique_name("Group"), "hsn_code": "998877"}
-		).insert()
+		cogs, received, group = self.make_default_sources()
 
 		service = make_item(None, None, item_type="Service", item_group=group.name)
 		product = make_item(None, None, track_item=1)
@@ -90,3 +84,48 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 
 		row = invoice.items[0]
 		self.assertEqual((row.item, row.quantity, row.rate, row.account), (item.name, 1, 40, expense.name))
+
+	def test_item_invoice_row_shows_its_quantity(self):
+		income = make_account("Mapped Sales", root_type="Income")
+		expense = make_account("Mapped Expense", root_type="Expense")
+		item = make_item(income.name, expense.name, rate=40)
+
+		row = make_sales_invoice(item.name).items[0]
+
+		self.assertEqual((row.qty, row.transfer_quantity), (1, 1))
+
+	def test_preview_fills_what_a_save_would_without_saving(self):
+		cogs, received, group = self.make_default_sources()
+		item = frappe.new_doc("Books Item", item_type="Service", item_group=group.name)
+		item.name = unique_name("Preview Item")
+
+		item.preview()
+
+		self.assertEqual((item.income_account, item.expense_account), ("Service", cogs.name))
+		self.assertEqual(item.hsn_code, "998877")
+		self.assertFalse(frappe.db.exists("Books Item", item.name))
+
+		item.update(
+			{"item_type": "Product", "track_item": 1, "income_account": None, "expense_account": None}
+		)
+		item.preview()
+		self.assertEqual((item.income_account, item.expense_account), ("Sales", received.name))
+
+	def test_preview_needs_the_right_to_make_items(self):
+		item = frappe.new_doc("Books Item")
+		with self.set_user(ensure_user(READ_ONLY_USER)), self.assertRaises(frappe.PermissionError):
+			item.preview()
+
+	def make_default_sources(self):
+		"""The accounts and item group an item without its own takes them from."""
+		for name in ("Sales", "Service"):
+			if not frappe.db.exists("Books Account", name):
+				values = {"account_name": name, "parent_books_account": root_group("Income")}
+				frappe.get_doc({"doctype": "Books Account", **values}).insert()
+		cogs = make_account("Item COGS", root_type="Expense", account_type="Cost of Goods Sold")
+		received = make_account("Item Received", root_type="Liability")
+		set_inventory_accounts(None, received.name, cogs.name)
+		group = frappe.get_doc(
+			{"doctype": "Books Item Group", "name": unique_name("Group"), "hsn_code": "998877"}
+		).insert()
+		return cogs, received, group

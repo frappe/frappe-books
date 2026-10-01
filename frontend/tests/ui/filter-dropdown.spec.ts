@@ -1,7 +1,4 @@
 import { expect, test, type Page } from '@playwright/test';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import path from 'node:path';
 import {
   setupFilterFixture,
   choose,
@@ -183,7 +180,9 @@ test('Is Empty on User Remark hides Value and sends the unary condition', async 
     animations: 'disabled',
   });
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({ userRemark: ['is null', null] });
+  expect(await appliedFilters(page)).toEqual({
+    user_remark: ['is null', null],
+  });
 });
 
 test('date filters use the calendar and reset incompatible field values', async ({
@@ -216,7 +215,9 @@ test('date filters use the calendar and reset incompatible field values', async 
   await expect(input).toHaveValue('2024-02-29');
   await expect(panel).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({ date: ['=', '2024-02-29'] });
+  expect(await appliedFilters(page)).toEqual({
+    posting_date: ['=', '2024-02-29'],
+  });
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
@@ -290,8 +291,8 @@ async function dismissFilters(page: Page) {
 for (const [field, value, expected] of [
   ['Rate', '0', { rate: ['=', 0] }],
   ['Rate', '-12.5', { rate: ['=', -12.5] }],
-  ['Track Inventory', 'No', { trackItem: ['=', '0'] }],
-  ['Track Inventory', 'Yes', { trackItem: ['=', '1'] }],
+  ['Track Inventory', 'No', { track_item: ['=', '0'] }],
+  ['Track Inventory', 'Yes', { track_item: ['=', '1'] }],
 ] as const) {
   test(`${field} accepts ${value} and counts the applied filter`, async ({
     page,
@@ -311,7 +312,7 @@ for (const [field, value, expected] of [
     const query = await appliedFilters(page);
     const numericExpected = JSON.parse(JSON.stringify(expected));
     if (field === 'Track Inventory')
-      numericExpected.trackItem[1] = Number(numericExpected.trackItem[1]);
+      numericExpected.track_item[1] = Number(numericExpected.track_item[1]);
     expect(query).toEqual(numericExpected);
     await expect(
       page.getByRole('button', { name: '1 filter applied', exact: true })
@@ -367,6 +368,12 @@ test('datetime filters select both calendar date and time and preserve SQL round
   });
 });
 
+// Journal entries filter on their posting date.
+const dateFields: Record<string, string> = {
+  JournalEntry: 'posting_date',
+  SalesInvoice: 'date',
+};
+
 for (const schema of ['JournalEntry', 'SalesInvoice']) {
   test(`${schema} date picker supports keyboard selection, Escape, clearing and empty conditions`, async ({
     page,
@@ -411,7 +418,9 @@ for (const schema of ['JournalEntry', 'SalesInvoice']) {
     await choose(page, 'Condition', 'Is Empty');
     await expect(input).toHaveCount(0);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({ date: ['is null', null] });
+    expect(await appliedFilters(page)).toEqual({
+      [dateFields[schema]]: ['is null', null],
+    });
   });
 }
 
@@ -437,7 +446,7 @@ for (const [schema, first, second] of [
     await input.fill(first);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
     expect(await appliedFilters(page)).toEqual({
-      date: ['=', first.replace('T', ' ')],
+      [dateFields[schema]]: ['=', first.replace('T', ' ')],
     });
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
@@ -451,7 +460,7 @@ for (const [schema, first, second] of [
       page.getByRole('region', { name: 'Filters', exact: true })
     ).toBeHidden();
     expect(await appliedFilters(page)).toEqual({
-      date: ['=', second.replace('T', ' ')],
+      [dateFields[schema]]: ['=', second.replace('T', ' ')],
     });
   });
 }
@@ -532,164 +541,3 @@ test('outside click applies changes and zero matches can be cleared', async ({
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(page.getByText('INV-1', { exact: true })).toBeVisible();
 });
-
-const databaseCases = [
-  ['Is', 'Beta', ['3']],
-  ['Is Not', 'Beta', ['0', '1', '2', '4']],
-  ['Contains', 'Alpha', ['2', '4']],
-  ['Does Not Contain', 'Alpha', ['0', '1', '3']],
-  ['Greater Than', 'Alpha', ['2', '3', '4']],
-  ['Less Than', 'Alpha', ['0', '1']],
-  ['Is Empty', null, ['0', '1']],
-  ['Is Not Empty', null, ['2', '3', '4']],
-] as const;
-for (const [condition, value, matches] of databaseCases) {
-  test(`Frappe database: User Remark ${condition} returns matching records`, async ({
-    page,
-  }) => {
-    await useFilterDatabase(page);
-    await page.getByRole('button', { name: 'Filter', exact: true }).click();
-    await page
-      .getByRole('button', { name: 'Add a filter', exact: true })
-      .click();
-    await choose(page, 'Field', 'User Remark');
-    await choose(page, 'Condition', condition);
-    if (value !== null) await setValue(page, value);
-    await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    await expect
-      .poll(() =>
-        page.evaluate(() =>
-          (window as any).filterFixture.list.value.data
-            .map((row: any) => row.referenceNumber)
-            .sort()
-        )
-      )
-      .toEqual(matches);
-    for (const index of matches)
-      await expect(
-        page.getByText(new RegExp(`^Filter ${index} `))
-      ).toBeVisible();
-  });
-}
-
-async function useFilterDatabase(page: Page, schemaName = 'JournalEntry') {
-  test.skip(
-    !process.env.BOOKS_FILTER_TEST_BENCH || !process.env.BOOKS_FILTER_TEST_SITE,
-    'Requires an explicit Frappe test bench and site'
-  );
-  let pending: Promise<unknown> = Promise.resolve();
-  await page.route('**/__filter_database_test', async (route) => {
-    const result = pending.then(() =>
-      promisify(execFile)(
-        'bench',
-        [
-          '--site',
-          process.env.BOOKS_FILTER_TEST_SITE!,
-          'execute',
-          'frappe_books.tests.test_filters.query_filter_fixture',
-          '--kwargs',
-          JSON.stringify({
-            filters: route.request().postData(),
-            schema_name: schemaName,
-          }),
-        ],
-        {
-          cwd: process.env.BOOKS_FILTER_TEST_BENCH,
-          env: {
-            ...process.env,
-            PYTHONPATH: path.resolve(__dirname, '../../..'),
-          },
-        }
-      )
-    );
-    pending = result.catch(() => {});
-    const { stdout } = await result.catch((error) => {
-      throw new Error(`${error.message}\n${error.stdout}\n${error.stderr}`);
-    });
-    await route.fulfill({ json: JSON.parse(stdout) });
-  });
-  await dismissFilters(page);
-  await page.evaluate(async (schemaName) => {
-    const fixture = (window as any).filterFixture;
-    fixture.state.useDatabase = true;
-    fixture.state.schemaName = schemaName;
-    await fixture.list.value.updateData({});
-  }, schemaName);
-  await expect
-    .poll(() =>
-      page.evaluate(() => (window as any).filterFixture.list.value.data.length)
-    )
-    .toBe(5);
-}
-
-const storedFieldCases = [
-  ['JournalEntry', 'Entry No', 'Contains', 'Filter 3 ', ['3']],
-  ['JournalEntry', 'Date', 'Greater Than', '2024-01-03', ['3', '4']],
-  ['JournalEntry', 'Entry Type', 'Is', 'Cash Entry', ['3', '4']],
-  ['JournalEntry', 'Number Series', 'Is', 'JV-', ['0', '2', '4']],
-  ['JournalEntry', 'Created By', 'Is', 'Administrator', ['0', '2', '4']],
-  ['JournalEntry', 'Modified By', 'Is', 'Guest', ['1', '3']],
-  [
-    'JournalEntry',
-    'Created',
-    'Greater Than',
-    '2024-01-03T12:00:00',
-    ['3', '4'],
-  ],
-  [
-    'JournalEntry',
-    'Modified',
-    'Greater Than',
-    '2024-02-03T12:00:00',
-    ['3', '4'],
-  ],
-  ['JournalEntry', 'Submitted', 'Is', 'No', ['0', '3']],
-  ['JournalEntry', 'Cancelled', 'Is', 'Yes', ['2']],
-  ['SalesInvoice', 'Invoice No', 'Contains', 'Filter invoice 3 ', ['3']],
-  ['SalesInvoice', 'Net Total', 'Is', '0', ['0']],
-  ['SalesInvoice', 'Grand Total', 'Greater Than', '112', ['2', '3', '4']],
-  ['SalesInvoice', 'Base Grand Total', 'Less Than', '448', ['0', '1']],
-] as const;
-for (const [schema, field, condition, value, matches] of storedFieldCases) {
-  test(`stored field ${schema}.${field} returns matching Frappe records`, async ({
-    page,
-  }) => {
-    await useFilterDatabase(page, schema);
-    await page.getByRole('button', { name: 'Filter', exact: true }).click();
-    await page
-      .getByRole('button', { name: 'Add a filter', exact: true })
-      .click();
-    await choose(page, 'Field', field);
-    await choose(page, 'Condition', condition);
-    if (
-      field === 'Submitted' ||
-      field === 'Cancelled' ||
-      field === 'Entry Type'
-    )
-      await choose(page, 'Value', value);
-    else if (field === 'Date' || field === 'Created' || field === 'Modified') {
-      const date = value.slice(0, 10);
-      // Start the calendar in the fixture month, then select a real day cell.
-      const input = page.getByRole('combobox', { name: 'Value', exact: true });
-      await input.fill(value);
-      await input.press('Enter');
-      await input.click();
-      await page.locator(`[role="gridcell"][data-value="${date}"]`).click();
-      if (field !== 'Date') {
-        const time = page.getByPlaceholder('Select time');
-        await time.fill('12:00:00');
-        await time.press('Enter');
-      }
-    } else await setValue(page, value);
-    await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    await expect
-      .poll(() =>
-        page.evaluate(() =>
-          (window as any).filterFixture.list.value.data
-            .map((row: any) => row.name.match(/^Filter (?:invoice )?(\d) /)[1])
-            .sort()
-        )
-      )
-      .toEqual(matches);
-  });
-}

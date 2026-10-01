@@ -25,47 +25,47 @@
  ],
  "fields": [
   {
-   "description": "Address Line 1",
    "fieldname": "address_line1",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Address Line 1",
+   "placeholder": "Address Line 1",
    "reqd": 1
   },
   {
-   "description": "Address Line 2",
    "fieldname": "address_line2",
    "fieldtype": "Data",
-   "label": "Address Line 2"
+   "label": "Address Line 2",
+   "placeholder": "Address Line 2"
   },
   {
-   "description": "City / Town",
    "fieldname": "city",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "City / Town",
+   "placeholder": "City / Town",
    "reqd": 1
   },
   {
-   "description": "Country",
    "fieldname": "country",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Country",
    "options": "Country",
+   "placeholder": "Country",
    "reqd": 1
   },
   {
-   "description": "State",
    "fieldname": "state",
    "fieldtype": "Autocomplete",
-   "label": "State"
+   "label": "State",
+   "placeholder": "State"
   },
   {
-   "description": "Postal Code",
    "fieldname": "postal_code",
    "fieldtype": "Data",
-   "label": "Postal Code"
+   "label": "Postal Code",
+   "placeholder": "Postal Code"
   },
   {
    "fieldname": "contacts_section_break_7",
@@ -73,16 +73,16 @@
    "label": "Contacts"
   },
   {
-   "description": "Email Address",
    "fieldname": "email_address",
    "fieldtype": "Data",
-   "label": "Email Address"
+   "label": "Email Address",
+   "placeholder": "Email Address"
   },
   {
-   "description": "Phone",
    "fieldname": "phone",
    "fieldtype": "Data",
-   "label": "Phone"
+   "label": "Phone",
+   "placeholder": "Phone"
   },
   {
    "fieldname": "fax",
@@ -101,17 +101,17 @@
    "read_only": 1
   },
   {
-   "description": "Place of Supply",
    "fieldname": "pos",
    "fieldtype": "Autocomplete",
    "label": "Place of Supply",
+   "placeholder": "Place of Supply",
    "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 12:00:00.000000",
+ "modified": "2026-09-30 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Address",
@@ -122,7 +122,6 @@
    "delete": 1,
    "email": 1,
    "export": 1,
-   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,
@@ -147,7 +146,6 @@
    "create": 1,
    "email": 1,
    "export": 1,
-   "import": 1,
    "print": 1,
    "read": 1,
    "report": 1,

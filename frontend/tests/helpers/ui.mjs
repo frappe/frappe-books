@@ -14,15 +14,15 @@ await build({
   absWorkingDir: frontend,
   stdin: {
     contents: `
-      export {
-        getDocFromNameIfExistsElseNew,
-        getFieldsGroupedByTabAndSection,
-      } from './src/utils/ui';
+      export { getFieldsGroupedByTabAndSection } from './src/utils/ui';
+      export { FrappeDoc } from './src/frappe/document';
+      export { registerFrappeModels } from './src/frappe/doctypes';
+      export { loadFrappeDocTypes } from './src/frappe/registry';
       export { Search } from './src/utils/search';
       export { sortByFuzzyMatch } from './src/utils';
       export { fyo } from './src/initFyo';
-      export { NotFoundError } from './fyo/utils/errors';
       export { default as FilterLinkInput } from './src/components/FilterLinkInput.vue';
+      export { default as FilterValueInput } from './src/components/FilterValueInput.vue';
     `,
     resolveDir: frontend,
   },
@@ -42,7 +42,7 @@ await build({
           contents: 'export default {}',
         }));
         // Components under test keep their script; the rest are stubs.
-        builder.onLoad({ filter: /FilterLinkInput\.vue$/ }, async (args) => ({
+        builder.onLoad({ filter: /Filter(Link|Value)Input\.vue$/ }, async (args) => ({
           contents: (await readFile(args.path, 'utf8')).match(
             /<script[^>]*>([\s\S]*?)<\/script>/
           )[1],
@@ -58,11 +58,13 @@ await build({
 });
 globalThis.history = { state: null };
 export const {
-  getDocFromNameIfExistsElseNew,
+  FrappeDoc,
+  registerFrappeModels,
+  loadFrappeDocTypes,
   getFieldsGroupedByTabAndSection,
   Search,
   sortByFuzzyMatch,
   fyo,
-  NotFoundError,
   FilterLinkInput,
+  FilterValueInput,
 } = createRequire(import.meta.url)(output);

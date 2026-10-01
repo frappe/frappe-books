@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getRowDetails, makeFyo } from './helpers/accounting.mjs';
+import { fyo, getRowDetails, newFrappeDoc } from './helpers/frappe.mjs';
+import { loadFrappeModels } from './helpers/models.mjs';
 
-test('row details list every visible column of a row', async () => {
-  const fyo = await makeFyo();
-  const invoice = fyo.doc.getNewDoc('SalesInvoice', {
+await loadFrappeModels();
+
+test('row details list every visible column of a row', () => {
+  fyo.singles.AccountingSettings = { enable_discounting: true };
+  const invoice = newFrappeDoc('SalesInvoice', {
     items: [
       {
         item: 'Widget',
         quantity: 2,
-        transferQuantity: 2,
+        transfer_quantity: 2,
         rate: fyo.pesa(50),
         amount: fyo.pesa(100),
       },
@@ -20,14 +23,13 @@ test('row details list every visible column of a row', async () => {
     details.map((detail) => [detail.key, detail])
   );
 
-  for (const key of ['name', 'idx', 'parent', 'parentFieldname']) {
+  for (const key of ['name', 'idx', 'parent', 'parentfield']) {
     assert.equal(byKey[key], undefined);
   }
   assert.equal(byKey.description.value, '—');
-  assert.equal(byKey.setItemDiscountAmount.value, 'No');
+  assert.equal(byKey.set_item_discount_amount.value, 'No');
   assert.deepEqual(
     details.filter((detail) => detail.emphasis).map((detail) => detail.key),
     ['amount']
   );
-  clearTimeout(invoice._previewTimer);
 });

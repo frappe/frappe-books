@@ -1,8 +1,31 @@
 import { t } from 'fyo';
 import { Doc } from 'fyo/model/doc';
 import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class Address extends Doc {
+/**
+ * Books Address, served by Frappe. The server writes its display text and,
+ * for an Indian address, its place of supply.
+ */
+export class Address extends FrappeDoc {
+  static override doctype = 'Books Address';
+  static override presentation = {
+    label: 'Address',
+    nameField: { label: 'Address Name' },
+    quickEditFields: [
+      'address_line1',
+      'address_line2',
+      'city',
+      'country',
+      'state',
+      'postal_code',
+    ],
+    linkDisplayField: 'address_display',
+    fields: { country: { create: false } },
+    // Place of supply is an Indian GST field; see the Indian Address.
+    omitFields: ['pos'],
+  };
+
   static lists: ListsMap = {
     state(doc?: Doc) {
       const country = doc?.country as string | undefined;
@@ -27,7 +50,7 @@ export class Address extends Doc {
 
   static override getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'addressLine1', 'city', 'state', 'country'],
+      columns: ['name', 'address_line1', 'city', 'state', 'country'],
     };
   }
 }

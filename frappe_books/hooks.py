@@ -35,10 +35,15 @@ setup_wizard_url = "/books"
 
 extend_bootinfo = "frappe_books.boot.extend_bootinfo"
 
-jinja = {"methods": ["frappe_books.printing.get_print_settings"]}
+jinja = {
+	"methods": [
+		"frappe_books.printing.get_print_settings",
+		"frappe_books.printing.get_print_totals",
+		"frappe_books.printing.books_format",
+	]
+}
 
 after_install = "frappe_books.setup.bootstrap"
-after_migrate = "frappe_books.setup.after_migrate"
 before_tests = ["frappe_books.setup.before_tests", "frappe_books.tests.accounting.enable_features"]
 
 scheduler_events = {

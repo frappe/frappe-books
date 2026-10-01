@@ -1,13 +1,15 @@
-import { Doc } from 'fyo/model/doc';
-import { Account } from '../Account/Account';
 import { ListViewSettings } from 'fyo/model/types';
-import { PaymentMethodType } from 'models/types';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class PaymentMethod extends Doc {
-  name?: string;
-  account?: Account;
-  type?: PaymentMethodType;
-  requiresClearanceDate?: boolean;
+/** Books Payment Method, served by Frappe; the server checks its account against its type. */
+export class PaymentMethod extends FrappeDoc {
+  static override doctype = 'Books Payment Method';
+  static override presentation = {
+    label: 'Payment Method',
+    nameField: { label: 'Name' },
+    quickEditFields: ['name', 'type', 'account', 'requires_clearance_date'],
+    fields: { account: { create: false } },
+  };
 
   static getListViewSettings(): ListViewSettings {
     return {

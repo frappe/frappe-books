@@ -1,11 +1,11 @@
 """Factories used by accounting integration tests."""
 
 import frappe
-from frappe.utils import now_datetime
+from frappe.utils import flt, now_datetime
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.inventory.availability import get_stock_quantities
 from frappe_books.settings import FEATURES
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 
 def enable_features():
@@ -131,7 +131,7 @@ def set_inventory_accounts(stock, received, cogs):
 
 
 def stock_quantity(item, location):
-	return BooksBespokeQueries().stock_quantity(item, location) or 0
+	return sum(flt(row.quantity) for row in get_stock_quantities(location, [item]))
 
 
 def make_number_series(reference_type):

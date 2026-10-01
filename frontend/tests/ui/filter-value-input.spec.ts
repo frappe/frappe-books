@@ -12,7 +12,7 @@ const cases = [
   [
     'JournalEntry',
     'Entry Type',
-    'entryType',
+    'entry_type',
     [
       'Journal Entry',
       'Bank Entry',
@@ -27,8 +27,8 @@ const cases = [
       'Depreciation Entry',
     ],
   ],
-  ['Item', 'Purpose', 'for', ['Purchases', 'Sales', 'Both']],
-  ['Item', 'Type', 'itemType', ['Product', 'Service']],
+  ['Item', 'Purpose', 'item_usage', ['Purchases', 'Sales', 'Both']],
+  ['Item', 'Type', 'item_type', ['Product', 'Service']],
   [
     'SalesInvoice',
     'Status',
@@ -57,7 +57,7 @@ for (const [schema, label, field, options] of cases) {
     page,
   }) => {
     // The narrowest desktop window; phones get the filter sheet instead.
-    if (schema === 'JournalEntry' && field === 'entryType')
+    if (schema === 'JournalEntry' && field === 'entry_type')
       await page.setViewportSize({ width: 768, height: 560 });
     await openField(page, schema, label);
     const value = page.getByRole('combobox', { name: 'Value', exact: true });
@@ -67,7 +67,7 @@ for (const [schema, label, field, options] of cases) {
     ).toHaveText('Is');
     await value.click();
     await expect(page.getByRole('option')).toHaveText([...options]);
-    if (schema === 'JournalEntry' && field === 'entryType') {
+    if (schema === 'JournalEntry' && field === 'entry_type') {
       const menu = page.getByRole('listbox');
       await expect(menu).toBeInViewport();
       const bounds = (await menu.boundingBox())!;
@@ -103,9 +103,7 @@ for (const [schema, label, field, options] of cases) {
 }
 
 for (const condition of ['Is', 'Contains']) {
-  test(`status ${condition} filters on the stored value`, async ({
-    page,
-  }) => {
+  test(`status ${condition} filters on the stored value`, async ({ page }) => {
     await openField(page, 'SalesInvoice', 'Status');
     await choose(page, 'Condition', condition);
     await setValue(page, 'Partly Paid');
@@ -146,7 +144,7 @@ test('changing Select fields resets choices and supports keyboard selection', as
     page.getByRole('region', { name: 'Filters', exact: true })
   ).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({ itemType: ['=', 'Service'] });
+  expect(await appliedFilters(page)).toEqual({ item_type: ['=', 'Service'] });
 });
 
 test('Link filters offer records, search by name, clear, and use text for Contains', async ({
@@ -166,7 +164,7 @@ test('Link filters offer records, search by name, clear, and use text for Contai
     .click();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   expect(await appliedFilters(page)).toEqual({
-    itemGroup: ['=', 'ItemGroup-002'],
+    item_group: ['=', 'ItemGroup-002'],
   });
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
@@ -180,7 +178,7 @@ test('Link filters offer records, search by name, clear, and use text for Contai
   await setValue(page, 'Group');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   expect(await appliedFilters(page)).toEqual({
-    itemGroup: ['like', '%Group%'],
+    item_group: ['like', '%Group%'],
   });
 });
 
@@ -222,7 +220,7 @@ test('Dynamic Link filters follow the selected type and clear stale selections',
   await page.getByRole('option', { name: 'Lead-002', exact: true }).click();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   expect(await appliedFilters(page)).toEqual({
-    referenceType: ['=', 'Lead'],
+    reference_type: ['=', 'Books Lead'],
     party: ['=', 'Lead-002'],
   });
 });
@@ -294,7 +292,7 @@ test('changing a Dynamic Link type preserves implicit record restrictions', asyn
   await setValue(page, 'Lead');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   expect(await appliedFilters(page)).toEqual({
-    referenceType: ['=', 'Lead'],
+    reference_type: ['=', 'Books Lead'],
     party: ['=', 'Party-001'],
   });
 });

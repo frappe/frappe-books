@@ -64,15 +64,15 @@
 
       <Link
         :df="{
-          fieldname: 'similarProduct',
+          fieldname: 'similar_product',
           fieldtype: 'Link',
           target: 'Item',
           label: t`Similar Product`,
         }"
-        :value="ItemEnquiry.similarProduct"
+        :value="ItemEnquiry.similar_product"
         :border="true"
         :show-label="true"
-        @change="(value: string) => (ItemEnquiry.similarProduct = value)"
+        @change="(value: string) => (ItemEnquiry.similar_product = value)"
       />
     </div>
     <template #actions="{ size }">
@@ -98,9 +98,17 @@ import Modal from 'src/components/POS/POSDialog.vue';
 import Link from 'src/components/Controls/Link.vue';
 import Text from 'src/components/Controls/Text.vue';
 import Data from 'src/components/Controls/Data.vue';
-import { ItemEnquiry } from 'models/baseModels/ItemEnquiry/ItemEnquiry';
 import { ModelNameEnum } from 'models/types';
-import { DocValueMap } from 'fyo/core/types';
+import { getDocuments } from 'src/frappe/api';
+import { newFrappeDoc } from 'src/frappe/documents';
+
+/** An enquiry's values by Books Item Enquiry fieldname. */
+type Enquiry = Partial<
+  Record<
+    'item' | 'description' | 'customer' | 'contact' | 'similar_product',
+    string
+  >
+>;
 
 export default defineComponent({
   name: 'ItemEnquiryModal',
@@ -118,7 +126,7 @@ export default defineComponent({
   emits: ['toggleModal'],
   data() {
     return {
-      ItemEnquiry: {} as ItemEnquiry,
+      ItemEnquiry: {} as Enquiry,
     };
   },
   watch: {
@@ -140,15 +148,18 @@ export default defineComponent({
   },
   methods: {
     async updateCustomerContact(customer: string) {
-      this.ItemEnquiry.contact =
-        ((await this.fyo.getValue('Party', customer, 'phone')) as string) || '';
+      const [party] = await getDocuments('Books Party', {
+        fields: ['phone'],
+        filters: [['name', '=', customer]],
+      });
+      this.ItemEnquiry.contact = (party?.phone as string) || '';
     },
 
     async submitForm() {
       try {
-        const itemEnquiryDoc = this.fyo.doc.getNewDoc(
+        const itemEnquiryDoc = newFrappeDoc(
           ModelNameEnum.ItemEnquiry,
-          this.ItemEnquiry as DocValueMap
+          this.ItemEnquiry
         );
         await itemEnquiryDoc.sync();
         showToast({
@@ -165,7 +176,7 @@ export default defineComponent({
       }
     },
     clearValues() {
-      this.ItemEnquiry = {} as ItemEnquiry;
+      this.ItemEnquiry = {} as Enquiry;
     },
     closeModal() {
       this.clearValues();

@@ -21,7 +21,7 @@ The app currently targets only the Frappe Framework `develop` branch. It uses Fr
 - POS shifts and checkout, pricing rules, coupons, and loyalty points
 - India GST fields and GSTR-1/GSTR-2 reports, plus Swiss regional schema fields
 - General Ledger, Trial Balance, Profit and Loss, Balance Sheet, Stock Ledger, and Stock Balance reports in the Books interface
-- Native Frappe print formats for invoices, quotes, payments, shipments, and receipts
+- Frappe print formats for invoices, quotes, payments, shipments, and POS receipts
 - Books workspace and Data Import/Data Export links in Desk
 
 The browser handles downloads, file selection, and printing. Company data belongs to the current Frappe site. The app does not contain a local company-database selector, device telemetry, an updater, or an ERPNext device-sync client.
@@ -122,7 +122,7 @@ Use standard Frappe **Data Import** and **Data Export** for CSV-based transfers.
 
 ## Schema changes
 
-The DocType JSON files are the source of truth. When you change a DocType field that the Vue app uses, update the matching file in `frontend/schemas` and `frappe_books/schema_mapping.json`. `yarn --cwd frontend test` checks that the three agree.
+The DocType JSON files are the source of truth. /books builds its forms from the DocType meta and addresses fields by their Frappe fieldnames, so a field change needs no second copy. When /books shows a field differently from its DocField, change the model's `presentation` in `frontend/models`; see `docs/framework-backed-doctypes.md`.
 
 ## Tests and checks
 

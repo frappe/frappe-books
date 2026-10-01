@@ -1,4 +1,5 @@
 import frappe
+from frappe.api.v2 import run_doc_method
 from frappe.permissions import add_permission, update_permission_property
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime, nowdate, set_request
@@ -11,21 +12,19 @@ from frappe_books.tests.accounting import (
 	make_tax,
 	unique_name,
 )
-from frappe_books.ui_api import run_doc_method
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
-COMPARED_FIELDS = ("netTotal", "grandTotal", "baseGrandTotal", "outstandingAmount", "discountAmount")
+COMPARED_FIELDS = ("net_total", "grand_total", "base_grand_total", "outstanding_amount", "discount_amount")
 COMPARED_ROW_FIELDS = (
 	"item",
 	"rate",
 	"amount",
 	"tax",
 	"account",
-	"itemDiscountPercent",
-	"itemDiscountedTotal",
-	"itemTaxedTotal",
-	"pricingRule",
-	"isFreeItem",
+	"item_discount_percent",
+	"item_discounted_total",
+	"item_taxed_total",
+	"pricing_rule",
+	"is_free_item",
 )
 NO_ROLE_USER = "books-preview-no-role@example.com"
 CREATOR = "books-preview-creator@example.com"
@@ -33,8 +32,7 @@ CREATOR = "books-preview-creator@example.com"
 
 class IntegrationTestInvoicePreview(IntegrationTestCase):
 	def setUp(self):
-		set_request(method="POST", path="/api/method/frappe_books.ui_api.run_doc_method")
-		self.bridge = BooksDatabaseBridge()
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
 		self.receivable = make_account("Preview Receivable", account_type="Receivable")
 		self.income = make_account("Preview Sales", root_type="Income", account_type="Income Account")
 		self.expense = make_account("Preview Expense", root_type="Expense", account_type="Expense Account")
@@ -49,7 +47,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 	def test_preview_matches_the_saved_calculation(self):
 		preview = _preview(self.values)
-		saved = self.bridge.insert("SalesInvoice", self.values)
+		saved = _insert(self.values)
 
 		for field in COMPARED_FIELDS:
 			self.assertEqual(preview[field], saved[field], field)
@@ -61,7 +59,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 			_rows(preview["items"], COMPARED_ROW_FIELDS), _rows(saved["items"], COMPARED_ROW_FIELDS)
 		)
 		self.assertEqual(preview["items"][0]["rate"], 80)
-		self.assertTrue(preview["items"][-1]["isFreeItem"])
+		self.assertTrue(preview["items"][-1]["is_free_item"])
 
 	def test_preview_keeps_client_row_names(self):
 		preview = _preview(self.values)
@@ -79,41 +77,64 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		self.assertEqual(frappe.db.count("Books Sales Invoice"), invoices)
 
 	def test_preview_recalculates_an_edited_draft_without_saving_it(self):
-		saved = self.bridge.insert("SalesInvoice", self.values)
-		edited = {**saved, "items": [{**saved["items"][0], "quantity": 4}]}
+		saved = _insert(self.values)
+		# /books leaves the quantities that follow an edited quantity for the server to fill.
+		row = {
+			key: value for key, value in saved["items"][0].items() if key not in ("qty", "transfer_quantity")
+		}
+		edited = {**saved, "items": [{**row, "quantity": 4}]}
 
-		preview = _preview(edited, saved["name"])
+		preview = _preview(edited)
 
-		self.assertEqual(preview["netTotal"], 320)
+		self.assertEqual(preview["net_total"], 320)
 		self.assertEqual(
-			frappe.db.get_value("Books Sales Invoice", saved["name"], "net_total"), saved["netTotal"]
+			frappe.db.get_value("Books Sales Invoice", saved["name"], "net_total"), saved["net_total"]
 		)
 
 	def test_preview_requires_create_or_write_permission(self):
-		saved = self.bridge.insert("SalesInvoice", self.values)
+		saved = _insert(self.values)
 		with self.set_user(ensure_user(NO_ROLE_USER)):
 			self.assertRaises(frappe.PermissionError, _preview, self.values)
-			self.assertRaises(frappe.PermissionError, _preview, saved, saved["name"])
+			self.assertRaises(frappe.PermissionError, _preview, saved)
 
 	def test_preview_needs_create_for_a_new_invoice_and_write_for_a_saved_one(self):
-		saved = self.bridge.insert("SalesInvoice", self.values)
+		saved = _insert(self.values)
 		role = frappe.get_doc({"doctype": "Role", "role_name": unique_name("Books Invoice Creator")}).insert()
 		add_permission("Books Sales Invoice", role.name)
 		update_permission_property("Books Sales Invoice", role.name, 0, "create", 1)
 
 		with self.set_user(ensure_user(CREATOR, role.name)):
-			self.assertEqual(_preview(self.values)["netTotal"], saved["netTotal"])
-			self.assertRaises(frappe.PermissionError, _preview, saved, saved["name"])
+			# Frappe's /api/v2 run_doc_method also needs write; the controller's rule needs create.
+			invoice = frappe.get_doc(_new_document(self.values))
+			invoice.preview()
+			self.assertEqual(invoice.net_total, saved["net_total"])
+			self.assertRaises(frappe.PermissionError, _preview, saved)
 
 	def test_a_preview_of_a_draft_changed_since_it_was_read_is_refused(self):
-		saved = self.bridge.insert("SalesInvoice", self.values)
+		saved = _insert(self.values)
 		frappe.db.set_value("Books Sales Invoice", saved["name"], "terms", "Changed elsewhere")
 
-		self.assertRaises(frappe.TimestampMismatchError, _preview, saved, saved["name"])
+		self.assertRaises(frappe.TimestampMismatchError, _preview, saved)
+
+	def test_preview_starts_a_new_invoice_with_its_defaults(self):
+		frappe.db.set_single_value(
+			"Books Defaults",
+			{"sales_invoice_terms": "Pay in 30 days", "sales_payment_account": self.expense.name},
+		)
+		invoice = frappe.new_doc("Books Sales Invoice", party=self.party.name)
+		invoice.make_auto_payment = None
+
+		invoice.preview()
+
+		self.assertEqual(
+			invoice.number_series,
+			frappe.db.get_single_value("Books Defaults", "sales_invoice_number_series") or "SINV-",
+		)
+		self.assertEqual((invoice.terms, invoice.make_auto_payment), ("Pay in 30 days", 1))
 
 	def test_only_whitelisted_methods_run(self):
 		with self.assertRaisesRegex(frappe.PermissionError, "not whitelisted"):
-			run_doc_method("calculate", "SalesInvoice", self.values)
+			run_doc_method("calculate", _new_document(self.values))
 
 	def _invoice_values(self):
 		free_item = make_item(self.income.name, self.expense.name)
@@ -148,9 +169,9 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		).insert()
 		return {
 			"party": self.party.name,
-			"date": now_datetime().isoformat(),
-			"priceList": price_list.name,
-			"discountPercent": 5,
+			"date": str(now_datetime()),
+			"price_list": price_list.name,
+			"discount_percent": 5,
 			"coupons": [{"coupons": coupon.name}],
 			"items": [
 				{"name": "client-row-1", "item": self.item.name, "quantity": 2},
@@ -171,8 +192,23 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		).insert()
 
 
-def _preview(values, name=None):
-	return run_doc_method("preview", "SalesInvoice", values, name)
+def _preview(document):
+	"""Preview the client's copy of an invoice, as /books does through run_doc_method."""
+	if "name" not in document:
+		document = _new_document(document)
+	run_doc_method("preview", document)
+	return frappe.response.docs.pop().as_dict(convert_dates_to_str=True)
+
+
+def _new_document(values):
+	return {"doctype": "Books Sales Invoice", **values, "__islocal": 1}
+
+
+def _insert(values):
+	"""Save new values as /books does: new rows go without their client names."""
+	rows = [{key: value for key, value in row.items() if key != "name"} for row in values["items"]]
+	invoice = frappe.get_doc({"doctype": "Books Sales Invoice", **values, "items": rows}).insert()
+	return invoice.as_dict(convert_dates_to_str=True)
 
 
 def _rows(rows, fields):

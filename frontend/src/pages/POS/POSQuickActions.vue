@@ -16,7 +16,7 @@
   />
 
   <FrappeButton
-    v-if="fyo.singles.AccountingSettings?.enableLoyaltyProgram && loyaltyProgram"
+    v-if="fyo.singles.AccountingSettings?.enable_loyalty_program && loyaltyProgram"
     icon="lucide-badge-dollar-sign"
     :tooltip="t`Loyalty Program`"
     variant="subtle"
@@ -24,7 +24,7 @@
     @click="$emit('openLoyaltyProgram')"
   />
 
-  <div v-if="fyo.singles.AccountingSettings?.enableCouponCode" class="relative">
+  <div v-if="fyo.singles.AccountingSettings?.enable_coupon_code" class="relative">
     <FrappeButton
       icon="lucide-ticket-percent"
       :tooltip="t`Coupon Code`"
@@ -42,7 +42,7 @@
   </div>
 
   <FrappeButton
-    v-if="fyo.singles.AccountingSettings?.enablePriceList"
+    v-if="fyo.singles.AccountingSettings?.enable_price_list"
     icon="lucide-list-checks"
     :tooltip="t`Price List`"
     variant="subtle"
@@ -51,7 +51,7 @@
   />
 
   <FrappeButton
-    v-if="fyo.singles.AccountingSettings?.enableItemEnquiry"
+    v-if="fyo.singles.AccountingSettings?.enable_item_enquiry"
     icon="lucide-square-pen"
     :tooltip="t`Item Enquiry`"
     variant="subtle"

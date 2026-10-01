@@ -167,16 +167,17 @@ import FormContainer from 'src/components/FormContainer.vue';
 import FormHeader from 'src/components/FormHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import { getSchema } from 'src/frappe/registry';
+import { useBooksDoc } from 'src/frappe/useBooksDoc';
 import { getErrorMessage } from 'src/utils';
 import { loadDocPermissions } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
-import { ActionGroup, DocRef, UIGroupedFields } from 'src/utils/types';
+import { ActionGroup, UIGroupedFields } from 'src/utils/types';
 import {
   commonDocSubmit,
   commonDocSync,
-  getDocFromNameIfExistsElseNew,
   getFieldsGroupedByTabAndSection,
   getFormRoute,
   getGroupedActionsForDoc,
@@ -185,7 +186,7 @@ import {
 } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { useDocShortcuts } from 'src/utils/vueUtils';
-import { computed, defineComponent, inject, nextTick, ref } from 'vue';
+import { computed, defineComponent, inject, nextTick } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
 import LinkedEntries from './LinkedEntries.vue';
 import MobileForm from './MobileForm.vue';
@@ -217,7 +218,7 @@ export default defineComponent({
   },
   setup() {
     const shortcuts = inject(shortcutsKey);
-    const docOrNull = ref(null) as DocRef;
+    const { doc: docOrNull, load: loadDoc } = useBooksDoc();
     let context = 'CommonForm';
     if (shortcuts) {
       context = useDocShortcuts(shortcuts, docOrNull, 'CommonForm', true);
@@ -225,6 +226,7 @@ export default defineComponent({
 
     return {
       docOrNull,
+      loadDoc,
       shortcuts,
       context,
       isMobile,
@@ -253,7 +255,7 @@ export default defineComponent({
   },
   computed: {
     canShowBarcode(): boolean {
-      if (!this.fyo.singles.InventorySettings?.enableBarcodes) {
+      if (!this.fyo.singles.InventorySettings?.enable_barcodes) {
         return false;
       }
 
@@ -272,11 +274,11 @@ export default defineComponent({
     },
     exchangeRate(): number {
       // 0 shows the rate as missing, to be entered by the user.
-      if (!this.hasDoc || typeof this.doc.exchangeRate !== 'number') {
+      if (!this.hasDoc || typeof this.doc.exchange_rate !== 'number') {
         return 0;
       }
 
-      return this.doc.exchangeRate;
+      return this.doc.exchange_rate;
     },
     exchangeRateProps() {
       return {
@@ -340,10 +342,10 @@ export default defineComponent({
         return this.t`New Entry`;
       }
 
-      return this.docOrNull?.name || this.t`New Entry`;
+      return this.docOrNull?.formTitle || this.t`New Entry`;
     },
     schema(): Schema {
-      const schema = this.docOrNull?.schema ?? this.fyo.schemaMap[this.schemaName];
+      const schema = this.docOrNull?.schema ?? getSchema(this.schemaName);
       if (!schema) {
         throw new ValidationError(`no schema found with ${this.schemaName}`);
       }
@@ -381,7 +383,7 @@ export default defineComponent({
     'docOrNull.schema': 'updateGroupedFields',
   },
   beforeMount() {
-    this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
+    this.useFullWidth = !!this.fyo.singles.Misc?.use_full_width;
   },
   async mounted() {
     await this.setDoc();
@@ -396,7 +398,7 @@ export default defineComponent({
     if (this.hasDoc) {
       void this.refreshDoc();
     }
-    this.useFullWidth = !!this.fyo.singles.Misc?.useFullWidth;
+    this.useFullWidth = !!this.fyo.singles.Misc?.use_full_width;
     docsPathRef.value = docsPathMap[this.schemaName] ?? '';
     this.shortcuts?.pmod.set(this.context, ['KeyP'], () => {
       if (!this.canPrint) {
@@ -425,7 +427,7 @@ export default defineComponent({
       await this.doc.addItem(name, quantity);
     },
     async setExchangeRate(exchangeRate: number) {
-      await this.doc.set('exchangeRate', exchangeRate);
+      await this.doc.set('exchange_rate', exchangeRate);
     },
     async openPrintView() {
       await routeTo(`/print/${this.doc.schemaName}/${this.doc.name}`);
@@ -433,7 +435,7 @@ export default defineComponent({
     async toggleWidth() {
       const value = !this.useFullWidth;
       if (this.fyo.can('Misc', 'write')) {
-        await this.fyo.singles.Misc?.setAndSync('useFullWidth', value);
+        await this.fyo.singles.Misc?.setAndSync('use_full_width', value);
       }
       this.useFullWidth = value;
     },
@@ -487,9 +489,7 @@ export default defineComponent({
       }
 
       try {
-        const doc = await getDocFromNameIfExistsElseNew(this.schemaName, this.name);
-        await loadDocPermissions(doc);
-        this.docOrNull = doc;
+        await this.loadDoc(this.schemaName, this.name, true);
       } catch (error) {
         await handleErrorWithDialog(error);
       }

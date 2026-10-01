@@ -54,9 +54,10 @@ const themeByColour: Record<string, 'green' | 'red'> = {
 };
 
 function colourProps(action: 'save' | 'cancel' | 'held' | 'return' | 'pay') {
-  const field = `${action}ButtonColour`;
   const colour = String(
-    props.profile?.[field] || fyo.singles.Defaults?.[field] || ''
+    props.profile?.[`${action}_button_colour`] ||
+      fyo.singles.Defaults?.get(`${action}_button_colour`) ||
+      ''
   ).toLowerCase();
   if (!colour) {
     return {};

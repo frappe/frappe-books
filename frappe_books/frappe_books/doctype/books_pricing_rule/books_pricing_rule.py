@@ -7,6 +7,7 @@ from frappe.model.document import Document
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.commerce.pricing import validate_dates, validate_range
+from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 
 
@@ -70,10 +71,31 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 		valid_to: DF.Date | None
 	# end: auto-generated types
 
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill each applied item's unit from its item, as a save would, for the form to show it."""
+		check_preview_permission(self)
+		for row in self.applied_items:
+			row.get_invalid_links()
+
 	def validate(self):
-		validate_range(self.min_quantity, self.max_quantity, _("quantity"))
-		validate_range(self.min_amount, self.max_amount, _("amount"), strict=True)
-		validate_dates(self.valid_from, self.valid_to)
+		# The messages /books shows at these fields.
+		validate_range(
+			self.min_quantity,
+			self.max_quantity,
+			_("quantity"),
+			message=_("Minimum Quantity should be less than the Maximum Quantity."),
+		)
+		validate_range(
+			self.min_amount,
+			self.max_amount,
+			_("amount"),
+			strict=True,
+			message=_("Minimum Amount should be less than the Maximum Amount."),
+		)
+		validate_dates(
+			self.valid_from, self.valid_to, _("Valid From Date should be less than Valid To Date.")
+		)
 		if not self.applied_items:
 			frappe.throw(_("Add at least one item to the pricing rule."))
 		if self.discount_type == "Price Discount":

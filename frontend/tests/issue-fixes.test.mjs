@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  frappeModels,
   makeFyo,
   GeneralLedger,
   TrialBalance,
@@ -53,7 +54,7 @@ test('trial balance sends its dates as they are and renders six amounts', async 
   );
 });
 
-test('general ledger runs its Script Report and styles the server rows', async () => {
+test('general ledger runs its Script Report and styles the server rows', async (t) => {
   const fyo = await makeFyo();
   const report = new GeneralLedger(fyo);
   report.fromDate = '2026-01-01';
@@ -88,7 +89,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
           debit: 50,
           credit: 0,
           balance: 150,
-          reference_type: 'JournalEntry',
+          reference_type: 'Books Journal Entry',
         },
         {},
         {
@@ -101,6 +102,8 @@ test('general ledger runs its Script Report and styles the server rows', async (
       ]
     )
   );
+  window.frappe = { boot: {} };
+  t.after(() => delete window.frappe);
   await report.setReportData();
   const [{ method, args }] = calls;
   assert.equal(method, 'frappe.desk.query_report.run');
@@ -128,7 +131,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
   assert.equal(cell(opening, 'balance').rawValue, 100);
   assert.equal(cell(opening, 'account').italics, true);
   assert.equal(cell(entry, 'index').value, '1');
-  assert.equal(cell(entry, 'reference_type').value, 'Journal Entry');
+  assert.equal(cell(entry, 'reference_type').rawValue, 'Books Journal Entry');
   assert.equal(blank.isEmpty, true);
   assert.equal(cell(closing, 'account').value, 'Closing');
   assert.equal(cell(closing, 'balance').bold, true);
@@ -150,72 +153,7 @@ test('general ledger opens with the dates the server picks', async () => {
   assert.equal(report.toDate, '2026-09-28');
 });
 
-test('stock transfers use only the value of their own rows, including partial receipts and returns', async () => {
-  const fyo = await makeFyo();
-  fyo.doc.getDoc = async () => ({
-    taxes: [{ amount: fyo.pesa(18) }],
-    items: [],
-  });
-  for (const schema of ['PurchaseReceipt', 'Shipment']) {
-    for (const amount of [100, 50, -50, 0]) {
-      const transfer = fyo.doc.getNewDoc(schema, {
-        backReference: 'Invoice',
-        items: [{ amount: fyo.pesa(amount) }],
-      });
-      assert.equal((await transfer.getGrandTotal()).float, amount);
-    }
-  }
-});
-
-test('root groups can be recreated and edited but cannot be deleted', async () => {
-  const fyo = await makeFyo();
-  fyo.singles.AccountingSettings.setupComplete = true;
-  const root = fyo.doc.getNewDoc('Account', {
-    name: 'Restored Assets',
-    isGroup: true,
-    rootType: 'Asset',
-  });
-  assert.equal(root.required.parentAccount(), false);
-  await assert.rejects(root.beforeDelete(), /Root accounts cannot be deleted/);
-  const child = fyo.doc.getNewDoc('Account', {
-    name: 'Cash',
-    parentAccount: root.name,
-  });
-  await child.beforeDelete();
-});
-
-test('Canada selects the French chart only for a French language preference', async () => {
-  const fyo = await makeFyo();
-  fyo.store.chartsOfAccounts = [
-    chart('Standard Chart of Accounts', ''),
-    chart(
-      'Canada - Plan comptable pour les provinces francophones',
-      'ca',
-      'fr'
-    ),
-  ];
-  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Canada' });
-  for (const language of ['en', 'en-CA', 'English', '']) {
-    fyo.store.language = language;
-    assert.equal(
-      wizard.formulas.chartOfAccounts.formula(),
-      'Standard Chart of Accounts'
-    );
-  }
-  for (const language of ['fr', 'fr-CA', 'fr_CA']) {
-    fyo.store.language = language;
-    assert.match(
-      wizard.formulas.chartOfAccounts.formula(),
-      /Canada - Plan comptable/
-    );
-  }
-  assert.ok(
-    wizard.constructor.lists
-      .chartOfAccounts(wizard)
-      .some(({ value }) => value.startsWith('Canada'))
-  );
-});
-
+// The server's preview picks a country's chart; see test_books_setup_wizard.py.
 test('the setup wizard offers the charts the server lists', async () => {
   const fyo = await makeFyo();
   const swiss = 'Switzerland - General Chart of Accounts';
@@ -223,26 +161,11 @@ test('the setup wizard offers the charts the server lists', async () => {
     { ...chart('Standard Chart of Accounts', ''), label: 'Plan standard' },
     chart(swiss, 'ch'),
   ];
-  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Switzerland' });
 
-  assert.deepEqual(wizard.constructor.lists.chartOfAccounts(wizard), [
+  assert.deepEqual(frappeModels.SetupWizard.lists.chart_of_accounts({ fyo }), [
     { value: 'Standard Chart of Accounts', label: 'Plan standard' },
     { value: swiss, label: swiss },
   ]);
-  assert.equal(wizard.formulas.chartOfAccounts.formula(), swiss);
-  wizard.country = 'Japan';
-  assert.equal(
-    wizard.formulas.chartOfAccounts.formula(),
-    'Standard Chart of Accounts'
-  );
-});
-
-test('the setup wizard fills in the currency for Frappe country names', async () => {
-  const fyo = await makeFyo();
-  fyo.db.exists = async () => true;
-  const wizard = fyo.doc.getNewDoc('SetupWizard', { country: 'Türkiye' });
-
-  assert.equal(await wizard.formulas.currency.formula(), 'TRY');
 });
 
 function chart(name, countryCode, language = null) {
@@ -251,21 +174,14 @@ function chart(name, countryCode, language = null) {
 
 test('account labels come from the server while identifiers and custom names stay stable', async () => {
   const fyo = await makeFyo();
-  const account = fyo.doc.getNewDoc('Account', {
-    name: 'Cash',
-    parentAccount: 'Cash In Hand',
-  });
   fyo.store.accountLabels = { Cash: 'Trésorerie' };
-  assert.equal(getAccountLabel(fyo, account.name), 'Trésorerie');
+  assert.equal(getAccountLabel(fyo, 'Cash'), 'Trésorerie');
   assert.equal(getAccountLabel(fyo, 'Custom savings'), 'Custom savings');
   const report = new TrialBalance(fyo);
   report.columns = [{ fieldname: 'account', fieldtype: 'Link' }];
-  const cell = report.getReportRow({ account: account.name, indent: 0 })
-    .cells[0];
+  const cell = report.getReportRow({ account: 'Cash', indent: 0 }).cells[0];
   assert.equal(cell.value, 'Trésorerie');
   assert.equal(cell.rawValue, 'Cash');
-  assert.equal(account.name, 'Cash');
-  assert.equal(account.parentAccount, 'Cash In Hand');
 });
 
 test('translations fill template values and skip empty ones', () => {
@@ -278,7 +194,7 @@ test('translations fill template values and skip empty ones', () => {
   }
 });
 
-test('general ledger offers stock reference types only with inventory', async () => {
+test('general ledger offers stock reference doctypes only with inventory', async () => {
   const fyo = await makeFyo();
   const referenceTypes = () =>
     new GeneralLedger(fyo)
@@ -286,9 +202,17 @@ test('general ledger offers stock reference types only with inventory', async ()
       .find(({ fieldname }) => fieldname === 'referenceType')
       .options.map(({ value }) => value);
 
-  fyo.singles.AccountingSettings.enableInventory = false;
-  assert.ok(!referenceTypes().includes('Shipment'));
-  fyo.singles.AccountingSettings.enableInventory = true;
-  assert.ok(referenceTypes().includes('Shipment'));
-  assert.ok(referenceTypes().includes('PurchaseReceipt'));
+  fyo.singles.AccountingSettings.enable_inventory = false;
+  assert.deepEqual(referenceTypes(), [
+    'All',
+    'Books Sales Invoice',
+    'Books Purchase Invoice',
+    'Books Payment',
+    'Books Journal Entry',
+  ]);
+  fyo.singles.AccountingSettings.enable_inventory = true;
+  assert.deepEqual(referenceTypes().slice(-2), [
+    'Books Shipment',
+    'Books Purchase Receipt',
+  ]);
 });

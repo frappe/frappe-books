@@ -7,17 +7,18 @@ import type { RawValueMap } from 'fyo/core/types';
 import type { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
-import { NotFoundError, ValueError } from 'fyo/utils/errors';
-import { Invoice } from 'models/baseModels/Invoice/Invoice';
-import { PurchaseInvoice } from 'models/baseModels/PurchaseInvoice/PurchaseInvoice';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import { ValueError } from 'fyo/utils/errors';
 import { getLedgerLink } from 'models/helpers';
 import { getInsufficientItems } from 'models/inventory/insufficientStock';
-import { Transfer } from 'models/inventory/Transfer';
-import { Transactional } from 'models/Transactional/Transactional';
+import { Invoice } from 'models/invoices/Invoice';
+import { PurchaseInvoice } from 'models/invoices/PurchaseInvoice';
+import { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import { getCount, type Filter } from 'src/frappe/api';
+import { getModel } from 'src/frappe/registry';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import router from 'src/router';
 import { call } from 'src/web/api';
@@ -164,8 +165,8 @@ export async function cancelDocWithPrompt(doc: Doc) {
 
 /** The submitted payments that cancelling the invoice `doc` also cancels. */
 async function getInvoicePayments(doc: Doc): Promise<LinkedDoc[]> {
-  return await call('frappe_books.ui_api.get_invoice_payments', {
-    source_schema: doc.schemaName,
+  return await call('frappe_books.accounting.invoice.get_payments_to_cancel', {
+    doctype: fyo.store.permissions?.doctypes[doc.schemaName],
     name: doc.name,
   });
 }
@@ -322,7 +323,7 @@ function getNewAction(doc: Doc): Action {
     condition: (doc: Doc) => fyo.can(doc.schemaName, 'create'),
     async action() {
       try {
-        const newDoc = fyo.doc.getNewDoc(doc.schemaName);
+        const newDoc = newFrappeDoc(doc.schemaName);
         await openEdit(newDoc);
       } catch (err) {
         await handleErrorWithDialog(err as Error, doc);
@@ -383,7 +384,7 @@ export function getFieldsGroupedByTabAndSection(
 }
 
 export function getFormRoute(schemaName: string, name: string): string {
-  const route = fyo.models[schemaName]
+  const route = getModel(schemaName)
     ?.getListViewSettings(fyo)
     ?.formRoute?.(name);
 
@@ -396,34 +397,21 @@ export function getFormRoute(schemaName: string, name: string): string {
 }
 
 export async function openNewDoc(schemaName: string, initData?: RawValueMap) {
-  const doc = fyo.doc.getNewDoc(schemaName, initData);
+  const doc = newFrappeDoc(schemaName, initData);
   await routeTo(getFormRoute(schemaName, doc.name!));
 }
 
-export async function getDocFromNameIfExistsElseNew(
-  schemaName: string,
-  name?: string,
-) {
-  if (!name) {
-    return fyo.doc.getNewDoc(schemaName);
-  }
-
-  try {
-    return await fyo.doc.getDoc(schemaName, name, { refresh: true });
-  } catch (error) {
-    if (error instanceof NotFoundError) {
-      return fyo.doc.getNewDoc(schemaName);
-    }
-
-    throw error;
-  }
-}
-
 export async function isPrintable(schemaName: string) {
-  const numTemplates = await fyo.db.count(ModelNameEnum.PrintTemplate, {
-    filters: { type: schemaName },
-  });
-  return numTemplates > 0;
+  const doctype = fyo.store.permissions?.doctypes[schemaName];
+  if (!doctype) {
+    return false;
+  }
+
+  const filters: Filter[] = [
+    ['doc_type', '=', doctype],
+    ['disabled', '=', 0],
+  ];
+  return (await getCount('Print Format', filters, [])) > 0;
 }
 
 export function toggleSidebar(value?: boolean) {
@@ -443,12 +431,11 @@ export function focusOrSelectFormControl(
     return;
   }
 
-  const naming = doc.fyo.schemaMap[doc.schemaName]?.naming;
-  if (naming !== 'manual' || doc.inserted) {
+  if (doc.schema.naming !== 'manual' || doc.inserted) {
     return;
   }
 
-  if (!doc.fyo.doc.isTemporaryName(doc.name ?? '', doc.schema)) {
+  if (!doc.fyo.isTemporaryName(doc.name ?? '', doc.schema)) {
     return;
   }
 
@@ -582,7 +569,7 @@ export async function commonDocSubmit(doc: Doc): Promise<boolean> {
   let success = true;
   if (
     doc instanceof SalesInvoice &&
-    fyo.singles.AccountingSettings?.enableInventory
+    fyo.singles.AccountingSettings?.enable_inventory
   ) {
     success = await showInsufficientInventoryDialog(doc);
   }
@@ -696,8 +683,8 @@ function getDocSyncMessage(doc: Doc): string {
     return t`Save changes made to ${label}?`;
   }
 
-  if (doc instanceof Invoice && doc.grandTotal?.isZero()) {
-    const gt = doc.fyo.format(doc.grandTotal ?? doc.fyo.pesa(0), 'Currency');
+  if (doc instanceof Invoice && doc.grand_total?.isZero()) {
+    const gt = doc.fyo.format(doc.grand_total ?? doc.fyo.pesa(0), 'Currency');
     return [
       detail,
       t`Entry has Grand Total ${gt}. Please verify amounts.`,
@@ -710,18 +697,18 @@ function getDocSyncMessage(doc: Doc): string {
 function getDocSubmitMessage(doc: Doc): string {
   const details = [t`Mark ${doc.schema.label} as submitted?`];
 
-  if (doc instanceof SalesInvoice && doc.makeAutoPayment) {
+  if (doc instanceof SalesInvoice && doc.make_auto_payment) {
     const toAccount = doc.autoPaymentAccount!;
     const fromAccount = doc.account!;
-    const amount = fyo.format(doc.outstandingAmount, 'Currency');
+    const amount = fyo.format(doc.outstanding_amount, 'Currency');
 
     details.push(
       t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,
     );
-  } else if (doc instanceof PurchaseInvoice && doc.makeAutoPayment) {
+  } else if (doc instanceof PurchaseInvoice && doc.make_auto_payment) {
     const fromAccount = doc.autoPaymentAccount!;
     const toAccount = doc.account!;
-    const amount = fyo.format(doc.outstandingAmount, 'Currency');
+    const amount = fyo.format(doc.outstanding_amount, 'Currency');
 
     details.push(
       t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,
@@ -754,9 +741,15 @@ function showSubmitToast(doc: Doc) {
   showToast(toastOption);
 }
 
+// Documents that move stock; their submit toast opens their stock entries.
+const stockSchemas: string[] = [
+  ModelNameEnum.StockMovement,
+  ModelNameEnum.Shipment,
+  ModelNameEnum.PurchaseReceipt,
+];
+
 function getSubmitSuccessToastAction(doc: Doc) {
-  const isStockTransfer = doc instanceof Transfer;
-  const isTransactional = doc instanceof Transactional;
+  const isStockTransfer = stockSchemas.includes(doc.schemaName);
 
   if (isStockTransfer) {
     return {
@@ -768,7 +761,7 @@ function getSubmitSuccessToastAction(doc: Doc) {
     };
   }
 
-  if (isTransactional) {
+  if (doc.isTransactional) {
     return {
       async action() {
         const route = getLedgerLink(doc, 'GeneralLedger');

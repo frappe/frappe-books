@@ -6,11 +6,8 @@ import {
   conditionsForField,
   defaultCondition,
   mergeQueryFilters,
-  makeFyo,
   getFilterFields,
   getFieldLabel,
-  getJsonExportData,
-  loadListData,
 } from './helpers/accounting.mjs';
 
 const field = (fieldtype = 'Data', fieldname = 'value') => ({
@@ -173,88 +170,6 @@ test('merging user filters cannot replace base restrictions or mutate inputs', (
     value: ['=', 'base', '!=', 'other'],
   });
   assert.deepEqual(base, { name: ['in', ['one', 'two']], value: 'base' });
-});
-test('list keeps filters on refresh and ignores stale responses', async () => {
-  const fyo = await makeFyo();
-  const calls = [];
-  const pending = [];
-  fyo.db.count = async () => 2;
-  fyo.db.getAll = async (_schema, options) => {
-    calls.push(options);
-    return new Promise((resolve) => pending.push(resolve));
-  };
-  const list = {
-    filters: { name: ['like', 'JV%'] },
-    activeFilters: {},
-    pageStart: 100,
-    pageLength: 50,
-    requestId: 0,
-    schemaName: 'JournalEntry',
-  };
-  const query = { status: ['=', 'Submitted'] };
-  const first = loadListData(fyo, list, query);
-  pending.shift()([{ name: 'JV1', status: 'Submitted' }]);
-  const loaded = await first;
-  assert.deepEqual(
-    loaded.rows.map((r) => r.name),
-    ['JV1']
-  );
-  assert.equal(loaded.total, 2);
-  assert.equal(calls.at(-1).offset, 0);
-  assert.deepEqual(loaded.appliedFilters, { ...list.filters, ...query });
-  const refresh = loadListData(fyo, list);
-  pending.shift()([]);
-  await refresh;
-  assert.deepEqual(list.activeFilters, query);
-  assert.deepEqual(calls.at(-1).filters.status, ['=', 'Submitted']);
-  const old = loadListData(fyo, list, { name: ['=', 'JV-old'] });
-  const latest = loadListData(fyo, list, {});
-  const oldResolve = pending.shift();
-  pending.shift()([{ name: 'JV-new' }]);
-  assert.equal((await latest).rows[0].name, 'JV-new');
-  oldResolve([{ name: 'JV-old' }]);
-  assert.equal(await old, undefined);
-  assert.deepEqual(list.activeFilters, {});
-});
-
-test('filtered export sends status to the server and pages rows', async () => {
-  const fyo = await makeFyo();
-  const calls = [];
-  const names = Array.from({ length: 700 }, (_, i) => ({ name: `JV-${i}` }));
-  fyo.db.getAllRaw = async (_schema, options) => {
-    calls.push(options);
-    return names.slice(options.offset, options.offset + options.limit);
-  };
-  const query = { name: ['like', 'JV%'], status: ['=', 'Submitted'] };
-  const fields = [{ fieldname: 'name', fieldtype: 'Data', export: true }];
-  const limited = await getJsonExportData(
-    'JournalEntry',
-    fields,
-    [],
-    1,
-    query,
-    fyo
-  );
-  assert.deepEqual(JSON.parse(limited), [{ name: 'JV-0' }]);
-  assert.deepEqual(calls[0].filters, query);
-  assert.equal(calls[0].limit, 1);
-  calls.length = 0;
-  const all = await getJsonExportData(
-    'JournalEntry',
-    fields,
-    [],
-    null,
-    query,
-    fyo
-  );
-  assert.equal(JSON.parse(all).length, 700);
-  assert.deepEqual(
-    calls.map(({ offset, limit }) => [offset, limit]),
-    [
-      [0, 500],
-      [500, 500],
-    ]
-  );
 });
 
 test('field selection excludes unsupported and computed fields; column position is irrelevant', () => {

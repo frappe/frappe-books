@@ -1,34 +1,59 @@
 import { ListViewSettings } from 'fyo/model/types';
-import { ClosingAmounts } from './ClosingAmounts';
-import { ClosingCash } from './ClosingCash';
-import { Doc } from 'fyo/model/doc';
+import type { Money } from 'pesa';
+import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
+import { CashCount, getCashTotal } from './POSOpeningShift';
 
-export class POSClosingShift extends Doc {
-  closingAmounts?: ClosingAmounts[];
-  closingCash?: ClosingCash[];
-  closingDate?: Date;
-  openingShift?: string;
+/** A payment method's counted amount against what the shift expects. */
+export type ClosingAmount = FrappeDoc & {
+  payment_method?: string;
+  opening_amount?: Money;
+  closing_amount?: Money;
+  expected_amount?: Money;
+  difference_amount?: Money;
+};
 
-  get closingCashAmount() {
-    if (!this.closingCash) {
-      return this.fyo.pesa(0);
-    }
+/** A Books Closing Cash row. */
+export class ClosingCash extends FrappeDoc {
+  static override presentation = { label: 'Closing Cash In Denominations' };
+}
 
-    let closingAmount = this.fyo.pesa(0);
+/** A Books Closing Amounts row. */
+export class ClosingAmounts extends FrappeDoc {
+  static override presentation = { label: 'Closing Amount' };
+}
 
-    this.closingCash.map((row: ClosingCash) => {
-      const denomination = row.denomination ?? this.fyo.pesa(0);
-      const count = row.count ?? 0;
+/** Books Pos Closing Shift, served by Frappe; its preview fills the expected amounts. */
+export class POSClosingShift extends FrappeDoc {
+  static override doctype = 'Books Pos Closing Shift';
+  static override presentation = {
+    label: 'POS Closing Shift',
+    fields: withoutCreate(['opening_shift']),
+    fileFields: [
+      'name',
+      'closing_date',
+      'closing_cash',
+      'closing_amounts',
+      'opening_shift',
+    ],
+  };
+  static override rowModels = {
+    closing_cash: ClosingCash,
+    closing_amounts: ClosingAmounts,
+  };
+  static override previewMethod = 'preview';
 
-      const amount = denomination.mul(count);
-      closingAmount = closingAmount.add(amount);
-    });
-    return closingAmount;
+  declare closing_date?: Date;
+  declare closing_cash?: CashCount[];
+  declare closing_amounts?: ClosingAmount[];
+  declare opening_shift?: string;
+
+  /** The cash the counted denominations add up to. */
+  get closingCashAmount(): Money {
+    return getCashTotal(this.fyo.pesa(0), this.closing_cash);
   }
 
   static getListViewSettings(): ListViewSettings {
-    return {
-      columns: ['name', 'closingDate'],
-    };
+    return { columns: ['name', 'closing_date'] };
   }
 }

@@ -2,6 +2,7 @@
 
 import frappe
 from frappe import _
+from frappe.desk.form import linked_with
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns
@@ -21,6 +22,7 @@ from frappe_books.inventory.invoice_balance import (
 )
 from frappe_books.inventory.stock import create_series_batches, validate_batches
 from frappe_books.inventory.units import populate_units
+from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
 from frappe_books.status import StatusMixin
@@ -30,6 +32,11 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	"""Totals and validation shared by quotes and invoices."""
 
 	transaction_type: str
+	follow_up_fields = ("make_auto_payment",)
+
+	def __setup__(self):
+		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
+		self.dont_update_if_missing.extend(self.follow_up_fields)
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -37,12 +44,22 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 
 	def calculate(self):
 		"""Fill defaults, apply pricing and set the totals, without writing anything."""
+		returns.set_quantity_signs(self.items, bool(self.get("return_against")))
 		pricing.reset_pricing(self)
 		_populate_invoice_defaults(self)
 		pricing.apply_pricing(self)
 		_populate_invoice_defaults(self)
 		calculate_invoice(self)
 		loyalty.set_available_points(self)
+		self.set_follow_up_defaults()
+
+	def set_follow_up_defaults(self):
+		"""Pay on submit when Books Defaults says where to, unless the caller chose.
+
+		A quote offers it too, as its invoice would; the invoice decides again when it is made.
+		"""
+		if self.get("make_auto_payment") is None:
+			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
 
 	def validate(self):
 		validate_invoice(self)
@@ -56,14 +73,12 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	@frappe.whitelist()
 	def preview(self):
 		"""Calculate what a save would store, without saving, for a new document or an edited draft."""
-		if self.is_new():
-			self.check_permission("create")
-		else:
-			frappe.has_permission(self.doctype, "write", doc=self.name, throw=True)
+		check_preview_permission(self)
+		self.set_number_series()
+		set_default_terms(self)
 		self.calculate()
 
 
-FOLLOW_UP_FIELDS = ("make_auto_payment", "make_auto_stock_transfer")
 INVOICE_FEATURES = {
 	"return_against": "enable_invoice_returns",
 	"coupons": "enable_coupon_code",
@@ -74,27 +89,20 @@ INVOICE_FEATURES = {
 class PostingInvoiceController(InvoiceController):
 	"""Ledger, outstanding and follow-up effects of submitting an invoice."""
 
-	def __setup__(self):
-		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
-		self.dont_update_if_missing.extend(FOLLOW_UP_FIELDS)
-
-	def calculate(self):
-		super().calculate()
-		self.set_follow_up_defaults()
+	follow_up_fields = ("make_auto_payment", "make_auto_stock_transfer")
 
 	def fill_mapped_values(self):
 		"""Fill a mapped invoice as a save would, letting it choose its own follow-ups.
 
 		frappe.new_doc sets every check box to 0, so the follow-up checks are cleared first.
 		"""
-		for fieldname in FOLLOW_UP_FIELDS:
+		for fieldname in self.follow_up_fields:
 			self.set(fieldname, None)
 		self.calculate()
 
 	def set_follow_up_defaults(self):
-		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
-		if self.get("make_auto_payment") is None:
-			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
+		"""Also transfer stock on submit when Books Defaults says where to, unless the caller chose."""
+		super().set_follow_up_defaults()
 		if self.get("make_auto_stock_transfer") is None:
 			inventory = frappe.db.get_single_value("Books Accounting Settings", "enable_inventory")
 			self.make_auto_stock_transfer = int(bool(inventory and default_location(self)))
@@ -132,6 +140,15 @@ class PostingInvoiceController(InvoiceController):
 		payment.submit()
 		self.outstanding_amount = self.db_get("outstanding_amount")
 
+	@frappe.whitelist()
+	def cancel_with_linked_docs(self, linked_docs: list[dict]):
+		"""Cancel `linked_docs`, the payments `get_payments_to_cancel` listed, and then the invoice.
+
+		Frappe's Cancel All does it in one transaction, on a fresh copy of the invoice.
+		"""
+		linked_with.cancel_all_linked_docs(linked_docs, root_doctype=self.doctype, root_name=self.name)
+		self.reload()
+
 	def before_cancel(self):
 		cancel_auto_transfer(self)
 		self.outstanding_amount = 0
@@ -166,6 +183,16 @@ class PostingInvoiceController(InvoiceController):
 		for doctype, names in ((transfer_doctype, transfers), ("Books Payment", set(payments))):
 			for name in names:
 				frappe.delete_doc(doctype, name)
+
+
+@frappe.whitelist()
+def get_payments_to_cancel(doctype: str, name: str) -> list[dict]:
+	"""Return the submitted payments that cancelling an invoice also cancels.
+
+	Other submitted documents that link to the invoice, like returns, still block its cancellation.
+	"""
+	linked = linked_with.get_submitted_linked_docs(doctype, name)
+	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment"]
 
 
 def calculate_invoice(invoice):
@@ -277,7 +304,6 @@ def _validate_row(invoice, row):
 	quantity = as_decimal(row.quantity)
 	if quantity == 0:
 		frappe.throw(_("Item quantity cannot be zero."))
-	returns.validate_quantity_sign(row, bool(invoice.get("return_against")))
 	if as_decimal(row.rate) < 0:
 		frappe.throw(_("Item rate cannot be negative."))
 	_validate_row_discount(row)
@@ -414,6 +440,8 @@ def _populate_row(invoice, row, item, rates):
 		row.rate = pricing.standard_rate(invoice, row, rates)
 	if not row.account:
 		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
+	# The Qty column shows the quantity in the transfer unit.
+	row.qty = row.transfer_quantity
 
 
 def _item_details(names):

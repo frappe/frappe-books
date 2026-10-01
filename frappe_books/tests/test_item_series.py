@@ -6,7 +6,6 @@ from frappe.utils import now_datetime
 
 from frappe_books.series import new_item_names
 from frappe_books.tests.accounting import ensure_user, make_account, make_item, make_party
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
 
 BOOKS_USER = "books-series-user@example.com"
 NO_ROLE_USER = "books-series-no-role@example.com"
@@ -64,20 +63,15 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 			frappe.ValidationError, make_series_item, has_serial_number=1, serial_number_series="BAD@"
 		)
 
-	def test_books_user_takes_names_through_the_bridge(self):
+	def test_books_user_takes_names_from_the_series(self):
 		with self.set_user(ensure_user(BOOKS_USER, "Books User")):
-			names = BooksBespokeQueries().call("getNewSeriesNames", ["SerialNumber", self.item, 1])
+			names = new_item_names("Books Serial Number", self.item, 1)
 
 		self.assertEqual(names, [f"{self.prefix}1001"])
 
 	def test_names_require_permission_to_create_serial_numbers(self):
 		with self.set_user(ensure_user(NO_ROLE_USER)):
-			self.assertRaises(
-				frappe.PermissionError,
-				BooksBespokeQueries().call,
-				"getNewSeriesNames",
-				["SerialNumber", self.item, 1],
-			)
+			self.assertRaises(frappe.PermissionError, new_item_names, "Books Serial Number", self.item, 1)
 
 
 class IntegrationTestSeriesBatches(IntegrationTestCase):

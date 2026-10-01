@@ -26,39 +26,34 @@
 </template>
 <script lang="ts">
 import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
-import { PrintTemplate } from 'models/baseModels/PrintTemplate';
+import { ModelNameEnum } from 'models/types';
+import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { OptionField, SelectOption } from 'schemas/types';
 import Select from 'src/components/Controls/Select.vue';
+import { getField } from 'src/frappe/registry';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   components: { FrappeDialog, Select, FrappeButton },
   props: {
     open: { type: Boolean, default: false },
-    doc: { type: PrintTemplate, required: true },
+    doc: { type: PrintFormat, required: true },
   },
   emits: ['update:open'],
   data() {
-    return { type: 'SalesInvoice' };
+    return { type: '' };
   },
   computed: {
     df(): OptionField {
-      const options = PrintTemplate.lists.type?.(this.doc) ?? [];
-      const firstOption = options[0];
-      return {
-        ...this.fyo.getField('PrintTemplate', 'type'),
-        options,
-        fieldtype: 'Select',
-        default:
-          typeof firstOption === 'string' ? firstOption : firstOption?.value,
-      } as OptionField;
+      const field = getField(ModelNameEnum.PrintFormat, 'doc_type');
+      return { ...field, fieldtype: 'Select' } as OptionField;
     },
   },
   watch: {
     open: {
       handler(open: boolean) {
         if (open) {
-          this.type = this.doc.type ?? 'SalesInvoice';
+          this.type = this.doc.doc_type ?? (this.df.default as string);
         }
       },
       immediate: true,
@@ -76,7 +71,7 @@ export default defineComponent({
       this.type = v;
     },
     async done() {
-      await this.doc.set('type', this.type);
+      await this.doc.set('doc_type', this.type);
       this.$emit('update:open', false);
     },
   },

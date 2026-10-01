@@ -38,6 +38,21 @@ class IntegrationTestUnits(IntegrationTestCase):
 		row = invoice.items[0]
 		self.assertEqual((row.unit_conversion_factor, row.quantity, row.amount), (12, 24, 2400))
 
+	def test_invoice_row_stores_its_qty_in_the_transfer_unit(self):
+		receivable = make_account("Unit Receivable", account_type="Receivable")
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			make_party(receivable.name).name,
+			receivable.name,
+			self.item.name,
+			self.income.name,
+		)
+		invoice.items[0].update({"transfer_unit": self.box, "transfer_quantity": 2, "qty": 1})
+		invoice.save()
+
+		stored = frappe.db.get_value("Books Sales Invoice Item", invoice.items[0].name, ["qty", "quantity"])
+		self.assertEqual(stored, (2, 24))
+
 	def test_stock_row_converts_with_the_item_factor(self):
 		movement = self._receipt({"transfer_unit": self.box, "transfer_quantity": 3, "quantity": 3}).insert()
 

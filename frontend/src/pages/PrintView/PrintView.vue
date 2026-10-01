@@ -23,7 +23,7 @@
         <FrappeButton variant="solid" @click="savePDF()">
           {{ t`Save as PDF` }}
         </FrappeButton>
-        <FrappeButton variant="solid" @click="savePDF(true)">
+        <FrappeButton variant="solid" @click="openPrintDialog()">
           {{ t`Print` }}
         </FrappeButton>
       </template>
@@ -55,15 +55,13 @@
 
       <!-- Template Container -->
       <div :class="isMobile ? 'relative w-max min-w-full' : ''">
-        <PrintContainer
-          v-if="printProps"
-          ref="printContainer"
-          :print-schema-name="schemaName"
-          :template="printProps.template"
-          :values="printProps.values"
-          :scale="scale * zoom"
-          :width="templateDoc?.width"
-          :height="templateDoc?.height"
+        <PrintSheet
+          v-if="printDocument"
+          class="mx-auto shadow-lg border"
+          :document="printDocument"
+          :scale="Math.max(scale * zoom, 0.1)"
+          :width="pageSize.width"
+          :height="pageSize.height"
         />
         <!-- Takes the touches the preview frame would swallow. -->
         <div
@@ -86,7 +84,7 @@
         size="lg"
         icon-left="lucide-download"
         :label="t`Save as PDF`"
-        :disabled="!printProps"
+        :disabled="!printDocument"
         @click="savePDF()"
       />
       <FrappeButton
@@ -95,8 +93,8 @@
         variant="solid"
         icon-left="lucide-printer"
         :label="t`Print`"
-        :disabled="!printProps"
-        @click="savePDF(true)"
+        :disabled="!printDocument"
+        @click="openPrintDialog()"
       />
     </div>
   </div>
@@ -105,20 +103,33 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { Action } from 'fyo/model/types';
-import { PrintTemplate } from 'models/baseModels/PrintTemplate';
+import { snakeCase } from 'lodash';
+import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { ModelNameEnum } from 'models/types';
 import SelectControl from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
+import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
-import { fyo } from 'src/initFyo';
-import { getPrintTemplatePropValues } from 'src/utils/printTemplates';
+import { getAllDocuments, getValue } from 'src/frappe/api';
+import { getSchema } from 'src/frappe/registry';
+import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
+import { showToast } from 'src/utils/interactive';
+import {
+  downloadPDF,
+  getPrintHTML,
+  openPrintView,
+} from 'src/utils/printFormatApi';
+import {
+  getPageSize,
+  getPrintDocument,
+  PageSize,
+  PrintHTML,
+} from 'src/utils/printFormats';
 import { showSidebar } from 'src/utils/refs';
-import { PrintValues } from 'src/utils/types';
 import { getFormRoute, openSettings, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { defineComponent } from 'vue';
-import PrintContainer from '../TemplateBuilder/PrintContainer.vue';
 import MobilePrintTemplatePicker from './MobilePrintTemplatePicker.vue';
 import { usePinchZoom } from './pinchZoom';
 
@@ -128,7 +139,7 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
     SelectControl,
-    PrintContainer,
+    PrintSheet,
     DropdownWithActions,
     MobilePrintTemplatePicker,
   },
@@ -143,7 +154,7 @@ export default defineComponent({
     return {
       doc: null,
       scale: 1,
-      values: null,
+      print: null,
       templateDoc: null,
       templateName: null,
       templateList: [],
@@ -151,8 +162,8 @@ export default defineComponent({
     } as {
       doc: null | Doc;
       scale: number;
-      values: null | PrintValues;
-      templateDoc: null | PrintTemplate;
+      print: null | PrintHTML;
+      templateDoc: null | PrintFormat;
       templateName: null | string;
       templateList: string[];
       templateRequest: number;
@@ -161,8 +172,7 @@ export default defineComponent({
   computed: {
     helperMessage() {
       if (!this.templateList.length) {
-        const label =
-          this.fyo.schemaMap[this.schemaName]?.label ?? this.schemaName;
+        const label = getSchema(this.schemaName)?.label ?? this.schemaName;
 
         return this.t`No Print Templates not found for entry type ${label}`;
       }
@@ -173,18 +183,14 @@ export default defineComponent({
 
       return '';
     },
-    printProps(): null | { template: string; values: PrintValues } {
-      const values = this.values;
-      if (!values) {
-        return null;
-      }
-
-      const template = this.templateDoc?.template;
-      if (!template) {
-        return null;
-      }
-
-      return { values, template };
+    printDocument(): string | null {
+      return this.print && getPrintDocument(this.print);
+    },
+    pageSize(): PageSize {
+      return getPageSize(this.print?.style);
+    },
+    doctype(): string {
+      return this.fyo.store.permissions?.doctypes[this.schemaName] ?? '';
     },
     actions(): Action[] {
       const actions: Action[] = [
@@ -204,7 +210,7 @@ export default defineComponent({
           group: this.t`View`,
           action: async () => {
             const route = getFormRoute(
-              ModelNameEnum.PrintTemplate,
+              ModelNameEnum.PrintFormat,
               templateDocName
             );
             await routeTo(route);
@@ -212,7 +218,7 @@ export default defineComponent({
         });
       }
 
-      if (this.fyo.can(ModelNameEnum.PrintTemplate, 'create')) {
+      if (this.fyo.can(ModelNameEnum.PrintFormat, 'create')) {
         actions.push(...this.createTemplateActions());
       }
 
@@ -235,8 +241,8 @@ export default defineComponent({
           label: this.t`New Template`,
           group: this.t`Create`,
           action: async () => {
-            const doc = this.fyo.doc.getNewDoc(ModelNameEnum.PrintTemplate, {
-              type: this.schemaName,
+            const doc = newFrappeDoc(ModelNameEnum.PrintFormat, {
+              doc_type: this.doctype,
             });
 
             const route = getFormRoute(doc.schemaName, doc.name!);
@@ -250,9 +256,10 @@ export default defineComponent({
           label: this.t`Duplicate Template`,
           group: this.t`Create`,
           action: async () => {
-            const doc = this.fyo.doc.getNewDoc(ModelNameEnum.PrintTemplate, {
-              type: this.schemaName,
-              template: this.templateDoc?.template,
+            const doc = newFrappeDoc(ModelNameEnum.PrintFormat, {
+              doc_type: this.doctype,
+              html: this.templateDoc?.html,
+              css: this.templateDoc?.css,
             });
 
             const route = getFormRoute(doc.schemaName, doc.name!);
@@ -264,20 +271,16 @@ export default defineComponent({
       return actions;
     },
     async initialize() {
-      this.doc = await fyo.doc.getDoc(this.schemaName, this.name);
+      this.doc = await getFrappeDoc(this.schemaName, this.name);
       await this.setTemplateList();
       await this.setTemplateFromDefault();
       if (!this.templateDoc && this.templateList.length) {
         await this.onTemplateNameChange(this.templateList[0]);
       }
-
-      if (this.doc) {
-        this.values = await getPrintTemplatePropValues(this.doc as Doc);
-      }
     },
     setScale() {
       this.scale = 1;
-      const width = (this.templateDoc?.width ?? 21) * 37.8;
+      const width = this.pageSize.width * 37.8;
       let containerWidth = window.innerWidth - 32;
       if (showSidebar.value && !isMobile.value) {
         containerWidth -= 12 * 16;
@@ -288,7 +291,7 @@ export default defineComponent({
     reset() {
       this.templateRequest += 1;
       this.doc = null;
-      this.values = null;
+      this.print = null;
       this.templateList = [];
       this.templateDoc = null;
       this.scale = 1;
@@ -299,6 +302,7 @@ export default defineComponent({
         this.templateRequest += 1;
         this.templateName = null;
         this.templateDoc = null;
+        this.print = null;
         return;
       }
 
@@ -309,15 +313,16 @@ export default defineComponent({
       const request = ++this.templateRequest;
       this.templateName = value;
       try {
-        const templateDoc = (await this.fyo.doc.getDoc(
-          ModelNameEnum.PrintTemplate,
-          value
-        )) as PrintTemplate;
+        const [templateDoc, print] = await Promise.all([
+          getFrappeDoc(ModelNameEnum.PrintFormat, value),
+          getPrintHTML(this.doctype, this.name, value),
+        ]);
         if (request !== this.templateRequest) {
           return;
         }
 
-        this.templateDoc = templateDoc;
+        this.templateDoc = templateDoc as PrintFormat;
+        this.print = print;
         this.setScale();
       } catch (error) {
         if (request === this.templateRequest) {
@@ -326,49 +331,56 @@ export default defineComponent({
       }
     },
     async setTemplateList(): Promise<void> {
-      const list = (await this.fyo.db.getAllRaw(ModelNameEnum.PrintTemplate, {
-        filters: { type: this.schemaName },
-      })) as { name: string }[];
-
-      this.templateList = list.map(({ name }) => name);
+      const list = await getAllDocuments('Print Format', {
+        fields: ['name'],
+        filters: [
+          ['doc_type', '=', this.doctype],
+          ['disabled', '=', 0],
+        ],
+      });
+      this.templateList = list.map(({ name }) => name as string);
     },
-    async savePDF(shouldPrint?: boolean) {
-      const printContainer = this.$refs.printContainer as {
-        savePDF: (name?: string, shouldPrint?: boolean) => Promise<void>;
-      };
-
-      if (!printContainer?.savePDF) {
+    async savePDF() {
+      if (!this.templateName) {
         return;
       }
 
-      await printContainer.savePDF(this.doc?.name, shouldPrint);
+      try {
+        await downloadPDF(this.doctype, this.name, this.templateName);
+      } catch (error) {
+        await handleErrorWithDialog(error);
+      }
+    },
+    openPrintDialog() {
+      if (!this.templateName) {
+        return;
+      }
+
+      const opened = openPrintView(this.doctype, this.name, this.templateName);
+      showToast(
+        opened
+          ? { message: this.t`Print dialog opened`, type: 'success' }
+          : { message: this.t`Pop-up blocked`, type: 'error' }
+      );
     },
     async setTemplateFromDefault() {
-      const defaultName =
-        this.schemaName[0].toLowerCase() +
-        this.schemaName.slice(1) +
-        ModelNameEnum.PrintTemplate;
+      const defaultName = `${snakeCase(this.schemaName)}_print_template`;
 
       let templateName;
 
-      if (
-        this.schemaName == ModelNameEnum.SalesInvoice &&
-        (this.doc as Doc).isPOS
-      ) {
-        templateName = this.fyo.singles.Defaults?.posPrintTemplate;
+      if (this.schemaName == ModelNameEnum.SalesInvoice && this.doc?.is_pos) {
+        templateName = this.fyo.singles.Defaults?.pos_print_template;
 
-        const posProfileName = this.fyo.singles.POSSettings
-          ?.posProfile as string;
-
-        if (posProfileName) {
-          const posProfile = await this.fyo.doc.getDoc(
-            ModelNameEnum.POSProfile,
-            posProfileName
-          );
-
-          if (posProfile.posPrintTemplate) {
-            templateName = posProfile.posPrintTemplate;
-          }
+        const posProfileName = this.fyo.singles.POSSettings?.pos_profile;
+        const profileTemplate =
+          posProfileName &&
+          (await getValue(
+            'Books Pos Profile',
+            posProfileName,
+            'pos_print_template'
+          ));
+        if (profileTemplate) {
+          templateName = profileTemplate;
         }
       } else {
         templateName = this.fyo.singles.Defaults?.get(defaultName);

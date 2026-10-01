@@ -1,136 +1,92 @@
-import { Doc } from 'fyo/model/doc';
-import {
-  ChangeArg,
-  DefaultMap,
-  FiltersMap,
-  FormulaMap,
-  HiddenMap,
-} from 'fyo/model/types';
-import { Invoice } from 'models/baseModels/Invoice/Invoice';
-import { addItem, getMappedDoc, getNumberSeries } from 'models/helpers';
+import type { ChangeArg, FiltersMap } from 'fyo/model/types';
+import { addItem, getMappedValues } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { Money } from 'pesa';
-import { TargetField } from 'schemas/types';
-import { StockTransferItem } from './StockTransferItem';
-import { Transfer } from './Transfer';
+import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
 
-export abstract class StockTransfer extends Transfer {
-  name?: string;
-  date?: Date;
-  party?: string;
-  terms?: string;
-  attachment?: string;
-  grandTotal?: Money;
-  backReference?: string;
-  items?: StockTransferItem[];
-  isReturned?: boolean;
-  isFullyBilled?: boolean;
-  returnAgainst?: string;
+/** Links of a shipment or purchase receipt that offer no Create, as before. */
+export const transferLinks = withoutCreate([
+  'back_reference',
+  'return_against',
+]);
+
+/** The fields of a shipment's or purchase receipt's files, as Books ordered them. */
+export const transferFileFields = [
+  'name',
+  'number_series',
+  'party',
+  'date',
+  'items',
+  'grand_total',
+  'terms',
+  'attachment',
+  'back_reference',
+  'return_against',
+  'status',
+];
+
+/**
+ * A shipment or purchase receipt, served by Frappe. Its `preview` fills the
+ * number series, terms, row units, rates, locations and the grand total.
+ */
+export abstract class StockTransfer extends FrappeDoc {
+  static override previewMethod = 'preview';
+  /** The invoice a transfer is made from, and its mapper. */
+  static invoiceSchemaName: ModelNameEnum;
+  static invoiceMapper: string;
 
   get isSales() {
     return this.schemaName === ModelNameEnum.Shipment;
   }
 
   get isReturn(): boolean {
-    return !!this.returnAgainst;
+    return !!this.return_against;
   }
-
-  get enableDiscounting() {
-    return !!this.fyo.singles?.AccountingSettings?.enableDiscounting;
-  }
-
-  get invoiceSchemaName() {
-    if (this.isSales) {
-      return ModelNameEnum.SalesInvoice;
-    }
-    return ModelNameEnum.PurchaseInvoice;
-  }
-
-  getGrandTotal() {
-    // Receipts and shipments use their own stock rows, as the server does.
-    return this.getSum('items', 'amount', false);
-  }
-
-  formulas: FormulaMap = {
-    grandTotal: {
-      formula: async () => await this.getGrandTotal(),
-      dependsOn: ['items'],
-    },
-  };
-
-  hidden: HiddenMap = {
-    backReference: () =>
-      !(this.backReference || !(this.isSubmitted || this.isCancelled)),
-    terms: () => !(this.terms || !(this.isSubmitted || this.isCancelled)),
-    attachment: () =>
-      !(this.attachment || !(this.isSubmitted || this.isCancelled)),
-    returnAgainst: () =>
-      (this.isSubmitted || this.isCancelled) && !this.returnAgainst,
-  };
-
-  static defaults: DefaultMap = {
-    numberSeries: (doc) => getNumberSeries(doc.schemaName, doc.fyo),
-    terms: (doc) => {
-      const defaults = doc.fyo.singles.Defaults;
-      if (doc.schemaName === ModelNameEnum.Shipment) {
-        return defaults?.shipmentTerms ?? '';
-      }
-
-      return defaults?.purchaseReceiptTerms ?? '';
-    },
-  };
 
   static filters: FiltersMap = {
-    party: (doc: Doc) => ({
+    party: (doc) => ({
       role: ['in', [doc.isSales ? 'Customer' : 'Supplier', 'Both']],
     }),
-    numberSeries: (doc: Doc) => ({ referenceType: doc.schemaName }),
-    backReference: () => ({
-      stockNotTransferred: ['!=', 0],
+    number_series: (doc) => ({ reference_type: doc.schemaName }),
+    back_reference: () => ({
+      stock_not_transferred: ['!=', 0],
       submitted: true,
       cancelled: false,
     }),
   };
 
   static createFilters: FiltersMap = {
-    party: (doc: Doc) => ({
-      role: doc.isSales ? 'Customer' : 'Supplier',
-    }),
+    party: (doc) => ({ role: doc.isSales ? 'Customer' : 'Supplier' }),
   };
 
   async addItem(name: string, quantity?: number) {
     return await addItem(name, this, quantity);
   }
 
-  override async change({ doc, changed }: ChangeArg): Promise<void> {
-    if (doc.name === this.name && changed === 'backReference') {
-      await this.setFieldsFromBackReference();
+  override async change(arg: ChangeArg) {
+    await super.change(arg);
+    if (arg.changed === 'back_reference') {
+      await this.setFromBackReference();
     }
   }
 
-  async setFieldsFromBackReference() {
-    const backReference = this.backReference;
-    const { target } = this.fyo.getField(
-      this.schemaName,
-      'backReference'
-    ) as TargetField;
-
-    if (!backReference || !target) {
+  /** Takes the party, return and rows the picked invoice's mapper gives a transfer. */
+  async setFromBackReference() {
+    if (!this.back_reference) {
       return;
     }
 
-    const brDoc = await this.fyo.doc.getDoc(target, backReference);
-    if (!(brDoc instanceof Invoice)) {
-      return;
-    }
-
-    const transfer = (await getMappedDoc(
-      brDoc,
-      this.schemaName,
-      brDoc.stockTransferMapper
-    )) as StockTransfer;
-    await this.set('party', transfer.party);
-    await this.set('returnAgainst', transfer.returnAgainst);
-    await this.set('items', transfer.items);
+    const { invoiceSchemaName, invoiceMapper } = this
+      .constructor as typeof StockTransfer;
+    const mapped = this.toDocValues(
+      await getMappedValues(
+        invoiceSchemaName,
+        this.back_reference as string,
+        invoiceMapper
+      )
+    );
+    await this.set('party', mapped.party);
+    await this.set('return_against', mapped.return_against);
+    await this.set('items', mapped.items);
   }
 }

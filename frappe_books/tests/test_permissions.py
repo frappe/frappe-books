@@ -1,13 +1,21 @@
 from unittest.mock import patch
 
 import frappe
+from frappe import client
+from frappe.api.v2 import count, read_doc
+from frappe.desk.search import search_link, search_widget
 from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, make_tax
-from frappe_books.ui_bridge.bespoke import BooksBespokeQueries
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
-from frappe_books.ui_bridge.linked_entries import linked_entries
+from frappe_books.linked_entries import get_linked_entries
+from frappe_books.tests.accounting import (
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	make_tax,
+	unique_name,
+)
 
 RIGHTS = ("read", "write", "create", "delete", "submit", "cancel", "amend")
 FULL = {"read", "write", "create", "delete"}
@@ -20,7 +28,7 @@ ROLE_MATRIX = {
 	"Books Party": (FULL, FULL, {"read", "write", "create"}),
 	"Books Tax": (FULL, FULL, READ),
 	"Books Defaults": (FULL, FULL, READ),
-	"Books Print Template": (FULL, READ, READ),
+	"Print Format": (FULL, FULL, READ),
 	"Books Custom Form": (FULL, READ, READ),
 	"Books Ledger Entry": (READ, READ, READ),
 	"Books Stock Ledger Entry": (READ, READ, READ),
@@ -65,41 +73,70 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(TEST_USER):
 			self.assertRaises(frappe.PermissionError, make_tax, account.name)
 
-	def test_books_user_cannot_write_print_template(self):
-		template = frappe.get_last_doc("Books Print Template")
+	def test_books_manager_writes_print_formats_books_user_prints(self):
+		with self.set_user(MANAGER):
+			print_format = frappe.get_doc(
+				{
+					"doctype": "Print Format",
+					"name": unique_name("Manager Format"),
+					"doc_type": "Books Sales Invoice",
+					"custom_format": 1,
+					"html": "<div>{{ doc.name }}</div>",
+				}
+			).insert()
 		with self.set_user(TEST_USER):
-			template.template = "<div>{{ doc.name }}</div>"
-			self.assertRaises(frappe.PermissionError, template.save)
+			self.assertTrue(frappe.has_permission("Print Format", "print"))
+			print_format.html = "<p>{{ doc.name }}</p>"
+			self.assertRaises(frappe.PermissionError, print_format.save)
 
-	def test_roles_import_the_doctypes_they_create(self):
+	def test_only_books_manager_imports(self):
+		importable = frappe.get_all(
+			"DocType", filters={"module": "Frappe Books", "allow_import": 1}, pluck="name"
+		)
+		for doctype in importable:
+			with self.subTest(doctype=doctype):
+				importers = {perm.role for perm in frappe.get_meta(doctype).permissions if perm.get("import")}
+				self.assertEqual(importers, {"Books Manager"})
+
 		for user, doctype, allowed in (
-			(TEST_USER, "Books Sales Invoice", True),
-			(TEST_USER, "Books Tax", False),
-			(MANAGER, "Books Tax", True),
+			(TEST_USER, "Books Sales Invoice", False),
+			(MANAGER, "Books Sales Invoice", True),
 			(MANAGER, "Books Ledger Entry", False),
 		):
 			with self.subTest(user=user, doctype=doctype), self.set_user(user):
 				self.assertEqual(frappe.has_permission(doctype, "import"), allowed)
 
-	def test_bridge_ledger_writes_follow_docperms(self):
+	def test_only_books_manager_starts_data_imports(self):
 		with self.set_user(MANAGER):
-			for schema in ("AccountingLedgerEntry", "StockLedgerEntry", "LoyaltyPointEntry"):
-				with self.subTest(schema=schema):
-					self.assertRaises(frappe.PermissionError, BooksDatabaseBridge().insert, schema, {})
+			own = _new_data_import().insert()
+			self.assertTrue(own.has_permission("write"))
+		with self.set_user(TEST_USER):
+			self.assertRaises(frappe.PermissionError, _new_data_import().insert)
 
-	def test_bridge_hides_fields_above_the_users_permlevel(self):
+	def test_books_manager_reads_only_its_own_data_imports(self):
+		other = _new_data_import().insert()
+		with self.set_user(MANAGER):
+			self.assertFalse(frappe.has_permission("Data Import", "read", other))
+
+	def test_ledger_writes_follow_docperms(self):
+		with self.set_user(MANAGER):
+			for doctype in ("Books Ledger Entry", "Books Stock Ledger Entry", "Books Loyalty Point Entry"):
+				with self.subTest(doctype=doctype):
+					self.assertRaises(frappe.PermissionError, client.insert, {"doctype": doctype})
+
+	def test_documents_hide_fields_above_the_users_permlevel(self):
 		party = make_party(make_account("Permlevel Receivable", account_type="Receivable").name)
 		party.db_set("email", "hidden@example.com")
 		email = frappe.get_meta("Books Party").get_field("email")
 		with patch.object(email, "permlevel", 1), self.set_user(TEST_USER):
-			self.assertIsNone(BooksDatabaseBridge().get("Party", party.name).get("email"))
+			self.assertIsNone(read_doc("Books Party", party.name).get("email"))
 
-	def test_bridge_count_skips_documents_the_user_cannot_read(self):
+	def test_counts_skip_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
 		add_user_permission("Books Shipment", readable, TEST_USER)
-		with self.set_user(TEST_USER):
-			count = BooksDatabaseBridge().call("count", ["Shipment", {"name": ["in", [readable, hidden]]}])
-		self.assertEqual(count, 1)
+		filters = [["name", "in", [readable, hidden]]]
+		with self.set_user(TEST_USER), patch.dict(frappe.form_dict, {"filters": filters}):
+			self.assertEqual(count("Books Shipment"), 1)
 
 	def test_search_skips_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
@@ -112,9 +149,9 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		readable, hidden = _seed_shipment(), _seed_shipment()
 		add_user_permission("Books Shipment", readable, TEST_USER)
 		with self.set_user(TEST_USER):
-			found = BooksDatabaseBridge().call("searchLink", ["Shipment", "", {}, ["name"], 50])
-		self.assertIn(readable, [row["name"] for row in found])
-		self.assertNotIn(hidden, [row["name"] for row in found])
+			found = [row["value"] for row in search_link("Books Shipment", "", page_length=50)]
+		self.assertIn(readable, found)
+		self.assertNotIn(hidden, found)
 
 	def test_linked_entries_need_the_document_and_hide_unreadable_links(self):
 		original = _seed_shipment()
@@ -124,17 +161,10 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			add_user_permission("Books Shipment", name, TEST_USER)
 		hidden = _seed_shipment()
 		with self.set_user(TEST_USER):
-			self.assertEqual(linked_entries("Shipment", original), {"Shipment": [readable_return]})
-			self.assertRaises(frappe.PermissionError, linked_entries, "Shipment", hidden)
-
-	def test_pos_amounts_require_invoice_read(self):
-		def has_permission(doctype, ptype="read", throw=False, **kwargs):
-			if doctype == "Books Sales Invoice":
-				raise frappe.PermissionError
-			return True
-
-		with patch("frappe.has_permission", has_permission), self.assertRaises(frappe.PermissionError):
-			BooksBespokeQueries().call("getPOSTransactedAmount", ["2031-01-01", "2031-01-02"])
+			self.assertEqual(
+				get_linked_entries("Books Shipment", original), {"Books Shipment": [readable_return]}
+			)
+			self.assertRaises(frappe.PermissionError, get_linked_entries, "Books Shipment", hidden)
 
 	def _make_invoice_as_books_user(self):
 		receivable = make_account("Permission Receivable", account_type="Receivable")
@@ -152,9 +182,15 @@ def _role_rights(doctype, role):
 	return {right for right in RIGHTS for row in rows if row.get(right)}
 
 
+def _new_data_import():
+	return frappe.get_doc(
+		{"doctype": "Data Import", "reference_doctype": "Books Party", "import_type": "Insert New Records"}
+	)
+
+
 def _search_shipments(name):
-	found = BooksDatabaseBridge().call("search", [name, ["Shipment"], 5])
-	return [row["name"] for row in found["Shipment"]]
+	found = search_widget("Books Shipment", name, page_length=5, filter_fields=["name"], as_dict=True)
+	return [row.name for row in found]
 
 
 def _seed_shipment(return_against=None):

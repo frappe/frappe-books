@@ -35,8 +35,8 @@ import {
   BottomSheet as FrappeBottomSheet,
   Icon as FrappeIcon,
 } from 'frappe-ui';
-import { ModelNameEnum } from 'models/types';
 import { ModalName } from 'src/components/POS/types';
+import { getCount, type Filter } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
 import { computed, ref, watch } from 'vue';
 
@@ -64,9 +64,11 @@ watch(
   () => props.open,
   async (open) => {
     if (open) {
-      savedCount.value = await fyo.db.count(ModelNameEnum.SalesInvoice, {
-        filters: { isPOS: true, submitted: false },
-      });
+      const filters = [
+        ['is_pos', '=', 1],
+        ['docstatus', '=', 0],
+      ] as Filter[];
+      savedCount.value = await getCount('Books Sales Invoice', filters, []);
     }
   }
 );
@@ -90,26 +92,26 @@ const actions = computed(() => {
       name: 'LoyaltyProgram',
       label: t`Loyalty Program`,
       icon: 'lucide-gift',
-      hidden: !settings?.enableLoyaltyProgram || !props.loyaltyProgram,
+      hidden: !settings?.enable_loyalty_program || !props.loyaltyProgram,
     },
     {
       name: 'CouponCode',
       label: t`Coupon Code`,
       icon: 'lucide-ticket-percent',
       count: props.appliedCouponsCount,
-      hidden: !settings?.enableCouponCode,
+      hidden: !settings?.enable_coupon_code,
     },
     {
       name: 'PriceList',
       label: t`Price List`,
       icon: 'lucide-tags',
-      hidden: !settings?.enablePriceList,
+      hidden: !settings?.enable_price_list,
     },
     {
       name: 'ItemEnquiry',
       label: t`Item Enquiry`,
       icon: 'lucide-package-search',
-      hidden: !settings?.enableItemEnquiry,
+      hidden: !settings?.enable_item_enquiry,
     },
     {
       name: 'ShiftClose',

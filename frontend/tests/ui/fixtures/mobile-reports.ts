@@ -12,11 +12,10 @@ import {
   type ServerColumn,
   type ServerRow,
 } from 'reports/serverReport';
-import { getTestSchemas } from './schemas';
+import { loadFrappeFixture } from './frappe';
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
 import { getFilterValues } from 'src/components/Report/Mobile/MobileFilters';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
-import { FrappeDatabaseDemux } from 'src/web/databaseDemux';
 import { createApp, h, markRaw, reactive, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import 'src/styles/index.css';
@@ -246,19 +245,18 @@ const makers: Record<string, () => Promise<Report>> = {
 };
 
 async function mount() {
-  FrappeDatabaseDemux.prototype.getSchemaMap = async () => getTestSchemas();
-  await fyo.db.init();
+  await loadFrappeFixture(() => ({ message: [], data: [] }));
   // The app's documents mark fyo raw; reactive reports rely on it.
   markRaw(fyo);
   fyo.singles.SystemSettings = {
     currency: 'INR',
     locale: 'en-IN',
-    displayPrecision: 2,
-    dateFormat: 'MMM d, y',
+    display_precision: 2,
+    date_format: 'MMM d, y',
   } as any;
   fyo.singles.InventorySettings = {
-    enableBatches: false,
-    enableSerialNumber: false,
+    enable_batches: false,
+    enable_serial_number: false,
   } as any;
 
   const report = await makeProfitAndLoss();

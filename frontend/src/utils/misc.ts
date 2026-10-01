@@ -1,11 +1,14 @@
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports/index';
 import type { Report } from 'reports/Report';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { QueryFilter } from 'utils/db/types';
 
+/** A new wizard, in the browser's time zone until Frappe's setup sets the system one. */
 export function getSetupWizardDoc() {
-  return fyo.doc.getNewDoc(ModelNameEnum.SetupWizard, {}, false);
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return newFrappeDoc(ModelNameEnum.SetupWizard, { time_zone: timeZone });
 }
 
 export const docsPathMap: Record<string, string | undefined> = {
@@ -36,7 +39,7 @@ export const docsPathMap: Record<string, string | undefined> = {
   [ModelNameEnum.Party]: 'books/party',
   [ModelNameEnum.Item]: 'books/items',
   [ModelNameEnum.Tax]: 'books/taxes',
-  [ModelNameEnum.PrintTemplate]: 'books/print-templates',
+  [ModelNameEnum.PrintFormat]: 'books/print-templates',
 
   // Miscellaneous
   Search: 'books/quick-search',

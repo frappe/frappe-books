@@ -1,5 +1,4 @@
 import { Action } from 'fyo/model/types';
-import { ModelNameEnum } from 'models/types';
 import { toServerFilters } from 'reports/serverReport';
 import { ExportExtension } from 'reports/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -35,11 +34,7 @@ async function exportReport(extension: ExportExtension, report: BaseGSTR) {
 
 /** Mirrors the server's GSTIN check so the dialog explains what to set. */
 async function getCanExport(report: BaseGSTR) {
-  const gstin = await report.fyo.getValue(
-    ModelNameEnum.AccountingSettings,
-    'gstin'
-  );
-  if (gstin) {
+  if (report.fyo.singles.AccountingSettings?.gstin) {
     return true;
   }
 

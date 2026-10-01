@@ -126,7 +126,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/template-builder/:name',
     name: 'Template Builder',
-    meta: { sidebarPath: '/list/PrintTemplate', desktopOnly: true },
+    meta: { sidebarPath: '/list/PrintFormat', desktopOnly: true },
     component: TemplateBuilder,
     props: true,
   },

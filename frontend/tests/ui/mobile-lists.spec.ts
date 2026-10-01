@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { insert } from './helpers/records';
+import { insertDocument } from './helpers/records';
 import { useBooksSession } from './helpers/session';
 
 test.use({
@@ -16,13 +16,16 @@ let hasParties = false;
 
 test.beforeEach(async ({ page }) => {
   if (hasParties) return;
-  await insert(page, 'Party', {
+  await insertDocument(page, 'Books Party', {
     name: customer,
     role: 'Customer',
     phone: '98765 43210',
     email: `${run}@example.com`,
   });
-  await insert(page, 'Party', { name: supplier, role: 'Supplier' });
+  await insertDocument(page, 'Books Party', {
+    name: supplier,
+    role: 'Supplier',
+  });
   hasParties = true;
 });
 
@@ -54,11 +57,11 @@ test('search also matches keyword fields', async ({ page }) => {
 test('selected items start a new sales invoice', async ({ page }) => {
   const items = [`Phone Item A ${run}`, `Phone Item B ${run}`];
   for (const name of items) {
-    await insert(page, 'Item', {
+    await insertDocument(page, 'Books Item', {
       name,
       rate: 100,
-      incomeAccount: 'Sales',
-      expenseAccount: 'Cost of Goods Sold',
+      income_account: 'Sales',
+      expense_account: 'Cost of Goods Sold',
     });
   }
   await page.goto('/books/list/Item');
@@ -136,14 +139,15 @@ test('a filtered empty list clears its search', async ({ page }) => {
 });
 
 test('an empty list offers Make Entry', async ({ page }) => {
+  // Frappe serves the journal entry list and its count.
+  await page.route('**/api/method/frappe.client.get_list', (route) =>
+    route.request().postDataJSON().doctype === 'Books Journal Entry'
+      ? route.fulfill({ json: { message: [] } })
+      : route.fallback()
+  );
   await page.route(
-    '**/api/method/frappe_books.ui_api.database_call',
-    async (route) => {
-      const { method, args } = route.request().postDataJSON();
-      if (args?.[0] !== 'JournalEntry' || !['getAll', 'count'].includes(method))
-        return route.continue();
-      await route.fulfill({ json: { message: method === 'count' ? 0 : [] } });
-    }
+    /\/api\/v2\/doctype\/Books%20Journal%20Entry\/count\?/,
+    (route) => route.fulfill({ json: { data: 0 } })
   );
   await page.goto('/books/list/JournalEntry');
 

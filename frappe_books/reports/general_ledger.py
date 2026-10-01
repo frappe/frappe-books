@@ -4,7 +4,6 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting.money import as_decimal, sum_decimal
-from frappe_books.ui_bridge.mapping import source_reference, target_reference
 
 DOCTYPE = "Books Ledger Entry"
 BALANCE = {"SUB": [{"SUM": "debit"}, {"SUM": "credit"}], "as": "balance"}
@@ -71,7 +70,7 @@ def _conditions(filters):
 		if filters.get(source)
 	]
 	if filters.get("reference_type") and filters["reference_type"] != "All":
-		conditions.append(["voucher_type", "=", target_reference(filters["reference_type"])])
+		conditions.append(["voucher_type", "=", filters["reference_type"]])
 	if not filters.get("reverted"):
 		conditions.append(["reverted", "=", 0])
 	return conditions
@@ -135,7 +134,7 @@ def _entry_row(entry, index):
 		"debit": as_decimal(entry.debit),
 		"credit": as_decimal(entry.credit),
 		"party": entry.party,
-		"reference_type": source_reference(entry.voucher_type),
+		"reference_type": entry.voucher_type,
 		"reference_name": entry.voucher_no,
 		"reverted": bool(entry.reverted),
 	}

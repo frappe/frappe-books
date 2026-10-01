@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { insert } from './helpers/records';
+import { insertDocument } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 test.use({
@@ -15,7 +15,10 @@ let hasCustomer = false;
 
 test.beforeEach(async ({ page }) => {
   if (hasCustomer) return;
-  await insert(page, 'Party', { name: customer, role: 'Customer' });
+  await insertDocument(page, 'Books Party', {
+    name: customer,
+    role: 'Customer',
+  });
   hasCustomer = true;
 });
 

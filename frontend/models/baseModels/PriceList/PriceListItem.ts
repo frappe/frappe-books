@@ -1,25 +1,11 @@
-import { Doc } from 'fyo/model/doc';
-import type { FormulaMap } from 'fyo/model/types';
-import { ModelNameEnum } from 'models/types';
-import type { Money } from 'pesa';
-import type { PriceList } from './PriceList';
+import { FrappeDoc } from 'src/frappe/document';
 
-export class PriceListItem extends Doc {
-  item?: string;
-  unit?: string;
-  rate?: Money;
-  parentdoc?: PriceList;
-
-  formulas: FormulaMap = {
-    unit: {
-      formula: async () => {
-        if (!this.item) {
-          return;
-        }
-
-        return await this.fyo.getValue(ModelNameEnum.Item, this.item, 'unit');
-      },
-      dependsOn: ['item'],
-    },
+/** A Books Price List Item row; its unit is picked, not created, and follows its item. */
+export class PriceListItem extends FrappeDoc {
+  static override presentation = {
+    label: 'Price List Item',
+    fields: { unit: { create: false } },
   };
+  // The server fetches an empty unit from the item.
+  static override refills = { item: ['unit'] };
 }

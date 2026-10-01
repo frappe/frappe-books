@@ -5,7 +5,7 @@
 </template>
 <script lang="ts">
 import { Badge as FrappeBadge } from 'frappe-ui';
-import { Doc } from 'fyo/model/doc';
+import type { Doc } from 'fyo/model/doc';
 import { BadgeData } from 'fyo/model/types';
 import { LoyaltyProgram } from 'models/baseModels/LoyaltyProgram/LoyaltyProgram';
 import { Party } from 'models/baseModels/Party/Party';
@@ -16,11 +16,11 @@ import {
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { defineComponent } from 'vue';
+import { defineComponent, PropType } from 'vue';
 
 export default defineComponent({
   components: { FrappeBadge },
-  props: { doc: { type: Doc, required: true } },
+  props: { doc: { type: Object as PropType<Doc>, required: true } },
   computed: {
     showStatus(): boolean {
       return !(
@@ -33,7 +33,8 @@ export default defineComponent({
         return getLoyaltyProgramBadge(this.doc);
       }
 
-      const outstanding = this.doc.outstandingAmount as Money | undefined;
+      // Frappe serves parties, so this is the Frappe fieldname.
+      const outstanding = this.doc.outstanding_amount as Money | undefined;
       if (
         status === 'Saved' &&
         this.doc instanceof Party &&
@@ -52,8 +53,8 @@ export default defineComponent({
   },
   methods: {
     getAmountLabel(status: string): string | undefined {
-      const outstanding = this.doc.outstandingAmount as Money | undefined;
-      const grandTotal = this.doc.grandTotal as Money | undefined;
+      const outstanding = this.doc.outstanding_amount as Money | undefined;
+      const grandTotal = this.doc.grand_total as Money | undefined;
       if (status === 'Unpaid' && outstanding) {
         return this.t`Unpaid ${this.formatAmount(outstanding)}`;
       }

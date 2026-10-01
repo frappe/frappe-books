@@ -1,4 +1,4 @@
-"""Custom fields materialised through the Books bridge.
+"""Custom fields that Books Custom Forms keep in Frappe Custom Fields.
 
 Creating or removing a custom field alters the hosted table, and Frappe commits
 around DDL. Integration tests only roll back at the end of a class, so this test
@@ -12,9 +12,9 @@ from frappe import client
 from frappe.api.v1 import update_doc
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import unique_name
-from frappe_books.ui_api import get_field_properties
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
+from frappe_books.customization import camel_case
+from frappe_books.meta import get_books_meta
+from frappe_books.tests.accounting import ensure_user, unique_name
 
 COLUMN = "custom_books_hostedbridgetestvalue"
 FIELD = {
@@ -34,69 +34,64 @@ PARTY_FIELD = {
 	"label": "Hosted Bridge Test Party",
 	"fieldname": "hostedBridgeTestParty",
 	"fieldtype": "Link",
-	"target": "Party",
+	"target": "Books Party",
 }
 REFERENCE_FIELD = {
 	"label": "Hosted Bridge Test Reference",
 	"fieldname": "hostedBridgeTestReference",
 	"fieldtype": "DynamicLink",
-	"references": "hostedBridgeTestSize",
+	"references": "custom_books_hostedbridgetestsize",
 }
 SYSTEM_MANAGER = "books-customizer@example.com"
 
 
 class IntegrationTestCustomFields(IntegrationTestCase):
 	def setUp(self):
-		self.bridge = BooksDatabaseBridge()
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
-		self.assertFalse(frappe.db.exists("Books Custom Form", "UOM"))
+		self.assertFalse(frappe.db.exists("Books Custom Form", "Books Uom"))
 		self.addCleanup(self._cleanup_custom_field_test)
 
 	def test_custom_fields_are_materialized_and_round_trip(self):
 		unit_name = unique_name("Bridge Custom Unit")
-		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD]})
+		_custom_form("Books Uom", [FIELD]).insert()
 		self.assertTrue(frappe.db.exists("Custom Field", {"dt": "Books Uom", "fieldname": COLUMN}))
 
-		inserted = self.bridge.insert(
-			"UOM",
-			{
-				"name": unit_name,
-				FIELD["fieldname"]: "persisted",
-			},
-		)
+		frappe.get_doc({"doctype": "Books Uom", "name": unit_name, COLUMN: "persisted"}).insert()
 
-		self.assertEqual(inserted[FIELD["fieldname"]], "persisted")
-		self.assertEqual(self.bridge.get("UOM", unit_name)[FIELD["fieldname"]], "persisted")
+		self.assertEqual(frappe.db.get_value("Books Uom", unit_name, COLUMN), "persisted")
 
-	def test_custom_fields_are_served_under_their_books_names(self):
-		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD]})
+	def test_books_meta_places_custom_fields_as_their_form_says(self):
+		_custom_form("Books Uom", [FIELD]).insert()
 
-		self.assertEqual(
-			get_field_properties()["UOM"][FIELD["fieldname"]],
-			{"fieldtype": "Data", "label": FIELD["label"]},
-		)
+		books_meta = get_books_meta(["Books Uom"])
+
+		placement = {"section": "Default", "tab": "Custom", "books_fieldname": FIELD["fieldname"]}
+		self.assertEqual(books_meta["placements"], {"Books Uom": {COLUMN: placement}})
+		(unit,) = books_meta["metas"]
+		self.assertIn(COLUMN, [field["fieldname"] for field in unit["fields"]])
+		with self.set_user(ensure_user("books-meta-outsider@example.com", "Translator")):
+			self.assertEqual(get_books_meta(["Books Uom"])["placements"], {})
 
 	def test_system_manager_removes_fields_without_switching_user(self):
 		_make_system_manager()
 		with self.set_user(SYSTEM_MANAGER):
 			frappe.local.session.data.csrf_token = "books-token"
-			_custom_form("UOM", [FIELD]).insert()
+			_custom_form("Books Uom", [FIELD]).insert()
 			self.assertEqual(_field_owner(), SYSTEM_MANAGER)
 
-			frappe.delete_doc("Books Custom Form", "UOM")
+			frappe.delete_doc("Books Custom Form", "Books Uom")
 
 			self.assertEqual(frappe.local.session.data.csrf_token, "books-token")
 		self.assertIsNone(_field_owner())
 
-	def test_bridge_creates_edits_and_deletes_custom_fields(self):
-		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD, SIZE_FIELD]})
-		self.assertEqual(_custom_field(FIELD).label, FIELD["label"])
-		self.assertEqual(_custom_field(SIZE_FIELD).options, SIZE_FIELD["options"])
+	def test_rest_creates_edits_and_deletes_custom_fields(self):
+		client.insert(_form_values("Books Uom", [FIELD, SIZE_FIELD]))
+		self.assertEqual(_custom_field(SIZE_FIELD).fieldtype, "Select")
 
-		form = self.bridge.get("CustomForm", "UOM")
-		row = _row(form["customFields"], FIELD)
-		form["customFields"] = [{**row, "label": "Renamed", "isRequired": 1, "default": "North"}]
-		self.bridge.update("CustomForm", form)
+		form = client.get("Books Custom Form", "Books Uom")
+		row = _row(form["custom_fields"], FIELD)
+		form["custom_fields"] = [{**row, "label": "Renamed", "is_required": 1, "default": "North"}]
+		client.save(form)
 
 		self.assertEqual(
 			(_custom_field(FIELD).label, _custom_field(FIELD).reqd, _custom_field(FIELD).default),
@@ -104,65 +99,49 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 		)
 		self.assertIsNone(_custom_field(SIZE_FIELD))
 
-		self.bridge.delete("CustomForm", "UOM")
+		client.delete("Books Custom Form", "Books Uom")
 		self.assertIsNone(_custom_field(FIELD))
-
-	def test_rest_creates_edits_and_deletes_custom_fields(self):
-		client.insert(_form_values("UOM", [FIELD, SIZE_FIELD]))
-		self.assertEqual(_custom_field(SIZE_FIELD).fieldtype, "Select")
-
-		form = client.get("Books Custom Form", "UOM")
-		row = _row(form["custom_fields"], SIZE_FIELD)
-		form["custom_fields"] = [{**row, "options": "Small\nMedium\nLarge"}]
-		client.save(form)
-
-		self.assertEqual(_custom_field(SIZE_FIELD).options, "Small\nMedium\nLarge")
-		self.assertIsNone(_custom_field(FIELD))
-
-		client.delete("Books Custom Form", "UOM")
-		self.assertIsNone(_custom_field(SIZE_FIELD))
 
 	def test_forms_show_the_definition_their_custom_field_holds(self):
-		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": [FIELD]})
+		_custom_form("Books Uom", [FIELD]).insert()
 
 		client.set_value("Custom Field", f"Books Uom-{COLUMN}", "label", "Edited In Frappe")
 
-		row = self.bridge.get("CustomForm", "UOM")["customFields"][0]
+		row = client.get("Books Custom Form", "Books Uom")["custom_fields"][0]
 		self.assertEqual(row["label"], "Edited In Frappe")
-		self.assertEqual(get_field_properties()["UOM"][FIELD["fieldname"]]["label"], "Edited In Frappe")
 
-	def test_link_options_round_trip_in_books_names(self):
+	def test_link_options_round_trip_in_frappe_names(self):
 		fields = [SIZE_FIELD, PARTY_FIELD, REFERENCE_FIELD]
-		self.bridge.insert("CustomForm", {"name": "UOM", "customFields": fields})
+		_custom_form("Books Uom", fields).insert()
 
 		self.assertEqual(_custom_field(PARTY_FIELD).options, "Books Party")
 		self.assertEqual(_custom_field(REFERENCE_FIELD).options, "custom_books_hostedbridgetestsize")
-		rows = self.bridge.get("CustomForm", "UOM")["customFields"]
-		self.assertEqual(_row(rows, PARTY_FIELD)["target"], "Party")
-		self.assertEqual(_row(rows, REFERENCE_FIELD)["references"], SIZE_FIELD["fieldname"])
+		rows = client.get("Books Custom Form", "Books Uom")["custom_fields"]
+		self.assertEqual(_row(rows, PARTY_FIELD)["target"], "Books Party")
+		self.assertEqual(_row(rows, REFERENCE_FIELD)["references"], "custom_books_hostedbridgetestsize")
 
 	def test_a_loaded_form_saves_unchanged(self):
 		fields = [{**FIELD, "is_required": 1, "default": "North"}, SIZE_FIELD, PARTY_FIELD, REFERENCE_FIELD]
-		_custom_form("UOM", fields).insert()
+		_custom_form("Books Uom", fields).insert()
 		definitions = _definitions(fields)
 
-		frappe.get_doc("Books Custom Form", "UOM").save()
-		_rest_put("UOM", {})
+		frappe.get_doc("Books Custom Form", "Books Uom").save()
+		_rest_put("Books Uom", {})
 
 		self.assertEqual(_definitions(fields), definitions)
 
 	def test_rest_put_of_stored_row_columns_changes_only_them(self):
-		_custom_form("UOM", [FIELD, SIZE_FIELD]).insert()
+		_custom_form("Books Uom", [FIELD, SIZE_FIELD]).insert()
 		definitions = _definitions([FIELD, SIZE_FIELD])
 		rows = frappe.get_all(
 			"Books Custom Field",
-			filters={"parent": "UOM"},
+			filters={"parent": "Books Uom"},
 			fields=["name", "parent", "parenttype", "parentfield", "fieldname", "section", "tab"],
 			order_by="idx",
 		)
 		rows[0].tab = "Details"
 
-		_rest_put("UOM", {"custom_fields": rows})
+		_rest_put("Books Uom", {"custom_fields": rows})
 
 		self.assertEqual(_definitions([FIELD, SIZE_FIELD]), definitions)
 		self.assertEqual(frappe.db.get_value("Books Custom Field", rows[0].name, "tab"), "Details")
@@ -175,8 +154,8 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 			"Books Uom", filters={"name": ["like", "Bridge Custom Unit%"]}, pluck="name"
 		):
 			frappe.delete_doc("Books Uom", unit)
-		if frappe.db.exists("Books Custom Form", "UOM"):
-			frappe.delete_doc("Books Custom Form", "UOM")
+		if frappe.db.exists("Books Custom Form", "Books Uom"):
+			frappe.delete_doc("Books Custom Form", "Books Uom")
 		for column in frappe.db.get_table_columns("Books Uom"):
 			if column.startswith("custom_books_hostedbridgetest"):
 				frappe.db.sql_ddl(f"alter table `tabBooks Uom` drop column `{column}`")
@@ -187,37 +166,85 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 	def test_customization_must_be_enabled(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 0)
 		self.assertRaisesRegex(
-			frappe.ValidationError, "Enable form customization", _custom_form("UOM", [FIELD]).insert
+			frappe.ValidationError, "Enable form customization", _custom_form("Books Uom", [FIELD]).insert
 		)
 
-	def test_ledger_and_single_schemas_cannot_be_customized(self):
+	def test_ledgers_singles_and_unknown_doctypes_cannot_be_customized(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
-		for schema in ("AccountingLedgerEntry", "LoyaltyPointEntry", "SystemSettings", "CustomForm"):
-			with self.subTest(schema=schema):
+		for doctype in (
+			"Books Ledger Entry",
+			"Books Loyalty Point Entry",
+			"Books System Settings",
+			"Books Custom Field",
+			"UOM",
+		):
+			with self.subTest(doctype=doctype):
 				self.assertRaisesRegex(
-					frappe.ValidationError, "cannot be customized", _custom_form(schema, [FIELD]).insert
+					frappe.ValidationError, "cannot be customized", _custom_form(doctype, [FIELD]).insert
 				)
 
 	def test_invalid_custom_fields_are_rejected(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
 		cases = {
 			"needs a default": [{**FIELD, "is_required": 1}],
-			"must be unique": [FIELD, {**FIELD, "label": "Duplicate"}],
+			"already used for Custom Field 1": [FIELD, {**FIELD, "label": "Duplicate"}],
+			"already exists for Books Uom": [{**FIELD, "fieldname": "is_whole"}],
 			"at least two options": [{**FIELD, "fieldtype": "Select", "options": "Only\n "}],
+			"needs a Target": [{**PARTY_FIELD, "target": None}],
+			"needs a References": [{**REFERENCE_FIELD, "references": None}],
 		}
 		for message, fields in cases.items():
 			with self.subTest(message=message):
-				self.assertRaisesRegex(frappe.ValidationError, message, _custom_form("UOM", fields).insert)
+				self.assertRaisesRegex(
+					frappe.ValidationError, message, _custom_form("Books Uom", fields).insert
+				)
 
 
-def _custom_form(schema, fields):
-	return frappe.get_doc(_form_values(schema, fields))
+class IntegrationTestCustomFieldnames(IntegrationTestCase):
+	def test_a_new_row_is_named_after_its_label_as_lodash_camel_case_names_it(self):
+		# Expected names are lodash's camelCase of each label.
+		for label, fieldname in (
+			("Delivery Date", "deliveryDate"),
+			("GST No.", "gstNo"),
+			("HTTPServer Port", "httpServerPort"),
+			("crème brûlée", "cremeBrulee"),
+			("Customer's PO", "customersPo"),
+			("2nd Contact", "2ndContact"),
+			("Straße Nr", "strasseNr"),
+			("ÆON flux", "aeOnFlux"),
+			("Имя Клиента", "имяКлиента"),
+			("ग्राहक नाम", "ग्राहकनाम"),
+			("Size (cm)", "sizeCm"),
+		):
+			with self.subTest(label=label):
+				self.assertEqual(camel_case(label), fieldname)
+
+	def test_preview_names_new_rows_and_keeps_named_ones(self):
+		form = _new_custom_form([{**FIELD, "fieldname": None}, {**SIZE_FIELD, "label": "Renamed Size"}])
+		form.preview()
+		self.assertEqual(
+			[row.fieldname for row in form.custom_fields], ["hostedBridgeTestValue", "hostedBridgeTestSize"]
+		)
+
+	def test_preview_needs_the_right_to_customize(self):
+		form = _new_custom_form([{**FIELD, "fieldname": None}])
+		with self.set_user(ensure_user("books-custom-form-user@example.com", "Books User")):
+			self.assertRaises(frappe.PermissionError, form.preview)
 
 
-def _form_values(schema, fields):
+def _new_custom_form(fields):
+	"""An unsaved form, as /books sends one to preview."""
+	return frappe.get_doc({**_form_values("Books Uom", fields), "__islocal": 1})
+
+
+def _custom_form(doctype, fields):
+	return frappe.get_doc(_form_values(doctype, fields))
+
+
+def _form_values(doctype, fields):
 	# `get_doc` adds a doctype to each row dict, so give it copies.
 	rows = [dict(field) for field in fields]
-	return {"doctype": "Books Custom Form", "name": schema, "custom_fields": rows}
+	return {"doctype": "Books Custom Form", "name": doctype, "custom_fields": rows}
 
 
 def _custom_field(field):

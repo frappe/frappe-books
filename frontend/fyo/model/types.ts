@@ -1,47 +1,32 @@
 import type { BadgeProps } from 'frappe-ui';
 import type { Fyo } from 'fyo';
-import type { DocValue, DocValueMap } from 'fyo/core/types';
-import type SystemSettings from 'fyo/models/SystemSettings';
+import type { DocValue } from 'fyo/core/types';
+import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import type { FieldType, Schema, SelectOption } from 'schemas/types';
 import type { QueryFilter } from 'utils/db/types';
 import type { RouteLocationRaw, Router } from 'vue-router';
 import type { Doc } from './doc';
 import type { AccountingSettings } from 'models/baseModels/AccountingSettings/AccountingSettings';
+import type { GetStarted } from 'models/baseModels/GetStarted/GetStarted';
 import type { Defaults } from 'models/baseModels/Defaults/Defaults';
 import type { PrintSettings } from 'models/baseModels/PrintSettings/PrintSettings';
 import type { InventorySettings } from 'models/inventory/InventorySettings';
 import type { Misc } from 'models/baseModels/Misc';
 import type { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
-import type { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
-import type { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
-import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 
 /**
- * The functions below are used for dynamic evaluation
- * and setting of field types.
+ * Functions a model sets on its documents to decide a field dynamically;
+ * they read the document through `this`.
  *
- * Since they are set directly on the doc, they can
- * access the doc  by using `this`.
- *
- * - `Formula`: Async function used for obtaining a computed value such as amount (rate * qty).
- * - `Default`: Regular function used to dynamically set the default value, example new Date().
- * - `Validation`: Async function that throw an error if the value is invalid.
- * - `Required`: Regular function used to decide if a value is mandatory (there are !notnul in the db).
+ * - `Validation`: throws if the value is invalid.
+ * - `Required`, `Hidden`, `ReadOnly`: whether the field is so.
  */
-export type FormulaReturn = DocValue | DocValueMap[] | undefined | Doc[];
-export type Formula = (
-  fieldname?: string,
-) => Promise<FormulaReturn> | FormulaReturn;
-export type FormulaConfig = { dependsOn?: string[]; formula: Formula };
-export type Default = (doc: Doc) => DocValue;
 export type Validation = (value: DocValue) => Promise<void> | void;
 export type Required = () => boolean;
 export type Hidden = () => boolean;
 export type ReadOnly = () => boolean;
 export type GetCurrency = () => string;
 
-export type FormulaMap = Record<string, FormulaConfig | undefined>;
-export type DefaultMap = Record<string, Default | undefined>;
 export type ValidationMap = Record<string, Validation | undefined>;
 export type RequiredMap = Record<string, Required | undefined>;
 export type CurrenciesMap = Record<string, GetCurrency | undefined>;
@@ -57,24 +42,15 @@ export interface DocumentActionWarning {
   errors: unknown[];
 }
 
-/**
- * Should add this for hidden too
- */
-
-export type ModelMap = Record<string, typeof Doc | undefined>;
-export type DocMap = Record<string, Doc | undefined>;
-
 export interface SinglesMap {
   SystemSettings?: SystemSettings;
   AccountingSettings?: AccountingSettings;
   InventorySettings?: InventorySettings;
   POSSettings?: POSSettings;
-  POSProfile?: POSProfile;
-  POSOpeningShift?: POSOpeningShift;
-  POSClosingShift?: POSClosingShift;
   PrintSettings?: PrintSettings;
   Defaults?: Defaults;
   Misc?: Misc;
+  GetStarted?: GetStarted;
   [key: string]: Doc | undefined;
 }
 

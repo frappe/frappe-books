@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.utils.nestedset import NestedSet
 
+from frappe_books.permissions import check_preview_permission
+
 
 class BooksAccount(NestedSet):
 	# begin: auto-generated types
@@ -50,6 +52,10 @@ class BooksAccount(NestedSet):
 	allow_root_deletion = False
 
 	def before_validate(self):
+		self.set_missing_values()
+
+	def set_missing_values(self):
+		"""A child account takes its group's root type, and its account type unless it has one."""
 		if not self.parent_books_account:
 			return
 
@@ -67,6 +73,12 @@ class BooksAccount(NestedSet):
 		self.root_type = parent.root_type
 		self.account_type = self.account_type or parent.account_type
 
+	@frappe.whitelist()
+	def preview(self):
+		"""Fill the values a save would fill, without saving, for the form to show them."""
+		check_preview_permission(self)
+		self.set_missing_values()
+
 	def validate(self):
 		if not self.is_group and not self.parent_books_account:
 			frappe.throw(_("Only group accounts can be root accounts. Select a parent group."))
@@ -80,3 +92,9 @@ class BooksAccount(NestedSet):
 				_("Value cannot be changed for {0}").format(self.meta.get_label("account_type")),
 				frappe.CannotChangeConstantError,
 			)
+
+	def on_trash(self):
+		# The /books form checks this too, before it asks the server.
+		if not self.parent_books_account:
+			frappe.throw(_("Root accounts cannot be deleted."))
+		super().on_trash()

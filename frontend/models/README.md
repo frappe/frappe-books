@@ -1,43 +1,30 @@
 # Models
 
-The `models` root folder contains all the model files, i.e. files containing all
-the models. **Models** here, refers to the classes that handle the data, its
-validation and updation and a bunch of other stuff.
+The `models` folder holds the model of each /books schema. A model extends `FrappeDoc` from `src/frappe/document.ts`, names its DocType in `static doctype`, and says how /books presents it: its label, quick edit fields, link filters, list settings, actions and the rules that depend on /books settings. The DocType meta gives the fields; the server fills and checks the values. See `docs/framework-backed-doctypes.md`.
 
-Each model directly or indirectly extends the `Doc` class from
-`fyo/model/doc.ts` so for more info check that file and the associated types
-in `fyo/model/types.ts`.
-
-A model class can used even if the class body has no content, for example
-`PurchaseInvoiceItem`. Else the model used will default to using `Doc`. The
-class can also be used to provide type information for the field types else they
-default to the catch all `DocValue` example:
+A model can declare the fields it reads, for types:
 
 ```typescript
-class Todo extends Doc {
-  title?: string;
-  date?: Date;
-  completed?: boolean;
+class Todo extends FrappeDoc {
+  static override doctype = 'Books Todo';
+  static override presentation = { label: 'Todo' };
+
+  declare title?: string;
+  declare date?: Date;
+  declare completed?: boolean;
 }
 ```
 
-While this has obvious advantages, the drawback is if the underlying fieldtype
-changes this too will have to be changed.
-
-The data stored by the models is decided by the schema passed to it's
-constructor. Check `schemas/README.md` for info on this.
-
 ## Adding models
 
-Keep model modules independent from Vue and the global Fyo instance. Pass the
-Fyo instance to a model when the model needs it.
+Register each model in `frappeModels` in `models/index.ts`, by its schema name. The search palette lists the schemas in that order. The rows of a table use the model the parent names in `static rowModels`, else a plain `FrappeDoc`.
+
+Keep model modules independent from Vue and the global Fyo instance. Pass the Fyo instance to a model when the model needs it.
 
 Use a dynamic import when a model action must open part of the interface.
 
 ## Regional Models
 
-Regional models should as far as possible extend the base model and override
-what's required.
+Regional models should as far as possible extend the base model and override what's required.
 
-They should then be imported dynamicall and returned from `getRegionalModels` in
-`models/index.ts` on the basis of `countryCode`.
+They should then be imported dynamically and returned from `getRegionalFrappeModels` in `models/index.ts` on the basis of `countryCode`.

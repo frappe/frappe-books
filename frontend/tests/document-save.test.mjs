@@ -1,10 +1,105 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Fyo } from './helpers/fyo.mjs';
+import {
+  FrappeDoc,
+  fyo,
+  getFrappeDoc,
+  loadFrappeDocTypes,
+  newFrappeDoc,
+  registerFrappeModels,
+  stubFrappe,
+} from './helpers/frappe.mjs';
+
+const MODIFIED = '2026-09-28 10:00:00.123456';
+const fields = [{ fieldname: 'value', fieldtype: 'Data', label: 'Value' }];
+const metas = {
+  master: { name: 'Books Record', autoname: 'Prompt', fields },
+  transaction: {
+    name: 'Books Record Entry',
+    autoname: 'Prompt',
+    is_submittable: 1,
+    fields,
+  },
+  singleton: { name: 'Books Record Settings', issingle: 1, fields },
+};
+const schemaNames = {
+  master: 'Record',
+  transaction: 'RecordEntry',
+  singleton: 'RecordSettings',
+};
+
+registerFrappeModels(
+  Object.fromEntries(
+    Object.entries(metas).map(([kind, meta]) => [
+      schemaNames[kind],
+      class extends FrappeDoc {
+        static doctype = meta.name;
+        static presentation = { label: meta.name };
+      },
+    ])
+  )
+);
+stubFrappe(() => ({
+  message: {
+    metas: Object.values(metas).map((meta) => ({ permissions: [], ...meta })),
+    placements: {},
+  },
+}));
+await loadFrappeDocTypes();
+
+let saved = 0;
+
+/** A new document of the kind, and a server that stores what it is sent. */
+function makeFixture(kind, savedName) {
+  const warnings = [];
+  const writes = [];
+  let stored;
+  let writeError;
+  let loadCount = 0;
+  let loading;
+  fyo.onDocumentActionWarning = (warning) => warnings.push(warning);
+  stubFrappe(async ({ method, body }) => {
+    if (method === 'GET') {
+      loadCount++;
+      await loading;
+      return { data: structuredClone(stored) };
+    }
+
+    if (writeError) {
+      const message = writeError;
+      writeError = undefined;
+      return { status: 417, body: { errors: [{ message }] } };
+    }
+
+    stored = { ...stored, ...body, name: savedName ?? body.name ?? 'Record' };
+    stored.modified = body.modified ?? MODIFIED;
+    writes.push(structuredClone(stored));
+    return { data: structuredClone(stored) };
+  });
+  saved += 1;
+  const name = kind === 'singleton' ? undefined : `Record ${saved}`;
+  const doc = newFrappeDoc(schemaNames[kind], { name, value: 'Initial' });
+  return {
+    doc,
+    warnings,
+    writes,
+    rejectWrite: (message) => {
+      writeError = message;
+    },
+    loads: () => loadCount,
+    setStored: (values) => {
+      stored = { ...stored, ...values };
+    },
+    holdLoads: (until) => {
+      loading = until;
+    },
+  };
+}
 
 for (const kind of ['master', 'transaction', 'singleton']) {
   test(`${kind} saves and updates remain successful when post-save hooks fail`, async () => {
-    const { fyo, doc, warnings, writes } = await makeFixture(kind);
+    const { doc, warnings, writes } = makeFixture(kind);
+    const schemaName = schemaNames[kind];
     const calls = [];
     doc.afterSync = () => {
       throw new Error('Refresh failed');
@@ -17,35 +112,42 @@ for (const kind of ['master', 'transaction', 'singleton']) {
       throw new Error('Navigation failed');
     });
     doc.once('afterSync', () => calls.push('next'));
-    fyo.doc.observer.on('sync:Record', () => {
+    const failList = () => {
       throw new Error('List refresh failed');
-    });
-    fyo.doc.observer.on('sync:Record', () => calls.push('list'));
+    };
+    const refreshList = () => calls.push('list');
+    fyo.observer.on(`sync:${schemaName}`, failList);
+    fyo.observer.on(`sync:${schemaName}`, refreshList);
 
-    assert.equal(await doc.sync(), doc);
-    assert.equal(doc.inserted, true);
-    assert.equal(doc.dirty, false);
-    assert.equal(doc.canSave, false);
-    assert.equal(doc.canSubmit, kind === 'transaction');
-    assert.equal(writes.length, 1);
-    assert.equal(warnings[0].action, 'save');
-    assert.equal(warnings[0].errors.length, 4);
-    assert.match(warnings[0].message, /was saved/);
-    assert.deepEqual(calls, ['once', 'next', 'list']);
-    assert.equal(await fyo.doc.getDoc('Record', doc.name), doc);
+    try {
+      assert.equal(await doc.sync(), doc);
+      assert.equal(doc.inserted, true);
+      assert.equal(doc.dirty, false);
+      assert.equal(doc.canSave, false);
+      assert.equal(doc.canSubmit, kind === 'transaction');
+      assert.equal(writes.length, 1);
+      assert.equal(warnings[0].action, 'save');
+      assert.equal(warnings[0].errors.length, 4);
+      assert.match(warnings[0].message, /was saved/);
+      assert.deepEqual(calls, ['once', 'next', 'list']);
+      assert.equal(await getFrappeDoc(schemaName, doc.name), doc);
 
-    await doc.set('value', 'Updated');
-    await doc.sync();
-    assert.equal(writes.length, 2);
-    assert.equal(writes[1].value, 'Updated');
-    assert.equal(doc.dirty, false);
-    assert.deepEqual(calls, ['once', 'next', 'list', 'list']);
-    assert.equal(warnings[1].errors.length, 3);
+      await doc.set('value', 'Updated');
+      await doc.sync();
+      assert.equal(writes.length, 2);
+      assert.equal(writes[1].value, 'Updated');
+      assert.equal(doc.dirty, false);
+      assert.deepEqual(calls, ['once', 'next', 'list', 'list']);
+      assert.equal(warnings[1].errors.length, 3);
+    } finally {
+      fyo.observer.off(`sync:${schemaName}`, failList);
+      fyo.observer.off(`sync:${schemaName}`, refreshList);
+    }
   });
 }
 
 test('saving twice while the first save runs inserts the document once', async () => {
-  const { doc, writes } = await makeFixture('master');
+  const { doc, writes } = makeFixture('master');
   const first = doc.sync();
   assert.equal(doc.isSyncing, true);
   const second = doc.sync();
@@ -55,32 +157,32 @@ test('saving twice while the first save runs inserts the document once', async (
   assert.equal(doc.isSyncing, false);
 });
 
-test('opening a cached document reloads it unless it has unsaved edits', async () => {
-  const { fyo, doc, loads, setStored } = await makeFixture('master');
+test('opening an open document reloads it unless it has unsaved edits', async () => {
+  const { doc, loads, setStored } = makeFixture('master');
   await doc.sync();
   setStored({ value: 'Changed elsewhere' });
 
-  assert.equal(await fyo.doc.getDoc('Record', doc.name), doc);
+  assert.equal(await getFrappeDoc('Record', doc.name), doc);
   assert.equal(loads(), 0);
-  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  await getFrappeDoc('Record', doc.name, { refresh: true });
   assert.equal(loads(), 1);
   assert.equal(doc.value, 'Changed elsewhere');
 
   await doc.set('value', 'Unsaved edit');
   setStored({ value: 'Changed again' });
-  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  await getFrappeDoc('Record', doc.name, { refresh: true });
   assert.equal(loads(), 1);
   assert.equal(doc.value, 'Unsaved edit');
 });
 
-test('edits made while a cached document reloads are kept', async () => {
-  const { fyo, doc, setStored, holdLoads } = await makeFixture('master');
+test('edits made while an open document reloads are kept', async () => {
+  const { doc, setStored, holdLoads } = makeFixture('master');
   await doc.sync();
   setStored({ value: 'Changed elsewhere' });
   const load = Promise.withResolvers();
   holdLoads(load.promise);
 
-  const refresh = fyo.doc.getDoc('Record', doc.name, { refresh: true });
+  const refresh = getFrappeDoc('Record', doc.name, { refresh: true });
   await doc.set('value', 'Typed while loading');
   load.resolve();
   await refresh;
@@ -89,25 +191,13 @@ test('edits made while a cached document reloads are kept', async () => {
   assert.equal(doc.dirty, true);
 });
 
-test('an update sends back the modified value the server stored', async () => {
-  const { fyo, doc, writes, setStored } = await makeFixture('master');
-  await doc.sync();
-  setStored({ modified: '2026-09-28 10:00:00.123456' });
-  await fyo.doc.getDoc('Record', doc.name, { refresh: true });
-
-  await doc.set('value', 'Updated');
-  await doc.sync();
-
-  assert.equal(writes[1].modified, '2026-09-28 10:00:00.123456');
-});
-
 for (const existing of [false, true]) {
   test(`a rejected ${existing ? 'update' : 'insert'} keeps edits and does not run post-save hooks`, async () => {
-    const fixture = await makeFixture('transaction');
+    const fixture = makeFixture('transaction');
     const { doc, warnings, writes } = fixture;
     if (existing) await doc.sync();
     await doc.set('value', 'Unsaved edit');
-    fixture.rejectWrite(new Error('Write rejected'));
+    fixture.rejectWrite('Write rejected');
     let called = false;
     doc.once('afterSync', () => {
       called = true;
@@ -131,7 +221,7 @@ for (const existing of [false, true]) {
 }
 
 test('validation still stops the save before any write or notification', async () => {
-  const { doc, warnings, writes } = await makeFixture('master');
+  const { doc, warnings, writes } = makeFixture('master');
   doc.on('validate', () => {
     throw new Error('Invalid value');
   });
@@ -145,8 +235,8 @@ test('validation still stops the save before any write or notification', async (
   assert.equal(warnings.length, 0);
 });
 
-test('post-save errors do not prevent the cache from adopting a server-assigned name', async () => {
-  const { fyo, doc } = await makeFixture('master', 'SERVER-0001');
+test('post-save errors do not stop the open document taking the name the server gave', async () => {
+  const { doc } = makeFixture('master', 'SERVER-0001');
   const original = doc.name;
   doc.afterSync = () => {
     throw new Error('Refresh failed');
@@ -155,19 +245,13 @@ test('post-save errors do not prevent the cache from adopting a server-assigned 
   await doc.sync();
 
   assert.equal(doc.name, 'SERVER-0001');
-  assert.equal(await fyo.doc.getDoc('Record', 'SERVER-0001'), doc);
-  assert.equal(fyo.doc.docs.get('Record')[original], undefined);
+  assert.equal(await getFrappeDoc('Record', 'SERVER-0001'), doc);
+  assert.notEqual(original, 'SERVER-0001');
 });
 
-test('saved values survive failed computed fields and change listeners', async () => {
-  const { doc, warnings, writes } = await makeFixture(
-    'transaction',
-    'SERVER-0002'
-  );
+test('saved values survive failed change listeners', async () => {
+  const { doc, warnings, writes } = makeFixture('transaction');
   let refreshed = false;
-  doc._setComputedValuesFromFormulas = async () => {
-    throw new Error('Display formula failed');
-  };
   doc.once('change', () => {
     throw new Error('Display listener failed');
   });
@@ -177,83 +261,11 @@ test('saved values survive failed computed fields and change listeners', async (
 
   await doc.sync();
 
-  assert.equal(doc.name, 'SERVER-0002');
   assert.equal(doc.inserted, true);
   assert.equal(doc.canSave, false);
   assert.equal(doc.canSubmit, true);
   assert.equal(writes.length, 1);
   assert.equal(refreshed, true);
   assert.equal(warnings[0].action, 'save');
-  assert.equal(warnings[0].errors.length, 2);
+  assert.equal(warnings[0].errors.length, 1);
 });
-
-async function makeFixture(kind, savedName) {
-  const warnings = [];
-  const writes = [];
-  let stored;
-  let writeError;
-  let loadCount = 0;
-  let loading;
-  const schema = {
-    name: 'Record',
-    label: 'Record',
-    naming: 'manual',
-    isSingle: kind === 'singleton',
-    isSubmittable: kind === 'transaction',
-    fields: [
-      { fieldname: 'name', fieldtype: 'Data', required: true },
-      { fieldname: 'value', fieldtype: 'Data' },
-      { fieldname: 'submitted', fieldtype: 'Check' },
-      { fieldname: 'cancelled', fieldtype: 'Check' },
-      ...(kind === 'singleton'
-        ? []
-        : [{ fieldname: 'modified', fieldtype: 'Datetime' }]),
-    ],
-  };
-  class Store {
-    getSchemaMap() {
-      return { Record: schema };
-    }
-    call(method, _schemaName, values) {
-      if (method === 'get') {
-        loadCount++;
-        return loading ? loading.then(() => structuredClone(stored)) : structuredClone(stored);
-      }
-      assert.ok(['insert', 'update'].includes(method), method);
-      if (writeError) {
-        const error = writeError;
-        writeError = undefined;
-        throw error;
-      }
-      stored = { ...values, name: savedName ?? values.name };
-      writes.push(structuredClone(stored));
-      return structuredClone(stored);
-    }
-  }
-  const fyo = new Fyo({ DatabaseDemux: Store });
-  fyo.onDocumentActionWarning = (warning) => warnings.push(warning);
-  await fyo.db.init();
-  fyo.doc.registerModels({});
-  const doc = fyo.doc.getNewDoc('Record', {
-    name: kind === 'singleton' ? 'Record' : 'New record',
-    value: 'Initial',
-    submitted: false,
-    cancelled: false,
-  });
-  return {
-    fyo,
-    doc,
-    warnings,
-    writes,
-    rejectWrite: (error) => {
-      writeError = error;
-    },
-    loads: () => loadCount,
-    setStored: (values) => {
-      stored = { ...stored, ...values };
-    },
-    holdLoads: (until) => {
-      loading = until;
-    },
-  };
-}

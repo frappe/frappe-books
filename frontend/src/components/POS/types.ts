@@ -47,8 +47,9 @@ export interface POSItem {
   itemGroup?: string;
 }
 
+/** A payment method the cashier picks, by Books Payment Method fieldnames. */
 export type PaymentMethodOption = {
   name: string;
   type?: PaymentMethodType;
-  requiresClearanceDate?: boolean;
+  requires_clearance_date?: boolean;
 };

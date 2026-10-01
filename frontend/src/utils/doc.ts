@@ -1,5 +1,7 @@
 import { Doc } from 'fyo/model/doc';
 import { Field } from 'schemas/types';
+import { getDocPermissions } from 'src/frappe/api';
+import { call } from 'src/web/api';
 
 /** Loads the user's rights on a saved document, which shares, ownership and user permissions change. */
 export async function loadDocPermissions(doc: Doc) {
@@ -8,7 +10,7 @@ export async function loadDocPermissions(doc: Doc) {
     return;
   }
 
-  doc.docPermissions = await doc.fyo.db.getDocPermissions(doctype, doc.name!);
+  doc.docPermissions = await getDocPermissions(doctype, doc.name!);
 }
 
 /**
@@ -99,6 +101,10 @@ function evaluateFieldMeta(
     return value;
   }
 
+  if (meta !== 'invisible' && doc?.hasFieldRule(field.fieldname, meta)) {
+    return true;
+  }
+
   const docRecord = doc as Record<string, unknown> | undefined;
   const metaKey = meta as string;
   const metaObj = docRecord?.[metaKey] as
@@ -111,11 +117,25 @@ function evaluateFieldMeta(
   return defaultValue;
 }
 
-/** Names of the documents linking to `doc`, newest first, by schema. */
+/** Names of the documents linking to `doc`, newest first, by schema in schema order. */
 export async function getLinkedEntries(
   doc: Doc
 ): Promise<Record<string, string[]>> {
-  return await doc.fyo.db.getLinkedEntries(doc.schemaName, doc.name!);
+  const doctypes = doc.fyo.store.permissions?.doctypes ?? {};
+  const linked = await call<Record<string, string[]>>(
+    'frappe_books.linked_entries.get_linked_entries',
+    { doctype: doctypes[doc.schemaName], name: doc.name }
+  );
+
+  const entries: Record<string, string[]> = {};
+  for (const [schemaName, doctype] of Object.entries(doctypes)) {
+    const names = linked[doctype ?? ''];
+    if (names?.length) {
+      entries[schemaName] = names;
+    }
+  }
+
+  return entries;
 }
 
 /** Whether a field holds a value worth showing; an unchecked box does not. */

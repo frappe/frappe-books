@@ -45,7 +45,7 @@
       <section class="order-1 min-w-0 space-y-5 md:order-2" aria-label="Payment details">
         <Currency
           :df="{
-            ...fyo.fieldMap.PaymentFor.amount,
+            ...getField('PaymentFor', 'amount')!,
             label: sinvDoc.isReturn ? t`Refund amount` : t`Paid amount`,
           }"
           :show-label="true"
@@ -67,7 +67,7 @@
           <div class="grid gap-4 sm:grid-cols-2">
             <Data
               v-if="showReferenceField"
-              :df="fyo.fieldMap.Payment.referenceId"
+              :df="getField('Payment', 'reference_id')!"
               :show-label="true"
               :border="true"
               :required="true"
@@ -79,7 +79,7 @@
 
             <DateControl
               v-if="showClearanceDate"
-              :df="fyo.fieldMap.Payment.clearanceDate"
+              :df="getField('Payment', 'clearance_date')!"
               :show-label="true"
               :border="true"
               :required="true"
@@ -154,12 +154,11 @@
 
 <script lang="ts">
 import Modal from 'src/components/POS/POSDialog.vue';
-import { SalesInvoice } from 'models/baseModels/SalesInvoice/SalesInvoice';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
 } from 'models/baseModels/PaymentMethod/requirements';
-import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import Currency from 'src/components/Controls/Currency.vue';
 import Data from 'src/components/Controls/Data.vue';
@@ -167,6 +166,8 @@ import DateControl from 'src/components/Controls/Date.vue';
 import PaymentMethodSelector from 'src/components/POS/PaymentMethodSelector.vue';
 import PaymentSummary from 'src/components/POS/PaymentSummary.vue';
 import { PaymentMethodOption } from 'src/components/POS/types';
+import { getAllDocuments } from 'src/frappe/api';
+import { getField } from 'src/frappe/registry';
 import { isMobile } from 'src/utils/viewport';
 import MobilePayment from './MobilePayment.vue';
 import { fyo } from 'src/initFyo';
@@ -235,7 +236,7 @@ export default defineComponent({
       );
       return getPaymentMethodRequirements(
         selectedMethod?.type,
-        selectedMethod?.requiresClearanceDate
+        selectedMethod?.requires_clearance_date
       );
     },
     showReferenceField(): boolean {
@@ -245,10 +246,10 @@ export default defineComponent({
       return this.paymentRequirements.requiresClearanceDate;
     },
     balanceAmount(): Money {
-      return (this.sinvDoc.grandTotal ?? fyo.pesa(0)).sub(this.paidAmount);
+      return (this.sinvDoc.grand_total ?? fyo.pesa(0)).sub(this.paidAmount);
     },
     paidChange(): Money {
-      return this.paidAmount.sub(this.sinvDoc.grandTotal ?? fyo.pesa(0));
+      return this.paidAmount.sub(this.sinvDoc.grand_total ?? fyo.pesa(0));
     },
     showBalanceAmount(): boolean {
       return this.paidAmount.float > 0 && this.balanceAmount.isPositive();
@@ -295,14 +296,15 @@ export default defineComponent({
     },
   },
   methods: {
+    getField,
     async initializePayment() {
       this.$emit('setPaidAmount', this.getDefaultPaymentAmount());
       await this.setPaymentMethods();
     },
     getDefaultPaymentAmount(): Money {
       const outstandingAmount =
-        this.sinvDoc.outstandingAmount ?? this.fyo.pesa(0);
-      const grandTotal = this.sinvDoc.grandTotal ?? this.fyo.pesa(0);
+        this.sinvDoc.outstanding_amount ?? this.fyo.pesa(0);
+      const grandTotal = this.sinvDoc.grand_total ?? this.fyo.pesa(0);
 
       return (
         outstandingAmount.isZero() ? grandTotal : outstandingAmount
@@ -321,7 +323,7 @@ export default defineComponent({
       );
       const requirements = getPaymentMethodRequirements(
         selectedMethod?.type,
-        selectedMethod?.requiresClearanceDate
+        selectedMethod?.requires_clearance_date
       );
       if (requirements.isCash) {
         this.$emit('setTransferRefNo', '');
@@ -331,10 +333,9 @@ export default defineComponent({
       }
     },
     async setPaymentMethods() {
-      const methods = (await this.fyo.db.getAll(ModelNameEnum.PaymentMethod, {
-        fields: ['name', 'type', 'requiresClearanceDate'],
+      this.paymentMethods = (await getAllDocuments('Books Payment Method', {
+        fields: ['name', 'type', 'requires_clearance_date'],
       })) as PaymentMethodOption[];
-      this.paymentMethods = methods;
     },
     submitTransaction() {
       this.$emit('createTransaction');

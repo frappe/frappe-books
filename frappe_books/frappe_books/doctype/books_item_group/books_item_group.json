@@ -25,23 +25,23 @@
    "label": "Image"
   },
   {
-   "description": "Tax",
    "fieldname": "tax",
    "fieldtype": "Link",
    "label": "Tax",
-   "options": "Books Tax"
+   "options": "Books Tax",
+   "placeholder": "Tax"
   },
   {
-   "description": "HSN/SAC Code",
    "fieldname": "hsn_code",
    "fieldtype": "Data",
-   "label": "HSN/SAC"
+   "label": "HSN/SAC",
+   "placeholder": "HSN/SAC Code"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-28 07:25:34.948290",
+ "modified": "2026-09-30 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item Group",

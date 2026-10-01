@@ -80,8 +80,7 @@
 <script lang="ts">
 import { t } from 'fyo';
 import { Button as FrappeButton, Tooltip as FrappeTooltip } from 'frappe-ui';
-import { ModelNameEnum } from 'models/types';
-import { fyo } from 'src/initFyo';
+import { getDoctypeLabel, toSchemaName } from 'src/frappe/registry';
 import {
   getInvoiceListFilters,
   getInvoiceSummary,
@@ -104,7 +103,6 @@ export default defineComponent({
   },
   extends: BaseDashboardChart,
   props: {
-    schemaName: { type: String as PropType<string>, required: true },
     doctype: { type: String as PropType<string>, required: true },
     darkMode: { type: Boolean, default: false },
   },
@@ -116,7 +114,7 @@ export default defineComponent({
   },
   computed: {
     title(): string {
-      return fyo.schemaMap[this.schemaName]?.label ?? '';
+      return getDoctypeLabel(this.doctype);
     },
     paid(): number {
       return this.summary?.paid ?? 0;
@@ -140,7 +138,7 @@ export default defineComponent({
       return (this.paid / (this.summary?.total || 1)) * 100;
     },
     color(): 'blue' | 'pink' {
-      if (this.schemaName === ModelNameEnum.SalesInvoice) {
+      if (this.doctype === 'Books Sales Invoice') {
         return 'blue';
       }
       return 'pink';
@@ -167,11 +165,11 @@ export default defineComponent({
         return;
       }
 
-      const schemaLabel = fyo.schemaMap[this.schemaName]?.label ?? '';
+      const schemaLabel = this.title;
       const label =
         type === 'paid' ? t`Paid ${schemaLabel}` : t`Unpaid ${schemaLabel}`;
       const filters = getInvoiceListFilters(this.summary, type === 'paid');
-      const path = `/list/${this.schemaName}/${label}`;
+      const path = `/list/${toSchemaName(this.doctype)}/${label}`;
       await routeTo({ path, query: { filters: JSON.stringify(filters) } });
     },
     async setData() {

@@ -1,4 +1,5 @@
 import type { Field } from 'schemas/types';
+import { getModel, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import type { QueryFilter } from 'utils/db/types';
 import { markRaw } from 'vue';
@@ -23,8 +24,8 @@ export class ListFilters {
   constructor(schemaName: string) {
     this.fields = markRaw(
       getFilterFields(
-        fyo.schemaMap[schemaName]?.fields ?? [],
-        fyo.models[schemaName]?.getListViewSettings?.(fyo)?.columns
+        getSchema(schemaName)?.fields ?? [],
+        getModel(schemaName)?.getListViewSettings?.(fyo)?.columns
       )
     );
     this.fieldOptions = markRaw(

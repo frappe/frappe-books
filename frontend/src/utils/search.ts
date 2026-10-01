@@ -4,6 +4,18 @@ import { groupBy } from 'lodash';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports';
 import { OptionField } from 'schemas/types';
+import type { DocValues } from 'src/frappe/api';
+import {
+  getAllSchemaNames,
+  getField,
+  getSchema,
+  toSchemaName,
+} from 'src/frappe/registry';
+import {
+  getSearchables,
+  searchDocuments,
+  type Searchable,
+} from 'src/frappe/search';
 import { getImportableSchemaNames } from 'src/importer';
 import { createFilters, routeFilters } from 'src/utils/filters';
 import { safeParseFloat } from 'utils/index';
@@ -39,17 +51,9 @@ export type SearchItems = (DocSearchItem | SearchItem | RecentSearchItem)[];
 
 const DOC_RESULT_LIMIT = 20;
 
-interface Searchable {
-  schemaName: string;
-  fields: string[];
-  meta: string[];
-  isChild: boolean;
-  isSubmittable: boolean;
-}
-
 interface Keyword {
   values: string[];
-  meta: Record<string, string | boolean | undefined>;
+  meta: Record<string, string | number | undefined>;
   priority: number;
 }
 
@@ -89,7 +93,7 @@ export const groupThemeMap: Record<
 };
 
 function getCreateList(fyo: Fyo): SearchItem[] {
-  const hasInventory = fyo.doc.singles.AccountingSettings?.enableInventory;
+  const hasInventory = fyo.singles.AccountingSettings?.enable_inventory;
   const formEditCreateList = [
     ModelNameEnum.SalesInvoice,
     ModelNameEnum.PurchaseInvoice,
@@ -104,7 +108,7 @@ function getCreateList(fyo: Fyo): SearchItem[] {
   ].map(
     (schemaName) =>
       ({
-        label: fyo.schemaMap[schemaName]?.label,
+        label: getSchema(schemaName)?.label,
         group: 'Create',
         action: () => openNewDoc(schemaName),
         schemaName,
@@ -169,7 +173,7 @@ function getCreateList(fyo: Fyo): SearchItem[] {
 
 function getReportList(fyo: Fyo): SearchItem[] {
   const hasGstin = !!fyo.singles?.AccountingSettings?.gstin;
-  const hasInventory = !!fyo.singles?.AccountingSettings?.enableInventory;
+  const hasInventory = !!fyo.singles?.AccountingSettings?.enable_inventory;
   const reportNames = Object.keys(reports) as (keyof typeof reports)[];
   return reportNames
     .filter((r) => {
@@ -205,10 +209,10 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     ModelNameEnum.AccountingLedgerEntry,
     ModelNameEnum.Currency,
     ModelNameEnum.NumberSeries,
-    ModelNameEnum.PrintTemplate,
+    ModelNameEnum.PrintFormat,
   ];
 
-  if (fyo.doc.singles.AccountingSettings?.enableInventory) {
+  if (fyo.singles.AccountingSettings?.enable_inventory) {
     schemaNames.push(
       ModelNameEnum.StockMovement,
       ModelNameEnum.Shipment,
@@ -218,26 +222,26 @@ function getListViewList(fyo: Fyo): SearchItem[] {
     );
   }
 
-  if (fyo.doc.singles.AccountingSettings?.enablePriceList) {
+  if (fyo.singles.AccountingSettings?.enable_price_list) {
     schemaNames.push(ModelNameEnum.PriceList);
   }
 
-  if (fyo.singles.InventorySettings?.enableBatches) {
+  if (fyo.singles.InventorySettings?.enable_batches) {
     schemaNames.push(ModelNameEnum.Batch);
   }
 
-  if (fyo.singles.InventorySettings?.enableSerialNumber) {
+  if (fyo.singles.InventorySettings?.enable_serial_number) {
     schemaNames.push(ModelNameEnum.SerialNumber);
   }
 
-  if (fyo.doc.singles.AccountingSettings?.enableFormCustomization) {
+  if (fyo.singles.AccountingSettings?.enable_form_customization) {
     schemaNames.push(ModelNameEnum.CustomForm);
   }
 
-  schemaNames = Object.keys(fyo.schemaMap) as ModelNameEnum[];
+  schemaNames = getAllSchemaNames() as ModelNameEnum[];
 
   const standardLists = schemaNames
-    .map((s) => fyo.schemaMap[s])
+    .map((s) => getSchema(s))
     .filter((s) => s && !s.isChild && !s.isSingle)
     .map(
       (s) =>
@@ -532,7 +536,7 @@ export class Search {
     return Object.values(this.searchables)
       .map(({ schemaName, isChild, isSubmittable }) => ({
         value: schemaName,
-        label: this.fyo.schemaMap[schemaName]?.label ?? schemaName,
+        label: getSchema(schemaName)?.label ?? schemaName,
         index: isSubmittable ? 0 : isChild ? 2 : 1,
       }))
       .sort((a, b) => a.index - b.index);
@@ -632,22 +636,21 @@ export class Search {
       this._isSearchable(searchable)
     );
     const text = input?.trim();
-    const results =
-      text && searchables.length
-        ? await this.fyo.db.search(
-            text,
-            searchables.map((s) => s.schemaName),
-            DOC_RESULT_LIMIT
+    const results = text
+      ? await Promise.all(
+          searchables.map((searchable) =>
+            searchDocuments(searchable, text, DOC_RESULT_LIMIT)
           )
-        : {};
+        )
+      : [];
     if (requestId !== this._docRequestId) {
       return false;
     }
 
     this.keywords = {};
-    for (const searchable of searchables) {
-      this._setKeywords(results[searchable.schemaName] ?? [], searchable);
-    }
+    searchables.forEach((searchable, index) =>
+      this._setKeywords(results[index] ?? [], searchable)
+    );
 
     this._setIntermediate([]);
     return true;
@@ -894,7 +897,7 @@ export class Search {
 
   _getDocSearchItemFromKeyword(keyword: Keyword): DocSearchItem {
     const schemaName = keyword.meta.schemaName as string;
-    const schemaLabel = this.fyo.schemaMap[schemaName]?.label ?? schemaName;
+    const schemaLabel = getSchema(schemaName)?.label ?? schemaName;
     const route = this._getRouteFromKeyword(keyword);
     return {
       label: keyword.values[0],
@@ -933,34 +936,12 @@ export class Search {
   }
 
   _setSearchables() {
-    for (const [schemaName, fields] of Object.entries(
-      this.fyo.store.searchFields
-    )) {
-      const schema = this.fyo.schemaMap[schemaName];
-      if (!schema || !fields?.length || this.searchables[schemaName]) {
-        continue;
-      }
-
-      const meta = [];
-      if (schema.isChild) {
-        meta.push('parent', 'parentSchemaName');
-      }
-
-      if (schema.isSubmittable) {
-        meta.push('submitted', 'cancelled');
-      }
-
-      this.searchables[schemaName] = {
-        schemaName,
-        fields,
-        meta,
-        isChild: !!schema.isChild,
-        isSubmittable: !!schema.isSubmittable,
-      };
+    for (const searchable of getSearchables()) {
+      this.searchables[searchable.schemaName] ??= searchable;
     }
   }
 
-  _setKeywords(maps: RawValueMap[], searchable: Searchable) {
+  _setKeywords(maps: DocValues[], searchable: Searchable) {
     if (!maps?.length) {
       return;
     }
@@ -977,15 +958,11 @@ export class Search {
     this._setPriority(searchable);
   }
 
-  _setKeywordValues(
-    map: RawValueMap,
-    searchable: Searchable,
-    keyword: Keyword
-  ) {
+  _setKeywordValues(map: DocValues, searchable: Searchable, keyword: Keyword) {
     // Set individual field values
     for (const fn of searchable.fields) {
       let value = map[fn] as string | undefined;
-      const field = this.fyo.getField(searchable.schemaName, fn);
+      const field = getField(searchable.schemaName, fn);
 
       const { options } = field as OptionField;
       if (options) {
@@ -996,20 +973,16 @@ export class Search {
     }
   }
 
-  _setMeta(map: RawValueMap, searchable: Searchable, keyword: Keyword) {
-    // Set the meta map
-    for (const fn of searchable.meta) {
-      const meta = map[fn];
-      if (typeof meta === 'number' || typeof meta === 'boolean') {
-        keyword.meta[fn] = Boolean(meta);
-      } else if (typeof meta === 'string') {
-        keyword.meta[fn] = meta;
-      }
+  _setMeta(map: DocValues, searchable: Searchable, keyword: Keyword) {
+    keyword.meta.schemaName = searchable.schemaName;
+    if (searchable.isSubmittable) {
+      keyword.meta.docstatus = Number(map.docstatus);
     }
 
-    keyword.meta.schemaName = searchable.schemaName;
-    if (keyword.meta.parent) {
-      keyword.values.unshift(keyword.meta.parent as string);
+    if (searchable.isChild && map.parent) {
+      keyword.meta.parent = String(map.parent);
+      keyword.meta.parentSchemaName = toSchemaName(String(map.parenttype));
+      keyword.values.unshift(keyword.meta.parent);
     }
   }
 
@@ -1020,11 +993,12 @@ export class Search {
     for (const k of keywords) {
       k.priority += basePriority;
 
-      if (k.meta.submitted) {
+      // Submitted and cancelled documents.
+      if (k.meta.docstatus) {
         k.priority += 25;
       }
 
-      if (k.meta.cancelled) {
+      if (k.meta.docstatus === 2) {
         k.priority -= 200;
       }
 

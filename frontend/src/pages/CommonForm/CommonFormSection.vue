@@ -40,7 +40,7 @@
             />
             <FormControl
               v-else
-              :ref="field.fieldname === 'name' ? 'nameField' : 'fields'"
+              :ref="field.fieldname === doc.schema.titleField ? 'nameField' : 'fields'"
               class="w-full"
               :invalid="Boolean(errors?.[field.fieldname])"
               :layout="field.fieldtype === 'Check' ? 'inline' : undefined"

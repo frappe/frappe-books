@@ -77,8 +77,8 @@ test('the cart lists every amount between net and grand total', async ({
   await page.evaluate(() => {
     const { fyo, state } = (window as any).posFixture;
     (window as any).posFixture.fillCart();
-    state.invoice.totalDiscount = fyo.pesa(250);
-    state.invoice.loyaltyPointsAmount = fyo.pesa(50);
+    state.invoice.total_discount = fyo.pesa(250);
+    state.invoice.loyalty_points_amount = fyo.pesa(50);
   });
   await page.getByRole('button', { name: /\d+ items?/ }).click();
   const cart = page.getByRole('dialog', { name: 'Cart', exact: true });

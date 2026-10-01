@@ -74,7 +74,7 @@
 </template>
 <script lang="ts">
 import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
-import { Doc } from 'fyo/model/doc';
+import type { Doc } from 'fyo/model/doc';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { getErrorMessage } from 'src/utils';
 import { evaluateHidden } from 'src/utils/doc';
@@ -93,7 +93,7 @@ export default defineComponent({
     Table,
   },
   props: {
-    doc: { type: Doc, required: true },
+    doc: { type: Object as PropType<Doc>, required: true },
     fields: { type: Array as PropType<Field[]>, default: () => [] },
     columnRatio: {
       type: Array as PropType<number[]>,

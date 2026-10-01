@@ -36,35 +36,31 @@
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Row Edit Tool bar -->
-    <div class="shrink-0 border-b border-outline-gray-1">
-      <div class="flex items-center justify-between px-4 h-16">
-        <!-- Close Button -->
-        <FrappeButton
-          icon="lucide-x"
-          :label="t`Close row editor`"
-          @click="$emit('close')"
-        />
-
-        <!-- Actions, Badge and Status Change Buttons -->
-        <div class="flex items-stretch gap-2">
-          <FrappeButton
-            v-if="previous >= 0"
-            icon="lucide-chevron-left"
-            :label="t`Previous row`"
-            @click="$emit('previous', previous)"
-          />
-          <FrappeButton
-            v-if="next >= 0"
-            icon="lucide-chevron-right"
-            :label="t`Next row`"
-            @click="$emit('next', next)"
-          />
-        </div>
-      </div>
-      <FormHeader
-        class="border-t border-outline-gray-1"
-        :form-title="t`Row ${index + 1}`"
-        :form-sub-title="fieldlabel"
+    <div
+      class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
+    >
+      <FrappeButton
+        icon="lucide-x"
+        :label="t`Close row editor`"
+        @click="$emit('close')"
+      />
+      <h2 class="truncate text-lg-semibold text-ink-gray-8">
+        {{ t`Row ${index + 1}` }}
+      </h2>
+      <span class="min-w-0 flex-1 truncate text-sm text-ink-gray-5">
+        {{ fieldlabel }}
+      </span>
+      <FrappeButton
+        v-if="previous >= 0"
+        icon="lucide-chevron-left"
+        :label="t`Previous row`"
+        @click="$emit('previous', previous)"
+      />
+      <FrappeButton
+        v-if="next >= 0"
+        icon="lucide-chevron-right"
+        :label="t`Next row`"
+        @click="$emit('next', next)"
       />
     </div>
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
@@ -86,7 +82,6 @@ import {
 } from 'frappe-ui';
 import { Doc } from 'fyo/model/doc';
 import { ValueError } from 'fyo/utils/errors';
-import FormHeader from 'src/components/FormHeader.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import RowDetailSheet from './RowDetailSheet.vue';
 import { evaluateReadOnly } from 'src/utils/doc';
@@ -104,7 +99,6 @@ export default defineComponent({
     FrappeBottomSheet,
     FrappeButton,
     FrappeScrollArea,
-    FormHeader,
     RowDetailSheet,
     TwoColumnForm,
   },

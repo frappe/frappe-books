@@ -146,20 +146,14 @@
   </FrappeBottomSheet>
   <div
     v-else
-    class="flex h-full w-quick-edit flex-col border-l border-outline-gray-1 bg-surface-base"
+    class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Page Header -->
-    <div class="flex h-16 shrink-0 items-center justify-between px-4">
-      <div class="flex items-center justify-between w-full">
-        <FrappeButton
-          icon="lucide-x"
-          :label="t`Close`"
-          @click="$emit('close')"
-        />
-        <p class="text-xl font-semibold text-ink-gray-6">
-          {{ t`Linked Entries` }}
-        </p>
-      </div>
+    <div class="flex h-12 shrink-0 items-center gap-2 px-3">
+      <FrappeButton icon="lucide-x" :label="t`Close`" @click="$emit('close')" />
+      <h2 class="truncate text-lg-semibold text-ink-gray-8">
+        {{ t`Linked Entries` }}
+      </h2>
     </div>
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">

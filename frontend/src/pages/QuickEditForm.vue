@@ -33,7 +33,7 @@
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Quick edit Tool bar -->
-    <div class="flex h-16 shrink-0 items-center justify-between px-4">
+    <div class="flex h-12 shrink-0 items-center justify-between px-3">
       <!-- Close Button  -->
       <FrappeButton
         icon="lucide-x"
@@ -55,7 +55,7 @@
       <!-- Name and image -->
       <div
         v-if="doc && (titleField || imageField)"
-        class="flex min-h-14 items-center gap-3 border-b border-t border-outline-gray-1 px-4 py-3"
+        class="flex min-h-14 items-center gap-3 border-b border-t border-outline-gray-1 p-3"
       >
         <AttachImage
           v-if="imageField"

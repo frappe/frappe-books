@@ -181,11 +181,15 @@ function getRecord(doctype: string, name: string): Row | undefined {
   return records[doctype]?.find((row) => row.name === name);
 }
 
-/** The doctype's records that match each `[field, operator, value]` filter. */
+/**
+ * The doctype's records that match each `[field, operator, value]` filter on
+ * a field they have; the items have no `track_item`, so every item lists.
+ */
 function getList(doctype: string, filters: Filter[] = []): Row[] {
   return (records[doctype] ?? []).filter((row) =>
-    filters.every(([field, operator, value]) =>
-      matches(row[field], operator, value)
+    filters.every(
+      ([field, operator, value]) =>
+        !(field in row) || matches(row[field], operator, value)
     )
   );
 }

@@ -21,7 +21,7 @@ import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem
 import { ItemQtyMap, ItemVisibility } from 'src/components/POS/types';
 import { getPOSInventory, validatePOSStock } from './inventory/posStock';
 import type { DocValues } from 'src/frappe/api';
-import { isFrappeBacked } from 'src/frappe/doctypes';
+import { getDocType, isFrappeBacked } from 'src/frappe/doctypes';
 import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
 
 const MAPPER_MODULES: Record<string, string> = {
@@ -324,7 +324,7 @@ export function getLedgerLink(
     },
     query: {
       defaultFilters: JSON.stringify({
-        referenceType: doc.schemaName,
+        referenceType: getDocType(doc.schemaName).doctype,
         referenceName: doc.name,
       }),
     },

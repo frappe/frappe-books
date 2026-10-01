@@ -1,10 +1,11 @@
+from zoneinfo import ZoneInfo
+
 import frappe
 from frappe import _
+from frappe.utils import get_datetime, get_system_timezone
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
-from frappe_books.ui_bridge.database import iso_datetime
-from frappe_books.ui_bridge.mapping import source_reference, target_reference
 
 DOCTYPE = "Books Stock Ledger Entry"
 LEDGER_FIELDS = [
@@ -80,7 +81,7 @@ def get_ledger_data(filters) -> list[dict]:
 		*datetime_conditions("date", filters.get("from_date"), filters.get("to_date")),
 	]
 	if filters.get("reference_type") and filters["reference_type"] != "All":
-		conditions.append(["reference_type", "=", target_reference(filters["reference_type"])])
+		conditions.append(["reference_type", "=", filters["reference_type"]])
 	if filters.get("reference_name"):
 		conditions.append(["reference_name", "=", filters["reference_name"]])
 	direction = "asc" if filters.get("ascending") else "desc"
@@ -136,7 +137,7 @@ def _key_conditions(filters):
 def _ledger_row(entry):
 	quantity = as_decimal(entry.quantity)
 	return {
-		"date": iso_datetime(entry.date),
+		"date": _system_time(entry.date),
 		"item": entry.item,
 		"location": entry.location,
 		"batch": entry.batch or "",
@@ -148,8 +149,13 @@ def _ledger_row(entry):
 		"balance_value": as_decimal(entry.balance_value),
 		"value_change": as_decimal(entry.value_change),
 		"reference_name": entry.reference_name,
-		"reference_type": source_reference(entry.reference_type),
+		"reference_type": entry.reference_type,
 	}
+
+
+def _system_time(value):
+	"""An entry's time with the system time zone, which /books shows in the browser's."""
+	return get_datetime(value).replace(tzinfo=ZoneInfo(get_system_timezone())).isoformat()
 
 
 def _incoming_rate(rate, value_change, quantity):

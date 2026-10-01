@@ -1,5 +1,6 @@
 import type { Report } from 'reports/Report';
 import type { PhoneLayout, ReportRow } from 'reports/types';
+import { toSchemaName } from 'src/frappe/registry';
 import { isNumeric } from 'src/utils';
 
 export interface RowDetail {
@@ -46,16 +47,14 @@ export function getRowDetails(report: Report, row: ReportRow): RowDetail[] {
 export function getRowReference(report: Report, row: ReportRow) {
   const getRaw = (fieldname: string) =>
     row.cells[getColumnIndex(report, fieldname)]?.rawValue;
-  const schemaName = getRaw('reference_type');
+  const doctype = getRaw('reference_type');
   const name = getRaw('reference_name');
-  if (typeof schemaName !== 'string' || typeof name !== 'string' || !name) {
+  if (typeof doctype !== 'string' || typeof name !== 'string' || !name) {
     return null;
   }
 
-  if (
-    !report.fyo.schemaMap[schemaName] ||
-    !report.fyo.can(schemaName, 'read')
-  ) {
+  const schemaName = toSchemaName(doctype);
+  if (!schemaName || !report.fyo.can(schemaName, 'read')) {
     return null;
   }
 

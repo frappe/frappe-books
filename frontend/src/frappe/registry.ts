@@ -86,6 +86,12 @@ export function toSchemaName(name: string): string | undefined {
   return schemaName && getSchema(schemaName) ? schemaName : undefined;
 }
 
+/** The label /books shows for a doctype: its schema's, e.g. `Sales Invoice` for `Books Sales Invoice`. */
+export function getDoctypeLabel(doctype: string): string {
+  const schemaName = toSchemaName(doctype);
+  return (schemaName && getSchema(schemaName)?.label) || doctype;
+}
+
 /** The model whose statics (actions, list settings, link filters) present a schema. */
 export function getModel(schemaName: string): typeof Doc | undefined {
   return isFrappeBacked(schemaName)

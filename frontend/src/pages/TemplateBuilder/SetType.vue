@@ -26,9 +26,11 @@
 </template>
 <script lang="ts">
 import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
+import { ModelNameEnum } from 'models/types';
 import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { OptionField, SelectOption } from 'schemas/types';
 import Select from 'src/components/Controls/Select.vue';
+import { getField } from 'src/frappe/registry';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
@@ -39,26 +41,19 @@ export default defineComponent({
   },
   emits: ['update:open'],
   data() {
-    return { type: 'SalesInvoice' };
+    return { type: '' };
   },
   computed: {
     df(): OptionField {
-      const options = PrintFormat.lists.docType?.(this.doc) ?? [];
-      const firstOption = options[0];
-      return {
-        ...this.fyo.getField('PrintFormat', 'docType'),
-        options,
-        fieldtype: 'Select',
-        default:
-          typeof firstOption === 'string' ? firstOption : firstOption?.value,
-      } as OptionField;
+      const field = getField(ModelNameEnum.PrintFormat, 'doc_type');
+      return { ...field, fieldtype: 'Select' } as OptionField;
     },
   },
   watch: {
     open: {
       handler(open: boolean) {
         if (open) {
-          this.type = this.doc.docType ?? 'SalesInvoice';
+          this.type = this.doc.doc_type ?? (this.df.default as string);
         }
       },
       immediate: true,
@@ -76,7 +71,7 @@ export default defineComponent({
       this.type = v;
     },
     async done() {
-      await this.doc.set('docType', this.type);
+      await this.doc.set('doc_type', this.type);
       this.$emit('update:open', false);
     },
   },

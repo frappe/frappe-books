@@ -5,6 +5,11 @@ import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import { PartyRoleEnum } from '../Party/types';
 
+/** Print Formats of `doctype`, which a print template picker offers. */
+function printFormatFilter(doctype: string) {
+  return () => ({ doc_type: doctype });
+}
+
 /** Books Defaults, served by Frappe: what new documents start with. */
 export class Defaults extends FrappeDoc {
   static override doctype = 'Books Defaults';
@@ -69,25 +74,19 @@ export class Defaults extends FrappeDoc {
     purchase_receipt_number_series: () => ({
       reference_type: ModelNameEnum.PurchaseReceipt,
     }),
-    sales_quote_print_template: () => ({ docType: ModelNameEnum.SalesQuote }),
-    sales_invoice_print_template: () => ({
-      docType: ModelNameEnum.SalesInvoice,
-    }),
-    pos_print_template: () => ({ docType: ModelNameEnum.SalesInvoice }),
-    purchase_invoice_print_template: () => ({
-      docType: ModelNameEnum.PurchaseInvoice,
-    }),
-    journal_entry_print_template: () => ({
-      docType: ModelNameEnum.JournalEntry,
-    }),
-    payment_print_template: () => ({ docType: ModelNameEnum.Payment }),
-    shipment_print_template: () => ({ docType: ModelNameEnum.Shipment }),
-    purchase_receipt_print_template: () => ({
-      docType: ModelNameEnum.PurchaseReceipt,
-    }),
-    stock_movement_print_template: () => ({
-      docType: ModelNameEnum.StockMovement,
-    }),
+    sales_quote_print_template: printFormatFilter('Books Sales Quote'),
+    sales_invoice_print_template: printFormatFilter('Books Sales Invoice'),
+    pos_print_template: printFormatFilter('Books Sales Invoice'),
+    purchase_invoice_print_template: printFormatFilter(
+      'Books Purchase Invoice'
+    ),
+    journal_entry_print_template: printFormatFilter('Books Journal Entry'),
+    payment_print_template: printFormatFilter('Books Payment'),
+    shipment_print_template: printFormatFilter('Books Shipment'),
+    purchase_receipt_print_template: printFormatFilter(
+      'Books Purchase Receipt'
+    ),
+    stock_movement_print_template: printFormatFilter('Books Stock Movement'),
     pos_customer: () => ({ role: PartyRoleEnum.Customer }),
   };
 

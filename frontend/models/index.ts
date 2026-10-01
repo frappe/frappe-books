@@ -64,7 +64,6 @@ export const models = {
   AppliedCouponCodes,
   SalesQuote,
   SalesQuoteItem,
-  PrintFormat,
   TaxSummary,
   // POS Models
   ClosingAmounts,
@@ -109,6 +108,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   PaymentMethod,
   PriceList,
   PricingRule,
+  PrintFormat,
   PrintSettings,
   PurchaseReceipt,
   SerialNumber,

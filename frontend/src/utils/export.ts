@@ -10,6 +10,7 @@ import { getNamingField } from 'src/frappe/schema';
 import { toIsoDatetime } from 'src/frappe/values';
 import { generateCSV } from 'utils/csvParser';
 import { QueryFilter } from 'utils/db/types';
+import { safeParseFloat } from 'utils/index';
 import { expandDocStatus } from './filterFields';
 import { ExportField, ExportTableField } from './types';
 
@@ -237,7 +238,9 @@ function getExportKey(schemaName: string, fieldname: string): string {
 /**
  * How a file holds a field's value, as Books wrote it: Submitted and
  * Cancelled for the docstatus, datetimes in ISO with the system offset
- * (`modified` as Frappe sends it), and doctypes by their schema names.
+ * (`modified` as Frappe sends it), doctypes by their schema names, amounts
+ * as numbers (0 for a virtual one, which a list does not read), and null
+ * for another value it does not read.
  */
 function getValueReader(
   schemaName: string,
@@ -256,7 +259,11 @@ function getValueReader(
     return (values) => toSchemaReference(values[fieldname]);
   }
 
-  return (values) => values[fieldname];
+  if (fieldtype === FieldTypeEnum.Currency) {
+    return (values) => safeParseFloat(values[fieldname] ?? 0);
+  }
+
+  return (values) => values[fieldname] ?? null;
 }
 
 function isReference(schemaName: string, fieldname: string): boolean {

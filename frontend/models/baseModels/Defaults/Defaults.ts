@@ -42,7 +42,9 @@ export class Defaults extends FrappeDoc {
       'pos_print_template',
     ]),
   };
-  static override rowModels = { pos_cash_denominations: DefaultCashDenominations };
+  static override rowModels = {
+    pos_cash_denominations: DefaultCashDenominations,
+  };
 
   declare sales_payment_account?: string;
   declare purchase_payment_account?: string;

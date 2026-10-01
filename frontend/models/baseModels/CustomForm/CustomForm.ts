@@ -2,15 +2,15 @@ import { Fyo } from 'fyo';
 import { HiddenMap, ListsMap, ListViewSettings } from 'fyo/model/types';
 import { Field, Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
-import { getSchema } from 'src/frappe/registry';
+import { getDoctypeLabel, getSchema, toSchemaName } from 'src/frappe/registry';
 import type { Presentation } from 'src/frappe/schema';
 import { getMapFromList } from 'utils/index';
 import { CustomField } from './CustomField';
-import { getCustomizableSchemas } from './customizable';
+import { getCustomizableForms } from './customizable';
 
 /**
- * Books Custom Form, served by Frappe. It is named after the schema whose
- * form it customizes; its rows name Books schemas and fields.
+ * Books Custom Form, served by Frappe. It is named after the DocType whose
+ * form it customizes; its rows name DocTypes and Frappe fieldnames.
  */
 export class CustomForm extends FrappeDoc {
   static override doctype = 'Books Custom Form';
@@ -24,7 +24,11 @@ export class CustomForm extends FrappeDoc {
   declare custom_fields?: CustomField[];
 
   get parentSchema(): Schema | null {
-    return getSchema(this.name ?? '') ?? null;
+    return getSchema(toSchemaName(this.name ?? '') ?? '') ?? null;
+  }
+
+  override get formTitle(): string {
+    return this.name ? getDoctypeLabel(this.name) : '';
   }
 
   get parentFields(): Record<string, Field> {
@@ -32,11 +36,7 @@ export class CustomForm extends FrappeDoc {
   }
 
   static lists: ListsMap = {
-    name: () =>
-      getCustomizableSchemas().map(({ name, label }) => ({
-        value: name,
-        label: label!,
-      })),
+    name: () => getCustomizableForms(),
   };
 
   static getListViewSettings(fyo: Fyo): ListViewSettings {
@@ -47,8 +47,7 @@ export class CustomForm extends FrappeDoc {
           fieldname: 'name',
           fieldtype: 'AutoComplete',
           display(value) {
-            const schemaName = String(value ?? '');
-            return getSchema(schemaName)?.label ?? schemaName;
+            return getDoctypeLabel(String(value ?? ''));
           },
         },
       ],

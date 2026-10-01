@@ -6,16 +6,6 @@ import unicodedata
 import frappe
 from frappe import _
 
-from frappe_books.ui_bridge.field_properties import get_docfield_properties
-from frappe_books.ui_bridge.mapping import (
-	CUSTOM_FIELD_PREFIX,
-	custom_target_field,
-	schema_mapping,
-	target_doctype,
-	target_field,
-	target_reference,
-)
-
 FIELD_TYPE_MAP = {
 	"AttachImage": "Attach Image",
 	"Attachment": "Attach",
@@ -23,19 +13,18 @@ FIELD_TYPE_MAP = {
 	"DynamicLink": "Dynamic Link",
 }
 BOOKS_FIELD_TYPES = {fieldtype: books_fieldtype for books_fieldtype, fieldtype in FIELD_TYPE_MAP.items()}
-# The row field that holds a Custom Field's options, by Books field type.
+# The row field that holds a Custom Field's options, by Books field type: a DocType, or the field naming one.
 ROW_OPTIONS_FIELDS = {"Link": "target", "Table": "target", "DynamicLink": "references"}
-PROTECTED_SCHEMAS = {
-	"AccountingLedgerEntry",
-	"CustomField",
-	"CustomForm",
-	"LoyaltyPointEntry",
-	"SetupWizard",
-	"StockLedgerEntry",
+PROTECTED_DOCTYPES = {
+	"Books Custom Field",
+	"Books Custom Form",
+	"Books Ledger Entry",
+	"Books Loyalty Point Entry",
+	"Books Setup Wizard",
+	"Books Stock Ledger Entry",
 }
 OPTION_FIELDTYPES = {"Select", "AutoComplete"}
-# The row field a field type needs, as the /books form asks for it.
-REQUIRED_ROW_FIELDS = {"Link": "target", "Table": "target", "DynamicLink": "references"}
+CUSTOM_FIELD_PREFIX = "custom_books_"
 
 # A word as lodash's `words` finds it, after `deburr`: /books named custom fields with `camelCase`.
 _BREAKS = r"\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\xbf\xd7\xf7\u2000-\u206f\s\ufeff\u180e"
@@ -92,13 +81,21 @@ def set_custom_fieldnames(doc):
 
 
 def validate_custom_form(doc):
+	"""A Books Custom Form is named after the DocType it adds fields to."""
 	if not frappe.db.get_single_value("Books Accounting Settings", "enable_form_customization"):
 		frappe.throw(_("Enable form customization in Accounting Settings to customize forms."))
-	if doc.name in PROTECTED_SCHEMAS or frappe.get_meta(target_doctype(doc.name)).issingle:
+	if not _is_customizable(doc.name):
 		frappe.throw(_("{0} cannot be customized.").format(doc.name))
 	_validate_unique_fieldnames(doc.custom_fields)
+	meta = frappe.get_meta(doc.name)
 	for row in doc.custom_fields:
-		_validate_custom_field(doc.name, row)
+		_validate_custom_field(meta, row)
+
+
+def _is_customizable(doctype: str) -> bool:
+	if doctype in PROTECTED_DOCTYPES or not frappe.db.exists("DocType", doctype):
+		return False
+	return not frappe.get_meta(doctype).issingle
 
 
 def _validate_unique_fieldnames(rows):
@@ -111,10 +108,10 @@ def _validate_unique_fieldnames(rows):
 		first_rows[row.fieldname] = row
 
 
-def _validate_custom_field(source_schema: str, row):
-	if row.fieldname in schema_mapping()[source_schema]["fields"]:
-		frappe.throw(_("Fieldname {0} already exists for {1}").format(row.fieldname, source_schema))
-	if (required := REQUIRED_ROW_FIELDS.get(row.fieldtype)) and not row.get(required):
+def _validate_custom_field(meta, row):
+	if (docfield := meta.get_field(row.fieldname)) and not docfield.get("is_custom_field"):
+		frappe.throw(_("Fieldname {0} already exists for {1}").format(row.fieldname, meta.name))
+	if (required := ROW_OPTIONS_FIELDS.get(row.fieldtype)) and not row.get(required):
 		label = _(frappe.get_meta("Books Custom Field").get_label(required))
 		frappe.throw(_("Custom field {0} needs a {1}.").format(row.label, label))
 	if row.is_required and not row.default:
@@ -124,9 +121,9 @@ def _validate_custom_field(source_schema: str, row):
 		frappe.throw(_("Custom field {0} needs at least two options.").format(row.label))
 
 
-def get_saved_definition(source_schema: str, fieldname: str) -> dict:
+def get_saved_definition(doctype: str, fieldname: str) -> dict:
 	"""Return the row values of a custom field's saved Custom Field, or none before it is saved."""
-	docfield = frappe.get_meta(target_doctype(source_schema)).get_field(custom_target_field(fieldname))
+	docfield = frappe.get_meta(doctype).get_field(custom_target_field(fieldname))
 	if not docfield:
 		return {}
 
@@ -140,51 +137,38 @@ def get_saved_definition(source_schema: str, fieldname: str) -> dict:
 		"target": None,
 		"references": None,
 	}
-	# Link, Table and Dynamic Link options take their /books names.
-	options = get_docfield_properties(source_schema, docfield).get("options")
-	definition[ROW_OPTIONS_FIELDS.get(fieldtype, "options")] = options
+	definition[ROW_OPTIONS_FIELDS.get(fieldtype, "options")] = docfield.options
 	return definition
 
 
 def update_custom_fields(doc):
 	"""Save each row's definition in its Custom Field and delete those of removed rows."""
-	target = target_doctype(doc.name)
 	for row in doc.custom_fields:
-		_save_custom_field(target, _custom_field_values(doc.name, row, doc.custom_fields))
-	_remove_stale_custom_fields(target, {custom_target_field(row.fieldname) for row in doc.custom_fields})
-	frappe.clear_cache(doctype=target)
+		_save_custom_field(doc.name, _custom_field_values(row))
+	_remove_stale_custom_fields(doc.name, {custom_target_field(row.fieldname) for row in doc.custom_fields})
+	frappe.clear_cache(doctype=doc.name)
 
 
-def remove_custom_fields(source_schema: str):
-	target = target_doctype(source_schema)
-	_remove_stale_custom_fields(target, set())
-	frappe.clear_cache(doctype=target)
+def remove_custom_fields(doctype: str):
+	_remove_stale_custom_fields(doctype, set())
+	frappe.clear_cache(doctype=doctype)
 
 
-def _custom_field_values(source_schema: str, row, rows) -> dict:
-	fieldtype = FIELD_TYPE_MAP.get(row.fieldtype, row.fieldtype)
-	values = {
+def custom_target_field(fieldname: str) -> str:
+	"""The fieldname of the Custom Field that holds a Books custom field."""
+	return f"{CUSTOM_FIELD_PREFIX}{frappe.scrub(fieldname)}"
+
+
+def _custom_field_values(row) -> dict:
+	return {
 		"fieldname": custom_target_field(row.fieldname),
 		"label": row.label,
-		"fieldtype": fieldtype,
+		"fieldtype": FIELD_TYPE_MAP.get(row.fieldtype, row.fieldtype),
 		"reqd": row.is_required,
 		"default": row.default,
-		"options": row.options,
+		"options": row.get(ROW_OPTIONS_FIELDS.get(row.fieldtype, "options")),
 		"is_system_generated": 1,
 	}
-
-	if fieldtype in {"Link", "Table"} and row.target:
-		values["options"] = target_reference(row.target)
-	elif fieldtype == "Dynamic Link" and row.references:
-		values["options"] = _reference_target(source_schema, row.references, rows)
-
-	return values
-
-
-def _reference_target(source_schema: str, references: str, rows) -> str:
-	if any(row.fieldname == references for row in rows):
-		return custom_target_field(references)
-	return target_field(source_schema, references)
 
 
 def _save_custom_field(target: str, values: dict):

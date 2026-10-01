@@ -16,6 +16,7 @@ import {
 import { getOpenFrappeDocs } from './documents';
 import { clearMeta, getMetaBundle, type DocTypeMeta } from './meta';
 import {
+  getCustomFieldname,
   getTableSchemaName,
   toSchema,
   type Placements,
@@ -103,7 +104,7 @@ export function getModel(schemaName: string): typeof Doc | undefined {
 async function loadDocType(schemaName: string, Model: FrappeModel) {
   const [bundle, placements] = await Promise.all([
     getMetaBundle(Model.doctype),
-    getPlacements(schemaName),
+    getPlacements(Model.doctype),
   ]);
   const byName = new Map(bundle.map((meta) => [meta.name, meta]));
   const docType = toDocType(
@@ -163,11 +164,11 @@ function toDocType(
   return { doctype: meta.name, meta, schema, Model, tables: {} };
 }
 
-/** Where /books puts each custom field of a schema, as its Books Custom Form says. */
-async function getPlacements(schemaName: string): Promise<Placements> {
+/** Where /books puts each custom field of a doctype, as its Books Custom Form says. */
+async function getPlacements(doctype: string): Promise<Placements> {
   const [form] = await getDocuments('Books Custom Form', {
     fields: [{ custom_fields: ['fieldname', 'section', 'tab'] }],
-    filters: [['name', '=', schemaName]],
+    filters: [['name', '=', doctype]],
   });
   const rows = (form?.custom_fields ?? []) as Placement[];
   return Object.fromEntries(
@@ -180,34 +181,33 @@ async function getPlacements(schemaName: string): Promise<Placements> {
 
 type Placement = { fieldname: string; section?: string; tab?: string };
 
-/** The Custom Field that holds a Books custom field, as `frappe_books.customization` names it. */
-function getCustomFieldname(fieldname: string): string {
-  return `custom_books_${fieldname.replace(/[ -]/g, '_').toLowerCase()}`;
-}
-
 /** Schema names by doctype: each model's. */
 function getSchemaNames(): Record<string, string | undefined> {
   return Object.fromEntries(
-    Object.entries(getSchemaDoctypes()).map(([name, doctype]) => [doctype, name])
+    Object.entries(getSchemaDoctypes()).map(([name, doctype]) => [
+      doctype,
+      name,
+    ])
   );
 }
 
-/** Shows a customized form's new fields: reloads the doctype that has the customized schema. */
+/** Shows a customized form's new fields: reloads the doctypes that show or hold the customized doctype. */
 async function reloadCustomized(customized: unknown) {
   for (const [schemaName, Model] of getFrappeModels()) {
     const docType = getDocType(schemaName);
-    const tables = Object.values(docType.tables).map(
-      (table) => table!.schema.name
+    const doctypes = [docType, ...Object.values(docType.tables)].map(
+      (shown) => shown!.doctype
     );
-    if (customized !== schemaName && !tables.includes(customized as string)) {
+    if (!doctypes.includes(customized as string)) {
       continue;
     }
 
     clearMeta(Model.doctype);
     await loadDocType(schemaName, Model);
     // A customized table refreshes the rows of the open documents that hold it.
+    const customizedSchema = toSchemaName(customized as string)!;
     for (const doc of getOpenFrappeDocs(schemaName)) {
-      doc.refreshSchema(customized as string);
+      doc.refreshSchema(customizedSchema);
     }
   }
 }

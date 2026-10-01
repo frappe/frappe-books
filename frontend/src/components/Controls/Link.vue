@@ -138,8 +138,7 @@ export default {
     },
     async getCreateFilters() {
       const { schemaName, fieldname } = this.df;
-      const getCreateFilters =
-        getModel(schemaName)?.createFilters?.[fieldname];
+      const getCreateFilters = getModel(schemaName)?.createFilters?.[fieldname];
       let createFilters = await getCreateFilters?.(this.doc);
 
       if (createFilters !== undefined) {

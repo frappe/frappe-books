@@ -210,6 +210,11 @@ function toField(docfield: DocField, context: FieldContext): Field {
   return field;
 }
 
+/** The Custom Field that holds a Books custom field, as `frappe_books.customization` names it. */
+export function getCustomFieldname(fieldname: string): string {
+  return `custom_books_${fieldname.replace(/[ -]/g, '_').toLowerCase()}`;
+}
+
 /** The schema of a table's rows: its DocType without `Books ` and spaces, e.g. `SalesInvoiceItem`. */
 export function getTableSchemaName(doctype: string): string {
   return doctype.replace(/^Books /, '').replaceAll(' ', '');

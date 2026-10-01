@@ -110,6 +110,11 @@ export class Doc extends Observable<DocValue | Doc[]> {
     return this._dirty;
   }
 
+  /** What a form of the document is headed by. */
+  get formTitle(): string {
+    return this.name ?? '';
+  }
+
   get quickEditFields() {
     let fieldnames = this.schema.quickEditFields;
 

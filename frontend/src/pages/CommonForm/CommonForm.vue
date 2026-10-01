@@ -342,7 +342,7 @@ export default defineComponent({
         return this.t`New Entry`;
       }
 
-      return this.docOrNull?.name || this.t`New Entry`;
+      return this.docOrNull?.formTitle || this.t`New Entry`;
     },
     schema(): Schema {
       const schema = this.docOrNull?.schema ?? getSchema(this.schemaName);

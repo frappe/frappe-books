@@ -2,8 +2,9 @@ import { ListsMap, ValidationMap } from 'fyo/model/types';
 import { ValueError } from 'fyo/utils/errors';
 import { FieldTypeEnum } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { getCustomFieldname } from 'src/frappe/schema';
 import type { CustomForm } from './CustomForm';
-import { getCustomizableSchemas } from './customizable';
+import { getCustomizableForms } from './customizable';
 
 const REFERENCE_FIELDTYPES: string[] = [
   FieldTypeEnum.AutoComplete,
@@ -52,7 +53,7 @@ export class CustomField extends FrappeDoc {
       if (field && !field.isCustom) {
         throw new ValueError(
           this.fyo.t`Fieldname ${value as string} already exists for ${
-            this.parentdoc!.name!
+            this.parentdoc!.formTitle
           }`
         );
       }
@@ -72,11 +73,7 @@ export class CustomField extends FrappeDoc {
   };
 
   static lists: ListsMap = {
-    target: () =>
-      getCustomizableSchemas().map(({ name, label }) => ({
-        value: name,
-        label: label!,
-      })),
+    target: () => getCustomizableForms(),
     references: (doc) => {
       const row = doc as CustomField;
       const rows = (row.parentdoc?.custom_fields ?? []).filter(
@@ -85,15 +82,17 @@ export class CustomField extends FrappeDoc {
           other.label &&
           REFERENCE_FIELDTYPES.includes(other.fieldtype ?? '')
       );
+      // Saved rows are the form's custom fields; the rows list them.
       const fields = (row.parentdoc?.parentSchema?.fields ?? []).filter(
         (field) =>
           field.fieldname &&
           field.label &&
+          !field.isCustom &&
           REFERENCE_FIELDTYPES.includes(field.fieldtype)
       );
       return [
         ...rows.map((other) => ({
-          value: other.fieldname!,
+          value: getCustomFieldname(other.fieldname!),
           label: other.label!,
         })),
         ...fields.map((field) => ({

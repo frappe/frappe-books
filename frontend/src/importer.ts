@@ -629,7 +629,7 @@ function getTemplateFields(schemaName: string): TemplateField[] {
   ];
   while (schemas.length) {
     const { schema, parentSchemaChildField } = schemas.pop()!;
-    for (const field of getFileFields(schema.name)) {
+    for (const field of getOrderedFields(schema)) {
       if (shouldSkipField(field, schema)) {
         continue;
       }
@@ -654,6 +654,17 @@ function getTemplateFields(schemaName: string): TemplateField[] {
   return nameIndex > 0
     ? [fields[nameIndex], ...fields.filter((_, i) => i !== nameIndex)]
     : fields;
+}
+
+/** A schema's file fields; a table's rows start with their ID, as Books' templates did. */
+function getOrderedFields(schema: Schema): Field[] {
+  const fields = getFileFields(schema.name);
+  if (!schema.isChild) {
+    return fields;
+  }
+
+  const isId = (field: Field) => field.fieldname === 'name';
+  return [...fields.filter(isId), ...fields.filter((field) => !isId(field))];
 }
 
 /**
@@ -685,8 +696,9 @@ export function getColumnLabel(field: TemplateField): string {
 }
 
 function shouldSkipField(field: Field, schema: Schema): boolean {
-  // The name of a numbered document only groups its rows.
-  if (schema.naming === 'numberSeries' && field.fieldname === 'name') {
+  // The name of a numbered document only groups its rows; a row's ID is offered as before.
+  const isNamedElsewhere = schema.naming === 'numberSeries' || schema.isChild;
+  if (isNamedElsewhere && field.fieldname === 'name') {
     return false;
   }
 
@@ -707,15 +719,18 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
 
 /**
  * The column Frappe's Data Import reads a template field from. Frappe names
- * numbered documents itself, so their name only groups the rows and is not
- * imported.
+ * numbered documents and rows itself, so their names are not imported: a
+ * numbered document's name only groups its rows.
  */
 function getImportColumnKey(
   field: TemplateField,
   schema: Schema
 ): string | null {
   if (field.parentSchemaChildField) {
-    return `${field.parentSchemaChildField.fieldname}.${field.fieldname}`;
+    // Frappe would keep a row ID from the file as the row's name; Books never saved it.
+    return field.fieldname === 'name'
+      ? null
+      : `${field.parentSchemaChildField.fieldname}.${field.fieldname}`;
   }
 
   if (field.fieldname !== 'name') {

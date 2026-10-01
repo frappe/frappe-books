@@ -50,11 +50,6 @@ test('a template starts with the name that groups each document’s rows', () =>
   );
   assert.ok(accountKeys.includes('Account.account_name'));
   assert.ok(!accountKeys.includes('Account.name'));
-  assert.ok(
-    !fields('SalesInvoice').some(
-      (field) => field.parentSchemaChildField && field.fieldname === 'name'
-    )
-  );
 });
 
 test('a party template holds a tax ID, not Indian GST fields', () => {

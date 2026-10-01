@@ -115,7 +115,6 @@ declare global {
         /** Added by `frappe_books.boot.extend_bootinfo`. */
         books?: {
           country_code: string;
-          doctypes: Record<string, string>;
           charts_of_accounts: ChartOfAccounts[];
           account_labels: Record<string, string>;
           indian_states: Record<string, string>;

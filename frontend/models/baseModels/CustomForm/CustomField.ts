@@ -72,8 +72,8 @@ export class CustomField extends FrappeDoc {
   };
 
   static lists: ListsMap = {
-    target: (doc) =>
-      getCustomizableSchemas(doc!.fyo).map(({ name, label }) => ({
+    target: () =>
+      getCustomizableSchemas().map(({ name, label }) => ({
         value: name,
         label: label!,
       })),

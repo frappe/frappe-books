@@ -16,18 +16,14 @@ export interface FrappeDocType {
 const models = new Map<string, FrappeModel>();
 const docTypes = new Map<string, FrappeDocType>();
 
-/**
- * The transition switch: a schema whose model is registered here is served
- * by Frappe directly (Frappe fieldnames, /api/v2). Every other schema still
- * goes through the camelCase bridge (`fyo.db`).
- */
+/** Registers the model of each schema; a regional model replaces the one of its schema. */
 export function registerFrappeModels(map: Record<string, FrappeModel>) {
   for (const [schemaName, Model] of Object.entries(map)) {
     models.set(schemaName, Model);
   }
 }
 
-/** Whether Frappe serves the schema's documents, including the rows of its tables. */
+/** Whether the schema is known: a model's, or the rows of a table it holds. */
 export function isFrappeBacked(schemaName: string | undefined): boolean {
   return !!schemaName && (models.has(schemaName) || docTypes.has(schemaName));
 }
@@ -43,6 +39,11 @@ export function getDocType(schemaName: string): FrappeDocType {
   }
 
   return docType;
+}
+
+/** Every loaded doctype, by schema, the tables included. */
+export function getDocTypes(): FrappeDocType[] {
+  return [...docTypes.values()];
 }
 
 /** Stores a loaded doctype under its schema name, and its tables under theirs. */

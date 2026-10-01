@@ -50,6 +50,7 @@ import Desk from 'src/pages/Desk.vue';
 import SetupWizard from 'src/pages/SetupWizard/SetupWizard.vue';
 import { registerFrappeModels } from 'src/frappe/doctypes';
 import {
+  getSchemaDoctypes,
   getSingleSchemaNames,
   loadFrappeDocTypes,
 } from 'src/frappe/registry';
@@ -136,18 +137,15 @@ export default defineComponent({
       const books = boot.books!;
       fyo.store.isDevelopment = !!boot.developer_mode;
       fyo.store.appVersion = boot.versions?.frappe_books ?? '';
-      fyo.store.permissions = { doctypes: books.doctypes, user: boot.user };
       fyo.store.chartsOfAccounts = books.charts_of_accounts;
       fyo.store.accountLabels = books.account_labels;
       fyo.store.indianStates = books.indian_states;
       fyo.store.language = boot.lang || 'English';
       fyo.user = boot.user.name;
 
-      const countryCode = books.country_code || '-';
-      await fyo.db.connect(countryCode);
-      await fyo.initializeAndRegister();
       registerFrappeModels(frappeModels);
-      registerFrappeModels(await getRegionalFrappeModels(countryCode));
+      registerFrappeModels(await getRegionalFrappeModels(books.country_code));
+      fyo.store.permissions = { doctypes: getSchemaDoctypes(), user: boot.user };
       await loadFrappeDocTypes();
       // Amounts load in the currency and precision the system settings set.
       const systemSettings = ModelNameEnum.SystemSettings;

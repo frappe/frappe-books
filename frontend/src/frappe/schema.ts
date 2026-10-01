@@ -57,7 +57,7 @@ export function withoutCreate(
 export type Placements = Record<string, { section?: string; tab?: string }>;
 
 export interface SchemaContext {
-  /** Books schema names by doctype; link and table targets use them. */
+  /** Books schema names by doctype; link targets use them. */
   schemaNames: Record<string, string | undefined>;
   /** The user's roles, which decide the permission levels they can read and write. */
   roles: string[];
@@ -201,11 +201,18 @@ function toField(docfield: DocField, context: FieldContext): Field {
     ...shown,
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
-  if (properties.target) {
+  if (docfield.fieldtype === 'Table') {
+    field.target = getTableSchemaName(docfield.options!);
+  } else if (properties.target) {
     field.target = schemaNames[properties.target] ?? properties.target;
   }
 
   return field;
+}
+
+/** The schema of a table's rows: its DocType without `Books ` and spaces, e.g. `SalesInvoiceItem`. */
+export function getTableSchemaName(doctype: string): string {
+  return doctype.replace(/^Books /, '').replaceAll(' ', '');
 }
 
 function isLink({ fieldtype }: DocField): boolean {

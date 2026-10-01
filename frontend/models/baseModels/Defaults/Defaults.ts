@@ -26,6 +26,11 @@ function printFormatFilter(doctype: string) {
   return () => ({ doc_type: doctype });
 }
 
+/** A Books Default Cash Denominations row. */
+export class DefaultCashDenominations extends FrappeDoc {
+  static override presentation = { label: 'Default Cash Denominations' };
+}
+
 /** Books Defaults, served by Frappe: what new documents start with. */
 export class Defaults extends FrappeDoc {
   static override doctype = 'Books Defaults';
@@ -37,6 +42,7 @@ export class Defaults extends FrappeDoc {
       'pos_print_template',
     ]),
   };
+  static override rowModels = { pos_cash_denominations: DefaultCashDenominations };
 
   declare sales_payment_account?: string;
   declare purchase_payment_account?: string;

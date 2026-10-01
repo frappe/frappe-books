@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import { HiddenMap, ListsMap, ListViewSettings } from 'fyo/model/types';
 import { Field, Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { getSchema } from 'src/frappe/registry';
 import type { Presentation } from 'src/frappe/schema';
 import { getMapFromList } from 'utils/index';
 import { CustomField } from './CustomField';
@@ -23,7 +24,7 @@ export class CustomForm extends FrappeDoc {
   declare custom_fields?: CustomField[];
 
   get parentSchema(): Schema | null {
-    return this.fyo.schemaMap[this.name ?? ''] ?? null;
+    return getSchema(this.name ?? '') ?? null;
   }
 
   get parentFields(): Record<string, Field> {
@@ -31,8 +32,8 @@ export class CustomForm extends FrappeDoc {
   }
 
   static lists: ListsMap = {
-    name: (doc) =>
-      getCustomizableSchemas(doc!.fyo).map(({ name, label }) => ({
+    name: () =>
+      getCustomizableSchemas().map(({ name, label }) => ({
         value: name,
         label: label!,
       })),
@@ -47,7 +48,7 @@ export class CustomForm extends FrappeDoc {
           fieldtype: 'AutoComplete',
           display(value) {
             const schemaName = String(value ?? '');
-            return fyo.schemaMap[schemaName]?.label ?? schemaName;
+            return getSchema(schemaName)?.label ?? schemaName;
           },
         },
       ],
@@ -55,22 +56,4 @@ export class CustomForm extends FrappeDoc {
   }
 
   hidden: HiddenMap = { custom_fields: () => !this.name };
-
-  override async afterSync(): Promise<void> {
-    await this.refreshParentSchema();
-  }
-
-  override async afterDelete(): Promise<void> {
-    await this.refreshParentSchema();
-  }
-
-  /** Forms still served through the bridge show the new fields; see `loadFrappeDocTypes` for the rest. */
-  async refreshParentSchema(): Promise<void> {
-    if (!this.name) {
-      return;
-    }
-
-    await this.fyo.db.refreshSchemaMap();
-    this.fyo.doc.refreshSchema(this.name);
-  }
 }

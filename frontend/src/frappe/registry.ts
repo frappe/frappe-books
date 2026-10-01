@@ -15,7 +15,12 @@ import {
 } from './doctypes';
 import { getOpenFrappeDocs } from './documents';
 import { clearMeta, getMetaBundle, type DocTypeMeta } from './meta';
-import { toSchema, type Placements, type Presentation } from './schema';
+import {
+  getTableSchemaName,
+  toSchema,
+  type Placements,
+  type Presentation,
+} from './schema';
 
 /** Loads the meta of every Frappe-backed schema. Screens read it synchronously after this. */
 export async function loadFrappeDocTypes() {
@@ -26,11 +31,9 @@ export async function loadFrappeDocTypes() {
   fyo.doc.observer.on('delete:CustomForm', reloadCustomized);
 }
 
-/** A schema by name: the DocType's for a Frappe-backed schema, else the bridge's. */
+/** A schema by name, as its DocType's meta and model's presentation make it. */
 export function getSchema(schemaName: string): Schema | undefined {
-  return isFrappeBacked(schemaName)
-    ? getDocType(schemaName).schema
-    : fyo.schemaMap[schemaName];
+  return isFrappeBacked(schemaName) ? getDocType(schemaName).schema : undefined;
 }
 
 export function getField(
@@ -51,10 +54,6 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
 
 /** The fields list and global search match besides the name. */
 export function getSearchFields(schemaName: string): string[] {
-  if (!isFrappeBacked(schemaName)) {
-    return [];
-  }
-
   const { search_fields = '' } = getDocType(schemaName).meta;
   return search_fields
     .split(',')
@@ -62,16 +61,20 @@ export function getSearchFields(schemaName: string): string[] {
     .filter(Boolean);
 }
 
-/** Every schema name, Frappe-backed or not. */
+/** The schema name of every model, in `frappeModels` order. */
 export function getAllSchemaNames(): string[] {
-  const names = new Set([
-    ...Object.keys(fyo.schemaMap),
-    ...getFrappeModels().map(([name]) => name),
-  ]);
-  return [...names];
+  return getFrappeModels().map(([name]) => name);
 }
 
-/** The single schemas, Frappe-backed or not, e.g. to load the settings at startup. */
+/** The DocType of each model's schema, by schema name, in schema name order. */
+export function getSchemaDoctypes(): Record<string, string> {
+  const doctypes = getFrappeModels().map(
+    ([name, Model]) => [name, Model.doctype] as const
+  );
+  return Object.fromEntries(doctypes.sort(([a], [b]) => (a < b ? -1 : 1)));
+}
+
+/** The single schemas, e.g. to load the settings at startup. */
 export function getSingleSchemaNames(): string[] {
   return getAllSchemaNames().filter((name) => getSchema(name)?.isSingle);
 }
@@ -82,8 +85,8 @@ export function toSchemaName(name: string): string | undefined {
     return name;
   }
 
-  const schemaName = getSchemaNames()[name];
-  return schemaName && getSchema(schemaName) ? schemaName : undefined;
+  const schemaName = getSchemaNames()[name] ?? getTableSchemaName(name);
+  return getSchema(schemaName) ? schemaName : undefined;
 }
 
 /** The label /books shows for a doctype: its schema's, e.g. `Sales Invoice` for `Books Sales Invoice`. */
@@ -94,21 +97,7 @@ export function getDoctypeLabel(doctype: string): string {
 
 /** The model whose statics (actions, list settings, link filters) present a schema. */
 export function getModel(schemaName: string): typeof Doc | undefined {
-  return isFrappeBacked(schemaName)
-    ? getDocType(schemaName).Model
-    : fyo.models[schemaName];
-}
-
-/** The model whose statics filter a field: its document's own class, like the POS's bridge invoice's. */
-export function getFieldModel(
-  schemaName: string,
-  doc?: Doc | null
-): typeof Doc | undefined {
-  if (doc && doc.schemaName === schemaName) {
-    return doc.constructor as typeof Doc;
-  }
-
-  return getModel(schemaName);
+  return isFrappeBacked(schemaName) ? getDocType(schemaName).Model : undefined;
 }
 
 async function loadDocType(schemaName: string, Model: FrappeModel) {
@@ -137,7 +126,7 @@ function getTables(
     const child =
       field.fieldtype === 'Table' ? byName.get(field.options!) : undefined;
     if (child) {
-      const name = getSchemaNames()[child.name] ?? child.name;
+      const name = getTableSchemaName(child.name);
       const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;
       tables[field.fieldname] = toDocType(child, name, RowModel, {});
     }
@@ -196,14 +185,10 @@ function getCustomFieldname(fieldname: string): string {
   return `custom_books_${fieldname.replace(/[ -]/g, '_').toLowerCase()}`;
 }
 
-/** Books schema names by doctype, from the boot. */
+/** Schema names by doctype: each model's. */
 function getSchemaNames(): Record<string, string | undefined> {
-  const doctypes = window.frappe.boot?.books?.doctypes ?? {};
   return Object.fromEntries(
-    Object.entries(doctypes).map(([schemaName, doctype]) => [
-      doctype,
-      schemaName,
-    ])
+    Object.entries(getSchemaDoctypes()).map(([name, doctype]) => [doctype, name])
   );
 }
 
@@ -220,8 +205,9 @@ async function reloadCustomized(customized: unknown) {
 
     clearMeta(Model.doctype);
     await loadDocType(schemaName, Model);
+    // A customized table refreshes the rows of the open documents that hold it.
     for (const doc of getOpenFrappeDocs(schemaName)) {
-      doc.refreshSchema(schemaName);
+      doc.refreshSchema(customized as string);
     }
   }
 }

@@ -117,6 +117,8 @@ import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
 import { t } from 'fyo';
 import { exportsOwnDocumentsOnly } from 'fyo/utils/permissions';
 import { Field, FieldTypeEnum } from 'schemas/types';
+import { isFrappeBacked } from 'src/frappe/doctypes';
+import { getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { saveExportData } from 'reports/commonExporter';
 import {
@@ -151,9 +153,9 @@ export default defineComponent({
   },
   emits: ['update:open'],
   data() {
-    const fields = fyo.schemaMap[this.schemaName]?.fields ?? [];
+    const fields = getSchema(this.schemaName)?.fields ?? [];
     const exportFields = getExportFields(fields);
-    const exportTableFields = getExportTableFields(fields, fyo);
+    const exportTableFields = getExportTableFields(fields);
 
     return {
       limit: null,
@@ -169,7 +171,7 @@ export default defineComponent({
         return this.pageTitle;
       }
 
-      return fyo.schemaMap?.[this.schemaName]?.label ?? '';
+      return getSchema(this.schemaName)?.label ?? '';
     },
     filteredTableFields() {
       return this.tableFields.filter((f) => {
@@ -252,29 +254,21 @@ export default defineComponent({
         JSON.stringify(this.useListFilters ? this.listFilters : {})
       );
       if (exportsOwnDocumentsOnly(fyo.store.permissions, this.schemaName)) {
-        filters.createdBy = fyo.user;
+        const owner = isFrappeBacked(this.schemaName) ? 'owner' : 'createdBy';
+        filters[owner] = fyo.user;
       }
 
-      let data: string;
-      if (this.exportFormat === 'json') {
-        data = await getJsonExportData(
-          this.schemaName,
-          this.fields,
-          this.tableFields,
-          this.limit,
-          filters,
-          fyo
-        );
-      } else {
-        data = await getCsvExportData(
-          this.schemaName,
-          this.fields,
-          this.tableFields,
-          this.limit,
-          filters,
-          fyo
-        );
-      }
+      const query = {
+        schemaName: this.schemaName,
+        fields: this.fields,
+        tableFields: this.tableFields,
+        limit: this.limit,
+        filters,
+      };
+      const data =
+        this.exportFormat === 'json'
+          ? await getJsonExportData(query, fyo)
+          : await getCsvExportData(query, fyo);
 
       await this.saveExportData(data);
     },

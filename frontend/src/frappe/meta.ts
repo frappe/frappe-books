@@ -18,6 +18,7 @@ export interface DocField {
   in_list_view?: number;
   is_custom_field?: number;
   permlevel?: number;
+  is_virtual?: number;
   depends_on?: string;
   read_only_depends_on?: string;
   mandatory_depends_on?: string;

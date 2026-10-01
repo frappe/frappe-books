@@ -47,7 +47,6 @@ await build({
         getInvoiceListFilters,
         getInvoiceSummary,
       } from './src/utils/dashboard';
-      export { FrappeDatabaseDemux } from './src/web/databaseDemux';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
       export { call } from './src/web/api';
@@ -135,7 +134,6 @@ export const {
   getLinkedEntries,
   linkOnSave,
   showReport,
-  FrappeDatabaseDemux,
   GSTR1,
   getGstrJsonData,
   call,
@@ -148,26 +146,9 @@ export const {
   DataImport,
 } = bundle;
 
+/** A Fyo with the settings tests read: discounting on, amounts in USD to two decimals. */
 export async function makeFyo() {
-  class Store {
-    getSchemaMap() {
-      return getSchemas('-', []);
-    }
-    call(method) {
-      // The store holds no documents; a missing one reads as an empty map.
-      if (method === 'exists') return false;
-      if (method === 'get') return {};
-      if (['getAll', 'getAllRaw'].includes(method)) return [];
-      throw new Error(`Unexpected database call: ${method}`);
-    }
-    // Invoices preview their totals once edits pause; echo the values back.
-    runDocMethod(method, schemaName, values) {
-      return values;
-    }
-  }
-  const fyo = new Fyo({ DatabaseDemux: Store });
-  await fyo.db.init();
-  fyo.doc.registerModels({});
+  const fyo = new Fyo();
   fyo.singles.AccountingSettings = { enable_discounting: true };
   fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
   return fyo;

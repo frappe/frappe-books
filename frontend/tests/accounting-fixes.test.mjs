@@ -10,7 +10,11 @@ import {
   getLoyaltyProgramBadge,
   getStateBadge,
 } from './helpers/accounting.mjs';
+import { getSchema } from './helpers/frappe.mjs';
+import { loadFrappeModels } from './helpers/models.mjs';
 import { reportResult, stubServer } from './helpers/server.mjs';
+
+await loadFrappeModels();
 
 test('CSV and JSON retain hidden groups and visible leaf amounts', async () => {
   const fyo = await makeFyo();
@@ -120,26 +124,24 @@ test('P&L takes its defaults, periods and totals from the server', async () => {
   );
 });
 
-test('list and form statuses come from the stored status', async () => {
-  const fyo = await makeFyo();
-  const schema = fyo.schemaMap.SalesInvoice;
+test('list and form statuses come from the stored status', () => {
+  const schema = getSchema('SalesInvoice');
   assert.equal(getDocStatus({ schema, status: 'Partly Paid' }), 'Partly Paid');
   assert.equal(getDocStatus({ schema, notInserted: true }), 'Draft');
   assert.equal(
     getDocStatus({ schema, dirty: true, status: 'Saved' }),
     'NotSaved'
   );
-  const shift = fyo.schemaMap.POSOpeningShift;
+  const shift = getSchema('POSOpeningShift');
   assert.equal(getDocStatus({ schema: shift, submitted: true }), 'Submitted');
   assert.equal(
-    getDocStatus({ schema: fyo.schemaMap.Lead, status: 'Open' }),
+    getDocStatus({ schema: getSchema('Lead'), status: 'Open' }),
     'Saved'
   );
 });
 
-test('status badges use the status option label and the DocType state colour', async () => {
-  const fyo = await makeFyo();
-  const schema = fyo.schemaMap.SalesInvoice;
+test('status badges use the status option label and the DocType state colour', () => {
+  const schema = getSchema('SalesInvoice');
   assert.deepEqual(getDocStatusBadge({ schema, status: 'Partly Paid' }), {
     label: 'Partly Paid',
     theme: 'amber',
@@ -152,11 +154,11 @@ test('status badges use the status option label and the DocType state colour', a
     label: 'Draft',
     theme: 'gray',
   });
-  assert.deepEqual(getStateBadge(fyo.schemaMap.Lead, 'Do not Contact'), {
+  assert.deepEqual(getStateBadge(getSchema('Lead'), 'Do not Contact'), {
     label: 'Do not Contact',
     theme: 'red',
   });
-  const program = fyo.schemaMap.LoyaltyProgram;
+  const program = getSchema('LoyaltyProgram');
   assert.deepEqual(
     getLoyaltyProgramBadge({ schema: program, status: 'Maxed' }),
     {

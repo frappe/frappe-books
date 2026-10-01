@@ -21,7 +21,7 @@ test('amounts carry the currency symbol once symbols are loaded', async () => {
       ],
     });
   };
-  const fyo = new Fyo({ DatabaseDemux: class {} });
+  const fyo = new Fyo();
   const field = { fieldname: 'amount', fieldtype: 'Currency' };
 
   assert.doesNotMatch(fyo.format(fyo.pesa(5), field), /₹/);

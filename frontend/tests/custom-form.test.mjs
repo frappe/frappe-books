@@ -35,7 +35,7 @@ async function customize(doctype, fields) {
       { section: 'Default', tab: 'Custom' },
     ])
   );
-  await fyo.doc.observer.trigger('sync:CustomForm', doctype);
+  await fyo.observer.trigger('sync:CustomForm', doctype);
 }
 
 before(async () => {

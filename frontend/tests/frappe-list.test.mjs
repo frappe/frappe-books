@@ -159,7 +159,7 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
 
 test('a submittable list refreshes after a submit, cancel, save, delete or rename', () => {
   const events = [];
-  const fyoStub = { doc: { observer: { on: (event) => events.push(event) } } };
+  const fyoStub = { observer: { on: (event) => events.push(event) } };
   onListChange(fyoStub, 'Order', async () => {});
   assert.deepEqual(events, [
     'submit:Order',

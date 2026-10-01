@@ -116,8 +116,8 @@ for (const kind of ['master', 'transaction', 'singleton']) {
       throw new Error('List refresh failed');
     };
     const refreshList = () => calls.push('list');
-    fyo.doc.observer.on(`sync:${schemaName}`, failList);
-    fyo.doc.observer.on(`sync:${schemaName}`, refreshList);
+    fyo.observer.on(`sync:${schemaName}`, failList);
+    fyo.observer.on(`sync:${schemaName}`, refreshList);
 
     try {
       assert.equal(await doc.sync(), doc);
@@ -140,8 +140,8 @@ for (const kind of ['master', 'transaction', 'singleton']) {
       assert.deepEqual(calls, ['once', 'next', 'list', 'list']);
       assert.equal(warnings[1].errors.length, 3);
     } finally {
-      fyo.doc.observer.off(`sync:${schemaName}`, failList);
-      fyo.doc.observer.off(`sync:${schemaName}`, refreshList);
+      fyo.observer.off(`sync:${schemaName}`, failList);
+      fyo.observer.off(`sync:${schemaName}`, refreshList);
     }
   });
 }

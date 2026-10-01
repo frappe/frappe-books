@@ -387,7 +387,7 @@ test('submit and cancel run the document methods on the client copy', async () =
   const order = await getFrappeDoc('Order', 'ORD-1');
   assert.equal(order.canSubmit, true);
   const submitted = [];
-  fyo.doc.observer.on('submit:Order', (name) => submitted.push(name));
+  fyo.observer.on('submit:Order', (name) => submitted.push(name));
 
   await order.submit();
   assert.equal(order.submitted, true);
@@ -421,8 +421,6 @@ test('a cancel with linked documents runs the controller method that cancels the
       : undefined
   );
   const order = await getFrappeDoc('Order', 'ORD-2');
-  // A copy the POS or print loaded through the bridge.
-  fyo.doc.docs.set('Order', { 'ORD-2': {} });
   const payments = [{ doctype: 'Books Payment', name: 'PAY-1', docstatus: 1 }];
 
   await order.cancel(payments);
@@ -432,7 +430,6 @@ test('a cancel with linked documents runs the controller method that cancels the
   assert.equal(document.modified, MODIFIED);
   assert.deepEqual(kwargs, { linked_docs: payments });
   assert.equal(order.cancelled, true);
-  assert.equal(fyo.doc.docs.get('Order')['ORD-2'], undefined);
 });
 
 test('a new document leaves its server defaults to the preview until set', async (t) => {
@@ -482,7 +479,7 @@ test('delete removes the document and tells the lists', async () => {
   );
   const pen = await getFrappeDoc('Item', 'Pen', { refresh: true });
   const deleted = [];
-  fyo.doc.observer.on('delete:Item', (name) => deleted.push(name));
+  fyo.observer.on('delete:Item', (name) => deleted.push(name));
 
   await pen.delete();
 
@@ -508,13 +505,6 @@ test('a duplicate copies unsaved edits but not the no_copy fields', async () => 
   assert.equal(copy.uom_conversions[0].uom, 'Box');
   assert.notEqual(copy.uom_conversions[0].name, 'row-1');
   assert.equal(await getFrappeDoc('Item', 'Pen CPY'), copy);
-});
-
-test('a document takes its defaults from its own model, not a bridge model of its schema', (t) => {
-  fyo.doc.models.Order = { defaults: { customer: () => 'Bridge' } };
-  t.after(() => delete fyo.doc.models.Order);
-
-  assert.equal(newFrappeDoc('Order').customer, null);
 });
 
 async function waitFor(condition) {

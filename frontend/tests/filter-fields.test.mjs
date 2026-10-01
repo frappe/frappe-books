@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { makeFyo, getFilterFields } from './helpers/accounting.mjs';
+import { getFilterFields } from './helpers/accounting.mjs';
+import { frappeModels, getDocType } from './helpers/frappe.mjs';
+import { loadFrappeModels } from './helpers/models.mjs';
 
 test('stored totals filter Frappe-backed lists by their Frappe names', () => {
   const fields = ['net_total', 'grand_total', 'base_grand_total', 'balance'].map(
@@ -46,8 +48,12 @@ test("a Frappe-backed schema's standard columns filter its list", () => {
 });
 
 test('stored Select fields retain all configured choices and labels', async () => {
-  const fyo = await makeFyo();
-  for (const schema of Object.values(fyo.schemaMap)) {
+  await loadFrappeModels();
+  const schemas = Object.keys(frappeModels).flatMap((schemaName) => {
+    const { schema, tables } = getDocType(schemaName);
+    return [schema, ...Object.values(tables).map((table) => table.schema)];
+  });
+  for (const schema of schemas) {
     const fields = getFilterFields(schema.fields);
     for (const field of fields.filter(
       (field) => field.fieldtype === 'Select'

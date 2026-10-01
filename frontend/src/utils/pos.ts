@@ -2,11 +2,7 @@ import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import type { Item } from 'models/baseModels/Item/Item';
 import { getAvailableSerialNumbers } from 'models/inventory/helpers';
-import {
-  getItemQtyMap,
-  getPOSInventory,
-  validatePOSStock,
-} from 'models/inventory/posStock';
+import { getPOSInventory, validatePOSStock } from 'models/inventory/posStock';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
@@ -179,81 +175,31 @@ export function getTotalQuantity(rows: SalesInvoiceItem[]): number {
   );
 }
 
-export async function validateSinv(
-  sinvDoc: SalesInvoice,
-  itemQtyMap: ItemQtyMap
-) {
-  if (!sinvDoc) {
-    return;
-  }
-
-  const rows = sinvDoc.items ?? [];
-  const tracked = await getTrackedItems(rows);
-  await validateSinvItems(
-    rows.filter((row) => tracked.has(row.item!)),
-    itemQtyMap,
-    !!sinvDoc.return_against
-  );
-}
-
-/** Checks the tracked rows' quantities, and that the POS location has them. */
-async function validateSinvItems(
-  rows: SalesInvoiceItem[],
-  itemQtyMap: ItemQtyMap,
-  isReturn: boolean
-) {
-  const inventory = await getPOSInventory();
-  const requested: ItemQtyMap = {};
-  for (const row of rows) {
-    const item = row.item!;
-    const quantity = row.quantity ?? 0;
-    if (!quantity || (quantity < 0 && !isReturn)) {
-      throw new ValidationError(t`Invalid Quantity for Item ${item}`);
-    }
-
-    if (isReturn) {
-      continue;
-    }
-
-    const total = (requested[item] ??= { availableQty: 0 });
-    total.availableQty = safeParseFloat(total.availableQty + quantity);
-    validatePOSStock(item, total.availableQty, itemQtyMap, inventory);
-
-    if (row.batch) {
-      total[row.batch] = safeParseFloat((total[row.batch] ?? 0) + quantity);
-      validatePOSStock(
-        item,
-        total[row.batch],
-        itemQtyMap,
-        inventory,
-        row.batch
-      );
-    }
-  }
-}
-
-/** The rows' items whose stock is tracked. */
-async function getTrackedItems(rows: SalesInvoiceItem[]): Promise<Set<string>> {
-  const names = [...new Set(rows.map((row) => row.item!).filter(Boolean))];
-  const items = await Promise.all(names.map(getItemDoc));
-  return new Set(
-    items.filter((item) => item.track_item).map((item) => item.name!)
-  );
-}
-
 /**
- * Check a POS checkout against freshly loaded stock. A submitted invoice has
- * shipped, so a payment retry skips the check.
+ * Checks the sale's quantities, and on the server that the POS location has
+ * the stock it ships; a return brings stock back.
  */
-export async function validatePOSCheckout(
-  sinvDoc: SalesInvoice,
-  loadStock: () => Promise<ItemQtyMap>
-) {
+export async function validateSinv(sinvDoc: SalesInvoice) {
+  const rows = (sinvDoc.items ?? []).filter((row) => row.item);
+  const isReturn = !!sinvDoc.return_against;
+  for (const { item, quantity = 0 } of rows) {
+    if (!quantity || (quantity < 0 && !isReturn)) {
+      throw new ValidationError(t`Invalid Quantity for Item ${item!}`);
+    }
+  }
+
+  if (!isReturn) {
+    await validatePOSStock(rows);
+  }
+}
+
+/** Checks a POS checkout. A submitted invoice has shipped, so a payment retry skips the check. */
+export async function validatePOSCheckout(sinvDoc: SalesInvoice) {
   if (sinvDoc.isSubmitted) {
     return;
   }
 
-  await validateSinv(sinvDoc, await loadStock());
+  await validateSinv(sinvDoc);
 }
 
 /** Checks the POS location has the stock that a row's item, or its batch, needs. */
@@ -270,19 +216,11 @@ export async function validateQty(
     throw new ValidationError(t`Please select a batch first`);
   }
 
-  if (!item.track_item) {
-    return;
-  }
-
-  const quantity = itemRows
-    .filter((existing) => !row.batch || existing.batch === row.batch)
-    .reduce(
-      (total, existing) => safeParseFloat(total + (existing.quantity ?? 0)),
-      0
+  if (item.track_item) {
+    await validatePOSStock(
+      itemRows.filter((existing) => !row.batch || existing.batch === row.batch)
     );
-  const itemQtyMap = await getItemQtyMap([row.item]);
-  const location = await getPOSInventory();
-  validatePOSStock(row.item, quantity, itemQtyMap, location, row.batch);
+  }
 }
 
 export type POSRowItem = {
@@ -423,17 +361,11 @@ export async function addBatchItem(
   sinvDoc: SalesInvoice,
   item: POSItem,
   batch: string,
-  quantity: number,
-  itemQtyMap: ItemQtyMap
+  quantity: number
 ) {
   const rows = getItemRows(sinvDoc, item.name, batch);
   if (item.trackItem) {
-    const required = rows.reduce(
-      (total, row) => total + (row.quantity ?? 0),
-      quantity
-    );
-    const inventory = await getPOSInventory();
-    validatePOSStock(item.name, required, itemQtyMap, inventory, batch);
+    await validatePOSStock([...rows, { item: item.name, batch, quantity }]);
   }
 
   if (rows.length) {

@@ -42,8 +42,8 @@ def get_stock_quantities(
 
 
 @frappe.whitelist()
-def get_sale_shortfalls(items: list[dict], date: str, is_pos: bool = False) -> list[dict]:
-	"""Return how much of each tracked item, or of its batch, a sale lacks where it ships from on the date."""
+def get_sale_shortfalls(items: list[dict], date: str | None = None, is_pos: bool = False) -> list[dict]:
+	"""Return how much of each tracked item, or of its batch, a sale lacks where it ships from, on the date when given."""
 	required = _tracked_quantities(items)
 	if not required:
 		return []

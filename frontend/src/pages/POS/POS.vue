@@ -820,14 +820,11 @@ export default defineComponent({
       this.pendingBatchItem = null;
 
       try {
-        await this.setItemQtyMap();
-        await this.setItems();
         await addBatchItem(
           this.sinvDoc as SalesInvoice,
           item as POSItem,
           batchName,
-          quantity ?? 1,
-          this.itemQtyMap
+          quantity ?? 1
         );
         await this.previewInvoice();
       } catch (error) {
@@ -1037,14 +1034,7 @@ export default defineComponent({
       this.setTotalQuantity();
     },
     async validate() {
-      await validatePOSCheckout(
-        this.sinvDoc as SalesInvoice,
-        async () => {
-          await this.setItemQtyMap();
-          await this.setItems();
-          return this.itemQtyMap;
-        }
-      );
+      await validatePOSCheckout(this.sinvDoc as SalesInvoice);
     },
     async previewInvoice() {
       try {

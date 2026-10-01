@@ -126,6 +126,7 @@ function answer(path: string, body: Row, params: Row): unknown {
       getList(body.doctype).map(({ name }) => ({ value: name })),
     get_open_shift: () => (shift.open ? openingShift.name : null),
     get_stock_location: () => null,
+    get_sale_shortfalls: () => [],
     get_stock_quantities: () =>
       items.map((item) => ({ item: item.name, quantity: item.availableQty })),
   };

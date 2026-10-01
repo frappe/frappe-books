@@ -1,11 +1,13 @@
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import { ItemQtyMap } from 'src/components/POS/types';
+import { safeParseFloat } from 'utils/index';
 import {
   getBatchQuantity,
   getStockLocation,
   getStockQuantities,
 } from './availability';
+import { getSaleShortfalls, type ItemQuantity } from './insufficientStock';
 
 /** The location a POS sale ships from, as the server picks it. */
 export async function getPOSInventory(): Promise<string | undefined> {
@@ -39,22 +41,22 @@ export async function getPOSBatchQuantity(
   return await getBatchQuantity(item, batch, inventory);
 }
 
-export function validatePOSStock(
-  item: string,
-  quantity: number,
-  itemQtyMap: ItemQtyMap,
-  inventory?: string,
-  batch?: string
-) {
-  const stock = itemQtyMap[item];
-  const available = (batch ? stock?.[batch] : stock?.availableQty) ?? 0;
-  if (quantity <= available) {
+/** Checks, on the server, that the POS location has what the rows need of each tracked item, or batch. */
+export async function validatePOSStock(rows: ItemQuantity[]) {
+  const [shortfall] = await getSaleShortfalls(rows, true);
+  if (!shortfall) {
     return;
   }
 
+  const { item, batch, quantity: missing } = shortfall;
+  const required = rows
+    .filter((row) => row.item === item && (row.batch || '') === (batch || ''))
+    .reduce((total, row) => safeParseFloat(total + (row.quantity ?? 0)), 0);
+  const available = safeParseFloat(required - (missing ?? 0));
+  const inventory = await getPOSInventory();
   const locationText = inventory ? ' ' + t`in ${inventory}` : '';
   const batchText = batch ? ' ' + t`for batch ${batch}` : '';
   throw new ValidationError(
-    t`Insufficient stock for ${item}${locationText}${batchText}. Available: ${available}; required: ${quantity}.`
+    t`Insufficient stock for ${item!}${locationText}${batchText}. Available: ${available}; required: ${required}.`
   );
 }

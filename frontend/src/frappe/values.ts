@@ -62,6 +62,13 @@ export function toFrappeValue(
   return Converter.toRawValue(value, field, fyo);
 }
 
+/** A datetime as Frappe sends it, in ISO with the system time zone's offset. */
+export function toIsoDatetime(value: unknown): string {
+  const text = String(value);
+  const datetime = DateTime.fromSQL(text, { zone: getSystemZone() });
+  return `${text.replace(' ', 'T')}${datetime.toFormat('ZZ')}`;
+}
+
 function getTableSchema(field: Field, getSchema: (target: string) => Schema) {
   return getSchema((field as { target: string }).target);
 }

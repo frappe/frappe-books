@@ -257,7 +257,7 @@ test("CSV repeats a document's values on each row of its tables", async () => {
     [
       'SalesInvoice.name',
       'SalesInvoice.party',
-      'SalesInvoice.total_discount',
+      'SalesInvoice.totalDiscount',
       'SalesInvoiceItem.item',
       'SalesInvoiceItem.rate',
     ],

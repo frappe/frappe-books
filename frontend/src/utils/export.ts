@@ -1,10 +1,13 @@
 import { t } from 'fyo/utils/translation';
+import { camelCase } from 'lodash';
 import { Field, FieldType, FieldTypeEnum, TargetField } from 'schemas/types';
 import { getDocuments, type DocValues, type ListQuery } from 'src/frappe/api';
 import { getDocType } from 'src/frappe/doctypes';
+import { isReferenceField } from 'src/frappe/fieldProperties';
 import { getOrderBy, toFrappeFilters } from 'src/frappe/list';
-import { getFileFields, getSchema } from 'src/frappe/registry';
+import { getFileFields, getSchema, toSchemaName } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
+import { toIsoDatetime } from 'src/frappe/values';
 import { generateCSV } from 'utils/csvParser';
 import { QueryFilter } from 'utils/db/types';
 import { expandDocStatus } from './filterFields';
@@ -16,6 +19,37 @@ const excludedFieldTypes: FieldType[] = [
   FieldTypeEnum.AttachImage,
   FieldTypeEnum.Attachment,
 ];
+
+/*
+ * Files hold the keys Books named fields by: camelCased Frappe fieldnames,
+ * except these, by schema. CSV keys start with the schema name.
+ */
+const RENAMED_KEYS: Record<string, Record<string, string>> = {
+  Account: { account_name: 'name', parent_books_account: 'parentAccount' },
+  AccountingLedgerEntry: {
+    posting_date: 'date',
+    voucher_no: 'referenceName',
+    voucher_type: 'referenceType',
+  },
+  Country: { country_name: 'name' },
+  Currency: {
+    currency_name: 'name',
+    smallest_currency_fraction_value: 'smallestValue',
+  },
+  Item: { item_usage: 'for' },
+  JournalEntry: { posting_date: 'date' },
+  Payment: { payment_references: 'for' },
+  POSProfile: { pos_ui: 'posUI' },
+  TaxDetail: { payment_account: 'payment_account' },
+  TaxSummary: { from_account: 'from_account' },
+};
+const AUDIT_KEYS: Record<string, string> = {
+  owner: 'createdBy',
+  creation: 'created',
+};
+const RENAMED_SCHEMAS: Record<string, string> = {
+  UomConversionItem: 'UOMConversionItem',
+};
 
 // Books' Submitted and Cancelled, by the docstatus values that set them.
 const DOCSTATUS_FLAGS: Record<string, number[]> = {
@@ -80,8 +114,8 @@ export async function getJsonExportData(query: ExportQuery): Promise<string> {
 }
 
 /**
- * The documents as CSV: a row of labels, a row of `schema.fieldname` keys,
- * then a row for each table row, which repeats its document's values.
+ * The documents as CSV: a row of labels, a row of `schema.key` keys, then a
+ * row for each table row, which repeats its document's values.
  */
 export async function getCsvExportData(query: ExportQuery): Promise<string> {
   const documents = await getExportRows(query);
@@ -112,15 +146,22 @@ interface TableColumns {
   columns: ExportColumn[];
 }
 
+/** A document as Books wrote it: always with its name, and tables that have rows. */
 function toJsonDocument(
   document: DocValues,
   columns: ExportColumn[],
   tables: TableColumns[]
 ): DocValues {
-  const values = toJsonValues(document, columns);
+  const hasName = columns.some(({ key }) => key === 'name');
+  const values: DocValues = {
+    ...(!hasName && { name: document.name }),
+    ...toJsonValues(document, columns),
+  };
   for (const { fieldname, key, columns } of tables) {
     const rows = (document[fieldname] as DocValues[] | undefined) ?? [];
-    values[key] = rows.map((row) => toJsonValues(row, columns));
+    if (rows.length) {
+      values[key] = rows.map((row) => toJsonValues(row, columns));
+    }
   }
 
   return values;
@@ -156,28 +197,74 @@ function getCsvRows(
 }
 
 /** The columns of the picked tables. */
-function getTableColumns({ fields, tableFields }: ExportQuery): TableColumns[] {
+function getTableColumns({
+  schemaName,
+  fields,
+  tableFields,
+}: ExportQuery): TableColumns[] {
   return getExportedTables(fields, tableFields).map((tf) => ({
     fieldname: tf.fieldname,
-    key: tf.fieldname,
+    key: getExportKey(schemaName, tf.fieldname),
     columns: getColumns(tf.target, tf.fields),
   }));
 }
 
 /** The picked fields that hold values, as columns. */
 function getColumns(schemaName: string, fields: ExportField[]): ExportColumn[] {
-  return getPickedFields(fields).map(({ fieldname, label }) => ({
-    label,
-    key: fieldname,
-    csvKey: `${schemaName}.${fieldname}`,
-    getValue: (values: DocValues) => getExportValue(values, fieldname),
-  }));
+  const schemaKey = RENAMED_SCHEMAS[schemaName] ?? schemaName;
+  return getPickedFields(fields).map((field) => {
+    const key = getExportKey(schemaName, field.fieldname);
+    return {
+      label: field.label,
+      key,
+      csvKey: `${schemaKey}.${key}`,
+      getValue: getValueReader(schemaName, field),
+    };
+  });
 }
 
-/** A field's value; Submitted and Cancelled follow the docstatus. */
-function getExportValue(values: DocValues, fieldname: string): unknown {
+function getExportKey(schemaName: string, fieldname: string): string {
+  return (
+    RENAMED_KEYS[schemaName]?.[fieldname] ??
+    AUDIT_KEYS[fieldname] ??
+    camelCase(fieldname)
+  );
+}
+
+/**
+ * How a file holds a field's value, as Books wrote it: Submitted and
+ * Cancelled for the docstatus, datetimes in ISO with the system offset
+ * (`modified` as Frappe sends it), and doctypes by their schema names.
+ */
+function getValueReader(
+  schemaName: string,
+  { fieldname, fieldtype }: ExportField
+): (values: DocValues) => unknown {
   const flag = DOCSTATUS_FLAGS[fieldname];
-  return flag ? flag.includes(values.docstatus as number) : values[fieldname];
+  if (flag) {
+    return (values) => flag.includes(values.docstatus as number);
+  }
+
+  if (fieldtype === FieldTypeEnum.Datetime && fieldname !== 'modified') {
+    return (values) => values[fieldname] && toIsoDatetime(values[fieldname]);
+  }
+
+  if (isReference(schemaName, fieldname)) {
+    return (values) => toSchemaReference(values[fieldname]);
+  }
+
+  return (values) => values[fieldname];
+}
+
+function isReference(schemaName: string, fieldname: string): boolean {
+  const docfield = getDocType(schemaName).meta.fields.find(
+    (field) => field.fieldname === fieldname
+  );
+  return !!docfield && isReferenceField(docfield);
+}
+
+function toSchemaReference(value: unknown): unknown {
+  return typeof value === 'string' ? (toSchemaName(value) ?? value) : value;
 }
 
 /** The tables whose field is picked for export. */

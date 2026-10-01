@@ -23,7 +23,10 @@ test('the POS profile form shows the fields and quick edit fields it showed', ()
     'inventory | Inventory |  | Default',
     'pos_print_template | POS Print Template |  | Default',
   ]);
-  assert.equal(getLayout('POSProfile').at(-1).split(' | ')[3], 'Colour');
+  assert.equal(
+    getLayout('POSProfile').at(-1),
+    'pay_and_print_button_colour | Pay And Print Button Colour | Select Colour | Colour'
+  );
   assert.deepEqual(getSchema('POSProfile').quickEditFields, [
     'name',
     'pos_customer',

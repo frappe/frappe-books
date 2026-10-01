@@ -80,6 +80,22 @@ test('shift tables show the columns their bridge schemas showed', () => {
   });
 });
 
+test('shift table headings show only their labels; the hints are placeholders', () => {
+  const fields = ['OpeningCash', 'ClosingAmounts'].flatMap(
+    (schemaName) => getSchema(schemaName).fields
+  );
+  assert.deepEqual(
+    fields.filter((field) => field.sub_label).map((field) => field.fieldname),
+    []
+  );
+  assert.equal(
+    getSchema('ClosingAmounts').fields.find(
+      (field) => field.fieldname === 'expected_amount'
+    ).placeholder,
+    'Expected Amount'
+  );
+});
+
 test('the POS opens a new shift unless one is open', async () => {
   openShift = null;
   const opening = await posSetup.getPOSOpeningShiftDoc();

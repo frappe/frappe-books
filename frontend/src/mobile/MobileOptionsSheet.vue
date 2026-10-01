@@ -5,33 +5,22 @@
       :aria-label="actions ? undefined : title"
       class="flex flex-col px-2 pb-[max(env(safe-area-inset-bottom),1rem)]"
     >
-      <button
+      <MobileSheetRow
         v-for="option in options"
         :key="String(option.value)"
-        type="button"
         :role="actions ? undefined : 'option'"
         :aria-selected="actions ? undefined : option.value === value"
-        class="flex h-[52px] items-center gap-3 rounded-5 px-3 text-start text-lg text-ink-gray-8 active:bg-surface-gray-2"
+        :label="option.label"
+        :icon="option.icon"
+        :checked="!actions && option.value === value"
         @click="select(option.value)"
-      >
-        <span
-          v-if="option.icon"
-          :class="option.icon"
-          class="size-[18px] shrink-0"
-          aria-hidden="true"
-        />
-        <span class="min-w-0 flex-1 truncate">{{ option.label }}</span>
-        <span
-          v-if="!actions && option.value === value"
-          class="lucide-check size-[18px] shrink-0 text-ink-gray-9"
-          aria-hidden="true"
-        />
-      </button>
+      />
     </div>
   </FrappeBottomSheet>
 </template>
 <script setup lang="ts">
 import { BottomSheet as FrappeBottomSheet } from 'frappe-ui';
+import MobileSheetRow from './MobileSheetRow.vue';
 
 export interface SheetOption {
   label: string;

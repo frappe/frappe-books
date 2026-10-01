@@ -18,30 +18,21 @@
       role="listbox"
       class="flex flex-col px-2 pb-[max(env(safe-area-inset-bottom),1rem)]"
     >
-      <FrappeItemListRow
+      <MobileSheetRow
         v-for="template in templates"
         :key="template"
-        as="button"
-        type="button"
         role="option"
-        size="lg"
-        class="text-start"
         :aria-selected="template === modelValue"
+        :label="template"
+        :checked="template === modelValue"
         @click="pick(template)"
-      >
-        {{ template }}
-        <template v-if="template === modelValue" #suffix>
-          <span class="lucide-check size-[18px]" aria-hidden="true" />
-        </template>
-      </FrappeItemListRow>
+      />
     </div>
   </FrappeBottomSheet>
 </template>
 <script setup lang="ts">
-import {
-  BottomSheet as FrappeBottomSheet,
-  ItemListRow as FrappeItemListRow,
-} from 'frappe-ui';
+import { BottomSheet as FrappeBottomSheet } from 'frappe-ui';
+import MobileSheetRow from 'src/mobile/MobileSheetRow.vue';
 import { ref } from 'vue';
 
 defineProps<{ modelValue: string | null; templates: string[] }>();

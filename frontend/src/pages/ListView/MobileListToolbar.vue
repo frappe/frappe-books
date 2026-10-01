@@ -1,5 +1,7 @@
 <template>
-  <div class="flex flex-col gap-2.5 border-b border-outline-gray-1 px-4 py-3">
+  <div
+    class="sticky top-0 z-10 flex flex-col gap-2 border-b border-outline-gray-1 bg-surface-base px-4 py-2"
+  >
     <div class="flex gap-2">
       <FrappeTextInput
         type="search"
@@ -36,21 +38,19 @@
       />
     </div>
     <div v-if="chips.length" class="-mx-4 flex gap-2 overflow-x-auto px-4">
-      <span
+      <FrappeButton
         v-for="chip in chips"
         :key="chip.id"
-        class="flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-surface-gray-2 pe-0.5 ps-3 text-sm text-ink-gray-8"
+        size="md"
+        :label="t`Remove filter ${chip.label}`"
+        @click="removeFilter(chip.id)"
       >
         <span class="text-ink-gray-5">{{ chip.label }}</span>
         {{ chip.value }}
-        <FrappeButton
-          variant="ghost"
-          size="sm"
-          icon="lucide-x"
-          :label="t`Remove filter ${chip.label}`"
-          @click="removeFilter(chip.id)"
-        />
-      </span>
+        <template #suffix>
+          <span class="lucide-x size-4 text-ink-gray-5" aria-hidden="true" />
+        </template>
+      </FrappeButton>
     </div>
   </div>
   <MobileFilterSheet

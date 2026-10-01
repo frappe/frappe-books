@@ -6,29 +6,24 @@
     <div
       class="flex shrink-0 gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none]"
     >
-      <button
+      <FrappeButton
         v-if="columnOptions.length > 1"
-        type="button"
-        :class="chipClass"
+        size="md"
+        icon-right="lucide-chevron-down"
         @click="columnSheetOpen = true"
       >
         <span class="text-ink-gray-5">{{ t`Column` }}</span>
         {{ valueColumns[0]?.label }}
-        <FrappeIcon
-          icon="lucide-chevron-down"
-          class="size-3.5 text-ink-gray-5"
-        />
-      </button>
-      <button
+      </FrappeButton>
+      <FrappeButton
         v-for="chip in filters.chips"
         :key="chip.fieldname"
-        type="button"
-        :class="chipClass"
+        size="md"
         @click="emit('open-filters')"
       >
         <span class="text-ink-gray-5">{{ chip.label }}</span>
         {{ chip.value }}
-      </button>
+      </FrappeButton>
     </div>
 
     <MobileReportSkeleton v-if="loading" v-bind="skeleton" />
@@ -82,7 +77,7 @@
 </template>
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core';
-import { Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
+import { Button as FrappeButton } from 'frappe-ui';
 import type { Report } from 'reports/Report';
 import type { ReportRow } from 'reports/types';
 import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
@@ -103,9 +98,6 @@ const props = defineProps<{
   loading: boolean;
 }>();
 const emit = defineEmits<{ 'open-filters': []; 'clear-filters': [] }>();
-
-const chipClass =
-  'flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-surface-gray-2 px-3 text-sm text-ink-gray-8 active:bg-surface-gray-4';
 
 const columnChoices = useLocalStorage<Record<string, string>>(
   'books:report-phone-columns',

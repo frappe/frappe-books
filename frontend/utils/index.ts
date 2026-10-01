@@ -52,10 +52,6 @@ export function getMapFromList<T, K extends keyof T>(
   return acc;
 }
 
-export function getListFromMap<T>(map: Record<string, T>): T[] {
-  return Object.keys(map).map((n) => map[n]);
-}
-
 export function getIsNullOrUndef(value: unknown): value is null | undefined {
   return value === null || value === undefined;
 }
@@ -71,17 +67,6 @@ export function titleCase(phrase: string): string {
       return wordLower[0].toUpperCase() + wordLower.slice(1);
     })
     .join(' ');
-}
-
-export function invertMap(map: Record<string, string>): Record<string, string> {
-  const keys = Object.keys(map);
-  const inverted: Record<string, string> = {};
-  for (const key of keys) {
-    const val = map[key];
-    inverted[val] = key;
-  }
-
-  return inverted;
 }
 
 export function time<K, T>(func: (...args: K[]) => T, ...args: K[]): T {

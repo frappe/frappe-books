@@ -46,7 +46,6 @@ export enum ModelNameEnum {
   Tax = 'Tax',
   TaxDetail = 'TaxDetail',
   TaxSummary = 'TaxSummary',
-  SingleValue = 'SingleValue',
   InventorySettings = 'InventorySettings',
   SystemSettings = 'SystemSettings',
   StockMovement = 'StockMovement',

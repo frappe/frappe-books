@@ -66,23 +66,6 @@ export async function getMappedFrappeDoc(
   return newFrappeDoc(schemaName, Object.fromEntries(setValues));
 }
 
-/** An unsaved document from values the server built, like a mapper's; unset values keep their defaults. */
-export function newFrappeDocFromServer(
-  schemaName: string,
-  values: DocValues
-): FrappeDoc {
-  const setValues = Object.fromEntries(
-    Object.entries(values).filter(([, value]) => value != null)
-  );
-  const docValues = toDocValues(
-    getDocType(schemaName).schema,
-    setValues,
-    fyo,
-    (target) => getDocType(target).schema
-  );
-  return newFrappeDoc(schemaName, docValues);
-}
-
 /** An open document, reloaded if asked and unedited, or the saved one loaded. */
 export async function getFrappeDoc(
   schemaName: string,

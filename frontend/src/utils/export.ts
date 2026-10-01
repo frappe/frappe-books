@@ -132,6 +132,12 @@ export async function getCsvExportData(query: ExportQuery): Promise<string> {
   return generateCSV([labels, keys, ...rows]);
 }
 
+/** A field's key in an exported CSV, e.g. `SalesInvoice.numberSeries`. */
+export function getCsvKey(schemaName: string, fieldname: string): string {
+  const schemaKey = RENAMED_SCHEMAS[schemaName] ?? schemaName;
+  return `${schemaKey}.${getExportKey(schemaName, fieldname)}`;
+}
+
 /** A picked field as a file holds it: its label, keys and value. */
 interface ExportColumn {
   label: string;
@@ -219,12 +225,6 @@ function getColumns(schemaName: string, fields: ExportField[]): ExportColumn[] {
     csvKey: getCsvKey(schemaName, field.fieldname),
     getValue: getValueReader(schemaName, field),
   }));
-}
-
-/** A field's key in an exported CSV, e.g. `SalesInvoice.numberSeries`. */
-export function getCsvKey(schemaName: string, fieldname: string): string {
-  const schemaKey = RENAMED_SCHEMAS[schemaName] ?? schemaName;
-  return `${schemaKey}.${getExportKey(schemaName, fieldname)}`;
 }
 
 function getExportKey(schemaName: string, fieldname: string): string {

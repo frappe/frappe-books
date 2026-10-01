@@ -38,7 +38,9 @@
           @click="setSearchFilter(group, !isFilterOn(group))"
         />
       </div>
-      <div class="mb-2.5 me-3 mt-1 shrink-0 border-s border-outline-gray-1 ps-1">
+      <div
+        class="mb-2.5 me-3 mt-1 shrink-0 border-s border-outline-gray-1 ps-1"
+      >
         <FrappeButton
           size="md"
           variant="ghost"
@@ -57,33 +59,36 @@
     >
       {{ t`Recent` }}
     </p>
-    <ul v-if="rows.length" :aria-label="t`Results`">
-      <li v-for="(item, index) in rows" :key="`${index}-${item.label}`">
-        <button
-          type="button"
-          class="flex min-h-14 w-full items-center gap-3 border-b border-outline-gray-1 px-4 py-2 text-start active:bg-surface-gray-1"
-          @click="openSearchItem(item)"
-        >
-          <span class="flex min-w-0 flex-1 flex-col gap-1">
-            <span class="truncate text-md-medium text-ink-gray-9">
-              {{ item.label }}
-            </span>
-            <span
+    <FrappeList
+      v-if="rows.length"
+      class="list-row-px-4"
+      :columns="['minmax(0,1fr)', 'auto']"
+      :aria-label="t`Results`"
+    >
+      <FrappeListRow
+        v-for="(item, index) in rows"
+        :key="`${index}-${item.label}`"
+        class="min-h-14 py-2"
+        @click="openSearchItem(item)"
+      >
+        <FrappeListCell>
+          <div class="min-w-0">
+            <div class="truncate text-lg text-ink-gray-8">{{ item.label }}</div>
+            <div
               v-if="getDetail(item)"
-              class="truncate text-sm text-ink-gray-5"
+              class="mt-0.5 truncate text-md text-ink-gray-5"
             >
               {{ getDetail(item) }}
-            </span>
-          </span>
-          <FrappeBadge
-            :theme="groupThemeMap[item.group]"
-            class="max-w-[132px] shrink-0"
-          >
+            </div>
+          </div>
+        </FrappeListCell>
+        <FrappeListCell class="justify-end">
+          <FrappeBadge :theme="groupThemeMap[item.group]" class="max-w-[132px]">
             <span class="truncate">{{ getBadgeLabel(item) }}</span>
           </FrappeBadge>
-        </button>
-      </li>
-    </ul>
+        </FrappeListCell>
+      </FrappeListRow>
+    </FrappeList>
 
     <div
       v-if="query && total"
@@ -129,6 +134,11 @@ import {
   Icon as FrappeIcon,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListCell as FrappeListCell,
+  ListRow as FrappeListRow,
+} from 'frappe-ui/list';
 import PageHeader from 'src/components/PageHeader.vue';
 import { historyState } from 'src/utils/refs';
 import {

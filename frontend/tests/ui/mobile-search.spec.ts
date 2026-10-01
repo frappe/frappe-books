@@ -25,6 +25,8 @@ test.beforeEach(async ({ page }) => {
 const searchbox = (page: Page) =>
   page.getByRole('searchbox', { name: 'Search Frappe Books' });
 const results = (page: Page) => page.getByRole('list', { name: 'Results' });
+const result = (page: Page, text: string | RegExp) =>
+  results(page).getByRole('listitem').filter({ hasText: text });
 
 async function openSearch(page: Page, query: string) {
   await page.goto('/books/search');
@@ -53,14 +55,14 @@ test('a result opens its record, back keeps the search and Recent reopens it', a
   page,
 }) => {
   await openSearch(page, customer);
-  await results(page).getByRole('button', { name: customer }).click();
+  await result(page, customer).click();
   await expect(page).toHaveURL(/\/books\/edit\/Party\//);
 
   await page.goBack();
   await expect(searchbox(page)).toHaveValue(customer);
 
   await searchbox(page).fill('');
-  const recent = results(page).getByRole('button', { name: customer });
+  const recent = result(page, customer);
   await expect(recent).toContainText('Recent');
   await recent.click();
   await expect(page).toHaveURL(/\/books\/edit\/Party\//);
@@ -70,7 +72,7 @@ test('group chips and the filters sheet narrow the results', async ({
   page,
 }) => {
   await openSearch(page, customer);
-  const record = results(page).getByRole('button', { name: customer });
+  const record = result(page, customer);
   await expect(record).toBeVisible();
 
   const docs = page.getByRole('button', { name: 'Docs', exact: true });
@@ -94,7 +96,5 @@ test('desktop-only pages are left out of the results', async ({ page }) => {
   await expect(page.getByText('No results')).toBeVisible();
 
   await searchbox(page).fill('Settings');
-  await expect(
-    results(page).getByRole('button', { name: /^Settings\s*Page$/ })
-  ).toBeVisible();
+  await expect(result(page, /^Settings\s*Page$/)).toBeVisible();
 });

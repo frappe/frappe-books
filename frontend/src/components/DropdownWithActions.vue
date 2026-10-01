@@ -28,7 +28,7 @@ import {
   type DropdownOption,
   type DropdownOptions,
 } from 'frappe-ui';
-import { Doc } from 'fyo/model/doc';
+import { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { defineComponent, PropType } from 'vue';
 
@@ -51,9 +51,9 @@ export default defineComponent({
     variant(): 'solid' | 'subtle' {
       return this.type === 'primary' ? 'solid' : 'subtle';
     },
-    doc(): Doc | undefined {
+    doc(): FrappeDoc | undefined {
       const doc = this.injectedDoc;
-      return doc instanceof Doc ? doc : undefined;
+      return doc instanceof FrappeDoc ? doc : undefined;
     },
     options(): DropdownOptions {
       const groups = new Map<string, Action[]>();

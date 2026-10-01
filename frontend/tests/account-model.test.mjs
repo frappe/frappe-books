@@ -105,11 +105,12 @@ test('a root account says it cannot be deleted before asking the server', async 
 
 test('the parent picker offers groups of the account root type', () => {
   const { parent_books_account } = Account.filters;
-  assert.deepEqual(parent_books_account(newAccount({})), { is_group: true });
-  assert.deepEqual(parent_books_account(newAccount({ root_type: 'Income' })), {
-    is_group: true,
-    root_type: 'Income',
-  });
+  const groups = ['is_group', '=', 1];
+  assert.deepEqual(parent_books_account(newAccount({})), [groups]);
+  assert.deepEqual(parent_books_account(newAccount({ root_type: 'Income' })), [
+    groups,
+    ['root_type', '=', 'Income'],
+  ]);
 });
 
 test('account links in other forms filter by Frappe fieldnames', async () => {
@@ -117,39 +118,39 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
   const JournalEntryAccount = frappeModels.JournalEntry.rowModels.accounts;
   const { Party, AccountingSettings, InventorySettings, POSSettings } =
     frappeModels;
-  const ledger = { is_group: false };
-  assert.deepEqual(await Party.filters.default_account({ role: 'Customer' }), {
-    ...ledger,
-    account_type: 'Receivable',
-  });
-  assert.deepEqual(await PurchaseInvoice.filters.account({ isSales: false }), {
-    ...ledger,
-    account_type: 'Payable',
-  });
-  assert.deepEqual(JournalEntryAccount.filters.account(), ledger);
-  assert.deepEqual(AccountingSettings.filters.discount_account(), {
-    ...ledger,
-    root_type: 'Income',
-  });
+  const ledger = ['is_group', '=', 0];
+  assert.deepEqual(await Party.filters.default_account({ role: 'Customer' }), [
+    ledger,
+    ['account_type', '=', 'Receivable'],
+  ]);
+  assert.deepEqual(await PurchaseInvoice.filters.account({ isSales: false }), [
+    ledger,
+    ['account_type', '=', 'Payable'],
+  ]);
+  assert.deepEqual(JournalEntryAccount.filters.account(), [ledger]);
+  assert.deepEqual(AccountingSettings.filters.discount_account(), [
+    ledger,
+    ['root_type', '=', 'Income'],
+  ]);
   // As the DocField's link_filters say.
   const defaults = getSchema('Defaults').fields;
   assert.deepEqual(
     defaults.find((f) => f.fieldname === 'sales_payment_account').linkFilters,
-    { is_group: ['=', 0], account_type: ['in', ['Cash', 'Bank']] }
+    [ledger, ['account_type', 'in', ['Cash', 'Bank']]]
   );
-  assert.deepEqual(InventorySettings.filters.stock_in_hand(), {
-    ...ledger,
-    account_type: 'Stock',
-  });
-  assert.deepEqual(POSSettings.filters.cash_account(), {
-    ...ledger,
-    root_type: 'Asset',
-    account_type: 'Cash',
-  });
-  assert.deepEqual(frappeModels.Item.filters.income_account(), {
-    ...ledger,
-    root_type: 'Income',
-  });
+  assert.deepEqual(InventorySettings.filters.stock_in_hand(), [
+    ledger,
+    ['account_type', '=', 'Stock'],
+  ]);
+  assert.deepEqual(POSSettings.filters.cash_account(), [
+    ['root_type', '=', 'Asset'],
+    ['account_type', '=', 'Cash'],
+    ledger,
+  ]);
+  assert.deepEqual(frappeModels.Item.filters.income_account(), [
+    ledger,
+    ['root_type', '=', 'Income'],
+  ]);
 });
 
 test('the account list shows its name, root type, group and parent', () => {

@@ -13,47 +13,22 @@ import {
   onListChange,
   searchFrappeLink,
   stubFrappe,
-  toFrappeFilters,
 } from './helpers/frappe.mjs';
 
 await loadTestDocTypes();
 
-test('Books list filters become Frappe filters', () => {
-  assert.deepEqual(
-    toFrappeFilters({
-      item_type: 'Product',
-      track_item: true,
-      rate: ['>=', 5, '<=', 10],
-      item_usage: ['not in', ['Sales']],
-      description: ['includes', 'blue'],
-      barcode: ['is null', null],
-      hsn_code: ['is not null', null],
-    }),
-    [
-      ['item_type', '=', 'Product'],
-      ['track_item', '=', 1],
-      ['rate', '>=', 5],
-      ['rate', '<=', 10],
-      ['item_usage', 'not in', ['Sales']],
-      ['description', 'like', '%blue%'],
-      ['barcode', 'is', 'not set'],
-      ['hsn_code', 'is', 'set'],
-    ]
-  );
-});
-
 test('Submitted and Cancelled filters become docstatus filters', () => {
-  assert.deepEqual(toFrappeFilters({ submitted: true, cancelled: ['=', 0] }), [
+  const filters = new ListFilters('Order');
+  filters.filterSet.add('submitted', '=', true);
+  filters.filterSet.add('cancelled', '=', 0);
+  filters.filterSet.add('submitted', '!=', 1);
+  filters.filterSet.add('cancelled', '=', '1');
+  assert.deepEqual(filters.apply(), [
     ['docstatus', 'in', [1, 2]],
     ['docstatus', 'not in', [2]],
+    ['docstatus', 'not in', [1, 2]],
+    ['docstatus', 'in', [2]],
   ]);
-  assert.deepEqual(
-    toFrappeFilters({ submitted: ['!=', 1], cancelled: ['=', '1'] }),
-    [
-      ['docstatus', 'not in', [1, 2]],
-      ['docstatus', 'in', [2]],
-    ]
-  );
 });
 
 test('submittable lists offer the Submitted and Cancelled filters', () => {
@@ -72,8 +47,11 @@ test("a list page and its count come from Frappe's list query, newest first", as
       : { message: [{ name: 'Pen', rate: 12.5, track_item: 1 }] }
   );
   const { rows, total } = await getFrappeListPage(fyo, 'Item', {
-    filters: { item_type: 'Product' },
-    orFilters: { name: ['like', '%pe%'], item_usage: ['like', '%pe%'] },
+    filters: [['item_type', '=', 'Product']],
+    orFilters: [
+      ['name', 'like', '%pe%'],
+      ['item_usage', 'like', '%pe%'],
+    ],
     start: 50,
     limit: 50,
   });
@@ -116,14 +94,14 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
   );
   const list = {
     schemaName: 'Order',
-    filters: { customer: ['like', 'Acme%'] },
-    activeFilters: {},
-    orFilters: {},
+    filters: [['customer', 'like', 'Acme%']],
+    activeFilters: [],
+    orFilters: [],
     requestId: 0,
     pageStart: 100,
     pageLength: 50,
   };
-  const query = { amount: ['>', 5] };
+  const query = [['amount', '>', 5]];
   const first = loadListData(fyo, list, query);
   pages.shift()({ message: [{ name: 'ORD-1', customer: 'Acme' }] });
   const loaded = await first;
@@ -133,7 +111,7 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
     ['ORD-1']
   );
   assert.equal(loaded.total, 2);
-  assert.deepEqual(loaded.appliedFilters, { ...list.filters, ...query });
+  assert.deepEqual(loaded.appliedFilters, [...list.filters, ...query]);
   assert.deepEqual(requests[0].body.filters, [
     ['customer', 'like', 'Acme%'],
     ['amount', '>', 5],
@@ -148,14 +126,14 @@ test('a list keeps its filters on refresh and drops a stale page', async () => {
   await refresh;
   assert.deepEqual(list.activeFilters, query);
 
-  const old = loadListData(fyo, list, { customer: 'Old' });
-  const latest = loadListData(fyo, list, {});
+  const old = loadListData(fyo, list, [['customer', '=', 'Old']]);
+  const latest = loadListData(fyo, list, []);
   const oldPage = pages.shift();
   pages.shift()({ message: [{ name: 'ORD-2' }] });
   assert.equal((await latest).rows[0].name, 'ORD-2');
   oldPage({ message: [{ name: 'ORD-0' }] });
   assert.equal(await old, undefined);
-  assert.deepEqual(list.activeFilters, {});
+  assert.deepEqual(list.activeFilters, []);
 });
 
 test('a submittable list refreshes after a submit, cancel, save, delete or rename', () => {
@@ -197,7 +175,10 @@ test("link options come from Frappe's link search, letters matched in order", as
   const options = await searchFrappeLink(
     'Item',
     ' rce ',
-    { item_usage: ['not in', ['Purchases']], track_item: true },
+    [
+      ['item_usage', 'not in', ['Purchases']],
+      ['track_item', '=', 1],
+    ],
     50
   );
 
@@ -228,7 +209,7 @@ test("a list is ordered by its DocType's sort field, newest first", async (t) =>
   const requests = stubFrappe(({ path }) =>
     path.endsWith('/count') ? { data: 0 } : { message: [] }
   );
-  const page = { filters: {}, orFilters: {}, start: 0, limit: 20 };
+  const page = { filters: [], orFilters: [], start: 0, limit: 20 };
 
   meta.sort_field = 'creation';
   await getFrappeListPage(fyo, 'Order', page);
@@ -248,18 +229,4 @@ test('a submittable list filters Submitted and Cancelled by docstatus', () => {
   );
   assert.deepEqual(fieldnames.slice(-2), ['submitted', 'cancelled']);
   assert.ok(!fieldnames.includes('docstatus'));
-
-  assert.deepEqual(
-    toFrappeFilters({
-      submitted: true,
-      cancelled: ['!=', 1],
-    }),
-    [
-      ['docstatus', 'in', [1, 2]],
-      ['docstatus', 'not in', [2]],
-    ]
-  );
-  assert.deepEqual(toFrappeFilters({ submitted: ['=', 0] }), [
-    ['docstatus', 'not in', [1, 2]],
-  ]);
 });

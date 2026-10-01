@@ -2,7 +2,7 @@ import { getMoneyMaker, MoneyMaker } from 'pesa';
 import { Field, FieldType, Schema } from 'schemas/types';
 import { getRandomString } from 'utils';
 import { markRaw } from 'vue';
-import { Doc } from './model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { DocumentActionWarning, SinglesMap } from './model/types';
 import {
   DEFAULT_CURRENCY,
@@ -70,7 +70,7 @@ export class Fyo {
   }
 
   reportDocumentActionWarning(
-    doc: Doc,
+    doc: FrappeDoc,
     action: DocumentActionWarning['action'],
     errors: unknown[]
   ) {
@@ -87,7 +87,7 @@ export class Fyo {
     }
   }
 
-  format(value: unknown, field: FieldType | Field, doc?: Doc) {
+  format(value: unknown, field: FieldType | Field, doc?: FrappeDoc) {
     return format(value, field, doc ?? null, this);
   }
 

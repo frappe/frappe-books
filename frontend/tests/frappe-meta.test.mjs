@@ -222,7 +222,7 @@ test("a list export keys custom fields by their Books Custom Field's fieldname",
   );
   const query = { schemaName: 'Item', fields, tableFields: [], limit: null };
 
-  const csv = await getCsvExportData({ ...query, filters: {} });
+  const csv = await getCsvExportData({ ...query, filters: [] });
   assert.deepEqual(csv.split('\r\n').slice(1), [
     'Item.name,Item.shelf',
     'Pen,A1',

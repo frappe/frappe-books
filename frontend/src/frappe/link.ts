@@ -1,10 +1,8 @@
 import { translateValue } from 'fyo/utils/translation';
 import { call } from 'src/web/api';
-import type { QueryFilter } from 'utils/db/types';
-import { getValue } from './api';
+import { getValue, type Filter } from './api';
 import { getDocType, isFrappeBacked } from './doctypes';
 import { getOpenFrappeDocs } from './documents';
-import { toFrappeFilters } from './list';
 import { getSchema } from './registry';
 
 export type LinkRecord = Record<string, string | null | undefined> & {
@@ -22,7 +20,7 @@ export type LinkOption = { label: string; value: string; record: LinkRecord };
 export async function searchFrappeLink(
   schemaName: string,
   text: string,
-  filters: QueryFilter | null,
+  filters: Filter[] | null,
   limit: number,
   fields: string[] = []
 ): Promise<LinkOption[]> {
@@ -31,7 +29,7 @@ export async function searchFrappeLink(
   const records = await call<LinkRecord[]>('frappe.desk.search.search_widget', {
     doctype,
     txt: meta.translated_doctype ? words : [...words].join('%'),
-    filters: toFrappeFilters(filters ?? {}),
+    filters: filters ?? [],
     filter_fields: fields,
     page_length: limit,
     as_dict: true,

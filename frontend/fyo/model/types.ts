@@ -3,9 +3,9 @@ import type { Fyo } from 'fyo';
 import type { DocValue } from 'fyo/core/types';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import type { FieldType, Schema, SelectOption } from 'schemas/types';
-import type { QueryFilter } from 'utils/db/types';
+import type { Filter } from 'src/frappe/api';
 import type { RouteLocationRaw, Router } from 'vue-router';
-import type { Doc } from './doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import type { AccountingSettings } from 'models/baseModels/AccountingSettings/AccountingSettings';
 import type { GetStarted } from 'models/baseModels/GetStarted/GetStarted';
 import type { Defaults } from 'models/baseModels/Defaults/Defaults';
@@ -33,10 +33,10 @@ export type CurrenciesMap = Record<string, GetCurrency | undefined>;
 export type HiddenMap = Record<string, Hidden | undefined>;
 export type ReadOnlyMap = Record<string, ReadOnly | undefined>;
 
-export type ChangeArg = { doc: Doc; changed?: string };
+export type ChangeArg = { doc: FrappeDoc; changed?: string };
 
 export interface DocumentActionWarning {
-  doc: Doc;
+  doc: FrappeDoc;
   action: 'save' | 'submit';
   message: string;
   errors: unknown[];
@@ -51,24 +51,24 @@ export interface SinglesMap {
   Defaults?: Defaults;
   Misc?: Misc;
   GetStarted?: GetStarted;
-  [key: string]: Doc | undefined;
+  [key: string]: FrappeDoc | undefined;
 }
 
 // Static Config properties
 
-export type FilterFunction = (doc: Doc) => QueryFilter | Promise<QueryFilter>;
+export type FilterFunction = (doc: FrappeDoc) => Filter[] | Promise<Filter[]>;
 export type FiltersMap = Record<string, FilterFunction>;
 
-export type EmptyMessageFunction = (doc: Doc) => string;
+export type EmptyMessageFunction = (doc: FrappeDoc) => string;
 export type EmptyMessageMap = Record<string, EmptyMessageFunction>;
 
-export type ListFunction = (doc?: Doc) => string[] | SelectOption[];
+export type ListFunction = (doc?: FrappeDoc) => string[] | SelectOption[];
 export type ListsMap = Record<string, ListFunction | undefined>;
 
 export interface Action {
   label: string;
-  action: (doc: Doc, router: Router) => Promise<void> | void | unknown;
-  condition?: (doc: Doc) => boolean;
+  action: (doc: FrappeDoc, router: Router) => Promise<void> | void | unknown;
+  condition?: (doc: FrappeDoc) => boolean;
   group?: string;
   type?: 'primary' | 'secondary';
   theme?: 'gray' | 'red';

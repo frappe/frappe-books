@@ -77,7 +77,7 @@ test('selecting a condition closes its menu and Apply preserves the value', asyn
   await setValue(page, 'Paid');
   await panel.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(panel).toBeHidden();
-  expect(await appliedFilters(page)).toEqual({ status: ['=', 'Paid'] });
+  expect(await appliedFilters(page)).toEqual([['status', '=', 'Paid']]);
   const trigger = page.getByRole('button', {
     name: '1 filter applied',
     exact: true,
@@ -93,7 +93,7 @@ test('selecting a condition closes its menu and Apply preserves the value', asyn
   await expect(page.locator('[data-slot="bubble"]')).toBeHidden();
   await panel.getByRole('button', { name: 'Clear', exact: true }).click();
   await expect(panel.getByText('No filters selected')).toBeVisible();
-  expect(await appliedFilters(page)).toEqual({});
+  expect(await appliedFilters(page)).toEqual([]);
 });
 
 test('remaining filters can be edited and removed after an incomplete row is discarded', async ({
@@ -112,7 +112,7 @@ test('remaining filters can be edited and removed after an incomplete row is dis
   await setValue(page, 'Unpaid');
   await panel.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(panel).toBeHidden();
-  expect(await appliedFilters(page)).toEqual({ status: ['=', 'Unpaid'] });
+  expect(await appliedFilters(page)).toEqual([['status', '=', 'Unpaid']]);
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
@@ -121,20 +121,21 @@ test('remaining filters can be edited and removed after an incomplete row is dis
     .click();
   await expect(panel.getByText('No filters selected')).toBeVisible();
   await dismissFilters(page);
-  expect(await appliedFilters(page)).toEqual({});
+  expect(await appliedFilters(page)).toEqual([]);
 });
 
+// Each condition, the value typed, the Frappe filter it sends and the matches.
 const operatorCases = [
-  ['Is', '=', 'Paid', 20],
-  ['Is Not', '!=', 'Paid', 40],
-  ['Contains', 'like', 'Paid', 60],
-  ['Does Not Contain', 'not like', 'Paid', 0],
-  ['Greater Than', '>', 'Paid', 40],
-  ['Less Than', '<', 'Paid', 0],
-  ['Is Empty', 'is null', null, 0],
-  ['Is Not Empty', 'is not null', null, 60],
+  ['Is', 'Paid', ['=', 'Paid'], 20],
+  ['Is Not', 'Paid', ['!=', 'Paid'], 40],
+  ['Contains', 'Paid', ['like', '%Paid%'], 60],
+  ['Does Not Contain', 'Paid', ['not like', '%Paid%'], 0],
+  ['Greater Than', 'Paid', ['>', 'Paid'], 40],
+  ['Less Than', 'Paid', ['<', 'Paid'], 0],
+  ['Is Empty', null, ['is', 'not set'], 0],
+  ['Is Not Empty', null, ['is', 'set'], 60],
 ] as const;
-for (const [label, operator, value, count] of operatorCases) {
+for (const [label, value, [operator, sent], count] of operatorCases) {
   test(`status ${label} produces the expected list records`, async ({
     page,
   }) => {
@@ -150,9 +151,7 @@ for (const [label, operator, value, count] of operatorCases) {
     await expect
       .poll(() => listSize(page))
       .toEqual({ total: count, rows: Math.min(count, pageLength) });
-    expect(await appliedFilters(page)).toEqual({
-      status: [operator, operator.includes('like') ? `%${value}%` : value],
-    });
+    expect(await appliedFilters(page)).toEqual([['status', operator, sent]]);
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
       .click();
@@ -180,9 +179,9 @@ test('Is Empty on User Remark hides Value and sends the unary condition', async 
     animations: 'disabled',
   });
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    user_remark: ['is null', null],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['user_remark', 'is', 'not set'],
+  ]);
 });
 
 test('date filters use the calendar and reset incompatible field values', async ({
@@ -209,15 +208,15 @@ test('date filters use the calendar and reset incompatible field values', async 
   await expect(page.getByPlaceholder('Select time')).toHaveCount(0);
   await expect(input).toHaveValue('2024-02-29');
   await expect(panel).toBeVisible();
-  expect(await appliedFilters(page)).toEqual({});
+  expect(await appliedFilters(page)).toEqual([]);
   await input.fill('not a date');
   await input.press('Enter');
   await expect(input).toHaveValue('2024-02-29');
   await expect(panel).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    posting_date: ['=', '2024-02-29'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['posting_date', '=', '2024-02-29'],
+  ]);
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
@@ -235,9 +234,10 @@ test('same-field conditions survive apply, reopen, edit, remove, refresh and cle
   await choose(page, 'Condition', 'Is Not', 1);
   await setValue(page, 'Paid', 1);
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    status: ['like', '%Paid%', '!=', 'Paid'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['status', 'like', '%Paid%'],
+    ['status', '!=', 'Paid'],
+  ]);
   await expect.poll(() => listSize(page)).toEqual({ total: 40, rows: 40 });
   await page.evaluate(async () => {
     await (window as any).filterFixture.list.value.updateData();
@@ -251,12 +251,12 @@ test('same-field conditions survive apply, reopen, edit, remove, refresh and cle
     .click();
   await setValue(page, 'Unpaid');
   await dismissFilters(page);
-  expect(await appliedFilters(page)).toEqual({ status: ['!=', 'Unpaid'] });
+  expect(await appliedFilters(page)).toEqual([['status', '!=', 'Unpaid']]);
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({});
+  expect(await appliedFilters(page)).toEqual([]);
   await expect
     .poll(() => listSize(page))
     .toEqual({ total: 60, rows: pageLength });
@@ -289,10 +289,10 @@ async function dismissFilters(page: Page) {
 }
 
 for (const [field, value, expected] of [
-  ['Rate', '0', { rate: ['=', 0] }],
-  ['Rate', '-12.5', { rate: ['=', -12.5] }],
-  ['Track Inventory', 'No', { track_item: ['=', '0'] }],
-  ['Track Inventory', 'Yes', { track_item: ['=', '1'] }],
+  ['Rate', '0', [['rate', '=', 0]]],
+  ['Rate', '-12.5', [['rate', '=', -12.5]]],
+  ['Track Inventory', 'No', [['track_item', '=', 0]]],
+  ['Track Inventory', 'Yes', [['track_item', '=', 1]]],
 ] as const) {
   test(`${field} accepts ${value} and counts the applied filter`, async ({
     page,
@@ -309,11 +309,7 @@ for (const [field, value, expected] of [
     if (field === 'Track Inventory') await choose(page, 'Value', value);
     else await setValue(page, value);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    const query = await appliedFilters(page);
-    const numericExpected = JSON.parse(JSON.stringify(expected));
-    if (field === 'Track Inventory')
-      numericExpected.track_item[1] = Number(numericExpected.track_item[1]);
-    expect(query).toEqual(numericExpected);
+    expect(await appliedFilters(page)).toEqual(expected);
     await expect(
       page.getByRole('button', { name: '1 filter applied', exact: true })
     ).toBeVisible();
@@ -338,16 +334,12 @@ test('datetime filters select both calendar date and time and preserve SQL round
   await time.press('Enter');
   await expect(input).toHaveValue('2024-02-29 13:45:00');
   await expect(panel).toBeVisible();
-  expect(await appliedFilters(page)).toEqual({});
+  expect(await appliedFilters(page)).toEqual([]);
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(panel).toBeHidden();
-  const expected = { date: ['=', '2024-02-29 13:45:00'] };
-  expect(await appliedFilters(page)).toEqual(expected);
-  await page.evaluate(() => {
-    const f = (window as any).filterFixture;
-    f.filter.value.setFilter(f.state.applied);
-  });
-  expect(await appliedFilters(page)).toEqual(expected);
+  expect(await appliedFilters(page)).toEqual([
+    ['date', '=', '2024-02-29 13:45:00'],
+  ]);
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
@@ -363,9 +355,9 @@ test('datetime filters select both calendar date and time and preserve SQL round
     .getByRole('heading', { name: 'Sales Invoice', exact: true })
     .click();
   await expect(panel).toBeHidden();
-  expect(await appliedFilters(page)).toEqual({
-    date: ['=', '2024-02-29 14:25:30'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['date', '=', '2024-02-29 14:25:30'],
+  ]);
 });
 
 // Journal entries filter on their posting date.
@@ -407,20 +399,20 @@ for (const schema of ['JournalEntry', 'SalesInvoice']) {
       page.getByRole('grid', { name: 'Calendar dates' })
     ).toBeHidden();
     await expect(panel).toBeVisible();
-    expect(await appliedFilters(page)).toEqual({});
+    expect(await appliedFilters(page)).toEqual([]);
     await input.fill('');
     await input.press('Enter');
     await expect(input).toHaveValue('');
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({});
+    expect(await appliedFilters(page)).toEqual([]);
     await page.getByRole('button', { name: 'Filter', exact: true }).click();
     await expect(input).toHaveValue('');
     await choose(page, 'Condition', 'Is Empty');
     await expect(input).toHaveCount(0);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({
-      [dateFields[schema]]: ['is null', null],
-    });
+    expect(await appliedFilters(page)).toEqual([
+      [dateFields[schema], 'is', 'not set'],
+    ]);
   });
 }
 
@@ -445,9 +437,9 @@ for (const [schema, first, second] of [
     await input.click();
     await input.fill(first);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({
-      [dateFields[schema]]: ['=', first.replace('T', ' ')],
-    });
+    expect(await appliedFilters(page)).toEqual([
+      [dateFields[schema], '=', first.replace('T', ' ')],
+    ]);
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
       .click();
@@ -459,9 +451,9 @@ for (const [schema, first, second] of [
     await expect(
       page.getByRole('region', { name: 'Filters', exact: true })
     ).toBeHidden();
-    expect(await appliedFilters(page)).toEqual({
-      [dateFields[schema]]: ['=', second.replace('T', ' ')],
-    });
+    expect(await appliedFilters(page)).toEqual([
+      [dateFields[schema], '=', second.replace('T', ' ')],
+    ]);
   });
 }
 
@@ -494,7 +486,7 @@ test('hidden filters survive visible removal and Clear; drafts do not change the
 }) => {
   await page.evaluate(() => {
     const f = (window as any).filterFixture.filter.value;
-    f.setFilter({ status: ['!=', 'Cancelled'] }, true);
+    f.addFilter('status', '!=', 'Cancelled', true);
   });
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
   await setValue(page, 'Paid');
@@ -502,9 +494,10 @@ test('hidden filters survive visible removal and Clear; drafts do not change the
     page.getByRole('button', { name: 'Filter', exact: true })
   ).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    status: ['!=', 'Cancelled', '=', 'Paid'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['status', '!=', 'Cancelled'],
+    ['status', '=', 'Paid'],
+  ]);
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
@@ -512,12 +505,12 @@ test('hidden filters survive visible removal and Clear; drafts do not change the
     .getByRole('button', { name: 'Remove filter 1', exact: true })
     .click();
   await dismissFilters(page);
-  expect(await appliedFilters(page)).toEqual({ status: ['!=', 'Cancelled'] });
+  expect(await appliedFilters(page)).toEqual([['status', '!=', 'Cancelled']]);
   await page.getByRole('button', { name: 'Filter', exact: true }).click();
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
   await setValue(page, 'Paid');
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({ status: ['!=', 'Cancelled'] });
+  expect(await appliedFilters(page)).toEqual([['status', '!=', 'Cancelled']]);
 });
 
 test('outside click applies changes and zero matches can be cleared', async ({
@@ -531,7 +524,7 @@ test('outside click applies changes and zero matches can be cleared', async ({
   await expect(
     page.getByRole('region', { name: 'Filters', exact: true })
   ).toBeHidden();
-  expect(await appliedFilters(page)).toEqual({ status: ['=', 'Saved'] });
+  expect(await appliedFilters(page)).toEqual([['status', '=', 'Saved']]);
   await expect(
     page.getByText('No entries found', { exact: true })
   ).toBeVisible();

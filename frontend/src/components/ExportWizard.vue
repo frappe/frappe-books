@@ -8,7 +8,7 @@
     <!-- Export Config -->
     <div class="flex flex-wrap items-end gap-4">
       <Check
-        v-if="configFields.useListFilters && Object.keys(listFilters).length"
+        v-if="configFields.useListFilters && listFilters.length"
         class="w-56"
         layout="field"
         :df="configFields.useListFilters"
@@ -117,6 +117,7 @@ import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
 import { t } from 'fyo';
 import { exportsOwnDocumentsOnly } from 'fyo/utils/permissions';
 import { Field, FieldTypeEnum } from 'schemas/types';
+import type { Filter } from 'src/frappe/api';
 import { getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { saveExportData } from 'reports/commonExporter';
@@ -127,7 +128,6 @@ import {
   getJsonExportData,
 } from 'src/utils/export';
 import { ExportField, ExportFormat, ExportTableField } from 'src/utils/types';
-import { QueryFilter } from 'utils/db/types';
 import { PropType, defineComponent } from 'vue';
 import Check from './Controls/Check.vue';
 import Int from './Controls/Int.vue';
@@ -147,7 +147,7 @@ export default defineComponent({
   props: {
     open: { type: Boolean, default: false },
     schemaName: { type: String, required: true },
-    listFilters: { type: Object as PropType<QueryFilter>, default: () => {} },
+    listFilters: { type: Array as PropType<Filter[]>, default: () => [] },
     pageTitle: String,
   },
   emits: ['update:open'],
@@ -248,11 +248,12 @@ export default defineComponent({
       field.export = value;
     },
     async exportData() {
-      const filters = JSON.parse(
-        JSON.stringify(this.useListFilters ? this.listFilters : {})
-      );
+      let filters = this.useListFilters ? this.listFilters : [];
       if (exportsOwnDocumentsOnly(fyo.store.permissions, this.schemaName)) {
-        filters.owner = fyo.user;
+        filters = [
+          ...filters.filter(([fieldname]) => fieldname !== 'owner'),
+          ['owner', '=', fyo.user],
+        ];
       }
 
       const query = {

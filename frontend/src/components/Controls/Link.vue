@@ -6,7 +6,7 @@ import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { LINK_PAGE_LENGTH, sortByFuzzyMatch } from 'src/utils';
 import { linkOnSave } from 'src/utils/doc';
-import { getCreateFiltersFromListViewFilters } from 'src/utils/misc';
+import { getNewDocValues } from 'src/utils/misc';
 import AutoComplete from './AutoComplete.vue';
 
 export default {
@@ -127,10 +127,10 @@ export default {
 
       const name =
         this.searchQuery || fyo.getTemporaryName(getSchema(schemaName));
-      const filters = await this.getCreateFilters();
+      const values = await this.getCreateValues(schemaName);
       const { openQuickEdit } = await import('src/utils/ui');
 
-      const doc = newFrappeDoc(schemaName, { name, ...filters });
+      const doc = newFrappeDoc(schemaName, { name, ...values });
       openQuickEdit({ doc });
 
       linkOnSave(doc, this.doc, this.df.fieldname, (savedName) => {
@@ -140,17 +140,14 @@ export default {
         this.triggerChange(savedName);
       });
     },
-    async getCreateFilters() {
+    /** Values a record created from the link takes from its create filters, else its filters. */
+    async getCreateValues(target) {
       const { schemaName, fieldname } = this.df;
       const getCreateFilters = getModel(schemaName)?.createFilters?.[fieldname];
-      let createFilters = await getCreateFilters?.(this.doc);
-
-      if (createFilters !== undefined) {
-        return createFilters;
-      }
-
-      const filters = (await this.getFilters()) ?? {};
-      return getCreateFiltersFromListViewFilters(filters);
+      const filters = getCreateFilters
+        ? await getCreateFilters(this.doc)
+        : await this.getFilters();
+      return getNewDocValues(target, filters ?? []);
     },
     async getFilters() {
       if (this.df.filters) {

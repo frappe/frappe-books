@@ -30,8 +30,8 @@
               :border="true"
               :df="field"
               :value="tableValue(doc[field.fieldname])"
-              @editrow="(doc: Doc) => $emit('editrow', doc)"
-              @row-remove="(doc: Doc) => $emit('row-remove', doc)"
+              @editrow="(doc: FrappeDoc) => $emit('editrow', doc)"
+              @row-remove="(doc: FrappeDoc) => $emit('row-remove', doc)"
               @change="(value: DocValue) => $emit('value-change', field, value)"
               @row-change="
                 (field: Field, value: DocValue, parentfield: Field) =>
@@ -49,7 +49,7 @@
               :border="true"
               :df="field"
               :value="doc[field.fieldname]"
-              @editrow="(doc: Doc) => $emit('editrow', doc)"
+              @editrow="(doc: FrappeDoc) => $emit('editrow', doc)"
               @change="(value: DocValue) => $emit('value-change', field, value)"
               @row-change="
                 (field: Field, value: DocValue, parentfield: Field) =>
@@ -79,7 +79,7 @@ import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Table from 'src/components/Controls/Table.vue';
@@ -95,7 +95,7 @@ export default defineComponent({
       required: true,
     },
     showTitle: Boolean,
-    doc: { type: Object as PropType<Doc>, required: true },
+    doc: { type: Object as PropType<FrappeDoc>, required: true },
     fields: { type: Array as PropType<Field[]>, required: true },
   },
   emits: ['editrow', 'row-remove', 'value-change', 'row-change'],

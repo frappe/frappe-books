@@ -1,5 +1,4 @@
 import { Fyo } from 'fyo';
-import { Doc } from 'fyo/model/doc';
 import {
   Action,
   FiltersMap,
@@ -54,19 +53,19 @@ export class Party extends FrappeDoc {
   };
 
   static filters: FiltersMap = {
-    default_account: (doc: Doc) => {
+    default_account: (doc: FrappeDoc) => {
       const role = doc.role as PartyRole;
       if (role === 'Both') {
-        return {
-          is_group: false,
-          account_type: ['in', ['Payable', 'Receivable']],
-        };
+        return [
+          ['is_group', '=', 0],
+          ['account_type', 'in', ['Payable', 'Receivable']],
+        ];
       }
 
-      return {
-        is_group: false,
-        account_type: role === 'Customer' ? 'Receivable' : 'Payable',
-      };
+      return [
+        ['is_group', '=', 0],
+        ['account_type', '=', role === 'Customer' ? 'Receivable' : 'Payable'],
+      ];
     },
   };
 
@@ -96,7 +95,7 @@ export class Party extends FrappeDoc {
     return [
       {
         label: fyo.t`Create Purchase`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
           const doc = await getMappedDoc(
@@ -119,18 +118,18 @@ export class Party extends FrappeDoc {
       },
       {
         label: fyo.t`View Purchases`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
           await router.push({
             path: '/list/PurchaseInvoice',
-            query: { filters: JSON.stringify({ party: partyDoc.name }) },
+            query: { filters: JSON.stringify([['party', '=', partyDoc.name]]) },
           });
         },
       },
       {
         label: fyo.t`Create Sale`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {
           const doc = await getMappedDoc(
@@ -153,12 +152,12 @@ export class Party extends FrappeDoc {
       },
       {
         label: fyo.t`View Sales`,
-        condition: (doc: Doc) =>
+        condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {
           await router.push({
             path: '/list/SalesInvoice',
-            query: { filters: JSON.stringify({ party: partyDoc.name }) },
+            query: { filters: JSON.stringify([['party', '=', partyDoc.name]]) },
           });
         },
       },

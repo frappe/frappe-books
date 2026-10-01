@@ -35,7 +35,7 @@
 </template>
 
 <script lang="ts">
-import { Doc } from "fyo/model/doc";
+import type { FrappeDoc } from "src/frappe/document";
 import { Icon as FrappeIcon, TextInput as FrappeTextInput } from "frappe-ui";
 import { Field } from "schemas/types";
 import { fyo } from "src/initFyo";
@@ -55,7 +55,7 @@ export default defineComponent({
 			default: null,
 		},
 		displayValue: String,
-		doc: { type: Object as PropType<Doc> },
+		doc: { type: Object as PropType<FrappeDoc> },
 		border: { type: Boolean, default: false },
 		showLabel: { type: Boolean, default: false },
 		trailingActions: { type: Boolean, default: false },
@@ -94,7 +94,7 @@ export default defineComponent({
 		},
 	},
 	methods: {
-		formatValue(value: unknown, field: Field, doc?: Doc): string {
+		formatValue(value: unknown, field: Field, doc?: FrappeDoc): string {
 			return fyo.format(value, field, doc);
 		},
 	},

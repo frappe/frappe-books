@@ -96,7 +96,7 @@
 </template>
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { ValidationError } from 'fyo/utils/errors';
 import {
   TabButtons as FrappeTabButtons,
@@ -165,7 +165,7 @@ export default defineComponent({
         ModelNameEnum.SystemSettings,
       ].some((s) => this.fyo.singles[s]?.canSave);
     },
-    doc(): Doc | null {
+    doc(): FrappeDoc | null {
       const doc = this.fyo.singles[this.activeTab];
       if (!doc) {
         return null;
@@ -279,7 +279,7 @@ export default defineComponent({
     async reset() {
       const resetableDocs = this.schemas
         .map(({ name }) => this.fyo.singles[name])
-        .filter((doc) => doc?.dirty) as Doc[];
+        .filter((doc) => doc?.dirty) as FrappeDoc[];
 
       for (const doc of resetableDocs) {
         await doc.load();
@@ -290,7 +290,7 @@ export default defineComponent({
     async sync(): Promise<void> {
       const syncableDocs = this.schemas
         .map(({ name }) => this.fyo.singles[name])
-        .filter((doc) => doc?.canSave) as Doc[];
+        .filter((doc) => doc?.canSave) as FrappeDoc[];
 
       for (const doc of syncableDocs) {
         if (!(await this.syncDoc(doc))) {
@@ -335,7 +335,7 @@ export default defineComponent({
         behavior: 'smooth',
       });
     },
-    async syncDoc(doc: Doc): Promise<boolean> {
+    async syncDoc(doc: FrappeDoc): Promise<boolean> {
       try {
         await doc.sync();
       } catch (error) {

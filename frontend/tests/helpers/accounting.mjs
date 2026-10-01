@@ -102,7 +102,6 @@ export const {
   conditionsForField,
   defaultCondition,
   isCompleteFilter,
-  mergeQueryFilters,
   getItemQtyMap,
   getMappedDoc,
   getStockTransferActions,

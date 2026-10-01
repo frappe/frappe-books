@@ -151,9 +151,9 @@ export default defineComponent({
       this.apply();
     },
     emitApply(): boolean {
-      const query = this.filters.apply();
-      if (query) this.$emit('apply', query);
-      return query !== undefined;
+      const filters = this.filters.apply();
+      if (filters) this.$emit('apply', filters);
+      return filters !== undefined;
     },
   },
 });

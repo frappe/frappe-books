@@ -129,12 +129,12 @@ import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/regis
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
-import { docsPathMap, getCreateFiltersFromListViewFilters } from 'src/utils/misc';
+import { docsPathMap, getNewDocValues } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { getFormRoute, openNewDoc, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
-import { QueryFilter } from 'utils/db/types';
-import { defineComponent, inject, ref } from 'vue';
+import type { Filter } from 'src/frappe/api';
+import { defineComponent, inject, ref, type PropType } from 'vue';
 import List from './List.vue';
 import { getListColumns } from './listColumns';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
@@ -157,7 +157,7 @@ export default defineComponent({
   },
   props: {
     schemaName: { type: String, required: true },
-    filters: { type: Object, default: undefined },
+    filters: { type: Array as PropType<Filter[]>, default: () => [] },
     pageTitle: { type: String, default: '' },
   },
   setup() {
@@ -174,14 +174,14 @@ export default defineComponent({
     return {
       listConfig: undefined,
       openExportModal: false,
-      listFilters: {},
+      listFilters: [],
       isSelectionMode: false,
       selectedItems: [] as string[],
       isCreateSheetOpen: false,
     } as {
       listConfig: undefined | ReturnType<typeof getListConfig>;
       openExportModal: boolean;
-      listFilters: QueryFilter;
+      listFilters: Filter[];
       isSelectionMode: boolean;
       selectedItems: string[];
       isCreateSheetOpen: boolean;
@@ -251,7 +251,7 @@ export default defineComponent({
       this.shortcuts.pmod.set(this.context, ['KeyN'], () => this.makeNewDoc());
       this.shortcuts.pmod.set(this.context, ['KeyE'], () => this.exportButton?.$el.click());
     },
-    updatedData(listFilters: QueryFilter) {
+    updatedData(listFilters: Filter[]) {
       this.listFilters = listFilters;
     },
     async openDoc(name: string) {
@@ -263,13 +263,13 @@ export default defineComponent({
         return;
       }
 
-      const filters = getCreateFiltersFromListViewFilters(this.filters ?? {});
-      await openNewDoc(this.schemaName, filters);
+      const values = getNewDocValues(this.schemaName, this.filters);
+      await openNewDoc(this.schemaName, values);
     },
     async handleMakeNewDoc() {
       await this.makeNewDoc();
     },
-    applyFilter(filters: QueryFilter, orFilters?: QueryFilter) {
+    applyFilter(filters: Filter[], orFilters?: Filter[]) {
       this.list?.updateData(filters, orFilters);
     },
     toggleSelectionMode() {

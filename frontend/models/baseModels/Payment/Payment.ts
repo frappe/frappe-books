@@ -1,9 +1,7 @@
 import { Fyo, t } from 'fyo';
-import { Doc } from 'fyo/model/doc';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getLedgerLinkAction } from 'models/helpers';
 import { Field } from 'schemas/types';
-import { QueryFilter } from 'utils/db/types';
 import { getValue } from 'src/frappe/api';
 import { FrappeDoc } from 'src/frappe/document';
 import { PaymentFor } from '../PaymentFor/PaymentFor';
@@ -114,32 +112,41 @@ export class Payment extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    party: (doc: Doc) => {
+    party: (doc: FrappeDoc) => {
       if (doc.payment_type === PaymentTypeEnum.Pay) {
-        return { role: ['in', ['Supplier', 'Both']] } as QueryFilter;
+        return [['role', 'in', ['Supplier', 'Both']]];
       }
 
       if (doc.payment_type === PaymentTypeEnum.Receive) {
-        return { role: ['in', ['Customer', 'Both']] } as QueryFilter;
+        return [['role', 'in', ['Customer', 'Both']]];
       }
 
-      return {};
+      return [];
     },
-    number_series: () => ({ reference_type: 'Payment' }),
-    account: (doc: Doc) => ({
-      account_type:
+    number_series: () => [['reference_type', '=', 'Payment']],
+    account: (doc: FrappeDoc) => [
+      [
+        'account_type',
+        '=',
         doc.payment_type === PaymentTypeEnum.Pay ? 'Payable' : 'Receivable',
-      is_group: false,
-    }),
-    payment_account: async (doc: Doc) => {
+      ],
+      ['is_group', '=', 0],
+    ],
+    payment_account: async (doc: FrappeDoc) => {
       const method = doc.payment_method as string | undefined;
       const type =
         method && (await getValue('Books Payment Method', method, 'type'));
       if (type === 'Cash') {
-        return { account_type: 'Cash', is_group: false };
+        return [
+          ['account_type', '=', 'Cash'],
+          ['is_group', '=', 0],
+        ];
       }
 
-      return { account_type: ['in', ['Bank', 'Cash']], is_group: false };
+      return [
+        ['account_type', 'in', ['Bank', 'Cash']],
+        ['is_group', '=', 0],
+      ];
     },
   };
 

@@ -1,6 +1,6 @@
 import { Fyo } from 'fyo';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { Money } from 'pesa';
 import { Field, FieldType, OptionField, SelectOption } from 'schemas/types';
@@ -39,13 +39,13 @@ export function isFalsy(value: unknown): boolean {
 }
 
 /** The actions of the doc's model; a doc's statics come from its own class. */
-export function getActions(doc: Doc): Action[] {
-  return (doc.constructor as typeof Doc).getActions(doc.fyo);
+export function getActions(doc: FrappeDoc): Action[] {
+  return (doc.constructor as typeof FrappeDoc).getActions(doc.fyo);
 }
 
 export function getOptionList(
   field: Field,
-  doc: Doc | undefined | null
+  doc: FrappeDoc | undefined | null
 ): SelectOption[] {
   const list = getRawOptionList(field, doc);
   return list.map((option) => {
@@ -60,7 +60,7 @@ export function getOptionList(
   });
 }
 
-function getRawOptionList(field: Field, doc: Doc | undefined | null) {
+function getRawOptionList(field: Field, doc: FrappeDoc | undefined | null) {
   const options = (field as OptionField).options;
   if (options && options.length > 0) {
     return (field as OptionField).options;
@@ -70,7 +70,7 @@ function getRawOptionList(field: Field, doc: Doc | undefined | null) {
     return [];
   }
 
-  const getList = (doc.constructor as typeof Doc).lists[field.fieldname];
+  const getList = (doc.constructor as typeof FrappeDoc).lists[field.fieldname];
   if (getList === undefined) {
     return [];
   }

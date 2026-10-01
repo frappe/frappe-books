@@ -5,7 +5,7 @@
 </template>
 <script lang="ts">
 import { Badge as FrappeBadge } from 'frappe-ui';
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { BadgeData } from 'fyo/model/types';
 import { LoyaltyProgram } from 'models/baseModels/LoyaltyProgram/LoyaltyProgram';
 import { Party } from 'models/baseModels/Party/Party';
@@ -20,7 +20,7 @@ import { defineComponent, PropType } from 'vue';
 
 export default defineComponent({
   components: { FrappeBadge },
-  props: { doc: { type: Object as PropType<Doc>, required: true } },
+  props: { doc: { type: Object as PropType<FrappeDoc>, required: true } },
   computed: {
     showStatus(): boolean {
       return !(

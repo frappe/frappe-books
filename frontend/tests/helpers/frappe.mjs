@@ -19,7 +19,7 @@ await build({
       export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
-      export { getFrappeListPage, getFrappeRows, toFrappeFilters } from './src/frappe/list';
+      export { getFrappeListPage, getFrappeRows } from './src/frappe/list';
       export { getLinkDisplayValue, searchFrappeLink } from './src/frappe/link';
       export { loadListData, onListChange } from './src/utils/listData';
       export { getModel, getQuickViewFields, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
@@ -34,6 +34,7 @@ await build({
       export { frappeModels, getRegionalFrappeModels } from './models';
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
+      export { getNewDocValues } from './src/utils/misc';
       export { getFilterFields } from './src/utils/filterFields';
       export { getSidebarConfig } from './src/utils/sidebarConfig';
       export { default as ListView } from './src/pages/ListView/ListView.vue';
@@ -120,7 +121,6 @@ export const {
   evaluateCondition,
   getFrappeListPage,
   getFrappeRows,
-  toFrappeFilters,
   searchFrappeLink,
   getLinkDisplayValue,
   loadListData,
@@ -148,6 +148,7 @@ export const {
   getMappedDoc,
   createFilters,
   routeFilters,
+  getNewDocValues,
   getStockTransferActions,
   getFilterFields,
   ListFilters,

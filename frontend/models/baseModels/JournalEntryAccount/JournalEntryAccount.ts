@@ -9,6 +9,6 @@ export class JournalEntryAccount extends FrappeDoc {
   };
 
   static filters: FiltersMap = {
-    account: () => ({ is_group: false }),
+    account: () => [['is_group', '=', 0]],
   };
 }

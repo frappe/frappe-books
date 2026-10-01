@@ -1,7 +1,8 @@
 import { DateTime } from 'luxon';
 import { t } from 'fyo';
 import type { Field } from 'schemas/types';
-import type { QueryFilter } from 'utils/db/types';
+import type { Filter } from 'src/frappe/api';
+import { DOCSTATUS_FLAGS, toDocStatusFilter } from './filterFields';
 
 export const filterConditions = [
   { label: t`Is`, value: '=' },
@@ -54,9 +55,9 @@ export class FilterSet {
     this.rows = this.rows.filter((row) => row.implicit);
   }
 
-  toQuery(fields: Field[]): QueryFilter {
-    const query: QueryFilter = {};
-    for (const row of this.rows.filter(isCompleteFilter)) {
+  /** Frappe filters for the complete rows; throws on an invalid row. */
+  toFilters(fields: Field[]): Filter[] {
+    return this.rows.filter(isCompleteFilter).map((row) => {
       const field = fields.find((field) => field.fieldname === row.fieldname);
       if (!field) throw new Error(t`Unknown filter field: ${row.fieldname}`);
       if (
@@ -66,18 +67,8 @@ export class FilterSet {
       ) {
         throw new Error(t`Invalid condition for ${field.label}`);
       }
-      let value = parseFilterValue(field, row);
-      if (row.condition === 'like' || row.condition === 'not like')
-        value = `%${value}%`;
-      const fieldname = row.fieldname;
-      const previous = (query[fieldname] ?? []) as (string | number | null)[];
-      query[fieldname] = [
-        ...previous,
-        row.condition,
-        value,
-      ] as QueryFilter[string];
-    }
-    return query;
+      return toFilter(row, parseFilterValue(field, row));
+    });
   }
 
   normalize() {
@@ -95,38 +86,6 @@ export class FilterSet {
       seen.add(key);
       return true;
     });
-  }
-
-  setQuery(query: QueryFilter, implicit = false) {
-    const loaded = new FilterSet();
-    for (const [fieldname, value] of Object.entries(query)) {
-      const conditions = Array.isArray(value) ? value : ['=', value];
-      if (!conditions.length || conditions.length % 2)
-        throw new Error(t`Invalid filter for ${fieldname}`);
-      for (let index = 0; index < conditions.length; index += 2) {
-        const condition = conditions[index] as FilterCondition;
-        if (!filterConditions.some((option) => option.value === condition)) {
-          throw new Error(t`Unknown filter condition: ${condition}`);
-        }
-        let comparison = conditions[index + 1] as FilterValue;
-        if (
-          Array.isArray(comparison) ||
-          (typeof comparison === 'object' && comparison !== null)
-        ) {
-          throw new Error(t`Invalid filter value for ${fieldname}`);
-        }
-        if (
-          (condition === 'like' || condition === 'not like') &&
-          typeof comparison === 'string'
-        ) {
-          if (comparison.startsWith('%') && comparison.endsWith('%'))
-            comparison = comparison.slice(1, -1);
-        }
-        loaded.add(fieldname, condition, comparison, implicit);
-      }
-    }
-    this.rows = loaded.rows;
-    this.nextId = loaded.nextId;
   }
 }
 
@@ -161,6 +120,23 @@ export function defaultCondition(field?: Field): FilterCondition {
   )
     ? 'like'
     : '=';
+}
+
+function toFilter(row: FilterRow, value: string | number | null): Filter {
+  const { fieldname, condition } = row;
+  if (isValuelessCondition(condition)) {
+    return [fieldname, 'is', condition === 'is null' ? 'not set' : 'set'];
+  }
+
+  if (condition === 'like' || condition === 'not like') {
+    return [fieldname, condition, `%${value}%`];
+  }
+
+  if (DOCSTATUS_FLAGS[fieldname]) {
+    return toDocStatusFilter(fieldname, condition, value as number);
+  }
+
+  return [fieldname, condition, value];
 }
 
 function parseFilterValue(
@@ -204,21 +180,4 @@ function parseFilterValue(
       : date.toFormat('yyyy-MM-dd HH:mm:ss');
   }
   return String(value);
-}
-
-export function mergeQueryFilters(...queries: QueryFilter[]): QueryFilter {
-  const merged: QueryFilter = {};
-  for (const query of queries) {
-    for (const [fieldname, value] of Object.entries(query)) {
-      const conditions = Array.isArray(value) ? value : ['=', value];
-      const previous = merged[fieldname];
-      if (previous === undefined) merged[fieldname] = value;
-      else
-        merged[fieldname] = [
-          ...(Array.isArray(previous) ? previous : ['=', previous]),
-          ...conditions,
-        ] as QueryFilter[string];
-    }
-  }
-  return merged;
 }

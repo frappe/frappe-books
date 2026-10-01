@@ -1,4 +1,4 @@
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import type { Money } from 'pesa';
 import type { RawValue } from 'schemas/types';
 
@@ -10,5 +10,5 @@ export type DocValue =
   | Money
   | null
   | undefined;
-export type DocValueMap = Record<string, DocValue | Doc[] | DocValueMap[]>;
+export type DocValueMap = Record<string, DocValue | FrappeDoc[] | DocValueMap[]>;
 export type RawValueMap = Record<string, RawValue | RawValueMap[]>;

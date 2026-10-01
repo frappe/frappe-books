@@ -31,12 +31,15 @@ export class StockMovementItem extends FrappeDoc {
   override hidden: HiddenMap = getStockRowHiddenMap(this);
 
   static filters: FiltersMap = {
-    item: () => ({ track_item: true }),
+    item: () => [['track_item', '=', 1]],
     transfer_unit: getTransferUnitFilter,
-    batch: (doc) => ({ item: doc.item as string }),
+    batch: (doc) => [['item', '=', doc.item]],
   };
 
   static createFilters: FiltersMap = {
-    item: () => ({ track_item: true, item_type: 'Product' }),
+    item: () => [
+      ['track_item', '=', 1],
+      ['item_type', '=', 'Product'],
+    ],
   };
 }

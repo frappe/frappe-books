@@ -86,9 +86,9 @@ for (const [schema, label, field, options] of cases) {
     ).toBeVisible();
     await expect(page.getByRole('listbox')).toBeHidden();
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({
-      [field]: ['=', options.at(-1)],
-    });
+    expect(await appliedFilters(page)).toEqual([
+      [field, '=', options.at(-1)],
+    ]);
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
       .click();
@@ -98,7 +98,7 @@ for (const [schema, label, field, options] of cases) {
     await choose(page, 'Condition', 'Is Empty');
     await expect(value).toHaveCount(0);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({ [field]: ['is null', null] });
+    expect(await appliedFilters(page)).toEqual([[field, 'is', 'not set']]);
   });
 }
 
@@ -108,10 +108,11 @@ for (const condition of ['Is', 'Contains']) {
     await choose(page, 'Condition', condition);
     await setValue(page, 'Partly Paid');
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual({
-      status:
-        condition === 'Is' ? ['=', 'Partly Paid'] : ['like', '%Partly Paid%'],
-    });
+    expect(await appliedFilters(page)).toEqual([
+      condition === 'Is'
+        ? ['status', '=', 'Partly Paid']
+        : ['status', 'like', '%Partly Paid%'],
+    ]);
     await expect
       .poll(() =>
         page.evaluate(
@@ -144,7 +145,7 @@ test('changing Select fields resets choices and supports keyboard selection', as
     page.getByRole('region', { name: 'Filters', exact: true })
   ).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({ item_type: ['=', 'Service'] });
+  expect(await appliedFilters(page)).toEqual([['item_type', '=', 'Service']]);
 });
 
 test('Link filters offer records, search by name, clear, and use text for Contains', async ({
@@ -163,23 +164,23 @@ test('Link filters offer records, search by name, clear, and use text for Contai
     .getByRole('option', { name: 'ItemGroup-002', exact: true })
     .click();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    item_group: ['=', 'ItemGroup-002'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['item_group', '=', 'ItemGroup-002'],
+  ]);
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
   await expect(input).toHaveValue('ItemGroup-002');
   await input.fill('');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({});
+  expect(await appliedFilters(page)).toEqual([]);
   await page.getByRole('button', { name: 'Filter', exact: true }).click();
   await choose(page, 'Condition', 'Contains');
   await setValue(page, 'Group');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    item_group: ['like', '%Group%'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['item_group', 'like', '%Group%'],
+  ]);
 });
 
 test('Link field changes load the correct records and lookup errors are visible', async ({
@@ -199,7 +200,7 @@ test('Link field changes load the correct records and lookup errors are visible'
   await expect(
     page.getByText('Unable to load options', { exact: true }).first()
   ).toBeVisible();
-  expect(await appliedFilters(page)).toEqual({});
+  expect(await appliedFilters(page)).toEqual([]);
 });
 
 test('Dynamic Link filters follow the selected type and clear stale selections', async ({
@@ -219,10 +220,10 @@ test('Dynamic Link filters follow the selected type and clear stale selections',
   await expect(page.getByRole('option')).toHaveText(['Lead-001', 'Lead-002']);
   await page.getByRole('option', { name: 'Lead-002', exact: true }).click();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    reference_type: ['=', 'Books Lead'],
-    party: ['=', 'Lead-002'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['reference_type', '=', 'Books Lead'],
+    ['party', '=', 'Lead-002'],
+  ]);
 });
 
 test('unresolved Dynamic Links allow text until their type is selected', async ({
@@ -234,9 +235,9 @@ test('unresolved Dynamic Links allow text until their type is selected', async (
   ).toHaveCount(0);
   await setValue(page, 'Known customer');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    party: ['=', 'Known customer'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['party', '=', 'Known customer'],
+  ]);
 });
 
 async function openField(page: Page, schema: string, label: string) {
@@ -259,9 +260,9 @@ test('custom Select fields offer every label and serialize its value', async ({
   ).toHaveText('Select a value');
   await setValue(page, 'Second label');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    customChoice: ['=', 'code-two'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['customChoice', '=', 'code-two'],
+  ]);
 });
 
 test('Autocomplete filters offer configured suggestions and still accept text', async ({
@@ -272,9 +273,9 @@ test('Autocomplete filters offer configured suggestions and still accept text', 
   const input = page.getByRole('combobox', { name: 'Value', exact: true });
   await input.fill('Custom text');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    customSuggestion: ['like', '%Custom text%'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['customSuggestion', 'like', '%Custom text%'],
+  ]);
 });
 
 test('changing a Dynamic Link type preserves implicit record restrictions', async ({
@@ -291,8 +292,8 @@ test('changing a Dynamic Link type preserves implicit record restrictions', asyn
   });
   await setValue(page, 'Lead');
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual({
-    reference_type: ['=', 'Books Lead'],
-    party: ['=', 'Party-001'],
-  });
+  expect(await appliedFilters(page)).toEqual([
+    ['reference_type', '=', 'Books Lead'],
+    ['party', '=', 'Party-001'],
+  ]);
 });

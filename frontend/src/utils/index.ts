@@ -2,7 +2,7 @@
  * General purpose utils used by the frontend.
  */
 import { t } from 'fyo';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import {
   BaseError,
   DuplicateEntryError,
@@ -76,7 +76,7 @@ export function sortByFuzzyMatch<T>(
 /** Link options load a page at a time, as Frappe's link search returns them. */
 export const LINK_PAGE_LENGTH = 50;
 
-export function getErrorMessage(e: Error, doc?: Doc): string {
+export function getErrorMessage(e: Error, doc?: FrappeDoc): string {
   const errorMessage = e.message || t`An error occurred.`;
 
   let { schemaName, name } = doc ?? {};

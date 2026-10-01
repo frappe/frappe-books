@@ -27,17 +27,17 @@ export class InventorySettings extends FrappeDoc {
   declare enable_point_of_sale?: boolean;
 
   static filters: FiltersMap = {
-    stock_in_hand: () => ({
-      is_group: false,
-      account_type: AccountTypeEnum.Stock,
-    }),
-    stock_received_but_not_billed: () => ({
-      is_group: false,
-      account_type: AccountTypeEnum['Stock Received But Not Billed'],
-    }),
-    cost_of_goods_sold: () => ({
-      is_group: false,
-      account_type: AccountTypeEnum['Cost of Goods Sold'],
-    }),
+    stock_in_hand: () => [
+      ['is_group', '=', 0],
+      ['account_type', '=', AccountTypeEnum.Stock],
+    ],
+    stock_received_but_not_billed: () => [
+      ['is_group', '=', 0],
+      ['account_type', '=', AccountTypeEnum['Stock Received But Not Billed']],
+    ],
+    cost_of_goods_sold: () => [
+      ['is_group', '=', 0],
+      ['account_type', '=', AccountTypeEnum['Cost of Goods Sold']],
+    ],
   };
 }

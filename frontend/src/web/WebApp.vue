@@ -39,7 +39,7 @@
 </template>
 
 <script lang="ts">
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { frappeModels, getRegionalFrappeModels } from 'models';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
@@ -160,7 +160,7 @@ export default defineComponent({
       }
       this.loading = false;
     },
-    async completeSetup(wizard: Doc) {
+    async completeSetup(wizard: FrappeDoc) {
       await wizard.sync();
       await call(
         'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'

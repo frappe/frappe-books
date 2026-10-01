@@ -5,7 +5,6 @@ import {
   filterConditions,
   conditionsForField,
   defaultCondition,
-  mergeQueryFilters,
   getFilterFields,
   getFieldLabel,
 } from './helpers/accounting.mjs';
@@ -48,7 +47,7 @@ for (const type of types) {
       );
       if (!offered)
         return assert.throws(
-          () => set.toQuery([field(type)]),
+          () => set.toFilters([field(type)]),
           /Invalid condition/
         );
       let expected = values[type] ?? 'café';
@@ -56,11 +55,15 @@ for (const type of types) {
         expected = Number(expected);
       if (type === 'Check') expected = 0;
       if (type === 'Datetime') expected = '2024-02-29 12:34:56';
+      let frappeOperator = operator;
       if (['like', 'not like'].includes(operator)) expected = `%${expected}%`;
-      if (operator.startsWith('is ')) expected = null;
-      assert.deepEqual(set.toQuery([field(type)]), {
-        value: [operator, expected],
-      });
+      if (operator.startsWith('is ')) {
+        frappeOperator = 'is';
+        expected = operator === 'is null' ? 'not set' : 'set';
+      }
+      assert.deepEqual(set.toFilters([field(type)]), [
+        ['value', frappeOperator, expected],
+      ]);
     });
   }
 }
@@ -76,34 +79,40 @@ for (const [type, invalid] of [
     test(`${type} rejects ${String(value)}`, () => {
       const set = new FilterSet();
       set.add('value', '=', value);
-      assert.throws(() => set.toQuery([field(type)]));
+      assert.throws(() => set.toFilters([field(type)]));
     });
 for (const value of ['', null, undefined])
   test(`incomplete ${value} is skipped; empty operators still apply`, () => {
     const set = new FilterSet();
     set.add('value', '=', value);
-    assert.deepEqual(set.toQuery([field()]), {});
-    for (const op of ['is null', 'is not null']) {
+    assert.deepEqual(set.toFilters([field()]), []);
+    for (const [op, frappeValue] of [
+      ['is null', 'not set'],
+      ['is not null', 'set'],
+    ]) {
       set.rows = [];
       set.add('value', op, value);
-      assert.deepEqual(set.toQuery([field()]), { value: [op, null] });
+      assert.deepEqual(set.toFilters([field()]), [
+        ['value', 'is', frappeValue],
+      ]);
     }
   });
 for (const value of [' ', "O'Reilly", '₹ café 中文', '%_.*[x]\\', 'a\nb'])
   test(`text preserves ${JSON.stringify(value)}`, () => {
     const set = new FilterSet();
     set.add('value', '=', value);
-    assert.deepEqual(set.toQuery([field()]), { value: ['=', value] });
+    assert.deepEqual(set.toFilters([field()]), [['value', '=', value]]);
   });
 test('repeated fields form AND ranges; different fields are retained', () => {
   const set = new FilterSet();
   set.add('value', '>', '1');
   set.add('value', '<', '10');
   set.add('name', 'not like', 'archived');
-  assert.deepEqual(set.toQuery([field('Int'), field('Data', 'name')]), {
-    value: ['>', 1, '<', 10],
-    name: ['not like', '%archived%'],
-  });
+  assert.deepEqual(set.toFilters([field('Int'), field('Data', 'name')]), [
+    ['value', '>', 1],
+    ['value', '<', 10],
+    ['name', 'not like', '%archived%'],
+  ]);
 });
 test('clear preserves hidden filters and stable IDs remove the visible row', () => {
   const set = new FilterSet();
@@ -113,7 +122,7 @@ test('clear preserves hidden filters and stable IDs remove the visible row', () 
   assert.equal(set.rows[0].value, 'base');
   set.add('value', '=', 'new');
   set.clear();
-  assert.deepEqual(set.toQuery([field()]), { value: ['=', 'base'] });
+  assert.deepEqual(set.toFilters([field()]), [['value', '=', 'base']]);
 });
 test('normalization deduplicates and preserves only the last incomplete draft', () => {
   const set = new FilterSet();
@@ -124,54 +133,18 @@ test('normalization deduplicates and preserves only the last incomplete draft', 
     ['same', '']
   );
 });
-test('round trip keeps repeated conditions, zero, false, empty and SQL datetimes', () => {
-  const query = {
-    text: ['like', '%a%', 'not like', '%b%', 'is not null', null],
-    num: ['=', 0],
-    check: false,
-    date: ['=', '2024-01-01 00:00:00'],
-  };
-  const set = new FilterSet();
-  set.setQuery(query);
-  assert.deepEqual(
-    set.toQuery([
-      field('Text', 'text'),
-      field('Int', 'num'),
-      field('Check', 'check'),
-      field('Datetime', 'date'),
-    ]),
-    { ...query, check: ['=', 0] }
-  );
-});
-for (const value of [[], ['='], ['bad', 'x'], ['=', {}], ['=', []]])
-  test(`malformed query ${JSON.stringify(value)} is atomic`, () => {
-    const set = new FilterSet();
-    set.add('value', '=', 'original');
-    assert.throws(() => set.setQuery({ first: 'valid', value }));
-    assert.equal(set.rows[0].value, 'original');
-  });
 test('unknown fields fail and number series keeps its own query field', () => {
   const set = new FilterSet();
   set.add('numberSeries', 'like', 'INV-');
-  assert.throws(() => set.toQuery([field()]));
-  assert.deepEqual(set.toQuery([field('Link', 'numberSeries')]), {
-    numberSeries: ['like', '%INV-%'],
-  });
+  assert.throws(() => set.toFilters([field()]));
+  assert.deepEqual(set.toFilters([field('Link', 'numberSeries')]), [
+    ['numberSeries', 'like', '%INV-%'],
+  ]);
   assert.equal(defaultCondition(field('Int')), '=');
   for (const type of ['Select', 'Link', 'DynamicLink', 'Check'])
     assert.equal(defaultCondition(field(type)), '=');
   assert.equal(defaultCondition(field('Text')), 'like');
 });
-test('merging user filters cannot replace base restrictions or mutate inputs', () => {
-  const base = { name: ['in', ['one', 'two']], value: 'base' };
-  const user = { name: ['like', '%one%'], value: ['!=', 'other'] };
-  assert.deepEqual(mergeQueryFilters(base, user), {
-    name: ['in', ['one', 'two'], 'like', '%one%'],
-    value: ['=', 'base', '!=', 'other'],
-  });
-  assert.deepEqual(base, { name: ['in', ['one', 'two']], value: 'base' });
-});
-
 test('field selection excludes unsupported and computed fields; column position is irrelevant', () => {
   const fields = [
     field('Data', 'editable'),

@@ -210,7 +210,7 @@
           fieldtype: 'Link',
           target: 'Batch',
           label: t`Batch`,
-          filters: { item: row.item as string },
+          filters: [['item', '=', row.item]],
         }"
         size="medium"
         :value="row.batch"

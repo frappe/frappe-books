@@ -201,19 +201,19 @@ test('links of stock documents filter by the vocabulary of their targets', async
   );
   const { Shipment, PurchaseReceipt } = frappeModels;
 
-  assert.deepEqual(Shipment.filters.party(shipment), {
-    role: ['in', ['Customer', 'Both']],
-  });
-  assert.deepEqual(PurchaseReceipt.createFilters.party(receipt), {
-    role: 'Supplier',
-  });
-  assert.deepEqual(getModel('ShipmentItem').filters.item(), {
-    item_usage: ['not in', ['Purchases']],
-    track_item: true,
-  });
+  assert.deepEqual(Shipment.filters.party(shipment), [
+    ['role', 'in', ['Customer', 'Both']],
+  ]);
+  assert.deepEqual(PurchaseReceipt.createFilters.party(receipt), [
+    ['role', '=', 'Supplier'],
+  ]);
+  assert.deepEqual(getModel('ShipmentItem').filters.item(), [
+    ['item_usage', 'not in', ['Purchases']],
+    ['track_item', '=', 1],
+  ]);
   assert.deepEqual(
     await getModel('StockMovementItem').filters.transfer_unit(movementRow),
-    { name: ['in', ['Unit', 'Box']] }
+    [['name', 'in', ['Unit', 'Box']]]
   );
   assert.deepEqual(requests[0].params.filters, [['name', '=', 'Pen']]);
 });

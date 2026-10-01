@@ -3,8 +3,8 @@
  * Basically anything that may directly or indirectly import a Vue file.
  */
 import { t } from 'fyo';
-import type { RawValueMap } from 'fyo/core/types';
-import type { Doc } from 'fyo/model/doc';
+import type { DocValueMap } from 'fyo/core/types';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
 import { ValueError } from 'fyo/utils/errors';
@@ -91,7 +91,7 @@ export async function routeTo(route: RouteLocationRaw) {
   return await router.push(route);
 }
 
-export async function deleteDocWithPrompt(doc: Doc) {
+export async function deleteDocWithPrompt(doc: FrappeDoc) {
   let detail = t`This action is permanent.`;
   if (doc.isTransactional && doc.isSubmitted) {
     detail = t`This action is permanent and will delete associated ledger entries.`;
@@ -127,7 +127,7 @@ export async function deleteDocWithPrompt(doc: Doc) {
   })) as boolean;
 }
 
-export async function cancelDocWithPrompt(doc: Doc) {
+export async function cancelDocWithPrompt(doc: FrappeDoc) {
   let payments: LinkedDoc[] = [];
   if (['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
     payments = await getInvoicePayments(doc);
@@ -164,7 +164,7 @@ export async function cancelDocWithPrompt(doc: Doc) {
 }
 
 /** The submitted payments that cancelling the invoice `doc` also cancels. */
-async function getInvoicePayments(doc: Doc): Promise<LinkedDoc[]> {
+async function getInvoicePayments(doc: FrappeDoc): Promise<LinkedDoc[]> {
   return await call('frappe_books.accounting.invoice.get_payments_to_cancel', {
     doctype: fyo.store.permissions?.doctypes[doc.schemaName],
     name: doc.name,
@@ -184,7 +184,7 @@ function getCancelDetail(payments: LinkedDoc[]): string {
   return t`This action is permanent and will cancel the following payments: ${names}`;
 }
 
-export function getActionsForDoc(doc?: Doc): Action[] {
+export function getActionsForDoc(doc?: FrappeDoc): Action[] {
   if (!doc) return [];
 
   const actions: Action[] = [
@@ -213,7 +213,7 @@ export function getActionsForDoc(doc?: Doc): Action[] {
     });
 }
 
-export function getGroupedActionsForDoc(doc?: Doc): ActionGroup[] {
+export function getGroupedActionsForDoc(doc?: FrappeDoc): ActionGroup[] {
   const actions = getActionsForDoc(doc);
   const actionsMap = actions.reduce(
     (acc, ac) => {
@@ -242,12 +242,12 @@ export function getGroupedActionsForDoc(doc?: Doc): ActionGroup[] {
   return [grouped, actionsMap['']].flat().filter(Boolean);
 }
 
-function getViewActions(doc: Doc): Action[] {
+function getViewActions(doc: FrappeDoc): Action[] {
   const actions: Action[] = [
     {
       label: t`General Ledger`,
       group: t`View`,
-      condition: (doc: Doc) => doc.schemaName === 'Party',
+      condition: (doc: FrappeDoc) => doc.schemaName === 'Party',
       action: async () => {
         await router.push({
           path: '/report/GeneralLedger',
@@ -263,29 +263,29 @@ function getViewActions(doc: Doc): Action[] {
   return actions;
 }
 
-function getCancelAction(doc: Doc): Action {
+function getCancelAction(doc: FrappeDoc): Action {
   return {
     label: t`Cancel`,
     theme: 'red',
-    condition: (doc: Doc) => doc.canCancel,
+    condition: (doc: FrappeDoc) => doc.canCancel,
     async action() {
       await commonDocCancel(doc);
     },
   };
 }
 
-function getDeleteAction(doc: Doc): Action {
+function getDeleteAction(doc: FrappeDoc): Action {
   return {
     label: t`Delete`,
     theme: 'red',
-    condition: (doc: Doc) => doc.canDelete,
+    condition: (doc: FrappeDoc) => doc.canDelete,
     async action() {
       await commonDocDelete(doc);
     },
   };
 }
 
-async function openEdit({ name, schemaName }: Doc) {
+async function openEdit({ name, schemaName }: FrappeDoc) {
   if (!name) {
     return;
   }
@@ -294,12 +294,12 @@ async function openEdit({ name, schemaName }: Doc) {
   return await routeTo(route);
 }
 
-function getDuplicateAction(doc: Doc): Action {
+function getDuplicateAction(doc: FrappeDoc): Action {
   const isSubmittable = !!doc.schema.isSubmittable;
   return {
     label: t`Duplicate`,
     group: t`Create`,
-    condition: (doc: Doc) =>
+    condition: (doc: FrappeDoc) =>
       !!(
         ((isSubmittable && doc.submitted) || !isSubmittable) &&
         !doc.notInserted &&
@@ -316,11 +316,11 @@ function getDuplicateAction(doc: Doc): Action {
   };
 }
 
-function getNewAction(doc: Doc): Action {
+function getNewAction(doc: FrappeDoc): Action {
   return {
     label: t`New Entry`,
     group: t`Create`,
-    condition: (doc: Doc) => fyo.can(doc.schemaName, 'create'),
+    condition: (doc: FrappeDoc) => fyo.can(doc.schemaName, 'create'),
     async action() {
       try {
         const newDoc = newFrappeDoc(doc.schemaName);
@@ -334,7 +334,7 @@ function getNewAction(doc: Doc): Action {
 
 export function getFieldsGroupedByTabAndSection(
   schema: Schema,
-  doc: Doc,
+  doc: FrappeDoc,
 ): UIGroupedFields {
   const grouped: UIGroupedFields = new Map();
   for (const field of doc.getFormFields(schema?.fields ?? [])) {
@@ -396,7 +396,7 @@ export function getFormRoute(schemaName: string, name: string): string {
   return `/edit/${schemaName}/${name.replaceAll('/', '%2F')}`;
 }
 
-export async function openNewDoc(schemaName: string, initData?: RawValueMap) {
+export async function openNewDoc(schemaName: string, initData?: DocValueMap) {
   const doc = newFrappeDoc(schemaName, initData);
   await routeTo(getFormRoute(schemaName, doc.name!));
 }
@@ -423,7 +423,7 @@ export function toggleSidebar(value?: boolean) {
 }
 
 export function focusOrSelectFormControl(
-  doc: Doc,
+  doc: FrappeDoc,
   ref: unknown,
   shouldClear = true,
 ) {
@@ -510,7 +510,7 @@ export enum ShortcutKey {
 }
 
 export async function commonDocDelete(
-  doc: Doc,
+  doc: FrappeDoc,
   routeBack = true,
 ): Promise<boolean> {
   const res = await deleteDocWithPrompt(doc);
@@ -525,7 +525,7 @@ export async function commonDocDelete(
   return true;
 }
 
-export async function commonDocCancel(doc: Doc): Promise<boolean> {
+export async function commonDocCancel(doc: FrappeDoc): Promise<boolean> {
   const res = await cancelDocWithPrompt(doc);
   if (!res) {
     return false;
@@ -536,7 +536,7 @@ export async function commonDocCancel(doc: Doc): Promise<boolean> {
 }
 
 export async function commonDocSync(
-  doc: Doc,
+  doc: FrappeDoc,
   useDialog = false,
 ): Promise<boolean> {
   let success: boolean;
@@ -554,7 +554,7 @@ export async function commonDocSync(
   return true;
 }
 
-async function syncWithoutDialog(doc: Doc): Promise<boolean> {
+async function syncWithoutDialog(doc: FrappeDoc): Promise<boolean> {
   try {
     await doc.sync();
   } catch (error) {
@@ -565,7 +565,7 @@ async function syncWithoutDialog(doc: Doc): Promise<boolean> {
   return true;
 }
 
-export async function commonDocSubmit(doc: Doc): Promise<boolean> {
+export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
   let success = true;
   if (
     doc instanceof SalesInvoice &&
@@ -622,7 +622,7 @@ async function showInsufficientInventoryDialog(doc: SalesInvoice) {
   return true;
 }
 
-async function showSubmitOrSyncDialog(doc: Doc, type: 'submit' | 'sync') {
+async function showSubmitOrSyncDialog(doc: FrappeDoc, type: 'submit' | 'sync') {
   const label = getDocReferenceLabel(doc);
   let title = t`Save ${label}?`;
   if (type === 'submit') {
@@ -676,7 +676,7 @@ async function showSubmitOrSyncDialog(doc: Doc, type: 'submit' | 'sync') {
   return success;
 }
 
-function getDocSyncMessage(doc: Doc): string {
+function getDocSyncMessage(doc: FrappeDoc): string {
   const label = getDocReferenceLabel(doc);
   const detail = t`Create new ${doc.schema.label} entry?`;
   if (doc.inserted) {
@@ -694,7 +694,7 @@ function getDocSyncMessage(doc: Doc): string {
   return detail;
 }
 
-function getDocSubmitMessage(doc: Doc): string {
+function getDocSubmitMessage(doc: FrappeDoc): string {
   const details = [t`Mark ${doc.schema.label} as submitted?`];
 
   if (doc instanceof SalesInvoice && doc.make_auto_payment) {
@@ -718,7 +718,7 @@ function getDocSubmitMessage(doc: Doc): string {
   return details.join(' ');
 }
 
-function showActionToast(doc: Doc, type: 'sync' | 'cancel' | 'delete') {
+function showActionToast(doc: FrappeDoc, type: 'sync' | 'cancel' | 'delete') {
   const label = getDocReferenceLabel(doc);
   const message = {
     sync: t`${label} saved`,
@@ -729,7 +729,7 @@ function showActionToast(doc: Doc, type: 'sync' | 'cancel' | 'delete') {
   showToast({ type: 'success', message, duration: 'short' });
 }
 
-function showSubmitToast(doc: Doc) {
+function showSubmitToast(doc: FrappeDoc) {
   const label = getDocReferenceLabel(doc);
   const message = t`${label} submitted`;
   const toastOption: ToastOptions = {
@@ -748,7 +748,7 @@ const stockSchemas: string[] = [
   ModelNameEnum.PurchaseReceipt,
 ];
 
-function getSubmitSuccessToastAction(doc: Doc) {
+function getSubmitSuccessToastAction(doc: FrappeDoc) {
   const isStockTransfer = stockSchemas.includes(doc.schemaName);
 
   if (isStockTransfer) {
@@ -774,7 +774,7 @@ function getSubmitSuccessToastAction(doc: Doc) {
   return {};
 }
 
-export function showCannotSaveOrSubmitToast(doc: Doc) {
+export function showCannotSaveOrSubmitToast(doc: FrappeDoc) {
   const label = getDocReferenceLabel(doc);
   let message = t`${label} already saved`;
 
@@ -785,7 +785,7 @@ export function showCannotSaveOrSubmitToast(doc: Doc) {
   showToast({ type: 'warning', message, duration: 'short' });
 }
 
-export function showCannotCancelOrDeleteToast(doc: Doc) {
+export function showCannotCancelOrDeleteToast(doc: FrappeDoc) {
   const label = getDocReferenceLabel(doc);
   let message = t`${label} cannot be deleted`;
   if (doc.schema.isSubmittable && !doc.isCancelled) {
@@ -795,7 +795,7 @@ export function showCannotCancelOrDeleteToast(doc: Doc) {
   showToast({ type: 'warning', message, duration: 'short' });
 }
 
-function getDocReferenceLabel(doc: Doc) {
+function getDocReferenceLabel(doc: FrappeDoc) {
   const label = doc.schema.label || doc.schemaName;
   if (doc.schema.naming === 'random') {
     return label;

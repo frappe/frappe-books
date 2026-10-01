@@ -16,10 +16,10 @@
 <script setup lang="ts">
 import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 import { DocValue } from 'fyo/core/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 
-defineProps<{ field: Field; doc: Doc; error?: string }>();
+defineProps<{ field: Field; doc: FrappeDoc; error?: string }>();
 defineEmits<{ change: [value: DocValue] }>();
 </script>

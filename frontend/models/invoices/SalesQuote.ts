@@ -1,5 +1,5 @@
 import { Fyo } from 'fyo';
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getQuoteActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
@@ -52,7 +52,7 @@ export class SalesQuote extends Invoice {
 
   // A quote's party may be a lead, so it is not filtered by role.
   static override filters: FiltersMap = {
-    number_series: (doc: Doc) => ({ reference_type: doc.schemaName }),
+    number_series: (doc: FrappeDoc) => [['reference_type', '=', doc.schemaName]],
   };
 
   static getListViewSettings(): ListViewSettings {

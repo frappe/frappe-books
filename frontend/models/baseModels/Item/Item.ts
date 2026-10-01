@@ -75,16 +75,20 @@ export class Item extends FrappeDoc {
   };
 
   static filters: FiltersMap = {
-    income_account: () => ({
-      is_group: false,
-      root_type: AccountRootTypeEnum.Income,
-    }),
-    expense_account: (doc) => ({
-      is_group: false,
-      root_type: doc.track_item
-        ? AccountRootTypeEnum.Liability
-        : AccountRootTypeEnum.Expense,
-    }),
+    income_account: () => [
+      ['is_group', '=', 0],
+      ['root_type', '=', AccountRootTypeEnum.Income],
+    ],
+    expense_account: (doc) => [
+      ['is_group', '=', 0],
+      [
+        'root_type',
+        '=',
+        doc.track_item
+          ? AccountRootTypeEnum.Liability
+          : AccountRootTypeEnum.Expense,
+      ],
+    ],
   };
 
   static getActions(fyo: Fyo): Action[] {

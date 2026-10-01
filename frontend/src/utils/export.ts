@@ -1,17 +1,21 @@
 import { t } from 'fyo/utils/translation';
 import { camelCase } from 'lodash';
 import { Field, FieldType, FieldTypeEnum, TargetField } from 'schemas/types';
-import { getList, type DocValues, type ListQuery } from 'src/frappe/api';
+import {
+  getList,
+  type DocValues,
+  type Filter,
+  type ListQuery,
+} from 'src/frappe/api';
 import { getDocType } from 'src/frappe/doctypes';
 import { isReferenceField } from 'src/frappe/fieldProperties';
-import { getOrderBy, toFrappeFilters } from 'src/frappe/list';
+import { getOrderBy } from 'src/frappe/list';
 import { getFileFields, getSchema, toSchemaName } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
 import { toIsoDatetime } from 'src/frappe/values';
 import { generateCSV } from 'utils/csvParser';
-import { QueryFilter } from 'utils/db/types';
 import { safeParseFloat } from 'utils/index';
-import { expandDocStatus } from './filterFields';
+import { DOCSTATUS_FLAGS, expandDocStatus } from './filterFields';
 import { ExportField, ExportTableField } from './types';
 
 const EXPORT_PAGE_SIZE = 500;
@@ -53,19 +57,13 @@ const RENAMED_SCHEMAS: Record<string, string> = {
   UomConversionItem: 'UOMConversionItem',
 };
 
-// Books' Submitted and Cancelled, by the docstatus values that set them.
-const DOCSTATUS_FLAGS: Record<string, number[]> = {
-  submitted: [1, 2],
-  cancelled: [2],
-};
-
 /** What an export reads: a page at a time, newest first. */
 interface ExportQuery {
   schemaName: string;
   fields: ExportField[];
   tableFields: ExportTableField[];
   limit: number | null;
-  filters: QueryFilter;
+  filters: Filter[];
 }
 
 /**
@@ -329,7 +327,7 @@ async function getFrappeRows(
   ];
   return await getList(docType.doctype, {
     fields: queryFields,
-    filters: toFrappeFilters(filters),
+    filters,
     orderBy: getOrderBy(docType),
     ...page,
   });

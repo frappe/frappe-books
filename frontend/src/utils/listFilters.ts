@@ -1,7 +1,7 @@
 import type { Field } from 'schemas/types';
+import type { Filter } from 'src/frappe/api';
 import { getModel, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
-import type { QueryFilter } from 'utils/db/types';
 import { markRaw } from 'vue';
 import { getFieldLabel, getFilterFields } from './filterFields';
 import {
@@ -93,16 +93,16 @@ export class ListFilters {
     }
   }
 
-  /** Returns the query of the complete rows, or undefined and sets `error`. */
-  apply(): QueryFilter | undefined {
+  /** Returns the filters of the complete rows, or undefined and sets `error`. */
+  apply(): Filter[] | undefined {
     try {
-      const query = this.filterSet.toQuery(this.fields);
+      const filters = this.filterSet.toFilters(this.fields);
       this.filterSet.normalize();
       this.applied = this.explicitRows
         .filter(isCompleteFilter)
         .map((row) => ({ ...row }));
       this.error = '';
-      return query;
+      return filters;
     } catch (error) {
       this.error = (error as Error).message;
     }

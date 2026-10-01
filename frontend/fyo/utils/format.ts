@@ -1,5 +1,5 @@
 import { Fyo } from 'fyo';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { DateTime } from 'luxon';
 import { Field, FieldType, FieldTypeEnum } from 'schemas/types';
 import { getIsNullOrUndef, safeParseFloat, titleCase } from 'utils';
@@ -14,7 +14,7 @@ import {
 export function format(
   value: unknown,
   df: string | Field | null,
-  doc: Doc | null,
+  doc: FrappeDoc | null,
   fyo: Fyo
 ): string {
   if (!df) {
@@ -118,7 +118,7 @@ function formatDate(value: unknown, fyo: Fyo): string {
 function formatCurrency(
   value: unknown,
   field: Field,
-  doc: Doc | null,
+  doc: FrappeDoc | null,
   fyo: Fyo
 ): string {
   const currency = getCurrency(field, doc, fyo);
@@ -188,7 +188,7 @@ function getNumberFormatter(fyo: Fyo) {
   }));
 }
 
-function getCurrency(field: Field, doc: Doc | null, fyo: Fyo): string {
+function getCurrency(field: Field, doc: FrappeDoc | null, fyo: Fyo): string {
   const defaultCurrency =
     fyo.singles.SystemSettings?.currency ?? DEFAULT_CURRENCY;
 

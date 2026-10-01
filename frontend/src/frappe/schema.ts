@@ -1,6 +1,6 @@
 import { getFieldProperties, isReferenceField } from './fieldProperties';
 import type { Field, Naming, OptionField, Schema } from 'schemas/types';
-import type { QueryFilter } from 'utils/db/types';
+import type { Filter } from './api';
 import type { DocField, DocTypeMeta } from './meta';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -238,22 +238,15 @@ export function getTableSchemaName(doctype: string): string {
 }
 
 /** A DocField's link_filters as list filters; `eval:` values need Desk's form script, so they are left out. */
-function getLinkFilters({ link_filters }: DocField): QueryFilter | undefined {
+function getLinkFilters({ link_filters }: DocField): Filter[] | undefined {
   if (!link_filters) {
     return undefined;
   }
 
   type LinkFilter = [string, string, string, unknown];
-  const query: Record<string, unknown[]> = {};
-  for (const [, fieldname, operator, value] of JSON.parse(
-    link_filters
-  ) as LinkFilter[]) {
-    if (!String(value).startsWith('eval:')) {
-      (query[fieldname] ??= []).push(operator, value);
-    }
-  }
-
-  return query as QueryFilter;
+  return (JSON.parse(link_filters) as LinkFilter[])
+    .filter(([, , , value]) => !String(value).startsWith('eval:'))
+    .map(([, fieldname, operator, value]) => [fieldname, operator, value]);
 }
 
 function isLink({ fieldtype }: DocField): boolean {

@@ -132,7 +132,7 @@ import { defineComponent, nextTick } from 'vue';
 import { handleErrorWithDialog } from '../errorHandling';
 import { AccountRootType, AccountType } from 'models/baseModels/Account/types';
 import { TreeViewSettings } from 'fyo/model/types';
-import { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { showDialog } from 'src/utils/interactive';
 
 type AccountItem = {
@@ -309,7 +309,7 @@ export default defineComponent({
       await openQuickEdit({ doc });
     },
     setOpenAccountDocListener(
-      doc: Doc,
+      doc: FrappeDoc,
       account?: AccountItem,
       parentAccount?: AccountItem
     ) {

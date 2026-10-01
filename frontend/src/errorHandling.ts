@@ -1,5 +1,5 @@
 import { t } from 'fyo';
-import type { Doc } from 'fyo/model/doc';
+import type { FrappeDoc } from 'src/frappe/document';
 import { BaseError, ConflictError } from 'fyo/utils/errors';
 import { showDialog } from 'src/utils/interactive';
 import { fyo } from './initFyo';
@@ -37,7 +37,7 @@ export async function handleError(
 
 export async function handleErrorWithDialog(
   error: unknown,
-  doc?: Doc,
+  doc?: FrappeDoc,
   dontThrow?: boolean
 ) {
   if (!(error instanceof Error)) {

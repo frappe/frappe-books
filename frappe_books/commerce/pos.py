@@ -59,7 +59,7 @@ def counter_payment_amounts(rows, due):
 	for row in rows:
 		tendered = as_decimal(row.amount)
 		if tendered <= 0:
-			frappe.throw(_("Tendered amounts must be greater than zero."))
+			frappe.throw(_("Please enter an amount greater than zero."))
 		if tendered > due and not is_cash_method(row.payment_method):
 			frappe.throw(_("Non-cash payment amount cannot exceed the outstanding amount."))
 		paid = min(tendered, due)

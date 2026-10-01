@@ -173,6 +173,19 @@ def available_serial_numbers(item, location, count, exclude=()):
 	return [serial_number for serial_number in in_stock if serial_number not in exclude][:count]
 
 
+def insufficient_stock_message(item, location, batch, available, required):
+	location_text = " " + _("in {0}").format(location) if location else ""
+	batch_text = " " + _("for batch {0}").format(batch) if batch else ""
+	return _("Insufficient stock for {0}{1}{2}. Available: {3}; required: {4}.").format(
+		item, location_text, batch_text, format_quantity(available), format_quantity(required)
+	)
+
+
+def format_quantity(value):
+	"""A quantity as /books shows it in messages: 4, not 4.000."""
+	return f"{as_decimal(value).normalize():f}"
+
+
 def parse_serial_numbers(value):
 	if not value:
 		return []
@@ -183,7 +196,7 @@ def _validate_row(transfer):
 	if not transfer.get("item"):
 		frappe.throw(_("Every stock row requires an item."))
 	if abs(as_decimal(transfer.get("quantity"))) <= 0:
-		frappe.throw(_("Stock quantity must be greater than zero."))
+		frappe.throw(_("Quantity must be greater than zero."))
 	if as_decimal(transfer.get("rate")) < 0:
 		frappe.throw(_("Stock rate cannot be negative."))
 	if not transfer.get("from_location") and not transfer.get("to_location"):
@@ -200,7 +213,7 @@ def _validate_tracked_items(transfers):
 def _validate_batch(transfer, item, batch_items):
 	batch = transfer.get("batch")
 	if item.has_batch and not batch:
-		frappe.throw(_("Item {0} requires a batch.").format(transfer["item"]))
+		frappe.throw(_("Please select a batch first"))
 	if batch and not item.has_batch:
 		frappe.throw(_("Item {0} does not use batches.").format(transfer["item"]))
 	if batch_items.get(batch) and batch_items[batch] != transfer["item"]:
@@ -219,8 +232,13 @@ def _validate_row_serial_numbers(transfer, item, serial_items):
 	serial_numbers = parse_serial_numbers(transfer.get("serial_number"))
 	if serial_numbers and not item.has_serial_number:
 		frappe.throw(_("Item {0} does not use serial numbers.").format(transfer["item"]))
-	if item.has_serial_number and len(serial_numbers) != abs(as_decimal(transfer["quantity"])):
-		frappe.throw(_("Serial-number count must equal stock quantity."))
+	quantity = abs(as_decimal(transfer["quantity"]))
+	if item.has_serial_number and len(serial_numbers) != quantity:
+		frappe.throw(
+			_("Need {0} Serial Numbers for Item {1}. You have provided {2}").format(
+				format_quantity(quantity), transfer["item"], len(serial_numbers)
+			)
+		)
 	for serial_number in serial_numbers:
 		if serial_items.get(serial_number, transfer["item"]) != transfer["item"]:
 			frappe.throw(_("Serial number {0} belongs to another item.").format(serial_number))
@@ -239,12 +257,10 @@ def _validate_quantities_available(outgoing, date):
 		key = (transfer["item"], transfer["from_location"], transfer.get("batch") or "")
 		required[key] += abs(as_decimal(transfer["quantity"]))
 	available = _available_quantities(required, date)
-	for key, quantity in required.items():
-		if available[key] < quantity:
+	for (item, location, batch), quantity in required.items():
+		if available[item, location, batch] < quantity:
 			frappe.throw(
-				_("Insufficient stock for {0} at {1}: {2} available, {3} required.").format(
-					key[0], key[1], available[key], quantity
-				)
+				insufficient_stock_message(item, location, batch, available[item, location, batch], quantity)
 			)
 
 

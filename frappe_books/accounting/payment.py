@@ -123,9 +123,9 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		if not method:
 			return
 		if method.type != "Cash" and not self.reference_id:
-			frappe.throw(_("Set a reference ID for {0} payments.").format(self.payment_method))
+			frappe.throw(_("Please enter a reference number."))
 		if method.requires_clearance_date and not self.clearance_date:
-			frappe.throw(_("Set a clearance date for {0} payments.").format(self.payment_method))
+			frappe.throw(_("Please select a clearance date."))
 
 	def validate_counter_account(self, invoices):
 		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""

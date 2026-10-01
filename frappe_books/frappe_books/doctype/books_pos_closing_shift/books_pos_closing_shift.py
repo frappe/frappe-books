@@ -107,7 +107,7 @@ class BooksPosClosingShift(Document):
 			closing_row = counted.get(row.payment_method) or frappe._dict(payment_method=row.payment_method)
 			closing = rounded(closing_row.closing_amount)
 			if closing < 0:
-				frappe.throw(_("Closing amounts cannot be negative."))
+				frappe.throw(_("Closing {0} Amount can not be negative.").format(row.payment_method))
 			expected = rounded(as_decimal(row.amount) + as_decimal(transactions.get(row.payment_method)))
 			closing_row.update(
 				{

@@ -6,7 +6,7 @@ import {
   fyo,
   getSchema,
   newFrappeDoc,
-  pos,
+  posSetup,
 } from './helpers/frappe.mjs';
 
 const OPEN_SHIFT =
@@ -82,12 +82,12 @@ test('shift tables show the columns their bridge schemas showed', () => {
 
 test('the POS opens a new shift unless one is open', async () => {
   openShift = null;
-  const opening = await pos.getPOSOpeningShiftDoc();
+  const opening = await posSetup.getPOSOpeningShiftDoc();
   assert.equal(opening.notInserted, true);
   assert.equal(opening.schemaName, 'POSOpeningShift');
 
   openShift = 'SHIFT-1';
-  const open = await pos.getPOSOpeningShiftDoc();
+  const open = await posSetup.getPOSOpeningShiftDoc();
   assert.equal(open.name, 'SHIFT-1');
   assert.equal(open.openingCashAmount.float, 200);
   assert.equal(open.opening_amounts[0].payment_method, 'Cash');
@@ -95,7 +95,7 @@ test('the POS opens a new shift unless one is open', async () => {
 
 test('cash methods are all the payment methods of the Cash type', async () => {
   requests.length = 0;
-  assert.deepEqual(await pos.getCashPaymentMethods(), ['Cash', 'Petty Cash']);
+  assert.deepEqual(await posSetup.getCashPaymentMethods(), ['Cash', 'Petty Cash']);
   assert.deepEqual(requests[0].body, {
     doctype: 'Books Payment Method',
     fields: ['name'],

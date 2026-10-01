@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getLayout, loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, fyo, getSchema, pos } from './helpers/frappe.mjs';
+import { frappeModels, fyo, getSchema, posSetup } from './helpers/frappe.mjs';
 
 const profile = {
   name: 'Counter 1',
@@ -44,18 +44,18 @@ test('the POS reads what its profile allows and lists, else POS Settings', async
     can_edit_discount: true,
     item_visibility: 'Inventory Items',
   };
-  assert.deepEqual(await pos.getPOSPermissions(), {
+  assert.deepEqual(await posSetup.getPOSPermissions(), {
     canChangeRate: false,
     canEditDiscount: true,
   });
-  assert.equal(await pos.getItemVisibility(), 'Inventory Items');
+  assert.equal(await posSetup.getItemVisibility(), 'Inventory Items');
   assert.equal(requests.length, 0);
 
   fyo.singles.POSSettings.pos_profile = 'Counter 1';
-  assert.deepEqual(await pos.getPOSPermissions(), {
+  assert.deepEqual(await posSetup.getPOSPermissions(), {
     canChangeRate: true,
     canEditDiscount: false,
   });
-  assert.equal(await pos.getItemVisibility(), 'Non-Inventory Items');
-  assert.equal((await pos.getPOSProfile()).pos_ui, 'Modern');
+  assert.equal(await posSetup.getItemVisibility(), 'Non-Inventory Items');
+  assert.equal((await posSetup.getPOSProfile()).pos_ui, 'Modern');
 });

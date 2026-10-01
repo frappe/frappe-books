@@ -50,9 +50,6 @@ export default defineComponent({
     MobileSectionState,
   },
   extends: DashboardChartBase,
-  props: {
-    darkMode: { type: Boolean, default: false },
-  },
   data: () => ({
     data: [] as MonthlyCashflow[],
     hasData: false,

@@ -286,7 +286,6 @@ test('invoice selection and bank payment fields work in a small dialog', async (
   });
   await page.evaluate(() => {
     (window as any).posFixture.state.invoice.return_against = 'SINV-2026-0001';
-    document.documentElement.classList.add('dark');
     document.documentElement.dataset.theme = 'dark';
   });
   await expect(
@@ -332,7 +331,6 @@ async function showModal(page: Page, name: string) {
 for (const dark of [false, true]) {
   test(`link actions share their size and hover styling in ${dark ? 'dark' : 'light'} mode`, async ({ page }) => {
     await page.evaluate((dark) => {
-      document.documentElement.classList.toggle('dark', dark);
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     }, dark);
     const clear = page.getByRole('button', { name: 'Clear value', exact: true }).first();

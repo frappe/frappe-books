@@ -104,7 +104,6 @@ export default defineComponent({
   extends: BaseDashboardChart,
   props: {
     doctype: { type: String as PropType<string>, required: true },
-    darkMode: { type: Boolean, default: false },
   },
   data() {
     return {

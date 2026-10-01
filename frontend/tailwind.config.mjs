@@ -20,7 +20,6 @@ export default {
     // Phone layouts name their icons.
     './reports/**/*.ts',
   ],
-  darkMode: 'class',
   safelist: [
     {
       pattern: new RegExp(`^(bg|text|border)-(${colorNames})-(${colorSteps})$`),

@@ -9,12 +9,7 @@ html {
   @apply text-ink-gray-9 bg-surface-base;
 }
 
-html.dark {
-  color-scheme: dark;
-}
-
-html.dark input[type='date']::-webkit-calendar-picker-indicator {
-  background-color: transparent;
+[data-theme='dark'] {
   color-scheme: dark;
 }
 
@@ -31,7 +26,7 @@ html.dark input[type='date']::-webkit-calendar-picker-indicator {
   );
   overflow-y: auto !important;
   overscroll-behavior: contain;
-  scrollbar-color: theme('colors.gray.300') transparent;
+  scrollbar-color: var(--surface-gray-4) transparent;
   scrollbar-width: thin !important;
 }
 
@@ -43,18 +38,8 @@ html.dark input[type='date']::-webkit-calendar-picker-indicator {
 
 [data-slot='content'][role='listbox']
   [data-reka-select-viewport]::-webkit-scrollbar-thumb {
-  background: theme('colors.gray.300');
+  background: var(--surface-gray-4);
   border-radius: 9999px;
-}
-
-.dark [data-slot='content'][role='listbox'] [data-reka-select-viewport] {
-  scrollbar-color: theme('colors.gray.700') transparent;
-}
-
-.dark
-  [data-slot='content'][role='listbox']
-  [data-reka-select-viewport]::-webkit-scrollbar-thumb {
-  background: theme('colors.gray.700');
 }
 
 /* Frappe UI toast buttons are flex containers with no cross-axis alignment. */
@@ -206,36 +191,6 @@ input[type='number']::-webkit-outer-spin-button {
   background: transparent;
 }
 
-.dark.custom-scroll::-webkit-scrollbar-track:vertical,
-.dark .custom-scroll::-webkit-scrollbar-track:vertical {
-  border-left-color: theme('colors.gray.800');
-}
-
-.dark.custom-scroll::-webkit-scrollbar-track:horizontal,
-.dark .custom-scroll::-webkit-scrollbar-track:horizontal {
-  border-top-color: theme('colors.gray.800');
-}
-
-.dark.custom-scroll-thumb1::-webkit-scrollbar-thumb,
-.dark .custom-scroll-thumb1::-webkit-scrollbar-thumb {
-  background: theme('colors.gray.850');
-}
-
-.dark.custom-scroll-thumb1::-webkit-scrollbar-thumb:hover,
-.dark .custom-scroll-thumb1::-webkit-scrollbar-thumb:hover {
-  background: theme('colors.gray.800');
-}
-
-.dark.custom-scroll-thumb2::-webkit-scrollbar-thumb,
-.dark .custom-scroll-thumb2::-webkit-scrollbar-thumb {
-  background: theme('colors.gray.800');
-}
-
-.dark.custom-scroll-thumb2::-webkit-scrollbar-thumb:hover,
-.dark .custom-scroll-thumb2::-webkit-scrollbar-thumb:hover {
-  background: theme('colors.gray.875');
-}
-
 /*
   Transitions
  */
@@ -269,11 +224,6 @@ input[type='number']::-webkit-outer-spin-button {
 
 [dir='rtl'] .custom-scroll::-webkit-scrollbar-track:vertical {
   border-right: solid 1px theme('colors.gray.200');
-}
-
-[dir='rtl'].dark.custom-scroll::-webkit-scrollbar-track:vertical,
-[dir='rtl'].dark .custom-scroll::-webkit-scrollbar-track:vertical {
-  border-right: solid 1px theme('colors.gray.850');
 }
 
 .pill {

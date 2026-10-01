@@ -2,7 +2,7 @@
   <FrappeMobileShell>
     <router-view v-slot="{ Component }">
       <keep-alive>
-        <component :is="Component" :key="$route.path" :dark-mode="darkMode" />
+        <component :is="Component" :key="$route.path" />
       </keep-alive>
     </router-view>
   </FrappeMobileShell>
@@ -34,8 +34,6 @@ import InstallSheet from './InstallSheet.vue';
 import MobileDrawer from './MobileDrawer.vue';
 import { useBackClosesSheets } from './useBackClosesSheets';
 import OfflineScreen from './OfflineScreen.vue';
-
-defineProps<{ darkMode: boolean }>();
 
 const EDGE_WIDTH = 24;
 const MIN_SWIPE = 60;

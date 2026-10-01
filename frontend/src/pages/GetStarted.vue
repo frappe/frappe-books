@@ -96,9 +96,6 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
   },
-  props: {
-    darkMode: { type: Boolean, default: false },
-  },
   data() {
     return {
       activeCard: null as string | null,

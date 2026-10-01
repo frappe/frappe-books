@@ -20,19 +20,17 @@
 
     <div class="no-scrollbar min-h-0 flex-1 overflow-auto bg-surface-base">
       <div class="min-w-0 max-md:pb-[calc(env(safe-area-inset-bottom)+5rem)]">
-        <Cashflow class="p-4" :common-period="period" :dark-mode="darkMode" />
+        <Cashflow class="p-4" :common-period="period" />
         <hr class="border-outline-gray-1" />
         <div class="grid grid-cols-1 md:grid-cols-2">
           <UnpaidInvoices
             doctype="Books Sales Invoice"
             :common-period="period"
-            :dark-mode="darkMode"
             class="min-w-0 border-outline-gray-1 max-md:border-b md:border-e"
           />
           <UnpaidInvoices
             doctype="Books Purchase Invoice"
             :common-period="period"
-            :dark-mode="darkMode"
           />
         </div>
         <hr class="border-outline-gray-1" />
@@ -40,12 +38,10 @@
           <ProfitAndLoss
             class="min-w-0 w-full p-4 border-outline-gray-1 max-md:border-b md:border-e"
             :common-period="period"
-            :dark-mode="darkMode"
           />
           <Expenses
             class="min-w-0 w-full p-4"
             :common-period="period"
-            :dark-mode="darkMode"
           />
         </div>
         <hr class="border-outline-gray-1" />
@@ -78,9 +74,6 @@ export default {
     MobileCreateButton,
     PeriodSelector,
     UnpaidInvoices,
-  },
-  props: {
-    darkMode: { type: Boolean, default: false },
   },
   setup() {
     return { isMobile };

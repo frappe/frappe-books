@@ -174,9 +174,6 @@ export default defineComponent({
     FrappeDialog,
     FrappeDropdown,
   },
-  props: {
-    darkMode: { type: Boolean, default: false },
-  },
   data() {
     return {
       addingParent: null as AccountItem | null,

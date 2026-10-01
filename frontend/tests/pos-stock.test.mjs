@@ -270,15 +270,16 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
 /** Serial numbers come from the server pick at the POS inventory. */
 function makeSerialFyo(getSerialNumbers) {
   globalThis.window = { location: { hostname: 'books.localhost' } };
-  globalThis.fetch = async (_url, { body }) => {
+  globalThis.fetch = async (url, { body }) => {
+    if (url.startsWith('/api/v2/document/')) {
+      return Response.json({ data: [{ has_serial_number: 1 }] });
+    }
+
     const { location, quantity } = JSON.parse(body);
     assert.equal(location, inventory);
     return Response.json({ message: await getSerialNumbers(quantity) });
   };
-  return {
-    getValue: async () => true,
-    db: { getStockLocation: async () => inventory },
-  };
+  return { db: { getStockLocation: async () => inventory } };
 }
 
 function makeSerialRow(fyo, values) {

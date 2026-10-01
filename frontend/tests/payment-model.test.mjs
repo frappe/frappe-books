@@ -145,14 +145,19 @@ test('payment links filter as they did', async () => {
   });
   assert.deepEqual(filters.number_series(pay), { reference_type: 'Payment' });
 
-  const getValue = fyo.getValue;
-  fyo.getValue = async () => 'Cash';
+  const requests = stubFrappe(() => ({ data: [{ type: 'Cash' }] }));
   await pay.set('payment_method', 'Cash');
   assert.deepEqual(await filters.payment_account(pay), {
     account_type: 'Cash',
     is_group: false,
   });
-  fyo.getValue = getValue;
+  const [read] = requests.filter(({ path }) => path.includes('Payment Method'));
+  assert.equal(read.path, '/api/v2/document/Books Payment Method');
+  assert.deepEqual(read.params, {
+    fields: ['type'],
+    filters: [['name', '=', 'Cash']],
+    limit: 1,
+  });
 
   await pay.append('payment_references', {});
   const PaymentFor = getModel('PaymentFor');

@@ -328,6 +328,29 @@ test('links filter by the doctypes they point to', async () => {
   assert.deepEqual(RowModel.createFilters.item(row), { item_usage: 'Sales' });
 });
 
+test("a row's transfer unit is its item's stock unit or one of its conversions", async () => {
+  const sale = newInvoice('SalesInvoice');
+  sale.push('items', { item: 'Pen', unit: 'Unit' });
+  const row = sale.items[0];
+  const requests = stubFrappe(() => ({
+    data: [
+      {
+        unit: 'Unit',
+        uom_conversions: [{ uom: 'Box', conversion_factor: 12 }],
+      },
+    ],
+  }));
+
+  await row.validations.transfer_unit('Unit');
+  await row.validations.transfer_unit('Box');
+  await assert.rejects(
+    row.validations.transfer_unit('Crate'),
+    /Transfer Unit Crate is not applicable for Item Pen/
+  );
+  assert.equal(requests[0].path, '/api/v2/document/Books Item');
+  assert.deepEqual(requests[0].params.filters, [['name', '=', 'Pen']]);
+});
+
 test('invoice actions follow the Frappe invoice values', () => {
   setSettings({ accounting: { enable_invoice_returns: true } });
   const invoice = newInvoice('SalesInvoice', {

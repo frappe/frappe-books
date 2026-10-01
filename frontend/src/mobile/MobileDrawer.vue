@@ -123,16 +123,15 @@ import {
 import { getAppMenuItems } from 'src/utils/appMenu';
 import { useCompanyIdentity } from 'src/utils/company';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
-import { getSidebarConfig } from 'src/utils/sidebarConfig';
 import {
   getSidebarLocation,
   getSidebarPath,
   matchesSidebarPath,
 } from 'src/utils/sidebarNavigation';
-import type { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
+import type { SidebarItem, SidebarRoot } from 'src/utils/types';
 import { computed, inject, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { isDesktopOnly } from './availability';
+import { usePhoneSidebar } from './usePhoneSidebar';
 
 const isOpen = defineModel<boolean>('open', { required: true });
 
@@ -144,12 +143,12 @@ const { companyName, companyLogo, userName } = useCompanyIdentity();
 const menuItems = getAppMenuItems();
 
 const openGroup = ref('');
-const groups = computed(getPhoneSidebar);
+const { groups } = usePhoneSidebar();
 
 watch(isOpen, (open) => {
   if (open) {
     openGroup.value =
-      groups.value.find((group) => group.items?.some(isItemActive))?.name ?? '';
+      groups.find((group) => group.items?.some(isItemActive))?.name ?? '';
   }
 });
 
@@ -168,17 +167,6 @@ const { direction: swipeDirection, lengthX } = useSwipe(
     },
   }
 );
-
-function getPhoneSidebar(): SidebarConfig {
-  const isPhonePage = (item: SidebarItem | SidebarRoot) =>
-    !isDesktopOnly(router.resolve(item.route));
-
-  return getSidebarConfig()
-    .map((group) => ({ ...group, items: group.items?.filter(isPhonePage) }))
-    .filter((group) =>
-      group.items ? group.items.length > 0 : isPhonePage(group)
-    );
-}
 
 function isItemActive(item: SidebarItem | SidebarRoot) {
   return matchesSidebarPath(getSidebarPath(route), item.route);

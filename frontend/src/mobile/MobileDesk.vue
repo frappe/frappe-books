@@ -5,6 +5,9 @@
         <component :is="Component" :key="$route.path" :dark-mode="darkMode" />
       </keep-alive>
     </router-view>
+    <template #nav>
+      <MobileTabs v-if="!$route.meta.pushed" />
+    </template>
   </FrappeMobileShell>
   <router-view v-slot="{ Component, route }" name="edit">
     <component
@@ -32,6 +35,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { isDesktopOnly } from './availability';
 import InstallSheet from './InstallSheet.vue';
 import MobileDrawer from './MobileDrawer.vue';
+import MobileTabs from './MobileTabs.vue';
 import { useBackClosesSheets } from './useBackClosesSheets';
 import OfflineScreen from './OfflineScreen.vue';
 

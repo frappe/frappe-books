@@ -10,6 +10,29 @@ test.use({
 useBooksSession();
 
 const drawer = (page: Page) => page.getByRole('dialog', { name: 'Books' });
+const tabs = (page: Page) => page.locator('[data-slot="mobile-nav"]');
+const tab = (page: Page, name: string) =>
+  tabs(page).getByRole('button', { name, exact: true });
+
+test('bottom tabs open each section and light the page owner', async ({
+  page,
+}) => {
+  await expect(tab(page, 'Dashboard')).toHaveAttribute('data-state', 'active');
+
+  await tab(page, 'Purchases').click();
+  await expect(page).toHaveURL(/\/books\/list\/PurchaseInvoice$/);
+  await expect(tab(page, 'Purchases')).toHaveAttribute('data-state', 'active');
+
+  await tab(page, 'Sales').click();
+  await expect(page).toHaveURL(/\/books\/list\/SalesInvoice$/);
+  await tab(page, 'Reports').click();
+  await expect(page).toHaveURL(/\/books\/report\/GeneralLedger$/);
+  await expect(tab(page, 'Reports')).toHaveAttribute('data-state', 'active');
+
+  await page.goto('/books/list/Payment/Purchase%20Payments');
+  await expect(tab(page, 'Purchases')).toHaveAttribute('data-state', 'active');
+  await expect(tab(page, 'Sales')).toHaveAttribute('data-state', 'inactive');
+});
 
 test('the menu opens a drawer that works as an accordion', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
@@ -55,6 +78,7 @@ test('pushed pages show a back button instead of the menu', async ({
   await waitForBooks(page);
   await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Menu' })).toHaveCount(0);
+  await expect(tabs(page)).toHaveCount(0);
 });
 
 test('back closes the drawer before leaving the page', async ({ page }) => {

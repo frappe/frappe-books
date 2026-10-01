@@ -126,7 +126,7 @@ import FilterDropdown from 'src/components/FilterDropdown.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 
 import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/registry';
-import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
+import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, getCreateFiltersFromListViewFilters } from 'src/utils/misc';
@@ -140,7 +140,7 @@ import { getListColumns } from './listColumns';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import MobileListToolbar from './MobileListToolbar.vue';
 import { getMobileRowLayout } from './mobileRowLayout';
-import { Money } from 'pesa';
+import type { Invoice } from 'models/invoices/Invoice';
 import { ModelNameEnum } from 'models/types';
 
 export default defineComponent({
@@ -284,20 +284,10 @@ export default defineComponent({
         value === ModelNameEnum.SalesInvoice ||
         value === ModelNameEnum.PurchaseInvoice
       ) {
-        const doc = newFrappeDoc(value);
-
+        // The server prices the rows, as when the items are added in the form.
+        const doc = newFrappeDoc(value) as Invoice;
         for (const itemName of this.selectedItems) {
-          const itemDoc = await getFrappeDoc(ModelNameEnum.Item, itemName);
-
-          // Invoices are Frappe-backed, so their rows use Frappe fieldnames.
-          const itemRow = {
-            item: itemName,
-            rate: (itemDoc.rate as Money) || fyo.pesa(0),
-            quantity: 1,
-            transfer_quantity: 1,
-          };
-
-          await doc.append('items', itemRow);
+          await doc.addItem(itemName);
         }
 
         const route = getFormRoute(value, doc.name!);

@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils.nestedset import NestedSet
+from frappe.utils.nestedset import NestedSet, NestedSetChildExistsError
 
 from frappe_books.permissions import check_preview_permission
 
@@ -94,7 +94,9 @@ class BooksAccount(NestedSet):
 			)
 
 	def on_trash(self):
-		# The /books form checks this too, before it asks the server.
+		# The /books chart checks these too, before it asks the server; NestedSet words them differently.
 		if not self.parent_books_account:
 			frappe.throw(_("Root accounts cannot be deleted."))
+		if frappe.db.exists("Books Account", {"parent_books_account": self.name}):
+			frappe.throw(_("{0} has linked child accounts.").format(self.name), NestedSetChildExistsError)
 		super().on_trash()

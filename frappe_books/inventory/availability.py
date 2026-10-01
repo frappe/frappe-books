@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, get_datetime
 
+from frappe_books.accounting.money import as_decimal, plain_number
 from frappe_books.inventory.auto_transfer import default_location
 
 LEDGER = "Books Stock Ledger Entry"
@@ -55,6 +56,57 @@ def get_sale_shortfalls(items: list[dict], date: str, is_pos: bool = False) -> l
 		for (item, batch), quantity in required.items()
 		if quantity > available[item, batch]
 	]
+
+
+def validate_sale_batch_stock(invoice):
+	"""Reject a sale's batch row that needs more than the batch has where the sale ships from.
+
+	/books checks a row as its batch or quantity is edited, so only new and edited rows are checked.
+	"""
+	if invoice.transaction_type != "sales" or invoice.get("return_against"):
+		return
+	if not frappe.db.get_single_value("Books Inventory Settings", "enable_batches"):
+		return
+	rows = _edited_batch_rows(invoice)
+	if not rows:
+		return
+	stock = _batch_stock(rows, default_location(invoice))
+	for row in rows:
+		available, required = stock.get((row.item, row.batch), 0), as_decimal(row.quantity)
+		if required > available:
+			frappe.throw(
+				_("Batch {0} only has {1} quantity available but {2} is required").format(
+					row.batch, plain_number(available), plain_number(required)
+				)
+			)
+
+
+def _edited_batch_rows(invoice):
+	"""Rows with a batch that are new, or whose batch or quantity changed since the last save."""
+	previous = invoice.get_doc_before_save()
+	saved = {row.name: (row.batch, flt(row.quantity)) for row in previous.items} if previous else {}
+	return [
+		row
+		for row in invoice.items
+		if row.item and row.batch and saved.get(row.name) != (row.batch, flt(row.quantity))
+	]
+
+
+def _batch_stock(rows, location):
+	"""Stock of the rows' batches, at the location when given, read as the system: the rule binds every saver."""
+	filters = {
+		"item": ["in", sorted({row.item for row in rows})],
+		"batch": ["in", sorted({row.batch for row in rows})],
+	}
+	if location:
+		filters["location"] = location
+	stock = frappe.get_all(
+		LEDGER,
+		filters=filters,
+		fields=["item", "batch", {"SUM": "quantity", "as": "quantity"}],
+		group_by="item, batch",
+	)
+	return {(row.item, row.batch): as_decimal(row.quantity) for row in stock}
 
 
 def _tracked_quantities(rows):

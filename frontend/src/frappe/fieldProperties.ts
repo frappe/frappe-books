@@ -17,6 +17,7 @@ export type DocFieldProperties = {
   read_only?: number;
   set_only_once?: number;
   non_negative?: number;
+  max_value?: number;
   states?: Record<string, string>;
 };
 
@@ -85,7 +86,11 @@ function getOptionProperties(
   }
 
   if (numberFieldTypes.includes(fieldtype)) {
-    return { minvalue: docfield.non_negative ? 0 : undefined };
+    // Frappe reads a max_value of 0 as no limit.
+    return {
+      minvalue: docfield.non_negative ? 0 : undefined,
+      maxvalue: docfield.max_value || undefined,
+    };
   }
 
   return {};

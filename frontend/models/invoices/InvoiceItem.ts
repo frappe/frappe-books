@@ -96,9 +96,11 @@ export class InvoiceItem extends FrappeDoc {
       'is_manual_rate',
     ],
   };
-  // The server prices the row and derives the other quantities again.
+  // The server prices the row, turns a typed rate per transfer unit into the
+  // rate, and derives the other quantities again.
   static override refills = {
     item: ['rate', ...ITEM_DETAILS],
+    transfer_rate: ['rate'],
     transfer_unit: ['rate', 'quantity'],
     quantity: ['qty', 'transfer_quantity'],
     qty: ['quantity'],
@@ -143,22 +145,12 @@ export class InvoiceItem extends FrappeDoc {
 
   override async change(arg: ChangeArg) {
     await super.change(arg);
-    if (arg.changed === 'transfer_rate') {
-      await this.set('rate', this.getStockUnitRate());
-    }
-
     this.followEdit(arg.changed);
-  }
-
-  /** The rate per stock unit of the rate per transfer unit, which the table shows. */
-  getStockUnitRate(): Money {
-    const transferRate = this.transfer_rate ?? this.fyo.pesa(0);
-    return transferRate.div(this.unit_conversion_factor || 1);
   }
 
   /** What an edit asks of the server besides its refills: a price of its own or the server's. */
   followEdit(fieldname?: string) {
-    if (fieldname === 'rate') {
+    if (fieldname === 'rate' || fieldname === 'transfer_rate') {
       this.is_manual_rate = true;
     } else if (fieldname === 'item') {
       this.followItem();
@@ -218,7 +210,9 @@ export class InvoiceItem extends FrappeDoc {
       ),
     qty: async (value: DocValue) => {
       if (this.batch) {
-        await this.validateBatchQuantity(this.batch, value as number);
+        // Qty is in the transfer unit; the batch holds stock units.
+        const quantity = (value as number) * (this.unit_conversion_factor || 1);
+        await this.validateBatchQuantity(this.batch, quantity);
       }
     },
     batch: async (value: DocValue) => {

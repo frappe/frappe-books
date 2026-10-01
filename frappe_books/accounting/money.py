@@ -30,3 +30,8 @@ def company_currency() -> str:
 	if not currency:
 		frappe.throw(_("Set the company currency in System Settings."))
 	return currency
+
+
+def plain_number(value) -> str:
+	"""Write a number without trailing zeros or an exponent, e.g. 2 or 2.5."""
+	return format(as_decimal(value).normalize(), "f")

@@ -104,6 +104,20 @@ class IntegrationTestPricing(IntegrationTestCase):
 				self._pricing_rule(**values)
 			self.assertEqual(str(raised.exception), message)
 
+	def test_an_edited_upper_limit_says_what_books_says_at_it(self):
+		rule = self._pricing_rule(
+			min_quantity=2, max_quantity=5, min_amount=10, max_amount=20, valid_from=nowdate()
+		)
+		for values, message in (
+			({"max_quantity": 1}, "Maximum Quantity should be greater than the Minimum Quantity."),
+			({"max_amount": 10}, "Maximum Amount should be greater than the Minimum Amount."),
+			({"valid_to": add_days(nowdate(), -1)}, "Valid To Date should be greater than Valid From Date."),
+		):
+			edited = frappe.get_doc("Books Pricing Rule", rule.name).update(values)
+			with self.subTest(message=message), self.assertRaises(frappe.ValidationError) as raised:
+				edited.save()
+			self.assertEqual(str(raised.exception), message)
+
 	def test_product_discount_adds_free_item(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		free_item = make_item(self.income.name, self.expense.name)

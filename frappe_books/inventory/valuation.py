@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 import frappe
 from frappe.query_builder import Order
 
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal, plain_number, rounded
 
 DOCTYPE = "Books Stock Ledger Entry"
 KEY_FIELDS = ["item", "location", "batch"]
@@ -68,7 +68,7 @@ def next_state(previous, quantity, rate):
 		"value_change": value_change,
 		"balance_quantity": balance_quantity,
 		"balance_value": opening_value + value_change,
-		"stock_queue": json.dumps([[_plain(value) for value in layer] for layer in layers]),
+		"stock_queue": json.dumps([[plain_number(value) for value in layer] for layer in layers]),
 	}
 
 
@@ -148,7 +148,3 @@ def _consume_layers(queue, quantity, rate):
 			queue.popleft()
 	# Stock that was never received is valued at the entry's own rate.
 	return value_change - remaining * rate
-
-
-def _plain(value):
-	return format(value.normalize(), "f")

@@ -195,6 +195,7 @@ test('the System tab offers sample dates and takes custom formats and locales', 
     { value: 'MM/dd/yyyy', label: '03/23/2022' },
   ]);
   assert.equal(field('currency').readOnly, true);
+  assert.equal(field('display_precision').maxvalue, 9);
   assert.deepEqual(fieldnames('SystemSettings').slice(4, 8), [
     'locale',
     'display_precision',

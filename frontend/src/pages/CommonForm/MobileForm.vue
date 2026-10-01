@@ -48,31 +48,20 @@
         <template #suffix="{ button }">
           <span
             v-if="errorTabs.has(String(button.value))"
-            class="size-1.5 rounded-full bg-surface-red-4"
+            class="size-1.5 rounded-full bg-surface-red-7"
             :aria-label="t`Has errors`"
           />
         </template>
       </FrappeTabButtons>
     </div>
 
-    <button
+    <FrappeAlert
       v-if="missingLabels"
-      role="alert"
-      class="mx-4 mt-3 flex items-start gap-2 rounded-5 bg-surface-red-1 px-3 py-2.5 text-start text-p-base text-ink-red-4"
-      @click="showFirstError"
-    >
-      <span
-        class="lucide-circle-alert mt-0.5 size-4 shrink-0"
-        aria-hidden="true"
-      />
-      <span class="flex-1">{{ t`Value missing for ${missingLabels}` }}</span>
-      <span
-        v-if="firstErrorTab && firstErrorTab !== activeTab"
-        class="shrink-0 font-medium underline"
-      >
-        {{ t`Show` }}
-      </span>
-    </button>
+      class="mx-4 mt-3"
+      theme="red"
+      :title="t`Value missing for ${missingLabels}`"
+      :primary-action="{ label: t`Show`, onClick: () => showFirstError() }"
+    />
 
     <MobileFormSection
       v-for="([section, fields], index) of activeSections"
@@ -151,6 +140,7 @@
 </template>
 <script setup lang="ts">
 import {
+  Alert as FrappeAlert,
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
   TabButtons as FrappeTabButtons,
@@ -238,11 +228,6 @@ const errorTabs = computed(() => {
   }
 
   return tabs;
-});
-
-const firstErrorTab = computed(() => {
-  const [field] = unresolvedFields.value;
-  return field ? getTabOf(field) : undefined;
 });
 
 const actions = computed(() => getActionsForDoc(props.doc) as SheetAction[]);

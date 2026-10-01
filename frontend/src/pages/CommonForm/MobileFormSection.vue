@@ -10,7 +10,7 @@
         <span class="min-w-0 flex-1 truncate">{{ title }}</span>
         <span
           v-if="hasError"
-          class="size-1.5 rounded-full bg-surface-red-4"
+          class="size-1.5 rounded-full bg-surface-red-7"
           :aria-label="t`Has errors`"
         />
         <span

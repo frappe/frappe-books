@@ -10,7 +10,7 @@
       />
       <p
         class="text-center text-p-base"
-        :class="error ? 'text-ink-red-4' : 'text-ink-gray-6'"
+        :class="error ? 'text-ink-red-7' : 'text-ink-gray-6'"
         :role="error ? 'alert' : undefined"
       >
         {{ error || t`Point the camera at a barcode.` }}

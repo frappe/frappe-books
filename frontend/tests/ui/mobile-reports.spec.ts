@@ -125,7 +125,7 @@ test('reports fit a phone screen without sideways scrolling', async ({
   }
 });
 
-test('account trees scroll sideways only when accounts do not fit', async ({
+test('trial balance scrolls sideways instead of wrapping accounts', async ({
   page,
 }) => {
   await show(page, 'TrialBalance');
@@ -134,11 +134,26 @@ test('account trees scroll sideways only when accounts do not fit', async ({
   expect(await name.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
     true
   );
-  expect(await isScrollingSideways(page)).toBe(true);
 
-  await show(page, 'ProfitAndLoss');
-  await expect(row(page, 'Sales')).toBeVisible();
-  expect(await isScrollingSideways(page)).toBe(false);
+  const scroller = page
+    .locator('[data-slot="scroll-area-viewport"]')
+    .filter({ has: name });
+  expect(await scroller.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
+    true
+  );
+});
+
+test('long account names wrap and keep their amounts on screen', async ({
+  page,
+}) => {
+  const name = 'Implementation & Development Income';
+  const label = await page.getByText(name, { exact: true }).boundingBox();
+  const sales = await page.getByText('Sales', { exact: true }).boundingBox();
+  const amount = await row(page, name).locator('[dir="ltr"]').boundingBox();
+
+  expect(label!.height).toBeGreaterThan(sales!.height * 1.5);
+  expect(amount!.x - label!.x - label!.width).toBeGreaterThanOrEqual(24);
+  expect(amount!.x + amount!.width).toBeLessThanOrEqual(390);
 });
 
 test('labels and amounts keep a gap between them', async ({ page }) => {
@@ -157,12 +172,6 @@ function row(page: Page, name: string) {
   return page.getByRole('button', { name, exact: false }).filter({
     has: page.getByText(name, { exact: true }),
   });
-}
-
-function isScrollingSideways(page: Page) {
-  return page
-    .locator('[data-slot="scroll-area-viewport"]')
-    .evaluate((el) => el.scrollWidth > el.clientWidth);
 }
 
 async function show(page: Page, name: string) {

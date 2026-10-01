@@ -70,7 +70,7 @@ function makeProfitAndLoss() {
       account('Income', 0, [123456789, 1000], true),
       account('Direct Income', 1, [123456789, 1000], true),
       account('Sales', 2, [123450000, 1000]),
-      account('Service', 2, [6789, 0]),
+      account('Implementation & Development Income', 2, [6789, 0]),
       account('Total Income (Credit)', 0, [123456789, 1000]),
       {},
       account('Expenses', 0, [500, 250], true),

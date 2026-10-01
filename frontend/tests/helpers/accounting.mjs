@@ -32,7 +32,6 @@ await build({
       export { getRowDetails } from './src/components/Controls/rowDetails';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
-      export { getJsonExportData } from './src/utils/export';
       export {
         getItemQtyMap,
         getMappedDoc,
@@ -117,7 +116,6 @@ export const {
   getRowDetails,
   getFilterFields,
   getFieldLabel,
-  getJsonExportData,
   FilterSet,
   filterConditions,
   conditionsForField,

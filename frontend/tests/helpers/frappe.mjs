@@ -36,6 +36,12 @@ await build({
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
       export { getLedgerLink } from './models/helpers';
+      export {
+        getCsvExportData,
+        getExportFields,
+        getExportTableFields,
+        getJsonExportData,
+      } from './src/utils/export';
     `,
     resolveDir: frontend,
   },
@@ -125,6 +131,10 @@ export const {
   GeneralLedger,
   getRowReference,
   getLedgerLink,
+  getCsvExportData,
+  getExportFields,
+  getExportTableFields,
+  getJsonExportData,
 } = createRequire(import.meta.url)(output);
 
 /**

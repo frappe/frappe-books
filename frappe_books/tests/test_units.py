@@ -100,6 +100,28 @@ class IntegrationTestUnits(IntegrationTestCase):
 		row = invoice["items"][0]
 		self.assertEqual((row["transfer_unit"], row["transfer_quantity"], row["amount"]), (piece, 2, 20))
 
+	def test_invoice_rows_show_their_rate_per_transfer_unit(self):
+		party = make_party(make_account("Unit Receivable", account_type="Receivable").name, role="Both").name
+		payable = make_account("Unit Payable", root_type="Liability", account_type="Payable").name
+		row = {"item": self.item.name, "transfer_unit": self.box, "transfer_quantity": 2, "rate": 10}
+		for doctype, values in (
+			("Books Sales Invoice", {}),
+			("Books Sales Quote", {}),
+			("Books Purchase Invoice", {"account": payable}),
+		):
+			with self.subTest(doctype=doctype):
+				invoice = insert(
+					{
+						"doctype": doctype,
+						"party": party,
+						"date": frappe.utils.now_datetime(),
+						"items": [row],
+						**values,
+					}
+				)
+				saved = invoice["items"][0]
+				self.assertEqual((saved["rate"], saved["transfer_rate"], saved["amount"]), (10, 120, 240))
+
 	def test_row_unit_must_be_a_unit_of_the_item(self):
 		movement = self._receipt({"transfer_unit": make_uom("Crate"), "unit_conversion_factor": 6})
 

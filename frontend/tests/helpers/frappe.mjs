@@ -32,6 +32,7 @@ await build({
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getFilterFields } from './src/utils/filterFields';
       export { ListFilters } from './src/utils/listFilters';
+      export * as pos from './src/utils/pos';
     `,
     resolveDir: frontend,
   },
@@ -109,6 +110,7 @@ export const {
   getStockTransferActions,
   getFilterFields,
   ListFilters,
+  pos,
 } = createRequire(import.meta.url)(output);
 
 /**

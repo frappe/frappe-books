@@ -9,6 +9,7 @@ import {
   fyo,
   getFrappeDoc,
   getMappedDoc,
+  getNewDocValues,
   getSchema,
   ListFilters,
   ListView,
@@ -423,6 +424,53 @@ test('links filter by the doctypes they point to', async () => {
   assert.deepEqual(RowModel.createFilters.item(row), [
     ['item_usage', '=', 'Sales'],
   ]);
+});
+
+test('a new invoice from a filtered list takes the values users enter', async () => {
+  setSettings();
+  stubFrappe(() => ({ data: [] }));
+  const routes = [];
+  router.currentRoute = { value: { fullPath: '/list/SalesInvoice' } };
+  router.push = async (route) => routes.push(route);
+  // A party's sales, as the dashboard's paid list narrows them.
+  const filters = [
+    ['party', '=', 'Acme'],
+    ['docstatus', '=', 1],
+    ['outstanding_amount', '=', 0],
+    ['date', '>=', '2031-09-01'],
+  ];
+  const list = { schemaName: 'SalesInvoice', canCreate: true, filters };
+
+  await ListView.methods.makeNewDoc.call(list);
+
+  const name = decodeURIComponent(routes[0].split('/').at(-1));
+  const invoice = await getFrappeDoc('SalesInvoice', name);
+  clearTimeout(invoice._previewTimer);
+  assert.equal(invoice.party, 'Acme');
+  assert.equal(invoice.docstatus, 0);
+  assert.deepEqual(getNewDocValues('SalesInvoice', filters), {
+    party: 'Acme',
+  });
+});
+
+test('a record created from a link takes the values its filters choose', () => {
+  const sale = newInvoice('SalesInvoice');
+  const { filters, createFilters } = frappeModels.SalesInvoice;
+
+  assert.deepEqual(getNewDocValues('Account', filters.account(sale)), {
+    is_group: false,
+    account_type: 'Receivable',
+  });
+  assert.deepEqual(getNewDocValues('Party', filters.party(sale)), {
+    role: 'Customer',
+  });
+  assert.deepEqual(getNewDocValues('Party', createFilters.party(sale)), {
+    role: 'Customer',
+  });
+  assert.deepEqual(getNewDocValues('PriceList', filters.price_list(sale)), {
+    is_enabled: true,
+    is_sales: true,
+  });
 });
 
 test("a row's transfer unit is its item's stock unit or one of its conversions", async () => {

@@ -34,6 +34,7 @@ await build({
       export { frappeModels, getRegionalFrappeModels } from './models';
       export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
+      export { getNewDocValues } from './src/utils/misc';
       export { getFilterFields } from './src/utils/filterFields';
       export { getSidebarConfig } from './src/utils/sidebarConfig';
       export { default as ListView } from './src/pages/ListView/ListView.vue';
@@ -147,6 +148,7 @@ export const {
   getMappedDoc,
   createFilters,
   routeFilters,
+  getNewDocValues,
   getStockTransferActions,
   getFilterFields,
   ListFilters,

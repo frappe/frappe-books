@@ -74,13 +74,13 @@ test('the offline screen covers the page until the connection returns', async ({
 test('a request that cannot reach the server shows the offline screen', async ({
   page,
 }) => {
-  await page.route('**/api/method/**', (route) =>
+  await page.route('**/api/**', (route) =>
     route.abort('internetdisconnected')
   );
   await routeTo(page, '/list/SalesInvoice');
   await expect(noConnection(page)).toBeVisible();
 
-  await page.unroute('**/api/method/**');
+  await page.unroute('**/api/**');
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(noConnection(page)).toHaveCount(0);
 });

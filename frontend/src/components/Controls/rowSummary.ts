@@ -9,6 +9,8 @@ export interface RowSummary {
 }
 
 const quantityFields = ['qty', 'quantity'];
+// Invoice rows show their rate per transfer unit, as their Qty is.
+const rateFields = ['rate', 'transfer_rate'];
 
 /** Phone summary of a table row: the first column, a closing amount, the rest. */
 export function getRowSummary(row: Doc, fields: Field[]): RowSummary {
@@ -32,7 +34,8 @@ export function getAmountField(fields: Field[]): Field | undefined {
 function getMeta(row: Doc, fields: Field[]) {
   const quantity = fields.find((f) => quantityFields.includes(f.fieldname));
   const rate = fields.find(
-    (f) => f.fieldname === 'rate' && f.fieldtype === FieldTypeEnum.Currency
+    (f) =>
+      rateFields.includes(f.fieldname) && f.fieldtype === FieldTypeEnum.Currency
   );
   const pairQuantity = Boolean(quantity && rate);
   const parts = pairQuantity

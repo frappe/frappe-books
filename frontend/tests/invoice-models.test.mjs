@@ -151,7 +151,7 @@ test('item tables keep their columns, row editor and Invoice No', () => {
       'item',
       'tax',
       'qty',
-      'rate',
+      'transfer_rate',
       'amount',
     ]);
   }

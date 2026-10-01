@@ -1,15 +1,18 @@
 <template>
   <div class="flex min-h-full flex-col">
-    <PageHeader>
-      <template #mobile-bar>
+    <PageHeader :title="t`Search`" />
+
+    <div
+      class="sticky top-0 z-10 border-b border-outline-gray-1 bg-surface-base"
+    >
+      <div class="px-4 pt-2">
         <FrappeTextInput
           ref="input"
           v-model="query"
           type="search"
           enterkeyhint="search"
           size="lg"
-          variant="outline"
-          class="min-w-0 flex-1"
+          variant="subtle"
           :placeholder="t`Type to search...`"
           :aria-label="t`Search Frappe Books`"
           @keydown.enter="input?.inputElement?.blur()"
@@ -18,38 +21,37 @@
             <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
           </template>
         </FrappeTextInput>
-      </template>
-    </PageHeader>
-
-    <div
-      class="sticky top-0 z-10 flex items-center border-b border-outline-gray-1 bg-surface-base"
-    >
-      <div
-        class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-2.5 pe-2 ps-4 pt-1 [scrollbar-width:none]"
-      >
-        <FrappeButton
-          v-for="group in groups"
-          :key="group"
-          class="shrink-0"
-          size="md"
-          :variant="isFilterOn(group) ? 'subtle' : 'outline'"
-          :aria-pressed="isFilterOn(group)"
-          :label="groupLabelMap[group]"
-          @click="setSearchFilter(group, !isFilterOn(group))"
-        />
       </div>
-      <div
-        class="mb-2.5 me-3 mt-1 shrink-0 border-s border-outline-gray-1 ps-1"
-      >
-        <FrappeButton
-          size="md"
-          variant="ghost"
-          icon-left="lucide-sliders-horizontal"
-          :label="
-            changedFilterCount ? t`Filters · ${changedFilterCount}` : t`Filters`
-          "
-          @click="isFilterSheetOpen = true"
-        />
+      <div class="flex items-center">
+        <div
+          class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-2.5 pe-2 ps-4 pt-2 [scrollbar-width:none]"
+        >
+          <FrappeButton
+            v-for="group in groups"
+            :key="group"
+            class="shrink-0"
+            size="md"
+            :variant="isFilterOn(group) ? 'subtle' : 'outline'"
+            :aria-pressed="isFilterOn(group)"
+            :label="groupLabelMap[group]"
+            @click="setSearchFilter(group, !isFilterOn(group))"
+          />
+        </div>
+        <div
+          class="mb-2.5 me-3 mt-2 shrink-0 border-s border-outline-gray-1 ps-1"
+        >
+          <FrappeButton
+            size="md"
+            variant="ghost"
+            icon-left="lucide-sliders-horizontal"
+            :label="
+              changedFilterCount
+                ? t`Filters · ${changedFilterCount}`
+                : t`Filters`
+            "
+            @click="isFilterSheetOpen = true"
+          />
+        </div>
       </div>
     </div>
 
@@ -205,7 +207,6 @@ onActivated(async () => {
   }
 
   query.value = '';
-  // The header bar renders again once the page is active.
   await nextTick();
   input.value?.focus();
 });

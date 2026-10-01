@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col" :class="isMobile ? 'min-h-full' : 'min-h-0'">
-    <PageHeader :title="t`Point of Sale`">
+    <PageHeader :title="isMobile ? mobileTitle : t`Point of Sale`">
       <template v-if="isMobile && isPosShiftOpen" #mobile-prefix>
         <FrappeButton
           v-if="openPaymentModal"
@@ -20,17 +20,6 @@
           @click="routeToSinvList"
         />
       </template>
-      <template v-if="isMobile && openPaymentModal" #mobile-title>
-        {{ sinvDoc.isReturn ? t`Refund` : t`Payment` }}
-      </template>
-      <template v-else-if="isMobile" #mobile-title>
-        <span class="flex flex-col items-center gap-0.5">
-          <span>{{ t`POS` }}</span>
-          <span v-if="shiftSubtitle" class="text-xs text-ink-gray-5">
-            {{ shiftSubtitle }}
-          </span>
-        </span>
-      </template>
       <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>
         <MobilePOSMenu
           v-model:open="isMenuOpen"
@@ -48,6 +37,12 @@
         </FrappeButton>
       </slot>
     </PageHeader>
+    <p
+      v-if="isMobile && !openPaymentModal && shiftSubtitle"
+      class="px-4 pt-3 text-md text-ink-gray-5"
+    >
+      {{ shiftSubtitle }}
+    </p>
     <MobilePOS
       v-if="isMobile && !openPaymentModal"
       :items="filteredItems as POSItem[]"
@@ -400,6 +395,13 @@ export default defineComponent({
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
+    },
+    mobileTitle(): string {
+      if (!this.openPaymentModal) {
+        return t`POS`;
+      }
+
+      return this.sinvDoc.isReturn ? t`Refund` : t`Payment`;
     },
     shiftSubtitle(): string {
       if (!this.shiftOpenedAt) {

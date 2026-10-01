@@ -40,6 +40,8 @@ test('the System tab saves through Frappe and keeps the value after a reload', a
     /\d{4}/
   );
   await expect(page.getByRole('textbox', { name: 'Currency' })).toBeDisabled();
+  const save = page.getByRole('button', { name: 'Save', exact: true });
+  await expect(save).toBeDisabled();
 
   const saved = page.waitForResponse(
     (response) =>
@@ -47,7 +49,7 @@ test('the System tab saves through Frappe and keeps the value after a reload', a
       response.url().includes('/api/v2/document/Books%20System%20Settings')
   );
   await bypass.click();
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await save.click();
   expect((await saved).ok()).toBe(true);
   const reloaded = page.waitForEvent('load');
   await page.getByRole('button', { name: 'Yes', exact: true }).click();

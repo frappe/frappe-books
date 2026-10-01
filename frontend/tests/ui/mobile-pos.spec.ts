@@ -38,7 +38,7 @@ test('items fill a two-column grid and a tap adds to the cart bar', async ({
   await tea.click();
   await expect(tea.getByText('2', { exact: true })).toBeVisible();
   await expect(cartBar).toContainText('2 items');
-  expect((await cartBar.boundingBox())!.height).toBe(48);
+  expect((await cartBar.boundingBox())!.height).toBe(40);
   await expect(cartBar).toBeInViewport();
   await page.screenshot({ path: test.info().outputPath('items.png') });
 });

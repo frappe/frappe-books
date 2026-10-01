@@ -87,17 +87,22 @@
       v-if="sinvDoc.items?.length"
       class="sticky bottom-0 border-t border-outline-gray-1 bg-surface-base px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3"
     >
-      <button
-        type="button"
-        class="flex h-12 w-full items-center gap-3 rounded-5 bg-surface-gray-10 px-4 text-md-medium text-ink-base hover:bg-surface-gray-9 active:bg-surface-gray-8"
+      <FrappeButton
+        class="w-full"
+        variant="solid"
+        size="lg"
+        icon-left="lucide-shopping-cart"
         @click="sheet = 'cart'"
       >
-        <FrappeIcon icon="lucide-shopping-cart" class="size-[18px]" />
-        <span class="flex-1 text-start">{{ itemCountLabel }}</span>
-        <span class="tabular-nums" dir="ltr">
-          {{ fyo.format(sinvDoc.grand_total ?? fyo.pesa(0), 'Currency') }}
-        </span>
-      </button>
+        {{ itemCountLabel }}
+        <template #suffix>
+          <span class="ms-auto tabular-nums">
+            <span dir="ltr">
+              {{ fyo.format(sinvDoc.grand_total ?? fyo.pesa(0), 'Currency') }}
+            </span>
+          </span>
+        </template>
+      </FrappeButton>
     </div>
 
     <MobilePOSCart
@@ -120,6 +125,7 @@
 import { t } from 'fyo';
 import {
   Badge as FrappeBadge,
+  Button as FrappeButton,
   Icon as FrappeIcon,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';

@@ -5,6 +5,7 @@ import {
   frappeModels,
   fyo,
   getDocType,
+  getFrappeDoc,
   getSchema,
   models,
   newFrappeDoc,
@@ -113,4 +114,40 @@ test('print template pickers offer the Print Formats of the doctype they print',
   assert.deepEqual(models.POSProfile.filters.posPrintTemplate(), {
     doc_type: 'Books Sales Invoice',
   });
+});
+
+test("a settings save first sets the doctypes' print formats through their method", async () => {
+  respond = ({ method }) =>
+    method === 'GET'
+      ? {
+          data: {
+            name: 'Books Defaults',
+            payment_print_template: 'Business - Payment',
+            modified: '2026-10-01 10:00:00.000000',
+          },
+        }
+      : { data: { name: 'Books Defaults' }, message: null };
+  const defaults = await getFrappeDoc('Defaults', 'Defaults', {
+    refresh: true,
+  });
+  await defaults.set('journal_entry_print_template', 'Ledger Copy');
+
+  requests.length = 0;
+  await defaults.sync();
+  const [setFormats, save] = requests;
+
+  assert.equal(
+    setFormats.path,
+    '/api/method/frappe_books.frappe_books.doctype.books_defaults.books_defaults.set_print_formats'
+  );
+  const { print_formats } = setFormats.body;
+  assert.equal(Object.keys(print_formats).length, 8);
+  assert.equal(print_formats.journal_entry_print_template, 'Ledger Copy');
+  assert.equal(print_formats.payment_print_template, 'Business - Payment');
+  assert.equal(print_formats.sales_invoice_print_template, null);
+  assert.equal('pos_print_template' in print_formats, false);
+  assert.deepEqual(
+    [save.method, save.path],
+    ['PUT', '/api/v2/document/Books Defaults/Books Defaults']
+  );
 });

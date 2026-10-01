@@ -24,12 +24,6 @@ export abstract class DatabaseBase {
 
   abstract count(schemaName: string, options: GetAllOptions): Promise<number>;
 
-  abstract search(
-    text: string,
-    schemaNames: string[],
-    limit: number
-  ): Promise<Record<string, UnknownMap[]>>;
-
   abstract searchLink(
     schemaName: string,
     text: string,

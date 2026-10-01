@@ -47,6 +47,7 @@ export interface DocTypeMeta {
   sort_field?: string;
   /** Comma separated fieldnames that search matches besides the name. */
   search_fields?: string;
+  show_name_in_global_search?: number;
   istable?: number;
   issingle?: number;
   is_submittable?: number;

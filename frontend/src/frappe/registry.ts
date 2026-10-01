@@ -52,7 +52,7 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
 /** The fields list and global search match besides the name. */
 export function getSearchFields(schemaName: string): string[] {
   if (!isFrappeBacked(schemaName)) {
-    return fyo.store.searchFields[schemaName] ?? [];
+    return [];
   }
 
   const { search_fields = '' } = getDocType(schemaName).meta;
@@ -62,13 +62,18 @@ export function getSearchFields(schemaName: string): string[] {
     .filter(Boolean);
 }
 
-/** The single schemas, Frappe-backed or not, e.g. to load the settings at startup. */
-export function getSingleSchemaNames(): string[] {
+/** Every schema name, Frappe-backed or not. */
+export function getAllSchemaNames(): string[] {
   const names = new Set([
     ...Object.keys(fyo.schemaMap),
     ...getFrappeModels().map(([name]) => name),
   ]);
-  return [...names].filter((name) => getSchema(name)?.isSingle);
+  return [...names];
+}
+
+/** The single schemas, Frappe-backed or not, e.g. to load the settings at startup. */
+export function getSingleSchemaNames(): string[] {
+  return getAllSchemaNames().filter((name) => getSchema(name)?.isSingle);
 }
 
 /** The schema that shows `name`: a schema name, or a DocType that a Frappe-backed document holds. */

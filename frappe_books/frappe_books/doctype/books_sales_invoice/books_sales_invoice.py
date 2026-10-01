@@ -7,7 +7,7 @@ from frappe.utils import now_datetime
 
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.accounting.payment import map_invoice_payment
+from frappe_books.accounting.payment import map_invoice_payment, validate_payment_details
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
@@ -107,6 +107,8 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def validate_payments(self):
 		if self.payments and not self.is_pos:
 			frappe.throw(_("Only POS invoices take counter payments."))
+		for row in self.payments:
+			validate_payment_details(row.payment_method, row.reference_id, row.clearance_date)
 		counter_payment_amounts(self.payments, abs(as_decimal(self.outstanding_amount)))
 
 	def before_submit(self):

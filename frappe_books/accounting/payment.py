@@ -117,15 +117,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		validate_payment_account(self, "payment_account", method_type)
 
 	def validate_payment_method(self):
-		method = frappe.db.get_value(
-			"Books Payment Method", self.payment_method, ["type", "requires_clearance_date"], as_dict=True
-		)
-		if not method:
-			return
-		if method.type != "Cash" and not self.reference_id:
-			frappe.throw(_("Please enter a reference number."))
-		if method.requires_clearance_date and not self.clearance_date:
-			frappe.throw(_("Please select a clearance date."))
+		validate_payment_details(self.payment_method, self.reference_id, self.clearance_date)
 
 	def validate_counter_account(self, invoices):
 		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""
@@ -370,6 +362,19 @@ def _settle_invoice(invoice, payment):
 		"payment_references",
 		{"reference_type": invoice.doctype, "reference_name": invoice.name, "amount": outstanding},
 	)
+
+
+def validate_payment_details(payment_method, reference_id, clearance_date):
+	"""A non-cash payment needs a reference number, and its method may need a clearance date."""
+	method = frappe.db.get_value(
+		"Books Payment Method", payment_method, ["type", "requires_clearance_date"], as_dict=True
+	)
+	if not method:
+		return
+	if method.type != "Cash" and not reference_id:
+		frappe.throw(_("Please enter a reference number."))
+	if method.requires_clearance_date and not clearance_date:
+		frappe.throw(_("Please select a clearance date."))
 
 
 def default_payment_account(invoice_doctype) -> str | None:

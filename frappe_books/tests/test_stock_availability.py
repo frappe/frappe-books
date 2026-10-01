@@ -41,6 +41,15 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 
 		self.assertEqual(shortfalls, [{"item": pen, "batch": None, "quantity": 1}])
 
+	def test_without_a_date_all_stock_counts(self):
+		pen = self.make_item(track_item=1)
+		seed_stock(pen, quantity=5, rate=10, date=add_days(now_datetime(), 2))
+
+		self.assertEqual(get_sale_shortfalls([{"item": pen, "quantity": 5}]), [])
+		self.assertEqual(
+			get_sale_shortfalls([{"item": pen, "quantity": 6}]), [{"item": pen, "batch": None, "quantity": 1}]
+		)
+
 	def test_pos_sales_ship_from_the_pos_inventory(self):
 		location = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Counter")}).insert()
 		frappe.db.set_single_value("Books Pos Settings", {"inventory": location.name, "pos_profile": None})

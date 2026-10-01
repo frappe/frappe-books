@@ -35,15 +35,16 @@ beforeEach(() => stubServer());
  * ledger, with `location` as where POS sales ship from. Item lookups by
  * filter (the serial number check) find a serial-numbered item.
  */
-function stubServer({ location = inventory, serialNumbers } = {}) {
+function stubServer({ location = inventory, serialNumbers, stock = ledger } = {}) {
   const requests = [];
   const methods = {
     get_stock_location: () => location,
     get_stock_quantities: (args) =>
-      ledger
+      stock
         .filter((row) => !args.location || row.location === args.location)
         .filter((row) => !args.items || args.items.includes(row.item))
         .map(({ item, batch, quantity }) => ({ item, batch, quantity })),
+    get_sale_shortfalls: (args) => getShortfalls(args.items, stock, location),
     get_available_serial_numbers: (args) => {
       assert.equal(args.location, inventory);
       return serialNumbers(args.quantity);
@@ -79,21 +80,39 @@ test('the card and batch quantities use the location the server ships POS sales 
   ]);
 });
 
+test('checkout asks the server for the whole sale’s shortfalls in one request', async () => {
+  const requests = stubServer();
+  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  await pos.validateSinv(invoice);
+  assert.deepEqual(requests, [
+    [
+      'frappe_books.inventory.availability.get_sale_shortfalls',
+      { items: [{ item, batch, quantity: 2 }], is_pos: true },
+    ],
+  ]);
+});
+
 test('checkout accepts stocked batches and rejects stock held elsewhere', async () => {
   const invoice = { items: [{ item, batch, quantity: 2 }] };
-  await pos.validateSinv(invoice, await posStock.getItemQtyMap());
+  await pos.validateSinv(invoice);
 
   stubServer({ location: 'Empty Counter' });
   await assert.rejects(
-    pos.validateSinv(invoice, await posStock.getItemQtyMap()),
+    pos.validateSinv(invoice),
     /Demo - Coffee Beans in Empty Counter.*Available: 0; required: 2/
   );
 });
 
 test('checkout checks the selected batch instead of just total item stock', async () => {
+  stubServer({
+    stock: [
+      { item, batch, location: inventory, quantity: 1 },
+      { item, batch: 'DEMO-COFFEE-2027', location: inventory, quantity: 131 },
+    ],
+  });
   const invoice = { items: [{ item, batch, quantity: 2 }] };
   await assert.rejects(
-    pos.validateSinv(invoice, { [item]: { availableQty: 132, [batch]: 1 } }),
+    pos.validateSinv(invoice),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 1; required: 2/
   );
 });
@@ -106,7 +125,7 @@ test('checkout combines repeated item rows, including free items', async () => {
     ],
   };
   await assert.rejects(
-    pos.validateSinv(invoice, { [item]: { availableQty: 132, [batch]: 4 } }),
+    pos.validateSinv(invoice),
     /batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
 });
@@ -118,15 +137,17 @@ test('checkout needs no stock of untracked items', async () => {
       { item, batch, quantity: 2 },
     ],
   };
-  await pos.validateSinv(invoice, stockMap(4));
+  await pos.validateSinv(invoice);
 });
 
 test('fractional sales and returns do not produce false stock errors', async () => {
   const invoice = { items: [{ item, batch, quantity: 0.5 }] };
-  await pos.validateSinv(invoice, await posStock.getItemQtyMap());
+  await pos.validateSinv(invoice);
   invoice.return_against = 'Original Invoice';
   invoice.items[0].quantity = -2;
-  await pos.validateSinv(invoice, {});
+  const requests = stubServer({ stock: [] });
+  await pos.validateSinv(invoice);
+  assert.deepEqual(requests, []);
 });
 
 test('a row may not ask for more of its batch than the POS warehouse has', async () => {
@@ -155,9 +176,10 @@ test('a row without a batch shows no batch stock', async () => {
 });
 
 test('selecting an unavailable batch cannot use stock from other warehouses', async () => {
+  stubServer({ stock: ledger.filter((row) => row.location !== inventory) });
   const invoice = makeInvoice();
   await assert.rejects(
-    pos.addBatchItem(invoice, product, batch, 2, stockMap(0)),
+    pos.addBatchItem(invoice, product, batch, 2),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 0/
   );
   assert.equal(invoice.items.length, 0);
@@ -165,30 +187,31 @@ test('selecting an unavailable batch cannot use stock from other warehouses', as
 
 test('selecting a stocked batch adds to its row and checks the added quantity', async () => {
   const invoice = makeInvoice();
-  await pos.addBatchItem(invoice, product, batch, 2, stockMap(4));
+  await pos.addBatchItem(invoice, product, batch, 2);
   assert.equal(invoice.items[0].quantity, 2);
 
   await assert.rejects(
-    pos.addBatchItem(invoice, product, batch, 3, stockMap(4)),
+    pos.addBatchItem(invoice, product, batch, 3),
     /Available: 4; required: 5/
   );
   assert.equal(invoice.items[0].quantity, 2);
 });
 
-test('checkout validates against freshly loaded stock', async () => {
+test('checkout validates against the stock the server has now', async () => {
   const invoice = { items: [{ item, batch, quantity: 2 }] };
-  await pos.validatePOSCheckout(invoice, async () => stockMap(4));
+  await pos.validatePOSCheckout(invoice);
+  stubServer({ stock: [{ item, batch, location: inventory, quantity: 1 }] });
   await assert.rejects(
-    pos.validatePOSCheckout(invoice, async () => stockMap(1)),
+    pos.validatePOSCheckout(invoice),
     /Available: 1; required: 2/
   );
 });
 
 test('a payment retry does not require stock that has already shipped', async () => {
+  const requests = stubServer();
   const invoice = { isSubmitted: true, items: [{ item, batch, quantity: 2 }] };
-  await pos.validatePOSCheckout(invoice, async () =>
-    assert.fail('Stock already shipped')
-  );
+  await pos.validatePOSCheckout(invoice);
+  assert.deepEqual(requests, []);
 });
 
 test('a cart quantity must be above zero unless the row is a return', async () => {
@@ -366,6 +389,26 @@ function makeInvoice() {
       });
     },
   };
+}
+
+/** What the rows lack of each tracked item, or batch, at the location, as the server sums them. */
+function getShortfalls(rows, stock, location) {
+  const required = new Map();
+  for (const row of rows.filter((row) => items[row.item]?.track_item)) {
+    const key = JSON.stringify([row.item, row.batch ?? '']);
+    required.set(key, (required.get(key) ?? 0) + row.quantity);
+  }
+
+  return [...required].flatMap(([key, quantity]) => {
+    const [item, batch] = JSON.parse(key);
+    const available = stock
+      .filter((row) => row.location === location && row.item === item)
+      .filter((row) => !batch || row.batch === batch)
+      .reduce((total, row) => total + row.quantity, 0);
+    return quantity > available
+      ? [{ item, batch: batch || null, quantity: quantity - available }]
+      : [];
+  });
 }
 
 function stockMap(batchQuantity) {

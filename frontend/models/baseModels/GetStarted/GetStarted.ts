@@ -6,4 +6,5 @@ export class GetStarted extends FrappeDoc {
   static override presentation = { label: 'Get Started' };
 
   declare onboarding_complete?: boolean;
+  declare tasks_complete?: boolean;
 }

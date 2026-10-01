@@ -14,7 +14,7 @@ import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
 import type { DocValues } from 'src/frappe/api';
-import { getDocType, isFrappeBacked } from 'src/frappe/doctypes';
+import { getDocType } from 'src/frappe/doctypes';
 import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
 
 const MAPPER_MODULES: Record<string, string> = {
@@ -38,10 +38,6 @@ export async function getMappedDoc(
   schemaName: string,
   mapper: string
 ): Promise<Doc> {
-  if (!isFrappeBacked(schemaName)) {
-    return await getMappedBridgeDoc(source, schemaName, mapper);
-  }
-
   const method = getMapperMethod(source.schemaName, mapper);
   return await getMappedFrappeDoc(schemaName, method, source.name!);
 }
@@ -58,20 +54,6 @@ export async function getMappedValues(
 
 function getMapperMethod(sourceSchemaName: string, mapper: string) {
   return `${MAPPER_MODULES[sourceSchemaName]}.${mapper}`;
-}
-
-/** A bridge document of what a server mapper builds, for screens still on the bridge, like the POS. */
-export async function getMappedBridgeDoc(
-  source: Doc,
-  schemaName: string,
-  mapper: string
-): Promise<Doc> {
-  const values = await source.fyo.db.getMapped(
-    schemaName,
-    getMapperMethod(source.schemaName, mapper),
-    source.name!
-  );
-  return source.fyo.doc.getNewDocFromServer(schemaName, values);
 }
 
 export function getQuoteActions(
@@ -451,10 +433,6 @@ export function getIsDocEnabledColumn(): ColumnConfig {
       return { theme: 'amber', label: t`Disabled` };
     },
   };
-}
-
-export function getNumberSeries(schemaName: string, fyo: Fyo) {
-  return fyo.defaultNumberSeries[schemaName];
 }
 
 export function getDocStatusListColumn(): ColumnConfig {

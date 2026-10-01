@@ -17,7 +17,6 @@ import {
   DocValueMap,
   RawValueMap,
 } from './types';
-import { StockQuantity } from 'models/inventory/types';
 
 type FieldMap = Record<string, Record<string, Field>>;
 
@@ -271,57 +270,6 @@ export class DatabaseHandler extends DatabaseBase {
       this.converter.toRawValueMap(schemaName, docValueMap)
     )) as RawValueMap;
     return this.converter.toDocValueMap(schemaName, rawValueMap) as DocValueMap;
-  }
-
-  // The Frappe adapter runs these complex queries on the server.
-
-  async getStockQuantity(
-    item: string,
-    location?: string,
-    fromDate?: string,
-    toDate?: string,
-    batch?: string,
-    serialNumbers?: string[]
-  ): Promise<number | null> {
-    return (await this.#demux.callBespoke(
-      'getStockQuantity',
-      item,
-      location,
-      fromDate,
-      toDate,
-      batch,
-      serialNumbers
-    )) as number | null;
-  }
-
-  async getStockQuantities(
-    location?: string,
-    items?: string[]
-  ): Promise<StockQuantity[]> {
-    return (await this.#demux.callBespoke(
-      'getStockQuantities',
-      location,
-      items
-    )) as StockQuantity[];
-  }
-
-  /** The location the server moves an invoice's stock from or to. */
-  async getStockLocation(
-    schemaName: string,
-    isPOS: boolean
-  ): Promise<string | null> {
-    return (await this.#demux.callBespoke(
-      'getStockLocation',
-      schemaName,
-      isPOS
-    )) as string | null;
-  }
-
-  async getDefaultNumberSeries(): Promise<Record<string, string>> {
-    return (await this.#demux.callBespoke('getDefaultNumberSeries')) as Record<
-      string,
-      string
-    >;
   }
 
   /**

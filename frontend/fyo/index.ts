@@ -50,7 +50,6 @@ export class Fyo {
 
   currencyFormatter?: Intl.NumberFormat;
   currencySymbols: Record<string, string | undefined> = {};
-  defaultNumberSeries: Record<string, string | undefined> = {};
 
   constructor(conf: FyoConfig) {
     this.db = new DatabaseHandler(this, conf.DatabaseDemux);
@@ -74,11 +73,6 @@ export class Fyo {
     this.currencySymbols = Object.fromEntries(
       currencies.map(({ name, symbol }) => [name, symbol || undefined])
     );
-  }
-
-  /** Loads the series the server names new documents with, by schema. */
-  async loadDefaultNumberSeries() {
-    this.defaultNumberSeries = await this.db.getDefaultNumberSeries();
   }
 
   reportDocumentActionWarning(

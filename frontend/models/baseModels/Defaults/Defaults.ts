@@ -135,8 +135,4 @@ export class Defaults extends FrappeDoc {
       print_formats: Object.fromEntries(printFormats),
     });
   }
-
-  override async afterSync() {
-    await this.fyo.loadDefaultNumberSeries();
-  }
 }

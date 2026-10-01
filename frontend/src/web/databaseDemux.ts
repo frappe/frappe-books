@@ -40,10 +40,6 @@ export class FrappeDatabaseDemux extends DatabaseDemuxBase {
     return call('frappe_books.ui_api.database_call', { method, args });
   }
 
-  async callBespoke(method: string, ...args: unknown[]): Promise<unknown> {
-    return call('frappe_books.ui_api.bespoke_call', { method, args });
-  }
-
   override async getDuplicate(
     schemaName: string,
     values: unknown

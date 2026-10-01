@@ -1,4 +1,3 @@
-import { ModelMap } from 'fyo/model/types';
 import type { FrappeModel } from 'src/frappe/doctypes';
 import { Account } from './baseModels/Account/Account';
 import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
@@ -16,7 +15,6 @@ import { NumberSeries } from './baseModels/NumberSeries/NumberSeries';
 import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
 import { Lead } from './baseModels/Lead/Lead';
-import { AppliedCouponCodes } from './baseModels/AppliedCouponCodes/AppliedCouponCodes';
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { Payment } from './baseModels/Payment/Payment';
 import { Party } from './baseModels/Party/Party';
@@ -25,18 +23,11 @@ import { PriceList } from './baseModels/PriceList/PriceList';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
 import { PrintFormat } from './baseModels/PrintFormat';
 import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
-import { PurchaseInvoice } from './baseModels/PurchaseInvoice/PurchaseInvoice';
-import { PurchaseInvoiceItem } from './baseModels/PurchaseInvoiceItem/PurchaseInvoiceItem';
-import { SalesInvoice } from './baseModels/SalesInvoice/SalesInvoice';
-import { SalesInvoiceItem } from './baseModels/SalesInvoiceItem/SalesInvoiceItem';
-import { SalesQuote } from './baseModels/SalesQuote/SalesQuote';
-import { SalesQuoteItem } from './baseModels/SalesQuoteItem/SalesQuoteItem';
 import { SetupWizard } from './baseModels/SetupWizard/SetupWizard';
 import { SystemSettings } from './baseModels/SystemSettings/SystemSettings';
 import { ItemGroup } from './baseModels/ItemGroup/ItemGroup';
 import { Tax } from './baseModels/Tax/Tax';
 import { UOM } from './baseModels/UOM/UOM';
-import { TaxSummary } from './baseModels/TaxSummary/TaxSummary';
 import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
 import { Location } from './inventory/Location';
@@ -52,21 +43,7 @@ import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 import * as invoices from './invoices';
 
-export const models = {
-  PurchaseInvoice,
-  PurchaseInvoiceItem,
-  SalesInvoice,
-  SalesInvoiceItem,
-  AppliedCouponCodes,
-  SalesQuote,
-  SalesQuoteItem,
-  TaxSummary,
-} as ModelMap;
-
-/**
- * Models of the schemas Frappe serves directly. A schema moves here from
- * `models` when its module stops using the bridge; see docs/framework-backed-doctypes.md.
- */
+/** The model of each schema, by schema name; see docs/framework-backed-doctypes.md. */
 export const frappeModels: Record<string, FrappeModel> = {
   Account,
   AccountingLedgerEntry,

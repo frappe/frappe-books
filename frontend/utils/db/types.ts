@@ -96,8 +96,6 @@ export abstract class DatabaseDemuxBase {
 
   abstract call(method: DatabaseMethod, ...args: unknown[]): Promise<unknown>;
 
-  abstract callBespoke(method: string, ...args: unknown[]): Promise<unknown>;
-
   abstract getDuplicate(schemaName: string, values: unknown): Promise<unknown>;
 
   abstract runDocMethod(

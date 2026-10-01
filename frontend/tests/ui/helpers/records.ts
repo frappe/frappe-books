@@ -24,6 +24,30 @@ export async function insertDocument(
   return JSON.parse(response.text).data;
 }
 
+/** Saves values on a settings DocType (a Single), e.g. to turn on a feature a spec needs. */
+export async function updateSingle(
+  page: Page,
+  doctype: string,
+  values: Record<string, unknown>
+) {
+  const response = await page.evaluate(
+    async ({ doctype, values }) => {
+      const path = [doctype, doctype].map(encodeURIComponent).join('/');
+      const result = await fetch(`/api/v2/document/${path}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': (window as any).csrf_token,
+        },
+        body: JSON.stringify(values),
+      });
+      return { ok: result.ok, text: await result.text() };
+    },
+    { doctype, values }
+  );
+  expect(response.ok, response.text).toBe(true);
+}
+
 /** The names of the first leaf accounts of a root type, e.g. Asset. */
 export async function getLeafAccounts(
   page: Page,

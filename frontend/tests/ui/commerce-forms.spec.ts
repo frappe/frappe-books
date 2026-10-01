@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { updateSingle } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 // Frappe serves parties, addresses, leads and pricing rules directly; their
@@ -58,6 +59,7 @@ test('a lead makes its customer through the server mapper', async ({
   page,
 }) => {
   const lead = `Form Lead ${Date.now()}`;
+  await updateSingle(page, 'Books Accounting Settings', { enable_lead: 1 });
   await insert(page, 'Books Lead', { name: lead, email: 'lead@example.com' });
   await page.goto(`/books/edit/Lead/${encodeURIComponent(lead)}`);
   await waitForBooks(page);

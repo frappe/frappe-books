@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { updateSingle } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 // Frappe serves invoices and quotes directly; the forms still look and behave as before.
@@ -35,6 +36,9 @@ test('a new sales invoice takes its account, rows and totals from the server', a
 });
 
 test('a return takes back what its invoice sold', async ({ page }) => {
+  await updateSingle(page, 'Books Accounting Settings', {
+    enable_invoice_returns: 1,
+  });
   const name = await insertSubmittedInvoice(page);
   await page.goto(`/books/edit/SalesInvoice/${name}`);
   await waitForBooks(page);

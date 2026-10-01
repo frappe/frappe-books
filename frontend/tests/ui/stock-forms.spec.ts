@@ -1,20 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
+import { updateSingle } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 // Frappe serves stock documents directly; the forms still look and behave as before.
 useBooksSession('/books');
 
 test.beforeEach(async ({ page }) => {
-  await api(
-    page,
-    'PUT',
-    'Books Accounting Settings/Books Accounting Settings',
-    {
-      enable_inventory: 1,
-      enable_invoice_returns: 1,
-    }
-  );
-  await api(page, 'PUT', 'Books Inventory Settings/Books Inventory Settings', {
+  await updateSingle(page, 'Books Accounting Settings', {
+    enable_inventory: 1,
+    enable_invoice_returns: 1,
+  });
+  await updateSingle(page, 'Books Inventory Settings', {
     default_location: 'Stores',
   });
 });

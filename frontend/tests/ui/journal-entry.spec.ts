@@ -12,10 +12,12 @@ test('a new journal entry takes its series and balances its rows', async ({
 }) => {
   await page.getByRole('button', { name: 'Create new entry' }).click();
   await expect(page).toHaveURL(/\/books\/edit\/JournalEntry\//);
-  await expect(page.getByText('Entry No', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('textbox', { name: 'Entry No (required)', exact: true })
+  ).toBeVisible();
   // The server's preview fills the default series once the form opens.
   await expect(
-    page.getByRole('combobox', { name: 'Number Series' })
+    page.getByRole('combobox', { name: 'Number Series (required)' })
   ).toHaveValue('JV-');
 });
 
@@ -28,7 +30,9 @@ test('a submitted entry shows its accounting entries in the ledger list', async 
   await expect(page.getByText('Submitted', { exact: true })).toBeVisible();
   // A submitted entry hides the references it has none of.
   await expect(page.getByText('User Remark', { exact: true })).toHaveCount(0);
-  await expect(page.getByText(`JE ${run}`)).toBeVisible();
+  await expect(
+    page.getByRole('textbox', { name: 'Reference Number', exact: true })
+  ).toHaveValue(`JE ${run}`);
 
   await page.goto('/books/list/AccountingLedgerEntry');
   await waitForBooks(page);

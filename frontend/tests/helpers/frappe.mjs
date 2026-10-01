@@ -364,7 +364,7 @@ export async function loadTestDocTypes() {
         { fieldname: 'Shelf', section: 'Storage', tab: 'Custom' },
         { fieldname: 'Colour', section: 'Extra', tab: null },
       ];
-      const isItem = params.filters[0][2] === 'Item';
+      const isItem = params.filters[0][2] === 'Books Item';
       return { data: isItem ? [{ custom_fields: rows }] : [] };
     }
   });

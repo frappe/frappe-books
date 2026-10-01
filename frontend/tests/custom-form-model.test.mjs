@@ -17,7 +17,7 @@ await loadFrappeModels();
 const field = (doc, fieldname) => doc.fieldMap[fieldname];
 
 async function newForm() {
-  const form = newFrappeDoc('CustomForm', { name: 'UOM' });
+  const form = newFrappeDoc('CustomForm', { name: 'Books Uom' });
   await form.append('custom_fields', {
     label: 'My Note',
     fieldname: 'myNote',
@@ -32,13 +32,20 @@ test('the Custom Form asks for a form type among the forms Books can customize',
     ['name', 'AutoComplete', 'Form Type']
   );
 
-  const types = CustomForm.lists
-    .name(newFrappeDoc('CustomForm'))
-    .map(({ value }) => value);
-  assert.ok(types.includes('UOM'));
-  assert.ok(types.includes('SalesInvoice'));
-  for (const schemaName of ['SystemSettings', 'CustomForm', 'SetupWizard']) {
-    assert.equal(types.includes(schemaName), false);
+  const types = Object.fromEntries(
+    CustomForm.lists
+      .name(newFrappeDoc('CustomForm'))
+      .map(({ value, label }) => [value, label])
+  );
+  assert.equal(types['Books Uom'], 'UOM');
+  assert.equal(types['Books Sales Invoice'], 'Sales Invoice');
+  assert.equal(types['Books Sales Invoice Item'], 'Sales Invoice Item');
+  for (const doctype of [
+    'Books System Settings',
+    'Books Custom Form',
+    'Books Setup Wizard',
+  ]) {
+    assert.equal(doctype in types, false);
   }
 });
 
@@ -112,12 +119,19 @@ test('a row links to other forms and references text fields of the form', async 
   });
   const [row] = form.custom_fields;
   const targets = CustomField.lists.target(row).map(({ value }) => value);
-  assert.ok(targets.includes('Party'));
-  assert.equal(targets.includes('SystemSettings'), false);
+  assert.ok(targets.includes('Books Party'));
+  assert.equal(targets.includes('Books System Settings'), false);
 
+  // References name Frappe fieldnames: a row's Custom Field, or a field of the form.
   const references = CustomField.lists.references(row);
-  assert.deepEqual(references[0], { value: 'myNote', label: 'My Note' });
-  assert.deepEqual(references[1], { value: 'size', label: 'Size' });
+  assert.deepEqual(references[0], {
+    value: 'custom_books_mynote',
+    label: 'My Note',
+  });
+  assert.deepEqual(references[1], {
+    value: 'custom_books_size',
+    label: 'Size',
+  });
   assert.ok(references.some(({ value }) => value === 'name'));
 });
 
@@ -133,7 +147,7 @@ test('editing a row previews its name from the server', async () => {
       },
     ],
   }));
-  const form = newFrappeDoc('CustomForm', { name: 'UOM' });
+  const form = newFrappeDoc('CustomForm', { name: 'Books Uom' });
   await form.append('custom_fields', { label: 'Delivery Date' });
   await form.preview();
 

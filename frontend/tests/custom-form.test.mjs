@@ -32,15 +32,15 @@ function serveCustomizedMeta() {
   });
 }
 
-/** Saves a customization, as the Custom Form's save announces it. */
-async function customize(schemaName, doctype, fields) {
+/** Saves a customization of a doctype, as its Custom Form's save announces it. */
+async function customize(doctype, fields) {
   customFields[doctype] = fields.map(({ docfield }) => docfield);
-  placements[schemaName] = fields.map(({ fieldname }) => ({
+  placements[doctype] = fields.map(({ fieldname }) => ({
     fieldname,
     section: 'Default',
     tab: 'Custom',
   }));
-  await fyo.doc.observer.trigger('sync:CustomForm', schemaName);
+  await fyo.doc.observer.trigger('sync:CustomForm', doctype);
 }
 
 before(async () => {
@@ -64,29 +64,27 @@ const note = (docfield = {}) => ({
 });
 
 test('optional custom fields retain their configured defaults', async () => {
-  await customize('UOM', 'Books Uom', [note({ default: 'Optional default' })]);
+  await customize('Books Uom', [note({ default: 'Optional default' })]);
 
   const unit = newFrappeDoc('UOM');
   assert.equal(unit.custom_books_mynote, 'Optional default');
   assert.equal(unit.fieldMap.custom_books_mynote.required, undefined);
-  await customize('UOM', 'Books Uom', []);
+  await customize('Books Uom', []);
 });
 
 test('saving and deleting customizations refresh open documents without losing edits', async () => {
   const unit = newFrappeDoc('UOM', { name: 'Test Unit', is_whole: true });
-  await customize('UOM', 'Books Uom', [
-    note({ reqd: 1, default: 'Initial note' }),
-  ]);
+  await customize('Books Uom', [note({ reqd: 1, default: 'Initial note' })]);
   assert.equal(unit.fieldMap.custom_books_mynote.tab, 'Custom');
   assert.equal(unit.custom_books_mynote, 'Initial note');
   await unit.set('custom_books_mynote', 'Unsaved note');
 
-  await customize('UOM', 'Books Uom', [note({ label: 'Updated label' })]);
+  await customize('Books Uom', [note({ label: 'Updated label' })]);
   assert.equal(unit.fieldMap.custom_books_mynote.label, 'Updated label');
   assert.equal(unit.custom_books_mynote, 'Unsaved note');
   assert.equal(unit.is_whole, true);
 
-  await customize('UOM', 'Books Uom', []);
+  await customize('Books Uom', []);
   assert.equal(unit.fieldMap.custom_books_mynote, undefined);
   assert.equal('custom_books_mynote' in unit.getFrappeValues(), false);
   assert.equal(unit.is_whole, true);
@@ -98,7 +96,7 @@ test('customizing a table refreshes the rows of open documents', async () => {
   invoice.push('items', { item: 'Test Item', quantity: 2 });
   const [row] = invoice.items;
 
-  await customize('SalesInvoiceItem', 'Books Sales Invoice Item', [
+  await customize('Books Sales Invoice Item', [
     {
       fieldname: 'packingNote',
       docfield: {

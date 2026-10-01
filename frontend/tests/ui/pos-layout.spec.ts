@@ -264,7 +264,7 @@ test('invoice selection and bank payment fields work in a small dialog', async (
     path: test.info().outputPath('bank-payment-small.png'),
   });
   await page.evaluate(() => {
-    (window as any).posFixture.state.invoice.returnAgainst = 'SINV-2026-0001';
+    (window as any).posFixture.state.invoice.return_against = 'SINV-2026-0001';
     document.documentElement.classList.add('dark');
     document.documentElement.dataset.theme = 'dark';
   });

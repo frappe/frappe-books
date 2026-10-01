@@ -67,7 +67,7 @@ await build({
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { getAvailableSerialNumbers } from './models/inventory/helpers';
       export { generateCSV, parseCSV } from './utils/csvParser';
-      export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
+      export { getImportableSchemaNames } from './src/importer';
       export { DataImport } from './src/dataImport';
     `,
     resolveDir: frontend,
@@ -158,8 +158,6 @@ export const {
   getAvailableSerialNumbers,
   generateCSV,
   parseCSV,
-  Importer,
-  getGridRows,
   getImportableSchemaNames,
   DataImport,
 } = bundle;

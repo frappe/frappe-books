@@ -1,14 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-  getGridRows,
-  Importer,
-  makeFyo,
-  parseCSV,
-} from './helpers/accounting.mjs';
+import { parseCSV } from './helpers/accounting.mjs';
+import { loadFrappeModels } from './helpers/frappeModels.mjs';
+import { frappeModels, fyo, getGridRows, Importer } from './helpers/frappe.mjs';
+
+await loadFrappeModels(frappeModels);
 
 test('import columns report duplicates and missing required fields', async () => {
-  const importer = new Importer('Party', await makeFyo());
+  const importer = new Importer('Party', fyo);
   const required = [...importer.templateFieldsMap.values()].filter(
     (field) => field.required
   );
@@ -29,7 +28,7 @@ test('import columns report duplicates and missing required fields', async () =>
 });
 
 test('child table fields are never required in an import template', async () => {
-  const importer = new Importer('SalesInvoice', await makeFyo());
+  const importer = new Importer('SalesInvoice', fyo);
   const childFields = [...importer.templateFieldsMap.values()].filter(
     (field) => field.parentSchemaChildField
   );
@@ -38,8 +37,28 @@ test('child table fields are never required in an import template', async () => 
   assert.ok(childFields.every((field) => !field.required));
 });
 
+test('a template starts with the name that groups each document’s rows', () => {
+  const fields = (schemaName) => [
+    ...new Importer(schemaName, fyo).templateFieldsMap.values(),
+  ];
+  const [invoiceNo] = fields('SalesInvoice');
+  const accountKeys = fields('Account').map(({ fieldKey }) => fieldKey);
+
+  assert.deepEqual(
+    [invoiceNo.fieldKey, invoiceNo.label, invoiceNo.required],
+    ['SalesInvoice.name', 'Invoice No', true]
+  );
+  assert.ok(accountKeys.includes('Account.account_name'));
+  assert.ok(!accountKeys.includes('Account.name'));
+  assert.ok(
+    !fields('SalesInvoice').some(
+      (field) => field.parentSchemaChildField && field.fieldname === 'name'
+    )
+  );
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
-  const importer = new Importer('Party', await makeFyo());
+  const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;
 
   importer.pickColumn(first, false);
@@ -57,7 +76,7 @@ function importRows(importer) {
 }
 
 test('the import file puts each document’s rows together, its values on the first', async () => {
-  const importer = new Importer('SalesInvoice', await makeFyo());
+  const importer = new Importer('SalesInvoice', fyo);
   importer.assignedTemplateFields = [
     'SalesInvoice.name',
     'SalesInvoice.party',
@@ -85,9 +104,8 @@ test('the import file puts each document’s rows together, its values on the fi
 });
 
 test('named documents import their name under the DocType’s fieldname', async () => {
-  const fyo = await makeFyo();
   const party = new Importer('Party', fyo);
-  party.assignedTemplateFields = ['Party.name', 'Party.defaultAccount'];
+  party.assignedTemplateFields = ['Party.name', 'Party.default_account'];
   party.valueMatrix = [[{ value: 'Ann' }, { value: 'Debtors' }]];
   assert.deepEqual(importRows(party), [
     ['docstatus', 'name', 'default_account'],
@@ -95,22 +113,25 @@ test('named documents import their name under the DocType’s fieldname', async 
   ]);
 
   const account = new Importer('Account', fyo);
-  account.assignedTemplateFields = ['Account.name', 'Account.parentAccount'];
+  account.assignedTemplateFields = [
+    'Account.account_name',
+    'Account.parent_books_account',
+  ];
   account.valueMatrix = [[{ value: 'Petty Cash' }, { value: 'Cash' }]];
-  assert.deepEqual(importRows(account)[0], [
-    'docstatus',
-    'account_name',
-    'parent_books_account',
+  assert.deepEqual(importRows(account), [
+    ['docstatus', 'account_name', 'parent_books_account'],
+    ['0', 'Petty Cash', 'Cash'],
   ]);
+  // A doctype named by a field groups its rows by that field.
+  assert.equal(account.getRowName(0), 'Petty Cash');
 });
 
-test('import cells are written as Frappe’s Data Import parses them', async (t) => {
-  const fyo = await makeFyo();
+test('import cells are written as Frappe’s Data Import parses them', async () => {
   const importer = new Importer('SalesInvoice', fyo);
   importer.assignedTemplateFields = [
     'SalesInvoice.name',
     'SalesInvoice.date',
-    'SalesInvoice.discountAfterTax',
+    'SalesInvoice.discount_after_tax',
     'SalesInvoiceItem.rate',
   ];
   importer.valueMatrix = [
@@ -121,10 +142,6 @@ test('import cells are written as Frappe’s Data Import parses them', async (t)
       { value: fyo.pesa(12.5) },
     ],
   ];
-  globalThis.window = {
-    frappe: { boot: { time_zone: { system: 'Asia/Kolkata' } } },
-  };
-  t.after(() => delete globalThis.window);
 
   assert.deepEqual(importRows(importer)[1], [
     '0',
@@ -135,7 +152,7 @@ test('import cells are written as Frappe’s Data Import parses them', async (t)
 });
 
 test('fix failed keeps the failed rows and the file columns', async () => {
-  const importer = new Importer('Party', await makeFyo());
+  const importer = new Importer('Party', fyo);
   importer.assignedTemplateFields = ['Party.role', 'Party.name'];
   importer.valueMatrix = [
     [{ value: 'Customer' }, { value: 'A' }],

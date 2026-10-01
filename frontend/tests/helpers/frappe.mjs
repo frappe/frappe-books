@@ -36,6 +36,7 @@ await build({
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
       export { getLedgerLink } from './models/helpers';
+      export { Importer, getGridRows } from './src/importer';
       export {
         getCsvExportData,
         getExportFields,
@@ -131,6 +132,8 @@ export const {
   GeneralLedger,
   getRowReference,
   getLedgerLink,
+  Importer,
+  getGridRows,
   getCsvExportData,
   getExportFields,
   getExportTableFields,

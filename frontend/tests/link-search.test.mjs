@@ -4,6 +4,7 @@ import {
   FrappeDoc,
   Link,
   MultiLabelLink,
+  fyo,
   loadFrappeDocTypes,
   registerFrappeModels,
 } from './helpers/ui.mjs';
@@ -97,4 +98,16 @@ test("a multi-label link shows its records' other fields from one search", async
   ]);
   assert.equal(requests.length, 1);
   assert.deepEqual(requests[0].args.filter_fields, ['phone', 'email']);
+});
+
+test("a link without model filters searches by its DocField's link_filters", async (t) => {
+  t.after(() => delete fyo.singles.SystemSettings);
+  const linkFilters = { account_type: ['in', ['Cash', 'Bank']] };
+  const link = makeControl(Link, {
+    df: { target: 'Account', schemaName: 'Defaults', linkFilters },
+  });
+
+  assert.deepEqual(await link.getFilters(), linkFilters);
+  fyo.singles.SystemSettings = { remove_filter: true };
+  assert.equal(await link.getFilters(), null);
 });

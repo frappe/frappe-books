@@ -6,6 +6,10 @@ import { build, loadConfigFromFile, preview, type PreviewServer } from 'vite';
 
 const frontendRoot = path.resolve(__dirname, '../../..');
 
+// Compile fixtures as `vite build` does. Otherwise Vue's dev compiler keeps
+// template comments, and a component with a root comment drops its attrs.
+process.env.NODE_ENV = 'production';
+
 /**
  * Build `tests/ui/fixtures/<name>.html` with the app's Vite config and serve
  * it while the tests in the calling file run. Returns the fixture URL getter.

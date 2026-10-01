@@ -5,6 +5,7 @@ from decimal import Decimal
 import frappe
 from frappe.api.v2 import run_doc_method as run_doc_method_v2
 from frappe.client import insert
+from frappe.model.mapper import make_mapped_doc
 from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
 
@@ -30,8 +31,6 @@ from frappe_books.tests.accounting import (
 	make_number_series,
 	make_party,
 )
-from frappe_books.ui_api import get_duplicate, lifecycle_action, run_doc_method
-from frappe_books.ui_bridge.database import BooksDatabaseBridge
 
 MAPPERS = "frappe_books.frappe_books.doctype.{0}.{0}.{1}"
 
@@ -91,30 +90,27 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		self.assertEqual((invoice_row.qty, invoice_row.amount), (2, 50))
 
-	def test_bridge_returns_mapped_documents_in_interface_fields(self):
+	def test_frappe_mappers_make_the_documents_actions_open(self):
 		quote = self._submitted_quote()
-		bridge = BooksDatabaseBridge()
 
-		invoice = bridge.call(
-			"getMapped", [MAPPERS.format("books_sales_quote", "make_sales_invoice"), quote.name]
-		)
-		self.assertEqual((invoice["quote"], invoice["party"]), (quote.name, self.party.name))
-		self.assertEqual(invoice["items"][0]["rate"], 75)
+		invoice = make_mapped_doc(MAPPERS.format("books_sales_quote", "make_sales_invoice"), quote.name)
+		self.assertEqual((invoice.quote, invoice.party), (quote.name, self.party.name))
+		self.assertEqual(invoice.items[0].rate, 75)
 
 		mapped = make_sales_invoice(quote.name)
 		mapped.make_auto_payment = 0
 		submitted = mapped.insert().submit()
-		payment = bridge.call(
-			"getMapped", [MAPPERS.format("books_sales_invoice", "make_payment"), submitted.name]
+		payment = make_mapped_doc(MAPPERS.format("books_sales_invoice", "make_payment"), submitted.name)
+		self.assertEqual((payment.payment_type, payment.amount), ("Receive", 150))
+		reference = payment.payment_references[0]
+		self.assertEqual(
+			(reference.reference_type, reference.reference_name), (submitted.doctype, submitted.name)
 		)
-		self.assertEqual((payment["paymentType"], payment["amount"]), ("Receive", 150))
-		self.assertEqual(payment["for"][0]["referenceName"], submitted.name)
-		self.assertEqual(payment["for"][0]["referenceType"], "SalesInvoice")
 
-	def test_bridge_maps_only_through_whitelisted_mappers(self):
+	def test_documents_map_only_through_whitelisted_mappers(self):
 		quote = self._submitted_quote()
 		with self.assertRaises(frappe.PermissionError):
-			BooksDatabaseBridge().get_mapped("frappe_books.accounting.returns.map_return", quote.name)
+			make_mapped_doc("frappe_books.accounting.returns.map_return", quote.name)
 
 	def test_return_limits_quantity_and_updates_original_status(self):
 		invoice = make_invoice(
@@ -254,25 +250,17 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		):
 			self.assertFalse(frappe.db.exists(doctype, name), doctype)
 
-	def test_cancelling_a_paid_invoice_cancels_the_payments_it_lists(self):
-		invoice = self._paid_invoice()
-		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
-		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
-		cancelled = lifecycle_action("cancel", "SalesInvoice", invoice.name, _modified(invoice), linked_docs)
-
-		self.assertEqual([doc["name"] for doc in linked_docs], [payment])
-		self.assertTrue(cancelled["cancelled"])
-		self.assertEqual(frappe.db.get_value("Books Payment", payment, "docstatus"), 2)
-
 	def test_an_invoice_cancels_the_payments_it_lists_through_its_controller(self):
 		invoice = self._paid_invoice()
+		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
 		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
 		cancelled = run_invoice_method(invoice, "cancel_with_linked_docs", linked_docs=linked_docs)
 
+		self.assertEqual([doc["name"] for doc in linked_docs], [payment])
 		self.assertEqual(cancelled.docstatus, 2)
-		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 2)
+		self.assertEqual(frappe.db.get_value("Books Payment", payment, "docstatus"), 2)
 
 	def test_an_invoice_copy_older_than_the_saved_one_cancels_nothing(self):
 		invoice = self._paid_invoice()
@@ -295,21 +283,28 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		credit_note.insert().submit()
 
 		payments = get_payments_to_cancel(invoice.doctype, invoice.name)
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
 		self.assertEqual([doc["doctype"] for doc in payments], ["Books Payment"])
 		self.assertRaises(
 			frappe.LinkExistsError,
-			lifecycle_action,
-			*("cancel", "SalesInvoice", invoice.name, _modified(invoice), payments),
+			run_invoice_method,
+			*(invoice, "cancel_with_linked_docs"),
+			linked_docs=payments,
 		)
 
 	def test_linked_documents_are_cancelled_with_the_users_rights(self):
 		invoice = self._paid_invoice()
 		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
-		args = ("cancel", "SalesInvoice", invoice.name, _modified(invoice), linked_docs)
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
 		with self.set_user(ensure_user("books-cancel-user@example.com", "Books User")):
-			self.assertRaises(frappe.PermissionError, lifecycle_action, *args)
+			self.assertRaises(
+				frappe.PermissionError,
+				run_invoice_method,
+				*(invoice, "cancel_with_linked_docs"),
+				linked_docs=linked_docs,
+			)
 
 		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
 
@@ -319,56 +314,38 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		credit_note.make_auto_payment = 0
 		credit_note.insert().submit()
 
-		bridge = BooksDatabaseBridge()
-		values = get_duplicate("SalesInvoice", bridge.get("SalesInvoice", invoice.name))
-		duplicate = bridge.insert("SalesInvoice", values)
-		submitted = lifecycle_action("submit", "SalesInvoice", duplicate["name"], duplicate["modified"])
+		# /books copies a document without the fields its DocType marks no_copy.
+		duplicate = frappe.copy_doc(invoice.reload(), ignore_no_copy=False).insert()
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
+		submitted = run_invoice_method(duplicate, "submit")
 
-		self.assertEqual((submitted["isReturned"], submitted["status"]), (0, "Unpaid"))
-		self.assertEqual(submitted["outstandingAmount"], submitted["grandTotal"])
-
-	def test_a_duplicate_keeps_the_unsaved_edits_it_is_sent(self):
-		values = BooksDatabaseBridge().get("Item", self.item.name)
-		values.update(description="Edited, not saved", rate=45)
-
-		duplicate = get_duplicate("Item", values)
-
-		self.assertEqual((duplicate["description"], duplicate["rate"]), ("Edited, not saved", 45))
-		self.assertIsNone(duplicate["name"])
+		self.assertEqual((submitted.is_returned, submitted.status), (0, "Unpaid"))
+		self.assertEqual(submitted.outstanding_amount, submitted.grand_total)
 
 	def test_submit_refuses_a_document_changed_since_it_was_read(self):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
 		invoice = make_invoice(
 			"Books Sales Invoice", self.party.name, self.receivable.name, self.item.name, self.income.name
 		)
-		read = _modified(invoice)
+		read = invoice.as_dict(convert_dates_to_str=True)
 		invoice.save()
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
-		self.assertRaises(
-			frappe.TimestampMismatchError, lifecycle_action, "submit", "SalesInvoice", invoice.name, read
-		)
-		submitted = lifecycle_action("submit", "SalesInvoice", invoice.name, _modified(invoice))
-		self.assertTrue(submitted["submitted"])
+		self.assertRaises(frappe.TimestampMismatchError, run_doc_method_v2, "submit", read)
+		self.assertEqual(run_invoice_method(invoice, "submit").docstatus, 1)
 
 	def test_cancel_refuses_a_document_changed_since_it_was_read(self):
 		invoice = self._paid_invoice()
-		read = _modified(invoice)
 		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		frappe.db.set_value(invoice.doctype, invoice.name, "terms", "Changed elsewhere")
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
-		for docs in ([], linked_docs):
-			with self.subTest(linked_docs=docs):
+		for method, kwargs in (("cancel", {}), ("cancel_with_linked_docs", {"linked_docs": linked_docs})):
+			with self.subTest(method=method):
 				self.assertRaises(
-					frappe.TimestampMismatchError,
-					lifecycle_action,
-					*("cancel", "SalesInvoice", invoice.name, read, docs),
+					frappe.TimestampMismatchError, run_invoice_method, invoice, method, **kwargs
 				)
 		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
-
-	def test_duplicates_need_create_rights(self):
-		values = BooksDatabaseBridge().get("SalesInvoice", self._paid_invoice().name)
-		with self.set_user(ensure_user("books-no-role@example.com")):
-			self.assertRaises(frappe.PermissionError, get_duplicate, "SalesInvoice", values)
 
 	def test_submit_makes_the_automatic_payment(self):
 		start_pos_shift()
@@ -461,10 +438,15 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual(invoice.make_auto_payment, 0)
 
 	def test_preview_shows_the_follow_up_defaults(self):
-		values = {"party": self.party.name, "items": [{"item": self.item.name, "quantity": 1}]}
-		set_request(method="POST", path="/api/method/frappe_books.ui_api.run_doc_method")
-		preview = run_doc_method("preview", "SalesInvoice", values)
-		self.assertTrue(preview["makeAutoPayment"])
+		document = {
+			"doctype": "Books Sales Invoice",
+			"party": self.party.name,
+			"items": [{"item": self.item.name, "quantity": 1}],
+			"__islocal": 1,
+		}
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
+		run_doc_method_v2("preview", document)
+		self.assertTrue(frappe.response.docs.pop().make_auto_payment)
 
 	def _paid_invoice(self, make_auto_payment=1):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
@@ -507,8 +489,3 @@ def run_invoice_method(invoice, method, **kwargs):
 	"""Run a controller method on the client's copy of `invoice`, as /books does."""
 	run_doc_method_v2(method, invoice.as_dict(convert_dates_to_str=True), kwargs)
 	return frappe.get_doc(invoice.doctype, invoice.name)
-
-
-def _modified(doc):
-	"""Return the stored `modified` value, as the interface reads it."""
-	return str(frappe.db.get_value(doc.doctype, doc.name, "modified"))

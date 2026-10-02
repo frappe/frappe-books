@@ -371,6 +371,14 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		self.assertEqual((row["rate"], row["igst_amount"], row["in_state"]), (*_decimals(18, 18), False))
 		self.assertNotIn("cgst_amount", row)
 
+	def test_supplies_to_unregistered_parties_are_not_reverse_charge(self):
+		self.party = self._party("Karnataka")
+		invoice = self._invoice((_tax(("CGST", 9), ("SGST", 9)), 100, 1))
+
+		(row,) = self._rows(invoice)
+
+		self.assertEqual((row["gstin"], row["reverse_charge"]), ("", "N"))
+
 	def test_invoices_and_parties_are_read_in_batches(self):
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))
 		first = self._invoice((gst_18, 100, 1))

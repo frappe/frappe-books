@@ -17,6 +17,7 @@ export class CustomForm extends FrappeDoc {
   static override presentation: Presentation = {
     label: 'Custom Form',
     nameField: { label: 'Form Type', fieldtype: 'AutoComplete' },
+    fields: { custom_fields: { edit: true } },
   };
   static override previewMethod = 'preview';
   static override rowModels = { custom_fields: CustomField };

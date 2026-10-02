@@ -3,7 +3,9 @@ import { test } from 'node:test';
 import {
   appFyo,
   getReportDefaultFilters,
+  reactive,
   showReport,
+  watchSyncEffect,
 } from './helpers/accounting.mjs';
 import { reportResult, stubServer } from './helpers/server.mjs';
 
@@ -38,6 +40,21 @@ test('a report opened with filters runs once on the server', async () => {
   assert.equal(await showReport('GeneralLedger', { party: 'Beta' }), report);
   assert.equal(runs().length, 2);
   assert.equal(runs()[1].args.filters.party, 'Beta');
+  delete appFyo.store.reports.GeneralLedger;
+});
+
+test('a report shown again with new filters updates the page', async () => {
+  stubServer((method) =>
+    method.endsWith('get_default_filters')
+      ? { from_date: '2025-01-01', to_date: '2025-12-31' }
+      : reportResult([['account', 'Data']], [])
+  );
+  const page = reactive(await showReport('GeneralLedger', { party: 'Acme' }));
+  const shown = [];
+  watchSyncEffect(() => shown.push(page.get('party')));
+
+  await showReport('GeneralLedger', { party: 'Beta' });
+  assert.equal(shown.at(-1), 'Beta');
   delete appFyo.store.reports.GeneralLedger;
 });
 

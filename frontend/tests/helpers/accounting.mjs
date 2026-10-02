@@ -55,6 +55,7 @@ await build({
       export { generateCSV, parseCSV } from './utils/csvParser';
       export { getImportableSchemaNames } from './src/importer';
       export { DataImport } from './src/dataImport';
+      export { reactive, watchSyncEffect } from 'vue';
     `,
     resolveDir: frontend,
   },
@@ -142,6 +143,8 @@ export const {
   parseCSV,
   getImportableSchemaNames,
   DataImport,
+  reactive,
+  watchSyncEffect,
 } = bundle;
 
 /** A Fyo with the settings tests read: discounting on, amounts in USD to two decimals. */

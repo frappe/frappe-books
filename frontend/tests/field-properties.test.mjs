@@ -37,6 +37,14 @@ test('the server decides required, default, read only and minimum value', () => 
   assert.equal(role.default, undefined);
 });
 
+test('a Color field offers its options as the palette', () => {
+  const color = getField({ fieldtype: 'Color', options: '#ff0000\n#00ff00' });
+  assert.deepEqual(color.options, [
+    { value: '#ff0000', label: '#ff0000' },
+    { value: '#00ff00', label: '#00ff00' },
+  ]);
+});
+
 test('a DocField max_value limits the number, and 0 sets no limit', () => {
   assert.equal(getField({ fieldtype: 'Int', max_value: 9 }).maxvalue, 9);
   assert.equal(

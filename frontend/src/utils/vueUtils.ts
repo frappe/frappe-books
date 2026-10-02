@@ -1,3 +1,4 @@
+import type { FrappeDoc } from 'src/frappe/document';
 import { Keys } from 'utils/types';
 import {
   onActivated,
@@ -90,6 +91,19 @@ export function useKeys() {
   return keys;
 }
 
+/** What the save shortcut does: save the doc, else submit it, else say it cannot. */
+export async function syncOrSubmitDoc(doc: FrappeDoc) {
+  if (doc.canSave) {
+    return await commonDocSync(doc, true);
+  }
+
+  if (doc.canSubmit) {
+    return await commonDocSubmit(doc);
+  }
+
+  showCannotSaveOrSubmitToast(doc);
+}
+
 export function useDocShortcuts(
   shortcuts: Shortcuts,
   docRef: DocRef,
@@ -102,20 +116,9 @@ export function useDocShortcuts(
   }
 
   const syncOrSubmitCallback = async () => {
-    const doc = docRef.value;
-    if (!doc) {
-      return;
+    if (docRef.value) {
+      await syncOrSubmitDoc(docRef.value);
     }
-
-    if (doc.canSave) {
-      return await commonDocSync(doc, true);
-    }
-
-    if (doc.canSubmit) {
-      return await commonDocSubmit(doc);
-    }
-
-    showCannotSaveOrSubmitToast(doc);
   };
 
   const cancelOrDeleteCallback = async () => {

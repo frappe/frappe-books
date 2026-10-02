@@ -73,7 +73,8 @@ function getOptionProperties(
     return { references: docfield.options };
   }
 
-  if (fieldtype === 'Select' || fieldtype === 'AutoComplete') {
+  // A Color field's options are its palette.
+  if (['Select', 'AutoComplete', 'Color'].includes(fieldtype)) {
     const labels = (field as OptionField).optionLabels ?? {};
     const values = (docfield.options ?? '').split('\n').filter(Boolean);
     return {

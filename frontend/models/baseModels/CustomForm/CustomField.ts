@@ -4,14 +4,7 @@ import { FieldTypeEnum } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { getCustomFieldname } from 'src/frappe/schema';
 import type { CustomForm } from './CustomForm';
-import { getCustomizableForms } from './customizable';
-
-const REFERENCE_FIELDTYPES: string[] = [
-  FieldTypeEnum.AutoComplete,
-  FieldTypeEnum.Data,
-  FieldTypeEnum.Text,
-  FieldTypeEnum.Select,
-];
+import { getTargets } from './customizable';
 
 /** A Books Custom Field row. Its Custom Field holds the definition; the row places it. */
 export class CustomField extends FrappeDoc {
@@ -73,14 +66,15 @@ export class CustomField extends FrappeDoc {
   };
 
   static lists: ListsMap = {
-    target: () => getCustomizableForms(),
+    target: (doc) => getTargets((doc as CustomField).fieldtype),
     references: (doc) => {
+      // Frappe takes a Select or a DocType link, which /books shows as a Select.
       const row = doc as CustomField;
       const rows = (row.parentdoc?.custom_fields ?? []).filter(
         (other) =>
           other.fieldname &&
           other.label &&
-          REFERENCE_FIELDTYPES.includes(other.fieldtype ?? '')
+          other.fieldtype === FieldTypeEnum.Select
       );
       // Saved rows are the form's custom fields; the rows list them.
       const fields = (row.parentdoc?.parentSchema?.fields ?? []).filter(
@@ -88,7 +82,7 @@ export class CustomField extends FrappeDoc {
           field.fieldname &&
           field.label &&
           !field.isCustom &&
-          REFERENCE_FIELDTYPES.includes(field.fieldtype)
+          field.fieldtype === FieldTypeEnum.Select
       );
       return [
         ...rows.map((other) => ({

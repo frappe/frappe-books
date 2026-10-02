@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import date
 
 import frappe
 from frappe import _
@@ -9,17 +10,13 @@ from frappe_books.regional import INDIAN_STATES
 from frappe_books.reports.filters import datetime_conditions
 
 TAX_AMOUNT_FIELDS = {"IGST": "igst_amount", "CGST": "cgst_amount", "SGST": "sgst_amount"}
-LARGE_B2C_INVOICE = 250000
+# CGST rule 59(4): interstate B2C invoices above this value are listed one by one. Notification
+# 12/2024-Central Tax lowered it from 2,50,000 to 1,00,000 from 1 August 2024.
+LARGE_B2C_INVOICE = 100000
+LARGE_B2C_INVOICE_FROM = date(2024, 8, 1)
+LARGE_B2C_INVOICE_BEFORE = 250000
 # SQLite allows 32766 query parameters.
 IN_LIST_BATCH_SIZE = 1000
-TRANSFER_TYPES = {
-	"B2B": lambda row: bool(row["gstin"]),
-	"B2CL": lambda row: (
-		not row["gstin"] and not row["in_state"] and row["invoice_value"] >= LARGE_B2C_INVOICE
-	),
-	"B2CS": lambda row: not row["gstin"] and (row["in_state"] or row["invoice_value"] < LARGE_B2C_INVOICE),
-	"NR": lambda row: row["rate"] == 0,
-}
 
 
 def get_default_filters() -> dict:
@@ -180,6 +177,19 @@ def _in_company_currency(row, exchange_rate):
 		if field in row:
 			row[field] = rounded(row[field] * as_decimal(exchange_rate or 1))
 	return row
+
+
+def _is_large_b2c(row):
+	limit = LARGE_B2C_INVOICE if row["invoice_date"] >= LARGE_B2C_INVOICE_FROM else LARGE_B2C_INVOICE_BEFORE
+	return not row["gstin"] and not row["in_state"] and row["invoice_value"] > limit
+
+
+TRANSFER_TYPES = {
+	"B2B": lambda row: bool(row["gstin"]),
+	"B2CL": _is_large_b2c,
+	"B2CS": lambda row: not row["gstin"] and not _is_large_b2c(row),
+	"NR": lambda row: row["rate"] == 0,
+}
 
 
 def _matches(row, filters):

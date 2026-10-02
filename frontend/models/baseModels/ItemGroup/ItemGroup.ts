@@ -5,7 +5,7 @@ import { FrappeDoc } from 'src/frappe/document';
 export class ItemGroup extends FrappeDoc {
   static override doctype = 'Books Item Group';
   static override presentation = {
-    label: 'item Group',
+    label: 'Item Group',
     nameField: { label: 'Name', placeholder: 'Name' },
     quickEditFields: ['tax', 'hsn_code'],
   };

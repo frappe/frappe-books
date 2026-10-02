@@ -2,6 +2,7 @@ import type { FiltersMap } from 'fyo/model/types';
 import {
   StockTransferItem,
   transferRowFields,
+  transferRowFilters,
   transferRowLinks,
 } from './StockTransferItem';
 
@@ -14,6 +15,7 @@ export class PurchaseReceiptItem extends StockTransferItem {
 
   // Items are Frappe-backed.
   static filters: FiltersMap = {
+    ...transferRowFilters,
     item: () => [
       ['item_usage', 'not in', ['Sales']],
       ['track_item', '=', 1],

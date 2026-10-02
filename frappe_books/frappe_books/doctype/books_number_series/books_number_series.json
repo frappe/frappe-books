@@ -27,10 +27,11 @@
   },
   {
    "default": "4",
+   "description": "Numbers are padded with leading zeros to at least this many digits.",
    "fieldname": "pad_zeros",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "label": "Pad Zeros",
+   "label": "Digits",
    "non_negative": 1,
    "reqd": 1,
    "set_only_once": 1
@@ -55,7 +56,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-02 18:00:00.000000",
+ "modified": "2026-10-02 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Number Series",

@@ -100,6 +100,46 @@ test('a word naming the doctype is matched by the palette, not by the server', a
   assert.equal(salesInvoice['Books Sales Invoice'], 'i%n%v%o%i%c%e');
 });
 
+test('a number series prefix is matched by the palette, not by the server', async () => {
+  const { search, requests } = makeSearch(({ body }) =>
+    body.doctype === 'Books Number Series'
+      ? [
+          { name: 'SINV-', reference_type: 'SalesInvoice' },
+          { name: 'INV-26-', reference_type: 'SalesInvoice' },
+        ]
+      : []
+  );
+  search.set('skipTables', true);
+  await search.fetchDocs('sinv 1001');
+  await search.fetchDocs('1001 inv-26');
+  const sent = (doctype) =>
+    requests
+      .filter(({ body }) => body.doctype === doctype)
+      .map(({ body }) => body.txt);
+
+  assert.equal(sent('Books Number Series').length, 1);
+  assert.deepEqual(sent('Books Sales Invoice'), ['1%0%0%1', '1%0%0%1']);
+  assert.deepEqual(sent('Books Purchase Invoice'), ['s%i%n%v', 'i%n%v%-%2%6']);
+});
+
+test('a user who cannot read number series searches without them', async () => {
+  const { search, requests } = makeSearch();
+  const { permissions } = fyo.store;
+  fyo.store.permissions = {
+    doctypes: { NumberSeries: 'Books Number Series' },
+    user: { can_read: [] },
+  };
+  try {
+    await search.fetchDocs('sinv 1001');
+  } finally {
+    fyo.store.permissions = permissions;
+  }
+
+  const doctypes = requests.map(({ body }) => body.doctype);
+  assert.equal(doctypes.includes('Books Number Series'), false);
+  assert.equal(doctypes.includes('Books Sales Invoice'), true);
+});
+
 test('a superseded search is dropped and documents rank by status', async () => {
   const pending = [];
   const { search } = makeSearch((request) =>

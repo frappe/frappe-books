@@ -105,6 +105,12 @@ export async function getReport(
   return report;
 }
 
+/** Ref filters pick one document, so they last only while a link sets them. */
+const NO_REFERENCE: Record<string, DocValue> = {
+  referenceType: 'All',
+  referenceName: null,
+};
+
 /**
  * Load a report when it is first shown, and refetch its data when shown
  * again. Either way the server runs it once, with the filters set.
@@ -118,7 +124,7 @@ export async function showReport(
     return getReport(name, filters);
   }
 
-  await report.setFilters(filters);
+  await report.setFilters({ ...NO_REFERENCE, ...filters });
   await report.setReportData(undefined, true);
   return report;
 }

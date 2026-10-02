@@ -65,6 +65,7 @@ import {
 import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
+import { revealActiveTab } from 'src/mobile/revealActiveTab';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { canInstall, isInstallSheetOpen } from 'src/web/pwa';
@@ -121,9 +122,7 @@ export default defineComponent({
     async activeTab() {
       shellScrollContainer.value?.scrollTo({ top: 0 });
       await nextTick();
-      (this.$refs.mobileTabs as HTMLElement | undefined)
-        ?.querySelector('[data-state="active"]')
-        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      revealActiveTab(this.$refs.mobileTabs as HTMLElement | undefined);
     },
   },
   activated(): void {

@@ -9,6 +9,7 @@ from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.regional import INDIAN_STATES
 from frappe_books.reports.filters import datetime_conditions
 
+# The amount field of each GST head an account holds.
 TAX_AMOUNT_FIELDS = {"IGST": "igst_amount", "CGST": "cgst_amount", "SGST": "sgst_amount"}
 # CGST rule 59(4): interstate B2C invoices above this value are listed one by one. Notification
 # 12/2024-Central Tax lowered it from 2,50,000 to 1,00,000 from 1 August 2024.
@@ -128,7 +129,7 @@ def _tax_details(taxes):
 	for detail in frappe.get_list(
 		"Books Tax Detail",
 		filters={"parent": ["in", list(taxes)], "parenttype": "Books Tax"},
-		fields=["parent", "account", "rate"],
+		fields=["parent", "rate", "account.gst_head as gst_head"],
 		parent_doctype="Books Tax",
 	):
 		details[detail.parent].append(detail)
@@ -197,11 +198,11 @@ def _invoice_rows(invoice, items, details, header):
 
 
 def _add_tax(row, detail, base, currency):
-	if detail.account not in TAX_AMOUNT_FIELDS:
+	field = TAX_AMOUNT_FIELDS.get(detail.gst_head)
+	if not field:
 		return
-	field = TAX_AMOUNT_FIELDS[detail.account]
 	row[field] = row.get(field, as_decimal(0)) + rounded(base * as_decimal(detail.rate) / 100, currency)
-	if detail.account == "IGST":
+	if detail.gst_head == "IGST":
 		row["in_state"] = False
 
 

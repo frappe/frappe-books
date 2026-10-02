@@ -267,11 +267,6 @@ function getListViewList(fyo: Fyo): SearchItem[] {
       filters: routeFilters.Suppliers,
     },
     {
-      label: t`Party`,
-      route: `/list/Party/${t`Party`}`,
-      filters: routeFilters.Party,
-    },
-    {
       label: t`Sales Items`,
       route: `/list/Item/${t`Sales Items`}`,
       filters: routeFilters.SalesItems,

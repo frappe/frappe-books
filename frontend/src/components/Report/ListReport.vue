@@ -16,16 +16,14 @@
         <FrappeListHeader class="sticky top-0 z-10 min-w-max bg-surface-base">
           <ReportColumnHeader
             v-for="(column, index) in report.columns"
-            :key="columnWidths.getKey(column)"
-            :ref="
-              (header) => (columnHeaders[columnWidths.getKey(column)] = header)
-            "
+            :key="column.fieldname"
+            :ref="(header) => (columnHeaders[column.fieldname] = header)"
             :label="column.label"
             :width="columnWidths.get(column)"
             :direction="languageDirection"
             :class="getAlignmentClass(column)"
-            @resize="columnWidths.set(column, $event)"
-            @commit="columnWidths.set(column, $event, true)"
+            @resize="columnWidths.set(column.fieldname, $event)"
+            @commit="columnWidths.set(column.fieldname, $event, true)"
             @fit="fitColumn(column, index)"
           />
         </FrappeListHeader>
@@ -157,7 +155,7 @@ export default defineComponent({
         column,
         index,
         this.report.reportData,
-        this.columnHeaders[this.columnWidths.getKey(column)].$el,
+        this.columnHeaders[column.fieldname].$el,
         this.$refs.list.$el
       );
     },

@@ -1,9 +1,11 @@
 <template>
   <FrappeBottomSheet
+    v-if="isMounted"
     :open="Boolean(sheet)"
     :title="sheet?.title"
     :dismissible="sheet?.dismissible"
     @update:open="onOpenChange"
+    @after-leave="isMounted = Boolean(sheet)"
   >
     <div
       v-if="sheet"
@@ -36,6 +38,16 @@ import {
   type DialogSheetAction,
 } from 'src/utils/interactive';
 import { renderSafeRichText } from 'src/utils/safeRichText';
+import { ref, watch } from 'vue';
+
+// A teleport keeps the spot in <body> it got on mount, so a sheet mounted with
+// the app opens behind sheets mounted later. Mounting per dialog puts it on top.
+const isMounted = ref(false);
+watch(sheet, (value) => {
+  if (value) {
+    isMounted.value = true;
+  }
+});
 
 async function run(action: DialogSheetAction) {
   // Cleared first, so an action can open the next dialog.

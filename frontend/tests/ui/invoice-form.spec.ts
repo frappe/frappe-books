@@ -93,6 +93,21 @@ test.describe('on a phone', () => {
     await expect(page.getByText('2.00 × ₹ 50.00')).toBeVisible();
     await expect(page.getByText('Receive Payment')).toBeVisible();
   });
+
+  test('a payment submits from its sheet', async ({ page }) => {
+    const name = await insertSubmittedInvoice(page);
+    await page.goto(`/books/edit/SalesInvoice/${name}`);
+    await waitForBooks(page);
+
+    await page.getByRole('button', { name: 'Receive Payment' }).click();
+    const sheet = page.getByRole('dialog', { name: 'New Payment' });
+    await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.getByRole('button', { name: 'Submit', exact: true }).click();
+    // The confirmation opens over the payment sheet, not behind it.
+    await page.getByRole('button', { name: 'Yes', exact: true }).click();
+
+    await expect(page.getByText('Paid', { exact: true })).toBeVisible();
+  });
 });
 
 async function pickLink(page: Page, label: string, value: string) {

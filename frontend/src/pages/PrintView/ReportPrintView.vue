@@ -69,7 +69,7 @@
         <p class="p-4 text-sm text-ink-gray-6">
           {{
             [
-              t`Hidden values will be visible on Print on.`,
+              t`Values cut off in the report are shown in full when printed.`,
               t`Report will use more than one page if required.`,
             ].join(' ')
           }}

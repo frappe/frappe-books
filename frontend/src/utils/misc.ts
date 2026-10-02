@@ -8,6 +8,7 @@ import { getField } from 'src/frappe/registry';
 import { toDocValue } from 'src/frappe/values';
 import { fyo } from 'src/initFyo';
 import type { RawValue } from 'schemas/types';
+import { reactive } from 'vue';
 
 /** A new wizard, in the browser's time zone until Frappe's setup sets the system one. */
 export function getSetupWizardDoc() {
@@ -97,7 +98,8 @@ export async function getReport(
     return cachedReport;
   }
 
-  const report = new reports[name](fyo);
+  // Reactive, so refreshing the cached report updates the pages showing it.
+  const report = reactive(new reports[name](fyo)) as unknown as Report;
   await report.initialize(filters);
   fyo.store.reports[name] = report;
   return report;

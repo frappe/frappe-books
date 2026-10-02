@@ -193,7 +193,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual([row.quantity for row in remaining.items], [-1, -1])
 		self.assertEqual(remaining.items[0].serial_number, "S-2")
 
-	def test_return_keeps_the_invoice_discounts(self):
+	def test_return_keeps_the_item_discounts(self):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -201,7 +201,6 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			self.receivable.name,
 			self.item.name,
 			self.income.name,
-			discount_percent=5,
 		)
 		invoice.submit()
 

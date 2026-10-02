@@ -13,7 +13,7 @@ from frappe_books.tests.accounting import (
 	unique_name,
 )
 
-COMPARED_FIELDS = ("net_total", "grand_total", "base_grand_total", "outstanding_amount", "discount_amount")
+COMPARED_FIELDS = ("net_total", "grand_total", "base_grand_total", "outstanding_amount", "total_discount")
 COMPARED_ROW_FIELDS = (
 	"item",
 	"rate",
@@ -184,7 +184,6 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 			"party": self.party.name,
 			"date": str(now_datetime()),
 			"price_list": price_list.name,
-			"discount_percent": 5,
 			"coupons": [{"coupons": coupon.name}],
 			"items": [
 				{"name": "client-row-1", "item": self.item.name, "quantity": 2},

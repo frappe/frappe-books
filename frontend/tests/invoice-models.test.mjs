@@ -228,6 +228,20 @@ test('a new invoice leaves its payment and stock follow-ups to the server', () =
   assert.equal(copy.getMethodDocument({ clearServerFilled: true }).make_auto_payment, 0);
 });
 
+test('a cleared row tax goes to the server empty, so it is not filled again', () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice');
+  invoice.push('items', { item: 'Pen', tax: 'GST-18' });
+  const sentTax = () =>
+    invoice.getMethodDocument({ clearServerFilled: true }).items[0].tax;
+
+  // The Link control clears to an empty string.
+  invoice.items[0].tax = '';
+  assert.equal(sentTax(), '');
+  invoice.items[0].tax = null;
+  assert.equal(sentTax(), null);
+});
+
 test('row edits ask the server for the price, details and quantities that follow', async () => {
   setSettings();
   const invoice = newInvoice('SalesInvoice');

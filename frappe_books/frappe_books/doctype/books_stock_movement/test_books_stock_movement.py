@@ -2,13 +2,21 @@
 # See license.txt
 
 import re
+from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import add_to_date, now_datetime
 
 from frappe_books.series import default_series
-from frappe_books.tests.accounting import ensure_user, make_account, make_item, stock_quantity, unique_name
+from frappe_books.tests.accounting import (
+	ensure_user,
+	ledger_entries,
+	make_account,
+	make_item,
+	stock_quantity,
+	unique_name,
+)
 
 READ_ONLY_USER = "books-movement-preview-reader@example.com"
 
@@ -350,6 +358,74 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		)
 
 		self.assertRaisesRegex(frappe.ValidationError, "Only From or To", manufacture.insert)
+
+
+class IntegrationTestStockMovementPostings(IntegrationTestCase):
+	"""A movement moves its net stock value between Stock In Hand and Stock Adjustment."""
+
+	def setUp(self):
+		income = make_account("Income", root_type="Income")
+		received = make_account("Received", root_type="Liability")
+		self.item = make_item(income.name, received.name, track_item=1).name
+		self.product = make_item(income.name, received.name, track_item=1).name
+		self.stock = make_account("Stock", account_type="Stock").name
+		self.adjustment = make_account(
+			"Adjustment", root_type="Expense", account_type="Stock Adjustment"
+		).name
+		frappe.db.set_single_value(
+			"Books Inventory Settings", {"stock_in_hand": self.stock, "stock_adjustment": self.adjustment}
+		)
+		self.shop = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert().name
+
+	def test_each_movement_type_posts_its_net_stock_value(self):
+		receipt = self.submit("MaterialReceipt", [self.row(4, 10, to_location="Stores")])
+		issue = self.submit("MaterialIssue", [self.row(1, 99, from_location="Stores")])
+		transfer = self.submit(
+			"MaterialTransfer", [self.row(1, 99, from_location="Stores", to_location=self.shop)]
+		)
+		consumed = self.row(2, 99, from_location="Stores")
+		manufacture = self.submit(
+			"Manufacture", [consumed, {**self.row(1, 30, to_location="Stores"), "item": self.product}]
+		)
+
+		self.assertEqual(self.balances(receipt), {self.stock: Decimal(40), self.adjustment: Decimal(-40)})
+		self.assertEqual(self.balances(issue), {self.stock: Decimal(-10), self.adjustment: Decimal(10)})
+		self.assertEqual(ledger_entries(transfer.doctype, transfer.name), [])
+		self.assertEqual(self.balances(manufacture), {self.stock: Decimal(10), self.adjustment: Decimal(-10)})
+
+	def test_cancelling_a_movement_reverses_its_entries(self):
+		receipt = self.submit("MaterialReceipt", [self.row(4, 10, to_location="Stores")])
+
+		receipt.cancel()
+
+		self.assertEqual(self.balances(receipt), {self.stock: Decimal(0), self.adjustment: Decimal(0)})
+		self.assertTrue(all(entry.reverted for entry in ledger_entries(receipt.doctype, receipt.name)))
+
+	def test_a_restated_movement_posts_its_new_value(self):
+		now = now_datetime()
+		self.submit("MaterialReceipt", [self.row(5, 10, to_location="Stores")], add_to_date(now, hours=-2))
+		issue = self.submit(
+			"MaterialIssue", [self.row(3, 10, from_location="Stores")], add_to_date(now, hours=-1)
+		)
+
+		self.submit("MaterialReceipt", [self.row(2, 20, to_location="Stores")], add_to_date(now, hours=-3))
+
+		self.assertEqual(self.balances(issue), {self.stock: Decimal(-50), self.adjustment: Decimal(50)})
+
+	def row(self, quantity, rate, **locations):
+		return {"item": self.item, "quantity": quantity, "rate": rate, **locations}
+
+	def submit(self, movement_type, items, date=None):
+		movement = frappe.get_doc({**movement_values(movement_type, items), "date": date or now_datetime()})
+		movement.insert().submit()
+		return movement
+
+	def balances(self, movement):
+		balances = {}
+		for entry in ledger_entries(movement.doctype, movement.name):
+			balance = balances.get(entry.account, Decimal(0))
+			balances[entry.account] = balance + Decimal(str(entry.debit)) - Decimal(str(entry.credit))
+		return balances
 
 
 def make_movement(movement_type, items):

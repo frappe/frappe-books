@@ -271,6 +271,17 @@ test('stock lists show and filter by their Frappe fieldnames', () => {
   }
 });
 
+test('a submitted movement links to its accounting and stock entries', () => {
+  const actions = frappeModels.StockMovement.getActions(fyo);
+  const movement = newFrappeDoc('StockMovement', { docstatus: 1 });
+
+  assert.deepEqual(
+    actions.map(({ label }) => label),
+    ['Accounting Entries', 'Stock Entries']
+  );
+  assert.ok(actions.every((action) => action.condition(movement)));
+});
+
 test('a submitted shipment offers an invoice and a return by Frappe fieldnames', () => {
   fyo.singles.AccountingSettings = { enable_invoice_returns: true };
   const [invoice, , , makeReturn] = getStockTransferActions(fyo, 'Shipment');

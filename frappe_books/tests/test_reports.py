@@ -379,6 +379,22 @@ class IntegrationTestGSTR(IntegrationTestCase):
 
 		self.assertEqual((row["gstin"], row["reverse_charge"]), ("", "N"))
 
+	def test_interstate_consumer_invoices_above_one_lakh_are_large_from_august_2024(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "27AAAAA0000A1Z5")
+		self.party = self._party("Karnataka")
+		igst_25 = _tax(("IGST", 25))
+		invoices = [
+			self._invoice((igst_25, rate, 1), date=date)
+			for date, rate in (("2064-03-10", 80001), ("2064-03-10", 80000), ("2024-07-31", 80001))
+		]
+
+		dates = {"from_date": "2024-07-31", "to_date": "2064-03-10"}
+		large = {row["invoice_no"] for row in _run("Books GSTR-1", transfer_type="B2CL", **dates)}
+		small = {row["invoice_no"] for row in _run("Books GSTR-1", transfer_type="B2CS", **dates)}
+
+		self.assertEqual([invoice.name in large for invoice in invoices], [True, False, False])
+		self.assertEqual([invoice.name in small for invoice in invoices], [False, True, True])
+
 	def test_invoices_and_parties_are_read_in_batches(self):
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))
 		first = self._invoice((gst_18, 100, 1))

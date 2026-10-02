@@ -143,7 +143,7 @@ function makeStockBalance() {
       column('item', 'Item', 'Link'),
       column('location', 'Location', 'Link'),
       column('balance_quantity', 'Balance Qty.', 'Float'),
-      column('balance_value', 'Balance Value', 'Float'),
+      column('balance_value', 'Balance Value', 'Currency'),
     ],
     rows.map(([item, location, quantity, value], index) => ({
       index: index + 1,

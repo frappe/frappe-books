@@ -120,6 +120,11 @@ test('a submitted invoice hides what only a draft offers', () => {
   assert.deepEqual(getLayout(invoice).Main.References, ['terms']);
 });
 
+test('an invoice posts ledger entries and a quote does not', () => {
+  assert.equal(newInvoice('SalesInvoice').isTransactional, true);
+  assert.equal(newInvoice('SalesQuote').isTransactional, false);
+});
+
 test('the quote asks for the Type of its party and hides invoice fields', () => {
   setSettings();
   const quote = newInvoice('SalesQuote');

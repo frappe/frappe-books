@@ -50,3 +50,22 @@ test('dismissing the delete confirmation keeps the document', async () => {
   assert.equal(await deleted, false);
   assert.equal(doc.deletions, 0);
 });
+
+test('deleting a cancelled entry says its ledger entries go too', () => {
+  const calls = captureDangerDialogs();
+  const message = (values) => {
+    deleteDocWithPrompt({ ...makeDoc(), ...values });
+    return calls.at(-1).message.children.join('');
+  };
+
+  assert.match(message({ isCancelled: true }), /ledger entries/);
+  assert.match(
+    message({
+      schemaName: 'Shipment',
+      isTransactional: false,
+      isCancelled: true,
+    }),
+    /ledger entries/
+  );
+  assert.equal(message({ isCancelled: false }), 'This action is permanent.');
+});

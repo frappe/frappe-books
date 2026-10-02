@@ -30,7 +30,7 @@ class BooksPosSettings(Document):
 		ignore_pricing_rule: DF.Check
 		inventory: DF.Link | None
 		item_code_digits: DF.Int
-		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items"]
+		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items", "All Items"]
 		pos_profile: DF.Link | None
 		pos_ui: DF.Literal["Classic", "Modern"]
 		weight_enabled_barcode: DF.Check

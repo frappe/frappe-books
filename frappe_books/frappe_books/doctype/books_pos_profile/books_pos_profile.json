@@ -68,7 +68,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Item Visibility",
-   "options": "Inventory Items\nNon-Inventory Items",
+   "options": "Inventory Items\nNon-Inventory Items\nAll Items",
    "reqd": 1
   },
   {
@@ -153,7 +153,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-02 18:00:00.000000",
+ "modified": "2026-10-02 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Profile",

@@ -22,7 +22,7 @@ class BooksPosProfile(Document):
 		hide_unavailable_items: DF.Check
 		ignore_pricing_rule: DF.Check
 		inventory: DF.Link
-		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items"]
+		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items", "All Items"]
 		pay_and_print_button_colour: DF.Color | None
 		pay_button_colour: DF.Color | None
 		pos_customer: DF.Link | None

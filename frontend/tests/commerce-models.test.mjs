@@ -55,7 +55,7 @@ test('item group, unit, location, batch and serial number forms show what they s
     'description | Description | Serial Number Description | Default',
     'status | Status |  | Default',
   ]);
-  assert.equal(getSchema('ItemGroup').label, 'item Group');
+  assert.equal(getSchema('ItemGroup').label, 'Item Group');
   assert.deepEqual(getSchema('Batch').quickEditFields, [
     'item',
     'expiry_date',
@@ -336,15 +336,30 @@ test('the party form and list show what they showed, without GST fields', () => 
   ]);
   const party = newFrappeDoc('Party');
   assert.equal(hidden(party, 'outstanding_amount'), true);
-  for (const fieldname of ['tax_id', 'loyalty_program', 'loyalty_points']) {
-    assert.equal(hidden(party, fieldname), false, fieldname);
-  }
+  assert.equal(hidden(party, 'tax_id'), false);
   assert.deepEqual(getColumns('Party'), [
     'name',
     'email',
     'phone',
     'outstanding_amount',
   ]);
+});
+
+test('a customer shows loyalty fields only when the program is on', async () => {
+  fyo.singles.AccountingSettings = {};
+  const party = newFrappeDoc('Party', { role: 'Customer' });
+  assert.equal(hidden(party, 'loyalty_program'), true);
+  assert.equal(hidden(party, 'loyalty_points'), true);
+
+  fyo.singles.AccountingSettings = { enable_loyalty_program: true };
+  assert.equal(hidden(party, 'loyalty_program'), false);
+  assert.equal(hidden(party, 'loyalty_points'), true);
+  await party.set('loyalty_program', 'Gold');
+  assert.equal(hidden(party, 'loyalty_points'), false);
+  await party.set('role', 'Supplier');
+  assert.equal(hidden(party, 'loyalty_program'), true);
+  assert.equal(hidden(party, 'loyalty_points'), true);
+  fyo.singles.AccountingSettings = {};
 });
 
 test('a party makes and lists the invoices its role allows', () => {
@@ -415,7 +430,9 @@ test('a price list or pricing rule row takes the unit of each item it is given',
       return { data: [] };
     }
     // As the server's fetch_if_empty: an empty unit is the item's.
-    const table = body.document.price_list_item ? 'price_list_item' : 'applied_items';
+    const table = body.document.price_list_item
+      ? 'price_list_item'
+      : 'applied_items';
     const rows = body.document[table].map((row) => {
       sent.push(row.unit ?? null);
       return { ...row, unit: row.unit || units[row.item] };

@@ -17,9 +17,7 @@
   "currency",
   "internal_precision",
   "theme_section_break_14",
-  "dark_mode",
-  "customizations_section_break_16",
-  "display_terms_and_conditions"
+  "dark_mode"
  ],
  "fields": [
   {
@@ -103,24 +101,13 @@
    "fieldname": "dark_mode",
    "fieldtype": "Check",
    "label": "Dark mode"
-  },
-  {
-   "fieldname": "customizations_section_break_16",
-   "fieldtype": "Section Break",
-   "label": "Customizations"
-  },
-  {
-   "default": "0",
-   "fieldname": "display_terms_and_conditions",
-   "fieldtype": "Check",
-   "label": "Display Terms and Conditions"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-01 18:00:00.000000",
+ "modified": "2026-10-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books System Settings",

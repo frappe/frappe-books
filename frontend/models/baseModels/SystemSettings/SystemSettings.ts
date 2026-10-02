@@ -41,7 +41,6 @@ export class SystemSettings extends FrappeDoc {
   declare allow_filter_bypass?: boolean;
   declare remove_filter?: boolean;
   declare dark_mode?: boolean;
-  declare display_terms_and_conditions?: boolean;
 
   // The server checks it too; mirrored to show the message at the field.
   validations: ValidationMap = {

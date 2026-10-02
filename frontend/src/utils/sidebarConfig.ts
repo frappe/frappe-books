@@ -309,7 +309,6 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'party',
           route: '/list/Party',
           schemaName: 'Party',
-          filters: [['role', 'in', ['Customer', 'Supplier', 'Both']]],
         },
         {
           label: t`Items`,

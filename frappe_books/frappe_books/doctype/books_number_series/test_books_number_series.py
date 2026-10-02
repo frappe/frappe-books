@@ -64,6 +64,14 @@ class IntegrationTestBooksNumberSeries(IntegrationTestCase):
 	def test_rejects_prefix_frappe_cannot_name_with(self):
 		self.assertRaises(InvalidNamingSeriesError, make_series, "BAD@")
 
+	def test_needs_a_reference_type_a_document_can_use(self):
+		series = frappe.get_doc(
+			{"doctype": "Books Number Series", "name": f"TEST-{frappe.generate_hash(length=6)}-"}
+		)
+		self.assertRaises(frappe.MandatoryError, series.insert)
+		series.reference_type = "-"
+		self.assertRaises(frappe.ValidationError, series.insert)
+
 	def test_documents_take_only_a_series_of_their_type(self):
 		journal = frappe.get_doc(
 			{"doctype": "Books Journal Entry", "number_series": make_number_series("Payment")}

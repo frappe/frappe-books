@@ -6,7 +6,12 @@ from frappe.desk.form import linked_with
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns
-from frappe_books.accounting.accounts import validate_account, validate_item_usage, validate_party_role
+from frappe_books.accounting.accounts import (
+	latest_ledger_account,
+	validate_account,
+	validate_item_usage,
+	validate_party_role,
+)
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
@@ -412,9 +417,20 @@ def _populate_party_defaults(invoice):
 	_populate_currency(invoice, party.currency)
 	if invoice.transaction_type == "quote" or not party:
 		return
-	invoice.account = invoice.get("account") or party.default_account
+	invoice.account = invoice.get("account") or _party_account(invoice, party.default_account)
 	if invoice.transaction_type == "sales" and not invoice.get("return_against"):
 		invoice.loyalty_program = party.loyalty_program
+
+
+def _party_account(invoice, account):
+	"""The party's ledger if it suits the invoice, else the newest that does.
+
+	A party with both roles has one ledger, receivable or payable, for either invoice.
+	"""
+	account_type = "Payable" if invoice.transaction_type == "purchase" else "Receivable"
+	if account and frappe.db.get_value("Books Account", account, "account_type") == account_type:
+		return account
+	return latest_ledger_account(account_type)
 
 
 def _party_defaults(invoice):

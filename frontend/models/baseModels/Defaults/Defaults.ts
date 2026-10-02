@@ -97,6 +97,8 @@ export class Defaults extends FrappeDoc {
   }
 
   hidden: HiddenMap = {
+    shipment_location: this.getInventoryHidden(),
+    purchase_receipt_location: this.getInventoryHidden(),
     stock_movement_number_series: this.getInventoryHidden(),
     shipment_number_series: this.getInventoryHidden(),
     purchase_receipt_number_series: this.getInventoryHidden(),
@@ -105,6 +107,7 @@ export class Defaults extends FrappeDoc {
     shipment_print_template: this.getInventoryHidden(),
     purchase_receipt_print_template: this.getInventoryHidden(),
     stock_movement_print_template: this.getInventoryHidden(),
+    pos_print_template: this.getPointOfSaleHidden(),
     pos_cash_denominations: this.getPointOfSaleHidden(),
     pos_customer: this.getPointOfSaleHidden(),
     save_button_colour: this.getPointOfSaleHidden(),

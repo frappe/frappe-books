@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
 from frappe.model.document import Document
+
+from frappe_books.accounting.ledger import validate_leaf_accounts
 
 
 class BooksTax(Document):
@@ -20,3 +21,8 @@ class BooksTax(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Tax"
+
+	def validate(self):
+		# Invoices post to these accounts.
+		accounts = {row.get(field) for row in self.details for field in ("account", "payment_account")}
+		validate_leaf_accounts(accounts - {None, ""})

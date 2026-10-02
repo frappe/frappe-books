@@ -10,6 +10,7 @@ import {
   getFrappeDoc,
   getMappedDoc,
   getNewDocValues,
+  getSidebarConfig,
   getSchema,
   ListFilters,
   ListView,
@@ -117,6 +118,11 @@ test('a submitted invoice hides what only a draft offers', () => {
   assert.equal(layout.Settings, undefined);
   invoice.terms = 'Pay in 30 days';
   assert.deepEqual(getLayout(invoice).Main.References, ['terms']);
+});
+
+test('an invoice posts ledger entries and a quote does not', () => {
+  assert.equal(newInvoice('SalesInvoice').isTransactional, true);
+  assert.equal(newInvoice('SalesQuote').isTransactional, false);
 });
 
 test('the quote asks for the Type of its party and hides invoice fields', () => {
@@ -548,6 +554,14 @@ test('a record created from a link takes the values its filters choose', () => {
     is_enabled: true,
     is_sales: true,
   });
+});
+
+test('a new party from the list of every party takes the default role', () => {
+  const party = getSidebarConfig()
+    .flatMap(({ items }) => items ?? [])
+    .find(({ name }) => name === 'party');
+  assert.equal(party.route, '/list/Party');
+  assert.deepEqual(getNewDocValues('Party', party.filters ?? []), {});
 });
 
 test("a row's transfer unit is its item's stock unit or one of its conversions", async () => {

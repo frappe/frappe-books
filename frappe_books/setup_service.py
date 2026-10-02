@@ -150,8 +150,6 @@ def _update_defaults():
 	defaults = frappe.get_single("Books Defaults")
 	defaults.update(
 		{
-			"shipment_location": "Stores",
-			"purchase_receipt_location": "Stores",
 			**{field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field},
 		}
 	)

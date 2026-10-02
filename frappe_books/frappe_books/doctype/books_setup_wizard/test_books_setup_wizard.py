@@ -81,6 +81,19 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		gst = frappe.get_doc("Books Tax", "GST-18")
 		self.assertEqual([(row.account, row.rate) for row in gst.details], [("CGST", 9), ("SGST", 9)])
 
+	def test_setup_leaves_auto_stock_transfer_to_the_user(self):
+		frappe.db.set_single_value(
+			"Books Defaults", {"shipment_location": None, "purchase_receipt_location": None}
+		)
+		wizard = self._wizard(chart_of_accounts=STANDARD_CHART)
+		wizard.save(ignore_permissions=True)
+		run_setup(wizard)
+
+		# A transfer location makes every invoice move stock on submit once inventory is on.
+		defaults = frappe.get_single("Books Defaults")
+		self.assertFalse(defaults.shipment_location)
+		self.assertFalse(defaults.purchase_receipt_location)
+
 	def test_setup_creates_the_selected_country_chart(self):
 		wizard = self._wizard(chart_of_accounts="India - Chart of Accounts")
 		wizard.save(ignore_permissions=True)

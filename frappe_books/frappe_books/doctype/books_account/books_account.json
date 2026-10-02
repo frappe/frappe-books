@@ -34,6 +34,7 @@
    "label": "Root Type",
    "options": "Asset\nLiability\nEquity\nIncome\nExpense",
    "placeholder": "Root Type",
+   "read_only_depends_on": "eval:doc.parent_books_account",
    "reqd": 1,
    "set_only_once": 1
   },
@@ -88,7 +89,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Account",

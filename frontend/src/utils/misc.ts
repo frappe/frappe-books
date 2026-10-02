@@ -21,15 +21,21 @@ export const docsPathMap: Record<string, string | undefined> = {
   Dashboard: 'books/dashboard',
   Reports: 'books/reports',
   GeneralLedger: 'books/general-ledger',
-  ProfitAndLoss: 'books/profit-and-loss',
+  ProfitAndLoss: 'books/profit-and-loss-statement',
   BalanceSheet: 'books/balance-sheet',
   TrialBalance: 'books/trial-balance',
+  GSTR1: 'books/gst-reports',
+  GSTR2: 'books/gst-reports',
 
   // Transactions
+  [ModelNameEnum.SalesQuote]: 'books/sales-quotes',
   [ModelNameEnum.SalesInvoice]: 'books/sales-invoices',
   [ModelNameEnum.PurchaseInvoice]: 'books/purchase-invoices',
   [ModelNameEnum.Payment]: 'books/payments',
   [ModelNameEnum.JournalEntry]: 'books/journal-entries',
+  [ModelNameEnum.LoyaltyProgram]: 'books/loyalty-program',
+  [ModelNameEnum.PricingRule]: 'books/pricing-rule',
+  [ModelNameEnum.CouponCode]: 'books/coupon-code',
 
   // Inventory
   [ModelNameEnum.StockMovement]: 'books/stock-movement',
@@ -38,12 +44,14 @@ export const docsPathMap: Record<string, string | undefined> = {
   StockLedger: 'books/stock-ledger',
   StockBalance: 'books/stock-balance',
   [ModelNameEnum.Batch]: 'books/batches',
+  [ModelNameEnum.SerialNumber]: 'books/serial-number',
 
   // Entries
-  Entries: 'books/books',
+  Entries: 'books',
   [ModelNameEnum.Party]: 'books/party',
   [ModelNameEnum.Item]: 'books/items',
   [ModelNameEnum.Tax]: 'books/taxes',
+  [ModelNameEnum.PriceList]: 'books/price-list',
   [ModelNameEnum.PrintFormat]: 'books/print-templates',
 
   // Miscellaneous
@@ -52,6 +60,7 @@ export const docsPathMap: Record<string, string | undefined> = {
   ImportWizard: 'books/import-wizard',
   Settings: 'books/settings',
   ChartOfAccounts: 'books/chart-of-accounts',
+  [ModelNameEnum.CustomForm]: 'books/customize-form',
 };
 
 /**

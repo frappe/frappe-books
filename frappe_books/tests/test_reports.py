@@ -395,6 +395,30 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		self.assertEqual([invoice.name in large for invoice in invoices], [True, False, False])
 		self.assertEqual([invoice.name in small for invoice in invoices], [False, True, True])
 
+	def test_nil_rated_supplies_show_only_as_nil_rated(self):
+		registered = self._party("Karnataka", gstin="29AAAAA0000A1Z5")
+		unregistered = self._party("Karnataka")
+		gst_0 = _tax(("CGST", 0), ("SGST", 0))
+		invoices = []
+		for party in (registered, unregistered):
+			self.party = party
+			invoices.append(self._invoice((gst_0, 100, 1), date="2064-04-20").name)
+
+		def shown(transfer_type):
+			rows = _run(
+				"Books GSTR-1", from_date="2064-04-20", to_date="2064-04-20", transfer_type=transfer_type
+			)
+			return sorted(row["invoice_no"] for row in rows)
+
+		self.assertEqual([shown(transfer_type) for transfer_type in ("B2B", "B2CL", "B2CS")], [[], [], []])
+		self.assertEqual(shown("NR"), sorted(invoices))
+
+	def test_json_export_refuses_sections_it_cannot_build(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+
+		with self.assertRaisesRegex(frappe.ValidationError, "JSON"):
+			self._json("NR")
+
 	def test_invoices_and_parties_are_read_in_batches(self):
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))
 		first = self._invoice((gst_18, 100, 1))

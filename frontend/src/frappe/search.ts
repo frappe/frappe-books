@@ -1,5 +1,7 @@
+import { groupBy, mapValues } from 'lodash';
+import { ModelNameEnum } from 'models/types';
 import { call } from 'src/web/api';
-import type { DocValues } from './api';
+import { getAllDocuments, type DocValues } from './api';
 import { getDocType, getFrappeModels, type FrappeDocType } from './doctypes';
 import { getSearchFields } from './registry';
 
@@ -64,6 +66,17 @@ function addSearchable(
   });
 }
 
+/** Each schema's number series prefixes; every name a series gives starts with its prefix. */
+export async function getSeriesPrefixes(): Promise<Record<string, string[]>> {
+  const { doctype } = getDocType(ModelNameEnum.NumberSeries);
+  const series = await getAllDocuments(doctype, {
+    fields: ['name', 'reference_type'],
+  });
+  return mapValues(groupBy(series, 'reference_type'), (rows) =>
+    rows.map(({ name }) => String(name))
+  );
+}
+
 /**
  * Up to `limit` documents whose search fields hold the letters of the search
  * word of `text` in order, as Frappe's search finds them. Table rows come with
@@ -72,9 +85,10 @@ function addSearchable(
 export function searchDocuments(
   searchable: Searchable,
   text: string,
-  limit: number
+  limit: number,
+  seriesPrefixes: string[] = []
 ): Promise<DocValues[]> {
-  const word = getSearchWord(searchable, text);
+  const word = getSearchWord(searchable, text, seriesPrefixes);
   // Frappe matches `%txt%`; a `%` between letters matches them in order.
   // Translated doctypes match `txt` in Python, where `%` is literal.
   const pattern = searchable.isTranslated ? word : [...word].join('%');
@@ -93,14 +107,18 @@ export function searchDocuments(
 }
 
 /**
- * The longest word of `text` that does not start a word of the schema name:
- * the palette matches those by the schema name, so `Karen invoice` sends
- * `Karen` for invoices.
+ * The longest word of `text` that does not start a word of the schema name or
+ * a number series prefix: every document matches those in the palette, so
+ * `Karen invoice` and `SINV 1001` send `Karen` and `1001` for invoices.
  */
-function getSearchWord({ schemaName }: Searchable, text: string): string {
-  const typeWords = schemaName
-    .split(/(?=[A-Z])/)
-    .map((typeWord) => typeWord.toLowerCase());
+function getSearchWord(
+  { schemaName }: Searchable,
+  text: string,
+  seriesPrefixes: string[]
+): string {
+  const typeWords = [...schemaName.split(/(?=[A-Z])/), ...seriesPrefixes].map(
+    (typeWord) => typeWord.toLowerCase()
+  );
   const isTypeWord = (word: string) =>
     typeWords.some((typeWord) => typeWord.startsWith(word.toLowerCase()));
   const words = text.split(/\s+/);

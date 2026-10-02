@@ -63,7 +63,8 @@ test('each doctype is searched for the letters of the longest word in order', as
     filter_fields: ['name', 'party', 'docstatus'],
     as_dict: true,
   });
-  assert.equal(requests.length, 18);
+  // 18 doctypes and their number series
+  assert.equal(requests.length, 19);
 });
 
 test('a word naming the doctype is matched by the palette, not by the server', async () => {
@@ -78,7 +79,7 @@ test('a word naming the doctype is matched by the palette, not by the server', a
     return Object.fromEntries(
       requests.map(({ body }) => [
         body.doctype,
-        body.txt ?? body.or_filters[0][2],
+        body.txt ?? body.or_filters?.[0][2],
       ])
     );
   };
@@ -108,6 +109,7 @@ test('a superseded search is dropped and documents rank by status', async () => 
   );
   const stale = search.fetchDocs('SINV');
   const latest = search.fetchDocs('SINV-100');
+  await new Promise((resolve) => setImmediate(resolve));
   pending[1]([
     { name: 'SINV-1003', party: 'Acme', docstatus: 2 },
     { name: 'SINV-1001', party: 'Acme', docstatus: 0 },

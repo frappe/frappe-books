@@ -103,6 +103,27 @@ test('leaving a sale with items asks to save or discard it', async ({
   await expect(dialog).toBeHidden();
 });
 
+test('discarding a sale on leaving empties the cart', async ({ page }) => {
+  await page.evaluate(() => {
+    const fixture = (window as any).posFixture;
+    fixture.fillCart();
+    void fixture.pos.routeToSinvList();
+  });
+  const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
+  await dialog
+    .getByRole('button', { name: 'Discard and Continue', exact: true })
+    .click();
+
+  await expect(dialog).toBeHidden();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as any).posFixture.pos.sinvDoc.items?.length ?? 0
+      )
+    )
+    .toBe(0);
+});
+
 test('a held sale reopens as saved after its cart was edited', async ({
   page,
 }) => {

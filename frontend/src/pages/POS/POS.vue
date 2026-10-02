@@ -1054,7 +1054,7 @@ export default defineComponent({
             },
             {
               label: t`Discard and Continue`,
-              action: () => routeTo('/list/SalesInvoice'),
+              action: () => this.discardAndContinue(),
             },
             { label: t`Cancel`, action: () => null, isEscape: true },
           ],
@@ -1069,9 +1069,7 @@ export default defineComponent({
           {
             label: t`Discard and Continue`,
             theme: 'red',
-            onClick: async () => {
-              await routeTo('/list/SalesInvoice');
-            },
+            onClick: () => this.discardAndContinue(),
           },
           {
             label: t`Save and Continue`,
@@ -1080,6 +1078,11 @@ export default defineComponent({
           },
         ],
       });
+    },
+    /** POS stays cached when left, so the sale is cleared before leaving. */
+    async discardAndContinue() {
+      await this.clearValues();
+      await routeTo('/list/SalesInvoice');
     },
     async saveAndContinue() {
       if (!this.sinvDoc.party) {

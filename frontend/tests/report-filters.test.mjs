@@ -87,3 +87,15 @@ test('without a fiscal year the presets are this month and the last', () => {
     ]
   );
 });
+
+test('a new Ref Type clears the Ref Name of the old one', async () => {
+  const report = new GeneralLedger(await makeFyo());
+  report.filters = report.getFilters();
+  await report.set('referenceType', 'Books Sales Invoice', false);
+  await report.set('referenceName', 'SINV-1001', false);
+
+  await report.set('referenceType', 'Books Payment', false);
+
+  assert.equal(report.get('referenceName'), undefined);
+  assert.equal(report.get('referenceType'), 'Books Payment');
+});

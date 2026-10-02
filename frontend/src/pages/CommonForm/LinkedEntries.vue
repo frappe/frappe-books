@@ -33,97 +33,99 @@
             :key="String(e.name) + item.value"
             @click="routeTo(item.value, String(e.name))"
           >
-            <FrappeListCell class="min-w-0 flex-col items-start py-2.5">
-              <p
-                class="max-w-full truncate text-ink-gray-8"
-                :class="isMobile ? 'text-lg' : 'text-base'"
-              >
-                {{ e.name }}
-              </p>
-              <p
-                v-if="getDate(e)"
-                class="mt-1.5 text-ink-gray-5"
-                :class="isMobile ? 'text-md' : 'text-sm'"
-              >
-                {{ fyo.format(getDate(e), 'Date') }}
-              </p>
-              <div class="mt-1.5 flex flex-wrap gap-1.5 empty:hidden">
-                <!-- Credit or Debit (GLE) -->
-                <FrappeBadge
-                  v-if="isPesa(e.credit) && e.credit.isPositive()"
-                  theme="gray"
-                  variant="subtle"
+            <FrappeListCell class="py-2.5">
+              <div class="min-w-0 flex-1">
+                <p
+                  class="max-w-full truncate text-ink-gray-8"
+                  :class="isMobile ? 'text-lg' : 'text-base'"
                 >
-                  {{ t`Cr. ${fyo.format(e.credit, 'Currency')}` }}
-                </FrappeBadge>
-                <FrappeBadge
-                  v-else-if="isPesa(e.debit) && e.debit.isPositive()"
-                  theme="gray"
-                  variant="subtle"
+                  {{ e.name }}
+                </p>
+                <p
+                  v-if="getDate(e)"
+                  class="mt-1.5 text-ink-gray-5"
+                  :class="isMobile ? 'text-md' : 'text-sm'"
                 >
-                  {{ t`Dr. ${fyo.format(e.debit, 'Currency')}` }}
-                </FrappeBadge>
+                  {{ fyo.format(getDate(e), 'Date') }}
+                </p>
+                <div class="mt-1.5 flex flex-wrap gap-1.5 empty:hidden">
+                  <!-- Credit or Debit (GLE) -->
+                  <FrappeBadge
+                    v-if="isPesa(e.credit) && e.credit.isPositive()"
+                    theme="gray"
+                    variant="subtle"
+                  >
+                    {{ t`Cr. ${fyo.format(e.credit, 'Currency')}` }}
+                  </FrappeBadge>
+                  <FrappeBadge
+                    v-else-if="isPesa(e.debit) && e.debit.isPositive()"
+                    theme="gray"
+                    variant="subtle"
+                  >
+                    {{ t`Dr. ${fyo.format(e.debit, 'Currency')}` }}
+                  </FrappeBadge>
 
-                <!-- Party or EntryType or Account -->
-                <FrappeBadge
-                  v-if="e.party || e.entry_type || e.account"
-                  theme="gray"
-                  variant="subtle"
-                >
-                  {{ e.party || e.entry_type || e.account }}
-                </FrappeBadge>
+                  <!-- Party or EntryType or Account -->
+                  <FrappeBadge
+                    v-if="e.party || e.entry_type || e.account"
+                    theme="gray"
+                    variant="subtle"
+                  >
+                    {{ e.party || e.entry_type || e.account }}
+                  </FrappeBadge>
 
-                <FrappeBadge v-if="e.item" theme="gray" variant="subtle">
-                  {{ e.item }}
-                </FrappeBadge>
-                <FrappeBadge v-if="e.location" theme="gray" variant="subtle">
-                  {{ e.location }}
-                </FrappeBadge>
+                  <FrappeBadge v-if="e.item" theme="gray" variant="subtle">
+                    {{ e.item }}
+                  </FrappeBadge>
+                  <FrappeBadge v-if="e.location" theme="gray" variant="subtle">
+                    {{ e.location }}
+                  </FrappeBadge>
 
-                <!-- Amounts -->
-                <FrappeBadge
-                  v-if="
-                    isPesa(e.outstanding_amount) && !e.outstanding_amount.isZero()
-                  "
-                  theme="amber"
-                  variant="subtle"
-                >
-                  {{
-                    t`Unpaid ${fyo.format(e.outstanding_amount.abs(), 'Currency')}`
-                  }}
-                </FrappeBadge>
-                <FrappeBadge
-                  v-else-if="isPesa(e.grand_total) && e.grand_total.isPositive()"
-                  theme="green"
-                  variant="subtle"
-                >
-                  {{ fyo.format(e.grand_total, 'Currency') }}
-                </FrappeBadge>
-                <FrappeBadge
-                  v-else-if="isPesa(e.amount) && e.amount.isPositive()"
-                  theme="green"
-                  variant="subtle"
-                >
-                  {{ fyo.format(e.amount, 'Currency') }}
-                </FrappeBadge>
+                  <!-- Amounts -->
+                  <FrappeBadge
+                    v-if="
+                      isPesa(e.outstanding_amount) && !e.outstanding_amount.isZero()
+                    "
+                    theme="amber"
+                    variant="subtle"
+                  >
+                    {{
+                      t`Unpaid ${fyo.format(e.outstanding_amount.abs(), 'Currency')}`
+                    }}
+                  </FrappeBadge>
+                  <FrappeBadge
+                    v-else-if="isPesa(e.grand_total) && e.grand_total.isPositive()"
+                    theme="green"
+                    variant="subtle"
+                  >
+                    {{ fyo.format(e.grand_total, 'Currency') }}
+                  </FrappeBadge>
+                  <FrappeBadge
+                    v-else-if="isPesa(e.amount) && e.amount.isPositive()"
+                    theme="green"
+                    variant="subtle"
+                  >
+                    {{ fyo.format(e.amount, 'Currency') }}
+                  </FrappeBadge>
 
-                <!-- Quantities -->
-                <FrappeBadge
-                  v-if="e.stock_not_transferred"
-                  theme="amber"
-                  variant="subtle"
-                >
-                  {{
-                    t`Pending qty. ${fyo.format(e.stock_not_transferred, 'Float')}`
-                  }}
-                </FrappeBadge>
-                <FrappeBadge
-                  v-else-if="typeof e.quantity === 'number' && e.quantity"
-                  theme="gray"
-                  variant="subtle"
-                >
-                  {{ t`Qty. ${fyo.format(e.quantity, 'Float')}` }}
-                </FrappeBadge>
+                  <!-- Quantities -->
+                  <FrappeBadge
+                    v-if="e.stock_not_transferred"
+                    theme="amber"
+                    variant="subtle"
+                  >
+                    {{
+                      t`Pending qty. ${fyo.format(e.stock_not_transferred, 'Float')}`
+                    }}
+                  </FrappeBadge>
+                  <FrappeBadge
+                    v-else-if="typeof e.quantity === 'number' && e.quantity"
+                    theme="gray"
+                    variant="subtle"
+                  >
+                    {{ t`Qty. ${fyo.format(e.quantity, 'Float')}` }}
+                  </FrappeBadge>
+                </div>
               </div>
             </FrappeListCell>
           </FrappeListRow>

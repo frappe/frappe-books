@@ -87,6 +87,15 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		)
 		self._sale(ink, batch, quantity=2).insert()
 
+	def test_a_quote_row_takes_no_more_of_its_batch_than_is_in_stock(self):
+		ink = self.make_item(track_item=1, has_batch=1)
+		batch = make_batch(ink)
+		seed_stock(ink, quantity=2, rate=10, batch=batch)
+
+		quote = self._sale(ink, batch, quantity=3, doctype="Books Sales Quote")
+		self.assertRaisesRegex(frappe.ValidationError, "only has 2 quantity available but 3 is", quote.insert)
+		self._sale(ink, batch, quantity=2, doctype="Books Sales Quote").insert()
+
 	def test_a_saved_sale_row_is_checked_again_only_when_edited(self):
 		ink = self.make_item(track_item=1, has_batch=1)
 		batch = make_batch(ink)

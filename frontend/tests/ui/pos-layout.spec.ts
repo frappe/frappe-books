@@ -112,9 +112,7 @@ test('a held sale reopens as saved after its cart was edited', async ({
     const dialog = page.getByRole('dialog', {
       name: 'Saved and Submitted Invoices',
     });
-    await dialog
-      .getByRole('checkbox', { name: 'Select invoice SINV-2026-HELD' })
-      .check();
+    await dialog.getByRole('row', { name: /SINV-2026-HELD/ }).click();
     await dialog.getByRole('button', { name: 'Open Invoice' }).click();
     await expect(dialog).toBeHidden();
   };
@@ -325,15 +323,15 @@ test('invoice selection and bank payment fields work in a small dialog', async (
   await dialog
     .getByRole('textbox', { name: 'Search by invoice name' })
     .fill('0001');
-  await expect(dialog.getByRole('checkbox')).toHaveCount(1);
-  await dialog.getByRole('checkbox').check();
+  await expect(dialog.getByRole('row', { name: /0001/ })).toHaveCount(1);
+  await dialog.getByRole('row', { name: /0001/ }).click();
   await expect(
     dialog.getByRole('button', { name: 'Create Return' })
   ).toBeEnabled();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await showModal(page, 'Payment');
   await dialog
-    .getByRole('button', { name: 'Bank Transfer', exact: true })
+    .getByRole('radio', { name: 'Bank Transfer', exact: true })
     .click();
   await expect(dialog.getByRole('textbox', { name: /Ref\./ })).toBeVisible();
   await dialog.getByRole('textbox', { name: /Ref\./ }).fill('BANK-006');
@@ -364,11 +362,18 @@ test('payment buttons match the form text scale', async ({ page }) => {
   const amount = dialog.getByRole('spinbutton', { name: 'Paid amount' });
   const inputFont = await amount.evaluate((el) => getComputedStyle(el).fontSize);
   const inputHeight = await amount.evaluate((el) => getComputedStyle(el).height);
-  const buttons = dialog.locator('footer button, button[aria-pressed]');
-  await expect(dialog.locator('button[aria-pressed]')).toHaveCount(5);
-  for (const button of await buttons.all()) {
+  const methods = dialog.getByRole('radio');
+  await expect(methods).toHaveCount(5);
+  for (const button of await dialog.locator('footer button').all()) {
     await expect(button).toHaveCSS('font-size', inputFont);
     await expect(button).toHaveCSS('height', inputHeight);
+  }
+  for (const method of await methods.all()) {
+    await expect(method.locator('[data-slot=label]')).toHaveCSS(
+      'font-size',
+      inputFont
+    );
+    await expect(method).toHaveCSS('height', inputHeight);
   }
   await page.screenshot({
     animations: 'disabled',

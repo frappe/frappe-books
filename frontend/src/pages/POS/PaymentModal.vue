@@ -97,8 +97,8 @@
           :class="settlementClasses"
           role="status"
         >
-          <span class="text-sm font-medium">{{ settlementLabel }}</span>
-          <span class="text-lg font-semibold tabular-nums">
+          <span class="text-sm-medium">{{ settlementLabel }}</span>
+          <span class="text-lg-semibold tabular-nums">
             {{ fyo.format(settlementAmount, 'Currency') }}
           </span>
         </div>

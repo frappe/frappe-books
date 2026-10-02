@@ -47,7 +47,7 @@
         class="lucide-shopping-cart mb-1 size-7 text-ink-gray-5"
         aria-hidden="true"
       />
-      <p class="text-base font-medium text-ink-gray-8">
+      <p class="text-base-medium text-ink-gray-8">
         {{ t`No items in this sale` }}
       </p>
       <p class="text-sm text-ink-gray-6">

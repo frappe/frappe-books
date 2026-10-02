@@ -27,7 +27,7 @@
           :disabled="uploading"
           @click="openFileSelector"
         >
-          <span class="lucide-image-plus size-[22px]" aria-hidden="true" />
+          <span class="lucide-image-plus size-6" aria-hidden="true" />
           {{ uploading ? t`Uploading...` : t`Upload` }}
         </button>
       </template>
@@ -37,7 +37,7 @@
     v-else
     class="relative bg-surface-base border border-outline-gray-1 flex-center overflow-hidden group"
     :class="{
-      'rounded-2': size === 'form',
+      'rounded-4': size === 'form',
       'w-20 h-20 rounded-full': size !== 'small' && size !== 'form',
       'w-12 h-12 rounded-full': size === 'small',
     }"
@@ -65,8 +65,7 @@
     </div>
     <div
       v-if="!isReadOnly"
-      class="flex w-full h-full absolute justify-center items-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-      style="background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2px)"
+      class="flex w-full h-full absolute justify-center items-end bg-black-overlay-200 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-black-overlay-700"
     >
       <FrappeButton
         v-if="value"

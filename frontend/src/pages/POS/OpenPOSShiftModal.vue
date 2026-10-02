@@ -36,7 +36,7 @@
     </template>
     <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2">
       <div class="flex min-w-0 flex-col gap-4">
-        <h2 class="text-base font-medium text-ink-gray-8">
+        <h2 class="text-lg-semibold text-ink-gray-8">
           {{ t`Cash In Denominations` }}
         </h2>
 
@@ -51,7 +51,7 @@
       </div>
 
       <div class="flex min-w-0 flex-col gap-4">
-        <h2 class="text-base font-medium text-ink-gray-8">
+        <h2 class="text-lg-semibold text-ink-gray-8">
           {{ t`Opening Amount` }}
         </h2>
 

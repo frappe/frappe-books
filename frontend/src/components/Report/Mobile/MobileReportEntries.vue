@@ -25,7 +25,7 @@
             </FrappeListCell>
             <FrappeListCell class="justify-end">
               <div class="whitespace-nowrap text-end tabular-nums">
-                <div class="text-lg font-medium text-ink-gray-8">
+                <div class="text-lg-medium text-ink-gray-8">
                   <span dir="ltr">{{ entry.amount }}</span>
                 </div>
                 <div class="mt-0.5 text-md text-ink-gray-5">

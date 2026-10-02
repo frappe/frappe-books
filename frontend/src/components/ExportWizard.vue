@@ -51,7 +51,7 @@
               mt-2
               grid grid-cols-3
               gap-x-6 gap-y-2
-              rounded-2
+              rounded-6
               border
               p-3
               border-outline-gray-1
@@ -61,7 +61,6 @@
               v-for="ef of fields"
               :key="ef.fieldname"
               class="min-w-0"
-              :class="{ '[&_[data-slot=label]]:font-semibold': ef.fieldtype === 'Table' }"
               :df="getField(ef)"
               :show-label="true"
               :value="ef.export"
@@ -80,7 +79,7 @@
               mt-2
               grid grid-cols-3
               gap-x-6 gap-y-2
-              rounded-2
+              rounded-6
               border
               p-3
               border-outline-gray-1

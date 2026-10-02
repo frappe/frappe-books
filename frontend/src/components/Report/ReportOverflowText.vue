@@ -9,7 +9,7 @@
       >
       <template #content>
         <span
-          class="block max-w-[min(32rem,calc(100vw-2rem))] whitespace-pre-wrap break-words text-sm leading-5 select-text"
+          class="block max-w-[min(32rem,calc(100vw-2rem))] whitespace-pre-wrap break-words text-p-sm select-text"
           >{{ value }}</span
         >
       </template>

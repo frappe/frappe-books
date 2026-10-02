@@ -3,7 +3,7 @@
     class="grid max-h-[70vh] grid-cols-1 gap-8 gap-x-6 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3"
   >
     <div v-for="g in groups" :key="g.label" class="space-y-1">
-      <h3 class="text-base-medium tracking-wide text-ink-gray-8">
+      <h3 class="text-base-medium text-ink-gray-8">
         {{ g.label }}
       </h3>
       <p class="mb-3 text-p-sm text-ink-gray-5">{{ g.description }}</p>

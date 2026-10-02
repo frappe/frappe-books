@@ -12,7 +12,7 @@ export function constructPrintDocument(
   const head = document.createElement('head');
   const body = document.createElement('body');
   html.dataset.theme = 'light';
-  body.className = 'bg-white text-gray-900';
+  body.className = 'bg-surface-base text-ink-gray-9';
   const style = getAllCSSAsStyleElem();
 
   const printCSS = document.createElement('style');

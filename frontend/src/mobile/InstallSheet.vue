@@ -11,7 +11,7 @@
         v-if="appIconUrl"
         :src="appIconUrl"
         alt=""
-        class="size-16 rounded-[14px] ring-1 ring-outline-gray-1"
+        class="size-16 rounded-6 ring-1 ring-outline-gray-1"
       />
       <p class="text-p-md text-ink-gray-7">
         {{
@@ -27,7 +27,7 @@
           :key="step.label"
           class="flex min-h-13 items-center gap-3 px-3.5 text-md text-ink-gray-8"
         >
-          <span class="w-6 font-semibold text-ink-gray-5">{{ index + 1 }}</span>
+          <span class="w-6 text-md-semibold text-ink-gray-5">{{ index + 1 }}</span>
           <span class="flex-1">{{ step.label }}</span>
           <span :class="step.icon" class="size-5" aria-hidden="true" />
         </li>

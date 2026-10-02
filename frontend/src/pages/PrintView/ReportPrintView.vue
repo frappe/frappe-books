@@ -17,18 +17,18 @@
         <!-- Report Print Display Container -->
         <PrintSheet
           ref="printSheet"
-          class="shadow-lg border mx-auto"
+          class="shadow-sm border mx-auto"
           :scale="scale"
           :width="size.width"
           :height="size.height"
         >
-          <div class="bg-white mx-auto">
+          <div class="bg-surface-base mx-auto">
             <div class="p-2">
-              <div class="font-semibold text-xl w-full flex justify-between">
+              <div class="text-xl-semibold w-full flex justify-between">
                 <h1>
                   {{ `${fyo.singles.PrintSettings?.company_name}` }}
                 </h1>
-                <p class="text-gray-600">
+                <p class="text-ink-gray-6">
                   {{ title }}
                 </p>
               </div>
@@ -41,7 +41,7 @@
                   v-for="(cell, c) of row"
                   :key="`cell-${r}.${c}`"
                   :class="cellClasses(cell.idx, r)"
-                  class="text-sm p-2"
+                  class="p-2"
                   style="min-height: 2rem"
                 >
                   {{ cell.value }}
@@ -131,7 +131,7 @@
             {{ t`Pick Columns` }}
           </h2>
           <div
-            class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 rounded-2 border p-3 border-outline-gray-1"
+            class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 rounded-6 border p-3 border-outline-gray-1"
           >
             <Check
               v-for="(col, i) of report?.columns"
@@ -335,9 +335,7 @@ export default defineComponent({
         classes.push(`text-${col.align}`);
       }
 
-      if (rIdx === 0) {
-        classes.push('font-semibold');
-      }
+      classes.push(rIdx === 0 ? 'text-sm-semibold' : 'text-sm');
 
       classes.push('border-t');
       if (!isFirst) {

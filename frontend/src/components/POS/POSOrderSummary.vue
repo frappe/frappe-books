@@ -3,7 +3,7 @@
     <dl class="flex flex-col gap-2 text-sm">
       <div class="flex items-baseline justify-between gap-4">
         <dt class="text-ink-gray-6">{{ t`Total Quantity` }}</dt>
-        <dd class="font-medium tabular-nums text-ink-gray-9">
+        <dd class="text-sm-medium tabular-nums text-ink-gray-9">
           {{ fyo.format(totalQuantity, 'Float') }}
         </dd>
       </div>
@@ -13,17 +13,17 @@
         class="flex items-baseline justify-between gap-4"
       >
         <dt class="text-ink-gray-6">{{ line.label }}</dt>
-        <dd class="font-medium tabular-nums text-ink-gray-9">
+        <dd class="text-sm-medium tabular-nums text-ink-gray-9">
           {{ fyo.format(line.value, 'Currency') }}
         </dd>
       </div>
       <div
         class="flex flex-wrap items-baseline justify-between gap-2 border-t border-outline-gray-1 pt-3"
       >
-        <dt class="text-base font-medium text-ink-gray-9">
+        <dt class="text-base-medium text-ink-gray-9">
           {{ t`Grand Total` }}
         </dt>
-        <dd class="text-xl font-semibold tabular-nums text-ink-gray-9">
+        <dd class="text-xl-semibold tabular-nums text-ink-gray-9">
           {{ fyo.format(sinvDoc?.grand_total ?? fyo.pesa(0), 'Currency') }}
         </dd>
       </div>

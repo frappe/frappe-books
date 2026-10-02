@@ -21,7 +21,7 @@
         <span
           v-if="amount"
           dir="ltr"
-          class="text-lg font-medium tabular-nums text-ink-gray-8"
+          class="text-lg-medium tabular-nums text-ink-gray-8"
         >
           {{ amount }}
         </span>

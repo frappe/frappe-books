@@ -13,7 +13,7 @@
   >
     <template v-if="value" #trailing>
       <span
-        class="ms-2 size-3 shrink-0 rounded-2"
+        class="ms-2 size-3 shrink-0 rounded-1"
         :style="{ backgroundColor: normalizedColor }"
         aria-hidden="true"
       />
@@ -59,21 +59,20 @@
           :variant="frappeVariant"
           :size="frappeSize"
           :aria-label="df.label"
-          class="w-full !justify-start text-base"
+          class="w-full text-base"
         >
-          <div class="flex items-center">
-            <div
-              v-if="value"
-              class="w-3 h-3 rounded-2 me-1"
+          <template v-if="value" #prefix>
+            <span
+              class="size-3 rounded-1"
               :style="{ backgroundColor: normalizedColor }"
-            ></div>
-            <span v-if="value">
-              {{ selectedColorLabel }}
-            </span>
-            <span v-else class="text-ink-gray-4">
-              {{ inputPlaceholder }}
-            </span>
-          </div>
+            />
+          </template>
+          <span v-if="value">{{ selectedColorLabel }}</span>
+          <span v-else class="text-ink-gray-4">{{ inputPlaceholder }}</span>
+          <template #suffix>
+            <!-- Takes the free width, so the value sits at the start like other fields. -->
+            <span class="flex-1" aria-hidden="true" />
+          </template>
         </FrappeButton>
       </template>
       <ColorPalette

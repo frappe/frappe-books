@@ -10,7 +10,7 @@
       :style="{ gridTemplateColumns }"
     >
       <div
-        class="sticky top-0 z-[1] col-span-full grid grid-cols-subgrid border-y border-outline-gray-1 bg-surface-base px-4 py-2 text-xs-medium text-ink-gray-5"
+        class="sticky top-0 z-10 col-span-full grid grid-cols-subgrid border-y border-outline-gray-1 bg-surface-base px-4 py-2 text-xs-medium text-ink-gray-5"
       >
         <span class="truncate">{{ labelHeader }}</span>
         <span

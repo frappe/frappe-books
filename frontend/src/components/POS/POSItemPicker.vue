@@ -40,7 +40,7 @@
     v-if="!items.length"
     class="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-4 text-center"
   >
-    <p class="text-lg font-medium text-ink-gray-7">
+    <p class="text-lg-medium text-ink-gray-7">
       {{ t`No items found` }}
     </p>
     <p class="text-sm text-ink-gray-5">

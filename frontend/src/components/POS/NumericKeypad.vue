@@ -18,22 +18,20 @@
 		/>
 
 		<div class="keypad-keys grid grid-cols-4 gap-2" role="group" :aria-label="t`Numeric keypad`">
-			<FrappeButton
+			<!-- Plain buttons: touch keys need 56px, above frappe-ui's largest Button (40px). -->
+			<button
 				v-for="key in keyDefinitions"
 				:key="key.value"
+				type="button"
 				:aria-label="key.ariaLabel"
 				:disabled="disabled"
-				:class="[
-					key.wide ? 'col-span-2' : '',
-					'!h-14 !px-0 text-lg font-semibold tabular-nums',
-				]"
-				size="lg"
-				variant="subtle"
+				class="h-14 rounded-5 bg-surface-gray-2 text-lg-semibold tabular-nums text-ink-gray-8 transition-colors enabled:hover:bg-surface-gray-3 enabled:active:bg-surface-gray-4 disabled:cursor-not-allowed disabled:text-ink-gray-4"
+				:class="{ 'col-span-2': key.wide }"
 				@mousedown.prevent
 				@click="pressKey(key.value)"
 			>
 				{{ key.label }}
-			</FrappeButton>
+			</button>
 		</div>
 
 		<p class="keypad-hint text-center text-sm text-ink-gray-5">
@@ -43,7 +41,7 @@
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton, TextInput as FrappeTextInput } from "frappe-ui";
+import { TextInput as FrappeTextInput } from "frappe-ui";
 import { defineComponent, nextTick } from "vue";
 import { applyNumericKey, normalizeNumericDraft, NumericKey } from "./numericKeypad";
 
@@ -61,7 +59,7 @@ type TextInputRef = {
 
 export default defineComponent({
 	name: "NumericKeypad",
-	components: { FrappeButton, FrappeTextInput },
+	components: { FrappeTextInput },
 	props: {
 		modelValue: { type: String, required: true },
 		label: { type: String, required: true },

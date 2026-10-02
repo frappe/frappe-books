@@ -74,11 +74,11 @@
               : 'text-base text-ink-gray-7'
           "
         >
-          <span v-if="fileName" class="font-normal">{{ t`Selected` }} </span>
+          <span v-if="fileName">{{ t`Selected` }} </span>
           {{ helperMessage }}{{ fileName ? ',' : '' }}
-          <span v-if="fileName" class="font-normal"> {{ t`check values and click on` }} </span
+          <span v-if="fileName"> {{ t`check values and click on` }} </span
           >{{ ' ' }}<span v-if="fileName">{{ t`Import Data.` }}</span>
-          <span v-if="hasImporter && importer.valueMatrix.length > 0" class="font-normal">{{
+          <span v-if="hasImporter && importer.valueMatrix.length > 0">{{
             ' ' +
             (importer.valueMatrix.length === 1
               ? t`${importer.valueMatrix.length} row added.`
@@ -206,7 +206,7 @@
               {{ key }}
             </h2>
             <div
-              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 border border-outline-gray-1 rounded-2 mt-1 p-3"
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 border border-outline-gray-1 rounded-6 mt-1 p-3"
             >
               <div v-for="tf of value" :key="tf.fieldKey" class="min-w-0">
                 <Check

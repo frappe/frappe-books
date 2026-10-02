@@ -51,7 +51,7 @@
         <FrappeListCell class="justify-end gap-2.5">
           <span
             v-if="amount"
-            class="text-lg font-medium tabular-nums text-ink-gray-8"
+            class="text-lg-medium tabular-nums text-ink-gray-8"
             dir="ltr"
           >
             {{ amount }}

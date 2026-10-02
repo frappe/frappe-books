@@ -53,7 +53,7 @@
           <template v-else>{{ getItemInitials(item.name) }}</template>
         </span>
         <span
-          class="line-clamp-2 min-h-[35px] px-1 text-base-medium leading-tight text-ink-gray-8"
+          class="line-clamp-2 min-h-[2lh] px-1 text-p-base-medium text-ink-gray-8"
         >
           {{ item.name }}
         </span>

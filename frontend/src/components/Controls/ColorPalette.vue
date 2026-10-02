@@ -1,21 +1,23 @@
 <template>
   <div>
     <div class="grid grid-cols-5 gap-2">
-      <FrappeButton
+      <!-- The selected outline's offset gap shows the popover or sheet behind. -->
+      <button
         v-for="color in colors"
         :key="color.value"
-        variant="outline"
-        size="sm"
-        class="!min-w-0 !p-0"
+        type="button"
+        class="rounded-1 border border-outline-gray-2"
         :class="[
-          isMobile ? '!size-10' : '!size-7',
-          value.toLowerCase() === color.value.toLowerCase()
-            ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-850'
-            : '',
+          isMobile ? 'size-10' : 'size-7',
+          {
+            'outline outline-2 outline-offset-2 outline-[color:var(--outline-gray-5)]':
+              isSelected(color.value),
+          },
         ]"
         :style="{ backgroundColor: color.value }"
         :title="color.label"
         :aria-label="color.label"
+        :aria-pressed="isSelected(color.value)"
         @click="$emit('select', color.value)"
       />
     </div>
@@ -42,14 +44,18 @@
   </div>
 </template>
 <script setup lang="ts">
-import {
-  Button as FrappeButton,
-  TextInput as FrappeTextInput,
-} from 'frappe-ui';
+import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
 
-defineProps<{ colors: { label: string; value: string }[]; value: string }>();
+const props = defineProps<{
+  colors: { label: string; value: string }[];
+  value: string;
+}>();
 const emit = defineEmits<{ select: [value: string] }>();
+
+function isSelected(color: string) {
+  return props.value.toLowerCase() === color.toLowerCase();
+}
 
 function onInput(event: Event) {
   if (event.target instanceof HTMLInputElement) {

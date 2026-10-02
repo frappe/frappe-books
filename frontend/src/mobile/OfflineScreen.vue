@@ -3,6 +3,7 @@
     v-if="isVisible"
     class="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-surface-base px-10 pb-24 text-center"
   >
+    <!-- z-[60]: above frappe-ui's sheets and dialogs (z-50), which open later in the DOM. -->
     <span class="rounded-full bg-surface-gray-2 p-3 text-ink-gray-5">
       <span class="lucide-wifi-off size-6" aria-hidden="true" />
     </span>

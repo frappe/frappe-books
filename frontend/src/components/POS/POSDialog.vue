@@ -26,9 +26,9 @@
       class="flex max-h-[calc(100dvh-6rem)] min-w-0 flex-col text-ink-gray-9"
     >
       <header
-        class="flex shrink-0 items-start justify-between gap-4 border-b border-outline-gray-1 px-6 py-4"
+        class="flex shrink-0 items-center justify-between gap-4 border-b border-outline-gray-1 px-6 py-4"
       >
-        <DialogTitle class="min-w-0 text-lg font-semibold leading-7">
+        <DialogTitle class="min-w-0 text-lg-semibold">
           {{ title }}
         </DialogTitle>
         <FrappeButton

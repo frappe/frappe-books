@@ -25,18 +25,19 @@
           />
         </template>
         <template #actions="{ setRange, close }">
-          <button
+          <FrappeItemListRow
             v-for="preset in getPresets()"
             :key="preset.label"
+            as="button"
             type="button"
-            class="w-full rounded-4 px-2 py-1.5 text-start text-base hover:bg-surface-gray-2"
+            class="text-start hover:bg-surface-gray-2"
             @click="
               setRange(preset.range);
               close();
             "
           >
             {{ preset.label }}
-          </button>
+          </FrappeItemListRow>
         </template>
       </FrappeDateRangePicker>
       <FrappeTabButtons
@@ -65,6 +66,7 @@
 <script setup lang="ts">
 import {
   DateRangePicker as FrappeDateRangePicker,
+  ItemListRow as FrappeItemListRow,
   TabButtons as FrappeTabButtons,
   type DateRangeValue,
 } from 'frappe-ui';

@@ -7,7 +7,7 @@
           ref="nameField"
           class="w-60 flex-shrink-0"
           size="small"
-          :input-class="['font-semibold text-xl']"
+          :input-class="['text-xl-semibold']"
           :df="fields.name"
           :border="true"
           :value="doc!.name"
@@ -51,7 +51,7 @@
           <PrintSheet
             v-if="printDocument"
             ref="printSheet"
-            class="mx-auto shadow-lg border"
+            class="mx-auto shadow-sm border"
             :document="printDocument"
             :scale="Math.max(scale, 0.1)"
             :width="pageSize.width"

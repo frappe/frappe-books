@@ -18,7 +18,7 @@
       >
         {{ node.isArray ? t`Array` : t`Object` }}
       </FrappeBadge>
-      <span v-else class="truncate text-sm font-semibold text-ink-gray-8">
+      <span v-else class="truncate text-sm-semibold text-ink-gray-8">
         {{ node.value }}
       </span>
     </template>

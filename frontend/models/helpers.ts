@@ -71,8 +71,9 @@ export function getInvoiceActions(
   fyo: Fyo,
   schemaName: ModelNameEnum.SalesInvoice | ModelNameEnum.PurchaseInvoice
 ): Action[] {
-  const nextStep =
-    schemaName === ModelNameEnum.SalesInvoice
+  // A return refunds, so a sales return pays and a purchase return receives.
+  const nextStep = (doc: FrappeDoc) =>
+    (schemaName === ModelNameEnum.SalesInvoice) !== !!doc.return_against
       ? fyo.t`Receive Payment`
       : fyo.t`Make Payment`;
 

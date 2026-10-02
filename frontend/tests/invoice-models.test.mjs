@@ -143,6 +143,14 @@ test('the quote asks for the Type of its party and hides invoice fields', () => 
   assert.equal(getSchema('SalesQuote').label, 'Quote');
 });
 
+test('a quote posts nothing, so it offers no ledger or payment on submit', () => {
+  setSettings({ defaults: { sales_payment_account: 'Cash' } });
+  const quote = newInvoice('SalesQuote');
+
+  assert.equal(quote.isTransactional, false);
+  assert.equal(getLayout(quote).Settings, undefined);
+});
+
 test('item tables keep their columns, row editor and Invoice No', () => {
   for (const schemaName of ['SalesInvoice', 'PurchaseInvoice', 'SalesQuote']) {
     const schema = getSchema(schemaName);
@@ -413,7 +421,18 @@ test('links filter by the doctypes they point to', async () => {
     ['is_purchase', '=', 1],
   ]);
   assert.deepEqual(createFilters.party(sale), [['role', '=', 'Customer']]);
-  assert.deepEqual(frappeModels.SalesQuote.filters.party, undefined);
+  const quote = newInvoice('SalesQuote');
+  const quoteFilters = frappeModels.SalesQuote.filters;
+  assert.deepEqual(quoteFilters.party(quote), [
+    ['role', 'in', ['Customer', 'Both']],
+  ]);
+  assert.deepEqual(quoteFilters.price_list(quote), [
+    ['is_enabled', '=', 1],
+    ['is_sales', '=', 1],
+  ]);
+  // Leads have no role.
+  quote.reference_type = 'Books Lead';
+  assert.deepEqual(quoteFilters.party(quote), []);
 
   sale.push('items', { item: 'Pen' });
   const row = sale.items[0];

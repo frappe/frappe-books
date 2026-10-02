@@ -1,5 +1,5 @@
 import { handleError } from 'src/errorHandling';
-import { computed, inject, onUnmounted, ref, watch } from 'vue';
+import { computed, inject, onScopeDispose, ref, watch } from 'vue';
 import { searcherKey } from './injectionKeys';
 import type { SearchItems } from './search';
 
@@ -9,23 +9,29 @@ const FETCH_DELAY = 250;
 export function useSearch() {
   const searcher = inject(searcherKey, ref(null));
   const query = ref('');
+  // Results change once per query, when its documents arrive.
+  const resultsQuery = ref('');
   // The web app keeps Search in a shallow ref; track filter mutations here.
   const revision = ref(0);
   let fetchTimer: ReturnType<typeof setTimeout> | undefined;
 
   const results = computed<SearchItems>(() => {
     void revision.value;
-    return searcher.value?.search(query.value) ?? [];
+    return searcher.value?.search(resultsQuery.value) ?? [];
   });
 
   async function fetchDocs() {
+    const text = query.value;
     try {
-      if (await searcher.value?.fetchDocs(query.value)) {
-        revision.value += 1;
+      if (!(await searcher.value?.fetchDocs(text))) {
+        return;
       }
     } catch (error) {
       await handleError(false, error as Error);
     }
+
+    resultsQuery.value = text;
+    revision.value += 1;
   }
 
   function isFilterOn(filterName: string): boolean {
@@ -54,15 +60,16 @@ export function useSearch() {
     void item.action();
   }
 
-  watch(query, () => {
+  watch(query, (text) => {
     clearTimeout(fetchTimer);
-    fetchTimer = setTimeout(() => void fetchDocs(), FETCH_DELAY);
+    fetchTimer = setTimeout(() => void fetchDocs(), text ? FETCH_DELAY : 0);
   });
-  onUnmounted(() => clearTimeout(fetchTimer));
+  onScopeDispose(() => clearTimeout(fetchTimer));
 
   return {
     searcher,
     query,
+    resultsQuery,
     results,
     revision,
     isFilterOn,

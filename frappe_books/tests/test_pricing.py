@@ -293,6 +293,20 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual(rule.applied_items[0].unit, "Unit")
 		self.assertEqual(invoice.items[0].pricing_rule, rule.name)
 
+	def test_price_list_holds_one_price_per_item_and_unit(self):
+		price_list = frappe.get_doc(
+			{
+				"doctype": "Books Price List",
+				"name": unique_name("Price List"),
+				"price_list_item": [
+					{"item": self.item.name, "rate": 90},
+					{"item": self.item.name, "rate": 80},
+				],
+			}
+		)
+		with self.assertRaisesRegex(frappe.ValidationError, "already has a price"):
+			price_list.insert()
+
 	def test_price_list_item_without_unit_gets_the_item_unit(self):
 		price_list = frappe.get_doc(
 			{

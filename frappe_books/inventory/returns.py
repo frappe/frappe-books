@@ -3,6 +3,7 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
+from frappe.utils import get_datetime
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import return_unreturned_rows
@@ -41,10 +42,13 @@ def _prepare_return(transfer, return_transfer):
 
 
 def validate_transfer_return(transfer):
-	"""Stop a return from taking back more than its original transfer moved."""
+	"""Stop a return from taking back more than its original transfer moved, or before it moved it."""
 	original = frappe.get_doc(transfer.doctype, transfer.return_against, for_update=True)
 	if original.docstatus != 1 or original.return_against:
 		frappe.throw(_("A return must reference a submitted original {0}.").format(_(transfer.doctype)))
+	# A sales return is valued at its shipment's cost, which must not depend on the return.
+	if get_datetime(transfer.date) < get_datetime(original.date):
+		frappe.throw(_("A return cannot be dated before its original {0}.").format(original.name))
 	returned = _returned_rows(original, exclude=transfer.name)
 	validate_moved_quantities(
 		original, [*returned, *transfer.items], _("Returns of {0} exceed the quantity of {1} in {2}.")

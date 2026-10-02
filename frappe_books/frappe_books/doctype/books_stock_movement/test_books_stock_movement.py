@@ -412,6 +412,30 @@ class IntegrationTestStockMovementPostings(IntegrationTestCase):
 
 		self.assertEqual(self.balances(issue), {self.stock: Decimal(-50), self.adjustment: Decimal(50)})
 
+	def test_a_restated_transfer_passes_its_new_cost_on(self):
+		now = now_datetime()
+		warehouse = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Warehouse")}).insert()
+		self.submit("MaterialReceipt", [self.row(5, 10, to_location="Stores")], add_to_date(now, hours=-4))
+		first = self.submit(
+			"MaterialTransfer",
+			[self.row(3, 99, from_location="Stores", to_location=self.shop)],
+			add_to_date(now, hours=-3),
+		)
+		second = self.submit(
+			"MaterialTransfer",
+			[self.row(3, 99, from_location=self.shop, to_location=warehouse.name)],
+			add_to_date(now, hours=-2),
+		)
+		issue = self.submit(
+			"MaterialIssue", [self.row(3, 99, from_location=warehouse.name)], add_to_date(now, hours=-1)
+		)
+
+		self.submit("MaterialReceipt", [self.row(2, 20, to_location="Stores")], add_to_date(now, hours=-5))
+
+		self.assertEqual(ledger_entries(first.doctype, first.name), [])
+		self.assertEqual(ledger_entries(second.doctype, second.name), [])
+		self.assertEqual(self.balances(issue), {self.stock: Decimal(-50), self.adjustment: Decimal(50)})
+
 	def row(self, quantity, rate, **locations):
 		return {"item": self.item, "quantity": quantity, "rate": rate, **locations}
 

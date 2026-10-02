@@ -127,9 +127,8 @@ def _get_list_in(doctype, fieldname, values, filters=None, **kwargs):
 
 
 def _place(party, positions):
-	if party.address:
-		return positions.get(party.address) or ""
-	return _gstin_state(party.gstin)
+	"""The state of the party's address, or else of its GSTIN."""
+	return positions.get(party.address) or _gstin_state(party.gstin)
 
 
 def _gstin_state(gstin):

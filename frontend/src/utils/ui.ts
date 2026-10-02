@@ -248,7 +248,8 @@ function getViewActions(doc: FrappeDoc): Action[] {
     {
       label: t`General Ledger`,
       group: t`View`,
-      condition: (doc: FrappeDoc) => doc.schemaName === 'Party',
+      condition: (doc: FrappeDoc) =>
+        doc.schemaName === 'Party' && doc.inserted,
       action: async () => {
         await router.push({
           path: '/report/GeneralLedger',

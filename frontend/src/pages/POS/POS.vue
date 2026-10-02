@@ -740,10 +740,13 @@ export default defineComponent({
     },
     /** Opens a held sale; a submitted one goes on to its payment. */
     async selectedInvoiceName(invoice: { name: string; docstatus: number }) {
-      this.sinvDoc = (await getFrappeDoc(
-        ModelNameEnum.SalesInvoice,
-        invoice.name
-      )) as SalesInvoice;
+      const doc = await getFrappeDoc(ModelNameEnum.SalesInvoice, invoice.name);
+      // A sale left with unsaved edits reopens as saved.
+      if (doc.dirty) {
+        await doc.load();
+      }
+
+      this.sinvDoc = doc as SalesInvoice;
       this.toggleModal('SavedInvoice', false);
 
       if (invoice.docstatus === 1) {

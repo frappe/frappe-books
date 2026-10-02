@@ -567,7 +567,6 @@ export const previousForms = {
       'base_grand_total | Base Grand Total',
       'grand_total | Grand Total',
       'discount_after_tax | Apply Discount After Tax',
-      'make_auto_payment | Make Payment On Submit',
       'outstanding_amount | Outstanding Amount',
       'terms | Notes',
       'reference_type | Type',

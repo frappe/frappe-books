@@ -113,7 +113,15 @@ def get_trial_balance(filters) -> list[dict]:
 		closing = (before[0] + during[0], before[1] + during[1])
 		values[account] = [*_split(before), *during, *_split(closing)]
 	sections = _sections(TRIAL_BALANCE, values, len(TRIAL_BALANCE_KEYS))
-	return _rows(sections, TRIAL_BALANCE_KEYS, filters.hide_group_amounts)
+	rows = _rows(sections, TRIAL_BALANCE_KEYS, filters.hide_group_amounts)
+	if not sections:
+		return rows
+	total = [sum_decimal(values) for values in zip(*(section["total"] for section in sections), strict=True)]
+	return [
+		*rows,
+		{},
+		{"account": _("Total"), "indent": 0, **dict(zip(TRIAL_BALANCE_KEYS, total, strict=True))},
+	]
 
 
 @frappe.whitelist()

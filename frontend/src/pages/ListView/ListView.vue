@@ -4,9 +4,9 @@
       <template #mobile>
         <FrappeButton
           v-if="canCreate && !isSelectionMode"
-          variant="ghost"
+          variant="solid"
           size="md"
-          icon="lucide-plus"
+          icon-left="lucide-plus"
           :label="t`New`"
           @click="handleMakeNewDoc"
         />

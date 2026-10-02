@@ -76,7 +76,26 @@
     </div>
 
     <MobileFooter v-if="isMobile">
+      <template v-if="canShare">
+        <FrappeButton
+          size="lg"
+          icon="lucide-download"
+          :label="t`Save as PDF`"
+          :disabled="!printDocument"
+          @click="savePDF()"
+        />
+        <FrappeButton
+          class="flex-1"
+          size="lg"
+          icon-left="lucide-share"
+          :label="t`Share`"
+          :loading="isSharing"
+          :disabled="!printDocument"
+          @click="sharePDF()"
+        />
+      </template>
       <FrappeButton
+        v-else
         class="flex-1"
         size="lg"
         icon-left="lucide-download"
@@ -114,7 +133,9 @@ import { getSchema } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { showToast } from 'src/utils/interactive';
 import {
+  canSharePDF,
   downloadPDF,
+  getPDF,
   getPrintHTML,
   openPrintView,
 } from 'src/utils/printFormatApi';
@@ -147,7 +168,7 @@ export default defineComponent({
     name: { type: String, required: true },
   },
   setup() {
-    return { isMobile, ...usePinchZoom() };
+    return { isMobile, canShare: canSharePDF(), ...usePinchZoom() };
   },
   data() {
     return {
@@ -158,6 +179,8 @@ export default defineComponent({
       templateName: null,
       templateList: [],
       templateRequest: 0,
+      sharedPDF: null,
+      isSharing: false,
     } as {
       doc: null | FrappeDoc;
       scale: number;
@@ -166,6 +189,8 @@ export default defineComponent({
       templateName: null | string;
       templateList: string[];
       templateRequest: number;
+      sharedPDF: null | { key: string; file: File };
+      isSharing: boolean;
     };
   },
   computed: {
@@ -295,6 +320,7 @@ export default defineComponent({
       this.templateDoc = null;
       this.scale = 1;
       this.zoom = 1;
+      this.sharedPDF = null;
     },
     async onTemplateNameChange(value: string | null): Promise<void> {
       if (!value) {
@@ -349,6 +375,47 @@ export default defineComponent({
       } catch (error) {
         await handleErrorWithDialog(error);
       }
+    },
+    /** Hands the PDF to the system share sheet, as messaging apps expect a file. */
+    async sharePDF() {
+      if (!this.templateName) {
+        return;
+      }
+
+      this.isSharing = true;
+      try {
+        const file = await this.getSharedPDF(this.templateName);
+        await navigator.share({ files: [file], title: this.name });
+      } catch (error) {
+        await this.handleShareError(error);
+      } finally {
+        this.isSharing = false;
+      }
+    },
+    async getSharedPDF(templateName: string): Promise<File> {
+      const key = [this.doctype, this.name, templateName].join('/');
+      if (this.sharedPDF?.key === key) {
+        return this.sharedPDF.file;
+      }
+
+      const file = await getPDF(this.doctype, this.name, templateName);
+      this.sharedPDF = { key, file };
+      return file;
+    },
+    async handleShareError(error: unknown) {
+      const name = error instanceof DOMException ? error.name : '';
+      if (name === 'AbortError') {
+        return;
+      }
+
+      // Fetching the PDF can outlast the tap the browser needs to share; the
+      // PDF is kept, so the next tap shares at once.
+      if (name === 'NotAllowedError') {
+        showToast({ message: this.t`PDF ready. Tap Share again.` });
+        return;
+      }
+
+      await handleErrorWithDialog(error as Error);
     },
     openPrintDialog() {
       if (!this.templateName) {

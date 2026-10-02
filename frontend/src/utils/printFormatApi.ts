@@ -43,6 +43,16 @@ export async function downloadPDF(
   name: string,
   printFormat: string
 ): Promise<void> {
+  const pdf = await getPDF(doctype, name, printFormat);
+  downloadFile(new Uint8Array(await pdf.arrayBuffer()), pdf.name, pdf.type);
+}
+
+/** Frappe's PDF of a saved document, as a file named after it. */
+export async function getPDF(
+  doctype: string,
+  name: string,
+  printFormat: string
+): Promise<File> {
   const params = new URLSearchParams({ doctype, name, format: printFormat });
   const response = await fetch(
     `/api/method/frappe.utils.print_format.download_pdf?${params.toString()}`
@@ -51,8 +61,15 @@ export async function downloadPDF(
     throw new Error(await getServerMessage(response));
   }
 
-  const pdf = new Uint8Array(await response.arrayBuffer());
-  downloadFile(pdf, `${name}.pdf`, 'application/pdf');
+  return new File([await response.arrayBuffer()], `${name}.pdf`, {
+    type: 'application/pdf',
+  });
+}
+
+/** Whether the browser can hand a PDF to the system share sheet. */
+export function canSharePDF(): boolean {
+  const probe = new File([], 'probe.pdf', { type: 'application/pdf' });
+  return navigator.canShare?.({ files: [probe] }) ?? false;
 }
 
 /** Opens Frappe's print view of a saved document, which opens the print dialog. */

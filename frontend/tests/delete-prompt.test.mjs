@@ -35,7 +35,7 @@ test('deleting a document asks with a destructive Delete confirmation', async ()
   assert.equal(calls.length, 1);
   assert.equal(calls[0].title, 'Delete SINV-1001?');
   assert.equal(calls[0].confirmLabel, 'Delete');
-  assert.equal(calls[0].cancelLabel, 'Cancel');
+  assert.equal(calls[0].cancelLabel, 'Keep Sales Invoice');
   await calls[0].onConfirm();
   assert.equal(await deleted, true);
   assert.equal(doc.deletions, 1);

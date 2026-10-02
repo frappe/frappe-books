@@ -124,6 +124,18 @@ test('back closes the nav sheet before leaving the page', async ({ page }) => {
   await expect(page).toHaveURL(/\/books\/list\/SalesQuote$/);
 });
 
+test('back closes an open menu before leaving the page', async ({ page }) => {
+  await tab(page, 'Sales').click();
+  await expect(page).toHaveURL(/\/books\/list\/SalesInvoice$/);
+  await tab(page, 'Dashboard').click();
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.evaluate(() => history.back());
+
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(page).toHaveURL(/\/books\/?$/);
+});
+
 test('a right-to-left language lays Books out right to left', async ({
   page,
 }) => {

@@ -154,6 +154,10 @@ test('status badges use the status option label and the DocType state colour', (
     label: 'Draft',
     theme: 'gray',
   });
+  assert.deepEqual(
+    getDocStatusBadge({ schema, dirty: true, status: 'Saved' }),
+    { label: 'Not Saved', theme: 'amber' }
+  );
   assert.deepEqual(getStateBadge(getSchema('Lead'), 'Do not Contact'), {
     label: 'Do not Contact',
     theme: 'red',

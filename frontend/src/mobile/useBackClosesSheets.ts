@@ -2,7 +2,7 @@ import { onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 
 /**
- * The phone's back gesture closes the top sheet or picker before it
+ * The phone's back gesture closes the top sheet, menu or picker before it
  * leaves the page. Sheets that are routes themselves close by navigating.
  */
 export function useBackClosesSheets() {
@@ -20,15 +20,16 @@ export function useBackClosesSheets() {
       return true;
     }
 
-    const dialogs = document.querySelectorAll<HTMLElement>(
-      '[role="dialog"][data-state="open"]'
+    // Menus open after the sheet they belong to, so the last one is on top.
+    const layers = document.querySelectorAll<HTMLElement>(
+      '[role="dialog"][data-state="open"], [role="menu"][data-state="open"]'
     );
-    const top = dialogs[dialogs.length - 1];
+    const top = layers[layers.length - 1];
     if (!top) {
       return true;
     }
 
-    // Dismissible sheets close on Escape; confirmations stay until answered.
+    // Dismissible sheets and menus close on Escape; confirmations stay until answered.
     top.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
     );

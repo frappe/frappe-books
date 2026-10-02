@@ -359,7 +359,8 @@ function getDocstatusBadge(status: string): BadgeData {
     case 'Draft':
       return { label: t`Draft`, theme: 'gray' };
     case 'NotSaved':
-      return { label: t`Not Saved`, theme: 'gray' };
+      // Frappe's desk shows Not Saved in orange; amber is frappe-ui's nearest.
+      return { label: t`Not Saved`, theme: 'amber' };
     case 'Saved':
       return { label: t`Saved`, theme: 'blue' };
     case 'Submitted':

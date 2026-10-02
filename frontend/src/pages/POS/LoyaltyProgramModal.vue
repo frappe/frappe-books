@@ -19,16 +19,19 @@
           </p>
         </div>
       </div>
-      <Int
-        v-if="sinvDoc.fieldMap"
-        :show-label="true"
-        :border="true"
-        :focus-input="!isMobile"
-        :value="pendingLoyaltyPoints"
-        :df="sinvDoc.fieldMap.loyalty_points"
-        @keydown.enter="saveLoyaltyPoints"
-        @change="setPendingLoyaltyPoints"
-      />
+      <div v-if="sinvDoc.fieldMap">
+        <Int
+          :show-label="true"
+          :border="true"
+          :focus-input="!isMobile"
+          :invalid="Boolean(errorMessage)"
+          :value="pendingLoyaltyPoints"
+          :df="sinvDoc.fieldMap.loyalty_points"
+          @keydown.enter="saveLoyaltyPoints"
+          @change="setPendingLoyaltyPoints"
+        />
+        <FrappeErrorMessage class="mt-1.5" :message="errorMessage" />
+      </div>
     </div>
     <template #actions="{ size }">
       <FrappeButton :size="size" class="min-w-24" @click="cancelLoyaltyProgram">{{
@@ -45,13 +48,15 @@
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ErrorMessage as FrappeErrorMessage,
+} from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
 import Modal from 'src/components/POS/POSDialog.vue';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { defineComponent, inject } from 'vue';
 import { t } from 'fyo';
-import { showToast } from 'src/utils/interactive';
 import Int from 'src/components/Controls/Int.vue';
 
 export default defineComponent({
@@ -59,6 +64,7 @@ export default defineComponent({
   components: {
     Modal,
     FrappeButton,
+    FrappeErrorMessage,
     Int,
   },
   props: {
@@ -85,7 +91,7 @@ export default defineComponent({
   },
   data() {
     return {
-      validationError: false,
+      errorMessage: '',
       initialLoyaltyPoints: 0,
       pendingLoyaltyPoints: 0,
     };
@@ -98,13 +104,13 @@ export default defineComponent({
 
       this.initialLoyaltyPoints = this.sinvDoc.loyalty_points ?? 0;
       this.pendingLoyaltyPoints = this.initialLoyaltyPoints;
-      this.validationError = false;
+      this.errorMessage = '';
     },
   },
   methods: {
     setPendingLoyaltyPoints(value: number) {
       this.pendingLoyaltyPoints = value;
-      this.validationError = false;
+      this.errorMessage = '';
     },
     cancelLoyaltyProgram() {
       this.$emit('setLoyaltyPoints', this.initialLoyaltyPoints);
@@ -113,13 +119,12 @@ export default defineComponent({
     /** The server checks the points against the customer's balance and the invoice total. */
     applyLoyaltyPoints(newValue: number): boolean {
       if (newValue < 0) {
-        this.validationError = true;
-        showToast({ type: 'error', message: t`Points must be greater than 0` });
+        this.errorMessage = t`Points must be greater than 0`;
         return false;
       }
 
       this.$emit('setLoyaltyPoints', newValue);
-      this.validationError = false;
+      this.errorMessage = '';
       return true;
     },
     saveLoyaltyPoints() {

@@ -20,6 +20,7 @@
 
     <div
       v-if="tabOptions.length > 1"
+      ref="tabBar"
       class="sticky top-0 z-10 mt-1 flex items-center overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none]"
     >
       <!-- md is the largest TabButtons size (frappe/frappe-ui#1221). -->
@@ -127,10 +128,11 @@ import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
+import { revealActiveTab } from 'src/mobile/revealActiveTab';
 import { hasFieldValue } from 'src/utils/doc';
 import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc } from 'src/utils/ui';
-import { computed, nextTick } from 'vue';
+import { computed, nextTick, useTemplateRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import MobileFormSection from './MobileFormSection.vue';
 
@@ -183,6 +185,15 @@ const activeSections = computed(() => {
 
 const isFirstTab = computed(
   () => props.activeTab === (tabOptions.value[0]?.value ?? props.activeTab)
+);
+
+const tabBar = useTemplateRef<HTMLElement>('tabBar');
+watch(
+  () => props.activeTab,
+  async () => {
+    await nextTick();
+    revealActiveTab(tabBar.value);
+  }
 );
 
 const unresolvedFields = computed(() =>

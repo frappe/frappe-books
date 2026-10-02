@@ -96,15 +96,17 @@
       v-if="query && total"
       class="flex flex-col items-center gap-2.5 px-4 pb-10 pt-4"
     >
-      <p class="text-sm tabular-nums text-ink-gray-5">
-        {{ t`${rows.length} out of ${total}` }}
-      </p>
-      <FrappeButton
-        v-if="rows.length < total"
-        size="lg"
-        :label="t`Show all`"
-        @click="showAll = true"
-      />
+      <!-- The count only matters while some results are hidden. -->
+      <template v-if="rows.length < total">
+        <p class="text-sm tabular-nums text-ink-gray-5">
+          {{ t`${rows.length} out of ${total}` }}
+        </p>
+        <FrappeButton
+          size="lg"
+          :label="t`Show all`"
+          @click="showAll = true"
+        />
+      </template>
     </div>
     <MobileEmptyState
       v-else-if="query"

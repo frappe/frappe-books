@@ -3,16 +3,16 @@
     <FrappeList
       v-if="rows.length"
       class="-mx-4 list-row-px-4"
-      :columns="['minmax(0,1fr)', 'auto']"
-      :active="modelValue || undefined"
+      :columns="['minmax(0,1fr)', 'auto', '1rem']"
       :aria-label="t`Invoices`"
-      @update:active="select"
     >
       <FrappeListRow
         v-for="row in rows"
         :key="getRowName(row)"
         :value="getRowName(row)"
         class="h-17"
+        :aria-current="modelValue === getRowName(row) || undefined"
+        @click="select(getRowName(row))"
       >
         <FrappeListCell>
           <div class="min-w-0">
@@ -24,10 +24,21 @@
             </div>
           </div>
         </FrappeListCell>
-        <FrappeListCell v-if="amountField" class="justify-end">
-          <span class="text-lg-medium tabular-nums text-ink-gray-8" dir="ltr">
+        <FrappeListCell class="justify-end">
+          <span
+            v-if="amountField"
+            class="text-lg-medium tabular-nums text-ink-gray-8"
+            dir="ltr"
+          >
             {{ formatCell(row, amountField) }}
           </span>
+        </FrappeListCell>
+        <FrappeListCell>
+          <span
+            v-if="modelValue === getRowName(row)"
+            class="lucide-check size-4 text-ink-gray-7"
+            aria-hidden="true"
+          />
         </FrappeListCell>
       </FrappeListRow>
     </FrappeList>
@@ -158,6 +169,7 @@ export default defineComponent({
         .map((field) => this.formatCell(row, field))
         .join(' · ');
     },
+    /** Phones mark the choice with a check; the List's active surface is for desktop. */
     select(name: string | undefined) {
       this.$emit('update:modelValue', name ?? '');
     },

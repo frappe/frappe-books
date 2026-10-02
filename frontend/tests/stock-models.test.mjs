@@ -227,6 +227,23 @@ test('links of stock documents filter by the vocabulary of their targets', async
   assert.deepEqual(requests[0].params.filters, [['name', '=', 'Pen']]);
 });
 
+test('transfer rows offer only the batches and units of their item', async () => {
+  stubFrappe(() => ({
+    data: [{ unit: 'Unit', uom_conversions: [{ uom: 'Box' }] }],
+  }));
+  for (const name of ['Shipment', 'PurchaseReceipt']) {
+    const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
+    const { filters } = getModel(rowSchemas[name]);
+
+    assert.deepEqual(filters.batch(row), [['item', '=', 'Pen']], name);
+    assert.deepEqual(
+      await filters.transfer_unit(row),
+      [['name', 'in', ['Unit', 'Box']]],
+      name
+    );
+  }
+});
+
 test('stock lists show and filter by their Frappe fieldnames', () => {
   for (const name of stockSchemas) {
     const { columns } = frappeModels[name].getListViewSettings(fyo);

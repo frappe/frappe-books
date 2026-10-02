@@ -9,6 +9,7 @@ import {
   getJsonData,
   getLedgerLink,
   getRowReference,
+  newFrappeDoc,
 } from './helpers/frappe.mjs';
 
 await loadFrappeModels(frappeModels);
@@ -42,16 +43,40 @@ test('a ledger row shows its doctype by the schema label and opens the document'
   assert.equal(getRowReference(getReport(false), row), null);
 });
 
-test("a document's ledger opens filtered by its doctype", () => {
-  const link = getLedgerLink(
-    { schemaName: 'Shipment', name: 'SHPM-1001' },
-    'StockLedger'
-  );
+/** The report's From and To dates after it opens with the link's filters. */
+async function getLinkedDates(link) {
+  const report = new GeneralLedger(fyo);
+  report.filters = report.getFilters();
+  const filters = JSON.parse(link.query.defaultFilters);
+  await report.set('fromDate', filters.fromDate, false);
+  await report.set('toDate', filters.toDate, false);
+  return [report.fromDate, report.toDate];
+}
 
-  assert.deepEqual(JSON.parse(link.query.defaultFilters), {
-    referenceType: 'Books Shipment',
-    referenceName: 'SHPM-1001',
+test("a document's ledger opens filtered by its doctype, on its posting date", async () => {
+  // Half past midnight in the system time zone, the evening before in UTC.
+  const date = new Date('2020-05-01T00:30:00+05:30');
+  const shipment = newFrappeDoc('Shipment', { name: 'SHPM-1001', date });
+  const link = getLedgerLink(shipment, 'StockLedger');
+
+  const { referenceType, referenceName } = JSON.parse(
+    link.query.defaultFilters
+  );
+  assert.deepEqual(
+    [referenceType, referenceName],
+    ['Books Shipment', 'SHPM-1001']
+  );
+  assert.deepEqual(await getLinkedDates(link), ['2020-05-01', '2020-05-01']);
+});
+
+test('a journal entry ledger opens on its posting date', async () => {
+  const entry = newFrappeDoc('JournalEntry', {
+    posting_date: new Date(2019, 11, 31),
   });
+
+  const link = getLedgerLink(entry, 'GeneralLedger');
+
+  assert.deepEqual(await getLinkedDates(link), ['2019-12-31', '2019-12-31']);
 });
 
 test('report files name a reference type by its schema, as before', () => {

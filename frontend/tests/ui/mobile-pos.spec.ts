@@ -172,6 +172,27 @@ const sheets = [
   ['ShiftClose', 'Close POS Shift', 'Close Shift'],
 ];
 
+test('an invoice is picked by tapping its row, which shows a check', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.showModal('ReturnSalesInvoice')
+  );
+  const sheet = page.getByRole('dialog', { name: 'Return Sales Invoice' });
+  const create = sheet.getByRole('button', { name: 'Create Return' });
+  await expect(create).toBeDisabled();
+
+  const row = sheet
+    .getByRole('listitem')
+    .filter({ hasText: 'SINV-2026-0002' });
+  await row.click();
+
+  await expect(row).toHaveAttribute('aria-current', 'true');
+  await expect(row).not.toHaveAttribute('data-state', 'active');
+  await expect(sheet.locator('.lucide-check')).toHaveCount(1);
+  await expect(create).toBeEnabled();
+});
+
 test('every POS dialog opens as a bottom sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const [name, title, action] of sheets) {

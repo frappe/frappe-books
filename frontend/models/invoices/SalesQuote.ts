@@ -50,10 +50,11 @@ export class SalesQuote extends Invoice {
   static override rowModels = { items: SalesQuoteItem, taxes: TaxSummary };
 
   static override filters: FiltersMap = {
-    ...Invoice.filters,
     // Leads have no role.
     party: (doc: FrappeDoc) =>
       doc.reference_type === 'Books Party' ? Invoice.filters.party(doc) : [],
+    number_series: Invoice.filters.number_series,
+    price_list: Invoice.filters.price_list,
   };
 
   /** Quotes post no ledger entries. */

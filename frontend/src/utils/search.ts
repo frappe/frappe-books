@@ -114,7 +114,7 @@ function getCreateList(fyo: Fyo): SearchItem[] {
         group: 'Create',
         action: () => openNewDoc(schemaName),
         schemaName,
-      } as SearchItem)
+      }) as SearchItem
   );
 
   const filteredCreateList = [
@@ -252,7 +252,7 @@ function getListViewList(fyo: Fyo): SearchItem[] {
           label: s!.label,
           route: `/list/${s!.name}`,
           group: 'List',
-        } as SearchItem)
+        }) as SearchItem
     );
 
   const filteredLists = [
@@ -773,16 +773,43 @@ export class Search {
       }
     }
 
+    this._pushGroupedItems(keys, groupedKeywords, array, input);
+    this._setIntermediate(array, input);
+    return array;
+  }
+
+  /**
+   * Docs by priority group, with actions after group 0. Actions come first
+   * when a typed word names their group, because a loose match such as
+   * "create" in "Cloud Hosting - Shared Starter" would outrank them.
+   */
+  _pushGroupedItems(
+    keys: string[],
+    groupedKeywords: Record<string, Keyword[]>,
+    array: SearchItems,
+    input?: string
+  ) {
+    const actionsFirst = this._namesActionGroup(input);
+    if (actionsFirst) {
+      this._pushNonDocSearchItems(array, input);
+    }
+
     for (const key of keys) {
-      const keywords = groupedKeywords[key] ?? [];
-      this._pushDocSearchItems(keywords, array, input);
-      if (key === '0') {
+      this._pushDocSearchItems(groupedKeywords[key] ?? [], array, input);
+      if (key === '0' && !actionsFirst) {
         this._pushNonDocSearchItems(array, input);
       }
     }
+  }
 
-    this._setIntermediate(array, input);
-    return array;
+  /** Whether a typed word is an action group's name, such as "create". */
+  _namesActionGroup(input?: string): boolean {
+    const words = input?.toLowerCase().split(/\s+/) ?? [];
+    return this._nonDocSearchList.some(({ group }) =>
+      [group, this._groupLabelMap?.[group]].some(
+        (name) => !!name && words.includes(name.toLowerCase())
+      )
+    );
   }
 
   _pushDocSearchItems(keywords: Keyword[], array: SearchItems, input?: string) {

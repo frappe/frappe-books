@@ -576,6 +576,7 @@ for (const size of ['large', 'small']) {
     await expect(page.getByText('Party', { exact: true })).toBeVisible();
     await linked.press('Enter');
     await expect(page).toHaveURL(/\/edit\/Party\/Aarav%20Shah/);
+    await expect(page.getByText('Party', { exact: true })).toBeHidden();
   });
 }
 

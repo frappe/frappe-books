@@ -1,7 +1,10 @@
 <script lang="ts">
-import { DEFAULT_LOCALE } from 'fyo/utils/consts';
+import { DEFAULT_CURRENCY, DEFAULT_LOCALE } from 'fyo/utils/consts';
 import { fyo } from 'src/initFyo';
-import { getPhoneAxisLabels } from 'src/utils/chart';
+import {
+  getCompactCurrencyFormat,
+  getPhoneAxisLabels,
+} from 'src/utils/chart';
 import { PeriodKey } from 'src/utils/types';
 import { isMobile } from 'src/utils/viewport';
 import { PropType } from 'vue';
@@ -54,6 +57,16 @@ export default defineComponent({
     },
     phoneAxisLabels() {
       return getPhoneAxisLabels(this.locale);
+    },
+    /** Amounts short enough for a small space, e.g. "₹ 1.2L". */
+    compactCurrency(): (value: number) => string {
+      const currency =
+        (fyo.singles.SystemSettings?.currency as string | undefined) ??
+        DEFAULT_CURRENCY;
+      return getCompactCurrencyFormat(
+        this.locale,
+        fyo.currencySymbols[currency]
+      );
     },
   },
   watch: {

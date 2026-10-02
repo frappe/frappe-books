@@ -26,7 +26,7 @@
         align="end"
       >
         <template #trigger>
-          <FrappeButton class="w-40">{{ t`Create` }}</FrappeButton>
+          <FrappeButton>{{ t`Create` }}</FrappeButton>
         </template>
       </FrappeDropdown>
       <FrappeButton

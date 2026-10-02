@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, fyo, Search, stubFrappe } from './helpers/frappe.mjs';
+import {
+  createApp,
+  effectScope,
+  frappeModels,
+  fyo,
+  Search,
+  searcherKey,
+  shallowRef,
+  stubFrappe,
+  useSearch,
+} from './helpers/frappe.mjs';
 import { sortByFuzzyMatch } from './helpers/ui.mjs';
 
 await loadFrappeModels(frappeModels);
@@ -212,6 +222,34 @@ test('a superseded search is dropped and documents rank by status', async () => 
       ['SINV-1003', ['Acme']],
     ]
   );
+});
+
+test('typed text changes the results once, when its documents arrive', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const pending = [];
+  const { search } = makeSearch(({ body }) =>
+    body.doctype === 'Books Sales Invoice'
+      ? new Promise((resolve) => pending.push(resolve))
+      : []
+  );
+  const app = createApp({});
+  app.provide(searcherKey, shallowRef(search));
+  const scope = effectScope();
+  t.after(() => scope.stop());
+  const { query, results } = scope.run(() => app.runWithContext(useSearch));
+  const settle = () => new Promise((resolve) => setImmediate(resolve));
+  const first = () => results.value[0]?.label;
+  const before = first();
+
+  query.value = 'SINV';
+  await settle();
+  t.mock.timers.tick(250);
+  await settle();
+  assert.equal(first(), before);
+
+  pending[0]([{ name: 'SINV-1001', party: 'Acme', docstatus: 1 }]);
+  await settle();
+  assert.equal(first(), 'SINV-1001');
 });
 
 test('a word naming an action group lists those actions before records', async () => {

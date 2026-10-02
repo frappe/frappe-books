@@ -32,7 +32,7 @@ test('the System tab saves through Frappe and keeps the value after a reload', a
   page,
 }) => {
   await settings(page).getByRole('tab', { name: 'System' }).click();
-  const bypass = page.getByRole('checkbox', {
+  const bypass = page.getByRole('switch', {
     name: 'Allow to bypass filters',
   });
   const wasChecked = await bypass.isChecked();

@@ -66,11 +66,6 @@ interface SearchFilters {
   schemaFilters: Record<string, boolean>;
 }
 
-interface SearchIntermediate {
-  suggestions: SearchItems;
-  previousInput?: string;
-}
-
 export function getGroupLabelMap() {
   return {
     Create: t`Create`,
@@ -363,11 +358,8 @@ export class Search {
    * - Input is split on `' '` (whitespace) and each part has to completely
    *   or partially match the search target terms.
    * - Non matches are ignored.
-   * - Each letter in the input narrows the search using the `this._intermediate`
-   *   object where the incremental searches are stored.
    */
 
-  numSearches = 0;
   _docRequestId = 0;
   recentKey = 'searchRecents';
   searchables: Record<string, Searchable>;
@@ -400,8 +392,6 @@ export class Search {
   };
 
   fyo: Fyo;
-
-  _intermediate: SearchIntermediate = { suggestions: [] };
 
   _nonDocSearchList: SearchItem[];
   _groupLabelMap?: Record<SearchGroup, string>;
@@ -584,16 +574,9 @@ export class Search {
     this.filters.skipTables = false;
     this.filters.skipTransactions = false;
     this._setSchemaFilters();
-    this._setIntermediate([]);
   }
 
   set(filterName: string, value: boolean) {
-    /**
-     * When a filter is set, intermediate is reset
-     * this way the groups are rebuild with the filters
-     * applied.
-     */
-
     if (filterName in this.filters.groupFilters) {
       this.filters.groupFilters[filterName as SearchGroup] = value;
     } else if (filterName in this.searchables) {
@@ -615,8 +598,6 @@ export class Search {
         });
       this.filters.skipTransactions = value;
     }
-
-    this._setIntermediate([]);
   }
 
   initialize() {
@@ -648,7 +629,6 @@ export class Search {
       this._setKeywords(results[index] ?? [], searchable)
     );
 
-    this._setIntermediate([]);
     return true;
   }
 
@@ -684,70 +664,7 @@ export class Search {
     return !(searchable.isSubmittable && this.filters.skipTransactions);
   }
 
-  _searchSuggestions(input: string): SearchItems {
-    const matches: { si: SearchItems[number]; distance: number }[] = [];
-
-    for (const si of this._intermediate.suggestions) {
-      const label = si.label;
-      const groupLabel =
-        (si as DocSearchItem).schemaLabel || this._groupLabelMap?.[si.group];
-      const more = (si as DocSearchItem).more ?? [];
-      const values = [label, more, groupLabel]
-        .flat()
-        .filter(Boolean) as string[];
-
-      const { isMatch, distance } = this._getMatchAndDistance(input, values);
-
-      if (isMatch) {
-        matches.push({ si, distance });
-      }
-    }
-
-    matches.sort((a, b) => a.distance - b.distance);
-    const suggestions = matches.map((m) => m.si);
-    this._setIntermediate(suggestions, input);
-    return suggestions;
-  }
-
-  _shouldUseSuggestions(input?: string): boolean {
-    if (!input) {
-      return false;
-    }
-
-    const { suggestions, previousInput } = this._intermediate;
-    if (!suggestions?.length || !previousInput) {
-      return false;
-    }
-
-    if (!input.startsWith(previousInput)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  _setIntermediate(suggestions: SearchItems, previousInput?: string) {
-    this.numSearches = suggestions.length;
-    this._intermediate.suggestions = suggestions;
-    this._intermediate.previousInput = previousInput;
-  }
-
   search(input?: string): SearchItems {
-    const useSuggestions = this._shouldUseSuggestions(input);
-    /**
-     * If the suggestion list is already populated
-     * and the input is an extension of the previous
-     * then use the suggestions.
-     */
-    if (useSuggestions) {
-      return this._searchSuggestions(input!);
-    } else {
-      this._setIntermediate([]);
-    }
-
-    /**
-     * Create the suggestion list.
-     */
     const groupedKeywords = this._getGroupedKeywords();
     const keys = Object.keys(groupedKeywords);
     if (!keys.includes('0')) {
@@ -770,7 +687,6 @@ export class Search {
     }
 
     this._pushGroupedItems(keys, groupedKeywords, array, input);
-    this._setIntermediate(array, input);
     return array;
   }
 

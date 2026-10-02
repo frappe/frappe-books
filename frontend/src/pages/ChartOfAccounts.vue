@@ -11,10 +11,13 @@
     </PageHeader>
     <FrappeScrollArea
       v-if="root"
-      class="books-account-tree min-h-0 flex-1"
+      class="min-h-0 flex-1"
       viewport-class="px-3 pt-4 pb-10 sm:px-5"
     >
+      <!-- Tree hides its own focus ring, so the focused row draws one (frappe/frappe-ui#1258). -->
       <FrappeTree
+        ref="tree"
+        class="[&_[role=treeitem]:focus-visible>[data-slot=row]]:focus-ring"
         v-model:expanded="expandedAccounts"
         :nodes="accounts"
         node-key="name"
@@ -30,8 +33,7 @@
         <template #item-label="{ node }">
           <button
             type="button"
-            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-ink-gray-8"
-            :class="node.is_group ? 'text-base-medium' : 'text-base'"
+            class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-base leading-tighter text-ink-gray-8"
             :title="accountLabel(String(node.name))"
             @keydown.enter.stop
             @keydown.space.stop
@@ -118,6 +120,7 @@ import {
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
   type DropdownOptions,
+  type TreeExposed,
   Button as FrappeButton,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
@@ -242,12 +245,10 @@ export default defineComponent({
       return actions;
     },
     expand() {
-      this.expandedAccounts = this.getGroups(this.accounts).map(
-        (account) => account.name
-      );
+      (this.$refs.tree as TreeExposed).expandAll();
     },
     collapse() {
-      this.expandedAccounts = [];
+      (this.$refs.tree as TreeExposed).collapseAll();
     },
     isExpanded(account: AccountItem) {
       return this.expandedAccounts.includes(account.name);
@@ -515,22 +516,3 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
-.books-account-tree {
-  --tree-row-height: 2.25rem;
-}
-
-.books-account-tree :deep([data-slot='row']) {
-  gap: 0.5rem;
-  padding-inline: 0.5rem;
-}
-
-.books-account-tree :deep([role='treeitem']:focus-visible) {
-  outline: none;
-}
-
-.books-account-tree :deep([role='treeitem']:focus-visible > [data-slot='row']) {
-  outline: 2px solid var(--outline-gray-3);
-  outline-offset: -1px;
-}
-</style>

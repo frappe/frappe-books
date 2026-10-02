@@ -56,7 +56,7 @@
     </div>
 
     <p
-      v-if="!query && rows.length"
+      v-if="!resultsQuery && rows.length"
       class="px-4 pb-1.5 pt-3.5 text-sm text-ink-gray-5"
     >
       {{ t`Recent` }}
@@ -93,7 +93,7 @@
     </FrappeList>
 
     <div
-      v-if="query && total"
+      v-if="resultsQuery && total"
       class="flex flex-col items-center gap-2.5 px-4 pb-10 pt-4"
     >
       <!-- The count only matters while some results are hidden. -->
@@ -109,7 +109,7 @@
       </template>
     </div>
     <MobileEmptyState
-      v-else-if="query"
+      v-else-if="resultsQuery"
       class="flex-1 pb-40 pt-8"
       icon="lucide-search-x"
       :title="t`No results`"
@@ -173,6 +173,7 @@ const router = useRouter();
 const {
   searcher,
   query,
+  resultsQuery,
   results,
   revision,
   isFilterOn,
@@ -188,7 +189,8 @@ const showAll = ref(false);
 
 const matches = computed(() =>
   results.value.filter(
-    (item) => (query.value || item.group === 'Recent') && isPhonePage(item)
+    (item) =>
+      (resultsQuery.value || item.group === 'Recent') && isPhonePage(item)
   )
 );
 const total = computed(() => matches.value.length);

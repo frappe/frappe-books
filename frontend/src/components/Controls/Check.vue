@@ -9,10 +9,14 @@
     <!-- A field reserves the label line other fields have, even without a neighbor. -->
     <div class="row-start-2 flex min-w-0 items-center" :class="controlHeight">
       <!-- The box stays beside the first line of a wrapped label. -->
-      <FrappeCheckbox
+      <component
+        :is="asSwitch ? 'FrappeSwitch' : 'FrappeCheckbox'"
         ref="input"
-        class="min-w-0 max-w-full [&_[data-slot=control]]:self-start"
-        :class="{ '[&_[data-slot=label]]:text-ink-red-7': showMandatory }"
+        class="min-w-0 [&_[data-slot=control]]:self-start"
+        :class="[
+          asSwitch ? 'w-full' : 'max-w-full',
+          { '[&_[data-slot=label]]:text-ink-red-7': showMandatory },
+        ]"
         :model-value="getChecked(value)"
         :label="showLabel ? df.label : undefined"
         :aria-label="showLabel ? undefined : df.label"
@@ -27,19 +31,24 @@
 </template>
 
 <script lang="ts">
-import { Checkbox as FrappeCheckbox } from 'frappe-ui';
+import {
+  Checkbox as FrappeCheckbox,
+  Switch as FrappeSwitch,
+} from 'frappe-ui';
 import { defineComponent, PropType } from 'vue';
 import Base from './Base.vue';
 
 export default defineComponent({
   name: 'Check',
-  components: { FrappeCheckbox },
+  components: { FrappeCheckbox, FrappeSwitch },
   extends: Base,
   props: {
     layout: {
       default: 'inline',
       type: String as PropType<'inline' | 'field'>,
     },
+    /** Settings turn things on and off with a switch. */
+    asSwitch: { type: Boolean, default: false },
   },
   emits: ['focus'],
   computed: {

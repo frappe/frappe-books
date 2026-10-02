@@ -23,6 +23,13 @@
             ]"
             :style="field.invisible ? 'visibility: hidden;' : ''"
           >
+            <!-- A scan adds item rows, so its field sits above them. -->
+            <div
+              v-if="field.fieldname === 'items' && $slots.table"
+              class="mb-4 grid grid-cols-1 gap-x-8 md:grid-cols-2"
+            >
+              <slot name="table" />
+            </div>
             <Table
               v-if="field.fieldtype === 'Table'"
               ref="fields"
@@ -44,6 +51,7 @@
               class="w-full"
               :invalid="Boolean(errors?.[field.fieldname])"
               :layout="field.fieldtype === 'Check' ? 'inline' : undefined"
+              :as-switch="(switches && field.fieldtype === 'Check') || undefined"
               :size="field.fieldtype === 'AttachImage' ? 'form' : undefined"
               :show-label="true"
               :border="true"
@@ -96,6 +104,8 @@ export default defineComponent({
       required: true,
     },
     showTitle: Boolean,
+    /** Checks show as switches, as settings do. */
+    switches: Boolean,
     doc: { type: Object as PropType<FrappeDoc>, required: true },
     fields: { type: Array as PropType<Field[]>, required: true },
   },

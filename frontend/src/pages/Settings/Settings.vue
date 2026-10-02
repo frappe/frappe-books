@@ -32,6 +32,7 @@
           {{ name }}
         </h2>
         <CommonFormSection
+          switches
           :fields="fields"
           :doc="doc"
           :errors="errors"

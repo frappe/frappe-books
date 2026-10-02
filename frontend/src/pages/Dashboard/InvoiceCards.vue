@@ -30,12 +30,10 @@
 </template>
 <script lang="ts">
 import { t } from 'fyo';
-import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { Button as FrappeButton } from 'frappe-ui';
 import { NumberCard as FrappeNumberCard } from 'frappe-ui/charts';
 import { getDoctypeLabel, toSchemaName } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
-import { getCompactCurrencyFormat } from 'src/utils/chart';
 import {
   getInvoiceListFilters,
   getInvoiceSummary,
@@ -82,17 +80,9 @@ export default defineComponent({
       ];
     },
     valueFormat(): (value: number) => string {
-      if (!this.isMobile) {
-        return (value) => fyo.format(value, 'Currency');
-      }
-
-      const currency =
-        (fyo.singles.SystemSettings?.currency as string | undefined) ??
-        DEFAULT_CURRENCY;
-      return getCompactCurrencyFormat(
-        this.locale,
-        fyo.currencySymbols[currency]
-      );
+      return this.isMobile
+        ? this.compactCurrency
+        : (value) => fyo.format(value, 'Currency');
     },
   },
   methods: {

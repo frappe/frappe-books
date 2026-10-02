@@ -20,7 +20,7 @@
 					icon="lucide-chevron-right"
 					:label="t`Open linked entry`"
 					@pointerdown.prevent
-					@click.stop="$emit('open')"
+					@click.stop="open"
 				/>
 			</span>
 		</template>
@@ -43,6 +43,13 @@ export default defineComponent({
 	emits: ["open"],
 	data() {
 		return { previewOpen: false };
+	},
+	methods: {
+		/** The form stays alive behind the opened entry; an open preview would stay on screen. */
+		open() {
+			this.previewOpen = false;
+			this.$emit("open");
+		},
 	},
 });
 </script>

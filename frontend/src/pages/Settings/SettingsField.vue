@@ -25,6 +25,7 @@
         :class="{ 'w-full': hasInputWidth }"
         size="small"
         :border="true"
+        :as-switch="field.fieldtype === 'Check' || undefined"
         :df="field"
         :value="doc[field.fieldname]"
         @change="(value: DocValue) => $emit('change', value)"

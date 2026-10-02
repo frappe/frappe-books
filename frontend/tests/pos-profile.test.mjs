@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getLayout, loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, fyo, getSchema, posSetup } from './helpers/frappe.mjs';
+import {
+  frappeModels,
+  fyo,
+  getSchema,
+  pos,
+  posSetup,
+} from './helpers/frappe.mjs';
 
 const profile = {
   name: 'Counter 1',
@@ -61,4 +67,23 @@ test('the POS reads what its profile allows and lists, else POS Settings', async
   });
   assert.equal(await posSetup.getItemVisibility(), 'Non-Inventory Items');
   assert.equal((await posSetup.getPOSProfile()).pos_ui, 'Modern');
+});
+
+test('All Items lists stock and service items, hiding only stock that is out', () => {
+  assert.deepEqual(pos.getPOSItemFilters('All Items', 'Drinks'), [
+    ['item_group', '=', 'Drinks'],
+  ]);
+
+  const items = [
+    { name: 'Tea', track_item: 1 },
+    { name: 'Coffee', track_item: 1 },
+    { name: 'Gift Wrapping', track_item: 0 },
+  ];
+  const quantities = { Tea: { availableQty: 3 } };
+  const listed = (hideUnavailable) =>
+    pos
+      .getListedPOSItems(items, quantities, hideUnavailable)
+      .map(({ name }) => name);
+  assert.deepEqual(listed(false), ['Tea', 'Coffee', 'Gift Wrapping']);
+  assert.deepEqual(listed(true), ['Tea', 'Gift Wrapping']);
 });

@@ -179,7 +179,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
 		)
 		self._pricing_rule(
-			applied_items=[{"item": item.name}],
+			applied_items=[{"item": item.name, "unit": box.name}],
 			discount_type="Product Discount",
 			free_item=item.name,
 			free_item_quantity=2,

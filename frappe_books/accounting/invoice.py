@@ -272,6 +272,7 @@ def validate_invoice(invoice):
 		frappe.throw(_("At least one invoice item is required."))
 	_validate_features(invoice)
 	_validate_party_and_account(invoice)
+	pricing.validate_price_list(invoice)
 	if as_decimal(invoice.exchange_rate) <= 0:
 		frappe.throw(
 			_("Set an exchange rate from {0} to {1} above zero.").format(invoice.currency, company_currency())

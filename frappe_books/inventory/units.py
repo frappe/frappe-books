@@ -14,7 +14,7 @@ def populate_units(rows):
 	quantity and a row in another unit converts its transfer quantity.
 	Quantities in a whole-number unit must be whole.
 	"""
-	items = _item_units({row.item for row in rows if row.item})
+	items = item_units({row.item for row in rows if row.item})
 	for row in rows:
 		if row.item in items:
 			_populate_row_units(row, *items[row.item])
@@ -53,7 +53,7 @@ def _conversion_factor(row, factors):
 	return as_decimal(factors[row.transfer_unit])
 
 
-def _item_units(names):
+def item_units(names):
 	"""Map each item to its stock unit and the conversion factors of its other units."""
 	if not names:
 		return {}

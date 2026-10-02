@@ -506,14 +506,16 @@ class IntegrationTestReportPeriods(IntegrationTestCase):
 		(consolidated,) = get_periods(frappe._dict(until, consolidate_columns=1))
 		self.assertEqual((consolidated.from_date, consolidated.to_date), _dates("2026-07-01", "2026-09-30"))
 
-	def test_expense_only_profit_and_loss_has_no_profit_row(self):
+	def test_expense_only_profit_and_loss_shows_the_loss(self):
 		rent = make_account("Period Rent", root_type="Expense")
 		_post("2062-06-01", rent.name, 30, 0)
 
 		rows = _run("Books Profit and Loss", periodicity="Yearly", count=1, to_date="2062-12-31")
 
-		self.assertEqual(rows[-1]["account"], "Total Expense (Debit)")
-		self.assertNotIn("Total Profit", [row.get("account") for row in rows])
+		self.assertEqual(
+			[row.get("account") for row in rows[-3:]], ["Total Expense (Debit)", None, "Total Profit"]
+		)
+		self.assertEqual((rows[-1]["period_2062_12_31"], rows[-1]["total"]), _decimals(-30, -30))
 
 
 def _set_fiscal_year(start, end):

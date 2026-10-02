@@ -151,8 +151,6 @@ def _update_defaults(bank_account, accounts):
 		{
 			"sales_payment_account": accounts["cash"],
 			"purchase_payment_account": bank_account,
-			"shipment_location": "Stores",
-			"purchase_receipt_location": "Stores",
 			**{field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field},
 		}
 	)

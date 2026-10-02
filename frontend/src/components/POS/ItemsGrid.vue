@@ -14,7 +14,7 @@
         v-for="item in items"
         :key="item.name"
         type="button"
-        class="flex min-h-60 flex-col rounded-6 border border-outline-gray-1 bg-surface-base p-3 text-start transition-colors hover:bg-surface-gray-2 active:bg-surface-gray-3"
+        class="flex min-h-60 flex-col rounded-6 border border-outline-gray-1 bg-surface-base p-3 text-center transition-colors hover:bg-surface-gray-2 active:bg-surface-gray-3"
         :aria-label="t`Add ${item.name}`"
         @click="$emit('addItem', item)"
       >

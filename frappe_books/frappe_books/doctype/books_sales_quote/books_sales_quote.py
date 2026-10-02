@@ -35,7 +35,6 @@ class BooksSalesQuote(InvoiceController):
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check
 		items: DF.Table[BooksSalesQuoteItem]
-		make_auto_payment: DF.Check
 		net_total: DF.Currency
 		number_series: DF.Link
 		outstanding_amount: DF.Currency
@@ -67,7 +66,7 @@ def make_sales_invoice(source_name: str):
 			"Books Sales Quote": {
 				"doctype": "Books Sales Invoice",
 				"validation": {"docstatus": ["=", 1], "reference_type": ["=", "Books Party"]},
-				"field_no_map": ["date", "number_series", "make_auto_payment", "attachment"],
+				"field_no_map": ["date", "number_series", "attachment"],
 			},
 			"Books Sales Quote Item": {"doctype": "Books Sales Invoice Item"},
 		},

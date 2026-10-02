@@ -33,11 +33,6 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	"""Totals and validation shared by quotes and invoices."""
 
 	transaction_type: str
-	follow_up_fields = ("make_auto_payment",)
-
-	def __setup__(self):
-		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
-		self.dont_update_if_missing.extend(self.follow_up_fields)
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -52,15 +47,6 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 		_populate_invoice_defaults(self)
 		calculate_invoice(self)
 		loyalty.set_available_points(self)
-		self.set_follow_up_defaults()
-
-	def set_follow_up_defaults(self):
-		"""Pay on submit when Books Defaults says where to, unless the caller chose.
-
-		A quote offers it too, as its invoice would; the invoice decides again when it is made.
-		"""
-		if self.get("make_auto_payment") is None:
-			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
 
 	def validate(self):
 		validate_invoice(self)
@@ -92,6 +78,14 @@ class PostingInvoiceController(InvoiceController):
 
 	follow_up_fields = ("make_auto_payment", "make_auto_stock_transfer")
 
+	def __setup__(self):
+		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
+		self.dont_update_if_missing.extend(self.follow_up_fields)
+
+	def calculate(self):
+		super().calculate()
+		self.set_follow_up_defaults()
+
 	def fill_mapped_values(self):
 		"""Fill a mapped invoice as a save would, letting it choose its own follow-ups.
 
@@ -102,8 +96,9 @@ class PostingInvoiceController(InvoiceController):
 		self.calculate()
 
 	def set_follow_up_defaults(self):
-		"""Also transfer stock on submit when Books Defaults says where to, unless the caller chose."""
-		super().set_follow_up_defaults()
+		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
+		if self.get("make_auto_payment") is None:
+			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
 		if self.get("make_auto_stock_transfer") is None:
 			inventory = frappe.db.get_single_value("Books Accounting Settings", "enable_inventory")
 			self.make_auto_stock_transfer = int(bool(inventory and default_location(self)))

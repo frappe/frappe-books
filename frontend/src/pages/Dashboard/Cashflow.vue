@@ -15,7 +15,7 @@
     >
       <template #empty>
         <span class="text-p-sm text-ink-gray-5">
-          {{ t`No transactions yet` }}
+          {{ t`No transactions in this period` }}
         </span>
       </template>
       <template #error>

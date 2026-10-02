@@ -1,9 +1,10 @@
 import frappe
 from frappe import _
-from frappe.utils import add_days, add_months, get_first_day, get_year_start, getdate, month_diff
+from frappe.utils import add_days, add_months, get_first_day, getdate, month_diff
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
+from frappe_books.reports.periods import get_fiscal_year
 
 LEDGER = "Books Ledger Entry"
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
@@ -18,7 +19,7 @@ def get_period_dates(period: str) -> tuple:
 	"""Return the first and last day of a dashboard period, which ends today."""
 	today = getdate()
 	if period == "YTD":
-		return get_year_start(today), today
+		return get_fiscal_year(today)[0], today
 	if period not in PERIOD_MONTHS:
 		frappe.throw(_("Unknown dashboard period: {0}").format(period))
 	return get_first_day(add_months(today, 1 - PERIOD_MONTHS[period])), today
@@ -26,7 +27,7 @@ def get_period_dates(period: str) -> tuple:
 
 @frappe.whitelist()
 def get_cashflow(period: str) -> dict:
-	"""Return the cash and bank inflow and outflow of each month, and whether any exist at all."""
+	"""Return the cash and bank inflow and outflow of each month, and whether the period has any."""
 	from_date, to_date = get_period_dates(period)
 	fields = [*MONTH_FIELDS, {"SUM": "debit", "as": "inflow"}, {"SUM": "credit", "as": "outflow"}]
 	totals = _monthly_totals(from_date, to_date, CASH_ACCOUNTS, fields)
@@ -38,8 +39,7 @@ def get_cashflow(period: str) -> dict:
 		}
 		for month in _months(from_date, to_date)
 	]
-	has_data = bool(frappe.get_list(LEDGER, filters=CASH_ACCOUNTS, pluck="name", limit=1))
-	return {"months": months, "has_data": has_data}
+	return {"months": months, "has_data": bool(totals)}
 
 
 @frappe.whitelist()
@@ -61,7 +61,7 @@ def get_profit_and_loss(period: str) -> dict:
 
 @frappe.whitelist()
 def get_top_expenses(period: str) -> list[dict]:
-	"""Return the five expense accounts with the most spent in the period."""
+	"""Return the five expense accounts with the most spent in the period, and the rest as Others."""
 	from_date, to_date = get_period_dates(period)
 	rows = frappe.get_list(
 		LEDGER,
@@ -71,22 +71,25 @@ def get_top_expenses(period: str) -> list[dict]:
 		order_by="account",
 	)
 	# The query engine wraps an ORDER BY on this expression alias in MAX() on Postgres.
-	rows.sort(key=lambda row: row.balance, reverse=True)
-	return [{"account": row.account, "total": rounded(row.balance)} for row in rows[:5] if row.balance > 0]
+	spent = sorted((row for row in rows if row.balance > 0), key=lambda row: row.balance, reverse=True)
+	expenses = [{"account": row.account, "total": rounded(row.balance)} for row in spent[:5]]
+	if others := spent[5:]:
+		expenses.append({"account": _("Others"), "total": rounded(sum(row.balance for row in others))})
+	return expenses
 
 
 @frappe.whitelist()
 def get_invoice_summary(doctype: str, period: str) -> dict:
 	"""Return the paid and unpaid amounts and counts of the period's submitted invoices.
 
-	Credit notes count as positive amounts. `from_date` and `before_date` bound the invoice dates.
+	Credit notes are negative, so they reduce the amounts. `from_date` and `before_date` bound the invoice dates.
 	"""
 	if doctype not in INVOICE_DOCTYPES:
 		frappe.throw(_("{0} is not an invoice.").format(doctype))
 	from_date, to_date = get_period_dates(period)
 	conditions = [["docstatus", "=", 1], *datetime_conditions("date", from_date, to_date)]
 	totals = _invoice_totals(doctype, conditions)
-	total, unpaid = (sum(abs(as_decimal(row[field])) for row in totals) for field in ("total", "outstanding"))
+	total, unpaid = as_decimal(totals.total), as_decimal(totals.outstanding)
 	paid_count, unpaid_count = (
 		_count(doctype, [*conditions, ["outstanding_amount", operator, 0]]) for operator in ("=", "!=")
 	)
@@ -126,10 +129,7 @@ def _ledger_filters(from_date, to_date, filters):
 
 def _invoice_totals(doctype, conditions):
 	fields = [{"SUM": "base_grand_total", "as": "total"}, {"SUM": "outstanding_amount", "as": "outstanding"}]
-	return [
-		frappe.get_list(doctype, filters=[*conditions, ["return_against", "is", state]], fields=fields)[0]
-		for state in ("not set", "set")
-	]
+	return frappe.get_list(doctype, filters=conditions, fields=fields)[0]
 
 
 def _count(doctype, conditions):

@@ -13,6 +13,7 @@ import {
 } from 'src/frappe/registry';
 import {
   getSearchables,
+  getSeriesPrefixes,
   searchDocuments,
   type Searchable,
 } from 'src/frappe/search';
@@ -374,6 +375,7 @@ export class Search {
   _docRequestId = 0;
   recentKey = 'searchRecents';
   searchables: Record<string, Searchable>;
+  seriesPrefixes?: Record<string, string[]>;
   keywords: Record<string, Keyword[]>;
   priorityMap: Record<string, number> = {
     [ModelNameEnum.SalesInvoice]: 125,
@@ -640,13 +642,7 @@ export class Search {
       this._isSearchable(searchable)
     );
     const text = input?.trim();
-    const results = text
-      ? await Promise.all(
-          searchables.map((searchable) =>
-            searchDocuments(searchable, text, DOC_RESULT_LIMIT)
-          )
-        )
-      : [];
+    const results = text ? await this._searchDocuments(searchables, text) : [];
     if (requestId !== this._docRequestId) {
       return false;
     }
@@ -658,6 +654,23 @@ export class Search {
 
     this._setIntermediate([]);
     return true;
+  }
+
+  async _searchDocuments(searchables: Searchable[], text: string) {
+    this.seriesPrefixes ??= this.fyo.can(ModelNameEnum.NumberSeries, 'read')
+      ? await getSeriesPrefixes()
+      : {};
+    const { seriesPrefixes } = this;
+    return await Promise.all(
+      searchables.map((searchable) =>
+        searchDocuments(
+          searchable,
+          text,
+          DOC_RESULT_LIMIT,
+          seriesPrefixes[searchable.schemaName]
+        )
+      )
+    );
   }
 
   _isSearchable(searchable: Searchable): boolean {

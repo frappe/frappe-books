@@ -6,6 +6,7 @@ import {
   RenderData,
 } from 'fyo/model/types';
 import { Fyo, t } from 'fyo';
+import type { DocValue } from 'fyo/core/types';
 import { OptionField, Schema } from 'schemas/types';
 import { ModelNameEnum } from './types';
 
@@ -281,9 +282,11 @@ export function getLedgerLink(
 /** Local midnight of the day, in the system time zone, the server posts the document on. */
 function getPostingDate(doc: FrappeDoc): Date {
   const field = doc.fieldMap.date ?? doc.fieldMap.posting_date;
-  const value = toFrappeValue(doc.get(field.fieldname), field, doc.fyo);
-  return DateTime.fromISO(String(value).slice(0, 10)).toJSDate();
+  const value = doc.get(field.fieldname) as DocValue;
+  const day = String(toFrappeValue(value, field, doc.fyo)).slice(0, 10);
+  return DateTime.fromISO(day).toJSDate();
 }
+
 export function getMakeReturnDocAction(fyo: Fyo): Action {
   return {
     label: fyo.t`Return`,

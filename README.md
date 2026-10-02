@@ -39,17 +39,13 @@ Frappe Books started as a desktop app that keeps one company in one file on one 
 - **Phone App**: A phone layout with bottom tabs. Install it from the browser to your home screen.
 - **Regional**: India GST with the GSTR-1 and GSTR-2 reports, Swiss fields, and translations for more than 15 languages.
 
-<details open>
-
-<summary>More</summary>
+<div align="center">
 	<img src="./docs/images/desktop-invoice.png" alt="Sales invoice"/>
 	<img src="./docs/images/desktop-pos.png" alt="Point of Sale"/>
 	<img src="./docs/images/desktop-profit-and-loss.png" alt="Profit and Loss report"/>
 	<img src="./docs/images/desktop-dark.png" alt="Dashboard in dark mode"/>
-	<div align="center">
-		<img src="./docs/images/desktop-print.png" alt="Printed sales invoice" width="600"/>
-	</div>
-</details>
+	<img src="./docs/images/desktop-print.png" alt="Printed sales invoice" width="600"/>
+</div>
 
 ### On Your Phone
 

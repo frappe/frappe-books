@@ -5,7 +5,8 @@ import { syntaxTree } from '@codemirror/language';
 export function getCompletionsFromHints(hints: Record<string, unknown>) {
   const options = hintsToCompletionOptions(hints);
   return function completions(context: CompletionContext) {
-    let word = context.matchBefore(/\w*/);
+    // The whole path typed, as each option is one, like `doc.name`.
+    const word = context.matchBefore(/[\w.]*/);
     if (word == null) {
       return null;
     }

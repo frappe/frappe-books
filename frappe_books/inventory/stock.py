@@ -436,8 +436,9 @@ def _create_serial_numbers(item, serial_numbers):
 
 
 def _serial_status(transaction, transfer, cancel):
-	if cancel:
-		return "Active" if transfer.get("from_location") else "Inactive"
-	if transfer.get("from_location") and not transfer.get("to_location"):
+	if cancel and transfer.get("from_location"):
+		return "Active"
+	# Stock leaves: shipped or issued, or taken back out by cancelling a return or receipt.
+	if cancel or (transfer.get("from_location") and not transfer.get("to_location")):
 		return "Delivered" if transaction.doctype == "Books Shipment" else "Inactive"
 	return "Active"

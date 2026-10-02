@@ -136,10 +136,12 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		return _run("Books General Ledger", from_date="2045-01-01", to_date="2045-01-31", **filters)
 
 
-class IntegrationTestBalanceSheet(IntegrationTestCase):
-	"""Balance sheet totals sum every entry, so these tests keep out of the one-sided ledger tests."""
+class IntegrationTestBalancedReports(IntegrationTestCase):
+	"""Report totals sum every entry, so these tests keep out of the one-sided ledger tests."""
 
-	def test_balance_sheet_balances_with_the_profit_not_closed_into_equity(self):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
 		cash = make_account("Balance Cash")
 		sales = make_account("Balance Sales", root_type="Income")
 		rent = make_account("Balance Rent", root_type="Expense")
@@ -151,6 +153,14 @@ class IntegrationTestBalanceSheet(IntegrationTestCase):
 		):
 			_post(date, account, debit, credit)
 
+	def test_trial_balance_totals_debits_and_credits(self):
+		rows = _run("Books Trial Balance", from_date="2046-01-01", to_date="2046-12-31")
+
+		self.assertEqual(rows[-2:-1], [{}])
+		self.assertEqual(rows[-1]["account"], "Total")
+		self.assertEqual(_values(rows[-1], TRIAL_BALANCE_KEYS), _decimals(100, 100, 30, 30, 100, 100))
+
+	def test_balance_sheet_balances_with_the_profit_not_closed_into_equity(self):
 		rows = _rows_by_account(_run("Books Balance Sheet", **YEARS_2045_AND_2046))
 
 		profit = rows["Provisional Profit / Loss (Credit)"]

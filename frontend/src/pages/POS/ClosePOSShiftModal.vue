@@ -46,11 +46,7 @@
               </span>
               <span
                 class="shrink-0 text-base tabular-nums"
-                :class="
-                  row.difference_amount?.isNegative()
-                    ? 'text-ink-red-4'
-                    : 'text-ink-gray-9'
-                "
+                :class="getDifferenceClass(row.difference_amount)"
                 dir="ltr"
               >
                 {{ format(row.difference_amount) }}
@@ -228,6 +224,12 @@ export default defineComponent({
     },
     getField(fieldname: string): Field {
       return getField(ModelNameEnum.POSClosingShift, fieldname)!;
+    },
+    /** Colours a difference by its sign; an exact count stays gray. */
+    getDifferenceClass(amount?: Money): string {
+      if (amount?.isNegative()) return 'text-ink-red-5';
+      if (amount?.isPositive()) return 'text-ink-green-5';
+      return 'text-ink-gray-9';
     },
     format(amount?: Money): string {
       return fyo.format(amount ?? fyo.pesa(0), 'Currency');

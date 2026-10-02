@@ -200,11 +200,7 @@ import { handleErrorWithDialog } from 'src/errorHandling';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { showDialog, showToast } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
-import {
-  getPrintHints,
-  getPrintHTML,
-  previewPrintHTML,
-} from 'src/utils/printFormatApi';
+import { getPrintHints } from 'src/utils/printFormatApi';
 import {
   PageSize,
   PrintHints,
@@ -313,7 +309,7 @@ export default defineComponent({
   },
   computed: {
     canEditTemplate(): boolean {
-      return !!this.doc?.isEditable && !!this.doc?.canEdit;
+      return !!this.doc?.canEditTemplate;
     },
     canDisplayPreview(): boolean {
       return !!this.printDocument || !!this.error;
@@ -503,21 +499,12 @@ export default defineComponent({
       }
     },
     async getPreview(): Promise<PrintHTML | null> {
-      const doc = this.doc;
       const name = this.displayDoc?.name;
-      if (!doc || !name) {
+      if (!this.doc || !name) {
         return null;
       }
 
-      if (!doc.isEditable) {
-        return await getPrintHTML(this.doctype, name, doc.name!);
-      }
-
-      if (!doc.html) {
-        return null;
-      }
-
-      return await previewPrintHTML(this.doctype, name, doc.html, doc.css);
+      return await this.doc.getPrint(name);
     },
     reset() {
       this.doc = null;

@@ -242,7 +242,7 @@ export const previousForms = {
         'number_series | Number Series |  | Default | ',
         'party | Party |  | Default | ',
         'date | Date |  | Default | ',
-        'items | Items |  | Default | ',
+        'items | Items |  | Items | ',
         'grand_total | Grand Total |  | Items | ',
         'terms | Notes | Add transfer terms | References | ',
         'attachment | Attachment | Add attachment | References | ',

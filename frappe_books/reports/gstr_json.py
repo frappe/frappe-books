@@ -25,16 +25,18 @@ def get_gstr_json(report_name: str, filters: dict) -> dict:
 	if not gstin:
 		frappe.throw(_("Please set GSTIN in General Settings."), title=_("Cannot Export"))
 	filters = frappe._dict(filters)
-	rows = run(report_name, filters)["result"]
-	data = {
+	build = SECTIONS.get(filters.transfer_type)
+	if not build:
+		frappe.throw(
+			_("JSON export is only available for B2B, B2C-Large and B2C-Small."), title=_("Cannot Export")
+		)
+	return {
 		"version": "GST3.0.4",
 		"hash": "hash",
 		"gstin": gstin,
 		"fp": getdate(filters.to_date).strftime("%m%Y"),
+		filters.transfer_type.lower(): build(run(report_name, filters)["result"]),
 	}
-	if build := SECTIONS.get(filters.transfer_type):
-		data[filters.transfer_type.lower()] = build(rows)
-	return data
 
 
 def _b2b(rows) -> list[dict]:

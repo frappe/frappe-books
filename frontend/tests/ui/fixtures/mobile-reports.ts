@@ -183,8 +183,8 @@ function makeStockLedger() {
       column('location', 'Location', 'Link'),
       column('quantity', 'Quantity', 'Float'),
       column('balance_quantity', 'Balance Qty.', 'Float'),
-      column('reference_name', 'Ref. Name'),
-      column('reference_type', 'Ref. Type'),
+      column('reference_name', 'Ref Name'),
+      column('reference_type', 'Ref Type'),
     ],
     rows.map(([date, item, location, quantity, balance, name], index) => ({
       index: index + 1,

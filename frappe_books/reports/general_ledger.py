@@ -63,12 +63,14 @@ def _conditions(filters):
 	conditions = [
 		[fieldname, "=", filters[source]]
 		for source, fieldname in (
-			("account", "account"),
 			("party", "party"),
 			("reference_name", "voucher_no"),
 		)
 		if filters.get(source)
 	]
+	if filters.get("account"):
+		# A group account shows the entries of the accounts under it.
+		conditions.append(["account", "descendants of (inclusive)", filters["account"]])
 	if filters.get("reference_type") and filters["reference_type"] != "All":
 		conditions.append(["voucher_type", "=", filters["reference_type"]])
 	if not filters.get("reverted"):

@@ -84,7 +84,7 @@ export class GeneralLedger extends Report {
       },
       {
         fieldtype: 'DynamicLink',
-        label: t`Ref. Name`,
+        label: t`Ref Name`,
         references: 'referenceType',
         placeholder: t`Ref Name`,
         emptyMessage: t`Change Ref Type`,

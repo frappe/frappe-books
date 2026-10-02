@@ -68,6 +68,18 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 			[(row["reference_type"], row["debit"]) for row in entries], [("Books Payment", Decimal(30))]
 		)
 
+	def test_general_ledger_of_a_group_account_shows_its_accounts_entries(self):
+		_post("2044-12-31", self.cash.name, 100, 0)
+		_post("2045-01-05", self.cash.name, 50, 0)
+
+		rows = self._ledger(account=self.assets.name)
+
+		self.assertEqual(rows[0], _row("opening", "Opening", 0, 0, 100))
+		self.assertEqual(
+			[(row["account"], row["debit"]) for row in rows if row.get("type") == "entry"],
+			[(self.cash.name, Decimal(50))],
+		)
+
 	def test_trial_balance_splits_opening_and_closing_balances(self):
 		for date, debit, credit in (
 			("2044-12-31", 100, 20),
@@ -134,6 +146,40 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 
 	def _ledger(self, **filters):
 		return _run("Books General Ledger", from_date="2045-01-01", to_date="2045-01-31", **filters)
+
+
+class IntegrationTestBalancedReports(IntegrationTestCase):
+	"""Report totals sum every entry, so these tests keep out of the one-sided ledger tests."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cash = make_account("Balance Cash")
+		sales = make_account("Balance Sales", root_type="Income")
+		rent = make_account("Balance Rent", root_type="Expense")
+		for date, account, debit, credit in (
+			("2045-03-01", cash.name, 100, 0),
+			("2045-03-01", sales.name, 0, 100),
+			("2046-03-01", rent.name, 30, 0),
+			("2046-03-01", cash.name, 0, 30),
+		):
+			_post(date, account, debit, credit)
+
+	def test_trial_balance_totals_debits_and_credits(self):
+		rows = _run("Books Trial Balance", from_date="2046-01-01", to_date="2046-12-31")
+
+		self.assertEqual(rows[-2:-1], [{}])
+		self.assertEqual(rows[-1]["account"], "Total")
+		self.assertEqual(_values(rows[-1], TRIAL_BALANCE_KEYS), _decimals(100, 100, 30, 30, 100, 100))
+
+	def test_balance_sheet_balances_with_the_profit_not_closed_into_equity(self):
+		rows = _rows_by_account(_run("Books Balance Sheet", **YEARS_2045_AND_2046))
+
+		profit = rows["Provisional Profit / Loss (Credit)"]
+		self.assertEqual(_values(profit, PERIOD_KEYS), _decimals(70, 100))
+		self.assertEqual(
+			_values(rows["Total (Credit)"], PERIOD_KEYS), _values(rows["Total Asset (Debit)"], PERIOD_KEYS)
+		)
 
 
 def _group_account(label, root_type):
@@ -332,6 +378,54 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		self.assertEqual((row["rate"], row["igst_amount"], row["in_state"]), (*_decimals(18, 18), False))
 		self.assertNotIn("cgst_amount", row)
 
+	def test_supplies_to_unregistered_parties_are_not_reverse_charge(self):
+		self.party = self._party("Karnataka")
+		invoice = self._invoice((_tax(("CGST", 9), ("SGST", 9)), 100, 1))
+
+		(row,) = self._rows(invoice)
+
+		self.assertEqual((row["gstin"], row["reverse_charge"]), ("", "N"))
+
+	def test_interstate_consumer_invoices_above_one_lakh_are_large_from_august_2024(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "27AAAAA0000A1Z5")
+		self.party = self._party("Karnataka")
+		igst_25 = _tax(("IGST", 25))
+		invoices = [
+			self._invoice((igst_25, rate, 1), date=date)
+			for date, rate in (("2064-03-10", 80001), ("2064-03-10", 80000), ("2024-07-31", 80001))
+		]
+
+		dates = {"from_date": "2024-07-31", "to_date": "2064-03-10"}
+		large = {row["invoice_no"] for row in _run("Books GSTR-1", transfer_type="B2CL", **dates)}
+		small = {row["invoice_no"] for row in _run("Books GSTR-1", transfer_type="B2CS", **dates)}
+
+		self.assertEqual([invoice.name in large for invoice in invoices], [True, False, False])
+		self.assertEqual([invoice.name in small for invoice in invoices], [False, True, True])
+
+	def test_nil_rated_supplies_show_only_as_nil_rated(self):
+		registered = self._party("Karnataka", gstin="29AAAAA0000A1Z5")
+		unregistered = self._party("Karnataka")
+		gst_0 = _tax(("CGST", 0), ("SGST", 0))
+		invoices = []
+		for party in (registered, unregistered):
+			self.party = party
+			invoices.append(self._invoice((gst_0, 100, 1), date="2064-04-20").name)
+
+		def shown(transfer_type):
+			rows = _run(
+				"Books GSTR-1", from_date="2064-04-20", to_date="2064-04-20", transfer_type=transfer_type
+			)
+			return sorted(row["invoice_no"] for row in rows)
+
+		self.assertEqual([shown(transfer_type) for transfer_type in ("B2B", "B2CL", "B2CS")], [[], [], []])
+		self.assertEqual(shown("NR"), sorted(invoices))
+
+	def test_json_export_refuses_sections_it_cannot_build(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+
+		with self.assertRaisesRegex(frappe.ValidationError, "JSON"):
+			self._json("NR")
+
 	def test_invoices_and_parties_are_read_in_batches(self):
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))
 		first = self._invoice((gst_18, 100, 1))
@@ -360,6 +454,17 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			[(item["num"], item["itm_det"]["txval"], item["itm_det"]["iamt"]) for item in invoice["itms"]],
 			[(1, *_decimals(100, 18)), (2, *_decimals(50, "2.5"))],
 		)
+
+	def test_place_of_supply_falls_back_to_the_gstin_state(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+		self.party = self._party("Bombay", gstin="27AAAAA0000A1Z5")
+		self._invoice((_tax(("IGST", 18)), 100, 1), date="2064-05-05")
+
+		(customer,) = get_gstr_json(
+			"Books GSTR-1", {"from_date": "2064-05-05", "to_date": "2064-05-05", "transfer_type": "B2B"}
+		)["b2b"]
+
+		self.assertEqual(customer["inv"][0]["pos"], "27")
 
 	def test_json_sums_small_consumer_supplies_by_state_and_rate(self):
 		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
@@ -513,14 +618,16 @@ class IntegrationTestReportPeriods(IntegrationTestCase):
 		(consolidated,) = get_periods(frappe._dict(until, consolidate_columns=1))
 		self.assertEqual((consolidated.from_date, consolidated.to_date), _dates("2026-07-01", "2026-09-30"))
 
-	def test_expense_only_profit_and_loss_has_no_profit_row(self):
+	def test_expense_only_profit_and_loss_shows_the_loss(self):
 		rent = make_account("Period Rent", root_type="Expense")
 		_post("2062-06-01", rent.name, 30, 0)
 
 		rows = _run("Books Profit and Loss", periodicity="Yearly", count=1, to_date="2062-12-31")
 
-		self.assertEqual(rows[-1]["account"], "Total Expense (Debit)")
-		self.assertNotIn("Total Profit", [row.get("account") for row in rows])
+		self.assertEqual(
+			[row.get("account") for row in rows[-3:]], ["Total Expense (Debit)", None, "Total Profit"]
+		)
+		self.assertEqual((rows[-1]["period_2062_12_31"], rows[-1]["total"]), _decimals(-30, -30))
 
 
 def _set_fiscal_year(start, end):

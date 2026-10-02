@@ -18,6 +18,7 @@ export abstract class BaseGSTR extends Report {
     if (this.gstrType === 'GSTR-2') {
       return {
         B2B: 'B2B',
+        NR: 'Nil Rated, Exempted and Non GST supplies',
       };
     }
 

@@ -39,8 +39,8 @@ def get_ledger_columns() -> list[dict]:
 		{"fieldname": "valuation_rate", "label": _("Valuation Rate"), "fieldtype": "Currency"},
 		{"fieldname": "balance_value", "label": _("Balance Value"), "fieldtype": "Currency"},
 		{"fieldname": "value_change", "label": _("Value Change"), "fieldtype": "Currency"},
-		{"fieldname": "reference_name", "label": _("Ref. Name"), "fieldtype": "Data"},
-		{"fieldname": "reference_type", "label": _("Ref. Type"), "fieldtype": "Data"},
+		{"fieldname": "reference_name", "label": _("Ref Name"), "fieldtype": "Data"},
+		{"fieldname": "reference_type", "label": _("Ref Type"), "fieldtype": "Data"},
 	]
 
 

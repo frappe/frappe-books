@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import date
 
 import frappe
 from frappe import _
@@ -9,17 +10,13 @@ from frappe_books.regional import INDIAN_STATES
 from frappe_books.reports.filters import datetime_conditions
 
 TAX_AMOUNT_FIELDS = {"IGST": "igst_amount", "CGST": "cgst_amount", "SGST": "sgst_amount"}
-LARGE_B2C_INVOICE = 250000
+# CGST rule 59(4): interstate B2C invoices above this value are listed one by one. Notification
+# 12/2024-Central Tax lowered it from 2,50,000 to 1,00,000 from 1 August 2024.
+LARGE_B2C_INVOICE = 100000
+LARGE_B2C_INVOICE_FROM = date(2024, 8, 1)
+LARGE_B2C_INVOICE_BEFORE = 250000
 # SQLite allows 32766 query parameters.
 IN_LIST_BATCH_SIZE = 1000
-TRANSFER_TYPES = {
-	"B2B": lambda row: bool(row["gstin"]),
-	"B2CL": lambda row: (
-		not row["gstin"] and not row["in_state"] and row["invoice_value"] >= LARGE_B2C_INVOICE
-	),
-	"B2CS": lambda row: not row["gstin"] and (row["in_state"] or row["invoice_value"] < LARGE_B2C_INVOICE),
-	"NR": lambda row: row["rate"] == 0,
-}
 
 
 def get_default_filters() -> dict:
@@ -130,9 +127,8 @@ def _get_list_in(doctype, fieldname, values, filters=None, **kwargs):
 
 
 def _place(party, positions):
-	if party.address:
-		return positions.get(party.address) or ""
-	return _gstin_state(party.gstin)
+	"""The state of the party's address, or else of its GSTIN."""
+	return positions.get(party.address) or _gstin_state(party.gstin)
 
 
 def _gstin_state(gstin):
@@ -145,7 +141,8 @@ def _row_header(invoice, gstin, place, company_state):
 		"party": invoice.party,
 		"invoice_no": invoice.name,
 		"invoice_date": getdate(invoice.date),
-		"reverse_charge": "N" if gstin else "Y",
+		# Reverse charge depends on what is supplied, not on the GSTIN, and Books records no such supply.
+		"reverse_charge": "N",
 		"in_state": bool(company_state) and company_state == place,
 		"place": place,
 		"invoice_value": as_decimal(invoice.base_grand_total),
@@ -179,6 +176,20 @@ def _in_company_currency(row, exchange_rate):
 		if field in row:
 			row[field] = rounded(row[field] * as_decimal(exchange_rate or 1))
 	return row
+
+
+def _is_large_b2c(row):
+	limit = LARGE_B2C_INVOICE if row["invoice_date"] >= LARGE_B2C_INVOICE_FROM else LARGE_B2C_INVOICE_BEFORE
+	return not row["gstin"] and not row["in_state"] and row["invoice_value"] > limit
+
+
+# Nil rated, exempted and non-GST supplies show only under NR.
+TRANSFER_TYPES = {
+	"B2B": lambda row: row["rate"] != 0 and bool(row["gstin"]),
+	"B2CL": lambda row: row["rate"] != 0 and _is_large_b2c(row),
+	"B2CS": lambda row: row["rate"] != 0 and not row["gstin"] and not _is_large_b2c(row),
+	"NR": lambda row: row["rate"] == 0,
+}
 
 
 def _matches(row, filters):

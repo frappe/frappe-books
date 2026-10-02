@@ -169,6 +169,32 @@ class IntegrationTestPricing(IntegrationTestCase):
 				free_item_unit=box.name,
 			)
 
+	def test_recursive_rule_gives_its_quantity_for_every_stock_units(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		item = make_item(
+			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
+		)
+		self._pricing_rule(
+			applied_items=[{"item": item.name}],
+			discount_type="Product Discount",
+			free_item=item.name,
+			free_item_quantity=2,
+			is_recursive=1,
+			recurse_every=12,
+		)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			item.name,
+			self.income.name,
+			items=[{"item": item.name, "transfer_unit": box.name, "transfer_quantity": 3, "rate": 10}],
+		)
+
+		free_row = next(row for row in invoice.items if row.is_free_item)
+		self.assertEqual(free_row.quantity, 6)
+
 	def test_rule_values_reset_when_rule_stops_applying(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		for values in (

@@ -74,6 +74,8 @@ test('the offline screen covers the page until the connection returns', async ({
 test('a request that cannot reach the server shows the offline screen', async ({
   page,
 }) => {
+  // A dashboard request answered after the cut would hide the screen again.
+  await expect(page.locator('.fui-skeleton')).toHaveCount(0);
   await page.route('**/api/**', (route) =>
     route.abort('internetdisconnected')
   );

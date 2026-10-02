@@ -364,8 +364,8 @@ test('payment buttons match the form text scale', async ({ page }) => {
   const amount = dialog.getByRole('spinbutton', { name: 'Paid amount' });
   const inputFont = await amount.evaluate((el) => getComputedStyle(el).fontSize);
   const inputHeight = await amount.evaluate((el) => getComputedStyle(el).height);
-  const buttons = dialog.locator('footer button, button[aria-pressed]');
-  await expect(dialog.locator('button[aria-pressed]')).toHaveCount(5);
+  const buttons = dialog.locator('footer button, [role="radio"]');
+  await expect(dialog.getByRole('radio')).toHaveCount(5);
   for (const button of await buttons.all()) {
     await expect(button).toHaveCSS('font-size', inputFont);
     await expect(button).toHaveCSS('height', inputHeight);

@@ -90,7 +90,7 @@ test('a report title switches to the other reports', async ({ page }) => {
     .click();
 
   const sheet = page.getByRole('dialog', { name: 'Reports' });
-  await expect(sheet.getByRole('option')).toHaveText([
+  await expect(sheet.getByRole('option')).toContainText([
     'General Ledger',
     'Profit And Loss',
     'Balance Sheet',

@@ -65,8 +65,7 @@
     </div>
     <div
       v-if="!isReadOnly"
-      class="flex w-full h-full absolute justify-center items-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-      style="background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(2px)"
+      class="flex w-full h-full absolute justify-center items-end bg-black-overlay-200 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-black-overlay-700"
     >
       <FrappeButton
         v-if="value"

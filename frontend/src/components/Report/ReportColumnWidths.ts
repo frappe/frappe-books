@@ -1,5 +1,5 @@
 import type { ColumnField, ReportData } from 'reports/types';
-import { ColumnWidths } from 'src/utils/columnWidths';
+import { ColumnWidths, getFont, measureText } from 'src/utils/columnWidths';
 
 export class ReportColumnWidths extends ColumnWidths {
   private remSize = parseFloat(
@@ -38,8 +38,8 @@ export class ReportColumnWidths extends ColumnWidths {
     const bodyStyle = getComputedStyle(body);
     const padding =
       parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-    context.font = style.font;
-    let width = this.measure(context, column.label, style);
+    context.font = getFont(style);
+    let width = measureText(context, column.label, style);
 
     for (const row of rows) {
       const cell = row.cells[index];
@@ -51,20 +51,10 @@ export class ReportColumnWidths extends ColumnWidths {
       const indent = (cell.indent ?? 0) * 2 * this.remSize;
       width = Math.max(
         width,
-        this.measure(context, cell.value, bodyStyle) + indent
+        measureText(context, cell.value, bodyStyle) + indent
       );
     }
 
     this.set(column.fieldname, Math.ceil(width + padding + 2), true);
-  }
-
-  private measure(
-    context: CanvasRenderingContext2D,
-    value: string,
-    style: CSSStyleDeclaration
-  ) {
-    const text = value.replace(/\s+/g, ' ');
-    const spacing = parseFloat(style.letterSpacing) || 0;
-    return context.measureText(text).width + text.length * spacing;
   }
 }

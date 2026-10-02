@@ -1,6 +1,22 @@
 export const MIN_COLUMN_WIDTH = 48;
 export const MAX_COLUMN_WIDTH = 4096;
 
+/** Canvas font of an element; `style.font` is empty when it has no shorthand. */
+export function getFont(style: CSSStyleDeclaration) {
+  return `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+}
+
+/** Text width in the context's font, with the element's letter spacing. */
+export function measureText(
+  context: CanvasRenderingContext2D,
+  value: string,
+  style: CSSStyleDeclaration
+) {
+  const text = value.replace(/\s+/g, ' ');
+  const spacing = parseFloat(style.letterSpacing) || 0;
+  return context.measureText(text).width + text.length * spacing;
+}
+
 /** Column widths in pixels, kept per browser under `storageKey`. */
 export class ColumnWidths {
   widths: Record<string, number> = {};

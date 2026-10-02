@@ -7,9 +7,9 @@
     />
     <div
       v-if="value"
-      class="flex min-h-[52px] items-center gap-2.5 rounded-5 border border-outline-gray-2 pe-1 ps-3"
+      class="flex min-h-13 items-center gap-2.5 rounded-5 border border-outline-gray-2 pe-1 ps-3"
     >
-      <span class="lucide-file-text size-[18px] shrink-0 text-ink-gray-6" aria-hidden="true" />
+      <span class="lucide-file-text size-5 shrink-0 text-ink-gray-6" aria-hidden="true" />
       <button
         class="flex min-w-0 flex-1 flex-col gap-0.5 py-2 text-start"
         @click="download"

@@ -27,7 +27,7 @@
           :disabled="uploading"
           @click="openFileSelector"
         >
-          <span class="lucide-image-plus size-[22px]" aria-hidden="true" />
+          <span class="lucide-image-plus size-6" aria-hidden="true" />
           {{ uploading ? t`Uploading...` : t`Upload` }}
         </button>
       </template>

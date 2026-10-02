@@ -11,7 +11,7 @@
         v-if="appIconUrl"
         :src="appIconUrl"
         alt=""
-        class="size-16 rounded-[14px] ring-1 ring-outline-gray-1"
+        class="size-16 rounded-6 ring-1 ring-outline-gray-1"
       />
       <p class="text-p-md text-ink-gray-7">
         {{

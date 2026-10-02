@@ -51,7 +51,7 @@
           <PrintSheet
             v-if="printDocument"
             ref="printSheet"
-            class="mx-auto shadow-lg border"
+            class="mx-auto shadow-sm border"
             :document="printDocument"
             :scale="Math.max(scale, 0.1)"
             :width="pageSize.width"

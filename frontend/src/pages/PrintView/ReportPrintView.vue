@@ -17,7 +17,7 @@
         <!-- Report Print Display Container -->
         <PrintSheet
           ref="printSheet"
-          class="shadow-lg border mx-auto"
+          class="shadow-sm border mx-auto"
           :scale="scale"
           :width="size.width"
           :height="size.height"

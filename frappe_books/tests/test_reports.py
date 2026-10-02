@@ -448,6 +448,17 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			[(1, *_decimals(100, 18)), (2, *_decimals(50, "2.5"))],
 		)
 
+	def test_place_of_supply_falls_back_to_the_gstin_state(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+		self.party = self._party("Bombay", gstin="27AAAAA0000A1Z5")
+		self._invoice((_tax(("IGST", 18)), 100, 1), date="2064-05-05")
+
+		(customer,) = get_gstr_json(
+			"Books GSTR-1", {"from_date": "2064-05-05", "to_date": "2064-05-05", "transfer_type": "B2B"}
+		)["b2b"]
+
+		self.assertEqual(customer["inv"][0]["pos"], "27")
+
 	def test_json_sums_small_consumer_supplies_by_state_and_rate(self):
 		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))

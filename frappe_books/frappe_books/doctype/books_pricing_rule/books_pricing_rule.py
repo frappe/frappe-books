@@ -110,6 +110,7 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 			self.validate_price_discount()
 		elif self.discount_type == "Product Discount":
 			self.validate_product_discount()
+		self.validate_units()
 
 	def get_limit_message(self, lower, upper):
 		"""The message /books shows at the edited limit: the upper one's when only it changed."""
@@ -135,14 +136,14 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 			frappe.throw(_("A product discount requires a free item and a positive quantity."))
 		if self.is_recursive and as_decimal(self.recurse_every) <= 0:
 			frappe.throw(_("Recursive product discounts require a positive recurse-every quantity."))
-		self.validate_free_item_unit()
 
-	def validate_free_item_unit(self):
-		"""The free row comes in this unit, so the free item must have it."""
-		if not self.free_item_unit:
-			return
-		unit, factors = item_units({self.free_item})[self.free_item]
-		if self.free_item_unit not in (unit, *factors):
-			frappe.throw(
-				_("UOM {0} is not applicable for Item {1}.").format(self.free_item_unit, self.free_item)
-			)
+	def validate_units(self):
+		"""The rule matches rows in its items' units and gives the free row in its unit, so the items must have them."""
+		item_unit_pairs = [(row.item, row.unit) for row in self.applied_items if row.unit]
+		if self.discount_type == "Product Discount" and self.free_item_unit:
+			item_unit_pairs.append((self.free_item, self.free_item_unit))
+		units = item_units({item for item, _unit in item_unit_pairs})
+		for item, unit in item_unit_pairs:
+			stock_unit, factors = units[item]
+			if unit not in (stock_unit, *factors):
+				frappe.throw(_("UOM {0} is not applicable for Item {1}.").format(unit, item))

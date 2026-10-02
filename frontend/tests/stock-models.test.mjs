@@ -53,6 +53,15 @@ test('stock forms, row editors and tables show what they showed', () => {
   }
 });
 
+test('stock item tables open their rows in the row editor', () => {
+  for (const name of stockSchemas) {
+    const items = getSchema(name).fields.find(
+      ({ fieldname }) => fieldname === 'items'
+    );
+    assert.equal(items.edit, true, name);
+  }
+});
+
 test('movement types keep their labels', () => {
   const { options } = getSchema('StockMovement').fields.find(
     ({ fieldname }) => fieldname === 'movement_type'

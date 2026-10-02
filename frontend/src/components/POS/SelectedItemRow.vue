@@ -13,14 +13,15 @@
   ></FrappeListCell>
   <FrappeListCell class="min-h-12"
     ><div class="w-full min-w-0 px-2">
-      <FrappeButton
-        variant="ghost"
-        class="!h-auto !w-full !justify-start !px-0 text-start [&>span]:min-w-0"
-        :tooltip="row.item"
-        @click="selectRow"
-      >
-        <span class="truncate text-sm text-ink-gray-9">{{ row.item }}</span>
-      </FrappeButton>
+      <FrappeTooltip :text="row.item">
+        <button
+          type="button"
+          class="block w-full truncate rounded-4 text-start text-sm text-ink-gray-9 hover:bg-surface-gray-2"
+          @click="selectRow"
+        >
+          {{ row.item }}
+        </button>
+      </FrappeTooltip>
       <p
         v-if="row.is_free_item"
         class="truncate text-xs text-ink-green-7"
@@ -42,7 +43,6 @@
           icon="lucide-chevron-up"
           variant="ghost"
           size="xs"
-          class="!h-5 !w-6"
           :tooltip="t`Increase quantity`"
           :aria-label="t`Increase quantity`"
           @click="adjustQuantity(1)"
@@ -51,7 +51,6 @@
           icon="lucide-chevron-down"
           variant="ghost"
           size="xs"
-          class="!h-5 !w-6"
           :tooltip="t`Decrease quantity`"
           :aria-label="t`Decrease quantity`"
           @click="adjustQuantity(-1)"
@@ -256,7 +255,7 @@
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import { Button as FrappeButton, Tooltip as FrappeTooltip } from 'frappe-ui';
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
 import { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { getPOSBatchQuantity } from 'models/inventory/posStock';
@@ -291,6 +290,7 @@ export default defineComponent({
     Float,
     FrappeButton,
     FrappeListCell,
+    FrappeTooltip,
     Link,
     Text,
   },

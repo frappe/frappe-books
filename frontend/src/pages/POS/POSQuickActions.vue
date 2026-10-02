@@ -35,7 +35,7 @@
     <FrappeBadge
       v-if="appliedCouponsCount"
       theme="green"
-      class="pointer-events-none absolute -end-2 -top-2 !min-w-5 justify-center"
+      class="pointer-events-none absolute -end-2 -top-2 min-w-5 justify-center"
     >
       {{ appliedCouponsCount }}
     </FrappeBadge>

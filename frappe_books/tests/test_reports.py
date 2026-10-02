@@ -136,6 +136,30 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		return _run("Books General Ledger", from_date="2045-01-01", to_date="2045-01-31", **filters)
 
 
+class IntegrationTestBalanceSheet(IntegrationTestCase):
+	"""Balance sheet totals sum every entry, so these tests keep out of the one-sided ledger tests."""
+
+	def test_balance_sheet_balances_with_the_profit_not_closed_into_equity(self):
+		cash = make_account("Balance Cash")
+		sales = make_account("Balance Sales", root_type="Income")
+		rent = make_account("Balance Rent", root_type="Expense")
+		for date, account, debit, credit in (
+			("2045-03-01", cash.name, 100, 0),
+			("2045-03-01", sales.name, 0, 100),
+			("2046-03-01", rent.name, 30, 0),
+			("2046-03-01", cash.name, 0, 30),
+		):
+			_post(date, account, debit, credit)
+
+		rows = _rows_by_account(_run("Books Balance Sheet", **YEARS_2045_AND_2046))
+
+		profit = rows["Provisional Profit / Loss (Credit)"]
+		self.assertEqual(_values(profit, PERIOD_KEYS), _decimals(70, 100))
+		self.assertEqual(
+			_values(rows["Total (Credit)"], PERIOD_KEYS), _values(rows["Total Asset (Debit)"], PERIOD_KEYS)
+		)
+
+
 def _group_account(label, root_type):
 	return _account(label, root_type, is_group=1)
 

@@ -301,9 +301,9 @@ def _within_limits(record, date, amount, quantity=None):
 			return False
 		if as_decimal(record.max_quantity) > 0 and quantity > as_decimal(record.max_quantity):
 			return False
-	if as_decimal(record.min_amount) > 0 and amount <= as_decimal(record.min_amount):
+	if as_decimal(record.min_amount) > 0 and amount < as_decimal(record.min_amount):
 		return False
-	if as_decimal(record.max_amount) > 0 and amount >= as_decimal(record.max_amount):
+	if as_decimal(record.max_amount) > 0 and amount > as_decimal(record.max_amount):
 		return False
 	date = frappe.utils.getdate(date)
 	return not (

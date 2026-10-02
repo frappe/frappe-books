@@ -141,23 +141,24 @@ export abstract class Invoice extends FrappeDoc {
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
-    make_auto_payment: () => !this.autoPaymentAccount,
     discount_after_tax: () =>
       !this.fyo.singles.AccountingSettings?.enable_discounting,
     price_list: () =>
       !this.fyo.singles.AccountingSettings?.enable_price_list ||
       (!this.canEdit && !this.price_list),
-    return_against: () =>
-      !this.fyo.singles.AccountingSettings?.enable_invoice_returns &&
-      !this.return_against,
   };
 
-  /** Invoices, not quotes, make stock transfers when inventory and its location are set. */
-  get isAutoStockTransferHidden(): boolean {
-    return (
-      !this.fyo.singles.AccountingSettings?.enable_inventory ||
-      !this.autoStockTransferLocation
-    );
+  /** Rules of the fields invoices have and quotes lack: follow-ups on submit, and returns. */
+  get postingHidden(): HiddenMap {
+    return {
+      make_auto_payment: () => !this.autoPaymentAccount,
+      make_auto_stock_transfer: () =>
+        !this.fyo.singles.AccountingSettings?.enable_inventory ||
+        !this.autoStockTransferLocation,
+      return_against: () =>
+        !this.fyo.singles.AccountingSettings?.enable_invoice_returns &&
+        !this.return_against,
+    };
   }
 
   // The server refuses a missing rate too; asked for here to show it at the field.

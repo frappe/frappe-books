@@ -153,7 +153,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/search',
     name: 'Search',
-    meta: { pushed: true, phoneOnly: true },
+    meta: { phoneOnly: true },
     component: MobileSearch,
   },
   {

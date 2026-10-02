@@ -5,7 +5,7 @@
       :key="tab.name"
       :label="tab.label"
       :icon="tab.icon"
-      :active="tab.name === active?.group.name"
+      :active="tab.name === activeTab"
       @click="openTab(tab)"
     />
   </FrappeMobileNav>
@@ -16,7 +16,9 @@ import {
   MobileNavItem as FrappeMobileNavItem,
   shellScrollContainer,
 } from 'frappe-ui';
+import { t } from 'fyo';
 import type { SidebarRoot } from 'src/utils/types';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usePhoneSidebar } from './usePhoneSidebar';
 
@@ -25,7 +27,19 @@ const TAB_GROUPS = ['dashboard', 'sales', 'purchases', 'reports'];
 const route = useRoute();
 const router = useRouter();
 const { groups, active } = usePhoneSidebar();
-const tabs = groups.filter((group) => TAB_GROUPS.includes(group.name));
+const searchTab: SidebarRoot = {
+  name: 'search',
+  label: t`Search`,
+  icon: 'lucide-search',
+  route: '/search',
+};
+const tabs = [
+  ...groups.filter((group) => TAB_GROUPS.includes(group.name)),
+  searchTab,
+];
+const activeTab = computed(() =>
+  route.path === searchTab.route ? searchTab.name : active.value?.group.name
+);
 
 // MobileNavItem's `route` matches by route name, so any two lists are one page
 // (frappe/frappe-ui#1245).

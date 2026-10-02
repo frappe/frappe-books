@@ -6,6 +6,7 @@ from frappe.desk.query_report import run
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, add_years, getdate, now_datetime, nowdate
 
+from frappe_books.accounting.returns import map_return
 from frappe_books.reports import gst
 from frappe_books.reports.filters import get_default_filters
 from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
@@ -482,6 +483,74 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			_decimals(18, 300, 27, 27, 0),
 		)
 
+	def test_registered_credit_notes_show_as_cdnr_not_b2b(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+		self.party = self._party("Maharashtra", gstin="27AAAAA0000A1Z5")
+		invoice = self._invoice((_tax(("IGST", 18)), 100, 1), date="2065-02-10")
+		note = self._credit_note(invoice, "2065-02-11")
+		dates = {"from_date": "2065-02-10", "to_date": "2065-02-11"}
+
+		b2b = _run("Books GSTR-1", transfer_type="B2B", **dates)
+		(row,) = _run("Books GSTR-1", transfer_type="CDNR", **dates)
+		(customer,) = get_gstr_json("Books GSTR-1", {**dates, "transfer_type": "CDNR"})["cdnr"]
+
+		self.assertEqual([row["invoice_no"] for row in b2b], [invoice.name])
+		self.assertEqual((row["invoice_no"], row["taxable_value"]), (note.name, Decimal(-100)))
+		self.assertEqual(customer["ctin"], "27AAAAA0000A1Z5")
+		self.assertEqual(
+			customer["nt"],
+			[
+				{
+					"ntty": "C",
+					"nt_num": note.name,
+					"nt_dt": "11-02-2065",
+					"val": Decimal(118),
+					"itms": [
+						{
+							"num": 1,
+							"itm_det": {
+								"txval": Decimal(100),
+								"rt": Decimal(18),
+								"csamt": 0,
+								"iamt": Decimal(18),
+								"camt": Decimal(0),
+								"samt": Decimal(0),
+							},
+						}
+					],
+					"pos": "27",
+					"rchrg": "N",
+					"inv_typ": "R",
+				}
+			],
+		)
+
+	def test_unregistered_credit_notes_follow_the_invoice_they_return(self):
+		frappe.db.set_single_value("Books Accounting Settings", "gstin", "29AAAAA0000A1Z5")
+		self.party = self._party("Maharashtra")
+		igst = _tax(("IGST", 25))
+		large, small = (self._invoice((igst, rate, 1), date="2065-03-10") for rate in (80001, 100))
+		large_note, small_note = (self._credit_note(invoice, "2065-03-11") for invoice in (large, small))
+		dates = {"from_date": "2065-03-11", "to_date": "2065-03-11"}
+
+		shown = {
+			transfer_type: [
+				row["invoice_no"] for row in _run("Books GSTR-1", transfer_type=transfer_type, **dates)
+			]
+			for transfer_type in ("B2CL", "B2CS", "CDNUR")
+		}
+		(note,) = get_gstr_json("Books GSTR-1", {**dates, "transfer_type": "CDNUR"})["cdnur"]
+
+		self.assertEqual(shown, {"B2CL": [], "B2CS": [small_note.name], "CDNUR": [large_note.name]})
+		self.assertEqual(
+			(note["typ"], note["ntty"], note["nt_num"], note["pos"], note["val"]),
+			("B2CL", "C", large_note.name, "27", Decimal("100001.25")),
+		)
+		self.assertEqual(
+			note["itms"][0]["itm_det"],
+			{"txval": Decimal(80001), "rt": Decimal(25), "csamt": 0, "iamt": Decimal("20000.25")},
+		)
+
 	def test_json_export_needs_the_company_gstin(self):
 		frappe.db.set_single_value("Books Accounting Settings", "gstin", None)
 
@@ -533,6 +602,12 @@ class IntegrationTestGSTR(IntegrationTestCase):
 			.insert()
 			.submit()
 		)
+
+	def _credit_note(self, invoice, date):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_invoice_returns", 1)
+		note = map_return(invoice.doctype, invoice.name)
+		note.date = date
+		return note.insert().submit()
 
 	def _rows(self, invoice):
 		today = nowdate()

@@ -12,8 +12,8 @@
   "party",
   "date",
   "status",
-  "items",
   "items_section_break_6",
+  "items",
   "grand_total",
   "references_section_break_8",
   "terms",
@@ -81,16 +81,16 @@
    "search_index": 1
   },
   {
+   "fieldname": "items_section_break_6",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
    "options": "Books Purchase Receipt Item",
    "reqd": 1
-  },
-  {
-   "fieldname": "items_section_break_6",
-   "fieldtype": "Section Break",
-   "label": "Items"
   },
   {
    "fieldname": "grand_total",
@@ -154,7 +154,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-02 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Purchase Receipt",

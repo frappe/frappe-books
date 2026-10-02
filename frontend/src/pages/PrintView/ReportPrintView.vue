@@ -1,10 +1,7 @@
 <template>
   <div class="flex flex-col w-full md:h-full">
     <PageHeader :title="t`Print ${title}`">
-      <FrappeButton variant="solid" @click="savePDF()">
-        {{ t`Save as PDF` }}
-      </FrappeButton>
-      <FrappeButton variant="solid" @click="savePDF(true)">
+      <FrappeButton variant="solid" @click="print()">
         {{ t`Print` }}
       </FrappeButton>
     </PageHeader>
@@ -157,17 +154,10 @@
       <FrappeButton
         class="flex-1"
         size="lg"
-        icon-left="lucide-file-down"
-        :label="t`Save as PDF`"
-        @click="savePDF()"
-      />
-      <FrappeButton
-        class="flex-1"
-        size="lg"
         variant="solid"
         icon-left="lucide-printer"
         :label="t`Print`"
-        @click="savePDF(true)"
+        @click="print()"
       />
     </MobileFooter>
   </div>
@@ -183,7 +173,7 @@ import Select from 'src/components/Controls/Select.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getReport } from 'src/utils/misc';
-import { getPathAndMakePDF } from 'src/utils/printDocument';
+import { printDocument } from 'src/utils/printDocument';
 import { showSidebar } from 'src/utils/refs';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
@@ -322,7 +312,7 @@ export default defineComponent({
       }
       this.scale = Math.min(containerWidth / pageWidthPx, 1);
     },
-    async savePDF(shouldPrint?: boolean): Promise<void> {
+    async print(): Promise<void> {
       const innerHTML = (
         this.$refs.printSheet as InstanceType<typeof PrintSheet>
       ).getHTML();
@@ -331,13 +321,7 @@ export default defineComponent({
       }
 
       const name = this.title + ' - ' + this.fyo.format(new Date(), 'Date');
-      await getPathAndMakePDF(
-        name,
-        innerHTML,
-        this.size.width,
-        this.size.height,
-        shouldPrint
-      );
+      await printDocument(name, innerHTML, this.size.width, this.size.height);
     },
     cellClasses(cIdx: number, rIdx: number): string[] {
       const classes: string[] = [];

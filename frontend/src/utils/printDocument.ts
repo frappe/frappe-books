@@ -77,23 +77,17 @@ function getAllCSSAsStyleElem() {
   return styleElem;
 }
 
-/** Opens the browser's print dialog for the HTML, as a PDF or on paper. */
-export async function getPathAndMakePDF(
+/** Opens the browser's print dialog for the HTML. */
+export async function printDocument(
   name: string,
   innerHTML: string,
   width: number,
-  height: number,
-  shouldPrint?: boolean
+  height: number
 ) {
   const html = constructPrintDocument(name, innerHTML, width, height);
   const success = await printHtml(html);
   if (success) {
-    showToast({
-      message: shouldPrint
-        ? t`Print dialog opened`
-        : t`Save as PDF dialog opened`,
-      type: 'success',
-    });
+    showToast({ message: t`Print dialog opened`, type: 'success' });
   } else {
     showToast({ message: t`Pop-up blocked`, type: 'error' });
   }

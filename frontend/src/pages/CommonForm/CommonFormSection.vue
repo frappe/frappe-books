@@ -51,6 +51,7 @@
               class="w-full"
               :invalid="Boolean(errors?.[field.fieldname])"
               :layout="field.fieldtype === 'Check' ? 'inline' : undefined"
+              :as-switch="(switches && field.fieldtype === 'Check') || undefined"
               :size="field.fieldtype === 'AttachImage' ? 'form' : undefined"
               :show-label="true"
               :border="true"
@@ -103,6 +104,8 @@ export default defineComponent({
       required: true,
     },
     showTitle: Boolean,
+    /** Checks show as switches, as settings do. */
+    switches: Boolean,
     doc: { type: Object as PropType<FrappeDoc>, required: true },
     fields: { type: Array as PropType<Field[]>, required: true },
   },

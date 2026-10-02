@@ -110,16 +110,6 @@ function getInventorySidebar(): SidebarRoot[] {
           route: '/list/PurchaseReceipt',
           schemaName: 'PurchaseReceipt',
         },
-        {
-          label: t`Stock Ledger`,
-          name: 'stock-ledger',
-          route: '/report/StockLedger',
-        },
-        {
-          label: t`Stock Balance`,
-          name: 'stock-balance',
-          route: '/report/StockBalance',
-        },
       ],
     },
   ];
@@ -136,6 +126,9 @@ function getPOSSidebar() {
 }
 
 function getReportSidebar() {
+  const isInventoryDisabled = () =>
+    !fyo.singles.AccountingSettings?.enable_inventory;
+
   return {
     label: t`Reports`,
     name: 'reports',
@@ -161,6 +154,18 @@ function getReportSidebar() {
         label: t`Trial Balance`,
         name: 'trial-balance',
         route: '/report/TrialBalance',
+      },
+      {
+        label: t`Stock Ledger`,
+        name: 'stock-ledger',
+        route: '/report/StockLedger',
+        hidden: isInventoryDisabled,
+      },
+      {
+        label: t`Stock Balance`,
+        name: 'stock-balance',
+        route: '/report/StockBalance',
+        hidden: isInventoryDisabled,
       },
     ],
   };

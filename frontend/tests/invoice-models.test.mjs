@@ -519,6 +519,24 @@ test('invoice actions follow the Frappe invoice values', () => {
   assert.deepEqual(labels(invoice), ['Shipment', 'Accounting Entries']);
 });
 
+test('the payment step of a return names the refund', () => {
+  const step = (schemaName, values = {}) =>
+    frappeModels[schemaName]
+      .getActions(fyo)[0]
+      .nextStep(newInvoice(schemaName, values));
+
+  assert.equal(step('SalesInvoice'), 'Receive Payment');
+  assert.equal(
+    step('SalesInvoice', { return_against: 'SINV-1000' }),
+    'Make Payment'
+  );
+  assert.equal(step('PurchaseInvoice'), 'Make Payment');
+  assert.equal(
+    step('PurchaseInvoice', { return_against: 'PINV-1000' }),
+    'Receive Payment'
+  );
+});
+
 test('a submitted quote makes a Frappe-backed sales invoice from its mapper', async () => {
   setSettings();
   const quote = newInvoice('SalesQuote', { docstatus: 1, name: 'SQUOT-1001' });

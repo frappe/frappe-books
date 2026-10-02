@@ -12,6 +12,7 @@ import { getMappedDoc } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
+import { getFrappeRows } from 'src/frappe/list';
 import { AccountRootTypeEnum } from '../Account/types';
 import { UOMConversionItem } from './UOMConversionItem';
 
@@ -126,5 +127,21 @@ export class Item extends FrappeDoc {
     return {
       columns: ['name', 'unit', 'tax', 'rate'],
     };
+  }
+
+  /** The documents that take all the items; the server refuses one kept for the other side. */
+  static async getInvoiceSchemaNames(
+    fyo: Fyo,
+    names: string[]
+  ): Promise<string[]> {
+    const rows = await getFrappeRows(fyo, ModelNameEnum.Item, names, [
+      'item_usage',
+    ]);
+    const usages = rows.map(({ item_usage }) => item_usage);
+    const sales = [ModelNameEnum.SalesQuote, ModelNameEnum.SalesInvoice];
+    return [
+      ...(usages.includes('Purchases') ? [] : sales),
+      ...(usages.includes('Sales') ? [] : [ModelNameEnum.PurchaseInvoice]),
+    ];
   }
 }

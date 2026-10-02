@@ -66,6 +66,39 @@ test('each doctype is searched for the letters of the longest word in order', as
   assert.equal(requests.length, 18);
 });
 
+test('a word naming the doctype is matched by the palette, not by the server', async () => {
+  const { search, requests } = makeSearch(({ body }) =>
+    body.doctype === 'Books Sales Invoice' && body.txt === 'K%a%r%e%n'
+      ? [{ name: 'SINV-1001', party: 'Karen', docstatus: 1 }]
+      : []
+  );
+  const sent = async (text) => {
+    requests.length = 0;
+    await search.fetchDocs(text);
+    return Object.fromEntries(
+      requests.map(({ body }) => [
+        body.doctype,
+        body.txt ?? body.or_filters[0][2],
+      ])
+    );
+  };
+
+  const karen = await sent('Karen invoice');
+  assert.equal(karen['Books Sales Invoice'], 'K%a%r%e%n');
+  assert.equal(karen['Books Party'], 'i%n%v%o%i%c%e');
+  assert.deepEqual(
+    docs(search, 'Karen invoice').map(({ label }) => label),
+    ['SINV-1001']
+  );
+
+  const jacket = await sent('Jacket purchase');
+  assert.equal(jacket['Books Purchase Invoice Item'], '%J%a%c%k%e%t%');
+  assert.equal(jacket['Books Sales Invoice Item'], '%p%u%r%c%h%a%s%e%');
+
+  const salesInvoice = await sent('sales invoice');
+  assert.equal(salesInvoice['Books Sales Invoice'], 'i%n%v%o%i%c%e');
+});
+
 test('a superseded search is dropped and documents rank by status', async () => {
   const pending = [];
   const { search } = makeSearch((request) =>

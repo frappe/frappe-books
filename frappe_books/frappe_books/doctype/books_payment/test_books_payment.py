@@ -301,6 +301,30 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		payment.set_missing_values()
 		self.assertEqual(payment.payment_references[0].reference_type, "Books Purchase Invoice")
 
+	def test_a_payment_lists_with_its_invoice_else_its_type(self):
+		bank = make_account("Rules Bank", account_type="Bank")
+		frappe.db.set_single_value("Books Defaults", "purchase_payment_account", bank.name)
+		supplier = make_party(self.payable.name, role="Supplier")
+		purchase = make_invoice(
+			"Books Purchase Invoice",
+			supplier.name,
+			self.payable.name,
+			self.item.name,
+			self.expense.name,
+			make_auto_payment=1,
+		).submit()
+		payment = frappe.db.get_value("Books Payment For", {"reference_name": purchase.name}, "parent")
+		self.assertEqual(frappe.db.get_value("Books Payment", payment, "reference_type"), "PurchaseInvoice")
+
+		for party, payment_type, reference_type in (
+			(supplier.name, "Pay", "PurchaseInvoice"),
+			(self.party.name, "Receive", "SalesInvoice"),
+		):
+			with self.subTest(payment_type=payment_type):
+				payment = frappe.new_doc("Books Payment", party=party, payment_type=payment_type)
+				payment.set_missing_values()
+				self.assertEqual(payment.reference_type, reference_type)
+
 	def test_a_save_allocates_what_the_invoice_owes(self):
 		payment = self._payment(self.invoice, amount=None)
 		payment.amount = None

@@ -1,9 +1,10 @@
 import frappe
 from frappe import _
-from frappe.utils import add_days, add_months, get_first_day, get_year_start, getdate, month_diff
+from frappe.utils import add_days, add_months, get_first_day, getdate, month_diff
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
+from frappe_books.reports.periods import get_fiscal_year
 
 LEDGER = "Books Ledger Entry"
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
@@ -18,7 +19,7 @@ def get_period_dates(period: str) -> tuple:
 	"""Return the first and last day of a dashboard period, which ends today."""
 	today = getdate()
 	if period == "YTD":
-		return get_year_start(today), today
+		return get_fiscal_year(today)[0], today
 	if period not in PERIOD_MONTHS:
 		frappe.throw(_("Unknown dashboard period: {0}").format(period))
 	return get_first_day(add_months(today, 1 - PERIOD_MONTHS[period])), today

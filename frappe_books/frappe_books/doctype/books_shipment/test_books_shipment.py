@@ -127,6 +127,25 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		receipt.cancel()
 		self.assertEqual(account_balance(shipment, cogs.name), 30)
 
+	def test_restated_shipment_cost_revalues_its_return(self):
+		item, cogs, _stock = self._tracked_item()
+		now = now_datetime()
+		seed_stock(item.name, quantity=5, rate=10, date=add_to_date(now, hours=-3))
+		shipment = self._make_shipment(item, quantity=3, rate=25, date=add_to_date(now, hours=-2))
+		shipment.submit()
+		returned = self._make_shipment(
+			item, quantity=-3, rate=25, return_against=shipment.name, date=add_to_date(now, hours=-1)
+		)
+		returned.submit()
+
+		receipt = make_receipt(item.name, quantity=3, rate=20, date=add_to_date(now, hours=-4))
+		self.assertEqual(stock_value_change(returned), 60)
+		self.assertEqual(account_balance(returned, cogs.name), -60)
+
+		receipt.cancel()
+		self.assertEqual(stock_value_change(returned), 30)
+		self.assertEqual(account_balance(returned, cogs.name), -30)
+
 	def test_shipment_against_invoice_updates_quantity_to_transfer(self):
 		item, cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=5, rate=10)

@@ -49,6 +49,13 @@ test('the Custom Form asks for a form type among the forms Books can customize',
   }
 });
 
+test('custom field rows open in the row editor', () => {
+  const table = getSchema('CustomForm').fields.find(
+    (f) => f.fieldname === 'custom_fields'
+  );
+  assert.equal(table.edit, true);
+});
+
 test('a row edits the fields it edited, with the field types labelled as before', () => {
   const schema = getSchema('CustomField');
   assert.deepEqual(schema.quickEditFields.slice(4, 8), [

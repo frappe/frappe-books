@@ -46,6 +46,9 @@ await build({
       export * as posItemSearch from './src/utils/posItemSearch';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { Search } from './src/utils/search';
+      export { useSearch } from './src/utils/useSearch';
+      export { searcherKey } from './src/utils/injectionKeys';
+      export { createApp, effectScope, shallowRef } from 'vue';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
       export { StockBalance } from './reports/inventory/StockBalance';
@@ -160,6 +163,11 @@ export const {
   posItemSearch,
   getInsufficientItems,
   Search,
+  useSearch,
+  searcherKey,
+  createApp,
+  effectScope,
+  shallowRef,
   GeneralLedger,
   ProfitAndLoss,
   StockBalance,

@@ -38,9 +38,9 @@
         <FrappeListHeader v-if="showHeader" class="!h-auto min-h-8 py-1">
           <FrappeListHeaderCell class="justify-center">#</FrappeListHeaderCell>
           <FrappeListHeaderCell
-            v-for="df in tableFields"
+            v-for="(df, index) in tableFields"
             :key="df.fieldname"
-            class="min-w-0 [&>span]:whitespace-normal [&>span]:break-words"
+            class="relative min-w-0 [&>span]:whitespace-normal [&>span]:break-words"
             :class="[
               cellPaddingClass,
               df.sub_label ? 'flex-col justify-center' : 'items-center',
@@ -57,6 +57,23 @@
             <p v-if="df.sub_label" class="text-xs">
               {{ df.sub_label }}
             </p>
+            <!-- A last column fills the row, so it has no edge to drag. -->
+            <template
+              v-if="canEditRow || index < tableFields.length - 1"
+              #suffix
+            >
+              <ColumnResizeHandle
+                :label="df.label"
+                :title="
+                  t`Drag to resize. Double-click or press Enter to reset. Use arrow keys to resize.`
+                "
+                :width="columnWidths.widths[df.fieldname]"
+                :direction="languageDirection"
+                @resize="columnWidths.set(df.fieldname, $event)"
+                @commit="columnWidths.set(df.fieldname, $event, true)"
+                @fit="columnWidths.set(df.fieldname, undefined, true)"
+              />
+            </template>
           </FrappeListHeaderCell>
           <FrappeListHeaderCell v-if="canEditRow">
             <span class="sr-only">{{ t`Actions` }}</span>
@@ -130,7 +147,10 @@ import {
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
 import { getFields, getSchema } from 'src/frappe/registry';
+import { ColumnWidths } from 'src/utils/columnWidths';
+import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { nextTick } from 'vue';
+import ColumnResizeHandle from '../ColumnResizeHandle.vue';
 import Base from './Base.vue';
 import MobileTableRows from './MobileTableRows.vue';
 import TableRow from './TableRow.vue';
@@ -138,6 +158,7 @@ import TableRow from './TableRow.vue';
 export default {
   name: 'Table',
   components: {
+    ColumnResizeHandle,
     FrappeFormLabel,
     FrappeList,
     FrappeListCell,
@@ -148,6 +169,9 @@ export default {
     TableRow,
   },
   extends: Base,
+  inject: {
+    languageDirection: { from: languageDirectionKey, default: undefined },
+  },
   props: {
     value: { type: Array, default: () => [] },
     showHeader: {
@@ -173,6 +197,13 @@ export default {
     },
   },
   emits: ['editrow', 'row-change', 'row-remove'],
+  data() {
+    return {
+      columnWidths: new ColumnWidths(
+        `books:table-column-widths:${this.df.target}`
+      ),
+    };
+  },
   computed: {
     rowHeight() {
       return 48;
@@ -199,7 +230,12 @@ export default {
     listColumns() {
       return [
         '2rem',
-        ...this.fieldMinimumWidths.map((width) => `minmax(${width}rem, 1fr)`),
+        ...this.tableFields.map((field, index) => {
+          const width = this.columnWidths.widths[field.fieldname];
+          return width
+            ? `${width}px`
+            : `minmax(${this.fieldMinimumWidths[index]}rem, 1fr)`;
+        }),
         ...(this.canEditRow ? ['2rem'] : []),
       ];
     },
@@ -213,13 +249,16 @@ export default {
     },
     minimumWidth() {
       // Keep fields usable in narrow forms; the shared viewport scrolls them.
-      const fields = this.fieldMinimumWidths.reduce(
-        (sum, width) => sum + width,
-        0
-      );
+      let fields = 0;
+      let resized = 0;
+      this.tableFields.forEach((field, index) => {
+        const width = this.columnWidths.widths[field.fieldname];
+        if (width) resized += width;
+        else fields += this.fieldMinimumWidths[index];
+      });
       const actions = this.canEditRow ? 4 : 2;
       const gaps = (this.listColumns.length - 1) * 0.5;
-      return `${fields + actions + gaps}rem`;
+      return `calc(${fields + actions + gaps}rem + ${resized}px)`;
     },
     cellPaddingClass() {
       return this.size === 'small' ? 'px-2' : 'px-3';

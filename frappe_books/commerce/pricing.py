@@ -248,7 +248,7 @@ def _apply_price_discount(invoice, row, rule):
 def _append_free_item(invoice, source_row, rule):
 	quantity = as_decimal(rule.free_item_quantity)
 	if rule.is_recursive:
-		quantity = as_decimal(source_row.quantity) / as_decimal(rule.recurse_every)
+		quantity *= as_decimal(source_row.quantity) / as_decimal(rule.recurse_every)
 	if rule.round_free_item_qty:
 		rounding = {
 			"floor": ROUND_FLOOR,

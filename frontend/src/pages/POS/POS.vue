@@ -588,7 +588,9 @@ export default defineComponent({
       });
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyP'], () => {
-        this.toggleModal('PriceList', true);
+        if (this.fyo.singles.AccountingSettings?.enable_price_list) {
+          this.toggleModal('PriceList', true);
+        }
       });
 
       this.shortcuts?.pmodShift.set(COMPONENT_NAME, ['KeyH'], () => {
@@ -619,7 +621,7 @@ export default defineComponent({
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyL'], () => {
         if (
-          this.fyo.singles.AccountingSettings?.enable_price_list &&
+          this.fyo.singles.AccountingSettings?.enable_loyalty_program &&
           this.loyaltyPoints &&
           this.sinvDoc.party &&
           this.sinvDoc.items?.length &&

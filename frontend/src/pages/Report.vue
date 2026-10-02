@@ -1,6 +1,9 @@
 <template>
   <div class="flex flex-col w-full h-full">
     <PageHeader :title="title">
+      <template #mobile-title>
+        <MobileReportSwitcher :title="title" />
+      </template>
       <template #mobile>
         <FrappeButton
           variant="ghost"
@@ -74,6 +77,7 @@ import {
 import MobileReport from 'src/components/Report/Mobile/MobileReport.vue';
 import MobileReportFilters from 'src/components/Report/Mobile/MobileReportFilters.vue';
 import MobileReportSkeleton from 'src/components/Report/Mobile/MobileReportSkeleton.vue';
+import MobileReportSwitcher from 'src/components/Report/Mobile/MobileReportSwitcher.vue';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, showReport } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
@@ -92,6 +96,7 @@ export default defineComponent({
     MobileReport,
     MobileReportFilters,
     MobileReportSkeleton,
+    MobileReportSwitcher,
   },
   provide() {
     return {

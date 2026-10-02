@@ -1,8 +1,12 @@
 <template>
-  <!-- The tree scrolls both ways itself, so its header still sticks. -->
-  <FrappeScrollArea orientation="both" class="min-h-0 flex-1">
+  <!-- A scrolling tree scrolls both ways itself, so its header still sticks. -->
+  <component
+    :is="scroll ? FrappeScrollArea : 'div'"
+    v-bind="scroll ? { orientation: 'both', class: 'min-h-0 flex-1' } : {}"
+  >
     <div
-      class="grid w-max min-w-full gap-x-6 pb-12"
+      class="grid gap-x-6"
+      :class="{ 'w-max min-w-full pb-12': scroll }"
       :style="{ gridTemplateColumns }"
     >
       <div
@@ -47,7 +51,7 @@
             class="size-3.5 shrink-0 text-ink-gray-5"
           />
           <span class="flex min-w-0 flex-col gap-1">
-            <span class="truncate">{{ row.label }}</span>
+            <span class="break-words">{{ row.label }}</span>
             <span v-if="row.subtitle" class="truncate text-sm text-ink-gray-5">
               {{ row.subtitle }}
             </span>
@@ -63,7 +67,7 @@
         </span>
       </button>
     </div>
-  </FrappeScrollArea>
+  </component>
 </template>
 <script setup lang="ts">
 import { Icon as FrappeIcon, ScrollArea as FrappeScrollArea } from 'frappe-ui';
@@ -82,16 +86,18 @@ const props = defineProps<{
   /** Rows grouped on the client: groups start collapsed. */
   grouped?: boolean;
   icon?: string;
+  /** Labels keep one line and the tree scrolls sideways. */
+  scroll?: boolean;
 }>();
 
 const emit = defineEmits<{ open: [row: ReportRow] }>();
 
 const toggled = ref(new Set<string>());
 
-/** Labels keep their full width; the tree scrolls sideways when they don't fit. */
+/** Long labels wrap, unless the tree scrolls sideways. */
 const gridTemplateColumns = computed(() =>
   [
-    'minmax(max-content, 1fr)',
+    props.scroll ? 'minmax(max-content, 1fr)' : 'minmax(0, 1fr)',
     ...props.values.map(({ width }) => `minmax(${width}px, max-content)`),
   ].join(' ')
 );

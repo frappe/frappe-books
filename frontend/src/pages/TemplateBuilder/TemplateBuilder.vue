@@ -135,7 +135,8 @@
             :disabled="!canEditTemplate"
             :hints="hints"
             @input="() => (templateChanged = true)"
-            @blur="(value: string) => setTemplate(value)"
+            @blur="setTemplate"
+            @apply="setTemplate"
           />
         </div>
         <div
@@ -462,7 +463,6 @@ export default defineComponent({
         return;
       }
 
-      this.shortcuts.ctrl.set(this.context, ['Enter'], this.setTemplate.bind(this));
       this.shortcuts.ctrl.set(this.context, ['KeyE'], this.toggleEditMode.bind(this));
       this.shortcuts.ctrl.set(this.context, ['KeyH'], this.toggleShowHints.bind(this));
       this.shortcuts.ctrl.set(this.context, ['Equal'], () => this.setScale(this.scale + 0.1));
@@ -534,13 +534,12 @@ export default defineComponent({
 
       return this.view.state.doc.toString();
     },
-    async setTemplate(value?: string) {
+    async setTemplate(value: string) {
       this.templateChanged = false;
       if (!this.canEditTemplate) {
         return;
       }
 
-      value ??= this.getTemplateEditorState();
       await this.doc?.set('html', value);
     },
     setScale(e: Event | number | string) {

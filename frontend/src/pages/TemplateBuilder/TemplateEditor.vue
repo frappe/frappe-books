@@ -5,6 +5,8 @@
 import { CompletionContext } from '@codemirror/autocomplete';
 import { vue } from '@codemirror/lang-vue';
 import { syntaxTree } from '@codemirror/language';
+import { Prec } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
 import {
   CodeEditorContent as FrappeCodeEditorContent,
   CodeKit,
@@ -19,7 +21,7 @@ export default defineComponent({
     disabled: { type: Boolean, default: false },
     hints: { type: Object, default: undefined },
   },
-  emits: ['input', 'blur'],
+  emits: ['input', 'blur', 'apply'],
   setup(props, { emit }) {
     const completions = getCompletionsFromHints(props.hints ?? {});
     const view = useCodeEditor({
@@ -30,6 +32,19 @@ export default defineComponent({
           autocompletion: { override: [completions] },
         }),
         vue(),
+        // Control on every platform, as the hint shows. Above the default
+        // keymap, whose Mod-Enter inserts a blank line.
+        Prec.high(
+          keymap.of([
+            {
+              key: 'Ctrl-Enter',
+              run: (editor) => {
+                emit('apply', editor.state.doc.toString());
+                return true;
+              },
+            },
+          ])
+        ),
       ],
       editable: () => !props.disabled,
       onUpdate: (editor) => emit('input', editor.state.doc.toString()),

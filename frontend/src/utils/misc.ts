@@ -114,11 +114,16 @@ export async function getReport(
   return report;
 }
 
-/** Ref filters pick one document, so they last only while a link sets them. */
-const NO_REFERENCE: Record<string, DocValue> = {
-  referenceType: 'All',
-  referenceName: null,
-};
+/**
+ * Ref filters pick one document, so they last only while a link sets them,
+ * as do the dates its ledger link sets with them; cleared dates take defaults.
+ */
+function getDocumentFilterResets(report: Report): Record<string, DocValue> {
+  const resets = { referenceType: 'All', referenceName: null };
+  return report.get('referenceName')
+    ? { ...resets, fromDate: null, toDate: null }
+    : resets;
+}
 
 /**
  * Load a report when it is first shown, and refetch its data when shown
@@ -133,7 +138,7 @@ export async function showReport(
     return getReport(name, filters);
   }
 
-  await report.setFilters({ ...NO_REFERENCE, ...filters });
+  await report.setFilters({ ...getDocumentFilterResets(report), ...filters });
   await report.setReportData(undefined, true);
   return report;
 }

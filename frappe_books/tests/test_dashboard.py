@@ -19,26 +19,25 @@ PERIODS = ("This Year", "This Quarter", "This Month", "YTD")
 
 
 class IntegrationTestDashboard(IntegrationTestCase):
-	def setUp(self):
-		self.cash = make_account("Dashboard Cash", account_type="Cash")
-		self.rent = make_account("Dashboard Rent", root_type="Expense")
-		self.sales = make_account("Dashboard Sales", root_type="Income")
+	def test_ledger_totals_are_grouped_by_account_and_month(self):
+		cash = make_account("Dashboard Cash", account_type="Cash")
+		rent = make_account("Dashboard Rent", root_type="Expense")
+		sales = make_account("Dashboard Sales", root_type="Income")
 		for date, account, debit, credit in (
-			("2031-01-10", self.rent, 30, 0),
-			("2031-01-20", self.rent, 20, 0),
-			("2031-01-20", self.cash, 0, 50),
-			("2031-02-05", self.cash, 80, 0),
-			("2031-02-05", self.sales, 0, 80),
+			("2031-01-10", rent, 30, 0),
+			("2031-01-20", rent, 20, 0),
+			("2031-01-20", cash, 0, 50),
+			("2031-02-05", cash, 80, 0),
+			("2031-02-05", sales, 0, 80),
 		):
 			_post(account, debit, credit, date)
 
-	def test_ledger_totals_are_grouped_by_account_and_month(self):
 		with self.freeze_time(TODAY):
 			expenses = get_top_expenses("This Year")
 			cashflow = get_cashflow("This Year")
 			profit = get_profit_and_loss("This Year")
 
-		self.assertIn({"account": self.rent.name, "total": Decimal("50.00")}, expenses)
+		self.assertIn({"account": rent.name, "total": Decimal("50.00")}, expenses)
 		self.assertEqual(
 			cashflow["months"][:3],
 			[

@@ -179,7 +179,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
 		)
 		self._pricing_rule(
-			applied_items=[{"item": item.name}],
+			applied_items=[{"item": item.name, "unit": box.name}],
 			discount_type="Product Discount",
 			free_item=item.name,
 			free_item_quantity=2,
@@ -197,6 +197,77 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 		free_row = next(row for row in invoice.items if row.is_free_item)
 		self.assertEqual(free_row.quantity, 6)
+
+	def test_rule_applies_to_rows_in_its_unit_at_its_unit_rate(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		item = make_item(
+			self.income.name,
+			self.expense.name,
+			rate=15,
+			uom_conversions=[{"uom": box.name, "conversion_factor": 12}],
+		)
+		rule = self._pricing_rule(
+			applied_items=[{"item": item.name, "unit": box.name}],
+			price_discount_type="rate",
+			discount_rate=120,
+		)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			item.name,
+			self.income.name,
+			items=[
+				{"item": item.name, "transfer_unit": box.name, "transfer_quantity": 1},
+				{"item": item.name, "quantity": 1},
+			],
+		)
+
+		box_row, unit_row = invoice.items
+		self.assertEqual((box_row.pricing_rule, box_row.rate, box_row.transfer_rate), (rule.name, 10, 120))
+		self.assertEqual((unit_row.pricing_rule, unit_row.rate), (None, 15))
+
+	def test_rule_takes_only_units_its_items_have(self):
+		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		item = make_item(
+			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
+		)
+		self._pricing_rule(applied_items=[{"item": item.name, "unit": unit} for unit in ("Unit", box.name)])
+		with self.assertRaisesRegex(frappe.ValidationError, "not applicable"):
+			self._pricing_rule(applied_items=[{"item": self.item.name, "unit": box.name}])
+
+	def test_rule_counts_only_the_rows_in_its_units(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		for units, free_quantity in (((box.name,), 2), ((box.name, "Unit"), 3)):
+			with self.subTest(units=units):
+				item = make_item(
+					self.income.name,
+					self.expense.name,
+					uom_conversions=[{"uom": box.name, "conversion_factor": 12}],
+				)
+				self._pricing_rule(
+					applied_items=[{"item": item.name, "unit": unit} for unit in units],
+					discount_type="Product Discount",
+					free_item=item.name,
+					free_item_quantity=1,
+					is_recursive=1,
+					recurse_every=12,
+				)
+				box_row = {"item": item.name, "transfer_unit": box.name, "transfer_quantity": 1, "rate": 10}
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					item.name,
+					self.income.name,
+					items=[box_row, box_row, {"item": item.name, "quantity": 12, "rate": 10}],
+				)
+
+				free_rows = [row for row in invoice.items if row.is_free_item]
+				self.assertEqual([row.quantity for row in free_rows], [free_quantity])
+				self.assertEqual(len(invoice.pricing_rule_detail), 1)
 
 	def test_rule_whose_free_quantity_rounds_to_zero_is_skipped(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)

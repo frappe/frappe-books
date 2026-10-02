@@ -233,18 +233,23 @@ export default {
         '2rem',
         ...this.tableFields.map((field, index) => {
           const width = this.columnWidths.widths[field.fieldname];
-          return width
-            ? `${width}px`
-            : `minmax(${this.fieldMinimumWidths[index]}rem, 1fr)`;
+          if (width) return `${width}px`;
+          const share = field === this.subjectField ? 2 : 1;
+          return `minmax(${this.fieldMinimumWidths[index]}rem, ${share}fr)`;
         }),
         ...(this.canEditRow ? ['2rem'] : []),
       ];
+    },
+    subjectField() {
+      // The row's first link (item, account) names it, so it gets more room.
+      return this.tableFields.find((field) => this.isLink(field));
     },
     fieldMinimumWidths() {
       return this.tableFields.map((field) => {
         if (field.fieldtype === 'Check') return 3;
         if (field.fieldtype === 'Int') return 4;
-        if (['Link', 'DynamicLink'].includes(field.fieldtype)) return 9;
+        if (field.fieldtype === 'Currency') return 7;
+        if (this.isLink(field)) return 9;
         return this.isNumeric(field) ? 6 : 8;
       });
     },
@@ -271,6 +276,9 @@ export default {
   },
   methods: {
     focus() {},
+    isLink(field) {
+      return ['Link', 'DynamicLink'].includes(field.fieldtype);
+    },
     async addRow() {
       await this.doc.append(this.df.fieldname);
       await nextTick();

@@ -64,7 +64,7 @@ test('a new sales invoice shows the fields it showed, in its sections', () => {
       Items: ['items', 'net_total'],
       'Tax and Totals': ['grand_total'],
       Outstanding: ['outstanding_amount', 'stock_not_transferred'],
-      References: ['terms', 'attachment', 'return_against'],
+      References: ['terms', 'attachment'],
     },
   });
 });
@@ -517,6 +517,34 @@ test('invoice actions follow the Frappe invoice values', () => {
   invoice.outstanding_amount = fyo.pesa(0);
   invoice.return_against = 'SINV-1000';
   assert.deepEqual(labels(invoice), ['Shipment', 'Accounting Entries']);
+});
+
+test('Return Against shows while returns are on, or once it is set', () => {
+  for (const schemaName of ['SalesInvoice', 'PurchaseInvoice']) {
+    setSettings();
+    const draft = newInvoice(schemaName);
+    const isHidden = () =>
+      evaluateHidden(draft.fieldMap.return_against, draft);
+
+    assert.equal(isHidden(), true);
+    setSettings({ accounting: { enable_invoice_returns: true } });
+    assert.equal(isHidden(), false);
+    setSettings();
+    draft.return_against = 'INV-1000';
+    assert.equal(isHidden(), false);
+  }
+});
+
+test('a fully returned invoice offers no Return', () => {
+  setSettings({ accounting: { enable_invoice_returns: true } });
+  const invoice = newInvoice('SalesInvoice', { docstatus: 1 });
+  const makeReturn = frappeModels.SalesInvoice.getActions(fyo).find(
+    ({ label }) => label === 'Return'
+  );
+
+  assert.equal(makeReturn.condition(invoice), true);
+  invoice.is_fully_returned = true;
+  assert.equal(makeReturn.condition(invoice), false);
 });
 
 test('the payment step of a return names the refund', () => {

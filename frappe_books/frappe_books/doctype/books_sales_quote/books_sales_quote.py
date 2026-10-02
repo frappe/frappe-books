@@ -29,8 +29,6 @@ class BooksSalesQuote(InvoiceController):
 		currency: DF.Link | None
 		date: DF.Datetime
 		discount_after_tax: DF.Check
-		discount_amount: DF.Currency
-		discount_percent: DF.Float
 		exchange_rate: DF.Float
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check
@@ -41,7 +39,6 @@ class BooksSalesQuote(InvoiceController):
 		party: DF.DynamicLink
 		price_list: DF.Link | None
 		reference_type: DF.Link
-		set_discount_amount: DF.Check
 		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 		taxes: DF.Table[BooksTaxSummary]
 		terms: DF.Text | None

@@ -50,6 +50,11 @@ export class SalesQuote extends Invoice {
   };
   static override rowModels = { items: SalesQuoteItem, taxes: TaxSummary };
 
+  /** A quote posts no ledger entries. */
+  override get isTransactional(): boolean {
+    return false;
+  }
+
   // A quote's party may be a lead, so it is not filtered by role.
   static override filters: FiltersMap = {
     number_series: (doc: FrappeDoc) => [['reference_type', '=', doc.schemaName]],

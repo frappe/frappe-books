@@ -94,7 +94,10 @@ export async function routeTo(route: RouteLocationRaw) {
 
 export async function deleteDocWithPrompt(doc: FrappeDoc) {
   let detail = t`This action is permanent.`;
-  if (doc.isTransactional && doc.isSubmitted) {
+  // A submitted document cannot be deleted; a cancelled one takes its entries along.
+  const hasEntries =
+    doc.isTransactional || stockSchemas.includes(doc.schemaName);
+  if (hasEntries && doc.isCancelled) {
     detail = t`This action is permanent and will delete associated ledger entries.`;
   }
 

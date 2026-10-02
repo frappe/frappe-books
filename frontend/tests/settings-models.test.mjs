@@ -127,15 +127,23 @@ test('Defaults hide inventory and POS fields as those features are off', () => {
   fyo.singles.AccountingSettings = {};
   fyo.singles.InventorySettings = {};
   const defaults = newFrappeDoc('Defaults');
-  assert.equal(hidden(defaults, 'shipment_terms'), true);
-  assert.equal(hidden(defaults, 'pos_customer'), true);
+  const gated = [
+    'shipment_location',
+    'purchase_receipt_location',
+    'shipment_terms',
+    'pos_customer',
+    'pos_print_template',
+  ];
+  for (const fieldname of gated) {
+    assert.equal(hidden(defaults, fieldname), true, fieldname);
+  }
   assert.equal(hidden(defaults, 'sales_invoice_terms'), false);
 
   fyo.singles.AccountingSettings = { enable_inventory: true };
   fyo.singles.InventorySettings = { enable_point_of_sale: true };
-  assert.equal(hidden(defaults, 'shipment_terms'), false);
-  assert.equal(hidden(defaults, 'pos_customer'), false);
-  assert.equal(hidden(defaults, 'pos_cash_denominations'), false);
+  for (const fieldname of [...gated, 'pos_cash_denominations']) {
+    assert.equal(hidden(defaults, fieldname), false, fieldname);
+  }
 });
 
 test('Defaults and POS profiles offer the button colours they offered', () => {

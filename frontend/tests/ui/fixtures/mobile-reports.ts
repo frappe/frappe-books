@@ -65,6 +65,7 @@ function makeProfitAndLoss() {
       column('account', 'Account', 'Link'),
       column(periods[0], 'Aug 31, 2026', 'Currency'),
       column(periods[1], 'Jul 31, 2026', 'Currency'),
+      column('total', 'Total', 'Currency'),
     ],
     [
       account('Income', 0, [123456789, 1000], true),
@@ -183,8 +184,8 @@ function makeStockLedger() {
       column('location', 'Location', 'Link'),
       column('quantity', 'Quantity', 'Float'),
       column('balance_quantity', 'Balance Qty.', 'Float'),
-      column('reference_name', 'Ref. Name'),
-      column('reference_type', 'Ref. Type'),
+      column('reference_name', 'Ref Name'),
+      column('reference_type', 'Ref Type'),
     ],
     rows.map(([date, item, location, quantity, balance, name], index) => ({
       index: index + 1,

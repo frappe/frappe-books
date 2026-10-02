@@ -2,17 +2,16 @@
   <FrappeCodeEditorContent :editor="view" />
 </template>
 <script lang="ts">
-import { CompletionContext } from '@codemirror/autocomplete';
 import { vue } from '@codemirror/lang-vue';
-import { syntaxTree } from '@codemirror/language';
 import { Prec } from '@codemirror/state';
-import { keymap } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import {
   CodeEditorContent as FrappeCodeEditorContent,
   CodeKit,
   useCodeEditor,
 } from 'frappe-ui/code-editor';
 import { defineComponent, ref } from 'vue';
+import { getCompletionsFromHints } from './completions';
 
 export default defineComponent({
   components: { FrappeCodeEditorContent },
@@ -21,9 +20,16 @@ export default defineComponent({
     disabled: { type: Boolean, default: false },
     hints: { type: Object, default: undefined },
   },
-  emits: ['input', 'blur', 'apply'],
+  emits: ['input', 'blur', 'apply', 'save', 'toggle-edit-mode', 'toggle-hints'],
   setup(props, { emit }) {
     const completions = getCompletionsFromHints(props.hints ?? {});
+    const text = (editor: EditorView) => editor.state.doc.toString();
+    const handled = (action: (editor: EditorView) => void) => {
+      return (editor: EditorView) => {
+        action(editor);
+        return true;
+      };
+    };
     const view = useCodeEditor({
       content: ref(props.initialValue),
       extensions: [
@@ -32,115 +38,30 @@ export default defineComponent({
           autocompletion: { override: [completions] },
         }),
         vue(),
-        // Control on every platform, as the hint shows. Above the default
-        // keymap, whose Mod-Enter inserts a blank line.
+        // The Template Builder's shortcuts, which the default keymap would
+        // take: its Mod-Enter inserts a blank line, and its macOS Ctrl-E and
+        // Ctrl-H move and delete. A save here takes the text not yet applied.
         Prec.high(
           keymap.of([
             {
               key: 'Ctrl-Enter',
-              run: (editor) => {
-                emit('apply', editor.state.doc.toString());
-                return true;
-              },
+              run: handled((editor) => emit('apply', text(editor))),
             },
+            {
+              key: 'Mod-s',
+              run: handled((editor) => emit('save', text(editor))),
+            },
+            { key: 'Ctrl-e', run: handled(() => emit('toggle-edit-mode')) },
+            { key: 'Ctrl-h', run: handled(() => emit('toggle-hints')) },
           ])
         ),
       ],
       editable: () => !props.disabled,
-      onUpdate: (editor) => emit('input', editor.state.doc.toString()),
-      onBlur: (editor) => emit('blur', editor.state.doc.toString()),
+      onUpdate: (editor) => emit('input', text(editor)),
+      onBlur: (editor) => emit('blur', text(editor)),
     });
 
     return { view };
   },
 });
-
-function getCompletionsFromHints(hints: Record<string, unknown>) {
-  const options = hintsToCompletionOptions(hints);
-  return function completions(context: CompletionContext) {
-    let word = context.matchBefore(/\w*/);
-    if (word == null) {
-      return null;
-    }
-
-    const node = syntaxTree(context.state).resolveInner(context.pos);
-    const aptLocation = ['ScriptAttributeValue', 'SingleExpression'];
-
-    if (!aptLocation.includes(node.name)) {
-      return null;
-    }
-
-    if (word.from === word.to && !context.explicit) {
-      return null;
-    }
-
-    return {
-      from: word.from,
-      options,
-    };
-  };
-}
-
-type CompletionOption = {
-  label: string;
-  type: string;
-  detail: string;
-};
-
-function hintsToCompletionOptions(
-  hints: object,
-  prefix?: string
-): CompletionOption[] {
-  prefix ??= '';
-  const list: CompletionOption[] = [];
-
-  for (const [key, value] of Object.entries(hints)) {
-    const option = getCompletionOption(key, value, prefix);
-    if (option === null) {
-      continue;
-    }
-
-    if (Array.isArray(option)) {
-      list.push(...option);
-      continue;
-    }
-
-    list.push(option);
-  }
-
-  return list;
-}
-
-function getCompletionOption(
-  key: string,
-  value: unknown,
-  prefix: string
-): null | CompletionOption | CompletionOption[] {
-  let label = key;
-  if (prefix.length) {
-    label = prefix + '.' + key;
-  }
-
-  if (Array.isArray(value)) {
-    return {
-      label,
-      type: 'variable',
-      detail: 'Child Table',
-    };
-  }
-
-  if (typeof value === 'string') {
-    return {
-      label,
-      type: 'variable',
-      detail: value,
-    };
-  }
-
-  if (typeof value === 'object' && value !== null) {
-    return hintsToCompletionOptions(value, label);
-  }
-
-  return null;
-}
 </script>

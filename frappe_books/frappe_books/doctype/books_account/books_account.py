@@ -40,6 +40,7 @@ class BooksAccount(NestedSet):
 			"Tax",
 			"Temporary",
 		]
+		gst_head: DF.Literal["", "CGST", "SGST", "IGST", "Exempt"]
 		is_group: DF.Check
 		lft: DF.Int
 		old_parent: DF.Link | None

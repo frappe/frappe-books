@@ -6,6 +6,7 @@ import {
   RenderData,
 } from 'fyo/model/types';
 import { Fyo, t } from 'fyo';
+import type { DocValue } from 'fyo/core/types';
 import { OptionField, Schema } from 'schemas/types';
 import { ModelNameEnum } from './types';
 
@@ -16,6 +17,8 @@ import { Router } from 'vue-router';
 import type { DocValues } from 'src/frappe/api';
 import { getDocType } from 'src/frappe/doctypes';
 import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
+import { toFrappeValue } from 'src/frappe/values';
+import { DateTime } from 'luxon';
 
 const MAPPER_MODULES: Record<string, string> = {
   Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
@@ -71,8 +74,9 @@ export function getInvoiceActions(
   fyo: Fyo,
   schemaName: ModelNameEnum.SalesInvoice | ModelNameEnum.PurchaseInvoice
 ): Action[] {
-  const nextStep =
-    schemaName === ModelNameEnum.SalesInvoice
+  // A return refunds, so a sales return pays and a purchase return receives.
+  const nextStep = (doc: FrappeDoc) =>
+    (schemaName === ModelNameEnum.SalesInvoice) !== !!doc.return_against
       ? fyo.t`Receive Payment`
       : fyo.t`Make Payment`;
 
@@ -142,8 +146,9 @@ export function getMakeInvoiceAction(
     label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) => {
+      // Quotes to leads are not invoiced.
       if (schemaName === ModelNameEnum.SalesQuote) {
-        return doc.isSubmitted;
+        return doc.isSubmitted && doc.reference_type === 'Books Party';
       }
 
       // Shipments and receipts are Frappe-backed.
@@ -211,7 +216,6 @@ export function getMakePaymentAction(fyo: Fyo): Action {
         ModelNameEnum.Payment,
         'make_payment'
       );
-      await payment.set('reference_type', doc.schemaName);
       const currentRoute = router.currentRoute.value.fullPath;
       payment.once('afterSubmit', async () => {
         await doc.load();
@@ -254,10 +258,12 @@ export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
   };
 }
 
+/** The report of the document's entries, which all post on its date. */
 export function getLedgerLink(
   doc: FrappeDoc,
   reportClassName: 'GeneralLedger' | 'StockLedger'
 ) {
+  const date = getPostingDate(doc);
   return {
     name: 'Report',
     params: {
@@ -267,10 +273,21 @@ export function getLedgerLink(
       defaultFilters: JSON.stringify({
         referenceType: getDocType(doc.schemaName).doctype,
         referenceName: doc.name,
+        fromDate: date,
+        toDate: date,
       }),
     },
   };
 }
+
+/** Local midnight of the day, in the system time zone, the server posts the document on. */
+function getPostingDate(doc: FrappeDoc): Date {
+  const field = doc.fieldMap.date ?? doc.fieldMap.posting_date;
+  const value = doc.get(field.fieldname) as DocValue;
+  const day = String(toFrappeValue(value, field, doc.fyo)).slice(0, 10);
+  return DateTime.fromISO(day).toJSDate();
+}
+
 export function getMakeReturnDocAction(fyo: Fyo): Action {
   return {
     label: fyo.t`Return`,
@@ -278,7 +295,8 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     condition: (doc: FrappeDoc) =>
       !!fyo.singles.AccountingSettings?.enable_invoice_returns &&
       doc.isSubmitted &&
-      !doc.isReturn,
+      !doc.isReturn &&
+      !doc.is_fully_returned,
     action: async (doc: FrappeDoc) => {
       const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
       if (!returnDoc.name) {

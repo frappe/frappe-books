@@ -152,3 +152,28 @@ test("a settings save first sets the doctypes' print formats through their metho
     ['PUT', '/api/v2/document/Books Defaults/Books Defaults']
   );
 });
+
+test('a custom template previews its edits for an editor and prints as saved for a reader', async () => {
+  respond = () => ({ message: { html: '<p>INV-1</p>', style: '' } });
+  const template = newFrappeDoc('PrintFormat', {
+    name: 'Receipt',
+    doc_type: 'Books Sales Invoice',
+    html: '<p>{{ doc.name }}</p>',
+  });
+  template._notInserted = false;
+  const printPath = async (permissions) => {
+    template.docPermissions = permissions;
+    requests.length = 0;
+    await template.getPrint('INV-1');
+    return requests[0].path;
+  };
+
+  assert.equal(
+    await printPath({ read: 1, write: 1 }),
+    '/api/method/frappe_books.printing.preview_print_format'
+  );
+  assert.equal(
+    await printPath({ read: 1, print: 1 }),
+    '/api/method/frappe.www.printview.get_html_and_style'
+  );
+});

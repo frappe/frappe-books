@@ -50,6 +50,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			wizard.save(ignore_permissions=True)
 
 	def test_setup_creates_standard_accounts_and_defaults(self):
+		payment_accounts = ("sales_payment_account", "purchase_payment_account")
+		frappe.db.set_single_value("Books Defaults", dict.fromkeys(payment_accounts))
 		wizard = self._wizard(chart_of_accounts=STANDARD_CHART)
 		wizard.save(ignore_permissions=True)
 		run_setup(wizard)
@@ -71,10 +73,26 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		cash = frappe.db.get_single_value("Books Pos Settings", "cash_account")
 		for method, account in (("Cash", cash), ("Bank", wizard.bank_name)):
 			self.assertEqual(frappe.db.get_value("Books Payment Method", method, "account"), account)
-		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
+		# Invoices stay unpaid on submit until the user picks an automatic payment account.
+		for fieldname in payment_accounts:
+			self.assertFalse(frappe.db.get_single_value("Books Defaults", fieldname), fieldname)
+		self.assert_gst_heads()
 		self.assertTrue(frappe.db.exists("Books Tax", "GST-18"))
 		gst = frappe.get_doc("Books Tax", "GST-18")
 		self.assertEqual([(row.account, row.rate) for row in gst.details], [("CGST", 9), ("SGST", 9)])
+
+	def test_setup_leaves_auto_stock_transfer_to_the_user(self):
+		frappe.db.set_single_value(
+			"Books Defaults", {"shipment_location": None, "purchase_receipt_location": None}
+		)
+		wizard = self._wizard(chart_of_accounts=STANDARD_CHART)
+		wizard.save(ignore_permissions=True)
+		run_setup(wizard)
+
+		# A transfer location makes every invoice move stock on submit once inventory is on.
+		defaults = frappe.get_single("Books Defaults")
+		self.assertFalse(defaults.shipment_location)
+		self.assertFalse(defaults.purchase_receipt_location)
 
 	def test_setup_creates_the_selected_country_chart(self):
 		wizard = self._wizard(chart_of_accounts="India - Chart of Accounts")
@@ -92,7 +110,10 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"), "Stock In Hand"
 		)
-		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
+		self.assertEqual(
+			frappe.db.get_single_value("Books Inventory Settings", "stock_adjustment"), "Stock Adjustment"
+		)
+		self.assert_gst_heads()
 
 	def test_setup_adapts_defaults_to_a_numbered_chart(self):
 		wizard = self._wizard(country="Guatemala", currency="GTQ", chart_of_accounts="Guatemala - Cuentas")
@@ -278,6 +299,11 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			self.assertFalse(account.is_group, name)
 			self.assertIn(account.account_type, rules.get("account_types", (account.account_type,)), name)
 			self.assertIn(account.root_type, rules.get("root_types", (account.root_type,)), name)
+
+	def assert_gst_heads(self):
+		accounts = ("CGST", "SGST", "IGST", "Exempt")
+		heads = [frappe.db.get_value("Books Account", account, "gst_head") for account in accounts]
+		self.assertEqual(heads, list(accounts))
 
 	def assert_pos_accounts_are_ledgers(self):
 		for fieldname, account_type in (("cash_account", "Cash"), ("default_account", "Receivable")):

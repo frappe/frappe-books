@@ -18,6 +18,8 @@ export abstract class BaseGSTR extends Report {
     if (this.gstrType === 'GSTR-2') {
       return {
         B2B: 'B2B',
+        CDNR: 'Credit/Debit Notes (Registered)',
+        NR: 'Nil Rated, Exempted and Non GST supplies',
       };
     }
 
@@ -25,6 +27,8 @@ export abstract class BaseGSTR extends Report {
       B2B: 'B2B',
       B2CL: 'B2C-Large',
       B2CS: 'B2C-Small',
+      CDNR: 'Credit/Debit Notes (Registered)',
+      CDNUR: 'Credit/Debit Notes (Unregistered)',
       NR: 'Nil Rated, Exempted and Non GST supplies',
     };
   }

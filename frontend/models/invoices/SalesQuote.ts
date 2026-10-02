@@ -34,13 +34,9 @@ export class SalesQuote extends Invoice {
       'taxes',
       'base_grand_total',
       'grand_total',
-      'set_discount_amount',
-      'discount_amount',
-      'discount_percent',
       'currency',
       'exchange_rate',
       'discount_after_tax',
-      'make_auto_payment',
       'outstanding_amount',
       'terms',
       'attachment',
@@ -50,10 +46,18 @@ export class SalesQuote extends Invoice {
   };
   static override rowModels = { items: SalesQuoteItem, taxes: TaxSummary };
 
-  // A quote's party may be a lead, so it is not filtered by role.
   static override filters: FiltersMap = {
-    number_series: (doc: FrappeDoc) => [['reference_type', '=', doc.schemaName]],
+    // Leads have no role.
+    party: (doc: FrappeDoc) =>
+      doc.reference_type === 'Books Party' ? Invoice.filters.party(doc) : [],
+    number_series: Invoice.filters.number_series,
+    price_list: Invoice.filters.price_list,
   };
+
+  /** Quotes post no ledger entries. */
+  override get isTransactional(): boolean {
+    return false;
+  }
 
   static getListViewSettings(): ListViewSettings {
     return {

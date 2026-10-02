@@ -94,7 +94,7 @@ test('the wizard offers Books’ fields in Books’ order', () => {
       .map(({ label }) => label),
     ['Submitted', 'Cancelled']
   );
-  assert.deepEqual(invoice.slice(18, 21), [
+  assert.deepEqual(invoice.slice(15, 18), [
     'discount_after_tax',
     'make_auto_payment',
     'make_auto_stock_transfer',

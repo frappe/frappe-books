@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, nowdate
+from frappe.utils import add_days, now_datetime, nowdate
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.loyalty import expire_programs_and_points, get_available_points
@@ -84,6 +84,24 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		self.assertEqual(program.db_get("is_enabled"), 0)
 		self.assertEqual(program.db_get("status"), "Expired")
 		self.assertEqual(frappe.db.get_value("Books Party", self.party.name, "loyalty_points"), 0)
+
+	def test_points_expire_only_when_the_program_sets_an_expiry(self):
+		for expiry_duration, available in ((None, 180), (1, 0)):
+			with self.subTest(expiry_duration=expiry_duration):
+				program = self._loyalty_program(
+					from_date=add_days(nowdate(), -5), expiry_duration=expiry_duration
+				)
+				make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					self.item.name,
+					self.income.name,
+					date=add_days(now_datetime(), -2),
+					loyalty_program=program.name,
+				).submit()
+
+				self.assertEqual(get_available_points(self.party.name, program.name), available)
 
 	def test_status_follows_the_server_rules(self):
 		for values, status in (

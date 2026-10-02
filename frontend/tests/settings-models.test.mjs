@@ -55,12 +55,13 @@ test('each Get Started task is checked by a Books Get Started field', async () =
   assert.equal(fyo.singles.GetStarted, getStarted);
 });
 
-test('POS Settings hide barcode and visibility fields as the features they need are off', async () => {
+test('POS Settings hide barcode fields as the features they need are off', async () => {
   fyo.singles.InventorySettings = { enable_barcodes: false };
   fyo.singles.AccountingSettings = {};
   const settings = newFrappeDoc('POSSettings');
   assert.equal(hidden(settings, 'weight_enabled_barcode'), true);
-  assert.equal(hidden(settings, 'item_visibility'), true);
+  // An inventory POS can list all items too.
+  assert.equal(hidden(settings, 'item_visibility'), false);
 
   fyo.singles.InventorySettings = { enable_barcodes: true };
   fyo.singles.AccountingSettings = {
@@ -68,27 +69,36 @@ test('POS Settings hide barcode and visibility fields as the features they need 
   };
   assert.equal(hidden(settings, 'weight_enabled_barcode'), false);
   assert.equal(hidden(settings, 'check_digits'), true);
-  assert.equal(hidden(settings, 'item_visibility'), false);
   await settings.set('weight_enabled_barcode', true);
   assert.equal(hidden(settings, 'check_digits'), false);
   assert.equal(hidden(settings, 'item_code_digits'), false);
   assert.equal(hidden(settings, 'item_weight_digits'), false);
 });
 
-test('an inventory feature cannot be turned off once it is on', async () => {
-  const settings = newFrappeDoc('InventorySettings');
-  for (const fieldname of [
+test('a saved inventory feature cannot be turned off; an unsaved one can', async () => {
+  const features = [
     'enable_barcodes',
     'enable_batches',
     'enable_serial_number',
     'enable_uom_conversions',
-  ]) {
-    assert.equal(readOnly(settings, fieldname), false);
+  ];
+  stubFrappe(() => ({
+    data: {
+      name: 'Books Inventory Settings',
+      ...Object.fromEntries(features.map((fieldname) => [fieldname, 1])),
+      enable_point_of_sale: 1,
+    },
+  }));
+  const saved = newFrappeDoc('InventorySettings');
+  await saved.load();
+  const settings = newFrappeDoc('InventorySettings');
+  for (const fieldname of features) {
+    assert.equal(readOnly(saved, fieldname), true);
     await settings.set(fieldname, true);
-    assert.equal(readOnly(settings, fieldname), true);
+    assert.equal(readOnly(settings, fieldname), false);
   }
 
-  assert.equal(readOnly(settings, 'enable_point_of_sale'), false);
+  assert.equal(readOnly(saved, 'enable_point_of_sale'), false);
 });
 
 test('the rules of each Frappe-backed model name fields of its DocType', () => {
@@ -117,23 +127,36 @@ test('Defaults hide inventory and POS fields as those features are off', () => {
   fyo.singles.AccountingSettings = {};
   fyo.singles.InventorySettings = {};
   const defaults = newFrappeDoc('Defaults');
-  assert.equal(hidden(defaults, 'shipment_terms'), true);
-  assert.equal(hidden(defaults, 'pos_customer'), true);
+  const gated = [
+    'shipment_location',
+    'purchase_receipt_location',
+    'shipment_terms',
+    'pos_customer',
+    'pos_print_template',
+  ];
+  for (const fieldname of gated) {
+    assert.equal(hidden(defaults, fieldname), true, fieldname);
+  }
   assert.equal(hidden(defaults, 'sales_invoice_terms'), false);
 
   fyo.singles.AccountingSettings = { enable_inventory: true };
   fyo.singles.InventorySettings = { enable_point_of_sale: true };
-  assert.equal(hidden(defaults, 'shipment_terms'), false);
-  assert.equal(hidden(defaults, 'pos_customer'), false);
-  assert.equal(hidden(defaults, 'pos_cash_denominations'), false);
+  for (const fieldname of [...gated, 'pos_cash_denominations']) {
+    assert.equal(hidden(defaults, fieldname), false, fieldname);
+  }
 });
 
-test('Defaults and POS profiles offer the button colours they offered', () => {
+test('Defaults and POS profiles offer colours for the POS buttons that use them', () => {
   for (const schemaName of ['Defaults', 'POSProfile']) {
     const colourFields = getSchema(schemaName).fields.filter(({ fieldname }) =>
       fieldname.endsWith('_button_colour')
     );
-    assert.equal(colourFields.length, 7);
+    assert.deepEqual(
+      colourFields.map(({ fieldname }) => fieldname),
+      ['save', 'cancel', 'held', 'return', 'pay'].map(
+        (action) => `${action}_button_colour`
+      )
+    );
     for (const { fieldname, options } of colourFields) {
       assert.deepEqual(options, previousForms.colors.Buttons, fieldname);
     }
@@ -177,7 +200,6 @@ test('discounts lead to pricing rules, then coupons, and stay on once on', async
   assert.equal(hidden(settings, 'enable_pricing_rule'), true);
 
   await settings.set('enable_discounting', true);
-  assert.equal(readOnly(settings, 'enable_discounting'), true);
   assert.equal(hidden(settings, 'discount_account'), false);
   assert.equal(hidden(settings, 'enable_pricing_rule'), false);
   assert.equal(hidden(settings, 'enable_coupon_code'), true);
@@ -185,6 +207,27 @@ test('discounts lead to pricing rules, then coupons, and stay on once on', async
   await settings.set('enable_pricing_rule', true);
   assert.equal(hidden(settings, 'enable_coupon_code'), false);
   assert.equal(readOnly(settings, 'enable_pricing_rule'), false);
+});
+
+test('a switch that stays on locks once saved, not when checked before Save', async () => {
+  const checks = getSchema('AccountingSettings').fields.filter(
+    ({ fieldtype }) => fieldtype === 'Check'
+  );
+  stubFrappe(() => ({
+    data: {
+      name: 'Books Accounting Settings',
+      ...Object.fromEntries(checks.map(({ fieldname }) => [fieldname, 0])),
+      enable_inventory: 1,
+    },
+  }));
+  const settings = newFrappeDoc('AccountingSettings');
+  await settings.load();
+  assert.equal(readOnly(settings, 'enable_inventory'), true);
+
+  await settings.set('enable_discounting', true);
+  assert.equal(readOnly(settings, 'enable_discounting'), false);
+  await settings.set('enable_discounting', false);
+  assert.equal(settings.enable_discounting, false);
 });
 
 test('the System tab offers sample dates and takes custom formats and locales', async () => {
@@ -209,6 +252,17 @@ test('the System tab offers sample dates and takes custom formats and locales', 
   await assert.rejects(
     settings.set('display_precision', 10),
     /between 0 and 9/
+  );
+});
+
+test('only the Print tab offers a terms and conditions switch', () => {
+  assert.equal(
+    fieldnames('SystemSettings').includes('display_terms_and_conditions'),
+    false
+  );
+  assert.equal(
+    fieldnames('PrintSettings').includes('displaytermsandconditions'),
+    true
   );
 });
 

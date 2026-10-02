@@ -11,7 +11,7 @@ from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_mov
 	movement_values,
 )
 from frappe_books.reports.stock import get_ledger_data
-from frappe_books.tests.accounting import make_account, make_item
+from frappe_books.tests.accounting import make_account, make_item, unique_name
 
 
 class IntegrationTestValuation(IntegrationTestCase):
@@ -42,6 +42,24 @@ class IntegrationTestValuation(IntegrationTestCase):
 		self.assertEqual(entry.balance_quantity, 1)
 		self.assertEqual(Decimal(str(entry.balance_value)), Decimal("20"))
 		self.assertEqual(json.loads(entry.stock_queue), [["1", "20"]])
+
+	def test_transfer_moves_stock_at_the_cost_it_leaves_with(self):
+		shop = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert().name
+		move(self.item, "MaterialReceipt", 2, 10)
+		move(self.item, "MaterialReceipt", 1, 20)
+		row = {"item": self.item, "from_location": "Stores", "to_location": shop, "quantity": 3, "rate": 99}
+		transfer = frappe.get_doc(movement_values("MaterialTransfer", [row])).insert()
+		transfer.submit()
+
+		values = frappe.get_all(
+			"Books Stock Ledger Entry",
+			filters={"reference_name": transfer.name},
+			fields=["location", "value_change"],
+		)
+		self.assertEqual(
+			{entry.location: Decimal(str(entry.value_change)) for entry in values},
+			{"Stores": Decimal("-40"), shop: Decimal("40")},
+		)
 
 	def test_emptying_stock_clears_rounding_remainder(self):
 		move(self.item, "MaterialReceipt", 0.5, 0.01)

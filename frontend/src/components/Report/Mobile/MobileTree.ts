@@ -1,4 +1,5 @@
 import { t } from 'fyo';
+import { sortBy } from 'lodash';
 import type { Report } from 'reports/Report';
 import type {
   ColumnField,
@@ -63,21 +64,10 @@ export class MobileTree {
       return [];
     }
 
-    const periods = this.report.columns.flatMap((column, index) =>
+    const options = this.report.columns.flatMap((column, index) =>
       index === this.labelIndex ? [] : [this.getValueColumn(column, index)]
     );
-    if (!this.layout.periods.total || periods.length < 2) {
-      return periods;
-    }
-
-    const total: MobileValueColumn = {
-      key: TOTAL_COLUMN,
-      label: t`Total`,
-      width: DEFAULT_WIDTH,
-      fieldtype: 'Currency',
-      getCell: (row) => row.total,
-    };
-    return [total, ...periods];
+    return sortBy(options, ({ key }) => key !== TOTAL_COLUMN);
   }
 
   getValueColumns(choice?: string): MobileValueColumn[] {
@@ -159,10 +149,14 @@ export class MobileTree {
   }
 
   getGroupRow(name: string, rows: ReportRow[], values: MobileValueColumn[]) {
+    // Rows can repeat a label, such as one location's batches.
+    const labels = new Set(
+      rows.map((row) => row.cells[this.labelIndex]?.value)
+    );
     return {
       ...this.getSummaryRow(`group:${name}`, rows, values),
       label: name,
-      subtitle: this.layout.describeGroup?.(rows.length),
+      subtitle: this.layout.describeGroup?.(labels.size),
       isGroup: true,
     };
   }

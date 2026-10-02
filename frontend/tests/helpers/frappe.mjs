@@ -48,6 +48,7 @@ await build({
       export { Search } from './src/utils/search';
       export { GeneralLedger } from './reports/GeneralLedger/GeneralLedger';
       export { ProfitAndLoss } from './reports/ProfitAndLoss/ProfitAndLoss';
+      export { StockBalance } from './reports/inventory/StockBalance';
       export { MobileTree } from './src/components/Report/Mobile/MobileTree';
       export { getCsvData, getJsonData } from './reports/commonExporter';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
@@ -161,6 +162,7 @@ export const {
   Search,
   GeneralLedger,
   ProfitAndLoss,
+  StockBalance,
   MobileTree,
   getCsvData,
   getJsonData,

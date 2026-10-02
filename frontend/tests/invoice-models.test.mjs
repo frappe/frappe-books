@@ -10,6 +10,7 @@ import {
   getFrappeDoc,
   getMappedDoc,
   getNewDocValues,
+  getSidebarConfig,
   getSchema,
   ListFilters,
   ListView,
@@ -64,7 +65,7 @@ test('a new sales invoice shows the fields it showed, in its sections', () => {
       Items: ['items', 'net_total'],
       'Tax and Totals': ['grand_total'],
       Outstanding: ['outstanding_amount', 'stock_not_transferred'],
-      References: ['terms', 'attachment', 'return_against'],
+      References: ['terms', 'attachment'],
     },
   });
 });
@@ -119,6 +120,11 @@ test('a submitted invoice hides what only a draft offers', () => {
   assert.deepEqual(getLayout(invoice).Main.References, ['terms']);
 });
 
+test('an invoice posts ledger entries and a quote does not', () => {
+  assert.equal(newInvoice('SalesInvoice').isTransactional, true);
+  assert.equal(newInvoice('SalesQuote').isTransactional, false);
+});
+
 test('the quote asks for the Type of its party and hides invoice fields', () => {
   setSettings();
   const quote = newInvoice('SalesQuote');
@@ -141,6 +147,14 @@ test('the quote asks for the Type of its party and hides invoice fields', () => 
   assert.equal(quote.reference_type, 'Books Party');
   assert.equal(quote.fieldMap.party.create, true);
   assert.equal(getSchema('SalesQuote').label, 'Quote');
+});
+
+test('a quote posts nothing, so it offers no ledger or payment on submit', () => {
+  setSettings({ defaults: { sales_payment_account: 'Cash' } });
+  const quote = newInvoice('SalesQuote');
+
+  assert.equal(quote.isTransactional, false);
+  assert.equal(getLayout(quote).Settings, undefined);
 });
 
 test('item tables keep their columns, row editor and Invoice No', () => {
@@ -202,7 +216,13 @@ test('row fields show by the features and discounts turned on', () => {
   assert.equal(hidden('item_discount_amount'), true);
   assert.equal(hidden('item_discounted_total'), true);
   assert.equal(hidden('batch'), true);
+  assert.equal(hidden('serial_number'), true);
   assert.equal(hidden('transfer_unit'), true);
+  fyo.singles.InventorySettings = { enable_serial_number: true };
+  assert.equal(hidden('serial_number'), false);
+  assert.equal(hidden('hsn_code'), true);
+  fyo.singles.AccountingSettings.country = 'India';
+  assert.equal(hidden('hsn_code'), false);
   row.set_item_discount_amount = true;
   row.item_discount_amount = fyo.pesa(2);
   assert.equal(hidden('item_discount_amount'), false);
@@ -218,6 +238,20 @@ test('a new invoice leaves its payment and stock follow-ups to the server', () =
   assert.equal('make_auto_stock_transfer' in sent, false);
   const copy = newInvoice('SalesInvoice', { make_auto_payment: false });
   assert.equal(copy.getMethodDocument({ clearServerFilled: true }).make_auto_payment, 0);
+});
+
+test('a cleared row tax goes to the server empty, so it is not filled again', () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice');
+  invoice.push('items', { item: 'Pen', tax: 'GST-18' });
+  const sentTax = () =>
+    invoice.getMethodDocument({ clearServerFilled: true }).items[0].tax;
+
+  // The Link control clears to an empty string.
+  invoice.items[0].tax = '';
+  assert.equal(sentTax(), '');
+  invoice.items[0].tax = null;
+  assert.equal(sentTax(), null);
 });
 
 test('row edits ask the server for the price, details and quantities that follow', async () => {
@@ -341,6 +375,47 @@ test('an invoice from selected items leaves their pricing to the server', async 
   assert.deepEqual(requests, []);
 });
 
+test('selected items offer only the documents their Item Usage allows', async () => {
+  const usages = { Pen: 'Sales', Ink: 'Both', Paper: 'Purchases' };
+  stubFrappe(({ params }) => ({
+    data: params.filters[0][2].map((name) => ({ name, item_usage: usages[name] })),
+  }));
+  const list = { schemaName: 'Item', t: fyo.t };
+  const offered = async (selected) => {
+    await ListView.methods.updateSelectedItems.call(list, selected);
+    return ListView.computed.createOptions.call(list).map(({ value }) => value);
+  };
+
+  assert.deepEqual(await offered(['Ink']), [
+    'SalesQuote',
+    'SalesInvoice',
+    'PurchaseInvoice',
+  ]);
+  assert.deepEqual(await offered(['Pen', 'Ink']), ['SalesQuote', 'SalesInvoice']);
+  assert.deepEqual(await offered(['Paper']), ['PurchaseInvoice']);
+  assert.deepEqual(await offered(['Pen', 'Paper']), []);
+});
+
+test('a new date fetches the exchange rate for it again', async () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice', {
+    party: 'Acme',
+    currency: 'USD',
+    exchange_rate: 80,
+  });
+  invoice.push('items', { item: 'Pen', rate: fyo.pesa(5) });
+
+  await invoice.set('date', new Date('2026-01-15'));
+  const sent = invoice.getMethodDocument({
+    keepRowNames: true,
+    clearServerFilled: true,
+  });
+  assert.equal('exchange_rate' in sent, false);
+  assert.equal(sent.currency, 'USD');
+  assert.equal('rate' in sent.items[0], false);
+  clearTimeout(invoice._previewTimer);
+});
+
 test('a return takes quantities back, however they are typed', async () => {
   setSettings();
   const invoice = newInvoice('SalesInvoice', { return_against: 'SINV-1001' });
@@ -413,7 +488,18 @@ test('links filter by the doctypes they point to', async () => {
     ['is_purchase', '=', 1],
   ]);
   assert.deepEqual(createFilters.party(sale), [['role', '=', 'Customer']]);
-  assert.deepEqual(frappeModels.SalesQuote.filters.party, undefined);
+  const quote = newInvoice('SalesQuote');
+  const quoteFilters = frappeModels.SalesQuote.filters;
+  assert.deepEqual(quoteFilters.party(quote), [
+    ['role', 'in', ['Customer', 'Both']],
+  ]);
+  assert.deepEqual(quoteFilters.price_list(quote), [
+    ['is_enabled', '=', 1],
+    ['is_sales', '=', 1],
+  ]);
+  // Leads have no role.
+  quote.reference_type = 'Books Lead';
+  assert.deepEqual(quoteFilters.party(quote), []);
 
   sale.push('items', { item: 'Pen' });
   const row = sale.items[0];
@@ -473,6 +559,14 @@ test('a record created from a link takes the values its filters choose', () => {
   });
 });
 
+test('a new party from the list of every party takes the default role', () => {
+  const party = getSidebarConfig()
+    .flatMap(({ items }) => items ?? [])
+    .find(({ name }) => name === 'party');
+  assert.equal(party.route, '/list/Party');
+  assert.deepEqual(getNewDocValues('Party', party.filters ?? []), {});
+});
+
 test("a row's transfer unit is its item's stock unit or one of its conversions", async () => {
   const sale = newInvoice('SalesInvoice');
   sale.push('items', { item: 'Pen', unit: 'Unit' });
@@ -519,6 +613,52 @@ test('invoice actions follow the Frappe invoice values', () => {
   assert.deepEqual(labels(invoice), ['Shipment', 'Accounting Entries']);
 });
 
+test('Return Against shows while returns are on, or once it is set', () => {
+  for (const schemaName of ['SalesInvoice', 'PurchaseInvoice']) {
+    setSettings();
+    const draft = newInvoice(schemaName);
+    const isHidden = () =>
+      evaluateHidden(draft.fieldMap.return_against, draft);
+
+    assert.equal(isHidden(), true);
+    setSettings({ accounting: { enable_invoice_returns: true } });
+    assert.equal(isHidden(), false);
+    setSettings();
+    draft.return_against = 'INV-1000';
+    assert.equal(isHidden(), false);
+  }
+});
+
+test('a fully returned invoice offers no Return', () => {
+  setSettings({ accounting: { enable_invoice_returns: true } });
+  const invoice = newInvoice('SalesInvoice', { docstatus: 1 });
+  const makeReturn = frappeModels.SalesInvoice.getActions(fyo).find(
+    ({ label }) => label === 'Return'
+  );
+
+  assert.equal(makeReturn.condition(invoice), true);
+  invoice.is_fully_returned = true;
+  assert.equal(makeReturn.condition(invoice), false);
+});
+
+test('the payment step of a return names the refund', () => {
+  const step = (schemaName, values = {}) =>
+    frappeModels[schemaName]
+      .getActions(fyo)[0]
+      .nextStep(newInvoice(schemaName, values));
+
+  assert.equal(step('SalesInvoice'), 'Receive Payment');
+  assert.equal(
+    step('SalesInvoice', { return_against: 'SINV-1000' }),
+    'Make Payment'
+  );
+  assert.equal(step('PurchaseInvoice'), 'Make Payment');
+  assert.equal(
+    step('PurchaseInvoice', { return_against: 'PINV-1000' }),
+    'Receive Payment'
+  );
+});
+
 test('a submitted quote makes a Frappe-backed sales invoice from its mapper', async () => {
   setSettings();
   const quote = newInvoice('SalesQuote', { docstatus: 1, name: 'SQUOT-1001' });
@@ -532,6 +672,10 @@ test('a submitted quote makes a Frappe-backed sales invoice from its mapper', as
   }));
 
   assert.equal(makeInvoice.condition(quote), true);
+  // The mapper invoices only customers, not leads.
+  quote.reference_type = 'Books Lead';
+  assert.equal(makeInvoice.condition(quote), false);
+  quote.reference_type = 'Books Party';
   const invoice = await getMappedDoc(
     quote,
     'SalesInvoice',

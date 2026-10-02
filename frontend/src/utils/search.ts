@@ -200,50 +200,51 @@ function getReportList(fyo: Fyo): SearchItem[] {
     .filter((item) => canOpen(item.route!));
 }
 
-function getListViewList(fyo: Fyo): SearchItem[] {
-  let schemaNames = [
-    ModelNameEnum.Account,
-    ModelNameEnum.JournalEntry,
-    ModelNameEnum.PurchaseInvoice,
-    ModelNameEnum.SalesInvoice,
-    ModelNameEnum.Tax,
-    ModelNameEnum.UOM,
-    ModelNameEnum.Address,
-    ModelNameEnum.AccountingLedgerEntry,
-    ModelNameEnum.Currency,
-    ModelNameEnum.NumberSeries,
-    ModelNameEnum.PrintFormat,
+/** Schemas of the features that are turned off, whose lists are not offered. */
+function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
+  const accounting = fyo.singles.AccountingSettings;
+  const inventory = fyo.singles.InventorySettings;
+  const features: [boolean | undefined, ModelNameEnum[]][] = [
+    [
+      accounting?.enable_inventory,
+      [
+        ModelNameEnum.StockMovement,
+        ModelNameEnum.Shipment,
+        ModelNameEnum.PurchaseReceipt,
+        ModelNameEnum.Location,
+        ModelNameEnum.StockLedgerEntry,
+      ],
+    ],
+    [accounting?.enable_price_list, [ModelNameEnum.PriceList]],
+    [accounting?.enable_pricing_rule, [ModelNameEnum.PricingRule]],
+    [accounting?.enable_coupon_code, [ModelNameEnum.CouponCode]],
+    [accounting?.enable_lead, [ModelNameEnum.Lead]],
+    [
+      accounting?.enable_loyalty_program,
+      [ModelNameEnum.LoyaltyProgram, ModelNameEnum.LoyaltyPointEntry],
+    ],
+    [accounting?.enableitem_group, [ModelNameEnum.ItemGroup]],
+    [accounting?.enable_form_customization, [ModelNameEnum.CustomForm]],
+    [inventory?.enable_batches, [ModelNameEnum.Batch]],
+    [inventory?.enable_serial_number, [ModelNameEnum.SerialNumber]],
+    [
+      inventory?.enable_point_of_sale,
+      [
+        ModelNameEnum.POSProfile,
+        ModelNameEnum.POSOpeningShift,
+        ModelNameEnum.POSClosingShift,
+        ModelNameEnum.ItemEnquiry,
+      ],
+    ],
   ];
 
-  if (fyo.singles.AccountingSettings?.enable_inventory) {
-    schemaNames.push(
-      ModelNameEnum.StockMovement,
-      ModelNameEnum.Shipment,
-      ModelNameEnum.PurchaseReceipt,
-      ModelNameEnum.Location,
-      ModelNameEnum.StockLedgerEntry
-    );
-  }
+  return features.filter(([isOn]) => !isOn).flatMap(([, names]) => names);
+}
 
-  if (fyo.singles.AccountingSettings?.enable_price_list) {
-    schemaNames.push(ModelNameEnum.PriceList);
-  }
-
-  if (fyo.singles.InventorySettings?.enable_batches) {
-    schemaNames.push(ModelNameEnum.Batch);
-  }
-
-  if (fyo.singles.InventorySettings?.enable_serial_number) {
-    schemaNames.push(ModelNameEnum.SerialNumber);
-  }
-
-  if (fyo.singles.AccountingSettings?.enable_form_customization) {
-    schemaNames.push(ModelNameEnum.CustomForm);
-  }
-
-  schemaNames = getAllSchemaNames() as ModelNameEnum[];
-
-  const standardLists = schemaNames
+function getListViewList(fyo: Fyo): SearchItem[] {
+  const switchedOff = getSwitchedOffSchemaNames(fyo);
+  const standardLists = getAllSchemaNames()
+    .filter((s) => !switchedOff.includes(s))
     .map((s) => getSchema(s))
     .filter((s) => s && !s.isChild && !s.isSingle)
     .map(
@@ -265,11 +266,6 @@ function getListViewList(fyo: Fyo): SearchItem[] {
       label: t`Suppliers`,
       route: `/list/Party/${t`Suppliers`}`,
       filters: routeFilters.Suppliers,
-    },
-    {
-      label: t`Party`,
-      route: `/list/Party/${t`Party`}`,
-      filters: routeFilters.Party,
     },
     {
       label: t`Sales Items`,

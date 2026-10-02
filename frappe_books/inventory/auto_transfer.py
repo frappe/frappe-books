@@ -123,7 +123,8 @@ def _is_pos_sale(invoice) -> bool:
 
 
 def _location_field(invoice) -> str:
-	return "shipment_location" if invoice.transaction_type == "sales" else "purchase_receipt_location"
+	# A quote ships like the sales invoice made from it.
+	return "purchase_receipt_location" if invoice.transaction_type == "purchase" else "shipment_location"
 
 
 def _pos_location() -> str | None:

@@ -19,7 +19,7 @@ class BooksNumberSeries(Document):
 
 		pad_zeros: DF.Int
 		reference_type: DF.Literal[
-			"-",
+			"",
 			"SalesInvoice",
 			"SalesQuote",
 			"PurchaseInvoice",

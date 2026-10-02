@@ -27,6 +27,7 @@ export class StockMovement extends FrappeDoc {
       'items',
     ],
     fields: {
+      items: { edit: true },
       movement_type: {
         optionLabels: {
           [MovementTypeEnum.MaterialIssue]: 'Material Issue',
@@ -78,7 +79,7 @@ export class StockMovement extends FrappeDoc {
   }
 
   static getActions(fyo: Fyo): Action[] {
-    return [getLedgerLinkAction(fyo, true)];
+    return [getLedgerLinkAction(fyo), getLedgerLinkAction(fyo, true)];
   }
 
   async addItem(name: string) {

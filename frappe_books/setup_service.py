@@ -32,7 +32,7 @@ def run_setup(wizard):
 	_update_inventory_settings(accounts)
 	_update_pos_settings(accounts)
 	_update_payment_methods(accounts["cash"], bank_account)
-	_update_defaults(bank_account, accounts)
+	_update_defaults()
 	return {"setup_complete": True, "bank_account": bank_account}
 
 
@@ -67,6 +67,7 @@ def default_accounts(chart):
 			chart, ["Stock Received But Not Billed"], "Stock Received But Not Billed"
 		),
 		"cost_of_goods_sold": find_ledger_account(chart, ["Cost of Goods Sold"], "Cost of Goods Sold"),
+		"stock_adjustment": find_ledger_account(chart, ["Stock Adjustment"], "Stock Adjustment"),
 	}
 
 
@@ -121,6 +122,7 @@ def _update_inventory_settings(accounts):
 			"stock_in_hand": accounts["stock_in_hand"],
 			"stock_received_but_not_billed": accounts["stock_received_but_not_billed"],
 			"cost_of_goods_sold": accounts["cost_of_goods_sold"],
+			"stock_adjustment": accounts["stock_adjustment"],
 		}
 	)
 	settings.save(ignore_permissions=True)
@@ -145,15 +147,11 @@ def _update_payment_methods(cash_account, bank_account):
 		frappe.db.set_value("Books Payment Method", method, "account", account, update_modified=False)
 
 
-def _update_defaults(bank_account, accounts):
+def _update_defaults():
+	"""Set the default number series.
+
+	Payment accounts and stock locations stay empty, so invoices do not pay or move stock on submit unasked.
+	"""
 	defaults = frappe.get_single("Books Defaults")
-	defaults.update(
-		{
-			"sales_payment_account": accounts["cash"],
-			"purchase_payment_account": bank_account,
-			"shipment_location": "Stores",
-			"purchase_receipt_location": "Stores",
-			**{field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field},
-		}
-	)
+	defaults.update({field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field})
 	defaults.save(ignore_permissions=True)

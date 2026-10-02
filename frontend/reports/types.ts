@@ -15,8 +15,6 @@ export interface ReportCell {
 
 export interface ReportRow {
   cells: ReportCell[];
-  /** The server's total of the row's period columns. */
-  total?: ReportCell;
   level?: number;
   isGroup?: boolean;
   isEmpty?: boolean;
@@ -51,11 +49,11 @@ export interface PhoneTreeLayout {
   type: 'tree';
   label: string;
   values?: PhoneValueColumn[];
-  /** Show one of the other columns, picked in a Column sheet. */
-  periods?: { total: boolean };
+  /** Show one of the other columns, picked in a Column sheet; a Total column first. */
+  periods?: boolean;
   /** Group rows under this column's values and sum the value columns. */
   groupBy?: string;
-  /** Subtitle of a group row, from its number of rows. */
+  /** Subtitle of a group row, from its number of distinct labels. */
   describeGroup?: (count: number) => string;
   /** Icon of the rows inside a group. */
   icon?: string;

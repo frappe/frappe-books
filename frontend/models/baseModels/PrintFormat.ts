@@ -2,7 +2,12 @@ import { Fyo } from 'fyo';
 import { ListViewSettings, ReadOnlyMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { getSchema, toSchemaName } from 'src/frappe/registry';
-import { defaultPageSize, getPageCSS } from 'src/utils/printFormats';
+import { getPrintHTML, previewPrintHTML } from 'src/utils/printFormatApi';
+import {
+  defaultPageSize,
+  getPageCSS,
+  type PrintHTML,
+} from 'src/utils/printFormats';
 
 // The doctypes /books prints, as the Template Type offers them.
 const PRINTED_DOCTYPES = [
@@ -76,6 +81,23 @@ export class PrintFormat extends FrappeDoc {
 
   get isEditable(): boolean {
     return this.standard !== 'Yes' && !!this.custom_format;
+  }
+
+  get canEditTemplate(): boolean {
+    return this.isEditable && this.canEdit;
+  }
+
+  /** A document printed with the template: with its edits for an editor, else as saved. */
+  async getPrint(name: string): Promise<PrintHTML | null> {
+    if (!this.canEditTemplate) {
+      return await getPrintHTML(this.doc_type!, name, this.name!);
+    }
+
+    if (!this.html) {
+      return null;
+    }
+
+    return await previewPrintHTML(this.doc_type!, name, this.html, this.css);
   }
 
   override get canDelete(): boolean {

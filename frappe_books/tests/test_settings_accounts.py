@@ -11,6 +11,7 @@ class IntegrationTestSettingsAccounts(IntegrationTestCase):
 		for doctype, fieldname, account in (
 			("Books Accounting Settings", "discount_account", cash),
 			("Books Inventory Settings", "stock_in_hand", cash),
+			("Books Inventory Settings", "stock_adjustment", cash),
 			("Books Pos Settings", "cash_account", receivable),
 			("Books Pos Settings", "write_off_account", cash),
 			("Books Pos Settings", "default_account", cash),

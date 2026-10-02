@@ -14,6 +14,20 @@ def enable_features():
 		frappe.db.set_single_value(settings, fieldname, 1)
 
 
+def set_default_inventory_accounts():
+	"""Give stock movements the ledger accounts the setup wizard sets, as test sites skip it."""
+	settings = frappe.get_single("Books Inventory Settings")
+	frappe.db.set_single_value(
+		"Books Inventory Settings",
+		{
+			"stock_in_hand": settings.stock_in_hand
+			or make_account("Stock In Hand", account_type="Stock").name,
+			"stock_adjustment": settings.stock_adjustment
+			or make_account("Stock Adjustment", root_type="Expense", account_type="Stock Adjustment").name,
+		},
+	)
+
+
 def make_account(label, root_type="Asset", **values):
 	if not values.get("is_group"):
 		values.setdefault("parent_books_account", root_group(root_type))

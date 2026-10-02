@@ -309,7 +309,6 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'party',
           route: '/list/Party',
           schemaName: 'Party',
-          filters: [['role', 'in', ['Customer', 'Supplier', 'Both']]],
         },
         {
           label: t`Items`,
@@ -348,6 +347,12 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'taxes',
           route: '/list/Tax',
           schemaName: 'Tax',
+        },
+        {
+          label: t`Number Series`,
+          name: 'number-series',
+          route: '/list/NumberSeries',
+          schemaName: 'NumberSeries',
         },
         {
           label: t`Import Wizard`,

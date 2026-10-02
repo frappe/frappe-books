@@ -49,14 +49,3 @@ class IntegrationTestBooksSalesQuote(IntegrationTestCase):
 		).insert().submit()
 
 		self.assertEqual(lead.db_get("status"), "Quotation")
-
-	def test_a_new_quote_offers_the_sales_payment_on_submit(self):
-		cash = make_account("Quote Cash", account_type="Cash")
-		frappe.db.set_single_value("Books Defaults", "sales_payment_account", cash.name)
-		quote = frappe.new_doc("Books Sales Quote", reference_type="Books Party")
-		# /books leaves the check to the server, as frappe.new_doc does not.
-		quote.make_auto_payment = None
-
-		quote.preview()
-
-		self.assertEqual(quote.make_auto_payment, 1)

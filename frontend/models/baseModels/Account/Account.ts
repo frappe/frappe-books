@@ -18,7 +18,8 @@ export class Account extends FrappeDoc {
     label: 'Account',
     create: false,
     // Frappe moves the nested set as accounts are added; a client copy would be stale.
-    omitFields: ['lft', 'rgt', 'old_parent'],
+    // GST Head is Indian; see the Indian Account.
+    omitFields: ['lft', 'rgt', 'old_parent', 'gst_head'],
     quickEditFields: [
       'root_type',
       'parent_books_account',

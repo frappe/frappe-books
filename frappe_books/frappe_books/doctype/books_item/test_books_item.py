@@ -1,9 +1,12 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.frappe_books.doctype.books_item import books_item
 from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice, make_sales_invoice
 from frappe_books.tests.accounting import (
 	ensure_user,
@@ -35,6 +38,14 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 			make_item(income.name, expense.name, rate=-1)
 		item = make_item(income.name, expense.name, hsn_code="123456", barcode="123456789012")
 		self.assertEqual(item.hsn_code, "123456")
+
+	def test_hsn_code_digits_are_checked_only_for_an_indian_company(self):
+		income = make_account("Item Sales", root_type="Income", account_type="Income Account")
+		expense = make_account("Item Expense", root_type="Expense", account_type="Expense Account")
+		with patch(f"{books_item.__name__}.company_country", return_value="United States"):
+			item = make_item(income.name, expense.name, hsn_code="1234567890")
+
+		self.assertEqual(item.hsn_code, "1234567890")
 
 	def test_missing_accounts_and_hsn_code_get_the_app_defaults(self):
 		cogs, received, group = self.make_default_sources()

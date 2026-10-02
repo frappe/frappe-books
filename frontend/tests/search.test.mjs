@@ -140,6 +140,51 @@ test('a user who cannot read number series searches without them', async () => {
   assert.equal(doctypes.includes('Books Sales Invoice'), true);
 });
 
+test('the palette lists only the lists of features that are on', () => {
+  const { AccountingSettings, InventorySettings } = fyo.singles;
+  const lists = (accounting, inventory) => {
+    fyo.singles.AccountingSettings = accounting;
+    fyo.singles.InventorySettings = inventory;
+    return makeSearch()
+      .search.search('')
+      .filter(({ group }) => group === 'List')
+      .map(({ label }) => label);
+  };
+  const featureLists = [
+    'Batch',
+    'Custom Form',
+    'Lead',
+    'Price List',
+    'Serial Number',
+    'Stock Movement',
+  ];
+  try {
+    const off = lists({}, undefined);
+    const on = lists(
+      {
+        enable_form_customization: true,
+        enable_inventory: true,
+        enable_lead: true,
+        enable_price_list: true,
+      },
+      { enable_batches: true, enable_serial_number: true }
+    );
+
+    assert.deepEqual(
+      featureLists.filter((label) => off.includes(label)),
+      []
+    );
+    assert.deepEqual(
+      featureLists.filter((label) => on.includes(label)),
+      featureLists
+    );
+    assert.equal(off.includes('Quote'), true);
+  } finally {
+    fyo.singles.AccountingSettings = AccountingSettings;
+    fyo.singles.InventorySettings = InventorySettings;
+  }
+});
+
 test('a superseded search is dropped and documents rank by status', async () => {
   const pending = [];
   const { search } = makeSearch((request) =>
@@ -264,6 +309,18 @@ test('a party shows its email and role, and is not found by its phone', async ()
 
   await search.fetchDocs('98765');
   assert.deepEqual(docs(search, '98765'), []);
+});
+
+test('the palette lists every party under one Party list', () => {
+  const { search } = makeSearch();
+  const lists = search
+    .search('Party')
+    .filter(({ group, label }) => group === 'List' && label === 'Party');
+
+  assert.deepEqual(
+    lists.map(({ route }) => route),
+    ['/list/Party']
+  );
 });
 
 test('recent records reopen the record instead of a list', async () => {

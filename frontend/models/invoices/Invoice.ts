@@ -18,7 +18,13 @@ import type { InvoiceItem } from './InvoiceItem';
 import type { TaxSummary } from './TaxSummary';
 
 // A new rate for rows priced by the server follows these.
-const RATE_SOURCE_FIELDS = ['party', 'price_list', 'currency', 'exchange_rate'];
+const RATE_SOURCE_FIELDS = [
+  'party',
+  'date',
+  'price_list',
+  'currency',
+  'exchange_rate',
+];
 // The server fills these from the party.
 const PARTY_FIELDS = ['account', 'currency', 'exchange_rate'];
 /** Invoice and quote fields: links that offer no Create, and items edited in the row editor. */
@@ -44,7 +50,8 @@ export abstract class Invoice extends FrappeDoc {
     'make_auto_payment',
     'make_auto_stock_transfer',
   ];
-  static override refills = { party: PARTY_FIELDS };
+  // The exchange rate is the one on the invoice date.
+  static override refills = { party: PARTY_FIELDS, date: ['exchange_rate'] };
 
   items?: InvoiceItem[];
   date?: Date;
@@ -134,7 +141,6 @@ export abstract class Invoice extends FrappeDoc {
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
-    make_auto_payment: () => !this.autoPaymentAccount,
     discount_after_tax: () =>
       !this.fyo.singles.AccountingSettings?.enable_discounting,
     price_list: () =>
@@ -142,12 +148,17 @@ export abstract class Invoice extends FrappeDoc {
       (!this.canEdit && !this.price_list),
   };
 
-  /** Invoices, not quotes, make stock transfers when inventory and its location are set. */
-  get isAutoStockTransferHidden(): boolean {
-    return (
-      !this.fyo.singles.AccountingSettings?.enable_inventory ||
-      !this.autoStockTransferLocation
-    );
+  /** Rules of the fields invoices have and quotes lack: follow-ups on submit, and returns. */
+  get postingHidden(): HiddenMap {
+    return {
+      make_auto_payment: () => !this.autoPaymentAccount,
+      make_auto_stock_transfer: () =>
+        !this.fyo.singles.AccountingSettings?.enable_inventory ||
+        !this.autoStockTransferLocation,
+      return_against: () =>
+        !this.fyo.singles.AccountingSettings?.enable_invoice_returns &&
+        !this.return_against,
+    };
   }
 
   // The server refuses a missing rate too; asked for here to show it at the field.

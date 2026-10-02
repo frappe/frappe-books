@@ -158,7 +158,8 @@ def _earn_points(invoice, program):
 	if not tier:
 		return
 	points = _whole(_whole(abs(as_decimal(invoice.grand_total))) * as_decimal(tier.collection_factor))
-	expiry_date = add_days(getdate(invoice.date), program.expiry_duration or 0)
+	duration = program.expiry_duration
+	expiry_date = add_days(getdate(invoice.date), duration) if duration else None
 	_insert_entry(invoice, int(points), expiry_date, tier.tier_name)
 
 

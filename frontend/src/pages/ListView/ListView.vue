@@ -128,6 +128,7 @@ import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import MobileListToolbar from './MobileListToolbar.vue';
 import { getMobileRowLayout } from './mobileRowLayout';
 import type { Invoice } from 'models/invoices/Invoice';
+import { Item } from 'models/baseModels/Item/Item';
 import { ModelNameEnum } from 'models/types';
 
 export default defineComponent({
@@ -165,6 +166,7 @@ export default defineComponent({
       listFilters: [],
       isSelectionMode: false,
       selectedItems: [] as string[],
+      invoiceSchemaNames: [] as string[],
       isCreateSheetOpen: false,
     } as {
       listConfig: undefined | ReturnType<typeof getListConfig>;
@@ -172,6 +174,7 @@ export default defineComponent({
       listFilters: Filter[];
       isSelectionMode: boolean;
       selectedItems: string[];
+      invoiceSchemaNames: string[];
       isCreateSheetOpen: boolean;
     };
   },
@@ -211,7 +214,11 @@ export default defineComponent({
         { value: ModelNameEnum.SalesQuote, label: this.t`Sales Quote` },
         { value: ModelNameEnum.SalesInvoice, label: this.t`Sales Invoice` },
         { value: ModelNameEnum.PurchaseInvoice, label: this.t`Purchase Invoice` },
-      ].filter((option) => fyo.can(option.value, 'create'));
+      ].filter(
+        (option) =>
+          this.invoiceSchemaNames.includes(option.value) &&
+          fyo.can(option.value, 'create')
+      );
     },
     actionOptions(): DropdownOptions {
       return this.createOptions.map((option) => ({
@@ -285,8 +292,18 @@ export default defineComponent({
       }
     },
 
-    updateSelectedItems(selected: string[]) {
+    async updateSelectedItems(selected: string[]) {
       this.selectedItems = selected;
+      this.invoiceSchemaNames = [];
+      if (this.schemaName !== ModelNameEnum.Item || !selected.length) {
+        return;
+      }
+
+      const schemaNames = await Item.getInvoiceSchemaNames(fyo, selected);
+      // A later selection may have been answered first.
+      if (this.selectedItems === selected) {
+        this.invoiceSchemaNames = schemaNames;
+      }
     },
   },
 });

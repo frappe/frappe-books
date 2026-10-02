@@ -70,7 +70,8 @@ export class GeneralLedger extends Report {
     if (this.fyo.singles.AccountingSettings?.enable_inventory) {
       refTypeOptions.push(
         { label: t`Shipment`, value: 'Books Shipment' },
-        { label: t`Purchase Receipt`, value: 'Books Purchase Receipt' }
+        { label: t`Purchase Receipt`, value: 'Books Purchase Receipt' },
+        { label: t`Stock Movements`, value: 'Books Stock Movement' }
       );
     }
 
@@ -84,7 +85,7 @@ export class GeneralLedger extends Report {
       },
       {
         fieldtype: 'DynamicLink',
-        label: t`Ref. Name`,
+        label: t`Ref Name`,
         references: 'referenceType',
         placeholder: t`Ref Name`,
         emptyMessage: t`Change Ref Type`,

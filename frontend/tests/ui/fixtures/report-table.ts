@@ -32,8 +32,8 @@ const stockLedgerColumns = (
     ['valuation_rate', 'Valuation Rate', 'Currency'],
     ['balance_value', 'Balance Value', 'Currency'],
     ['value_change', 'Value Change', 'Currency'],
-    ['reference_name', 'Ref. Name', 'Data'],
-    ['reference_type', 'Ref. Type', 'Data'],
+    ['reference_name', 'Ref Name', 'Data'],
+    ['reference_type', 'Ref Type', 'Data'],
   ] as const
 ).map(([fieldname, label, fieldtype, width]) =>
   toColumnField({ fieldname, label, fieldtype, width })

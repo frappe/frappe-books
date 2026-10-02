@@ -7,6 +7,7 @@ from frappe.model.document import Document
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.commerce.pricing import validate_dates, validate_range
+from frappe_books.inventory.units import item_units
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 
@@ -134,3 +135,14 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 			frappe.throw(_("A product discount requires a free item and a positive quantity."))
 		if self.is_recursive and as_decimal(self.recurse_every) <= 0:
 			frappe.throw(_("Recursive product discounts require a positive recurse-every quantity."))
+		self.validate_free_item_unit()
+
+	def validate_free_item_unit(self):
+		"""The free row comes in this unit, so the free item must have it."""
+		if not self.free_item_unit:
+			return
+		unit, factors = item_units({self.free_item})[self.free_item]
+		if self.free_item_unit not in (unit, *factors):
+			frappe.throw(
+				_("UOM {0} is not applicable for Item {1}.").format(self.free_item_unit, self.free_item)
+			)

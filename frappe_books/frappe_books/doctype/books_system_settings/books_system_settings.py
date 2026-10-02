@@ -21,7 +21,6 @@ class BooksSystemSettings(Document):
 		dark_mode: DF.Check
 		date_format: DF.Autocomplete
 		display_precision: DF.Int
-		display_terms_and_conditions: DF.Check
 		hide_get_started: DF.Check
 		internal_precision: DF.Int
 		locale: DF.Autocomplete

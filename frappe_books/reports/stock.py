@@ -39,8 +39,8 @@ def get_ledger_columns() -> list[dict]:
 		{"fieldname": "valuation_rate", "label": _("Valuation Rate"), "fieldtype": "Currency"},
 		{"fieldname": "balance_value", "label": _("Balance Value"), "fieldtype": "Currency"},
 		{"fieldname": "value_change", "label": _("Value Change"), "fieldtype": "Currency"},
-		{"fieldname": "reference_name", "label": _("Ref. Name"), "fieldtype": "Data"},
-		{"fieldname": "reference_type", "label": _("Ref. Type"), "fieldtype": "Data"},
+		{"fieldname": "reference_name", "label": _("Ref Name"), "fieldtype": "Data"},
+		{"fieldname": "reference_type", "label": _("Ref Type"), "fieldtype": "Data"},
 	]
 
 
@@ -49,7 +49,7 @@ def get_balance_columns(filters) -> list[dict]:
 		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
 		{"fieldname": "item", "label": _("Item"), "fieldtype": "Link", "options": "Books Item"},
 		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Location"},
-		*_tracking_columns(show_serial_numbers=filters.get("show_serial_numbers")),
+		*_tracking_columns(show_serial_numbers=_shows_serial_numbers(filters)),
 		{"fieldname": "balance_quantity", "label": _("Balance Qty."), "fieldtype": "Float"},
 		{"fieldname": "balance_value", "label": _("Balance Value"), "fieldtype": "Currency"},
 		{"fieldname": "opening_quantity", "label": _("Opening Qty."), "fieldtype": "Float"},
@@ -74,6 +74,13 @@ def _tracking_columns(show_serial_numbers):
 	return columns
 
 
+def _shows_serial_numbers(filters):
+	return (
+		filters.get("show_serial_numbers")
+		and frappe.get_cached_doc("Books Inventory Settings").enable_serial_number
+	)
+
+
 def get_ledger_data(filters) -> list[dict]:
 	"""Return stock ledger entries with the FIFO balances stored on each entry."""
 	conditions = [
@@ -95,7 +102,7 @@ def get_balance_data(filters) -> list[dict]:
 	"""Return opening, incoming, outgoing and closing stock of each item, location and batch."""
 	key_fields = ["item", "location", "batch"]
 	conditions = _key_conditions(filters)
-	if filters.get("show_serial_numbers"):
+	if _shows_serial_numbers(filters):
 		key_fields.append("serial_number")
 		conditions.append(["serial_number", "is", "set"])
 	period = [*conditions, *datetime_conditions("date", filters.get("from_date"), filters.get("to_date"))]

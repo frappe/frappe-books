@@ -91,6 +91,70 @@ test('Set Print Size writes the page size into the template CSS', async ({
     .toBe('8cm');
 });
 
+test('saving from the editor saves the text not yet applied', async ({
+  page,
+}) => {
+  await insertPayment(page);
+  const name = await duplicatePaymentTemplate(page);
+  const save = page.getByRole('button', { name: 'Save', exact: true });
+  await save.click();
+  await expect(save).toHaveCount(0);
+
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText('<p>Saved with the shortcut</p>');
+  await page.keyboard.press('ControlOrMeta+KeyS');
+  await page.getByRole('dialog').getByRole('button', { name: 'Yes' }).click();
+
+  await expect
+    .poll(async () => (await getPrintFormat(page, name))?.html ?? '')
+    .toContain('Saved with the shortcut');
+});
+
+test('the Control shortcuts work in the editor on macOS', async ({ page }) => {
+  // CodeMirror's macOS keymap binds Ctrl-E and Ctrl-H.
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'platform', { get: () => 'MacIntel' })
+  );
+  await page.reload();
+  await waitForBooks(page);
+  await insertPayment(page);
+  await duplicatePaymentTemplate(page);
+
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('Control+KeyH');
+  await expect(page.getByRole('button', { name: 'Key Hints' })).toHaveAttribute(
+    'aria-expanded',
+    'true'
+  );
+  await page.keyboard.press('Control+KeyE');
+  await expect(
+    page.getByRole('navigation', { name: 'Books', exact: true })
+  ).toBeHidden();
+});
+
+/** Opens an editable copy of the shipped payment template, with a new name. */
+async function duplicatePaymentTemplate(page: Page) {
+  await routeTo(page, '/template-builder/Business - Payment');
+  await expect(preview(page).getByText('Amount Paid')).toBeVisible();
+  await page.getByRole('button', { name: 'Actions' }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+  const name = `Payment ${Date.now()}`;
+  const nameField = page.locator('header input').first();
+  await nameField.fill(name);
+  await nameField.blur();
+  return name;
+}
+
+async function getPrintFormat(page: Page, name: string) {
+  return await page.evaluate(async (name) => {
+    const response = await fetch(
+      `/api/resource/Print Format/${encodeURIComponent(name)}`
+    );
+    return response.ok ? (await response.json()).data : null;
+  }, name);
+}
+
 /** Navigates in the app; a leave guard can hold the navigation open. */
 async function routeTo(page: Page, path: string) {
   await page.evaluate((path) => {

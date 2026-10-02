@@ -105,7 +105,7 @@
         class="flex-1"
         size="lg"
         variant="solid"
-        :label="footerStep.nextStep"
+        :label="footerStep.nextStep!(doc)"
         @click="run(footerStep)"
       />
     </MobileFooter>

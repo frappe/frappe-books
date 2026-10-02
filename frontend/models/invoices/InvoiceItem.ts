@@ -15,9 +15,10 @@ import {
 } from 'models/inventory/availability';
 import { getTransferUnitFilter } from 'models/inventory/stockRows';
 import { validateTransferUnit } from 'models/inventory/units';
+import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import type { Money } from 'pesa';
-import type { Schema } from 'schemas/types';
-import { FrappeDoc } from 'src/frappe/document';
+import type { Field, Schema } from 'schemas/types';
+import { FrappeDoc, type FrappeValueOptions } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import type { Invoice } from './Invoice';
 import { setCurrencies } from './Invoice';
@@ -146,6 +147,15 @@ export class InvoiceItem extends FrappeDoc {
     this.followEdit(arg.changed);
   }
 
+  /** A cleared tax goes empty, not null, as the server fills a missing one from the item. */
+  override _getFrappeValue(field: Field, options: FrappeValueOptions) {
+    if (field.fieldname === 'tax' && this.tax === '') {
+      return '';
+    }
+
+    return super._getFrappeValue(field, options);
+  }
+
   /** What an edit asks of the server besides its refills: a price of its own or the server's. */
   followEdit(fieldname?: string) {
     if (fieldname === 'rate' || fieldname === 'transfer_rate') {
@@ -181,11 +191,14 @@ export class InvoiceItem extends FrappeDoc {
   // which the row shows per transfer unit. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     rate: () => true,
+    hsn_code: () => isHsnCodeHidden(this.fyo),
     item_discounted_total: () => !this.enableDiscounting,
     set_item_discount_amount: () => !this.enableDiscounting,
     item_discount_amount: () => !this.enableDiscounting,
     item_discount_percent: () => !this.enableDiscounting,
     batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
+    serial_number: () =>
+      !this.fyo.singles.InventorySettings?.enable_serial_number,
     transfer_unit: () => !this.enableUomConversions,
     transfer_quantity: () => !this.enableUomConversions,
     unit_conversion_factor: () => !this.enableUomConversions,
@@ -275,6 +288,8 @@ export class InvoiceItem extends FrappeDoc {
     item: (doc: FrappeDoc) => [
       ['item_usage', '=', doc.isSales ? 'Sales' : 'Purchases'],
     ],
+    // A new batch is of the row's item, not one of the batches in stock.
+    batch: (doc: FrappeDoc) => [['item', '=', doc.item]],
   };
 }
 

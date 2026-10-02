@@ -9,9 +9,11 @@ import {
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { getMappedDoc } from 'models/helpers';
+import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
+import { getFrappeRows } from 'src/frappe/list';
 import { AccountRootTypeEnum } from '../Account/types';
 import { UOMConversionItem } from './UOMConversionItem';
 
@@ -56,6 +58,10 @@ export class Item extends FrappeDoc {
       }
     },
     hsn_code: (value: DocValue) => {
+      if (isHsnCodeHidden(this.fyo)) {
+        return;
+      }
+
       if (value && !(value as string).match(/^\d{4,8}$/)) {
         throw new ValidationError(this.fyo.t`Invalid HSN Code.`);
       }
@@ -64,6 +70,7 @@ export class Item extends FrappeDoc {
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
+    hsn_code: () => isHsnCodeHidden(this.fyo),
     track_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
     barcode: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
     has_batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
@@ -126,5 +133,21 @@ export class Item extends FrappeDoc {
     return {
       columns: ['name', 'unit', 'tax', 'rate'],
     };
+  }
+
+  /** The documents that take all the items; the server refuses one kept for the other side. */
+  static async getInvoiceSchemaNames(
+    fyo: Fyo,
+    names: string[]
+  ): Promise<string[]> {
+    const rows = await getFrappeRows(fyo, ModelNameEnum.Item, names, [
+      'item_usage',
+    ]);
+    const usages = rows.map(({ item_usage }) => item_usage);
+    const sales = [ModelNameEnum.SalesQuote, ModelNameEnum.SalesInvoice];
+    return [
+      ...(usages.includes('Purchases') ? [] : sales),
+      ...(usages.includes('Sales') ? [] : [ModelNameEnum.PurchaseInvoice]),
+    ];
   }
 }

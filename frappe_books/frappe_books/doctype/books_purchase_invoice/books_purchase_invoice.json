@@ -22,9 +22,6 @@
   "taxes",
   "base_grand_total",
   "grand_total",
-  "set_discount_amount",
-  "discount_amount",
-  "discount_percent",
   "currency",
   "exchange_rate",
   "outstanding_section_break_24",
@@ -156,25 +153,6 @@
    "read_only": 1
   },
   {
-   "default": "0",
-   "fieldname": "set_discount_amount",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Set Discount Amount"
-  },
-  {
-   "fieldname": "discount_amount",
-   "fieldtype": "Currency",
-   "hidden": 1,
-   "label": "Discount Amount"
-  },
-  {
-   "fieldname": "discount_percent",
-   "fieldtype": "Float",
-   "hidden": 1,
-   "label": "Discount Percent"
-  },
-  {
    "fieldname": "currency",
    "fieldtype": "Link",
    "hidden": 1,
@@ -300,7 +278,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Purchase Invoice",

@@ -12,6 +12,7 @@
   "stock_in_hand",
   "stock_received_but_not_billed",
   "cost_of_goods_sold",
+  "stock_adjustment",
   "features_section_break_7",
   "enable_barcodes",
   "enable_batches",
@@ -52,6 +53,12 @@
    "fieldname": "cost_of_goods_sold",
    "fieldtype": "Link",
    "label": "Cost Of Goods Sold Acc.",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "stock_adjustment",
+   "fieldtype": "Link",
+   "label": "Stock Adjustment Acc.",
    "options": "Books Account"
   },
   {
@@ -98,7 +105,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-30 16:00:00.000000",
+ "modified": "2026-10-02 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Inventory Settings",

@@ -8,7 +8,7 @@ from frappe_books.frappe_books.doctype.books_accounting_settings.books_accountin
 )
 from frappe_books.frappe_books.doctype.books_inventory_settings import books_inventory_settings
 from frappe_books.series import default_series
-from frappe_books.tests.accounting import make_number_series, unique_name
+from frappe_books.tests.accounting import make_account, make_number_series, unique_name
 
 COMPANY = {
 	"company_name": "Settings Test Company",
@@ -54,6 +54,22 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		inventory_settings = frappe.get_single("Books Inventory Settings")
 		for fieldname in POINT_OF_SALE_FEATURES:
 			self.assertTrue(inventory_settings.get(fieldname), fieldname)
+
+	def test_a_pos_can_list_all_items(self):
+		settings = frappe.get_single("Books Pos Settings")
+		cash = make_account("POS Cash", account_type="Cash").name
+		settings.update({"item_visibility": "All Items", "cash_account": cash})
+		settings.save()
+		profile = frappe.get_doc(
+			{
+				"doctype": "Books Pos Profile",
+				"name": unique_name("POS Profile"),
+				"inventory": "Stores",
+				"item_visibility": "All Items",
+			}
+		).insert()
+
+		self.assertEqual((settings.item_visibility, profile.item_visibility), ("All Items", "All Items"))
 
 	def test_one_way_switches_cannot_be_turned_off(self):
 		_accounting_settings()

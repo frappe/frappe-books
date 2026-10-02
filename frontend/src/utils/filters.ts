@@ -9,7 +9,6 @@ export const routeFilters = {
   SalesPayments: [['reference_type', '=', ModelNameEnum.SalesInvoice]],
   Suppliers: [['role', 'in', ['Supplier', 'Both']]],
   Customers: [['role', 'in', ['Customer', 'Both']]],
-  Party: [['role', '=', 'Both']],
 } satisfies Record<string, Filter[]>;
 
 export const createFilters = {

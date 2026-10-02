@@ -18,7 +18,7 @@ const BUTTON_COLOURS = [
 /** The POS button colour fields, by fieldname, with the colours they offer. */
 export const BUTTON_COLOUR_FIELDS: Record<string, FieldPresentation> =
   Object.fromEntries(
-    ['save', 'cancel', 'submit', 'held', 'return', 'pay', 'pay_and_print'].map(
+    ['save', 'cancel', 'held', 'return', 'pay'].map(
       (action) => [`${action}_button_colour`, { options: BUTTON_COLOURS }]
     )
   );

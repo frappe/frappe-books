@@ -161,6 +161,7 @@
   },
   {
    "default": "0",
+   "depends_on": "track_item",
    "fieldname": "has_batch",
    "fieldtype": "Check",
    "label": "Has Batch",
@@ -201,7 +202,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-02 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item",

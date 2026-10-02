@@ -46,7 +46,6 @@ class BooksDefaults(Document):
 		held_button_colour: DF.Color | None
 		journal_entry_number_series: DF.Link | None
 		journal_entry_print_template: DF.Link | None
-		pay_and_print_button_colour: DF.Color | None
 		pay_button_colour: DF.Color | None
 		payment_number_series: DF.Link | None
 		payment_print_template: DF.Link | None
@@ -75,7 +74,6 @@ class BooksDefaults(Document):
 		shipment_terms: DF.Text | None
 		stock_movement_number_series: DF.Link | None
 		stock_movement_print_template: DF.Link | None
-		submit_button_colour: DF.Color | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Defaults"

@@ -173,7 +173,7 @@ export default defineComponent({
       if (!this.templateList.length) {
         const label = getSchema(this.schemaName)?.label ?? this.schemaName;
 
-        return this.t`No Print Templates not found for entry type ${label}`;
+        return this.t`No Print Templates found for entry type ${label}`;
       }
 
       if (!this.templateDoc) {

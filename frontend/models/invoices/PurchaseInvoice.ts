@@ -25,9 +25,6 @@ export class PurchaseInvoice extends Invoice {
       'taxes',
       'base_grand_total',
       'grand_total',
-      'set_discount_amount',
-      'discount_amount',
-      'discount_percent',
       'currency',
       'exchange_rate',
       'discount_after_tax',
@@ -49,7 +46,7 @@ export class PurchaseInvoice extends Invoice {
 
   override hidden: HiddenMap = {
     ...this.hidden,
-    make_auto_stock_transfer: () => this.isAutoStockTransferHidden,
+    ...this.postingHidden,
   };
 
   static getListViewSettings(): ListViewSettings {

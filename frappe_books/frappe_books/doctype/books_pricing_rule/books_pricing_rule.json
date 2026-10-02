@@ -189,7 +189,7 @@
    "depends_on": "eval:doc.discount_type != 'Price Discount' && doc.is_recursive",
    "fieldname": "recurse_every",
    "fieldtype": "Float",
-   "label": "Recurse Every (As Per Transaction Unit)"
+   "label": "Recurse Every (As Per Stock Unit)"
   },
   {
    "fieldname": "quantity_and_amount_section_break_24",
@@ -235,7 +235,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-30 20:00:00.000000",
+ "modified": "2026-10-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pricing Rule",

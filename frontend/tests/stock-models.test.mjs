@@ -53,6 +53,15 @@ test('stock forms, row editors and tables show what they showed', () => {
   }
 });
 
+test('stock item tables open their rows in the row editor', () => {
+  for (const name of stockSchemas) {
+    const items = getSchema(name).fields.find(
+      ({ fieldname }) => fieldname === 'items'
+    );
+    assert.equal(items.edit, true, name);
+  }
+});
+
 test('movement types keep their labels', () => {
   const { options } = getSchema('StockMovement').fields.find(
     ({ fieldname }) => fieldname === 'movement_type'
@@ -113,6 +122,18 @@ test('stock rows hide the fields of inventory features turned off', () => {
       enable_uom_conversions: true,
     };
     assert.deepEqual(hidden(), [false, false, false], name);
+  }
+});
+
+test('transfer rows show HSN/SAC only for an Indian company', () => {
+  for (const name of ['Shipment', 'PurchaseReceipt']) {
+    const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
+    const hidden = () => evaluateHidden(row.fieldMap.hsn_code, row);
+
+    fyo.singles.AccountingSettings = { country: 'United States' };
+    assert.equal(hidden(), true, name);
+    fyo.singles.AccountingSettings = { country: 'India' };
+    assert.equal(hidden(), false, name);
   }
 });
 
@@ -218,6 +239,23 @@ test('links of stock documents filter by the vocabulary of their targets', async
   assert.deepEqual(requests[0].params.filters, [['name', '=', 'Pen']]);
 });
 
+test('transfer rows offer only the batches and units of their item', async () => {
+  stubFrappe(() => ({
+    data: [{ unit: 'Unit', uom_conversions: [{ uom: 'Box' }] }],
+  }));
+  for (const name of ['Shipment', 'PurchaseReceipt']) {
+    const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
+    const { filters } = getModel(rowSchemas[name]);
+
+    assert.deepEqual(filters.batch(row), [['item', '=', 'Pen']], name);
+    assert.deepEqual(
+      await filters.transfer_unit(row),
+      [['name', 'in', ['Unit', 'Box']]],
+      name
+    );
+  }
+});
+
 test('stock lists show and filter by their Frappe fieldnames', () => {
   for (const name of stockSchemas) {
     const { columns } = frappeModels[name].getListViewSettings(fyo);
@@ -243,6 +281,17 @@ test('stock lists show and filter by their Frappe fieldnames', () => {
       fieldname
     );
   }
+});
+
+test('a submitted movement links to its accounting and stock entries', () => {
+  const actions = frappeModels.StockMovement.getActions(fyo);
+  const movement = newFrappeDoc('StockMovement', { docstatus: 1 });
+
+  assert.deepEqual(
+    actions.map(({ label }) => label),
+    ['Accounting Entries', 'Stock Entries']
+  );
+  assert.ok(actions.every((action) => action.condition(movement)));
 });
 
 test('a submitted shipment offers an invoice and a return by Frappe fieldnames', () => {

@@ -104,8 +104,21 @@ export abstract class Report extends Observable<RawValue> {
       this[key] = value;
     }
 
+    this.clearDynamicLinks(key);
     if (callPostSet) {
       await this.updateData(key);
+    }
+  }
+
+  /** A dynamic link names a document of the type it references, so a new type clears it. */
+  clearDynamicLinks(references: string) {
+    for (const field of this.filters) {
+      if (
+        field.fieldtype === 'DynamicLink' &&
+        field.references === references
+      ) {
+        delete this[field.fieldname];
+      }
     }
   }
 

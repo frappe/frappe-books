@@ -137,6 +137,9 @@
             @input="() => (templateChanged = true)"
             @blur="setTemplate"
             @apply="setTemplate"
+            @save="saveTemplate"
+            @toggle-edit-mode="toggleEditMode"
+            @toggle-hints="toggleShowHints"
           />
         </div>
         <div
@@ -200,11 +203,7 @@ import { handleErrorWithDialog } from 'src/errorHandling';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { showDialog, showToast } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
-import {
-  getPrintHints,
-  getPrintHTML,
-  previewPrintHTML,
-} from 'src/utils/printFormatApi';
+import { getPrintHints } from 'src/utils/printFormatApi';
 import {
   PageSize,
   PrintHints,
@@ -223,7 +222,7 @@ import {
   openSettings,
   selectTextFile,
 } from 'src/utils/ui';
-import { useDocShortcuts } from 'src/utils/vueUtils';
+import { syncOrSubmitDoc, useDocShortcuts } from 'src/utils/vueUtils';
 import { getDocuments } from 'src/frappe/api';
 import { getSchema } from 'src/frappe/registry';
 import { getFrappeDocOrNew } from 'src/frappe/documents';
@@ -313,7 +312,7 @@ export default defineComponent({
   },
   computed: {
     canEditTemplate(): boolean {
-      return !!this.doc?.isEditable && !!this.doc?.canEdit;
+      return !!this.doc?.canEditTemplate;
     },
     canDisplayPreview(): boolean {
       return !!this.printDocument || !!this.error;
@@ -503,21 +502,12 @@ export default defineComponent({
       }
     },
     async getPreview(): Promise<PrintHTML | null> {
-      const doc = this.doc;
       const name = this.displayDoc?.name;
-      if (!doc || !name) {
+      if (!this.doc || !name) {
         return null;
       }
 
-      if (!doc.isEditable) {
-        return await getPrintHTML(this.doctype, name, doc.name!);
-      }
-
-      if (!doc.html) {
-        return null;
-      }
-
-      return await previewPrintHTML(this.doctype, name, doc.html, doc.css);
+      return await this.doc.getPrint(name);
     },
     reset() {
       this.doc = null;
@@ -541,6 +531,12 @@ export default defineComponent({
       }
 
       await this.doc?.set('html', value);
+    },
+    async saveTemplate(value: string) {
+      await this.setTemplate(value);
+      if (this.doc) {
+        await syncOrSubmitDoc(this.doc);
+      }
     },
     setScale(e: Event | number | string) {
       let value = this.scale;

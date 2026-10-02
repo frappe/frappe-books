@@ -97,6 +97,8 @@ export class Defaults extends FrappeDoc {
   }
 
   hidden: HiddenMap = {
+    shipment_location: this.getInventoryHidden(),
+    purchase_receipt_location: this.getInventoryHidden(),
     stock_movement_number_series: this.getInventoryHidden(),
     shipment_number_series: this.getInventoryHidden(),
     purchase_receipt_number_series: this.getInventoryHidden(),
@@ -105,15 +107,14 @@ export class Defaults extends FrappeDoc {
     shipment_print_template: this.getInventoryHidden(),
     purchase_receipt_print_template: this.getInventoryHidden(),
     stock_movement_print_template: this.getInventoryHidden(),
+    pos_print_template: this.getPointOfSaleHidden(),
     pos_cash_denominations: this.getPointOfSaleHidden(),
     pos_customer: this.getPointOfSaleHidden(),
     save_button_colour: this.getPointOfSaleHidden(),
     cancel_button_colour: this.getPointOfSaleHidden(),
-    submit_button_colour: this.getPointOfSaleHidden(),
     held_button_colour: this.getPointOfSaleHidden(),
     return_button_colour: this.getPointOfSaleHidden(),
     pay_button_colour: this.getPointOfSaleHidden(),
-    pay_and_print_button_colour: this.getPointOfSaleHidden(),
   };
 
   /** The virtual print format fields are the doctypes'; a save of the settings sets them first. */

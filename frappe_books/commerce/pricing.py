@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.settings import require_feature
 
 
 def reset_pricing(invoice):
@@ -52,6 +53,28 @@ def standard_rates(invoice):
 	return rates
 
 
+def validate_price_list(invoice):
+	"""Sales and quotes take enabled sales price lists, purchases enabled purchase price lists.
+
+	A return keeps its original's price list, as its rates come from the original.
+	"""
+	if not invoice.price_list or invoice.get("return_against"):
+		return
+	is_purchase = invoice.transaction_type == "purchase"
+	side = "is_purchase" if is_purchase else "is_sales"
+	price_list = frappe.db.get_value(
+		"Books Price List", invoice.price_list, ["is_enabled", side], as_dict=True
+	)
+	if not price_list.is_enabled:
+		frappe.throw(_("Price List {0} is disabled.").format(invoice.price_list))
+	if not price_list[side]:
+		frappe.throw(
+			_("Price List {0} is not for {1}.").format(
+				invoice.price_list, _("Purchases" if is_purchase else "Sales")
+			)
+		)
+
+
 def standard_rate(invoice, row, rates):
 	"""Return the row's standard rate per stock unit from `standard_rates` in the invoice currency, or None."""
 	rate = _stock_unit_rate(row, rates)
@@ -95,36 +118,48 @@ def _reset_row(row, rule):
 def apply_pricing(invoice):
 	if invoice.transaction_type != "sales" or invoice.get("return_against"):
 		return
-	if not frappe.db.get_single_value("Books Accounting Settings", "enable_pricing_rule"):
-		return
-	if _ignore_pos_pricing(invoice):
+	if not _applies_pricing_rules(invoice):
+		# A coupon's discount is a pricing rule, so the coupon would be used up for nothing.
+		if invoice.get("coupons"):
+			require_feature("enable_coupon_code")
+			frappe.throw(_("Coupons cannot be applied, as pricing rules do not apply to this invoice."))
 		return
 
 	rows = list(invoice.items)
 	if not rows:
 		return
 	coupons = _validated_coupons(invoice, sum_decimal(_row_value(row) for row in rows))
+	applied = _apply_rules(invoice, rows, coupons)
+	invoice.is_pricing_rule_applied = int(bool(applied))
+	_validate_coupon_application(coupons, {name for _item, name in applied})
+
+
+def _apply_rules(invoice, rows, coupons):
+	"""Apply each row's best rule, and each item's free row once; return the (item, rule name)s applied."""
 	candidates = _candidate_rules(rows)
 	quantities = defaultdict(Decimal)
+	amounts = defaultdict(Decimal)
 	for row in rows:
 		quantities[row.item] += as_decimal(row.quantity)
-	applied = []
+		amounts[row.item] += _row_value(row)
+	applied = {}
 	for row in rows:
-		rule = _best_rule(invoice, row, quantities[row.item], candidates[row.item, row.unit], coupons)
+		rules = candidates[row.item, row.unit]
+		rule = _best_rule(invoice, row.item, quantities[row.item], amounts[row.item], rules, coupons)
 		if rule:
 			_apply_rule(invoice, row, rule)
-			applied.append(rule.name)
-	invoice.is_pricing_rule_applied = int(bool(applied))
-	_validate_coupon_application(coupons, applied)
+			applied[row.item, rule.name] = rule
+	for (item, _name), rule in applied.items():
+		invoice.append("pricing_rule_detail", {"reference_name": rule.name, "reference_item": item})
+		if rule.discount_type == "Product Discount":
+			_append_free_item(invoice, rule, quantities[item])
+	return applied
 
 
 def _apply_rule(invoice, row, rule):
 	row.pricing_rule = rule.name
-	invoice.append("pricing_rule_detail", {"reference_name": rule.name, "reference_item": row.item})
 	if rule.discount_type == "Price Discount":
 		_apply_price_discount(invoice, row, rule)
-	else:
-		_append_free_item(invoice, row, rule)
 
 
 def update_coupon_usage(invoice, delta):
@@ -181,13 +216,15 @@ def _candidate_rules(rows):
 	return defaultdict(list, {key: list(value.values()) for key, value in candidates.items()})
 
 
-def _best_rule(invoice, row, quantity, rules, coupons):
-	amount = _in_company_currency(invoice, as_decimal(row.rate) * quantity)
+def _best_rule(invoice, item, quantity, amount, rules, coupons):
+	"""Return the highest-priority rule the item's total quantity and amount qualify for."""
+	amount = _in_company_currency(invoice, amount)
 	rules = [
 		rule
 		for rule in rules
 		if bool(rule.is_coupon_code_based) == (rule.name in coupons)
 		and _within_limits(rule, invoice.date, amount, quantity)
+		and (rule.discount_type == "Price Discount" or _free_quantity(rule, quantity) > 0)
 	]
 	if not rules:
 		return None
@@ -195,7 +232,7 @@ def _best_rule(invoice, row, quantity, rules, coupons):
 	if len(rules) > 1 and rules[0].priority == rules[1].priority:
 		frappe.throw(
 			_("Pricing rules {0} and {1} have the same priority for item {2}.").format(
-				rules[0].name, rules[1].name, row.item
+				rules[0].name, rules[1].name, item
 			)
 		)
 	return rules[0]
@@ -218,30 +255,34 @@ def _apply_price_discount(invoice, row, rule):
 		row.item_discount_percent = rule.discount_percentage
 	elif rule.price_discount_type == "amount":
 		row.set_item_discount_amount = 1
-		row.item_discount_amount = in_invoice_currency(invoice, rule.discount_amount)
+		row_amount = rounded(_row_value(row), invoice.get("currency"))
+		row.item_discount_amount = min(in_invoice_currency(invoice, rule.discount_amount), row_amount)
 	else:
 		frappe.throw(_("Pricing rule {0} has no price discount type.").format(rule.name))
 
 
-def _append_free_item(invoice, source_row, rule):
-	quantity = as_decimal(rule.free_item_quantity)
+def _free_quantity(rule, quantity):
+	"""Return the free quantity a product discount gives for `quantity` stock units of its item."""
+	free_quantity = as_decimal(rule.free_item_quantity)
 	if rule.is_recursive:
-		quantity = as_decimal(source_row.quantity) / as_decimal(rule.recurse_every)
+		free_quantity *= quantity / as_decimal(rule.recurse_every)
 	if rule.round_free_item_qty:
 		rounding = {
 			"floor": ROUND_FLOOR,
 			"ceil": ROUND_CEILING,
 			"round": ROUND_HALF_UP,
 		}.get(rule.rounding_method, ROUND_HALF_UP)
-		quantity = quantity.quantize(Decimal("1"), rounding=rounding)
-	if quantity <= 0:
-		frappe.throw(_("Pricing rule {0} produces a zero free-item quantity.").format(rule.name))
+		free_quantity = free_quantity.quantize(Decimal("1"), rounding=rounding)
+	return free_quantity
+
+
+def _append_free_item(invoice, rule, quantity):
 	invoice.append(
 		"items",
 		{
 			"item": rule.free_item,
-			"unit": rule.free_item_unit,
-			"quantity": quantity,
+			"transfer_unit": rule.free_item_unit,
+			"transfer_quantity": _free_quantity(rule, quantity),
 			"rate": 0,
 			"is_free_item": 1,
 			"pricing_rule": rule.name,
@@ -263,9 +304,9 @@ def _within_limits(record, date, amount, quantity=None):
 			return False
 		if as_decimal(record.max_quantity) > 0 and quantity > as_decimal(record.max_quantity):
 			return False
-	if as_decimal(record.min_amount) > 0 and amount <= as_decimal(record.min_amount):
+	if as_decimal(record.min_amount) > 0 and amount < as_decimal(record.min_amount):
 		return False
-	if as_decimal(record.max_amount) > 0 and amount >= as_decimal(record.max_amount):
+	if as_decimal(record.max_amount) > 0 and amount > as_decimal(record.max_amount):
 		return False
 	date = frappe.utils.getdate(date)
 	return not (
@@ -274,8 +315,11 @@ def _within_limits(record, date, amount, quantity=None):
 	)
 
 
-def _ignore_pos_pricing(invoice):
-	return bool(invoice.get("is_pos") and pos_setting("ignore_pricing_rule"))
+def _applies_pricing_rules(invoice):
+	"""Pricing rules are on, and the POS profile or settings of a POS invoice do not ignore them."""
+	if not frappe.db.get_single_value("Books Accounting Settings", "enable_pricing_rule"):
+		return False
+	return not (invoice.get("is_pos") and pos_setting("ignore_pricing_rule"))
 
 
 def validate_range(minimum, maximum, label, strict=False, message=None):

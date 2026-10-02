@@ -29,9 +29,6 @@ export class SalesInvoice extends Invoice {
       'loyalty_points_amount',
       'base_grand_total',
       'grand_total',
-      'set_discount_amount',
-      'discount_amount',
-      'discount_percent',
       'currency',
       'exchange_rate',
       'discount_after_tax',
@@ -66,7 +63,7 @@ export class SalesInvoice extends Invoice {
 
   override hidden: HiddenMap = {
     ...this.hidden,
-    make_auto_stock_transfer: () => this.isAutoStockTransferHidden,
+    ...this.postingHidden,
     coupons: () => !this.fyo.singles.AccountingSettings?.enable_coupon_code,
     pricing_rule_detail: () =>
       !this.fyo.singles.AccountingSettings?.enable_pricing_rule,

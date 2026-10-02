@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import {
   Action,
   FiltersMap,
+  HiddenMap,
   ListViewSettings,
   ValidationMap,
 } from 'fyo/model/types';
@@ -45,11 +46,20 @@ export class Party extends FrappeDoc {
 
   role?: PartyRole;
   from_lead?: string;
+  declare loyalty_program?: string;
 
   // Frappe checks these on save; mirrored to show its message at the field.
   validations: ValidationMap = {
     email: validateEmail,
     phone: validatePhoneNumber,
+  };
+
+  // Loyalty is for customers, while the program is on.
+  hidden: HiddenMap = {
+    loyalty_program: () =>
+      !this.fyo.singles.AccountingSettings?.enable_loyalty_program ||
+      this.role === 'Supplier',
+    loyalty_points: () => !this.loyalty_program || this.role === 'Supplier',
   };
 
   static filters: FiltersMap = {

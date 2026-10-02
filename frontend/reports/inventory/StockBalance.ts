@@ -77,13 +77,17 @@ export class StockBalance extends StockLedger {
         label: t`To Date`,
         fieldname: 'toDate',
       },
-      {
-        fieldtype: 'Check',
-        placeholder: t`Serial Number`,
-        label: t`Serial Number`,
-        fieldname: 'showSerialNumbers',
-      },
-      ...(this.showSerialNumbers
+      ...(this.hasSerialNumbers
+        ? [
+            {
+              fieldtype: 'Check',
+              placeholder: t`Serial Number`,
+              label: t`Serial Number`,
+              fieldname: 'showSerialNumbers',
+            },
+          ]
+        : []),
+      ...(this.hasSerialNumbers && this.showSerialNumbers
         ? ([
             {
               fieldtype: 'Select',

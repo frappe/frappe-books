@@ -16,6 +16,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Tax Invoice Account",
+   "link_filters": "[[\"Books Account\",\"is_group\",\"=\",0]]",
    "options": "Books Account",
    "reqd": 1
   },
@@ -24,6 +25,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Tax Payment Account",
+   "link_filters": "[[\"Books Account\",\"is_group\",\"=\",0]]",
    "options": "Books Account"
   },
   {
@@ -39,7 +41,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-30 19:00:00.000000",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Tax Detail",

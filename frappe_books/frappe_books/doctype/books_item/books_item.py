@@ -12,7 +12,7 @@ from frappe.utils import flt
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, validate_prefix
-from frappe_books.settings import require_features
+from frappe_books.settings import company_country, require_features
 
 # Item fields the Books app offers only while their feature is on.
 ITEM_FEATURES = {
@@ -84,7 +84,12 @@ class BooksItem(Document):
 		require_features(self, ITEM_FEATURES)
 		self.validate_stock_settings()
 		self.validate_accounts()
-		if self.hsn_code and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code)):
+		# HSN/SAC is India's GST code.
+		if (
+			self.hsn_code
+			and company_country() == "India"
+			and not re.fullmatch(r"[0-9]{4,8}", str(self.hsn_code))
+		):
 			frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
 		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
 			frappe.throw(_("Barcode must contain exactly 12 digits."))
@@ -96,6 +101,8 @@ class BooksItem(Document):
 			frappe.throw(_("Only products can track inventory."))
 		if self.has_serial_number and not self.track_item:
 			frappe.throw(_("Only items that track inventory can have serial numbers."))
+		if self.has_batch and not self.track_item:
+			frappe.throw(_("Only items that track inventory can have batches."))
 
 	def validate_unit_conversions(self):
 		units = [row.uom for row in self.uom_conversions]

@@ -54,7 +54,7 @@ class IntegrationTestDashboard(IntegrationTestCase):
 		)
 		self.assertTrue(profit["has_data"])
 
-	def test_outstanding_counts_credit_notes_as_positive_amounts(self):
+	def test_returns_reduce_the_paid_and_unpaid_totals(self):
 		for total, outstanding, return_against in ((100, 40, None), (-30, -30, "Dashboard Original")):
 			_invoice("2031-03-01", total, outstanding, return_against=return_against)
 
@@ -63,12 +63,38 @@ class IntegrationTestDashboard(IntegrationTestCase):
 
 		self.assertEqual(
 			(summary["total"], summary["paid"], summary["unpaid"]),
-			(Decimal("130.00"), Decimal("60.00"), Decimal("70.00")),
+			(Decimal("70.00"), Decimal("60.00"), Decimal("10.00")),
 		)
 		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (0, 2))
 
 
+class IntegrationTestCashflow(IntegrationTestCase):
+	def test_cashflow_has_data_only_with_cash_entries_in_the_period(self):
+		_post(make_account("Period Cash", account_type="Cash"), 80, 0, "2031-01-10")
+
+		with self.freeze_time(TODAY):
+			self.assertTrue(get_cashflow("This Year")["has_data"])
+			self.assertFalse(get_cashflow("This Month")["has_data"])
+
+
+class IntegrationTestTopExpenses(IntegrationTestCase):
+	def test_expenses_past_the_top_five_are_summed_as_others(self):
+		for amount in (60, 50, 40, 30, 20, 10, 5):
+			_post(make_account("Top Expense", root_type="Expense"), amount, 0, "2031-12-01")
+
+		with self.freeze_time(TODAY):
+			expenses = get_top_expenses("This Month")
+
+		self.assertEqual([row["total"] for row in expenses], [60, 50, 40, 30, 20, 15])
+		self.assertEqual(expenses[-1]["account"], "Others")
+
+
 class IntegrationTestDashboardPeriods(IntegrationTestCase):
+	def setUp(self):
+		frappe.db.set_single_value(
+			"Books Accounting Settings", {"fiscal_year_start": "2026-04-01", "fiscal_year_end": "2027-03-31"}
+		)
+
 	def test_periods_end_today_and_start_on_the_first_of_a_month(self):
 		with self.freeze_time("2031-09-30 18:00:00"):
 			periods = {period: get_period_dates(period) for period in PERIODS}
@@ -80,10 +106,14 @@ class IntegrationTestDashboardPeriods(IntegrationTestCase):
 				"This Year": _dates("2030-10-01", "2031-09-30"),
 				"This Quarter": _dates("2031-07-01", "2031-09-30"),
 				"This Month": _dates("2031-09-01", "2031-09-30"),
-				"YTD": _dates("2031-01-01", "2031-09-30"),
+				"YTD": _dates("2031-04-01", "2031-09-30"),
 			},
 		)
 		self.assertEqual([month["yearmonth"] for month in months], ["2031-09"])
+
+	def test_year_to_date_starts_on_the_fiscal_year_holding_today(self):
+		with self.freeze_time("2032-02-15"):
+			self.assertEqual(get_period_dates("YTD"), _dates("2031-04-01", "2032-02-15"))
 
 	def test_invoices_dated_after_today_are_left_out(self):
 		for date in ("2031-09-30 09:00:00", "2031-10-01 09:00:00"):

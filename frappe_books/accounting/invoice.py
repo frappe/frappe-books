@@ -440,9 +440,12 @@ def _populate_currency(invoice, party_currency):
 
 
 def _populate_row(invoice, row, item, rates):
-	for fieldname in ("item_code", "description", "unit", "tax", "hsn_code"):
+	for fieldname in ("item_code", "description", "unit", "hsn_code"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
+	# A tax left out follows the item; an empty one sent, as a cleared tax, stays empty.
+	if row.get("tax") is None:
+		row.tax = item.tax
 	_populate_rate_from_transfer_rate(row)
 	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
 		row.rate = pricing.standard_rate(invoice, row, rates)

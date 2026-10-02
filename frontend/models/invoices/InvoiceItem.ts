@@ -16,8 +16,8 @@ import {
 import { getTransferUnitFilter } from 'models/inventory/stockRows';
 import { validateTransferUnit } from 'models/inventory/units';
 import type { Money } from 'pesa';
-import type { Schema } from 'schemas/types';
-import { FrappeDoc } from 'src/frappe/document';
+import type { Field, Schema } from 'schemas/types';
+import { FrappeDoc, type FrappeValueOptions } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import type { Invoice } from './Invoice';
 import { setCurrencies } from './Invoice';
@@ -144,6 +144,15 @@ export class InvoiceItem extends FrappeDoc {
   override async change(arg: ChangeArg) {
     await super.change(arg);
     this.followEdit(arg.changed);
+  }
+
+  /** A cleared tax goes empty, not null, as the server fills a missing one from the item. */
+  override _getFrappeValue(field: Field, options: FrappeValueOptions) {
+    if (field.fieldname === 'tax' && this.tax === '') {
+      return '';
+    }
+
+    return super._getFrappeValue(field, options);
   }
 
   /** What an edit asks of the server besides its refills: a price of its own or the server's. */

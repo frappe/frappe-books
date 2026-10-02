@@ -66,6 +66,26 @@ for (const viewport of [
   });
 }
 
+test('price list and loyalty shortcuts follow their own features', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const { fyo, fillCart } = (window as any).posFixture;
+    Object.assign(fyo.singles.AccountingSettings, { enable_price_list: false });
+    fillCart();
+  });
+
+  await page.keyboard.press('Shift+P');
+  await page.keyboard.press('Shift+L');
+
+  await expect(
+    page.getByRole('dialog', { name: 'Redeem Loyalty Points', exact: true })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Apply Price List', exact: true })
+  ).toBeHidden();
+});
+
 test('leaving a sale with items asks to save or discard it', async ({
   page,
 }) => {

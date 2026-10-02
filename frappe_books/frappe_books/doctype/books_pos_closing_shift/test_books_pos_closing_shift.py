@@ -68,6 +68,17 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertEqual(debits(entries, "Cash"), Decimal("5"))
 		self.assertEqual(credits(entries, self.write_off), Decimal("5"))
 
+	def test_a_counter_that_is_the_cash_account_posts_only_the_difference(self):
+		frappe.db.set_single_value("Books Pos Settings", "cash_account", "Cash")
+		opening = open_shift(100)
+		self.assertIsNone(opening.journal_entry)
+
+		closing = close_shift(opening, 90)
+
+		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
+		self.assertEqual((debits(entries, "Cash"), credits(entries, "Cash")), (0, Decimal("10")))
+		self.assertEqual(debits(entries, self.write_off), Decimal("10"))
+
 	def test_closing_counts_sales_made_after_its_draft_was_saved(self):
 		draft = make_closing_shift(open_shift(100), 280).insert()
 		invoice = self._pos_invoice()

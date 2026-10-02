@@ -60,10 +60,9 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 			self.party = invoice.party
 			party = self.get_party()
 		self.payment_type = self.payment_type or _default_payment_type(party, invoice)
+		self.reference_type = self.reference_type or _default_reference_type(invoice, self.payment_type)
 		self.account = self.account or _default_party_account(party, invoice, self.payment_type)
-		self.payment_account = self.payment_account or _default_payment_account(
-			self.payment_method, self.payment_type, invoice
-		)
+		self.payment_account = self.payment_account or _default_payment_account(self.payment_method, invoice)
 		self.set_amounts()
 
 	def get_party(self):
@@ -169,6 +168,13 @@ def _default_payment_type(party, invoice):
 	return None
 
 
+def _default_reference_type(invoice, payment_type):
+	"""The list a payment shows in: its invoice's, else Purchase Payments for Pay and Sales Payments for Receive."""
+	if invoice:
+		return "PurchaseInvoice" if invoice.doctype == "Books Purchase Invoice" else "SalesInvoice"
+	return "PurchaseInvoice" if payment_type == "Pay" else "SalesInvoice"
+
+
 def _default_party_account(party, invoice, payment_type):
 	"""The party's ledger, else the invoice's, else the newest payable or receivable ledger."""
 	if party and party.role != "Both" and party.default_account:
@@ -178,8 +184,8 @@ def _default_party_account(party, invoice, payment_type):
 	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
 
 
-def _default_payment_account(payment_method, payment_type, invoice):
-	"""POS cash goes to the counter, other receipts to the method's account, else the newest ledger
+def _default_payment_account(payment_method, invoice):
+	"""POS cash goes to the counter, other payments to the method's account, else the newest ledger
 	of the method's kind."""
 	fields = ["type", "account"]
 	method = payment_method and frappe.db.get_value(
@@ -189,7 +195,7 @@ def _default_payment_account(payment_method, payment_type, invoice):
 		return None
 	if method.type == "Cash" and invoice and invoice.get("is_pos"):
 		return counter_cash_account()
-	if method.account and payment_type != "Pay":
+	if method.account:
 		return method.account
 	return latest_ledger_account("Cash" if method.type == "Cash" else "Bank")
 

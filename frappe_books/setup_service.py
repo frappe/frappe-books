@@ -32,7 +32,7 @@ def run_setup(wizard):
 	_update_inventory_settings(accounts)
 	_update_pos_settings(accounts)
 	_update_payment_methods(accounts["cash"], bank_account)
-	_update_defaults(bank_account, accounts)
+	_update_defaults()
 	return {"setup_complete": True, "bank_account": bank_account}
 
 
@@ -145,12 +145,11 @@ def _update_payment_methods(cash_account, bank_account):
 		frappe.db.set_value("Books Payment Method", method, "account", account, update_modified=False)
 
 
-def _update_defaults(bank_account, accounts):
+def _update_defaults():
+	"""Leave the automatic payment accounts empty, so invoices are not paid on submit unasked."""
 	defaults = frappe.get_single("Books Defaults")
 	defaults.update(
 		{
-			"sales_payment_account": accounts["cash"],
-			"purchase_payment_account": bank_account,
 			"shipment_location": "Stores",
 			"purchase_receipt_location": "Stores",
 			**{field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field},

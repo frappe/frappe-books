@@ -8,7 +8,8 @@ import POS from 'src/pages/POS/POS.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
 import { provideMobileFooter } from 'src/mobile/provideMobileFooter';
-import { languageDirectionKey } from 'src/utils/injectionKeys';
+import { languageDirectionKey, shortcutsKey } from 'src/utils/injectionKeys';
+import { Shortcuts } from 'src/utils/shortcuts';
 import { isMobile } from 'src/utils/viewport';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { preparePOSData, shift } from './pos-data';
@@ -77,12 +78,17 @@ async function mount() {
     methods: { t: fyo.t, T: fyo.T },
   });
   app.provide(languageDirectionKey, ref('ltr'));
+  const shortcuts = new Shortcuts();
+  shortcuts.start();
+  app.provide(shortcutsKey, shortcuts);
   app.mount('#app');
 
   while (!posRef.value?.items.length) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   const pos = posRef.value;
+  // The app registers POS shortcuts when its kept-alive page activates.
+  pos.setShortcuts();
   await pos.setCustomer('Aarav Shah');
   pos.selectedItemForBatch = items[0].name;
   pos.setPaymentMethod('Cash');

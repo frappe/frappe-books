@@ -50,6 +50,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			wizard.save(ignore_permissions=True)
 
 	def test_setup_creates_standard_accounts_and_defaults(self):
+		payment_accounts = ("sales_payment_account", "purchase_payment_account")
+		frappe.db.set_single_value("Books Defaults", dict.fromkeys(payment_accounts))
 		wizard = self._wizard(chart_of_accounts=STANDARD_CHART)
 		wizard.save(ignore_permissions=True)
 		run_setup(wizard)
@@ -71,6 +73,9 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		cash = frappe.db.get_single_value("Books Pos Settings", "cash_account")
 		for method, account in (("Cash", cash), ("Bank", wizard.bank_name)):
 			self.assertEqual(frappe.db.get_value("Books Payment Method", method, "account"), account)
+		# Invoices stay unpaid on submit until the user picks an automatic payment account.
+		for fieldname in payment_accounts:
+			self.assertFalse(frappe.db.get_single_value("Books Defaults", fieldname), fieldname)
 		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
 		self.assertTrue(frappe.db.exists("Books Tax", "GST-18"))
 		gst = frappe.get_doc("Books Tax", "GST-18")

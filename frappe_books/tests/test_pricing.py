@@ -4,6 +4,9 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, nowdate
 
+from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+	start_pos_shift,
+)
 from frappe_books.tests.accounting import (
 	ensure_user,
 	foreign_currency,
@@ -500,6 +503,27 @@ class IntegrationTestPricing(IntegrationTestCase):
 		credit_note.insert().submit()
 
 		self.assertEqual(coupon.db_get("used"), 1)
+
+	def test_coupons_need_pricing_rules_that_apply(self):
+		coupon = self._coupon(self._pricing_rule(is_coupon_code_based=1))
+		start_pos_shift()
+		frappe.db.set_single_value("Books Pos Settings", {"pos_profile": None, "ignore_pricing_rule": 1})
+		for enable_pricing_rule, is_pos in ((0, 0), (1, 1)):
+			with self.subTest(enable_pricing_rule=enable_pricing_rule, is_pos=is_pos):
+				frappe.db.set_single_value(
+					"Books Accounting Settings", "enable_pricing_rule", enable_pricing_rule
+				)
+				invoice = frappe.get_doc(
+					{
+						"doctype": "Books Sales Invoice",
+						"party": self.party.name,
+						"account": self.receivable.name,
+						"is_pos": is_pos,
+						"items": [{"item": self.item.name, "rate": 100, "quantity": 1}],
+						"coupons": [{"coupons": coupon.name}],
+					}
+				)
+				self.assertRaisesRegex(frappe.ValidationError, "pricing rules", invoice.insert)
 
 	def _coupon(self, rule, **values):
 		return frappe.get_doc(

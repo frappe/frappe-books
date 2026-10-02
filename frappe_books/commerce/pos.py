@@ -122,11 +122,14 @@ def cash_account():
 
 
 def make_cash_journal(posting_date, rows, remark):
-	"""Submit a cash journal for the non-zero rows and return its name."""
+	"""Submit a cash journal of the rows' non-zero net per account, as the counter can be the cash account."""
+	net = defaultdict(as_decimal)
+	for account, debit, credit in rows:
+		net[account] += as_decimal(debit) - as_decimal(credit)
 	accounts = [
-		{"account": account, "debit": rounded(debit), "credit": rounded(credit)}
-		for account, debit, credit in rows
-		if rounded(debit) or rounded(credit)
+		{"account": account, "debit": rounded(max(amount, 0)), "credit": rounded(max(-amount, 0))}
+		for account, amount in net.items()
+		if rounded(amount)
 	]
 	if not accounts:
 		return None

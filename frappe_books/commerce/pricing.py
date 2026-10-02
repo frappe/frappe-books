@@ -117,9 +117,10 @@ def _reset_row(row, rule):
 def apply_pricing(invoice):
 	if invoice.transaction_type != "sales" or invoice.get("return_against"):
 		return
-	if not frappe.db.get_single_value("Books Accounting Settings", "enable_pricing_rule"):
-		return
-	if _ignore_pos_pricing(invoice):
+	if not _applies_pricing_rules(invoice):
+		# A coupon's discount is a pricing rule, so the coupon would be used up for nothing.
+		if invoice.get("coupons"):
+			frappe.throw(_("Coupons cannot be applied, as pricing rules do not apply to this invoice."))
 		return
 
 	rows = list(invoice.items)
@@ -312,8 +313,11 @@ def _within_limits(record, date, amount, quantity=None):
 	)
 
 
-def _ignore_pos_pricing(invoice):
-	return bool(invoice.get("is_pos") and pos_setting("ignore_pricing_rule"))
+def _applies_pricing_rules(invoice):
+	"""Pricing rules are on, and the POS profile or settings of a POS invoice do not ignore them."""
+	if not frappe.db.get_single_value("Books Accounting Settings", "enable_pricing_rule"):
+		return False
+	return not (invoice.get("is_pos") and pos_setting("ignore_pricing_rule"))
 
 
 def validate_range(minimum, maximum, label, strict=False, message=None):

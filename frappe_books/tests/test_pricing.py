@@ -222,6 +222,33 @@ class IntegrationTestPricing(IntegrationTestCase):
 				invoice.save()
 				self.assertEqual(invoice.items[0].rate, rate)
 
+	def test_invoice_takes_only_an_enabled_price_list_for_its_side(self):
+		payable = make_account("Commerce Payable", root_type="Liability", account_type="Payable")
+		supplier = make_party(payable.name, role="Supplier")
+		for values, doctype, party, account, message in (
+			({"is_enabled": 0}, "Books Sales Invoice", self.party, self.receivable, "is disabled"),
+			(
+				{"is_sales": 0, "is_purchase": 1},
+				"Books Sales Quote",
+				self.party,
+				self.receivable,
+				"not for Sales",
+			),
+			({}, "Books Purchase Invoice", supplier, payable, "not for Purchases"),
+		):
+			price_list = frappe.get_doc(
+				{"doctype": "Books Price List", "name": unique_name("Price List"), **values}
+			).insert()
+			with self.subTest(doctype=doctype), self.assertRaisesRegex(frappe.ValidationError, message):
+				make_invoice(
+					doctype,
+					party.name,
+					account.name,
+					self.item.name,
+					self.income.name,
+					price_list=price_list.name,
+				)
+
 	def test_price_list_rate_is_charged_per_stock_unit(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
 		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()

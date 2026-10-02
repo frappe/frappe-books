@@ -578,6 +578,10 @@ test('a submitted quote makes a Frappe-backed sales invoice from its mapper', as
   }));
 
   assert.equal(makeInvoice.condition(quote), true);
+  // The mapper invoices only customers, not leads.
+  quote.reference_type = 'Books Lead';
+  assert.equal(makeInvoice.condition(quote), false);
+  quote.reference_type = 'Books Party';
   const invoice = await getMappedDoc(
     quote,
     'SalesInvoice',

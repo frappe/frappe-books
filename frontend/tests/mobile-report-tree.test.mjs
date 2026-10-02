@@ -13,9 +13,9 @@ function getProfitAndLossTree(rows) {
   const report = new ProfitAndLoss(fyo);
   report.columns = [
     { fieldname: 'account', label: 'Account', fieldtype: 'Link' },
-    ...periods.map((fieldname) => ({
+    ...[...periods, 'total'].map((fieldname) => ({
       fieldname,
-      label: fieldname,
+      label: fieldname === 'total' ? 'Total' : fieldname,
       fieldtype: 'Currency',
     })),
   ];
@@ -33,7 +33,7 @@ function account(name, indent, values, total) {
   };
 }
 
-test("the phone Total column shows the server's total of each row", () => {
+test("the phone picks the server's Total column first", () => {
   // Added up in the browser, 100010.135 + 123.45 shows as 1,00,133.58.
   const tree = getProfitAndLossTree([
     account('Income', 0, [null, null], null),
@@ -44,7 +44,10 @@ test("the phone Total column shows the server's total of each row", () => {
   const [total] = tree.columnOptions;
   const rows = tree.getRows([total]);
 
-  assert.equal(total.label, 'Total');
+  assert.deepEqual(
+    tree.columnOptions.map(({ key }) => key),
+    ['total', ...periods]
+  );
   assert.deepEqual(
     rows.map(({ label, values: [value] }) => [label, value.text, value.isZero]),
     [

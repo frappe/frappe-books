@@ -2,6 +2,8 @@ export enum TransferTypeEnum {
   'B2B' = 'B2B',
   'B2CL' = 'B2CL',
   'B2CS' = 'B2CS',
+  'CDNR' = 'CDNR',
+  'CDNUR' = 'CDNUR',
   'NR' = 'NR',
 }
 

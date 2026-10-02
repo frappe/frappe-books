@@ -76,7 +76,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		# Invoices stay unpaid on submit until the user picks an automatic payment account.
 		for fieldname in payment_accounts:
 			self.assertFalse(frappe.db.get_single_value("Books Defaults", fieldname), fieldname)
-		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
+		self.assert_gst_heads()
 		self.assertTrue(frappe.db.exists("Books Tax", "GST-18"))
 		gst = frappe.get_doc("Books Tax", "GST-18")
 		self.assertEqual([(row.account, row.rate) for row in gst.details], [("CGST", 9), ("SGST", 9)])
@@ -113,7 +113,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_single_value("Books Inventory Settings", "stock_adjustment"), "Stock Adjustment"
 		)
-		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
+		self.assert_gst_heads()
 
 	def test_setup_adapts_defaults_to_a_numbered_chart(self):
 		wizard = self._wizard(country="Guatemala", currency="GTQ", chart_of_accounts="Guatemala - Cuentas")
@@ -299,6 +299,11 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			self.assertFalse(account.is_group, name)
 			self.assertIn(account.account_type, rules.get("account_types", (account.account_type,)), name)
 			self.assertIn(account.root_type, rules.get("root_types", (account.root_type,)), name)
+
+	def assert_gst_heads(self):
+		accounts = ("CGST", "SGST", "IGST", "Exempt")
+		heads = [frappe.db.get_value("Books Account", account, "gst_head") for account in accounts]
+		self.assertEqual(heads, list(accounts))
 
 	def assert_pos_accounts_are_ledgers(self):
 		for fieldname, account_type in (("cash_account", "Cash"), ("default_account", "Receivable")):

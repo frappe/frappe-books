@@ -75,3 +75,21 @@ test('phone filter defaults reuse the fetched server defaults', async () => {
   assert.equal(defaultCalls.length, 1);
   delete appFyo.store.reports.GeneralLedger;
 });
+
+test('a report opened without Ref filters drops those it was opened with before', async () => {
+  const calls = stubServer((method) =>
+    method.endsWith('get_default_filters')
+      ? { from_date: '2025-01-01', to_date: '2025-12-31' }
+      : reportResult([['account', 'Data']], [])
+  );
+  const document = { referenceType: 'Books Payment', referenceName: 'PAY-1' };
+  await showReport('GeneralLedger', { ...document, party: 'Acme' });
+
+  const report = await showReport('GeneralLedger');
+
+  const run = calls.filter((c) => c.method === 'frappe.desk.query_report.run');
+  assert.equal(run.at(-1).args.filters.reference_type, 'All');
+  assert.equal(run.at(-1).args.filters.reference_name, undefined);
+  assert.equal(report.get('party'), 'Acme');
+  delete appFyo.store.reports.GeneralLedger;
+});

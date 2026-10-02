@@ -15,7 +15,7 @@ export abstract class AccountReport extends Report {
   static phoneLayout: PhoneTreeLayout = {
     type: 'tree',
     label: 'account',
-    periods: { total: false },
+    periods: true,
     chips: ['toDate', 'fromYear', 'toYear', 'periodicity'],
   };
 

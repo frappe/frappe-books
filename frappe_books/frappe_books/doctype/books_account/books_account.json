@@ -14,6 +14,7 @@
   "parent_books_account",
   "account_type",
   "is_group",
+  "gst_head",
   "lft",
   "rgt",
   "old_parent"
@@ -62,6 +63,14 @@
    "set_only_once": 1
   },
   {
+   "description": "The GST tax this account holds, for the GSTR reports.",
+   "fieldname": "gst_head",
+   "fieldtype": "Select",
+   "label": "GST Head",
+   "options": "\nCGST\nSGST\nIGST\nExempt",
+   "placeholder": "GST Head"
+  },
+  {
    "fieldname": "lft",
    "fieldtype": "Int",
    "hidden": 1,
@@ -89,7 +98,7 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-10-02 18:00:00.000000",
+ "modified": "2026-10-02 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Account",

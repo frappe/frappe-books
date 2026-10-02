@@ -103,9 +103,10 @@ export async function getRegionalFrappeModels(
     return {};
   }
 
-  const [{ Address }, { Party }] = await Promise.all([
+  const [{ Account }, { Address }, { Party }] = await Promise.all([
+    import('./regionalModels/in/Account'),
     import('./regionalModels/in/Address'),
     import('./regionalModels/in/Party'),
   ]);
-  return { Address, Party };
+  return { Account, Address, Party };
 }

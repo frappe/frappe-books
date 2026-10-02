@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, fyo, newFrappeDoc } from './helpers/frappe.mjs';
+import {
+  frappeModels,
+  fyo,
+  getNewDocValues,
+  newFrappeDoc,
+} from './helpers/frappe.mjs';
 
 const AVAILABILITY = '/api/method/frappe_books.inventory.availability';
 const stock = [
@@ -54,6 +59,16 @@ test('sales batch choices are the batches in stock where the invoice ships from'
   const filters = await row.constructor.filters.batch(row);
   assert.deepEqual(filters, [['name', 'in', ['B1']]]);
   assert.deepEqual(getStockLocations(), [['Stores', ['Pen']]]);
+});
+
+test('a batch created from a sales row is a new batch of its item', async () => {
+  const row = makeRow();
+  const { filters, createFilters } = row.constructor;
+  // As the Link control picks them.
+  const getValues = createFilters?.batch ?? filters.batch;
+  assert.deepEqual(getNewDocValues('Batch', await getValues(row)), {
+    item: 'Pen',
+  });
 });
 
 test('a POS row checks its batch at the POS location', async () => {

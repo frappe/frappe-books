@@ -41,11 +41,9 @@
   "pos_cash_denominations",
   "save_button_colour",
   "cancel_button_colour",
-  "submit_button_colour",
   "held_button_colour",
   "return_button_colour",
-  "pay_button_colour",
-  "pay_and_print_button_colour"
+  "pay_button_colour"
  ],
  "fields": [
   {
@@ -270,13 +268,6 @@
    "placeholder": "Select Colour"
   },
   {
-   "default": "#86efac",
-   "fieldname": "submit_button_colour",
-   "fieldtype": "Color",
-   "label": "Submit Button Colour",
-   "placeholder": "Select Colour"
-  },
-  {
    "default": "#f98080",
    "fieldname": "held_button_colour",
    "fieldtype": "Color",
@@ -296,20 +287,13 @@
    "fieldtype": "Color",
    "label": "Pay Button Colour",
    "placeholder": "Select Colour"
-  },
-  {
-   "default": "#86efac",
-   "fieldname": "pay_and_print_button_colour",
-   "fieldtype": "Color",
-   "label": "Pay And Print Button Colour",
-   "placeholder": "Select Colour"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-01 20:30:00.000000",
+ "modified": "2026-10-02 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Defaults",

@@ -21,11 +21,9 @@
   "colour_section_break_12",
   "save_button_colour",
   "cancel_button_colour",
-  "submit_button_colour",
   "held_button_colour",
   "return_button_colour",
-  "pay_button_colour",
-  "pay_and_print_button_colour"
+  "pay_button_colour"
  ],
  "fields": [
   {
@@ -115,13 +113,6 @@
    "placeholder": "Select Colour"
   },
   {
-   "default": "#86efac",
-   "fieldname": "submit_button_colour",
-   "fieldtype": "Color",
-   "label": "Submit Button Colour",
-   "placeholder": "Select Colour"
-  },
-  {
    "default": "#f98080",
    "fieldname": "held_button_colour",
    "fieldtype": "Color",
@@ -140,13 +131,6 @@
    "fieldname": "pay_button_colour",
    "fieldtype": "Color",
    "label": "Pay Button Colour",
-   "placeholder": "Select Colour"
-  },
-  {
-   "default": "#86efac",
-   "fieldname": "pay_and_print_button_colour",
-   "fieldtype": "Color",
-   "label": "Pay And Print Button Colour",
    "placeholder": "Select Colour"
   }
  ],

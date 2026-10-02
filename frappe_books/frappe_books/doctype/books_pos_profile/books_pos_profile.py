@@ -23,14 +23,12 @@ class BooksPosProfile(Document):
 		ignore_pricing_rule: DF.Check
 		inventory: DF.Link
 		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items", "All Items"]
-		pay_and_print_button_colour: DF.Color | None
 		pay_button_colour: DF.Color | None
 		pos_customer: DF.Link | None
 		pos_print_template: DF.Link | None
 		pos_ui: DF.Literal["Classic", "Modern"]
 		return_button_colour: DF.Color | None
 		save_button_colour: DF.Color | None
-		submit_button_colour: DF.Color | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Pos Profile"

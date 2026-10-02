@@ -68,6 +68,18 @@ class IntegrationTestDashboard(IntegrationTestCase):
 		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (0, 2))
 
 
+class IntegrationTestTopExpenses(IntegrationTestCase):
+	def test_expenses_past_the_top_five_are_summed_as_others(self):
+		for amount in (60, 50, 40, 30, 20, 10, 5):
+			_post(make_account("Top Expense", root_type="Expense"), amount, 0, "2031-12-01")
+
+		with self.freeze_time(TODAY):
+			expenses = get_top_expenses("This Month")
+
+		self.assertEqual([row["total"] for row in expenses], [60, 50, 40, 30, 20, 15])
+		self.assertEqual(expenses[-1]["account"], "Others")
+
+
 class IntegrationTestDashboardPeriods(IntegrationTestCase):
 	def setUp(self):
 		frappe.db.set_single_value(

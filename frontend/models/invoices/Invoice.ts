@@ -18,7 +18,13 @@ import type { InvoiceItem } from './InvoiceItem';
 import type { TaxSummary } from './TaxSummary';
 
 // A new rate for rows priced by the server follows these.
-const RATE_SOURCE_FIELDS = ['party', 'price_list', 'currency', 'exchange_rate'];
+const RATE_SOURCE_FIELDS = [
+  'party',
+  'date',
+  'price_list',
+  'currency',
+  'exchange_rate',
+];
 // The server fills these from the party.
 const PARTY_FIELDS = ['account', 'currency', 'exchange_rate'];
 /** Invoice and quote fields: links that offer no Create, and items edited in the row editor. */
@@ -44,7 +50,8 @@ export abstract class Invoice extends FrappeDoc {
     'make_auto_payment',
     'make_auto_stock_transfer',
   ];
-  static override refills = { party: PARTY_FIELDS };
+  // The exchange rate is the one on the invoice date.
+  static override refills = { party: PARTY_FIELDS, date: ['exchange_rate'] };
 
   items?: InvoiceItem[];
   date?: Date;

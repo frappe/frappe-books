@@ -52,6 +52,18 @@ test('an Indian party asks for its GST registration instead of a tax ID', async 
   ]);
 });
 
+test('an Indian account names the GST head it holds, in quick edit too', () => {
+  const account = newFrappeDoc('Account', { account_type: 'Tax' });
+  assert.equal(hidden(account, 'gst_head'), false);
+  assert.deepEqual(getSchema('Account').quickEditFields, [
+    'root_type',
+    'parent_books_account',
+    'account_type',
+    'is_group',
+    'gst_head',
+  ]);
+});
+
 test('an Indian customer shows loyalty fields when the program is on', async () => {
   fyo.singles.AccountingSettings = { enable_loyalty_program: true };
   const party = newFrappeDoc('Party', { role: 'Customer' });

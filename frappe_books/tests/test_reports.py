@@ -339,13 +339,9 @@ class IntegrationTestGSTR(IntegrationTestCase):
 	def setUp(self):
 		for account in ("CGST", "SGST", "IGST"):
 			if not frappe.db.exists("Books Account", account):
-				frappe.get_doc(
-					{
-						"doctype": "Books Account",
-						"account_name": account,
-						"parent_books_account": root_group("Liability"),
-					}
-				).insert()
+				_tax_account(account, account)
+			# The site may already have these accounts, without a GST head.
+			frappe.db.set_value("Books Account", account, "gst_head", account)
 		self.receivable = make_account("GSTR Receivable", account_type="Receivable")
 		self.income = make_account("GSTR Income", root_type="Income", account_type="Income Account")
 		expense = make_account("GSTR Expense", root_type="Expense", account_type="Expense Account")
@@ -427,6 +423,16 @@ class IntegrationTestGSTR(IntegrationTestCase):
 
 		with self.assertRaisesRegex(frappe.ValidationError, "JSON"):
 			self._json("NR")
+
+	def test_tax_amounts_follow_the_gst_head_of_the_account(self):
+		central, state = (
+			_tax_account(unique_name(f"Output {head} 9%"), head).name for head in ("CGST", "SGST")
+		)
+		invoice = self._invoice((_tax((central, 9), (state, 9)), 100, 1))
+
+		(row,) = self._rows(invoice)
+
+		self.assertEqual((row["rate"], row["cgst_amount"], row["sgst_amount"]), _decimals(18, 9, 9))
 
 	def test_invoices_and_parties_are_read_in_batches(self):
 		gst_18 = _tax(("CGST", 9), ("SGST", 9))
@@ -613,6 +619,18 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		today = nowdate()
 		rows = _run("Books GSTR-1", from_date=today, to_date=today)
 		return [row for row in rows if row["invoice_no"] == invoice.name]
+
+
+def _tax_account(name, gst_head):
+	return frappe.get_doc(
+		{
+			"doctype": "Books Account",
+			"account_name": name,
+			"parent_books_account": root_group("Liability"),
+			"account_type": "Tax",
+			"gst_head": gst_head,
+		}
+	).insert()
 
 
 def _tax(*details):

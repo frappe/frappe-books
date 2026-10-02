@@ -120,6 +120,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
   /** Rows the server holds; other rows are new and saved without their client names. */
   _savedRows = new Set<string>();
+  /** The values as last loaded or saved. */
+  _savedValues: DocValueMap = {};
   /** Fields the last preview filled; the next preview fills them again until the user edits one. */
   _serverFilled = new Set<string>();
   _previewTimer?: ReturnType<typeof setTimeout>;
@@ -319,9 +321,24 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       return false;
     }
 
+    const evalDoc = this.getEvalDoc();
+    if (rule === 'readOnly') {
+      // A field locks on its saved value, so an unsaved edit never locks it.
+      evalDoc[fieldname] = this._getSavedFrappeValue(fieldname);
+    }
+
     const parent = this.parentdoc?.getEvalDoc();
-    const isMet = evaluateCondition(condition, this.getEvalDoc(), parent);
+    const isMet = evaluateCondition(condition, evalDoc, parent);
     return rule === 'hidden' ? !isMet : isMet;
+  }
+
+  /** A field's saved value as form conditions read it. */
+  _getSavedFrappeValue(fieldname: string): unknown {
+    const value = this._savedValues[fieldname] as DocValue;
+    const field = this.fieldMap[fieldname];
+    return getIsNullOrUndef(value)
+      ? null
+      : toFrappeValue(value, field, this.fyo);
   }
 
   /** The values Frappe's form conditions read; amounts are numbers there. */
@@ -697,6 +714,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   ) {
     this._clearValues();
     this._setValuesWithoutChecks(data);
+    this._savedValues = data;
     this._dirty = false;
     const change = { doc: this };
     if (!savedAction) {

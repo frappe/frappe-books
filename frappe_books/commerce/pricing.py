@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.settings import require_feature
 
 
 def reset_pricing(invoice):
@@ -120,6 +121,7 @@ def apply_pricing(invoice):
 	if not _applies_pricing_rules(invoice):
 		# A coupon's discount is a pricing rule, so the coupon would be used up for nothing.
 		if invoice.get("coupons"):
+			require_feature("enable_coupon_code")
 			frappe.throw(_("Coupons cannot be applied, as pricing rules do not apply to this invoice."))
 		return
 

@@ -52,6 +52,28 @@ def standard_rates(invoice):
 	return rates
 
 
+def validate_price_list(invoice):
+	"""Sales and quotes take enabled sales price lists, purchases enabled purchase price lists.
+
+	A return keeps its original's price list, as its rates come from the original.
+	"""
+	if not invoice.price_list or invoice.get("return_against"):
+		return
+	is_purchase = invoice.transaction_type == "purchase"
+	side = "is_purchase" if is_purchase else "is_sales"
+	price_list = frappe.db.get_value(
+		"Books Price List", invoice.price_list, ["is_enabled", side], as_dict=True
+	)
+	if not price_list.is_enabled:
+		frappe.throw(_("Price List {0} is disabled.").format(invoice.price_list))
+	if not price_list[side]:
+		frappe.throw(
+			_("Price List {0} is not for {1}.").format(
+				invoice.price_list, _("Purchases" if is_purchase else "Sales")
+			)
+		)
+
+
 def standard_rate(invoice, row, rates):
 	"""Return the row's standard rate per stock unit from `standard_rates` in the invoice currency, or None."""
 	rate = _stock_unit_rate(row, rates)

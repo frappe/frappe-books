@@ -27,7 +27,7 @@ def get_period_dates(period: str) -> tuple:
 
 @frappe.whitelist()
 def get_cashflow(period: str) -> dict:
-	"""Return the cash and bank inflow and outflow of each month, and whether any exist at all."""
+	"""Return the cash and bank inflow and outflow of each month, and whether the period has any."""
 	from_date, to_date = get_period_dates(period)
 	fields = [*MONTH_FIELDS, {"SUM": "debit", "as": "inflow"}, {"SUM": "credit", "as": "outflow"}]
 	totals = _monthly_totals(from_date, to_date, CASH_ACCOUNTS, fields)
@@ -39,8 +39,7 @@ def get_cashflow(period: str) -> dict:
 		}
 		for month in _months(from_date, to_date)
 	]
-	has_data = bool(frappe.get_list(LEDGER, filters=CASH_ACCOUNTS, pluck="name", limit=1))
-	return {"months": months, "has_data": has_data}
+	return {"months": months, "has_data": bool(totals)}
 
 
 @frappe.whitelist()

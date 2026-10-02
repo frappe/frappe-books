@@ -143,6 +143,11 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     defaults.find((f) => f.fieldname === 'sales_payment_account').linkFilters,
     [ledger, ['account_type', 'in', ['Cash', 'Bank']]]
   );
+  const taxRow = getSchema('TaxDetail').fields;
+  for (const fieldname of ['account', 'payment_account']) {
+    const field = taxRow.find((f) => f.fieldname === fieldname);
+    assert.deepEqual(field.linkFilters, [ledger], fieldname);
+  }
   assert.deepEqual(InventorySettings.filters.stock_in_hand(), [
     ledger,
     ['account_type', '=', 'Stock'],

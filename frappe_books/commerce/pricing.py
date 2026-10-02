@@ -262,8 +262,8 @@ def _append_free_item(invoice, source_row, rule):
 		"items",
 		{
 			"item": rule.free_item,
-			"unit": rule.free_item_unit,
-			"quantity": quantity,
+			"transfer_unit": rule.free_item_unit,
+			"transfer_quantity": quantity,
 			"rate": 0,
 			"is_free_item": 1,
 			"pricing_rule": rule.name,

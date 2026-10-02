@@ -62,7 +62,7 @@ def get_profit_and_loss(period: str) -> dict:
 
 @frappe.whitelist()
 def get_top_expenses(period: str) -> list[dict]:
-	"""Return the five expense accounts with the most spent in the period."""
+	"""Return the five expense accounts with the most spent in the period, and the rest as Others."""
 	from_date, to_date = get_period_dates(period)
 	rows = frappe.get_list(
 		LEDGER,
@@ -72,8 +72,11 @@ def get_top_expenses(period: str) -> list[dict]:
 		order_by="account",
 	)
 	# The query engine wraps an ORDER BY on this expression alias in MAX() on Postgres.
-	rows.sort(key=lambda row: row.balance, reverse=True)
-	return [{"account": row.account, "total": rounded(row.balance)} for row in rows[:5] if row.balance > 0]
+	spent = sorted((row for row in rows if row.balance > 0), key=lambda row: row.balance, reverse=True)
+	expenses = [{"account": row.account, "total": rounded(row.balance)} for row in spent[:5]]
+	if others := spent[5:]:
+		expenses.append({"account": _("Others"), "total": rounded(sum(row.balance for row in others))})
+	return expenses
 
 
 @frappe.whitelist()

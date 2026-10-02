@@ -39,11 +39,6 @@
     <div
       class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
     >
-      <FrappeButton
-        icon="lucide-x"
-        :label="t`Close row editor`"
-        @click="$emit('close')"
-      />
       <h2 class="truncate text-lg-semibold text-ink-gray-8">
         {{ t`Row ${index + 1}` }}
       </h2>
@@ -61,6 +56,11 @@
         icon="lucide-chevron-right"
         :label="t`Next row`"
         @click="$emit('next', next)"
+      />
+      <FrappeButton
+        icon="lucide-x"
+        :label="t`Close row editor`"
+        @click="$emit('close')"
       />
     </div>
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">

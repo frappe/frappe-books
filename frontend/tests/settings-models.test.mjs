@@ -242,6 +242,17 @@ test('the System tab offers sample dates and takes custom formats and locales', 
   );
 });
 
+test('only the Print tab offers a terms and conditions switch', () => {
+  assert.equal(
+    fieldnames('SystemSettings').includes('display_terms_and_conditions'),
+    false
+  );
+  assert.equal(
+    fieldnames('PrintSettings').includes('displaytermsandconditions'),
+    true
+  );
+});
+
 test('the setup wizard shows the fields, placeholders and sections it showed', () => {
   const layout = getSchema('SetupWizard')
     .fields.filter((field) => !field.meta && !field.hidden)

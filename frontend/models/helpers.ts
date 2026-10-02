@@ -143,8 +143,9 @@ export function getMakeInvoiceAction(
     label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) => {
+      // Quotes to leads are not invoiced.
       if (schemaName === ModelNameEnum.SalesQuote) {
-        return doc.isSubmitted;
+        return doc.isSubmitted && doc.reference_type === 'Books Party';
       }
 
       // Shipments and receipts are Frappe-backed.

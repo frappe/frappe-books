@@ -69,6 +69,7 @@
                 "
                 :width="columnWidths.widths[df.fieldname]"
                 :direction="languageDirection"
+                keep-label
                 @resize="columnWidths.set(df.fieldname, $event)"
                 @commit="columnWidths.set(df.fieldname, $event, true)"
                 @fit="columnWidths.set(df.fieldname, undefined, true)"

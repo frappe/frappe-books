@@ -228,6 +228,15 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual((box_row.pricing_rule, box_row.rate, box_row.transfer_rate), (rule.name, 10, 120))
 		self.assertEqual((unit_row.pricing_rule, unit_row.rate), (None, 15))
 
+	def test_rule_takes_only_units_its_items_have(self):
+		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		item = make_item(
+			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
+		)
+		self._pricing_rule(applied_items=[{"item": item.name, "unit": unit} for unit in ("Unit", box.name)])
+		with self.assertRaisesRegex(frappe.ValidationError, "not applicable"):
+			self._pricing_rule(applied_items=[{"item": self.item.name, "unit": box.name}])
+
 	def test_rule_counts_only_the_rows_in_its_units(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()

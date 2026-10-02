@@ -63,8 +63,22 @@ test('item group, unit, location, batch and serial number forms show what they s
   ]);
 });
 
-test('item group, batch and serial number lists show their columns', () => {
-  assert.deepEqual(getColumns('ItemGroup'), ['name', 'tax', 'hsn_code']);
+test('item groups show HSN/SAC only for an Indian company', () => {
+  const group = newFrappeDoc('ItemGroup', { name: 'Tea' });
+  const columns = () =>
+    getModel('ItemGroup')
+      .getListViewSettings(fyo)
+      .columns.map((column) => column.fieldname ?? column);
+
+  fyo.singles.AccountingSettings = { country: 'United States' };
+  assert.equal(hidden(group, 'hsn_code'), true);
+  assert.deepEqual(columns(), ['name', 'tax']);
+  fyo.singles.AccountingSettings = { country: 'India' };
+  assert.equal(hidden(group, 'hsn_code'), false);
+  assert.deepEqual(columns(), ['name', 'tax', 'hsn_code']);
+});
+
+test('batch and serial number lists show their columns', () => {
   assert.deepEqual(getColumns('Batch'), [
     'name',
     'expiry_date',

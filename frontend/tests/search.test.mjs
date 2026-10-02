@@ -169,6 +169,31 @@ test('a superseded search is dropped and documents rank by status', async () => 
   );
 });
 
+test('a word naming an action group lists those actions before records', async () => {
+  const { search } = makeSearch(({ body }) =>
+    body.doctype === 'Books Item'
+      ? [
+          {
+            name: 'Cloud Hosting - Shared Starter',
+            item_type: 'Service',
+            item_usage: 'Sales',
+          },
+        ]
+      : []
+  );
+  const first = async (input) => {
+    await search.fetchDocs(input);
+    const [item] = search.search(input);
+    return [item.group, item.label];
+  };
+
+  assert.deepEqual(await first('create sales'), ['Create', 'Sales Invoice']);
+  assert.deepEqual(await first('sales'), [
+    'Docs',
+    'Cloud Hosting - Shared Starter',
+  ]);
+});
+
 test('a table row is found by its search fields and opens its parent', async () => {
   const { search, requests } = makeSearch(({ body }) =>
     body.doctype === 'Books Payment For'

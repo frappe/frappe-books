@@ -242,6 +242,21 @@ class IntegrationTestPricing(IntegrationTestCase):
 				self.assertEqual([row.quantity for row in free_rows], [free_quantity])
 				self.assertEqual(len(invoice.pricing_rule_detail), 1)
 
+	def test_rule_discount_amount_is_capped_at_the_row_amount(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		self._pricing_rule(price_discount_type="amount", discount_amount=10)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			items=[{"item": self.item.name, "quantity": 1, "rate": 4}],
+		)
+
+		self.assertEqual(invoice.items[0].item_discount_amount, 4)
+		self.assertEqual(invoice.grand_total, 0)
+
 	def test_rule_values_reset_when_rule_stops_applying(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		for values in (

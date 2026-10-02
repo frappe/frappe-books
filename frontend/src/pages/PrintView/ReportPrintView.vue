@@ -22,13 +22,13 @@
           :width="size.width"
           :height="size.height"
         >
-          <div class="bg-white mx-auto">
+          <div class="bg-surface-base mx-auto">
             <div class="p-2">
-              <div class="font-semibold text-xl w-full flex justify-between">
+              <div class="text-xl-semibold w-full flex justify-between">
                 <h1>
                   {{ `${fyo.singles.PrintSettings?.company_name}` }}
                 </h1>
-                <p class="text-gray-600">
+                <p class="text-ink-gray-6">
                   {{ title }}
                 </p>
               </div>

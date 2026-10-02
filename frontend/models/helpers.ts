@@ -16,6 +16,8 @@ import { Router } from 'vue-router';
 import type { DocValues } from 'src/frappe/api';
 import { getDocType } from 'src/frappe/doctypes';
 import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
+import { toFrappeValue } from 'src/frappe/values';
+import { DateTime } from 'luxon';
 
 const MAPPER_MODULES: Record<string, string> = {
   Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
@@ -254,10 +256,12 @@ export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
   };
 }
 
+/** The report of the document's entries, which all post on its date. */
 export function getLedgerLink(
   doc: FrappeDoc,
   reportClassName: 'GeneralLedger' | 'StockLedger'
 ) {
+  const date = getPostingDate(doc);
   return {
     name: 'Report',
     params: {
@@ -267,9 +271,18 @@ export function getLedgerLink(
       defaultFilters: JSON.stringify({
         referenceType: getDocType(doc.schemaName).doctype,
         referenceName: doc.name,
+        fromDate: date,
+        toDate: date,
       }),
     },
   };
+}
+
+/** Local midnight of the day, in the system time zone, the server posts the document on. */
+function getPostingDate(doc: FrappeDoc): Date {
+  const field = doc.fieldMap.date ?? doc.fieldMap.posting_date;
+  const value = toFrappeValue(doc.get(field.fieldname), field, doc.fyo);
+  return DateTime.fromISO(String(value).slice(0, 10)).toJSDate();
 }
 export function getMakeReturnDocAction(fyo: Fyo): Action {
   return {

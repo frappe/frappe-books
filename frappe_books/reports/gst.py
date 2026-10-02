@@ -15,6 +15,7 @@ TAX_AMOUNT_FIELDS = {"IGST": "igst_amount", "CGST": "cgst_amount", "SGST": "sgst
 LARGE_B2C_INVOICE = 100000
 LARGE_B2C_INVOICE_FROM = date(2024, 8, 1)
 LARGE_B2C_INVOICE_BEFORE = 250000
+CREDIT_NOTES = ("CDNR", "CDNUR")
 # SQLite allows 32766 query parameters.
 IN_LIST_BATCH_SIZE = 1000
 
@@ -25,11 +26,25 @@ def get_default_filters() -> dict:
 
 
 def get_columns(filters) -> list[dict]:
+	transfer_type = filters.get("transfer_type") or "B2B"
+	note = transfer_type in CREDIT_NOTES
 	columns = [
 		{"fieldname": "party", "label": _("Party"), "fieldtype": "Data", "width": 180},
-		{"fieldname": "invoice_no", "label": _("Invoice No."), "fieldtype": "Data"},
-		{"fieldname": "invoice_value", "label": _("Invoice Value"), "fieldtype": "Currency"},
-		{"fieldname": "invoice_date", "label": _("Invoice Date"), "fieldtype": "Date"},
+		{
+			"fieldname": "invoice_no",
+			"label": _("Note No.") if note else _("Invoice No."),
+			"fieldtype": "Data",
+		},
+		{
+			"fieldname": "invoice_value",
+			"label": _("Note Value") if note else _("Invoice Value"),
+			"fieldtype": "Currency",
+		},
+		{
+			"fieldname": "invoice_date",
+			"label": _("Note Date") if note else _("Invoice Date"),
+			"fieldtype": "Date",
+		},
 		{"fieldname": "place", "label": _("Place of supply"), "fieldtype": "Data"},
 		{"fieldname": "rate", "label": _("Rate"), "fieldtype": "Data", "width": 60},
 		{"fieldname": "taxable_value", "label": _("Taxable Value"), "fieldtype": "Currency"},
@@ -38,7 +53,7 @@ def get_columns(filters) -> list[dict]:
 		{"fieldname": "cgst_amount", "label": _("Central Tax"), "fieldtype": "Currency"},
 		{"fieldname": "sgst_amount", "label": _("State Tax"), "fieldtype": "Currency"},
 	]
-	if (filters.get("transfer_type") or "B2B") == "B2B":
+	if transfer_type in ("B2B", "CDNR"):
 		columns.insert(0, {"fieldname": "gstin", "label": _("GSTIN No."), "fieldtype": "Data", "width": 180})
 	return columns
 
@@ -52,13 +67,16 @@ def get_data(doctype, filters) -> list[dict]:
 	details = _tax_details({item.tax for item in items if item.tax})
 	places = _party_places({invoice.party for invoice in invoices})
 	company_state = _gstin_state(frappe.db.get_single_value("Books Accounting Settings", "gstin"))
+	originals = _originals(
+		doctype, {invoice.return_against for invoice in invoices if invoice.return_against}
+	)
 	items_by_invoice = defaultdict(list)
 	for item in items:
 		items_by_invoice[item.parent].append(item)
 	rows = []
 	for invoice in invoices:
 		gstin, place = places[invoice.party]
-		header = _row_header(invoice, gstin, place, company_state)
+		header = _row_header(invoice, gstin, place, company_state, originals.get(invoice.return_against))
 		rows += _invoice_rows(invoice, items_by_invoice[invoice.name], details, header)
 	return [row for row in rows if _matches(row, filters)]
 
@@ -79,9 +97,16 @@ def _invoices(doctype, filters):
 			"currency",
 			"exchange_rate",
 			"discount_after_tax",
+			"return_against",
 		],
 		order_by="date asc, name asc",
 	)
+
+
+def _originals(doctype, names):
+	"""Return the invoices that the credit notes return, by name."""
+	invoices = _get_list_in(doctype, "name", names, fields=["name", "date", "base_grand_total"])
+	return {invoice.name: invoice for invoice in invoices}
 
 
 def _items(doctype, names):
@@ -135,7 +160,7 @@ def _gstin_state(gstin):
 	return INDIAN_STATES.get((gstin or "")[:2], "")
 
 
-def _row_header(invoice, gstin, place, company_state):
+def _row_header(invoice, gstin, place, company_state, original):
 	return {
 		"gstin": gstin,
 		"party": invoice.party,
@@ -146,7 +171,16 @@ def _row_header(invoice, gstin, place, company_state):
 		"in_state": bool(company_state) and company_state == place,
 		"place": place,
 		"invoice_value": as_decimal(invoice.base_grand_total),
+		"return_against": invoice.return_against,
+		# A credit note is B2C-Large when the invoice it returns is.
+		"above_b2c_limit": _is_above_b2c_limit(original or invoice),
 	}
+
+
+def _is_above_b2c_limit(invoice):
+	date = getdate(invoice.date)
+	limit = LARGE_B2C_INVOICE if date >= LARGE_B2C_INVOICE_FROM else LARGE_B2C_INVOICE_BEFORE
+	return as_decimal(invoice.base_grand_total) > limit
 
 
 def _invoice_rows(invoice, items, details, header):
@@ -178,23 +212,21 @@ def _in_company_currency(row, exchange_rate):
 	return row
 
 
-def _is_large_b2c(row):
-	limit = LARGE_B2C_INVOICE if row["invoice_date"] >= LARGE_B2C_INVOICE_FROM else LARGE_B2C_INVOICE_BEFORE
-	return not row["gstin"] and not row["in_state"] and row["invoice_value"] > limit
-
-
-# Nil rated, exempted and non-GST supplies show only under NR.
-TRANSFER_TYPES = {
-	"B2B": lambda row: row["rate"] != 0 and bool(row["gstin"]),
-	"B2CL": lambda row: row["rate"] != 0 and _is_large_b2c(row),
-	"B2CS": lambda row: row["rate"] != 0 and not row["gstin"] and not _is_large_b2c(row),
-	"NR": lambda row: row["rate"] == 0,
-}
+def _transfer_type(row):
+	"""Return the one GSTR section a row belongs to."""
+	if row["rate"] == 0:
+		return "NR"
+	if row["gstin"]:
+		return "CDNR" if row["return_against"] else "B2B"
+	if not row["in_state"] and row["above_b2c_limit"]:
+		return "CDNUR" if row["return_against"] else "B2CL"
+	# Credit notes of other consumer invoices reduce B2C-Small, as GSTR-1 table 7 nets them.
+	return "B2CS"
 
 
 def _matches(row, filters):
 	place = filters.get("place")
 	if place and INDIAN_STATES.get(place) != row["place"]:
 		return False
-	matches_transfer_type = TRANSFER_TYPES.get(filters.get("transfer_type"))
-	return not matches_transfer_type or matches_transfer_type(row)
+	transfer_type = filters.get("transfer_type")
+	return not transfer_type or _transfer_type(row) == transfer_type

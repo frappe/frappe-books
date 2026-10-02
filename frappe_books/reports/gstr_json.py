@@ -28,7 +28,8 @@ def get_gstr_json(report_name: str, filters: dict) -> dict:
 	build = SECTIONS.get(filters.transfer_type)
 	if not build:
 		frappe.throw(
-			_("JSON export is only available for B2B, B2C-Large and B2C-Small."), title=_("Cannot Export")
+			_("JSON export is not available for nil rated, exempted and non-GST supplies."),
+			title=_("Cannot Export"),
 		)
 	return {
 		"version": "GST3.0.4",
@@ -40,13 +41,22 @@ def get_gstr_json(report_name: str, filters: dict) -> dict:
 
 
 def _b2b(rows) -> list[dict]:
-	invoices_by_gstin = defaultdict(list)
-	for invoice_rows in _rows_by_invoice(rows):
-		row = invoice_rows[0]
-		invoice = _invoice(invoice_rows, ("iamt", "camt", "samt"))
-		invoice.update(pos=_state_code(row), rchrg=row["reverse_charge"], inv_typ="R")
-		invoices_by_gstin[row["gstin"]].append(invoice)
-	return [{"ctin": gstin, "inv": invoices} for gstin, invoices in invoices_by_gstin.items()]
+	return _by_gstin(rows, _invoice, "inv")
+
+
+def _cdnr(rows) -> list[dict]:
+	return _by_gstin(rows, _note, "nt")
+
+
+def _by_gstin(rows, build, key):
+	"""Return the documents built from the rows, grouped by the party's GSTIN."""
+	documents_by_gstin = defaultdict(list)
+	for document_rows in _rows_by_invoice(rows):
+		row = document_rows[0]
+		document = build(document_rows, ("iamt", "camt", "samt"))
+		document.update(pos=_state_code(row), rchrg=row["reverse_charge"], inv_typ="R")
+		documents_by_gstin[row["gstin"]].append(document)
+	return [{"ctin": gstin, key: documents} for gstin, documents in documents_by_gstin.items()]
 
 
 def _b2cl(rows) -> list[dict]:
@@ -54,6 +64,14 @@ def _b2cl(rows) -> list[dict]:
 	for invoice_rows in _rows_by_invoice(rows):
 		invoices_by_state[_state_code(invoice_rows[0])].append(_invoice(invoice_rows, ("iamt",)))
 	return [{"pos": state, "inv": invoices} for state, invoices in invoices_by_state.items()]
+
+
+def _cdnur(rows) -> list[dict]:
+	"""Return the credit notes of B2C-Large invoices, the only unregistered notes Books makes."""
+	return [
+		{"typ": "B2CL", "pos": _state_code(note_rows[0]), **_note(note_rows, ("iamt",))}
+		for note_rows in _rows_by_invoice(rows)
+	]
 
 
 def _b2cs(rows) -> list[dict]:
@@ -80,16 +98,21 @@ def _rows_by_invoice(rows):
 	return invoices.values()
 
 
-def _invoice(rows, tax_fields):
+def _invoice(rows, tax_fields, amount=lambda value: value):
 	row = rows[0]
 	items = [
 		{
 			"num": number,
 			"itm_det": {
-				"txval": rate_row["taxable_value"],
+				"txval": amount(rate_row["taxable_value"]),
 				"rt": rate_row["rate"],
 				"csamt": 0,
-				**_tax_amounts(rate_row, {field: TAX_AMOUNTS[field] for field in tax_fields}),
+				**{
+					field: amount(value)
+					for field, value in _tax_amounts(
+						rate_row, {field: TAX_AMOUNTS[field] for field in tax_fields}
+					).items()
+				},
 			},
 		}
 		for number, rate_row in enumerate(rows, 1)
@@ -97,9 +120,15 @@ def _invoice(rows, tax_fields):
 	return {
 		"inum": row["invoice_no"],
 		"idt": getdate(row["invoice_date"]).strftime("%d-%m-%Y"),
-		"val": row["invoice_value"],
+		"val": amount(row["invoice_value"]),
 		"itms": items,
 	}
+
+
+def _note(rows, tax_fields):
+	"""Return a credit note as the portal takes it: its type and unsigned amounts."""
+	note = _invoice(rows, tax_fields, amount=abs)
+	return {"ntty": "C", "nt_num": note.pop("inum"), "nt_dt": note.pop("idt"), **note}
 
 
 def _tax_amounts(row, fields):
@@ -112,4 +141,4 @@ def _state_code(row):
 	return STATE_CODES[row["place"]]
 
 
-SECTIONS = {"B2B": _b2b, "B2CL": _b2cl, "B2CS": _b2cs}
+SECTIONS = {"B2B": _b2b, "B2CL": _b2cl, "B2CS": _b2cs, "CDNR": _cdnr, "CDNUR": _cdnur}

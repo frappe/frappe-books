@@ -54,7 +54,7 @@ class IntegrationTestDashboard(IntegrationTestCase):
 		)
 		self.assertTrue(profit["has_data"])
 
-	def test_outstanding_counts_credit_notes_as_positive_amounts(self):
+	def test_returns_reduce_the_paid_and_unpaid_totals(self):
 		for total, outstanding, return_against in ((100, 40, None), (-30, -30, "Dashboard Original")):
 			_invoice("2031-03-01", total, outstanding, return_against=return_against)
 
@@ -63,7 +63,7 @@ class IntegrationTestDashboard(IntegrationTestCase):
 
 		self.assertEqual(
 			(summary["total"], summary["paid"], summary["unpaid"]),
-			(Decimal("130.00"), Decimal("60.00"), Decimal("70.00")),
+			(Decimal("70.00"), Decimal("60.00"), Decimal("10.00")),
 		)
 		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (0, 2))
 

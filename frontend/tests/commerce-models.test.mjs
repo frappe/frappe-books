@@ -55,7 +55,7 @@ test('item group, unit, location, batch and serial number forms show what they s
     'description | Description | Serial Number Description | Default',
     'status | Status |  | Default',
   ]);
-  assert.equal(getSchema('ItemGroup').label, 'item Group');
+  assert.equal(getSchema('ItemGroup').label, 'Item Group');
   assert.deepEqual(getSchema('Batch').quickEditFields, [
     'item',
     'expiry_date',

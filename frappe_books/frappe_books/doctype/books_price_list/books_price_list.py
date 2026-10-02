@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.permissions import check_preview_permission
@@ -34,3 +35,13 @@ class BooksPriceList(Document):
 		check_preview_permission(self)
 		for row in self.price_list_item:
 			row.get_invalid_links()
+
+	def validate(self):
+		"""One price per item and unit, so the rate an invoice gets is never ambiguous."""
+		priced = set()
+		for row in self.price_list_item:
+			if (row.item, row.unit) in priced:
+				frappe.throw(
+					_("Row {0}: {1} already has a price in {2}.").format(row.idx, row.item, row.unit)
+				)
+			priced.add((row.item, row.unit))

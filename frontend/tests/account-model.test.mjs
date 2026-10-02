@@ -35,6 +35,7 @@ function newAccount(values) {
 function savedAccount(values) {
   const account = newAccount(values);
   account._notInserted = false;
+  account._savedValues = values;
   return account;
 }
 
@@ -68,7 +69,7 @@ test('a ledger account needs a parent group; a root group does not', () => {
   assert.equal(evaluateRequired(parent, newAccount({ is_group: true })), false);
 });
 
-test('a saved account keeps its name, types, parent and group; a set type stays', () => {
+test('a saved account keeps its name, types, parent and group; a saved type stays', () => {
   const account = savedAccount({
     account_name: 'Petty Cash',
     parent_books_account: 'Cash In Hand',
@@ -86,7 +87,11 @@ test('a saved account keeps its name, types, parent and group; a set type stays'
   const accountType = field('account_type');
   assert.equal(evaluateReadOnly(accountType, account), false);
   account.account_type = 'Cash';
-  assert.equal(evaluateReadOnly(accountType, account), true);
+  assert.equal(evaluateReadOnly(accountType, account), false);
+  assert.equal(
+    evaluateReadOnly(accountType, savedAccount({ account_type: 'Cash' })),
+    true
+  );
   assert.equal(
     evaluateReadOnly(accountType, newAccount({ account_type: 'Cash' })),
     false

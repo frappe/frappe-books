@@ -75,20 +75,30 @@ test('POS Settings hide barcode and visibility fields as the features they need 
   assert.equal(hidden(settings, 'item_weight_digits'), false);
 });
 
-test('an inventory feature cannot be turned off once it is on', async () => {
-  const settings = newFrappeDoc('InventorySettings');
-  for (const fieldname of [
+test('a saved inventory feature cannot be turned off; an unsaved one can', async () => {
+  const features = [
     'enable_barcodes',
     'enable_batches',
     'enable_serial_number',
     'enable_uom_conversions',
-  ]) {
-    assert.equal(readOnly(settings, fieldname), false);
+  ];
+  stubFrappe(() => ({
+    data: {
+      name: 'Books Inventory Settings',
+      ...Object.fromEntries(features.map((fieldname) => [fieldname, 1])),
+      enable_point_of_sale: 1,
+    },
+  }));
+  const saved = newFrappeDoc('InventorySettings');
+  await saved.load();
+  const settings = newFrappeDoc('InventorySettings');
+  for (const fieldname of features) {
+    assert.equal(readOnly(saved, fieldname), true);
     await settings.set(fieldname, true);
-    assert.equal(readOnly(settings, fieldname), true);
+    assert.equal(readOnly(settings, fieldname), false);
   }
 
-  assert.equal(readOnly(settings, 'enable_point_of_sale'), false);
+  assert.equal(readOnly(saved, 'enable_point_of_sale'), false);
 });
 
 test('the rules of each Frappe-backed model name fields of its DocType', () => {
@@ -177,7 +187,6 @@ test('discounts lead to pricing rules, then coupons, and stay on once on', async
   assert.equal(hidden(settings, 'enable_pricing_rule'), true);
 
   await settings.set('enable_discounting', true);
-  assert.equal(readOnly(settings, 'enable_discounting'), true);
   assert.equal(hidden(settings, 'discount_account'), false);
   assert.equal(hidden(settings, 'enable_pricing_rule'), false);
   assert.equal(hidden(settings, 'enable_coupon_code'), true);
@@ -185,6 +194,27 @@ test('discounts lead to pricing rules, then coupons, and stay on once on', async
   await settings.set('enable_pricing_rule', true);
   assert.equal(hidden(settings, 'enable_coupon_code'), false);
   assert.equal(readOnly(settings, 'enable_pricing_rule'), false);
+});
+
+test('a switch that stays on locks once saved, not when checked before Save', async () => {
+  const checks = getSchema('AccountingSettings').fields.filter(
+    ({ fieldtype }) => fieldtype === 'Check'
+  );
+  stubFrappe(() => ({
+    data: {
+      name: 'Books Accounting Settings',
+      ...Object.fromEntries(checks.map(({ fieldname }) => [fieldname, 0])),
+      enable_inventory: 1,
+    },
+  }));
+  const settings = newFrappeDoc('AccountingSettings');
+  await settings.load();
+  assert.equal(readOnly(settings, 'enable_inventory'), true);
+
+  await settings.set('enable_discounting', true);
+  assert.equal(readOnly(settings, 'enable_discounting'), false);
+  await settings.set('enable_discounting', false);
+  assert.equal(settings.enable_discounting, false);
 });
 
 test('the System tab offers sample dates and takes custom formats and locales', async () => {

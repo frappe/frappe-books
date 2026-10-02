@@ -279,7 +279,8 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     condition: (doc: FrappeDoc) =>
       !!fyo.singles.AccountingSettings?.enable_invoice_returns &&
       doc.isSubmitted &&
-      !doc.isReturn,
+      !doc.isReturn &&
+      !doc.is_fully_returned,
     action: async (doc: FrappeDoc) => {
       const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
       if (!returnDoc.name) {

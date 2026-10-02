@@ -208,4 +208,5 @@ def _remove_stale_custom_fields(target: str, desired: set[str]):
 	)
 	for field in existing:
 		if field.fieldname not in desired:
-			frappe.delete_doc("Custom Field", field.name)
+			# The form's save or delete checked permission, so fields Administrator added go too (frappe#43775).
+			frappe.delete_doc("Custom Field", field.name, ignore_permissions=True)

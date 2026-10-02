@@ -152,10 +152,10 @@
   >
     <!-- Page Header -->
     <div class="flex h-12 shrink-0 items-center gap-2 px-3">
-      <FrappeButton icon="lucide-x" :label="t`Close`" @click="$emit('close')" />
-      <h2 class="truncate text-lg-semibold text-ink-gray-8">
+      <h2 class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-8">
         {{ t`Linked Entries` }}
       </h2>
+      <FrappeButton icon="lucide-x" :label="t`Close`" @click="$emit('close')" />
     </div>
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">

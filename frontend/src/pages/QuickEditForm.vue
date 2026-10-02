@@ -33,15 +33,7 @@
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
     <!-- Quick edit Tool bar -->
-    <div class="flex h-12 shrink-0 items-center justify-between px-3">
-      <!-- Close Button  -->
-      <FrappeButton
-        icon="lucide-x"
-        :label="t`Close quick edit`"
-        :tooltip="t`Close quick edit`"
-        @click="routeToPrevious"
-      />
-
+    <div class="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
       <!-- Save & Submit Buttons -->
       <FrappeButton v-if="doc?.canSave" variant="solid" @click="sync">
         {{ t`Save` }}
@@ -49,6 +41,13 @@
       <FrappeButton v-else-if="doc?.canSubmit" variant="solid" @click="submit">
         {{ t`Submit` }}
       </FrappeButton>
+
+      <FrappeButton
+        icon="lucide-x"
+        :label="t`Close quick edit`"
+        :tooltip="t`Close quick edit`"
+        @click="routeToPrevious"
+      />
     </div>
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">

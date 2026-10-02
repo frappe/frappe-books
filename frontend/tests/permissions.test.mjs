@@ -161,6 +161,20 @@ test('the sidebar shows only the lists and reports the user can open', () => {
   ]);
 });
 
+test('Setup lists Number Series for a user who can read them', () => {
+  const setupItems = (canRead) => {
+    fyo.store.permissions = {
+      doctypes: { NumberSeries: 'Books Number Series' },
+      user: { can_read: canRead ? ['Books Number Series'] : [] },
+    };
+    const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
+    return setup.items.map(({ label }) => label);
+  };
+
+  assert.ok(setupItems(true).includes('Number Series'));
+  assert.ok(!setupItems(false).includes('Number Series'));
+});
+
 test('the search palette offers only the lists and reports the user can open', () => {
   const lists = ['SalesQuote', 'SalesInvoice', 'Party', 'Item', 'Account'];
   fyo.store.permissions = {

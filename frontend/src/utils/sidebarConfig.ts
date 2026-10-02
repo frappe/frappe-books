@@ -349,6 +349,12 @@ function getCompleteSidebar(): SidebarConfig {
           schemaName: 'Tax',
         },
         {
+          label: t`Number Series`,
+          name: 'number-series',
+          route: '/list/NumberSeries',
+          schemaName: 'NumberSeries',
+        },
+        {
           label: t`Import Wizard`,
           name: 'import-wizard',
           route: '/import-wizard',

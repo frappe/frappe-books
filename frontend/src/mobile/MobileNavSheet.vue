@@ -43,7 +43,6 @@
             :as="RouterLink"
             :to="getSidebarLocation(group)"
             size="lg"
-            :active="active?.item === group"
             @click="close"
           >
             <template #prefix>
@@ -59,7 +58,6 @@
               :as="RouterLink"
               :to="getSidebarLocation(item)"
               size="lg"
-              :active="active?.item === item"
               @click="close"
             >
               <template #prefix><span :class="iconClasses" /></template>

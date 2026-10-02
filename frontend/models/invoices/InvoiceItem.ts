@@ -15,6 +15,7 @@ import {
 } from 'models/inventory/availability';
 import { getTransferUnitFilter } from 'models/inventory/stockRows';
 import { validateTransferUnit } from 'models/inventory/units';
+import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import type { Money } from 'pesa';
 import type { Schema } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
@@ -181,6 +182,7 @@ export class InvoiceItem extends FrappeDoc {
   // which the row shows per transfer unit. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     rate: () => true,
+    hsn_code: () => isHsnCodeHidden(this.fyo),
     item_discounted_total: () => !this.enableDiscounting,
     set_item_discount_amount: () => !this.enableDiscounting,
     item_discount_amount: () => !this.enableDiscounting,

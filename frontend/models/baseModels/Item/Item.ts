@@ -9,6 +9,7 @@ import {
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { getMappedDoc } from 'models/helpers';
+import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
@@ -56,6 +57,10 @@ export class Item extends FrappeDoc {
       }
     },
     hsn_code: (value: DocValue) => {
+      if (isHsnCodeHidden(this.fyo)) {
+        return;
+      }
+
       if (value && !(value as string).match(/^\d{4,8}$/)) {
         throw new ValidationError(this.fyo.t`Invalid HSN Code.`);
       }
@@ -64,6 +69,7 @@ export class Item extends FrappeDoc {
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
+    hsn_code: () => isHsnCodeHidden(this.fyo),
     track_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
     barcode: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
     has_batch: () => !this.fyo.singles.InventorySettings?.enable_batches,

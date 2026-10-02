@@ -1,4 +1,5 @@
 import type { FiltersMap, HiddenMap } from 'fyo/model/types';
+import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import {
@@ -46,5 +47,8 @@ export abstract class StockTransferItem extends FrappeDoc {
     item: [...stockRowRefills.item, 'description', 'hsn_code'],
   };
 
-  override hidden: HiddenMap = getStockRowHiddenMap(this);
+  override hidden: HiddenMap = {
+    ...getStockRowHiddenMap(this),
+    hsn_code: () => isHsnCodeHidden(this.fyo),
+  };
 }

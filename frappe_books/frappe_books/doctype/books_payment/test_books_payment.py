@@ -237,7 +237,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		self._payment(self.invoice, amount=100).insert()
 
-	def test_missing_type_and_accounts_are_filled_like_the_app(self):
+	def test_missing_type_and_accounts_are_filled(self):
 		frappe.db.set_value("Books Payment Method", "Cash", "account", self.cash.name)
 		receipt = self._payment(self.invoice, payment_type=None, account=None, payment_account=None)
 		receipt.insert()
@@ -248,13 +248,17 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 
 		supplier = make_party(self.payable.name, role="Supplier")
 		cash = make_account("Rules Petty Cash", account_type="Cash")
-		payment = frappe.get_doc(
-			{"doctype": "Books Payment", "party": supplier.name, "date": now_datetime(), "amount": 10}
-		).insert()
-		self.assertEqual(
-			(payment.payment_type, payment.account, payment.payment_account),
-			("Pay", self.payable.name, cash.name),
-		)
+		# A payment out uses the method's account too, else the newest cash account.
+		for method_account, payment_account in ((self.cash.name, self.cash.name), (None, cash.name)):
+			with self.subTest(method_account=method_account):
+				frappe.db.set_value("Books Payment Method", "Cash", "account", method_account)
+				payment = frappe.get_doc(
+					{"doctype": "Books Payment", "party": supplier.name, "date": now_datetime(), "amount": 10}
+				).insert()
+				self.assertEqual(
+					(payment.payment_type, payment.account, payment.payment_account),
+					("Pay", self.payable.name, payment_account),
+				)
 
 	def test_pos_cash_defaults_to_the_counter_account(self):
 		counter = make_account("Rules Counter", account_type="Cash")

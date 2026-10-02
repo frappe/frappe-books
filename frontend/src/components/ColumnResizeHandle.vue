@@ -36,7 +36,8 @@ import { onDeactivated } from 'vue';
 
 /**
  * `width` is unset while the column keeps its default track size.
- * `keepLabel` stops the column getting narrower than its label on one line.
+ * `keepLabel` stops the column getting narrower than its header text, so
+ * the label and its description stay on one line each.
  */
 const props = defineProps<{
   label: string;
@@ -125,14 +126,28 @@ function getMinimumWidth(handle: HTMLElement) {
   const context = document.createElement('canvas').getContext('2d');
   if (!props.keepLabel || !context) return MIN_COLUMN_WIDTH;
 
-  const style = getComputedStyle(getHeader(handle));
-  context.font = getFont(style);
+  const header = getHeader(handle);
+  const style = getComputedStyle(header);
   // The cell's gap sits between the label and this handle's slot.
   const space =
     parseFloat(style.paddingLeft) +
     parseFloat(style.paddingRight) +
     (parseFloat(style.columnGap) || 0);
-  return Math.ceil(measureText(context, props.label, style) + space + 2);
+  return Math.ceil(getTextWidth(context, header) + space + 2);
+}
+
+/** Widest text in the header, each piece measured in its own font. */
+function getTextWidth(context: CanvasRenderingContext2D, header: HTMLElement) {
+  const walker = document.createTreeWalker(header, NodeFilter.SHOW_TEXT);
+  let width = 0;
+  while (walker.nextNode()) {
+    const text = walker.currentNode.textContent!.trim();
+    if (!text) continue;
+    const style = getComputedStyle(walker.currentNode.parentElement!);
+    context.font = getFont(style);
+    width = Math.max(width, measureText(context, text, style));
+  }
+  return width;
 }
 
 function getHeader(handle: HTMLElement) {

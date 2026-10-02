@@ -98,6 +98,26 @@ test('a pricing rule shows the fields of its discount scheme', async ({
   ]);
 });
 
+test('a narrowed table column keeps its description on one line', async ({
+  page,
+}) => {
+  await page.goto('/books/edit/LoyaltyProgram/new');
+  await waitForBooks(page);
+  const handle = page.getByRole('separator', {
+    name: 'Resize Collection Factor column',
+  });
+  const header = handle.locator('xpath=ancestor::*[@role="columnheader"]');
+  const height = (await header.boundingBox())!.height;
+
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 400, box.y + 4, { steps: 4 });
+  await page.mouse.up();
+  await expect(handle).toHaveAttribute('aria-valuenow');
+  expect((await header.boundingBox())!.height).toBe(height);
+});
+
 test.describe('on a phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },

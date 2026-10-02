@@ -2,6 +2,7 @@
   <div v-if="isMobile" class="space-y-1.5">
     <FrappeFormLabel :label="t`Exchange Rate`" />
     <div class="flex items-center gap-2" dir="ltr">
+      <!-- TextInput can't align its text, so these inputs set [&_input] (frappe/frappe-ui#1256). -->
       <FrappeTextInput
         :model-value="fromValue"
         type="number"

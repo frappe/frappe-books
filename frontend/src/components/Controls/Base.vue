@@ -126,6 +126,7 @@ export default defineComponent({
         classes.push(this.inputClass);
       }
       if (this.textRight ?? isNumeric(this.df)) {
+        // TextInput can't align its text (frappe/frappe-ui#1256).
         classes.push('[&_input]:text-end');
       }
       if (this.isMobile ? this.invalid : this.showMandatory) {

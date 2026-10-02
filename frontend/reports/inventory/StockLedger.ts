@@ -45,6 +45,10 @@ export class StockLedger extends Report {
     return !!this.fyo.singles.InventorySettings?.enable_batches;
   }
 
+  get hasSerialNumbers(): boolean {
+    return !!this.fyo.singles.InventorySettings?.enable_serial_number;
+  }
+
   async setDefaultFilters() {
     if (!this.toDate) {
       const { fromDate, toDate } = await this.getDefaultFilters();

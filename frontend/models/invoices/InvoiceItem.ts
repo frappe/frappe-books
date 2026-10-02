@@ -186,6 +186,8 @@ export class InvoiceItem extends FrappeDoc {
     item_discount_amount: () => !this.enableDiscounting,
     item_discount_percent: () => !this.enableDiscounting,
     batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
+    serial_number: () =>
+      !this.fyo.singles.InventorySettings?.enable_serial_number,
     transfer_unit: () => !this.enableUomConversions,
     transfer_quantity: () => !this.enableUomConversions,
     unit_conversion_factor: () => !this.enableUomConversions,

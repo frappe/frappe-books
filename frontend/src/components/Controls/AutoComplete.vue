@@ -75,7 +75,7 @@
     @update:model-value="onComboboxValueChange"
   >
     <template #suffix="{ open, clear, setOpen }">
-      <div class="flex shrink-0 items-center gap-0.5">
+      <div class="-mr-1 flex shrink-0 items-center gap-0.5">
         <FrappeButton
           v-if="value && showClearButton"
           variant="ghost"
@@ -102,7 +102,7 @@
         >
           <template #icon>
             <span
-              class="lucide-chevron-down size-3.5 transition-transform duration-200"
+              class="lucide-chevron-down size-4 transition-transform duration-200"
               :class="open ? 'rotate-180' : ''"
             />
           </template>

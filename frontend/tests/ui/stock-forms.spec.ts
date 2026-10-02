@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { updateSingle } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
@@ -65,10 +65,7 @@ test('form table columns resize by dragging and keep their width', async ({
     page.getByRole('separator', { name: 'Resize Rate column' })
   ).toHaveCount(0);
 
-  await page.mouse.move(start.x + 4, start.y + 4);
-  await page.mouse.down();
-  await page.mouse.move(start.x + 104, start.y + 4, { steps: 4 });
-  await page.mouse.up();
+  await dragBy(page, handle, 100);
   const width = Number(await handle.getAttribute('aria-valuenow'));
   expect(width).toBeGreaterThan(100);
   expect((await handle.boundingBox())!.x).toBeCloseTo(start.x + 100, 0);
@@ -80,6 +77,15 @@ test('form table columns resize by dragging and keep their width', async ({
   await handle.dblclick();
   await expect(handle).not.toHaveAttribute('aria-valuenow');
   expect((await handle.boundingBox())!.x).toBeCloseTo(start.x, 0);
+
+  // A column stops at its label, so the label stays on one line.
+  const header = handle.locator('xpath=ancestor::*[@role="columnheader"]');
+  const height = (await header.boundingBox())!.height;
+  await dragBy(page, handle, -300);
+  expect(Number(await handle.getAttribute('aria-valuenow'))).toBeGreaterThan(
+    48
+  );
+  expect((await header.boundingBox())!.height).toBe(height);
 });
 
 test('a purchase receipt return keeps its quantities negative', async ({
@@ -123,6 +129,14 @@ test.describe('on a phone', () => {
     await expect(page.getByText('2.00 × ₹ 30.00 · Stores')).toBeVisible();
   });
 });
+
+async function dragBy(page: Page, handle: Locator, delta: number) {
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + 4, box.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 4 + delta, box.y + 4, { steps: 4 });
+  await page.mouse.up();
+}
 
 async function choose(page: Page, label: string, option: string) {
   await page.getByRole('combobox', { name: label }).click();

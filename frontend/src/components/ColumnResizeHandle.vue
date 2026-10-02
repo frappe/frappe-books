@@ -26,15 +26,24 @@
 
 <script setup lang="ts">
 import { t } from 'fyo';
-import { MAX_COLUMN_WIDTH, MIN_COLUMN_WIDTH } from 'src/utils/columnWidths';
+import {
+  MAX_COLUMN_WIDTH,
+  MIN_COLUMN_WIDTH,
+  getFont,
+  measureText,
+} from 'src/utils/columnWidths';
 import { onDeactivated } from 'vue';
 
-/** `width` is unset while the column keeps its default track size. */
+/**
+ * `width` is unset while the column keeps its default track size.
+ * `keepLabel` stops the column getting narrower than its label on one line.
+ */
 const props = defineProps<{
   label: string;
   title: string;
   width?: number;
   direction?: string;
+  keepLabel?: boolean;
 }>();
 const emit = defineEmits<{
   resize: [width: number | undefined];
@@ -42,7 +51,14 @@ const emit = defineEmits<{
   fit: [];
 }>();
 let drag:
-  { pointerId: number; x: number; width: number; initial?: number } | undefined;
+  | {
+      pointerId: number;
+      x: number;
+      width: number;
+      minimum: number;
+      initial?: number;
+    }
+  | undefined;
 
 onDeactivated(cancelResize);
 
@@ -56,6 +72,7 @@ function startResize(event: PointerEvent) {
     pointerId: event.pointerId,
     x: event.clientX,
     width: getWidth(handle),
+    minimum: getMinimumWidth(handle),
     initial: props.width,
   };
 }
@@ -82,12 +99,16 @@ function onKeydown(event: KeyboardEvent) {
     emit('fit');
   } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault();
+    const handle = event.currentTarget as HTMLElement;
     const direction = event.key === 'ArrowRight' ? 1 : -1;
     const step = event.shiftKey ? 40 : 8;
     emit(
       'commit',
-      getWidth(event.currentTarget as HTMLElement) +
-        direction * step * (props.direction === 'rtl' ? -1 : 1)
+      Math.max(
+        getMinimumWidth(handle),
+        getWidth(handle) +
+          direction * step * (props.direction === 'rtl' ? -1 : 1)
+      )
     );
   } else if (event.key === 'Escape' && drag) {
     event.preventDefault();
@@ -97,15 +118,30 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 function getWidth(handle: HTMLElement) {
-  return (
-    props.width ??
-    handle.closest('[role="columnheader"]')!.getBoundingClientRect().width
-  );
+  return props.width ?? getHeader(handle).getBoundingClientRect().width;
+}
+
+function getMinimumWidth(handle: HTMLElement) {
+  const context = document.createElement('canvas').getContext('2d');
+  if (!props.keepLabel || !context) return MIN_COLUMN_WIDTH;
+
+  const style = getComputedStyle(getHeader(handle));
+  context.font = getFont(style);
+  // The cell's gap sits between the label and this handle's slot.
+  const space =
+    parseFloat(style.paddingLeft) +
+    parseFloat(style.paddingRight) +
+    (parseFloat(style.columnGap) || 0);
+  return Math.ceil(measureText(context, props.label, style) + space + 2);
+}
+
+function getHeader(handle: HTMLElement) {
+  return handle.closest<HTMLElement>('[role="columnheader"]')!;
 }
 
 function getDraggedWidth(event: PointerEvent) {
   const delta =
     (event.clientX - drag!.x) * (props.direction === 'rtl' ? -1 : 1);
-  return drag!.width + delta;
+  return Math.max(drag!.minimum, drag!.width + delta);
 }
 </script>

@@ -5,6 +5,7 @@ import frappe
 from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.invoice import InvoiceController
+from frappe_books.inventory.availability import validate_sale_batch_stock
 
 
 class BooksSalesQuote(InvoiceController):
@@ -50,6 +51,10 @@ class BooksSalesQuote(InvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "quote"
+
+	def validate(self):
+		super().validate()
+		validate_sale_batch_stock(self)
 
 	def on_submit(self):
 		if self.reference_type == "Books Lead":

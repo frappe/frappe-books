@@ -378,7 +378,7 @@ def validate_payment_details(payment_method, reference_id, clearance_date):
 
 
 def default_payment_account(invoice_doctype) -> str | None:
-	"""Return the Books Defaults account that pays invoices, or quotes, of the doctype."""
+	"""Return the Books Defaults account that pays invoices of the doctype."""
 	fieldname = (
 		"purchase_payment_account" if invoice_doctype == "Books Purchase Invoice" else "sales_payment_account"
 	)

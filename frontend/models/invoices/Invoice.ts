@@ -140,6 +140,9 @@ export abstract class Invoice extends FrappeDoc {
     price_list: () =>
       !this.fyo.singles.AccountingSettings?.enable_price_list ||
       (!this.canEdit && !this.price_list),
+    return_against: () =>
+      !this.fyo.singles.AccountingSettings?.enable_invoice_returns &&
+      !this.return_against,
   };
 
   /** Invoices, not quotes, make stock transfers when inventory and its location are set. */

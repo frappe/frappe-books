@@ -132,6 +132,19 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		)
 		self.assertEqual((invoice.terms, invoice.make_auto_payment), ("Pay in 30 days", 1))
 
+	def test_a_row_tax_left_out_follows_the_item_and_a_cleared_one_stays_cleared(self):
+		row = {"item": self.item.name, "quantity": 1}
+		values = {"party": self.party.name, "date": str(now_datetime()), "items": [row]}
+		self.assertEqual(_preview(values)["items"][0]["tax"], self.item.tax)
+
+		cleared = {**values, "items": [{**row, "tax": ""}]}
+		saved = _insert(cleared)
+		self.assertFalse(_preview(cleared)["items"][0].get("tax"))
+		self.assertFalse(saved["items"][0].get("tax"))
+		self.assertEqual((saved["grand_total"], saved["taxes"]), (100, []))
+		resaved = frappe.get_doc("Books Sales Invoice", saved["name"]).save()
+		self.assertFalse(resaved.items[0].tax)
+
 	def test_only_whitelisted_methods_run(self):
 		with self.assertRaisesRegex(frappe.PermissionError, "not whitelisted"):
 			run_doc_method("calculate", _new_document(self.values))

@@ -71,8 +71,9 @@ export function getInvoiceActions(
   fyo: Fyo,
   schemaName: ModelNameEnum.SalesInvoice | ModelNameEnum.PurchaseInvoice
 ): Action[] {
-  const nextStep =
-    schemaName === ModelNameEnum.SalesInvoice
+  // A return refunds, so a sales return pays and a purchase return receives.
+  const nextStep = (doc: FrappeDoc) =>
+    (schemaName === ModelNameEnum.SalesInvoice) !== !!doc.return_against
       ? fyo.t`Receive Payment`
       : fyo.t`Make Payment`;
 
@@ -142,8 +143,9 @@ export function getMakeInvoiceAction(
     label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) => {
+      // Quotes to leads are not invoiced.
       if (schemaName === ModelNameEnum.SalesQuote) {
-        return doc.isSubmitted;
+        return doc.isSubmitted && doc.reference_type === 'Books Party';
       }
 
       // Shipments and receipts are Frappe-backed.
@@ -278,7 +280,8 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     condition: (doc: FrappeDoc) =>
       !!fyo.singles.AccountingSettings?.enable_invoice_returns &&
       doc.isSubmitted &&
-      !doc.isReturn,
+      !doc.isReturn &&
+      !doc.is_fully_returned,
     action: async (doc: FrappeDoc) => {
       const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
       if (!returnDoc.name) {

@@ -567,19 +567,14 @@ async function syncWithoutDialog(doc: FrappeDoc): Promise<boolean> {
 }
 
 export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
-  let success = true;
   if (
     doc instanceof SalesInvoice &&
-    fyo.singles.AccountingSettings?.enable_inventory
+    !(await showInsufficientInventoryDialog(doc))
   ) {
-    success = await showInsufficientInventoryDialog(doc);
-  }
-
-  if (!success) {
     return false;
   }
 
-  success = await showSubmitOrSyncDialog(doc, 'submit');
+  const success = await showSubmitOrSyncDialog(doc, 'submit');
   if (!success) {
     return false;
   }
@@ -588,13 +583,18 @@ export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
   return true;
 }
 
+/** The server refuses the shipment of short stock, so Yes submits without it. */
 async function showInsufficientInventoryDialog(doc: SalesInvoice) {
+  if (!doc.make_auto_stock_transfer) {
+    return true;
+  }
+
   const insufficient = await getInsufficientItems(doc);
   if (insufficient.length) {
     const buttons = [
       {
         label: t`Yes`,
-        action: () => true,
+        action: async () => await doc.set('make_auto_stock_transfer', false),
         isPrimary: true,
       },
       {

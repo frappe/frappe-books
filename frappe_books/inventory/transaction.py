@@ -7,6 +7,7 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
+from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.accounting.returns import set_quantity_signs
 from frappe_books.inventory.invoice_balance import (
 	bill_unbilled_rows,
@@ -28,7 +29,12 @@ from frappe_books.inventory.stock import (
 	validate_stock_available,
 	validate_transfer_rows,
 )
-from frappe_books.inventory.valuation import outgoing_rates, transaction_stock_value
+from frappe_books.inventory.valuation import (
+	outgoing_rates,
+	revalue_entries,
+	transaction_entries,
+	transaction_stock_value,
+)
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
@@ -256,9 +262,9 @@ def valued_transfer_rows(transaction):
 	"""Return the transfer rows, with a sales return valued at the cost its shipment took out."""
 	rows = transfer_rows(transaction)
 	if transaction.transfer_type == "sales" and transaction.return_against:
-		rates = outgoing_rates(transaction.doctype, transaction.return_against)
+		rates = outgoing_rates(transaction.doctype, [transaction.return_against])
 		for row in rows:
-			row["rate"] = rates[row["item"], row["batch"] or ""]
+			row["rate"] = rates[transaction.return_against, row["item"], row["batch"] or ""]
 	return rows
 
 
@@ -280,12 +286,68 @@ def post_stock_accounts(transaction):
 
 
 def repost_stock_accounts(references):
-	"""Post the stock accounts of transfers again after a restatement changed their stock value."""
-	for doctype, name in sorted(references):
+	"""Revalue the stock valued from restated transfers, then post their stock accounts again."""
+	for doctype, name in sorted(revalue_dependents(references)):
 		if doctype in STOCK_COUNTER_ACCOUNTS:
 			transfer = frappe.get_doc(doctype, name)
 			delete_entries(transfer)
 			post_stock_accounts(transfer)
+
+
+def revalue_dependents(references):
+	"""Pass restated costs on to the stock that material transfers and sales returns took in at them.
+
+	Return every transaction whose stock value changed.
+	"""
+	restated = set(references)
+	pending = set(references)
+	while pending:
+		pending = _revalue_transfers(pending) | _revalue_returns(pending)
+		restated |= pending
+	return restated
+
+
+def _revalue_transfers(references):
+	"""Bring in the stock of restated material transfers at the cost it now leaves with."""
+	names = [name for doctype, name in references if doctype == "Books Stock Movement"]
+	if not names:
+		return set()
+	transfers = frappe.get_all(
+		"Books Stock Movement",
+		filters={"name": ["in", names], "movement_type": "MaterialTransfer"},
+		pluck="name",
+	)
+	entries = transaction_entries("Books Stock Movement", transfers)
+	rates = {}
+	for entry in entries:
+		# Each incoming entry follows the outgoing entry it takes its cost from.
+		if as_decimal(entry.quantity) < 0:
+			rate = as_decimal(entry.value_change) / as_decimal(entry.quantity)
+		else:
+			rates[entry.name] = rate
+	return revalue_entries([entry for entry in entries if entry.name in rates], rates)
+
+
+def _revalue_returns(references):
+	"""Take back the stock of sales returns at the cost their restated shipments now take out."""
+	shipments = [name for doctype, name in references if doctype == "Books Shipment"]
+	if not shipments:
+		return set()
+	returns = dict(
+		frappe.get_all(
+			"Books Shipment",
+			filters={"return_against": ["in", shipments], "docstatus": 1},
+			fields=["name", "return_against"],
+			as_list=True,
+		)
+	)
+	costs = outgoing_rates("Books Shipment", list(set(returns.values())))
+	entries = transaction_entries("Books Shipment", list(returns))
+	rates = {
+		entry.name: rounded(costs[returns[entry.reference_name], entry.item, entry.batch or ""])
+		for entry in entries
+	}
+	return revalue_entries(entries, rates)
 
 
 def _validate_value_direction(transaction, value):

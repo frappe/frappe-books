@@ -55,11 +55,13 @@ test('a row opens every column in a detail sheet', async ({ page }) => {
     'Account',
     'Aug 31, 2026',
     'Jul 31, 2026',
+    'Total',
   ]);
   await expect(details.locator('dd')).toHaveText([
     'Sales',
     '12,34,50,000.00',
     '1,000.00',
+    '12,34,51,000.00',
   ]);
 
   await page.keyboard.press('Escape');

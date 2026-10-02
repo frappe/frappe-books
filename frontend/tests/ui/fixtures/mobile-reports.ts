@@ -65,6 +65,7 @@ function makeProfitAndLoss() {
       column('account', 'Account', 'Link'),
       column(periods[0], 'Aug 31, 2026', 'Currency'),
       column(periods[1], 'Jul 31, 2026', 'Currency'),
+      column('total', 'Total', 'Currency'),
     ],
     [
       account('Income', 0, [123456789, 1000], true),

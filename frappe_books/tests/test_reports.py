@@ -126,6 +126,14 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		self.assertIsNone(hidden[income]["total"])
 		self.assertEqual(hidden[self.sales.name]["total"], Decimal("0.3"))
 
+	def test_profit_and_loss_has_a_total_column_after_its_periods(self):
+		columns = run("Books Profit and Loss", YEARS_2045_AND_2046)["columns"]
+		consolidated = run("Books Profit and Loss", {**YEARS_2045_AND_2046, "consolidate_columns": 1})
+
+		self.assertEqual([column["fieldname"] for column in columns], ["account", *PERIOD_KEYS, "total"])
+		self.assertEqual(columns[-1]["label"], "Total")
+		self.assertNotIn("total", [column["fieldname"] for column in consolidated["columns"]])
+
 	def test_balance_sheet_accumulates_from_the_first_entry(self):
 		for date, debit, credit in (
 			("2044-01-01", 100, 0),

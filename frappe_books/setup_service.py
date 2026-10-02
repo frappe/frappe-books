@@ -67,6 +67,7 @@ def default_accounts(chart):
 			chart, ["Stock Received But Not Billed"], "Stock Received But Not Billed"
 		),
 		"cost_of_goods_sold": find_ledger_account(chart, ["Cost of Goods Sold"], "Cost of Goods Sold"),
+		"stock_adjustment": find_ledger_account(chart, ["Stock Adjustment"], "Stock Adjustment"),
 	}
 
 
@@ -121,6 +122,7 @@ def _update_inventory_settings(accounts):
 			"stock_in_hand": accounts["stock_in_hand"],
 			"stock_received_but_not_billed": accounts["stock_received_but_not_billed"],
 			"cost_of_goods_sold": accounts["cost_of_goods_sold"],
+			"stock_adjustment": accounts["stock_adjustment"],
 		}
 	)
 	settings.save(ignore_permissions=True)

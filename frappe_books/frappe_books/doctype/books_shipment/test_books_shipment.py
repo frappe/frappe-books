@@ -146,6 +146,24 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		self.assertEqual(stock_value_change(returned), 30)
 		self.assertEqual(account_balance(returned, cogs.name), -30)
 
+	def test_return_cannot_be_dated_before_its_shipment(self):
+		item, _cogs, _stock = self._tracked_item()
+		now = now_datetime()
+		seed_stock(item.name, quantity=2, rate=10, date=add_to_date(now, hours=-3))
+		shipment = self._make_shipment(item, quantity=2, rate=25, date=add_to_date(now, hours=-1))
+		shipment.submit()
+
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"cannot be dated before",
+			self._make_shipment,
+			item,
+			quantity=-1,
+			rate=25,
+			return_against=shipment.name,
+			date=add_to_date(now, hours=-2),
+		)
+
 	def test_shipment_against_invoice_updates_quantity_to_transfer(self):
 		item, cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=5, rate=10)

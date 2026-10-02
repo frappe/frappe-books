@@ -277,6 +277,8 @@ export class InvoiceItem extends FrappeDoc {
     item: (doc: FrappeDoc) => [
       ['item_usage', '=', doc.isSales ? 'Sales' : 'Purchases'],
     ],
+    // A new batch is of the row's item, not one of the batches in stock.
+    batch: (doc: FrappeDoc) => [['item', '=', doc.item]],
   };
 }
 

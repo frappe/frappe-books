@@ -184,10 +184,11 @@ def _is_large_b2c(row):
 	return not row["gstin"] and not row["in_state"] and row["invoice_value"] > limit
 
 
+# Nil rated, exempted and non-GST supplies show only under NR.
 TRANSFER_TYPES = {
-	"B2B": lambda row: bool(row["gstin"]),
-	"B2CL": _is_large_b2c,
-	"B2CS": lambda row: not row["gstin"] and not _is_large_b2c(row),
+	"B2B": lambda row: row["rate"] != 0 and bool(row["gstin"]),
+	"B2CL": lambda row: row["rate"] != 0 and _is_large_b2c(row),
+	"B2CS": lambda row: row["rate"] != 0 and not row["gstin"] and not _is_large_b2c(row),
 	"NR": lambda row: row["rate"] == 0,
 }
 

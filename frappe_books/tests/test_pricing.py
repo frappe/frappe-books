@@ -141,6 +141,34 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual(free_row.pricing_rule, rule.name)
 		self.assertEqual(invoice.grand_total, 180)
 
+	def test_free_item_comes_in_the_rule_unit(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		free_item = make_item(
+			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
+		)
+		self._pricing_rule(
+			discount_type="Product Discount",
+			free_item=free_item.name,
+			free_item_quantity=1,
+			free_item_unit=box.name,
+		)
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, self.item.name, self.income.name
+		)
+
+		free_row = next(row for row in invoice.items if row.is_free_item)
+		self.assertEqual(free_row.transfer_unit, box.name)
+		self.assertEqual(free_row.transfer_quantity, 1)
+		self.assertEqual(free_row.quantity, 12)
+		with self.assertRaisesRegex(frappe.ValidationError, "not applicable"):
+			self._pricing_rule(
+				discount_type="Product Discount",
+				free_item=self.item.name,
+				free_item_quantity=1,
+				free_item_unit=box.name,
+			)
+
 	def test_rule_values_reset_when_rule_stops_applying(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		for values in (

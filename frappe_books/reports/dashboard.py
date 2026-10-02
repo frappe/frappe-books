@@ -80,14 +80,14 @@ def get_top_expenses(period: str) -> list[dict]:
 def get_invoice_summary(doctype: str, period: str) -> dict:
 	"""Return the paid and unpaid amounts and counts of the period's submitted invoices.
 
-	Credit notes count as positive amounts. `from_date` and `before_date` bound the invoice dates.
+	Credit notes are negative, so they reduce the amounts. `from_date` and `before_date` bound the invoice dates.
 	"""
 	if doctype not in INVOICE_DOCTYPES:
 		frappe.throw(_("{0} is not an invoice.").format(doctype))
 	from_date, to_date = get_period_dates(period)
 	conditions = [["docstatus", "=", 1], *datetime_conditions("date", from_date, to_date)]
 	totals = _invoice_totals(doctype, conditions)
-	total, unpaid = (sum(abs(as_decimal(row[field])) for row in totals) for field in ("total", "outstanding"))
+	total, unpaid = as_decimal(totals.total), as_decimal(totals.outstanding)
 	paid_count, unpaid_count = (
 		_count(doctype, [*conditions, ["outstanding_amount", operator, 0]]) for operator in ("=", "!=")
 	)
@@ -127,10 +127,7 @@ def _ledger_filters(from_date, to_date, filters):
 
 def _invoice_totals(doctype, conditions):
 	fields = [{"SUM": "base_grand_total", "as": "total"}, {"SUM": "outstanding_amount", "as": "outstanding"}]
-	return [
-		frappe.get_list(doctype, filters=[*conditions, ["return_against", "is", state]], fields=fields)[0]
-		for state in ("not set", "set")
-	]
+	return frappe.get_list(doctype, filters=conditions, fields=fields)[0]
 
 
 def _count(doctype, conditions):

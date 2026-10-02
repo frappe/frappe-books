@@ -14,11 +14,11 @@ STATE_FIELDS = ["name", "date", "quantity", "rate", "balance_quantity", "balance
 
 
 def insert_entry(values):
-	"""Insert a stock ledger entry with its FIFO state and restate later entries; return the restated transactions."""
+	"""Insert a stock ledger entry with its FIFO state and restate later entries; return it and the restated transactions."""
 	values = frappe._dict(values)
 	state = next_state(_entry_before(values, values.date), values.quantity, values.rate)
 	entry = frappe.get_doc({"doctype": DOCTYPE, **values, **state}).insert(ignore_permissions=True)
-	return restate_after(entry, entry)
+	return entry, restate_after(entry, entry)
 
 
 def delete_entries(reference_type, reference_name):

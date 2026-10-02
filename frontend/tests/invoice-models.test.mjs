@@ -202,7 +202,10 @@ test('row fields show by the features and discounts turned on', () => {
   assert.equal(hidden('item_discount_amount'), true);
   assert.equal(hidden('item_discounted_total'), true);
   assert.equal(hidden('batch'), true);
+  assert.equal(hidden('serial_number'), true);
   assert.equal(hidden('transfer_unit'), true);
+  fyo.singles.InventorySettings = { enable_serial_number: true };
+  assert.equal(hidden('serial_number'), false);
   row.set_item_discount_amount = true;
   row.item_discount_amount = fyo.pesa(2);
   assert.equal(hidden('item_discount_amount'), false);

@@ -384,18 +384,23 @@ def _items_of(doctype, names):
 
 def _create_location_entries(transaction, transfer, quantity, serial_number):
 	restated = set()
+	rate = rounded(transfer["rate"])
 	if transfer.get("from_location"):
-		restated |= _create_stock_entry(
-			transaction, transfer, transfer["from_location"], -quantity, serial_number
+		entry, taken = _create_stock_entry(
+			transaction, transfer, transfer["from_location"], -quantity, serial_number, rate
 		)
+		restated |= taken
+		# Stock moved between locations keeps the cost it left with.
+		rate = -as_decimal(entry.value_change) / quantity
 	if transfer.get("to_location"):
-		restated |= _create_stock_entry(
-			transaction, transfer, transfer["to_location"], quantity, serial_number
+		_entry, added = _create_stock_entry(
+			transaction, transfer, transfer["to_location"], quantity, serial_number, rate
 		)
+		restated |= added
 	return restated
 
 
-def _create_stock_entry(transaction, transfer, location, quantity, serial_number):
+def _create_stock_entry(transaction, transfer, location, quantity, serial_number, rate):
 	return insert_entry(
 		{
 			"date": transaction.date,
@@ -403,7 +408,7 @@ def _create_stock_entry(transaction, transfer, location, quantity, serial_number
 			"batch": transfer.get("batch"),
 			"serial_number": serial_number,
 			"item": transfer["item"],
-			"rate": rounded(transfer["rate"]),
+			"rate": rate,
 			"quantity": quantity,
 			"reference_type": transaction.doctype,
 			"reference_name": transaction.name,
@@ -436,8 +441,9 @@ def _create_serial_numbers(item, serial_numbers):
 
 
 def _serial_status(transaction, transfer, cancel):
-	if cancel:
-		return "Active" if transfer.get("from_location") else "Inactive"
-	if transfer.get("from_location") and not transfer.get("to_location"):
+	if cancel and transfer.get("from_location"):
+		return "Active"
+	# Stock leaves: shipped or issued, or taken back out by cancelling a return or receipt.
+	if cancel or (transfer.get("from_location") and not transfer.get("to_location")):
 		return "Delivered" if transaction.doctype == "Books Shipment" else "Inactive"
 	return "Active"

@@ -54,11 +54,11 @@ def get_sale_shortfalls(items: list[dict], date: str | None = None, is_pos: bool
 
 
 def validate_sale_batch_stock(invoice):
-	"""Reject a sale's batch row that needs more than the batch has where the sale ships from.
+	"""Reject a sale's or quote's batch row that needs more than the batch has where the sale ships from.
 
 	/books checks a row as its batch or quantity is edited, so only new and edited rows are checked.
 	"""
-	if invoice.transaction_type != "sales" or invoice.get("return_against"):
+	if invoice.transaction_type not in ("sales", "quote") or invoice.get("return_against"):
 		return
 	if not frappe.db.get_single_value("Books Inventory Settings", "enable_batches"):
 		return

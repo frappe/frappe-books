@@ -82,6 +82,17 @@ test('item fields hide by the item and by the features turned on', async () => {
   clearTimeout(item._previewTimer);
 });
 
+test('Has Batch shows only for items that track inventory', async () => {
+  fyo.singles.AccountingSettings = { enable_inventory: true };
+  fyo.singles.InventorySettings = { enable_batches: true };
+  const item = newFrappeDoc('Item', { name: 'Chai' });
+
+  assert.equal(hidden(item, 'has_batch'), true);
+  await item.set('track_item', true);
+  assert.equal(hidden(item, 'has_batch'), false);
+  clearTimeout(item._previewTimer);
+});
+
 test('a saved item keeps its set-once fields and hides tracking it did not use', () => {
   fyo.singles.AccountingSettings = { enable_inventory: true };
   const item = newFrappeDoc('Item', { name: 'Kettle', track_item: false });

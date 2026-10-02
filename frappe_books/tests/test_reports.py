@@ -276,6 +276,13 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		self.assertEqual(tuple(rows[0][column] for column in columns), _decimals(6, 80, 5, 60, 20))
 		self.assertEqual((rows[0]["balance_quantity"], rows[0]["valuation_rate"]), _decimals(1, 20))
 
+	def test_stock_balance_ignores_serial_numbers_while_they_are_off(self):
+		frappe.db.set_single_value("Books Inventory Settings", "enable_serial_number", 0)
+
+		rows = _run("Books Stock Balance", item=self.item, show_serial_numbers=1)
+
+		self.assertEqual([row["balance_quantity"] for row in rows], [1])
+
 	def _item(self):
 		return make_item(self.income.name, self.received.name, track_item=1).name
 

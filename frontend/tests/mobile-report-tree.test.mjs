@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { fyo, MobileTree, ProfitAndLoss } from './helpers/frappe.mjs';
+import {
+  fyo,
+  MobileTree,
+  ProfitAndLoss,
+  StockBalance,
+} from './helpers/frappe.mjs';
 
 const periods = ['period_2026_08_31', 'period_2026_07_31'];
 
@@ -48,4 +53,21 @@ test("the phone Total column shows the server's total of each row", () => {
       ['Total Income (Credit)', '1,00,133.59', false],
     ]
   );
+});
+
+test('a phone Stock Balance item counts its locations, not its batch rows', () => {
+  const report = new StockBalance(fyo);
+  report.columns = ['item', 'location', 'batch', 'balance_quantity'].map(
+    (fieldname) => ({ fieldname, label: fieldname, fieldtype: 'Data' })
+  );
+  report.reportData = [
+    { item: 'Pen', location: 'Stores', batch: 'B1', balance_quantity: 2 },
+    { item: 'Pen', location: 'Stores', batch: 'B2', balance_quantity: 3 },
+    { item: 'Pen', location: 'Counter', batch: 'B1', balance_quantity: 1 },
+  ].map((row) => report.getReportRow(row));
+  const tree = new MobileTree(report, StockBalance.phoneLayout);
+
+  const [pen] = tree.getRows(tree.getValueColumns());
+
+  assert.equal(pen.subtitle, '2 locations');
 });

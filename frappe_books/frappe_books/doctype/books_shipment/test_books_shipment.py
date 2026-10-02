@@ -192,6 +192,21 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		shipment.cancel()
 		self.assertEqual(serial_statuses(serials), {"Active"})
 
+	def test_returned_serial_numbers_are_delivered_again_when_the_return_is_cancelled(self):
+		item, _cogs, _stock = self._tracked_item(has_serial_number=1)
+		serial = unique_name("SER")
+		seed_stock(item.name, quantity=1, rate=10, serial_number=serial)
+		shipment = self._make_shipment(
+			item, quantity=1, rate=25, items=[self._row(item, 1, serial_number=serial)]
+		)
+		shipment.submit()
+		returned = self._return_serial(item, shipment, serial)
+		returned.submit()
+		self.assertEqual(serial_statuses([serial]), {"Active"})
+
+		returned.cancel()
+		self.assertEqual(serial_statuses([serial]), {"Delivered"})
+
 	def test_return_cannot_take_back_more_than_was_shipped(self):
 		item, _cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=3, rate=10)

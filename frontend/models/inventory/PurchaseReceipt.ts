@@ -9,7 +9,7 @@ import { PurchaseReceiptItem } from './PurchaseReceiptItem';
 import {
   StockTransfer,
   transferFileFields,
-  transferLinks,
+  transferFields,
 } from './StockTransfer';
 
 export class PurchaseReceipt extends StockTransfer {
@@ -17,7 +17,7 @@ export class PurchaseReceipt extends StockTransfer {
   static override presentation = {
     label: 'Purchase Receipt',
     nameField: { label: 'Transfer No', hidden: true },
-    fields: transferLinks,
+    fields: transferFields,
     fileFields: transferFileFields,
   };
   static override rowModels = { items: PurchaseReceiptItem };

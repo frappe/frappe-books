@@ -4,11 +4,11 @@ import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 
-/** Links of a shipment or purchase receipt that offer no Create, as before. */
-export const transferLinks = withoutCreate([
-  'back_reference',
-  'return_against',
-]);
+/** Shipment and purchase receipt fields: links that offer no Create, and items edited in the row editor. */
+export const transferFields = {
+  ...withoutCreate(['back_reference', 'return_against']),
+  items: { edit: true },
+};
 
 /** The fields of a shipment's or purchase receipt's files, as Books ordered them. */
 export const transferFileFields = [

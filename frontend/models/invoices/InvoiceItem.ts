@@ -186,6 +186,8 @@ export class InvoiceItem extends FrappeDoc {
     item_discount_amount: () => !this.enableDiscounting,
     item_discount_percent: () => !this.enableDiscounting,
     batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
+    serial_number: () =>
+      !this.fyo.singles.InventorySettings?.enable_serial_number,
     transfer_unit: () => !this.enableUomConversions,
     transfer_quantity: () => !this.enableUomConversions,
     unit_conversion_factor: () => !this.enableUomConversions,
@@ -275,6 +277,8 @@ export class InvoiceItem extends FrappeDoc {
     item: (doc: FrappeDoc) => [
       ['item_usage', '=', doc.isSales ? 'Sales' : 'Purchases'],
     ],
+    // A new batch is of the row's item, not one of the batches in stock.
+    batch: (doc: FrappeDoc) => [['item', '=', doc.item]],
   };
 }
 

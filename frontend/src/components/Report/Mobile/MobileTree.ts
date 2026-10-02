@@ -159,10 +159,14 @@ export class MobileTree {
   }
 
   getGroupRow(name: string, rows: ReportRow[], values: MobileValueColumn[]) {
+    // Rows can repeat a label, such as one location's batches.
+    const labels = new Set(
+      rows.map((row) => row.cells[this.labelIndex]?.value)
+    );
     return {
       ...this.getSummaryRow(`group:${name}`, rows, values),
       label: name,
-      subtitle: this.layout.describeGroup?.(rows.length),
+      subtitle: this.layout.describeGroup?.(labels.size),
       isGroup: true,
     };
   }

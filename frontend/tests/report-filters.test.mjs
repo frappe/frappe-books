@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   GeneralLedger,
   ProfitAndLoss,
+  StockBalance,
   getDateRangePresets,
   getFilterItems,
   makeFyo,
@@ -34,6 +35,18 @@ test('report filters show their From and To dates as one range, first', async ()
     'field:reverted',
     'field:ascending',
   ]);
+});
+
+test('stock balance offers serial numbers only when they are turned on', async () => {
+  const fyo = await makeFyo();
+  const report = new StockBalance(fyo);
+  const fieldnames = () =>
+    report.getFilters().map(({ fieldname }) => fieldname);
+
+  fyo.singles.InventorySettings = {};
+  assert.equal(fieldnames().includes('showSerialNumbers'), false);
+  fyo.singles.InventorySettings = { enable_serial_number: true };
+  assert.equal(fieldnames().includes('showSerialNumbers'), true);
 });
 
 test('financial statements show periodicity as tabs and a lone To Date as a date', async () => {

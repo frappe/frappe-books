@@ -9,7 +9,7 @@ import { ShipmentItem } from './ShipmentItem';
 import {
   StockTransfer,
   transferFileFields,
-  transferLinks,
+  transferFields,
 } from './StockTransfer';
 
 export class Shipment extends StockTransfer {
@@ -17,7 +17,7 @@ export class Shipment extends StockTransfer {
   static override presentation = {
     label: 'Shipment',
     nameField: { label: 'Transfer No', hidden: true },
-    fields: transferLinks,
+    fields: transferFields,
     fileFields: transferFileFields,
   };
   static override rowModels = { items: ShipmentItem };

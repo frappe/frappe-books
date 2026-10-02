@@ -16,8 +16,8 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 			("item_type", {"item_type": "Service"}, False),
 			# a tracked item needs a liability account, so only the locked field can fail
 			("track_item", {"track_item": 1, "expense_account": received}, False),
-			("has_batch", {"has_batch": 1}, False),
-			# only tracked items have serial numbers
+			# only tracked items have batches and serial numbers
+			("has_batch", {"has_batch": 1}, True),
 			("has_serial_number", {"has_serial_number": 1}, True),
 		):
 			with self.subTest(fieldname=fieldname):

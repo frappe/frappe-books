@@ -51,7 +51,7 @@
               mt-2
               grid grid-cols-3
               gap-x-6 gap-y-2
-              rounded-2
+              rounded-6
               border
               p-3
               border-outline-gray-1
@@ -79,7 +79,7 @@
               mt-2
               grid grid-cols-3
               gap-x-6 gap-y-2
-              rounded-2
+              rounded-6
               border
               p-3
               border-outline-gray-1

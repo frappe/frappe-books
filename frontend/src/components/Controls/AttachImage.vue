@@ -37,7 +37,7 @@
     v-else
     class="relative bg-surface-base border border-outline-gray-1 flex-center overflow-hidden group"
     :class="{
-      'rounded-2': size === 'form',
+      'rounded-4': size === 'form',
       'w-20 h-20 rounded-full': size !== 'small' && size !== 'form',
       'w-12 h-12 rounded-full': size === 'small',
     }"

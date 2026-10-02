@@ -131,7 +131,7 @@
             {{ t`Pick Columns` }}
           </h2>
           <div
-            class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 rounded-2 border p-3 border-outline-gray-1"
+            class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 rounded-6 border p-3 border-outline-gray-1"
           >
             <Check
               v-for="(col, i) of report?.columns"

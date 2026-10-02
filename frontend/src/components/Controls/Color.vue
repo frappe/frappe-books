@@ -13,7 +13,7 @@
   >
     <template v-if="value" #trailing>
       <span
-        class="ms-2 size-3 shrink-0 rounded-2"
+        class="ms-2 size-3 shrink-0 rounded-1"
         :style="{ backgroundColor: normalizedColor }"
         aria-hidden="true"
       />

@@ -3,7 +3,7 @@
     <FrappeKeyboardShortcut v-if="combo" :bg="!simple" :combo="combo" />
     <kbd
       v-if="hasNumberRange"
-      class="inline-flex h-6 min-w-[2.5rem] items-center justify-center rounded-2 bg-surface-gray-2 px-1.5 text-xs-medium text-ink-gray-7"
+      class="inline-flex h-6 min-w-[2.5rem] items-center justify-center rounded-4 bg-surface-gray-2 px-1.5 text-xs-medium text-ink-gray-7"
     >
       0–9
     </kbd>

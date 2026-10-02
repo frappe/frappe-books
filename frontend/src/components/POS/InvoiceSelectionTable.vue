@@ -40,7 +40,7 @@
       :columns="listColumns"
       :row-height="48"
       divider="full"
-      class="flex min-h-0 min-w-[34rem] flex-1 flex-col overflow-hidden rounded-4 border border-outline-gray-1 list-gap-2 [--list-row-padding-x:0px]"
+      class="flex min-h-0 min-w-[34rem] flex-1 flex-col overflow-hidden rounded-6 border border-outline-gray-1 list-gap-2 [--list-row-padding-x:0px]"
       :active="modelValue || undefined"
       :aria-label="t`Invoices`"
       @update:active="select"

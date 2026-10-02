@@ -341,6 +341,26 @@ test('an invoice from selected items leaves their pricing to the server', async 
   assert.deepEqual(requests, []);
 });
 
+test('a new date fetches the exchange rate for it again', async () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice', {
+    party: 'Acme',
+    currency: 'USD',
+    exchange_rate: 80,
+  });
+  invoice.push('items', { item: 'Pen', rate: fyo.pesa(5) });
+
+  await invoice.set('date', new Date('2026-01-15'));
+  const sent = invoice.getMethodDocument({
+    keepRowNames: true,
+    clearServerFilled: true,
+  });
+  assert.equal('exchange_rate' in sent, false);
+  assert.equal(sent.currency, 'USD');
+  assert.equal('rate' in sent.items[0], false);
+  clearTimeout(invoice._previewTimer);
+});
+
 test('a return takes quantities back, however they are typed', async () => {
   setSettings();
   const invoice = newInvoice('SalesInvoice', { return_against: 'SINV-1001' });

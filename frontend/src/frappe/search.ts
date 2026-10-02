@@ -65,7 +65,7 @@ function addSearchable(
 }
 
 /**
- * Up to `limit` documents whose search fields hold the letters of the longest
+ * Up to `limit` documents whose search fields hold the letters of the search
  * word of `text` in order, as Frappe's search finds them. Table rows come with
  * their parent.
  */
@@ -74,9 +74,7 @@ export function searchDocuments(
   text: string,
   limit: number
 ): Promise<DocValues[]> {
-  const word = text
-    .split(/\s+/)
-    .reduce((longest, part) => (part.length > longest.length ? part : longest));
+  const word = getSearchWord(searchable, text);
   // Frappe matches `%txt%`; a `%` between letters matches them in order.
   // Translated doctypes match `txt` in Python, where `%` is literal.
   const pattern = searchable.isTranslated ? word : [...word].join('%');
@@ -92,6 +90,24 @@ export function searchDocuments(
     filter_fields: isSubmittable ? [...fields, 'docstatus'] : fields,
     as_dict: true,
   });
+}
+
+/**
+ * The longest word of `text` that does not start a word of the schema name:
+ * the palette matches those by the schema name, so `Karen invoice` sends
+ * `Karen` for invoices.
+ */
+function getSearchWord({ schemaName }: Searchable, text: string): string {
+  const typeWords = schemaName
+    .split(/(?=[A-Z])/)
+    .map((typeWord) => typeWord.toLowerCase());
+  const isTypeWord = (word: string) =>
+    typeWords.some((typeWord) => typeWord.startsWith(word.toLowerCase()));
+  const words = text.split(/\s+/);
+  const recordWords = words.filter((word) => !isTypeWord(word));
+  return (recordWords.length ? recordWords : words).reduce((longest, word) =>
+    word.length > longest.length ? word : longest
+  );
 }
 
 /** Frappe's search needs a parent doctype for table rows, so their rows are listed per parent. */

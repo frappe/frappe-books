@@ -44,6 +44,9 @@ test('the Custom Form asks for a form type among the forms Books can customize',
     'Books System Settings',
     'Books Custom Form',
     'Books Setup Wizard',
+    'Books Ledger Entry',
+    'Books Stock Ledger Entry',
+    'Books Loyalty Point Entry',
   ]) {
     assert.equal(doctype in types, false);
   }
@@ -117,7 +120,7 @@ test('custom field names still reject another row and built-in fields', async ()
   );
 });
 
-test('a row links to other forms and references text fields of the form', async () => {
+test('a row links to other forms and references select fields of the form', async () => {
   const form = await newForm();
   await form.append('custom_fields', {
     label: 'Size',
@@ -131,15 +134,28 @@ test('a row links to other forms and references text fields of the form', async 
 
   // References name Frappe fieldnames: a row's Custom Field, or a field of the form.
   const references = CustomField.lists.references(row);
-  assert.deepEqual(references[0], {
-    value: 'custom_books_mynote',
-    label: 'My Note',
-  });
-  assert.deepEqual(references[1], {
-    value: 'custom_books_size',
-    label: 'Size',
-  });
-  assert.ok(references.some(({ value }) => value === 'name'));
+  assert.deepEqual(references, [{ value: 'custom_books_size', label: 'Size' }]);
+});
+
+test('Dynamic Link references are the Select and DocType fields Frappe accepts', async () => {
+  const form = newFrappeDoc('CustomForm', { name: 'Books Payment For' });
+  await form.append('custom_fields', { label: 'Ref', fieldname: 'ref' });
+  const references = CustomField.lists
+    .references(form.custom_fields[0])
+    .map(({ value }) => value);
+  assert.deepEqual(references, ['reference_type']);
+});
+
+test('a Table field targets only child tables', async () => {
+  const form = await newForm();
+  const [row] = form.custom_fields;
+  const targets = (fieldtype) => {
+    row.fieldtype = fieldtype;
+    return CustomField.lists.target(row).map(({ value }) => value);
+  };
+  assert.ok(targets('Table').includes('Books Sales Invoice Item'));
+  assert.equal(targets('Table').includes('Books Party'), false);
+  assert.ok(targets('Link').includes('Books Party'));
 });
 
 test('editing a row previews its name from the server', async () => {

@@ -27,6 +27,7 @@ export class StockMovement extends FrappeDoc {
       'items',
     ],
     fields: {
+      items: { edit: true },
       movement_type: {
         optionLabels: {
           [MovementTypeEnum.MaterialIssue]: 'Material Issue',

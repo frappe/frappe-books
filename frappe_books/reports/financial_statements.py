@@ -9,6 +9,7 @@ from frappe_books.reports.periods import get_fiscal_year
 
 LEDGER = "Books Ledger Entry"
 CREDIT_ROOT_TYPES = {"Liability", "Equity", "Income"}
+BALANCE_SHEET = ("Asset", "Liability", "Equity")
 TRIAL_BALANCE = ("Asset", "Liability", "Income", "Expense", "Equity")
 TRIAL_BALANCE_KEYS = ("opening_debit", "opening_credit", "debit", "credit", "closing_debit", "closing_credit")
 
@@ -62,13 +63,7 @@ def get_profit_and_loss(filters, periods) -> list[dict]:
 	rows = _rows(sections, keys, filters.hide_group_amounts, totals)
 	if not sections:
 		return rows
-	section_totals = {section["root_type"]: section["total"] for section in sections}
-	income, expense = (
-		section_totals.get(root_type, [as_decimal(0)] * len(keys)) for root_type in ("Income", "Expense")
-	)
-	profit = [
-		income_value - expense_value for income_value, expense_value in zip(income, expense, strict=True)
-	]
+	profit = _profit(sections, len(keys))
 	return [
 		*rows,
 		{},
@@ -77,14 +72,33 @@ def get_profit_and_loss(filters, periods) -> list[dict]:
 
 
 def get_balance_sheet(filters, periods) -> list[dict]:
-	"""Return asset, liability and equity accounts with their balance at the end of each period."""
-	sections = _statement(("Asset", "Liability", "Equity"), [(None, period.to_date) for period in periods])
+	"""Return asset, liability and equity balances at the end of each period, and the profit not closed into equity."""
+	keys = [period.key for period in periods]
+	sections = _statement(
+		(*BALANCE_SHEET, "Income", "Expense"), [(None, period.to_date) for period in periods]
+	)
+	balances = [section for section in sections if section["root_type"] in BALANCE_SHEET]
 	totals = {
 		"Asset": _("Total Asset (Debit)"),
 		"Liability": _("Total Liability (Credit)"),
 		"Equity": _("Total Equity (Credit)"),
 	}
-	return _rows(sections, [period.key for period in periods], filters.hide_group_amounts, totals)
+	rows = _rows(balances, keys, filters.hide_group_amounts, totals)
+	profit = _profit(sections, len(keys))
+	if not any(profit):
+		return rows
+	credits = [section["total"] for section in balances if section["root_type"] != "Asset"]
+	credit_total = [sum_decimal(values) for values in zip(profit, *credits, strict=True)]
+	return [
+		*rows,
+		{},
+		{
+			"account": _("Provisional Profit / Loss (Credit)"),
+			"indent": 0,
+			**dict(zip(keys, profit, strict=True)),
+		},
+		{"account": _("Total (Credit)"), "indent": 0, **dict(zip(keys, credit_total, strict=True))},
+	]
 
 
 def get_trial_balance(filters) -> list[dict]:
@@ -211,6 +225,14 @@ def _account_rows(accounts, values):
 				}
 			)
 	return rows
+
+
+def _profit(sections, width):
+	"""Return income less expense in each value column."""
+	totals = {section["root_type"]: section["total"] for section in sections}
+	zero = [as_decimal(0)] * width
+	income, expense = totals.get("Income", zero), totals.get("Expense", zero)
+	return [income_value - expense_value for income_value, expense_value in zip(income, expense, strict=True)]
 
 
 def _total(rows, width):

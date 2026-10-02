@@ -67,7 +67,7 @@
       </section>
     </template>
     <template v-else>
-    <h2 class="mb-3 text-base font-medium text-ink-gray-8">
+    <h2 class="mb-3 text-lg-semibold text-ink-gray-8">
       {{ t`Closing Cash` }}
     </h2>
     <Table
@@ -80,7 +80,7 @@
       :read-only="false"
     />
 
-    <h2 class="mt-6 mb-3 text-base text-ink-gray-8 font-medium">
+    <h2 class="mt-6 mb-3 text-lg-semibold text-ink-gray-8">
       {{ t`Closing Amounts` }}
     </h2>
     <Table

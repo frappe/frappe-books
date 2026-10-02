@@ -7,7 +7,7 @@
           ref="nameField"
           class="w-60 flex-shrink-0"
           size="small"
-          :input-class="['font-semibold text-xl']"
+          :input-class="['text-xl-semibold']"
           :df="fields.name"
           :border="true"
           :value="doc!.name"

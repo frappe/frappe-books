@@ -74,11 +74,11 @@
               : 'text-base text-ink-gray-7'
           "
         >
-          <span v-if="fileName" class="font-normal">{{ t`Selected` }} </span>
+          <span v-if="fileName">{{ t`Selected` }} </span>
           {{ helperMessage }}{{ fileName ? ',' : '' }}
-          <span v-if="fileName" class="font-normal"> {{ t`check values and click on` }} </span
+          <span v-if="fileName"> {{ t`check values and click on` }} </span
           >{{ ' ' }}<span v-if="fileName">{{ t`Import Data.` }}</span>
-          <span v-if="hasImporter && importer.valueMatrix.length > 0" class="font-normal">{{
+          <span v-if="hasImporter && importer.valueMatrix.length > 0">{{
             ' ' +
             (importer.valueMatrix.length === 1
               ? t`${importer.valueMatrix.length} row added.`

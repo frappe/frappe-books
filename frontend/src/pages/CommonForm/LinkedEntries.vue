@@ -22,7 +22,7 @@
       :items="groupItems"
     >
       <template #item-suffix="{ item }">
-        <span class="text-sm font-normal text-ink-gray-5">
+        <span class="text-sm text-ink-gray-5">
           {{ entries[item.value].details.length }}
         </span>
       </template>

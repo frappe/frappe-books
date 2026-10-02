@@ -5,7 +5,7 @@
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="min-w-0">
-				<h3 id="payment-summary-title" class="text-base font-semibold text-ink-gray-9">
+				<h3 id="payment-summary-title" class="text-base-semibold text-ink-gray-9">
 					{{ t`Order summary` }}
 				</h3>
 				<p class="mt-1 truncate text-sm text-ink-gray-6">
@@ -34,14 +34,14 @@
 
 		<dl class="space-y-3">
 			<div class="flex items-baseline justify-between gap-4">
-				<dt class="font-medium text-ink-gray-8">{{ t`Grand total` }}</dt>
-				<dd class="text-lg font-semibold tabular-nums text-ink-gray-9">
+				<dt class="text-base-medium text-ink-gray-8">{{ t`Grand total` }}</dt>
+				<dd class="text-lg-semibold tabular-nums text-ink-gray-9">
 					{{ formatAmount(sinvDoc.grand_total) }}
 				</dd>
 			</div>
 			<div class="flex items-baseline justify-between gap-4">
 				<dt class="text-sm text-ink-gray-6">{{ t`Outstanding` }}</dt>
-				<dd class="text-sm font-medium tabular-nums text-ink-gray-8">
+				<dd class="text-sm-medium tabular-nums text-ink-gray-8">
 					{{ formatAmount(sinvDoc.outstanding_amount) }}
 				</dd>
 			</div>

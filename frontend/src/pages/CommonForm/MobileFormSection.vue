@@ -65,7 +65,7 @@
               class="flex justify-between gap-3"
               :class="
                 line.emphasis
-                  ? 'border-t border-outline-gray-1 pt-2.5 font-semibold text-ink-gray-8 first:border-t-0 first:pt-0'
+                  ? 'border-t border-outline-gray-1 pt-2.5 text-md-semibold text-ink-gray-8 first:border-t-0 first:pt-0'
                   : 'text-ink-gray-7'
               "
               :data-fieldname="group[0].fieldname"

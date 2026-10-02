@@ -11,7 +11,7 @@
           aria-hidden="true"
         />
         <div class="min-w-0">
-          <p class="text-base font-medium text-ink-gray-9">
+          <p class="text-base-medium text-ink-gray-9">
             {{ t`${loyaltyPoints} points available` }}
           </p>
           <p class="break-words text-sm text-ink-gray-6">

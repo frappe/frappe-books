@@ -41,7 +41,7 @@
                   v-for="(cell, c) of row"
                   :key="`cell-${r}.${c}`"
                   :class="cellClasses(cell.idx, r)"
-                  class="text-sm p-2"
+                  class="p-2"
                   style="min-height: 2rem"
                 >
                   {{ cell.value }}
@@ -335,9 +335,7 @@ export default defineComponent({
         classes.push(`text-${col.align}`);
       }
 
-      if (rIdx === 0) {
-        classes.push('font-semibold');
-      }
+      classes.push(rIdx === 0 ? 'text-sm-semibold' : 'text-sm');
 
       classes.push('border-t');
       if (!isFirst) {

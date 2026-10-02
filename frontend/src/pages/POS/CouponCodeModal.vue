@@ -7,7 +7,7 @@
     <div class="flex flex-col gap-4">
       <p
         v-if="appliedCoupons.length"
-        class="text-sm font-medium text-ink-gray-7"
+        class="text-sm-medium text-ink-gray-7"
       >
         {{ t`Applied Coupon Codes` }}
       </p>

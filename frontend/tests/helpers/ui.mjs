@@ -14,7 +14,7 @@ await build({
   absWorkingDir: frontend,
   stdin: {
     contents: `
-      export { deleteDocWithPrompt, getFieldsGroupedByTabAndSection } from './src/utils/ui';
+      export { deleteDocWithPrompt, getActionsForDoc, getFieldsGroupedByTabAndSection } from './src/utils/ui';
       export { dialog } from 'frappe-ui';
       export { FrappeDoc } from './src/frappe/document';
       export { registerFrappeModels } from './src/frappe/doctypes';
@@ -66,6 +66,7 @@ await build({
 globalThis.history = { state: null };
 export const {
   deleteDocWithPrompt,
+  getActionsForDoc,
   dialog,
   FrappeDoc,
   registerFrappeModels,

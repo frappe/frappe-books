@@ -121,7 +121,7 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
         isPrimary: true,
       },
       {
-        label: t`Cancel`,
+        label: t`Keep ${getDocTypeLabel(doc)}`,
         action() {
           return false;
         },
@@ -141,9 +141,10 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
     title: t`Cancel ${getDocReferenceLabel(doc)}?`,
     detail: getCancelDetail(payments),
     type: 'warning',
+    // Buttons name the outcome: "Cancel" alone could mean either answer.
     buttons: [
       {
-        label: t`Yes`,
+        label: t`Cancel ${getDocTypeLabel(doc)}`,
         async action() {
           try {
             await doc.cancel(payments);
@@ -157,7 +158,7 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
         isPrimary: true,
       },
       {
-        label: t`No`,
+        label: t`Keep ${getDocTypeLabel(doc)}`,
         action() {
           return false;
         },
@@ -800,8 +801,12 @@ export function showCannotCancelOrDeleteToast(doc: FrappeDoc) {
   showToast({ type: 'warning', message, duration: 'short' });
 }
 
+function getDocTypeLabel(doc: FrappeDoc) {
+  return doc.schema.label || doc.schemaName;
+}
+
 function getDocReferenceLabel(doc: FrappeDoc) {
-  const label = doc.schema.label || doc.schemaName;
+  const label = getDocTypeLabel(doc);
   if (doc.schema.naming === 'random') {
     return label;
   }

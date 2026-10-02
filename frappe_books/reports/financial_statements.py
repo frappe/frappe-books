@@ -38,6 +38,14 @@ def get_statement_columns(periods) -> list[dict]:
 	]
 
 
+def get_profit_and_loss_columns(periods) -> list[dict]:
+	"""Return the statement columns, then a Total column when there is more than one period."""
+	columns = get_statement_columns(periods)
+	if len(periods) > 1:
+		columns.append(_amount_column("total", _("Total")))
+	return columns
+
+
 def get_trial_balance_columns() -> list[dict]:
 	labels = (
 		_("Opening (Dr)"),

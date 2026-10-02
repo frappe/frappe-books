@@ -60,6 +60,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 			self.party = invoice.party
 			party = self.get_party()
 		self.payment_type = self.payment_type or _default_payment_type(party, invoice)
+		self.reference_type = self.reference_type or _default_reference_type(invoice, self.payment_type)
 		self.account = self.account or _default_party_account(party, invoice, self.payment_type)
 		self.payment_account = self.payment_account or _default_payment_account(
 			self.payment_method, self.payment_type, invoice
@@ -167,6 +168,13 @@ def _default_payment_type(party, invoice):
 	if party:
 		return "Pay" if party.role == "Supplier" else "Receive"
 	return None
+
+
+def _default_reference_type(invoice, payment_type):
+	"""The list a payment shows in: its invoice's, else Purchase Payments for Pay and Sales Payments for Receive."""
+	if invoice:
+		return "PurchaseInvoice" if invoice.doctype == "Books Purchase Invoice" else "SalesInvoice"
+	return "PurchaseInvoice" if payment_type == "Pay" else "SalesInvoice"
 
 
 def _default_party_account(party, invoice, payment_type):

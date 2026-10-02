@@ -211,7 +211,6 @@ export function getMakePaymentAction(fyo: Fyo): Action {
         ModelNameEnum.Payment,
         'make_payment'
       );
-      await payment.set('reference_type', doc.schemaName);
       const currentRoute = router.currentRoute.value.fullPath;
       payment.once('afterSubmit', async () => {
         await doc.load();

@@ -52,6 +52,24 @@ def restate_after(anchor, previous):
 	return restated
 
 
+def revalue_entries(entries, rates):
+	"""Give incoming entries new rates and restate the entries after them.
+
+	Return the (reference_type, reference_name) of the transactions whose stock value changed.
+	"""
+	restated = set()
+	for entry in entries:
+		rate = rates[entry.name]
+		# An incoming entry is worth its quantity at its rate.
+		if rounded(as_decimal(entry.quantity) * rate) == as_decimal(entry.value_change):
+			continue
+		state = next_state(_entry_before(entry, entry.date, entry.name), entry.quantity, rate)
+		frappe.db.set_value(DOCTYPE, entry.name, {"rate": rate, **state}, update_modified=False)
+		restated.add((entry.reference_type, entry.reference_name))
+		restated |= restate_after(entry, frappe._dict(state))
+	return restated
+
+
 def next_state(previous, quantity, rate):
 	quantity = as_decimal(quantity)
 	opening_value = as_decimal(previous.balance_value) if previous else as_decimal(0)
@@ -82,17 +100,31 @@ def transaction_stock_value(transaction):
 	return rounded(sum((as_decimal(value) for value in values), as_decimal(0)))
 
 
-def outgoing_rates(reference_type, reference_name):
-	"""Map (item, batch) to the average rate at which a transaction took stock out."""
+def transaction_entries(reference_type, reference_names):
+	"""Return the transactions' stock ledger entries, each transaction's in the order it made them."""
+	return frappe.get_all(
+		DOCTYPE,
+		filters={"reference_type": reference_type, "reference_name": ["in", reference_names]},
+		fields=["name", "date", *KEY_FIELDS, "quantity", "value_change", "reference_type", "reference_name"],
+		order_by="reference_name asc, name asc",
+	)
+
+
+def outgoing_rates(reference_type, reference_names):
+	"""Map (transaction, item, batch) to the average rate at which each transaction took stock out."""
 	entries = frappe.get_all(
 		DOCTYPE,
-		filters={"reference_type": reference_type, "reference_name": reference_name, "quantity": ["<", 0]},
-		fields=["item", "batch", "value_change", "quantity"],
+		filters={
+			"reference_type": reference_type,
+			"reference_name": ["in", reference_names],
+			"quantity": ["<", 0],
+		},
+		fields=["reference_name", "item", "batch", "value_change", "quantity"],
 	)
 	values = defaultdict(as_decimal)
 	quantities = defaultdict(as_decimal)
 	for entry in entries:
-		key = (entry.item, entry.batch or "")
+		key = (entry.reference_name, entry.item, entry.batch or "")
 		values[key] += as_decimal(entry.value_change)
 		quantities[key] += as_decimal(entry.quantity)
 	return {key: values[key] / quantities[key] for key in values}

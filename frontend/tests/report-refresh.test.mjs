@@ -12,6 +12,7 @@ import { reportResult, stubServer } from './helpers/server.mjs';
 test('a report shown again refetches its data', async () => {
   const calls = [];
   const report = {
+    get: () => undefined,
     setFilters: async () => {},
     setReportData: async (...args) => calls.push(args),
   };
@@ -91,5 +92,27 @@ test('a report opened without Ref filters drops those it was opened with before'
   assert.equal(run.at(-1).args.filters.reference_type, 'All');
   assert.equal(run.at(-1).args.filters.reference_name, undefined);
   assert.equal(report.get('party'), 'Acme');
+  delete appFyo.store.reports.GeneralLedger;
+});
+
+test('a report opened without Ref filters resets the dates a document link set', async () => {
+  const calls = stubServer((method) =>
+    method.endsWith('get_default_filters')
+      ? { from_date: '2025-01-01', to_date: '2025-12-31' }
+      : reportResult([['account', 'Data']], [])
+  );
+  const runs = () =>
+    calls.filter((c) => c.method === 'frappe.desk.query_report.run');
+  const day = { fromDate: '2025-03-04', toDate: '2025-03-04' };
+  const document = { referenceType: 'Books Payment', referenceName: 'PAY-1' };
+  await showReport('GeneralLedger', { ...document, ...day });
+
+  await showReport('GeneralLedger');
+  assert.equal(runs().at(-1).args.filters.from_date, '2025-01-01');
+  assert.equal(runs().at(-1).args.filters.to_date, '2025-12-31');
+
+  await showReport('GeneralLedger', day);
+  await showReport('GeneralLedger');
+  assert.equal(runs().at(-1).args.filters.from_date, '2025-03-04');
   delete appFyo.store.reports.GeneralLedger;
 });

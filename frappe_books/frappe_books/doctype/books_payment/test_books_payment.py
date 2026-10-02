@@ -329,6 +329,15 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 				payment.set_missing_values()
 				self.assertEqual(payment.reference_type, reference_type)
 
+	def test_a_draft_lists_by_its_current_payment_type(self):
+		payment = self._payment(self.invoice, payment_references=[]).insert()
+		self.assertEqual(payment.reference_type, "SalesInvoice")
+
+		payment.payment_type = "Pay"
+		payment.save()
+
+		self.assertEqual(payment.reference_type, "PurchaseInvoice")
+
 	def test_a_save_allocates_what_the_invoice_owes(self):
 		payment = self._payment(self.invoice, amount=None)
 		payment.amount = None

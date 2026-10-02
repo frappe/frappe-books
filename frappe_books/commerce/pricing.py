@@ -137,23 +137,30 @@ def apply_pricing(invoice):
 def _apply_rules(invoice, rows, coupons):
 	"""Apply each row's best rule, and each item's free row once; return the (item, rule name)s applied."""
 	candidates = _candidate_rules(rows)
-	quantities = defaultdict(Decimal)
-	amounts = defaultdict(Decimal)
-	for row in rows:
-		quantities[row.item] += as_decimal(row.quantity)
-		amounts[row.item] += _row_value(row)
+	quantities, amounts = _rule_totals(rows, candidates)
 	applied = {}
 	for row in rows:
-		rules = candidates[row.item, row.unit]
-		rule = _best_rule(invoice, row.item, quantities[row.item], amounts[row.item], rules, coupons)
+		rules = candidates[row.item, row.transfer_unit]
+		rule = _best_rule(invoice, row.item, quantities, amounts, rules, coupons)
 		if rule:
 			_apply_rule(invoice, row, rule)
 			applied[row.item, rule.name] = rule
-	for (item, _name), rule in applied.items():
-		invoice.append("pricing_rule_detail", {"reference_name": rule.name, "reference_item": item})
+	for key, rule in applied.items():
+		invoice.append("pricing_rule_detail", {"reference_name": rule.name, "reference_item": key[0]})
 		if rule.discount_type == "Product Discount":
-			_append_free_item(invoice, rule, quantities[item])
+			_append_free_item(invoice, rule, quantities[key])
 	return applied
+
+
+def _rule_totals(rows, candidates):
+	"""Sum, by (item, rule name), the stock quantity and amount of the item's rows in the rule's units."""
+	quantities = defaultdict(Decimal)
+	amounts = defaultdict(Decimal)
+	for row in rows:
+		for rule in candidates[row.item, row.transfer_unit]:
+			quantities[row.item, rule.name] += as_decimal(row.quantity)
+			amounts[row.item, rule.name] += _row_value(row)
+	return quantities, amounts
 
 
 def _apply_rule(invoice, row, rule):
@@ -195,7 +202,7 @@ def _validated_coupons(invoice, order_value):
 
 
 def _candidate_rules(rows):
-	"""Return enabled rules keyed by the (item, unit) they apply to."""
+	"""Return enabled rules keyed by the (item, unit) they apply to; a row's unit is its transfer unit."""
 	links = frappe.get_all(
 		"Books Pricing Rule Item",
 		filters={"item": ["in", list({row.item for row in rows})]},
@@ -216,15 +223,13 @@ def _candidate_rules(rows):
 	return defaultdict(list, {key: list(value.values()) for key, value in candidates.items()})
 
 
-def _best_rule(invoice, item, quantity, amount, rules, coupons):
-	"""Return the highest-priority rule the item's total quantity and amount qualify for."""
-	amount = _in_company_currency(invoice, amount)
+def _best_rule(invoice, item, quantities, amounts, rules, coupons):
+	"""Return the highest-priority rule whose `_rule_totals` for the item qualify."""
 	rules = [
 		rule
 		for rule in rules
 		if bool(rule.is_coupon_code_based) == (rule.name in coupons)
-		and _within_limits(rule, invoice.date, amount, quantity)
-		and (rule.discount_type == "Price Discount" or _free_quantity(rule, quantity) > 0)
+		and _qualifies(invoice, rule, quantities[item, rule.name], amounts[item, rule.name])
 	]
 	if not rules:
 		return None
@@ -238,6 +243,14 @@ def _best_rule(invoice, item, quantity, amount, rules, coupons):
 	return rules[0]
 
 
+def _qualifies(invoice, rule, quantity, amount):
+	"""The quantity and amount are within the rule's limits, and a product discount gives something."""
+	amount = _in_company_currency(invoice, amount)
+	return _within_limits(rule, invoice.date, amount, quantity) and (
+		rule.discount_type == "Price Discount" or _free_quantity(rule, quantity) > 0
+	)
+
+
 def _row_value(row):
 	return as_decimal(row.rate) * as_decimal(row.quantity)
 
@@ -248,8 +261,10 @@ def _in_company_currency(invoice, amount):
 
 def _apply_price_discount(invoice, row, rule):
 	if rule.price_discount_type == "rate":
+		# The rule rate is per the row's transfer unit, which the rule matched; rows are priced per stock unit.
 		if not row.is_manual_rate:
-			row.rate = in_invoice_currency(invoice, rule.discount_rate)
+			rate = as_decimal(rule.discount_rate) / as_decimal(row.unit_conversion_factor or 1)
+			row.rate = in_invoice_currency(invoice, rate)
 	elif rule.price_discount_type == "percentage":
 		row.set_item_discount_amount = 0
 		row.item_discount_percent = rule.discount_percentage

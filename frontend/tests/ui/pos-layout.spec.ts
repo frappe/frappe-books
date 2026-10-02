@@ -443,7 +443,7 @@ for (const size of ['large', 'small']) {
           expect(button.height).toBe(24);
           expect(top).toBe(size === 'large' ? 4 : 2);
           expect(bottom).toBe(top);
-          expect(end).toBe(size === 'large' ? 11 : 9);
+          expect(end).toBe(top);
           const linked = control.getByRole('button', {
             name: 'Open linked entry',
             exact: true,

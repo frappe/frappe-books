@@ -75,8 +75,8 @@
     @update:model-value="onComboboxValueChange"
   >
     <template #suffix="{ open, clear, setOpen }">
-      <!-- Pulled right so the buttons' hover backgrounds sit as far from the right edge as from the top and bottom. -->
-      <div class="-mr-[7px] flex shrink-0 items-center gap-0.5">
+      <!-- Pulled to the end so the buttons' hover backgrounds sit as far from the end edge as from the top and bottom. -->
+      <div class="-me-[7px] flex shrink-0 items-center gap-0.5">
         <FrappeButton
           v-if="value && showClearButton"
           variant="ghost"

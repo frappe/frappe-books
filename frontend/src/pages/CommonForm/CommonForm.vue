@@ -46,7 +46,6 @@
             <FrappeBreadcrumbs :items="breadcrumbs" />
           </nav>
           <StatusPill v-if="hasDoc" :doc="doc" />
-          <Barcode v-if="canShowBarcode" @item-selected="addItem" />
           <ExchangeRate
             v-if="canShowExchangeRate"
             v-bind="exchangeRateProps"
@@ -109,7 +108,11 @@
           @row-remove="onRowRemove"
           @value-change="onValueChange"
           @row-change="updateGroupedFields"
-        />
+        >
+          <template v-if="canShowBarcode" #table>
+            <Barcode @item-selected="addItem" />
+          </template>
+        </CommonFormSection>
       </div>
     </template>
     <template v-if="groupedFields && groupedFields.size > 1" #footer>

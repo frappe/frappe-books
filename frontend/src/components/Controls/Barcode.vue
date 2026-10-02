@@ -1,10 +1,10 @@
 <template>
   <FrappeTextInput
-    :class="isMobile ? 'w-full' : 'w-36'"
+    class="w-full"
     type="text"
-    :size="isMobile ? 'lg' : 'sm'"
+    :size="isMobile ? 'lg' : 'md'"
     :variant="isMobile ? 'subtle' : 'outline'"
-    :label="isMobile ? t`Barcode` : undefined"
+    :label="t`Barcode`"
     :placeholder="t`Enter barcode`"
     @change="handleChange"
   >

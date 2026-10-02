@@ -23,6 +23,13 @@
             ]"
             :style="field.invisible ? 'visibility: hidden;' : ''"
           >
+            <!-- A scan adds item rows, so its field sits above them. -->
+            <div
+              v-if="field.fieldname === 'items' && $slots.table"
+              class="mb-4 grid grid-cols-1 gap-x-8 md:grid-cols-2"
+            >
+              <slot name="table" />
+            </div>
             <Table
               v-if="field.fieldtype === 'Table'"
               ref="fields"

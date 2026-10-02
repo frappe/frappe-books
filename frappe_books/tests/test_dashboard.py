@@ -69,6 +69,11 @@ class IntegrationTestDashboard(IntegrationTestCase):
 
 
 class IntegrationTestDashboardPeriods(IntegrationTestCase):
+	def setUp(self):
+		frappe.db.set_single_value(
+			"Books Accounting Settings", {"fiscal_year_start": "2026-04-01", "fiscal_year_end": "2027-03-31"}
+		)
+
 	def test_periods_end_today_and_start_on_the_first_of_a_month(self):
 		with self.freeze_time("2031-09-30 18:00:00"):
 			periods = {period: get_period_dates(period) for period in PERIODS}
@@ -80,10 +85,14 @@ class IntegrationTestDashboardPeriods(IntegrationTestCase):
 				"This Year": _dates("2030-10-01", "2031-09-30"),
 				"This Quarter": _dates("2031-07-01", "2031-09-30"),
 				"This Month": _dates("2031-09-01", "2031-09-30"),
-				"YTD": _dates("2031-01-01", "2031-09-30"),
+				"YTD": _dates("2031-04-01", "2031-09-30"),
 			},
 		)
 		self.assertEqual([month["yearmonth"] for month in months], ["2031-09"])
+
+	def test_year_to_date_starts_on_the_fiscal_year_holding_today(self):
+		with self.freeze_time("2032-02-15"):
+			self.assertEqual(get_period_dates("YTD"), _dates("2031-04-01", "2032-02-15"))
 
 	def test_invoices_dated_after_today_are_left_out(self):
 		for date in ("2031-09-30 09:00:00", "2031-10-01 09:00:00"):

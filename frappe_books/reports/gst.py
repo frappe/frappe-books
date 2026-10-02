@@ -145,7 +145,8 @@ def _row_header(invoice, gstin, place, company_state):
 		"party": invoice.party,
 		"invoice_no": invoice.name,
 		"invoice_date": getdate(invoice.date),
-		"reverse_charge": "N" if gstin else "Y",
+		# Reverse charge depends on what is supplied, not on the GSTIN, and Books records no such supply.
+		"reverse_charge": "N",
 		"in_state": bool(company_state) and company_state == place,
 		"place": place,
 		"invoice_value": as_decimal(invoice.base_grand_total),

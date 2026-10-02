@@ -112,9 +112,7 @@ test('a held sale reopens as saved after its cart was edited', async ({
     const dialog = page.getByRole('dialog', {
       name: 'Saved and Submitted Invoices',
     });
-    await dialog
-      .getByRole('checkbox', { name: 'Select invoice SINV-2026-HELD' })
-      .check();
+    await dialog.getByRole('row', { name: /SINV-2026-HELD/ }).click();
     await dialog.getByRole('button', { name: 'Open Invoice' }).click();
     await expect(dialog).toBeHidden();
   };

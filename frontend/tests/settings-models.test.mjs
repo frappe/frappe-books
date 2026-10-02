@@ -128,12 +128,17 @@ test('Defaults hide inventory and POS fields as those features are off', () => {
   assert.equal(hidden(defaults, 'pos_cash_denominations'), false);
 });
 
-test('Defaults and POS profiles offer the button colours they offered', () => {
+test('Defaults and POS profiles offer colours for the POS buttons that use them', () => {
   for (const schemaName of ['Defaults', 'POSProfile']) {
     const colourFields = getSchema(schemaName).fields.filter(({ fieldname }) =>
       fieldname.endsWith('_button_colour')
     );
-    assert.equal(colourFields.length, 7);
+    assert.deepEqual(
+      colourFields.map(({ fieldname }) => fieldname),
+      ['save', 'cancel', 'held', 'return', 'pay'].map(
+        (action) => `${action}_button_colour`
+      )
+    );
     for (const { fieldname, options } of colourFields) {
       assert.deepEqual(options, previousForms.colors.Buttons, fieldname);
     }

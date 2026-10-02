@@ -31,7 +31,7 @@ test('the POS profile form shows the fields and quick edit fields it showed', ()
   ]);
   assert.equal(
     getLayout('POSProfile').at(-1),
-    'pay_and_print_button_colour | Pay And Print Button Colour | Select Colour | Colour'
+    'pay_button_colour | Pay Button Colour | Select Colour | Colour'
   );
   assert.deepEqual(getSchema('POSProfile').quickEditFields, [
     'name',

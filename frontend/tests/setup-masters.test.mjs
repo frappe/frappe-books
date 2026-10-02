@@ -92,7 +92,7 @@ test('a number series shows its prefix, counter and labelled reference types', (
   assert.deepEqual(getLayout('NumberSeries'), [
     'name | Prefix | ',
     'start | Start | ',
-    'pad_zeros | Pad Zeros | ',
+    'pad_zeros | Digits | ',
     'reference_type | Reference Type | ',
     'current | Current | ',
   ]);
@@ -109,6 +109,10 @@ test('a number series shows its prefix, counter and labelled reference types', (
   );
   assert.equal(labels.SalesInvoice, 'Sales Invoice');
   assert.equal(labels.Payment, 'Payment');
+  const digits = series.fields.find(
+    ({ fieldname }) => fieldname === 'pad_zeros'
+  );
+  assert.match(digits.sub_label, /leading zeros/);
   // No document can use a series without a type, so a new one asks for it.
   assert.equal(labels['-'], undefined);
   assert.equal(referenceType.default, undefined);

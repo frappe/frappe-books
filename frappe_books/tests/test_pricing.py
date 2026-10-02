@@ -257,6 +257,36 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual(invoice.items[0].item_discount_amount, 4)
 		self.assertEqual(invoice.grand_total, 0)
 
+	def test_rule_amount_limits_include_the_limit(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		for values in ({"min_amount": 200}, {"max_amount": 200}):
+			with self.subTest(values=values):
+				self.item = make_item(self.income.name, self.expense.name)
+				rule = self._pricing_rule(**values)
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					self.item.name,
+					self.income.name,
+				)
+
+				self.assertEqual(invoice.items[0].pricing_rule, rule.name)
+
+	def test_rule_amount_is_the_item_total_over_its_rows(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		self._pricing_rule(min_amount=160)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			items=[{"item": self.item.name, "quantity": 1, "rate": rate} for rate in (100, 50)],
+		)
+
+		self.assertEqual([row.pricing_rule for row in invoice.items], [None, None])
+
 	def test_rule_values_reset_when_rule_stops_applying(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		for values in (

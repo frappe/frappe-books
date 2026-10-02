@@ -105,10 +105,23 @@ test('a saved item keeps its set-once fields and hides tracking it did not use',
 });
 
 test('the item form shows bad values at their fields, as the server refuses them', async () => {
+  fyo.singles.AccountingSettings = { country: 'India' };
   const item = newFrappeDoc('Item', { name: 'Mug' });
   await assert.rejects(item.set('barcode', '123'), errors.ValidationError);
   await assert.rejects(item.set('hsn_code', '12A'), errors.ValidationError);
   await assert.rejects(item.set('rate', fyo.pesa(-1)), errors.ValidationError);
+  clearTimeout(item._previewTimer);
+});
+
+test('HSN/SAC shows and is checked only for an Indian company', async () => {
+  fyo.singles.AccountingSettings = { country: 'United States' };
+  const item = newFrappeDoc('Item', { name: 'Kettle' });
+
+  assert.equal(hidden(item, 'hsn_code'), true);
+  await item.set('hsn_code', '12A');
+  fyo.singles.AccountingSettings = { country: 'India' };
+  assert.equal(hidden(item, 'hsn_code'), false);
+  await assert.rejects(item.set('hsn_code', '12B'), errors.ValidationError);
   clearTimeout(item._previewTimer);
 });
 

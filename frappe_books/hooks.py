@@ -44,7 +44,11 @@ jinja = {
 }
 
 after_install = "frappe_books.setup.bootstrap"
-before_tests = ["frappe_books.setup.before_tests", "frappe_books.tests.accounting.enable_features"]
+before_tests = [
+	"frappe_books.setup.before_tests",
+	"frappe_books.tests.accounting.enable_features",
+	"frappe_books.tests.accounting.set_default_inventory_accounts",
+]
 
 scheduler_events = {
 	"daily": ["frappe_books.commerce.loyalty.expire_programs_and_points"],

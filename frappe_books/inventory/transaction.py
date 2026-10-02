@@ -34,7 +34,12 @@ from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
 from frappe_books.status import StatusMixin
 
-STOCK_POSTING_DOCTYPES = ("Books Shipment", "Books Purchase Receipt")
+# The Books Inventory Settings account each stock document moves its stock value against.
+STOCK_COUNTER_ACCOUNTS = {
+	"Books Shipment": "cost_of_goods_sold",
+	"Books Purchase Receipt": "stock_received_but_not_billed",
+	"Books Stock Movement": "stock_adjustment",
+}
 
 # The row location an issue or receipt uses, the default location when empty, and the one it does not use.
 MOVEMENT_LOCATION_FIELDS = {
@@ -79,13 +84,18 @@ class StockMovementController(StatusMixin, SeriesNamingMixin, Document):
 		validate_stock_available(reverse_transfers(movement_transfers(self)), self.date)
 
 	def on_submit(self):
-		repost_stock_accounts(create_stock_entries(self, movement_transfers(self)))
+		restated = create_stock_entries(self, movement_transfers(self))
+		post_stock_accounts(self)
+		repost_stock_accounts(restated)
 
 	def on_cancel(self):
-		repost_stock_accounts(cancel_stock_entries(self, movement_transfers(self)))
+		restated = cancel_stock_entries(self, movement_transfers(self))
+		reverse_entries(self)
+		repost_stock_accounts(restated)
 
 	def on_trash(self):
 		repost_stock_accounts(delete_stock_entries(self))
+		delete_entries(self)
 
 
 class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
@@ -259,11 +269,7 @@ def post_stock_accounts(transaction):
 	_validate_value_direction(transaction, value)
 	settings = frappe.get_single("Books Inventory Settings")
 	stock = settings.stock_in_hand
-	counter = (
-		settings.cost_of_goods_sold
-		if transaction.transfer_type == "sales"
-		else settings.stock_received_but_not_billed
-	)
+	counter = settings.get(STOCK_COUNTER_ACCOUNTS[transaction.doctype])
 	if not stock or not counter:
 		frappe.throw(_("Set all inventory ledger accounts in Books Inventory Settings."))
 	debit, credit = (stock, counter) if value > 0 else (counter, stock)
@@ -276,13 +282,16 @@ def post_stock_accounts(transaction):
 def repost_stock_accounts(references):
 	"""Post the stock accounts of transfers again after a restatement changed their stock value."""
 	for doctype, name in sorted(references):
-		if doctype in STOCK_POSTING_DOCTYPES:
+		if doctype in STOCK_COUNTER_ACCOUNTS:
 			transfer = frappe.get_doc(doctype, name)
 			delete_entries(transfer)
 			post_stock_accounts(transfer)
 
 
 def _validate_value_direction(transaction, value):
+	if transaction.doctype == "Books Stock Movement":
+		# A manufacture can add or remove value; an issue or a receipt moves it one way only.
+		return
 	takes_stock_out = (transaction.transfer_type == "sales") != bool(transaction.return_against)
 	if (value < 0) != takes_stock_out:
 		frappe.throw(

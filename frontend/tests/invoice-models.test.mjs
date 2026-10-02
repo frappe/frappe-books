@@ -220,6 +220,9 @@ test('row fields show by the features and discounts turned on', () => {
   assert.equal(hidden('transfer_unit'), true);
   fyo.singles.InventorySettings = { enable_serial_number: true };
   assert.equal(hidden('serial_number'), false);
+  assert.equal(hidden('hsn_code'), true);
+  fyo.singles.AccountingSettings.country = 'India';
+  assert.equal(hidden('hsn_code'), false);
   row.set_item_discount_amount = true;
   row.item_discount_amount = fyo.pesa(2);
   assert.equal(hidden('item_discount_amount'), false);

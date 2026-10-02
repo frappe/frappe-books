@@ -13,6 +13,7 @@ export class InventorySettings extends FrappeDoc {
       'stock_in_hand',
       'stock_received_but_not_billed',
       'cost_of_goods_sold',
+      'stock_adjustment',
     ]),
   };
 
@@ -20,6 +21,7 @@ export class InventorySettings extends FrappeDoc {
   declare stock_in_hand?: string;
   declare stock_received_but_not_billed?: string;
   declare cost_of_goods_sold?: string;
+  declare stock_adjustment?: string;
   declare enable_barcodes?: boolean;
   declare enable_batches?: boolean;
   declare enable_serial_number?: boolean;
@@ -38,6 +40,10 @@ export class InventorySettings extends FrappeDoc {
     cost_of_goods_sold: () => [
       ['is_group', '=', 0],
       ['account_type', '=', AccountTypeEnum['Cost of Goods Sold']],
+    ],
+    stock_adjustment: () => [
+      ['is_group', '=', 0],
+      ['account_type', '=', AccountTypeEnum['Stock Adjustment']],
     ],
   };
 }

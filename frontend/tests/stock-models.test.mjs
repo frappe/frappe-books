@@ -125,6 +125,18 @@ test('stock rows hide the fields of inventory features turned off', () => {
   }
 });
 
+test('transfer rows show HSN/SAC only for an Indian company', () => {
+  for (const name of ['Shipment', 'PurchaseReceipt']) {
+    const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
+    const hidden = () => evaluateHidden(row.fieldMap.hsn_code, row);
+
+    fyo.singles.AccountingSettings = { country: 'United States' };
+    assert.equal(hidden(), true, name);
+    fyo.singles.AccountingSettings = { country: 'India' };
+    assert.equal(hidden(), false, name);
+  }
+});
+
 test('a submitted transfer hides the references and notes it does not have', () => {
   const fields = ['terms', 'attachment', 'back_reference', 'return_against'];
   const shipment = newFrappeDoc('Shipment');
@@ -269,6 +281,17 @@ test('stock lists show and filter by their Frappe fieldnames', () => {
       fieldname
     );
   }
+});
+
+test('a submitted movement links to its accounting and stock entries', () => {
+  const actions = frappeModels.StockMovement.getActions(fyo);
+  const movement = newFrappeDoc('StockMovement', { docstatus: 1 });
+
+  assert.deepEqual(
+    actions.map(({ label }) => label),
+    ['Accounting Entries', 'Stock Entries']
+  );
+  assert.ok(actions.every((action) => action.condition(movement)));
 });
 
 test('a submitted shipment offers an invoice and a return by Frappe fieldnames', () => {

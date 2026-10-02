@@ -110,6 +110,9 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"), "Stock In Hand"
 		)
+		self.assertEqual(
+			frappe.db.get_single_value("Books Inventory Settings", "stock_adjustment"), "Stock Adjustment"
+		)
 		self.assertTrue(frappe.db.exists("Books Account", "CGST"))
 
 	def test_setup_adapts_defaults_to_a_numbered_chart(self):

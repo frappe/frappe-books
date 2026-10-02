@@ -15,6 +15,7 @@ ACCOUNT_TYPES = {
 	"stock_in_hand": {"account_types": ("Stock",)},
 	"stock_received_but_not_billed": {"account_types": ("Stock Received But Not Billed",)},
 	"cost_of_goods_sold": {"account_types": ("Cost of Goods Sold",)},
+	"stock_adjustment": {"account_types": ("Stock Adjustment",)},
 }
 
 
@@ -34,6 +35,7 @@ class BooksInventorySettings(Document):
 		enable_point_of_sale: DF.Check
 		enable_serial_number: DF.Check
 		enable_uom_conversions: DF.Check
+		stock_adjustment: DF.Link | None
 		stock_in_hand: DF.Link | None
 		stock_received_but_not_billed: DF.Link | None
 	# end: auto-generated types

@@ -5234,7 +5234,7 @@ msgid "No Display Entries Found"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:107
-msgid "No Print Templates not found for entry type {0}"
+msgid "No Print Templates found for entry type {0}"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:639

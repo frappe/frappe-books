@@ -96,6 +96,8 @@ class BooksItem(Document):
 			frappe.throw(_("Only products can track inventory."))
 		if self.has_serial_number and not self.track_item:
 			frappe.throw(_("Only items that track inventory can have serial numbers."))
+		if self.has_batch and not self.track_item:
+			frappe.throw(_("Only items that track inventory can have batches."))
 
 	def validate_unit_conversions(self):
 		units = [row.uom for row in self.uom_conversions]

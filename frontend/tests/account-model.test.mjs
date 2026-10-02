@@ -98,6 +98,14 @@ test('a saved account keeps its name, types, parent and group; a saved type stay
   );
 });
 
+test('a child account takes its root type from its group, so it is read only', () => {
+  const rootType = field('root_type');
+  const root = newAccount({ is_group: true });
+  assert.equal(evaluateReadOnly(rootType, root), false);
+  const child = newAccount({ parent_books_account: 'Current Assets' });
+  assert.equal(evaluateReadOnly(rootType, child), true);
+});
+
 test('a root account says it cannot be deleted before asking the server', async () => {
   const root = newAccount({ account_name: 'Assets', is_group: true });
   await assert.rejects(root.beforeDelete(), /Root accounts cannot be deleted/);

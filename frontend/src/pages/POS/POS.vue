@@ -246,7 +246,7 @@ import {
   getPOSItemFilters,
   refillSerialNumbers,
   POS_ITEM_FIELDS,
-  toPOSItem,
+  getListedPOSItems,
   validatePOSCheckout,
   getTotalQuantity,
   setPOSRowQuantity,
@@ -675,14 +675,12 @@ export default defineComponent({
         fields: POS_ITEM_FIELDS,
         filters: getPOSItemFilters(visibility, this.selectedItemGroup),
       });
-      const hideUnavailable =
-        visibility === 'Inventory Items' &&
-        (this.posProfile?.hide_unavailable_items ??
-          this.fyo.singles.POSSettings?.hide_unavailable_items);
+      const hideUnavailable = !!(
+        this.posProfile?.hide_unavailable_items ??
+        this.fyo.singles.POSSettings?.hide_unavailable_items
+      );
 
-      this.items = items
-        .map((item) => toPOSItem(item, this.itemQtyMap))
-        .filter(({ availableQty }) => !(hideUnavailable && availableQty <= 0));
+      this.items = getListedPOSItems(items, this.itemQtyMap, hideUnavailable);
     },
     async selectedReturnInvoice(invoiceName: string) {
       const invoice = await getFrappeDoc(ModelNameEnum.SalesInvoice, invoiceName);

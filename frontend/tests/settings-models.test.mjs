@@ -55,12 +55,13 @@ test('each Get Started task is checked by a Books Get Started field', async () =
   assert.equal(fyo.singles.GetStarted, getStarted);
 });
 
-test('POS Settings hide barcode and visibility fields as the features they need are off', async () => {
+test('POS Settings hide barcode fields as the features they need are off', async () => {
   fyo.singles.InventorySettings = { enable_barcodes: false };
   fyo.singles.AccountingSettings = {};
   const settings = newFrappeDoc('POSSettings');
   assert.equal(hidden(settings, 'weight_enabled_barcode'), true);
-  assert.equal(hidden(settings, 'item_visibility'), true);
+  // An inventory POS can list all items too.
+  assert.equal(hidden(settings, 'item_visibility'), false);
 
   fyo.singles.InventorySettings = { enable_barcodes: true };
   fyo.singles.AccountingSettings = {
@@ -68,7 +69,6 @@ test('POS Settings hide barcode and visibility fields as the features they need 
   };
   assert.equal(hidden(settings, 'weight_enabled_barcode'), false);
   assert.equal(hidden(settings, 'check_digits'), true);
-  assert.equal(hidden(settings, 'item_visibility'), false);
   await settings.set('weight_enabled_barcode', true);
   assert.equal(hidden(settings, 'check_digits'), false);
   assert.equal(hidden(settings, 'item_code_digits'), false);
@@ -146,12 +146,17 @@ test('Defaults hide inventory and POS fields as those features are off', () => {
   }
 });
 
-test('Defaults and POS profiles offer the button colours they offered', () => {
+test('Defaults and POS profiles offer colours for the POS buttons that use them', () => {
   for (const schemaName of ['Defaults', 'POSProfile']) {
     const colourFields = getSchema(schemaName).fields.filter(({ fieldname }) =>
       fieldname.endsWith('_button_colour')
     );
-    assert.equal(colourFields.length, 7);
+    assert.deepEqual(
+      colourFields.map(({ fieldname }) => fieldname),
+      ['save', 'cancel', 'held', 'return', 'pay'].map(
+        (action) => `${action}_button_colour`
+      )
+    );
     for (const { fieldname, options } of colourFields) {
       assert.deepEqual(options, previousForms.colors.Buttons, fieldname);
     }

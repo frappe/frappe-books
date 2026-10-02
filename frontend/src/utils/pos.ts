@@ -303,6 +303,20 @@ export function toPOSItem(item: DocValues, itemQtyMap: ItemQtyMap): POSItem {
   };
 }
 
+/** The items the POS lists; Hide Unavailable Items leaves out stock items none is left of. */
+export function getListedPOSItems(
+  items: DocValues[],
+  itemQtyMap: ItemQtyMap,
+  hideUnavailable: boolean
+): POSItem[] {
+  return items
+    .map((item) => toPOSItem(item, itemQtyMap))
+    .filter(
+      ({ trackItem, availableQty }) =>
+        !(hideUnavailable && trackItem && availableQty <= 0)
+    );
+}
+
 /**
  * Leaves a sale row's serial numbers to the server's preview, which picks
  * those in stock, when they no longer match its quantity; a return row

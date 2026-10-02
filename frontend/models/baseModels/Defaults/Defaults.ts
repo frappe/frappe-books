@@ -112,11 +112,9 @@ export class Defaults extends FrappeDoc {
     pos_customer: this.getPointOfSaleHidden(),
     save_button_colour: this.getPointOfSaleHidden(),
     cancel_button_colour: this.getPointOfSaleHidden(),
-    submit_button_colour: this.getPointOfSaleHidden(),
     held_button_colour: this.getPointOfSaleHidden(),
     return_button_colour: this.getPointOfSaleHidden(),
     pay_button_colour: this.getPointOfSaleHidden(),
-    pay_and_print_button_colour: this.getPointOfSaleHidden(),
   };
 
   /** The virtual print format fields are the doctypes'; a save of the settings sets them first. */

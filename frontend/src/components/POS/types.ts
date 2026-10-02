@@ -9,7 +9,10 @@ export type ItemGroupMap = Record<string, string>;
 
 export type DiscountType = 'percent' | 'amount';
 
-export type ItemVisibility = 'Inventory Items' | 'Non-Inventory Items';
+export type ItemVisibility =
+  | 'Inventory Items'
+  | 'Non-Inventory Items'
+  | 'All Items';
 
 export type POSLayout = 'Classic' | 'Modern';
 

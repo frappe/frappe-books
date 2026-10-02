@@ -68,15 +68,37 @@ const records: Record<string, Row[]> = {
   'Books Price List': [{ name: 'Retail' }, { name: 'Members' }],
   'Books Batch': [{ name: 'TEA-2026-09' }],
   'Books Pos Opening Shift': [openingShift],
-  'Books Sales Invoice': Array.from({ length: 24 }, (_, index) => ({
-    name: `SINV-2026-${String(index + 1).padStart(4, '0')}`,
-    party: index % 2 ? 'Aarav Shah' : 'Meera Patel',
-    date: '2026-09-06 10:00:00',
-    grand_total: 1250,
-    outstanding_amount: 0,
-    docstatus: 1,
-    is_pos: 1,
-  })),
+  'Books Sales Invoice': [
+    ...Array.from({ length: 24 }, (_, index) => ({
+      name: `SINV-2026-${String(index + 1).padStart(4, '0')}`,
+      party: index % 2 ? 'Aarav Shah' : 'Meera Patel',
+      date: '2026-09-06 10:00:00',
+      grand_total: 1250,
+      outstanding_amount: 0,
+      docstatus: 1,
+      is_pos: 1,
+    })),
+    {
+      name: 'SINV-2026-HELD',
+      party: 'Aarav Shah',
+      date: '2026-09-06 11:00:00',
+      grand_total: items[0].rate,
+      outstanding_amount: items[0].rate,
+      docstatus: 0,
+      is_pos: 1,
+      items: [
+        {
+          name: 'held-row',
+          item: items[0].name,
+          quantity: 1,
+          transfer_quantity: 1,
+          rate: items[0].rate,
+          amount: items[0].rate,
+          unit: 'Unit',
+        },
+      ],
+    },
+  ],
 };
 
 export async function preparePOSData() {

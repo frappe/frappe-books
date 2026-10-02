@@ -135,11 +135,14 @@ def _apply_rules(invoice, rows, coupons):
 	"""Apply each row's best rule, and each item's free row once; return the (item, rule name)s applied."""
 	candidates = _candidate_rules(rows)
 	quantities = defaultdict(Decimal)
+	amounts = defaultdict(Decimal)
 	for row in rows:
 		quantities[row.item] += as_decimal(row.quantity)
+		amounts[row.item] += _row_value(row)
 	applied = {}
 	for row in rows:
-		rule = _best_rule(invoice, row, quantities[row.item], candidates[row.item, row.unit], coupons)
+		rules = candidates[row.item, row.unit]
+		rule = _best_rule(invoice, row.item, quantities[row.item], amounts[row.item], rules, coupons)
 		if rule:
 			_apply_rule(invoice, row, rule)
 			applied[row.item, rule.name] = rule
@@ -210,8 +213,9 @@ def _candidate_rules(rows):
 	return defaultdict(list, {key: list(value.values()) for key, value in candidates.items()})
 
 
-def _best_rule(invoice, row, quantity, rules, coupons):
-	amount = _in_company_currency(invoice, as_decimal(row.rate) * quantity)
+def _best_rule(invoice, item, quantity, amount, rules, coupons):
+	"""Return the highest-priority rule the item's total quantity and amount qualify for."""
+	amount = _in_company_currency(invoice, amount)
 	rules = [
 		rule
 		for rule in rules
@@ -225,7 +229,7 @@ def _best_rule(invoice, row, quantity, rules, coupons):
 	if len(rules) > 1 and rules[0].priority == rules[1].priority:
 		frappe.throw(
 			_("Pricing rules {0} and {1} have the same priority for item {2}.").format(
-				rules[0].name, rules[1].name, row.item
+				rules[0].name, rules[1].name, item
 			)
 		)
 	return rules[0]

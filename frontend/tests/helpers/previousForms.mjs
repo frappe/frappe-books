@@ -95,7 +95,6 @@ export const previousForms = {
       'display_time | Display Time In Invoice |  | Customizations',
       'display_description | Display Description In Invoice |  | Customizations',
       'displaytermsandconditions | Display Terms and Conditions |  | Customizations',
-      'pos_print_width | Pos Print Width |  | Customizations',
       'terms_and_conditions | Terms and Conditions |  | Customizations',
     ],
   },

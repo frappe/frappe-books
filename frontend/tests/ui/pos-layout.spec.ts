@@ -83,6 +83,29 @@ test('leaving a sale with items asks to save or discard it', async ({
   await expect(dialog).toBeHidden();
 });
 
+test('a held sale reopens as saved after its cart was edited', async ({
+  page,
+}) => {
+  const removeItem = page.getByRole('button', { name: 'Remove item' });
+  const openHeldSale = async () => {
+    await page.getByRole('button', { name: 'Held', exact: true }).click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Saved and Submitted Invoices',
+    });
+    await dialog
+      .getByRole('checkbox', { name: 'Select invoice SINV-2026-HELD' })
+      .check();
+    await dialog.getByRole('button', { name: 'Open Invoice' }).click();
+    await expect(dialog).toBeHidden();
+  };
+
+  await openHeldSale();
+  await removeItem.click();
+  await expect(page.getByText('No items in this sale')).toBeVisible();
+  await openHeldSale();
+  await expect(removeItem).toHaveCount(1);
+});
+
 test('cart values fit and expanded item fields open a usable keypad', async ({
   page,
 }) => {

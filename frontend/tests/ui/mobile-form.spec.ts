@@ -39,6 +39,18 @@ test('one header menu holds the document actions', async ({ page }) => {
     page.getByRole('menuitem', { name: 'General Ledger' })
   ).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
+
+  // The safe answer names what it keeps.
+  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  const confirmation = page.getByRole('dialog', { name: `Delete ${name}?` });
+  await expect(
+    confirmation.getByRole('button', { name: 'Delete', exact: true })
+  ).toBeVisible();
+  await confirmation
+    .getByRole('button', { name: 'Keep Party', exact: true })
+    .click();
+  await expect(confirmation).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(encodeURIComponent(name)));
 });
 
 test('a link field searches full screen and creates a record in a sheet', async ({

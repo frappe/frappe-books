@@ -229,7 +229,9 @@ test('one action opens one dismissible confirmation', async ({ page }) => {
   const confirmation = page.getByRole('dialog');
   await expect(confirmation).toHaveCount(1);
   await expect(confirmation).toBeVisible();
-  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).hover();
+  await confirmation
+    .getByRole('button', { name: 'Keep Party', exact: true })
+    .hover();
   await page.keyboard.press('Escape');
   await expect(confirmation).toHaveCount(0);
   expect(await getPartyState(page)).toEqual({

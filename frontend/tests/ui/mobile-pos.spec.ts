@@ -193,6 +193,25 @@ test('an invoice is picked by tapping its row, which shows a check', async ({
   await expect(create).toBeEnabled();
 });
 
+test('negative loyalty points show a field error, not a toast', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.showModal('LoyaltyProgram')
+  );
+  const sheet = page.getByRole('dialog', { name: 'Redeem Loyalty Points' });
+  await sheet.locator('input').first().fill('-5');
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(sheet.getByText('Points must be greater than 0')).toBeVisible();
+  await expect(sheet).toBeVisible();
+  await expect(
+    page.locator('[data-sonner-toast]', {
+      hasText: 'Points must be greater than 0',
+    })
+  ).toHaveCount(0);
+});
+
 test('every POS dialog opens as a bottom sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const [name, title, action] of sheets) {

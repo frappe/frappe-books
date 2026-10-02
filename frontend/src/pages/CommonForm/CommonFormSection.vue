@@ -62,14 +62,15 @@
       </div>
     </component>
 
-    <FrappeAccordion
-      v-if="showTitle && title"
-      v-model="openSection"
-      class="-mx-2"
-      :items="[{ value: 'fields', title }]"
-    >
-      <template #item-content><component :is="ReuseFields" /></template>
-    </FrappeAccordion>
+    <!-- The accordion is w-full, so the bleed goes on a wrapper to widen it. -->
+    <div v-if="showTitle && title" class="-mx-2">
+      <FrappeAccordion
+        v-model="openSection"
+        :items="[{ value: 'fields', title }]"
+      >
+        <template #item-content><component :is="ReuseFields" /></template>
+      </FrappeAccordion>
+    </div>
     <component :is="ReuseFields" v-else />
   </div>
 </template>

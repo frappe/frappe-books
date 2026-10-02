@@ -36,13 +36,18 @@ ROLE_MATRIX = {
 }
 TEST_USER = "books-user-permissions@example.com"
 MANAGER = "books-manager-permissions@example.com"
+SYSTEM_MANAGER = "books-system-manager-permissions@example.com"
 
 
 class IntegrationTestPermissions(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		for email, role in ((TEST_USER, "Books User"), (MANAGER, "Books Manager")):
+		for email, role in (
+			(TEST_USER, "Books User"),
+			(MANAGER, "Books Manager"),
+			(SYSTEM_MANAGER, "System Manager"),
+		):
 			if not frappe.db.exists("User", email):
 				frappe.get_doc(
 					{
@@ -89,18 +94,19 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			print_format.html = "<p>{{ doc.name }}</p>"
 			self.assertRaises(frappe.PermissionError, print_format.save)
 
-	def test_only_books_manager_imports(self):
+	def test_only_managers_import(self):
 		importable = frappe.get_all(
 			"DocType", filters={"module": "Frappe Books", "allow_import": 1}, pluck="name"
 		)
 		for doctype in importable:
 			with self.subTest(doctype=doctype):
 				importers = {perm.role for perm in frappe.get_meta(doctype).permissions if perm.get("import")}
-				self.assertEqual(importers, {"Books Manager"})
+				self.assertEqual(importers, {"Books Manager", "System Manager"})
 
 		for user, doctype, allowed in (
 			(TEST_USER, "Books Sales Invoice", False),
 			(MANAGER, "Books Sales Invoice", True),
+			(SYSTEM_MANAGER, "Books Sales Invoice", True),
 			(MANAGER, "Books Ledger Entry", False),
 		):
 			with self.subTest(user=user, doctype=doctype), self.set_user(user):

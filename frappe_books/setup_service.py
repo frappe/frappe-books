@@ -146,11 +146,10 @@ def _update_payment_methods(cash_account, bank_account):
 
 
 def _update_defaults():
-	"""Leave the automatic payment accounts empty, so invoices are not paid on submit unasked."""
+	"""Set the default number series.
+
+	Payment accounts and stock locations stay empty, so invoices do not pay or move stock on submit unasked.
+	"""
 	defaults = frappe.get_single("Books Defaults")
-	defaults.update(
-		{
-			**{field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field},
-		}
-	)
+	defaults.update({field: prefix for prefix, _type, field in NUMBER_SERIES.values() if field})
 	defaults.save(ignore_permissions=True)

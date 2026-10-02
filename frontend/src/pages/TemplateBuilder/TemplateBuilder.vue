@@ -137,6 +137,9 @@
             @input="() => (templateChanged = true)"
             @blur="setTemplate"
             @apply="setTemplate"
+            @save="saveTemplate"
+            @toggle-edit-mode="toggleEditMode"
+            @toggle-hints="toggleShowHints"
           />
         </div>
         <div
@@ -219,7 +222,7 @@ import {
   openSettings,
   selectTextFile,
 } from 'src/utils/ui';
-import { useDocShortcuts } from 'src/utils/vueUtils';
+import { syncOrSubmitDoc, useDocShortcuts } from 'src/utils/vueUtils';
 import { getDocuments } from 'src/frappe/api';
 import { getSchema } from 'src/frappe/registry';
 import { getFrappeDocOrNew } from 'src/frappe/documents';
@@ -528,6 +531,12 @@ export default defineComponent({
       }
 
       await this.doc?.set('html', value);
+    },
+    async saveTemplate(value: string) {
+      await this.setTemplate(value);
+      if (this.doc) {
+        await syncOrSubmitDoc(this.doc);
+      }
     },
     setScale(e: Event | number | string) {
       let value = this.scale;

@@ -71,11 +71,12 @@
    "reqd": 1
   },
   {
-   "default": "1",
+   "default": "0",
+   "description": "Days that earned points stay valid; 0 for no expiry.",
    "fieldname": "expiry_duration",
    "fieldtype": "Int",
-   "hidden": 1,
-   "label": "Expiry Duration"
+   "label": "Expiry Duration",
+   "non_negative": 1
   },
   {
    "fieldname": "expense_account",
@@ -106,7 +107,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-30 20:00:00.000000",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Loyalty Program",

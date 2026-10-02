@@ -63,6 +63,7 @@
         </FrappeListCell>
       </FrappeListRow>
     </FrappeList>
+    <!-- A 44px row: Button stops at 40px (frappe/frappe-ui#1250). -->
     <button
       v-if="canAdd"
       class="flex h-11 w-full items-center gap-2 border-outline-gray-1 px-3 text-md-medium text-ink-gray-8 active:bg-surface-gray-1"

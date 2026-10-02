@@ -17,6 +17,7 @@
       :disabled="value <= min"
       @click="$emit('change', value - 1)"
     />
+    <!-- TextInput can't align its text (frappe/frappe-ui#1256). -->
     <FormControl
       class="min-w-0 flex-1"
       input-class="[&_input]:text-center [&_input]:tabular-nums"

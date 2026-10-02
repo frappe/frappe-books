@@ -28,6 +28,7 @@
     <section class="flex flex-col gap-4 p-4">
       <div class="flex flex-col gap-1.5">
         <span class="text-sm text-ink-gray-6">{{ t`Payment method` }}</span>
+        <!-- 48px tiles: RadioGroup rows stop at 32px (frappe/frappe-ui#1257). -->
         <div
           role="radiogroup"
           class="grid grid-cols-2 gap-2"
@@ -127,6 +128,7 @@
         :model-value="!!sinvDoc.redeem_loyalty_points"
         @update:model-value="(on: boolean) => $emit('setLoyalty', on)"
       />
+      <!-- A 56px row: ItemListRow stops at 40px (frappe/frappe-ui#1250). -->
       <button
         v-if="showCoupon"
         type="button"

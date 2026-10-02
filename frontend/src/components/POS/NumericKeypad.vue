@@ -1,5 +1,6 @@
 <template>
 	<div class="flex flex-col gap-4">
+		<!-- TextInput can't align its text (frappe/frappe-ui#1256). -->
 		<FrappeTextInput
 			ref="input"
 			:model-value="modelValue"
@@ -18,7 +19,7 @@
 		/>
 
 		<div class="keypad-keys grid grid-cols-4 gap-2" role="group" :aria-label="t`Numeric keypad`">
-			<!-- Plain buttons: touch keys need 56px, above frappe-ui's largest Button (40px). -->
+			<!-- Plain buttons: touch keys need 56px; frappe-ui's largest Button is 40px (frappe/frappe-ui#1250). -->
 			<button
 				v-for="key in keyDefinitions"
 				:key="key.value"

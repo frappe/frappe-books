@@ -55,7 +55,7 @@ export interface PhoneTreeLayout {
   periods?: { total: boolean };
   /** Group rows under this column's values and sum the value columns. */
   groupBy?: string;
-  /** Subtitle of a group row, from its number of rows. */
+  /** Subtitle of a group row, from its number of distinct labels. */
   describeGroup?: (count: number) => string;
   /** Icon of the rows inside a group. */
   icon?: string;

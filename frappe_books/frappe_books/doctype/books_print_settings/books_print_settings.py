@@ -26,7 +26,6 @@ class BooksPrintSettings(Document):
 		font: DF.Literal["Arial", "Times New Roman", "Courier"]
 		logo: DF.AttachImage | None
 		phone: DF.Data | None
-		pos_print_width: DF.Float
 		terms_and_conditions: DF.Text | None
 	# end: auto-generated types
 

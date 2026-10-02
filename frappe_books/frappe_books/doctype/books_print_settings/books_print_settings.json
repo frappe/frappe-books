@@ -21,7 +21,6 @@
   "display_time",
   "display_description",
   "displaytermsandconditions",
-  "pos_print_width",
   "terms_and_conditions"
  ],
  "fields": [
@@ -114,12 +113,6 @@
    "label": "Display Terms and Conditions"
   },
   {
-   "default": "8",
-   "fieldname": "pos_print_width",
-   "fieldtype": "Float",
-   "label": "Pos Print Width"
-  },
-  {
    "depends_on": "eval:doc.displaytermsandconditions",
    "fieldname": "terms_and_conditions",
    "fieldtype": "Text",
@@ -130,7 +123,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-01 12:00:00.000000",
+ "modified": "2026-10-02 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Print Settings",

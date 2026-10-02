@@ -61,9 +61,10 @@ test('form table columns resize by dragging and keep their width', async ({
   await waitForBooks(page);
   const handle = page.getByRole('separator', { name: 'Resize Item column' });
   const start = (await handle.boundingBox())!;
+  // The Edit row column follows Rate, so Rate resizes too.
   await expect(
     page.getByRole('separator', { name: 'Resize Rate column' })
-  ).toHaveCount(0);
+  ).toHaveCount(1);
 
   await dragBy(page, handle, 100);
   const width = Number(await handle.getAttribute('aria-valuenow'));

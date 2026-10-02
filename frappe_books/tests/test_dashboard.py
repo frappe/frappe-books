@@ -68,6 +68,15 @@ class IntegrationTestDashboard(IntegrationTestCase):
 		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (0, 2))
 
 
+class IntegrationTestCashflow(IntegrationTestCase):
+	def test_cashflow_has_data_only_with_cash_entries_in_the_period(self):
+		_post(make_account("Period Cash", account_type="Cash"), 80, 0, "2031-01-10")
+
+		with self.freeze_time(TODAY):
+			self.assertTrue(get_cashflow("This Year")["has_data"])
+			self.assertFalse(get_cashflow("This Month")["has_data"])
+
+
 class IntegrationTestTopExpenses(IntegrationTestCase):
 	def test_expenses_past_the_top_five_are_summed_as_others(self):
 		for amount in (60, 50, 40, 30, 20, 10, 5):

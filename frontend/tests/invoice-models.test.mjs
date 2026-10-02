@@ -10,6 +10,7 @@ import {
   getFrappeDoc,
   getMappedDoc,
   getNewDocValues,
+  getSidebarConfig,
   getSchema,
   ListFilters,
   ListView,
@@ -471,6 +472,14 @@ test('a record created from a link takes the values its filters choose', () => {
     is_enabled: true,
     is_sales: true,
   });
+});
+
+test('a new party from the list of every party takes the default role', () => {
+  const party = getSidebarConfig()
+    .flatMap(({ items }) => items ?? [])
+    .find(({ name }) => name === 'party');
+  assert.equal(party.route, '/list/Party');
+  assert.deepEqual(getNewDocValues('Party', party.filters ?? []), {});
 });
 
 test("a row's transfer unit is its item's stock unit or one of its conversions", async () => {

@@ -266,6 +266,18 @@ test('a party shows its email and role, and is not found by its phone', async ()
   assert.deepEqual(docs(search, '98765'), []);
 });
 
+test('the palette lists every party under one Party list', () => {
+  const { search } = makeSearch();
+  const lists = search
+    .search('Party')
+    .filter(({ group, label }) => group === 'List' && label === 'Party');
+
+  assert.deepEqual(
+    lists.map(({ route }) => route),
+    ['/list/Party']
+  );
+});
+
 test('recent records reopen the record instead of a list', async () => {
   const { search } = makeSearch(({ body }) =>
     body.doctype === 'Books Sales Invoice'

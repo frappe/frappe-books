@@ -60,9 +60,12 @@ def get_profit_and_loss(filters, periods) -> list[dict]:
 	keys = [*(period.key for period in periods), "total"]
 	totals = {"Income": _("Total Income (Credit)"), "Expense": _("Total Expense (Debit)")}
 	rows = _rows(sections, keys, filters.hide_group_amounts, totals)
-	if len(sections) < 2:
+	if not sections:
 		return rows
-	income, expense = (section["total"] for section in sections)
+	section_totals = {section["root_type"]: section["total"] for section in sections}
+	income, expense = (
+		section_totals.get(root_type, [as_decimal(0)] * len(keys)) for root_type in ("Income", "Expense")
+	)
 	profit = [
 		income_value - expense_value for income_value, expense_value in zip(income, expense, strict=True)
 	]

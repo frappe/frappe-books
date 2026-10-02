@@ -195,6 +195,53 @@ class IntegrationTestPricing(IntegrationTestCase):
 		free_row = next(row for row in invoice.items if row.is_free_item)
 		self.assertEqual(free_row.quantity, 6)
 
+	def test_rule_whose_free_quantity_rounds_to_zero_is_skipped(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		self._pricing_rule(
+			discount_type="Product Discount",
+			free_item=self.item.name,
+			free_item_quantity=1,
+			is_recursive=1,
+			recurse_every=5,
+			round_free_item_qty=1,
+			rounding_method="floor",
+		)
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, self.item.name, self.income.name
+		)
+
+		self.assertEqual(len(invoice.items), 1)
+		self.assertFalse(invoice.items[0].pricing_rule)
+		self.assertFalse(invoice.is_pricing_rule_applied)
+
+	def test_free_item_counts_the_item_on_every_row_once(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		for values, free_quantity in (
+			({"min_quantity": 5}, 1),
+			(
+				{"is_recursive": 1, "recurse_every": 5, "round_free_item_qty": 1, "rounding_method": "floor"},
+				1,
+			),
+		):
+			with self.subTest(values=values):
+				self.item = make_item(self.income.name, self.expense.name)
+				self._pricing_rule(
+					discount_type="Product Discount", free_item=self.item.name, free_item_quantity=1, **values
+				)
+				row = {"item": self.item.name, "quantity": 3, "rate": 10}
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					self.item.name,
+					self.income.name,
+					items=[row, row],
+				)
+
+				free_rows = [row for row in invoice.items if row.is_free_item]
+				self.assertEqual([row.quantity for row in free_rows], [free_quantity])
+				self.assertEqual(len(invoice.pricing_rule_detail), 1)
+
 	def test_rule_values_reset_when_rule_stops_applying(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		for values in (

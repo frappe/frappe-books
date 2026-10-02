@@ -54,6 +54,34 @@ test('a stock movement takes its series, rate and locations from the server', as
   await expect(page.getByText('View Stock Entries')).toBeVisible();
 });
 
+test('form table columns resize by dragging and keep their width', async ({
+  page,
+}) => {
+  await page.goto('/books/edit/StockMovement/new');
+  await waitForBooks(page);
+  const handle = page.getByRole('separator', { name: 'Resize Item column' });
+  const start = (await handle.boundingBox())!;
+  await expect(
+    page.getByRole('separator', { name: 'Resize Rate column' })
+  ).toHaveCount(0);
+
+  await page.mouse.move(start.x + 4, start.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 104, start.y + 4, { steps: 4 });
+  await page.mouse.up();
+  const width = Number(await handle.getAttribute('aria-valuenow'));
+  expect(width).toBeGreaterThan(100);
+  expect((await handle.boundingBox())!.x).toBeCloseTo(start.x + 100, 0);
+
+  await page.reload();
+  await waitForBooks(page);
+  await expect(handle).toHaveAttribute('aria-valuenow', String(width));
+
+  await handle.dblclick();
+  await expect(handle).not.toHaveAttribute('aria-valuenow');
+  expect((await handle.boundingBox())!.x).toBeCloseTo(start.x, 0);
+});
+
 test('a purchase receipt return keeps its quantities negative', async ({
   page,
 }) => {

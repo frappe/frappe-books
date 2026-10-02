@@ -1,22 +1,13 @@
 import type { ColumnField, ReportData } from 'reports/types';
+import { ColumnWidths } from 'src/utils/columnWidths';
 
-export const MIN_COLUMN_WIDTH = 48;
-export const MAX_COLUMN_WIDTH = 4096;
-
-export class ReportColumnWidths {
-  widths: Record<string, number> = {};
-  private storageKey: string;
+export class ReportColumnWidths extends ColumnWidths {
   private remSize = parseFloat(
     getComputedStyle(document.documentElement).fontSize
   );
 
   constructor(reportName: string) {
-    this.storageKey = `books:report-column-widths:${reportName}`;
-    this.load();
-  }
-
-  getKey(column: ColumnField) {
-    return column.fieldname;
+    super(`books:report-column-widths:${reportName}`);
   }
 
   get(column: ColumnField) {
@@ -27,16 +18,9 @@ export class ReportColumnWidths {
           ? 10
           : 0;
     return (
-      this.widths[this.getKey(column)] ??
+      this.widths[column.fieldname] ??
       Math.max((column.width ?? 1) * 8, minimum) * this.remSize
     );
-  }
-
-  set(column: ColumnField, width: number, persist = false) {
-    this.widths[this.getKey(column)] = Math.round(
-      Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, width))
-    );
-    if (persist) this.save();
   }
 
   /** Fits the label in the header's font and the values in the body's. */
@@ -71,7 +55,7 @@ export class ReportColumnWidths {
       );
     }
 
-    this.set(column, Math.ceil(width + padding + 2), true);
+    this.set(column.fieldname, Math.ceil(width + padding + 2), true);
   }
 
   private measure(
@@ -82,34 +66,5 @@ export class ReportColumnWidths {
     const text = value.replace(/\s+/g, ' ');
     const spacing = parseFloat(style.letterSpacing) || 0;
     return context.measureText(text).width + text.length * spacing;
-  }
-
-  private load() {
-    try {
-      const stored: unknown = JSON.parse(
-        localStorage.getItem(this.storageKey) ?? '{}'
-      );
-      if (!stored || typeof stored !== 'object' || Array.isArray(stored))
-        return;
-      this.widths = Object.fromEntries(
-        Object.entries(stored).filter(
-          ([, width]) =>
-            typeof width === 'number' &&
-            Number.isFinite(width) &&
-            width >= MIN_COLUMN_WIDTH &&
-            width <= MAX_COLUMN_WIDTH
-        )
-      );
-    } catch {
-      // The report still works when browser storage is unavailable.
-    }
-  }
-
-  private save() {
-    try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.widths));
-    } catch {
-      // Keep resized widths for this visit if browser storage is unavailable.
-    }
   }
 }

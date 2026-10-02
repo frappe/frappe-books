@@ -248,7 +248,8 @@ def _apply_price_discount(invoice, row, rule):
 		row.item_discount_percent = rule.discount_percentage
 	elif rule.price_discount_type == "amount":
 		row.set_item_discount_amount = 1
-		row.item_discount_amount = in_invoice_currency(invoice, rule.discount_amount)
+		row_amount = rounded(_row_value(row), invoice.get("currency"))
+		row.item_discount_amount = min(in_invoice_currency(invoice, rule.discount_amount), row_amount)
 	else:
 		frappe.throw(_("Pricing rule {0} has no price discount type.").format(rule.name))
 

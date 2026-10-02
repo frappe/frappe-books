@@ -10,16 +10,6 @@
         :logo="companyLogo || undefined"
         :menu-items="menuItems"
       />
-      <!-- Looks like the list search box; the search page owns the input. -->
-      <button
-        type="button"
-        class="flex h-10 w-full items-center gap-2 rounded-5 bg-surface-gray-2 px-3 text-start text-lg text-ink-gray-4 active:bg-surface-gray-3"
-        @click="openSearch"
-      >
-        <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
-        {{ t`Search` }}
-      </button>
-
       <nav class="flex flex-col gap-0.5" :aria-label="t`Books`">
         <template v-for="group in groups" :key="group.name">
           <FrappeItemListRow
@@ -94,13 +84,12 @@ import { useCompanyIdentity } from 'src/utils/company';
 import { getSidebarLocation } from 'src/utils/sidebarNavigation';
 import type { SidebarRoot } from 'src/utils/types';
 import { ref, watch } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { RouterLink } from 'vue-router';
 import { usePhoneSidebar } from './usePhoneSidebar';
 
-/** The desktop sidebar on a phone: account menu, search and every page. */
+/** The desktop sidebar on a phone: account menu and every page. */
 const isOpen = defineModel<boolean>('open', { required: true });
 
-const router = useRouter();
 const { companyName, companyLogo, userName } = useCompanyIdentity();
 const menuItems = getAppMenuItems();
 const { groups, active } = usePhoneSidebar();
@@ -119,10 +108,5 @@ function toggleGroup(group: SidebarRoot) {
 
 function close() {
   isOpen.value = false;
-}
-
-async function openSearch() {
-  close();
-  await router.push('/search');
 }
 </script>

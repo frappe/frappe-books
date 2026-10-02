@@ -34,13 +34,13 @@ async function openSearch(page: Page, query: string) {
   await searchbox(page).fill(query);
 }
 
-test('the nav sheet opens search with the input focused', async ({ page }) => {
-  await page.getByRole('button', { name: 'Menu' }).click();
-  await page
-    .getByRole('dialog', { name: 'Books' })
-    .getByRole('button', { name: 'Search' })
-    .click();
+test('the Search tab opens search with the input focused', async ({ page }) => {
+  const tab = page
+    .locator('[data-slot="mobile-nav"]')
+    .getByRole('button', { name: 'Search', exact: true });
+  await tab.click();
   await expect(page).toHaveURL(/\/books\/search$/);
+  await expect(tab).toHaveAttribute('data-state', 'active');
   await expect(searchbox(page)).toBeFocused();
 });
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="w-72 font-sans">
+  <div class="w-72">
     <header class="border-b border-outline-gray-1 px-3 py-2.5">
       <p
         v-if="schema?.naming !== 'random' && !schema?.isChild"

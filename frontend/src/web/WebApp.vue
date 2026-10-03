@@ -7,7 +7,6 @@
         flex flex-col
         overflow-hidden
         bg-surface-base
-        font-sans
         antialiased
       "
       :dir="languageDirection"

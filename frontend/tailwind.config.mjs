@@ -15,10 +15,5 @@ export default {
     'text-center',
     'text-end',
   ],
-  theme: {
-    fontFamily: {
-      sans: ['InterVar', 'sans-serif'],
-    },
-  },
   plugins: [tailwindRtl],
 };

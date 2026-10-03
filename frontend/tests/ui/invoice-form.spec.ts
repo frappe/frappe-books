@@ -78,6 +78,30 @@ test('a submitted quote makes an invoice with its rows', async ({ page }) => {
   await expect(qty).toHaveValue('4');
 });
 
+test('the barcode field marks itself with a leading icon, not a trailing control', async ({
+  page,
+}) => {
+  await page.route(
+    '**/api/v2/document/Books%20Inventory%20Settings/**',
+    async (route) => {
+      const json = await (await route.fetch()).json();
+      json.data.enable_barcodes = 1;
+      await route.fulfill({ json });
+    }
+  );
+  await page.goto(`/books/edit/SalesInvoice/new-barcode-${Date.now()}`);
+  await waitForBooks(page);
+
+  const barcode = page.getByRole('textbox', { name: 'Barcode' });
+  const icon = page.locator('.lucide-scan-line');
+  const field = (await barcode.boundingBox())!;
+  const mark = (await icon.boundingBox())!;
+  expect(mark.x + mark.width).toBeLessThan(field.x + field.width / 2);
+  await expect(page.getByRole('button', { name: 'Scan barcode' })).toHaveCount(
+    0
+  );
+});
+
 test.describe('on a phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },

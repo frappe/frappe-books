@@ -8,15 +8,11 @@
     :placeholder="t`Enter barcode`"
     @change="handleChange"
   >
-    <template #suffix>
-      <BarcodeScanButton
-        v-if="isMobile"
-        variant="ghost"
-        size="sm"
-        @scan="selectItem"
-      />
+    <template v-if="isMobile" #suffix>
+      <BarcodeScanButton variant="ghost" size="sm" @scan="selectItem" />
+    </template>
+    <template v-else #prefix>
       <span
-        v-else
         class="lucide-scan-line size-4 text-ink-gray-5"
         aria-hidden="true"
       />

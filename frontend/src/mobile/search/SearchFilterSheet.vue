@@ -1,8 +1,6 @@
 <template>
   <FrappeBottomSheet v-model:open="isOpen" :title="t`Search filters`">
-    <div
-      class="flex flex-col gap-5 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
-    >
+    <div class="flex flex-col gap-5 px-4">
       <section
         v-for="section in sections"
         :key="section.title"
@@ -21,12 +19,14 @@
           />
         </div>
       </section>
-      <FrappeButton
-        variant="solid"
-        size="lg"
-        :label="t`Done`"
-        @click="isOpen = false"
-      />
+      <MobileSheetFooter class="*:flex-1">
+        <FrappeButton
+          variant="solid"
+          size="lg"
+          :label="t`Done`"
+          @click="isOpen = false"
+        />
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
 </template>
@@ -37,6 +37,7 @@ import {
   Button as FrappeButton,
 } from 'frappe-ui';
 import { computed } from 'vue';
+import MobileSheetFooter from '../MobileSheetFooter.vue';
 
 type FilterOption = { value: string; label: string };
 

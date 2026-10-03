@@ -42,7 +42,11 @@ import Modal from 'src/components/POS/POSDialog.vue';
 import NumericKeypad from 'src/components/POS/NumericKeypad.vue';
 import { parseNumericDraft } from 'src/components/POS/numericKeypad';
 import { getErrorMessage } from 'src/utils';
-import { POSRowField, setPOSRowValue } from 'src/utils/pos';
+import {
+  getPOSRowFieldLabel,
+  POSRowField,
+  setPOSRowValue,
+} from 'src/utils/pos';
 import { defineComponent } from 'vue';
 
 type NumericKeypadRef = {
@@ -69,8 +73,10 @@ export default defineComponent({
   computed: {
     fieldLabel(): string {
       return (
-        (this.selectedItemRow?.fieldMap[this.selectedItemField]?.label as string) ||
-        this.t`Value`
+        getPOSRowFieldLabel(
+          this.selectedItemRow,
+          this.selectedItemField as POSRowField
+        ) || this.t`Value`
       );
     },
     allowNegative(): boolean {

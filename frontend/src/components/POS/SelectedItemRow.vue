@@ -74,7 +74,7 @@
         :df="{
           fieldtype: 'Float',
           fieldname: 'transfer_quantity',
-          label: t`Transfer Quantity`,
+          label: fieldLabel('transfer_quantity'),
         }"
         size="medium"
         :border="true"
@@ -249,6 +249,7 @@ import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
   getPOSQuantityField,
+  getPOSRowFieldLabel,
   getPOSRowItem,
   isPOSRowFieldReadOnly,
   POSRowItem,
@@ -393,6 +394,9 @@ export default defineComponent({
     },
     isFieldReadOnly(field: POSRowField): boolean {
       return isPOSRowFieldReadOnly(this.row, field, this.permissions);
+    },
+    fieldLabel(field: POSRowField): string {
+      return getPOSRowFieldLabel(this.row, field);
     },
     openKeypad(field: POSRowField) {
       if (!this.isClassic && !this.isFieldReadOnly(field)) {

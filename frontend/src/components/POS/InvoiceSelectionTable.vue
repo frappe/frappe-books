@@ -49,9 +49,9 @@
   <div v-else class="flex min-h-0 flex-1 overflow-x-auto">
     <FrappeList
       :columns="listColumns"
-      :row-height="48"
+      :row-height="44"
       divider="full"
-      class="flex min-h-0 min-w-[34rem] flex-1 flex-col overflow-hidden rounded-6 border border-outline-gray-1 list-gap-2 [--list-row-padding-x:0px]"
+      class="flex min-h-0 min-w-[34rem] flex-1 flex-col list-gap-3 list-row-px-2.5"
       :active="modelValue || undefined"
       :aria-label="t`Invoices`"
       @update:active="select"
@@ -60,7 +60,6 @@
         <FrappeListHeaderCell
           v-for="field in fields"
           :key="field.fieldname"
-          class="px-2"
           :class="{ 'justify-end': isNumeric(field) }"
         >
           {{ field.label }}
@@ -72,10 +71,13 @@
           <template #default="{ item: row, value }">
             <FrappeListRow :value="value">
               <FrappeListCell
-                v-for="field in fields"
+                v-for="(field, index) in fields"
                 :key="field.fieldname"
-                class="min-w-0 truncate px-2 text-base text-ink-gray-8"
-                :class="{ 'justify-end text-end': isNumeric(field) }"
+                class="min-w-0 truncate"
+                :class="[
+                  isNumeric(field) ? 'justify-end text-end tabular-nums' : '',
+                  getCellInk(field, index),
+                ]"
                 :title="formatCell(row, field)"
               >
                 <span class="truncate">{{ formatCell(row, field) }}</span>
@@ -158,6 +160,13 @@ export default defineComponent({
   },
   methods: {
     isNumeric,
+    /** The name stands out and the date recedes, as in the redesign. */
+    getCellInk(field: Field, index: number): string {
+      if (!index) return 'text-base-medium text-ink-gray-9';
+      return field.fieldtype === 'Date'
+        ? 'text-base text-ink-gray-6'
+        : 'text-base text-ink-gray-8';
+    },
     getRowName(row: InvoiceRow): string {
       return String(row.name ?? '');
     },

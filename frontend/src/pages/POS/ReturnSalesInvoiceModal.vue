@@ -1,27 +1,26 @@
 <template>
   <Modal
     :open-modal="openModal"
-    :title="t`Return Sales Invoice`"
+    :title="t`Return an invoice`"
+    :subtitle="t`Submitted POS invoices that are not fully returned.`"
     size="2xl"
     body-class="flex h-[32rem] flex-col gap-3"
     @closemodal="closeModal"
   >
-    <div class="shrink-0">
-      <FrappeTextInput
-        v-model="invoiceSearchTerm"
-        type="text"
-        :aria-label="t`Search by invoice name`"
-        :placeholder="t`Search by invoice name`"
-        class="w-full"
-        :variant="isMobile ? 'subtle' : 'outline'"
-        :size="isMobile ? 'lg' : 'md'"
-        @keydown.enter="handleSearchEnter"
-     >
-        <template v-if="isMobile" #prefix>
-          <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
-        </template>
-      </FrappeTextInput>
-    </div>
+    <FrappeTextInput
+      v-model="invoiceSearchTerm"
+      type="text"
+      :aria-label="t`Search by invoice name`"
+      :placeholder="t`Search by invoice name`"
+      class="w-full shrink-0"
+      variant="subtle"
+      :size="isMobile ? 'lg' : 'md'"
+      @keydown.enter="handleSearchEnter"
+    >
+      <template #prefix>
+        <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
+      </template>
+    </FrappeTextInput>
 
     <InvoiceSelectionTable
       v-model="selectedInvoiceName"
@@ -49,7 +48,7 @@
         variant="solid"
         :disabled="!selectedInvoiceName"
         @click="returnSelectedInvoice"
-        >{{ t`Create Return` }}</FrappeButton>
+        >{{ t`Create return` }}</FrappeButton>
     </template>
   </Modal>
 </template>

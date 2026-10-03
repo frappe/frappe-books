@@ -87,14 +87,13 @@
     <template #footer>
       <div class="flex items-center justify-between">
         <FrappeButton
-          variant="outline"
           class="w-24"
           :disabled="loading"
           @click="cancel"
           >{{ t`Cancel` }}</FrappeButton>
         <FrappeButton
           v-if="fyo.store.isDevelopment"
-          variant="outline"
+          variant="ghost"
           class="w-24 ml-auto mr-4"
           :disabled="loading"
           @click="fill"

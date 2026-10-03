@@ -1,6 +1,7 @@
 """Factories used by accounting integration tests."""
 
 import frappe
+from frappe.tests import change_settings
 from frappe.utils import flt, now_datetime
 
 from frappe_books.accounting.money import company_currency
@@ -121,6 +122,13 @@ def ledger_entries(voucher_type, voucher_no):
 		fields=["account", "debit", "credit", "reverted", "reverts"],
 		order_by="creation asc",
 	)
+
+
+def restored_company_settings():
+	"""Restore the System Settings a Books setup changes, so cached defaults stay right."""
+	settings = frappe.get_single("System Settings")
+	fields = ("country", "currency", "currency_precision")
+	return change_settings("System Settings", {field: settings.get(field) for field in fields})
 
 
 def ensure_user(email, *roles):

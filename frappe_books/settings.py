@@ -71,9 +71,9 @@ def regional_code() -> str:
 	return code if code in REGIONAL_CODES else "-"
 
 
-def update_system_settings(values):
-	"""Save the changed values only, so users who cannot write System Settings can save the rest."""
-	settings = frappe.get_single("System Settings")
+def update_frappe_settings(doctype, values):
+	"""Save the changed values of a Frappe settings single only, so saves that change none need no right to it."""
+	settings = frappe.get_single(doctype)
 	changed = {
 		fieldname: value
 		for fieldname, value in values.items()

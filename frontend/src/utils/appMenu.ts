@@ -2,6 +2,7 @@ import { t } from 'fyo';
 import type { DropdownOptions } from 'frappe-ui';
 import { call } from 'src/web/api';
 import { docsPathRef } from './refs';
+import { deskTheme, setDeskTheme, type DeskTheme } from './theme';
 
 /** Phones have no keyboard shortcuts, so they pass no `openShortcuts`. */
 export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
@@ -33,6 +34,11 @@ export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
       hideLabel: true,
       options: [
         {
+          label: t`Theme`,
+          icon: 'lucide-sun-moon',
+          submenu: getThemeItems(),
+        },
+        {
           label: t`Apps`,
           icon: 'lucide-layout-grid',
           onClick: () => window.location.assign('/apps'),
@@ -41,6 +47,19 @@ export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
       ],
     },
   ];
+}
+
+function getThemeItems(): DropdownOptions {
+  const themes: [DeskTheme, string][] = [
+    ['Light', t`Light`],
+    ['Dark', t`Dark`],
+    ['Automatic', t`Automatic`],
+  ];
+  return themes.map(([theme, label]) => ({
+    label,
+    selected: deskTheme.value === theme,
+    onClick: () => setDeskTheme(theme),
+  }));
 }
 
 export function openDocumentation() {

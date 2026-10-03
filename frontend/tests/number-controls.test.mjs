@@ -197,6 +197,23 @@ test('a typed Float is rounded to the system float precision and shown with it, 
   assert.equal(control.parse('abc'), null);
 });
 
+test('a read-only Float shows the float precision and number groups, a whole number no decimals, as Desk does', (t) => {
+  setLocale('en-IN');
+  fyo.singles.SystemSettings.display_precision = 0;
+  setSysDefaults(t, SYSDEFAULTS);
+
+  assert.equal(fyo.format(123456.5, 'Float'), '1,23,456.500');
+  assert.equal(fyo.format(0.0833, 'Float'), '0.083');
+  assert.equal(fyo.format(1234567, 'Float'), '12,34,567');
+  assert.equal(fyo.format(null, 'Float'), '');
+  // The Display Precision applies to amounts only.
+  assert.equal(fyo.format(fyo.pesa(1234.5), 'Currency'), '₹ 1,235');
+
+  // Desk shows a Float without a system float precision to 3 decimals.
+  setSysDefaults(t, { ...SYSDEFAULTS, float_precision: '' });
+  assert.equal(fyo.format(2.5, 'Float'), '2.500');
+});
+
 test('a typed amount is rounded to the currency precision, else to that of the number format', (t) => {
   setLocale('en-IN');
   setSysDefaults(t, SYSDEFAULTS);

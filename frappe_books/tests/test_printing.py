@@ -13,6 +13,7 @@ from frappe_books.frappe_books.doctype.books_defaults.books_defaults import (
 	PRINT_FORMAT_FIELDS,
 	set_print_formats,
 )
+from frappe_books.frappe_books.doctype.books_print_settings.books_print_settings import set_font
 from frappe_books.printing import (
 	books_format,
 	default_print_format,
@@ -140,15 +141,30 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		)
 
 	def test_books_format_follows_books_system_settings(self):
-		settings = {"locale": "en-IN", "display_precision": 2, "date_format": "MMM d, y"}
-		with self.change_settings("Books System Settings", settings):
+		settings = {"locale": "en-IN", "date_format": "MMM d, y"}
+		with (
+			self.change_settings("Books System Settings", settings),
+			self.change_settings("System Settings", currency_precision="2"),
+		):
 			self.assertEqual(books_format(1234567.125, "Currency", "INR"), "₹ 12,34,567.13")
-			self.assertEqual(books_format(10, "Float"), "10.00")
 			self.assertEqual(books_format("2026-09-30 13:45:00", "Date"), "Sep 30, 2026")
 			self.assertEqual(books_format(None, "Currency"), "")
 
-		with self.change_settings("Books System Settings", {"locale": "de-DE", "display_precision": 1}):
+		with (
+			self.change_settings("Books System Settings", locale="de-DE"),
+			self.change_settings("System Settings", currency_precision="1"),
+		):
 			self.assertEqual(books_format(1234.56, "Currency", "EUR"), "€ 1.234,6")
+
+	def test_books_format_shows_a_float_as_desk_shows_a_read_only_float(self):
+		with (
+			self.change_settings("Books System Settings", locale="en-IN"),
+			self.change_settings("System Settings", currency_precision="0"),
+		):
+			for float_precision, number in (("4", "1,23,456.5000"), ("", "1,23,456.500")):
+				with self.change_settings("System Settings", float_precision=float_precision):
+					self.assertEqual(books_format(123456.5, "Float"), number)
+			self.assertEqual(books_format(10, "Float"), "10")
 
 	def test_print_settings_show_the_company_address_and_gstin(self):
 		address = frappe.get_doc(
@@ -167,6 +183,43 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 		self.assertEqual(settings["address"], address.address_display)
 		self.assertEqual(settings["gstin"], "27AAACB1234A1Z5")
+
+	def test_print_font_is_frappes_print_settings_font(self):
+		frappe_options = frappe.get_meta("Print Settings").get_options("font")
+		self.assertEqual(frappe.get_meta("Books Print Settings").get_options("font"), frappe_options)
+		with self.change_settings("Print Settings", font="Verdana"):
+			self.assertEqual(frappe.get_single("Books Print Settings").as_dict()["font"], "Verdana")
+			# Templates that set their font from it get Frappe's font stack.
+			self.assertEqual(get_print_settings()["font"], "Verdana, sans-serif")
+
+	def test_built_in_formats_print_in_frappes_print_font(self):
+		invoice = self.make_invoice()
+		with self.change_settings("Print Settings", font="Verdana"):
+			for print_format in frappe.get_all("Print Format", {"module": "Frappe Books"}, pluck="name"):
+				with self.subTest(print_format=print_format):
+					self.assertNotIn("print.font", frappe.db.get_value("Print Format", print_format, "html"))
+			html = get_print(invoice.doctype, invoice.name, print_format="Business - Sales Invoice")
+
+		self.assertIn("font-family: Verdana, sans-serif", html)
+
+	def test_setting_the_print_font_sets_frappes(self):
+		with self.change_settings("Print Settings", font="Arial"):
+			set_font("Monospace")
+			self.assertEqual(frappe.db.get_single_value("Print Settings", "font"), "Monospace")
+
+			save_print_settings({"font": "Verdana"})
+			self.assertEqual(frappe.db.get_single_value("Print Settings", "font"), "Monospace")
+
+	def test_only_print_settings_editors_change_the_print_font(self):
+		with self.change_settings("Print Settings", font="Arial"):
+			with self.set_user(ensure_user(MANAGER, "Books Manager")):
+				# The unchanged font goes with each settings save.
+				set_font("Arial")
+				self.assertRaises(frappe.PermissionError, set_font, "Verdana")
+			with self.set_user(ensure_user(USER, "Books User")):
+				self.assertRaises(frappe.PermissionError, set_font, "Arial")
+
+			self.assertEqual(frappe.db.get_single_value("Print Settings", "font"), "Arial")
 
 	def test_invoice_prints_the_amount_each_payment_allocates_to_it(self):
 		invoice, other = self.make_invoice(), self.make_invoice()
@@ -377,6 +430,13 @@ def make_print_format(doctype):
 		.insert()
 		.name
 	)
+
+
+def save_print_settings(values):
+	"""Save Books Print Settings as /books does: the loaded copy with the changed values."""
+	settings = frappe.get_single("Books Print Settings")
+	settings.update(values)
+	settings.save()
 
 
 def save_defaults(values):

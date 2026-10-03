@@ -1,14 +1,20 @@
 import { DocValue } from 'fyo/core/types';
-import { ListsMap, ValidationMap } from 'fyo/model/types';
+import { ListsMap, ReadOnlyMap, ValidationMap } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
+import { hasDocTypePermission } from 'fyo/utils/permissions';
 import { t } from 'fyo/utils/translation';
 import { SelectOption } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { call } from 'src/web/api';
 import { getCountryInfo } from 'utils/misc';
 
+const SET_DISPLAY_PRECISION =
+  'frappe_books.frappe_books.doctype.books_system_settings.books_system_settings.set_display_precision';
+
 /**
- * Books System Settings, served by Frappe. Its currency is Frappe's System
- * Settings currency; the DocType shows it read only.
+ * Books System Settings, served by Frappe. Its currency and display precision
+ * are Frappe's System Settings currency and currency precision; a save of its
+ * date format or locale sets Frappe's date or number format.
  */
 export class SystemSettings extends FrappeDoc {
   static override doctype = 'Books System Settings';
@@ -40,12 +46,15 @@ export class SystemSettings extends FrappeDoc {
   declare hide_get_started?: boolean;
   declare allow_filter_bypass?: boolean;
   declare remove_filter?: boolean;
-  declare dark_mode?: boolean;
 
   // The server checks it too; mirrored to show the message at the field.
   validations: ValidationMap = {
     display_precision(value: DocValue) {
-      if ((value as number) >= 0 && (value as number) <= 9) {
+      if (
+        Number.isInteger(value) &&
+        (value as number) >= 0 &&
+        (value as number) <= 9
+      ) {
         return;
       }
 
@@ -54,6 +63,31 @@ export class SystemSettings extends FrappeDoc {
       );
     },
   };
+
+  readOnly: ReadOnlyMap = {
+    date_format: () => !this.canWriteSystemSettings,
+    locale: () => !this.canWriteSystemSettings,
+    display_precision: () => !this.canWriteSystemSettings,
+  };
+
+  get canWriteSystemSettings(): boolean {
+    return hasDocTypePermission(
+      this.fyo.store.permissions,
+      'System Settings',
+      'write'
+    );
+  }
+
+  /** The display precision is Frappe's; a save that changes it sets it first. */
+  override async beforeSync() {
+    await super.beforeSync();
+    // Only a change goes, so a stale copy neither sets it back nor needs the right to.
+    if (this.isChanged('display_precision')) {
+      await call(SET_DISPLAY_PRECISION, {
+        display_precision: this.display_precision,
+      });
+    }
+  }
 
   static lists: ListsMap = {
     locale() {

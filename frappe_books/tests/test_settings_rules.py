@@ -7,6 +7,9 @@ from frappe_books.frappe_books.doctype.books_accounting_settings.books_accountin
 	POINT_OF_SALE_FEATURES,
 )
 from frappe_books.frappe_books.doctype.books_inventory_settings import books_inventory_settings
+from frappe_books.frappe_books.doctype.books_system_settings.books_system_settings import (
+	set_display_precision,
+)
 from frappe_books.series import default_series
 from frappe_books.tests.accounting import make_account, make_number_series, unique_name
 
@@ -103,10 +106,11 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 	def test_display_precision_stays_between_zero_and_nine(self):
 		for precision in (-1, 10):
 			with self.subTest(precision=precision):
-				settings = frappe.get_single("Books System Settings")
-				settings.display_precision = precision
 				self.assertRaisesRegex(
-					frappe.ValidationError, "should have a value between 0 and 9", settings.save
+					frappe.ValidationError,
+					"should have a value between 0 and 9",
+					set_display_precision,
+					precision,
 				)
 
 	def test_default_number_series_come_from_books_defaults_else_the_standard_prefix(self):

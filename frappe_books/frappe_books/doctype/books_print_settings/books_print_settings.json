@@ -75,11 +75,12 @@
    "placeholder": "Select Color"
   },
   {
-   "default": "Arial",
+   "description": "The Font of Frappe's Print Settings, which only a System Manager can change.",
    "fieldname": "font",
    "fieldtype": "Select",
+   "is_virtual": 1,
    "label": "Font",
-   "options": "Arial\nTimes New Roman\nCourier",
+   "options": "Default\nHelvetica Neue\nArial\nHelvetica\nInter\nVerdana\nMonospace",
    "placeholder": "Font"
   },
   {
@@ -123,7 +124,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-02 20:00:00.000000",
+ "modified": "2026-10-03 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Print Settings",

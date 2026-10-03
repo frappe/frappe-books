@@ -114,7 +114,7 @@ test.describe('on a phone', () => {
     await page.goto(`/books/edit/SalesInvoice/${name}`);
     await waitForBooks(page);
 
-    await expect(page.getByText('2.00 × ₹ 50.00')).toBeVisible();
+    await expect(page.getByText('2 × ₹ 50.00')).toBeVisible();
     await expect(page.getByText('Receive Payment')).toBeVisible();
   });
 

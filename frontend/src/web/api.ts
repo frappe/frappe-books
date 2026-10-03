@@ -13,6 +13,7 @@ import {
   ValidationError,
 } from 'fyo/utils/errors';
 import type { BootUserPermissions } from 'fyo/utils/permissions';
+import type { DeskTheme } from 'src/utils/theme';
 import type { ChartOfAccounts } from 'utils/types';
 import { ref } from 'vue';
 
@@ -141,6 +142,8 @@ declare global {
         user?: BootUserPermissions & { name?: string };
         user_info?: Record<string, { fullname?: string }>;
         time_zone?: { system: string; user?: string };
+        /** The user's Frappe desk theme. */
+        desk_theme?: DeskTheme;
         /** Frappe's system defaults, such as its number precisions. */
         sysdefaults?: {
           float_precision?: string;

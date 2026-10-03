@@ -127,7 +127,7 @@ test.describe('on a phone', () => {
     await expect(page).toHaveURL(
       new RegExp(`/books/edit/PurchaseReceipt/${receipt}$`)
     );
-    await expect(page.getByText('2.00 × ₹ 30.00 · Stores')).toBeVisible();
+    await expect(page.getByText('2 × ₹ 30.00 · Stores')).toBeVisible();
   });
 });
 

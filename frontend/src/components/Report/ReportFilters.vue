@@ -14,7 +14,7 @@
         :model-value="dateRange"
         :placeholder="t`Date Range`"
         :required="item.from.required || item.to.required"
-        :format="getDatePickerFormat()"
+        :format="getRangeFormat()"
         :disabled="loading"
         @update:model-value="setDateRange"
       >
@@ -99,6 +99,11 @@ function getPresets() {
   });
 }
 
+/** frappe-ui reads the range back from its text, split at commas, on close. */
+function getRangeFormat() {
+  return getDatePickerFormat().replace(/,/g, '');
+}
+
 function getWidthClass(field: Field): string {
   return ['Select', 'Check'].includes(field.fieldtype) ? '' : 'w-40';
 }
@@ -112,12 +117,15 @@ async function setFilter(field: Field, value: DocValue) {
   await props.report.set(field.fieldname, value);
 }
 
-/** Both dates change together, so the report runs once. */
+/**
+ * Both dates change in one tick, so the picker never shows half a range,
+ * and the report runs once.
+ */
 async function setDateRange([from, to]: DateRangeValue) {
-  await props.report.setFilters({
-    fromDate: toLocalDate(from),
-    toDate: toLocalDate(to),
-  });
+  await Promise.all([
+    props.report.set('fromDate', toLocalDate(from), false),
+    props.report.set('toDate', toLocalDate(to), false),
+  ]);
   await props.report.updateData();
 }
 

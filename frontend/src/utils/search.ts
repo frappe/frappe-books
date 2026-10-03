@@ -555,8 +555,11 @@ export class Search {
       .filter((searchable) => this._isSearchable(searchable))
       .map(({ doctype }) => doctype);
     const text = input?.trim();
+    // `#` searches only the recent items.
     const rows =
-      text && doctypes.length ? await searchDocuments(text, doctypes) : [];
+      text && !text.startsWith('#') && doctypes.length
+        ? await searchDocuments(text, doctypes)
+        : [];
     if (requestId !== this._docRequestId) {
       return false;
     }

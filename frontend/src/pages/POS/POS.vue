@@ -102,6 +102,7 @@
             :value="sinvDoc.party"
             :df="sinvDoc.fieldMap.party"
             :show-clear-button="true"
+            :read-only="sinvDoc.isSubmitted"
             @change="setCustomer"
           />
         </div>
@@ -131,6 +132,7 @@
             :profile="posProfile as POSProfile"
             :disable-pay="disablePayButton"
             :is-return="!!sinvDoc.isReturn"
+            :is-submitted="sinvDoc.isSubmitted"
             :grand-total="(sinvDoc as SalesInvoice).grand_total"
             @save="saveInvoiceAction"
             @pay="handlePaymentAction"
@@ -627,7 +629,10 @@ export default defineComponent({
       });
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyP'], () => {
-        if (this.fyo.singles.AccountingSettings?.enable_price_list) {
+        if (
+          this.fyo.singles.AccountingSettings?.enable_price_list &&
+          !this.sinvDoc.isSubmitted
+        ) {
           this.toggleModal('PriceList', true);
         }
       });
@@ -653,7 +658,12 @@ export default defineComponent({
       this.shortcuts?.pmodShift.set(COMPONENT_NAME, ['KeyS'], async () => {
         const modalStatus = this.isModalOpen();
 
-        if (!modalStatus && this.sinvDoc.party && this.sinvDoc.items?.length) {
+        if (
+          !modalStatus &&
+          !this.sinvDoc.isSubmitted &&
+          this.sinvDoc.party &&
+          this.sinvDoc.items?.length
+        ) {
           await this.saveOrder();
         }
       });
@@ -664,7 +674,8 @@ export default defineComponent({
           this.loyaltyPoints &&
           this.sinvDoc.party &&
           this.sinvDoc.items?.length &&
-          this.loyaltyProgram
+          this.loyaltyProgram &&
+          !this.sinvDoc.isSubmitted
         ) {
           this.toggleModal('LoyaltyProgram', true);
         }
@@ -674,7 +685,8 @@ export default defineComponent({
         if (
           this.fyo.singles.AccountingSettings?.enable_coupon_code &&
           this.sinvDoc?.party &&
-          this.sinvDoc?.items?.length
+          this.sinvDoc?.items?.length &&
+          !this.sinvDoc.isSubmitted
         ) {
           this.toggleModal('CouponCode', true);
         }

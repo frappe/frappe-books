@@ -1,6 +1,7 @@
 <template>
   <div class="grid grid-cols-[1fr_2fr] gap-2">
     <POSActionButton
+      v-if="!isSubmitted"
       action="save"
       :profile="profile"
       size="lg"
@@ -13,6 +14,7 @@
       :profile="profile"
       size="lg"
       variant="solid"
+      :class="{ 'col-span-full': isSubmitted }"
       :disabled="disablePay"
       @click="$emit('pay')"
     >
@@ -33,6 +35,7 @@ const props = defineProps<{
   profile?: POSProfile | null;
   disablePay?: boolean;
   isReturn?: boolean;
+  isSubmitted?: boolean;
   grandTotal?: Money;
 }>();
 defineEmits<{ save: []; pay: [] }>();

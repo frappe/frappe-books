@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="showCoupon || showLoyalty || showPriceList"
+    v-if="!sinvDoc.isSubmitted && (showCoupon || showLoyalty || showPriceList)"
     class="flex flex-wrap gap-1.5"
   >
     <FrappeButton
@@ -35,7 +35,7 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { fyo } from 'src/initFyo';
 import { computed, inject, type Ref } from 'vue';
 
-/** Coupon, loyalty and price list actions, each shown when its feature is on. */
+/** Coupon, loyalty and price list actions, each shown when its feature is on and the sale can change. */
 const props = defineProps<{
   loyaltyProgram?: string;
   appliedCouponsCount?: number;

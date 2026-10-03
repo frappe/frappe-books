@@ -99,11 +99,8 @@ class BooksSalesInvoice(PostingInvoiceController):
 		"""Apply pricing rules and coupons too; a return keeps its original's prices."""
 		if self.return_against:
 			super().set_prices()
-			return
-		pricing.reset_pricing(self)
-		self.populate_defaults()
-		pricing.apply_pricing(self, drop_invalid_coupons)
-		self.populate_defaults()
+		else:
+			pricing.price(self, drop_invalid_coupons)
 
 	def populate_party_defaults(self):
 		"""Also join the party's loyalty program; a return keeps its original's."""
@@ -205,35 +202,29 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def validate_pos_permissions(self):
 		"""Hold POS rows to the rates and discounts the POS profile allows."""
 		rows = [row for row in self.items if not row.is_free_item]
-		rules = pricing.applied_rules(rows)
 		if not pricing.pos_setting("can_change_rate"):
-			self._validate_pos_rates(rows, rules)
+			self._validate_pos_rates(rows)
 		if not pricing.pos_setting("can_edit_discount"):
-			self._validate_pos_discounts(rows, rules)
+			self._validate_pos_discounts(rows)
 
-	def _validate_pos_rates(self, rows, rules):
+	def _validate_pos_rates(self, rows):
 		rates = pricing.standard_rates(self)
 		for row in rows:
 			rate = pricing.standard_rate(self, row, rates)
 			# Rows without a standard rate, or priced by a rule, keep the rate they have.
-			if rate is None or _price_type(rules, row) == "rate":
+			if rate is None or pricing.is_rule_priced(row, "rate"):
 				continue
 			if rounded(row.rate, self.currency) != rate:
 				frappe.throw(_("The POS profile does not allow changing the rate of {0}.").format(row.item))
 
-	def _validate_pos_discounts(self, rows, rules):
+	def _validate_pos_discounts(self, rows):
 		for row in rows:
-			if _price_type(rules, row) in ("percentage", "amount"):
+			if pricing.is_rule_priced(row, "discount"):
 				continue
 			if as_decimal(row.item_discount_percent) or as_decimal(row.item_discount_amount):
 				frappe.throw(
 					_("The POS profile does not allow editing the discount of {0}.").format(row.item)
 				)
-
-
-def _price_type(rules, row):
-	rule = rules.get(row.pricing_rule)
-	return rule.price_discount_type if rule and rule.discount_type == "Price Discount" else None
 
 
 @frappe.whitelist(methods=["POST"])

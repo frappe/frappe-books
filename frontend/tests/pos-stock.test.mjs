@@ -192,9 +192,12 @@ test('a batched row needs a batch and untracked items need no stock', async () =
   await pos.validateQty(untracked, [untracked]);
 });
 
-test('a row without a batch shows no batch stock', async () => {
+test('a row without an item or batch shows no batch stock and asks nothing', async () => {
   assert.equal(await posStock.getPOSBatchQuantity(item, batch), 4);
+  const requests = stubServer();
   assert.equal(await posStock.getPOSBatchQuantity(item, undefined), 0);
+  assert.equal(await posStock.getPOSBatchQuantity(undefined, batch), 0);
+  assert.deepEqual(requests, []);
 });
 
 test('selecting an unavailable batch cannot use stock from other warehouses', async () => {

@@ -26,6 +26,12 @@ const items = products.map((name, index) => ({
   has_serial_number: 0,
 }));
 
+/** Where POS sales ship from; the coffee batch has more stock elsewhere. */
+const inventory = 'POS Counter';
+const coffee = items[1];
+Object.assign(coffee, { has_batch: 1, track_item: 1 });
+const coffeeBatch = { name: 'COFFEE-2026-09', item: coffee.name };
+
 const openingShift = {
   name: 'SHIFT-001',
   docstatus: 1,
@@ -53,10 +59,15 @@ const records: Record<string, Row[]> = {
     { name: 'Store UPI', type: 'Transfer' },
   ],
   'Books Item': items,
-  'Books Stock Ledger Entry': items.map((item) => ({
-    item: item.name,
-    quantity: item.availableQty,
-  })),
+  'Books Stock Ledger Entry': [
+    ...items
+      .filter((item) => item !== coffee)
+      .map((item) => ({ item: item.name, quantity: item.availableQty })),
+    ...[
+      { location: inventory, quantity: 110 },
+      { location: 'Warehouse', quantity: 40 },
+    ].map((row) => ({ item: coffee.name, batch: coffeeBatch.name, ...row })),
+  ],
   'Books Party': [
     {
       name: 'Aarav Shah',
@@ -67,7 +78,7 @@ const records: Record<string, Row[]> = {
   ],
   'Books Price List': [{ name: 'Retail' }, { name: 'Members' }],
   'Books Coupon Code': [{ name: 'FOSSCLUB' }, { name: 'EXPIRED' }],
-  'Books Batch': [{ name: 'TEA-2026-09' }],
+  'Books Batch': [coffeeBatch],
   'Books Pos Opening Shift': [openingShift],
   'Books Sales Invoice': [
     ...Array.from({ length: 24 }, (_, index) => ({
@@ -151,7 +162,7 @@ function answer(path: string, body: Row, params: Row): unknown {
       ),
     'frappe.desk.search.search_widget': () => getList(body.doctype),
     get_open_shift: () => (shift.open ? openingShift.name : null),
-    get_stock_location: () => null,
+    get_stock_location: () => inventory,
     get_sale_shortfalls: () => [],
   };
   const answerMethod = methods[method] ?? methods[method.split('.').pop()!];

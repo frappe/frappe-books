@@ -160,7 +160,6 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 		frappe.db.set_value("Installed Application", {"app_name": "frappe"}, "is_setup_complete", 0)
 		frappe.clear_document_cache("Installed Applications", "Installed Applications")
-		frappe.db.set_single_value("Books System Settings", "date_format", "MMM d, y")
 		self._wizard(country="Switzerland", currency="CHF", time_zone="Europe/Zurich").save()
 
 		with self.restored_system_settings():
@@ -172,19 +171,28 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			(settings.country, settings.currency, settings.time_zone),
 			("Switzerland", "CHF", "Europe/Zurich"),
 		)
-		# Frappe formats dates and numbers as the Books settings do, not as the country does.
-		self.assertEqual((settings.date_format, settings.number_format), ("mm-dd-yyyy", "#,###.##"))
+		self.assertEqual(
+			(settings.date_format, settings.number_format),
+			(frappe.db.get_value("Country", "Switzerland", "date_format"), "#'###.##"),
+		)
 
-	def test_setup_sets_frappe_formats_from_the_books_formats(self):
-		frappe.db.set_single_value("Books System Settings", "date_format", "yyyy-MM-dd")
-		wizard = self._wizard()
-		wizard.save(ignore_permissions=True)
-		with self.restored_system_settings():
-			run_setup(wizard)
-			formats = frappe.db.get_value("System Settings", None, ["date_format", "number_format"])
-
+	def test_setup_formats_dates_and_numbers_as_the_country_does(self):
 		# Amounts in words follow the number format, e.g. lakh and crore for India.
-		self.assertEqual(formats, ["yyyy-mm-dd", "#,##,###.##"])
+		for country, currency, books_formats, frappe_formats in (
+			("India", "INR", ["dd-MM-yyyy", "en-IN"], ["dd-mm-yyyy", "#,##,###.##"]),
+			("Germany", "EUR", ["dd.MM.yyyy", "de-DE"], ["dd.mm.yyyy", "#.###,##"]),
+			("United States", "USD", ["MM-dd-yyyy", "en-US"], ["mm-dd-yyyy", "#,###.##"]),
+		):
+			with self.subTest(country=country), self.restored_system_settings():
+				frappe.db.set_single_value("Books System Settings", "date_format", "MMM d, y")
+				wizard = self._wizard(country=country, currency=currency)
+				wizard.save(ignore_permissions=True)
+				run_setup(wizard)
+
+				books = frappe.db.get_value("Books System Settings", None, ["date_format", "locale"])
+				self.assertEqual(books, books_formats)
+				formats = frappe.db.get_value("System Settings", None, ["date_format", "number_format"])
+				self.assertEqual(formats, frappe_formats)
 
 	def test_fresh_site_opens_the_books_setup_wizard(self):
 		self.assertEqual(get_setup_wizard_url(), "/books")

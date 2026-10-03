@@ -65,6 +65,21 @@ test('a link filter opens from a pill, searches inside and clears', async ({
   await expect(account).toHaveText(/All/);
 });
 
+test('typing in a pill search does not set the filter until an option is picked', async ({
+  page,
+}) => {
+  await page.goto('/books/report/GSTR2');
+  await waitForBooks(page);
+  const place = page
+    .getByRole('group', { name: 'Filters', exact: true })
+    .getByRole('combobox', { name: 'Place', exact: true });
+  await place.click();
+  await page.getByPlaceholder('Search', { exact: true }).fill('mah');
+  await expect(place).toHaveText(/All/);
+  await page.getByRole('option', { name: 'Maharashtra', exact: true }).click();
+  await expect(place).toHaveText(/Maharashtra/);
+});
+
 test('inline filter labels share one size and sit beside their values', async ({
   page,
 }) => {

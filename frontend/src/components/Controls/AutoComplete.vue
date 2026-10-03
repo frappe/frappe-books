@@ -444,7 +444,12 @@ export default {
       this.updateSuggestions(query);
     },
     onComboboxInput(event) {
-      if (this.isReadOnly || !(event.target instanceof HTMLInputElement)) {
+      // Button mode's search box only narrows the options (searchOptions).
+      if (
+        this.isReadOnly ||
+        this.triggerButton ||
+        !(event.target instanceof HTMLInputElement)
+      ) {
         return;
       }
 

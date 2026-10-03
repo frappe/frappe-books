@@ -134,6 +134,10 @@ export default defineComponent({
         // TextInput can't align its text (frappe/frappe-ui#1256).
         classes.push('[&_input]:text-end');
       }
+      if (isNumeric(this.df)) {
+        // Inputs don't inherit tabular-nums from the wrapper.
+        classes.push('[&_input]:tabular-nums');
+      }
       if (this.isMobile ? this.invalid : this.showMandatory) {
         // TextInput's `error` shows a message, not a border (frappe/frappe-ui#1252).
         classes.push('[&_[data-slot=control]]:border-outline-red-3');

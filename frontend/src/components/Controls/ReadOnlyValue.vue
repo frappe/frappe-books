@@ -91,6 +91,9 @@ export default defineComponent({
 				// TextInput can't align its text (frappe/frappe-ui#1256).
 				classes.push("[&_input]:text-end");
 			}
+			if (isNumeric(this.df)) {
+				classes.push("[&_input]:tabular-nums");
+			}
 			return classes;
 		},
 	},

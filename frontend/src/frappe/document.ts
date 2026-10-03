@@ -318,7 +318,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
   /** Whether a field's value differs from the one last loaded or saved. */
   isChanged(fieldname: string): boolean {
-    return this[fieldname] !== this._savedValues[fieldname];
+    const saved = this._savedValues[fieldname] as DocValue;
+    return !areDocValuesEqual(this[fieldname] as DocValue, saved);
   }
 
   /** A field's saved value as form conditions read it. */

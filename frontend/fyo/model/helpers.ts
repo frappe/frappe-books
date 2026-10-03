@@ -10,7 +10,11 @@ export function areDocValuesEqual(
   dvOne: DocValue | FrappeDoc[],
   dvTwo: DocValue | FrappeDoc[]
 ): boolean {
-  if (['string', 'number'].includes(typeof dvOne) || dvOne instanceof Date) {
+  if (dvOne instanceof Date) {
+    return dvTwo instanceof Date && dvOne.getTime() === dvTwo.getTime();
+  }
+
+  if (['string', 'number'].includes(typeof dvOne)) {
     return dvOne === dvTwo;
   }
 

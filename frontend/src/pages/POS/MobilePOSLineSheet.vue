@@ -91,6 +91,7 @@ import {
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { Money } from 'pesa';
 import FormControl from 'src/components/Controls/FormControl.vue';
+import { POS_ITEM_TOAST_ID } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
@@ -121,7 +122,11 @@ async function setValue(field: POSRowField, value: number | Money) {
   try {
     await setPOSRowValue(props.row!, field, value);
   } catch (error) {
-    showToast({ type: 'error', message: t`${error as string}` });
+    showToast({
+      id: POS_ITEM_TOAST_ID,
+      type: 'error',
+      message: t`${error as string}`,
+    });
   }
 }
 

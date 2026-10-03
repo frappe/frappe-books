@@ -267,7 +267,7 @@ import {
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { defineComponent, inject, PropType } from 'vue';
-import { POSLayout } from './types';
+import { POSLayout, POS_ITEM_TOAST_ID } from './types';
 
 /** A cart row: its fields edit inline in the Classic layout, with the keypad in Modern. */
 export default defineComponent({
@@ -422,6 +422,7 @@ export default defineComponent({
         await setPOSRowValue(this.row, field, value);
       } catch (error) {
         showToast({
+          id: POS_ITEM_TOAST_ID,
           type: 'error',
           message: this.t`${error as string}`,
           duration: 'short',

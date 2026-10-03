@@ -115,6 +115,7 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import NumberStepper from 'src/components/POS/NumberStepper.vue';
+import { POS_ITEM_TOAST_ID } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
@@ -168,7 +169,11 @@ async function setQuantity(row: SalesInvoiceItem, quantity: number) {
     await setPOSRowQuantity(row, quantityField, quantity);
     refillSerialNumbers(row);
   } catch (error) {
-    showToast({ type: 'error', message: t`${error as string}` });
+    showToast({
+      id: POS_ITEM_TOAST_ID,
+      type: 'error',
+      message: t`${error as string}`,
+    });
   }
 }
 </script>

@@ -91,7 +91,6 @@ async function mount() {
   pos.setShortcuts();
   await pos.setCustomer('Aarav Shah');
   pos.selectedItemForBatch = items[0].name;
-  pos.setPaymentMethod('Cash');
   state.invoice = pos.sinvDoc;
 
   (window as any).posFixture = {

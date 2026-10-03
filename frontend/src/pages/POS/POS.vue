@@ -182,10 +182,6 @@
       @set-loyalty="setLoyalty"
       @apply-coupon="openCouponCode"
       @toggle-modal="toggleModal('Payment', false)"
-      @set-paid-amount="setPaidAmount"
-      @set-payment-method="setPaymentMethod"
-      @set-transfer-ref-no="setTransferRefNo"
-      @set-transfer-clearance-date="setTransferClearanceDate"
       @create-transaction="createTransaction"
     />
     <ReturnSalesInvoiceModal
@@ -207,7 +203,6 @@
 import { Badge as FrappeBadge, Button as FrappeButton, dialog } from 'frappe-ui';
 import { t } from 'fyo';
 import { DateTime } from 'luxon';
-import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import MobilePOS from './MobilePOS.vue';
 import MobilePOSMenu from './MobilePOSMenu.vue';
@@ -230,25 +225,19 @@ import ClosePOSShiftModal from './ClosePOSShiftModal.vue';
 import BatchSelectionModal from './BatchSelectionModal.vue';
 import LoyaltyProgramModal from './LoyaltyProgramModal.vue';
 import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
-import { ModelNameEnum, PaymentMethodType } from 'models/types';
+import { ModelNameEnum } from 'models/types';
 import { showDialog, showToast } from 'src/utils/interactive';
 import { isMobile } from 'src/utils/viewport';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import PageHeader from 'src/components/PageHeader.vue';
-import { computed, defineComponent, inject, nextTick } from 'vue';
-import { call } from 'src/web/api';
-import {
-  getPaymentMethodRequirements,
-  PaymentMethodRequirements,
-} from 'models/baseModels/PaymentMethod/requirements';
+import { computed, defineComponent, inject, nextTick, shallowRef } from 'vue';
 import {
   ModalName,
   modalNames,
   POS_ITEM_TOAST_ID,
 } from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
-import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import {
@@ -264,8 +253,8 @@ import {
   isTypingInField,
   getQuickQtyBuffer,
   getPOSQuantityField,
-  getInvoicePayments,
 } from 'src/utils/pos';
+import { posCheckoutKey, usePOSCheckout } from 'src/utils/posCheckout';
 import {
   getItemVisibility,
   getOpenPOSShift,
@@ -286,16 +275,6 @@ import { ValidationError } from 'fyo/utils/errors';
 import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
 
 const COMPONENT_NAME = 'POS';
-const PAY_POS_INVOICE =
-  'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice.pay_pos_invoice';
-
-/** A payment the cashier takes, by Books Sales Invoice Payment fieldnames. */
-type TenderedPayment = {
-  payment_method?: string;
-  amount: Money;
-  reference_id?: string;
-  clearance_date?: Date;
-};
 
 export default defineComponent({
   name: 'POS',
@@ -329,18 +308,19 @@ export default defineComponent({
     return {
       doc: computed(() => this.sinvDoc),
       sinvDoc: computed(() => this.sinvDoc),
-      paidAmount: computed(() => this.paidAmount),
-      paymentMethod: computed(() => this.paymentMethod),
-      transferRefNo: computed(() => this.transferRefNo),
       appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
-      transferClearanceDate: computed(() => this.transferClearanceDate),
+      [posCheckoutKey]: this.posCheckout,
     };
   },
   setup() {
+    // Docs are reactive themselves; the ref follows which sale is open.
+    const sinvDoc = shallowRef({} as SalesInvoice);
     return {
       isMobile,
       shortcuts: inject(shortcutsKey),
+      sinvDoc,
+      posCheckout: usePOSCheckout(() => sinvDoc.value),
     };
   },
   data() {
@@ -364,7 +344,6 @@ export default defineComponent({
       isMenuOpen: false,
 
       totalQuantity: 0,
-      paidAmount: fyo.pesa(0),
 
       loyaltyPoints: 0,
       loyaltyProgram: '' as string,
@@ -372,12 +351,8 @@ export default defineComponent({
 
       itemSearchTerm: '',
       selectedItemGroup: '',
-      paymentMethod: undefined as string | undefined,
-      transferRefNo: undefined as string | undefined,
       defaultCustomer: undefined as string | undefined,
-      transferClearanceDate: undefined as Date | undefined,
 
-      sinvDoc: {} as SalesInvoice,
       posProfile: null as POSProfile | null,
       itemQtyMap: {} as ItemQtyMap,
       quickQtyActive: false,
@@ -748,13 +723,6 @@ export default defineComponent({
     toggleView() {
       this.tableView = !this.tableView;
     },
-    /** Text that is no number pays nothing, which Pay refuses. */
-    setPaidAmount(amount: Money | null) {
-      this.paidAmount = this.fyo.pesa(amount?.toString() ?? 0);
-    },
-    setPaymentMethod(method: string) {
-      this.paymentMethod = method;
-    },
     /** A new sale for the POS customer, whom the server's preview picks. */
     async setDefaultCustomer() {
       this.sinvDoc = newFrappeDoc(ModelNameEnum.SalesInvoice, {
@@ -805,12 +773,6 @@ export default defineComponent({
       if (invoice.docstatus === 1) {
         this.toggleModal('Payment');
       }
-    },
-    setTransferClearanceDate(date: Date) {
-      this.transferClearanceDate = date;
-    },
-    setTransferRefNo(ref: string) {
-      this.transferRefNo = ref;
     },
     validateInvoice() {
       if (this.sinvDoc.isSubmitted) {
@@ -886,29 +848,9 @@ export default defineComponent({
       }
     },
 
-    async createTransaction(shouldPrint = false, isPay = false) {
+    async createTransaction(shouldPrint = false, pay = false) {
       try {
-        if (isPay) {
-          await this.validatePaymentDetails();
-        }
-
-        const payments = isPay ? [this.getTenderedPayment()] : [];
-        if (this.sinvDoc.isSubmitted) {
-          await this.payAtCounter(payments);
-        } else {
-          await this.setTenderedPayments(payments);
-          await this.submitSinvDoc();
-          if (payments.length) {
-            const invoice = this.sinvDoc.name!;
-            // The sale is done; a failed lookup must not keep its cart open.
-            getInvoicePayments(invoice)
-              .then((names) => this.showSaleToast(invoice, names))
-              .catch((error) =>
-                showToast({ type: 'error', message: t`${error as string}` })
-              );
-          }
-        }
-
+        await this.completeSale(pay);
         this.closeAllModals();
         await nextTick();
 
@@ -927,87 +869,33 @@ export default defineComponent({
         });
       }
     },
-    async validatePaymentDetails() {
-      if (!this.paymentMethod) {
-        throw new ValidationError(
-          t`Please select a payment method before proceeding with payment.`
+    /** Submits or pays the sale; its payments are named once the server says which. */
+    async completeSale(pay: boolean) {
+      const isPayingSubmitted = this.sinvDoc.isSubmitted;
+      const { invoice, payments } = await this.posCheckout.checkout({ pay });
+      if (!isPayingSubmitted) {
+        this.showSaleToast(invoice);
+      }
+
+      // The sale is done; a failed lookup must not keep its cart open.
+      payments
+        .then((names) =>
+          isPayingSubmitted
+            ? this.showPaymentToast(names)
+            : this.showSaleToast(invoice, names)
+        )
+        .catch((error) =>
+          showToast({ type: 'error', message: t`${error as string}` })
         );
-      }
-
-      const paidAmount = this.fyo.pesa(this.paidAmount.float).abs();
-      if (paidAmount.isZero()) {
-        throw new ValidationError(t`Please enter an amount greater than zero.`);
-      }
-
-      const paymentMethod = (await getFrappeDoc(
-        ModelNameEnum.PaymentMethod,
-        this.paymentMethod
-      )) as PaymentMethod;
-      const requirements = getPaymentMethodRequirements(
-        paymentMethod.type as PaymentMethodType,
-        !!paymentMethod.requires_clearance_date
-      );
-      if (!requirements.isCash) {
-        this.validateTransfer(paidAmount, requirements);
-      }
     },
-    validateTransfer(
-      paidAmount: Money,
-      requirements: PaymentMethodRequirements
-    ) {
-      const outstandingAmount = (
-        this.sinvDoc.outstanding_amount?.isZero()
-          ? this.sinvDoc.grand_total
-          : this.sinvDoc.outstanding_amount
-      )?.abs();
-      if (outstandingAmount && paidAmount.gt(outstandingAmount)) {
-        throw new ValidationError(
-          t`Non-cash payment amount cannot exceed the outstanding amount.`
-        );
-      }
-
-      if (requirements.requiresReferenceId && !this.transferRefNo) {
-        throw new ValidationError(t`Please enter a reference number.`);
-      }
-
-      if (requirements.requiresClearanceDate && !this.transferClearanceDate) {
-        throw new ValidationError(t`Please select a clearance date.`);
-      }
-    },
-    getTenderedPayment(): TenderedPayment {
-      return {
-        payment_method: this.paymentMethod,
-        amount: this.fyo.pesa(this.paidAmount.float).abs(),
-        reference_id: this.transferRefNo,
-        clearance_date: this.transferClearanceDate,
-      };
-    },
-    /** The server pays the invoice with these when it submits it. */
-    async setTenderedPayments(payments: TenderedPayment[]) {
-      await this.sinvDoc.set('payments', null);
-      for (const payment of payments) {
-        await this.sinvDoc.append('payments', payment);
-      }
-    },
-    /** Pays an invoice submitted earlier; cash beyond what it owes is change. */
-    async payAtCounter(payments: TenderedPayment[]) {
+    showPaymentToast(payments: string[]) {
       if (!payments.length) {
         return;
       }
 
-      const names = await call<string[]>(PAY_POS_INVOICE, {
-        invoice: this.sinvDoc.name,
-        payments: payments.map((payment) => ({
-          ...payment,
-          amount: payment.amount.float,
-          clearance_date: payment.clearance_date
-            ? DateTime.fromJSDate(payment.clearance_date).toISODate()
-            : null,
-        })),
-      });
       showToast({
         type: 'success',
-        message: t`Payment ${names.join(', ')} is Saved`,
+        message: t`Payment ${payments.join(', ')} is Saved`,
         duration: 'short',
       });
     },
@@ -1022,15 +910,6 @@ export default defineComponent({
         duration: 'short',
       });
     },
-    async submitSinvDoc() {
-      this.sinvDoc.once('afterSubmit', () =>
-        this.showSaleToast(this.sinvDoc.name as string)
-      );
-
-      await this.validate();
-      await this.sinvDoc.sync();
-      await this.sinvDoc.submit();
-    },
     async afterSync() {
       await this.clearValues();
       this.setSinvDoc();
@@ -1044,11 +923,7 @@ export default defineComponent({
     },
     async clearValues() {
       this.setSinvDoc();
-
-      this.paidAmount = fyo.pesa(0);
-      this.paymentMethod = undefined;
-      this.transferRefNo = undefined;
-      this.transferClearanceDate = undefined;
+      this.posCheckout.reset();
       await this.setItems();
 
       if (!this.defaultCustomer) {

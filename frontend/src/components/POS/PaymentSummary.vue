@@ -25,17 +25,19 @@
       <dd class="text-ink-gray-8">{{ formatAmount(sinvDoc.outstanding_amount) }}</dd>
     </div>
     <div
-      v-if="settlement"
+      v-if="posCheckout.settlement"
       class="flex justify-between gap-4 rounded-b-6 px-3 py-2.5"
       :class="
-        settlement.isChange
+        posCheckout.settlement.isChange
           ? 'bg-surface-green-2 text-ink-green-7'
           : 'bg-surface-red-2 text-ink-red-7'
       "
       role="status"
     >
-      <dt>{{ settlement.label }}</dt>
-      <dd class="text-base-semibold">{{ formatAmount(settlement.amount) }}</dd>
+      <dt>{{ posCheckout.settlement.label }}</dt>
+      <dd class="text-base-semibold">
+        {{ formatAmount(posCheckout.settlement.amount) }}
+      </dd>
     </div>
   </dl>
 </template>
@@ -45,18 +47,17 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import { CostLine, getCostLines } from 'src/utils/pos';
-import { defineComponent, PropType } from 'vue';
+import { posCheckoutKey } from 'src/utils/posCheckout';
+import { defineComponent, inject, PropType } from 'vue';
 
-export type Settlement = { label: string; amount: Money; isChange: boolean };
-
+/** The sale's totals, then what the POS checkout's tender settles. */
 export default defineComponent({
   name: 'PaymentSummary',
   props: {
     sinvDoc: { type: Object as PropType<SalesInvoice>, required: true },
-    settlement: {
-      type: Object as PropType<Settlement | null>,
-      default: null,
-    },
+  },
+  setup() {
+    return { posCheckout: inject(posCheckoutKey)! };
   },
   computed: {
     detailRows(): CostLine[] {

@@ -2,6 +2,7 @@
   <div v-bind="phoneChartListeners" :class="cardClass">
     <FrappeDonutChart
       :title="t`Top Expenses`"
+      :subtitle="totalSpending"
       :loading="!isLoaded"
       :error="error"
       :dir="isMobile ? 'ltr' : undefined"
@@ -11,7 +12,7 @@
       :center-label="t`Total Spending`"
       :format="(value: number) => fyo.format(value, 'Currency')"
     >
-      <!-- A full total overflows the hole (frappe/frappe-ui#1259); the tooltip keeps it in full. -->
+      <!-- A full total overflows the hole (frappe/frappe-ui#1259); the subtitle keeps it in full. -->
       <template #center="{ label, value, percent }">
         <div
           class="truncate text-center text-xl font-semibold tabular-nums text-ink-gray-8"
@@ -56,6 +57,16 @@ export default defineComponent({
   data: () => ({
     expenses: [] as { account: string; total: number }[],
   }),
+  computed: {
+    totalSpending(): string | undefined {
+      if (!this.expenses.length) {
+        return;
+      }
+
+      const total = this.expenses.reduce((sum, row) => sum + row.total, 0);
+      return this.t`Total Spending: ${this.fyo.format(total, 'Currency')}`;
+    },
+  },
   methods: {
     async setData() {
       this.expenses = await getDashboardData<

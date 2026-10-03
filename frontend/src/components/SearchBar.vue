@@ -182,8 +182,6 @@ import {
   type CommandPaletteValue,
 } from 'frappe-ui-command-palette';
 
-const COMPONENT_NAME = 'SearchBar';
-
 export default defineComponent({
   components: {
     CommandPalette,
@@ -246,10 +244,10 @@ export default defineComponent({
     this.openModal = false;
   },
   deactivated() {
-    this.shortcuts?.delete(COMPONENT_NAME);
+    this.shortcuts?.delete(this);
   },
   unmounted() {
-    this.shortcuts?.delete(COMPONENT_NAME);
+    this.shortcuts?.delete(this);
   },
   watch: {
     openModal(open: boolean) {
@@ -290,7 +288,9 @@ export default defineComponent({
         return;
       }
 
-      this.shortcuts.pmod.set(COMPONENT_NAME, ['KeyK'], () => {
+      // Each page header has its own search bar, and a cached page's bar unmounts
+      // after the next page's bar sets this, so the bars must not share a context.
+      this.shortcuts.pmod.set(this, ['KeyK'], () => {
         if (!this.openModal) {
           this.open();
         }
@@ -301,12 +301,12 @@ export default defineComponent({
       }
 
       for (const { shortcut, callback } of this.getShortcuts()) {
-        this.shortcuts.pmod.set(COMPONENT_NAME, [shortcut], callback);
+        this.shortcuts.pmod.set(this, [shortcut], callback);
       }
     },
     clearFilterShortcuts() {
       for (const { shortcut } of this.getShortcuts()) {
-        this.shortcuts?.pmod.delete(COMPONENT_NAME, [shortcut]);
+        this.shortcuts?.pmod.delete(this, [shortcut]);
       }
     },
     open(): void {

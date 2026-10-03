@@ -6,7 +6,7 @@
       <div
         :id="viewfinderId"
         ref="viewfinder"
-        class="min-h-48 w-full overflow-hidden rounded-6 bg-surface-gray-9"
+        class="min-h-48 w-full overflow-hidden rounded-6 bg-black"
       />
       <p
         class="text-center text-p-base"

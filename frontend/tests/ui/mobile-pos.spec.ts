@@ -157,6 +157,42 @@ test('a submitted invoice from Held offers only its payment', async ({
   await expect(page.getByRole('button', { name: 'Submit only' })).toHaveCount(0);
 });
 
+test('a submitted invoice offers nothing that changes its totals', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.pos.selectedInvoiceName({
+      name: 'SINV-2026-0002',
+      docstatus: 1,
+    })
+  );
+  await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
+  await expect(page.getByText('Redeem loyalty points')).toHaveCount(0);
+  await expect(page.getByText('Apply coupon code')).toHaveCount(0);
+
+  await page.evaluate(() => {
+    const { pos, openSavedInvoice } = (window as any).posFixture;
+    pos.closeAllModals();
+    openSavedInvoice(1);
+  });
+  await page.getByRole('button', { name: /1 item/ }).click();
+  const cart = page.getByRole('dialog', { name: 'Cart', exact: true });
+  await expect(cart.getByRole('button', { name: /^Pay / })).toBeVisible();
+  for (const name of ['Hold', 'Increase', 'Decrease', 'Remove']) {
+    await expect(cart.getByRole('button', { name, exact: true })).toHaveCount(0);
+  }
+  await expect(cart.getByRole('combobox')).toHaveCount(0);
+  await expect(cart.getByRole('button', { name: 'Organic Assam Tea' })).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(cart).toBeHidden();
+
+  await page.getByRole('button', { name: 'POS actions' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Item Enquiry' })).toBeVisible();
+  for (const name of ['Loyalty Program', 'Coupon Code', 'Price List']) {
+    await expect(page.getByRole('menuitem', { name })).toHaveCount(0);
+  }
+});
+
 test('the menu opens each quick action as a sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const [row, title] of [

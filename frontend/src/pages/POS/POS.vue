@@ -16,7 +16,6 @@
         <MobilePOSMenu
           v-model:open="isMenuOpen"
           :enable-returns="enableReturns"
-          :loyalty-program="loyaltyProgram"
           :applied-coupons-count="appliedCouponsCount"
           @select="openMenuAction"
         />
@@ -110,7 +109,6 @@
           class="flex shrink-0 flex-col gap-3 border-t border-outline-gray-1 bg-surface-gray-1 px-4 pb-4 pt-3"
         >
           <POSPriceActions
-            :loyalty-program="loyaltyProgram"
             :applied-coupons-count="appliedCouponsCount"
             @open-coupon-code="openCouponCode"
             @open-loyalty-program="openLoyaltyProgram"
@@ -144,8 +142,6 @@
     />
     <LoyaltyProgramModal
       :open-modal="openLoyaltyProgramModal"
-      :loyalty-points="loyaltyPoints"
-      :loyalty-program="loyaltyProgram"
       @toggle-modal="toggleModal('LoyaltyProgram', false)"
       @set-loyalty-points="setLoyaltyPoints"
     />
@@ -176,8 +172,6 @@
     <PaymentModal
       ref="payment"
       :open-modal="openPaymentModal"
-      :loyalty-points="loyaltyPoints"
-      :loyalty-program="loyaltyProgram"
       :applied-coupons-count="appliedCouponsCount"
       @set-loyalty="setLoyalty"
       @apply-coupon="openCouponCode"
@@ -255,6 +249,7 @@ import {
   getPOSQuantityField,
 } from 'src/utils/pos';
 import { posCheckoutKey, usePOSCheckout } from 'src/utils/posCheckout';
+import { canApplyCoupon, canRedeemLoyalty } from 'src/utils/posDiscounts';
 import {
   getItemVisibility,
   getOpenPOSShift,
@@ -262,7 +257,7 @@ import {
   validateIsPosSettingsSet,
 } from 'src/utils/posSetup';
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
-import { getAllDocuments, getDocuments } from 'src/frappe/api';
+import { getAllDocuments } from 'src/frappe/api';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { getMappedDoc } from 'models/helpers';
 import { getItemQtyMap } from 'models/inventory/posStock';
@@ -344,10 +339,6 @@ export default defineComponent({
       isMenuOpen: false,
 
       totalQuantity: 0,
-
-      loyaltyPoints: 0,
-      loyaltyProgram: '' as string,
-
 
       itemSearchTerm: '',
       selectedItemGroup: '',
@@ -561,14 +552,6 @@ export default defineComponent({
 
       // Set as the user's choice, which previews keep instead of the POS customer.
       await this.sinvDoc.set('party', value);
-
-      const [party] = await getDocuments('Books Party', {
-        fields: ['loyalty_program', 'loyalty_points'],
-        filters: [['name', '=', value]],
-      });
-
-      this.loyaltyProgram = party?.loyalty_program as string;
-      this.loyaltyPoints = party?.loyalty_points as number;
     },
 
     async loadPOSProfile() {
@@ -648,25 +631,13 @@ export default defineComponent({
       });
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyL'], () => {
-        if (
-          this.fyo.singles.AccountingSettings?.enable_loyalty_program &&
-          this.loyaltyPoints &&
-          this.sinvDoc.party &&
-          this.sinvDoc.items?.length &&
-          this.loyaltyProgram &&
-          !this.sinvDoc.isSubmitted
-        ) {
+        if (canRedeemLoyalty(this.sinvDoc)) {
           this.toggleModal('LoyaltyProgram', true);
         }
       });
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyC'], () => {
-        if (
-          this.fyo.singles.AccountingSettings?.enable_coupon_code &&
-          this.sinvDoc?.party &&
-          this.sinvDoc?.items?.length &&
-          !this.sinvDoc.isSubmitted
-        ) {
+        if (canApplyCoupon(this.sinvDoc)) {
           this.toggleModal('CouponCode', true);
         }
       });
@@ -1066,18 +1037,14 @@ export default defineComponent({
       });
     },
     openCouponCode() {
-      if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {
+      if (!canApplyCoupon(this.sinvDoc)) {
         return this.showValidationToast('applying coupon');
       }
 
       this.toggleModal('CouponCode', true);
     },
     openLoyaltyProgram() {
-      if (
-        !this.sinvDoc.items?.length ||
-        !this.sinvDoc.party ||
-        !this.loyaltyPoints
-      ) {
+      if (!canRedeemLoyalty(this.sinvDoc)) {
         return this.showValidationToast('applying loyalty points');
       }
 

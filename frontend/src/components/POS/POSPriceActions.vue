@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="!sinvDoc.isSubmitted && (showCoupon || showLoyalty || showPriceList)"
+    v-if="showCoupon || showLoyalty || showPriceList"
     class="flex flex-wrap gap-1.5"
   >
     <FrappeButton
@@ -30,13 +30,11 @@ import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { fyo } from 'src/initFyo';
+import { canApplyCoupon, canRedeemLoyalty } from 'src/utils/posDiscounts';
 import { computed, inject, type Ref } from 'vue';
 
-/** Coupon, loyalty and price list actions, each shown when its feature is on and the sale can change. */
-const props = defineProps<{
-  loyaltyProgram?: string;
-  appliedCouponsCount?: number;
-}>();
+/** Coupon, loyalty and price list actions, each shown when the sale can take it. */
+const props = defineProps<{ appliedCouponsCount?: number }>();
 defineEmits<{
   openCouponCode: [];
   openLoyaltyProgram: [];
@@ -44,13 +42,15 @@ defineEmits<{
 }>();
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
-const settings = fyo.singles.AccountingSettings;
 
-const showCoupon = computed(() => !!settings?.enable_coupon_code);
-const showLoyalty = computed(
-  () => !!settings?.enable_loyalty_program && !!props.loyaltyProgram
+const showCoupon = computed(() => canApplyCoupon(sinvDoc.value));
+const showLoyalty = computed(() => canRedeemLoyalty(sinvDoc.value));
+// A submitted sale's totals are final.
+const showPriceList = computed(
+  () =>
+    !!fyo.singles.AccountingSettings?.enable_price_list &&
+    !sinvDoc.value.isSubmitted
 );
-const showPriceList = computed(() => !!settings?.enable_price_list);
 
 const couponLabel = computed(() => {
   const count = props.appliedCouponsCount ?? 0;

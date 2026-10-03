@@ -1,8 +1,6 @@
 <template>
   <MobilePayment
     v-if="isMobile && openModal"
-    :loyalty-points="loyaltyPoints"
-    :loyalty-program="loyaltyProgram"
     :applied-coupons-count="appliedCouponsCount"
     @set-loyalty="(on: boolean) => $emit('setLoyalty', on)"
     @apply-coupon="$emit('applyCoupon')"
@@ -157,8 +155,6 @@ export default defineComponent({
   },
   props: {
     openModal: Boolean,
-    loyaltyPoints: { type: Number, default: 0 },
-    loyaltyProgram: { type: String, default: '' },
     appliedCouponsCount: { type: Number, default: 0 },
   },
   emits: ['applyCoupon', 'createTransaction', 'setLoyalty', 'toggleModal'],

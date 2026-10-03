@@ -60,6 +60,9 @@ export class SalesInvoice extends Invoice {
   };
 
   coupons?: AppliedCouponCode[];
+  /** The customer's program and its points, as the server's preview fills them. */
+  loyalty_program?: string;
+  available_loyalty_points?: number;
 
   override hidden: HiddenMap = {
     ...this.hidden,

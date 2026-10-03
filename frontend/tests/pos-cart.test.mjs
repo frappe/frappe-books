@@ -80,7 +80,9 @@ test('every quantity change leaves serial numbers that no longer match to the se
     assert.equal('serial_number' in getSentRow(sale), false, String(change));
   }
 
-  const matching = makeSale([{ item: flour, quantity: 1, serial_number: 'S1\nS2' }]);
+  const matching = makeSale([
+    { item: flour, quantity: 1, serial_number: 'S1\nS2' },
+  ]);
   await posCart.setCartQuantity(matching.items[0], 2);
   assert.equal(getSentRow(matching).serial_number, 'S1\nS2');
 
@@ -191,6 +193,31 @@ test('a new cart row needs its item in stock and leaves its price to the server'
   for (const fieldname of ['rate', 'quantity', 'unit']) {
     assert.equal(fieldname in sent, false, fieldname);
   }
+});
+
+test('the item badge and the cart total count what the cart shows', () => {
+  setUOMConversions(true);
+  const sale = makeSale([
+    {
+      item: tea,
+      transfer_unit: 'Box',
+      unit_conversion_factor: 12,
+      transfer_quantity: 2,
+      quantity: 24,
+    },
+    { item: tea, transfer_quantity: 1, quantity: 1, is_free_item: true },
+    { item: flour, transfer_quantity: 0.5, quantity: 0.5 },
+  ]);
+  assert.deepEqual(posCart.getQuantityByItem(sale), { [tea]: 2, [flour]: 0.5 });
+  assert.equal(posCart.getTotalQuantity(sale.items), 3.5);
+
+  const returned = makeSale(
+    [{ item: tea, transfer_quantity: -2, quantity: -2 }],
+    {
+      return_against: 'SINV-1001',
+    }
+  );
+  assert.equal(posCart.getTotalQuantity(returned.items), 2);
 });
 
 test('a cart discount edit picks amount or percent discounts', async () => {

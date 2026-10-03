@@ -74,6 +74,9 @@
     @update:open="onComboboxOpen"
     @update:model-value="onComboboxValueChange"
   >
+    <template v-if="inlineLabel" #prefix>
+      <span class="shrink-0 text-ink-gray-5">{{ df.label }}</span>
+    </template>
     <template #suffix="{ open, clear, setOpen }">
       <!-- Pulled to the end so the buttons' hover backgrounds sit as far from the end edge as from the top and bottom. -->
       <div class="-me-[7px] flex shrink-0 items-center gap-0.5">

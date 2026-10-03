@@ -79,8 +79,6 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
-    /** Names the value inside the trigger where no label is shown. */
-    inlineLabel: Boolean,
   },
   data() {
     return {

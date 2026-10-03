@@ -15,7 +15,7 @@
     v-else
     ref="input"
     spellcheck="false"
-    :class="controlClasses"
+    :class="textInputClasses"
     :type="inputType"
     :inputmode="inputMode"
     :model-value="inputValue"
@@ -29,12 +29,15 @@
     :step="step"
     :max="isNumeric(df) ? df.maxvalue : undefined"
     :min="isNumeric(df) ? df.minvalue : undefined"
-    :style="containerStyles"
+    :style="textInputStyles"
     tabindex="0"
     @blur="onBlur"
     @focus="onFocus"
     @input="onInput"
   >
+    <template v-if="inlineLabel" #prefix>
+      <span class="text-ink-gray-5">{{ df.label }}</span>
+    </template>
     <template v-if="isBarcodeField" #suffix>
       <BarcodeScanButton
         variant="ghost"
@@ -89,6 +92,8 @@ export default defineComponent({
     },
     /** Phones mark a field red only once it has an error. */
     invalid: { type: Boolean, default: false },
+    /** Names the value inside the control where no label is shown. */
+    inlineLabel: Boolean,
   },
   emits: ['focus', 'input', 'change'],
   computed: {
@@ -143,6 +148,22 @@ export default defineComponent({
         classes.push('[&_[data-slot=control]]:border-outline-red-3');
       }
       return classes;
+    },
+    /** TextInput's prefix is sized for an icon, so the input makes room for the inline label. */
+    textInputClasses(): (string | string[])[] {
+      if (!this.inlineLabel) {
+        return this.controlClasses;
+      }
+
+      return [...this.controlClasses, '[&_input]:ps-[--inline-label-padding]'];
+    },
+    textInputStyles(): Record<string, string> {
+      if (!this.inlineLabel) {
+        return this.containerStyles;
+      }
+
+      const padding = `calc(${this.df.label.length}ch + 1rem)`;
+      return { ...this.containerStyles, '--inline-label-padding': padding };
     },
     doc(): FrappeDoc | undefined {
       const doc = this.injectedDoc;

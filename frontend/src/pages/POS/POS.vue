@@ -131,11 +131,16 @@
       </aside>
     </div>
 
-    <OpenPOSShiftModal v-if="shift.isLoaded && !shift.isOpen" :shift="shift" />
+    <OpenPOSShiftModal
+      v-if="shift.isLoaded && !shift.isOpen"
+      :shift="shift"
+      @opened="shift.refresh()"
+    />
     <ClosePOSShiftModal
       :open-modal="openShiftCloseModal"
       :shift="shift"
       @toggle-modal="toggleModal('ShiftClose', false)"
+      @closed="closeShift"
     />
     <LoyaltyProgramModal
       :open-modal="openLoyaltyProgramModal"
@@ -675,6 +680,10 @@ export default defineComponent({
     },
     toggleView() {
       this.tableView = !this.tableView;
+    },
+    async closeShift() {
+      await this.shift.refresh();
+      this.toggleModal('ShiftClose', false);
     },
     /** A new sale for the POS customer, whom the server's preview picks. */
     async setDefaultCustomer() {

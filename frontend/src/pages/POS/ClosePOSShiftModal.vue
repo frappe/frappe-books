@@ -190,7 +190,7 @@ export default defineComponent({
     },
     shift: { type: Object as PropType<POSShift>, required: true },
   },
-  emits: ['toggleModal'],
+  emits: ['toggleModal', 'closed'],
   setup() {
     return {
       isMobile,
@@ -281,9 +281,7 @@ export default defineComponent({
 
         await this.posClosingShiftDoc?.sync();
         await this.posClosingShiftDoc?.submit();
-        await this.shift.refresh();
-
-        this.$emit('toggleModal', 'ShiftClose');
+        this.$emit('closed');
       } catch (error) {
         return showToast({
           type: 'error',

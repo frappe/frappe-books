@@ -133,6 +133,7 @@ export default defineComponent({
   props: {
     shift: { type: Object as PropType<POSShift>, required: true },
   },
+  emits: ['opened'],
   setup() {
     return { isMobile, paymentMethodIcons };
   },
@@ -232,7 +233,7 @@ export default defineComponent({
       try {
         await this.posShiftDoc?.sync();
         await this.posShiftDoc?.submit();
-        await this.shift.refresh();
+        this.$emit('opened');
       } catch (error) {
         showToast({
           type: 'error',

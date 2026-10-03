@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { findScannedPOSItem } from './helpers/accounting.mjs';
-import { fyo, posItemSearch, stubFrappe } from './helpers/frappe.mjs';
+import { POS, fyo, posItemSearch, stubFrappe } from './helpers/frappe.mjs';
 
 const rice = {
   name: 'Basmati Rice',
@@ -94,4 +94,21 @@ test('a blank code looks nothing up', async () => {
   const requests = stubFrappe(() => ({ message: [riceRow] }));
   assert.equal(await posItemSearch.getScannedItem('  '), undefined);
   assert.equal(requests.length, 0);
+});
+
+test('a POS scan adds an item the POS does not list', async () => {
+  fyo.singles.POSSettings = {};
+  stubFrappe(() => ({ message: [riceRow] }));
+  const added = [];
+  const pos = {
+    items: [],
+    itemQtyMap: {},
+    itemSearchTerm: '',
+    addItem: async (item, quantity) => added.push([item.name, quantity]),
+  };
+
+  await POS.methods.handleItemSearch.call(pos, '890000000001', true);
+
+  assert.deepEqual(added, [['Basmati Rice', 1]]);
+  assert.equal(pos.itemSearchTerm, '');
 });

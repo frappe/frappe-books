@@ -39,9 +39,11 @@
       <span class="text-ink-gray-5">{{ df.label }}</span>
     </template>
     <template v-if="isBarcodeField" #suffix>
+      <!-- Pulled toward the edge so the 32px button sits 4px in, as from top and bottom. -->
       <BarcodeScanButton
+        class="-me-2"
         variant="ghost"
-        size="sm"
+        size="md"
         @scan="(code: string) => triggerChange(code)"
       />
     </template>

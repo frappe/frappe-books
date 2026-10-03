@@ -9,7 +9,13 @@
     @change="handleChange"
   >
     <template v-if="isMobile" #suffix>
-      <BarcodeScanButton variant="ghost" size="sm" @scan="selectItem" />
+      <!-- Pulled toward the edge so the 32px button sits 4px in, as from top and bottom. -->
+      <BarcodeScanButton
+        class="-me-2"
+        variant="ghost"
+        size="md"
+        @scan="selectItem"
+      />
     </template>
     <template v-else #prefix>
       <span

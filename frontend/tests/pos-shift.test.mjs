@@ -6,7 +6,7 @@ import {
   fyo,
   getSchema,
   newFrappeDoc,
-  posSetup,
+  posShift,
 } from './helpers/frappe.mjs';
 
 const OPEN_SHIFT =
@@ -27,7 +27,13 @@ const requests = await loadFrappeModels(frappeModels, (request) => {
   }
 
   if (path === '/api/method/frappe.client.get_list') {
-    return { message: [{ name: 'Cash' }, { name: 'Petty Cash' }] };
+    return {
+      message: [
+        { name: 'Cash', type: 'Cash' },
+        { name: 'Till', type: 'Cash' },
+        { name: 'Card', type: 'Bank' },
+      ],
+    };
   }
 
   if (path.endsWith('/Books Pos Opening Shift/SHIFT-1')) {
@@ -108,32 +114,33 @@ test('shift table headings show only their labels; the hints are placeholders', 
   );
 });
 
-test('the POS opens a new shift unless one is open', async () => {
+test('a shift shows once it opens and goes once it closes', async () => {
+  const shift = posShift.usePOSShift();
+  assert.equal(shift.isLoaded, false);
+
   openShift = null;
-  const opening = await posSetup.getPOSOpeningShiftDoc();
-  assert.equal(opening.notInserted, true);
-  assert.equal(opening.schemaName, 'POSOpeningShift');
+  await shift.refresh();
+  assert.deepEqual([shift.isLoaded, shift.isOpen], [true, false]);
+  assert.equal(shift.openedAt, undefined);
 
   openShift = 'SHIFT-1';
-  const open = await posSetup.getPOSOpeningShiftDoc();
-  assert.equal(open.name, 'SHIFT-1');
-  assert.equal(open.openingCashAmount.float, 200);
-  assert.equal(open.opening_amounts[0].payment_method, 'Cash');
+  await shift.refresh();
+  assert.equal(shift.isOpen, true);
+  // Frappe sends the opening time in the system time zone, Asia/Kolkata here.
+  assert.equal(shift.openedAt.toISOString(), '2026-10-01T03:30:00.000Z');
+  assert.equal(shift.openShift.openingCashAmount.float, 200);
+
+  openShift = null;
+  await shift.refresh();
+  assert.equal(shift.isOpen, false);
+  assert.equal(shift.openShift, undefined);
 });
 
-test('cash methods are all the payment methods of the Cash type', async () => {
-  requests.length = 0;
-  assert.deepEqual(await posSetup.getCashPaymentMethods(), [
-    'Cash',
-    'Petty Cash',
-  ]);
-  assert.deepEqual(requests[0].body, {
-    doctype: 'Books Payment Method',
-    fields: ['name'],
-    filters: [['type', '=', 'Cash']],
-    order_by: 'creation desc',
-    limit_page_length: 0,
-  });
+test('cash methods are the payment methods of the Cash type, whatever their name', async () => {
+  const shift = posShift.usePOSShift();
+  await shift.refresh();
+  assert.deepEqual(shift.cashMethods, ['Cash', 'Till']);
+  assert.deepEqual(Object.keys(shift.methodTypes), ['Cash', 'Till', 'Card']);
 });
 
 test('a closing shift shows the server expected amounts and keeps its rows', async () => {

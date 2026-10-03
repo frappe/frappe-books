@@ -61,3 +61,31 @@ test('an invoice that makes no shipment submits without a stock warning', async 
   assert.deepEqual(titles, ['Submit SINV-1001?']);
   assert.equal(submitted.make_auto_stock_transfer, 0);
 });
+
+test('the submit prompt tells the payment a sale or purchase makes', async () => {
+  fyo.singles.Defaults = {
+    sales_payment_account: 'Cash',
+    purchase_payment_account: 'Bank',
+  };
+  const messages = [];
+  dialog.confirm = ({ message, actions }) => {
+    messages.push(message.children.join(''));
+    void actions[1].onClick();
+  };
+  for (const [schemaName, account] of [
+    ['SalesInvoice', 'Debtors'],
+    ['PurchaseInvoice', 'Creditors'],
+  ]) {
+    const invoice = newFrappeDoc(schemaName, {
+      account,
+      make_auto_payment: true,
+      outstanding_amount: fyo.pesa(100),
+    });
+    clearTimeout(invoice._previewTimer);
+    Object.assign(invoice, { docstatus: 0, _notInserted: false, _dirty: false });
+    await commonDocSubmit(invoice);
+  }
+
+  assert.match(messages[0], /from account "Debtors" to account "Cash" on Submit/);
+  assert.match(messages[1], /from account "Bank" to account "Creditors" on Submit/);
+});

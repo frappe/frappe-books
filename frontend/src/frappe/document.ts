@@ -58,6 +58,13 @@ import { toDocValue, toDocValues, toFrappeValue } from './values';
 /** Runs a document's preview later; the returned function cancels it. */
 export type PreviewScheduler = (preview: () => void) => () => void;
 
+/** A warning the submit prompt shows first; a Yes runs `accept` and goes on. */
+export type SubmitWarning = {
+  title: string;
+  detail: string[];
+  accept: () => Promise<unknown>;
+};
+
 /** Previews once edits pause, so filled values follow the user without a request per keystroke. */
 export const afterPause: PreviewScheduler = (preview) => {
   const timer = setTimeout(preview, 300);
@@ -211,6 +218,21 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   /** What a form of the document is headed by. */
   get formTitle(): string {
     return this.name ?? '';
+  }
+
+  /** The kind of record the user sees, such as Customer for a customer party. */
+  get typeLabel(): string {
+    return this.schema.label || this.schemaName;
+  }
+
+  /** What else a submit does, which the submit prompt tells. */
+  get submitNote(): string | undefined {
+    return undefined;
+  }
+
+  /** A warning the user answers before a submit, if any. */
+  getSubmitWarning(): Promise<SubmitWarning | undefined> {
+    return Promise.resolve(undefined);
   }
 
   get quickEditFields() {

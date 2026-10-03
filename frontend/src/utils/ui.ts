@@ -9,10 +9,7 @@ import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
 import { ValueError } from 'fyo/utils/errors';
 import { getLedgerLink } from 'models/helpers';
-import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { Invoice } from 'models/invoices/Invoice';
-import { PurchaseInvoice } from 'models/invoices/PurchaseInvoice';
-import { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -120,7 +117,7 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
         isPrimary: true,
       },
       {
-        label: t`Keep ${getDocTypeLabel(doc)}`,
+        label: t`Keep ${doc.typeLabel}`,
         action() {
           return false;
         },
@@ -143,7 +140,7 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
     // Buttons name the outcome: "Cancel" alone could mean either answer.
     buttons: [
       {
-        label: t`Cancel ${getDocTypeLabel(doc)}`,
+        label: t`Cancel ${doc.typeLabel}`,
         async action() {
           try {
             await doc.cancel(payments);
@@ -157,7 +154,7 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
         isPrimary: true,
       },
       {
-        label: t`Keep ${getDocTypeLabel(doc)}`,
+        label: t`Keep ${doc.typeLabel}`,
         action() {
           return false;
         },
@@ -199,11 +196,6 @@ export function getActionsForDoc(doc?: FrappeDoc): Action[] {
     getCancelAction(doc),
   ];
 
-  if (doc?.schemaName === 'Party') {
-    const viewActions = getViewActions(doc);
-    actions.push(...viewActions);
-  }
-
   return actions
     .filter((d) => d.condition?.(doc) ?? true)
     .map((d) => {
@@ -244,28 +236,6 @@ export function getGroupedActionsForDoc(doc?: FrappeDoc): ActionGroup[] {
     .map((k) => actionsMap[k]);
 
   return [grouped, actionsMap['']].flat().filter(Boolean);
-}
-
-function getViewActions(doc: FrappeDoc): Action[] {
-  const actions: Action[] = [
-    {
-      label: t`General Ledger`,
-      group: t`View`,
-      condition: (doc: FrappeDoc) =>
-        doc.schemaName === 'Party' && doc.inserted,
-      action: async () => {
-        await router.push({
-          path: '/report/GeneralLedger',
-          query: {
-            defaultFilters: JSON.stringify({
-              party: doc.name,
-            }),
-          },
-        });
-      },
-    },
-  ];
-  return actions;
 }
 
 function getCancelAction(doc: FrappeDoc): Action {
@@ -571,10 +541,7 @@ async function syncWithoutDialog(doc: FrappeDoc): Promise<boolean> {
 }
 
 export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
-  if (
-    doc instanceof SalesInvoice &&
-    !(await showInsufficientInventoryDialog(doc))
-  ) {
+  if (!(await confirmSubmitWarning(doc))) {
     return false;
   }
 
@@ -587,44 +554,26 @@ export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
   return true;
 }
 
-/** The server refuses the shipment of short stock, so Yes submits without it. */
-async function showInsufficientInventoryDialog(doc: SalesInvoice) {
-  if (!doc.make_auto_stock_transfer) {
+/** The model's warning before a submit; a Yes accepts it, a No stops the submit. */
+async function confirmSubmitWarning(doc: FrappeDoc): Promise<boolean> {
+  const warning = await doc.getSubmitWarning();
+  if (!warning) {
     return true;
   }
 
-  const insufficient = await getInsufficientItems(doc);
-  if (insufficient.length) {
-    const buttons = [
-      {
-        label: t`Yes`,
-        action: async () => await doc.set('make_auto_stock_transfer', false),
-        isPrimary: true,
-      },
-      {
-        label: t`No`,
-        action: () => false,
-        isEscape: true,
-      },
-    ];
-
-    const list = insufficient
-      .map(({ item, quantity }) => `${item} (${quantity})`)
-      .join(', ');
-    const detail = [
-      t`The following items have insufficient quantity for Shipment: ${list}`,
-      t`Continue submitting Sales Invoice?`,
-    ];
-
-    return (await showDialog({
-      title: t`Insufficient quantity`,
-      type: 'warning',
-      detail,
-      buttons,
-    })) as boolean;
-  }
-
-  return true;
+  const accept = async () => {
+    await warning.accept();
+    return true;
+  };
+  return (await showDialog({
+    title: warning.title,
+    type: 'warning',
+    detail: warning.detail,
+    buttons: [
+      { label: t`Yes`, action: accept, isPrimary: true },
+      { label: t`No`, action: () => false, isEscape: true },
+    ],
+  })) as boolean;
 }
 
 async function showSubmitOrSyncDialog(doc: FrappeDoc, type: 'submit' | 'sync') {
@@ -700,27 +649,8 @@ function getDocSyncMessage(doc: FrappeDoc): string {
 }
 
 function getDocSubmitMessage(doc: FrappeDoc): string {
-  const details = [t`Mark ${doc.schema.label} as submitted?`];
-
-  if (doc instanceof SalesInvoice && doc.make_auto_payment) {
-    const toAccount = doc.autoPaymentAccount!;
-    const fromAccount = doc.account!;
-    const amount = fyo.format(doc.outstanding_amount, 'Currency');
-
-    details.push(
-      t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,
-    );
-  } else if (doc instanceof PurchaseInvoice && doc.make_auto_payment) {
-    const fromAccount = doc.autoPaymentAccount!;
-    const toAccount = doc.account!;
-    const amount = fyo.format(doc.outstanding_amount, 'Currency');
-
-    details.push(
-      t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,
-    );
-  }
-
-  return details.join(' ');
+  const question = t`Mark ${doc.schema.label} as submitted?`;
+  return [question, doc.submitNote].filter(Boolean).join(' ');
 }
 
 function showActionToast(doc: FrappeDoc, type: 'sync' | 'cancel' | 'delete') {
@@ -800,25 +730,8 @@ export function showCannotCancelOrDeleteToast(doc: FrappeDoc) {
   showToast({ type: 'warning', message, duration: 'short' });
 }
 
-/** The kind of record the user sees, such as Customer for a customer party. */
-function getDocTypeLabel(doc: FrappeDoc) {
-  if (doc.schemaName === ModelNameEnum.Party) {
-    const roleLabels: Record<string, string> = {
-      Customer: t`Customer`,
-      Supplier: t`Supplier`,
-    };
-    return roleLabels[doc.role as string] ?? t`Party`;
-  }
-
-  if (doc.schemaName === ModelNameEnum.Account && doc.is_group) {
-    return t`Group`;
-  }
-
-  return doc.schema.label || doc.schemaName;
-}
-
 function getDocReferenceLabel(doc: FrappeDoc) {
-  const label = getDocTypeLabel(doc);
+  const label = doc.typeLabel;
   if (doc.schema.naming === 'random') {
     return label;
   }

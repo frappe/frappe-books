@@ -1,5 +1,5 @@
 import { Fyo } from 'fyo';
-import { Converter } from 'fyo/utils/converter';
+import { toFrappeValue } from 'src/frappe/values';
 import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import Observable from 'fyo/utils/observable';
@@ -92,7 +92,7 @@ export abstract class Report extends Observable<RawValue> {
     // Clearing works for every field type, including checks.
     value = getIsNullOrUndef(value)
       ? null
-      : Converter.toRawValue(value, field, this.fyo);
+      : toFrappeValue(value, field, this.fyo);
     const prevValue = this[key];
     if (prevValue === value) {
       return;

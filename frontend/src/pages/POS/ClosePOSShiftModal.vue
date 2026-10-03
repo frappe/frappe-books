@@ -161,16 +161,12 @@ import {
   POSClosingShift,
 } from 'models/inventory/Point of Sale/POSClosingShift';
 import { newFrappeDoc } from 'src/frappe/documents';
-import { computed } from 'vue';
+import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
-import {
-  getCashPaymentMethods,
-  getPOSOpeningShiftDoc,
-  validateClosingAmounts,
-} from 'src/utils/posSetup';
+import type { POSShift } from 'src/utils/posShift';
 import { ForbiddenError } from 'fyo/utils/errors';
 
 export default defineComponent({
@@ -192,6 +188,7 @@ export default defineComponent({
       default: false,
       type: Boolean,
     },
+    shift: { type: Object as PropType<POSShift>, required: true },
   },
   emits: ['toggleModal'],
   setup() {
@@ -205,7 +202,6 @@ export default defineComponent({
       isValuesSeeded: false,
 
       posClosingShiftDoc: undefined as POSClosingShift | undefined,
-      cashMethods: [] as string[],
     };
   },
   computed: {
@@ -219,7 +215,7 @@ export default defineComponent({
     /** Cash methods share the drawer count; the others are counted one by one. */
     cashClosingAmounts(): ClosingAmount[] {
       return this.closingAmounts.filter((row) =>
-        this.cashMethods.includes(row.payment_method as string)
+        this.shift.cashMethods.includes(row.payment_method as string)
       );
     },
     otherClosingAmounts(): ClosingAmount[] {
@@ -248,9 +244,8 @@ export default defineComponent({
      */
     async prepareShift() {
       this.isValuesSeeded = false;
-      this.cashMethods = await getCashPaymentMethods();
-      const opening = await getPOSOpeningShiftDoc();
-      const closingCash = (opening.opening_cash ?? []).map(
+      const openingCash = this.shift.openShift?.opening_cash ?? [];
+      const closingCash = openingCash.map(
         ({ count, denomination }) => ({ count, denomination })
       );
       this.posClosingShiftDoc = newFrappeDoc(ModelNameEnum.POSClosingShift, {
@@ -284,9 +279,9 @@ export default defineComponent({
           );
         }
 
-        validateClosingAmounts(this.posClosingShiftDoc as POSClosingShift);
         await this.posClosingShiftDoc?.sync();
         await this.posClosingShiftDoc?.submit();
+        await this.shift.refresh();
 
         this.$emit('toggleModal', 'ShiftClose');
       } catch (error) {

@@ -99,6 +99,15 @@ export class Party extends FrappeDoc {
     }
   }
 
+  /** A customer or supplier goes by its role; a party of both roles stays a Party. */
+  override get typeLabel(): string {
+    const roleLabels: Record<string, string> = {
+      Customer: this.fyo.t`Customer`,
+      Supplier: this.fyo.t`Supplier`,
+    };
+    return roleLabels[this.role ?? ''] ?? this.fyo.t`Party`;
+  }
+
   static getActions(fyo: Fyo): Action[] {
     return [
       getMappedDocAction({
@@ -135,6 +144,21 @@ export class Party extends FrappeDoc {
           });
         },
       },
+      getGeneralLedgerAction(fyo),
     ];
   }
+}
+
+function getGeneralLedgerAction(fyo: Fyo): Action {
+  return {
+    label: fyo.t`General Ledger`,
+    group: fyo.t`View`,
+    condition: (doc: FrappeDoc) => doc.inserted,
+    action: async (partyDoc, router) => {
+      await router.push({
+        path: '/report/GeneralLedger',
+        query: { defaultFilters: JSON.stringify({ party: partyDoc.name }) },
+      });
+    },
+  };
 }

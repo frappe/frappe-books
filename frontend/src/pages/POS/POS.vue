@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col" :class="isMobile ? 'min-h-full' : 'min-h-0'">
     <PageHeader :title="isMobile ? mobileTitle : t`Point of Sale`">
-      <template v-if="isMobile && isPosShiftOpen" #mobile-prefix>
+      <template v-if="isMobile && shift.isOpen" #mobile-prefix>
         <!-- PageHeaderBackButton's look; its click can't wait for the leave prompt. -->
         <FrappeButton
           variant="ghost"
@@ -12,7 +12,7 @@
           @click="openPaymentModal ? cancelPayment() : routeToSinvList()"
         />
       </template>
-      <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>
+      <template v-if="shift.isOpen && !openPaymentModal" #mobile>
         <MobilePOSMenu
           v-model:open="isMenuOpen"
           :enable-returns="enableReturns"
@@ -133,13 +133,10 @@
       </aside>
     </div>
 
-    <OpenPOSShiftModal
-      v-if="!isPosShiftOpen"
-      :open-modal="!isPosShiftOpen"
-      @toggle-modal="toggleModal('ShiftOpen')"
-    />
+    <OpenPOSShiftModal v-if="shift.isLoaded && !shift.isOpen" :shift="shift" />
     <ClosePOSShiftModal
       :open-modal="openShiftCloseModal"
+      :shift="shift"
       @toggle-modal="toggleModal('ShiftClose', false)"
     />
     <LoyaltyProgramModal
@@ -268,11 +265,10 @@ import {
 } from 'src/utils/pos';
 import {
   getItemVisibility,
-  getOpenPOSShift,
   getPOSProfile,
   validateIsPosSettingsSet,
 } from 'src/utils/posSetup';
-import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
+import { usePOSShift } from 'src/utils/posShift';
 import { getAllDocuments, getDocuments } from 'src/frappe/api';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { getMappedDoc } from 'models/helpers';
@@ -341,6 +337,7 @@ export default defineComponent({
     return {
       isMobile,
       shortcuts: inject(shortcutsKey),
+      shift: usePOSShift(),
     };
   },
   data() {
@@ -359,8 +356,6 @@ export default defineComponent({
       openLoyaltyProgramModal: false,
       openReturnSalesInvoiceModal: false,
       openBatchSelectionModal: false,
-      isPosShiftOpen: false,
-      shiftOpenedAt: undefined as Date | undefined,
       isMenuOpen: false,
 
       totalQuantity: 0,
@@ -426,14 +421,15 @@ export default defineComponent({
       return [name, date].filter(Boolean).join(' · ');
     },
     shiftSubtitle(): string {
-      if (!this.shiftOpenedAt) {
+      const openedAt = this.shift.openedAt;
+      if (!openedAt) {
         return '';
       }
 
-      const opened = DateTime.fromJSDate(this.shiftOpenedAt);
+      const opened = DateTime.fromJSDate(openedAt);
       const time = opened.hasSame(DateTime.now(), 'day')
         ? opened.toLocaleString(DateTime.TIME_SIMPLE)
-        : fyo.format(this.shiftOpenedAt, 'Date');
+        : fyo.format(openedAt, 'Date');
       return t`Shift opened ${time}`;
     },
     disablePayButton(): boolean {
@@ -477,7 +473,7 @@ export default defineComponent({
   },
 
   async mounted() {
-    await this.setIsPosShiftOpen();
+    await this.shift.refresh();
     await this.loadPOSProfile();
     await this.setDefaultCustomer();
     await this.setItemQtyMap();
@@ -485,7 +481,7 @@ export default defineComponent({
   },
   async activated() {
     toggleSidebar(false);
-    await this.setIsPosShiftOpen();
+    await this.shift.refresh();
     await this.loadPOSProfile();
     validateIsPosSettingsSet(this.posProfile as POSProfile | null);
     await this.setDefaultCustomer();
@@ -1047,26 +1043,7 @@ export default defineComponent({
         this.sinvDoc.party = '';
       }
     },
-    async setIsPosShiftOpen() {
-      const shift = await getOpenPOSShift();
-      this.isPosShiftOpen = !!shift;
-      this.shiftOpenedAt = shift
-        ? (
-            (await getFrappeDoc(
-              ModelNameEnum.POSOpeningShift,
-              shift
-            )) as POSOpeningShift
-          ).opening_date
-        : undefined;
-    },
-    toggleModal(modal: ModalName | 'ShiftOpen', value?: boolean) {
-      if (modal === 'ShiftOpen' || modal === 'ShiftClose') {
-        void this.setIsPosShiftOpen();
-      }
-      if (modal === 'ShiftOpen') {
-        return;
-      }
-
+    toggleModal(modal: ModalName, value?: boolean) {
       if (value !== undefined) {
         return (this[`open${modal}Modal`] = value);
       }

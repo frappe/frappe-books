@@ -1,7 +1,9 @@
 import { Fyo } from 'fyo';
 import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
+import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { ModelNameEnum } from 'models/types';
+import type { SubmitWarning } from 'src/frappe/document';
 import { AppliedCouponCode } from './AppliedCouponCode';
 import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { SalesInvoiceItem } from './InvoiceItem';
@@ -68,6 +70,31 @@ export class SalesInvoice extends Invoice {
     pricing_rule_detail: () =>
       !this.fyo.singles.AccountingSettings?.enable_pricing_rule,
   };
+
+  /** The server ships no short stock, so a Yes submits without the shipment. */
+  override async getSubmitWarning(): Promise<SubmitWarning | undefined> {
+    if (!this.make_auto_stock_transfer) {
+      return undefined;
+    }
+
+    const insufficient = await getInsufficientItems(this);
+    if (!insufficient.length) {
+      return undefined;
+    }
+
+    const list = insufficient
+      .map(({ item, quantity }) => `${item} (${quantity})`)
+      .join(', ');
+    return {
+      title: this.fyo.t`Insufficient quantity`,
+      detail: [
+        this.fyo
+          .t`The following items have insufficient quantity for Shipment: ${list}`,
+        this.fyo.t`Continue submitting Sales Invoice?`,
+      ],
+      accept: () => this.set('make_auto_stock_transfer', false),
+    };
+  }
 
   static getListViewSettings(): ListViewSettings {
     return {

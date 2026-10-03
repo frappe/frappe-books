@@ -14,6 +14,7 @@ import {
   registerFrappeModels,
   stubFrappe,
 } from './helpers/frappe.mjs';
+import { baseTemplate } from '../src/utils/printFormats.ts';
 import { getLayout } from './helpers/models.mjs';
 import { previousForms } from './helpers/previousForms.mjs';
 
@@ -362,4 +363,65 @@ test('the Print tab shows the fields, placeholders, colours and sections it show
   assert.equal(hidden(settings, 'terms_and_conditions'), true);
   settings.displaytermsandconditions = true;
   assert.equal(hidden(settings, 'terms_and_conditions'), false);
+});
+
+test("the Print tab font is Frappe's print font, set through its method when changed", async () => {
+  const settings = newFrappeDoc('PrintSettings');
+  const saved = { ...settings.getFrappeValues(), font: 'Arial' };
+  const requests = stubFrappe(({ method, body }) => {
+    if (method === 'GET') {
+      return { data: saved };
+    }
+
+    return method === 'PUT' ? { data: body } : { message: null };
+  });
+  await settings.load();
+  assert.deepEqual(
+    getSchema('PrintSettings')
+      .fields.find(({ fieldname }) => fieldname === 'font')
+      .options.map(({ value }) => value),
+    [
+      'Default',
+      'Helvetica Neue',
+      'Arial',
+      'Helvetica',
+      'Inter',
+      'Verdana',
+      'Monospace',
+    ]
+  );
+
+  await settings.set('company_name', 'Lin Traders');
+  requests.length = 0;
+  await settings.sync();
+  assert.deepEqual(
+    requests.map(({ method }) => method),
+    ['PUT']
+  );
+
+  await settings.set('font', 'Monospace');
+  requests.length = 0;
+  await settings.sync();
+  assert.deepEqual(requests.map(({ path, body }) => [path, body]).slice(0, 1), [
+    [
+      '/api/method/frappe_books.frappe_books.doctype.books_print_settings.books_print_settings.set_font',
+      { font: 'Monospace' },
+    ],
+  ]);
+
+  const permissions = fyo.store.permissions;
+  const canWrite = ['Books Print Settings'];
+  fyo.store.permissions = {
+    doctypes: { PrintSettings: 'Books Print Settings' },
+    user: { can_write: canWrite },
+  };
+  assert.equal(readOnly(settings, 'font'), true);
+  assert.equal(readOnly(settings, 'company_name'), false);
+  canWrite.push('Print Settings');
+  assert.equal(readOnly(settings, 'font'), false);
+  fyo.store.permissions = permissions;
+});
+
+test("a new template prints in Frappe's print font", () => {
+  assert.equal(baseTemplate.includes('font-family'), false);
 });

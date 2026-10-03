@@ -50,14 +50,17 @@ def _prepare_return(invoice, credit_note):
 
 def return_unreturned_rows(original, return_doc):
 	"""Negate each row, limited to what earlier returns have not taken back."""
+	# Imported here: inventory.returns imports this module.
+	from frappe_books.inventory.returns import batch_quantities
+
 	returned_rows = _submitted_returns(original)[1]
-	remaining = _batch_quantities(original.items)
-	for key, quantity in _batch_quantities(returned_rows).items():
+	remaining = batch_quantities(original.items)
+	for key, quantity in batch_quantities(returned_rows).items():
 		remaining[key] -= quantity
 	returned_serials = {serial for row in returned_rows for serial in parse_serial_numbers(row.serial_number)}
 	rows = []
 	for row in return_doc.items:
-		key = (row.item, row.batch)
+		key = (row.item, row.batch or "")
 		quantity = min(abs(as_decimal(row.quantity)), remaining[key])
 		remaining[key] -= quantity
 		if quantity > 0:
@@ -177,11 +180,4 @@ def _item_quantities(rows):
 	quantities = defaultdict(as_decimal)
 	for row in rows:
 		quantities[row.item] += abs(as_decimal(row.quantity))
-	return quantities
-
-
-def _batch_quantities(rows):
-	quantities = defaultdict(as_decimal)
-	for row in rows:
-		quantities[row.item, row.batch] += abs(as_decimal(row.quantity))
 	return quantities

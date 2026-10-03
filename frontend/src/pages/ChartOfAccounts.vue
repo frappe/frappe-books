@@ -84,6 +84,7 @@
         <FrappeSkeleton class="h-4 rounded-4" :class="width" />
       </div>
     </div>
+    <!-- Not dialog.prompt: it neither focuses the field nor submits on Enter (frappe/frappe-ui#1264). -->
     <FrappeDialog
       :open="!!addingParent"
       :title="newAccountTitle"

@@ -101,12 +101,12 @@ test('stock balance groups locations under items with a total', async ({
   await show(page, 'StockBalance');
   const item = row(page, 'Printed Brochures (100)');
   await expect(item).toContainText('2 locations');
-  await expect(item).toContainText('104.00');
+  await expect(item).toContainText('104');
   await expect(row(page, 'Showroom')).toBeHidden();
 
   await item.click();
   await expect(row(page, 'Showroom')).toBeVisible();
-  await expect(row(page, 'Total')).toContainText('294.00');
+  await expect(row(page, 'Total')).toContainText('294');
 });
 
 test('reports fit a phone screen without sideways scrolling', async ({

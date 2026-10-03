@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   errors,
   FrappeDoc,
+  fyo,
   getFrappeDoc,
   loadFrappeDocTypes,
   newFrappeDoc,
@@ -55,6 +56,8 @@ const noteMeta = {
       label: 'Reference',
       set_only_once: 1,
     },
+    { fieldname: 'amount', fieldtype: 'Currency', label: 'Amount' },
+    { fieldname: 'held_on', fieldtype: 'Date', label: 'Held On' },
   ],
 };
 
@@ -175,4 +178,23 @@ test('conditions read the values once per change: after an edit or a preview', a
   assert.equal(state(note, 'due_on').required, false);
   assert.deepEqual(missing(note), ['owner_note']);
   assert.equal(reads, 3);
+});
+
+test('an amount or a date changed back to its saved value is unchanged', async () => {
+  stubFrappe(() => ({
+    data: { name: 'N-2', amount: 12.5, held_on: '2026-10-01' },
+  }));
+  const note = await getFrappeDoc('Note', 'N-2');
+  const savedDate = note.held_on.getTime();
+  assert.equal(note.isChanged('amount'), false);
+
+  await note.set('amount', fyo.pesa(15));
+  await note.set('held_on', new Date('2026-10-02'));
+  assert.equal(note.isChanged('amount'), true);
+  assert.equal(note.isChanged('held_on'), true);
+
+  await note.set('amount', fyo.pesa(12.5));
+  await note.set('held_on', new Date(savedDate));
+  assert.equal(note.isChanged('amount'), false);
+  assert.equal(note.isChanged('held_on'), false);
 });

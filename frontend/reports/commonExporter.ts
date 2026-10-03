@@ -3,11 +3,12 @@ import { Action } from 'fyo/model/types';
 import { toSchemaName } from 'src/frappe/registry';
 import { downloadFile } from 'src/utils/browser';
 import { showToast } from 'src/utils/interactive';
+import { getFloatPrecision } from 'src/utils/precision';
 import { getIsNullOrUndef } from 'utils';
 import { generateCSV } from 'utils/csvParser';
 import { Report } from './Report';
 import { canExportReport } from './serverReport';
-import { ExportExtension, ReportCell } from './types';
+import { ColumnField, ExportExtension, ReportCell } from './types';
 
 // Reports hold reference types as doctypes; files name them by schema, e.g. `SalesInvoice`.
 const REFERENCE_FIELDNAMES = ['reference_type', 'referenceType'];
@@ -98,7 +99,7 @@ export function getJsonData(report: Report): string {
 
     const rowObj: Record<string, unknown> = {};
     for (let c = 0; c < row.cells.length; c++) {
-      const { label, fieldname } = columns[c];
+      const column = columns[c];
       const cell = row.cells[c];
       // If the cell's display value is empty (due to hideGroupAmounts or similar),
       // export empty string instead of the rawValue
@@ -106,9 +107,9 @@ export function getJsonData(report: Report): string {
       if (cell.value === '' && row.isGroup) {
         cellValue = '';
       } else {
-        cellValue = getValueFromCell(cell, fieldname, displayPrecision);
+        cellValue = getValueFromCell(cell, column, displayPrecision);
       }
-      rowObj[label] = cellValue;
+      rowObj[column.label] = cellValue;
     }
 
     exportObject.rows.push(rowObj);
@@ -164,9 +165,7 @@ function convertReportToCSVMatrix(report: Report): unknown[][] {
       if (cell.value === '' && row.isGroup) {
         csvrow.push('');
       } else {
-        csvrow.push(
-          getValueFromCell(cell, columns[c].fieldname, displayPrecision)
-        );
+        csvrow.push(getValueFromCell(cell, columns[c], displayPrecision));
       }
     }
 
@@ -178,26 +177,28 @@ function convertReportToCSVMatrix(report: Report): unknown[][] {
 
 function getValueFromCell(
   cell: ReportCell,
-  fieldname: string,
+  column: ColumnField,
   displayPrecision: number
 ) {
-  const rawValue = toExportValue(fieldname, cell.rawValue);
+  const rawValue = toExportValue(column.fieldname, cell.rawValue);
 
   if (rawValue instanceof Date) {
     return rawValue.toISOString();
   }
 
   if (typeof rawValue === 'number') {
-    const value = rawValue.toFixed(displayPrecision);
+    // The display precision is for amounts; Floats take Frappe's float precision.
+    const precision =
+      column.fieldtype === 'Float'
+        ? (getFloatPrecision() ?? 3)
+        : displayPrecision;
+    const value = rawValue.toFixed(precision);
 
     /**
      * remove insignificant zeroes
      */
-    if (
-      displayPrecision > 0 &&
-      value.endsWith('0'.repeat(displayPrecision))
-    ) {
-      return value.slice(0, -displayPrecision - 1);
+    if (precision > 0 && value.endsWith('0'.repeat(precision))) {
+      return value.slice(0, -precision - 1);
     }
 
     return value;

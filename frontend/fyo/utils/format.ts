@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import type { FrappeDoc } from 'src/frappe/document';
 import { DateTime } from 'luxon';
 import { Field, FieldType, FieldTypeEnum } from 'schemas/types';
+import { getFloatPrecision } from 'src/utils/precision';
 import { getIsNullOrUndef, safeParseFloat, titleCase } from 'utils';
 import { getOptionList, isPesa } from '.';
 import {
@@ -24,7 +25,7 @@ export function format(
   const field: Field = getField(df);
 
   if (field.fieldtype === FieldTypeEnum.Float) {
-    return Number(value).toFixed(fyo.singles.SystemSettings?.display_precision);
+    return formatFloat(value, fyo);
   }
 
   if (field.fieldtype === FieldTypeEnum.Int) {
@@ -59,6 +60,16 @@ export function format(
   }
 
   return String(value);
+}
+
+/** Desk's Float formatter: the float precision, else 3 decimals, and none for a whole number. */
+function formatFloat(value: unknown, fyo: Fyo): string {
+  if (getIsNullOrUndef(value)) {
+    return '';
+  }
+
+  const isWhole = safeParseFloat(value) % 1 === 0;
+  return formatNumber(value, fyo, isWhole ? 0 : (getFloatPrecision() ?? 3));
 }
 
 function toDatetime(value: unknown): DateTime | null {

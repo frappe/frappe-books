@@ -145,6 +145,22 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('a long price list name wraps instead of leaving the cart', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const { state } = (window as any).posFixture;
+    state.invoice.price_list = 'Partner Price List 2026-27 for Resellers';
+  });
+  const cart = page.getByRole('complementary', { name: 'Cart' });
+  const priceList = cart.getByRole('button', { name: /Partner Price List/ });
+  const cartBox = (await cart.boundingBox())!;
+  const buttonBox = (await priceList.boundingBox())!;
+  expect(buttonBox.x + buttonBox.width).toBeLessThanOrEqual(
+    cartBox.x + cartBox.width
+  );
+});
+
 test('a held sale reopens as saved after its cart was edited', async ({
   page,
 }) => {

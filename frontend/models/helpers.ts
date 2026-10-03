@@ -14,50 +14,13 @@ import type { FrappeDoc } from 'src/frappe/document';
 import type { Invoice as InvoiceDoc } from './invoices/Invoice';
 import { Money } from 'pesa';
 import { Router } from 'vue-router';
-import type { DocValues } from 'src/frappe/api';
 import { getDocType } from 'src/frappe/doctypes';
-import { getMappedFrappeDoc, getMapperValues } from 'src/frappe/documents';
+import { getMappedDoc } from 'src/frappe/documents';
 import { toFrappeValue } from 'src/frappe/values';
 import { DateTime } from 'luxon';
 
-const MAPPER_MODULES: Record<string, string> = {
-  Item: 'frappe_books.frappe_books.doctype.books_item.books_item',
-  Lead: 'frappe_books.frappe_books.doctype.books_lead.books_lead',
-  Party: 'frappe_books.frappe_books.doctype.books_party.books_party',
-  SalesInvoice:
-    'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice',
-  PurchaseInvoice:
-    'frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice',
-  SalesQuote:
-    'frappe_books.frappe_books.doctype.books_sales_quote.books_sales_quote',
-  Shipment: 'frappe_books.frappe_books.doctype.books_shipment.books_shipment',
-  PurchaseReceipt:
-    'frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt',
-};
-
-/** The unsaved `schemaName` document a server mapper, such as make_return, builds from `source`. */
-export async function getMappedDoc(
-  source: FrappeDoc,
-  schemaName: string,
-  mapper: string
-): Promise<FrappeDoc> {
-  const method = getMapperMethod(source.schemaName, mapper);
-  return await getMappedFrappeDoc(schemaName, method, source.name!);
-}
-
-/** What a server mapper builds from the `sourceSchemaName` document `sourceName`, in Frappe fieldnames. */
-export async function getMappedValues(
-  sourceSchemaName: string,
-  sourceName: string,
-  mapper: string
-): Promise<DocValues> {
-  const method = getMapperMethod(sourceSchemaName, mapper);
-  return await getMapperValues(method, sourceName);
-}
-
-function getMapperMethod(sourceSchemaName: string, mapper: string) {
-  return `${MAPPER_MODULES[sourceSchemaName]}.${mapper}`;
-}
+// POS.vue imports it from here.
+export { getMappedDoc } from 'src/frappe/documents';
 
 export function getQuoteActions(
   fyo: Fyo,

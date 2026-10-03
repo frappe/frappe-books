@@ -16,7 +16,7 @@ await build({
     contents: `
       export { FrappeDoc, afterPause, setPreviewScheduler } from './src/frappe/document';
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
-      export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
+      export { getFrappeDoc, getFrappeDocOrNew, getMappedDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';
@@ -32,7 +32,7 @@ await build({
       export { getRowSummary } from './src/components/Controls/rowSummary';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels } from './models';
-      export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
+      export { getLedgerLink, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getNewDocValues } from './src/utils/misc';
       export { getFilterFields } from './src/utils/filterFields';
@@ -124,7 +124,6 @@ export const {
   getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
-  getMappedFrappeDoc,
   newFrappeDoc,
   useBooksDoc,
   evaluateCondition,

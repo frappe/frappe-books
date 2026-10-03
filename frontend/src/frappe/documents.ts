@@ -35,24 +35,25 @@ export function newFrappeDoc(
   return doc;
 }
 
-/** What a whitelisted server mapper, like an invoice's make_payment, builds from `sourceName`. */
-export async function getMapperValues(
-  method: string,
-  sourceName: string
+/** What the source DocType's server `mapper`, like an invoice's make_payment, builds from its document `sourceName`. */
+export async function getMappedValues(
+  sourceSchemaName: string,
+  sourceName: string,
+  mapper: string
 ): Promise<DocValues> {
   return await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
-    method,
+    method: `${getControllerModule(sourceSchemaName)}.${mapper}`,
     source_name: sourceName,
   });
 }
 
-/** The unsaved document a whitelisted server mapper, like an invoice's make_payment, builds. */
-export async function getMappedFrappeDoc(
+/** The unsaved `schemaName` document that the server `mapper` of `source`, like make_return, builds from it. */
+export async function getMappedDoc(
+  source: FrappeDoc,
   schemaName: string,
-  method: string,
-  sourceName: string
+  mapper: string
 ): Promise<FrappeDoc> {
-  const mapped = await getMapperValues(method, sourceName);
+  const mapped = await getMappedValues(source.schemaName, source.name!, mapper);
   const values = toDocValues(
     getDocType(schemaName).schema,
     mapped,
@@ -64,6 +65,18 @@ export async function getMappedFrappeDoc(
     ([, value]) => !getIsNullOrUndef(value)
   );
   return newFrappeDoc(schemaName, Object.fromEntries(setValues));
+}
+
+/** The module of a Books DocType's controller, as Frappe's `get_module_name` builds it. */
+function getControllerModule(schemaName: string): string {
+  const { doctype, meta } = getDocType(schemaName);
+  const name = scrub(doctype);
+  return `frappe_books.${scrub(meta.module!)}.doctype.${name}.${name}`;
+}
+
+/** Frappe's `scrub`: `Books Sales Invoice` becomes `books_sales_invoice`. */
+function scrub(text: string): string {
+  return text.replace(/[ -]/g, '_').toLowerCase();
 }
 
 /** An open document, reloaded if asked and unedited, or the saved one loaded. */

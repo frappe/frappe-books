@@ -29,9 +29,11 @@ stubFrappe(({ path, body }) =>
     ? { message: getBooksMeta(body.doctypes) }
     : { data: [] }
 );
-registerFrappeModels(
-  Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]]))
-);
+// A transfer is mapped from a sales invoice.
+registerFrappeModels({
+  ...Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]])),
+  SalesInvoice: frappeModels.SalesInvoice,
+});
 await loadFrappeDocTypes();
 test('stock forms, row editors and tables show what they showed', () => {
   for (const name of [...stockSchemas, ...Object.values(rowSchemas)]) {

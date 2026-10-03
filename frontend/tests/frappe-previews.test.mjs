@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   FrappeDoc,
-  fyo,
-  getMappedDoc,
   getModel,
   loadFrappeDocTypes,
   newFrappeDoc,
@@ -144,37 +142,4 @@ test('a form previews a new document once it opens', async () => {
   await doc.value.whenFilled();
   assert.equal(doc.value.series, 'MOVE-');
   assert.equal(previews.length, 1);
-});
-
-test('a document of a Frappe-backed schema is mapped by the server mapper', async () => {
-  const { requests } = stubServer();
-  stubFrappe((request) => {
-    requests.push(request);
-    return {
-      message: {
-        doctype: 'Books Move',
-        name: null,
-        kind: 'Return',
-        rows: [{ name: null, item: 'Pen', quantity: -1, rate: 10 }],
-      },
-    };
-  });
-  const source = { schemaName: 'Shipment', name: 'SHPM-1', fyo };
-
-  const move = await getMappedDoc(source, 'Move', 'make_return');
-
-  assert.equal(
-    requests[0].path,
-    '/api/method/frappe.model.mapper.make_mapped_doc'
-  );
-  assert.deepEqual(requests[0].body, {
-    method:
-      'frappe_books.frappe_books.doctype.books_shipment.books_shipment.make_return',
-    source_name: 'SHPM-1',
-  });
-  assert.ok(move instanceof Move);
-  assert.ok(move.notInserted && move.name);
-  assert.equal(move.kind, 'Return');
-  assert.equal(move.rows[0].quantity, -1);
-  assert.ok(move.rows[0] instanceof MoveRow);
 });

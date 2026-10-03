@@ -13,6 +13,7 @@ import {
 
 const billMeta = {
   name: 'Books Bill',
+  module: 'Frappe Books',
   autoname: 'hash',
   permissions: [],
   states: [
@@ -151,19 +152,17 @@ test('a mapper builds an unsaved Frappe-backed document; unset values keep defau
     },
   }));
 
-  const bill = await getMappedDoc(
-    { schemaName: 'Item', name: 'Pen' },
-    'Bill',
-    'make_bill'
-  );
+  const source = newFrappeDoc('Bill', { name: 'BILL-1' });
+
+  const bill = await getMappedDoc(source, 'Bill', 'make_bill');
 
   assert.equal(
     requests[0].path,
     '/api/method/frappe.model.mapper.make_mapped_doc'
   );
   assert.deepEqual(requests[0].body, {
-    method: 'frappe_books.frappe_books.doctype.books_item.books_item.make_bill',
-    source_name: 'Pen',
+    method: 'frappe_books.frappe_books.doctype.books_bill.books_bill.make_bill',
+    source_name: 'BILL-1',
   });
   assert.ok(bill instanceof Bill);
   assert.equal(bill.notInserted, true);

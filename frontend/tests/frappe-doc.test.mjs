@@ -11,7 +11,6 @@ import {
   getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
-  getMappedFrappeDoc,
   getMissingMandatoryFields,
   loadTestDocTypes,
   manualScheduler,
@@ -432,26 +431,6 @@ test('a new document previews once its form opens', async () => {
   await item.whenFilled();
   assert.equal(requests.length, 1);
   assert.equal(requests[0].body.method, 'preview');
-});
-
-test("a server mapper's document is a new document with the mapped values", async () => {
-  const requests = stubFrappe(() => ({
-    message: { doctype: 'Books Order', name: null, customer: 'Acme' },
-  }));
-  const order = await getMappedFrappeDoc('Order', 'app.make_order', 'Q-1');
-
-  assert.equal(
-    requests[0].path,
-    '/api/method/frappe.model.mapper.make_mapped_doc'
-  );
-  assert.deepEqual(requests[0].body, {
-    method: 'app.make_order',
-    source_name: 'Q-1',
-  });
-  assert.equal(order.customer, 'Acme');
-  assert.equal(order.amount.float, 0);
-  assert.equal(order.notInserted, true);
-  assert.equal(order, await getFrappeDoc('Order', order.name));
 });
 
 test('submit and cancel run the document methods on the client copy', async () => {

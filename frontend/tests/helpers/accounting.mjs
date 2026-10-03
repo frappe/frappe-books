@@ -29,7 +29,8 @@ await build({
       export { getRowDetails } from './src/components/Controls/rowDetails';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
-      export { getMappedDoc, getStockTransferActions } from './models/helpers';
+      export { getStockTransferActions } from './models/helpers';
+      export { getMappedDoc } from './src/frappe/documents';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { getDateRangePresets, getFilterItems } from './src/components/Report/filterToolbar';

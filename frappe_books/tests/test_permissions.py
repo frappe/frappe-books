@@ -3,11 +3,12 @@ from unittest.mock import patch
 import frappe
 from frappe import client
 from frappe.api.v2 import count, read_doc
-from frappe.desk.search import search_link, search_widget
+from frappe.desk.search import search_link
 from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.linked_entries import get_linked_entries
+from frappe_books.search import BooksSearch, build_search_index, search
 from frappe_books.tests.accounting import (
 	make_account,
 	make_invoice,
@@ -147,6 +148,8 @@ class IntegrationTestPermissions(IntegrationTestCase):
 	def test_search_skips_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
 		add_user_permission("Books Shipment", readable, TEST_USER)
+		build_search_index()
+		BooksSearch().index_documents_by_name("Books Shipment", [readable, hidden])
 		with self.set_user(TEST_USER):
 			self.assertEqual(_search_shipments(hidden), [])
 			self.assertEqual(_search_shipments(readable), [readable])
@@ -195,8 +198,7 @@ def _new_data_import():
 
 
 def _search_shipments(name):
-	found = search_widget("Books Shipment", name, page_length=5, filter_fields=["name"], as_dict=True)
-	return [row.name for row in found]
+	return [row["name"] for row in search(name, ["Books Shipment"])]
 
 
 def _seed_shipment(return_against=None):

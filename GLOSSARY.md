@@ -26,6 +26,13 @@ _Avoid_: balance, outstanding (for the unsigned amount)
 A Shipment or Purchase Receipt: the document that moves an invoice's stock out of or into a location.
 _Avoid_: delivery note, goods receipt
 
+**Automatic transfer**:
+The stock transfer an invoice makes when it is submitted, for the stock no transfer it bills has moved.
+
+**Stock unit**:
+The unit an item's stock is counted in; a row may sell or buy it in another, its transfer unit.
+_Avoid_: base unit, UOM
+
 **Invoice–transfer link**:
 An invoice and the stock transfer that moves its stock, either the one it bills or the one made automatically when it is submitted.
 

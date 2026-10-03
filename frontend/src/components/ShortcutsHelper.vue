@@ -189,7 +189,7 @@ export default defineComponent({
           },
           {
             shortcut: [ShortcutKey.pmod, ShortcutKey.shift, 'S'],
-            description: t`If any entry form is open, save the details. Otherwise, save the invoice.`,
+            description: t`Hold the sale when no dialog is open.`,
           },
           {
             shortcut: [ShortcutKey.pmod, ShortcutKey.shift, 'P'],

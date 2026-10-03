@@ -18,7 +18,7 @@ Every /books screen is Frappe-backed: it uses Frappe fieldnames from end to end,
 | `api.ts` | `/api/v2` requests: documents, lists, counts and one field's value (`getValue`). `getAllDocuments` reads every row of a short list, like payment methods, through `frappe.client.get_list`. |
 | `list.ts`, `link.ts` | List pages, counts and documents by name (`getFrappeRows`) over `/api/v2`. Link options from `search_link`, and the text a link shows (`getLinkDisplayValue`). |
 | `search.ts` | The search palette's doctypes (`getSearchables`) and its one request to `frappe_books.search.search`. That searches Frappe's SQLite Search index (`frappe_books/search.py`), which Frappe's scheduler updates with saved documents every five minutes. |
-| `values.ts` | Frappe values to form values and back. |
+| `values.ts` | Frappe and import-file values to form values and back, for every field type. Datetimes are read and written in the system time zone. |
 | `dependsOn.ts` | Evaluates `depends_on` conditions as Frappe forms do. |
 | `useBooksDoc.ts` | `useBooksDoc`: a form's document with the user's rights on it (`frappe.client.get_doc_permissions`). Other screens use `newFrappeDoc`, `getFrappeDoc` and `getFrappeDocOrNew` from `documents.ts`. |
 

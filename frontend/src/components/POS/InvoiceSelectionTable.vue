@@ -42,7 +42,7 @@
         </FrappeListCell>
       </FrappeListRow>
     </FrappeList>
-    <p v-else class="px-4 py-6 text-center text-base text-ink-gray-6">
+    <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
       {{ emptyText }}
     </p>
   </template>
@@ -87,12 +87,9 @@
         </FrappeListRows>
       </div>
 
-      <div
-        v-else
-        class="flex min-h-0 flex-1 items-center justify-center text-sm text-ink-gray-6"
-      >
+      <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
         {{ emptyText }}
-      </div>
+      </p>
     </FrappeList>
   </div>
 </template>

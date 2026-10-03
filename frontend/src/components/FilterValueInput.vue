@@ -36,9 +36,16 @@
     :value="String(value ?? '')"
     @change="(value) => $emit('change', value)"
   />
+  <!-- A filter takes any text, as Frappe desk's filter fields do. -->
   <AutoComplete
     v-else-if="field?.fieldtype === 'AutoComplete'"
-    :df="{ ...field, label: t`Value`, readOnly: false, required: false }"
+    :df="{
+      ...field,
+      label: t`Value`,
+      readOnly: false,
+      required: false,
+      allowCustom: true,
+    }"
     :value="value ?? undefined"
     :border="true"
     :show-label="true"

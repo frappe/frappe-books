@@ -49,13 +49,13 @@ test('the cart stepper turns minus into remove at one', async ({ page }) => {
   await tea.click();
   await page.getByRole('button', { name: /2 items/ }).click();
   const cart = page.getByRole('dialog', { name: 'Cart', exact: true });
-  const quantity = cart.getByRole('spinbutton', {
+  const quantity = cart.getByRole('textbox', {
     name: 'Quantity of Organic Assam Tea',
   });
-  await expect(quantity).toHaveValue('2');
+  await expect(quantity).toHaveValue('2.00');
   await expect(cart.getByRole('button', { name: 'Remove' })).toBeHidden();
   await cart.getByRole('button', { name: 'Decrease' }).click();
-  await expect(quantity).toHaveValue('1');
+  await expect(quantity).toHaveValue('1.00');
   await page.screenshot({ path: test.info().outputPath('cart.png') });
 
   await cart.getByRole('button', { name: 'Organic Assam Tea' }).click();
@@ -314,7 +314,7 @@ test('every POS dialog opens as a bottom sheet', async ({ page }) => {
 test('shift sheets count cash with steppers', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
   const sheet = page.getByRole('dialog', { name: 'Close POS shift' });
-  const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
+  const count = sheet.getByRole('textbox', { name: /Count of .*500\.00/ });
   const cash = sheet.getByRole('listitem').filter({ hasText: /^\s*Cash/ });
   const before = Number(await count.inputValue());
   const counted = await cash.textContent();
@@ -346,7 +346,7 @@ test('large shift amounts fit a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
   const sheet = page.getByRole('dialog', { name: 'Close POS shift' });
-  const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
+  const count = sheet.getByRole('textbox', { name: /Count of .*500\.00/ });
   await count.fill('9999999');
   await count.press('Tab');
   await expect(

@@ -93,6 +93,11 @@ export default defineComponent({
         return [];
       }
 
+      // Frappe's desk offers an empty line of the options as no value.
+      if (this.df.allowEmpty && !this.isRequired) {
+        return [{ label: '', value: '' }, ...this.df.options];
+      }
+
       return this.df.options;
     },
     selectedLabel(): string {

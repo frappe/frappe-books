@@ -68,9 +68,9 @@ for (const type of types) {
   }
 }
 for (const [type, invalid] of [
-  ['Int', ['1.1', 'word', ' ', Infinity, NaN, true]],
+  ['Int', ['word', ' ', Infinity, NaN, true]],
   ['Float', ['word', ' ', Infinity, 'NaN', true]],
-  ['Currency', ['1,200', '$12', '-Infinity']],
+  ['Currency', ['$12', '-Infinity']],
   ['Date', ['2023-02-29', '2024-13-01', '2024', '2024-01-01T12:00']],
   ['Datetime', ['2024', '2024-01-01', '2024-01-01T25:00']],
   ['Check', ['yes', 2, -1]],
@@ -81,6 +81,17 @@ for (const [type, invalid] of [
       set.add('value', '=', value);
       assert.throws(() => set.toFilters([field(type)]));
     });
+test('number filters read typed numbers as Frappe desk does', () => {
+  for (const [type, value, number] of [
+    ['Currency', '1,200', 1200],
+    ['Float', '100*2+5', 205],
+    ['Int', '1.9', 1],
+  ]) {
+    const set = new FilterSet();
+    set.add('value', '=', value);
+    assert.deepEqual(set.toFilters([field(type)]), [['value', '=', number]]);
+  }
+});
 for (const value of ['', null, undefined])
   test(`incomplete ${value} is skipped; empty operators still apply`, () => {
     const set = new FilterSet();

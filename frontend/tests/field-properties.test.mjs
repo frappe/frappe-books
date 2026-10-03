@@ -37,6 +37,17 @@ test('the server decides required, default, read only and minimum value', () => 
   assert.equal(role.default, undefined);
 });
 
+test('a Select whose options hold an empty line can be left empty, as in Frappe desk', () => {
+  assert.equal(
+    getField({ fieldtype: 'Select', options: '\nCGST\nSGST' }).allowEmpty,
+    true
+  );
+  assert.equal(
+    getField({ fieldtype: 'Select', options: 'Both\nCustomer' }).allowEmpty,
+    false
+  );
+});
+
 test('a Color field offers its options as the palette', () => {
   const color = getField({ fieldtype: 'Color', options: '#ff0000\n#00ff00' });
   assert.deepEqual(color.options, [

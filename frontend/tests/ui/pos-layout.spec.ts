@@ -286,7 +286,7 @@ test('cart values fit and expanded item fields open a usable keypad', async ({
     animations: 'disabled',
     path: test.info().outputPath('modern-expanded.png'),
   });
-  await page.getByRole('spinbutton', { name: 'Quantity', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Quantity', exact: true }).click();
   const keypad = page.getByRole('dialog', { name: 'Quantity', exact: true });
   await expect(keypad).toBeVisible();
   await expect(keypad).toContainText('Organic Assam Tea');
@@ -347,7 +347,7 @@ test('the transfer quantity keypad is titled as its cart field', async ({
   await page.evaluate(() => (window as any).posFixture.fillBoxRow());
   await page.getByRole('button', { name: /^Organic Assam Tea/ }).click();
   await page
-    .getByRole('spinbutton', { name: 'Transfer Quantity', exact: true })
+    .getByRole('textbox', { name: 'Transfer Quantity', exact: true })
     .click();
 
   await expect(
@@ -388,7 +388,7 @@ for (const modern of [true, false]) {
       row.getByRole('button', { name: /^Organic Assam Tea/ })
     ).toHaveAttribute('aria-expanded', 'true');
     await page
-      .getByRole('spinbutton', { name: 'Quantity', exact: true })
+      .getByRole('textbox', { name: 'Quantity', exact: true })
       .click();
     const keypad = page.getByRole('dialog', { name: 'Quantity', exact: true });
     if (modern) {

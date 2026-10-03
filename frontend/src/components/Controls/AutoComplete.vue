@@ -41,7 +41,7 @@
       :loading="isLoading"
       :empty-text="emptyMessage"
       @update:query="search"
-      @update:open="(open) => !open && (searchQuery = '')"
+      @update:open="onPickerOpen"
       @select="onPickerSelect"
     />
   </div>
@@ -68,7 +68,7 @@
     :class="controlClasses"
     :style="containerStyles"
     @focus="onComboboxFocus"
-    @blur="isFocused = false"
+    @blur="onComboboxBlur"
     @keydown.enter="onPressEnter"
     @input="onComboboxInput"
     @update:open="onComboboxOpen"
@@ -351,6 +351,31 @@ export default {
     onComboboxFocus(event) {
       this.isFocused = true;
       this.$emit('focus', event);
+    },
+    onComboboxBlur() {
+      this.isFocused = false;
+      this.clearUnlistedValue();
+    },
+    onPickerOpen(isOpen) {
+      if (!isOpen) {
+        this.searchQuery = '';
+        this.clearUnlistedValue();
+      }
+    },
+    /** Frappe desk's Autocomplete takes a typed label as its value and drops one not listed. */
+    clearUnlistedValue() {
+      const isCustom =
+        this.df.fieldtype !== FieldTypeEnum.AutoComplete || this.df.allowCustom;
+      if (isCustom || !this.value || !this.options.length) {
+        return;
+      }
+
+      if (this.options.some(({ value }) => value === this.value)) {
+        return;
+      }
+
+      const option = this.options.find(({ label }) => label === this.value);
+      this.triggerChange(option?.value ?? '');
     },
     onComboboxOpen(isOpen) {
       this.isDropdownOpen = isOpen;

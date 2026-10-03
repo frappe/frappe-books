@@ -116,8 +116,9 @@ export default defineComponent({
       this.height = size.height;
       this.width = size.width;
     },
-    valueChange(v: number, name: 'width' | 'height') {
-      if (this[name] === v) {
+    valueChange(v: number | null, name: 'width' | 'height') {
+      // Text that is no number keeps the size.
+      if (v === null || this[name] === v) {
         return;
       }
 

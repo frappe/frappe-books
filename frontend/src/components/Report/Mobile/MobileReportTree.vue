@@ -9,8 +9,10 @@
       :class="{ 'w-max min-w-full pb-12': scroll }"
       :style="{ gridTemplateColumns }"
     >
+      <!-- Sticks below the report toolbar, or atop its own scroller. -->
       <div
-        class="sticky top-0 z-10 col-span-full grid grid-cols-subgrid border-y border-outline-gray-1 bg-surface-base px-4 py-2 text-xs-medium text-ink-gray-5"
+        class="sticky z-10 col-span-full grid grid-cols-subgrid border-b border-outline-gray-1 bg-surface-base px-4 py-2 text-xs-medium text-ink-gray-5"
+        :class="scroll ? 'top-0' : 'top-14'"
       >
         <span class="truncate">{{ labelHeader }}</span>
         <span

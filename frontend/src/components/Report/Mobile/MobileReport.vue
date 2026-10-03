@@ -1,10 +1,12 @@
 <template>
+  <!-- Grows with its rows, so the toolbar sticks all the way down. -->
   <div
     class="flex flex-col"
-    :class="isScrollable ? 'min-h-0 flex-1' : 'min-h-full pb-12'"
+    :class="isScrollable ? 'min-h-0 flex-1' : 'min-h-full shrink-0 pb-12'"
   >
+    <!-- Row headers stick under it (top-14) and slide beneath it. -->
     <div
-      class="sticky top-0 z-10 flex shrink-0 gap-2 overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none] *:shrink-0"
+      class="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 [scrollbar-width:none] *:shrink-0"
     >
       <MobileFiltersButton
         size="lg"

@@ -3,15 +3,11 @@ import { test } from 'node:test';
 import {
   errors,
   evaluateCondition,
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   fyo,
   getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
   getMappedFrappeDoc,
-  getMissingMandatoryFields,
   loadTestDocTypes,
   newFrappeDoc,
   setLanguageMapOnTranslationString,
@@ -102,22 +98,22 @@ test('depends_on, read_only_depends_on and mandatory_depends_on apply to the for
   const item = newFrappeDoc('Item', { item_type: 'Service' });
   const trackItem = field(item, 'track_item');
   const batchSeries = field(item, 'batch_series');
-  assert.equal(evaluateHidden(trackItem, item), true);
+  assert.equal(item.getFieldState(trackItem).hidden, true);
 
   await item.set('item_type', 'Product');
-  assert.equal(evaluateHidden(trackItem, item), false);
-  assert.equal(evaluateReadOnly(batchSeries, item), false);
-  assert.equal(evaluateRequired(batchSeries, item), false);
+  assert.equal(item.getFieldState(trackItem).hidden, false);
+  assert.equal(item.getFieldState(batchSeries).readOnly, false);
+  assert.equal(item.getFieldState(batchSeries).required, false);
 
   await item.set('track_item', true);
-  assert.equal(evaluateReadOnly(batchSeries, item), true);
-  assert.equal(evaluateRequired(batchSeries, item), true);
-  assert.ok(getMissingMandatoryFields(item).includes(batchSeries));
+  assert.equal(item.getFieldState(batchSeries).readOnly, true);
+  assert.equal(item.getFieldState(batchSeries).required, true);
+  assert.ok(item.missingFields.includes(batchSeries));
   clearTimeout(item._previewTimer);
 
   stubDocument({ ...savedPen, track_item: 0 });
   const untracked = await getFrappeDoc('Item', 'Untracked');
-  assert.equal(evaluateHidden(field(untracked, 'track_item'), untracked), true);
+  assert.equal(untracked.getFieldState(field(untracked, 'track_item')).hidden, true);
 });
 
 test('a missing required value is reported in the user’s language', async () => {

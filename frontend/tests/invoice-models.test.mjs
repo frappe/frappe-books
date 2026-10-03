@@ -2,9 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   frappeModels,
   fyo,
   getFrappeDoc,
@@ -34,7 +31,7 @@ fyo.singles.SystemSettings = { currency: 'INR' };
 function getLayout(doc) {
   const layout = {};
   for (const field of doc.schema.fields) {
-    if (field.meta || evaluateHidden(field, doc)) {
+    if (field.meta || doc.getFieldState(field).hidden) {
       continue;
     }
 
@@ -106,7 +103,7 @@ test('features and totals show the fields that go with them', () => {
     'make_auto_payment',
     'make_auto_stock_transfer',
   ]);
-  assert.equal(evaluateRequired(invoice.fieldMap.exchange_rate, invoice), true);
+  assert.equal(invoice.getFieldState(invoice.fieldMap.exchange_rate).required, true);
 });
 
 test('a submitted invoice hides what only a draft offers', () => {
@@ -210,7 +207,7 @@ test('row fields show by the features and discounts turned on', () => {
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', { item: 'Pen' });
   const row = invoice.items[0];
-  const hidden = (fieldname) => evaluateHidden(row.fieldMap[fieldname], row);
+  const hidden = (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden;
 
   assert.equal(hidden('item_discount_percent'), false);
   assert.equal(hidden('item_discount_amount'), true);
@@ -293,9 +290,9 @@ test('a row in another unit shows and takes its rate per that unit', async () =>
   });
   const row = invoice.items[0];
   const { rate, transfer_rate } = row.fieldMap;
-  assert.equal(evaluateHidden(rate, row), true);
-  assert.equal(evaluateHidden(transfer_rate, row), false);
-  assert.equal(evaluateReadOnly(transfer_rate, row), false);
+  assert.equal(row.getFieldState(rate).hidden, true);
+  assert.equal(row.getFieldState(transfer_rate).hidden, false);
+  assert.equal(row.getFieldState(transfer_rate).readOnly, false);
   assert.equal(transfer_rate.label, 'Rate');
   assert.ok(row.schema.quickEditFields.includes('transfer_rate'));
 
@@ -633,7 +630,7 @@ test('Return Against shows while returns are on, or once it is set', () => {
     setSettings();
     const draft = newInvoice(schemaName);
     const isHidden = () =>
-      evaluateHidden(draft.fieldMap.return_against, draft);
+      draft.getFieldState(draft.fieldMap.return_against).hidden;
 
     assert.equal(isHidden(), true);
     setSettings({ accounting: { enable_invoice_returns: true } });

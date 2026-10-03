@@ -26,7 +26,6 @@ import { assertIsType } from 'utils/index';
 import type { LinkedDoc } from 'utils/db/types';
 import { SelectFileOptions } from 'utils/types';
 import { RouteLocationRaw } from 'vue-router';
-import { evaluateHidden } from './doc';
 import { selectFile } from './browser';
 import { showDialog, showToast } from './interactive';
 import { showSidebar } from './refs';
@@ -359,7 +358,7 @@ export function getFieldsGroupedByTabAndSection(
       continue;
     }
 
-    if (evaluateHidden(field, doc)) {
+    if (doc.getFieldState(field).hidden) {
       continue;
     }
 

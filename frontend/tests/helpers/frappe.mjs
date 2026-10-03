@@ -26,8 +26,7 @@ await build({
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { setLanguageMapOnTranslationString } from './fyo/utils/translation';
-      export { getMissingMandatoryFields } from './fyo/model/helpers';
-      export { evaluateHidden, evaluateReadOnly, evaluateRequired, loadDocPermissions } from './src/utils/doc';
+      export { loadDocPermissions } from './src/utils/doc';
       export { getRowDetails } from './src/components/Controls/rowDetails';
       export { getRowSummary } from './src/components/Controls/rowSummary';
       export * as errors from './fyo/utils/errors';
@@ -143,10 +142,6 @@ export const {
   toSchema,
   fyo,
   setLanguageMapOnTranslationString,
-  getMissingMandatoryFields,
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   loadDocPermissions,
   getRowDetails,
   getRowSummary,

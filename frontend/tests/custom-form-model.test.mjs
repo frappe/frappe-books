@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  evaluateHidden,
-  evaluateRequired,
   frappeModels,
   getSchema,
   newFrappeDoc,
@@ -90,8 +88,8 @@ test('a row asks for options, a target or references as its field type needs', a
   const form = await newForm();
   const [row] = form.custom_fields;
   assert.ok(row instanceof CustomField);
-  const shown = (fieldname) => !evaluateHidden(field(row, fieldname), row);
-  const required = (fieldname) => evaluateRequired(field(row, fieldname), row);
+  const shown = (fieldname) => !row.getFieldState(field(row, fieldname)).hidden;
+  const required = (fieldname) => row.getFieldState(field(row, fieldname)).required;
   assert.deepEqual(['options', 'target', 'references'].map(shown), [
     false,
     false,

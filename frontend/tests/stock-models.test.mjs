@@ -3,9 +3,6 @@ import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import { previousForms } from './helpers/previousForms.mjs';
 import {
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   frappeModels,
   fyo,
   getFilterFields,
@@ -76,8 +73,8 @@ test('a movement row asks for the locations its type moves stock between', () =>
   const movement = newFrappeDoc('StockMovement');
   const row = movement._getChildDoc({ item: 'Pen' }, 'items');
   const state = (fieldname) =>
-    [evaluateRequired, evaluateReadOnly].map((evaluate) =>
-      evaluate(row.fieldMap[fieldname], row)
+    ['required', 'readOnly'].map(
+      (rule) => row.getFieldState(row.fieldMap[fieldname])[rule]
     );
   const expected = {
     MaterialIssue: [
@@ -112,7 +109,7 @@ test('stock rows hide the fields of inventory features turned off', () => {
     const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
     const hidden = () =>
       ['batch', 'serial_number', 'transfer_unit'].map((fieldname) =>
-        evaluateHidden(row.fieldMap[fieldname], row)
+        row.getFieldState(row.fieldMap[fieldname]).hidden
       );
     fyo.singles.InventorySettings = {};
     assert.deepEqual(hidden(), [true, true, true], name);
@@ -128,7 +125,7 @@ test('stock rows hide the fields of inventory features turned off', () => {
 test('transfer rows show HSN/SAC only for an Indian company', () => {
   for (const name of ['Shipment', 'PurchaseReceipt']) {
     const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
-    const hidden = () => evaluateHidden(row.fieldMap.hsn_code, row);
+    const hidden = () => row.getFieldState(row.fieldMap.hsn_code).hidden;
 
     fyo.singles.AccountingSettings = { country: 'United States' };
     assert.equal(hidden(), true, name);
@@ -142,7 +139,7 @@ test('a submitted transfer hides the references and notes it does not have', () 
   const shipment = newFrappeDoc('Shipment');
   const shown = () =>
     fields.filter(
-      (fieldname) => !evaluateHidden(shipment.fieldMap[fieldname], shipment)
+      (fieldname) => !shipment.getFieldState(shipment.fieldMap[fieldname]).hidden
     );
   assert.deepEqual(shown(), fields);
 
@@ -153,7 +150,7 @@ test('a submitted transfer hides the references and notes it does not have', () 
 
 test('a transfer row shows the item discounts of its invoice only when it has them', () => {
   const row = newFrappeDoc('Shipment')._getChildDoc({ item: 'Pen' }, 'items');
-  const hidden = (fieldname) => evaluateHidden(row.fieldMap[fieldname], row);
+  const hidden = (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden;
   assert.deepEqual(
     [hidden('item_discount_amount'), hidden('item_discount_percent')],
     [true, true]

@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
 import {
-  evaluateHidden,
   frappeModels,
   fyo,
   getSchema,
@@ -27,7 +26,7 @@ test('the invoice form keeps the POS payment rows hidden, and saves them', () =>
     ({ fieldname }) => fieldname === 'payments'
   );
 
-  assert.equal(evaluateHidden(field, invoice), true);
+  assert.equal(invoice.getFieldState(field).hidden, true);
   const [payment] = invoice.getFrappeValues().payments;
   assert.deepEqual(
     [payment.payment_method, Number(payment.amount)],

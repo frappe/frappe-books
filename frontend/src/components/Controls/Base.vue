@@ -56,7 +56,6 @@ import { FrappeDoc } from 'src/frappe/document';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { Field } from 'schemas/types';
 import { isNumeric } from 'src/utils';
-import { evaluateReadOnly, evaluateRequired } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
 import { getIsNullOrUndef } from 'utils/index';
 import { defineComponent, markRaw, PropType } from 'vue';
@@ -225,14 +224,14 @@ export default defineComponent({
         return this.readOnly;
       }
 
-      return evaluateReadOnly(this.df, this.doc);
+      return this.doc?.getFieldState(this.df).readOnly ?? !!this.df.readOnly;
     },
     isRequired(): boolean {
       if (typeof this.required === 'boolean') {
         return this.required;
       }
 
-      return evaluateRequired(this.df, this.doc);
+      return this.doc?.getFieldState(this.df).required ?? !!this.df.required;
     },
   },
   mounted() {

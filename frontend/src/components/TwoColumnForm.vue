@@ -78,7 +78,6 @@ import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { getErrorMessage } from 'src/utils';
-import { evaluateHidden } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
 import Table from './Controls/Table.vue';
 import { defineComponent } from 'vue';
@@ -161,7 +160,7 @@ export default defineComponent({
 
       this.formFields = this.doc
         .getFormFields(fieldList.filter(Boolean))
-        .filter((field) => !evaluateHidden(field, this.doc));
+        .filter((field) => !this.doc.getFieldState(field).hidden);
     },
   },
 });

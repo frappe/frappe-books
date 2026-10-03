@@ -38,32 +38,35 @@
             </template>
           </FrappeButton>
         </div>
-        <ul
+        <FrappeScrollArea
           v-else
-          class="max-h-40 divide-y divide-outline-gray-1 overflow-y-auto rounded-6 border border-outline-gray-1"
+          class="rounded-6 border border-outline-gray-1"
+          viewport-class="max-h-40"
         >
-          <li
-            v-for="coupon in appliedCoupons as AppliedCouponCode[]"
-            :key="coupon.coupons"
-            class="flex items-center gap-2.5 px-3 py-2.5"
-          >
-            <span
-              class="lucide-ticket-percent size-4 shrink-0 text-ink-green-5"
-              aria-hidden="true"
-            />
-            <span class="min-w-0 flex-1 truncate text-base-medium text-ink-gray-8">
-              {{ coupon.coupons }}
-            </span>
-            <FrappeButton
-              icon="lucide-x"
-              variant="ghost"
-              size="xs"
-              :tooltip="t`Remove coupon`"
-              :aria-label="t`Remove coupon`"
-              @click="removeAppliedCoupon(coupon)"
-            />
-          </li>
-        </ul>
+          <ul class="divide-y divide-outline-gray-1">
+            <li
+              v-for="coupon in appliedCoupons as AppliedCouponCode[]"
+              :key="coupon.coupons"
+              class="flex items-center gap-2.5 px-3 py-2.5"
+            >
+              <span
+                class="lucide-ticket-percent size-4 shrink-0 text-ink-green-5"
+                aria-hidden="true"
+              />
+              <span class="min-w-0 flex-1 truncate text-base-medium text-ink-gray-8">
+                {{ coupon.coupons }}
+              </span>
+              <FrappeButton
+                icon="lucide-x"
+                variant="ghost"
+                size="xs"
+                :tooltip="t`Remove coupon`"
+                :aria-label="t`Remove coupon`"
+                @click="removeAppliedCoupon(coupon)"
+              />
+            </li>
+          </ul>
+        </FrappeScrollArea>
       </div>
     </div>
     <template #actions="{ size }">
@@ -91,6 +94,7 @@ import { Field } from 'schemas/types';
 import {
   Button as FrappeButton,
   ErrorMessage as FrappeErrorMessage,
+  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { getErrorMessage } from 'src/utils';
 import { isMobile } from 'src/utils/viewport';
@@ -102,6 +106,7 @@ export default defineComponent({
     Link,
     FrappeButton,
     FrappeErrorMessage,
+    FrappeScrollArea,
   },
   props: {
     openModal: Boolean,

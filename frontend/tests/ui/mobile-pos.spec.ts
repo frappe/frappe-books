@@ -217,11 +217,11 @@ test('negative loyalty points show a field error, not a toast', async ({
   await sheet.locator('input').first().fill('-5');
   await sheet.getByRole('button', { name: 'Redeem', exact: true }).click();
 
-  await expect(sheet.getByText('Points must be greater than 0')).toBeVisible();
+  await expect(sheet.getByText('Loyalty points cannot be negative.')).toBeVisible();
   await expect(sheet).toBeVisible();
   await expect(
     page.locator('[data-sonner-toast]', {
-      hasText: 'Points must be greater than 0',
+      hasText: 'Loyalty points cannot be negative.',
     })
   ).toHaveCount(0);
 });

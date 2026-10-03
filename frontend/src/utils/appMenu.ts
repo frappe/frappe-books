@@ -64,7 +64,7 @@ function getThemeItems(): DropdownOptions {
 
 export function openDocumentation() {
   window.open(
-    'https://docs.frappe.io/' + docsPathRef.value,
+    'https://docs.frappe.io/' + (docsPathRef.value || 'books'),
     '_blank',
     'noopener,noreferrer'
   );

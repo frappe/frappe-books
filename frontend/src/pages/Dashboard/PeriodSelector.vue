@@ -58,10 +58,10 @@ export default defineComponent({
   computed: {
     periodSelectorMap(): Record<PeriodKey, string> {
       return {
-        'This Year': t`This Year`,
-        YTD: t`Year to Date`,
-        'This Quarter': t`This Quarter`,
-        'This Month': t`This Month`,
+        'This Year': t`This year`,
+        YTD: t`Year to date`,
+        'This Quarter': t`This quarter`,
+        'This Month': t`This month`,
       };
     },
     periodOptions(): { label: string; value: PeriodKey }[] {

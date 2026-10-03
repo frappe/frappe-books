@@ -80,7 +80,7 @@
         variant="solid"
         size="lg"
         icon-left="lucide-plus"
-        :label="t`Make Entry`"
+        :label="t`Make entry`"
         @click="$emit('makeNewDoc')"
       />
     </EmptyState>

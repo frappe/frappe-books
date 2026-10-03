@@ -59,7 +59,7 @@
       :text="t`Loading Report...`"
     />
     <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
-      {{ t`No Values to be Displayed` }}
+      {{ t`No values to be displayed` }}
     </p>
 
     <!-- Pagination Footer -->

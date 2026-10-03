@@ -52,10 +52,10 @@ const isOpen = defineModel<boolean>('open', { required: true });
 const sections = computed(() => [
   {
     title: t`Records`,
-    filters: [{ value: 'skipTransactions', label: t`Skip Transactions` }],
+    filters: [{ value: 'skipTransactions', label: t`Skip transactions` }],
   },
   {
-    title: t`Document Types`,
+    title: t`Document types`,
     filters: props.schemaFilters,
   },
 ]);

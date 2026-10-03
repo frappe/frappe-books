@@ -98,7 +98,7 @@ export class SystemSettings extends FrappeDoc {
           (c) =>
             ({
               value: countryInfo[c]?.locale,
-              label: `${c} (${countryInfo[c]?.locale ?? t`Not Found`})`,
+              label: `${c} (${countryInfo[c]?.locale ?? t`Not found`})`,
             }) as SelectOption
         );
     },

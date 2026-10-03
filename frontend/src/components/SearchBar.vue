@@ -69,7 +69,7 @@
             :aria-expanded="showMore"
             @click="showMore = !showMore"
           >
-            {{ showMore ? t`Less Filters` : t`More Filters` }}
+            {{ showMore ? t`Fewer filters` : t`More filters` }}
           </FrappeButton>
         </div>
 
@@ -89,7 +89,7 @@
                   )
                 "
               >
-                {{ t`Skip Transactions` }}
+                {{ t`Skip transactions` }}
               </FrappeButton>
             </div>
 

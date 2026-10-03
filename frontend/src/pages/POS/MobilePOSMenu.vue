@@ -65,7 +65,7 @@ const actions = computed(() => {
   const all: MenuAction[] = [
     {
       name: 'SavedInvoice',
-      label: t`Saved and Submitted Invoices`,
+      label: t`Saved and submitted invoices`,
       icon: 'lucide-receipt-text',
       count: savedCount.value,
     },
@@ -86,7 +86,7 @@ const actions = computed(() => {
     },
     {
       name: 'CouponCode',
-      label: t`Coupon Code`,
+      label: t`Coupon code`,
       icon: 'lucide-ticket-percent',
       count: props.appliedCouponsCount,
       hidden: !settings?.enable_coupon_code || isSubmitted,
@@ -99,7 +99,7 @@ const actions = computed(() => {
     },
     {
       name: 'ItemEnquiry',
-      label: t`Item Enquiry`,
+      label: t`Item enquiry`,
       icon: 'lucide-package-search',
       hidden: !settings?.enable_item_enquiry,
     },
@@ -116,7 +116,7 @@ const options = computed<DropdownOptions>(() => {
   });
   const shiftClose: MenuAction = {
     name: 'ShiftClose',
-    label: t`Close POS Shift`,
+    label: t`Close POS shift`,
     icon: 'lucide-log-out',
   };
 

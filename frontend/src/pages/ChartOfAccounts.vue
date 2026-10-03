@@ -2,7 +2,7 @@
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
       <FrappeButton v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
-        t`Add Root Group`
+        t`Add root group`
       }}</FrappeButton>
       <FrappeButton v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</FrappeButton>
       <FrappeButton v-if="!isAllCollapsed" @click="collapse">{{
@@ -222,8 +222,8 @@ export default defineComponent({
     },
     newAccountTitle(): string {
       return this.addingParent?.addingGroupAccount
-        ? t`Add Group`
-        : t`Add Account`;
+        ? t`Add group`
+        : t`Add account`;
     },
   },
   async activated() {
@@ -244,18 +244,18 @@ export default defineComponent({
       if (account.is_group && fyo.can(ModelNameEnum.Account, 'create')) {
         actions.push(
           {
-            label: t`Add Account`,
+            label: t`Add account`,
             onClick: () => this.addAccount(account, 'addingAccount'),
           },
           {
-            label: t`Add Group`,
+            label: t`Add group`,
             onClick: () => this.addAccount(account, 'addingGroupAccount'),
           }
         );
       }
 
       if (account.parent_books_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
-        label: account.is_group ? t`Delete Group` : t`Delete Account`,
+        label: account.is_group ? t`Delete group` : t`Delete account`,
         theme: 'red',
         onClick: () => this.deleteAccount(account),
       });
@@ -360,7 +360,7 @@ export default defineComponent({
       if (!account.parent_books_account) {
         await showDialog({
           type: 'error',
-          title: t`Cannot Delete Account`,
+          title: t`Cannot delete account`,
           detail: t`Root accounts cannot be deleted.`,
         });
         return false;
@@ -375,7 +375,7 @@ export default defineComponent({
 
       await showDialog({
         type: 'error',
-        title: t`Cannot Delete Account`,
+        title: t`Cannot delete account`,
         detail: t`${account.name} has linked child accounts.`,
       });
 

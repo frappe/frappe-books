@@ -252,7 +252,7 @@ export default defineComponent({
 
       if (!this.areAllValuesFilled) {
         return await showDialog({
-          title: this.t`Mandatory Error`,
+          title: this.t`Mandatory error`,
           detail: this.t`Please fill all values.`,
           type: 'error',
         });

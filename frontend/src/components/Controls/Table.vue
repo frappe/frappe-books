@@ -118,7 +118,7 @@
             style="grid-column: 2 / -1"
           >
             <p>
-              {{ t`Add Row` }}
+              {{ t`Add row` }}
             </p>
             <p
               v-if="

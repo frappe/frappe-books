@@ -153,7 +153,7 @@ msgid "Accounting"
 msgstr "लेखांकन"
 
 #: frontend/models/helpers.ts:278
-msgid "Accounting Entries"
+msgid "Accounting entries"
 msgstr "लेखांकन प्रविष्टियाँ"
 
 #: frontend/schemas/app/AccountingLedgerEntry.json
@@ -231,42 +231,42 @@ msgstr "सक्रिय"
 
 #: frontend/src/pages/ChartOfAccounts.vue:196
 #: frontend/src/pages/ChartOfAccounts.vue:217
-msgid "Add Account"
+msgid "Add account"
 msgstr "खाता जोड़ें"
 
 #: frontend/src/utils/getStartedConfig.ts:90
-msgid "Add Customers"
+msgid "Add customers"
 msgstr "ग्राहक जोड़ें"
 
 #: frontend/src/pages/ChartOfAccounts.vue:195
 #: frontend/src/pages/ChartOfAccounts.vue:221
-msgid "Add Group"
+msgid "Add group"
 msgstr "समूह जोड़ें"
 
 #: frontend/src/utils/getStartedConfig.ts:74
 #: frontend/src/utils/getStartedConfig.ts:120
-msgid "Add Items"
+msgid "Add items"
 msgstr "वस्तु जोड़ें"
 
 #: frontend/src/pages/ChartOfAccounts.vue:5
-msgid "Add Root Group"
+msgid "Add root group"
 msgstr ""
 
 #: frontend/src/components/Controls/Table.vue:87
 #: frontend/src/pages/ImportWizard.vue:13
 #: frontend/src/pages/ImportWizard.vue:14
-msgid "Add Row"
+msgid "Add row"
 msgstr "पंक्ति जोड़ें"
 
 #: frontend/src/utils/getStartedConfig.ts:134
-msgid "Add Suppliers"
+msgid "Add suppliers"
 msgstr "आपूर्तिकर्ता जोड़ें"
 
 #. Label of the taxes_added (Check) field in DocType 'Books Get Started'
 #: frappe_books/frappe_books/doctype/books_get_started/books_get_started.json
 #: frontend/schemas/app/GetStarted.json
 #: frontend/src/utils/getStartedConfig.ts:59
-msgid "Add Taxes"
+msgid "Add taxes"
 msgstr "कर जोड़ें"
 
 #: frontend/src/utils/getStartedConfig.ts:92
@@ -519,7 +519,7 @@ msgid "Applicable when POS is open"
 msgstr "POS खुला होने पर लागू होगा"
 
 #: frontend/src/components/ShortcutsHelper.vue:107
-msgid "Applicable when Quick Search is open"
+msgid "Applicable when quick search is open"
 msgstr "त्वरित खोज के खुले होने पर लागू"
 
 #: frontend/src/components/ShortcutsHelper.vue:134
@@ -531,7 +531,7 @@ msgid "Applicable when a entry is open in the Form view or Quick Edit view"
 msgstr "फॉर्म व्यू या त्वरित संपादन व्यू में प्रविष्टि के खुले होने पर लागू"
 
 #: frontend/src/components/ShortcutsHelper.vue:93
-msgid "Applicable when the List View of an entry type is open"
+msgid "Applicable when the list view of an entry type is open"
 msgstr "प्रविष्टि प्रकार का सूची दृश्य खुला होने पर लागू"
 
 #. Name of a standard account
@@ -1394,15 +1394,15 @@ msgstr "रद्द किया गया"
 
 #: frontend/src/pages/ChartOfAccounts.vue:349
 #: frontend/src/pages/ChartOfAccounts.vue:364
-msgid "Cannot Delete Account"
+msgid "Cannot delete account"
 msgstr "खाता हटा नहीं सकता"
 
 #: frontend/reports/GoodsAndServiceTax/gstExporter.ts:126
-msgid "Cannot Export"
+msgid "Cannot export"
 msgstr "निर्यात नहीं कर सकता"
 
 #: frontend/src/pages/ImportWizard.vue:668
-msgid "Cannot Import"
+msgid "Cannot import"
 msgstr "आयात नहीं कर सकता"
 
 #: frontend/src/pages/POS/POS.vue:714
@@ -1463,7 +1463,7 @@ msgid "Central Tax"
 msgstr "केंद्रीय कर"
 
 #: frontend/src/pages/ImportWizard.vue:523
-msgid "Change File"
+msgid "Change file"
 msgstr "फ़ाइल बदलें"
 
 #: frontend/reports/GeneralLedger/GeneralLedger.ts:142
@@ -1561,7 +1561,7 @@ msgstr "बंद करें"
 
 #: frontend/src/pages/POS/ClosePOSShiftModal.vue:4
 #: frontend/src/pages/POS/POS.vue:8
-msgid "Close POS Shift"
+msgid "Close POS shift"
 msgstr "POS शिफ्ट बंद करें"
 
 #: frappe_books/frappe_books/doctype/books_pos_closing_shift/books_pos_closing_shift.py:79
@@ -1569,7 +1569,7 @@ msgid "Close POS shift {0} before reopening another shift."
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:109
-msgid "Close Quick Search"
+msgid "Close quick search"
 msgstr "त्वरित खोज बंद करें"
 
 #: frontend/src/pages/POS/ClosePOSShiftModal.vue:48
@@ -1621,7 +1621,7 @@ msgstr "समापन राशि"
 #: frappe_books/frappe_books/doctype/books_pos_closing_shift/books_pos_closing_shift.json
 #: frontend/schemas/app/inventory/Point
 #: frontend/src/pages/POS/ClosePOSShiftModal.vue:23 of
-msgid "Closing Amounts"
+msgid "Closing amounts"
 msgstr "समापन राशियाँ"
 
 #. Label of the closing_cash (Table) field in DocType 'Books Pos Closing Shift'
@@ -1808,7 +1808,7 @@ msgid "Contra Entry"
 msgstr "कॉन्ट्रा एंट्री"
 
 #: frontend/src/pages/ImportWizard.vue:635
-msgid "Conversion Error"
+msgid "Conversion error"
 msgstr "रूपांतरण त्रुटि"
 
 #. Label of the conversion_factor (Float) field in DocType 'Books Loyalty
@@ -2019,7 +2019,7 @@ msgid "Create Payment."
 msgstr "भुगतान बनाएँ."
 
 #: frontend/models/baseModels/Party/Party.ts:82
-msgid "Create Purchase"
+msgid "Create purchase"
 msgstr "खरीद बनाएँ"
 
 #: frontend/src/utils/getStartedConfig.ts:146
@@ -2031,7 +2031,7 @@ msgid "Create Return"
 msgstr ""
 
 #: frontend/models/baseModels/Party/Party.ts:115
-msgid "Create Sale"
+msgid "Create sale"
 msgstr "बिक्री बनाएँ"
 
 #: frontend/src/utils/getStartedConfig.ts:106
@@ -2039,7 +2039,7 @@ msgid "Create Sales Invoice"
 msgstr "बिक्री चालान बनाएँ"
 
 #: frontend/src/components/ShortcutsHelper.vue:97
-msgid "Create a new entry of the same type as the List View"
+msgid "Create a new entry of the same type as the list view"
 msgstr "सूची दृश्य के समान प्रकार की एक नई प्रविष्टि बनाएँ"
 
 #: frappe_books/accounting/returns.py:42
@@ -2168,7 +2168,7 @@ msgstr "कस्टम फॉर्म"
 
 #: frontend/src/components/Controls/Color.vue:86
 #: frontend/src/components/Controls/Color.vue:87
-msgid "Custom Hex"
+msgid "Custom hex"
 msgstr "कस्टम हेक्स"
 
 #: frappe_books/customization.py:41
@@ -2509,11 +2509,11 @@ msgid "Delete"
 msgstr "हटाएँ"
 
 #: frontend/src/pages/ChartOfAccounts.vue:228
-msgid "Delete Account"
+msgid "Delete account"
 msgstr "खाता हटाएं"
 
 #: frontend/src/pages/ChartOfAccounts.vue:228
-msgid "Delete Group"
+msgid "Delete group"
 msgstr "समूह हटाएं"
 
 #: frontend/src/components/POS/NumericKeypad.vue:93
@@ -2643,7 +2643,7 @@ msgid "Disabled"
 msgstr "अक्षम"
 
 #: frontend/src/pages/POS/POS.vue:1023
-msgid "Discard and Continue"
+msgid "Discard and continue"
 msgstr ""
 
 #: frappe_books/frappe_books/print_format/frappe_books___journal_entry/frappe_books___journal_entry.html:1
@@ -2796,7 +2796,7 @@ msgid "Display Precision should have a value between 0 and 9."
 msgstr "प्रदर्शन परिशुद्धता का मान 0 से 9 के बीच होना चाहिए।"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:89
-msgid "Display Scale"
+msgid "Display scale"
 msgstr "प्रदर्शन स्केल"
 
 #. Label of the displaytermsandconditions (Check) field in DocType 'Books Print
@@ -2883,11 +2883,11 @@ msgid "Duplicate"
 msgstr "डुप्लिकेट"
 
 #: frontend/src/errorHandling.ts:120
-msgid "Duplicate Entry"
+msgid "Duplicate entry"
 msgstr "डुप्लिकेट प्रविष्टि"
 
 #: frontend/src/pages/PrintView/PrintView.vue:190
-msgid "Duplicate Template"
+msgid "Duplicate template"
 msgstr "डुप्लिकेट टेम्पलेट"
 
 #: frontend/src/pages/ImportWizard.vue:419
@@ -3121,11 +3121,11 @@ msgid "Enabled For"
 msgstr "के लिए सक्षम"
 
 #: frontend/models/baseModels/Address/Address.ts:28
-msgid "Enter Country to load States"
+msgid "Enter country to load states"
 msgstr "राज्यों को लोड करने के लिए देश दर्ज करें"
 
 #: frontend/models/baseModels/Address/Address.ts:25
-msgid "Enter State"
+msgid "Enter state"
 msgstr "राज्य दर्ज करें"
 
 #: frappe_books/regional.py:98
@@ -3314,12 +3314,12 @@ msgid "Export"
 msgstr "निर्यात"
 
 #: frontend/src/components/ExportWizard.vue:205
-msgid "Export Format"
+msgid "Export format"
 msgstr "निर्यात प्रारूप"
 
 #: frontend/reports/commonExporter.ts:194
 #: frontend/src/components/ExportWizard.vue:282
-msgid "Export Successful"
+msgid "Export successful"
 msgstr "निर्यात सफल"
 
 #: frontend/src/components/ExportWizard.vue:4
@@ -3456,7 +3456,7 @@ msgid "Five"
 msgstr "पाँच"
 
 #: frontend/src/pages/ImportWizard.vue:310
-msgid "Fix Failed"
+msgid "Fix failed"
 msgstr "फ़िक्स विफल"
 
 #. Option for the 'Account Type' (Select) field in DocType 'Books Account'
@@ -3502,7 +3502,7 @@ msgid "For Sales"
 msgstr "बिक्री के लिए"
 
 #: frontend/src/errorHandling.ts:116
-msgid "Forbidden Error"
+msgid "Forbidden error"
 msgstr "निषिद्ध त्रुटि"
 
 #. Label of the section (Data) field in DocType 'Books Custom Field'
@@ -3860,7 +3860,7 @@ msgid "Hide Group Amounts"
 msgstr "समूह राशियाँ छिपाएँ"
 
 #: frontend/src/components/Sidebar.vue:44
-msgid "Hide Sidebar"
+msgid "Hide sidebar"
 msgstr ""
 
 #. Label of the hide_unavailable_items (Check) field in DocType 'Books Pos
@@ -3926,11 +3926,11 @@ msgid "Image"
 msgstr "छवि"
 
 #: frontend/src/pages/ImportWizard.vue:243
-msgid "Import Complete"
+msgid "Import complete"
 msgstr "आयात पूर्ण"
 
 #: frontend/src/pages/ImportWizard.vue:32
-msgid "Import Data"
+msgid "Import data"
 msgstr "डेटा आयात "
 
 #: frontend/src/pages/ImportWizard.vue:83
@@ -4022,7 +4022,7 @@ msgid "Inflow"
 msgstr "इनफ़्लो"
 
 #: frontend/src/utils/ui.ts:624
-msgid "Insufficient Quantity"
+msgid "Insufficient quantity"
 msgstr "अपर्याप्त मात्रा"
 
 #: frappe_books/inventory/stock.py:196
@@ -4064,7 +4064,7 @@ msgid "Invalid Key Error"
 msgstr "अमान्य कुंजी त्रुटि"
 
 #: frontend/src/utils/pos.ts:173
-msgid "Invalid Quantity for Item {0}"
+msgid "Invalid quantity for item {0}"
 msgstr "वस्तु {0} के लिए अमान्य मात्रा"
 
 #: frontend/src/utils/filterQuery.ts:67
@@ -4249,7 +4249,7 @@ msgid "Is Group"
 msgstr "समूह है"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:119
-msgid "Is Landscape"
+msgid "Landscape"
 msgstr "लैंडस्केप है"
 
 #: frontend/src/utils/filterQuery.ts:8
@@ -4405,7 +4405,7 @@ msgstr "वस्तु छूट"
 #: frontend/src/pages/POS/ItemEnquiryModal.vue:4
 #: frontend/src/pages/POS/POSQuickActions.vue:56
 #: frontend/src/pages/POS/POSQuickActions.vue:58
-msgid "Item Enquiry"
+msgid "Item enquiry"
 msgstr ""
 
 #. Label of the item_group (Link) field in DocType 'Books Item'
@@ -4595,11 +4595,11 @@ msgid "JournalEntry"
 msgstr ""
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:147
-msgid "Key Hints"
+msgid "Key hints"
 msgstr "मुख्य संकेत"
 
 #: frontend/src/components/Sidebar.vue:58 frontend/src/utils/appMenu.ts:18
-msgid "Keyboard Shortcuts"
+msgid "Keyboard shortcuts"
 msgstr ""
 
 #. Label of the label (Data) field in DocType 'Books Custom Field'
@@ -4644,7 +4644,7 @@ msgid "Legal Expenses"
 msgstr "कानूनी व्यय"
 
 #: frontend/src/components/SearchBar.vue:74
-msgid "Less Filters"
+msgid "Fewer filters"
 msgstr "कम फ़िल्टर"
 
 #: frontend/src/utils/filterQuery.ts:12
@@ -4666,11 +4666,11 @@ msgid "Link"
 msgstr "लिंक"
 
 #: frontend/src/errorHandling.ts:124
-msgid "Link Validation Error"
+msgid "Link validation error"
 msgstr "लिंक सत्यापन त्रुटि"
 
 #: frontend/src/pages/CommonForm/LinkedEntries.vue:17
-msgid "Linked Entries"
+msgid "Linked entries"
 msgstr "लिंक की गई प्रविष्टियाँ"
 
 #: frontend/src/utils/search.ts:70
@@ -4680,7 +4680,7 @@ msgstr "सूची"
 #: frontend/src/components/ShortcutsHelper.vue:92
 #: frontend/src/pages/POS/POSQuickActions.vue:4
 #: frontend/src/pages/POS/POSQuickActions.vue:6
-msgid "List View"
+msgid "List view"
 msgstr "सूची दृश्य"
 
 #: frontend/src/components/Report/ListReport.vue:51
@@ -4733,7 +4733,7 @@ msgid "Locations"
 msgstr ""
 
 #: frontend/src/utils/appMenu.ts:33
-msgid "Log Out"
+msgid "Log out"
 msgstr ""
 
 #: frappe_books/www/books.py:41
@@ -4844,7 +4844,7 @@ msgid "Loyalty-program usage counts cannot be negative."
 msgstr ""
 
 #: frontend/src/pages/ListView/List.vue:71
-msgid "Make Entry"
+msgid "Make entry"
 msgstr "प्रविष्टि बनाएँ"
 
 #. Label of the make_auto_payment (Check) field in DocType 'Books Purchase
@@ -4882,7 +4882,7 @@ msgstr ""
 
 #: frontend/src/errorHandling.ts:128
 #: frontend/src/pages/SetupWizard/SetupWizard.vue:199
-msgid "Mandatory Error"
+msgid "Mandatory error"
 msgstr "अनिवार्य त्रुटि"
 
 #. Label of the is_manual_rate (Check) field in DocType 'Books Purchase Invoice
@@ -5099,7 +5099,7 @@ msgid "More"
 msgstr "अधिक"
 
 #: frontend/src/components/SearchBar.vue:74
-msgid "More Filters"
+msgid "More filters"
 msgstr "अधिक फ़िल्टर"
 
 #. Label of the movement_type (Select) field in DocType 'Books Stock Movement'
@@ -5175,7 +5175,7 @@ msgstr ""
 #: frontend/src/pages/CommonForm/CommonForm.vue:291
 #: frontend/src/pages/CommonForm/CommonForm.vue:294
 #: frontend/src/utils/ui.ts:321
-msgid "New Entry"
+msgid "New entry"
 msgstr "नई प्रविष्टि"
 
 #. Label of a shortcut in the Books Workspace
@@ -5189,7 +5189,7 @@ msgid "New Sales Invoice"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:175
-msgid "New Template"
+msgid "New template"
 msgstr "नया टेम्पलेट"
 
 #: frontend/fyo/core/docHandler.ts:138
@@ -5230,19 +5230,19 @@ msgid "No"
 msgstr "नहीं"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:562
-msgid "No Display Entries Found"
+msgid "No display entries found"
 msgstr "कोई प्रदर्शन प्रविष्टियाँ नहीं मिलीं"
 
 #: frontend/src/pages/PrintView/PrintView.vue:107
-msgid "No Print Templates found for entry type {0}"
+msgid "No print templates found for entry type {0}"
 msgstr "प्रविष्टि प्रकार {0} के लिए कोई प्रिंट टेम्पलेट नहीं मिला"
 
 #: frontend/src/pages/ImportWizard.vue:639
-msgid "No Value"
+msgid "No value"
 msgstr "कोई मूल्य नहीं"
 
 #: frontend/src/components/Report/ListReport.vue:54
-msgid "No Values to be Displayed"
+msgid "No values to be displayed"
 msgstr "प्रदर्शित किए जाने वाले कोई मूल्य नहीं"
 
 #: frontend/src/components/POS/PaymentSummary.vue:12
@@ -5327,7 +5327,7 @@ msgid "None"
 msgstr "कोई नहीं"
 
 #: frontend/fyo/models/SystemSettings.ts:45 frontend/src/errorHandling.ts:112
-msgid "Not Found"
+msgid "Not found"
 msgstr "नहीं मिला"
 
 #: frontend/models/helpers.ts:382
@@ -5398,7 +5398,7 @@ msgid "Number Series"
 msgstr "संख्या श्रृंखला"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:94
-msgid "Number of Rows"
+msgid "Number of rows"
 msgstr "पंक्तियों की संख्या"
 
 #: frontend/reports/AccountReport.ts:272 frontend/reports/AccountReport.ts:273
@@ -5463,7 +5463,7 @@ msgid "Open"
 msgstr "खोलें"
 
 #: frontend/src/components/ShortcutsHelper.vue:58
-msgid "Open Documentation"
+msgid "Open documentation"
 msgstr "दस्तावेज़ खोलें"
 
 #: frontend/src/pages/POS/SavedInvoiceModal.vue:48
@@ -5476,7 +5476,7 @@ msgstr ""
 
 #: frontend/src/pages/CommonForm/CommonForm.vue:39
 #: frontend/src/pages/CommonForm/CommonForm.vue:40
-msgid "Open Print View"
+msgid "Open print view"
 msgstr "प्रिंट दृश्य खोलें"
 
 #: frontend/src/components/ShortcutsHelper.vue:83
@@ -5484,15 +5484,15 @@ msgid "Open Print View if Print is available."
 msgstr "यदि प्रिंट उपलब्ध है तो प्रिंट दृश्य खोलें।"
 
 #: frontend/src/components/ShortcutsHelper.vue:46
-msgid "Open Quick Search"
+msgid "Open quick search"
 msgstr "त्वरित खोज खोलें"
 
 #: frontend/src/pages/Report.vue:15 frontend/src/pages/Report.vue:16
-msgid "Open Report Print View"
+msgid "Open report print view"
 msgstr "रिपोर्ट प्रिंट दृश्य खोलें"
 
 #: frontend/src/components/ShortcutsHelper.vue:168
-msgid "Open Sales Invoice List"
+msgid "Open Sales Invoice list"
 msgstr "बिक्री चालान सूची खोलें"
 
 #: frontend/src/components/ShortcutsHelper.vue:188
@@ -5560,7 +5560,7 @@ msgstr "प्रारंभिक शेष इक्विटी"
 #: frappe_books/frappe_books/doctype/books_get_started/books_get_started.json
 #: frontend/schemas/app/GetStarted.json
 #: frontend/src/utils/getStartedConfig.ts:51
-msgid "Opening Balances"
+msgid "Opening balances"
 msgstr "प्रारंभिक शेष"
 
 #. Label of the opening_cash (Table) field in DocType 'Books Pos Opening Shift'
@@ -6049,12 +6049,12 @@ msgid "Phone"
 msgstr "फ़ोन"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:131
-msgid "Pick Columns"
+msgid "Pick columns"
 msgstr "कॉलम चुनें"
 
 #: frontend/src/pages/ImportWizard.vue:200
 #: frontend/src/pages/ImportWizard.vue:534
-msgid "Pick Import Columns"
+msgid "Pick import columns"
 msgstr "आयात कॉलम चुनें"
 
 #: frontend/schemas/app/Defaults.json frontend/schemas/app/POSProfile.json
@@ -6352,7 +6352,7 @@ msgid "Print Templates"
 msgstr "प्रिंट टेम्पलेट"
 
 #: frontend/src/pages/PrintView/PrintView.vue:3
-msgid "Print View"
+msgid "Print view"
 msgstr "प्रिंट दृश्य"
 
 #. Name of a standard account
@@ -6404,11 +6404,6 @@ msgstr "उत्पाद छूट योजना"
 #: frontend/schemas/app/POSProfile.json
 msgid "Profile"
 msgstr ""
-
-#: frontend/reports/ProfitAndLoss/ProfitAndLoss.ts:8
-#: frontend/src/utils/sidebarConfig.ts:126
-msgid "Profit And Loss"
-msgstr "लाभ और हानि"
 
 #: frontend/src/pages/Dashboard/ProfitAndLoss.vue:4
 #: frontend/src/pages/Dashboard/ProfitAndLoss.vue:59
@@ -6677,7 +6672,7 @@ msgid "Quarters"
 msgstr "तिमाही"
 
 #: frontend/src/components/ShortcutsHelper.vue:106
-msgid "Quick Search"
+msgid "Quick search"
 msgstr "त्वरित खोज"
 
 #: frontend/src/utils/ui.ts:50
@@ -6750,7 +6745,7 @@ msgid "Rate can't be negative."
 msgstr "दर ऋणात्मक नहीं हो सकती।"
 
 #: frontend/src/pages/ImportWizard.vue:631
-msgid "Raw Value: {0}"
+msgid "Raw value: {0}"
 msgstr "कच्चा मूल्य: {0}"
 
 #. Option for the 'Account Type' (Select) field in DocType 'Books Account'
@@ -7152,7 +7147,7 @@ msgid "Reverts"
 msgstr "वापस लाया गया"
 
 #: frontend/src/utils/getStartedConfig.ts:42
-msgid "Review Accounts"
+msgid "Review accounts"
 msgstr "खातों की समीक्षा करें"
 
 #: frontend/src/utils/getStartedConfig.ts:44
@@ -7400,15 +7395,15 @@ msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:22
 #: frontend/src/pages/ImportWizard.vue:23
-msgid "Save Template"
+msgid "Save template"
 msgstr "टेम्पलेट सहेजें"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:352
-msgid "Save Template File"
+msgid "Save template file"
 msgstr "टेम्पलेट फ़ाइल सहेजें"
 
 #: frontend/src/pages/POS/POS.vue:1030
-msgid "Save and Continue"
+msgid "Save and continue"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:20
@@ -7459,7 +7454,7 @@ msgid "Saved"
 msgstr "सहेजा गया"
 
 #: frontend/src/pages/POS/SavedInvoiceModal.vue:4
-msgid "Saved and Submitted Invoices"
+msgid "Saved and submitted invoices"
 msgstr ""
 
 #: frontend/src/importer.ts:757
@@ -7556,19 +7551,19 @@ msgstr "देश चुनें"
 
 #: frontend/src/pages/ImportWizard.vue:39
 #: frontend/src/pages/ImportWizard.vue:521 frontend/src/utils/ui.ts:481
-msgid "Select File"
+msgid "Select file"
 msgstr "फ़ाइल चुनें"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:345
-msgid "Select Template File"
+msgid "Select template file"
 msgstr "टेम्पलेट फ़ाइल चुनें"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:381
-msgid "Select a Display Doc to view the Template"
+msgid "Select a Display Doc to view the template"
 msgstr "टेम्पलेट देखने के लिए कोई डिस्प्ले डॉक चुनें"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:377
-msgid "Select a Template type"
+msgid "Select a template type"
 msgstr "टेम्पलेट प्रकार चुनें"
 
 #: frontend/src/pages/TemplateBuilder/SetPrintSize.vue:11
@@ -7711,20 +7706,20 @@ msgstr "मूल्य सूची निर्धारित करें"
 
 #: frontend/src/pages/TemplateBuilder/SetPrintSize.vue:4
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:337
-msgid "Set Print Size"
+msgid "Set print size"
 msgstr "प्रिंट आकार सेट करें"
 
 #: frontend/src/pages/TemplateBuilder/SetType.vue:4
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:329
-msgid "Set Template Type"
+msgid "Set template type"
 msgstr "टेम्पलेट प्रकार सेट करें"
 
 #: frontend/src/pages/GetStarted.vue:63
-msgid "Set Up"
+msgid "Set up"
 msgstr "सेट अप करें"
 
 #: frontend/src/pages/GetStarted.vue:3
-msgid "Set Up Your Workspace"
+msgid "Set up your workspace"
 msgstr "अपना कार्यक्षेत्र सेट करें"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:385
@@ -7772,7 +7767,7 @@ msgid "Set all inventory ledger accounts in Books Inventory Settings."
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:556
-msgid "Set an Import Type"
+msgid "Set an import type"
 msgstr "एक आयात प्रकार सेट करें"
 
 #: frappe_books/accounting/invoice.py:204
@@ -7931,7 +7926,7 @@ msgid "Show HSN"
 msgstr "HSN दिखाएँ"
 
 #: frontend/src/pages/ImportWizard.vue:313
-msgid "Show Me"
+msgid "Show me"
 msgstr "मुझे दिखाएँ"
 
 #: frontend/src/components/PageHeader.vue:13
@@ -7976,7 +7971,7 @@ msgid "Skip Child Tables"
 msgstr "चाइल्ड टेबल छोड़ें"
 
 #: frontend/src/components/SearchBar.vue:91
-msgid "Skip Transactions"
+msgid "Skip transactions"
 msgstr "लेनदेन छोड़ें"
 
 #: frontend/schemas/app/Currency.json
@@ -8017,7 +8012,7 @@ msgid "Start"
 msgstr "शुरू करें"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:80
-msgid "Start From Row Index"
+msgid "Start from row index"
 msgstr "पंक्ति सूचकांक से शुरू करें"
 
 #. Label of the state (Autocomplete) field in DocType 'Books Address'
@@ -8085,7 +8080,7 @@ msgid "Stock Balance"
 msgstr "स्टॉक शेष"
 
 #: frontend/models/helpers.ts:282
-msgid "Stock Entries"
+msgid "Stock entries"
 msgstr "स्टॉक प्रविष्टियाँ"
 
 #. Name of a standard account
@@ -8674,15 +8669,15 @@ msgid "Thirty"
 msgstr "तीस"
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:39
-msgid "This Month"
+msgid "This month"
 msgstr "इस महीने"
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:38
-msgid "This Quarter"
+msgid "This quarter"
 msgstr "इस तिमाही"
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:36
-msgid "This Year"
+msgid "This year"
 msgstr "इस वर्ष"
 
 #: frontend/src/utils/ui.ts:127
@@ -8783,11 +8778,11 @@ msgstr "इस वर्ष तक"
 #: frontend/src/components/ShortcutsHelper.vue:142
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:25
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:26
-msgid "Toggle Edit Mode"
+msgid "Toggle edit mode"
 msgstr "टॉगल एडिट मोड"
 
 #: frontend/src/components/ShortcutsHelper.vue:146
-msgid "Toggle Key Hints"
+msgid "Toggle key hints"
 msgstr "टॉगल की हिंट"
 
 #: frontend/src/components/ShortcutsHelper.vue:87
@@ -8795,7 +8790,7 @@ msgid "Toggle Linked Entries widget, not available in Quick Edit view."
 msgstr "टॉगल लिंक्ड एंट्री विजेट, क्विक एडिट व्यू में उपलब्ध नहीं है।"
 
 #: frontend/src/components/ShortcutsHelper.vue:164
-msgid "Toggle between Grid and List view"
+msgid "Toggle between grid and list view"
 msgstr "ग्रिड और सूची दृश्य के बीच टॉगल करें"
 
 #: frontend/src/pages/CommonForm/CommonForm.vue:45
@@ -8828,7 +8823,7 @@ msgid "Toggle the Report filter"
 msgstr "रिपोर्ट फ़िल्टर टॉगल करें"
 
 #: frontend/src/pages/Dashboard/Expenses.vue:4
-msgid "Top Expenses"
+msgid "Top expenses"
 msgstr "शीर्ष व्यय"
 
 #: frappe_books/frappe_books/print_format/frappe_books___journal_entry/frappe_books___journal_entry.html:1
@@ -8893,7 +8888,7 @@ msgid "Total Quantity"
 msgstr "कुल मात्रा"
 
 #: frontend/src/pages/Dashboard/Expenses.vue:12
-msgid "Total Spending"
+msgid "Total spending"
 msgstr "कुल खर्च"
 
 #: frappe_books/accounting/ledger.py:105
@@ -9145,7 +9140,7 @@ msgid "Use Full Width"
 msgstr "पूर्ण चौड़ाई का उपयोग करें"
 
 #: frontend/src/components/ExportWizard.vue:194
-msgid "Use List Filters"
+msgid "Use list filters"
 msgstr "सूची फ़िल्टर का उपयोग करें"
 
 #: frontend/src/components/POS/NumericKeypad.vue:133
@@ -9201,7 +9196,7 @@ msgid "Valid To Date should be greater than Valid From Date."
 msgstr "तिथि-तक-वैध, तिथि-से-वैध से अधिक होना चाहिए।"
 
 #: frontend/src/errorHandling.ts:108
-msgid "Validation Error"
+msgid "Validation error"
 msgstr "सत्यापन त्रुटि"
 
 #. Label of the validity_section_break_29 (Section Break) field in DocType
@@ -9269,27 +9264,27 @@ msgid "View"
 msgstr "देखें"
 
 #: frontend/src/utils/ui.ts:773
-msgid "View Accounting Entries"
+msgid "View accounting entries"
 msgstr "लेखांकन प्रविष्टियाँ देखें"
 
 #: frontend/src/pages/Dashboard/UnpaidInvoices.vue:17
-msgid "View Paid Invoices"
+msgid "View paid invoices"
 msgstr "भुगतान किए गए चालान देखें"
 
 #: frontend/models/baseModels/Party/Party.ts:104
-msgid "View Purchases"
+msgid "View purchases"
 msgstr "खरीदारी देखें"
 
 #: frontend/models/baseModels/Party/Party.ts:137
-msgid "View Sales"
+msgid "View sales"
 msgstr "बिक्री देखें"
 
 #: frontend/src/utils/ui.ts:763
-msgid "View Stock Entries"
+msgid "View stock entries"
 msgstr "स्टॉक प्रविष्टियाँ देखें"
 
 #: frontend/src/pages/Dashboard/UnpaidInvoices.vue:31
-msgid "View Unpaid Invoices"
+msgid "View unpaid invoices"
 msgstr "अवैतनिक चालान देखें"
 
 #: frontend/src/pages/CommonForm/CommonForm.vue:32
@@ -9348,7 +9343,7 @@ msgid "Write-off must be between zero and the payment amount."
 msgstr ""
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:37
-msgid "Year to Date"
+msgid "Year to date"
 msgstr "वर्ष में आज तक"
 
 #: frontend/reports/AccountReport.ts:233
@@ -9648,3 +9643,11 @@ msgstr "{0} {1} मौजूद नहीं है"
 msgid "{0} {1} is linked with existing records."
 msgstr "{0} {1} मौजूदा रिकॉर्ड से जुड़ा हुआ है।"
 
+
+
+#: frontend/schemas/app/CouponCode.json
+#: frontend/src/pages/POS/POSQuickActions.vue:30
+#: frontend/src/pages/POS/POSQuickActions.vue:32
+#: frontend/src/utils/sidebarConfig.ts:222
+msgid "Coupon code"
+msgstr "कूपन कोड"

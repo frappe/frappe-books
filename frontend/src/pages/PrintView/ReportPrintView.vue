@@ -77,7 +77,7 @@
             :show-label="true"
             :border="true"
             :df="{
-              label: t`Start From Row Index`,
+              label: t`Start from row index`,
               fieldtype: 'Int',
               fieldname: 'numRows',
               minvalue: 1,
@@ -91,7 +91,7 @@
             :show-label="true"
             :border="true"
             :df="{
-              label: t`Number of Rows`,
+              label: t`Number of rows`,
               fieldtype: 'Int',
               fieldname: 'numRows',
               minvalue: 0,
@@ -116,7 +116,7 @@
             :show-label="true"
             :border="true"
             :df="{
-              label: t`Is Landscape`,
+              label: t`Landscape`,
               fieldname: 'isLandscape',
               fieldtype: 'Check',
             }"
@@ -128,7 +128,7 @@
         <!-- Pick Columns -->
         <div class="border-t border-outline-gray-1 p-4">
           <h2 class="text-sm text-ink-gray-5">
-            {{ t`Pick Columns` }}
+            {{ t`Pick columns` }}
           </h2>
           <div
             class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 rounded-6 border p-3 border-outline-gray-1"

@@ -324,7 +324,7 @@ function getDuplicateAction(doc: FrappeDoc): Action {
 
 function getNewAction(doc: FrappeDoc): Action {
   return {
-    label: t`New Entry`,
+    label: t`New entry`,
     group: t`Create`,
     condition: (doc: FrappeDoc) => fyo.can(doc.schemaName, 'create'),
     async action() {
@@ -475,7 +475,7 @@ export function focusOrSelectFormControl(
 
 export async function selectTextFile(filters?: SelectFileOptions['filters']) {
   const options = {
-    title: t`Select File`,
+    title: t`Select file`,
     filters,
   };
   const selectedFile = await selectFile(options);
@@ -618,7 +618,7 @@ async function showInsufficientInventoryDialog(doc: SalesInvoice) {
     ];
 
     return (await showDialog({
-      title: t`Insufficient Quantity`,
+      title: t`Insufficient quantity`,
       type: 'warning',
       detail,
       buttons,
@@ -763,7 +763,7 @@ function getSubmitSuccessToastAction(doc: FrappeDoc) {
         const route = getLedgerLink(doc, 'StockLedger');
         await routeTo(route);
       },
-      actionText: t`View Stock Entries`,
+      actionText: t`View stock entries`,
     };
   }
 
@@ -773,7 +773,7 @@ function getSubmitSuccessToastAction(doc: FrappeDoc) {
         const route = getLedgerLink(doc, 'GeneralLedger');
         await routeTo(route);
       },
-      actionText: t`View Accounting Entries`,
+      actionText: t`View accounting entries`,
     };
   }
 

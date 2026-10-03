@@ -121,7 +121,7 @@
         class="mt-2"
         variant="solid"
         icon-left="lucide-plus"
-        :label="t`Make Entry`"
+        :label="t`Make entry`"
         @click="$emit('makeNewDoc')"
       />
     </EmptyState>

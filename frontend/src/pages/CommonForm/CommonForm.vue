@@ -60,8 +60,8 @@
           <FrappeButton
             v-if="canPrint"
             icon="lucide-printer"
-            :label="t`Open Print View`"
-            :tooltip="t`Open Print View`"
+            :label="t`Open print view`"
+            :tooltip="t`Open print view`"
             @click="openPrintView"
           />
           <DropdownWithActions
@@ -345,10 +345,10 @@ export default defineComponent({
       }
 
       if (this.schema.isSubmittable && this.docOrNull.notInserted) {
-        return this.t`New Entry`;
+        return this.t`New entry`;
       }
 
-      return this.docOrNull.formTitle || this.t`New Entry`;
+      return this.docOrNull.formTitle || this.t`New entry`;
     },
     breadcrumbs(): BreadcrumbsProps['items'] {
       const list = { label: this.schema.label, route: `/list/${this.schemaName}` };

@@ -3,7 +3,7 @@
     class="flex flex-1 flex-col bg-surface-gray-1"
     :class="{ 'min-h-full': isMobile }"
   >
-    <PageHeader :title="isMobile ? name : t`Print View`">
+    <PageHeader :title="isMobile ? name : t`Print view`">
       <SelectControl
         v-if="templateList.length"
         :df="{
@@ -208,7 +208,7 @@ export default defineComponent({
       if (!this.templateList.length) {
         const label = getSchema(this.schemaName)?.label ?? this.schemaName;
 
-        return this.t`No Print Templates found for entry type ${label}`;
+        return this.t`No print templates found for entry type ${label}`;
       }
 
       if (!this.templateName) {
@@ -272,7 +272,7 @@ export default defineComponent({
     createTemplateActions(): Action[] {
       const actions: Action[] = [
         {
-          label: this.t`New Template`,
+          label: this.t`New template`,
           group: this.t`Create`,
           action: async () => {
             const doc = newFrappeDoc(ModelNameEnum.PrintFormat, {
@@ -287,7 +287,7 @@ export default defineComponent({
 
       if (this.templateDoc?.name) {
         actions.push({
-          label: this.t`Duplicate Template`,
+          label: this.t`Duplicate template`,
           group: this.t`Create`,
           action: async () => {
             const doc = newFrappeDoc(ModelNameEnum.PrintFormat, {

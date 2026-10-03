@@ -102,7 +102,7 @@ export class Party extends FrappeDoc {
   static getActions(fyo: Fyo): Action[] {
     return [
       {
-        label: fyo.t`Create Purchase`,
+        label: fyo.t`Create purchase`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
@@ -125,7 +125,7 @@ export class Party extends FrappeDoc {
         },
       },
       {
-        label: fyo.t`View Purchases`,
+        label: fyo.t`View purchases`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
         action: async (partyDoc, router) => {
@@ -136,7 +136,7 @@ export class Party extends FrappeDoc {
         },
       },
       {
-        label: fyo.t`Create Sale`,
+        label: fyo.t`Create sale`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {
@@ -159,7 +159,7 @@ export class Party extends FrappeDoc {
         },
       },
       {
-        label: fyo.t`View Sales`,
+        label: fyo.t`View sales`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
         action: async (partyDoc, router) => {

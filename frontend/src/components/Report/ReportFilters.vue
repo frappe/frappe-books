@@ -12,7 +12,7 @@
         variant="outline"
         dual-pane
         :model-value="dateRange"
-        :placeholder="t`Date Range`"
+        :placeholder="t`Date range`"
         :required="item.from.required || item.to.required"
         :format="getRangeFormat()"
         :disabled="loading"

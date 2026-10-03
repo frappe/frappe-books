@@ -71,7 +71,7 @@
       @click="$emit('add')"
     >
       <span class="lucide-plus size-5" aria-hidden="true" />
-      {{ t`Add Row` }}
+      {{ t`Add row` }}
     </button>
   </div>
 </template>

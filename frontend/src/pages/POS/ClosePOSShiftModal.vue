@@ -23,7 +23,7 @@
       />
       <section
         class="rounded-6 bg-surface-gray-1"
-        :aria-label="t`Closing Amounts`"
+        :aria-label="t`Closing amounts`"
       >
         <div
           class="flex h-9 items-center justify-between gap-3 border-b border-outline-gray-1 px-3 text-xs-medium text-ink-gray-5"

@@ -1,7 +1,7 @@
 <template>
   <FrappeDialog
     :open="open"
-    :title="t`Set Template Type`"
+    :title="t`Set template type`"
     :actions="[{ label: t`Done`, variant: 'solid', onClick: done }]"
     @update:open="(value: boolean) => $emit('update:open', value)"
   >

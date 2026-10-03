@@ -1,7 +1,7 @@
 <template>
   <FrappeDialog
     :open="open"
-    :title="t`Set Print Size`"
+    :title="t`Set print size`"
     :actions="[{ label: t`Done`, variant: 'solid', onClick: done }]"
     @update:open="(value: boolean) => $emit('update:open', value)"
   >

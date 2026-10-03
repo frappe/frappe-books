@@ -1116,12 +1116,12 @@ export default defineComponent({
           detail: message,
           buttons: [
             {
-              label: t`Save and Continue`,
+              label: t`Save and continue`,
               action: () => this.saveAndContinue(),
               isPrimary: true,
             },
             {
-              label: t`Discard and Continue`,
+              label: t`Discard and continue`,
               action: () => this.discardAndContinue(),
             },
             { label: t`Cancel`, action: () => null, isEscape: true },
@@ -1135,13 +1135,13 @@ export default defineComponent({
         actions: [
           { label: t`Cancel`, variant: 'ghost' },
           {
-            label: t`Discard and Continue`,
+            label: t`Discard and continue`,
             theme: 'red',
             variant: 'subtle',
             onClick: () => this.discardAndContinue(),
           },
           {
-            label: t`Save and Continue`,
+            label: t`Save and continue`,
             variant: 'solid',
             onClick: () => this.saveAndContinue(),
           },

@@ -199,7 +199,7 @@ export default defineComponent({
       return {
         useListFilters: {
           fieldtype: 'Check',
-          label: t`Use List Filters`,
+          label: t`Use list filters`,
           fieldname: 'useListFilters',
         } as Field,
         limit: {
@@ -210,7 +210,7 @@ export default defineComponent({
         } as Field,
         exportFormat: {
           fieldtype: 'Select',
-          label: t`Export Format`,
+          label: t`Export format`,
           fieldname: 'exportFormat',
           options: [
             { value: 'json', label: 'JSON' },
@@ -285,7 +285,7 @@ export default defineComponent({
       saveExportData(
         data,
         `${fileName}.${this.exportFormat}`,
-        fyo.t`Export Successful`
+        fyo.t`Export successful`
       );
     },
     getFileName() {

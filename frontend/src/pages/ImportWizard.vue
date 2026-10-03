@@ -10,8 +10,8 @@
       />
       <FrappeButton
         v-if="hasImporter"
-        :label="t`Add Row`"
-        :tooltip="t`Add Row`"
+        :label="t`Add row`"
+        :tooltip="t`Add row`"
         :disabled="isMakingEntries"
         icon="lucide-plus"
         @click="() => importer.addRow()"
@@ -19,7 +19,7 @@
       <FrappeButton
         v-if="hasImporter"
         icon-left="lucide-download"
-        :label="t`Save Template`"
+        :label="t`Save template`"
         @click="saveTemplate"
       />
       <FrappeButton
@@ -28,14 +28,14 @@
         :disabled="errorMessage.length > 0 || isMakingEntries"
         @click="importData"
       >
-        {{ t`Import Data` }}
+        {{ t`Import data` }}
       </FrappeButton>
       <FrappeButton
         v-if="importType && !canImportData"
         variant="solid"
         @click="selectFile"
       >
-        {{ t`Select File` }}
+        {{ t`Select file` }}
       </FrappeButton>
     </PageHeader>
 
@@ -186,14 +186,14 @@
         v-else
         class="flex-1"
         icon="lucide-file-up"
-        :title="t`Set an Import Type`"
+        :title="t`Set an import type`"
       />
     </div>
 
     <!-- Pick Column Dialog -->
     <FrappeDialog
       v-model:open="showColumnPicker"
-      :title="t`Pick Import Columns`"
+      :title="t`Pick import columns`"
       size="3xl"
     >
       <FrappeScrollArea viewport-class="max-h-80">
@@ -238,7 +238,7 @@
     <!-- Import Completed Dialog -->
     <FrappeDialog
       :open="complete"
-      :title="t`Import Complete`"
+      :title="t`Import complete`"
       :actions="completeActions"
       @update:open="(open: boolean) => !open && clear()"
     >
@@ -503,11 +503,11 @@ export default defineComponent({
       const actions: DialogAction[] = [];
       if (this.failed.length) {
         actions.push({
-          label: this.t`Fix Failed`,
+          label: this.t`Fix failed`,
           onClick: this.clearSuccessfullyImportedEntries,
         });
       } else if (this.success.length) {
-        actions.push({ label: this.t`Show Me`, onClick: this.showMe });
+        actions.push({ label: this.t`Show me`, onClick: this.showMe });
       }
 
       actions.push({ label: this.t`Done`, variant: 'solid', onClick: this.clear });
@@ -516,9 +516,9 @@ export default defineComponent({
     actions(): Action[] {
       const actions: Action[] = [];
 
-      let selectFileLabel = this.t`Select File`;
+      let selectFileLabel = this.t`Select file`;
       if (this.file) {
-        selectFileLabel = this.t`Change File`;
+        selectFileLabel = this.t`Change file`;
       }
 
       if (this.canImportData) {
@@ -529,7 +529,7 @@ export default defineComponent({
       }
 
       const pickColumnsAction = {
-        label: this.t`Pick Import Columns`,
+        label: this.t`Pick import columns`,
         action: () => (this.showColumnPicker = true),
       };
 
@@ -616,15 +616,15 @@ export default defineComponent({
       }
 
       if (vmi.rawValue != null) {
-        title.push(this.t`Raw Value: ${String(vmi.rawValue)}`);
+        title.push(this.t`Raw value: ${String(vmi.rawValue)}`);
       }
 
       if (vmi.error) {
-        title.push(this.t`Conversion Error`);
+        title.push(this.t`Conversion error`);
       }
 
       if (!title.length) {
-        return this.t`No Value`;
+        return this.t`No value`;
       }
 
       return title.join(', ');
@@ -669,7 +669,7 @@ export default defineComponent({
     },
     /** Shows why the entries cannot be imported; resolves false. */
     async showCannotImport(detail: string): Promise<false> {
-      await showDialog({ title: this.t`Cannot Import`, type: 'error', detail });
+      await showDialog({ title: this.t`Cannot import`, type: 'error', detail });
       return false;
     },
     async importData(): Promise<void> {

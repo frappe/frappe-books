@@ -4,7 +4,7 @@ import { ServerRow } from 'reports/serverReport';
 import { ReportRow } from 'reports/types';
 
 export class ProfitAndLoss extends AccountReport {
-  static title = t`Profit And Loss`;
+  static title = t`Profit and Loss`;
   static reportName = 'profit-and-loss';
   static serverReportName = 'Books Profit and Loss';
 

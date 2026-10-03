@@ -140,7 +140,7 @@
   <FrappeBottomSheet
     v-if="isMobile"
     :open="true"
-    :title="t`Linked Entries`"
+    :title="t`Linked entries`"
     @update:open="(open: boolean) => !open && $emit('close')"
   >
     <div class="pb-[max(env(safe-area-inset-bottom),1rem)]">
@@ -155,7 +155,7 @@
       class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
     >
       <h2 class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-8">
-        {{ t`Linked Entries` }}
+        {{ t`Linked entries` }}
       </h2>
       <FrappeButton
         variant="ghost"

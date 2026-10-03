@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col overflow-y-hidden">
-    <PageHeader :title="t`Set Up Your Workspace`" />
+    <PageHeader :title="t`Set up your workspace`" />
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
       <div class="mx-auto max-w-4xl space-y-6 px-3 pt-5 sm:px-5">
         <section v-for="section in sections" :key="section.label">
@@ -25,7 +25,7 @@
                 <FrappeButton
                   v-if="item.action"
                   variant="ghost"
-                  :label="t`Set Up`"
+                  :label="t`Set up`"
                   @click="handleAction(item)"
                 />
                 <FrappeButton

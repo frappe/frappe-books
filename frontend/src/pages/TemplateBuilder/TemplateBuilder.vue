@@ -21,7 +21,7 @@
       </FrappeButton>
       <FrappeButton
         v-if="canEditTemplate && displayDoc"
-        :label="t`Toggle Edit Mode`"
+        :label="t`Toggle edit mode`"
         icon-left="lucide-square-pen"
         @click="toggleEditMode"
       />
@@ -55,7 +55,7 @@
             :width="pageSize.width"
             :height="pageSize.height"
           />
-          <FrappeAlert v-else class="m-4" theme="red" :title="t`Template Error`">
+          <FrappeAlert v-else class="m-4" theme="red" :title="t`Template error`">
             <template #description>
               <p class="whitespace-pre-wrap">{{ error }}</p>
             </template>
@@ -98,7 +98,7 @@
             v-if="canDisplayPreview"
             class="ms-auto flex flex-shrink-0 items-center gap-2 text-sm text-ink-gray-6"
           >
-            <span class="whitespace-nowrap">{{ t`Display Scale` }}</span>
+            <span class="whitespace-nowrap">{{ t`Display scale` }}</span>
             <FrappeTextInput
               type="number"
               class="w-16"
@@ -159,7 +159,7 @@
         >
           <FrappeAccordion
             :model-value="showHints ? 'hints' : undefined"
-            :items="[{ value: 'hints', title: t`Key Hints` }]"
+            :items="[{ value: 'hints', title: t`Key hints` }]"
             @update:model-value="(value) => (showHints = value === 'hints')"
           >
             <template #item-content>
@@ -381,7 +381,7 @@ export default defineComponent({
 
       if (this.canEditTemplate && !this.showTypeModal) {
         actions.push({
-          label: this.t`Set Template Type`,
+          label: this.t`Set template type`,
           group: this.t`Action`,
           action: () => (this.showTypeModal = true),
         });
@@ -389,7 +389,7 @@ export default defineComponent({
 
       if (this.canEditTemplate && !this.showSizeModal) {
         actions.push({
-          label: this.t`Set Print Size`,
+          label: this.t`Set print size`,
           group: this.t`Action`,
           action: () => (this.showSizeModal = true),
         });
@@ -397,14 +397,14 @@ export default defineComponent({
 
       if (this.canEditTemplate) {
         actions.push({
-          label: this.t`Select Template File`,
+          label: this.t`Select template file`,
           group: this.t`Action`,
           action: this.selectFile.bind(this),
         });
       }
 
       actions.push({
-        label: this.t`Save Template File`,
+        label: this.t`Save template file`,
         group: this.t`Action`,
         action: this.saveFile.bind(this),
       });
@@ -430,11 +430,11 @@ export default defineComponent({
       }
 
       if (!this.doc.doc_type) {
-        return this.t`Select a Template type`;
+        return this.t`Select a template type`;
       }
 
       if (!this.displayDoc) {
-        return this.t`Select a Display Doc to view the Template`;
+        return this.t`Select a Display Doc to view the template`;
       }
 
       if (this.doc.isEditable && !this.doc.html) {
@@ -655,7 +655,7 @@ export default defineComponent({
       if (!name) {
         const label = getSchema(schemaName)?.label ?? schemaName;
         await showDialog({
-          title: this.t`No Display Entries Found`,
+          title: this.t`No display entries found`,
           detail: this.t`Please create a ${label} entry to view Template Preview.`,
           type: 'warning',
         });

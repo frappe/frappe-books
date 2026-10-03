@@ -1,10 +1,9 @@
 <template>
   <div
-    class="grid grid-cols-3 text-ink-gray-8 text-sm select-none items-center"
-    style="height: 50px"
+    class="grid h-12 grid-cols-3 text-ink-gray-8 text-sm select-none items-center"
   >
     <!-- Length Display -->
-    <div class="justify-self-start">
+    <div class="justify-self-start text-ink-gray-5 tabular-nums">
       {{ rangeLabel }}
     </div>
 
@@ -16,7 +15,7 @@
         class="rtl-rotate-180"
         icon="lucide-chevron-left"
         :disabled="pageNo <= 1"
-        aria-label="Previous page"
+        :aria-label="t`Previous page`"
         @click="() => setPageNo(Math.max(1, pageNo - 1))"
       />
       <div
@@ -27,7 +26,7 @@
       >
         <FrappeTextInput
           type="number"
-          aria-label="Page number"
+          :aria-label="t`Page number`"
           class="min-w-0"
           variant="ghost"
           size="sm"
@@ -48,7 +47,7 @@
         class="rtl-rotate-180"
         icon="lucide-chevron-right"
         :disabled="pageNo >= maxPages"
-        aria-label="Next page"
+        :aria-label="t`Next page`"
         @click="() => setPageNo(Math.min(maxPages, pageNo + 1))"
       />
     </div>

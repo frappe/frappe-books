@@ -147,11 +147,24 @@ export function isPOSRowFieldReadOnly(
   }
 }
 
-/** The cart's quantity, in the unit the POS edits. */
+/** Each item's quantity in the cart, free items aside, as its rows show it. */
+export function getQuantityByItem(sale: SalesInvoice): Record<string, number> {
+  const quantities: Record<string, number> = {};
+  for (const row of sale.items ?? []) {
+    if (row.item && !row.is_free_item) {
+      quantities[row.item] = safeParseFloat(
+        (quantities[row.item] ?? 0) + getCartRowQuantity(row)
+      );
+    }
+  }
+
+  return quantities;
+}
+
+/** The quantity of the rows, as the cart shows them. */
 export function getTotalQuantity(rows: SalesInvoiceItem[]): number {
-  const field = getQuantityField();
   return rows.reduce(
-    (total, row) => safeParseFloat(total + (row[field] ?? row.quantity ?? 0)),
+    (total, row) => safeParseFloat(total + getCartRowQuantity(row)),
     0
   );
 }

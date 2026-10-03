@@ -55,12 +55,6 @@ input[type='number']::-webkit-outer-spin-button {
   margin: 0;
 }
 
-.flex-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 :root {
   --w-sidebar: 14rem;
   --w-quick-edit: 22rem;

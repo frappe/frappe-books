@@ -207,6 +207,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this.schema.label || this.schemaName;
   }
 
+  /** What else a submit does, which the submit prompt tells. */
+  get submitNote(): string | undefined {
+    return undefined;
+  }
+
   get quickEditFields() {
     let fieldnames = this.schema.quickEditFields;
 

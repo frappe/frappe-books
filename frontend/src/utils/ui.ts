@@ -11,7 +11,6 @@ import { ValueError } from 'fyo/utils/errors';
 import { getLedgerLink } from 'models/helpers';
 import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { Invoice } from 'models/invoices/Invoice';
-import { PurchaseInvoice } from 'models/invoices/PurchaseInvoice';
 import { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
@@ -701,27 +700,8 @@ function getDocSyncMessage(doc: FrappeDoc): string {
 }
 
 function getDocSubmitMessage(doc: FrappeDoc): string {
-  const details = [t`Mark ${doc.schema.label} as submitted?`];
-
-  if (doc instanceof SalesInvoice && doc.make_auto_payment) {
-    const toAccount = doc.autoPaymentAccount!;
-    const fromAccount = doc.account!;
-    const amount = fyo.format(doc.outstanding_amount, 'Currency');
-
-    details.push(
-      t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,
-    );
-  } else if (doc instanceof PurchaseInvoice && doc.make_auto_payment) {
-    const fromAccount = doc.autoPaymentAccount!;
-    const toAccount = doc.account!;
-    const amount = fyo.format(doc.outstanding_amount, 'Currency');
-
-    details.push(
-      t`Payment of ${amount} will be made from account "${fromAccount}" to account "${toAccount}" on Submit.`,
-    );
-  }
-
-  return details.join(' ');
+  const question = t`Mark ${doc.schema.label} as submitted?`;
+  return [question, doc.submitNote].filter(Boolean).join(' ');
 }
 
 function showActionToast(doc: FrappeDoc, type: 'sync' | 'cancel' | 'delete') {

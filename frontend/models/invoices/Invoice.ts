@@ -122,6 +122,20 @@ export abstract class Invoice extends FrappeDoc {
     return (this.fyo.singles.Defaults?.[fieldname] as string) || undefined;
   }
 
+  /** The payment a submit makes: a sale's receivable is paid into the payment account, a purchase's payable out of it. */
+  override get submitNote(): string | undefined {
+    if (!this.make_auto_payment) {
+      return undefined;
+    }
+
+    const [from = '', to = ''] = this.isSales
+      ? [this.account, this.autoPaymentAccount]
+      : [this.autoPaymentAccount, this.account];
+    const amount = this.fyo.format(this.outstanding_amount, 'Currency');
+    return this.fyo
+      .t`Payment of ${amount} will be made from account "${from}" to account "${to}" on Submit.`;
+  }
+
   get autoStockTransferLocation(): string | undefined {
     const fieldname = this.isSales
       ? 'shipment_location'

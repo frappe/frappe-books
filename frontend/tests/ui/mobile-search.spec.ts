@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { execFile } from 'node:child_process';
+import path from 'node:path';
+import { promisify } from 'node:util';
 import { insertDocument } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
@@ -9,18 +12,43 @@ test.use({
 });
 useBooksSession();
 
+const bench = process.env.BOOKS_FILTER_TEST_BENCH;
+const site = process.env.BOOKS_FILTER_TEST_SITE;
 const run = Date.now().toString(36);
 const customer = `Search Customer ${run}`;
 let hasCustomer = false;
 
 test.beforeEach(async ({ page }) => {
-  if (hasCustomer) return;
+  if (hasCustomer || !bench || !site) return;
   await insertDocument(page, 'Books Party', {
     name: customer,
     role: 'Customer',
   });
+  await indexForSearch('Books Party', [customer]);
   hasCustomer = true;
 });
+
+/** Frappe indexes saved records every five minutes; the test indexes its own now. */
+async function indexForSearch(doctype: string, names: string[]) {
+  await promisify(execFile)(
+    'bench',
+    [
+      '--site',
+      site!,
+      'execute',
+      'frappe_books.tests.search_records.index_search_records',
+      '--kwargs',
+      JSON.stringify({ doctype, names }),
+    ],
+    {
+      cwd: bench,
+      env: { ...process.env, PYTHONPATH: path.resolve(__dirname, '../../..') },
+    }
+  );
+}
+
+const skipWithoutIndex = () =>
+  test.skip(!bench || !site, 'Indexing the record requires a test bench and site');
 
 const searchbox = (page: Page) =>
   page.getByRole('searchbox', { name: 'Search Frappe Books' });
@@ -47,6 +75,7 @@ test('the Search tab opens search with the input focused', async ({ page }) => {
 test('a result opens its record, back keeps the search and Recent reopens it', async ({
   page,
 }) => {
+  skipWithoutIndex();
   await openSearch(page, customer);
   await result(page, customer).click();
   await expect(page).toHaveURL(/\/books\/edit\/Party\//);
@@ -64,6 +93,7 @@ test('a result opens its record, back keeps the search and Recent reopens it', a
 test('group chips and the filters sheet narrow the results', async ({
   page,
 }) => {
+  skipWithoutIndex();
   await openSearch(page, customer);
   const record = result(page, customer);
   await expect(record).toBeVisible();

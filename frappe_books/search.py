@@ -30,9 +30,13 @@ class BooksSearch(SQLiteSearch):
 		super().__init__(db_name)
 
 	def get_search_filters(self) -> dict:
-		"""The requested doctypes the user can read."""
-		doctypes = self.doctypes or list(self.INDEXABLE_DOCTYPES)
-		return {"doctype": [doctype for doctype in doctypes if frappe.has_permission(doctype, "read")]}
+		"""The requested indexed doctypes the user can read."""
+		readable = [
+			doctype
+			for doctype in self.doctypes or self.INDEXABLE_DOCTYPES
+			if doctype in self.INDEXABLE_DOCTYPES and frappe.has_permission(doctype, "read")
+		]
+		return {"doctype": readable}
 
 	def get_documents_paginated(self, doctype, *args, **kwargs):
 		documents = super().get_documents_paginated(doctype, *args, **kwargs)

@@ -68,7 +68,7 @@
                 variant="ghost"
                 size="xs"
                 icon="lucide-upload"
-                aria-label="Upload attachment"
+                :aria-label="t`Upload attachment`"
                 :loading="uploading"
                 @click="openFileSelector"
               />
@@ -80,7 +80,7 @@
             variant="ghost"
             size="xs"
             icon="lucide-download"
-            aria-label="Download attachment"
+            :aria-label="t`Download attachment`"
             @click="download"
           />
 
@@ -89,7 +89,7 @@
             variant="ghost"
             size="xs"
             icon="lucide-x"
-            aria-label="Remove attachment"
+            :aria-label="t`Remove attachment`"
             @click="clear"
           />
         </div>

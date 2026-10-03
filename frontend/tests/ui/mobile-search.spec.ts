@@ -110,7 +110,7 @@ test('group chips and the filters sheet narrow the results', async ({
   await sheet.getByRole('button', { name: 'Party', exact: true }).click();
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(record).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Filters · 1' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
   await page.getByRole('button', { name: 'Reset filters' }).click();
 });
 

@@ -6,6 +6,8 @@ import unicodedata
 import frappe
 from frappe import _
 
+from frappe_books.permissions import BOOKS_MODULE
+
 FIELD_TYPE_MAP = {
 	"AttachImage": "Attach Image",
 	"Attachment": "Attach",
@@ -93,9 +95,16 @@ def validate_custom_form(doc):
 
 
 def _is_customizable(doctype: str) -> bool:
-	if doctype in PROTECTED_DOCTYPES or not frappe.db.exists("DocType", doctype):
+	"""Books forms and their rows; not settings, which are singles, nor other apps' doctypes."""
+	if doctype in PROTECTED_DOCTYPES or frappe.db.get_value("DocType", doctype, "module") != BOOKS_MODULE:
 		return False
-	return not frappe.get_meta(doctype).issingle
+	meta = frappe.get_meta(doctype)
+	return not meta.issingle and not (meta.istable and _is_settings_table(doctype))
+
+
+def _is_settings_table(doctype: str) -> bool:
+	parents = frappe.get_all("DocField", filters={"fieldtype": "Table", "options": doctype}, pluck="parent")
+	return bool(parents) and bool(frappe.db.exists("DocType", {"name": ["in", parents], "issingle": 1}))
 
 
 def _validate_unique_fieldnames(rows):

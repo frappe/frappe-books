@@ -43,6 +43,7 @@ export interface DocTypeState {
 
 export interface DocTypeMeta {
   name: string;
+  module?: string;
   fields: DocField[];
   permissions: DocPerm[];
   states?: DocTypeState[];

@@ -29,6 +29,7 @@ from frappe_books.inventory.invoice_balance import (
 from frappe_books.inventory.stock import create_series_batches, validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.permissions import check_preview_permission
+from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
 from frappe_books.status import StatusMixin
@@ -282,6 +283,7 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	validate_hsn_codes(invoice.items)
 	validate_item_usage(invoice, invoice.transaction_type == "purchase")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)

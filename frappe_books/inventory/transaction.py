@@ -36,6 +36,7 @@ from frappe_books.inventory.valuation import (
 	transaction_stock_value,
 )
 from frappe_books.permissions import check_preview_permission
+from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
 from frappe_books.status import StatusMixin
@@ -129,6 +130,7 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 			create_series_batches(self.items)
 			create_series_serial_numbers(self.items)
 		validate_transfer_rows(transfer_rows(self))
+		validate_hsn_codes(self.items)
 		if self.return_against:
 			validate_transfer_return(self)
 

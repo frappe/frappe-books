@@ -17,7 +17,7 @@ class BooksShipmentItem(Document):
 		amount: DF.Currency
 		batch: DF.Link | None
 		description: DF.Text | None
-		hsn_code: DF.Int
+		hsn_code: DF.Data | None
 		item: DF.Link
 		item_discount_amount: DF.Currency
 		item_discount_percent: DF.Float

@@ -25,7 +25,7 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModalName } from 'src/components/POS/types';
 import { getCount, type Filter } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
-import { canApplyCoupon, canRedeemLoyalty } from 'src/utils/posDiscounts';
+import { isCouponOffered, isLoyaltyOffered } from 'src/utils/posDiscounts';
 import { computed, inject, ref, watch, type Ref } from 'vue';
 
 type MenuAction = {
@@ -79,14 +79,14 @@ const actions = computed(() => {
       name: 'LoyaltyProgram',
       label: t`Loyalty Program`,
       icon: 'lucide-gift',
-      hidden: !canRedeemLoyalty(sinvDoc.value),
+      hidden: !isLoyaltyOffered(sinvDoc.value),
     },
     {
       name: 'CouponCode',
       label: t`Coupon code`,
       icon: 'lucide-ticket-percent',
       count: props.appliedCouponsCount,
-      hidden: !canApplyCoupon(sinvDoc.value),
+      hidden: !isCouponOffered(sinvDoc.value),
     },
     {
       name: 'PriceList',

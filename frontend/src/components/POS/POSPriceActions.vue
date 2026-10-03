@@ -30,10 +30,10 @@ import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { fyo } from 'src/initFyo';
-import { canApplyCoupon, canRedeemLoyalty } from 'src/utils/posDiscounts';
+import { isCouponOffered, isLoyaltyOffered } from 'src/utils/posDiscounts';
 import { computed, inject, type Ref } from 'vue';
 
-/** Coupon, loyalty and price list actions, each shown when the sale can take it. */
+/** Coupon, loyalty and price list actions, each shown when the POS offers it on the sale. */
 const props = defineProps<{ appliedCouponsCount?: number }>();
 defineEmits<{
   openCouponCode: [];
@@ -43,8 +43,8 @@ defineEmits<{
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
 
-const showCoupon = computed(() => canApplyCoupon(sinvDoc.value));
-const showLoyalty = computed(() => canRedeemLoyalty(sinvDoc.value));
+const showCoupon = computed(() => isCouponOffered(sinvDoc.value));
+const showLoyalty = computed(() => isLoyaltyOffered(sinvDoc.value));
 // A submitted sale's totals are final.
 const showPriceList = computed(
   () =>

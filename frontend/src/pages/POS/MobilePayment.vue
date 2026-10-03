@@ -199,7 +199,7 @@ import { fyo } from 'src/initFyo';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getCostLines, getTotalQuantity } from 'src/utils/pos';
 import { posCheckoutKey } from 'src/utils/posCheckout';
-import { canApplyCoupon, canRedeemLoyalty } from 'src/utils/posDiscounts';
+import { isCouponOffered, isLoyaltyOffered } from 'src/utils/posDiscounts';
 import { computed, inject, type Ref } from 'vue';
 
 /** The phone payment screen, inside PaymentModal; the POS checkout owns its tender. */
@@ -216,8 +216,8 @@ defineEmits<{
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
 const posCheckout = inject(posCheckoutKey)!;
 
-const showLoyalty = computed(() => canRedeemLoyalty(sinvDoc.value));
-const showCoupon = computed(() => canApplyCoupon(sinvDoc.value));
+const showLoyalty = computed(() => isLoyaltyOffered(sinvDoc.value));
+const showCoupon = computed(() => isCouponOffered(sinvDoc.value));
 
 const summary = computed(() => {
   const quantity = getTotalQuantity(sinvDoc.value.items ?? []);

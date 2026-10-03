@@ -35,7 +35,7 @@
   </div>
   <div
     v-else
-    class="relative bg-surface-base border border-outline-gray-1 flex-center overflow-hidden group"
+    class="relative bg-surface-base border border-outline-gray-1 flex items-center justify-center overflow-hidden group"
     :class="{
       'rounded-4': size === 'form',
       'w-20 h-20 rounded-full': size !== 'small' && size !== 'form',

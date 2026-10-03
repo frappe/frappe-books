@@ -17,6 +17,7 @@ from frappe.utils import flt, formatdate, money_in_words
 from frappe.www.printview import get_font, get_print_style, get_rendered_template
 from jinja2 import TemplateError
 
+from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import InvoiceController, PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
 from frappe_books.accounting.payment import PaymentController, tax_share
@@ -102,7 +103,10 @@ def _invoice_totals(invoice) -> dict[str, Any]:
 
 
 def _payment_details(invoice) -> list[dict[str, Any]]:
-	"""Each submitted payment with the part of it allocated to the invoice, and the balance after it."""
+	"""Each submitted payment the user can read, with its allocation to the invoice and the balance after it.
+
+	The balances count back from the invoice's outstanding amount, so the last one always matches it.
+	"""
 	allocations = frappe.get_list(
 		"Books Payment For",
 		filters={"reference_type": invoice.doctype, "reference_name": invoice.name, "docstatus": 1},
@@ -118,7 +122,7 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 		fields=["name", "payment_method", "amount_paid"],
 		order_by="date asc, name asc",
 	)
-	balance = abs(as_decimal(invoice.base_grand_total))
+	balance = settlement.due(invoice) + sum_decimal(allocated[payment.name] for payment in payments)
 	details = []
 	for payment in payments:
 		balance -= allocated[payment.name]

@@ -69,3 +69,16 @@ test('deleting a cancelled entry says its ledger entries go too', () => {
   );
   assert.equal(message({ isCancelled: false }), 'This action is permanent.');
 });
+
+test('deleting a party names it the way its list does', () => {
+  const calls = captureDangerDialogs();
+  const keepLabel = (role) => {
+    const party = { name: 'Acme', schemaName: 'Party', role };
+    deleteDocWithPrompt({ ...party, schema: { label: 'Party' } });
+    return calls.at(-1).cancelLabel;
+  };
+
+  assert.equal(keepLabel('Customer'), 'Keep Customer');
+  assert.equal(keepLabel('Supplier'), 'Keep Supplier');
+  assert.equal(keepLabel('Both'), 'Keep Party');
+});

@@ -45,6 +45,7 @@ await build({
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
       export * as posSetup from './src/utils/posSetup';
+      export * as posShift from './src/utils/posShift';
       export * as posStock from './models/inventory/posStock';
       export * as posItemSearch from './src/utils/posItemSearch';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
@@ -162,6 +163,7 @@ export const {
   ListFilters,
   pos,
   posSetup,
+  posShift,
   posStock,
   posItemSearch,
   getInsufficientItems,

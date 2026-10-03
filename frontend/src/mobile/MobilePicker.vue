@@ -54,7 +54,7 @@
               v-for="option in sortedOptions"
               :key="getKey(option)"
               role="option"
-              :class="option.actionOnly ? 'h-13' : 'min-h-15 py-2'"
+              :class="option.actionOnly ? 'h-13' : 'h-17'"
               @click="$emit('select', option)"
             >
               <FrappeListCell>

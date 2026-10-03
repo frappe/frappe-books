@@ -70,7 +70,7 @@
       <FrappeListRow
         v-for="(item, index) in rows"
         :key="`${index}-${item.label}`"
-        class="min-h-14 py-2"
+        class="h-17"
         @click="openSearchItem(item)"
       >
         <FrappeListCell>

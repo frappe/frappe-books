@@ -2,7 +2,7 @@
   <Modal
     :open-modal="openModal && isValuesSeeded"
     :title="t`Close POS shift`"
-    size="4xl"
+    size="2xl"
     :dismissible="false"
     @closemodal="$emit('toggleModal', 'ShiftClose', false)"
   >
@@ -66,10 +66,7 @@
         </ul>
       </section>
     </template>
-    <div
-      v-else-if="posClosingShiftDoc"
-      class="grid grid-cols-[minmax(0,18.5rem)_minmax(0,1fr)] gap-6"
-    >
+    <div v-else-if="posClosingShiftDoc" class="flex flex-col gap-6">
       <CashCountTable :heading="t`Count the drawer`" :rows="closingCash" />
 
       <section class="flex min-w-0 flex-col gap-2">

@@ -157,11 +157,7 @@
                   <FormControl
                     v-else
                     class="min-w-0 flex-1"
-                    :class="
-                      val.error
-                        ? '[&_[data-slot=control]]:border-outline-red-3 [&_[data-slot=trigger]]:border-outline-red-3'
-                        : ''
-                    "
+                    :invalid="!!val.error"
                     :title="getFieldTitle(val)"
                     :df="importer.templateFieldsMap.get(importer.assignedTemplateFields[cidx]!)"
                     size="small"

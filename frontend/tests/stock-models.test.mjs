@@ -26,9 +26,11 @@ stubFrappe(({ path, body }) =>
     ? { message: getBooksMeta(body.doctypes) }
     : { data: [] }
 );
-registerFrappeModels(
-  Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]]))
-);
+// A transfer is mapped from a sales invoice.
+registerFrappeModels({
+  ...Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]])),
+  SalesInvoice: frappeModels.SalesInvoice,
+});
 await loadFrappeDocTypes();
 test('stock forms, row editors and tables show what they showed', () => {
   for (const name of [...stockSchemas, ...Object.values(rowSchemas)]) {
@@ -164,7 +166,6 @@ test('a row takes its item defaults again when its item changes', async () => {
   await movement.append('items', { item: 'Pen', batch: 'PEN-1' });
   const [row] = movement.items;
   await row.set('item', 'Ink');
-  clearTimeout(movement._previewTimer);
 
   const sent = row.getFrappeValues({ clearServerFilled: true });
   for (const fieldname of ['rate', 'unit', 'batch', 'serial_number']) {
@@ -185,7 +186,6 @@ test('picking an invoice fills a shipment with the rows its mapper gives', async
   const shipment = newFrappeDoc('Shipment');
 
   await shipment.set('back_reference', 'SINV-1');
-  clearTimeout(shipment._previewTimer);
 
   assert.equal(
     requests[0].path,

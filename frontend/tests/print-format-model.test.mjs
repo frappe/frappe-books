@@ -7,6 +7,7 @@ import {
   getDocType,
   getFrappeDoc,
   getSchema,
+  loadSaved,
   newFrappeDoc,
 } from './helpers/frappe.mjs';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
@@ -160,7 +161,7 @@ test('a custom template previews its edits for an editor and prints as saved for
     doc_type: 'Books Sales Invoice',
     html: '<p>{{ doc.name }}</p>',
   });
-  template._notInserted = false;
+  await loadSaved(template);
   const printPath = async (permissions) => {
     template.docPermissions = permissions;
     requests.length = 0;

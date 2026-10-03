@@ -9,6 +9,7 @@ import {
   getImportableSchemaNames,
   getSidebarConfig,
   loadDocPermissions,
+  loadSaved,
   Search,
   newFrappeDoc,
   stubFrappe,
@@ -19,9 +20,9 @@ const doctypes = { SalesInvoice: 'Books Sales Invoice', Tax: 'Books Tax' };
 await loadFrappeModels();
 
 /** A saved document of the schema, as a form loads it. */
-function getSaved(schemaName, name) {
+async function getSaved(schemaName, name) {
   const doc = newFrappeDoc(schemaName, { name });
-  doc._notInserted = false;
+  await loadSaved(doc);
   return doc;
 }
 
@@ -47,12 +48,12 @@ test('without boot permissions nothing is restricted', () => {
   assert.equal(hasPermission(null, 'Tax', 'delete'), true);
 });
 
-test('a saved document uses the rights the server returned for it', () => {
+test('a saved document uses the rights the server returned for it', async () => {
   fyo.store.permissions = {
     doctypes: { Payment: 'Books Payment' },
     user: { can_write: ['Books Payment'], can_delete: ['Books Payment'] },
   };
-  const payment = getSaved('Payment', 'PAY-0001');
+  const payment = await getSaved('Payment', 'PAY-0001');
   assert.equal(payment.canWrite, true);
   assert.equal(payment.canDelete, true);
 
@@ -69,7 +70,7 @@ test("a form loads the user's rights on its saved document from Frappe", async (
   const requests = stubFrappe(() => ({
     message: { permissions: { read: 1, write: 0 } },
   }));
-  const payment = getSaved('Payment', 'PAY-0002');
+  const payment = await getSaved('Payment', 'PAY-0002');
 
   await loadDocPermissions(payment);
 
@@ -84,12 +85,12 @@ test("a form loads the user's rights on its saved document from Frappe", async (
   assert.equal(payment.canWrite, false);
 });
 
-test('printing a document needs the print permission', () => {
+test('printing a document needs the print permission', async () => {
   fyo.store.permissions = {
     doctypes: { Payment: 'Books Payment' },
     user: { can_read: ['Books Payment'] },
   };
-  const payment = getSaved('Payment', 'PAY-0001');
+  const payment = await getSaved('Payment', 'PAY-0001');
   assert.equal(payment.can('print'), false);
 
   payment.docPermissions = { read: 1, print: 1 };

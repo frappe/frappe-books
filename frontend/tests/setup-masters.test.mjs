@@ -148,7 +148,6 @@ test('a currency created from /books is inserted enabled, for link pickers', asy
   }));
   const currency = newFrappeDoc('Currency', { name: 'Test Coin' });
   await currency.set('symbol', 'TC');
-  clearTimeout(currency._previewTimer);
   await currency.sync();
 
   const [insert] = requests.filter(({ method }) => method === 'POST');

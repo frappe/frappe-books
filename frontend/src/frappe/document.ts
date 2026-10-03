@@ -55,7 +55,21 @@ import {
 import { getNamingField, type Presentation } from './schema';
 import { toDocValue, toDocValues, toFrappeValue } from './values';
 
-const PREVIEW_DELAY = 300;
+/** Runs a document's preview later; the returned function cancels it. */
+export type PreviewScheduler = (preview: () => void) => () => void;
+
+/** Previews once edits pause, so filled values follow the user without a request per keystroke. */
+export const afterPause: PreviewScheduler = (preview) => {
+  const timer = setTimeout(preview, 300);
+  return () => clearTimeout(timer);
+};
+
+let previewScheduler = afterPause;
+
+/** Sets when a scheduled preview runs; node tests run one only when they ask. */
+export function setPreviewScheduler(scheduler: PreviewScheduler) {
+  previewScheduler = scheduler;
+}
 
 /**
  * A document a form edits, as Frappe serves it: its values, unsaved edits,
@@ -119,7 +133,9 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   _savedValues: DocValueMap = {};
   /** Fields the last preview filled; the next preview fills them again until the user edits one. */
   _serverFilled = new Set<string>();
-  _previewTimer?: ReturnType<typeof setTimeout>;
+  _cancelScheduledPreview?: () => void;
+  /** The last preview started; it settles without throwing, as its caller reports a failure. */
+  _previewing?: Promise<void>;
   /** An edit's fills are not back from the server yet. */
   _isPreviewDue = false;
   _edits = 0;
@@ -786,7 +802,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   async _setSaved(values: DocValues, action: 'save' | 'submit' = 'save') {
-    clearTimeout(this._previewTimer);
+    this._unschedulePreview();
     this._isPreviewDue = false;
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
@@ -970,8 +986,9 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     this.schedulePreview();
   }
 
-  /** A save takes the fills of the last edit, and those of missing values. */
+  /** A save waits for a running preview, then takes the fills of the last edit and of missing values. */
   async beforeSync() {
+    await this._previewing;
     if (this.previewMethod && (this._isPreviewDue || this.hasMissingValues)) {
       await this.preview();
     }
@@ -986,17 +1003,33 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this._getDocAndRows().some((doc) => doc.missingFields.length > 0);
   }
 
-  /** Previews once edits pause, so filled values follow the user without a request per keystroke. */
-  schedulePreview(delay = PREVIEW_DELAY) {
-    clearTimeout(this._previewTimer);
+  /** Previews once edits pause, as the scheduler times it; see `setPreviewScheduler`. */
+  schedulePreview() {
+    this._unschedulePreview();
     if (!this.previewMethod || !this.canEdit || !this.dirty) {
       return;
     }
 
     this._isPreviewDue = true;
-    this._previewTimer = setTimeout(() => {
-      this.preview().catch(showPreviewError);
-    }, delay);
+    this._cancelScheduledPreview = previewScheduler(() => this.startPreview());
+  }
+
+  _unschedulePreview() {
+    this._cancelScheduledPreview?.();
+    this._cancelScheduledPreview = undefined;
+  }
+
+  /** Previews now, for no caller to wait on, e.g. as a form opens; shows a failure as a toast. */
+  startPreview() {
+    this.preview().catch(showPreviewError);
+  }
+
+  /** Resolves once the server filled the last edit: waits for a running preview and runs a scheduled one now. */
+  async whenFilled() {
+    await this._previewing;
+    if (this._cancelScheduledPreview) {
+      await this.preview();
+    }
   }
 
   /**
@@ -1020,11 +1053,17 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
   /** Shows what the server would fill for the unsaved values; dropped if they changed meanwhile. */
   async preview(kwargs?: Record<string, unknown>) {
-    clearTimeout(this._previewTimer);
+    this._unschedulePreview();
     if (!this.previewMethod || !this.canEdit) {
       return;
     }
 
+    const previewing = this._previewAndApply(kwargs);
+    this._previewing = previewing.catch(() => undefined);
+    await previewing;
+  }
+
+  async _previewAndApply(kwargs?: Record<string, unknown>) {
     const edits = this._edits;
     const document = this.getMethodDocument({
       keepRowNames: true,

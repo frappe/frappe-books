@@ -14,9 +14,9 @@ await build({
   absWorkingDir: frontend,
   stdin: {
     contents: `
-      export { FrappeDoc } from './src/frappe/document';
+      export { FrappeDoc, afterPause, setPreviewScheduler } from './src/frappe/document';
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
-      export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
+      export { getFrappeDoc, getFrappeDocOrNew, getMappedDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';
@@ -31,7 +31,7 @@ await build({
       export { getRowSummary } from './src/components/Controls/rowSummary';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels } from './models';
-      export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
+      export { getLedgerLink, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getNewDocValues } from './src/utils/misc';
       export { getFilterFields } from './src/utils/filterFields';
@@ -117,12 +117,13 @@ globalThis.window = {
 
 export const {
   FrappeDoc,
+  afterPause,
+  setPreviewScheduler,
   registerFrappeModels,
   isFrappeBacked,
   getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
-  getMappedFrappeDoc,
   newFrappeDoc,
   useBooksDoc,
   evaluateCondition,
@@ -191,6 +192,29 @@ export const {
   POS,
   router,
 } = createRequire(import.meta.url)(output);
+
+/** Runs no scheduled preview itself, so none reaches a later test's stub; `doc.whenFilled()` runs it. */
+export function manualScheduler() {
+  return () => undefined;
+}
+
+setPreviewScheduler(manualScheduler);
+
+/** Loads `doc` as saved and unedited, with its own values and the Frappe `values`, as a form loads it. */
+export async function loadSaved(doc, values = {}) {
+  const fetch = globalThis.fetch;
+  const data = {
+    ...doc.getFrappeValues({ keepRowNames: true }),
+    name: doc.name,
+    ...values,
+  };
+  stubFrappe(() => ({ data }));
+  try {
+    await doc.load();
+  } finally {
+    globalThis.fetch = fetch;
+  }
+}
 
 /**
  * Answers every request with `respond({ method, path, params, body })`, which

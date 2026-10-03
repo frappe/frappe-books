@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
-import { stubFrappe } from './helpers/frappe.mjs';
+import { loadSaved, stubFrappe } from './helpers/frappe.mjs';
 import {
   commonDocSubmit,
   dialog,
@@ -43,7 +43,7 @@ async function submitShortInvoice(makeShipment) {
     make_auto_stock_transfer: makeShipment,
     items: [{ item: 'Pen', quantity: 2 }],
   });
-  Object.assign(invoice, { docstatus: 0, _notInserted: false, _dirty: false });
+  await loadSaved(invoice, { docstatus: 0 });
   assert.equal(await commonDocSubmit(invoice), true);
   return { titles, submitted };
 }

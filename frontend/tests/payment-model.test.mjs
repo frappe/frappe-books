@@ -100,8 +100,7 @@ for (const [paymentType, from, to] of [
   });
 }
 
-test('the server fills an account again after the method or type it follows', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('the server fills an account again after the method or type it follows', async () => {
   const previews = [];
   stubFrappe(({ body }) => {
     previews.push(body.document);
@@ -110,18 +109,17 @@ test('the server fills an account again after the method or type it follows', as
   const payment = newFrappeDoc('Payment', { payment_account: 'Cash' });
 
   await payment.set('reference_id', 'CHQ-1');
-  t.mock.timers.tick(300);
-  await waitFor(() => previews.length === 1);
+  await payment.whenFilled();
+  assert.equal(previews.length, 1);
   assert.equal(previews[0].payment_account, 'Cash');
 
   await payment.set('payment_method', 'Bank');
-  t.mock.timers.tick(300);
-  await waitFor(() => previews.length === 2);
+  await payment.whenFilled();
+  assert.equal(previews.length, 2);
   assert.equal('payment_account' in previews[1], false);
 });
 
-test("a reference's amount is filled again for the invoice it now names", async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test("a reference's amount is filled again for the invoice it now names", async () => {
   const previews = [];
   stubFrappe(({ body }) => {
     previews.push(body.document);
@@ -139,8 +137,8 @@ test("a reference's amount is filled again for the invoice it now names", async 
   });
 
   await payment.payment_references[0].set('reference_name', 'SINV-2');
-  t.mock.timers.tick(300);
-  await waitFor(() => previews.length === 1);
+  await payment.whenFilled();
+  assert.equal(previews.length, 1);
   const [reference] = previews[0].payment_references;
   assert.equal(reference.reference_name, 'SINV-2');
   assert.equal('amount' in reference, false);
@@ -187,7 +185,6 @@ test('payment links filter as they did', async () => {
     ['docstatus', '=', 1],
     ['party', '=', 'Supplier'],
   ]);
-  clearTimeout(pay._previewTimer);
 });
 
 test("an invoice's payment is mapped by the server with Frappe fieldnames", async () => {
@@ -252,15 +249,3 @@ test('the payment lists show, filter and open as they did', () => {
     ['Sales', 'Purchase']
   );
 });
-
-async function waitFor(condition) {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    if (condition()) {
-      return;
-    }
-
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-
-  assert.fail('The condition was never met');
-}

@@ -610,13 +610,14 @@ export default defineComponent({
       }
     },
 
-    isModalOpen() {
-      for (const modal of modalNames) {
-        if (modal && this[`open${modal}Modal`]) {
-          this[`open${modal}Modal`] = false;
-          return `open${modal}Modal`;
-        }
+    /** Closes the first open modal; false when none was open. */
+    closeOpenModal(): boolean {
+      const modal = modalNames.find((name) => this[`open${name}Modal`]);
+      if (modal) {
+        this[`open${modal}Modal`] = false;
       }
+
+      return !!modal;
     },
     setShortcuts() {
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyS'], async () => {
@@ -641,9 +642,7 @@ export default defineComponent({
       });
 
       this.shortcuts?.pmodShift.set(COMPONENT_NAME, ['Backspace'], async () => {
-        const modalStatus = this.isModalOpen();
-
-        if (!modalStatus) {
+        if (!this.closeOpenModal()) {
           await this.clearValues();
         }
       });
@@ -655,10 +654,8 @@ export default defineComponent({
       });
 
       this.shortcuts?.pmodShift.set(COMPONENT_NAME, ['KeyS'], async () => {
-        const modalStatus = this.isModalOpen();
-
         if (
-          !modalStatus &&
+          !this.hasAnyOpenModal() &&
           !this.sinvDoc.isSubmitted &&
           this.sinvDoc.party &&
           this.sinvDoc.items?.length

@@ -1,7 +1,5 @@
 <template>
-  <FrappeBadge v-if="showStatus" :theme="badge.theme">{{
-    badge.label
-  }}</FrappeBadge>
+  <FrappeBadge :theme="badge.theme">{{ badge.label }}</FrappeBadge>
 </template>
 <script lang="ts">
 import { Badge as FrappeBadge } from 'frappe-ui';
@@ -14,7 +12,6 @@ import {
   getDocStatusBadge,
   getLoyaltyProgramBadge,
 } from 'models/helpers';
-import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { defineComponent, PropType } from 'vue';
 
@@ -22,11 +19,6 @@ export default defineComponent({
   components: { FrappeBadge },
   props: { doc: { type: Object as PropType<FrappeDoc>, required: true } },
   computed: {
-    showStatus(): boolean {
-      return !(
-        this.doc.schemaName === ModelNameEnum.SalesQuote && this.doc.isSubmitted
-      );
-    },
     badge(): BadgeData {
       const status = getDocStatus(this.doc);
       if (status === 'Saved' && this.doc instanceof LoyaltyProgram) {

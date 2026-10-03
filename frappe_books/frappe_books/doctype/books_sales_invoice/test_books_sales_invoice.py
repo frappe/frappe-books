@@ -82,13 +82,19 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(invoice.items[0].tax, self.tax.name)
 		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
 
-	def test_row_hsn_code_comes_from_the_item(self):
-		item = make_item(self.income.name, self.expense.name, hsn_code="998314")
+	def test_row_hsn_code_comes_from_the_item_with_its_leading_zero(self):
+		item = make_item(self.income.name, self.expense.name, hsn_code="0902")
 		invoice = make_invoice(
 			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
 		)
 
-		self.assertEqual(invoice.items[0].db_get("hsn_code"), 998314)
+		self.assertEqual(invoice.items[0].db_get("hsn_code"), "0902")
+
+	def test_row_hsn_code_must_contain_four_to_eight_digits(self):
+		invoice = self._make_invoice()
+		invoice.items[0].hsn_code = "12A4"
+
+		self.assertRaisesRegex(frappe.ValidationError, "between 4 and 8 digits", invoice.save)
 
 	def test_item_discount_stays_within_the_row(self):
 		for values, message in (

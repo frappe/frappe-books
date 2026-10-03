@@ -35,6 +35,26 @@
           @change="(value: number) => setValue('item_discount_percent', value)"
         />
       </div>
+      <div v-if="row.batch" class="grid grid-cols-2 gap-3">
+        <FormControl
+          :df="{ fieldname: 'batch', fieldtype: 'Data', label: t`Batch` }"
+          :value="row.batch"
+          :show-label="true"
+          :border="true"
+          :read-only="true"
+        />
+        <FormControl
+          :df="{
+            fieldname: 'availableQtyInBatch',
+            fieldtype: 'Float',
+            label: t`Qty in Batch`,
+          }"
+          :value="batchQuantity"
+          :show-label="true"
+          :border="true"
+          :read-only="true"
+        />
+      </div>
       <div
         class="flex justify-between gap-4 text-lg-semibold tabular-nums text-ink-gray-8"
       >
@@ -79,11 +99,13 @@ import {
   setPOSRowValue,
 } from 'src/utils/pos';
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
+import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { inject, onMounted, ref, type Ref } from 'vue';
 
-/** Edits a cart line's rate and discount. */
+/** Edits a cart line's rate and discount, and shows its batch stock. */
 const props = defineProps<{ row: SalesInvoiceItem | null }>();
 const emit = defineEmits<{ close: [] }>();
+const batchQuantity = usePOSBatchQuantity(() => props.row);
 
 const isDiscountingEnabled = inject('isDiscountingEnabled') as Ref<boolean>;
 const permissions = ref<POSPermissions>({

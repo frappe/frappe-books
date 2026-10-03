@@ -19,6 +19,8 @@ export interface ReportRow {
   isGroup?: boolean;
   isEmpty?: boolean;
   isTotal?: boolean;
+  /** An opening, total or closing row, which pages do not count. */
+  isSummary?: boolean;
   folded?: boolean;
   foldedBelow?: boolean;
 }

@@ -108,6 +108,15 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				self.assertIn(books_format(3100, "Currency", doc.currency), html)
 				self.assertNotIn(books_format(62, "Currency", doc.currency), html)
 
+	def test_invoice_prints_the_hsn_code_with_its_leading_zero(self):
+		item = make_item(self.income.name, self.expense.name, hsn_code="0902")
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
+		)
+		html = get_print(invoice.doctype, invoice.name, print_format="Business - Sales Invoice")
+
+		self.assertIn(">0902</td>", html)
+
 	def test_built_in_formats_print_their_doctype(self):
 		formats = dict(
 			frappe.get_all(

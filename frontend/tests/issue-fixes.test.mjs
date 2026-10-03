@@ -134,6 +134,11 @@ test('general ledger runs its Script Report and styles the server rows', async (
   assert.equal(blank.isEmpty, true);
   assert.equal(cell(closing, 'account').value, 'Closing');
   assert.equal(cell(closing, 'balance').bold, true);
+  // Pages count entries only.
+  assert.deepEqual(
+    [opening, entry, closing].map((row) => Boolean(row.isSummary)),
+    [true, false, true]
+  );
 });
 
 test('general ledger opens with the dates the server picks', async () => {

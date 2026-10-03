@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 
 from frappe_books.coa import ensure_account
+from frappe_books.settings import company_country
 
 INDIAN_STATES = {
 	"01": "Jammu and Kashmir",
@@ -46,6 +47,7 @@ INDIAN_STATES = {
 	"38": "Ladakh",
 }
 GSTIN_PATTERN = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
+HSN_CODE_PATTERN = re.compile(r"[0-9]{4,8}")
 GST_RATES = (28, 18, 12, 6, 5, 3, 0.25, 0)
 # The seeded GST accounts are named after the GST head they hold.
 GST_HEADS = ("CGST", "SGST", "IGST", "Exempt")
@@ -99,6 +101,14 @@ def validate_gstin(gstin):
 	if not GSTIN_PATTERN.fullmatch(gstin) or gstin[:2] not in INDIAN_STATES:
 		frappe.throw(_("Enter a valid 15-character Indian GSTIN."))
 	return gstin
+
+
+def validate_hsn_codes(docs):
+	"""HSN/SAC is India's GST code, so only an Indian company's codes are checked."""
+	codes = [str(doc.hsn_code) for doc in docs if doc.get("hsn_code")]
+	invalid = [code for code in codes if not HSN_CODE_PATTERN.fullmatch(code)]
+	if invalid and company_country() == "India":
+		frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
 
 
 def _tax_details(tax_type, rate):

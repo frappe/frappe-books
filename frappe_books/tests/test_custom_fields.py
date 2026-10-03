@@ -183,6 +183,15 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 					frappe.ValidationError, "cannot be customized", _custom_form(doctype, [FIELD]).insert
 				)
 
+	def test_only_books_forms_and_their_rows_can_be_customized(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
+		for doctype in ("Country", "Currency", "Books Default Cash Denominations"):
+			with self.subTest(doctype=doctype):
+				self.assertRaisesRegex(
+					frappe.ValidationError, "cannot be customized", _custom_form(doctype, [FIELD]).insert
+				)
+		_custom_form("Books Sales Invoice Item", [FIELD]).validate()
+
 	def test_invalid_custom_fields_are_rejected(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
 		cases = {

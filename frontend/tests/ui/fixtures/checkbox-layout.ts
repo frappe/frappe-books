@@ -45,6 +45,7 @@ async function mount() {
     view: 'report',
     value: false,
     readOnly: false,
+    asSwitch: false,
     showLabel: true,
     size: 'small',
     label: 'Include serial numbers when exporting inventory movements',
@@ -91,6 +92,7 @@ async function mount() {
           size: state.size,
           value: state.value,
           readOnly: state.readOnly,
+          asSwitch: state.asSwitch,
           onChange: (value: boolean) => {
             state.value = value;
           },

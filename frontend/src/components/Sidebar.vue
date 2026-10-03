@@ -160,8 +160,7 @@ export default defineComponent({
           : this.groups.find((group) =>
               group.items?.some(this.isItemActive)
             )) ??
-        fallBackGroup ??
-        this.groups[0];
+        null;
     },
     isItemActive(item: SidebarItem) {
       return matchesSidebarPath(getSidebarPath(this.$route), item.route);

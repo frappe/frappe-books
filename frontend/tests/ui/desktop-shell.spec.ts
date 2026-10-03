@@ -21,6 +21,20 @@ test('sidebar items are links that open their page', async ({ page }) => {
   await expect(quotes).toHaveAttribute('aria-current', 'page');
 });
 
+test('a page without a sidebar entry highlights none', async ({ page }) => {
+  const current = sidebar(page).locator('[aria-current="page"]');
+  await expect(current).toHaveText('Dashboard');
+  await page.goto('/books/list/SerialNumber');
+  await expect(headers(page)).toContainText('Serial Number');
+  await expect(current).toHaveCount(0);
+
+  await sidebar(page).getByRole('link', { name: 'Dashboard' }).click();
+  await expect(current).toHaveText('Dashboard');
+  await page.goBack();
+  await expect(headers(page)).toContainText('Serial Number');
+  await expect(current).toHaveCount(0);
+});
+
 test('only the current page header shows after moving between cached pages', async ({
   page,
 }) => {

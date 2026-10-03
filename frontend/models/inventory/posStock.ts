@@ -30,15 +30,15 @@ export async function getItemQtyMap(items?: string[]): Promise<ItemQtyMap> {
 }
 
 export async function getPOSBatchQuantity(
-  item: string,
+  item?: string,
   batch?: string
 ): Promise<number> {
-  const inventory = await getPOSInventory();
-  if (!batch || !inventory) {
+  if (!item || !batch) {
     return 0;
   }
 
-  return await getBatchQuantity(item, batch, inventory);
+  const inventory = await getPOSInventory();
+  return inventory ? await getBatchQuantity(item, batch, inventory) : 0;
 }
 
 /**

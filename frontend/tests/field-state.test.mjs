@@ -152,3 +152,27 @@ test('a field the form marks required cannot be cleared', async () => {
   await note.set('priority', 'Low');
   assert.equal(await note.set('due_on', null), true);
 });
+
+test('conditions read the values once per change: after an edit or a preview', async () => {
+  const note = newFrappeDoc('Note', { title: 'Plan' });
+  let reads = 0;
+  note.getEvalDoc = () => {
+    reads += 1;
+    return FrappeDoc.prototype.getEvalDoc.call(note);
+  };
+
+  assert.equal(state(note, 'due_on').required, false);
+  assert.equal(state(note, 'reason').required, false);
+  missing(note);
+  assert.equal(reads, 1);
+
+  await note.set('priority', 'High');
+  assert.equal(state(note, 'due_on').required, true);
+  assert.deepEqual(missing(note), ['due_on']);
+  assert.equal(reads, 2);
+
+  note.applyPreview({ title: 'Plan', priority: 'Low' });
+  assert.equal(state(note, 'due_on').required, false);
+  assert.deepEqual(missing(note), ['owner_note']);
+  assert.equal(reads, 3);
+});

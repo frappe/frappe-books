@@ -45,6 +45,26 @@ test('a preset shows its whole range and keeps it on close', async ({
   await closeWithoutChoice(page, () => page.keyboard.press('Escape'));
 });
 
+test('a link filter opens from a pill, searches inside and clears', async ({
+  page,
+}) => {
+  const account = page
+    .getByRole('group', { name: 'Filters', exact: true })
+    .getByRole('combobox', { name: 'Account', exact: true });
+  await expect(account).toHaveText(/All/);
+  await account.click();
+  await page.getByPlaceholder('Search', { exact: true }).fill('Debtors');
+  await page.getByRole('option', { name: 'Debtors', exact: true }).click();
+  await expect(account).toHaveText(/Debtors/);
+
+  await account.click();
+  await expect(page.getByPlaceholder('Search', { exact: true })).toHaveValue(
+    ''
+  );
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
+  await expect(account).toHaveText(/All/);
+});
+
 test('inline filter labels share one size and sit beside their values', async ({
   page,
 }) => {

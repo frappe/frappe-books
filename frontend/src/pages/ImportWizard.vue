@@ -246,12 +246,12 @@
       :actions="completeActions"
       @update:open="(open: boolean) => !open && clear()"
     >
-      <div class="space-y-4 text-base text-ink-gray-9">
+      <div class="space-y-4 text-p-base text-ink-gray-8">
         <!-- Success -->
         <div v-if="success.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
             <p class="text-base-semibold text-ink-gray-8">{{ t`Success` }}</p>
-            <p class="text-sm text-ink-gray-6">
+            <p class="text-sm text-ink-gray-5">
               {{
                 success.length === 1
                   ? t`${success.length} entry imported`
@@ -277,7 +277,7 @@
         <div v-if="failed.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
             <p class="text-base-semibold text-ink-gray-8">{{ t`Failed` }}</p>
-            <p class="text-sm text-ink-gray-6">
+            <p class="text-sm text-ink-gray-5">
               {{
                 failed.length === 1
                   ? t`${failed.length} entry failed`
@@ -295,7 +295,7 @@
               <p class="min-w-0 break-words">
                 {{ f.name }}
               </p>
-              <p class="min-w-0 break-words text-ink-gray-6">
+              <p class="min-w-0 break-words text-ink-gray-7">
                 {{ f.message }}
               </p>
             </div>

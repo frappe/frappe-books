@@ -63,7 +63,7 @@
         v-if="report"
         class="border-t md:border-t-0 md:border-l border-outline-gray-1 flex flex-col"
       >
-        <p class="p-4 text-sm text-ink-gray-6">
+        <p class="p-4 text-p-sm text-ink-gray-6">
           {{
             [
               t`Values cut off in the report are shown in full when printed.`,

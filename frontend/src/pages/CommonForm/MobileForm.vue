@@ -229,7 +229,7 @@ const menuOptions = computed<DropdownOptions>(() => {
   const rest = actions.value.filter((action) => action !== footerStep.value);
   const labels = [...new Set(rest.map((a) => a.group ?? ''))].sort();
   const links: FormAction[] = props.canShowLinks
-    ? [{ label: t`Linked Entries`, action: () => emit('show-links') }]
+    ? [{ label: t`Linked entries`, action: () => emit('show-links') }]
     : [];
   const groups = [
     { label: '', actions: links },

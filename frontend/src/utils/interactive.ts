@@ -133,6 +133,7 @@ export function showToast(options: ToastOptions) {
           long: 5_000,
         }[options.duration ?? 'long'];
   const toastOptions = {
+    id: options.id,
     duration,
     action: options.actionText
       ? {

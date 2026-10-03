@@ -10,13 +10,13 @@ import { stubServer } from './helpers/server.mjs';
 test('dashboard figures come from the server for the chosen period', async () => {
   const calls = stubServer(() => ({ months: [], has_data: false }));
 
-  await getDashboardData('get_cashflow', 'This Month');
+  await getDashboardData('get_cashflow', 'This month');
   await getInvoiceSummary('Books Sales Invoice', 'YTD');
 
   assert.deepEqual(calls, [
     {
       method: 'frappe_books.reports.dashboard.get_cashflow',
-      args: { period: 'This Month' },
+      args: { period: 'This month' },
     },
     {
       method: 'frappe_books.reports.dashboard.get_invoice_summary',

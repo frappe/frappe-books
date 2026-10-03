@@ -28,7 +28,7 @@
 <script lang="ts">
 import { BarChart as FrappeBarChart } from 'frappe-ui/charts';
 import { fyo } from 'src/initFyo';
-import { formatXLabels, getYMax, getYMin } from 'src/utils/chart';
+import { formatXLabels } from 'src/utils/chart';
 import { getDashboardData, MonthlyBalance } from 'src/utils/dashboard';
 import DashboardChartBase from './BaseDashboardChart.vue';
 import ChartLoadError from './ChartLoadError.vue';
@@ -47,9 +47,7 @@ export default defineComponent({
   }),
   computed: {
     chartData() {
-      const points = [this.data.map((d) => d.balance)];
       const format = (value: number) => fyo.format(value ?? 0, 'Currency');
-      const phoneAxes = this.isMobile ? this.phoneAxisLabels : undefined;
       return {
         // A month is a profit or a loss, so it fills one of the two series.
         rows: this.data.map(({ yearmonth, balance }) =>
@@ -64,14 +62,9 @@ export default defineComponent({
         xAxis: {
           type: 'category' as const,
           format: formatXLabels,
-          echartOptions: phoneAxes?.x,
+          echartOptions: this.axisLabels.x,
         },
-        yAxis: {
-          min: getYMin(points),
-          max: getYMax(points),
-          format,
-          echartOptions: phoneAxes?.y,
-        },
+        yAxis: { format, echartOptions: this.axisLabels.y },
       };
     },
   },

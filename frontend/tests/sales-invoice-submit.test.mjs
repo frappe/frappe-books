@@ -51,7 +51,7 @@ async function submitShortInvoice(makeShipment) {
 test('a Yes to insufficient stock for the shipment submits the invoice without it', async () => {
   const { titles, submitted } = await submitShortInvoice(true);
 
-  assert.deepEqual(titles, ['Insufficient Quantity', 'Submit SINV-1001?']);
+  assert.deepEqual(titles, ['Insufficient quantity', 'Submit SINV-1001?']);
   assert.equal(submitted.make_auto_stock_transfer, 0);
 });
 

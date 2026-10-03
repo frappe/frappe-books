@@ -31,6 +31,9 @@ export const modalNames = [
 
 export type ModalName = typeof modalNames[number];
 
+/** Cart item errors share one toast, so repeated taps do not stack them. */
+export const POS_ITEM_TOAST_ID = 'pos-item-error';
+
 export interface POSItem {
   id?: number;
   image?: string;

@@ -50,6 +50,9 @@ class BooksSystemSettings(Document):
 
 	def on_update(self):
 		# Only a changed format goes, so other saves need no right to System Settings.
+		# The first save (app install) has nothing to change: Frappe keeps its formats.
+		if not self.get_doc_before_save():
+			return
 		self.update_frappe_formats(
 			[fieldname for fieldname in FRAPPE_FORMATS if self.has_value_changed(fieldname)]
 		)

@@ -3,7 +3,7 @@ import { useBooksSession, waitForBooks } from './helpers/session';
 
 useBooksSession('/books/report/GeneralLedger');
 
-const range = (page: Page) => page.getByPlaceholder('Date Range');
+const range = (page: Page) => page.getByPlaceholder('Date range');
 
 async function closeWithoutChoice(page: Page, close: () => Promise<void>) {
   const value = await range(page).inputValue();

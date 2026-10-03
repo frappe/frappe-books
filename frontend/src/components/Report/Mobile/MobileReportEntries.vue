@@ -1,6 +1,10 @@
 <template>
   <div>
-    <FrappeList class="list-row-px-4" :columns="['minmax(0,1fr)', 'auto']">
+    <!-- Dates stick below the report toolbar. -->
+    <FrappeList
+      class="list-row-px-4 [&_[data-slot=list-group-header]]:top-14"
+      :columns="['minmax(0,1fr)', 'auto']"
+    >
       <template v-for="section in sections" :key="section.key">
         <FrappeListGroup v-if="section.date" :label="section.date" sticky>
           <FrappeListRow

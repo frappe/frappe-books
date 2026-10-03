@@ -21,6 +21,7 @@
       >
         {{ t`Filters` }}
       </h2>
+      <!-- Not ScrollArea: its focusable viewport would take the popover's first focus from the Field. -->
       <div class="min-h-0 overflow-y-auto px-4 pb-4">
         <div v-if="filters.explicitRows.length" class="flex flex-col gap-4">
           <div
@@ -84,7 +85,7 @@
             />
           </div>
         </div>
-        <p v-else class="py-2 text-base text-ink-gray-6">
+        <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
           {{ t`No filters selected` }}
         </p>
       </div>

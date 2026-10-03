@@ -28,20 +28,13 @@
       </FrappeListRows>
     </FrappeList>
   </FrappeScrollArea>
-  <div
+  <EmptyState
     v-else
-    class="flex min-h-32 flex-1 flex-col items-center justify-center gap-2.5 p-6 text-center"
-  >
-    <span
-      class="flex size-11 items-center justify-center rounded-full bg-surface-gray-2"
-    >
-      <span class="lucide-shopping-cart size-5 text-ink-gray-5" aria-hidden="true" />
-    </span>
-    <p class="text-lg-medium text-ink-gray-8">{{ t`No items yet` }}</p>
-    <p class="max-w-60 text-sm text-ink-gray-5">
-      {{ t`Scan a barcode or pick an item to get started.` }}
-    </p>
-  </div>
+    class="min-h-32 flex-1 py-6"
+    icon="lucide-shopping-cart"
+    :title="t`No items yet`"
+    :description="t`Scan a barcode or pick an item to get started.`"
+  />
 </template>
 
 <script lang="ts">
@@ -53,6 +46,7 @@ import {
 } from 'frappe-ui/list';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
+import EmptyState from 'src/components/EmptyState.vue';
 import { defineComponent, inject, PropType } from 'vue';
 import SelectedItemRow from './SelectedItemRow.vue';
 import { POSLayout } from './types';
@@ -61,6 +55,7 @@ import { POSLayout } from './types';
 export default defineComponent({
   name: 'SelectedItemTable',
   components: {
+    EmptyState,
     FrappeList,
     FrappeListRow,
     FrappeListRows,

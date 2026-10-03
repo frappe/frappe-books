@@ -9,7 +9,7 @@ export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
   const shortcuts = openShortcuts
     ? [
         {
-          label: t`Keyboard Shortcuts`,
+          label: t`Keyboard shortcuts`,
           icon: 'lucide-command',
           onClick: openShortcuts,
         },
@@ -43,7 +43,7 @@ export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
           icon: 'lucide-layout-grid',
           onClick: () => window.location.assign('/apps'),
         },
-        { label: t`Log Out`, icon: 'lucide-log-out', onClick: logOut },
+        { label: t`Log out`, icon: 'lucide-log-out', onClick: logOut },
       ],
     },
   ];

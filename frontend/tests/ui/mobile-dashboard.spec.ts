@@ -15,16 +15,16 @@ const createButton = (page: Page) =>
     .getByRole('button', { name: 'Create', exact: true });
 
 test('the period sheet changes the dashboard period', async ({ page }) => {
-  await page.getByRole('button', { name: 'This Year' }).click();
+  await page.getByRole('button', { name: 'This year' }).click();
   const sheet = page.getByRole('dialog', { name: 'Period' });
   await expect(
-    sheet.getByRole('option', { name: 'This Year' })
+    sheet.getByRole('option', { name: 'This year' })
   ).toHaveAttribute('aria-selected', 'true');
 
-  await sheet.getByRole('option', { name: 'This Quarter' }).click();
+  await sheet.getByRole('option', { name: 'This quarter' }).click();
   await expect(sheet).toBeHidden();
   await expect(
-    page.getByRole('button', { name: 'This Quarter' })
+    page.getByRole('button', { name: 'This quarter' })
   ).toBeVisible();
 });
 
@@ -33,9 +33,9 @@ test('the create menu opens a new sales invoice', async ({ page }) => {
   const menu = page.getByRole('menu');
   for (const name of [
     'Sales Invoice',
-    'Receive Payment',
+    'Receive payment',
     'Purchase Invoice',
-    'Make Payment',
+    'Make payment',
     'Customer',
     'Item',
   ]) {
@@ -89,7 +89,7 @@ test('a section that fails to load can be retried', async ({ page }) => {
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByText('Failed to load')).toBeHidden();
   await expect(
-    page.locator('[data-slot="chart-container"]', { hasText: 'Top Expenses' })
+    page.locator('[data-slot="chart-container"]', { hasText: 'Top expenses' })
   ).toHaveAttribute('data-state', /ready|empty/);
 });
 
@@ -106,6 +106,6 @@ test('top expenses shows the full total spending under its title', async ({
   await page.reload();
 
   await expect(
-    page.locator('[data-slot="chart-container"]', { hasText: 'Top Expenses' })
-  ).toContainText('Total Spending: ₹ 12,34,567.89');
+    page.locator('[data-slot="chart-container"]', { hasText: 'Top expenses' })
+  ).toContainText('Total spending: ₹ 12,34,567.89');
 });

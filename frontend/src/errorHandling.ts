@@ -83,27 +83,27 @@ function getErrorLabel(error: Error) {
   }
 
   if (name === 'ValidationError') {
-    return t`Validation Error`;
+    return t`Validation error`;
   }
 
   if (name === 'NotFoundError') {
-    return t`Not Found`;
+    return t`Not found`;
   }
 
   if (name === 'ForbiddenError') {
-    return t`Forbidden Error`;
+    return t`Forbidden error`;
   }
 
   if (name === 'DuplicateEntryError') {
-    return t`Duplicate Entry`;
+    return t`Duplicate entry`;
   }
 
   if (name === 'LinkValidationError') {
-    return t`Link Validation Error`;
+    return t`Link validation error`;
   }
 
   if (name === 'MandatoryError') {
-    return t`Mandatory Error`;
+    return t`Mandatory error`;
   }
 
   if (name === 'NotImplemented') {

@@ -193,7 +193,7 @@ export async function validateSinv(sinvDoc: SalesInvoice) {
   const isReturn = !!sinvDoc.return_against;
   for (const { item, quantity = 0 } of rows) {
     if (!quantity || (quantity < 0 && !isReturn)) {
-      throw new ValidationError(t`Invalid Quantity for Item ${item!}`);
+      throw new ValidationError(t`Invalid quantity for item ${item!}`);
     }
   }
 

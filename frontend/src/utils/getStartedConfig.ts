@@ -39,7 +39,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
       items: [
         {
           key: 'Review Accounts',
-          label: t`Review Accounts`,
+          label: t`Review accounts`,
           icon: 'lucide-clipboard-check',
           description: t`Review your chart of accounts, add any account or tax heads as needed`,
           action: () => routeTo('/chart-of-accounts'),
@@ -48,7 +48,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
         },
         {
           key: 'Opening Balances',
-          label: t`Opening Balances`,
+          label: t`Opening balances`,
           icon: 'lucide-landmark',
           fieldname: 'opening_balance_checked',
           description: t`Set up your opening balances before performing any accounting entries`,
@@ -56,7 +56,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
         },
         {
           key: 'Add Taxes',
-          label: t`Add Taxes`,
+          label: t`Add taxes`,
           icon: 'lucide-percent',
           fieldname: 'taxes_added',
           description: t`Set up your tax templates for your sales or purchase transactions`,
@@ -71,7 +71,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
       items: [
         {
           key: 'Add Sales Items',
-          label: t`Add Items`,
+          label: t`Add items`,
           icon: 'lucide-box',
           description: t`Add products or services that you sell to your customers`,
           action: () =>
@@ -87,7 +87,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
         },
         {
           key: 'Add Customers',
-          label: t`Add Customers`,
+          label: t`Add customers`,
           icon: 'lucide-user-round',
           description: t`Add a few customers to create your first sales invoice`,
           action: () =>
@@ -117,7 +117,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
       items: [
         {
           key: 'Add Purchase Items',
-          label: t`Add Items`,
+          label: t`Add items`,
           icon: 'lucide-box',
           description: t`Add products or services that you buy from your suppliers`,
           action: () =>
@@ -131,7 +131,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
         },
         {
           key: 'Add Suppliers',
-          label: t`Add Suppliers`,
+          label: t`Add suppliers`,
           icon: 'lucide-truck',
           description: t`Add a few suppliers to create your first purchase invoice`,
           action: () =>

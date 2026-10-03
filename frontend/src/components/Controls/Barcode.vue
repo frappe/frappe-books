@@ -9,7 +9,13 @@
     @change="handleChange"
   >
     <template v-if="isMobile" #suffix>
-      <BarcodeScanButton variant="ghost" size="sm" @scan="selectItem" />
+      <!-- Pulled toward the edge so the 32px button sits 4px in, as from top and bottom. -->
+      <BarcodeScanButton
+        class="-me-2"
+        variant="ghost"
+        size="md"
+        @scan="selectItem"
+      />
     </template>
     <template v-else #prefix>
       <span
@@ -140,11 +146,12 @@ export default defineComponent({
       clearInterval(this.timerId);
       this.timerId = null;
     },
+    // One toast per scanner: each scan replaces the last one's.
     error(message: string) {
-      showToast({ type: 'error', message });
+      showToast({ type: 'error', message, id: 'barcode-scan' });
     },
     success(message: string) {
-      showToast({ type: 'success', message });
+      showToast({ type: 'success', message, id: 'barcode-scan' });
     },
   },
 });

@@ -205,7 +205,7 @@ test('Escape dismisses account menus and dialogs without closing quick edit', as
 
   await actions.click();
   await page
-    .getByRole('menuitem', { name: 'Add Account', exact: true })
+    .getByRole('menuitem', { name: 'Add account', exact: true })
     .click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();

@@ -11,7 +11,7 @@
         :columns="listColumns"
         :row-height="40"
         divider="full"
-        class="-mx-3 text-base list-gap-4 list-row-px-3"
+        class="-mx-3 text-base tabular-nums list-gap-4 list-row-px-3"
       >
         <FrappeListHeader class="sticky top-0 z-10 min-w-max bg-surface-base">
           <ReportColumnHeader
@@ -59,7 +59,7 @@
       :text="t`Loading Report...`"
     />
     <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
-      {{ t`No Values to be Displayed` }}
+      {{ t`No values to be displayed` }}
     </p>
 
     <!-- Pagination Footer -->

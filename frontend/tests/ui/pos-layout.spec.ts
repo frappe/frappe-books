@@ -96,7 +96,7 @@ test('leaving a sale with items asks to save or discard it', async ({
   });
 
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
-  for (const name of ['Cancel', 'Discard and Continue', 'Save and Continue']) {
+  for (const name of ['Cancel', 'Discard and continue', 'Save and continue']) {
     await expect(dialog.getByRole('button', { name, exact: true })).toBeVisible();
   }
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -111,7 +111,7 @@ test('discarding a sale on leaving empties the cart', async ({ page }) => {
   });
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
   await dialog
-    .getByRole('button', { name: 'Discard and Continue', exact: true })
+    .getByRole('button', { name: 'Discard and continue', exact: true })
     .click();
 
   await expect(dialog).toBeHidden();
@@ -135,7 +135,7 @@ test('leaving a submitted sale offers only to leave or stay', async ({
 
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
   await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
-  for (const name of ['Save and Continue', 'Discard and Continue']) {
+  for (const name of ['Save and continue', 'Discard and continue']) {
     await expect(dialog.getByRole('button', { name, exact: true })).toHaveCount(0);
   }
   await dialog.getByRole('button', { name: 'Leave', exact: true }).click();
@@ -166,6 +166,30 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: 'Coupon', exact: true })
   ).toBeVisible();
+});
+
+test('coupons a preview takes off share one warning', async ({ page }) => {
+  await page.evaluate(() => {
+    const { state } = (window as any).posFixture;
+    state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
+    state.invoice.push('coupons', { coupons: 'SUMMER' });
+  });
+  await expect(
+    page.getByRole('button', { name: '2 coupons applied', exact: true })
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const { invoice } = (window as any).posFixture.state;
+    const document = invoice.getMethodDocument({ keepRowNames: true });
+    invoice.applyPreview(invoice.toDocValues({ ...document, coupons: [] }));
+  });
+  await expect(
+    page.getByText(
+      'Coupons FOSSCLUB, SUMMER no longer apply, so they were removed.'
+    )
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-sonner-toast]', { hasText: 'no longer appl' })
+  ).toHaveCount(1);
 });
 
 test('Done keeps the applied coupons after a refused code', async ({

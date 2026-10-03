@@ -14,7 +14,7 @@
       :viewport-class="isMobile ? undefined : 'px-3 pb-10 pt-5 sm:px-5'"
     >
       <div
-        class="space-y-4 px-4 pb-6 pt-3 md:mx-auto md:max-w-4xl md:space-y-6 md:p-0"
+        class="space-y-4 px-4 pb-10 pt-3 md:mx-auto md:max-w-4xl md:space-y-6 md:p-0"
       >
         <PeriodSelector
           v-if="isMobile"

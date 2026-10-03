@@ -11,7 +11,7 @@ async function selectImportFile(page: Page, importType: string, csv: string) {
   await page.getByRole('combobox').first().click();
   await page.getByRole('option', { name: importType, exact: true }).click();
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Select File', exact: true }).click();
+  await page.getByRole('button', { name: 'Select file', exact: true }).click();
   await (
     await chooser
   ).setFiles({
@@ -19,7 +19,7 @@ async function selectImportFile(page: Page, importType: string, csv: string) {
     mimeType: 'text/csv',
     buffer: Buffer.from(csv),
   });
-  await page.getByRole('button', { name: 'Import Data', exact: true }).click();
+  await page.getByRole('button', { name: 'Import data', exact: true }).click();
 }
 
 async function getDoc(page: Page, doctype: string, name: string) {
@@ -40,7 +40,7 @@ test('Frappe’s Data Import saves the rows and lists what it imported', async (
     `Name,Role,Default Account\n${names[0]},Customer,Debtors\n${names[1]},Supplier,Creditors\n`
   );
 
-  const results = page.getByRole('dialog', { name: 'Import Complete' });
+  const results = page.getByRole('dialog', { name: 'Import complete' });
   await expect(results).toContainText('2 entries imported');
   for (const name of names) {
     await expect(results).toContainText(name);
@@ -55,7 +55,7 @@ test('links Frappe cannot find stop the import', async ({ page }) => {
     `Name,Role,Default Account\nImport Cid ${run},Customer,Missing ${run}\n`
   );
 
-  const error = page.getByRole('dialog', { name: 'Cannot Import' });
+  const error = page.getByRole('dialog', { name: 'Cannot import' });
   await expect(error).toContainText(
     `Following links do not exist: (Account, Missing ${run}).`
   );
@@ -85,7 +85,7 @@ test('rows of one invoice become one submitted invoice', async ({ page }) => {
   );
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
 
-  const results = page.getByRole('dialog', { name: 'Import Complete' });
+  const results = page.getByRole('dialog', { name: 'Import complete' });
   await expect(results).toContainText('1 entry imported');
   const name = (await results.locator('p.break-words').first().textContent())!;
   const invoice = await getDoc(page, 'Books Sales Invoice', name.trim());
@@ -109,12 +109,12 @@ test('Fix Failed keeps only the rows Frappe could not save', async ({
     `Name,Role\n${existing},Customer\nImport Fay ${run},Customer\n`
   );
 
-  const results = page.getByRole('dialog', { name: 'Import Complete' });
+  const results = page.getByRole('dialog', { name: 'Import complete' });
   await expect(results).toContainText('1 entry imported');
   await expect(results).toContainText('1 entry failed');
   await expect(results).toContainText(existing);
   await results
-    .getByRole('button', { name: 'Fix Failed', exact: true })
+    .getByRole('button', { name: 'Fix failed', exact: true })
     .click();
 
   await expect(page.getByText('1 row added.')).toBeVisible();

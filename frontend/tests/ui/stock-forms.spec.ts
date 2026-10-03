@@ -27,7 +27,7 @@ test('a stock movement takes its series, rate and locations from the server', as
   ).toHaveValue('SMOV-');
 
   await choose(page, 'Movement Type', 'Material Receipt');
-  await page.getByText('Add Row', { exact: true }).click();
+  await page.getByText('Add row', { exact: true }).click();
   await pickLink(page, 'Item', item);
   await expect(page.getByRole('combobox', { name: 'To' })).toHaveValue(
     'Stores'
@@ -51,7 +51,7 @@ test('a stock movement takes its series, rate and locations from the server', as
   await expect(page).toHaveURL(/\/books\/edit\/StockMovement\/SMOV-/);
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
-  await expect(page.getByText('View Stock Entries')).toBeVisible();
+  await expect(page.getByText('View stock entries')).toBeVisible();
 });
 
 test('form table columns resize by dragging and keep their width', async ({

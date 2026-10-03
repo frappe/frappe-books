@@ -1,13 +1,15 @@
 <template>
+  <!-- Grows with its rows, so the toolbar sticks all the way down. -->
   <div
     class="flex flex-col"
-    :class="isScrollable ? 'min-h-0 flex-1' : 'min-h-full pb-12'"
+    :class="isScrollable ? 'min-h-0 flex-1' : 'min-h-full shrink-0 pb-12'"
   >
+    <!-- Row headers stick under it (top-14) and slide beneath it. -->
     <div
-      class="sticky top-0 z-10 flex shrink-0 gap-2 overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 py-2 [scrollbar-width:none] *:shrink-0"
+      class="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 [scrollbar-width:none] *:shrink-0"
     >
       <MobileFiltersButton
-        size="md"
+        size="lg"
         :count="changedCount"
         @click="emit('open-filters')"
       />
@@ -35,7 +37,7 @@
     </div>
 
     <MobileReportSkeleton v-if="loading" v-bind="skeleton" />
-    <MobileEmptyState
+    <EmptyState
       v-else-if="isEmpty"
       class="flex-1 pb-28 pt-8"
       :icon="filters.hasChanges ? 'lucide-search-x' : 'lucide-inbox'"
@@ -51,7 +53,7 @@
         :label="t`Clear filters`"
         @click="emit('clear-filters')"
       />
-    </MobileEmptyState>
+    </EmptyState>
     <MobileReportTree
       v-else-if="tree"
       :rows="treeRows"
@@ -88,7 +90,7 @@ import { useLocalStorage } from '@vueuse/core';
 import { Button as FrappeButton } from 'frappe-ui';
 import type { Report } from 'reports/Report';
 import type { ReportRow } from 'reports/types';
-import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import MobileFilterChip from 'src/mobile/MobileFilterChip.vue';
 import MobileFiltersButton from 'src/mobile/MobileFiltersButton.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';

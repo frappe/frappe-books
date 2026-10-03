@@ -18,7 +18,7 @@
 			@update:model-value="handleTextInput"
 		/>
 
-		<div class="keypad-keys grid grid-cols-4 gap-2" role="group" :aria-label="t`Numeric keypad`">
+		<div class="grid grid-cols-4 gap-2" role="group" :aria-label="t`Numeric keypad`">
 			<!-- Plain buttons: touch keys need 52px; frappe-ui's largest Button is 40px (frappe/frappe-ui#1250). -->
 			<button
 				v-for="key in keyDefinitions"
@@ -26,7 +26,7 @@
 				type="button"
 				:aria-label="key.ariaLabel"
 				:disabled="disabled"
-				class="flex h-13 items-center justify-center rounded-4 tabular-nums transition-colors disabled:cursor-not-allowed disabled:text-ink-gray-4"
+				class="flex h-13 items-center [@media(max-height:700px)]:h-10 justify-center rounded-4 tabular-nums transition-colors disabled:cursor-not-allowed disabled:text-ink-gray-4"
 				:class="[
 					key.wide ? 'col-span-2 text-md-medium' : 'text-3xl-medium',
 					key.action
@@ -181,11 +181,3 @@ export default defineComponent({
 	},
 });
 </script>
-
-<style scoped>
-@media (max-height: 700px) {
-  .keypad-keys :deep(button) {
-    height: 40px !important;
-  }
-}
-</style>

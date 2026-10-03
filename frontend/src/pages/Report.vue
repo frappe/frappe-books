@@ -24,8 +24,8 @@
       <FrappeButton
         ref="printButton"
         icon="lucide-printer"
-        :label="t`Open Report Print View`"
-        :tooltip="t`Open Report Print View`"
+        :label="t`Open report print view`"
+        :tooltip="t`Open report print view`"
         @click="routeTo(`/report-print/${reportClassName}`)"
       />
     </PageHeader>

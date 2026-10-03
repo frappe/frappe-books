@@ -1,7 +1,7 @@
 <template>
   <div v-bind="phoneChartListeners" :class="cardClass">
     <FrappeDonutChart
-      :title="t`Top Expenses`"
+      :title="t`Top expenses`"
       :subtitle="totalSpending"
       :loading="!isLoaded"
       :error="error"
@@ -9,7 +9,7 @@
       :data="expenses"
       category="account"
       value="total"
-      :center-label="t`Total Spending`"
+      :center-label="t`Total spending`"
       :format="(value: number) => fyo.format(value, 'Currency')"
     >
       <!-- A full total overflows the hole (frappe/frappe-ui#1259); the subtitle keeps it in full. -->
@@ -64,7 +64,7 @@ export default defineComponent({
       }
 
       const total = this.expenses.reduce((sum, row) => sum + row.total, 0);
-      return this.t`Total Spending: ${this.fyo.format(total, 'Currency')}`;
+      return this.t`Total spending: ${this.fyo.format(total, 'Currency')}`;
     },
   },
   methods: {

@@ -15,13 +15,13 @@
         as="button"
         type="button"
         size="lg"
-        class="min-h-12 text-start active:bg-surface-gray-2"
+        class="text-start active:bg-surface-gray-2"
         @click="$emit('pick', field)"
       >
         <template #prefix>
           <span
             aria-hidden="true"
-            class="size-4 text-ink-gray-5"
+            class="size-5 text-ink-gray-5"
             :class="fieldIcons[field.fieldtype] ?? 'lucide-type'"
           />
         </template>

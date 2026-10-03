@@ -102,7 +102,7 @@ test('lead, party and item actions open documents from their server mappers', as
     ],
     [
       'Party',
-      'Create Sale',
+      'Create sale',
       'books_party.books_party.make_sales_invoice',
       '/edit/SalesInvoice/',
     ],

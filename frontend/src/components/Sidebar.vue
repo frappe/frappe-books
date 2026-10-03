@@ -37,7 +37,7 @@
 
     <div class="flex-shrink-0 px-2 py-2">
       <FrappeSidebarItem
-        :label="t`Hide Sidebar`"
+        :label="t`Hide sidebar`"
         @click="() => toggleSidebar()"
       >
         <template #prefix>
@@ -51,7 +51,7 @@
 
     <FrappeKeyboardShortcutsDialog
       v-model:open="viewShortcuts"
-      :title="t`Keyboard Shortcuts`"
+      :title="t`Keyboard shortcuts`"
     >
       <ShortcutsHelper />
     </FrappeKeyboardShortcutsDialog>

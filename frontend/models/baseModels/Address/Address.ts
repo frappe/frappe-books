@@ -40,10 +40,10 @@ export class Address extends FrappeDoc {
   static emptyMessages: EmptyMessageMap = {
     state: (doc: FrappeDoc) => {
       if (doc.country) {
-        return t`Enter State`;
+        return t`Enter state`;
       }
 
-      return t`Enter Country to load States`;
+      return t`Enter country to load states`;
     },
   };
 

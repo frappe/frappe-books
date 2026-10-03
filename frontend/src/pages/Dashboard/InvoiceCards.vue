@@ -68,14 +68,14 @@ export default defineComponent({
           title: t`Paid ${label}`,
           value: summary?.paid ?? null,
           count: summary?.paid_count ?? 0,
-          linkLabel: t`View Paid Invoices`,
+          linkLabel: t`View paid invoices`,
         },
         {
           paid: false,
           title: t`Unpaid ${label}`,
           value: summary?.unpaid ?? null,
           count: summary?.unpaid_count ?? 0,
-          linkLabel: t`View Unpaid Invoices`,
+          linkLabel: t`View unpaid invoices`,
         },
       ];
     },

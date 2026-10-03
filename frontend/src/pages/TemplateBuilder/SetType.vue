@@ -1,12 +1,12 @@
 <template>
   <FrappeDialog
     :open="open"
-    :title="t`Set Template Type`"
-    size="2xl"
+    :title="t`Set template type`"
+    :actions="[{ label: t`Done`, variant: 'solid', onClick: done }]"
     @update:open="(value: boolean) => $emit('update:open', value)"
   >
     <div class="flex w-full flex-col gap-4">
-      <p class="text-base text-ink-gray-9">
+      <p class="text-p-base text-ink-gray-7">
         {{ t`Select the template type.` }}
       </p>
       <Select
@@ -17,15 +17,10 @@
         @change="typeChange"
       />
     </div>
-    <template #actions>
-      <div class="flex justify-end">
-        <FrappeButton variant="solid" @click="done">{{ t`Done` }}</FrappeButton>
-      </div>
-    </template>
   </FrappeDialog>
 </template>
 <script lang="ts">
-import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
+import { Dialog as FrappeDialog } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { OptionField, SelectOption } from 'schemas/types';
@@ -34,7 +29,7 @@ import { getField } from 'src/frappe/registry';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
-  components: { FrappeDialog, Select, FrappeButton },
+  components: { FrappeDialog, Select },
   props: {
     open: { type: Boolean, default: false },
     doc: { type: PrintFormat, required: true },

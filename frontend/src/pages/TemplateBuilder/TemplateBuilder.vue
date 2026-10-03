@@ -7,7 +7,6 @@
           ref="nameField"
           class="w-60 flex-shrink-0"
           size="small"
-          :input-class="['text-xl-semibold']"
           :df="fields.name"
           :border="true"
           :value="doc!.name"
@@ -22,9 +21,8 @@
       </FrappeButton>
       <FrappeButton
         v-if="canEditTemplate && displayDoc"
-        :label="t`Toggle Edit Mode`"
-        :tooltip="t`Toggle Edit Mode`"
-        icon="lucide-square-pen"
+        :label="t`Toggle edit mode`"
+        icon-left="lucide-square-pen"
         @click="toggleEditMode"
       />
       <DropdownWithActions v-if="actions.length" :actions="actions" />
@@ -57,17 +55,19 @@
             :width="pageSize.width"
             :height="pageSize.height"
           />
-          <FrappeAlert v-else class="m-4" theme="red" :title="t`Template Error`">
+          <FrappeAlert v-else class="m-4" theme="red" :title="t`Template error`">
             <template #description>
               <p class="whitespace-pre-wrap">{{ error }}</p>
             </template>
           </FrappeAlert>
         </FrappeScrollArea>
 
-        <!-- Display Hints -->
-        <p v-else-if="helperMessage" class="text-sm text-ink-gray-7 p-4">
-          {{ helperMessage }}
-        </p>
+        <EmptyState
+          v-else-if="helperMessage"
+          class="flex-1"
+          icon="lucide-layout-template"
+          :title="helperMessage"
+        />
 
         <!-- Bottom Bar -->
         <div
@@ -76,6 +76,7 @@
           <!-- Entry Type -->
           <FormControl
             class="w-44 flex-shrink-0"
+            size="small"
             :df="fields.doc_type"
             :border="true"
             :value="doc.get('doc_type')"
@@ -85,6 +86,7 @@
           <Link
             v-if="doc.doc_type"
             class="w-48 min-w-0"
+            size="small"
             :df="displayDocField"
             :border="true"
             :value="displayDoc?.name"
@@ -96,7 +98,7 @@
             v-if="canDisplayPreview"
             class="ms-auto flex flex-shrink-0 items-center gap-2 text-sm text-ink-gray-6"
           >
-            <span class="whitespace-nowrap">{{ t`Display Scale` }}</span>
+            <span class="whitespace-nowrap">{{ t`Display scale` }}</span>
             <FrappeTextInput
               type="number"
               class="w-16"
@@ -104,7 +106,7 @@
               :min="0.1"
               :max="10"
               :step="0.1"
-              size="md"
+              size="sm"
               variant="outline"
               @update:model-value="setScale"
             />
@@ -117,7 +119,6 @@
         :initial-x="panelWidth"
         :min-x="22 * 16"
         :max-x="maxWidth"
-        style="z-index: 5"
         @resize="(x: number) => (panelWidth = x)"
       />
 
@@ -158,19 +159,35 @@
         >
           <FrappeAccordion
             :model-value="showHints ? 'hints' : undefined"
-            :items="[{ value: 'hints', title: t`Key Hints` }]"
+            :items="[{ value: 'hints', title: t`Key hints` }]"
             @update:model-value="(value) => (showHints = value === 'hints')"
           >
             <template #item-content>
-              <div
-                class="overflow-auto"
-                style="max-height: 30vh"
-              >
+              <FrappeScrollArea viewport-class="max-h-[30vh]">
                 <TemplateBuilderHint :hints="hints" />
-              </div>
+              </FrappeScrollArea>
             </template>
           </FrappeAccordion>
         </div>
+      </div>
+    </div>
+    <div
+      v-else
+      class="grid min-h-0 w-full flex-1 grid-cols-[minmax(0,1fr)_22rem] bg-surface-gray-1"
+      aria-busy="true"
+    >
+      <div class="overflow-hidden p-4">
+        <FrappeSkeleton class="mx-auto aspect-[21/29.7] max-w-md rounded-4" />
+      </div>
+      <div
+        class="space-y-3 border-l border-outline-gray-1 bg-surface-base p-4"
+      >
+        <FrappeSkeleton
+          v-for="width in ['w-48', 'w-64', 'w-40', 'w-56', 'w-32']"
+          :key="width"
+          class="h-3.5 rounded-4"
+          :class="width"
+        />
       </div>
     </div>
     <SetPrintSize v-if="doc" v-model:open="showSizeModal" :doc="doc" />
@@ -189,12 +206,14 @@ import {
   Alert as FrappeAlert,
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
+  Skeleton as FrappeSkeleton,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
 import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import HorizontalResizer from 'src/components/HorizontalResizer.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
@@ -240,7 +259,9 @@ export default defineComponent({
     FrappeAccordion,
     FrappeAlert,
     FrappeScrollArea,
+    FrappeSkeleton,
     DropdownWithActions,
+    EmptyState,
     PrintSheet,
     HorizontalResizer,
     TemplateEditor,
@@ -360,7 +381,7 @@ export default defineComponent({
 
       if (this.canEditTemplate && !this.showTypeModal) {
         actions.push({
-          label: this.t`Set Template Type`,
+          label: this.t`Set template type`,
           group: this.t`Action`,
           action: () => (this.showTypeModal = true),
         });
@@ -368,7 +389,7 @@ export default defineComponent({
 
       if (this.canEditTemplate && !this.showSizeModal) {
         actions.push({
-          label: this.t`Set Print Size`,
+          label: this.t`Set print size`,
           group: this.t`Action`,
           action: () => (this.showSizeModal = true),
         });
@@ -376,14 +397,14 @@ export default defineComponent({
 
       if (this.canEditTemplate) {
         actions.push({
-          label: this.t`Select Template File`,
+          label: this.t`Select template file`,
           group: this.t`Action`,
           action: this.selectFile.bind(this),
         });
       }
 
       actions.push({
-        label: this.t`Save Template File`,
+        label: this.t`Save template file`,
         group: this.t`Action`,
         action: this.saveFile.bind(this),
       });
@@ -409,11 +430,11 @@ export default defineComponent({
       }
 
       if (!this.doc.doc_type) {
-        return this.t`Select a Template type`;
+        return this.t`Select a template type`;
       }
 
       if (!this.displayDoc) {
-        return this.t`Select a Display Doc to view the Template`;
+        return this.t`Select a Display Doc to view the template`;
       }
 
       if (this.doc.isEditable && !this.doc.html) {
@@ -634,7 +655,7 @@ export default defineComponent({
       if (!name) {
         const label = getSchema(schemaName)?.label ?? schemaName;
         await showDialog({
-          title: this.t`No Display Entries Found`,
+          title: this.t`No display entries found`,
           detail: this.t`Please create a ${label} entry to view Template Preview.`,
           type: 'warning',
         });

@@ -2,47 +2,50 @@
   <FrappeBottomSheet
     v-if="isMobile"
     :open="true"
-    :title="sheetTitle"
+    :title="title"
     @update:open="(open: boolean) => !open && routeToPrevious()"
   >
-    <TwoColumnForm v-if="doc" ref="form" :doc="doc" :fields="sheetFields" />
-    <div
-      v-if="doc?.canSave || doc?.canSubmit"
-      class="px-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
-    >
-      <FrappeButton
-        v-if="doc.canSave"
-        class="w-full"
-        size="lg"
-        variant="solid"
-        :label="t`Save`"
-        @click="sync"
-      />
-      <FrappeButton
-        v-else
-        class="w-full"
-        size="lg"
-        variant="solid"
-        :label="t`Submit`"
-        @click="submit"
-      />
+    <div class="px-4">
+      <TwoColumnForm v-if="doc" ref="form" :doc="doc" :fields="sheetFields" />
+      <FormSkeleton v-else class="py-4" />
+      <MobileSheetFooter v-if="doc?.canSave || doc?.canSubmit" class="*:flex-1">
+        <FrappeButton
+          v-if="doc.canSave"
+          size="lg"
+          variant="solid"
+          :label="t`Save`"
+          @click="sync"
+        />
+        <FrappeButton
+          v-else
+          size="lg"
+          variant="solid"
+          :label="t`Submit`"
+          @click="submit"
+        />
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
   <div
     v-else
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
-    <!-- Quick edit Tool bar -->
-    <div class="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
-      <!-- Save & Submit Buttons -->
-      <FrappeButton v-if="doc?.canSave" variant="solid" @click="sync">
+    <div
+      class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
+    >
+      <h2 class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-8">
+        {{ title }}
+      </h2>
+      <!-- Subtle: the page beside the panel keeps the one solid button. -->
+      <FrappeButton v-if="doc?.canSave" @click="sync">
         {{ t`Save` }}
       </FrappeButton>
-      <FrappeButton v-else-if="doc?.canSubmit" variant="solid" @click="submit">
+      <FrappeButton v-else-if="doc?.canSubmit" @click="submit">
         {{ t`Submit` }}
       </FrappeButton>
 
       <FrappeButton
+        variant="ghost"
         icon="lucide-x"
         :label="t`Close quick edit`"
         :tooltip="t`Close quick edit`"
@@ -51,10 +54,10 @@
     </div>
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
-      <!-- Name and image -->
+      <FormSkeleton v-if="!doc" class="p-3" />
       <div
-        v-if="doc && (titleField || imageField)"
-        class="flex min-h-14 items-center gap-3 border-b border-t border-outline-gray-1 p-3"
+        v-if="doc && (imageField || isTitleEditable)"
+        class="flex min-h-14 items-center gap-3 border-b border-outline-gray-1 p-3"
       >
         <AttachImage
           v-if="imageField"
@@ -65,14 +68,8 @@
           :letter-placeholder="letterPlaceHolder"
           @change="(value: DocValue) => valueChange(imageField as Field, value)"
         />
-        <h2
-          v-if="titleField && (doc.inserted || doc.schema.naming !== 'manual')"
-          class="min-w-0 break-words text-lg-semibold text-ink-gray-8"
-        >
-          {{ doc[titleField.fieldname] || titleField.label }}
-        </h2>
         <FormControl
-          v-else-if="titleField"
+          v-if="titleField && isTitleEditable"
           ref="titleControl"
           class="min-w-0 flex-1"
           :border="true"
@@ -105,6 +102,8 @@ import { Field, Schema } from 'schemas/types';
 import AttachImage from 'src/components/Controls/AttachImage.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
+import FormSkeleton from 'src/pages/CommonForm/FormSkeleton.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getField, getFields, getSchema } from 'src/frappe/registry';
 import { useBooksDoc } from 'src/frappe/useBooksDoc';
@@ -126,6 +125,8 @@ export default defineComponent({
     FrappeButton,
     FrappeScrollArea,
     FormControl,
+    FormSkeleton,
+    MobileSheetFooter,
     TwoColumnForm,
     AttachImage,
   },
@@ -182,21 +183,29 @@ export default defineComponent({
 
       return '';
     },
-    sheetTitle(): string {
-      if (!this.doc || this.doc.notInserted) {
+    title(): string {
+      if (!this.doc) {
+        return this.schema.label;
+      }
+
+      if (this.doc.notInserted) {
         return this.t`New ${this.schema.label}`;
       }
 
       const title = this.titleField && this.doc.get(this.titleField.fieldname);
       return String(title || this.doc.name);
     },
+    /** A new document named by hand takes its name in the form. */
+    isTitleEditable(): boolean {
+      return (
+        !!this.titleField &&
+        !!this.doc?.notInserted &&
+        this.doc.schema.naming === 'manual'
+      );
+    },
     sheetFields(): Field[] {
-      const isTitleEditable =
-        this.titleField &&
-        this.doc?.notInserted &&
-        this.doc.schema.naming === 'manual';
       const fields = this.fields as Field[];
-      if (!isTitleEditable || fields.includes(this.titleField!)) {
+      if (!this.isTitleEditable || fields.includes(this.titleField!)) {
         return fields;
       }
 

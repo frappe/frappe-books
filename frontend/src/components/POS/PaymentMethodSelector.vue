@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <span :id="labelId" class="text-sm text-ink-gray-8">
+    <span :id="labelId" class="text-sm text-ink-gray-6">
       {{ t`Payment method` }}
     </span>
     <!-- 64px tiles: RadioGroup rows stop at 32px (frappe/frappe-ui#1257). -->

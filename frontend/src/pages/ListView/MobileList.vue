@@ -46,7 +46,7 @@
           @open="$emit('openDoc', String(row.name))"
         />
       </FrappeList>
-      <div class="flex flex-col items-center gap-2.5 px-4 pb-6 pt-4">
+      <div class="flex flex-col items-center gap-2.5 px-4 pb-10 pt-4">
         <p class="text-sm tabular-nums text-ink-gray-5">
           {{ t`${rows.length} of ${total}` }}
         </p>
@@ -60,7 +60,7 @@
       </div>
     </template>
 
-    <MobileEmptyState
+    <EmptyState
       v-else
       class="flex-1 py-16"
       :icon="isFiltered ? 'lucide-search-x' : 'lucide-inbox'"
@@ -70,7 +70,6 @@
       <FrappeButton
         v-if="isFiltered"
         class="mt-2"
-        variant="solid"
         size="lg"
         :label="t`Clear filters`"
         @click="$emit('clearFilters')"
@@ -81,10 +80,10 @@
         variant="solid"
         size="lg"
         icon-left="lucide-plus"
-        :label="t`Make Entry`"
+        :label="t`Make entry`"
         @click="$emit('makeNewDoc')"
       />
-    </MobileEmptyState>
+    </EmptyState>
   </MobilePullToRefresh>
 </template>
 <script lang="ts">
@@ -95,7 +94,7 @@ import {
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
 import type { RenderData } from 'fyo/model/types';
-import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import MobilePullToRefresh from 'src/mobile/MobilePullToRefresh.vue';
 import { defineComponent, type PropType } from 'vue';
 import type { ListColumn } from './listColumns';
@@ -110,7 +109,7 @@ export default defineComponent({
     FrappeListCell,
     FrappeListRow,
     FrappeSkeleton,
-    MobileEmptyState,
+    EmptyState,
     MobileListRow,
     MobilePullToRefresh,
   },

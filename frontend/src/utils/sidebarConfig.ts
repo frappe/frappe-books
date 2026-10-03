@@ -141,7 +141,7 @@ function getReportSidebar() {
         route: '/report/GeneralLedger',
       },
       {
-        label: t`Profit And Loss`,
+        label: t`Profit and Loss`,
         name: 'profit-and-loss',
         route: '/report/ProfitAndLoss',
       },

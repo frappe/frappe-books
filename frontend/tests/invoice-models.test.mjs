@@ -620,12 +620,12 @@ test('invoice actions follow the Frappe invoice values', () => {
   assert.deepEqual(labels(invoice), [
     'Payment',
     'Shipment',
-    'Accounting Entries',
+    'Accounting entries',
     'Return',
   ]);
   invoice.outstanding_amount = fyo.pesa(0);
   invoice.return_against = 'SINV-1000';
-  assert.deepEqual(labels(invoice), ['Shipment', 'Accounting Entries']);
+  assert.deepEqual(labels(invoice), ['Shipment', 'Accounting entries']);
 });
 
 test('Return Against shows while returns are on, or once it is set', () => {
@@ -662,15 +662,15 @@ test('the payment step of a return names the refund', () => {
       .getActions(fyo)[0]
       .nextStep(newInvoice(schemaName, values));
 
-  assert.equal(step('SalesInvoice'), 'Receive Payment');
+  assert.equal(step('SalesInvoice'), 'Receive payment');
   assert.equal(
     step('SalesInvoice', { return_against: 'SINV-1000' }),
-    'Make Payment'
+    'Make payment'
   );
-  assert.equal(step('PurchaseInvoice'), 'Make Payment');
+  assert.equal(step('PurchaseInvoice'), 'Make payment');
   assert.equal(
     step('PurchaseInvoice', { return_against: 'PINV-1000' }),
-    'Receive Payment'
+    'Receive payment'
   );
 });
 

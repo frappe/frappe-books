@@ -11,9 +11,7 @@
         :value="report.get(field.fieldname)"
         @change="(value: DocValue) => setFilter(field.fieldname, value)"
       />
-      <footer
-        class="sticky bottom-0 -mx-4 grid grid-cols-2 gap-2 bg-surface-base px-4 pt-2 pb-[max(env(safe-area-inset-bottom),1rem)]"
-      >
+      <MobileSheetFooter class="*:flex-1">
         <FrappeButton size="lg" :label="t`Clear`" @click="clear" />
         <FrappeButton
           size="lg"
@@ -21,7 +19,7 @@
           :label="t`Apply`"
           @click="apply"
         />
-      </footer>
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
 </template>
@@ -33,6 +31,7 @@ import {
 import type { DocValue } from 'fyo/core/types';
 import type { Report } from 'reports/Report';
 import FormControl from 'src/components/Controls/FormControl.vue';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { watch } from 'vue';
 import { getFilterValues, type FilterValues } from './MobileFilters';
 

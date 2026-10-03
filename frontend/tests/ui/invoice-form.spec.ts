@@ -21,7 +21,7 @@ test('a new sales invoice takes its account, rows and totals from the server', a
     'Debtors'
   );
 
-  await page.getByText('Add Row', { exact: true }).first().click();
+  await page.getByText('Add row', { exact: true }).first().click();
   await pickLink(page, 'Item', item);
   // The first data row, after the header; Qty is its first number.
   const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
@@ -102,6 +102,34 @@ test('the barcode field marks itself with a leading icon, not a trailing control
   );
 });
 
+test('the form tabs sit above the fields', async ({ page }) => {
+  await page.goto(`/books/edit/SalesInvoice/new-tabs-${Date.now()}`);
+  await waitForBooks(page);
+  const series = page.getByRole('combobox', { name: 'Number Series' });
+  const settings = page.getByRole('radio', { name: 'Settings', exact: true });
+  await expect(series).toBeVisible();
+  const [tab, field] = await Promise.all([
+    settings.boundingBox(),
+    series.boundingBox(),
+  ]);
+  expect(tab!.y).toBeLessThan(field!.y);
+
+  await settings.click();
+  await expect(
+    page.getByText('Apply Discount After Tax', { exact: true })
+  ).toBeVisible();
+  await expect(series).toBeHidden();
+});
+
+test('the actions menu holds the width toggle', async ({ page }) => {
+  await page.goto(`/books/edit/SalesInvoice/new-menu-${Date.now()}`);
+  await waitForBooks(page);
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(
+    page.getByRole('menuitem', { name: /^(Full|Form) width$/ })
+  ).toBeVisible();
+});
+
 test.describe('on a phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },
@@ -115,7 +143,7 @@ test.describe('on a phone', () => {
     await waitForBooks(page);
 
     await expect(page.getByText('2 × ₹ 50.00')).toBeVisible();
-    await expect(page.getByText('Receive Payment')).toBeVisible();
+    await expect(page.getByText('Receive payment')).toBeVisible();
   });
 
   test('a payment submits from its sheet', async ({ page }) => {
@@ -123,7 +151,7 @@ test.describe('on a phone', () => {
     await page.goto(`/books/edit/SalesInvoice/${name}`);
     await waitForBooks(page);
 
-    await page.getByRole('button', { name: 'Receive Payment' }).click();
+    await page.getByRole('button', { name: 'Receive payment' }).click();
     const sheet = page.getByRole('dialog', { name: 'New Payment' });
     await sheet.getByRole('button', { name: 'Save', exact: true }).click();
     await page.getByRole('button', { name: 'Submit', exact: true }).click();

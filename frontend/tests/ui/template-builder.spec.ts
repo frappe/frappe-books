@@ -19,7 +19,7 @@ test('a shipped template is read-only and its duplicate edits, previews and save
     'false'
   );
   await expect(
-    page.getByRole('button', { name: 'Toggle Edit Mode' })
+    page.getByRole('button', { name: 'Toggle edit mode' })
   ).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Actions' }).click();
@@ -43,7 +43,7 @@ test('a shipped template is read-only and its duplicate edits, previews and save
 
   await page.keyboard.insertText('{% if doc.name %}');
   await page.keyboard.press('Control+Enter');
-  await expect(page.getByText('Template Error')).toBeVisible();
+  await expect(page.getByText('Template error')).toBeVisible();
   for (let i = 0; i < '{% if doc.name %}'.length; i++) {
     await page.keyboard.press('Backspace');
   }
@@ -74,9 +74,9 @@ test('Set Print Size writes the page size into the template CSS', async ({
   await page.getByRole('button', { name: 'Actions' }).click();
   await page.getByRole('menuitem', { name: 'Duplicate' }).click();
   await page.getByRole('button', { name: 'Actions' }).click();
-  await page.getByRole('menuitem', { name: 'Set Print Size' }).click();
+  await page.getByRole('menuitem', { name: 'Set print size' }).click();
 
-  const dialog = page.getByRole('dialog', { name: 'Set Print Size' });
+  const dialog = page.getByRole('dialog', { name: 'Set print size' });
   await dialog.getByLabel('Width (in cm)').fill('8');
   await dialog.getByLabel('Height (in cm)').fill('22');
   await dialog.getByLabel('Height (in cm)').blur();
@@ -123,7 +123,7 @@ test('the Control shortcuts work in the editor on macOS', async ({ page }) => {
 
   await page.locator('.cm-content').click();
   await page.keyboard.press('Control+KeyH');
-  await expect(page.getByRole('button', { name: 'Key Hints' })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Key hints' })).toHaveAttribute(
     'aria-expanded',
     'true'
   );

@@ -10,7 +10,7 @@ test('a new tax template saves its detail rows', async ({ page }) => {
   await page
     .getByRole('textbox', { name: 'Name (required)', exact: true })
     .fill(name);
-  await page.getByText('Add Row', { exact: true }).click();
+  await page.getByText('Add row', { exact: true }).click();
   const account = page.getByRole('combobox', { name: 'Tax Invoice Account' });
   await account.fill('CGST');
   await page.getByRole('option', { name: 'CGST', exact: true }).click();
@@ -62,7 +62,7 @@ test('a new currency saves under the name typed', async ({ page }) => {
     exact: true,
   });
   await expect(currencyName).toBeFocused();
-  await expect(page.getByText('New Entry', { exact: true })).toBeVisible();
+  await expect(page.getByText('New entry', { exact: true })).toBeVisible();
   await currencyName.fill(name);
   await page.getByRole('textbox', { name: 'Symbol', exact: true }).fill('C');
   await page.keyboard.press('Tab');

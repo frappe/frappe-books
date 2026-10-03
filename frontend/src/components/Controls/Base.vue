@@ -15,7 +15,7 @@
     v-else
     ref="input"
     spellcheck="false"
-    :class="controlClasses"
+    :class="textInputClasses"
     :type="inputType"
     :inputmode="inputMode"
     :model-value="inputValue"
@@ -29,16 +29,21 @@
     :step="step"
     :max="isNumeric(df) ? df.maxvalue : undefined"
     :min="isNumeric(df) ? df.minvalue : undefined"
-    :style="containerStyles"
+    :style="textInputStyles"
     tabindex="0"
     @blur="onBlur"
     @focus="onFocus"
     @input="onInput"
   >
+    <template v-if="inlineLabel" #prefix>
+      <span class="text-ink-gray-5">{{ df.label }}</span>
+    </template>
     <template v-if="isBarcodeField" #suffix>
+      <!-- Pulled toward the edge so the 32px button sits 4px in, as from top and bottom. -->
       <BarcodeScanButton
+        class="-me-2"
         variant="ghost"
-        size="sm"
+        size="md"
         @scan="(code: string) => triggerChange(code)"
       />
     </template>
@@ -87,8 +92,10 @@ export default defineComponent({
       type: [null, Boolean] as PropType<boolean | null>,
       default: null,
     },
-    /** Phones mark a field red only once it has an error. */
+    /** Marks the field red. Desktop also marks empty required fields. */
     invalid: { type: Boolean, default: false },
+    /** Names the value inside the control where no label is shown. */
+    inlineLabel: Boolean,
   },
   emits: ['focus', 'input', 'change'],
   computed: {
@@ -134,11 +141,36 @@ export default defineComponent({
         // TextInput can't align its text (frappe/frappe-ui#1256).
         classes.push('[&_input]:text-end');
       }
-      if (this.isMobile ? this.invalid : this.showMandatory) {
-        // TextInput's `error` shows a message, not a border (frappe/frappe-ui#1252).
-        classes.push('[&_[data-slot=control]]:border-outline-red-3');
+      if (isNumeric(this.df)) {
+        // Inputs don't inherit tabular-nums from the wrapper.
+        classes.push('[&_input]:tabular-nums');
+      }
+      if (this.invalid || (!this.isMobile && this.showMandatory)) {
+        // `error` shows a message, not a border (frappe/frappe-ui#1252).
+        // Select and Combobox put the class on their trigger without a label, on a wrapper with one.
+        classes.push(
+          '[&_[data-slot=control]]:border-outline-red-3',
+          '[&_[data-slot=trigger]]:border-outline-red-3',
+          'data-[slot=trigger]:border-outline-red-3'
+        );
       }
       return classes;
+    },
+    /** TextInput's prefix is sized for an icon, so the input makes room for the inline label. */
+    textInputClasses(): (string | string[])[] {
+      if (!this.inlineLabel) {
+        return this.controlClasses;
+      }
+
+      return [...this.controlClasses, '[&_input]:ps-[--inline-label-padding]'];
+    },
+    textInputStyles(): Record<string, string> {
+      if (!this.inlineLabel) {
+        return this.containerStyles;
+      }
+
+      const padding = `calc(${this.df.label.length}ch + 1rem)`;
+      return { ...this.containerStyles, '--inline-label-padding': padding };
     },
     doc(): FrappeDoc | undefined {
       const doc = this.injectedDoc;

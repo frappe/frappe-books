@@ -39,7 +39,7 @@ async function getCanExport(report: BaseGSTR) {
   }
 
   await showDialog({
-    title: report.fyo.t`Cannot Export`,
+    title: report.fyo.t`Cannot export`,
     detail: report.fyo.t`Please set GSTIN in General Settings.`,
     type: 'error',
   });

@@ -29,11 +29,7 @@
       @click="$emit('enquiry')"
     />
     <FrappeDivider orientation="vertical" class="h-5" />
-    <FrappeButton
-      variant="outline"
-      :label="t`Close shift`"
-      @click="$emit('closeShift')"
-    />
+    <FrappeButton :label="t`Close shift`" @click="$emit('closeShift')" />
   </div>
 </template>
 

@@ -12,7 +12,7 @@ test('a new custom field is named after its label', async ({ page }) => {
   await formType.click();
   await formType.fill('UOM');
   await page.getByRole('option', { name: 'UOM', exact: true }).click();
-  await page.getByText('Add Row', { exact: true }).click();
+  await page.getByText('Add row', { exact: true }).click();
 
   await page.getByRole('textbox', { name: 'Label' }).fill('Shelf Code');
   await page.keyboard.press('Tab');

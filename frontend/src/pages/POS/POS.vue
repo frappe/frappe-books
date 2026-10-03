@@ -2,22 +2,14 @@
   <div class="flex flex-col" :class="isMobile ? 'min-h-full' : 'min-h-0'">
     <PageHeader :title="isMobile ? mobileTitle : t`Point of Sale`">
       <template v-if="isMobile && isPosShiftOpen" #mobile-prefix>
+        <!-- PageHeaderBackButton's look; its click can't wait for the leave prompt. -->
         <FrappeButton
-          v-if="openPaymentModal"
           variant="ghost"
           size="md"
           icon="lucide-chevron-left"
           class="rtl-rotate-180"
-          :label="t`Back`"
-          @click="cancelPayment"
-        />
-        <FrappeButton
-          v-else
-          variant="ghost"
-          size="md"
-          icon="lucide-x"
-          :label="t`Exit POS`"
-          @click="routeToSinvList"
+          :label="openPaymentModal ? t`Back` : t`Exit POS`"
+          @click="openPaymentModal ? cancelPayment() : routeToSinvList()"
         />
       </template>
       <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>
@@ -250,7 +242,11 @@ import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
 } from 'models/baseModels/PaymentMethod/requirements';
-import { ModalName, modalNames } from 'src/components/POS/types';
+import {
+  ModalName,
+  modalNames,
+  POS_ITEM_TOAST_ID,
+} from 'src/components/POS/types';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
@@ -464,12 +460,19 @@ export default defineComponent({
         return;
       }
 
-      for (const code of previous.codes.filter((c) => !current.codes.includes(c))) {
-        showToast({
-          type: 'warning',
-          message: t`Coupon ${code} no longer applies, so it was removed.`,
-        });
+      const removed = previous.codes.filter((c) => !current.codes.includes(c));
+      if (!removed.length) {
+        return;
       }
+
+      showToast({
+        id: 'pos-coupons-removed',
+        type: 'warning',
+        message:
+          removed.length === 1
+            ? t`Coupon ${removed[0]} no longer applies, so it was removed.`
+            : t`Coupons ${removed.join(', ')} no longer apply, so they were removed.`,
+      });
     },
   },
 
@@ -558,6 +561,7 @@ export default defineComponent({
         await setPOSRowQuantity(row, getPOSQuantityField(), Number(buffer));
       } catch (error) {
         showToast({
+          id: POS_ITEM_TOAST_ID,
           type: 'error',
           message: t`${error as string}`,
           duration: 'short',
@@ -842,7 +846,11 @@ export default defineComponent({
         refillSerialNumbers(row);
         await this.previewInvoice();
       } catch (error) {
-        showToast({ type: 'error', message: t`${error as string}` });
+        showToast({
+          id: POS_ITEM_TOAST_ID,
+          type: 'error',
+          message: t`${error as string}`,
+        });
       }
     },
     selectBatch(item: POSItem, quantity: number) {
@@ -870,7 +878,11 @@ export default defineComponent({
         );
         await this.previewInvoice();
       } catch (error) {
-        showToast({ type: 'error', message: t`${error as string}` });
+        showToast({
+          id: POS_ITEM_TOAST_ID,
+          type: 'error',
+          message: t`${error as string}`,
+        });
       }
     },
 
@@ -887,9 +899,10 @@ export default defineComponent({
           await this.setTenderedPayments(payments);
           await this.submitSinvDoc();
           if (payments.length) {
+            const invoice = this.sinvDoc.name!;
             // The sale is done; a failed lookup must not keep its cart open.
-            getInvoicePayments(this.sinvDoc.name!)
-              .then((names) => this.showPaymentToasts(names))
+            getInvoicePayments(invoice)
+              .then((names) => this.showSaleToast(invoice, names))
               .catch((error) =>
                 showToast({ type: 'error', message: t`${error as string}` })
               );
@@ -992,25 +1005,27 @@ export default defineComponent({
             : null,
         })),
       });
-      this.showPaymentToasts(names);
+      showToast({
+        type: 'success',
+        message: t`Payment ${names.join(', ')} is Saved`,
+        duration: 'short',
+      });
     },
-    showPaymentToasts(names: string[]) {
-      for (const name of names) {
-        showToast({
-          type: 'success',
-          message: t`Payment ${name} is Saved`,
-          duration: 'short',
-        });
-      }
+    /** One toast per sale: the payments, once known, replace the submit message. */
+    showSaleToast(invoice: string, payments: string[] = []) {
+      showToast({
+        id: `pos-sale-${invoice}`,
+        type: 'success',
+        message: payments.length
+          ? t`Sales Invoice ${invoice} submitted with Payment ${payments.join(', ')}`
+          : t`Sales Invoice ${invoice} is Submitted`,
+        duration: 'short',
+      });
     },
     async submitSinvDoc() {
-      this.sinvDoc.once('afterSubmit', () => {
-        showToast({
-          type: 'success',
-          message: t`Sales Invoice ${this.sinvDoc.name as string} is Submitted`,
-          duration: 'short',
-        });
-      });
+      this.sinvDoc.once('afterSubmit', () =>
+        this.showSaleToast(this.sinvDoc.name as string)
+      );
 
       await this.validate();
       await this.sinvDoc.sync();
@@ -1101,12 +1116,12 @@ export default defineComponent({
           detail: message,
           buttons: [
             {
-              label: t`Save and Continue`,
+              label: t`Save and continue`,
               action: () => this.saveAndContinue(),
               isPrimary: true,
             },
             {
-              label: t`Discard and Continue`,
+              label: t`Discard and continue`,
               action: () => this.discardAndContinue(),
             },
             { label: t`Cancel`, action: () => null, isEscape: true },
@@ -1120,13 +1135,13 @@ export default defineComponent({
         actions: [
           { label: t`Cancel`, variant: 'ghost' },
           {
-            label: t`Discard and Continue`,
+            label: t`Discard and continue`,
             theme: 'red',
             variant: 'subtle',
             onClick: () => this.discardAndContinue(),
           },
           {
-            label: t`Save and Continue`,
+            label: t`Save and continue`,
             variant: 'solid',
             onClick: () => this.saveAndContinue(),
           },
@@ -1169,7 +1184,11 @@ export default defineComponent({
         message = t`Please select a customer`;
       }
 
-      showToast({ type: 'error', message: t`${message} before ${method}` });
+      showToast({
+        id: 'pos-validation',
+        type: 'error',
+        message: t`${message} before ${method}`,
+      });
     },
     openCouponCode() {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {

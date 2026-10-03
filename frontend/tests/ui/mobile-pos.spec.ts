@@ -43,6 +43,16 @@ test('items fill a two-column grid and a tap adds to the cart bar', async ({
   await page.screenshot({ path: test.info().outputPath('items.png') });
 });
 
+test('a broken item image falls back to the initials', async ({ page }) => {
+  const name = await page.evaluate(() => {
+    const [item] = (window as any).posFixture.pos.items;
+    item.image = '/missing-item-image.png';
+    return item.name as string;
+  });
+  const tile = page.getByRole('button', { name: `Add ${name}`, exact: true });
+  await expect(tile.locator('img')).toHaveCount(0);
+});
+
 test('the cart stepper turns minus into remove at one', async ({ page }) => {
   const tea = page.getByRole('button', { name: 'Add Organic Assam Tea' });
   await tea.click();
@@ -69,6 +79,15 @@ test('the cart stepper turns minus into remove at one', async ({ page }) => {
   await cart.getByRole('button', { name: 'Remove' }).click();
   await expect(cart).toBeHidden();
   await expect(page.getByRole('button', { name: /\d+ items?/ })).toBeHidden();
+});
+
+test('a long cart keeps Hold and Pay in view', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 460 });
+  await page.evaluate(() => (window as any).posFixture.fillCart());
+  await page.getByRole('button', { name: /\d+ items?/ }).click();
+  const cart = page.getByRole('dialog', { name: 'Cart', exact: true });
+  await expect(cart.getByRole('button', { name: 'Hold' })).toBeInViewport();
+  await expect(cart.getByRole('button', { name: /^Pay / })).toBeInViewport();
 });
 
 test('the cart stepper shows the whole quantity', async ({ page }) => {
@@ -232,7 +251,7 @@ test('a submitted invoice offers nothing that changes its totals', async ({
   await expect(cart).toBeHidden();
 
   await page.getByRole('button', { name: 'POS actions' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Item Enquiry' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Item enquiry' })).toBeVisible();
   for (const name of ['Loyalty Program', 'Coupon Code', 'Price List']) {
     await expect(page.getByRole('menuitem', { name })).toHaveCount(0);
   }
@@ -241,13 +260,13 @@ test('a submitted invoice offers nothing that changes its totals', async ({
 test('the menu opens each quick action as a sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const [row, title] of [
-    ['Saved and Submitted Invoices', 'Invoices'],
+    ['Saved and submitted invoices', 'Invoices'],
     ['Return Sales Invoice', 'Return an invoice'],
     ['Loyalty Program', 'Redeem loyalty points'],
     ['Coupon Code', 'Coupon code'],
     ['Price List', 'Price list'],
-    ['Item Enquiry', 'Item enquiry'],
-    ['Close POS Shift', 'Close POS shift'],
+    ['Item enquiry', 'Item enquiry'],
+    ['Close POS shift', 'Close POS shift'],
   ]) {
     await page.getByRole('button', { name: 'POS actions' }).click();
     await page.getByRole('menuitem', { name: row }).click();
@@ -386,7 +405,7 @@ test('leaving a sale with items asks in a sheet', async ({ page }) => {
   await page.getByRole('button', { name: 'Exit POS' }).click();
   const sheet = page.getByRole('dialog', { name: 'Leave this sale?' });
   await expectSheet(sheet);
-  for (const name of ['Save and Continue', 'Discard and Continue', 'Cancel']) {
+  for (const name of ['Save and continue', 'Discard and continue', 'Cancel']) {
     await expect(
       sheet.getByRole('button', { name, exact: true })
     ).toBeVisible();
@@ -407,7 +426,7 @@ test('leaving a submitted sale asks only to leave or stay', async ({
   for (const name of ['Leave', 'Cancel']) {
     await expect(sheet.getByRole('button', { name, exact: true })).toBeVisible();
   }
-  for (const name of ['Save and Continue', 'Discard and Continue']) {
+  for (const name of ['Save and continue', 'Discard and continue']) {
     await expect(sheet.getByRole('button', { name, exact: true })).toHaveCount(0);
   }
   await sheet.getByRole('button', { name: 'Cancel', exact: true }).click();

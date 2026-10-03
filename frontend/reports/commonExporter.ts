@@ -225,6 +225,6 @@ export function saveExportData(
   message?: string
 ) {
   downloadFile(data, fileName, 'text/plain;charset=utf-8');
-  message ??= t`Export Successful`;
+  message ??= t`Export successful`;
   showToast({ message, type: 'success' });
 }

@@ -42,7 +42,7 @@
         </FrappeListCell>
       </FrappeListRow>
     </FrappeList>
-    <p v-else class="px-4 py-6 text-center text-base text-ink-gray-6">
+    <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
       {{ emptyText }}
     </p>
   </template>
@@ -66,7 +66,7 @@
         </FrappeListHeaderCell>
       </FrappeListHeader>
 
-      <div v-if="rows.length" class="min-h-0 w-full flex-1 overflow-y-auto">
+      <FrappeScrollArea v-if="rows.length" class="min-h-0 w-full flex-1">
         <FrappeListRows :items="rows" row-key="name">
           <template #default="{ item: row, value }">
             <FrappeListRow :value="value">
@@ -85,19 +85,17 @@
             </FrappeListRow>
           </template>
         </FrappeListRows>
-      </div>
+      </FrappeScrollArea>
 
-      <div
-        v-else
-        class="flex min-h-0 flex-1 items-center justify-center text-sm text-ink-gray-6"
-      >
+      <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
         {{ emptyText }}
-      </div>
+      </p>
     </FrappeList>
   </div>
 </template>
 
 <script lang="ts">
+import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import { Field } from 'schemas/types';
 import {
   List as FrappeList,
@@ -123,6 +121,7 @@ export default defineComponent({
     FrappeListHeaderCell,
     FrappeListRow,
     FrappeListRows,
+    FrappeScrollArea,
   },
   props: {
     rows: {
@@ -162,7 +161,7 @@ export default defineComponent({
     isNumeric,
     /** The name stands out and the date recedes, as in the redesign. */
     getCellInk(field: Field, index: number): string {
-      if (!index) return 'text-base-medium text-ink-gray-9';
+      if (!index) return 'text-base-medium text-ink-gray-8';
       return field.fieldtype === 'Date'
         ? 'text-base text-ink-gray-6'
         : 'text-base text-ink-gray-8';

@@ -31,7 +31,7 @@
       <FrappeButton
         v-for="group in ['', ...itemGroups]"
         :key="group"
-        :variant="group === itemGroup ? 'solid' : 'outline'"
+        :variant="group === itemGroup ? 'subtle' : 'outline'"
         :label="group || t`All`"
         :aria-pressed="group === itemGroup"
         @click="$emit('setItemGroup', group)"
@@ -39,20 +39,13 @@
     </div>
   </div>
 
-  <div
+  <EmptyState
     v-if="!items.length"
-    class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 px-4 text-center"
-  >
-    <span
-      class="flex size-11 items-center justify-center rounded-full bg-surface-gray-2"
-    >
-      <span class="lucide-search-x size-5 text-ink-gray-5" aria-hidden="true" />
-    </span>
-    <p class="text-lg-medium text-ink-gray-8">{{ t`No items found` }}</p>
-    <p class="text-sm text-ink-gray-5">
-      {{ t`Try a different name, code or barcode.` }}
-    </p>
-  </div>
+    class="min-h-0 flex-1"
+    icon="lucide-search-x"
+    :title="t`No items found`"
+    :description="t`Try a different name, code or barcode.`"
+  />
 
   <ItemsTable
     v-else-if="tableView"
@@ -71,6 +64,7 @@
 import { Button as FrappeButton, TabButtons as FrappeTabButtons } from 'frappe-ui';
 import { t } from 'fyo';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import { getAllDocuments } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
 import { defineComponent, PropType } from 'vue';
@@ -82,6 +76,7 @@ import { POSItem } from './types';
 export default defineComponent({
   name: 'POSItemPicker',
   components: {
+    EmptyState,
     FrappeButton,
     FrappeTabButtons,
     MultiLabelLink,

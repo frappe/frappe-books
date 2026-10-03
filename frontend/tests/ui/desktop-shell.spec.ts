@@ -60,21 +60,21 @@ test('the sidebar header menu opens help and account actions', async ({
   await header.getByRole('button').click();
   for (const name of [
     'Documentation',
-    'Keyboard Shortcuts',
+    'Keyboard shortcuts',
     'Apps',
-    'Log Out',
+    'Log out',
   ]) {
     await expect(page.getByRole('menuitem', { name })).toBeVisible();
   }
 
-  await page.getByRole('menuitem', { name: 'Keyboard Shortcuts' }).click();
-  await expect(page.getByText('Open Quick Search')).toBeVisible();
+  await page.getByRole('menuitem', { name: 'Keyboard shortcuts' }).click();
+  await expect(page.getByText('Open quick search')).toBeVisible();
 });
 
 test('the sidebar hides and comes back from the page header', async ({
   page,
 }) => {
-  await sidebar(page).getByRole('button', { name: 'Hide Sidebar' }).click();
+  await sidebar(page).getByRole('button', { name: 'Hide sidebar' }).click();
   await expect(sidebar(page)).toBeHidden();
 
   await page.getByRole('button', { name: 'Show sidebar' }).click();
@@ -117,8 +117,8 @@ test('top expenses shows the full total spending under its title', async ({
   await page.reload();
 
   await expect(
-    page.locator('[data-slot="chart-container"]', { hasText: 'Top Expenses' })
-  ).toContainText('Total Spending: ₹ 12,34,567.89');
+    page.locator('[data-slot="chart-container"]', { hasText: 'Top expenses' })
+  ).toContainText('Total spending: ₹ 12,34,567.89');
 });
 
 test('a logout elsewhere sends the next action to the login page', async ({

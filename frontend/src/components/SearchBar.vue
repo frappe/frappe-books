@@ -36,7 +36,7 @@
           </span>
         </span>
         <template #suffix>
-          <FrappeBadge :theme="groupThemeMap[si.group]" variant="subtle">
+          <FrappeBadge>
             {{ si.group === 'Docs' ? si.schemaLabel : groupLabelMap[si.group] }}
           </FrappeBadge>
         </template>
@@ -69,42 +69,46 @@
             :aria-expanded="showMore"
             @click="showMore = !showMore"
           >
-            {{ showMore ? t`Less Filters` : t`More Filters` }}
+            {{ showMore ? t`Fewer filters` : t`More filters` }}
           </FrappeButton>
         </div>
 
         <!-- Additional Filters -->
-        <div v-if="showMore" class="flex max-h-40 flex-col gap-2 overflow-y-auto">
-          <!-- Group Skip Filters -->
-          <div class="flex flex-wrap gap-1.5">
-            <FrappeButton
-              size="xs"
-              :variant="isFilterOn('skipTransactions') ? 'subtle' : 'outline'"
-              :aria-pressed="isFilterOn('skipTransactions')"
-              @click="
-                setSearchFilter('skipTransactions', !isFilterOn('skipTransactions'))
-              "
-            >
-              {{ t`Skip Transactions` }}
-            </FrappeButton>
-          </div>
+        <FrappeScrollArea v-if="showMore" viewport-class="max-h-40">
+          <div class="flex flex-col gap-2">
+            <!-- Group Skip Filters -->
+            <div class="flex flex-wrap gap-1.5">
+              <FrappeButton
+                size="xs"
+                :variant="isFilterOn('skipTransactions') ? 'subtle' : 'outline'"
+                :aria-pressed="isFilterOn('skipTransactions')"
+                @click="
+                  setSearchFilter(
+                    'skipTransactions',
+                    !isFilterOn('skipTransactions')
+                  )
+                "
+              >
+                {{ t`Skip transactions` }}
+              </FrappeButton>
+            </div>
 
-          <!-- Schema Name Filters -->
-          <div class="flex flex-wrap gap-1.5">
-            <FrappeButton
-              v-for="sf in schemaFilters"
-              :key="sf.value"
-              class="whitespace-nowrap"
-              size="xs"
-              theme="blue"
-              :variant="isFilterOn(sf.value) ? 'subtle' : 'outline'"
-              :aria-pressed="isFilterOn(sf.value)"
-              @click="setSearchFilter(sf.value, !isFilterOn(sf.value))"
-            >
-              {{ sf.label }}
-            </FrappeButton>
+            <!-- Schema Name Filters -->
+            <div class="flex flex-wrap gap-1.5">
+              <FrappeButton
+                v-for="sf in schemaFilters"
+                :key="sf.value"
+                class="whitespace-nowrap"
+                size="xs"
+                :variant="isFilterOn(sf.value) ? 'subtle' : 'outline'"
+                :aria-pressed="isFilterOn(sf.value)"
+                @click="setSearchFilter(sf.value, !isFilterOn(sf.value))"
+              >
+                {{ sf.label }}
+              </FrappeButton>
+            </div>
           </div>
-        </div>
+        </FrappeScrollArea>
 
         <!-- Keybindings Help -->
         <div
@@ -157,7 +161,6 @@ import {
   SearchGroup,
   SearchItems,
   getGroupLabelMap,
-  groupThemeMap,
   searchGroups,
 } from 'src/utils/search';
 import { useSearch } from 'src/utils/useSearch';
@@ -166,6 +169,7 @@ import {
   Badge as FrappeBadge,
   Button as FrappeButton,
   KeyboardShortcut as FrappeKeyboardShortcut,
+  ScrollArea as FrappeScrollArea,
   TabButtons as FrappeTabButtons,
 } from 'frappe-ui';
 import {
@@ -191,12 +195,12 @@ export default defineComponent({
     FrappeBadge,
     FrappeButton,
     FrappeKeyboardShortcut,
+    FrappeScrollArea,
     FrappeTabButtons,
   },
   setup() {
     return {
       ...useSearch(),
-      groupThemeMap,
       shortcuts: inject(shortcutsKey),
     };
   },

@@ -17,7 +17,7 @@ test('an account added under a group takes its types and opens in quick edit', a
     .getByRole('button', { name: 'Actions for Cash In Hand', exact: true })
     .click();
   await page
-    .getByRole('menuitem', { name: 'Add Account', exact: true })
+    .getByRole('menuitem', { name: 'Add account', exact: true })
     .click();
   const dialog = page.getByRole('dialog');
   await dialog
@@ -41,7 +41,7 @@ test('a new root group asks for its name and root type only', async ({
 }) => {
   const name = `Tree Root ${Date.now()}`;
   await page
-    .getByRole('button', { name: 'Add Root Group', exact: true })
+    .getByRole('button', { name: 'Add root group', exact: true })
     .click();
   await page
     .getByRole('textbox', { name: 'Account Name', exact: true })

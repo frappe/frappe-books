@@ -2,7 +2,7 @@
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
       <FrappeButton v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
-        t`Add Root Group`
+        t`Add root group`
       }}</FrappeButton>
       <FrappeButton v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</FrappeButton>
       <FrappeButton v-if="!isAllCollapsed" @click="collapse">{{
@@ -74,12 +74,24 @@
         </template>
       </FrappeTree>
     </FrappeScrollArea>
+    <div v-else class="px-3 pt-4 sm:px-5" aria-busy="true">
+      <div
+        v-for="width in ['w-56', 'w-40', 'w-48', 'w-36', 'w-44']"
+        :key="width"
+        class="flex h-8 items-center gap-2 px-1.5"
+      >
+        <FrappeSkeleton class="size-4 rounded-full" />
+        <FrappeSkeleton class="h-4 rounded-4" :class="width" />
+      </div>
+    </div>
+    <!-- Not dialog.prompt: it neither focuses the field nor submits on Enter (frappe/frappe-ui#1264). -->
     <FrappeDialog
       :open="!!addingParent"
       :title="newAccountTitle"
+      :actions="newAccountActions"
       @close="cancelAddingAccount(addingParent)"
     >
-      <p class="mb-4 text-p-sm text-ink-gray-6">
+      <p class="mb-4 text-p-base text-ink-gray-7">
         {{ t`Under ${addingParent?.name ?? ''}` }}
       </p>
       <FrappeTextInput
@@ -94,20 +106,6 @@
           createNewAccount(addingParent, addingParent.addingGroupAccount)
         "
       />
-      <template #actions>
-        <FrappeButton @click="cancelAddingAccount(addingParent)">{{
-          t`Cancel`
-        }}</FrappeButton>
-        <FrappeButton
-          variant="solid"
-          :loading="insertingAccount"
-          :disabled="!newAccountName.trim() || insertingAccount"
-          @click="
-            addingParent &&
-            createNewAccount(addingParent, addingParent.addingGroupAccount)
-          "
-          >{{ t`Save` }}</FrappeButton>
-      </template>
     </FrappeDialog>
   </div>
 </template>
@@ -117,8 +115,10 @@ import {
   Dialog as FrappeDialog,
   Dropdown as FrappeDropdown,
   ScrollArea as FrappeScrollArea,
+  Skeleton as FrappeSkeleton,
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
+  type DialogAction,
   type DropdownOptions,
   type TreeExposed,
   Button as FrappeButton,
@@ -175,6 +175,7 @@ export default defineComponent({
     FrappeButton,
     PageHeader,
     FrappeScrollArea,
+    FrappeSkeleton,
     FrappeTextInput,
     FrappeTree,
     FrappeDialog,
@@ -203,10 +204,26 @@ export default defineComponent({
     isAllCollapsed(): boolean {
       return this.accounts.every((account) => !this.isExpanded(account));
     },
+    newAccountActions(): DialogAction[] {
+      const parent = this.addingParent;
+      return [
+        { label: t`Cancel`, onClick: () => this.cancelAddingAccount(parent) },
+        {
+          label: t`Save`,
+          variant: 'solid',
+          disabled: !this.newAccountName.trim() || this.insertingAccount,
+          onClick: async () => {
+            if (parent) {
+              await this.createNewAccount(parent, parent.addingGroupAccount);
+            }
+          },
+        },
+      ];
+    },
     newAccountTitle(): string {
       return this.addingParent?.addingGroupAccount
-        ? t`Add Group`
-        : t`Add Account`;
+        ? t`Add group`
+        : t`Add account`;
     },
   },
   async activated() {
@@ -227,18 +244,18 @@ export default defineComponent({
       if (account.is_group && fyo.can(ModelNameEnum.Account, 'create')) {
         actions.push(
           {
-            label: t`Add Account`,
+            label: t`Add account`,
             onClick: () => this.addAccount(account, 'addingAccount'),
           },
           {
-            label: t`Add Group`,
+            label: t`Add group`,
             onClick: () => this.addAccount(account, 'addingGroupAccount'),
           }
         );
       }
 
       if (account.parent_books_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
-        label: account.is_group ? t`Delete Group` : t`Delete Account`,
+        label: account.is_group ? t`Delete group` : t`Delete account`,
         theme: 'red',
         onClick: () => this.deleteAccount(account),
       });
@@ -278,12 +295,6 @@ export default defineComponent({
         getModel(ModelNameEnum.Account)?.getTreeSettings(fyo) ?? null;
       const currency = this.fyo.singles.SystemSettings?.currency ?? '';
       const label = (await this.settings?.getRootLabel()) ?? '';
-
-      this.root = {
-        label,
-        balance: 0,
-        currency,
-      };
       const nodes = (await this.getAccounts()).map((account) => ({
         ...account,
         children: [],
@@ -294,6 +305,13 @@ export default defineComponent({
         const parent = byName.get(node.parent_books_account);
         (parent?.children ?? this.accounts).push(node);
       }
+
+      // Set last: the tree shows once its accounts are in.
+      this.root = {
+        label,
+        balance: 0,
+        currency,
+      };
     },
     async onClick(account: AccountItem) {
       let shouldOpen = !account.is_group;
@@ -342,7 +360,7 @@ export default defineComponent({
       if (!account.parent_books_account) {
         await showDialog({
           type: 'error',
-          title: t`Cannot Delete Account`,
+          title: t`Cannot delete account`,
           detail: t`Root accounts cannot be deleted.`,
         });
         return false;
@@ -357,7 +375,7 @@ export default defineComponent({
 
       await showDialog({
         type: 'error',
-        title: t`Cannot Delete Account`,
+        title: t`Cannot delete account`,
         detail: t`${account.name} has linked child accounts.`,
       });
 

@@ -36,8 +36,8 @@
       <FrappeTextInput
         class="min-w-0 flex-1 font-mono uppercase"
         :model-value="value"
-        :placeholder="t`Custom Hex`"
-        :aria-label="t`Custom Hex`"
+        :placeholder="t`Custom hex`"
+        :aria-label="t`Custom hex`"
         @update:model-value="(hex: string) => $emit('select', hex)"
       />
     </div>

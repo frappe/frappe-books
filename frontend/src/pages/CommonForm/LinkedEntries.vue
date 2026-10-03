@@ -18,7 +18,8 @@
       v-else-if="sequence.length"
       v-model="openGroups"
       type="multiple"
-      class="w-full border-t border-outline-gray-1 px-2"
+      class="w-full px-2"
+      :class="{ 'border-t border-outline-gray-1': isMobile }"
       :items="groupItems"
     >
       <template #item-suffix="{ item }">
@@ -139,7 +140,7 @@
   <FrappeBottomSheet
     v-if="isMobile"
     :open="true"
-    :title="t`Linked Entries`"
+    :title="t`Linked entries`"
     @update:open="(open: boolean) => !open && $emit('close')"
   >
     <div class="pb-[max(env(safe-area-inset-bottom),1rem)]">
@@ -150,12 +151,19 @@
     v-else
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
-    <!-- Page Header -->
-    <div class="flex h-12 shrink-0 items-center gap-2 px-3">
+    <div
+      class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
+    >
       <h2 class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-8">
-        {{ t`Linked Entries` }}
+        {{ t`Linked entries` }}
       </h2>
-      <FrappeButton icon="lucide-x" :label="t`Close`" @click="$emit('close')" />
+      <FrappeButton
+        variant="ghost"
+        icon="lucide-x"
+        :label="t`Close`"
+        :tooltip="t`Close`"
+        @click="$emit('close')"
+      />
     </div>
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">

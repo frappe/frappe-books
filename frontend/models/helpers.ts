@@ -77,8 +77,8 @@ export function getInvoiceActions(
   // A return refunds, so a sales return pays and a purchase return receives.
   const nextStep = (doc: FrappeDoc) =>
     (schemaName === ModelNameEnum.SalesInvoice) !== !!doc.return_against
-      ? fyo.t`Receive Payment`
-      : fyo.t`Make Payment`;
+      ? fyo.t`Receive payment`
+      : fyo.t`Make payment`;
 
   return [
     { ...getMakePaymentAction(fyo), nextStep },
@@ -239,11 +239,11 @@ export function getMakePaymentAction(fyo: Fyo): Action {
 }
 
 export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
-  let label = fyo.t`Accounting Entries`;
+  let label = fyo.t`Accounting entries`;
   let reportClassName: 'GeneralLedger' | 'StockLedger' = 'GeneralLedger';
 
   if (isStock) {
-    label = fyo.t`Stock Entries`;
+    label = fyo.t`Stock entries`;
     reportClassName = 'StockLedger';
   }
 

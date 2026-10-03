@@ -43,7 +43,7 @@ export default defineComponent({
         shortcuts: [
           {
             shortcut: [ShortcutKey.pmod, 'K'],
-            description: t`Open Quick Search`,
+            description: t`Open quick search`,
           },
           {
             shortcut: [ShortcutKey.shift, ShortcutKey.delete],
@@ -55,7 +55,7 @@ export default defineComponent({
           },
           {
             shortcut: ['F1'],
-            description: t`Open Documentation`,
+            description: t`Open documentation`,
           },
         ],
       },
@@ -89,12 +89,12 @@ export default defineComponent({
         ],
       },
       {
-        label: t`List View`,
-        description: t`Applicable when the List View of an entry type is open`,
+        label: t`List view`,
+        description: t`Applicable when the list view of an entry type is open`,
         shortcuts: [
           {
             shortcut: [ShortcutKey.pmod, 'N'],
-            description: t`Create a new entry of the same type as the List View`,
+            description: t`Create a new entry of the same type as the list view`,
           },
           {
             shortcut: [ShortcutKey.pmod, 'E'],
@@ -103,10 +103,10 @@ export default defineComponent({
         ],
       },
       {
-        label: t`Quick Search`,
-        description: t`Applicable when Quick Search is open`,
+        label: t`Quick search`,
+        description: t`Applicable when quick search is open`,
         shortcuts: [
-          { shortcut: [ShortcutKey.esc], description: t`Close Quick Search` },
+          { shortcut: [ShortcutKey.esc], description: t`Close quick search` },
           {
             shortcut: [ShortcutKey.pmod, '1'],
             description: t`Toggle the Docs filter`,
@@ -139,11 +139,11 @@ export default defineComponent({
           },
           {
             shortcut: [ShortcutKey.ctrl, 'E'],
-            description: t`Toggle Edit Mode`,
+            description: t`Toggle edit mode`,
           },
           {
             shortcut: [ShortcutKey.ctrl, 'H'],
-            description: t`Toggle Key Hints`,
+            description: t`Toggle key hints`,
           },
           {
             shortcut: [ShortcutKey.ctrl, '+'],
@@ -161,11 +161,11 @@ export default defineComponent({
         shortcuts: [
           {
             shortcut: [ShortcutKey.shift, 'V'],
-            description: t`Toggle between Grid and List view`,
+            description: t`Toggle between grid and list view`,
           },
           {
             shortcut: [ShortcutKey.shift, 'S'],
-            description: t`Open Sales Invoice List`,
+            description: t`Open Sales Invoice list`,
           },
           {
             shortcut: [ShortcutKey.shift, 'L'],

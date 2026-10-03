@@ -153,7 +153,7 @@ msgid "Accounting"
 msgstr ""
 
 #: frontend/models/helpers.ts:278
-msgid "Accounting Entries"
+msgid "Accounting entries"
 msgstr ""
 
 #: frontend/schemas/app/AccountingLedgerEntry.json
@@ -231,42 +231,42 @@ msgstr ""
 
 #: frontend/src/pages/ChartOfAccounts.vue:196
 #: frontend/src/pages/ChartOfAccounts.vue:217
-msgid "Add Account"
+msgid "Add account"
 msgstr "Hesap Ekle"
 
 #: frontend/src/utils/getStartedConfig.ts:90
-msgid "Add Customers"
+msgid "Add customers"
 msgstr "Müşteri Ekle"
 
 #: frontend/src/pages/ChartOfAccounts.vue:195
 #: frontend/src/pages/ChartOfAccounts.vue:221
-msgid "Add Group"
+msgid "Add group"
 msgstr "Grup Ekle"
 
 #: frontend/src/utils/getStartedConfig.ts:74
 #: frontend/src/utils/getStartedConfig.ts:120
-msgid "Add Items"
+msgid "Add items"
 msgstr "Öğe Ekle"
 
 #: frontend/src/pages/ChartOfAccounts.vue:5
-msgid "Add Root Group"
+msgid "Add root group"
 msgstr ""
 
 #: frontend/src/components/Controls/Table.vue:87
 #: frontend/src/pages/ImportWizard.vue:13
 #: frontend/src/pages/ImportWizard.vue:14
-msgid "Add Row"
+msgid "Add row"
 msgstr "Satır Ekle"
 
 #: frontend/src/utils/getStartedConfig.ts:134
-msgid "Add Suppliers"
+msgid "Add suppliers"
 msgstr "Tedarikçi Ekle"
 
 #. Label of the taxes_added (Check) field in DocType 'Books Get Started'
 #: frappe_books/frappe_books/doctype/books_get_started/books_get_started.json
 #: frontend/schemas/app/GetStarted.json
 #: frontend/src/utils/getStartedConfig.ts:59
-msgid "Add Taxes"
+msgid "Add taxes"
 msgstr "Vergi Ekle"
 
 #: frontend/src/utils/getStartedConfig.ts:92
@@ -519,7 +519,7 @@ msgid "Applicable when POS is open"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:107
-msgid "Applicable when Quick Search is open"
+msgid "Applicable when quick search is open"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:134
@@ -531,7 +531,7 @@ msgid "Applicable when a entry is open in the Form view or Quick Edit view"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:93
-msgid "Applicable when the List View of an entry type is open"
+msgid "Applicable when the list view of an entry type is open"
 msgstr ""
 
 #. Name of a standard account
@@ -1394,15 +1394,15 @@ msgstr "İptal edildi"
 
 #: frontend/src/pages/ChartOfAccounts.vue:349
 #: frontend/src/pages/ChartOfAccounts.vue:364
-msgid "Cannot Delete Account"
+msgid "Cannot delete account"
 msgstr ""
 
 #: frontend/reports/GoodsAndServiceTax/gstExporter.ts:126
-msgid "Cannot Export"
+msgid "Cannot export"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:668
-msgid "Cannot Import"
+msgid "Cannot import"
 msgstr ""
 
 #: frontend/src/pages/POS/POS.vue:714
@@ -1463,7 +1463,7 @@ msgid "Central Tax"
 msgstr "Merkezi Vergi"
 
 #: frontend/src/pages/ImportWizard.vue:523
-msgid "Change File"
+msgid "Change file"
 msgstr "Dosyayı Değiştir"
 
 #: frontend/reports/GeneralLedger/GeneralLedger.ts:142
@@ -1561,7 +1561,7 @@ msgstr "Kapatma"
 
 #: frontend/src/pages/POS/ClosePOSShiftModal.vue:4
 #: frontend/src/pages/POS/POS.vue:8
-msgid "Close POS Shift"
+msgid "Close POS shift"
 msgstr ""
 
 #: frappe_books/frappe_books/doctype/books_pos_closing_shift/books_pos_closing_shift.py:79
@@ -1569,7 +1569,7 @@ msgid "Close POS shift {0} before reopening another shift."
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:109
-msgid "Close Quick Search"
+msgid "Close quick search"
 msgstr ""
 
 #: frontend/src/pages/POS/ClosePOSShiftModal.vue:48
@@ -1621,7 +1621,7 @@ msgstr ""
 #: frappe_books/frappe_books/doctype/books_pos_closing_shift/books_pos_closing_shift.json
 #: frontend/schemas/app/inventory/Point
 #: frontend/src/pages/POS/ClosePOSShiftModal.vue:23 of
-msgid "Closing Amounts"
+msgid "Closing amounts"
 msgstr ""
 
 #. Label of the closing_cash (Table) field in DocType 'Books Pos Closing Shift'
@@ -1808,7 +1808,7 @@ msgid "Contra Entry"
 msgstr "Kontra Giriş"
 
 #: frontend/src/pages/ImportWizard.vue:635
-msgid "Conversion Error"
+msgid "Conversion error"
 msgstr ""
 
 #. Label of the conversion_factor (Float) field in DocType 'Books Loyalty
@@ -2019,7 +2019,7 @@ msgid "Create Payment."
 msgstr ""
 
 #: frontend/models/baseModels/Party/Party.ts:82
-msgid "Create Purchase"
+msgid "Create purchase"
 msgstr "Satın Alma Oluştur"
 
 #: frontend/src/utils/getStartedConfig.ts:146
@@ -2031,7 +2031,7 @@ msgid "Create Return"
 msgstr ""
 
 #: frontend/models/baseModels/Party/Party.ts:115
-msgid "Create Sale"
+msgid "Create sale"
 msgstr "Satış Oluştur"
 
 #: frontend/src/utils/getStartedConfig.ts:106
@@ -2039,7 +2039,7 @@ msgid "Create Sales Invoice"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:97
-msgid "Create a new entry of the same type as the List View"
+msgid "Create a new entry of the same type as the list view"
 msgstr ""
 
 #: frappe_books/accounting/returns.py:42
@@ -2168,7 +2168,7 @@ msgstr ""
 
 #: frontend/src/components/Controls/Color.vue:86
 #: frontend/src/components/Controls/Color.vue:87
-msgid "Custom Hex"
+msgid "Custom hex"
 msgstr "Özel Altıgen"
 
 #: frappe_books/customization.py:41
@@ -2509,11 +2509,11 @@ msgid "Delete"
 msgstr "Silmek"
 
 #: frontend/src/pages/ChartOfAccounts.vue:228
-msgid "Delete Account"
+msgid "Delete account"
 msgstr ""
 
 #: frontend/src/pages/ChartOfAccounts.vue:228
-msgid "Delete Group"
+msgid "Delete group"
 msgstr ""
 
 #: frontend/src/components/POS/NumericKeypad.vue:93
@@ -2643,7 +2643,7 @@ msgid "Disabled"
 msgstr ""
 
 #: frontend/src/pages/POS/POS.vue:1023
-msgid "Discard and Continue"
+msgid "Discard and continue"
 msgstr ""
 
 #: frappe_books/frappe_books/print_format/frappe_books___journal_entry/frappe_books___journal_entry.html:1
@@ -2796,7 +2796,7 @@ msgid "Display Precision should have a value between 0 and 9."
 msgstr "Ekran Hassasiyeti 0 ile 9 arasında bir değere sahip olmalıdır."
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:89
-msgid "Display Scale"
+msgid "Display scale"
 msgstr ""
 
 #. Label of the displaytermsandconditions (Check) field in DocType 'Books Print
@@ -2883,11 +2883,11 @@ msgid "Duplicate"
 msgstr "Çiftleme"
 
 #: frontend/src/errorHandling.ts:120
-msgid "Duplicate Entry"
+msgid "Duplicate entry"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:190
-msgid "Duplicate Template"
+msgid "Duplicate template"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:419
@@ -3121,11 +3121,11 @@ msgid "Enabled For"
 msgstr ""
 
 #: frontend/models/baseModels/Address/Address.ts:28
-msgid "Enter Country to load States"
+msgid "Enter country to load states"
 msgstr "Devletleri yüklemek için Ülkeyi girin"
 
 #: frontend/models/baseModels/Address/Address.ts:25
-msgid "Enter State"
+msgid "Enter state"
 msgstr "Durumu Girin"
 
 #: frappe_books/regional.py:98
@@ -3314,12 +3314,12 @@ msgid "Export"
 msgstr "İhracat"
 
 #: frontend/src/components/ExportWizard.vue:205
-msgid "Export Format"
+msgid "Export format"
 msgstr ""
 
 #: frontend/reports/commonExporter.ts:194
 #: frontend/src/components/ExportWizard.vue:282
-msgid "Export Successful"
+msgid "Export successful"
 msgstr "İhracat Başarılı"
 
 #: frontend/src/components/ExportWizard.vue:4
@@ -3456,7 +3456,7 @@ msgid "Five"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:310
-msgid "Fix Failed"
+msgid "Fix failed"
 msgstr ""
 
 #. Option for the 'Account Type' (Select) field in DocType 'Books Account'
@@ -3502,7 +3502,7 @@ msgid "For Sales"
 msgstr ""
 
 #: frontend/src/errorHandling.ts:116
-msgid "Forbidden Error"
+msgid "Forbidden error"
 msgstr ""
 
 #. Label of the section (Data) field in DocType 'Books Custom Field'
@@ -3860,7 +3860,7 @@ msgid "Hide Group Amounts"
 msgstr "Grup Tutarlarını Gizle"
 
 #: frontend/src/components/Sidebar.vue:44
-msgid "Hide Sidebar"
+msgid "Hide sidebar"
 msgstr ""
 
 #. Label of the hide_unavailable_items (Check) field in DocType 'Books Pos
@@ -3926,11 +3926,11 @@ msgid "Image"
 msgstr "Görüntü"
 
 #: frontend/src/pages/ImportWizard.vue:243
-msgid "Import Complete"
+msgid "Import complete"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:32
-msgid "Import Data"
+msgid "Import data"
 msgstr "Verileri İçe Aktar"
 
 #: frontend/src/pages/ImportWizard.vue:83
@@ -4022,7 +4022,7 @@ msgid "Inflow"
 msgstr "Giriş"
 
 #: frontend/src/utils/ui.ts:624
-msgid "Insufficient Quantity"
+msgid "Insufficient quantity"
 msgstr ""
 
 #: frappe_books/inventory/stock.py:196
@@ -4064,7 +4064,7 @@ msgid "Invalid Key Error"
 msgstr ""
 
 #: frontend/src/utils/pos.ts:173
-msgid "Invalid Quantity for Item {0}"
+msgid "Invalid quantity for item {0}"
 msgstr ""
 
 #: frontend/src/utils/filterQuery.ts:67
@@ -4249,7 +4249,7 @@ msgid "Is Group"
 msgstr "Grup mu"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:119
-msgid "Is Landscape"
+msgid "Landscape"
 msgstr ""
 
 #: frontend/src/utils/filterQuery.ts:8
@@ -4405,7 +4405,7 @@ msgstr ""
 #: frontend/src/pages/POS/ItemEnquiryModal.vue:4
 #: frontend/src/pages/POS/POSQuickActions.vue:56
 #: frontend/src/pages/POS/POSQuickActions.vue:58
-msgid "Item Enquiry"
+msgid "Item enquiry"
 msgstr ""
 
 #. Label of the item_group (Link) field in DocType 'Books Item'
@@ -4595,11 +4595,11 @@ msgid "JournalEntry"
 msgstr ""
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:147
-msgid "Key Hints"
+msgid "Key hints"
 msgstr ""
 
 #: frontend/src/components/Sidebar.vue:58 frontend/src/utils/appMenu.ts:18
-msgid "Keyboard Shortcuts"
+msgid "Keyboard shortcuts"
 msgstr ""
 
 #. Label of the label (Data) field in DocType 'Books Custom Field'
@@ -4644,7 +4644,7 @@ msgid "Legal Expenses"
 msgstr "Yasal Giderler"
 
 #: frontend/src/components/SearchBar.vue:74
-msgid "Less Filters"
+msgid "Fewer filters"
 msgstr ""
 
 #: frontend/src/utils/filterQuery.ts:12
@@ -4666,11 +4666,11 @@ msgid "Link"
 msgstr ""
 
 #: frontend/src/errorHandling.ts:124
-msgid "Link Validation Error"
+msgid "Link validation error"
 msgstr ""
 
 #: frontend/src/pages/CommonForm/LinkedEntries.vue:17
-msgid "Linked Entries"
+msgid "Linked entries"
 msgstr ""
 
 #: frontend/src/utils/search.ts:70
@@ -4680,7 +4680,7 @@ msgstr "Liste"
 #: frontend/src/components/ShortcutsHelper.vue:92
 #: frontend/src/pages/POS/POSQuickActions.vue:4
 #: frontend/src/pages/POS/POSQuickActions.vue:6
-msgid "List View"
+msgid "List view"
 msgstr ""
 
 #: frontend/src/components/Report/ListReport.vue:51
@@ -4733,7 +4733,7 @@ msgid "Locations"
 msgstr ""
 
 #: frontend/src/utils/appMenu.ts:33
-msgid "Log Out"
+msgid "Log out"
 msgstr ""
 
 #: frappe_books/www/books.py:41
@@ -4844,7 +4844,7 @@ msgid "Loyalty-program usage counts cannot be negative."
 msgstr ""
 
 #: frontend/src/pages/ListView/List.vue:71
-msgid "Make Entry"
+msgid "Make entry"
 msgstr "Giriş Yap"
 
 #. Label of the make_auto_payment (Check) field in DocType 'Books Purchase
@@ -4882,7 +4882,7 @@ msgstr ""
 
 #: frontend/src/errorHandling.ts:128
 #: frontend/src/pages/SetupWizard/SetupWizard.vue:199
-msgid "Mandatory Error"
+msgid "Mandatory error"
 msgstr ""
 
 #. Label of the is_manual_rate (Check) field in DocType 'Books Purchase Invoice
@@ -5099,7 +5099,7 @@ msgid "More"
 msgstr ""
 
 #: frontend/src/components/SearchBar.vue:74
-msgid "More Filters"
+msgid "More filters"
 msgstr ""
 
 #. Label of the movement_type (Select) field in DocType 'Books Stock Movement'
@@ -5175,7 +5175,7 @@ msgstr ""
 #: frontend/src/pages/CommonForm/CommonForm.vue:291
 #: frontend/src/pages/CommonForm/CommonForm.vue:294
 #: frontend/src/utils/ui.ts:321
-msgid "New Entry"
+msgid "New entry"
 msgstr ""
 
 #. Label of a shortcut in the Books Workspace
@@ -5189,7 +5189,7 @@ msgid "New Sales Invoice"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:175
-msgid "New Template"
+msgid "New template"
 msgstr ""
 
 #: frontend/fyo/core/docHandler.ts:138
@@ -5230,19 +5230,19 @@ msgid "No"
 msgstr "Hayır"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:562
-msgid "No Display Entries Found"
+msgid "No display entries found"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:107
-msgid "No Print Templates found for entry type {0}"
+msgid "No print templates found for entry type {0}"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:639
-msgid "No Value"
+msgid "No value"
 msgstr ""
 
 #: frontend/src/components/Report/ListReport.vue:54
-msgid "No Values to be Displayed"
+msgid "No values to be displayed"
 msgstr "Görüntülenecek Değer Yok"
 
 #: frontend/src/components/POS/PaymentSummary.vue:12
@@ -5327,7 +5327,7 @@ msgid "None"
 msgstr "Hiçbiri"
 
 #: frontend/fyo/models/SystemSettings.ts:45 frontend/src/errorHandling.ts:112
-msgid "Not Found"
+msgid "Not found"
 msgstr ""
 
 #: frontend/models/helpers.ts:382
@@ -5398,7 +5398,7 @@ msgid "Number Series"
 msgstr "Sayı Serisi"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:94
-msgid "Number of Rows"
+msgid "Number of rows"
 msgstr ""
 
 #: frontend/reports/AccountReport.ts:272 frontend/reports/AccountReport.ts:273
@@ -5463,7 +5463,7 @@ msgid "Open"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:58
-msgid "Open Documentation"
+msgid "Open documentation"
 msgstr ""
 
 #: frontend/src/pages/POS/SavedInvoiceModal.vue:48
@@ -5476,7 +5476,7 @@ msgstr ""
 
 #: frontend/src/pages/CommonForm/CommonForm.vue:39
 #: frontend/src/pages/CommonForm/CommonForm.vue:40
-msgid "Open Print View"
+msgid "Open print view"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:83
@@ -5484,15 +5484,15 @@ msgid "Open Print View if Print is available."
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:46
-msgid "Open Quick Search"
+msgid "Open quick search"
 msgstr ""
 
 #: frontend/src/pages/Report.vue:15 frontend/src/pages/Report.vue:16
-msgid "Open Report Print View"
+msgid "Open report print view"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:168
-msgid "Open Sales Invoice List"
+msgid "Open Sales Invoice list"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:188
@@ -5560,7 +5560,7 @@ msgstr "Açılış Bakiyesi Özkaynakları"
 #: frappe_books/frappe_books/doctype/books_get_started/books_get_started.json
 #: frontend/schemas/app/GetStarted.json
 #: frontend/src/utils/getStartedConfig.ts:51
-msgid "Opening Balances"
+msgid "Opening balances"
 msgstr "Açılış Bakiyeleri"
 
 #. Label of the opening_cash (Table) field in DocType 'Books Pos Opening Shift'
@@ -6049,12 +6049,12 @@ msgid "Phone"
 msgstr "Telefon"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:131
-msgid "Pick Columns"
+msgid "Pick columns"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:200
 #: frontend/src/pages/ImportWizard.vue:534
-msgid "Pick Import Columns"
+msgid "Pick import columns"
 msgstr ""
 
 #: frontend/schemas/app/Defaults.json frontend/schemas/app/POSProfile.json
@@ -6352,7 +6352,7 @@ msgid "Print Templates"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:3
-msgid "Print View"
+msgid "Print view"
 msgstr ""
 
 #. Name of a standard account
@@ -6404,11 +6404,6 @@ msgstr ""
 #: frontend/schemas/app/POSProfile.json
 msgid "Profile"
 msgstr ""
-
-#: frontend/reports/ProfitAndLoss/ProfitAndLoss.ts:8
-#: frontend/src/utils/sidebarConfig.ts:126
-msgid "Profit And Loss"
-msgstr "Kar ve Zarar"
 
 #: frontend/src/pages/Dashboard/ProfitAndLoss.vue:4
 #: frontend/src/pages/Dashboard/ProfitAndLoss.vue:59
@@ -6677,7 +6672,7 @@ msgid "Quarters"
 msgstr "Konut"
 
 #: frontend/src/components/ShortcutsHelper.vue:106
-msgid "Quick Search"
+msgid "Quick search"
 msgstr ""
 
 #: frontend/src/utils/ui.ts:50
@@ -6750,7 +6745,7 @@ msgid "Rate can't be negative."
 msgstr "Oran negatif olamaz."
 
 #: frontend/src/pages/ImportWizard.vue:631
-msgid "Raw Value: {0}"
+msgid "Raw value: {0}"
 msgstr ""
 
 #. Option for the 'Account Type' (Select) field in DocType 'Books Account'
@@ -7152,7 +7147,7 @@ msgid "Reverts"
 msgstr "Döndürüyor"
 
 #: frontend/src/utils/getStartedConfig.ts:42
-msgid "Review Accounts"
+msgid "Review accounts"
 msgstr "Hesapları Gözden Geçirme"
 
 #: frontend/src/utils/getStartedConfig.ts:44
@@ -7400,15 +7395,15 @@ msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:22
 #: frontend/src/pages/ImportWizard.vue:23
-msgid "Save Template"
+msgid "Save template"
 msgstr "Şablonu Kaydet"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:352
-msgid "Save Template File"
+msgid "Save template file"
 msgstr ""
 
 #: frontend/src/pages/POS/POS.vue:1030
-msgid "Save and Continue"
+msgid "Save and continue"
 msgstr ""
 
 #: frontend/src/pages/PrintView/PrintView.vue:20
@@ -7459,7 +7454,7 @@ msgid "Saved"
 msgstr ""
 
 #: frontend/src/pages/POS/SavedInvoiceModal.vue:4
-msgid "Saved and Submitted Invoices"
+msgid "Saved and submitted invoices"
 msgstr ""
 
 #: frontend/src/importer.ts:757
@@ -7556,19 +7551,19 @@ msgstr "Ülke Seç"
 
 #: frontend/src/pages/ImportWizard.vue:39
 #: frontend/src/pages/ImportWizard.vue:521 frontend/src/utils/ui.ts:481
-msgid "Select File"
+msgid "Select file"
 msgstr "Dosya Seç"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:345
-msgid "Select Template File"
+msgid "Select template file"
 msgstr ""
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:381
-msgid "Select a Display Doc to view the Template"
+msgid "Select a Display Doc to view the template"
 msgstr ""
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:377
-msgid "Select a Template type"
+msgid "Select a template type"
 msgstr ""
 
 #: frontend/src/pages/TemplateBuilder/SetPrintSize.vue:11
@@ -7711,20 +7706,20 @@ msgstr ""
 
 #: frontend/src/pages/TemplateBuilder/SetPrintSize.vue:4
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:337
-msgid "Set Print Size"
+msgid "Set print size"
 msgstr ""
 
 #: frontend/src/pages/TemplateBuilder/SetType.vue:4
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:329
-msgid "Set Template Type"
+msgid "Set template type"
 msgstr ""
 
 #: frontend/src/pages/GetStarted.vue:63
-msgid "Set Up"
+msgid "Set up"
 msgstr ""
 
 #: frontend/src/pages/GetStarted.vue:3
-msgid "Set Up Your Workspace"
+msgid "Set up your workspace"
 msgstr "Çalışma Alanınızı Ayarlama"
 
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:385
@@ -7772,7 +7767,7 @@ msgid "Set all inventory ledger accounts in Books Inventory Settings."
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:556
-msgid "Set an Import Type"
+msgid "Set an import type"
 msgstr "İçe Aktarma Türünü Ayarlama"
 
 #: frappe_books/accounting/invoice.py:204
@@ -7931,7 +7926,7 @@ msgid "Show HSN"
 msgstr ""
 
 #: frontend/src/pages/ImportWizard.vue:313
-msgid "Show Me"
+msgid "Show me"
 msgstr "göster bana"
 
 #: frontend/src/components/PageHeader.vue:13
@@ -7976,7 +7971,7 @@ msgid "Skip Child Tables"
 msgstr ""
 
 #: frontend/src/components/SearchBar.vue:91
-msgid "Skip Transactions"
+msgid "Skip transactions"
 msgstr ""
 
 #: frontend/schemas/app/Currency.json
@@ -8017,7 +8012,7 @@ msgid "Start"
 msgstr "Başlamak"
 
 #: frontend/src/pages/PrintView/ReportPrintView.vue:80
-msgid "Start From Row Index"
+msgid "Start from row index"
 msgstr ""
 
 #. Label of the state (Autocomplete) field in DocType 'Books Address'
@@ -8085,7 +8080,7 @@ msgid "Stock Balance"
 msgstr ""
 
 #: frontend/models/helpers.ts:282
-msgid "Stock Entries"
+msgid "Stock entries"
 msgstr ""
 
 #. Name of a standard account
@@ -8674,15 +8669,15 @@ msgid "Thirty"
 msgstr ""
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:39
-msgid "This Month"
+msgid "This month"
 msgstr "Bu Ay"
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:38
-msgid "This Quarter"
+msgid "This quarter"
 msgstr "Bu Çeyrek"
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:36
-msgid "This Year"
+msgid "This year"
 msgstr "Bu Yıl"
 
 #: frontend/src/utils/ui.ts:127
@@ -8783,11 +8778,11 @@ msgstr "Yıl için"
 #: frontend/src/components/ShortcutsHelper.vue:142
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:25
 #: frontend/src/pages/TemplateBuilder/TemplateBuilder.vue:26
-msgid "Toggle Edit Mode"
+msgid "Toggle edit mode"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:146
-msgid "Toggle Key Hints"
+msgid "Toggle key hints"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:87
@@ -8795,7 +8790,7 @@ msgid "Toggle Linked Entries widget, not available in Quick Edit view."
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:164
-msgid "Toggle between Grid and List view"
+msgid "Toggle between grid and list view"
 msgstr ""
 
 #: frontend/src/pages/CommonForm/CommonForm.vue:45
@@ -8828,7 +8823,7 @@ msgid "Toggle the Report filter"
 msgstr ""
 
 #: frontend/src/pages/Dashboard/Expenses.vue:4
-msgid "Top Expenses"
+msgid "Top expenses"
 msgstr "En Yüksek Giderler"
 
 #: frappe_books/frappe_books/print_format/frappe_books___journal_entry/frappe_books___journal_entry.html:1
@@ -8893,7 +8888,7 @@ msgid "Total Quantity"
 msgstr ""
 
 #: frontend/src/pages/Dashboard/Expenses.vue:12
-msgid "Total Spending"
+msgid "Total spending"
 msgstr "Toplam Harcama"
 
 #: frappe_books/accounting/ledger.py:105
@@ -9145,7 +9140,7 @@ msgid "Use Full Width"
 msgstr ""
 
 #: frontend/src/components/ExportWizard.vue:194
-msgid "Use List Filters"
+msgid "Use list filters"
 msgstr ""
 
 #: frontend/src/components/POS/NumericKeypad.vue:133
@@ -9201,7 +9196,7 @@ msgid "Valid To Date should be greater than Valid From Date."
 msgstr ""
 
 #: frontend/src/errorHandling.ts:108
-msgid "Validation Error"
+msgid "Validation error"
 msgstr ""
 
 #. Label of the validity_section_break_29 (Section Break) field in DocType
@@ -9269,27 +9264,27 @@ msgid "View"
 msgstr ""
 
 #: frontend/src/utils/ui.ts:773
-msgid "View Accounting Entries"
+msgid "View accounting entries"
 msgstr ""
 
 #: frontend/src/pages/Dashboard/UnpaidInvoices.vue:17
-msgid "View Paid Invoices"
+msgid "View paid invoices"
 msgstr ""
 
 #: frontend/models/baseModels/Party/Party.ts:104
-msgid "View Purchases"
+msgid "View purchases"
 msgstr "Satın Alımları Görüntüle"
 
 #: frontend/models/baseModels/Party/Party.ts:137
-msgid "View Sales"
+msgid "View sales"
 msgstr "Satışları Görüntüle"
 
 #: frontend/src/utils/ui.ts:763
-msgid "View Stock Entries"
+msgid "View stock entries"
 msgstr ""
 
 #: frontend/src/pages/Dashboard/UnpaidInvoices.vue:31
-msgid "View Unpaid Invoices"
+msgid "View unpaid invoices"
 msgstr ""
 
 #: frontend/src/pages/CommonForm/CommonForm.vue:32
@@ -9348,7 +9343,7 @@ msgid "Write-off must be between zero and the payment amount."
 msgstr ""
 
 #: frontend/src/pages/Dashboard/PeriodSelector.vue:37
-msgid "Year to Date"
+msgid "Year to date"
 msgstr ""
 
 #: frontend/reports/AccountReport.ts:233
@@ -9648,3 +9643,11 @@ msgstr ""
 msgid "{0} {1} is linked with existing records."
 msgstr "{0} {1} varolan kayıtlarla bağlantılıdır."
 
+
+
+#: frontend/schemas/app/CouponCode.json
+#: frontend/src/pages/POS/POSQuickActions.vue:30
+#: frontend/src/pages/POS/POSQuickActions.vue:32
+#: frontend/src/utils/sidebarConfig.ts:222
+msgid "Coupon code"
+msgstr ""

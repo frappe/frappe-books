@@ -25,6 +25,10 @@
         <Barcode @item-selected="addItem" />
       </template>
     </MobileForm>
+    <template v-else>
+      <PageHeader :title="title" />
+      <FormSkeleton class="p-4" />
+    </template>
     <LinkedEntries
       v-if="showLinks && canShowLinks"
       :doc="doc"
@@ -93,38 +97,41 @@
         </template>
       </PageHeader>
     </template>
-    <template v-if="hasDoc" #body>
-      <div
-        v-if="tabOptions.length > 1"
-        class="sticky top-0 z-10 flex border-b border-outline-gray-1 bg-surface-base pt-2"
-      >
-        <FrappeTabButtons
-          v-model="activeTab"
-          class="-mb-px flex"
-          :options="tabOptions"
-          variant="underline"
-        />
-      </div>
-      <div class="divide-y divide-outline-gray-1">
-        <CommonFormSection
-          v-for="([n, fields], idx) in activeGroup.entries()"
-          :key="n + idx"
-          class="py-5"
-          :show-title="activeGroup.size > 1 && n !== t`Default`"
-          :title="n"
-          :fields="fields"
-          :doc="doc"
-          :errors="errors"
-          @editrow="(doc: FrappeDoc) => showRowEditForm(doc)"
-          @row-remove="onRowRemove"
-          @value-change="onValueChange"
-          @row-change="updateGroupedFields"
+    <template #body>
+      <FormSkeleton v-if="!hasDoc" class="py-5 md:grid-cols-2 md:gap-x-8" />
+      <template v-else>
+        <div
+          v-if="tabOptions.length > 1"
+          class="sticky top-0 z-10 flex border-b border-outline-gray-1 bg-surface-base pt-2"
         >
-          <template v-if="canShowBarcode" #table>
-            <Barcode @item-selected="addItem" />
-          </template>
-        </CommonFormSection>
-      </div>
+          <FrappeTabButtons
+            v-model="activeTab"
+            class="-mb-px flex"
+            :options="tabOptions"
+            variant="underline"
+          />
+        </div>
+        <div class="divide-y divide-outline-gray-1">
+          <CommonFormSection
+            v-for="([n, fields], idx) in activeGroup.entries()"
+            :key="n + idx"
+            class="py-5"
+            :show-title="activeGroup.size > 1 && n !== t`Default`"
+            :title="n"
+            :fields="fields"
+            :doc="doc"
+            :errors="errors"
+            @editrow="(doc: FrappeDoc) => showRowEditForm(doc)"
+            @row-remove="onRowRemove"
+            @value-change="onValueChange"
+            @row-change="updateGroupedFields"
+          >
+            <template v-if="canShowBarcode" #table>
+              <Barcode @item-selected="addItem" />
+            </template>
+          </CommonFormSection>
+        </div>
+      </template>
     </template>
     <template #quickedit>
       <Transition name="quickedit">
@@ -191,6 +198,7 @@ import { isMobile } from 'src/utils/viewport';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { computed, defineComponent, inject, nextTick } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
+import FormSkeleton from './FormSkeleton.vue';
 import LinkedEntries from './LinkedEntries.vue';
 import MobileForm from './MobileForm.vue';
 import RowEditForm from './RowEditForm.vue';
@@ -199,6 +207,7 @@ export default defineComponent({
   components: {
     FormContainer,
     CommonFormSection,
+    FormSkeleton,
     FrappeBreadcrumbs,
     FrappeButton,
     PageHeader,
@@ -341,18 +350,21 @@ export default defineComponent({
       }
       return doc;
     },
+    /** Empty while the document loads. */
     title(): string {
-      if (this.schema.isSubmittable && this.docOrNull?.notInserted) {
+      if (!this.docOrNull) {
+        return '';
+      }
+
+      if (this.schema.isSubmittable && this.docOrNull.notInserted) {
         return this.t`New Entry`;
       }
 
-      return this.docOrNull?.formTitle || this.t`New Entry`;
+      return this.docOrNull.formTitle || this.t`New Entry`;
     },
     breadcrumbs(): BreadcrumbsProps['items'] {
-      return [
-        { label: this.schema.label, route: `/list/${this.schemaName}` },
-        { label: this.title },
-      ];
+      const list = { label: this.schema.label, route: `/list/${this.schemaName}` };
+      return this.title ? [list, { label: this.title }] : [list];
     },
     schema(): Schema {
       const schema = this.docOrNull?.schema ?? getSchema(this.schemaName);

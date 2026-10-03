@@ -6,6 +6,7 @@
     @update:open="(open: boolean) => !open && routeToPrevious()"
   >
     <TwoColumnForm v-if="doc" ref="form" :doc="doc" :fields="sheetFields" />
+    <FormSkeleton v-else class="p-4" />
     <div
       v-if="doc?.canSave || doc?.canSubmit"
       class="px-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
@@ -51,6 +52,7 @@
     </div>
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
+      <FormSkeleton v-if="!doc" class="p-3" />
       <!-- Name and image -->
       <div
         v-if="doc && (titleField || imageField)"
@@ -105,6 +107,7 @@ import { Field, Schema } from 'schemas/types';
 import AttachImage from 'src/components/Controls/AttachImage.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import FormSkeleton from 'src/pages/CommonForm/FormSkeleton.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getField, getFields, getSchema } from 'src/frappe/registry';
 import { useBooksDoc } from 'src/frappe/useBooksDoc';
@@ -126,6 +129,7 @@ export default defineComponent({
     FrappeButton,
     FrappeScrollArea,
     FormControl,
+    FormSkeleton,
     TwoColumnForm,
     AttachImage,
   },
@@ -183,7 +187,11 @@ export default defineComponent({
       return '';
     },
     sheetTitle(): string {
-      if (!this.doc || this.doc.notInserted) {
+      if (!this.doc) {
+        return this.schema.label;
+      }
+
+      if (this.doc.notInserted) {
         return this.t`New ${this.schema.label}`;
       }
 

@@ -316,7 +316,7 @@ test('a cart row in boxes shows and takes its rate per box', async ({
   await expect(row).toContainText('18,600.00');
 
   await row.getByRole('button', { name: /^Organic Assam Tea/ }).click();
-  await page.getByRole('spinbutton', { name: 'Rate', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Rate', exact: true }).click();
   const keypad = page.getByRole('dialog', { name: 'Rate', exact: true });
   await keypad.getByRole('textbox', { name: 'Rate', exact: true }).fill('3000');
   await keypad.getByRole('button', { name: 'Save', exact: true }).click();
@@ -491,7 +491,7 @@ test('payment takes a large amount field, tiles and same-size actions', async ({
   await page.setViewportSize({ width: 1352, height: 848 });
   await showModal(page, 'Payment');
   const dialog = page.getByRole('dialog', { name: 'Payment' });
-  const amount = dialog.getByRole('spinbutton', { name: 'Amount paid' });
+  const amount = dialog.getByRole('textbox', { name: 'Amount paid' });
   await expect(amount).toHaveCSS('height', '40px');
   for (const button of await dialog.locator('footer button').all()) {
     await expect(button).toHaveCSS('font-size', '14px');
@@ -510,6 +510,24 @@ test('payment takes a large amount field, tiles and same-size actions', async ({
     animations: 'disabled',
     path: test.info().outputPath('payment-compact.png'),
   });
+});
+
+test('the paid amount takes arithmetic, and text that is no number pays nothing', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await showModal(page, 'Payment');
+  const amount = page
+    .getByRole('dialog', { name: 'Payment' })
+    .getByRole('textbox', { name: 'Amount paid' });
+  await amount.fill('2000+300');
+  await amount.press('Tab');
+  await expect(amount).toHaveValue('2,300.00');
+  await amount.fill('abc');
+  await amount.press('Tab');
+  await expect(amount).toHaveValue('0.00');
+  expect(errors).toEqual([]);
 });
 
 async function showModal(page: Page, name: string) {

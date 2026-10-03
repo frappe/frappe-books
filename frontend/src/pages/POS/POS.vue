@@ -744,8 +744,9 @@ export default defineComponent({
     toggleView() {
       this.tableView = !this.tableView;
     },
-    setPaidAmount(amount: Money) {
-      this.paidAmount = this.fyo.pesa(amount.toString());
+    /** Text that is no number pays nothing, which Pay refuses. */
+    setPaidAmount(amount: Money | null) {
+      this.paidAmount = this.fyo.pesa(amount?.toString() ?? 0);
     },
     setPaymentMethod(method: string) {
       this.paymentMethod = method;

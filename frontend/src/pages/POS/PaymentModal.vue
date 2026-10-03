@@ -14,7 +14,7 @@
     :loyalty-program="loyaltyProgram"
     :applied-coupons-count="appliedCouponsCount"
     @select-method="setPaymentMethodAndAmount"
-    @set-paid-amount="(amount: Money) => $emit('setPaidAmount', amount)"
+    @set-paid-amount="(amount: Money | null) => $emit('setPaidAmount', amount)"
     @set-transfer-ref-no="(value: string) => $emit('setTransferRefNo', value)"
     @set-transfer-clearance-date="
       (value: Date) => $emit('setTransferClearanceDate', value)
@@ -51,7 +51,7 @@
           :border="true"
           :value="paidAmount"
           size="xlarge"
-          @change="(amount: Money) => $emit('setPaidAmount', amount)"
+          @change="(amount: Money | null) => $emit('setPaidAmount', amount)"
         />
         <div v-if="isCashSale" class="flex flex-wrap gap-1.5">
           <FrappeButton

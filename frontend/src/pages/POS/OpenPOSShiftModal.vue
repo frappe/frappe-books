@@ -49,7 +49,7 @@
               {{ row.payment_method }}
             </span>
             <span
-              v-if="row.payment_method === 'Cash'"
+              v-if="isCashMethod(row.payment_method)"
               class="text-base-medium tabular-nums text-ink-gray-8"
               dir="ltr"
             >
@@ -154,7 +154,7 @@ export default defineComponent({
     },
     otherOpeningAmounts(): ShiftAmount[] {
       return ((this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]).filter(
-        (row) => row.payment_method !== 'Cash'
+        (row) => !this.isCashMethod(row.payment_method)
       );
     },
     openingAmountDetails(): Detail[] {
@@ -186,6 +186,10 @@ export default defineComponent({
     this.isDismissed = true;
   },
   methods: {
+    /** The counted drawer covers cash methods; the others are entered one by one. */
+    isCashMethod(paymentMethod?: string): boolean {
+      return this.shift.cashMethods.includes(paymentMethod ?? '');
+    },
     handleDismiss() {
       this.isDismissed = true;
       this.$router.back();

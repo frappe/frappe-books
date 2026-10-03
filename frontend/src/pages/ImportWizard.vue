@@ -159,7 +159,7 @@
                     class="min-w-0 flex-1"
                     :class="
                       val.error
-                        ? 'rounded-4 border border-outline-red-2'
+                        ? '[&_[data-slot=control]]:border-outline-red-3 [&_[data-slot=trigger]]:border-outline-red-3'
                         : ''
                     "
                     :title="getFieldTitle(val)"
@@ -842,8 +842,3 @@ export default defineComponent({
   },
 });
 </script>
-<style scoped>
-.index-cell {
-  @apply flex pe-4 justify-end items-center border-e last:border-b border-outline-gray-1 bg-surface-base sticky left-0 -my-4 text-ink-gray-6;
-}
-</style>

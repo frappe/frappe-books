@@ -45,6 +45,27 @@ test('a preset shows its whole range and keeps it on close', async ({
   await closeWithoutChoice(page, () => page.keyboard.press('Escape'));
 });
 
+test('inline filter labels share one size and sit beside their values', async ({
+  page,
+}) => {
+  await page.goto('/books/report/BalanceSheet');
+  await waitForBooks(page);
+  const filters = page.getByRole('group', { name: 'Filters', exact: true });
+  const fontSize = (label: string) =>
+    filters
+      .getByText(label, { exact: true })
+      .evaluate((node) => getComputedStyle(node).fontSize);
+
+  const selectLabelSize = await fontSize('Based On');
+  for (const label of ['To Date', 'Number of Months']) {
+    expect(await fontSize(label)).toBe(selectLabelSize);
+  }
+  const months = filters.getByRole('textbox', { name: 'Number of Months' });
+  expect(
+    await months.evaluate((node) => getComputedStyle(node).textAlign)
+  ).not.toBe('end');
+});
+
 test.describe('on a phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },

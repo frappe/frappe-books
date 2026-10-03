@@ -108,7 +108,7 @@ async function mount() {
     },
     closeShift() {
       shift.open = false;
-      pos.isPosShiftOpen = false;
+      return pos.shift.refresh();
     },
     /** Loads a saved invoice, unsubmitted unless `docstatus` says, as the Invoices sheet does. */
     openSavedInvoice(docstatus = 0) {

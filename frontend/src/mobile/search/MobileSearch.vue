@@ -85,7 +85,7 @@
           </div>
         </FrappeListCell>
         <FrappeListCell class="justify-end">
-          <FrappeBadge :theme="groupThemeMap[item.group]" class="max-w-[132px]">
+          <FrappeBadge class="max-w-[132px]">
             <span class="truncate">{{ getBadgeLabel(item) }}</span>
           </FrappeBadge>
         </FrappeListCell>
@@ -147,7 +147,6 @@ import PageHeader from 'src/components/PageHeader.vue';
 import { historyState } from 'src/utils/refs';
 import {
   getGroupLabelMap,
-  groupThemeMap,
   searchGroups,
   type SearchItems,
 } from 'src/utils/search';

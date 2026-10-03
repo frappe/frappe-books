@@ -14,7 +14,6 @@
             v-for="filter in section.filters"
             :key="filter.value"
             size="md"
-            :theme="section.theme"
             :variant="isFilterOn(filter.value) ? 'subtle' : 'outline'"
             :aria-pressed="isFilterOn(filter.value)"
             :label="filter.label"
@@ -52,12 +51,10 @@ const isOpen = defineModel<boolean>('open', { required: true });
 const sections = computed(() => [
   {
     title: t`Records`,
-    theme: 'gray' as const,
     filters: [{ value: 'skipTransactions', label: t`Skip Transactions` }],
   },
   {
     title: t`Document Types`,
-    theme: 'blue' as const,
     filters: props.schemaFilters,
   },
 ]);

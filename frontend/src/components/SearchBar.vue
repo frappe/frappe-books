@@ -36,7 +36,7 @@
           </span>
         </span>
         <template #suffix>
-          <FrappeBadge :theme="groupThemeMap[si.group]" variant="subtle">
+          <FrappeBadge>
             {{ si.group === 'Docs' ? si.schemaLabel : groupLabelMap[si.group] }}
           </FrappeBadge>
         </template>
@@ -96,7 +96,6 @@
               :key="sf.value"
               class="whitespace-nowrap"
               size="xs"
-              theme="blue"
               :variant="isFilterOn(sf.value) ? 'subtle' : 'outline'"
               :aria-pressed="isFilterOn(sf.value)"
               @click="setSearchFilter(sf.value, !isFilterOn(sf.value))"
@@ -157,7 +156,6 @@ import {
   SearchGroup,
   SearchItems,
   getGroupLabelMap,
-  groupThemeMap,
   searchGroups,
 } from 'src/utils/search';
 import { useSearch } from 'src/utils/useSearch';
@@ -196,7 +194,6 @@ export default defineComponent({
   setup() {
     return {
       ...useSearch(),
-      groupThemeMap,
       shortcuts: inject(shortcutsKey),
     };
   },

@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { deleteDocWithPrompt, dialog } from './helpers/ui.mjs';
+import { getBooksMeta } from './helpers/doctypes.mjs';
+import { stubFrappe } from './helpers/frappe.mjs';
+import {
+  deleteDocWithPrompt,
+  dialog,
+  frappeModels,
+  loadFrappeDocTypes,
+  newFrappeDoc,
+  registerFrappeModels,
+} from './helpers/ui.mjs';
+
+stubFrappe(({ body }) => ({ message: getBooksMeta(body.doctypes) }));
+registerFrappeModels(frappeModels);
+await loadFrappeDocTypes();
 
 /** Records each `dialog.danger` call instead of rendering it. */
 function captureDangerDialogs() {
@@ -17,6 +30,7 @@ function makeDoc() {
     name: 'SINV-1001',
     schemaName: 'SalesInvoice',
     schema: { label: 'Sales Invoice' },
+    typeLabel: 'Sales Invoice',
     isTransactional: true,
     isSubmitted: false,
     deletions: 0,
@@ -73,8 +87,7 @@ test('deleting a cancelled entry says its ledger entries go too', () => {
 test('deleting a party names it the way its list does', () => {
   const calls = captureDangerDialogs();
   const keepLabel = (role) => {
-    const party = { name: 'Acme', schemaName: 'Party', role };
-    deleteDocWithPrompt({ ...party, schema: { label: 'Party' } });
+    deleteDocWithPrompt(newFrappeDoc('Party', { name: 'Acme', role }));
     return calls.at(-1).cancelLabel;
   };
 
@@ -86,8 +99,9 @@ test('deleting a party names it the way its list does', () => {
 test('deleting an account group offers to keep the group', () => {
   const calls = captureDangerDialogs();
   const keepLabel = (is_group) => {
-    const account = { name: 'Assets', schemaName: 'Account', is_group };
-    deleteDocWithPrompt({ ...account, schema: { label: 'Account' } });
+    const account = newFrappeDoc('Account', { name: 'Assets', is_group });
+    clearTimeout(account._previewTimer);
+    deleteDocWithPrompt(account);
     return calls.at(-1).cancelLabel;
   };
 

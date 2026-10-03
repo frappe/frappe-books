@@ -99,6 +99,15 @@ export class Party extends FrappeDoc {
     }
   }
 
+  /** A customer or supplier goes by its role; a party of both roles stays a Party. */
+  override get typeLabel(): string {
+    const roleLabels: Record<string, string> = {
+      Customer: this.fyo.t`Customer`,
+      Supplier: this.fyo.t`Supplier`,
+    };
+    return roleLabels[this.role ?? ''] ?? this.fyo.t`Party`;
+  }
+
   static getActions(fyo: Fyo): Action[] {
     return [
       {

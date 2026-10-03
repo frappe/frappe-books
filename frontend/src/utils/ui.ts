@@ -121,7 +121,7 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
         isPrimary: true,
       },
       {
-        label: t`Keep ${getDocTypeLabel(doc)}`,
+        label: t`Keep ${doc.typeLabel}`,
         action() {
           return false;
         },
@@ -144,7 +144,7 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
     // Buttons name the outcome: "Cancel" alone could mean either answer.
     buttons: [
       {
-        label: t`Cancel ${getDocTypeLabel(doc)}`,
+        label: t`Cancel ${doc.typeLabel}`,
         async action() {
           try {
             await doc.cancel(payments);
@@ -158,7 +158,7 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
         isPrimary: true,
       },
       {
-        label: t`Keep ${getDocTypeLabel(doc)}`,
+        label: t`Keep ${doc.typeLabel}`,
         action() {
           return false;
         },
@@ -801,25 +801,8 @@ export function showCannotCancelOrDeleteToast(doc: FrappeDoc) {
   showToast({ type: 'warning', message, duration: 'short' });
 }
 
-/** The kind of record the user sees, such as Customer for a customer party. */
-function getDocTypeLabel(doc: FrappeDoc) {
-  if (doc.schemaName === ModelNameEnum.Party) {
-    const roleLabels: Record<string, string> = {
-      Customer: t`Customer`,
-      Supplier: t`Supplier`,
-    };
-    return roleLabels[doc.role as string] ?? t`Party`;
-  }
-
-  if (doc.schemaName === ModelNameEnum.Account && doc.is_group) {
-    return t`Group`;
-  }
-
-  return doc.schema.label || doc.schemaName;
-}
-
 function getDocReferenceLabel(doc: FrappeDoc) {
-  const label = getDocTypeLabel(doc);
+  const label = doc.typeLabel;
   if (doc.schema.naming === 'random') {
     return label;
   }

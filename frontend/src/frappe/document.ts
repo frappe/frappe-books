@@ -202,6 +202,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this.name ?? '';
   }
 
+  /** The kind of record the user sees, such as Customer for a customer party. */
+  get typeLabel(): string {
+    return this.schema.label || this.schemaName;
+  }
+
   get quickEditFields() {
     let fieldnames = this.schema.quickEditFields;
 

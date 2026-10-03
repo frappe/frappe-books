@@ -30,6 +30,10 @@ export class Account extends FrappeDoc {
   };
   static override previewMethod = 'preview';
 
+  override get typeLabel(): string {
+    return this.is_group ? this.fyo.t`Group` : super.typeLabel;
+  }
+
   // The server refuses this too; checked here to say so before asking it.
   async beforeDelete() {
     if (!this.parent_books_account) {

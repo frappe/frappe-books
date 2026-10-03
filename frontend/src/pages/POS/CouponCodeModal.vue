@@ -23,21 +23,20 @@
 
       <div v-if="appliedCoupons.length" class="flex flex-col gap-1.5">
         <p class="text-sm text-ink-gray-5">{{ t`Applied` }}</p>
+        <!-- MobileFilterChip's shape; its name says "filter". -->
         <div v-if="isMobile" class="flex flex-wrap gap-2">
-          <span
+          <FrappeButton
             v-for="coupon in appliedCoupons as AppliedCouponCode[]"
             :key="coupon.coupons"
-            class="flex h-8 items-center gap-1 rounded-full bg-surface-gray-2 pe-1 ps-3 text-sm-medium text-ink-gray-8"
+            size="md"
+            :label="t`Remove coupon ${coupon.coupons ?? ''}`"
+            @click="removeAppliedCoupon(coupon)"
           >
             {{ coupon.coupons }}
-            <FrappeButton
-              icon="lucide-x"
-              variant="ghost"
-              size="sm"
-              :aria-label="t`Remove coupon`"
-              @click="removeAppliedCoupon(coupon)"
-            />
-          </span>
+            <template #suffix>
+              <span class="lucide-x size-4 text-ink-gray-5" aria-hidden="true" />
+            </template>
+          </FrappeButton>
         </div>
         <ul
           v-else

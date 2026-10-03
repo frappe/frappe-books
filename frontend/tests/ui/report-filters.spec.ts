@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { useBooksSession } from './helpers/session';
+import { useBooksSession, waitForBooks } from './helpers/session';
 
 useBooksSession('/books/report/GeneralLedger');
 
@@ -27,6 +27,17 @@ test('closing the date range without a choice keeps the range', async ({
 test('a preset shows its whole range and keeps it on close', async ({
   page,
 }) => {
+  // The range shows dates in the Books date format, which setup takes from the country.
+  await page.route(
+    '**/api/v2/document/Books%20System%20Settings/**',
+    async (route) => {
+      const json = await (await route.fetch()).json();
+      json.data.date_format = 'MMM d, y';
+      await route.fulfill({ json });
+    }
+  );
+  await page.reload();
+  await waitForBooks(page);
   await page.clock.setFixedTime(new Date(2026, 9, 3, 12));
   await range(page).click();
   await page.getByRole('button', { name: 'Last month' }).click();

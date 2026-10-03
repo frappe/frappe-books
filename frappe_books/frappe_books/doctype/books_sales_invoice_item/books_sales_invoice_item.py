@@ -17,7 +17,7 @@ class BooksSalesInvoiceItem(InvoiceItemController):
 		amount: DF.Currency
 		batch: DF.Link | None
 		description: DF.Text | None
-		hsn_code: DF.Int
+		hsn_code: DF.Data | None
 		is_free_item: DF.Check
 		is_manual_rate: DF.Check
 		item: DF.Link

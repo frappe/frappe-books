@@ -25,7 +25,7 @@
 
     <div
       class="max-w-full overflow-x-auto"
-      :class="border ? 'rounded-4 border border-outline-gray-1' : ''"
+      :class="border ? 'rounded-6 border border-outline-gray-1' : ''"
     >
       <FrappeList
         :columns="listColumns"

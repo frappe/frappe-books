@@ -78,7 +78,7 @@ test('a link field searches full screen and creates a record in a sheet', async 
 
 test('rows open in a sheet', async ({ page }) => {
   // Items is the first table on the form.
-  await page.getByRole('button', { name: 'Add Row' }).first().click();
+  await page.getByRole('button', { name: 'Add row' }).first().click();
 
   const sheet = page.getByRole('dialog', { name: 'Row 1' });
   await expect(sheet).toBeVisible();
@@ -93,7 +93,7 @@ test('rows without quick edit fields edit their table columns', async ({
 }) => {
   await page.goto(`/books/edit/JournalEntry/new-phone-${Date.now()}`);
   await waitForBooks(page);
-  await page.getByRole('button', { name: 'Add Row' }).first().click();
+  await page.getByRole('button', { name: 'Add row' }).first().click();
 
   const sheet = page.getByRole('dialog', { name: 'Row 1' });
   for (const label of ['Account', 'Debit', 'Credit']) {

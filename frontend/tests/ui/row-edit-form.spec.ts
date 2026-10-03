@@ -11,13 +11,13 @@ test.beforeEach(async ({ page }) => {
   );
   await page
     .getByRole('navigation', { name: 'Breadcrumb' })
-    .getByText('New Entry', { exact: true })
+    .getByText('New entry', { exact: true })
     .waitFor();
 });
 
 async function addRows(page: Page, count: number) {
   for (let row = 0; row < count; row++) {
-    await page.getByText('Add Row', { exact: true }).first().click();
+    await page.getByText('Add row', { exact: true }).first().click();
     await page.keyboard.press('Escape');
   }
   await expect(page.getByRole('button', { name: 'Edit row' })).toHaveCount(

@@ -205,10 +205,10 @@ test('an address lists Indian states for India and has no place of supply', () =
     lists.state(newFrappeDoc('Address', { country: 'Chile' })),
     []
   );
-  assert.equal(emptyMessages.state(address), 'Enter State');
+  assert.equal(emptyMessages.state(address), 'Enter state');
   assert.equal(
     emptyMessages.state(newFrappeDoc('Address')),
-    'Enter Country to load States'
+    'Enter country to load states'
   );
   assert.equal(address.fieldMap.pos, undefined);
 });
@@ -382,8 +382,8 @@ test('a party makes and lists the invoices its role allows', () => {
     actions
       .filter(({ condition }) => condition({ notInserted: false, role }))
       .map(({ label }) => label);
-  assert.deepEqual(labels('Customer'), ['Create Sale', 'View Sales']);
-  assert.deepEqual(labels('Supplier'), ['Create Purchase', 'View Purchases']);
+  assert.deepEqual(labels('Customer'), ['Create sale', 'View sales']);
+  assert.deepEqual(labels('Supplier'), ['Create purchase', 'View purchases']);
   assert.equal(labels('Both').length, 4);
   assert.deepEqual(
     getModel('Party').filters.default_account({ role: 'Both' }),

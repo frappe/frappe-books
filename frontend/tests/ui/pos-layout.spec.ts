@@ -96,7 +96,7 @@ test('leaving a sale with items asks to save or discard it', async ({
   });
 
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
-  for (const name of ['Cancel', 'Discard and Continue', 'Save and Continue']) {
+  for (const name of ['Cancel', 'Discard and continue', 'Save and continue']) {
     await expect(dialog.getByRole('button', { name, exact: true })).toBeVisible();
   }
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -111,7 +111,7 @@ test('discarding a sale on leaving empties the cart', async ({ page }) => {
   });
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
   await dialog
-    .getByRole('button', { name: 'Discard and Continue', exact: true })
+    .getByRole('button', { name: 'Discard and continue', exact: true })
     .click();
 
   await expect(dialog).toBeHidden();
@@ -135,7 +135,7 @@ test('leaving a submitted sale offers only to leave or stay', async ({
 
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
   await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
-  for (const name of ['Save and Continue', 'Discard and Continue']) {
+  for (const name of ['Save and continue', 'Discard and continue']) {
     await expect(dialog.getByRole('button', { name, exact: true })).toHaveCount(0);
   }
   await dialog.getByRole('button', { name: 'Leave', exact: true }).click();

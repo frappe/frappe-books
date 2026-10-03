@@ -142,7 +142,7 @@ test('a filtered empty list clears its search', async ({ page }) => {
   await page.goto('/books/list/Party');
   await search(page, `none ${run}`);
   await expect(page.getByText('No entries found')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Make Entry' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Make entry' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Clear filters' }).tap();
   await expect(page.getByRole('searchbox', { name: 'Search' })).toHaveValue('');
@@ -163,7 +163,7 @@ test('an empty list offers Make Entry', async ({ page }) => {
   await page.goto('/books/list/JournalEntry');
 
   await expect(page.getByText('No entries found')).toBeVisible();
-  await page.getByRole('button', { name: 'Make Entry' }).tap();
+  await page.getByRole('button', { name: 'Make entry' }).tap();
   await expect(page).toHaveURL(/\/books\/edit\/JournalEntry\//);
 });
 

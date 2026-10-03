@@ -205,7 +205,7 @@ test('account tree refresh failure reports the saved account and closes the crea
     .getByRole('button', { name: 'Actions for Save Test Assets', exact: true })
     .click();
   await page
-    .getByRole('menuitem', { name: 'Add Account', exact: true })
+    .getByRole('menuitem', { name: 'Add account', exact: true })
     .click();
   const form = page.getByRole('dialog');
   await form

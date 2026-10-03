@@ -289,7 +289,7 @@ test('a submitted movement links to its accounting and stock entries', () => {
 
   assert.deepEqual(
     actions.map(({ label }) => label),
-    ['Accounting Entries', 'Stock Entries']
+    ['Accounting entries', 'Stock entries']
   );
   assert.ok(actions.every((action) => action.condition(movement)));
 });

@@ -21,7 +21,7 @@ test('a new sales invoice takes its account, rows and totals from the server', a
     'Debtors'
   );
 
-  await page.getByText('Add Row', { exact: true }).first().click();
+  await page.getByText('Add row', { exact: true }).first().click();
   await pickLink(page, 'Item', item);
   // The first data row, after the header; Qty is its first number.
   const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
@@ -143,7 +143,7 @@ test.describe('on a phone', () => {
     await waitForBooks(page);
 
     await expect(page.getByText('2 × ₹ 50.00')).toBeVisible();
-    await expect(page.getByText('Receive Payment')).toBeVisible();
+    await expect(page.getByText('Receive payment')).toBeVisible();
   });
 
   test('a payment submits from its sheet', async ({ page }) => {
@@ -151,7 +151,7 @@ test.describe('on a phone', () => {
     await page.goto(`/books/edit/SalesInvoice/${name}`);
     await waitForBooks(page);
 
-    await page.getByRole('button', { name: 'Receive Payment' }).click();
+    await page.getByRole('button', { name: 'Receive payment' }).click();
     const sheet = page.getByRole('dialog', { name: 'New Payment' });
     await sheet.getByRole('button', { name: 'Save', exact: true }).click();
     await page.getByRole('button', { name: 'Submit', exact: true }).click();

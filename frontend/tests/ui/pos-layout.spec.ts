@@ -145,6 +145,29 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('Done keeps the applied coupons after a refused code', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const { fillCart, state } = (window as any).posFixture;
+    fillCart();
+    state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
+  });
+  await page
+    .getByRole('button', { name: '1 coupon applied', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Coupon code', exact: true });
+  await dialog.getByRole('combobox').fill('EXPIRED');
+  await page.getByRole('option', { name: 'EXPIRED', exact: true }).click();
+  await expect(dialog).toContainText('Coupon EXPIRED has expired.');
+
+  await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: '1 coupon applied', exact: true })
+  ).toBeVisible();
+});
+
 test('a long price list name wraps instead of leaving the cart', async ({
   page,
 }) => {

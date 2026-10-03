@@ -55,7 +55,7 @@ const frappeMetas: Meta[] = [
 /**
  * Serves the models from the DocType files, with `customFields` added by
  * doctype, and answers every other request with `answer(path, body, params)`,
- * as the server would.
+ * as the server would; an answer that is a `Response` is sent as it is.
  */
 export async function loadFrappeFixture(
   answer: Answer,
@@ -78,7 +78,7 @@ export async function loadFrappeFixture(
     const json = path.endsWith('get_books_meta')
       ? { message: getBooksMeta(body.doctypes, customFields) }
       : await answer(path, body, params);
-    return Response.json(json ?? {});
+    return json instanceof Response ? json : Response.json(json ?? {});
   };
   registerFrappeModels(frappeModels);
   await loadFrappeDocTypes();

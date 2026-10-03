@@ -66,6 +66,7 @@ const records: Record<string, Row[]> = {
     },
   ],
   'Books Price List': [{ name: 'Retail' }, { name: 'Members' }],
+  'Books Coupon Code': [{ name: 'FOSSCLUB' }, { name: 'EXPIRED' }],
   'Books Batch': [{ name: 'TEA-2026-09' }],
   'Books Pos Opening Shift': [openingShift],
   'Books Sales Invoice': [
@@ -159,10 +160,22 @@ function answer(path: string, body: Row, params: Row): unknown {
   }
 
   if (method === 'run_doc_method') {
-    return { docs: [preview(body.document)] };
+    return checkCoupons(body) ?? { docs: [preview(body.document)] };
   }
 
   return { data: getDocuments(path, params) };
+}
+
+/** The server refuses the EXPIRED coupon when the POS checks coupons. */
+function checkCoupons({ document, kwargs }: Row): Response | undefined {
+  const codes = (document.coupons ?? []).map((row: Row) => row.coupons);
+  if (kwargs?.check_coupons && codes.includes('EXPIRED')) {
+    const message = 'Coupon EXPIRED has expired.';
+    return Response.json(
+      { errors: [{ type: 'ValidationError', message }] },
+      { status: 417 }
+    );
+  }
 }
 
 /** A document by its path, a list by its query, or a count. */

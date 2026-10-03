@@ -173,6 +173,25 @@
         </div>
       </div>
     </div>
+    <div
+      v-else
+      class="grid min-h-0 w-full flex-1 grid-cols-[minmax(0,1fr)_22rem] bg-surface-gray-1"
+      aria-busy="true"
+    >
+      <div class="overflow-hidden p-4">
+        <FrappeSkeleton class="mx-auto aspect-[21/29.7] max-w-md rounded-4" />
+      </div>
+      <div
+        class="space-y-3 border-l border-outline-gray-1 bg-surface-base p-4"
+      >
+        <FrappeSkeleton
+          v-for="width in ['w-48', 'w-64', 'w-40', 'w-56', 'w-32']"
+          :key="width"
+          class="h-3.5 rounded-4"
+          :class="width"
+        />
+      </div>
+    </div>
     <SetPrintSize v-if="doc" v-model:open="showSizeModal" :doc="doc" />
     <SetType v-if="doc" v-model:open="showTypeModal" :doc="doc" />
   </div>
@@ -189,6 +208,7 @@ import {
   Alert as FrappeAlert,
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
+  Skeleton as FrappeSkeleton,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
 import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
@@ -240,6 +260,7 @@ export default defineComponent({
     FrappeAccordion,
     FrappeAlert,
     FrappeScrollArea,
+    FrappeSkeleton,
     DropdownWithActions,
     PrintSheet,
     HorizontalResizer,

@@ -65,6 +65,20 @@
               </div>
             </section>
           </div>
+          <div
+            v-else
+            class="divide-y divide-outline-gray-1"
+            aria-busy="true"
+          >
+            <div
+              v-for="width in ['w-40', 'w-32', 'w-48', 'w-36']"
+              :key="width"
+              class="flex items-center gap-8 py-3.5"
+            >
+              <FrappeSkeleton class="h-4 rounded-4" :class="width" />
+              <FrappeSkeleton class="ms-auto h-7 w-60 rounded-4" />
+            </div>
+          </div>
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
 
@@ -91,6 +105,7 @@ import {
   SettingsNavItem as FrappeSettingsNavItem,
   SettingsPanel as FrappeSettingsPanel,
   SettingsSidebar as FrappeSettingsSidebar,
+  Skeleton as FrappeSkeleton,
 } from 'frappe-ui';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
@@ -113,6 +128,7 @@ export default defineComponent({
     FrappeSettingsNavItem,
     FrappeSettingsPanel,
     FrappeSettingsSidebar,
+    FrappeSkeleton,
     QuickEditForm,
     SettingsField,
   },

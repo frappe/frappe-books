@@ -107,7 +107,7 @@
         v-if="changedFilterCount"
         class="mt-2"
         size="lg"
-        :label="t`Reset filters`"
+        :label="t`Clear filters`"
         @click="resetSearchFilters"
       />
     </EmptyState>

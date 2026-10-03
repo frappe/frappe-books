@@ -70,7 +70,6 @@
       <FrappeButton
         v-if="isFiltered"
         class="mt-2"
-        variant="solid"
         size="lg"
         :label="t`Clear filters`"
         @click="$emit('clearFilters')"

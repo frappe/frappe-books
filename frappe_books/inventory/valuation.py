@@ -2,11 +2,12 @@
 
 import json
 from collections import defaultdict, deque
+from decimal import ROUND_HALF_UP
 
 import frappe
 from frappe.query_builder import Order
 
-from frappe_books.accounting.money import as_decimal, plain_number, rounded
+from frappe_books.accounting.money import as_decimal, currency_unit, plain_number, rounded
 
 DOCTYPE = "Books Stock Ledger Entry"
 KEY_FIELDS = ["item", "location", "batch"]
@@ -16,7 +17,7 @@ STATE_FIELDS = ["name", "date", "quantity", "rate", "balance_quantity", "balance
 def insert_entry(values):
 	"""Insert a stock ledger entry with its FIFO state and restate later entries; return it and the restated transactions."""
 	values = frappe._dict(values)
-	state = next_state(_entry_before(values, values.date), values.quantity, values.rate)
+	state = next_state(_entry_before(values, values.date), values.quantity, values.rate, currency_unit())
 	entry = frappe.get_doc({"doctype": DOCTYPE, **values, **state}).insert(ignore_permissions=True)
 	return entry, restate_after(entry, entry)
 
@@ -43,8 +44,9 @@ def restate_after(anchor, previous):
 	Return the (reference_type, reference_name) of the transactions whose stock value changed.
 	"""
 	restated = set()
+	unit = currency_unit()
 	for entry in _entries_after(anchor):
-		state = next_state(previous, entry.quantity, entry.rate)
+		state = next_state(previous, entry.quantity, entry.rate, unit)
 		if state["value_change"] != as_decimal(entry.value_change):
 			restated.add((entry.reference_type, entry.reference_name))
 		frappe.db.set_value(DOCTYPE, entry.name, state, update_modified=False)
@@ -58,19 +60,21 @@ def revalue_entries(entries, rates):
 	Return the (reference_type, reference_name) of the transactions whose stock value changed.
 	"""
 	restated = set()
+	unit = currency_unit()
 	for entry in entries:
 		rate = rates[entry.name]
 		# An incoming entry is worth its quantity at its rate.
 		if rounded(as_decimal(entry.quantity) * rate) == as_decimal(entry.value_change):
 			continue
-		state = next_state(_entry_before(entry, entry.date, entry.name), entry.quantity, rate)
+		state = next_state(_entry_before(entry, entry.date, entry.name), entry.quantity, rate, unit)
 		frappe.db.set_value(DOCTYPE, entry.name, {"rate": rate, **state}, update_modified=False)
 		restated.add((entry.reference_type, entry.reference_name))
 		restated |= restate_after(entry, frappe._dict(state))
 	return restated
 
 
-def next_state(previous, quantity, rate):
+def next_state(previous, quantity, rate, unit):
+	"""Return the FIFO state after an entry of `quantity` at `rate`, with its value rounded to `unit`."""
 	quantity = as_decimal(quantity)
 	opening_value = as_decimal(previous.balance_value) if previous else as_decimal(0)
 	balance_quantity = (as_decimal(previous.balance_quantity) if previous else as_decimal(0)) + quantity
@@ -78,7 +82,7 @@ def next_state(previous, quantity, rate):
 		[as_decimal(layer_quantity), as_decimal(layer_rate)]
 		for layer_quantity, layer_rate in json.loads(previous.stock_queue if previous else "[]")
 	)
-	value_change = rounded(_consume_layers(layers, quantity, as_decimal(rate)))
+	value_change = _consume_layers(layers, quantity, as_decimal(rate)).quantize(unit, rounding=ROUND_HALF_UP)
 	if quantity < 0 and balance_quantity == 0:
 		# Clear the cents left behind by rounding each outgoing entry.
 		value_change = -opening_value

@@ -220,6 +220,18 @@ test('the item badge and the cart total count what the cart shows', () => {
   assert.equal(posCart.getTotalQuantity(returned.items), 2);
 });
 
+test('a cart row needs a serial number for each unit, blank lines aside', () => {
+  const [row] = makeSale([
+    { item: flour, quantity: 2, serial_number: 'S1\n' },
+  ]).items;
+  assert.throws(
+    () => posCart.validateSerialNumberCount(row),
+    /^ValidationError: Need 2 Serial Numbers for Item Demo - Flour. You have provided 1$/
+  );
+  row.serial_number = 'S1\nS2';
+  posCart.validateSerialNumberCount(row);
+});
+
 test('a cart discount edit picks amount or percent discounts', async () => {
   const [row] = makeSale([{ item: tea, quantity: 1 }]).items;
   await posCart.setPOSRowValue(row, 'item_discount_amount', fyo.pesa(5));

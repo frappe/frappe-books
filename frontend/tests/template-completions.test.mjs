@@ -15,8 +15,10 @@ const completions = getCompletionsFromHints({
 function pick(template, label) {
   const pos = template.indexOf('|');
   const text = template.replace('|', '');
-  const state = EditorState.create({ doc: text, extensions: [vue()] });
-  ensureSyntaxTree(state, text.length, 5000);
+  const created = EditorState.create({ doc: text, extensions: [vue()] });
+  ensureSyntaxTree(created, text.length, 5000);
+  // syntaxTree() keeps the first 20ms parse until the next update.
+  const state = created.update({}).state;
   const result = completions(new CompletionContext(state, pos, false));
   assert.ok(result.options.some((option) => option.label === label));
   return text.slice(0, result.from) + label + text.slice(pos);

@@ -349,18 +349,17 @@ test('invoice selection and bank payment fields work in a small dialog', async (
   });
 });
 
-test('payment methods are tiles and buttons match the form text scale', async ({
+test('payment takes a large amount field, tiles and same-size actions', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1352, height: 848 });
   await showModal(page, 'Payment');
   const dialog = page.getByRole('dialog', { name: 'Payment' });
   const amount = dialog.getByRole('spinbutton', { name: 'Amount paid' });
-  const inputFont = await amount.evaluate((el) => getComputedStyle(el).fontSize);
-  const inputHeight = await amount.evaluate((el) => getComputedStyle(el).height);
+  await expect(amount).toHaveCSS('height', '40px');
   for (const button of await dialog.locator('footer button').all()) {
-    await expect(button).toHaveCSS('font-size', inputFont);
-    await expect(button).toHaveCSS('height', inputHeight);
+    await expect(button).toHaveCSS('font-size', '14px');
+    await expect(button).toHaveCSS('height', '32px');
   }
   const methods = dialog.getByRole('radio');
   await expect(methods).toHaveCount(5);

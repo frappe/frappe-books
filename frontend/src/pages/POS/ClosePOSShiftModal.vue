@@ -1,7 +1,7 @@
 <template>
   <Modal
     :open-modal="openModal && isValuesSeeded"
-    :title="t`Close POS Shift`"
+    :title="t`Close POS shift`"
     size="4xl"
     :dismissible="false"
     @closemodal="$emit('toggleModal', 'ShiftClose', false)"
@@ -66,34 +66,72 @@
         </ul>
       </section>
     </template>
-    <template v-else>
-    <h2 class="mb-3 text-lg-semibold text-ink-gray-8">
-      {{ t`Closing Cash` }}
-    </h2>
-    <Table
-      v-if="isValuesSeeded"
-      class="text-base"
-      :df="getField('closing_cash')"
-      :show-header="true"
-      :border="true"
-      :value="posClosingShiftDoc?.closing_cash ?? []"
-      :read-only="false"
-    />
+    <div
+      v-else-if="posClosingShiftDoc"
+      class="grid grid-cols-[minmax(0,18.5rem)_minmax(0,1fr)] gap-6"
+    >
+      <CashCountTable :heading="t`Count the drawer`" :rows="closingCash" />
 
-    <h2 class="mt-6 mb-3 text-lg-semibold text-ink-gray-8">
-      {{ t`Closing Amounts` }}
-    </h2>
-    <Table
-      v-if="isValuesSeeded"
-      class="text-base"
-      :df="getField('closing_amounts')"
-      :show-header="true"
-      :border="true"
-      :value="posClosingShiftDoc?.closing_amounts"
-      :read-only="false"
-      :allow-add-remove-rows="false"
-    />
-    </template>
+      <section class="flex min-w-0 flex-col gap-2">
+        <h3 class="text-base-medium text-ink-gray-9">
+          {{ t`Closing amounts` }}
+        </h3>
+        <div
+          class="flex flex-col rounded-5 border border-outline-gray-1 text-base tabular-nums"
+        >
+          <div
+            class="grid h-8 items-center gap-2 rounded-t-5 bg-surface-gray-1 px-3 text-sm text-ink-gray-5"
+            :class="amountColumns"
+          >
+            <span>{{ t`Method` }}</span>
+            <span class="text-end">{{ t`Opening` }}</span>
+            <span class="text-end">{{ t`Expected` }}</span>
+            <span class="text-end">{{ t`Closing` }}</span>
+            <span class="text-end">{{ t`Difference` }}</span>
+          </div>
+          <div
+            v-for="row in closingAmounts"
+            :key="row.idx"
+            class="grid h-10 items-center gap-2 border-t border-outline-gray-1 px-3"
+            :class="amountColumns"
+          >
+            <span class="truncate text-ink-gray-8">{{ row.payment_method }}</span>
+            <span class="truncate text-end text-ink-gray-6" dir="ltr">
+              {{ format(row.opening_amount) }}
+            </span>
+            <span class="truncate text-end text-ink-gray-8" dir="ltr">
+              {{ format(row.expected_amount) }}
+            </span>
+            <span
+              v-if="cashClosingAmounts.includes(row)"
+              class="truncate text-end text-base-medium text-ink-gray-9"
+              dir="ltr"
+            >
+              {{ format(row.closing_amount) }}
+            </span>
+            <FormControl
+              v-else
+              size="small"
+              :border="true"
+              :df="{
+                fieldname: 'closing_amount',
+                fieldtype: 'Currency',
+                label: t`Counted ${row.payment_method ?? ''}`,
+              }"
+              :value="row.closing_amount"
+              @change="(amount: Money) => setClosingAmount(row, amount)"
+            />
+            <span
+              class="truncate text-end text-base-medium"
+              :class="getDifferenceClass(row.difference_amount)"
+              dir="ltr"
+            >
+              {{ format(row.difference_amount) }}
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <template #actions="{ size }">
       <FrappeButton
@@ -106,7 +144,7 @@
         class="min-w-24"
         variant="solid"
         @click="handleSubmit"
-        >{{ t`Close Shift` }}</FrappeButton>
+        >{{ t`Close shift` }}</FrappeButton>
     </template>
   </Modal>
 </template>
@@ -114,19 +152,17 @@
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
-import Table from 'src/components/Controls/Table.vue';
+import CashCountTable from 'src/components/POS/CashCountTable.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { Field } from 'schemas/types';
 import { CashCount } from 'models/inventory/Point of Sale/POSOpeningShift';
 import {
   ClosingAmount,
   POSClosingShift,
 } from 'models/inventory/Point of Sale/POSClosingShift';
-import { getField } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { computed } from 'vue';
 import { defineComponent } from 'vue';
@@ -142,7 +178,13 @@ import { ForbiddenError } from 'fyo/utils/errors';
 
 export default defineComponent({
   name: 'ClosePOSShiftModal',
-  components: { FormControl, FrappeButton, MobileCashCount, Modal, Table },
+  components: {
+    CashCountTable,
+    FormControl,
+    FrappeButton,
+    MobileCashCount,
+    Modal,
+  },
   provide() {
     return {
       doc: computed(() => this.posClosingShiftDoc),
@@ -156,7 +198,10 @@ export default defineComponent({
   },
   emits: ['toggleModal'],
   setup() {
-    return { isMobile };
+    return {
+      isMobile,
+      amountColumns: 'grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_6.5rem_5.5rem]',
+    };
   },
   data() {
     return {
@@ -221,9 +266,6 @@ export default defineComponent({
       }
 
       this.isValuesSeeded = true;
-    },
-    getField(fieldname: string): Field {
-      return getField(ModelNameEnum.POSClosingShift, fieldname)!;
     },
     /** Colours a difference by its sign; an exact count stays gray. */
     getDifferenceClass(amount?: Money): string {

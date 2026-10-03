@@ -41,7 +41,7 @@
             </div>
           </FrappeListCell>
           <FrappeListCell class="justify-end">
-            <MobileStepper
+            <NumberStepper
               v-if="!row.is_free_item"
               class="relative w-32"
               removable
@@ -112,7 +112,7 @@ import {
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
-import MobileStepper from 'src/components/POS/MobileStepper.vue';
+import NumberStepper from 'src/components/POS/NumberStepper.vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {

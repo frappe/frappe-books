@@ -13,7 +13,7 @@
       class="grid grid-cols-[minmax(0,1fr)_8.5rem_6.5rem] items-center gap-2 text-md tabular-nums text-ink-gray-8"
     >
       <span class="truncate" dir="ltr">{{ format(row.denomination) }}</span>
-      <MobileStepper
+      <NumberStepper
         :value="row.count ?? 0"
         :df="{
           fieldname: 'count',
@@ -36,7 +36,7 @@
 import { t } from 'fyo';
 import { CashCount } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { Money } from 'pesa';
-import MobileStepper from 'src/components/POS/MobileStepper.vue';
+import NumberStepper from 'src/components/POS/NumberStepper.vue';
 import { fyo } from 'src/initFyo';
 
 /** Cash counted by denomination, with a stepper per note. */

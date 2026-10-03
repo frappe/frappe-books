@@ -1141,7 +1141,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
       // Frappe leaves empty values out of the documents it sends.
       const value = previewed[fieldname] ?? toDocValue(null, field, this.fyo);
-      if (!isSameValue(value as DocValue, this[fieldname] as DocValue)) {
+      if (!areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)) {
         this._rememberFilled(fieldname);
         this[fieldname] = value;
       }
@@ -1178,15 +1178,6 @@ export interface FrappeValueOptions {
   keepRowNames?: boolean;
   /** Leaves out the values a preview filled, so the server fills them again. */
   clearServerFilled?: boolean;
-}
-
-/** Whether a previewed value is the one the document has; dates by their time. */
-function isSameValue(previewed: DocValue, current: DocValue): boolean {
-  if (previewed instanceof Date && current instanceof Date) {
-    return previewed.getTime() === current.getTime();
-  }
-
-  return areDocValuesEqual(previewed, current);
 }
 
 async function showPreviewError(error: unknown) {

@@ -20,7 +20,6 @@ import { toFrappeValue } from 'src/frappe/values';
 import { DateTime } from 'luxon';
 
 // POS.vue imports it from here.
-export { getMappedDoc } from 'src/frappe/documents';
 
 /** What a mapped document action builds, and how it opens the new document. */
 export interface MappedDocAction extends Omit<Action, 'action'> {

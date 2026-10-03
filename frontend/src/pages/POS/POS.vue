@@ -253,8 +253,7 @@ import {
 } from 'src/utils/posSetup';
 import { usePOSShift } from 'src/utils/posShift';
 import { getAllDocuments } from 'src/frappe/api';
-import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
-import { getMappedDoc } from 'models/helpers';
+import { getFrappeDoc, getMappedDoc, newFrappeDoc } from 'src/frappe/documents';
 import { getItemQtyMap } from 'models/inventory/posStock';
 import {
   POSItem,

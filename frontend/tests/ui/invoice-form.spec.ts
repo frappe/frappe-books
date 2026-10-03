@@ -50,11 +50,11 @@ test('a return takes back what its invoice sold', async ({ page }) => {
   );
 
   const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
-  await expect(qty).toHaveValue('-2.00');
+  await expect(qty).toHaveValue('-2.000');
   // Returns take quantities back, however they are typed.
   await qty.fill('1');
   await page.keyboard.press('Tab');
-  await expect(qty).toHaveValue('-1.00');
+  await expect(qty).toHaveValue('-1.000');
 });
 
 test('a submitted quote makes an invoice with its rows', async ({ page }) => {
@@ -75,7 +75,7 @@ test('a submitted quote makes an invoice with its rows', async ({ page }) => {
     quote
   );
   const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
-  await expect(qty).toHaveValue('4.00');
+  await expect(qty).toHaveValue('4.000');
 });
 
 test('the barcode field marks itself with a leading icon, not a trailing control', async ({

@@ -122,3 +122,28 @@ test('a failed attachment upload is shown', async ({
   await expect(page.getByRole('dialog')).toContainText('File is too large');
   expect(uploads).toBe(1);
 });
+
+test('an attachment takes any file the server accepts, as Frappe desk does', async ({
+  page,
+}) => {
+  await page.route('**/api/method/upload_file', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: { file_url: '/files/stock.xlsx', file_name: 'stock.xlsx' },
+      }),
+    })
+  );
+  const input = page.locator('input[type="file"]');
+  await expect(input).not.toHaveAttribute('accept', /./);
+
+  await input.setInputFiles({
+    name: 'stock.xlsx',
+    mimeType:
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from('PK'),
+  });
+  await expect
+    .poll(() => page.evaluate(() => (window as any).issueFixture.state.attachment))
+    .toBe('/files/stock.xlsx');
+});

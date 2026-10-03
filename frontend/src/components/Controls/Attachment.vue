@@ -27,7 +27,6 @@
     </div>
     <FrappeFileUploader
       v-else-if="!isReadOnly"
-      file-types="image/*,.pdf"
       @success="onUploaded"
       @failure="onUploadFailure"
     >
@@ -61,7 +60,6 @@
         <div class="ms-2 flex shrink-0 gap-1">
           <FrappeFileUploader
             v-if="!value && !isReadOnly"
-            file-types="image/*,.pdf"
             @success="onUploaded"
             @failure="onUploadFailure"
           >

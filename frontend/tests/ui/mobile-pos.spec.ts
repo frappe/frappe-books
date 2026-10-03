@@ -52,10 +52,10 @@ test('the cart stepper turns minus into remove at one', async ({ page }) => {
   const quantity = cart.getByRole('textbox', {
     name: 'Quantity of Organic Assam Tea',
   });
-  await expect(quantity).toHaveValue('2.00');
+  await expect(quantity).toHaveValue('2.000');
   await expect(cart.getByRole('button', { name: 'Remove' })).toBeHidden();
   await cart.getByRole('button', { name: 'Decrease' }).click();
-  await expect(quantity).toHaveValue('1.00');
+  await expect(quantity).toHaveValue('1.000');
   await page.screenshot({ path: test.info().outputPath('cart.png') });
 
   await cart.getByRole('button', { name: 'Organic Assam Tea' }).click();

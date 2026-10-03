@@ -109,3 +109,14 @@ test('top expenses shows the full total spending under its title', async ({
     page.locator('[data-slot="chart-container"]', { hasText: 'Top expenses' })
   ).toContainText('Total spending: ₹ 12,34,567.89');
 });
+
+test('invoice cards name their totals in sentence case', async ({ page }) => {
+  for (const title of [
+    'Paid sales',
+    'Unpaid sales',
+    'Paid purchases',
+    'Unpaid purchases',
+  ]) {
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  }
+});

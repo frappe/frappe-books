@@ -144,7 +144,8 @@ test('Float fields read typed numbers as Desk does, and show them in the number 
 
   assert.equal(control.inputType, 'text');
   assert.equal(control.inputMode, 'decimal');
-  assert.equal(control.inputValue, '1,23,456.50');
+  // Desk shows a Float without a system float precision to 3 decimals.
+  assert.equal(control.inputValue, '1,23,456.500');
   assert.equal(getControl(Float, null, 'Float').inputValue, '');
   assert.equal(control.parse('1,234.5'), 1234.5);
   assert.equal(control.parse('2*1.5'), 3);
@@ -169,4 +170,43 @@ test('the exchange rate widget reads typed rates as Desk reads numbers', () => {
   widget.rightChange({ target: getInput('abc') });
 
   assert.deepEqual(emitted, [1000]);
+});
+
+/** Frappe's system defaults, which the desk session boot gives /books too. */
+const SYSDEFAULTS = {
+  float_precision: '3',
+  currency_precision: '',
+  number_format: '#,##,###.##',
+  rounding_method: "Banker's Rounding",
+};
+
+function setSysDefaults(t, sysdefaults) {
+  globalThis.window = { frappe: { boot: { sysdefaults } } };
+  t.after(() => delete globalThis.window);
+}
+
+test('a typed Float is rounded to the system float precision and shown with it, as Desk does', (t) => {
+  setLocale('en-IN');
+  setSysDefaults(t, SYSDEFAULTS);
+  const control = getControl(Float, 4, 'Float');
+
+  assert.equal(control.inputValue, '4.000');
+  assert.equal(control.parse('0.0833'), 0.083);
+  // Banker's rounding takes a tie to the even digit.
+  assert.equal(control.parse('0.0125'), 0.012);
+  assert.equal(control.parse('abc'), null);
+});
+
+test('a typed amount is rounded to the currency precision, else to that of the number format', (t) => {
+  setLocale('en-IN');
+  setSysDefaults(t, SYSDEFAULTS);
+  const control = getControl(Currency, fyo.pesa(6500));
+
+  assert.equal(control.inputValue, '6,500.00');
+  assert.equal(control.parse('10.006').float, 10.01);
+  assert.equal(control.parse('10.005').float, 10);
+
+  setSysDefaults(t, { ...SYSDEFAULTS, currency_precision: '3' });
+  assert.equal(control.parse('10.0056').float, 10.006);
+  assert.equal(control.inputValue, '6,500.000');
 });

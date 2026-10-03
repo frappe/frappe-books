@@ -18,6 +18,9 @@ type BarcodeSettings = Pick<
 
 type WeightBarcode = { itemCode: string; weight?: number };
 
+/** A scanned item and the quantity to add: one, or a scale barcode's weight in the stock unit. */
+type ScannedItem<T> = { item: T; quantity: number; isStockQuantity: boolean };
+
 type POSItemSearchMatch = {
   distance: number;
   isMatch: boolean;
@@ -25,14 +28,11 @@ type POSItemSearchMatch = {
 
 const SCANNED_FIELDS = ['name', 'item_code', 'barcode'];
 
-/**
- * The item a scanned or typed code names among all items, whatever a list
- * shows, with the quantity a scale barcode carries.
- */
+/** The item a scanned or typed code names among all items, whatever a list shows. */
 export async function getScannedItem(
   code: string,
   itemQtyMap: ItemQtyMap = {}
-): Promise<{ item: POSItem; quantity: number } | undefined> {
+): Promise<ScannedItem<POSItem> | undefined> {
   const scannedCode = code.trim();
   if (!scannedCode) {
     return;
@@ -100,12 +100,12 @@ export function findExactPOSItem<T extends POSItemSearchRecord>(
   );
 }
 
-/** The item a scanned or typed code names, with the quantity a scale barcode carries. */
+/** The item a scanned or typed code names. */
 export function findScannedPOSItem<T extends ScannableItem>(
   items: T[],
   code: string,
   settings?: BarcodeSettings
-): { item: T; quantity: number } | undefined {
+): ScannedItem<T> | undefined {
   const weighed = parseWeightBarcode(code, settings);
   const item =
     findByBarcode(items, code, weighed) ?? findExactPOSItem(items, code);
@@ -115,11 +115,12 @@ export function findScannedPOSItem<T extends ScannableItem>(
 
   const weight = weighed?.weight;
   if (weight === undefined) {
-    return { item, quantity: 1 };
+    return { item, quantity: 1, isStockQuantity: false };
   }
 
   const isKilogram = item.unit?.toLowerCase() === 'kg';
-  return { item, quantity: isKilogram ? weight / 1000 : weight };
+  const quantity = isKilogram ? weight / 1000 : weight;
+  return { item, quantity, isStockQuantity: true };
 }
 
 function findByBarcode<T extends ScannableItem>(

@@ -245,6 +245,7 @@ import {
   addToCart,
   getTotalQuantity,
   setCartQuantity,
+  type CartAddition,
 } from 'src/utils/posCart';
 import {
   getItemVisibility,
@@ -344,7 +345,11 @@ export default defineComponent({
       selectedRow: null as SalesInvoiceItem | null,
       keyboardField: '',
       selectedItemForBatch: '' as string,
-      pendingBatchItem: null as { item: POSItem; quantity: number } | null,
+      pendingBatchItem: null as {
+        item: POSItem;
+        quantity: number;
+        addition: CartAddition;
+      } | null,
       expandedRow: undefined as string | undefined,
     };
   },
@@ -554,7 +559,8 @@ export default defineComponent({
       const scanned =
         addItem && (await getScannedItem(this.itemSearchTerm, this.itemQtyMap));
       if (scanned) {
-        await this.addItem(scanned.item, scanned.quantity);
+        const { item, quantity, isStockQuantity } = scanned;
+        await this.addItem(item, quantity, { isStockQuantity });
         this.itemSearchTerm = '';
       }
     },
@@ -736,7 +742,11 @@ export default defineComponent({
         );
       }
     },
-    async addItem(item: POSItem | undefined, quantity = 1) {
+    async addItem(
+      item: POSItem | undefined,
+      quantity = 1,
+      addition: CartAddition = {}
+    ) {
       try {
         this.validateInvoice();
         if (!item) {
@@ -744,11 +754,11 @@ export default defineComponent({
         }
 
         if (item.hasBatch) {
-          this.selectBatch(item, quantity);
+          this.selectBatch(item, quantity, addition);
           return;
         }
 
-        await addToCart(this.sinvDoc as SalesInvoice, item, quantity);
+        await addToCart(this.sinvDoc as SalesInvoice, item, quantity, addition);
         await this.previewInvoice();
       } catch (error) {
         showToast({
@@ -758,9 +768,9 @@ export default defineComponent({
         });
       }
     },
-    selectBatch(item: POSItem, quantity: number) {
+    selectBatch(item: POSItem, quantity: number, addition: CartAddition) {
       this.selectedItemForBatch = item.name;
-      this.pendingBatchItem = { item, quantity };
+      this.pendingBatchItem = { item, quantity, addition };
       this.toggleModal('BatchSelection', true);
     },
     async handleBatchSelected(batchName: string) {
@@ -768,9 +778,10 @@ export default defineComponent({
         return;
       }
 
-      const { item, quantity } = this.pendingBatchItem as {
+      const { item, quantity, addition } = this.pendingBatchItem as {
         item: POSItem;
         quantity: number;
+        addition: CartAddition;
       };
       this.pendingBatchItem = null;
 
@@ -779,7 +790,7 @@ export default defineComponent({
           this.sinvDoc as SalesInvoice,
           item as POSItem,
           quantity ?? 1,
-          batchName
+          { ...addition, batch: batchName }
         );
         await this.previewInvoice();
       } catch (error) {

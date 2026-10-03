@@ -103,15 +103,15 @@ test('a batch add merges into its row and restores it when the POS location cann
     posCart.addToCart(sale, { name: coffee }, 1),
     /select a batch/
   );
-  await posCart.addToCart(sale, { name: coffee }, 2, batch);
-  await posCart.addToCart(sale, { name: coffee }, 1, batch);
+  await posCart.addToCart(sale, { name: coffee }, 2, { batch });
+  await posCart.addToCart(sale, { name: coffee }, 1, { batch });
   assert.deepEqual(
     sale.items.map((row) => [row.batch, row.quantity]),
     [[batch, 3]]
   );
 
   await assert.rejects(
-    posCart.addToCart(sale, { name: coffee }, 2, batch),
+    posCart.addToCart(sale, { name: coffee }, 2, { batch }),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
   assert.equal(sale.items[0].quantity, 3);
@@ -119,7 +119,7 @@ test('a batch add merges into its row and restores it when the POS location cann
   stock = {};
   const empty = makeSale();
   await assert.rejects(
-    posCart.addToCart(empty, { name: coffee }, 1, batch),
+    posCart.addToCart(empty, { name: coffee }, 1, { batch }),
     /Available: 0; required: 1/
   );
   assert.equal(empty.items.length, 0);

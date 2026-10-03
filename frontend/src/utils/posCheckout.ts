@@ -15,6 +15,7 @@ import {
   reactive,
   shallowReactive,
   shallowRef,
+  watch,
   type InjectionKey,
 } from 'vue';
 import {
@@ -26,7 +27,7 @@ import {
 const PAY_POS_INVOICE =
   'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice.pay_pos_invoice';
 
-/** What the cashier takes for a POS sale, by Books Sales Invoice Payment fieldnames. Its amount is set with `setAmount`. */
+/** What the cashier takes for a POS sale, by Books Sales Invoice Payment fieldnames. The checkout's actions set it. */
 export type Tender = {
   payment_method?: string;
   amount: Money;
@@ -44,7 +45,8 @@ export type POSCheckoutResult = {
 };
 
 export interface POSCheckout {
-  readonly tender: Tender;
+  /** Changed only through the actions below. */
+  readonly tender: Readonly<Tender>;
   readonly methods: PaymentMethodOption[];
   /** What the chosen method needs with its payment. */
   readonly requirements: PaymentMethodRequirements;
@@ -55,6 +57,8 @@ export interface POSCheckout {
   readonly canPay: boolean;
   selectMethod(name: string): void;
   setAmount(amount: Money | null): void;
+  setReference(reference: string): void;
+  setClearanceDate(date: Date): void;
   start(): Promise<void>;
   reset(): void;
   checkout(options: { pay: boolean }): Promise<POSCheckoutResult>;
@@ -79,6 +83,12 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
     () => !getSale().isReturn && requirements.value.isCash
   );
   const reset = () => Object.assign(tender, getEmptyTender());
+  // An amount still at what was due follows it, as a coupon or points change it.
+  watch(due, (next, previous) => {
+    if (tender.amount.eq(previous)) {
+      tender.amount = next;
+    }
+  });
 
   const posCheckout = reactive({
     tender,
@@ -100,6 +110,12 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
     /** Text that is no number pays nothing, which `canPay` refuses. */
     setAmount(amount: Money | null) {
       tender.amount = fyo.pesa(amount?.toString() ?? 0);
+    },
+    setReference(reference: string) {
+      tender.reference_id = reference;
+    },
+    setClearanceDate(date: Date) {
+      tender.clearance_date = date;
     },
     async start() {
       reset();

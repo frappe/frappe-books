@@ -77,7 +77,7 @@
           :class="
             posCheckout.requirements.requiresClearanceDate ? '' : 'col-span-2'
           "
-          @change="(value: string) => (posCheckout.tender.reference_id = value)"
+          @change="posCheckout.setReference"
         />
 
         <DateControl
@@ -88,11 +88,14 @@
           :required="true"
           :read-only="false"
           :value="posCheckout.tender.clearance_date"
-          @change="(value: Date) => (posCheckout.tender.clearance_date = value)"
+          @change="posCheckout.setClearanceDate"
         />
       </div>
 
-      <PaymentSummary :sinv-doc="sinvDoc" />
+      <PaymentSummary
+        :sinv-doc="sinvDoc"
+        :settlement="posCheckout.settlement"
+      />
     </div>
 
     <template #actions>

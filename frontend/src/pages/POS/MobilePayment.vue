@@ -70,7 +70,7 @@
         :required="true"
         :read-only="false"
         :value="posCheckout.tender.reference_id"
-        @change="(value: string) => (posCheckout.tender.reference_id = value)"
+        @change="posCheckout.setReference"
       />
       <DateControl
         v-if="posCheckout.requirements.requiresClearanceDate"
@@ -80,7 +80,7 @@
         :required="true"
         :read-only="false"
         :value="posCheckout.tender.clearance_date"
-        @change="(value: Date) => (posCheckout.tender.clearance_date = value)"
+        @change="posCheckout.setClearanceDate"
       />
 
       <Currency

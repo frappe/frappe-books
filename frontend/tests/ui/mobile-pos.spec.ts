@@ -130,7 +130,7 @@ test('payment methods wrap in a two-column grid', async ({ page }) => {
   await page.getByRole('radio', { name: 'Cash', exact: true }).click();
   await expect(methods.first()).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('button', { name: '2,300.00' }).click();
-  await expect(page.getByRole('status')).toContainText('Change due');
+  await expect(page.getByRole('status')).toContainText('Change to return');
   await page.screenshot({ path: test.info().outputPath('payment.png') });
 
   await page.getByRole('radio', { name: 'Bank Transfer' }).click();
@@ -146,13 +146,13 @@ test('payment methods wrap in a two-column grid', async ({ page }) => {
 test('the menu opens each quick action as a sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const [row, title] of [
-    ['Saved and Submitted Invoices', 'Saved and Submitted Invoices'],
-    ['Return Sales Invoice', 'Return Sales Invoice'],
-    ['Loyalty Program', 'Redeem Loyalty Points'],
-    ['Coupon Code', 'Apply Coupon Code'],
-    ['Price List', 'Apply Price List'],
-    ['Item Enquiry', 'Item Enquiry'],
-    ['Close POS Shift', 'Close POS Shift'],
+    ['Saved and Submitted Invoices', 'Invoices'],
+    ['Return Sales Invoice', 'Return an invoice'],
+    ['Loyalty Program', 'Redeem loyalty points'],
+    ['Coupon Code', 'Coupon code'],
+    ['Price List', 'Price list'],
+    ['Item Enquiry', 'Item enquiry'],
+    ['Close POS Shift', 'Close POS shift'],
   ]) {
     await page.getByRole('button', { name: 'POS actions' }).click();
     await page.getByRole('menuitem', { name: row }).click();
@@ -162,14 +162,14 @@ test('the menu opens each quick action as a sheet', async ({ page }) => {
 });
 
 const sheets = [
-  ['SavedInvoice', 'Saved and Submitted Invoices', 'Open Invoice'],
-  ['ReturnSalesInvoice', 'Return Sales Invoice', 'Create Return'],
-  ['LoyaltyProgram', 'Redeem Loyalty Points', 'Save'],
-  ['CouponCode', 'Apply Coupon Code', 'Save'],
-  ['PriceList', 'Apply Price List', 'Save'],
-  ['ItemEnquiry', 'Item Enquiry', 'Submit'],
-  ['BatchSelection', 'Select Batch', 'Select'],
-  ['ShiftClose', 'Close POS Shift', 'Close Shift'],
+  ['SavedInvoice', 'Invoices', 'Open invoice'],
+  ['ReturnSalesInvoice', 'Return an invoice', 'Create return'],
+  ['LoyaltyProgram', 'Redeem loyalty points', 'Redeem'],
+  ['CouponCode', 'Coupon code', 'Done'],
+  ['PriceList', 'Price list', 'Apply'],
+  ['ItemEnquiry', 'Item enquiry', 'Submit'],
+  ['BatchSelection', 'Select batch', 'Select'],
+  ['ShiftClose', 'Close POS shift', 'Close shift'],
 ];
 
 test('an invoice is picked by tapping its row, which shows a check', async ({
@@ -178,8 +178,8 @@ test('an invoice is picked by tapping its row, which shows a check', async ({
   await page.evaluate(() =>
     (window as any).posFixture.showModal('ReturnSalesInvoice')
   );
-  const sheet = page.getByRole('dialog', { name: 'Return Sales Invoice' });
-  const create = sheet.getByRole('button', { name: 'Create Return' });
+  const sheet = page.getByRole('dialog', { name: 'Return an invoice' });
+  const create = sheet.getByRole('button', { name: 'Create return' });
   await expect(create).toBeDisabled();
 
   const row = sheet
@@ -199,9 +199,9 @@ test('negative loyalty points show a field error, not a toast', async ({
   await page.evaluate(() =>
     (window as any).posFixture.showModal('LoyaltyProgram')
   );
-  const sheet = page.getByRole('dialog', { name: 'Redeem Loyalty Points' });
+  const sheet = page.getByRole('dialog', { name: 'Redeem loyalty points' });
   await sheet.locator('input').first().fill('-5');
-  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await sheet.getByRole('button', { name: 'Redeem', exact: true }).click();
 
   await expect(sheet.getByText('Points must be greater than 0')).toBeVisible();
   await expect(sheet).toBeVisible();
@@ -228,17 +228,17 @@ test('every POS dialog opens as a bottom sheet', async ({ page }) => {
   }
 
   await page.evaluate(() => (window as any).posFixture.closeShift());
-  const opening = page.getByRole('dialog', { name: 'Open POS Shift' });
+  const opening = page.getByRole('dialog', { name: 'Open POS shift' });
   await expectSheet(opening);
   await expect(
-    opening.getByRole('button', { name: 'Open Shift', exact: true })
+    opening.getByRole('button', { name: 'Open shift', exact: true })
   ).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('ShiftOpen.png') });
 });
 
 test('shift sheets count cash with steppers', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
-  const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
+  const sheet = page.getByRole('dialog', { name: 'Close POS shift' });
   const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
   const cash = sheet.getByRole('listitem').filter({ hasText: /^\s*Cash/ });
   const before = Number(await count.inputValue());
@@ -252,7 +252,7 @@ test('shift sheets count cash with steppers', async ({ page }) => {
 test('the counted drawer is shared by the cash methods', async ({ page }) => {
   // Cash expects 1,000.00 and Store Cash 500.00; the opening 1,760.00 is counted.
   await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
-  const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
+  const sheet = page.getByRole('dialog', { name: 'Close POS shift' });
   await expect(sheet.getByText('Counted Credit Card')).toBeVisible();
   await expect(sheet.getByText('Counted Cash')).toHaveCount(0);
   await expect(sheet.getByText('Counted Store Cash')).toHaveCount(0);
@@ -270,7 +270,7 @@ test('the counted drawer is shared by the cash methods', async ({ page }) => {
 test('large shift amounts fit a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await page.evaluate(() => (window as any).posFixture.showModal('ShiftClose'));
-  const sheet = page.getByRole('dialog', { name: 'Close POS Shift' });
+  const sheet = page.getByRole('dialog', { name: 'Close POS shift' });
   const count = sheet.getByRole('spinbutton', { name: /Count of .*500\.00/ });
   await count.fill('9999999');
   await count.press('Tab');

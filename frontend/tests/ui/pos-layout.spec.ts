@@ -6,7 +6,7 @@ const url = serveFixture('pos');
 test.beforeEach(async ({ page }) => {
   await page.goto(url());
   await page.waitForFunction(() => (window as any).posFixture);
-  await expect(page.getByText('No items in this sale')).toBeVisible();
+  await expect(page.getByText('No items yet')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 });
 
@@ -14,15 +14,15 @@ test.beforeEach(async ({ page }) => {
 const narrowest = 768;
 
 const dialogs = [
-  ['PriceList', 'Apply Price List'],
-  ['CouponCode', 'Apply Coupon Code'],
-  ['ItemEnquiry', 'Item Enquiry'],
-  ['LoyaltyProgram', 'Redeem Loyalty Points'],
-  ['BatchSelection', 'Select Batch'],
-  ['SavedInvoice', 'Saved and Submitted Invoices'],
-  ['ReturnSalesInvoice', 'Return Sales Invoice'],
-  ['Payment', 'Complete payment'],
-  ['ShiftClose', 'Close POS Shift'],
+  ['PriceList', 'Price list'],
+  ['CouponCode', 'Coupon code'],
+  ['ItemEnquiry', 'Item enquiry'],
+  ['LoyaltyProgram', 'Redeem loyalty points'],
+  ['BatchSelection', 'Select batch'],
+  ['SavedInvoice', 'Invoices'],
+  ['ReturnSalesInvoice', 'Return an invoice'],
+  ['Payment', 'Payment'],
+  ['ShiftClose', 'Close POS shift'],
 ];
 for (const viewport of [
   { width: 1440, height: 900 },
@@ -52,12 +52,12 @@ for (const viewport of [
     }
     await page.evaluate(() => (window as any).posFixture.closeShift());
     const opening = page.getByRole('dialog', {
-      name: 'Open POS Shift',
+      name: 'Open POS shift',
       exact: true,
     });
     await expect(opening).toBeVisible();
     await expect(
-      opening.getByRole('button', { name: 'Open Shift', exact: true })
+      opening.getByRole('button', { name: 'Open shift', exact: true })
     ).toBeInViewport();
     await page.screenshot({
       animations: 'disabled',
@@ -79,10 +79,10 @@ test('price list and loyalty shortcuts follow their own features', async ({
   await page.keyboard.press('Shift+L');
 
   await expect(
-    page.getByRole('dialog', { name: 'Redeem Loyalty Points', exact: true })
+    page.getByRole('dialog', { name: 'Redeem loyalty points', exact: true })
   ).toBeVisible();
   await expect(
-    page.getByRole('dialog', { name: 'Apply Price List', exact: true })
+    page.getByRole('dialog', { name: 'Price list', exact: true })
   ).toBeHidden();
 });
 
@@ -130,17 +130,15 @@ test('a held sale reopens as saved after its cart was edited', async ({
   const removeItem = page.getByRole('button', { name: 'Remove item' });
   const openHeldSale = async () => {
     await page.getByRole('button', { name: 'Held', exact: true }).click();
-    const dialog = page.getByRole('dialog', {
-      name: 'Saved and Submitted Invoices',
-    });
+    const dialog = page.getByRole('dialog', { name: 'Invoices', exact: true });
     await dialog.getByRole('row', { name: /SINV-2026-HELD/ }).click();
-    await dialog.getByRole('button', { name: 'Open Invoice' }).click();
+    await dialog.getByRole('button', { name: 'Open invoice' }).click();
     await expect(dialog).toBeHidden();
   };
 
   await openHeldSale();
   await removeItem.click();
-  await expect(page.getByText('No items in this sale')).toBeVisible();
+  await expect(page.getByText('No items yet')).toBeVisible();
   await openHeldSale();
   await expect(removeItem).toHaveCount(1);
 });
@@ -150,32 +148,26 @@ test('cart values fit and expanded item fields open a usable keypad', async ({
 }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.evaluate(() => (window as any).posFixture.fillCart());
-  const rows = page.locator('[data-slot="list-row"]').filter({
-    has: page.getByRole('button', { name: 'Expand item', exact: true }),
-  });
+  const rows = page.getByRole('list', { name: 'Cart' }).getByRole('listitem');
   await expect(rows).toHaveCount(3);
   for (const row of await rows.all()) {
     expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48);
-    for (const value of await row.locator('[role="cell"] > span').all()) {
+    for (const value of await row.locator('span.tabular-nums.truncate').all()) {
       expect(
         await value.evaluate((el) => el.scrollWidth <= el.clientWidth)
       ).toBe(true);
     }
   }
-  await page
-    .getByRole('button', { name: 'Expand item', exact: true })
-    .first()
-    .click();
+  await page.getByRole('button', { name: /^Organic Assam Tea/ }).click();
+  await expect(rows.first()).toHaveClass(/bg-surface-gray-1/);
   await page.screenshot({
     animations: 'disabled',
     path: test.info().outputPath('modern-expanded.png'),
   });
   await page.getByRole('spinbutton', { name: 'Quantity', exact: true }).click();
-  const keypad = page.getByRole('dialog', {
-    name: 'Edit Quantity',
-    exact: true,
-  });
+  const keypad = page.getByRole('dialog', { name: 'Quantity', exact: true });
   await expect(keypad).toBeVisible();
+  await expect(keypad).toContainText('Organic Assam Tea');
   await page.setViewportSize({ width: narrowest, height: 560 });
   await expect(
     keypad.getByRole('button', { name: 'Save', exact: true })
@@ -197,14 +189,13 @@ test('a cart row in boxes shows and takes its rate per box', async ({
   page,
 }) => {
   await page.evaluate(() => (window as any).posFixture.fillBoxRow());
-  const row = page.locator('[data-slot="list-row"]').filter({
-    has: page.getByRole('button', { name: 'Expand item', exact: true }),
-  });
-  await expect(row).toContainText('6.003,100.0018,600.00');
+  const row = page.getByRole('list', { name: 'Cart' }).getByRole('listitem');
+  await expect(row).toContainText('3,100.00 each');
+  await expect(row).toContainText('18,600.00');
 
-  await row.getByRole('button', { name: 'Expand item', exact: true }).click();
+  await row.getByRole('button', { name: /^Organic Assam Tea/ }).click();
   await page.getByRole('spinbutton', { name: 'Rate', exact: true }).click();
-  const keypad = page.getByRole('dialog', { name: 'Edit Rate', exact: true });
+  const keypad = page.getByRole('dialog', { name: 'Rate', exact: true });
   await keypad.getByRole('textbox', { name: 'Rate', exact: true }).fill('3000');
   await keypad.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(keypad).toBeHidden();
@@ -229,7 +220,7 @@ test('a cart row in boxes shows and takes its rate per box', async ({
 });
 
 for (const modern of [true, false]) {
-  test(`${modern ? 'Modern' : 'Classic'} cart actions have balanced hover insets`, async ({
+  test(`${modern ? 'Modern' : 'Classic'} cart rows step quantities and edit ${modern ? 'with the keypad' : 'inline'}`, async ({
     page,
   }) => {
     await page.evaluate((modern) => {
@@ -238,72 +229,56 @@ for (const modern of [true, false]) {
       fixture.fillCart();
     }, modern);
     const row = page
-      .locator('[data-slot="list-row"]')
-      .filter({
-        has: page.getByRole('button', { name: 'Expand item', exact: true }),
-      })
+      .getByRole('list', { name: 'Cart' })
+      .getByRole('listitem')
       .first();
-    const expand = row.getByRole('button', { name: 'Expand item', exact: true });
     const remove = row.getByRole('button', { name: 'Remove item', exact: true });
+    await expect(
+      row.getByRole('button', { name: 'Increase quantity', exact: true })
+    ).toBeVisible();
+    await expect(
+      row.getByRole('button', { name: 'Decrease quantity', exact: true })
+    ).toBeVisible();
 
-    for (const width of [1440, 1024, narrowest]) {
-      await page.setViewportSize({ width, height: 900 });
-      const bounds = (await row.boundingBox())!;
-      const leading = (await expand.boundingBox())!;
-      const trailing = (await remove.boundingBox())!;
-      expect(bounds.height).toBe(48);
-      expect(leading.x - bounds.x).toBeCloseTo(8, 0);
-      expect(bounds.x + bounds.width - trailing.x - trailing.width).toBeCloseTo(
-        8,
-        0
-      );
-      expect(leading.y - bounds.y).toBeCloseTo(12, 0);
-      expect(trailing.y - bounds.y).toBeCloseTo(12, 0);
-    }
-
-    await page.setViewportSize({ width: 1440, height: 900 });
     const bounds = await row.boundingBox();
-    for (const [name, button] of [
-      ['remove', remove],
-      ['expand', expand],
-    ] as const) {
-      await button.hover();
-      await expect(
-        page.locator('[data-slot="bubble"]', {
-          hasText: name === 'remove' ? 'Remove item' : 'Expand item',
-        })
-      ).toBeVisible();
-      expect(await row.boundingBox()).toEqual(bounds);
-      await page.screenshot({
-        animations: 'disabled',
-        path: test.info().outputPath(`${name}-hover.png`),
-      });
+    await remove.hover();
+    await expect(
+      page.locator('[data-slot="bubble"]', { hasText: 'Remove item' })
+    ).toBeVisible();
+    expect(await row.boundingBox()).toEqual(bounds);
+
+    await row.getByRole('button', { name: /^Organic Assam Tea/ }).click();
+    await expect(
+      row.getByRole('button', { name: /^Organic Assam Tea/ })
+    ).toHaveAttribute('aria-expanded', 'true');
+    await page
+      .getByRole('spinbutton', { name: 'Quantity', exact: true })
+      .click();
+    const keypad = page.getByRole('dialog', { name: 'Quantity', exact: true });
+    if (modern) {
+      await expect(keypad).toBeVisible();
+    } else {
+      await expect(keypad).toBeHidden();
     }
-    await expand.click();
-    await expect(
-      page.getByRole('button', { name: 'Collapse item', exact: true })
-    ).toBeVisible();
-    await expect(
-      page.getByRole('spinbutton', { name: 'Quantity', exact: true })
-    ).toBeVisible();
+    await page.screenshot({
+      animations: 'disabled',
+      path: test.info().outputPath(`${modern ? 'modern' : 'classic'}-row.png`),
+    });
   });
 }
 
 test('view toggles survive switching layouts and checkout remains reachable', async ({
   page,
 }) => {
-  await page.getByRole('button', { name: 'Grid View', exact: true }).click();
-  await expect(
-    page.getByRole('button', { name: 'List View', exact: true })
-  ).toBeVisible();
+  const grid = page.getByRole('radio', { name: 'Grid view', exact: true });
+  await grid.click();
+  await expect(grid).toHaveAttribute('aria-checked', 'true');
   await page.screenshot({
     animations: 'disabled',
     path: test.info().outputPath('item-grid.png'),
   });
   await page.evaluate(() => (window as any).posFixture.setLayout(false));
-  await expect(
-    page.getByRole('button', { name: 'List View', exact: true })
-  ).toBeVisible();
+  await expect(grid).toHaveAttribute('aria-checked', 'true');
   await page.setViewportSize({ width: narrowest, height: 700 });
   await page
     .getByRole('button', { name: 'Add Organic Assam Tea', exact: true })
@@ -312,7 +287,7 @@ test('view toggles survive switching layouts and checkout remains reachable', as
     animations: 'disabled',
     path: test.info().outputPath('item-grid-small.png'),
   });
-  await page.getByRole('button', { name: 'List View', exact: true }).click();
+  await page.getByRole('radio', { name: 'List view', exact: true }).click();
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const modern of [true, false]) {
     await page.evaluate(
@@ -320,7 +295,7 @@ test('view toggles survive switching layouts and checkout remains reachable', as
       modern
     );
     await page.setViewportSize({ width: narrowest, height: 700 });
-    const pay = page.getByRole('button', { name: 'Pay', exact: true });
+    const pay = page.getByRole('button', { name: 'Pay 2,250.00', exact: true });
     await pay.scrollIntoViewIfNeeded();
     await expect(pay).toBeInViewport();
     expect(
@@ -347,7 +322,7 @@ test('invoice selection and bank payment fields work in a small dialog', async (
   await expect(dialog.getByRole('row', { name: /0001/ })).toHaveCount(1);
   await dialog.getByRole('row', { name: /0001/ }).click();
   await expect(
-    dialog.getByRole('button', { name: 'Create Return' })
+    dialog.getByRole('button', { name: 'Create return' })
   ).toBeEnabled();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await showModal(page, 'Payment');
@@ -364,11 +339,9 @@ test('invoice selection and bank payment fields work in a small dialog', async (
     (window as any).posFixture.state.invoice.return_against = 'SINV-2026-0001';
     document.documentElement.dataset.theme = 'dark';
   });
+  await expect(page.getByRole('dialog', { name: 'Refund' })).toBeVisible();
   await expect(
-    page.getByRole('dialog', { name: 'Complete refund' })
-  ).toBeVisible();
-  await expect(
-    dialog.getByRole('button', { name: 'Refund & print', exact: true })
+    dialog.getByRole('button', { name: 'Refund and print', exact: true })
   ).toBeVisible();
   await page.screenshot({
     animations: 'disabled',
@@ -376,26 +349,28 @@ test('invoice selection and bank payment fields work in a small dialog', async (
   });
 });
 
-test('payment buttons match the form text scale', async ({ page }) => {
+test('payment methods are tiles and buttons match the form text scale', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1352, height: 848 });
   await showModal(page, 'Payment');
-  const dialog = page.getByRole('dialog', { name: 'Complete payment' });
-  const amount = dialog.getByRole('spinbutton', { name: 'Paid amount' });
+  const dialog = page.getByRole('dialog', { name: 'Payment' });
+  const amount = dialog.getByRole('spinbutton', { name: 'Amount paid' });
   const inputFont = await amount.evaluate((el) => getComputedStyle(el).fontSize);
   const inputHeight = await amount.evaluate((el) => getComputedStyle(el).height);
-  const methods = dialog.getByRole('radio');
-  await expect(methods).toHaveCount(5);
   for (const button of await dialog.locator('footer button').all()) {
     await expect(button).toHaveCSS('font-size', inputFont);
     await expect(button).toHaveCSS('height', inputHeight);
   }
+  const methods = dialog.getByRole('radio');
+  await expect(methods).toHaveCount(5);
   for (const method of await methods.all()) {
-    await expect(method.locator('[data-slot=label]')).toHaveCSS(
-      'font-size',
-      inputFont
-    );
-    await expect(method).toHaveCSS('height', inputHeight);
+    await expect(method).toHaveCSS('height', '64px');
   }
+  await dialog.getByRole('radio', { name: 'Cash', exact: true }).click();
+  await dialog.getByRole('button', { name: '2,300.00', exact: true }).click();
+  await expect(dialog.getByRole('status')).toContainText('Change to return');
+  await expect(dialog.getByRole('status')).toContainText('50.00');
   await page.screenshot({
     animations: 'disabled',
     path: test.info().outputPath('payment-compact.png'),

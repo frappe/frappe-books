@@ -362,7 +362,6 @@ export default defineComponent({
       shiftOpenedAt: undefined as Date | undefined,
       isMenuOpen: false,
 
-      totalQuantity: 0,
       paidAmount: fyo.pesa(0),
 
       loyaltyPoints: 0,
@@ -402,6 +401,9 @@ export default defineComponent({
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
+    },
+    totalQuantity(): number {
+      return getTotalQuantity((this.sinvDoc.items ?? []) as SalesInvoiceItem[]);
     },
     mobileTitle(): string {
       if (!this.openPaymentModal) {
@@ -444,12 +446,6 @@ export default defineComponent({
     },
   },
   watch: {
-    sinvDoc: {
-      handler() {
-        this.updateValues();
-      },
-      deep: true,
-    },
     /** A preview takes off a coupon the cart no longer allows; say which. */
     coupons(
       current: { doc: SalesInvoice; codes: string[] },
@@ -772,11 +768,6 @@ export default defineComponent({
         is_pos: true,
       }) as SalesInvoice;
     },
-    setTotalQuantity() {
-      this.totalQuantity = getTotalQuantity(
-        (this.sinvDoc.items ?? []) as SalesInvoiceItem[]
-      );
-    },
     /** Turning redemption on asks for the points; off clears them. */
     async setLoyalty(on: boolean) {
       if (on) {
@@ -1078,9 +1069,6 @@ export default defineComponent({
       for (const modal of modalNames) {
         this[`open${modal}Modal`] = false;
       }
-    },
-    updateValues() {
-      this.setTotalQuantity();
     },
     async validate() {
       await validatePOSCheckout(this.sinvDoc as SalesInvoice);

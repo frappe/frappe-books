@@ -115,23 +115,27 @@ def _reset_row(row, rule):
 		row.item_discount_amount = 0
 
 
-def apply_pricing(invoice):
+def apply_pricing(invoice, drop_invalid_coupons=False):
+	"""Apply the best pricing rules; `drop_invalid_coupons` takes off coupons that cannot apply instead of refusing them."""
 	if invoice.transaction_type != "sales" or invoice.get("return_against"):
 		return
 	if not _applies_pricing_rules(invoice):
 		# A coupon's discount is a pricing rule, so the coupon would be used up for nothing.
 		if invoice.get("coupons"):
 			require_feature("enable_coupon_code")
-			frappe.throw(_("Coupons cannot be applied, as pricing rules do not apply to this invoice."))
+			message = _("Coupons cannot be applied, as pricing rules do not apply to this invoice.")
+			for row in list(invoice.coupons):
+				_reject_coupon(invoice, row.coupons, message, drop_invalid_coupons)
 		return
 
 	rows = list(invoice.items)
 	if not rows:
 		return
-	coupons = _validated_coupons(invoice, sum_decimal(_row_value(row) for row in rows))
+	order_value = sum_decimal(_row_value(row) for row in rows)
+	coupons = _validated_coupons(invoice, order_value, drop_invalid_coupons)
 	applied = _apply_rules(invoice, rows, coupons)
 	invoice.is_pricing_rule_applied = int(bool(applied))
-	_validate_coupon_application(coupons, {name for _item, name in applied})
+	_validate_coupon_application(invoice, coupons, {name for _item, name in applied}, drop_invalid_coupons)
 
 
 def _apply_rules(invoice, rows, coupons):
@@ -184,21 +188,39 @@ def update_coupon_usage(invoice, delta):
 		frappe.db.set_value("Books Coupon Code", name, "used", used)
 
 
-def _validated_coupons(invoice, order_value):
+def _validated_coupons(invoice, order_value, drop_invalid):
+	"""Return the coupons that can apply, by pricing rule."""
 	names = [row.coupons for row in invoice.get("coupons", []) if row.coupons]
 	if len(names) != len(set(names)):
 		frappe.throw(_("The same coupon cannot be applied more than once."))
 	if not names:
 		return {}
 	coupons = frappe.get_all("Books Coupon Code", filters={"name": ["in", names]}, fields=["*"])
+	valid = {}
 	for coupon in coupons:
-		if not coupon.is_enabled:
-			frappe.throw(_("Coupon {0} is disabled.").format(coupon.name))
-		if coupon.maximum_use and coupon.used >= coupon.maximum_use:
-			frappe.throw(_("Coupon {0} has reached its use limit.").format(coupon.name))
-		if not _within_limits(coupon, invoice.date, _in_company_currency(invoice, order_value)):
-			frappe.throw(_("Coupon {0} is not valid for this invoice.").format(coupon.name))
-	return {coupon.pricing_rule: coupon for coupon in coupons}
+		if error := _coupon_error(invoice, coupon, order_value):
+			_reject_coupon(invoice, coupon.name, error, drop_invalid)
+		else:
+			valid[coupon.pricing_rule] = coupon
+	return valid
+
+
+def _coupon_error(invoice, coupon, order_value):
+	"""Why the coupon cannot be used on the invoice, or None."""
+	if not coupon.is_enabled:
+		return _("Coupon {0} is disabled.").format(coupon.name)
+	if coupon.maximum_use and coupon.used >= coupon.maximum_use:
+		return _("Coupon {0} has reached its use limit.").format(coupon.name)
+	if not _within_limits(coupon, invoice.date, _in_company_currency(invoice, order_value)):
+		return _("Coupon {0} is not valid for this invoice.").format(coupon.name)
+	return None
+
+
+def _reject_coupon(invoice, coupon, message, drop):
+	"""Take the coupon off the invoice when dropping invalid coupons, else refuse the invoice."""
+	if not drop:
+		frappe.throw(message)
+	invoice.set("coupons", [row for row in invoice.coupons if row.coupons != coupon])
 
 
 def _candidate_rules(rows):
@@ -305,10 +327,11 @@ def _append_free_item(invoice, rule, quantity):
 	)
 
 
-def _validate_coupon_application(coupons, applied_rules):
+def _validate_coupon_application(invoice, coupons, applied_rules, drop_invalid):
 	for rule_name, coupon in coupons.items():
 		if rule_name not in applied_rules:
-			frappe.throw(_("Coupon {0} does not apply to any invoice item.").format(coupon.name))
+			message = _("Coupon {0} does not apply to any invoice item.").format(coupon.name)
+			_reject_coupon(invoice, coupon.name, message, drop_invalid)
 
 
 def _within_limits(record, date, amount, quantity=None):

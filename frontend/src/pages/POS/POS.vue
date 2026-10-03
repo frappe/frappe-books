@@ -169,7 +169,6 @@
     <CouponCodeModal
       :open-modal="openCouponCodeModal"
       @toggle-modal="toggleModal('CouponCode', false)"
-      @set-coupons-count="setCouponsCount"
     />
     <PriceListModal
       :open-modal="openPriceListModal"
@@ -372,7 +371,6 @@ export default defineComponent({
       loyaltyPoints: 0,
       loyaltyProgram: '' as string,
 
-      appliedCouponsCount: 0,
 
       itemSearchTerm: '',
       selectedItemGroup: '',
@@ -415,6 +413,13 @@ export default defineComponent({
 
       return this.sinvDoc.isReturn ? t`Refund` : t`Payment`;
     },
+    coupons(): { doc: SalesInvoice; codes: string[] } {
+      const doc = this.sinvDoc as SalesInvoice;
+      return { doc, codes: (doc.coupons ?? []).map((row) => row.coupons ?? '') };
+    },
+    appliedCouponsCount(): number {
+      return this.sinvDoc.coupons?.length ?? 0;
+    },
     cartLabel(): string {
       const name = this.sinvDoc.inserted ? this.sinvDoc.name : t`New sale`;
       const date = this.sinvDoc.date
@@ -444,13 +449,25 @@ export default defineComponent({
   watch: {
     sinvDoc: {
       handler() {
-        if (this.sinvDoc.coupons?.length) {
-          this.setCouponsCount(this.sinvDoc.coupons?.length);
-        }
-
         this.updateValues();
       },
       deep: true,
+    },
+    /** A preview takes off a coupon the cart no longer allows; say which. */
+    coupons(
+      current: { doc: SalesInvoice; codes: string[] },
+      previous: { doc: SalesInvoice; codes: string[] }
+    ) {
+      if (current.doc !== previous.doc || this.openCouponCodeModal) {
+        return;
+      }
+
+      for (const code of previous.codes.filter((c) => !current.codes.includes(c))) {
+        showToast({
+          type: 'warning',
+          message: t`Coupon ${code} no longer applies, so it was removed.`,
+        });
+      }
     },
   },
 
@@ -743,9 +760,6 @@ export default defineComponent({
       this.totalQuantity = getTotalQuantity(
         (this.sinvDoc.items ?? []) as SalesInvoiceItem[]
       );
-    },
-    setCouponsCount(value: number) {
-      this.appliedCouponsCount = value;
     },
     /** Turning redemption on asks for the points; off clears them. */
     async setLoyalty(on: boolean) {

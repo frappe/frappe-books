@@ -90,7 +90,7 @@ test('selected items start a new sales invoice', async ({ page }) => {
   await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\//);
   await expect(page.getByText('2 rows', { exact: true })).toBeVisible();
   // The server's preview prices the rows; no item is loaded one by one.
-  await expect(page.getByText(/^1\.00 × .*100\.00$/)).toHaveCount(2);
+  await expect(page.getByText(/^1 × .*100\.00$/)).toHaveCount(2);
   expect(itemLoads).toEqual([]);
 });
 

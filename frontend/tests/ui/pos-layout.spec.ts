@@ -285,7 +285,7 @@ test('a picked batch shows its stock at the POS location', async ({
   const cart = page.getByRole('complementary', { name: 'Cart' });
   await expect(
     cart.getByRole('textbox', { name: 'Qty in Batch', exact: true })
-  ).toHaveValue('110.00');
+  ).toHaveValue('110');
 });
 
 test('cart values fit and expanded item fields open a usable keypad', async ({

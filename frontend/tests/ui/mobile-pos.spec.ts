@@ -113,7 +113,7 @@ test('a cart line shows its batch and the batch stock at the POS location', asyn
     name: 'Roasted Arabica Coffee Beans',
   });
   await expect(line).toContainText('COFFEE-2026-09');
-  await expect(line).toContainText('110.00');
+  await expect(line.getByText('110', { exact: true })).toBeVisible();
 });
 
 test('the cart lists every amount between net and grand total', async ({

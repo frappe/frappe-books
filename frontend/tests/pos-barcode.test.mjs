@@ -102,19 +102,24 @@ test('a blank code looks nothing up', async () => {
   assert.equal(requests.length, 0);
 });
 
-test('a POS scan adds an item the POS does not list', async () => {
-  fyo.singles.POSSettings = {};
+test('a POS scan adds an item the POS does not list, a weight in the stock unit', async () => {
+  fyo.singles.POSSettings = scale;
   stubFrappe(() => ({ message: [riceRow] }));
   const added = [];
   const pos = {
     items: [],
     itemQtyMap: {},
     itemSearchTerm: '',
-    addItem: async (item, quantity) => added.push([item.name, quantity]),
+    addItem: async (item, quantity, addition) =>
+      added.push([item.name, quantity, addition]),
   };
 
   await POS.methods.handleItemSearch.call(pos, '890000000001', true);
+  await POS.methods.handleItemSearch.call(pos, '211234501500', true);
 
-  assert.deepEqual(added, [['Basmati Rice', 1]]);
+  assert.deepEqual(added, [
+    ['Basmati Rice', 1, { isStockQuantity: false }],
+    ['Basmati Rice', 1.5, { isStockQuantity: true }],
+  ]);
   assert.equal(pos.itemSearchTerm, '');
 });

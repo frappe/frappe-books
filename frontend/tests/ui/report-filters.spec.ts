@@ -33,3 +33,22 @@ test('a preset shows its whole range and keeps it on close', async ({
   await expect(range(page)).toHaveValue('Sep 01 2026 to Sep 30 2026');
   await closeWithoutChoice(page, () => page.keyboard.press('Escape'));
 });
+
+test.describe('on a phone', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test('the Filters sheet keeps Clear and Apply on screen', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: /^Filters/ }).click();
+    for (const name of ['Clear', 'Apply']) {
+      await expect(
+        page.getByRole('dialog').getByRole('button', { name, exact: true })
+      ).toBeInViewport({ ratio: 1 });
+    }
+  });
+});

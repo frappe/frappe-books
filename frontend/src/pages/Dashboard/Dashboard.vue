@@ -26,12 +26,14 @@
         >
           <InvoiceCards
             doctype="Books Sales Invoice"
-            :label="t`Sales`"
+            :paid-title="t`Paid sales`"
+            :unpaid-title="t`Unpaid sales`"
             :period="period"
           />
           <InvoiceCards
             doctype="Books Purchase Invoice"
-            :label="t`Purchases`"
+            :paid-title="t`Paid purchases`"
+            :unpaid-title="t`Unpaid purchases`"
             :period="period"
           />
         </div>

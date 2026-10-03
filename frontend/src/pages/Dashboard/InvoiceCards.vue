@@ -54,25 +54,26 @@ export default defineComponent({
   extends: BaseDashboardChart,
   props: {
     doctype: { type: String, required: true },
-    label: { type: String, required: true },
+    paidTitle: { type: String, required: true },
+    unpaidTitle: { type: String, required: true },
   },
   data() {
     return { summary: null as InvoiceSummary | null };
   },
   computed: {
     cards() {
-      const { summary, label } = this;
+      const { summary, paidTitle, unpaidTitle } = this;
       return [
         {
           paid: true,
-          title: t`Paid ${label}`,
+          title: paidTitle,
           value: summary?.paid ?? null,
           count: summary?.paid_count ?? 0,
           linkLabel: t`View paid invoices`,
         },
         {
           paid: false,
-          title: t`Unpaid ${label}`,
+          title: unpaidTitle,
           value: summary?.unpaid ?? null,
           count: summary?.unpaid_count ?? 0,
           linkLabel: t`View unpaid invoices`,

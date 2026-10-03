@@ -46,6 +46,7 @@ await build({
       export * as pos from './src/utils/pos';
       export { usePOSCheckout } from './src/utils/posCheckout';
       export * as posDiscounts from './src/utils/posDiscounts';
+      export * as posCart from './src/utils/posCart';
       export * as posSetup from './src/utils/posSetup';
       export * as posShift from './src/utils/posShift';
       export * as posStock from './models/inventory/posStock';
@@ -163,6 +164,7 @@ export const {
   pos,
   usePOSCheckout,
   posDiscounts,
+  posCart,
   posSetup,
   posShift,
   posStock,

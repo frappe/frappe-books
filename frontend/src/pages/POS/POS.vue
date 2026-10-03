@@ -232,21 +232,20 @@ import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import {
-  addBatchItem,
-  addPOSItem,
   getPOSItemFilters,
-  refillSerialNumbers,
   POS_ITEM_FIELDS,
   getListedPOSItems,
   validatePOSCheckout,
-  getTotalQuantity,
-  setPOSRowQuantity,
   isTypingInField,
   getQuickQtyBuffer,
-  getPOSQuantityField,
 } from 'src/utils/pos';
 import { posCheckoutKey, usePOSCheckout } from 'src/utils/posCheckout';
 import { canApplyCoupon, canRedeemLoyalty } from 'src/utils/posDiscounts';
+import {
+  addToCart,
+  getTotalQuantity,
+  setCartQuantity,
+} from 'src/utils/posCart';
 import {
   getItemVisibility,
   getPOSProfile,
@@ -333,7 +332,6 @@ export default defineComponent({
       openBatchSelectionModal: false,
       isMenuOpen: false,
 
-      totalQuantity: 0,
 
       itemSearchTerm: '',
       selectedItemGroup: '',
@@ -364,6 +362,9 @@ export default defineComponent({
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
+    },
+    totalQuantity(): number {
+      return getTotalQuantity((this.sinvDoc.items ?? []) as SalesInvoiceItem[]);
     },
     mobileTitle(): string {
       if (!this.openPaymentModal) {
@@ -407,12 +408,6 @@ export default defineComponent({
     },
   },
   watch: {
-    sinvDoc: {
-      handler() {
-        this.updateValues();
-      },
-      deep: true,
-    },
     /** A preview takes off a coupon the cart no longer allows; say which. */
     coupons(
       current: { doc: SalesInvoice; codes: string[] },
@@ -520,7 +515,7 @@ export default defineComponent({
       }
 
       try {
-        await setPOSRowQuantity(row, getPOSQuantityField(), Number(buffer));
+        await setCartQuantity(row, Number(buffer));
       } catch (error) {
         showToast({
           id: POS_ITEM_TOAST_ID,
@@ -700,11 +695,6 @@ export default defineComponent({
         is_pos: true,
       }) as SalesInvoice;
     },
-    setTotalQuantity() {
-      this.totalQuantity = getTotalQuantity(
-        (this.sinvDoc.items ?? []) as SalesInvoiceItem[]
-      );
-    },
     /** Turning redemption on asks for the points; off clears them. */
     async setLoyalty(on: boolean) {
       if (on) {
@@ -758,13 +748,7 @@ export default defineComponent({
           return;
         }
 
-        const row = await addPOSItem(
-          this.sinvDoc as SalesInvoice,
-          item,
-          quantity,
-          this.itemQtyMap
-        );
-        refillSerialNumbers(row);
+        await addToCart(this.sinvDoc as SalesInvoice, item, quantity);
         await this.previewInvoice();
       } catch (error) {
         showToast({
@@ -791,11 +775,11 @@ export default defineComponent({
       this.pendingBatchItem = null;
 
       try {
-        await addBatchItem(
+        await addToCart(
           this.sinvDoc as SalesInvoice,
           item as POSItem,
-          batchName,
-          quantity ?? 1
+          quantity ?? 1,
+          batchName
         );
         await this.previewInvoice();
       } catch (error) {
@@ -900,9 +884,6 @@ export default defineComponent({
       for (const modal of modalNames) {
         this[`open${modal}Modal`] = false;
       }
-    },
-    updateValues() {
-      this.setTotalQuantity();
     },
     async validate() {
       await validatePOSCheckout(this.sinvDoc as SalesInvoice);

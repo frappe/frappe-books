@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   deskTheme,
+  docsPathRef,
   getAppMenuItems,
   getColorScheme,
   stubFrappe,
@@ -45,4 +46,22 @@ test('the desk theme paints the app; Automatic follows the system', () => {
     ['Light', 'Dark', 'Automatic', undefined].map(getColorScheme),
     ['light', 'dark', 'system', 'light']
   );
+});
+
+test('Documentation opens the Books docs on a page that has none of its own', () => {
+  const opened = [];
+  globalThis.window.open = (url) => opened.push(url);
+  const documentation = getAppMenuItems()
+    .flatMap(({ options }) => options)
+    .find(({ label }) => label === 'Documentation');
+
+  docsPathRef.value = '';
+  documentation.onClick();
+  docsPathRef.value = 'books/sales-invoices';
+  documentation.onClick();
+
+  assert.deepEqual(opened, [
+    'https://docs.frappe.io/books',
+    'https://docs.frappe.io/books/sales-invoices',
+  ]);
 });

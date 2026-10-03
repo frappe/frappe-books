@@ -38,6 +38,7 @@ await build({
       export { getFilterFields } from './src/utils/filterFields';
       export { getSidebarConfig } from './src/utils/sidebarConfig';
       export { getAppMenuItems } from './src/utils/appMenu';
+      export { docsPathRef } from './src/utils/refs';
       export { deskTheme, getColorScheme } from './src/utils/theme';
       export { default as ListView } from './src/pages/ListView/ListView.vue';
       export { default as router } from 'src/router';
@@ -187,6 +188,7 @@ export const {
   getJsonExportData,
   getSidebarConfig,
   getAppMenuItems,
+  docsPathRef,
   deskTheme,
   getColorScheme,
   ListView,

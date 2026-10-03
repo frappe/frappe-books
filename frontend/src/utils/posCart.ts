@@ -21,19 +21,26 @@ export type POSRowField =
   | 'item_discount_amount'
   | 'item_discount_percent';
 
+/** How `addToCart` adds: from `batch` if given, and in the stock unit if `isStockQuantity`, as a scale barcode does. */
+export type CartAddition = { batch?: string; isStockQuantity?: boolean };
+
 /**
- * Adds `quantity` of a POS item, from `batch` if given, to its cart row or
- * to a new one, if the POS location has the stock the item's rows then need.
+ * Adds `quantity` of a POS item to its cart row or to a new one, if the POS
+ * location has the stock the item's rows then need. The quantity is in the
+ * unit the cart shows, unless `isStockQuantity`.
  */
 export async function addToCart(
   sale: SalesInvoice,
   item: POSItem,
   quantity: number,
-  batch?: string
+  { batch, isStockQuantity = false }: CartAddition = {}
 ): Promise<SalesInvoiceItem> {
   const row = getItemRows(sale, item.name, batch)[0];
   if (row) {
-    await stepCartQuantity(row, quantity);
+    await stepCartQuantity(
+      row,
+      isStockQuantity ? toCartQuantity(row, quantity) : quantity
+    );
     return row;
   }
 
@@ -191,6 +198,15 @@ function getQuantityField(): QuantityField {
   return fyo.singles.InventorySettings?.enable_uom_conversions
     ? 'transfer_quantity'
     : 'quantity';
+}
+
+/** A stock quantity in the unit the cart row shows. */
+function toCartQuantity(row: SalesInvoiceItem, stockQuantity: number): number {
+  if (getQuantityField() === 'quantity') {
+    return stockQuantity;
+  }
+
+  return stockQuantity / (row.unit_conversion_factor || 1);
 }
 
 /**

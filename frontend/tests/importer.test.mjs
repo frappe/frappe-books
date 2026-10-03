@@ -155,6 +155,20 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
   );
 });
 
+test('a file with fewer columns than the template has only its own columns', () => {
+  const importer = new Importer('Party', fyo);
+  const [first, , third] = importer.assignedTemplateFields;
+
+  importer.selectFile([`${third},${first}`, 'a,b'].join('\n'));
+
+  assert.deepEqual(importer.assignedTemplateFields, [third, first]);
+  assert.deepEqual(importer.getDuplicateColumns(), []);
+
+  const headless = new Importer('Party', fyo);
+  headless.selectFile('a,b');
+  assert.deepEqual(headless.assignedTemplateFields, [null, null]);
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;

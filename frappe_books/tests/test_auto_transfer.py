@@ -19,6 +19,9 @@ from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice i
 	make_return as make_sales_return,
 )
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import make_shipment
+from frappe_books.frappe_books.doctype.books_shipment.books_shipment import (
+	make_sales_invoice as make_shipment_invoice,
+)
 from frappe_books.frappe_books.doctype.books_stock_movement.test_books_stock_movement import (
 	make_movement,
 )
@@ -109,6 +112,29 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice.cancel()
 		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 2)
 		self.assertEqual(stock_quantity(item, "Stores"), 5)
+
+	def test_invoice_cancel_takes_back_what_it_shipped_beside_the_shipment_it_bills(self):
+		_draft, billed_item = self._sales_invoice()
+		invoice, item = self._sales_invoice()
+		shipment = frappe.get_doc(
+			{
+				"doctype": "Books Shipment",
+				"party": invoice.party,
+				"date": invoice.date,
+				"items": [{"item": billed_item, "location": "Stores", "quantity": 2, "rate": 10}],
+			}
+		).insert()
+		shipment.submit()
+		billing = make_shipment_invoice(shipment.name)
+		billing.append("items", {"item": item, "quantity": 1, "rate": 10})
+		billing.update({"make_auto_stock_transfer": 1, "make_auto_payment": 0})
+		billing.insert().submit()
+		self.assertEqual(stock_quantity(item, "Stores"), 4)
+
+		billing.cancel()
+
+		self.assertEqual(stock_quantity(item, "Stores"), 5)
+		self.assertEqual(frappe.db.get_value("Books Shipment", shipment.name, "docstatus"), 1)
 
 	def test_a_duplicate_shipment_is_not_linked_to_the_invoice(self):
 		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)

@@ -42,7 +42,7 @@ def on_invoice_submit(invoice):
 def before_invoice_cancel(invoice):
 	"""Cancel the transfer made automatically from the invoice."""
 	transfer = auto_transfer(invoice)
-	if transfer and transfer.docstatus == 1:
+	if transfer:
 		transfer.ignore_linked_doctypes = (invoice.doctype,)
 		transfer.cancel()
 
@@ -156,9 +156,15 @@ def billed_transfer(invoice, for_update=False):
 
 
 def auto_transfer(invoice):
-	"""Return the transfer the invoice links to because it made it on submit."""
-	transfer = _linked_transfer(invoice)
-	return transfer if transfer and transfer.back_reference == invoice.name else None
+	"""Return the submitted transfer the invoice made on submit.
+
+	It is found by its link back to the invoice, as an invoice that bills a transfer links to that one.
+	"""
+	if not invoice.get("make_auto_stock_transfer"):
+		return None
+	doctype = linked_doctype(invoice.doctype)
+	name = frappe.db.get_value(doctype, {"back_reference": invoice.name, "docstatus": 1})
+	return frappe.get_doc(doctype, name) if name else None
 
 
 def linked_doctype(doctype) -> str:

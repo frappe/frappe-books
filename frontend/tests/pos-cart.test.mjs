@@ -6,12 +6,14 @@ import { frappeModels, fyo, newFrappeDoc, posCart } from './helpers/frappe.mjs';
 const tea = 'Demo - Tea';
 const flour = 'Demo - Flour';
 const coffee = 'Demo - Coffee Beans';
+const rice = 'Demo - Rice';
 const service = 'Demo - Gift Wrapping';
 const batch = 'DEMO-COFFEE-2026';
 const items = {
   [tea]: { track_item: 1, unit: 'Unit' },
   [flour]: { track_item: 1, has_serial_number: 1, unit: 'Kg' },
   [coffee]: { track_item: 1, has_batch: 1, unit: 'Unit' },
+  [rice]: { track_item: 1, unit: 'Kg' },
   [service]: { track_item: 0, unit: 'Unit' },
 };
 
@@ -62,6 +64,28 @@ test('a card tap and a stepper add the unit the cart shows', async () => {
   assert.equal(plain.items[0].quantity, 3);
 });
 
+test('a scale quantity is in the stock unit, whatever unit its row shows', async () => {
+  stock = { [rice]: 10 };
+  setUOMConversions(true);
+  const sale = makeSale([
+    {
+      item: rice,
+      unit: 'Kg',
+      transfer_unit: 'Gram',
+      unit_conversion_factor: 0.001,
+      transfer_quantity: 250,
+      quantity: 0.25,
+    },
+  ]);
+  const [row] = sale.items;
+  await posCart.addToCart(sale, { name: rice }, 0.5, { isStockQuantity: true });
+  assert.deepEqual([row.transfer_quantity, row.quantity], [750, 0.75]);
+
+  setUOMConversions(false);
+  await posCart.addToCart(sale, { name: rice }, 0.5, { isStockQuantity: true });
+  assert.equal(row.quantity, 1.25);
+});
+
 test('every quantity change leaves serial numbers that no longer match to the server', async () => {
   stock = { [flour]: 10 };
   setUOMConversions(false);
@@ -103,15 +127,15 @@ test('a batch add merges into its row and restores it when the POS location cann
     posCart.addToCart(sale, { name: coffee }, 1),
     /select a batch/
   );
-  await posCart.addToCart(sale, { name: coffee }, 2, batch);
-  await posCart.addToCart(sale, { name: coffee }, 1, batch);
+  await posCart.addToCart(sale, { name: coffee }, 2, { batch });
+  await posCart.addToCart(sale, { name: coffee }, 1, { batch });
   assert.deepEqual(
     sale.items.map((row) => [row.batch, row.quantity]),
     [[batch, 3]]
   );
 
   await assert.rejects(
-    posCart.addToCart(sale, { name: coffee }, 2, batch),
+    posCart.addToCart(sale, { name: coffee }, 2, { batch }),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
   assert.equal(sale.items[0].quantity, 3);
@@ -119,7 +143,7 @@ test('a batch add merges into its row and restores it when the POS location cann
   stock = {};
   const empty = makeSale();
   await assert.rejects(
-    posCart.addToCart(empty, { name: coffee }, 1, batch),
+    posCart.addToCart(empty, { name: coffee }, 1, { batch }),
     /Available: 0; required: 1/
   );
   assert.equal(empty.items.length, 0);

@@ -148,13 +148,12 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Loyalty points cannot be negative"):
 			self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=-5)
 
-	def test_redeeming_no_points_redeems_nothing(self):
+	def test_redeeming_needs_points(self):
 		program = self._loyalty_program()
 		self._loyalty_invoice(program).submit()
 
-		invoice = self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=0).submit()
-		self.assertEqual(invoice.redeem_loyalty_points, 0)
-		self.assertEqual(program.db_get("used"), 0)
+		with self.assertRaisesRegex(frappe.ValidationError, "Enter the loyalty points to redeem"):
+			self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=0)
 
 	def test_redemption_is_capped_by_the_total_before_redemption(self):
 		program = self._loyalty_program()

@@ -90,6 +90,42 @@ class BooksSalesInvoice(PostingInvoiceController):
 		"""What the redeemed points take off the grand total, as a virtual field."""
 		return loyalty.redemption_amount(self)
 
+	def calculate(self, drop_invalid_coupons=False):
+		"""Also show the points the party can redeem."""
+		super().calculate(drop_invalid_coupons)
+		loyalty.set_available_points(self)
+
+	def set_prices(self, drop_invalid_coupons=False):
+		"""Apply pricing rules and coupons too; a return keeps its original's prices."""
+		if self.return_against:
+			super().set_prices()
+			return
+		pricing.reset_pricing(self)
+		self.populate_defaults()
+		pricing.apply_pricing(self, drop_invalid_coupons)
+		self.populate_defaults()
+
+	def populate_party_defaults(self):
+		"""Also join the party's loyalty program; a return keeps its original's."""
+		party = super().populate_party_defaults()
+		if party and not self.return_against:
+			self.loyalty_program = party.loyalty_program
+		return party
+
+	def deduct_redemption(self, total):
+		"""A return gives back its share of the points its original redeemed."""
+		if self.return_against:
+			loyalty.set_return_redemption(self, total)
+		return total - loyalty.redemption_amount(self)
+
+	def get_ledger_posting(self):
+		"""Also expense the redeemed loyalty points, on the party's side."""
+		posting = super().get_ledger_posting()
+		redeemed = loyalty.redemption_amount(self)
+		if redeemed:
+			posting.on_party_side(loyalty.loyalty_expense_account(self), redeemed)
+		return posting
+
 	@frappe.whitelist()
 	def preview(self, check_coupons: bool = False):
 		"""Also give a POS sale's serialised rows serial numbers in stock where it ships from."""
@@ -105,6 +141,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 
 	def validate(self):
 		super().validate()
+		loyalty.validate_invoice_loyalty(self)
 		if self.is_pos:
 			# Ship in the submit transaction, so a stock error also rejects the sale.
 			self.make_auto_stock_transfer = 1
@@ -128,7 +165,19 @@ class BooksSalesInvoice(PostingInvoiceController):
 
 	def on_submit(self):
 		super().on_submit()
+		self.update_coupon_usage(1)
+		loyalty.process_invoice(self)
 		self.pay_at_counter(self.payments)
+
+	def on_cancel(self):
+		super().on_cancel()
+		self.update_coupon_usage(-1)
+		loyalty.reverse_invoice(self)
+
+	def update_coupon_usage(self, delta):
+		"""Count the coupons as used, or unused on cancel; a return uses none."""
+		if not self.return_against:
+			pricing.update_coupon_usage(self, delta)
 
 	def pay_at_counter(self, rows):
 		"""Submit a payment for each tendered row and return their names."""

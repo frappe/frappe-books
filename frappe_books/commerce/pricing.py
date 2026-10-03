@@ -12,8 +12,6 @@ from frappe_books.settings import require_feature
 
 def reset_pricing(invoice):
 	"""Undo what pricing rules set on an invoice so they can be evaluated afresh."""
-	if invoice.transaction_type != "sales" or invoice.get("return_against"):
-		return
 	invoice.set("items", [row for row in invoice.items if not row.is_free_item])
 	invoice.set("pricing_rule_detail", [])
 	invoice.is_pricing_rule_applied = 0
@@ -116,8 +114,6 @@ def _reset_row(row, rule):
 
 def apply_pricing(invoice, drop_invalid_coupons=False):
 	"""Apply the best pricing rules; `drop_invalid_coupons` takes off coupons that cannot apply instead of refusing them."""
-	if invoice.transaction_type != "sales" or invoice.get("return_against"):
-		return
 	if not _applies_pricing_rules(invoice):
 		# A coupon's discount is a pricing rule, so the coupon would be used up for nothing.
 		if invoice.get("coupons"):
@@ -173,8 +169,6 @@ def _apply_rule(invoice, row, rule):
 
 
 def update_coupon_usage(invoice, delta):
-	if invoice.transaction_type != "sales" or invoice.get("return_against"):
-		return
 	for name in {row.coupons for row in invoice.get("coupons", []) if row.coupons}:
 		coupon = frappe.db.get_value(
 			"Books Coupon Code", name, ["used", "maximum_use"], as_dict=True, for_update=True

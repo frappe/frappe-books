@@ -16,7 +16,7 @@ from frappe_books.accounting.ledger import LedgerPosting, delete_entries, revers
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
-from frappe_books.commerce import loyalty, pricing
+from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.currency import get_exchange_rate
 from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
@@ -26,7 +26,7 @@ from frappe_books.inventory.invoice_balance import (
 	update_billed_status,
 	validate_billed_quantities,
 )
-from frappe_books.inventory.stock import create_series_batches, validate_batches
+from frappe_books.inventory.stock import validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.permissions import check_preview_permission
 from frappe_books.regional import validate_hsn_codes
@@ -38,7 +38,7 @@ from frappe_books.status import StatusMixin
 class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	"""Totals and validation shared by quotes and invoices.
 
-	Each kind of invoice sets the attributes below.
+	Each kind of invoice sets the attributes below, and overrides the hooks its own rules need.
 	"""
 
 	transaction_type: str
@@ -56,16 +56,42 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	def calculate(self, drop_invalid_coupons=False):
 		"""Fill defaults, apply pricing and set the totals, without writing anything."""
 		returns.set_quantity_signs(self.items, bool(self.get("return_against")))
-		pricing.reset_pricing(self)
-		_populate_invoice_defaults(self)
-		pricing.apply_pricing(self, drop_invalid_coupons)
-		_populate_invoice_defaults(self)
+		self.set_prices(drop_invalid_coupons)
 		calculate_invoice(self)
-		loyalty.set_available_points(self)
+
+	def set_prices(self, drop_invalid_coupons=False):
+		"""Fill the defaults, standard rates included; sales also apply pricing rules."""
+		self.populate_defaults()
+
+	def populate_defaults(self):
+		"""Fill the POS, party and row defaults."""
+		_populate_pos_defaults(self)
+		self.populate_party_defaults()
+		self.populate_rows(self.get("items", []))
+
+	def populate_party_defaults(self):
+		"""Bill in the party's currency to its ledger, and return the party's defaults."""
+		party = _party_defaults(self)
+		_populate_currency(self, party.currency)
+		if party and self.party_account_type:
+			self.account = self.get("account") or _party_account(self, party.default_account)
+		return party
+
+	def populate_rows(self, rows):
+		"""Fill the rows' units, item details, accounts and standard rates."""
+		populate_units(rows)
+		items = _item_details({row.item for row in rows if row.item})
+		rates = pricing.standard_rates(self) if items else {}
+		for row in rows:
+			if row.item in items:
+				_populate_row(self, row, items[row.item], rates)
+
+	def deduct_redemption(self, total):
+		"""Return the total less what redeemed loyalty points pay; only sales redeem them."""
+		return total
 
 	def validate(self):
 		validate_invoice(self)
-		loyalty.validate_invoice_loyalty(self)
 
 	@property
 	def total_discount(self):
@@ -124,10 +150,23 @@ class PostingInvoiceController(InvoiceController):
 
 	def validate(self):
 		super().validate()
-		if self.transaction_type == "purchase" and not self.return_against:
-			create_series_batches(self.items)
+		self.create_batches()
 		validate_batches([{"item": row.item, "batch": row.batch} for row in self.items])
 		validate_sale_batch_stock(self)
+
+	def create_batches(self):
+		"""Create the batches the rows need before they are checked; purchases create series batches."""
+
+	def get_ledger_posting(self):
+		"""Return the invoice's ledger entries, not yet posted."""
+		posting = InvoicePosting(self)
+		posting.on_party_side(self.account, self.grand_total, self.party)
+		for row in (*self.items, *self.taxes):
+			posting.on_item_side(row.account, row.amount)
+		discount = sum_decimal(row_discount(self, row) for row in self.items)
+		if discount:
+			posting.on_party_side(_discount_account(), discount)
+		return posting
 
 	def before_submit(self):
 		validate_billed_quantities(self)
@@ -135,10 +174,8 @@ class PostingInvoiceController(InvoiceController):
 		self.outstanding_amount = -outstanding if self.return_against else outstanding
 
 	def on_submit(self):
-		post_invoice(self)
+		self.get_ledger_posting().post()
 		update_party_outstanding(self.party)
-		pricing.update_coupon_usage(self, 1)
-		loyalty.process_invoice(self)
 		update_billed_status(self)
 		create_auto_transfer(self)
 		store_pending_quantities(self)
@@ -172,8 +209,6 @@ class PostingInvoiceController(InvoiceController):
 	def on_cancel(self):
 		reverse_entries(self)
 		update_party_outstanding(self.party)
-		pricing.update_coupon_usage(self, -1)
-		loyalty.reverse_invoice(self)
 		update_billed_status(self)
 		if self.return_against:
 			returns.update_return_status(self, include_current=False)
@@ -261,13 +296,9 @@ def _add_row_taxes(row, base, taxes, currency):
 def _calculate_totals(invoice):
 	currency = invoice.get("currency")
 	invoice.net_total = sum_decimal(row.amount for row in invoice.items)
-	grand_total = (
+	grand_total = invoice.deduct_redemption(
 		invoice.net_total + sum_decimal(tax.amount for tax in invoice.taxes) - invoice.total_discount
 	)
-	if invoice.transaction_type == "sales" and invoice.get("return_against"):
-		loyalty.set_return_redemption(invoice, grand_total)
-	if invoice.transaction_type == "sales":
-		grand_total -= loyalty.redemption_amount(invoice)
 	invoice.grand_total = rounded(grand_total, currency)
 	invoice.base_grand_total = rounded(invoice.grand_total * as_decimal(invoice.exchange_rate or 1))
 	if invoice.docstatus == 0:
@@ -343,76 +374,35 @@ def _validate_row_discount(row):
 		frappe.throw(_("Item discount percent must be between 0 and 100."))
 
 
-def post_invoice(invoice):
-	posting = LedgerPosting(invoice)
-	total = abs(as_decimal(invoice.base_grand_total))
-	exchange_rate = as_decimal(invoice.exchange_rate or 1)
-	is_return = bool(invoice.get("return_against"))
+class InvoicePosting(LedgerPosting):
+	"""An invoice's ledger entries, in base currency, on the party's side or the items' side.
 
-	if invoice.is_purchase:
-		_post_purchase(invoice, posting, total, exchange_rate, is_return)
-	else:
-		_post_sales(invoice, posting, total, exchange_rate, is_return)
-	posting.post()
+	Sales debit the party and purchases credit it; a return reverses its invoice.
+	"""
 
+	def __init__(self, invoice):
+		super().__init__(invoice)
+		self.exchange_rate = as_decimal(invoice.exchange_rate or 1)
+		self.is_party_credited = invoice.is_purchase != bool(invoice.get("return_against"))
 
-def _post_sales(invoice, posting, total, exchange_rate, is_return):
-	_post_direction(posting, invoice.account, total, invoice.party, reverse=is_return)
-	loyalty_amount = abs(loyalty.redemption_amount(invoice)) * exchange_rate
-	if loyalty_amount:
-		_post_direction(
-			posting,
-			loyalty.loyalty_expense_account(invoice),
-			loyalty_amount,
-			reverse=is_return,
-		)
-	for row in invoice.items:
-		_post_direction(
-			posting, row.account, abs(as_decimal(row.amount) * exchange_rate), credit=True, reverse=is_return
-		)
-	for tax in invoice.taxes:
-		_post_direction(
-			posting, tax.account, abs(as_decimal(tax.amount) * exchange_rate), credit=True, reverse=is_return
-		)
-	_post_discount(invoice, posting, exchange_rate, credit=False, reverse=is_return)
+	def on_party_side(self, account, amount, party=None):
+		"""Post an invoice-currency amount on the party's side, as the discount is."""
+		self.add_entry(account, amount, party, credit=self.is_party_credited)
+
+	def on_item_side(self, account, amount):
+		"""Post an invoice-currency amount on the side of the items and taxes."""
+		self.add_entry(account, amount, None, credit=not self.is_party_credited)
+
+	def add_entry(self, account, amount, party, credit):
+		base_amount = abs(as_decimal(amount)) * self.exchange_rate
+		(self.credit if credit else self.debit)(account, base_amount, party)
 
 
-def _post_purchase(invoice, posting, total, exchange_rate, is_return):
-	_post_direction(posting, invoice.account, total, invoice.party, credit=True, reverse=is_return)
-	for row in invoice.items:
-		_post_direction(posting, row.account, abs(as_decimal(row.amount) * exchange_rate), reverse=is_return)
-	for tax in invoice.taxes:
-		_post_direction(posting, tax.account, abs(as_decimal(tax.amount) * exchange_rate), reverse=is_return)
-	_post_discount(invoice, posting, exchange_rate, credit=True, reverse=is_return)
-
-
-def _post_discount(invoice, posting, exchange_rate, credit, reverse):
-	item_discount = sum_decimal(row_discount(invoice, row) for row in invoice.items)
-	discount = abs(item_discount) * exchange_rate
-	if discount == 0:
-		return
+def _discount_account():
 	account = frappe.db.get_single_value("Books Accounting Settings", "discount_account")
 	if not account:
 		frappe.throw(_("Set a discount account in Books Accounting Settings."))
-	_post_direction(posting, account, discount, credit=credit, reverse=reverse)
-
-
-def _post_direction(posting, account, amount, party=None, credit=False, reverse=False):
-	if credit ^ reverse:
-		posting.credit(account, amount, party)
-	else:
-		posting.debit(account, amount, party)
-
-
-def _populate_invoice_defaults(invoice):
-	_populate_pos_defaults(invoice)
-	_populate_party_defaults(invoice)
-	populate_units(invoice.get("items", []))
-	items = _item_details({row.item for row in invoice.get("items", []) if row.item})
-	rates = pricing.standard_rates(invoice) if items else {}
-	for row in invoice.get("items", []):
-		if row.item in items:
-			_populate_row(invoice, row, items[row.item], rates)
+	return account
 
 
 def _populate_pos_defaults(invoice):
@@ -423,16 +413,6 @@ def _populate_pos_defaults(invoice):
 	invoice.account = invoice.get("account") or frappe.db.get_single_value(
 		"Books Pos Settings", "default_account"
 	)
-
-
-def _populate_party_defaults(invoice):
-	party = _party_defaults(invoice)
-	_populate_currency(invoice, party.currency)
-	if not (party and invoice.party_account_type):
-		return
-	invoice.account = invoice.get("account") or _party_account(invoice, party.default_account)
-	if invoice.transaction_type == "sales" and not invoice.get("return_against"):
-		invoice.loyalty_program = party.loyalty_program
 
 
 def _party_account(invoice, account):

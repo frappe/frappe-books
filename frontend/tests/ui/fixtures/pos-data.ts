@@ -119,6 +119,8 @@ export async function preparePOSData() {
   for (const name of getSingleSchemaNames()) {
     newFrappeDoc(name);
   }
+  // The server serves it from Frappe's currency precision; it has no default.
+  Object.assign(fyo.singles.SystemSettings!, { display_precision: 2 });
   Object.assign(fyo.singles.AccountingSettings!, {
     enable_invoice_returns: true,
     enable_coupon_code: true,

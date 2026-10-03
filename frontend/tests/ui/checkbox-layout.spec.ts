@@ -111,6 +111,39 @@ test('compact checkboxes retain their size, label, and alignment when text wraps
   );
 });
 
+test('a locked switch that is on looks on, not paler than one that is off', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    Object.assign((window as any).checkboxFixture.state, {
+      view: 'check',
+      asSwitch: true,
+    });
+  });
+  const toggle = page.getByRole('switch');
+  await expect(toggle).not.toBeChecked();
+  const off = await getTrackLightness(toggle);
+  await page.evaluate(() => {
+    Object.assign((window as any).checkboxFixture.state, {
+      value: true,
+      readOnly: true,
+    });
+  });
+  await expect(toggle).toBeChecked();
+  await expect(toggle).toBeDisabled();
+  await expect.poll(() => getTrackLightness(toggle)).toBeLessThan(off - 0.1);
+});
+
+/** The switch track's red channel, 0 to 1; the track is grey. */
+async function getTrackLightness(toggle: Locator) {
+  return toggle.evaluate((element) => {
+    const context = document.createElement('canvas').getContext('2d')!;
+    context.fillStyle = getComputedStyle(element).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    return context.getImageData(0, 0, 1, 1).data[0] / 255;
+  });
+}
+
 async function assertLabelLayout(checkbox: Locator) {
   const layout = await checkbox.evaluate((input: HTMLInputElement) => {
     const bounds = input.getBoundingClientRect();

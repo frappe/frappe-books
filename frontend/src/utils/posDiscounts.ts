@@ -18,6 +18,13 @@ export function isLoyaltyOffered(sale: SalesInvoice): boolean {
   );
 }
 
+/** Whether the POS offers another price list on the sale. */
+export function isPriceListOffered(sale: SalesInvoice): boolean {
+  return (
+    !!fyo.singles.AccountingSettings?.enable_price_list && !sale.isSubmitted
+  );
+}
+
 /** Whether the cashier can apply a coupon now; the server checks it again at save. */
 export function canApplyCoupon(sale: SalesInvoice): boolean {
   return isCouponOffered(sale) && hasItemsAndCustomer(sale);

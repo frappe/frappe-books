@@ -245,7 +245,11 @@ import {
   getQuickQtyBuffer,
 } from 'src/utils/pos';
 import { posCheckoutKey, usePOSCheckout } from 'src/utils/posCheckout';
-import { canApplyCoupon, canRedeemLoyalty } from 'src/utils/posDiscounts';
+import {
+  canApplyCoupon,
+  canRedeemLoyalty,
+  isPriceListOffered,
+} from 'src/utils/posDiscounts';
 import {
   addToCart,
   getTotalQuantity,
@@ -582,10 +586,7 @@ export default defineComponent({
       });
 
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyP'], () => {
-        if (
-          this.fyo.singles.AccountingSettings?.enable_price_list &&
-          !this.sinvDoc.isSubmitted
-        ) {
+        if (isPriceListOffered(this.sinvDoc)) {
           this.toggleModal('PriceList', true);
         }
       });

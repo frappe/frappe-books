@@ -25,7 +25,11 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModalName } from 'src/components/POS/types';
 import { getCount, type Filter } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
-import { isCouponOffered, isLoyaltyOffered } from 'src/utils/posDiscounts';
+import {
+  isCouponOffered,
+  isLoyaltyOffered,
+  isPriceListOffered,
+} from 'src/utils/posDiscounts';
 import { computed, inject, ref, watch, type Ref } from 'vue';
 
 type MenuAction = {
@@ -60,8 +64,6 @@ watch(open, async (isOpen) => {
 
 const actions = computed(() => {
   const settings = fyo.singles.AccountingSettings;
-  // A submitted sale's totals are final.
-  const isSubmitted = sinvDoc.value.isSubmitted;
   const all: MenuAction[] = [
     {
       name: 'SavedInvoice',
@@ -92,7 +94,7 @@ const actions = computed(() => {
       name: 'PriceList',
       label: t`Price List`,
       icon: 'lucide-tags',
-      hidden: !settings?.enable_price_list || isSubmitted,
+      hidden: !isPriceListOffered(sinvDoc.value),
     },
     {
       name: 'ItemEnquiry',

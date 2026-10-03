@@ -74,12 +74,23 @@
         </template>
       </FrappeTree>
     </FrappeScrollArea>
+    <div v-else class="px-3 pt-4 sm:px-5" aria-busy="true">
+      <div
+        v-for="width in ['w-56', 'w-40', 'w-48', 'w-36', 'w-44']"
+        :key="width"
+        class="flex h-8 items-center gap-2 px-1.5"
+      >
+        <FrappeSkeleton class="size-4 rounded-full" />
+        <FrappeSkeleton class="h-4 rounded-4" :class="width" />
+      </div>
+    </div>
     <FrappeDialog
       :open="!!addingParent"
       :title="newAccountTitle"
+      :actions="newAccountActions"
       @close="cancelAddingAccount(addingParent)"
     >
-      <p class="mb-4 text-p-sm text-ink-gray-6">
+      <p class="mb-4 text-p-base text-ink-gray-7">
         {{ t`Under ${addingParent?.name ?? ''}` }}
       </p>
       <FrappeTextInput
@@ -94,20 +105,6 @@
           createNewAccount(addingParent, addingParent.addingGroupAccount)
         "
       />
-      <template #actions>
-        <FrappeButton @click="cancelAddingAccount(addingParent)">{{
-          t`Cancel`
-        }}</FrappeButton>
-        <FrappeButton
-          variant="solid"
-          :loading="insertingAccount"
-          :disabled="!newAccountName.trim() || insertingAccount"
-          @click="
-            addingParent &&
-            createNewAccount(addingParent, addingParent.addingGroupAccount)
-          "
-          >{{ t`Save` }}</FrappeButton>
-      </template>
     </FrappeDialog>
   </div>
 </template>
@@ -117,8 +114,10 @@ import {
   Dialog as FrappeDialog,
   Dropdown as FrappeDropdown,
   ScrollArea as FrappeScrollArea,
+  Skeleton as FrappeSkeleton,
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
+  type DialogAction,
   type DropdownOptions,
   type TreeExposed,
   Button as FrappeButton,
@@ -175,6 +174,7 @@ export default defineComponent({
     FrappeButton,
     PageHeader,
     FrappeScrollArea,
+    FrappeSkeleton,
     FrappeTextInput,
     FrappeTree,
     FrappeDialog,
@@ -202,6 +202,22 @@ export default defineComponent({
     },
     isAllCollapsed(): boolean {
       return this.accounts.every((account) => !this.isExpanded(account));
+    },
+    newAccountActions(): DialogAction[] {
+      const parent = this.addingParent;
+      return [
+        { label: t`Cancel`, onClick: () => this.cancelAddingAccount(parent) },
+        {
+          label: t`Save`,
+          variant: 'solid',
+          disabled: !this.newAccountName.trim() || this.insertingAccount,
+          onClick: async () => {
+            if (parent) {
+              await this.createNewAccount(parent, parent.addingGroupAccount);
+            }
+          },
+        },
+      ];
     },
     newAccountTitle(): string {
       return this.addingParent?.addingGroupAccount
@@ -278,12 +294,6 @@ export default defineComponent({
         getModel(ModelNameEnum.Account)?.getTreeSettings(fyo) ?? null;
       const currency = this.fyo.singles.SystemSettings?.currency ?? '';
       const label = (await this.settings?.getRootLabel()) ?? '';
-
-      this.root = {
-        label,
-        balance: 0,
-        currency,
-      };
       const nodes = (await this.getAccounts()).map((account) => ({
         ...account,
         children: [],
@@ -294,6 +304,13 @@ export default defineComponent({
         const parent = byName.get(node.parent_books_account);
         (parent?.children ?? this.accounts).push(node);
       }
+
+      // Set last: the tree shows once its accounts are in.
+      this.root = {
+        label,
+        balance: 0,
+        currency,
+      };
     },
     async onClick(account: AccountItem) {
       let shouldOpen = !account.is_group;

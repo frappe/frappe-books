@@ -1,7 +1,7 @@
 <template>
   <div
-    class="flex flex-col flex-1"
-    :class="isMobile ? 'min-h-full bg-surface-gray-2' : 'bg-surface-gray-1'"
+    class="flex flex-1 flex-col bg-surface-gray-1"
+    :class="{ 'min-h-full': isMobile }"
   >
     <PageHeader :title="isMobile ? name : t`Print View`">
       <SelectControl
@@ -12,7 +12,7 @@
           label: t`Template Name`,
           options: templateList.map((n) => ({ label: n, value: n })),
         }"
-        input-class="text-base py-0 h-8"
+        size="small"
         class="w-40"
         :border="true"
         :value="templateName ?? ''"
@@ -20,7 +20,7 @@
       />
       <DropdownWithActions :actions="actions" :label="t`More`" />
       <template v-if="doc?.can('print')">
-        <FrappeButton variant="solid" @click="savePDF()">
+        <FrappeButton @click="savePDF()">
           {{ t`Save as PDF` }}
         </FrappeButton>
         <FrappeButton variant="solid" @click="openPrintDialog()">
@@ -40,19 +40,19 @@
       />
     </div>
 
+    <EmptyState
+      v-if="helperMessage"
+      class="flex-1"
+      icon="lucide-printer"
+      :title="helperMessage"
+    />
     <!-- Template Display Area -->
-    <div
-      class="overflow-auto p-4"
-      :class="isMobile ? 'flex-1' : ''"
+    <FrappeScrollArea
+      v-else
+      orientation="both"
+      class="min-h-0 flex-1"
+      viewport-class="p-4 pb-10"
     >
-      <!-- Display Hints -->
-      <div
-        v-if="helperMessage"
-        class="text-sm text-ink-gray-7"
-      >
-        {{ helperMessage }}
-      </div>
-
       <!-- Template Container -->
       <div :class="isMobile ? 'relative w-max min-w-full' : ''">
         <PrintSheet
@@ -73,7 +73,7 @@
           @touchcancel="onTouchEnd"
         />
       </div>
-    </div>
+    </FrappeScrollArea>
 
     <MobileFooter v-if="isMobile">
       <template v-if="canShare">
@@ -116,7 +116,10 @@
   </div>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { snakeCase } from 'lodash';
@@ -124,6 +127,7 @@ import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { ModelNameEnum } from 'models/types';
 import SelectControl from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -157,9 +161,11 @@ export default defineComponent({
   components: {
     PageHeader,
     FrappeButton,
+    FrappeScrollArea,
     SelectControl,
     PrintSheet,
     DropdownWithActions,
+    EmptyState,
     MobileFooter,
     MobilePrintTemplatePicker,
   },
@@ -195,13 +201,17 @@ export default defineComponent({
   },
   computed: {
     helperMessage() {
+      if (!this.doc) {
+        return '';
+      }
+
       if (!this.templateList.length) {
         const label = getSchema(this.schemaName)?.label ?? this.schemaName;
 
         return this.t`No Print Templates found for entry type ${label}`;
       }
 
-      if (!this.templateDoc) {
+      if (!this.templateName) {
         return this.t`Please select a Print Template`;
       }
 
@@ -295,8 +305,9 @@ export default defineComponent({
       return actions;
     },
     async initialize() {
-      this.doc = await getFrappeDoc(this.schemaName, this.name);
+      // The hints wait for the doc, so they don't flash while the list loads.
       await this.setTemplateList();
+      this.doc = await getFrappeDoc(this.schemaName, this.name);
       await this.setTemplateFromDefault();
       if (!this.templateDoc && this.templateList.length) {
         await this.onTemplateNameChange(this.templateList[0]);

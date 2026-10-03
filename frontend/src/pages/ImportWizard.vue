@@ -18,9 +18,8 @@
       />
       <FrappeButton
         v-if="hasImporter"
-        icon="lucide-download"
+        icon-left="lucide-download"
         :label="t`Save Template`"
-        :tooltip="t`Save Template`"
         @click="saveTemplate"
       />
       <FrappeButton
@@ -75,7 +74,7 @@
           "
         >
           <span v-if="fileName">{{ t`Selected` }} </span>
-          {{ helperMessage }}{{ fileName ? ',' : '' }}
+          {{ fileName }}{{ fileName ? ',' : '' }}
           <span v-if="fileName"> {{ t`check values and click on` }} </span
           >{{ ' ' }}<span v-if="fileName">{{ t`Import Data.` }}</span>
           <span v-if="hasImporter && importer.valueMatrix.length > 0">{{
@@ -160,7 +159,7 @@
                     class="min-w-0 flex-1"
                     :class="
                       val.error
-                        ? 'rounded-4 border border-outline-red-2'
+                        ? '[&_[data-slot=control]]:border-outline-red-3 [&_[data-slot=trigger]]:border-outline-red-3'
                         : ''
                     "
                     :title="getFieldTitle(val)"
@@ -183,14 +182,16 @@
           </FrappeListRows>
         </FrappeList>
 
-        <div
-          v-else
-          class="ps-3 sm:ps-5 text-ink-gray-7 sticky left-0 flex items-center"
-          style="height: 62.5px"
-        >
+        <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
           {{ t`No rows added. Select a file or add rows.` }}
-        </div>
+        </p>
       </FrappeScrollArea>
+      <EmptyState
+        v-else
+        class="flex-1"
+        icon="lucide-file-up"
+        :title="t`Set an Import Type`"
+      />
     </div>
 
     <!-- Pick Column Dialog -->
@@ -242,15 +243,15 @@
     <FrappeDialog
       :open="complete"
       :title="t`Import Complete`"
-      size="2xl"
+      :actions="completeActions"
       @update:open="(open: boolean) => !open && clear()"
     >
-      <div class="space-y-4 text-base text-ink-gray-9">
+      <div class="space-y-4 text-p-base text-ink-gray-8">
         <!-- Success -->
         <div v-if="success.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
             <p class="text-base-semibold text-ink-gray-8">{{ t`Success` }}</p>
-            <p class="text-sm text-ink-gray-6">
+            <p class="text-sm text-ink-gray-5">
               {{
                 success.length === 1
                   ? t`${success.length} entry imported`
@@ -258,7 +259,7 @@
               }}
             </p>
           </div>
-          <div class="max-h-40 overflow-y-auto">
+          <FrappeScrollArea viewport-class="max-h-40">
             <div
               v-for="(name, i) of success"
               :key="name"
@@ -269,14 +270,14 @@
                 {{ name }}
               </p>
             </div>
-          </div>
+          </FrappeScrollArea>
         </div>
 
         <!-- Failed -->
         <div v-if="failed.length > 0">
           <div class="flex items-center justify-between gap-4 pb-2">
             <p class="text-base-semibold text-ink-gray-8">{{ t`Failed` }}</p>
-            <p class="text-sm text-ink-gray-6">
+            <p class="text-sm text-ink-gray-5">
               {{
                 failed.length === 1
                   ? t`${failed.length} entry failed`
@@ -284,7 +285,7 @@
               }}
             </p>
           </div>
-          <div class="max-h-40 overflow-y-auto">
+          <FrappeScrollArea viewport-class="max-h-40">
             <div
               v-for="(f, i) of failed"
               :key="f.name"
@@ -294,28 +295,17 @@
               <p class="min-w-0 break-words">
                 {{ f.name }}
               </p>
-              <p class="min-w-0 break-words text-ink-gray-6">
+              <p class="min-w-0 break-words text-ink-gray-7">
                 {{ f.message }}
               </p>
             </div>
-          </div>
+          </FrappeScrollArea>
         </div>
 
         <p v-if="failed.length === 0 && success.length === 0" class="text-ink-gray-8">
           {{ t`No entries were imported.` }}
         </p>
       </div>
-      <template #actions>
-        <div class="flex items-center justify-end gap-2">
-          <FrappeButton v-if="failed.length > 0" @click="clearSuccessfullyImportedEntries">{{
-            t`Fix Failed`
-          }}</FrappeButton>
-          <FrappeButton v-if="failed.length === 0 && success.length > 0" @click="showMe">{{
-            t`Show Me`
-          }}</FrappeButton>
-          <FrappeButton variant="solid" @click="clear">{{ t`Done` }}</FrappeButton>
-        </div>
-      </template>
     </FrappeDialog>
   </div>
 </template>
@@ -329,6 +319,7 @@ import {
   ErrorMessage as FrappeErrorMessage,
   ScrollArea as FrappeScrollArea,
   toast,
+  type DialogAction,
 } from 'frappe-ui';
 import {
   List as FrappeList,
@@ -346,6 +337,7 @@ import Data from 'src/components/Controls/Data.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Select from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { DataImport, MissingLink } from 'src/dataImport';
 import { getDocType } from 'src/frappe/doctypes';
@@ -388,6 +380,7 @@ export default defineComponent({
     PageHeader,
     FormControl,
     DropdownWithActions,
+    EmptyState,
     AutoComplete,
     Data,
     FrappeDialog,
@@ -510,6 +503,20 @@ export default defineComponent({
         label: getSchema(value)?.label ?? value,
       }));
     },
+    completeActions(): DialogAction[] {
+      const actions: DialogAction[] = [];
+      if (this.failed.length) {
+        actions.push({
+          label: this.t`Fix Failed`,
+          onClick: this.clearSuccessfullyImportedEntries,
+        });
+      } else if (this.success.length) {
+        actions.push({ label: this.t`Show Me`, onClick: this.showMe });
+      }
+
+      actions.push({ label: this.t`Done`, variant: 'solid', onClick: this.clear });
+      return actions;
+    },
     actions(): Action[] {
       const actions: Action[] = [];
 
@@ -545,15 +552,6 @@ export default defineComponent({
       }
 
       return this.file.name;
-    },
-    helperMessage(): string {
-      if (!this.importType) {
-        return this.t`Set an Import Type`;
-      } else if (!this.fileName) {
-        return '';
-      }
-
-      return this.fileName;
     },
     isSubmittable(): boolean {
       return !!getSchema(this.importer.schemaName)?.isSubmittable;
@@ -844,8 +842,3 @@ export default defineComponent({
   },
 });
 </script>
-<style scoped>
-.index-cell {
-  @apply flex pe-4 justify-end items-center border-e last:border-b border-outline-gray-1 bg-surface-base sticky left-0 -my-4 text-ink-gray-6;
-}
-</style>

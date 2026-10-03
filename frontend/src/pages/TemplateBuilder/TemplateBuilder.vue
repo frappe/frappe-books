@@ -7,7 +7,6 @@
           ref="nameField"
           class="w-60 flex-shrink-0"
           size="small"
-          :input-class="['text-xl-semibold']"
           :df="fields.name"
           :border="true"
           :value="doc!.name"
@@ -23,8 +22,7 @@
       <FrappeButton
         v-if="canEditTemplate && displayDoc"
         :label="t`Toggle Edit Mode`"
-        :tooltip="t`Toggle Edit Mode`"
-        icon="lucide-square-pen"
+        icon-left="lucide-square-pen"
         @click="toggleEditMode"
       />
       <DropdownWithActions v-if="actions.length" :actions="actions" />
@@ -64,10 +62,12 @@
           </FrappeAlert>
         </FrappeScrollArea>
 
-        <!-- Display Hints -->
-        <p v-else-if="helperMessage" class="text-sm text-ink-gray-7 p-4">
-          {{ helperMessage }}
-        </p>
+        <EmptyState
+          v-else-if="helperMessage"
+          class="flex-1"
+          icon="lucide-layout-template"
+          :title="helperMessage"
+        />
 
         <!-- Bottom Bar -->
         <div
@@ -76,6 +76,7 @@
           <!-- Entry Type -->
           <FormControl
             class="w-44 flex-shrink-0"
+            size="small"
             :df="fields.doc_type"
             :border="true"
             :value="doc.get('doc_type')"
@@ -85,6 +86,7 @@
           <Link
             v-if="doc.doc_type"
             class="w-48 min-w-0"
+            size="small"
             :df="displayDocField"
             :border="true"
             :value="displayDoc?.name"
@@ -104,7 +106,7 @@
               :min="0.1"
               :max="10"
               :step="0.1"
-              size="md"
+              size="sm"
               variant="outline"
               @update:model-value="setScale"
             />
@@ -117,7 +119,6 @@
         :initial-x="panelWidth"
         :min-x="22 * 16"
         :max-x="maxWidth"
-        style="z-index: 5"
         @resize="(x: number) => (panelWidth = x)"
       />
 
@@ -162,15 +163,31 @@
             @update:model-value="(value) => (showHints = value === 'hints')"
           >
             <template #item-content>
-              <div
-                class="overflow-auto"
-                style="max-height: 30vh"
-              >
+              <FrappeScrollArea viewport-class="max-h-[30vh]">
                 <TemplateBuilderHint :hints="hints" />
-              </div>
+              </FrappeScrollArea>
             </template>
           </FrappeAccordion>
         </div>
+      </div>
+    </div>
+    <div
+      v-else
+      class="grid min-h-0 w-full flex-1 grid-cols-[minmax(0,1fr)_22rem] bg-surface-gray-1"
+      aria-busy="true"
+    >
+      <div class="overflow-hidden p-4">
+        <FrappeSkeleton class="mx-auto aspect-[21/29.7] max-w-md rounded-4" />
+      </div>
+      <div
+        class="space-y-3 border-l border-outline-gray-1 bg-surface-base p-4"
+      >
+        <FrappeSkeleton
+          v-for="width in ['w-48', 'w-64', 'w-40', 'w-56', 'w-32']"
+          :key="width"
+          class="h-3.5 rounded-4"
+          :class="width"
+        />
       </div>
     </div>
     <SetPrintSize v-if="doc" v-model:open="showSizeModal" :doc="doc" />
@@ -189,12 +206,14 @@ import {
   Alert as FrappeAlert,
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
+  Skeleton as FrappeSkeleton,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
 import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import HorizontalResizer from 'src/components/HorizontalResizer.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
@@ -240,7 +259,9 @@ export default defineComponent({
     FrappeAccordion,
     FrappeAlert,
     FrappeScrollArea,
+    FrappeSkeleton,
     DropdownWithActions,
+    EmptyState,
     PrintSheet,
     HorizontalResizer,
     TemplateEditor,

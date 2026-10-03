@@ -47,6 +47,7 @@
         :model-value="getTabValue(item.field)"
         @update:model-value="(value) => setFilter(item.field, value)"
       />
+      <!-- A set value keeps its label beside it, as phone chips do. -->
       <FormControl
         v-else
         :class="getWidthClass(item.field)"
@@ -54,7 +55,8 @@
         size="small"
         :df="item.field"
         :show-label="item.field.fieldtype === 'Check'"
-        :inline-label="item.field.fieldtype === 'Select'"
+        :inline-label="item.field.fieldtype !== 'Check'"
+        :placeholder="t`All`"
         :layout="item.field.fieldtype === 'Check' ? 'inline' : undefined"
         :value="report.get(item.field.fieldname)"
         :read-only="loading"
@@ -105,7 +107,7 @@ function getRangeFormat() {
 }
 
 function getWidthClass(field: Field): string {
-  return ['Select', 'Check'].includes(field.fieldtype) ? '' : 'w-40';
+  return ['Select', 'Check'].includes(field.fieldtype) ? '' : 'w-56';
 }
 
 function getTabValue(field: Field): string | undefined {

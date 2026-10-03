@@ -47,10 +47,11 @@
       :title="helperMessage"
     />
     <!-- Template Display Area -->
-    <div
+    <FrappeScrollArea
       v-else
-      class="overflow-auto p-4"
-      :class="isMobile ? 'flex-1' : ''"
+      orientation="both"
+      class="min-h-0 flex-1"
+      viewport-class="p-4 pb-10"
     >
       <!-- Template Container -->
       <div :class="isMobile ? 'relative w-max min-w-full' : ''">
@@ -72,7 +73,7 @@
           @touchcancel="onTouchEnd"
         />
       </div>
-    </div>
+    </FrappeScrollArea>
 
     <MobileFooter v-if="isMobile">
       <template v-if="canShare">
@@ -115,7 +116,10 @@
   </div>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { snakeCase } from 'lodash';
@@ -157,6 +161,7 @@ export default defineComponent({
   components: {
     PageHeader,
     FrappeButton,
+    FrappeScrollArea,
     SelectControl,
     PrintSheet,
     DropdownWithActions,

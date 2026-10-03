@@ -163,12 +163,9 @@
             @update:model-value="(value) => (showHints = value === 'hints')"
           >
             <template #item-content>
-              <div
-                class="overflow-auto"
-                style="max-height: 30vh"
-              >
+              <FrappeScrollArea viewport-class="max-h-[30vh]">
                 <TemplateBuilderHint :hints="hints" />
-              </div>
+              </FrappeScrollArea>
             </template>
           </FrappeAccordion>
         </div>

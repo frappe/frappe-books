@@ -7,61 +7,61 @@
     </PageHeader>
 
     <div
-      class="outer-container overflow-y-auto"
+      class="md:grid md:min-h-0 md:flex-1 md:grid-cols-[auto_var(--w-quick-edit)] md:grid-rows-[minmax(0,1fr)]"
     >
       <!-- Report Print Display Area -->
-      <div
-        ref="previewContainer"
-        class="p-4 bg-surface-gray-1 overflow-auto"
-      >
+      <FrappeScrollArea class="bg-surface-gray-1" viewport-class="p-4 md:pb-10">
         <!-- Report Print Display Container -->
-        <PrintSheet
-          ref="printSheet"
-          class="shadow-sm border mx-auto"
-          :scale="scale"
-          :width="size.width"
-          :height="size.height"
-        >
-          <div class="bg-surface-base mx-auto">
-            <div class="p-2">
-              <div class="text-xl-semibold w-full flex justify-between">
-                <h1>
-                  {{ `${fyo.singles.PrintSettings?.company_name}` }}
-                </h1>
-                <p class="text-ink-gray-6">
-                  {{ title }}
+        <div ref="previewContainer">
+          <PrintSheet
+            ref="printSheet"
+            class="shadow-sm border mx-auto"
+            :scale="scale"
+            :width="size.width"
+            :height="size.height"
+          >
+            <div class="bg-surface-base mx-auto">
+              <div class="p-2">
+                <div class="text-xl-semibold w-full flex justify-between">
+                  <h1>
+                    {{ `${fyo.singles.PrintSettings?.company_name}` }}
+                  </h1>
+                  <p class="text-ink-gray-6">
+                    {{ title }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Report Data -->
+              <div class="grid" :style="rowStyles">
+                <template v-for="(row, r) of matrix" :key="`row-${r}`">
+                  <div
+                    v-for="(cell, c) of row"
+                    :key="`cell-${r}.${c}`"
+                    :class="cellClasses(cell.idx, r)"
+                    class="p-2"
+                    style="min-height: 2rem"
+                  >
+                    {{ cell.value }}
+                  </div>
+                </template>
+              </div>
+
+              <div class="border-t p-2">
+                <p class="text-xs text-right w-full">
+                  {{ fyo.format(new Date(), 'Datetime') }}
                 </p>
               </div>
             </div>
-
-            <!-- Report Data -->
-            <div class="grid" :style="rowStyles">
-              <template v-for="(row, r) of matrix" :key="`row-${r}`">
-                <div
-                  v-for="(cell, c) of row"
-                  :key="`cell-${r}.${c}`"
-                  :class="cellClasses(cell.idx, r)"
-                  class="p-2"
-                  style="min-height: 2rem"
-                >
-                  {{ cell.value }}
-                </div>
-              </template>
-            </div>
-
-            <div class="border-t p-2">
-              <p class="text-xs text-right w-full">
-                {{ fyo.format(new Date(), 'Datetime') }}
-              </p>
-            </div>
-          </div>
-        </PrintSheet>
-      </div>
+          </PrintSheet>
+        </div>
+      </FrappeScrollArea>
 
       <!-- Report Print Settings -->
-      <div
+      <FrappeScrollArea
         v-if="report"
-        class="border-t md:border-t-0 md:border-l border-outline-gray-1 flex flex-col"
+        class="border-t border-outline-gray-1 md:border-l md:border-t-0"
+        viewport-class="pb-10"
       >
         <p class="p-4 text-p-sm text-ink-gray-6">
           {{
@@ -147,7 +147,7 @@
             />
           </div>
         </div>
-      </div>
+      </FrappeScrollArea>
     </div>
 
     <MobileFooter v-if="isMobile">
@@ -163,7 +163,10 @@
   </div>
 </template>
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import { Report } from 'reports/Report';
 import { reports } from 'reports/index';
 import { OptionField } from 'schemas/types';
@@ -184,6 +187,7 @@ export default defineComponent({
   components: {
     PageHeader,
     FrappeButton,
+    FrappeScrollArea,
     Check,
     Int,
     MobileFooter,
@@ -347,9 +351,3 @@ export default defineComponent({
   },
 });
 </script>
-<style scoped>
-.outer-container {
-  grid-template-columns: auto var(--w-quick-edit);
-  @apply md:grid md:h-full md:overflow-auto;
-}
-</style>

@@ -259,7 +259,7 @@
               }}
             </p>
           </div>
-          <div class="max-h-40 overflow-y-auto">
+          <FrappeScrollArea viewport-class="max-h-40">
             <div
               v-for="(name, i) of success"
               :key="name"
@@ -270,7 +270,7 @@
                 {{ name }}
               </p>
             </div>
-          </div>
+          </FrappeScrollArea>
         </div>
 
         <!-- Failed -->
@@ -285,7 +285,7 @@
               }}
             </p>
           </div>
-          <div class="max-h-40 overflow-y-auto">
+          <FrappeScrollArea viewport-class="max-h-40">
             <div
               v-for="(f, i) of failed"
               :key="f.name"
@@ -299,7 +299,7 @@
                 {{ f.message }}
               </p>
             </div>
-          </div>
+          </FrappeScrollArea>
         </div>
 
         <p v-if="failed.length === 0 && success.length === 0" class="text-ink-gray-8">

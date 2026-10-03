@@ -226,13 +226,23 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.make_payment({invoice: 50}).cancel()
 		payment = self.make_payment({invoice: 100, other: 98})
 
-		totals = get_print_totals(invoice)
+		totals = get_print_totals(invoice.reload())
 
 		self.assertEqual(
 			totals["payment_details"],
 			[{"amount": 100, "amount_paid": 198, "payment_method": "Cash", "outstanding_amount": 98}],
 		)
 		self.assertEqual(payment.amount_paid, 198)
+
+	def test_printed_balances_end_at_what_the_invoice_still_owes(self):
+		invoice = self.make_invoice()
+		self.make_payment({invoice: 50})
+		self.make_payment({invoice: 100})
+
+		details = get_print_totals(invoice.reload())["payment_details"]
+
+		self.assertEqual([row["outstanding_amount"] for row in details], [148, 48])
+		self.assertEqual(invoice.outstanding_amount, 48)
 
 	def test_invoice_totals_and_amount_in_words(self):
 		invoice = self.make_invoice()

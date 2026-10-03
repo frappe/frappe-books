@@ -624,6 +624,30 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, message, sale(0).preview)
 		self.assertRaisesRegex(frappe.ValidationError, message, sale(1).insert)
 
+	def test_pos_profile_that_forbids_edits_keeps_rule_prices(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		frappe.db.set_single_value(
+			"Books Pos Settings",
+			{"pos_profile": None, "ignore_pricing_rule": 0, "can_change_rate": 0, "can_edit_discount": 0},
+		)
+		for values, total in (
+			({"price_discount_type": "rate", "discount_rate": 80}, 80),
+			({"price_discount_type": "percentage", "discount_percentage": 25}, 75),
+		):
+			with self.subTest(values=values):
+				self.item = make_item(self.income.name, self.expense.name, rate=100)
+				self._pricing_rule(**values)
+				invoice = frappe.get_doc(
+					{
+						"doctype": "Books Sales Invoice",
+						"party": self.party.name,
+						"account": self.receivable.name,
+						"is_pos": 1,
+						"items": [{"item": self.item.name, "quantity": 1}],
+					}
+				).insert()
+				self.assertEqual(invoice.grand_total, total)
+
 	def _coupon(self, rule, **values):
 		return frappe.get_doc(
 			{

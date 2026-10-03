@@ -7,6 +7,7 @@ from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
 from frappe_books.inventory.invoice_transfer import map_invoice_transfer
+from frappe_books.inventory.stock import create_series_batches
 
 
 class BooksPurchaseInvoice(PostingInvoiceController):
@@ -54,6 +55,14 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "purchase"
+	is_purchase = True
+	party_account_type = "Payable"
+	item_account_field = "expense_account"
+
+	def create_batches(self):
+		"""Give batch rows without a batch a new one from the item's series; a return keeps the original's."""
+		if not self.return_against:
+			create_series_batches(self.items)
 
 
 @frappe.whitelist()

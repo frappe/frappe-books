@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.accounting.payment import map_invoice_payment, validate_payment_details
@@ -81,11 +82,47 @@ class BooksSalesInvoice(PostingInvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "sales"
+	is_purchase = False
+	party_account_type = "Receivable"
+	item_account_field = "income_account"
 
 	@property
 	def loyalty_points_amount(self):
 		"""What the redeemed points take off the grand total, as a virtual field."""
 		return loyalty.redemption_amount(self)
+
+	def calculate(self, drop_invalid_coupons=False):
+		"""Also show the points the party can redeem."""
+		super().calculate(drop_invalid_coupons)
+		loyalty.set_available_points(self)
+
+	def set_prices(self, drop_invalid_coupons=False):
+		"""Apply pricing rules and coupons too; a return keeps its original's prices."""
+		if self.return_against:
+			super().set_prices()
+		else:
+			pricing.price(self, drop_invalid_coupons)
+
+	def populate_party_defaults(self):
+		"""Also join the party's loyalty program; a return keeps its original's."""
+		party = super().populate_party_defaults()
+		if party and not self.return_against:
+			self.loyalty_program = party.loyalty_program
+		return party
+
+	def deduct_redemption(self, total):
+		"""A return gives back its share of the points its original redeemed."""
+		if self.return_against:
+			loyalty.set_return_redemption(self, total)
+		return total - loyalty.redemption_amount(self)
+
+	def get_ledger_posting(self):
+		"""Also expense the redeemed loyalty points, on the party's side."""
+		posting = super().get_ledger_posting()
+		redeemed = loyalty.redemption_amount(self)
+		if redeemed:
+			posting.on_party_side(loyalty.loyalty_expense_account(self), redeemed)
+		return posting
 
 	@frappe.whitelist()
 	def preview(self, check_coupons: bool = False):
@@ -102,6 +139,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 
 	def validate(self):
 		super().validate()
+		loyalty.validate_invoice_loyalty(self)
 		if self.is_pos:
 			# Ship in the submit transaction, so a stock error also rejects the sale.
 			self.make_auto_stock_transfer = 1
@@ -114,7 +152,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 			frappe.throw(_("Only POS invoices take counter payments."))
 		for row in self.payments:
 			validate_payment_details(row.payment_method, row.reference_id, row.clearance_date)
-		counter_payment_amounts(self.payments, abs(as_decimal(self.outstanding_amount)))
+		counter_payment_amounts(self.payments, settlement.due(self))
 
 	def before_submit(self):
 		super().before_submit()
@@ -125,13 +163,25 @@ class BooksSalesInvoice(PostingInvoiceController):
 
 	def on_submit(self):
 		super().on_submit()
+		self.update_coupon_usage(1)
+		loyalty.process_invoice(self)
 		self.pay_at_counter(self.payments)
+
+	def on_cancel(self):
+		super().on_cancel()
+		self.update_coupon_usage(-1)
+		loyalty.reverse_invoice(self)
+
+	def update_coupon_usage(self, delta):
+		"""Count the coupons as used, or unused on cancel; a return uses none."""
+		if not self.return_against:
+			pricing.update_coupon_usage(self, delta)
 
 	def pay_at_counter(self, rows):
 		"""Submit a payment for each tendered row and return their names."""
-		due = abs(as_decimal(self.outstanding_amount))
-		names = [self.make_counter_payment(row, amount) for row, amount in counter_payment_amounts(rows, due)]
-		self.outstanding_amount = self.db_get("outstanding_amount")
+		amounts = counter_payment_amounts(rows, settlement.due(self))
+		names = [self.make_counter_payment(row, amount) for row, amount in amounts]
+		settlement.reload_balance(self)
 		return names
 
 	def make_counter_payment(self, row, amount):
@@ -153,35 +203,29 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def validate_pos_permissions(self):
 		"""Hold POS rows to the rates and discounts the POS profile allows."""
 		rows = [row for row in self.items if not row.is_free_item]
-		rules = pricing.applied_rules(rows)
 		if not pricing.pos_setting("can_change_rate"):
-			self._validate_pos_rates(rows, rules)
+			self._validate_pos_rates(rows)
 		if not pricing.pos_setting("can_edit_discount"):
-			self._validate_pos_discounts(rows, rules)
+			self._validate_pos_discounts(rows)
 
-	def _validate_pos_rates(self, rows, rules):
+	def _validate_pos_rates(self, rows):
 		rates = pricing.standard_rates(self)
 		for row in rows:
 			rate = pricing.standard_rate(self, row, rates)
 			# Rows without a standard rate, or priced by a rule, keep the rate they have.
-			if rate is None or _price_type(rules, row) == "rate":
+			if rate is None or pricing.is_rule_priced(row, "rate"):
 				continue
 			if rounded(row.rate, self.currency) != rate:
 				frappe.throw(_("The POS profile does not allow changing the rate of {0}.").format(row.item))
 
-	def _validate_pos_discounts(self, rows, rules):
+	def _validate_pos_discounts(self, rows):
 		for row in rows:
-			if _price_type(rules, row) in ("percentage", "amount"):
+			if pricing.is_rule_priced(row, "discount"):
 				continue
 			if as_decimal(row.item_discount_percent) or as_decimal(row.item_discount_amount):
 				frappe.throw(
 					_("The POS profile does not allow editing the discount of {0}.").format(row.item)
 				)
-
-
-def _price_type(rules, row):
-	rule = rules.get(row.pricing_rule)
-	return rule.price_discount_type if rule and rule.discount_type == "Price Discount" else None
 
 
 @frappe.whitelist(methods=["POST"])

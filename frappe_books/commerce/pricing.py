@@ -10,30 +10,41 @@ from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.settings import require_feature
 
 
-def reset_pricing(invoice):
+def price(invoice, drop_invalid_coupons=False):
+	"""Fill a sale's defaults and apply its best pricing rules afresh, free rows included.
+
+	`drop_invalid_coupons` takes off coupons that cannot apply instead of refusing them.
+	"""
+	_reset_pricing(invoice)
+	invoice.populate_defaults()
+	_apply_pricing(invoice, drop_invalid_coupons)
+	invoice.populate_rows([row for row in invoice.items if row.is_free_item])
+
+
+def is_rule_priced(row, field):
+	"""Whether the row's pricing rule sets its "rate" or its "discount"."""
+	price_type = _price_discount_type(row.pricing_rule)
+	if field == "rate":
+		return price_type == "rate"
+	return price_type in ("percentage", "amount")
+
+
+def _reset_pricing(invoice):
 	"""Undo what pricing rules set on an invoice so they can be evaluated afresh."""
-	if invoice.transaction_type != "sales" or invoice.get("return_against"):
-		return
 	invoice.set("items", [row for row in invoice.items if not row.is_free_item])
 	invoice.set("pricing_rule_detail", [])
 	invoice.is_pricing_rule_applied = 0
-	rules = applied_rules(invoice.items)
 	for row in invoice.items:
 		if row.pricing_rule:
-			_reset_row(row, rules.get(row.pricing_rule))
+			_reset_row(row)
 
 
-def applied_rules(rows):
-	"""Return the pricing rules named on the rows, by name."""
-	names = list({row.pricing_rule for row in rows if row.pricing_rule})
-	if not names:
-		return {}
-	rules = frappe.get_all(
-		"Books Pricing Rule",
-		filters={"name": ["in", names]},
-		fields=["name", "discount_type", "price_discount_type"],
+def _price_discount_type(rule_name):
+	"""Return what a price discount rule changes: rate, percentage or amount; None for other rules."""
+	rule = rule_name and frappe.get_cached_value(
+		"Books Pricing Rule", rule_name, ["discount_type", "price_discount_type"], as_dict=True
 	)
-	return {rule.name: rule for rule in rules}
+	return rule.price_discount_type if rule and rule.discount_type == "Price Discount" else None
 
 
 def standard_rates(invoice):
@@ -60,8 +71,7 @@ def validate_price_list(invoice):
 	"""
 	if not invoice.price_list or invoice.get("return_against"):
 		return
-	is_purchase = invoice.transaction_type == "purchase"
-	side = "is_purchase" if is_purchase else "is_sales"
+	side = "is_purchase" if invoice.is_purchase else "is_sales"
 	price_list = frappe.db.get_value(
 		"Books Price List", invoice.price_list, ["is_enabled", side], as_dict=True
 	)
@@ -70,7 +80,7 @@ def validate_price_list(invoice):
 	if not price_list[side]:
 		frappe.throw(
 			_("Price List {0} is not for {1}.").format(
-				invoice.price_list, _("Purchases" if is_purchase else "Sales")
+				invoice.price_list, _("Purchases" if invoice.is_purchase else "Sales")
 			)
 		)
 
@@ -102,23 +112,19 @@ def pos_setting(fieldname):
 	return frappe.db.get_single_value("Books Pos Settings", fieldname)
 
 
-def _reset_row(row, rule):
+def _reset_row(row):
+	price_type = _price_discount_type(row.pricing_rule)
 	row.pricing_rule = None
-	if not rule or rule.discount_type != "Price Discount":
-		return
-	if rule.price_discount_type == "rate" and not row.is_manual_rate:
+	if price_type == "rate" and not row.is_manual_rate:
 		row.rate = None
-	elif rule.price_discount_type == "percentage":
+	elif price_type == "percentage":
 		row.item_discount_percent = 0
-	elif rule.price_discount_type == "amount":
+	elif price_type == "amount":
 		row.set_item_discount_amount = 0
 		row.item_discount_amount = 0
 
 
-def apply_pricing(invoice, drop_invalid_coupons=False):
-	"""Apply the best pricing rules; `drop_invalid_coupons` takes off coupons that cannot apply instead of refusing them."""
-	if invoice.transaction_type != "sales" or invoice.get("return_against"):
-		return
+def _apply_pricing(invoice, drop_invalid_coupons):
 	if not _applies_pricing_rules(invoice):
 		# A coupon's discount is a pricing rule, so the coupon would be used up for nothing.
 		if invoice.get("coupons"):
@@ -174,8 +180,6 @@ def _apply_rule(invoice, row, rule):
 
 
 def update_coupon_usage(invoice, delta):
-	if invoice.transaction_type != "sales" or invoice.get("return_against"):
-		return
 	for name in {row.coupons for row in invoice.get("coupons", []) if row.coupons}:
 		coupon = frappe.db.get_value(
 			"Books Coupon Code", name, ["used", "maximum_use"], as_dict=True, for_update=True

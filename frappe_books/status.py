@@ -9,14 +9,10 @@ class StatusMixin:
 	"""Store the list status of a submittable Books document."""
 
 	def on_change(self):
-		"""Store this document's status and the status of the documents it settles."""
+		"""Store this document's status and, for a return, its original's; settling stores a paid invoice's."""
 		store_status(self)
-		if self.docstatus == 0:
-			return
-		if self.get("return_against"):
+		if self.docstatus != 0 and self.get("return_against"):
 			store_status(frappe.get_doc(self.doctype, self.return_against))
-		for row in self.get("payment_references") or []:
-			store_status(frappe.get_doc(row.reference_type, row.reference_name))
 
 
 def get_status(doc) -> str:

@@ -14,7 +14,7 @@
         :key="method.name"
         type="button"
         role="radio"
-        class="flex h-16 min-w-0 flex-col items-center justify-center gap-1.5 rounded-4 border px-2 transition-colors"
+        class="flex h-16 min-w-0 flex-col items-center justify-center gap-1.5 rounded-5 border px-2 transition-colors"
         :class="
           method.name === selected
             ? 'border-outline-gray-5 text-sm-medium text-ink-gray-9 ring-1 ring-outline-gray-5'

@@ -237,7 +237,7 @@ export default {
           const share = field === this.subjectField ? 2 : 1;
           return `minmax(${this.fieldMinimumWidths[index]}rem, ${share}fr)`;
         }),
-        ...(this.canEditRow ? ['2rem'] : []),
+        ...(this.canEditRow ? ['2.5rem'] : []),
       ];
     },
     subjectField() {
@@ -262,7 +262,7 @@ export default {
         if (width) resized += width;
         else fields += this.fieldMinimumWidths[index];
       });
-      const actions = this.canEditRow ? 4 : 2;
+      const actions = this.canEditRow ? 4.5 : 2;
       const gaps = (this.listColumns.length - 1) * 0.5;
       return `calc(${fields + actions + gaps}rem + ${resized}px)`;
     },

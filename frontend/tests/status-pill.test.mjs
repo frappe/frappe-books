@@ -28,3 +28,14 @@ test('a partly paid foreign-currency invoice shows the paid amount in the compan
 
   assert.equal(badge.label, 'Partly Paid ₹ 5,000.00');
 });
+
+test('a submitted sales quote shows its status, as an invoice does', () => {
+  const quote = {
+    schemaName: 'SalesQuote',
+    isSubmitted: true,
+    status: 'Submitted',
+  };
+
+  assert.notEqual(StatusPill.computed.showStatus?.call({ doc: quote }), false);
+  assert.deepEqual(getBadge(quote), { label: 'Submitted', theme: 'green' });
+});

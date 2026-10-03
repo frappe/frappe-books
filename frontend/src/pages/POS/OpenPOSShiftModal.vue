@@ -112,7 +112,6 @@ import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
-import { ValidationError } from 'fyo/utils/errors';
 import type { POSShift } from 'src/utils/posShift';
 
 export default defineComponent({
@@ -231,12 +230,6 @@ export default defineComponent({
     },
     async handleSubmit() {
       try {
-        if (this.posShiftDoc?.openingCashAmount.isNegative()) {
-          throw new ValidationError(
-            t`Opening Cash Amount can not be negative.`
-          );
-        }
-
         await this.posShiftDoc?.sync();
         await this.posShiftDoc?.submit();
         await this.shift.refresh();

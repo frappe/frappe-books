@@ -166,7 +166,6 @@ import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
-import { validateClosingAmounts } from 'src/utils/posSetup';
 import type { POSShift } from 'src/utils/posShift';
 import { ForbiddenError } from 'fyo/utils/errors';
 
@@ -280,7 +279,6 @@ export default defineComponent({
           );
         }
 
-        validateClosingAmounts(this.posClosingShiftDoc as POSClosingShift);
         await this.posClosingShiftDoc?.sync();
         await this.posClosingShiftDoc?.submit();
         await this.shift.refresh();

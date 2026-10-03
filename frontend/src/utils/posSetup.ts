@@ -1,7 +1,6 @@
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
-import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
 import { ModelNameEnum } from 'models/types';
 import { ItemVisibility } from 'src/components/POS/types';
 import { getFrappeDoc } from 'src/frappe/documents';
@@ -69,18 +68,4 @@ export function validateIsPosSettingsSet(profile?: POSProfile | null) {
       duration: 'long',
     });
   }
-}
-
-export function validateClosingAmounts(posShiftDoc: POSClosingShift) {
-  if (!posShiftDoc) {
-    throw new ValidationError(`POS Shift Document not loaded. Please reload.`);
-  }
-
-  posShiftDoc.closing_amounts?.forEach((row) => {
-    if (row.closing_amount?.isNegative()) {
-      throw new ValidationError(
-        t`Closing ${row.payment_method as string} Amount can not be negative.`
-      );
-    }
-  });
 }

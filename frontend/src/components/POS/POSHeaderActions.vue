@@ -30,7 +30,6 @@
     />
     <FrappeDivider orientation="vertical" class="h-5" />
     <FrappeButton
-      variant="outline"
       :label="t`Close shift`"
       @click="$emit('closeShift')"
     />

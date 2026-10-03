@@ -31,7 +31,7 @@
       <FrappeButton
         v-for="group in ['', ...itemGroups]"
         :key="group"
-        :variant="group === itemGroup ? 'solid' : 'outline'"
+        :variant="group === itemGroup ? 'subtle' : 'outline'"
         :label="group || t`All`"
         :aria-pressed="group === itemGroup"
         @click="$emit('setItemGroup', group)"

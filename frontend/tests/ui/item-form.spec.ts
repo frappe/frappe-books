@@ -45,7 +45,7 @@ test.describe('on a phone', () => {
     await page.goto(`/books/edit/Item/${encodeURIComponent(name)}`);
     await waitForBooks(page);
 
-    await page.getByRole('spinbutton', { name: 'Rate' }).fill('45');
+    await page.getByRole('textbox', { name: 'Rate' }).fill('45');
     await page.keyboard.press('Tab');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByText(`${name} saved`)).toBeVisible();

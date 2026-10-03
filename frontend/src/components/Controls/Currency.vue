@@ -15,9 +15,10 @@
     v-else
     ref="input"
     spellcheck="false"
+    inputmode="decimal"
     :class="controlClasses"
     :type="inputType"
-    :model-value="round(value)"
+    :model-value="displayValue"
     :label="showLabel ? df.label : undefined"
     :description="showLabel ? df.sub_label : undefined"
     :placeholder="inputPlaceholder"
@@ -49,6 +50,23 @@ export default defineComponent({
   props: {
     focusInput: Boolean,
   },
+  data() {
+    return { isFocused: false };
+  },
+  computed: {
+    // A text input, as Frappe's desk uses, shows the formatted amount.
+    inputType(): 'text' {
+      return 'text';
+    },
+    /** The formatted amount, or the bare number while it is typed. */
+    displayValue(): string {
+      if (this.isFocused) {
+        return this.round(this.value);
+      }
+
+      return this.fyo.format(this.parse(this.value), this.df, this.doc);
+    },
+  },
   mounted() {
     if (this.focusInput) {
       nextTick(() => {
@@ -63,7 +81,9 @@ export default defineComponent({
         return;
       }
 
-      target.select();
+      this.isFocused = true;
+      // Select the bare number once it replaces the formatted amount.
+      nextTick(() => target.select());
       this.$emit('focus', e);
     },
     round(v: unknown) {
@@ -86,6 +106,7 @@ export default defineComponent({
         return;
       }
 
+      this.isFocused = false;
       this.triggerChange(target.value);
     },
   },

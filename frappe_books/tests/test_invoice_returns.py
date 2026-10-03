@@ -38,6 +38,17 @@ class IntegrationTestInvoiceReturns(IntegrationTestCase):
 				credit_note.items[0].serial_number = serial_number
 				self.assertRaisesRegex(frappe.ValidationError, message, credit_note.insert)
 
+	def test_a_return_saved_with_an_empty_batch_counts_as_returned(self):
+		item = make_item(self.income.name, self.received, track_item=1).name
+		invoice = self._submitted_invoice(item)
+		partial = map_return(invoice.doctype, invoice.name)
+		partial.items[0].update({"quantity": -1, "batch": ""})
+		partial.insert().submit()
+
+		remaining = map_return(invoice.doctype, invoice.name)
+
+		self.assertEqual([row.quantity for row in remaining.items], [-1])
+
 	def _submitted_invoice(self, item, **row):
 		return make_invoice(
 			"Books Sales Invoice",

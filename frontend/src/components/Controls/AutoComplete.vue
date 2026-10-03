@@ -59,11 +59,17 @@
     :label="showLabel ? df.label : undefined"
     :aria-label="showLabel ? undefined : df.label"
     :description="showLabel ? df.sub_label : undefined"
-    :placeholder="inputPlaceholder"
+    :placeholder="triggerButton ? t`Search` : inputPlaceholder"
     :empty-text="emptyMessage"
     :required="isRequired"
     :size="frappeSize"
     :variant="frappeVariant"
+    :trigger="triggerButton ? 'button' : 'input'"
+    v-bind="
+      triggerButton
+        ? { query: searchQuery, 'onUpdate:query': searchOptions }
+        : {}
+    "
     class="min-w-0"
     :class="controlClasses"
     :style="containerStyles"
@@ -74,7 +80,42 @@
     @update:open="onComboboxOpen"
     @update:model-value="onComboboxValueChange"
   >
-    <template v-if="inlineLabel" #prefix>
+    <!-- Button mode drops #prefix once a value is set, so the trigger shows the label itself. -->
+    <template v-if="triggerButton" #trigger="{ open }">
+      <FrappeButton
+        variant="outline"
+        size="sm"
+        class="max-w-80"
+        role="combobox"
+        aria-haspopup="listbox"
+        :aria-label="df.label"
+        :aria-expanded="open"
+      >
+        <span v-if="inlineLabel" class="me-2 text-ink-gray-5">{{
+          df.label
+        }}</span>
+        <span class="truncate">{{ triggerLabel }}</span>
+        <template #suffix>
+          <span
+            class="lucide-chevron-down size-4 text-ink-gray-5 transition-transform duration-200"
+            :class="open ? 'rotate-180' : ''"
+            aria-hidden="true"
+          />
+        </template>
+      </FrappeButton>
+    </template>
+    <template v-if="triggerButton && value" #footer="{ clear, close }">
+      <FrappeButton
+        class="w-full"
+        variant="ghost"
+        :label="t`Clear`"
+        @click="
+          clear();
+          close();
+        "
+      />
+    </template>
+    <template v-if="inlineLabel && !triggerButton" #prefix>
       <span class="shrink-0 text-base text-ink-gray-5">{{ df.label }}</span>
     </template>
     <template #suffix="{ open, clear, setOpen }">
@@ -144,6 +185,8 @@ export default {
   props: {
     closeOnEnter: { type: Boolean, default: false },
     showClearButton: { type: Boolean, default: false },
+    /** Opens from a button showing the value, with the search inside the dropdown. */
+    triggerButton: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -157,6 +200,11 @@ export default {
     };
   },
   computed: {
+    triggerLabel() {
+      return (
+        this.linkValue || String(this.value || '') || this.inputPlaceholder
+      );
+    },
     comboboxValue() {
       if (typeof this.value === 'string' || typeof this.value === 'number') {
         return this.value || null;
@@ -382,11 +430,18 @@ export default {
     },
     onComboboxOpen(isOpen) {
       this.isDropdownOpen = isOpen;
-      if (isOpen) {
-        this.updateSuggestions(this.searchQuery);
-      } else {
+      // Button mode's search box starts empty on every open.
+      if (!isOpen || this.triggerButton) {
         this.searchQuery = '';
       }
+      if (isOpen) {
+        this.updateSuggestions(this.searchQuery);
+      }
+    },
+    /** Button mode's search only narrows the options; picking one sets the value. */
+    searchOptions(query) {
+      this.searchQuery = query;
+      this.updateSuggestions(query);
     },
     onComboboxInput(event) {
       if (this.isReadOnly || !(event.target instanceof HTMLInputElement)) {

@@ -8,13 +8,16 @@
   >
     <!-- A field reserves the label line other fields have, even without a neighbor. -->
     <div class="row-start-2 flex min-w-0 items-center" :class="controlHeight">
-      <!-- The box stays beside the first line of a wrapped label. -->
+      <!-- The box stays beside the first line of a wrapped label. frappe-ui greys
+      every disabled switch alike, so one that is on keeps a darker track. -->
       <component
         :is="asSwitch ? 'FrappeSwitch' : 'FrappeCheckbox'"
         ref="input"
         class="min-w-0 [&_[data-slot=control]]:self-start"
         :class="[
-          asSwitch ? 'w-full' : 'max-w-full',
+          asSwitch
+            ? 'w-full [&_[data-slot=control][data-state=checked]:disabled]:bg-surface-gray-6'
+            : 'max-w-full',
           { '[&_[data-slot=label]]:text-ink-red-7': showMandatory },
         ]"
         :model-value="getChecked(value)"

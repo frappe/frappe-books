@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { before, test } from 'node:test';
 import { loadFrappeModels } from './helpers/models.mjs';
 import {
   frappeModels,
   fyo,
-  getMappedDoc,
+  getDocType,
+  getFrappeDoc,
   getStockTransferActions,
   loadSaved,
   newFrappeDoc,
+  router,
   stubFrappe,
 } from './helpers/frappe.mjs';
 
@@ -31,54 +34,6 @@ async function getSaved(schemaName, name) {
   return doc;
 }
 
-test('transfer invoices and returns come from the transfer mappers', async () => {
-  const requests = stubMapper({
-    doctype: 'Books Purchase Receipt',
-    party: 'Supplier',
-    items: [{ item: 'Pen', quantity: -2 }],
-  });
-  const receipt = await getSaved('PurchaseReceipt', 'PREC-1');
-
-  await getMappedDoc(receipt, 'PurchaseInvoice', 'make_purchase_invoice');
-  const purchaseReturn = await getMappedDoc(
-    receipt,
-    'PurchaseReceipt',
-    'make_return'
-  );
-
-  const module = `${DOCTYPES}.books_purchase_receipt.books_purchase_receipt`;
-  assert.deepEqual(
-    requests.map(({ body }) => body),
-    [
-      { method: `${module}.make_purchase_invoice`, source_name: 'PREC-1' },
-      { method: `${module}.make_return`, source_name: 'PREC-1' },
-    ]
-  );
-  assert.equal(purchaseReturn.items[0].quantity, -2);
-});
-
-test('an invoice maps its pending stock with the transfer mapper', async () => {
-  const requests = stubMapper({
-    doctype: 'Books Purchase Receipt',
-    party: 'Supplier',
-    items: [{ item: 'Pen', quantity: 2 }],
-  });
-  const invoice = await getSaved('PurchaseInvoice', 'PINV-1');
-
-  const receipt = await getMappedDoc(
-    invoice,
-    invoice.stockTransferSchemaName,
-    invoice.stockTransferMapper
-  );
-
-  assert.deepEqual(requests[0].body, {
-    method: `${DOCTYPES}.books_purchase_invoice.books_purchase_invoice.make_purchase_receipt`,
-    source_name: 'PINV-1',
-  });
-  assert.equal(receipt.schemaName, 'PurchaseReceipt');
-  assert.equal(receipt.items[0].quantity, 2);
-});
-
 test('a fully billed shipment does not offer an invoice', () => {
   const [makeInvoice] = getStockTransferActions(fyo, 'Shipment');
   const shipment = { isSubmitted: true, is_fully_billed: 0 };
@@ -88,45 +43,99 @@ test('a fully billed shipment does not offer an invoice', () => {
   assert.equal(makeInvoice.condition(shipment), false);
 });
 
-test('lead, party and item actions open documents from their server mappers', async () => {
-  const requests = stubMapper({
-    party: 'Acme',
-    items: [{ item: 'Pen', quantity: 1 }],
-  });
-  const cases = [
-    ['Lead', 'Customer', 'books_lead.books_lead.make_customer', '/edit/Party/'],
-    [
-      'Lead',
-      'Sales Quote',
-      'books_lead.books_lead.make_sales_quote',
-      '/edit/SalesQuote/',
-    ],
-    [
-      'Party',
-      'Create sale',
-      'books_party.books_party.make_sales_invoice',
-      '/edit/SalesInvoice/',
-    ],
-    [
-      'Item',
-      'Purchase Invoice',
-      'books_item.books_item.make_purchase_invoice',
-      '/edit/PurchaseInvoice/',
-    ],
-  ];
-  for (const [schemaName, label, mapper, path] of cases) {
-    const source = await getSaved(schemaName, 'Acme');
-    const { action } = frappeModels[schemaName]
-      .getActions(fyo)
-      .find((action) => action.label === label);
-    let route = '';
-    await action(source, { push: (to) => (route = to.path ?? to) });
+// By source: each action that builds a document with a mapper of the source, the mapper, and what it builds.
+const mappedDocActions = {
+  Lead: [
+    ['Customer', 'make_customer', 'Party'],
+    ['Sales Quote', 'make_sales_quote', 'SalesQuote'],
+  ],
+  Party: [
+    ['Create sale', 'make_sales_invoice', 'SalesInvoice'],
+    ['Create purchase', 'make_purchase_invoice', 'PurchaseInvoice'],
+  ],
+  Item: [
+    ['Sales Invoice', 'make_sales_invoice', 'SalesInvoice'],
+    ['Purchase Invoice', 'make_purchase_invoice', 'PurchaseInvoice'],
+  ],
+  SalesQuote: [['Sales Invoice', 'make_sales_invoice', 'SalesInvoice']],
+  SalesInvoice: [
+    ['Shipment', 'make_shipment', 'Shipment'],
+    ['Return', 'make_return', 'SalesInvoice'],
+  ],
+  PurchaseInvoice: [
+    ['Purchase Receipt', 'make_purchase_receipt', 'PurchaseReceipt'],
+    ['Return', 'make_return', 'PurchaseInvoice'],
+  ],
+  Shipment: [
+    ['Sales Invoice', 'make_sales_invoice', 'SalesInvoice'],
+    ['Return', 'make_return', 'Shipment'],
+  ],
+  PurchaseReceipt: [
+    ['Purchase Invoice', 'make_purchase_invoice', 'PurchaseInvoice'],
+    ['Return', 'make_return', 'PurchaseReceipt'],
+  ],
+};
 
-    assert.deepEqual(
-      requests.at(-1).body,
-      { method: `${DOCTYPES}.${mapper}`, source_name: 'Acme' },
-      label
-    );
-    assert.ok(route.startsWith(path), label);
+function getAction(schemaName, label) {
+  return frappeModels[schemaName]
+    .getActions(fyo)
+    .find((action) => action.label === label);
+}
+
+/** Whether the app's Python module that a dotted method path names whitelists that function. */
+function isWhitelisted(method) {
+  const path = method.split('.');
+  const name = path.pop();
+  const file = new URL(`../../${path.join('/')}.py`, import.meta.url);
+  return readFileSync(file, 'utf8').includes(
+    `@frappe.whitelist()\ndef ${name}(`
+  );
+}
+
+test("each mapped document action opens the form of what its source's whitelisted mapper builds", async () => {
+  const requests = stubMapper({ party: 'Acme' });
+  for (const [schemaName, actions] of Object.entries(mappedDocActions)) {
+    const source = await getSaved(schemaName, 'SRC-1');
+    const module = getDocType(schemaName)
+      .doctype.toLowerCase()
+      .replaceAll(' ', '_');
+    for (const [label, mapper, target] of actions) {
+      let route = '';
+      await getAction(schemaName, label).action(source, {
+        push: (to) => (route = to),
+      });
+
+      const method = `${DOCTYPES}.${module}.${module}.${mapper}`;
+      assert.deepEqual(requests.at(-1).body, { method, source_name: 'SRC-1' });
+      assert.ok(isWhitelisted(method), method);
+      const [, edit, routeSchemaName, name] = route.split('/');
+      assert.deepEqual([edit, routeSchemaName], ['edit', target], label);
+      assert.equal((await getFrappeDoc(target, name)).notInserted, true, label);
+    }
+  }
+});
+
+test('a payment action opens the payment in a quick edit without the fields its invoice sets', async () => {
+  const requests = stubMapper({ party: 'Acme' });
+  const pushed = [];
+  router.currentRoute = {
+    value: { fullPath: '/list/SalesInvoice', query: {} },
+  };
+  router.push = async (to) => pushed.push(to);
+  for (const schemaName of ['SalesInvoice', 'PurchaseInvoice']) {
+    const invoice = await getSaved(schemaName, 'INV-1');
+
+    await getAction(schemaName, 'Payment').action(invoice, router);
+
+    const method = requests.at(-1).body.method;
+    assert.ok(method.endsWith('.make_payment') && isWhitelisted(method));
+    const { schemaName: opened, edit, hideFields } = pushed.at(-1).query;
+    assert.deepEqual([opened, edit], ['Payment', 1]);
+    assert.deepEqual(hideFields, [
+      'party',
+      'payment_references',
+      'account',
+      'payment_type',
+    ]);
   }
 });

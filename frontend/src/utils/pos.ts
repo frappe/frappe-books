@@ -268,6 +268,16 @@ export function getQuickPaymentAmounts(due: number, count = 2): number[] {
   return amounts.slice(0, count);
 }
 
+/** What is due, then, for a cash sale, the round amounts a customer may hand over. */
+export function getPaymentShortcuts(due: Money, isCashSale: boolean): Money[] {
+  if (!isCashSale) {
+    return [due];
+  }
+
+  const notes = getQuickPaymentAmounts(due.float);
+  return [due, ...notes.map((note) => fyo.pesa(note))];
+}
+
 /** The items the POS lists: those its visibility setting tracks, of the group when given. */
 export function getPOSItemFilters(
   visibility: ItemVisibility | undefined,
@@ -494,6 +504,8 @@ export function getTotalTaxedAmount(sinvDoc: SalesInvoice): Money {
 export interface CostLine {
   label: string;
   value: Money;
+  /** A discount or redemption that lowers the total. */
+  isDiscount?: boolean;
 }
 
 /** The net total, then each amount that takes it to the grand total. */
@@ -501,11 +513,16 @@ export function getCostLines(invoice: SalesInvoice): CostLine[] {
   const getLabel = (fieldname: string) =>
     getField(invoice.schemaName, fieldname)?.label ?? fieldname;
   const changes = [
-    { label: getLabel('total_discount'), value: invoice.total_discount },
+    {
+      label: getLabel('total_discount'),
+      value: invoice.total_discount,
+      isDiscount: true,
+    },
     { label: getLabel('taxes'), value: getTotalTaxedAmount(invoice) },
     {
       label: getLabel('loyalty_points_amount'),
       value: invoice.loyalty_points_amount,
+      isDiscount: true,
     },
   ].filter((line): line is CostLine => !!line.value && !line.value.isZero());
 

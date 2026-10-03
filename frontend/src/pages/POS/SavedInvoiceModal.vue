@@ -1,35 +1,38 @@
 <template>
   <Modal
     :open-modal="openModal"
-    :title="t`Saved and Submitted Invoices`"
+    :title="t`Invoices`"
     size="2xl"
     body-class="flex h-[32rem] flex-col gap-3"
     @closemodal="closeModal"
   >
-    <div class="shrink-0">
-      <FrappeTextInput
-        v-model="invoiceSearchTerm"
-        type="text"
-        :aria-label="t`Search by invoice name`"
-        :placeholder="t`Search by invoice name`"
-        class="w-full"
-        :variant="isMobile ? 'subtle' : 'outline'"
-        :size="isMobile ? 'lg' : 'md'"
-        @keyup.enter="handleEnterKey"
-     >
-        <template v-if="isMobile" #prefix>
-          <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
-        </template>
-      </FrappeTextInput>
-    </div>
-
     <FrappeTabButtons
       :model-value="savedInvoiceList ? 'saved' : 'submitted'"
       :options="invoiceTabs"
-      class="w-full shrink-0"
-      fluid
+      variant="underline"
+      class="shrink-0"
+      :fluid="isMobile"
       @update:model-value="showSavedInvoices($event === 'saved')"
-    />
+    >
+      <template #suffix="{ button }">
+        <FrappeBadge :label="getInvoiceCount(button.value)" />
+      </template>
+    </FrappeTabButtons>
+
+    <FrappeTextInput
+      v-model="invoiceSearchTerm"
+      type="text"
+      :aria-label="t`Search by invoice name`"
+      :placeholder="t`Search by invoice name`"
+      class="w-full shrink-0"
+      variant="subtle"
+      :size="isMobile ? 'lg' : 'md'"
+      @keyup.enter="handleEnterKey"
+    >
+      <template #prefix>
+        <FrappeIcon icon="lucide-search" class="size-4 text-ink-gray-5" />
+      </template>
+    </FrappeTextInput>
 
     <InvoiceSelectionTable
       v-model="selectedInvoiceName"
@@ -49,7 +52,7 @@
         variant="solid"
         :disabled="!selectedInvoiceName"
         @click="openSelectedInvoice"
-        >{{ t`Open Invoice` }}</FrappeButton>
+        >{{ t`Open invoice` }}</FrappeButton>
     </template>
   </Modal>
 </template>
@@ -62,7 +65,13 @@ import { defineComponent } from 'vue';
 import { Field } from 'schemas/types';
 import type { Filter } from 'src/frappe/api';
 import { getPOSInvoiceFields, getPOSInvoices } from 'src/utils/pos';
-import { TabButtons as FrappeTabButtons, TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
+import {
+  Badge as FrappeBadge,
+  Button as FrappeButton,
+  Icon as FrappeIcon,
+  TabButtons as FrappeTabButtons,
+  TextInput as FrappeTextInput,
+} from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
 
 const SAVED_FILTERS: Filter[] = [['docstatus', '=', 0]];
@@ -77,6 +86,7 @@ export default defineComponent({
   name: 'SavedInvoiceModal',
   components: {
     Modal,
+    FrappeBadge,
     FrappeButton,
     FrappeIcon,
     InvoiceSelectionTable,
@@ -107,7 +117,7 @@ export default defineComponent({
     invoiceTabs() {
       return [
         { value: 'saved', label: this.t`Saved` },
-        { value: 'submitted', label: this.t`Submitted` },
+        { value: 'submitted', label: this.t`Submitted, unpaid` },
       ];
     },
     tableFields(): Field[] {
@@ -131,6 +141,10 @@ export default defineComponent({
   },
 
   methods: {
+    getInvoiceCount(tab: string | number | boolean): number {
+      return (tab === 'saved' ? this.savedInvoices : this.submittedInvoices)
+        .length;
+    },
     /** Both tabs' invoices whose name has the search term; a later search replaces them. */
     async setInvoices() {
       const search = this.invoiceSearchTerm;

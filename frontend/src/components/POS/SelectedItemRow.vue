@@ -1,98 +1,73 @@
 <template>
-  <FrappeListCell class="min-h-12"
-    ><div class="w-full flex justify-center">
-      <FrappeButton
-        :icon="isExpanded ? 'lucide-chevron-up' : 'lucide-chevron-down'"
-        variant="ghost"
-        size="xs"
-        :tooltip="isExpanded ? t`Collapse item` : t`Expand item`"
-        :aria-label="isExpanded ? t`Collapse item` : t`Expand item`"
-        :aria-expanded="isExpanded"
-        @click="toggleExpand"
-      /></div
-  ></FrappeListCell>
-  <FrappeListCell class="min-h-12"
-    ><div class="w-full min-w-0 px-2">
-      <FrappeTooltip :text="row.item">
-        <button
-          type="button"
-          class="block w-full truncate rounded-4 text-start text-sm text-ink-gray-9 hover:bg-surface-gray-2"
-          @click="selectRow"
-        >
-          {{ row.item }}
-        </button>
-      </FrappeTooltip>
-      <p
+  <FrappeListCell>
+    <button
+      type="button"
+      class="flex min-w-0 flex-1 flex-col gap-0.5 text-start"
+      :aria-expanded="isExpanded"
+      @click="selectRow"
+    >
+      <span class="truncate text-base-medium text-ink-gray-9" :title="row.item">
+        {{ row.item }}
+      </span>
+      <span
         v-if="row.is_free_item"
-        class="truncate text-xs text-ink-green-7"
+        class="truncate text-xs text-ink-green-5"
         :title="String(row.pricing_rule ?? '')"
       >
         {{ row.pricing_rule }}
-      </p>
-    </div></FrappeListCell
-  >
-  <FrappeListCell class="min-h-12"
-    ><div class="w-full flex min-w-0 items-center justify-end gap-1">
-      <span
-        class="min-w-0 truncate px-2 text-end text-sm tabular-nums text-ink-gray-9"
-        :title="fyo.format(displayQuantity, 'Float')"
-        >{{ fyo.format(displayQuantity, 'Float') }}</span
-      >
-      <div v-if="isClassic" class="flex shrink-0 flex-col">
-        <FrappeButton
-          icon="lucide-chevron-up"
-          variant="ghost"
-          size="xs"
-          :tooltip="t`Increase quantity`"
-          :aria-label="t`Increase quantity`"
-          @click="adjustQuantity(1)"
-        />
-        <FrappeButton
-          icon="lucide-chevron-down"
-          variant="ghost"
-          size="xs"
-          :tooltip="t`Decrease quantity`"
-          :aria-label="t`Decrease quantity`"
-          @click="adjustQuantity(-1)"
-        />
-      </div></div
-  ></FrappeListCell>
-  <FrappeListCell v-if="isClassic" class="min-h-12"
-    ><span
-      class="w-full min-w-0 truncate px-2 text-sm text-ink-gray-9"
-      :title="row.transfer_unit || row.unit"
-      >{{ row.transfer_unit || row.unit }}</span
-    ></FrappeListCell
-  >
-  <FrappeListCell class="min-h-12"
-    ><span
-      class="w-full min-w-0 truncate px-2 text-end text-sm tabular-nums text-ink-gray-9"
-      :title="fyo.format(row.transfer_rate, 'Currency')"
-      >{{ fyo.format(row.transfer_rate, 'Currency') }}</span
-    ></FrappeListCell
-  >
-  <FrappeListCell class="min-h-12"
-    ><span
-      class="w-full min-w-0 truncate px-2 text-end text-sm tabular-nums text-ink-gray-9"
-      :title="fyo.format(row.amount, 'Currency')"
-      >{{ fyo.format(row.amount, 'Currency') }}</span
-    ></FrappeListCell
-  >
-  <FrappeListCell class="min-h-12"
-    ><div class="w-full flex justify-center">
+      </span>
+      <span v-else class="truncate text-xs tabular-nums text-ink-gray-5">
+        {{ rateLabel }}
+      </span>
+    </button>
+  </FrappeListCell>
+  <FrappeListCell>
+    <div
+      class="flex items-center gap-0.5 rounded-4 p-0.5"
+      :class="isExpanded ? 'bg-surface-gray-3' : 'bg-surface-gray-2'"
+    >
       <FrappeButton
-        icon="lucide-trash-2"
-        theme="red"
+        icon="lucide-minus"
         variant="ghost"
         size="xs"
-        :tooltip="t`Remove item`"
-        :aria-label="t`Remove item`"
-        @click.stop="removeRow"
-      /></div
-  ></FrappeListCell>
+        :aria-label="t`Decrease quantity`"
+        @click="adjustQuantity(-1)"
+      />
+      <span
+        class="min-w-5.5 text-center text-base-medium tabular-nums text-ink-gray-9"
+      >
+        {{ displayQuantity }}
+      </span>
+      <FrappeButton
+        icon="lucide-plus"
+        variant="ghost"
+        size="xs"
+        :aria-label="t`Increase quantity`"
+        @click="adjustQuantity(1)"
+      />
+    </div>
+  </FrappeListCell>
+  <FrappeListCell class="justify-end">
+    <span
+      class="truncate text-base tabular-nums text-ink-gray-9"
+      :title="fyo.format(row.amount, 'Currency')"
+    >
+      {{ fyo.format(row.amount, 'Currency') }}
+    </span>
+  </FrappeListCell>
+  <FrappeListCell>
+    <FrappeButton
+      icon="lucide-x"
+      variant="ghost"
+      size="xs"
+      :tooltip="t`Remove item`"
+      :aria-label="t`Remove item`"
+      @click.stop="removeRow"
+    />
+  </FrappeListCell>
   <div
     v-if="isExpanded"
-    class="col-span-full grid grid-cols-2 gap-4 border-t border-outline-gray-1 px-3 py-4"
+    class="col-span-full grid grid-cols-2 gap-3 pb-1.5 pt-0.5"
   >
     <div v-if="isUOMConversionEnabled" class="min-w-0">
       <Float
@@ -251,11 +226,15 @@
         @change="(value: string) => setSerialNumber(value)"
       />
     </div>
+
+    <p v-if="!isClassic" class="col-span-2 text-xs text-ink-gray-5">
+      {{ t`Tap a number to use the keypad.` }}
+    </p>
   </div>
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton, Tooltip as FrappeTooltip } from 'frappe-ui';
+import { Button as FrappeButton } from 'frappe-ui';
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
 import { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { getPOSBatchQuantity } from 'models/inventory/posStock';
@@ -265,6 +244,7 @@ import Currency from 'src/components/Controls/Currency.vue';
 import Float from 'src/components/Controls/Float.vue';
 import Link from 'src/components/Controls/Link.vue';
 import Text from 'src/components/Controls/Text.vue';
+import { t } from 'fyo';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import {
@@ -281,7 +261,7 @@ import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { defineComponent, inject, PropType } from 'vue';
 import { POSLayout } from './types';
 
-/** A cart row: edited inline in the Classic layout, with the keypad in Modern. */
+/** A cart row: its fields edit inline in the Classic layout, with the keypad in Modern. */
 export default defineComponent({
   name: 'SelectedItemRow',
   components: {
@@ -290,7 +270,6 @@ export default defineComponent({
     Float,
     FrappeButton,
     FrappeListCell,
-    FrappeTooltip,
     Link,
     Text,
   },
@@ -344,6 +323,20 @@ export default defineComponent({
         label: unit,
         value: unit,
       }));
+    },
+    /** The rate per unit, its unit in Classic, and any item discount. */
+    rateLabel(): string {
+      const rate = fyo.format(this.row.transfer_rate, 'Currency');
+      const parts = [
+        this.isClassic
+          ? t`${rate} per ${this.row.transfer_unit || this.row.unit || ''}`
+          : t`${rate} each`,
+      ];
+      if (this.row.item_discount_percent) {
+        parts.push(t`${this.row.item_discount_percent}% off`);
+      }
+
+      return parts.join(' · ');
     },
     displayQuantity(): number | undefined {
       if (!this.isUOMConversionEnabled) {

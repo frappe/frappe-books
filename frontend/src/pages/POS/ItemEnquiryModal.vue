@@ -1,11 +1,12 @@
 <template>
   <Modal
     :open-modal="openModal"
-    :title="t`Item Enquiry`"
+    :title="t`Item enquiry`"
+    :subtitle="t`Record what a customer asked for.`"
     size="md"
     @closemodal="closeModal"
   >
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-3">
       <Link
         :df="{
           fieldname: 'item',
@@ -32,42 +33,44 @@
         @change="(value: string) => (ItemEnquiry.description = value)"
       />
 
-      <Link
-        :df="{
-          fieldname: 'customer',
-          fieldtype: 'Link',
-          target: 'Party',
-          label: t`Customer`,
-        }"
-        :value="ItemEnquiry.customer"
-        :border="true"
-        :show-label="true"
-        @change="
-          (value: string) => {
-            ItemEnquiry.customer = value;
-            updateCustomerContact(value);
-          }
-        "
-      />
+      <div class="grid gap-3 md:grid-cols-2">
+        <Link
+          :df="{
+            fieldname: 'customer',
+            fieldtype: 'Link',
+            target: 'Party',
+            label: t`Customer`,
+          }"
+          :value="ItemEnquiry.customer"
+          :border="true"
+          :show-label="true"
+          @change="
+            (value: string) => {
+              ItemEnquiry.customer = value;
+              updateCustomerContact(value);
+            }
+          "
+        />
 
-      <Data
-        :df="{
-          fieldname: 'contact',
-          fieldtype: 'Data',
-          label: t`Contact`,
-        }"
-        :value="ItemEnquiry.contact"
-        :border="true"
-        :show-label="true"
-        @change="(value: string) => (ItemEnquiry.contact = value)"
-      />
+        <Data
+          :df="{
+            fieldname: 'contact',
+            fieldtype: 'Data',
+            label: t`Contact`,
+          }"
+          :value="ItemEnquiry.contact"
+          :border="true"
+          :show-label="true"
+          @change="(value: string) => (ItemEnquiry.contact = value)"
+        />
+      </div>
 
       <Link
         :df="{
           fieldname: 'similar_product',
           fieldtype: 'Link',
           target: 'Item',
-          label: t`Similar Product`,
+          label: t`Similar product`,
         }"
         :value="ItemEnquiry.similar_product"
         :border="true"

@@ -49,7 +49,7 @@
             @click="$emit('selectMethod', method.name)"
           >
             <FrappeIcon
-              :icon="methodIcons[method.type ?? 'Cash']"
+              :icon="paymentMethodIcons[method.type ?? 'Cash']"
               class="size-5 shrink-0"
             />
             <span class="min-w-0 flex-1 truncate">{{ method.name }}</span>
@@ -186,18 +186,20 @@ import {
 } from 'frappe-ui';
 import { PaymentMethodRequirements } from 'models/baseModels/PaymentMethod/requirements';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
-import { PaymentMethodType } from 'models/types';
 import { Money } from 'pesa';
 import Currency from 'src/components/Controls/Currency.vue';
 import Data from 'src/components/Controls/Data.vue';
 import DateControl from 'src/components/Controls/Date.vue';
-import { PaymentMethodOption } from 'src/components/POS/types';
+import {
+  PaymentMethodOption,
+  paymentMethodIcons,
+} from 'src/components/POS/types';
 import { getField } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import {
   getCostLines,
-  getQuickPaymentAmounts,
+  getPaymentShortcuts,
   getTotalQuantity,
 } from 'src/utils/pos';
 import { computed, inject, type Ref } from 'vue';
@@ -226,12 +228,6 @@ defineEmits<{
   submit: [];
 }>();
 
-const methodIcons: Record<PaymentMethodType, string> = {
-  Cash: 'lucide-banknote',
-  Bank: 'lucide-landmark',
-  Transfer: 'lucide-arrow-right-left',
-};
-
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
 const paidAmount = inject('paidAmount') as Ref<Money>;
 const paymentMethod = inject('paymentMethod') as Ref<string | undefined>;
@@ -255,14 +251,12 @@ const summary = computed(() => {
 // Only Net Total means nothing changed it, so the amount due says it all.
 const costLines = computed(() => getCostLines(sinvDoc.value));
 
-const quickAmounts = computed(() => {
-  if (sinvDoc.value.isReturn || !props.requirements.isCash) {
-    return [props.dueAmount];
-  }
-
-  const notes = getQuickPaymentAmounts(props.dueAmount.float);
-  return [props.dueAmount, ...notes.map((note) => fyo.pesa(note))];
-});
+const quickAmounts = computed(() =>
+  getPaymentShortcuts(
+    props.dueAmount,
+    !sinvDoc.value.isReturn && props.requirements.isCash
+  )
+);
 
 function format(amount: Money): string {
   return fyo.format(amount, 'Currency');

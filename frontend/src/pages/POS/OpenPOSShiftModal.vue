@@ -1,7 +1,7 @@
 <template>
   <Modal
     :open-modal="openModal && !isDismissed && isValuesSeeded"
-    :title="t`Open POS Shift`"
+    :title="t`Open POS shift`"
     size="3xl"
     :dismissible="false"
     @closemodal="handleDismiss"
@@ -34,38 +34,54 @@
         </div>
       </dl>
     </template>
-    <div v-else class="grid grid-cols-1 gap-6 md:grid-cols-2">
-      <div class="flex min-w-0 flex-col gap-4">
-        <h2 class="text-lg-semibold text-ink-gray-8">
-          {{ t`Cash In Denominations` }}
-        </h2>
+    <div
+      v-else-if="posShiftDoc"
+      class="grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6"
+    >
+      <CashCountTable :heading="t`Cash in drawer`" :rows="openingCash" />
 
-        <Table
-          v-if="isValuesSeeded"
-          class="text-base"
-          :df="getField('opening_cash')"
-          :show-header="true"
-          :border="true"
-          :value="posShiftDoc?.opening_cash"
-        />
-      </div>
-
-      <div class="flex min-w-0 flex-col gap-4">
-        <h2 class="text-lg-semibold text-ink-gray-8">
-          {{ t`Opening Amount` }}
-        </h2>
-
-        <Table
-          v-if="isValuesSeeded"
-          class="text-base"
-          :df="getField('opening_amounts')"
-          :show-header="true"
-          :border="true"
-          :value="posShiftDoc?.opening_amounts"
-          :read-only="false"
-          :allow-add-remove-rows="false"
-        />
-      </div>
+      <section class="flex min-w-0 flex-col gap-2">
+        <h3 class="text-base-medium text-ink-gray-9">
+          {{ t`Opening amounts` }}
+        </h3>
+        <ul
+          class="flex flex-col divide-y divide-outline-gray-1 rounded-5 border border-outline-gray-1 text-base"
+        >
+          <li
+            v-for="row in posShiftDoc.opening_amounts"
+            :key="row.idx"
+            class="flex h-10 items-center gap-2 px-3"
+          >
+            <FrappeIcon
+              :icon="paymentMethodIcons[methodTypes[row.payment_method ?? ''] ?? 'Cash']"
+              class="size-4 shrink-0 text-ink-gray-5"
+            />
+            <span class="min-w-0 flex-1 truncate text-ink-gray-8">
+              {{ row.payment_method }}
+            </span>
+            <span
+              v-if="row.payment_method === 'Cash'"
+              class="text-base-medium tabular-nums text-ink-gray-9"
+              dir="ltr"
+            >
+              {{ fyo.format(row.amount ?? 0, 'Currency') }}
+            </span>
+            <FormControl
+              v-else
+              class="w-32"
+              size="small"
+              :border="true"
+              :df="{
+                fieldname: 'amount',
+                fieldtype: 'Currency',
+                label: row.payment_method,
+              }"
+              :value="row.amount"
+              @change="(amount: Money) => row.set('amount', amount)"
+            />
+          </li>
+        </ul>
+      </section>
     </div>
 
     <template #actions="{ size }">
@@ -77,28 +93,27 @@
         class="min-w-24"
         variant="solid"
         @click="handleSubmit"
-        >{{ t`Open Shift` }}</FrappeButton>
+        >{{ t`Open shift` }}</FrappeButton>
     </template>
   </Modal>
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton } from 'frappe-ui';
+import { Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import Modal from 'src/components/POS/POSDialog.vue';
-import Table from 'src/components/Controls/Table.vue';
+import CashCountTable from 'src/components/POS/CashCountTable.vue';
+import { paymentMethodIcons } from 'src/components/POS/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
-import { ModelNameEnum } from 'models/types';
+import { PaymentMethodType } from 'models/types';
 import { Money } from 'pesa';
-import { Field } from 'schemas/types';
 import {
   CashCount,
   POSOpeningShift,
   ShiftAmount,
 } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { getAllDocuments } from 'src/frappe/api';
-import { getField } from 'src/frappe/registry';
 import { computed } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
@@ -109,7 +124,14 @@ import { getPOSOpeningShiftDoc } from 'src/utils/posSetup';
 
 export default defineComponent({
   name: 'OpenPOSShift',
-  components: { FormControl, FrappeButton, MobileCashCount, Modal, Table },
+  components: {
+    CashCountTable,
+    FormControl,
+    FrappeButton,
+    FrappeIcon,
+    MobileCashCount,
+    Modal,
+  },
   provide() {
     return {
       doc: computed(() => this.posShiftDoc),
@@ -123,11 +145,12 @@ export default defineComponent({
   },
   emits: ['toggleModal'],
   setup() {
-    return { isMobile };
+    return { isMobile, paymentMethodIcons };
   },
   data() {
     return {
       posShiftDoc: undefined as POSOpeningShift | undefined,
+      methodTypes: {} as Record<string, PaymentMethodType>,
 
       isValuesSeeded: false,
       isDismissed: false,
@@ -193,9 +216,13 @@ export default defineComponent({
 
       this.posShiftDoc.opening_amounts = [];
 
-      const paymentMethods = (
-        await getAllDocuments('Books Payment Method', { fields: ['name'] })
-      ).map(({ name }) => ({
+      const methods = await getAllDocuments('Books Payment Method', {
+        fields: ['name', 'type'],
+      });
+      this.methodTypes = Object.fromEntries(
+        methods.map(({ name, type }) => [name, type as PaymentMethodType])
+      );
+      const paymentMethods = methods.map(({ name }) => ({
         payment_method: name as string,
         amount: fyo.pesa(0),
       }));
@@ -209,9 +236,6 @@ export default defineComponent({
 
       await this.seedDefaultCashDenomiations();
       await this.seedPaymentMethods();
-    },
-    getField(fieldname: string): Field {
-      return getField(ModelNameEnum.POSOpeningShift, fieldname)!;
     },
     async handleSubmit() {
       try {

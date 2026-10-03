@@ -25,12 +25,15 @@
     <div
       class="flex max-h-[calc(100dvh-6rem)] min-w-0 flex-col text-ink-gray-9"
     >
-      <header
-        class="flex shrink-0 items-center justify-between gap-4 border-b border-outline-gray-1 px-6 py-4"
-      >
-        <DialogTitle class="min-w-0 text-lg-semibold">
-          {{ title }}
-        </DialogTitle>
+      <header class="flex shrink-0 items-start justify-between gap-4 px-5 pt-5">
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <DialogTitle class="text-3xl-semibold text-ink-gray-9">
+            {{ title }}
+          </DialogTitle>
+          <p v-if="subtitle" class="text-sm text-ink-gray-5">
+            {{ subtitle }}
+          </p>
+        </div>
         <FrappeButton
           icon="lucide-x"
           variant="ghost"
@@ -39,15 +42,12 @@
           @click="$emit('closemodal')"
         />
       </header>
-      <div
-        class="min-h-0 overflow-y-auto px-6 py-5"
-        :class="bodyClass"
-      >
+      <div class="min-h-0 overflow-y-auto px-5 pt-4 pb-5" :class="bodyClass">
         <slot />
       </div>
       <footer
         v-if="$slots.actions"
-        class="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-outline-gray-1 px-6 py-3"
+        class="flex shrink-0 flex-wrap items-center justify-end gap-2 px-5 pb-5"
       >
         <slot name="actions" size="md" />
       </footer>
@@ -70,11 +70,13 @@ withDefaults(
   defineProps<{
     openModal: boolean;
     title: string;
+    /** A line under the title on desktop; sheets have no room for it. */
+    subtitle?: string;
     size?: 'sm' | 'md' | 'lg' | '2xl' | '3xl' | '4xl';
     bodyClass?: string;
     dismissible?: boolean;
   }>(),
-  { size: 'sm', bodyClass: '', dismissible: true }
+  { size: 'sm', subtitle: '', bodyClass: '', dismissible: true }
 );
 
 defineEmits<{ closemodal: [] }>();

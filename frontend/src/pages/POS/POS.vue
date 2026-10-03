@@ -29,13 +29,18 @@
           @select="openMenuAction"
         />
       </template>
-      <slot>
-        <FrappeButton
-          @click="toggleModal('ShiftClose')"
-        >
-          <span>{{ t`Close POS Shift` }}</span>
-        </FrappeButton>
-      </slot>
+      <template v-if="shiftSubtitle" #left>
+        <FrappeBadge theme="green" :label="shiftSubtitle" />
+      </template>
+      <POSHeaderActions
+        :profile="posProfile as POSProfile"
+        :enable-returns="enableReturns"
+        @held="toggleModal('SavedInvoice', true)"
+        @return="toggleModal('ReturnSalesInvoice', true)"
+        @invoices="routeToSinvList"
+        @enquiry="toggleModal('ItemEnquiry', true)"
+        @close-shift="toggleModal('ShiftClose')"
+      />
     </PageHeader>
     <p
       v-if="isMobile && !openPaymentModal && shiftSubtitle"
@@ -55,38 +60,39 @@
       @hold="saveInvoiceAction"
       @pay="handlePaymentAction"
     />
-    <component
-      :is="layout === 'Classic' ? 'ClassicPOS' : 'ModernPOS'"
-      v-else-if="!isMobile"
-    >
-      <template #items>
+    <div v-else-if="!isMobile" class="flex min-h-0 flex-1">
+      <main class="flex min-w-0 flex-1 flex-col">
         <POSItemPicker
           :items="filteredItems as POSItem[]"
           :search-items="items as POSItem[]"
           :search-term="itemSearchTerm"
           :item-group="selectedItemGroup"
           :table-view="tableView"
-          :split="layout === 'Modern'"
           @search="handleItemSearch"
           @set-item-group="setItemGroup"
           @add-item="addItem"
+          @toggle-view="toggleView"
         />
-        <div class="flex shrink-0 flex-wrap gap-2 pt-3">
-          <POSQuickActions
-            :table-view="tableView"
-            :loyalty-program="loyaltyProgram"
-            :applied-coupons-count="appliedCouponsCount"
-            @toggle-view="toggleView"
-            @emit-route-to-sinv-list="routeToSinvList"
-            @toggle-modal="toggleModal"
-            @open-loyalty-program="openLoyaltyProgram"
-            @open-coupon-code="openCouponCode"
-          />
-        </div>
-      </template>
+      </main>
 
-      <template #cart>
-        <div class="flex-none">
+      <aside
+        class="flex w-[24.5rem] shrink-0 flex-col border-s border-outline-gray-1"
+        :aria-label="t`Cart`"
+      >
+        <div class="flex flex-col gap-2 border-b border-outline-gray-1 px-4 pb-3 pt-4">
+          <div class="flex h-6 items-center justify-between gap-2">
+            <span class="truncate text-sm text-ink-gray-5">{{ cartLabel }}</span>
+            <POSActionButton
+              v-if="sinvDoc.items?.length"
+              action="cancel"
+              :profile="posProfile as POSProfile"
+              variant="ghost"
+              icon-left="lucide-trash-2"
+              @click="clearValues"
+            >
+              {{ t`Clear cart` }}
+            </POSActionButton>
+          </div>
           <MultiLabelLink
             v-if="sinvDoc.fieldMap"
             class="w-full"
@@ -98,32 +104,39 @@
             @change="setCustomer"
           />
         </div>
+
         <SelectedItemTable
           :layout="layout"
           :expanded-row="expandedRow"
           @expand="(name?: string) => (expandedRow = name)"
           @select="selectRow"
         />
-      </template>
 
-      <template #summary>
-        <POSOrderSummary
-          :sinv-doc="sinvDoc as SalesInvoice"
-          :total-quantity="totalQuantity"
-        />
-        <POSInvoiceActions
-          :profile="posProfile as POSProfile"
-          :enable-returns="enableReturns"
-          :disable-pay="disablePayButton"
-          :is-return="!!sinvDoc.isReturn"
-          @save="saveInvoiceAction"
-          @clear="clearValues"
-          @held="toggleModal('SavedInvoice', true)"
-          @return="toggleModal('ReturnSalesInvoice', true)"
-          @pay="handlePaymentAction"
-        />
-      </template>
-    </component>
+        <div
+          class="flex shrink-0 flex-col gap-3 border-t border-outline-gray-1 bg-surface-gray-1 px-4 pb-4 pt-3"
+        >
+          <POSPriceActions
+            :loyalty-program="loyaltyProgram"
+            :applied-coupons-count="appliedCouponsCount"
+            @open-coupon-code="openCouponCode"
+            @open-loyalty-program="openLoyaltyProgram"
+            @open-price-list="toggleModal('PriceList', true)"
+          />
+          <POSOrderSummary
+            :sinv-doc="sinvDoc as SalesInvoice"
+            :total-quantity="totalQuantity"
+          />
+          <POSInvoiceActions
+            :profile="posProfile as POSProfile"
+            :disable-pay="disablePayButton"
+            :is-return="!!sinvDoc.isReturn"
+            :grand-total="(sinvDoc as SalesInvoice).grand_total"
+            @save="saveInvoiceAction"
+            @pay="handlePaymentAction"
+          />
+        </div>
+      </aside>
+    </div>
 
     <OpenPOSShiftModal
       v-if="!isPosShiftOpen"
@@ -197,20 +210,20 @@
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton, dialog } from 'frappe-ui';
+import { Badge as FrappeBadge, Button as FrappeButton, dialog } from 'frappe-ui';
 import { t } from 'fyo';
 import { DateTime } from 'luxon';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
-import ModernPOS from './ModernPOS.vue';
-import ClassicPOS from './ClassicPOS.vue';
 import MobilePOS from './MobilePOS.vue';
 import MobilePOSMenu from './MobilePOSMenu.vue';
-import POSQuickActions from './POSQuickActions.vue';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import POSItemPicker from 'src/components/POS/POSItemPicker.vue';
 import POSOrderSummary from 'src/components/POS/POSOrderSummary.vue';
 import POSInvoiceActions from 'src/components/POS/POSInvoiceActions.vue';
+import POSActionButton from 'src/components/POS/POSActionButton.vue';
+import POSHeaderActions from 'src/components/POS/POSHeaderActions.vue';
+import POSPriceActions from 'src/components/POS/POSPriceActions.vue';
 import SelectedItemTable from 'src/components/POS/SelectedItemTable.vue';
 import PaymentModal from './PaymentModal.vue';
 import KeyboardModal from './KeyboardModal.vue';
@@ -289,13 +302,14 @@ type TenderedPayment = {
 export default defineComponent({
   name: 'POS',
   components: {
+    FrappeBadge,
     FrappeButton,
-    ModernPOS,
     PageHeader,
-    ClassicPOS,
     MobilePOS,
     MobilePOSMenu,
-    POSQuickActions,
+    POSActionButton,
+    POSHeaderActions,
+    POSPriceActions,
     MultiLabelLink,
     POSItemPicker,
     POSOrderSummary,
@@ -399,6 +413,13 @@ export default defineComponent({
       }
 
       return this.sinvDoc.isReturn ? t`Refund` : t`Payment`;
+    },
+    cartLabel(): string {
+      const name = this.sinvDoc.inserted ? this.sinvDoc.name : t`New sale`;
+      const date = this.sinvDoc.date
+        ? fyo.format(this.sinvDoc.date, 'Date')
+        : '';
+      return [name, date].filter(Boolean).join(' · ');
     },
     shiftSubtitle(): string {
       if (!this.shiftOpenedAt) {

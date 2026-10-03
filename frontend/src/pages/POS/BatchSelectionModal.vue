@@ -1,11 +1,13 @@
 <template>
   <Modal
     :open-modal="openModal"
-    :title="t`Select Batch`"
+    :title="t`Select batch`"
+    :subtitle="itemCode"
+    size="md"
     @closemodal="closeModal"
   >
     <div class="flex flex-col gap-4">
-      <p class="break-words text-sm text-ink-gray-6">
+      <p v-if="isMobile" class="break-words text-sm text-ink-gray-6">
         {{ itemCode }}
       </p>
       <Link
@@ -43,6 +45,7 @@ import { Button as FrappeButton } from 'frappe-ui';
 import { defineComponent } from 'vue';
 import Modal from 'src/components/POS/POSDialog.vue';
 import Link from 'src/components/Controls/Link.vue';
+import { isMobile } from 'src/utils/viewport';
 
 export default defineComponent({
   name: 'BatchSelectionModal',
@@ -62,6 +65,9 @@ export default defineComponent({
     },
   },
   emits: ['toggleModal', 'batchSelected'],
+  setup() {
+    return { isMobile };
+  },
   data() {
     return {
       selectedBatch: '' as string,

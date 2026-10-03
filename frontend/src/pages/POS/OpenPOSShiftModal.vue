@@ -45,7 +45,7 @@
           {{ t`Opening amounts` }}
         </h3>
         <ul
-          class="flex flex-col divide-y divide-outline-gray-1 rounded-5 border border-outline-gray-1 text-base"
+          class="flex flex-col divide-y divide-outline-gray-1 rounded-6 border border-outline-gray-1 text-base"
         >
           <li
             v-for="row in posShiftDoc.opening_amounts"

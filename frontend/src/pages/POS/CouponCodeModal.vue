@@ -41,7 +41,7 @@
         </div>
         <ul
           v-else
-          class="max-h-40 divide-y divide-outline-gray-1 overflow-y-auto rounded-4 border border-outline-gray-1"
+          class="max-h-40 divide-y divide-outline-gray-1 overflow-y-auto rounded-6 border border-outline-gray-1"
         >
           <li
             v-for="coupon in appliedCoupons as AppliedCouponCode[]"

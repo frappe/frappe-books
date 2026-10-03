@@ -7,7 +7,7 @@
     @closemodal="cancelLoyaltyProgram"
   >
     <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-1 rounded-5 border border-outline-gray-1 p-3">
+      <div class="flex flex-col gap-1 rounded-6 border border-outline-gray-1 p-3">
         <span class="text-sm text-ink-gray-5">
           {{ isMobile ? loyaltyProgram : t`Available` }}
         </span>

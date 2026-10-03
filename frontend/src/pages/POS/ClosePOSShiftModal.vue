@@ -74,10 +74,10 @@
           {{ t`Closing amounts` }}
         </h3>
         <div
-          class="flex flex-col rounded-5 border border-outline-gray-1 text-base tabular-nums"
+          class="flex flex-col rounded-6 border border-outline-gray-1 text-base tabular-nums"
         >
           <div
-            class="grid h-8 items-center gap-2 rounded-t-5 bg-surface-gray-1 px-3 text-sm text-ink-gray-5"
+            class="grid h-8 items-center gap-2 rounded-t-6 bg-surface-gray-1 px-3 text-sm text-ink-gray-5"
             :class="amountColumns"
           >
             <span>{{ t`Method` }}</span>

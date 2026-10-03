@@ -140,6 +140,16 @@ class IntegrationTestSystemSettings(IntegrationTestCase):
 				{"date_format": "mm-dd-yyyy", "number_format": "#.###,##"},
 			)
 
+	def test_first_save_of_settings_leaves_frappe_formats(self):
+		# As on app install, where Frappe's System Settings may not be set up yet.
+		with self.change_settings("System Settings", FRAPPE_FORMATS):
+			frappe.db.delete("Singles", {"doctype": "Books System Settings"})
+			settings = frappe.new_doc("Books System Settings")
+			settings.update({"date_format": "MMM d, y", "locale": "de-DE"})
+			settings.save()
+
+			self.assertEqual(frappe.db.get_single_value("System Settings", "date_format"), "dd-mm-yyyy")
+
 	def test_only_system_settings_editors_change_formats(self):
 		with self.change_settings("System Settings", FRAPPE_FORMATS):
 			frappe.db.set_single_value(

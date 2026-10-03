@@ -148,7 +148,6 @@ import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
-import { getMissingMandatoryFields } from 'fyo/model/helpers';
 import { ValidationError } from 'fyo/utils/errors';
 import {
   Breadcrumbs as FrappeBreadcrumbs,
@@ -500,14 +499,12 @@ export default defineComponent({
     },
     /** Phones mark missing fields in place instead of in a dialog. */
     checkRequiredFields(): boolean {
-      const shown = new Set(
-        [...(this.groupedFields?.values() ?? [])].flatMap((tab) =>
-          [...tab.values()].flat()
-        )
+      const missing = new Set(
+        this.doc.missingFields.map(({ fieldname }) => fieldname)
       );
-      this.missingFields = [...new Set(getMissingMandatoryFields(this.doc))].filter(
-        (field) => shown.has(field)
-      );
+      this.missingFields = [...(this.groupedFields?.values() ?? [])]
+        .flatMap((tab) => [...tab.values()].flat())
+        .filter((field) => missing.has(field.fieldname));
       for (const field of this.missingFields) {
         this.errors[field.fieldname] = this.t`${field.label} is required`;
       }

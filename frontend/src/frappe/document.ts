@@ -3,11 +3,10 @@ import type { DocValue, DocValueMap } from 'fyo/core/types';
 import {
   areDocValuesEqual,
   getFieldDefault,
-  getMissingMandatoryMessage,
   getPreDefaultValues,
   isDocValueTruthy,
   setChildDocIdx,
-} from 'fyo/model/helpers';
+} from './docValues';
 import type {
   Action,
   ChangeArg,
@@ -23,11 +22,13 @@ import type {
   TreeViewSettings,
   ValidationMap,
 } from 'fyo/model/types';
+import { validateOptions } from './validation';
 import {
-  validateOptions,
-  validateRequired,
-} from 'fyo/model/validationFunction';
-import { ConflictError, MandatoryError, ValueError } from 'fyo/utils/errors';
+  ConflictError,
+  MandatoryError,
+  ValidationError,
+  ValueError,
+} from 'fyo/utils/errors';
 import { isPesa } from 'fyo/utils';
 import Observable from 'fyo/utils/observable';
 import type { DocPermission, DocPermissionMap } from 'fyo/utils/permissions';
@@ -42,25 +43,40 @@ import type { LinkedDoc } from 'utils/db/types';
 import { markRaw, reactive } from 'vue';
 import * as api from './api';
 import type { DocValues } from './api';
-import { evaluateCondition, type EvalDoc } from './dependsOn';
+import type { EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
-import type { DocField } from './meta';
+import {
+  getFieldState,
+  getMissingFields,
+  getMissingMessage,
+  type FieldState,
+} from './fieldState';
 import { getNamingField, type Presentation } from './schema';
 import { toDocValue, toDocValues, toFrappeValue } from './values';
 
-const PREVIEW_DELAY = 300;
+/** Runs a document's preview later; the returned function cancels it. */
+export type PreviewScheduler = (preview: () => void) => () => void;
 
-export type FieldRule = 'hidden' | 'readOnly' | 'required';
-
-const ruleConditions: Record<
-  FieldRule,
-  (field: DocField) => string | undefined
-> = {
-  hidden: (field) => field.depends_on,
-  readOnly: (field) => field.read_only_depends_on,
-  required: (field) => field.mandatory_depends_on,
+/** A warning the submit prompt shows first; a Yes runs `accept` and goes on. */
+export type SubmitWarning = {
+  title: string;
+  detail: string[];
+  accept: () => Promise<unknown>;
 };
+
+/** Previews once edits pause, so filled values follow the user without a request per keystroke. */
+export const afterPause: PreviewScheduler = (preview) => {
+  const timer = setTimeout(preview, 300);
+  return () => clearTimeout(timer);
+};
+
+let previewScheduler = afterPause;
+
+/** Sets when a scheduled preview runs; node tests run one only when they ask. */
+export function setPreviewScheduler(scheduler: PreviewScheduler) {
+  previewScheduler = scheduler;
+}
 
 /**
  * A document a form edits, as Frappe serves it: its values, unsaved edits,
@@ -124,7 +140,9 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   _savedValues: DocValueMap = {};
   /** Fields the last preview filled; the next preview fills them again until the user edits one. */
   _serverFilled = new Set<string>();
-  _previewTimer?: ReturnType<typeof setTimeout>;
+  _cancelScheduledPreview?: () => void;
+  /** The last preview started; it settles without throwing, as its caller reports a failure. */
+  _previewing?: Promise<void>;
   /** An edit's fills are not back from the server yet. */
   _isPreviewDue = false;
   _edits = 0;
@@ -200,6 +218,21 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   /** What a form of the document is headed by. */
   get formTitle(): string {
     return this.name ?? '';
+  }
+
+  /** The kind of record the user sees, such as Customer for a customer party. */
+  get typeLabel(): string {
+    return this.schema.label || this.schemaName;
+  }
+
+  /** What else a submit does, which the submit prompt tells. */
+  get submitNote(): string | undefined {
+    return undefined;
+  }
+
+  /** A warning the user answers before a submit, if any. */
+  getSubmitWarning(): Promise<SubmitWarning | undefined> {
+    return Promise.resolve(undefined);
   }
 
   get quickEditFields() {
@@ -311,30 +344,20 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this.fyo.can(this.schemaName, permission);
   }
 
-  /** Whether the DocField's depends_on, read_only_depends_on or mandatory_depends_on applies. */
-  hasFieldRule(fieldname: string, rule: FieldRule): boolean {
-    const docfield = getDocType(this.schemaName).meta.fields.find(
-      (field) => field.fieldname === fieldname
-    );
-    const condition = docfield && ruleConditions[rule](docfield);
-    if (!condition) {
-      return false;
-    }
+  /** Whether a field is hidden, read only or required now, in the order `fieldState.ts` gives. */
+  getFieldState(field: Field): FieldState {
+    return getFieldState(this, field);
+  }
 
-    const evalDoc = this.getEvalDoc();
-    if (rule === 'readOnly') {
-      // A field locks on its saved value, so an unsaved edit never locks it.
-      evalDoc[fieldname] = this._getSavedFrappeValue(fieldname);
-    }
-
-    const parent = this.parentdoc?.getEvalDoc();
-    const isMet = evaluateCondition(condition, evalDoc, parent);
-    return rule === 'hidden' ? !isMet : isMet;
+  /** The required fields that are empty, which a save refuses. */
+  get missingFields(): Field[] {
+    return getMissingFields(this);
   }
 
   /** Whether a field's value differs from the one last loaded or saved. */
   isChanged(fieldname: string): boolean {
-    return this[fieldname] !== this._savedValues[fieldname];
+    const saved = this._savedValues[fieldname] as DocValue;
+    return !areDocValuesEqual(this[fieldname] as DocValue, saved);
   }
 
   /** A field's saved value as form conditions read it. */
@@ -617,25 +640,22 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   _validateMandatory() {
-    const checkForMandatory: FrappeDoc[] = [this];
-    for (const field of this.tableFields) {
-      const childDocs = this.get(field.fieldname) as FrappeDoc[];
-      if (!childDocs) {
-        continue;
-      }
-
-      checkForMandatory.push(...childDocs);
-    }
-
-    const missingMandatoryMessage = checkForMandatory
-      .map((doc) => getMissingMandatoryMessage(doc))
+    const missing = this._getDocAndRows()
+      .map((doc) => getMissingMessage(doc))
       .filter(Boolean);
 
-    if (missingMandatoryMessage.length > 0) {
-      const fields = missingMandatoryMessage.join('\n');
-      const message = this.fyo.t`Value missing for ${fields}`;
-      throw new MandatoryError(message);
+    if (missing.length > 0) {
+      const fields = missing.join('\n');
+      throw new MandatoryError(this.fyo.t`Value missing for ${fields}`);
     }
+  }
+
+  /** The document and the rows of its tables. */
+  _getDocAndRows(): FrappeDoc[] {
+    const rows = this.tableFields.flatMap(
+      ({ fieldname }) => (this[fieldname] ?? []) as FrappeDoc[]
+    );
+    return [this, ...rows];
   }
 
   async _validateFields() {
@@ -650,6 +670,15 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   async _validateField(field: Field, value: DocValue) {
+    const isEmpty = getIsNullOrUndef(value);
+    if (isEmpty && this.getFieldState(field).required) {
+      throw new ValidationError(this.fyo.t`${field.label} is required`);
+    }
+
+    if (isEmpty) {
+      return;
+    }
+
     if (
       field.fieldtype === FieldTypeEnum.Select ||
       field.fieldtype === FieldTypeEnum.AutoComplete
@@ -657,17 +686,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       validateOptions(field, value as string, this);
     }
 
-    validateRequired(field, value, this);
-    if (getIsNullOrUndef(value)) {
-      return;
-    }
-
-    const validator = this.validations[field.fieldname];
-    if (validator === undefined) {
-      return;
-    }
-
-    await validator(value);
+    await this.validations[field.fieldname]?.(value);
   }
 
   async load() {
@@ -805,7 +824,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   async _setSaved(values: DocValues, action: 'save' | 'submit' = 'save') {
-    clearTimeout(this._previewTimer);
+    this._unschedulePreview();
     this._isPreviewDue = false;
     this._serverFilled.clear();
     await this._syncValues(this.toDocValues(values), action);
@@ -989,8 +1008,9 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     this.schedulePreview();
   }
 
-  /** A save takes the fills of the last edit, and those of missing values. */
+  /** A save waits for a running preview, then takes the fills of the last edit and of missing values. */
   async beforeSync() {
+    await this._previewing;
     if (this.previewMethod && (this._isPreviewDue || this.hasMissingValues)) {
       await this.preview();
     }
@@ -1002,23 +1022,36 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
   /** Mandatory values are missing, which a preview may fill. */
   get hasMissingValues(): boolean {
-    const rows = this.tableFields.flatMap(
-      ({ fieldname }) => (this[fieldname] ?? []) as FrappeDoc[]
-    );
-    return [this, ...rows].some((doc) => !!getMissingMandatoryMessage(doc));
+    return this._getDocAndRows().some((doc) => doc.missingFields.length > 0);
   }
 
-  /** Previews once edits pause, so filled values follow the user without a request per keystroke. */
-  schedulePreview(delay = PREVIEW_DELAY) {
-    clearTimeout(this._previewTimer);
+  /** Previews once edits pause, as the scheduler times it; see `setPreviewScheduler`. */
+  schedulePreview() {
+    this._unschedulePreview();
     if (!this.previewMethod || !this.canEdit || !this.dirty) {
       return;
     }
 
     this._isPreviewDue = true;
-    this._previewTimer = setTimeout(() => {
-      this.preview().catch(showPreviewError);
-    }, delay);
+    this._cancelScheduledPreview = previewScheduler(() => this.startPreview());
+  }
+
+  _unschedulePreview() {
+    this._cancelScheduledPreview?.();
+    this._cancelScheduledPreview = undefined;
+  }
+
+  /** Previews now, for no caller to wait on, e.g. as a form opens; shows a failure as a toast. */
+  startPreview() {
+    this.preview().catch(showPreviewError);
+  }
+
+  /** Resolves once the server filled the last edit: waits for a running preview and runs a scheduled one now. */
+  async whenFilled() {
+    await this._previewing;
+    if (this._cancelScheduledPreview) {
+      await this.preview();
+    }
   }
 
   /**
@@ -1042,11 +1075,17 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
   /** Shows what the server would fill for the unsaved values; dropped if they changed meanwhile. */
   async preview(kwargs?: Record<string, unknown>) {
-    clearTimeout(this._previewTimer);
+    this._unschedulePreview();
     if (!this.previewMethod || !this.canEdit) {
       return;
     }
 
+    const previewing = this._previewAndApply(kwargs);
+    this._previewing = previewing.catch(() => undefined);
+    await previewing;
+  }
+
+  async _previewAndApply(kwargs?: Record<string, unknown>) {
     const edits = this._edits;
     const document = this.getMethodDocument({
       keepRowNames: true,
@@ -1102,7 +1141,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
       // Frappe leaves empty values out of the documents it sends.
       const value = previewed[fieldname] ?? toDocValue(null, field, this.fyo);
-      if (!isSameValue(value as DocValue, this[fieldname] as DocValue)) {
+      if (!areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)) {
         this._rememberFilled(fieldname);
         this[fieldname] = value;
       }
@@ -1139,15 +1178,6 @@ export interface FrappeValueOptions {
   keepRowNames?: boolean;
   /** Leaves out the values a preview filled, so the server fills them again. */
   clearServerFilled?: boolean;
-}
-
-/** Whether a previewed value is the one the document has; dates by their time. */
-function isSameValue(previewed: DocValue, current: DocValue): boolean {
-  if (previewed instanceof Date && current instanceof Date) {
-    return previewed.getTime() === current.getTime();
-  }
-
-  return areDocValuesEqual(previewed, current);
 }
 
 async function showPreviewError(error: unknown) {

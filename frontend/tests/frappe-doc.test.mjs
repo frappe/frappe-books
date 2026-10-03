@@ -1,20 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  afterPause,
   errors,
   evaluateCondition,
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   fyo,
   getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
-  getMappedFrappeDoc,
-  getMissingMandatoryFields,
   loadTestDocTypes,
+  manualScheduler,
   newFrappeDoc,
   setLanguageMapOnTranslationString,
+  setPreviewScheduler,
   stubFrappe,
   useBooksDoc,
 } from './helpers/frappe.mjs';
@@ -102,27 +100,25 @@ test('depends_on, read_only_depends_on and mandatory_depends_on apply to the for
   const item = newFrappeDoc('Item', { item_type: 'Service' });
   const trackItem = field(item, 'track_item');
   const batchSeries = field(item, 'batch_series');
-  assert.equal(evaluateHidden(trackItem, item), true);
+  assert.equal(item.getFieldState(trackItem).hidden, true);
 
   await item.set('item_type', 'Product');
-  assert.equal(evaluateHidden(trackItem, item), false);
-  assert.equal(evaluateReadOnly(batchSeries, item), false);
-  assert.equal(evaluateRequired(batchSeries, item), false);
+  assert.equal(item.getFieldState(trackItem).hidden, false);
+  assert.equal(item.getFieldState(batchSeries).readOnly, false);
+  assert.equal(item.getFieldState(batchSeries).required, false);
 
   await item.set('track_item', true);
-  assert.equal(evaluateReadOnly(batchSeries, item), true);
-  assert.equal(evaluateRequired(batchSeries, item), true);
-  assert.ok(getMissingMandatoryFields(item).includes(batchSeries));
-  clearTimeout(item._previewTimer);
+  assert.equal(item.getFieldState(batchSeries).readOnly, true);
+  assert.equal(item.getFieldState(batchSeries).required, true);
+  assert.ok(item.missingFields.includes(batchSeries));
 
   stubDocument({ ...savedPen, track_item: 0 });
   const untracked = await getFrappeDoc('Item', 'Untracked');
-  assert.equal(evaluateHidden(field(untracked, 'track_item'), untracked), true);
+  assert.equal(untracked.getFieldState(field(untracked, 'track_item')).hidden, true);
 });
 
 test('a missing required value is reported in the user’s language', async () => {
   const doc = newFrappeDoc('Item');
-  clearTimeout(doc._previewTimer);
   const field = doc.schema.fields.find(({ required }) => required);
   setLanguageMapOnTranslationString({
     '${0} is required': { translation: '${0} est obligatoire' },
@@ -163,7 +159,6 @@ test('a new document is inserted whole; its rows go without client names', async
   await item.append('uom_conversions', { uom: 'Box', conversion_factor: 10 });
   const saved = [];
   item.once('afterSync', () => saved.push(item.name));
-  clearTimeout(item._previewTimer);
 
   await item.sync();
 
@@ -186,7 +181,6 @@ test('a save sends the whole document with the modified time Frappe checks', asy
   const pen = await getFrappeDoc('Item', 'Pen', { refresh: true });
   await pen.set('rate', fyo.pesa(15));
   await pen.append('uom_conversions', { uom: 'Crate', conversion_factor: 20 });
-  clearTimeout(pen._previewTimer);
 
   await pen.sync();
 
@@ -214,7 +208,6 @@ test('a stale save shows as a conflict', async () => {
   );
   const pen = await getFrappeDoc('Item', 'Pen', { refresh: true });
   await pen.set('rate', fyo.pesa(16));
-  clearTimeout(pen._previewTimer);
   await assert.rejects(
     pen.sync(),
     staleError(
@@ -250,10 +243,27 @@ function staleError(message) {
     error instanceof errors.ConflictError && error.message === message;
 }
 
-test('a preview fills what the server fills, again until the user edits it', async (t) => {
+test('edits preview once, after they pause', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
+  setPreviewScheduler(afterPause);
+  t.after(() => setPreviewScheduler(manualScheduler));
+  const requests = stubDocument();
+  const item = newFrappeDoc('Item', { name: 'Oolong' });
+
+  await item.set('item_type', 'Product');
+  t.mock.timers.tick(200);
+  await item.set('rate', fyo.pesa(3));
+  t.mock.timers.tick(299);
+  assert.equal(requests.length, 0);
+
+  t.mock.timers.tick(1);
+  await item.whenFilled();
+  assert.deepEqual(requests.map(({ body }) => body.method), ['preview']);
+});
+
+test('a preview fills what the server fills, again until the user edits it', async () => {
   const previews = [];
-  const requests = stubDocument(savedPen, ({ path, body }) => {
+  stubDocument(savedPen, ({ path, body }) => {
     if (!path.endsWith('run_doc_method')) {
       return;
     }
@@ -272,9 +282,8 @@ test('a preview fills what the server fills, again until the user edits it', asy
 
   await item.set('item_type', 'Product');
   await item.set('rate', fyo.pesa(3));
-  assert.equal(requests.length, 0);
-  t.mock.timers.tick(300);
-  await waitFor(() => item.income_account === 'Sales');
+  await item.whenFilled();
+  assert.equal(item.income_account, 'Sales');
   assert.equal(previews.length, 1);
   assert.equal(previews[0].method, 'preview');
   assert.equal(previews[0].document.doctype, 'Books Item');
@@ -282,15 +291,15 @@ test('a preview fills what the server fills, again until the user edits it', asy
 
   // The server's value is filled again for the new type.
   await item.set('item_type', 'Service');
-  t.mock.timers.tick(300);
-  await waitFor(() => item.income_account === 'Service');
+  await item.whenFilled();
+  assert.equal(item.income_account, 'Service');
   assert.equal('income_account' in previews[1].document, false);
 
   // The user's own value stays.
   await item.set('income_account', 'Consulting');
   await item.set('item_type', 'Product');
-  t.mock.timers.tick(300);
-  await waitFor(() => previews.length === 3);
+  await item.whenFilled();
+  assert.equal(previews.length, 3);
   assert.equal(previews[2].document.income_account, 'Consulting');
   assert.equal(item.income_account, 'Consulting');
 });
@@ -331,7 +340,6 @@ test('a preview is dropped when the values changed meanwhile or the draft is sta
   edit = () => item.set('rate', fyo.pesa(2));
   await item.preview();
   assert.equal(item.income_account, null);
-  clearTimeout(item._previewTimer);
 
   stubDocument(savedPen, () => ({
     status: 417,
@@ -383,37 +391,42 @@ test('a save waits for the fills of the last edit', async () => {
   assert.equal(requests[1].body.income_account, 'Service');
 });
 
-test('a new document previews once its form opens', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('a save waits for a running preview and takes its fills without another', async () => {
+  let release;
+  const answered = new Promise((resolve) => (release = resolve));
+  const requests = stubDocument(savedPen, async ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      await answered;
+      return { docs: [{ ...body.document, batch_series: 'LAT-' }] };
+    }
+  });
+  const item = newFrappeDoc('Item', { name: 'Latte', income_account: 'Sales' });
+  await item.set('rate', fyo.pesa(4));
+
+  // The edit's pause has passed, so its preview is on its way.
+  item.startPreview();
+  const saving = item.sync();
+  await new Promise((resolve) => setImmediate(resolve));
+  release();
+  await saving;
+
+  assert.deepEqual(
+    requests.map(({ path }) => path),
+    ['/api/v2/method/run_doc_method', '/api/v2/document/Books Item']
+  );
+  assert.equal(requests[1].body.batch_series, 'LAT-');
+});
+
+test('a new document previews once its form opens', async () => {
   const requests = stubDocument(savedPen);
   const { doc, load } = useBooksDoc();
   const item = newFrappeDoc('Item', { name: 'Mocha' });
 
   await load('Item', item.name, true);
   assert.equal(doc.value, item);
-  t.mock.timers.tick(300);
-  await waitFor(() => requests.length === 1);
+  await item.whenFilled();
+  assert.equal(requests.length, 1);
   assert.equal(requests[0].body.method, 'preview');
-});
-
-test("a server mapper's document is a new document with the mapped values", async () => {
-  const requests = stubFrappe(() => ({
-    message: { doctype: 'Books Order', name: null, customer: 'Acme' },
-  }));
-  const order = await getMappedFrappeDoc('Order', 'app.make_order', 'Q-1');
-
-  assert.equal(
-    requests[0].path,
-    '/api/method/frappe.model.mapper.make_mapped_doc'
-  );
-  assert.deepEqual(requests[0].body, {
-    method: 'app.make_order',
-    source_name: 'Q-1',
-  });
-  assert.equal(order.customer, 'Acme');
-  assert.equal(order.amount.float, 0);
-  assert.equal(order.notInserted, true);
-  assert.equal(order, await getFrappeDoc('Order', order.name));
 });
 
 test('submit and cancel run the document methods on the client copy', async () => {
@@ -503,8 +516,7 @@ test('a new document leaves its server defaults to the preview until set', async
   assert.equal(sent[1].track_item, 0);
 });
 
-test('a form previews a new document as it opens it, not a saved one', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('a form previews a new document as it opens it, not a saved one', async () => {
   const requests = stubDocument(savedPen, ({ path, body }) =>
     path.endsWith('run_doc_method')
       ? { data: null, docs: [{ ...body.document, income_account: 'Sales' }] }
@@ -515,10 +527,10 @@ test('a form previews a new document as it opens it, not a saved one', async (t)
   const { doc, load } = useBooksDoc();
 
   await load('Item', undefined, true);
-  t.mock.timers.tick(0);
-  await waitFor(() => doc.value.income_account === 'Sales');
+  await doc.value.whenFilled();
+  assert.equal(doc.value.income_account, 'Sales');
   await load('Item', 'Pen');
-  t.mock.timers.tick(300);
+  await doc.value.whenFilled();
 
   assert.equal(previews(), 1);
 });
@@ -544,7 +556,6 @@ test('a duplicate copies unsaved edits but not the no_copy fields', async () => 
   stubDocument();
   const pen = await getFrappeDoc('Item', 'Pen', { refresh: true });
   await pen.set('rate', fyo.pesa(20));
-  clearTimeout(pen._previewTimer);
 
   const copy = await pen.duplicate();
 
@@ -573,23 +584,9 @@ test('a duplicate leaves out the no_copy fields of its rows too', async (t) => {
   assert.equal(copy.uom_conversions[0].conversion_factor, 1);
 });
 
-async function waitFor(condition) {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    if (condition()) {
-      return;
-    }
-
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-
-  assert.fail('The condition was never met');
-}
-
 test('typed text keeps its leading and trailing spaces, as Frappe keeps them', async () => {
   const item = newFrappeDoc('Item');
-  clearTimeout(item._previewTimer);
   await item.set('batch_series', '  PEN-  ');
-  clearTimeout(item._previewTimer);
 
   assert.equal(item.batch_series, '  PEN-  ');
 });

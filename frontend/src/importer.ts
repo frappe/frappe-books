@@ -1,9 +1,7 @@
 import { Fyo } from 'fyo';
-import { Converter } from 'fyo/utils/converter';
 import { DocValue } from 'fyo/core/types';
 import { getEmptyValuesByFieldTypes, isPesa } from 'fyo/utils';
 import { ValidationError } from 'fyo/utils/errors';
-import { DateTime } from 'luxon';
 import { ModelNameEnum } from 'models/types';
 import {
   Field,
@@ -17,6 +15,7 @@ import {
 import { getDocType } from 'src/frappe/doctypes';
 import { getFileFields, getSchema } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
+import { toDocValue, toFrappeValue } from 'src/frappe/values';
 import { getCsvKey } from 'src/utils/export';
 import { generateCSV, parseCSV } from 'utils/csvParser';
 import { getValueMapFromList } from 'utils/index';
@@ -365,11 +364,7 @@ export class Importer {
       return String(value.float);
     }
 
-    if (field.fieldtype === FieldTypeEnum.Datetime && value instanceof Date) {
-      return getSystemDatetime(value);
-    }
-
-    return String(Converter.toRawValue(value, field, this.fyo) ?? '');
+    return String(toFrappeValue(value, field, this.fyo) ?? '');
   }
 
   selectParsed(parsed: string[][]): void {
@@ -394,7 +389,7 @@ export class Importer {
     }
 
     if (!templateFieldsAssigned) {
-      this.clearAndResizeAssignedTemplateFields(parsed[0].length);
+      this.assignedTemplateFields = parsed[0].map(() => null);
     }
 
     if (startIndex === -1) {
@@ -402,16 +397,6 @@ export class Importer {
     }
 
     this.assignValueMatrixFromParsed(parsed.slice(startIndex));
-  }
-
-  clearAndResizeAssignedTemplateFields(size: number) {
-    for (let i = 0; i < size; i++) {
-      if (i >= this.assignedTemplateFields.length) {
-        this.assignedTemplateFields.push(null);
-      } else {
-        this.assignedTemplateFields[i] = null;
-      }
-    }
   }
 
   assignValueMatrixFromParsed(parsed: string[][]) {
@@ -484,7 +469,7 @@ export class Importer {
     }
 
     try {
-      vmi.value = Converter.toDocValue(rawValue, tf, this.fyo);
+      vmi.value = toDocValue(rawValue, tf, this.fyo);
     } catch {
       vmi.error = true;
     }
@@ -531,10 +516,9 @@ export class Importer {
       return false;
     }
 
-    for (const [index, value] of row.entries()) {
-      this.assignedTemplateFields[index] = this.getPickedFieldKey(value);
-    }
-
+    this.assignedTemplateFields = row.map((value) =>
+      this.getPickedFieldKey(value)
+    );
     return true;
   }
 
@@ -753,13 +737,4 @@ function getImportColumnKey(
   }
 
   return schema.naming === 'manual' ? 'name' : null;
-}
-
-/** A datetime as the naive system time Frappe stores. */
-function getSystemDatetime(date: Date): string {
-  const timeZone = globalThis.window?.frappe?.boot?.time_zone as
-    { system?: string } | undefined;
-  return DateTime.fromJSDate(date, { zone: timeZone?.system }).toFormat(
-    'yyyy-MM-dd HH:mm:ss'
-  );
 }

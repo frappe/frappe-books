@@ -7,7 +7,7 @@
         {{ sinvDoc.isReturn ? t`Amount to refund` : t`Amount due` }}
       </span>
       <span class="text-7xl-semibold tabular-nums text-ink-gray-9" dir="ltr">
-        {{ format(dueAmount) }}
+        {{ format(posCheckout.due) }}
       </span>
       <span class="text-sm text-ink-gray-5">{{ summary }}</span>
       <dl
@@ -35,18 +35,18 @@
           :aria-label="t`Payment method`"
         >
           <button
-            v-for="method in methods"
+            v-for="method in posCheckout.methods"
             :key="method.name"
             type="button"
             role="radio"
             class="flex h-12 min-w-0 items-center gap-2.5 rounded-5 border px-3 text-start text-md-medium"
             :class="
-              method.name === paymentMethod
+              method.name === posCheckout.tender.payment_method
                 ? 'border-outline-gray-4 bg-surface-base text-ink-gray-9 shadow-sm'
                 : 'border-outline-gray-2 text-ink-gray-7'
             "
-            :aria-checked="method.name === paymentMethod"
-            @click="$emit('selectMethod', method.name)"
+            :aria-checked="method.name === posCheckout.tender.payment_method"
+            @click="posCheckout.selectMethod(method.name)"
           >
             <FrappeIcon
               :icon="paymentMethodIcons[method.type ?? 'Cash']"
@@ -54,7 +54,7 @@
             />
             <span class="min-w-0 flex-1 truncate">{{ method.name }}</span>
             <FrappeIcon
-              v-if="method.name === paymentMethod"
+              v-if="method.name === posCheckout.tender.payment_method"
               icon="lucide-circle-check"
               class="size-4 shrink-0 text-ink-gray-9"
             />
@@ -63,24 +63,24 @@
       </div>
 
       <Data
-        v-if="requirements.requiresReferenceId"
+        v-if="posCheckout.requirements.requiresReferenceId"
         :df="getField('Payment', 'reference_id')!"
         :show-label="true"
         :border="true"
         :required="true"
         :read-only="false"
-        :value="transferRefNo"
-        @change="(value: string) => $emit('setTransferRefNo', value)"
+        :value="posCheckout.tender.reference_id"
+        @change="posCheckout.setReference"
       />
       <DateControl
-        v-if="requirements.requiresClearanceDate"
+        v-if="posCheckout.requirements.requiresClearanceDate"
         :df="getField('Payment', 'clearance_date')!"
         :show-label="true"
         :border="true"
         :required="true"
         :read-only="false"
-        :value="transferClearanceDate"
-        @change="(value: Date) => $emit('setTransferClearanceDate', value)"
+        :value="posCheckout.tender.clearance_date"
+        @change="posCheckout.setClearanceDate"
       />
 
       <Currency
@@ -91,27 +91,27 @@
         :show-label="true"
         :read-only="false"
         :border="true"
-        :value="paidAmount"
-        @change="(amount: Money | null) => $emit('setPaidAmount', amount)"
+        :value="posCheckout.tender.amount"
+        @change="posCheckout.setAmount"
       />
       <div class="flex flex-wrap gap-2">
         <FrappeButton
-          v-for="amount in quickAmounts"
+          v-for="amount in posCheckout.quickAmounts"
           :key="amount.float"
           size="lg"
-          :variant="amount.eq(paidAmount) ? 'subtle' : 'outline'"
-          :aria-pressed="amount.eq(paidAmount)"
-          :label="amount.eq(dueAmount) ? t`Exact` : format(amount)"
-          @click="$emit('setPaidAmount', amount)"
+          :variant="amount.eq(posCheckout.tender.amount) ? 'subtle' : 'outline'"
+          :aria-pressed="amount.eq(posCheckout.tender.amount)"
+          :label="amount.eq(posCheckout.due) ? t`Exact` : format(amount)"
+          @click="posCheckout.setAmount(amount)"
         />
       </div>
       <div
-        v-if="settlement"
+        v-if="posCheckout.settlement"
         class="flex justify-between gap-4 py-1 text-lg-semibold tabular-nums text-ink-gray-8"
         role="status"
       >
-        <span>{{ settlement.label }}</span>
-        <span dir="ltr">{{ format(settlement.amount) }}</span>
+        <span>{{ posCheckout.settlement.label }}</span>
+        <span dir="ltr">{{ format(posCheckout.settlement.amount) }}</span>
       </div>
     </section>
 
@@ -125,7 +125,9 @@
         icon="lucide-gift"
         size="md"
         :label="t`Redeem loyalty points`"
-        :description="t`${loyaltyPoints} points available`"
+        :description="
+          t`${sinvDoc.available_loyalty_points ?? 0} points available`
+        "
         :model-value="!!sinvDoc.redeem_loyalty_points"
         @update:model-value="(on: boolean) => $emit('setLoyalty', on)"
       />
@@ -155,7 +157,7 @@
       <FrappeButton
         size="lg"
         variant="solid"
-        :disabled="payDisabled"
+        :disabled="!posCheckout.canPay"
         :label="sinvDoc.isReturn ? t`Refund` : t`Pay`"
         @click="$emit('pay')"
       />
@@ -163,7 +165,7 @@
         <FrappeButton
           class="flex-1"
           size="lg"
-          :disabled="payDisabled"
+          :disabled="!posCheckout.canPay"
           :label="sinvDoc.isReturn ? t`Refund & print` : t`Pay & print`"
           @click="$emit('payAndPrint')"
         />
@@ -186,43 +188,24 @@ import {
   Icon as FrappeIcon,
   Switch as FrappeSwitch,
 } from 'frappe-ui';
-import { PaymentMethodRequirements } from 'models/baseModels/PaymentMethod/requirements';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { Money } from 'pesa';
 import Currency from 'src/components/Controls/Currency.vue';
 import Data from 'src/components/Controls/Data.vue';
 import DateControl from 'src/components/Controls/Date.vue';
-import {
-  PaymentMethodOption,
-  paymentMethodIcons,
-} from 'src/components/POS/types';
+import { paymentMethodIcons } from 'src/components/POS/types';
 import { getField } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
-import {
-  getCostLines,
-  getPaymentShortcuts,
-  getTotalQuantity,
-} from 'src/utils/pos';
+import { getCostLines, getTotalQuantity } from 'src/utils/pos';
+import { posCheckoutKey } from 'src/utils/posCheckout';
+import { isCouponOffered, isLoyaltyOffered } from 'src/utils/posDiscounts';
 import { computed, inject, type Ref } from 'vue';
 
-/** The phone payment screen; PaymentModal owns its state and checks. */
-const props = defineProps<{
-  methods: PaymentMethodOption[];
-  requirements: PaymentMethodRequirements;
-  dueAmount: Money;
-  settlement: { label: string; amount: Money } | null;
-  payDisabled: boolean;
-  loyaltyPoints: number;
-  loyaltyProgram: string;
-  appliedCouponsCount: number;
-}>();
+/** The phone payment screen, inside PaymentModal; the POS checkout owns its tender. */
+defineProps<{ appliedCouponsCount: number }>();
 
 defineEmits<{
-  selectMethod: [name: string];
-  setPaidAmount: [amount: Money | null];
-  setTransferRefNo: [value: string];
-  setTransferClearanceDate: [value: Date];
   setLoyalty: [on: boolean];
   applyCoupon: [];
   pay: [];
@@ -231,24 +214,10 @@ defineEmits<{
 }>();
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
-const paidAmount = inject('paidAmount') as Ref<Money>;
-const paymentMethod = inject('paymentMethod') as Ref<string | undefined>;
-const transferRefNo = inject('transferRefNo') as Ref<string | undefined>;
-const transferClearanceDate = inject('transferClearanceDate') as Ref<
-  Date | undefined
->;
+const posCheckout = inject(posCheckoutKey)!;
 
-const settings = fyo.singles.AccountingSettings;
-// A submitted sale's totals are final.
-const showLoyalty = computed(
-  () =>
-    !!settings?.enable_loyalty_program &&
-    !!props.loyaltyProgram &&
-    !sinvDoc.value.isSubmitted
-);
-const showCoupon = computed(
-  () => !!settings?.enable_coupon_code && !sinvDoc.value.isSubmitted
-);
+const showLoyalty = computed(() => isLoyaltyOffered(sinvDoc.value));
+const showCoupon = computed(() => isCouponOffered(sinvDoc.value));
 
 const summary = computed(() => {
   const quantity = getTotalQuantity(sinvDoc.value.items ?? []);
@@ -258,13 +227,6 @@ const summary = computed(() => {
 
 // Only Net Total means nothing changed it, so the amount due says it all.
 const costLines = computed(() => getCostLines(sinvDoc.value));
-
-const quickAmounts = computed(() =>
-  getPaymentShortcuts(
-    props.dueAmount,
-    !sinvDoc.value.isReturn && props.requirements.isCash
-  )
-);
 
 function format(amount: Money): string {
   return fyo.format(amount, 'Currency');

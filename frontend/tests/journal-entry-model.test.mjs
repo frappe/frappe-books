@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getFilterFields } from './helpers/accounting.mjs';
 import {
-  evaluateHidden,
   frappeModels,
   fyo,
   getModel,
@@ -66,7 +65,7 @@ test('a new journal entry is saved without its temporary name, which the server 
 test('references and attachments hide on a submitted entry without them', () => {
   const entry = newFrappeDoc('JournalEntry', { reference_number: 'CHQ-1' });
   const hidden = (fieldname) =>
-    evaluateHidden(entry.fieldMap[fieldname], entry);
+    entry.getFieldState(entry.fieldMap[fieldname]).hidden;
   assert.equal(hidden('user_remark'), false);
 
   entry.docstatus = 1;
@@ -75,10 +74,9 @@ test('references and attachments hide on a submitted entry without them', () => 
   assert.equal(hidden('reference_number'), false);
 });
 
-test('a row without amounts takes what balances the entry, as Books did', async (t) => {
+test('a row without amounts takes what balances the entry, as Books did', async () => {
   stubFrappe(({ body }) => ({ docs: [body.document] }));
   const entry = newFrappeDoc('JournalEntry');
-  t.after(() => clearTimeout(entry._previewTimer));
   await entry.append('accounts', { account: 'Cash' });
   await entry.accounts[0].set('debit', fyo.pesa(100));
   await entry.append('accounts', { account: 'Capital' });
@@ -92,10 +90,9 @@ test('a row without amounts takes what balances the entry, as Books did', async 
   assert.equal(entry.accounts[2].debit.float, 0);
 });
 
-test('a row amount cleared by text that is no number still balances the entry', async (t) => {
+test('a row amount cleared by text that is no number still balances the entry', async () => {
   stubFrappe(({ body }) => ({ docs: [body.document] }));
   const entry = newFrappeDoc('JournalEntry');
-  t.after(() => clearTimeout(entry._previewTimer));
   await entry.append('accounts', { account: 'Cash' });
   await entry.accounts[0].set('debit', fyo.pesa(100));
   await entry.append('accounts', { account: 'Capital' });

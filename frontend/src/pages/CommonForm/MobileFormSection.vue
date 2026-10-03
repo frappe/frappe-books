@@ -100,7 +100,7 @@ import Table from 'src/components/Controls/Table.vue';
 import { getFields, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
-import { evaluateReadOnly, hasFieldValue } from 'src/utils/doc';
+import { hasFieldValue } from 'src/utils/doc';
 import { computed, ref, watch } from 'vue';
 import MobileFormField from './MobileFormField.vue';
 
@@ -218,7 +218,7 @@ function isTotal(field: Field) {
     return !!field.readOnly;
   }
 
-  return isNumeric(field) && evaluateReadOnly(field, props.doc);
+  return isNumeric(field) && props.doc.getFieldState(field).readOnly;
 }
 
 function getTotalLines(field: Field) {

@@ -202,11 +202,24 @@ function getDocuments(path: string, params: Row): unknown {
 }
 
 /**
- * Totals as the server leaves them. An opening shift's first cash row takes
- * the counted cash; a closing shift expects what its shift opened with and
- * shares the counted cash among the cash methods.
+ * Totals as the server leaves them. A sale fills the checks it was sent
+ * without, as Frappe sends every check, and takes its customer's loyalty
+ * program and points. An opening shift's first cash row takes the counted
+ * cash; a closing shift expects what its shift opened with and shares the
+ * counted cash among the cash methods.
  */
 function preview(document: Row): Row {
+  if (document.doctype === 'Books Sales Invoice') {
+    const party = getRecord('Books Party', document.party);
+    return {
+      ...document,
+      make_auto_payment: document.make_auto_payment ?? 0,
+      make_auto_stock_transfer: document.make_auto_stock_transfer ?? 0,
+      loyalty_program: party?.loyalty_program ?? null,
+      available_loyalty_points: party?.loyalty_points ?? 0,
+    };
+  }
+
   if (document.doctype === 'Books Pos Opening Shift') {
     const [cashRow] = getCashRows(document.opening_amounts ?? []);
     if (cashRow) {

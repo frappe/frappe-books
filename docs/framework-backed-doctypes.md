@@ -14,12 +14,14 @@ Every /books screen is Frappe-backed: it uses Frappe fieldnames from end to end,
 | `fieldProperties.ts` | A DocField's type, options, default, required and minimum as the field /books renders. |
 | `schema.ts` | Turns the meta and the model's `presentation` into the schema that forms, tables and lists render. Breaks become tabs and sections. Permission levels make fields read only or hidden. |
 | `document.ts` | `FrappeDoc`. It loads, inserts and saves the whole document, with `modified` so that Frappe refuses a stale copy. Submit, cancel and preview run as document methods on the client copy through `run_doc_method`. |
-| `documents.ts` | The open documents, so that a form, a quick edit and a link share one. A mapped document (`getMappedFrappeDoc`) comes from `frappe.model.mapper.make_mapped_doc`. |
+| `documents.ts` | The open documents, so that a form, a quick edit and a link share one. A mapped document (`getMappedDoc`) comes from `frappe.model.mapper.make_mapped_doc`, which runs a mapper of the source DocType. The path of its controller module comes from the meta, as Frappe's `get_module_name` builds it. |
 | `api.ts` | `/api/v2` requests: documents, lists, counts and one field's value (`getValue`). `getAllDocuments` reads every row of a short list, like payment methods, through `frappe.client.get_list`. |
 | `list.ts`, `link.ts` | List pages, counts and documents by name (`getFrappeRows`) over `/api/v2`. Link options from `search_link`, and the text a link shows (`getLinkDisplayValue`). |
 | `search.ts` | The search palette's doctypes (`getSearchables`) and its one request to `frappe_books.search.search`. That searches Frappe's SQLite Search index (`frappe_books/search.py`), which Frappe's scheduler updates with saved documents every five minutes. |
-| `values.ts` | Frappe values to form values and back. |
+| `values.ts` | Frappe and import-file values to form values and back, for every field type. Datetimes are read and written in the system time zone. |
 | `dependsOn.ts` | Evaluates `depends_on` conditions as Frappe forms do. |
+| `fieldState.ts` | Whether a field is hidden, read only or required on a document now (`doc.getFieldState(field)`), in one order: a submitted or cancelled document, a saved set-once field or no right to write makes it read only; then the field's own property (true from the DocType or permission levels, false from the presentation); then `depends_on`, `read_only_depends_on` and `mandatory_depends_on`; then the model's `hidden`, `readOnly` and `required` maps. `doc.missingFields` are the empty required fields, which the form marks and a save refuses, hidden ones too, as Frappe's form does. The conditions read the document's values once per change. |
+| `docValues.ts`, `validation.ts` | How values compare and start. The field checks a model mirrors to show a message at the field: email, phone and options. |
 | `useBooksDoc.ts` | `useBooksDoc`: a form's document with the user's rights on it (`frappe.client.get_doc_permissions`). Other screens use `newFrappeDoc`, `getFrappeDoc` and `getFrappeDocOrNew` from `documents.ts`. |
 
 Each schema's model is in `frappeModels` in `frontend/models/index.ts`. The schema name stays the route key, for example `Item` in `/edit/Item/Pen`. The model names the DocType, and the boot permissions map each schema name to it. The rows of a table go by the table's DocType without `Books ` and spaces, for example `SalesInvoiceItem`. `getRegionalFrappeModels` gives the regional models, for example the Indian Party, which replace their `frappeModels` entries. A model can show a Frappe doctype that the app does not ship, like Currency, Country or Print Format; its `presentation` gives the labels, options and defaults that /books shows, and `omitFields` leaves out the rest.
@@ -45,7 +47,7 @@ Each schema's model is in `frappeModels` in `frontend/models/index.ts`. The sche
 | List order | The DocType's `sort_field`, else `date`, newest first |
 | Visibility that depends on /books settings | The model's `hidden` map |
 | Link filters and create values | `static filters` and `static createFilters`, in the fieldnames of the target doctype |
-| Actions that open a mapped document | `getMappedDoc`. A Frappe-backed target runs through `frappe.model.mapper.make_mapped_doc`. |
+| Actions that open a mapped document | `getMappedDocAction` in `models/helpers.ts`, with the target schema and a whitelisted mapper in the controller of the source DocType. It opens the new form, or what its `open` says, like the quick edit of a payment. |
 | Rows a screen adds for the user, like a scanned item | Append the row, then `set` its item, so the `refills` of the item leave the price and details to the server. A row appended with its item sends an empty rate as 0, which the server keeps. |
 | A cancel that also cancels linked documents | The controller's whitelisted `cancel_with_linked_docs` |
 
@@ -53,7 +55,7 @@ Each schema's model is in `frappeModels` in `frontend/models/index.ts`. The sche
 
 A model for a Frappe-backed doctype extends `FrappeDoc`. It has no `formulas`, no `defaults` and no data code.
 
-A new document previews once when its form opens. When the user edits a field, the preview runs after a pause, and a save waits for the preview of the last edit. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user, until the user edits a field that `refills` names for it. A model calls `leaveToServer` itself when the refill depends on the document, for example to price rows again. A document without a preview clears these fields, so its save sends them empty.
+A new document previews once when its form opens. When the user edits a field, the preview runs after a pause. A save waits for a running preview, then previews the last edit if its values are not back yet. `await doc.whenFilled()` resolves when no preview is scheduled or running. One scheduler times the pause (`setPreviewScheduler`); node tests install one that runs a scheduled preview only on `whenFilled`. A value that the preview filled is sent empty in the next preview, so the server fills it again. After the user edits that field, the server keeps the value of the user, until the user edits a field that `refills` names for it. A model calls `leaveToServer` itself when the refill depends on the document, for example to price rows again. A document without a preview clears these fields, so its save sends them empty.
 
 A value that the user entered and the server only corrected, such as the sign of a return quantity, stays the value of the user. Frappe sends no empty values, so a value that is missing from the preview is empty.
 

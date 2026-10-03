@@ -2,9 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   frappeModels,
   fyo,
   getFrappeDoc,
@@ -34,7 +31,7 @@ fyo.singles.SystemSettings = { currency: 'INR' };
 function getLayout(doc) {
   const layout = {};
   for (const field of doc.schema.fields) {
-    if (field.meta || evaluateHidden(field, doc)) {
+    if (field.meta || doc.getFieldState(field).hidden) {
       continue;
     }
 
@@ -46,9 +43,7 @@ function getLayout(doc) {
 }
 
 function newInvoice(schemaName, values = {}) {
-  const doc = newFrappeDoc(schemaName, values);
-  clearTimeout(doc._previewTimer);
-  return doc;
+  return newFrappeDoc(schemaName, values);
 }
 
 function setSettings({ accounting = {}, inventory = {}, defaults = {} } = {}) {
@@ -106,7 +101,7 @@ test('features and totals show the fields that go with them', () => {
     'make_auto_payment',
     'make_auto_stock_transfer',
   ]);
-  assert.equal(evaluateRequired(invoice.fieldMap.exchange_rate, invoice), true);
+  assert.equal(invoice.getFieldState(invoice.fieldMap.exchange_rate).required, true);
 });
 
 test('a submitted invoice hides what only a draft offers', () => {
@@ -210,7 +205,7 @@ test('row fields show by the features and discounts turned on', () => {
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', { item: 'Pen' });
   const row = invoice.items[0];
-  const hidden = (fieldname) => evaluateHidden(row.fieldMap[fieldname], row);
+  const hidden = (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden;
 
   assert.equal(hidden('item_discount_percent'), false);
   assert.equal(hidden('item_discount_amount'), true);
@@ -275,7 +270,6 @@ test('row edits ask the server for the price, details and quantities that follow
   for (const fieldname of ['rate', 'account', 'tax', 'description', 'unit']) {
     assert.equal(fieldname in sent(), false, fieldname);
   }
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a row in another unit shows and takes its rate per that unit', async () => {
@@ -293,9 +287,9 @@ test('a row in another unit shows and takes its rate per that unit', async () =>
   });
   const row = invoice.items[0];
   const { rate, transfer_rate } = row.fieldMap;
-  assert.equal(evaluateHidden(rate, row), true);
-  assert.equal(evaluateHidden(transfer_rate, row), false);
-  assert.equal(evaluateReadOnly(transfer_rate, row), false);
+  assert.equal(row.getFieldState(rate).hidden, true);
+  assert.equal(row.getFieldState(transfer_rate).hidden, false);
+  assert.equal(row.getFieldState(transfer_rate).readOnly, false);
   assert.equal(transfer_rate.label, 'Rate');
   assert.ok(row.schema.quickEditFields.includes('transfer_rate'));
 
@@ -308,7 +302,6 @@ test('a row in another unit shows and takes its rate per that unit', async () =>
   assert.equal(sent.rate, undefined);
   assert.equal(Number(sent.transfer_rate), 3000);
   assert.equal(row.is_manual_rate, true);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a row rate cleared by text that is no number is refused, as the server requires a rate', async () => {
@@ -323,7 +316,6 @@ test('a row rate cleared by text that is no number is refused, as the server req
 
   await assert.rejects(row.set('transfer_rate', null), /Rate is required/);
   assert.equal(row.transfer_rate.float, 62);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a new item on a purchase row leaves its batch for the server to name', async () => {
@@ -333,7 +325,6 @@ test('a new item on a purchase row leaves its batch for the server to name', asy
   );
   for (const invoice of invoices) {
     await invoice.items[0].set('item', 'Ink');
-    clearTimeout(invoice._previewTimer);
   }
 
   assert.deepEqual(
@@ -360,7 +351,6 @@ test('a scanned item is priced by the server, and scanning it again adds to its 
     invoice.items.map(({ item, quantity }) => [item, quantity]),
     [['Pen', 3]]
   );
-  clearTimeout(invoice._previewTimer);
 });
 
 test('an invoice from selected items leaves their pricing to the server', async () => {
@@ -375,7 +365,6 @@ test('an invoice from selected items leaves their pricing to the server', async 
 
   const name = decodeURIComponent(routes[0].split('/').at(-1));
   const invoice = await getFrappeDoc('SalesInvoice', name);
-  clearTimeout(invoice._previewTimer);
   const { items } = invoice.getMethodDocument({
     keepRowNames: true,
     clearServerFilled: true,
@@ -428,7 +417,6 @@ test('a new date fetches the exchange rate for it again', async () => {
   assert.equal('exchange_rate' in sent, false);
   assert.equal(sent.currency, 'USD');
   assert.equal('rate' in sent.items[0], false);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a return takes quantities back, however they are typed', async () => {
@@ -441,7 +429,6 @@ test('a return takes quantities back, however they are typed', async () => {
   assert.equal(row.quantity, -2);
   await row.set('transfer_quantity', 4);
   assert.deepEqual([row.transfer_quantity, row.qty], [-4, -4]);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a new party or price list prices rows again, except manual and free ones', async () => {
@@ -462,7 +449,6 @@ test('a new party or price list prices rows again, except manual and free ones',
     sent.items.map((row) => 'rate' in row),
     [false, true, true]
   );
-  clearTimeout(invoice._previewTimer);
 });
 
 test('amounts show in the party currency, base amounts in the company one', () => {
@@ -546,7 +532,6 @@ test('a new invoice from a filtered list takes the values users enter', async ()
 
   const name = decodeURIComponent(routes[0].split('/').at(-1));
   const invoice = await getFrappeDoc('SalesInvoice', name);
-  clearTimeout(invoice._previewTimer);
   assert.equal(invoice.party, 'Acme');
   assert.equal(invoice.docstatus, 0);
   assert.deepEqual(getNewDocValues('SalesInvoice', filters), {
@@ -633,7 +618,7 @@ test('Return Against shows while returns are on, or once it is set', () => {
     setSettings();
     const draft = newInvoice(schemaName);
     const isHidden = () =>
-      evaluateHidden(draft.fieldMap.return_against, draft);
+      draft.getFieldState(draft.fieldMap.return_against).hidden;
 
     assert.equal(isHidden(), true);
     setSettings({ accounting: { enable_invoice_returns: true } });
@@ -696,7 +681,6 @@ test('a submitted quote makes a Frappe-backed sales invoice from its mapper', as
     'SalesInvoice',
     'make_sales_invoice'
   );
-  clearTimeout(invoice._previewTimer);
 
   assert.equal(
     requests[0].path,

@@ -35,7 +35,9 @@
       role="status"
     >
       <dt>{{ settlement.label }}</dt>
-      <dd class="text-base-semibold">{{ formatAmount(settlement.amount) }}</dd>
+      <dd class="text-base-semibold">
+        {{ formatAmount(settlement.amount) }}
+      </dd>
     </div>
   </dl>
 </template>
@@ -45,10 +47,10 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import { CostLine, getCostLines } from 'src/utils/pos';
+import type { Settlement } from 'src/utils/posCheckout';
 import { defineComponent, PropType } from 'vue';
 
-export type Settlement = { label: string; amount: Money; isChange: boolean };
-
+/** The sale's totals, then what the tender settles. */
 export default defineComponent({
   name: 'PaymentSummary',
   props: {

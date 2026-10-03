@@ -1,5 +1,5 @@
 import { FiltersMap, ValidationMap } from 'fyo/model/types';
-import { validateEmail } from 'fyo/model/validationFunction';
+import { validateEmail } from 'src/frappe/validation';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { findScannedPOSItem } from './helpers/accounting.mjs';
-import { posItemSearch, stubFrappe } from './helpers/frappe.mjs';
+import { POS, fyo, posItemSearch, stubFrappe } from './helpers/frappe.mjs';
 
 const rice = {
   name: 'Basmati Rice',
@@ -11,6 +11,14 @@ const rice = {
 };
 const eggs = { name: 'Eggs', itemCode: '54321', unit: 'Unit' };
 const items = [rice, eggs];
+const riceRow = {
+  name: 'Basmati Rice',
+  item_code: '12345',
+  barcode: '890000000001',
+  unit: 'Kg',
+  rate: 80,
+  track_item: 1,
+};
 const scale = {
   weight_enabled_barcode: true,
   check_digits: 21,
@@ -22,10 +30,12 @@ test('a scale barcode adds its weight, in kilograms for kg items', () => {
   assert.deepEqual(findScannedPOSItem(items, '211234501500', scale), {
     item: rice,
     quantity: 1.5,
+    isStockQuantity: true,
   });
   assert.deepEqual(findScannedPOSItem(items, '215432100012', scale), {
     item: eggs,
     quantity: 12,
+    isStockQuantity: true,
   });
 });
 
@@ -33,10 +43,12 @@ test('other codes match a 12 digit barcode or an exact name or code', () => {
   assert.deepEqual(findScannedPOSItem(items, '890000000001', scale), {
     item: rice,
     quantity: 1,
+    isStockQuantity: false,
   });
   assert.deepEqual(findScannedPOSItem(items, 'eggs'), {
     item: eggs,
     quantity: 1,
+    isStockQuantity: false,
   });
   assert.equal(findScannedPOSItem(items, '211234501500'), undefined);
   assert.equal(findScannedPOSItem(items, 'Egg'), undefined);
@@ -48,21 +60,27 @@ test('any barcode matches exactly, whatever its length or characters', () => {
   assert.deepEqual(findScannedPOSItem([tagged, short], 'ABC-abc-1234'), {
     item: tagged,
     quantity: 1,
+    isStockQuantity: false,
   });
   assert.deepEqual(findScannedPOSItem([tagged, short], '96385074'), {
     item: short,
     quantity: 1,
+    isStockQuantity: false,
   });
 });
 
 test('a scan looks up only the items its code, or its scale item code, may name', async () => {
-  const requests = stubFrappe(() => ({
-    message: [{ name: 'Basmati Rice', item_code: '12345', unit: 'Kg' }],
-  }));
-  const scanned = await posItemSearch.getScannableItems('211234501500', scale);
-  assert.deepEqual(scanned, [
-    { name: 'Basmati Rice', itemCode: '12345', barcode: undefined, unit: 'Kg' },
-  ]);
+  fyo.singles.POSSettings = scale;
+  const requests = stubFrappe(() => ({ message: [riceRow] }));
+  const stock = { 'Basmati Rice': { availableQty: 4 } };
+  const { item, quantity } = await posItemSearch.getScannedItem(
+    '211234501500',
+    stock
+  );
+  assert.deepEqual(
+    [item.name, item.rate.float, item.trackItem, item.availableQty, quantity],
+    ['Basmati Rice', 80, true, 4, 1.5]
+  );
 
   assert.equal(requests.length, 1);
   const { path, body } = requests[0];
@@ -76,4 +94,44 @@ test('a scan looks up only the items its code, or its scale item code, may name'
     ['item_code', 'like', '12345'],
     ['barcode', 'like', '12345'],
   ]);
+});
+
+test('a blank code looks nothing up', async () => {
+  const requests = stubFrappe(() => ({ message: [riceRow] }));
+  assert.equal(await posItemSearch.getScannedItem('  '), undefined);
+  assert.equal(requests.length, 0);
+});
+
+test('a POS scan adds an item the POS does not list, a weight in the stock unit', async () => {
+  fyo.singles.POSSettings = scale;
+  stubFrappe(() => ({ message: [riceRow] }));
+  const added = [];
+  const pos = {
+    items: [],
+    itemQtyMap: {},
+    itemSearchTerm: '',
+    addItem: async (item, quantity, addition) =>
+      added.push([item.name, quantity, addition]),
+  };
+
+  await POS.methods.handleItemSearch.call(pos, '890000000001', true);
+  await POS.methods.handleItemSearch.call(pos, '211234501500', true);
+
+  assert.deepEqual(added, [
+    ['Basmati Rice', 1, { isStockQuantity: false }],
+    ['Basmati Rice', 1.5, { isStockQuantity: true }],
+  ]);
+  assert.equal(pos.itemSearchTerm, '');
+});
+
+test('a POS scan keeps the text typed while its item was added', async () => {
+  fyo.singles.POSSettings = scale;
+  stubFrappe(() => ({ message: [riceRow] }));
+  const pos = { items: [], itemQtyMap: {}, itemSearchTerm: '' };
+  pos.addItem = async () => {
+    pos.itemSearchTerm = '8900';
+  };
+
+  await POS.methods.handleItemSearch.call(pos, '890000000001', true);
+  assert.equal(pos.itemSearchTerm, '8900');
 });

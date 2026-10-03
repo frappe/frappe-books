@@ -16,7 +16,7 @@ await build({
     contents: `
       export { commonDocSubmit, deleteDocWithPrompt, getActionsForDoc, getFieldsGroupedByTabAndSection } from './src/utils/ui';
       export { dialog, toast } from 'frappe-ui';
-      export { FrappeDoc } from './src/frappe/document';
+      export { FrappeDoc, setPreviewScheduler } from './src/frappe/document';
       export { registerFrappeModels } from './src/frappe/doctypes';
       export { newFrappeDoc } from './src/frappe/documents';
       export { frappeModels } from './models';
@@ -81,6 +81,7 @@ export const {
   dialog,
   toast,
   FrappeDoc,
+  setPreviewScheduler,
   registerFrappeModels,
   newFrappeDoc,
   frappeModels,
@@ -104,3 +105,6 @@ export const {
   MultiLabelLink,
   GetStarted,
 } = createRequire(import.meta.url)(output);
+
+// No scheduled preview runs by itself, so none reaches a later test's stub.
+setPreviewScheduler(() => () => undefined);

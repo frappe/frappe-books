@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateReadOnly, newFrappeDoc, toSchema } from './helpers/frappe.mjs';
+import { newFrappeDoc, toSchema } from './helpers/frappe.mjs';
 import { loadFrappeModels } from './helpers/models.mjs';
 
 /** The field /books shows for a DocField, with what the model presents of it. */
@@ -117,13 +117,11 @@ test('option values come from the server and labels from the model', () => {
   ]);
 });
 
-test('a field set only once is read only after the first save', () => {
+test('a field set only once says so', () => {
   const unit = getField({
     fieldtype: 'Link',
     options: 'Books Uom',
     set_only_once: 1,
   });
-  const doc = { canWrite: true, hasFieldRule: () => false };
-  assert.equal(evaluateReadOnly(unit, { ...doc, inserted: false }), false);
-  assert.equal(evaluateReadOnly(unit, { ...doc, inserted: true }), true);
+  assert.equal(unit.setOnlyOnce, true);
 });

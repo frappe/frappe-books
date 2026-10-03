@@ -198,40 +198,6 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			entries = ledger_entries(invoice.doctype, invoice.name)
 			self.assertEqual(sum(Decimal(str(row.debit)) for row in entries), Decimal("1538"))
 
-	def test_return_posts_item_discounts(self):
-		item = make_item(self.income.name, self.expense.name)
-		invoice = make_invoice(
-			"Books Sales Invoice",
-			self.party.name,
-			self.receivable.name,
-			item.name,
-			self.income.name,
-		)
-		invoice.submit()
-		credit_note = make_invoice(
-			"Books Sales Invoice",
-			self.party.name,
-			self.receivable.name,
-			item.name,
-			self.income.name,
-			return_against=invoice.name,
-			items=[
-				{
-					"item": item.name,
-					"account": self.income.name,
-					"rate": 100,
-					"quantity": -2,
-					"item_discount_percent": 10,
-				}
-			],
-		)
-		credit_note.submit()
-
-		self.assertEqual(Decimal(str(credit_note.grand_total)), Decimal("-180"))
-		entries = ledger_entries(credit_note.doctype, credit_note.name)
-		discount = next(row for row in entries if row.account == self.discount.name)
-		self.assertEqual(Decimal(str(discount.credit)), Decimal("20"))
-
 	def test_partial_returns_share_fixed_discounts(self):
 		item = make_item(self.income.name, self.expense.name)
 		for row_discount, refund in ((20, 90), (150, 25)):

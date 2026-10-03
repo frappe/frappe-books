@@ -7,6 +7,7 @@ from frappe import _
 from frappe.query_builder import Order
 from frappe.utils import getdate
 
+from frappe_books.accounting import settlement
 from frappe_books.accounting.money import as_decimal, rounded
 
 
@@ -94,14 +95,12 @@ def transacted_amounts(from_date, to_date):
 		fields=["parent", "reference_name", "amount"],
 	)
 	methods = _submitted_payment_methods({reference.parent for reference in references})
-	returns = {invoice.name for invoice in invoices if invoice.return_against}
+	invoices = {invoice.name: invoice for invoice in invoices}
 	result = defaultdict(as_decimal)
 	for reference in references:
 		method = methods.get(reference.parent)
-		if not method:
-			continue
-		sign = -1 if reference.reference_name in returns else 1
-		result[method] += sign * as_decimal(reference.amount)
+		if method:
+			result[method] += settlement.signed(invoices[reference.reference_name], reference.amount)
 	return {method: rounded(amount) for method, amount in result.items()}
 
 

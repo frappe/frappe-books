@@ -106,7 +106,7 @@
         :border="true"
         :value="row.transfer_unit ?? ''"
         :read-only="isReadOnly"
-        @change="(value: string) => row.set('transfer_unit', value)"
+        @change="setUnit"
       />
     </div>
 
@@ -253,17 +253,17 @@ import Text from 'src/components/Controls/Text.vue';
 import { t } from 'fyo';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
+import { getPOSRowItem, POSRowItem } from 'src/utils/pos';
 import {
-  getPOSQuantityField,
+  getCartRowQuantity,
   getPOSRowFieldLabel,
-  getPOSRowItem,
   isPOSRowFieldReadOnly,
-  POSRowItem,
   POSRowField,
-  refillSerialNumbers,
+  setCartUnit,
   setPOSRowValue,
+  stepCartQuantity,
   validateSerialNumberCount,
-} from 'src/utils/pos';
+} from 'src/utils/posCart';
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { defineComponent, inject, PropType } from 'vue';
@@ -349,17 +349,8 @@ export default defineComponent({
 
       return parts.join(' · ');
     },
-    displayQuantity(): number | undefined {
-      if (!this.isUOMConversionEnabled) {
-        return this.row.quantity;
-      }
-
-      const transferQuantity = this.row.transfer_quantity;
-      if (this.row.isReturn && transferQuantity) {
-        return -Math.abs(transferQuantity);
-      }
-
-      return transferQuantity;
+    displayQuantity(): number {
+      return getCartRowQuantity(this.row);
     },
   },
   watch: {
@@ -382,11 +373,6 @@ export default defineComponent({
         this.itemSettings = await getPOSRowItem(item);
       },
       immediate: true,
-    },
-    'row.quantity'(quantity?: number, previous?: number) {
-      if (this.hasSerialNumber && quantity !== previous) {
-        refillSerialNumbers(this.row);
-      }
     },
   },
   async mounted() {
@@ -418,8 +404,18 @@ export default defineComponent({
       }
     },
     async setValue(field: POSRowField, value: number | Money) {
+      await this.changeRow(() => setPOSRowValue(this.row, field, value));
+    },
+    async adjustQuantity(step: number) {
+      await this.changeRow(() => stepCartQuantity(this.row, step));
+    },
+    async setUnit(unit: string) {
+      await this.changeRow(() => setCartUnit(this.row, unit));
+    },
+    /** Makes a change to the row; a refused one shows in the cart's toast. */
+    async changeRow(change: () => Promise<void>) {
       try {
-        await setPOSRowValue(this.row, field, value);
+        await change();
       } catch (error) {
         showToast({
           id: POS_ITEM_TOAST_ID,
@@ -429,24 +425,15 @@ export default defineComponent({
         });
       }
     },
-    async adjustQuantity(change: number) {
-      const field = getPOSQuantityField();
-      const quantity = (this.row[field] ?? this.row.quantity ?? 1) + change;
-      if (quantity !== 0) {
-        await this.setValue(field, quantity);
-      }
-    },
     async setSerialNumber(serialNumber: string) {
       if (!serialNumber) {
         return;
       }
 
-      await this.row.set('serial_number', serialNumber);
-      validateSerialNumberCount(
-        serialNumber,
-        Math.abs(this.row.quantity ?? 0),
-        this.row.item as string
-      );
+      await this.changeRow(async () => {
+        await this.row.set('serial_number', serialNumber);
+        validateSerialNumberCount(this.row);
+      });
     },
     async removeRow() {
       await this.row.parentdoc?.remove('items', this.row.idx as number);

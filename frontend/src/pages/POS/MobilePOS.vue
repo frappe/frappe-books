@@ -135,6 +135,7 @@ import EmptyState from 'src/components/EmptyState.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { getItemInitials } from 'src/utils/pos';
+import { getQuantityByItem } from 'src/utils/posCart';
 import {
   computed,
   inject,
@@ -188,16 +189,7 @@ watch(sinvDoc, (doc) => {
   }
 });
 
-const cartQuantities = computed(() => {
-  const quantities: Record<string, number> = {};
-  for (const row of sinvDoc.value.items ?? []) {
-    if (row.item && !row.is_free_item) {
-      quantities[row.item] =
-        (quantities[row.item] ?? 0) + Math.abs(row.quantity ?? 0);
-    }
-  }
-  return quantities;
-});
+const cartQuantities = computed(() => getQuantityByItem(sinvDoc.value));
 
 const itemCountLabel = computed(() =>
   props.totalQuantity === 1 ? t`1 item` : t`${props.totalQuantity} items`

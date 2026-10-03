@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   FrappeDoc,
-  fyo,
-  getMappedDoc,
   getModel,
   loadFrappeDocTypes,
   newFrappeDoc,
@@ -84,7 +82,6 @@ await loadFrappeDocTypes();
 test('table rows are presented by the row model their parent names', async () => {
   const move = newFrappeDoc('Move');
   await move.append('rows', { item: 'Pen' });
-  clearTimeout(move._previewTimer);
 
   assert.equal(getModel('MoveRow'), MoveRow);
   assert.ok(move.rows[0] instanceof MoveRow);
@@ -103,7 +100,6 @@ test('editing a field has the preview fill the fields derived from it again', as
 
   await move.rows[0].set('item', 'Ink');
   await move.preview();
-  clearTimeout(move._previewTimer);
   assert.equal('rate' in previews[2].rows[0], false);
   assert.equal(move.rows[0].rate, 20);
 });
@@ -117,7 +113,6 @@ test('a value the user entered stays theirs when the server only corrects it', a
 
   await move.set('kind', 'Return');
   await move.preview();
-  clearTimeout(move._previewTimer);
   assert.equal(previews[1].rows[0].quantity, -2);
   assert.equal('series' in previews[1], false);
 });
@@ -135,59 +130,16 @@ test('a value the server leaves empty is cleared, as Frappe sends no empty value
   await move.set('series', 'OLD-');
 
   await move.preview();
-  clearTimeout(move._previewTimer);
   assert.equal(move.kind, null);
   assert.equal(move.series, 'OLD-');
 });
 
-test('a form previews a new document once it opens', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('a form previews a new document once it opens', async () => {
   const { previews } = stubServer();
   const { doc, load } = useBooksDoc();
 
   await load('Move', undefined, true);
-  t.mock.timers.tick(300);
-  await waitFor(() => doc.value.series === 'MOVE-');
+  await doc.value.whenFilled();
+  assert.equal(doc.value.series, 'MOVE-');
   assert.equal(previews.length, 1);
 });
-
-test('a document of a Frappe-backed schema is mapped by the server mapper', async () => {
-  const { requests } = stubServer();
-  stubFrappe((request) => {
-    requests.push(request);
-    return {
-      message: {
-        doctype: 'Books Move',
-        name: null,
-        kind: 'Return',
-        rows: [{ name: null, item: 'Pen', quantity: -1, rate: 10 }],
-      },
-    };
-  });
-  const source = { schemaName: 'Shipment', name: 'SHPM-1', fyo };
-
-  const move = await getMappedDoc(source, 'Move', 'make_return');
-
-  assert.equal(
-    requests[0].path,
-    '/api/method/frappe.model.mapper.make_mapped_doc'
-  );
-  assert.deepEqual(requests[0].body, {
-    method:
-      'frappe_books.frappe_books.doctype.books_shipment.books_shipment.make_return',
-    source_name: 'SHPM-1',
-  });
-  assert.ok(move instanceof Move);
-  assert.ok(move.notInserted && move.name);
-  assert.equal(move.kind, 'Return');
-  assert.equal(move.rows[0].quantity, -1);
-  assert.ok(move.rows[0] instanceof MoveRow);
-});
-
-async function waitFor(condition) {
-  for (let attempt = 0; attempt < 50 && !condition(); attempt += 1) {
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-
-  assert.ok(condition());
-}

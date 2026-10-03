@@ -2,12 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
-  evaluateReadOnly,
-  evaluateRequired,
   frappeModels,
   fyo,
   getSchema,
   loadFrappeDocTypes,
+  loadSaved,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -27,15 +26,12 @@ const field = (fieldname) =>
   schema.fields.find((field) => field.fieldname === fieldname);
 
 function newAccount(values) {
-  const account = newFrappeDoc('Account', values);
-  clearTimeout(account._previewTimer);
-  return account;
+  return newFrappeDoc('Account', values);
 }
 
-function savedAccount(values) {
+async function savedAccount(values) {
   const account = newAccount(values);
-  account._notInserted = false;
-  account._savedValues = values;
+  await loadSaved(account);
   return account;
 }
 
@@ -65,12 +61,12 @@ test('the Account form shows the fields, labels and placeholders it showed', () 
 
 test('a ledger account needs a parent group; a root group does not', () => {
   const parent = field('parent_books_account');
-  assert.equal(evaluateRequired(parent, newAccount({ is_group: false })), true);
-  assert.equal(evaluateRequired(parent, newAccount({ is_group: true })), false);
+  assert.equal(newAccount({ is_group: false }).getFieldState(parent).required, true);
+  assert.equal(newAccount({ is_group: true }).getFieldState(parent).required, false);
 });
 
-test('a saved account keeps its name, types, parent and group; a saved type stays', () => {
-  const account = savedAccount({
+test('a saved account keeps its name, types, parent and group; a saved type stays', async () => {
+  const account = await savedAccount({
     account_name: 'Petty Cash',
     parent_books_account: 'Cash In Hand',
     root_type: 'Asset',
@@ -81,19 +77,20 @@ test('a saved account keeps its name, types, parent and group; a saved type stay
     'parent_books_account',
     'is_group',
   ]) {
-    assert.equal(evaluateReadOnly(field(fieldname), account), true);
+    assert.equal(account.getFieldState(field(fieldname)).readOnly, true);
   }
 
   const accountType = field('account_type');
-  assert.equal(evaluateReadOnly(accountType, account), false);
+  assert.equal(account.getFieldState(accountType).readOnly, false);
   account.account_type = 'Cash';
-  assert.equal(evaluateReadOnly(accountType, account), false);
+  assert.equal(account.getFieldState(accountType).readOnly, false);
   assert.equal(
-    evaluateReadOnly(accountType, savedAccount({ account_type: 'Cash' })),
+    (await savedAccount({ account_type: 'Cash' })).getFieldState(accountType)
+      .readOnly,
     true
   );
   assert.equal(
-    evaluateReadOnly(accountType, newAccount({ account_type: 'Cash' })),
+    newAccount({ account_type: 'Cash' }).getFieldState(accountType).readOnly,
     false
   );
 });
@@ -101,9 +98,9 @@ test('a saved account keeps its name, types, parent and group; a saved type stay
 test('a child account takes its root type from its group, so it is read only', () => {
   const rootType = field('root_type');
   const root = newAccount({ is_group: true });
-  assert.equal(evaluateReadOnly(rootType, root), false);
+  assert.equal(root.getFieldState(rootType).readOnly, false);
   const child = newAccount({ parent_books_account: 'Current Assets' });
-  assert.equal(evaluateReadOnly(rootType, child), true);
+  assert.equal(child.getFieldState(rootType).readOnly, true);
 });
 
 test('a root account says it cannot be deleted before asking the server', async () => {
@@ -181,8 +178,8 @@ test('the account list shows its name, root type, group and parent', () => {
   ]);
 });
 
-test('an account saves without the nested set Frappe keeps', () => {
-  const account = savedAccount({
+test('an account saves without the nested set Frappe keeps', async () => {
+  const account = await savedAccount({
     account_name: 'Petty Cash',
     parent_books_account: 'Cash In Hand',
   });

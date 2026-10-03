@@ -14,13 +14,13 @@ ENTRY = "Books Loyalty Point Entry"
 
 
 def set_available_points(invoice):
-	if invoice.transaction_type != "sales" or not (invoice.party and invoice.get("loyalty_program")):
+	if not (invoice.party and invoice.get("loyalty_program")):
 		return
 	invoice.available_loyalty_points = get_available_points(invoice.party, invoice.loyalty_program)
 
 
 def validate_invoice_loyalty(invoice):
-	if invoice.transaction_type != "sales" or not invoice.get("loyalty_program"):
+	if not invoice.get("loyalty_program"):
 		return
 	if invoice.redeem_loyalty_points and not invoice.return_against:
 		_validate_redemption(invoice)
@@ -81,7 +81,7 @@ def loyalty_expense_account(invoice):
 
 
 def process_invoice(invoice):
-	if invoice.transaction_type != "sales" or not invoice.get("loyalty_program"):
+	if not invoice.get("loyalty_program"):
 		return
 	_lock_customer(invoice.party)
 	program = frappe.get_doc("Books Loyalty Program", invoice.loyalty_program)
@@ -95,7 +95,7 @@ def process_invoice(invoice):
 
 
 def reverse_invoice(invoice):
-	if invoice.transaction_type != "sales" or not invoice.get("loyalty_program"):
+	if not invoice.get("loyalty_program"):
 		return
 	_lock_customer(invoice.party)
 	frappe.db.delete(ENTRY, {"invoice": invoice.name})

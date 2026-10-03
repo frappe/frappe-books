@@ -14,9 +14,9 @@ await build({
   absWorkingDir: frontend,
   stdin: {
     contents: `
-      export { FrappeDoc } from './src/frappe/document';
+      export { FrappeDoc, afterPause, setPreviewScheduler } from './src/frappe/document';
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
-      export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
+      export { getFrappeDoc, getFrappeDocOrNew, getMappedDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
       export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';
@@ -26,13 +26,12 @@ await build({
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { setLanguageMapOnTranslationString } from './fyo/utils/translation';
-      export { getMissingMandatoryFields } from './fyo/model/helpers';
-      export { evaluateHidden, evaluateReadOnly, evaluateRequired, loadDocPermissions } from './src/utils/doc';
+      export { loadDocPermissions } from './src/utils/doc';
       export { getRowDetails } from './src/components/Controls/rowDetails';
       export { getRowSummary } from './src/components/Controls/rowSummary';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels } from './models';
-      export { getLedgerLink, getMappedDoc, getStockTransferActions } from './models/helpers';
+      export { getLedgerLink, getStockTransferActions } from './models/helpers';
       export { createFilters, routeFilters } from './src/utils/filters';
       export { getNewDocValues } from './src/utils/misc';
       export { getFilterFields } from './src/utils/filterFields';
@@ -41,10 +40,15 @@ await build({
       export { docsPathRef } from './src/utils/refs';
       export { deskTheme, getColorScheme } from './src/utils/theme';
       export { default as ListView } from './src/pages/ListView/ListView.vue';
+      export { default as POS } from './src/pages/POS/POS.vue';
       export { default as router } from 'src/router';
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
+      export { usePOSCheckout } from './src/utils/posCheckout';
+      export * as posDiscounts from './src/utils/posDiscounts';
+      export * as posCart from './src/utils/posCart';
       export * as posSetup from './src/utils/posSetup';
+      export * as posShift from './src/utils/posShift';
       export * as posStock from './models/inventory/posStock';
       export * as posItemSearch from './src/utils/posItemSearch';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
@@ -86,7 +90,7 @@ await build({
         }));
         // Components under test keep their script; the rest are stubs.
         builder.onLoad(
-          { filter: /ListView\/ListView\.vue$/ },
+          { filter: /(ListView\/ListView|pages\/POS\/POS)\.vue$/ },
           async (args) => ({
             contents: (await readFile(args.path, 'utf8')).match(
               /<script[^>]*>([\s\S]*?)<\/script>/
@@ -117,12 +121,13 @@ globalThis.window = {
 
 export const {
   FrappeDoc,
+  afterPause,
+  setPreviewScheduler,
   registerFrappeModels,
   isFrappeBacked,
   getDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
-  getMappedFrappeDoc,
   newFrappeDoc,
   useBooksDoc,
   evaluateCondition,
@@ -143,10 +148,6 @@ export const {
   toSchema,
   fyo,
   setLanguageMapOnTranslationString,
-  getMissingMandatoryFields,
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   loadDocPermissions,
   getRowDetails,
   getRowSummary,
@@ -161,7 +162,11 @@ export const {
   getFilterFields,
   ListFilters,
   pos,
+  usePOSCheckout,
+  posDiscounts,
+  posCart,
   posSetup,
+  posShift,
   posStock,
   posItemSearch,
   getInsufficientItems,
@@ -192,8 +197,32 @@ export const {
   deskTheme,
   getColorScheme,
   ListView,
+  POS,
   router,
 } = createRequire(import.meta.url)(output);
+
+/** Runs no scheduled preview itself, so none reaches a later test's stub; `doc.whenFilled()` runs it. */
+export function manualScheduler() {
+  return () => undefined;
+}
+
+setPreviewScheduler(manualScheduler);
+
+/** Loads `doc` as saved and unedited, with its own values and the Frappe `values`, as a form loads it. */
+export async function loadSaved(doc, values = {}) {
+  const fetch = globalThis.fetch;
+  const data = {
+    ...doc.getFrappeValues({ keepRowNames: true }),
+    name: doc.name,
+    ...values,
+  };
+  stubFrappe(() => ({ data }));
+  try {
+    await doc.load();
+  } finally {
+    globalThis.fetch = fetch;
+  }
+}
 
 /**
  * Answers every request with `respond({ method, path, params, body })`, which

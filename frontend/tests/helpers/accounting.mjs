@@ -29,16 +29,12 @@ await build({
       export { getRowDetails } from './src/components/Controls/rowDetails';
       export * from './src/utils/filterQuery';
       export * from './src/utils/filterFields';
-      export { getMappedDoc, getStockTransferActions } from './models/helpers';
+      export { getStockTransferActions } from './models/helpers';
+      export { getMappedDoc } from './src/frappe/documents';
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { getDateRangePresets, getFilterItems } from './src/components/Report/filterToolbar';
-      export {
-        evaluateHidden,
-        evaluateReadOnly,
-        getLinkedEntries,
-        linkOnSave,
-      } from './src/utils/doc';
+      export { getLinkedEntries, linkOnSave } from './src/utils/doc';
       export { showReport } from './src/utils/misc';
       export { fyo as appFyo } from './src/initFyo';
       export { getDefaultFilters as getReportDefaultFilters } from './src/components/Report/Mobile/MobileFilters';
@@ -106,30 +102,15 @@ export const {
   conditionsForField,
   defaultCondition,
   isCompleteFilter,
-  getItemQtyMap,
   getMappedDoc,
   getStockTransferActions,
-  validateQty,
-  getPOSInventory,
-  getPOSBatchQuantity,
-  validatePOSStock,
-  setPOSRowQuantity,
-  setPOSRowValue,
   findScannedPOSItem,
-  validateSinv,
-  addBatchItem,
-  addPOSItem,
-  getPOSRowItem,
-  validatePOSCheckout,
   getReportCellColorClass,
   getDateRangePresets,
   getFilterItems,
   getDashboardData,
   getInvoiceListFilters,
   getInvoiceSummary,
-
-  evaluateHidden,
-  evaluateReadOnly,
   getLinkedEntries,
   linkOnSave,
   showReport,

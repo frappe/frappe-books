@@ -155,6 +155,20 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
   );
 });
 
+test('a file with fewer columns than the template has only its own columns', () => {
+  const importer = new Importer('Party', fyo);
+  const [first, , third] = importer.assignedTemplateFields;
+
+  importer.selectFile([`${third},${first}`, 'a,b'].join('\n'));
+
+  assert.deepEqual(importer.assignedTemplateFields, [third, first]);
+  assert.deepEqual(importer.getDuplicateColumns(), []);
+
+  const headless = new Importer('Party', fyo);
+  headless.selectFile('a,b');
+  assert.deepEqual(headless.assignedTemplateFields, [null, null]);
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;
@@ -243,10 +257,40 @@ test('import cells are written as Frappe’s Data Import parses them', async () 
 
   assert.deepEqual(importRows(importer)[1], [
     '0',
-    '2026-09-30 10:05:00',
+    '2026-09-30 10:05:00.000',
     '1',
     '12.5',
   ]);
+});
+
+test('import datetimes are read as system time, whatever the browser’s time zone', async () => {
+  // The system time zone is Asia/Kolkata; the browser is in Tokyo.
+  process.env.TZ = 'Asia/Tokyo';
+  const importer = new Importer('SalesInvoice', fyo);
+  importer.selectFile(
+    [
+      'SalesInvoice.name,SalesInvoice.date',
+      'A,2026-01-01',
+      'B,2026-01-01 10:00:00',
+      'C,2026-01-01T10:00:00+05:30',
+    ].join('\n')
+  );
+
+  assert.deepEqual(
+    importer.valueMatrix.map(([, date]) => date.error ?? false),
+    [false, false, false]
+  );
+  assert.deepEqual(
+    importRows(importer)
+      .slice(1)
+      .map(([, date]) => date),
+    [
+      '2026-01-01 00:00:00.000',
+      '2026-01-01 10:00:00.000',
+      '2026-01-01 10:00:00.000',
+    ]
+  );
+  delete process.env.TZ;
 });
 
 test('fix failed keeps the failed rows and the file columns', async () => {

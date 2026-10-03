@@ -4,6 +4,7 @@ import {
   FrappeDoc,
   fyo,
   loadFrappeDocTypes,
+  loadSaved,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -29,13 +30,11 @@ stubFrappe(() => ({ message: { metas: [entryMeta], placements: {} } }));
 await loadFrappeDocTypes();
 
 /** A saved draft, and a server whose submit `respond` answers; returns the methods it ran. */
-function makeEntry(respond) {
+async function makeEntry(respond) {
   const warnings = [];
   fyo.onDocumentActionWarning = (warning) => warnings.push(warning);
   const entry = newFrappeDoc('Entry', { name: 'ENT-0001', amount: 100 });
-  Object.assign(entry, { modified: MODIFIED, docstatus: 0 });
-  entry._notInserted = false;
-  entry._dirty = false;
+  await loadSaved(entry, { modified: MODIFIED, docstatus: 0 });
   const methods = [];
   stubFrappe(async ({ body }) => {
     methods.push([body.method, body.document.modified]);
@@ -49,7 +48,7 @@ const submitted = ({ document }) => ({ ...document, docstatus: 1 });
 
 test('submission notifies listeners after the server accepts the document without rerunning model hooks', async () => {
   const calls = [];
-  const { entry, methods } = makeEntry((body) => {
+  const { entry, methods } = await makeEntry((body) => {
     assert.equal(entry.submitted, false);
     calls.push('server');
     return submitted(body);
@@ -74,7 +73,7 @@ test('submission notifies listeners after the server accepts the document withou
 test('a rejected submission retains the draft and listeners for a successful retry', async () => {
   let submissions = 0;
   let notifications = 0;
-  const { entry } = makeEntry((body) => {
+  const { entry } = await makeEntry((body) => {
     submissions++;
     if (submissions === 1) {
       const message = 'Account cannot receive a posting';
@@ -100,7 +99,7 @@ test('a rejected submission retains the draft and listeners for a successful ret
 });
 
 test('submitted values survive a failing change handler without allowing resubmission', async () => {
-  const { entry, warnings } = makeEntry(submitted);
+  const { entry, warnings } = await makeEntry(submitted);
   entry.change = async () => {
     throw new Error('Display update failed');
   };
@@ -115,7 +114,7 @@ test('submitted values survive a failing change handler without allowing resubmi
 });
 
 test('a failed submission callback cannot turn a posted document into a failed submission', async () => {
-  const { entry, warnings } = makeEntry(submitted);
+  const { entry, warnings } = await makeEntry(submitted);
   let notified = false;
   entry.once('afterSubmit', () => {
     throw new Error('Invoice refresh failed');

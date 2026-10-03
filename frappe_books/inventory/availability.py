@@ -5,7 +5,7 @@ from frappe import _
 from frappe.utils import flt, get_datetime
 
 from frappe_books.accounting.money import as_decimal, plain_number
-from frappe_books.inventory.auto_transfer import default_location
+from frappe_books.inventory.invoice_transfer import default_location
 
 LEDGER = "Books Stock Ledger Entry"
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")

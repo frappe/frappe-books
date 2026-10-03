@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  evaluateReadOnly,
   FrappeDoc,
   getFrappeDoc,
   getSchema,
@@ -76,8 +75,8 @@ test('a new document takes a given name in its naming field and follows it', asy
 test('a saved document keeps its naming field', async () => {
   const north = await getFrappeDoc('Region', 'North');
   const namingField = north.fieldMap.region_name;
-  assert.equal(evaluateReadOnly(namingField, north), true);
-  assert.equal(evaluateReadOnly(namingField, newFrappeDoc('Region')), false);
+  assert.equal(north.getFieldState(namingField).readOnly, true);
+  assert.equal(newFrappeDoc('Region').getFieldState(namingField).readOnly, false);
 });
 
 test('the presentation labels options and can turn off new documents', () => {

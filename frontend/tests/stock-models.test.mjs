@@ -3,9 +3,6 @@ import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import { previousForms } from './helpers/previousForms.mjs';
 import {
-  evaluateHidden,
-  evaluateReadOnly,
-  evaluateRequired,
   frappeModels,
   fyo,
   getFilterFields,
@@ -29,9 +26,11 @@ stubFrappe(({ path, body }) =>
     ? { message: getBooksMeta(body.doctypes) }
     : { data: [] }
 );
-registerFrappeModels(
-  Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]]))
-);
+// A transfer is mapped from a sales invoice.
+registerFrappeModels({
+  ...Object.fromEntries(stockSchemas.map((name) => [name, frappeModels[name]])),
+  SalesInvoice: frappeModels.SalesInvoice,
+});
 await loadFrappeDocTypes();
 test('stock forms, row editors and tables show what they showed', () => {
   for (const name of [...stockSchemas, ...Object.values(rowSchemas)]) {
@@ -76,8 +75,8 @@ test('a movement row asks for the locations its type moves stock between', () =>
   const movement = newFrappeDoc('StockMovement');
   const row = movement._getChildDoc({ item: 'Pen' }, 'items');
   const state = (fieldname) =>
-    [evaluateRequired, evaluateReadOnly].map((evaluate) =>
-      evaluate(row.fieldMap[fieldname], row)
+    ['required', 'readOnly'].map(
+      (rule) => row.getFieldState(row.fieldMap[fieldname])[rule]
     );
   const expected = {
     MaterialIssue: [
@@ -112,7 +111,7 @@ test('stock rows hide the fields of inventory features turned off', () => {
     const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
     const hidden = () =>
       ['batch', 'serial_number', 'transfer_unit'].map((fieldname) =>
-        evaluateHidden(row.fieldMap[fieldname], row)
+        row.getFieldState(row.fieldMap[fieldname]).hidden
       );
     fyo.singles.InventorySettings = {};
     assert.deepEqual(hidden(), [true, true, true], name);
@@ -128,7 +127,7 @@ test('stock rows hide the fields of inventory features turned off', () => {
 test('transfer rows show HSN/SAC only for an Indian company', () => {
   for (const name of ['Shipment', 'PurchaseReceipt']) {
     const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
-    const hidden = () => evaluateHidden(row.fieldMap.hsn_code, row);
+    const hidden = () => row.getFieldState(row.fieldMap.hsn_code).hidden;
 
     fyo.singles.AccountingSettings = { country: 'United States' };
     assert.equal(hidden(), true, name);
@@ -142,7 +141,7 @@ test('a submitted transfer hides the references and notes it does not have', () 
   const shipment = newFrappeDoc('Shipment');
   const shown = () =>
     fields.filter(
-      (fieldname) => !evaluateHidden(shipment.fieldMap[fieldname], shipment)
+      (fieldname) => !shipment.getFieldState(shipment.fieldMap[fieldname]).hidden
     );
   assert.deepEqual(shown(), fields);
 
@@ -153,7 +152,7 @@ test('a submitted transfer hides the references and notes it does not have', () 
 
 test('a transfer row shows the item discounts of its invoice only when it has them', () => {
   const row = newFrappeDoc('Shipment')._getChildDoc({ item: 'Pen' }, 'items');
-  const hidden = (fieldname) => evaluateHidden(row.fieldMap[fieldname], row);
+  const hidden = (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden;
   assert.deepEqual(
     [hidden('item_discount_amount'), hidden('item_discount_percent')],
     [true, true]
@@ -167,7 +166,6 @@ test('a row takes its item defaults again when its item changes', async () => {
   await movement.append('items', { item: 'Pen', batch: 'PEN-1' });
   const [row] = movement.items;
   await row.set('item', 'Ink');
-  clearTimeout(movement._previewTimer);
 
   const sent = row.getFrappeValues({ clearServerFilled: true });
   for (const fieldname of ['rate', 'unit', 'batch', 'serial_number']) {
@@ -188,7 +186,6 @@ test('picking an invoice fills a shipment with the rows its mapper gives', async
   const shipment = newFrappeDoc('Shipment');
 
   await shipment.set('back_reference', 'SINV-1');
-  clearTimeout(shipment._previewTimer);
 
   assert.equal(
     requests[0].path,

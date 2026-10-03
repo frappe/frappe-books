@@ -7,6 +7,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
+from frappe_books.accounting import settlement
 from frappe_books.accounting.accounts import (
 	latest_ledger_account,
 	validate_party_account,
@@ -14,7 +15,6 @@ from frappe_books.accounting.accounts import (
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
-from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.commerce.pos import counter_cash_account, is_cash_method
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
@@ -141,23 +141,29 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		_post_taxes(self, posting)
 		_post_writeoff(self, posting)
 		posting.post()
-		_apply_allocations(self, reverse=False)
-		update_party_outstanding(self.party)
+		self.settle_references(reverse=False)
 
 	def on_cancel(self):
 		reverse_entries(self)
-		_apply_allocations(self, reverse=True)
-		update_party_outstanding(self.party)
+		self.settle_references(reverse=True)
+
+	def settle_references(self, reverse):
+		"""Settle each referenced invoice by its allocation, or take it back, and the party's total."""
+		for row in self.payment_references:
+			invoice = frappe.get_doc(row.reference_type, row.reference_name, for_update=True)
+			settlement.settle(invoice, row.amount, reverse)
+		settlement.refresh_party(self.party)
 
 	def on_trash(self):
 		delete_entries(self)
 
 
 def _outstanding(row):
-	"""What the referenced invoice owes; returns owe a negative balance, but allocations are positive."""
+	"""What the referenced invoice still owes."""
 	if not row.reference_name or row.reference_type not in REFERENCE_DOCTYPES.values():
 		return 0
-	return abs(as_decimal(frappe.db.get_value(row.reference_type, row.reference_name, "outstanding_amount")))
+	invoice = frappe.db.get_value(row.reference_type, row.reference_name, "outstanding_amount", as_dict=True)
+	return settlement.due(invoice) if invoice else 0
 
 
 def _default_payment_type(party, invoice):
@@ -217,7 +223,7 @@ def _validate_allocations(payment):
 
 
 def _validate_allocation(payment, invoice, amount):
-	outstanding = abs(as_decimal(invoice.outstanding_amount))
+	outstanding = settlement.due(invoice)
 	if amount > outstanding:
 		frappe.throw(_("Allocated amount exceeds the invoice outstanding amount."))
 	if amount < outstanding and not frappe.db.get_single_value(
@@ -257,7 +263,7 @@ def _invoice_realised_taxes(invoice, amount):
 	total = abs(as_decimal(invoice.base_grand_total))
 	if not payment_accounts or not total:
 		return
-	paid = total - abs(as_decimal(invoice.outstanding_amount))
+	paid = total - settlement.due(invoice)
 	for tax in invoice.taxes:
 		if tax.account not in payment_accounts:
 			continue
@@ -289,23 +295,6 @@ def _tax_payment_accounts(invoice):
 					_("Tax account {0} moves to more than one payment account.").format(detail.account)
 				)
 	return accounts
-
-
-def _apply_allocations(payment, reverse):
-	for row in payment.payment_references:
-		invoice = frappe.db.get_value(
-			row.reference_type, row.reference_name, ["outstanding_amount", "return_against"], as_dict=True
-		)
-		settled = -as_decimal(row.amount) if invoice.return_against else as_decimal(row.amount)
-		if reverse:
-			settled = -settled
-		frappe.db.set_value(
-			row.reference_type,
-			row.reference_name,
-			"outstanding_amount",
-			rounded(as_decimal(invoice.outstanding_amount) - settled),
-			update_modified=False,
-		)
 
 
 def _post_taxes(payment, posting):
@@ -354,7 +343,7 @@ def map_invoice_payment(invoice_doctype, invoice_name):
 
 
 def _settle_invoice(invoice, payment):
-	outstanding = abs(as_decimal(invoice.outstanding_amount))
+	outstanding = settlement.due(invoice)
 	if not outstanding:
 		frappe.throw(_("Invoice {0} has no outstanding amount.").format(invoice.name))
 	account = _settling_account(invoice)

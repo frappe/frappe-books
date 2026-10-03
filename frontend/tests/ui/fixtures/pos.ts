@@ -90,8 +90,9 @@ async function mount() {
   // The app registers POS shortcuts when its kept-alive page activates.
   pos.setShortcuts();
   await pos.setCustomer('Aarav Shah');
+  // The preview fills the customer's loyalty points.
+  await pos.sinvDoc.preview();
   pos.selectedItemForBatch = items[0].name;
-  pos.setPaymentMethod('Cash');
   state.invoice = pos.sinvDoc;
 
   (window as any).posFixture = {
@@ -107,7 +108,7 @@ async function mount() {
     },
     closeShift() {
       shift.open = false;
-      pos.isPosShiftOpen = false;
+      return pos.shift.refresh();
     },
     /** Loads a saved invoice, unsubmitted unless `docstatus` says, as the Invoices sheet does. */
     openSavedInvoice(docstatus = 0) {

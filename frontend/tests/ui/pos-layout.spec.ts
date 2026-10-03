@@ -149,7 +149,8 @@ test('leaving a submitted sale offers only to leave or stay', async ({
 
 test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   await page.evaluate(() => {
-    const { state } = (window as any).posFixture;
+    const { fillCart, state } = (window as any).posFixture;
+    fillCart();
     state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
   });
   await expect(
@@ -170,7 +171,8 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
 
 test('coupons a preview takes off share one warning', async ({ page }) => {
   await page.evaluate(() => {
-    const { state } = (window as any).posFixture;
+    const { fillCart, state } = (window as any).posFixture;
+    fillCart();
     state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
     state.invoice.push('coupons', { coupons: 'SUMMER' });
   });

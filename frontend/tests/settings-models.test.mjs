@@ -3,13 +3,12 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
-  evaluateHidden,
-  evaluateReadOnly,
   frappeModels,
   fyo,
   getFrappeDoc,
   getSchema,
   loadFrappeDocTypes,
+  loadSaved,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -26,9 +25,9 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels(frappeModels);
 await loadFrappeDocTypes();
 
-const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);
+const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 const readOnly = (doc, fieldname) =>
-  evaluateReadOnly(doc.fieldMap[fieldname], doc);
+  doc.getFieldState(doc.fieldMap[fieldname]).readOnly;
 const fieldnames = (schemaName) =>
   getSchema(schemaName)
     .fields.filter((field) => !field.meta)
@@ -295,9 +294,9 @@ test("a System tab save that changes the display precision first sets Frappe's",
   );
 });
 
-test('only users who can write System Settings change what Frappe formats with', () => {
+test('only users who can write System Settings change what Frappe formats with', async () => {
   const settings = newFrappeDoc('SystemSettings');
-  settings._notInserted = false;
+  await loadSaved(settings);
   const permissions = fyo.store.permissions;
   const canWrite = ['Books System Settings'];
   fyo.store.permissions = {

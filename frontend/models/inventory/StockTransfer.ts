@@ -1,7 +1,8 @@
 import type { ChangeArg, FiltersMap } from 'fyo/model/types';
-import { addItem, getMappedValues } from 'models/helpers';
+import { addItem } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { getMappedValues } from 'src/frappe/documents';
 import { withoutCreate } from 'src/frappe/schema';
 
 /** Shipment and purchase receipt fields: links that offer no Create, and items edited in the row editor. */

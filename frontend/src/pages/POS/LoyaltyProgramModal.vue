@@ -2,17 +2,19 @@
   <Modal
     :open-modal="openModal"
     :title="t`Redeem loyalty points`"
-    :subtitle="[sinvDoc.party, loyaltyProgram].filter(Boolean).join(' · ')"
+    :subtitle="
+      [sinvDoc.party, sinvDoc.loyalty_program].filter(Boolean).join(' · ')
+    "
     size="md"
     @closemodal="cancelLoyaltyProgram"
   >
     <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-1 rounded-6 border border-outline-gray-1 p-3">
         <span class="text-sm text-ink-gray-5">
-          {{ isMobile ? loyaltyProgram : t`Available` }}
+          {{ isMobile ? sinvDoc.loyalty_program : t`Available` }}
         </span>
         <span class="text-3xl-semibold tabular-nums text-ink-gray-9">
-          {{ t`${loyaltyPoints} points` }}
+          {{ t`${sinvDoc.available_loyalty_points ?? 0} points` }}
         </span>
       </div>
       <div v-if="sinvDoc.fieldMap" class="flex flex-col gap-1.5">
@@ -67,15 +69,6 @@ export default defineComponent({
     openModal: {
       type: Boolean,
       default: false,
-    },
-    loyaltyPoints: {
-      type: Number,
-      default: 0,
-    },
-
-    loyaltyProgram: {
-      type: String,
-      default: '',
     },
   },
   emits: ['setLoyaltyPoints', 'toggleModal'],

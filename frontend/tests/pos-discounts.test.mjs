@@ -9,7 +9,8 @@ import {
   posDiscounts,
 } from './helpers/frappe.mjs';
 
-const { canApplyCoupon, canRedeemLoyalty } = posDiscounts;
+const { canApplyCoupon, canRedeemLoyalty, isCouponOffered, isLoyaltyOffered } =
+  posDiscounts;
 
 /** Held sales as the server saved them, with what their previews filled. */
 const heldSales = {
@@ -52,7 +53,6 @@ function makeSale(values = {}) {
     items: [{ item: 'Pen', quantity: 1 }],
     ...values,
   });
-  clearTimeout(sale._previewTimer);
   return sale;
 }
 
@@ -70,14 +70,19 @@ test("a reopened held sale shows its own customer's points", async () => {
   assert.equal(canRedeemLoyalty(ravi), false);
 });
 
+const getOffers = (sale) => [isCouponOffered(sale), isLoyaltyOffered(sale)];
+
 test('coupons and loyalty need an open sale with items and a customer', () => {
   assert.deepEqual(getGates(makeSale()), [true, true]);
   assert.deepEqual(getGates(makeSale({ items: [] })), [false, false]);
   assert.deepEqual(getGates(makeSale({ party: '' })), [false, false]);
+  // The actions stay on offer, so their toasts can say what is missing.
+  assert.deepEqual(getOffers(makeSale({ items: [], party: '' })), [true, true]);
 
   const submitted = makeSale();
   submitted.docstatus = 1;
   assert.deepEqual(getGates(submitted), [false, false]);
+  assert.deepEqual(getOffers(submitted), [false, false]);
 });
 
 test('each gate follows its own feature', () => {

@@ -47,6 +47,9 @@ class BooksSalesQuote(InvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "quote"
+	is_purchase = False
+	party_account_type = None
+	item_account_field = "income_account"
 
 	def validate(self):
 		super().validate()

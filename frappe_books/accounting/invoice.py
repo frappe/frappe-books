@@ -36,9 +36,18 @@ from frappe_books.status import StatusMixin
 
 
 class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
-	"""Totals and validation shared by quotes and invoices."""
+	"""Totals and validation shared by quotes and invoices.
+
+	Each kind of invoice sets the attributes below.
+	"""
 
 	transaction_type: str
+	# Purchases buy purchase items from suppliers on purchase price lists, and credit the party.
+	is_purchase: bool
+	# The party's ledger account type, or None for a quote, which posts nothing.
+	party_account_type: str | None
+	# The item field that holds a row's income or expense account.
+	item_account_field: str
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -284,7 +293,7 @@ def validate_invoice(invoice):
 	for row in invoice.items:
 		_validate_row(invoice, row)
 	validate_hsn_codes(invoice.items)
-	validate_item_usage(invoice, invoice.transaction_type == "purchase")
+	validate_item_usage(invoice, invoice.is_purchase)
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
 
@@ -309,11 +318,10 @@ def _has_manual_discount(invoice):
 
 def _validate_party_and_account(invoice):
 	"""Sales go to customers and receivables, purchases to suppliers and payables."""
-	is_purchase = invoice.transaction_type == "purchase"
 	if _has_books_party(invoice):
-		validate_party_role(invoice, is_purchase)
-	if invoice.transaction_type != "quote":
-		validate_account(invoice, "account", ("Payable" if is_purchase else "Receivable",))
+		validate_party_role(invoice, invoice.is_purchase)
+	if invoice.party_account_type:
+		validate_account(invoice, "account", (invoice.party_account_type,))
 
 
 def _validate_row(invoice, row):
@@ -341,10 +349,10 @@ def post_invoice(invoice):
 	exchange_rate = as_decimal(invoice.exchange_rate or 1)
 	is_return = bool(invoice.get("return_against"))
 
-	if invoice.transaction_type == "sales":
-		_post_sales(invoice, posting, total, exchange_rate, is_return)
-	else:
+	if invoice.is_purchase:
 		_post_purchase(invoice, posting, total, exchange_rate, is_return)
+	else:
+		_post_sales(invoice, posting, total, exchange_rate, is_return)
 	posting.post()
 
 
@@ -420,7 +428,7 @@ def _populate_pos_defaults(invoice):
 def _populate_party_defaults(invoice):
 	party = _party_defaults(invoice)
 	_populate_currency(invoice, party.currency)
-	if invoice.transaction_type == "quote" or not party:
+	if not (party and invoice.party_account_type):
 		return
 	invoice.account = invoice.get("account") or _party_account(invoice, party.default_account)
 	if invoice.transaction_type == "sales" and not invoice.get("return_against"):
@@ -432,7 +440,7 @@ def _party_account(invoice, account):
 
 	A party with both roles has one ledger, receivable or payable, for either invoice.
 	"""
-	account_type = "Payable" if invoice.transaction_type == "purchase" else "Receivable"
+	account_type = invoice.party_account_type
 	if account and frappe.db.get_value("Books Account", account, "account_type") == account_type:
 		return account
 	return latest_ledger_account(account_type)
@@ -472,7 +480,7 @@ def _populate_row(invoice, row, item, rates):
 	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
 		row.rate = pricing.standard_rate(invoice, row, rates)
 	if not row.account:
-		row.account = item.expense_account if invoice.transaction_type == "purchase" else item.income_account
+		row.account = item.get(invoice.item_account_field)
 	# The Qty column shows the quantity in the transfer unit.
 	row.qty = row.transfer_quantity
 

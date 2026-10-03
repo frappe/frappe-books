@@ -54,6 +54,9 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "purchase"
+	is_purchase = True
+	party_account_type = "Payable"
+	item_account_field = "expense_account"
 
 
 @frappe.whitelist()

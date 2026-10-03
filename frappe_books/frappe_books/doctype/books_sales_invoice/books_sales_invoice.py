@@ -81,6 +81,9 @@ class BooksSalesInvoice(PostingInvoiceController):
 	# end: auto-generated types
 
 	transaction_type = "sales"
+	is_purchase = False
+	party_account_type = "Receivable"
+	item_account_field = "income_account"
 
 	@property
 	def loyalty_points_amount(self):

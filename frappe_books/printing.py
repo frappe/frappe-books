@@ -17,7 +17,7 @@ from frappe.utils import flt, formatdate, money_in_words
 from frappe.www.printview import get_font, get_print_style, get_rendered_template
 from jinja2 import TemplateError
 
-from frappe_books.accounting.invoice import InvoiceController
+from frappe_books.accounting.invoice import InvoiceController, PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
 from frappe_books.accounting.payment import PaymentController, tax_share
 from frappe_books.inventory.transaction import StockMovementController, StockTransferController
@@ -96,7 +96,7 @@ def _invoice_totals(invoice) -> dict[str, Any]:
 	tax = sum_decimal(row.amount for row in invoice.taxes)
 	totals = _amount_totals(invoice.grand_total, invoice.currency)
 	totals["sub_total"] = as_decimal(invoice.grand_total) - tax
-	if invoice.transaction_type != "quote":
+	if isinstance(invoice, PostingInvoiceController):
 		totals["payment_details"] = _payment_details(invoice)
 	return totals
 

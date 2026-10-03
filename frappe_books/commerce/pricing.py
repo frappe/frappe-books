@@ -60,8 +60,7 @@ def validate_price_list(invoice):
 	"""
 	if not invoice.price_list or invoice.get("return_against"):
 		return
-	is_purchase = invoice.transaction_type == "purchase"
-	side = "is_purchase" if is_purchase else "is_sales"
+	side = "is_purchase" if invoice.is_purchase else "is_sales"
 	price_list = frappe.db.get_value(
 		"Books Price List", invoice.price_list, ["is_enabled", side], as_dict=True
 	)
@@ -70,7 +69,7 @@ def validate_price_list(invoice):
 	if not price_list[side]:
 		frappe.throw(
 			_("Price List {0} is not for {1}.").format(
-				invoice.price_list, _("Purchases" if is_purchase else "Sales")
+				invoice.price_list, _("Purchases" if invoice.is_purchase else "Sales")
 			)
 		)
 

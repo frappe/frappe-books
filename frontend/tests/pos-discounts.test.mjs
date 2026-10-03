@@ -9,8 +9,13 @@ import {
   posDiscounts,
 } from './helpers/frappe.mjs';
 
-const { canApplyCoupon, canRedeemLoyalty, isCouponOffered, isLoyaltyOffered } =
-  posDiscounts;
+const {
+  canApplyCoupon,
+  canRedeemLoyalty,
+  isCouponOffered,
+  isLoyaltyOffered,
+  isPriceListOffered,
+} = posDiscounts;
 
 /** Held sales as the server saved them, with what their previews filled. */
 const heldSales = {
@@ -83,6 +88,17 @@ test('coupons and loyalty need an open sale with items and a customer', () => {
   submitted.docstatus = 1;
   assert.deepEqual(getGates(submitted), [false, false]);
   assert.deepEqual(getOffers(submitted), [false, false]);
+});
+
+test('another price list is offered while the sale can change', () => {
+  fyo.singles.AccountingSettings = { enable_price_list: true };
+  const sale = makeSale();
+  assert.equal(isPriceListOffered(sale), true);
+
+  sale.docstatus = 1;
+  assert.equal(isPriceListOffered(sale), false);
+  fyo.singles.AccountingSettings = {};
+  assert.equal(isPriceListOffered(makeSale()), false);
 });
 
 test('each gate follows its own feature', () => {

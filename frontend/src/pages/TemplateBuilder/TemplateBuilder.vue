@@ -23,8 +23,7 @@
       <FrappeButton
         v-if="canEditTemplate && displayDoc"
         :label="t`Toggle Edit Mode`"
-        :tooltip="t`Toggle Edit Mode`"
-        icon="lucide-square-pen"
+        icon-left="lucide-square-pen"
         @click="toggleEditMode"
       />
       <DropdownWithActions v-if="actions.length" :actions="actions" />

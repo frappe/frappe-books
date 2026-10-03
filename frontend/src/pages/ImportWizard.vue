@@ -18,9 +18,8 @@
       />
       <FrappeButton
         v-if="hasImporter"
-        icon="lucide-download"
+        icon-left="lucide-download"
         :label="t`Save Template`"
-        :tooltip="t`Save Template`"
         @click="saveTemplate"
       />
       <FrappeButton

@@ -29,8 +29,8 @@
       class="flex justify-between gap-4 rounded-b-6 px-3 py-2.5"
       :class="
         settlement.isChange
-          ? 'bg-surface-green-1 text-ink-green-7'
-          : 'bg-surface-red-1 text-ink-red-7'
+          ? 'bg-surface-green-2 text-ink-green-7'
+          : 'bg-surface-red-2 text-ink-red-7'
       "
       role="status"
     >

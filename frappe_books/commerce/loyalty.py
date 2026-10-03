@@ -31,9 +31,7 @@ def _validate_redemption(invoice):
 	if points < 0:
 		frappe.throw(_("Loyalty points cannot be negative."))
 	if not points:
-		# Redeeming no points redeems nothing, as in POS.
-		invoice.redeem_loyalty_points = 0
-		return
+		frappe.throw(_("Enter the loyalty points to redeem."))
 	program = frappe.get_doc("Books Loyalty Program", invoice.loyalty_program)
 	_validate_redeemable(program, invoice.date)
 	_lock_customer(invoice.party)

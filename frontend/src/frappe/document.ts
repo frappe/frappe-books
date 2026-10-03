@@ -332,6 +332,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return rule === 'hidden' ? !isMet : isMet;
   }
 
+  /** Whether a field's value differs from the one last loaded or saved. */
+  isChanged(fieldname: string): boolean {
+    return this[fieldname] !== this._savedValues[fieldname];
+  }
+
   /** A field's saved value as form conditions read it. */
   _getSavedFrappeValue(fieldname: string): unknown {
     const value = this._savedValues[fieldname] as DocValue;

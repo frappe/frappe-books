@@ -14,7 +14,7 @@ from frappe_books.coa import (
 from frappe_books.currency import currency_precision
 from frappe_books.regional import ensure_regional_records
 from frappe_books.series import NUMBER_SERIES
-from frappe_books.settings import update_system_settings
+from frappe_books.settings import update_frappe_settings
 
 
 def run_setup(wizard):
@@ -44,12 +44,13 @@ def complete_site_setup(wizard):
 	"""
 	if not frappe.is_setup_complete():
 		complete_app_setup(country=wizard.country, currency=wizard.currency, timezone=wizard.time_zone)
-	update_system_settings(
+	update_frappe_settings(
+		"System Settings",
 		{
 			"country": wizard.country,
 			"currency": wizard.currency,
 			"currency_precision": str(currency_precision(wizard.currency)),
-		}
+		},
 	)
 
 

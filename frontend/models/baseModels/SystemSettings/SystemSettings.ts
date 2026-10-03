@@ -1,6 +1,7 @@
 import { DocValue } from 'fyo/core/types';
 import { ListsMap, ReadOnlyMap, ValidationMap } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
+import { hasDocTypePermission } from 'fyo/utils/permissions';
 import { t } from 'fyo/utils/translation';
 import { SelectOption } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
@@ -70,9 +71,10 @@ export class SystemSettings extends FrappeDoc {
   };
 
   get canWriteSystemSettings(): boolean {
-    const permissions = this.fyo.store.permissions;
-    return (
-      !permissions || !!permissions.user.can_write?.includes('System Settings')
+    return hasDocTypePermission(
+      this.fyo.store.permissions,
+      'System Settings',
+      'write'
     );
   }
 
@@ -80,7 +82,7 @@ export class SystemSettings extends FrappeDoc {
   override async beforeSync() {
     await super.beforeSync();
     // Only a change goes, so a stale copy neither sets it back nor needs the right to.
-    if (this.display_precision !== this._savedValues.display_precision) {
+    if (this.isChanged('display_precision')) {
       await call(SET_DISPLAY_PRECISION, {
         display_precision: this.display_precision,
       });

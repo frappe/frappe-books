@@ -42,7 +42,18 @@ export function hasPermission(
   }
 
   const doctype = permissions.doctypes[schemaName];
-  return !!doctype && !!permissions.user[`can_${permission}`]?.includes(doctype);
+  return !!doctype && hasDocTypePermission(permissions, doctype, permission);
+}
+
+/** A right on a Frappe doctype by name, such as System Settings, which has no schema. */
+export function hasDocTypePermission(
+  permissions: Permissions | null,
+  doctype: string,
+  permission: DocPermission
+): boolean {
+  return (
+    !permissions || !!permissions.user[`can_${permission}`]?.includes(doctype)
+  );
 }
 
 /** Frappe exports only the user's own documents when export is granted only to owners. */

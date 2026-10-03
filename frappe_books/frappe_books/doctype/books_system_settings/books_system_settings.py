@@ -8,7 +8,7 @@ from frappe.model.document import Document
 from frappe.utils import get_currency_precision
 
 from frappe_books.formats import frappe_date_format, frappe_number_format
-from frappe_books.settings import update_system_settings
+from frappe_books.settings import update_frappe_settings
 
 # Frappe's System Settings fields that follow Books fields, with the Frappe value of a Books value.
 FRAPPE_FORMATS = {
@@ -60,7 +60,7 @@ class BooksSystemSettings(Document):
 		for fieldname in fieldnames:
 			frappe_field, to_frappe = FRAPPE_FORMATS[fieldname]
 			values[frappe_field] = to_frappe(self.get(fieldname))
-		update_system_settings(values)
+		update_frappe_settings("System Settings", values)
 
 
 def get_display_precision() -> int:
@@ -79,4 +79,4 @@ def set_display_precision(display_precision: int) -> None:
 	if not 0 <= display_precision <= 9:
 		frappe.throw(_("Display Precision should have a value between 0 and 9."))
 	if display_precision != get_display_precision():
-		update_system_settings({"currency_precision": str(display_precision)})
+		update_frappe_settings("System Settings", {"currency_precision": str(display_precision)})

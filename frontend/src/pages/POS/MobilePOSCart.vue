@@ -20,7 +20,10 @@
       </div>
 
       <!-- Rows hold a stepper, so a stretched button under it opens the row. -->
-      <FrappeList class="-mx-4 list-row-px-4" :columns="['minmax(0,1fr)', 'auto']">
+      <FrappeList
+        class="-mx-4 list-row-px-4"
+        :columns="['minmax(0,1fr)', 'auto']"
+      >
         <FrappeListRow
           v-for="row in sinvDoc.items ?? []"
           :key="row.name"

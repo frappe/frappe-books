@@ -34,7 +34,10 @@
           >
             {{ coupon.coupons }}
             <template #suffix>
-              <span class="lucide-x size-4 text-ink-gray-5" aria-hidden="true" />
+              <span
+                class="lucide-x size-4 text-ink-gray-5"
+                aria-hidden="true"
+              />
             </template>
           </FrappeButton>
         </div>
@@ -53,7 +56,9 @@
                 class="lucide-ticket-percent size-4 shrink-0 text-ink-green-5"
                 aria-hidden="true"
               />
-              <span class="min-w-0 flex-1 truncate text-base-medium text-ink-gray-8">
+              <span
+                class="min-w-0 flex-1 truncate text-base-medium text-ink-gray-8"
+              >
                 {{ coupon.coupons }}
               </span>
               <FrappeButton

@@ -24,6 +24,7 @@ await build({
       export { Search } from './src/utils/search';
       export { sortByFuzzyMatch } from './src/utils';
       export { fyo } from './src/initFyo';
+      export { parseNumber } from './fyo/utils/format';
       export { default as FilterLinkInput } from './src/components/FilterLinkInput.vue';
       export { default as FilterValueInput } from './src/components/FilterValueInput.vue';
       export { default as StatusPill } from './src/components/StatusPill.vue';
@@ -82,6 +83,7 @@ export const {
   Search,
   sortByFuzzyMatch,
   fyo,
+  parseNumber,
   FilterLinkInput,
   FilterValueInput,
   StatusPill,

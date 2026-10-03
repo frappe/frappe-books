@@ -33,7 +33,7 @@ test('a stock movement takes its series, rate and locations from the server', as
     'Stores'
   );
   await expect(page.getByRole('textbox', { name: 'Rate' })).toHaveValue(
-    '₹ 12.00'
+    '12.00'
   );
 
   // An issue takes from the default location and has no destination.

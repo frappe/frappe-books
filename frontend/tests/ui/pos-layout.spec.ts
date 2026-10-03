@@ -494,6 +494,24 @@ test('payment takes a large amount field, tiles and same-size actions', async ({
   });
 });
 
+test('the paid amount takes arithmetic, and text that is no number pays nothing', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await showModal(page, 'Payment');
+  const amount = page
+    .getByRole('dialog', { name: 'Payment' })
+    .getByRole('textbox', { name: 'Amount paid' });
+  await amount.fill('2000+300');
+  await amount.press('Tab');
+  await expect(amount).toHaveValue('2,300.00');
+  await amount.fill('abc');
+  await amount.press('Tab');
+  await expect(amount).toHaveValue('0.00');
+  expect(errors).toEqual([]);
+});
+
 async function showModal(page: Page, name: string) {
   await page.evaluate((name) => {
     const fixture = (window as any).posFixture;

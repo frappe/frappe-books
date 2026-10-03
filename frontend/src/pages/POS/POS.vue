@@ -563,12 +563,17 @@ export default defineComponent({
     },
 
     async handleItemSearch(searchTerm: string | null, addItem = false) {
-      this.itemSearchTerm = searchTerm ?? '';
-      const scanned =
-        addItem && (await getScannedItem(this.itemSearchTerm, this.itemQtyMap));
-      if (scanned) {
-        const { item, quantity, isStockQuantity } = scanned;
-        await this.addItem(item, quantity, { isStockQuantity });
+      const code = searchTerm ?? '';
+      this.itemSearchTerm = code;
+      const scanned = addItem && (await getScannedItem(code, this.itemQtyMap));
+      if (!scanned) {
+        return;
+      }
+
+      const { item, quantity, isStockQuantity } = scanned;
+      await this.addItem(item, quantity, { isStockQuantity });
+      // Text typed or scanned while the item was added stays.
+      if (this.itemSearchTerm === code) {
         this.itemSearchTerm = '';
       }
     },

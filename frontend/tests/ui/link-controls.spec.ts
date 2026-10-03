@@ -230,7 +230,7 @@ test('one action opens one dismissible confirmation', async ({ page }) => {
   await expect(confirmation).toHaveCount(1);
   await expect(confirmation).toBeVisible();
   await confirmation
-    .getByRole('button', { name: 'Keep Party', exact: true })
+    .getByRole('button', { name: 'Keep Customer', exact: true })
     .hover();
   await page.keyboard.press('Escape');
   await expect(confirmation).toHaveCount(0);

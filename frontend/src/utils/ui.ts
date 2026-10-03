@@ -801,7 +801,16 @@ export function showCannotCancelOrDeleteToast(doc: FrappeDoc) {
   showToast({ type: 'warning', message, duration: 'short' });
 }
 
+/** The kind of record the user sees, such as Customer for a customer party. */
 function getDocTypeLabel(doc: FrappeDoc) {
+  if (doc.schemaName === ModelNameEnum.Party) {
+    const roleLabels: Record<string, string> = {
+      Customer: t`Customer`,
+      Supplier: t`Supplier`,
+    };
+    return roleLabels[doc.role as string] ?? t`Party`;
+  }
+
   return doc.schema.label || doc.schemaName;
 }
 

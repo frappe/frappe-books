@@ -9,9 +9,7 @@ import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
 import { ValueError } from 'fyo/utils/errors';
 import { getLedgerLink } from 'models/helpers';
-import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { Invoice } from 'models/invoices/Invoice';
-import { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -571,10 +569,7 @@ async function syncWithoutDialog(doc: FrappeDoc): Promise<boolean> {
 }
 
 export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
-  if (
-    doc instanceof SalesInvoice &&
-    !(await showInsufficientInventoryDialog(doc))
-  ) {
+  if (!(await confirmSubmitWarning(doc))) {
     return false;
   }
 
@@ -587,44 +582,26 @@ export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
   return true;
 }
 
-/** The server refuses the shipment of short stock, so Yes submits without it. */
-async function showInsufficientInventoryDialog(doc: SalesInvoice) {
-  if (!doc.make_auto_stock_transfer) {
+/** The model's warning before a submit; a Yes accepts it, a No stops the submit. */
+async function confirmSubmitWarning(doc: FrappeDoc): Promise<boolean> {
+  const warning = await doc.getSubmitWarning();
+  if (!warning) {
     return true;
   }
 
-  const insufficient = await getInsufficientItems(doc);
-  if (insufficient.length) {
-    const buttons = [
-      {
-        label: t`Yes`,
-        action: async () => await doc.set('make_auto_stock_transfer', false),
-        isPrimary: true,
-      },
-      {
-        label: t`No`,
-        action: () => false,
-        isEscape: true,
-      },
-    ];
-
-    const list = insufficient
-      .map(({ item, quantity }) => `${item} (${quantity})`)
-      .join(', ');
-    const detail = [
-      t`The following items have insufficient quantity for Shipment: ${list}`,
-      t`Continue submitting Sales Invoice?`,
-    ];
-
-    return (await showDialog({
-      title: t`Insufficient quantity`,
-      type: 'warning',
-      detail,
-      buttons,
-    })) as boolean;
-  }
-
-  return true;
+  const accept = async () => {
+    await warning.accept();
+    return true;
+  };
+  return (await showDialog({
+    title: warning.title,
+    type: 'warning',
+    detail: warning.detail,
+    buttons: [
+      { label: t`Yes`, action: accept, isPrimary: true },
+      { label: t`No`, action: () => false, isEscape: true },
+    ],
+  })) as boolean;
 }
 
 async function showSubmitOrSyncDialog(doc: FrappeDoc, type: 'submit' | 'sync') {

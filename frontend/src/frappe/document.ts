@@ -53,6 +53,13 @@ const PREVIEW_DELAY = 300;
 
 export type FieldRule = 'hidden' | 'readOnly' | 'required';
 
+/** A warning the submit prompt shows first; a Yes runs `accept` and goes on. */
+export type SubmitWarning = {
+  title: string;
+  detail: string[];
+  accept: () => Promise<unknown>;
+};
+
 const ruleConditions: Record<
   FieldRule,
   (field: DocField) => string | undefined
@@ -210,6 +217,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   /** What else a submit does, which the submit prompt tells. */
   get submitNote(): string | undefined {
     return undefined;
+  }
+
+  /** A warning the user answers before a submit, if any. */
+  getSubmitWarning(): Promise<SubmitWarning | undefined> {
+    return Promise.resolve(undefined);
   }
 
   get quickEditFields() {

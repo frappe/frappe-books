@@ -1184,7 +1184,11 @@ export default defineComponent({
         message = t`Please select a customer`;
       }
 
-      showToast({ type: 'error', message: t`${message} before ${method}` });
+      showToast({
+        id: 'pos-validation',
+        type: 'error',
+        message: t`${message} before ${method}`,
+      });
     },
     openCouponCode() {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.party) {

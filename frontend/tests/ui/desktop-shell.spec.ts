@@ -51,6 +51,16 @@ test('only the current page header shows after moving between cached pages', asy
   await expect(headers(page)).toContainText('Dashboard');
 });
 
+test('Ctrl+K opens Quick Search after moving to another page', async ({
+  page,
+}) => {
+  await sidebar(page).getByRole('link', { name: 'Sales', exact: true }).click();
+  await expect(headers(page)).toContainText('Sales Invoice');
+
+  await page.keyboard.press('ControlOrMeta+KeyK');
+  await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('the sidebar header menu opens help and account actions', async ({
   page,
 }) => {

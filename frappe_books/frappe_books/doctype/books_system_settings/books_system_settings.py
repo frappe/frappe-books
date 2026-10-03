@@ -28,7 +28,6 @@ class BooksSystemSettings(Document):
 
 		allow_filter_bypass: DF.Check
 		currency: DF.Link | None
-		dark_mode: DF.Check
 		date_format: DF.Autocomplete
 		display_precision: DF.Int
 		hide_get_started: DF.Check

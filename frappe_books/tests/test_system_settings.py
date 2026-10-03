@@ -53,9 +53,9 @@ class IntegrationTestSystemSettings(IntegrationTestCase):
 		currency = frappe.db.get_single_value("System Settings", "currency")
 		with self.set_user(ensure_user(BOOKS_MANAGER, "Books Manager")):
 			values = client.get("Books System Settings")
-			client.save({**values, "dark_mode": 1, "currency": "EUR" if currency != "EUR" else "CHF"})
+			client.save({**values, "hide_get_started": 1, "currency": "EUR" if currency != "EUR" else "CHF"})
 
-		self.assertEqual(frappe.db.get_single_value("Books System Settings", "dark_mode"), 1)
+		self.assertEqual(frappe.db.get_single_value("Books System Settings", "hide_get_started"), 1)
 		self.assertEqual(frappe.db.get_single_value("System Settings", "currency"), currency)
 
 	def test_display_precision_is_the_system_settings_currency_precision(self):

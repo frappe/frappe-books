@@ -3,8 +3,11 @@
 
 import frappe
 from frappe import _
+from frappe.locale import get_number_format
 from frappe.model.document import Document
-from frappe.utils import cint
+from frappe.utils import get_currency_precision
+
+from frappe_books.settings import update_system_settings
 
 
 class BooksSystemSettings(Document):
@@ -34,7 +37,26 @@ class BooksSystemSettings(Document):
 		"""The company currency, which Frappe's System Settings holds."""
 		return frappe.db.get_single_value("System Settings", "currency")
 
-	def validate(self):
-		# The DocField limits are checked by Frappe after this, in other words than /books shows at the field.
-		if not 0 <= cint(self.display_precision) <= 9:
-			frappe.throw(_("Display Precision should have a value between 0 and 9."))
+	@property
+	def display_precision(self):
+		"""The decimals of amounts, which Frappe's System Settings hold as the Currency Precision."""
+		return get_display_precision()
+
+
+def get_display_precision() -> int:
+	"""Frappe's Currency Precision, else the decimals of its number format."""
+	precision = get_currency_precision()
+	return get_number_format().precision if precision is None else precision
+
+
+@frappe.whitelist(methods=["POST"])
+def set_display_precision(display_precision: int) -> None:
+	"""Set Frappe's Currency Precision, which Books System Settings shows as the Display Precision.
+
+	A save of the settings leaves it alone, so no stored copy can set it back.
+	"""
+	frappe.has_permission("Books System Settings", "write", throw=True)
+	if not 0 <= display_precision <= 9:
+		frappe.throw(_("Display Precision should have a value between 0 and 9."))
+	if display_precision != get_display_precision():
+		update_system_settings({"currency_precision": str(display_precision)})

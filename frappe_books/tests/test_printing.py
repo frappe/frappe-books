@@ -140,14 +140,20 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		)
 
 	def test_books_format_follows_books_system_settings(self):
-		settings = {"locale": "en-IN", "display_precision": 2, "date_format": "MMM d, y"}
-		with self.change_settings("Books System Settings", settings):
+		settings = {"locale": "en-IN", "date_format": "MMM d, y"}
+		with (
+			self.change_settings("Books System Settings", settings),
+			self.change_settings("System Settings", currency_precision="2"),
+		):
 			self.assertEqual(books_format(1234567.125, "Currency", "INR"), "₹ 12,34,567.13")
 			self.assertEqual(books_format(10, "Float"), "10.00")
 			self.assertEqual(books_format("2026-09-30 13:45:00", "Date"), "Sep 30, 2026")
 			self.assertEqual(books_format(None, "Currency"), "")
 
-		with self.change_settings("Books System Settings", {"locale": "de-DE", "display_precision": 1}):
+		with (
+			self.change_settings("Books System Settings", locale="de-DE"),
+			self.change_settings("System Settings", currency_precision="1"),
+		):
 			self.assertEqual(books_format(1234.56, "Currency", "EUR"), "€ 1.234,6")
 
 	def test_print_settings_show_the_company_address_and_gstin(self):

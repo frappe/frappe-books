@@ -40,11 +40,17 @@ def complete_site_setup(wizard):
 	"""Frappe's setup sets System Settings: country, currency, time zone and formats.
 
 	On a site Frappe has set up already, only the company country and currency change.
+	Either way, the currency precision becomes that of the company currency.
 	"""
-	if frappe.is_setup_complete():
-		update_system_settings({"country": wizard.country, "currency": wizard.currency})
-	else:
+	if not frappe.is_setup_complete():
 		complete_app_setup(country=wizard.country, currency=wizard.currency, timezone=wizard.time_zone)
+	update_system_settings(
+		{
+			"country": wizard.country,
+			"currency": wizard.currency,
+			"currency_precision": str(currency_precision(wizard.currency)),
+		}
+	)
 
 
 def enable_currency(currency):
@@ -105,12 +111,7 @@ def _update_print_settings(wizard):
 
 def _update_books_system_settings(wizard):
 	settings = frappe.get_single("Books System Settings")
-	settings.update(
-		{
-			"display_precision": currency_precision(wizard.currency),
-			"locale": "en-IN" if wizard.country == "India" else "en-US",
-		}
-	)
+	settings.locale = "en-IN" if wizard.country == "India" else "en-US"
 	settings.save(ignore_permissions=True)
 
 

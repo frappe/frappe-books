@@ -24,6 +24,7 @@ from frappe_books.tests.accounting import ensure_user, unique_name
 FRAPPE_SETUP_FIELDS = (
 	"country",
 	"currency",
+	"currency_precision",
 	"language",
 	"time_zone",
 	"date_format",

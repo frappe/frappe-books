@@ -66,14 +66,14 @@
    "reqd": 1
   },
   {
-   "default": "2",
+   "description": "The Currency Precision of Frappe's System Settings, which only a System Manager can change.",
    "fieldname": "display_precision",
    "fieldtype": "Int",
    "in_list_view": 1,
+   "is_virtual": 1,
    "label": "Display Precision",
    "max_value": 9,
-   "non_negative": 1,
-   "reqd": 1
+   "non_negative": 1
   },
   {
    "fieldname": "currency",
@@ -107,7 +107,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-03 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books System Settings",

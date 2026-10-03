@@ -9,8 +9,9 @@ MODULE = "Frappe Books"
 class BooksSearch(SQLiteSearch):
 	"""The /books search palette's index of Books documents.
 
-	A document is found by its name, its DocType's search fields, its tables' search fields and
-	its doctype's label, so "Karen invoice" finds Karen's invoices.
+	A document's title is its doctype's label and its name, and its content its DocType's search
+	fields and its tables' search fields. So "Karen invoice" finds Karen's invoices, and Frappe's
+	title boost ranks them above payments whose rows name an invoice.
 	"""
 
 	INDEX_NAME = "books_search.db"
@@ -57,13 +58,14 @@ class BooksSearch(SQLiteSearch):
 	def prepare_document(self, doc):
 		document = super().prepare_document(doc)
 		if document:
+			document["title"] = self._process_content(f"{doc.doctype.removeprefix('Books ')} {doc.name}")
 			document["content"] = self._process_content(" ".join(self.get_content_values(doc)))
 		return document
 
 	def get_content_values(self, doc) -> list[str]:
-		"""What a document is found by, besides its name."""
+		"""The search field values of a document and of its table rows."""
 		config = get_search_doctypes()[doc.doctype]
-		values = [doc.doctype.removeprefix("Books "), *(doc.get(field) for field in config["fields"])]
+		values = [doc.get(field) for field in config["fields"]]
 		for fieldname, table in config["tables"].items():
 			# A queued document is a full Document; a build reads rows without their tables.
 			rows = (

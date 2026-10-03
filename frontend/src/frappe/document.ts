@@ -1005,8 +1005,9 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     this.schedulePreview();
   }
 
-  /** A save takes the fills of the last edit, and those of missing values. */
+  /** A save waits for a running preview, then takes the fills of the last edit and of missing values. */
   async beforeSync() {
+    await this._previewing;
     if (this.previewMethod && (this._isPreviewDue || this.hasMissingValues)) {
       await this.preview();
     }

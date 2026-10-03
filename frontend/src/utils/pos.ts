@@ -494,6 +494,8 @@ export function getTotalTaxedAmount(sinvDoc: SalesInvoice): Money {
 export interface CostLine {
   label: string;
   value: Money;
+  /** A discount or redemption that lowers the total. */
+  isDiscount?: boolean;
 }
 
 /** The net total, then each amount that takes it to the grand total. */
@@ -501,11 +503,16 @@ export function getCostLines(invoice: SalesInvoice): CostLine[] {
   const getLabel = (fieldname: string) =>
     getField(invoice.schemaName, fieldname)?.label ?? fieldname;
   const changes = [
-    { label: getLabel('total_discount'), value: invoice.total_discount },
+    {
+      label: getLabel('total_discount'),
+      value: invoice.total_discount,
+      isDiscount: true,
+    },
     { label: getLabel('taxes'), value: getTotalTaxedAmount(invoice) },
     {
       label: getLabel('loyalty_points_amount'),
       value: invoice.loyalty_points_amount,
+      isDiscount: true,
     },
   ].filter((line): line is CostLine => !!line.value && !line.value.isZero());
 

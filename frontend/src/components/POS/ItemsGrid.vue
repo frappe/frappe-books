@@ -1,55 +1,40 @@
 <template>
-  <FrappeScrollArea
-    class="w-full min-h-0 flex-1 rounded-t-4 text-ink-gray-9"
-    viewport-class="py-3"
-  >
-    <!-- Items Grid -->
+  <FrappeScrollArea class="min-h-0 w-full flex-1" viewport-class="px-5 pb-5 pt-1">
     <div
-      class="grid w-full gap-3"
-      style="
-        grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
-      "
+      class="grid w-full gap-2.5"
+      style="grid-template-columns: repeat(auto-fill, minmax(min(9.25rem, 100%), 1fr))"
     >
       <button
         v-for="item in items"
         :key="item.name"
         type="button"
-        class="flex min-h-60 flex-col rounded-6 border border-outline-gray-1 bg-surface-base p-3 text-center transition-colors hover:bg-surface-gray-2 active:bg-surface-gray-3"
+        class="flex flex-col gap-2 rounded-5 border border-outline-gray-1 bg-surface-base p-1.5 pb-2.5 text-start transition-colors hover:border-outline-gray-2 hover:bg-surface-gray-1 active:bg-surface-gray-2"
         :aria-label="t`Add ${item.name}`"
         @click="$emit('addItem', item)"
       >
-        <div class="relative h-28 w-full overflow-hidden rounded-4">
+        <div
+          class="relative flex h-21 w-full items-center justify-center overflow-hidden rounded-3 bg-surface-gray-2"
+        >
           <img
             v-if="item.image"
             :src="item.image"
             alt=""
             class="h-full w-full object-cover"
           />
-
-          <div
-            v-else
-            class="rounded-4 w-full h-full bg-surface-gray-3 flex justify-center items-center"
-          >
-            <p class="text-4xl-semibold text-ink-gray-4 select-none">
-              {{ getItemInitials(item.name) }}
-            </p>
-          </div>
+          <span v-else class="select-none text-4xl-semibold text-ink-gray-4">
+            {{ getItemInitials(item.name) }}
+          </span>
           <FrappeBadge
-            class="absolute top-1 right-1"
+            class="absolute end-1.5 top-1.5"
             :theme="item.availableQty > 0 ? 'green' : 'red'"
-            :label="item.availableQty"
+            :label="t`${item.availableQty} in stock`"
           />
         </div>
-        <div class="mt-3 flex flex-1 flex-col gap-1">
-          <h3
-            class="flex min-h-12 items-center justify-center break-words text-p-base-medium text-ink-gray-9"
-          >
-            {{ item.name }}
-          </h3>
-
-          <p class="mt-auto text-base-medium text-ink-gray-9">
+        <div class="flex flex-col gap-1 px-1">
+          <span class="text-p-base-medium text-ink-gray-9">{{ item.name }}</span>
+          <span class="text-sm tabular-nums text-ink-gray-6">
             {{ fyo.format(item.rate, 'Currency') }}
-          </p>
+          </span>
         </div>
       </button>
     </div>

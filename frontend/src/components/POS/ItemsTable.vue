@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-h-0 flex-1 flex-col px-5 pb-5 pt-1">
     <FrappeList
-      :columns="['minmax(0, 1fr)', '6rem', '5rem', '6.5rem', '1rem']"
+      :columns="['minmax(0, 1fr)', '6rem', '7rem', '6.5rem', '1rem']"
       :row-height="40"
       divider="full"
       class="flex min-h-0 flex-1 flex-col list-gap-3 list-row-px-2.5"
@@ -31,12 +31,10 @@
                 <span class="truncate text-sm text-ink-gray-6">{{ row.unit }}</span>
               </FrappeListCell>
               <FrappeListCell class="justify-end">
-                <span
-                  class="truncate text-sm tabular-nums"
-                  :class="row.availableQty > 0 ? 'text-ink-gray-6' : 'text-ink-red-5'"
-                >
-                  {{ fyo.format(row.availableQty, 'Float') }}
-                </span>
+                <FrappeBadge
+                  :theme="row.availableQty > 0 ? 'green' : 'red'"
+                  :label="t`${row.availableQty} in stock`"
+                />
               </FrappeListCell>
               <FrappeListCell class="justify-end">
                 <span class="truncate text-base tabular-nums text-ink-gray-8">
@@ -55,7 +53,10 @@
 </template>
 
 <script lang="ts">
-import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
+import {
+  Badge as FrappeBadge,
+  ScrollArea as FrappeScrollArea,
+} from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -71,6 +72,7 @@ import { POSItem } from './types';
 export default defineComponent({
   name: 'ItemsTable',
   components: {
+    FrappeBadge,
     FrappeList,
     FrappeListCell,
     FrappeListHeader,

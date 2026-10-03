@@ -50,12 +50,14 @@
           :read-only="false"
           :border="true"
           :value="paidAmount"
+          size="xlarge"
           @change="(amount: Money) => $emit('setPaidAmount', amount)"
         />
         <div v-if="isCashSale" class="flex flex-wrap gap-1.5">
           <FrappeButton
             v-for="amount in quickAmounts"
             :key="amount.float"
+            size="xs"
             :variant="amount.eq(paidAmount) ? 'solid' : 'subtle'"
             :label="amount.eq(dueAmount) ? t`Exact` : fyo.format(amount, 'Currency')"
             @click="$emit('setPaidAmount', amount)"

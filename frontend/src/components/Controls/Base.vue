@@ -111,7 +111,11 @@ export default defineComponent({
         return 'lg';
       }
 
-      return this.size === 'small' ? 'sm' : 'md';
+      if (this.size === 'small') {
+        return 'sm';
+      }
+
+      return this.size === 'xlarge' ? 'lg' : 'md';
     },
     frappeVariant(): 'outline' | 'ghost' | 'subtle' {
       if (!this.border) {

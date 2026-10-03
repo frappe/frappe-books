@@ -8,12 +8,12 @@
         v-for="item in items"
         :key="item.name"
         type="button"
-        class="flex flex-col gap-2 rounded-5 border border-outline-gray-1 bg-surface-base p-1.5 pb-2.5 text-start transition-colors hover:border-outline-gray-2 hover:bg-surface-gray-1 active:bg-surface-gray-2"
+        class="flex flex-col gap-2 rounded-6 border border-outline-gray-1 bg-surface-base p-1.5 pb-2.5 text-start transition-colors hover:border-outline-gray-2 hover:bg-surface-gray-1 active:bg-surface-gray-2"
         :aria-label="t`Add ${item.name}`"
         @click="$emit('addItem', item)"
       >
         <div
-          class="relative flex h-21 w-full items-center justify-center overflow-hidden rounded-3 bg-surface-gray-2"
+          class="relative flex h-21 w-full items-center justify-center overflow-hidden rounded-4 bg-surface-gray-2"
         >
           <img
             v-if="item.image"

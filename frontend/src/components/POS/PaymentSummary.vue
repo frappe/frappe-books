@@ -1,6 +1,6 @@
 <template>
   <dl
-    class="flex flex-col divide-y divide-outline-gray-1 rounded-5 border border-outline-gray-1 text-base tabular-nums"
+    class="flex flex-col divide-y divide-outline-gray-1 rounded-6 border border-outline-gray-1 text-base tabular-nums"
     :aria-label="t`Payment summary`"
   >
     <div
@@ -26,7 +26,7 @@
     </div>
     <div
       v-if="settlement"
-      class="flex justify-between gap-4 rounded-b-5 px-3 py-2.5"
+      class="flex justify-between gap-4 rounded-b-6 px-3 py-2.5"
       :class="
         settlement.isChange
           ? 'bg-surface-green-1 text-ink-green-7'

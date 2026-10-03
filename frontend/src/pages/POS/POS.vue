@@ -86,6 +86,7 @@
               v-if="sinvDoc.items?.length"
               action="cancel"
               :profile="posProfile as POSProfile"
+              size="xs"
               variant="ghost"
               icon-left="lucide-trash-2"
               @click="clearValues"
@@ -1086,10 +1087,11 @@ export default defineComponent({
         title,
         message,
         actions: [
-          { label: t`Cancel` },
+          { label: t`Cancel`, variant: 'ghost' },
           {
             label: t`Discard and Continue`,
             theme: 'red',
+            variant: 'subtle',
             onClick: () => this.discardAndContinue(),
           },
           {

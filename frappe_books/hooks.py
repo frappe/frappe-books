@@ -43,7 +43,9 @@ jinja = {
 	]
 }
 
-after_install = "frappe_books.setup.bootstrap"
+# The search palette's index; a new site builds it now, not at Frappe's next three-hourly check.
+sqlite_search = ["frappe_books.search.BooksSearch"]
+after_install = ["frappe_books.setup.bootstrap", "frappe_books.search.build_search_index"]
 before_tests = [
 	"frappe_books.setup.before_tests",
 	"frappe_books.tests.accounting.enable_features",

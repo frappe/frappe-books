@@ -141,7 +141,7 @@ function formatCurrency(
   return valueString;
 }
 
-function formatNumber(value: unknown, fyo: Fyo): string {
+export function formatNumber(value: unknown, fyo: Fyo): string {
   const numberFormatter = getNumberFormatter(fyo);
   if (typeof value === 'number') {
     value = fyo.pesa(value.toFixed(20));
@@ -164,6 +164,69 @@ function formatNumber(value: unknown, fyo: Fyo): string {
   }
 
   return formattedNumber;
+}
+
+interface Separators {
+  group: string;
+  decimal: string;
+}
+
+/**
+ * A typed number as Frappe's desk reads it (frappe.utils.eval_expression,
+ * then ControlFloat.parse): numbers read by the number format, simple
+ * arithmetic evaluated, and null for text that is not a number.
+ */
+export function parseNumber(text: string, fyo: Fyo): number | null {
+  const separators = getSeparators(fyo);
+  const value = evaluateExpression(text, separators);
+  if (Number.isNaN(parseFloat(String(value)))) {
+    return null;
+  }
+
+  const number =
+    typeof value === 'number' ? value : toNumber(value, separators);
+  return Number.isFinite(number) ? number : null;
+}
+
+/** Desk's eval_expression: each number read by the number format, then plain arithmetic evaluated. */
+function evaluateExpression(
+  text: string,
+  separators: Separators
+): string | number {
+  const expression = (text.match(/[^\d.,]+|[\d.,]+/g) ?? [])
+    .map((part) =>
+      Number.isNaN(parseFloat(part)) ? part : String(toNumber(part, separators))
+    )
+    .join('');
+  if (!/^[0-9+\-/*.() ]+$/.test(expression)) {
+    return text;
+  }
+
+  try {
+    // Only digits, operators and brackets reach eval, as in Frappe's desk.
+    return globalThis.eval(expression) as number;
+  } catch {
+    return text;
+  }
+}
+
+/** Desk's flt for text: number groups dropped, the decimal separator read; 0 if no number. */
+function toNumber(text: string, { group, decimal }: Separators): number {
+  const number = parseFloat(
+    text.replaceAll(group, '').replaceAll(decimal, '.')
+  );
+  return Number.isNaN(number) ? 0 : number;
+}
+
+/** The group and decimal separators of the locale numbers are formatted in. */
+function getSeparators(fyo: Fyo): Separators {
+  const { locale } = getNumberFormatter(fyo).resolvedOptions();
+  const parts = Intl.NumberFormat(locale).formatToParts(1234567.5);
+  const find = (type: string) => parts.find((part) => part.type === type);
+  return {
+    group: find('group')?.value ?? '',
+    decimal: find('decimal')?.value ?? '.',
+  };
 }
 
 function getNumberFormatter(fyo: Fyo) {

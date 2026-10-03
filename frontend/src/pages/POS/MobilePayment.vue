@@ -92,7 +92,7 @@
         :read-only="false"
         :border="true"
         :value="paidAmount"
-        @change="(amount: Money) => $emit('setPaidAmount', amount)"
+        @change="(amount: Money | null) => $emit('setPaidAmount', amount)"
       />
       <div class="flex flex-wrap gap-2">
         <FrappeButton
@@ -219,7 +219,7 @@ const props = defineProps<{
 
 defineEmits<{
   selectMethod: [name: string];
-  setPaidAmount: [amount: Money];
+  setPaidAmount: [amount: Money | null];
   setTransferRefNo: [value: string];
   setTransferClearanceDate: [value: Date];
   setLoyalty: [on: boolean];

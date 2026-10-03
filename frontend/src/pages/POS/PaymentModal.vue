@@ -109,6 +109,7 @@
 
     <template #actions>
       <FrappeButton
+        v-if="!sinvDoc.isSubmitted"
         class="me-auto"
         size="md"
         variant="ghost"

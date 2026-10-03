@@ -43,6 +43,16 @@ test('items fill a two-column grid and a tap adds to the cart bar', async ({
   await page.screenshot({ path: test.info().outputPath('items.png') });
 });
 
+test('a broken item image falls back to the initials', async ({ page }) => {
+  const name = await page.evaluate(() => {
+    const [item] = (window as any).posFixture.pos.items;
+    item.image = '/missing-item-image.png';
+    return item.name as string;
+  });
+  const tile = page.getByRole('button', { name: `Add ${name}`, exact: true });
+  await expect(tile.locator('img')).toHaveCount(0);
+});
+
 test('the cart stepper turns minus into remove at one', async ({ page }) => {
   const tea = page.getByRole('button', { name: 'Add Organic Assam Tea' });
   await tea.click();

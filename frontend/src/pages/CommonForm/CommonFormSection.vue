@@ -21,7 +21,6 @@
               field.fieldname === 'terms_and_conditions' ? 'md:col-span-2' : '',
               field.invisible ? 'invisible' : '',
             ]"
-            :style="field.invisible ? 'visibility: hidden;' : ''"
           >
             <!-- A scan adds item rows, so its field sits above them. -->
             <div

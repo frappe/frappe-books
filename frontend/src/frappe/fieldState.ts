@@ -1,6 +1,7 @@
 import type { Field } from 'schemas/types';
 import { getIsNullOrUndef, getMapFromList } from 'utils';
-import { evaluateCondition } from './dependsOn';
+import { computed, reactive, toRaw, type ComputedRef } from 'vue';
+import { evaluateCondition, type EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import type { FrappeDoc } from './document';
 import type { DocField, DocTypeMeta } from './meta';
@@ -24,6 +25,7 @@ const ruleConditions: Record<
 };
 
 const docFieldMaps = new WeakMap<DocTypeMeta, Record<string, DocField>>();
+const evalDocs = new WeakMap<FrappeDoc, ComputedRef<EvalDoc>>();
 
 /**
  * A field's state on `doc`, decided in this order:
@@ -111,13 +113,13 @@ function isConditionOn(
     return false;
   }
 
-  let evalDoc = doc.getEvalDoc();
+  let evalDoc = getEvalDoc(doc);
   if (rule === 'readOnly') {
     // A field locks on its saved value, so an unsaved edit never locks it.
     evalDoc = { ...evalDoc, [fieldname]: doc._getSavedFrappeValue(fieldname) };
   }
 
-  const parent = doc.parentdoc?.getEvalDoc();
+  const parent = doc.parentdoc && getEvalDoc(doc.parentdoc);
   const isMet = evaluateCondition(condition, evalDoc, parent);
   return rule === 'hidden' ? !isMet : isMet;
 }
@@ -132,6 +134,22 @@ function getDocFields(doc: FrappeDoc): Record<string, DocField> {
   }
 
   return docFields;
+}
+
+/**
+ * `doc.getEvalDoc()`, worked out again only after a value of the document
+ * or its rows changes, however it changed: Vue tracks what it read.
+ */
+function getEvalDoc(doc: FrappeDoc): EvalDoc {
+  const raw = toRaw(doc);
+  let evalDoc = evalDocs.get(raw);
+  if (!evalDoc) {
+    const reactiveDoc = reactive(raw) as FrappeDoc;
+    evalDoc = computed(() => reactiveDoc.getEvalDoc());
+    evalDocs.set(raw, evalDoc);
+  }
+
+  return evalDoc.value;
 }
 
 /** No value, an empty text or a table without rows. */

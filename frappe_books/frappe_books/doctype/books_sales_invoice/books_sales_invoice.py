@@ -88,9 +88,9 @@ class BooksSalesInvoice(PostingInvoiceController):
 		return loyalty.redemption_amount(self)
 
 	@frappe.whitelist()
-	def preview(self):
+	def preview(self, check_coupons: bool = False):
 		"""Also give a POS sale's serialised rows serial numbers in stock where it ships from."""
-		super().preview()
+		super().preview(check_coupons)
 		if self.is_pos and not self.return_against:
 			fill_serial_numbers(self.items, default_location(self))
 

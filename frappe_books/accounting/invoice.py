@@ -43,12 +43,12 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 		set_default_terms(self)
 		self.calculate()
 
-	def calculate(self):
+	def calculate(self, drop_invalid_coupons=False):
 		"""Fill defaults, apply pricing and set the totals, without writing anything."""
 		returns.set_quantity_signs(self.items, bool(self.get("return_against")))
 		pricing.reset_pricing(self)
 		_populate_invoice_defaults(self)
-		pricing.apply_pricing(self)
+		pricing.apply_pricing(self, drop_invalid_coupons)
 		_populate_invoice_defaults(self)
 		calculate_invoice(self)
 		loyalty.set_available_points(self)
@@ -63,12 +63,16 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 		return sum_decimal(row_discount(self, row) for row in self.items)
 
 	@frappe.whitelist()
-	def preview(self):
-		"""Calculate what a save would store, without saving, for a new document or an edited draft."""
+	def preview(self, check_coupons: bool = False):
+		"""Calculate what a save would store, without saving, for a new document or an edited draft.
+
+		A POS sale's cart changes under its coupons, so its preview takes off the
+		ones that no longer apply, unless `check_coupons` asks why one does not.
+		"""
 		check_preview_permission(self)
 		self.set_number_series()
 		set_default_terms(self)
-		self.calculate()
+		self.calculate(drop_invalid_coupons=bool(self.get("is_pos")) and not check_coupons)
 
 
 INVOICE_FEATURES = {
@@ -87,8 +91,8 @@ class PostingInvoiceController(InvoiceController):
 		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
 		self.dont_update_if_missing.extend(self.follow_up_fields)
 
-	def calculate(self):
-		super().calculate()
+	def calculate(self, drop_invalid_coupons=False):
+		super().calculate(drop_invalid_coupons)
 		self.set_follow_up_defaults()
 
 	def fill_mapped_values(self):

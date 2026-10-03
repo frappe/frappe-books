@@ -1,5 +1,8 @@
 <template>
-  <div v-if="showCoupon || showLoyalty || showPriceList" class="flex gap-1.5">
+  <div
+    v-if="showCoupon || showLoyalty || showPriceList"
+    class="flex flex-wrap gap-1.5"
+  >
     <FrappeButton
       v-if="showCoupon"
       variant="outline"
@@ -16,6 +19,7 @@
     />
     <FrappeButton
       v-if="showPriceList"
+      class="max-w-full"
       variant="outline"
       icon-left="lucide-list-checks"
       :label="sinvDoc.price_list || t`Price list`"

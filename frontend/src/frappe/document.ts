@@ -1040,7 +1040,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   /** Shows what the server would fill for the unsaved values; dropped if they changed meanwhile. */
-  async preview() {
+  async preview(kwargs?: Record<string, unknown>) {
     clearTimeout(this._previewTimer);
     if (!this.previewMethod || !this.canEdit) {
       return;
@@ -1051,7 +1051,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       keepRowNames: true,
       clearServerFilled: true,
     });
-    const previewed = await this._fetchPreview(document);
+    const previewed = await this._fetchPreview(document, kwargs);
     if (edits !== this._edits || !this.dirty) {
       return;
     }
@@ -1063,9 +1063,12 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   /** The server's preview, or none for a document changed elsewhere, which only its save reports. */
-  async _fetchPreview(document: DocValues): Promise<DocValues | undefined> {
+  async _fetchPreview(
+    document: DocValues,
+    kwargs?: Record<string, unknown>
+  ): Promise<DocValues | undefined> {
     try {
-      return await api.runDocMethod(this.previewMethod!, document);
+      return await api.runDocMethod(this.previewMethod!, document, kwargs);
     } catch (error) {
       if (error instanceof ConflictError) {
         return;

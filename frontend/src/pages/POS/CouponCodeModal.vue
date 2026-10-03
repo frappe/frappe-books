@@ -108,7 +108,7 @@ export default defineComponent({
   props: {
     openModal: Boolean,
   },
-  emits: ['setCouponsCount', 'toggleModal'],
+  emits: ['toggleModal'],
 
   setup() {
     return {
@@ -159,17 +159,16 @@ export default defineComponent({
 
         this.couponCode = value as string;
         await this.applyCoupon(this.couponCode);
-        this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
         this.couponCode = '';
       } catch (error) {
         this.errorMessage = getErrorMessage(error as Error);
       }
     },
-    /** The server's preview rejects a coupon that does not apply, which is then taken off. */
+    /** The server's preview says why a coupon does not apply, which is then taken off. */
     async applyCoupon(coupon: string) {
       await this.sinvDoc.append('coupons', { coupons: coupon });
       try {
-        await this.sinvDoc.preview();
+        await this.sinvDoc.preview({ check_coupons: true });
       } catch (error) {
         const added = this.sinvDoc.coupons?.at(-1);
         await this.sinvDoc.remove('coupons', added?.idx as number);
@@ -181,7 +180,6 @@ export default defineComponent({
     },
     async removeAppliedCoupon(coupon: AppliedCouponCode) {
       await coupon?.parentdoc?.remove('coupons', coupon.idx as number);
-      this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
     },
     async cancelApplyCouponCode() {
       this.couponCode = '';
@@ -191,7 +189,6 @@ export default defineComponent({
         await this.sinvDoc.append('coupons', { coupons });
       }
 
-      this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
       this.$emit('toggleModal', 'CouponCode');
     },
   },

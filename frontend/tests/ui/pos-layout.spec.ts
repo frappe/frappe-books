@@ -124,6 +124,43 @@ test('discarding a sale on leaving empties the cart', async ({ page }) => {
     .toBe(0);
 });
 
+test('a coupon a preview takes off is named in a warning', async ({ page }) => {
+  await page.evaluate(() => {
+    const { state } = (window as any).posFixture;
+    state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
+  });
+  await expect(
+    page.getByRole('button', { name: '1 coupon applied', exact: true })
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const { invoice } = (window as any).posFixture.state;
+    const document = invoice.getMethodDocument({ keepRowNames: true });
+    invoice.applyPreview(invoice.toDocValues({ ...document, coupons: [] }));
+  });
+  await expect(
+    page.getByText('Coupon FOSSCLUB no longer applies, so it was removed.')
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Coupon', exact: true })
+  ).toBeVisible();
+});
+
+test('a long price list name wraps instead of leaving the cart', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const { state } = (window as any).posFixture;
+    state.invoice.price_list = 'Partner Price List 2026-27 for Resellers';
+  });
+  const cart = page.getByRole('complementary', { name: 'Cart' });
+  const priceList = cart.getByRole('button', { name: /Partner Price List/ });
+  const cartBox = (await cart.boundingBox())!;
+  const buttonBox = (await priceList.boundingBox())!;
+  expect(buttonBox.x + buttonBox.width).toBeLessThanOrEqual(
+    cartBox.x + cartBox.width
+  );
+});
+
 test('a held sale reopens as saved after its cart was edited', async ({
   page,
 }) => {

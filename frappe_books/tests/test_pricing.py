@@ -596,6 +596,34 @@ class IntegrationTestPricing(IntegrationTestCase):
 				)
 				self.assertRaisesRegex(frappe.ValidationError, "pricing rules", invoice.insert)
 
+	def test_pos_preview_drops_coupons_the_cart_no_longer_allows(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		coupon = self._coupon(self._pricing_rule(is_coupon_code_based=1))
+		other_item = make_item(self.income.name, self.expense.name)
+		start_pos_shift()
+		frappe.db.set_single_value("Books Pos Settings", {"pos_profile": None, "ignore_pricing_rule": 0})
+
+		def sale(is_pos):
+			return frappe.get_doc(
+				{
+					"doctype": "Books Sales Invoice",
+					"party": self.party.name,
+					"account": self.receivable.name,
+					"is_pos": is_pos,
+					"items": [{"item": other_item.name, "rate": 100, "quantity": 1}],
+					"coupons": [{"coupons": coupon.name}],
+				}
+			)
+
+		pos_sale = sale(1)
+		pos_sale.preview()
+		self.assertEqual(pos_sale.coupons, [])
+
+		message = "does not apply to any invoice item"
+		self.assertRaisesRegex(frappe.ValidationError, message, sale(1).preview, check_coupons=True)
+		self.assertRaisesRegex(frappe.ValidationError, message, sale(0).preview)
+		self.assertRaisesRegex(frappe.ValidationError, message, sale(1).insert)
+
 	def _coupon(self, rule, **values):
 		return frappe.get_doc(
 			{

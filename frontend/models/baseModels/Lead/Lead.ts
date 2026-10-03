@@ -3,7 +3,7 @@ import { Action, ListViewSettings, ValidationMap } from 'fyo/model/types';
 import {
   validateEmail,
   validatePhoneNumber,
-} from 'fyo/model/validationFunction';
+} from 'src/frappe/validation';
 import { getLeadActions, getLeadStatusColumn } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
 

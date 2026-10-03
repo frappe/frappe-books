@@ -33,12 +33,7 @@ await build({
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { getDateRangePresets, getFilterItems } from './src/components/Report/filterToolbar';
-      export {
-        evaluateHidden,
-        evaluateReadOnly,
-        getLinkedEntries,
-        linkOnSave,
-      } from './src/utils/doc';
+      export { getLinkedEntries, linkOnSave } from './src/utils/doc';
       export { showReport } from './src/utils/misc';
       export { fyo as appFyo } from './src/initFyo';
       export { getDefaultFilters as getReportDefaultFilters } from './src/components/Report/Mobile/MobileFilters';
@@ -127,9 +122,6 @@ export const {
   getDashboardData,
   getInvoiceListFilters,
   getInvoiceSummary,
-
-  evaluateHidden,
-  evaluateReadOnly,
   getLinkedEntries,
   linkOnSave,
   showReport,

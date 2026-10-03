@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  evaluateHidden,
-  evaluateRequired,
   frappeModels,
   fyo,
   getFrappeDoc,
@@ -26,7 +24,7 @@ const requests = await loadFrappeModels(frappeModels, (request) =>
   respond(request)
 );
 
-const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);
+const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
 test('item group, unit, location, batch and serial number forms show what they showed', () => {
   assert.deepEqual(getLayout('ItemGroup'), [
@@ -529,7 +527,7 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
     'price_discount_type',
     'discount_percentage',
   ]);
-  assert.equal(evaluateRequired(rule.fieldMap.price_discount_type, rule), true);
+  assert.equal(rule.getFieldState(rule.fieldMap.price_discount_type).required, true);
   await rule.set('discount_type', 'Product Discount');
   await rule.set('is_recursive', true);
   assert.deepEqual(shown().slice(0, 6), [
@@ -541,7 +539,7 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
     'recurse_every',
   ]);
   assert.equal(
-    evaluateRequired(rule.fieldMap.price_discount_type, rule),
+    rule.getFieldState(rule.fieldMap.price_discount_type).required,
     false
   );
   clearTimeout(rule._previewTimer);

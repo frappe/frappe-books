@@ -7,7 +7,6 @@ import { handleErrorWithDialog } from 'src/errorHandling';
 import { getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { getErrorMessage } from 'src/utils';
-import { evaluateHidden } from 'src/utils/doc';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { showDialog } from 'src/utils/interactive';
 import { UIGroupedFields } from 'src/utils/types';
@@ -185,7 +184,7 @@ function groupFields(schemas: Schema[]): UIGroupedFields {
     }
 
     const doc = fyo.singles[schemaName];
-    if (field.meta || evaluateHidden(field, doc)) {
+    if (field.meta || !doc || doc.getFieldState(field).hidden) {
       continue;
     }
 

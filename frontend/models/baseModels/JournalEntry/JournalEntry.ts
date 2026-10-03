@@ -1,6 +1,6 @@
 import { Fyo } from 'fyo';
 import { DocValue } from 'fyo/core/types';
-import { isDocValueTruthy } from 'fyo/model/helpers';
+import { isDocValueTruthy } from 'src/frappe/docValues';
 import {
   Action,
   ChangeArg,

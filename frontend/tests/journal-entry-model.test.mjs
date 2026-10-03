@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getFilterFields } from './helpers/accounting.mjs';
 import {
-  evaluateHidden,
   frappeModels,
   fyo,
   getModel,
@@ -66,7 +65,7 @@ test('a new journal entry is saved without its temporary name, which the server 
 test('references and attachments hide on a submitted entry without them', () => {
   const entry = newFrappeDoc('JournalEntry', { reference_number: 'CHQ-1' });
   const hidden = (fieldname) =>
-    evaluateHidden(entry.fieldMap[fieldname], entry);
+    entry.getFieldState(entry.fieldMap[fieldname]).hidden;
   assert.equal(hidden('user_remark'), false);
 
   entry.docstatus = 1;

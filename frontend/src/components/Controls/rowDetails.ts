@@ -1,7 +1,6 @@
 import { t } from 'fyo';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Field, FieldTypeEnum } from 'schemas/types';
-import { evaluateHidden } from 'src/utils/doc';
 import { getAmountField } from './rowSummary';
 
 export interface RowDetail {
@@ -33,7 +32,7 @@ function isShown(row: FrappeDoc, field: Field) {
     !field.meta &&
     field.fieldname !== 'name' &&
     field.fieldtype !== FieldTypeEnum.Table &&
-    !evaluateHidden(field, row)
+    !row.getFieldState(field).hidden
   );
 }
 

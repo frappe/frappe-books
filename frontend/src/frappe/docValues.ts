@@ -4,13 +4,18 @@ import { isPesa } from 'fyo/utils';
 import { isEqual } from 'lodash';
 import { Field, FieldType, FieldTypeEnum } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
-import type { FrappeDoc } from 'src/frappe/document';
+import type { FrappeDoc } from './document';
 
+/** Whether two values of a field are equal: amounts by value, dates by time. */
 export function areDocValuesEqual(
   dvOne: DocValue | FrappeDoc[],
   dvTwo: DocValue | FrappeDoc[]
 ): boolean {
-  if (['string', 'number'].includes(typeof dvOne) || dvOne instanceof Date) {
+  if (dvOne instanceof Date) {
+    return dvTwo instanceof Date && dvOne.getTime() === dvTwo.getTime();
+  }
+
+  if (['string', 'number'].includes(typeof dvOne)) {
     return dvOne === dvTwo;
   }
 
@@ -32,6 +37,7 @@ export function getFieldDefault(field: Field): DocValue | undefined {
   return field.default as DocValue | undefined;
 }
 
+/** The value a field of the type starts with when it has no default. */
 export function getPreDefaultValues(
   fieldtype: FieldType,
   fyo: Fyo
@@ -52,48 +58,7 @@ export function getPreDefaultValues(
   }
 }
 
-export function getMissingMandatoryFields(doc: FrappeDoc): Field[] {
-  return getMandatory(doc).filter((f) => {
-    const value = doc.get(f.fieldname);
-    const isNullOrUndef = getIsNullOrUndef(value);
-
-    if (f.fieldtype === FieldTypeEnum.Table) {
-      return isNullOrUndef || (value as FrappeDoc[])?.length === 0;
-    }
-
-    return isNullOrUndef || value === '';
-  });
-}
-
-export function getMissingMandatoryMessage(doc: FrappeDoc) {
-  const message = getMissingMandatoryFields(doc)
-    .map((f) => f.label ?? f.fieldname)
-    .join(', ');
-
-  if (message && doc.schema.isChild && doc.parentdoc && doc.parentFieldname) {
-    const parentfield = doc.parentdoc.fieldMap[doc.parentFieldname];
-    return `${parentfield.label} Row ${(doc.idx ?? 0) + 1}: ${message}`;
-  }
-
-  return message;
-}
-
-function getMandatory(doc: FrappeDoc): Field[] {
-  const mandatoryFields: Field[] = [];
-  for (const field of doc.schema.fields) {
-    if (field.required) {
-      mandatoryFields.push(field);
-    }
-
-    const requiredFunction = doc.required[field.fieldname];
-    if (requiredFunction?.() || doc.hasFieldRule(field.fieldname, 'required')) {
-      mandatoryFields.push(field);
-    }
-  }
-
-  return mandatoryFields;
-}
-
+/** Whether a value is set: a nonzero amount, a table with rows. */
 export function isDocValueTruthy(docValue: DocValue | FrappeDoc[]) {
   if (isPesa(docValue)) {
     return !docValue.isZero();
@@ -106,6 +71,7 @@ export function isDocValueTruthy(docValue: DocValue | FrappeDoc[]) {
   return !!docValue;
 }
 
+/** Numbers the rows by their place in the table. */
 export function setChildDocIdx(childDocs: FrappeDoc[]) {
   childDocs.forEach((cd, idx) => {
     cd.idx = idx;

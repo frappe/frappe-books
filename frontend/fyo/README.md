@@ -1,17 +1,20 @@
 # Fyo
 
-`fyo` holds what every /books screen shares: translations (`t`, `T`), money (`pesa`), formatting, the user's rights, the open settings documents and the document events. Documents load and save through Frappe; see `docs/framework-backed-doctypes.md` and `src/frappe/`.
+`fyo` holds what every /books screen shares: translations (`t`, `T`), money (`pesa`), formatting, the user's rights, the open settings documents and the document events. It has no documents: `FrappeDoc`, its field state and its checks are in `src/frappe/`; see `docs/framework-backed-doctypes.md`.
 
 ## The parts
 
 | Part | Job |
 | --- | --- |
 | `index.ts` | The `Fyo` class. `src/initFyo.ts` makes the one instance that screens use. |
-| `model/doc.ts` | `Doc`, the abstract document a form edits: values, unsaved edits, rights and the save lifecycle. `FrappeDoc` in `src/frappe/document.ts` loads and saves it through Frappe. |
+| `core/types.ts` | The value types: `DocValue`, `DocValueMap`, `RawValueMap`. |
 | `model/types.ts` | The statics and dynamic rules a model sets (`hidden`, `readOnly`, `required`, `validations`, list settings, actions). |
 | `utils/converter.ts` | A field's raw value to the value a form edits, and back. |
 | `utils/format.ts` | How values show, by field type. |
 | `utils/translation.ts` | Runtime translations. |
+| `utils/permissions.ts` | The user's rights by doctype, from the Frappe boot. |
+| `utils/errors.ts` | The errors that forms show, like `ValidationError` and `MandatoryError`. |
+| `utils/observable.ts` | The events of a document and of `fyo.observer`. |
 
 ## Startup
 

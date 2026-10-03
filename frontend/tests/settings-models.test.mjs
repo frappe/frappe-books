@@ -3,8 +3,6 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
-  evaluateHidden,
-  evaluateReadOnly,
   frappeModels,
   fyo,
   getFrappeDoc,
@@ -26,9 +24,9 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels(frappeModels);
 await loadFrappeDocTypes();
 
-const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);
+const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 const readOnly = (doc, fieldname) =>
-  evaluateReadOnly(doc.fieldMap[fieldname], doc);
+  doc.getFieldState(doc.fieldMap[fieldname]).readOnly;
 const fieldnames = (schemaName) =>
   getSchema(schemaName)
     .fields.filter((field) => !field.meta)

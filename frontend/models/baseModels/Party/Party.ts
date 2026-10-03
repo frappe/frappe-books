@@ -9,7 +9,7 @@ import {
 import {
   validateEmail,
   validatePhoneNumber,
-} from 'fyo/model/validationFunction';
+} from 'src/frappe/validation';
 import { getMappedDoc } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';

@@ -4,7 +4,6 @@ import { getFilterFields } from './helpers/accounting.mjs';
 import { doctypes } from './helpers/doctypes.mjs';
 import {
   createFilters,
-  evaluateHidden,
   frappeModels,
   fyo,
   getMappedDoc,
@@ -67,7 +66,7 @@ test('the payment type offers Receive and Pay only, and starts empty', () => {
 test('payment fields hide as they did', () => {
   const payment = newFrappeDoc('Payment', { writeoff: fyo.pesa(0) });
   const hidden = (fieldname) =>
-    evaluateHidden(payment.fieldMap[fieldname], payment);
+    payment.getFieldState(payment.fieldMap[fieldname]).hidden;
   assert.equal(hidden('amount_paid'), true);
   assert.equal(hidden('taxes'), true);
   assert.equal(hidden('payment_references'), false);

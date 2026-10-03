@@ -3,11 +3,10 @@ import type { DocValue, DocValueMap } from 'fyo/core/types';
 import {
   areDocValuesEqual,
   getFieldDefault,
-  getMissingMandatoryMessage,
   getPreDefaultValues,
   isDocValueTruthy,
   setChildDocIdx,
-} from 'fyo/model/helpers';
+} from './docValues';
 import type {
   Action,
   ChangeArg,
@@ -23,11 +22,13 @@ import type {
   TreeViewSettings,
   ValidationMap,
 } from 'fyo/model/types';
+import { validateOptions } from './validation';
 import {
-  validateOptions,
-  validateRequired,
-} from 'fyo/model/validationFunction';
-import { ConflictError, MandatoryError, ValueError } from 'fyo/utils/errors';
+  ConflictError,
+  MandatoryError,
+  ValidationError,
+  ValueError,
+} from 'fyo/utils/errors';
 import { isPesa } from 'fyo/utils';
 import Observable from 'fyo/utils/observable';
 import type { DocPermission, DocPermissionMap } from 'fyo/utils/permissions';
@@ -42,25 +43,19 @@ import type { LinkedDoc } from 'utils/db/types';
 import { markRaw, reactive } from 'vue';
 import * as api from './api';
 import type { DocValues } from './api';
-import { evaluateCondition, type EvalDoc } from './dependsOn';
+import type { EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
-import type { DocField } from './meta';
+import {
+  getFieldState,
+  getMissingFields,
+  getMissingMessage,
+  type FieldState,
+} from './fieldState';
 import { getNamingField, type Presentation } from './schema';
 import { toDocValue, toDocValues, toFrappeValue } from './values';
 
 const PREVIEW_DELAY = 300;
-
-export type FieldRule = 'hidden' | 'readOnly' | 'required';
-
-const ruleConditions: Record<
-  FieldRule,
-  (field: DocField) => string | undefined
-> = {
-  hidden: (field) => field.depends_on,
-  readOnly: (field) => field.read_only_depends_on,
-  required: (field) => field.mandatory_depends_on,
-};
 
 /**
  * A document a form edits, as Frappe serves it: its values, unsaved edits,
@@ -311,30 +306,20 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this.fyo.can(this.schemaName, permission);
   }
 
-  /** Whether the DocField's depends_on, read_only_depends_on or mandatory_depends_on applies. */
-  hasFieldRule(fieldname: string, rule: FieldRule): boolean {
-    const docfield = getDocType(this.schemaName).meta.fields.find(
-      (field) => field.fieldname === fieldname
-    );
-    const condition = docfield && ruleConditions[rule](docfield);
-    if (!condition) {
-      return false;
-    }
+  /** Whether a field is hidden, read only or required now, in the order `fieldState.ts` gives. */
+  getFieldState(field: Field): FieldState {
+    return getFieldState(this, field);
+  }
 
-    const evalDoc = this.getEvalDoc();
-    if (rule === 'readOnly') {
-      // A field locks on its saved value, so an unsaved edit never locks it.
-      evalDoc[fieldname] = this._getSavedFrappeValue(fieldname);
-    }
-
-    const parent = this.parentdoc?.getEvalDoc();
-    const isMet = evaluateCondition(condition, evalDoc, parent);
-    return rule === 'hidden' ? !isMet : isMet;
+  /** The required fields that are empty, which a save refuses. */
+  get missingFields(): Field[] {
+    return getMissingFields(this);
   }
 
   /** Whether a field's value differs from the one last loaded or saved. */
   isChanged(fieldname: string): boolean {
-    return this[fieldname] !== this._savedValues[fieldname];
+    const saved = this._savedValues[fieldname] as DocValue;
+    return !areDocValuesEqual(this[fieldname] as DocValue, saved);
   }
 
   /** A field's saved value as form conditions read it. */
@@ -617,25 +602,22 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   _validateMandatory() {
-    const checkForMandatory: FrappeDoc[] = [this];
-    for (const field of this.tableFields) {
-      const childDocs = this.get(field.fieldname) as FrappeDoc[];
-      if (!childDocs) {
-        continue;
-      }
-
-      checkForMandatory.push(...childDocs);
-    }
-
-    const missingMandatoryMessage = checkForMandatory
-      .map((doc) => getMissingMandatoryMessage(doc))
+    const missing = this._getDocAndRows()
+      .map((doc) => getMissingMessage(doc))
       .filter(Boolean);
 
-    if (missingMandatoryMessage.length > 0) {
-      const fields = missingMandatoryMessage.join('\n');
-      const message = this.fyo.t`Value missing for ${fields}`;
-      throw new MandatoryError(message);
+    if (missing.length > 0) {
+      const fields = missing.join('\n');
+      throw new MandatoryError(this.fyo.t`Value missing for ${fields}`);
     }
+  }
+
+  /** The document and the rows of its tables. */
+  _getDocAndRows(): FrappeDoc[] {
+    const rows = this.tableFields.flatMap(
+      ({ fieldname }) => (this[fieldname] ?? []) as FrappeDoc[]
+    );
+    return [this, ...rows];
   }
 
   async _validateFields() {
@@ -650,6 +632,15 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   async _validateField(field: Field, value: DocValue) {
+    const isEmpty = getIsNullOrUndef(value);
+    if (isEmpty && this.getFieldState(field).required) {
+      throw new ValidationError(this.fyo.t`${field.label} is required`);
+    }
+
+    if (isEmpty) {
+      return;
+    }
+
     if (
       field.fieldtype === FieldTypeEnum.Select ||
       field.fieldtype === FieldTypeEnum.AutoComplete
@@ -657,17 +648,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       validateOptions(field, value as string, this);
     }
 
-    validateRequired(field, value, this);
-    if (getIsNullOrUndef(value)) {
-      return;
-    }
-
-    const validator = this.validations[field.fieldname];
-    if (validator === undefined) {
-      return;
-    }
-
-    await validator(value);
+    await this.validations[field.fieldname]?.(value);
   }
 
   async load() {
@@ -1002,10 +983,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
   /** Mandatory values are missing, which a preview may fill. */
   get hasMissingValues(): boolean {
-    const rows = this.tableFields.flatMap(
-      ({ fieldname }) => (this[fieldname] ?? []) as FrappeDoc[]
-    );
-    return [this, ...rows].some((doc) => !!getMissingMandatoryMessage(doc));
+    return this._getDocAndRows().some((doc) => doc.missingFields.length > 0);
   }
 
   /** Previews once edits pause, so filled values follow the user without a request per keystroke. */

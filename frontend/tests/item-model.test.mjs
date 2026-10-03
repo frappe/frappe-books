@@ -3,8 +3,6 @@ import { test } from 'node:test';
 import { getBooksMeta } from './helpers/doctypes.mjs';
 import {
   errors,
-  evaluateHidden,
-  evaluateReadOnly,
   frappeModels,
   fyo,
   getSchema,
@@ -22,7 +20,7 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels({ Item: frappeModels.Item });
 await loadFrappeDocTypes();
 
-const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);
+const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
 test('the Item form shows the fields, labels, placeholders and sections it showed', () => {
   const layout = getSchema('Item')
@@ -98,9 +96,9 @@ test('a saved item keeps its set-once fields and hides tracking it did not use',
   const item = newFrappeDoc('Item', { name: 'Kettle', track_item: false });
   item._notInserted = false;
   for (const fieldname of ['unit', 'item_type', 'track_item', 'has_batch']) {
-    assert.equal(evaluateReadOnly(item.fieldMap[fieldname], item), true);
+    assert.equal(item.getFieldState(item.fieldMap[fieldname]).readOnly, true);
   }
-  assert.equal(evaluateReadOnly(item.fieldMap.rate, item), false);
+  assert.equal(item.getFieldState(item.fieldMap.rate).readOnly, false);
   assert.equal(hidden(item, 'track_item'), true);
 });
 

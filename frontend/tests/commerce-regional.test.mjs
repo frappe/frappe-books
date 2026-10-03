@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  evaluateHidden,
   frappeModels,
   fyo,
   getExportFields,
@@ -17,7 +16,7 @@ await loadFrappeModels({
   ...(await getRegionalFrappeModels('in')),
 });
 
-const hidden = (doc, fieldname) => evaluateHidden(doc.fieldMap[fieldname], doc);
+const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
 test('an Indian address shows its place of supply, in quick edit too', () => {
   const address = newFrappeDoc('Address', { country: 'India' });

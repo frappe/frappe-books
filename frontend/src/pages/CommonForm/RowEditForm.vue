@@ -91,7 +91,6 @@ import { ValueError } from 'fyo/utils/errors';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import RowDetailSheet from './RowDetailSheet.vue';
-import { evaluateReadOnly } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getRowEditFieldnames } from 'src/utils/sheetFields';
@@ -127,7 +126,7 @@ export default defineComponent({
   computed: {
     isEditable(): boolean {
       const field = this.doc.fieldMap[this.fieldname];
-      return !!field && !evaluateReadOnly(field, this.doc);
+      return !!field && !this.doc.getFieldState(field).readOnly;
     },
     fieldlabel() {
       return this.doc.fieldMap[this.fieldname]?.label ?? '';

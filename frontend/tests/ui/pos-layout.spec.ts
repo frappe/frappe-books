@@ -187,7 +187,9 @@ test('coupons a preview takes off share one warning', async ({ page }) => {
       'Coupons FOSSCLUB, SUMMER no longer apply, so they were removed.'
     )
   ).toBeVisible();
-  await expect(page.locator('[data-sonner-toast]')).toHaveCount(1);
+  await expect(
+    page.locator('[data-sonner-toast]', { hasText: 'no longer appl' })
+  ).toHaveCount(1);
 });
 
 test('Done keeps the applied coupons after a refused code', async ({

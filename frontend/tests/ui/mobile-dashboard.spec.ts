@@ -107,5 +107,5 @@ test('top expenses shows the full total spending under its title', async ({
 
   await expect(
     page.locator('[data-slot="chart-container"]', { hasText: 'Top expenses' })
-  ).toContainText('Total Spending: ₹ 12,34,567.89');
+  ).toContainText('Total spending: ₹ 12,34,567.89');
 });

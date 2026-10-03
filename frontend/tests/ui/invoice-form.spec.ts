@@ -102,6 +102,34 @@ test('the barcode field marks itself with a leading icon, not a trailing control
   );
 });
 
+test('the form tabs sit above the fields', async ({ page }) => {
+  await page.goto(`/books/edit/SalesInvoice/new-tabs-${Date.now()}`);
+  await waitForBooks(page);
+  const series = page.getByRole('combobox', { name: 'Number Series' });
+  const settings = page.getByRole('radio', { name: 'Settings', exact: true });
+  await expect(series).toBeVisible();
+  const [tab, field] = await Promise.all([
+    settings.boundingBox(),
+    series.boundingBox(),
+  ]);
+  expect(tab!.y).toBeLessThan(field!.y);
+
+  await settings.click();
+  await expect(
+    page.getByText('Apply Discount After Tax', { exact: true })
+  ).toBeVisible();
+  await expect(series).toBeHidden();
+});
+
+test('the actions menu holds the width toggle', async ({ page }) => {
+  await page.goto(`/books/edit/SalesInvoice/new-menu-${Date.now()}`);
+  await waitForBooks(page);
+  await page.getByRole('button', { name: 'Actions', exact: true }).click();
+  await expect(
+    page.getByRole('menuitem', { name: /^(Full|Form) width$/ })
+  ).toBeVisible();
+});
+
 test.describe('on a phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },

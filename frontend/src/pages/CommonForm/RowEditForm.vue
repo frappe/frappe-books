@@ -11,31 +11,31 @@
     :title="t`Row ${index + 1}`"
     @update:open="(open: boolean) => !open && $emit('close')"
   >
-    <TwoColumnForm :doc="row" :fields="fields" />
-    <div class="flex gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-      <FrappeButton
-        v-if="isEditable"
-        size="lg"
-        variant="ghost"
-        theme="red"
-        icon-left="lucide-trash-2"
-        :label="t`Remove`"
-        @click="remove"
-      />
-      <FrappeButton
-        class="flex-1"
-        size="lg"
-        variant="solid"
-        :label="t`Done`"
-        @click="$emit('close')"
-      />
+    <div class="px-4">
+      <TwoColumnForm :doc="row" :fields="fields" />
+      <MobileSheetFooter>
+        <FrappeButton
+          size="lg"
+          variant="ghost"
+          theme="red"
+          icon-left="lucide-trash-2"
+          :label="t`Remove`"
+          @click="remove"
+        />
+        <FrappeButton
+          class="flex-1"
+          size="lg"
+          variant="solid"
+          :label="t`Done`"
+          @click="$emit('close')"
+        />
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
   <div
     v-else
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
-    <!-- Row Edit Tool bar -->
     <div
       class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
     >
@@ -47,19 +47,25 @@
       </span>
       <FrappeButton
         v-if="previous >= 0"
+        variant="ghost"
         icon="lucide-chevron-left"
         :label="t`Previous row`"
+        :tooltip="t`Previous row`"
         @click="$emit('previous', previous)"
       />
       <FrappeButton
         v-if="next >= 0"
+        variant="ghost"
         icon="lucide-chevron-right"
         :label="t`Next row`"
+        :tooltip="t`Next row`"
         @click="$emit('next', next)"
       />
       <FrappeButton
+        variant="ghost"
         icon="lucide-x"
         :label="t`Close row editor`"
+        :tooltip="t`Close row editor`"
         @click="$emit('close')"
       />
     </div>
@@ -83,6 +89,7 @@ import {
 import { FrappeDoc } from 'src/frappe/document';
 import { ValueError } from 'fyo/utils/errors';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import RowDetailSheet from './RowDetailSheet.vue';
 import { evaluateReadOnly } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
@@ -99,6 +106,7 @@ export default defineComponent({
     FrappeBottomSheet,
     FrappeButton,
     FrappeScrollArea,
+    MobileSheetFooter,
     RowDetailSheet,
     TwoColumnForm,
   },

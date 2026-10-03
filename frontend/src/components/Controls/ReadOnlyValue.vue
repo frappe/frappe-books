@@ -4,7 +4,7 @@
 		<!-- Frappe keeps colour for state, so links are marked by the icon. -->
 		<button
 			v-if="linked"
-			class="-mx-2 flex min-h-9 max-w-full items-center gap-1.5 self-start rounded-4 px-2 text-start text-lg text-ink-gray-9 active:bg-surface-gray-2"
+			class="-mx-2 flex min-h-9 max-w-full items-center gap-1.5 self-start rounded-4 px-2 text-start text-lg text-ink-gray-8 active:bg-surface-gray-2"
 			@click="$emit('open')"
 		>
 			<span class="min-w-0 truncate">{{ displayText }}</span>
@@ -86,10 +86,13 @@ export default defineComponent({
 			return this.size === "small" ? "sm" : "md";
 		},
 		controlClasses(): string[] {
-			const classes = ["font-sans", "[&_input]:cursor-not-allowed", "[&_input]:text-base"];
+			const classes = ["[&_input]:cursor-not-allowed", "[&_input]:text-base"];
 			if (this.textRight ?? isNumeric(this.df)) {
 				// TextInput can't align its text (frappe/frappe-ui#1256).
 				classes.push("[&_input]:text-end");
+			}
+			if (isNumeric(this.df)) {
+				classes.push("[&_input]:tabular-nums");
 			}
 			return classes;
 		},

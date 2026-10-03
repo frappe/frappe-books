@@ -41,13 +41,17 @@
     :format="frappeDateFormat"
     :size="frappeSize"
     :variant="frappeVariant"
-    :class="controlClasses"
-    :style="containerStyles"
+    :class="textInputClasses"
+    :style="textInputStyles"
     side="bottom"
     align="start"
     @change="onPickerChange"
     @focus="onFocus"
-  />
+  >
+    <template v-if="inlineLabel" #prefix>
+      <span class="text-ink-gray-5">{{ df.label }}</span>
+    </template>
+  </component>
 </template>
 
 <script lang="ts">

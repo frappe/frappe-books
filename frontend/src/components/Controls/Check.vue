@@ -9,7 +9,7 @@
     <!-- A field reserves the label line other fields have, even without a neighbor. -->
     <div class="row-start-2 flex min-w-0 items-center" :class="controlHeight">
       <!-- The box stays beside the first line of a wrapped label. frappe-ui greys
-      every disabled switch alike, so one that is on keeps a darker track. -->
+      every disabled switch alike, so one that is on keeps a darker track (frappe/frappe-ui#1262). -->
       <component
         :is="asSwitch ? 'FrappeSwitch' : 'FrappeCheckbox'"
         ref="input"

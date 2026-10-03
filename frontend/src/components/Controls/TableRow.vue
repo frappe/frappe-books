@@ -14,7 +14,7 @@
         :icon="showDeleteButton ? 'lucide-x' : undefined"
         variant="ghost"
         size="xs"
-        aria-label="Delete row"
+        :aria-label="t`Delete row`"
         @focus="isDeleteFocused = true"
         @blur="isDeleteFocused = false"
         @click="$emit('remove')"
@@ -51,11 +51,7 @@
     </FrappeListCell>
 
     <!-- Error Display -->
-    <FrappeListCell
-      v-if="hasErrors"
-      class="ps-2 col-span-full relative"
-      style="bottom: 0.75rem; height: 0px"
-    >
+    <FrappeListCell v-if="hasErrors" class="col-span-full ps-2 pb-2">
       <FrappeErrorMessage :message="getErrorString()" />
     </FrappeListCell>
   </FrappeListRow>

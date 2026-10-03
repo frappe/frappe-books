@@ -25,11 +25,10 @@
 
     <div
       class="max-w-full overflow-x-auto"
-      :class="border ? 'rounded-4 border border-outline-gray-1' : ''"
+      :class="border ? 'rounded-6 border border-outline-gray-1' : ''"
     >
       <FrappeList
         :columns="listColumns"
-        :row-height="rowHeight"
         divider="full"
         class="list-gap-2 list-row-px-0"
         :style="{ minWidth: minimumWidth }"
@@ -108,7 +107,7 @@
         <!-- Add Row and Row Count -->
         <FrappeListRow
           v-if="canAddRemoveRows"
-          class="border-t border-outline-gray-1 text-ink-gray-5"
+          class="min-h-12 border-t border-outline-gray-1 text-ink-gray-5"
           @click="addRow"
         >
           <FrappeListCell class="justify-center">
@@ -206,6 +205,7 @@ export default {
     };
   },
   computed: {
+    /** Rows are at least this tall (`min-h-12`); rows with errors grow. */
     rowHeight() {
       return 48;
     },

@@ -144,6 +144,12 @@ export default {
         return;
       }
 
+      // Frappe desk clears a Color that is emptied.
+      if (!value) {
+        this.triggerChange(null);
+        return;
+      }
+
       if (!value.startsWith('#')) {
         value = '#' + value;
       }

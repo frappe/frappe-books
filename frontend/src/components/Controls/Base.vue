@@ -17,6 +17,7 @@
     spellcheck="false"
     :class="controlClasses"
     :type="inputType"
+    :inputmode="inputMode"
     :model-value="inputValue"
     :label="showLabel ? df.label : undefined"
     :aria-label="showLabel ? undefined : df.label"
@@ -150,6 +151,9 @@ export default defineComponent({
     },
     inputType(): 'text' {
       return 'text';
+    },
+    inputMode(): string | undefined {
+      return undefined;
     },
     inputPlaceholder(): string {
       return this.placeholder || this.df.placeholder || this.df.label;

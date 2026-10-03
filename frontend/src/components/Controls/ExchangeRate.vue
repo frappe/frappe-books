@@ -5,7 +5,6 @@
       <!-- TextInput can't align its text, so these inputs set [&_input] (frappe/frappe-ui#1256). -->
       <FrappeTextInput
         :model-value="fromValue"
-        type="number"
         inputmode="decimal"
         :aria-label="left"
         :disabled="disabled"
@@ -21,7 +20,6 @@
       </FrappeTextInput>
       <span class="text-ink-gray-6">=</span>
       <FrappeTextInput
-        type="number"
         inputmode="decimal"
         :aria-label="right"
         :model-value="toValue"
@@ -56,7 +54,7 @@
     >
       <FrappeTextInput
         :model-value="fromValue"
-        type="number"
+        inputmode="decimal"
         :aria-label="left"
         :disabled="disabled"
         :min="0"
@@ -76,7 +74,7 @@
       :class="disabled ? 'bg-surface-gray-2' : 'bg-surface-gray-1'"
     >
       <FrappeTextInput
-        type="number"
+        inputmode="decimal"
         :aria-label="right"
         :model-value="toValue"
         :disabled="disabled"
@@ -108,8 +106,8 @@ import {
   FormLabel as FrappeFormLabel,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import { parseNumber } from 'fyo/utils/format';
 import { isMobile } from 'src/utils/viewport';
-import { safeParseFloat } from 'utils/index';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
@@ -153,19 +151,26 @@ export default defineComponent({
     },
   },
   methods: {
+    // Rates are read as Frappe's desk reads numbers; text that is no number changes nothing.
     setFromValue(value: string) {
-      this.fromValue = Math.max(safeParseFloat(value), 0);
+      const number = parseNumber(value, this.fyo);
+      if (number !== null) {
+        this.fromValue = Math.max(number, 0);
+      }
     },
     swap() {
       this.isSwapped = !this.isSwapped;
     },
     rightChange(e: Event) {
-      let value: string | number = 1;
-      if (e.target instanceof HTMLInputElement) {
-        value = e.target.value;
+      if (!(e.target instanceof HTMLInputElement)) {
+        return;
       }
 
-      value = safeParseFloat(value);
+      const value = parseNumber(e.target.value, this.fyo);
+      if (value === null) {
+        e.target.value = String(this.toValue);
+        return;
+      }
 
       let exchangeRate = value / this.fromValue;
       if (this.isSwapped) {

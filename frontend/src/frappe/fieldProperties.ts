@@ -76,13 +76,14 @@ function getOptionProperties(
   // A Color field's options are its palette.
   if (['Select', 'AutoComplete', 'Color'].includes(fieldtype)) {
     const labels = (field as OptionField).optionLabels ?? {};
-    const values = (docfield.options ?? '').split('\n').filter(Boolean);
+    const lines = (docfield.options ?? '').split('\n');
     return {
-      options: values.map((value) => ({
+      options: lines.filter(Boolean).map((value) => ({
         value,
         label: labels[value] ?? value,
       })),
       states: docfield.states,
+      allowEmpty: lines.includes(''),
     };
   }
 

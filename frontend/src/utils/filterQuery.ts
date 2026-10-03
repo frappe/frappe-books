@@ -1,7 +1,9 @@
 import { DateTime } from 'luxon';
 import { t } from 'fyo';
+import { parseNumber } from 'fyo/utils/format';
 import type { Field } from 'schemas/types';
 import type { Filter } from 'src/frappe/api';
+import { fyo } from 'src/initFyo';
 import { DOCSTATUS_FLAGS, toDocStatusFilter } from './filterFields';
 
 export const filterConditions = [
@@ -151,15 +153,13 @@ function parseFilterValue(
     throw new Error(t`Choose Yes or No for ${field.label}`);
   }
   if (numericTypes.has(field.fieldtype)) {
+    // Numbers are read as Frappe's desk reads them; Int takes the whole part, as its cint does.
     const number =
-      typeof value === 'boolean' || !String(value).trim() ? NaN : Number(value);
-    if (
-      !Number.isFinite(number) ||
-      (field.fieldtype === 'Int' && !Number.isInteger(number))
-    ) {
+      typeof value === 'boolean' ? null : parseNumber(String(value), fyo);
+    if (number === null) {
       throw new Error(t`Enter a valid number for ${field.label}`);
     }
-    return number;
+    return field.fieldtype === 'Int' ? Math.trunc(number) : number;
   }
   if (dateTypes.has(field.fieldtype)) {
     const text = String(value);

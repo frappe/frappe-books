@@ -19,7 +19,7 @@ class BooksSearch(SQLiteSearch):
 	# since then, such as a new customer's, into an older one.
 	BUILD_VOCABULARY = False
 
-	def __init__(self, doctypes: list[str] | None = None, db_name: str | None = None):
+	def __init__(self, doctypes: list[str] | None = None):
 		self.doctypes = doctypes
 		self.table_rows = {}
 		self.INDEX_SCHEMA = {}
@@ -27,7 +27,7 @@ class BooksSearch(SQLiteSearch):
 			doctype: {"fields": ["modified", *config["fields"], {"title": "name", "content": "name"}]}
 			for doctype, config in get_search_doctypes().items()
 		}
-		super().__init__(db_name)
+		super().__init__()
 
 	def get_search_filters(self) -> dict:
 		"""The requested indexed doctypes the user can read."""
@@ -124,7 +124,8 @@ def search(text: str, doctypes: list[str]) -> list[dict]:
 		return []
 
 	rows = get_rows(results)
-	found = [rows[key] for key in ((result["doctype"], result["name"]) for result in results) if key in rows]
+	keys = [(result["doctype"], result["name"]) for result in results]
+	found = [rows[key] for key in keys if key in rows]
 	return sorted(found, key=lambda row: row["docstatus"] == 2)
 
 

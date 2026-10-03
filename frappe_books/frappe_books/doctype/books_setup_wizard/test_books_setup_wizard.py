@@ -160,6 +160,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 		frappe.db.set_value("Installed Application", {"app_name": "frappe"}, "is_setup_complete", 0)
 		frappe.clear_document_cache("Installed Applications", "Installed Applications")
+		frappe.db.set_single_value("Books System Settings", "date_format", "MMM d, y")
 		self._wizard(country="Switzerland", currency="CHF", time_zone="Europe/Zurich").save()
 
 		with self.restored_system_settings():

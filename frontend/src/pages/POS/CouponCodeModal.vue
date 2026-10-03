@@ -25,21 +25,13 @@
         <p class="text-sm text-ink-gray-5">{{ t`Applied` }}</p>
         <!-- MobileFilterChip's shape; its name says "filter". -->
         <div v-if="isMobile" class="flex flex-wrap gap-2">
-          <FrappeButton
+          <MobileFilterChip
             v-for="coupon in appliedCoupons as AppliedCouponCode[]"
             :key="coupon.coupons"
-            size="md"
-            :label="t`Remove coupon ${coupon.coupons ?? ''}`"
+            :value="coupon.coupons ?? ''"
+            :remove-label="t`Remove coupon ${coupon.coupons ?? ''}`"
             @click="removeAppliedCoupon(coupon)"
-          >
-            {{ coupon.coupons }}
-            <template #suffix>
-              <span
-                class="lucide-x size-4 text-ink-gray-5"
-                aria-hidden="true"
-              />
-            </template>
-          </FrappeButton>
+          />
         </div>
         <FrappeScrollArea
           v-else
@@ -75,15 +67,19 @@
       </div>
     </div>
     <template #actions="{ size }">
-      <FrappeButton :size="size" class="min-w-24" @click="cancelApplyCouponCode">{{
-        t`Cancel`
-      }}</FrappeButton>
+      <FrappeButton
+        :size="size"
+        class="min-w-24"
+        @click="cancelApplyCouponCode"
+        >{{ t`Cancel` }}</FrappeButton
+      >
       <FrappeButton
         :size="size"
         class="min-w-24"
         variant="solid"
         @click="setCouponCode"
-        >{{ t`Done` }}</FrappeButton>
+        >{{ t`Done` }}</FrappeButton
+      >
     </template>
   </Modal>
 </template>
@@ -95,6 +91,7 @@ import { defineComponent, inject } from 'vue';
 import type { AppliedCouponCode } from 'models/invoices/AppliedCouponCode';
 import { getField } from 'src/frappe/registry';
 import Link from 'src/components/Controls/Link.vue';
+import MobileFilterChip from 'src/mobile/MobileFilterChip.vue';
 import { Field } from 'schemas/types';
 import {
   Button as FrappeButton,
@@ -110,6 +107,7 @@ export default defineComponent({
     Modal,
     Link,
     FrappeButton,
+    MobileFilterChip,
     FrappeErrorMessage,
     FrappeScrollArea,
   },

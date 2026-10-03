@@ -256,6 +256,20 @@ test('a cart row in boxes shows and takes its rate per box', async ({
   });
 });
 
+test('the transfer quantity keypad is titled as its cart field', async ({
+  page,
+}) => {
+  await page.evaluate(() => (window as any).posFixture.fillBoxRow());
+  await page.getByRole('button', { name: /^Organic Assam Tea/ }).click();
+  await page
+    .getByRole('spinbutton', { name: 'Transfer Quantity', exact: true })
+    .click();
+
+  await expect(
+    page.getByRole('dialog', { name: 'Transfer Quantity', exact: true })
+  ).toBeVisible();
+});
+
 for (const modern of [true, false]) {
   test(`${modern ? 'Modern' : 'Classic'} cart rows step quantities and edit ${modern ? 'with the keypad' : 'inline'}`, async ({
     page,

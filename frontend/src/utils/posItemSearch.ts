@@ -1,7 +1,9 @@
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
-import { POSItem } from 'src/components/POS/types';
+import { ItemQtyMap, POSItem } from 'src/components/POS/types';
 import { getList, type Filter } from 'src/frappe/api';
+import { fyo } from 'src/initFyo';
 import { fuzzyMatch } from 'src/utils';
+import { POS_ITEM_FIELDS, toPOSItem } from 'src/utils/pos';
 
 type POSItemSearchRecord = Pick<POSItem, 'name' | 'itemCode' | 'barcode'>;
 export type ScannableItem = POSItemSearchRecord & Pick<POSItem, 'unit'>;
@@ -24,14 +26,33 @@ type POSItemSearchMatch = {
 const SCANNED_FIELDS = ['name', 'item_code', 'barcode'];
 
 /**
+ * The item a scanned or typed code names among all items, whatever a list
+ * shows, with the quantity a scale barcode carries.
+ */
+export async function getScannedItem(
+  code: string,
+  itemQtyMap: ItemQtyMap = {}
+): Promise<{ item: POSItem; quantity: number } | undefined> {
+  const scannedCode = code.trim();
+  if (!scannedCode) {
+    return;
+  }
+
+  const settings = fyo.singles.POSSettings;
+  const items = await getScannableItems(scannedCode, settings, itemQtyMap);
+  return findScannedPOSItem(items, scannedCode, settings);
+}
+
+/**
  * The items a scanned code, or the item code in a scale barcode, may name:
  * those whose name, item code or barcode is the code in any case.
  * `findScannedPOSItem` picks the item among them.
  */
-export async function getScannableItems(
+async function getScannableItems(
   code: string,
-  settings?: BarcodeSettings
-): Promise<ScannableItem[]> {
+  settings: BarcodeSettings | undefined,
+  itemQtyMap: ItemQtyMap
+): Promise<POSItem[]> {
   const codes = [code, parseWeightBarcode(code, settings)?.itemCode];
   const orFilters = codes
     .filter((value): value is string => !!value)
@@ -39,17 +60,12 @@ export async function getScannableItems(
       SCANNED_FIELDS.map((field): Filter => [field, 'like', value])
     );
   const items = await getList('Books Item', {
-    fields: [...SCANNED_FIELDS, 'unit'],
+    fields: POS_ITEM_FIELDS,
     orFilters,
     orderBy: 'creation desc',
     limit: 0,
   });
-  return items.map((item) => ({
-    name: item.name as string,
-    itemCode: item.item_code as string,
-    barcode: item.barcode as string,
-    unit: item.unit as string,
-  }));
+  return items.map((item) => toPOSItem(item, itemQtyMap));
 }
 
 export function filterPOSItems<T extends POSItemSearchRecord>(

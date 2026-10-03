@@ -283,7 +283,7 @@ import {
   ItemQtyMap,
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
+import { filterPOSItems, getScannedItem } from 'src/utils/posItemSearch';
 
 const COMPONENT_NAME = 'POS';
 const PAY_POS_INVOICE =
@@ -603,25 +603,21 @@ export default defineComponent({
     async handleItemSearch(searchTerm: string | null, addItem = false) {
       this.itemSearchTerm = searchTerm ?? '';
       const scanned =
-        addItem &&
-        findScannedPOSItem(
-          this.items as POSItem[],
-          this.itemSearchTerm,
-          fyo.singles.POSSettings
-        );
+        addItem && (await getScannedItem(this.itemSearchTerm, this.itemQtyMap));
       if (scanned) {
         await this.addItem(scanned.item, scanned.quantity);
         this.itemSearchTerm = '';
       }
     },
 
-    isModalOpen() {
-      for (const modal of modalNames) {
-        if (modal && this[`open${modal}Modal`]) {
-          this[`open${modal}Modal`] = false;
-          return `open${modal}Modal`;
-        }
+    /** Closes the first open modal; false when none was open. */
+    closeOpenModal(): boolean {
+      const modal = modalNames.find((name) => this[`open${name}Modal`]);
+      if (modal) {
+        this[`open${modal}Modal`] = false;
       }
+
+      return !!modal;
     },
     setShortcuts() {
       this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyS'], async () => {
@@ -646,9 +642,7 @@ export default defineComponent({
       });
 
       this.shortcuts?.pmodShift.set(COMPONENT_NAME, ['Backspace'], async () => {
-        const modalStatus = this.isModalOpen();
-
-        if (!modalStatus) {
+        if (!this.closeOpenModal()) {
           await this.clearValues();
         }
       });
@@ -660,10 +654,8 @@ export default defineComponent({
       });
 
       this.shortcuts?.pmodShift.set(COMPONENT_NAME, ['KeyS'], async () => {
-        const modalStatus = this.isModalOpen();
-
         if (
-          !modalStatus &&
+          !this.hasAnyOpenModal() &&
           !this.sinvDoc.isSubmitted &&
           this.sinvDoc.party &&
           this.sinvDoc.items?.length

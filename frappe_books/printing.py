@@ -12,6 +12,7 @@ from babel.numbers import parse_pattern
 from frappe import _
 from frappe.custom.doctype.property_setter.property_setter import delete_property_setter, make_property_setter
 from frappe.model import no_value_fields, table_fields
+from frappe.model.meta import get_field_precision
 from frappe.utils import flt, formatdate, money_in_words
 from frappe.www.printview import get_print_style, get_rendered_template
 from jinja2 import TemplateError
@@ -44,22 +45,32 @@ def books_format(value, fieldtype: str, currency: str | None = None) -> str:
 	if fieldtype == "Currency":
 		return format_amount(value, currency or company_currency(), settings)
 	if fieldtype == "Float":
-		return f"{flt(value):.{settings.display_precision}f}"
+		return format_float(value, settings)
 	if fieldtype == "Date":
 		return formatdate(value, settings.date_format)
 	return str(value)
 
 
 def format_amount(value, currency: str, settings) -> str:
-	"""The currency symbol, then the number grouped by the Books locale."""
+	"""The currency symbol, then the number to the display precision."""
+	number = format_number(value, settings.display_precision, settings)
+	symbol = frappe.db.get_value("Currency", currency, "symbol", cache=True)
+	return f"{symbol} {number}" if symbol else number
+
+
+def format_float(value, settings) -> str:
+	"""Desk's read-only Float: Frappe's float precision, no decimals for a whole number."""
+	precision = 0 if flt(value) % 1 == 0 else get_field_precision(frappe._dict(fieldtype="Float"))
+	return format_number(value, precision, settings)
+
+
+def format_number(value, precision: int, settings) -> str:
+	"""The number to `precision` decimals, grouped by the Books locale."""
 	locale = Locale.parse(settings.locale, sep="-")
-	precision = settings.display_precision
 	pattern = parse_pattern(locale.decimal_formats[None])
 	pattern.frac_prec = (precision, precision)
 	# The Books app rounds half away from zero, where babel rounds half to even.
-	number = pattern.apply(as_decimal(value).quantize(as_decimal(10) ** -precision, ROUND_HALF_UP), locale)
-	symbol = frappe.db.get_value("Currency", currency, "symbol", cache=True)
-	return f"{symbol} {number}" if symbol else number
+	return pattern.apply(as_decimal(value).quantize(as_decimal(10) ** -precision, ROUND_HALF_UP), locale)
 
 
 def get_print_totals(doc) -> dict[str, Any]:

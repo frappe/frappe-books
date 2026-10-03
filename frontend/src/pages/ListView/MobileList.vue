@@ -60,7 +60,7 @@
       </div>
     </template>
 
-    <MobileEmptyState
+    <EmptyState
       v-else
       class="flex-1 py-16"
       :icon="isFiltered ? 'lucide-search-x' : 'lucide-inbox'"
@@ -84,7 +84,7 @@
         :label="t`Make Entry`"
         @click="$emit('makeNewDoc')"
       />
-    </MobileEmptyState>
+    </EmptyState>
   </MobilePullToRefresh>
 </template>
 <script lang="ts">
@@ -95,7 +95,7 @@ import {
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
 import type { RenderData } from 'fyo/model/types';
-import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import MobilePullToRefresh from 'src/mobile/MobilePullToRefresh.vue';
 import { defineComponent, type PropType } from 'vue';
 import type { ListColumn } from './listColumns';
@@ -110,7 +110,7 @@ export default defineComponent({
     FrappeListCell,
     FrappeListRow,
     FrappeSkeleton,
-    MobileEmptyState,
+    EmptyState,
     MobileListRow,
     MobilePullToRefresh,
   },

@@ -35,7 +35,7 @@
     </div>
 
     <MobileReportSkeleton v-if="loading" v-bind="skeleton" />
-    <MobileEmptyState
+    <EmptyState
       v-else-if="isEmpty"
       class="flex-1 pb-28 pt-8"
       :icon="filters.hasChanges ? 'lucide-search-x' : 'lucide-inbox'"
@@ -51,7 +51,7 @@
         :label="t`Clear filters`"
         @click="emit('clear-filters')"
       />
-    </MobileEmptyState>
+    </EmptyState>
     <MobileReportTree
       v-else-if="tree"
       :rows="treeRows"
@@ -88,7 +88,7 @@ import { useLocalStorage } from '@vueuse/core';
 import { Button as FrappeButton } from 'frappe-ui';
 import type { Report } from 'reports/Report';
 import type { ReportRow } from 'reports/types';
-import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import MobileFilterChip from 'src/mobile/MobileFilterChip.vue';
 import MobileFiltersButton from 'src/mobile/MobileFiltersButton.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';

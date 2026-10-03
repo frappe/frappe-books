@@ -108,7 +108,7 @@
         />
       </template>
     </div>
-    <MobileEmptyState
+    <EmptyState
       v-else-if="resultsQuery"
       class="flex-1 pb-40 pt-8"
       icon="lucide-search-x"
@@ -121,7 +121,7 @@
         :label="t`Reset filters`"
         @click="resetSearchFilters"
       />
-    </MobileEmptyState>
+    </EmptyState>
 
     <SearchFilterSheet
       v-model:open="isFilterSheetOpen"
@@ -162,7 +162,7 @@ import {
 } from 'vue';
 import { useRouter } from 'vue-router';
 import { isDesktopOnly } from '../availability';
-import MobileEmptyState from '../MobileEmptyState.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import SearchFilterSheet from './SearchFilterSheet.vue';
 
 type SearchItem = SearchItems[number];

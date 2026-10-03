@@ -76,7 +76,7 @@
         />
       </button>
     </div>
-    <MobileEmptyState
+    <EmptyState
       v-else
       class="flex-1 pb-16"
       :icon="searchTerm ? 'lucide-search-x' : 'lucide-package'"
@@ -130,7 +130,7 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { POSItem } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
-import MobileEmptyState from 'src/mobile/MobileEmptyState.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { getItemInitials } from 'src/utils/pos';

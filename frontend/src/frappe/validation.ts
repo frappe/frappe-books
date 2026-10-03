@@ -3,7 +3,7 @@ import { getOptionList } from 'fyo/utils';
 import { ValidationError, ValueError } from 'fyo/utils/errors';
 import { t } from 'fyo/utils/translation';
 import { OptionField } from 'schemas/types';
-import type { FrappeDoc } from 'src/frappe/document';
+import type { FrappeDoc } from './document';
 
 // Frappe checks Data fields with the Email and Phone options by these patterns.
 const FRAPPE_EMAIL =
@@ -33,7 +33,12 @@ export function validatePhoneNumber(value: DocValue) {
   }
 }
 
-export function validateOptions(field: OptionField, value: string, doc: FrappeDoc) {
+/** Refuses a value that is not one of the field's options, unless the field takes others. */
+export function validateOptions(
+  field: OptionField,
+  value: string,
+  doc: FrappeDoc
+) {
   const options = getOptionList(field, doc);
   if (!options.length) {
     return;

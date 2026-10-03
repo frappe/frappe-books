@@ -4,8 +4,9 @@ import { isPesa } from 'fyo/utils';
 import { isEqual } from 'lodash';
 import { Field, FieldType, FieldTypeEnum } from 'schemas/types';
 import { getIsNullOrUndef } from 'utils';
-import type { FrappeDoc } from 'src/frappe/document';
+import type { FrappeDoc } from './document';
 
+/** Whether two values of a field are equal: amounts by value, dates by time. */
 export function areDocValuesEqual(
   dvOne: DocValue | FrappeDoc[],
   dvTwo: DocValue | FrappeDoc[]
@@ -36,6 +37,7 @@ export function getFieldDefault(field: Field): DocValue | undefined {
   return field.default as DocValue | undefined;
 }
 
+/** The value a field of the type starts with when it has no default. */
 export function getPreDefaultValues(
   fieldtype: FieldType,
   fyo: Fyo
@@ -56,6 +58,7 @@ export function getPreDefaultValues(
   }
 }
 
+/** Whether a value is set: a nonzero amount, a table with rows. */
 export function isDocValueTruthy(docValue: DocValue | FrappeDoc[]) {
   if (isPesa(docValue)) {
     return !docValue.isZero();
@@ -68,6 +71,7 @@ export function isDocValueTruthy(docValue: DocValue | FrappeDoc[]) {
   return !!docValue;
 }
 
+/** Numbers the rows by their place in the table. */
 export function setChildDocIdx(childDocs: FrappeDoc[]) {
   childDocs.forEach((cd, idx) => {
     cd.idx = idx;

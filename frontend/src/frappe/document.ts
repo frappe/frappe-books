@@ -6,7 +6,7 @@ import {
   getPreDefaultValues,
   isDocValueTruthy,
   setChildDocIdx,
-} from 'fyo/model/helpers';
+} from './docValues';
 import type {
   Action,
   ChangeArg,
@@ -22,7 +22,7 @@ import type {
   TreeViewSettings,
   ValidationMap,
 } from 'fyo/model/types';
-import { validateOptions } from 'fyo/model/validationFunction';
+import { validateOptions } from './validation';
 import {
   ConflictError,
   MandatoryError,

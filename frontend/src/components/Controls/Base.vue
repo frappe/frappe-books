@@ -36,7 +36,9 @@
     @input="onInput"
   >
     <template v-if="inlineLabel" #prefix>
-      <span class="text-ink-gray-5">{{ df.label }}</span>
+      <span ref="inlineLabel" class="text-base text-ink-gray-5">{{
+        df.label
+      }}</span>
     </template>
     <template v-if="isBarcodeField" #suffix>
       <!-- Pulled toward the edge so the 32px button sits 4px in, as from top and bottom. -->
@@ -57,7 +59,7 @@ import { isNumeric } from 'src/utils';
 import { evaluateReadOnly, evaluateRequired } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
 import { getIsNullOrUndef } from 'utils/index';
-import { defineComponent, PropType } from 'vue';
+import { defineComponent, markRaw, PropType } from 'vue';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
@@ -98,6 +100,13 @@ export default defineComponent({
     inlineLabel: Boolean,
   },
   emits: ['focus', 'input', 'change'],
+  data() {
+    return {
+      /** Room the input leaves for the inline label, measured as its font loads. */
+      inlineLabelPadding: '',
+      labelObserver: null as ResizeObserver | null,
+    };
+  },
   computed: {
     isMobile(): boolean {
       return isMobile.value;
@@ -137,7 +146,8 @@ export default defineComponent({
       if (this.inputClass) {
         classes.push(this.inputClass);
       }
-      if (this.textRight ?? isNumeric(this.df)) {
+      // An inline label keeps the value beside it.
+      if ((this.textRight ?? isNumeric(this.df)) && !this.inlineLabel) {
         // TextInput can't align its text (frappe/frappe-ui#1256).
         classes.push('[&_input]:text-end');
       }
@@ -169,8 +179,10 @@ export default defineComponent({
         return this.containerStyles;
       }
 
-      const padding = `calc(${this.df.label.length}ch + 1rem)`;
-      return { ...this.containerStyles, '--inline-label-padding': padding };
+      return {
+        ...this.containerStyles,
+        '--inline-label-padding': this.inlineLabelPadding,
+      };
     },
     doc(): FrappeDoc | undefined {
       const doc = this.injectedDoc;
@@ -222,6 +234,24 @@ export default defineComponent({
 
       return evaluateRequired(this.df, this.doc);
     },
+  },
+  mounted() {
+    // TextInput's prefix is absolutely placed, so the input pads by the label's width.
+    const label = this.$refs.inlineLabel as HTMLElement | undefined;
+    const prefix = label?.parentElement;
+    if (!label || !prefix) {
+      return;
+    }
+
+    this.labelObserver = markRaw(
+      new ResizeObserver(() => {
+        this.inlineLabelPadding = `${prefix.offsetWidth + 8}px`;
+      })
+    );
+    this.labelObserver.observe(label);
+  },
+  beforeUnmount() {
+    this.labelObserver?.disconnect();
   },
   methods: {
     onBlur(e: FocusEvent) {

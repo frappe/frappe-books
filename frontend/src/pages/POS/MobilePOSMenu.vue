@@ -21,10 +21,11 @@ import {
   Dropdown as FrappeDropdown,
   type DropdownOptions,
 } from 'frappe-ui';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModalName } from 'src/components/POS/types';
 import { getCount, type Filter } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
-import { computed, ref, watch } from 'vue';
+import { computed, inject, ref, watch, type Ref } from 'vue';
 
 type MenuAction = {
   name: ModalName;
@@ -44,6 +45,7 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [name: ModalName] }>();
 const open = defineModel<boolean>('open', { required: true });
 
+const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
 const savedCount = ref(0);
 
 watch(open, async (isOpen) => {
@@ -58,6 +60,8 @@ watch(open, async (isOpen) => {
 
 const actions = computed(() => {
   const settings = fyo.singles.AccountingSettings;
+  // A submitted sale's totals are final.
+  const isSubmitted = sinvDoc.value.isSubmitted;
   const all: MenuAction[] = [
     {
       name: 'SavedInvoice',
@@ -75,20 +79,23 @@ const actions = computed(() => {
       name: 'LoyaltyProgram',
       label: t`Loyalty Program`,
       icon: 'lucide-gift',
-      hidden: !settings?.enable_loyalty_program || !props.loyaltyProgram,
+      hidden:
+        !settings?.enable_loyalty_program ||
+        !props.loyaltyProgram ||
+        isSubmitted,
     },
     {
       name: 'CouponCode',
       label: t`Coupon Code`,
       icon: 'lucide-ticket-percent',
       count: props.appliedCouponsCount,
-      hidden: !settings?.enable_coupon_code,
+      hidden: !settings?.enable_coupon_code || isSubmitted,
     },
     {
       name: 'PriceList',
       label: t`Price List`,
       icon: 'lucide-tags',
-      hidden: !settings?.enable_price_list,
+      hidden: !settings?.enable_price_list || isSubmitted,
     },
     {
       name: 'ItemEnquiry',

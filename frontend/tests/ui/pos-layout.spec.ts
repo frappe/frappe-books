@@ -217,6 +217,36 @@ test('a submitted invoice from Held offers only its payment', async ({
   await expect(dialog.getByRole('button', { name: 'Submit unpaid' })).toHaveCount(0);
 });
 
+test('a submitted invoice in the cart offers nothing that changes its totals', async ({
+  page,
+}) => {
+  await page.evaluate(() => (window as any).posFixture.openSavedInvoice(1));
+  const cart = page.getByRole('complementary', { name: 'Cart' });
+  await expect(cart.getByRole('button', { name: /^Pay / })).toBeVisible();
+  for (const name of [
+    'Coupon',
+    'Loyalty',
+    'Price list',
+    'Hold',
+    'Increase quantity',
+    'Decrease quantity',
+    'Remove item',
+  ]) {
+    await expect(cart.getByRole('button', { name, exact: true })).toHaveCount(0);
+  }
+  await expect(cart.getByRole('combobox')).toHaveCount(0);
+
+  await cart.getByRole('button', { name: /^Organic Assam Tea/ }).click();
+  await expect(
+    cart.getByRole('textbox', { name: 'Quantity', exact: true })
+  ).toBeDisabled();
+  await expect(cart.getByText('Tap a number to use the keypad.')).toBeHidden();
+  for (const key of ['Shift+C', 'Shift+L', 'Shift+P']) {
+    await page.keyboard.press(key);
+  }
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
 test('cart values fit and expanded item fields open a usable keypad', async ({
   page,
 }) => {

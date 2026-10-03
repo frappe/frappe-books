@@ -109,11 +109,12 @@ async function mount() {
       shift.open = false;
       pos.isPosShiftOpen = false;
     },
-    /** Loads a saved, unsubmitted invoice as the Saved Invoices sheet does. */
-    openSavedInvoice() {
+    /** Loads a saved invoice, unsubmitted unless `docstatus` says, as the Invoices sheet does. */
+    openSavedInvoice(docstatus = 0) {
       const invoice = newFrappeDoc('SalesInvoice', {
         name: 'SINV-SAVED',
         is_pos: true,
+        docstatus,
         items: [{ item: items[0].name, quantity: 1, transfer_quantity: 1 }],
       });
       invoice._notInserted = false;

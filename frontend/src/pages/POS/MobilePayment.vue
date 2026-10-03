@@ -238,10 +238,16 @@ const transferClearanceDate = inject('transferClearanceDate') as Ref<
 >;
 
 const settings = fyo.singles.AccountingSettings;
+// A submitted sale's totals are final.
 const showLoyalty = computed(
-  () => !!settings?.enable_loyalty_program && !!props.loyaltyProgram
+  () =>
+    !!settings?.enable_loyalty_program &&
+    !!props.loyaltyProgram &&
+    !sinvDoc.value.isSubmitted
 );
-const showCoupon = computed(() => !!settings?.enable_coupon_code);
+const showCoupon = computed(
+  () => !!settings?.enable_coupon_code && !sinvDoc.value.isSubmitted
+);
 
 const summary = computed(() => {
   const quantity = getTotalQuantity(sinvDoc.value.items ?? []);

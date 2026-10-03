@@ -27,6 +27,7 @@
       :class="isExpanded ? 'bg-surface-gray-3' : 'bg-surface-gray-2'"
     >
       <FrappeButton
+        v-if="!isSaleSubmitted"
         icon="lucide-minus"
         variant="ghost"
         size="xs"
@@ -39,6 +40,7 @@
         {{ displayQuantity }}
       </span>
       <FrappeButton
+        v-if="!isSaleSubmitted"
         icon="lucide-plus"
         variant="ghost"
         size="xs"
@@ -57,6 +59,7 @@
   </FrappeListCell>
   <FrappeListCell>
     <FrappeButton
+      v-if="!isSaleSubmitted"
       icon="lucide-x"
       variant="ghost"
       size="xs"
@@ -190,7 +193,7 @@
         :value="row.batch"
         :border="true"
         :show-label="true"
-        :read-only="false"
+        :read-only="isSaleSubmitted"
         @change="(value: string) => row.set('batch', value)"
       />
     </div>
@@ -223,11 +226,15 @@
         :show-label="true"
         :border="true"
         :required="hasSerialNumber"
+        :read-only="isSaleSubmitted"
         @change="(value: string) => setSerialNumber(value)"
       />
     </div>
 
-    <p v-if="!isClassic" class="col-span-2 text-xs text-ink-gray-5">
+    <p
+      v-if="!isClassic && !isSaleSubmitted"
+      class="col-span-2 text-xs text-ink-gray-5"
+    >
       {{ t`Tap a number to use the keypad.` }}
     </p>
   </div>
@@ -310,8 +317,11 @@ export default defineComponent({
     isUOMConversionEnabled(): boolean {
       return !!fyo.singles.InventorySettings?.enable_uom_conversions;
     },
+    isSaleSubmitted(): boolean {
+      return !!this.row.parentdoc?.isSubmitted;
+    },
     isReadOnly(): boolean {
-      return !!this.row.is_free_item;
+      return !!this.row.is_free_item || this.isSaleSubmitted;
     },
     hasBatch(): boolean {
       return this.itemSettings.hasBatch;

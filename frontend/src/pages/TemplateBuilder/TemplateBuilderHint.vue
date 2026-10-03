@@ -11,11 +11,7 @@
       </span>
     </template>
     <template #item-suffix="{ node }">
-      <FrappeBadge
-        v-if="node.children"
-        :theme="node.isArray ? 'blue' : 'red'"
-        size="sm"
-      >
+      <FrappeBadge v-if="node.children" size="sm">
         {{ node.isArray ? t`Array` : t`Object` }}
       </FrappeBadge>
       <span v-else class="truncate text-sm-semibold text-ink-gray-8">

@@ -67,7 +67,6 @@ test("a table's rows use the row model the parent names, with its presentation",
   const voucher = newFrappeDoc('Voucher');
   await voucher.append('lines', { account: 'Cash' });
   assert.ok(voucher.lines[0] instanceof VoucherLine);
-  clearTimeout(voucher._previewTimer);
 });
 
 test('a doctype a Frappe-backed document holds is shown by its schema', () => {

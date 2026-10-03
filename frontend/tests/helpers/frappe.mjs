@@ -14,7 +14,7 @@ await build({
   absWorkingDir: frontend,
   stdin: {
     contents: `
-      export { FrappeDoc } from './src/frappe/document';
+      export { FrappeDoc, afterPause, setPreviewScheduler } from './src/frappe/document';
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
       export { getFrappeDoc, getFrappeDocOrNew, getMappedFrappeDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
@@ -117,6 +117,8 @@ globalThis.window = {
 
 export const {
   FrappeDoc,
+  afterPause,
+  setPreviewScheduler,
   registerFrappeModels,
   isFrappeBacked,
   getDocType,
@@ -194,6 +196,13 @@ export const {
   ListView,
   router,
 } = createRequire(import.meta.url)(output);
+
+/** Runs no scheduled preview itself, so none reaches a later test's stub; `doc.whenFilled()` runs it. */
+export function manualScheduler() {
+  return () => undefined;
+}
+
+setPreviewScheduler(manualScheduler);
 
 /**
  * Answers every request with `respond({ method, path, params, body })`, which

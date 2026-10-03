@@ -22,7 +22,6 @@ test('the invoice form keeps the POS payment rows hidden, and saves them', () =>
     is_pos: true,
     payments: [{ payment_method: 'Cash', amount: fyo.pesa(150) }],
   });
-  clearTimeout(invoice._previewTimer);
   const field = getSchema('SalesInvoice').fields.find(
     ({ fieldname }) => fieldname === 'payments'
   );

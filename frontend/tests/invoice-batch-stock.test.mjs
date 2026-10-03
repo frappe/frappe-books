@@ -42,7 +42,6 @@ function makeRow(values = {}) {
     ...values,
     items: [{ item: 'Pen', quantity: 3 }],
   });
-  clearTimeout(invoice._previewTimer);
   requests.length = 0;
   return invoice.items[0];
 }
@@ -105,5 +104,4 @@ test('a Qty in another unit checks its batch in stock units', async () => {
     /Batch B1 only has 2 quantity available but 4 is required/
   );
   await row.set('qty', 1);
-  clearTimeout(row.parentdoc._previewTimer);
 });

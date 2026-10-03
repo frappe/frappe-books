@@ -140,7 +140,6 @@ test('a closing shift shows the server expected amounts and keeps its rows', asy
   const closing = newFrappeDoc('POSClosingShift', {
     closing_cash: [{ denomination: fyo.pesa(100), count: 3 }],
   });
-  clearTimeout(closing._previewTimer);
   await closing.preview();
   assert.equal(closing.opening_shift, 'SHIFT-1');
 
@@ -158,7 +157,6 @@ test('an opening shift takes its cash amount from the server preview', async () 
     opening_cash: [{ denomination: fyo.pesa(50), count: 3 }],
     opening_amounts: [{ payment_method: 'Cash', amount: fyo.pesa(0) }],
   });
-  clearTimeout(opening._previewTimer);
   requests.length = 0;
   await opening.preview();
 

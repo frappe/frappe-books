@@ -106,7 +106,6 @@ test('saving and deleting customizations refresh open documents without losing e
 
 test('customizing a table refreshes the rows of open documents', async () => {
   const invoice = newFrappeDoc('SalesInvoice');
-  clearTimeout(invoice._previewTimer);
   invoice.push('items', { item: 'Test Item', quantity: 2 });
   const [row] = invoice.items;
 

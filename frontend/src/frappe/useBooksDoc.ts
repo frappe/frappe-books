@@ -16,7 +16,7 @@ export function useBooksDoc() {
     doc.value = loaded;
     // A new document shows what the server fills, like its number series and defaults, from the start.
     if (loaded.notInserted) {
-      loaded.schedulePreview(0);
+      loaded.startPreview();
     }
   }
 

@@ -27,9 +27,7 @@ const field = (fieldname) =>
   schema.fields.find((field) => field.fieldname === fieldname);
 
 function newAccount(values) {
-  const account = newFrappeDoc('Account', values);
-  clearTimeout(account._previewTimer);
-  return account;
+  return newFrappeDoc('Account', values);
 }
 
 function savedAccount(values) {

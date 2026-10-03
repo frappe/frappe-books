@@ -75,10 +75,9 @@ test('references and attachments hide on a submitted entry without them', () => 
   assert.equal(hidden('reference_number'), false);
 });
 
-test('a row without amounts takes what balances the entry, as Books did', async (t) => {
+test('a row without amounts takes what balances the entry, as Books did', async () => {
   stubFrappe(({ body }) => ({ docs: [body.document] }));
   const entry = newFrappeDoc('JournalEntry');
-  t.after(() => clearTimeout(entry._previewTimer));
   await entry.append('accounts', { account: 'Cash' });
   await entry.accounts[0].set('debit', fyo.pesa(100));
   await entry.append('accounts', { account: 'Capital' });
@@ -92,10 +91,9 @@ test('a row without amounts takes what balances the entry, as Books did', async 
   assert.equal(entry.accounts[2].debit.float, 0);
 });
 
-test('a row amount cleared by text that is no number still balances the entry', async (t) => {
+test('a row amount cleared by text that is no number still balances the entry', async () => {
   stubFrappe(({ body }) => ({ docs: [body.document] }));
   const entry = newFrappeDoc('JournalEntry');
-  t.after(() => clearTimeout(entry._previewTimer));
   await entry.append('accounts', { account: 'Cash' });
   await entry.accounts[0].set('debit', fyo.pesa(100));
   await entry.append('accounts', { account: 'Capital' });

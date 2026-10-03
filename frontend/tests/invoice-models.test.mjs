@@ -46,9 +46,7 @@ function getLayout(doc) {
 }
 
 function newInvoice(schemaName, values = {}) {
-  const doc = newFrappeDoc(schemaName, values);
-  clearTimeout(doc._previewTimer);
-  return doc;
+  return newFrappeDoc(schemaName, values);
 }
 
 function setSettings({ accounting = {}, inventory = {}, defaults = {} } = {}) {
@@ -275,7 +273,6 @@ test('row edits ask the server for the price, details and quantities that follow
   for (const fieldname of ['rate', 'account', 'tax', 'description', 'unit']) {
     assert.equal(fieldname in sent(), false, fieldname);
   }
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a row in another unit shows and takes its rate per that unit', async () => {
@@ -308,7 +305,6 @@ test('a row in another unit shows and takes its rate per that unit', async () =>
   assert.equal(sent.rate, undefined);
   assert.equal(Number(sent.transfer_rate), 3000);
   assert.equal(row.is_manual_rate, true);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a row rate cleared by text that is no number is refused, as the server requires a rate', async () => {
@@ -323,7 +319,6 @@ test('a row rate cleared by text that is no number is refused, as the server req
 
   await assert.rejects(row.set('transfer_rate', null), /Rate is required/);
   assert.equal(row.transfer_rate.float, 62);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a new item on a purchase row leaves its batch for the server to name', async () => {
@@ -333,7 +328,6 @@ test('a new item on a purchase row leaves its batch for the server to name', asy
   );
   for (const invoice of invoices) {
     await invoice.items[0].set('item', 'Ink');
-    clearTimeout(invoice._previewTimer);
   }
 
   assert.deepEqual(
@@ -360,7 +354,6 @@ test('a scanned item is priced by the server, and scanning it again adds to its 
     invoice.items.map(({ item, quantity }) => [item, quantity]),
     [['Pen', 3]]
   );
-  clearTimeout(invoice._previewTimer);
 });
 
 test('an invoice from selected items leaves their pricing to the server', async () => {
@@ -375,7 +368,6 @@ test('an invoice from selected items leaves their pricing to the server', async 
 
   const name = decodeURIComponent(routes[0].split('/').at(-1));
   const invoice = await getFrappeDoc('SalesInvoice', name);
-  clearTimeout(invoice._previewTimer);
   const { items } = invoice.getMethodDocument({
     keepRowNames: true,
     clearServerFilled: true,
@@ -428,7 +420,6 @@ test('a new date fetches the exchange rate for it again', async () => {
   assert.equal('exchange_rate' in sent, false);
   assert.equal(sent.currency, 'USD');
   assert.equal('rate' in sent.items[0], false);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a return takes quantities back, however they are typed', async () => {
@@ -441,7 +432,6 @@ test('a return takes quantities back, however they are typed', async () => {
   assert.equal(row.quantity, -2);
   await row.set('transfer_quantity', 4);
   assert.deepEqual([row.transfer_quantity, row.qty], [-4, -4]);
-  clearTimeout(invoice._previewTimer);
 });
 
 test('a new party or price list prices rows again, except manual and free ones', async () => {
@@ -462,7 +452,6 @@ test('a new party or price list prices rows again, except manual and free ones',
     sent.items.map((row) => 'rate' in row),
     [false, true, true]
   );
-  clearTimeout(invoice._previewTimer);
 });
 
 test('amounts show in the party currency, base amounts in the company one', () => {
@@ -546,7 +535,6 @@ test('a new invoice from a filtered list takes the values users enter', async ()
 
   const name = decodeURIComponent(routes[0].split('/').at(-1));
   const invoice = await getFrappeDoc('SalesInvoice', name);
-  clearTimeout(invoice._previewTimer);
   assert.equal(invoice.party, 'Acme');
   assert.equal(invoice.docstatus, 0);
   assert.deepEqual(getNewDocValues('SalesInvoice', filters), {
@@ -696,7 +684,6 @@ test('a submitted quote makes a Frappe-backed sales invoice from its mapper', as
     'SalesInvoice',
     'make_sales_invoice'
   );
-  clearTimeout(invoice._previewTimer);
 
   assert.equal(
     requests[0].path,

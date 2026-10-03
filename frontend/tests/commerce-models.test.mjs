@@ -416,8 +416,7 @@ test('the price list form shows its item prices; the list shows its use', () => 
   assert.equal(usage.badge({ is_purchase: 1 }).label, 'Purchase');
 });
 
-test("a price list row takes its item's unit from the server preview", async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test("a price list row takes its item's unit from the server preview", async () => {
   respond = ({ path, body }) => {
     if (path !== '/api/v2/method/run_doc_method') {
       return { data: [] };
@@ -431,8 +430,8 @@ test("a price list row takes its item's unit from the server preview", async (t)
   await prices.append('price_list_item', { item: 'Sugar' });
   await prices.price_list_item[0].set('rate', fyo.pesa(5));
 
-  t.mock.timers.tick(300);
-  await waitFor(() => prices.price_list_item[0].unit === 'Kg');
+  await prices.whenFilled();
+  assert.equal(prices.price_list_item[0].unit, 'Kg');
   assert.equal(requests.at(-1).body.method, 'preview');
 });
 
@@ -474,7 +473,6 @@ test('a price list or pricing rule row takes the unit of each item it is given',
 
     await row.set('unit', 'Kg');
     await doc.preview();
-    clearTimeout(doc._previewTimer);
     assert.equal(row.unit, 'Kg');
     assert.deepEqual(sent, [null, 'Gram', null, 'Kg']);
   }
@@ -544,7 +542,6 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
     evaluateRequired(rule.fieldMap.price_discount_type, rule),
     false
   );
-  clearTimeout(rule._previewTimer);
 });
 
 test('pricing rule limits show the message /books showed at each field', async () => {
@@ -565,7 +562,6 @@ test('pricing rule limits show the message /books showed at each field', async (
   await assert.rejects(rule.set('valid_from', new Date('2026-02-01')), {
     message: 'Valid From Date should be less than Valid To Date.',
   });
-  clearTimeout(rule._previewTimer);
 });
 
 test('coupon and invoice links filter pricing rules and price lists by Frappe fieldnames', () => {
@@ -733,10 +729,3 @@ test('item enquiries list as before and are recorded through the REST API', asyn
   assert.equal(requests[0].body.similar_product, 'Pencil');
   assert.equal(enquiry.name, '0000000001');
 });
-
-async function waitFor(isDone) {
-  for (let tries = 0; tries < 50 && !isDone(); tries++) {
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-  assert.ok(isDone());
-}

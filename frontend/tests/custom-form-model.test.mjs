@@ -47,8 +47,12 @@ test('the Custom Form asks for a form type among the forms Books can customize',
     'Books Ledger Entry',
     'Books Stock Ledger Entry',
     'Books Loyalty Point Entry',
+    // Settings rows and other apps' doctypes, which the server refuses too.
+    'Books Default Cash Denominations',
+    'Currency',
+    'Country',
   ]) {
-    assert.equal(doctype in types, false);
+    assert.equal(doctype in types, false, doctype);
   }
 });
 

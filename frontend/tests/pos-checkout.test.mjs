@@ -66,7 +66,6 @@ function makeSale(values = {}) {
     outstanding_amount: fyo.pesa(500),
     ...values,
   });
-  clearTimeout(sale._previewTimer);
   return sale;
 }
 
@@ -133,6 +132,23 @@ test('a refund is due its total and gives no change', async () => {
   assert.equal(checkout.settlement, null);
 });
 
+/** Lets watchers run. */
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test('an amount still at what was due follows a coupon or points that change it', async () => {
+  const sale = makeSale();
+  const checkout = await startCheckout(sale);
+
+  sale.outstanding_amount = fyo.pesa(450);
+  await settle();
+  assert.equal(checkout.tender.amount.float, 450);
+
+  checkout.setAmount(fyo.pesa(1000));
+  sale.outstanding_amount = fyo.pesa(400);
+  await settle();
+  assert.equal(checkout.tender.amount.float, 1000);
+});
+
 test('a tender can pay once it has a method, an amount and what the method needs', async () => {
   const checkout = usePOSCheckout(() => makeSale());
   await checkout.start();
@@ -149,16 +165,16 @@ test('a tender can pay once it has a method, an amount and what the method needs
     requiresReferenceId: true,
     requiresClearanceDate: true,
   });
-  checkout.tender.reference_id = 'CHQ-77';
+  checkout.setReference('CHQ-77');
   assert.equal(checkout.canPay, false);
-  checkout.tender.clearance_date = new Date('2026-10-05T00:00:00Z');
+  checkout.setClearanceDate(new Date('2026-10-05T00:00:00Z'));
   assert.equal(checkout.canPay, true);
 });
 
 test('a method keeps only the payment details it needs', async () => {
   const checkout = await startCheckout(makeSale(), 'Cheque');
-  checkout.tender.reference_id = 'CHQ-77';
-  checkout.tender.clearance_date = new Date('2026-10-05T00:00:00Z');
+  checkout.setReference('CHQ-77');
+  checkout.setClearanceDate(new Date('2026-10-05T00:00:00Z'));
 
   checkout.selectMethod('Card');
   assert.deepEqual(
@@ -172,7 +188,7 @@ test('a method keeps only the payment details it needs', async () => {
 test('a draft sale is submitted with the tender as its payment row', async () => {
   const sale = makeSale();
   const checkout = await startCheckout(sale, 'Card');
-  checkout.tender.reference_id = 'TXN-9';
+  checkout.setReference('TXN-9');
   requests.length = 0;
 
   const { invoice, payments } = await checkout.checkout({ pay: true });
@@ -219,8 +235,8 @@ test('a failed payment lookup does not fail the checkout', async () => {
 test('a submitted sale is paid at the counter', async () => {
   const sale = markSubmitted(makeSale({ outstanding_amount: fyo.pesa(200) }));
   const checkout = await startCheckout(sale, 'Cheque');
-  checkout.tender.reference_id = 'CHQ-77';
-  checkout.tender.clearance_date = new Date('2026-10-05T12:00:00Z');
+  checkout.setReference('CHQ-77');
+  checkout.setClearanceDate(new Date('2026-10-05T12:00:00Z'));
   requests.length = 0;
 
   const { invoice, payments } = await checkout.checkout({ pay: true });
@@ -247,7 +263,7 @@ test('a reset tender starts again at what the next sale is due', async () => {
   const checkout = usePOSCheckout(() => sale.value);
   await checkout.start();
   checkout.selectMethod('Cheque');
-  checkout.tender.reference_id = 'CHQ-77';
+  checkout.setReference('CHQ-77');
 
   checkout.reset();
   assert.deepEqual(

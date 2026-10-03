@@ -4,7 +4,7 @@
 		<!-- Frappe keeps colour for state, so links are marked by the icon. -->
 		<button
 			v-if="linked"
-			class="-mx-2 flex min-h-9 max-w-full items-center gap-1.5 self-start rounded-4 px-2 text-start text-lg text-ink-gray-9 active:bg-surface-gray-2"
+			class="-mx-2 flex min-h-9 max-w-full items-center gap-1.5 self-start rounded-4 px-2 text-start text-lg text-ink-gray-8 active:bg-surface-gray-2"
 			@click="$emit('open')"
 		>
 			<span class="min-w-0 truncate">{{ displayText }}</span>

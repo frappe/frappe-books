@@ -31,16 +31,43 @@ function setLocale(locale) {
   fyo.currencyFormatter = undefined;
 }
 
-test('a currency field shows the number as Frappe desk formats it for input, and the bare number while focused', () => {
+/** An input element as the control's focus and blur handlers see it. */
+function getInput(value) {
+  globalThis.HTMLInputElement ??= class {};
+  return Object.assign(new HTMLInputElement(), {
+    value,
+    select() {
+      this.isSelected = true;
+    },
+  });
+}
+
+test('a currency field shows the number as Frappe desk formats it for input, also while focused', () => {
   setLocale('en-IN');
   const control = getControl(fyo.pesa(650000));
+  control.$emit = () => {};
 
   // Desk's format_for_input: the number format, without the currency symbol.
   assert.equal(control.displayValue, '6,50,000.00');
   assert.equal(getControl(null).displayValue, '');
 
-  control.isFocused = true;
-  assert.equal(control.displayValue, '650000.00');
+  // Desk keeps the formatted amount on focus and selects it.
+  const input = getInput(control.displayValue);
+  control.onFocus({ target: input });
+  assert.equal(input.isSelected, true);
+  assert.equal(control.displayValue, '6,50,000.00');
+});
+
+test('a blurred currency field shows its amount formatted again, as Desk does', () => {
+  setLocale('en-IN');
+  const control = getControl(fyo.pesa(6500));
+  const changes = [];
+  control.triggerChange = (value) => changes.push(value);
+
+  const input = getInput('6500');
+  control.onBlur({ target: input });
+  assert.deepEqual(changes, ['6500']);
+  assert.equal(input.value, '6,500.00');
 });
 
 test('a typed amount is read as Frappe desk reads it, and text that is no number clears the field', () => {

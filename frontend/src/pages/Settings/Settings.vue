@@ -1,16 +1,6 @@
 <template>
-  <div ref="mobileSettings" class="flex min-h-full flex-col">
-    <PageHeader :title="t`Settings`">
-      <template #mobile>
-        <FrappeButton
-          v-if="canSave"
-          variant="solid"
-          size="md"
-          :label="t`Save`"
-          @click="saveOnPhone"
-        />
-      </template>
-    </PageHeader>
+  <div ref="mobileSettings" class="flex min-h-full flex-col pb-10">
+    <PageHeader :title="t`Settings`" />
     <div
       v-if="tabOptions.length > 1"
       ref="mobileTabs"
@@ -51,6 +41,15 @@
         @click="isInstallSheetOpen = true"
       />
     </div>
+    <MobileFooter v-if="canSave">
+      <FrappeButton
+        class="flex-1"
+        size="lg"
+        variant="solid"
+        :label="t`Save`"
+        @click="saveOnPhone"
+      />
+    </MobileFooter>
   </div>
 </template>
 <script lang="ts">
@@ -66,6 +65,7 @@ import {
 import { ModelNameEnum } from 'models/types';
 import { Field } from 'schemas/types';
 import PageHeader from 'src/components/PageHeader.vue';
+import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { revealActiveTab } from 'src/mobile/revealActiveTab';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
@@ -80,6 +80,7 @@ export default defineComponent({
     FrappeButton,
     CommonFormSection,
     FrappeTabButtons,
+    MobileFooter,
     PageHeader,
   },
   provide() {

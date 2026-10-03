@@ -92,7 +92,7 @@ export default defineComponent({
       type: [null, Boolean] as PropType<boolean | null>,
       default: null,
     },
-    /** Phones mark a field red only once it has an error. */
+    /** Marks the field red. Desktop also marks empty required fields. */
     invalid: { type: Boolean, default: false },
     /** Names the value inside the control where no label is shown. */
     inlineLabel: Boolean,
@@ -145,9 +145,14 @@ export default defineComponent({
         // Inputs don't inherit tabular-nums from the wrapper.
         classes.push('[&_input]:tabular-nums');
       }
-      if (this.isMobile ? this.invalid : this.showMandatory) {
-        // TextInput's `error` shows a message, not a border (frappe/frappe-ui#1252).
-        classes.push('[&_[data-slot=control]]:border-outline-red-3');
+      if (this.invalid || (!this.isMobile && this.showMandatory)) {
+        // `error` shows a message, not a border (frappe/frappe-ui#1252).
+        // Select and Combobox put the class on their trigger without a label, on a wrapper with one.
+        classes.push(
+          '[&_[data-slot=control]]:border-outline-red-3',
+          '[&_[data-slot=trigger]]:border-outline-red-3',
+          'data-[slot=trigger]:border-outline-red-3'
+        );
       }
       return classes;
     },

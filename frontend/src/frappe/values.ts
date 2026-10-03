@@ -1,6 +1,7 @@
 import type { Fyo } from 'fyo';
 import { Converter } from 'fyo/utils/converter';
 import type { DocValue, DocValueMap } from 'fyo/core/types';
+import { ValueError } from 'fyo/utils/errors';
 import { DateTime } from 'luxon';
 import type { Field, RawValue, Schema } from 'schemas/types';
 import type { DocValues } from './api';
@@ -43,7 +44,7 @@ export function toDocValue(value: RawValue, field: Field, fyo: Fyo): DocValue {
   }
 
   if (isZonedDatetime(field) && typeof value === 'string' && value) {
-    return DateTime.fromSQL(value, { zone: getSystemZone() }).toJSDate();
+    return toSystemDate(value, field);
   }
 
   return Converter.toDocValue(value, field, fyo);
@@ -67,6 +68,20 @@ export function toIsoDatetime(value: unknown): string {
   const text = String(value);
   const datetime = DateTime.fromSQL(text, { zone: getSystemZone() });
   return `${text.replace(' ', 'T')}${datetime.toFormat('ZZ')}`;
+}
+
+/** Datetime text, as Frappe or a file holds it, read in the system time zone. */
+function toSystemDate(text: string, field: Field): Date {
+  const zone = { zone: getSystemZone() };
+  const sql = DateTime.fromSQL(text, zone);
+  const date = sql.isValid ? sql : DateTime.fromISO(text, zone);
+  if (!date.isValid) {
+    throw new ValueError(
+      `invalid datetime '${text}', field: ${field.fieldname}`
+    );
+  }
+
+  return date.toJSDate();
 }
 
 function getTableSchema(field: Field, getSchema: (target: string) => Schema) {

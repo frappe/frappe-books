@@ -243,7 +243,7 @@ test('import cells are written as Frappe’s Data Import parses them', async () 
 
   assert.deepEqual(importRows(importer)[1], [
     '0',
-    '2026-09-30 10:05:00',
+    '2026-09-30 10:05:00.000',
     '1',
     '12.5',
   ]);

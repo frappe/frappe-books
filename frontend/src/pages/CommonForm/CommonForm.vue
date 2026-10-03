@@ -58,24 +58,11 @@
         </template>
         <template v-if="hasDoc">
           <FrappeButton
-            v-if="canShowLinks"
-            icon="lucide-link"
-            :label="t`View linked entries`"
-            :tooltip="t`View linked entries`"
-            @click="showLinks = true"
-          />
-          <FrappeButton
             v-if="canPrint"
             icon="lucide-printer"
             :label="t`Open Print View`"
             :tooltip="t`Open Print View`"
             @click="openPrintView"
-          />
-          <FrappeButton
-            :icon="useFullWidth ? 'lucide-minimize-2' : 'lucide-maximize-2'"
-            :label="t`Toggle between form and full width`"
-            :tooltip="t`Toggle between form and full width`"
-            @click="toggleWidth"
           />
           <DropdownWithActions
             v-for="group of groupedActions"
@@ -158,6 +145,7 @@
 </template>
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
+import { Action } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { getMissingMandatoryFields } from 'fyo/model/helpers';
@@ -398,7 +386,28 @@ export default defineComponent({
         return [];
       }
 
-      return getGroupedActionsForDoc(this.doc);
+      const groups = getGroupedActionsForDoc(this.doc);
+      const more = groups.find(({ group }) => !group)?.actions ?? [];
+      return [
+        ...groups.filter(({ group }) => group),
+        { group: '', label: '', type: 'secondary', actions: [...this.viewActions, ...more] },
+      ];
+    },
+    /** Linked entries and the width toggle lead the … menu, as on phones. */
+    viewActions(): Action[] {
+      const width: Action = {
+        label: this.useFullWidth ? this.t`Form width` : this.t`Full width`,
+        action: () => this.toggleWidth(),
+      };
+      if (!this.canShowLinks) {
+        return [width];
+      }
+
+      const links: Action = {
+        label: this.t`Linked entries`,
+        action: () => (this.showLinks = true),
+      };
+      return [links, width];
     },
   },
   watch: {

@@ -89,17 +89,19 @@ def validate_return(invoice):
 	if original.party != invoice.party:
 		frappe.throw(_("A return must use the same party as the original invoice."))
 	returns, returned_rows = _submitted_returns(original, exclude=invoice.name)
-	_validate_quantities(invoice, original, _item_quantities(returned_rows))
+	_validate_returned_rows(original, returned_rows, invoice.items)
 	_validate_value(invoice, original, returns, len(returned_rows))
 
 
-def _validate_quantities(invoice, original, returned_quantities):
-	original_quantities = _item_quantities(original.items)
-	for item, quantity in _item_quantities(invoice.items).items():
-		if item not in original_quantities:
-			frappe.throw(_("Item {0} is not present in the original invoice.").format(item))
-		if returned_quantities[item] + quantity > original_quantities[item]:
-			frappe.throw(_("Returned quantity for item {0} exceeds the original invoice.").format(item))
+def _validate_returned_rows(original, returned_rows, rows):
+	"""A return takes back each item and batch, and serial number, as a transfer return does."""
+	# Imported here: inventory.returns imports this module.
+	from frappe_books.inventory.returns import _validate_serial_numbers, validate_moved_quantities
+
+	validate_moved_quantities(
+		original, [*returned_rows, *rows], _("Returns of {0} exceed the quantity of {1} in {2}.")
+	)
+	_validate_serial_numbers(original, returned_rows, rows)
 
 
 def _validate_value(invoice, original, returns, returned_row_count):

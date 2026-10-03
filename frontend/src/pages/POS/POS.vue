@@ -1089,6 +1089,10 @@ export default defineComponent({
         return await routeTo('/list/SalesInvoice');
       }
 
+      if (this.sinvDoc.isSubmitted) {
+        return await this.confirmLeavingSubmitted();
+      }
+
       const title = t`Leave this sale?`;
       const message = t`Save this sale to resume it later, or discard the selected items and continue to the invoice list.`;
       if (isMobile.value) {
@@ -1126,6 +1130,21 @@ export default defineComponent({
             variant: 'solid',
             onClick: () => this.saveAndContinue(),
           },
+        ],
+      });
+    },
+    /** A submitted sale has nothing to save, so it can only be left or kept open. */
+    async confirmLeavingSubmitted() {
+      return await showDialog({
+        title: t`Leave this sale?`,
+        detail: t`This invoice is already submitted. Its payment can be taken later.`,
+        buttons: [
+          {
+            label: t`Leave`,
+            action: () => this.discardAndContinue(),
+            isPrimary: true,
+          },
+          { label: t`Cancel`, action: () => null, isEscape: true },
         ],
       });
     },

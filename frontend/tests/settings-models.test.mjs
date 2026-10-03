@@ -10,6 +10,7 @@ import {
   getFrappeDoc,
   getSchema,
   loadFrappeDocTypes,
+  loadSaved,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -295,9 +296,9 @@ test("a System tab save that changes the display precision first sets Frappe's",
   );
 });
 
-test('only users who can write System Settings change what Frappe formats with', () => {
+test('only users who can write System Settings change what Frappe formats with', async () => {
   const settings = newFrappeDoc('SystemSettings');
-  settings._notInserted = false;
+  await loadSaved(settings);
   const permissions = fyo.store.permissions;
   const canWrite = ['Books System Settings'];
   fyo.store.permissions = {

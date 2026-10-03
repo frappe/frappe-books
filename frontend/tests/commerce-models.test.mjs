@@ -9,6 +9,7 @@ import {
   getLinkDisplayValue,
   getModel,
   getSchema,
+  loadSaved,
   newFrappeDoc,
   searchFrappeLink,
   setLanguageMapOnTranslationString,
@@ -272,7 +273,7 @@ test('a lead makes its customer with the server mapper, as an unsaved party', as
   const mapped = { doctype: 'Books Party', name: 'Asha', role: 'Customer' };
   respond = () => ({ message: { ...mapped, from_lead: 'Asha', __islocal: 1 } });
   const lead = newFrappeDoc('Lead', { name: 'Asha' });
-  lead._notInserted = false;
+  await loadSaved(lead);
   const { action } = getModel('Lead')
     .getActions(fyo)
     .find(({ label }) => label === 'Customer');
@@ -612,7 +613,7 @@ test('the coupon form shows what it showed and names a new coupon from its name'
   const coupon = newFrappeDoc('CouponCode');
   await coupon.set('coupon_name', 'Save Twenty Five');
   assert.equal(coupon.name, 'SAVETWEN');
-  coupon._notInserted = false;
+  await loadSaved(coupon);
   await coupon.set('coupon_name', 'Other');
   assert.equal(coupon.name, 'SAVETWEN');
 });

@@ -204,6 +204,22 @@ export function manualScheduler() {
 
 setPreviewScheduler(manualScheduler);
 
+/** Loads `doc` as saved and unedited, with its own values and the Frappe `values`, as a form loads it. */
+export async function loadSaved(doc, values = {}) {
+  const fetch = globalThis.fetch;
+  const data = {
+    ...doc.getFrappeValues({ keepRowNames: true }),
+    name: doc.name,
+    ...values,
+  };
+  stubFrappe(() => ({ data }));
+  try {
+    await doc.load();
+  } finally {
+    globalThis.fetch = fetch;
+  }
+}
+
 /**
  * Answers every request with `respond({ method, path, params, body })`, which
  * returns a response body, or `{ status, body }` for an error. Records the requests.

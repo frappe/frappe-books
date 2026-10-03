@@ -8,6 +8,7 @@ import {
   fyo,
   getSchema,
   loadFrappeDocTypes,
+  loadSaved,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -30,10 +31,9 @@ function newAccount(values) {
   return newFrappeDoc('Account', values);
 }
 
-function savedAccount(values) {
+async function savedAccount(values) {
   const account = newAccount(values);
-  account._notInserted = false;
-  account._savedValues = values;
+  await loadSaved(account);
   return account;
 }
 
@@ -67,8 +67,8 @@ test('a ledger account needs a parent group; a root group does not', () => {
   assert.equal(evaluateRequired(parent, newAccount({ is_group: true })), false);
 });
 
-test('a saved account keeps its name, types, parent and group; a saved type stays', () => {
-  const account = savedAccount({
+test('a saved account keeps its name, types, parent and group; a saved type stays', async () => {
+  const account = await savedAccount({
     account_name: 'Petty Cash',
     parent_books_account: 'Cash In Hand',
     root_type: 'Asset',
@@ -87,7 +87,7 @@ test('a saved account keeps its name, types, parent and group; a saved type stay
   account.account_type = 'Cash';
   assert.equal(evaluateReadOnly(accountType, account), false);
   assert.equal(
-    evaluateReadOnly(accountType, savedAccount({ account_type: 'Cash' })),
+    evaluateReadOnly(accountType, await savedAccount({ account_type: 'Cash' })),
     true
   );
   assert.equal(
@@ -179,8 +179,8 @@ test('the account list shows its name, root type, group and parent', () => {
   ]);
 });
 
-test('an account saves without the nested set Frappe keeps', () => {
-  const account = savedAccount({
+test('an account saves without the nested set Frappe keeps', async () => {
+  const account = await savedAccount({
     account_name: 'Petty Cash',
     parent_books_account: 'Cash In Hand',
   });

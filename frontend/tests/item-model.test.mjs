@@ -9,6 +9,7 @@ import {
   fyo,
   getSchema,
   loadFrappeDocTypes,
+  loadSaved,
   newFrappeDoc,
   registerFrappeModels,
   stubFrappe,
@@ -91,10 +92,10 @@ test('Has Batch shows only for items that track inventory', async () => {
   assert.equal(hidden(item, 'has_batch'), false);
 });
 
-test('a saved item keeps its set-once fields and hides tracking it did not use', () => {
+test('a saved item keeps its set-once fields and hides tracking it did not use', async () => {
   fyo.singles.AccountingSettings = { enable_inventory: true };
   const item = newFrappeDoc('Item', { name: 'Kettle', track_item: false });
-  item._notInserted = false;
+  await loadSaved(item);
   for (const fieldname of ['unit', 'item_type', 'track_item', 'has_batch']) {
     assert.equal(evaluateReadOnly(item.fieldMap[fieldname], item), true);
   }

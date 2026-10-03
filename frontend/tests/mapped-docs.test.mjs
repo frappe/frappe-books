@@ -6,6 +6,7 @@ import {
   fyo,
   getMappedDoc,
   getStockTransferActions,
+  loadSaved,
   newFrappeDoc,
   stubFrappe,
 } from './helpers/frappe.mjs';
@@ -24,9 +25,9 @@ function stubMapper(mapped) {
   return requests;
 }
 
-function getSaved(schemaName, name) {
+async function getSaved(schemaName, name) {
   const doc = newFrappeDoc(schemaName, { name });
-  doc._notInserted = false;
+  await loadSaved(doc);
   return doc;
 }
 
@@ -36,7 +37,7 @@ test('transfer invoices and returns come from the transfer mappers', async () =>
     party: 'Supplier',
     items: [{ item: 'Pen', quantity: -2 }],
   });
-  const receipt = getSaved('PurchaseReceipt', 'PREC-1');
+  const receipt = await getSaved('PurchaseReceipt', 'PREC-1');
 
   await getMappedDoc(receipt, 'PurchaseInvoice', 'make_purchase_invoice');
   const purchaseReturn = await getMappedDoc(
@@ -62,7 +63,7 @@ test('an invoice maps its pending stock with the transfer mapper', async () => {
     party: 'Supplier',
     items: [{ item: 'Pen', quantity: 2 }],
   });
-  const invoice = getSaved('PurchaseInvoice', 'PINV-1');
+  const invoice = await getSaved('PurchaseInvoice', 'PINV-1');
 
   const receipt = await getMappedDoc(
     invoice,
@@ -114,7 +115,7 @@ test('lead, party and item actions open documents from their server mappers', as
     ],
   ];
   for (const [schemaName, label, mapper, path] of cases) {
-    const source = getSaved(schemaName, 'Acme');
+    const source = await getSaved(schemaName, 'Acme');
     const { action } = frappeModels[schemaName]
       .getActions(fyo)
       .find((action) => action.label === label);

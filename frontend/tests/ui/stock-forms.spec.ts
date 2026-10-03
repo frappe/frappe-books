@@ -103,11 +103,11 @@ test('a purchase receipt return keeps its quantities negative', async ({
     page.getByRole('combobox', { name: 'Return Against' })
   ).toHaveValue(receipt);
   const quantity = page.getByRole('textbox', { name: 'Quantity' });
-  await expect(quantity).toHaveValue('-2.00');
+  await expect(quantity).toHaveValue('-2.000');
 
   await quantity.fill('1');
   await page.keyboard.press('Tab');
-  await expect(quantity).toHaveValue('-1.00');
+  await expect(quantity).toHaveValue('-1.000');
 });
 
 test.describe('on a phone', () => {

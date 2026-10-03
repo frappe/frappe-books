@@ -141,6 +141,13 @@ declare global {
         user?: BootUserPermissions & { name?: string };
         user_info?: Record<string, { fullname?: string }>;
         time_zone?: { system: string; user?: string };
+        /** Frappe's system defaults, such as its number precisions. */
+        sysdefaults?: {
+          float_precision?: string;
+          currency_precision?: string;
+          number_format?: string;
+          rounding_method?: string;
+        };
         /** Added by `frappe_books.boot.extend_bootinfo`. */
         books?: {
           country_code: string;

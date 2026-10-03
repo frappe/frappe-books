@@ -141,8 +141,16 @@ function formatCurrency(
   return valueString;
 }
 
-export function formatNumber(value: unknown, fyo: Fyo): string {
-  const numberFormatter = getNumberFormatter(fyo);
+/** The number in the locale's format, to `precision` decimals or the display precision. */
+export function formatNumber(
+  value: unknown,
+  fyo: Fyo,
+  precision?: number
+): string {
+  const numberFormatter =
+    precision === undefined
+      ? getNumberFormatter(fyo)
+      : getPrecisionFormatter(fyo, precision);
   if (typeof value === 'number') {
     value = fyo.pesa(value.toFixed(20));
   }
@@ -227,6 +235,67 @@ function getSeparators(fyo: Fyo): Separators {
     group: find('group')?.value ?? '',
     decimal: find('decimal')?.value ?? '.',
   };
+}
+
+/**
+ * Desk's _round: the number to `precision` decimals by Frappe's rounding
+ * method, or as it is without a precision.
+ */
+export function roundNumber(
+  number: number,
+  precision: number | null,
+  method: string
+): number {
+  if (precision === null || number === 0) {
+    return number;
+  }
+
+  const multiplier = 10 ** precision;
+  const scaled = roundScaled(Math.abs(number) * multiplier, precision, method);
+  return (Math.sign(number) * scaled) / multiplier;
+}
+
+function roundScaled(scaled: number, precision: number, method: string) {
+  // Desk's allowance for float error in the scaled number.
+  const epsilon = 2 ** (Math.log2(scaled) - 52);
+  if (method === 'Commercial Rounding') {
+    return Math.round(scaled + (epsilon < 0.25 ? epsilon : 0));
+  }
+
+  if (method === "Banker's Rounding (legacy)") {
+    const fixed = +scaled.toFixed(8);
+    // Only a tie to a whole number goes to the even one.
+    const isTie = !precision && fixed % 1 === 0.5;
+    return isTie ? roundToEven(fixed) : Math.round(fixed);
+  }
+
+  const fraction = scaled % 1;
+  const isTie =
+    epsilon < 0.5 ? Math.abs(fraction - 0.5) < epsilon : fraction === 0.5;
+  return isTie ? roundToEven(scaled) : Math.round(scaled);
+}
+
+function roundToEven(tie: number): number {
+  const floor = Math.floor(tie);
+  return floor % 2 === 0 ? floor : floor + 1;
+}
+
+const precisionFormatters = new Map<string, Intl.NumberFormat>();
+
+function getPrecisionFormatter(fyo: Fyo, precision: number) {
+  const { locale } = getNumberFormatter(fyo).resolvedOptions();
+  const key = `${locale}|${precision}`;
+  let formatter = precisionFormatters.get(key);
+  if (!formatter) {
+    formatter = Intl.NumberFormat(locale, {
+      style: 'decimal',
+      minimumFractionDigits: precision,
+      maximumFractionDigits: precision,
+    });
+    precisionFormatters.set(key, formatter);
+  }
+
+  return formatter;
 }
 
 function getNumberFormatter(fyo: Fyo) {

@@ -146,11 +146,12 @@ export default defineComponent({
       clearInterval(this.timerId);
       this.timerId = null;
     },
+    // One toast per scanner: each scan replaces the last one's.
     error(message: string) {
-      showToast({ type: 'error', message });
+      showToast({ type: 'error', message, id: 'barcode-scan' });
     },
     success(message: string) {
-      showToast({ type: 'success', message });
+      showToast({ type: 'success', message, id: 'barcode-scan' });
     },
   },
 });

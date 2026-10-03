@@ -292,6 +292,22 @@ test('filters with fewer or no results return to page one and recover when clear
   }
 });
 
+test('pages count entries, not opening, blank and closing rows', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const report = (window as any).reportFixture.state.report;
+    const entries = report.reportData.slice(0, 50);
+    const summary = { ...entries[0], isSummary: true };
+    report.reportData = [summary, ...entries, report.getEmptyRow(), summary];
+  });
+  await expect(page.getByText('1 - 50', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Next page', exact: true })
+  ).toBeDisabled();
+  await expect(page.locator('[data-slot="list-row"]')).toHaveCount(53);
+});
+
 function handle(page: Page, name: string) {
   return page.getByRole('separator', {
     name: `Resize ${name} column`,

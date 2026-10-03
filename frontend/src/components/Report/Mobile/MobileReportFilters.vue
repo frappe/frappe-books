@@ -1,8 +1,6 @@
 <template>
   <FrappeBottomSheet v-model:open="open" :title="t`Filters`">
-    <div
-      class="flex flex-col gap-4 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
-    >
+    <div class="flex flex-col gap-4 px-4">
       <FormControl
         v-for="field in report.filters"
         :key="field.fieldname"
@@ -13,7 +11,9 @@
         :value="report.get(field.fieldname)"
         @change="(value: DocValue) => setFilter(field.fieldname, value)"
       />
-      <div class="grid grid-cols-2 gap-2 pt-1">
+      <footer
+        class="sticky bottom-0 -mx-4 grid grid-cols-2 gap-2 bg-surface-base px-4 pt-2 pb-[max(env(safe-area-inset-bottom),1rem)]"
+      >
         <FrappeButton size="lg" :label="t`Clear`" @click="clear" />
         <FrappeButton
           size="lg"
@@ -21,7 +21,7 @@
           :label="t`Apply`"
           @click="apply"
         />
-      </div>
+      </footer>
     </div>
   </FrappeBottomSheet>
 </template>

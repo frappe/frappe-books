@@ -5,9 +5,7 @@
   >
     <!-- Length Display -->
     <div class="justify-self-start">
-      {{
-        `${(pageNo - 1) * count + 1} - ${Math.min(pageNo * count, itemCount)}`
-      }}
+      {{ rangeLabel }}
     </div>
 
     <!-- Pagination Selector -->
@@ -87,6 +85,11 @@ export default defineComponent({
     };
   },
   computed: {
+    rangeLabel() {
+      const end = Math.min(this.pageNo * this.count, this.itemCount);
+      const start = Math.min((this.pageNo - 1) * this.count + 1, end);
+      return `${start} - ${end}`;
+    },
     maxPages() {
       return Math.max(1, Math.ceil(this.itemCount / this.count));
     },

@@ -56,6 +56,7 @@
         :df="item.field"
         :show-label="item.field.fieldtype === 'Check'"
         :inline-label="item.field.fieldtype !== 'Check'"
+        :trigger-button="isLinkField(item.field) || undefined"
         :placeholder="t`All`"
         :layout="item.field.fieldtype === 'Check' ? 'inline' : undefined"
         :value="report.get(item.field.fieldname)"
@@ -107,8 +108,13 @@ function getRangeFormat() {
   return getDatePickerFormat().replace(/,/g, '');
 }
 
+/** Link filters open from a pill, as Selects do, so they size to their value. */
+function isLinkField(field: Field): boolean {
+  return ['Link', 'DynamicLink', 'AutoComplete'].includes(field.fieldtype);
+}
+
 function getWidthClass(field: Field): string {
-  if (['Select', 'Check'].includes(field.fieldtype)) {
+  if (['Select', 'Check'].includes(field.fieldtype) || isLinkField(field)) {
     return '';
   }
 

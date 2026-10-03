@@ -6156,7 +6156,7 @@ msgid "Point of Sale"
 msgstr "Point of sale"
 
 #: frontend/src/pages/POS/LoyaltyProgramModal.vue:116
-msgid "Points must be greater than 0"
+msgid "Loyalty points cannot be negative."
 msgstr ""
 
 #: frontend/src/utils/printTemplates.ts:357

@@ -115,7 +115,7 @@ export default defineComponent({
     /** The server checks the points against the customer's balance and the invoice total. */
     applyLoyaltyPoints(newValue: number): boolean {
       if (newValue < 0) {
-        this.errorMessage = t`Points must be greater than 0`;
+        this.errorMessage = t`Loyalty points cannot be negative.`;
         return false;
       }
 

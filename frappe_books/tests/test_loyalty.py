@@ -141,11 +141,18 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "is disabled"):
 			self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10)
 
-	def test_points_to_redeem_must_be_above_zero(self):
+	def test_points_to_redeem_cannot_be_negative(self):
 		program = self._loyalty_program()
 		self._loyalty_invoice(program).submit()
 
-		with self.assertRaisesRegex(frappe.ValidationError, "Points must be greater than 0"):
+		with self.assertRaisesRegex(frappe.ValidationError, "Loyalty points cannot be negative"):
+			self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=-5)
+
+	def test_redeeming_needs_points(self):
+		program = self._loyalty_program()
+		self._loyalty_invoice(program).submit()
+
+		with self.assertRaisesRegex(frappe.ValidationError, "Enter the loyalty points to redeem"):
 			self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=0)
 
 	def test_redemption_is_capped_by_the_total_before_redemption(self):

@@ -75,7 +75,6 @@
         :size="size"
         class="min-w-24"
         variant="solid"
-        :disabled="Boolean(errorMessage)"
         @click="setCouponCode"
         >{{ t`Done` }}</FrappeButton>
     </template>

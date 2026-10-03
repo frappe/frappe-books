@@ -396,6 +396,32 @@ test('a save waits for the fills of the last edit', async () => {
   assert.equal(requests[1].body.income_account, 'Service');
 });
 
+test('a save waits for a running preview and takes its fills without another', async () => {
+  let release;
+  const answered = new Promise((resolve) => (release = resolve));
+  const requests = stubDocument(savedPen, async ({ path, body }) => {
+    if (path.endsWith('run_doc_method')) {
+      await answered;
+      return { docs: [{ ...body.document, batch_series: 'LAT-' }] };
+    }
+  });
+  const item = newFrappeDoc('Item', { name: 'Latte', income_account: 'Sales' });
+  await item.set('rate', fyo.pesa(4));
+
+  // The edit's pause has passed, so its preview is on its way.
+  item.startPreview();
+  const saving = item.sync();
+  await new Promise((resolve) => setImmediate(resolve));
+  release();
+  await saving;
+
+  assert.deepEqual(
+    requests.map(({ path }) => path),
+    ['/api/v2/method/run_doc_method', '/api/v2/document/Books Item']
+  );
+  assert.equal(requests[1].body.batch_series, 'LAT-');
+});
+
 test('a new document previews once its form opens', async () => {
   const requests = stubDocument(savedPen);
   const { doc, load } = useBooksDoc();

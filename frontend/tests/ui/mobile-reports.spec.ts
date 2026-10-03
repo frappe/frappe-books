@@ -170,6 +170,29 @@ test('labels and amounts keep a gap between them', async ({ page }) => {
   expect(amounts[1].left - amounts[0].right).toBeGreaterThanOrEqual(24);
 });
 
+test('headers stick below the filter toolbar, which stays on screen', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 320 });
+  const toolbar = page
+    .getByRole('button', { name: 'Filters', exact: true })
+    .locator('..');
+  for (const [name, header] of [
+    ['ProfitAndLoss', 'Account'],
+    ['GeneralLedger', 'Sep 27, 2026'],
+  ]) {
+    await show(page, name);
+    await page.evaluate(() => window.scrollTo(0, 120));
+    const bar = (await toolbar.boundingBox())!;
+    const label = (await page
+      .getByText(header, { exact: true })
+      .boundingBox())!;
+    expect(bar.y, name).toBe(0);
+    expect(label.y, name).toBeGreaterThanOrEqual(bar.height - 1);
+    expect(label.y, name).toBeLessThan(bar.height + 16);
+  }
+});
+
 function row(page: Page, name: string) {
   return page.getByRole('button', { name, exact: false }).filter({
     has: page.getByText(name, { exact: true }),

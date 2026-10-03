@@ -35,11 +35,11 @@
   >
     <!-- Quick edit Tool bar -->
     <div class="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
-      <!-- Save & Submit Buttons -->
-      <FrappeButton v-if="doc?.canSave" variant="solid" @click="sync">
+      <!-- Subtle: the page beside the panel keeps the one solid button. -->
+      <FrappeButton v-if="doc?.canSave" @click="sync">
         {{ t`Save` }}
       </FrappeButton>
-      <FrappeButton v-else-if="doc?.canSubmit" variant="solid" @click="submit">
+      <FrappeButton v-else-if="doc?.canSubmit" @click="submit">
         {{ t`Submit` }}
       </FrappeButton>
 

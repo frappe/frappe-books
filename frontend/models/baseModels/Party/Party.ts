@@ -178,6 +178,21 @@ export class Party extends FrappeDoc {
           });
         },
       },
+      getGeneralLedgerAction(fyo),
     ];
   }
+}
+
+function getGeneralLedgerAction(fyo: Fyo): Action {
+  return {
+    label: fyo.t`General Ledger`,
+    group: fyo.t`View`,
+    condition: (doc: FrappeDoc) => doc.inserted,
+    action: async (partyDoc, router) => {
+      await router.push({
+        path: '/report/GeneralLedger',
+        query: { defaultFilters: JSON.stringify({ party: partyDoc.name }) },
+      });
+    },
+  };
 }

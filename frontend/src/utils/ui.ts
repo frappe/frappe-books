@@ -197,11 +197,6 @@ export function getActionsForDoc(doc?: FrappeDoc): Action[] {
     getCancelAction(doc),
   ];
 
-  if (doc?.schemaName === 'Party') {
-    const viewActions = getViewActions(doc);
-    actions.push(...viewActions);
-  }
-
   return actions
     .filter((d) => d.condition?.(doc) ?? true)
     .map((d) => {
@@ -242,28 +237,6 @@ export function getGroupedActionsForDoc(doc?: FrappeDoc): ActionGroup[] {
     .map((k) => actionsMap[k]);
 
   return [grouped, actionsMap['']].flat().filter(Boolean);
-}
-
-function getViewActions(doc: FrappeDoc): Action[] {
-  const actions: Action[] = [
-    {
-      label: t`General Ledger`,
-      group: t`View`,
-      condition: (doc: FrappeDoc) =>
-        doc.schemaName === 'Party' && doc.inserted,
-      action: async () => {
-        await router.push({
-          path: '/report/GeneralLedger',
-          query: {
-            defaultFilters: JSON.stringify({
-              party: doc.name,
-            }),
-          },
-        });
-      },
-    },
-  ];
-  return actions;
 }
 
 function getCancelAction(doc: FrappeDoc): Action {

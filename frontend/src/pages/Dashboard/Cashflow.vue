@@ -27,7 +27,7 @@
 <script lang="ts">
 import { LineChart as FrappeLineChart } from 'frappe-ui/charts';
 import { fyo } from 'src/initFyo';
-import { formatXLabels, getYMax } from 'src/utils/chart';
+import { formatXLabels } from 'src/utils/chart';
 import { getDashboardData, MonthlyCashflow } from 'src/utils/dashboard';
 import DashboardChartBase from './BaseDashboardChart.vue';
 import ChartLoadError from './ChartLoadError.vue';
@@ -46,13 +46,7 @@ export default defineComponent({
   }),
   computed: {
     chartData() {
-      const points = (['inflow', 'outflow'] as const).map((k) =>
-        this.data.map((d) => d[k])
-      );
-
       const format = (value: number) => fyo.format(value ?? 0, 'Currency');
-      const yMax = getYMax(points);
-      const phoneAxes = this.isMobile ? this.phoneAxisLabels : undefined;
       return {
         seriesConfig: {
           inflow: { label: this.t`Inflow`, smooth: true },
@@ -61,9 +55,9 @@ export default defineComponent({
         xAxis: {
           type: 'category' as const,
           format: formatXLabels,
-          echartOptions: phoneAxes?.x,
+          echartOptions: this.axisLabels.x,
         },
-        yAxis: { max: yMax, format, echartOptions: phoneAxes?.y },
+        yAxis: { format, echartOptions: this.axisLabels.y },
       };
     },
   },

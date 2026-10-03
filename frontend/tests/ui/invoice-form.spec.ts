@@ -24,7 +24,7 @@ test('a new sales invoice takes its account, rows and totals from the server', a
   await page.getByText('Add Row', { exact: true }).first().click();
   await pickLink(page, 'Item', item);
   // The first data row, after the header; Qty is its first number.
-  const qty = page.getByRole('row').nth(1).getByRole('spinbutton').first();
+  const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
   await qty.fill('3');
   await page.keyboard.press('Tab');
   await expect(page.getByLabel('Net Total')).toHaveValue('₹ 150.00');
@@ -49,12 +49,12 @@ test('a return takes back what its invoice sold', async ({ page }) => {
     name
   );
 
-  const qty = page.getByRole('row').nth(1).getByRole('spinbutton').first();
-  await expect(qty).toHaveValue('-2');
+  const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
+  await expect(qty).toHaveValue('-2.00');
   // Returns take quantities back, however they are typed.
   await qty.fill('1');
   await page.keyboard.press('Tab');
-  await expect(qty).toHaveValue('-1');
+  await expect(qty).toHaveValue('-1.00');
 });
 
 test('a submitted quote makes an invoice with its rows', async ({ page }) => {
@@ -74,8 +74,8 @@ test('a submitted quote makes an invoice with its rows', async ({ page }) => {
   await expect(page.getByRole('combobox', { name: 'Quote Reference' })).toHaveValue(
     quote
   );
-  const qty = page.getByRole('row').nth(1).getByRole('spinbutton').first();
-  await expect(qty).toHaveValue('4');
+  const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
+  await expect(qty).toHaveValue('4.00');
 });
 
 test('the barcode field marks itself with a leading icon, not a trailing control', async ({

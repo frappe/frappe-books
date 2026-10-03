@@ -157,7 +157,10 @@ class IntegrationTestPrinting(IntegrationTestCase):
 			self.assertEqual(books_format(1234.56, "Currency", "EUR"), "€ 1.234,6")
 
 	def test_books_format_shows_a_float_as_desk_shows_a_read_only_float(self):
-		with self.change_settings("Books System Settings", {"locale": "en-IN", "display_precision": 0}):
+		with (
+			self.change_settings("Books System Settings", locale="en-IN"),
+			self.change_settings("System Settings", currency_precision="0"),
+		):
 			for float_precision, number in (("4", "1,23,456.5000"), ("", "1,23,456.500")):
 				with self.change_settings("System Settings", float_precision=float_precision):
 					self.assertEqual(books_format(123456.5, "Float"), number)

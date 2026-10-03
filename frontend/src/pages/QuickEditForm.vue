@@ -2,7 +2,7 @@
   <FrappeBottomSheet
     v-if="isMobile"
     :open="true"
-    :title="sheetTitle"
+    :title="title"
     @update:open="(open: boolean) => !open && routeToPrevious()"
   >
     <div class="px-4">
@@ -30,8 +30,12 @@
     v-else
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
-    <!-- Quick edit Tool bar -->
-    <div class="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
+    <div
+      class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
+    >
+      <h2 class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-8">
+        {{ title }}
+      </h2>
       <!-- Subtle: the page beside the panel keeps the one solid button. -->
       <FrappeButton v-if="doc?.canSave" @click="sync">
         {{ t`Save` }}
@@ -41,6 +45,7 @@
       </FrappeButton>
 
       <FrappeButton
+        variant="ghost"
         icon="lucide-x"
         :label="t`Close quick edit`"
         :tooltip="t`Close quick edit`"
@@ -50,10 +55,9 @@
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="pb-10">
       <FormSkeleton v-if="!doc" class="p-3" />
-      <!-- Name and image -->
       <div
-        v-if="doc && (titleField || imageField)"
-        class="flex min-h-14 items-center gap-3 border-b border-t border-outline-gray-1 p-3"
+        v-if="doc && (imageField || isTitleEditable)"
+        class="flex min-h-14 items-center gap-3 border-b border-outline-gray-1 p-3"
       >
         <AttachImage
           v-if="imageField"
@@ -64,14 +68,8 @@
           :letter-placeholder="letterPlaceHolder"
           @change="(value: DocValue) => valueChange(imageField as Field, value)"
         />
-        <h2
-          v-if="titleField && (doc.inserted || doc.schema.naming !== 'manual')"
-          class="min-w-0 break-words text-lg-semibold text-ink-gray-8"
-        >
-          {{ doc[titleField.fieldname] || titleField.label }}
-        </h2>
         <FormControl
-          v-else-if="titleField"
+          v-if="titleField && isTitleEditable"
           ref="titleControl"
           class="min-w-0 flex-1"
           :border="true"
@@ -185,7 +183,7 @@ export default defineComponent({
 
       return '';
     },
-    sheetTitle(): string {
+    title(): string {
       if (!this.doc) {
         return this.schema.label;
       }
@@ -197,13 +195,17 @@ export default defineComponent({
       const title = this.titleField && this.doc.get(this.titleField.fieldname);
       return String(title || this.doc.name);
     },
+    /** A new document named by hand takes its name in the form. */
+    isTitleEditable(): boolean {
+      return (
+        !!this.titleField &&
+        !!this.doc?.notInserted &&
+        this.doc.schema.naming === 'manual'
+      );
+    },
     sheetFields(): Field[] {
-      const isTitleEditable =
-        this.titleField &&
-        this.doc?.notInserted &&
-        this.doc.schema.naming === 'manual';
       const fields = this.fields as Field[];
-      if (!isTitleEditable || fields.includes(this.titleField!)) {
+      if (!this.isTitleEditable || fields.includes(this.titleField!)) {
         return fields;
       }
 

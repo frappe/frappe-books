@@ -36,7 +36,6 @@
     v-else
     class="flex h-full w-quick-edit flex-col border-s border-outline-gray-1 bg-surface-base"
   >
-    <!-- Row Edit Tool bar -->
     <div
       class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
     >
@@ -48,19 +47,25 @@
       </span>
       <FrappeButton
         v-if="previous >= 0"
+        variant="ghost"
         icon="lucide-chevron-left"
         :label="t`Previous row`"
+        :tooltip="t`Previous row`"
         @click="$emit('previous', previous)"
       />
       <FrappeButton
         v-if="next >= 0"
+        variant="ghost"
         icon="lucide-chevron-right"
         :label="t`Next row`"
+        :tooltip="t`Next row`"
         @click="$emit('next', next)"
       />
       <FrappeButton
+        variant="ghost"
         icon="lucide-x"
         :label="t`Close row editor`"
+        :tooltip="t`Close row editor`"
         @click="$emit('close')"
       />
     </div>

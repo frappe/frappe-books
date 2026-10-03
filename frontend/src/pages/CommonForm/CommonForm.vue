@@ -94,6 +94,17 @@
       </PageHeader>
     </template>
     <template v-if="hasDoc" #body>
+      <div
+        v-if="tabOptions.length > 1"
+        class="sticky top-0 z-10 flex border-b border-outline-gray-1 bg-surface-base pt-2"
+      >
+        <FrappeTabButtons
+          v-model="activeTab"
+          class="-mb-px flex"
+          :options="tabOptions"
+          variant="underline"
+        />
+      </div>
       <div class="divide-y divide-outline-gray-1">
         <CommonFormSection
           v-for="([n, fields], idx) in activeGroup.entries()"
@@ -114,9 +125,6 @@
           </template>
         </CommonFormSection>
       </div>
-    </template>
-    <template v-if="groupedFields && groupedFields.size > 1" #footer>
-      <FrappeTabButtons v-model="activeTab" :options="tabOptions" variant="underline" />
     </template>
     <template #quickedit>
       <Transition name="quickedit">

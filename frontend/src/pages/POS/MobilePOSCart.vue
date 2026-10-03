@@ -44,7 +44,7 @@
           <FrappeListCell class="justify-end">
             <NumberStepper
               v-if="!row.is_free_item && !sinvDoc.isSubmitted"
-              class="relative w-32"
+              class="relative w-44"
               removable
               :min="1"
               :value="getQuantity(row)"

@@ -1,4 +1,6 @@
 import { Fyo } from 'fyo';
+import { DocValue } from 'fyo/core/types';
+import { isDocValueTruthy } from 'fyo/model/helpers';
 import {
   Action,
   ChangeArg,
@@ -52,7 +54,9 @@ export class JournalEntry extends FrappeDoc {
     const debit = this.getSum('accounts', 'debit', false) as Money;
     const difference = debit.sub(this.getSum('accounts', 'credit', false));
     const row = ((this.accounts ?? []) as FrappeDoc[]).find(
-      (row) => (row.debit as Money).isZero() && (row.credit as Money).isZero()
+      (row) =>
+        !isDocValueTruthy(row.debit as DocValue) &&
+        !isDocValueTruthy(row.credit as DocValue)
     );
     if (row && !difference.isZero()) {
       row[difference.isNegative() ? 'debit' : 'credit'] = difference.abs();

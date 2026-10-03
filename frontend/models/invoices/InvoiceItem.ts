@@ -5,6 +5,7 @@ import {
   CurrenciesMap,
   FiltersMap,
   HiddenMap,
+  RequiredMap,
   ValidationMap,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
@@ -186,6 +187,9 @@ export class InvoiceItem extends FrappeDoc {
       this.qty = this.transfer_quantity = this[fieldname] as number;
     }
   }
+
+  // The rate per transfer unit is the rate the server requires, as the row shows it.
+  required: RequiredMap = { transfer_rate: () => true };
 
   // Fields of features turned off in the settings, and the rate per stock unit,
   // which the row shows per transfer unit. The DocType's depends_on hides the rest.

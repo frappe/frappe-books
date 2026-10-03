@@ -24,9 +24,11 @@ await build({
       export { Search } from './src/utils/search';
       export { sortByFuzzyMatch } from './src/utils';
       export { fyo } from './src/initFyo';
+      export { parseNumber } from './fyo/utils/format';
       export { default as FilterLinkInput } from './src/components/FilterLinkInput.vue';
       export { default as FilterValueInput } from './src/components/FilterValueInput.vue';
       export { default as StatusPill } from './src/components/StatusPill.vue';
+      export { default as Currency } from './src/components/Controls/Currency.vue';
       export { default as Link } from './src/components/Controls/Link.vue';
       export { default as MultiLabelLink } from './src/components/Controls/MultiLabelLink.vue';
       export { default as GetStarted } from './src/pages/GetStarted.vue';
@@ -50,7 +52,7 @@ await build({
         }));
         // Components under test keep their script; the rest are stubs.
         const tested =
-          /\/(FilterLinkInput|FilterValueInput|Link|MultiLabelLink|GetStarted|StatusPill)\.vue$/;
+          /\/(FilterLinkInput|FilterValueInput|Link|MultiLabelLink|GetStarted|StatusPill|Currency)\.vue$/;
         builder.onLoad({ filter: tested }, async (args) => ({
           contents: (await readFile(args.path, 'utf8')).match(
             /<script[^>]*>([\s\S]*?)<\/script>/
@@ -81,9 +83,11 @@ export const {
   Search,
   sortByFuzzyMatch,
   fyo,
+  parseNumber,
   FilterLinkInput,
   FilterValueInput,
   StatusPill,
+  Currency,
   Link,
   MultiLabelLink,
   GetStarted,

@@ -32,7 +32,7 @@ test('a stock movement takes its series, rate and locations from the server', as
   await expect(page.getByRole('combobox', { name: 'To' })).toHaveValue(
     'Stores'
   );
-  await expect(page.getByRole('spinbutton', { name: 'Rate' })).toHaveValue(
+  await expect(page.getByRole('textbox', { name: 'Rate' })).toHaveValue(
     '12.00'
   );
 

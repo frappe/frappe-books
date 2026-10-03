@@ -20,7 +20,7 @@
       />
       <DropdownWithActions :actions="actions" :label="t`More`" />
       <template v-if="doc?.can('print')">
-        <FrappeButton variant="solid" @click="savePDF()">
+        <FrappeButton @click="savePDF()">
           {{ t`Save as PDF` }}
         </FrappeButton>
         <FrappeButton variant="solid" @click="openPrintDialog()">

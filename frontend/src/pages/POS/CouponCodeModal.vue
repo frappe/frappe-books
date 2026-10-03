@@ -1,87 +1,71 @@
 <template>
   <Modal
     :open-modal="openModal"
-    :title="t`Apply Coupon Code`"
+    :title="t`Coupon code`"
+    :subtitle="subtitle"
+    size="md"
     @closemodal="cancelApplyCouponCode"
   >
     <div class="flex flex-col gap-4">
-      <p
-        v-if="appliedCoupons.length"
-        class="text-sm-medium text-ink-gray-7"
-      >
-        {{ t`Applied Coupon Codes` }}
-      </p>
-      <div
-        v-if="appliedCoupons.length && isMobile"
-        class="-mt-2 flex flex-wrap gap-2"
-      >
-        <span
-          v-for="coupon in appliedCoupons as AppliedCouponCode[]"
-          :key="coupon.coupons"
-          class="flex h-8 items-center gap-1 rounded-full bg-surface-gray-2 pe-1 ps-3 text-sm-medium text-ink-gray-8"
-        >
-          {{ coupon.coupons }}
-          <FrappeButton
-            icon="lucide-x"
-            variant="ghost"
-            size="sm"
-            :aria-label="t`Remove coupon`"
-            @click="removeAppliedCoupon(coupon)"
-          />
-        </span>
+      <div v-if="couponField" class="flex flex-col gap-1.5">
+        <Link
+          class="w-full min-w-0"
+          :show-label="isMobile"
+          :border="true"
+          :value="couponCode"
+          :focus-input="!isMobile"
+          :invalid="Boolean(errorMessage)"
+          :df="couponField"
+          @change="updateCouponCode"
+        />
+        <FrappeErrorMessage :message="errorMessage" />
       </div>
-      <FrappeList
-        v-else-if="appliedCoupons.length"
-        :columns="['minmax(0, 1fr)', '2rem']"
-        divider="full"
-        class="max-h-40 overflow-y-auto rounded-4 border border-outline-gray-1"
-      >
-        <FrappeListRows
-          :items="appliedCoupons as AppliedCouponCode[]"
-          row-key="coupons"
-        >
-          <template #default="{ item: coupon, value }">
-            <FrappeListRow
-              :value="value"
-              class="min-h-10 px-3 hover:bg-surface-gray-1"
-            >
-              <FrappeListCell>
-                <FormControl
-                  v-for="df in tableFields"
-                  :key="df.fieldname"
-                  size="large"
-                  class="min-w-0 flex-1"
-                  :df="df"
-                  :value="coupon[df.fieldname]"
-                  :read-only="true"
-                />
-              </FrappeListCell>
-              <FrappeListCell class="justify-center">
-                <FrappeButton
-                  icon="lucide-trash-2"
-                  theme="red"
-                  variant="ghost"
-                  size="xs"
-                  :tooltip="t`Remove coupon`"
-                  :aria-label="t`Remove coupon`"
-                  @click="removeAppliedCoupon(coupon)"
-                />
-              </FrappeListCell>
-            </FrappeListRow>
-          </template>
-        </FrappeListRows>
-      </FrappeList>
 
-      <Link
-        v-if="couponField"
-        class="min-w-0 w-full"
-        :show-label="true"
-        :border="true"
-        :value="couponCode"
-        :focus-input="!isMobile"
-        :df="couponField"
-        @change="updateCouponCode"
-      />
+      <div v-if="appliedCoupons.length" class="flex flex-col gap-1.5">
+        <p class="text-sm text-ink-gray-5">{{ t`Applied` }}</p>
+        <div v-if="isMobile" class="flex flex-wrap gap-2">
+          <span
+            v-for="coupon in appliedCoupons as AppliedCouponCode[]"
+            :key="coupon.coupons"
+            class="flex h-8 items-center gap-1 rounded-full bg-surface-gray-2 pe-1 ps-3 text-sm-medium text-ink-gray-8"
+          >
+            {{ coupon.coupons }}
+            <FrappeButton
+              icon="lucide-x"
+              variant="ghost"
+              size="sm"
+              :aria-label="t`Remove coupon`"
+              @click="removeAppliedCoupon(coupon)"
+            />
+          </span>
+        </div>
+        <ul
+          v-else
+          class="max-h-40 divide-y divide-outline-gray-1 overflow-y-auto rounded-4 border border-outline-gray-1"
+        >
+          <li
+            v-for="coupon in appliedCoupons as AppliedCouponCode[]"
+            :key="coupon.coupons"
+            class="flex items-center gap-2.5 px-3 py-2.5"
+          >
+            <span
+              class="lucide-ticket-percent size-4 shrink-0 text-ink-green-5"
+              aria-hidden="true"
+            />
+            <span class="min-w-0 flex-1 truncate text-base-medium text-ink-gray-9">
+              {{ coupon.coupons }}
+            </span>
+            <FrappeButton
+              icon="lucide-x"
+              variant="ghost"
+              size="xs"
+              :tooltip="t`Remove coupon`"
+              :aria-label="t`Remove coupon`"
+              @click="removeAppliedCoupon(coupon)"
+            />
+          </li>
+        </ul>
+      </div>
     </div>
     <template #actions="{ size }">
       <FrappeButton :size="size" class="min-w-24" @click="cancelApplyCouponCode">{{
@@ -91,9 +75,9 @@
         :size="size"
         class="min-w-24"
         variant="solid"
-        :disabled="validationError"
+        :disabled="Boolean(errorMessage)"
         @click="setCouponCode"
-        >{{ t`Save` }}</FrappeButton>
+        >{{ t`Done` }}</FrappeButton>
     </template>
   </Modal>
 </template>
@@ -102,33 +86,24 @@
 import Modal from 'src/components/POS/POSDialog.vue';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { defineComponent, inject } from 'vue';
-import { t } from 'fyo';
-import { showToast } from 'src/utils/interactive';
 import type { AppliedCouponCode } from 'models/invoices/AppliedCouponCode';
 import { getField } from 'src/frappe/registry';
 import Link from 'src/components/Controls/Link.vue';
 import { Field } from 'schemas/types';
-import FormControl from 'src/components/Controls/FormControl.vue';
-import { Button as FrappeButton } from 'frappe-ui';
-import { isMobile } from 'src/utils/viewport';
 import {
-  List as FrappeList,
-  ListCell as FrappeListCell,
-  ListRow as FrappeListRow,
-  ListRows as FrappeListRows,
-} from 'frappe-ui/list';
+  Button as FrappeButton,
+  ErrorMessage as FrappeErrorMessage,
+} from 'frappe-ui';
+import { getErrorMessage } from 'src/utils';
+import { isMobile } from 'src/utils/viewport';
 
 export default defineComponent({
   name: 'CouponCodeModal',
   components: {
     Modal,
     Link,
-    FormControl,
     FrappeButton,
-    FrappeList,
-    FrappeListCell,
-    FrappeListRow,
-    FrappeListRows,
+    FrappeErrorMessage,
   },
   props: {
     openModal: Boolean,
@@ -144,7 +119,7 @@ export default defineComponent({
   },
   data() {
     return {
-      validationError: false,
+      errorMessage: '',
       couponCode: '',
       initialCouponCodes: [] as string[],
     };
@@ -153,15 +128,9 @@ export default defineComponent({
     couponField(): Field | undefined {
       return getField('AppliedCouponCodes', 'coupons');
     },
-    tableFields() {
-      return [
-        {
-          fieldname: 'coupons',
-          fieldtype: 'Link',
-          required: true,
-          readOnly: true,
-        },
-      ] as Field[];
+    subtitle(): string {
+      const name = this.sinvDoc.inserted ? this.sinvDoc.name : '';
+      return [this.sinvDoc.party, name].filter(Boolean).join(' · ');
     },
   },
   watch: {
@@ -171,7 +140,7 @@ export default defineComponent({
       }
 
       this.couponCode = '';
-      this.validationError = false;
+      this.errorMessage = '';
       this.initialCouponCodes =
         this.sinvDoc.coupons?.map((coupon) => coupon.coupons ?? '') ?? [];
     },
@@ -182,7 +151,7 @@ export default defineComponent({
         if (!value) {
           return;
         }
-        this.validationError = false;
+        this.errorMessage = '';
 
         if ((value as Event).type === 'keydown') {
           value = ((value as Event).target as HTMLInputElement).value;
@@ -192,14 +161,8 @@ export default defineComponent({
         await this.applyCoupon(this.couponCode);
         this.$emit('setCouponsCount', this.sinvDoc.coupons?.length ?? 0);
         this.couponCode = '';
-        this.validationError = false;
       } catch (error) {
-        this.validationError = true;
-
-        showToast({
-          type: 'error',
-          message: t`${error as string}`,
-        });
+        this.errorMessage = getErrorMessage(error as Error);
       }
     },
     /** The server's preview rejects a coupon that does not apply, which is then taken off. */

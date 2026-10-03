@@ -1,7 +1,8 @@
 <template>
   <Modal
     :open-modal="openModal"
-    :title="t`Apply Price List`"
+    :title="t`Price list`"
+    :subtitle="t`Rates update for every item in the cart.`"
     @closemodal="cancelPriceList"
   >
     <div class="flex items-end gap-3">
@@ -16,17 +17,24 @@
         @change="(value) => (selectedPriceList = value ?? '')"
       />
       <FrappeButton
-        v-if="selectedPriceList"
+        v-if="isMobile && selectedPriceList"
         icon="lucide-trash-2"
         theme="red"
         variant="ghost"
         class="shrink-0"
-        :tooltip="t`Remove price list`"
         :aria-label="t`Remove price list`"
         @click="removePriceList"
       />
     </div>
     <template #actions="{ size }">
+      <FrappeButton
+        v-if="!isMobile && selectedPriceList"
+        :size="size"
+        class="me-auto"
+        theme="red"
+        variant="ghost"
+        @click="removePriceList"
+        >{{ t`Remove price list` }}</FrappeButton>
       <FrappeButton :size="size" class="min-w-24" @click="cancelPriceList">{{
         t`Cancel`
       }}</FrappeButton>
@@ -35,7 +43,7 @@
         class="min-w-24"
         variant="solid"
         @click="setPriceList"
-        >{{ t`Save` }}</FrappeButton>
+        >{{ t`Apply` }}</FrappeButton>
     </template>
   </Modal>
 </template>

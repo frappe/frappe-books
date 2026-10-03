@@ -1,25 +1,21 @@
 <template>
   <Modal
     :open-modal="openModal"
-    :title="t`Redeem Loyalty Points`"
+    :title="t`Redeem loyalty points`"
+    :subtitle="[sinvDoc.party, loyaltyProgram].filter(Boolean).join(' · ')"
+    size="md"
     @closemodal="cancelLoyaltyProgram"
   >
-    <div class="flex flex-col gap-5">
-      <div class="flex items-start gap-3">
-        <span
-          class="lucide-coins mt-1 size-5 shrink-0 text-ink-gray-6"
-          aria-hidden="true"
-        />
-        <div class="min-w-0">
-          <p class="text-base-medium text-ink-gray-9">
-            {{ t`${loyaltyPoints} points available` }}
-          </p>
-          <p class="break-words text-sm text-ink-gray-6">
-            {{ loyaltyProgram }}
-          </p>
-        </div>
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1 rounded-5 border border-outline-gray-1 p-3">
+        <span class="text-sm text-ink-gray-5">
+          {{ isMobile ? loyaltyProgram : t`Available` }}
+        </span>
+        <span class="text-3xl-semibold tabular-nums text-ink-gray-9">
+          {{ t`${loyaltyPoints} points` }}
+        </span>
       </div>
-      <div v-if="sinvDoc.fieldMap">
+      <div v-if="sinvDoc.fieldMap" class="flex flex-col gap-1.5">
         <Int
           :show-label="true"
           :border="true"
@@ -30,7 +26,7 @@
           @keydown.enter="saveLoyaltyPoints"
           @change="setPendingLoyaltyPoints"
         />
-        <FrappeErrorMessage class="mt-1.5" :message="errorMessage" />
+        <FrappeErrorMessage :message="errorMessage" />
       </div>
     </div>
     <template #actions="{ size }">
@@ -42,7 +38,7 @@
         class="min-w-24"
         variant="solid"
         @click="saveLoyaltyPoints"
-        >{{ t`Save` }}</FrappeButton>
+        >{{ t`Redeem` }}</FrappeButton>
     </template>
   </Modal>
 </template>

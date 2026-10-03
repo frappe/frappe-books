@@ -458,10 +458,6 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     }
 
     this._setDirty(true);
-    if (typeof value === 'string') {
-      value = value.trim();
-    }
-
     if (Array.isArray(value)) {
       for (const row of value) {
         this.push(fieldname, row);

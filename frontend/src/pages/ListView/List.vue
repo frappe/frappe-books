@@ -59,14 +59,18 @@
               :value="value"
               @click="isSelectionMode ? undefined : $emit('openDoc', row.name)"
             >
-              <FrappeListCell class="justify-end pe-2 text-ink-gray-5">
+              <FrappeListCell
+                class="justify-end pe-2 text-ink-gray-4 tabular-nums"
+              >
                 {{ index + pageStart + 1 }}
               </FrappeListCell>
               <FrappeListCell
                 v-for="(column, columnIndex) in columns"
                 :key="column.label"
                 :class="[
-                  isNumeric(column.fieldtype) ? 'justify-end text-end' : '',
+                  isNumeric(column.fieldtype)
+                    ? 'justify-end text-end tabular-nums'
+                    : '',
                   columnIndex === 0 ? 'text-ink-gray-8' : '',
                 ]"
               >

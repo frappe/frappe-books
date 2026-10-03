@@ -123,3 +123,15 @@ test('a POS scan adds an item the POS does not list, a weight in the stock unit'
   ]);
   assert.equal(pos.itemSearchTerm, '');
 });
+
+test('a POS scan keeps the text typed while its item was added', async () => {
+  fyo.singles.POSSettings = scale;
+  stubFrappe(() => ({ message: [riceRow] }));
+  const pos = { items: [], itemQtyMap: {}, itemSearchTerm: '' };
+  pos.addItem = async () => {
+    pos.itemSearchTerm = '8900';
+  };
+
+  await POS.methods.handleItemSearch.call(pos, '890000000001', true);
+  assert.equal(pos.itemSearchTerm, '8900');
+});

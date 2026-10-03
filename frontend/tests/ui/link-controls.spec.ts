@@ -267,9 +267,9 @@ test('one notification renders once and dismisses on click', async ({
     return app.config.globalProperties.$router.push('/pos');
   });
   await expect(
-    page.getByRole('button', { name: 'Coupon Code', exact: true })
+    page.getByRole('button', { name: 'Coupon', exact: true })
   ).toHaveCount(1);
-  await page.getByRole('button', { name: 'Coupon Code', exact: true }).click();
+  await page.getByRole('button', { name: 'Coupon', exact: true }).click();
   const close = page.getByRole('button', { name: 'Close toast', exact: true });
   await expect(close).toHaveCount(1);
   await close.hover();

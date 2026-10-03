@@ -53,10 +53,7 @@ const sections = computed(() => [
   {
     title: t`Records`,
     theme: 'gray' as const,
-    filters: [
-      { value: 'skipTables', label: t`Skip Child Tables` },
-      { value: 'skipTransactions', label: t`Skip Transactions` },
-    ],
+    filters: [{ value: 'skipTransactions', label: t`Skip Transactions` }],
   },
   {
     title: t`Document Types`,

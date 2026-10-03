@@ -32,6 +32,9 @@ await build({
       export { default as Float } from './src/components/Controls/Float.vue';
       export { default as Int } from './src/components/Controls/Int.vue';
       export { default as ExchangeRate } from './src/components/Controls/ExchangeRate.vue';
+      export { default as Select } from './src/components/Controls/Select.vue';
+      export { default as AutoComplete } from './src/components/Controls/AutoComplete.vue';
+      export { default as Color } from './src/components/Controls/Color.vue';
       export { default as Link } from './src/components/Controls/Link.vue';
       export { default as MultiLabelLink } from './src/components/Controls/MultiLabelLink.vue';
       export { default as GetStarted } from './src/pages/GetStarted.vue';
@@ -55,7 +58,7 @@ await build({
         }));
         // Components under test keep their script; the rest are stubs.
         const tested =
-          /\/(FilterLinkInput|FilterValueInput|Link|MultiLabelLink|GetStarted|StatusPill|Currency|Float|Int|ExchangeRate)\.vue$/;
+          /\/(FilterLinkInput|FilterValueInput|Link|MultiLabelLink|GetStarted|StatusPill|Currency|Float|Int|ExchangeRate|Controls\/Select|Controls\/AutoComplete|Controls\/Color)\.vue$/;
         builder.onLoad({ filter: tested }, async (args) => ({
           contents: (await readFile(args.path, 'utf8')).match(
             /<script[^>]*>([\s\S]*?)<\/script>/
@@ -94,6 +97,9 @@ export const {
   Float,
   Int,
   ExchangeRate,
+  Select,
+  AutoComplete,
+  Color,
   Link,
   MultiLabelLink,
   GetStarted,

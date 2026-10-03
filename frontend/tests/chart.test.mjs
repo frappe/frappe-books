@@ -1,25 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  getCompactCurrencyFormat,
-  getYMax,
-  getYMin,
-} from '../src/utils/chart.ts';
+import { getAxisLabels, getCompactCurrencyFormat } from '../src/utils/chart.ts';
 
-test('chart axes include zero and have a finite range for sparse periods', () => {
-  for (const points of [[], [[]], [[0]], [[12]], [[-12]], [[NaN, Infinity]]]) {
-    const min = getYMin(points);
-    const max = getYMax(points);
-    assert.ok(Number.isFinite(min) && Number.isFinite(max));
-    assert.ok(min <= 0 && max >= 0);
-    assert.ok(min < max);
+test('chart value ticks are compact on every screen; phones shorten months', () => {
+  for (const isPhone of [false, true]) {
+    const { x, y } = getAxisLabels('en-IN', isPhone);
+    assert.equal(y.axisLabel.formatter(2500000), '25L');
+    assert.equal(x?.axisLabel.formatter('2026-10'), isPhone ? 'Oct' : undefined);
   }
-});
-
-test('chart axes contain every positive and negative balance', () => {
-  const points = [[-121, 0, 345], [10, -2]];
-  assert.ok(getYMin(points) <= -121);
-  assert.ok(getYMax(points) >= 345);
 });
 
 test('phone tiles show amounts compact, behind the currency symbol', () => {

@@ -46,7 +46,7 @@ import {
   getPOSRowFieldLabel,
   POSRowField,
   setPOSRowValue,
-} from 'src/utils/pos';
+} from 'src/utils/posCart';
 import { defineComponent } from 'vue';
 
 type NumericKeypadRef = {

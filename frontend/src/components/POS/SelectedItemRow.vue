@@ -253,17 +253,16 @@ import Text from 'src/components/Controls/Text.vue';
 import { t } from 'fyo';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
+import { getPOSRowItem, POSRowItem } from 'src/utils/pos';
 import {
   getPOSQuantityField,
   getPOSRowFieldLabel,
-  getPOSRowItem,
   isPOSRowFieldReadOnly,
-  POSRowItem,
   POSRowField,
   refillSerialNumbers,
   setPOSRowValue,
   validateSerialNumberCount,
-} from 'src/utils/pos';
+} from 'src/utils/posCart';
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { defineComponent, inject, PropType } from 'vue';

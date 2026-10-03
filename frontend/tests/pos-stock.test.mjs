@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, pos, posStock } from './helpers/frappe.mjs';
+import { frappeModels, pos, posCart, posStock } from './helpers/frappe.mjs';
 
 const item = 'Demo - Coffee Beans';
 const service = 'Demo - Gift Wrapping';
@@ -177,19 +177,19 @@ test('a row may not ask for more of its batch than the POS warehouse has', async
     { item, batch, quantity: 3 },
     { item, batch, quantity: 1 },
   ];
-  await pos.validateQty(rows[0], rows);
+  await posCart.validateQty(rows[0], rows);
   rows[1].quantity = 2;
   await assert.rejects(
-    pos.validateQty(rows[0], rows),
+    posCart.validateQty(rows[0], rows),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
 });
 
 test('a batched row needs a batch and untracked items need no stock', async () => {
   const row = { item, quantity: 999 };
-  await assert.rejects(pos.validateQty(row, [row]), /select a batch/);
+  await assert.rejects(posCart.validateQty(row, [row]), /select a batch/);
   const untracked = { item: service, quantity: 999 };
-  await pos.validateQty(untracked, [untracked]);
+  await posCart.validateQty(untracked, [untracked]);
 });
 
 test('a row without an item or batch shows no batch stock and asks nothing', async () => {
@@ -204,7 +204,7 @@ test('selecting an unavailable batch cannot use stock from other warehouses', as
   stubServer({ stock: ledger.filter((row) => row.location !== inventory) });
   const invoice = makeInvoice();
   await assert.rejects(
-    pos.addBatchItem(invoice, product, batch, 2),
+    posCart.addBatchItem(invoice, product, batch, 2),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 0/
   );
   assert.equal(invoice.items.length, 0);
@@ -212,11 +212,11 @@ test('selecting an unavailable batch cannot use stock from other warehouses', as
 
 test('selecting a stocked batch adds to its row and checks the added quantity', async () => {
   const invoice = makeInvoice();
-  await pos.addBatchItem(invoice, product, batch, 2);
+  await posCart.addBatchItem(invoice, product, batch, 2);
   assert.equal(invoice.items[0].quantity, 2);
 
   await assert.rejects(
-    pos.addBatchItem(invoice, product, batch, 3),
+    posCart.addBatchItem(invoice, product, batch, 3),
     /Available: 4; required: 5/
   );
   assert.equal(invoice.items[0].quantity, 2);
@@ -243,7 +243,7 @@ test('a cart quantity must be above zero unless the row is a return', async () =
   const row = makeRow({ quantity: 2, transfer_quantity: 2 });
   for (const quantity of [0, -1]) {
     await assert.rejects(
-      pos.setPOSRowQuantity(row, 'quantity', quantity),
+      posCart.setPOSRowQuantity(row, 'quantity', quantity),
       /greater than zero/
     );
   }
@@ -254,28 +254,28 @@ test('a cart quantity must be above zero unless the row is a return', async () =
     quantity: -1,
     transfer_quantity: -1,
   });
-  await pos.setPOSRowQuantity(returned, 'transfer_quantity', 3);
+  await posCart.setPOSRowQuantity(returned, 'transfer_quantity', 3);
   assert.deepEqual([returned.quantity, returned.transfer_quantity], [-3, -3]);
 });
 
 test('a cart quantity the POS warehouse cannot supply is restored', async () => {
   const row = makeRow({ quantity: 2, transfer_quantity: 2 });
   await assert.rejects(
-    pos.setPOSRowQuantity(row, 'transfer_quantity', 5),
+    posCart.setPOSRowQuantity(row, 'transfer_quantity', 5),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
   assert.deepEqual([row.quantity, row.transfer_quantity], [2, 2]);
 
-  await pos.setPOSRowQuantity(row, 'quantity', 4);
+  await posCart.setPOSRowQuantity(row, 'quantity', 4);
   assert.equal(row.quantity, 4);
 });
 
 test('a transfer quantity is checked by the stock quantity it converts to', async () => {
   const row = makeRow({ unit_conversion_factor: 2 });
-  await pos.setPOSRowQuantity(row, 'transfer_quantity', 2);
+  await posCart.setPOSRowQuantity(row, 'transfer_quantity', 2);
   assert.deepEqual([row.transfer_quantity, row.quantity], [2, 4]);
   await assert.rejects(
-    pos.setPOSRowQuantity(row, 'transfer_quantity', 3),
+    posCart.setPOSRowQuantity(row, 'transfer_quantity', 3),
     /Available: 4; required: 6/
   );
   assert.deepEqual([row.transfer_quantity, row.quantity], [2, 4]);
@@ -283,14 +283,14 @@ test('a transfer quantity is checked by the stock quantity it converts to', asyn
 
 test('a cart discount edit picks amount or percent discounts', async () => {
   const row = makeRow();
-  await pos.setPOSRowValue(row, 'item_discount_amount', 5);
+  await posCart.setPOSRowValue(row, 'item_discount_amount', 5);
   assert.equal(row.set_item_discount_amount, true);
-  await pos.setPOSRowValue(row, 'item_discount_percent', 10);
+  await posCart.setPOSRowValue(row, 'item_discount_percent', 10);
   assert.deepEqual(
     [row.set_item_discount_amount, row.item_discount_percent],
     [false, 10]
   );
-  await pos.setPOSRowValue(row, 'transfer_rate', 7);
+  await posCart.setPOSRowValue(row, 'transfer_rate', 7);
   assert.deepEqual(
     [row.set_item_discount_amount, row.transfer_rate],
     [false, 7]
@@ -301,10 +301,10 @@ test('adding an item already in the cart checks the POS warehouse for the new to
   const row = makeRow({ quantity: 3, transfer_quantity: 3 });
   const invoice = row.parentdoc;
   const stock = { [item]: { availableQty: 4 } };
-  assert.equal(await pos.addPOSItem(invoice, product, 1, stock), row);
+  assert.equal(await posCart.addPOSItem(invoice, product, 1, stock), row);
   assert.equal(row.quantity, 4);
   await assert.rejects(
-    pos.addPOSItem(invoice, product, 1, stock),
+    posCart.addPOSItem(invoice, product, 1, stock),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
   );
   assert.equal(row.quantity, 4);
@@ -312,8 +312,8 @@ test('adding an item already in the cart checks the POS warehouse for the new to
 
 test('a new cart row needs the item in stock', async () => {
   const invoice = makeInvoice();
-  await assert.rejects(pos.addPOSItem(invoice, product, 1, {}), /out of stock/);
-  const row = await pos.addPOSItem(invoice, product, 2, stockMap(0));
+  await assert.rejects(posCart.addPOSItem(invoice, product, 1, {}), /out of stock/);
+  const row = await posCart.addPOSItem(invoice, product, 2, stockMap(0));
   assert.deepEqual(
     [invoice.items.length, row.item, row.quantity],
     [1, item, 2]
@@ -326,9 +326,9 @@ test('a sale row leaves serial numbers that miss its quantity to the server', ()
     ...values,
     leaveToServer: (fieldnames) => left.push([values.quantity, fieldnames]),
   });
-  pos.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1' }));
-  pos.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1\nS2' }));
-  pos.refillSerialNumbers(makeSerialRow({ quantity: -2, serial_number: 'SOLD-1' }));
+  posCart.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1' }));
+  posCart.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1\nS2' }));
+  posCart.refillSerialNumbers(makeSerialRow({ quantity: -2, serial_number: 'SOLD-1' }));
   assert.deepEqual(left, [[2, ['serial_number']]]);
 });
 

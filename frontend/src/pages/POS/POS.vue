@@ -252,20 +252,22 @@ import { PaymentMethod } from 'models/baseModels/PaymentMethod/PaymentMethod';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import {
-  addBatchItem,
-  addPOSItem,
   getPOSItemFilters,
-  refillSerialNumbers,
   POS_ITEM_FIELDS,
   getListedPOSItems,
   validatePOSCheckout,
-  getTotalQuantity,
-  setPOSRowQuantity,
   isTypingInField,
   getQuickQtyBuffer,
-  getPOSQuantityField,
   getInvoicePayments,
 } from 'src/utils/pos';
+import {
+  addBatchItem,
+  addPOSItem,
+  getPOSQuantityField,
+  getTotalQuantity,
+  refillSerialNumbers,
+  setPOSRowQuantity,
+} from 'src/utils/posCart';
 import {
   getItemVisibility,
   getOpenPOSShift,

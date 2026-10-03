@@ -122,13 +122,12 @@ import { POS_ITEM_TOAST_ID } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { showToast } from 'src/utils/interactive';
+import { CostLine, getCostLines } from 'src/utils/pos';
 import {
-  CostLine,
-  getCostLines,
   getPOSQuantityField,
   refillSerialNumbers,
   setPOSRowQuantity,
-} from 'src/utils/pos';
+} from 'src/utils/posCart';
 import { computed, inject, type Ref } from 'vue';
 
 /** The cart sheet: customer, lines with quantity steppers, totals, Hold and Pay; a submitted sale only pays. */

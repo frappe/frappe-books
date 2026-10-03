@@ -98,7 +98,7 @@ import {
   isPOSRowFieldReadOnly,
   POSRowField,
   setPOSRowValue,
-} from 'src/utils/pos';
+} from 'src/utils/posCart';
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { inject, onMounted, ref, type Ref } from 'vue';

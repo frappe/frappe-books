@@ -389,7 +389,7 @@ export class Importer {
     }
 
     if (!templateFieldsAssigned) {
-      this.clearAndResizeAssignedTemplateFields(parsed[0].length);
+      this.assignedTemplateFields = parsed[0].map(() => null);
     }
 
     if (startIndex === -1) {
@@ -397,16 +397,6 @@ export class Importer {
     }
 
     this.assignValueMatrixFromParsed(parsed.slice(startIndex));
-  }
-
-  clearAndResizeAssignedTemplateFields(size: number) {
-    for (let i = 0; i < size; i++) {
-      if (i >= this.assignedTemplateFields.length) {
-        this.assignedTemplateFields.push(null);
-      } else {
-        this.assignedTemplateFields[i] = null;
-      }
-    }
   }
 
   assignValueMatrixFromParsed(parsed: string[][]) {
@@ -526,10 +516,9 @@ export class Importer {
       return false;
     }
 
-    for (const [index, value] of row.entries()) {
-      this.assignedTemplateFields[index] = this.getPickedFieldKey(value);
-    }
-
+    this.assignedTemplateFields = row.map((value) =>
+      this.getPickedFieldKey(value)
+    );
     return true;
   }
 

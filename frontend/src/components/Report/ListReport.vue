@@ -66,7 +66,7 @@
     <div v-if="report.usePagination" class="mt-auto flex-shrink-0">
       <Paginator
         ref="paginator"
-        :item-count="report?.reportData?.length ?? 0"
+        :item-count="entryRowIndexes.length"
         class="px-3 sm:px-5"
         @index-change="setPageIndices"
       />
@@ -128,10 +128,18 @@ export default defineComponent({
   computed: {
     dataSlice() {
       if (this.report?.usePagination) {
-        return this.report.reportData.slice(this.pageStart, this.pageEnd);
+        return this.report.reportData.slice(
+          this.getPageRow(this.pageStart),
+          this.getPageRow(this.pageEnd)
+        );
       }
 
       return this.report.reportData;
+    },
+    entryRowIndexes() {
+      return this.report.reportData.flatMap((row, index) =>
+        row.isEmpty || row.isSummary ? [] : [index]
+      );
     },
     listColumns() {
       return this.report.columns.map(
@@ -158,6 +166,12 @@ export default defineComponent({
         this.columnHeaders[column.fieldname].$el,
         this.$refs.list.$el
       );
+    },
+    /** Where a page starting at this entry starts; the last page keeps the rows after it. */
+    getPageRow(entry) {
+      return entry
+        ? (this.entryRowIndexes[entry] ?? this.report.reportData.length)
+        : 0;
     },
     getRowKey(row, index) {
       return `${index}-${row.cells?.[0]?.value ?? ''}`;

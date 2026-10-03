@@ -11,7 +11,6 @@ import type { POSItem } from 'src/components/POS/types';
 import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
-import { showToast } from './interactive';
 import type { POSPermissions } from './posSetup';
 
 type QuantityField = 'quantity' | 'transfer_quantity';
@@ -60,7 +59,11 @@ export async function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
   };
   try {
     await writeQuantity(row, field, quantity);
-    const rows = getItemRows(row.parentdoc as SalesInvoice, row.item, row.batch);
+    const rows = getItemRows(
+      row.parentdoc as SalesInvoice,
+      row.item,
+      row.batch
+    );
     await validateStock(row.item as string, row.batch, rows);
   } catch (error) {
     await row.set(field, previous[field]);
@@ -169,26 +172,14 @@ export function getTotalQuantity(rows: SalesInvoiceItem[]): number {
   );
 }
 
-export function validateSerialNumberCount(
-  serialNumbers: string | undefined,
-  quantity: number,
-  item: string
-) {
-  let serialNumberCount = 0;
-
-  if (serialNumbers) {
-    serialNumberCount = serialNumbers.split('\n').length;
-  }
-
-  if (Math.abs(quantity) !== serialNumberCount) {
-    const errorMessage = t`Need ${quantity} Serial Numbers for Item ${item}. You have provided ${serialNumberCount}`;
-
-    showToast({
-      type: 'error',
-      message: errorMessage,
-      duration: 'long',
-    });
-    throw new ValidationError(errorMessage);
+/** Checks a cart row has a serial number for each unit it sells or takes back. */
+export function validateSerialNumberCount(row: SalesInvoiceItem) {
+  const quantity = Math.abs(row.quantity ?? 0);
+  const count = getSerialNumberCount(row);
+  if (count !== quantity) {
+    throw new ValidationError(
+      t`Need ${quantity} Serial Numbers for Item ${row.item!}. You have provided ${count}`
+    );
   }
 }
 
@@ -238,12 +229,15 @@ async function validateStock(
  */
 function refillSerialNumbers(row: SalesInvoiceItem) {
   const quantity = row.quantity ?? 0;
-  const count = (row.serial_number ?? '')
-    .split('\n')
-    .filter((serialNumber) => serialNumber.trim()).length;
-  if (quantity > 0 && count !== quantity) {
+  if (quantity > 0 && getSerialNumberCount(row) !== quantity) {
     row.leaveToServer(['serial_number']);
   }
+}
+
+function getSerialNumberCount(row: SalesInvoiceItem): number {
+  return (row.serial_number ?? '')
+    .split('\n')
+    .filter((serialNumber) => serialNumber.trim()).length;
 }
 
 /** The cart rows of `item` that are not free items, from `batch` if given. */

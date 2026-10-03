@@ -430,12 +430,10 @@ export default defineComponent({
         return;
       }
 
-      await this.row.set('serial_number', serialNumber);
-      validateSerialNumberCount(
-        serialNumber,
-        Math.abs(this.row.quantity ?? 0),
-        this.row.item as string
-      );
+      await this.changeRow(async () => {
+        await this.row.set('serial_number', serialNumber);
+        validateSerialNumberCount(this.row);
+      });
     },
     async removeRow() {
       await this.row.parentdoc?.remove('items', this.row.idx as number);

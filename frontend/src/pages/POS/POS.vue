@@ -283,7 +283,7 @@ import {
   ItemQtyMap,
 } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
-import { filterPOSItems, findScannedPOSItem } from 'src/utils/posItemSearch';
+import { filterPOSItems, getScannedItem } from 'src/utils/posItemSearch';
 
 const COMPONENT_NAME = 'POS';
 const PAY_POS_INVOICE =
@@ -603,12 +603,7 @@ export default defineComponent({
     async handleItemSearch(searchTerm: string | null, addItem = false) {
       this.itemSearchTerm = searchTerm ?? '';
       const scanned =
-        addItem &&
-        findScannedPOSItem(
-          this.items as POSItem[],
-          this.itemSearchTerm,
-          fyo.singles.POSSettings
-        );
+        addItem && (await getScannedItem(this.itemSearchTerm, this.itemQtyMap));
       if (scanned) {
         await this.addItem(scanned.item, scanned.quantity);
         this.itemSearchTerm = '';

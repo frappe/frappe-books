@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { findScannedPOSItem } from './helpers/accounting.mjs';
-import { posItemSearch, stubFrappe } from './helpers/frappe.mjs';
+import { fyo, posItemSearch, stubFrappe } from './helpers/frappe.mjs';
 
 const rice = {
   name: 'Basmati Rice',
@@ -11,6 +11,14 @@ const rice = {
 };
 const eggs = { name: 'Eggs', itemCode: '54321', unit: 'Unit' };
 const items = [rice, eggs];
+const riceRow = {
+  name: 'Basmati Rice',
+  item_code: '12345',
+  barcode: '890000000001',
+  unit: 'Kg',
+  rate: 80,
+  track_item: 1,
+};
 const scale = {
   weight_enabled_barcode: true,
   check_digits: 21,
@@ -56,13 +64,17 @@ test('any barcode matches exactly, whatever its length or characters', () => {
 });
 
 test('a scan looks up only the items its code, or its scale item code, may name', async () => {
-  const requests = stubFrappe(() => ({
-    message: [{ name: 'Basmati Rice', item_code: '12345', unit: 'Kg' }],
-  }));
-  const scanned = await posItemSearch.getScannableItems('211234501500', scale);
-  assert.deepEqual(scanned, [
-    { name: 'Basmati Rice', itemCode: '12345', barcode: undefined, unit: 'Kg' },
-  ]);
+  fyo.singles.POSSettings = scale;
+  const requests = stubFrappe(() => ({ message: [riceRow] }));
+  const stock = { 'Basmati Rice': { availableQty: 4 } };
+  const { item, quantity } = await posItemSearch.getScannedItem(
+    '211234501500',
+    stock
+  );
+  assert.deepEqual(
+    [item.name, item.rate.float, item.trackItem, item.availableQty, quantity],
+    ['Basmati Rice', 80, true, 4, 1.5]
+  );
 
   assert.equal(requests.length, 1);
   const { path, body } = requests[0];
@@ -76,4 +88,10 @@ test('a scan looks up only the items its code, or its scale item code, may name'
     ['item_code', 'like', '12345'],
     ['barcode', 'like', '12345'],
   ]);
+});
+
+test('a blank code looks nothing up', async () => {
+  const requests = stubFrappe(() => ({ message: [riceRow] }));
+  assert.equal(await posItemSearch.getScannedItem('  '), undefined);
+  assert.equal(requests.length, 0);
 });

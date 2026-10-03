@@ -78,6 +78,7 @@ import type { Report } from 'reports/Report';
 import type { Field } from 'schemas/types';
 import { getDatePickerFormat } from 'src/components/Controls/datePickerFormat';
 import FormControl from 'src/components/Controls/FormControl.vue';
+import { isNumeric } from 'src/utils';
 import { fyo } from 'src/initFyo';
 import { computed } from 'vue';
 import { getDateRangePresets, getFilterItems } from './filterToolbar';
@@ -107,7 +108,11 @@ function getRangeFormat() {
 }
 
 function getWidthClass(field: Field): string {
-  return ['Select', 'Check'].includes(field.fieldtype) ? '' : 'w-56';
+  if (['Select', 'Check'].includes(field.fieldtype)) {
+    return '';
+  }
+
+  return isNumeric(field) ? 'w-44' : 'w-56';
 }
 
 function getTabValue(field: Field): string | undefined {

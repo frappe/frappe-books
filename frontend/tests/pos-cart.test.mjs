@@ -155,10 +155,10 @@ test('a cart quantity must be above zero, and a return takes it back', async () 
   for (const change of [
     () => posCart.setCartQuantity(row, 0),
     () => posCart.setCartQuantity(row, -1),
-    () => posCart.stepCartQuantity(row, -1),
   ]) {
     await assert.rejects(change(), /greater than zero/);
   }
+  await posCart.stepCartQuantity(row, -1);
   assert.equal(row.quantity, 1);
 
   const [returned] = makeSale([{ item: tea, quantity: -1 }], {

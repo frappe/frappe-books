@@ -78,16 +78,14 @@
           <!-- Group Skip Filters -->
           <div class="flex flex-wrap gap-1.5">
             <FrappeButton
-              v-for="s in ['skipTables', 'skipTransactions'] as const"
-              :key="s"
               size="xs"
-              :variant="isFilterOn(s) ? 'subtle' : 'outline'"
-              :aria-pressed="isFilterOn(s)"
-              @click="setSearchFilter(s, !isFilterOn(s))"
+              :variant="isFilterOn('skipTransactions') ? 'subtle' : 'outline'"
+              :aria-pressed="isFilterOn('skipTransactions')"
+              @click="
+                setSearchFilter('skipTransactions', !isFilterOn('skipTransactions'))
+              "
             >
-              {{
-                s === 'skipTables' ? t`Skip Child Tables` : t`Skip Transactions`
-              }}
+              {{ t`Skip Transactions` }}
             </FrappeButton>
           </div>
 

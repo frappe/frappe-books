@@ -1,6 +1,5 @@
 import { Fyo, t } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
-import { groupBy } from 'lodash';
 import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports';
 import { OptionField } from 'schemas/types';
@@ -9,17 +8,14 @@ import {
   getAllSchemaNames,
   getField,
   getSchema,
-  toSchemaName,
 } from 'src/frappe/registry';
 import {
   getSearchables,
-  getSeriesPrefixes,
   searchDocuments,
   type Searchable,
 } from 'src/frappe/search';
 import { getImportableSchemaNames } from 'src/importer';
 import { createFilters, routeFilters } from 'src/utils/filters';
-import { safeParseFloat } from 'utils/index';
 import { fuzzyMatch } from '.';
 import { canOpen } from './sidebarConfig';
 import { getFormRoute, openNewDoc, routeTo } from './ui';
@@ -51,17 +47,9 @@ interface RecentSearchItem extends Omit<SearchItem, 'group'> {
 
 export type SearchItems = (DocSearchItem | SearchItem | RecentSearchItem)[];
 
-const DOC_RESULT_LIMIT = 20;
-
-interface Keyword {
-  values: string[];
-  meta: Record<string, string | number | undefined>;
-  priority: number;
-}
 
 interface SearchFilters {
   groupFilters: Record<SearchGroup, boolean>;
-  skipTables: boolean;
   skipTransactions: boolean;
   schemaFilters: Record<string, boolean>;
 }
@@ -346,36 +334,15 @@ function getNonDocSearchList(fyo: Fyo) {
 
 export class Search {
   /**
-   * A simple fuzzy searcher.
-   *
-   * How the Search works:
-   * - Typed input fetches a bounded set of matching docs from the server,
-   *   matched on the DocType search fields.
-   * - `name` or `parent` (parent doc's name) is used as the main
-   *   label.
-   * - The search field values and schema label are used as
-   *   search target terms.
-   * - Input is split on `' '` (whitespace) and each part has to completely
-   *   or partially match the search target terms.
-   * - Non matches are ignored.
+   * The search palette's items: lists, actions, reports and pages that
+   * fuzzy match the input here, then the documents the server's search
+   * index finds for it, in the server's order.
    */
 
   _docRequestId = 0;
   recentKey = 'searchRecents';
   searchables: Record<string, Searchable>;
-  seriesPrefixes?: Record<string, string[]>;
-  keywords: Record<string, Keyword[]>;
-  priorityMap: Record<string, number> = {
-    [ModelNameEnum.SalesInvoice]: 125,
-    [ModelNameEnum.PurchaseInvoice]: 100,
-    [ModelNameEnum.Payment]: 75,
-    [ModelNameEnum.StockMovement]: 75,
-    [ModelNameEnum.Shipment]: 75,
-    [ModelNameEnum.PurchaseReceipt]: 75,
-    [ModelNameEnum.Item]: 50,
-    [ModelNameEnum.Party]: 50,
-    [ModelNameEnum.JournalEntry]: 50,
-  };
+  docs: DocSearchItem[] = [];
 
   filters: SearchFilters = {
     groupFilters: {
@@ -387,7 +354,6 @@ export class Search {
       Recent: true,
     },
     schemaFilters: {},
-    skipTables: false,
     skipTransactions: false,
   };
 
@@ -401,14 +367,13 @@ export class Search {
 
   constructor(fyo: Fyo) {
     this.fyo = fyo;
-    this.keywords = {};
     this.searchables = {};
     this._nonDocSearchList = getNonDocSearchList(fyo);
   }
 
   /**
    * these getters are used for hacky two way binding between the
-   * `skipT*` filters and the `schemaFilters`.
+   * `skipTransactions` filter and the `schemaFilters`.
    */
 
   private _loadAndCleanRecentItems(): StoredRecentItem[] {
@@ -499,18 +464,6 @@ export class Search {
     void routeTo(route);
   }
 
-  get skipTables() {
-    let value = true;
-    for (const val of Object.values(this.searchables)) {
-      if (!val.isChild) {
-        continue;
-      }
-
-      value &&= !this.filters.schemaFilters[val.schemaName];
-    }
-    return value;
-  }
-
   get skipTransactions() {
     let value = true;
     for (const val of Object.values(this.searchables)) {
@@ -523,13 +476,13 @@ export class Search {
     return value;
   }
 
-  /** Schema filter chips: transactions first, child tables last. */
+  /** Schema filter chips: transactions first, by schema label. */
   get schemaFilterOptions(): { value: string; label: string }[] {
     return Object.values(this.searchables)
-      .map(({ schemaName, isChild, isSubmittable }) => ({
+      .map(({ schemaName, isSubmittable }) => ({
         value: schemaName,
         label: getSchema(schemaName)?.label ?? schemaName,
-        index: isSubmittable ? 0 : isChild ? 2 : 1,
+        index: isSubmittable ? 0 : 1,
       }))
       .sort((a, b) => a.index - b.index);
   }
@@ -539,8 +492,8 @@ export class Search {
       return this.filters.groupFilters[filterName as SearchGroup];
     }
 
-    if (filterName === 'skipTables' || filterName === 'skipTransactions') {
-      return this.filters[filterName];
+    if (filterName === 'skipTransactions') {
+      return this.filters.skipTransactions;
     }
 
     return !!this.filters.schemaFilters[filterName];
@@ -548,22 +501,14 @@ export class Search {
 
   /** Filters that differ from the defaults; a skip filter counts once. */
   get changedFilterCount(): number {
-    const { groupFilters, schemaFilters, skipTables, skipTransactions } =
-      this.filters;
+    const { groupFilters, schemaFilters, skipTransactions } = this.filters;
     const groups = searchGroups.filter((group) => !groupFilters[group]);
     const schemas = Object.values(this.searchables).filter(
-      ({ schemaName, isChild, isSubmittable }) =>
-        !schemaFilters[schemaName] &&
-        !(isChild && skipTables) &&
-        !(isSubmittable && skipTransactions)
+      ({ schemaName, isSubmittable }) =>
+        !schemaFilters[schemaName] && !(isSubmittable && skipTransactions)
     );
 
-    return (
-      groups.length +
-      schemas.length +
-      Number(skipTables) +
-      Number(skipTransactions)
-    );
+    return groups.length + schemas.length + Number(skipTransactions);
   }
 
   resetFilters() {
@@ -571,7 +516,6 @@ export class Search {
       this.filters.groupFilters[group] = true;
     }
 
-    this.filters.skipTables = false;
     this.filters.skipTransactions = false;
     this._setSchemaFilters();
   }
@@ -581,15 +525,7 @@ export class Search {
       this.filters.groupFilters[filterName as SearchGroup] = value;
     } else if (filterName in this.searchables) {
       this.filters.schemaFilters[filterName] = value;
-      this.filters.skipTables = this.skipTables;
       this.filters.skipTransactions = this.skipTransactions;
-    } else if (filterName === 'skipTables') {
-      Object.values(this.searchables)
-        .filter(({ isChild }) => isChild)
-        .forEach(({ schemaName }) => {
-          this.filters.schemaFilters[schemaName] = !value;
-        });
-      this.filters.skipTables = value;
     } else if (filterName === 'skipTransactions') {
       Object.values(this.searchables)
         .filter(({ isSubmittable }) => isSubmittable)
@@ -615,49 +551,26 @@ export class Search {
   /** Loads the docs matching the input; returns false for a superseded request. */
   async fetchDocs(input?: string): Promise<boolean> {
     const requestId = ++this._docRequestId;
-    const searchables = Object.values(this.searchables).filter((searchable) =>
-      this._isSearchable(searchable)
-    );
+    const doctypes = Object.values(this.searchables)
+      .filter((searchable) => this._isSearchable(searchable))
+      .map(({ doctype }) => doctype);
     const text = input?.trim();
-    const results = text ? await this._searchDocuments(searchables, text) : [];
+    const rows =
+      text && doctypes.length ? await searchDocuments(text, doctypes) : [];
     if (requestId !== this._docRequestId) {
       return false;
     }
 
-    this.keywords = {};
-    searchables.forEach((searchable, index) =>
-      this._setKeywords(results[index] ?? [], searchable)
-    );
-
+    this.docs = rows.flatMap((row) => this._getDocSearchItem(row) ?? []);
     return true;
   }
 
-  async _searchDocuments(searchables: Searchable[], text: string) {
-    this.seriesPrefixes ??= this.fyo.can(ModelNameEnum.NumberSeries, 'read')
-      ? await getSeriesPrefixes()
-      : {};
-    const { seriesPrefixes } = this;
-    return await Promise.all(
-      searchables.map((searchable) =>
-        searchDocuments(
-          searchable,
-          text,
-          DOC_RESULT_LIMIT,
-          seriesPrefixes[searchable.schemaName]
-        )
-      )
-    );
-  }
-
-  _isSearchable(searchable: Searchable): boolean {
+  _isSearchable(searchable?: Searchable): boolean {
     if (
+      !searchable ||
       !this.filters.groupFilters.Docs ||
       !this.filters.schemaFilters[searchable.schemaName]
     ) {
-      return false;
-    }
-
-    if (searchable.isChild && this.filters.skipTables) {
       return false;
     }
 
@@ -665,13 +578,6 @@ export class Search {
   }
 
   search(input?: string): SearchItems {
-    const groupedKeywords = this._getGroupedKeywords();
-    const keys = Object.keys(groupedKeywords);
-    if (!keys.includes('0')) {
-      keys.push('0');
-    }
-
-    keys.sort((a, b) => safeParseFloat(b) - safeParseFloat(a));
     const array: SearchItems = [];
 
     const showRecent =
@@ -680,141 +586,45 @@ export class Search {
       input.toLowerCase().startsWith('recent');
     if (showRecent && this.filters.groupFilters.Recent) {
       const recentSearchTerm = input?.replace(/^#|recent/gi, '').trim();
-      const recentItems = this.getRecentItems(recentSearchTerm);
-      if (recentItems.length > 0) {
-        array.push(...recentItems);
-      }
+      array.push(...this.getRecentItems(recentSearchTerm));
     }
 
-    this._pushGroupedItems(keys, groupedKeywords, array, input);
+    this._pushNonDocSearchItems(array, input);
+    array.push(
+      ...this.docs.filter((doc) =>
+        this._isSearchable(this.searchables[doc.schemaName!])
+      )
+    );
     return array;
   }
 
-  /**
-   * Docs by priority group, with actions after group 0. Actions come first
-   * when a typed word names their group, because a loose match such as
-   * "create" in "Cloud Hosting - Shared Starter" would outrank them.
-   */
-  _pushGroupedItems(
-    keys: string[],
-    groupedKeywords: Record<string, Keyword[]>,
-    array: SearchItems,
-    input?: string
-  ) {
-    const actionsFirst = this._namesActionGroup(input);
-    if (actionsFirst) {
-      this._pushNonDocSearchItems(array, input);
-    }
-
-    for (const key of keys) {
-      this._pushDocSearchItems(groupedKeywords[key] ?? [], array, input);
-      if (key === '0' && !actionsFirst) {
-        this._pushNonDocSearchItems(array, input);
-      }
-    }
-  }
-
-  /** Whether a typed word is an action group's name, such as "create". */
-  _namesActionGroup(input?: string): boolean {
-    const words = input?.toLowerCase().split(/\s+/) ?? [];
-    return this._nonDocSearchList.some(({ group }) =>
-      [group, this._groupLabelMap?.[group]].some(
-        (name) => !!name && words.includes(name.toLowerCase())
-      )
-    );
-  }
-
-  _pushDocSearchItems(keywords: Keyword[], array: SearchItems, input?: string) {
-    if (!input) {
-      return;
-    }
-
-    if (!this.filters.groupFilters.Docs) {
-      return;
-    }
-
-    const subArray = this._getSubSortedArray(keywords, input);
-    array.push(...subArray);
-  }
-
   _pushNonDocSearchItems(array: SearchItems, input?: string) {
-    const filtered = this._nonDocSearchList.filter(
-      (si) => this.filters.groupFilters[si.group]
-    );
-    const subArray = this._getSubSortedArray(filtered, input);
-    array.push(...subArray);
-  }
-
-  _getSubSortedArray(
-    items: (SearchItem | Keyword)[],
-    input?: string
-  ): SearchItems {
-    const subArray: { item: SearchItems[number]; distance: number }[] = [];
-
-    for (const item of items) {
-      const subArrayItem = this._getSubArrayItem(item, input);
-      if (!subArrayItem) {
-        continue;
+    const matches: { item: SearchItem; distance: number }[] = [];
+    for (const item of this._nonDocSearchList) {
+      const match = this.filters.groupFilters[item.group]
+        ? this._getSubArrayItem(item, input)
+        : null;
+      if (match) {
+        matches.push(match);
       }
-
-      subArray.push(subArrayItem);
     }
 
-    subArray.sort((a, b) => a.distance - b.distance);
-    return subArray.map(({ item }) => item);
+    matches.sort((a, b) => a.distance - b.distance);
+    array.push(...matches.map(({ item }) => item));
   }
 
-  _getSubArrayItem(
-    item: SearchItem | Keyword,
-    input?: string
-  ): { item: SearchItems[number]; distance: number } | null {
-    if (isSearchItem(item)) {
-      return this._getSubArrayItemFromSearchItem(item, input);
-    }
-
-    if (!input) {
-      return null;
-    }
-
-    return this._getSubArrayItemFromKeyword(item, input);
-  }
-
-  _getSubArrayItemFromSearchItem(item: SearchItem, input?: string) {
+  _getSubArrayItem(item: SearchItem, input?: string) {
     if (!input) {
       return { item, distance: 0 };
     }
 
     const values = this._getValueListFromSearchItem(item).filter(Boolean);
     const { isMatch, distance } = this._getMatchAndDistance(input, values);
-
-    if (!isMatch) {
-      return null;
-    }
-
-    return { item, distance };
+    return isMatch ? { item, distance } : null;
   }
 
   _getValueListFromSearchItem({ label, group }: SearchItem): string[] {
     return [label, group];
-  }
-
-  _getSubArrayItemFromKeyword(item: Keyword, input: string) {
-    const values = this._getValueListFromKeyword(item).filter(Boolean);
-    const { isMatch, distance } = this._getMatchAndDistance(input, values);
-
-    if (!isMatch) {
-      return null;
-    }
-
-    return {
-      item: this._getDocSearchItemFromKeyword(item),
-      distance,
-    };
-  }
-
-  _getValueListFromKeyword({ values, meta }: Keyword): string[] {
-    const schemaLabel = meta.schemaName as string;
-    return [values, schemaLabel].flat();
   }
 
   _getMatchAndDistance(input: string, values: string[]) {
@@ -851,14 +661,26 @@ export class Search {
     return { isMatch, distance };
   }
 
-  _getDocSearchItemFromKeyword(keyword: Keyword): DocSearchItem {
-    const schemaName = keyword.meta.schemaName as string;
-    const schemaLabel = getSchema(schemaName)?.label ?? schemaName;
-    const route = this._getRouteFromKeyword(keyword);
+  /** A server row as the palette shows it: its name, then its search fields. */
+  _getDocSearchItem(row: DocValues): DocSearchItem | undefined {
+    const searchable = Object.values(this.searchables).find(
+      ({ doctype }) => doctype === row.doctype
+    );
+    if (!searchable) {
+      return;
+    }
+
+    const { schemaName } = searchable;
+
+    const [label, ...more] = searchable.fields.map((fieldname) =>
+      this._getDisplayValue(schemaName, fieldname, row[fieldname])
+    );
+    const route = getFormRoute(schemaName, String(row.name));
     return {
-      label: keyword.values[0],
-      schemaLabel,
-      more: keyword.values.slice(1),
+      label,
+      schemaLabel: getSchema(schemaName)?.label ?? schemaName,
+      schemaName,
+      more,
       group: 'Docs',
       route,
       action: async () => {
@@ -867,28 +689,11 @@ export class Search {
     };
   }
 
-  _getRouteFromKeyword(keyword: Keyword): string {
-    const { parent, parentSchemaName, schemaName } = keyword.meta;
-    if (parent && parentSchemaName) {
-      return getFormRoute(parentSchemaName as string, parent as string);
-    }
-
-    return getFormRoute(schemaName as string, keyword.values[0]);
-  }
-
-  _getGroupedKeywords() {
-    /**
-     * filter out the ignored groups
-     * group by the keyword priority
-     */
-    const keywords: Keyword[] = [];
-    for (const sn of Object.keys(this.keywords)) {
-      if (this._isSearchable(this.searchables[sn])) {
-        keywords.push(...this.keywords[sn]);
-      }
-    }
-
-    return groupBy(keywords, 'priority');
+  /** A field's value, or its Select option's label. */
+  _getDisplayValue(schemaName: string, fieldname: string, value: unknown) {
+    const text = value == null ? '' : String(value);
+    const { options } = (getField(schemaName, fieldname) ?? {}) as OptionField;
+    return options?.find((option) => option.value === text)?.label ?? text;
   }
 
   _setSearchables() {
@@ -896,75 +701,4 @@ export class Search {
       this.searchables[searchable.schemaName] ??= searchable;
     }
   }
-
-  _setKeywords(maps: DocValues[], searchable: Searchable) {
-    if (!maps?.length) {
-      return;
-    }
-
-    this.keywords[searchable.schemaName] = [];
-
-    for (const map of maps) {
-      const keyword: Keyword = { values: [], meta: {}, priority: 0 };
-      this._setKeywordValues(map, searchable, keyword);
-      this._setMeta(map, searchable, keyword);
-      this.keywords[searchable.schemaName]!.push(keyword);
-    }
-
-    this._setPriority(searchable);
-  }
-
-  _setKeywordValues(map: DocValues, searchable: Searchable, keyword: Keyword) {
-    // Set individual field values
-    for (const fn of searchable.fields) {
-      let value = map[fn] as string | undefined;
-      const field = getField(searchable.schemaName, fn);
-
-      const { options } = field as OptionField;
-      if (options) {
-        value = options.find((o) => o.value === value)?.label ?? value;
-      }
-
-      keyword.values.push(value ?? '');
-    }
-  }
-
-  _setMeta(map: DocValues, searchable: Searchable, keyword: Keyword) {
-    keyword.meta.schemaName = searchable.schemaName;
-    if (searchable.isSubmittable) {
-      keyword.meta.docstatus = Number(map.docstatus);
-    }
-
-    if (searchable.isChild && map.parent) {
-      keyword.meta.parent = String(map.parent);
-      keyword.meta.parentSchemaName = toSchemaName(String(map.parenttype));
-      keyword.values.unshift(keyword.meta.parent);
-    }
-  }
-
-  _setPriority(searchable: Searchable) {
-    const keywords = this.keywords[searchable.schemaName] ?? [];
-    const basePriority = this.priorityMap[searchable.schemaName] ?? 0;
-
-    for (const k of keywords) {
-      k.priority += basePriority;
-
-      // Submitted and cancelled documents.
-      if (k.meta.docstatus) {
-        k.priority += 25;
-      }
-
-      if (k.meta.docstatus === 2) {
-        k.priority -= 200;
-      }
-
-      if (searchable.isChild) {
-        k.priority -= 150;
-      }
-    }
-  }
-}
-
-function isSearchItem(item: SearchItem | Keyword): item is SearchItem {
-  return !!(item as SearchItem).group;
 }

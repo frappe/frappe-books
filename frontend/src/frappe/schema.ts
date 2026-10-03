@@ -36,8 +36,6 @@ export interface Presentation {
    * left out.
    */
   fileFields?: string[];
-  /** The search fields the search palette shows and matches, where they are fewer than the DocType's. */
-  paletteFields?: string[];
 }
 
 /**

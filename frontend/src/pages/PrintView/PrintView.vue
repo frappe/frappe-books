@@ -1,7 +1,7 @@
 <template>
   <div
-    class="flex flex-col flex-1"
-    :class="isMobile ? 'min-h-full bg-surface-gray-2' : 'bg-surface-gray-1'"
+    class="flex flex-1 flex-col bg-surface-gray-1"
+    :class="{ 'min-h-full': isMobile }"
   >
     <PageHeader :title="isMobile ? name : t`Print View`">
       <SelectControl

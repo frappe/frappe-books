@@ -44,6 +44,8 @@ await build({
       export { default as router } from 'src/router';
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
+      export { usePOSCheckout } from './src/utils/posCheckout';
+      export * as posDiscounts from './src/utils/posDiscounts';
       export * as posSetup from './src/utils/posSetup';
       export * as posShift from './src/utils/posShift';
       export * as posStock from './models/inventory/posStock';
@@ -159,6 +161,8 @@ export const {
   getFilterFields,
   ListFilters,
   pos,
+  usePOSCheckout,
+  posDiscounts,
   posSetup,
   posShift,
   posStock,

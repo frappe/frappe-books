@@ -45,7 +45,13 @@
     </div>
 
     <p
-      v-if="!resultsQuery && rows.length"
+      v-if="isFirstSearch"
+      class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
+    >
+      {{ t`Loading...` }}
+    </p>
+    <p
+      v-else-if="!resultsQuery && rows.length"
       class="px-4 pb-1.5 pt-3.5 text-sm text-ink-gray-5"
     >
       {{ t`Recent` }}
@@ -176,11 +182,15 @@ const input = useTemplateRef<InstanceType<typeof FrappeTextInput>>('input');
 const isFilterSheetOpen = ref(false);
 const showAll = ref(false);
 
+// The first query has no earlier results to keep showing while it loads.
+const isFirstSearch = computed(() => !!query.value && !resultsQuery.value);
 const matches = computed(() =>
-  results.value.filter(
-    (item) =>
-      (resultsQuery.value || item.group === 'Recent') && isPhonePage(item)
-  )
+  isFirstSearch.value
+    ? []
+    : results.value.filter(
+        (item) =>
+          (resultsQuery.value || item.group === 'Recent') && isPhonePage(item)
+      )
 );
 const total = computed(() => matches.value.length);
 const rows = computed(() =>

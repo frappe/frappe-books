@@ -1,6 +1,6 @@
 <template>
-  <div v-if="isMobile" class="space-y-1.5">
-    <FrappeFormLabel :label="t`Exchange Rate`" />
+  <div :class="{ 'space-y-1.5': isMobile }">
+    <FrappeFormLabel v-if="isMobile" :label="t`Exchange Rate`" />
     <div class="flex items-center gap-2" dir="ltr">
       <!-- TextInput can't align its text, so these inputs set [&_input] (frappe/frappe-ui#1256). -->
       <FrappeTextInput
@@ -9,13 +9,13 @@
         :aria-label="left"
         :disabled="disabled"
         :min="0"
-        size="lg"
+        :size="size"
         variant="subtle"
-        class="min-w-0 flex-1 [&_input]:pe-12 [&_input]:text-end"
+        :class="inputClass"
         @update:model-value="setFromValue"
       >
         <template #suffix>
-          <span class="text-base text-ink-gray-5">{{ left }}</span>
+          <span :class="suffixClass">{{ left }}</span>
         </template>
       </FrappeTextInput>
       <span class="text-ink-gray-6">=</span>
@@ -25,79 +25,24 @@
         :model-value="toValue"
         :disabled="disabled"
         :min="0"
-        size="lg"
+        :size="size"
         variant="subtle"
-        class="min-w-0 flex-1 [&_input]:pe-12 [&_input]:text-end"
+        :class="inputClass"
         @change="rightChange"
       >
         <template #suffix>
-          <span class="text-base text-ink-gray-5">{{ right }}</span>
+          <span :class="suffixClass">{{ right }}</span>
         </template>
       </FrappeTextInput>
       <FrappeButton
         v-if="!disabled"
-        size="lg"
-        variant="subtle"
+        :size="size"
         icon="lucide-arrow-left-right"
         :label="t`Swap currencies`"
+        :tooltip="isMobile ? undefined : t`Swap currencies`"
         @click="swap"
       />
     </div>
-  </div>
-  <div
-    v-else
-    class="flex items-center bg-surface-gray-1 border-outline-gray-1 rounded-4 text-sm p-1 border"
-  >
-    <div
-      class="flex items-center gap-2 rounded-4 px-1 text-sm text-ink-gray-9"
-      :class="disabled ? 'bg-surface-gray-2' : 'bg-surface-gray-1'"
-    >
-      <FrappeTextInput
-        :model-value="fromValue"
-        inputmode="decimal"
-        :aria-label="left"
-        :disabled="disabled"
-        :min="0"
-        size="sm"
-        variant="ghost"
-        class="w-16 [&_input]:text-end"
-        @update:model-value="setFromValue"
-      />
-
-      <span class="text-ink-gray-5">{{ left }}</span>
-    </div>
-
-    <p class="mx-1 text-ink-gray-6">=</p>
-
-    <div
-      class="flex items-center gap-2 rounded-4 px-1 text-sm text-ink-gray-9"
-      :class="disabled ? 'bg-surface-gray-2' : 'bg-surface-gray-1'"
-    >
-      <FrappeTextInput
-        inputmode="decimal"
-        :aria-label="right"
-        :model-value="toValue"
-        :disabled="disabled"
-        :min="0"
-        size="sm"
-        variant="ghost"
-        class="w-16 [&_input]:text-end"
-        @change="rightChange"
-      />
-      <span class="text-ink-gray-5">{{ right }}</span>
-    </div>
-
-    <FrappeButton
-      v-if="!disabled"
-      theme="green"
-      variant="subtle"
-      size="xs"
-      class="ms-1"
-      icon="lucide-refresh-cw"
-      :label="t`Swap currencies`"
-      :tooltip="t`Swap currencies`"
-      @click="swap"
-    />
   </div>
 </template>
 <script lang="ts">
@@ -126,6 +71,20 @@ export default defineComponent({
     return { fromValue: 1, isSwapped: false };
   },
   computed: {
+    /** Phones show the rate as a form field, desktop in the form header. */
+    size(): 'sm' | 'lg' {
+      return this.isMobile ? 'lg' : 'sm';
+    },
+    inputClass(): string {
+      return this.isMobile
+        ? 'min-w-0 flex-1 [&_input]:pe-12 [&_input]:text-end'
+        : 'w-28 [&_input]:pe-10 [&_input]:text-end';
+    },
+    suffixClass(): string {
+      return this.isMobile
+        ? 'text-base text-ink-gray-5'
+        : 'text-sm text-ink-gray-5';
+    },
     toValue(): number | string {
       if (!this.exchangeRate) {
         return '';

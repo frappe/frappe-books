@@ -1,5 +1,8 @@
 """Set up a Books company on the current Frappe site."""
 
+import json
+from functools import cache
+
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 
@@ -12,6 +15,7 @@ from frappe_books.coa import (
 	load_chart,
 )
 from frappe_books.currency import currency_precision
+from frappe_books.formats import books_date_format
 from frappe_books.regional import ensure_regional_records
 from frappe_books.series import NUMBER_SERIES
 from frappe_books.settings import update_frappe_settings
@@ -110,9 +114,20 @@ def _update_print_settings(wizard):
 	settings.save(ignore_permissions=True)
 
 
+@cache
+def get_books_country_info() -> dict:
+	"""The fiscal years and locales Frappe's country data lacks, by Frappe country name."""
+	path = frappe.get_app_path("frappe_books", "data", "country_info.json")
+	with open(path) as file:
+		return json.load(file)
+
+
 def _update_books_system_settings(wizard):
+	"""Format dates and numbers as the company country does, in /books and in Frappe."""
 	settings = frappe.get_single("Books System Settings")
-	settings.locale = "en-IN" if wizard.country == "India" else "en-US"
+	settings.locale = get_books_country_info().get(wizard.country, {}).get("locale") or "en-US"
+	if date_format := frappe.db.get_value("Country", wizard.country, "date_format"):
+		settings.date_format = books_date_format(date_format)
 	settings.save(ignore_permissions=True)
 	settings.update_frappe_formats()
 

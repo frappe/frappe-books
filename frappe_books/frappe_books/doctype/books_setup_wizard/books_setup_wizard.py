@@ -1,9 +1,7 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import json
 from datetime import date
-from functools import cache
 
 import frappe
 from frappe import _
@@ -13,7 +11,7 @@ from frappe.utils import add_days, add_years, getdate, momentjs
 
 from frappe_books.coa import chart_options
 from frappe_books.permissions import check_preview_permission
-from frappe_books.setup_service import run_setup
+from frappe_books.setup_service import get_books_country_info, run_setup
 
 
 class BooksSetupWizard(Document):
@@ -72,14 +70,6 @@ class BooksSetupWizard(Document):
 			frappe.throw(_("Fiscal Year End Date must be after Fiscal Year Start Date."))
 		if self.time_zone and self.time_zone not in momentjs.get_all_timezones():
 			frappe.throw(_("{0} is not a valid time zone.").format(self.time_zone))
-
-
-@cache
-def get_books_country_info() -> dict:
-	"""The fiscal years and locales Frappe's country data lacks, by Frappe country name."""
-	path = frappe.get_app_path("frappe_books", "data", "country_info.json")
-	with open(path) as file:
-		return json.load(file)
 
 
 def get_country_currency(info: dict) -> str | None:

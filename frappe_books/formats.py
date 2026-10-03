@@ -29,6 +29,11 @@ def frappe_date_format(date_format: str) -> str:
 	return "dd-mm-yyyy" if order.index("d") < order.index("M") else "mm-dd-yyyy"
 
 
+def books_date_format(frappe_format: str) -> str:
+	"""The Books (Luxon) date format of a Frappe date format, e.g. dd-MM-yyyy for dd-mm-yyyy."""
+	return frappe_format.replace("mm", "MM")
+
+
 def _position(tokens: str, token: str) -> int:
 	index = tokens.find(token)
 	return len(tokens) if index < 0 else index

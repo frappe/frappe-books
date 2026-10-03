@@ -1,6 +1,6 @@
 <template>
   <Modal
-    :open-modal="openModal && !isDismissed && isValuesSeeded"
+    :open-modal="!isDismissed && isValuesSeeded"
     :title="t`Open POS shift`"
     size="3xl"
     :dismissible="false"
@@ -42,7 +42,7 @@
             class="flex h-10 items-center gap-2 px-3"
           >
             <FrappeIcon
-              :icon="paymentMethodIcons[methodTypes[row.payment_method ?? ''] ?? 'Cash']"
+              :icon="paymentMethodIcons[shift.methodTypes[row.payment_method ?? ''] ?? 'Cash']"
               class="size-4 shrink-0 text-ink-gray-5"
             />
             <span class="min-w-0 flex-1 truncate text-ink-gray-8">
@@ -99,21 +99,21 @@ import FormControl from 'src/components/Controls/FormControl.vue';
 import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
 import MobileDetailList, { type Detail } from 'src/mobile/MobileDetailList.vue';
-import { PaymentMethodType } from 'models/types';
+import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import {
   CashCount,
   POSOpeningShift,
   ShiftAmount,
 } from 'models/inventory/Point of Sale/POSOpeningShift';
-import { getAllDocuments } from 'src/frappe/api';
-import { computed } from 'vue';
+import { newFrappeDoc } from 'src/frappe/documents';
+import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
-import { getPOSOpeningShiftDoc } from 'src/utils/posSetup';
+import type { POSShift } from 'src/utils/posShift';
 
 export default defineComponent({
   name: 'OpenPOSShift',
@@ -132,19 +132,14 @@ export default defineComponent({
     };
   },
   props: {
-    openModal: {
-      default: false,
-      type: Boolean,
-    },
+    shift: { type: Object as PropType<POSShift>, required: true },
   },
-  emits: ['toggleModal'],
   setup() {
     return { isMobile, paymentMethodIcons };
   },
   data() {
     return {
       posShiftDoc: undefined as POSOpeningShift | undefined,
-      methodTypes: {} as Record<string, PaymentMethodType>,
 
       isValuesSeeded: false,
       isDismissed: false,
@@ -177,7 +172,9 @@ export default defineComponent({
   },
   async mounted() {
     this.isValuesSeeded = false;
-    this.posShiftDoc = await getPOSOpeningShiftDoc();
+    this.posShiftDoc = newFrappeDoc(
+      ModelNameEnum.POSOpeningShift
+    ) as POSOpeningShift;
 
     await this.seedDefaults();
     this.isValuesSeeded = true;
@@ -218,25 +215,13 @@ export default defineComponent({
       }
 
       this.posShiftDoc.opening_amounts = [];
-
-      const methods = await getAllDocuments('Books Payment Method', {
-        fields: ['name', 'type'],
-      });
-      this.methodTypes = Object.fromEntries(
-        methods.map(({ name, type }) => [name, type as PaymentMethodType])
+      const paymentMethods = Object.keys(this.shift.methodTypes).map(
+        (name) => ({ payment_method: name, amount: fyo.pesa(0) })
       );
-      const paymentMethods = methods.map(({ name }) => ({
-        payment_method: name as string,
-        amount: fyo.pesa(0),
-      }));
 
       await this.posShiftDoc.set('opening_amounts', paymentMethods);
     },
     async seedDefaults() {
-      if (this.posShiftDoc?.isSubmitted) {
-        return;
-      }
-
       await this.seedDefaultCashDenomiations();
       await this.seedPaymentMethods();
     },
@@ -250,8 +235,7 @@ export default defineComponent({
 
         await this.posShiftDoc?.sync();
         await this.posShiftDoc?.submit();
-
-        this.$emit('toggleModal', 'ShiftOpen');
+        await this.shift.refresh();
       } catch (error) {
         showToast({
           type: 'error',

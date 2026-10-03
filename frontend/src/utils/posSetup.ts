@@ -2,17 +2,11 @@ import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import { POSClosingShift } from 'models/inventory/Point of Sale/POSClosingShift';
-import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
 import { ModelNameEnum } from 'models/types';
 import { ItemVisibility } from 'src/components/POS/types';
-import { getAllDocuments } from 'src/frappe/api';
-import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
+import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
-import { call } from 'src/web/api';
 import { showToast } from './interactive';
-
-const GET_OPEN_SHIFT =
-  'frappe_books.frappe_books.doctype.books_pos_opening_shift.books_pos_opening_shift.get_open_shift';
 
 export type POSPermissions = {
   canChangeRate: boolean;
@@ -43,33 +37,6 @@ export async function getItemVisibility(): Promise<ItemVisibility> {
   const profile = await getPOSProfile();
   return (profile?.item_visibility ??
     fyo.singles.POSSettings?.item_visibility) as ItemVisibility;
-}
-
-/** The name of the open POS shift, if there is one. */
-export async function getOpenPOSShift(): Promise<string | null> {
-  return await call<string | null>(GET_OPEN_SHIFT);
-}
-
-/** The open POS shift, or a new one to open. */
-export async function getPOSOpeningShiftDoc(): Promise<POSOpeningShift> {
-  const openShift = await getOpenPOSShift();
-  if (!openShift) {
-    return newFrappeDoc(ModelNameEnum.POSOpeningShift) as POSOpeningShift;
-  }
-
-  return (await getFrappeDoc(
-    ModelNameEnum.POSOpeningShift,
-    openShift
-  )) as POSOpeningShift;
-}
-
-/** Cash-type payment methods, whose amounts the counted denominations cover. */
-export async function getCashPaymentMethods(): Promise<string[]> {
-  const methods = await getAllDocuments('Books Payment Method', {
-    fields: ['name'],
-    filters: [['type', '=', 'Cash']],
-  });
-  return methods.map(({ name }) => name as string);
 }
 
 /** Warns of POS settings that a sale needs; the profile's inventory stands in for POS Settings', as on the server. */

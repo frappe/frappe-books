@@ -71,6 +71,26 @@ test('the cart stepper turns minus into remove at one', async ({ page }) => {
   await expect(page.getByRole('button', { name: /\d+ items?/ })).toBeHidden();
 });
 
+test('the cart stepper shows the whole quantity', async ({ page }) => {
+  await page.getByRole('button', { name: 'Add Organic Assam Tea' }).click();
+  await page.getByRole('button', { name: /1 item/ }).click();
+  const quantity = page
+    .getByRole('dialog', { name: 'Cart', exact: true })
+    .getByRole('textbox', { name: 'Quantity of Organic Assam Tea' });
+
+  for (const [typed, shown] of [
+    ['1', '1.000'],
+    ['100', '100.000'],
+  ]) {
+    await quantity.fill(typed);
+    await quantity.press('Tab');
+    await expect(quantity).toHaveValue(shown);
+    expect(
+      await quantity.evaluate((input) => input.scrollWidth <= input.clientWidth)
+    ).toBe(true);
+  }
+});
+
 test('a cart line shows its batch and the batch stock at the POS location', async ({
   page,
 }) => {

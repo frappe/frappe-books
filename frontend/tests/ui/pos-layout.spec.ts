@@ -124,6 +124,29 @@ test('discarding a sale on leaving empties the cart', async ({ page }) => {
     .toBe(0);
 });
 
+test('leaving a submitted sale offers only to leave or stay', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const fixture = (window as any).posFixture;
+    fixture.openSavedInvoice(1);
+    void fixture.pos.routeToSinvList();
+  });
+
+  const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
+  await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
+  for (const name of ['Save and Continue', 'Discard and Continue']) {
+    await expect(dialog.getByRole('button', { name, exact: true })).toHaveCount(0);
+  }
+  await dialog.getByRole('button', { name: 'Leave', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).posFixture.pos.sinvDoc.isSubmitted)
+    )
+    .toBe(false);
+});
+
 test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   await page.evaluate(() => {
     const { state } = (window as any).posFixture;

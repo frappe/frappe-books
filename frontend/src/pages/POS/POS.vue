@@ -261,12 +261,9 @@ import {
   getInvoicePayments,
 } from 'src/utils/pos';
 import {
-  addBatchItem,
-  addPOSItem,
-  getPOSQuantityField,
+  addToCart,
   getTotalQuantity,
-  refillSerialNumbers,
-  setPOSRowQuantity,
+  setCartQuantity,
 } from 'src/utils/posCart';
 import {
   getItemVisibility,
@@ -560,7 +557,7 @@ export default defineComponent({
       }
 
       try {
-        await setPOSRowQuantity(row, getPOSQuantityField(), Number(buffer));
+        await setCartQuantity(row, Number(buffer));
       } catch (error) {
         showToast({
           id: POS_ITEM_TOAST_ID,
@@ -839,13 +836,7 @@ export default defineComponent({
           return;
         }
 
-        const row = await addPOSItem(
-          this.sinvDoc as SalesInvoice,
-          item,
-          quantity,
-          this.itemQtyMap
-        );
-        refillSerialNumbers(row);
+        await addToCart(this.sinvDoc as SalesInvoice, item, quantity);
         await this.previewInvoice();
       } catch (error) {
         showToast({
@@ -872,11 +863,11 @@ export default defineComponent({
       this.pendingBatchItem = null;
 
       try {
-        await addBatchItem(
+        await addToCart(
           this.sinvDoc as SalesInvoice,
           item as POSItem,
-          batchName,
-          quantity ?? 1
+          quantity ?? 1,
+          batchName
         );
         await this.previewInvoice();
       } catch (error) {

@@ -50,9 +50,9 @@
               class="relative w-44"
               removable
               :min="1"
-              :value="getQuantity(row)"
+              :value="getCartRowQuantity(row)"
               :df="{
-                fieldname: quantityField,
+                fieldname: 'quantity',
                 fieldtype: 'Float',
                 label: t`Quantity of ${row.item ?? ''}`,
               }"
@@ -60,7 +60,7 @@
               @remove="row.parentdoc?.remove('items', row.idx as number)"
             />
             <span v-else class="text-lg tabular-nums text-ink-gray-7">
-              {{ getQuantity(row) }}
+              {{ getCartRowQuantity(row) }}
             </span>
           </FrappeListCell>
         </FrappeListRow>
@@ -123,11 +123,7 @@ import { fyo } from 'src/initFyo';
 import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { showToast } from 'src/utils/interactive';
 import { CostLine, getCostLines } from 'src/utils/pos';
-import {
-  getPOSQuantityField,
-  refillSerialNumbers,
-  setPOSRowQuantity,
-} from 'src/utils/posCart';
+import { getCartRowQuantity, setCartQuantity } from 'src/utils/posCart';
 import { computed, inject, type Ref } from 'vue';
 
 /** The cart sheet: customer, lines with quantity steppers, totals, Hold and Pay; a submitted sale only pays. */
@@ -142,7 +138,6 @@ defineEmits<{
 }>();
 
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
-const quantityField = getPOSQuantityField();
 
 const totals = computed<(CostLine & { strong?: boolean })[]>(() => [
   ...getCostLines(sinvDoc.value),
@@ -158,10 +153,6 @@ const payLabel = computed(() => {
   return sinvDoc.value.isReturn ? t`Refund ${amount}` : t`Pay ${amount}`;
 });
 
-function getQuantity(row: SalesInvoiceItem): number {
-  return Math.abs(row[quantityField] ?? row.quantity ?? 0);
-}
-
 function getRowMeta(row: SalesInvoiceItem): string {
   const rate = fyo.format(row.transfer_rate ?? 0, 'Currency');
   return [rate, row.tax, row.pricing_rule].filter(Boolean).join(' · ');
@@ -169,8 +160,7 @@ function getRowMeta(row: SalesInvoiceItem): string {
 
 async function setQuantity(row: SalesInvoiceItem, quantity: number) {
   try {
-    await setPOSRowQuantity(row, quantityField, quantity);
-    refillSerialNumbers(row);
+    await setCartQuantity(row, quantity);
   } catch (error) {
     showToast({
       id: POS_ITEM_TOAST_ID,

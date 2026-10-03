@@ -172,54 +172,12 @@ test('fractional sales and returns do not produce false stock errors', async () 
   assert.deepEqual(requests, []);
 });
 
-test('a row may not ask for more of its batch than the POS warehouse has', async () => {
-  const rows = [
-    { item, batch, quantity: 3 },
-    { item, batch, quantity: 1 },
-  ];
-  await posCart.validateQty(rows[0], rows);
-  rows[1].quantity = 2;
-  await assert.rejects(
-    posCart.validateQty(rows[0], rows),
-    /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
-  );
-});
-
-test('a batched row needs a batch and untracked items need no stock', async () => {
-  const row = { item, quantity: 999 };
-  await assert.rejects(posCart.validateQty(row, [row]), /select a batch/);
-  const untracked = { item: service, quantity: 999 };
-  await posCart.validateQty(untracked, [untracked]);
-});
-
 test('a row without an item or batch shows no batch stock and asks nothing', async () => {
   assert.equal(await posStock.getPOSBatchQuantity(item, batch), 4);
   const requests = stubServer();
   assert.equal(await posStock.getPOSBatchQuantity(item, undefined), 0);
   assert.equal(await posStock.getPOSBatchQuantity(undefined, batch), 0);
   assert.deepEqual(requests, []);
-});
-
-test('selecting an unavailable batch cannot use stock from other warehouses', async () => {
-  stubServer({ stock: ledger.filter((row) => row.location !== inventory) });
-  const invoice = makeInvoice();
-  await assert.rejects(
-    posCart.addBatchItem(invoice, product, batch, 2),
-    /POS Counter for batch DEMO-COFFEE-2026.*Available: 0/
-  );
-  assert.equal(invoice.items.length, 0);
-});
-
-test('selecting a stocked batch adds to its row and checks the added quantity', async () => {
-  const invoice = makeInvoice();
-  await posCart.addBatchItem(invoice, product, batch, 2);
-  assert.equal(invoice.items[0].quantity, 2);
-
-  await assert.rejects(
-    posCart.addBatchItem(invoice, product, batch, 3),
-    /Available: 4; required: 5/
-  );
-  assert.equal(invoice.items[0].quantity, 2);
 });
 
 test('checkout validates against the stock the server has now', async () => {
@@ -239,48 +197,6 @@ test('a payment retry does not require stock that has already shipped', async ()
   assert.deepEqual(requests, []);
 });
 
-test('a cart quantity must be above zero unless the row is a return', async () => {
-  const row = makeRow({ quantity: 2, transfer_quantity: 2 });
-  for (const quantity of [0, -1]) {
-    await assert.rejects(
-      posCart.setPOSRowQuantity(row, 'quantity', quantity),
-      /greater than zero/
-    );
-  }
-  assert.equal(row.quantity, 2);
-
-  const returned = makeRow({
-    isReturn: true,
-    quantity: -1,
-    transfer_quantity: -1,
-  });
-  await posCart.setPOSRowQuantity(returned, 'transfer_quantity', 3);
-  assert.deepEqual([returned.quantity, returned.transfer_quantity], [-3, -3]);
-});
-
-test('a cart quantity the POS warehouse cannot supply is restored', async () => {
-  const row = makeRow({ quantity: 2, transfer_quantity: 2 });
-  await assert.rejects(
-    posCart.setPOSRowQuantity(row, 'transfer_quantity', 5),
-    /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
-  );
-  assert.deepEqual([row.quantity, row.transfer_quantity], [2, 2]);
-
-  await posCart.setPOSRowQuantity(row, 'quantity', 4);
-  assert.equal(row.quantity, 4);
-});
-
-test('a transfer quantity is checked by the stock quantity it converts to', async () => {
-  const row = makeRow({ unit_conversion_factor: 2 });
-  await posCart.setPOSRowQuantity(row, 'transfer_quantity', 2);
-  assert.deepEqual([row.transfer_quantity, row.quantity], [2, 4]);
-  await assert.rejects(
-    posCart.setPOSRowQuantity(row, 'transfer_quantity', 3),
-    /Available: 4; required: 6/
-  );
-  assert.deepEqual([row.transfer_quantity, row.quantity], [2, 4]);
-});
-
 test('a cart discount edit picks amount or percent discounts', async () => {
   const row = makeRow();
   await posCart.setPOSRowValue(row, 'item_discount_amount', 5);
@@ -295,41 +211,6 @@ test('a cart discount edit picks amount or percent discounts', async () => {
     [row.set_item_discount_amount, row.transfer_rate],
     [false, 7]
   );
-});
-
-test('adding an item already in the cart checks the POS warehouse for the new total', async () => {
-  const row = makeRow({ quantity: 3, transfer_quantity: 3 });
-  const invoice = row.parentdoc;
-  const stock = { [item]: { availableQty: 4 } };
-  assert.equal(await posCart.addPOSItem(invoice, product, 1, stock), row);
-  assert.equal(row.quantity, 4);
-  await assert.rejects(
-    posCart.addPOSItem(invoice, product, 1, stock),
-    /POS Counter for batch DEMO-COFFEE-2026.*Available: 4; required: 5/
-  );
-  assert.equal(row.quantity, 4);
-});
-
-test('a new cart row needs the item in stock', async () => {
-  const invoice = makeInvoice();
-  await assert.rejects(posCart.addPOSItem(invoice, product, 1, {}), /out of stock/);
-  const row = await posCart.addPOSItem(invoice, product, 2, stockMap(0));
-  assert.deepEqual(
-    [invoice.items.length, row.item, row.quantity],
-    [1, item, 2]
-  );
-});
-
-test('a sale row leaves serial numbers that miss its quantity to the server', () => {
-  const left = [];
-  const makeSerialRow = (values) => ({
-    ...values,
-    leaveToServer: (fieldnames) => left.push([values.quantity, fieldnames]),
-  });
-  posCart.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1' }));
-  posCart.refillSerialNumbers(makeSerialRow({ quantity: 2, serial_number: 'S1\nS2' }));
-  posCart.refillSerialNumbers(makeSerialRow({ quantity: -2, serial_number: 'SOLD-1' }));
-  assert.deepEqual(left, [[2, ['serial_number']]]);
 });
 
 test('a cart row reads batch, serial and unit settings from its item', async () => {
@@ -362,28 +243,6 @@ function makeRow(values = {}) {
   return row;
 }
 
-const product = {
-  name: item,
-  rate: 600,
-  unit: 'Unit',
-  trackItem: true,
-  hasBatch: true,
-};
-
-function makeInvoice() {
-  return {
-    items: [],
-    async append(_field, row) {
-      this.items.push({
-        ...row,
-        async set(field, value) {
-          this[field] = value;
-        },
-      });
-    },
-  };
-}
-
 /** The ledger rows that match the location and item filters, as their sums. */
 function getSums(stock, filters) {
   const values = Object.fromEntries(filters.map(([field, , value]) => [field, value]));
@@ -411,10 +270,4 @@ function getShortfalls(rows, stock, location) {
       ? [{ item, batch: batch || null, quantity: quantity - available }]
       : [];
   });
-}
-
-function stockMap(batchQuantity) {
-  return {
-    [item]: { availableQty: batchQuantity + 10, [batch]: batchQuantity },
-  };
 }

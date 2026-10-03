@@ -84,7 +84,7 @@
             />
           </div>
         </div>
-        <p v-else class="py-2 text-base text-ink-gray-6">
+        <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
           {{ t`No filters selected` }}
         </p>
       </div>

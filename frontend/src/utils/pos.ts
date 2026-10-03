@@ -268,6 +268,16 @@ export function getQuickPaymentAmounts(due: number, count = 2): number[] {
   return amounts.slice(0, count);
 }
 
+/** What is due, then, for a cash sale, the round amounts a customer may hand over. */
+export function getPaymentShortcuts(due: Money, isCashSale: boolean): Money[] {
+  if (!isCashSale) {
+    return [due];
+  }
+
+  const notes = getQuickPaymentAmounts(due.float);
+  return [due, ...notes.map((note) => fyo.pesa(note))];
+}
+
 /** The items the POS lists: those its visibility setting tracks, of the group when given. */
 export function getPOSItemFilters(
   visibility: ItemVisibility | undefined,

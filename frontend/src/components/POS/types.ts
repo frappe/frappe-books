@@ -48,6 +48,13 @@ export interface POSItem {
   itemGroup?: string;
 }
 
+/** The icon for each kind of payment method. */
+export const paymentMethodIcons: Record<PaymentMethodType, string> = {
+  Cash: 'lucide-banknote',
+  Bank: 'lucide-landmark',
+  Transfer: 'lucide-arrow-right-left',
+};
+
 /** A payment method the cashier picks, by Books Payment Method fieldnames. */
 export type PaymentMethodOption = {
   name: string;

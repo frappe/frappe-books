@@ -29,124 +29,108 @@
     v-else-if="!isMobile"
     :open-modal="openModal"
     :title="paymentTitle"
-    size="2xl"
+    :subtitle="paymentSubtitle"
+    size="lg"
     @closemodal="cancelTransaction"
   >
-    <div
-      v-if="sinvDoc.fieldMap"
-      class="grid items-start gap-6 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
-    >
-      <PaymentSummary
-        class="order-2 md:order-1"
-        :sinv-doc="sinvDoc"
+    <div v-if="sinvDoc.fieldMap" class="flex flex-col gap-4">
+      <PaymentMethodSelector
+        :methods="paymentMethods"
+        :selected="paymentMethod"
+        @select="setPaymentMethodAndAmount"
       />
 
-      <section class="order-1 min-w-0 space-y-5 md:order-2" aria-label="Payment details">
+      <div class="flex flex-col gap-1.5">
         <Currency
           :df="{
             ...getField('PaymentFor', 'amount')!,
-            label: sinvDoc.isReturn ? t`Refund amount` : t`Paid amount`,
+            label: sinvDoc.isReturn ? t`Refund amount` : t`Amount paid`,
           }"
           :show-label="true"
           :read-only="false"
           :border="true"
-          :text-right="true"
           :value="paidAmount"
-          size="large"
           @change="(amount: Money) => $emit('setPaidAmount', amount)"
         />
+        <div v-if="isCashSale" class="flex flex-wrap gap-1.5">
+          <FrappeButton
+            v-for="amount in quickAmounts"
+            :key="amount.float"
+            :variant="amount.eq(paidAmount) ? 'solid' : 'subtle'"
+            :label="amount.eq(dueAmount) ? t`Exact` : fyo.format(amount, 'Currency')"
+            @click="$emit('setPaidAmount', amount)"
+          />
+        </div>
+      </div>
 
-        <PaymentMethodSelector
-          :methods="paymentMethodNames"
-          :selected="paymentMethod"
-          @select="setPaymentMethodAndAmount"
+      <div
+        v-if="showReferenceField || showClearanceDate"
+        class="grid grid-cols-2 gap-3"
+      >
+        <Data
+          v-if="showReferenceField"
+          :df="getField('Payment', 'reference_id')!"
+          :show-label="true"
+          :border="true"
+          :required="true"
+          :read-only="false"
+          :value="transferRefNo"
+          :class="showClearanceDate ? '' : 'col-span-2'"
+          @change="(value: string) => $emit('setTransferRefNo', value)"
         />
 
-        <div v-if="showReferenceField || showClearanceDate">
-          <div class="grid gap-4 sm:grid-cols-2">
-            <Data
-              v-if="showReferenceField"
-              :df="getField('Payment', 'reference_id')!"
-              :show-label="true"
-              :border="true"
-              :required="true"
-              :read-only="false"
-              :value="transferRefNo"
-              :class="showClearanceDate ? '' : 'sm:col-span-2'"
-              @change="(value: string) => $emit('setTransferRefNo', value)"
-            />
+        <DateControl
+          v-if="showClearanceDate"
+          :df="getField('Payment', 'clearance_date')!"
+          :show-label="true"
+          :border="true"
+          :required="true"
+          :read-only="false"
+          :value="transferClearanceDate"
+          @change="(value: Date) => $emit('setTransferClearanceDate', value)"
+        />
+      </div>
 
-            <DateControl
-              v-if="showClearanceDate"
-              :df="getField('Payment', 'clearance_date')!"
-              :show-label="true"
-              :border="true"
-              :required="true"
-              :read-only="false"
-              :value="transferClearanceDate"
-              @change="
-                (value: Date) => $emit('setTransferClearanceDate', value)
-              "
-            />
-          </div>
-        </div>
-
-        <div
-          v-if="showSettlementAmount"
-          class="flex items-center justify-between gap-4 rounded-6 px-3 py-2.5"
-          :class="settlementClasses"
-          role="status"
-        >
-          <span class="text-sm-medium">{{ settlementLabel }}</span>
-          <span class="text-lg-semibold tabular-nums">
-            {{ fyo.format(settlementAmount, 'Currency') }}
-          </span>
-        </div>
-      </section>
+      <PaymentSummary
+        :sinv-doc="sinvDoc"
+        :settlement="
+          showSettlementAmount
+            ? {
+                label: settlementLabel,
+                amount: settlementAmount,
+                isChange: showPaidChange,
+              }
+            : null
+        "
+      />
     </div>
 
     <template #actions>
-      <div
-        class="flex w-full flex-wrap items-center justify-between gap-2"
+      <FrappeButton
+        class="me-auto"
+        size="md"
+        variant="ghost"
+        @click="submitTransaction"
       >
-        <FrappeButton
-          size="md"
-          theme="gray"
-          variant="ghost"
-          @click="cancelTransaction"
-        >
-          {{ t`Cancel` }}
-        </FrappeButton>
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <FrappeButton
-            size="md"
-            theme="gray"
-            variant="subtle"
-            @click="submitTransaction"
-          >
-            {{ t`Submit only` }}
-          </FrappeButton>
-          <FrappeButton
-            v-if="sinvDoc.can('print')"
-            size="md"
-            theme="gray"
-            variant="subtle"
-            :disabled="isPayDisabled"
-            @click="payAndPrintTransaction"
-          >
-            {{ sinvDoc.isReturn ? t`Refund & print` : t`Pay & print` }}
-          </FrappeButton>
-          <FrappeButton
-            size="md"
-            theme="gray"
-            variant="solid"
-            :disabled="isPayDisabled"
-            @click="payTransaction"
-          >
-            {{ sinvDoc.isReturn ? t`Refund` : t`Pay` }}
-          </FrappeButton>
-        </div>
-      </div>
+        {{ sinvDoc.isReturn ? t`Submit without refund` : t`Submit unpaid` }}
+      </FrappeButton>
+      <FrappeButton
+        v-if="sinvDoc.can('print')"
+        size="md"
+        icon-left="lucide-printer"
+        :disabled="isPayDisabled"
+        @click="payAndPrintTransaction"
+      >
+        {{ sinvDoc.isReturn ? t`Refund and print` : t`Pay and print` }}
+      </FrappeButton>
+      <FrappeButton
+        size="md"
+        variant="solid"
+        :disabled="isPayDisabled"
+        @click="payTransaction"
+      >
+        {{ sinvDoc.isReturn ? t`Refund` : t`Pay` }}
+      </FrappeButton>
     </template>
   </Modal>
 </template>
@@ -167,6 +151,7 @@ import PaymentSummary from 'src/components/POS/PaymentSummary.vue';
 import { PaymentMethodOption } from 'src/components/POS/types';
 import { getAllDocuments } from 'src/frappe/api';
 import { getField } from 'src/frappe/registry';
+import { getPaymentShortcuts } from 'src/utils/pos';
 import { isMobile } from 'src/utils/viewport';
 import MobilePayment from './MobilePayment.vue';
 import { fyo } from 'src/initFyo';
@@ -218,15 +203,23 @@ export default defineComponent({
   },
   computed: {
     paymentTitle(): string {
-      return this.sinvDoc.isReturn
-        ? this.fyo.t`Complete refund`
-        : this.fyo.t`Complete payment`;
+      return this.sinvDoc.isReturn ? this.fyo.t`Refund` : this.fyo.t`Payment`;
+    },
+    paymentSubtitle(): string {
+      const name = this.sinvDoc.inserted ? this.sinvDoc.name : '';
+      return [name, this.sinvDoc.party].filter(Boolean).join(' · ');
+    },
+    dueAmount(): Money {
+      return this.getDefaultPaymentAmount();
+    },
+    isCashSale(): boolean {
+      return !this.sinvDoc.isReturn && this.isPaymentMethodCash;
+    },
+    quickAmounts(): Money[] {
+      return getPaymentShortcuts(this.dueAmount, this.isCashSale);
     },
     isPaymentMethodCash(): boolean {
       return this.paymentRequirements.isCash;
-    },
-    paymentMethodNames(): string[] {
-      return this.paymentMethods.map(({ name }) => name);
     },
     paymentRequirements(): PaymentMethodRequirements {
       const selectedMethod = this.paymentMethods.find(
@@ -267,13 +260,8 @@ export default defineComponent({
     },
     settlementLabel(): string {
       return this.showPaidChange
-        ? this.fyo.t`Change due`
+        ? this.fyo.t`Change to return`
         : this.fyo.t`Balance due`;
-    },
-    settlementClasses(): string {
-      return this.showPaidChange
-        ? 'bg-surface-green-2 text-ink-green-7'
-        : 'bg-surface-amber-2 text-ink-amber-7';
     },
     isPayDisabled(): boolean {
       if (!this.paymentMethod || this.paidAmount.float <= 0) {

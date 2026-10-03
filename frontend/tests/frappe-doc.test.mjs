@@ -584,3 +584,12 @@ async function waitFor(condition) {
 
   assert.fail('The condition was never met');
 }
+
+test('typed text keeps its leading and trailing spaces, as Frappe keeps them', async () => {
+  const item = newFrappeDoc('Item');
+  clearTimeout(item._previewTimer);
+  await item.set('batch_series', '  PEN-  ');
+  clearTimeout(item._previewTimer);
+
+  assert.equal(item.batch_series, '  PEN-  ');
+});

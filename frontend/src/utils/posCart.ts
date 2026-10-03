@@ -74,9 +74,12 @@ export async function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
   refillSerialNumbers(row);
 }
 
-/** Adds `step`, which may be negative, to a cart row's quantity. */
+/** Adds `step`, which may be negative, to a cart row's quantity; stepping below one unit does nothing. */
 export async function stepCartQuantity(row: SalesInvoiceItem, step: number) {
-  await setCartQuantity(row, getCartRowQuantity(row) + step);
+  const quantity = getCartRowQuantity(row) + step;
+  if (quantity > 0) {
+    await setCartQuantity(row, quantity);
+  }
 }
 
 /**

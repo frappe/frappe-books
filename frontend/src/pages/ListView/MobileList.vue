@@ -46,7 +46,7 @@
           @open="$emit('openDoc', String(row.name))"
         />
       </FrappeList>
-      <div class="flex flex-col items-center gap-2.5 px-4 pb-6 pt-4">
+      <div class="flex flex-col items-center gap-2.5 px-4 pb-10 pt-4">
         <p class="text-sm tabular-nums text-ink-gray-5">
           {{ t`${rows.length} of ${total}` }}
         </p>

@@ -3,7 +3,7 @@ import { ModelNameEnum, PaymentMethodType } from 'models/types';
 import { getAllDocuments } from 'src/frappe/api';
 import { getFrappeDoc } from 'src/frappe/documents';
 import { call } from 'src/web/api';
-import { computed, reactive, ref, shallowRef } from 'vue';
+import { computed, reactive, shallowRef } from 'vue';
 
 const GET_OPEN_SHIFT =
   'frappe_books.frappe_books.doctype.books_pos_opening_shift.books_pos_opening_shift.get_open_shift';
@@ -16,7 +16,7 @@ const GET_OPEN_SHIFT =
 export function usePOSShift() {
   const openShift = shallowRef<POSOpeningShift>();
   const methodTypes = shallowRef<Record<string, PaymentMethodType>>({});
-  const isLoaded = ref(false);
+  const isLoaded = shallowRef(false);
 
   async function refresh() {
     const [name, methods] = await Promise.all([

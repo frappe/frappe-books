@@ -145,7 +145,7 @@ function getEvalDoc(doc: FrappeDoc): EvalDoc {
   let evalDoc = evalDocs.get(raw);
   if (!evalDoc) {
     const reactiveDoc = reactive(raw) as FrappeDoc;
-    evalDoc = computed(() => reactiveDoc.getEvalDoc());
+    evalDoc = computed(() => Object.freeze(reactiveDoc.getEvalDoc()));
     evalDocs.set(raw, evalDoc);
   }
 

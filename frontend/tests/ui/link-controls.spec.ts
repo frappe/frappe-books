@@ -157,6 +157,8 @@ test('cancelling a new linked record returns to its parent quick edit', async ({
   await expect(title).toBeVisible();
   const parentUrl = page.url();
   const address = page.getByRole('combobox', { name: 'Address', exact: true });
+  // A label that loads while typing replaces the selected text.
+  await expect(address).toHaveValue(addressLabel);
   await address.fill(partyName);
   await page.getByRole('option', { name: /^Create/ }).click();
   await expect(

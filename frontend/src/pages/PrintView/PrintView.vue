@@ -12,7 +12,7 @@
           label: t`Template Name`,
           options: templateList.map((n) => ({ label: n, value: n })),
         }"
-        input-class="text-base py-0 h-8"
+        size="small"
         class="w-40"
         :border="true"
         :value="templateName ?? ''"

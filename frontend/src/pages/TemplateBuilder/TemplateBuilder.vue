@@ -7,7 +7,6 @@
           ref="nameField"
           class="w-60 flex-shrink-0"
           size="small"
-          :input-class="['text-xl-semibold']"
           :df="fields.name"
           :border="true"
           :value="doc!.name"
@@ -77,6 +76,7 @@
           <!-- Entry Type -->
           <FormControl
             class="w-44 flex-shrink-0"
+            size="small"
             :df="fields.doc_type"
             :border="true"
             :value="doc.get('doc_type')"
@@ -86,6 +86,7 @@
           <Link
             v-if="doc.doc_type"
             class="w-48 min-w-0"
+            size="small"
             :df="displayDocField"
             :border="true"
             :value="displayDoc?.name"
@@ -105,7 +106,7 @@
               :min="0.1"
               :max="10"
               :step="0.1"
-              size="md"
+              size="sm"
               variant="outline"
               @update:model-value="setScale"
             />

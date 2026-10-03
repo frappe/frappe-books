@@ -255,6 +255,62 @@ test('the System tab offers sample dates and takes custom formats and locales', 
   );
 });
 
+test("a System tab save that changes the display precision first sets Frappe's", async () => {
+  const settings = newFrappeDoc('SystemSettings');
+  const saved = { ...settings.getFrappeValues(), display_precision: 2 };
+  const requests = stubFrappe(({ method, body }) => {
+    if (method === 'GET') {
+      return { data: saved };
+    }
+
+    return method === 'PUT' ? { data: body } : { message: null };
+  });
+  await settings.load();
+  await assert.rejects(
+    settings.set('display_precision', ''),
+    /between 0 and 9/
+  );
+  await settings.set('locale', 'de-CH');
+
+  requests.length = 0;
+  await settings.sync();
+  assert.deepEqual(
+    requests.map(({ method }) => method),
+    ['PUT']
+  );
+
+  await settings.set('display_precision', 3);
+  requests.length = 0;
+  await settings.sync();
+  const [setPrecision, save] = requests;
+  assert.equal(
+    setPrecision.path,
+    '/api/method/frappe_books.frappe_books.doctype.books_system_settings.books_system_settings.set_display_precision'
+  );
+  assert.deepEqual(setPrecision.body, { display_precision: 3 });
+  assert.deepEqual(
+    [save.method, save.path],
+    ['PUT', '/api/v2/document/Books System Settings/Books System Settings']
+  );
+});
+
+test('only users who can write System Settings change the display precision', () => {
+  const settings = newFrappeDoc('SystemSettings');
+  settings._notInserted = false;
+  const permissions = fyo.store.permissions;
+  const canWrite = ['Books System Settings'];
+  fyo.store.permissions = {
+    doctypes: { SystemSettings: 'Books System Settings' },
+    user: { can_write: canWrite },
+  };
+
+  assert.equal(readOnly(settings, 'display_precision'), true);
+  assert.equal(readOnly(settings, 'date_format'), false);
+  canWrite.push('System Settings');
+  assert.equal(readOnly(settings, 'display_precision'), false);
+  fyo.store.permissions = permissions;
+});
+
 test('only the Print tab offers a terms and conditions switch', () => {
   assert.equal(
     fieldnames('SystemSettings').includes('display_terms_and_conditions'),

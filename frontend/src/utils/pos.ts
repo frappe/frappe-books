@@ -105,6 +105,18 @@ export async function setPOSRowQuantity(
   }
 }
 
+/** A cart row field's label, as the cart and its keypad show it. */
+export function getPOSRowFieldLabel(
+  row: SalesInvoiceItem,
+  field: POSRowField
+): string {
+  if (field === 'transfer_quantity') {
+    return t`Transfer Quantity`;
+  }
+
+  return row.fieldMap[field]?.label;
+}
+
 /** The quantity field the POS edits: the transfer quantity with UOM conversions. */
 export function getPOSQuantityField(): POSQuantityField {
   return fyo.singles.InventorySettings?.enable_uom_conversions

@@ -6156,8 +6156,8 @@ msgid "Point of Sale"
 msgstr "نقطة البيع"
 
 #: frontend/src/pages/POS/LoyaltyProgramModal.vue:116
-msgid "Points must be greater than 0"
-msgstr "يجب أن تكون النقاط أكبر من 0"
+msgid "Loyalty points cannot be negative."
+msgstr ""
 
 #: frontend/src/utils/printTemplates.ts:357
 msgid "Pop-up blocked"

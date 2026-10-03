@@ -145,6 +145,29 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('Done keeps the applied coupons after a refused code', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const { fillCart, state } = (window as any).posFixture;
+    fillCart();
+    state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
+  });
+  await page
+    .getByRole('button', { name: '1 coupon applied', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Coupon code', exact: true });
+  await dialog.getByRole('combobox').fill('EXPIRED');
+  await page.getByRole('option', { name: 'EXPIRED', exact: true }).click();
+  await expect(dialog).toContainText('Coupon EXPIRED has expired.');
+
+  await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: '1 coupon applied', exact: true })
+  ).toBeVisible();
+});
+
 test('a long price list name wraps instead of leaving the cart', async ({
   page,
 }) => {
@@ -178,6 +201,20 @@ test('a held sale reopens as saved after its cart was edited', async ({
   await expect(page.getByText('No items yet')).toBeVisible();
   await openHeldSale();
   await expect(removeItem).toHaveCount(1);
+});
+
+test('a submitted invoice from Held offers only its payment', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.pos.selectedInvoiceName({
+      name: 'SINV-2026-0002',
+      docstatus: 1,
+    })
+  );
+  const dialog = page.getByRole('dialog', { name: 'Payment' });
+  await expect(dialog.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Submit unpaid' })).toHaveCount(0);
 });
 
 test('cart values fit and expanded item fields open a usable keypad', async ({
@@ -254,6 +291,20 @@ test('a cart row in boxes shows and takes its rate per box', async ({
     transferRate: 3000,
     isManualRate: true,
   });
+});
+
+test('the transfer quantity keypad is titled as its cart field', async ({
+  page,
+}) => {
+  await page.evaluate(() => (window as any).posFixture.fillBoxRow());
+  await page.getByRole('button', { name: /^Organic Assam Tea/ }).click();
+  await page
+    .getByRole('spinbutton', { name: 'Transfer Quantity', exact: true })
+    .click();
+
+  await expect(
+    page.getByRole('dialog', { name: 'Transfer Quantity', exact: true })
+  ).toBeVisible();
 });
 
 for (const modern of [true, false]) {

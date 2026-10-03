@@ -92,3 +92,20 @@ test('a section that fails to load can be retried', async ({ page }) => {
     page.locator('[data-slot="chart-container"]', { hasText: 'Top Expenses' })
   ).toHaveAttribute('data-state', /ready|empty/);
 });
+
+test('top expenses shows the full total spending under its title', async ({
+  page,
+}) => {
+  const expenses = [
+    { account: 'Rent', total: 1000000 },
+    { account: 'Travel', total: 234567.89 },
+  ];
+  await page.route(/reports\.dashboard\.get_top_expenses/, (route) =>
+    route.fulfill({ json: { message: expenses } })
+  );
+  await page.reload();
+
+  await expect(
+    page.locator('[data-slot="chart-container"]', { hasText: 'Top Expenses' })
+  ).toContainText('Total Spending: ₹ 12,34,567.89');
+});

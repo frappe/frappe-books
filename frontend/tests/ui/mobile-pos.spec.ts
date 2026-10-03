@@ -143,6 +143,20 @@ test('payment methods wrap in a two-column grid', async ({ page }) => {
   await expect(page.getByRole('button', { name: /6 items/ })).toBeVisible();
 });
 
+test('a submitted invoice from Held offers only its payment', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.pos.selectedInvoiceName({
+      name: 'SINV-2026-0002',
+      docstatus: 1,
+    })
+  );
+  await expect(page.getByRole('heading', { name: 'Payment' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Submit only' })).toHaveCount(0);
+});
+
 test('the menu opens each quick action as a sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const [row, title] of [
@@ -203,11 +217,11 @@ test('negative loyalty points show a field error, not a toast', async ({
   await sheet.locator('input').first().fill('-5');
   await sheet.getByRole('button', { name: 'Redeem', exact: true }).click();
 
-  await expect(sheet.getByText('Points must be greater than 0')).toBeVisible();
+  await expect(sheet.getByText('Loyalty points cannot be negative.')).toBeVisible();
   await expect(sheet).toBeVisible();
   await expect(
     page.locator('[data-sonner-toast]', {
-      hasText: 'Points must be greater than 0',
+      hasText: 'Loyalty points cannot be negative.',
     })
   ).toHaveCount(0);
 });

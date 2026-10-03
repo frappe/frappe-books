@@ -628,7 +628,8 @@ class IntegrationTestPricing(IntegrationTestCase):
 		return frappe.get_doc(
 			{
 				"doctype": "Books Coupon Code",
-				"coupon_name": unique_name("Coupon"),
+				# The code is the name's first eight characters, so all eight must be unique.
+				"coupon_name": frappe.generate_hash(length=8),
 				"pricing_rule": rule.name,
 				"valid_from": add_days(nowdate(), -1),
 				"valid_to": add_days(nowdate(), 1),

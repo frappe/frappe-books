@@ -167,6 +167,7 @@
           @click="$emit('payAndPrint')"
         />
         <FrappeButton
+          v-if="!sinvDoc.isSubmitted"
           class="flex-1"
           size="lg"
           :label="t`Submit only`"

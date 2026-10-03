@@ -253,6 +253,27 @@ test('recent records reopen the record instead of a list', async () => {
   );
 });
 
+test('a # search shows only recent items and skips the server', async () => {
+  const { search, requests } = makeSearch(() => [invoice('SINV-1001', 1)]);
+  const stored = new Map();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key) => stored.get(key) ?? null,
+      setItem: (key, value) => stored.set(key, value),
+    },
+  });
+  await search.fetchDocs('SINV');
+  search.addToRecent(docs(search, 'SINV')[0]);
+  await search.fetchDocs('#sinv');
+
+  assert.equal(requests.length, 1);
+  assert.deepEqual(
+    search.search('#sinv').map(({ group, label }) => [group, label]),
+    [['Recent', 'SINV-1001']]
+  );
+});
+
 test('link options keep every server match, closest first', () => {
   const options = [
     { label: 'Acme Supplies' },

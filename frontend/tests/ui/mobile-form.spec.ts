@@ -47,7 +47,7 @@ test('one header menu holds the document actions', async ({ page }) => {
     confirmation.getByRole('button', { name: 'Delete', exact: true })
   ).toBeVisible();
   await confirmation
-    .getByRole('button', { name: 'Keep Party', exact: true })
+    .getByRole('button', { name: 'Keep Customer', exact: true })
     .click();
   await expect(confirmation).toBeHidden();
   await expect(page).toHaveURL(new RegExp(encodeURIComponent(name)));

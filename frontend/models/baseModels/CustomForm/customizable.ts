@@ -14,9 +14,25 @@ const LEDGERS: string[] = [
   ModelNameEnum.StockLedgerEntry,
 ];
 
-/** The doctypes a Custom Form can add fields to, by the label /books shows. */
+/** The doctypes a Custom Form can add fields to, as the server allows: Books forms and their rows. */
 export function getCustomizableForms(): { value: string; label: string }[] {
-  return getForms(({ schema }) => !LEDGERS.includes(schema.name));
+  const settingsTables = getSettingsTables();
+  return getForms(
+    ({ meta, schema }) =>
+      meta.module === 'Frappe Books' &&
+      !LEDGERS.includes(schema.name) &&
+      !settingsTables.has(schema.name)
+  );
+}
+
+/** The rows of settings, which are singles. */
+function getSettingsTables(): Set<string> {
+  return new Set(
+    getDocTypes()
+      .filter(({ schema }) => schema.isSingle)
+      .flatMap(({ tables }) => Object.values(tables))
+      .map((table) => table!.schema.name)
+  );
 }
 
 /** The doctypes a custom Link can link to; a custom Table holds rows of a child table. */

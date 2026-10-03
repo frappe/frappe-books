@@ -82,3 +82,15 @@ test('deleting a party names it the way its list does', () => {
   assert.equal(keepLabel('Supplier'), 'Keep Supplier');
   assert.equal(keepLabel('Both'), 'Keep Party');
 });
+
+test('deleting an account group offers to keep the group', () => {
+  const calls = captureDangerDialogs();
+  const keepLabel = (is_group) => {
+    const account = { name: 'Assets', schemaName: 'Account', is_group };
+    deleteDocWithPrompt({ ...account, schema: { label: 'Account' } });
+    return calls.at(-1).cancelLabel;
+  };
+
+  assert.equal(keepLabel(1), 'Keep Group');
+  assert.equal(keepLabel(0), 'Keep Account');
+});

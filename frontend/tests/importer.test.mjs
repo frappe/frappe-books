@@ -249,6 +249,36 @@ test('import cells are written as Frappe’s Data Import parses them', async () 
   ]);
 });
 
+test('import datetimes are read as system time, whatever the browser’s time zone', async () => {
+  // The system time zone is Asia/Kolkata; the browser is in Tokyo.
+  process.env.TZ = 'Asia/Tokyo';
+  const importer = new Importer('SalesInvoice', fyo);
+  importer.selectFile(
+    [
+      'SalesInvoice.name,SalesInvoice.date',
+      'A,2026-01-01',
+      'B,2026-01-01 10:00:00',
+      'C,2026-01-01T10:00:00+05:30',
+    ].join('\n')
+  );
+
+  assert.deepEqual(
+    importer.valueMatrix.map(([, date]) => date.error ?? false),
+    [false, false, false]
+  );
+  assert.deepEqual(
+    importRows(importer)
+      .slice(1)
+      .map(([, date]) => date),
+    [
+      '2026-01-01 00:00:00.000',
+      '2026-01-01 10:00:00.000',
+      '2026-01-01 10:00:00.000',
+    ]
+  );
+  delete process.env.TZ;
+});
+
 test('fix failed keeps the failed rows and the file columns', async () => {
   const importer = new Importer('Party', fyo);
   importer.assignedTemplateFields = ['Party.role', 'Party.name'];

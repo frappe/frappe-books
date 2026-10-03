@@ -811,6 +811,10 @@ function getDocTypeLabel(doc: FrappeDoc) {
     return roleLabels[doc.role as string] ?? t`Party`;
   }
 
+  if (doc.schemaName === ModelNameEnum.Account && doc.is_group) {
+    return t`Group`;
+  }
+
   return doc.schema.label || doc.schemaName;
 }
 

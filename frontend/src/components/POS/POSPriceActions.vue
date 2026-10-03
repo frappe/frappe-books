@@ -5,14 +5,12 @@
   >
     <FrappeButton
       v-if="showCoupon"
-      variant="outline"
       icon-left="lucide-ticket-percent"
       :label="couponLabel"
       @click="$emit('openCouponCode')"
     />
     <FrappeButton
       v-if="showLoyalty"
-      variant="outline"
       icon-left="lucide-gift"
       :label="loyaltyLabel"
       @click="$emit('openLoyaltyProgram')"
@@ -20,7 +18,6 @@
     <FrappeButton
       v-if="showPriceList"
       class="max-w-full"
-      variant="outline"
       icon-left="lucide-list-checks"
       :label="sinvDoc.price_list || t`Price list`"
       @click="$emit('openPriceList')"

@@ -6,7 +6,7 @@
       :aria-expanded="isExpanded"
       @click="selectRow"
     >
-      <span class="truncate text-base-medium text-ink-gray-9" :title="row.item">
+      <span class="truncate text-base-medium text-ink-gray-8" :title="row.item">
         {{ row.item }}
       </span>
       <span
@@ -35,7 +35,7 @@
         @click="adjustQuantity(-1)"
       />
       <span
-        class="min-w-5.5 text-center text-base-medium tabular-nums text-ink-gray-9"
+        class="min-w-5.5 text-center text-base-medium tabular-nums text-ink-gray-8"
       >
         {{ displayQuantity }}
       </span>
@@ -51,7 +51,7 @@
   </FrappeListCell>
   <FrappeListCell class="justify-end">
     <span
-      class="truncate text-base tabular-nums text-ink-gray-9"
+      class="truncate text-base tabular-nums text-ink-gray-8"
       :title="fyo.format(row.amount, 'Currency')"
     >
       {{ fyo.format(row.amount, 'Currency') }}
@@ -267,7 +267,7 @@ import {
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { defineComponent, inject, PropType } from 'vue';
-import { POSLayout } from './types';
+import { POSLayout, POS_ITEM_TOAST_ID } from './types';
 
 /** A cart row: its fields edit inline in the Classic layout, with the keypad in Modern. */
 export default defineComponent({
@@ -422,6 +422,7 @@ export default defineComponent({
         await setPOSRowValue(this.row, field, value);
       } catch (error) {
         showToast({
+          id: POS_ITEM_TOAST_ID,
           type: 'error',
           message: this.t`${error as string}`,
           duration: 'short',

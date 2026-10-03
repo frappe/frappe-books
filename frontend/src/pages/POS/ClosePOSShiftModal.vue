@@ -70,14 +70,14 @@
       <CashCountTable :heading="t`Count the drawer`" :rows="closingCash" />
 
       <section class="flex min-w-0 flex-col gap-2">
-        <h3 class="text-base-medium text-ink-gray-9">
+        <h3 class="text-base-medium text-ink-gray-8">
           {{ t`Closing amounts` }}
         </h3>
         <div
-          class="flex flex-col rounded-5 border border-outline-gray-1 text-base tabular-nums"
+          class="flex flex-col rounded-6 border border-outline-gray-1 text-base tabular-nums"
         >
           <div
-            class="grid h-8 items-center gap-2 rounded-t-5 bg-surface-gray-1 px-3 text-sm text-ink-gray-5"
+            class="grid h-8 items-center gap-2 rounded-t-6 bg-surface-gray-1 px-3 text-sm text-ink-gray-5"
             :class="amountColumns"
           >
             <span>{{ t`Method` }}</span>
@@ -101,7 +101,7 @@
             </span>
             <span
               v-if="cashClosingAmounts.includes(row)"
-              class="truncate text-end text-base-medium text-ink-gray-9"
+              class="truncate text-end text-base-medium text-ink-gray-8"
               dir="ltr"
             >
               {{ format(row.closing_amount) }}
@@ -268,7 +268,7 @@ export default defineComponent({
     getDifferenceClass(amount?: Money): string {
       if (amount?.isNegative()) return 'text-ink-red-5';
       if (amount?.isPositive()) return 'text-ink-green-5';
-      return 'text-ink-gray-9';
+      return 'text-ink-gray-8';
     },
     format(amount?: Money): string {
       return fyo.format(amount ?? fyo.pesa(0), 'Currency');

@@ -4,8 +4,8 @@
     :title="t`Cart`"
     @update:open="(value: boolean) => $emit('update:open', value)"
   >
-    <div class="flex flex-col pb-[max(env(safe-area-inset-bottom),1rem)]">
-      <div class="px-4 pb-3">
+    <div class="flex flex-col px-4">
+      <div class="pb-3">
         <MultiLabelLink
           v-if="sinvDoc.fieldMap"
           class="w-full"
@@ -20,7 +20,10 @@
       </div>
 
       <!-- Rows hold a stepper, so a stretched button under it opens the row. -->
-      <FrappeList class="list-row-px-4" :columns="['minmax(0,1fr)', 'auto']">
+      <FrappeList
+        class="-mx-4 list-row-px-4"
+        :columns="['minmax(0,1fr)', 'auto']"
+      >
         <FrappeListRow
           v-for="row in sinvDoc.items ?? []"
           :key="row.name"
@@ -64,7 +67,7 @@
       </FrappeList>
 
       <dl
-        class="flex flex-col gap-2 border-t border-outline-gray-1 px-4 py-3 text-md tabular-nums"
+        class="-mx-4 flex flex-col gap-2 border-t border-outline-gray-1 px-4 py-3 text-md tabular-nums"
       >
         <div
           v-for="total in totals"
@@ -79,7 +82,7 @@
         </div>
       </dl>
 
-      <div class="flex gap-2 px-4 pt-2">
+      <MobileSheetFooter>
         <FrappeButton
           v-if="!sinvDoc.isSubmitted"
           class="flex-1"
@@ -95,7 +98,7 @@
           :label="payLabel"
           @click="$emit('pay')"
         />
-      </div>
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
 </template>
@@ -115,7 +118,9 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import NumberStepper from 'src/components/POS/NumberStepper.vue';
+import { POS_ITEM_TOAST_ID } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { showToast } from 'src/utils/interactive';
 import {
   CostLine,
@@ -168,7 +173,11 @@ async function setQuantity(row: SalesInvoiceItem, quantity: number) {
     await setPOSRowQuantity(row, quantityField, quantity);
     refillSerialNumbers(row);
   } catch (error) {
-    showToast({ type: 'error', message: t`${error as string}` });
+    showToast({
+      id: POS_ITEM_TOAST_ID,
+      type: 'error',
+      message: t`${error as string}`,
+    });
   }
 }
 </script>

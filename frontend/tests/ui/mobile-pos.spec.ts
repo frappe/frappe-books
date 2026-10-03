@@ -43,6 +43,16 @@ test('items fill a two-column grid and a tap adds to the cart bar', async ({
   await page.screenshot({ path: test.info().outputPath('items.png') });
 });
 
+test('a broken item image falls back to the initials', async ({ page }) => {
+  const name = await page.evaluate(() => {
+    const [item] = (window as any).posFixture.pos.items;
+    item.image = '/missing-item-image.png';
+    return item.name as string;
+  });
+  const tile = page.getByRole('button', { name: `Add ${name}`, exact: true });
+  await expect(tile.locator('img')).toHaveCount(0);
+});
+
 test('the cart stepper turns minus into remove at one', async ({ page }) => {
   const tea = page.getByRole('button', { name: 'Add Organic Assam Tea' });
   await tea.click();
@@ -69,6 +79,15 @@ test('the cart stepper turns minus into remove at one', async ({ page }) => {
   await cart.getByRole('button', { name: 'Remove' }).click();
   await expect(cart).toBeHidden();
   await expect(page.getByRole('button', { name: /\d+ items?/ })).toBeHidden();
+});
+
+test('a long cart keeps Hold and Pay in view', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 460 });
+  await page.evaluate(() => (window as any).posFixture.fillCart());
+  await page.getByRole('button', { name: /\d+ items?/ }).click();
+  const cart = page.getByRole('dialog', { name: 'Cart', exact: true });
+  await expect(cart.getByRole('button', { name: 'Hold' })).toBeInViewport();
+  await expect(cart.getByRole('button', { name: /^Pay / })).toBeInViewport();
 });
 
 test('the cart stepper shows the whole quantity', async ({ page }) => {

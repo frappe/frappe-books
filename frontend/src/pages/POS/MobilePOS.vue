@@ -26,13 +26,13 @@
 
     <div
       v-if="items.length"
-      class="grid flex-1 grid-cols-2 content-start gap-2 px-4 pb-4"
+      class="grid flex-1 grid-cols-2 content-start gap-2 px-4 pb-10"
     >
       <button
         v-for="item in items"
         :key="item.name"
         type="button"
-        class="relative flex min-w-0 flex-col gap-2 rounded-6 border bg-surface-base p-2 text-start active:bg-surface-gray-1"
+        class="relative flex min-w-0 flex-col gap-2 rounded-6 border bg-surface-base p-2 text-start active:bg-surface-gray-2"
         :class="
           cartQuantities[item.name]
             ? 'border-outline-gray-4'
@@ -45,10 +45,11 @@
           class="flex h-21 items-center justify-center overflow-hidden rounded-4 bg-surface-gray-2 text-3xl-semibold text-ink-gray-5"
         >
           <img
-            v-if="item.image"
+            v-if="item.image && !brokenImages.has(item.image)"
             :src="item.image"
             alt=""
             class="size-full object-cover"
+            @error="brokenImages.add(item.image)"
           />
           <template v-else>{{ getItemInitials(item.name) }}</template>
         </span>
@@ -138,6 +139,7 @@ import {
   computed,
   inject,
   onDeactivated,
+  reactive,
   ref,
   shallowRef,
   watch,
@@ -165,6 +167,7 @@ const emit = defineEmits<{
 const sinvDoc = inject('sinvDoc') as Ref<SalesInvoice>;
 const sheet = ref<'cart' | 'line' | null>(null);
 const editingRow = shallowRef<SalesInvoiceItem | null>(null);
+const brokenImages = reactive(new Set<string>());
 
 // Sheets are teleported, so they would outlive a cached page.
 onDeactivated(() => (sheet.value = null));

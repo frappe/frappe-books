@@ -21,18 +21,7 @@
         :border="true"
         @change="(amount: Money) => row.set('amount', amount)"
       />
-      <dl class="flex flex-col rounded-6 bg-surface-gray-1 text-md tabular-nums">
-        <div
-          v-for="row in posShiftDoc.opening_amounts"
-          :key="row.idx"
-          class="flex min-h-11 items-center justify-between gap-2 border-b border-outline-gray-1 px-3 last:border-b-0"
-        >
-          <dt class="text-ink-gray-8">{{ row.payment_method }}</dt>
-          <dd class="text-ink-gray-9" dir="ltr">
-            {{ fyo.format(row.amount ?? 0, 'Currency') }}
-          </dd>
-        </div>
-      </dl>
+      <MobileDetailList :details="openingAmountDetails" />
     </template>
     <div
       v-else-if="posShiftDoc"
@@ -41,11 +30,11 @@
       <CashCountTable :heading="t`Cash in drawer`" :rows="openingCash" />
 
       <section class="flex min-w-0 flex-col gap-2">
-        <h3 class="text-base-medium text-ink-gray-9">
+        <h3 class="text-base-medium text-ink-gray-8">
           {{ t`Opening amounts` }}
         </h3>
         <ul
-          class="flex flex-col divide-y divide-outline-gray-1 rounded-5 border border-outline-gray-1 text-base"
+          class="flex flex-col divide-y divide-outline-gray-1 rounded-6 border border-outline-gray-1 text-base"
         >
           <li
             v-for="row in posShiftDoc.opening_amounts"
@@ -61,7 +50,7 @@
             </span>
             <span
               v-if="row.payment_method === 'Cash'"
-              class="text-base-medium tabular-nums text-ink-gray-9"
+              class="text-base-medium tabular-nums text-ink-gray-8"
               dir="ltr"
             >
               {{ fyo.format(row.amount ?? 0, 'Currency') }}
@@ -109,6 +98,7 @@ import { paymentMethodIcons } from 'src/components/POS/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
+import MobileDetailList, { type Detail } from 'src/mobile/MobileDetailList.vue';
 import { PaymentMethodType } from 'models/types';
 import { Money } from 'pesa';
 import {
@@ -133,6 +123,7 @@ export default defineComponent({
     FrappeButton,
     FrappeIcon,
     MobileCashCount,
+    MobileDetailList,
     Modal,
   },
   provide() {
@@ -169,6 +160,15 @@ export default defineComponent({
     otherOpeningAmounts(): ShiftAmount[] {
       return ((this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]).filter(
         (row) => row.payment_method !== 'Cash'
+      );
+    },
+    openingAmountDetails(): Detail[] {
+      return ((this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]).map(
+        (row) => ({
+          key: String(row.idx),
+          label: row.payment_method ?? '',
+          value: fyo.format(row.amount ?? 0, 'Currency'),
+        })
       );
     },
     posOpeningCashAmount(): Money {

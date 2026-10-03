@@ -16,10 +16,11 @@
           class="relative flex h-21 w-full items-center justify-center overflow-hidden rounded-4 bg-surface-gray-2"
         >
           <img
-            v-if="item.image"
+            v-if="item.image && !brokenImages.has(item.image)"
             :src="item.image"
             alt=""
             class="h-full w-full object-cover"
+            @error="brokenImages.add(item.image)"
           />
           <span v-else class="select-none text-4xl-semibold text-ink-gray-4">
             {{ getItemInitials(item.name) }}
@@ -31,7 +32,7 @@
           />
         </div>
         <div class="flex flex-col gap-1 px-1">
-          <span class="text-p-base-medium text-ink-gray-9">{{ item.name }}</span>
+          <span class="text-p-base-medium text-ink-gray-8">{{ item.name }}</span>
           <span class="text-sm tabular-nums text-ink-gray-6">
             {{ fyo.format(item.rate, 'Currency') }}
           </span>
@@ -59,6 +60,9 @@ export default defineComponent({
       type: Array as PropType<POSItem[]>,
       default: () => [],
     },
+  },
+  data() {
+    return { brokenImages: new Set<string>() };
   },
   methods: { getItemInitials },
 });

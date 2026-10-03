@@ -58,7 +58,8 @@
             v-for="amount in quickAmounts"
             :key="amount.float"
             size="xs"
-            :variant="amount.eq(paidAmount) ? 'solid' : 'subtle'"
+            :variant="amount.eq(paidAmount) ? 'subtle' : 'outline'"
+            :aria-pressed="amount.eq(paidAmount)"
             :label="amount.eq(dueAmount) ? t`Exact` : fyo.format(amount, 'Currency')"
             @click="$emit('setPaidAmount', amount)"
           />

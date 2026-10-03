@@ -311,7 +311,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
-		item, _cogs, _stock = self._tracked_item(has_serial_number=1, hsn_code="123456")
+		item, _cogs, _stock = self._tracked_item(has_serial_number=1, hsn_code="012345")
 		serial_numbers = [unique_name("SN"), unique_name("SN")]
 		seed_stock(item.name, quantity=2, rate=10, serial_number="\n".join(serial_numbers))
 		frappe.db.set_single_value("Books Inventory Settings", "default_location", "Stores")
@@ -325,7 +325,7 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 
 		row = shipment.items[0]
 		self.assertEqual((shipment.number_series, shipment.terms), ("SHPM-", "Ships in a week"))
-		self.assertEqual((row.location, row.hsn_code, row.amount), ("Stores", 123456, 50))
+		self.assertEqual((row.location, row.hsn_code, row.amount), ("Stores", "012345", 50))
 		self.assertEqual(row.serial_number.splitlines(), sorted(serial_numbers))
 		self.assertEqual(shipment.grand_total, 50)
 		self.assertIsNone(shipment.name)

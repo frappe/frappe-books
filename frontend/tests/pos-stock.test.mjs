@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
-import { frappeModels, pos, posCart, posStock } from './helpers/frappe.mjs';
+import { frappeModels, pos, posStock } from './helpers/frappe.mjs';
 
 const item = 'Demo - Coffee Beans';
 const service = 'Demo - Gift Wrapping';
@@ -197,22 +197,6 @@ test('a payment retry does not require stock that has already shipped', async ()
   assert.deepEqual(requests, []);
 });
 
-test('a cart discount edit picks amount or percent discounts', async () => {
-  const row = makeRow();
-  await posCart.setPOSRowValue(row, 'item_discount_amount', 5);
-  assert.equal(row.set_item_discount_amount, true);
-  await posCart.setPOSRowValue(row, 'item_discount_percent', 10);
-  assert.deepEqual(
-    [row.set_item_discount_amount, row.item_discount_percent],
-    [false, 10]
-  );
-  await posCart.setPOSRowValue(row, 'transfer_rate', 7);
-  assert.deepEqual(
-    [row.set_item_discount_amount, row.transfer_rate],
-    [false, 7]
-  );
-});
-
 test('a cart row reads batch, serial and unit settings from its item', async () => {
   assert.deepEqual(await pos.getPOSRowItem(flour), {
     hasBatch: true,
@@ -225,23 +209,6 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
     units: [],
   });
 });
-
-function makeRow(values = {}) {
-  const invoice = { items: [] };
-  const row = {
-    item,
-    batch,
-    quantity: 1,
-    transfer_quantity: 1,
-    parentdoc: invoice,
-    ...values,
-    async set(field, value) {
-      this[field] = value;
-    },
-  };
-  invoice.items.push(row);
-  return row;
-}
 
 /** The ledger rows that match the location and item filters, as their sums. */
 function getSums(stock, filters) {

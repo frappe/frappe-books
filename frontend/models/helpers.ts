@@ -22,6 +22,37 @@ import { DateTime } from 'luxon';
 // POS.vue imports it from here.
 export { getMappedDoc } from 'src/frappe/documents';
 
+/** What a mapped document action builds, and how it opens the new document. */
+export interface MappedDocAction extends Omit<Action, 'action'> {
+  /** The schema to build, and the mapper of the source DocType that builds it. */
+  target: (doc: FrappeDoc) => [schemaName: string, mapper: string];
+  /** Opens the new document; its form unless given. */
+  open?: (
+    mapped: FrappeDoc,
+    router: Router,
+    source: FrappeDoc
+  ) => Promise<void>;
+}
+
+/** An action that builds a new document from the one it runs on with a server mapper, then opens it. */
+export function getMappedDocAction({
+  target,
+  open = openForm,
+  ...action
+}: MappedDocAction): Action {
+  return {
+    ...action,
+    action: async (doc: FrappeDoc, router: Router) => {
+      const [schemaName, mapper] = target(doc);
+      await open(await getMappedDoc(doc, schemaName, mapper), router, doc);
+    },
+  };
+}
+
+async function openForm(mapped: FrappeDoc, router: Router) {
+  await router.push(`/edit/${mapped.schemaName}/${mapped.name!}`);
+}
+
 export function getQuoteActions(
   fyo: Fyo,
   schemaName: ModelNameEnum.SalesQuote
@@ -72,26 +103,15 @@ export function getMakeStockTransferAction(
     label = fyo.t`Purchase Receipt`;
   }
 
-  return {
+  return getMappedDocAction({
     label,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) => doc.isSubmitted && !!doc.stock_not_transferred,
-    action: async (doc: FrappeDoc) => {
+    target: (doc: FrappeDoc) => {
       const invoice = doc as InvoiceDoc;
-      const transfer = await getMappedDoc(
-        invoice,
-        invoice.stockTransferSchemaName,
-        invoice.stockTransferMapper
-      );
-      if (!transfer.name) {
-        return;
-      }
-
-      const { routeTo } = await import('src/utils/ui');
-      const path = `/edit/${transfer.schemaName}/${transfer.name}`;
-      await routeTo(path);
+      return [invoice.stockTransferSchemaName, invoice.stockTransferMapper];
     },
-  };
+  });
 }
 
 export function getMakeInvoiceAction(
@@ -105,7 +125,7 @@ export function getMakeInvoiceAction(
   const [invoiceSchemaName, mapper] = isPurchase
     ? [ModelNameEnum.PurchaseInvoice, 'make_purchase_invoice']
     : [ModelNameEnum.SalesInvoice, 'make_sales_invoice'];
-  return {
+  return getMappedDocAction({
     label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) => {
@@ -122,83 +142,63 @@ export function getMakeInvoiceAction(
         !doc.is_fully_billed
       );
     },
-    action: async (doc: FrappeDoc) => {
-      const invoice = await getMappedDoc(doc, invoiceSchemaName, mapper);
-      if (!invoice.name) {
-        return;
-      }
-
-      const { routeTo } = await import('src/utils/ui');
-      const path = `/edit/${invoice.schemaName}/${invoice.name}`;
-      await routeTo(path);
-    },
-  };
+    target: () => [invoiceSchemaName, mapper],
+  });
 }
 
 export function getCreateCustomerAction(fyo: Fyo): Action {
-  return {
+  return getMappedDocAction({
     group: fyo.t`Create`,
     label: fyo.t`Customer`,
     condition: (doc: FrappeDoc) => !doc.notInserted,
-    action: async (doc: FrappeDoc, router) => {
-      const customer = await getMappedDoc(
-        doc,
-        ModelNameEnum.Party,
-        'make_customer'
-      );
-      await router.push(`/edit/Party/${customer.name!}`);
-    },
-  };
+    target: () => [ModelNameEnum.Party, 'make_customer'],
+  });
 }
 
 export function getSalesQuoteAction(fyo: Fyo): Action {
-  return {
+  return getMappedDocAction({
     group: fyo.t`Create`,
     label: fyo.t`Sales Quote`,
     condition: (doc: FrappeDoc) => !doc.notInserted,
-    action: async (doc, router) => {
-      const quote = await getMappedDoc(
-        doc,
-        ModelNameEnum.SalesQuote,
-        'make_sales_quote'
-      );
-      await router.push(`/edit/SalesQuote/${quote.name!}`);
-    },
-  };
+    target: () => [ModelNameEnum.SalesQuote, 'make_sales_quote'],
+  });
 }
 
 export function getMakePaymentAction(fyo: Fyo): Action {
-  return {
+  return getMappedDocAction({
     label: fyo.t`Payment`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) =>
       doc.isSubmitted && !(doc.outstanding_amount as Money).isZero(),
-    action: async (doc, router) => {
-      const payment = await getMappedDoc(
-        doc,
-        ModelNameEnum.Payment,
-        'make_payment'
-      );
-      const currentRoute = router.currentRoute.value.fullPath;
-      payment.once('afterSubmit', async () => {
-        await doc.load();
-        await router.push(currentRoute);
-      });
+    target: () => [ModelNameEnum.Payment, 'make_payment'],
+    open: openPayment,
+  });
+}
 
-      // The party account comes from the invoice.
-      const hideFields = ['party', 'payment_references', 'account'];
+/** Opens a payment in a quick edit; once it is submitted, the invoice shows what is left to pay. */
+async function openPayment(
+  payment: FrappeDoc,
+  router: Router,
+  invoice: FrappeDoc
+) {
+  const currentRoute = router.currentRoute.value.fullPath;
+  payment.once('afterSubmit', async () => {
+    await invoice.load();
+    await router.push(currentRoute);
+  });
 
-      if (!fyo.singles.AccountingSettings?.enable_invoice_returns) {
-        hideFields.push('payment_type');
-      }
+  // The party account comes from the invoice.
+  const hideFields = ['party', 'payment_references', 'account'];
 
-      const { openQuickEdit } = await import('src/utils/ui');
-      await openQuickEdit({
-        doc: payment,
-        hideFields,
-      });
-    },
-  };
+  if (!payment.fyo.singles.AccountingSettings?.enable_invoice_returns) {
+    hideFields.push('payment_type');
+  }
+
+  const { openQuickEdit } = await import('src/utils/ui');
+  await openQuickEdit({
+    doc: payment,
+    hideFields,
+  });
 }
 
 export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
@@ -252,7 +252,7 @@ function getPostingDate(doc: FrappeDoc): Date {
 }
 
 export function getMakeReturnDocAction(fyo: Fyo): Action {
-  return {
+  return getMappedDocAction({
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) =>
@@ -260,17 +260,8 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
       doc.isSubmitted &&
       !doc.isReturn &&
       !doc.is_fully_returned,
-    action: async (doc: FrappeDoc) => {
-      const returnDoc = await getMappedDoc(doc, doc.schemaName, 'make_return');
-      if (!returnDoc.name) {
-        return;
-      }
-
-      const { routeTo } = await import('src/utils/ui');
-      const path = `/edit/${doc.schemaName}/${returnDoc.name}`;
-      await routeTo(path);
-    },
-  };
+    target: (doc: FrappeDoc) => [doc.schemaName, 'make_return'],
+  });
 }
 
 export function getLeadStatusColumn(): ColumnConfig {

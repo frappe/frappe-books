@@ -10,7 +10,7 @@ import {
   validateEmail,
   validatePhoneNumber,
 } from 'fyo/model/validationFunction';
-import { getMappedDoc } from 'models/helpers';
+import { getMappedDocAction } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { getFrappeDoc } from 'src/frappe/documents';
@@ -101,29 +101,12 @@ export class Party extends FrappeDoc {
 
   static getActions(fyo: Fyo): Action[] {
     return [
-      {
+      getMappedDocAction({
         label: fyo.t`Create purchase`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
-        action: async (partyDoc, router) => {
-          const doc = await getMappedDoc(
-            partyDoc,
-            ModelNameEnum.PurchaseInvoice,
-            'make_purchase_invoice'
-          );
-
-          await router.push({
-            path: `/edit/PurchaseInvoice/${doc.name!}`,
-            query: {
-              schemaName: 'PurchaseInvoice',
-              values: {
-                // @ts-expect-error the router types query values as strings
-                party: partyDoc.name!,
-              },
-            },
-          });
-        },
-      },
+        target: () => [ModelNameEnum.PurchaseInvoice, 'make_purchase_invoice'],
+      }),
       {
         label: fyo.t`View purchases`,
         condition: (doc: FrappeDoc) =>
@@ -135,29 +118,12 @@ export class Party extends FrappeDoc {
           });
         },
       },
-      {
+      getMappedDocAction({
         label: fyo.t`Create sale`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
-        action: async (partyDoc, router) => {
-          const doc = await getMappedDoc(
-            partyDoc,
-            ModelNameEnum.SalesInvoice,
-            'make_sales_invoice'
-          );
-
-          await router.push({
-            path: `/edit/SalesInvoice/${doc.name!}`,
-            query: {
-              schemaName: 'SalesInvoice',
-              values: {
-                // @ts-expect-error the router types query values as strings
-                party: partyDoc.name!,
-              },
-            },
-          });
-        },
-      },
+        target: () => [ModelNameEnum.SalesInvoice, 'make_sales_invoice'],
+      }),
       {
         label: fyo.t`View sales`,
         condition: (doc: FrappeDoc) =>

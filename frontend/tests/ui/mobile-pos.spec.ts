@@ -143,6 +143,20 @@ test('payment methods wrap in a two-column grid', async ({ page }) => {
   await expect(page.getByRole('button', { name: /6 items/ })).toBeVisible();
 });
 
+test('a submitted invoice from Held offers only its payment', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.pos.selectedInvoiceName({
+      name: 'SINV-2026-0002',
+      docstatus: 1,
+    })
+  );
+  await expect(page.getByRole('heading', { name: 'Payment' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Submit only' })).toHaveCount(0);
+});
+
 test('the menu opens each quick action as a sheet', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.fillCart());
   for (const [row, title] of [

@@ -180,6 +180,20 @@ test('a held sale reopens as saved after its cart was edited', async ({
   await expect(removeItem).toHaveCount(1);
 });
 
+test('a submitted invoice from Held offers only its payment', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.pos.selectedInvoiceName({
+      name: 'SINV-2026-0002',
+      docstatus: 1,
+    })
+  );
+  const dialog = page.getByRole('dialog', { name: 'Payment' });
+  await expect(dialog.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Submit unpaid' })).toHaveCount(0);
+});
+
 test('cart values fit and expanded item fields open a usable keypad', async ({
   page,
 }) => {

@@ -63,10 +63,12 @@
           </FrappeAlert>
         </FrappeScrollArea>
 
-        <!-- Display Hints -->
-        <p v-else-if="helperMessage" class="text-sm text-ink-gray-7 p-4">
-          {{ helperMessage }}
-        </p>
+        <EmptyState
+          v-else-if="helperMessage"
+          class="flex-1"
+          icon="lucide-layout-template"
+          :title="helperMessage"
+        />
 
         <!-- Bottom Bar -->
         <div
@@ -214,6 +216,7 @@ import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Link from 'src/components/Controls/Link.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import HorizontalResizer from 'src/components/HorizontalResizer.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
@@ -261,6 +264,7 @@ export default defineComponent({
     FrappeScrollArea,
     FrappeSkeleton,
     DropdownWithActions,
+    EmptyState,
     PrintSheet,
     HorizontalResizer,
     TemplateEditor,

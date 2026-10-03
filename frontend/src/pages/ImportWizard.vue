@@ -74,7 +74,7 @@
           "
         >
           <span v-if="fileName">{{ t`Selected` }} </span>
-          {{ helperMessage }}{{ fileName ? ',' : '' }}
+          {{ fileName }}{{ fileName ? ',' : '' }}
           <span v-if="fileName"> {{ t`check values and click on` }} </span
           >{{ ' ' }}<span v-if="fileName">{{ t`Import Data.` }}</span>
           <span v-if="hasImporter && importer.valueMatrix.length > 0">{{
@@ -182,14 +182,16 @@
           </FrappeListRows>
         </FrappeList>
 
-        <div
-          v-else
-          class="ps-3 sm:ps-5 text-ink-gray-7 sticky left-0 flex items-center"
-          style="height: 62.5px"
-        >
+        <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
           {{ t`No rows added. Select a file or add rows.` }}
-        </div>
+        </p>
       </FrappeScrollArea>
+      <EmptyState
+        v-else
+        class="flex-1"
+        icon="lucide-file-up"
+        :title="t`Set an Import Type`"
+      />
     </div>
 
     <!-- Pick Column Dialog -->
@@ -345,6 +347,7 @@ import Data from 'src/components/Controls/Data.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Select from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { DataImport, MissingLink } from 'src/dataImport';
 import { getDocType } from 'src/frappe/doctypes';
@@ -387,6 +390,7 @@ export default defineComponent({
     PageHeader,
     FormControl,
     DropdownWithActions,
+    EmptyState,
     AutoComplete,
     Data,
     FrappeDialog,
@@ -544,15 +548,6 @@ export default defineComponent({
       }
 
       return this.file.name;
-    },
-    helperMessage(): string {
-      if (!this.importType) {
-        return this.t`Set an Import Type`;
-      } else if (!this.fileName) {
-        return '';
-      }
-
-      return this.fileName;
     },
     isSubmittable(): boolean {
       return !!getSchema(this.importer.schemaName)?.isSubmittable;

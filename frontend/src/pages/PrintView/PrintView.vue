@@ -40,19 +40,18 @@
       />
     </div>
 
+    <EmptyState
+      v-if="helperMessage"
+      class="flex-1"
+      icon="lucide-printer"
+      :title="helperMessage"
+    />
     <!-- Template Display Area -->
     <div
+      v-else
       class="overflow-auto p-4"
       :class="isMobile ? 'flex-1' : ''"
     >
-      <!-- Display Hints -->
-      <div
-        v-if="helperMessage"
-        class="text-sm text-ink-gray-7"
-      >
-        {{ helperMessage }}
-      </div>
-
       <!-- Template Container -->
       <div :class="isMobile ? 'relative w-max min-w-full' : ''">
         <PrintSheet
@@ -124,6 +123,7 @@ import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { ModelNameEnum } from 'models/types';
 import SelectControl from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -160,6 +160,7 @@ export default defineComponent({
     SelectControl,
     PrintSheet,
     DropdownWithActions,
+    EmptyState,
     MobileFooter,
     MobilePrintTemplatePicker,
   },
@@ -195,13 +196,17 @@ export default defineComponent({
   },
   computed: {
     helperMessage() {
+      if (!this.doc) {
+        return '';
+      }
+
       if (!this.templateList.length) {
         const label = getSchema(this.schemaName)?.label ?? this.schemaName;
 
         return this.t`No Print Templates found for entry type ${label}`;
       }
 
-      if (!this.templateDoc) {
+      if (!this.templateName) {
         return this.t`Please select a Print Template`;
       }
 
@@ -295,8 +300,9 @@ export default defineComponent({
       return actions;
     },
     async initialize() {
-      this.doc = await getFrappeDoc(this.schemaName, this.name);
+      // The hints wait for the doc, so they don't flash while the list loads.
       await this.setTemplateList();
+      this.doc = await getFrappeDoc(this.schemaName, this.name);
       await this.setTemplateFromDefault();
       if (!this.templateDoc && this.templateList.length) {
         await this.onTemplateNameChange(this.templateList[0]);

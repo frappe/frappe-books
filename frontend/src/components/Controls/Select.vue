@@ -50,7 +50,7 @@
     @focus="onFocus"
   >
     <template v-if="inlineLabel" #prefix>
-      <span class="text-ink-gray-5">{{ df.label }}</span>
+      <span class="text-base text-ink-gray-5">{{ df.label }}</span>
     </template>
   </FrappeSelect>
 </template>

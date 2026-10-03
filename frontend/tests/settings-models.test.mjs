@@ -294,7 +294,7 @@ test("a System tab save that changes the display precision first sets Frappe's",
   );
 });
 
-test('only users who can write System Settings change the display precision', () => {
+test('only users who can write System Settings change what Frappe formats with', () => {
   const settings = newFrappeDoc('SystemSettings');
   settings._notInserted = false;
   const permissions = fyo.store.permissions;
@@ -304,10 +304,15 @@ test('only users who can write System Settings change the display precision', ()
     user: { can_write: canWrite },
   };
 
-  assert.equal(readOnly(settings, 'display_precision'), true);
-  assert.equal(readOnly(settings, 'date_format'), false);
+  const formats = ['display_precision', 'date_format', 'locale'];
+  for (const fieldname of formats) {
+    assert.equal(readOnly(settings, fieldname), true, fieldname);
+  }
+  assert.equal(readOnly(settings, 'hide_get_started'), false);
   canWrite.push('System Settings');
-  assert.equal(readOnly(settings, 'display_precision'), false);
+  for (const fieldname of formats) {
+    assert.equal(readOnly(settings, fieldname), false, fieldname);
+  }
   fyo.store.permissions = permissions;
 });
 

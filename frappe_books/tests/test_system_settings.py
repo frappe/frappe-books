@@ -3,6 +3,7 @@ from frappe import client
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.formats import frappe_date_format, frappe_number_format
 from frappe_books.frappe_books.doctype.books_system_settings.books_system_settings import (
 	set_display_precision,
 )
@@ -12,6 +13,7 @@ from frappe_books.tests.test_settings_rules import COMPANY
 
 BOOKS_MANAGER = "books-settings-manager@example.com"
 BOOKS_USER = "books-settings-user@example.com"
+FRAPPE_FORMATS = {"date_format": "dd-mm-yyyy", "number_format": "#,###.##"}
 
 
 class IntegrationTestSystemSettings(IntegrationTestCase):
@@ -87,6 +89,72 @@ class IntegrationTestSystemSettings(IntegrationTestCase):
 				self.assertRaises(frappe.PermissionError, set_display_precision, 2)
 
 			self.assertEqual(frappe.db.get_single_value("System Settings", "currency_precision"), "2")
+
+	def test_frappe_date_format_follows_the_day_month_year_order(self):
+		cases = {
+			"dd/MM/yyyy": "dd/mm/yyyy",
+			"MM/dd/yyyy": "mm/dd/yyyy",
+			"dd-MM-yyyy": "dd-mm-yyyy",
+			"MM-dd-yyyy": "mm-dd-yyyy",
+			"yyyy-MM-dd": "yyyy-mm-dd",
+			"dd.MM.yyyy": "dd.mm.yyyy",
+			"MMM d, y": "mm-dd-yyyy",
+			"d MMM, y": "dd-mm-yyyy",
+			"EEE, d MMM y": "dd-mm-yyyy",
+			"LLLL d 'of' y": "mm-dd-yyyy",
+			# Frappe has no other year-first or dotted month-first format.
+			"yyyy/MM/dd": "yyyy-mm-dd",
+			"MM.dd.yyyy": "mm-dd-yyyy",
+		}
+		for date_format, expected in cases.items():
+			with self.subTest(date_format=date_format):
+				self.assertEqual(frappe_date_format(date_format), expected)
+
+	def test_frappe_number_format_follows_the_locale_marks(self):
+		cases = {
+			"en-IN": "#,##,###.##",
+			"en-US": "#,###.##",
+			"de-DE": "#.###,##",
+			"fr-FR": "# ###,##",
+			"sv-SE": "# ###,##",
+			"de-CH": "#'###.##",
+			"pt-BR": "#.###,##",
+			"ja-JP": "#,###.##",
+		}
+		for locale, expected in cases.items():
+			with self.subTest(locale=locale):
+				self.assertEqual(frappe_number_format(locale), expected)
+		self.assertRaisesRegex(frappe.ValidationError, "not a valid locale", frappe_number_format, "xx-QQ")
+
+	def test_saving_formats_sets_frappe_formats(self):
+		with self.change_settings("System Settings", FRAPPE_FORMATS):
+			frappe.db.set_single_value(
+				"Books System Settings", {"date_format": "dd/MM/yyyy", "locale": "en-US"}
+			)
+			settings = frappe.get_single("Books System Settings")
+			settings.update({"date_format": "MMM d, y", "locale": "de-DE"})
+			settings.save()
+
+			self.assertEqual(
+				frappe.db.get_value("System Settings", None, ["date_format", "number_format"], as_dict=True),
+				{"date_format": "mm-dd-yyyy", "number_format": "#.###,##"},
+			)
+
+	def test_only_system_settings_editors_change_formats(self):
+		with self.change_settings("System Settings", FRAPPE_FORMATS):
+			frappe.db.set_single_value(
+				"Books System Settings", {"date_format": "MMM d, y", "locale": "en-US"}
+			)
+			with self.set_user(ensure_user(BOOKS_MANAGER, "Books Manager")):
+				values = client.get("Books System Settings")
+				# Formats that differ from Frappe's stay until one of them changes.
+				client.save({**values, "hide_get_started": 1})
+				for fieldname, value in (("date_format", "dd/MM/yyyy"), ("locale", "de-DE")):
+					with self.subTest(fieldname=fieldname):
+						values = client.get("Books System Settings")
+						self.assertRaises(frappe.PermissionError, client.save, {**values, fieldname: value})
+
+			self.assertEqual(frappe.db.get_single_value("System Settings", "date_format"), "dd-mm-yyyy")
 
 	def test_regional_code_comes_from_the_country(self):
 		for country, code in (("India", "in"), ("Switzerland", "ch"), ("Germany", "-"), (None, "-")):

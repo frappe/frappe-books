@@ -12,7 +12,8 @@ const SET_DISPLAY_PRECISION =
 
 /**
  * Books System Settings, served by Frappe. Its currency and display precision
- * are Frappe's System Settings currency and currency precision.
+ * are Frappe's System Settings currency and currency precision; a save of its
+ * date format or locale sets Frappe's date or number format.
  */
 export class SystemSettings extends FrappeDoc {
   static override doctype = 'Books System Settings';
@@ -64,6 +65,8 @@ export class SystemSettings extends FrappeDoc {
   };
 
   readOnly: ReadOnlyMap = {
+    date_format: () => !this.canWriteSystemSettings,
+    locale: () => !this.canWriteSystemSettings,
     display_precision: () => !this.canWriteSystemSettings,
   };
 

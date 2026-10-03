@@ -7,7 +7,14 @@ from frappe.locale import get_number_format
 from frappe.model.document import Document
 from frappe.utils import get_currency_precision
 
+from frappe_books.formats import frappe_date_format, frappe_number_format
 from frappe_books.settings import update_system_settings
+
+# Frappe's System Settings fields that follow Books fields, with the Frappe value of a Books value.
+FRAPPE_FORMATS = {
+	"date_format": ("date_format", frappe_date_format),
+	"locale": ("number_format", frappe_number_format),
+}
 
 
 class BooksSystemSettings(Document):
@@ -41,6 +48,20 @@ class BooksSystemSettings(Document):
 	def display_precision(self):
 		"""The decimals of amounts, which Frappe's System Settings hold as the Currency Precision."""
 		return get_display_precision()
+
+	def on_update(self):
+		# Only a changed format goes, so other saves need no right to System Settings.
+		self.update_frappe_formats(
+			[fieldname for fieldname in FRAPPE_FORMATS if self.has_value_changed(fieldname)]
+		)
+
+	def update_frappe_formats(self, fieldnames=tuple(FRAPPE_FORMATS)):
+		"""Set Frappe's date and number formats to the closest of the Books ones, for Frappe's own output."""
+		values = {}
+		for fieldname in fieldnames:
+			frappe_field, to_frappe = FRAPPE_FORMATS[fieldname]
+			values[frappe_field] = to_frappe(self.get(fieldname))
+		update_system_settings(values)
 
 
 def get_display_precision() -> int:

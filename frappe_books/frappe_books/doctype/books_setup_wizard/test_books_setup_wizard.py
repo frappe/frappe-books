@@ -3,7 +3,6 @@
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import get_setup_wizard_url
-from frappe.geo.country_info import get_country_info
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
@@ -169,16 +168,22 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 		self.assertTrue(frappe.is_setup_complete())
 		self.assertEqual(
-			(settings.country, settings.currency, settings.time_zone, settings.date_format),
-			(
-				"Switzerland",
-				"CHF",
-				"Europe/Zurich",
-				frappe.db.get_value("Country", "Switzerland", "date_format"),
-			),
+			(settings.country, settings.currency, settings.time_zone),
+			("Switzerland", "CHF", "Europe/Zurich"),
 		)
-		# Amounts in words follow the country's number format, e.g. lakh and crore for India.
-		self.assertEqual(settings.number_format, get_country_info("Switzerland")["number_format"])
+		# Frappe formats dates and numbers as the Books settings do, not as the country does.
+		self.assertEqual((settings.date_format, settings.number_format), ("mm-dd-yyyy", "#,###.##"))
+
+	def test_setup_sets_frappe_formats_from_the_books_formats(self):
+		frappe.db.set_single_value("Books System Settings", "date_format", "yyyy-MM-dd")
+		wizard = self._wizard()
+		wizard.save(ignore_permissions=True)
+		with self.restored_system_settings():
+			run_setup(wizard)
+			formats = frappe.db.get_value("System Settings", None, ["date_format", "number_format"])
+
+		# Amounts in words follow the number format, e.g. lakh and crore for India.
+		self.assertEqual(formats, ["yyyy-mm-dd", "#,##,###.##"])
 
 	def test_fresh_site_opens_the_books_setup_wizard(self):
 		self.assertEqual(get_setup_wizard_url(), "/books")

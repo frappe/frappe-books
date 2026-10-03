@@ -113,6 +113,7 @@ def _update_books_system_settings(wizard):
 	settings = frappe.get_single("Books System Settings")
 	settings.locale = "en-IN" if wizard.country == "India" else "en-US"
 	settings.save(ignore_permissions=True)
+	settings.update_frappe_formats()
 
 
 def _update_inventory_settings(accounts):

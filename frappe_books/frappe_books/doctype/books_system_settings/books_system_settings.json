@@ -27,6 +27,7 @@
   },
   {
    "default": "MMM d, y",
+   "description": "Frappe's System Settings take the closest numeric date format. Only a System Manager can change it.",
    "fieldname": "date_format",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
@@ -59,6 +60,7 @@
   },
   {
    "default": "en-IN",
+   "description": "Frappe's System Settings take its number format. Only a System Manager can change it.",
    "fieldname": "locale",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,

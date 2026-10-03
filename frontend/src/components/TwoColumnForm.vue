@@ -1,5 +1,6 @@
 <template>
-  <div v-if="isMobile" class="flex flex-col gap-4 p-4">
+  <!-- Sheets add the side gutter, so their footers can pin. -->
+  <div v-if="isMobile" class="flex flex-col gap-4 py-4">
     <template v-for="df in formFields" :key="df.fieldname">
       <Table
         v-if="df.fieldtype === 'Table'"

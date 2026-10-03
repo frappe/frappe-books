@@ -5,28 +5,25 @@
     :title="sheetTitle"
     @update:open="(open: boolean) => !open && routeToPrevious()"
   >
-    <TwoColumnForm v-if="doc" ref="form" :doc="doc" :fields="sheetFields" />
-    <FormSkeleton v-else class="p-4" />
-    <div
-      v-if="doc?.canSave || doc?.canSubmit"
-      class="px-4 pb-[max(env(safe-area-inset-bottom),1rem)]"
-    >
-      <FrappeButton
-        v-if="doc.canSave"
-        class="w-full"
-        size="lg"
-        variant="solid"
-        :label="t`Save`"
-        @click="sync"
-      />
-      <FrappeButton
-        v-else
-        class="w-full"
-        size="lg"
-        variant="solid"
-        :label="t`Submit`"
-        @click="submit"
-      />
+    <div class="px-4">
+      <TwoColumnForm v-if="doc" ref="form" :doc="doc" :fields="sheetFields" />
+      <FormSkeleton v-else class="py-4" />
+      <MobileSheetFooter v-if="doc?.canSave || doc?.canSubmit" class="*:flex-1">
+        <FrappeButton
+          v-if="doc.canSave"
+          size="lg"
+          variant="solid"
+          :label="t`Save`"
+          @click="sync"
+        />
+        <FrappeButton
+          v-else
+          size="lg"
+          variant="solid"
+          :label="t`Submit`"
+          @click="submit"
+        />
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
   <div
@@ -107,6 +104,7 @@ import { Field, Schema } from 'schemas/types';
 import AttachImage from 'src/components/Controls/AttachImage.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import FormSkeleton from 'src/pages/CommonForm/FormSkeleton.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getField, getFields, getSchema } from 'src/frappe/registry';
@@ -130,6 +128,7 @@ export default defineComponent({
     FrappeScrollArea,
     FormControl,
     FormSkeleton,
+    MobileSheetFooter,
     TwoColumnForm,
     AttachImage,
   },

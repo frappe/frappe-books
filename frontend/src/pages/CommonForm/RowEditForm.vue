@@ -11,24 +11,25 @@
     :title="t`Row ${index + 1}`"
     @update:open="(open: boolean) => !open && $emit('close')"
   >
-    <TwoColumnForm :doc="row" :fields="fields" />
-    <div class="flex gap-2 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
-      <FrappeButton
-        v-if="isEditable"
-        size="lg"
-        variant="ghost"
-        theme="red"
-        icon-left="lucide-trash-2"
-        :label="t`Remove`"
-        @click="remove"
-      />
-      <FrappeButton
-        class="flex-1"
-        size="lg"
-        variant="solid"
-        :label="t`Done`"
-        @click="$emit('close')"
-      />
+    <div class="px-4">
+      <TwoColumnForm :doc="row" :fields="fields" />
+      <MobileSheetFooter>
+        <FrappeButton
+          size="lg"
+          variant="ghost"
+          theme="red"
+          icon-left="lucide-trash-2"
+          :label="t`Remove`"
+          @click="remove"
+        />
+        <FrappeButton
+          class="flex-1"
+          size="lg"
+          variant="solid"
+          :label="t`Done`"
+          @click="$emit('close')"
+        />
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
   <div
@@ -83,6 +84,7 @@ import {
 import { FrappeDoc } from 'src/frappe/document';
 import { ValueError } from 'fyo/utils/errors';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import RowDetailSheet from './RowDetailSheet.vue';
 import { evaluateReadOnly } from 'src/utils/doc';
 import { isMobile } from 'src/utils/viewport';
@@ -99,6 +101,7 @@ export default defineComponent({
     FrappeBottomSheet,
     FrappeButton,
     FrappeScrollArea,
+    MobileSheetFooter,
     RowDetailSheet,
     TwoColumnForm,
   },

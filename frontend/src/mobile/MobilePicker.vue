@@ -6,18 +6,20 @@
         class="fixed inset-0 z-50 flex flex-col bg-surface-base pt-[env(safe-area-inset-top)] focus:outline-none"
         @open-auto-focus="focusSearch"
       >
+        <!-- PageHeaderMobile's geometry; it teleports to the page's header, so it can't sit in an overlay. -->
         <div
           class="relative flex h-13 shrink-0 items-center border-b border-outline-gray-1 px-3"
         >
           <FrappeButton
             variant="ghost"
+            size="md"
             icon="lucide-chevron-left"
             class="rtl-rotate-180"
             :label="t`Back`"
             @click="isOpen = false"
           />
           <DialogTitle
-            class="absolute inset-x-14 truncate text-center text-xl-semibold text-ink-gray-9"
+            class="absolute inset-x-15 truncate text-center text-xl-semibold leading-tight text-ink-gray-9"
           >
             {{ title }}
           </DialogTitle>
@@ -28,7 +30,7 @@
             ref="search"
             type="search"
             size="lg"
-            variant="outline"
+            variant="subtle"
             :model-value="query"
             :placeholder="t`Search`"
             @update:model-value="(value: string) => (query = value)"

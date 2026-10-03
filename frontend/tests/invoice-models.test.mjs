@@ -311,6 +311,21 @@ test('a row in another unit shows and takes its rate per that unit', async () =>
   clearTimeout(invoice._previewTimer);
 });
 
+test('a row rate cleared by text that is no number is refused, as the server requires a rate', async () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice');
+  invoice.push('items', {
+    item: 'Paper',
+    rate: fyo.pesa(62),
+    transfer_rate: fyo.pesa(62),
+  });
+  const row = invoice.items[0];
+
+  await assert.rejects(row.set('transfer_rate', null), /Rate is required/);
+  assert.equal(row.transfer_rate.float, 62);
+  clearTimeout(invoice._previewTimer);
+});
+
 test('a new item on a purchase row leaves its batch for the server to name', async () => {
   setSettings();
   const invoices = ['PurchaseInvoice', 'SalesInvoice'].map((schemaName) =>

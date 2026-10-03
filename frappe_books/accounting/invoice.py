@@ -19,13 +19,8 @@ from frappe_books.accounting.payment import default_payment_account, map_invoice
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.currency import get_exchange_rate
-from frappe_books.inventory.auto_transfer import cancel_auto_transfer, create_auto_transfer, default_location
+from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
-from frappe_books.inventory.invoice_balance import (
-	store_pending_quantities,
-	update_billed_status,
-	validate_billed_quantities,
-)
 from frappe_books.inventory.stock import create_series_batches, validate_batches
 from frappe_books.inventory.units import populate_units
 from frappe_books.permissions import check_preview_permission
@@ -111,7 +106,7 @@ class PostingInvoiceController(InvoiceController):
 			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
 		if self.get("make_auto_stock_transfer") is None:
 			inventory = frappe.db.get_single_value("Books Accounting Settings", "enable_inventory")
-			self.make_auto_stock_transfer = int(bool(inventory and default_location(self)))
+			self.make_auto_stock_transfer = int(bool(inventory and invoice_transfer.default_location(self)))
 
 	def validate(self):
 		super().validate()
@@ -121,7 +116,7 @@ class PostingInvoiceController(InvoiceController):
 		validate_sale_batch_stock(self)
 
 	def before_submit(self):
-		validate_billed_quantities(self)
+		invoice_transfer.validate_invoice(self)
 		outstanding = abs(as_decimal(self.base_grand_total))
 		self.outstanding_amount = -outstanding if self.return_against else outstanding
 
@@ -130,9 +125,7 @@ class PostingInvoiceController(InvoiceController):
 		update_party_outstanding(self.party)
 		pricing.update_coupon_usage(self, 1)
 		loyalty.process_invoice(self)
-		update_billed_status(self)
-		create_auto_transfer(self)
-		store_pending_quantities(self)
+		invoice_transfer.on_invoice_submit(self)
 		if self.return_against:
 			returns.update_return_status(self, include_current=True)
 		# POS invoices are paid at the counter with the tendered payment method.
@@ -157,7 +150,7 @@ class PostingInvoiceController(InvoiceController):
 		self.reload()
 
 	def before_cancel(self):
-		cancel_auto_transfer(self)
+		invoice_transfer.before_invoice_cancel(self)
 		self.outstanding_amount = 0
 
 	def on_cancel(self):
@@ -165,7 +158,7 @@ class PostingInvoiceController(InvoiceController):
 		update_party_outstanding(self.party)
 		pricing.update_coupon_usage(self, -1)
 		loyalty.reverse_invoice(self)
-		update_billed_status(self)
+		invoice_transfer.on_invoice_cancel(self)
 		if self.return_against:
 			returns.update_return_status(self, include_current=False)
 
@@ -175,21 +168,14 @@ class PostingInvoiceController(InvoiceController):
 
 	def delete_cancelled_follow_ups(self):
 		"""Delete the cancelled stock transfers and payments made for this invoice, with the user's rights."""
-		transfer_doctype = "Books Shipment" if self.transaction_type == "sales" else "Books Purchase Receipt"
-		transfers = frappe.get_all(
-			transfer_doctype, filters={"back_reference": self.name, "docstatus": 2}, pluck="name"
-		)
-		if self.back_reference in transfers:
-			# The link back to the transfer would block deleting it.
-			self.db_set("back_reference", None, update_modified=False)
+		invoice_transfer.delete_cancelled_transfers(self)
 		payments = frappe.get_all(
 			"Books Payment For",
 			filters={"reference_type": self.doctype, "reference_name": self.name, "docstatus": 2},
 			pluck="parent",
 		)
-		for doctype, names in ((transfer_doctype, transfers), ("Books Payment", set(payments))):
-			for name in names:
-				frappe.delete_doc(doctype, name)
+		for name in set(payments):
+			frappe.delete_doc("Books Payment", name)
 
 
 class InvoiceItemController(Document):

@@ -11,8 +11,8 @@ from frappe_books.accounting.payment import map_invoice_payment, validate_paymen
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
-from frappe_books.inventory.auto_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.availability import validate_pos_stock
+from frappe_books.inventory.invoice_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.stock import fill_serial_numbers
 
 

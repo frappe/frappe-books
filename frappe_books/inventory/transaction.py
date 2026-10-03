@@ -3,18 +3,12 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.accounting.returns import set_quantity_signs
-from frappe_books.inventory.invoice_balance import (
-	bill_unbilled_rows,
-	update_invoice_balance,
-	validate_billable,
-	validate_invoice_balance,
-)
+from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	cancel_stock_entries,
@@ -53,9 +47,6 @@ MOVEMENT_LOCATION_FIELDS = {
 	"MaterialIssue": ("from_location", "to_location"),
 	"MaterialReceipt": ("to_location", "from_location"),
 }
-
-# Fields an invoice and its transfer do not share when one is mapped from the other.
-UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
 
 
 class StockMovementController(StatusMixin, SeriesNamingMixin, Document):
@@ -136,7 +127,7 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 
 	def before_submit(self):
 		validate_stock_available(transfer_rows(self), self.date)
-		validate_invoice_balance(self)
+		invoice_transfer.validate_transfer(self)
 
 	def before_cancel(self):
 		validate_stock_available(reverse_transfers(transfer_rows(self)), self.date)
@@ -145,14 +136,14 @@ class StockTransferController(StatusMixin, SeriesNamingMixin, Document):
 		restated = create_stock_entries(self, valued_transfer_rows(self))
 		post_stock_accounts(self)
 		repost_stock_accounts(restated)
-		update_invoice_balance(self)
+		invoice_transfer.update_invoice_balance(self)
 		self.update_returned_status()
 
 	def on_cancel(self):
 		restated = cancel_stock_entries(self, transfer_rows(self))
 		reverse_entries(self)
 		repost_stock_accounts(restated)
-		update_invoice_balance(self)
+		invoice_transfer.update_invoice_balance(self)
 		self.update_returned_status()
 
 	def on_trash(self):
@@ -191,35 +182,6 @@ def fill_default_location(rows, fieldname):
 	for row in rows:
 		if location and not row.get(fieldname):
 			row.set(fieldname, location)
-
-
-def map_transfer_invoice(transfer_doctype, transfer_name):
-	"""Return an unsaved invoice that bills a submitted shipment or purchase receipt."""
-	invoice_doctype = frappe.get_meta(transfer_doctype).get_field("back_reference").options
-	return get_mapped_doc(
-		transfer_doctype,
-		transfer_name,
-		{
-			transfer_doctype: {
-				"doctype": invoice_doctype,
-				"validation": {"docstatus": ["=", 1]},
-				"field_map": {"name": "back_reference"},
-				"field_no_map": UNSHARED_FIELDS,
-			},
-			_items_doctype(transfer_doctype): {"doctype": _items_doctype(invoice_doctype)},
-		},
-		postprocess=_bill_transfer,
-	)
-
-
-def _bill_transfer(transfer, invoice):
-	validate_billable(transfer)
-	bill_unbilled_rows(transfer, invoice)
-	invoice.fill_mapped_values()
-
-
-def _items_doctype(doctype):
-	return frappe.get_meta(doctype).get_field("items").options
 
 
 def movement_transfers(movement):

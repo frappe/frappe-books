@@ -3,8 +3,9 @@
 
 import frappe
 
+from frappe_books.inventory.invoice_transfer import map_transfer_invoice
 from frappe_books.inventory.returns import map_transfer_return
-from frappe_books.inventory.transaction import StockTransferController, map_transfer_invoice
+from frappe_books.inventory.transaction import StockTransferController
 
 
 class BooksPurchaseReceipt(StockTransferController):

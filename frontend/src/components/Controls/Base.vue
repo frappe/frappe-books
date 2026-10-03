@@ -53,6 +53,7 @@
 </template>
 <script lang="ts">
 import { FrappeDoc } from 'src/frappe/document';
+import type { FieldState } from 'src/frappe/fieldState';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
 import { Field } from 'schemas/types';
 import { isNumeric } from 'src/utils';
@@ -219,19 +220,22 @@ export default defineComponent({
 
       return false;
     },
+    fieldState(): FieldState | undefined {
+      return this.doc?.getFieldState(this.df);
+    },
     isReadOnly(): boolean {
       if (typeof this.readOnly === 'boolean') {
         return this.readOnly;
       }
 
-      return this.doc?.getFieldState(this.df).readOnly ?? !!this.df.readOnly;
+      return this.fieldState?.readOnly ?? !!this.df.readOnly;
     },
     isRequired(): boolean {
       if (typeof this.required === 'boolean') {
         return this.required;
       }
 
-      return this.doc?.getFieldState(this.df).required ?? !!this.df.required;
+      return this.fieldState?.required ?? !!this.df.required;
     },
   },
   mounted() {

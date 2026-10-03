@@ -61,22 +61,15 @@ export default defineComponent({
   props: {
     focusInput: Boolean,
   },
-  data() {
-    return { isFocused: false };
-  },
   computed: {
     // A text input, as Frappe's desk uses, takes grouped numbers and arithmetic.
     inputType(): 'text' {
       return 'text';
     },
-    /** The amount as Desk formats it for input, or the bare number while it is typed. */
+    /** The amount as Desk formats it for input: the number format, without the symbol. */
     displayValue(): string {
       const amount = toAmount(this.value, this.fyo);
-      if (amount === null) {
-        return '';
-      }
-
-      return this.isFocused ? amount.round() : formatNumber(amount, this.fyo);
+      return amount === null ? '' : formatNumber(amount, this.fyo);
     },
   },
   mounted() {
@@ -93,9 +86,7 @@ export default defineComponent({
         return;
       }
 
-      this.isFocused = true;
-      // Select the bare number once it replaces the formatted amount.
-      nextTick(() => target.select());
+      target.select();
       this.$emit('focus', e);
     },
     parse(value: unknown): Money | null {
@@ -107,8 +98,9 @@ export default defineComponent({
         return;
       }
 
-      this.isFocused = false;
       this.triggerChange(target.value);
+      // Desk formats the amount again; an accepted change re-renders it.
+      target.value = this.displayValue;
     },
   },
 });

@@ -524,6 +524,9 @@ test('the paid amount takes arithmetic, and text that is no number pays nothing'
   await amount.fill('2000+300');
   await amount.press('Tab');
   await expect(amount).toHaveValue('2,300.00');
+  // Desk keeps the formatted amount while it is edited.
+  await amount.focus();
+  await expect(amount).toHaveValue('2,300.00');
   await amount.fill('abc');
   await amount.press('Tab');
   await expect(amount).toHaveValue('0.00');

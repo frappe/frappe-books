@@ -119,7 +119,6 @@
         :initial-x="panelWidth"
         :min-x="22 * 16"
         :max-x="maxWidth"
-        style="z-index: 5"
         @resize="(x: number) => (panelWidth = x)"
       />
 

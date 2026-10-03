@@ -376,6 +376,24 @@ test('leaving a sale with items asks in a sheet', async ({ page }) => {
   await expect(sheet).toBeHidden();
 });
 
+test('leaving a submitted sale asks only to leave or stay', async ({
+  page,
+}) => {
+  await page.evaluate(() => (window as any).posFixture.openSavedInvoice(1));
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Exit POS' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Leave this sale?' });
+  await expectSheet(sheet);
+  for (const name of ['Leave', 'Cancel']) {
+    await expect(sheet.getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  for (const name of ['Save and Continue', 'Discard and Continue']) {
+    await expect(sheet.getByRole('button', { name, exact: true })).toHaveCount(0);
+  }
+  await sheet.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(sheet).toBeHidden();
+});
+
 test('opening a saved invoice shows its cart', async ({ page }) => {
   await page.evaluate(() => (window as any).posFixture.openSavedInvoice());
   await expectSheet(page.getByRole('dialog', { name: 'Cart' }));

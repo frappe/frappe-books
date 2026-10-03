@@ -21,11 +21,8 @@
       >
         {{ t`Filters` }}
       </h2>
-      <!-- A flex column, so the viewport fills the popover's max height. -->
-      <FrappeScrollArea
-        class="flex min-h-0 flex-col"
-        viewport-class="min-h-0 flex-1 px-4 pb-4"
-      >
+      <!-- Not ScrollArea: its focusable viewport would take the popover's first focus from the Field. -->
+      <div class="min-h-0 overflow-y-auto px-4 pb-4">
         <div v-if="filters.explicitRows.length" class="flex flex-col gap-4">
           <div
             v-for="(filter, i) in filters.explicitRows"
@@ -91,7 +88,7 @@
         <p v-else class="px-3 py-10 text-center text-p-sm text-ink-gray-4">
           {{ t`No filters selected` }}
         </p>
-      </FrappeScrollArea>
+      </div>
       <FrappeErrorMessage class="px-4 pb-3" :message="filters.error" />
       <footer
         class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-outline-gray-1 p-3"
@@ -121,7 +118,6 @@ import {
   Button as FrappeButton,
   ErrorMessage as FrappeErrorMessage,
   Popover as FrappePopover,
-  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { defineComponent } from 'vue';
 import Select from './Controls/Select.vue';
@@ -139,7 +135,6 @@ export default defineComponent({
   components: {
     FrappeErrorMessage,
     FrappePopover,
-    FrappeScrollArea,
     FilterValueInput,
     Select,
     FrappeButton,

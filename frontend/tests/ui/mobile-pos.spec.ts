@@ -71,6 +71,31 @@ test('the cart stepper turns minus into remove at one', async ({ page }) => {
   await expect(page.getByRole('button', { name: /\d+ items?/ })).toBeHidden();
 });
 
+test('a cart line shows its batch and the batch stock at the POS location', async ({
+  page,
+}) => {
+  await page.evaluate(() =>
+    (window as any).posFixture.state.invoice.push('items', {
+      name: 'row-batch',
+      item: 'Roasted Arabica Coffee Beans',
+      batch: 'COFFEE-2026-09',
+      quantity: 1,
+      transfer_quantity: 1,
+      unit: 'Unit',
+    })
+  );
+  await page.getByRole('button', { name: /1 item/ }).click();
+  await page
+    .getByRole('dialog', { name: 'Cart', exact: true })
+    .getByRole('button', { name: 'Roasted Arabica Coffee Beans' })
+    .click();
+  const line = page.getByRole('dialog', {
+    name: 'Roasted Arabica Coffee Beans',
+  });
+  await expect(line).toContainText('COFFEE-2026-09');
+  await expect(line).toContainText('110.00');
+});
+
 test('the cart lists every amount between net and grand total', async ({
   page,
 }) => {

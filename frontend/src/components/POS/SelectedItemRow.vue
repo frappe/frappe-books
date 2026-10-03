@@ -207,7 +207,7 @@
         }"
         size="medium"
         :min="0"
-        :value="availableQtyInBatch"
+        :value="batchQuantity"
         :show-label="true"
         :border="true"
         :read-only="true"
@@ -244,7 +244,6 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
 import { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
-import { getPOSBatchQuantity } from 'models/inventory/posStock';
 import { Money } from 'pesa';
 import AutoComplete from 'src/components/Controls/AutoComplete.vue';
 import Currency from 'src/components/Controls/Currency.vue';
@@ -266,6 +265,7 @@ import {
   validateSerialNumberCount,
 } from 'src/utils/pos';
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
+import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { defineComponent, inject, PropType } from 'vue';
 import { POSLayout } from './types';
 
@@ -290,15 +290,15 @@ export default defineComponent({
     },
   },
   emits: ['select', 'expand'],
-  setup() {
+  setup(props) {
     return {
       isDiscountingEnabled: inject('isDiscountingEnabled') as boolean,
+      batchQuantity: usePOSBatchQuantity(() => props.row),
     };
   },
   data() {
     return {
       isExpanded: false,
-      availableQtyInBatch: 0,
       permissions: {
         canChangeRate: false,
         canEditDiscount: false,
@@ -369,9 +369,8 @@ export default defineComponent({
       }
     },
     'row.batch': {
-      async handler(batch?: string) {
+      handler(batch?: string) {
         if (batch) {
-          this.availableQtyInBatch = await this.getAvailableQtyInBatch();
           this.isExpanded = true;
           this.$emit('expand', this.row.name);
         }
@@ -435,9 +434,6 @@ export default defineComponent({
       if (quantity !== 0) {
         await this.setValue(field, quantity);
       }
-    },
-    async getAvailableQtyInBatch(): Promise<number> {
-      return getPOSBatchQuantity(this.row.item as string, this.row.batch);
     },
     async setSerialNumber(serialNumber: string) {
       if (!serialNumber) {

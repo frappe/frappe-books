@@ -247,6 +247,24 @@ test('a submitted invoice in the cart offers nothing that changes its totals', a
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
+test('a picked batch shows its stock at the POS location', async ({
+  page,
+}) => {
+  await page
+    .getByLabel('Add Roasted Arabica Coffee Beans', { exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Select batch', exact: true });
+  await dialog.getByRole('combobox').fill('COFFEE');
+  await page.getByRole('option', { name: 'COFFEE-2026-09', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Select', exact: true }).click();
+  await expect(dialog).toBeHidden();
+
+  const cart = page.getByRole('complementary', { name: 'Cart' });
+  await expect(
+    cart.getByRole('textbox', { name: 'Qty in Batch', exact: true })
+  ).toHaveValue('110.00');
+});
+
 test('cart values fit and expanded item fields open a usable keypad', async ({
   page,
 }) => {

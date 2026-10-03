@@ -24,6 +24,8 @@ export interface MessageDialogOptions {
 
 export interface ToastOptions {
   message: string;
+  /** A repeated message with the same id replaces the shown toast. */
+  id?: string;
   type?: ToastType;
   duration?: ToastDuration;
   action?: () => void;

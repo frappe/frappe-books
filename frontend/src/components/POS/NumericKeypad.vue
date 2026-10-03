@@ -4,7 +4,7 @@
 		<FrappeTextInput
 			ref="input"
 			:model-value="modelValue"
-			:label="label"
+			:aria-label="label"
 			:error="displayError"
 			:disabled="disabled"
 			size="lg"
@@ -19,25 +19,27 @@
 		/>
 
 		<div class="keypad-keys grid grid-cols-4 gap-2" role="group" :aria-label="t`Numeric keypad`">
-			<!-- Plain buttons: touch keys need 56px; frappe-ui's largest Button is 40px (frappe/frappe-ui#1250). -->
+			<!-- Plain buttons: touch keys need 52px; frappe-ui's largest Button is 40px (frappe/frappe-ui#1250). -->
 			<button
 				v-for="key in keyDefinitions"
 				:key="key.value"
 				type="button"
 				:aria-label="key.ariaLabel"
 				:disabled="disabled"
-				class="h-14 rounded-5 bg-surface-gray-2 text-lg-semibold tabular-nums text-ink-gray-8 transition-colors enabled:hover:bg-surface-gray-3 enabled:active:bg-surface-gray-4 disabled:cursor-not-allowed disabled:text-ink-gray-4"
-				:class="{ 'col-span-2': key.wide }"
+				class="flex h-13 items-center justify-center rounded-4 tabular-nums transition-colors disabled:cursor-not-allowed disabled:text-ink-gray-4"
+				:class="[
+					key.wide ? 'col-span-2 text-md-medium' : 'text-3xl-medium',
+					key.action
+						? 'bg-surface-gray-3 text-ink-gray-7 enabled:hover:bg-surface-gray-4'
+						: 'bg-surface-gray-2 text-ink-gray-9 enabled:hover:bg-surface-gray-3 enabled:active:bg-surface-gray-4',
+				]"
 				@mousedown.prevent
 				@click="pressKey(key.value)"
 			>
-				{{ key.label }}
+				<span v-if="key.icon" :class="key.icon" class="size-5" aria-hidden="true" />
+				<template v-else>{{ key.label }}</template>
 			</button>
 		</div>
-
-		<p class="keypad-hint text-center text-sm text-ink-gray-5">
-			{{ t`Press Enter to save or Escape to cancel.` }}
-		</p>
 	</div>
 </template>
 
@@ -51,6 +53,9 @@ type KeyDefinition = {
 	value: NumericKey;
 	ariaLabel: string;
 	wide?: boolean;
+	/** Edits the value rather than typing a digit. */
+	action?: boolean;
+	icon?: string;
 };
 
 type TextInputRef = {
@@ -90,6 +95,8 @@ export default defineComponent({
 					label: this.t`Del`,
 					value: "backspace",
 					ariaLabel: this.t`Delete last digit`,
+					action: true,
+					icon: "lucide-delete",
 				},
 				{ label: "4", value: "4", ariaLabel: "4" },
 				{ label: "5", value: "5", ariaLabel: "5" },
@@ -98,6 +105,7 @@ export default defineComponent({
 					label: "−",
 					value: "-",
 					ariaLabel: this.t`Make negative`,
+					action: true,
 				},
 				{ label: "1", value: "1", ariaLabel: "1" },
 				{ label: "2", value: "2", ariaLabel: "2" },
@@ -106,6 +114,7 @@ export default defineComponent({
 					label: "+",
 					value: "+",
 					ariaLabel: this.t`Make positive`,
+					action: true,
 				},
 				{ label: ".", value: ".", ariaLabel: this.t`Decimal point` },
 				{ label: "0", value: "0", ariaLabel: "0" },
@@ -114,6 +123,7 @@ export default defineComponent({
 					value: "clear",
 					ariaLabel: this.t`Clear`,
 					wide: true,
+					action: true,
 				},
 			];
 		},
@@ -176,10 +186,6 @@ export default defineComponent({
 @media (max-height: 700px) {
   .keypad-keys :deep(button) {
     height: 40px !important;
-  }
-
-  .keypad-hint {
-    display: none;
   }
 }
 </style>

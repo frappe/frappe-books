@@ -1,7 +1,8 @@
 <template>
   <Modal
     :open-modal="modalStatus"
-    :title="modalTitle"
+    :title="fieldLabel"
+    :subtitle="selectedItemRow?.item ?? ''"
     @closemodal="closeKeyboardModal"
   >
     <NumericKeypad
@@ -14,16 +15,16 @@
       @cancel="closeKeyboardModal"
     />
 
-    <template #actions="{ size }">
+    <template #actions>
       <FrappeButton
-        :size="size"
-        class="min-w-24"
+        size="lg"
+        class="flex-1"
         :disabled="saving"
         @click="closeKeyboardModal"
         >{{ t`Cancel` }}</FrappeButton>
       <FrappeButton
-        :size="size"
-        class="min-w-24"
+        size="lg"
+        class="flex-1"
         variant="solid"
         :disabled="saving"
         :loading="saving"
@@ -71,9 +72,6 @@ export default defineComponent({
         (this.selectedItemRow?.fieldMap[this.selectedItemField]?.label as string) ||
         this.t`Value`
       );
-    },
-    modalTitle(): string {
-      return this.t`Edit ${this.fieldLabel}`;
     },
     allowNegative(): boolean {
       const isQuantity = ['quantity', 'transfer_quantity'].includes(

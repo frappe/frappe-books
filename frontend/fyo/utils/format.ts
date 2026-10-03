@@ -3,7 +3,7 @@ import type { FrappeDoc } from 'src/frappe/document';
 import { DateTime } from 'luxon';
 import { Field, FieldType, FieldTypeEnum } from 'schemas/types';
 import { getFloatPrecision } from 'src/utils/precision';
-import { getIsNullOrUndef, safeParseFloat, titleCase } from 'utils';
+import { getIsNullOrUndef, safeParseFloat } from 'utils';
 import { getOptionList, isPesa } from '.';
 import {
   DEFAULT_CURRENCY,
@@ -45,7 +45,7 @@ export function format(
   }
 
   if (field.fieldtype === FieldTypeEnum.Check) {
-    return titleCase(Boolean(value).toString());
+    return value ? fyo.t`Yes` : fyo.t`No`;
   }
 
   if (getIsNullOrUndef(value)) {

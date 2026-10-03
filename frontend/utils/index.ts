@@ -56,19 +56,6 @@ export function getIsNullOrUndef(value: unknown): value is null | undefined {
   return value === null || value === undefined;
 }
 
-export function titleCase(phrase: string): string {
-  return phrase
-    .split(' ')
-    .map((word) => {
-      const wordLower = word.toLowerCase();
-      if (['and', 'an', 'a', 'from', 'by', 'on'].includes(wordLower)) {
-        return wordLower;
-      }
-      return wordLower[0].toUpperCase() + wordLower.slice(1);
-    })
-    .join(' ');
-}
-
 function safeParseNumber(value: unknown, parser: (v: string) => number) {
   let parsed: number;
   switch (typeof value) {

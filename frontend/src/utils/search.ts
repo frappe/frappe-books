@@ -65,18 +65,6 @@ export function getGroupLabelMap() {
   };
 }
 
-export const groupThemeMap: Record<
-  SearchGroup,
-  'gray' | 'blue' | 'green' | 'amber' | 'red' | 'violet'
-> = {
-  Docs: 'blue',
-  Create: 'green',
-  List: 'violet',
-  Report: 'amber',
-  Page: 'red',
-  Recent: 'gray',
-};
-
 function getCreateList(fyo: Fyo): SearchItem[] {
   const hasInventory = fyo.singles.AccountingSettings?.enable_inventory;
   const formEditCreateList = [

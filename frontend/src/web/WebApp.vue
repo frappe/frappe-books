@@ -7,7 +7,6 @@
         flex flex-col
         overflow-hidden
         bg-surface-base
-        font-sans
         antialiased
       "
       :dir="languageDirection"
@@ -20,9 +19,9 @@
           v-if="startupError"
           class="max-w-xl"
           theme="red"
-          title="Books could not start"
+          :title="t`Books could not start`"
           :description="startupError"
-          :primary-action="{ label: 'Try again', onClick: () => initialize() }"
+          :primary-action="{ label: t`Try again`, onClick: () => initialize() }"
         />
         <FrappeSpinner v-else size="lg" />
       </div>

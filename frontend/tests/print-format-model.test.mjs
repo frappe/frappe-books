@@ -97,8 +97,8 @@ test('the template list labels each type as its schema and marks custom template
   const [, type, custom] =
     getDocType('PrintFormat').Model.getListViewSettings(fyo).columns;
   assert.equal(type.display('Books Payment'), 'Payment');
-  assert.equal(custom.display('No'), fyo.format(true, 'Check'));
-  assert.equal(custom.display('Yes'), fyo.format(false, 'Check'));
+  assert.equal(custom.display('No'), 'Yes');
+  assert.equal(custom.display('Yes'), 'No');
 });
 
 test('print template pickers offer the Print Formats of the doctype they print', () => {

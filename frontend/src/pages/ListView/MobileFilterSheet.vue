@@ -4,9 +4,10 @@
     :title="isPickingField ? t`Filter by` : t`Filters`"
     @update:open="onOpenChange"
   >
-    <div class="px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
+    <div class="px-4">
       <MobileFilterFieldList
         v-if="isPickingField"
+        class="pb-[max(env(safe-area-inset-bottom),1rem)]"
         :fields="filters.fields"
         @pick="addFilter"
       />
@@ -73,21 +74,15 @@
           @click="isPickingField = true"
         />
         <FrappeErrorMessage :message="filters.error" />
-        <div class="flex gap-2">
-          <FrappeButton
-            size="lg"
-            class="flex-1"
-            :label="t`Clear`"
-            @click="clear"
-          />
+        <MobileSheetFooter class="*:flex-1">
+          <FrappeButton size="lg" :label="t`Clear`" @click="clear" />
           <FrappeButton
             size="lg"
             variant="solid"
-            class="flex-1"
             :label="t`Apply`"
             @click="apply"
           />
-        </div>
+        </MobileSheetFooter>
       </div>
     </div>
   </FrappeBottomSheet>
@@ -101,6 +96,7 @@ import {
 import type { Field } from 'schemas/types';
 import Select from 'src/components/Controls/Select.vue';
 import FilterValueInput from 'src/components/FilterValueInput.vue';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { isValuelessCondition } from 'src/utils/filterQuery';
 import type { ListFilters } from 'src/utils/listFilters';
 import { defineComponent, type PropType } from 'vue';
@@ -115,6 +111,7 @@ export default defineComponent({
     FrappeButton,
     FrappeErrorMessage,
     MobileFilterFieldList,
+    MobileSheetFooter,
     Select,
   },
   props: {

@@ -11,24 +11,23 @@
           @click="handleMakeNewDoc"
         />
       </template>
-      <FrappeButton
-        v-if="
-          schemaName === 'Item' &&
-          (!isSelectionMode || (isSelectionMode && selectedItems.length === 0))
-        "
-        @click="toggleSelectionMode"
-      >
-        {{ t`Select` }}
-      </FrappeButton>
-      <FrappeDropdown
-        v-if="isSelectionMode && schemaName === 'Item' && selectedItems.length > 0"
-        :options="actionOptions"
-        align="end"
-      >
-        <template #trigger>
-          <FrappeButton>{{ t`Create` }}</FrappeButton>
+      <template v-if="schemaName === 'Item'">
+        <template v-if="isSelectionMode && selectedItems.length">
+          <span class="self-center text-sm text-ink-gray-6">
+            {{ t`${selectedItems.length} selected` }}
+          </span>
+          <FrappeDropdown :options="actionOptions" align="end">
+            <template #trigger>
+              <FrappeButton>{{ t`Create` }}</FrappeButton>
+            </template>
+          </FrappeDropdown>
         </template>
-      </FrappeDropdown>
+        <FrappeButton
+          :label="isSelectionMode ? t`Done` : t`Select`"
+          :icon-left="isSelectionMode ? 'lucide-check' : 'lucide-list-checks'"
+          @click="toggleSelectionMode"
+        />
+      </template>
       <FrappeButton
         v-if="canExport"
         ref="exportButton"

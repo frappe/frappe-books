@@ -1,10 +1,5 @@
 @import 'frappe-ui/style.css';
 
-html,
-body {
-  @apply font-sans;
-}
-
 html {
   @apply text-ink-gray-8 bg-surface-base;
 }

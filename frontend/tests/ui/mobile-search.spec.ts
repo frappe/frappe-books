@@ -102,7 +102,7 @@ test('group chips and the filters sheet narrow the results', async ({
   await docs.click();
   await expect(docs).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByText('No results')).toBeVisible();
-  await page.getByRole('button', { name: 'Reset filters' }).click();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
   await expect(record).toBeVisible();
 
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
@@ -110,8 +110,8 @@ test('group chips and the filters sheet narrow the results', async ({
   await sheet.getByRole('button', { name: 'Party', exact: true }).click();
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(record).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Filters · 1' })).toBeVisible();
-  await page.getByRole('button', { name: 'Reset filters' }).click();
+  await expect(page.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Clear filters' }).click();
 });
 
 test('desktop-only pages are left out of the results', async ({ page }) => {

@@ -59,14 +59,18 @@
               :value="value"
               @click="isSelectionMode ? undefined : $emit('openDoc', row.name)"
             >
-              <FrappeListCell class="justify-end pe-2 text-ink-gray-5">
+              <FrappeListCell
+                class="justify-end pe-2 text-ink-gray-4 tabular-nums"
+              >
                 {{ index + pageStart + 1 }}
               </FrappeListCell>
               <FrappeListCell
                 v-for="(column, columnIndex) in columns"
                 :key="column.label"
                 :class="[
-                  isNumeric(column.fieldtype) ? 'justify-end text-end' : '',
+                  isNumeric(column.fieldtype)
+                    ? 'justify-end text-end tabular-nums'
+                    : '',
                   columnIndex === 0 ? 'text-ink-gray-8' : '',
                 ]"
               >
@@ -105,28 +109,22 @@
       />
     </div>
 
-    <!-- Empty State -->
-    <div
+    <EmptyState
       v-if="!isLoading && !total"
-      class="my-auto flex flex-col items-center justify-center gap-3 py-16 text-center"
+      class="my-auto py-16"
+      icon="lucide-inbox"
+      :title="t`No entries found`"
+      :description="canCreate ? t`Create one to get started.` : ''"
     >
-      <div class="rounded-full bg-surface-gray-2 p-3 text-ink-gray-5">
-        <span class="lucide-inbox size-6" aria-hidden="true" />
-      </div>
-      <p class="text-base text-ink-gray-7">{{ t`No entries found` }}</p>
-      <template v-if="canCreate">
-        <p class="text-sm text-ink-gray-5">
-          {{ t`Create one to get started.` }}
-        </p>
-        <FrappeButton
-          class="mt-2"
-          variant="solid"
-          icon-left="lucide-plus"
-          :label="t`Make Entry`"
-          @click="$emit('makeNewDoc')"
-        />
-      </template>
-    </div>
+      <FrappeButton
+        v-if="canCreate"
+        class="mt-2"
+        variant="solid"
+        icon-left="lucide-plus"
+        :label="t`Make Entry`"
+        @click="$emit('makeNewDoc')"
+      />
+    </EmptyState>
   </div>
 </template>
 <script lang="ts">
@@ -145,6 +143,7 @@ import {
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
+import EmptyState from 'src/components/EmptyState.vue';
 import Paginator from 'src/components/Paginator.vue';
 import { isSortableField, type ListSort } from 'src/frappe/list';
 import { fyo } from 'src/initFyo';
@@ -177,6 +176,7 @@ export default defineComponent({
     FrappeSkeleton,
     ListCell,
     FrappeButton,
+    EmptyState,
     MobileList,
     Paginator,
   },

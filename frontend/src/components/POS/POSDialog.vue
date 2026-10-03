@@ -8,11 +8,9 @@
   >
     <div class="flex flex-col gap-4 px-4 text-ink-gray-9">
       <slot />
-      <footer
-        class="sticky bottom-0 -mx-4 flex gap-2 bg-surface-base px-4 pt-2 pb-[max(env(safe-area-inset-bottom),1rem)] *:flex-1"
-      >
+      <MobileSheetFooter class="*:flex-1">
         <slot name="actions" size="lg" />
-      </footer>
+      </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
   <FrappeDialog
@@ -63,6 +61,7 @@ import {
   Dialog as FrappeDialog,
 } from 'frappe-ui';
 import { DialogTitle } from 'reka-ui';
+import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { isMobile } from 'src/utils/viewport';
 
 /** A POS modal: a dialog on desktop, a bottom sheet on phones. */

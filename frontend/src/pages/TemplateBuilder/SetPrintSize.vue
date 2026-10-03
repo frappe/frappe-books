@@ -2,11 +2,11 @@
   <FrappeDialog
     :open="open"
     :title="t`Set Print Size`"
-    size="2xl"
+    :actions="[{ label: t`Done`, variant: 'solid', onClick: done }]"
     @update:open="(value: boolean) => $emit('update:open', value)"
   >
     <div class="flex w-full flex-col gap-4">
-      <p class="text-p-base text-ink-gray-8">
+      <p class="text-p-base text-ink-gray-7">
         {{
           t`Select a pre-defined page size, or set a custom page size for your Print Template.`
         }}
@@ -37,15 +37,10 @@
         />
       </div>
     </div>
-    <template #actions>
-      <div class="flex justify-end">
-        <FrappeButton variant="solid" @click="done">{{ t`Done` }}</FrappeButton>
-      </div>
-    </template>
   </FrappeDialog>
 </template>
 <script lang="ts">
-import { Button as FrappeButton, Dialog as FrappeDialog } from 'frappe-ui';
+import { Dialog as FrappeDialog } from 'frappe-ui';
 import { PrintFormat } from 'models/baseModels/PrintFormat';
 import { Field, OptionField } from 'schemas/types';
 import Float from 'src/components/Controls/Float.vue';
@@ -56,7 +51,7 @@ import { defineComponent } from 'vue';
 
 type SizeName = (typeof printSizes)[number];
 export default defineComponent({
-  components: { Float, FrappeDialog, Select, FrappeButton },
+  components: { Float, FrappeDialog, Select },
   props: {
     open: { type: Boolean, default: false },
     doc: { type: PrintFormat, required: true },

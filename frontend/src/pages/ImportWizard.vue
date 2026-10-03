@@ -243,7 +243,7 @@
     <FrappeDialog
       :open="complete"
       :title="t`Import Complete`"
-      size="2xl"
+      :actions="completeActions"
       @update:open="(open: boolean) => !open && clear()"
     >
       <div class="space-y-4 text-base text-ink-gray-9">
@@ -306,17 +306,6 @@
           {{ t`No entries were imported.` }}
         </p>
       </div>
-      <template #actions>
-        <div class="flex items-center justify-end gap-2">
-          <FrappeButton v-if="failed.length > 0" @click="clearSuccessfullyImportedEntries">{{
-            t`Fix Failed`
-          }}</FrappeButton>
-          <FrappeButton v-if="failed.length === 0 && success.length > 0" @click="showMe">{{
-            t`Show Me`
-          }}</FrappeButton>
-          <FrappeButton variant="solid" @click="clear">{{ t`Done` }}</FrappeButton>
-        </div>
-      </template>
     </FrappeDialog>
   </div>
 </template>
@@ -330,6 +319,7 @@ import {
   ErrorMessage as FrappeErrorMessage,
   ScrollArea as FrappeScrollArea,
   toast,
+  type DialogAction,
 } from 'frappe-ui';
 import {
   List as FrappeList,
@@ -512,6 +502,20 @@ export default defineComponent({
         value,
         label: getSchema(value)?.label ?? value,
       }));
+    },
+    completeActions(): DialogAction[] {
+      const actions: DialogAction[] = [];
+      if (this.failed.length) {
+        actions.push({
+          label: this.t`Fix Failed`,
+          onClick: this.clearSuccessfullyImportedEntries,
+        });
+      } else if (this.success.length) {
+        actions.push({ label: this.t`Show Me`, onClick: this.showMe });
+      }
+
+      actions.push({ label: this.t`Done`, variant: 'solid', onClick: this.clear });
+      return actions;
     },
     actions(): Action[] {
       const actions: Action[] = [];

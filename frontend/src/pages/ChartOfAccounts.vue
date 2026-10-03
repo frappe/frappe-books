@@ -87,9 +87,10 @@
     <FrappeDialog
       :open="!!addingParent"
       :title="newAccountTitle"
+      :actions="newAccountActions"
       @close="cancelAddingAccount(addingParent)"
     >
-      <p class="mb-4 text-p-sm text-ink-gray-6">
+      <p class="mb-4 text-p-base text-ink-gray-7">
         {{ t`Under ${addingParent?.name ?? ''}` }}
       </p>
       <FrappeTextInput
@@ -104,20 +105,6 @@
           createNewAccount(addingParent, addingParent.addingGroupAccount)
         "
       />
-      <template #actions>
-        <FrappeButton @click="cancelAddingAccount(addingParent)">{{
-          t`Cancel`
-        }}</FrappeButton>
-        <FrappeButton
-          variant="solid"
-          :loading="insertingAccount"
-          :disabled="!newAccountName.trim() || insertingAccount"
-          @click="
-            addingParent &&
-            createNewAccount(addingParent, addingParent.addingGroupAccount)
-          "
-          >{{ t`Save` }}</FrappeButton>
-      </template>
     </FrappeDialog>
   </div>
 </template>
@@ -130,6 +117,7 @@ import {
   Skeleton as FrappeSkeleton,
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
+  type DialogAction,
   type DropdownOptions,
   type TreeExposed,
   Button as FrappeButton,
@@ -214,6 +202,22 @@ export default defineComponent({
     },
     isAllCollapsed(): boolean {
       return this.accounts.every((account) => !this.isExpanded(account));
+    },
+    newAccountActions(): DialogAction[] {
+      const parent = this.addingParent;
+      return [
+        { label: t`Cancel`, onClick: () => this.cancelAddingAccount(parent) },
+        {
+          label: t`Save`,
+          variant: 'solid',
+          disabled: !this.newAccountName.trim() || this.insertingAccount,
+          onClick: async () => {
+            if (parent) {
+              await this.createNewAccount(parent, parent.addingGroupAccount);
+            }
+          },
+        },
+      ];
     },
     newAccountTitle(): string {
       return this.addingParent?.addingGroupAccount

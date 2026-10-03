@@ -129,7 +129,7 @@ export function isPOSRowFieldReadOnly(
   field: POSRowField,
   permissions: POSPermissions
 ): boolean {
-  if (row.is_free_item) {
+  if (row.is_free_item || row.parentdoc?.isSubmitted) {
     return true;
   }
 

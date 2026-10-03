@@ -14,6 +14,7 @@
           :value="sinvDoc.party"
           :df="sinvDoc.fieldMap.party"
           :show-clear-button="true"
+          :read-only="sinvDoc.isSubmitted"
           @change="(party: string) => $emit('setCustomer', party)"
         />
       </div>
@@ -30,7 +31,7 @@
               type="button"
               class="absolute inset-0"
               :aria-label="row.item"
-              :disabled="!!row.is_free_item"
+              :disabled="!!row.is_free_item || sinvDoc.isSubmitted"
               @click="$emit('edit', row)"
             />
             <div class="min-w-0">
@@ -42,7 +43,7 @@
           </FrappeListCell>
           <FrappeListCell class="justify-end">
             <NumberStepper
-              v-if="!row.is_free_item"
+              v-if="!row.is_free_item && !sinvDoc.isSubmitted"
               class="relative w-32"
               removable
               :min="1"
@@ -80,6 +81,7 @@
 
       <div class="flex gap-2 px-4 pt-2">
         <FrappeButton
+          v-if="!sinvDoc.isSubmitted"
           class="flex-1"
           size="lg"
           :label="t`Hold`"
@@ -124,7 +126,7 @@ import {
 } from 'src/utils/pos';
 import { computed, inject, type Ref } from 'vue';
 
-/** The cart sheet: customer, lines with quantity steppers, totals, Hold and Pay. */
+/** The cart sheet: customer, lines with quantity steppers, totals, Hold and Pay; a submitted sale only pays. */
 defineProps<{ open: boolean; disablePay: boolean }>();
 
 defineEmits<{

@@ -86,6 +86,7 @@ export interface OptionField extends Omit<BaseField, 'fieldtype'> {
   optionLabels?: Record<string, string>; // Labels of option values that need one
   states?: Record<string, string>; // DocType state colour by `status` option value
   allowCustom?: boolean;
+  allowEmpty?: boolean; // Whether an empty line of the options offers no value, as in Frappe
 }
 
 export interface TargetField extends Omit<BaseField, 'fieldtype'> {

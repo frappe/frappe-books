@@ -6,7 +6,7 @@ import frappe
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.payment import map_invoice_payment
 from frappe_books.accounting.returns import map_return
-from frappe_books.inventory.auto_transfer import map_invoice_transfer
+from frappe_books.inventory.invoice_transfer import map_invoice_transfer
 
 
 class BooksPurchaseInvoice(PostingInvoiceController):

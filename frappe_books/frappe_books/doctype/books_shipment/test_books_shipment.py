@@ -398,6 +398,24 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 		invoice.insert().submit()
 		self.assertEqual(stock_quantity(item.name, "Stores"), 1)
 
+	def test_invoice_cancel_and_delete_keep_the_shipment_it_bills(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_shipment(item, quantity=2, rate=25)
+		shipment.submit()
+		invoice = make_sales_invoice(shipment.name)
+		invoice.update({"make_auto_stock_transfer": 1, "make_auto_payment": 0})
+		invoice.insert().submit()
+		self.assertFalse(frappe.db.exists("Books Shipment", {"back_reference": invoice.name}))
+		self.assertEqual(transfer_balance(invoice), [0, 0])
+		self.assertEqual(shipment.db_get("is_fully_billed"), 1)
+
+		invoice.cancel()
+		self.assertEqual([shipment.db_get("docstatus"), shipment.db_get("is_fully_billed")], [1, 0])
+
+		frappe.delete_doc(invoice.doctype, invoice.name)
+		self.assertTrue(frappe.db.exists("Books Shipment", shipment.name))
+
 	def test_invoices_bill_a_shipment_only_up_to_what_it_shipped(self):
 		item, _cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=3, rate=10)

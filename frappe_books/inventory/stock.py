@@ -1,7 +1,6 @@
-"""Stock-ledger creation, availability checks, batches, and serial numbers."""
+"""Stock row checks, availability, batches, and serial numbers."""
 
 from collections import Counter, defaultdict
-from decimal import Decimal
 
 import frappe
 from frappe import _
@@ -9,7 +8,6 @@ from frappe.query_builder.functions import Coalesce, Min, Sum
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.units import populate_units
-from frappe_books.inventory.valuation import delete_entries, insert_entry
 from frappe_books.series import new_item_names
 
 LEDGER = "Books Stock Ledger Entry"
@@ -86,38 +84,6 @@ def reverse_transfers(transfers):
 		}
 		for transfer in transfers
 	]
-
-
-def create_stock_entries(transaction, transfers):
-	"""Insert the transfers' stock ledger entries and return the other transactions they restated."""
-	restated = set()
-	for transfer in transfers:
-		serial_numbers = parse_serial_numbers(transfer.get("serial_number"))
-		_update_serial_statuses(transaction, transfer, serial_numbers, cancel=False)
-		if serial_numbers:
-			for serial_number in serial_numbers:
-				restated |= _create_location_entries(transaction, transfer, Decimal(1), serial_number)
-		else:
-			quantity = abs(as_decimal(transfer["quantity"]))
-			restated |= _create_location_entries(transaction, transfer, quantity, None)
-	restated.discard((transaction.doctype, transaction.name))
-	return restated
-
-
-def cancel_stock_entries(transaction, transfers):
-	"""Delete the transaction's stock ledger entries and return the transactions they restated."""
-	for transfer in transfers:
-		_update_serial_statuses(
-			transaction,
-			transfer,
-			parse_serial_numbers(transfer.get("serial_number")),
-			cancel=True,
-		)
-	return delete_stock_entries(transaction)
-
-
-def delete_stock_entries(transaction):
-	return delete_entries(transaction.doctype, transaction.name)
 
 
 def populate_stock_rows(rows):
@@ -380,70 +346,3 @@ def _items_of(doctype, names):
 	return dict(
 		frappe.get_all(doctype, filters={"name": ["in", names]}, fields=["name", "item"], as_list=True)
 	)
-
-
-def _create_location_entries(transaction, transfer, quantity, serial_number):
-	restated = set()
-	rate = rounded(transfer["rate"])
-	if transfer.get("from_location"):
-		entry, taken = _create_stock_entry(
-			transaction, transfer, transfer["from_location"], -quantity, serial_number, rate
-		)
-		restated |= taken
-		# Stock moved between locations keeps the cost it left with.
-		rate = -as_decimal(entry.value_change) / quantity
-	if transfer.get("to_location"):
-		_entry, added = _create_stock_entry(
-			transaction, transfer, transfer["to_location"], quantity, serial_number, rate
-		)
-		restated |= added
-	return restated
-
-
-def _create_stock_entry(transaction, transfer, location, quantity, serial_number, rate):
-	return insert_entry(
-		{
-			"date": transaction.date,
-			"location": location,
-			"batch": transfer.get("batch"),
-			"serial_number": serial_number,
-			"item": transfer["item"],
-			"rate": rate,
-			"quantity": quantity,
-			"reference_type": transaction.doctype,
-			"reference_name": transaction.name,
-		}
-	)
-
-
-def _update_serial_statuses(transaction, transfer, serial_numbers, cancel):
-	if not serial_numbers:
-		return
-	if transfer.get("to_location") and not cancel:
-		_create_serial_numbers(transfer["item"], serial_numbers)
-	frappe.db.set_value(
-		"Books Serial Number",
-		{"name": ["in", serial_numbers]},
-		"status",
-		_serial_status(transaction, transfer, cancel),
-	)
-
-
-def _create_serial_numbers(item, serial_numbers):
-	existing = set(
-		frappe.get_all("Books Serial Number", filters={"name": ["in", serial_numbers]}, pluck="name")
-	)
-	for serial_number in serial_numbers:
-		if serial_number not in existing:
-			frappe.get_doc(
-				{"doctype": "Books Serial Number", "name": serial_number, "item": item, "status": "Active"}
-			).insert(ignore_permissions=True)
-
-
-def _serial_status(transaction, transfer, cancel):
-	if cancel and transfer.get("from_location"):
-		return "Active"
-	# Stock leaves: shipped or issued, or taken back out by cancelling a return or receipt.
-	if cancel or (transfer.get("from_location") and not transfer.get("to_location")):
-		return "Delivered" if transaction.doctype == "Books Shipment" else "Inactive"
-	return "Active"

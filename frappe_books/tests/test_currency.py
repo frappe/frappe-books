@@ -7,8 +7,8 @@ from frappe import client
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
 from frappe_books.currency import currency_precision
-from frappe_books.setup_service import _update_books_system_settings, enable_currency
-from frappe_books.tests.accounting import ensure_user, make_account, make_party
+from frappe_books.setup_service import complete_site_setup, enable_currency
+from frappe_books.tests.accounting import ensure_user, make_account, make_party, restored_company_settings
 
 CURRENCIES = (("JPY", 0), ("VUV", 0), ("USD", 2), ("BHD", 3), ("CLF", 4))
 BOOKS_USER = "books-currency-user@example.com"
@@ -24,12 +24,13 @@ class UnitTestCurrencyMetadata(UnitTestCase):
 
 class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 	def test_setup_uses_currency_precision(self):
-		for currency, precision in CURRENCIES:
-			with self.subTest(currency=currency):
-				_update_books_system_settings(frappe._dict(country="India", currency=currency))
+		for currency, precision in (("JPY", 0), ("USD", 2), ("BHD", 3)):
+			with self.subTest(currency=currency), restored_company_settings():
+				complete_site_setup(frappe._dict(country="India", currency=currency))
 				self.assertEqual(
-					frappe.db.get_single_value("Books System Settings", "display_precision"), precision
+					frappe.db.get_single_value("System Settings", "currency_precision"), str(precision)
 				)
+				self.assertEqual(frappe.get_single("Books System Settings").display_precision, precision)
 
 	def test_setup_enables_the_company_currency(self):
 		frappe.db.set_value("Currency", "BHD", "enabled", 0)

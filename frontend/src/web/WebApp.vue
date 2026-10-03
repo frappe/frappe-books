@@ -57,6 +57,7 @@ import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
+import { deskTheme, getColorScheme } from 'src/utils/theme';
 import { isMobile } from 'src/utils/viewport';
 import { useKeys } from 'src/utils/vueUtils';
 import * as injectionKeys from 'src/utils/injectionKeys';
@@ -67,6 +68,7 @@ import {
   provide,
   ref,
   shallowRef,
+  watchEffect,
 } from 'vue';
 import {
   Alert as FrappeAlert,
@@ -100,6 +102,9 @@ export default defineComponent({
     provide(injectionKeys.searcherKey, searcher);
     provide(injectionKeys.shortcutsKey, shortcuts);
     provide(injectionKeys.languageDirectionKey, languageDirection);
+    deskTheme.value = window.frappe.boot?.desk_theme ?? 'Light';
+    const { setColorScheme } = useColorScheme();
+    watchEffect(() => setColorScheme(getColorScheme(deskTheme.value)));
     return { keys, languageDirection, searcher, shortcuts, isMobile };
   },
   data() {
@@ -151,9 +156,6 @@ export default defineComponent({
       );
       await Promise.all(singles.map((name) => getFrappeDoc(name, name)));
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
-      useColorScheme().setColorScheme(
-        fyo.singles.SystemSettings?.dark_mode ? 'dark' : 'light'
-      );
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
         this.searcher.initialize();

@@ -1,8 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
 from frappe.model.document import Document
+
+from frappe_books.settings import update_frappe_settings
 
 
 class BooksPrintSettings(Document):
@@ -23,10 +25,25 @@ class BooksPrintSettings(Document):
 		display_time: DF.Check
 		displaytermsandconditions: DF.Check
 		email: DF.Data | None
-		font: DF.Literal["Arial", "Times New Roman", "Courier"]
+		font: DF.Literal["Default", "Helvetica Neue", "Arial", "Helvetica", "Inter", "Verdana", "Monospace"]
 		logo: DF.AttachImage | None
 		phone: DF.Data | None
 		terms_and_conditions: DF.Text | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Print Settings"
+
+	@property
+	def font(self):
+		"""The print font, which Frappe's Print Settings hold."""
+		return frappe.db.get_single_value("Print Settings", "font")
+
+
+@frappe.whitelist(methods=["POST"])
+def set_font(font: str) -> None:
+	"""Set the font of Frappe's Print Settings, which Books Print Settings shows.
+
+	A save of the settings leaves it alone, so no stored copy can set it back.
+	"""
+	frappe.has_permission("Books Print Settings", "write", throw=True)
+	update_frappe_settings("Print Settings", {"font": font})

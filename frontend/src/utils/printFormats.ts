@@ -63,7 +63,6 @@ export function getPrintDocument({ html, style }: PrintHTML): string {
 
 export const baseTemplate = `{%- set print = get_print_settings() -%}
 <style>
-  .template { font-family: {{ print.font }}; }
   .template table { width: 100%; border-bottom: 1px solid #ededed; }
   .template td { padding: 16px; font-size: 24px; font-weight: bold; }
   .template p { padding: 16px; color: #525252; }

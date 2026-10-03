@@ -81,7 +81,7 @@ import { getAppMenuItems } from 'src/utils/appMenu';
 import { useCompanyIdentity } from 'src/utils/company';
 import { getSidebarLocation } from 'src/utils/sidebarNavigation';
 import type { SidebarRoot } from 'src/utils/types';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { usePhoneSidebar } from './usePhoneSidebar';
 
@@ -89,7 +89,7 @@ import { usePhoneSidebar } from './usePhoneSidebar';
 const isOpen = defineModel<boolean>('open', { required: true });
 
 const { companyName, companyLogo, userName } = useCompanyIdentity();
-const menuItems = getAppMenuItems();
+const menuItems = computed(() => getAppMenuItems());
 const { groups, active } = usePhoneSidebar();
 const openGroup = ref('');
 const iconClasses = 'size-5 shrink-0 text-ink-gray-5';

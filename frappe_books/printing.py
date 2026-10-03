@@ -14,7 +14,7 @@ from frappe.custom.doctype.property_setter.property_setter import delete_propert
 from frappe.model import no_value_fields, table_fields
 from frappe.model.meta import get_field_precision
 from frappe.utils import flt, formatdate, money_in_words
-from frappe.www.printview import get_print_style, get_rendered_template
+from frappe.www.printview import get_font, get_print_style, get_rendered_template
 from jinja2 import TemplateError
 
 from frappe_books.accounting.invoice import InvoiceController
@@ -26,7 +26,7 @@ TAX_ID_FIELDS = ("gstin", "tax_id")
 
 
 def get_print_settings() -> dict[str, Any]:
-	"""Books Print Settings with the company address and tax IDs, for print formats."""
+	"""Books Print Settings with the company address and tax IDs, and Frappe's print font, for print formats."""
 	settings = frappe.get_cached_doc("Books Print Settings")
 	accounting = frappe.get_cached_doc("Books Accounting Settings")
 	address = settings.address and frappe.db.get_value("Books Address", settings.address, "address_display")
@@ -34,6 +34,8 @@ def get_print_settings() -> dict[str, Any]:
 		**settings.as_dict(no_default_fields=True),
 		"address": address,
 		**{fieldname: accounting.get(fieldname) for fieldname in TAX_ID_FIELDS},
+		# The font-family Frappe prints in, for templates that set their own
+		"font": get_font(frappe.get_cached_doc("Print Settings")),
 	}
 
 

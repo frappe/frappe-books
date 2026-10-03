@@ -7,8 +7,15 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
 from frappe_books.currency import currency_precision
-from frappe_books.setup_service import _update_books_system_settings
-from frappe_books.tests.accounting import ledger_entries, make_account, make_invoice, make_item, make_party
+from frappe_books.setup_service import complete_site_setup
+from frappe_books.tests.accounting import (
+	ledger_entries,
+	make_account,
+	make_invoice,
+	make_item,
+	make_party,
+	restored_company_settings,
+)
 
 
 class IntegrationTestPrFixes(IntegrationTestCase):
@@ -120,10 +127,9 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 
 	def test_currency_precision_follows_currency_not_country(self):
 		for country, currency, precision in (("Japan", "USD", 2), ("India", "JPY", 0), ("Japan", "JPY", 0)):
-			_update_books_system_settings(frappe._dict(country=country, currency=currency))
-			self.assertEqual(
-				frappe.db.get_single_value("Books System Settings", "display_precision"), precision
-			)
+			with restored_company_settings():
+				complete_site_setup(frappe._dict(country=country, currency=currency))
+				self.assertEqual(frappe.get_single("Books System Settings").display_precision, precision)
 		self.assertEqual(currency_precision("JPY"), 0)
 
 	def make_invoice(self, payment_type):

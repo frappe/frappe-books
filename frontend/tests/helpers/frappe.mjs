@@ -37,6 +37,8 @@ await build({
       export { getNewDocValues } from './src/utils/misc';
       export { getFilterFields } from './src/utils/filterFields';
       export { getSidebarConfig } from './src/utils/sidebarConfig';
+      export { getAppMenuItems } from './src/utils/appMenu';
+      export { deskTheme, getColorScheme } from './src/utils/theme';
       export { default as ListView } from './src/pages/ListView/ListView.vue';
       export { default as router } from 'src/router';
       export { ListFilters } from './src/utils/listFilters';
@@ -184,6 +186,9 @@ export const {
   getExportTableFields,
   getJsonExportData,
   getSidebarConfig,
+  getAppMenuItems,
+  deskTheme,
+  getColorScheme,
   ListView,
   router,
 } = createRequire(import.meta.url)(output);

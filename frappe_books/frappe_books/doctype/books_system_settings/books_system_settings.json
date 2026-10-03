@@ -15,9 +15,7 @@
   "locale",
   "display_precision",
   "currency",
-  "internal_precision",
-  "theme_section_break_14",
-  "dark_mode"
+  "internal_precision"
  ],
  "fields": [
   {
@@ -27,6 +25,7 @@
   },
   {
    "default": "MMM d, y",
+   "description": "Frappe's System Settings take the closest numeric date format. Only a System Manager can change it.",
    "fieldname": "date_format",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
@@ -59,6 +58,7 @@
   },
   {
    "default": "en-IN",
+   "description": "Frappe's System Settings take its number format. Only a System Manager can change it.",
    "fieldname": "locale",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
@@ -66,15 +66,14 @@
    "reqd": 1
   },
   {
-   "default": "2",
-   "description": "Decimal places shown for amounts. Quantities follow Frappe's float precision.",
+   "description": "Decimal places shown for amounts. It is the Currency Precision of Frappe's System Settings, which only a System Manager can change. Quantities follow Frappe's float precision.",
    "fieldname": "display_precision",
    "fieldtype": "Int",
    "in_list_view": 1,
+   "is_virtual": 1,
    "label": "Display Precision",
    "max_value": 9,
-   "non_negative": 1,
-   "reqd": 1
+   "non_negative": 1
   },
   {
    "fieldname": "currency",
@@ -91,24 +90,13 @@
    "hidden": 1,
    "label": "Internal Precision",
    "non_negative": 1
-  },
-  {
-   "fieldname": "theme_section_break_14",
-   "fieldtype": "Section Break",
-   "label": "Theme"
-  },
-  {
-   "default": "0",
-   "fieldname": "dark_mode",
-   "fieldtype": "Check",
-   "label": "Dark mode"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-03 12:00:00.000000",
+ "modified": "2026-10-03 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books System Settings",

@@ -1,6 +1,6 @@
 <template>
   <section class="flex min-w-0 flex-col gap-2">
-    <h3 class="text-base-medium text-ink-gray-9">{{ heading }}</h3>
+    <h3 class="text-base-medium text-ink-gray-8">{{ heading }}</h3>
     <div
       class="flex flex-col rounded-5 border border-outline-gray-1 text-base tabular-nums"
     >
@@ -40,7 +40,7 @@
         {{ t`Set Cash Denominations in Settings to count cash here.` }}
       </p>
       <div
-        class="grid h-10 items-center gap-3 rounded-b-5 border-t border-outline-gray-1 bg-surface-gray-1 px-3 text-base-medium text-ink-gray-9"
+        class="grid h-10 items-center gap-3 rounded-b-5 border-t border-outline-gray-1 bg-surface-gray-1 px-3 text-base-medium text-ink-gray-8"
         :class="columns"
       >
         <span>{{ t`Total` }}</span>

@@ -6,7 +6,7 @@
     :dismissible="dismissible"
     @update:open="(open: boolean) => !open && $emit('closemodal')"
   >
-    <div class="flex flex-col gap-4 px-4 text-ink-gray-9">
+    <div class="flex flex-col gap-4 px-4 text-ink-gray-8">
       <slot />
       <MobileSheetFooter class="*:flex-1">
         <slot name="actions" size="lg" />
@@ -21,7 +21,7 @@
     @close="$emit('closemodal')"
   >
     <div
-      class="flex max-h-[calc(100dvh-6rem)] min-w-0 flex-col text-ink-gray-9"
+      class="flex max-h-[calc(100dvh-6rem)] min-w-0 flex-col text-ink-gray-8"
     >
       <header class="flex shrink-0 items-start justify-between gap-4 px-5 pt-5">
         <div class="flex min-w-0 flex-col gap-1.5">

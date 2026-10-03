@@ -16,7 +16,7 @@
     <div
       class="flex flex-wrap items-baseline justify-between gap-2 border-t border-outline-gray-1 pt-2"
     >
-      <dt class="text-md-medium text-ink-gray-9">{{ t`Grand total` }}</dt>
+      <dt class="text-md-medium text-ink-gray-8">{{ t`Grand total` }}</dt>
       <dd class="text-4xl-semibold tabular-nums text-ink-gray-9">
         {{ fyo.format(sinvDoc?.grand_total ?? fyo.pesa(0), 'Currency') }}
       </dd>

@@ -6,7 +6,7 @@
       :aria-expanded="isExpanded"
       @click="selectRow"
     >
-      <span class="truncate text-base-medium text-ink-gray-9" :title="row.item">
+      <span class="truncate text-base-medium text-ink-gray-8" :title="row.item">
         {{ row.item }}
       </span>
       <span
@@ -35,7 +35,7 @@
         @click="adjustQuantity(-1)"
       />
       <span
-        class="min-w-5.5 text-center text-base-medium tabular-nums text-ink-gray-9"
+        class="min-w-5.5 text-center text-base-medium tabular-nums text-ink-gray-8"
       >
         {{ displayQuantity }}
       </span>
@@ -51,7 +51,7 @@
   </FrappeListCell>
   <FrappeListCell class="justify-end">
     <span
-      class="truncate text-base tabular-nums text-ink-gray-9"
+      class="truncate text-base tabular-nums text-ink-gray-8"
       :title="fyo.format(row.amount, 'Currency')"
     >
       {{ fyo.format(row.amount, 'Currency') }}

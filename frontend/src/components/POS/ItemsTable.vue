@@ -23,7 +23,7 @@
               @click="$emit('addItem', row)"
             >
               <FrappeListCell>
-                <span class="truncate text-base text-ink-gray-9" :title="row.name">
+                <span class="truncate text-base text-ink-gray-8" :title="row.name">
                   {{ row.name }}
                 </span>
               </FrappeListCell>

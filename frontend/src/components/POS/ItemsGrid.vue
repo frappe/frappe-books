@@ -31,7 +31,7 @@
           />
         </div>
         <div class="flex flex-col gap-1 px-1">
-          <span class="text-p-base-medium text-ink-gray-9">{{ item.name }}</span>
+          <span class="text-p-base-medium text-ink-gray-8">{{ item.name }}</span>
           <span class="text-sm tabular-nums text-ink-gray-6">
             {{ fyo.format(item.rate, 'Currency') }}
           </span>

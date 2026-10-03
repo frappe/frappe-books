@@ -28,7 +28,7 @@
           class="flex min-h-11 items-center justify-between gap-2 border-b border-outline-gray-1 px-3 last:border-b-0"
         >
           <dt class="text-ink-gray-8">{{ row.payment_method }}</dt>
-          <dd class="text-ink-gray-9" dir="ltr">
+          <dd class="text-ink-gray-8" dir="ltr">
             {{ fyo.format(row.amount ?? 0, 'Currency') }}
           </dd>
         </div>
@@ -41,7 +41,7 @@
       <CashCountTable :heading="t`Cash in drawer`" :rows="openingCash" />
 
       <section class="flex min-w-0 flex-col gap-2">
-        <h3 class="text-base-medium text-ink-gray-9">
+        <h3 class="text-base-medium text-ink-gray-8">
           {{ t`Opening amounts` }}
         </h3>
         <ul
@@ -61,7 +61,7 @@
             </span>
             <span
               v-if="row.payment_method === 'Cash'"
-              class="text-base-medium tabular-nums text-ink-gray-9"
+              class="text-base-medium tabular-nums text-ink-gray-8"
               dir="ltr"
             >
               {{ fyo.format(row.amount ?? 0, 'Currency') }}

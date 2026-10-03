@@ -159,7 +159,7 @@ export default defineComponent({
     isNumeric,
     /** The name stands out and the date recedes, as in the redesign. */
     getCellInk(field: Field, index: number): string {
-      if (!index) return 'text-base-medium text-ink-gray-9';
+      if (!index) return 'text-base-medium text-ink-gray-8';
       return field.fieldtype === 'Date'
         ? 'text-base text-ink-gray-6'
         : 'text-base text-ink-gray-8';

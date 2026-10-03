@@ -5,7 +5,7 @@ from frappe import _
 from frappe.desk.form import linked_with
 from frappe.model.document import Document
 
-from frappe_books.accounting import returns
+from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import (
 	latest_ledger_account,
 	validate_account,
@@ -14,7 +14,6 @@ from frappe_books.accounting.accounts import (
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
-from frappe_books.accounting.outstanding import update_party_outstanding
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
@@ -170,12 +169,11 @@ class PostingInvoiceController(InvoiceController):
 
 	def before_submit(self):
 		validate_billed_quantities(self)
-		outstanding = abs(as_decimal(self.base_grand_total))
-		self.outstanding_amount = -outstanding if self.return_against else outstanding
+		settlement.open_balance(self)
 
 	def on_submit(self):
 		self.get_ledger_posting().post()
-		update_party_outstanding(self.party)
+		settlement.refresh_party(self.party)
 		update_billed_status(self)
 		create_auto_transfer(self)
 		store_pending_quantities(self)
@@ -191,7 +189,7 @@ class PostingInvoiceController(InvoiceController):
 		payment.reference_id = self.name
 		payment.insert()
 		payment.submit()
-		self.outstanding_amount = self.db_get("outstanding_amount")
+		settlement.reload_balance(self)
 
 	@frappe.whitelist()
 	def cancel_with_linked_docs(self, linked_docs: list[dict]):
@@ -204,11 +202,11 @@ class PostingInvoiceController(InvoiceController):
 
 	def before_cancel(self):
 		cancel_auto_transfer(self)
-		self.outstanding_amount = 0
+		settlement.clear_balance(self)
 
 	def on_cancel(self):
 		reverse_entries(self)
-		update_party_outstanding(self.party)
+		settlement.refresh_party(self.party)
 		update_billed_status(self)
 		if self.return_against:
 			returns.update_return_status(self, include_current=False)
@@ -302,7 +300,7 @@ def _calculate_totals(invoice):
 	invoice.grand_total = rounded(grand_total, currency)
 	invoice.base_grand_total = rounded(invoice.grand_total * as_decimal(invoice.exchange_rate or 1))
 	if invoice.docstatus == 0:
-		invoice.outstanding_amount = abs(invoice.base_grand_total)
+		settlement.open_balance(invoice)
 
 
 def row_discount(invoice, row):

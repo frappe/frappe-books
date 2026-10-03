@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.accounting.payment import map_invoice_payment, validate_payment_details
@@ -151,7 +152,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 			frappe.throw(_("Only POS invoices take counter payments."))
 		for row in self.payments:
 			validate_payment_details(row.payment_method, row.reference_id, row.clearance_date)
-		counter_payment_amounts(self.payments, abs(as_decimal(self.outstanding_amount)))
+		counter_payment_amounts(self.payments, settlement.due(self))
 
 	def before_submit(self):
 		super().before_submit()
@@ -178,9 +179,9 @@ class BooksSalesInvoice(PostingInvoiceController):
 
 	def pay_at_counter(self, rows):
 		"""Submit a payment for each tendered row and return their names."""
-		due = abs(as_decimal(self.outstanding_amount))
-		names = [self.make_counter_payment(row, amount) for row, amount in counter_payment_amounts(rows, due)]
-		self.outstanding_amount = self.db_get("outstanding_amount")
+		amounts = counter_payment_amounts(rows, settlement.due(self))
+		names = [self.make_counter_payment(row, amount) for row, amount in amounts]
+		settlement.reload_balance(self)
 		return names
 
 	def make_counter_payment(self, row, amount):

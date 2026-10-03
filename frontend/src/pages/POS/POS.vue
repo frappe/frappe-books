@@ -2,22 +2,14 @@
   <div class="flex flex-col" :class="isMobile ? 'min-h-full' : 'min-h-0'">
     <PageHeader :title="isMobile ? mobileTitle : t`Point of Sale`">
       <template v-if="isMobile && isPosShiftOpen" #mobile-prefix>
+        <!-- PageHeaderBackButton's look; its click can't wait for the leave prompt. -->
         <FrappeButton
-          v-if="openPaymentModal"
           variant="ghost"
           size="md"
           icon="lucide-chevron-left"
           class="rtl-rotate-180"
-          :label="t`Back`"
-          @click="cancelPayment"
-        />
-        <FrappeButton
-          v-else
-          variant="ghost"
-          size="md"
-          icon="lucide-x"
-          :label="t`Exit POS`"
-          @click="routeToSinvList"
+          :label="openPaymentModal ? t`Back` : t`Exit POS`"
+          @click="openPaymentModal ? cancelPayment() : routeToSinvList()"
         />
       </template>
       <template v-if="isPosShiftOpen && !openPaymentModal" #mobile>

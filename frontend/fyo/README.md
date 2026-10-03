@@ -9,7 +9,6 @@
 | `index.ts` | The `Fyo` class. `src/initFyo.ts` makes the one instance that screens use. |
 | `core/types.ts` | The value types: `DocValue`, `DocValueMap`, `RawValueMap`. |
 | `model/types.ts` | The statics and dynamic rules a model sets (`hidden`, `readOnly`, `required`, `validations`, list settings, actions). |
-| `utils/converter.ts` | A field's raw value to the value a form edits, and back. |
 | `utils/format.ts` | How values show, by field type. |
 | `utils/translation.ts` | Runtime translations. |
 | `utils/permissions.ts` | The user's rights by doctype, from the Frappe boot. |

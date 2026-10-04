@@ -8,7 +8,7 @@ import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
 import { ValueError } from 'fyo/utils/errors';
-import { getLedgerLink } from 'models/helpers';
+import { canOpenLedger, getLedgerLink } from 'models/helpers';
 import { Invoice } from 'models/invoices/Invoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
@@ -686,7 +686,7 @@ const stockSchemas: string[] = [
 function getSubmitSuccessToastAction(doc: FrappeDoc) {
   const isStockTransfer = stockSchemas.includes(doc.schemaName);
 
-  if (isStockTransfer) {
+  if (isStockTransfer && canOpenLedger('StockLedger')) {
     return {
       async action() {
         const route = getLedgerLink(doc, 'StockLedger');
@@ -696,7 +696,7 @@ function getSubmitSuccessToastAction(doc: FrappeDoc) {
     };
   }
 
-  if (doc.isTransactional) {
+  if (doc.isTransactional && canOpenLedger('GeneralLedger')) {
     return {
       async action() {
         const route = getLedgerLink(doc, 'GeneralLedger');

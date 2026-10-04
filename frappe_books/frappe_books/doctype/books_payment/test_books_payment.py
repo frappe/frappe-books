@@ -20,6 +20,8 @@ from frappe_books.tests.accounting import (
 	unique_name,
 )
 
+CASHIER = "books-payment-cashier@example.com"
+
 
 class IntegrationTestBooksPayment(IntegrationTestCase):
 	def test_payment_allocates_and_cancel_restores_invoice(self):
@@ -186,13 +188,35 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Allocated amounts must be greater than zero"):
 			refund.insert()
 
+	def test_sales_user_refunds_a_return_in_full(self):
+		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
+		with self.set_user(ensure_user(CASHIER, "Books Sales User")):
+			self._payment(credit_note, payment_type="Pay").insert().submit()
+		self.assertEqual(credit_note.db_get("outstanding_amount"), 0)
+
+	def test_sales_user_pays_out_only_to_refund_returns(self):
+		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
+		over_refund = self._payment(credit_note, payment_type="Pay")
+		over_refund.amount += 50
+		unreferenced = self._payment(credit_note, payment_type="Pay", payment_references=[])
+		with self.set_user(ensure_user(CASHIER, "Books Sales User")):
+			for payment in (over_refund, unreferenced):
+				with self.subTest(amount=payment.amount, references=len(payment.payment_references)):
+					self.assertRaises(frappe.PermissionError, payment.insert)
+
+	def test_sales_user_cannot_write_off(self):
+		payment = self._payment(self.invoice, writeoff=10)
+		with self.set_user(ensure_user(CASHIER, "Books Sales User")):
+			payment.insert()
+		self.assertFalse(payment.writeoff)
+
 	def test_number_series_cannot_change_after_insert(self):
 		payment = self._payment(self.invoice).insert()
 		payment.number_series = make_number_series("Payment")
 		self.assertRaises(frappe.CannotChangeConstantError, payment.save)
 
 	def test_payment_needs_read_access_to_the_invoice(self):
-		user = ensure_user("books-payment-reader@example.com", "Books User")
+		user = ensure_user("books-payment-reader@example.com", "Books Sales User")
 		own_party = make_party(self.receivable.name)
 		add_user_permission("Books Party", own_party.name, user)
 		payment = self._payment(self.invoice, party=own_party.name)

@@ -15,19 +15,33 @@ LEDGER_FIELDS = [
 	"batch",
 	"serial_number",
 	"quantity",
-	"rate",
-	"value_change",
 	"balance_quantity",
-	"balance_value",
 	"reference_type",
 	"reference_name",
 ]
+LEDGER_VALUE_FIELDS = ["rate", "value_change", "balance_value"]
 GROUP_FIELDS = ("item", "location", "reference_name")
-MOVEMENT = [{"SUM": "quantity", "as": "quantity"}, {"SUM": "value_change", "as": "value"}]
+QUANTITY_SUM = {"SUM": "quantity", "as": "quantity"}
+VALUE_SUM = {"SUM": "value_change", "as": "value"}
+# Columns that show what stock is worth
+VALUE_COLUMNS = {
+	"incoming_rate",
+	"valuation_rate",
+	"balance_value",
+	"value_change",
+	"opening_value",
+	"incoming_value",
+	"outgoing_value",
+}
+
+
+def shows_stock_values() -> bool:
+	"""Whether the user may see what stock is worth; its value fields are on permlevel 1."""
+	return 1 in frappe.get_meta(DOCTYPE).get_permlevel_access()
 
 
 def get_ledger_columns() -> list[dict]:
-	return [
+	columns = [
 		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
 		{"fieldname": "date", "label": _("Date"), "fieldtype": "Datetime", "width": 150},
 		{"fieldname": "item", "label": _("Item"), "fieldtype": "Link", "options": "Books Item"},
@@ -42,10 +56,11 @@ def get_ledger_columns() -> list[dict]:
 		{"fieldname": "reference_name", "label": _("Ref Name"), "fieldtype": "Data"},
 		{"fieldname": "reference_type", "label": _("Ref Type"), "fieldtype": "Data"},
 	]
+	return _visible_columns(columns)
 
 
 def get_balance_columns(filters) -> list[dict]:
-	return [
+	columns = [
 		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
 		{"fieldname": "item", "label": _("Item"), "fieldtype": "Link", "options": "Books Item"},
 		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Location"},
@@ -60,6 +75,7 @@ def get_balance_columns(filters) -> list[dict]:
 		{"fieldname": "outgoing_value", "label": _("Out Value"), "fieldtype": "Currency"},
 		{"fieldname": "valuation_rate", "label": _("Valuation rate"), "fieldtype": "Currency"},
 	]
+	return _visible_columns(columns)
 
 
 def _tracking_columns(show_serial_numbers):
@@ -92,10 +108,11 @@ def get_ledger_data(filters) -> list[dict]:
 	if filters.get("reference_name"):
 		conditions.append(["reference_name", "=", filters["reference_name"]])
 	direction = "asc" if filters.get("ascending") else "desc"
+	fields = [*LEDGER_FIELDS, *_value_fields(LEDGER_VALUE_FIELDS)]
 	entries = frappe.get_list(
-		DOCTYPE, filters=conditions, fields=LEDGER_FIELDS, order_by=f"date {direction}, name {direction}"
+		DOCTYPE, filters=conditions, fields=fields, order_by=f"date {direction}, name {direction}"
 	)
-	return _grouped([_ledger_row(entry) for entry in entries], filters.get("group_by"))
+	return _visible_values(_grouped([_ledger_row(entry) for entry in entries], filters.get("group_by")))
 
 
 def get_balance_data(filters) -> list[dict]:
@@ -112,9 +129,8 @@ def get_balance_data(filters) -> list[dict]:
 	_add_movement(balances, key_fields, [*period, ["quantity", ">", 0]], "incoming")
 	_add_movement(balances, key_fields, [*period, ["quantity", "<", 0]], "outgoing")
 	rows = [_balance_row(key, key_fields, movement) for key, movement in sorted(balances.items())]
-	return _numbered(
-		[row for row in rows if _matches_serial_filter(row, filters.get("serial_number_filter"))]
-	)
+	rows = [row for row in rows if _matches_serial_filter(row, filters.get("serial_number_filter"))]
+	return _visible_values(_numbered(rows))
 
 
 def _grouped(rows, group_by):
@@ -174,9 +190,8 @@ def _incoming_rate(rate, value_change, quantity):
 
 def _add_movement(balances, key_fields, conditions, column):
 	group_by = ", ".join(key_fields)
-	rows = frappe.get_list(
-		DOCTYPE, filters=conditions, fields=[*key_fields, *MOVEMENT], group_by=group_by, order_by=group_by
-	)
+	fields = [*key_fields, QUANTITY_SUM, *_value_fields([VALUE_SUM])]
+	rows = frappe.get_list(DOCTYPE, filters=conditions, fields=fields, group_by=group_by, order_by=group_by)
 	for row in rows:
 		key = tuple(row[field] or "" for field in key_fields)
 		balances.setdefault(key, {})[column] = (as_decimal(row.quantity), as_decimal(row.value))
@@ -214,3 +229,19 @@ def _matches_serial_filter(row, serial_filter):
 def _valuation_rate(value, quantity):
 	quantity = as_decimal(quantity)
 	return rounded(as_decimal(value) / quantity) if quantity else as_decimal(0)
+
+
+def _value_fields(fields):
+	return fields if shows_stock_values() else []
+
+
+def _visible_columns(columns):
+	if shows_stock_values():
+		return columns
+	return [column for column in columns if column["fieldname"] not in VALUE_COLUMNS]
+
+
+def _visible_values(rows):
+	if shows_stock_values():
+		return rows
+	return [{key: value for key, value in row.items() if key not in VALUE_COLUMNS} for row in rows]

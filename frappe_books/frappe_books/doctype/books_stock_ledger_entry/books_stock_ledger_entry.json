@@ -78,6 +78,7 @@
    "fieldname": "rate",
    "fieldtype": "Currency",
    "label": "Rate",
+   "permlevel": 1,
    "read_only": 1
   },
   {
@@ -96,6 +97,7 @@
    "fieldtype": "Currency",
    "hidden": 1,
    "label": "Value Change",
+   "permlevel": 1,
    "read_only": 1
   },
   {
@@ -110,6 +112,7 @@
    "fieldtype": "Currency",
    "hidden": 1,
    "label": "Balance Value",
+   "permlevel": 1,
    "read_only": 1
   },
   {
@@ -118,6 +121,7 @@
    "fieldtype": "Long Text",
    "hidden": 1,
    "label": "Stock Queue",
+   "permlevel": 1,
    "read_only": 1
   },
   {
@@ -144,7 +148,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-30 19:00:00.000000",
+ "modified": "2026-10-04 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Stock Ledger Entry",
@@ -174,7 +178,33 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Books User"
+   "role": "Books Sales User"
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Books Purchase User"
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Books Stock User"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Books Manager"
   }
  ],
  "row_format": "Dynamic",

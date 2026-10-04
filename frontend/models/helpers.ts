@@ -18,6 +18,8 @@ import { getDocType } from 'src/frappe/doctypes';
 import { getMappedDoc } from 'src/frappe/documents';
 import { toFrappeValue } from 'src/frappe/values';
 import { DateTime } from 'luxon';
+import { reports } from 'reports';
+import { canOpenReport } from 'reports/serverReport';
 
 // POS.vue imports it from here.
 
@@ -34,13 +36,15 @@ export interface MappedDocAction extends Omit<Action, 'action'> {
 }
 
 /** An action that builds a new document from the one it runs on with a server mapper, then opens it. */
-export function getMappedDocAction({
-  target,
-  open = openForm,
-  ...action
-}: MappedDocAction): Action {
+export function getMappedDocAction(
+  fyo: Fyo,
+  { target, open = openForm, ...action }: MappedDocAction
+): Action {
   return {
     ...action,
+    // Shown only to users who may create the new document.
+    condition: (doc: FrappeDoc) =>
+      (action.condition?.(doc) ?? true) && fyo.can(target(doc)[0], 'create'),
     action: async (doc: FrappeDoc, router: Router) => {
       const [schemaName, mapper] = target(doc);
       await open(await getMappedDoc(doc, schemaName, mapper), router, doc);
@@ -102,7 +106,7 @@ export function getMakeStockTransferAction(
     label = fyo.t`Purchase Receipt`;
   }
 
-  return getMappedDocAction({
+  return getMappedDocAction(fyo, {
     label,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) => doc.isSubmitted && !!doc.stock_not_transferred,
@@ -124,7 +128,7 @@ export function getMakeInvoiceAction(
   const [invoiceSchemaName, mapper] = isPurchase
     ? [ModelNameEnum.PurchaseInvoice, 'make_purchase_invoice']
     : [ModelNameEnum.SalesInvoice, 'make_sales_invoice'];
-  return getMappedDocAction({
+  return getMappedDocAction(fyo, {
     label: isPurchase ? fyo.t`Purchase Invoice` : fyo.t`Sales Invoice`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) => {
@@ -146,7 +150,7 @@ export function getMakeInvoiceAction(
 }
 
 export function getCreateCustomerAction(fyo: Fyo): Action {
-  return getMappedDocAction({
+  return getMappedDocAction(fyo, {
     group: fyo.t`Create`,
     label: fyo.t`Customer`,
     condition: (doc: FrappeDoc) => !doc.notInserted,
@@ -155,7 +159,7 @@ export function getCreateCustomerAction(fyo: Fyo): Action {
 }
 
 export function getSalesQuoteAction(fyo: Fyo): Action {
-  return getMappedDocAction({
+  return getMappedDocAction(fyo, {
     group: fyo.t`Create`,
     label: fyo.t`Sales Quote`,
     condition: (doc: FrappeDoc) => !doc.notInserted,
@@ -164,7 +168,7 @@ export function getSalesQuoteAction(fyo: Fyo): Action {
 }
 
 export function getMakePaymentAction(fyo: Fyo): Action {
-  return getMappedDocAction({
+  return getMappedDocAction(fyo, {
     label: fyo.t`Payment`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) =>
@@ -200,9 +204,11 @@ async function openPayment(
   });
 }
 
+type LedgerReport = 'GeneralLedger' | 'StockLedger';
+
 export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
   let label = fyo.t`Accounting entries`;
-  let reportClassName: 'GeneralLedger' | 'StockLedger' = 'GeneralLedger';
+  let reportClassName: LedgerReport = 'GeneralLedger';
 
   if (isStock) {
     label = fyo.t`Stock entries`;
@@ -212,7 +218,8 @@ export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
   return {
     label,
     group: fyo.t`View`,
-    condition: (doc: FrappeDoc) => doc.isSubmitted,
+    condition: (doc: FrappeDoc) =>
+      doc.isSubmitted && canOpenLedger(reportClassName),
     action: async (doc: FrappeDoc, router: Router) => {
       const route = getLedgerLink(doc, reportClassName);
       await router.push(route);
@@ -220,11 +227,13 @@ export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
   };
 }
 
+/** Whether the user may open the ledger report. */
+export function canOpenLedger(reportClassName: LedgerReport): boolean {
+  return canOpenReport(reports[reportClassName].serverReportName);
+}
+
 /** The report of the document's entries, which all post on its date. */
-export function getLedgerLink(
-  doc: FrappeDoc,
-  reportClassName: 'GeneralLedger' | 'StockLedger'
-) {
+export function getLedgerLink(doc: FrappeDoc, reportClassName: LedgerReport) {
   const date = getPostingDate(doc);
   return {
     name: 'Report',
@@ -251,7 +260,7 @@ function getPostingDate(doc: FrappeDoc): Date {
 }
 
 export function getMakeReturnDocAction(fyo: Fyo): Action {
-  return getMappedDocAction({
+  return getMappedDocAction(fyo, {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) =>

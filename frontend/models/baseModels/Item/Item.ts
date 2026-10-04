@@ -100,13 +100,13 @@ export class Item extends FrappeDoc {
 
   static getActions(fyo: Fyo): Action[] {
     return [
-      getMappedDocAction({
+      getMappedDocAction(fyo, {
         group: fyo.t`Create`,
         label: fyo.t`Sales Invoice`,
         condition: (doc) => !doc.notInserted && doc.item_usage !== 'Purchases',
         target: () => [ModelNameEnum.SalesInvoice, 'make_sales_invoice'],
       }),
-      getMappedDocAction({
+      getMappedDocAction(fyo, {
         group: fyo.t`Create`,
         label: fyo.t`Purchase Invoice`,
         condition: (doc) => !doc.notInserted && doc.item_usage !== 'Sales',

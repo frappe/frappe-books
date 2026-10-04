@@ -121,7 +121,9 @@ function getPOSSidebar() {
     name: 'pos',
     route: '/pos',
     icon: 'lucide-store',
-    hidden: () => !fyo.singles.InventorySettings?.enable_point_of_sale,
+    hidden: () =>
+      !fyo.singles.InventorySettings?.enable_point_of_sale ||
+      !fyo.can('POSOpeningShift', 'create'),
   };
 }
 

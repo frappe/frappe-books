@@ -12,7 +12,15 @@ from frappe_books.reports.filters import get_default_filters
 from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
 from frappe_books.reports.gstr_json import get_gstr_json
 from frappe_books.reports.periods import get_periods
-from frappe_books.tests.accounting import make_account, make_item, make_party, root_group, unique_name
+from frappe_books.reports.stock import VALUE_COLUMNS
+from frappe_books.tests.accounting import (
+	ensure_user,
+	make_account,
+	make_item,
+	make_party,
+	root_group,
+	unique_name,
+)
 from frappe_books.tests.test_valuation import move
 
 VOUCHER = "Books Journal Entry"
@@ -285,6 +293,16 @@ class IntegrationTestStockReports(IntegrationTestCase):
 				_decimals(-5, 1, -60, 20, 12, 20),
 			],
 		)
+
+	def test_stock_users_see_quantities_but_not_values(self):
+		with self.set_user(ensure_user("books-stock-reports@example.com", "Books Stock User")):
+			for report in ("Books Stock Ledger", "Books Stock Balance"):
+				with self.subTest(report=report):
+					result = run(report, {"item": self.item})
+					fieldnames = {column["fieldname"] for column in result["columns"]}
+					self.assertIn("balance_quantity", fieldnames)
+					self.assertFalse(fieldnames & VALUE_COLUMNS)
+					self.assertFalse(set().union(*result["result"]) & VALUE_COLUMNS)
 
 	def test_stock_ledger_dates_are_iso_datetimes(self):
 		rows = _run("Books Stock Ledger", item=self.item)

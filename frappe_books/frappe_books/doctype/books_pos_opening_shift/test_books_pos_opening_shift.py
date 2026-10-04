@@ -106,7 +106,7 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 
 	def test_user_cannot_cancel_shift(self):
 		shift = open_shift(0)
-		user = make_user("Books User")
+		user = make_user("Books Sales User")
 
 		with self.set_user(user):
 			self.assertRaises(frappe.PermissionError, frappe.get_doc(shift.doctype, shift.name).cancel)

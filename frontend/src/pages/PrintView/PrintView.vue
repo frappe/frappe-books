@@ -121,6 +121,7 @@ import {
   ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
+import { t } from 'fyo';
 import { Action } from 'fyo/model/types';
 import { snakeCase } from 'lodash';
 import { PrintFormat } from 'models/baseModels/PrintFormat';
@@ -154,6 +155,7 @@ import { getFormRoute, openSettings, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { defineComponent } from 'vue';
 import MobilePrintTemplatePicker from './MobilePrintTemplatePicker.vue';
+import { usePDFShare } from './pdfShare';
 import { usePinchZoom } from './pinchZoom';
 
 export default defineComponent({
@@ -174,7 +176,12 @@ export default defineComponent({
     name: { type: String, required: true },
   },
   setup() {
-    return { isMobile, canShare: canSharePDF(), ...usePinchZoom() };
+    return {
+      isMobile,
+      canShare: canSharePDF(),
+      ...usePinchZoom(),
+      ...usePDFShare(t`PDF ready. Tap Share again.`),
+    };
   },
   data() {
     return {
@@ -185,8 +192,6 @@ export default defineComponent({
       templateName: null,
       templateList: [],
       templateRequest: 0,
-      sharedPDF: null,
-      isSharing: false,
     } as {
       doc: null | FrappeDoc;
       scale: number;
@@ -195,8 +200,6 @@ export default defineComponent({
       templateName: null | string;
       templateList: string[];
       templateRequest: number;
-      sharedPDF: null | { key: string; file: File };
-      isSharing: boolean;
     };
   },
   computed: {
@@ -331,7 +334,7 @@ export default defineComponent({
       this.templateDoc = null;
       this.scale = 1;
       this.zoom = 1;
-      this.sharedPDF = null;
+      this.clearKeptPDF();
     },
     async onTemplateNameChange(value: string | null): Promise<void> {
       if (!value) {
@@ -389,44 +392,16 @@ export default defineComponent({
     },
     /** Hands the PDF to the system share sheet, as messaging apps expect a file. */
     async sharePDF() {
-      if (!this.templateName) {
+      const templateName = this.templateName;
+      if (!templateName) {
         return;
       }
 
-      this.isSharing = true;
-      try {
-        const file = await this.getSharedPDF(this.templateName);
-        await navigator.share({ files: [file], title: this.name });
-      } catch (error) {
-        await this.handleShareError(error);
-      } finally {
-        this.isSharing = false;
-      }
-    },
-    async getSharedPDF(templateName: string): Promise<File> {
-      const key = [this.doctype, this.name, templateName].join('/');
-      if (this.sharedPDF?.key === key) {
-        return this.sharedPDF.file;
-      }
-
-      const file = await getPDF(this.doctype, this.name, templateName);
-      this.sharedPDF = { key, file };
-      return file;
-    },
-    async handleShareError(error: unknown) {
-      const name = error instanceof DOMException ? error.name : '';
-      if (name === 'AbortError') {
-        return;
-      }
-
-      // Fetching the PDF can outlast the tap the browser needs to share; the
-      // PDF is kept, so the next tap shares at once.
-      if (name === 'NotAllowedError') {
-        showToast({ message: this.t`PDF ready. Tap Share again.` });
-        return;
-      }
-
-      await handleErrorWithDialog(error as Error);
+      await this.share(
+        [this.doctype, this.name, templateName].join('/'),
+        this.name,
+        () => getPDF(this.doctype, this.name, templateName)
+      );
     },
     openPrintDialog() {
       if (!this.templateName) {

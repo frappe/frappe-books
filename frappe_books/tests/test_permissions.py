@@ -3,11 +3,19 @@ from unittest.mock import patch
 import frappe
 from frappe import client
 from frappe.api.v2 import count, read_doc
+from frappe.desk.query_report import get_report_doc
 from frappe.desk.search import search_link
 from frappe.permissions import add_user_permission
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.linked_entries import get_linked_entries
+from frappe_books.reports.dashboard import (
+	get_cashflow,
+	get_invoice_summary,
+	get_profit_and_loss,
+	get_top_expenses,
+)
+from frappe_books.reports.financial_statements import get_account_balances
 from frappe_books.search import BooksSearch, build_search_index, search
 from frappe_books.tests.accounting import (
 	make_account,
@@ -35,6 +43,15 @@ ROLE_MATRIX = {
 	"Books Stock Ledger Entry": (READ, READ, READ),
 	"Books Loyalty Point Entry": (READ, READ, READ),
 }
+FINANCIAL_REPORTS = (
+	"Books General Ledger",
+	"Books Profit and Loss",
+	"Books Balance Sheet",
+	"Books Trial Balance",
+	"Books GSTR-1",
+	"Books GSTR-2",
+)
+STOCK_REPORTS = ("Books Stock Ledger", "Books Stock Balance")
 TEST_USER = "books-user-permissions@example.com"
 MANAGER = "books-manager-permissions@example.com"
 SYSTEM_MANAGER = "books-system-manager-permissions@example.com"
@@ -73,6 +90,28 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			invoice.submit()
 			self.assertEqual(invoice.docstatus, 1)
 			self.assertRaises(frappe.PermissionError, invoice.cancel)
+
+	def test_only_managers_open_financial_reports(self):
+		for report in FINANCIAL_REPORTS:
+			with self.subTest(report=report):
+				with self.set_user(TEST_USER):
+					self.assertRaises(frappe.PermissionError, get_report_doc, report)
+				for user in (MANAGER, SYSTEM_MANAGER):
+					with self.set_user(user):
+						get_report_doc(report)
+
+	def test_books_user_opens_stock_reports(self):
+		with self.set_user(TEST_USER):
+			for report in STOCK_REPORTS:
+				get_report_doc(report)
+
+	def test_books_user_gets_invoice_totals_but_no_ledger_totals(self):
+		with self.set_user(TEST_USER):
+			get_invoice_summary("Books Sales Invoice", "This Month")
+			for method in (get_cashflow, get_profit_and_loss, get_top_expenses):
+				with self.subTest(method=method.__name__):
+					self.assertRaises(frappe.PermissionError, method, "This Month")
+			self.assertRaises(frappe.PermissionError, get_account_balances)
 
 	def test_books_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")

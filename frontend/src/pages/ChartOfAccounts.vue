@@ -44,7 +44,11 @@
         </template>
         <template #item-suffix="{ node }">
           <div class="flex shrink-0 items-center gap-3">
-            <div @click.stop @keydown.stop>
+            <div
+              v-if="getAccountActions(node as AccountItem).length"
+              @click.stop
+              @keydown.stop
+            >
               <FrappeDropdown
                 :options="getAccountActions(node as AccountItem)"
                 align="end"

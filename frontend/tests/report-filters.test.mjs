@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  BalanceSheet,
   GeneralLedger,
   ProfitAndLoss,
   StockBalance,
@@ -62,6 +63,14 @@ test('financial statements show periodicity as tabs and a lone To Date as a date
     'field:consolidateColumns',
     'field:hideGroupAmounts',
   ]);
+});
+
+test('the balance sheet leaves out Consolidate Columns', async () => {
+  const report = new BalanceSheet(await makeFyo());
+  const fieldnames = report.getFilters().map(({ fieldname }) => fieldname);
+
+  assert.equal(fieldnames.includes('consolidateColumns'), false);
+  assert.equal(fieldnames.includes('hideGroupAmounts'), true);
 });
 
 test('date range presets follow the fiscal year the settings set', () => {

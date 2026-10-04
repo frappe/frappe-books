@@ -143,9 +143,18 @@ class BooksSalesInvoice(PostingInvoiceController):
 		if self.is_pos:
 			# Ship in the submit transaction, so a stock error also rejects the sale.
 			self.make_auto_stock_transfer = 1
-		if self.is_pos and not self.return_against:
+		if self.is_held_to_pos_limits():
 			self.validate_pos_permissions()
 		self.validate_payments()
+
+	def is_held_to_pos_limits(self):
+		"""POS sales keep the POS rates and discounts; with POS on, so do all sales of users who cannot change them."""
+		if self.return_against:
+			return False
+		if self.is_pos:
+			return True
+		pos_enabled = frappe.db.get_single_value("Books Inventory Settings", "enable_point_of_sale")
+		return bool(pos_enabled) and not frappe.has_permission("Books Pos Settings", "write")
 
 	def validate_payments(self):
 		if self.payments and not self.is_pos:
@@ -201,7 +210,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		return payment.name
 
 	def validate_pos_permissions(self):
-		"""Hold POS rows to the rates and discounts the POS profile allows."""
+		"""Hold the rows to the rates and discounts the POS profile allows."""
 		rows = [row for row in self.items if not row.is_free_item]
 		if not pricing.pos_setting("can_change_rate"):
 			self._validate_pos_rates(rows)

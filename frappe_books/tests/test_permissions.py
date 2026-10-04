@@ -95,7 +95,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 					self.assertEqual(_role_rights(doctype, role), rights)
 
 	def test_sales_user_submits_but_cannot_cancel_invoice(self):
-		invoice = self._make_invoice_as_sales_user()
+		invoice = self._make_invoice_as(SALES_USER)
 		with self.set_user(SALES_USER):
 			invoice.submit()
 			self.assertEqual(invoice.docstatus, 1)
@@ -228,15 +228,24 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			)
 			self.assertRaises(frappe.PermissionError, get_linked_entries, "Books Shipment", hidden)
 
-	def _make_invoice_as_sales_user(self):
+	def _make_invoice_as(self, user, discount=0):
 		receivable = make_account("Permission Receivable", account_type="Receivable")
 		income = make_account("Permission Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Permission Expense", root_type="Expense", account_type="Expense Account")
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
-		with self.set_user(SALES_USER):
-			return make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
+		row = {
+			"item": item.name,
+			"account": income.name,
+			"rate": 100,
+			"quantity": 2,
+			"item_discount_percent": discount,
+		}
+		with self.set_user(user):
+			return make_invoice(
+				"Books Sales Invoice", party.name, receivable.name, item.name, income.name, items=[row]
+			)
 
 
 def _role_rights(doctype, role):

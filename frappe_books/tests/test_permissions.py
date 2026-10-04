@@ -101,6 +101,21 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			self.assertEqual(invoice.docstatus, 1)
 			self.assertRaises(frappe.PermissionError, invoice.cancel)
 
+	def test_with_pos_on_only_managers_go_past_its_discount_limit_on_any_invoice(self):
+		_set_pos_discount_limit(pos_enabled=1)
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"does not allow editing the discount",
+			self._make_invoice_as,
+			SALES_USER,
+			discount=10,
+		)
+		self.assertEqual(self._make_invoice_as(MANAGER, discount=10).items[0].item_discount_percent, 10)
+
+	def test_with_pos_off_sales_users_discount_any_invoice(self):
+		_set_pos_discount_limit(pos_enabled=0)
+		self.assertEqual(self._make_invoice_as(SALES_USER, discount=10).items[0].item_discount_percent, 10)
+
 	def test_only_managers_open_financial_reports(self):
 		for report in FINANCIAL_REPORTS:
 			with self.subTest(report=report):
@@ -246,6 +261,12 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			return make_invoice(
 				"Books Sales Invoice", party.name, receivable.name, item.name, income.name, items=[row]
 			)
+
+
+def _set_pos_discount_limit(pos_enabled):
+	frappe.db.set_single_value("Books Accounting Settings", "enable_discounting", 1)
+	frappe.db.set_single_value("Books Inventory Settings", "enable_point_of_sale", pos_enabled)
+	frappe.db.set_single_value("Books Pos Settings", {"pos_profile": None, "can_edit_discount": 0})
 
 
 def _role_rights(doctype, role):

@@ -10,7 +10,7 @@ import {
   validateEmail,
   validatePhoneNumber,
 } from 'src/frappe/validation';
-import { getMappedDocAction } from 'models/helpers';
+import { canOpenLedger, getMappedDocAction } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { getFrappeDoc } from 'src/frappe/documents';
@@ -110,7 +110,7 @@ export class Party extends FrappeDoc {
 
   static getActions(fyo: Fyo): Action[] {
     return [
-      getMappedDocAction({
+      getMappedDocAction(fyo, {
         label: fyo.t`Create purchase`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
@@ -119,7 +119,9 @@ export class Party extends FrappeDoc {
       {
         label: fyo.t`View purchases`,
         condition: (doc: FrappeDoc) =>
-          !doc.notInserted && (doc.role as PartyRole) !== 'Customer',
+          !doc.notInserted &&
+          (doc.role as PartyRole) !== 'Customer' &&
+          fyo.can(ModelNameEnum.PurchaseInvoice, 'read'),
         action: async (partyDoc, router) => {
           await router.push({
             path: '/list/PurchaseInvoice',
@@ -127,7 +129,7 @@ export class Party extends FrappeDoc {
           });
         },
       },
-      getMappedDocAction({
+      getMappedDocAction(fyo, {
         label: fyo.t`Create sale`,
         condition: (doc: FrappeDoc) =>
           !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
@@ -136,7 +138,9 @@ export class Party extends FrappeDoc {
       {
         label: fyo.t`View sales`,
         condition: (doc: FrappeDoc) =>
-          !doc.notInserted && (doc.role as PartyRole) !== 'Supplier',
+          !doc.notInserted &&
+          (doc.role as PartyRole) !== 'Supplier' &&
+          fyo.can(ModelNameEnum.SalesInvoice, 'read'),
         action: async (partyDoc, router) => {
           await router.push({
             path: '/list/SalesInvoice',
@@ -153,7 +157,8 @@ function getGeneralLedgerAction(fyo: Fyo): Action {
   return {
     label: fyo.t`General Ledger`,
     group: fyo.t`View`,
-    condition: (doc: FrappeDoc) => doc.inserted,
+    condition: (doc: FrappeDoc) =>
+      doc.inserted && canOpenLedger('GeneralLedger'),
     action: async (partyDoc, router) => {
       await router.push({
         path: '/report/GeneralLedger',

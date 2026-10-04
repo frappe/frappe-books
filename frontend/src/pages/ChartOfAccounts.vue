@@ -66,7 +66,7 @@
               </FrappeDropdown>
             </div>
             <span
-              v-if="!node.is_group"
+              v-if="canReadLedger && !node.is_group"
               class="min-w-24 text-end text-base tabular-nums text-ink-gray-7"
               >{{ getBalanceString(node as AccountItem) }}</span
             >
@@ -196,6 +196,10 @@ export default defineComponent({
     };
   },
   computed: {
+    /** Balances total the ledger. */
+    canReadLedger(): boolean {
+      return fyo.can(ModelNameEnum.AccountingLedgerEntry, 'read');
+    },
     isAllExpanded(): boolean {
       return this.getGroups(this.accounts).every((account) =>
         this.isExpanded(account)
@@ -228,7 +232,9 @@ export default defineComponent({
   },
   async activated() {
     await this.fetchAccounts();
-    await this.setBalances();
+    if (this.canReadLedger) {
+      await this.setBalances();
+    }
 
     docsPathRef.value = docsPathMap.ChartOfAccounts!;
   },

@@ -115,6 +115,19 @@ globalThis.window = {
       time_zone: { system: 'Asia/Kolkata' },
       user: { name: 'Administrator', roles: ['Books Manager'] },
       books: {},
+      // A Books Manager opens every Books report.
+      allowed_reports: Object.fromEntries(
+        [
+          'Books General Ledger',
+          'Books Profit and Loss',
+          'Books Balance Sheet',
+          'Books Trial Balance',
+          'Books GSTR-1',
+          'Books GSTR-2',
+          'Books Stock Ledger',
+          'Books Stock Balance',
+        ].map((name) => [name, {}])
+      ),
     },
   },
 };

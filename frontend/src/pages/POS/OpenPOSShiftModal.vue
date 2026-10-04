@@ -77,7 +77,7 @@
       <FrappeButton
         :size="size"
         class="min-w-24"
-        variant="ghost"
+        :variant="isMobile ? 'subtle' : 'ghost'"
         @click="handleDismiss"
         >{{ t`Back` }}</FrappeButton>
       <FrappeButton

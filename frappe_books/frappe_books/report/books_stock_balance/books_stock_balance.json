@@ -11,7 +11,7 @@
  "generate_csv": 0,
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2026-09-28 12:00:00.000000",
+ "modified": "2026-10-04 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Stock Balance",
@@ -22,13 +22,16 @@
  "report_type": "Script Report",
  "roles": [
   {
-   "role": "Books User"
-  },
-  {
    "role": "Books Manager"
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Books Purchase User"
+  },
+  {
+   "role": "Books Stock User"
   }
  ],
  "snapshot_report": 0,

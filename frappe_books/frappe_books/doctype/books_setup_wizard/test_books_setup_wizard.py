@@ -286,7 +286,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 	def test_preview_needs_the_right_to_set_up_books(self):
 		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "India"})
-		with self.set_user(ensure_user("books-wizard-user@example.com", "Books User")):
+		with self.set_user(ensure_user("books-wizard-user@example.com", "Books Sales User")):
 			self.assertRaises(frappe.PermissionError, wizard.preview)
 
 	def test_setup_completes_only_once(self):

@@ -30,18 +30,27 @@ RIGHTS = ("read", "write", "create", "delete", "submit", "cancel", "amend")
 FULL = {"read", "write", "create", "delete"}
 FULL_SUBMIT = FULL | {"submit", "cancel", "amend"}
 READ = {"read"}
+NONE = set()
+CREATE = {"read", "write", "create"}
+SUBMIT = CREATE | {"submit"}
+ROLES = ("System Manager", "Books Manager", "Books Sales User", "Books Purchase User", "Books Stock User")
+# Rights of each role, in ROLES order
 ROLE_MATRIX = {
-	"Books Sales Invoice": (FULL_SUBMIT, FULL_SUBMIT, {"read", "write", "create", "submit"}),
-	"Books Sales Quote": (FULL_SUBMIT, FULL_SUBMIT, {"read", "write", "create", "submit", "cancel", "amend"}),
-	"Books Journal Entry": (FULL_SUBMIT, FULL_SUBMIT, READ),
-	"Books Party": (FULL, FULL, {"read", "write", "create"}),
-	"Books Tax": (FULL, FULL, READ),
-	"Books Defaults": (FULL, FULL, READ),
-	"Print Format": (FULL, FULL, READ),
-	"Books Custom Form": (FULL, READ, READ),
-	"Books Ledger Entry": (READ, READ, set()),
-	"Books Stock Ledger Entry": (READ, READ, READ),
-	"Books Loyalty Point Entry": (READ, READ, READ),
+	"Books Sales Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, NONE, READ),
+	"Books Purchase Invoice": (FULL_SUBMIT, FULL_SUBMIT, NONE, SUBMIT, READ),
+	"Books Sales Quote": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT | {"cancel", "amend"}, NONE, NONE),
+	"Books Payment": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, READ, NONE),
+	"Books Stock Movement": (FULL_SUBMIT, FULL_SUBMIT, NONE, NONE, SUBMIT),
+	"Books Journal Entry": (FULL_SUBMIT, FULL_SUBMIT, NONE, NONE, NONE),
+	"Books Party": (FULL, FULL, CREATE, CREATE, READ),
+	"Books Item": (FULL, FULL, READ, CREATE, CREATE),
+	"Books Tax": (FULL, FULL, READ, READ, READ),
+	"Books Defaults": (FULL, FULL, READ, READ, READ),
+	"Print Format": (FULL, FULL, READ, READ, READ),
+	"Books Custom Form": (FULL, READ, READ, READ, READ),
+	"Books Ledger Entry": (READ, READ, NONE, NONE, NONE),
+	"Books Stock Ledger Entry": (READ, READ, READ, READ, READ),
+	"Books Loyalty Point Entry": (READ, READ, READ, NONE, NONE),
 }
 FINANCIAL_REPORTS = (
 	"Books General Ledger",
@@ -52,7 +61,8 @@ FINANCIAL_REPORTS = (
 	"Books GSTR-2",
 )
 STOCK_REPORTS = ("Books Stock Ledger", "Books Stock Balance")
-TEST_USER = "books-user-permissions@example.com"
+SALES_USER = "books-sales-permissions@example.com"
+STOCK_USER = "books-stock-permissions@example.com"
 MANAGER = "books-manager-permissions@example.com"
 SYSTEM_MANAGER = "books-system-manager-permissions@example.com"
 
@@ -62,7 +72,8 @@ class IntegrationTestPermissions(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		for email, role in (
-			(TEST_USER, "Books User"),
+			(SALES_USER, "Books Sales User"),
+			(STOCK_USER, "Books Stock User"),
 			(MANAGER, "Books Manager"),
 			(SYSTEM_MANAGER, "System Manager"),
 		):
@@ -78,15 +89,14 @@ class IntegrationTestPermissions(IntegrationTestCase):
 				).insert(ignore_permissions=True)
 
 	def test_role_matrix(self):
-		roles = ("System Manager", "Books Manager", "Books User")
 		for doctype, expected in ROLE_MATRIX.items():
-			for role, rights in zip(roles, expected, strict=True):
+			for role, rights in zip(ROLES, expected, strict=True):
 				with self.subTest(doctype=doctype, role=role):
 					self.assertEqual(_role_rights(doctype, role), rights)
 
-	def test_books_user_submits_but_cannot_cancel_invoice(self):
-		invoice = self._make_invoice_as_books_user()
-		with self.set_user(TEST_USER):
+	def test_sales_user_submits_but_cannot_cancel_invoice(self):
+		invoice = self._make_invoice_as_sales_user()
+		with self.set_user(SALES_USER):
 			invoice.submit()
 			self.assertEqual(invoice.docstatus, 1)
 			self.assertRaises(frappe.PermissionError, invoice.cancel)
@@ -94,31 +104,35 @@ class IntegrationTestPermissions(IntegrationTestCase):
 	def test_only_managers_open_financial_reports(self):
 		for report in FINANCIAL_REPORTS:
 			with self.subTest(report=report):
-				with self.set_user(TEST_USER):
-					self.assertRaises(frappe.PermissionError, get_report_doc, report)
+				for user in (SALES_USER, STOCK_USER):
+					with self.set_user(user):
+						self.assertRaises(frappe.PermissionError, get_report_doc, report)
 				for user in (MANAGER, SYSTEM_MANAGER):
 					with self.set_user(user):
 						get_report_doc(report)
 
-	def test_books_user_opens_stock_reports(self):
-		with self.set_user(TEST_USER):
-			for report in STOCK_REPORTS:
-				get_report_doc(report)
+	def test_stock_users_open_stock_reports_sales_users_do_not(self):
+		for report in STOCK_REPORTS:
+			with self.subTest(report=report):
+				with self.set_user(STOCK_USER):
+					get_report_doc(report)
+				with self.set_user(SALES_USER):
+					self.assertRaises(frappe.PermissionError, get_report_doc, report)
 
-	def test_books_user_gets_invoice_totals_but_no_ledger_totals(self):
-		with self.set_user(TEST_USER):
+	def test_sales_user_gets_invoice_totals_but_no_ledger_totals(self):
+		with self.set_user(SALES_USER):
 			get_invoice_summary("Books Sales Invoice", "This Month")
 			for method in (get_cashflow, get_profit_and_loss, get_top_expenses):
 				with self.subTest(method=method.__name__):
 					self.assertRaises(frappe.PermissionError, method, "This Month")
 			self.assertRaises(frappe.PermissionError, get_account_balances)
 
-	def test_books_user_cannot_write_config(self):
+	def test_sales_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")
-		with self.set_user(TEST_USER):
+		with self.set_user(SALES_USER):
 			self.assertRaises(frappe.PermissionError, make_tax, account.name)
 
-	def test_books_manager_writes_print_formats_books_user_prints(self):
+	def test_books_manager_writes_print_formats_sales_user_prints(self):
 		with self.set_user(MANAGER):
 			print_format = frappe.get_doc(
 				{
@@ -129,7 +143,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 					"html": "<div>{{ doc.name }}</div>",
 				}
 			).insert()
-		with self.set_user(TEST_USER):
+		with self.set_user(SALES_USER):
 			self.assertTrue(frappe.has_permission("Print Format", "print"))
 			print_format.html = "<p>{{ doc.name }}</p>"
 			self.assertRaises(frappe.PermissionError, print_format.save)
@@ -144,7 +158,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 				self.assertEqual(importers, {"Books Manager", "System Manager"})
 
 		for user, doctype, allowed in (
-			(TEST_USER, "Books Sales Invoice", False),
+			(SALES_USER, "Books Sales Invoice", False),
 			(MANAGER, "Books Sales Invoice", True),
 			(SYSTEM_MANAGER, "Books Sales Invoice", True),
 			(MANAGER, "Books Ledger Entry", False),
@@ -156,7 +170,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(MANAGER):
 			own = _new_data_import().insert()
 			self.assertTrue(own.has_permission("write"))
-		with self.set_user(TEST_USER):
+		with self.set_user(SALES_USER):
 			self.assertRaises(frappe.PermissionError, _new_data_import().insert)
 
 	def test_books_manager_reads_only_its_own_data_imports(self):
@@ -174,29 +188,29 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		party = make_party(make_account("Permlevel Receivable", account_type="Receivable").name)
 		party.db_set("email", "hidden@example.com")
 		email = frappe.get_meta("Books Party").get_field("email")
-		with patch.object(email, "permlevel", 1), self.set_user(TEST_USER):
+		with patch.object(email, "permlevel", 1), self.set_user(SALES_USER):
 			self.assertIsNone(read_doc("Books Party", party.name).get("email"))
 
 	def test_counts_skip_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
-		add_user_permission("Books Shipment", readable, TEST_USER)
+		add_user_permission("Books Shipment", readable, SALES_USER)
 		filters = [["name", "in", [readable, hidden]]]
-		with self.set_user(TEST_USER), patch.dict(frappe.form_dict, {"filters": filters}):
+		with self.set_user(SALES_USER), patch.dict(frappe.form_dict, {"filters": filters}):
 			self.assertEqual(count("Books Shipment"), 1)
 
 	def test_search_skips_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
-		add_user_permission("Books Shipment", readable, TEST_USER)
+		add_user_permission("Books Shipment", readable, SALES_USER)
 		build_search_index()
 		BooksSearch().index_documents_by_name("Books Shipment", [readable, hidden])
-		with self.set_user(TEST_USER):
+		with self.set_user(SALES_USER):
 			self.assertEqual(_search_shipments(hidden), [])
 			self.assertEqual(_search_shipments(readable), [readable])
 
 	def test_link_search_skips_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_shipment(), _seed_shipment()
-		add_user_permission("Books Shipment", readable, TEST_USER)
-		with self.set_user(TEST_USER):
+		add_user_permission("Books Shipment", readable, SALES_USER)
+		with self.set_user(SALES_USER):
 			found = [row["value"] for row in search_link("Books Shipment", "", page_length=50)]
 		self.assertIn(readable, found)
 		self.assertNotIn(hidden, found)
@@ -206,22 +220,22 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		readable_return = _seed_shipment(return_against=original)
 		_seed_shipment(return_against=original)
 		for name in (original, readable_return):
-			add_user_permission("Books Shipment", name, TEST_USER)
+			add_user_permission("Books Shipment", name, SALES_USER)
 		hidden = _seed_shipment()
-		with self.set_user(TEST_USER):
+		with self.set_user(SALES_USER):
 			self.assertEqual(
 				get_linked_entries("Books Shipment", original), {"Books Shipment": [readable_return]}
 			)
 			self.assertRaises(frappe.PermissionError, get_linked_entries, "Books Shipment", hidden)
 
-	def _make_invoice_as_books_user(self):
+	def _make_invoice_as_sales_user(self):
 		receivable = make_account("Permission Receivable", account_type="Receivable")
 		income = make_account("Permission Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Permission Expense", root_type="Expense", account_type="Expense Account")
 		party = make_party(receivable.name)
 		item = make_item(income.name, expense.name)
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
-		with self.set_user(TEST_USER):
+		with self.set_user(SALES_USER):
 			return make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
 
 

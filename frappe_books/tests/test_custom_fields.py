@@ -237,7 +237,7 @@ class IntegrationTestCustomFieldnames(IntegrationTestCase):
 
 	def test_preview_needs_the_right_to_customize(self):
 		form = _new_custom_form([{**FIELD, "fieldname": None}])
-		with self.set_user(ensure_user("books-custom-form-user@example.com", "Books User")):
+		with self.set_user(ensure_user("books-custom-form-user@example.com", "Books Sales User")):
 			self.assertRaises(frappe.PermissionError, form.preview)
 
 

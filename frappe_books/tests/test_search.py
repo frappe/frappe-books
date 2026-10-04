@@ -51,7 +51,7 @@ class IntegrationTestSearchPalette(IntegrationTestCase):
 		BooksSearch().index_documents_by_name(INVOICE, [cancelled.name, submitted.name])
 		word = cancelled.party.split()[-1]
 
-		with self.set_user(ensure_user(USER, "Books User")):
+		with self.set_user(ensure_user(USER, "Books Sales User")):
 			rows = search(word, [INVOICE])
 		self.assertEqual(
 			[(row["name"], row["party"], row["docstatus"]) for row in rows],
@@ -72,13 +72,13 @@ class IntegrationTestSearchPalette(IntegrationTestCase):
 			}
 		).insert()
 
-		with self.set_user(ensure_user(USER, "Books User")), patch.object(frappe.local, "lang", "de"):
+		with self.set_user(ensure_user(USER, "Books Sales User")), patch.object(frappe.local, "lang", "de"):
 			found = search_widget("Books Account", translated.lower(), page_length=5, as_dict=True)
 
 		self.assertEqual([row.name for row in found], [account])
 
 	def _found(self, text, doctypes):
-		with self.set_user(ensure_user(USER, "Books User")):
+		with self.set_user(ensure_user(USER, "Books Sales User")):
 			return [row["name"] for row in search(text, doctypes)]
 
 	def _make_invoice(self, item=None, party=None):

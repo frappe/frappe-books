@@ -192,7 +192,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self.assertRaises(frappe.CannotChangeConstantError, payment.save)
 
 	def test_payment_needs_read_access_to_the_invoice(self):
-		user = ensure_user("books-payment-reader@example.com", "Books User")
+		user = ensure_user("books-payment-reader@example.com", "Books Sales User")
 		own_party = make_party(self.receivable.name)
 		add_user_permission("Books Party", own_party.name, user)
 		payment = self._payment(self.invoice, party=own_party.name)

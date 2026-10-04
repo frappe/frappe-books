@@ -70,7 +70,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		invoice.submit()
 
 		# The query the POS runs after checkout to toast each payment.
-		with self.set_user(ensure_user("pos-cashier@example.com", "Books User")):
+		with self.set_user(ensure_user("pos-cashier@example.com", "Books Sales User")):
 			rows = get_list(
 				"Books Payment For",
 				parent="Books Payment",

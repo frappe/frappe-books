@@ -297,7 +297,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
-		with self.set_user(ensure_user("books-cancel-user@example.com", "Books User")):
+		with self.set_user(ensure_user("books-cancel-user@example.com", "Books Sales User")):
 			self.assertRaises(
 				frappe.PermissionError,
 				run_invoice_method,

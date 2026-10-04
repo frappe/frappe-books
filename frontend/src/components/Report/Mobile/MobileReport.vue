@@ -9,7 +9,7 @@
       class="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 overflow-x-auto border-b border-outline-gray-1 bg-surface-base px-4 [scrollbar-width:none] *:shrink-0"
     >
       <MobileFiltersButton
-        size="lg"
+        size="md"
         :count="changedCount"
         @click="emit('open-filters')"
       />

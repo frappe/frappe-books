@@ -7,6 +7,7 @@ import {
 import {
   fyo,
   getImportableSchemaNames,
+  getModel,
   getSidebarConfig,
   loadDocPermissions,
   loadSaved,
@@ -195,4 +196,46 @@ test('the search palette offers only the lists and reports the user can open', (
   assert.ok(!routes.includes('/list/SalesInvoice'));
   assert.ok(!routes.some((route) => route.startsWith('/list/Item')));
   assert.ok(!routes.includes('/report/GeneralLedger'));
+});
+
+/** The labels of the model's actions shown on the document. */
+function shownActions(schemaName, doc) {
+  return getModel(schemaName)
+    .getActions(fyo)
+    .filter(({ condition }) => condition?.(doc) ?? true)
+    .map(({ label }) => label);
+}
+
+test('a party offers only the invoices the user may make and read', () => {
+  fyo.store.permissions = {
+    doctypes: {
+      SalesInvoice: 'Books Sales Invoice',
+      PurchaseInvoice: 'Books Purchase Invoice',
+    },
+    user: {
+      can_read: ['Books Sales Invoice'],
+      can_create: ['Books Sales Invoice'],
+    },
+  };
+  window.frappe.boot.allowed_reports = {};
+
+  const party = { inserted: true, notInserted: false, role: 'Both' };
+  const actions = shownActions('Party', party);
+
+  delete window.frappe.boot.allowed_reports;
+  assert.ok(actions.includes('Create sale'));
+  assert.ok(actions.includes('View sales'));
+  assert.ok(!actions.includes('Create purchase'));
+  assert.ok(!actions.includes('View purchases'));
+  assert.ok(!actions.includes('General Ledger'));
+});
+
+test('a submitted document links only to the ledgers the user may open', () => {
+  fyo.store.permissions = null;
+  window.frappe.boot.allowed_reports = { 'Books Stock Ledger': {} };
+
+  const actions = shownActions('StockMovement', { isSubmitted: true });
+
+  delete window.frappe.boot.allowed_reports;
+  assert.deepEqual(actions, ['Stock entries']);
 });

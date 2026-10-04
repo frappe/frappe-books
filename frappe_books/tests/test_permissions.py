@@ -31,7 +31,7 @@ ROLE_MATRIX = {
 	"Books Defaults": (FULL, FULL, READ),
 	"Print Format": (FULL, FULL, READ),
 	"Books Custom Form": (FULL, READ, READ),
-	"Books Ledger Entry": (READ, READ, READ),
+	"Books Ledger Entry": (READ, READ, set()),
 	"Books Stock Ledger Entry": (READ, READ, READ),
 	"Books Loyalty Point Entry": (READ, READ, READ),
 }

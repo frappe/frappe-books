@@ -11,7 +11,7 @@
  "generate_csv": 0,
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2026-09-28 12:00:00.000000",
+ "modified": "2026-10-04 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books General Ledger",
@@ -21,9 +21,6 @@
  "report_name": "Books General Ledger",
  "report_type": "Script Report",
  "roles": [
-  {
-   "role": "Books User"
-  },
   {
    "role": "Books Manager"
   },

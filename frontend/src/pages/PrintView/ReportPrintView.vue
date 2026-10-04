@@ -20,39 +20,63 @@
             :width="size.width"
             :height="size.height"
           >
-            <div class="bg-surface-base mx-auto">
-              <div class="p-2">
-                <div class="text-xl-semibold w-full flex justify-between">
-                  <h1>
-                    {{ `${fyo.singles.PrintSettings?.company_name}` }}
+            <!-- Inline styles, as Frappe's PDF renderer gets no app styles. -->
+            <table style="width: 100%; border-collapse: collapse">
+              <tr>
+                <td style="padding: 0.5rem">
+                  <h1 style="margin: 0; font-size: 1.25rem; font-weight: bold">
+                    {{ fyo.singles.PrintSettings?.company_name }}
                   </h1>
-                  <p class="text-ink-gray-6">
-                    {{ title }}
-                  </p>
-                </div>
-              </div>
+                </td>
+                <td style="padding: 0.5rem; text-align: right; color: #7c7c7c">
+                  {{ title }}
+                </td>
+              </tr>
+            </table>
 
-              <!-- Report Data -->
-              <div class="grid" :style="rowStyles">
-                <template v-for="(row, r) of matrix" :key="`row-${r}`">
-                  <div
+            <table
+              style="
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.875rem;
+              "
+            >
+              <thead>
+                <tr>
+                  <th
+                    v-for="(column, c) of columns"
+                    :key="column.idx"
+                    style="font-weight: bold"
+                    :style="getCellStyle(c, column.idx)"
+                  >
+                    {{ column.label }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, r) of rows" :key="r">
+                  <td
                     v-for="(cell, c) of row"
-                    :key="`cell-${r}.${c}`"
-                    :class="cellClasses(cell.idx, r)"
-                    class="p-2"
-                    style="min-height: 2rem"
+                    :key="cell.idx"
+                    :style="getCellStyle(c, cell.idx)"
                   >
                     {{ cell.value }}
-                  </div>
-                </template>
-              </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-              <div class="border-t p-2">
-                <p class="text-xs text-right w-full">
-                  {{ fyo.format(new Date(), 'Datetime') }}
-                </p>
-              </div>
-            </div>
+            <p
+              style="
+                margin: 0;
+                padding: 0.5rem;
+                border-top: 1px solid #e2e2e2;
+                text-align: right;
+                font-size: 0.75rem;
+              "
+            >
+              {{ fyo.format(new Date(), 'Datetime') }}
+            </p>
           </PrintSheet>
         </div>
       </FrappeScrollArea>
@@ -157,6 +181,7 @@
         variant="solid"
         icon-left="lucide-printer"
         :label="t`Print`"
+        :loading="isSharing"
         @click="print()"
       />
     </MobileFooter>
@@ -167,6 +192,7 @@ import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
+import { t } from 'fyo';
 import { Report } from 'reports/Report';
 import { reports } from 'reports/index';
 import { OptionField } from 'schemas/types';
@@ -176,12 +202,16 @@ import Select from 'src/components/Controls/Select.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getReport } from 'src/utils/misc';
-import { printDocument } from 'src/utils/printDocument';
+import { constructPDFDocument, printDocument } from 'src/utils/printDocument';
+import { canSharePDF, getReportPDF } from 'src/utils/printFormatApi';
 import { showSidebar } from 'src/utils/refs';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
-import { PropType, defineComponent } from 'vue';
+import { PropType, StyleValue, defineComponent } from 'vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
+import { usePDFShare } from './pdfShare';
+
+const CELL_BORDER = '1px solid #e2e2e2';
 
 export default defineComponent({
   components: {
@@ -201,7 +231,10 @@ export default defineComponent({
     },
   },
   setup() {
-    return { isMobile };
+    return {
+      isMobile,
+      ...usePDFShare(t`PDF ready. Tap Print again.`),
+    };
   },
   data() {
     return {
@@ -228,41 +261,25 @@ export default defineComponent({
           .map((name) => ({ value: name, label: name })),
       };
     },
-    matrix(): { value: string; idx: number }[][] {
+    columns(): { label: string; idx: number }[] {
+      return (this.report?.columns ?? [])
+        .map((column, idx) => ({ label: column.label, idx }))
+        .filter(({ idx }) => this.columnSelection[idx]);
+    },
+    rows(): { value: string; idx: number }[][] {
       if (!this.report) {
         return [];
       }
 
-      const columns = this.report.columns
-        .map((col, idx) => ({ value: col.label, idx }))
-        .filter((_, i) => this.columnSelection[i]);
-
-      const matrix: { value: string; idx: number }[][] = [columns];
       const start = Math.max(this.start - 1, 0);
       const end = Math.min(start + this.limit, this.report.reportData.length);
-      const slice = this.report.reportData.slice(start, end);
-
-      for (let i = 0; i < slice.length; i++) {
-        const row = slice[i];
-
-        matrix.push([]);
-        for (let j = 0; j < row.cells.length; j++) {
-          if (!this.columnSelection[j]) {
-            continue;
-          }
-
-          const value = row.cells[j].value;
-          matrix.at(-1)?.push({ value, idx: Number(j) });
-        }
-      }
-
-      return matrix;
-    },
-    rowStyles(): Record<string, string> {
-      const style: Record<string, string> = {};
-      const numColumns = this.columnSelection.filter(Boolean).length;
-      style['grid-template-columns'] = `repeat(${numColumns}, minmax(0, auto))`;
-      return style;
+      return this.report.reportData
+        .slice(start, end)
+        .map((row) =>
+          row.cells
+            .map((cell, idx) => ({ value: cell.value, idx }))
+            .filter(({ idx }) => this.columnSelection[idx])
+        );
     },
     size(): { width: number; height: number } {
       const size = paperSizeMap[this.printSize];
@@ -325,28 +342,24 @@ export default defineComponent({
       }
 
       const name = this.title + ' - ' + this.fyo.format(new Date(), 'Date');
-      await printDocument(name, innerHTML, this.size.width, this.size.height);
+      const { width, height } = this.size;
+      if (this.isMobile && canSharePDF()) {
+        // A home-screen app has no way out of a print window, so phones
+        // print from the share sheet.
+        const html = constructPDFDocument(name, innerHTML, width, height);
+        await this.share(html, name, () => getReportPDF(name, html));
+        return;
+      }
+
+      await printDocument(name, innerHTML, width, height);
     },
-    cellClasses(cIdx: number, rIdx: number): string[] {
-      const classes: string[] = [];
-      if (!this.report) {
-        return classes;
-      }
-
-      const col = this.report.columns[cIdx];
-      const isFirst = cIdx === 0;
-      if (col.align) {
-        classes.push(`text-${col.align}`);
-      }
-
-      classes.push(rIdx === 0 ? 'text-sm-semibold' : 'text-sm');
-
-      classes.push('border-t');
-      if (!isFirst) {
-        classes.push('border-l');
-      }
-
-      return classes;
+    getCellStyle(position: number, columnIndex: number): StyleValue {
+      return {
+        padding: '0.5rem',
+        borderTop: CELL_BORDER,
+        borderLeft: position ? CELL_BORDER : 'none',
+        textAlign: this.report?.columns[columnIndex].align ?? 'left',
+      };
     },
   },
 });

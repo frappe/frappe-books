@@ -8,12 +8,9 @@ export function constructPrintDocument(
   width: number,
   height: number
 ) {
-  const html = document.createElement('html');
-  const head = document.createElement('head');
   const body = document.createElement('body');
-  html.dataset.theme = 'light';
   body.className = 'bg-surface-base text-ink-gray-9';
-  const style = getAllCSSAsStyleElem();
+  body.innerHTML = innerHTML;
 
   const printCSS = document.createElement('style');
   printCSS.innerHTML = `
@@ -41,15 +38,54 @@ export function constructPrintDocument(
     }
   `;
 
+  const html = buildDocument(name, body, [getAllCSSAsStyleElem(), printCSS]);
+  html.dataset.theme = 'light';
+  return html.outerHTML;
+}
+
+/** A print document for Frappe's PDF renderer, which gets no app styles. */
+export function constructPDFDocument(
+  name: string,
+  innerHTML: string,
+  width: number,
+  height: number
+) {
+  // Frappe reads the PDF's page size and margins from the print-format rule.
+  const style = document.createElement('style');
+  style.textContent = `
+    .print-format {
+      page-size: Custom;
+      page-width: ${(width * 10).toFixed(1)}mm;
+      page-height: ${(height * 10).toFixed(1)}mm;
+      margin-top: 0;
+      margin-right: 0;
+      margin-bottom: 0;
+      margin-left: 0;
+      font-family: sans-serif;
+    }
+  `;
+
+  const body = document.createElement('body');
+  body.className = 'print-format';
+  body.innerHTML = innerHTML;
+  return buildDocument(name, body, [style]).outerHTML;
+}
+
+function buildDocument(
+  name: string,
+  body: HTMLElement,
+  styles: HTMLStyleElement[]
+): HTMLElement {
   const meta = document.createElement('meta');
   meta.setAttribute('charset', 'UTF-8');
   const title = document.createElement('title');
   title.textContent = name;
-  head.append(meta, title, style, printCSS);
+  const head = document.createElement('head');
+  head.append(meta, title, ...styles);
 
-  body.innerHTML = innerHTML;
+  const html = document.createElement('html');
   html.append(head, body);
-  return html.outerHTML;
+  return html;
 }
 
 function getAllCSSAsStyleElem() {

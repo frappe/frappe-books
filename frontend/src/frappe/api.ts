@@ -219,7 +219,8 @@ function getQueryString(params: Record<string, unknown> = {}): string {
   return text ? `?${text}` : '';
 }
 
-function getHeaders(): Record<string, string> {
+/** Frappe's JSON request headers, with the session's CSRF token. */
+export function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'Content-Type': 'application/json; charset=utf-8',

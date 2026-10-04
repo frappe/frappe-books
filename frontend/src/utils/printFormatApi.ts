@@ -1,3 +1,4 @@
+import { getHeaders } from 'src/frappe/api';
 import { call } from 'src/web/api';
 import { downloadFile } from './browser';
 import type { PrintHints, PrintHTML } from './printFormats';
@@ -57,13 +58,21 @@ export async function getPDF(
   const response = await fetch(
     `/api/method/frappe.utils.print_format.download_pdf?${params.toString()}`
   );
-  if (!response.ok) {
-    throw new Error(await getServerMessage(response));
-  }
+  return await getPDFFile(response, name);
+}
 
-  return new File([await response.arrayBuffer()], `${name}.pdf`, {
-    type: 'application/pdf',
-  });
+/** Frappe's PDF of a report print document, as a file with the given name. */
+export async function getReportPDF(name: string, html: string): Promise<File> {
+  const response = await fetch(
+    '/api/method/frappe.utils.print_format.report_to_pdf',
+    {
+      method: 'POST',
+      headers: getHeaders(),
+      // The document's page size is already turned for landscape.
+      body: JSON.stringify({ html, orientation: 'Portrait' }),
+    }
+  );
+  return await getPDFFile(response, name);
 }
 
 /** Whether the browser can hand a PDF to the system share sheet. */
@@ -85,6 +94,16 @@ export function openPrintView(
     trigger_print: '1',
   });
   return !!window.open(`/printview?${params.toString()}`, '_blank');
+}
+
+async function getPDFFile(response: Response, name: string): Promise<File> {
+  if (!response.ok) {
+    throw new Error(await getServerMessage(response));
+  }
+
+  return new File([await response.arrayBuffer()], `${name}.pdf`, {
+    type: 'application/pdf',
+  });
 }
 
 async function getServerMessage(response: Response): Promise<string> {

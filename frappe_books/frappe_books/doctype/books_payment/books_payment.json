@@ -106,6 +106,7 @@
    "fieldtype": "Link",
    "label": "Party Account",
    "options": "Books Account",
+   "permlevel": 1,
    "reqd": 1
   },
   {
@@ -113,6 +114,7 @@
    "fieldtype": "Link",
    "label": "Payment Account",
    "options": "Books Account",
+   "permlevel": 1,
    "reqd": 1
   },
   {
@@ -156,8 +158,7 @@
   {
    "fieldname": "writeoff",
    "fieldtype": "Currency",
-   "label": "Write Off",
-   "permlevel": 1
+   "label": "Write Off"
   },
   {
    "depends_on": "eval:doc.writeoff != 0",
@@ -206,7 +207,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-04 15:00:00.000000",
+ "modified": "2026-10-05 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Payment",
@@ -246,23 +247,17 @@
    "write": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Books Sales User",
+   "role": "Books User",
    "submit": 1,
    "write": 1
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Books Purchase User"
   },
   {
    "permlevel": 1,

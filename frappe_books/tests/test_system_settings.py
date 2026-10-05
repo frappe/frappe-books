@@ -85,7 +85,7 @@ class IntegrationTestSystemSettings(IntegrationTestCase):
 				# The unchanged precision goes with each settings save.
 				set_display_precision(2)
 				self.assertRaises(frappe.PermissionError, set_display_precision, 3)
-			with self.set_user(ensure_user(BOOKS_USER, "Books Sales User")):
+			with self.set_user(ensure_user(BOOKS_USER, "Books User")):
 				self.assertRaises(frappe.PermissionError, set_display_precision, 2)
 
 			self.assertEqual(frappe.db.get_single_value("System Settings", "currency_precision"), "2")

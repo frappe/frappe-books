@@ -104,12 +104,14 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		with self.set_user(ensure_user("books-pos-shift-no-role@example.com")):
 			self.assertRaises(frappe.PermissionError, get_open_shift)
 
-	def test_user_cannot_cancel_shift(self):
+	def test_books_user_cancels_shift_others_cannot(self):
 		shift = open_shift(0)
-		user = make_user("Books Sales User")
 
-		with self.set_user(user):
+		with self.set_user(ensure_user("books-pos-shift-no-role@example.com")):
 			self.assertRaises(frappe.PermissionError, frappe.get_doc(shift.doctype, shift.name).cancel)
+		with self.set_user(make_user("Books User")):
+			frappe.get_doc(shift.doctype, shift.name).cancel()
+		self.assertEqual(shift.db_get("docstatus"), 2)
 
 
 def set_pos_accounts():

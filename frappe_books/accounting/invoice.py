@@ -135,13 +135,9 @@ class PostingInvoiceController(InvoiceController):
 		self.calculate()
 
 	def set_follow_up_defaults(self):
-		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose.
-
-		Only users who may make payments pay by default.
-		"""
+		"""Pay and transfer stock on submit when Books Defaults says where to, unless the caller chose."""
 		if self.get("make_auto_payment") is None:
-			can_pay = frappe.has_permission("Books Payment", "create")
-			self.make_auto_payment = int(bool(can_pay and default_payment_account(self.doctype)))
+			self.make_auto_payment = int(bool(default_payment_account(self.doctype)))
 		if self.get("make_auto_stock_transfer") is None:
 			inventory = frappe.db.get_single_value("Books Accounting Settings", "enable_inventory")
 			self.make_auto_stock_transfer = int(bool(inventory and invoice_transfer.default_location(self)))

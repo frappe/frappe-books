@@ -235,7 +235,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-04 13:00:00.000000",
+ "modified": "2026-10-05 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pricing Rule",
@@ -272,23 +272,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Books Sales User"
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Books Purchase User"
-  },
-  {
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Books Stock User"
+   "role": "Books User"
   }
  ],
  "row_format": "Dynamic",

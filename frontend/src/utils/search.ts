@@ -299,7 +299,10 @@ function getSetupList(fyo: Fyo): SearchItem[] {
     },
   ];
   const canImport = getImportableSchemaNames(fyo).length > 0;
-  return pages.filter((page) => canImport || page.route !== '/import-wizard');
+  return pages.filter(
+    (page) =>
+      (canImport || page.route !== '/import-wizard') && canOpen(page.route!)
+  );
 }
 
 function getNonDocSearchList(fyo: Fyo) {

@@ -216,7 +216,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				# The unchanged font goes with each settings save.
 				set_font("Arial")
 				self.assertRaises(frappe.PermissionError, set_font, "Verdana")
-			with self.set_user(ensure_user(USER, "Books Sales User")):
+			with self.set_user(ensure_user(USER, "Books User")):
 				self.assertRaises(frappe.PermissionError, set_font, "Arial")
 
 			self.assertEqual(frappe.db.get_single_value("Print Settings", "font"), "Arial")
@@ -310,7 +310,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		invoice = self.make_invoice()
 		log = frappe.get_doc({"doctype": "Error Log", "error": "Print preview test"}).insert()
 
-		with self.set_user(ensure_user(USER, "Books Sales User")):
+		with self.set_user(ensure_user(USER, "Books User")):
 			self.assertRaises(
 				frappe.PermissionError, preview_print_format, invoice.doctype, invoice.name, "<p></p>"
 			)
@@ -363,7 +363,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.assertEqual(default_print_format("Books Journal Entry"), print_format)
 
 	def test_only_settings_writers_set_print_formats_of_the_fields_shown(self):
-		with self.set_user(ensure_user(USER, "Books Sales User")):
+		with self.set_user(ensure_user(USER, "Books User")):
 			self.assertRaises(
 				frappe.PermissionError, set_print_formats, {"journal_entry_print_template": None}
 			)

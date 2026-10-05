@@ -86,6 +86,7 @@
    "in_list_view": 1,
    "label": "Account",
    "options": "Books Account",
+   "permlevel": 1,
    "reqd": 1
   },
   {
@@ -400,7 +401,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-04 13:00:00.000000",
+ "modified": "2026-10-05 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",
@@ -440,23 +441,29 @@
    "write": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Books Sales User",
+   "role": "Books User",
    "submit": 1,
    "write": 1
   },
   {
-   "email": 1,
-   "export": 1,
-   "print": 1,
+   "permlevel": 1,
    "read": 1,
-   "report": 1,
-   "role": "Books Stock User"
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Books Manager",
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

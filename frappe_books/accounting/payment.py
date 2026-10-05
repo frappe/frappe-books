@@ -104,7 +104,6 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		self.validate_accounts()
 		self.validate_payment_method()
 		allocations = _validate_allocations(self)
-		self.validate_pay_out(allocations)
 		self.validate_counter_account([invoice for invoice, _amount in allocations])
 		self.set("taxes", _realised_taxes(allocations))
 
@@ -118,15 +117,6 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 
 	def validate_payment_method(self):
 		validate_payment_details(self.payment_method, self.reference_id, self.clearance_date)
-
-	def validate_pay_out(self, allocations):
-		"""Users who cannot write off may pay money out only to refund sales returns, all of it allocated."""
-		if self.payment_type != "Pay" or self.has_permlevel_access_to("writeoff", permission_type="write"):
-			return
-		refunds = [invoice.return_against for invoice, _amount in allocations]
-		allocated = sum_decimal(amount for _invoice, amount in allocations)
-		if not refunds or not all(refunds) or allocated != as_decimal(self.amount):
-			frappe.throw(_("You can pay money out only to refund sales returns."), frappe.PermissionError)
 
 	def validate_counter_account(self, invoices):
 		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""

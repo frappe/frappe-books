@@ -36,7 +36,13 @@ function isVisible(item: SidebarItem | SidebarRoot): boolean {
   return !item.hidden?.() && canOpen(item.route);
 }
 
-/** Whether the user can read the list or open the report the route shows. */
+/** Pages that need a right, by their route's first part. */
+const pageRights: Record<string, () => boolean> = {
+  'chart-of-accounts': () => fyo.can('Account', 'read'),
+  settings: canEditSettings,
+};
+
+/** Whether the user can read the list, open the report or use the page the route shows. */
 export function canOpen(route: string): boolean {
   const [, page, name] = route.split('/');
   if (page === 'list') {
@@ -48,7 +54,12 @@ export function canOpen(route: string): boolean {
     return canOpenReport(report.serverReportName);
   }
 
-  return true;
+  return pageRights[page]?.() ?? true;
+}
+
+/** Whether the user may change the settings, which the Setup group gathers. */
+function canEditSettings(): boolean {
+  return fyo.can('AccountingSettings', 'write');
 }
 
 function getRegionalSidebar(): SidebarRoot[] {
@@ -337,12 +348,12 @@ function getCompleteSidebar(): SidebarConfig {
       name: 'setup',
       icon: 'lucide-sliders-horizontal',
       route: '/chart-of-accounts',
+      hidden: () => !canEditSettings(),
       items: [
         {
           label: t`Chart of Accounts`,
           name: 'chart-of-accounts',
           route: '/chart-of-accounts',
-          hidden: () => !fyo.can('Account', 'read'),
         },
         {
           label: t`Tax Templates`,

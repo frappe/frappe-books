@@ -295,7 +295,7 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		)
 
 	def test_stock_users_see_quantities_but_not_values(self):
-		with self.set_user(ensure_user("books-stock-reports@example.com", "Books Stock User")):
+		with self.set_user(ensure_user("books-stock-reports@example.com", "Books User")):
 			for report in ("Books Stock Ledger", "Books Stock Balance"):
 				with self.subTest(report=report):
 					result = run(report, {"item": self.item})

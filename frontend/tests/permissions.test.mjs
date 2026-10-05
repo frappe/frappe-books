@@ -6,6 +6,7 @@ import {
 } from '../fyo/utils/permissions.ts';
 import {
   fyo,
+  getDocType,
   getImportableSchemaNames,
   getModel,
   getSidebarConfig,
@@ -126,7 +127,7 @@ test('a new single document is writable with the write permission', () => {
   assert.equal(wizard.canWrite, true);
 });
 
-test('the sidebar shows only the lists and reports the user can open', () => {
+test('the sidebar shows only the lists, reports and groups the user can open', () => {
   const lists = ['SalesQuote', 'SalesInvoice', 'Party', 'Item', 'Account'];
   fyo.store.permissions = {
     doctypes: Object.fromEntries(lists.map((name) => [name, `Books ${name}`])),
@@ -159,15 +160,20 @@ test('the sidebar shows only the lists and reports the user can open', () => {
       route: '/report/TrialBalance',
       items: ['Trial Balance'],
     },
-    { label: 'Setup', route: '/settings', items: ['Settings'] },
   ]);
 });
 
 test('Setup lists Number Series for a user who can read them', () => {
   const setupItems = (canRead) => {
     fyo.store.permissions = {
-      doctypes: { NumberSeries: 'Books Number Series' },
-      user: { can_read: canRead ? ['Books Number Series'] : [] },
+      doctypes: {
+        NumberSeries: 'Books Number Series',
+        AccountingSettings: 'Books Accounting Settings',
+      },
+      user: {
+        can_read: canRead ? ['Books Number Series'] : [],
+        can_write: ['Books Accounting Settings'],
+      },
     };
     const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
     return setup.items.map(({ label }) => label);
@@ -238,4 +244,43 @@ test('a submitted document links only to the ledgers the user may open', () => {
 
   delete window.frappe.boot.allowed_reports;
   assert.deepEqual(actions, ['Stock entries']);
+});
+
+test("a row's field levels follow its parent's permissions", async () => {
+  const account = (fields) =>
+    fields.find(({ fieldname }) => fieldname === 'account');
+  window.frappe.boot.user.roles = ['Books User'];
+
+  try {
+    await loadFrappeModels();
+    const invoice = getDocType('SalesInvoice');
+    for (const field of [
+      account(invoice.schema.fields),
+      account(invoice.tables.items.schema.fields),
+    ]) {
+      assert.equal(field.hidden, true);
+      assert.equal(field.required, undefined);
+    }
+  } finally {
+    window.frappe.boot.user.roles = ['Books Manager'];
+    await loadFrappeModels();
+  }
+});
+
+test('the palette offers the Setup pages only to users who can use them', () => {
+  fyo.store.permissions = {
+    doctypes: {
+      Account: 'Books Account',
+      AccountingSettings: 'Books Accounting Settings',
+    },
+    user: { can_read: [] },
+  };
+
+  const pages = new Search(fyo)._nonDocSearchList
+    .filter(({ group }) => group === 'Page')
+    .map(({ label }) => label);
+
+  assert.ok(pages.includes('Dashboard'));
+  assert.ok(!pages.includes('Settings'));
+  assert.ok(!pages.includes('Chart of Accounts'));
 });

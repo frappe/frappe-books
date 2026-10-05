@@ -127,7 +127,7 @@ test('a new single document is writable with the write permission', () => {
   assert.equal(wizard.canWrite, true);
 });
 
-test('the sidebar shows only the lists and reports the user can open', () => {
+test('the sidebar shows only the lists, reports and groups the user can open', () => {
   const lists = ['SalesQuote', 'SalesInvoice', 'Party', 'Item', 'Account'];
   fyo.store.permissions = {
     doctypes: Object.fromEntries(lists.map((name) => [name, `Books ${name}`])),
@@ -160,15 +160,20 @@ test('the sidebar shows only the lists and reports the user can open', () => {
       route: '/report/TrialBalance',
       items: ['Trial Balance'],
     },
-    { label: 'Setup', route: '/settings', items: ['Settings'] },
   ]);
 });
 
 test('Setup lists Number Series for a user who can read them', () => {
   const setupItems = (canRead) => {
     fyo.store.permissions = {
-      doctypes: { NumberSeries: 'Books Number Series' },
-      user: { can_read: canRead ? ['Books Number Series'] : [] },
+      doctypes: {
+        NumberSeries: 'Books Number Series',
+        AccountingSettings: 'Books Accounting Settings',
+      },
+      user: {
+        can_read: canRead ? ['Books Number Series'] : [],
+        can_write: ['Books Accounting Settings'],
+      },
     };
     const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
     return setup.items.map(({ label }) => label);

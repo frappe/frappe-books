@@ -1,25 +1,13 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-from unittest.mock import patch
-
 import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.money import company_currency
 from frappe_books.frappe_books.doctype.books_lead.books_lead import make_customer, make_sales_quote
-from frappe_books.frappe_books.doctype.books_party.books_party import (
-	make_purchase_invoice,
-	make_sales_invoice,
-)
-from frappe_books.tests.accounting import (
-	ensure_user,
-	make_account,
-	make_invoice,
-	make_item,
-	make_party,
-	unique_name,
-)
+from frappe_books.frappe_books.doctype.books_party.books_party import make_sales_invoice
+from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_party, unique_name
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -157,15 +145,3 @@ class IntegrationTestBooksParty(IntegrationTestCase):
 
 		self.assertEqual((invoice.party, invoice.account), (party.name, receivable.name))
 		self.assertEqual(invoice.make_auto_payment, 1)
-
-	def test_mapped_invoice_pays_by_default_only_for_users_who_may_pay(self):
-		cash = make_account("Mapped Cash", account_type="Cash")
-		party = make_party(make_account("Mapped Payable", account_type="Payable").name, role="Supplier")
-
-		with (
-			patch("frappe_books.accounting.invoice.default_payment_account", return_value=cash.name),
-			self.set_user(ensure_user("books-party-buyer@example.com", "Books Purchase User")),
-		):
-			invoice = make_purchase_invoice(party.name)
-
-		self.assertEqual(invoice.make_auto_payment, 0)

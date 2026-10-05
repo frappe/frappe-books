@@ -48,7 +48,7 @@ class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 		self.assertIsNone(frappe.cache.hget("bootinfo", frappe.session.user))
 
 	def test_books_user_reads_frappe_currencies(self):
-		with self.set_user(ensure_user(BOOKS_USER, "Books Sales User")):
+		with self.set_user(ensure_user(BOOKS_USER, "Books User")):
 			currency = client.get("Currency", "CHF")
 
 		self.assertEqual(currency["name"], "CHF")

@@ -25,7 +25,7 @@ class IntegrationTestBooksAddress(IntegrationTestCase):
 
 	def test_books_user_picks_the_country_from_frappe_countries(self):
 		self.assertEqual(frappe.get_meta("Books Address").get_field("country").options, "Country")
-		with self.set_user(ensure_user("books-address-user@example.com", "Books Sales User")):
+		with self.set_user(ensure_user("books-address-user@example.com", "Books User")):
 			found = search_link("Country", "indi", page_length=5)
 		self.assertIn("India", [row["value"] for row in found])
 

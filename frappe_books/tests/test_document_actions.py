@@ -292,20 +292,16 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			linked_docs=payments,
 		)
 
-	def test_linked_documents_are_cancelled_with_the_users_rights(self):
+	def test_books_user_cancels_an_invoice_with_its_payments(self):
 		invoice = self._paid_invoice()
 		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
-		with self.set_user(ensure_user("books-cancel-user@example.com", "Books Sales User")):
-			self.assertRaises(
-				frappe.PermissionError,
-				run_invoice_method,
-				*(invoice, "cancel_with_linked_docs"),
-				linked_docs=linked_docs,
-			)
+		with self.set_user(ensure_user("books-cancel-user@example.com", "Books User")):
+			run_invoice_method(invoice, "cancel_with_linked_docs", linked_docs=linked_docs)
 
-		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 2)
+		self.assertEqual(invoice.db_get("docstatus"), 2)
 
 	def test_a_duplicate_of_a_returned_invoice_is_a_new_invoice(self):
 		invoice = self._paid_invoice(make_auto_payment=0)

@@ -64,7 +64,7 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 		)
 
 	def test_books_user_takes_names_from_the_series(self):
-		with self.set_user(ensure_user(BOOKS_USER, "Books Stock User")):
+		with self.set_user(ensure_user(BOOKS_USER, "Books User")):
 			names = new_item_names("Books Serial Number", self.item, 1)
 
 		self.assertEqual(names, [f"{self.prefix}1001"])

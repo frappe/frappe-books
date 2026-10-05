@@ -122,7 +122,7 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_preview_needs_the_right_to_make_journal_entries(self):
 		journal_entry = frappe.new_doc("Books Journal Entry")
 		with (
-			self.set_user(ensure_user(READ_ONLY_USER, "Books Sales User")),
+			self.set_user(ensure_user(READ_ONLY_USER, "Books User")),
 			self.assertRaises(frappe.PermissionError),
 		):
 			journal_entry.preview()

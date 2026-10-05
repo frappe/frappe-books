@@ -17,18 +17,17 @@ DEFAULT_PRINT_FORMATS = {
 }
 POS_PRINT_FORMAT = "Business-POS - Sales Invoice"
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
-JOB_ROLES = ("Books Sales User", "Books Purchase User", "Books Stock User")
 # Rights Books roles need on core doctypes the Books interface uses; if_owner limits them to own records
 CORE_PERMISSIONS = {
 	"Currency": {
-		**dict.fromkeys(JOB_ROLES, ("read", "report", "print", "export", "email")),
+		"Books User": ("read", "report", "print", "export", "email"),
 		"Books Manager": ("read", "write", "create", "delete", "report", "print", "export", "email", "share"),
 	},
 	"Data Import": {
 		"Books Manager": ("read", "write", "create", "if_owner"),
 	},
 	"Print Format": {
-		**dict.fromkeys(JOB_ROLES, ("read", "print")),
+		"Books User": ("read", "print"),
 		"Books Manager": ("read", "write", "create", "delete", "print"),
 	},
 }

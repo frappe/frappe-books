@@ -53,9 +53,7 @@
  "public": 1,
  "quick_lists": [],
  "roles": [
-  {"role":"Books Sales User"},
-  {"role":"Books Purchase User"},
-  {"role":"Books Stock User"},
+  {"role":"Books User"},
   {"role":"Books Manager"},
   {"role":"System Manager"}
  ],

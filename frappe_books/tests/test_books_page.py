@@ -19,7 +19,7 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		_make_user(BOOKS_USER, "Books Sales User")
+		_make_user(BOOKS_USER, "Books User")
 		_make_user(DESK_USER, "Translator")
 		_make_user(SHARED_USER, "Translator")
 

@@ -155,8 +155,12 @@ class IntegrationTestPermissions(IntegrationTestCase):
 				"Books Sales Invoice", party.name, other_receivable.name, item.name, income.name, items=[row]
 			)
 
+			read_back = read_doc("Books Sales Invoice", invoice.name)
+
 		self.assertEqual(item.db_get("income_account"), income.name)
 		self.assertEqual(invoice.account, receivable.name)
+		self.assertIsNone(read_back["account"])
+		self.assertIsNone(read_back["items"][0]["account"])
 
 	def test_books_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")

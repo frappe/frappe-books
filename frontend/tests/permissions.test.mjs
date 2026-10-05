@@ -266,3 +266,21 @@ test("a row's field levels follow its parent's permissions", async () => {
     await loadFrappeModels();
   }
 });
+
+test('the palette offers the Setup pages only to users who can use them', () => {
+  fyo.store.permissions = {
+    doctypes: {
+      Account: 'Books Account',
+      AccountingSettings: 'Books Accounting Settings',
+    },
+    user: { can_read: [] },
+  };
+
+  const pages = new Search(fyo)._nonDocSearchList
+    .filter(({ group }) => group === 'Page')
+    .map(({ label }) => label);
+
+  assert.ok(pages.includes('Dashboard'));
+  assert.ok(!pages.includes('Settings'));
+  assert.ok(!pages.includes('Chart of Accounts'));
+});

@@ -253,8 +253,8 @@ test("a row's field levels follow its parent's permissions", async () => {
       account(invoice.schema.fields),
       account(invoice.tables.items.schema.fields),
     ]) {
-      assert.equal(field.readOnly, true);
-      assert.equal(field.hidden, undefined);
+      assert.equal(field.hidden, true);
+      assert.equal(field.required, undefined);
     }
   } finally {
     window.frappe.boot.user.roles = ['Books Manager'];

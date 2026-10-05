@@ -208,7 +208,8 @@ function toField(docfield: DocField, context: FieldContext): Field {
     placeholder: docfield.placeholder,
     sub_label: docfield.description,
     isCustom: !!docfield.is_custom_field,
-    required: docfield.reqd ? true : undefined,
+    // The server fills a field the user's roles cannot write.
+    required: docfield.reqd && levels.write.has(level) ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
     create: isLink(docfield) || undefined,

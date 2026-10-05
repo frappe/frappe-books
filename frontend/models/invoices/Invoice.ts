@@ -128,10 +128,15 @@ export abstract class Invoice extends FrappeDoc {
       return undefined;
     }
 
+    const amount = this.fyo.format(this.outstanding_amount, 'Currency');
+    // A Books User does not see the accounts.
+    if (!this.account) {
+      return this.fyo.t`Payment of ${amount} will be made on Submit.`;
+    }
+
     const [from = '', to = ''] = this.isSales
       ? [this.account, this.autoPaymentAccount]
       : [this.autoPaymentAccount, this.account];
-    const amount = this.fyo.format(this.outstanding_amount, 'Currency');
     return this.fyo
       .t`Payment of ${amount} will be made from account "${from}" to account "${to}" on Submit.`;
   }

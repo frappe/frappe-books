@@ -156,8 +156,7 @@
   {
    "fieldname": "writeoff",
    "fieldtype": "Currency",
-   "label": "Write Off",
-   "permlevel": 1
+   "label": "Write Off"
   },
   {
    "depends_on": "eval:doc.writeoff != 0",
@@ -206,7 +205,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-04 15:00:00.000000",
+ "modified": "2026-10-04 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Payment",
@@ -263,18 +262,6 @@
    "read": 1,
    "report": 1,
    "role": "Books Purchase User"
-  },
-  {
-   "permlevel": 1,
-   "read": 1,
-   "role": "System Manager",
-   "write": 1
-  },
-  {
-   "permlevel": 1,
-   "read": 1,
-   "role": "Books Manager",
-   "write": 1
   }
  ],
  "row_format": "Dynamic",

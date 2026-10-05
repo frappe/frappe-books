@@ -161,8 +161,9 @@ function getTables(
     if (child) {
       const name = getTableSchemaName(child.name);
       const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;
+      // Rows take their parent's permissions, as in Frappe.
       tables[field.fieldname] = toDocType(
-        child,
+        { ...child, permissions: meta.permissions },
         name,
         RowModel,
         placements[child.name]

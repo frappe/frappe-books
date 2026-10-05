@@ -113,6 +113,7 @@
    "in_list_view": 1,
    "label": "Sales Acc.",
    "options": "Books Account",
+   "permlevel": 1,
    "placeholder": "Income",
    "reqd": 1
   },
@@ -122,6 +123,7 @@
    "in_list_view": 1,
    "label": "Purchase Acc.",
    "options": "Books Account",
+   "permlevel": 1,
    "placeholder": "Expense",
    "reqd": 1
   },
@@ -202,7 +204,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-05 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item",
@@ -244,6 +246,23 @@
    "report": 1,
    "role": "Books User",
    "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Books Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Books User"
   }
  ],
  "row_format": "Dynamic",

@@ -198,7 +198,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		party = make_party(make_account("Permlevel Receivable", account_type="Receivable").name)
 		party.db_set("email", "hidden@example.com")
 		email = frappe.get_meta("Books Party").get_field("email")
-		with patch.object(email, "permlevel", 1), self.set_user(BOOKS_USER):
+		with patch.object(email, "permlevel", 2), self.set_user(BOOKS_USER):
 			self.assertIsNone(read_doc("Books Party", party.name).get("email"))
 
 	def test_counts_skip_documents_the_user_cannot_read(self):

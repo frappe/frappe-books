@@ -6,6 +6,7 @@ import {
 } from '../fyo/utils/permissions.ts';
 import {
   fyo,
+  getDocType,
   getImportableSchemaNames,
   getModel,
   getSidebarConfig,
@@ -238,4 +239,25 @@ test('a submitted document links only to the ledgers the user may open', () => {
 
   delete window.frappe.boot.allowed_reports;
   assert.deepEqual(actions, ['Stock entries']);
+});
+
+test("a row's field levels follow its parent's permissions", async () => {
+  const account = (fields) =>
+    fields.find(({ fieldname }) => fieldname === 'account');
+  window.frappe.boot.user.roles = ['Books User'];
+
+  try {
+    await loadFrappeModels();
+    const invoice = getDocType('SalesInvoice');
+    for (const field of [
+      account(invoice.schema.fields),
+      account(invoice.tables.items.schema.fields),
+    ]) {
+      assert.equal(field.readOnly, true);
+      assert.equal(field.hidden, undefined);
+    }
+  } finally {
+    window.frappe.boot.user.roles = ['Books Manager'];
+    await loadFrappeModels();
+  }
 });

@@ -137,6 +137,27 @@ class IntegrationTestPermissions(IntegrationTestCase):
 					self.assertRaises(frappe.PermissionError, method, "This Month")
 			self.assertRaises(frappe.PermissionError, get_account_balances)
 
+	def test_books_user_keeps_the_accounts_the_server_chooses(self):
+		income = make_account("Rights Income", root_type="Income", account_type="Income Account")
+		other_income = make_account("Rights Other Income", root_type="Income", account_type="Income Account")
+		expense = make_account("Rights Expense", root_type="Expense", account_type="Expense Account")
+		receivable = make_account("Rights Receivable", account_type="Receivable")
+		other_receivable = make_account("Rights Other Receivable", account_type="Receivable")
+		item = make_item(income.name, expense.name)
+		party = make_party(receivable.name)
+		row = {"item": item.name, "account": other_income.name, "rate": 100, "quantity": 1}
+
+		with self.set_user(BOOKS_USER):
+			edited = frappe.get_doc("Books Item", item.name)
+			edited.income_account = other_income.name
+			edited.save()
+			invoice = make_invoice(
+				"Books Sales Invoice", party.name, other_receivable.name, item.name, income.name, items=[row]
+			)
+
+		self.assertEqual(item.db_get("income_account"), income.name)
+		self.assertEqual(invoice.account, receivable.name)
+
 	def test_books_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")
 		with self.set_user(BOOKS_USER):

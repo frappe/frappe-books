@@ -163,6 +163,7 @@ import { Button as FrappeButton, Combobox as FrappeCombobox } from 'frappe-ui';
 import { FieldTypeEnum } from 'schemas/types';
 import { fuzzyMatch } from 'src/utils';
 import { getModel, getSchema, toSchemaName } from 'src/frappe/registry';
+import { fyo } from 'src/initFyo';
 import { h } from 'vue';
 import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
 import MobilePicker from 'src/mobile/MobilePicker.vue';
@@ -258,10 +259,12 @@ export default {
         return false;
       }
 
-      return Boolean(
+      const hasTarget = Boolean(
         (isLink && this.df.target) ||
         (this.df.references && this.doc?.[this.df.references])
       );
+      // Only entries the user may read open.
+      return hasTarget && fyo.can(this.linkSchemaName, 'read');
     },
   },
   watch: {

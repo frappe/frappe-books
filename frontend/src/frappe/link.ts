@@ -30,7 +30,7 @@ export async function searchFrappeLink(
     doctype,
     txt: meta.translated_doctype ? words : [...words].join('%'),
     filters: filters ?? [],
-    filter_fields: fields,
+    filter_fields: JSON.stringify(fields),
     page_length: limit,
     as_dict: true,
   });

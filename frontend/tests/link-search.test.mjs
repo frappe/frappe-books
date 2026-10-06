@@ -74,7 +74,7 @@ test('link options grouped by a record field come from one search', async () => 
     { label: 'Sales', value: 'Sales', group: 'Income' },
   ]);
   assert.equal(requests.length, 1);
-  assert.deepEqual(requests[0].args.filter_fields, ['root_type']);
+  assert.deepEqual(JSON.parse(requests[0].args.filter_fields), ['root_type']);
 });
 
 test("a multi-label link shows its records' other fields from one search", async () => {
@@ -97,7 +97,10 @@ test("a multi-label link shows its records' other fields from one search", async
     },
   ]);
   assert.equal(requests.length, 1);
-  assert.deepEqual(requests[0].args.filter_fields, ['phone', 'email']);
+  assert.deepEqual(JSON.parse(requests[0].args.filter_fields), [
+    'phone',
+    'email',
+  ]);
 });
 
 test("a link without model filters searches by its DocField's link_filters", async (t) => {

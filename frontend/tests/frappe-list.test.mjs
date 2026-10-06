@@ -198,7 +198,7 @@ test("link options come from Frappe's link search, letters matched in order", as
       ['item_usage', 'not in', ['Purchases']],
       ['track_item', '=', 1],
     ],
-    filter_fields: [],
+    filter_fields: '[]',
     page_length: 50,
     as_dict: true,
   });

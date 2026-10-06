@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.locale import get_number_format
 from frappe.model.document import Document
-from frappe.utils import get_currency_precision
+from frappe.utils import cint
 
 from frappe_books.formats import frappe_date_format, frappe_number_format
 from frappe_books.settings import update_frappe_settings
@@ -68,8 +68,8 @@ class BooksSystemSettings(Document):
 
 def get_display_precision() -> int:
 	"""Frappe's Currency Precision, else the decimals of its number format."""
-	precision = get_currency_precision()
-	return get_number_format().precision if precision is None else precision
+	precision = frappe.db.get_default("currency_precision")
+	return get_number_format().precision if precision in (None, "") else cint(precision)
 
 
 @frappe.whitelist(methods=["POST"])

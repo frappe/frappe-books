@@ -57,7 +57,7 @@ test('links Frappe cannot find stop the import', async ({ page }) => {
 
   const error = page.getByRole('dialog', { name: 'Cannot import' });
   await expect(error).toContainText(
-    `Following links do not exist: (Account, Missing ${run}).`
+    `The following values do not exist for Books Account: Missing ${run}`
   );
 });
 

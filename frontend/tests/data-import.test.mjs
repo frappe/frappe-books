@@ -34,20 +34,9 @@ function stubUpload(fileUrl) {
   return uploads;
 }
 
-test('the grid file is attached to a new Data Import, which lists missing links', async () => {
+test('the grid file is attached to a new Data Import', async () => {
   const calls = stubServer((method) =>
-    method === 'frappe.client.insert'
-      ? { name: 'DI-1' }
-      : {
-          value_mappings: [
-            {
-              fieldtype: 'Link',
-              link_doctype: 'Books Account',
-              source_value: 'Nope',
-            },
-            { fieldtype: 'Select', link_doctype: null, source_value: 'Both?' },
-          ],
-        }
+    method === 'frappe.client.insert' ? { name: 'DI-1' } : {}
   );
   const uploads = stubUpload('/private/files/Party.csv');
 
@@ -80,38 +69,34 @@ test('the grid file is attached to a new Data Import, which lists missing links'
       value: '/private/files/Party.csv',
     },
   });
-  assert.deepEqual(dataImport.missingLinks, [
-    { doctype: 'Books Account', name: 'Nope' },
-  ]);
 });
 
 test('an import is polled until Frappe finishes and its failures are read back', async () => {
   const statuses = [
-    { status: 'In Progress', processed_records: 1, total_records: 2 },
-    { status: 'Partial Success', processed_records: 2, total_records: 2 },
+    { status: 'In Progress', success: 1, total_records: 2 },
+    { status: 'Partial Success', success: 1, failed: 1, total_records: 2 },
   ];
-  const calls = stubServer((method, args) => {
+  const calls = stubServer((method) => {
     if (method === `${METHODS}.get_import_status`) {
       return statuses.shift();
     }
     if (method === `${METHODS}.get_import_logs`) {
-      return args.status === 'failed'
-        ? [
-            {
-              docname: null,
-              messages: JSON.stringify([{ message: 'Customer is required' }]),
-              exception: 'Traceback\nfrappe.exceptions.MandatoryError: party',
-              row_indexes: '[3, 4]',
-            },
-          ]
-        : [
-            {
-              docname: 'SINV-1001',
-              messages: '"[]"',
-              exception: null,
-              row_indexes: '[2]',
-            },
-          ];
+      return [
+        {
+          success: 1,
+          docname: 'SINV-1001',
+          messages: '"[]"',
+          exception: null,
+          row_indexes: '[2]',
+        },
+        {
+          success: 0,
+          docname: null,
+          messages: JSON.stringify([{ message: 'Customer is required' }]),
+          exception: 'Traceback\nfrappe.exceptions.MandatoryError: party',
+          row_indexes: '[3, 4]',
+        },
+      ];
     }
     return true;
   });
@@ -126,12 +111,10 @@ test('an import is polled until Frappe finishes and its failures are read back',
     method: `${METHODS}.form_start_import`,
     args: { data_import: 'DI-1' },
   });
-  assert.deepEqual(await dataImport.getLogs('failed'), [
-    { docname: null, message: 'Customer is required', rows: [3, 4] },
-  ]);
-  assert.deepEqual(await dataImport.getLogs('success'), [
-    { docname: 'SINV-1001', message: '', rows: [2] },
-  ]);
+  assert.deepEqual(await dataImport.getLogs(), {
+    success: [{ docname: 'SINV-1001', message: '', rows: [2] }],
+    failed: [{ docname: null, message: 'Customer is required', rows: [3, 4] }],
+  });
 });
 
 test('an import Frappe refuses returns the reasons it saved', async () => {
@@ -155,7 +138,7 @@ test('an import Frappe refuses returns the reasons it saved', async () => {
 test('an import that stops before any row fails loudly', async () => {
   stubServer((method) =>
     method === `${METHODS}.get_import_status`
-      ? { status: 'Error', processed_records: 0 }
+      ? { status: 'Error', total_records: 2 }
       : true
   );
 

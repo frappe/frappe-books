@@ -100,7 +100,9 @@
           class="w-max min-w-full list-gap-4 list-row-px-3 sm:list-row-px-5"
         >
           <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
-            <FrappeListHeaderCell class="justify-center">#</FrappeListHeaderCell>
+            <FrappeListHeaderCell class="justify-center"
+              >#</FrappeListHeaderCell
+            >
             <FrappeListHeaderCell v-for="index in columnIterator" :key="index">
               <Select
                 class="min-w-0 flex-1"
@@ -108,12 +110,18 @@
                 :border="true"
                 :df="gridColumnTitleDf"
                 :value="importer.assignedTemplateFields[index]!"
-                @change="(value: string | null) => importer.setTemplateField(index, value)"
+                @change="
+                  (value: string | null) =>
+                    importer.setTemplateField(index, value)
+                "
               />
             </FrappeListHeaderCell>
           </FrappeListHeader>
 
-          <FrappeListRows :items="importer.valueMatrix" :row-key="getImportRowKey">
+          <FrappeListRows
+            :items="importer.valueMatrix"
+            :row-key="getImportRowKey"
+          >
             <template #default="{ item: row, index: ridx, value }">
               <FrappeListRow :value="value" class="min-h-12 py-2">
                 <FrappeListCell class="justify-center">
@@ -159,7 +167,11 @@
                     class="min-w-0 flex-1"
                     :invalid="!!val.error"
                     :title="getFieldTitle(val)"
-                    :df="importer.templateFieldsMap.get(importer.assignedTemplateFields[cidx]!)"
+                    :df="
+                      importer.templateFieldsMap.get(
+                        importer.assignedTemplateFields[cidx]!
+                      )
+                    "
                     size="small"
                     :rows="1"
                     :border="true"
@@ -198,7 +210,10 @@
     >
       <FrappeScrollArea viewport-class="max-h-80">
         <div class="space-y-4">
-          <div v-for="[key, value] of columnPickerFieldsMap.entries()" :key="key">
+          <div
+            v-for="[key, value] of columnPickerFieldsMap.entries()"
+            :key="key"
+          >
             <h2 class="text-sm-semibold text-ink-gray-8">
               {{ key }}
             </h2>
@@ -298,7 +313,10 @@
           </FrappeScrollArea>
         </div>
 
-        <p v-if="failed.length === 0 && success.length === 0" class="text-ink-gray-8">
+        <p
+          v-if="failed.length === 0 && success.length === 0"
+          class="text-ink-gray-8"
+        >
           {{ t`No entries were imported.` }}
         </p>
       </div>
@@ -335,9 +353,9 @@ import Select from 'src/components/Controls/Select.vue';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
-import { DataImport, MissingLink } from 'src/dataImport';
+import { DataImport } from 'src/dataImport';
 import { getDocType } from 'src/frappe/doctypes';
-import { getDoctypeLabel, getSchema } from 'src/frappe/registry';
+import { getSchema } from 'src/frappe/registry';
 import {
   ImportFile,
   Importer,
@@ -421,7 +439,8 @@ export default defineComponent({
       }
 
       if (this.requiredNotSelected.length) {
-        return this.t`Required fields not selected: ${this.requiredNotSelected.join(', ')}`;
+        return this
+          .t`Required fields not selected: ${this.requiredNotSelected.join(', ')}`;
       }
 
       return '';
@@ -451,7 +470,7 @@ export default defineComponent({
 
       return Math.min(
         this.importer.assignedTemplateFields.length,
-        this.importer.valueMatrix[0].length,
+        this.importer.valueMatrix[0].length
       );
     },
     columnIterator(): number[] {
@@ -463,7 +482,8 @@ export default defineComponent({
       return !!this.nullOrImporter;
     },
     numColumnsPicked(): number {
-      return [...this.importer.templateFieldsPicked.values()].filter(Boolean).length;
+      return [...this.importer.templateFieldsPicked.values()].filter(Boolean)
+        .length;
     },
     columnPickerFieldsMap(): Map<string, TemplateField[]> {
       const map: Map<string, TemplateField[]> = new Map();
@@ -510,7 +530,11 @@ export default defineComponent({
         actions.push({ label: this.t`Show me`, onClick: this.showMe });
       }
 
-      actions.push({ label: this.t`Done`, variant: 'solid', onClick: this.clear });
+      actions.push({
+        label: this.t`Done`,
+        variant: 'solid',
+        onClick: this.clear,
+      });
       return actions;
     },
     actions(): Action[] {
@@ -609,7 +633,11 @@ export default defineComponent({
     getImportRowKey(_row: unknown, index: number): number {
       return index;
     },
-    getFieldTitle(vmi: { value?: DocValue; rawValue?: RawValue; error?: boolean }): string {
+    getFieldTitle(vmi: {
+      value?: DocValue;
+      rawValue?: RawValue;
+      error?: boolean;
+    }): string {
       const title: string[] = [];
       if (vmi.value != null) {
         title.push(this.t`Value: ${String(vmi.value)}`);
@@ -715,14 +743,6 @@ export default defineComponent({
       return getDocType(this.importType).doctype;
     },
     async checkImportFile(dataImport: DataImport): Promise<boolean> {
-      const { missingLinks } = dataImport;
-      if (missingLinks.length) {
-        const links = this.getLinkLabels(missingLinks).join(', ');
-        return await this.showCannotImport(
-          this.t`Following links do not exist: ${links}.`
-        );
-      }
-
       const warnings = await dataImport.getWarnings();
       if (warnings.length) {
         return await this.showCannotImport(warnings.join('\n'));
@@ -730,35 +750,20 @@ export default defineComponent({
 
       return true;
     },
-    /** Missing links as (schema, name), grouped by schema. */
-    getLinkLabels(links: MissingLink[]): string[] {
-      const doctypes = [...new Set(links.map(({ doctype }) => doctype))];
-      return doctypes.flatMap((doctype) => {
-        const names = links
-          .filter((link) => link.doctype === doctype)
-          .map(({ name }) => name);
-        const label = getDoctypeLabel(doctype);
-        return [...new Set(names)].map((name) => `(${label}, ${name})`);
-      });
-    },
     async runImport(dataImport: DataImport): Promise<string[]> {
       const progress = toast.loading(this.t`Importing entries...`);
       try {
         return await dataImport.run(({ processed, total }) => {
-          toast.loading(
-            this.t`${processed} entries made out of ${total}...`,
-            { id: progress }
-          );
+          toast.loading(this.t`${processed} entries made out of ${total}...`, {
+            id: progress,
+          });
         });
       } finally {
         toast.dismiss(progress);
       }
     },
     async setResults(dataImport: DataImport, file: ImportFile): Promise<void> {
-      const [imported, failed] = await Promise.all([
-        dataImport.getLogs('success'),
-        dataImport.getLogs('failed'),
-      ]);
+      const { success: imported, failed } = await dataImport.getLogs();
       const failedRows = failed.map(({ rows }) => getGridRows(file, rows));
       this.success = imported.map(({ docname }) => docname ?? '');
       this.failed = failed.map(({ message }, index) => ({

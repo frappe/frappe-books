@@ -7,12 +7,6 @@ const METHODS = 'frappe.core.doctype.data_import.data_import';
 const FINISHED = ['Success', 'Partial Success', 'Error', 'Timed Out'];
 const POLL_INTERVAL = 1000;
 
-/** A file value Frappe could not find the linked record of. */
-export interface MissingLink {
-  doctype: string;
-  name: string;
-}
-
 export interface ImportProgress {
   processed: number;
   total: number;
@@ -27,6 +21,7 @@ export interface ImportLog {
 }
 
 interface RawImportLog {
+  success: 0 | 1;
   docname: string | null;
   messages: string;
   exception: string | null;
@@ -38,16 +33,12 @@ interface ImportWarning {
   message: string;
 }
 
-interface ValueMapping {
-  fieldtype: string;
-  link_doctype: string | null;
-  source_value: string;
-}
-
 interface ImportStatus {
   status: string;
   total_records?: number;
-  processed_records?: number;
+  /** Counts of the logged documents, by outcome. */
+  success?: number;
+  failed?: number;
 }
 
 /**
@@ -58,7 +49,6 @@ export class DataImport {
   name: string;
   /** Whether Frappe submits what it imports. It is set once, on insert. */
   submit: boolean;
-  missingLinks: MissingLink[] = [];
 
   constructor(name: string, submit: boolean) {
     this.name = name;
@@ -85,24 +75,15 @@ export class DataImport {
       fieldname: 'import_file',
       private: true,
     });
-    const { value_mappings } = await call<{ value_mappings: ValueMapping[] }>(
-      'frappe.client.set_value',
-      {
-        doctype: DATA_IMPORT,
-        name: this.name,
-        fieldname: 'import_file',
-        value: file.file_url,
-      }
-    );
-    this.missingLinks = value_mappings
-      .filter(({ fieldtype }) => fieldtype === 'Link')
-      .map(({ link_doctype, source_value }) => ({
-        doctype: link_doctype ?? '',
-        name: source_value,
-      }));
+    await call('frappe.client.set_value', {
+      doctype: DATA_IMPORT,
+      name: this.name,
+      fieldname: 'import_file',
+      value: file.file_url,
+    });
   }
 
-  /** Messages of the problems in the file that stop the import, other than missing links. */
+  /** Messages of the problems in the file that stop the import. */
   async getWarnings(): Promise<string[]> {
     const { warnings } = await call<{ warnings: ImportWarning[] }>(
       `${METHODS}.get_preview_from_template`,
@@ -141,7 +122,7 @@ export class DataImport {
       }
 
       onProgress({
-        processed: status.processed_records ?? 0,
+        processed: getProcessed(status),
         total: status.total_records ?? 0,
       });
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
@@ -166,22 +147,33 @@ export class DataImport {
     return warnings.map(({ message }) => message);
   }
 
-  async getLogs(status: 'success' | 'failed'): Promise<ImportLog[]> {
+  async getLogs(): Promise<{ success: ImportLog[]; failed: ImportLog[] }> {
     const logs = await call<RawImportLog[]>(`${METHODS}.get_import_logs`, {
       data_import: this.name,
-      status,
     });
-    return logs.map((log) => ({
+    const toLog = (log: RawImportLog) => ({
       docname: log.docname,
-      message: status === 'failed' ? getLogMessage(log) : '',
+      message: log.success ? '' : getLogMessage(log),
       rows: JSON.parse(log.row_indexes) as number[],
-    }));
+    });
+    return {
+      success: logs.filter((log) => log.success).map(toLog),
+      failed: logs.filter((log) => !log.success).map(toLog),
+    };
   }
 }
 
+function getProcessed({ success, failed }: ImportStatus): number {
+  return (success ?? 0) + (failed ?? 0);
+}
+
 /** An import that failed before any row, such as a crashed job, has no row logs to show. */
-function throwIfStopped({ status, processed_records }: ImportStatus): void {
-  if (!processed_records && (status === 'Error' || status === 'Timed Out')) {
+function throwIfStopped(importStatus: ImportStatus): void {
+  const { status } = importStatus;
+  if (
+    !getProcessed(importStatus) &&
+    (status === 'Error' || status === 'Timed Out')
+  ) {
     throw new Error(
       t`The import stopped: ${status}. The Error Log has the details.`
     );

@@ -71,7 +71,7 @@ class BooksSearch(SQLiteSearch):
 		config = get_search_doctypes()[doc.doctype]
 		values = [doc.get(field) for field in config["fields"]]
 		for fieldname, table in config["tables"].items():
-			# A queued document is a full Document; a build reads rows without their tables.
+			# A saved document is a full Document; a build reads rows without their tables.
 			rows = (
 				doc.get(fieldname)
 				if isinstance(doc, Document)

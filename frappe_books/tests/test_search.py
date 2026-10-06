@@ -2,7 +2,6 @@ from unittest.mock import patch
 
 import frappe
 from frappe.desk.search import search_widget
-from frappe.search.sqlite_search import index_docs_in_queue
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.search import BooksSearch, build_search_index, search
@@ -38,10 +37,8 @@ class IntegrationTestSearchPalette(IntegrationTestCase):
 		self.assertEqual(self._found(item.split()[-1], [INVOICE]), [invoice.name])
 		self.assertEqual(self._found(f"{party} invoice", [INVOICE, "Books Party"]), [invoice.name])
 
-	def test_a_saved_document_is_indexed_from_the_queue(self):
-		BooksSearch().sql("DELETE FROM search_index_queue", commit=True)
+	def test_a_saved_document_is_indexed_on_save(self):
 		item, invoice = self._make_invoice()
-		index_docs_in_queue()
 
 		self.assertEqual(self._found(item.split()[-1], [INVOICE]), [invoice.name])
 

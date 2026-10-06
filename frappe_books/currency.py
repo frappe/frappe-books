@@ -4,8 +4,7 @@ from decimal import Decimal
 
 import frappe
 from babel.numbers import get_currency_precision
-from frappe.integrations.utils import make_get_request
-from frappe.utils import flt, getdate
+from frappe.utils import flt, get_request_session, getdate
 from requests.exceptions import RequestException
 
 RATES_URL = "https://api.vatcomply.com/rates"
@@ -39,9 +38,12 @@ def get_exchange_rate(from_currency: str, to_currency: str, date: str | None = N
 
 def _fetch_exchange_rate(from_currency, to_currency, date) -> float:
 	params = {"date": str(date), "base": from_currency, "symbols": to_currency}
+	# v16's make_get_request takes no timeout, so the request uses Frappe's session directly.
 	try:
-		response = make_get_request(RATES_URL, params=params, timeout=5)
+		response = get_request_session().get(RATES_URL, params=params, timeout=5)
+		response.raise_for_status()
+		data = response.json()
 	except (RequestException, ValueError):
 		return 0.0
-	rates = response.get("rates") if isinstance(response, dict) else None
+	rates = data.get("rates") if isinstance(data, dict) else None
 	return max(flt((rates or {}).get(to_currency)), 0.0)

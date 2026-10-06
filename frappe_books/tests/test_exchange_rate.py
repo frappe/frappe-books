@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -14,7 +14,7 @@ from frappe_books.tests.accounting import (
 	make_party,
 )
 
-REQUEST = "frappe_books.currency.make_get_request"
+REQUEST = "frappe_books.currency.get_request_session"
 DATE = "2026-09-01"
 
 
@@ -23,21 +23,22 @@ class IntegrationTestExchangeRate(IntegrationTestCase):
 		frappe.cache.delete_value(f"books_exchange_rate:{DATE}:EUR:USD")
 
 	def test_fetched_rate_is_cached_and_only_codes_and_date_are_sent(self):
-		with patch(REQUEST, return_value={"rates": {"USD": 1.1234}}) as request:
+		session = rates_session({"USD": 1.1234})
+		with patch(REQUEST, return_value=session):
 			self.assertEqual(get_exchange_rate("EUR", "USD", DATE), 1.1234)
 			self.assertEqual(get_exchange_rate("EUR", "USD", DATE), 1.1234)
 
-		request.assert_called_once_with(
+		session.get.assert_called_once_with(
 			RATES_URL, params={"date": DATE, "base": "EUR", "symbols": "USD"}, timeout=5
 		)
 
 	def test_failed_fetch_gives_no_rate_and_waits_before_retrying(self):
-		for reply in ({"side_effect": ConnectionError}, {"return_value": {"rates": {}}}):
-			with self.subTest(reply=reply), patch(REQUEST, **reply) as request:
+		for session in (rates_session(error=ConnectionError), rates_session({})):
+			with self.subTest(session=session), patch(REQUEST, return_value=session):
 				frappe.cache.delete_value(f"books_exchange_rate:{DATE}:EUR:USD")
 				self.assertIsNone(get_exchange_rate("EUR", "USD", DATE))
 				self.assertIsNone(get_exchange_rate("EUR", "USD", DATE))
-				request.assert_called_once()
+				session.get.assert_called_once()
 
 	def test_invoice_fetches_a_missing_rate_for_its_date(self):
 		receivable = make_account("FX Receivable", account_type="Receivable")
@@ -50,3 +51,13 @@ class IntegrationTestExchangeRate(IntegrationTestCase):
 
 		self.assertEqual(invoice.exchange_rate, 80)
 		rate.assert_called_with(invoice.currency, company_currency(), invoice.date)
+
+
+def rates_session(rates=None, error=None):
+	"""A request session whose GET answers with `rates`, or raises `error`."""
+	session = MagicMock()
+	if error:
+		session.get.side_effect = error
+	else:
+		session.get.return_value.json.return_value = {"rates": rates}
+	return session

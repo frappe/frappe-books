@@ -2,7 +2,7 @@ import io
 import json
 
 from frappe.tests import IntegrationTestCase, UnitTestCase
-from frappe.translate import get_boot_translations
+from frappe.translate import get_all_translations
 
 from frappe_books.coa import STANDARD_CHART
 from frappe_books.translation_extractors import (
@@ -94,6 +94,6 @@ def to_file(text):
 
 class IntegrationTestBooksTranslations(IntegrationTestCase):
 	def test_boot_translations_include_the_books_catalog(self):
-		translations = get_boot_translations("de")
+		translations = get_all_translations("de")
 		self.assertEqual(translations["Set up your organization"], "Ihr Unternehmen einrichten")
 		self.assertEqual(translations["Cash In Hand"], "Kassenbestand")

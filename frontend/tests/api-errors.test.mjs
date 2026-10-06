@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { setImmediate } from 'node:timers/promises';
-import {
-  call,
-  errors,
-  getDocuments,
-  loadTranslations,
-} from './helpers/accounting.mjs';
+import { call, errors, getDocuments } from './helpers/accounting.mjs';
 
 const LOGIN_URL = '/login?redirect-to=%2Fbooks';
 
@@ -65,21 +60,6 @@ test('an unreachable server surfaces the network error', async () => {
   };
   const error = await call('method').catch((error) => error);
   assert.ok(error instanceof TypeError);
-});
-
-test('translations load with a GET for the language', async () => {
-  const requests = [];
-  globalThis.fetch = async (url, options) => {
-    requests.push([url, options.method]);
-    return Response.json({ message: { Invoice: 'Facture {0}' } });
-  };
-
-  const map = await loadTranslations('fr');
-
-  assert.deepEqual(requests, [
-    ['/api/method/frappe.translate.get_boot_translations?lang=fr', 'GET'],
-  ]);
-  assert.equal(map.Invoice.translation, 'Facture ${0}');
 });
 
 /** Where the request sent the browser, once it has had time to settle. */

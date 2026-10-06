@@ -1,7 +1,4 @@
-import {
-  call as frappeCall,
-  type FrappeResourceError,
-} from 'frappe-ui';
+import { call as frappeCall, type FrappeResourceError } from 'frappe-ui';
 import {
   BaseError,
   ConflictError,
@@ -135,6 +132,8 @@ declare global {
       csrf_token?: string;
       boot?: {
         lang?: string;
+        /** Frappe's translations for the user's language. */
+        __messages?: Record<string, string>;
         /** Added by the Books page from the user's language. */
         layout_direction?: 'ltr' | 'rtl';
         developer_mode?: number;

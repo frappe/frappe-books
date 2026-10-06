@@ -41,9 +41,7 @@ class BooksGetStarted(Document):
 			if df.fieldname not in ("onboarding_complete", "tasks_complete")
 		]
 		tasks.sort(key=lambda df: bool(df.is_virtual))
-		return int(
-			all(self.get_virtual_field_value(df) if df.is_virtual else self.get(df.fieldname) for df in tasks)
-		)
+		return int(all(getattr(self, df.fieldname) for df in tasks))
 
 	@property
 	def sales_item_created(self):

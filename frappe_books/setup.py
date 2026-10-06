@@ -1,11 +1,11 @@
 """Install and test bootstrap data for Frappe Books."""
 
 import frappe
-from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 from frappe.permissions import add_permission, update_permission_property
 
 from frappe_books.printing import default_print_format, set_default_print_format
 from frappe_books.series import NUMBER_SERIES
+from frappe_books.setup_service import complete_frappe_setup
 
 DEFAULT_SERIES_START = 1001
 DEFAULT_PRINT_FORMATS = {
@@ -51,7 +51,7 @@ def before_tests():
 	"""Tests run on a site Frappe has set up for an Indian company."""
 	bootstrap()
 	if not frappe.is_setup_complete():
-		complete_app_setup(country="India", currency="INR", timezone="Asia/Kolkata")
+		complete_frappe_setup("India", "INR", "Asia/Kolkata")
 
 
 def grant_core_permissions():

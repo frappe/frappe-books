@@ -30,9 +30,6 @@ website_route_rules = [
 ]
 
 page_renderer = ["frappe_books.pwa.ServiceWorkerPage"]
-# A fresh site opens the Books setup wizard, which completes Frappe's setup too.
-setup_wizard_url = "/books"
-
 extend_bootinfo = "frappe_books.boot.extend_bootinfo"
 
 jinja = {

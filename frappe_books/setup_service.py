@@ -4,7 +4,8 @@ import json
 from functools import cache
 
 import frappe
-from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
+from frappe import _
+from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 
 from frappe_books.coa import (
 	ensure_bank_account,
@@ -47,7 +48,7 @@ def complete_site_setup(wizard):
 	Either way, the currency precision becomes that of the company currency.
 	"""
 	if not frappe.is_setup_complete():
-		complete_app_setup(country=wizard.country, currency=wizard.currency, timezone=wizard.time_zone)
+		complete_frappe_setup(wizard.country, wizard.currency, wizard.time_zone)
 	update_frappe_settings(
 		"System Settings",
 		{
@@ -56,6 +57,14 @@ def complete_site_setup(wizard):
 			"currency_precision": str(currency_precision(wizard.currency)),
 		},
 	)
+
+
+def complete_frappe_setup(country, currency, time_zone):
+	"""Run Frappe's setup with the wizard's region, unless an app needs the desk wizard's input."""
+	frappe.only_for("System Manager")
+	if frappe.get_hooks("setup_wizard_stages") or frappe.get_hooks("setup_wizard_complete"):
+		frappe.throw(_("This site's setup must run through the built-in wizard."))
+	setup_complete({"country": country, "currency": currency, "timezone": time_zone, "language": "English"})
 
 
 def enable_currency(currency):

@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
-from frappe.desk.page.setup_wizard.setup_wizard import get_setup_wizard_url
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
@@ -16,7 +17,7 @@ from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings imp
 	ACCOUNT_TYPES as POS_RULES,
 )
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
-from frappe_books.setup_service import default_accounts, run_setup
+from frappe_books.setup_service import complete_frappe_setup, default_accounts, run_setup
 from frappe_books.tests.accounting import ensure_user, unique_name
 
 # System Settings fields Frappe's setup fills; tests restore them so cached defaults stay right.
@@ -162,7 +163,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		frappe.clear_document_cache("Installed Applications", "Installed Applications")
 		self._wizard(country="Switzerland", currency="CHF", time_zone="Europe/Zurich").save()
 
-		with self.restored_system_settings():
+		# Frappe's setup commits, which would keep the earlier tests' records.
+		with self.restored_system_settings(), patch("frappe.db.commit"):
 			complete_setup()
 			settings = frappe.get_single("System Settings")
 
@@ -194,8 +196,16 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 				formats = frappe.db.get_value("System Settings", None, ["date_format", "number_format"])
 				self.assertEqual(formats, frappe_formats)
 
-	def test_fresh_site_opens_the_books_setup_wizard(self):
-		self.assertEqual(get_setup_wizard_url(), "/books")
+	def test_frappe_setup_leaves_sites_with_desk_wizard_steps_to_the_desk_wizard(self):
+		with patch("frappe.get_hooks", return_value=["erpnext.setup.setup_wizard.get_setup_stages"]):
+			self.assertRaisesRegex(
+				frappe.ValidationError,
+				"built-in wizard",
+				complete_frappe_setup,
+				"India",
+				"INR",
+				"Asia/Kolkata",
+			)
 
 	def test_wizard_takes_a_valid_time_zone(self):
 		for time_zone, saved in (("Asia/Calcutta", "Asia/Kolkata"), (None, "Asia/Kolkata")):

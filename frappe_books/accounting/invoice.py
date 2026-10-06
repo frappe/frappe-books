@@ -188,10 +188,11 @@ class PostingInvoiceController(InvoiceController):
 	def cancel_with_linked_docs(self, linked_docs: list[dict]):
 		"""Cancel `linked_docs`, the payments `get_payments_to_cancel` listed, and then the invoice.
 
-		Frappe's Cancel All does it in one transaction, on a fresh copy of the invoice.
+		Both happen in one transaction. The payments change the invoice, so it is reloaded first.
 		"""
-		linked_with.cancel_all_linked_docs(linked_docs, root_doctype=self.doctype, root_name=self.name)
+		linked_with.cancel_all_linked_docs(frappe.as_json(linked_docs))
 		self.reload()
+		self.cancel()
 
 	def before_cancel(self):
 		invoice_transfer.before_invoice_cancel(self)

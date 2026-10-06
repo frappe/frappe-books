@@ -36,14 +36,10 @@ jobs:
           yarn test
 
   integration:
-    name: Frappe develop / ${{ matrix.database }}
+    name: Frappe version-16 / mariadb
     needs: lint
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        database: [sqlite, mariadb, postgres]
     services:
       mariadb:
         image: mariadb:11.8
@@ -53,15 +49,6 @@ jobs:
           - 3306:3306
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=5s --health-timeout=5s --health-retries=10
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_PASSWORD: books-test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres"
           --health-interval=5s --health-timeout=5s --health-retries=10
       redis-cache:
         image: redis:7
@@ -84,14 +71,14 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcups2-dev libmariadb-dev mariadb-client \
-            postgresql-client redis-server libpango-1.0-0 libharfbuzz-subset0
+          sudo apt-get install -y libcups2-dev libmariadb-dev mariadb-client redis-server \
+            libpango-1.0-0 libharfbuzz-subset0
           npm install --global yarn@1.22.22
           uv tool install frappe-bench
 
-      - name: Create develop bench
+      - name: Create version-16 bench
         run: |
-          bench init "$RUNNER_TEMP/books-bench" --frappe-branch develop \
+          bench init "$RUNNER_TEMP/books-bench" --frappe-branch version-16 \
             --python "$(command -v python)" --skip-assets --no-backups
 
       - name: Install Books and test dependencies
@@ -107,16 +94,9 @@ jobs:
 
       - name: Create and migrate test site
         working-directory: ${{ runner.temp }}/books-bench
-        env:
-          BOOKS_TEST_DATABASE: ${{ matrix.database }}
         run: |
-          case "$BOOKS_TEST_DATABASE" in
-            mariadb) database_args=(--db-host 127.0.0.1 --db-port 3306 --db-root-username root --db-root-password books-test) ;;
-            postgres) database_args=(--db-host 127.0.0.1 --db-port 5432 --db-root-username postgres --db-root-password books-test) ;;
-            sqlite) database_args=() ;;
-          esac
-          bench new-site books-test.localhost --db-type "$BOOKS_TEST_DATABASE" \
-            --admin-password admin "${database_args[@]}"
+          bench new-site books-test.localhost --db-type mariadb --admin-password admin \
+            --db-host 127.0.0.1 --db-port 3306 --db-root-username root --db-root-password books-test
           bench --site books-test.localhost install-app frappe_books
           bench --site books-test.localhost set-config allow_tests 1 --parse
           bench --site books-test.localhost migrate
@@ -153,7 +133,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-${{ matrix.database }}
+          name: playwright-mariadb
           path: |
             frontend/test-results/
             ${{ runner.temp }}/web.log

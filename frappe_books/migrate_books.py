@@ -309,7 +309,12 @@ def execute(file_url=None, file_path=None):
 
             
     frappe.db.commit()
-
+    
+    # Rebuild nested set trees for hierarchical doctypes to fix report indentation/totals
+    print("Rebuilding hierarchical trees...")
+    from frappe.utils.nestedset import rebuild_tree
+    rebuild_tree("Books Account", "parent_books_account")
+    
     print("Recalculating invoice totals...")
     for dt in ["Books Sales Invoice", "Books Purchase Invoice", "Books Payment", "Books Journal Entry"]:
         docs = frappe.get_all(dt, pluck="name")

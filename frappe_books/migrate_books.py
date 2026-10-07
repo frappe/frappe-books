@@ -13,7 +13,6 @@ def get_mapping(table):
     skip_tables = [
         "DocType", "PatchRun", "SingleValue", "ERPNextSyncQueue", 
         "FetchFromERPNextQueue", "IntegrationErrorLog",
-        "AccountingLedgerEntry", "StockLedgerEntry", # We rebuild these
     ]
     if table in skip_tables:
         return None
@@ -26,7 +25,8 @@ def get_mapping(table):
     
     # Custom overrides
     overrides = {
-        # Add any if needed
+        "Accounting Ledger Entry": "Books Ledger Entry",
+        "Stock Ledger Entry": "Books Stock Ledger Entry",
     }
     if spaced in overrides:
         return overrides[spaced]
@@ -204,81 +204,86 @@ def execute(file_url=None, file_path=None):
             # Rename camelCase SQLite fields → snake_case MariaDB fields
             doc_dict = rename_fields(doctype, doc_dict)
 
-            try:
-                if doctype == "Print Format":
-                    html = doc_dict.get("html", "")
-                    if html:
-                        html = re.sub(r'v-if="([^"]+)"', r'{% if \1 %}', html)
-                        html = html.replace('v-else', '{% else %}')
-                        html = re.sub(r'v-for="([^"]+) in ([^"]+)"', r'{% for \1 in \2 %}', html)
-                        html = re.sub(r':key="[^"]+"', '', html)
-                        
-                        html = html.replace('doc.netTotal', 'books_format(doc.net_total, "Currency", doc.currency)')
-                        html = html.replace('doc.grandTotal', 'books_format(doc.grand_total, "Currency", doc.currency)')
-                        html = html.replace('doc.totalDiscount', 'books_format(doc.total_discount, "Currency", doc.currency)')
-                        html = html.replace('doc.discountAfterTax', 'doc.discount_after_tax')
-                        html = html.replace('row.hsnCode', 'row.hsn_code')
-                        html = html.replace('print.companyName', '(print.company_name or "") | e')
-                        html = html.replace('print.displayLogo', 'print.display_logo')
-                        html = html.replace('print.logo', '{{ print.logo }}')
-                        html = html.replace('print.gstin', 'print.gstin')
-                        html = html.replace('print.address', 'print.address')
-                        html = html.replace('print.phone', 'print.phone')
-                        html = html.replace('print.email', 'print.email')
-                        
-                        html = html.replace('doc.grandTotalInWords', 'totals.grand_total_in_words')
-                        html = html.replace('doc.amountInWords', 'totals.amount_paid_in_words')
-                        html = re.sub(r't\`([^\`]+)\`', r'{{ _("\1") }}', html)
-                        
-                        scale_css = "<style>@media print { html, body { font-size: 12px !important; } .page-break-avoid, section, footer, .flex { page-break-inside: avoid !important; break-inside: avoid !important; } }</style>\n"
-                        tailwind_link = '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">\n'
-                        html = tailwind_link + scale_css + "{%- set print = get_print_settings() -%}\n{%- set totals = get_print_totals(doc) if doc else None -%}\n" + html
-                        
-                        doc_dict["html"] = html
-                        doc_dict["custom_format"] = 1
-                        
-                        if "doc_type" not in doc_dict or not doc_dict["doc_type"]:
-                            doc_dict["doc_type"] = "Books Sales Invoice"
-                        doc_dict["print_format_for"] = "DocType"
-
-                # Payment: copy `amount` into `amount_paid` if missing (old desktop schema had only `amount`)
-                if doctype == "Books Payment" and not doc_dict.get("amount_paid"):
-                    doc_dict["amount_paid"] = doc_dict.get("amount", 0)
-
-                if "name" in doc_dict:
-                    del doc_dict["name"]
-
-                fields = list(doc_dict.keys())
-                fields.append("name")
-                
-                fixed_values = []
-                for f in fields:
-                    if f == "name":
-                        fixed_values.append(row[columns.index("name")] if "name" in columns else frappe.generate_hash(length=10))
-                    elif f in doc_dict:
-                        v = doc_dict[f]
-                        if isinstance(v, dict) or isinstance(v, list):
-                            v = json.dumps(v)
-                        fixed_values.append(v)
-                    else:
-                        fixed_values.append(None)
-
-                # Use try-except around DB inserts to ignore table missing errors (like Color)
-                try:
-                    if frappe.db.exists(doctype, fixed_values[-1]):
-                        update_str = ", ".join([f"`{c}` = %s" for c in fields if c != "name"])
-                        update_values = tuple(fixed_values[i] for i, c in enumerate(fields) if c != "name")
-                        frappe.db.sql(f"UPDATE `tab{doctype}` SET {update_str} WHERE name = %s", update_values + (fixed_values[-1],))
-                    else:
-                        placeholders = ", ".join(["%s"] * len(fields))
-                        cols = ", ".join([f"`{c}`" for c in fields])
-                        frappe.db.sql(f"INSERT INTO `tab{doctype}` ({cols}) VALUES ({placeholders})", tuple(fixed_values))
-                except Exception as e:
-                    pass
+            if doctype == "Print Format":
+                html = doc_dict.get("html", "")
+                if html:
+                    html = re.sub(r'v-if="([^"]+)"', r'{% if \1 %}', html)
+                    html = html.replace('v-else', '{% else %}')
+                    html = re.sub(r'v-for="([^"]+) in ([^"]+)"', r'{% for \1 in \2 %}', html)
+                    html = re.sub(r':key="[^"]+"', '', html)
                     
-            except Exception as e:
-                print(f"Error importing {doctype}: {e}")
-                
+                    html = html.replace('doc.netTotal', 'books_format(doc.net_total, "Currency", doc.currency)')
+                    html = html.replace('doc.grandTotal', 'books_format(doc.grand_total, "Currency", doc.currency)')
+                    html = html.replace('doc.totalDiscount', 'books_format(doc.total_discount, "Currency", doc.currency)')
+                    html = html.replace('doc.discountAfterTax', 'doc.discount_after_tax')
+                    html = html.replace('row.hsnCode', 'row.hsn_code')
+                    html = html.replace('print.companyName', '(print.company_name or "") | e')
+                    html = html.replace('print.displayLogo', 'print.display_logo')
+                    html = html.replace('print.logo', '{{ print.logo }}')
+                    html = html.replace('print.gstin', 'print.gstin')
+                    html = html.replace('print.address', 'print.address')
+                    html = html.replace('print.phone', 'print.phone')
+                    html = html.replace('print.email', 'print.email')
+                    
+                    html = html.replace('doc.grandTotalInWords', 'totals.grand_total_in_words')
+                    html = html.replace('doc.amountInWords', 'totals.amount_paid_in_words')
+                    html = re.sub(r't\`([^\`]+)\`', r'{{ _("\1") }}', html)
+                    
+                    scale_css = "<style>@media print { html, body { font-size: 12px !important; } .page-break-avoid, section, footer, .flex { page-break-inside: avoid !important; break-inside: avoid !important; } }</style>\n"
+                    tailwind_link = '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">\n'
+                    html = tailwind_link + scale_css + "{%- set print = get_print_settings() -%}\n{%- set totals = get_print_totals(doc) if doc else None -%}\n" + html
+                    
+                    doc_dict["html"] = html
+                    doc_dict["custom_format"] = 1
+                    
+                    if "doc_type" not in doc_dict or not doc_dict["doc_type"]:
+                        doc_dict["doc_type"] = "Books Sales Invoice"
+                    doc_dict["print_format_for"] = "DocType"
+
+            # Payment: copy `amount` into `amount_paid` if missing (old desktop schema had only `amount`)
+            if doctype == "Books Payment" and not doc_dict.get("amount_paid"):
+                doc_dict["amount_paid"] = doc_dict.get("amount", 0)
+
+            if "name" in doc_dict:
+                del doc_dict["name"]
+
+            fields = list(doc_dict.keys())
+            fields.append("name")
+            
+            fixed_values = []
+            for f in fields:
+                if f == "name":
+                    fixed_values.append(row[columns.index("name")] if "name" in columns else frappe.generate_hash(length=10))
+                elif f in doc_dict:
+                    v = doc_dict[f]
+                    if isinstance(v, dict) or isinstance(v, list):
+                        v = json.dumps(v)
+                    fixed_values.append(v)
+                else:
+                    fixed_values.append(None)
+
+            # Validate identifiers to prevent SQL injection
+            if not re.match(r'^[a-zA-Z0-9_\s]+$', doctype):
+                raise ValueError(f"Invalid doctype name: {doctype}")
+            
+            for c in fields:
+                if not re.match(r'^[a-zA-Z0-9_]+$', c):
+                    raise ValueError(f"Invalid column name: {c}")
+
+            # Ensure target table actually exists in MariaDB before attempting insert
+            if not frappe.db.table_exists(doctype):
+                continue
+
+            if frappe.db.exists(doctype, fixed_values[-1]):
+                update_str = ", ".join([f"`{c}` = %s" for c in fields if c != "name"])
+                update_values = tuple(fixed_values[i] for i, c in enumerate(fields) if c != "name")
+                frappe.db.sql(f"UPDATE `tab{doctype}` SET {update_str} WHERE name = %s", update_values + (fixed_values[-1],))
+            else:
+                placeholders = ", ".join(["%s"] * len(fields))
+                cols = ", ".join([f"`{c}`" for c in fields])
+                frappe.db.sql(f"INSERT INTO `tab{doctype}` ({cols}) VALUES ({placeholders})", tuple(fixed_values))
+
+            
     frappe.db.commit()
 
     print("Recalculating invoice totals...")
@@ -293,39 +298,7 @@ def execute(file_url=None, file_path=None):
                 except Exception:
                     pass
 
-    print("Rebuilding General Ledger Natively...")
-    frappe.db.sql("DELETE FROM `tabBooks Ledger Entry`")
-    
-    from frappe_books.accounting.ledger import LedgerPosting
-    
-    for dt in ["Books Sales Invoice", "Books Purchase Invoice", "Books Payment", "Books Journal Entry"]:
-        docs = frappe.get_all(dt, filters={"docstatus": 1}, pluck="name")
-        for name in docs:
-            doc = frappe.get_doc(dt, name)
-            try:
-                if dt in ["Books Sales Invoice", "Books Purchase Invoice"]:
-                    posting = doc.get_ledger_posting()
-                    if posting: posting.post()
-                elif dt == "Books Payment":
-                    posting = LedgerPosting(doc)
-                    # old desktop DB had only `amount`; `amount_paid` may be 0 after migration
-                    paid = doc.amount_paid or doc.amount
-                    base = doc.amount
-                    if doc.payment_type == "Receive":
-                        posting.debit(doc.payment_account, paid, doc.party)
-                        posting.credit(doc.account, base, doc.party)
-                    else:
-                        posting.debit(doc.account, base, doc.party)
-                        posting.credit(doc.payment_account, paid, doc.party)
-                    posting.post()
-                elif dt == "Books Journal Entry":
-                    posting = LedgerPosting(doc)
-                    for row in doc.accounts:
-                        posting.debit(row.account, row.debit)
-                        posting.credit(row.account, row.credit)
-                    posting.post()
-            except Exception as e:
-                print(f"Error posting GL for {name}: {e}")
+
                 
     frappe.db.commit()
 

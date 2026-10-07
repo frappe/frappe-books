@@ -258,6 +258,9 @@ def execute(file_url=None, file_path=None):
                     v = doc_dict[f]
                     if isinstance(v, dict) or isinstance(v, list):
                         v = json.dumps(v)
+                    elif isinstance(v, str) and re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', v):
+                        # Convert SQLite ISO 8601 to MariaDB Datetime
+                        v = v.replace("T", " ").replace("Z", "")
                     fixed_values.append(v)
                 else:
                     fixed_values.append(None)
@@ -274,14 +277,35 @@ def execute(file_url=None, file_path=None):
             if not frappe.db.table_exists(doctype):
                 continue
 
-            if frappe.db.exists(doctype, fixed_values[-1]):
-                update_str = ", ".join([f"`{c}` = %s" for c in fields if c != "name"])
-                update_values = tuple(fixed_values[i] for i, c in enumerate(fields) if c != "name")
-                frappe.db.sql(f"UPDATE `tab{doctype}` SET {update_str} WHERE name = %s", update_values + (fixed_values[-1],))
+            valid_cols = frappe.db.get_table_columns(doctype)
+            meta = frappe.get_meta(doctype)
+            final_fields = []
+            final_values = []
+            
+            for i, c in enumerate(fields):
+                if c in valid_cols:
+                    v = fixed_values[i]
+                    if v is None:
+                        df = meta.get_field(c)
+                        if df and df.fieldtype in ("Int", "Float", "Currency", "Percent", "Check"):
+                            v = 0
+                        elif c in ("docstatus", "idx"):
+                            v = 0
+                    final_fields.append(c)
+                    final_values.append(v)
+
+            if not final_fields:
+                continue
+
+            name_idx = final_fields.index("name")
+            if frappe.db.exists(doctype, final_values[name_idx]):
+                update_str = ", ".join([f"`{c}` = %s" for c in final_fields if c != "name"])
+                update_values = tuple(final_values[i] for i, c in enumerate(final_fields) if c != "name")
+                frappe.db.sql(f"UPDATE `tab{doctype}` SET {update_str} WHERE name = %s", update_values + (final_values[name_idx],))
             else:
-                placeholders = ", ".join(["%s"] * len(fields))
-                cols = ", ".join([f"`{c}`" for c in fields])
-                frappe.db.sql(f"INSERT INTO `tab{doctype}` ({cols}) VALUES ({placeholders})", tuple(fixed_values))
+                placeholders = ", ".join(["%s"] * len(final_fields))
+                cols = ", ".join([f"`{c}`" for c in final_fields])
+                frappe.db.sql(f"INSERT INTO `tab{doctype}` ({cols}) VALUES ({placeholders})", tuple(final_values))
 
             
     frappe.db.commit()

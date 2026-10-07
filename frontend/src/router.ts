@@ -4,6 +4,7 @@ import Dashboard from 'src/pages/Dashboard/Dashboard.vue';
 import GetStarted from 'src/pages/GetStarted.vue';
 import MobileSearch from 'src/mobile/search/MobileSearch.vue';
 import ImportWizard from 'src/pages/ImportWizard.vue';
+import DesktopMigration from 'src/pages/DesktopMigration.vue';
 import ListView from 'src/pages/ListView/ListView.vue';
 import PrintView from 'src/pages/PrintView/PrintView.vue';
 import ReportPrintView from 'src/pages/PrintView/ReportPrintView.vue';
@@ -121,6 +122,12 @@ const routes: RouteRecordRaw[] = [
     name: 'Import Wizard',
     meta: { desktopOnly: true },
     component: ImportWizard,
+  },
+  {
+    path: '/desktop-migration',
+    name: 'Desktop Migration',
+    meta: { desktopOnly: true },
+    component: DesktopMigration,
   },
   {
     path: '/template-builder/:name',

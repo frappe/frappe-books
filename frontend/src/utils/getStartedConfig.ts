@@ -9,6 +9,14 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
       label: t`Organisation`,
       items: [
         {
+          key: 'Migrate Desktop',
+          label: t`Migrate from Desktop`,
+          icon: 'lucide-database',
+          description: t`Upload your old frappe-books.db SQLite database file.`,
+          action: () => routeTo('/desktop-migration'),
+          fieldname: 'opening_balance_checked',
+        },
+        {
           key: 'General',
           label: t`General`,
           icon: 'lucide-wrench',

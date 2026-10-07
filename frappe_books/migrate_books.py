@@ -1,391 +1,421 @@
 import frappe
+import json
 import sqlite3
 import re
+import os
+from frappe.utils import now
 
-def camel_to_snake(name):
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+def get_mapping(table):
+    if table == "PrintTemplate":
+        return "Print Format"
+    
+    # Tables to completely skip
+    skip_tables = [
+        "DocType", "PatchRun", "SingleValue", "ERPNextSyncQueue", 
+        "FetchFromERPNextQueue", "IntegrationErrorLog",
+        "AccountingLedgerEntry", "StockLedgerEntry", # We rebuild these
+    ]
+    if table in skip_tables:
+        return None
+        
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', table)
+    spaced = re.sub('([a-z0-9])([A-Z])', r'\1 \2', s1)
+    
+    spaced = spaced.replace("POS", "Pos")
+    spaced = spaced.replace("UOM", "Uom")
+    
+    # Custom overrides
+    overrides = {
+        # Add any if needed
+    }
+    if spaced in overrides:
+        return overrides[spaced]
+        
+    return "Books " + spaced
 
-MAPPING = {
-    "for": "item_usage",
-    "parentSchemaName": "parenttype",
-    "parentFieldname": "parentfield",
-    "date": "posting_date" # Only used by Journal Entry, others use date
+
+# Per-doctype field renames: {sqlite_col: mariadb_col}
+FIELD_RENAMES = {
+    "Books Account": {
+        "rootType":      "root_type",
+        "parentAccount": "parent_books_account",
+        "accountType":   "account_type",
+        "isGroup":       "is_group",
+    },
+    "Books Party": {
+        "defaultAccount":    "default_account",
+        "gstType":           "gst_type",
+        "fromLead":          "from_lead",
+        "loyaltyProgram":    "loyalty_program",
+        "loyaltyPoints":     "loyalty_points",
+        "outstandingAmount": "outstanding_amount",
+    },
+    "Books Item": {
+        "itemCode":        "item_code",
+        "itemGroup":       "item_group",
+        "itemType":        "item_type",
+        "incomeAccount":   "income_account",
+        "expenseAccount":  "expense_account",
+        "hsnCode":         "hsn_code",
+        "trackItem":       "track_item",
+        "hasBatch":        "has_batch",
+        "hasSerialNumber": "has_serial_number",
+    },
+    "Books Payment": {
+        "numberSeries":   "number_series",
+        "paymentType":    "payment_type",
+        "paymentAccount": "payment_account",
+        "paymentMethod":  "payment_method",
+        "clearanceDate":  "clearance_date",
+        "referenceId":    "reference_id",
+        "referenceDate":  "reference_date",
+        "referenceType":  "reference_type",
+    },
+    "Books Sales Invoice": {
+        "numberSeries":         "number_series",
+        "priceList":            "price_list",
+        "netTotal":             "net_total",
+        "grandTotal":           "grand_total",
+        "baseGrandTotal":       "base_grand_total",
+        "setDiscountAmount":    "set_discount_amount",
+        "discountAmount":       "discount_amount",
+        "discountPercent":      "discount_percent",
+        "entryCurrency":        "entry_currency",
+        "exchangeRate":         "exchange_rate",
+        "discountAfterTax":     "discount_after_tax",
+        "makeAutoPayment":      "make_auto_payment",
+        "outstandingAmount":    "outstanding_amount",
+        "isReturned":           "is_returned",
+        "backReference":        "back_reference",
+        "returnAgainst":        "return_against",
+        "loyaltyProgram":       "loyalty_program",
+        "redeemLoyaltyPoints":  "redeem_loyalty_points",
+        "loyaltyPoints":        "loyalty_points",
+        "isPOS":                "is_pos",
+        "isPricingRuleApplied": "is_pricing_rule_applied",
+        "isFullyReturned":      "is_fully_returned",
+    },
+    "Books Purchase Invoice": {
+        "numberSeries":      "number_series",
+        "priceList":         "price_list",
+        "netTotal":          "net_total",
+        "grandTotal":        "grand_total",
+        "discountAmount":    "discount_amount",
+        "discountPercent":   "discount_percent",
+        "exchangeRate":      "exchange_rate",
+        "discountAfterTax":  "discount_after_tax",
+        "outstandingAmount": "outstanding_amount",
+        "isReturned":        "is_returned",
+        "returnAgainst":     "return_against",
+    },
+    "Books Journal Entry": {
+        "numberSeries":    "number_series",
+        "entryType":       "entry_type",
+        "referenceNumber": "reference_number",
+        "referenceDate":   "reference_date",
+        "userRemark":      "user_remark",
+    },
+    "Books Number Series": {
+        "referenceType": "reference_type",
+        "startAt":       "start_at",
+        "padZeros":      "pad_zeros",
+    },
 }
 
-def execute():
-    # Make sure we're in the correct context
-    frappe.init(site="books.localhost", sites_path="sites")
-    frappe.connect()
 
-    # Provide the path to the sqlite file
-    conn = sqlite3.connect("../Sahajanand Digital.books 2.db")
-    conn.row_factory = sqlite3.Row
+def rename_fields(doctype, doc_dict):
+    """Rename camelCase SQLite fields to snake_case MariaDB fields."""
+    import re
+    new_dict = {}
+    
+    global_overrides = {
+        "parentAccount": "parent_books_account",
+        "parentFieldname": "parentfield",
+        "parentSchemaName": "parenttype",
+        "createdBy": "owner",
+        "modifiedBy": "modified_by",
+        "created": "creation",
+        "modified": "modified",
+        "isPOS": "is_pos",
+        "docType": "doc_type",
+    }
+    
+    renames = FIELD_RENAMES.get(doctype, {})
+    
+    for k, v in doc_dict.items():
+        if k in renames:
+            new_k = renames[k]
+        elif k in global_overrides:
+            new_k = global_overrides[k]
+        else:
+            new_k = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', k).lower()
+        
+        # If this is the parenttype column, rewrite the value to match the new Doctype name
+        if new_k in ("parenttype", "doc_type", "reference_type") and v:
+            mapped_type = get_mapping(v)
+            if mapped_type:
+                v = mapped_type
+
+        new_dict[new_k] = v
+        
+    return new_dict
+
+
+def execute(file_url=None, file_path=None):
+    if not file_path:
+        if file_url:
+            file_path = frappe.get_site_path(file_url.strip('/'))
+        else:
+            file_path = "frappe-books.db"
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Database file not found at {file_path}")
+
+    conn = sqlite3.connect(file_path)
     cursor = conn.cursor()
 
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = [r[0] for r in cursor.fetchall()]
+    tables = [row[0] for row in cursor.fetchall()]
 
-    # Ordered mapping to avoid reference issues
-    table_order = [
-        "Color", "Currency", "UOM", "NumberSeries", "Account", "Address", "ItemGroup",
-        "Party", "Item", "Tax", "PriceList", "Location", "CustomField", "CustomForm",
-        "PaymentMethod", "LoyaltyProgram", "CouponCode", "SalesQuote", "SalesOrder",
-        "SalesInvoice", "PurchaseReceipt", "PurchaseInvoice", "JournalEntry", "Payment", "PrintTemplate"
-    ]
-    
-    for t in tables:
-        if t not in table_order and not t.endswith("Item") and not t.endswith("Detail"):
-            table_order.append(t)
-            
-    for t in tables:
-        # Convert PascalCase to Space Separated Title Case
-        spaced_t = re.sub(r"([A-Z])", r" \1", t).strip()
-        # Handle exceptions
-        spaced_t = spaced_t.replace("U O M", "Uom")
-        spaced_t = spaced_t.replace("P O S", "Pos")
-        spaced_t = spaced_t.replace("E R P Next", "ERPNext")
-        doctype = f"Books {spaced_t}"
-        
-        if doctype == "Books Pos Closing Shift": pass
-        elif doctype == "Books Pos Opening Shift": pass
-        elif doctype == "Books Pos Profile": pass
-        elif doctype == "Books Accounting Ledger Entry": doctype = "Books Ledger Entry"
-        
-        if not frappe.db.exists("DocType", doctype):
+    # To resolve foreign key issues, we import parents first, then children, etc.
+    # But for a direct SQL dump, we can just insert everything and disable constraints temporarily if needed.
+    # MariaDB doesn't mind inserting child rows if constraints aren't strict.
+
+    for table in tables:
+        doctype = get_mapping(table)
+        if not doctype:
             continue
             
-        print(f"Migrating {t} to {doctype}...")
-        valid_columns = frappe.get_meta(doctype).get_valid_columns()
-        
-        cursor.execute(f"SELECT * FROM `{t}`")
+        cursor.execute(f"PRAGMA table_info(`{table}`)")
+        columns = [c[1] for c in cursor.fetchall()]
+
+        try:
+            cursor.execute(f"SELECT * FROM `{table}`")
+        except sqlite3.OperationalError:
+            continue
+            
         rows = cursor.fetchall()
+        
         for row in rows:
-            d = dict(row)
-            doc_dict = {}
-            for k, v in d.items():
-                if k == "name": doc_dict["name"] = v
-                elif k == "created": doc_dict["creation"] = v
-                elif k == "modified": doc_dict["modified"] = v
-                elif k == "createdBy": doc_dict["owner"] = v
-                elif k == "modifiedBy": doc_dict["modified_by"] = v
-                else:
-                    snake_key = camel_to_snake(k)
-                    if k in MAPPING:
-                        snake_key = MAPPING[k]
-                    
-                    if doctype == "Books Ledger Entry":
-                        if k == "referenceType": snake_key = "voucher_type"
-                        elif k == "referenceName": snake_key = "voucher_no"
-                        elif k == "date": snake_key = "posting_date"
-                    
-                    if snake_key in valid_columns:
-                        doc_dict[snake_key] = v
-                    elif k == "date" and "date" in valid_columns:
-                        doc_dict["date"] = v
-                        
-                    if k == "quantity" and "qty" in valid_columns:
-                        doc_dict["qty"] = v
-                        
+            doc_dict = dict(zip(columns, row))
             if not doc_dict.get("name"):
                 continue
 
-            if doctype == "PrintTemplate": doctype = "Print Format"
+            # Rename camelCase SQLite fields → snake_case MariaDB fields
+            doc_dict = rename_fields(doctype, doc_dict)
+
             try:
-
-            if doctype == "Print Format":
-                html = doc_dict["html"]
-                if html:
-                    # Basic Vue to Jinja conversion for Frappe Books Desktop Templates
-                    html = re.sub(r'v-if="([^"]+)"', r'{% if  %}', html)
-                    html = html.replace('v-else', '{% else %}')
-                    html = re.sub(r'v-for="([^"]+) in ([^"]+)"', r'{% for  in  %}', html)
-                    html = re.sub(r':key="[^"]+"', '', html)
-                    
-                    html = html.replace('doc.netTotal', 'books_format(doc.net_total, "Currency", doc.currency)')
-                    html = html.replace('doc.grandTotal', 'books_format(doc.grand_total, "Currency", doc.currency)')
-                    html = html.replace('doc.totalDiscount', 'books_format(doc.total_discount, "Currency", doc.currency)')
-                    html = html.replace('doc.discountAfterTax', 'doc.discount_after_tax')
-                    html = html.replace('row.hsnCode', 'row.hsn_code')
-                    html = html.replace('print.companyName', '(print.company_name or "") | e')
-                    html = html.replace('print.displayLogo', 'print.display_logo')
-                    html = html.replace('print.logo', '{{ print.logo }}')
-                    html = html.replace('print.gstin', 'print.gstin')
-                    html = html.replace('print.address', 'print.address')
-                    html = html.replace('print.phone', 'print.phone')
-                    html = html.replace('print.email', 'print.email')
-                    
-                    # Fix totals
-                    html = html.replace('doc.grandTotalInWords', 'totals.grand_total_in_words')
-                    html = html.replace('doc.amountInWords', 'totals.amount_paid_in_words')
-                    
-                    # Remove JS function calls like t`Item` -> _("Item")
-                    html = re.sub(r't\`([^\`]+)\`', r'{{ _("") }}', html)
-                    
-                    # Tailwind & Scaling fixes
-                    scale_css = "<style>@media print { html, body { font-size: 12px !important; } .page-break-avoid, section, footer, .flex { page-break-inside: avoid !important; break-inside: avoid !important; } }</style>\n"
-                    tailwind_link = '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">\n'
-                    html = html.replace('h-full', '').replace('h-screen', '')
-                    html = tailwind_link + scale_css + "{%- set print = get_print_settings() -%}\n{%- set totals = get_print_totals(doc) if doc else None -%}\n" + html
-                    
-                    doc_dict["html"] = html
-                    doc_dict["custom_format"] = 1
-                    
-                    # Fallback doc_type if not available
-                    if "doc_type" not in doc_dict or not doc_dict["doc_type"]:
-                        doc_dict["doc_type"] = "Books Sales Invoice"
-                    doc_dict["print_format_for"] = "DocType"
-
-                # add missing standard fields
-                doc_dict["creation"] = doc_dict.get("creation") or frappe.utils.now()
-                doc_dict["modified"] = doc_dict.get("modified") or frappe.utils.now()
-                doc_dict["owner"] = doc_dict.get("owner") or "Administrator"
-                doc_dict["modified_by"] = doc_dict.get("modified_by") or "Administrator"
-                doc_dict["docstatus"] = doc_dict.get("docstatus", 0)
-                
-                # Handling NULLs
-                if "loyalty_points" in valid_columns and (doc_dict.get("loyalty_points") is None or doc_dict.get("loyalty_points") == ""):
-                    doc_dict["loyalty_points"] = 0
-                if "discount_percent" in valid_columns and (doc_dict.get("discount_percent") is None or doc_dict.get("discount_percent") == ""):
-                    doc_dict["discount_percent"] = 0.0
-                
-                # Also map parenttype if this is a child table
-                if "parenttype" in doc_dict and doc_dict["parenttype"]:
-                    ptype = doc_dict["parenttype"]
-                    spaced_pt = re.sub(r"([A-Z])", r" \1", ptype).strip()
-                    if not spaced_pt.startswith("Books "):
-                        spaced_pt = "Books " + spaced_pt
-                    doc_dict["parenttype"] = spaced_pt
+                if doctype == "Print Format":
+                    html = doc_dict.get("html", "")
+                    if html:
+                        html = re.sub(r'v-if="([^"]+)"', r'{% if \1 %}', html)
+                        html = html.replace('v-else', '{% else %}')
+                        html = re.sub(r'v-for="([^"]+) in ([^"]+)"', r'{% for \1 in \2 %}', html)
+                        html = re.sub(r':key="[^"]+"', '', html)
                         
-                # map docstatus
-                if "submitted" in d and d["submitted"]: doc_dict["docstatus"] = 1
-                if "cancelled" in d and d["cancelled"]: doc_dict["docstatus"] = 2
+                        html = html.replace('doc.netTotal', 'books_format(doc.net_total, "Currency", doc.currency)')
+                        html = html.replace('doc.grandTotal', 'books_format(doc.grand_total, "Currency", doc.currency)')
+                        html = html.replace('doc.totalDiscount', 'books_format(doc.total_discount, "Currency", doc.currency)')
+                        html = html.replace('doc.discountAfterTax', 'doc.discount_after_tax')
+                        html = html.replace('row.hsnCode', 'row.hsn_code')
+                        html = html.replace('print.companyName', '(print.company_name or "") | e')
+                        html = html.replace('print.displayLogo', 'print.display_logo')
+                        html = html.replace('print.logo', '{{ print.logo }}')
+                        html = html.replace('print.gstin', 'print.gstin')
+                        html = html.replace('print.address', 'print.address')
+                        html = html.replace('print.phone', 'print.phone')
+                        html = html.replace('print.email', 'print.email')
                         
+                        html = html.replace('doc.grandTotalInWords', 'totals.grand_total_in_words')
+                        html = html.replace('doc.amountInWords', 'totals.amount_paid_in_words')
+                        html = re.sub(r't\`([^\`]+)\`', r'{{ _("\1") }}', html)
+                        
+                        scale_css = "<style>@media print { html, body { font-size: 12px !important; } .page-break-avoid, section, footer, .flex { page-break-inside: avoid !important; break-inside: avoid !important; } }</style>\n"
+                        tailwind_link = '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">\n'
+                        html = tailwind_link + scale_css + "{%- set print = get_print_settings() -%}\n{%- set totals = get_print_totals(doc) if doc else None -%}\n" + html
+                        
+                        doc_dict["html"] = html
+                        doc_dict["custom_format"] = 1
+                        
+                        if "doc_type" not in doc_dict or not doc_dict["doc_type"]:
+                            doc_dict["doc_type"] = "Books Sales Invoice"
+                        doc_dict["print_format_for"] = "DocType"
+
+                # Payment: copy `amount` into `amount_paid` if missing (old desktop schema had only `amount`)
+                if doctype == "Books Payment" and not doc_dict.get("amount_paid"):
+                    doc_dict["amount_paid"] = doc_dict.get("amount", 0)
+
+                if "name" in doc_dict:
+                    del doc_dict["name"]
+
                 fields = list(doc_dict.keys())
+                fields.append("name")
                 
-                # Fix datetime strings for MariaDB compatibility
                 fixed_values = []
-                for k in fields:
-                    v = doc_dict[k]
-                    if isinstance(v, str) and len(v) > 18 and v[10] == 'T' and v.endswith('Z'):
-                        v = v.replace('T', ' ').replace('Z', '')
-                    fixed_values.append(v)
+                for f in fields:
+                    if f == "name":
+                        fixed_values.append(row[columns.index("name")] if "name" in columns else frappe.generate_hash(length=10))
+                    elif f in doc_dict:
+                        v = doc_dict[f]
+                        if isinstance(v, dict) or isinstance(v, list):
+                            v = json.dumps(v)
+                        fixed_values.append(v)
+                    else:
+                        fixed_values.append(None)
+
+                # Use try-except around DB inserts to ignore table missing errors (like Color)
+                try:
+                    if frappe.db.exists(doctype, fixed_values[-1]):
+                        update_str = ", ".join([f"`{c}` = %s" for c in fields if c != "name"])
+                        update_values = tuple(fixed_values[i] for i, c in enumerate(fields) if c != "name")
+                        frappe.db.sql(f"UPDATE `tab{doctype}` SET {update_str} WHERE name = %s", update_values + (fixed_values[-1],))
+                    else:
+                        placeholders = ", ".join(["%s"] * len(fields))
+                        cols = ", ".join([f"`{c}`" for c in fields])
+                        frappe.db.sql(f"INSERT INTO `tab{doctype}` ({cols}) VALUES ({placeholders})", tuple(fixed_values))
+                except Exception as e:
+                    pass
                     
-                if frappe.db.exists(doctype, doc_dict["name"]):
-                    # UPDATE
-                    update_str = ", ".join([f"`{c}` = %s" for c in fields if c != "name"])
-                    update_values = tuple(fixed_values[i] for i, c in enumerate(fields) if c != "name")
-                    frappe.db.sql(f"UPDATE `tab{doctype}` SET {update_str} WHERE name = %s", update_values + (doc_dict["name"],))
-                else:
-                    # INSERT
-                    values = tuple(fixed_values)
-                    placeholders = ", ".join(["%s"] * len(fields))
-                    columns = ", ".join([f"`{c}`" for c in fields])
-                    frappe.db.sql(f"INSERT INTO `tab{doctype}` ({columns}) VALUES ({placeholders})", values)
             except Exception as e:
-                with open("migration_errors.txt", "a") as f:
-                    f.write(f"Error {doctype} {doc_dict.get('name')}: {e}\n")
-                    
-    frappe.db.commit()
-    with open("migration_errors.txt", "a") as f:
-        f.write("Migration complete!\n")
-
-
-    # --- POST MIGRATION CLEANUP ---
-    print("\n--- Starting Post-Migration Cleanup & Ledger Rebuild ---")
-    
-    # 1. Update Statuses
-    print("Fixing Document Statuses...")
-    for dt in ["Books Sales Invoice", "Books Purchase Invoice", "Books Payment", "Books Journal Entry"]:
-        docs = frappe.get_all(dt, pluck="name")
-        for name in docs:
-            doc = frappe.get_doc(dt, name)
-            if hasattr(doc, "set_status"):
-                doc.set_status(update=True)
-                doc.db_update()
+                print(f"Error importing {doctype}: {e}")
                 
-    # 2. Delete the raw imported ledgers to prevent duplicates
-    print("Clearing raw imported ledgers...")
-    frappe.db.sql("DELETE FROM `tabBooks Ledger Entry`")
     frappe.db.commit()
-    
-    # 3. Recalculate missing discount totals
+
     print("Recalculating invoice totals...")
     for dt in ["Books Sales Invoice", "Books Purchase Invoice", "Books Payment", "Books Journal Entry"]:
         docs = frappe.get_all(dt, pluck="name")
         for name in docs:
             doc = frappe.get_doc(dt, name)
             if hasattr(doc, "calculate"):
-                if doctype == "PrintTemplate": doctype = "Print Format"
-            try:
-
-            if doctype == "Print Format":
-                html = doc_dict["html"]
-                if html:
-                    # Basic Vue to Jinja conversion for Frappe Books Desktop Templates
-                    html = re.sub(r'v-if="([^"]+)"', r'{% if  %}', html)
-                    html = html.replace('v-else', '{% else %}')
-                    html = re.sub(r'v-for="([^"]+) in ([^"]+)"', r'{% for  in  %}', html)
-                    html = re.sub(r':key="[^"]+"', '', html)
-                    
-                    html = html.replace('doc.netTotal', 'books_format(doc.net_total, "Currency", doc.currency)')
-                    html = html.replace('doc.grandTotal', 'books_format(doc.grand_total, "Currency", doc.currency)')
-                    html = html.replace('doc.totalDiscount', 'books_format(doc.total_discount, "Currency", doc.currency)')
-                    html = html.replace('doc.discountAfterTax', 'doc.discount_after_tax')
-                    html = html.replace('row.hsnCode', 'row.hsn_code')
-                    html = html.replace('print.companyName', '(print.company_name or "") | e')
-                    html = html.replace('print.displayLogo', 'print.display_logo')
-                    html = html.replace('print.logo', '{{ print.logo }}')
-                    html = html.replace('print.gstin', 'print.gstin')
-                    html = html.replace('print.address', 'print.address')
-                    html = html.replace('print.phone', 'print.phone')
-                    html = html.replace('print.email', 'print.email')
-                    
-                    # Fix totals
-                    html = html.replace('doc.grandTotalInWords', 'totals.grand_total_in_words')
-                    html = html.replace('doc.amountInWords', 'totals.amount_paid_in_words')
-                    
-                    # Remove JS function calls like t`Item` -> _("Item")
-                    html = re.sub(r't\`([^\`]+)\`', r'{{ _("") }}', html)
-                    
-                    # Tailwind & Scaling fixes
-                    scale_css = "<style>@media print { html, body { font-size: 12px !important; } .page-break-avoid, section, footer, .flex { page-break-inside: avoid !important; break-inside: avoid !important; } }</style>\n"
-                    tailwind_link = '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">\n'
-                    html = html.replace('h-full', '').replace('h-screen', '')
-                    html = tailwind_link + scale_css + "{%- set print = get_print_settings() -%}\n{%- set totals = get_print_totals(doc) if doc else None -%}\n" + html
-                    
-                    doc_dict["html"] = html
-                    doc_dict["custom_format"] = 1
-                    
-                    # Fallback doc_type if not available
-                    if "doc_type" not in doc_dict or not doc_dict["doc_type"]:
-                        doc_dict["doc_type"] = "Books Sales Invoice"
-                    doc_dict["print_format_for"] = "DocType"
-
+                try:
                     doc.calculate()
-                    for item in doc.get("items", []):
-                        if not item.get("item_discounted_total"):
-                            item.item_discounted_total = item.amount
-                        if not item.get("item_taxed_total"):
-                            item.item_taxed_total = item.amount
-                    doc.db_update_all()
+                    doc.db_update()
                 except Exception:
                     pass
-                    
-    # 4. Rebuild Ledgers Natively
+
     print("Rebuilding General Ledger Natively...")
+    frappe.db.sql("DELETE FROM `tabBooks Ledger Entry`")
+    
+    from frappe_books.accounting.ledger import LedgerPosting
+    
     for dt in ["Books Sales Invoice", "Books Purchase Invoice", "Books Payment", "Books Journal Entry"]:
         docs = frappe.get_all(dt, filters={"docstatus": 1}, pluck="name")
         for name in docs:
             doc = frappe.get_doc(dt, name)
-            if hasattr(doc, "get_ledger_posting"):
-                if doctype == "PrintTemplate": doctype = "Print Format"
             try:
-
-            if doctype == "Print Format":
-                html = doc_dict["html"]
-                if html:
-                    # Basic Vue to Jinja conversion for Frappe Books Desktop Templates
-                    html = re.sub(r'v-if="([^"]+)"', r'{% if  %}', html)
-                    html = html.replace('v-else', '{% else %}')
-                    html = re.sub(r'v-for="([^"]+) in ([^"]+)"', r'{% for  in  %}', html)
-                    html = re.sub(r':key="[^"]+"', '', html)
-                    
-                    html = html.replace('doc.netTotal', 'books_format(doc.net_total, "Currency", doc.currency)')
-                    html = html.replace('doc.grandTotal', 'books_format(doc.grand_total, "Currency", doc.currency)')
-                    html = html.replace('doc.totalDiscount', 'books_format(doc.total_discount, "Currency", doc.currency)')
-                    html = html.replace('doc.discountAfterTax', 'doc.discount_after_tax')
-                    html = html.replace('row.hsnCode', 'row.hsn_code')
-                    html = html.replace('print.companyName', '(print.company_name or "") | e')
-                    html = html.replace('print.displayLogo', 'print.display_logo')
-                    html = html.replace('print.logo', '{{ print.logo }}')
-                    html = html.replace('print.gstin', 'print.gstin')
-                    html = html.replace('print.address', 'print.address')
-                    html = html.replace('print.phone', 'print.phone')
-                    html = html.replace('print.email', 'print.email')
-                    
-                    # Fix totals
-                    html = html.replace('doc.grandTotalInWords', 'totals.grand_total_in_words')
-                    html = html.replace('doc.amountInWords', 'totals.amount_paid_in_words')
-                    
-                    # Remove JS function calls like t`Item` -> _("Item")
-                    html = re.sub(r't\`([^\`]+)\`', r'{{ _("") }}', html)
-                    
-                    # Tailwind & Scaling fixes
-                    scale_css = "<style>@media print { html, body { font-size: 12px !important; } .page-break-avoid, section, footer, .flex { page-break-inside: avoid !important; break-inside: avoid !important; } }</style>\n"
-                    tailwind_link = '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">\n'
-                    html = html.replace('h-full', '').replace('h-screen', '')
-                    html = tailwind_link + scale_css + "{%- set print = get_print_settings() -%}\n{%- set totals = get_print_totals(doc) if doc else None -%}\n" + html
-                    
-                    doc_dict["html"] = html
-                    doc_dict["custom_format"] = 1
-                    
-                    # Fallback doc_type if not available
-                    if "doc_type" not in doc_dict or not doc_dict["doc_type"]:
-                        doc_dict["doc_type"] = "Books Sales Invoice"
-                    doc_dict["print_format_for"] = "DocType"
-
+                if dt in ["Books Sales Invoice", "Books Purchase Invoice"]:
                     posting = doc.get_ledger_posting()
                     if posting: posting.post()
-                except Exception:
-                    pass
-            elif hasattr(doc, "post_gl_entries"):
-                if doctype == "PrintTemplate": doctype = "Print Format"
-            try:
-
-            if doctype == "Print Format":
-                html = doc_dict["html"]
-                if html:
-                    # Basic Vue to Jinja conversion for Frappe Books Desktop Templates
-                    html = re.sub(r'v-if="([^"]+)"', r'{% if  %}', html)
-                    html = html.replace('v-else', '{% else %}')
-                    html = re.sub(r'v-for="([^"]+) in ([^"]+)"', r'{% for  in  %}', html)
-                    html = re.sub(r':key="[^"]+"', '', html)
-                    
-                    html = html.replace('doc.netTotal', 'books_format(doc.net_total, "Currency", doc.currency)')
-                    html = html.replace('doc.grandTotal', 'books_format(doc.grand_total, "Currency", doc.currency)')
-                    html = html.replace('doc.totalDiscount', 'books_format(doc.total_discount, "Currency", doc.currency)')
-                    html = html.replace('doc.discountAfterTax', 'doc.discount_after_tax')
-                    html = html.replace('row.hsnCode', 'row.hsn_code')
-                    html = html.replace('print.companyName', '(print.company_name or "") | e')
-                    html = html.replace('print.displayLogo', 'print.display_logo')
-                    html = html.replace('print.logo', '{{ print.logo }}')
-                    html = html.replace('print.gstin', 'print.gstin')
-                    html = html.replace('print.address', 'print.address')
-                    html = html.replace('print.phone', 'print.phone')
-                    html = html.replace('print.email', 'print.email')
-                    
-                    # Fix totals
-                    html = html.replace('doc.grandTotalInWords', 'totals.grand_total_in_words')
-                    html = html.replace('doc.amountInWords', 'totals.amount_paid_in_words')
-                    
-                    # Remove JS function calls like t`Item` -> _("Item")
-                    html = re.sub(r't\`([^\`]+)\`', r'{{ _("") }}', html)
-                    
-                    # Tailwind & Scaling fixes
-                    scale_css = "<style>@media print { html, body { font-size: 12px !important; } .page-break-avoid, section, footer, .flex { page-break-inside: avoid !important; break-inside: avoid !important; } }</style>\n"
-                    tailwind_link = '<link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">\n'
-                    html = html.replace('h-full', '').replace('h-screen', '')
-                    html = tailwind_link + scale_css + "{%- set print = get_print_settings() -%}\n{%- set totals = get_print_totals(doc) if doc else None -%}\n" + html
-                    
-                    doc_dict["html"] = html
-                    doc_dict["custom_format"] = 1
-                    
-                    # Fallback doc_type if not available
-                    if "doc_type" not in doc_dict or not doc_dict["doc_type"]:
-                        doc_dict["doc_type"] = "Books Sales Invoice"
-                    doc_dict["print_format_for"] = "DocType"
-
-                    doc.post_gl_entries()
-                except Exception:
-                    pass
-                    
+                elif dt == "Books Payment":
+                    posting = LedgerPosting(doc)
+                    # old desktop DB had only `amount`; `amount_paid` may be 0 after migration
+                    paid = doc.amount_paid or doc.amount
+                    base = doc.amount
+                    if doc.payment_type == "Receive":
+                        posting.debit(doc.payment_account, paid, doc.party)
+                        posting.credit(doc.account, base, doc.party)
+                    else:
+                        posting.debit(doc.account, base, doc.party)
+                        posting.credit(doc.payment_account, paid, doc.party)
+                    posting.post()
+                elif dt == "Books Journal Entry":
+                    posting = LedgerPosting(doc)
+                    for row in doc.accounts:
+                        posting.debit(row.account, row.debit)
+                        posting.credit(row.account, row.credit)
+                    posting.post()
+            except Exception as e:
+                print(f"Error posting GL for {name}: {e}")
+                
     frappe.db.commit()
+
+    print("Migrating settings (logo, phone, email, company...)...")
+    migrate_settings(conn)
+    frappe.db.commit()
+
     print("Migration and Cleanup completely finished!")
 
-if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.insert(0, os.path.abspath("apps/frappe"))
-    execute()
+
+def migrate_settings(conn):
+    """
+    Read the old desktop SingleValue table and push values into
+    the appropriate Frappe Books single-doctype fields.
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT parent, fieldname, value FROM SingleValue")
+    rows = cursor.fetchall()
+
+    # Map: (sqlite_parent, sqlite_fieldname) -> (frappe_doctype, frappe_fieldname)
+    # camelCase -> snake_case and old doctype name -> new Books doctype name
+    SETTINGS_MAP = {
+        # ── Print Settings ──────────────────────────────────────────────
+        ("PrintSettings", "companyName"):   ("Books Print Settings", "company_name"),
+        ("PrintSettings", "phone"):         ("Books Print Settings", "phone"),
+        ("PrintSettings", "email"):         ("Books Print Settings", "email"),
+        ("PrintSettings", "address"):       ("Books Print Settings", "address"),
+        ("PrintSettings", "gstin"):         ("Books Print Settings", "gstin"),
+        ("PrintSettings", "logo"):          ("Books Print Settings", "logo"),
+        ("PrintSettings", "displayLogo"):   ("Books Print Settings", "display_logo"),
+        ("PrintSettings", "color"):         ("Books Print Settings", "color"),
+        ("PrintSettings", "font"):          ("Books Print Settings", "font"),
+        ("PrintSettings", "amountInWords"): ("Books Print Settings", "amount_in_words"),
+        ("PrintSettings", "displayTime"):   ("Books Print Settings", "display_time"),
+        ("PrintSettings", "termsAndConditions"): ("Books Print Settings", "terms_and_conditions"),
+
+        # ── Accounting Settings ──────────────────────────────────────────
+        ("AccountingSettings", "companyName"):      ("Books Accounting Settings", "company_name"),
+        ("AccountingSettings", "fullname"):         ("Books Accounting Settings", "fullname"),
+        ("AccountingSettings", "email"):            ("Books Accounting Settings", "email"),
+        ("AccountingSettings", "gstin"):            ("Books Accounting Settings", "gstin"),
+        ("AccountingSettings", "country"):          ("Books Accounting Settings", "country"),
+        ("AccountingSettings", "bankName"):         ("Books Accounting Settings", "bank_name"),
+        ("AccountingSettings", "fiscalYearStart"):  ("Books Accounting Settings", "fiscal_year_start"),
+        ("AccountingSettings", "fiscalYearEnd"):    ("Books Accounting Settings", "fiscal_year_end"),
+        ("AccountingSettings", "currency"):         ("Books Accounting Settings", "currency"),
+        ("AccountingSettings", "writeOffAccount"):  ("Books Accounting Settings", "write_off_account"),
+        ("AccountingSettings", "roundOffAccount"):  ("Books Accounting Settings", "round_off_account"),
+        ("AccountingSettings", "discountAccount"):  ("Books Accounting Settings", "discount_account"),
+        ("AccountingSettings", "enableLead"):                      ("Books Accounting Settings", "enable_lead"),
+        ("AccountingSettings", "enablePricingRule"):               ("Books Accounting Settings", "enable_pricing_rule"),
+        ("AccountingSettings", "enableLoyaltyProgram"):            ("Books Accounting Settings", "enable_loyalty_program"),
+        ("AccountingSettings", "enableCouponCode"):                ("Books Accounting Settings", "enable_coupon_code"),
+        ("AccountingSettings", "enablePartialPayment"):            ("Books Accounting Settings", "enable_partial_payment"),
+        ("AccountingSettings", "enableitemGroup"):                 ("Books Accounting Settings", "enableitem_group"),
+        ("AccountingSettings", "enableItemEnquiry"):               ("Books Accounting Settings", "enable_item_enquiry"),
+        ("AccountingSettings", "enablePointOfSaleWithOutInventory"):("Books Accounting Settings", "enable_point_of_sale_with_out_inventory"),
+
+        # ── Defaults ─────────────────────────────────────────────────────
+        ("Defaults", "salesInvoicePrintTemplate"):  ("Books Defaults", "sales_invoice_print_template"),
+        ("Defaults", "purchaseInvoicePrintTemplate"):("Books Defaults", "purchase_invoice_print_template"),
+        ("Defaults", "paymentPrintTemplate"):       ("Books Defaults", "payment_print_template"),
+        ("Defaults", "salesQuotePrintTemplate"):    ("Books Defaults", "sales_quote_print_template"),
+        ("Defaults", "posPrintTemplate"):           ("Books Defaults", "pos_print_template"),
+        ("Defaults", "shipmentPrintTemplate"):      ("Books Defaults", "shipment_print_template"),
+        ("Defaults", "salesPaymentAccount"):        ("Books Defaults", "sales_payment_account"),
+        ("Defaults", "purchasePaymentAccount"):     ("Books Defaults", "purchase_payment_account"),
+        ("Defaults", "saveButtonColour"):           ("Books Defaults", "save_button_colour"),
+        ("Defaults", "cancelButtonColour"):         ("Books Defaults", "cancel_button_colour"),
+        ("Defaults", "submitButtonColour"):         ("Books Defaults", "save_button_colour"),
+        ("Defaults", "heldButtonColour"):           ("Books Defaults", "held_button_colour"),
+        ("Defaults", "returnButtonColour"):         ("Books Defaults", "return_button_colour"),
+        ("Defaults", "payButtonColour"):            ("Books Defaults", "pay_button_colour"),
+    }
+
+    updates = {}  # {(doctype, fieldname): value}
+    for parent, fieldname, value in rows:
+        key = (parent, fieldname)
+        if key in SETTINGS_MAP:
+            target_dt, target_field = SETTINGS_MAP[key]
+            updates[(target_dt, target_field)] = value
+
+    # Apply via frappe.db.set_single_value for singleton doctypes
+    for (doctype, fieldname), value in updates.items():
+        try:
+            # Convert 1.0/0.0 booleans to int
+            if isinstance(value, str) and value in ("1.0", "0.0"):
+                value = int(float(value))
+            frappe.db.set_single_value(doctype, fieldname, value)
+            print(f"  ✓ {doctype}.{fieldname} = {str(value)[:60]}")
+        except Exception as e:
+            print(f"  ✗ {doctype}.{fieldname}: {e}")
 

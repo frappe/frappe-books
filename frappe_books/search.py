@@ -102,9 +102,14 @@ def get_search_fields(meta) -> list[str]:
 
 
 def get_table_search_fields(meta) -> dict[str, dict]:
-	"""Search fields of the tables whose DocType names any, by table fieldname."""
+	"""Search fields of the tables whose DocType names any, by table fieldname.
+
+	Migrate deletes a removed doctype's table DocType before the doctype, and indexes in between.
+	"""
 	tables = {}
 	for field in meta.get_table_fields():
+		if not frappe.db.exists("DocType", field.options):
+			continue
 		table_meta = frappe.get_meta(field.options)
 		if table_meta.search_fields:
 			tables[field.fieldname] = {"doctype": field.options, "fields": get_search_fields(table_meta)}

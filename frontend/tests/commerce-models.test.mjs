@@ -639,6 +639,12 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
   );
 });
 
+test("the pricing rule list reads Enabled from ERPNext's disable check", () => {
+  const [, , enabled] = getModel('PricingRule').getListViewSettings().columns;
+  assert.equal(enabled.badge({ disable: 0 }).label, 'Enabled');
+  assert.equal(enabled.badge({ disable: 1 }).label, 'Disabled');
+});
+
 test('pricing rule limits show the message /books showed at each field', async () => {
   const rule = newFrappeDoc('PricingRule', { max_qty: 5 });
   await assert.rejects(rule.set('min_qty', 6), {

@@ -11,6 +11,7 @@ import {
 
 const {
   canApplyCoupon,
+  getCouponName,
   canRedeemLoyalty,
   isCouponOffered,
   isLoyaltyOffered,
@@ -24,7 +25,18 @@ const heldSales = {
 };
 const points = { Asha: 40, Ravi: 0 };
 
+/** Coupons by name, as ERPNext names them, with the codes cashiers type. */
+const coupons = [{ name: 'Diwali Offer', coupon_code: 'DIWALIOF' }];
+
 await loadFrappeModels(frappeModels, ({ path, body }) => {
+  if (
+    path.endsWith('frappe.client.get_list') &&
+    body.doctype === 'Books Coupon Code'
+  ) {
+    const [[, , code]] = body.filters;
+    return { message: coupons.filter((coupon) => coupon.coupon_code === code) };
+  }
+
   if (path.endsWith('.get_loyalty_program_details_with_points')) {
     return { message: { loyalty_points: points[body.customer] } };
   }
@@ -87,7 +99,10 @@ test('coupons and loyalty need an open sale with items and a customer', () => {
   assert.deepEqual(getGates(makeSale({ items: [] })), [false, false]);
   assert.deepEqual(getGates(makeSale({ customer: '' })), [false, false]);
   // The actions stay on offer, so their toasts can say what is missing.
-  assert.deepEqual(getOffers(makeSale({ items: [], customer: '' })), [true, true]);
+  assert.deepEqual(getOffers(makeSale({ items: [], customer: '' })), [
+    true,
+    true,
+  ]);
 
   const submitted = makeSale();
   submitted.docstatus = 1;
@@ -122,4 +137,9 @@ test('loyalty also needs points to redeem on a sale, not a return', () => {
   for (const sale of [noPoints, noProgram, refund]) {
     assert.deepEqual(getGates(sale), [true, false]);
   }
+});
+
+test('a typed coupon code finds its coupon; a picked coupon name stays', async () => {
+  assert.equal(await getCouponName('DIWALIOF'), 'Diwali Offer');
+  assert.equal(await getCouponName('Diwali Offer'), 'Diwali Offer');
 });

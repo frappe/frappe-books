@@ -118,3 +118,28 @@ test('a payment reference summary labels its outstanding and allocation', () => 
     ['SINV-1', 'Sales Invoice · Outstanding 600.00', '385.00', 'Allocated']
   );
 });
+
+test('a POS closing row reads its expected amount and a negative difference in red', () => {
+  const closing = newFrappeDoc('POSClosingEntry', {
+    payment_reconciliation: [
+      {
+        mode_of_payment: 'Cash',
+        expected_amount: fyo.pesa(455),
+        closing_amount: fyo.pesa(450),
+        difference: fyo.pesa(-5),
+      },
+    ],
+  });
+  const [row] = closing.payment_reconciliation;
+  const { mobileTableFields, mobileLabelledFields } = row.schema;
+  const fields = mobileTableFields.map((name) => row.fieldMap[name]);
+
+  const summary = getRowSummary(row, fields, undefined, mobileLabelledFields);
+  assert.deepEqual(
+    [summary.title, summary.meta, summary.amount, summary.amountLabel],
+    ['Cash', 'Expected Amount 455.00', '-5.00', 'Difference']
+  );
+  assert.equal(summary.isNegative, true);
+  row.difference = fyo.pesa(0);
+  assert.equal(getRowSummary(row, fields).isNegative, false);
+});

@@ -58,10 +58,18 @@ class BooksPOSOpeningEntry(Document):
 
 	@frappe.whitelist()
 	def preview(self):
-		"""Fill the start date and opening cash amount a save expects, without saving."""
+		"""Fill the start date, a row per mode of payment and the opening cash amount, without saving."""
 		check_preview_permission(self)
 		self.period_start_date = self.period_start_date or now_datetime()
+		self.set_balance_details()
 		self.set_opening_cash_amount()
+
+	def set_balance_details(self):
+		"""A new shift lists every mode of payment, as the POS takes them all."""
+		if self.balance_details:
+			return
+		for mode in frappe.get_all("Books Mode of Payment", pluck="name", order_by="creation desc"):
+			self.append("balance_details", {"mode_of_payment": mode, "opening_amount": 0})
 
 	def set_opening_cash_amount(self):
 		"""The counted cash is the first cash method's opening amount."""

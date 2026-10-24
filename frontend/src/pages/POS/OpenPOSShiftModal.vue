@@ -219,21 +219,14 @@ export default defineComponent({
         });
       }
     },
-    async seedPaymentMethods() {
-      if (!this.posShiftDoc) {
-        return;
-      }
-
-      this.posShiftDoc.balance_details = [];
-      const paymentMethods = Object.keys(this.shift.methodTypes).map(
-        (name) => ({ mode_of_payment: name, opening_amount: fyo.pesa(0) })
-      );
-
-      await this.posShiftDoc.set('balance_details', paymentMethods);
-    },
+    /** The server's preview lists a row per mode of payment. */
     async seedDefaults() {
       await this.seedDefaultCashDenomiations();
-      await this.seedPaymentMethods();
+      try {
+        await this.posShiftDoc?.preview();
+      } catch (error) {
+        showToast({ type: 'error', message: t`${error as string}` });
+      }
     },
     async handleSubmit() {
       try {

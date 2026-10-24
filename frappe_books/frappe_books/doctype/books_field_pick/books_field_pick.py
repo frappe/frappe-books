@@ -50,6 +50,21 @@ class BooksFieldPick(Document):
 			frappe.throw(_("Row #{0}: {1} has no field {2}.").format(row.idx, meta.name, row.fieldname))
 
 
+@frappe.whitelist(methods=["POST"])
+def save_field_picks(document_type: str, fields: list[dict]):
+	"""Replaces the picks of a form: rows of `table_fieldname` ('' for the document) and `fieldname`."""
+	if frappe.db.exists("Books Field Pick", document_type):
+		doc = frappe.get_doc("Books Field Pick", document_type)
+	else:
+		doc = frappe.new_doc("Books Field Pick", document_type=document_type)
+
+	rows = [
+		{"table_fieldname": f.get("table_fieldname") or "", "fieldname": f.get("fieldname")} for f in fields
+	]
+	doc.set("fields", rows)
+	doc.save()
+
+
 def get_field_picks(doctypes: list[str]) -> dict[str, dict[str, list[str]]]:
 	"""Picked fieldnames by form doctype, then by table fieldname ('' for the document's own)."""
 	rows = frappe.get_all(

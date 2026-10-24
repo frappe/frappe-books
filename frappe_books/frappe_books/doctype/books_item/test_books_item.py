@@ -46,6 +46,16 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		with self.assertRaises(frappe.UniqueValidationError):
 			make_item(income.name, expense.name, barcodes=[{"barcode": code}])
 
+	def test_item_is_named_by_its_code_and_titled_by_it_unless_named(self):
+		income = make_account("Item Sales", root_type="Income")
+		expense = make_account("Item Expense", root_type="Expense")
+		code = unique_name("CODE")
+		named = make_item(income.name, expense.name, item_name="Green Tea")
+		item = make_item(income.name, expense.name, item_code=code)
+
+		self.assertEqual((item.name, item.item_name), (code, code))
+		self.assertEqual(named.item_name, "Green Tea")
+
 	def test_item_group_hsn_code_must_contain_four_to_eight_digits(self):
 		group = frappe.get_doc(
 			{"doctype": "Books Item Group", "item_group_name": unique_name("Group"), "gst_hsn_code": "12A4"}

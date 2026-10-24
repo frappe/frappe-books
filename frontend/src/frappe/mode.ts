@@ -5,6 +5,11 @@ export function isAccessoryMode(): boolean {
   return !!globalThis.window?.frappe?.boot?.books?.accessory_mode;
 }
 
+/** The ERPNext company accessory mode works on. */
+export function getAccessoryCompany(): string | undefined {
+  return globalThis.window?.frappe?.boot?.books?.company ?? undefined;
+}
+
 /** The DocType a model shows: its Books one, or its ERPNext twin in accessory mode; null when accessory mode leaves it out. */
 export function getActiveDoctype(Model: {
   doctype: string;

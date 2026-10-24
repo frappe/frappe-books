@@ -2,6 +2,7 @@ import { getFieldProperties, isReferenceField } from './fieldProperties';
 import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { Filter } from './api';
 import type { DocField, DocTypeMeta } from './meta';
+import { getAccessoryCompany, isAccessoryMode } from './mode';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
 export interface Presentation {
@@ -106,6 +107,7 @@ export interface SchemaContext {
 const LAYOUT_FIELDTYPES = ['Section Break', 'Column Break', 'Tab Break'];
 const DEFAULT_SECTION = 'Default';
 // Fields every Books document has that the server sets, e.g. the one company it belongs to.
+// An ERPNext document keeps its company, hidden, as the one accessory mode works on.
 const SERVER_FIELDS = ['company'];
 
 // Standard columns, labelled as the list filters show them.
@@ -188,7 +190,10 @@ function getDocFields(
   const placed: Field[] = [];
   let tab: string | undefined;
   let section = DEFAULT_SECTION;
-  const omitted = [...SERVER_FIELDS, ...(presentation.omitFields ?? [])];
+  const omitted = [
+    ...(isAccessoryMode() ? [] : SERVER_FIELDS),
+    ...(presentation.omitFields ?? []),
+  ];
   for (const docfield of meta.fields) {
     if (omitted.includes(docfield.fieldname)) {
       continue;
@@ -254,6 +259,11 @@ function toField(docfield: DocField, context: FieldContext): Field {
     create: isLink(docfield) || undefined,
     linkFilters: getLinkFilters(docfield),
     ...shown,
+    ...(SERVER_FIELDS.includes(fieldname) && {
+      hidden: true,
+      readOnly: true,
+      default: getAccessoryCompany(),
+    }),
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
   if (docfield.fieldtype === 'Table') {

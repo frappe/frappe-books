@@ -27,13 +27,17 @@
           </div>
         </dl>
       </div>
-      <div v-else class="grid gap-4 gap-x-8 grid-cols-1 md:grid-cols-2">
+      <div
+        v-else
+        class="grid gap-4 gap-x-8 grid-cols-1 md:grid-cols-2"
+        :class="{ 'lg:grid-cols-3': doc.schema.formColumns === 3 }"
+      >
         <div
           v-for="group in fieldGroups"
           :key="group[0].fieldname"
           :class="
             group[0].fieldtype === 'Check'
-              ? 'md:col-span-2 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2'
+              ? 'md:col-span-full grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2'
               : 'contents'
           "
         >
@@ -43,11 +47,11 @@
             :data-fieldname="field.fieldname"
             :class="[
               'min-w-0 self-start w-full',
-              field.fieldtype === 'Table' ? 'md:col-span-2 text-base' : '',
-              isWideControl(field) ? 'md:col-span-2' : '',
-              (field as TargetField).card ? 'md:col-span-2' : '',
+              field.fieldtype === 'Table' ? 'md:col-span-full text-base' : '',
+              isWideControl(field) ? 'md:col-span-full' : '',
+              (field as TargetField).card ? 'md:col-span-full' : '',
               field.fieldtype === 'AttachImage' ? 'md:row-span-2' : '',
-              field.fieldname === 'terms_and_conditions' ? 'md:col-span-2' : '',
+              field.fieldname === 'terms_and_conditions' ? 'md:col-span-full' : '',
               field.narrow ? 'md:max-w-[340px]' : '',
               field.invisible ? 'invisible' : '',
             ]"
@@ -191,7 +195,7 @@ export default defineComponent({
     focusOrSelectFormControl(this.doc, this.$refs.nameField);
   },
   methods: {
-    /** Rich text and picked records span both columns. */
+    /** Rich text and picked records span the row. */
     isWideControl({ control }: Field): boolean {
       return control === 'TextEditor' || control === 'TableMultiSelect';
     },

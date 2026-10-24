@@ -141,6 +141,7 @@ export interface Schema {
   mobileTableFields?: string[]; // A phone row's title, meta and amount fields, where they differ from tableFields
   mobileRowDetail?: string; // The field a phone row shows under its amount
   mobileLabelledFields?: string[]; // Phone row fields shown with their labels; the amount's label goes under it
+  formColumns?: 3; // A desktop form's field columns, where it has three instead of two
   isSubmittable?: boolean; // For transactional types, values considered only after submit
   quickEditFields?: string[]; // Used to get fields for the quickEditForm
   fileFields?: string[]; // Fields of export and import files, in order

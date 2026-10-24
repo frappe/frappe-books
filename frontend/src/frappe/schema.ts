@@ -64,6 +64,8 @@ export interface Presentation {
   mobileRowDetail?: string;
   /** Phone row fields shown with their labels, like a reference's Outstanding; the amount's label goes under it. */
   mobileLabelledFields?: string[];
+  /** A desktop form's field columns, where the design draws three instead of two, like a payment's. */
+  formColumns?: 3;
   /**
    * The fields of list exports, import templates and quick views, in Books'
    * order, where it differs from the DocType's; fields the server fills are
@@ -165,6 +167,7 @@ export function toSchema(
     mobileTableFields: presentation.mobileTableFields,
     mobileRowDetail: presentation.mobileRowDetail,
     mobileLabelledFields: presentation.mobileLabelledFields,
+    formColumns: presentation.formColumns,
     tableFields: presentation.tableFields ?? getListViewFields(meta, context),
     isChild: !!meta.istable,
     isSingle: !!meta.issingle,

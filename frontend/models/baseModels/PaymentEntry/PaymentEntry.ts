@@ -35,6 +35,7 @@ export class PaymentEntry extends FrappeDoc {
   static override presentation = {
     label: 'Payment Entry',
     nameField: { label: 'Payment No', hidden: true },
+    formColumns: 3 as const,
     fields: {
       party_type: { options: PARTY_TYPE_OPTIONS },
       references: {

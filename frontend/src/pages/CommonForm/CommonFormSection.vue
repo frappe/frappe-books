@@ -92,6 +92,7 @@ import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Field, TargetField } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Table from 'src/components/Controls/Table.vue';

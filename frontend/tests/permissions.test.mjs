@@ -105,9 +105,17 @@ test('printing a document needs the print permission', async () => {
 test('the import wizard offers only the schemas the user may import', () => {
   fyo.store.permissions = {
     doctypes: { Customer: 'Books Customer', Tax: 'Books Tax' },
-    user: { can_import: ['Books Customer'] },
+    user: { can_import: ['Books Customer'], can_create: ['Data Import'] },
   };
   assert.deepEqual(getImportableSchemaNames(fyo), ['Customer']);
+});
+
+test('the import wizard offers nothing to who cannot make a Data Import', () => {
+  fyo.store.permissions = {
+    doctypes: { Customer: 'Books Customer' },
+    user: { can_import: ['Books Customer'], can_create: [] },
+  };
+  assert.deepEqual(getImportableSchemaNames(fyo), []);
 });
 
 test('export granted only to owners exports only the user’s documents', () => {

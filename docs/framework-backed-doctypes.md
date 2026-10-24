@@ -77,7 +77,15 @@ These node tests catch common mistakes after a merge:
 
 ## Accessory mode
 
-With ERPNext on the site, a System Manager turns on accessory mode in Settings → ERPNext (Books ERPNext Settings: `default_company`, `accessory_mode`). The boot sends `books.accessory_mode` and, as `books.company`, the ERPNext company; it falls back to standalone when ERPNext or the company is gone. `src/frappe/mode.ts` gives the active doctype of each model: its `doctype` without `Books `, or its `erpnextDoctype`. A model whose `erpnextDoctype` is `null` is standalone only and is not registered, so its lists, sidebar items and routes go away. Feature switches are read through `fyo.isFeatureOn`, which is on in accessory mode for every feature ERPNext has. Books previews and mappers do not run on ERPNext documents.
+With ERPNext on the site, a System Manager turns on accessory mode in Settings → ERPNext (Books ERPNext Settings: `default_company`, `accessory_mode`). The boot sends `books.accessory_mode` and, as `books.company`, the ERPNext company; it falls back to standalone when ERPNext or the company is gone. `src/frappe/mode.ts` gives the active doctype of each model: its `doctype` without `Books `, or its `erpnextDoctype`. A model whose `erpnextDoctype` is `null` is standalone only and is not registered, so its lists, sidebar items and routes go away. Feature switches are read through `fyo.isFeatureOn`, which is on in accessory mode for every feature ERPNext has. A site whose ERPNext is set up and whose Books never was starts in accessory mode on its first boot.
+
+ERPNext documents run ERPNext's own code, from `frappe_books/accessory/`:
+
+- Preview: `preview.preview` starts from `frappe.new_doc` (or the saved draft), sets the client's values, and runs `set_missing_values` and `calculate_taxes_and_totals` in a savepoint that is rolled back. The client sends the fields edited since the last preview, so a new party takes `get_party_details` and a new item starts its row afresh, as in Desk. A typed rate stays.
+- Create actions: `mappers.make_mapped_doc` maps each Books mapper name to ERPNext's mapper, e.g. `make_return` on a Sales Invoice to `make_sales_return`, and `make_payment` to `get_payment_entry`.
+- Linked entries use Frappe's `linked_with`; cancel offers every submitted linked document and runs `cancel_all_linked_docs`.
+- The search index holds the ERPNext twins of the Books doctypes, and is rebuilt when the mode changes.
+- Amounts go to Frappe as numbers, and ERPNext documents keep their company, hidden, as the accessory company.
 
 ## Custom forms
 

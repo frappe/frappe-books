@@ -1,3 +1,4 @@
+import unittest
 from unittest.mock import patch
 
 import frappe
@@ -11,6 +12,13 @@ from frappe_books.permissions import has_app_permission
 BOOKS_USER = "accessory-books-user@example.com"
 WITHOUT_ERPNEXT = patch("frappe_books.accessory.erpnext_installed", return_value=False)
 ACCESSORY_ON = patch("frappe_books.permissions.accessory_company", return_value="Acme")
+ERPNEXT_SET_UP = patch("frappe_books.accessory.erpnext_setup_complete", return_value=True)
+
+
+def forget_settings_and_books_setup():
+	"""A site whose ERPNext settings were never saved and whose Books setup never ran."""
+	frappe.db.delete("Singles", {"doctype": SETTINGS})
+	frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 
 
 class IntegrationTestAccessoryMode(IntegrationTestCase):
@@ -48,3 +56,23 @@ class IntegrationTestAccessoryMode(IntegrationTestCase):
 			self.assertTrue(has_app_permission())
 			with ACCESSORY_ON:
 				self.assertFalse(has_app_permission())
+
+	@unittest.skipUnless("erpnext" in frappe.get_installed_apps(), "needs ERPNext")
+	def test_first_load_without_books_setup_starts_in_accessory_mode(self):
+		company = frappe.get_all("Company", pluck="name", limit=1)[0]
+		forget_settings_and_books_setup()
+		with ERPNEXT_SET_UP, patch("frappe_books.accessory.erpnext_default_company", return_value=company):
+			bootinfo = frappe._dict()
+			extend_bootinfo(bootinfo)
+
+		self.assertTrue(bootinfo.books["accessory_mode"])
+		self.assertEqual(bootinfo.books["company"], company)
+
+	def test_saved_settings_keep_standalone_without_books_setup(self):
+		forget_settings_and_books_setup()
+		frappe.get_single(SETTINGS).save()
+		with patch("frappe_books.accessory.erpnext_installed", return_value=True), ERPNEXT_SET_UP:
+			bootinfo = frappe._dict()
+			extend_bootinfo(bootinfo)
+
+		self.assertFalse(bootinfo.books["accessory_mode"])

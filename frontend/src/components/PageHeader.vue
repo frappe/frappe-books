@@ -3,8 +3,22 @@
     <template #prefix>
       <slot name="mobile-prefix"><PageHeaderLead /></slot>
     </template>
-    <template v-if="$slots['mobile-title']" #default>
-      <slot name="mobile-title" />
+    <template v-if="$slots['mobile-title'] || companyLine" #default>
+      <slot name="mobile-title">
+        <span class="block truncate">{{ title }}</span>
+        <!-- Accessory mode: the ERPNext company under a tab's title -->
+        <span
+          class="flex items-center justify-center gap-1 truncate text-sm font-normal text-ink-gray-5"
+        >
+          <img
+            v-if="erpnextLogo"
+            :src="erpnextLogo"
+            class="size-3 shrink-0"
+            alt=""
+          />
+          <span class="truncate">{{ companyLine }}</span>
+        </span>
+      </slot>
     </template>
     <template v-if="$slots.mobile" #suffix>
       <div class="flex items-center gap-2">
@@ -46,6 +60,7 @@ import {
   PageHeaderTitle as FrappePageHeaderTitle,
   Button as FrappeButton,
 } from 'frappe-ui';
+import { getERPNextLogo, isAccessoryMode } from 'src/frappe/mode';
 import { showSidebar } from 'src/utils/refs';
 import { toggleSidebar } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
@@ -70,7 +85,18 @@ export default defineComponent({
     const isActive = ref(true);
     onActivated(() => (isActive.value = true));
     onDeactivated(() => (isActive.value = false));
-    return { showSidebar, isActive, isMobile };
+    return { showSidebar, isActive, isMobile, erpnextLogo: getERPNextLogo() };
+  },
+  computed: {
+    /** Tab pages, not pushed or phone-only ones like Settings, show the ERPNext company in accessory mode. */
+    companyLine(): string {
+      const { pushed, phoneOnly } = this.$route.meta;
+      if (!isAccessoryMode() || pushed || phoneOnly) {
+        return '';
+      }
+
+      return this.fyo.singles.Company?.company_name ?? '';
+    },
   },
   methods: { toggleSidebar },
 });

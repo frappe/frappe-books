@@ -42,8 +42,8 @@ import { StockLedgerEntry } from './inventory/StockLedgerEntry';
 import { StockEntry } from './inventory/StockEntry';
 import { POSSettings } from './inventory/Point of Sale/POSSettings';
 import { POSProfile } from './baseModels/POSProfile/PosProfile';
-import { POSOpeningShift } from './inventory/Point of Sale/POSOpeningShift';
-import { POSClosingShift } from './inventory/Point of Sale/POSClosingShift';
+import { POSOpeningEntry } from './inventory/Point of Sale/POSOpeningEntry';
+import { POSClosingEntry } from './inventory/Point of Sale/POSClosingEntry';
 import { ItemEnquiry } from './baseModels/ItemEnquiry/ItemEnquiry';
 import * as invoices from './invoices';
 
@@ -93,8 +93,8 @@ export const frappeModels: Record<string, FrappeModel> = {
   CustomForm,
   POSSettings,
   POSProfile,
-  POSOpeningShift,
-  POSClosingShift,
+  POSOpeningEntry,
+  POSClosingEntry,
   SalesInvoice: invoices.SalesInvoice,
   PurchaseInvoice: invoices.PurchaseInvoice,
   Quotation: invoices.Quotation,

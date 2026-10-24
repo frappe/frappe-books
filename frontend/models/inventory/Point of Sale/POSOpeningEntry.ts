@@ -5,10 +5,10 @@ import { FrappeDoc } from 'src/frappe/document';
 /** A row of cash counted by denomination. */
 export type CashCount = FrappeDoc & { denomination?: Money; count?: number };
 
-/** A payment method's amount in a shift. */
-export type ShiftAmount = FrappeDoc & {
-  payment_method?: string;
-  amount?: Money;
+/** A mode of payment's opening amount in a shift. */
+export type OpeningBalance = FrappeDoc & {
+  mode_of_payment?: string;
+  opening_amount?: Money;
 };
 
 /** A Books Opening Cash row. */
@@ -16,27 +16,32 @@ export class OpeningCash extends FrappeDoc {
   static override presentation = { label: 'Opening Cash In Denominations' };
 }
 
-/** A Books Opening Amounts row. */
-export class OpeningAmounts extends FrappeDoc {
-  static override presentation = { label: 'Opening Amount' };
+/** A Books POS Opening Entry Detail row. */
+export class POSOpeningEntryDetail extends FrappeDoc {
+  static override presentation = { label: 'Opening Balance Detail' };
 }
 
-/** Books Pos Opening Shift, served by Frappe; its preview fills the opening cash amount. */
-export class POSOpeningShift extends FrappeDoc {
-  static override doctype = 'Books Pos Opening Shift';
+/** Books POS Opening Entry, served by Frappe; its preview fills the start date and opening cash amount. */
+export class POSOpeningEntry extends FrappeDoc {
+  static override doctype = 'Books POS Opening Entry';
   static override presentation = {
-    label: 'POS Opening Shift',
-    fileFields: ['name', 'opening_date', 'opening_cash', 'opening_amounts'],
+    label: 'POS Opening Entry',
+    fileFields: [
+      'name',
+      'period_start_date',
+      'opening_cash',
+      'balance_details',
+    ],
   };
   static override rowModels = {
     opening_cash: OpeningCash,
-    opening_amounts: OpeningAmounts,
+    balance_details: POSOpeningEntryDetail,
   };
   static override previewMethod = 'preview';
 
-  declare opening_date?: Date;
+  declare period_start_date?: Date;
   declare opening_cash?: CashCount[];
-  declare opening_amounts?: ShiftAmount[];
+  declare balance_details?: OpeningBalance[];
 
   /** The cash the counted denominations add up to. */
   get openingCashAmount(): Money {
@@ -44,7 +49,7 @@ export class POSOpeningShift extends FrappeDoc {
   }
 
   static getListViewSettings(): ListViewSettings {
-    return { columns: ['name', 'opening_date'] };
+    return { columns: ['name', 'period_start_date'] };
   }
 }
 

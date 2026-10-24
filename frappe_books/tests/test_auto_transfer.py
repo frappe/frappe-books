@@ -12,7 +12,7 @@ from frappe_books.frappe_books.doctype.books_delivery_note.books_delivery_note i
 from frappe_books.frappe_books.doctype.books_delivery_note.books_delivery_note import (
 	make_sales_invoice as make_delivery_note_invoice,
 )
-from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
 	start_pos_shift,
 )
 from frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice import (

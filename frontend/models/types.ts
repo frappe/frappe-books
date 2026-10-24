@@ -64,8 +64,8 @@ export enum ModelNameEnum {
   CustomField = 'CustomField',
   POSSettings = 'POSSettings',
   POSProfile = 'POSProfile',
-  POSOpeningShift = 'POSOpeningShift',
-  POSClosingShift = 'POSClosingShift',
+  POSOpeningEntry = 'POSOpeningEntry',
+  POSClosingEntry = 'POSClosingEntry',
 }
 
 export type ModelName = keyof typeof ModelNameEnum;

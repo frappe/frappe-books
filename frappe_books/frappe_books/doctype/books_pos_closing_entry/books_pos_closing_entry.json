@@ -7,20 +7,22 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "closing_date",
+  "period_end_date",
   "closing_cash",
-  "closing_amounts",
-  "opening_shift",
+  "payment_reconciliation",
+  "pos_opening_entry",
   "journal_entry",
   "amended_from",
   "company"
  ],
  "fields": [
   {
-   "fieldname": "closing_date",
+   "fieldname": "period_end_date",
    "fieldtype": "Datetime",
-   "label": "Closing Date",
-   "no_copy": 1
+   "in_list_view": 1,
+   "label": "Period End Date",
+   "no_copy": 1,
+   "reqd": 1
   },
   {
    "fieldname": "closing_cash",
@@ -29,16 +31,17 @@
    "options": "Books Closing Cash"
   },
   {
-   "fieldname": "closing_amounts",
+   "fieldname": "payment_reconciliation",
    "fieldtype": "Table",
-   "label": "Closing Amounts",
-   "options": "Books Closing Amounts"
+   "label": "Payment Reconciliation",
+   "options": "Books POS Closing Entry Detail"
   },
   {
-   "fieldname": "opening_shift",
+   "fieldname": "pos_opening_entry",
    "fieldtype": "Link",
-   "label": "Opening Shift",
-   "options": "Books Pos Opening Shift",
+   "label": "POS Opening Entry",
+   "options": "Books POS Opening Entry",
+   "reqd": 1,
    "search_index": 1
   },
   {
@@ -54,7 +57,7 @@
    "fieldtype": "Link",
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Books Pos Closing Shift",
+   "options": "Books POS Closing Entry",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -71,10 +74,10 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Pos Closing Shift",
+ "name": "Books POS Closing Entry",
  "owner": "Administrator",
  "permissions": [
   {

@@ -6,7 +6,7 @@ from frappe.utils import add_days, getdate, nowdate
 
 from frappe_books.accounting.money import company_currency
 from frappe_books.commerce.pricing import row_pricing_rule
-from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
 	start_pos_shift,
 )
 from frappe_books.tests.accounting import (

@@ -58,7 +58,7 @@ import { t } from 'fyo';
 import {
   CashCount,
   getCashTotal,
-} from 'models/inventory/Point of Sale/POSOpeningShift';
+} from 'models/inventory/Point of Sale/POSOpeningEntry';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import NumberStepper from './NumberStepper.vue';

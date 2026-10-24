@@ -8,11 +8,11 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, now_datetime
 
 from frappe_books.commerce.pos import open_shift_name
-from frappe_books.frappe_books.doctype.books_pos_opening_shift.books_pos_opening_shift import get_open_shift
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.books_pos_opening_entry import get_open_shift
 from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, root_group, unique_name
 
 
-class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
+class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 	def setUp(self):
 		self.counter = set_pos_accounts()
 
@@ -27,13 +27,13 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 
 	def test_shift_is_dated_when_it_opens(self):
 		draft = make_opening_shift(0)
-		draft.opening_date = add_days(now_datetime(), -1)
+		draft.period_start_date = add_days(now_datetime(), -1)
 		draft.insert()
-		self.assertEqual(getdate(draft.opening_date), getdate(add_days(now_datetime(), -1)))
+		self.assertEqual(getdate(draft.period_start_date), getdate(add_days(now_datetime(), -1)))
 
 		draft.submit()
 
-		self.assertEqual(getdate(draft.reload().opening_date), getdate(now_datetime()))
+		self.assertEqual(getdate(draft.reload().period_start_date), getdate(now_datetime()))
 
 	def test_opening_cash_cannot_be_negative(self):
 		shift = make_opening_shift(100)
@@ -57,7 +57,7 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		draft.preview()
 
 		self.assertIsNone(draft.name)
-		self.assertEqual([row.amount for row in draft.opening_amounts], [150, 0])
+		self.assertEqual([row.opening_amount for row in draft.balance_details], [150, 0])
 
 	def test_preview_needs_the_right_to_open_a_shift(self):
 		with self.set_user(ensure_user("books-pos-shift-preview-stranger@example.com")):
@@ -77,7 +77,7 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 	def test_submitted_shift_cannot_be_edited_or_deleted(self):
 		shift = open_shift(100)
 
-		shift.opening_date = now_datetime()
+		shift.period_start_date = now_datetime()
 		self.assertRaises(frappe.UpdateAfterSubmitError, shift.save)
 		self.assertRaises(frappe.ValidationError, frappe.delete_doc, shift.doctype, shift.name)
 
@@ -117,7 +117,7 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 def set_pos_accounts():
 	"""Configure POS accounts and start without an open shift, as tests in a class share one transaction."""
 	while shift := open_shift_name():
-		frappe.get_doc("Books Pos Opening Shift", shift).cancel()
+		frappe.get_doc("Books POS Opening Entry", shift).cancel()
 	counter = make_account("POS Counter", account_type="Cash")
 	write_off = make_account("POS Write Off", root_type="Expense", account_type="Expense Account")
 	frappe.db.set_single_value(
@@ -151,12 +151,12 @@ def start_pos_shift():
 def make_opening_shift(cash):
 	return frappe.get_doc(
 		{
-			"doctype": "Books Pos Opening Shift",
-			"opening_date": now_datetime(),
+			"doctype": "Books POS Opening Entry",
+			"period_start_date": now_datetime(),
 			"opening_cash": [{"denomination": cash, "count": 1}] if cash else [],
-			"opening_amounts": [
-				{"payment_method": "Cash", "amount": cash},
-				{"payment_method": "Bank", "amount": 0},
+			"balance_details": [
+				{"mode_of_payment": "Cash", "opening_amount": cash},
+				{"mode_of_payment": "Bank", "opening_amount": 0},
 			],
 		}
 	)

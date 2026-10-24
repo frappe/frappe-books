@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-// frappe.ui.form.on("Books Pos Closing Shift", {
+// frappe.ui.form.on("Books POS Closing Entry", {
 // 	refresh(frm) {
 
 // 	},

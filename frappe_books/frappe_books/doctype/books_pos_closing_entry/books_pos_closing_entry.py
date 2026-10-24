@@ -21,7 +21,7 @@ from frappe_books.commerce.pos import (
 from frappe_books.permissions import check_preview_permission
 
 
-class BooksPosClosingShift(Document):
+class BooksPOSClosingEntry(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -30,26 +30,26 @@ class BooksPosClosingShift(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_closing_amounts.books_closing_amounts import (
-			BooksClosingAmounts,
-		)
 		from frappe_books.frappe_books.doctype.books_closing_cash.books_closing_cash import (
 			BooksClosingCash,
 		)
+		from frappe_books.frappe_books.doctype.books_pos_closing_entry_detail.books_pos_closing_entry_detail import (
+			BooksPOSClosingEntryDetail,
+		)
 
 		amended_from: DF.Link | None
-		closing_amounts: DF.Table[BooksClosingAmounts]
 		closing_cash: DF.Table[BooksClosingCash]
-		closing_date: DF.Datetime | None
 		company: DF.Link | None
 		journal_entry: DF.Link | None
-		opening_shift: DF.Link | None
+		payment_reconciliation: DF.Table[BooksPOSClosingEntryDetail]
+		period_end_date: DF.Datetime
+		pos_opening_entry: DF.Link
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Pos Closing Shift"
+	_DOCTYPE_NAME = "Books POS Closing Entry"
 
 	def validate(self):
-		self.set_opening_shift()
+		self.set_pos_opening_entry()
 		validate_cash_rows(self.closing_cash)
 		self.set_closing_amounts()
 		cash_rows = self.get_cash_rows()
@@ -58,8 +58,8 @@ class BooksPosClosingShift(Document):
 
 	def before_submit(self):
 		lock_pos_settings()
-		if open_shift_name() != self.opening_shift:
-			frappe.throw(_("POS shift {0} is not open.").format(self.opening_shift))
+		if open_shift_name() != self.pos_opening_entry:
+			frappe.throw(_("POS shift {0} is not open.").format(self.pos_opening_entry))
 		self.set_closing_amounts()
 
 	def on_submit(self):
@@ -67,7 +67,7 @@ class BooksPosClosingShift(Document):
 		if not cash_rows:
 			return
 		journal = make_cash_journal(
-			self.closing_date,
+			self.period_end_date,
 			_closing_journal_rows(cash_rows),
 			_("POS closing shift {0}").format(self.name),
 		)
@@ -85,14 +85,14 @@ class BooksPosClosingShift(Document):
 	def preview(self):
 		"""Fill the closing amounts a save would store, with the counted cash as the cash methods' amounts, without saving."""
 		check_preview_permission(self)
-		self.set_opening_shift()
+		self.set_pos_opening_entry()
 		self.set_closing_amounts()
 		self.split_counted_cash()
 
-	def set_opening_shift(self):
-		if not self.opening_shift:
-			self.opening_shift = open_shift_name()
-		if not self.opening_shift:
+	def set_pos_opening_entry(self):
+		if not self.pos_opening_entry:
+			self.pos_opening_entry = open_shift_name()
+		if not self.pos_opening_entry:
 			frappe.throw(_("There is no open POS shift to close."))
 
 	def set_closing_amounts(self):
@@ -100,28 +100,32 @@ class BooksPosClosingShift(Document):
 
 		A method's row keeps its counted amount and its name, so a preview updates the rows it was sent.
 		"""
-		self.closing_date = now_datetime()
-		opening = frappe.get_doc("Books Pos Opening Shift", self.opening_shift)
-		transactions = transacted_amounts(opening.opening_date, self.closing_date)
-		counted = {row.payment_method: row for row in self.closing_amounts}
+		self.period_end_date = now_datetime()
+		opening = frappe.get_doc("Books POS Opening Entry", self.pos_opening_entry)
+		transactions = transacted_amounts(opening.period_start_date, self.period_end_date)
+		counted = {row.mode_of_payment: row for row in self.payment_reconciliation}
 		rows = []
-		for row in opening.opening_amounts:
-			closing_row = counted.get(row.payment_method) or frappe._dict(payment_method=row.payment_method)
+		for row in opening.balance_details:
+			closing_row = counted.get(row.mode_of_payment) or frappe._dict(
+				mode_of_payment=row.mode_of_payment
+			)
 			closing = rounded(closing_row.closing_amount)
 			if closing < 0:
-				frappe.throw(_("Closing {0} Amount can not be negative.").format(row.payment_method))
-			expected = rounded(as_decimal(row.amount) + as_decimal(transactions.get(row.payment_method)))
+				frappe.throw(_("Closing {0} Amount can not be negative.").format(row.mode_of_payment))
+			expected = rounded(
+				as_decimal(row.opening_amount) + as_decimal(transactions.get(row.mode_of_payment))
+			)
 			closing_row.update(
 				{
 					"idx": len(rows) + 1,
-					"opening_amount": rounded(row.amount),
+					"opening_amount": rounded(row.opening_amount),
 					"closing_amount": closing,
 					"expected_amount": expected,
-					"difference_amount": closing - expected,
+					"difference": closing - expected,
 				}
 			)
 			rows.append(closing_row)
-		self.set("closing_amounts", rows)
+		self.set("payment_reconciliation", rows)
 
 	def split_counted_cash(self):
 		"""Share the counted cash among the cash methods: each up to what it expects, the first also any surplus."""
@@ -133,10 +137,10 @@ class BooksPosClosingShift(Document):
 		if cash_rows:
 			cash_rows[0].closing_amount += remaining
 		for row in cash_rows:
-			row.difference_amount = row.closing_amount - rounded(row.expected_amount)
+			row.difference = row.closing_amount - rounded(row.expected_amount)
 
 	def get_cash_rows(self):
-		return [row for row in self.closing_amounts if is_cash_method(row.payment_method)]
+		return [row for row in self.payment_reconciliation if is_cash_method(row.mode_of_payment)]
 
 
 def _cash_sum(cash_rows, fieldname):
@@ -150,7 +154,7 @@ def _closing_journal_rows(cash_rows):
 		(cash_account(), _cash_sum(cash_rows, "closing_amount"), 0),
 		(settings.cash_account, 0, _cash_sum(cash_rows, "expected_amount")),
 	]
-	difference = _cash_sum(cash_rows, "difference_amount")
+	difference = _cash_sum(cash_rows, "difference")
 	if difference:
 		if not settings.write_off_account:
 			frappe.throw(_("POS Write Off Account is not set. Please set it on POS Settings"))

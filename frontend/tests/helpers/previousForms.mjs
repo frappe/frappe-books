@@ -460,7 +460,7 @@ export const previousForms = {
     'POSProfile.pos_customer': true,
     'POSProfile.inventory': true,
     'POSProfile.pos_print_template': false,
-    'POSClosingShift.opening_shift': false,
+    'POSClosingEntry.pos_opening_entry': false,
     'SalesInvoice.naming_series': true,
     'SalesInvoice.customer': true,
     'SalesInvoice.debit_to': true,
@@ -525,10 +525,10 @@ export const previousForms = {
       'reference_date | Cheque/Reference Date',
       'clearance_date | Clearance Date',
     ],
-    POSOpeningShift: ['opening_date | Opening Date'],
-    POSClosingShift: [
-      'closing_date | Closing Date',
-      'opening_shift | Opening Shift',
+    POSOpeningEntry: ['period_start_date | Period Start Date'],
+    POSClosingEntry: [
+      'period_end_date | Period End Date',
+      'pos_opening_entry | POS Opening Entry',
     ],
     SalesInvoice: [
       'naming_series | Number Series',

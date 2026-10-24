@@ -121,11 +121,11 @@ test('a filter chip narrows the list until it is removed', async ({ page }) => {
 
 // POS shifts open on a date and time; invoices and payments post on a date.
 test('date filters use the native picker', async ({ page }) => {
-  await page.goto('/books/list/POSOpeningShift');
+  await page.goto('/books/list/POSOpeningEntry');
   await page.getByRole('button', { name: 'Filters', exact: true }).tap();
   await page
     .getByRole('dialog', { name: 'Filter by' })
-    .getByRole('button', { name: /^Opening Date/ })
+    .getByRole('button', { name: /^Period Start Date/ })
     .tap();
   const sheet = page.getByRole('dialog', { name: 'Filters' });
   const value = sheet.getByLabel('Value');

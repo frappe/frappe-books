@@ -14,7 +14,7 @@
         :df="{
           fieldname: 'closing_amount',
           fieldtype: 'Currency',
-          label: t`Counted ${row.payment_method ?? ''}`,
+          label: t`Counted ${row.mode_of_payment ?? ''}`,
         }"
         :value="row.closing_amount"
         :show-label="true"
@@ -42,14 +42,14 @@
               <span
                 class="min-w-0 text-base text-ink-gray-8 [overflow-wrap:anywhere]"
               >
-                {{ row.payment_method }}
+                {{ row.mode_of_payment }}
               </span>
               <span
                 class="shrink-0 text-base tabular-nums"
-                :class="getDifferenceClass(row.difference_amount)"
+                :class="getDifferenceClass(row.difference)"
                 dir="ltr"
               >
-                {{ format(row.difference_amount) }}
+                {{ format(row.difference) }}
               </span>
             </div>
             <p
@@ -92,7 +92,9 @@
             class="grid h-10 items-center gap-2 border-t border-outline-gray-1 px-3"
             :class="amountColumns"
           >
-            <span class="truncate text-ink-gray-8">{{ row.payment_method }}</span>
+            <span class="truncate text-ink-gray-8">{{
+              row.mode_of_payment
+            }}</span>
             <span class="truncate text-end text-ink-gray-6" dir="ltr">
               {{ format(row.opening_amount) }}
             </span>
@@ -113,17 +115,17 @@
               :df="{
                 fieldname: 'closing_amount',
                 fieldtype: 'Currency',
-                label: t`Counted ${row.payment_method ?? ''}`,
+                label: t`Counted ${row.mode_of_payment ?? ''}`,
               }"
               :value="row.closing_amount"
               @change="(amount: Money) => setClosingAmount(row, amount)"
             />
             <span
               class="truncate text-end text-base-medium"
-              :class="getDifferenceClass(row.difference_amount)"
+              :class="getDifferenceClass(row.difference)"
               dir="ltr"
             >
-              {{ format(row.difference_amount) }}
+              {{ format(row.difference) }}
             </span>
           </div>
         </div>
@@ -135,13 +137,15 @@
         :size="size"
         class="min-w-24"
         @click="$emit('toggleModal', 'ShiftClose', false)"
-        >{{ t`Cancel` }}</FrappeButton>
+        >{{ t`Cancel` }}</FrappeButton
+      >
       <FrappeButton
         :size="size"
         class="min-w-24"
         variant="solid"
         @click="handleSubmit"
-        >{{ t`Close shift` }}</FrappeButton>
+        >{{ t`Close shift` }}</FrappeButton
+      >
     </template>
   </Modal>
 </template>
@@ -155,11 +159,11 @@ import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { CashCount } from 'models/inventory/Point of Sale/POSOpeningShift';
+import { CashCount } from 'models/inventory/Point of Sale/POSOpeningEntry';
 import {
   ClosingAmount,
-  POSClosingShift,
-} from 'models/inventory/Point of Sale/POSClosingShift';
+  POSClosingEntry,
+} from 'models/inventory/Point of Sale/POSClosingEntry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
@@ -201,7 +205,7 @@ export default defineComponent({
     return {
       isValuesSeeded: false,
 
-      posClosingShiftDoc: undefined as POSClosingShift | undefined,
+      posClosingShiftDoc: undefined as POSClosingEntry | undefined,
     };
   },
   computed: {
@@ -209,13 +213,13 @@ export default defineComponent({
       return (this.posClosingShiftDoc?.closing_cash ?? []) as CashCount[];
     },
     closingAmounts(): ClosingAmount[] {
-      return (this.posClosingShiftDoc?.closing_amounts ??
+      return (this.posClosingShiftDoc?.payment_reconciliation ??
         []) as ClosingAmount[];
     },
     /** Cash methods share the drawer count; the others are counted one by one. */
     cashClosingAmounts(): ClosingAmount[] {
       return this.closingAmounts.filter((row) =>
-        this.shift.cashMethods.includes(row.payment_method as string)
+        this.shift.cashMethods.includes(row.mode_of_payment as string)
       );
     },
     otherClosingAmounts(): ClosingAmount[] {
@@ -245,12 +249,13 @@ export default defineComponent({
     async prepareShift() {
       this.isValuesSeeded = false;
       const openingCash = this.shift.openShift?.opening_cash ?? [];
-      const closingCash = openingCash.map(
-        ({ count, denomination }) => ({ count, denomination })
-      );
-      this.posClosingShiftDoc = newFrappeDoc(ModelNameEnum.POSClosingShift, {
+      const closingCash = openingCash.map(({ count, denomination }) => ({
+        count,
+        denomination,
+      }));
+      this.posClosingShiftDoc = newFrappeDoc(ModelNameEnum.POSClosingEntry, {
         closing_cash: closingCash,
-      }) as POSClosingShift;
+      }) as POSClosingEntry;
       try {
         await this.posClosingShiftDoc.preview();
       } catch (error) {

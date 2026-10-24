@@ -7,11 +7,11 @@ from frappe.utils import add_days, getdate, now_datetime, set_request
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.dates import posting_datetime
-from frappe_books.frappe_books.doctype.books_pos_closing_shift.test_books_pos_closing_shift import (
+from frappe_books.frappe_books.doctype.books_pos_closing_entry.test_books_pos_closing_entry import (
 	cash_amounts,
 	close_shift,
 )
-from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
 	start_pos_shift,
 )
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import (
@@ -171,12 +171,12 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Cash": 0})
 
 	def test_closing_shift_reconciles_counter_payments(self):
-		shift = frappe.get_doc("Books Pos Opening Shift", open_shift_name())
+		shift = frappe.get_doc("Books POS Opening Entry", open_shift_name())
 		self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 200}]).submit()
 
 		closing = close_shift(shift, 180)
 
-		self.assertEqual(cash_amounts(closing).difference_amount, 0)
+		self.assertEqual(cash_amounts(closing).difference, 0)
 		self.assertEqual(account_balance(self.counter), 0)
 
 	def test_pos_invoice_is_dated_at_checkout(self):

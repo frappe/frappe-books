@@ -170,8 +170,8 @@ function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
       inventory?.enable_point_of_sale,
       [
         ModelNameEnum.POSProfile,
-        ModelNameEnum.POSOpeningShift,
-        ModelNameEnum.POSClosingShift,
+        ModelNameEnum.POSOpeningEntry,
+        ModelNameEnum.POSClosingEntry,
         ModelNameEnum.ItemEnquiry,
       ],
     ],

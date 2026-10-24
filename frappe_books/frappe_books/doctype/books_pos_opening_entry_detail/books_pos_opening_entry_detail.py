@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksClosingAmounts(Document):
+class BooksPOSOpeningEntryDetail(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -14,14 +14,11 @@ class BooksClosingAmounts(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		closing_amount: DF.Currency
-		difference_amount: DF.Currency
-		expected_amount: DF.Currency
+		mode_of_payment: DF.Link
 		opening_amount: DF.Currency
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		payment_method: DF.Literal["Cash", "Transfer", "Bank"]
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Closing Amounts"
+	_DOCTYPE_NAME = "Books POS Opening Entry Detail"

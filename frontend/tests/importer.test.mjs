@@ -258,10 +258,10 @@ test('import cells are written as Frappe’s Data Import parses them', async () 
   assert.deepEqual(importRows(importer)[1], ['0', '2026-09-30', '1', '12.5']);
 
   // A payment posted on a date and time before; a shift still opens at one.
-  const shift = new Importer('POSOpeningShift', fyo);
+  const shift = new Importer('POSOpeningEntry', fyo);
   shift.assignedTemplateFields = [
-    'POSOpeningShift.name',
-    'POSOpeningShift.opening_date',
+    'POSOpeningEntry.name',
+    'POSOpeningEntry.period_start_date',
   ];
   shift.valueMatrix = [
     [{ value: 'A' }, { value: new Date(Date.UTC(2026, 8, 30, 4, 35)) }],
@@ -272,10 +272,10 @@ test('import cells are written as Frappe’s Data Import parses them', async () 
 test('import datetimes are read as system time, whatever the browser’s time zone', async () => {
   // The system time zone is Asia/Kolkata; the browser is in Tokyo.
   process.env.TZ = 'Asia/Tokyo';
-  const importer = new Importer('POSOpeningShift', fyo);
+  const importer = new Importer('POSOpeningEntry', fyo);
   importer.selectFile(
     [
-      'POSOpeningShift.name,POSOpeningShift.opening_date',
+      'POSOpeningEntry.name,POSOpeningEntry.period_start_date',
       'A,2026-01-01',
       'B,2026-01-01 10:00:00',
       'C,2026-01-01T10:00:00+05:30',

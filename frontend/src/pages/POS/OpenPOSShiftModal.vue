@@ -12,14 +12,14 @@
         v-for="row in otherOpeningAmounts"
         :key="row.idx"
         :df="{
-          fieldname: 'amount',
+          fieldname: 'opening_amount',
           fieldtype: 'Currency',
-          label: row.payment_method,
+          label: row.mode_of_payment,
         }"
-        :value="row.amount"
+        :value="row.opening_amount"
         :show-label="true"
         :border="true"
-        @change="(amount: Money) => row.set('amount', amount)"
+        @change="(amount: Money) => row.set('opening_amount', amount)"
       />
       <MobileDetailList :details="openingAmountDetails" />
     </template>
@@ -37,23 +37,27 @@
           class="flex flex-col divide-y divide-outline-gray-1 rounded-6 border border-outline-gray-1 text-base"
         >
           <li
-            v-for="row in posShiftDoc.opening_amounts"
+            v-for="row in posShiftDoc.balance_details"
             :key="row.idx"
             class="flex h-10 items-center gap-2 px-3"
           >
             <FrappeIcon
-              :icon="paymentMethodIcons[shift.methodTypes[row.payment_method ?? ''] ?? 'Cash']"
+              :icon="
+                paymentMethodIcons[
+                  shift.methodTypes[row.mode_of_payment ?? ''] ?? 'Cash'
+                ]
+              "
               class="size-4 shrink-0 text-ink-gray-5"
             />
             <span class="min-w-0 flex-1 truncate text-ink-gray-8">
-              {{ row.payment_method }}
+              {{ row.mode_of_payment }}
             </span>
             <span
-              v-if="isCashMethod(row.payment_method)"
+              v-if="isCashMethod(row.mode_of_payment)"
               class="text-base-medium tabular-nums text-ink-gray-8"
               dir="ltr"
             >
-              {{ fyo.format(row.amount ?? 0, 'Currency') }}
+              {{ fyo.format(row.opening_amount ?? 0, 'Currency') }}
             </span>
             <FormControl
               v-else
@@ -61,12 +65,12 @@
               size="small"
               :border="true"
               :df="{
-                fieldname: 'amount',
+                fieldname: 'opening_amount',
                 fieldtype: 'Currency',
-                label: row.payment_method,
+                label: row.mode_of_payment,
               }"
-              :value="row.amount"
-              @change="(amount: Money) => row.set('amount', amount)"
+              :value="row.opening_amount"
+              @change="(amount: Money) => row.set('opening_amount', amount)"
             />
           </li>
         </ul>
@@ -79,13 +83,15 @@
         class="min-w-24"
         :variant="isMobile ? 'subtle' : 'ghost'"
         @click="handleDismiss"
-        >{{ t`Back` }}</FrappeButton>
+        >{{ t`Back` }}</FrappeButton
+      >
       <FrappeButton
         :size="size"
         class="min-w-24"
         variant="solid"
         @click="handleSubmit"
-        >{{ t`Open shift` }}</FrappeButton>
+        >{{ t`Open shift` }}</FrappeButton
+      >
     </template>
   </Modal>
 </template>
@@ -103,9 +109,9 @@ import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import {
   CashCount,
-  POSOpeningShift,
-  ShiftAmount,
-} from 'models/inventory/Point of Sale/POSOpeningShift';
+  POSOpeningEntry,
+  OpeningBalance,
+} from 'models/inventory/Point of Sale/POSOpeningEntry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
@@ -139,7 +145,7 @@ export default defineComponent({
   },
   data() {
     return {
-      posShiftDoc: undefined as POSOpeningShift | undefined,
+      posShiftDoc: undefined as POSOpeningEntry | undefined,
 
       isValuesSeeded: false,
       isDismissed: false,
@@ -152,19 +158,19 @@ export default defineComponent({
     openingCash(): CashCount[] {
       return (this.posShiftDoc?.opening_cash ?? []) as CashCount[];
     },
-    otherOpeningAmounts(): ShiftAmount[] {
-      return ((this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]).filter(
-        (row) => !this.isCashMethod(row.payment_method)
-      );
+    otherOpeningAmounts(): OpeningBalance[] {
+      return (
+        (this.posShiftDoc?.balance_details ?? []) as OpeningBalance[]
+      ).filter((row) => !this.isCashMethod(row.mode_of_payment));
     },
     openingAmountDetails(): Detail[] {
-      return ((this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]).map(
-        (row) => ({
-          key: String(row.idx),
-          label: row.payment_method ?? '',
-          value: fyo.format(row.amount ?? 0, 'Currency'),
-        })
-      );
+      return (
+        (this.posShiftDoc?.balance_details ?? []) as OpeningBalance[]
+      ).map((row) => ({
+        key: String(row.idx),
+        label: row.mode_of_payment ?? '',
+        value: fyo.format(row.opening_amount ?? 0, 'Currency'),
+      }));
     },
     posOpeningCashAmount(): Money {
       return this.posShiftDoc?.openingCashAmount as Money;
@@ -173,8 +179,8 @@ export default defineComponent({
   async mounted() {
     this.isValuesSeeded = false;
     this.posShiftDoc = newFrappeDoc(
-      ModelNameEnum.POSOpeningShift
-    ) as POSOpeningShift;
+      ModelNameEnum.POSOpeningEntry
+    ) as POSOpeningEntry;
 
     await this.seedDefaults();
     this.isValuesSeeded = true;
@@ -218,12 +224,12 @@ export default defineComponent({
         return;
       }
 
-      this.posShiftDoc.opening_amounts = [];
+      this.posShiftDoc.balance_details = [];
       const paymentMethods = Object.keys(this.shift.methodTypes).map(
-        (name) => ({ payment_method: name, amount: fyo.pesa(0) })
+        (name) => ({ mode_of_payment: name, opening_amount: fyo.pesa(0) })
       );
 
-      await this.posShiftDoc.set('opening_amounts', paymentMethods);
+      await this.posShiftDoc.set('balance_details', paymentMethods);
     },
     async seedDefaults() {
       await this.seedDefaultCashDenomiations();

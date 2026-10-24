@@ -134,7 +134,7 @@ function getPOSSidebar() {
     icon: 'lucide-store',
     hidden: () =>
       !fyo.singles.InventorySettings?.enable_point_of_sale ||
-      !fyo.can('POSOpeningShift', 'create'),
+      !fyo.can('POSOpeningEntry', 'create'),
   };
 }
 

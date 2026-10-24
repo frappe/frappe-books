@@ -15,15 +15,15 @@ from frappe_books.dates import posting_datetime
 
 def open_shift_name():
 	"""Return the submitted opening shift that has no submitted closing shift."""
-	opening = frappe.qb.DocType("Books Pos Opening Shift")
-	closing = frappe.qb.DocType("Books Pos Closing Shift")
+	opening = frappe.qb.DocType("Books POS Opening Entry")
+	closing = frappe.qb.DocType("Books POS Closing Entry")
 	names = (
 		frappe.qb.from_(opening)
 		.left_join(closing)
-		.on((closing.opening_shift == opening.name) & (closing.docstatus == 1))
+		.on((closing.pos_opening_entry == opening.name) & (closing.docstatus == 1))
 		.select(opening.name)
 		.where((opening.docstatus == 1) & closing.name.isnull())
-		.orderby(opening.opening_date, order=Order.desc)
+		.orderby(opening.period_start_date, order=Order.desc)
 		.limit(1)
 	).run(pluck=True)
 	return names[0] if names else None

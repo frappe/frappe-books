@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { t } from 'fyo';
-import { CashCount } from 'models/inventory/Point of Sale/POSOpeningShift';
+import { CashCount } from 'models/inventory/Point of Sale/POSOpeningEntry';
 import { Money } from 'pesa';
 import NumberStepper from 'src/components/POS/NumberStepper.vue';
 import { fyo } from 'src/initFyo';

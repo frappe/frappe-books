@@ -12,7 +12,7 @@ from frappe.utils import add_days, nowdate
 from frappe_books.accounting.invoice import item_discount
 from frappe_books.accounting.money import company_currency
 from frappe_books.accounting.returns import map_return
-from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
 	open_shift,
 	set_pos_accounts,
 )

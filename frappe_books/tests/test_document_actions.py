@@ -16,7 +16,7 @@ from frappe_books.frappe_books.doctype.books_delivery_note.books_delivery_note i
 	make_sales_invoice as make_delivery_note_invoice,
 )
 from frappe_books.frappe_books.doctype.books_delivery_note.test_books_delivery_note import seed_stock
-from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
 	start_pos_shift,
 )
 from frappe_books.frappe_books.doctype.books_purchase_receipt.test_books_purchase_receipt import (

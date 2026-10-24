@@ -132,7 +132,7 @@ test('list and form statuses come from the stored status', () => {
     getDocStatus({ schema, dirty: true, status: 'Draft' }),
     'NotSaved'
   );
-  const shift = getSchema('POSOpeningShift');
+  const shift = getSchema('POSOpeningEntry');
   assert.equal(getDocStatus({ schema: shift, submitted: true }), 'Submitted');
   assert.equal(
     getDocStatus({ schema: getSchema('Lead'), status: 'Open' }),

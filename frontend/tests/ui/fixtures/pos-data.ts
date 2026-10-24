@@ -39,18 +39,21 @@ const coffeeBatch = {
 const openingShift = {
   name: 'SHIFT-001',
   docstatus: 1,
-  opening_date: '2026-09-06 09:00:00',
+  period_start_date: '2026-09-06 09:00:00',
   opening_cash: [10, 20, 50, 100, 200, 500].map((denomination, index) => ({
     name: `cash-${index}`,
     denomination,
     count: 2,
   })),
-  opening_amounts: [
+  balance_details: [
     ['Cash', 1000],
     ['Credit Card', 0],
     ['Bank Transfer', 0],
     ['Store Cash', 500],
-  ].map(([payment_method, amount]) => ({ payment_method, amount })),
+  ].map(([mode_of_payment, opening_amount]) => ({
+    mode_of_payment,
+    opening_amount,
+  })),
 };
 
 /** Frappe's records by doctype, which the fixture's server answers from. */
@@ -86,7 +89,7 @@ const records: Record<string, Row[]> = {
   'Books Price List': [{ name: 'Retail' }, { name: 'Members' }],
   'Books Coupon Code': [{ name: 'FOSSCLUB' }, { name: 'EXPIRED' }],
   'Books Batch': [coffeeBatch],
-  'Books Pos Opening Shift': [openingShift],
+  'Books POS Opening Entry': [openingShift],
   'Books Sales Invoice': [
     ...Array.from({ length: 24 }, (_, index) => ({
       name: `SINV-2026-${String(index + 1).padStart(4, '0')}`,
@@ -232,41 +235,41 @@ function preview(document: Row): Row {
     };
   }
 
-  if (document.doctype === 'Books Pos Opening Shift') {
-    const [cashRow] = getCashRows(document.opening_amounts ?? []);
+  if (document.doctype === 'Books POS Opening Entry') {
+    const [cashRow] = getCashRows(document.balance_details ?? []);
     if (cashRow) {
-      cashRow.amount = getCashTotal(document.opening_cash);
+      cashRow.opening_amount = getCashTotal(document.opening_cash);
     }
     return document;
   }
 
-  if (document.doctype !== 'Books Pos Closing Shift') {
+  if (document.doctype !== 'Books POS Closing Entry') {
     return document;
   }
 
   const counted = new Map(
-    (document.closing_amounts ?? []).map((row: Row) => [
-      row.payment_method,
+    (document.payment_reconciliation ?? []).map((row: Row) => [
+      row.mode_of_payment,
       row,
     ])
   );
-  const closingAmounts = openingShift.opening_amounts.map((row) => {
-    const sent = (counted.get(row.payment_method) ?? {}) as Row;
+  const closingAmounts = openingShift.balance_details.map((row) => {
+    const sent = (counted.get(row.mode_of_payment) ?? {}) as Row;
     return {
       name: sent.name ?? null,
-      payment_method: row.payment_method,
-      opening_amount: row.amount,
+      mode_of_payment: row.mode_of_payment,
+      opening_amount: row.opening_amount,
       closing_amount: Number(sent.closing_amount ?? 0),
-      expected_amount: row.amount,
+      expected_amount: row.opening_amount,
     };
   });
   shareCountedCash(closingAmounts, getCashTotal(document.closing_cash));
   return {
     ...document,
-    opening_shift: openingShift.name,
-    closing_amounts: closingAmounts.map((row) => ({
+    pos_opening_entry: openingShift.name,
+    payment_reconciliation: closingAmounts.map((row) => ({
       ...row,
-      difference_amount: row.closing_amount - Number(row.expected_amount),
+      difference: row.closing_amount - Number(row.expected_amount),
     })),
   };
 }
@@ -288,7 +291,7 @@ function shareCountedCash(rows: Row[], counted: number) {
 function getCashRows(rows: Row[]): Row[] {
   const cashMethods = getList('Books Mode of Payment', [['type', '=', 'Cash']]);
   return rows.filter((row) =>
-    cashMethods.some(({ name }) => name === row.payment_method)
+    cashMethods.some(({ name }) => name === row.mode_of_payment)
   );
 }
 

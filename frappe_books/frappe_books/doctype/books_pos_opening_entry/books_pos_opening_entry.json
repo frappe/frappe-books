@@ -7,18 +7,20 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "opening_date",
+  "period_start_date",
   "opening_cash",
-  "opening_amounts",
+  "balance_details",
   "journal_entry",
   "amended_from",
   "company"
  ],
  "fields": [
   {
-   "fieldname": "opening_date",
+   "fieldname": "period_start_date",
    "fieldtype": "Datetime",
-   "label": "Opening Date",
+   "in_list_view": 1,
+   "label": "Period Start Date",
+   "reqd": 1,
    "search_index": 1
   },
   {
@@ -28,10 +30,11 @@
    "options": "Books Opening Cash"
   },
   {
-   "fieldname": "opening_amounts",
+   "fieldname": "balance_details",
    "fieldtype": "Table",
-   "label": "Opening Amounts",
-   "options": "Books Opening Amounts"
+   "label": "Opening Balance Details",
+   "options": "Books POS Opening Entry Detail",
+   "reqd": 1
   },
   {
    "fieldname": "journal_entry",
@@ -46,7 +49,7 @@
    "fieldtype": "Link",
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Books Pos Opening Shift",
+   "options": "Books POS Opening Entry",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -63,10 +66,10 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Pos Opening Shift",
+ "name": "Books POS Opening Entry",
  "owner": "Administrator",
  "permissions": [
   {

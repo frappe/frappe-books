@@ -6,11 +6,25 @@ import {
   fyo,
   getActiveDoctype,
   isAccessoryMode,
+  loadTestDocTypes,
+  newFrappeDoc,
+  stubFrappe,
   toActiveDoctype,
 } from './helpers/frappe.mjs';
 
+await loadTestDocTypes();
+const PREVIEW = '/api/method/frappe_books.accessory.preview.preview';
+
 function setAccessoryMode(on) {
-  globalThis.window = { frappe: { boot: { books: { accessory_mode: on } } } };
+  globalThis.window = {
+    location: { hostname: 'books.localhost' },
+    frappe: {
+      boot: {
+        time_zone: { system: 'Asia/Kolkata' },
+        books: { accessory_mode: on },
+      },
+    },
+  };
 }
 
 afterEach(() => {
@@ -94,4 +108,32 @@ test("conditions with Frappe's form globals evaluate, and Desk-only ones show th
     evaluateCondition('eval:erpnext.stock.is_return(doc)', {}),
     true
   );
+});
+
+test('accessory mode previews through ERPNext with the fields edited since the last preview', async () => {
+  setAccessoryMode(true);
+  const previews = [];
+  stubFrappe(({ path, body }) => {
+    previews.push({ path, body });
+    return { message: { ...body.doc, rate: 4 } };
+  });
+  const item = newFrappeDoc('Item', { name: 'Assam' });
+
+  await item.set('item_type', 'Product');
+  await item.whenFilled();
+  assert.equal(previews[0].path, PREVIEW);
+  assert.equal(previews[0].body.doc.doctype, 'Books Item');
+  assert.deepEqual(previews[0].body.changed, { doc: ['item_type'], rows: {} });
+  assert.equal(item.rate.float, 4);
+
+  // An answered preview forgets its edits; amounts go to ERPNext as numbers.
+  item.push('uom_conversions', { uom: 'Box' });
+  const [row] = item.uom_conversions;
+  await row.set('conversion_factor', 12);
+  await item.set('rate', fyo.pesa(5));
+  await item.whenFilled();
+  const { changed, doc } = previews[1].body;
+  assert.deepEqual(changed.doc, ['uom_conversions', 'rate']);
+  assert.deepEqual(changed.rows, { [row.name]: ['conversion_factor'] });
+  assert.equal(doc.rate, 5);
 });

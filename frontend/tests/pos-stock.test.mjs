@@ -83,6 +83,7 @@ test('stock sums come from the ledger through frappe.client.get_list', async () 
         { SUM: 'actual_qty', as: 'actual_qty' },
       ],
       filters: [
+        ['is_cancelled', '=', 0],
         ['warehouse', '=', inventory],
         ['item_code', 'in', [item]],
       ],

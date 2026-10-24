@@ -15,6 +15,9 @@ import { t } from 'fyo';
 import POS from 'src/pages/POS/POS.vue';
 import type { HistoryState, RouteLocationNormalized } from 'vue-router';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { frappeModels } from 'models';
+import type { FrappeModel } from './frappe/doctypes';
+import { getActiveDoctype, isAccessoryMode } from './frappe/mode';
 import { isDesktopOnly } from './mobile/availability';
 import { historyState, settingsDialog } from './utils/refs';
 import { isMobile } from './utils/viewport';
@@ -28,6 +31,8 @@ declare module 'vue-router' {
     pushed?: boolean;
     /** Left out of the desktop layout. */
     phoneOnly?: boolean;
+    /** Left out of accessory mode. */
+    standaloneOnly?: boolean;
   }
 }
 
@@ -38,7 +43,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/get-started',
-    meta: { desktopOnly: true },
+    meta: { desktopOnly: true, standaloneOnly: true },
     component: GetStarted,
   },
   {
@@ -125,13 +130,18 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/template-builder/:name',
     name: 'Template Builder',
-    meta: { sidebarPath: '/list/PrintFormat', desktopOnly: true },
+    meta: {
+      sidebarPath: '/list/PrintFormat',
+      desktopOnly: true,
+      standaloneOnly: true,
+    },
     component: TemplateBuilder,
     props: true,
   },
   {
     path: '/customize-form',
     name: 'Customize Form',
+    meta: { standaloneOnly: true },
     redirect: () => ({
       name: 'ListView',
       params: { schemaName: 'CustomForm', pageTitle: t`Customize Form` },
@@ -185,7 +195,22 @@ router.beforeEach((to, from) => {
   if (isMobile.value ? isDesktopOnly(to) : to.meta.phoneOnly) {
     return '/';
   }
+
+  if (isAccessoryMode() && isStandaloneOnly(to)) {
+    return '/';
+  }
 });
+
+/** Standalone-only pages, the screens of models accessory mode has no doctype for, and the print templates list. */
+function isStandaloneOnly(to: RouteLocationNormalized): boolean {
+  const schemaName = String(to.params.schemaName ?? '');
+  const Model = frappeModels[schemaName] as FrappeModel | undefined;
+  return (
+    !!to.meta.standaloneOnly ||
+    (!!Model && !getActiveDoctype(Model)) ||
+    (to.name === 'ListView' && schemaName === 'PrintFormat')
+  );
+}
 
 router.afterEach(() => {
   const state = history.state as HistoryState;

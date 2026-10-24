@@ -22,6 +22,17 @@
           </template>
           {{ tab.label }}
         </FrappeSettingsNavItem>
+        <FrappeSettingsNavItem v-if="erpnextTab" :value="erpnextTab.value">
+          <template #prefix>
+            <img
+              v-if="erpnextTab.icon"
+              :src="erpnextTab.icon"
+              class="size-4 shrink-0"
+              alt=""
+            />
+          </template>
+          {{ erpnextTab.label }}
+        </FrappeSettingsNavItem>
       </FrappeSettingsNavGroup>
     </FrappeSettingsSidebar>
 
@@ -65,11 +76,7 @@
               </div>
             </section>
           </div>
-          <div
-            v-else
-            class="divide-y divide-outline-gray-1"
-            aria-busy="true"
-          >
+          <div v-else class="divide-y divide-outline-gray-1" aria-busy="true">
             <div
               v-for="width in ['w-40', 'w-32', 'w-48', 'w-36']"
               :key="width"
@@ -79,6 +86,14 @@
               <FrappeSkeleton class="ms-auto h-7 w-60 rounded-4" />
             </div>
           </div>
+        </FrappeSettingsBody>
+      </FrappeSettingsPanel>
+
+      <!-- Saved as it changes, so without Save -->
+      <FrappeSettingsPanel v-if="erpnextTab" :value="erpnextTab.value">
+        <FrappeSettingsHeader :title="erpnextTab.label" class="pb-6" />
+        <FrappeSettingsBody>
+          <ERPNextSettings />
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
 
@@ -114,11 +129,13 @@ import { Field } from 'schemas/types';
 import QuickEditForm from 'src/pages/QuickEditForm.vue';
 import { settingsDialog } from 'src/utils/refs';
 import { computed, defineComponent } from 'vue';
+import ERPNextSettings from './ERPNextSettings.vue';
 import SettingsField from './SettingsField.vue';
-import { useSettings } from './useSettings';
+import { getERPNextTab, useSettings } from './useSettings';
 
 export default defineComponent({
   components: {
+    ERPNextSettings,
     FrappeButton,
     FrappeSettingsBody,
     FrappeSettingsContent,
@@ -136,14 +153,15 @@ export default defineComponent({
     return { doc: computed(() => this.doc) };
   },
   setup() {
-    return { ...useSettings(), settingsDialog };
+    return { ...useSettings(), settingsDialog, erpnextTab: getERPNextTab() };
   },
   computed: {
     /** A tab that is not shown, e.g. Inventory with inventory off, opens the first. */
     activeTab: {
       get(): string {
         const { tab } = settingsDialog;
-        return this.tabs.some(({ value }) => value === tab)
+        const tabs = [...this.tabs, this.erpnextTab];
+        return tabs.some((shown) => shown?.value === tab)
           ? tab
           : this.tabs[0].value;
       },

@@ -32,6 +32,7 @@
         />
       </section>
     </template>
+    <ERPNextSettings v-else-if="erpnextTab && activeTab === erpnextTab.value" />
     <div v-if="showInstallButton" class="p-4">
       <FrappeButton
         class="w-full"
@@ -72,11 +73,13 @@ import { docsPathRef } from 'src/utils/refs';
 import { canInstall, isInstallSheetOpen } from 'src/web/pwa';
 import { computed, defineComponent, nextTick } from 'vue';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
-import { useSettings } from './useSettings';
+import ERPNextSettings from './ERPNextSettings.vue';
+import { getERPNextTab, useSettings } from './useSettings';
 
 /** Phones; desktop shows settings in SettingsDialog. */
 export default defineComponent({
   components: {
+    ERPNextSettings,
     FrappeButton,
     CommonFormSection,
     FrappeTabButtons,
@@ -87,17 +90,32 @@ export default defineComponent({
     return { doc: computed(() => this.doc) };
   },
   setup() {
-    return { ...useSettings(), isInstallSheetOpen };
+    return {
+      ...useSettings(),
+      isInstallSheetOpen,
+      erpnextTab: getERPNextTab(),
+    };
   },
   data() {
-    return { activeTab: ModelNameEnum.AccountingSettings as string };
+    return { pickedTab: '' };
   },
   computed: {
     doc(): FrappeDoc | null {
       return this.fyo.singles[this.activeTab] ?? null;
     },
+    /** The first tab until the user picks one; accessory mode has no General tab. */
+    activeTab: {
+      get(): string {
+        return this.pickedTab || this.tabOptions[0].value;
+      },
+      set(tab: string) {
+        this.pickedTab = tab;
+      },
+    },
     tabOptions(): { value: string; label: string }[] {
-      return this.tabs.map(({ value, label }) => ({ value, label }));
+      return [...this.tabs, this.erpnextTab]
+        .filter((tab) => !!tab)
+        .map(({ value, label }) => ({ value, label }));
     },
     activeGroup(): Map<string, Field[]> {
       const group = this.groupedFields.get(this.activeTab);
@@ -131,7 +149,7 @@ export default defineComponent({
     const tab = this.$route.query.tab;
     if (
       typeof tab === 'string' &&
-      this.tabs.some(({ value }) => value === tab)
+      this.tabOptions.some(({ value }) => value === tab)
     ) {
       this.activeTab = tab;
     }

@@ -2,6 +2,7 @@ import { t } from 'fyo';
 import { reports } from 'reports';
 import { canOpenReport } from 'reports/serverReport';
 import { getImportableSchemaNames } from 'src/importer';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { routeFilters } from 'src/utils/filters';
 import { fyo } from '../initFyo';
 import { SidebarConfig, SidebarItem, SidebarRoot } from './types';
@@ -59,7 +60,7 @@ export function canOpen(route: string): boolean {
 
 /** Whether the user may change the settings, which the Setup group gathers. */
 function canEditSettings(): boolean {
-  return fyo.can('AccountingSettings', 'write');
+  return fyo.can('SystemSettings', 'write');
 }
 
 function getRegionalSidebar(): SidebarRoot[] {
@@ -372,6 +373,8 @@ function getCompleteSidebar(): SidebarConfig {
           label: t`Print Template`,
           name: 'print-template',
           route: `/list/PrintFormat/${t`Print Template`}`,
+          // The template builder makes Books templates; ERPNext has its print formats.
+          hidden: isAccessoryMode,
         },
         {
           label: t`Customize Form`,

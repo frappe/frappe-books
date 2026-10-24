@@ -4,6 +4,7 @@ import type { FrappeDoc } from 'src/frappe/document';
 import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import { getERPNextLogo, isAccessoryMode } from 'src/frappe/mode';
 import { getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { getErrorMessage } from 'src/utils';
@@ -22,11 +23,26 @@ const SETTINGS_SCHEMAS = [
   ModelNameEnum.SystemSettings,
 ];
 const SHORTCUT_CONTEXT = 'Settings';
+export const ERPNEXT_TAB = 'ERPNext';
 
 export interface SettingsTab {
   value: string;
   label: string;
   icon: string;
+}
+
+/** The ERPNext section's tab: for those who can change it, with ERPNext installed. */
+export function getERPNextTab(): SettingsTab | null {
+  const hasERPNext = !!window.frappe.boot?.books?.erpnext;
+  if (!hasERPNext || !fyo.singles.ERPNextSettings) {
+    return null;
+  }
+
+  if (!fyo.can(ModelNameEnum.ERPNextSettings, 'write')) {
+    return null;
+  }
+
+  return { value: ERPNEXT_TAB, label: t`ERPNext`, icon: getERPNextLogo() };
 }
 
 /** The settings singles and the one company as tabs of sections, saved together. */
@@ -144,7 +160,17 @@ export function useSettings() {
   };
 }
 
+/** Accessory mode keeps the settings of the UI only; ERPNext holds the rest. */
+const ACCESSORY_SETTINGS_SCHEMAS = [
+  ModelNameEnum.PrintSettings,
+  ModelNameEnum.SystemSettings,
+];
+
 function isEnabled(name: ModelNameEnum): boolean {
+  if (isAccessoryMode()) {
+    return ACCESSORY_SETTINGS_SCHEMAS.includes(name);
+  }
+
   // The setup wizard makes the company.
   if (name === ModelNameEnum.Company) {
     return !!fyo.singles.Company;

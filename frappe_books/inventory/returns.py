@@ -3,11 +3,10 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import get_datetime
+from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import return_unreturned_rows
-from frappe_books.inventory.row_fields import row_values
 from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.settings import require_feature
 
@@ -24,8 +23,7 @@ def map_transfer_return(doctype, name):
 				"doctype": doctype,
 				"validation": {"docstatus": ["=", 1]},
 				"field_map": {"name": "return_against"},
-				# A return does not move stock for the original's invoice.
-				"field_no_map": ["date", "back_reference", "is_returned"],
+				"field_no_map": ["posting_date", "posting_time"],
 			},
 			item_doctype: {"doctype": item_doctype},
 		},
@@ -48,7 +46,7 @@ def validate_transfer_return(transfer):
 	if original.docstatus != 1 or original.return_against:
 		frappe.throw(_("A return must reference a submitted original {0}.").format(_(transfer.doctype)))
 	# A sales return is valued at its shipment's cost, which must not depend on the return.
-	if get_datetime(transfer.date) < get_datetime(original.date):
+	if transfer.posting_datetime() < original.posting_datetime():
 		frappe.throw(_("A return cannot be dated before its original {0}.").format(original.name))
 	returned = _returned_rows(original, exclude=transfer.name)
 	validate_moved_quantities(
@@ -57,19 +55,31 @@ def validate_transfer_return(transfer):
 	_validate_serial_numbers(original, returned, transfer.items)
 
 
-def _returned_rows(original, exclude):
-	"""Return the item rows of the other submitted returns against a transfer."""
-	names = frappe.get_all(
-		original.doctype,
-		filters={"return_against": original.name, "docstatus": 1, "name": ["!=", exclude]},
-		pluck="name",
+def update_returned_percent(transfer):
+	"""Store on a return's original the share of its stock quantity that submitted returns take back."""
+	if not transfer.return_against:
+		return
+	original = frappe.get_doc(transfer.doctype, transfer.return_against)
+	moved = sum(abs(as_decimal(row.stock_qty)) for row in original.items)
+	returned = sum(abs(as_decimal(row.stock_qty)) for row in _returned_rows(original))
+	per_returned = flt(returned / moved * 100, 2) if moved else 0
+	frappe.db.set_value(
+		original.doctype, original.name, "per_returned", min(per_returned, 100), update_modified=False
 	)
+
+
+def _returned_rows(original, exclude=None):
+	"""Return the item rows of the submitted returns against a transfer, but the excluded one."""
+	filters = {"return_against": original.name, "docstatus": 1}
+	if exclude:
+		filters["name"] = ["!=", exclude]
+	names = frappe.get_all(original.doctype, filters=filters, pluck="name")
 	if not names:
 		return []
 	return frappe.get_all(
 		original.meta.get_field("items").options,
 		filters={"parenttype": original.doctype, "parent": ["in", names]},
-		fields=["item", "batch", "quantity", "serial_number"],
+		fields=["item_code", "batch_no", "stock_qty", "serial_no"],
 	)
 
 
@@ -96,14 +106,13 @@ def batch_quantities(rows):
 	"""Sum the rows' stock quantities by item and batch."""
 	quantities = defaultdict(as_decimal)
 	for row in rows:
-		item, batch, stock_qty = row_values(row, "item", "batch", "stock_qty")
-		quantities[(item, batch or "")] += abs(as_decimal(stock_qty))
+		quantities[(row.get("item_code"), row.get("batch_no") or "")] += abs(as_decimal(row.get("stock_qty")))
 	return quantities
 
 
 def _serial_numbers(rows):
 	return {
-		(item, serial_number)
-		for item, serials in (row_values(row, "item", "serial") for row in rows)
-		for serial_number in parse_serial_numbers(serials)
+		(row.get("item_code"), serial_number)
+		for row in rows
+		for serial_number in parse_serial_numbers(row.get("serial_no"))
 	}

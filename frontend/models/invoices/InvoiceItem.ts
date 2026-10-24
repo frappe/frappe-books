@@ -268,8 +268,8 @@ export class InvoiceItem extends FrappeDoc {
       const location = await (doc as InvoiceItem).getStockLocation();
       const rows = await getStockQuantities(location, [item]);
       const batches = rows
-        .filter((row) => row.batch && row.quantity > 0)
-        .map((row) => row.batch as string);
+        .filter((row) => row.batch_no && row.actual_qty > 0)
+        .map((row) => row.batch_no as string);
       return [['name', 'in', batches]];
     },
     uom: getTransferUnitFilter,

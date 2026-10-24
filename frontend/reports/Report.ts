@@ -23,6 +23,9 @@ import {
   ReportRow,
 } from './types';
 
+/** Columns of the doctype of a ledger row's document: the general ledger's and the stock ledger's. */
+export const REFERENCE_TYPE_COLUMNS = ['reference_type', 'voucher_type'];
+
 export abstract class Report extends Observable<RawValue> {
   static title: string;
   static reportName: string;
@@ -30,6 +33,11 @@ export abstract class Report extends Observable<RawValue> {
   static serverReportName: string;
   static isInventory = false;
   static phoneLayout?: PhoneLayout;
+  /** The filters that pick one document's entries: its doctype and name. */
+  static referenceFilters: [type: string, name: string] = [
+    'referenceType',
+    'referenceName',
+  ];
 
   fyo: Fyo;
   columns: ColumnField[] = [];
@@ -59,6 +67,10 @@ export abstract class Report extends Observable<RawValue> {
 
   get phoneLayout(): PhoneLayout | undefined {
     return (this.constructor as typeof Report).phoneLayout;
+  }
+
+  get referenceFilters(): [type: string, name: string] {
+    return (this.constructor as typeof Report).referenceFilters;
   }
 
   /** Loads the report once with the given filter values set. */
@@ -191,7 +203,7 @@ export abstract class Report extends Observable<RawValue> {
       return '';
     }
 
-    if (column.fieldname === 'reference_type') {
+    if (REFERENCE_TYPE_COLUMNS.includes(column.fieldname)) {
       return getDoctypeLabel(String(rawValue));
     }
 

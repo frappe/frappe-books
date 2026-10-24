@@ -10,12 +10,10 @@ test.beforeEach(async ({ page }) => {
     enable_inventory: 1,
     enable_invoice_returns: 1,
   });
-  await updateSingle(page, 'Books Inventory Settings', {
-    default_location: 'Stores',
-  });
+  await setDefaultWarehouse(page, 'Stores');
 });
 
-test('a stock movement takes its series, rate and locations from the server', async ({
+test('a stock movement takes its series, rate and warehouses from the server', async ({
   page,
 }) => {
   const item = await insertItem(page, 'Movement Item', 12);
@@ -26,26 +24,28 @@ test('a stock movement takes its series, rate and locations from the server', as
     page.getByRole('combobox', { name: 'Number Series' })
   ).toHaveValue('SMOV-');
 
-  await choose(page, 'Movement Type', 'Material Receipt');
+  await choose(page, 'Purpose', 'Material Receipt');
   await page.getByText('Add row', { exact: true }).click();
   await pickLink(page, 'Item', item);
-  await expect(page.getByRole('combobox', { name: 'To' })).toHaveValue(
-    'Stores'
-  );
+  await expect(
+    page.getByRole('combobox', { name: 'Target Warehouse' })
+  ).toHaveValue('Stores');
   await expect(page.getByRole('textbox', { name: 'Rate' })).toHaveValue(
     '12.00'
   );
 
-  // An issue takes from the default location and has no destination.
-  await choose(page, 'Movement Type', 'Material Issue');
-  await expect(page.getByRole('combobox', { name: 'From' })).toHaveValue(
-    'Stores'
-  );
+  // An issue takes from the default warehouse and has no destination.
+  await choose(page, 'Purpose', 'Material Issue');
+  await expect(
+    page.getByRole('combobox', { name: 'Source Warehouse' })
+  ).toHaveValue('Stores');
   // The destination turns read only and empty.
-  await expect(page.getByRole('combobox', { name: 'To' })).toHaveCount(0);
+  await expect(
+    page.getByRole('combobox', { name: 'Target Warehouse' })
+  ).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: '—' })).toBeDisabled();
 
-  await choose(page, 'Movement Type', 'Material Receipt');
+  await choose(page, 'Purpose', 'Material Receipt');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/StockEntry\/SMOV-/);
@@ -149,6 +149,17 @@ async function pickLink(page: Page, label: string, value: string) {
   await page.getByRole('option', { name: value, exact: true }).click();
 }
 
+/** Sets the warehouse the one company's stock rows default to. */
+async function setDefaultWarehouse(page: Page, warehouse: string) {
+  const company = await page.evaluate(async () => {
+    const response = await fetch('/api/v2/document/Books Company?limit=1');
+    return (await response.json()).data[0].name as string;
+  });
+  await api(page, 'PUT', `Books Company/${encodeURIComponent(company)}`, {
+    default_warehouse: warehouse,
+  });
+}
+
 async function insertItem(page: Page, label: string, rate: number) {
   const name = `${label} ${Date.now()}`;
   await api(page, 'POST', 'Books Item', {
@@ -166,7 +177,7 @@ async function insertReceipt(page: Page, item: string) {
   await api(page, 'POST', 'Books Supplier', { supplier_name: supplier });
   const receipt = await api(page, 'POST', 'Books Purchase Receipt', {
     supplier,
-    items: [{ item, quantity: 2, location: 'Stores' }],
+    items: [{ item_code: item, qty: 2, warehouse: 'Stores' }],
   });
   await page.evaluate(async (document) => {
     const response = await fetch('/api/v2/method/run_doc_method', {

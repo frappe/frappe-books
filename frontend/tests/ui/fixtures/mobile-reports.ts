@@ -141,15 +141,15 @@ function makeStockBalance() {
     new StockBalance(fyo),
     [
       column('index', '#', 'Int'),
-      column('item', 'Item', 'Link'),
-      column('location', 'Location', 'Link'),
+      column('item_code', 'Item', 'Link'),
+      column('warehouse', 'Warehouse', 'Link'),
       column('balance_quantity', 'Balance Qty.', 'Float'),
       column('balance_value', 'Balance Value', 'Currency'),
     ],
-    rows.map(([item, location, quantity, value], index) => ({
+    rows.map(([item, warehouse, quantity, value], index) => ({
       index: index + 1,
-      item,
-      location,
+      item_code: item,
+      warehouse,
       balance_quantity: quantity,
       balance_value: value,
     }))
@@ -180,22 +180,22 @@ function makeStockLedger() {
     [
       column('index', '#', 'Int'),
       column('date', 'Date', 'Datetime'),
-      column('item', 'Item', 'Link'),
-      column('location', 'Location', 'Link'),
-      column('quantity', 'Quantity', 'Float'),
-      column('balance_quantity', 'Balance Qty.', 'Float'),
-      column('reference_name', 'Ref Name'),
-      column('reference_type', 'Ref Type'),
+      column('item_code', 'Item', 'Link'),
+      column('warehouse', 'Warehouse', 'Link'),
+      column('actual_qty', 'Quantity', 'Float'),
+      column('qty_after_transaction', 'Balance Qty.', 'Float'),
+      column('voucher_no', 'Ref Name'),
+      column('voucher_type', 'Ref Type'),
     ],
-    rows.map(([date, item, location, quantity, balance, name], index) => ({
+    rows.map(([date, item, warehouse, quantity, balance, name], index) => ({
       index: index + 1,
       date,
-      item,
-      location,
-      quantity,
-      balance_quantity: balance,
-      reference_name: name,
-      reference_type: 'DeliveryNote',
+      item_code: item,
+      warehouse,
+      actual_qty: quantity,
+      qty_after_transaction: balance,
+      voucher_no: name,
+      voucher_type: 'DeliveryNote',
     }))
   );
 }

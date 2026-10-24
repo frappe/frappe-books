@@ -10,9 +10,9 @@ import {
 
 const AVAILABILITY = '/api/method/frappe_books.inventory.availability';
 const stock = [
-  { item: 'Pen', batch: 'B1', quantity: 2 },
-  { item: 'Pen', batch: 'B2', quantity: 0 },
-  { item: 'Pen', batch: null, quantity: 5 },
+  { item_code: 'Pen', batch_no: 'B1', actual_qty: 2 },
+  { item_code: 'Pen', batch_no: 'B2', actual_qty: 0 },
+  { item_code: 'Pen', batch_no: null, actual_qty: 5 },
 ];
 
 /** A request for the stock ledger's sums by item and batch. */

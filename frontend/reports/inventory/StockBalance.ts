@@ -12,22 +12,22 @@ export class StockBalance extends StockLedger {
   static serverReportName = 'Books Stock Balance';
   static phoneLayout: PhoneLayout = {
     type: 'tree',
-    label: 'location',
-    groupBy: 'item',
+    label: 'warehouse',
+    groupBy: 'item_code',
     describeGroup: (count) =>
-      count === 1 ? t`1 location` : t`${count} locations`,
+      count === 1 ? t`1 warehouse` : t`${count} warehouses`,
     icon: 'lucide-map-pin',
     values: [
       { fieldname: 'balance_quantity', label: t`Qty`, width: 52 },
       { fieldname: 'balance_value', label: t`Value`, width: 112 },
     ],
-    chips: ['toDate', 'location', 'item'],
+    chips: ['toDate', 'warehouse', 'itemCode'],
   };
   static isInventory = true;
 
   override ascending = true;
-  override referenceType = 'All';
-  override referenceName = '';
+  override voucherType = 'All';
+  override voucherNo = '';
 
   showSerialNumbers = false;
   serialNumberFilter: SerialNumberStatus = 'All';
@@ -45,14 +45,14 @@ export class StockBalance extends StockLedger {
         target: 'Item',
         placeholder: t`Item`,
         label: t`Item`,
-        fieldname: 'item',
+        fieldname: 'itemCode',
       },
       {
         fieldtype: 'Link',
         target: 'Warehouse',
-        placeholder: t`Location`,
-        label: t`Location`,
-        fieldname: 'location',
+        placeholder: t`Warehouse`,
+        label: t`Warehouse`,
+        fieldname: 'warehouse',
       },
       ...(this.hasBatches
         ? [
@@ -61,7 +61,7 @@ export class StockBalance extends StockLedger {
               target: 'Batch',
               placeholder: t`Batch`,
               label: t`Batch`,
-              fieldname: 'batch',
+              fieldname: 'batchNo',
             },
           ]
         : []),

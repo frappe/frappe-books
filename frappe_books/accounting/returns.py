@@ -8,7 +8,6 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal, currency_unit, sum_decimal
-from frappe_books.inventory.row_fields import row_fields, row_values
 from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.settings import require_feature
 
@@ -61,13 +60,12 @@ def return_unreturned_rows(original, return_doc):
 	for key, quantity in batch_quantities(returned_rows).items():
 		remaining[key] -= quantity
 	returned_serials = {
-		serial for row in returned_rows for serial in parse_serial_numbers(row_values(row, "serial")[0])
+		serial for row in returned_rows for serial in parse_serial_numbers(row.get("serial_no"))
 	}
 	rows = []
 	for row in return_doc.items:
-		item, batch, stock_qty = row_values(row, "item", "batch", "stock_qty")
-		key = (item, batch or "")
-		quantity = min(abs(as_decimal(stock_qty)), remaining[key])
+		key = (row.item_code, row.batch_no or "")
+		quantity = min(abs(as_decimal(row.stock_qty)), remaining[key])
 		remaining[key] -= quantity
 		if quantity > 0:
 			_negate_row(row, quantity, returned_serials)
@@ -76,21 +74,17 @@ def return_unreturned_rows(original, return_doc):
 
 
 def _negate_row(row, quantity, returned_serials):
-	fields = row_fields(row)
-	row.set(fields.stock_qty, -quantity)
-	row.set(fields.qty, -quantity / as_decimal(row.get(fields.factor) or 1))
-	serials = [
-		serial for serial in parse_serial_numbers(row.get(fields.serial)) if serial not in returned_serials
-	]
-	row.set(fields.serial, "\n".join(serials) or None)
+	row.stock_qty = -quantity
+	row.qty = -quantity / as_decimal(row.conversion_factor or 1)
+	serials = [serial for serial in parse_serial_numbers(row.serial_no) if serial not in returned_serials]
+	row.serial_no = "\n".join(serials) or None
 
 
 def set_quantity_signs(rows, is_return):
 	"""A return takes quantities back, so its quantities are negative, and every other document's positive."""
 	sign = -1 if is_return else 1
 	for row in rows:
-		fields = row_fields(row)
-		for fieldname in (fields.stock_qty, fields.qty):
+		for fieldname in ("stock_qty", "qty"):
 			if row.get(fieldname):
 				row.set(fieldname, sign * abs(flt(row.get(fieldname))))
 
@@ -158,20 +152,13 @@ def _submitted_returns(original, *, exclude=None):
 			"parentfield": "items",
 			"parent": ["in", [row.name for row in returns]],
 		},
-		fields=["parenttype", *_returned_fields(original.doctype)],
+		fields=["item_code", "batch_no", "stock_qty", "serial_no"],
 	)
 	return returns, rows
-
-
-def _returned_fields(doctype):
-	"""The row fields a return takes back, as the doctype's rows name them."""
-	fields = row_fields({"parenttype": doctype})
-	return [fields.item, fields.batch, fields.stock_qty, fields.serial]
 
 
 def _item_quantities(rows):
 	quantities = defaultdict(as_decimal)
 	for row in rows:
-		item, stock_qty = row_values(row, "item", "stock_qty")
-		quantities[item] += abs(as_decimal(stock_qty))
+		quantities[row.item_code] += abs(as_decimal(row.stock_qty))
 	return quantities

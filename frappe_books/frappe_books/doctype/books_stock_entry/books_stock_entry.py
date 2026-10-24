@@ -13,18 +13,18 @@ class BooksStockEntry(StockEntryController):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_stock_entry_item.books_stock_entry_item import (
-			BooksStockEntryItem,
+		from frappe_books.frappe_books.doctype.books_stock_entry_detail.books_stock_entry_detail import (
+			BooksStockEntryDetail,
 		)
 
 		amended_from: DF.Link | None
-		amount: DF.Currency
 		company: DF.Link | None
-		date: DF.Datetime
-		items: DF.Table[BooksStockEntryItem]
-		movement_type: DF.Literal["MaterialIssue", "MaterialReceipt", "MaterialTransfer", "Manufacture"]
+		items: DF.Table[BooksStockEntryDetail]
 		naming_series: DF.Link
-		status: DF.Literal["Saved", "Submitted", "Cancelled"]
+		posting_date: DF.Date
+		posting_time: DF.Time | None
+		purpose: DF.Literal["Material Issue", "Material Receipt", "Material Transfer", "Repack"]
+		total_amount: DF.Currency
 	# end: auto-generated types
 
 	pass

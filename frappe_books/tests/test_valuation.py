@@ -12,7 +12,7 @@ from frappe_books.frappe_books.doctype.books_stock_entry.test_books_stock_entry 
 )
 from frappe_books.inventory.valuation import next_state
 from frappe_books.reports.stock import get_ledger_data
-from frappe_books.tests.accounting import make_account, make_item, make_warehouse
+from frappe_books.tests.accounting import make_account, make_item, make_warehouse, posting_values
 
 CENT = Decimal("0.01")
 
@@ -39,8 +39,8 @@ class UnitTestFifoState(UnitTestCase):
 		self.assertEqual(state_values(state), (Decimal("-0.01"), 0, 0, []))
 
 	def test_value_is_rounded_half_up_to_the_currency_unit(self):
-		self.assertEqual(next_state(None, 3, "3.335", CENT)["value_change"], Decimal("10.01"))
-		self.assertEqual(next_state(None, 3, "3.335", Decimal(1))["value_change"], Decimal(10))
+		self.assertEqual(next_state(None, 3, "3.335", CENT)["stock_value_difference"], Decimal("10.01"))
+		self.assertEqual(next_state(None, 3, "3.335", Decimal(1))["stock_value_difference"], Decimal(10))
 
 
 class IntegrationTestValuation(IntegrationTestCase):
@@ -50,64 +50,70 @@ class IntegrationTestValuation(IntegrationTestCase):
 		self.item = make_item(income.name, received.name, is_stock_item=1).name
 
 	def test_fifo_balances_follow_receipts_and_issues(self):
-		move(self.item, "MaterialReceipt", 5, 10)
-		move(self.item, "MaterialIssue", 2, 10)
+		move(self.item, "Material Receipt", 5, 10)
+		move(self.item, "Material Issue", 2, 10)
 
-		entries = get_ledger_data({"item": self.item, "ascending": True})
+		entries = get_ledger_data({"item_code": self.item, "ascending": True})
 
 		self.assertEqual(len(entries), 2)
-		self.assertEqual(entries[-1]["balance_quantity"], 3)
-		self.assertEqual(entries[-1]["balance_value"], Decimal("30.00"))
+		self.assertEqual(entries[-1]["qty_after_transaction"], 3)
+		self.assertEqual(entries[-1]["stock_value"], Decimal("30.00"))
 		self.assertEqual(entries[-1]["valuation_rate"], Decimal("10.00"))
 
 	def test_transfer_moves_stock_at_the_cost_it_leaves_with(self):
 		shop = make_warehouse("Shop").name
-		move(self.item, "MaterialReceipt", 2, 10)
-		move(self.item, "MaterialReceipt", 1, 20)
-		row = {"item": self.item, "from_location": "Stores", "to_location": shop, "quantity": 3, "rate": 99}
-		transfer = frappe.get_doc(movement_values("MaterialTransfer", [row])).insert()
+		move(self.item, "Material Receipt", 2, 10)
+		move(self.item, "Material Receipt", 1, 20)
+		row = {
+			"item_code": self.item,
+			"s_warehouse": "Stores",
+			"t_warehouse": shop,
+			"qty": 3,
+			"basic_rate": 99,
+		}
+		transfer = frappe.get_doc(movement_values("Material Transfer", [row])).insert()
 		transfer.submit()
 
 		values = frappe.get_all(
 			"Books Stock Ledger Entry",
-			filters={"reference_name": transfer.name},
-			fields=["location", "value_change"],
+			filters={"voucher_no": transfer.name},
+			fields=["warehouse", "stock_value_difference"],
 		)
 		self.assertEqual(
-			{entry.location: Decimal(str(entry.value_change)) for entry in values},
+			{entry.warehouse: Decimal(str(entry.stock_value_difference)) for entry in values},
 			{"Stores": Decimal("-40"), shop: Decimal("40")},
 		)
 
 	def test_backdated_receipt_restates_later_issue(self):
 		now = now_datetime()
-		move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-2))
-		issue = move(self.item, "MaterialIssue", 3, 10, add_to_date(now, hours=-1))
+		move(self.item, "Material Receipt", 5, 10, add_to_date(now, hours=-2))
+		issue = move(self.item, "Material Issue", 3, 10, add_to_date(now, hours=-1))
 
-		move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, hours=-3))
+		move(self.item, "Material Receipt", 2, 20, add_to_date(now, hours=-3))
 
 		entry = ledger_entry(issue)
-		self.assertEqual(Decimal(str(entry.value_change)), Decimal("-50"))
-		self.assertEqual(entry.balance_quantity, 4)
-		self.assertEqual(Decimal(str(entry.balance_value)), Decimal("40"))
+		self.assertEqual(Decimal(str(entry.stock_value_difference)), Decimal("-50"))
+		self.assertEqual(entry.qty_after_transaction, 4)
+		self.assertEqual(Decimal(str(entry.stock_value)), Decimal("40"))
 
 	def test_cancelled_receipt_restates_later_issue(self):
 		now = now_datetime()
-		receipt = move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, hours=-3))
-		move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-2))
-		issue = move(self.item, "MaterialIssue", 3, 10, add_to_date(now, hours=-1))
+		receipt = move(self.item, "Material Receipt", 2, 20, add_to_date(now, hours=-3))
+		move(self.item, "Material Receipt", 5, 10, add_to_date(now, hours=-2))
+		issue = move(self.item, "Material Issue", 3, 10, add_to_date(now, hours=-1))
 
 		receipt.cancel()
 
 		entry = ledger_entry(issue)
-		self.assertEqual(Decimal(str(entry.value_change)), Decimal("-30"))
-		self.assertEqual(entry.balance_quantity, 2)
-		self.assertEqual(Decimal(str(entry.balance_value)), Decimal("20"))
+		self.assertEqual(Decimal(str(entry.stock_value_difference)), Decimal("-30"))
+		self.assertEqual(entry.qty_after_transaction, 2)
+		self.assertEqual(Decimal(str(entry.stock_value)), Decimal("20"))
 
 	def test_backdated_issue_needs_stock_at_its_date_and_after(self):
 		now = now_datetime()
-		move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-3))
-		move(self.item, "MaterialIssue", 5, 10, add_to_date(now, hours=-1))
-		move(self.item, "MaterialReceipt", 5, 10, now)
+		move(self.item, "Material Receipt", 5, 10, add_to_date(now, hours=-3))
+		move(self.item, "Material Issue", 5, 10, add_to_date(now, hours=-1))
+		move(self.item, "Material Receipt", 5, 10, now)
 
 		for hours in (-4, -2):
 			with self.subTest(hours=hours):
@@ -116,28 +122,28 @@ class IntegrationTestValuation(IntegrationTestCase):
 					"Insufficient stock",
 					move,
 					self.item,
-					"MaterialIssue",
+					"Material Issue",
 					2,
 					10,
 					add_to_date(now, hours=hours),
 				)
-		move(self.item, "MaterialIssue", 5, 10, add_to_date(now, hours=1))
+		move(self.item, "Material Issue", 5, 10, add_to_date(now, hours=1))
 
 	def test_receipt_used_by_a_later_issue_cannot_be_cancelled(self):
 		now = now_datetime()
-		receipt = move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-3))
-		move(self.item, "MaterialIssue", 5, 10, add_to_date(now, hours=-2))
-		move(self.item, "MaterialReceipt", 5, 10, add_to_date(now, hours=-1))
+		receipt = move(self.item, "Material Receipt", 5, 10, add_to_date(now, hours=-3))
+		move(self.item, "Material Issue", 5, 10, add_to_date(now, hours=-2))
+		move(self.item, "Material Receipt", 5, 10, add_to_date(now, hours=-1))
 
 		self.assertRaisesRegex(frappe.ValidationError, "Insufficient stock", receipt.cancel)
 
 
-def move(item, movement_type, quantity, rate, date=None):
-	location = "to_location" if movement_type == "MaterialReceipt" else "from_location"
+def move(item, purpose, quantity, rate, date=None):
+	warehouse = "t_warehouse" if purpose == "Material Receipt" else "s_warehouse"
 	values = movement_values(
-		movement_type, [{"item": item, location: "Stores", "quantity": quantity, "rate": rate}]
+		purpose, [{"item_code": item, warehouse: "Stores", "qty": quantity, "basic_rate": rate}]
 	)
-	movement = frappe.get_doc({**values, "date": date or now_datetime()}).insert()
+	movement = frappe.get_doc({**values, **posting_values(date or now_datetime())}).insert()
 	movement.submit()
 	return movement
 
@@ -145,20 +151,20 @@ def move(item, movement_type, quantity, rate, date=None):
 def ledger_entry(movement):
 	return frappe.get_last_doc(
 		"Books Stock Ledger Entry",
-		filters={"reference_type": movement.doctype, "reference_name": movement.name},
+		filters={"voucher_type": movement.doctype, "voucher_no": movement.name},
 	)
 
 
-def fifo_state(balance_quantity, balance_value, layers):
+def fifo_state(qty_after_transaction, stock_value, layers):
 	return frappe._dict(
-		balance_quantity=balance_quantity, balance_value=balance_value, stock_queue=json.dumps(layers)
+		qty_after_transaction=qty_after_transaction, stock_value=stock_value, stock_queue=json.dumps(layers)
 	)
 
 
 def state_values(state):
 	return (
-		state["value_change"],
-		state["balance_quantity"],
-		state["balance_value"],
+		state["stock_value_difference"],
+		state["qty_after_transaction"],
+		state["stock_value"],
 		json.loads(state["stock_queue"]),
 	)

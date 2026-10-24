@@ -21,12 +21,12 @@ const previousColumns = {
     'voucher_no',
   ],
   StockLedgerEntry: [
-    'date',
-    'item',
-    'location',
-    'rate',
-    'quantity',
-    'reference_name',
+    'posting_datetime',
+    'item_code',
+    'warehouse',
+    'incoming_rate',
+    'actual_qty',
+    'voucher_no',
   ],
   LoyaltyPointEntry: [
     'loyalty_program',
@@ -74,7 +74,7 @@ test('the accounting ledger lists newest posting first', async () => {
       .map(({ body }) => body.order_by),
     [
       'posting_date desc, creation desc',
-      'date desc, creation desc',
+      'posting_datetime desc, creation desc',
       'creation desc',
     ]
   );

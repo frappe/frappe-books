@@ -7,12 +7,11 @@ import {
 } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
-import { StockEntryItem } from './StockEntryItem';
-import { MovementTypeEnum } from './types';
+import { StockEntryDetail } from './StockEntryDetail';
 
 /**
  * Books Stock Entry, served by Frappe. Its `preview` fills the number
- * series, row units, rates, locations and the total while the user edits.
+ * series, row units, rates, warehouses and the total while the user edits.
  */
 export class StockEntry extends FrappeDoc {
   static override doctype = 'Books Stock Entry';
@@ -21,60 +20,31 @@ export class StockEntry extends FrappeDoc {
     nameField: { label: 'Stock Entry No.', hidden: true },
     quickEditFields: [
       'naming_series',
-      'date',
-      'movement_type',
-      'amount',
+      'posting_date',
+      'purpose',
+      'total_amount',
       'items',
     ],
-    fields: {
-      items: { edit: true },
-      movement_type: {
-        optionLabels: {
-          [MovementTypeEnum.MaterialIssue]: 'Material Issue',
-          [MovementTypeEnum.MaterialReceipt]: 'Material Receipt',
-          [MovementTypeEnum.MaterialTransfer]: 'Material Transfer',
-        },
-      },
-    },
+    fields: { items: { edit: true } },
     fileFields: [
       'name',
       'naming_series',
-      'movement_type',
-      'date',
+      'purpose',
+      'posting_date',
       'items',
-      'amount',
-      'status',
+      'total_amount',
     ],
   };
   static override previewMethod = 'preview';
-  static override rowModels = { items: StockEntryItem };
+  static override rowModels = { items: StockEntryDetail };
 
   static filters: FiltersMap = {
     naming_series: () => [['reference_type', '=', ModelNameEnum.StockEntry]],
   };
 
-  static getListViewSettings(fyo: Fyo): ListViewSettings {
-    const movementTypeMap = {
-      [MovementTypeEnum.MaterialIssue]: fyo.t`Material Issue`,
-      [MovementTypeEnum.MaterialReceipt]: fyo.t`Material Receipt`,
-      [MovementTypeEnum.MaterialTransfer]: fyo.t`Material Transfer`,
-      [MovementTypeEnum.Manufacture]: fyo.t`Manufacture`,
-    };
-
+  static getListViewSettings(): ListViewSettings {
     return {
-      columns: [
-        'name',
-        getDocStatusListColumn(),
-        'date',
-        {
-          label: fyo.t`Movement Type`,
-          fieldname: 'movement_type',
-          fieldtype: 'Select',
-          display(value): string {
-            return movementTypeMap[value as MovementTypeEnum] ?? '';
-          },
-        },
-      ],
+      columns: ['name', getDocStatusListColumn(), 'posting_date', 'purpose'],
     };
   }
 

@@ -138,12 +138,11 @@ export function getMakeInvoiceAction(
         return doc.isSubmitted && doc.quotation_to === 'Books Customer';
       }
 
-      // Delivery notes and receipts are Frappe-backed.
+      // A transfer made from an invoice is fully billed.
       return (
         doc.isSubmitted &&
-        !doc.back_reference &&
         !doc.return_against &&
-        !doc.is_fully_billed
+        ((doc.per_billed as number) ?? 0) < 100
       );
     },
     target: () => [invoiceSchemaName, mapper],
@@ -236,6 +235,7 @@ export function canOpenLedger(reportClassName: LedgerReport): boolean {
 /** The report of the document's entries, which all post on its date. */
 export function getLedgerLink(doc: FrappeDoc, reportClassName: LedgerReport) {
   const date = getPostingDate(doc);
+  const [typeFilter, nameFilter] = reports[reportClassName].referenceFilters;
   return {
     name: 'Report',
     params: {
@@ -243,8 +243,8 @@ export function getLedgerLink(doc: FrappeDoc, reportClassName: LedgerReport) {
     },
     query: {
       defaultFilters: JSON.stringify({
-        referenceType: getDocType(doc.schemaName).doctype,
-        referenceName: doc.name,
+        [typeFilter]: getDocType(doc.schemaName).doctype,
+        [nameFilter]: doc.name,
         fromDate: date,
         toDate: date,
       }),
@@ -367,11 +367,12 @@ export function getDocStatus(doc?: RenderData | FrappeDoc): string {
     return doc.status as string;
   }
 
-  if (doc.cancelled) {
+  // A list row has only the docstatus of a document without a status field.
+  if (doc.cancelled || doc.docstatus === 2) {
     return 'Cancelled';
   }
 
-  return doc.submitted ? 'Submitted' : 'Saved';
+  return doc.submitted || doc.docstatus === 1 ? 'Submitted' : 'Saved';
 }
 
 export function getSerialNumberStatusColumn(): ColumnConfig {
@@ -450,34 +451,16 @@ export function getLoyaltyProgramBadge(doc: RenderData | FrappeDoc): BadgeData {
   );
 }
 
-// Invoice and quote rows take ERPNext's item and quantity fields; stock rows keep Books' until renamed.
-const INVOICE_SCHEMAS: string[] = [
-  ModelNameEnum.SalesInvoice,
-  ModelNameEnum.PurchaseInvoice,
-  ModelNameEnum.Quotation,
-];
-
-/** The item and quantity fields of a document's rows. */
-export function getRowItemFields(doc: FrappeDoc): [item: string, qty: string] {
-  return INVOICE_SCHEMAS.includes(doc.schemaName)
-    ? ['item_code', 'qty']
-    : ['item', 'quantity'];
-}
-
 /** Adds `quantity` of an item to a document's rows, to its row of the item if it has one. */
 export async function addItem(name: string, doc: FrappeDoc, quantity = 1) {
   if (!doc.canEdit) {
     return;
   }
 
-  const [itemField, quantityField] = getRowItemFields(doc);
   const rows = (doc.items ?? []) as FrappeDoc[];
-  const row = rows.find((existing) => existing[itemField] === name);
+  const row = rows.find((existing) => existing.item_code === name);
   if (row) {
-    await row.set(
-      quantityField,
-      ((row[quantityField] as number) ?? 0) + quantity
-    );
+    await row.set('qty', ((row.qty as number) ?? 0) + quantity);
     return;
   }
 
@@ -487,8 +470,7 @@ export async function addItem(name: string, doc: FrappeDoc, quantity = 1) {
     return;
   }
 
-  await added.set(itemField, name);
-  if (quantity !== 1) {
-    await added.set(quantityField, quantity);
-  }
+  await added.set('item_code', name);
+  // Stock rows have no default quantity.
+  await added.set('qty', quantity);
 }

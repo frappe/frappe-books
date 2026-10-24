@@ -50,15 +50,18 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		)
 		invoice.items[0].update({"qty": 1, "price_list_rate": 100, "discount_percentage": 0})
 		invoice.save().submit()
-		receipt = frappe.get_doc("Books Purchase Receipt", {"back_reference": invoice.name})
+		receipt = frappe.get_doc(
+			"Books Purchase Receipt",
+			frappe.db.get_value("Books Purchase Receipt Item", {"purchase_invoice": invoice.name}, "parent"),
+		)
 		self.assertEqual(Decimal(str(invoice.grand_total)), Decimal("118"))
 		self.assertEqual(Decimal(str(receipt.grand_total)), Decimal("100"))
 		entries = ledger_entries(receipt.doctype, receipt.name)
 		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries if row.account == stock.name), 100)
 		self.assertEqual(sum(Decimal(str(row.debit)) - Decimal(str(row.credit)) for row in entries), 0)
-		self.assertEqual(get_ledger_data({"item": item.name})[0]["balance_value"], 100)
+		self.assertEqual(get_ledger_data({"item_code": item.name})[0]["stock_value"], 100)
 		invoice.cancel()
-		self.assertFalse(get_ledger_data({"item": item.name}))
+		self.assertFalse(get_ledger_data({"item_code": item.name}))
 
 	def test_payment_settles_multiple_invoices_and_cancel_restores_each(self):
 		receivable = make_account("Multiple Receivable", account_type="Receivable")

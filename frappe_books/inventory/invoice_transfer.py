@@ -6,12 +6,11 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.dates import posting_datetime
 from frappe_books.inventory.returns import batch_quantities, validate_moved_quantities
-from frappe_books.inventory.row_fields import row_values
+from frappe_books.status import store_status
 
 # Fields an invoice and its transfer do not share when one is mapped from the other.
-UNSHARED_FIELDS = ["date", "naming_series", "terms", "attachment", "is_returned", "return_against"]
+UNSHARED_FIELDS = ["posting_date", "posting_time", "naming_series", "terms", "is_return", "return_against"]
 # Each invoice's transfer doctype, and the row fields that link a row to the transfer row it bills.
 TRANSFER_DOCTYPES = {
 	"Books Sales Invoice": "Books Delivery Note",
@@ -22,17 +21,10 @@ ROW_LINK_FIELDS = {
 	"Books Sales Invoice": ("delivery_note", "dn_detail"),
 	"Books Purchase Invoice": ("purchase_receipt", "pr_detail"),
 }
-# A transfer row's fields under the invoice row's names; transfer rows keep Books' names for now.
-TRANSFER_ROW_FIELDS = {
-	"item": "item_code",
-	"transfer_unit": "uom",
-	"transfer_quantity": "qty",
-	"unit": "stock_uom",
-	"quantity": "stock_qty",
-	"unit_conversion_factor": "conversion_factor",
-	"batch": "batch_no",
-	"serial_number": "serial_no",
-	"hsn_code": "gst_hsn_code",
+# The transfer row fields that link a row to the invoice row whose stock it moves, as ERPNext names them.
+SOURCE_LINK_FIELDS = {
+	"Books Delivery Note": ("against_sales_invoice", "si_detail"),
+	"Books Purchase Receipt": ("purchase_invoice", "purchase_invoice_item"),
 }
 
 
@@ -80,35 +72,35 @@ def on_invoice_cancel(invoice):
 def delete_cancelled_transfers(invoice):
 	"""Delete the cancelled transfers made from the invoice, with the user's rights."""
 	doctype = TRANSFER_DOCTYPES[invoice.doctype]
-	for name in frappe.get_all(
-		doctype, filters={"back_reference": invoice.name, "docstatus": 2}, pluck="name"
-	):
+	for name in _source_transfers(invoice, docstatus=2):
 		frappe.delete_doc(doctype, name)
 
 
 def validate_transfer(transfer):
-	"""Stop a transfer from moving more of an item than its invoice has left to transfer."""
-	if not transfer.back_reference:
+	"""Stop a transfer from moving more of an invoice row than the row has left to transfer."""
+	invoice = _source_invoice(transfer)
+	if not invoice:
 		return
-	invoice = _invoice(transfer)
 	items = {row.name: row.item_code for row in invoice.items}
-	left = defaultdict(as_decimal)
-	for row_name, quantity in pending_quantities(invoice, exclude=transfer.name).items():
-		left[items[row_name]] += quantity
+	left = pending_quantities(invoice, exclude=transfer.name)
+	detail_field = SOURCE_LINK_FIELDS[transfer.doctype][1]
 	requested = defaultdict(as_decimal)
 	for row in transfer.items:
-		requested[row.item] += abs(as_decimal(row.quantity))
-	for item, quantity in requested.items():
-		if item in left and quantity > left[item]:
+		requested[row.get(detail_field)] += abs(as_decimal(row.stock_qty))
+	for detail, quantity in requested.items():
+		if detail in left and quantity > left[detail]:
 			frappe.throw(
-				_("Invoice {0} has only {1} of {2} left to transfer.").format(invoice.name, left[item], item)
+				_("Invoice {0} has only {1} of {2} left to transfer.").format(
+					invoice.name, left[detail], items[detail]
+				)
 			)
 
 
 def update_invoice_balance(transfer):
 	"""Store what the transfer's invoice still has to transfer after a submit or cancel."""
-	if transfer.back_reference:
-		_store_pending_quantities(_invoice(transfer))
+	invoice = _source_invoice(transfer)
+	if invoice:
+		_store_pending_quantities(invoice)
 
 
 def map_invoice_transfer(invoice_doctype, invoice_name):
@@ -120,7 +112,6 @@ def map_invoice_transfer(invoice_doctype, invoice_name):
 			invoice_doctype: {
 				"doctype": TRANSFER_DOCTYPES[invoice_doctype],
 				"validation": {"docstatus": ["=", 1]},
-				"field_map": {"name": "back_reference"},
 				"field_no_map": UNSHARED_FIELDS,
 			},
 		},
@@ -143,9 +134,15 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 			},
 			_items_doctype(transfer_doctype): {
 				"doctype": _items_doctype(invoice_doctype),
-				"field_map": {**TRANSFER_ROW_FIELDS, "parent": link_field, "name": detail_field},
-				# The invoice prices its rows per its unit; `_bill_transfer` converts the transfer's rate.
-				"field_no_map": ["rate", "amount", "item_discount_amount", "item_discount_percent"],
+				"field_map": {"parent": link_field, "name": detail_field},
+				# The invoice prices its rows from their price list rate; `_bill_transfer` sets it.
+				"field_no_map": [
+					"rate",
+					"amount",
+					"stock_uom_rate",
+					"discount_amount",
+					"discount_percentage",
+				],
 			},
 		},
 		postprocess=_bill_transfer,
@@ -154,7 +151,7 @@ def map_transfer_invoice(transfer_doctype, transfer_name):
 
 def pending_quantities(invoice, exclude=None):
 	"""Return each tracked invoice row's stock quantity that no submitted transfer has moved yet."""
-	transferred = _transferred_quantities(invoice, exclude)
+	moved = _moved_quantities(invoice, exclude)
 	tracked = set(
 		frappe.get_all(
 			"Books Item",
@@ -166,10 +163,7 @@ def pending_quantities(invoice, exclude=None):
 	for row in invoice.items:
 		if row.item_code not in tracked:
 			continue
-		quantity = abs(as_decimal(row.stock_qty))
-		moved = min(quantity, transferred[row.item_code])
-		transferred[row.item_code] -= moved
-		pending[row.name] = quantity - moved
+		pending[row.name] = max(abs(as_decimal(row.stock_qty)) - moved[row.name], 0)
 	return pending
 
 
@@ -185,18 +179,41 @@ def auto_transfer(invoice):
 	"""Return the submitted transfer the invoice made on submit, which links back to the invoice."""
 	if not invoice.get("make_auto_stock_transfer"):
 		return None
+	names = _source_transfers(invoice, docstatus=1)
+	return frappe.get_doc(TRANSFER_DOCTYPES[invoice.doctype], names[0]) if names else None
+
+
+def source_invoice_name(transfer) -> str | None:
+	"""Return the invoice a delivery note or receipt moves the stock of, which its rows link to."""
+	link_field = SOURCE_LINK_FIELDS[transfer.doctype][0]
+	return next((row.get(link_field) for row in transfer.items if row.get(link_field)), None)
+
+
+def _source_invoice(transfer):
+	name = source_invoice_name(transfer)
+	return frappe.get_doc(INVOICE_DOCTYPES[transfer.doctype], name) if name else None
+
+
+def _source_transfers(invoice, **filters):
+	"""Return the delivery notes or receipts made from the invoice, oldest first; their rows link to it."""
 	doctype = TRANSFER_DOCTYPES[invoice.doctype]
-	name = frappe.db.get_value(doctype, {"back_reference": invoice.name, "docstatus": 1})
-	return frappe.get_doc(doctype, name) if name else None
+	link_field = SOURCE_LINK_FIELDS[doctype][0]
+	names = frappe.get_all(
+		_items_doctype(doctype),
+		filters={"parenttype": doctype, link_field: invoice.name},
+		pluck="parent",
+		distinct=True,
+	)
+	if not names:
+		return []
+	return frappe.get_all(
+		doctype, filters={"name": ["in", names], **filters}, pluck="name", order_by="creation asc"
+	)
 
 
 def _billed_transfer_name(invoice_doctype, rows):
 	link_field = ROW_LINK_FIELDS[invoice_doctype][0]
 	return next((row.get(link_field) for row in rows if row.get(link_field)), None)
-
-
-def _invoice(transfer):
-	return frappe.get_doc(INVOICE_DOCTYPES[transfer.doctype], transfer.back_reference)
 
 
 def _items_doctype(doctype):
@@ -210,15 +227,15 @@ def _create_auto_transfer(invoice) -> str | None:
 	rows = _stock_rows(invoice)
 	if not rows:
 		return None
-	location = _stock_location(invoice)
+	warehouse = _stock_location(invoice)
 	transfer = frappe.get_doc(
 		{
 			"doctype": TRANSFER_DOCTYPES[invoice.doctype],
 			invoice.party_field: invoice.party,
-			"date": posting_datetime(invoice.posting_date, invoice.posting_time),
-			"back_reference": invoice.name,
+			"posting_date": invoice.posting_date,
+			"posting_time": invoice.posting_time,
 			"return_against": _returned_transfer(invoice),
-			"items": [{**row, "location": location} for row in rows],
+			"items": [{**row, "warehouse": warehouse} for row in rows],
 		}
 	).insert(ignore_permissions=True)
 	transfer.submit()
@@ -247,43 +264,44 @@ def _per_received(invoice, pending):
 	return flt((tracked - sum(pending.values())) / tracked * 100, 2)
 
 
-def _transferred_quantities(invoice, exclude):
-	"""Sum the submitted transfers made from the invoice and the one it bills."""
+def _moved_quantities(invoice, exclude):
+	"""Sum by invoice row what the submitted transfers made from it moved; a row that bills a submitted
+	transfer moved all its stock."""
 	doctype = TRANSFER_DOCTYPES[invoice.doctype]
-	names = set(
-		frappe.get_all(doctype, filters={"back_reference": invoice.name, "docstatus": 1}, pluck="name")
-	)
+	link_field, detail_field = SOURCE_LINK_FIELDS[doctype]
+	filters = {"parenttype": doctype, link_field: invoice.name, "docstatus": 1}
+	if exclude:
+		filters["parent"] = ["!=", exclude]
+	moved = defaultdict(as_decimal)
+	for row in frappe.get_all(_items_doctype(doctype), filters=filters, fields=[detail_field, "stock_qty"]):
+		moved[row[detail_field]] += abs(as_decimal(row.stock_qty))
 	billed = _billed_transfer_name(invoice.doctype, invoice.items)
-	if billed and frappe.db.get_value(doctype, billed, "docstatus") == 1:
-		names.add(billed)
-	names.discard(exclude)
-	quantities = defaultdict(as_decimal)
-	if not names:
-		return quantities
-	rows = frappe.get_all(
-		_items_doctype(doctype),
-		filters={"parent": ["in", sorted(names)], "parenttype": doctype},
-		fields=["item", "quantity"],
-	)
-	for row in rows:
-		quantities[row.item] += abs(as_decimal(row.quantity))
-	return quantities
+	if billed and billed != exclude and frappe.db.get_value(doctype, billed, "docstatus") == 1:
+		billed_field = ROW_LINK_FIELDS[invoice.doctype][0]
+		for row in invoice.items:
+			if row.get(billed_field) == billed:
+				moved[row.name] += abs(as_decimal(row.stock_qty))
+	return moved
 
 
 def _update_billed_status(invoice):
-	"""Flag the transfer an invoice bills as fully billed while its invoices bill all it moved."""
+	"""Store the share of the stock in the transfer an invoice bills that its invoices bill, and its status."""
 	transfer = billed_transfer(invoice)
-	if transfer:
-		is_fully_billed = not any(_unbilled_quantities(transfer).values())
-		transfer.db_set("is_fully_billed", int(is_fully_billed), update_modified=False)
+	if not transfer:
+		return
+	moved = sum(batch_quantities(transfer.items).values())
+	unbilled = sum(max(quantity, 0) for quantity in _unbilled_quantities(transfer).values())
+	transfer.per_billed = flt((moved - unbilled) / moved * 100, 2) if moved else 0
+	transfer.db_set("per_billed", transfer.per_billed, update_modified=False)
+	store_status(transfer)
 
 
 def _validate_billable(transfer):
 	"""Allow billing only a submitted transfer that is not a return and was not made from an invoice."""
 	if transfer.docstatus != 1:
 		frappe.throw(_("{0} must be submitted before it is billed.").format(transfer.name))
-	if transfer.back_reference:
-		frappe.throw(_("{0} was made from invoice {1}.").format(transfer.name, transfer.back_reference))
+	if invoice := source_invoice_name(transfer):
+		frappe.throw(_("{0} was made from invoice {1}.").format(transfer.name, invoice))
 	if transfer.return_against:
 		frappe.throw(_("A return cannot be billed."))
 
@@ -310,16 +328,13 @@ def _bill_transfer(transfer, invoice):
 
 
 def _bill_row(row, source, stock_qty):
-	factor = as_decimal(row.conversion_factor or 1)
 	row.stock_qty = stock_qty
-	row.qty = stock_qty / factor
-	row.price_list_rate = as_decimal(source.rate) * factor
-	row.discount_percentage = source.item_discount_percent
-	# A transfer row's discount amount is for the whole row; an invoice row's is per unit.
-	if not as_decimal(source.item_discount_percent) and as_decimal(source.transfer_quantity):
-		row.discount_amount = as_decimal(source.item_discount_amount) / abs(
-			as_decimal(source.transfer_quantity)
-		)
+	row.qty = stock_qty / as_decimal(row.conversion_factor or 1)
+	# A transfer row's rate is net of its discount per unit, as an invoice row's is.
+	row.price_list_rate = as_decimal(source.rate) + as_decimal(source.discount_amount)
+	row.discount_percentage = source.discount_percentage
+	if not as_decimal(source.discount_percentage):
+		row.discount_amount = source.discount_amount
 
 
 def _unbilled_quantities(transfer):
@@ -332,8 +347,8 @@ def _unbilled_quantities(transfer):
 
 def _billing_rows(transfer, rows):
 	"""Return the rows that bill the transfer's items; free items and other lines bill none of it."""
-	items = {row.item for row in transfer.items}
-	return [row for row in rows if row_values(row, "item")[0] in items and not row.get("is_free_item")]
+	items = {row.item_code for row in transfer.items}
+	return [row for row in rows if row.get("item_code") in items and not row.get("is_free_item")]
 
 
 def _billed_rows(transfer):
@@ -366,9 +381,9 @@ def _transfer_pending_stock(invoice, transfer):
 	rows = _stock_rows(invoice)
 	if not rows:
 		frappe.throw(_("Invoice {0} has no stock left to transfer.").format(invoice.name))
-	location = default_location(invoice)
+	warehouse = default_location(invoice)
 	transfer.return_against = _returned_transfer(invoice)
-	transfer.set("items", [{**row, "location": location} for row in rows])
+	transfer.set("items", [{**row, "warehouse": warehouse} for row in rows])
 	transfer.calculate()
 
 
@@ -376,14 +391,10 @@ def _returned_transfer(invoice) -> str | None:
 	"""Return the original invoice's transfer, as a return transfer must reverse it."""
 	if not invoice.get("return_against"):
 		return None
-	doctype = TRANSFER_DOCTYPES[invoice.doctype]
 	# The transfer the original bills, else the one made from it, on submit or by hand.
 	original = frappe.get_doc(invoice.doctype, invoice.return_against)
-	transfer = _billed_transfer_name(invoice.doctype, original.items) or frappe.db.get_value(
-		doctype,
-		{"back_reference": invoice.return_against, "return_against": ("is", "not set"), "docstatus": 1},
-		"name",
-		order_by="creation asc",
+	transfer = _billed_transfer_name(invoice.doctype, original.items) or next(
+		iter(_source_transfers(original, return_against=("is", "not set"), docstatus=1)), None
 	)
 	if not transfer:
 		frappe.throw(
@@ -420,34 +431,34 @@ def _pos_location() -> str | None:
 
 
 def _stock_rows(invoice) -> list[dict]:
-	"""Return the rows still to transfer, negative for a return like the invoice's own, under the
-	transfer rows' names. A transfer row's rate is per stock unit, in the company currency."""
+	"""Return the rows still to transfer, negative for a return like the invoice's own, linked to their
+	invoice rows. A transfer row's rate and discount are per its unit, in the company currency."""
 	pending = pending_quantities(invoice)
 	sign = -1 if invoice.get("return_against") else 1
 	exchange_rate = as_decimal(invoice.conversion_rate or 1)
+	link_field, detail_field = SOURCE_LINK_FIELDS[TRANSFER_DOCTYPES[invoice.doctype]]
 	rows = []
 	for row in invoice.items:
 		if not pending.get(row.name):
 			continue
-		factor = as_decimal(row.conversion_factor or 1)
-		qty = pending[row.name] / factor
 		rows.append(
 			{
-				"item": row.item_code,
-				"transfer_unit": row.uom or row.stock_uom,
-				"transfer_quantity": sign * qty,
-				"unit": row.stock_uom,
-				"batch": row.batch_no,
-				"serial_number": row.serial_no,
-				"quantity": sign * pending[row.name],
-				"unit_conversion_factor": row.conversion_factor or 1,
-				"rate": rounded(as_decimal(row.price_list_rate) * exchange_rate / factor),
+				"item_code": row.item_code,
+				"item_name": row.item_name,
 				"description": row.description,
-				"hsn_code": row.gst_hsn_code,
-				"item_discount_amount": rounded(
-					as_decimal(row.discount_amount) * qty, invoice.get("currency")
-				),
-				"item_discount_percent": row.discount_percentage,
+				"uom": row.uom or row.stock_uom,
+				"qty": sign * pending[row.name] / as_decimal(row.conversion_factor or 1),
+				"stock_uom": row.stock_uom,
+				"stock_qty": sign * pending[row.name],
+				"conversion_factor": row.conversion_factor or 1,
+				"batch_no": row.batch_no,
+				"serial_no": row.serial_no,
+				"rate": rounded(as_decimal(row.rate) * exchange_rate),
+				"discount_amount": rounded(as_decimal(row.discount_amount) * exchange_rate),
+				"discount_percentage": row.discount_percentage,
+				"gst_hsn_code": row.gst_hsn_code,
+				link_field: invoice.name,
+				detail_field: row.name,
 			}
 		)
 	return rows

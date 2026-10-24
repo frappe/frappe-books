@@ -8,22 +8,25 @@
  "engine": "InnoDB",
  "field_order": [
   "default_section_break_1",
-  "date",
+  "posting_date",
+  "posting_time",
+  "posting_datetime",
   "details_section_break_3",
-  "location",
-  "batch",
-  "serial_number",
-  "item",
-  "rate",
-  "quantity",
+  "warehouse",
+  "batch_no",
+  "serial_no",
+  "item_code",
+  "incoming_rate",
+  "actual_qty",
   "valuation_section_break",
-  "value_change",
-  "balance_quantity",
-  "balance_value",
+  "stock_value_difference",
+  "qty_after_transaction",
+  "stock_value",
   "stock_queue",
   "reference_section_break_10",
-  "reference_type",
-  "reference_name",
+  "voucher_type",
+  "voucher_no",
+  "is_cancelled",
   "company"
  ],
  "fields": [
@@ -33,9 +36,21 @@
    "label": "Default"
   },
   {
-   "fieldname": "date",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "posting_time",
+   "fieldtype": "Time",
+   "label": "Posting Time",
+   "read_only": 1
+  },
+  {
+   "fieldname": "posting_datetime",
    "fieldtype": "Datetime",
-   "label": "Date",
+   "label": "Posting Datetime",
    "read_only": 1,
    "search_index": 1
   },
@@ -45,47 +60,47 @@
    "label": "Details"
   },
   {
-   "fieldname": "location",
+   "fieldname": "warehouse",
    "fieldtype": "Link",
-   "label": "Location",
+   "label": "Warehouse",
    "options": "Books Warehouse",
    "read_only": 1,
    "search_index": 1
   },
   {
-   "fieldname": "batch",
+   "fieldname": "batch_no",
    "fieldtype": "Link",
-   "label": "Batch",
+   "label": "Batch No",
    "options": "Books Batch",
    "read_only": 1,
    "search_index": 1
   },
   {
-   "fieldname": "serial_number",
+   "fieldname": "serial_no",
    "fieldtype": "Link",
-   "label": "Serial Number",
+   "label": "Serial No",
    "options": "Books Serial No",
    "read_only": 1
   },
   {
-   "fieldname": "item",
+   "fieldname": "item_code",
    "fieldtype": "Link",
-   "label": "Item",
+   "label": "Item Code",
    "options": "Books Item",
    "read_only": 1,
    "search_index": 1
   },
   {
-   "fieldname": "rate",
+   "fieldname": "incoming_rate",
    "fieldtype": "Currency",
-   "label": "Rate",
+   "label": "Incoming Rate",
    "permlevel": 1,
    "read_only": 1
   },
   {
-   "fieldname": "quantity",
+   "fieldname": "actual_qty",
    "fieldtype": "Float",
-   "label": "Quantity",
+   "label": "Qty Change",
    "read_only": 1
   },
   {
@@ -94,25 +109,25 @@
    "label": "Valuation"
   },
   {
-   "fieldname": "value_change",
+   "fieldname": "stock_value_difference",
    "fieldtype": "Currency",
    "hidden": 1,
-   "label": "Value Change",
+   "label": "Change in Stock Value",
    "permlevel": 1,
    "read_only": 1
   },
   {
-   "fieldname": "balance_quantity",
+   "fieldname": "qty_after_transaction",
    "fieldtype": "Float",
    "hidden": 1,
-   "label": "Balance Quantity",
+   "label": "Qty After Transaction",
    "read_only": 1
   },
   {
-   "fieldname": "balance_value",
+   "fieldname": "stock_value",
    "fieldtype": "Currency",
    "hidden": 1,
-   "label": "Balance Value",
+   "label": "Balance Stock Value",
    "permlevel": 1,
    "read_only": 1
   },
@@ -121,7 +136,7 @@
    "fieldname": "stock_queue",
    "fieldtype": "Long Text",
    "hidden": 1,
-   "label": "Stock Queue",
+   "label": "FIFO Stock Queue (qty, rate)",
    "permlevel": 1,
    "read_only": 1
   },
@@ -131,19 +146,26 @@
    "label": "Reference"
   },
   {
-   "fieldname": "reference_type",
+   "fieldname": "voucher_type",
    "fieldtype": "Link",
-   "label": "Ref. Type",
+   "label": "Voucher Type",
    "options": "DocType",
    "read_only": 1
   },
   {
-   "fieldname": "reference_name",
+   "fieldname": "voucher_no",
    "fieldtype": "Dynamic Link",
-   "label": "Ref. Name",
-   "options": "reference_type",
+   "label": "Voucher No",
+   "options": "voucher_type",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_cancelled",
+   "fieldtype": "Check",
+   "label": "Is Cancelled",
+   "read_only": 1
   },
   {
    "fieldname": "company",
@@ -156,7 +178,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Stock Ledger Entry",
@@ -201,7 +223,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "sort_field": "creation",
+ "sort_field": "posting_datetime",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

@@ -10,6 +10,7 @@ import {
   getLedgerLink,
   getRowReference,
   newFrappeDoc,
+  StockLedger,
 } from './helpers/frappe.mjs';
 
 await loadFrappeModels(frappeModels);
@@ -56,17 +57,42 @@ async function getLinkedDates(link) {
 test("a document's ledger opens filtered by its doctype, on its posting date", async () => {
   // Half past midnight in the system time zone, the evening before in UTC.
   const date = new Date('2020-05-01T00:30:00+05:30');
-  const shipment = newFrappeDoc('DeliveryNote', { name: 'SHPM-1001', date });
+  const shipment = newFrappeDoc('DeliveryNote', {
+    name: 'SHPM-1001',
+    posting_date: date,
+  });
   const link = getLedgerLink(shipment, 'StockLedger');
 
-  const { referenceType, referenceName } = JSON.parse(
-    link.query.defaultFilters
-  );
+  // The stock ledger picks a document by ERPNext's voucher fields.
+  const { voucherType, voucherNo } = JSON.parse(link.query.defaultFilters);
   assert.deepEqual(
-    [referenceType, referenceName],
+    [voucherType, voucherNo],
     ['Books Delivery Note', 'SHPM-1001']
   );
   assert.deepEqual(await getLinkedDates(link), ['2020-05-01', '2020-05-01']);
+});
+
+test('a stock ledger row opens the document of its voucher', () => {
+  const report = new StockLedger(fyo);
+  report.fyo = Object.assign(Object.create(fyo), { can: () => true });
+  report.columns = ['voucher_type', 'voucher_no'].map((fieldname) => ({
+    fieldname,
+    label: fieldname,
+    fieldtype: 'Data',
+  }));
+  const row = report.getReportRow({
+    voucher_type: 'Books Stock Entry',
+    voucher_no: 'STE-1001',
+  });
+
+  assert.deepEqual(
+    row.cells.map(({ value }) => value),
+    ['Stock Entry', 'STE-1001']
+  );
+  assert.deepEqual(getRowReference(report, row), {
+    schemaName: 'StockEntry',
+    name: 'STE-1001',
+  });
 });
 
 test('a journal entry ledger opens on its posting date', async () => {

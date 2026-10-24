@@ -153,7 +153,7 @@ class PostingInvoiceController(InvoiceController):
 	def validate(self):
 		super().validate()
 		self.create_batches()
-		validate_batches([{"item": row.item_code, "batch": row.batch_no} for row in self.items])
+		validate_batches([{"item_code": row.item_code, "batch_no": row.batch_no} for row in self.items])
 		validate_sale_batch_stock(self)
 
 	def create_batches(self):

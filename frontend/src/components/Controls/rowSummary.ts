@@ -15,7 +15,7 @@ export interface RowSummary {
   failed?: boolean;
 }
 
-const quantityFields = ['qty', 'quantity'];
+const quantityFields = ['qty'];
 // Invoice rows show their rate before discount, stock rows their rate.
 const rateFields = ['rate', 'price_list_rate'];
 // Tax summary rows and tax template rows.

@@ -3,7 +3,7 @@
 import frappe
 from frappe.model.base_document import get_controller
 from frappe.tests import change_settings
-from frappe.utils import flt, nowdate
+from frappe.utils import flt, get_datetime, nowdate
 
 from frappe_books.accounting.money import company_currency
 from frappe_books.company import company_value, default_company
@@ -190,8 +190,14 @@ def set_inventory_accounts(stock, received, cogs):
 	)
 
 
+def posting_values(when):
+	"""The posting date and time of a datetime, as stock documents take them."""
+	when = get_datetime(when)
+	return {"posting_date": when.date(), "posting_time": when.time()}
+
+
 def stock_quantity(item, location):
-	return sum(flt(row.quantity) for row in get_stock_quantities(location, [item]))
+	return sum(flt(row.actual_qty) for row in get_stock_quantities(location, [item]))
 
 
 def make_number_series(reference_type):

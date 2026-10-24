@@ -5,67 +5,60 @@ from frappe import _
 from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal
-from frappe_books.inventory.row_fields import INVOICE_ROW, row_fields, row_values
+
+
+def stock_qty_field(row) -> str:
+	"""The fieldname of a row's quantity in the stock unit: ERPNext's Stock Entry Detail names it `transfer_qty`."""
+	return "transfer_qty" if row.get("doctype") == "Books Stock Entry Detail" else "stock_qty"
 
 
 def populate_units(rows):
-	"""Set each row's stock unit, unit and conversion factor from its item, and its quantities.
+	"""Set each row's stock unit, unit and conversion factor from its item, and its stock quantity.
 
-	A missing quantity is derived from the other. When both are set, a quote or invoice row keeps
-	its quantity in its unit, as ERPNext does. A stock row in the stock unit keeps its stock
-	quantity and a stock row in another unit converts its quantity in that unit.
-	Quantities in a whole-number unit must be whole.
+	A row keeps its quantity in its unit, as ERPNext does, and derives its stock quantity from it;
+	a row with only a stock quantity derives its quantity. Quantities in a whole-number unit must be whole.
 	"""
-	items = item_units({row_values(row, "item")[0] for row in rows} - {None, ""})
+	items = item_units({row.item_code for row in rows} - {None, ""})
 	for row in rows:
-		item = row_values(row, "item")[0]
-		if item in items:
-			_populate_row_units(row, row_fields(row), *items[item])
+		if row.item_code in items:
+			_populate_row_units(row, *items[row.item_code])
 	validate_whole_quantities(rows)
 
 
 def validate_whole_quantities(rows):
-	units = {unit for row in rows for unit in row_values(row, "stock_uom", "uom") if unit}
+	units = {unit for row in rows for unit in (row.stock_uom, row.uom) if unit}
 	whole_units = _whole_units(units)
 	for row in rows:
-		fields = row_fields(row)
-		for quantity_field, unit_field in (("stock_qty", "stock_uom"), ("qty", "uom")):
-			fieldname, unit = fields[quantity_field], row.get(fields[unit_field])
+		for fieldname, unit in ((stock_qty_field(row), row.stock_uom), ("qty", row.uom)):
 			if unit in whole_units and not flt(row.get(fieldname)).is_integer():
 				frappe.throw(
 					_("{0} of {1} must be a whole number of {2}.").format(
-						_(row.meta.get_label(fieldname)), row.get(fields.item), unit
+						_(row.meta.get_label(fieldname)), row.item_code, unit
 					)
 				)
 
 
-def _populate_row_units(row, fields, unit, factors):
-	row.set(fields.stock_uom, unit)
-	row.set(fields.uom, row.get(fields.uom) or unit)
-	factor = _conversion_factor(row, fields, factors)
-	row.set(fields.factor, factor)
-	qty, stock_qty = row.get(fields.qty), row.get(fields.stock_qty)
-	if _keeps_stock_qty(fields, row, qty, stock_qty):
-		row.set(fields.qty, as_decimal(stock_qty) / factor)
+def _populate_row_units(row, unit, factors):
+	row.stock_uom = unit
+	row.uom = row.uom or unit
+	row.conversion_factor = _conversion_factor(row, factors)
+	stock_qty_fieldname = stock_qty_field(row)
+	stock_qty = row.get(stock_qty_fieldname)
+	if stock_qty and not row.qty:
+		row.qty = as_decimal(stock_qty) / row.conversion_factor
 	else:
-		row.set(fields.stock_qty, flt(as_decimal(qty) * factor, row.precision(fields.stock_qty)))
+		row.set(
+			stock_qty_fieldname,
+			flt(as_decimal(row.qty) * row.conversion_factor, row.precision(stock_qty_fieldname)),
+		)
 
 
-def _keeps_stock_qty(fields, row, qty, stock_qty):
-	if not stock_qty:
-		return False
-	if fields is INVOICE_ROW:
-		return not qty
-	return row.get(fields.uom) == row.get(fields.stock_uom) or not qty
-
-
-def _conversion_factor(row, fields, factors):
-	uom = row.get(fields.uom)
-	if uom == row.get(fields.stock_uom):
+def _conversion_factor(row, factors):
+	if row.uom == row.stock_uom:
 		return 1
-	if uom not in factors:
-		frappe.throw(_("Transfer Unit {0} is not applicable for Item {1}").format(uom, row.get(fields.item)))
-	return as_decimal(factors[uom])
+	if row.uom not in factors:
+		frappe.throw(_("Transfer Unit {0} is not applicable for Item {1}").format(row.uom, row.item_code))
+	return as_decimal(factors[row.uom])
 
 
 def item_units(names):

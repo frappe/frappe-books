@@ -2,7 +2,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.inventory.availability import get_stock_location
-from frappe_books.inventory.transaction import fill_default_location
+from frappe_books.inventory.transaction import fill_default_warehouse
 from frappe_books.tests.accounting import (
 	make_account,
 	make_item,
@@ -53,14 +53,14 @@ class IntegrationTestStockLocation(IntegrationTestCase):
 		other = make_item(income, received, is_stock_item=1).name
 		set_company_value("default_warehouse", "Stores")
 		rows = [
-			frappe._dict(item=shelved.name),
-			frappe._dict(item=other),
-			frappe._dict(item=other, to_location=self.counter),
+			frappe._dict(item_code=shelved.name),
+			frappe._dict(item_code=other),
+			frappe._dict(item_code=other, t_warehouse=self.counter),
 		]
 
-		fill_default_location(rows, "to_location")
+		fill_default_warehouse(rows, "t_warehouse")
 
-		self.assertEqual([row.to_location for row in rows], [self.shelf, "Stores", self.counter])
+		self.assertEqual([row.t_warehouse for row in rows], [self.shelf, "Stores", self.counter])
 
 	def test_quotes_use_the_sales_invoice_location(self):
 		self.assertEqual(get_stock_location("Books Quotation"), stock_location("SalesInvoice", False))

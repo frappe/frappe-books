@@ -47,7 +47,15 @@ const cases = [
     'DeliveryNote',
     'Status',
     'status',
-    ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled'],
+    [
+      'Draft',
+      'To Bill',
+      'Partially Billed',
+      'Completed',
+      'Return',
+      'Return Issued',
+      'Cancelled',
+    ],
   ],
 ] as const;
 

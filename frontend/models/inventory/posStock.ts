@@ -18,11 +18,11 @@ export async function getPOSInventory(): Promise<string | undefined> {
 export async function getItemQtyMap(items?: string[]): Promise<ItemQtyMap> {
   const rows = await getStockQuantities(await getPOSInventory(), items);
   const itemQtyMap: ItemQtyMap = {};
-  for (const { item, batch, quantity } of rows) {
-    itemQtyMap[item] ??= { availableQty: 0 };
-    itemQtyMap[item].availableQty += quantity;
-    if (batch) {
-      itemQtyMap[item][batch] = quantity;
+  for (const { item_code, batch_no, actual_qty } of rows) {
+    itemQtyMap[item_code] ??= { availableQty: 0 };
+    itemQtyMap[item_code].availableQty += actual_qty;
+    if (batch_no) {
+      itemQtyMap[item_code][batch_no] = actual_qty;
     }
   }
 

@@ -123,8 +123,9 @@ export async function getReport(
  * as do the dates its ledger link sets with them; cleared dates take defaults.
  */
 function getDocumentFilterResets(report: Report): Record<string, DocValue> {
-  const resets = { referenceType: 'All', referenceName: null };
-  return report.get('referenceName')
+  const [typeFilter, nameFilter] = report.referenceFilters;
+  const resets = { [typeFilter]: 'All', [nameFilter]: null };
+  return report.get(nameFilter)
     ? { ...resets, fromDate: null, toDate: null }
     : resets;
 }

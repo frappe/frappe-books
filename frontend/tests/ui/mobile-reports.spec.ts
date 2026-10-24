@@ -95,12 +95,12 @@ test('ledgers group entries under dates with debit or credit', async ({
   await expect(page.getByText('Sep 26, 2026', { exact: true })).toBeVisible();
 });
 
-test('stock balance groups locations under items with a total', async ({
+test('stock balance groups warehouses under items with a total', async ({
   page,
 }) => {
   await show(page, 'StockBalance');
   const item = row(page, 'Printed Brochures (100)');
-  await expect(item).toContainText('2 locations');
+  await expect(item).toContainText('2 warehouses');
   await expect(item).toContainText('104');
   await expect(row(page, 'Showroom')).toBeHidden();
 

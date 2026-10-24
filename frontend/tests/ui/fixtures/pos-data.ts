@@ -66,11 +66,15 @@ const records: Record<string, Row[]> = {
   'Books Stock Ledger Entry': [
     ...items
       .filter((item) => item !== coffee)
-      .map((item) => ({ item: item.name, quantity: item.availableQty })),
+      .map((item) => ({ item_code: item.name, actual_qty: item.availableQty })),
     ...[
-      { location: inventory, quantity: 110 },
-      { location: 'Warehouse', quantity: 40 },
-    ].map((row) => ({ item: coffee.name, batch: coffeeBatch.name, ...row })),
+      { warehouse: inventory, actual_qty: 110 },
+      { warehouse: 'Warehouse', actual_qty: 40 },
+    ].map((row) => ({
+      item_code: coffee.name,
+      batch_no: coffeeBatch.name,
+      ...row,
+    })),
   ],
   'Books Customer': [
     {

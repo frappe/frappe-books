@@ -78,11 +78,11 @@
                     {{ getBadge(item.value, e) }}
                   </FrappeBadge>
 
-                  <FrappeBadge v-if="e.item" theme="gray" variant="subtle">
-                    {{ e.item }}
+                  <FrappeBadge v-if="e.item_code" theme="gray" variant="subtle">
+                    {{ e.item_code }}
                   </FrappeBadge>
-                  <FrappeBadge v-if="e.location" theme="gray" variant="subtle">
-                    {{ e.location }}
+                  <FrappeBadge v-if="e.warehouse" theme="gray" variant="subtle">
+                    {{ e.warehouse }}
                   </FrappeBadge>
 
                   <!-- Amounts -->
@@ -108,11 +108,11 @@
                     {{ fyo.format(e.grand_total, 'Currency') }}
                   </FrappeBadge>
                   <FrappeBadge
-                    v-else-if="isPesa(e.amount) && e.amount.isPositive()"
+                    v-else-if="getAmount(e)?.isPositive()"
                     theme="green"
                     variant="subtle"
                   >
-                    {{ fyo.format(e.amount, 'Currency') }}
+                    {{ fyo.format(getAmount(e), 'Currency') }}
                   </FrappeBadge>
 
                   <!-- Quantities -->
@@ -126,11 +126,11 @@
                     }}
                   </FrappeBadge>
                   <FrappeBadge
-                    v-else-if="typeof e.quantity === 'number' && e.quantity"
+                    v-else-if="typeof e.actual_qty === 'number' && e.actual_qty"
                     theme="gray"
                     variant="subtle"
                   >
-                    {{ t`Qty. ${fyo.format(e.quantity, 'Float')}` }}
+                    {{ t`Qty. ${fyo.format(e.actual_qty, 'Float')}` }}
                   </FrappeBadge>
                 </div>
               </div>
@@ -181,6 +181,7 @@
 import { createReusableTemplate } from '@vueuse/core';
 import type { FrappeDoc } from 'src/frappe/document';
 import { isPesa } from 'fyo/utils';
+import type { Money } from 'pesa';
 import {
   Alert as FrappeAlert,
   Badge as FrappeBadge,
@@ -286,6 +287,11 @@ export default defineComponent({
     getDate(entry: Record<string, unknown>) {
       return entry.date ?? entry.posting_date;
     },
+    /** A payment's amount, or a stock entry's total. */
+    getAmount(entry: Record<string, unknown>): Money | undefined {
+      const amount = entry.amount ?? entry.total_amount;
+      return isPesa(amount) ? amount : undefined;
+    },
     async routeTo(schemaName: string, name: string) {
       const route = getFormRoute(schemaName, name);
       await routeTo(route);
@@ -364,12 +370,22 @@ const linkEntryDisplayFields: Record<string, string[]> = {
     'outstanding_amount',
   ],
   // Stock Transfers
-  [ModelNameEnum.DeliveryNote]: ['name', 'date', 'customer', 'grand_total'],
-  [ModelNameEnum.PurchaseReceipt]: ['name', 'date', 'supplier', 'grand_total'],
+  [ModelNameEnum.DeliveryNote]: [
+    'name',
+    'posting_date',
+    'customer',
+    'grand_total',
+  ],
+  [ModelNameEnum.PurchaseReceipt]: [
+    'name',
+    'posting_date',
+    'supplier',
+    'grand_total',
+  ],
   // Other Transactional
   [ModelNameEnum.Payment]: ['name', 'date', 'party', 'amount'],
   [ModelNameEnum.JournalEntry]: ['name', 'date', 'entry_type'],
-  [ModelNameEnum.StockEntry]: ['name', 'date', 'amount'],
+  [ModelNameEnum.StockEntry]: ['name', 'posting_date', 'total_amount'],
   // Ledgers
   [ModelNameEnum.AccountingLedgerEntry]: [
     'name',
@@ -380,10 +396,10 @@ const linkEntryDisplayFields: Record<string, string[]> = {
   ],
   [ModelNameEnum.StockLedgerEntry]: [
     'name',
-    'date',
-    'item',
-    'location',
-    'quantity',
+    'posting_date',
+    'item_code',
+    'warehouse',
+    'actual_qty',
   ],
 };
 </script>

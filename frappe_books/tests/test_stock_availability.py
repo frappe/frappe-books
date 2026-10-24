@@ -77,7 +77,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 
 		stock = get_stock_quantities("Stores", [ink])
 
-		self.assertEqual([(row.item, row.batch, row.quantity) for row in stock], [(ink, batch, 4)])
+		self.assertEqual([(row.item_code, row.batch_no, row.actual_qty) for row in stock], [(ink, batch, 4)])
 
 	def test_locations_are_given_for_invoices_to_their_readers(self):
 		self.assertRaises(frappe.ValidationError, get_stock_location, "Books Payment")
@@ -104,8 +104,8 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		sale = self._sale(ink, batch, quantity=3).insert()
 		issue = frappe.get_doc(
 			movement_values(
-				"MaterialIssue",
-				[{"item": ink, "batch": batch, "from_location": "Stores", "quantity": 2, "rate": 10}],
+				"Material Issue",
+				[{"item_code": ink, "batch_no": batch, "s_warehouse": "Stores", "qty": 2, "basic_rate": 10}],
 			)
 		).insert()
 		issue.submit()

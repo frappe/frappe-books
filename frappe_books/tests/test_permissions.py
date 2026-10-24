@@ -318,7 +318,7 @@ def _seed_delivery_note(return_against=None):
 			"name": frappe.generate_hash(),
 			"docstatus": 1,
 			"return_against": return_against,
-			"items": [{"item": "Keyboard", "quantity": 1}],
+			"items": [{"item_code": "Keyboard", "qty": 1}],
 		}
 	)
 	doc.db_insert()

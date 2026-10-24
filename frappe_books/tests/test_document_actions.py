@@ -70,7 +70,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		)
 		item = make_item(self.income.name, received.name, is_stock_item=1)
 		seed_stock(item.name, quantity=1, rate=10)
-		row = {"item": item.name, "location": "Stores", "quantity": 1, "rate": 25}
+		row = {"item_code": item.name, "warehouse": "Stores", "qty": 1, "rate": 25}
 		shipment = frappe.get_doc(
 			{"doctype": "Books Delivery Note", "customer": self.party.name, "items": [row]}
 		)
@@ -85,7 +85,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		)
 		item = make_item(self.income.name, received.name, is_stock_item=1)
 		seed_stock(item.name, quantity=2, rate=10)
-		row = {"item": item.name, "location": "Stores", "quantity": 2, "rate": 25}
+		row = {"item_code": item.name, "warehouse": "Stores", "qty": 2, "rate": 25}
 		shipment = frappe.get_doc(
 			{"doctype": "Books Delivery Note", "customer": self.party.name, "items": [row]}
 		)
@@ -239,7 +239,9 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			make_auto_stock_transfer=1,
 			make_auto_payment=1,
 		).submit()
-		receipt = frappe.db.get_value("Books Purchase Receipt", {"back_reference": invoice.name})
+		receipt = frappe.db.get_value(
+			"Books Purchase Receipt Item", {"purchase_invoice": invoice.name}, "parent"
+		)
 		payment = frappe.get_doc(
 			"Books Payment",
 			frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent"),

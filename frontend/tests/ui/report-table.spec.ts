@@ -45,11 +45,11 @@ test('only clipped text opens a hoverable tooltip with focus and Escape support'
   await expect(tooltip).toHaveText(value!);
   await page.keyboard.press('Escape');
   await expect(tooltip).toBeHidden();
-  const location = page
+  const warehouse = page
     .getByRole('cell', { name: 'Retail Floor', exact: true })
     .first();
-  await location.hover();
-  await expect(location.locator('[tabindex="0"]')).toHaveCount(0);
+  await warehouse.hover();
+  await expect(warehouse.locator('[tabindex="0"]')).toHaveCount(0);
   await expect(tooltip).toBeHidden();
   await text.hover();
   await expect(tooltip).toBeVisible();
@@ -130,7 +130,7 @@ test('column preferences survive optional column changes and invalid saved data'
   await page.evaluate(() => {
     const report = (window as any).reportFixture.state.report;
     const index = report.columns.findIndex(
-      (column: any) => column.fieldname === 'batch'
+      (column: any) => column.fieldname === 'batch_no'
     );
     report.columns.splice(index, 1);
     report.reportData.forEach((row: any) => row.cells.splice(index, 1));
@@ -188,12 +188,12 @@ test('changing report filters resets the page even when the row count is unchang
   page,
 }) => {
   for (const [field, value] of [
-    ['referenceType', 'Books Delivery Note'],
-    ['item', 'Keyboard'],
+    ['voucherType', 'Books Delivery Note'],
+    ['itemCode', 'Keyboard'],
     ['fromDate', '2026-09-01'],
-    ['groupBy', 'item'],
+    ['groupBy', 'item_code'],
     ['ascending', true],
-    ['item', null],
+    ['itemCode', null],
   ]) {
     await page
       .getByRole('button', { name: 'Next page', exact: true })
@@ -237,7 +237,7 @@ test('filter resets preserve page size and unchanged filters preserve the page',
     .click();
   await page.evaluate(async () => {
     await (window as any).reportFixture.state.report.set(
-      'item',
+      'itemCode',
       'Keyboard',
       false
     );
@@ -252,7 +252,7 @@ test('filter resets preserve page size and unchanged filters preserve the page',
     .click();
   await page.evaluate(async () => {
     const report = (window as any).reportFixture.state.report;
-    await report.set('item', 'Keyboard', false);
+    await report.set('itemCode', 'Keyboard', false);
     report.filters = report.getFilters();
     report.reportData = [...report.reportData];
   });
@@ -273,7 +273,7 @@ test('filters with fewer or no results return to page one and recover when clear
       .click();
     await page.evaluate(async (count) => {
       const report = (window as any).reportFixture.state.report;
-      await report.set('item', 'Keyboard', false);
+      await report.set('itemCode', 'Keyboard', false);
       report.reportData = report.reportData.slice(0, count);
     }, count);
     await expect(
@@ -285,7 +285,7 @@ test('filters with fewer or no results return to page one and recover when clear
     ).toBeDisabled();
     await page.evaluate(async (rows) => {
       const report = (window as any).reportFixture.state.report;
-      await report.set('item', null, false);
+      await report.set('itemCode', null, false);
       report.reportData = rows;
     }, rows);
     await expect(page.locator('[data-slot="list-row"]')).toHaveCount(50);

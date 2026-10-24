@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksStockEntryItem(Document):
+class BooksStockEntryDetail(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -15,20 +15,21 @@ class BooksStockEntryItem(Document):
 		from frappe.types import DF
 
 		amount: DF.Currency
-		batch: DF.Link | None
-		from_location: DF.Link | None
-		item: DF.Link
+		basic_rate: DF.Currency
+		batch_no: DF.Link | None
+		conversion_factor: DF.Float
+		item_code: DF.Link
+		item_name: DF.Data | None
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		quantity: DF.Float
-		rate: DF.Currency
-		serial_number: DF.Text | None
-		to_location: DF.Link | None
-		transfer_quantity: DF.Float
-		transfer_unit: DF.Link | None
-		unit: DF.Link | None
-		unit_conversion_factor: DF.Float
+		qty: DF.Float
+		s_warehouse: DF.Link | None
+		serial_no: DF.Text | None
+		stock_uom: DF.Link | None
+		t_warehouse: DF.Link | None
+		transfer_qty: DF.Float
+		uom: DF.Link | None
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Stock Entry Item"
+	_DOCTYPE_NAME = "Books Stock Entry Detail"

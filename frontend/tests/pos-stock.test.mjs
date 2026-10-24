@@ -23,9 +23,9 @@ const items = {
   },
 };
 const ledger = [
-  { location: inventory, quantity: 4 },
-  { location: 'Warehouse', quantity: 128 },
-].map((row) => ({ item, batch, ...row }));
+  { warehouse: inventory, actual_qty: 4 },
+  { warehouse: 'Warehouse', actual_qty: 128 },
+].map((row) => ({ item_code: item, batch_no: batch, ...row }));
 
 let server;
 stubServer();
@@ -77,13 +77,17 @@ test('stock sums come from the ledger through frappe.client.get_list', async () 
     'frappe.client.get_list',
     {
       doctype: 'Books Stock Ledger Entry',
-      fields: ['item', 'batch', { SUM: 'quantity', as: 'quantity' }],
-      filters: [
-        ['location', '=', inventory],
-        ['item', 'in', [item]],
+      fields: [
+        'item_code',
+        'batch_no',
+        { SUM: 'actual_qty', as: 'actual_qty' },
       ],
-      group_by: 'item, batch',
-      order_by: 'item, batch',
+      filters: [
+        ['warehouse', '=', inventory],
+        ['item_code', 'in', [item]],
+      ],
+      group_by: 'item_code, batch_no',
+      order_by: 'item_code, batch_no',
       limit_page_length: 0,
     },
   ]);
@@ -122,8 +126,13 @@ test('checkout accepts stocked batches and rejects stock held elsewhere', async 
 test('checkout checks the selected batch instead of just total item stock', async () => {
   stubServer({
     stock: [
-      { item, batch, location: inventory, quantity: 1 },
-      { item, batch: 'DEMO-COFFEE-2027', location: inventory, quantity: 131 },
+      { item_code: item, batch_no: batch, warehouse: inventory, actual_qty: 1 },
+      {
+        item_code: item,
+        batch_no: 'DEMO-COFFEE-2027',
+        warehouse: inventory,
+        actual_qty: 131,
+      },
     ],
   });
   const invoice = {
@@ -196,7 +205,11 @@ test('checkout validates against the stock the server has now', async () => {
     items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
   };
   await pos.validatePOSCheckout(invoice);
-  stubServer({ stock: [{ item, batch, location: inventory, quantity: 1 }] });
+  stubServer({
+    stock: [
+      { item_code: item, batch_no: batch, warehouse: inventory, actual_qty: 1 },
+    ],
+  });
   await assert.rejects(
     pos.validatePOSCheckout(invoice),
     /Available: 1; required: 2/
@@ -226,15 +239,21 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
   });
 });
 
-/** The ledger rows that match the location and item filters, as their sums. */
+/** The ledger rows that match the warehouse and item filters, as their sums. */
 function getSums(stock, filters) {
   const values = Object.fromEntries(
     filters.map(([field, , value]) => [field, value])
   );
   return stock
-    .filter((row) => !values.location || row.location === values.location)
-    .filter((row) => !values.item || values.item.includes(row.item))
-    .map(({ item, batch, quantity }) => ({ item, batch, quantity }));
+    .filter((row) => !values.warehouse || row.warehouse === values.warehouse)
+    .filter(
+      (row) => !values.item_code || values.item_code.includes(row.item_code)
+    )
+    .map(({ item_code, batch_no, actual_qty }) => ({
+      item_code,
+      batch_no,
+      actual_qty,
+    }));
 }
 
 /** What the rows lack of each tracked item, or batch, at the location, as the server sums them. */
@@ -248,9 +267,9 @@ function getShortfalls(rows, stock, location) {
   return [...required].flatMap(([key, quantity]) => {
     const [item, batch] = JSON.parse(key);
     const available = stock
-      .filter((row) => row.location === location && row.item === item)
-      .filter((row) => !batch || row.batch === batch)
-      .reduce((total, row) => total + row.quantity, 0);
+      .filter((row) => row.warehouse === location && row.item_code === item)
+      .filter((row) => !batch || row.batch_no === batch)
+      .reduce((total, row) => total + row.actual_qty, 0);
     return quantity > available
       ? [
           {

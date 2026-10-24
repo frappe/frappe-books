@@ -28,17 +28,17 @@ def get_stock_quantities(
 	"""Return the stock of each item and batch, at the location and up to the date when given."""
 	filters = {}
 	if location:
-		filters["location"] = location
+		filters["warehouse"] = location
 	if items:
-		filters["item"] = ["in", items]
+		filters["item_code"] = ["in", items]
 	if date:
-		filters["date"] = ["<=", get_datetime(date)]
+		filters["posting_datetime"] = ["<=", get_datetime(date)]
 	return frappe.get_list(
 		LEDGER,
 		filters=filters,
-		fields=["item", "batch", {"SUM": "quantity", "as": "quantity"}],
-		group_by="item, batch",
-		order_by="item, batch",
+		fields=["item_code", "batch_no", {"SUM": "actual_qty", "as": "actual_qty"}],
+		group_by="item_code, batch_no",
+		order_by="item_code, batch_no",
 	)
 
 
@@ -93,18 +93,18 @@ def _edited_batch_rows(invoice):
 def _batch_stock(rows, location):
 	"""Stock of the rows' batches, at the location when given, read as the system: the rule binds every saver."""
 	filters = {
-		"item": ["in", sorted({row.item_code for row in rows})],
-		"batch": ["in", sorted({row.batch_no for row in rows})],
+		"item_code": ["in", sorted({row.item_code for row in rows})],
+		"batch_no": ["in", sorted({row.batch_no for row in rows})],
 	}
 	if location:
-		filters["location"] = location
+		filters["warehouse"] = location
 	stock = frappe.get_all(
 		LEDGER,
 		filters=filters,
-		fields=["item", "batch", {"SUM": "quantity", "as": "quantity"}],
-		group_by="item, batch",
+		fields=["item_code", "batch_no", {"SUM": "actual_qty", "as": "actual_qty"}],
+		group_by="item_code, batch_no",
 	)
-	return {(row.item, row.batch): as_decimal(row.quantity) for row in stock}
+	return {(row.item_code, row.batch_no): as_decimal(row.actual_qty) for row in stock}
 
 
 def validate_pos_stock(rows):
@@ -144,7 +144,7 @@ def _available(stock):
 	"""Stock by item and batch; a row without a batch takes from all of the item's stock."""
 	available = defaultdict(float)
 	for row in stock:
-		available[row.item, ""] += flt(row.quantity)
-		if row.batch:
-			available[row.item, row.batch] = flt(row.quantity)
+		available[row.item_code, ""] += flt(row.actual_qty)
+		if row.batch_no:
+			available[row.item_code, row.batch_no] = flt(row.actual_qty)
 	return available

@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, now_datetime, nowdate
+from frappe.utils import add_days, nowdate
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.inventory.returns import map_transfer_return
@@ -103,9 +103,7 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 
 	def test_stock_entrys_need_inventory(self):
 		self.switch_off("enable_inventory")
-		movement = frappe.get_doc(
-			{"doctype": "Books Stock Entry", "movement_type": "MaterialReceipt", "date": now_datetime()}
-		)
+		movement = frappe.get_doc({"doctype": "Books Stock Entry", "purpose": "Material Receipt"})
 		with self.assertRaisesRegex(frappe.ValidationError, f"Inventory {OFF}"):
 			movement.insert()
 

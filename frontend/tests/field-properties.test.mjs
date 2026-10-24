@@ -71,7 +71,7 @@ test('the server date defaults Now and Today give a new document the current dat
     ['Quotation', 'transaction_date'],
     ['Payment', 'date'],
     ['JournalEntry', 'posting_date'],
-    ['DeliveryNote', 'date'],
+    ['DeliveryNote', 'posting_date'],
   ]) {
     const before = Date.now();
     const date = newFrappeDoc(schemaName)[fieldname];

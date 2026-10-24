@@ -25,6 +25,7 @@ from frappe_books.tests.accounting import (
 	make_invoice,
 	make_item,
 	make_warehouse,
+	posting_values,
 	set_company_value,
 	set_inventory_accounts,
 	stock_quantity,
@@ -50,8 +51,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 			{
 				"doctype": "Books Delivery Note",
 				"customer": party.name,
-				"date": now_datetime(),
-				"items": [{"item": item.name, "location": "Stores", "quantity": 2, "rate": 25}],
+				"items": [{"item_code": item.name, "warehouse": "Stores", "qty": 2, "rate": 25}],
 			}
 		).insert()
 		shipment.submit()
@@ -178,11 +178,11 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		seed_stock(item.name, quantity=5, rate=10)
 		invoice = self._make_invoice(item, cogs)
 
-		first = self._make_delivery_note(item, quantity=1, rate=100, back_reference=invoice.name)
+		first = self._make_delivery_note(item, quantity=1, rate=100, items=[invoice_row(invoice, 1)])
 		first.submit()
 		self.assertEqual(transfer_balance(invoice), [1, 1])
 
-		self._make_delivery_note(item, quantity=1, rate=100, back_reference=invoice.name).submit()
+		self._make_delivery_note(item, quantity=1, rate=100, items=[invoice_row(invoice, 1)]).submit()
 		self.assertEqual(transfer_balance(invoice), [0, 0])
 
 		first.cancel()
@@ -192,9 +192,9 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		item, cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=5, rate=10)
 		invoice = self._make_invoice(item, cogs)
-		self._make_delivery_note(item, quantity=2, rate=100, back_reference=invoice.name).submit()
+		self._make_delivery_note(item, quantity=2, rate=100, items=[invoice_row(invoice, 2)]).submit()
 
-		again = self._make_delivery_note(item, quantity=1, rate=100, back_reference=invoice.name)
+		again = self._make_delivery_note(item, quantity=1, rate=100, items=[invoice_row(invoice, 1)])
 
 		self.assertRaisesRegex(frappe.ValidationError, "left to transfer", again.submit)
 
@@ -205,13 +205,13 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		shipment.submit()
 
 		return_delivery_note = self._make_delivery_note(
-			item, quantity=-1, rate=25, return_against=shipment.name
+			item, quantity=-2, rate=25, return_against=shipment.name
 		)
 		return_delivery_note.submit()
-		self.assertEqual(frappe.db.get_value(shipment.doctype, shipment.name, "is_returned"), 1)
+		self.assertEqual(returned_state(shipment), (100, "Return Issued"))
 
 		return_delivery_note.cancel()
-		self.assertEqual(frappe.db.get_value(shipment.doctype, shipment.name, "is_returned"), 0)
+		self.assertEqual(returned_state(shipment), (0, "To Bill"))
 
 	def test_shipped_serial_numbers_are_delivered_until_cancelled(self):
 		item, _cogs, _stock = self._tracked_item()
@@ -222,14 +222,13 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 			{
 				"doctype": "Books Delivery Note",
 				"customer": make_customer(make_account("Receivable", account_type="Receivable").name).name,
-				"date": now_datetime(),
 				"items": [
 					{
-						"item": item.name,
-						"location": "Stores",
-						"quantity": 2,
+						"item_code": item.name,
+						"warehouse": "Stores",
+						"qty": 2,
 						"rate": 25,
-						"serial_number": "\n".join(serials),
+						"serial_no": "\n".join(serials),
 					}
 				],
 			}
@@ -307,8 +306,8 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 		returned = self._make_delivery_note(item, quantity=1, rate=25, return_against=shipment.name)
 
-		self.assertEqual((shipment.items[0].quantity, shipment.items[0].transfer_quantity), (2, 2))
-		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
+		self.assertEqual((shipment.items[0].stock_qty, shipment.items[0].qty), (2, 2))
+		self.assertEqual((returned.items[0].stock_qty, returned.items[0].qty), (-1, -1))
 
 	def test_rows_without_quantities_move_one_of_their_unit(self):
 		item, _cogs, _stock = self._tracked_item()
@@ -318,8 +317,8 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 		returned = self._make_delivery_note(item, quantity=None, rate=25, return_against=shipment.name)
 
-		self.assertEqual((shipment.items[0].quantity, shipment.items[0].transfer_quantity), (1, 1))
-		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
+		self.assertEqual((shipment.items[0].stock_qty, shipment.items[0].qty), (1, 1))
+		self.assertEqual((returned.items[0].stock_qty, returned.items[0].qty), (-1, -1))
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
 		item, _cogs, _stock = self._tracked_item(has_serial_no=1, gst_hsn_code="012345")
@@ -328,7 +327,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		set_company_value("default_warehouse", "Stores")
 		frappe.db.set_single_value("Books Defaults", "delivery_note_terms", "Ships in a week")
 		shipment = frappe.get_doc(
-			{"doctype": "Books Delivery Note", "items": [{"item": item.name, "quantity": 2, "rate": 25}]}
+			{"doctype": "Books Delivery Note", "items": [{"item_code": item.name, "qty": 2, "rate": 25}]}
 		)
 		shipment.set("__islocal", 1)
 
@@ -336,8 +335,8 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 		row = shipment.items[0]
 		self.assertEqual((shipment.naming_series, shipment.terms), ("SHPM-", "Ships in a week"))
-		self.assertEqual((row.location, row.hsn_code, row.amount), ("Stores", "012345", 50))
-		self.assertEqual(row.serial_number.splitlines(), sorted(serial_numbers))
+		self.assertEqual((row.warehouse, row.gst_hsn_code, row.amount), ("Stores", "012345", 50))
+		self.assertEqual(row.serial_no.splitlines(), sorted(serial_numbers))
 		self.assertEqual(shipment.grand_total, 50)
 		self.assertIsNone(shipment.name)
 
@@ -350,10 +349,10 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		item, _cogs, _stock = self._tracked_item()
 		set_company_value("default_warehouse", "Stores")
 		shipment = self._make_delivery_note(
-			item, quantity=1, rate=25, items=[{"item": item.name, "quantity": 1}]
+			item, quantity=1, rate=25, items=[{"item_code": item.name, "qty": 1}]
 		)
 
-		self.assertEqual(shipment.items[0].location, "Stores")
+		self.assertEqual(shipment.items[0].warehouse, "Stores")
 
 	def test_empty_serial_numbers_are_the_earliest_in_stock_at_the_row_location(self):
 		item, _cogs, _stock = self._tracked_item(has_serial_no=1)
@@ -362,22 +361,22 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		now = now_datetime()
 		seed_stock(item.name, quantity=1, rate=10, serial_number=serials[0], date=add_to_date(now, hours=-3))
 		for serial_number, hours in ((serials[2], -1), (serials[1], -2)):
-			row = {"item": item.name, "to_location": shelf, "quantity": 1, "rate": 10}
+			row = {"item_code": item.name, "t_warehouse": shelf, "qty": 1, "basic_rate": 10}
 			movement = frappe.get_doc(
 				{
 					"doctype": "Books Stock Entry",
-					"movement_type": "MaterialReceipt",
-					"date": add_to_date(now, hours=hours),
-					"items": [{**row, "serial_number": serial_number}],
+					"purpose": "Material Receipt",
+					**posting_values(add_to_date(now, hours=hours)),
+					"items": [{**row, "serial_no": serial_number}],
 				}
 			).insert()
 			movement.submit()
 
 		shipment = self._make_delivery_note(
-			item, quantity=1, rate=25, items=[{"item": item.name, "location": shelf, "quantity": 1}]
+			item, quantity=1, rate=25, items=[{"item_code": item.name, "warehouse": shelf, "qty": 1}]
 		)
 
-		self.assertEqual(shipment.items[0].serial_number, serials[1])
+		self.assertEqual(shipment.items[0].serial_no, serials[1])
 
 	def test_return_must_reference_a_submitted_original(self):
 		item, _cogs, _stock = self._tracked_item()
@@ -412,12 +411,14 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		invoice = make_sales_invoice(shipment.name)
 		invoice.update({"make_auto_stock_transfer": 1, "make_auto_payment": 0})
 		invoice.insert().submit()
-		self.assertFalse(frappe.db.exists("Books Delivery Note", {"back_reference": invoice.name}))
+		self.assertFalse(
+			frappe.db.exists("Books Delivery Note Item", {"against_sales_invoice": invoice.name})
+		)
 		self.assertEqual(transfer_balance(invoice), [0, 0])
-		self.assertEqual(shipment.db_get("is_fully_billed"), 1)
+		self.assertEqual(billed_state(shipment), (100, "Completed"))
 
 		invoice.cancel()
-		self.assertEqual([shipment.db_get("docstatus"), shipment.db_get("is_fully_billed")], [1, 0])
+		self.assertEqual([shipment.db_get("docstatus"), *billed_state(shipment)], [1, 0, "To Bill"])
 
 		frappe.delete_doc(invoice.doctype, invoice.name)
 		self.assertTrue(frappe.db.exists("Books Delivery Note", shipment.name))
@@ -451,7 +452,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 			frappe.ValidationError, "already fully billed", make_sales_invoice, shipment.name
 		)
 
-	def test_delivery_note_is_fully_billed_until_an_invoice_is_cancelled(self):
+	def test_delivery_note_is_billed_by_what_its_submitted_invoices_bill(self):
 		item, _cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=2, rate=10)
 		shipment = self._make_delivery_note(item, quantity=2, rate=25)
@@ -459,14 +460,14 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		first = make_sales_invoice(shipment.name)
 		first.items[0].update({"qty": 1, "stock_qty": 1})
 		first.insert().submit()
-		self.assertEqual(shipment.db_get("is_fully_billed"), 0)
+		self.assertEqual(billed_state(shipment), (50, "Partially Billed"))
 
 		second = make_sales_invoice(shipment.name).insert()
 		second.submit()
-		self.assertEqual(shipment.db_get("is_fully_billed"), 1)
+		self.assertEqual(billed_state(shipment), (100, "Completed"))
 
 		second.cancel()
-		self.assertEqual(shipment.db_get("is_fully_billed"), 0)
+		self.assertEqual(billed_state(shipment), (50, "Partially Billed"))
 
 	def test_invoice_of_a_delivery_note_can_bill_lines_it_did_not_ship(self):
 		item, cogs, _stock = self._tracked_item()
@@ -485,7 +486,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		item, cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=5, rate=10)
 		invoice = self._make_invoice(item, cogs)
-		shipment = self._make_delivery_note(item, quantity=2, rate=100, back_reference=invoice.name)
+		shipment = self._make_delivery_note(item, quantity=2, rate=100, items=[invoice_row(invoice, 2)])
 		shipment.submit()
 
 		self.assertRaisesRegex(frappe.ValidationError, "made from invoice", make_sales_invoice, shipment.name)
@@ -494,15 +495,15 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		item, cogs, _stock = self._tracked_item()
 		seed_stock(item.name, quantity=5, rate=10)
 		invoice = self._make_invoice(item, cogs)
-		shipment = self._make_delivery_note(item, quantity=2, rate=100, back_reference=invoice.name)
+		shipment = self._make_delivery_note(item, quantity=2, rate=100, items=[invoice_row(invoice, 2)])
 		shipment.submit()
 
 		delivery_note_return = make_return(shipment.name)
 
+		self.assertEqual(delivery_note_return.return_against, shipment.name)
 		self.assertEqual(
-			(delivery_note_return.return_against, delivery_note_return.back_reference), (shipment.name, None)
+			[(row.qty, row.against_sales_invoice) for row in delivery_note_return.items], [(-2, None)]
 		)
-		self.assertEqual([row.quantity for row in delivery_note_return.items], [-2])
 		delivery_note_return.insert().submit()
 		self.assertEqual(stock_quantity(item.name, "Stores"), 5)
 		self.assertEqual(transfer_balance(invoice), [0, 0])
@@ -513,12 +514,12 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		shipment = self._make_delivery_note(item, quantity=3, rate=25)
 		shipment.submit()
 		first = make_return(shipment.name)
-		first.items[0].update({"quantity": -1, "transfer_quantity": -1})
+		first.items[0].update({"qty": -1, "stock_qty": -1})
 		first.insert().submit()
 
 		second = make_return(shipment.name)
 
-		self.assertEqual([row.quantity for row in second.items], [-2])
+		self.assertEqual([row.qty for row in second.items], [-2])
 		second.insert().submit()
 		self.assertRaisesRegex(frappe.ValidationError, "fully returned", make_return, shipment.name)
 
@@ -532,7 +533,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		delivery_note_return = make_mapped_doc(method, shipment.name)
 
 		self.assertEqual(delivery_note_return.return_against, shipment.name)
-		self.assertEqual(delivery_note_return.items[0].quantity, -1)
+		self.assertEqual(delivery_note_return.items[0].qty, -1)
 
 	def _return_serial(self, item, shipment, serial_number):
 		return self._make_delivery_note(
@@ -544,8 +545,8 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		)
 
 	def _row(self, item, quantity, batch=None, serial_number=None):
-		row = {"item": item.name, "location": "Stores", "quantity": quantity, "rate": 25}
-		return {**row, "batch": batch, "serial_number": serial_number}
+		row = {"item_code": item.name, "warehouse": "Stores", "qty": quantity, "rate": 25}
+		return {**row, "batch_no": batch, "serial_no": serial_number}
 
 	def _make_invoice(self, item, account):
 		receivable = make_account("Receivable", account_type="Receivable")
@@ -568,28 +569,28 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		return make_item(income.name, received.name, is_stock_item=1, **values), cogs, stock
 
-	def _make_delivery_note(self, item, quantity, rate, **values):
+	def _make_delivery_note(self, item, quantity, rate, date=None, **values):
 		receivable = make_account("Receivable", account_type="Receivable")
 		party = make_customer(receivable.name)
 		return frappe.get_doc(
 			{
 				"doctype": "Books Delivery Note",
 				"customer": party.name,
-				"date": now_datetime(),
-				"items": [{"item": item.name, "location": "Stores", "quantity": quantity, "rate": rate}],
+				**posting_values(date or now_datetime()),
+				"items": [{"item_code": item.name, "warehouse": "Stores", "qty": quantity, "rate": rate}],
 				**values,
 			}
 		).insert()
 
 
 def seed_stock(item, quantity, rate, serial_number=None, batch=None, date=None):
-	row = {"item": item, "to_location": "Stores", "quantity": quantity, "rate": rate, "batch": batch}
+	row = {"item_code": item, "t_warehouse": "Stores", "qty": quantity, "basic_rate": rate, "batch_no": batch}
 	movement = frappe.get_doc(
 		{
 			"doctype": "Books Stock Entry",
-			"movement_type": "MaterialReceipt",
-			"date": date or now_datetime(),
-			"items": [{**row, "serial_number": serial_number}],
+			"purpose": "Material Receipt",
+			**posting_values(date or now_datetime()),
+			"items": [{**row, "serial_no": serial_number}],
 		}
 	).insert(ignore_permissions=True)
 	movement.submit()
@@ -612,6 +613,27 @@ def account_balance(voucher, account):
 
 def serial_statuses(serial_numbers):
 	return set(frappe.get_all("Books Serial No", filters={"name": ["in", serial_numbers]}, pluck="status"))
+
+
+def invoice_row(invoice, quantity):
+	"""A delivery note row that moves `quantity` of the invoice's first row, linked to it."""
+	row = invoice.items[0]
+	return {
+		"item_code": row.item_code,
+		"warehouse": "Stores",
+		"qty": quantity,
+		"rate": row.rate,
+		"against_sales_invoice": invoice.name,
+		"si_detail": row.name,
+	}
+
+
+def billed_state(transfer):
+	return tuple(frappe.db.get_value(transfer.doctype, transfer.name, ["per_billed", "status"]))
+
+
+def returned_state(transfer):
+	return tuple(frappe.db.get_value(transfer.doctype, transfer.name, ["per_returned", "status"]))
 
 
 def transfer_balance(invoice):

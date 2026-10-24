@@ -53,7 +53,7 @@ export enum ModelNameEnum {
   SystemSettings = 'SystemSettings',
   StockEntry = 'StockEntry',
   Supplier = 'Supplier',
-  StockEntryItem = 'StockEntryItem',
+  StockEntryDetail = 'StockEntryDetail',
   StockLedgerEntry = 'StockLedgerEntry',
   DeliveryNote = 'DeliveryNote',
   DeliveryNoteItem = 'DeliveryNoteItem',

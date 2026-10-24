@@ -36,10 +36,10 @@ async function getSaved(schemaName, name) {
 
 test('a fully billed shipment does not offer an invoice', () => {
   const [makeInvoice] = getStockTransferActions(fyo, 'DeliveryNote');
-  const shipment = { isSubmitted: true, is_fully_billed: 0 };
+  const shipment = { isSubmitted: true, per_billed: 0 };
 
   assert.equal(makeInvoice.condition(shipment), true);
-  shipment.is_fully_billed = 1;
+  shipment.per_billed = 100;
   assert.equal(makeInvoice.condition(shipment), false);
 });
 

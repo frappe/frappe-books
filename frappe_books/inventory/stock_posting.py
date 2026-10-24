@@ -45,7 +45,7 @@ def _valued_rows(transaction):
 	if transaction.doctype == "Books Delivery Note" and transaction.return_against:
 		rates = valuation.outgoing_rates(transaction.doctype, [transaction.return_against])
 		for row in rows:
-			row["rate"] = rates[transaction.return_against, row["item"], row["batch"] or ""]
+			row["rate"] = rates[transaction.return_against, row["item_code"], row["batch_no"] or ""]
 	return rows
 
 
@@ -56,51 +56,54 @@ def _create_entries(transaction, rows):
 		serial_numbers = _update_serial_statuses(transaction, row, cancel=False)
 		if serial_numbers:
 			for serial_number in serial_numbers:
-				restated |= _create_location_entries(transaction, row, Decimal(1), serial_number)
+				restated |= _create_warehouse_entries(transaction, row, Decimal(1), serial_number)
 		else:
-			quantity = abs(as_decimal(row["quantity"]))
-			restated |= _create_location_entries(transaction, row, quantity, None)
+			quantity = abs(as_decimal(row["stock_qty"]))
+			restated |= _create_warehouse_entries(transaction, row, quantity, None)
 	restated.discard((transaction.doctype, transaction.name))
 	return restated
 
 
-def _create_location_entries(transaction, row, quantity, serial_number):
+def _create_warehouse_entries(transaction, row, quantity, serial_number):
 	restated = set()
-	rate = rounded(row["rate"])
-	if row.get("from_location"):
-		entry, taken = _create_entry(transaction, row, row["from_location"], -quantity, serial_number, rate)
+	rate = as_decimal(row["rate"])
+	if row.get("s_warehouse"):
+		entry, taken = _create_entry(transaction, row, row["s_warehouse"], -quantity, serial_number, rate)
 		restated |= taken
-		# Stock moved between locations keeps the cost it left with.
-		rate = -as_decimal(entry.value_change) / quantity
-	if row.get("to_location"):
-		_entry, added = _create_entry(transaction, row, row["to_location"], quantity, serial_number, rate)
+		# Stock moved between warehouses keeps the cost it left with.
+		rate = -as_decimal(entry.stock_value_difference) / quantity
+	if row.get("t_warehouse"):
+		_entry, added = _create_entry(transaction, row, row["t_warehouse"], quantity, serial_number, rate)
 		restated |= added
 	return restated
 
 
-def _create_entry(transaction, row, location, quantity, serial_number, rate):
+def _create_entry(transaction, row, warehouse, quantity, serial_number, rate):
+	posting = transaction.posting_datetime()
 	return valuation.insert_entry(
 		{
-			"date": transaction.date,
-			"location": location,
-			"batch": row.get("batch"),
-			"serial_number": serial_number,
-			"item": row["item"],
-			"rate": rate,
-			"quantity": quantity,
-			"reference_type": transaction.doctype,
-			"reference_name": transaction.name,
+			"posting_date": posting.date(),
+			"posting_time": posting.time(),
+			"posting_datetime": posting,
+			"warehouse": warehouse,
+			"batch_no": row.get("batch_no"),
+			"serial_no": serial_number,
+			"item_code": row["item_code"],
+			"incoming_rate": rate,
+			"actual_qty": quantity,
+			"voucher_type": transaction.doctype,
+			"voucher_no": transaction.name,
 		}
 	)
 
 
 def _update_serial_statuses(transaction, row, cancel):
 	"""Create arriving serial numbers and set the status the row leaves them in; return them."""
-	serial_numbers = parse_serial_numbers(row.get("serial_number"))
+	serial_numbers = parse_serial_numbers(row.get("serial_no"))
 	if not serial_numbers:
 		return serial_numbers
-	if row.get("to_location") and not cancel:
-		_create_serial_numbers(row["item"], serial_numbers)
+	if row.get("t_warehouse") and not cancel:
+		_create_serial_numbers(row["item_code"], serial_numbers)
 	frappe.db.set_value(
 		"Books Serial No",
 		{"name": ["in", serial_numbers]},
@@ -125,10 +128,10 @@ def _create_serial_numbers(item, serial_numbers):
 
 
 def _serial_status(transaction, row, cancel):
-	if cancel and row.get("from_location"):
+	if cancel and row.get("s_warehouse"):
 		return "Active"
 	# Stock leaves: shipped or issued, or taken back out by cancelling a return or receipt.
-	if cancel or (row.get("from_location") and not row.get("to_location")):
+	if cancel or (row.get("s_warehouse") and not row.get("t_warehouse")):
 		return _leaving_status(transaction.doctype, cancel)
 	return "Active"
 
@@ -160,7 +163,7 @@ def _post_stock_value(transaction):
 
 def _validate_value_direction(transaction, value):
 	if transaction.doctype == "Books Stock Entry":
-		# A manufacture can add or remove value; an issue or a receipt moves it one way only.
+		# A repack can add or remove value; an issue or a receipt moves it one way only.
 		return
 	takes_stock_out = (transaction.doctype == "Books Delivery Note") != bool(transaction.return_against)
 	if (value < 0) != takes_stock_out:
@@ -200,15 +203,15 @@ def _revalue_transfers(references):
 		return set()
 	transfers = frappe.get_all(
 		"Books Stock Entry",
-		filters={"name": ["in", names], "movement_type": "MaterialTransfer"},
+		filters={"name": ["in", names], "purpose": "Material Transfer"},
 		pluck="name",
 	)
 	entries = valuation.transaction_entries("Books Stock Entry", transfers)
 	rates = {}
 	for entry in entries:
 		# Each incoming entry follows the outgoing entry it takes its cost from.
-		if as_decimal(entry.quantity) < 0:
-			rate = as_decimal(entry.value_change) / as_decimal(entry.quantity)
+		if as_decimal(entry.actual_qty) < 0:
+			rate = as_decimal(entry.stock_value_difference) / as_decimal(entry.actual_qty)
 		else:
 			rates[entry.name] = rate
 	return valuation.revalue_entries([entry for entry in entries if entry.name in rates], rates)
@@ -230,7 +233,7 @@ def _revalue_returns(references):
 	costs = valuation.outgoing_rates("Books Delivery Note", list(set(returns.values())))
 	entries = valuation.transaction_entries("Books Delivery Note", list(returns))
 	rates = {
-		entry.name: rounded(costs[returns[entry.reference_name], entry.item, entry.batch or ""])
+		entry.name: rounded(costs[returns[entry.voucher_no], entry.item_code, entry.batch_no or ""])
 		for entry in entries
 	}
 	return valuation.revalue_entries(entries, rates)

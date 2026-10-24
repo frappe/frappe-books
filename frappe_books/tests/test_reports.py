@@ -271,18 +271,18 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		self.received = make_account("Stock Report Received", root_type="Liability")
 		self.item = self._item()
 		now = now_datetime()
-		move(self.item, "MaterialReceipt", 4, 10, add_to_date(now, days=-3))
-		move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, days=-2))
-		move(self.item, "MaterialIssue", 5, 99, now)
+		move(self.item, "Material Receipt", 4, 10, add_to_date(now, days=-3))
+		move(self.item, "Material Receipt", 2, 20, add_to_date(now, days=-2))
+		move(self.item, "Material Issue", 5, 99, now)
 
 	def test_stock_ledger_reads_the_stored_fifo_balances(self):
-		rows = _run("Books Stock Ledger", item=self.item, ascending=True)
+		rows = _run("Books Stock Ledger", item_code=self.item, ascending=True)
 
 		columns = (
-			"quantity",
-			"balance_quantity",
-			"value_change",
-			"balance_value",
+			"actual_qty",
+			"qty_after_transaction",
+			"stock_value_difference",
+			"stock_value",
 			"incoming_rate",
 			"valuation_rate",
 		)
@@ -297,47 +297,52 @@ class IntegrationTestStockReports(IntegrationTestCase):
 
 	def test_stock_users_see_quantities_but_not_values(self):
 		with self.set_user(ensure_user("books-stock-reports@example.com", "Books User")):
-			for report in ("Books Stock Ledger", "Books Stock Balance"):
+			for report, quantity in (
+				("Books Stock Ledger", "qty_after_transaction"),
+				("Books Stock Balance", "balance_quantity"),
+			):
 				with self.subTest(report=report):
-					result = run(report, {"item": self.item})
+					result = run(report, {"item_code": self.item})
 					fieldnames = {column["fieldname"] for column in result["columns"]}
-					self.assertIn("balance_quantity", fieldnames)
+					self.assertIn(quantity, fieldnames)
 					self.assertFalse(fieldnames & VALUE_COLUMNS)
 					self.assertFalse(set().union(*result["result"]) & VALUE_COLUMNS)
 
 	def test_stock_ledger_dates_are_iso_datetimes(self):
-		rows = _run("Books Stock Ledger", item=self.item)
+		rows = _run("Books Stock Ledger", item_code=self.item)
 
 		for row in rows:
 			self.assertRegex(row["date"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[+-]\d{2}:\d{2}$")
 
 	def test_stock_ledger_filters_and_shows_documents_by_doctype(self):
-		rows = _run("Books Stock Ledger", item=self.item, reference_type="Books Stock Entry")
+		rows = _run("Books Stock Ledger", item_code=self.item, voucher_type="Books Stock Entry")
 
-		self.assertEqual([row["reference_type"] for row in rows], ["Books Stock Entry"] * 3)
-		self.assertEqual(_run("Books Stock Ledger", item=self.item, reference_type="Books Delivery Note"), [])
+		self.assertEqual([row["voucher_type"] for row in rows], ["Books Stock Entry"] * 3)
+		self.assertEqual(
+			_run("Books Stock Ledger", item_code=self.item, voucher_type="Books Delivery Note"), []
+		)
 
 	def test_stock_ledger_groups_rows_and_numbers_them_in_order(self):
 		other = self._item()
 		for item, day in ((self.item, 1), (other, 2), (self.item, 3)):
-			move(item, "MaterialReceipt", 1, 10, f"2061-01-0{day} 10:00:00")
+			move(item, "Material Receipt", 1, 10, f"2061-01-0{day} 10:00:00")
 
 		rows = _run(
 			"Books Stock Ledger",
 			from_date="2061-01-01",
 			to_date="2061-01-03",
-			group_by="item",
+			group_by="item_code",
 			ascending=True,
 		)
 
 		self.assertEqual(
-			[(row.get("index"), row.get("item")) for row in rows],
+			[(row.get("index"), row.get("item_code")) for row in rows],
 			[(1, self.item), (2, self.item), (None, None), (3, other)],
 		)
 
 	def test_stock_balance_splits_opening_and_period_movement(self):
 		today = nowdate()
-		rows = _run("Books Stock Balance", item=self.item, from_date=today, to_date=today)
+		rows = _run("Books Stock Balance", item_code=self.item, from_date=today, to_date=today)
 
 		self.assertEqual(len(rows), 1)
 		columns = (
@@ -353,7 +358,7 @@ class IntegrationTestStockReports(IntegrationTestCase):
 	def test_stock_balance_ignores_serial_numbers_while_they_are_off(self):
 		frappe.db.set_single_value("Books Inventory Settings", "enable_serial_number", 0)
 
-		rows = _run("Books Stock Balance", item=self.item, show_serial_numbers=1)
+		rows = _run("Books Stock Balance", item_code=self.item, show_serial_numbers=1)
 
 		self.assertEqual([row["balance_quantity"] for row in rows], [1])
 

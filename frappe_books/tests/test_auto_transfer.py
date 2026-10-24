@@ -7,6 +7,9 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.frappe_books.doctype.books_delivery_note.books_delivery_note import (
+	make_return as make_delivery_note_return,
+)
+from frappe_books.frappe_books.doctype.books_delivery_note.books_delivery_note import (
 	make_sales_invoice as make_delivery_note_invoice,
 )
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
@@ -25,7 +28,7 @@ from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice i
 from frappe_books.frappe_books.doctype.books_stock_entry.test_books_stock_entry import (
 	make_movement,
 )
-from frappe_books.inventory.invoice_transfer import TRANSFER_DOCTYPES
+from frappe_books.inventory.invoice_transfer import SOURCE_LINK_FIELDS, TRANSFER_DOCTYPES
 from frappe_books.tests.accounting import (
 	foreign_currency,
 	ledger_entries,
@@ -62,8 +65,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 	def test_pos_sale_of_an_item_out_of_stock_is_refused_as_the_pos_says(self):
 		invoice, item, location = self._make_pos_invoice(use_profile=False)
 		make_movement(
-			"MaterialIssue",
-			[{"item": item.name, "from_location": location.name, "quantity": 5, "rate": 10}],
+			"Material Issue",
+			[{"item_code": item.name, "s_warehouse": location.name, "qty": 5, "basic_rate": 10}],
 		).submit()
 
 		message = f"Item {item.name} is out of stock (quantity is zero)"
@@ -82,8 +85,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, item, location = self._make_pos_invoice(use_profile=False)
 		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)
 		serial_numbers = sorted(unique_name("SN") for _ in range(3))
-		row = {"item": item.name, "to_location": location.name, "quantity": 3, "rate": 10}
-		make_movement("MaterialReceipt", [{**row, "serial_number": "\n".join(serial_numbers)}]).submit()
+		row = {"item_code": item.name, "t_warehouse": location.name, "qty": 3, "basic_rate": 10}
+		make_movement("Material Receipt", [{**row, "serial_no": "\n".join(serial_numbers)}]).submit()
 		invoice.items[0].qty = 1
 		invoice.items[0].serial_no = serial_numbers[0]
 		invoice.append("items", {"item_code": item.name, "qty": 2})
@@ -124,8 +127,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 			{
 				"doctype": "Books Delivery Note",
 				"customer": invoice.customer,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": billed_item, "location": "Stores", "quantity": 2, "rate": 10}],
+				"items": [{"item_code": billed_item, "warehouse": "Stores", "qty": 2, "rate": 10}],
 			}
 		).insert()
 		shipment.submit()
@@ -148,8 +150,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		# /books copies a document without the fields its DocType marks no_copy.
 		duplicate = frappe.copy_doc(shipment, ignore_no_copy=False)
 
-		self.assertIsNone(duplicate.back_reference)
-		self.assertEqual(duplicate.items[0].quantity, 2)
+		row = duplicate.items[0]
+		self.assertEqual((row.against_sales_invoice, row.si_detail, row.qty), (None, None, 2))
 
 	def test_invoice_submit_stores_its_own_quantity_to_transfer(self):
 		invoice, _item = self._sales_invoice()
@@ -188,15 +190,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
 		invoice.submit()
 		shipment = made_transfer(invoice)
-		return_delivery_note = frappe.get_doc(
-			{
-				"doctype": shipment.doctype,
-				"customer": shipment.customer,
-				"date": shipment.date,
-				"return_against": shipment.name,
-				"items": [{**shipment.items[0].as_dict(no_default_fields=True), "quantity": -1}],
-			}
-		)
+		return_delivery_note = make_delivery_note_return(shipment.name)
+		return_delivery_note.items[0].update({"qty": -1, "stock_qty": -1})
 		return_delivery_note.insert().submit()
 
 		self.assertRaises(frappe.LinkExistsError, invoice.cancel)
@@ -211,15 +206,21 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, item = self._sales_invoice(currency=foreign_currency(), conversion_rate=2)
 		invoice.submit()
 		first = make_delivery_note(invoice.name)
-		first.items[0].update({"quantity": 1, "transfer_quantity": 1})
+		first.items[0].update({"qty": 1, "stock_qty": 1})
 		first.insert().submit()
 
 		shipment = make_delivery_note(invoice.name)
 
-		self.assertEqual((shipment.back_reference, shipment.return_against), (invoice.name, None))
 		self.assertEqual(
-			[(row.item, row.quantity, row.rate, row.location) for row in shipment.items],
-			[(item, 1, 200, "Stores")],
+			(shipment.items[0].against_sales_invoice, shipment.return_against), (invoice.name, None)
+		)
+		# The invoice row's rate is net of its 10% discount, in the company currency.
+		self.assertEqual(
+			[
+				(row.item_code, row.qty, row.rate, row.discount_amount, row.warehouse)
+				for row in shipment.items
+			],
+			[(item, 1, 180, 20, "Stores")],
 		)
 		shipment.insert().submit()
 		self.assertRaisesRegex(frappe.ValidationError, "no stock left", make_delivery_note, invoice.name)
@@ -245,7 +246,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		receipt = make_purchase_receipt(purchase_return.name)
 
 		self.assertEqual(receipt.return_against, made_transfer(invoice).name)
-		self.assertEqual([row.quantity for row in receipt.items], [-2])
+		self.assertEqual([row.qty for row in receipt.items], [-2])
 
 	def test_return_delivery_note_reverses_the_delivery_note_made_by_hand(self):
 		invoice, _item = self._sales_invoice()
@@ -291,8 +292,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", "Stores")
 		item = make_item(income.name, received.name, is_stock_item=1, standard_rate=10)
 		make_movement(
-			"MaterialReceipt",
-			[{"item": item.name, "to_location": "Stores", "quantity": 5, "rate": 10}],
+			"Material Receipt",
+			[{"item_code": item.name, "t_warehouse": "Stores", "qty": 5, "basic_rate": 10}],
 		).submit()
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -348,8 +349,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		)
 		invoice.submit()
 		make_movement(
-			"MaterialIssue",
-			[{"item": item.name, "from_location": "Stores", "quantity": 2, "rate": 10}],
+			"Material Issue",
+			[{"item_code": item.name, "s_warehouse": "Stores", "qty": 2, "basic_rate": 10}],
 		).submit()
 
 		self.assertRaisesRegex(frappe.ValidationError, "Insufficient stock", invoice.cancel)
@@ -360,7 +361,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice.submit()
 		shipment = made_transfer(invoice)
 		self.assertEqual(shipment.docstatus, 1)
-		self.assertEqual(shipment.items[0].location, location.name)
+		self.assertEqual(shipment.items[0].warehouse, location.name)
 		self.assertEqual(stock_quantity(item.name, location.name), 3)
 		self.assertEqual(stock_quantity(item.name, "Stores"), 0)
 		invoice.cancel()
@@ -394,8 +395,15 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		party = make_customer(receivable.name)
 		item = make_item(income.name, received.name, is_stock_item=1, standard_rate=10)
 		make_movement(
-			"MaterialReceipt",
-			[{"item": item.name, "to_location": location.name, "quantity": opening_quantity, "rate": 10}],
+			"Material Receipt",
+			[
+				{
+					"item_code": item.name,
+					"t_warehouse": location.name,
+					"qty": opening_quantity,
+					"basic_rate": 10,
+				}
+			],
 		).submit()
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -411,4 +419,6 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 def made_transfer(invoice):
 	"""The submitted delivery note or receipt the invoice made, which links back to it."""
 	doctype = TRANSFER_DOCTYPES[invoice.doctype]
-	return frappe.get_doc(doctype, {"back_reference": invoice.name, "docstatus": 1})
+	link_field = SOURCE_LINK_FIELDS[doctype][0]
+	names = frappe.get_all(f"{doctype} Item", filters={link_field: invoice.name}, pluck="parent")
+	return frappe.get_doc(doctype, {"name": ["in", names], "docstatus": 1})

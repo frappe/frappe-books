@@ -2,7 +2,6 @@ import frappe
 from frappe.client import insert
 from frappe.model.naming import NamingSeries
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
 
 from frappe_books.series import new_item_names
 from frappe_books.tests.accounting import ensure_user, make_account, make_item, make_supplier
@@ -80,31 +79,31 @@ class IntegrationTestSeriesBatches(IntegrationTestCase):
 		self.supplier = make_supplier(payable.name).name
 
 	def test_receipts_create_empty_batches_from_the_item_series(self):
-		row = {"item": self.item, "quantity": 1, "rate": 10}
-		invoice_row = {"item_code": self.item, "qty": 1, "price_list_rate": 10}
+		row = {"item_code": self.item, "qty": 1}
+		invoice_row = {**row, "price_list_rate": 10}
 		invoice = frappe.get_doc(self._purchase("Books Purchase Invoice", invoice_row)).insert()
 		receipt = frappe.get_doc(
-			self._purchase("Books Purchase Receipt", {**row, "location": "Stores"})
+			self._purchase("Books Purchase Receipt", {**row, "warehouse": "Stores", "rate": 10})
 		).insert()
-		movement = insert(movement_values("MaterialReceipt", row))
+		movement = insert(movement_values("Material Receipt", {**row, "basic_rate": 10}))
 
-		batches = [invoice.items[0].batch_no, receipt.items[0].batch, movement["items"][0]["batch"]]
+		batches = [invoice.items[0].batch_no, receipt.items[0].batch_no, movement["items"][0]["batch_no"]]
 		self.assertEqual(batches, [f"{self.prefix}{number}" for number in range(1001, 1004)])
 		for batch in batches:
 			self.assertEqual(frappe.db.get_value("Books Batch", batch, "item"), self.item)
 
 	def test_saving_again_keeps_the_batch(self):
 		receipt = frappe.get_doc(
-			movement_values("MaterialReceipt", {"item": self.item, "quantity": 1, "rate": 10})
+			movement_values("Material Receipt", {"item_code": self.item, "qty": 1, "basic_rate": 10})
 		).insert()
 		receipt.save()
 
-		self.assertEqual(receipt.items[0].batch, f"{self.prefix}1001")
+		self.assertEqual(receipt.items[0].batch_no, f"{self.prefix}1001")
 		self.assertEqual(frappe.db.count("Books Batch", {"item": self.item}), 1)
 
 	def test_rows_that_take_stock_out_still_require_a_batch(self):
 		issue = frappe.get_doc(
-			movement_values("MaterialIssue", {"item": self.item, "quantity": 1, "rate": 10})
+			movement_values("Material Issue", {"item_code": self.item, "qty": 1, "basic_rate": 10})
 		)
 
 		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", issue.insert)
@@ -113,25 +112,18 @@ class IntegrationTestSeriesBatches(IntegrationTestCase):
 	def test_item_without_a_batch_series_still_requires_a_batch(self):
 		item = make_series_item(has_batch_no=1)
 		receipt = frappe.get_doc(
-			movement_values("MaterialReceipt", {"item": item, "quantity": 1, "rate": 10})
+			movement_values("Material Receipt", {"item_code": item, "qty": 1, "basic_rate": 10})
 		)
 
 		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", receipt.insert)
 
 	def _purchase(self, doctype, row):
-		"""A purchase invoice takes its date by default; a receipt is dated now."""
-		date = {} if doctype == "Books Purchase Invoice" else {"date": now_datetime()}
-		return {"doctype": doctype, "supplier": self.supplier, **date, "items": [row]}
+		return {"doctype": doctype, "supplier": self.supplier, "items": [row]}
 
 
-def movement_values(movement_type, row):
-	location = "to_location" if movement_type == "MaterialReceipt" else "from_location"
-	return {
-		"doctype": "Books Stock Entry",
-		"movement_type": movement_type,
-		"date": now_datetime(),
-		"items": [{location: "Stores", **row}],
-	}
+def movement_values(purpose, row):
+	warehouse = "t_warehouse" if purpose == "Material Receipt" else "s_warehouse"
+	return {"doctype": "Books Stock Entry", "purpose": purpose, "items": [{warehouse: "Stores", **row}]}
 
 
 def make_series_item(**values):

@@ -93,7 +93,7 @@ def get_print_totals(doc) -> dict[str, Any]:
 	if isinstance(doc, StockTransferController):
 		return _amount_totals(doc.grand_total, company_currency())
 	if isinstance(doc, StockEntryController):
-		return _amount_totals(doc.amount, company_currency())
+		return _amount_totals(doc.total_amount, company_currency())
 	return {}
 
 

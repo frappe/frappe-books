@@ -58,19 +58,37 @@ test("the phone picks the server's Total column first", () => {
   );
 });
 
-test('a phone Stock Balance item counts its locations, not its batch rows', () => {
+test('a phone Stock Balance item counts its warehouses, not its batch rows', () => {
   const report = new StockBalance(fyo);
-  report.columns = ['item', 'location', 'batch', 'balance_quantity'].map(
-    (fieldname) => ({ fieldname, label: fieldname, fieldtype: 'Data' })
-  );
+  report.columns = [
+    'item_code',
+    'warehouse',
+    'batch_no',
+    'balance_quantity',
+  ].map((fieldname) => ({ fieldname, label: fieldname, fieldtype: 'Data' }));
   report.reportData = [
-    { item: 'Pen', location: 'Stores', batch: 'B1', balance_quantity: 2 },
-    { item: 'Pen', location: 'Stores', batch: 'B2', balance_quantity: 3 },
-    { item: 'Pen', location: 'Counter', batch: 'B1', balance_quantity: 1 },
+    {
+      item_code: 'Pen',
+      warehouse: 'Stores',
+      batch_no: 'B1',
+      balance_quantity: 2,
+    },
+    {
+      item_code: 'Pen',
+      warehouse: 'Stores',
+      batch_no: 'B2',
+      balance_quantity: 3,
+    },
+    {
+      item_code: 'Pen',
+      warehouse: 'Counter',
+      batch_no: 'B1',
+      balance_quantity: 1,
+    },
   ].map((row) => report.getReportRow(row));
   const tree = new MobileTree(report, StockBalance.phoneLayout);
 
   const [pen] = tree.getRows(tree.getValueColumns());
 
-  assert.equal(pen.subtitle, '2 locations');
+  assert.equal(pen.subtitle, '2 warehouses');
 });

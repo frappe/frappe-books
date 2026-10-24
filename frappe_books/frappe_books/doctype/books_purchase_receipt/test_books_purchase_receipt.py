@@ -18,6 +18,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_item,
 	make_supplier,
+	posting_values,
 	set_inventory_accounts,
 	stock_quantity,
 	unique_name,
@@ -41,8 +42,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 			{
 				"doctype": "Books Purchase Receipt",
 				"supplier": party.name,
-				"date": now_datetime(),
-				"items": [{"item": item.name, "location": "Stores", "quantity": 4, "rate": 25}],
+				"items": [{"item_code": item.name, "warehouse": "Stores", "qty": 4, "rate": 25}],
 			}
 		).insert()
 		receipt.submit()
@@ -118,7 +118,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 			(receipt.name, receipt.items[0].name, 2, 10),
 		)
 		self.assertEqual(
-			(purchase_return.doctype, purchase_return.return_against, purchase_return.items[0].quantity),
+			(purchase_return.doctype, purchase_return.return_against, purchase_return.items[0].qty),
 			("Books Purchase Receipt", receipt.name, -2),
 		)
 
@@ -152,8 +152,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 			{
 				"doctype": "Books Purchase Receipt",
 				"supplier": customer.name,
-				"date": now_datetime(),
-				"items": [{"item": item.name, "location": "Stores", "quantity": 1, "rate": 10}],
+				"items": [{"item_code": item.name, "warehouse": "Stores", "qty": 1, "rate": 10}],
 			}
 		)
 
@@ -172,24 +171,21 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		)
 		typed = unique_name("SN")
 		payable = make_account("Payable", root_type="Liability", account_type="Payable")
-		row = {"item": item.name, "location": "Stores", "quantity": 3, "rate": 10}
+		row = {"item_code": item.name, "warehouse": "Stores", "qty": 3, "rate": 10}
 		receipt = frappe.get_doc(
 			{
 				"doctype": "Books Purchase Receipt",
 				"supplier": make_supplier(payable.name).name,
-				"date": now_datetime(),
-				"items": [{**row, "serial_number": typed}, {**row, "quantity": 1}],
+				"items": [{**row, "serial_no": typed}, {**row, "qty": 1}],
 			}
 		)
 
 		receipt.preview()
-		self.assertEqual([row.serial_number for row in receipt.items], [typed, None])
+		self.assertEqual([row.serial_no for row in receipt.items], [typed, None])
 
 		receipt.insert()
-		self.assertEqual(
-			receipt.items[0].serial_number.splitlines(), [typed, f"{prefix}1001", f"{prefix}1002"]
-		)
-		self.assertEqual(receipt.items[1].serial_number, f"{prefix}1003")
+		self.assertEqual(receipt.items[0].serial_no.splitlines(), [typed, f"{prefix}1001", f"{prefix}1002"])
+		self.assertEqual(receipt.items[1].serial_no, f"{prefix}1003")
 
 
 def make_receipt(item, quantity, rate, return_against=None, date=None):
@@ -198,9 +194,9 @@ def make_receipt(item, quantity, rate, return_against=None, date=None):
 		{
 			"doctype": "Books Purchase Receipt",
 			"supplier": make_supplier(payable.name).name,
-			"date": date or now_datetime(),
+			**posting_values(date or now_datetime()),
 			"return_against": return_against,
-			"items": [{"item": item, "location": "Stores", "quantity": quantity, "rate": rate}],
+			"items": [{"item_code": item, "warehouse": "Stores", "qty": quantity, "rate": rate}],
 		}
 	).insert()
 	receipt.submit()
@@ -210,7 +206,7 @@ def make_receipt(item, quantity, rate, return_against=None, date=None):
 def stock_value_change(transaction):
 	values = frappe.get_all(
 		"Books Stock Ledger Entry",
-		filters={"reference_type": transaction.doctype, "reference_name": transaction.name},
-		pluck="value_change",
+		filters={"voucher_type": transaction.doctype, "voucher_no": transaction.name},
+		pluck="stock_value_difference",
 	)
 	return sum(Decimal(str(value)) for value in values)

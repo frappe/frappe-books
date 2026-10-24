@@ -105,6 +105,19 @@ class IntegrationTestAccessoryPreview(IntegrationTestCase):
 
 		self.assertEqual(doc["customer_name"], other)
 
+	def test_an_untouched_new_payment_previews_without_erpnext_refusals(self):
+		frappe.clear_messages()
+		doc = self.preview({"doctype": "Payment Entry", "__islocal": 1}, {})
+
+		self.assertTrue(doc["naming_series"])
+		self.assertEqual(doc["payment_type"], "Receive")
+		self.assertFalse(frappe.get_message_log())
+
+	def test_an_edited_new_payment_previews_with_erpnext_refusals(self):
+		values = {"doctype": "Payment Entry", "__islocal": 1, "paid_amount": 10}
+		with self.assertRaisesRegex(frappe.ValidationError, "is mandatory"):
+			self.preview(values, {"doc": ["paid_amount"]})
+
 	def test_a_preview_needs_the_right_to_make_the_document(self):
 		ensure_user(NO_RIGHTS_USER)
 		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):

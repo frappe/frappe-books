@@ -85,7 +85,7 @@ function previewClosing(document) {
   };
 }
 
-test('shift tables show the columns they showed', () => {
+test('shift tables show the columns the design shows', () => {
   const columns = Object.fromEntries(
     [
       'OpeningCash',
@@ -100,9 +100,8 @@ test('shift tables show the columns they showed', () => {
     ClosingCash: ['denomination', 'count'],
     POSClosingEntryDetail: [
       'mode_of_payment',
-      'opening_amount',
-      'closing_amount',
       'expected_amount',
+      'closing_amount',
       'difference',
     ],
   });

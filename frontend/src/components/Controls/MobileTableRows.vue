@@ -37,6 +37,7 @@
           detail,
           amountLabel,
           failed,
+          isNegative,
         } of summaries"
         :key="row.name"
         :class="title ? 'min-h-16 py-2.5' : 'min-h-13 py-2'"
@@ -67,7 +68,11 @@
             {{ t`Error` }}
           </FrappeBadge>
           <div v-if="amount" class="flex flex-col items-end">
-            <span class="text-lg-medium tabular-nums text-ink-gray-8" dir="ltr">
+            <span
+              class="text-lg-medium tabular-nums"
+              :class="isNegative ? 'text-ink-red-6' : 'text-ink-gray-8'"
+              dir="ltr"
+            >
               {{ amount }}
             </span>
             <span

@@ -8,8 +8,8 @@
  "field_order": [
   "mode_of_payment",
   "opening_amount",
-  "closing_amount",
   "expected_amount",
+  "closing_amount",
   "difference"
  ],
  "fields": [
@@ -26,19 +26,9 @@
   {
    "fieldname": "opening_amount",
    "fieldtype": "Currency",
-   "in_list_view": 1,
    "label": "Opening Amount",
    "placeholder": "Opening Amount",
    "read_only": 1,
-   "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "closing_amount",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Closing Amount",
-   "placeholder": "Closing Amount",
    "reqd": 1
   },
   {
@@ -48,6 +38,15 @@
    "label": "Expected Amount",
    "placeholder": "Expected Amount",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "closing_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Closing Amount",
+   "placeholder": "Closing Amount",
+   "reqd": 1
   },
   {
    "fieldname": "difference",

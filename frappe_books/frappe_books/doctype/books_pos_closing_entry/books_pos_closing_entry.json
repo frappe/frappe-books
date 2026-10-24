@@ -8,8 +8,10 @@
  "engine": "InnoDB",
  "field_order": [
   "period_end_date",
-  "closing_cash",
   "payment_reconciliation",
+  "cash_count_section",
+  "closing_cash",
+  "references_section",
   "pos_opening_entry",
   "journal_entry",
   "amended_from",
@@ -22,13 +24,8 @@
    "in_list_view": 1,
    "label": "Period End Date",
    "no_copy": 1,
+   "read_only": 1,
    "reqd": 1
-  },
-  {
-   "fieldname": "closing_cash",
-   "fieldtype": "Table",
-   "label": "Closing Cash",
-   "options": "Books Closing Cash"
   },
   {
    "fieldname": "payment_reconciliation",
@@ -37,14 +34,32 @@
    "options": "Books POS Closing Entry Detail"
   },
   {
+   "fieldname": "cash_count_section",
+   "fieldtype": "Section Break",
+   "label": "Cash Count"
+  },
+  {
+   "fieldname": "closing_cash",
+   "fieldtype": "Table",
+   "label": "Closing Cash",
+   "options": "Books Closing Cash"
+  },
+  {
+   "fieldname": "references_section",
+   "fieldtype": "Section Break",
+   "label": "References"
+  },
+  {
    "fieldname": "pos_opening_entry",
    "fieldtype": "Link",
    "label": "POS Opening Entry",
    "options": "Books POS Opening Entry",
+   "read_only": 1,
    "reqd": 1,
    "search_index": 1
   },
   {
+   "depends_on": "journal_entry",
    "fieldname": "journal_entry",
    "fieldtype": "Link",
    "label": "Journal Entry",
@@ -53,6 +68,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "amended_from",
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",

@@ -26,6 +26,9 @@ export class POSOpeningEntry extends FrappeDoc {
   static override doctype = 'Books POS Opening Entry';
   static override presentation = {
     label: 'POS Opening Entry',
+    fields: {
+      balance_details: { emptyMessage: 'There are no modes of payment.' },
+    },
     fileFields: [
       'name',
       'period_start_date',

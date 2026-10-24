@@ -20,7 +20,13 @@ export class ClosingCash extends FrappeDoc {
 
 /** A Books POS Closing Entry Detail row. */
 export class POSClosingEntryDetail extends FrappeDoc {
-  static override presentation = { label: 'Payment Reconciliation' };
+  static override presentation = {
+    label: 'Payment Reconciliation',
+    fields: { difference: { negativeInRed: true } },
+    // A phone row fits two amounts; the counted one is in the row's sheet.
+    mobileTableFields: ['mode_of_payment', 'expected_amount', 'difference'],
+    mobileLabelledFields: ['expected_amount', 'difference'],
+  };
 }
 
 /** Books POS Closing Entry, served by Frappe; its preview fills the expected, counted cash and difference amounts. */

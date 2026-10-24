@@ -1,6 +1,7 @@
 import { t } from 'fyo';
 import type { FrappeDoc } from 'src/frappe/document';
-import { Field, FieldTypeEnum } from 'schemas/types';
+import type { Money } from 'pesa';
+import { Field, FieldTypeEnum, NumberField } from 'schemas/types';
 import { getCalculatedState } from 'src/frappe/calculated';
 import { isHiddenByCondition } from 'src/frappe/fieldState';
 import { fyo } from 'src/initFyo';
@@ -15,6 +16,8 @@ export interface RowSummary {
   amountLabel?: string;
   /** The last preview failed on this row, so its amounts are unknown. */
   failed?: boolean;
+  /** The amount is negative and its field shows that in red. */
+  isNegative?: boolean;
 }
 
 const quantityFields = ['qty'];
@@ -57,7 +60,13 @@ export function getRowSummary(
         ? amountField.label
         : undefined,
     failed: state === 'failed' || !!row.parentdoc?.isRowFailed(row),
+    isNegative: !!amountField && isRedAmount(row, amountField),
   };
+}
+
+function isRedAmount(row: FrappeDoc, field: Field): boolean {
+  const value = row.get(field.fieldname) as Money | undefined;
+  return !!(field as NumberField).negativeInRed && !!value?.isNegative?.();
 }
 
 function formatAmount(row: FrappeDoc, field: Field, state?: string): string {

@@ -17,9 +17,12 @@
         class="size-4 shrink-0 text-ink-gray-5"
       />
     </button>
-    <span v-else class="min-h-6 break-words text-lg text-ink-gray-8">{{
-      displayText
-    }}</span>
+    <span
+      v-else
+      class="min-h-6 break-words text-lg"
+      :class="isRed ? 'text-ink-red-6' : 'text-ink-gray-8'"
+      >{{ displayText }}</span
+    >
   </div>
   <FrappeTextInput
     v-else
@@ -49,7 +52,8 @@
 <script lang="ts">
 import type { FrappeDoc } from 'src/frappe/document';
 import { Icon as FrappeIcon, TextInput as FrappeTextInput } from 'frappe-ui';
-import { Field } from 'schemas/types';
+import type { Money } from 'pesa';
+import { Field, NumberField } from 'schemas/types';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { isMobile } from 'src/utils/viewport';
@@ -107,7 +111,19 @@ export default defineComponent({
       if (isNumeric(this.df)) {
         classes.push('[&_input]:tabular-nums');
       }
+      if (this.isRed) {
+        classes.push('[&_input]:!text-ink-red-6');
+      }
       return classes;
+    },
+    /** A negative amount its field marks in red, like a POS closing difference. */
+    isRed(): boolean {
+      if (!(this.df as NumberField).negativeInRed) {
+        return false;
+      }
+
+      const value = this.value as Money | number | null;
+      return typeof value === 'number' ? value < 0 : !!value?.isNegative?.();
     },
   },
   methods: {

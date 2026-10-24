@@ -109,6 +109,7 @@ export interface NumberField extends Omit<BaseField, 'fieldtype'> {
   fieldtype: NumberFieldType;
   minvalue?: number; // UI Facing used to restrict lower bound
   maxvalue?: number; // UI Facing used to restrict upper bound
+  negativeInRed?: boolean; // UI Facing: a negative read-only value shows in red ink
 }
 
 export type Field =

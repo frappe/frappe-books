@@ -8,8 +8,10 @@
  "engine": "InnoDB",
  "field_order": [
   "period_start_date",
-  "opening_cash",
   "balance_details",
+  "cash_count_section",
+  "opening_cash",
+  "references_section",
   "journal_entry",
   "amended_from",
   "company"
@@ -20,14 +22,9 @@
    "fieldtype": "Datetime",
    "in_list_view": 1,
    "label": "Period Start Date",
+   "read_only": 1,
    "reqd": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "opening_cash",
-   "fieldtype": "Table",
-   "label": "Opening Cash",
-   "options": "Books Opening Cash"
   },
   {
    "fieldname": "balance_details",
@@ -37,6 +34,23 @@
    "reqd": 1
   },
   {
+   "fieldname": "cash_count_section",
+   "fieldtype": "Section Break",
+   "label": "Cash Count"
+  },
+  {
+   "fieldname": "opening_cash",
+   "fieldtype": "Table",
+   "label": "Opening Cash",
+   "options": "Books Opening Cash"
+  },
+  {
+   "fieldname": "references_section",
+   "fieldtype": "Section Break",
+   "label": "References"
+  },
+  {
+   "depends_on": "journal_entry",
    "fieldname": "journal_entry",
    "fieldtype": "Link",
    "label": "Journal Entry",
@@ -45,6 +59,7 @@
    "read_only": 1
   },
   {
+   "depends_on": "amended_from",
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",

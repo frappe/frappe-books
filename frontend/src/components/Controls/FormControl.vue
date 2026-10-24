@@ -14,6 +14,7 @@ import DynamicLink from './DynamicLink.vue';
 import Float from './Float.vue';
 import Int from './Int.vue';
 import Link from './Link.vue';
+import MultiSelectList from './MultiSelectList.vue';
 import LinkCard from './LinkCard.vue';
 import Percent from './Percent.vue';
 import Select from './Select.vue';
@@ -41,10 +42,11 @@ const components = {
   Text,
 };
 
-// Accessory mode's controls of ERPNext field types, by `df.control`.
+// Accessory mode's controls of ERPNext field types and report filters, by `df.control`.
 const controls = {
   TextEditor,
   TableMultiSelect,
+  MultiSelectList,
   Time,
   Percent,
   ReadOnly: Data,

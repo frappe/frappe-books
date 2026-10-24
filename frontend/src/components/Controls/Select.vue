@@ -52,6 +52,15 @@
     <template v-if="inlineLabel" #prefix>
       <span class="text-base text-ink-gray-5">{{ df.label }}</span>
     </template>
+    <template v-if="showsRequiredMark" #suffix>
+      <span class="ml-auto text-base text-ink-red-5" aria-hidden="true"
+        >*</span
+      >
+      <span
+        data-slot="chevron"
+        class="lucide-chevron-down size-4 shrink-0 text-ink-gray-4"
+      />
+    </template>
   </FrappeSelect>
 </template>
 

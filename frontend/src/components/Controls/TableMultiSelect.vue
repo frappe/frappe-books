@@ -119,7 +119,36 @@
     <template #footer />
     <!-- The default trigger shows "N selected"; the picked records show as tags that wrap. -->
     <template #trigger="{ open, setOpen }">
+      <!-- A report filter's pill names the picked records in a comma list, as other filter pills do. -->
+      <FrappeButton
+        v-if="inlineLabel"
+        ref="trigger"
+        variant="outline"
+        size="sm"
+        class="max-w-80"
+        role="combobox"
+        :class="triggerClass"
+        :aria-label="df.label"
+        :aria-expanded="open"
+      >
+        <span class="me-2 text-ink-gray-5">{{ df.label }}</span>
+        <span class="truncate">{{ pickedLabels || inputPlaceholder }}</span>
+        <span
+          v-if="showsRequiredMark"
+          class="ms-1 text-ink-red-5"
+          aria-hidden="true"
+          >*</span
+        >
+        <template #suffix>
+          <span
+            class="lucide-chevron-down size-4 text-ink-gray-5 transition-transform duration-200"
+            :class="open ? 'rotate-180' : ''"
+            aria-hidden="true"
+          />
+        </template>
+      </FrappeButton>
       <div
+        v-else
         ref="trigger"
         role="combobox"
         tabindex="0"
@@ -212,6 +241,9 @@ export default defineComponent({
         (field: Field) => field.fieldtype === 'Link'
       ) as TargetField | undefined;
     },
+    pickedLabels(): string {
+      return this.picked.map((name) => this.getLabel(name)).join(', ');
+    },
     linkLabel(): string {
       return this.linkField?.label ?? this.df.label;
     },
@@ -252,7 +284,11 @@ export default defineComponent({
   },
   methods: {
     focus() {
-      (this.$refs.trigger as HTMLElement | undefined)?.focus();
+      const trigger = this.$refs.trigger as
+        | HTMLElement
+        | { $el: HTMLElement }
+        | undefined;
+      (trigger && '$el' in trigger ? trigger.$el : trigger)?.focus();
     },
     getLabel(name: string): string {
       return this.labels[name] ?? name;

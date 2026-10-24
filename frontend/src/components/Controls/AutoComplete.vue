@@ -95,6 +95,12 @@
           df.label
         }}</span>
         <span class="truncate">{{ triggerLabel }}</span>
+        <span
+          v-if="showsRequiredMark"
+          class="ms-1 text-ink-red-5"
+          aria-hidden="true"
+          >*</span
+        >
         <template #suffix>
           <span
             class="lucide-chevron-down size-4 text-ink-gray-5 transition-transform duration-200"

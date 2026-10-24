@@ -103,6 +103,8 @@ export default defineComponent({
     invalid: { type: Boolean, default: false },
     /** Names the value inside the control where no label is shown. */
     inlineLabel: Boolean,
+    /** Marks a required value with `*` after it, as report filters do. */
+    requiredMark: Boolean,
   },
   emits: ['focus', 'input', 'change'],
   data() {
@@ -210,6 +212,9 @@ export default defineComponent({
     },
     inputPlaceholder(): string {
       return this.placeholder || this.df.placeholder || this.df.label;
+    },
+    showsRequiredMark(): boolean {
+      return this.requiredMark && this.isRequired;
     },
     showMandatory(): boolean {
       return this.isEmpty && this.isRequired;

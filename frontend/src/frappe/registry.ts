@@ -195,11 +195,9 @@ function getTables(
     if (child) {
       const name = getTableSchemaName(child.name);
       const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;
-      const childLayout = getChildLayoutMeta(
-        field.fieldname,
-        byName,
-        layoutMeta
-      );
+      const childLayout =
+        layoutMeta &&
+        getChildLayoutMeta(field.fieldname, child, byName, layoutMeta);
       // Rows take their parent's permissions, as in Frappe.
       tables[field.fieldname] = toDocType(
         { ...child, permissions: meta.permissions },
@@ -215,16 +213,23 @@ function getTables(
   return tables;
 }
 
-/** The Books rows that lay out an ERPNext table: those of the Books table of the same fieldname. */
+/**
+ * The Books rows that lay out an ERPNext table: those of the Books table of
+ * the same fieldname. A table Books lacks, e.g. a picked one, is laid out by
+ * its ERPNext list columns, so its other fields can be picked too.
+ */
 function getChildLayoutMeta(
   fieldname: string,
+  child: DocTypeMeta,
   byName: Map<string, DocTypeMeta>,
-  layoutMeta?: DocTypeMeta
+  layoutMeta: DocTypeMeta
 ): DocTypeMeta | undefined {
-  const table = layoutMeta?.fields.find((f) => f.fieldname === fieldname);
-  return table && isTableDocField(table)
-    ? byName.get(table.options!)
-    : undefined;
+  const table = layoutMeta.fields.find((f) => f.fieldname === fieldname);
+  if (table && isTableDocField(table)) {
+    return byName.get(table.options!);
+  }
+
+  return { ...child, fields: child.fields.filter((f) => f.in_list_view) };
 }
 
 /** How accessory mode lays out an ERPNext doctype, or a table's rows of the form doctype `form`. */

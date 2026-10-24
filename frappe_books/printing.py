@@ -64,7 +64,7 @@ def books_format(value, fieldtype: str, currency: str | None = None) -> str:
 
 def format_amount(value, currency: str, settings) -> str:
 	"""The currency symbol, then the number to the display precision."""
-	number = format_number(value, settings.display_precision, settings)
+	number = format_number(value, settings.currency_precision, settings)
 	symbol = frappe.db.get_value("Currency", currency, "symbol", cache=True)
 	return f"{symbol} {number}" if symbol else number
 

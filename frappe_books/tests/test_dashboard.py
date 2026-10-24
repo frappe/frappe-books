@@ -91,7 +91,7 @@ class IntegrationTestTopExpenses(IntegrationTestCase):
 class IntegrationTestDashboardPeriods(IntegrationTestCase):
 	def setUp(self):
 		frappe.db.set_single_value(
-			"Books Accounting Settings", {"fiscal_year_start": "2026-04-01", "fiscal_year_end": "2027-03-31"}
+			"Books Accounting Settings", {"year_start_date": "2026-04-01", "year_end_date": "2027-03-31"}
 		)
 
 	def test_periods_end_today_and_start_on_the_first_of_a_month(self):

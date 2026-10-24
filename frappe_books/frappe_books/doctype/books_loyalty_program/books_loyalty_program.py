@@ -40,7 +40,7 @@ class BooksLoyaltyProgram(Document):
 	_DOCTYPE_NAME = "Books Loyalty Program"
 
 	def validate(self):
-		require_feature("enable_loyalty_program")
+		require_feature("enable_loyalty_point_program")
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("Loyalty program start date must be on or before its end date."))
 		# The messages /books shows at these fields.

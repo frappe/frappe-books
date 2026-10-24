@@ -451,7 +451,7 @@ test('a customer shows loyalty fields only when the program is on', async () => 
   assert.equal(hidden(customer, 'loyalty_program'), true);
   assert.equal(hidden(customer, 'loyalty_points'), true);
 
-  fyo.singles.AccountingSettings = { enable_loyalty_program: true };
+  fyo.singles.AccountingSettings = { enable_loyalty_point_program: true };
   assert.equal(hidden(customer, 'loyalty_program'), false);
   assert.equal(hidden(customer, 'loyalty_points'), true);
   await customer.set('loyalty_program', 'Gold');

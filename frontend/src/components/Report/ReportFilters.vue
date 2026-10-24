@@ -98,8 +98,8 @@ const dateRange = computed<DateRangeValue>(() => {
 function getPresets() {
   const settings = fyo.singles.AccountingSettings;
   return getDateRangePresets({
-    start: settings?.fiscal_year_start,
-    end: settings?.fiscal_year_end,
+    start: settings?.year_start_date,
+    end: settings?.year_end_date,
   });
 }
 

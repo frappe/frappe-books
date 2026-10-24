@@ -42,7 +42,7 @@ class BooksCustomer(PartyController):
 	_DOCTYPE_NAME = "Books Customer"
 
 	def validate(self):
-		require_features(self, {"loyalty_program": "enable_loyalty_program"})
+		require_features(self, {"loyalty_program": "enable_loyalty_point_program"})
 		super().validate()
 
 	def after_insert(self):

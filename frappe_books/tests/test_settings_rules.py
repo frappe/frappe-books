@@ -17,8 +17,8 @@ from frappe_books.tests.accounting import make_account, make_number_series, set_
 COMPANY = {
 	"fullname": "Settings Owner",
 	"bank_name": "Settings Test Bank",
-	"fiscal_year_start": "2026-04-01",
-	"fiscal_year_end": "2027-03-31",
+	"year_start_date": "2026-04-01",
+	"year_end_date": "2027-03-31",
 }
 
 
@@ -35,9 +35,9 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		ensure_chart(load_chart(STANDARD_CHART))
 		frappe.db.delete("Books Account", {"name": "Discounts"})
 		set_company_value("default_discount_account", None)
-		settings = _accounting_settings(enable_discounting=0)
+		settings = _accounting_settings(enable_discounts_and_margin=0)
 
-		settings.enable_discounting = 1
+		settings.enable_discounts_and_margin = 1
 		settings.save()
 
 		self.assertEqual(company_value("default_discount_account"), "Discounts")

@@ -44,8 +44,8 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 		)
 
 	def test_discounts_need_discounting(self):
-		self.switch_off("enable_discounting")
-		with self.assertRaisesRegex(frappe.ValidationError, f"Discount Accounting {OFF}"):
+		self.switch_off("enable_discounts_and_margin")
+		with self.assertRaisesRegex(frappe.ValidationError, f"Discounts and Margin {OFF}"):
 			self.invoice()
 
 	def test_returns_need_invoice_returns(self):
@@ -93,7 +93,7 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 
 	def test_loyalty_programs_need_the_loyalty_feature(self):
 		program = self.loyalty_program()
-		self.switch_off("enable_loyalty_program")
+		self.switch_off("enable_loyalty_point_program")
 
 		with self.assertRaisesRegex(frappe.ValidationError, f"Loyalty Program {OFF}"):
 			self.loyalty_program()
@@ -119,7 +119,7 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 			("enable_batches", {"has_batch_no": 1}),
 			("enable_serial_number", {"is_stock_item": 1, "has_serial_no": 1}),
 			("enable_uom_conversions", {"uoms": [{"uom": "Kg", "conversion_factor": 2}]}),
-			("enableitem_group", {"item_group": group}),
+			("enable_item_group", {"item_group": group}),
 		):
 			with self.subTest(feature=feature):
 				enable_features()

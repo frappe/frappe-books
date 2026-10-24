@@ -44,7 +44,7 @@ test('CSV and JSON retain hidden groups and visible leaf amounts', async () => {
     ],
   };
   for (const precision of [0, 2]) {
-    fyo.singles.SystemSettings.display_precision = precision;
+    fyo.singles.SystemSettings.currency_precision = precision;
     assert.deepEqual(JSON.parse(getJsonData(report)).rows, [
       { Account: 'Assets', Balance: '' },
       { Account: 'Cash', Balance: '123' },
@@ -183,6 +183,6 @@ test('status badges use the status option label and the DocType state colour', (
 
 test('currency formatting uses exactly the configured precision', async () => {
   const fyo = await makeFyo();
-  fyo.singles.SystemSettings.display_precision = 0;
+  fyo.singles.SystemSettings.currency_precision = 0;
   assert.equal(fyo.format(fyo.pesa('123.99'), 'Currency'), '124');
 });

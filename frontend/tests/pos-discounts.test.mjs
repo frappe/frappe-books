@@ -37,7 +37,7 @@ await loadFrappeModels(frappeModels, ({ path, body }) => {
 beforeEach(() => {
   fyo.singles.AccountingSettings = {
     enable_coupon_code: true,
-    enable_loyalty_program: true,
+    enable_loyalty_point_program: true,
   };
 });
 
@@ -110,7 +110,7 @@ test('each gate follows its own feature', () => {
   fyo.singles.AccountingSettings = { enable_coupon_code: true };
   assert.deepEqual(getGates(makeSale()), [true, false]);
 
-  fyo.singles.AccountingSettings = { enable_loyalty_program: true };
+  fyo.singles.AccountingSettings = { enable_loyalty_point_program: true };
   assert.deepEqual(getGates(makeSale()), [false, true]);
 });
 

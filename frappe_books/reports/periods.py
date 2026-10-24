@@ -73,7 +73,7 @@ def _period(from_date, to_date, date_format):
 def _fiscal_year_setting():
 	start, end = (
 		frappe.db.get_single_value("Books Accounting Settings", fieldname)
-		for fieldname in ("fiscal_year_start", "fiscal_year_end")
+		for fieldname in ("year_start_date", "year_end_date")
 	)
 	if not start or not end:
 		frappe.throw(_("Set the fiscal year in Accounting Settings."))

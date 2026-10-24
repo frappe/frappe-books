@@ -749,9 +749,7 @@ class IntegrationTestReportPeriods(IntegrationTestCase):
 
 
 def _set_fiscal_year(start, end):
-	frappe.db.set_single_value(
-		"Books Accounting Settings", {"fiscal_year_start": start, "fiscal_year_end": end}
-	)
+	frappe.db.set_single_value("Books Accounting Settings", {"year_start_date": start, "year_end_date": end})
 
 
 def _dates(*dates):

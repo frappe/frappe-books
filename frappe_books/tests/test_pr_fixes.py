@@ -139,7 +139,7 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 		for country, currency, precision in (("Japan", "USD", 2), ("India", "JPY", 0), ("Japan", "JPY", 0)):
 			with restored_company_settings():
 				complete_site_setup(frappe._dict(country=country, currency=currency))
-				self.assertEqual(frappe.get_single("Books System Settings").display_precision, precision)
+				self.assertEqual(frappe.get_single("Books System Settings").currency_precision, precision)
 		self.assertEqual(currency_precision("JPY"), 0)
 
 	def make_invoice(self, payment_type):

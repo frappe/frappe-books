@@ -186,7 +186,7 @@ export abstract class Invoice extends FrappeDoc {
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     discount_after_tax: () =>
-      !this.fyo.singles.AccountingSettings?.enable_discounting,
+      !this.fyo.singles.AccountingSettings?.enable_discounts_and_margin,
     selling_price_list: () => this.isPriceListHidden,
     buying_price_list: () => this.isPriceListHidden,
     // A finished document names its template in the Taxes section instead.

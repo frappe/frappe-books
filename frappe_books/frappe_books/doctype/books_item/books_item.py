@@ -22,7 +22,7 @@ ITEM_FEATURES = {
 	"has_batch_no": "enable_batches",
 	"has_serial_no": "enable_serial_number",
 	"uoms": "enable_uom_conversions",
-	"item_group": "enableitem_group",
+	"item_group": "enable_item_group",
 }
 
 

@@ -69,7 +69,7 @@ test('a new sales invoice shows the fields it showed, in its sections', () => {
 test('features and totals show the fields that go with them', () => {
   setSettings({
     accounting: {
-      enable_discounting: true,
+      enable_discounts_and_margin: true,
       enable_inventory: true,
       enable_price_list: true,
       enable_coupon_code: true,
@@ -244,7 +244,7 @@ test('item tables keep their columns, row editor and Invoice No', () => {
 });
 
 test('row fields show by the features and discounts turned on', () => {
-  setSettings({ accounting: { enable_discounting: true } });
+  setSettings({ accounting: { enable_discounts_and_margin: true } });
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', { item_code: 'Pen' });
   const row = invoice.items[0];
@@ -262,7 +262,7 @@ test('row fields show by the features and discounts turned on', () => {
   assert.equal(hidden('gst_hsn_code'), true);
   fyo.singles.AccountingSettings.country = 'India';
   assert.equal(hidden('gst_hsn_code'), false);
-  fyo.singles.AccountingSettings.enable_discounting = false;
+  fyo.singles.AccountingSettings.enable_discounts_and_margin = false;
   assert.equal(hidden('discount_percentage'), true);
   assert.equal(hidden('discount_amount'), true);
 });
@@ -403,7 +403,7 @@ test('row edits ask the server for the price, details and quantities that follow
 });
 
 test('a row discount amount or percentage leaves the other to the server', async () => {
-  setSettings({ accounting: { enable_discounting: true } });
+  setSettings({ accounting: { enable_discounts_and_margin: true } });
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', {
     item_code: 'Pen',

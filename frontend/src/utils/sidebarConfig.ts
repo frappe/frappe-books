@@ -237,7 +237,8 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'loyalty-program',
           route: '/list/LoyaltyProgram',
           schemaName: 'LoyaltyProgram',
-          hidden: () => !fyo.singles.AccountingSettings?.enable_loyalty_program,
+          hidden: () =>
+            !fyo.singles.AccountingSettings?.enable_loyalty_point_program,
         },
         {
           label: t`Lead`,

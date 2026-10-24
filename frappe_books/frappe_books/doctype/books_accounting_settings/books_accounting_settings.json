@@ -11,7 +11,7 @@
   "bank_name",
   "country",
   "features_section_break_11",
-  "enable_discounting",
+  "enable_discounts_and_margin",
   "enable_inventory",
   "enable_price_list",
   "enable_invoice_returns",
@@ -19,14 +19,14 @@
   "enable_lead",
   "enable_pricing_rule",
   "enable_item_enquiry",
-  "enable_loyalty_program",
+  "enable_loyalty_point_program",
   "enable_coupon_code",
-  "enableitem_group",
+  "enable_item_group",
   "enable_point_of_sale_with_out_inventory",
   "enable_partial_payment",
   "fiscal_year_section_break_26",
-  "fiscal_year_start",
-  "fiscal_year_end",
+  "year_start_date",
+  "year_end_date",
   "setup_complete",
   "default_section_break_30",
   "gstin"
@@ -68,10 +68,10 @@
   },
   {
    "default": "0",
-   "fieldname": "enable_discounting",
+   "fieldname": "enable_discounts_and_margin",
    "fieldtype": "Check",
-   "label": "Enable Discount Accounting",
-   "read_only_depends_on": "enable_discounting"
+   "label": "Enable Discounts and Margin",
+   "read_only_depends_on": "enable_discounts_and_margin"
   },
   {
    "default": "0",
@@ -108,7 +108,7 @@
   },
   {
    "default": "0",
-   "depends_on": "enable_discounting",
+   "depends_on": "enable_discounts_and_margin",
    "fieldname": "enable_pricing_rule",
    "fieldtype": "Check",
    "label": "Enable Pricing Rule"
@@ -121,10 +121,10 @@
   },
   {
    "default": "0",
-   "fieldname": "enable_loyalty_program",
+   "fieldname": "enable_loyalty_point_program",
    "fieldtype": "Check",
-   "label": "Enable Loyalty Program",
-   "read_only_depends_on": "enable_loyalty_program"
+   "label": "Enable Loyalty Point Program",
+   "read_only_depends_on": "enable_loyalty_point_program"
   },
   {
    "default": "0",
@@ -135,10 +135,10 @@
   },
   {
    "default": "0",
-   "fieldname": "enableitem_group",
+   "fieldname": "enable_item_group",
    "fieldtype": "Check",
    "label": "Enable Item Group",
-   "read_only_depends_on": "enableitem_group"
+   "read_only_depends_on": "enable_item_group"
   },
   {
    "default": "0",
@@ -159,15 +159,15 @@
    "label": "Fiscal Year"
   },
   {
-   "fieldname": "fiscal_year_start",
+   "fieldname": "year_start_date",
    "fieldtype": "Date",
-   "label": "Fiscal Year Start Date",
+   "label": "Year Start Date",
    "reqd": 1
   },
   {
-   "fieldname": "fiscal_year_end",
+   "fieldname": "year_end_date",
    "fieldtype": "Date",
-   "label": "Fiscal Year End Date",
+   "label": "Year End Date",
    "reqd": 1
   },
   {
@@ -194,7 +194,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Accounting Settings",

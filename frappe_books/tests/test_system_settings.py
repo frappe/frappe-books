@@ -60,24 +60,24 @@ class IntegrationTestSystemSettings(IntegrationTestCase):
 
 	def test_display_precision_is_the_system_settings_currency_precision(self):
 		with self.change_settings("System Settings", currency_precision="3"):
-			self.assertEqual(frappe.get_single("Books System Settings").as_dict()["display_precision"], 3)
+			self.assertEqual(frappe.get_single("Books System Settings").as_dict()["currency_precision"], 3)
 		# Without one, Frappe takes the decimals of its number format.
 		with self.change_settings("System Settings", currency_precision="", number_format="#,###"):
-			self.assertEqual(frappe.get_single("Books System Settings").display_precision, 0)
+			self.assertEqual(frappe.get_single("Books System Settings").currency_precision, 0)
 
 	def test_setting_display_precision_sets_system_settings_currency_precision(self):
 		with self.change_settings("System Settings", currency_precision="2"):
 			set_display_precision(3)
 
 			self.assertEqual(frappe.db.get_single_value("System Settings", "currency_precision"), "3")
-			self.assertEqual(frappe.get_single("Books System Settings").display_precision, 3)
+			self.assertEqual(frappe.get_single("Books System Settings").currency_precision, 3)
 
 	def test_saving_settings_leaves_system_settings_currency_precision(self):
 		with self.change_settings("System Settings", currency_precision="2"):
-			client.save({**client.get("Books System Settings"), "display_precision": 4})
+			client.save({**client.get("Books System Settings"), "currency_precision": 4})
 
 			self.assertEqual(frappe.db.get_single_value("System Settings", "currency_precision"), "2")
-			self.assertEqual(frappe.get_single("Books System Settings").display_precision, 2)
+			self.assertEqual(frappe.get_single("Books System Settings").currency_precision, 2)
 
 	def test_only_system_settings_editors_change_display_precision(self):
 		with self.change_settings("System Settings", currency_precision="2"):

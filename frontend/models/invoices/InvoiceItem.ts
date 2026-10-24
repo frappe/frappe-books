@@ -199,7 +199,7 @@ export class InvoiceItem extends FrappeDoc {
   };
 
   get enableDiscounting(): boolean {
-    return !!this.fyo.singles.AccountingSettings?.enable_discounting;
+    return !!this.fyo.singles.AccountingSettings?.enable_discounts_and_margin;
   }
 
   get enableUomConversions(): boolean {

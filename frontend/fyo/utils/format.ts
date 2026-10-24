@@ -317,7 +317,7 @@ function getNumberFormatter(fyo: Fyo) {
   const locale =
     (fyo.singles.SystemSettings?.locale as string) ?? DEFAULT_LOCALE;
   const display =
-    (fyo.singles.SystemSettings?.display_precision as number) ??
+    (fyo.singles.SystemSettings?.currency_precision as number) ??
     DEFAULT_DISPLAY_PRECISION;
 
   // Force Latin (Western) digits for all locales by appending the Unicode

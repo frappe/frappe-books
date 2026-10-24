@@ -43,7 +43,7 @@ export class Customer extends Party {
   hidden: HiddenMap = {
     ...this.hidden,
     loyalty_program: () =>
-      !this.fyo.singles.AccountingSettings?.enable_loyalty_program,
+      !this.fyo.singles.AccountingSettings?.enable_loyalty_point_program,
     loyalty_points: () => !this.loyalty_program,
   };
 

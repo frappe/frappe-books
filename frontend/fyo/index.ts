@@ -28,7 +28,7 @@ type BootDoc = { doctype: string; name: string; symbol?: string | null };
 type MoneySettings = {
   currency?: string;
   internal_precision?: number;
-  display_precision?: number;
+  currency_precision?: number;
 };
 
 export class Fyo {
@@ -96,7 +96,7 @@ export class Fyo {
     this.pesa = getMoneyMaker({
       currency: settings.currency ?? DEFAULT_CURRENCY,
       precision: settings.internal_precision ?? DEFAULT_INTERNAL_PRECISION,
-      display: settings.display_precision ?? DEFAULT_DISPLAY_PRECISION,
+      display: settings.currency_precision ?? DEFAULT_DISPLAY_PRECISION,
       wrapper: markRaw,
     });
   }

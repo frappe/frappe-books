@@ -336,7 +336,7 @@ def _validate_features(invoice):
 	if invoice.party_type == "Books Lead":
 		require_feature("enable_lead")
 	if _has_manual_discount(invoice):
-		require_feature("enable_discounting")
+		require_feature("enable_discounts_and_margin")
 
 
 def _has_manual_discount(invoice):

@@ -369,7 +369,7 @@ export default defineComponent({
       return posUI === 'Classic' ? 'Classic' : 'Modern';
     },
     isDiscountingEnabled(): boolean {
-      return !!fyo.singles.AccountingSettings?.enable_discounting;
+      return !!fyo.singles.AccountingSettings?.enable_discounts_and_margin;
     },
     enableReturns(): boolean {
       return !!fyo.singles.AccountingSettings?.enable_invoice_returns;

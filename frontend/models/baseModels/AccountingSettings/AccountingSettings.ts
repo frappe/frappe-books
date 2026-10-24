@@ -12,10 +12,10 @@ export class AccountingSettings extends FrappeDoc {
   declare bank_name?: string;
   declare country?: string;
   declare gstin?: string;
-  declare fiscal_year_start?: Date;
-  declare fiscal_year_end?: Date;
+  declare year_start_date?: Date;
+  declare year_end_date?: Date;
   declare setup_complete?: boolean;
-  declare enable_discounting?: boolean;
+  declare enable_discounts_and_margin?: boolean;
   declare enable_inventory?: boolean;
   declare enable_price_list?: boolean;
   declare enable_invoice_returns?: boolean;
@@ -23,9 +23,9 @@ export class AccountingSettings extends FrappeDoc {
   declare enable_lead?: boolean;
   declare enable_pricing_rule?: boolean;
   declare enable_item_enquiry?: boolean;
-  declare enable_loyalty_program?: boolean;
+  declare enable_loyalty_point_program?: boolean;
   declare enable_coupon_code?: boolean;
-  declare enableitem_group?: boolean;
+  declare enable_item_group?: boolean;
   declare enable_point_of_sale_with_out_inventory?: boolean;
   declare enable_partial_payment?: boolean;
 }

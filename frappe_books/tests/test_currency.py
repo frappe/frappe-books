@@ -35,7 +35,7 @@ class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 				self.assertEqual(
 					frappe.db.get_single_value("System Settings", "currency_precision"), str(precision)
 				)
-				self.assertEqual(frappe.get_single("Books System Settings").display_precision, precision)
+				self.assertEqual(frappe.get_single("Books System Settings").currency_precision, precision)
 
 	def test_setup_enables_the_company_currency(self):
 		frappe.db.set_value("Currency", "BHD", "enabled", 0)

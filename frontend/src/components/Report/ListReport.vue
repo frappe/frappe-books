@@ -224,7 +224,8 @@ export default defineComponent({
       return 'justify-start text-start';
     },
     getCellColorClass(cell, row) {
-      const precision = this.fyo.singles.SystemSettings?.display_precision ?? 2;
+      const precision =
+        this.fyo.singles.SystemSettings?.currency_precision ?? 2;
       return getReportCellColorClass(cell, precision, row.isGroup);
     },
   },

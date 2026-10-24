@@ -77,7 +77,7 @@ test('an Indian account names the GST head it holds, in quick edit too', () => {
 });
 
 test('an Indian customer shows loyalty fields when the program is on', async () => {
-  fyo.singles.AccountingSettings = { enable_loyalty_program: true };
+  fyo.singles.AccountingSettings = { enable_loyalty_point_program: true };
   const customer = newFrappeDoc('Customer');
   assert.equal(hidden(customer, 'loyalty_program'), false);
   assert.equal(hidden(customer, 'loyalty_points'), true);

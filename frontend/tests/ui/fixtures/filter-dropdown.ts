@@ -108,7 +108,10 @@ async function mount() {
     },
     { 'Books Item': itemFields }
   );
-  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 } as any;
+  fyo.singles.SystemSettings = {
+    currency: 'USD',
+    currency_precision: 2,
+  } as any;
   const list = ref<InstanceType<typeof List>>();
   const filter = ref<InstanceType<typeof FilterDropdown>>();
   const app = createApp({

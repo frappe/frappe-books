@@ -17,13 +17,13 @@ POINT_OF_SALE_FEATURES = (
 	"enable_point_of_sale",
 )
 ONE_WAY_SWITCHES = (
-	"enable_discounting",
+	"enable_discounts_and_margin",
 	"enable_inventory",
 	"enable_lead",
 	"enable_invoice_returns",
-	"enable_loyalty_program",
+	"enable_loyalty_point_program",
 	"enable_point_of_sale_with_out_inventory",
-	"enableitem_group",
+	"enable_item_group",
 )
 
 
@@ -39,20 +39,20 @@ class BooksAccountingSettings(Document):
 		bank_name: DF.Data
 		country: DF.Link | None
 		enable_coupon_code: DF.Check
-		enable_discounting: DF.Check
+		enable_discounts_and_margin: DF.Check
 		enable_form_customization: DF.Check
 		enable_inventory: DF.Check
 		enable_invoice_returns: DF.Check
 		enable_item_enquiry: DF.Check
 		enable_lead: DF.Check
-		enable_loyalty_program: DF.Check
+		enable_loyalty_point_program: DF.Check
 		enable_partial_payment: DF.Check
 		enable_point_of_sale_with_out_inventory: DF.Check
 		enable_price_list: DF.Check
 		enable_pricing_rule: DF.Check
-		enableitem_group: DF.Check
-		fiscal_year_end: DF.Date
-		fiscal_year_start: DF.Date
+		enable_item_group: DF.Check
+		year_end_date: DF.Date
+		year_start_date: DF.Date
 		fullname: DF.Data
 		gstin: DF.Data | None
 		setup_complete: DF.Check
@@ -66,7 +66,7 @@ class BooksAccountingSettings(Document):
 		return company_country()
 
 	def on_update(self):
-		if self.is_enabled_now("enable_discounting"):
+		if self.is_enabled_now("enable_discounts_and_margin"):
 			set_discount_account()
 		if self.is_enabled_now("enable_point_of_sale_with_out_inventory"):
 			inventory_settings = frappe.get_single("Books Inventory Settings")

@@ -74,7 +74,7 @@ export class Item extends FrappeDoc {
     has_serial_no: () =>
       !this.fyo.singles.InventorySettings?.enable_serial_number,
     uoms: () => !this.fyo.singles.InventorySettings?.enable_uom_conversions,
-    item_group: () => !this.fyo.singles.AccountingSettings?.enableitem_group,
+    item_group: () => !this.fyo.singles.AccountingSettings?.enable_item_group,
   };
 
   static getActions(fyo: Fyo): Action[] {

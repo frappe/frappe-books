@@ -208,7 +208,7 @@ test('discounts lead to pricing rules, then coupons, and stay on once on', async
   assert.equal(hidden(company, 'default_discount_account'), true);
   assert.equal(hidden(settings, 'enable_pricing_rule'), true);
 
-  await settings.set('enable_discounting', true);
+  await settings.set('enable_discounts_and_margin', true);
   assert.equal(hidden(company, 'default_discount_account'), false);
   assert.equal(hidden(settings, 'enable_pricing_rule'), false);
   assert.equal(hidden(settings, 'enable_coupon_code'), true);
@@ -233,10 +233,10 @@ test('a switch that stays on locks once saved, not when checked before Save', as
   await settings.load();
   assert.equal(readOnly(settings, 'enable_inventory'), true);
 
-  await settings.set('enable_discounting', true);
-  assert.equal(readOnly(settings, 'enable_discounting'), false);
-  await settings.set('enable_discounting', false);
-  assert.equal(settings.enable_discounting, false);
+  await settings.set('enable_discounts_and_margin', true);
+  assert.equal(readOnly(settings, 'enable_discounts_and_margin'), false);
+  await settings.set('enable_discounts_and_margin', false);
+  assert.equal(settings.enable_discounts_and_margin, false);
 });
 
 test('the System tab offers sample dates and takes custom formats and locales', async () => {
@@ -247,10 +247,10 @@ test('the System tab offers sample dates and takes custom formats and locales', 
     { value: 'MM/dd/yyyy', label: '03/23/2022' },
   ]);
   assert.equal(field('currency').readOnly, true);
-  assert.equal(field('display_precision').maxvalue, 9);
+  assert.equal(field('currency_precision').maxvalue, 9);
   assert.deepEqual(fieldnames('SystemSettings').slice(4, 8), [
     'locale',
-    'display_precision',
+    'currency_precision',
     'currency',
     'internal_precision',
   ]);
@@ -259,14 +259,14 @@ test('the System tab offers sample dates and takes custom formats and locales', 
   await settings.set('date_format', 'EEE, d MMM y');
   await settings.set('locale', 'de-CH');
   await assert.rejects(
-    settings.set('display_precision', 10),
+    settings.set('currency_precision', 10),
     /between 0 and 9/
   );
 });
 
 test("a System tab save that changes the display precision first sets Frappe's", async () => {
   const settings = newFrappeDoc('SystemSettings');
-  const saved = { ...settings.getFrappeValues(), display_precision: 2 };
+  const saved = { ...settings.getFrappeValues(), currency_precision: 2 };
   const requests = stubFrappe(({ method, body }) => {
     if (method === 'GET') {
       return { data: saved };
@@ -276,7 +276,7 @@ test("a System tab save that changes the display precision first sets Frappe's",
   });
   await settings.load();
   await assert.rejects(
-    settings.set('display_precision', ''),
+    settings.set('currency_precision', ''),
     /between 0 and 9/
   );
   await settings.set('locale', 'de-CH');
@@ -288,7 +288,7 @@ test("a System tab save that changes the display precision first sets Frappe's",
     ['PUT']
   );
 
-  await settings.set('display_precision', 3);
+  await settings.set('currency_precision', 3);
   requests.length = 0;
   await settings.sync();
   const [setPrecision, save] = requests;
@@ -296,7 +296,7 @@ test("a System tab save that changes the display precision first sets Frappe's",
     setPrecision.path,
     '/api/method/frappe_books.frappe_books.doctype.books_system_settings.books_system_settings.set_display_precision'
   );
-  assert.deepEqual(setPrecision.body, { display_precision: 3 });
+  assert.deepEqual(setPrecision.body, { currency_precision: 3 });
   assert.deepEqual(
     [save.method, save.path],
     ['PUT', '/api/v2/document/Books System Settings/Books System Settings']
@@ -313,7 +313,7 @@ test('only users who can write System Settings change what Frappe formats with',
     user: { can_write: canWrite },
   };
 
-  const formats = ['display_precision', 'date_format', 'locale'];
+  const formats = ['currency_precision', 'date_format', 'locale'];
   for (const fieldname of formats) {
     assert.equal(readOnly(settings, fieldname), true, fieldname);
   }

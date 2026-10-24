@@ -253,7 +253,7 @@ async function mount() {
   fyo.singles.SystemSettings = {
     currency: 'INR',
     locale: 'en-IN',
-    display_precision: 2,
+    currency_precision: 2,
     date_format: 'MMM d, y',
   } as any;
   fyo.singles.InventorySettings = {

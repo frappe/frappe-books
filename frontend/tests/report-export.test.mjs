@@ -41,7 +41,7 @@ test('reports offer CSV and JSON only when their doctype can be exported', async
 
 test('CSV and JSON give quantities to the float precision, amounts to the display precision', async () => {
   const fyo = await makeFyo();
-  fyo.singles.SystemSettings.display_precision = 0;
+  fyo.singles.SystemSettings.currency_precision = 0;
   globalThis.window = {
     frappe: { boot: { sysdefaults: { float_precision: '3' } } },
   };

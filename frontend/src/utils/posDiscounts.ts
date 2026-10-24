@@ -11,7 +11,7 @@ export function isCouponOffered(sale: SalesInvoice): boolean {
 /** Whether the POS offers points on the sale: also a sale, not a return, whose customer has a program. */
 export function isLoyaltyOffered(sale: SalesInvoice): boolean {
   return (
-    !!fyo.singles.AccountingSettings?.enable_loyalty_program &&
+    !!fyo.singles.AccountingSettings?.enable_loyalty_point_program &&
     !sale.isSubmitted &&
     !sale.isReturn &&
     !!sale.loyalty_program

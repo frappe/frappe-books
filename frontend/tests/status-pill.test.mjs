@@ -16,7 +16,7 @@ function getBadge(values) {
 }
 
 test('a partly paid foreign-currency invoice shows the paid amount in the company currency', () => {
-  fyo.singles.SystemSettings = { currency: 'INR', display_precision: 2 };
+  fyo.singles.SystemSettings = { currency: 'INR', currency_precision: 2 };
   fyo.currencySymbols = { INR: '₹', USD: '$' };
 
   const badge = getBadge({

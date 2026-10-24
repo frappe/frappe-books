@@ -11,7 +11,7 @@ import { loadFrappeModels } from './helpers/models.mjs';
 await loadFrappeModels();
 
 test('row details list every visible column of a row', () => {
-  fyo.singles.AccountingSettings = { enable_discounting: true };
+  fyo.singles.AccountingSettings = { enable_discounts_and_margin: true };
   const invoice = newFrappeDoc('SalesInvoice', {
     items: [
       {

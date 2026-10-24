@@ -107,8 +107,8 @@ def _update_accounting_settings(wizard):
 		{
 			"fullname": wizard.fullname,
 			"bank_name": wizard.bank_name,
-			"fiscal_year_start": wizard.fiscal_year_start,
-			"fiscal_year_end": wizard.fiscal_year_end,
+			"year_start_date": wizard.fiscal_year_start,
+			"year_end_date": wizard.fiscal_year_end,
 			"setup_complete": 1,
 		}
 	)

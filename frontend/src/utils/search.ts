@@ -159,10 +159,10 @@ function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
     [accounting?.enable_coupon_code, [ModelNameEnum.CouponCode]],
     [accounting?.enable_lead, [ModelNameEnum.Lead]],
     [
-      accounting?.enable_loyalty_program,
+      accounting?.enable_loyalty_point_program,
       [ModelNameEnum.LoyaltyProgram, ModelNameEnum.LoyaltyPointEntry],
     ],
-    [accounting?.enableitem_group, [ModelNameEnum.ItemGroup]],
+    [accounting?.enable_item_group, [ModelNameEnum.ItemGroup]],
     [accounting?.enable_form_customization, [ModelNameEnum.CustomForm]],
     [inventory?.enable_batches, [ModelNameEnum.Batch]],
     [inventory?.enable_serial_number, [ModelNameEnum.SerialNo]],

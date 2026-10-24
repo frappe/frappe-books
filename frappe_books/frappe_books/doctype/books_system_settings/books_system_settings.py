@@ -29,7 +29,7 @@ class BooksSystemSettings(Document):
 		allow_filter_bypass: DF.Check
 		currency: DF.Link | None
 		date_format: DF.Autocomplete
-		display_precision: DF.Int
+		currency_precision: DF.Int
 		hide_get_started: DF.Check
 		internal_precision: DF.Int
 		locale: DF.Autocomplete
@@ -44,7 +44,7 @@ class BooksSystemSettings(Document):
 		return frappe.db.get_single_value("System Settings", "currency")
 
 	@property
-	def display_precision(self):
+	def currency_precision(self):
 		"""The decimals of amounts, which Frappe's System Settings hold as the Currency Precision."""
 		return get_display_precision()
 
@@ -73,13 +73,13 @@ def get_display_precision() -> int:
 
 
 @frappe.whitelist(methods=["POST"])
-def set_display_precision(display_precision: int) -> None:
-	"""Set Frappe's Currency Precision, which Books System Settings shows as the Display Precision.
+def set_display_precision(currency_precision: int) -> None:
+	"""Set Frappe's Currency Precision, which Books System Settings shows.
 
 	A save of the settings leaves it alone, so no stored copy can set it back.
 	"""
 	frappe.has_permission("Books System Settings", "write", throw=True)
-	if not 0 <= display_precision <= 9:
-		frappe.throw(_("Display Precision should have a value between 0 and 9."))
-	if display_precision != get_display_precision():
-		update_frappe_settings("System Settings", {"currency_precision": str(display_precision)})
+	if not 0 <= currency_precision <= 9:
+		frappe.throw(_("Currency Precision should have a value between 0 and 9."))
+	if currency_precision != get_display_precision():
+		update_frappe_settings("System Settings", {"currency_precision": str(currency_precision)})

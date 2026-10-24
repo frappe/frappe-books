@@ -130,14 +130,14 @@ export async function preparePOSData() {
     newFrappeDoc(name);
   }
   // The server serves it from Frappe's currency precision; it has no default.
-  Object.assign(fyo.singles.SystemSettings!, { display_precision: 2 });
+  Object.assign(fyo.singles.SystemSettings!, { currency_precision: 2 });
   Object.assign(fyo.singles.AccountingSettings!, {
     enable_invoice_returns: true,
     enable_coupon_code: true,
     enable_price_list: true,
     enable_item_enquiry: true,
-    enable_loyalty_program: true,
-    enable_discounting: true,
+    enable_loyalty_point_program: true,
+    enable_discounts_and_margin: true,
   });
   Object.assign(fyo.singles.POSSettings!, {
     pos_ui: 'Modern',

@@ -1,6 +1,7 @@
 import { Fyo } from 'fyo';
 import { ListViewSettings, ReadOnlyMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { toActiveDoctype } from 'src/frappe/mode';
 import { getSchema, toSchemaName } from 'src/frappe/registry';
 import { getPrintHTML, previewPrintHTML } from 'src/utils/printFormatApi';
 import {
@@ -9,17 +10,17 @@ import {
   type PrintHTML,
 } from 'src/utils/printFormats';
 
-// The doctypes /books prints, as the Template Type offers them.
+// The doctypes /books prints, as the Template Type offers them, named by the mode.
 const PRINTED_DOCTYPES = [
-  { value: 'Books Sales Invoice', label: 'Sales Invoice' },
-  { value: 'Books Quotation', label: 'Quotation' },
-  { value: 'Books Purchase Invoice', label: 'Purchase Invoice' },
-  { value: 'Books Journal Entry', label: 'Journal Entry' },
-  { value: 'Books Payment Entry', label: 'Payment Entry' },
-  { value: 'Books Delivery Note', label: 'Delivery Note' },
-  { value: 'Books Purchase Receipt', label: 'Purchase Receipt' },
-  { value: 'Books Stock Entry', label: 'Stock Entry' },
-];
+  'Sales Invoice',
+  'Quotation',
+  'Purchase Invoice',
+  'Journal Entry',
+  'Payment Entry',
+  'Delivery Note',
+  'Purchase Receipt',
+  'Stock Entry',
+].map((label) => ({ value: toActiveDoctype(`Books ${label}`), label }));
 
 /** Frappe's Print Format. /books edits the ones with custom HTML that no app ships. */
 export class PrintFormat extends FrappeDoc {

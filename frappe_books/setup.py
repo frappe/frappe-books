@@ -4,6 +4,7 @@ import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 from frappe.permissions import add_permission, update_permission_property
 
+from frappe_books.company import default_company, save_company
 from frappe_books.printing import default_print_format, set_default_print_format
 from frappe_books.series import NUMBER_SERIES
 
@@ -48,10 +49,12 @@ def bootstrap():
 
 
 def before_tests():
-	"""Tests run on a site Frappe has set up for an Indian company."""
+	"""Tests run on a site Frappe has set up for an Indian company, with its Books Company."""
 	bootstrap()
 	if not frappe.is_setup_complete():
 		complete_app_setup(country="India", currency="INR", timezone="Asia/Kolkata")
+	if not default_company():
+		save_company({"company_name": "Books Test Company"})
 
 
 def grant_core_permissions():

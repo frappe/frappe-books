@@ -14,6 +14,7 @@ from frappe_books.coa import (
 	find_ledger_account,
 	load_chart,
 )
+from frappe_books.company import save_company
 from frappe_books.currency import currency_precision
 from frappe_books.formats import books_date_format
 from frappe_books.regional import ensure_regional_records
@@ -23,6 +24,7 @@ from frappe_books.settings import update_frappe_settings
 
 def run_setup(wizard):
 	complete_site_setup(wizard)
+	save_company({"company_name": wizard.company_name})
 	chart = load_chart(wizard.chart_of_accounts)
 	ensure_chart(chart)
 	ensure_regional_records(wizard.country)

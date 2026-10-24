@@ -28,7 +28,8 @@
 
 <script lang="ts">
 import { showToast } from 'src/utils/interactive';
-import { getScannedItem } from 'src/utils/posItemSearch';
+import { isAccessoryMode } from 'src/frappe/mode';
+import { getERPNextScannedItem, getScannedItem } from 'src/utils/posItemSearch';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { isMobile } from 'src/utils/viewport';
@@ -68,7 +69,7 @@ export default defineComponent({
       this.selectItem(elem.value);
       elem.value = '';
     },
-    /** Matches the code as POS does: scale barcode, barcode, then item. */
+    /** Matches the code as POS does: scale barcode, barcode, then item; ERPNext's scan in accessory mode. */
     async selectItem(code: string) {
       const barcode = code.trim();
       if (!barcode) {
@@ -86,7 +87,9 @@ export default defineComponent({
       this.cooldown = barcode;
       setTimeout(() => (this.cooldown = ''), 100);
 
-      const scanned = await getScannedItem(barcode);
+      const scanned = isAccessoryMode()
+        ? await getERPNextScannedItem(barcode)
+        : await getScannedItem(barcode);
       if (!scanned) {
         return this.error(this.t`Item with barcode ${barcode} not found.`);
       }

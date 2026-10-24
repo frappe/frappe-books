@@ -3,6 +3,7 @@ import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { ItemQtyMap, POSItem } from 'src/components/POS/types';
 import { getList, type Filter } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
+import { call } from 'src/web/api';
 import { fuzzyMatch } from 'src/utils';
 import { POS_ITEM_FIELDS, toPOSItem } from 'src/utils/pos';
 
@@ -29,6 +30,17 @@ type POSItemSearchMatch = {
 
 // The item's name, then its barcode rows.
 const SCANNED_FIELDS = [['name'], ['Books Item Barcode', 'barcode']];
+
+/** The item ERPNext's scan_barcode finds by a barcode, batch, serial number or item code, one at a time. */
+export async function getERPNextScannedItem(
+  code: string
+): Promise<{ item: { name: string }; quantity: number } | undefined> {
+  const { item_code } = await call<{ item_code?: string }>(
+    'erpnext.stock.utils.scan_barcode',
+    { search_value: code.trim() }
+  );
+  return item_code ? { item: { name: item_code }, quantity: 1 } : undefined;
+}
 
 /** The item a scanned or typed code names among all items, whatever a list shows. */
 export async function getScannedItem(

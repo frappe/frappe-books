@@ -1,5 +1,5 @@
 import type { Filter } from 'src/frappe/api';
-import { isAccessoryMode } from 'src/frappe/mode';
+import { isAccessoryMode, toActiveDoctype } from 'src/frappe/mode';
 import { call } from 'src/web/api';
 
 const AVAILABILITY = 'frappe_books.inventory.availability';
@@ -29,7 +29,8 @@ export async function getStockQuantities(
   location?: string,
   items?: string[]
 ): Promise<StockQuantity[]> {
-  const filters: Filter[] = [];
+  // ERPNext keeps a cancelled entry and its reversal; Books keeps neither.
+  const filters: Filter[] = [['is_cancelled', '=', 0]];
   if (location) {
     filters.push(['warehouse', '=', location]);
   }
@@ -39,7 +40,7 @@ export async function getStockQuantities(
   }
 
   return await call<StockQuantity[]>('frappe.client.get_list', {
-    doctype: 'Books Stock Ledger Entry',
+    doctype: toActiveDoctype('Books Stock Ledger Entry'),
     fields: ['item_code', 'batch_no', { SUM: 'actual_qty', as: 'actual_qty' }],
     filters,
     group_by: 'item_code, batch_no',

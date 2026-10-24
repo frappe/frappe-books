@@ -207,7 +207,9 @@ function getPaymentAccountField(paymentType: string): string {
 /** Cash modes take cash accounts; other modes cash or bank, as the server checks. */
 async function getPaymentAccountFilters(doc: FrappeDoc): Promise<Filter[]> {
   const mode = doc.mode_of_payment as string | undefined;
-  const type = mode && (await getValue('Books Mode of Payment', mode, 'type'));
+  const type =
+    mode &&
+    (await getValue(toActiveDoctype('Books Mode of Payment'), mode, 'type'));
   const types = type === 'Cash' ? ['Cash'] : ['Bank', 'Cash'];
   return [['account_type', 'in', types], LEDGER];
 }

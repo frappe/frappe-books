@@ -1,6 +1,7 @@
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import { getDocuments } from 'src/frappe/api';
+import { toActiveDoctype } from 'src/frappe/mode';
 
 type UnitRow = {
   item?: string;
@@ -16,7 +17,7 @@ type ItemUnits = {
 
 /** The item's stock unit and the conversion factors of its other units. */
 export async function getItemUnits(item: string): Promise<ItemUnits> {
-  const [row] = await getDocuments('Books Item', {
+  const [row] = await getDocuments(toActiveDoctype('Books Item'), {
     fields: ['stock_uom', { uoms: ['uom', 'conversion_factor'] }],
     filters: [['name', '=', item]],
   });

@@ -129,6 +129,7 @@ import {
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import PageHeader from 'src/components/PageHeader.vue';
+import { getDocType } from 'src/frappe/doctypes';
 import { getLinkLabel } from 'src/frappe/link';
 import { getModel } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
@@ -463,7 +464,7 @@ export default defineComponent({
     /** Every account the filters match, by name, labelled in the user's language. */
     async getAccounts(filters: string[][] = []): Promise<AccountItem[]> {
       const accounts = await call<AccountItem[]>('frappe.client.get_list', {
-        doctype: 'Books Account',
+        doctype: getDocType(ModelNameEnum.Account).doctype,
         fields: ACCOUNT_FIELDS,
         filters,
         order_by: 'name asc',

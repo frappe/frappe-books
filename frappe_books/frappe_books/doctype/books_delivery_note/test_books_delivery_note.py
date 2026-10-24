@@ -213,6 +213,16 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		return_delivery_note.cancel()
 		self.assertEqual(returned_state(shipment), (0, "To Bill"))
 
+	def test_partly_returned_delivery_note_keeps_its_billing_status(self):
+		item, _cogs, _stock = self._tracked_item()
+		seed_stock(item.name, quantity=2, rate=10)
+		shipment = self._make_delivery_note(item, quantity=2, rate=25)
+		shipment.submit()
+
+		self._make_delivery_note(item, quantity=-1, rate=25, return_against=shipment.name).submit()
+
+		self.assertEqual(returned_state(shipment), (50, "To Bill"))
+
 	def test_shipped_serial_numbers_are_delivered_until_cancelled(self):
 		item, _cogs, _stock = self._tracked_item()
 		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)

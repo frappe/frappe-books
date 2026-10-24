@@ -21,6 +21,9 @@ from frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_inv
 from frappe_books.frappe_books.doctype.books_purchase_invoice.books_purchase_invoice import (
 	make_return as make_purchase_return,
 )
+from frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt import (
+	make_purchase_invoice as make_receipt_invoice,
+)
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import make_delivery_note
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import (
 	make_return as make_sales_return,
@@ -141,6 +144,36 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 		self.assertEqual(stock_quantity(item, "Stores"), 5)
 		self.assertEqual(frappe.db.get_value("Books Delivery Note", shipment.name, "docstatus"), 1)
+
+	def test_delivery_note_made_from_an_invoice_links_its_rows_and_is_billed(self):
+		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
+		invoice.submit()
+
+		shipment = made_transfer(invoice)
+
+		self.assertEqual(
+			[(row.against_sales_invoice, row.si_detail) for row in shipment.items],
+			[(invoice.name, invoice.items[0].name)],
+		)
+		self.assertEqual((shipment.per_billed, shipment.status), (100, "Completed"))
+		self.assertRaisesRegex(
+			frappe.ValidationError, "made from invoice", make_delivery_note_invoice, shipment.name
+		)
+
+	def test_receipt_made_from_an_invoice_links_its_rows_and_is_billed(self):
+		invoice, _item = self._purchase_invoice(make_auto_stock_transfer=1)
+		invoice.submit()
+
+		receipt = made_transfer(invoice)
+
+		self.assertEqual(
+			[(row.purchase_invoice, row.purchase_invoice_item) for row in receipt.items],
+			[(invoice.name, invoice.items[0].name)],
+		)
+		self.assertEqual((receipt.per_billed, receipt.status), (100, "Completed"))
+		self.assertRaisesRegex(
+			frappe.ValidationError, "made from invoice", make_receipt_invoice, receipt.name
+		)
 
 	def test_a_duplicate_delivery_note_is_not_linked_to_the_invoice(self):
 		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)

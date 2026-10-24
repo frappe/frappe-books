@@ -5,8 +5,9 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 
+from frappe_books.dates import posting_datetime
 from frappe_books.frappe_books.doctype.books_stock_entry.test_books_stock_entry import (
 	movement_values,
 )
@@ -59,6 +60,16 @@ class IntegrationTestValuation(IntegrationTestCase):
 		self.assertEqual(entries[-1]["qty_after_transaction"], 3)
 		self.assertEqual(entries[-1]["stock_value"], Decimal("30.00"))
 		self.assertEqual(entries[-1]["valuation_rate"], Decimal("10.00"))
+
+	def test_entry_takes_its_document_posting_date_and_time(self):
+		posted = get_datetime("2060-05-04 10:11:12")
+		receipt = move(self.item, "Material Receipt", 1, 10, posted)
+
+		entry = ledger_entry(receipt)
+
+		self.assertEqual(getdate(entry.posting_date), posted.date())
+		self.assertEqual(posting_datetime(entry.posting_date, entry.posting_time), posted)
+		self.assertEqual((get_datetime(entry.posting_datetime), entry.is_cancelled), (posted, 0))
 
 	def test_transfer_moves_stock_at_the_cost_it_leaves_with(self):
 		shop = make_warehouse("Shop").name

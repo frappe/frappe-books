@@ -11,6 +11,7 @@ from frappe_books.tests.accounting import (
 	make_invoice,
 	make_item,
 	make_supplier,
+	set_inventory_accounts,
 	unique_name,
 )
 
@@ -90,6 +91,23 @@ class IntegrationTestUnits(IntegrationTestCase):
 					(row["stock_uom"], row["uom"], row["qty"], row["transfer_qty"]),
 					(piece, *expected),
 				)
+
+	def test_receipt_row_is_priced_per_its_unit_and_values_stock_per_stock_unit(self):
+		set_inventory_accounts(
+			make_account("Unit Stock", account_type="Stock").name, self.received, self.expense.name
+		)
+		payable = make_account("Unit Payable", root_type="Liability", account_type="Payable").name
+		row = {"item_code": self.item.name, "warehouse": "Stores", "uom": self.box, "qty": 2, "rate": 120}
+		receipt = frappe.get_doc(
+			{"doctype": "Books Purchase Receipt", "supplier": make_supplier(payable).name, "items": [row]}
+		).insert()
+		receipt.submit()
+
+		# A box holds 12 units.
+		saved = receipt.items[0]
+		self.assertEqual((saved.stock_qty, saved.amount, saved.stock_uom_rate), (24, 240, 10))
+		entry = frappe.get_last_doc("Books Stock Ledger Entry", filters={"voucher_no": receipt.name})
+		self.assertEqual((entry.actual_qty, entry.incoming_rate, entry.stock_value_difference), (24, 10, 240))
 
 	def test_api_invoice_rows_take_the_item_unit(self):
 		receivable = make_account("Unit Receivable", account_type="Receivable")

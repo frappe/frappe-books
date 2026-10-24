@@ -22,6 +22,8 @@ class BooksJournalEntryAccount(Document):
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
+		party: DF.DynamicLink | None
+		party_type: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Journal Entry Account"

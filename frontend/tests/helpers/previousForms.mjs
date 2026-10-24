@@ -20,6 +20,8 @@ export const previousForms = {
     ],
     JournalEntryAccount: [
       'account | Account | Account | Default',
+      'party_type | Party Type |  | Default',
+      'party | Party |  | Default',
       'debit_in_account_currency | Debit |  | Default',
       'credit_in_account_currency | Credit |  | Default',
     ],
@@ -115,6 +117,8 @@ export const previousForms = {
   tableFields: {
     JournalEntryAccount: [
       'account',
+      'party_type',
+      'party',
       'debit_in_account_currency',
       'credit_in_account_currency',
     ],

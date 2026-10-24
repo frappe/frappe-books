@@ -15,6 +15,7 @@ from frappe_books.company import company_value
 class EntryKey:
 	account: str
 	party: str | None
+	party_type: str | None = None
 
 
 class LedgerPosting:
@@ -23,11 +24,12 @@ class LedgerPosting:
 		self.debits = defaultdict(as_decimal)
 		self.credits = defaultdict(as_decimal)
 
-	def debit(self, account, amount, party=None):
-		self._add(self.debits, account, amount, party)
+	def debit(self, account, amount, party=None, party_type=None):
+		"""Debit the account, for the party if given; its party type is the voucher's unless given."""
+		self._add(self.debits, account, amount, party, party_type)
 
-	def credit(self, account, amount, party=None):
-		self._add(self.credits, account, amount, party)
+	def credit(self, account, amount, party=None, party_type=None):
+		self._add(self.credits, account, amount, party, party_type)
 
 	def post(self):
 		debits = _rounded_entries(self.debits)
@@ -42,7 +44,7 @@ class LedgerPosting:
 		values = {
 			"doctype": "Books GL Entry",
 			"posting_date": _posting_date(self.voucher),
-			"party_type": key.party and self.voucher.party_type,
+			"party_type": key.party_type,
 			"party": key.party,
 			"account": key.account,
 			"debit": 0,
@@ -53,13 +55,14 @@ class LedgerPosting:
 		values[fieldname] = amount
 		frappe.get_doc(values).insert(ignore_permissions=True)
 
-	def _add(self, entries, account, amount, party):
+	def _add(self, entries, account, amount, party, party_type):
 		amount = as_decimal(amount)
 		if not account:
 			frappe.throw(_("A ledger account is required."))
 		if amount < 0:
 			frappe.throw(_("Ledger amounts cannot be negative."))
-		entries[EntryKey(account, party)] += amount
+		party_type = party and (party_type or self.voucher.party_type)
+		entries[EntryKey(account, party, party_type)] += amount
 
 
 def _rounded_entries(entries):

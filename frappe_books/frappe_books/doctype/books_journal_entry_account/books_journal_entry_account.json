@@ -7,6 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "account",
+  "party_type",
+  "party",
   "debit_in_account_currency",
   "debit",
   "credit_in_account_currency",
@@ -21,6 +23,21 @@
    "options": "Books Account",
    "placeholder": "Account",
    "reqd": 1
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Party Type",
+   "link_filters": "[[\"DocType\",\"name\",\"in\",[\"Books Customer\",\"Books Supplier\"]]]",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Party",
+   "options": "party_type"
   },
   {
    "fieldname": "debit_in_account_currency",
@@ -53,7 +70,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-24 12:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Journal Entry Account",

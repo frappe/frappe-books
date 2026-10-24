@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from frappe_books.accounting.accounts import PARTY_ACCOUNT_TYPES
 from frappe_books.accounting.ledger import (
 	LedgerPosting,
 	delete_entries,
@@ -68,6 +69,7 @@ class BooksJournalEntry(SeriesNamingMixin, Document):
 		validate_leaf_accounts({row.account for row in self.accounts})
 		for row in self.accounts:
 			_validate_amounts(row)
+			_validate_party(row)
 			_set_company_amounts(row)
 		self.total_debit = sum((as_decimal(row.debit) for row in self.accounts), as_decimal(0))
 		self.total_credit = sum((as_decimal(row.credit) for row in self.accounts), as_decimal(0))
@@ -81,8 +83,8 @@ class BooksJournalEntry(SeriesNamingMixin, Document):
 	def on_submit(self):
 		posting = LedgerPosting(self)
 		for row in self.accounts:
-			posting.debit(row.account, row.debit)
-			posting.credit(row.account, row.credit)
+			posting.debit(row.account, row.debit, row.party, row.party_type)
+			posting.credit(row.account, row.credit, row.party, row.party_type)
 		posting.post()
 
 	def on_cancel(self):
@@ -99,6 +101,23 @@ def _validate_amounts(row):
 		frappe.throw(_("Debit and credit amounts cannot be negative."))
 	if (debit == 0) == (credit == 0):
 		frappe.throw(_("Each account row must contain either a debit or a credit."))
+
+
+def _validate_party(row):
+	"""A row's party is optional; when set, it is a customer or supplier that suits a receivable or payable."""
+	if not (row.party_type or row.party):
+		return
+	if row.party_type not in PARTY_ACCOUNT_TYPES:
+		frappe.throw(_("Row {0}: Party Type must be Customer or Supplier.").format(row.idx))
+	if not row.party:
+		frappe.throw(_("Row {0}: Party is mandatory.").format(row.idx))
+	account_type = frappe.get_cached_value("Books Account", row.account, "account_type")
+	if account_type in PARTY_ACCOUNT_TYPES.values() and account_type != PARTY_ACCOUNT_TYPES[row.party_type]:
+		frappe.throw(
+			_("Row {0}: Account {1} and Party Type {2} have different account types").format(
+				row.idx, row.account, row.party_type
+			)
+		)
 
 
 def _set_company_amounts(row):

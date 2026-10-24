@@ -18,6 +18,12 @@ import { PaymentTypeEnum } from './types';
 
 const LEDGER: Filter = ['is_group', '=', 0];
 
+/** The party types a payment or journal row takes, labelled as Books names them. */
+export const PARTY_TYPE_OPTIONS = [
+  { value: 'Books Customer', label: 'Customer' },
+  { value: 'Books Supplier', label: 'Supplier' },
+];
+
 /**
  * Books Payment Entry, served by Frappe. Its `preview` fills the party type,
  * payment type, accounts and amounts that a save would, while the user edits.
@@ -29,12 +35,7 @@ export class PaymentEntry extends FrappeDoc {
     label: 'Payment Entry',
     nameField: { label: 'Payment No', hidden: true },
     fields: {
-      party_type: {
-        options: [
-          { value: 'Books Customer', label: 'Customer' },
-          { value: 'Books Supplier', label: 'Supplier' },
-        ],
-      },
+      party_type: { options: PARTY_TYPE_OPTIONS },
       references: {
         emptyMessage: 'No references. Add a row to allocate this payment.',
       },

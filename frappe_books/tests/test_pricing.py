@@ -91,6 +91,15 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual(getdate(coupon.valid_from), valid_from)
 		self.assertEqual(getdate(coupon.valid_upto), valid_upto)
 
+	def test_a_coupon_without_a_code_gets_one_from_its_name(self):
+		rule = self._pricing_rule(coupon_code_based=1)
+		made = self._coupon(rule, coupon_name=unique_name("Spring Sale"))
+		typed = self._coupon(rule, coupon_code=unique_name("SPRING"))
+
+		self.assertEqual(made.coupon_code, "SPRINGSA")
+		self.assertTrue(typed.coupon_code.startswith("SPRING "))
+		self.assertEqual((made.name, made.coupon_type), (made.coupon_name, "Promotional"))
+
 	def test_coupon_validity_is_one_day_or_more(self):
 		rule = self._pricing_rule(coupon_code_based=1)
 		self._coupon(rule, valid_from=nowdate(), valid_upto=nowdate())
@@ -340,6 +349,15 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 		self.assertEqual(invoice.items[0].discount_amount, 4)
 		self.assertEqual(invoice.grand_total, 0)
+
+	def test_a_disabled_rule_does_not_apply(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
+		self._pricing_rule(disable=1)
+		invoice = make_invoice(
+			"Books Sales Invoice", self.party.name, self.receivable.name, self.item.name, self.income.name
+		)
+
+		self.assertFalse(invoice.items[0].pricing_rules)
 
 	def test_rule_amount_limits_include_the_limit(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)

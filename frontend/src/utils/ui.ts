@@ -14,6 +14,7 @@ import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getCount, type Filter } from 'src/frappe/api';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { getModel } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -128,14 +129,12 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
 }
 
 export async function cancelDocWithPrompt(doc: FrappeDoc) {
-  let payments: LinkedDoc[] = [];
-  if (['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
-    payments = await getInvoicePayments(doc);
-  }
-
+  const linkedDocs = await getDocsToCancel(doc);
   return (await showDialog({
     title: t`Cancel ${getDocReferenceLabel(doc)}?`,
-    detail: getCancelDetail(payments),
+    detail: isAccessoryMode()
+      ? getLinkedCancelDetail(linkedDocs)
+      : getCancelDetail(linkedDocs),
     type: 'warning',
     // Buttons name the outcome: "Cancel" alone could mean either answer.
     buttons: [
@@ -143,7 +142,7 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
         label: t`Cancel ${doc.typeLabel}`,
         async action() {
           try {
-            await doc.cancel(payments);
+            await doc.cancel(linkedDocs);
           } catch (err) {
             await handleErrorWithDialog(err as Error, doc);
             return false;
@@ -164,12 +163,44 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
   })) as boolean;
 }
 
+/**
+ * The submitted documents that cancelling `doc` also cancels: an invoice's
+ * payments, or, in accessory mode, every submitted document linked to it,
+ * as Desk's Cancel All does.
+ */
+async function getDocsToCancel(doc: FrappeDoc): Promise<LinkedDoc[]> {
+  if (isAccessoryMode()) {
+    const { docs } = await call<{ docs: LinkedDoc[] }>(
+      'frappe.desk.form.linked_with.get_submitted_linked_docs',
+      { doctype: doc.doctype, name: doc.name }
+    );
+    return docs;
+  }
+
+  if (!['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
+    return [];
+  }
+
+  return await getInvoicePayments(doc);
+}
+
 /** The submitted payments that cancelling the invoice `doc` also cancels. */
 async function getInvoicePayments(doc: FrappeDoc): Promise<LinkedDoc[]> {
   return await call('frappe_books.accounting.invoice.get_payments_to_cancel', {
     doctype: fyo.store.permissions?.doctypes[doc.schemaName],
     name: doc.name,
   });
+}
+
+function getLinkedCancelDetail(linkedDocs: LinkedDoc[]): string {
+  if (!linkedDocs.length) {
+    return t`This action is permanent`;
+  }
+
+  const names = linkedDocs
+    .map(({ doctype, name }) => `${doctype} ${name}`)
+    .join(', ');
+  return t`This action is permanent and will cancel the following documents: ${names}`;
 }
 
 function getCancelDetail(payments: LinkedDoc[]): string {
@@ -227,7 +258,7 @@ export function getGroupedActionsForDoc(doc?: FrappeDoc): ActionGroup[] {
       acc[ac.group].actions.push(ac);
       return acc;
     },
-    {} as Record<string, ActionGroup>,
+    {} as Record<string, ActionGroup>
   );
 
   const grouped = Object.keys(actionsMap)
@@ -309,7 +340,7 @@ function getNewAction(doc: FrappeDoc): Action {
 
 export function getFieldsGroupedByTabAndSection(
   schema: Schema,
-  doc: FrappeDoc,
+  doc: FrappeDoc
 ): UIGroupedFields {
   const grouped: UIGroupedFields = new Map();
   for (const field of doc.getFormFields(schema?.fields ?? [])) {
@@ -400,7 +431,7 @@ export function toggleSidebar(value?: boolean) {
 export function focusOrSelectFormControl(
   doc: FrappeDoc,
   ref: unknown,
-  shouldClear = true,
+  shouldClear = true
 ) {
   if (!doc?.fyo) {
     return;
@@ -486,7 +517,7 @@ export enum ShortcutKey {
 
 export async function commonDocDelete(
   doc: FrappeDoc,
-  routeBack = true,
+  routeBack = true
 ): Promise<boolean> {
   const res = await deleteDocWithPrompt(doc);
   if (!res) {
@@ -512,7 +543,7 @@ export async function commonDocCancel(doc: FrappeDoc): Promise<boolean> {
 
 export async function commonDocSync(
   doc: FrappeDoc,
-  useDialog = false,
+  useDialog = false
 ): Promise<boolean> {
   let success: boolean;
   if (useDialog) {

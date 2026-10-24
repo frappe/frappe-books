@@ -940,16 +940,27 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       return;
     }
 
-    const document = this.getMethodDocument();
     const cancelled = linkedDocs.length
-      ? await api.runDocMethod('cancel_with_linked_docs', document, {
-          linked_docs: linkedDocs,
-        })
-      : await api.runDocMethod('cancel', document);
+      ? await this._cancelWithLinkedDocs(linkedDocs)
+      : await api.runDocMethod('cancel', this.getMethodDocument());
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();
     this.fyo.observer.trigger(`cancel:${this.schemaName}`, this.name);
+  }
+
+  /** Frappe's Cancel All cancels the documents, then this one, in one go; a Books controller runs it on its own copy. */
+  async _cancelWithLinkedDocs(linkedDocs: LinkedDoc[]): Promise<DocValues> {
+    if (!isAccessoryMode()) {
+      return await api.runDocMethod(
+        'cancel_with_linked_docs',
+        this.getMethodDocument(),
+        { linked_docs: linkedDocs }
+      );
+    }
+
+    await api.cancelAllLinkedDocs(this.doctype, this.name!, linkedDocs);
+    return await api.getDocument(this.doctype, this.name!);
   }
 
   async delete() {

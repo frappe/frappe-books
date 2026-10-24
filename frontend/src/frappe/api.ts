@@ -105,6 +105,19 @@ export async function previewERPNextDocument(
   });
 }
 
+/** Cancels `docs`, then the document they link to, as Desk's Cancel All does. */
+export async function cancelAllLinkedDocs(
+  doctype: string,
+  name: string,
+  docs: { doctype: string; name: string }[]
+): Promise<void> {
+  await call('frappe.desk.form.linked_with.cancel_all_linked_docs', {
+    docs,
+    root_doctype: doctype,
+    root_name: name,
+  });
+}
+
 export async function getDocuments(
   doctype: string,
   query: ListQuery

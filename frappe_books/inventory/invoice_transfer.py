@@ -8,7 +8,7 @@ from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.returns import batch_quantities, validate_moved_quantities
 
 # Fields an invoice and its transfer do not share when one is mapped from the other.
-UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
+UNSHARED_FIELDS = ["date", "naming_series", "terms", "attachment", "is_returned", "return_against"]
 
 
 def default_location(invoice) -> str | None:

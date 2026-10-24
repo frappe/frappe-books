@@ -30,7 +30,7 @@ class BooksPurchaseReceipt(StockTransferController):
 		is_fully_billed: DF.Check
 		is_returned: DF.Check
 		items: DF.Table[BooksPurchaseReceiptItem]
-		number_series: DF.Link
+		naming_series: DF.Link
 		return_against: DF.Link | None
 		status: DF.Literal["Saved", "Submitted", "Return", "Return Issued", "Cancelled"]
 		supplier: DF.Link

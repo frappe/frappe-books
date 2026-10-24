@@ -23,7 +23,7 @@ class BooksStockEntry(StockEntryController):
 		date: DF.Datetime
 		items: DF.Table[BooksStockEntryItem]
 		movement_type: DF.Literal["MaterialIssue", "MaterialReceipt", "MaterialTransfer", "Manufacture"]
-		number_series: DF.Link
+		naming_series: DF.Link
 		status: DF.Literal["Saved", "Submitted", "Cancelled"]
 	# end: auto-generated types
 

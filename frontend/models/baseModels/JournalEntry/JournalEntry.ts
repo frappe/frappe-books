@@ -23,7 +23,7 @@ export class JournalEntry extends FrappeDoc {
     nameField: { label: 'Entry No' },
     fileFields: [
       'name',
-      'number_series',
+      'naming_series',
       'entry_type',
       'posting_date',
       'accounts',
@@ -64,7 +64,7 @@ export class JournalEntry extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    number_series: () => [['reference_type', '=', 'JournalEntry']],
+    naming_series: () => [['reference_type', '=', 'JournalEntry']],
   };
 
   static getActions(fyo: Fyo): Action[] {

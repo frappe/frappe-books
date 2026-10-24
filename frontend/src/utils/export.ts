@@ -52,6 +52,8 @@ const AUDIT_KEYS: Record<string, string> = {
   owner: 'createdBy',
   creation: 'created',
 };
+// The number series of a numbered document, keyed as Books wrote it.
+const SERIES_KEYS: Record<string, string> = { naming_series: 'numberSeries' };
 const RENAMED_SCHEMAS: Record<string, string> = {
   UomConversionItem: 'UOMConversionItem',
 };
@@ -230,6 +232,7 @@ function getExportKey(schemaName: string, fieldname: string): string {
     RENAMED_KEYS[schemaName]?.[fieldname] ??
     placements[fieldname]?.books_fieldname ??
     AUDIT_KEYS[fieldname] ??
+    SERIES_KEYS[fieldname] ??
     camelCase(fieldname)
   );
 }

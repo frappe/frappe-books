@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "default_section_break_1",
-  "number_series",
+  "naming_series",
   "party_name",
   "date",
   "status",
@@ -41,7 +41,7 @@
    "label": "Default"
   },
   {
-   "fieldname": "number_series",
+   "fieldname": "naming_series",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Number Series",

@@ -55,7 +55,7 @@ test('a new sales invoice shows the fields it showed, in its sections', () => {
   setSettings();
   assert.deepEqual(getLayout(newInvoice('SalesInvoice')), {
     Main: {
-      Default: ['number_series', 'customer', 'account', 'date'],
+      Default: ['naming_series', 'customer', 'account', 'date'],
       Items: ['items', 'net_total'],
       'Tax and Totals': ['grand_total'],
       Outstanding: ['outstanding_amount', 'stock_not_transferred'],
@@ -83,7 +83,7 @@ test('features and totals show the fields that go with them', () => {
 
   const layout = getLayout(invoice);
   assert.deepEqual(layout.Main.Default, [
-    'number_series',
+    'naming_series',
     'customer',
     'account',
     'date',
@@ -124,7 +124,7 @@ test('the quote asks for the Type of its party and hides invoice fields', () => 
   const quote = newInvoice('Quotation');
 
   assert.deepEqual(getLayout(quote).Main.Default, [
-    'number_series',
+    'naming_series',
     'party_name',
     'date',
     'quotation_to',
@@ -173,7 +173,7 @@ test('item tables keep their columns, row editor and Invoice No', () => {
     getSchema(schemaName).fields.find((field) => field.fieldname === fieldname)
       .create;
   assert.deepEqual(
-    ['number_series', 'customer', 'account', 'price_list', 'return_against'].map(
+    ['naming_series', 'customer', 'account', 'price_list', 'return_against'].map(
       (fieldname) => create('SalesInvoice', fieldname)
     ),
     [true, true, true, false, false]
@@ -490,7 +490,7 @@ test('links filter by the doctypes they point to', async () => {
     ['is_group', '=', 0],
     ['account_type', '=', 'Receivable'],
   ]);
-  assert.deepEqual(filters.number_series(sale), [
+  assert.deepEqual(filters.naming_series(sale), [
     ['reference_type', '=', 'SalesInvoice'],
   ]);
   assert.deepEqual(filters.price_list(purchase), [
@@ -674,7 +674,7 @@ test('invoice lists show their columns and filter by status, totals and docstatu
   const fieldnames = filters.fields.map(({ fieldname }) => fieldname);
   for (const fieldname of [
     'name',
-    'number_series',
+    'naming_series',
     'status',
     'net_total',
     'grand_total',

@@ -32,7 +32,7 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
     exported.slice(0, 2).map(({ fieldname, label }) => [fieldname, label]),
     [
       ['name', 'Invoice No'],
-      ['number_series', 'Number Series'],
+      ['naming_series', 'Number Series'],
     ]
   );
   assert.equal(

@@ -349,7 +349,7 @@ def map_invoice_payment(invoice_doctype, invoice_name):
 			invoice_doctype: {
 				"doctype": "Books Payment",
 				"validation": {"docstatus": ["=", 1]},
-				"field_no_map": ["date", "number_series", "attachment"],
+				"field_no_map": ["date", "naming_series", "attachment"],
 			},
 			"Books Tax Summary": {"doctype": "Books Tax Summary", "ignore": True},
 		},

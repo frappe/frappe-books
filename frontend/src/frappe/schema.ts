@@ -333,7 +333,7 @@ function getNaming(meta: DocTypeMeta): Naming {
 
   // Books names these by script from their number series; see SeriesNamingMixin.
   const hasSeries = meta.fields.some(
-    ({ fieldname }) => fieldname === 'number_series'
+    ({ fieldname }) => fieldname === 'naming_series'
   );
   if (hasSeries || (!rule && meta.naming_rule === 'By script')) {
     return 'numberSeries';

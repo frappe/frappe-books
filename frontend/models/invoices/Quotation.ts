@@ -23,7 +23,7 @@ export class Quotation extends Invoice {
     },
     fileFields: [
       'name',
-      'number_series',
+      'naming_series',
       'party_name',
       'date',
       'price_list',
@@ -48,7 +48,7 @@ export class Quotation extends Invoice {
 
   // A quote has no party account.
   static override filters: FiltersMap = {
-    number_series: Invoice.filters.number_series,
+    naming_series: Invoice.filters.naming_series,
     price_list: Invoice.filters.price_list,
   };
 

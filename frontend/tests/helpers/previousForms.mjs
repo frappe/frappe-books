@@ -10,7 +10,7 @@ export const previousForms = {
   layouts: {
     JournalEntry: [
       'name | Entry No |  | Default',
-      'number_series | Number Series |  | Default',
+      'naming_series | Number Series |  | Default',
       'entry_type | Entry Type | Entry Type | Default',
       'posting_date | Date |  | Default',
       'accounts | Account Entries |  | Accounts',
@@ -61,7 +61,7 @@ export const previousForms = {
       'posting_date | Posting Date |  | Default',
     ],
     Payment: [
-      'number_series | Number Series |  | Default',
+      'naming_series | Number Series |  | Default',
       'party_type | Party Type |  | Default',
       'party | Party |  | Default',
       'date | Posting Date |  | Default',
@@ -115,7 +115,7 @@ export const previousForms = {
   },
   quickEditFields: {
     Payment: [
-      'number_series',
+      'naming_series',
       'party_type',
       'party',
       'date',
@@ -141,7 +141,7 @@ export const previousForms = {
       'modified',
       'modified_by',
       'name',
-      'number_series',
+      'naming_series',
       'owner',
       'posting_date',
       'reference_date',
@@ -211,14 +211,14 @@ export const previousForms = {
   stock: {
     StockEntry: {
       layout: [
-        'number_series | Number Series |  | Default | ',
+        'naming_series | Number Series |  | Default | ',
         'movement_type | Movement Type |  | Default | ',
         'date | Date |  | Default | ',
         'items | Items |  | Items | ',
         'amount | Total Amount |  | Items | ',
       ],
       quickEditFields: [
-        'number_series',
+        'naming_series',
         'date',
         'movement_type',
         'amount',
@@ -227,7 +227,7 @@ export const previousForms = {
     },
     DeliveryNote: {
       layout: [
-        'number_series | Number Series |  | Default | ',
+        'naming_series | Number Series |  | Default | ',
         'customer | Customer |  | Default | ',
         'date | Date |  | Default | ',
         'items | Items |  | Items | ',
@@ -241,7 +241,7 @@ export const previousForms = {
     },
     PurchaseReceipt: {
       layout: [
-        'number_series | Number Series |  | Default | ',
+        'naming_series | Number Series |  | Default | ',
         'supplier | Supplier |  | Default | ',
         'date | Date |  | Default | ',
         'items | Items |  | Items | ',
@@ -405,7 +405,7 @@ export const previousForms = {
     'Item.expense_account': true,
     'Item.tax': true,
     'LoyaltyProgram.expense_account': false,
-    'Payment.number_series': true,
+    'Payment.naming_series': true,
     'Payment.party': true,
     'Payment.account': true,
     'Payment.payment_account': true,
@@ -414,12 +414,12 @@ export const previousForms = {
     'TaxSummary.from_account': false,
     'PaymentFor.reference_name': false,
     'PaymentMethod.account': false,
-    'JournalEntry.number_series': true,
+    'JournalEntry.naming_series': true,
     'JournalEntryAccount.account': false,
     'CouponCode.pricing_rule': false,
     'PriceListItem.item': true,
     'PriceListItem.unit': false,
-    'PricingRule.number_series': true,
+    'PricingRule.naming_series': true,
     'PricingRule.free_item': false,
     'PricingRule.free_item_unit': false,
     'PricingRuleItem.item': false,
@@ -431,7 +431,7 @@ export const previousForms = {
     'Company.stock_received_but_not_billed': false,
     'Company.default_expense_account': false,
     'Location.address': true,
-    'StockEntry.number_series': true,
+    'StockEntry.naming_series': true,
     'StockEntryItem.item': true,
     'StockEntryItem.from_location': true,
     'StockEntryItem.to_location': true,
@@ -448,7 +448,7 @@ export const previousForms = {
     'POSProfile.inventory': true,
     'POSProfile.pos_print_template': false,
     'POSClosingShift.opening_shift': false,
-    'SalesInvoice.number_series': true,
+    'SalesInvoice.naming_series': true,
     'SalesInvoice.customer': true,
     'SalesInvoice.account': true,
     'SalesInvoice.price_list': false,
@@ -461,7 +461,7 @@ export const previousForms = {
     'SalesInvoiceItem.account': false,
     'SalesInvoiceItem.tax': true,
     'AppliedCouponCodes.coupons': false,
-    'PurchaseInvoice.number_series': true,
+    'PurchaseInvoice.naming_series': true,
     'PurchaseInvoice.supplier': true,
     'PurchaseInvoice.account': true,
     'PurchaseInvoice.price_list': false,
@@ -472,7 +472,7 @@ export const previousForms = {
     'PurchaseInvoiceItem.batch': true,
     'PurchaseInvoiceItem.account': false,
     'PurchaseInvoiceItem.tax': true,
-    'Quotation.number_series': true,
+    'Quotation.naming_series': true,
     'Quotation.party_name': true,
     'Quotation.price_list': false,
     'QuotationItem.item': true,
@@ -480,7 +480,7 @@ export const previousForms = {
     'QuotationItem.batch': true,
     'QuotationItem.account': false,
     'QuotationItem.tax': true,
-    'DeliveryNote.number_series': true,
+    'DeliveryNote.naming_series': true,
     'DeliveryNote.customer': true,
     'DeliveryNote.back_reference': false,
     'DeliveryNote.return_against': false,
@@ -488,7 +488,7 @@ export const previousForms = {
     'DeliveryNoteItem.location': true,
     'DeliveryNoteItem.transfer_unit': false,
     'DeliveryNoteItem.batch': false,
-    'PurchaseReceipt.number_series': true,
+    'PurchaseReceipt.naming_series': true,
     'PurchaseReceipt.supplier': true,
     'PurchaseReceipt.back_reference': false,
     'PurchaseReceipt.return_against': false,
@@ -500,7 +500,7 @@ export const previousForms = {
   // What quick views listed, as `fieldname | label`, where the form shows others.
   quickViews: {
     Payment: [
-      'number_series | Number Series',
+      'naming_series | Number Series',
       'party_type | Party Type',
       'party | Party',
       'date | Posting Date',
@@ -520,7 +520,7 @@ export const previousForms = {
       'opening_shift | Opening Shift',
     ],
     SalesInvoice: [
-      'number_series | Number Series',
+      'naming_series | Number Series',
       'customer | Customer',
       'account | Account',
       'date | Date',
@@ -545,7 +545,7 @@ export const previousForms = {
       'loyalty_points | Loyalty Points',
     ],
     PurchaseInvoice: [
-      'number_series | Number Series',
+      'naming_series | Number Series',
       'supplier | Supplier',
       'account | Account',
       'date | Date',
@@ -564,7 +564,7 @@ export const previousForms = {
       'return_against | Return Against',
     ],
     Quotation: [
-      'number_series | Number Series',
+      'naming_series | Number Series',
       'party_name | Customer',
       'date | Date',
       'price_list | Price List',

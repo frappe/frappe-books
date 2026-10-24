@@ -14,7 +14,7 @@ export class PurchaseInvoice extends Invoice {
     fields: INVOICE_FIELDS,
     fileFields: [
       'name',
-      'number_series',
+      'naming_series',
       'supplier',
       'account',
       'date',

@@ -236,8 +236,8 @@ async function installPaymentFixture(page: Page) {
         }),
       'POST /api/v2/method/run_doc_method': ({ method, document }) => {
         if (method === 'preview') {
-          const number_series = document.number_series || 'PAY-';
-          return answer({ docs: [{ ...document, number_series }] });
+          const naming_series = document.naming_series || 'PAY-';
+          return answer({ docs: [{ ...document, naming_series }] });
         }
 
         fixture.submissions++;

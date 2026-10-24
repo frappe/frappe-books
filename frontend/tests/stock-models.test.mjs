@@ -261,7 +261,7 @@ test('stock lists show and filter by their Frappe fieldnames', () => {
     status.options.map(({ value }) => value),
     ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled']
   );
-  for (const fieldname of ['name', 'number_series', 'owner', 'creation']) {
+  for (const fieldname of ['name', 'naming_series', 'owner', 'creation']) {
     assert.ok(
       fields.some((field) => field.fieldname === fieldname),
       fieldname

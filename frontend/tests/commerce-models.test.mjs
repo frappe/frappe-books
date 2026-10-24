@@ -485,7 +485,7 @@ test('a price list or pricing rule row takes the unit of each item it is given',
 test('the pricing rule form shows each discount scheme as it did', async () => {
   assert.deepEqual(getLayout('PricingRule').slice(0, 8), [
     'name | ID |  | Default',
-    'number_series | Number Series |  | Default',
+    'naming_series | Number Series |  | Default',
     'is_enabled | Is Pricing Rule Enabled |  | Default',
     'title | Title |  | Default',
     'applied_items | Applied Items |  | Items',
@@ -502,7 +502,7 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
     field('price_discount_type').options.map(({ label }) => label),
     ['Rate', 'Discount Percentage', 'Discount Amount']
   );
-  assert.equal(field('number_series').setOnlyOnce, true);
+  assert.equal(field('naming_series').setOnlyOnce, true);
   // Free items and applied items are picked, not created, as before.
   const creates = (schemaName, fieldnames) =>
     fieldnames.map(
@@ -517,7 +517,7 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
   assert.deepEqual(creates('PriceListItem', ['item', 'unit']), [true, false]);
 
   const rule = newFrappeDoc('PricingRule');
-  assert.equal(rule.number_series, 'PRLE-');
+  assert.equal(rule.naming_series, 'PRLE-');
   const shown = () =>
     rule.schema.fields
       .filter(

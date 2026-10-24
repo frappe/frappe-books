@@ -128,7 +128,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		invoice.preview()
 
 		self.assertEqual(
-			invoice.number_series,
+			invoice.naming_series,
 			frappe.db.get_single_value("Books Defaults", "sales_invoice_number_series") or "SINV-",
 		)
 		self.assertEqual((invoice.terms, invoice.make_auto_payment), ("Pay in 30 days", 1))

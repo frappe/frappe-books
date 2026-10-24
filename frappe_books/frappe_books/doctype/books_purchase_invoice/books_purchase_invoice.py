@@ -42,8 +42,8 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 		items: DF.Table[BooksPurchaseInvoiceItem]
 		make_auto_payment: DF.Check
 		make_auto_stock_transfer: DF.Check
+		naming_series: DF.Link
 		net_total: DF.Currency
-		number_series: DF.Link
 		outstanding_amount: DF.Currency
 		price_list: DF.Link | None
 		return_against: DF.Link | None

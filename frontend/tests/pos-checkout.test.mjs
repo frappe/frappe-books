@@ -54,7 +54,7 @@ function withServerDefaults(values) {
 function makeSale(values = {}) {
   const sale = newFrappeDoc('SalesInvoice', {
     is_pos: true,
-    number_series: 'SINV-',
+    naming_series: 'SINV-',
     customer: 'Asha',
     account: 'Debtors',
     date: new Date('2026-10-04T00:00:00Z'),

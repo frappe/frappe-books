@@ -121,7 +121,7 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
     message: [
       {
         name: 'SINV-1',
-        number_series: 'SINV-',
+        naming_series: 'SINV-',
         items: [{ item: 'Pen', quantity: 2 }],
       },
     ],
@@ -130,7 +130,7 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
     schemaName: 'SalesInvoice',
     fields: pick(getExportFields('SalesInvoice'), [
       'name',
-      'number_series',
+      'naming_series',
       'items',
     ]),
     tableFields: [
@@ -145,7 +145,7 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
 
   assert.deepEqual(importer.assignedTemplateFields.slice(0, 4), [
     'SalesInvoice.name',
-    'SalesInvoice.number_series',
+    'SalesInvoice.naming_series',
     'SalesInvoiceItem.item',
     'SalesInvoiceItem.quantity',
   ]);

@@ -334,7 +334,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		shipment.preview()
 
 		row = shipment.items[0]
-		self.assertEqual((shipment.number_series, shipment.terms), ("SHPM-", "Ships in a week"))
+		self.assertEqual((shipment.naming_series, shipment.terms), ("SHPM-", "Ships in a week"))
 		self.assertEqual((row.location, row.hsn_code, row.amount), ("Stores", "012345", 50))
 		self.assertEqual(row.serial_number.splitlines(), sorted(serial_numbers))
 		self.assertEqual(shipment.grand_total, 50)

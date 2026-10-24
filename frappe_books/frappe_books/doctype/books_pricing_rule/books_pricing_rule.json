@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "default_section_break_1",
-  "number_series",
+  "naming_series",
   "is_enabled",
   "title",
   "items_section_break_5",
@@ -47,7 +47,7 @@
   },
   {
    "default": "PRLE-",
-   "fieldname": "number_series",
+   "fieldname": "naming_series",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Number Series",

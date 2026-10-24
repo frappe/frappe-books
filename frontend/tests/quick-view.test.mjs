@@ -46,5 +46,5 @@ test('custom fields follow the fields a quick view names', () => {
     ({ fieldname }) => fieldname
   );
   assert.equal(fields.at(-1), 'custom_books_note');
-  assert.equal(fields[0], 'number_series');
+  assert.equal(fields[0], 'naming_series');
 });

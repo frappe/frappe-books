@@ -320,7 +320,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		movement.preview()
 
 		row = movement.items[0]
-		self.assertEqual(movement.number_series, default_series("Books Stock Entry"))
+		self.assertEqual(movement.naming_series, default_series("Books Stock Entry"))
 		self.assertEqual(
 			(row.to_location, row.rate, row.amount, row.unit), (self.warehouse.name, 15, 30, "Unit")
 		)

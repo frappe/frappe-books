@@ -66,8 +66,8 @@ class BooksSalesInvoice(PostingInvoiceController):
 		loyalty_program: DF.Link | None
 		make_auto_payment: DF.Check
 		make_auto_stock_transfer: DF.Check
+		naming_series: DF.Link
 		net_total: DF.Currency
-		number_series: DF.Link
 		outstanding_amount: DF.Currency
 		payments: DF.Table[BooksSalesInvoicePayment]
 		price_list: DF.Link | None

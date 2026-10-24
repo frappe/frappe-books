@@ -20,7 +20,7 @@ export class StockEntry extends FrappeDoc {
     label: 'Stock Entry',
     nameField: { label: 'Stock Entry No.', hidden: true },
     quickEditFields: [
-      'number_series',
+      'naming_series',
       'date',
       'movement_type',
       'amount',
@@ -38,7 +38,7 @@ export class StockEntry extends FrappeDoc {
     },
     fileFields: [
       'name',
-      'number_series',
+      'naming_series',
       'movement_type',
       'date',
       'items',
@@ -50,7 +50,7 @@ export class StockEntry extends FrappeDoc {
   static override rowModels = { items: StockEntryItem };
 
   static filters: FiltersMap = {
-    number_series: () => [['reference_type', '=', ModelNameEnum.StockEntry]],
+    naming_series: () => [['reference_type', '=', ModelNameEnum.StockEntry]],
   };
 
   static getListViewSettings(fyo: Fyo): ListViewSettings {

@@ -15,7 +15,7 @@ export const transferFields = {
 export function getTransferFileFields(partyField: string): string[] {
   return [
     'name',
-    'number_series',
+    'naming_series',
     partyField,
     'date',
     'items',
@@ -48,7 +48,7 @@ export abstract class StockTransfer extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    number_series: (doc) => [['reference_type', '=', doc.schemaName]],
+    naming_series: (doc) => [['reference_type', '=', doc.schemaName]],
     back_reference: () => [
       ['stock_not_transferred', '!=', 0],
       ['docstatus', '=', 1],

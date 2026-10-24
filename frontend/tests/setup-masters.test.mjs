@@ -124,16 +124,16 @@ test('number series links filter and create by reference_type', async () => {
   const invoice = { schemaName: 'SalesInvoice' };
   const series = (schemaName) => [['reference_type', '=', schemaName]];
   assert.deepEqual(
-    await SalesInvoice.filters.number_series(invoice),
+    await SalesInvoice.filters.naming_series(invoice),
     series('SalesInvoice')
   );
-  assert.deepEqual(Payment.filters.number_series(), series('Payment'));
+  assert.deepEqual(Payment.filters.naming_series(), series('Payment'));
   assert.deepEqual(
-    JournalEntry.filters.number_series(),
+    JournalEntry.filters.naming_series(),
     series('JournalEntry')
   );
   assert.deepEqual(
-    StockEntry.filters.number_series(),
+    StockEntry.filters.naming_series(),
     series('StockEntry')
   );
   assert.deepEqual(

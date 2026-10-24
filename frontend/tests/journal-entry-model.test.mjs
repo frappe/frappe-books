@@ -46,7 +46,7 @@ test('a new journal entry is saved without its temporary name, which the server 
       : { data: { ...body, name: 'JV-1001', modified: '2026-09-30 10:00:00' } }
   );
   const entry = newFrappeDoc('JournalEntry', {
-    number_series: 'JV-',
+    naming_series: 'JV-',
     entry_type: 'Journal Entry',
     accounts: [
       { account: 'Cash', debit: fyo.pesa(5) },
@@ -107,7 +107,7 @@ test('journal entry links filter accounts and series as before', async () => {
   assert.deepEqual(await JournalEntryAccount.filters.account(), [
     ['is_group', '=', 0],
   ]);
-  assert.deepEqual(await JournalEntry.filters.number_series(), [
+  assert.deepEqual(await JournalEntry.filters.naming_series(), [
     ['reference_type', '=', 'JournalEntry'],
   ]);
 });

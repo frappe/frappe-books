@@ -51,7 +51,7 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 		max_quantity: DF.Float
 		min_amount: DF.Currency
 		min_quantity: DF.Float
-		number_series: DF.Link
+		naming_series: DF.Link
 		price_discount_type: DF.Literal["rate", "percentage", "amount"]
 		priority: DF.Literal[
 			"1",

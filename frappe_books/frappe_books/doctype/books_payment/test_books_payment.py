@@ -193,7 +193,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 
 	def test_number_series_cannot_change_after_insert(self):
 		payment = self._payment(self.invoice).insert()
-		payment.number_series = make_number_series("Payment")
+		payment.naming_series = make_number_series("Payment")
 		self.assertRaises(frappe.CannotChangeConstantError, payment.save)
 
 	def test_payment_needs_read_access_to_the_invoice(self):
@@ -296,7 +296,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		row = payment.payment_references[0]
 		self.assertEqual((row.reference_type, row.amount), (self.invoice.doctype, 180))
 		self.assertEqual((payment.amount, payment.amount_paid), (180, 180))
-		self.assertEqual(payment.number_series, "PAY-")
+		self.assertEqual(payment.naming_series, "PAY-")
 		self.assertEqual(frappe.db.count("Books Payment"), payments)
 
 	def test_preview_settles_the_only_reference_with_the_amount(self):

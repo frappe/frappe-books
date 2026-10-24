@@ -36,8 +36,8 @@ class BooksQuotation(InvoiceController):
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check
 		items: DF.Table[BooksQuotationItem]
+		naming_series: DF.Link
 		net_total: DF.Currency
-		number_series: DF.Link
 		outstanding_amount: DF.Currency
 		party_name: DF.DynamicLink
 		price_list: DF.Link | None
@@ -81,7 +81,7 @@ def make_sales_invoice(source_name: str):
 				"doctype": "Books Sales Invoice",
 				"validation": {"docstatus": ["=", 1], "quotation_to": ["=", "Books Customer"]},
 				"field_map": {"party_name": "customer"},
-				"field_no_map": ["date", "number_series", "attachment"],
+				"field_no_map": ["date", "naming_series", "attachment"],
 			},
 			"Books Quotation Item": {"doctype": "Books Sales Invoice Item"},
 		},

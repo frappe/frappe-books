@@ -178,7 +178,7 @@ test('payment links filter as they did', async () => {
     ['account_type', '=', 'Payable'],
     ['is_group', '=', 0],
   ]);
-  assert.deepEqual(filters.number_series(pay), [
+  assert.deepEqual(filters.naming_series(pay), [
     ['reference_type', '=', 'Payment'],
   ]);
 
@@ -264,7 +264,7 @@ test('the payment lists show, filter and open as they did', () => {
     status.options.map(({ value }) => value),
     ['Saved', 'Submitted', 'Cancelled']
   );
-  for (const fieldname of ['name', 'number_series', 'submitted', 'cancelled'])
+  for (const fieldname of ['name', 'naming_series', 'submitted', 'cancelled'])
     assert.ok(filters.some((field) => field.fieldname === fieldname));
   const type = filters.find(({ fieldname }) => fieldname === 'reference_type');
   assert.deepEqual(

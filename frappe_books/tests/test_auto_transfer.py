@@ -231,7 +231,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 		shipment = make_delivery_note(invoice.name)
 
-		self.assertIsNone(shipment.number_series)
+		self.assertIsNone(shipment.naming_series)
 		self.assertTrue(shipment.insert().name.startswith(series), shipment.name)
 
 	def test_receipt_of_a_return_returns_against_the_original_receipt(self):

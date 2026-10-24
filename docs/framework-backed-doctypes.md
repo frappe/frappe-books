@@ -61,7 +61,7 @@ A value that the user entered and the server only corrected, such as the sign of
 
 A document method gets the client copy with its `name`, `modified`, `docstatus`, `creation` and `owner`, because Frappe refuses a copy that changes them. An insert sends no name unless the doctype is named by the user.
 
-The naming rule of the DocType decides how a new document is named. A doctype named by a field (`field:<fieldname>`, for example Books Account and Currency) shows that field as its name. The form asks for it on a new document and keeps it once saved. A doctype with a `number_series` field, or one that its controller names by script, gets a temporary name like `New Sales Invoice 01` until the server names it from the series.
+The naming rule of the DocType decides how a new document is named. A doctype named by a field (`field:<fieldname>`, for example Books Account and Currency) shows that field as its name. The form asks for it on a new document and keeps it once saved. A doctype with a `naming_series` field, or one that its controller names by script, gets a temporary name like `New Sales Invoice 01` until the server names it from the series.
 
 A submittable list filters by Submitted and Cancelled, which become `docstatus` filters. The `name` of a server-named document is a list filter field.
 

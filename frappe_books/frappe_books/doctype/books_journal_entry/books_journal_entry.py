@@ -47,7 +47,7 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 			"Opening Entry",
 			"Depreciation Entry",
 		]
-		number_series: DF.Link
+		naming_series: DF.Link
 		posting_date: DF.Date
 		reference_date: DF.Date | None
 		reference_number: DF.Data | None

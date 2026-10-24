@@ -30,7 +30,7 @@ export class Payment extends FrappeDoc {
     },
     fileFields: [
       'name',
-      'number_series',
+      'naming_series',
       'party_type',
       'party',
       'date',
@@ -50,7 +50,7 @@ export class Payment extends FrappeDoc {
       'status',
     ],
     quickEditFields: [
-      'number_series',
+      'naming_series',
       'party_type',
       'party',
       'date',
@@ -122,7 +122,7 @@ export class Payment extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    number_series: () => [['reference_type', '=', 'Payment']],
+    naming_series: () => [['reference_type', '=', 'Payment']],
     account: (doc: FrappeDoc) => [
       [
         'account_type',

@@ -19,7 +19,7 @@ export class SalesInvoice extends Invoice {
     fields: INVOICE_FIELDS,
     fileFields: [
       'name',
-      'number_series',
+      'naming_series',
       'customer',
       'account',
       'date',

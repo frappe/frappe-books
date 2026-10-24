@@ -190,7 +190,7 @@ test('a doctype named from its number series names new documents as Books does',
   const meta = {
     name: 'Books Bill Run',
     permissions: [],
-    fields: [{ fieldname: 'number_series', fieldtype: 'Link', label: 'Series' }],
+    fields: [{ fieldname: 'naming_series', fieldtype: 'Link', label: 'Series' }],
   };
   const context = { schemaNames: {}, roles: [], placements: {} };
 

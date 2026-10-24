@@ -20,6 +20,7 @@ await build({
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition, evaluateExpression } from './src/frappe/dependsOn';
       export { ERPNEXT_QUERIES } from './src/frappe/erpnextQueries';
+      export { canPickFields, getKeptPicks, getPickerFields, getPickerTables, getSavedPicks } from './src/frappe/fieldPicks';
       export { toFilterList } from './src/frappe/linkSearch';
       export { getActiveDoctype, isAccessoryMode, toActiveDoctype } from './src/frappe/mode';
       export { getCalculatedState } from './src/frappe/calculated';
@@ -157,6 +158,11 @@ export const {
   getActiveDoctype,
   isAccessoryMode,
   toActiveDoctype,
+  canPickFields,
+  getKeptPicks,
+  getPickerFields,
+  getPickerTables,
+  getSavedPicks,
   getCalculatedState,
   getFrappeListPage,
   getFrappeRows,

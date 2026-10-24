@@ -1,6 +1,9 @@
 <template>
   <section class="flex min-w-0 flex-col gap-2">
-    <h3 class="text-base-medium text-ink-gray-8">{{ heading }}</h3>
+    <div class="flex items-baseline justify-between gap-2">
+      <h3 class="text-base-medium text-ink-gray-8">{{ heading }}</h3>
+      <span v-if="note" class="text-sm text-ink-gray-5">{{ note }}</span>
+    </div>
     <div
       class="flex flex-col rounded-6 border border-outline-gray-1 text-base tabular-nums"
     >
@@ -56,15 +59,15 @@
 <script setup lang="ts">
 import { t } from 'fyo';
 import {
-  CashCount,
+  CashCountRow,
   getCashTotal,
 } from 'models/inventory/Point of Sale/POSOpeningEntry';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
 import NumberStepper from './NumberStepper.vue';
 
-/** Cash counted by denomination, as a table with its total. */
-defineProps<{ heading: string; rows: CashCount[] }>();
+/** Cash counted by denomination, as a table with its total; `note` says what is kept of it. */
+defineProps<{ heading: string; rows: CashCountRow[]; note?: string }>();
 
 const columns = 'grid-cols-[minmax(0,1fr)_6rem_6rem]';
 

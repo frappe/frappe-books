@@ -22,8 +22,14 @@
       </template>
       <template v-if="shiftSubtitle" #left>
         <FrappeBadge theme="green" :label="shiftSubtitle" />
+        <FrappeBadge
+          v-if="shift.profileLabel"
+          theme="gray"
+          :label="shift.profileLabel"
+        />
       </template>
       <POSHeaderActions
+        v-if="isSelling"
         :profile="posProfile as POSProfile"
         :enable-returns="enableReturns"
         @held="toggleModal('SavedInvoice', true)"
@@ -37,108 +43,118 @@
       v-if="isMobile && !openPaymentModal && shiftSubtitle"
       class="px-4 pt-3 text-md text-ink-gray-5"
     >
-      {{ shiftSubtitle }}
+      {{ mobileShiftLine }}
     </p>
-    <MobilePOS
-      v-if="isMobile && !openPaymentModal"
-      :items="filteredItems as POSItem[]"
-      :search-term="itemSearchTerm"
-      :total-quantity="totalQuantity"
-      :disable-pay="disablePayButton"
-      @search="handleItemSearch"
-      @add-item="addItem"
-      @set-customer="setCustomer"
-      @hold="saveInvoiceAction"
-      @pay="handlePaymentAction"
+    <EmptyState
+      v-if="shift.hasNoProfile"
+      class="flex-1"
+      icon="lucide-lock"
+      :title="t`No POS Profile is assigned to you`"
+      :description="t`A System Manager can add you to a POS Profile in ERPNext`"
     />
-    <div v-else-if="!isMobile" class="flex min-h-0 flex-1">
-      <main class="flex min-w-0 flex-1 flex-col">
-        <POSItemPicker
-          :items="filteredItems as POSItem[]"
-          :search-items="items as POSItem[]"
-          :search-term="itemSearchTerm"
-          :item-group="selectedItemGroup"
-          :table-view="tableView"
-          @search="handleItemSearch"
-          @set-item-group="setItemGroup"
-          @add-item="addItem"
-          @toggle-view="toggleView"
-        />
-      </main>
-
-      <aside
-        class="flex w-[24.5rem] shrink-0 flex-col border-s border-outline-gray-1"
-        :aria-label="t`Cart`"
-      >
-        <div
-          class="flex flex-col gap-2 border-b border-outline-gray-1 px-4 pb-3 pt-4"
-        >
-          <div class="flex h-6 items-center justify-between gap-2">
-            <span class="truncate text-sm text-ink-gray-5">{{
-              cartLabel
-            }}</span>
-            <POSActionButton
-              v-if="sinvDoc.items?.length"
-              action="cancel"
-              :profile="posProfile as POSProfile"
-              size="xs"
-              variant="ghost"
-              icon-left="lucide-trash-2"
-              @click="clearValues"
-            >
-              {{ t`Clear cart` }}
-            </POSActionButton>
-          </div>
-          <MultiLabelLink
-            v-if="sinvDoc.fieldMap"
-            class="w-full"
-            secondary-link="mobile_no"
-            :border="true"
-            :value="sinvDoc.customer"
-            :df="sinvDoc.fieldMap.customer"
-            :show-clear-button="true"
-            :read-only="sinvDoc.isSubmitted"
-            @change="setCustomer"
-          />
-        </div>
-
-        <SelectedItemTable
-          :layout="layout"
-          :expanded-row="expandedRow"
-          @expand="(name?: string) => (expandedRow = name)"
-          @select="selectRow"
-        />
-
-        <div
-          class="flex shrink-0 flex-col gap-3 border-t border-outline-gray-1 bg-surface-gray-1 px-4 pb-4 pt-3"
-        >
-          <POSPriceActions
-            :applied-coupons-count="appliedCouponsCount"
-            @open-coupon-code="openCouponCode"
-            @open-loyalty-program="openLoyaltyProgram"
-            @open-price-list="toggleModal('PriceList', true)"
-          />
-          <POSOrderSummary
-            :sinv-doc="sinvDoc as SalesInvoice"
-            :total-quantity="totalQuantity"
-          />
-          <POSInvoiceActions
+    <template v-else-if="isSelling">
+      <MobilePOS
+        v-if="isMobile && !openPaymentModal"
+        :items="filteredItems as POSItem[]"
+        :search-term="itemSearchTerm"
+        :total-quantity="totalQuantity"
+        :disable-pay="disablePayButton"
+        @search="handleItemSearch"
+        @add-item="addItem"
+        @set-customer="setCustomer"
+        @hold="saveInvoiceAction"
+        @pay="handlePaymentAction"
+      />
+      <div v-else-if="!isMobile" class="flex min-h-0 flex-1">
+        <main class="flex min-w-0 flex-1 flex-col">
+          <POSItemPicker
+            :items="filteredItems as POSItem[]"
+            :search-items="items as POSItem[]"
+            :search-term="itemSearchTerm"
+            :item-group="selectedItemGroup"
+            :table-view="tableView"
             :profile="posProfile as POSProfile"
-            :disable-pay="disablePayButton"
-            :is-return="!!sinvDoc.isReturn"
-            :is-submitted="sinvDoc.isSubmitted"
-            :grand-total="getPayableTotal(sinvDoc as SalesInvoice)"
-            @save="saveInvoiceAction"
-            @pay="handlePaymentAction"
+            @search="handleItemSearch"
+            @set-item-group="setItemGroup"
+            @add-item="addItem"
+            @toggle-view="toggleView"
           />
-        </div>
-      </aside>
-    </div>
+        </main>
+
+        <aside
+          class="flex w-[24.5rem] shrink-0 flex-col border-s border-outline-gray-1"
+          :aria-label="t`Cart`"
+        >
+          <div
+            class="flex flex-col gap-2 border-b border-outline-gray-1 px-4 pb-3 pt-4"
+          >
+            <div class="flex h-6 items-center justify-between gap-2">
+              <span class="truncate text-sm text-ink-gray-5">{{
+                cartLabel
+              }}</span>
+              <POSActionButton
+                v-if="sinvDoc.items?.length"
+                action="cancel"
+                :profile="posProfile as POSProfile"
+                size="xs"
+                variant="ghost"
+                icon-left="lucide-trash-2"
+                @click="clearValues"
+              >
+                {{ t`Clear cart` }}
+              </POSActionButton>
+            </div>
+            <MultiLabelLink
+              v-if="sinvDoc.fieldMap"
+              class="w-full"
+              secondary-link="mobile_no"
+              :border="true"
+              :value="sinvDoc.customer"
+              :df="sinvDoc.fieldMap.customer"
+              :show-clear-button="true"
+              :read-only="sinvDoc.isSubmitted"
+              @change="setCustomer"
+            />
+          </div>
+
+          <SelectedItemTable
+            :layout="layout"
+            :expanded-row="expandedRow"
+            @expand="(name?: string) => (expandedRow = name)"
+            @select="selectRow"
+          />
+
+          <div
+            class="flex shrink-0 flex-col gap-3 border-t border-outline-gray-1 bg-surface-gray-1 px-4 pb-4 pt-3"
+          >
+            <POSPriceActions
+              :applied-coupons-count="appliedCouponsCount"
+              @open-coupon-code="openCouponCode"
+              @open-loyalty-program="openLoyaltyProgram"
+              @open-price-list="toggleModal('PriceList', true)"
+            />
+            <POSOrderSummary
+              :sinv-doc="sinvDoc as SalesInvoice"
+              :total-quantity="totalQuantity"
+            />
+            <POSInvoiceActions
+              :profile="posProfile as POSProfile"
+              :disable-pay="disablePayButton"
+              :is-return="!!sinvDoc.isReturn"
+              :is-submitted="sinvDoc.isSubmitted"
+              :grand-total="getPayableTotal(sinvDoc as SalesInvoice)"
+              @save="saveInvoiceAction"
+              @pay="handlePaymentAction"
+            />
+          </div>
+        </aside>
+      </div>
+    </template>
 
     <OpenPOSShiftModal
-      v-if="shift.isLoaded && !shift.isOpen"
+      v-if="shift.isLoaded && !shift.isOpen && !shift.hasNoProfile"
       :shift="shift"
-      @opened="shift.refresh()"
+      @opened="loadPOS()"
     />
     <ClosePOSShiftModal
       :open-modal="openShiftCloseModal"
@@ -171,6 +187,7 @@
       @toggle-modal="toggleModal('PriceList', false)"
     />
     <ItemEnquiryModal
+      v-if="fyo.isFeatureOn('enable_item_enquiry')"
       :open-modal="openItemEnquiryModal"
       :customer="sinvDoc.customer"
       @toggle-modal="toggleModal('ItemEnquiry', false)"
@@ -234,6 +251,7 @@ import { showDialog, showToast } from 'src/utils/interactive';
 import { isMobile } from 'src/utils/viewport';
 import { routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { computed, defineComponent, inject, nextTick, shallowRef } from 'vue';
 import {
@@ -246,7 +264,7 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import {
   getPOSItemFilters,
-  POS_ITEM_FIELDS,
+  getPOSItemRecords,
   getListedPOSItems,
   validatePOSCheckout,
   isTypingInField,
@@ -267,12 +285,15 @@ import {
 } from 'src/utils/posCart';
 import {
   getItemVisibility,
+  getPOSPreference,
   getPOSProfile,
+  loadPOSPreferences,
   validateIsPosSettingsSet,
 } from 'src/utils/posSetup';
 import { usePOSShift } from 'src/utils/posShift';
-import { getAllDocuments } from 'src/frappe/api';
 import { getFrappeDoc, getMappedDoc, newFrappeDoc } from 'src/frappe/documents';
+import { isAccessoryMode } from 'src/frappe/mode';
+import type { DocValueMap } from 'fyo/core/types';
 import { getItemQtyMap } from 'models/inventory/posStock';
 import { POSItem, POSLayout, ItemQtyMap } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
@@ -283,6 +304,7 @@ const COMPONENT_NAME = 'POS';
 export default defineComponent({
   name: 'POS',
   components: {
+    EmptyState,
     FrappeBadge,
     FrappeButton,
     PageHeader,
@@ -367,7 +389,7 @@ export default defineComponent({
   },
   computed: {
     layout(): POSLayout {
-      const posUI = this.posProfile?.pos_ui || fyo.singles.POSSettings?.pos_ui;
+      const posUI = this.posProfile?.pos_ui || getPOSPreference('pos_ui');
       return posUI === 'Classic' ? 'Classic' : 'Modern';
     },
     isDiscountingEnabled(): boolean {
@@ -415,6 +437,27 @@ export default defineComponent({
         : fyo.format(openedAt, 'Date');
       return t`Shift opened ${time}`;
     },
+    /** Accessory mode sells only in an open shift, whose POS Profile the sale is of. */
+    isSelling(): boolean {
+      return !isAccessoryMode() || this.shift.isOpen;
+    },
+    mobileShiftLine(): string {
+      return [this.shiftSubtitle, this.shift.profileLabel]
+        .filter(Boolean)
+        .join(' · ');
+    },
+    /** A new POS sale's values: in accessory mode, of the open shift's POS Profile. */
+    saleValues(): DocValueMap {
+      if (!isAccessoryMode()) {
+        return { is_pos: true };
+      }
+
+      return {
+        is_pos: true,
+        is_created_using_pos: true,
+        pos_profile: this.shift.openShift?.pos_profile,
+      };
+    },
     disablePayButton(): boolean {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.customer) {
         return true;
@@ -447,23 +490,14 @@ export default defineComponent({
   },
 
   async mounted() {
-    await this.shift.refresh();
-    await this.loadPOSProfile();
-    await this.setDefaultCustomer();
-    await this.setItemQtyMap();
-    await this.setItems();
+    await this.loadPOS();
   },
   async activated() {
     toggleSidebar(false);
-    await this.shift.refresh();
-    await this.loadPOSProfile();
-    validateIsPosSettingsSet(this.posProfile as POSProfile | null);
-    await this.setDefaultCustomer();
     this.setShortcuts();
     this.addQuickQtyListeners();
-
-    await this.setItemQtyMap();
-    await this.setItems();
+    await this.loadPOS();
+    validateIsPosSettingsSet(this.posProfile as POSProfile | null);
   },
   async beforeRouteLeave() {
     this.closeAllModals();
@@ -558,8 +592,22 @@ export default defineComponent({
       await this.sinvDoc.set('customer', value);
     },
 
+    /** The shift, a new sale and the items; accessory mode sells only in an open shift, whose POS Profile the sale is of. */
+    async loadPOS() {
+      // The open shift dialog counts cash in the preferred denominations.
+      await loadPOSPreferences();
+      await this.shift.refresh();
+      if (isAccessoryMode() && !this.shift.isOpen) {
+        return;
+      }
+
+      await this.setDefaultCustomer();
+      await this.loadPOSProfile();
+      await this.setItemQtyMap();
+      await this.setItems();
+    },
     async loadPOSProfile() {
-      this.posProfile = (await getPOSProfile()) ?? null;
+      this.posProfile = (await getPOSProfile(this.sinvDoc)) ?? null;
     },
 
     async handleItemSearch(searchTerm: string | null, addItem = false) {
@@ -670,11 +718,10 @@ export default defineComponent({
       await this.setItems();
     },
     async setItems() {
-      const visibility = await getItemVisibility();
-      const items = await getAllDocuments('Books Item', {
-        fields: POS_ITEM_FIELDS,
-        filters: getPOSItemFilters(visibility, this.selectedItemGroup),
-      });
+      const profile = this.posProfile as POSProfile | null;
+      const visibility = getItemVisibility(profile);
+      const filters = getPOSItemFilters(visibility, this.selectedItemGroup);
+      const items = await getPOSItemRecords(filters, profile);
       const hideUnavailable = !!(
         this.posProfile?.hide_unavailable_items ??
         this.fyo.singles.POSSettings?.hide_unavailable_items
@@ -702,20 +749,21 @@ export default defineComponent({
     },
     /** A new sale for the POS customer, whom the server's preview picks. */
     async setDefaultCustomer() {
-      this.sinvDoc = newFrappeDoc(ModelNameEnum.SalesInvoice, {
-        is_pos: true,
-      }) as SalesInvoice;
+      this.sinvDoc = newFrappeDoc(
+        ModelNameEnum.SalesInvoice,
+        this.saleValues
+      ) as SalesInvoice;
       await this.previewInvoice();
       this.defaultCustomer = this.sinvDoc.customer ?? '';
     },
     async setItemQtyMap() {
-      this.itemQtyMap = await getItemQtyMap();
+      this.itemQtyMap = await getItemQtyMap(this.sinvDoc);
     },
     /** A new POS sale; the server bills it to the POS account. */
     setSinvDoc() {
       this.sinvDoc = newFrappeDoc(ModelNameEnum.SalesInvoice, {
+        ...this.saleValues,
         customer: this.sinvDoc.customer ?? this.defaultCustomer,
-        is_pos: true,
       }) as SalesInvoice;
     },
     /** Turning redemption on asks for the points; off clears them. */

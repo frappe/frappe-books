@@ -1,6 +1,7 @@
-import { ListViewSettings } from 'fyo/model/types';
+import { ChangeArg, ListViewSettings } from 'fyo/model/types';
 import type { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { withoutCreate } from 'src/frappe/schema';
 import { CashCount } from './POSOpeningEntry';
 
@@ -27,6 +28,22 @@ export class POSClosingEntryDetail extends FrappeDoc {
     mobileTableFields: ['mode_of_payment', 'expected_amount', 'difference'],
     mobileLabelledFields: ['expected_amount', 'difference'],
   };
+
+  declare closing_amount?: Money;
+  declare expected_amount?: Money;
+  declare difference?: Money;
+
+  /** ERPNext's Desk works out the difference as the counted amount changes; Books' server does in its preview. */
+  override async change(arg: ChangeArg) {
+    if (isAccessoryMode() && arg.changed === 'closing_amount') {
+      const zero = this.fyo.pesa(0);
+      this.difference = (this.closing_amount ?? zero).sub(
+        this.expected_amount ?? zero
+      );
+    }
+
+    await super.change(arg);
+  }
 }
 
 /** Books POS Closing Entry, served by Frappe; its preview fills the expected, counted cash and difference amounts. */

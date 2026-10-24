@@ -5,6 +5,11 @@ import { FrappeDoc } from 'src/frappe/document';
 /** A row of cash counted by denomination. */
 export type CashCount = FrappeDoc & { denomination?: Money; count?: number };
 
+/** What the cash counters show and set of a counted row: a saved row, or a count only its total is saved of. */
+export type CashCountRow = Pick<CashCount, 'idx' | 'denomination' | 'count'> & {
+  set(fieldname: 'count', count: number): unknown;
+};
+
 /** A mode of payment's opening amount in a shift. */
 export type OpeningBalance = FrappeDoc & {
   mode_of_payment?: string;
@@ -43,6 +48,7 @@ export class POSOpeningEntry extends FrappeDoc {
   static override previewMethod = 'preview';
 
   declare period_start_date?: Date;
+  declare pos_profile?: string;
   declare opening_cash?: CashCount[];
   declare balance_details?: OpeningBalance[];
 
@@ -56,7 +62,7 @@ export class POSOpeningEntry extends FrappeDoc {
   }
 }
 
-export function getCashTotal(zero: Money, rows: CashCount[] = []): Money {
+export function getCashTotal(zero: Money, rows: CashCountRow[] = []): Money {
   return rows.reduce(
     (total, row) => total.add((row.denomination ?? zero).mul(row.count ?? 0)),
     zero

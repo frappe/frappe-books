@@ -7,7 +7,11 @@
     @closemodal="$emit('toggleModal', 'ShiftClose', false)"
   >
     <template v-if="isMobile && posClosingShiftDoc">
-      <MobileCashCount :heading="t`Closing cash`" :rows="closingCash" />
+      <MobileCashCount
+        :heading="t`Closing cash`"
+        :rows="closingCash"
+        :note="cashNote"
+      />
       <FormControl
         v-for="row in otherClosingAmounts"
         :key="row.idx"
@@ -28,7 +32,7 @@
         <div
           class="flex h-9 items-center justify-between gap-3 border-b border-outline-gray-1 px-3 text-xs-medium text-ink-gray-5"
         >
-          <span>{{ t`Method` }}</span>
+          <span>{{ methodLabel }}</span>
           <span>{{ t`Difference` }}</span>
         </div>
         <!-- One row per method, so long names and large amounts never squeeze columns. -->
@@ -67,7 +71,11 @@
       </section>
     </template>
     <div v-else-if="posClosingShiftDoc" class="flex flex-col gap-6">
-      <CashCountTable :heading="t`Count the drawer`" :rows="closingCash" />
+      <CashCountTable
+        :heading="t`Count the drawer`"
+        :rows="closingCash"
+        :note="cashNote"
+      />
 
       <section class="flex min-w-0 flex-col gap-2">
         <h3 class="text-base-medium text-ink-gray-8">
@@ -80,10 +88,10 @@
             class="grid h-8 items-center gap-2 rounded-t-6 bg-surface-gray-1 px-3 text-sm text-ink-gray-5"
             :class="amountColumns"
           >
-            <span>{{ t`Method` }}</span>
-            <span class="text-end">{{ t`Opening` }}</span>
+            <span>{{ methodLabel }}</span>
+            <span v-if="!isAccessory" class="text-end">{{ t`Opening` }}</span>
             <span class="text-end">{{ t`Expected` }}</span>
-            <span class="text-end">{{ t`Closing` }}</span>
+            <span class="text-end">{{ countedLabel }}</span>
             <span class="text-end">{{ t`Difference` }}</span>
           </div>
           <div
@@ -95,7 +103,11 @@
             <span class="truncate text-ink-gray-8">{{
               row.mode_of_payment
             }}</span>
-            <span class="truncate text-end text-ink-gray-6" dir="ltr">
+            <span
+              v-if="!isAccessory"
+              class="truncate text-end text-ink-gray-6"
+              dir="ltr"
+            >
               {{ format(row.opening_amount) }}
             </span>
             <span class="truncate text-end text-ink-gray-8" dir="ltr">
@@ -159,18 +171,24 @@ import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import { CashCount } from 'models/inventory/Point of Sale/POSOpeningEntry';
+import {
+  CashCount,
+  CashCountRow,
+  getCashTotal,
+} from 'models/inventory/Point of Sale/POSOpeningEntry';
 import {
   ClosingAmount,
   POSClosingEntry,
 } from 'models/inventory/Point of Sale/POSClosingEntry';
 import { newFrappeDoc } from 'src/frappe/documents';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
 import { t } from 'fyo';
-import type { POSShift } from 'src/utils/posShift';
+import { getCashDenominations } from 'src/utils/posSetup';
+import { getCashCounter, type POSShift } from 'src/utils/posShift';
 import { ForbiddenError } from 'fyo/utils/errors';
 
 export default defineComponent({
@@ -196,36 +214,61 @@ export default defineComponent({
   },
   emits: ['toggleModal', 'closed'],
   setup() {
+    const isAccessory = isAccessoryMode();
     return {
       isMobile,
-      amountColumns: 'grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_6.5rem_5.5rem]',
+      isAccessory,
+      // ERPNext's closing has no opening column: its expected amount includes it.
+      amountColumns: isAccessory
+        ? 'grid-cols-[minmax(0,1fr)_6.5rem_7rem_6rem]'
+        : 'grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_6.5rem_5.5rem]',
+      methodLabel: isAccessory ? t`Mode of payment` : t`Method`,
+      countedLabel: isAccessory ? t`Counted` : t`Closing`,
+      cashNote: isAccessory ? t`Only the total is saved` : '',
     };
   },
   data() {
     return {
       isValuesSeeded: false,
+      // Accessory mode saves only the counted total.
+      cashCounter: [] as CashCountRow[],
 
       posClosingShiftDoc: undefined as POSClosingEntry | undefined,
     };
   },
   computed: {
-    closingCash(): CashCount[] {
+    closingCash(): CashCountRow[] {
+      if (this.isAccessory) {
+        return this.cashCounter as CashCountRow[];
+      }
+
       return (this.posClosingShiftDoc?.closing_cash ?? []) as CashCount[];
     },
     closingAmounts(): ClosingAmount[] {
       return (this.posClosingShiftDoc?.payment_reconciliation ??
         []) as ClosingAmount[];
     },
-    /** Cash methods share the drawer count; the others are counted one by one. */
+    /**
+     * Cash methods share the drawer count; the others are counted one by one.
+     * In accessory mode the count covers the first cash method, when cash is counted.
+     */
     cashClosingAmounts(): ClosingAmount[] {
-      return this.closingAmounts.filter((row) =>
+      const cashAmounts = this.closingAmounts.filter((row) =>
         this.shift.cashMethods.includes(row.mode_of_payment as string)
       );
+      if (!this.isAccessory) {
+        return cashAmounts;
+      }
+
+      return this.closingCash.length ? cashAmounts.slice(0, 1) : [];
     },
     otherClosingAmounts(): ClosingAmount[] {
       return this.closingAmounts.filter(
         (row) => !this.cashClosingAmounts.includes(row)
       );
+    },
+    countedCash(): Money {
+      return getCashTotal(fyo.pesa(0), this.closingCash);
     },
     isOnline() {
       return !!navigator.onLine;
@@ -239,15 +282,27 @@ export default defineComponent({
         }
       },
     },
+    async countedCash() {
+      await this.setCountedCash();
+    },
   },
   methods: {
+    async prepareShift() {
+      this.isValuesSeeded = false;
+      if (this.isAccessory) {
+        await this.prepareERPNextShift();
+      } else {
+        await this.prepareBooksShift();
+      }
+
+      this.isValuesSeeded = true;
+    },
     /**
      * Counts start from the opening cash. The server's preview, again after
      * each edit, fills the expected amounts, shares the counted cash among the
      * cash methods and works out the differences.
      */
-    async prepareShift() {
-      this.isValuesSeeded = false;
+    async prepareBooksShift() {
       const openingCash = this.shift.openShift?.opening_cash ?? [];
       const closingCash = openingCash.map(({ count, denomination }) => ({
         count,
@@ -256,13 +311,39 @@ export default defineComponent({
       this.posClosingShiftDoc = newFrappeDoc(ModelNameEnum.POSClosingEntry, {
         closing_cash: closingCash,
       }) as POSClosingEntry;
+      await this.preview();
+    },
+    /**
+     * ERPNext's preview fills the shift's invoices and, per mode of payment,
+     * the expected amount, which the counted one starts at. The drawer count
+     * starts afresh, as only its total was saved.
+     */
+    async prepareERPNextShift() {
+      this.cashCounter = getCashCounter(getCashDenominations());
+      this.posClosingShiftDoc = newFrappeDoc(
+        ModelNameEnum.POSClosingEntry
+      ) as POSClosingEntry;
+      await this.posClosingShiftDoc.set(
+        'pos_opening_entry',
+        this.shift.openShift?.name ?? null
+      );
+      await this.preview();
+      await this.setCountedCash();
+    },
+    async setCountedCash() {
+      if (this.isAccessory) {
+        await this.cashClosingAmounts[0]?.set(
+          'closing_amount',
+          this.countedCash
+        );
+      }
+    },
+    async preview() {
       try {
-        await this.posClosingShiftDoc.preview();
+        await this.posClosingShiftDoc?.preview();
       } catch (error) {
         showToast({ type: 'error', message: t`${error as string}` });
       }
-
-      this.isValuesSeeded = true;
     },
     /** Colours a difference by its sign; an exact count stays gray. */
     getDifferenceClass(amount?: Money): string {

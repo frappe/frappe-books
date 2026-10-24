@@ -2,23 +2,32 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:serial_no",
  "creation": "2026-08-27 22:09:40.179902",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "item",
+  "serial_no",
+  "item_code",
   "description",
   "status",
   "company"
  ],
  "fields": [
   {
-   "fieldname": "item",
+   "fieldname": "serial_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Serial No",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "item_code",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Item",
+   "label": "Item Code",
    "options": "Books Item",
    "reqd": 1
   },
@@ -33,7 +42,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Inactive\nActive\nDelivered",
+   "options": "\nActive\nInactive\nConsumed\nDelivered\nExpired",
    "read_only": 1
   },
   {
@@ -47,10 +56,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Serial Number",
+ "name": "Books Serial No",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -96,16 +106,24 @@
  "sort_order": "DESC",
  "states": [
   {
-   "color": "Gray",
-   "title": "Inactive"
-  },
-  {
    "color": "Green",
    "title": "Active"
   },
   {
+   "color": "Gray",
+   "title": "Inactive"
+  },
+  {
+   "color": "Gray",
+   "title": "Consumed"
+  },
+  {
    "color": "Blue",
    "title": "Delivered"
+  },
+  {
+   "color": "Red",
+   "title": "Expired"
   }
  ],
  "track_changes": 1

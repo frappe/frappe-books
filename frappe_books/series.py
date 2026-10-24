@@ -23,7 +23,7 @@ NUMBER_SERIES = {
 # Named doctype: (item flag, item series field), the field holding a naming pattern such as BAT-.####
 ITEM_SERIES = {
 	"Books Batch": ("has_batch_no", "batch_number_series"),
-	"Books Serial Number": ("has_serial_no", "serial_no_series"),
+	"Books Serial No": ("has_serial_no", "serial_no_series"),
 }
 ITEM_SERIES_START = 1001
 ITEM_SERIES_DIGITS = 4

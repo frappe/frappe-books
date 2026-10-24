@@ -102,7 +102,7 @@ def _update_serial_statuses(transaction, row, cancel):
 	if row.get("to_location") and not cancel:
 		_create_serial_numbers(row["item"], serial_numbers)
 	frappe.db.set_value(
-		"Books Serial Number",
+		"Books Serial No",
 		{"name": ["in", serial_numbers]},
 		"status",
 		_serial_status(transaction, row, cancel),
@@ -111,13 +111,16 @@ def _update_serial_statuses(transaction, row, cancel):
 
 
 def _create_serial_numbers(item, serial_numbers):
-	existing = set(
-		frappe.get_all("Books Serial Number", filters={"name": ["in", serial_numbers]}, pluck="name")
-	)
+	existing = set(frappe.get_all("Books Serial No", filters={"name": ["in", serial_numbers]}, pluck="name"))
 	for serial_number in serial_numbers:
 		if serial_number not in existing:
 			frappe.get_doc(
-				{"doctype": "Books Serial Number", "name": serial_number, "item": item, "status": "Active"}
+				{
+					"doctype": "Books Serial No",
+					"serial_no": serial_number,
+					"item_code": item,
+					"status": "Active",
+				}
 			).insert(ignore_permissions=True)
 
 

@@ -44,7 +44,7 @@ export const docsPathMap: Record<string, string | undefined> = {
   StockLedger: 'books/stock-ledger',
   StockBalance: 'books/stock-balance',
   [ModelNameEnum.Batch]: 'books/batches',
-  [ModelNameEnum.SerialNumber]: 'books/serial-number',
+  [ModelNameEnum.SerialNo]: 'books/serial-number',
 
   // Entries
   Entries: 'books',

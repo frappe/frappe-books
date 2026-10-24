@@ -27,7 +27,7 @@ def validate_transfer_rows(transfers):
 def validate_batches(rows):
 	"""Check each row names a batch of its item exactly when the item uses batches."""
 	items = _item_settings(rows)
-	batch_items = _items_of("Books Batch", [row.get("batch") for row in rows])
+	batch_items = _items_of("Books Batch", "item", [row.get("batch") for row in rows])
 	for row in rows:
 		_validate_batch(row, items[row["item"]], batch_items)
 
@@ -56,7 +56,7 @@ def create_series_serial_numbers(rows):
 		serial_numbers = parse_serial_numbers(row.serial_number)
 		missing = int(abs(as_decimal(row.quantity))) - len(serial_numbers)
 		if row.item in serialised and missing > 0:
-			added = new_item_names("Books Serial Number", row.item, missing)
+			added = new_item_names("Books Serial No", row.item, missing)
 			row.serial_number = "\n".join(serial_numbers + added) or None
 
 
@@ -189,7 +189,7 @@ def _validate_batch(transfer, item, batch_items):
 
 def _validate_serial_numbers(transfers):
 	items = _item_settings(transfers)
-	serial_items = _items_of("Books Serial Number", _all_serial_numbers(transfers))
+	serial_items = _items_of("Books Serial No", "item_code", _all_serial_numbers(transfers))
 	for transfer in transfers:
 		_validate_row_serial_numbers(transfer, items[transfer["item"]], serial_items)
 	_validate_unique_serial_numbers(transfers)
@@ -340,11 +340,11 @@ def _items_with(flag, names):
 	return set(frappe.get_all("Books Item", filters={"name": ["in", sorted(names)], flag: 1}, pluck="name"))
 
 
-def _items_of(doctype, names):
-	"""Map the given batches or serial numbers to their items."""
+def _items_of(doctype, item_field, names):
+	"""Map the given batches or serial numbers to their items, held in `item_field`."""
 	names = sorted(set(filter(None, names)))
 	if not names:
 		return {}
 	return dict(
-		frappe.get_all(doctype, filters={"name": ["in", names]}, fields=["name", "item"], as_list=True)
+		frappe.get_all(doctype, filters={"name": ["in", names]}, fields=["name", item_field], as_list=True)
 	)

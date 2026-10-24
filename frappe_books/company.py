@@ -21,7 +21,7 @@ COMPANY_DOCTYPES = (
 	"Books Purchase Receipt",
 	"Books Quotation",
 	"Books Sales Invoice",
-	"Books Serial Number",
+	"Books Serial No",
 	"Books Stock Entry",
 	"Books Stock Ledger Entry",
 	"Books Item Tax Template",

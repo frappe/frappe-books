@@ -165,7 +165,7 @@ function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
     [accounting?.enableitem_group, [ModelNameEnum.ItemGroup]],
     [accounting?.enable_form_customization, [ModelNameEnum.CustomForm]],
     [inventory?.enable_batches, [ModelNameEnum.Batch]],
-    [inventory?.enable_serial_number, [ModelNameEnum.SerialNumber]],
+    [inventory?.enable_serial_number, [ModelNameEnum.SerialNo]],
     [
       inventory?.enable_point_of_sale,
       [

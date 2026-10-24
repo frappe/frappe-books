@@ -64,7 +64,7 @@
    "fieldname": "serial_number",
    "fieldtype": "Link",
    "label": "Serial Number",
-   "options": "Books Serial Number",
+   "options": "Books Serial No",
    "read_only": 1
   },
   {

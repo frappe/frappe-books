@@ -17,8 +17,8 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 		self.item = make_series_item(has_serial_no=1, serial_no_series=self.prefix)
 
 	def test_names_count_in_frappe_series_from_1001(self):
-		first = new_item_names("Books Serial Number", self.item, 2)
-		second = new_item_names("Books Serial Number", self.item, 3)
+		first = new_item_names("Books Serial No", self.item, 2)
+		second = new_item_names("Books Serial No", self.item, 3)
 
 		self.assertEqual(first + second, [f"{self.prefix}{number}" for number in range(1001, 1006)])
 		self.assertEqual(NamingSeries(f"{self.prefix}.####").get_current_value(), 1005)
@@ -26,13 +26,13 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 	def test_names_continue_from_the_series_counter(self):
 		NamingSeries(f"{self.prefix}.####").update_counter(1019)
 
-		self.assertEqual(new_item_names("Books Serial Number", self.item, 1), [f"{self.prefix}1020"])
+		self.assertEqual(new_item_names("Books Serial No", self.item, 1), [f"{self.prefix}1020"])
 
 	def test_names_skip_hand_made_serial_numbers(self):
 		taken = f"{self.prefix}1002"
-		frappe.get_doc({"doctype": "Books Serial Number", "name": taken, "item": self.item}).insert()
+		frappe.get_doc({"doctype": "Books Serial No", "serial_no": taken, "item_code": self.item}).insert()
 
-		names = new_item_names("Books Serial Number", self.item, 2)
+		names = new_item_names("Books Serial No", self.item, 2)
 
 		self.assertEqual(names, [f"{self.prefix}1001", f"{self.prefix}1003"])
 
@@ -46,7 +46,7 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 	def test_item_without_a_series_gets_no_names(self):
 		frappe.db.set_value("Books Item", self.item, "has_serial_no", 0)
 
-		self.assertEqual(new_item_names("Books Serial Number", self.item, 1), [])
+		self.assertEqual(new_item_names("Books Serial No", self.item, 1), [])
 		self.assertEqual(new_item_names("Books Batch", make_series_item(has_batch_no=1), 1), [])
 
 	def test_series_prefix_cannot_hold_url_characters(self):
@@ -63,13 +63,13 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 
 	def test_books_user_takes_names_from_the_series(self):
 		with self.set_user(ensure_user(BOOKS_USER, "Books User")):
-			names = new_item_names("Books Serial Number", self.item, 1)
+			names = new_item_names("Books Serial No", self.item, 1)
 
 		self.assertEqual(names, [f"{self.prefix}1001"])
 
 	def test_names_require_permission_to_create_serial_numbers(self):
 		with self.set_user(ensure_user(NO_ROLE_USER)):
-			self.assertRaises(frappe.PermissionError, new_item_names, "Books Serial Number", self.item, 1)
+			self.assertRaises(frappe.PermissionError, new_item_names, "Books Serial No", self.item, 1)
 
 
 class IntegrationTestSeriesBatches(IntegrationTestCase):

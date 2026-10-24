@@ -21,7 +21,7 @@ STATUS_DOCTYPES = (
 	"Books Payment",
 	"Books Stock Entry",
 	"Books Lead",
-	"Books Serial Number",
+	"Books Serial No",
 )
 
 
@@ -66,8 +66,9 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		for doctype in STATUS_DOCTYPES:
 			meta = frappe.get_meta(doctype)
 			with self.subTest(doctype=doctype):
+				options = meta.get_field("status").options.split("\n")
 				self.assertEqual(
-					[state.title for state in meta.states], meta.get_field("status").options.split("\n")
+					[state.title for state in meta.states], [option for option in options if option]
 				)
 
 	def _pay(self, amount):

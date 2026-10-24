@@ -50,9 +50,9 @@ test('item group, unit, warehouse, batch and serial number forms show what they 
     'expiry_date | Expiry Date |  | Default',
     'manufacturing_date | Manufacturing Date |  | Default',
   ]);
-  assert.deepEqual(getLayout('SerialNumber'), [
-    'name | Serial Number |  | Default',
-    'item | Item |  | Default',
+  assert.deepEqual(getLayout('SerialNo'), [
+    'serial_no | Serial No |  | Default',
+    'item_code | Item Code |  | Default',
     'description | Description | Serial Number Description | Default',
     'status | Status |  | Default',
   ]);
@@ -85,17 +85,17 @@ test('batch and serial number lists show their columns', () => {
     'expiry_date',
     'manufacturing_date',
   ]);
-  assert.deepEqual(getColumns('SerialNumber'), [
+  assert.deepEqual(getColumns('SerialNo'), [
     'name',
     'status',
-    'item',
+    'item_code',
     'description',
   ]);
 });
 
 test('a serial number status badge takes the DocType state colour', () => {
-  const [, status] = getModel('SerialNumber').getListViewSettings().columns;
-  const schema = getSchema('SerialNumber');
+  const [, status] = getModel('SerialNo').getListViewSettings().columns;
+  const schema = getSchema('SerialNo');
   assert.deepEqual(status.badge({ schema, status: 'Delivered' }), {
     label: 'Delivered',
     theme: 'blue',

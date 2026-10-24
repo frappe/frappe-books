@@ -43,7 +43,7 @@ export enum ModelNameEnum {
   SalesInvoicePayment = 'SalesInvoicePayment',
   Quotation = 'Quotation',
   QuotationItem = 'QuotationItem',
-  SerialNumber = 'SerialNumber',
+  SerialNo = 'SerialNo',
   SetupWizard = 'SetupWizard',
   ItemTaxTemplate = 'ItemTaxTemplate',
   ItemTaxTemplateDetail = 'ItemTaxTemplateDetail',

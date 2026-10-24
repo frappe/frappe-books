@@ -95,7 +95,7 @@ test('the palette lists only the lists of features that are on', () => {
     'Item Price',
     'Lead',
     'Price List',
-    'Serial Number',
+    'Serial No',
     'Stock Entry',
   ];
   try {

@@ -236,7 +236,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 
 		self.assertEqual(frappe.db.get_value("Books Batch", batch, "item"), tracked_item.name)
 		for serial_number in serials.splitlines():
-			self.assertEqual(frappe.db.get_value("Books Serial Number", serial_number, "status"), "Active")
+			self.assertEqual(frappe.db.get_value("Books Serial No", serial_number, "status"), "Active")
 
 	def test_receipt_requires_an_existing_batch(self):
 		tracked_item = make_item(

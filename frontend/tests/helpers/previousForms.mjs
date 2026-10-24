@@ -440,7 +440,7 @@ export const previousForms = {
     'StockEntryItem.transfer_unit': false,
     'StockEntryItem.batch': true,
     'Batch.item': true,
-    'SerialNumber.item': true,
+    'SerialNo.item_code': true,
     'POSSettings.inventory': true,
     'POSSettings.pos_profile': true,
     'POSSettings.cash_account': true,

@@ -4,7 +4,7 @@
 from frappe.model.document import Document
 
 
-class BooksSerialNumber(Document):
+class BooksSerialNo(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -15,8 +15,9 @@ class BooksSerialNumber(Document):
 
 		company: DF.Link | None
 		description: DF.Text | None
-		item: DF.Link
-		status: DF.Literal["Inactive", "Active", "Delivered"]
+		item_code: DF.Link
+		serial_no: DF.Data
+		status: DF.Literal["", "Active", "Inactive", "Consumed", "Delivered", "Expired"]
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Serial Number"
+	_DOCTYPE_NAME = "Books Serial No"

@@ -36,7 +36,7 @@ import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
 import { Warehouse } from './inventory/Warehouse';
 import { PurchaseReceipt } from './inventory/PurchaseReceipt';
-import { SerialNumber } from './inventory/SerialNumber';
+import { SerialNo } from './inventory/SerialNo';
 import { DeliveryNote } from './inventory/DeliveryNote';
 import { StockLedgerEntry } from './inventory/StockLedgerEntry';
 import { StockEntry } from './inventory/StockEntry';
@@ -89,7 +89,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   StockLedgerEntry,
   StockEntry,
   Batch,
-  SerialNumber,
+  SerialNo,
   CustomForm,
   POSSettings,
   POSProfile,

@@ -611,9 +611,7 @@ def account_balance(voucher, account):
 
 
 def serial_statuses(serial_numbers):
-	return set(
-		frappe.get_all("Books Serial Number", filters={"name": ["in", serial_numbers]}, pluck="status")
-	)
+	return set(frappe.get_all("Books Serial No", filters={"name": ["in", serial_numbers]}, pluck="status"))
 
 
 def transfer_balance(invoice):

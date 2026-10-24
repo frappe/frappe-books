@@ -355,6 +355,17 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this.canWrite;
   }
 
+  /** Accessory mode shows a master's Save disabled while the form is unchanged, as the design does. */
+  get showsDisabledSave(): boolean {
+    return (
+      isAccessoryMode() &&
+      !this.schema.isSubmittable &&
+      !this.schema.isChild &&
+      !this.canSave &&
+      this.canWrite
+    );
+  }
+
   get canSubmit() {
     if (!this.schema.isSubmittable || !this.can('submit')) {
       return false;

@@ -83,9 +83,9 @@
             <template v-if="group.group" #default>{{ group.group }}</template>
           </DropdownWithActions>
           <FrappeButton
-            v-if="doc.canSave"
+            v-if="doc.canSave || doc.showsDisabledSave"
             variant="solid"
-            :disabled="doc.isSyncing"
+            :disabled="doc.isSyncing || !doc.canSave"
             @click="sync"
           >
             {{ t`Save` }}

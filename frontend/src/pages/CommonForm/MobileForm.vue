@@ -118,7 +118,7 @@
     />
 
     <div class="h-10 flex-none" />
-    <MobileFooter v-if="canPrint || doc.canSave || doc.canSubmit || footerStep">
+    <MobileFooter v-if="canPrint || showsSave || doc.canSubmit || footerStep">
       <FrappeButton
         v-if="canPrint"
         class="flex-1"
@@ -128,12 +128,12 @@
         @click="$emit('print')"
       />
       <FrappeButton
-        v-if="doc.canSave"
+        v-if="showsSave"
         class="flex-1"
         size="lg"
         variant="solid"
         :label="t`Save`"
-        :disabled="doc.isSyncing"
+        :disabled="doc.isSyncing || !doc.canSave"
         @click="$emit('sync')"
       />
       <FrappeButton
@@ -276,9 +276,13 @@ const errorTabs = computed(() => {
 
 const actions = computed(() => getActionsForDoc(props.doc) as FormAction[]);
 
+const showsSave = computed(
+  () => props.doc.canSave || props.doc.showsDisabledSave
+);
+
 /** The next step runs from the footer unless saving or submitting comes first. */
 const footerStep = computed(() =>
-  props.doc.canSave || props.doc.canSubmit
+  showsSave.value || props.doc.canSubmit
     ? undefined
     : actions.value.find((action) => action.nextStep)
 );

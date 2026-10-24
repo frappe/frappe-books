@@ -5,6 +5,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.accounting.party import party_account
+from frappe_books.company import default_company
 from frappe_books.frappe_books.doctype.books_customer.books_customer import make_sales_invoice
 from frappe_books.frappe_books.doctype.books_lead import books_lead
 from frappe_books.tests.accounting import (
@@ -65,6 +67,15 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		self.assertEqual(
 			(customer.accounts[0].account, customer.default_currency), ("Debtors", company_currency())
 		)
+
+	def test_customer_account_belongs_to_the_one_company(self):
+		receivable = make_account("Company Receivable", account_type="Receivable")
+		customer = make_customer(receivable.name)
+		self.assertEqual(customer.accounts[0].company, default_company())
+		self.assertEqual(party_account("Books Customer", customer.name), receivable.name)
+
+		customer.append("accounts", {"account": receivable.name})
+		self.assertRaisesRegex(frappe.ValidationError, "only be 1 Account per Company", customer.save)
 
 	def test_stale_customer_save_cannot_reset_outstanding(self):
 		receivable = make_account("Stale Receivable", account_type="Receivable")

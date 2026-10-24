@@ -22,6 +22,7 @@ import { Payment } from './baseModels/Payment/Payment';
 import { Customer } from './baseModels/Customer/Customer';
 import { Supplier } from './baseModels/Supplier/Supplier';
 import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
+import { ItemPrice } from './baseModels/ItemPrice/ItemPrice';
 import { PriceList } from './baseModels/PriceList/PriceList';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
 import { PrintFormat } from './baseModels/PrintFormat';
@@ -80,6 +81,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   ItemEnquiry,
   CouponCode,
   PriceList,
+  ItemPrice,
   PricingRule,
   ItemTaxTemplate,
   InventorySettings,

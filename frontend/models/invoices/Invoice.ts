@@ -184,10 +184,12 @@ export abstract class Invoice extends FrappeDoc {
       ['is_group', '=', 0],
       ['account_type', '=', doc.isSales ? 'Receivable' : 'Payable'],
     ],
-    naming_series: (doc: FrappeDoc) => [['reference_type', '=', doc.schemaName]],
+    naming_series: (doc: FrappeDoc) => [
+      ['reference_type', '=', doc.schemaName],
+    ],
     price_list: (doc: FrappeDoc) => [
-      ['is_enabled', '=', 1],
-      [doc.isSales ? 'is_sales' : 'is_purchase', '=', 1],
+      ['enabled', '=', 1],
+      [doc.isSales ? 'selling' : 'buying', '=', 1],
     ],
   };
 

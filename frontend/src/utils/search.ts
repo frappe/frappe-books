@@ -4,11 +4,7 @@ import { ModelNameEnum } from 'models/types';
 import { reports } from 'reports';
 import { OptionField } from 'schemas/types';
 import type { DocValues } from 'src/frappe/api';
-import {
-  getAllSchemaNames,
-  getField,
-  getSchema,
-} from 'src/frappe/registry';
+import { getAllSchemaNames, getField, getSchema } from 'src/frappe/registry';
 import {
   getSearchables,
   searchDocuments,
@@ -46,7 +42,6 @@ interface RecentSearchItem extends Omit<SearchItem, 'group'> {
 }
 
 export type SearchItems = (DocSearchItem | SearchItem | RecentSearchItem)[];
-
 
 interface SearchFilters {
   groupFilters: Record<SearchGroup, boolean>;
@@ -156,7 +151,10 @@ function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
         ModelNameEnum.StockLedgerEntry,
       ],
     ],
-    [accounting?.enable_price_list, [ModelNameEnum.PriceList]],
+    [
+      accounting?.enable_price_list,
+      [ModelNameEnum.PriceList, ModelNameEnum.ItemPrice],
+    ],
     [accounting?.enable_pricing_rule, [ModelNameEnum.PricingRule]],
     [accounting?.enable_coupon_code, [ModelNameEnum.CouponCode]],
     [accounting?.enable_lead, [ModelNameEnum.Lead]],

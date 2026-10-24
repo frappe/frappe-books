@@ -121,6 +121,24 @@ def _item_defaults(income_account, expense_account):
 	return [{"income_account": income_account, "expense_account": expense_account}]
 
 
+def make_price_list(*prices, **values):
+	"""A selling price list, with an Item Price for each (item, unit, rate); no unit takes the item's."""
+	price_list = frappe.get_doc(
+		{"doctype": "Books Price List", "price_list_name": unique_name("Price List"), **values}
+	).insert()
+	for item, uom, rate in prices:
+		frappe.get_doc(
+			{
+				"doctype": "Books Item Price",
+				"price_list": price_list.name,
+				"item_code": item,
+				"uom": uom,
+				"price_list_rate": rate,
+			}
+		).insert()
+	return price_list
+
+
 def make_invoice(doctype, party, account, item, item_account, **values):
 	return frappe.get_doc(
 		{

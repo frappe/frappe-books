@@ -482,48 +482,50 @@ test('a customer defaults to a receivable account, a supplier to a payable one',
   ]);
 });
 
-test('the price list form shows its item prices; the list shows its use', () => {
+test('price list and item price forms show their fields; the list shows its use', () => {
   assert.deepEqual(getLayout('PriceList'), [
-    'name | Name |  | Default',
-    'is_enabled | Is Price List Enabled |  | Default',
-    'is_sales | For Sales |  | Default',
-    'is_purchase | For Purchase |  | Default',
-    'price_list_item | Item Prices |  | Item Prices',
+    'price_list_name | Price List Name |  | Default',
+    'currency | Currency |  | Default',
+    'selling | Selling |  | Default',
+    'buying | Buying |  | Default',
+    'enabled | Enabled |  | Default',
   ]);
-  assert.deepEqual(getSchema('PriceListItem').tableFields, [
-    'item',
-    'unit',
-    'rate',
+  assert.deepEqual(getLayout('ItemPrice'), [
+    'item_code | Item Code |  | Default',
+    'uom | UOM |  | Default',
+    'price_list | Price List |  | Default',
+    'currency | Currency |  | Default',
+    'selling | Selling |  | Default',
+    'buying | Buying |  | Default',
+    'price_list_rate | Rate |  | Default',
+    'valid_from | Valid From |  | Default',
+    'valid_upto | Valid Up To |  | Default',
   ]);
   const [, enabled, usage] =
     getModel('PriceList').getListViewSettings().columns;
-  const row = { is_enabled: 1, is_sales: 1, is_purchase: 1 };
+  const row = { enabled: 1, selling: 1, buying: 1 };
   assert.equal(enabled.badge(row).label, 'Enabled');
   assert.equal(enabled.badge({}).label, 'Disabled');
   assert.equal(usage.badge(row).label, 'Sales and Purchase');
-  assert.equal(usage.badge({ is_purchase: 1 }).label, 'Purchase');
+  assert.equal(usage.badge({ buying: 1 }).label, 'Purchase');
 });
 
-test("a price list row takes its item's unit from the server preview", async () => {
+test("an item price takes its item's unit from the server preview", async () => {
   respond = ({ path, body }) => {
     if (path !== '/api/v2/method/run_doc_method') {
       return { data: [] };
     }
-    const [row] = body.document.price_list_item;
-    return {
-      docs: [{ ...body.document, price_list_item: [{ ...row, unit: 'Kg' }] }],
-    };
+    return { docs: [{ ...body.document, uom: 'Kg' }] };
   };
-  const prices = newFrappeDoc('PriceList', { name: 'Retail' });
-  await prices.append('price_list_item', { item: 'Sugar' });
-  await prices.price_list_item[0].set('rate', fyo.pesa(5));
+  const price = newFrappeDoc('ItemPrice', { price_list: 'Retail' });
+  await price.set('item_code', 'Sugar');
 
-  await prices.whenFilled();
-  assert.equal(prices.price_list_item[0].unit, 'Kg');
+  await price.whenFilled();
+  assert.equal(price.uom, 'Kg');
   assert.equal(requests.at(-1).body.method, 'preview');
 });
 
-test('a price list or pricing rule row takes the unit of each item it is given', async () => {
+test('a pricing rule row takes the unit of each item it is given', async () => {
   const units = { Sugar: 'Kg', Salt: 'Gram' };
   const sent = [];
   respond = ({ path, body }) => {
@@ -531,19 +533,14 @@ test('a price list or pricing rule row takes the unit of each item it is given',
       return { data: [] };
     }
     // As the server's fetch_if_empty: an empty unit is the item's.
-    const table = body.document.price_list_item
-      ? 'price_list_item'
-      : 'applied_items';
+    const table = 'applied_items';
     const rows = body.document[table].map((row) => {
       sent.push(row.unit ?? null);
       return { ...row, unit: row.unit || units[row.item] };
     });
     return { docs: [{ ...body.document, [table]: rows }] };
   };
-  for (const [schemaName, table] of [
-    ['PriceList', 'price_list_item'],
-    ['PricingRule', 'applied_items'],
-  ]) {
+  for (const [schemaName, table] of [['PricingRule', 'applied_items']]) {
     sent.length = 0;
     const doc = newFrappeDoc(schemaName);
     await doc.append(table, { item: 'Sugar' });
@@ -598,7 +595,7 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
     false,
   ]);
   assert.deepEqual(creates('PricingRuleItem', ['item', 'unit']), [false, true]);
-  assert.deepEqual(creates('PriceListItem', ['item', 'unit']), [true, false]);
+  assert.deepEqual(creates('ItemPrice', ['item_code', 'uom']), [true, false]);
 
   const rule = newFrappeDoc('PricingRule');
   assert.equal(rule.naming_series, 'PRLE-');

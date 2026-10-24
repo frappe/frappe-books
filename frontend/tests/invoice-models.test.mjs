@@ -512,13 +512,13 @@ test('links filter by the doctypes they point to', async () => {
     ['reference_type', '=', 'SalesInvoice'],
   ]);
   assert.deepEqual(filters.price_list(purchase), [
-    ['is_enabled', '=', 1],
-    ['is_purchase', '=', 1],
+    ['enabled', '=', 1],
+    ['buying', '=', 1],
   ]);
   const quote = newInvoice('Quotation');
   assert.deepEqual(frappeModels.Quotation.filters.price_list(quote), [
-    ['is_enabled', '=', 1],
-    ['is_sales', '=', 1],
+    ['enabled', '=', 1],
+    ['selling', '=', 1],
   ]);
 });
 
@@ -557,8 +557,8 @@ test('a record created from a link takes the values its filters choose', () => {
     account_type: 'Receivable',
   });
   assert.deepEqual(getNewDocValues('PriceList', filters.price_list(sale)), {
-    is_enabled: true,
-    is_sales: true,
+    enabled: true,
+    selling: true,
   });
 });
 

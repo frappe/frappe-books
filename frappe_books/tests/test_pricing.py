@@ -4,6 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, nowdate
 
+from frappe_books.accounting.money import company_currency
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
 	start_pos_shift,
 )
@@ -14,6 +15,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	make_price_list,
 	make_supplier,
 	set_company_value,
 	unique_name,
@@ -420,15 +422,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 	def test_empty_rate_comes_from_price_list_in_invoice_currency(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
 		item = make_item(self.income.name, self.expense.name, standard_rate=100)
-		price_list = frappe.get_doc(
-			{
-				"doctype": "Books Price List",
-				"name": unique_name("Price List"),
-				"is_enabled": 1,
-				"is_sales": 1,
-				"price_list_item": [{"item": item.name, "unit": "Unit", "rate": 90}],
-			}
-		).insert()
+		price_list = make_price_list((item.name, "Unit", 90))
 		for price_list_name, rate in ((price_list.name, 45), (None, 50)):
 			with self.subTest(price_list=price_list_name):
 				invoice = make_invoice(
@@ -448,9 +442,9 @@ class IntegrationTestPricing(IntegrationTestCase):
 		payable = make_account("Commerce Payable", root_type="Liability", account_type="Payable")
 		supplier = make_supplier(payable.name)
 		for values, doctype, party, account, message in (
-			({"is_enabled": 0}, "Books Sales Invoice", self.party, self.receivable, "is disabled"),
+			({"enabled": 0}, "Books Sales Invoice", self.party, self.receivable, "is disabled"),
 			(
-				{"is_sales": 0, "is_purchase": 1},
+				{"selling": 0, "buying": 1},
 				"Books Quotation",
 				self.party,
 				self.receivable,
@@ -458,9 +452,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			),
 			({}, "Books Purchase Invoice", supplier, payable, "not for Purchases"),
 		):
-			price_list = frappe.get_doc(
-				{"doctype": "Books Price List", "name": unique_name("Price List"), **values}
-			).insert()
+			price_list = make_price_list(**values)
 			with self.subTest(doctype=doctype), self.assertRaisesRegex(frappe.ValidationError, message):
 				make_invoice(
 					doctype,
@@ -482,15 +474,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 		)
 		for unit, price, rate in ((box.name, 120, 10), ("Unit", 9, 9)):
 			with self.subTest(unit=unit):
-				price_list = frappe.get_doc(
-					{
-						"doctype": "Books Price List",
-						"name": unique_name("Price List"),
-						"is_enabled": 1,
-						"is_sales": 1,
-						"price_list_item": [{"item": item.name, "unit": unit, "rate": price}],
-					}
-				).insert()
+				price_list = make_price_list((item.name, unit, price))
 				invoice = make_invoice(
 					"Books Sales Invoice",
 					self.party.name,
@@ -515,32 +499,15 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual(rule.applied_items[0].unit, "Unit")
 		self.assertEqual(invoice.items[0].pricing_rule, rule.name)
 
-	def test_price_list_holds_one_price_per_item_and_unit(self):
-		price_list = frappe.get_doc(
-			{
-				"doctype": "Books Price List",
-				"name": unique_name("Price List"),
-				"price_list_item": [
-					{"item": self.item.name, "rate": 90},
-					{"item": self.item.name, "rate": 80},
-				],
-			}
-		)
-		with self.assertRaisesRegex(frappe.ValidationError, "already has a price"):
-			price_list.insert()
+	def test_price_list_holds_one_price_per_item_unit_and_start(self):
+		price_list = make_price_list((self.item.name, None, 90))
+		with self.assertRaisesRegex(frappe.ValidationError, "Item Price appears multiple times"):
+			make_item_price(price_list.name, self.item.name, price_list_rate=80)
 
-	def test_price_list_item_without_unit_gets_the_item_unit(self):
-		price_list = frappe.get_doc(
-			{
-				"doctype": "Books Price List",
-				"name": unique_name("Price List"),
-				"is_enabled": 1,
-				"is_sales": 1,
-				"price_list_item": [{"item": self.item.name, "rate": 90}],
-			}
-		).insert()
+	def test_item_price_without_unit_gets_the_item_unit(self):
+		price_list = make_price_list()
 
-		self.assertEqual(price_list.price_list_item[0].unit, "Unit")
+		self.assertEqual(make_item_price(price_list.name, self.item.name).uom, "Unit")
 
 	def test_stale_coupon_save_cannot_reset_usage(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
@@ -663,20 +630,19 @@ class IntegrationTestPricing(IntegrationTestCase):
 			}
 		).insert()
 
-	def test_price_list_and_pricing_rule_previews_fill_units_without_saving(self):
+	def test_price_list_and_pricing_rule_previews_fill_values_without_saving(self):
 		sugar = make_item(self.income.name, self.expense.name, stock_uom="Kg")
 		price_list = frappe.new_doc("Books Price List")
-		price_list.name = unique_name("Preview Prices")
-		price_list.append("price_list_item", {"item": sugar.name, "rate": 5})
+		price_list.price_list_name = unique_name("Preview Prices")
 		rule = frappe.new_doc("Books Pricing Rule")
 		rule.append("applied_items", {"item": sugar.name})
 
 		price_list.preview()
 		rule.preview()
 
-		self.assertEqual(price_list.price_list_item[0].unit, "Kg")
+		self.assertEqual(price_list.currency, company_currency())
 		self.assertEqual(rule.applied_items[0].unit, "Kg")
-		self.assertFalse(frappe.db.exists("Books Price List", price_list.name))
+		self.assertFalse(frappe.db.exists("Books Price List", price_list.price_list_name))
 
 	def test_previews_need_the_right_to_make_the_document(self):
 		with self.set_user(ensure_user("books-pricing-preview@example.com")):
@@ -696,3 +662,15 @@ class IntegrationTestPricing(IntegrationTestCase):
 			**values,
 		}
 		return frappe.get_doc(data).insert()
+
+
+def make_item_price(price_list, item, **values):
+	return frappe.get_doc(
+		{
+			"doctype": "Books Item Price",
+			"price_list": price_list,
+			"item_code": item,
+			"price_list_rate": 90,
+			**values,
+		}
+	).insert()

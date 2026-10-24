@@ -92,6 +92,7 @@ test('the palette lists only the lists of features that are on', () => {
   const featureLists = [
     'Batch',
     'Custom Form',
+    'Item Price',
     'Lead',
     'Price List',
     'Serial Number',

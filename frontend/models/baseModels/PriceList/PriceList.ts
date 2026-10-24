@@ -4,21 +4,20 @@ import {
   getPriceListStatusColumn,
 } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
-import { PriceListItem } from './PriceListItem';
 
-/** Books Price List, served by Frappe. Its preview fills each row's unit from the item. */
+/** Books Price List, served by Frappe. Its preview fills the company currency; its prices are Item Prices. */
 export class PriceList extends FrappeDoc {
   static override doctype = 'Books Price List';
-  static override presentation = {
-    label: 'Price List',
-    nameField: { label: 'Name' },
-  };
+  static override presentation = { label: 'Price List' };
   static override previewMethod = 'preview';
-  static override rowModels = { price_list_item: PriceListItem };
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', getIsDocEnabledColumn(), getPriceListStatusColumn()],
+      columns: [
+        'name',
+        getIsDocEnabledColumn('enabled'),
+        getPriceListStatusColumn(),
+      ],
     };
   }
 }

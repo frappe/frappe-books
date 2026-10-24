@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from frappe_books.accounting.money import company_currency
 from frappe_books.permissions import check_preview_permission
 
 
@@ -17,31 +18,41 @@ class BooksPriceList(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_price_list_item.books_price_list_item import (
-			BooksPriceListItem,
-		)
-
-		is_enabled: DF.Check
-		is_purchase: DF.Check
-		is_sales: DF.Check
-		price_list_item: DF.Table[BooksPriceListItem]
+		buying: DF.Check
+		currency: DF.Link
+		enabled: DF.Check
+		price_list_name: DF.Data
+		selling: DF.Check
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Price List"
 
+	def before_validate(self):
+		self.set_missing_values()
+
+	def set_missing_values(self):
+		self.currency = self.currency or company_currency()
+
 	@frappe.whitelist()
 	def preview(self):
-		"""Fill each row's unit from its item, as a save would, for the form to show it."""
+		"""Fill the currency a save would fill, without saving, for the form to show it."""
 		check_preview_permission(self)
-		for row in self.price_list_item:
-			row.get_invalid_links()
+		self.set_missing_values()
 
 	def validate(self):
-		"""One price per item and unit, so the rate an invoice gets is never ambiguous."""
-		priced = set()
-		for row in self.price_list_item:
-			if (row.item, row.unit) in priced:
-				frappe.throw(
-					_("Row {0}: {1} already has a price in {2}.").format(row.idx, row.item, row.unit)
-				)
-			priced.add((row.item, row.unit))
+		# Books rates are in the company currency.
+		if self.currency != company_currency():
+			frappe.throw(
+				_("Price List {0} must be in the company currency {1}.").format(self.name, company_currency())
+			)
+
+	def on_update(self):
+		"""Its prices keep the currency and sides of the list, as ERPNext keeps them."""
+		item_price = frappe.qb.DocType("Books Item Price")
+		(
+			frappe.qb.update(item_price)
+			.set(item_price.currency, self.currency)
+			.set(item_price.buying, self.buying)
+			.set(item_price.selling, self.selling)
+			.where(item_price.price_list == self.name)
+		).run()

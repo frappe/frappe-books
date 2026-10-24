@@ -57,13 +57,26 @@ def standard_rates(invoice):
 		)
 	}
 	if invoice.price_list and frappe.db.get_single_value("Books Accounting Settings", "enable_price_list"):
-		for row in frappe.get_all(
-			"Books Price List Item",
-			filters={"parent": invoice.price_list, "item": ["in", items]},
-			fields=["item", "unit", "rate"],
-		):
-			rates[row.item, row.unit] = row.rate
+		for price in _item_prices(invoice.price_list, items, invoice.date):
+			rates[price.item_code, price.uom] = price.price_list_rate
 	return rates
+
+
+def _item_prices(price_list, items, date):
+	"""The list's Item Prices valid on `date`, latest start last, so it wins as ERPNext's does."""
+	date = frappe.utils.getdate(date)
+	prices = frappe.get_all(
+		"Books Item Price",
+		filters={"price_list": price_list, "item_code": ["in", items]},
+		fields=["item_code", "uom", "price_list_rate", "valid_from", "valid_upto"],
+	)
+	valid = [
+		price
+		for price in prices
+		if (not price.valid_from or price.valid_from <= date)
+		and (not price.valid_upto or date <= price.valid_upto)
+	]
+	return sorted(valid, key=lambda price: price.valid_from or date.min)
 
 
 def validate_price_list(invoice):
@@ -73,11 +86,9 @@ def validate_price_list(invoice):
 	"""
 	if not invoice.price_list or invoice.get("return_against"):
 		return
-	side = "is_purchase" if invoice.is_purchase else "is_sales"
-	price_list = frappe.db.get_value(
-		"Books Price List", invoice.price_list, ["is_enabled", side], as_dict=True
-	)
-	if not price_list.is_enabled:
+	side = "buying" if invoice.is_purchase else "selling"
+	price_list = frappe.db.get_value("Books Price List", invoice.price_list, ["enabled", side], as_dict=True)
+	if not price_list.enabled:
 		frappe.throw(_("Price List {0} is disabled.").format(invoice.price_list))
 	if not price_list[side]:
 		frappe.throw(

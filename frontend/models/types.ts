@@ -30,7 +30,7 @@ export enum ModelNameEnum {
   PaymentMethod = 'PaymentMethod',
   PaymentFor = 'PaymentFor',
   PriceList = 'PriceList',
-  PriceListItem = 'PriceListItem',
+  ItemPrice = 'ItemPrice',
   PricingRule = 'PricingRule',
   PricingRuleItem = 'PricingRuleItem',
   PricingRuleDetail = 'PricingRuleDetail',

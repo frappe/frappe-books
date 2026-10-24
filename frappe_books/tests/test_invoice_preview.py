@@ -9,6 +9,7 @@ from frappe_books.tests.accounting import (
 	make_account,
 	make_customer,
 	make_item,
+	make_price_list,
 	make_tax,
 	set_company_value,
 	unique_name,
@@ -155,15 +156,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 	def _invoice_values(self):
 		free_item = make_item(self.income.name, self.expense.name)
 		bundle_item = make_item(self.income.name, self.expense.name, standard_rate=50)
-		price_list = frappe.get_doc(
-			{
-				"doctype": "Books Price List",
-				"name": unique_name("Preview Prices"),
-				"is_enabled": 1,
-				"is_sales": 1,
-				"price_list_item": [{"item": self.item.name, "unit": "Unit", "rate": 80}],
-			}
-		).insert()
+		price_list = make_price_list((self.item.name, "Unit", 80))
 		coupon_rule = self._pricing_rule(
 			self.item, is_coupon_code_based=1, price_discount_type="percentage", discount_percentage=25
 		)

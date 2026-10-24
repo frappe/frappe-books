@@ -109,7 +109,8 @@ export function getMakeStockTransferAction(
   return getMappedDocAction(fyo, {
     label,
     group: fyo.t`Create`,
-    condition: (doc: FrappeDoc) => doc.isSubmitted && !!doc.stock_not_transferred,
+    condition: (doc: FrappeDoc) =>
+      doc.isSubmitted && !!doc.stock_not_transferred,
     target: (doc: FrappeDoc) => {
       const invoice = doc as InvoiceDoc;
       return [invoice.stockTransferSchemaName, invoice.stockTransferMapper];
@@ -279,7 +280,9 @@ export function getLeadStatusColumn(): ColumnConfig {
     fieldtype: 'Select',
     badge(doc) {
       const status = String(doc.status ?? '');
-      return getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' };
+      return (
+        getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' }
+      );
     },
   };
 }
@@ -312,7 +315,10 @@ export function getStateBadge(
   const option = (field as OptionField).options.find(
     ({ value }) => value === status
   );
-  return { label: option?.label ?? status, theme: stateThemes[color] ?? 'gray' };
+  return {
+    label: option?.label ?? status,
+    theme: stateThemes[color] ?? 'gray',
+  };
 }
 
 /** Unsaved and docstatus badges, which Frappe's desk also draws without states. */
@@ -375,7 +381,9 @@ export function getSerialNumberStatusColumn(): ColumnConfig {
     fieldtype: 'Select',
     badge(doc) {
       const status = typeof doc.status === 'string' ? doc.status : 'Inactive';
-      return getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' };
+      return (
+        getStateBadge(doc.schema, status) ?? { label: status, theme: 'gray' }
+      );
     },
   };
 }
@@ -385,7 +393,7 @@ export function getPriceListStatusColumn(): ColumnConfig {
     label: t`Enabled For`,
     fieldname: 'enabledFor',
     fieldtype: 'Select',
-    badge({ is_sales: isSales, is_purchase: isPurchase }) {
+    badge({ selling: isSales, buying: isPurchase }) {
       let label = t`None`;
 
       if (isSales && isPurchase) {
@@ -401,13 +409,14 @@ export function getPriceListStatusColumn(): ColumnConfig {
   };
 }
 
-export function getIsDocEnabledColumn(): ColumnConfig {
+/** A badge of whether the document is enabled, by its check `fieldname`. */
+export function getIsDocEnabledColumn(fieldname = 'is_enabled'): ColumnConfig {
   return {
     label: t`Enabled`,
     fieldname: 'enabled',
     fieldtype: 'Data',
     badge(doc) {
-      if (doc.is_enabled) {
+      if (doc[fieldname]) {
         return { theme: 'green', label: t`Enabled` };
       }
 

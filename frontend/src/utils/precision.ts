@@ -13,7 +13,7 @@ const NUMBER_FORMAT_DECIMALS: Record<string, string> = {
 };
 
 /** Frappe's system defaults in the session boot, which Desk reads its number precisions from. */
-function getSysDefaults() {
+export function getSysDefaults() {
   return globalThis.window?.frappe?.boot?.sysdefaults ?? {};
 }
 

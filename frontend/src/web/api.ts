@@ -172,6 +172,7 @@ declare global {
           currency_precision?: string;
           number_format?: string;
           rounding_method?: string;
+          time_format?: string;
         };
         /** Added by `frappe_books.boot.extend_bootinfo`. */
         books?: {

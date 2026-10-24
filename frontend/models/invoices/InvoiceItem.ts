@@ -97,7 +97,7 @@ export class InvoiceItem extends FrappeDoc {
       'income_account',
       'expense_account',
     ]),
-    fileFields: FILE_FIELDS,
+    fileFields: withTypedRate(FILE_FIELDS),
   };
   // The server prices the row and derives the other quantity again.
   static override refills = {
@@ -315,8 +315,8 @@ export class QuotationItem extends InvoiceItem {
     quickEditFields: QUICK_EDIT_FIELDS.filter(
       (fieldname) => !NOT_QUOTED.includes(fieldname)
     ),
-    fileFields: FILE_FIELDS.filter(
-      (fieldname) => !NOT_QUOTED.includes(fieldname)
+    fileFields: withTypedRate(
+      FILE_FIELDS.filter((fieldname) => !NOT_QUOTED.includes(fieldname))
     ),
   };
 }

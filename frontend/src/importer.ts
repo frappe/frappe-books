@@ -13,6 +13,7 @@ import {
   TargetField,
 } from 'schemas/types';
 import { getDocType } from 'src/frappe/doctypes';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { getFileFields, getSchema } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
 import { toDocValue, toFrappeValue } from 'src/frappe/values';
@@ -679,7 +680,8 @@ function getTemplateField(
   return {
     ...field,
     readOnly: false,
-    required: !schema.isChild && (field.required || field.fieldname === 'name'),
+    required:
+      !schema.isChild && (isFilledByUser(field) || field.fieldname === 'name'),
     schemaName: schema.name,
     schemaLabel: schema.label,
     fieldKey: `${schema.name}.${field.fieldname}`,
@@ -710,11 +712,19 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
     return true;
   }
 
-  if (field.readOnly && !field.required) {
+  if (field.readOnly && !isFilledByUser(field)) {
     return true;
   }
 
   return false;
+}
+
+/**
+ * Whether a file must give the field. ERPNext fills many of its mandatory
+ * fields on save, so accessory mode leaves the check to its Data Import.
+ */
+function isFilledByUser(field: Field): boolean {
+  return !!field.required && !isAccessoryMode();
 }
 
 /**

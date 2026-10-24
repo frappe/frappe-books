@@ -74,21 +74,31 @@ export function getFileFields(schemaName: string): Field[] {
     return fields;
   }
 
+  // Accessory mode adds the ERPNext fields More details holds.
   const listed = getFields(schemaName, fileFields);
   const rest = fields.filter(
-    (field) => (field.isCustom || field.meta) && !listed.includes(field)
+    (field) =>
+      (field.isCustom || field.meta || field.moreDetails) &&
+      !listed.includes(field)
   );
   return [...listed, ...rest];
 }
 
 /**
  * Accessory mode leaves out ERPNext fields its forms show only while mandatory
- * and empty, but keeps the mandatory ones with no default, which imports need.
+ * and empty, but keeps the mandatory ones a user fills, with no default, which
+ * imports need. ERPNext fills read-only and hidden ones.
  */
 function isShownInFiles(field: Field): boolean {
+  if (field.moreDetails !== 'ifMissing') {
+    return true;
+  }
+
   return (
-    field.moreDetails !== 'ifMissing' ||
-    (!!field.required && getIsNullOrUndef(field.default))
+    !!field.required &&
+    !field.readOnly &&
+    !field.hidden &&
+    getIsNullOrUndef(field.default)
   );
 }
 

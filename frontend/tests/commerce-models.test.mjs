@@ -411,6 +411,36 @@ test('a primary contact or address is picked from those linked to the party', as
   assert.ok(!getExportFields('Customer').some((f) => f.insertOnly));
 });
 
+test('a primary contact or address card shows its record', () => {
+  const contact = getModel('Contact').linkCard.getContent({
+    name: 'Asha-Asha',
+    full_name: 'Asha',
+    email_id: 'asha@example.com',
+    mobile_no: null,
+  });
+  assert.deepEqual(contact, {
+    title: 'Asha',
+    lines: [{ icon: 'lucide-mail', text: 'asha@example.com' }],
+  });
+
+  const address = getModel('Address').linkCard.getContent({
+    name: 'Asha-Billing',
+    address_line1: '12 Harbour Road',
+    address_line2: 'Unit 4',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411001',
+    country: 'India',
+  });
+  assert.deepEqual(address, {
+    title: 'Asha-Billing',
+    lines: [
+      { icon: 'lucide-map-pin', text: '12 Harbour Road, Unit 4' },
+      { text: 'Pune, Maharashtra 411001, India' },
+    ],
+  });
+});
+
 test('a customer shows loyalty fields only when the program is on', async () => {
   fyo.singles.AccountingSettings = {};
   const customer = newFrappeDoc('Customer');

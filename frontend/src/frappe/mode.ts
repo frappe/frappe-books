@@ -15,8 +15,13 @@ export function getActiveDoctype(Model: {
   }
 
   return Model.erpnextDoctype === undefined
-    ? Model.doctype.replace(/^Books /, '')
+    ? toActiveDoctype(Model.doctype)
     : Model.erpnextDoctype;
+}
+
+/** A Books doctype a value names, e.g. a party type, as the current mode names it. */
+export function toActiveDoctype(booksDoctype: string): string {
+  return isAccessoryMode() ? booksDoctype.replace(/^Books /, '') : booksDoctype;
 }
 
 /** ERPNext's logo, as its app data in the boot gives it. */

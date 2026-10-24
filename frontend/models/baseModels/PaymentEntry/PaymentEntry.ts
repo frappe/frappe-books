@@ -1,3 +1,4 @@
+import { toActiveDoctype } from 'src/frappe/mode';
 import { Fyo } from 'fyo';
 import {
   Action,
@@ -20,8 +21,8 @@ const LEDGER: Filter = ['is_group', '=', 0];
 
 /** The party types a payment or journal row takes, labelled as Books names them. */
 export const PARTY_TYPE_OPTIONS = [
-  { value: 'Books Customer', label: 'Customer' },
-  { value: 'Books Supplier', label: 'Supplier' },
+  { value: toActiveDoctype('Books Customer'), label: 'Customer' },
+  { value: toActiveDoctype('Books Supplier'), label: 'Supplier' },
 ];
 
 /**

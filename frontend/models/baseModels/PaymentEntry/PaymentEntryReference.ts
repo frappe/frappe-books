@@ -1,3 +1,4 @@
+import { toActiveDoctype } from 'src/frappe/mode';
 import { FiltersMap } from 'fyo/model/types';
 import type { Filter } from 'src/frappe/api';
 import { FrappeDoc } from 'src/frappe/document';
@@ -10,8 +11,14 @@ export class PaymentEntryReference extends FrappeDoc {
     fields: {
       reference_doctype: {
         options: [
-          { value: 'Books Sales Invoice', label: 'Sales Invoice' },
-          { value: 'Books Purchase Invoice', label: 'Purchase Invoice' },
+          {
+            value: toActiveDoctype('Books Sales Invoice'),
+            label: 'Sales Invoice',
+          },
+          {
+            value: toActiveDoctype('Books Purchase Invoice'),
+            label: 'Purchase Invoice',
+          },
         ],
       },
       reference_name: { create: false },

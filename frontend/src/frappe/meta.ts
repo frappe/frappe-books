@@ -62,16 +62,35 @@ export interface DocTypeMeta {
   translated_doctype?: number;
 }
 
+/** Where accessory mode forms put the ERPNext fields that have no Books position. */
+export interface AccessoryLayoutMeta {
+  /** The end tab of each custom field, by doctype and fieldname: `custom`, `other` or an app's title. */
+  tabs: Record<string, Record<string, string> | undefined>;
+  /** Installed apps' titles in install order, which orders the app tabs. */
+  app_titles: string[];
+  /** Fields More details shows, by form doctype, then table fieldname ('' for the document's own). */
+  picks: Record<string, Record<string, string[] | undefined> | undefined>;
+}
+
 /** What /books builds its forms from: the meta of each doctype and its tables, and custom field placements. */
 export interface BooksMeta {
   metas: DocTypeMeta[];
   /** Where Books Custom Forms put custom fields, by doctype and fieldname. */
   placements: Record<string, Placements | undefined>;
+  /** In accessory mode, with the Books doctypes whose positions lay out the ERPNext ones. */
+  accessory?: AccessoryLayoutMeta;
 }
 
-/** The meta of the doctypes, as Frappe's getdoctype sends it, in one request. */
-export async function getBooksMeta(doctypes: string[]): Promise<BooksMeta> {
+/**
+ * The meta of the doctypes, as Frappe's getdoctype sends it, in one request.
+ * In accessory mode, `layouts` are the Books twins that lay out the ERPNext `doctypes`.
+ */
+export async function getBooksMeta(
+  doctypes: string[],
+  layouts?: string[]
+): Promise<BooksMeta> {
   return await call<BooksMeta>('frappe_books.meta.get_books_meta', {
     doctypes,
+    layouts,
   });
 }

@@ -78,6 +78,8 @@ export interface BaseField {
   filters?: Filter[]; // A Link's own search filters
   linkFilters?: Filter[]; // A Link's search filters, from its DocField's link_filters
   getOptions?: () => Promise<{ label: string; value: string }[]>;
+  moreDetails?: 'picked' | 'ifMissing'; // Accessory mode: an ERPNext field with no Books position, in More details when picked or while mandatory and empty
+  appTab?: string; // Accessory mode: the end tab of a custom field, `custom`, `other` or its app's title
   rows?: number; // UI Facing config, number of rows for Text field (default 3)
 }
 

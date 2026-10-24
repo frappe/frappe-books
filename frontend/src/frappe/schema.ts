@@ -7,6 +7,12 @@ import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { Filter } from './api';
 import type { DocField, DocTypeMeta } from './meta';
 import { getAccessoryCompany, isAccessoryMode } from './mode';
+import {
+  DEFAULT_SECTION,
+  getPositionedFields,
+  layOutAccessoryFields,
+  type AccessoryLayout,
+} from './accessoryLayout';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
 export interface Presentation {
@@ -106,10 +112,10 @@ export interface SchemaContext {
   /** The user's roles, which decide the permission levels they can read and write. */
   roles: string[];
   placements: Placements;
+  /** Accessory mode: the Books twin's layout of an ERPNext DocType. */
+  layout?: AccessoryLayout;
 }
 
-const LAYOUT_FIELDTYPES = ['Section Break', 'Column Break', 'Tab Break'];
-const DEFAULT_SECTION = 'Default';
 // Fields every Books document has that the server sets, e.g. the one company it belongs to.
 // An ERPNext document keeps its company, hidden, as the one accessory mode works on.
 const SERVER_FIELDS = ['company'];
@@ -159,16 +165,23 @@ export function toSchema(
     mobileTableFields: presentation.mobileTableFields,
     mobileRowDetail: presentation.mobileRowDetail,
     mobileLabelledFields: presentation.mobileLabelledFields,
-    tableFields:
-      presentation.tableFields ??
-      meta.fields
-        .filter((field) => field.in_list_view)
-        .map((field) => field.fieldname),
+    tableFields: presentation.tableFields ?? getListViewFields(meta, context),
     isChild: !!meta.istable,
     isSingle: !!meta.issingle,
     isSubmittable: !!meta.is_submittable,
     isTree: !!meta.is_tree,
   };
+}
+
+/** The in_list_view columns; accessory mode takes the Books twin's that ERPNext has. */
+function getListViewFields(
+  meta: DocTypeMeta,
+  context: SchemaContext
+): string[] {
+  const fieldnames = new Set(meta.fields.map(({ fieldname }) => fieldname));
+  return (context.layout?.meta ?? meta).fields
+    .filter((field) => field.in_list_view && fieldnames.has(field.fieldname))
+    .map((field) => field.fieldname);
 }
 
 /** The field that names a document of a DocType named `field:<fieldname>`. */
@@ -177,7 +190,10 @@ export function getNamingField(meta: DocTypeMeta): string | undefined {
   return rule.toLowerCase() === 'field' ? fieldname : undefined;
 }
 
-/** Fields in DocType order; custom fields placed by a Books Custom Form come last, as Books adds them. */
+/**
+ * Fields in DocType order; custom fields placed by a Books Custom Form come
+ * last, as Books adds them. Accessory mode lays them out by the Books twin.
+ */
 function getDocFields(
   meta: DocTypeMeta,
   context: SchemaContext,
@@ -190,36 +206,32 @@ function getDocFields(
     fields: presentation.fields ?? {},
     states: getStates(meta),
   };
-  const fields: Field[] = [];
-  const placed: Field[] = [];
-  let tab: string | undefined;
-  let section = DEFAULT_SECTION;
   const omitted = [
     ...(isAccessoryMode() ? [] : SERVER_FIELDS),
     ...(presentation.omitFields ?? []),
   ];
-  for (const docfield of meta.fields) {
-    if (omitted.includes(docfield.fieldname)) {
-      continue;
-    }
+  const shown = {
+    ...meta,
+    fields: meta.fields.filter((field) => !omitted.includes(field.fieldname)),
+  };
+  const convert = (docfield: DocField) => toField(docfield, fieldContext);
+  if (context.layout) {
+    return layOutAccessoryFields(shown, context.layout, convert);
+  }
 
-    if (docfield.fieldtype === 'Tab Break') {
-      tab = docfield.label;
-      section = DEFAULT_SECTION;
-    } else if (docfield.fieldtype === 'Section Break') {
-      section = docfield.label || DEFAULT_SECTION;
-    } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
-      const field = toField(docfield, fieldContext);
-      const placement = context.placements[docfield.fieldname];
-      if (placement) {
-        placed.push({
-          ...field,
-          section: placement.section || DEFAULT_SECTION,
-          tab: placement.tab || undefined,
-        });
-      } else {
-        fields.push({ ...field, section, tab });
-      }
+  const fields: Field[] = [];
+  const placed: Field[] = [];
+  for (const { docfield, section, tab } of getPositionedFields(shown)) {
+    const field = convert(docfield);
+    const placement = context.placements[docfield.fieldname];
+    if (placement) {
+      placed.push({
+        ...field,
+        section: placement.section || DEFAULT_SECTION,
+        tab: placement.tab || undefined,
+      });
+    } else {
+      fields.push({ ...field, section, tab });
     }
   }
 
@@ -274,6 +286,8 @@ function toField(docfield: DocField, context: FieldContext): Field {
     field.target = getTableSchemaName(docfield.options!);
   } else if (properties.target) {
     field.target = schemaNames[properties.target] ?? properties.target;
+    // Books has no form to create a record of a doctype it does not show, like an ERPNext Cost Center.
+    field.create &&= !!schemaNames[properties.target];
   }
 
   return field;

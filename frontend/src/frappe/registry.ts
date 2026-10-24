@@ -14,6 +14,8 @@ import {
 } from './doctypes';
 import { isTableDocField } from './fieldProperties';
 import { getOpenFrappeDocs } from './documents';
+import { setAppTitles, type AccessoryLayout } from './accessoryLayout';
+import { isAccessoryMode } from './mode';
 import { getBooksMeta, type BooksMeta, type DocTypeMeta } from './meta';
 import {
   getNamingField,
@@ -28,8 +30,7 @@ const QUICK_VIEW_SKIPPED_FIELDTYPES = ['Table', 'AttachImage', 'Attachment'];
 /** Loads the meta of every model's schema in one request. Screens read it synchronously after this. */
 export async function loadFrappeDocTypes() {
   const models = getFrappeModels();
-  const doctypes = models.map(([, Model]) => getModelDoctype(Model));
-  setDocTypes(models, await getBooksMeta(doctypes));
+  setDocTypes(models, await getModelsMeta(models));
 
   fyo.observer.on('sync:CustomForm', reloadCustomized);
   fyo.observer.on('delete:CustomForm', reloadCustomized);
@@ -141,16 +142,40 @@ export function getModel(schemaName: string): typeof FrappeDoc | undefined {
   return isFrappeBacked(schemaName) ? getDocType(schemaName).Model : undefined;
 }
 
+/** The meta of the models' doctypes; in accessory mode with the Books twins that lay them out. */
+async function getModelsMeta(models: [string, FrappeModel][]) {
+  const doctypes = models.map(([, Model]) => getModelDoctype(Model));
+  const layouts = models
+    .map(([, Model]) => getLayoutDoctype(Model))
+    .filter((doctype): doctype is string => !!doctype);
+  return await getBooksMeta(doctypes, layouts.length ? layouts : undefined);
+}
+
+/** The Books twin whose positions lay out the ERPNext doctype a model shows in accessory mode. */
+function getLayoutDoctype(Model: FrappeModel): string | undefined {
+  const doctype = getModelDoctype(Model);
+  return isAccessoryMode() && doctype !== Model.doctype
+    ? Model.doctype
+    : undefined;
+}
+
 /** Stores each model's doctype and tables, as their meta and the custom field placements make them. */
-function setDocTypes(
-  models: [string, FrappeModel][],
-  { metas, placements }: BooksMeta
-) {
-  const byName = new Map(metas.map((meta) => [meta.name, meta]));
+function setDocTypes(models: [string, FrappeModel][], booksMeta: BooksMeta) {
+  const byName = new Map(booksMeta.metas.map((meta) => [meta.name, meta]));
+  const { placements } = booksMeta;
+  setAppTitles(booksMeta.accessory?.app_titles ?? []);
   for (const [schemaName, Model] of models) {
     const meta = byName.get(getModelDoctype(Model))!;
-    const docType = toDocType(meta, schemaName, Model, placements[meta.name]);
-    docType.tables = getTables(meta, byName, Model, placements);
+    const layoutMeta = byName.get(getLayoutDoctype(Model) ?? '');
+    const layout = layoutMeta && getLayout(meta, layoutMeta, '', booksMeta);
+    const docType = toDocType(
+      meta,
+      schemaName,
+      Model,
+      placements[meta.name],
+      layout
+    );
+    docType.tables = getTables(meta, byName, Model, booksMeta, layoutMeta);
     setDocType(schemaName, docType);
   }
 }
@@ -159,7 +184,8 @@ function getTables(
   meta: DocTypeMeta,
   byName: Map<string, DocTypeMeta>,
   Model: FrappeModel,
-  placements: BooksMeta['placements']
+  booksMeta: BooksMeta,
+  layoutMeta?: DocTypeMeta
 ) {
   const tables: FrappeDocType['tables'] = {};
   for (const field of meta.fields) {
@@ -169,12 +195,19 @@ function getTables(
     if (child) {
       const name = getTableSchemaName(child.name);
       const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;
+      const childLayout = getChildLayoutMeta(
+        field.fieldname,
+        byName,
+        layoutMeta
+      );
       // Rows take their parent's permissions, as in Frappe.
       tables[field.fieldname] = toDocType(
         { ...child, permissions: meta.permissions },
         name,
         RowModel,
-        placements[child.name]
+        booksMeta.placements[child.name],
+        childLayout &&
+          getLayout(child, childLayout, field.fieldname, booksMeta, meta.name)
       );
     }
   }
@@ -182,11 +215,39 @@ function getTables(
   return tables;
 }
 
+/** The Books rows that lay out an ERPNext table: those of the Books table of the same fieldname. */
+function getChildLayoutMeta(
+  fieldname: string,
+  byName: Map<string, DocTypeMeta>,
+  layoutMeta?: DocTypeMeta
+): DocTypeMeta | undefined {
+  const table = layoutMeta?.fields.find((f) => f.fieldname === fieldname);
+  return table && isTableDocField(table)
+    ? byName.get(table.options!)
+    : undefined;
+}
+
+/** How accessory mode lays out an ERPNext doctype, or a table's rows of the form doctype `form`. */
+function getLayout(
+  meta: DocTypeMeta,
+  layoutMeta: DocTypeMeta,
+  tableFieldname: string,
+  { accessory }: BooksMeta,
+  form = meta.name
+): AccessoryLayout {
+  return {
+    meta: layoutMeta,
+    tabs: accessory?.tabs[meta.name] ?? {},
+    picks: accessory?.picks[form]?.[tableFieldname] ?? [],
+  };
+}
+
 function toDocType(
   meta: DocTypeMeta,
   schemaName: string,
   Model: FrappeModel,
-  placements: Placements = {}
+  placements: Placements = {},
+  layout?: AccessoryLayout
 ): FrappeDocType {
   // Rows without a model of their own are labelled by their doctype.
   const presentation: Presentation = {
@@ -197,6 +258,7 @@ function toDocType(
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],
     placements,
+    layout,
   });
   const languageMap = TranslationString.prototype.languageMap;
   if (languageMap) {
@@ -233,7 +295,7 @@ async function reloadCustomized(customized: unknown) {
 
     setDocTypes(
       [[schemaName, Model]],
-      await getBooksMeta([getModelDoctype(Model)])
+      await getModelsMeta([[schemaName, Model]])
     );
     // A customized table refreshes the rows of the open documents that hold it.
     const customizedSchema = toSchemaName(customized as string)!;

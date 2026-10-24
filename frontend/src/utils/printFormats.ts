@@ -48,8 +48,17 @@ export function getTemplateNameFromFile(fileName: string): string | null {
 /** A print as Frappe renders it: the body HTML and its stylesheet. */
 export type PrintHTML = { html: string | null; style: string };
 
+// Frappe's print format builder renders whole documents that show the page on a
+// gray screen; the print sheet is the page already.
+const SHEET_STYLE =
+  '<style>@media screen { html { background: none; } body { margin: 0; box-shadow: none; } }</style>';
+
 /** A page for a print, styled the way Frappe's print view styles it. */
 export function getPrintDocument({ html, style }: PrintHTML): string {
+  if (/^\s*<!DOCTYPE/i.test(html ?? '')) {
+    return html!.replace('</head>', `${SHEET_STYLE}</head>`);
+  }
+
   const boot = window.frappe?.boot;
   const direction = boot?.layout_direction === 'rtl' ? 'rtl' : 'ltr';
   const stylesheet = boot?.books?.print_style;

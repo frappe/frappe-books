@@ -19,6 +19,7 @@ import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import type { Money } from 'pesa';
 import type { Field, Schema } from 'schemas/types';
 import { FrappeDoc, type FrappeValueOptions } from 'src/frappe/document';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { withoutCreate } from 'src/frappe/schema';
 import type { Invoice } from './Invoice';
 import { setCurrencies } from './Invoice';
@@ -35,7 +36,7 @@ const ITEM_DETAILS = [
   'expense_account',
 ];
 const QUANTITY_FIELDS = ['qty', 'stock_qty'];
-const QUICK_EDIT_FIELDS = [
+const QUICK_EDIT_FIELDS = withTypedRate([
   'item_code',
   'income_account',
   'expense_account',
@@ -53,7 +54,7 @@ const QUICK_EDIT_FIELDS = [
   'discount_percentage',
   'discount_amount',
   'amount',
-];
+]);
 const FILE_FIELDS = [
   'item_code',
   'description',
@@ -83,13 +84,13 @@ export class InvoiceItem extends FrappeDoc {
   static override presentation = {
     label: 'Invoice Item',
     quickEditFields: QUICK_EDIT_FIELDS,
-    tableFields: [
+    tableFields: withTypedRate([
       'item_code',
       'qty',
       'price_list_rate',
       'item_tax_template',
       'amount',
-    ],
+    ]),
     fields: withoutCreate([
       'uom',
       'stock_uom',
@@ -314,4 +315,16 @@ export class QuotationItem extends InvoiceItem {
       (fieldname) => !NOT_QUOTED.includes(fieldname)
     ),
   };
+}
+
+/**
+ * Fields with the rate the user types: a Books row's price list rate, or an
+ * ERPNext row's rate, as ERPNext reads the price list rate from the price list.
+ */
+function withTypedRate(fieldnames: string[]): string[] {
+  return isAccessoryMode()
+    ? fieldnames.map((fieldname) =>
+        fieldname === 'price_list_rate' ? 'rate' : fieldname
+      )
+    : fieldnames;
 }

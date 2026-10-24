@@ -49,6 +49,7 @@
       ref="mobileToolbar"
       :schema-name="schemaName"
       :search-fields="searchFields"
+      :search-placeholder="filterBar?.searchPlaceholder"
       @change="applyFilter"
     >
       <FrappeButton
@@ -57,7 +58,40 @@
         :label="isSelectionMode ? t`Cancel` : t`Select`"
         @click="toggleSelectionMode"
       />
+      <template v-if="filterBar" #below>
+        <ListLinkFilter
+          v-model="linkValue"
+          :schema-name="schemaName"
+          :fieldname="filterBar.linkField"
+          :all-label="filterBar.allLabel"
+          @update:model-value="updateList"
+        />
+      </template>
     </MobileListToolbar>
+    <div v-else-if="filterBar" class="flex gap-2 px-3 pb-2 pt-3 sm:px-5">
+      <FrappeTextInput
+        type="search"
+        class="w-[240px]"
+        :model-value="search"
+        :placeholder="filterBar.searchPlaceholder"
+        :aria-label="t`Search`"
+        @update:model-value="onSearch"
+      >
+        <template #prefix>
+          <span
+            aria-hidden="true"
+            class="lucide-search size-4 text-ink-gray-5"
+          />
+        </template>
+      </FrappeTextInput>
+      <ListLinkFilter
+        v-model="linkValue"
+        :schema-name="schemaName"
+        :fieldname="filterBar.linkField"
+        :all-label="filterBar.allLabel"
+        @update:model-value="updateList"
+      />
+    </div>
     <List
       ref="list"
       :schema-name="schemaName"
@@ -69,7 +103,7 @@
       @open-doc="openDoc"
       @updated-data="updatedData"
       @make-new-doc="makeNewDoc"
-      @clear-filters="mobileToolbar?.clear()"
+      @clear-filters="clearFilters"
       @selected-items-changed="selectedItems = $event"
     />
     <MobileFooter v-if="isMobile && isSelectionMode" class="items-center">
@@ -104,6 +138,7 @@
 import {
   Button as FrappeButton,
   Dropdown as FrappeDropdown,
+  TextInput as FrappeTextInput,
   type DropdownOptions,
 } from 'frappe-ui';
 import ExportWizard from 'src/components/ExportWizard.vue';
@@ -118,9 +153,12 @@ import { docsPathMap, getNewDocValues } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { getFormRoute, openNewDoc, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
+import type { ListFilterBar } from 'fyo/model/types';
 import type { Filter } from 'src/frappe/api';
 import { defineComponent, inject, ref, type PropType } from 'vue';
+import { getSearchFilters } from 'src/utils/listFilters';
 import List from './List.vue';
+import ListLinkFilter from './ListLinkFilter.vue';
 import { getListColumns } from './listColumns';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
@@ -138,6 +176,8 @@ export default defineComponent({
     FrappeButton,
     ExportWizard,
     FrappeDropdown,
+    FrappeTextInput,
+    ListLinkFilter,
     MobileFooter,
     MobileListToolbar,
     MobileOptionsSheet,
@@ -165,6 +205,11 @@ export default defineComponent({
       isSelectionMode: false,
       selectedItems: [] as string[],
       isCreateSheetOpen: false,
+      appliedFilters: [],
+      searchFilters: [],
+      search: '',
+      searchTimer: 0,
+      linkValue: null,
     } as {
       listConfig: undefined | ReturnType<typeof getListConfig>;
       openExportModal: boolean;
@@ -172,11 +217,19 @@ export default defineComponent({
       isSelectionMode: boolean;
       selectedItems: string[];
       isCreateSheetOpen: boolean;
+      appliedFilters: Filter[];
+      searchFilters: Filter[];
+      search: string;
+      searchTimer: number;
+      linkValue: string | null;
     };
   },
   computed: {
     context(): string {
       return 'ListView-' + this.schemaName;
+    },
+    filterBar(): ListFilterBar | undefined {
+      return this.listConfig?.filterBar;
     },
     title(): string {
       if (this.pageTitle) {
@@ -260,8 +313,34 @@ export default defineComponent({
     async handleMakeNewDoc() {
       await this.makeNewDoc();
     },
+    /** The filter dropdown's or phone toolbar's filters; the toolbar also sends its search. */
     applyFilter(filters: Filter[], orFilters?: Filter[]) {
-      this.list?.updateData(filters, orFilters);
+      this.appliedFilters = filters;
+      if (orFilters) {
+        this.searchFilters = orFilters;
+      }
+      this.updateList();
+    },
+    onSearch(value: string) {
+      this.search = value;
+      window.clearTimeout(this.searchTimer);
+      this.searchTimer = window.setTimeout(() => {
+        this.searchFilters = getSearchFilters(this.searchFields, this.search);
+        this.updateList();
+      }, 300);
+    },
+    updateList() {
+      const field = this.filterBar?.linkField;
+      const linkFilters: Filter[] =
+        field && this.linkValue ? [[field, '=', this.linkValue]] : [];
+      this.list?.updateData(
+        [...this.appliedFilters, ...linkFilters],
+        this.searchFilters
+      );
+    },
+    clearFilters() {
+      this.linkValue = null;
+      this.mobileToolbar?.clear();
     },
     toggleSelectionMode() {
       this.isSelectionMode = !this.isSelectionMode;

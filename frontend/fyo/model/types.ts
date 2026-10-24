@@ -121,10 +121,19 @@ export interface ListEmptyState {
   filteredTitle?: string;
 }
 
+/** A bar of filters above a list: a search box and one Link field's records. */
+export interface ListFilterBar {
+  searchPlaceholder: string;
+  linkField: string;
+  /** What the Link filter says while it shows every record, e.g. "All price lists". */
+  allLabel: string;
+}
+
 export interface ListViewSettings {
   formRoute?: (name: string) => RouteLocationRaw;
   columns?: ListViewColumn[];
   emptyState?: ListEmptyState;
+  filterBar?: ListFilterBar;
 }
 
 export interface TreeViewSettings {

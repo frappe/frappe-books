@@ -9,7 +9,7 @@
         variant="subtle"
         class="min-w-0 flex-1"
         :model-value="search"
-        :placeholder="t`Search`"
+        :placeholder="searchPlaceholder || t`Search`"
         :aria-label="t`Search`"
         @update:model-value="onSearch"
       >
@@ -27,6 +27,7 @@
       />
       <slot />
     </div>
+    <slot name="below" />
     <div v-if="chips.length" class="-mx-4 flex gap-2 overflow-x-auto px-4">
       <MobileFilterChip
         v-for="chip in chips"
@@ -58,11 +59,11 @@ import {
   isValuelessCondition,
   type FilterRow,
 } from 'src/utils/filterQuery';
-import { ListFilters } from 'src/utils/listFilters';
+import { getSearchFilters, ListFilters } from 'src/utils/listFilters';
 import { defineComponent, type PropType } from 'vue';
 import MobileFilterSheet from './MobileFilterSheet.vue';
 
-/** Search, Filters, the page's own buttons and filter chips above a phone list. */
+/** Search, Filters, the page's own buttons and filters, and filter chips above a phone list. */
 export default defineComponent({
   name: 'MobileListToolbar',
   components: {
@@ -74,6 +75,7 @@ export default defineComponent({
   props: {
     schemaName: { type: String, required: true },
     searchFields: { type: Array as PropType<string[]>, required: true },
+    searchPlaceholder: { type: String, default: '' },
   },
   emits: ['change'],
   data() {
@@ -98,16 +100,7 @@ export default defineComponent({
     },
     /** Rows whose number, title or keyword fields contain the text. */
     searchFilters(): Filter[] {
-      const text = this.search.trim();
-      if (!text) {
-        return [];
-      }
-
-      return this.searchFields.map((fieldname): Filter => [
-        fieldname,
-        'like',
-        `%${text}%`,
-      ]);
+      return getSearchFilters(this.searchFields, this.search);
     },
   },
   methods: {

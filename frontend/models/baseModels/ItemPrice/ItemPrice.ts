@@ -39,6 +39,11 @@ export class ItemPrice extends FrappeDoc {
         createLabel: t`New item price`,
         filteredTitle: t`No item prices match these filters`,
       },
+      filterBar: {
+        searchPlaceholder: t`Search item…`,
+        linkField: 'price_list',
+        allLabel: t`All price lists`,
+      },
     };
   }
 }

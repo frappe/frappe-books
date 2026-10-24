@@ -23,8 +23,11 @@ export function getEmptyState(
     return fallback;
   }
 
+  // A model's filtered title says it all, as the design's lists do.
   if (isFiltered) {
-    return { ...fallback, title: own.filteredTitle ?? fallback.title };
+    return own.filteredTitle
+      ? { ...fallback, title: own.filteredTitle, description: undefined }
+      : fallback;
   }
 
   return {

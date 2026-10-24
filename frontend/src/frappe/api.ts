@@ -6,6 +6,7 @@ import {
   getServerError,
   leaveIfSessionExpired,
   reachServer,
+  type ServerMessage,
 } from 'src/web/api';
 
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
@@ -27,7 +28,9 @@ export interface ListQuery {
 type ResponseBody<T> = {
   data: T;
   docs?: DocValues[];
-  errors?: { type?: string; message?: string }[];
+  errors?: { type?: string; message?: string; title?: string }[];
+  /** Messages the server logged besides the error, in order. */
+  messages?: ServerMessage[];
 };
 
 export async function getDocument(
@@ -215,12 +218,26 @@ async function request<T>(
   const body = (await response.json()) as ResponseBody<T>;
   if (!response.ok) {
     await leaveIfSessionExpired(response.status);
-    const [error] = body.errors ?? [];
-    const message = error?.message ?? error?.type ?? response.statusText;
-    throw getServerError(message, error?.type, response.status);
+    throw toServerError(body, response);
   }
 
   return body;
+}
+
+/** A failed response's error; a mandatory error says what is missing only in its messages. */
+function toServerError(body: ResponseBody<unknown>, response: Response) {
+  const [error] = body.errors ?? [];
+  const messages = [...(body.messages ?? [])];
+  if (error?.message) {
+    messages.push({ message: error.message, title: error.title });
+  }
+
+  const message =
+    error?.message ??
+    (messages.map((m) => m.message).join('\n') ||
+      error?.type ||
+      response.statusText);
+  return getServerError(message, error?.type, response.status, messages);
 }
 
 /** Frappe refuses a copy older than the saved one; /books says so in its own words. */

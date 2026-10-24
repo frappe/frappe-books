@@ -8,8 +8,18 @@
         @click="isOpen = !isOpen"
       >
         <span class="min-w-0 flex-1 truncate">{{ title }}</span>
+        <FrappeBadge
+          v-if="requiredCount"
+          theme="red"
+          :label="t`${requiredCount} required`"
+        />
         <span
-          v-if="hasError"
+          v-else-if="summary"
+          class="text-base font-normal text-ink-gray-5"
+          >{{ summary }}</span
+        >
+        <span
+          v-if="hasError && !requiredCount"
           class="size-1.5 rounded-full bg-surface-red-7"
           :aria-label="t`Has errors`"
         />
@@ -29,7 +39,11 @@
     </p>
     <template v-for="block in blocks" :key="block.key">
       <div
-        v-if="block.key === 'table' && tableField"
+        v-if="
+          block.key === 'table' &&
+          tableField &&
+          (kind !== 'collapsible' || isOpen)
+        "
         class="flex flex-col gap-3 p-4"
       >
         <slot name="table" />
@@ -97,7 +111,10 @@
   </section>
 </template>
 <script setup lang="ts">
-import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
+import {
+  Badge as FrappeBadge,
+  ErrorMessage as FrappeErrorMessage,
+} from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
@@ -118,6 +135,14 @@ const props = defineProps<{
   fields: Field[];
   doc: FrappeDoc;
   errors: Record<string, string>;
+  /** Always a collapsible section, like accessory mode's More details and end tabs. */
+  collapsible?: boolean;
+  /** What a collapsible header says beside its title, e.g. its field count. */
+  summary?: string;
+  /** Empty mandatory fields, which a collapsible header counts in red instead. */
+  requiredCount?: number;
+  /** Whether a collapsible section starts open; by default, when it holds a value. */
+  open?: boolean;
 }>();
 
 defineEmits<{
@@ -131,6 +156,10 @@ const dateTypes: string[] = [FieldTypeEnum.Date, FieldTypeEnum.Datetime];
 // Line tables (items) show as rows; read-only summary tables (taxes) as totals.
 const tableField = computed(() => props.fields.find(isLineTable));
 const kind = computed(() => {
+  if (props.collapsible) {
+    return 'collapsible';
+  }
+
   if (tableField.value) {
     return 'table';
   }
@@ -148,7 +177,7 @@ const hasError = computed(() =>
 
 // Collapsed sections open when they hold a value or an error.
 const isOpen = ref(
-  props.fields.some((field) => hasFieldValue(props.doc, field))
+  props.open ?? props.fields.some((field) => hasFieldValue(props.doc, field))
 );
 watch(hasError, (value) => value && (isOpen.value = true), { immediate: true });
 

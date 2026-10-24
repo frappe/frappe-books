@@ -62,15 +62,39 @@ export async function reachServer<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
-/** A fyo error for a server error, so forms treat it like their own. */
+/** One message of a failed request, as the server logged it; its HTML is the server's. */
+export interface ServerMessage {
+  message: string;
+  title?: string;
+}
+
+/**
+ * A fyo error for a server error, so forms treat it like their own. It keeps
+ * the server's messages, in server order, for forms that show them as sent.
+ */
 export function getServerError(
   message: string,
   excType?: string,
-  status?: number
+  status?: number,
+  messages: ServerMessage[] = [{ message }]
 ): Error {
   const ServerError =
     errorClassByType[excType ?? ''] ?? errorClassByStatus[status ?? 0];
-  return ServerError ? new ServerError(message, false) : new Error(message);
+  const error = ServerError
+    ? new ServerError(message, false)
+    : new Error(message);
+  return Object.assign(error, { serverMessages: messages });
+}
+
+/** The server's messages of an error, or its own message. */
+export function getServerMessages(error: unknown): ServerMessage[] {
+  const { serverMessages } = error as { serverMessages?: ServerMessage[] };
+  if (serverMessages?.length) {
+    return serverMessages;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return [{ message }];
 }
 
 /** Sends the user to log in, and back to Books after. */
@@ -114,7 +138,8 @@ function toBooksError(error: unknown): unknown {
   return getServerError(
     error.messages.join('\n'),
     error.exc_type,
-    error.status
+    error.status,
+    error.messages.map((message) => ({ message }))
   );
 }
 

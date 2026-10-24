@@ -40,6 +40,7 @@
           <div
             v-for="field of group"
             :key="field.fieldname"
+            :data-fieldname="field.fieldname"
             :class="[
               'min-w-0 self-start w-full',
               field.fieldtype === 'Table' ? 'md:col-span-2 text-base' : '',

@@ -7,7 +7,7 @@ import type { DocValueMap } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
-import { ValueError } from 'fyo/utils/errors';
+import { ConflictError, ValueError } from 'fyo/utils/errors';
 import { canOpenLedger, getLedgerLink } from 'models/helpers';
 import { Invoice } from 'models/invoices/Invoice';
 import { ModelNameEnum } from 'models/types';
@@ -355,7 +355,8 @@ export function getFieldsGroupedByTabAndSection(
       tabbed.set(section, []);
     }
 
-    if (field.meta) {
+    // Accessory mode's ERPNext fields with no Books position show after these; see `extraFields.ts`.
+    if (field.meta || field.moreDetails || field.appTab) {
       continue;
     }
 
@@ -541,15 +542,19 @@ export async function commonDocCancel(doc: FrappeDoc): Promise<boolean> {
   return true;
 }
 
+/** Shows a failed save or submit: in a dialog, or through `onError`, as accessory forms show it in place. */
+export type ActionErrorHandler = (error: unknown) => void;
+
 export async function commonDocSync(
   doc: FrappeDoc,
-  useDialog = false
+  useDialog = false,
+  onError?: ActionErrorHandler
 ): Promise<boolean> {
   let success: boolean;
   if (useDialog) {
-    success = !!(await showSubmitOrSyncDialog(doc, 'sync'));
+    success = !!(await showSubmitOrSyncDialog(doc, 'sync', onError));
   } else {
-    success = await syncWithoutDialog(doc);
+    success = await syncWithoutDialog(doc, onError);
   }
 
   if (!success) {
@@ -560,29 +565,50 @@ export async function commonDocSync(
   return true;
 }
 
-async function syncWithoutDialog(doc: FrappeDoc): Promise<boolean> {
+async function syncWithoutDialog(
+  doc: FrappeDoc,
+  onError?: ActionErrorHandler
+): Promise<boolean> {
   try {
     await doc.sync();
   } catch (error) {
-    await handleErrorWithDialog(error, doc);
+    await reportActionError(error, doc, onError, false);
     return false;
   }
 
   return true;
 }
 
-export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
+export async function commonDocSubmit(
+  doc: FrappeDoc,
+  onError?: ActionErrorHandler
+): Promise<boolean> {
   if (!(await confirmSubmitWarning(doc))) {
     return false;
   }
 
-  const success = await showSubmitOrSyncDialog(doc, 'submit');
+  const success = await showSubmitOrSyncDialog(doc, 'submit', onError);
   if (!success) {
     return false;
   }
 
   showSubmitToast(doc);
   return true;
+}
+
+/** A stale copy still asks to reload in a dialog. */
+async function reportActionError(
+  error: unknown,
+  doc: FrappeDoc,
+  onError: ActionErrorHandler | undefined,
+  dontThrow: boolean
+) {
+  if (onError && !(error instanceof ConflictError)) {
+    onError(error);
+    return;
+  }
+
+  await handleErrorWithDialog(error, doc, dontThrow);
 }
 
 /** The model's warning before a submit; a Yes accepts it, a No stops the submit. */
@@ -607,7 +633,11 @@ async function confirmSubmitWarning(doc: FrappeDoc): Promise<boolean> {
   })) as boolean;
 }
 
-async function showSubmitOrSyncDialog(doc: FrappeDoc, type: 'submit' | 'sync') {
+async function showSubmitOrSyncDialog(
+  doc: FrappeDoc,
+  type: 'submit' | 'sync',
+  onError?: ActionErrorHandler
+) {
   const label = getDocReferenceLabel(doc);
   let title = t`Save ${label}?`;
   if (type === 'submit') {
@@ -655,7 +685,7 @@ async function showSubmitOrSyncDialog(doc: FrappeDoc, type: 'submit' | 'sync') {
   const success = (await showDialog(dialogOptions)) as boolean;
   if (actionError) {
     // Show the error after the confirmation closes so it cannot offer a stale retry.
-    await handleErrorWithDialog(actionError, doc, true);
+    await reportActionError(actionError, doc, onError, true);
   }
 
   return success;

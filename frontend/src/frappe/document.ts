@@ -15,6 +15,7 @@ import type {
   EmptyMessageMap,
   FiltersMap,
   HiddenMap,
+  LinkedRecords,
   ListViewSettings,
   ListsMap,
   ReadOnlyMap,
@@ -121,6 +122,10 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   static emptyMessages: EmptyMessageMap = {};
   /** How a link to the doctype shows as a card, where its field asks; see `LinkCard`. */
   static linkCard?: LinkCard;
+  /** Records that link a saved document, which its form lists, e.g. an item's prices. */
+  static getLinkedRecords(_fyo: Fyo): LinkedRecords | undefined {
+    return undefined;
+  }
 
   static getListViewSettings(_fyo: Fyo): ListViewSettings {
     return {};

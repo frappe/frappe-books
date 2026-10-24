@@ -3,11 +3,13 @@ import { DocValue } from 'fyo/core/types';
 import {
   Action,
   HiddenMap,
+  LinkedRecords,
   ListViewSettings,
   ValidationMap,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { getMappedDocAction } from 'models/helpers';
+import { getItemPrices } from 'models/baseModels/ItemPrice/ItemPrice';
 import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
@@ -90,6 +92,10 @@ export class Item extends FrappeDoc {
         target: () => [ModelNameEnum.PurchaseInvoice, 'make_purchase_invoice'],
       }),
     ];
+  }
+
+  static override getLinkedRecords(fyo: Fyo): LinkedRecords | undefined {
+    return getItemPrices(fyo, 'item_code', fyo.t`No item prices for this item`);
   }
 
   static getListViewSettings(): ListViewSettings {

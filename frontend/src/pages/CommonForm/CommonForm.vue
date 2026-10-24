@@ -80,7 +80,12 @@
           >
             {{ t`Save` }}
           </FrappeButton>
-          <FrappeButton v-else-if="doc.canSubmit" variant="solid" @click="submit">{{ t`Submit` }}</FrappeButton>
+          <FrappeButton
+            v-else-if="doc.canSubmit"
+            variant="solid"
+            @click="submit"
+            >{{ t`Submit` }}</FrappeButton
+          >
         </template>
       </PageHeader>
     </template>
@@ -118,6 +123,11 @@
               <Barcode @item-selected="addItem" />
             </template>
           </CommonFormSection>
+          <LinkedRecordsSection
+            v-if="linkedRecords && activeTab === tabOptions[0]?.value"
+            :doc="doc"
+            :config="linkedRecords"
+          />
         </div>
       </template>
     </template>
@@ -146,7 +156,7 @@
 </template>
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
-import { Action } from 'fyo/model/types';
+import { Action, LinkedRecords } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
@@ -188,6 +198,7 @@ import { computed, defineComponent, inject, nextTick } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
 import FormSkeleton from './FormSkeleton.vue';
 import LinkedEntries from './LinkedEntries.vue';
+import LinkedRecordsSection from './LinkedRecordsSection.vue';
 import MobileForm from './MobileForm.vue';
 import RowEditForm from './RowEditForm.vue';
 
@@ -203,6 +214,7 @@ export default defineComponent({
     Barcode,
     ExchangeRate,
     LinkedEntries,
+    LinkedRecordsSection,
     MobileForm,
     RowEditForm,
     StatusPill,
@@ -334,7 +346,9 @@ export default defineComponent({
     doc(): FrappeDoc {
       const doc = this.docOrNull;
       if (!doc) {
-        throw new ValidationError(this.t`Doc ${this.schema.label} ${this.name} not set`);
+        throw new ValidationError(
+          this.t`Doc ${this.schema.label} ${this.name} not set`
+        );
       }
       return doc;
     },
@@ -351,7 +365,10 @@ export default defineComponent({
       return this.docOrNull.formTitle || this.t`New entry`;
     },
     breadcrumbs(): BreadcrumbsProps['items'] {
-      const list = { label: this.schema.label, route: `/list/${this.schemaName}` };
+      const list = {
+        label: this.schema.label,
+        route: `/list/${this.schemaName}`,
+      };
       return this.title ? [list, { label: this.title }] : [list];
     },
     schema(): Schema {
@@ -361,6 +378,11 @@ export default defineComponent({
       }
 
       return schema;
+    },
+    /** Records the model lists on its saved documents, e.g. an item's prices. */
+    linkedRecords(): LinkedRecords | undefined {
+      const Model = this.docOrNull?.constructor as typeof FrappeDoc | undefined;
+      return Model?.getLinkedRecords(this.fyo);
     },
     activeGroup(): Map<string, Field[]> {
       if (!this.groupedFields) {
@@ -390,7 +412,12 @@ export default defineComponent({
       const more = groups.find(({ group }) => !group)?.actions ?? [];
       return [
         ...groups.filter(({ group }) => group),
-        { group: '', label: '', type: 'secondary', actions: [...this.viewActions, ...more] },
+        {
+          group: '',
+          label: '',
+          type: 'secondary',
+          actions: [...this.viewActions, ...more],
+        },
       ];
     },
     /** Linked entries and the width toggle lead the … menu, as on phones. */
@@ -475,7 +502,10 @@ export default defineComponent({
         return;
       }
 
-      this.groupedFields = getFieldsGroupedByTabAndSection(this.schema, this.doc);
+      this.groupedFields = getFieldsGroupedByTabAndSection(
+        this.schema,
+        this.doc
+      );
       if (!this.groupedFields.has(this.activeTab)) {
         this.activeTab = [...this.groupedFields.keys()][0] ?? this.t`Default`;
       }
@@ -556,7 +586,11 @@ export default defineComponent({
     },
     onRowRemove({ idx, parentFieldname }: FrappeDoc) {
       const row = this.row;
-      if (!row || row.fieldname !== parentFieldname || typeof idx !== 'number') {
+      if (
+        !row ||
+        row.fieldname !== parentFieldname ||
+        typeof idx !== 'number'
+      ) {
         return;
       }
 

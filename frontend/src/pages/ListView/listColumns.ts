@@ -10,6 +10,28 @@ import { fyo } from 'src/initFyo';
 
 export type ListColumn = ColumnConfig | Field;
 
+/** What an empty list shows: the model's words, else `fallback`. */
+export function getEmptyState(
+  listConfig: ListViewSettings | undefined,
+  isFiltered: boolean,
+  fallback: { title: string; description?: string; createLabel: string }
+): { title: string; description?: string; createLabel: string } {
+  const own = listConfig?.emptyState;
+  if (!own) {
+    return fallback;
+  }
+
+  if (isFiltered) {
+    return { ...fallback, title: own.filteredTitle ?? fallback.title };
+  }
+
+  return {
+    title: own.title,
+    description: own.description,
+    createLabel: own.createLabel ?? fallback.createLabel,
+  };
+}
+
 /** The list view's columns, or the name and quick edit fields without them. */
 export function getListColumns(
   schemaName: string,

@@ -74,6 +74,11 @@
         <slot name="barcode" />
       </template>
     </MobileFormSection>
+    <LinkedRecordsSection
+      v-if="linkedRecords && isFirstTab"
+      :doc="doc"
+      :config="linkedRecords"
+    />
 
     <div class="h-10 flex-none" />
     <MobileFooter v-if="canPrint || doc.canSave || doc.canSubmit || footerStep">
@@ -122,6 +127,7 @@ import {
   type DropdownOptions,
 } from 'frappe-ui';
 import { t } from 'fyo';
+import { fyo } from 'src/initFyo';
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
@@ -136,6 +142,7 @@ import { getActionsForDoc } from 'src/utils/ui';
 import { computed, nextTick, useTemplateRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import MobileFormSection from './MobileFormSection.vue';
+import LinkedRecordsSection from './LinkedRecordsSection.vue';
 
 type FormAction = Pick<Action, 'label' | 'group' | 'theme' | 'nextStep'> & {
   action: (doc: FrappeDoc, router: ReturnType<typeof useRouter>) => unknown;
@@ -183,6 +190,11 @@ const activeSections = computed(() => {
   const tab = props.groupedFields?.get(props.activeTab);
   return [...(tab ?? props.groupedFields?.values().next().value ?? new Map())];
 });
+
+// Records the model lists on its saved documents, e.g. an item's prices.
+const linkedRecords = computed(() =>
+  (props.doc.constructor as typeof FrappeDoc).getLinkedRecords(fyo)
+);
 
 const isFirstTab = computed(
   () => props.activeTab === (tabOptions.value[0]?.value ?? props.activeTab)

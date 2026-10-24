@@ -97,9 +97,32 @@ export type ColumnConfig = {
 };
 
 export type ListViewColumn = string | ColumnConfig;
+
+/** Records of another schema that link a saved document, which its form lists read only. */
+export interface LinkedRecords {
+  schemaName: string;
+  /** The records' field that holds the document's name. */
+  linkField: string;
+  label: string;
+  columns: ListViewColumn[];
+  addLabel: string;
+  emptyMessage: string;
+  /** A from and to date pair that a phone row shows as one range. */
+  dateRange?: [string, string];
+}
+/** What an empty list says, where it says more than "No entries found". */
+export interface ListEmptyState {
+  title: string;
+  description?: string;
+  createLabel?: string;
+  /** The title when filters leave no rows. */
+  filteredTitle?: string;
+}
+
 export interface ListViewSettings {
   formRoute?: (name: string) => RouteLocationRaw;
   columns?: ListViewColumn[];
+  emptyState?: ListEmptyState;
 }
 
 export interface TreeViewSettings {

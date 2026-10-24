@@ -1,4 +1,6 @@
-import { ListViewSettings } from 'fyo/model/types';
+import type { Fyo } from 'fyo';
+import { LinkedRecords, ListViewSettings } from 'fyo/model/types';
+import { getItemPrices } from 'models/baseModels/ItemPrice/ItemPrice';
 import {
   getIsDocEnabledColumn,
   getPriceListStatusColumn,
@@ -10,6 +12,14 @@ export class PriceList extends FrappeDoc {
   static override doctype = 'Books Price List';
   static override presentation = { label: 'Price List' };
   static override previewMethod = 'preview';
+
+  static override getLinkedRecords(fyo: Fyo): LinkedRecords | undefined {
+    return getItemPrices(
+      fyo,
+      'price_list',
+      fyo.t`No item prices in this price list`
+    );
+  }
 
   static getListViewSettings(): ListViewSettings {
     return {

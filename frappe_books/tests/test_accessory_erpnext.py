@@ -1,4 +1,4 @@
-"""Accessory mode's endpoints over ERPNext: previews, Create mappers, linked entries and search."""
+"""Accessory mode's endpoints over ERPNext: previews, mappers, linked entries, search and print options."""
 
 import unittest
 from unittest.mock import patch
@@ -269,3 +269,74 @@ class IntegrationTestAccessoryScreens(IntegrationTestCase):
 		).insert()
 		invoice.submit()
 		return invoice
+
+
+def make_print_format(name, **values):
+	if not frappe.db.exists("Print Format", name):
+		frappe.get_doc(
+			{
+				"doctype": "Print Format",
+				"name": name,
+				"doc_type": "Sales Invoice",
+				"module": "Accounts",
+				"standard": "No",
+				"custom_format": 1,
+				"print_format_type": "Jinja",
+				"html": "<p>{{ doc.name }}</p>",
+				**values,
+			}
+		).insert()
+	return name
+
+
+def make_letter_head(name, **values):
+	if not frappe.db.exists("Letter Head", name):
+		frappe.get_doc(
+			{"doctype": "Letter Head", "letter_head_name": name, "source": "HTML", "content": name, **values}
+		).insert()
+	return name
+
+
+@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+class IntegrationTestAccessoryPrintOptions(IntegrationTestCase):
+	def setUp(self):
+		from frappe_books.accessory.printing import get_print_options
+
+		self.get_print_options = get_print_options
+		self.company = frappe.db.get_value("Company", {}, "name")
+		accessory = patch("frappe_books.accessory.printing.accessory_company", return_value=self.company)
+		accessory.start()
+		self.addCleanup(accessory.stop)
+
+	def test_print_formats_are_desks_with_the_default_first(self):
+		from frappe_books.printing import set_default_print_format
+
+		default = make_print_format("Accessory Print Default")
+		other = make_print_format("Accessory Print Other")
+		disabled = make_print_format("Accessory Print Disabled", disabled=1)
+		set_default_print_format("Sales Invoice", default)
+		user = ensure_user("accessory-accounts-user@example.com", "Accounts User")
+
+		with self.set_user(user):
+			formats = self.get_print_options("Sales Invoice")["print_formats"]
+
+		self.assertEqual(formats[0], default)
+		self.assertIn("Standard", formats)
+		self.assertIn(other, formats)
+		self.assertNotIn(disabled, formats)
+
+	def test_the_company_letter_head_is_the_default(self):
+		company_default = make_letter_head("Accessory Company Letter Head")
+		make_letter_head("Accessory Marked Letter Head", is_default=1)
+		disabled = make_letter_head("Accessory Disabled Letter Head", disabled=1)
+		frappe.db.set_value("Company", self.company, "default_letter_head", company_default)
+
+		options = self.get_print_options("Sales Invoice")
+
+		self.assertEqual(options["default_letter_head"], company_default)
+		self.assertNotIn(disabled, options["letter_heads"])
+
+	def test_print_options_need_the_right_to_read_the_doctype(self):
+		ensure_user(NO_RIGHTS_USER)
+		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):
+			self.get_print_options("Sales Invoice")

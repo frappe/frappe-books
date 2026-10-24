@@ -11,18 +11,17 @@ export const previousForms = {
     JournalEntry: [
       'name | Entry No |  | Default',
       'naming_series | Number Series |  | Default',
-      'entry_type | Entry Type | Entry Type | Default',
+      'voucher_type | Entry Type | Entry Type | Default',
       'posting_date | Date |  | Default',
       'accounts | Account Entries |  | Accounts',
-      'reference_number | Reference Number |  | References',
-      'reference_date | Reference Date |  | References',
+      'cheque_no | Reference Number |  | References',
+      'cheque_date | Reference Date |  | References',
       'user_remark | User Remark | Add a remark | References',
-      'attachment | Attachment | Add attachment | References',
     ],
     JournalEntryAccount: [
       'account | Account | Account | Default',
-      'debit | Debit |  | Default',
-      'credit | Credit |  | Default',
+      'debit_in_account_currency | Debit |  | Default',
+      'credit_in_account_currency | Credit |  | Default',
     ],
     GLEntry: [
       'name | Entry No. |  | Default',
@@ -113,7 +112,11 @@ export const previousForms = {
     PrintSettings: 'Print Settings',
   },
   tableFields: {
-    JournalEntryAccount: ['account', 'debit', 'credit'],
+    JournalEntryAccount: [
+      'account',
+      'debit_in_account_currency',
+      'credit_in_account_currency',
+    ],
   },
   quickEditFields: {
     Payment: [
@@ -138,19 +141,18 @@ export const previousForms = {
   listFilters: {
     JournalEntry: [
       'cancelled',
+      'cheque_date',
+      'cheque_no',
       'creation',
-      'entry_type',
       'modified',
       'modified_by',
       'name',
       'naming_series',
       'owner',
       'posting_date',
-      'reference_date',
-      'reference_number',
-      'status',
       'submitted',
       'user_remark',
+      'voucher_type',
     ],
   },
   colors: {

@@ -14,10 +14,9 @@ from frappe_books.accounting.ledger import (
 from frappe_books.accounting.money import as_decimal
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
-from frappe_books.status import StatusMixin
 
 
-class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
+class BooksJournalEntry(SeriesNamingMixin, Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -32,9 +31,15 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 
 		accounts: DF.Table[BooksJournalEntryAccount]
 		amended_from: DF.Link | None
-		attachment: DF.Attach | None
+		cheque_date: DF.Date | None
+		cheque_no: DF.Data | None
 		company: DF.Link | None
-		entry_type: DF.Literal[
+		naming_series: DF.Link
+		posting_date: DF.Date
+		total_credit: DF.Currency
+		total_debit: DF.Currency
+		user_remark: DF.SmallText | None
+		voucher_type: DF.Literal[
 			"Journal Entry",
 			"Bank Entry",
 			"Cash Entry",
@@ -47,14 +52,6 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 			"Opening Entry",
 			"Depreciation Entry",
 		]
-		naming_series: DF.Link
-		posting_date: DF.Date
-		reference_date: DF.Date | None
-		reference_number: DF.Data | None
-		status: DF.Literal["Saved", "Submitted", "Cancelled"]
-		total_credit: DF.Currency
-		total_debit: DF.Currency
-		user_remark: DF.Text | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Journal Entry"
@@ -71,6 +68,7 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 		validate_leaf_accounts({row.account for row in self.accounts})
 		for row in self.accounts:
 			_validate_amounts(row)
+			_set_company_amounts(row)
 		self.total_debit = sum((as_decimal(row.debit) for row in self.accounts), as_decimal(0))
 		self.total_credit = sum((as_decimal(row.credit) for row in self.accounts), as_decimal(0))
 		if self.total_debit == 0:
@@ -95,9 +93,15 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 
 
 def _validate_amounts(row):
-	debit = as_decimal(row.debit)
-	credit = as_decimal(row.credit)
+	debit = as_decimal(row.debit_in_account_currency)
+	credit = as_decimal(row.credit_in_account_currency)
 	if debit < 0 or credit < 0:
 		frappe.throw(_("Debit and credit amounts cannot be negative."))
 	if (debit == 0) == (credit == 0):
 		frappe.throw(_("Each account row must contain either a debit or a credit."))
+
+
+def _set_company_amounts(row):
+	"""Books has one currency, so the company amounts are the account amounts, as ERPNext's at rate 1."""
+	row.debit = row.debit_in_account_currency
+	row.credit = row.credit_in_account_currency

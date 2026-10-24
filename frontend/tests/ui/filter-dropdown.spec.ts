@@ -192,7 +192,8 @@ test('date filters use the calendar and reset incompatible field values', async 
   });
   await page.getByRole('button', { name: 'Filter', exact: true }).click();
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
-  await setValue(page, 'Submitted');
+  await choose(page, 'Field', 'Entry Type');
+  await setValue(page, 'Bank Entry');
   await choose(page, 'Field', 'Date');
   const input = page.getByRole('combobox', { name: 'Value', exact: true });
   const panel = page.getByRole('region', { name: 'Filters', exact: true });

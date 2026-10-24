@@ -9,16 +9,14 @@
  "field_order": [
   "default_section_break_1",
   "naming_series",
-  "entry_type",
+  "voucher_type",
   "posting_date",
-  "status",
   "accounts_section_break_5",
   "accounts",
   "references_section_break_7",
-  "reference_number",
-  "reference_date",
+  "cheque_no",
+  "cheque_date",
   "user_remark",
-  "attachment",
   "total_debit",
   "total_credit",
   "amended_from",
@@ -26,7 +24,7 @@
  ],
  "fields": [
   {
-   "fieldname": "entry_type",
+   "fieldname": "voucher_type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Entry Type",
@@ -41,20 +39,6 @@
    "in_list_view": 1,
    "label": "Date",
    "reqd": 1
-  },
-  {
-   "default": "Saved",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Status",
-   "no_copy": 1,
-   "options": "Saved\nSubmitted\nCancelled",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
   },
   {
    "fieldname": "accounts",
@@ -78,21 +62,21 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval:doc.reference_number || !doc.docstatus",
-   "fieldname": "reference_number",
+   "depends_on": "eval:doc.cheque_no || !doc.docstatus",
+   "fieldname": "cheque_no",
    "fieldtype": "Data",
    "label": "Reference Number"
   },
   {
-   "depends_on": "eval:doc.reference_date || !doc.docstatus",
-   "fieldname": "reference_date",
+   "depends_on": "eval:doc.cheque_date || !doc.docstatus",
+   "fieldname": "cheque_date",
    "fieldtype": "Date",
    "label": "Reference Date"
   },
   {
    "depends_on": "eval:doc.user_remark || !doc.docstatus",
    "fieldname": "user_remark",
-   "fieldtype": "Text",
+   "fieldtype": "Small Text",
    "label": "User Remark",
    "placeholder": "Add a remark"
   },
@@ -132,13 +116,6 @@
    "label": "References"
   },
   {
-   "depends_on": "eval:doc.attachment || !doc.docstatus",
-   "fieldname": "attachment",
-   "fieldtype": "Attach",
-   "label": "Attachment",
-   "placeholder": "Add attachment"
-  },
-  {
    "fieldname": "company",
    "fieldtype": "Link",
    "hidden": 1,
@@ -150,7 +127,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-04 13:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Journal Entry",
@@ -192,22 +169,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "entry_type",
+ "search_fields": "voucher_type",
  "sort_field": "posting_date",
  "sort_order": "DESC",
- "states": [
-  {
-   "color": "Blue",
-   "title": "Saved"
-  },
-  {
-   "color": "Green",
-   "title": "Submitted"
-  },
-  {
-   "color": "Red",
-   "title": "Cancelled"
-  }
- ],
+ "states": [],
  "track_changes": 1
 }

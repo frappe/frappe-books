@@ -281,7 +281,7 @@ export default defineComponent({
     isPesa,
     getBadge(schemaName: string, entry: Record<string, unknown>) {
       const partyField = getModel(schemaName)?.partyField ?? '';
-      return entry[partyField] || entry.entry_type || entry.account;
+      return entry[partyField] || entry.voucher_type || entry.account;
     },
     /** Ledger entries are dated by their posting date. */
     getDate(entry: Record<string, unknown>) {
@@ -384,7 +384,7 @@ const linkEntryDisplayFields: Record<string, string[]> = {
   ],
   // Other Transactional
   [ModelNameEnum.Payment]: ['name', 'date', 'party', 'amount'],
-  [ModelNameEnum.JournalEntry]: ['name', 'date', 'entry_type'],
+  [ModelNameEnum.JournalEntry]: ['name', 'posting_date', 'voucher_type'],
   [ModelNameEnum.StockEntry]: ['name', 'posting_date', 'total_amount'],
   // Ledgers
   [ModelNameEnum.GLEntry]: [

@@ -63,12 +63,12 @@ async function submitEntry(page: Page, reference: string): Promise<string> {
   const [asset] = await getLeafAccounts(page, 'Asset');
   const [equity] = await getLeafAccounts(page, 'Equity');
   const entry = await insertDocument(page, 'Books Journal Entry', {
-    entry_type: 'Journal Entry',
-    reference_number: reference,
+    voucher_type: 'Journal Entry',
+    cheque_no: reference,
     docstatus: 1,
     accounts: [
-      { account: asset, debit: 10 },
-      { account: equity, credit: 10 },
+      { account: asset, debit_in_account_currency: 10 },
+      { account: equity, credit_in_account_currency: 10 },
     ],
   });
   return entry.name as string;

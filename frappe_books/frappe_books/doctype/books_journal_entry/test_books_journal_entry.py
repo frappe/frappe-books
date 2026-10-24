@@ -28,8 +28,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_submit_posts_balanced_ledger_entries(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 125.50},
-				{"account": self.equity.name, "credit": 125.50},
+				{"account": self.cash.name, "debit_in_account_currency": 125.50},
+				{"account": self.equity.name, "credit_in_account_currency": 125.50},
 			]
 		)
 		journal_entry.submit()
@@ -42,8 +42,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_cancel_posts_reversals(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 50},
-				{"account": self.equity.name, "credit": 50},
+				{"account": self.cash.name, "debit_in_account_currency": 50},
+				{"account": self.equity.name, "credit_in_account_currency": 50},
 			]
 		)
 		journal_entry.submit()
@@ -66,8 +66,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 				"doctype": "Books Journal Entry",
 				"posting_date": nowdate(),
 				"accounts": [
-					{"account": self.cash.name, "debit": 10},
-					{"account": self.equity.name, "credit": 9},
+					{"account": self.cash.name, "debit_in_account_currency": 10},
+					{"account": self.equity.name, "credit_in_account_currency": 9},
 				],
 			}
 		)
@@ -76,9 +76,9 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_fractional_amounts_balance(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 0.1},
-				{"account": self.cash.name, "debit": 0.2},
-				{"account": self.equity.name, "credit": 0.3},
+				{"account": self.cash.name, "debit_in_account_currency": 0.1},
+				{"account": self.cash.name, "debit_in_account_currency": 0.2},
+				{"account": self.equity.name, "credit_in_account_currency": 0.3},
 			]
 		)
 		journal_entry.submit()
@@ -90,8 +90,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_posts_amounts_rounded_to_currency(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 10.005},
-				{"account": self.equity.name, "credit": 10.005},
+				{"account": self.cash.name, "debit_in_account_currency": 10.005},
+				{"account": self.equity.name, "credit_in_account_currency": 10.005},
 			]
 		)
 		journal_entry.submit()
@@ -113,7 +113,10 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 
 	def test_number_series_cannot_change_after_insert(self):
 		journal_entry = make_journal_entry(
-			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 5},
+				{"account": self.equity.name, "credit_in_account_currency": 5},
+			]
 		)
 		journal_entry.naming_series = make_number_series("JournalEntry")
 		self.assertRaises(frappe.CannotChangeConstantError, journal_entry.save)
@@ -133,7 +136,10 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 
 	def test_the_client_copy_submits_and_cancels_through_run_doc_method(self):
 		journal_entry = make_journal_entry(
-			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 5},
+				{"account": self.equity.name, "credit_in_account_currency": 5},
+			]
 		)
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 		for method, docstatus in (("submit", 1), ("cancel", 2)):
@@ -144,7 +150,10 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 			self.assertEqual(journal_entry.docstatus, docstatus)
 
 		draft = make_journal_entry(
-			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 5},
+				{"account": self.equity.name, "credit_in_account_currency": 5},
+			]
 		)
 		without_creation = client_copy(draft)
 		without_creation.pop("creation")

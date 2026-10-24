@@ -125,7 +125,11 @@ def make_cash_journal(posting_date, rows, remark):
 	for account, debit, credit in rows:
 		net[account] += as_decimal(debit) - as_decimal(credit)
 	accounts = [
-		{"account": account, "debit": rounded(max(amount, 0)), "credit": rounded(max(-amount, 0))}
+		{
+			"account": account,
+			"debit_in_account_currency": rounded(max(amount, 0)),
+			"credit_in_account_currency": rounded(max(-amount, 0)),
+		}
 		for account, amount in net.items()
 		if rounded(amount)
 	]
@@ -134,7 +138,7 @@ def make_cash_journal(posting_date, rows, remark):
 	journal = frappe.get_doc(
 		{
 			"doctype": "Books Journal Entry",
-			"entry_type": "Cash Entry",
+			"voucher_type": "Cash Entry",
 			"posting_date": getdate(posting_date),
 			"user_remark": remark,
 			"accounts": accounts,

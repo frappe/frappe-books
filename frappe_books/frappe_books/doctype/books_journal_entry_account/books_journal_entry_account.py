@@ -16,7 +16,9 @@ class BooksJournalEntryAccount(Document):
 
 		account: DF.Link
 		credit: DF.Currency
+		credit_in_account_currency: DF.Currency
 		debit: DF.Currency
+		debit_in_account_currency: DF.Currency
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data

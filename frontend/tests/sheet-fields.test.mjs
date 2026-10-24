@@ -61,7 +61,7 @@ test('row editors add the custom fields of a row', () => {
   assert.ok(fieldnames.includes('custom_books_warranty'));
   assert.deepEqual(getRowEditFieldnames(getSchema('JournalEntryAccount')), [
     'account',
-    'debit',
-    'credit',
+    'debit_in_account_currency',
+    'credit_in_account_currency',
   ]);
 });

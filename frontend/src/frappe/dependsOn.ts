@@ -17,43 +17,62 @@ const GLOBALS = {
 
 const expressions = new Map<string, Expression>();
 const failed = new Set<string>();
+// Desk's form globals, which only its form scripts have.
+const DESK_GLOBALS =
+  /\b(erpnext|frappe|cur_frm|cur_list|locals|moment)\s*[.([]/;
 
 /**
  * Evaluates a DocField condition (depends_on and the like) the way Frappe's
  * form does: `eval:<expression>` over `doc` and `parent`, or a fieldname
  * whose value must be set. Only decides what the form shows; the server
- * enforces its own rules.
+ * enforces its own rules. A condition that needs Desk's form scripts, like
+ * `erpnext.*` or `frappe.boot.*`, is `unknown`, and is logged once.
  */
 export function evaluateCondition(
   condition: string | undefined,
   doc: EvalDoc,
-  parent?: EvalDoc
+  parent?: EvalDoc,
+  unknown = true
 ): boolean {
   if (!condition) {
     return true;
   }
 
   if (condition.startsWith('eval:')) {
-    return evaluate(condition.slice(5), doc, parent ?? {});
+    return evaluate(condition.slice(5), doc, parent ?? {}) ?? unknown;
   }
 
   return hasValue(doc[condition]);
 }
 
-/**
- * An expression's truth. One that needs Desk's form scripts, like `erpnext.*`
- * globals, shows the field, and is logged once.
- */
-function evaluate(source: string, doc: EvalDoc, parent: EvalDoc): boolean {
+/** An expression's truth, or undefined when it needs Desk's form scripts or fails. */
+function evaluate(
+  source: string,
+  doc: EvalDoc,
+  parent: EvalDoc
+): boolean | undefined {
+  if (DESK_GLOBALS.test(source)) {
+    warnOnce(source);
+    return undefined;
+  }
+
   try {
     return !!getExpression(source)(doc, parent, ...Object.values(GLOBALS));
   } catch (error) {
-    if (!failed.has(source)) {
-      failed.add(source);
-      console.error(`Showing a field whose condition failed: ${source}`, error);
-    }
+    warnOnce(source, error);
+    return undefined;
+  }
+}
 
-    return true;
+function warnOnce(source: string, error?: unknown) {
+  if (!failed.has(source)) {
+    failed.add(source);
+    // A warning, not an error: the form works, it only shows the field.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `Not evaluated, as it needs Desk's scripts: ${source}`,
+      error ?? ''
+    );
   }
 }
 

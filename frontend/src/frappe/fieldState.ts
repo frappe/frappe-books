@@ -127,7 +127,13 @@ function isConditionOn(
   }
 
   const parent = doc.parentdoc && getEvalDoc(doc.parentdoc);
-  const isMet = evaluateCondition(condition, evalDoc, parent);
+  // A condition only Desk can evaluate shows the field, and neither locks nor requires it.
+  const isMet = evaluateCondition(
+    condition,
+    evalDoc,
+    parent,
+    rule === 'hidden'
+  );
   return rule === 'hidden' ? !isMet : isMet;
 }
 

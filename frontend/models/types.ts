@@ -1,6 +1,5 @@
 export enum ModelNameEnum {
   Account = 'Account',
-  AccountingLedgerEntry = 'AccountingLedgerEntry',
   AccountingSettings = 'AccountingSettings',
   Address = 'Address',
   Batch = 'Batch',
@@ -10,6 +9,7 @@ export enum ModelNameEnum {
   Currency = 'Currency',
   Customer = 'Customer',
   GetStarted = 'GetStarted',
+  GLEntry = 'GLEntry',
   Defaults = 'Defaults',
   Item = 'Item',
   ItemGroup = 'ItemGroup',

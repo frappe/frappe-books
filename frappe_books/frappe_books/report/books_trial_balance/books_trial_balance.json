@@ -17,7 +17,7 @@
  "name": "Books Trial Balance",
  "owner": "Administrator",
  "prepared_report": 0,
- "ref_doctype": "Books Ledger Entry",
+ "ref_doctype": "Books GL Entry",
  "report_name": "Books Trial Balance",
  "report_type": "Script Report",
  "roles": [

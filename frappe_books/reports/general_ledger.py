@@ -5,9 +5,9 @@ from frappe import _
 
 from frappe_books.accounting.money import as_decimal, sum_decimal
 
-DOCTYPE = "Books Ledger Entry"
+DOCTYPE = "Books GL Entry"
 BALANCE = {"SUB": [{"SUM": "debit"}, {"SUM": "credit"}], "as": "balance"}
-GROUP_FIELDS = {"party": "party", "account": "account", "reference_name": "voucher_no"}
+GROUP_FIELDS = ("party", "account", "voucher_no")
 ENTRY_FIELDS = [
 	"account",
 	"posting_date",
@@ -17,7 +17,7 @@ ENTRY_FIELDS = [
 	"voucher_no",
 	"party_type",
 	"party",
-	"reverted",
+	"is_cancelled",
 ]
 
 
@@ -43,18 +43,18 @@ def get_columns(filters) -> list[dict]:
 			"hidden": 1,
 		},
 		{"fieldname": "party", "label": _("Party"), "fieldtype": "Dynamic Link", "options": "party_type"},
-		{"fieldname": "reference_name", "label": _("Ref Name"), "fieldtype": "Data"},
-		{"fieldname": "reference_type", "label": _("Ref Type"), "fieldtype": "Data"},
+		{"fieldname": "voucher_no", "label": _("Ref Name"), "fieldtype": "Data"},
+		{"fieldname": "voucher_type", "label": _("Ref Type"), "fieldtype": "Data"},
 	]
-	if filters.get("reverted"):
-		columns.append({"fieldname": "reverted", "label": _("Reverted"), "fieldtype": "Check"})
+	if filters.get("is_cancelled"):
+		columns.append({"fieldname": "is_cancelled", "label": _("Cancelled"), "fieldtype": "Check"})
 	return columns
 
 
 def get_data(filters) -> list[dict]:
 	"""Return a period's ledger rows with opening, running, group and closing balances."""
 	conditions = _conditions(filters)
-	group_field = GROUP_FIELDS.get(filters.get("group_by") or "none")
+	group_field = filters.get("group_by") if filters.get("group_by") in GROUP_FIELDS else None
 	openings = _opening_balances(conditions, filters.get("from_date"), group_field)
 	groups = _grouped_entries(_period_entries(conditions, filters), openings, group_field)
 	index = count(1)
@@ -69,21 +69,17 @@ def get_data(filters) -> list[dict]:
 
 def _conditions(filters):
 	conditions = [
-		[fieldname, "=", filters[source]]
-		for source, fieldname in (
-			("party_type", "party_type"),
-			("party", "party"),
-			("reference_name", "voucher_no"),
-		)
-		if filters.get(source)
+		[fieldname, "=", filters[fieldname]]
+		for fieldname in ("party_type", "party", "voucher_no")
+		if filters.get(fieldname)
 	]
 	if filters.get("account"):
 		# A group account shows the entries of the accounts under it.
 		conditions.append(["account", "descendants of (inclusive)", filters["account"]])
-	if filters.get("reference_type") and filters["reference_type"] != "All":
-		conditions.append(["voucher_type", "=", filters["reference_type"]])
-	if not filters.get("reverted"):
-		conditions.append(["reverted", "=", 0])
+	if filters.get("voucher_type") and filters["voucher_type"] != "All":
+		conditions.append(["voucher_type", "=", filters["voucher_type"]])
+	if not filters.get("is_cancelled"):
+		conditions.append(["is_cancelled", "=", 0])
 	return conditions
 
 
@@ -146,9 +142,9 @@ def _entry_row(entry, index):
 		"credit": as_decimal(entry.credit),
 		"party_type": entry.party_type,
 		"party": entry.party,
-		"reference_type": entry.voucher_type,
-		"reference_name": entry.voucher_no,
-		"reverted": bool(entry.reverted),
+		"voucher_type": entry.voucher_type,
+		"voucher_no": entry.voucher_no,
+		"is_cancelled": bool(entry.is_cancelled),
 	}
 
 

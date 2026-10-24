@@ -1,6 +1,6 @@
 import type { FrappeModel } from 'src/frappe/doctypes';
 import { Account } from './baseModels/Account/Account';
-import { AccountingLedgerEntry } from './baseModels/AccountingLedgerEntry/AccountingLedgerEntry';
+import { GLEntry } from './baseModels/GLEntry/GLEntry';
 import { AccountingSettings } from './baseModels/AccountingSettings/AccountingSettings';
 import { Company } from './baseModels/Company/Company';
 import { Country } from './baseModels/Country';
@@ -64,7 +64,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   Account,
   AccountingSettings,
   Company,
-  AccountingLedgerEntry,
+  GLEntry,
   Customer,
   Supplier,
   Lead,

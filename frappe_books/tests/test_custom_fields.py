@@ -172,7 +172,7 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 	def test_ledgers_singles_and_unknown_doctypes_cannot_be_customized(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
 		for doctype in (
-			"Books Ledger Entry",
+			"Books GL Entry",
 			"Books Loyalty Point Entry",
 			"Books System Settings",
 			"Books Custom Field",

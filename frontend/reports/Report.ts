@@ -23,9 +23,6 @@ import {
   ReportRow,
 } from './types';
 
-/** Columns of the doctype of a ledger row's document: the general ledger's and the stock ledger's. */
-export const REFERENCE_TYPE_COLUMNS = ['reference_type', 'voucher_type'];
-
 export abstract class Report extends Observable<RawValue> {
   static title: string;
   static reportName: string;
@@ -35,8 +32,8 @@ export abstract class Report extends Observable<RawValue> {
   static phoneLayout?: PhoneLayout;
   /** The filters that pick one document's entries: its doctype and name. */
   static referenceFilters: [type: string, name: string] = [
-    'referenceType',
-    'referenceName',
+    'voucherType',
+    'voucherNo',
   ];
 
   fyo: Fyo;
@@ -203,7 +200,7 @@ export abstract class Report extends Observable<RawValue> {
       return '';
     }
 
-    if (REFERENCE_TYPE_COLUMNS.includes(column.fieldname)) {
+    if (column.fieldname === 'voucher_type') {
       return getDoctypeLabel(String(rawValue));
     }
 

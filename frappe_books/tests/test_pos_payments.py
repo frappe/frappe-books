@@ -219,5 +219,5 @@ def counter_payments(invoice):
 
 
 def account_balance(account):
-	entries = frappe.get_all("Books Ledger Entry", filters={"account": account}, fields=["debit", "credit"])
+	entries = frappe.get_all("Books GL Entry", filters={"account": account}, fields=["debit", "credit"])
 	return sum(entry.debit - entry.credit for entry in entries)

@@ -98,8 +98,8 @@ function makeGeneralLedger() {
     credit,
     balance: debit - credit,
     party: 'Sharma Traders',
-    reference_type: 'SalesInvoice',
-    reference_name: `SINV-10${index}`,
+    voucher_type: 'SalesInvoice',
+    voucher_no: `SINV-10${index}`,
   });
   return load(
     new GeneralLedger(fyo),
@@ -111,8 +111,8 @@ function makeGeneralLedger() {
       column('credit', 'Credit', 'Currency'),
       column('balance', 'Balance', 'Currency'),
       column('party', 'Party', 'Link'),
-      column('reference_name', 'Ref Name'),
-      column('reference_type', 'Ref Type'),
+      column('voucher_no', 'Ref Name'),
+      column('voucher_type', 'Ref Type'),
     ],
     [
       { type: 'opening', account: 'Opening', debit: 0, credit: 0, balance: 0 },

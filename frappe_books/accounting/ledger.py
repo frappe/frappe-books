@@ -40,7 +40,7 @@ class LedgerPosting:
 
 	def _insert_entry(self, key, fieldname, amount):
 		values = {
-			"doctype": "Books Ledger Entry",
+			"doctype": "Books GL Entry",
 			"posting_date": _posting_date(self.voucher),
 			"party_type": key.party and self.voucher.party_type,
 			"party": key.party,
@@ -109,21 +109,21 @@ def _throw_unbalanced(debit, credit):
 
 def reverse_entries(voucher):
 	entries = frappe.get_all(
-		"Books Ledger Entry",
+		"Books GL Entry",
 		filters={
 			"voucher_type": voucher.doctype,
 			"voucher_no": voucher.name,
-			"reverted": 0,
+			"is_cancelled": 0,
 		},
 		fields=["name", "account", "party_type", "party", "debit", "credit"],
 		# Reverse newest first, whatever order the list sorts by.
 		order_by="creation desc",
 	)
 	for entry in entries:
-		frappe.db.set_value("Books Ledger Entry", entry.name, "reverted", 1, update_modified=False)
+		frappe.db.set_value("Books GL Entry", entry.name, "is_cancelled", 1, update_modified=False)
 		frappe.get_doc(
 			{
-				"doctype": "Books Ledger Entry",
+				"doctype": "Books GL Entry",
 				"posting_date": _posting_date(voucher),
 				"party_type": entry.party_type,
 				"party": entry.party,
@@ -132,15 +132,14 @@ def reverse_entries(voucher):
 				"credit": entry.debit,
 				"voucher_type": voucher.doctype,
 				"voucher_no": voucher.name,
-				"reverted": 1,
-				"reverts": entry.name,
+				"is_cancelled": 1,
 			}
 		).insert(ignore_permissions=True)
 
 
 def delete_entries(voucher):
 	frappe.db.delete(
-		"Books Ledger Entry",
+		"Books GL Entry",
 		{"voucher_type": voucher.doctype, "voucher_no": voucher.name},
 	)
 

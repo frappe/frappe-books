@@ -32,11 +32,6 @@ const excludedFieldTypes: FieldType[] = [
  */
 const RENAMED_KEYS: Record<string, Record<string, string>> = {
   Account: { account_name: 'name', parent_account: 'parentAccount' },
-  AccountingLedgerEntry: {
-    posting_date: 'date',
-    voucher_no: 'referenceName',
-    voucher_type: 'referenceType',
-  },
   Country: { country_name: 'name' },
   Currency: {
     currency_name: 'name',

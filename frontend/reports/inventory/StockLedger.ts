@@ -19,10 +19,6 @@ export class StockLedger extends Report {
     chips: ['fromDate', 'toDate', 'itemCode', 'warehouse'],
   };
   static isInventory = true;
-  static override referenceFilters: [type: string, name: string] = [
-    'voucherType',
-    'voucherNo',
-  ];
 
   usePagination = true;
 

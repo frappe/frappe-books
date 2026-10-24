@@ -34,7 +34,7 @@ test('a submitted entry shows its accounting entries in the ledger list', async 
     page.getByRole('textbox', { name: 'Reference Number', exact: true })
   ).toHaveValue(`JE ${run}`);
 
-  await page.goto('/books/list/AccountingLedgerEntry');
+  await page.goto('/books/list/GLEntry');
   await waitForBooks(page);
   await expect(page.getByText(entry, { exact: true })).toHaveCount(2);
 });

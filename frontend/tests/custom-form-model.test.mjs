@@ -42,7 +42,7 @@ test('the Custom Form asks for a form type among the forms Books can customize',
     'Books System Settings',
     'Books Custom Form',
     'Books Setup Wizard',
-    'Books Ledger Entry',
+    'Books GL Entry',
     'Books Stock Ledger Entry',
     'Books Loyalty Point Entry',
     // Settings rows and other apps' doctypes, which the server refuses too.

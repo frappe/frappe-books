@@ -416,7 +416,7 @@ class IntegrationTestStockEntryPostings(IntegrationTestCase):
 		receipt.cancel()
 
 		self.assertEqual(self.balances(receipt), {self.stock: Decimal(0), self.adjustment: Decimal(0)})
-		self.assertTrue(all(entry.reverted for entry in ledger_entries(receipt.doctype, receipt.name)))
+		self.assertTrue(all(entry.is_cancelled for entry in ledger_entries(receipt.doctype, receipt.name)))
 
 	def test_a_restated_movement_posts_its_new_value(self):
 		now = now_datetime()

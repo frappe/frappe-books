@@ -20,7 +20,7 @@ ROW_OPTIONS_FIELDS = {"Link": "target", "Table": "target", "DynamicLink": "refer
 PROTECTED_DOCTYPES = {
 	"Books Custom Field",
 	"Books Custom Form",
-	"Books Ledger Entry",
+	"Books GL Entry",
 	"Books Loyalty Point Entry",
 	"Books Setup Wizard",
 	"Books Stock Ledger Entry",

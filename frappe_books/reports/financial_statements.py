@@ -7,7 +7,7 @@ from frappe.utils import add_days, getdate
 from frappe_books.accounting.money import as_decimal, sum_decimal
 from frappe_books.reports.periods import get_fiscal_year
 
-LEDGER = "Books Ledger Entry"
+LEDGER = "Books GL Entry"
 CREDIT_ROOT_TYPES = {"Liability", "Equity", "Income"}
 BALANCE_SHEET = ("Asset", "Liability", "Equity")
 TRIAL_BALANCE = ("Asset", "Liability", "Income", "Expense", "Equity")
@@ -172,7 +172,7 @@ def _balance(root_type, debit, credit):
 
 def _ledger_sums(from_date, to_date):
 	"""Return the debit and credit totals of each account, both dates included."""
-	filters = [["reverted", "=", 0]]
+	filters = [["is_cancelled", "=", 0]]
 	if from_date:
 		filters.append(["posting_date", ">=", from_date])
 	if to_date:

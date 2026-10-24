@@ -70,7 +70,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
         ['debit', 'Currency', 150],
         ['credit', 'Currency', 150],
         ['balance', 'Currency', 150],
-        ['reference_type', 'Data'],
+        ['voucher_type', 'Data'],
       ],
       [
         {
@@ -88,7 +88,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
           debit: 50,
           credit: 0,
           balance: 150,
-          reference_type: 'Books Journal Entry',
+          voucher_type: 'Books Journal Entry',
         },
         {},
         {
@@ -110,7 +110,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
   assert.equal(args.filters.account, 'Cash');
   assert.equal(args.filters.from_date, '2026-01-01');
   assert.equal(args.filters.ascending, true);
-  assert.equal(args.filters.reverted, false);
+  assert.equal(args.filters.is_cancelled, false);
   assert.deepEqual(
     report.columns.map((c) => [c.fieldname, c.align, c.width]),
     [
@@ -120,7 +120,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
       ['debit', 'right', 1.25],
       ['credit', 'right', 1.25],
       ['balance', 'right', 1.25],
-      ['reference_type', 'left', 1],
+      ['voucher_type', 'left', 1],
     ]
   );
   const cell = (row, fieldname) =>
@@ -130,7 +130,7 @@ test('general ledger runs its Script Report and styles the server rows', async (
   assert.equal(cell(opening, 'balance').rawValue, 100);
   assert.equal(cell(opening, 'account').italics, true);
   assert.equal(cell(entry, 'index').value, '1');
-  assert.equal(cell(entry, 'reference_type').rawValue, 'Books Journal Entry');
+  assert.equal(cell(entry, 'voucher_type').rawValue, 'Books Journal Entry');
   assert.equal(blank.isEmpty, true);
   assert.equal(cell(closing, 'account').value, 'Closing');
   assert.equal(cell(closing, 'balance').bold, true);
@@ -191,7 +191,7 @@ test('general ledger offers stock reference doctypes only with inventory', async
   const referenceTypes = () =>
     new GeneralLedger(fyo)
       .getFilters()
-      .find(({ fieldname }) => fieldname === 'referenceType')
+      .find(({ fieldname }) => fieldname === 'voucherType')
       .options.map(({ value }) => value);
 
   fyo.singles.AccountingSettings.enable_inventory = false;

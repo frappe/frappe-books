@@ -9,7 +9,7 @@ const UNCUSTOMIZABLE: string[] = [
 ];
 // Ledgers the server does not let a Custom Form change.
 const LEDGERS: string[] = [
-  ModelNameEnum.AccountingLedgerEntry,
+  ModelNameEnum.GLEntry,
   ModelNameEnum.LoyaltyPointEntry,
   ModelNameEnum.StockLedgerEntry,
 ];

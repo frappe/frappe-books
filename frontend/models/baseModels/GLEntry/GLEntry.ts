@@ -1,11 +1,11 @@
 import { ListViewSettings } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 
-/** Books Ledger Entry, served by Frappe. Only the server posts and reverts entries. */
-export class AccountingLedgerEntry extends FrappeDoc {
-  static override doctype = 'Books Ledger Entry';
+/** Books GL Entry, served by Frappe. Only the server posts and cancels entries. */
+export class GLEntry extends FrappeDoc {
+  static override doctype = 'Books GL Entry';
   static override presentation = {
-    label: 'Accounting Ledger Entry',
+    label: 'GL Entry',
     nameField: { label: 'Entry No.' },
     quickEditFields: [
       'posting_date',
@@ -16,8 +16,7 @@ export class AccountingLedgerEntry extends FrappeDoc {
       'credit',
       'voucher_type',
       'voucher_no',
-      'reverted',
-      'reverts',
+      'is_cancelled',
     ],
   };
 

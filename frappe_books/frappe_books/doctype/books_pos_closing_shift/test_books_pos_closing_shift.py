@@ -237,7 +237,7 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 
 		self.assertEqual([row.difference_amount for row in closing.closing_amounts], [0, 0])
 		entries = frappe.get_all(
-			"Books Ledger Entry", filters={"account": self.counter}, fields=["debit", "credit"]
+			"Books GL Entry", filters={"account": self.counter}, fields=["debit", "credit"]
 		)
 		self.assertEqual(sum(row.debit - row.credit for row in entries), 0)
 

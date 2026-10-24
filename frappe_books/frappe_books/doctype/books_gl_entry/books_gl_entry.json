@@ -18,15 +18,14 @@
   "reference_section_break_8",
   "voucher_type",
   "voucher_no",
-  "reverted",
-  "reverts",
+  "is_cancelled",
   "company"
  ],
  "fields": [
   {
    "fieldname": "posting_date",
    "fieldtype": "Date",
-   "label": "Date",
+   "label": "Posting Date",
    "read_only": 1,
    "search_index": 1
   },
@@ -43,42 +42,35 @@
   {
    "fieldname": "debit",
    "fieldtype": "Currency",
-   "label": "Debit",
+   "label": "Debit Amount",
    "read_only": 1
   },
   {
    "fieldname": "credit",
    "fieldtype": "Currency",
-   "label": "Credit",
+   "label": "Credit Amount",
    "read_only": 1
   },
   {
    "fieldname": "voucher_type",
    "fieldtype": "Link",
-   "label": "Ref. Type",
+   "label": "Voucher Type",
    "options": "DocType",
    "read_only": 1
   },
   {
    "fieldname": "voucher_no",
    "fieldtype": "Dynamic Link",
-   "label": "Ref. Name",
+   "label": "Voucher No",
    "options": "voucher_type",
    "read_only": 1,
    "search_index": 1
   },
   {
    "default": "0",
-   "fieldname": "reverted",
+   "fieldname": "is_cancelled",
    "fieldtype": "Check",
-   "label": "Reverted",
-   "read_only": 1
-  },
-  {
-   "fieldname": "reverts",
-   "fieldtype": "Link",
-   "label": "Reverts",
-   "options": "Books Ledger Entry",
+   "label": "Is Cancelled",
    "read_only": 1
   },
   {
@@ -122,10 +114,10 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-04 12:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Ledger Entry",
+ "name": "Books GL Entry",
  "owner": "Administrator",
  "permissions": [
   {

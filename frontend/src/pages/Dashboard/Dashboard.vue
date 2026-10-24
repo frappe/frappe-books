@@ -84,7 +84,7 @@ export default {
     const canRead = {
       sales: fyo.can(ModelNameEnum.SalesInvoice, 'read'),
       purchases: fyo.can(ModelNameEnum.PurchaseInvoice, 'read'),
-      ledger: fyo.can(ModelNameEnum.AccountingLedgerEntry, 'read'),
+      ledger: fyo.can(ModelNameEnum.GLEntry, 'read'),
     };
     return { isMobile, canRead };
   },

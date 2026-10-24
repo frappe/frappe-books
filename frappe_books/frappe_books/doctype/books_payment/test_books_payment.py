@@ -436,7 +436,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 
 	def _balance(self, account):
 		entries = frappe.get_all(
-			"Books Ledger Entry", filters={"account": account.name}, fields=["debit", "credit"]
+			"Books GL Entry", filters={"account": account.name}, fields=["debit", "credit"]
 		)
 		return sum(Decimal(str(row.credit)) - Decimal(str(row.debit)) for row in entries)
 

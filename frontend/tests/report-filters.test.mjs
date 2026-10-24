@@ -28,13 +28,13 @@ test('report filters show their From and To dates as one range, first', async ()
 
   assert.deepEqual(describe(getFilterItems(report.getFilters())), [
     'fromDate-toDate',
-    'field:referenceType',
-    'field:referenceName',
+    'field:voucherType',
+    'field:voucherNo',
     'field:account',
     'field:partyType',
     'field:party',
     'field:groupBy',
-    'field:reverted',
+    'field:isCancelled',
     'field:ascending',
   ]);
 });
@@ -114,11 +114,11 @@ test('without a fiscal year the presets are this month and the last', () => {
 test('a new Ref Type clears the Ref Name of the old one', async () => {
   const report = new GeneralLedger(await makeFyo());
   report.filters = report.getFilters();
-  await report.set('referenceType', 'Books Sales Invoice', false);
-  await report.set('referenceName', 'SINV-1001', false);
+  await report.set('voucherType', 'Books Sales Invoice', false);
+  await report.set('voucherNo', 'SINV-1001', false);
 
-  await report.set('referenceType', 'Books Payment', false);
+  await report.set('voucherType', 'Books Payment Entry', false);
 
-  assert.equal(report.get('referenceName'), undefined);
-  assert.equal(report.get('referenceType'), 'Books Payment');
+  assert.equal(report.get('voucherNo'), undefined);
+  assert.equal(report.get('voucherType'), 'Books Payment Entry');
 });

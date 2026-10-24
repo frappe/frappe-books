@@ -6,16 +6,12 @@ import { showToast } from 'src/utils/interactive';
 import { getFloatPrecision } from 'src/utils/precision';
 import { getIsNullOrUndef } from 'utils';
 import { generateCSV } from 'utils/csvParser';
-import { REFERENCE_TYPE_COLUMNS, Report } from './Report';
+import { Report } from './Report';
 import { canExportReport } from './serverReport';
 import { ColumnField, ExportExtension, ReportCell } from './types';
 
 // Reports hold reference types, as columns and filters, as doctypes; files name them by schema, e.g. `SalesInvoice`.
-const REFERENCE_FIELDNAMES = [
-  ...REFERENCE_TYPE_COLUMNS,
-  'referenceType',
-  'voucherType',
-];
+const REFERENCE_FIELDNAMES = ['voucher_type', 'voucherType'];
 
 interface JSONExport {
   columns: { fieldname: string; label: string }[];

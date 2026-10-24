@@ -288,10 +288,6 @@ test('files keep the keys Books renamed', async () => {
     'Item.itemType',
     'UOMConversionDetail.uom',
   ]);
-  assert.deepEqual(
-    await keys('AccountingLedgerEntry', ['posting_date', 'voucher_type']),
-    ['AccountingLedgerEntry.date', 'AccountingLedgerEntry.referenceType']
-  );
 });
 
 test('every exported table is headed by the label of its rows, not their doctype', () => {

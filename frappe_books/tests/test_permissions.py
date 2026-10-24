@@ -53,7 +53,7 @@ ROLE_MATRIX = {
 	"Books Defaults": (FULL, FULL, READ),
 	"Print Format": (FULL, FULL, READ),
 	"Books Custom Form": (FULL, READ, READ),
-	"Books Ledger Entry": (READ, READ, NONE),
+	"Books GL Entry": (READ, READ, NONE),
 	"Books Stock Ledger Entry": (READ, READ, READ),
 	"Books Loyalty Point Entry": (READ, READ, READ),
 }
@@ -202,7 +202,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			(BOOKS_USER, "Books Sales Invoice", False),
 			(MANAGER, "Books Sales Invoice", True),
 			(SYSTEM_MANAGER, "Books Sales Invoice", True),
-			(MANAGER, "Books Ledger Entry", False),
+			(MANAGER, "Books GL Entry", False),
 		):
 			with self.subTest(user=user, doctype=doctype), self.set_user(user):
 				self.assertEqual(frappe.has_permission(doctype, "import"), allowed)
@@ -221,7 +221,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 
 	def test_ledger_writes_follow_docperms(self):
 		with self.set_user(MANAGER):
-			for doctype in ("Books Ledger Entry", "Books Stock Ledger Entry", "Books Loyalty Point Entry"):
+			for doctype in ("Books GL Entry", "Books Stock Ledger Entry", "Books Loyalty Point Entry"):
 				with self.subTest(doctype=doctype):
 					self.assertRaises(frappe.PermissionError, client.insert, {"doctype": doctype})
 

@@ -152,9 +152,9 @@ def make_invoice(doctype, party, account, item, item_account, **values):
 
 def ledger_entries(voucher_type, voucher_no):
 	return frappe.get_all(
-		"Books Ledger Entry",
+		"Books GL Entry",
 		filters={"voucher_type": voucher_type, "voucher_no": voucher_no},
-		fields=["account", "debit", "credit", "reverted", "reverts"],
+		fields=["account", "debit", "credit", "is_cancelled"],
 		order_by="creation asc",
 	)
 

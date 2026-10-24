@@ -164,7 +164,11 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 		entries = ledger_entries(invoice.doctype, invoice.name)
 		self.assertEqual(len(entries), 8)
-		self.assertEqual(sum(bool(row.reverts) for row in entries), 4)
+		originals, reversals = entries[:4], entries[4:]
+		self.assertCountEqual(
+			[(row.account, row.credit, row.debit) for row in originals],
+			[(row.account, row.debit, row.credit) for row in reversals],
+		)
 		self.assertEqual(invoice.db_get("outstanding_amount"), 0)
 
 	def test_multi_currency_posting_balances_with_round_off(self):

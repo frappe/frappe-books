@@ -12,7 +12,7 @@ import {
 
 // The list columns the ledgers showed.
 const previousColumns = {
-  AccountingLedgerEntry: [
+  GLEntry: [
     'posting_date',
     'account',
     'party',
@@ -54,7 +54,7 @@ for (const schemaName of ledgers) {
 }
 
 test('a ledger entry shows the schema of its voucher as Books did', () => {
-  const field = getSchema('AccountingLedgerEntry').fields.find(
+  const field = getSchema('GLEntry').fields.find(
     ({ fieldname }) => fieldname === 'voucher_type'
   );
   assert.equal(fyo.format('Books Sales Invoice', field), 'SalesInvoice');
@@ -65,7 +65,7 @@ test('the accounting ledger lists newest posting first', async () => {
     path.endsWith('/count') ? { data: 0 } : { message: [] }
   );
   const page = { filters: [], orFilters: [], start: 0, limit: 20 };
-  await getFrappeListPage(fyo, 'AccountingLedgerEntry', page);
+  await getFrappeListPage(fyo, 'GLEntry', page);
   await getFrappeListPage(fyo, 'StockLedgerEntry', page);
   await getFrappeListPage(fyo, 'LoyaltyPointEntry', page);
   assert.deepEqual(

@@ -202,7 +202,7 @@ export default defineComponent({
   computed: {
     /** Balances total the ledger. */
     canReadLedger(): boolean {
-      return fyo.can(ModelNameEnum.AccountingLedgerEntry, 'read');
+      return fyo.can(ModelNameEnum.GLEntry, 'read');
     },
     isAllExpanded(): boolean {
       return this.getGroups(this.accounts).every((account) =>

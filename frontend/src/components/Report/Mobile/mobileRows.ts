@@ -47,9 +47,8 @@ export function getRowDetails(report: Report, row: ReportRow): RowDetail[] {
 export function getRowReference(report: Report, row: ReportRow) {
   const getRaw = (fieldname: string) =>
     row.cells[getColumnIndex(report, fieldname)]?.rawValue;
-  // The general ledger's columns, else the stock ledger's.
-  const doctype = getRaw('reference_type') ?? getRaw('voucher_type');
-  const name = getRaw('reference_name') ?? getRaw('voucher_no');
+  const doctype = getRaw('voucher_type');
+  const name = getRaw('voucher_no');
   if (typeof doctype !== 'string' || typeof name !== 'string' || !name) {
     return null;
   }

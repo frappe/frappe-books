@@ -57,7 +57,7 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		_post("2044-12-31", self.sales.name, 0, 100, voucher)
 		_post("2045-01-01", self.cash.name, 20, 0, voucher)
 
-		rows = self._ledger(reference_name=voucher, group_by="account", ascending=True)
+		rows = self._ledger(voucher_no=voucher, group_by="account", ascending=True)
 
 		totals = [row["balance"] for row in rows if row.get("type") == "total"]
 		self.assertEqual(totals, [Decimal(120), Decimal(-100)])
@@ -71,11 +71,11 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		_post("2045-01-05", self.cash.name, 50, 0)
 		_post("2045-01-06", self.cash.name, 30, 0, voucher_type="Books Payment")
 
-		rows = self._ledger(account=self.cash.name, reference_type="Books Payment")
+		rows = self._ledger(account=self.cash.name, voucher_type="Books Payment")
 
 		entries = [row for row in rows if row.get("type") == "entry"]
 		self.assertEqual(
-			[(row["reference_type"], row["debit"]) for row in entries], [("Books Payment", Decimal(30))]
+			[(row["voucher_type"], row["debit"]) for row in entries], [("Books Payment", Decimal(30))]
 		)
 
 	def test_general_ledger_of_a_group_account_shows_its_accounts_entries(self):
@@ -219,7 +219,7 @@ def _account(label, root_type, parent=None, is_group=0):
 def _post(date, account, debit, credit, voucher=None, voucher_type=VOUCHER):
 	frappe.get_doc(
 		{
-			"doctype": "Books Ledger Entry",
+			"doctype": "Books GL Entry",
 			"posting_date": date,
 			"account": account,
 			"debit": debit,

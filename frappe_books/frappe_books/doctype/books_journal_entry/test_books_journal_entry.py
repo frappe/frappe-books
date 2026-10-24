@@ -53,8 +53,12 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		self.assertEqual(len(entries), 4)
 		self.assertEqual(sum(flt(entry.debit, 2) for entry in entries), 100)
 		self.assertEqual(sum(flt(entry.credit, 2) for entry in entries), 100)
-		self.assertEqual(sum(bool(entry.reverts) for entry in entries), 2)
-		self.assertTrue(all(entry.reverted for entry in entries))
+		originals, reversals = entries[:2], entries[2:]
+		self.assertCountEqual(
+			[(entry.account, entry.credit, entry.debit) for entry in originals],
+			[(entry.account, entry.debit, entry.credit) for entry in reversals],
+		)
+		self.assertTrue(all(entry.is_cancelled for entry in entries))
 
 	def test_rejects_unbalanced_entry(self):
 		journal_entry = frappe.get_doc(

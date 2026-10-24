@@ -6,7 +6,7 @@ from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
 from frappe_books.reports.periods import get_fiscal_year
 
-LEDGER = "Books Ledger Entry"
+LEDGER = "Books GL Entry"
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
 PERIOD_MONTHS = {"This Year": 12, "This Quarter": 3, "This Month": 1}
 MONTH_FIELDS = [{"YEAR": "posting_date", "as": "year"}, {"MONTH": "posting_date", "as": "month"}]
@@ -124,7 +124,7 @@ def _balance(totals, month):
 
 
 def _ledger_filters(from_date, to_date, filters):
-	return {"reverted": 0, "posting_date": ["between", [from_date, to_date]], **filters}
+	return {"is_cancelled": 0, "posting_date": ["between", [from_date, to_date]], **filters}
 
 
 def _invoice_totals(doctype, conditions):

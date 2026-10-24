@@ -28,7 +28,7 @@ class IntegrationTestBooksQuotation(IntegrationTestCase):
 		self.assertEqual((quote.grand_total, quote.status), (50, "Open"))
 		self.assertFalse(
 			frappe.db.exists(
-				"Books Ledger Entry",
+				"Books GL Entry",
 				{"voucher_type": quote.doctype, "voucher_no": quote.name},
 			)
 		)

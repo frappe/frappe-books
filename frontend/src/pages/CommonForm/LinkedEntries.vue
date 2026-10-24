@@ -348,7 +348,7 @@ const linkSequence = [
   ModelNameEnum.Account,
   ModelNameEnum.Warehouse,
   // Ledgers
-  ModelNameEnum.AccountingLedgerEntry,
+  ModelNameEnum.GLEntry,
   ModelNameEnum.StockLedgerEntry,
 ];
 
@@ -387,7 +387,7 @@ const linkEntryDisplayFields: Record<string, string[]> = {
   [ModelNameEnum.JournalEntry]: ['name', 'date', 'entry_type'],
   [ModelNameEnum.StockEntry]: ['name', 'posting_date', 'total_amount'],
   // Ledgers
-  [ModelNameEnum.AccountingLedgerEntry]: [
+  [ModelNameEnum.GLEntry]: [
     'name',
     'posting_date',
     'account',

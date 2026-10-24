@@ -42,7 +42,7 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 
 		self.assertEqual(supplier.db_get("outstanding_amount"), 180)
 		party_entries = frappe.get_all(
-			"Books Ledger Entry",
+			"Books GL Entry",
 			filters={"voucher_no": invoice.name, "party": ["is", "set"]},
 			pluck="party_type",
 		)

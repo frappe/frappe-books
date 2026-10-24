@@ -26,17 +26,17 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		account = make_account("Linked entry IDs")
 		entry = frappe.get_doc(
 			{
-				"doctype": "Books Ledger Entry",
+				"doctype": "Books GL Entry",
 				"account": account.name,
 				"posting_date": "2026-09-06",
 				"debit": 12.5,
 			}
 		).insert()
 
-		names = get_linked_entries(account.doctype, account.name)["Books Ledger Entry"]
+		names = get_linked_entries(account.doctype, account.name)["Books GL Entry"]
 		# The panel then lists them by name, as getFrappeRows does.
 		details = frappe.get_list(
-			"Books Ledger Entry",
+			"Books GL Entry",
 			filters={"name": ["in", names]},
 			fields=["name", "posting_date", "account", "debit", "credit"],
 		)
@@ -81,7 +81,7 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 
 		entries = get_linked_entries(invoice.doctype, invoice.name)
 		self.assertEqual(entries["Books Payment"], [payment.name])
-		self.assertIn("Books Ledger Entry", entries)
+		self.assertIn("Books GL Entry", entries)
 
 		payment.cancel()
 		self.assertNotIn("Books Payment", get_linked_entries(invoice.doctype, invoice.name))
@@ -91,11 +91,9 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		older, newer = (_ledger_entry(account.name, creation) for creation in ("2026-01-01", "2026-01-02"))
 
 		with patch.object(linked_entries_module, "LINKED_ENTRIES_LIMIT", 1):
-			self.assertEqual(
-				get_linked_entries(account.doctype, account.name), {"Books Ledger Entry": [newer]}
-			)
+			self.assertEqual(get_linked_entries(account.doctype, account.name), {"Books GL Entry": [newer]})
 		self.assertEqual(
-			get_linked_entries(account.doctype, account.name), {"Books Ledger Entry": [newer, older]}
+			get_linked_entries(account.doctype, account.name), {"Books GL Entry": [newer, older]}
 		)
 
 	def test_linked_entries_read_only_books_tables(self):
@@ -118,7 +116,7 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 
 def _ledger_entry(account, creation):
 	entry = frappe.get_doc(
-		{"doctype": "Books Ledger Entry", "account": account, "posting_date": creation, "debit": 1}
+		{"doctype": "Books GL Entry", "account": account, "posting_date": creation, "debit": 1}
 	).insert()
 	entry.db_set("creation", creation, update_modified=False)
 	return str(entry.name)

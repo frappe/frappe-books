@@ -167,7 +167,7 @@ class IntegrationTestAccountBalances(IntegrationTestCase):
 def _post(account, debit, credit, date="2031-01-10"):
 	frappe.get_doc(
 		{
-			"doctype": "Books Ledger Entry",
+			"doctype": "Books GL Entry",
 			"posting_date": date,
 			"account": account.name,
 			"debit": debit,

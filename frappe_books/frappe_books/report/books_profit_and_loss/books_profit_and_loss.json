@@ -17,7 +17,7 @@
  "name": "Books Profit and Loss",
  "owner": "Administrator",
  "prepared_report": 0,
- "ref_doctype": "Books Ledger Entry",
+ "ref_doctype": "Books GL Entry",
  "report_name": "Books Profit and Loss",
  "report_type": "Script Report",
  "roles": [

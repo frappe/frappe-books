@@ -1,6 +1,8 @@
 <template>
+  <!-- Alert sizes its description to the text; messages take its width, so tables scroll inside it. -->
   <FrappeAlert
     ref="panel"
+    class="[&_[data-slot=description]]:w-full [&_[data-slot=description]]:min-w-0"
     theme="red"
     :title="title"
     dismissible

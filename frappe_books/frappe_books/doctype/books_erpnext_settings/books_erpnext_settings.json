@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "creation": "2026-10-24 22:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "default_company",
+  "accessory_mode"
+ ],
+ "fields": [
+  {
+   "description": "Books works on one company at a time. Required for accessory mode.",
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company"
+  },
+  {
+   "default": "0",
+   "description": "Books becomes a simple UI for ERPNext. Standalone Books data stays as it is and comes back when you turn this off.",
+   "fieldname": "accessory_mode",
+   "fieldtype": "Check",
+   "label": "Accessory Mode"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-24 22:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe Books",
+ "name": "Books ERPNext Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

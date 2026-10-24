@@ -54,6 +54,10 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		"""Fill the values a save would fill, without saving, for the form to show them."""
 		check_preview_permission(self)
 		self.set_number_series()
+		if self.payment_type == INTERNAL_TRANSFER:
+			# The form hides what a transfer cannot have, so it goes.
+			self.set("references", [])
+			self.set("deductions", [])
 		self.set_missing_values()
 		# The fills show what the invoices hold, which only their readers may see.
 		for row in self.references:
@@ -81,7 +85,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		self.party_type = self.party_type or PAYMENT_PARTY_TYPES.get(self.payment_type)
 		self.set_reference_doctypes()
 		invoice = self.get_first_invoice()
-		if invoice:
+		if invoice and self.payment_type != INTERNAL_TRANSFER:
 			self.party_type = self.party_type or invoice.party_type
 			self.party = self.party or invoice.party
 		self.payment_type = self.payment_type or _default_payment_type(self.party_type, invoice)

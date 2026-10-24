@@ -57,6 +57,7 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 	changed = frappe.parse_json(changed) or {}
 	edited = set(changed.get("doc") or [])
 	edited_rows = changed.get("rows") or {}
+	untouched = document.is_new() and not (edited or edited_rows)
 	frappe.db.savepoint("books_preview")
 	try:
 		refresh_party(document, edited)
@@ -65,7 +66,10 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 			reprice_rows(document, edited_rows)
 		if check_coupons and document.get("coupon_code"):
 			validate_coupon_code(document.coupon_code)
-		fill(document, edited)
+		if untouched:
+			fill_untouched(document)
+		else:
+			fill(document, edited)
 		return document.as_dict()
 	finally:
 		# ERPNext's fills only read, but a preview never keeps a write.
@@ -157,6 +161,14 @@ def fill(document: Document, edited: set[str]):
 
 	if form_fill := FORM_FILLS.get(document.doctype):
 		form_fill(document, edited)
+
+
+def fill_untouched(document: Document):
+	"""Fill a new document the user has not edited, leaving what ERPNext refuses to its save, as Desk does."""
+	try:
+		fill(document, set())
+	except frappe.ValidationError:
+		frappe.clear_last_message()
 
 
 def fill_loyalty(document: Document, edited: set[str]):

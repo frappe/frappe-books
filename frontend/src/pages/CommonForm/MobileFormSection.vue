@@ -39,29 +39,25 @@
     </p>
     <template v-for="block in blocks" :key="block.key">
       <div
-        v-if="
-          block.key === 'table' &&
-          tableField &&
-          (kind !== 'collapsible' || isOpen)
-        "
+        v-if="block.table && (kind !== 'collapsible' || isOpen)"
         class="flex flex-col gap-3 p-4"
       >
-        <slot name="table" />
+        <slot v-if="block.table === tableField" name="table" />
         <Table
-          :data-fieldname="tableField.fieldname"
-          :df="tableField"
-          :value="(doc[tableField.fieldname] ?? []) as FrappeDoc[]"
-          :title="tableTitle"
+          :data-fieldname="block.table.fieldname"
+          :df="block.table"
+          :value="(doc[block.table.fieldname] ?? []) as FrappeDoc[]"
+          :title="block.table === tableField ? tableTitle : block.table.label"
           @editrow="(row: FrappeDoc) => $emit('editrow', row)"
           @change="
-            (value: DocValue) => $emit('value-change', tableField!, value)
+            (value: DocValue) => $emit('value-change', block.table!, value)
           "
           @row-change="
             (field: Field, value: DocValue, parentfield: Field) =>
               $emit('row-change', field, value, parentfield)
           "
         />
-        <FrappeErrorMessage :message="errors[tableField.fieldname]" />
+        <FrappeErrorMessage :message="errors[block.table.fieldname]" />
       </div>
       <div
         v-else-if="block.groups.length && (kind !== 'collapsible' || isOpen)"
@@ -105,7 +101,10 @@
             "
           />
         </template>
-        <slot v-if="block.key !== 'before'" name="end" />
+        <slot
+          v-if="block.key === 'fields' || block.key === 'after'"
+          name="end"
+        />
       </div>
     </template>
   </section>
@@ -182,23 +181,34 @@ const isOpen = ref(
 watch(hasError, (value) => value && (isOpen.value = true), { immediate: true });
 
 interface FieldBlock {
-  key: 'before' | 'table' | 'after' | 'fields';
+  /** `before` the first table, `after` a table, or `fields` in a section without tables. */
+  key: string;
   groups: Field[][];
+  table?: Field;
 }
 
-/** Fields keep their schema order around the table. */
+/** Fields keep their schema order around the tables, e.g. two of an ERPNext section. */
 const blocks = computed<FieldBlock[]>(() => {
-  const fields = visibleFields.value;
-  const index = tableField.value ? fields.indexOf(tableField.value) : -1;
-  if (index === -1) {
-    return [{ key: 'fields', groups: groupFields(fields) }];
+  const blocks: FieldBlock[] = [];
+  let fields: Field[] = [];
+  const close = (key: string) =>
+    blocks.push({ key, groups: groupFields(fields) });
+  for (const field of visibleFields.value) {
+    if (isLineTable(field)) {
+      close(blocks.length ? `after-${blocks.length}` : 'before');
+      blocks.push({
+        key: `table-${field.fieldname}`,
+        groups: [],
+        table: field,
+      });
+      fields = [];
+    } else {
+      fields.push(field);
+    }
   }
 
-  return [
-    { key: 'before', groups: groupFields(fields.slice(0, index)) },
-    { key: 'table', groups: [] },
-    { key: 'after', groups: groupFields(fields.slice(index + 1)) },
-  ];
+  close(blocks.length ? 'after' : 'fields');
+  return blocks;
 });
 
 const tableTitle = computed(() =>
@@ -234,7 +244,7 @@ function getListClass(block: FieldBlock) {
   return [
     'p-4',
     onlyTotals ? 'gap-2.5 text-md tabular-nums' : 'gap-4',
-    { 'border-t border-outline-gray-1': block.key === 'after' },
+    { 'border-t border-outline-gray-1': block.key.startsWith('after') },
   ];
 }
 
@@ -261,7 +271,12 @@ function isTotal(field: Field) {
     return !!field.readOnly;
   }
 
-  return isNumeric(field) && props.doc.getFieldState(field).readOnly;
+  // A Percent reads as a value under its label, not as an amount.
+  return (
+    isNumeric(field) &&
+    !field.control &&
+    props.doc.getFieldState(field).readOnly
+  );
 }
 
 function getTotalLines(field: Field) {

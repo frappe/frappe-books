@@ -9,7 +9,14 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, nowdate, set_request
 
 from frappe_books.accounting.money import as_decimal
-from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, make_number_series
+from frappe_books.tests.accounting import (
+	ensure_user,
+	ledger_entries,
+	make_account,
+	make_customer,
+	make_number_series,
+	make_supplier,
+)
 
 READ_ONLY_USER = "books-journal-preview-reader@example.com"
 
@@ -114,6 +121,51 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		entries = ledger_entries(journal_entry.doctype, journal_entry.name)
 		self.assertEqual(sum(as_decimal(entry.debit) for entry in entries), Decimal("10.01"))
 		self.assertEqual(sum(as_decimal(entry.credit) for entry in entries), Decimal("10.01"))
+
+	def test_a_row_posts_its_party(self):
+		receivable = make_account("Test Debtors", account_type="Receivable")
+		customer = make_customer(receivable.name)
+		journal_entry = make_journal_entry(
+			[
+				{
+					"account": receivable.name,
+					"party_type": "Books Customer",
+					"party": customer.name,
+					"debit_in_account_currency": 40,
+				},
+				{"account": self.equity.name, "credit_in_account_currency": 40},
+			]
+		)
+		journal_entry.submit()
+
+		entries = frappe.get_all(
+			"Books GL Entry",
+			filters={"voucher_no": journal_entry.name},
+			fields=["account", "party_type", "party"],
+			as_list=True,
+		)
+		self.assertCountEqual(
+			[tuple(entry) for entry in entries],
+			[(receivable.name, "Books Customer", customer.name), (self.equity.name, None, None)],
+		)
+
+	def test_a_row_party_suits_its_account(self):
+		receivable = make_account("Test Debtors", account_type="Receivable")
+		payable = make_account("Test Creditors", root_type="Liability", account_type="Payable")
+		supplier = make_supplier(payable.name)
+		for party_type, party, message in (
+			("Books Supplier", supplier.name, "different account types"),
+			("Books Supplier", None, "Party is mandatory"),
+		):
+			with self.subTest(party_type=party_type, party=party):
+				row = {"account": receivable.name, "party_type": party_type, "party": party}
+				with self.assertRaisesRegex(frappe.ValidationError, message):
+					make_journal_entry(
+						[
+							{**row, "debit_in_account_currency": 40},
+							{"account": self.equity.name, "credit_in_account_currency": 40},
+						]
+					)
 
 	def test_preview_fills_the_default_series_without_saving(self):
 		series = make_number_series("JournalEntry")

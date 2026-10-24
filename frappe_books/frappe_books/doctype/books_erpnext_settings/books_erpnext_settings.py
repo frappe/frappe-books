@@ -47,3 +47,8 @@ class BooksERPNextSettings(Document):
 	def on_update(self):
 		# The mode comes with the session boot, which Frappe caches per user.
 		frappe.cache.delete_key("bootinfo")
+		if self.has_value_changed("accessory_mode"):
+			# The palette searches the mode's documents, which the index then needs.
+			frappe.enqueue(
+				rebuild_search_index, queue="long", job_id="rebuild_books_search_index", deduplicate=True
+			)

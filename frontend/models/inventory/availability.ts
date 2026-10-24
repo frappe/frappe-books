@@ -1,7 +1,9 @@
 import type { Filter } from 'src/frappe/api';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { call } from 'src/web/api';
 
 const AVAILABILITY = 'frappe_books.inventory.availability';
+const ERPNEXT_BATCH_QTY = 'erpnext.stock.doctype.batch.batch.get_batch_qty';
 
 /** Stock of an item, or of one of its batches, as the server sums its ledger. */
 export type StockQuantity = {
@@ -46,12 +48,33 @@ export async function getStockQuantities(
   });
 }
 
+/** The stock of each of an item's batches at the location: Books' ledger sums, or ERPNext's batch quantities. */
+export async function getBatchQuantities(
+  item: string,
+  location?: string
+): Promise<StockQuantity[]> {
+  if (!isAccessoryMode()) {
+    const rows = await getStockQuantities(location, [item]);
+    return rows.filter((row) => row.batch_no);
+  }
+
+  const batches = await call<{ batch_no: string; qty: number }[]>(
+    ERPNEXT_BATCH_QTY,
+    { item_code: item, warehouse: location }
+  );
+  return batches.map(({ batch_no, qty }) => ({
+    item_code: item,
+    batch_no,
+    actual_qty: qty,
+  }));
+}
+
 /** The stock of an item's batch at the location. */
 export async function getBatchQuantity(
   item: string,
   batch: string,
   location?: string
 ): Promise<number> {
-  const rows = await getStockQuantities(location, [item]);
+  const rows = await getBatchQuantities(item, location);
   return rows.find((row) => row.batch_no === batch)?.actual_qty ?? 0;
 }

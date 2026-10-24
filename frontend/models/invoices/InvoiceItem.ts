@@ -9,9 +9,9 @@ import {
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import {
+  getBatchQuantities,
   getBatchQuantity,
   getStockLocation,
-  getStockQuantities,
 } from 'models/inventory/availability';
 import { getTransferUnitFilter } from 'models/inventory/stockRows';
 import { validateTransferUnit } from 'models/inventory/units';
@@ -228,8 +228,12 @@ export class InvoiceItem extends FrappeDoc {
     },
   };
 
-  /** Stock location a sale ships from, as the server picks it. */
+  /** Stock location a sale ships from, as the server picks it; an ERPNext row names its warehouse. */
   async getStockLocation(): Promise<string | undefined> {
+    if (isAccessoryMode()) {
+      return (this.warehouse as string | undefined) ?? undefined;
+    }
+
     const invoice = this.parentdoc;
     if (!invoice) {
       return undefined;
@@ -267,9 +271,9 @@ export class InvoiceItem extends FrappeDoc {
       }
 
       const location = await (doc as InvoiceItem).getStockLocation();
-      const rows = await getStockQuantities(location, [item]);
+      const rows = await getBatchQuantities(item, location);
       const batches = rows
-        .filter((row) => row.batch_no && row.actual_qty > 0)
+        .filter((row) => row.actual_qty > 0)
         .map((row) => row.batch_no as string);
       return [['name', 'in', batches]];
     },

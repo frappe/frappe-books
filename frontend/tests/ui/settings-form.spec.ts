@@ -75,3 +75,13 @@ test('the General tab shows the company country read only', async ({
   await expect(country).toBeDisabled();
   await expect(country).not.toHaveValue('');
 });
+
+test('the Company tab shows the company and its accounts', async ({ page }) => {
+  await settings(page).getByRole('tab', { name: 'Company' }).click();
+  const name = page.getByRole('textbox', { name: 'Company Name' });
+  await expect(name).toBeDisabled();
+  await expect(name).not.toHaveValue('');
+  await expect(
+    settings(page).getByText('Write Off Account', { exact: true })
+  ).toBeVisible();
+});

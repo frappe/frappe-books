@@ -176,6 +176,23 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 			frappe.ValidationError, "already in stock", self._receive_serial, item, serial_number
 		)
 
+	def test_issued_serial_number_is_consumed_until_the_issue_is_cancelled(self):
+		item, serial_number = self._serial_item(), unique_name("SER")
+		self._receive_serial(item, serial_number)
+		row = {
+			"item": item,
+			"from_location": "Stores",
+			"quantity": 1,
+			"rate": 5,
+			"serial_number": serial_number,
+		}
+		issue = make_movement("MaterialIssue", [row])
+		issue.submit()
+		self.assertEqual(frappe.db.get_value("Books Serial No", serial_number, "status"), "Consumed")
+
+		issue.cancel()
+		self.assertEqual(frappe.db.get_value("Books Serial No", serial_number, "status"), "Active")
+
 	def _receive_serial(self, item, serial_number):
 		receipt = make_movement(
 			"MaterialReceipt",

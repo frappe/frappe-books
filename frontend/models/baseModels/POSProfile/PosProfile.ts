@@ -59,7 +59,6 @@ export class POSProfile extends FrappeDoc {
   declare allow_discount_change?: boolean;
   declare ignore_pricing_rule?: boolean;
   // ERPNext POS Profile only
-  declare selling_price_list?: string;
   declare item_groups?: (FrappeDoc & { item_group?: string })[];
   declare payments?: (FrappeDoc & { mode_of_payment?: string })[];
 

@@ -9,7 +9,6 @@ import { Money } from 'pesa';
 import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
 import type { DocValueMap } from 'fyo/core/types';
 import type { Field } from 'schemas/types';
-import { DateTime } from 'luxon';
 import type { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import {
   getAllDocuments,
@@ -43,6 +42,8 @@ const TRACKED_ITEMS: Partial<Record<ItemVisibility, number>> = {
   'Inventory Items': 1,
   'Non-Inventory Items': 0,
 };
+
+const GET_SELLING_RATES = 'frappe_books.accessory.pos.get_selling_rates';
 
 // The ERPNext items its POS sells
 const SOLD_ITEMS: Filter[] = [
@@ -206,7 +207,7 @@ export async function getPOSItemRecords(
       orderBy: 'creation desc',
       limit: 0,
     }),
-    getSellingRates(profile?.selling_price_list as string | undefined),
+    getSellingRates(profile),
   ]);
   return items.map((item) => ({
     ...item,
@@ -237,31 +238,17 @@ function getProfileGroups(profile?: POSProfile | null): string[] {
     .filter((g): g is string => !!g);
 }
 
-/** Each item's selling rate in the price list today, as the POS lists it; the cart's rows are priced by ERPNext. */
+/** Each item's selling rate in the POS Profile's price list today, as the POS lists it; ERPNext prices the cart's rows. */
 async function getSellingRates(
-  priceList?: string
+  profile?: POSProfile | null
 ): Promise<Record<string, number>> {
-  if (!priceList) {
+  if (!profile?.name) {
     return {};
   }
 
-  const today = DateTime.now().toISODate();
-  const prices = await getAllDocuments('Item Price', {
-    fields: ['item_code', 'price_list_rate', 'valid_from', 'valid_upto'],
-    filters: [
-      ['price_list', '=', priceList],
-      ['selling', '=', 1],
-    ],
-    orderBy: 'valid_from asc',
+  return await call<Record<string, number>>(GET_SELLING_RATES, {
+    pos_profile: profile.name,
   });
-  const isValid = ({ valid_from, valid_upto }: DocValues) =>
-    (!valid_from || String(valid_from) <= today) &&
-    (!valid_upto || String(valid_upto) >= today);
-  return Object.fromEntries(
-    prices
-      .filter(isValid)
-      .map(({ item_code, price_list_rate }) => [item_code, price_list_rate])
-  ) as Record<string, number>;
 }
 
 /** An item as the POS lists it, from its `POS_ITEM_FIELDS`. */

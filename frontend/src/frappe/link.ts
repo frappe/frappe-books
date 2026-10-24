@@ -24,11 +24,11 @@ export async function searchFrappeLink(
   limit: number,
   fields: string[] = []
 ): Promise<LinkOption[]> {
-  const { doctype, meta } = getDocType(schemaName);
+  const { doctype, translated } = getLinkDoctype(schemaName);
   const words = text.trim();
   const records = await call<LinkRecord[]>('frappe.desk.search.search_widget', {
     doctype,
-    txt: meta.translated_doctype ? words : [...words].join('%'),
+    txt: translated ? words : [...words].join('%'),
     filters: filters ?? [],
     filter_fields: fields,
     page_length: limit,
@@ -43,9 +43,20 @@ export async function searchFrappeLink(
 
 /** A linked record's name or title as Frappe shows it: in the user's language for a translated doctype. */
 export function getLinkLabel(schemaName: string, label: string): string {
-  return getDocType(schemaName).meta.translated_doctype
-    ? translateValue(label)
-    : label;
+  return getLinkDoctype(schemaName).translated ? translateValue(label) : label;
+}
+
+/**
+ * The doctype a link searches: its schema's, or, for an ERPNext doctype
+ * Books has no screen for, like a Cost Center in accessory mode, the target itself.
+ */
+function getLinkDoctype(schemaName: string) {
+  if (!isFrappeBacked(schemaName)) {
+    return { doctype: schemaName, translated: false };
+  }
+
+  const { doctype, meta } = getDocType(schemaName);
+  return { doctype, translated: !!meta.translated_doctype };
 }
 
 /**

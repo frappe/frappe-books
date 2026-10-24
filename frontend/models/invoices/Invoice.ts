@@ -27,7 +27,7 @@ const RATE_SOURCE_FIELDS = [
   'currency',
   'conversion_rate',
 ];
-/** Invoice and quote fields: links that offer no Create, and items edited in the row editor. */
+/** Invoice and quote fields: links that offer no Create, items edited in the row editor, and a narrow tax template. */
 export const INVOICE_FIELDS = {
   ...withoutCreate([
     'selling_price_list',
@@ -38,6 +38,7 @@ export const INVOICE_FIELDS = {
     'coupon_code',
   ]),
   items: { edit: true },
+  taxes_and_charges: { narrow: true },
   taxes: { emptyMessage: 'No taxes. Pick a template or add a row.' },
 };
 

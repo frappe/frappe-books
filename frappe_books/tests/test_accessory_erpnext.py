@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import nowdate
+from frappe.utils import flt, nowdate
 
 from frappe_books.tests.accounting import ensure_user
 
@@ -241,17 +241,31 @@ class IntegrationTestAccessoryScreens(IntegrationTestCase):
 		from frappe_books.reports.dashboard import get_invoice_summary
 
 		before = get_invoice_summary("Sales Invoice", "This Month")
-		invoice = frappe.get_doc(
-			{
-				"doctype": "Sales Invoice",
-				"company": self.company,
-				"customer": make_customer("Accessory Dashboard Customer"),
-				"due_date": nowdate(),
-				"items": [{"item_code": make_item("ACC-DASH-PEN", 20), "qty": 2}],
-			}
-		).insert()
-		invoice.submit()
+		invoice = self.submit_invoice()
 
 		after = get_invoice_summary("Sales Invoice", "This Month")
 		self.assertEqual(after["unpaid"] - before["unpaid"], invoice.outstanding_amount)
 		self.assertEqual(after["unpaid_count"], before["unpaid_count"] + 1)
+
+	def test_account_balances_total_the_erpnext_ledger_of_the_company(self):
+		from frappe_books.reports.financial_statements import get_account_balances
+
+		before = get_account_balances()["balances"]
+		invoice = self.submit_invoice()
+
+		after = get_account_balances()["balances"]
+		debtors = invoice.debit_to
+		self.assertEqual(flt(after[debtors] - before.get(debtors, 0)), invoice.outstanding_amount)
+
+	def submit_invoice(self):
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Sales Invoice",
+				"company": self.company,
+				"customer": make_customer("Accessory Screens Customer"),
+				"due_date": nowdate(),
+				"items": [{"item_code": make_item("ACC-SCREENS-PEN", 20), "qty": 2}],
+			}
+		).insert()
+		invoice.submit()
+		return invoice

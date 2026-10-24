@@ -2,7 +2,6 @@ import { Fyo } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import {
   Action,
-  FiltersMap,
   HiddenMap,
   ListViewSettings,
   ValidationMap,
@@ -13,8 +12,8 @@ import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
-import { AccountRootTypeEnum } from '../Account/types';
 import { ItemBarcode } from './ItemBarcode';
+import { ItemDefault } from './ItemDefault';
 import { UOMConversionDetail } from './UOMConversionDetail';
 
 /**
@@ -31,14 +30,14 @@ export class Item extends FrappeDoc {
       'item_type',
       'tax',
       'description',
-      'income_account',
-      'expense_account',
+      'item_defaults',
       'barcodes',
       'gst_hsn_code',
       'is_stock_item',
     ],
   };
   static override rowModels = {
+    item_defaults: ItemDefault,
     barcodes: ItemBarcode,
     uoms: UOMConversionDetail,
   };
@@ -72,23 +71,6 @@ export class Item extends FrappeDoc {
       !this.fyo.singles.InventorySettings?.enable_serial_number,
     uoms: () => !this.fyo.singles.InventorySettings?.enable_uom_conversions,
     item_group: () => !this.fyo.singles.AccountingSettings?.enableitem_group,
-  };
-
-  static filters: FiltersMap = {
-    income_account: () => [
-      ['is_group', '=', 0],
-      ['root_type', '=', AccountRootTypeEnum.Income],
-    ],
-    expense_account: (doc) => [
-      ['is_group', '=', 0],
-      [
-        'root_type',
-        '=',
-        doc.is_stock_item
-          ? AccountRootTypeEnum.Liability
-          : AccountRootTypeEnum.Expense,
-      ],
-    ],
   };
 
   static getActions(fyo: Fyo): Action[] {

@@ -15,6 +15,7 @@ from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.company import company_value
 from frappe_books.currency import get_exchange_rate
+from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import validate_batches
@@ -457,12 +458,12 @@ def _item_details(names):
 			"tax",
 			"item_group.tax as group_tax",
 			"gst_hsn_code as hsn_code",
-			"income_account",
-			"expense_account",
 		],
 	)
+	defaults = company_item_defaults(names)
 	for row in rows:
 		row.tax = row.tax or row.group_tax
+		row.update(defaults.get(row.name, {}))
 	return {row.name: row for row in rows}
 
 

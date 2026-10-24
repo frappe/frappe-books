@@ -8,7 +8,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
-from frappe_books.company import company_value
+from frappe_books.company import company_value, default_company
 from frappe_books.permissions import check_preview_permission
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, item_series_pattern, validate_pattern
@@ -34,6 +34,7 @@ class BooksItem(Document):
 		from frappe.types import DF
 
 		from frappe_books.frappe_books.doctype.books_item_barcode.books_item_barcode import BooksItemBarcode
+		from frappe_books.frappe_books.doctype.books_item_default.books_item_default import BooksItemDefault
 		from frappe_books.frappe_books.doctype.books_uom_conversion_detail.books_uom_conversion_detail import (
 			BooksUOMConversionDetail,
 		)
@@ -42,14 +43,13 @@ class BooksItem(Document):
 		batch_number_series: DF.Data | None
 		create_new_batch: DF.Check
 		description: DF.Text | None
-		expense_account: DF.Link
 		gst_hsn_code: DF.Data | None
 		has_batch_no: DF.Check
 		has_serial_no: DF.Check
 		image: DF.AttachImage | None
-		income_account: DF.Link
 		is_stock_item: DF.Check
 		item_code: DF.Data
+		item_defaults: DF.Table[BooksItemDefault]
 		item_group: DF.Link | None
 		item_name: DF.Data | None
 		item_type: DF.Literal["Product", "Service"]
@@ -73,8 +73,14 @@ class BooksItem(Document):
 		self.set_missing_values()
 
 	def set_missing_values(self):
-		self.income_account = self.income_account or _default_income_account(self.item_type)
-		self.expense_account = self.expense_account or _default_expense_account(self.is_stock_item)
+		"""The one company's row takes the chart's accounts for what it leaves empty."""
+		company = default_company()
+		for row in self.item_defaults:
+			row.company = row.company or company
+		row = self.get("item_defaults", {"company": company})
+		row = row[0] if row else self.append("item_defaults", {"company": company})
+		row.income_account = row.income_account or _default_income_account(self.item_type)
+		row.expense_account = row.expense_account or _default_expense_account(self.is_stock_item)
 
 	@frappe.whitelist()
 	def preview(self):
@@ -115,11 +121,14 @@ class BooksItem(Document):
 				validate_pattern(self.get(fieldname), message.format(label, INVALID_PREFIX_CHARACTERS))
 
 	def validate_accounts(self):
-		"""A tracked item is bought into stock received but not billed, a liability."""
-		validate_account(self, "income_account", root_types=("Income",))
-		validate_account(
-			self, "expense_account", root_types=("Liability" if self.is_stock_item else "Expense",)
-		)
+		"""One row per company. A tracked item is bought into stock received but not billed, a liability."""
+		companies = [row.company for row in self.item_defaults]
+		if len(companies) != len(set(companies)):
+			frappe.throw(_("Cannot set multiple Item Defaults for a company."))
+		expense_root = "Liability" if self.is_stock_item else "Expense"
+		for row in self.item_defaults:
+			validate_account(row, "income_account", root_types=("Income",))
+			validate_account(row, "expense_account", root_types=(expense_root,))
 
 
 def _default_income_account(item_type):
@@ -133,6 +142,18 @@ def _default_expense_account(is_stock_item):
 	if is_stock_item:
 		return company_value("stock_received_but_not_billed")
 	return latest_ledger_account("Cost of Goods Sold")
+
+
+def company_item_defaults(names):
+	"""Map each named item to its Books Item Default row for the one company."""
+	if not names:
+		return {}
+	rows = frappe.get_all(
+		"Books Item Default",
+		filters={"parenttype": "Books Item", "parent": ["in", sorted(names)], "company": default_company()},
+		fields=["parent", "income_account", "expense_account", "default_warehouse"],
+	)
+	return {row.parent: row for row in rows}
 
 
 @frappe.whitelist()

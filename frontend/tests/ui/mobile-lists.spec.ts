@@ -58,8 +58,9 @@ test('selected items start a new sales invoice', async ({ page }) => {
     await insertDocument(page, 'Books Item', {
       item_code: name,
       standard_rate: 100,
-      income_account: 'Sales',
-      expense_account: 'Cost of Goods Sold',
+      item_defaults: [
+        { income_account: 'Sales', expense_account: 'Cost of Goods Sold' },
+      ],
     });
   }
   await page.goto('/books/list/Item');

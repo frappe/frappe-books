@@ -20,8 +20,7 @@
   "standard_rate",
   "description",
   "accounts_section_break_11",
-  "income_account",
-  "expense_account",
+  "item_defaults",
   "tax",
   "inventory_section_break_15",
   "gst_hsn_code",
@@ -110,24 +109,11 @@
    "label": "Accounts"
   },
   {
-   "fieldname": "income_account",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Sales Acc.",
-   "options": "Books Account",
-   "permlevel": 1,
-   "placeholder": "Income",
-   "reqd": 1
-  },
-  {
-   "fieldname": "expense_account",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Purchase Acc.",
-   "options": "Books Account",
-   "permlevel": 1,
-   "placeholder": "Expense",
-   "reqd": 1
+   "fieldname": "item_defaults",
+   "fieldtype": "Table",
+   "label": "Item Defaults",
+   "options": "Books Item Default",
+   "permlevel": 1
   },
   {
    "fieldname": "tax",

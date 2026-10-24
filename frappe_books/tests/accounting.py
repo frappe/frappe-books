@@ -97,8 +97,7 @@ def make_item(income_account, expense_account, tax=None, **values):
 			"doctype": "Books Item",
 			"item_code": unique_name("Test Item"),
 			"stock_uom": "Unit",
-			"income_account": income_account,
-			"expense_account": expense_account,
+			"item_defaults": _item_defaults(income_account, expense_account),
 			"tax": tax,
 			**values,
 		}
@@ -113,6 +112,13 @@ def make_tax(account, rate=10):
 			"taxes": [{"tax_type": account, "tax_rate": rate}],
 		}
 	).insert()
+
+
+def _item_defaults(income_account, expense_account):
+	"""The one company's accounts row; without accounts the server fills the row."""
+	if not (income_account or expense_account):
+		return []
+	return [{"income_account": income_account, "expense_account": expense_account}]
 
 
 def make_invoice(doctype, party, account, item, item_account, **values):

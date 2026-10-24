@@ -154,7 +154,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 
 		with self.set_user(BOOKS_USER):
 			edited = frappe.get_doc("Books Item", item.name)
-			edited.income_account = other_income.name
+			edited.item_defaults[0].income_account = other_income.name
 			edited.save()
 			invoice = make_invoice(
 				"Books Sales Invoice", party.name, other_receivable.name, item.name, income.name, items=[row]
@@ -162,7 +162,8 @@ class IntegrationTestPermissions(IntegrationTestCase):
 
 			read_back = read_doc("Books Sales Invoice", invoice.name)
 
-		self.assertEqual(item.db_get("income_account"), income.name)
+		item.reload()
+		self.assertEqual(item.item_defaults[0].income_account, income.name)
 		self.assertEqual(invoice.account, receivable.name)
 		self.assertIsNone(read_back["account"])
 		self.assertIsNone(read_back["items"][0]["account"])

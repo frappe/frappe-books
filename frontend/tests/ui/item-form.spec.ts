@@ -17,13 +17,13 @@ test('a new item takes its accounts from the server and saves', async ({
   await page.keyboard.press('Tab');
   // The server's preview fills the accounts a save would.
   await expect(
-    page.getByRole('combobox', { name: 'Sales Acc. (required)' })
+    page.getByRole('combobox', { name: 'Income Account', exact: true })
   ).toHaveValue('Sales');
 
   await page.getByRole('combobox', { name: 'Type', exact: true }).click();
   await page.getByRole('option', { name: 'Service', exact: true }).click();
   await expect(
-    page.getByRole('combobox', { name: 'Sales Acc. (required)' })
+    page.getByRole('combobox', { name: 'Income Account', exact: true })
   ).toHaveValue('Service');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();

@@ -15,7 +15,7 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 			("stock_uom", {"stock_uom": unit}, False),
 			("item_type", {"item_type": "Service"}, False),
 			# a tracked item needs a liability account, so only the locked field can fail
-			("is_stock_item", {"is_stock_item": 1, "expense_account": received}, False),
+			("is_stock_item", {"is_stock_item": 1}, False),
 			# only tracked items have batches and serial numbers
 			("has_batch_no", {"has_batch_no": 1}, True),
 			("has_serial_no", {"has_serial_no": 1}, True),
@@ -25,6 +25,7 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 					make_item(income, received, is_stock_item=1) if is_tracked else make_item(income, expense)
 				)
 				item.update(changes)
+				item.item_defaults[0].expense_account = received
 				self.assertRaises(frappe.CannotChangeConstantError, item.save)
 
 	def test_account_tree_fields_cannot_change_after_insert(self):

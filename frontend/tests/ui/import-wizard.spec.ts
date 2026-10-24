@@ -67,8 +67,9 @@ test('rows of one invoice become one submitted invoice', async ({ page }) => {
   await insertDocument(page, 'Books Item', {
     item_code: item,
     standard_rate: 10,
-    income_account: 'Sales',
-    expense_account: 'Cost of Goods Sold',
+    item_defaults: [
+      { income_account: 'Sales', expense_account: 'Cost of Goods Sold' },
+    ],
   });
   await insertDocument(page, 'Books Customer', {
     customer_name: `Import Dan ${run}`,

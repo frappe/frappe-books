@@ -77,18 +77,18 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		service = make_item(None, None, item_type="Service", item_group=group.name)
 		product = make_item(None, None, is_stock_item=1)
 
-		self.assertEqual((service.income_account, service.expense_account), ("Service", cogs.name))
+		self.assertEqual(_accounts(service), ("Service", cogs.name))
 		self.assertEqual(service.gst_hsn_code, "998877")
-		self.assertEqual((product.income_account, product.expense_account), ("Sales", received.name))
+		self.assertEqual(_accounts(product), ("Sales", received.name))
 
 	def test_accounts_follow_the_item_tracking(self):
 		income = make_account("Item Sales", root_type="Income")
 		expense = make_account("Item Expense", root_type="Expense")
 		received = make_account("Item Received", root_type="Liability")
 		for accounts, values, message in (
-			((expense, expense), {}, "Sales Acc. must be of type Income"),
-			((income, received), {}, "Purchase Acc. must be of type Expense"),
-			((income, expense), {"is_stock_item": 1}, "Purchase Acc. must be of type Liability"),
+			((expense, expense), {}, "Income Account must be of type Income"),
+			((income, received), {}, "Expense Account must be of type Expense"),
+			((income, expense), {"is_stock_item": 1}, "Expense Account must be of type Liability"),
 		):
 			with self.subTest(message=message), self.assertRaisesRegex(frappe.ValidationError, message):
 				make_item(accounts[0].name, accounts[1].name, **values)
@@ -139,15 +139,14 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 
 		item.preview()
 
-		self.assertEqual((item.income_account, item.expense_account), ("Service", cogs.name))
+		self.assertEqual(_accounts(item), ("Service", cogs.name))
 		self.assertEqual(item.gst_hsn_code, "998877")
 		self.assertFalse(frappe.db.exists("Books Item", item.item_code))
 
-		item.update(
-			{"item_type": "Product", "is_stock_item": 1, "income_account": None, "expense_account": None}
-		)
+		item.update({"item_type": "Product", "is_stock_item": 1})
+		item.item_defaults[0].update({"income_account": None, "expense_account": None})
 		item.preview()
-		self.assertEqual((item.income_account, item.expense_account), ("Sales", received.name))
+		self.assertEqual(_accounts(item), ("Sales", received.name))
 
 	def test_preview_needs_the_right_to_make_items(self):
 		item = frappe.new_doc("Books Item")
@@ -167,3 +166,9 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 			{"doctype": "Books Item Group", "item_group_name": unique_name("Group"), "gst_hsn_code": "998877"}
 		).insert()
 		return cogs, received, group
+
+
+def _accounts(item):
+	"""The item's income and expense accounts for the one company."""
+	row = item.item_defaults[0]
+	return row.income_account, row.expense_account

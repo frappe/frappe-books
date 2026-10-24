@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe_books.accounting.party import PartyDocumentMixin
 from frappe_books.accounting.returns import set_quantity_signs
 from frappe_books.company import company_value
+from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults
 from frappe_books.inventory import invoice_transfer, stock_posting
 from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
@@ -165,11 +166,14 @@ def set_movement_locations(movement):
 
 
 def fill_default_location(rows, fieldname):
-	"""Set the company default location on rows that leave the field empty."""
-	location = fieldname and company_value("default_warehouse")
-	for row in rows:
-		if location and not row.get(fieldname):
-			row.set(fieldname, location)
+	"""Set the item's default location, else the company's, on rows that leave the field empty."""
+	empty = [row for row in rows if fieldname and not row.get(fieldname)]
+	if not empty:
+		return
+	location = company_value("default_warehouse")
+	defaults = company_item_defaults({row.item for row in empty if row.item})
+	for row in empty:
+		row.set(fieldname, defaults.get(row.item, {}).get("default_warehouse") or location)
 
 
 def _transfer_row(row, from_location, to_location):

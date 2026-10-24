@@ -203,16 +203,16 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 
 	def _serial_item(self):
 		return make_item(
-			self.item.income_account,
-			self.item.expense_account,
+			self.item.item_defaults[0].income_account,
+			self.item.item_defaults[0].expense_account,
 			is_stock_item=1,
 			has_serial_no=1,
 		).name
 
 	def test_batch_and_serial_numbers_follow_stock(self):
 		tracked_item = make_item(
-			self.item.income_account,
-			self.item.expense_account,
+			self.item.item_defaults[0].income_account,
+			self.item.item_defaults[0].expense_account,
 			is_stock_item=1,
 			has_batch_no=1,
 			has_serial_no=1,
@@ -241,8 +241,8 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 
 	def test_receipt_requires_an_existing_batch(self):
 		tracked_item = make_item(
-			self.item.income_account,
-			self.item.expense_account,
+			self.item.item_defaults[0].income_account,
+			self.item.item_defaults[0].expense_account,
 			is_stock_item=1,
 			has_batch_no=1,
 		)
@@ -266,8 +266,8 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 	def test_a_save_returns_the_batch_the_server_named(self):
 		prefix = f"B{frappe.generate_hash(length=6)}-"
 		item = make_item(
-			self.item.income_account,
-			self.item.expense_account,
+			self.item.item_defaults[0].income_account,
+			self.item.item_defaults[0].expense_account,
 			is_stock_item=1,
 			has_batch_no=1,
 			batch_number_series=prefix,
@@ -280,7 +280,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 
 	def test_untracked_item_cannot_move_stock(self):
 		expense = make_account("Service Expense", root_type="Expense")
-		item = make_item(self.item.income_account, expense.name).name
+		item = make_item(self.item.item_defaults[0].income_account, expense.name).name
 		receipt = frappe.get_doc(
 			movement_values(
 				"MaterialReceipt", [{"item": item, "to_location": "Stores", "quantity": 1, "rate": 10}]
@@ -335,8 +335,8 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 	def test_receipt_names_missing_serial_numbers_from_the_item_series(self):
 		prefix = f"S{frappe.generate_hash(length=6)}-"
 		item = make_item(
-			self.item.income_account,
-			self.item.expense_account,
+			self.item.item_defaults[0].income_account,
+			self.item.item_defaults[0].expense_account,
 			is_stock_item=1,
 			has_serial_no=1,
 			serial_no_series=prefix,

@@ -469,7 +469,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 	def test_invoice_of_a_delivery_note_can_bill_lines_it_did_not_ship(self):
 		item, cogs, _stock = self._tracked_item()
-		service = make_item(item.income_account, cogs.name)
+		service = make_item(item.item_defaults[0].income_account, cogs.name)
 		seed_stock(item.name, quantity=2, rate=10)
 		shipment = self._make_delivery_note(item, quantity=2, rate=25)
 		shipment.submit()
@@ -554,7 +554,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 			make_customer(receivable.name).name,
 			receivable.name,
 			item.name,
-			item.income_account,
+			item.item_defaults[0].income_account,
 		)
 		invoice.submit()
 		return invoice

@@ -127,7 +127,10 @@ export default {
 
       const name =
         this.searchQuery || fyo.getTemporaryName(getSchema(schemaName));
-      const values = await this.getCreateValues(schemaName);
+      const values = {
+        ...this.getTypedTitle(schemaName),
+        ...(await this.getCreateValues(schemaName)),
+      };
       const { openQuickEdit } = await import('src/utils/ui');
 
       const doc = newFrappeDoc(schemaName, { name, ...values });
@@ -139,6 +142,13 @@ export default {
         this.isDropdownOpen = false;
         this.triggerChange(savedName);
       });
+    },
+    /** The typed text as the title of a record its DocType names by script, like an address. */
+    getTypedTitle(target) {
+      const { titleField } = getModel(target)?.presentation ?? {};
+      return titleField && this.searchQuery
+        ? { [titleField]: this.searchQuery }
+        : {};
     },
     /** Values a record created from the link takes from its create filters, else its filters. */
     async getCreateValues(target) {

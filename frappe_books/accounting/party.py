@@ -2,6 +2,7 @@
 
 import frappe
 from frappe import _
+from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
@@ -12,6 +13,8 @@ from frappe_books.regional import validate_gstin
 
 # The account a new party's ledger defaults to, when the chart has it.
 CHART_ACCOUNTS = {"Books Customer": "Debtors", "Books Supplier": "Creditors"}
+# The prefix of a party's own fieldnames, as ERPNext names them.
+PARTY_KEYS = {"Books Customer": "customer", "Books Supplier": "supplier"}
 
 
 class PartyController(Document):
@@ -23,6 +26,7 @@ class PartyController(Document):
 
 	def validate(self):
 		self.validate_accounts()
+		self.set_primary_address()
 		if self.gst_category != "Registered Regular":
 			self.gstin = None
 		elif not self.gstin:
@@ -38,6 +42,11 @@ class PartyController(Document):
 		account = not self.get("accounts", {"company": company}) and _chart_account(self.doctype)
 		if account:
 			self.append("accounts", {"company": company, "account": account})
+
+	def set_primary_address(self):
+		"""The primary address as the Address Template renders it, which prints show."""
+		address = self.get(primary_field(self.doctype, "Address"))
+		self.primary_address = get_address_display(address) if address else None
 
 	def validate_accounts(self):
 		companies = [row.company for row in self.accounts]
@@ -58,6 +67,11 @@ class PartyDocumentMixin:
 	@property
 	def party(self):
 		return self.get(self.party_field)
+
+
+def primary_field(party_type, doctype):
+	"""The party's field that holds its primary Address or Contact, e.g. customer_primary_address."""
+	return f"{PARTY_KEYS[party_type]}_primary_{doctype.lower()}"
 
 
 def party_account(party_type, party):

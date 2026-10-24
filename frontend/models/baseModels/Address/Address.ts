@@ -1,28 +1,31 @@
 import { t } from 'fyo';
 import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
+import type { Presentation } from 'src/frappe/schema';
 
-/**
- * Books Address, served by Frappe. The server writes its display text and,
- * for an Indian address, its place of supply.
- */
+/** Frappe's Address, which parties, locations and print settings link to. */
 export class Address extends FrappeDoc {
-  static override doctype = 'Books Address';
-  static override presentation = {
+  static override doctype = 'Address';
+  static override presentation: Presentation = {
     label: 'Address',
-    nameField: { label: 'Address Name' },
+    titleField: 'address_title',
     quickEditFields: [
+      'address_title',
+      'address_type',
       'address_line1',
       'address_line2',
       'city',
       'country',
       'state',
-      'postal_code',
+      'pincode',
     ],
-    linkDisplayField: 'address_display',
-    fields: { country: { create: false } },
-    // Place of supply is an Indian GST field; see the Indian Address.
-    omitFields: ['pos'],
+    fields: {
+      // Frappe requires a type; Books' addresses are billing addresses unless chosen.
+      address_type: { default: 'Billing' },
+      country: { create: false },
+      // Frappe stores the state as text; Books offers the Indian states for India.
+      state: { fieldtype: 'AutoComplete', options: [] },
+    },
   };
 
   static lists: ListsMap = {

@@ -28,6 +28,11 @@ export interface Presentation {
   insertValues?: Record<string, unknown>;
   /** The field a link to the doctype shows instead of the name. */
   linkDisplayField?: string;
+  /**
+   * The field that titles a document its DocType names by script, like an
+   * Address's address_title; a link's typed text goes in it on Create.
+   */
+  titleField?: string;
   /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
   tableFields?: string[];
   /**
@@ -111,7 +116,11 @@ export function toSchema(
     label: presentation.label,
     fields,
     naming: getNaming(meta),
-    titleField: meta.title_field || getNamingField(meta) || 'name',
+    titleField:
+      presentation.titleField ||
+      meta.title_field ||
+      getNamingField(meta) ||
+      'name',
     quickEditFields: presentation.quickEditFields,
     linkDisplayField: presentation.linkDisplayField,
     create: presentation.create,

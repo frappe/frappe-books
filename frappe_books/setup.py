@@ -6,6 +6,7 @@ from frappe.permissions import add_permission, update_permission_property
 
 from frappe_books.company import default_company, save_company
 from frappe_books.printing import default_print_format, set_default_print_format
+from frappe_books.regional import ensure_address_template
 from frappe_books.series import NUMBER_SERIES
 
 DEFAULT_SERIES_START = 1001
@@ -20,6 +21,21 @@ POS_PRINT_FORMAT = "Business-POS - Sales Invoice"
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
 # Rights Books roles need on core doctypes the Books interface uses; if_owner limits them to own records
 CORE_PERMISSIONS = {
+	"Address": {
+		"Books User": ("read", "write", "create", "delete", "report", "print", "export", "email"),
+		"Books Manager": (
+			"read",
+			"write",
+			"create",
+			"delete",
+			"report",
+			"print",
+			"export",
+			"import",
+			"email",
+			"share",
+		),
+	},
 	"Currency": {
 		"Books User": ("read", "report", "print", "export", "email"),
 		"Books Manager": ("read", "write", "create", "delete", "report", "print", "export", "email", "share"),
@@ -53,6 +69,7 @@ def before_tests():
 	bootstrap()
 	if not frappe.is_setup_complete():
 		complete_app_setup(country="India", currency="INR", timezone="Asia/Kolkata")
+	ensure_address_template("India")
 	if not default_company():
 		save_company({"company_name": "Books Test Company", "email": "books-tests@example.com"})
 

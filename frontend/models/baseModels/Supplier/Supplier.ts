@@ -9,7 +9,7 @@ export class Supplier extends Party {
   static override presentation = getPartyPresentation('Supplier', [
     'email',
     'phone',
-    'address',
+    'supplier_primary_address',
     'accounts',
     'default_currency',
     'tax_id',

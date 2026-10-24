@@ -17,7 +17,7 @@ from frappe_books.coa import (
 from frappe_books.company import save_company
 from frappe_books.currency import currency_precision
 from frappe_books.formats import books_date_format
-from frappe_books.regional import ensure_regional_records
+from frappe_books.regional import ensure_address_template, ensure_regional_records
 from frappe_books.series import NUMBER_SERIES
 from frappe_books.settings import update_frappe_settings
 
@@ -29,6 +29,7 @@ def run_setup(wizard):
 	chart = load_chart(wizard.chart_of_accounts)
 	ensure_chart(chart)
 	ensure_regional_records(wizard.country)
+	ensure_address_template(wizard.country)
 	bank_account = ensure_bank_account(wizard.bank_name, chart, wizard.country)
 	discount_account = ensure_discount_account(chart)
 	enable_currency(wizard.currency)

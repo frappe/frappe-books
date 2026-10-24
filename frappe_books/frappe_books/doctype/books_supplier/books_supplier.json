@@ -15,7 +15,8 @@
   "contacts_section_break_4",
   "email",
   "phone",
-  "address",
+  "supplier_primary_address",
+  "primary_address",
   "billing_section_break_8",
   "accounts",
   "default_currency",
@@ -65,10 +66,19 @@
    "placeholder": "Phone"
   },
   {
-   "fieldname": "address",
+   "fieldname": "supplier_primary_address",
    "fieldtype": "Link",
-   "label": "Address",
-   "options": "Books Address"
+   "label": "Primary Address",
+   "no_copy": 1,
+   "options": "Address"
+  },
+  {
+   "fieldname": "primary_address",
+   "fieldtype": "Text Editor",
+   "hidden": 1,
+   "label": "Primary Address Preview",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "billing_section_break_8",

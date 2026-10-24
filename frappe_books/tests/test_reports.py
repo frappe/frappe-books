@@ -16,6 +16,7 @@ from frappe_books.reports.stock import VALUE_COLUMNS
 from frappe_books.tests.accounting import (
 	ensure_user,
 	make_account,
+	make_address,
 	make_customer,
 	make_item,
 	root_group,
@@ -597,18 +598,11 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		return get_gstr_json("Books GSTR-1", filters)
 
 	def _party(self, state, **values):
-		address = frappe.get_doc(
-			{
-				"doctype": "Books Address",
-				"name": unique_name("Address"),
-				"address_line1": "1 Road",
-				"city": "City",
-				"state": state,
-				"country": "India",
-			}
-		).insert()
+		address = make_address(state=state)
 		gst_category = "Registered Regular" if values.get("gstin") else "Unregistered"
-		return make_customer(self.receivable.name, address=address.name, gst_category=gst_category, **values)
+		return make_customer(
+			self.receivable.name, customer_primary_address=address.name, gst_category=gst_category, **values
+		)
 
 	def _invoice(self, *rows, date=None):
 		return (

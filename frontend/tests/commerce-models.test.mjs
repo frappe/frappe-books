@@ -25,7 +25,8 @@ const requests = await loadFrappeModels(frappeModels, (request) =>
   respond(request)
 );
 
-const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
+const hidden = (doc, fieldname) =>
+  doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
 test('item group, unit, location, batch and serial number forms show what they showed', () => {
   assert.deepEqual(getLayout('ItemGroup'), [
@@ -104,23 +105,30 @@ test('a serial number status badge takes the DocType state colour', () => {
   });
 });
 
-test('the address form shows what it showed, and links show its display text', () => {
+test("the address form is Frappe's Address, titled by its address title", () => {
   assert.deepEqual(getLayout('Address'), [
-    'name | Address Name |  | Default',
-    'address_line1 | Address Line 1 | Address Line 1 | Default',
-    'address_line2 | Address Line 2 | Address Line 2 | Default',
-    'city | City / Town | City / Town | Default',
-    'country | Country | Country | Default',
-    'state | State | State | Default',
-    'postal_code | Postal Code | Postal Code | Default',
-    'email_address | Email Address | Email Address | Contacts',
-    'phone | Phone | Phone | Contacts',
-    'fax | Fax |  | Contacts',
-    'address_display | Address Display |  | Miscellaneous',
+    'address_title | Address Title |  | Default',
+    'address_type | Address Type |  | Default',
+    'address_line1 | Address Line 1 |  | Default',
+    'address_line2 | Address Line 2 |  | Default',
+    'city | City/Town |  | Default',
+    'county | County |  | Default',
+    'state | State/Province |  | Default',
+    'country | Country |  | Default',
+    'pincode | Postal Code |  | Default',
+    'email_id | Email Address |  | Default',
+    'phone | Phone |  | Default',
+    'fax | Fax |  | Default',
+    'is_primary_address | Preferred Billing Address |  | Default',
+    'is_shipping_address | Preferred Shipping Address |  | Default',
+    'disabled | Disabled |  | Default',
+    'links | Links |  | Reference',
   ]);
   const schema = getSchema('Address');
   const country = schema.fields.find((f) => f.fieldname === 'country');
-  assert.equal(schema.linkDisplayField, 'address_display');
+  assert.equal(schema.titleField, 'address_title');
+  assert.equal(schema.linkDisplayField, undefined);
+  assert.equal(newFrappeDoc('Address').address_type, 'Billing');
   // Frappe's own Country, picked but not created from an address.
   assert.deepEqual(
     [country.fieldtype, country.target, country.create],
@@ -136,32 +144,14 @@ test('the address form shows what it showed, and links show its display text', (
   ]);
 });
 
-test("a link shows an address's display text and other records' names", async () => {
-  respond = ({ path }) =>
-    path === '/api/v2/document/Books Address'
-      ? { data: [{ address_display: '7 Hill Street' }] }
-      : { data: [] };
-  requests.length = 0;
-
-  assert.equal(await getLinkDisplayValue('Address', 'Home'), '7 Hill Street');
-  assert.equal(await getLinkDisplayValue('Address', undefined), '');
-  assert.equal(await getLinkDisplayValue('Customer', 'Asha'), 'Asha');
-  assert.deepEqual(
-    requests.map(({ path }) => path),
-    ['/api/v2/document/Books Address']
-  );
-  assert.deepEqual(requests[0].params.fields, ['address_display']);
-  assert.deepEqual(requests[0].params.filters, [['name', '=', 'Home']]);
-});
-
-test('a link to an open address shows its text without a request', async () => {
-  const address = newFrappeDoc('Address', { address_display: '9 Lake Road' });
+test('a link shows an address by its name, without a request', async () => {
   requests.length = 0;
 
   assert.equal(
-    await getLinkDisplayValue('Address', address.name),
-    '9 Lake Road'
+    await getLinkDisplayValue('Address', 'Home-Billing'),
+    'Home-Billing'
   );
+  assert.equal(await getLinkDisplayValue('Customer', 'Asha'), 'Asha');
   assert.deepEqual(requests, []);
 });
 
@@ -212,16 +202,6 @@ test('an address lists Indian states for India and has no place of supply', () =
   assert.equal(address.fieldMap.pos, undefined);
 });
 
-test('an address leaves its display text to the server', async () => {
-  const address = newFrappeDoc('Address', { name: 'Office' });
-  await address.setMultiple({
-    address_line1: '42 Market Road',
-    city: 'Mumbai',
-    country: 'India',
-  });
-  assert.ok(!address.address_display);
-});
-
 test('the lead form and list show what they showed, status coloured by state', () => {
   assert.deepEqual(getLayout('Lead'), [
     'name | Name | Full Name | Default',
@@ -270,7 +250,12 @@ test('lead contacts are checked as Frappe checks them, with the Books messages',
 test('a lead makes its customer with the server mapper, as an unsaved customer', async () => {
   const mapped = { doctype: 'Books Customer', name: 'Asha' };
   respond = () => ({
-    message: { ...mapped, customer_name: 'Asha', lead_name: 'Asha', __islocal: 1 },
+    message: {
+      ...mapped,
+      customer_name: 'Asha',
+      lead_name: 'Asha',
+      __islocal: 1,
+    },
   });
   const lead = newFrappeDoc('Lead', { name: 'Asha' });
   await loadSaved(lead);
@@ -287,10 +272,7 @@ test('a lead makes its customer with the server mapper, as an unsaved customer',
   });
   assert.equal(route, '/edit/Customer/Asha');
   const customer = await getFrappeDoc('Customer', 'Asha');
-  assert.deepEqual(
-    [customer.lead_name, customer.notInserted],
-    ['Asha', true]
-  );
+  assert.deepEqual([customer.lead_name, customer.notInserted], ['Asha', true]);
 });
 
 test('saving or deleting a converted customer refreshes its open lead only', async () => {
@@ -328,7 +310,8 @@ test('customer and supplier forms and lists show what they showed, without GST f
     'supplier_name | Supplier Name | Full Name | Default',
     'email | Email | john@doe.com | Contacts',
     'phone | Phone | Phone | Contacts',
-    'address | Address |  | Contacts',
+    'supplier_primary_address | Primary Address |  | Contacts',
+    'primary_address | Primary Address Preview |  | Contacts',
     'accounts | Default Accounts |  | Billing',
     'default_currency | Billing Currency | INR | Billing',
     'tax_id | Tax ID |  | Billing',
@@ -340,7 +323,8 @@ test('customer and supplier forms and lists show what they showed, without GST f
     'customer_name | Customer Name | Full Name | Default',
     'email | Email | john@doe.com | Contacts',
     'phone | Phone | Phone | Contacts',
-    'address | Address |  | Contacts',
+    'customer_primary_address | Customer Primary Address |  | Contacts',
+    'primary_address | Primary Address |  | Contacts',
     'accounts | Default Accounts |  | Billing',
     'default_currency | Billing Currency | INR | Billing',
     'lead_name | Lead |  | References',
@@ -536,7 +520,10 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
     'price_discount_type',
     'discount_percentage',
   ]);
-  assert.equal(rule.getFieldState(rule.fieldMap.price_discount_type).required, true);
+  assert.equal(
+    rule.getFieldState(rule.fieldMap.price_discount_type).required,
+    true
+  );
   await rule.set('discount_type', 'Product Discount');
   await rule.set('is_recursive', true);
   assert.deepEqual(shown().slice(0, 6), [

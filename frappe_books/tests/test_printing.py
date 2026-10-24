@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import frappe
 from bs4 import BeautifulSoup
+from frappe.contacts.doctype.address.address import get_address_display
 from frappe.tests import IntegrationTestCase
 from frappe.utils import money_in_words, now_datetime
 from frappe.utils.pdf import get_print_format_styles
@@ -27,6 +28,7 @@ from frappe_books.printing import (
 from frappe_books.tests.accounting import (
 	ensure_user,
 	make_account,
+	make_address,
 	make_customer,
 	make_invoice,
 	make_item,
@@ -175,21 +177,14 @@ class IntegrationTestPrinting(IntegrationTestCase):
 			self.assertEqual(books_format(10, "Float"), "10")
 
 	def test_print_settings_show_the_company_address_and_gstin(self):
-		address = frappe.get_doc(
-			{
-				"doctype": "Books Address",
-				"name": unique_name("Print Address"),
-				"address_line1": "12 MG Road",
-				"city": "Mumbai",
-				"country": "India",
-			}
-		).insert()
+		address = make_address(address_line1="12 MG Road", city="Mumbai")
 		frappe.db.set_single_value("Books Print Settings", "address", address.name)
 		frappe.db.set_single_value("Books Accounting Settings", "gstin", "27AAACB1234A1Z5")
 
 		settings = get_print_settings()
 
-		self.assertEqual(settings["address"], address.address_display)
+		self.assertEqual(settings["address"], get_address_display(address.name))
+		self.assertIn("12 MG Road", settings["address"])
 		self.assertEqual(settings["gstin"], "27AAACB1234A1Z5")
 
 	def test_print_font_is_frappes_print_settings_font(self):

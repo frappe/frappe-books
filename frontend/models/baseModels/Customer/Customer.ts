@@ -12,7 +12,7 @@ export class Customer extends Party {
     ...getPartyPresentation('Customer', [
       'email',
       'phone',
-      'address',
+      'customer_primary_address',
       'accounts',
       'loyalty_program',
       'default_currency',

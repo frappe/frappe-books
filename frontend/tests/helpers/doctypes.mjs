@@ -6,7 +6,8 @@ export const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 
 /**
  * A doctype's meta and its tables' meta, with fields in field order, as
- * Frappe's getdoctype sends them. Currency is Frappe's own doctype.
+ * Frappe's getdoctype sends them. Currency, Country, Print Format, Address
+ * and Dynamic Link are Frappe's own doctypes.
  */
 export function getMetaBundle(name) {
   const meta = getMeta(name);
@@ -24,9 +25,14 @@ export function getBooksMeta(doctypes, placements = {}) {
 }
 
 function getMeta(name) {
-  const meta = [...doctypes, currencyMeta, countryMeta, printFormatMeta].find(
-    (meta) => meta.name === name
-  );
+  const meta = [
+    ...doctypes,
+    currencyMeta,
+    countryMeta,
+    printFormatMeta,
+    addressMeta,
+    dynamicLinkMeta,
+  ].find((meta) => meta.name === name);
   const order = meta.field_order ?? [];
   const fields = [...meta.fields].sort(
     (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
@@ -155,6 +161,125 @@ const printFormatMeta = {
       fieldname: 'custom_html_help',
       fieldtype: 'HTML',
       label: 'Custom HTML Help',
+    },
+  ],
+};
+
+// Frappe's Address, which the app does not ship.
+const addressMeta = {
+  name: 'Address',
+  search_fields: 'country, state',
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'address_details',
+      fieldtype: 'Section Break',
+      options: 'fa fa-map-marker',
+    },
+    { fieldname: 'address_title', fieldtype: 'Data', label: 'Address Title' },
+    {
+      fieldname: 'address_type',
+      fieldtype: 'Select',
+      label: 'Address Type',
+      options:
+        'Billing\nShipping\nOffice\nPersonal\nPlant\nPostal\nShop\nSubsidiary\nWarehouse\nCurrent\nPermanent\nOther',
+      reqd: 1,
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'address_line1',
+      fieldtype: 'Data',
+      label: 'Address Line 1',
+      reqd: 1,
+    },
+    { fieldname: 'address_line2', fieldtype: 'Data', label: 'Address Line 2' },
+    {
+      fieldname: 'city',
+      fieldtype: 'Data',
+      label: 'City/Town',
+      reqd: 1,
+      in_list_view: 1,
+    },
+    { fieldname: 'county', fieldtype: 'Data', label: 'County' },
+    { fieldname: 'state', fieldtype: 'Data', label: 'State/Province' },
+    {
+      fieldname: 'country',
+      fieldtype: 'Link',
+      label: 'Country',
+      options: 'Country',
+      reqd: 1,
+    },
+    { fieldname: 'pincode', fieldtype: 'Data', label: 'Postal Code' },
+    { fieldname: 'column_break0', fieldtype: 'Column Break' },
+    {
+      fieldname: 'email_id',
+      fieldtype: 'Data',
+      label: 'Email Address',
+      options: 'Email',
+    },
+    { fieldname: 'phone', fieldtype: 'Data', label: 'Phone', options: 'Phone' },
+    { fieldname: 'fax', fieldtype: 'Data', label: 'Fax' },
+    {
+      fieldname: 'is_primary_address',
+      fieldtype: 'Check',
+      label: 'Preferred Billing Address',
+      default: '0',
+    },
+    {
+      fieldname: 'is_shipping_address',
+      fieldtype: 'Check',
+      label: 'Preferred Shipping Address',
+      default: '0',
+    },
+    {
+      fieldname: 'disabled',
+      fieldtype: 'Check',
+      label: 'Disabled',
+      default: '0',
+    },
+    {
+      fieldname: 'linked_with',
+      fieldtype: 'Section Break',
+      label: 'Reference',
+      options: 'fa fa-pushpin',
+    },
+    {
+      fieldname: 'links',
+      fieldtype: 'Table',
+      label: 'Links',
+      options: 'Dynamic Link',
+    },
+  ],
+};
+
+// Frappe's Dynamic Link, which the app does not ship.
+const dynamicLinkMeta = {
+  name: 'Dynamic Link',
+  istable: 1,
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'link_doctype',
+      fieldtype: 'Link',
+      label: 'Link Document Type',
+      options: 'DocType',
+      reqd: 1,
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'link_name',
+      fieldtype: 'Dynamic Link',
+      label: 'Link Name',
+      options: 'link_doctype',
+      reqd: 1,
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'link_title',
+      fieldtype: 'Read Only',
+      label: 'Link Title',
+      read_only: 1,
+      in_list_view: 1,
     },
   ],
 };

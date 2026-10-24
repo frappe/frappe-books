@@ -10,6 +10,7 @@ import frappe
 from babel import Locale
 from babel.numbers import parse_pattern
 from frappe import _
+from frappe.contacts.doctype.address.address import render_address
 from frappe.custom.doctype.property_setter.property_setter import delete_property_setter, make_property_setter
 from frappe.model import no_value_fields, table_fields
 from frappe.model.meta import get_field_precision
@@ -31,7 +32,7 @@ TAX_ID_FIELDS = {"gstin": "Books Accounting Settings", "tax_id": "Books Company"
 def get_print_settings() -> dict[str, Any]:
 	"""Books Print Settings with the company address and tax IDs, and Frappe's print font, for print formats."""
 	settings = frappe.get_cached_doc("Books Print Settings")
-	address = settings.address and frappe.db.get_value("Books Address", settings.address, "address_display")
+	address = render_address(settings.address, check_permissions=False)
 	return {
 		**settings.as_dict(no_default_fields=True),
 		"address": address,

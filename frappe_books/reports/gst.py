@@ -7,7 +7,8 @@ from frappe.model.base_document import get_controller
 from frappe.utils import add_months, create_batch, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
-from frappe_books.regional import INDIAN_STATES
+from frappe_books.accounting.party import primary_field
+from frappe_books.regional import INDIAN_STATES, gst_state
 from frappe_books.reports.filters import datetime_conditions
 
 # The amount field of each GST head an account holds.
@@ -140,10 +141,12 @@ def _tax_details(taxes):
 
 def _party_places(party_type, parties):
 	"""Return each customer's or supplier's GSTIN and place of supply."""
-	rows = _get_list_in(party_type, "name", parties, fields=["name", "gstin", "address"])
+	address_field = primary_field(party_type, "Address")
+	rows = _get_list_in(party_type, "name", parties, fields=["name", "gstin", f"{address_field} as address"])
 	addresses = {row.address for row in rows if row.address}
-	positions = dict(_get_list_in("Books Address", "name", addresses, fields=["name", "pos"], as_list=True))
-	return {row.name: (row.gstin or "", _place(row, positions)) for row in rows}
+	fields = ["name", "state", "country"]
+	states = {row.name: gst_state(row) for row in _get_list_in("Address", "name", addresses, fields=fields)}
+	return {row.name: (row.gstin or "", _place(row, states)) for row in rows}
 
 
 def _get_list_in(doctype, fieldname, values, filters=None, **kwargs):
@@ -154,9 +157,9 @@ def _get_list_in(doctype, fieldname, values, filters=None, **kwargs):
 	return rows
 
 
-def _place(party, positions):
+def _place(party, states):
 	"""The state of the party's address, or else of its GSTIN."""
-	return positions.get(party.address) or _gstin_state(party.gstin)
+	return states.get(party.address) or _gstin_state(party.gstin)
 
 
 def _gstin_state(gstin):

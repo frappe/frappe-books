@@ -5,10 +5,7 @@ import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
 import type { Presentation } from 'src/frappe/schema';
 import { getModel } from 'src/frappe/registry';
-import {
-  validateEmail,
-  validatePhoneNumber,
-} from 'src/frappe/validation';
+import { validateEmail, validatePhoneNumber } from 'src/frappe/validation';
 import { PartyAccount } from './PartyAccount';
 
 /**

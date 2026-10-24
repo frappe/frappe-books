@@ -77,23 +77,18 @@ def ensure_regional_records(country):
 			).insert(ignore_permissions=True)
 
 
-def populate_address(address):
-	address.address_display = ", ".join(
-		str(value)
-		for value in (
-			address.address_line1,
-			address.address_line2,
-			address.city,
-			address.state,
-			address.country,
-			address.postal_code,
+def ensure_address_template(country):
+	"""Frappe renders addresses by the default Address Template, which a site without ERPNext lacks."""
+	if not frappe.db.exists("Address Template", {"is_default": 1}):
+		frappe.get_doc({"doctype": "Address Template", "country": country, "is_default": 1}).insert(
+			ignore_permissions=True
 		)
-		if value
-	)
+
+
+def gst_state(address):
+	"""The GST state of an address: its state, when it is an Indian one."""
 	if address.country == "India" and address.state in INDIAN_STATES.values():
-		address.pos = address.state
-	elif address.get("pos"):
-		address.pos = None
+		return address.state
 
 
 def validate_gstin(gstin):

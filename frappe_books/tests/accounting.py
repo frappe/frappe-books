@@ -78,6 +78,14 @@ def _make_party(party_type, default_account, **values):
 	).insert()
 
 
+def make_address(**values):
+	"""A Frappe Address, as Books parties, locations and print settings link to."""
+	address = {"address_title": unique_name("Address"), "address_type": "Billing", "address_line1": "1 Road"}
+	return frappe.get_doc(
+		{"doctype": "Address", **address, "city": "City", "country": "India", **values}
+	).insert()
+
+
 def foreign_currency():
 	"""Return a currency other than the company's."""
 	return "EUR" if company_currency() == "USD" else "USD"

@@ -21,8 +21,8 @@ class BooksCustomer(PartyController):
 		)
 
 		accounts: DF.Table[BooksPartyAccount]
-		address: DF.Link | None
 		customer_name: DF.Data
+		customer_primary_address: DF.Link | None
 		default_currency: DF.Link | None
 		email: DF.Data | None
 		gst_category: DF.Literal["Registered Regular", "Unregistered"]
@@ -33,6 +33,7 @@ class BooksCustomer(PartyController):
 		loyalty_program: DF.Link | None
 		outstanding_amount: DF.Currency
 		phone: DF.Data | None
+		primary_address: DF.TextEditor | None
 		tax_id: DF.Data | None
 	# end: auto-generated types
 

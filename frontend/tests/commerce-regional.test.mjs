@@ -16,21 +16,8 @@ await loadFrappeModels({
   ...(await getRegionalFrappeModels('in')),
 });
 
-const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
-
-test('an Indian address shows its place of supply, in quick edit too', () => {
-  const address = newFrappeDoc('Address', { country: 'India' });
-  assert.equal(hidden(address, 'pos'), false);
-  assert.deepEqual(getSchema('Address').quickEditFields, [
-    'address_line1',
-    'address_line2',
-    'city',
-    'country',
-    'state',
-    'postal_code',
-    'pos',
-  ]);
-});
+const hidden = (doc, fieldname) =>
+  doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
 test('an Indian customer or supplier asks for its GST registration instead of a tax ID', async () => {
   for (const schemaName of ['Customer', 'Supplier']) {
@@ -45,7 +32,7 @@ test('an Indian customer or supplier asks for its GST registration instead of a 
   assert.deepEqual(getSchema('Customer').quickEditFields, [
     'email',
     'phone',
-    'address',
+    'customer_primary_address',
     'accounts',
     'loyalty_program',
     'default_currency',
@@ -55,7 +42,7 @@ test('an Indian customer or supplier asks for its GST registration instead of a 
   assert.deepEqual(getSchema('Supplier').quickEditFields, [
     'email',
     'phone',
-    'address',
+    'supplier_primary_address',
     'accounts',
     'default_currency',
     'gst_category',
@@ -86,7 +73,7 @@ test('an Indian customer shows loyalty fields when the program is on', async () 
   assert.equal(hidden(newFrappeDoc('Customer'), 'loyalty_program'), true);
 });
 
-test('Indian customer, supplier and address files hold GST fields, not a tax ID', () => {
+test('Indian customer and supplier files hold GST fields, not a tax ID', () => {
   const exported = (schemaName) =>
     getExportFields(schemaName).map((f) => f.fieldname);
   for (const schemaName of ['Customer', 'Supplier']) {
@@ -98,9 +85,10 @@ test('Indian customer, supplier and address files hold GST fields, not a tax ID'
     assert.ok(labels.includes('GST Category'));
     assert.ok(labels.includes('GSTIN / UIN'));
     assert.ok(!labels.includes('Tax ID'));
-    assert.deepEqual(exported(schemaName).slice(-6, -4), ['gst_category', 'gstin']);
+    assert.deepEqual(exported(schemaName).slice(-6, -4), [
+      'gst_category',
+      'gstin',
+    ]);
     assert.ok(!exported(schemaName).includes('tax_id'));
   }
-
-  assert.ok(exported('Address').includes('pos'));
 });

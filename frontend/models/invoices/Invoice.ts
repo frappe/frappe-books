@@ -38,6 +38,7 @@ export const INVOICE_FIELDS = {
     'coupon_code',
   ]),
   items: { edit: true },
+  taxes: { emptyMessage: 'No taxes. Pick a template or add a row.' },
 };
 
 /**
@@ -46,6 +47,7 @@ export const INVOICE_FIELDS = {
  */
 export abstract class Invoice extends FrappeDoc {
   static override previewMethod = 'preview';
+  static override calculatedFields = ['total_taxes_and_charges', 'grand_total'];
   static override serverDefaults = [
     'make_auto_payment',
     'make_auto_stock_transfer',
@@ -187,7 +189,23 @@ export abstract class Invoice extends FrappeDoc {
       !this.fyo.singles.AccountingSettings?.enable_discounting,
     selling_price_list: () => this.isPriceListHidden,
     buying_price_list: () => this.isPriceListHidden,
+    // A finished document names its template in the Taxes section instead.
+    taxes_and_charges: () => this.submitted,
   };
+
+  /** A finished document's Taxes section names the template its rows came from. */
+  override getSectionDescription(section: string): string | undefined {
+    const field = this.fieldMap.taxes_and_charges;
+    if (
+      !this.submitted ||
+      !this.taxes_and_charges ||
+      field?.section !== section
+    ) {
+      return undefined;
+    }
+
+    return `${field.label}: ${this.taxes_and_charges}`;
+  }
 
   get isPriceListHidden(): boolean {
     return (

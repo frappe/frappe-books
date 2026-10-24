@@ -41,6 +41,10 @@ export interface Presentation {
   titleField?: string;
   /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
   tableFields?: string[];
+  /** A phone row's fields, title first and amount last, where they differ from `tableFields`. */
+  mobileTableFields?: string[];
+  /** The field a phone row shows under its amount, labelled. */
+  mobileRowDetail?: string;
   /**
    * The fields of list exports, import templates and quick views, in Books'
    * order, where it differs from the DocType's; fields the server fills are
@@ -133,6 +137,8 @@ export function toSchema(
     linkDisplayField: presentation.linkDisplayField,
     create: presentation.create,
     fileFields: presentation.fileFields,
+    mobileTableFields: presentation.mobileTableFields,
+    mobileRowDetail: presentation.mobileRowDetail,
     tableFields:
       presentation.tableFields ??
       meta.fields

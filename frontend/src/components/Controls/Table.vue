@@ -8,9 +8,11 @@
     />
     <MobileTableRows
       :rows="value"
-      :fields="tableFields"
+      :fields="mobileTableFields"
+      :detail-field="mobileRowDetail"
       :can-add="canAddRemoveRows"
       :title="title"
+      :empty-message="df.emptyMessage"
       @edit="(row) => $emit('editrow', row)"
       @add="addRowAndEdit"
     />
@@ -84,8 +86,7 @@
         <div
           v-if="value"
           :class="{
-            'overflow-x-hidden overflow-y-auto':
-              rowsOverflow,
+            'overflow-x-hidden overflow-y-auto': rowsOverflow,
             'overscroll-contain': rowsOverflow,
           }"
           :style="{ 'max-height': maxHeight }"
@@ -104,6 +105,15 @@
           />
         </div>
 
+        <FrappeListRow
+          v-if="df.emptyMessage && !value?.length"
+          class="min-h-12 text-ink-gray-5"
+        >
+          <FrappeListCell class="px-3" style="grid-column: 1 / -1">
+            {{ df.emptyMessage }}
+          </FrappeListCell>
+        </FrappeListRow>
+
         <!-- Add Row and Row Count -->
         <FrappeListRow
           v-if="canAddRemoveRows"
@@ -111,7 +121,10 @@
           @click="addRow"
         >
           <FrappeListCell class="justify-center">
-            <span class="lucide-plus size-4 text-ink-gray-5" aria-hidden="true" />
+            <span
+              class="lucide-plus size-4 text-ink-gray-5"
+              aria-hidden="true"
+            />
           </FrappeListCell>
           <FrappeListCell
             class="justify-between px-2"
@@ -272,6 +285,16 @@ export default {
     tableFields() {
       const fieldnames = getSchema(this.df.target)?.tableFields ?? [];
       return getFields(this.df.target, fieldnames);
+    },
+    mobileTableFields() {
+      const fieldnames = getSchema(this.df.target)?.mobileTableFields;
+      return fieldnames
+        ? getFields(this.df.target, fieldnames)
+        : this.tableFields;
+    },
+    mobileRowDetail() {
+      const fieldname = getSchema(this.df.target)?.mobileRowDetail;
+      return fieldname ? getFields(this.df.target, [fieldname])[0] : undefined;
     },
   },
   methods: {

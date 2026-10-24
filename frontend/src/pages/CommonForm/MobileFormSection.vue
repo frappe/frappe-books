@@ -103,6 +103,7 @@ import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { getRowSummary } from 'src/components/Controls/rowSummary';
+import { isCalculating } from 'src/frappe/calculated';
 import Table from 'src/components/Controls/Table.vue';
 import { getFields, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
@@ -238,7 +239,9 @@ function getTotalLines(field: Field) {
         .at(-1);
 
   if (field.fieldtype !== FieldTypeEnum.Table) {
-    const value = fyo.format(props.doc.get(field.fieldname), field, props.doc);
+    const value = isCalculating(props.doc, field)
+      ? t`Calculating…`
+      : fyo.format(props.doc.get(field.fieldname), field, props.doc);
     return [{ label: field.label ?? field.fieldname, value, emphasis }];
   }
 

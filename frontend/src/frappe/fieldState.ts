@@ -75,6 +75,11 @@ export function getMissingMessage(doc: FrappeDoc): string {
   return `${table.label} Row ${(doc.idx ?? 0) + 1}: ${message}`;
 }
 
+/** Whether the field's DocField depends_on hides it on `doc`, e.g. in one row of a table. */
+export function isHiddenByCondition(doc: FrappeDoc, field: Field): boolean {
+  return isConditionOn(doc, field.fieldname, 'hidden');
+}
+
 /** Edits may not change the field, whatever its own rules say. */
 function isLocked(doc: FrappeDoc, field: Field): boolean {
   if (doc.inserted && field.setOnlyOnce) {

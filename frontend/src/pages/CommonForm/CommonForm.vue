@@ -103,6 +103,13 @@
             variant="underline"
           />
         </div>
+        <FrappeAlert
+          v-if="doc.previewError"
+          class="mt-4"
+          theme="red"
+          :title="t`Not saved`"
+          :description="doc.previewError"
+        />
         <div class="divide-y divide-outline-gray-1">
           <CommonFormSection
             v-for="([n, fields], idx) in activeGroup.entries()"
@@ -157,10 +164,11 @@
 <script lang="ts">
 import { DocValue } from 'fyo/core/types';
 import { Action, LinkedRecords } from 'fyo/model/types';
-import { FrappeDoc } from 'src/frappe/document';
+import { FrappeDoc, setFormShowsPreviewErrors } from 'src/frappe/document';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
 import {
+  Alert as FrappeAlert,
   Breadcrumbs as FrappeBreadcrumbs,
   Button as FrappeButton,
   TabButtons as FrappeTabButtons,
@@ -204,6 +212,7 @@ import RowEditForm from './RowEditForm.vue';
 
 export default defineComponent({
   components: {
+    FrappeAlert,
     FormContainer,
     CommonFormSection,
     FormSkeleton,
@@ -439,6 +448,15 @@ export default defineComponent({
   },
   watch: {
     'docOrNull.schema': 'updateGroupedFields',
+    // The form shows a failed preview as an Alert, so the document need not toast it.
+    docOrNull(doc: FrappeDoc | null, previous: FrappeDoc | null) {
+      if (previous) {
+        setFormShowsPreviewErrors(previous, false);
+      }
+      if (doc) {
+        setFormShowsPreviewErrors(doc, true);
+      }
+    },
   },
   beforeMount() {
     this.useFullWidth = !!this.fyo.singles.Misc?.use_full_width;

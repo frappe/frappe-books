@@ -21,9 +21,22 @@
         {{ rowCount }}
       </span>
     </div>
+    <p
+      v-if="emptyMessage && !rows.length"
+      class="px-3 py-3 text-md text-ink-gray-5"
+    >
+      {{ emptyMessage }}
+    </p>
     <FrappeList class="list-gap-2.5 list-row-px-3">
       <FrappeListRow
-        v-for="{ row, title: rowTitle, meta, amount } of summaries"
+        v-for="{
+          row,
+          title: rowTitle,
+          meta,
+          amount,
+          detail,
+          failed,
+        } of summaries"
         :key="row.name"
         :class="title ? 'min-h-16 py-2.5' : 'min-h-13 py-2'"
         @click="$emit('edit', row)"
@@ -49,13 +62,21 @@
           </div>
         </FrappeListCell>
         <FrappeListCell class="justify-end gap-2.5">
-          <span
-            v-if="amount"
-            class="text-lg-medium tabular-nums text-ink-gray-8"
-            dir="ltr"
-          >
-            {{ amount }}
-          </span>
+          <FrappeBadge v-if="failed" theme="red" variant="subtle">
+            {{ t`Error` }}
+          </FrappeBadge>
+          <div v-if="amount" class="flex flex-col items-end">
+            <span class="text-lg-medium tabular-nums text-ink-gray-8" dir="ltr">
+              {{ amount }}
+            </span>
+            <span
+              v-if="detail"
+              class="mt-0.5 text-md tabular-nums text-ink-gray-5"
+              dir="ltr"
+            >
+              {{ detail }}
+            </span>
+          </div>
           <span
             class="lucide-chevron-right size-4 shrink-0 text-ink-gray-4 rtl-rotate-180"
             aria-hidden="true"
@@ -67,7 +88,7 @@
     <button
       v-if="canAdd"
       class="flex h-11 w-full items-center gap-2 border-outline-gray-1 px-3 text-md-medium text-ink-gray-8 active:bg-surface-gray-2"
-      :class="{ 'border-t': rows.length }"
+      :class="{ 'border-t': rows.length || emptyMessage }"
       @click="$emit('add')"
     >
       <span class="lucide-plus size-5" aria-hidden="true" />
@@ -76,7 +97,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { Icon as FrappeIcon } from 'frappe-ui';
+import { Badge as FrappeBadge, Icon as FrappeIcon } from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -95,12 +116,19 @@ const props = defineProps<{
   canAdd: boolean;
   /** A section's table names itself; a field's table has a label above. */
   title?: string;
+  /** What the table says without rows. */
+  emptyMessage?: string;
+  /** The field each row shows under its amount. */
+  detailField?: Field;
 }>();
 
 defineEmits<{ edit: [row: FrappeDoc]; add: [] }>();
 
 const summaries = computed(() =>
-  props.rows.map((row) => ({ row, ...getRowSummary(row, props.fields) }))
+  props.rows.map((row) => ({
+    row,
+    ...getRowSummary(row, props.fields, props.detailField),
+  }))
 );
 
 const rowCount = computed(() =>

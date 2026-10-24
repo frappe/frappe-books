@@ -19,6 +19,8 @@ export class TaxesAndCharges extends FrappeDoc {
     label: 'Taxes and Charges',
     fields: withoutCreate(['account_head']),
     tableFields: ['charge_type', 'account_head', 'rate', 'tax_amount', 'total'],
+    mobileTableFields: ['account_head', 'charge_type', 'rate', 'tax_amount'],
+    mobileRowDetail: 'total',
     quickEditFields: [
       'charge_type',
       'account_head',
@@ -27,6 +29,7 @@ export class TaxesAndCharges extends FrappeDoc {
       'total',
     ],
   };
+  static override calculatedFields = ['tax_amount', 'total'];
   // A new type or rate is the server's to work out the amount for.
   static override refills = {
     charge_type: ['tax_amount', 'total'],

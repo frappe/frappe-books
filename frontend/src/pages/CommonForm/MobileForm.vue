@@ -48,32 +48,51 @@
       :primary-action="{ label: t`Show`, onClick: () => showFirstError() }"
     />
 
-    <MobileFormSection
+    <FrappeAlert
+      v-if="doc.previewError && !failedSection"
+      class="mx-4 mt-3"
+      theme="red"
+      :title="t`Not saved`"
+      :description="doc.previewError"
+    />
+
+    <template
       v-for="([section, fields], index) of activeSections"
       :key="activeTab + section"
-      :title="section"
-      :description="doc.getSectionDescription(section)"
-      :fields="fields"
-      :doc="doc"
-      :errors="errors"
-      @value-change="(field, value) => $emit('value-change', field, value)"
-      @row-change="
-        (field, value, parentfield) =>
-          $emit('row-change', field, value, parentfield)
-      "
-      @editrow="(row) => $emit('editrow', row)"
     >
-      <!-- Currency follows the party and dates; scanning adds item rows. -->
-      <template
-        v-if="$slots['exchange-rate'] && index === 0 && isFirstTab"
-        #end
+      <!-- A failed preview shows above the section whose rows it failed on. -->
+      <FrappeAlert
+        v-if="doc.previewError && section === failedSection"
+        class="mx-4 mt-3"
+        theme="red"
+        :title="t`Not saved`"
+        :description="doc.previewError"
+      />
+      <MobileFormSection
+        :title="section"
+        :description="doc.getSectionDescription(section)"
+        :fields="fields"
+        :doc="doc"
+        :errors="errors"
+        @value-change="(field, value) => $emit('value-change', field, value)"
+        @row-change="
+          (field, value, parentfield) =>
+            $emit('row-change', field, value, parentfield)
+        "
+        @editrow="(row) => $emit('editrow', row)"
       >
-        <slot name="exchange-rate" />
-      </template>
-      <template v-if="$slots.barcode && hasItemsTable(fields)" #table>
-        <slot name="barcode" />
-      </template>
-    </MobileFormSection>
+        <!-- Currency follows the party and dates; scanning adds item rows. -->
+        <template
+          v-if="$slots['exchange-rate'] && index === 0 && isFirstTab"
+          #end
+        >
+          <slot name="exchange-rate" />
+        </template>
+        <template v-if="$slots.barcode && hasItemsTable(fields)" #table>
+          <slot name="barcode" />
+        </template>
+      </MobileFormSection>
+    </template>
     <LinkedRecordsSection
       v-if="linkedRecords && isFirstTab"
       :doc="doc"
@@ -267,6 +286,24 @@ const menuOptions = computed<DropdownOptions>(() => {
         onClick: () => run(action),
       })),
     }));
+});
+
+/** The section of the table whose edited rows the last preview failed on. */
+const failedSection = computed(() => {
+  if (!props.doc.previewError) {
+    return undefined;
+  }
+
+  const failed = activeSections.value.find(([, fields]) =>
+    fields.some(
+      (field: Field) =>
+        field.fieldtype === 'Table' &&
+        ((props.doc[field.fieldname] ?? []) as FrappeDoc[]).some(
+          (row: FrappeDoc) => props.doc.isRowFailed(row)
+        )
+    )
+  );
+  return failed?.[0];
 });
 
 function hasItemsTable(fields: Field[]) {

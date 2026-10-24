@@ -1,6 +1,11 @@
 from frappe.utils.jinja_globals import bundled_asset
 
-from frappe_books.accessory import accessory_company, erpnext_installed, erpnext_setup_complete
+from frappe_books.accessory import (
+	accessory_company,
+	erpnext_installed,
+	erpnext_setup_complete,
+	start_in_accessory_mode,
+)
 from frappe_books.coa import chart_options
 from frappe_books.company import default_company
 from frappe_books.regional import INDIAN_STATES
@@ -9,6 +14,7 @@ from frappe_books.settings import regional_code
 
 def extend_bootinfo(bootinfo):
 	"""Add what the Books app starts with to the session boot."""
+	start_in_accessory_mode()
 	company = accessory_company()
 	bootinfo.books = {
 		"country_code": regional_code(),

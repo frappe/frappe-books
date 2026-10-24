@@ -36,14 +36,19 @@ jobs:
           yarn test
 
   integration:
-    name: Frappe develop / ${{ matrix.database }}
+    name: Frappe develop / ${{ matrix.database }}${{ matrix.erpnext && ' + ERPNext develop' || '' }}
     needs: lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: ${{ matrix.erpnext && 60 || 40 }}
     strategy:
       fail-fast: false
       matrix:
         database: [sqlite, mariadb, postgres]
+        erpnext: [false]
+        # Accessory mode: Books over ERPNext's doctypes. Its tests skip without ERPNext.
+        include:
+          - database: postgres
+            erpnext: true
     services:
       mariadb:
         image: mariadb:11.8
@@ -96,11 +101,16 @@ jobs:
 
       - name: Install Books and test dependencies
         working-directory: ${{ runner.temp }}/books-bench
+        env:
+          BOOKS_WITH_ERPNEXT: ${{ matrix.erpnext }}
         run: |
           bench set-config -g developer_mode 1
           bench set-config -g redis_cache redis://127.0.0.1:13000
           bench set-config -g redis_queue redis://127.0.0.1:11000
           bench set-config -g redis_socketio redis://127.0.0.1:13000
+          if [ "$BOOKS_WITH_ERPNEXT" = true ]; then
+            bench get-app --branch develop --skip-assets erpnext
+          fi
           bench get-app --soft-link --skip-assets "$GITHUB_WORKSPACE"
           bench setup requirements --dev
           bench build
@@ -109,6 +119,7 @@ jobs:
         working-directory: ${{ runner.temp }}/books-bench
         env:
           BOOKS_TEST_DATABASE: ${{ matrix.database }}
+          BOOKS_WITH_ERPNEXT: ${{ matrix.erpnext }}
         run: |
           case "$BOOKS_TEST_DATABASE" in
             mariadb) database_args=(--db-host 127.0.0.1 --db-port 3306 --db-root-username root --db-root-password books-test) ;;
@@ -117,15 +128,31 @@ jobs:
           esac
           bench new-site books-test.localhost --db-type "$BOOKS_TEST_DATABASE" \
             --admin-password admin "${database_args[@]}"
+          if [ "$BOOKS_WITH_ERPNEXT" = true ]; then
+            bench --site books-test.localhost install-app erpnext
+          fi
           bench --site books-test.localhost install-app frappe_books
           bench --site books-test.localhost set-config allow_tests 1 --parse
           bench --site books-test.localhost migrate
+
+      - name: Run ERPNext's setup wizard
+        if: matrix.erpnext
+        working-directory: ${{ runner.temp }}/books-bench
+        run: |
+          result=$(bench --site books-test.localhost execute frappe.desk.page.setup_wizard.setup_wizard.setup_complete --kwargs '{"args": {
+            "language": "English", "country": "India", "timezone": "Asia/Kolkata", "currency": "INR",
+            "full_name": "Admin", "email": "admin@example.com", "password": "admin",
+            "company_name": "Acme Retail", "company_abbr": "AR", "chart_of_accounts": "Standard",
+            "fy_start_date": "2026-04-01", "fy_end_date": "2027-03-31", "setup_demo": 0}}')
+          echo "$result"
+          grep -q '"status": "ok"' <<< "$result"
 
       - name: Run integration suite
         working-directory: ${{ runner.temp }}/books-bench
         run: bench --site books-test.localhost run-tests --app frappe_books
 
       - name: Set up a company for the browser tests
+        if: ${{ !matrix.erpnext }}
         working-directory: ${{ runner.temp }}/books-bench
         run: |
           bench --site books-test.localhost execute frappe.db.set_single_value --args '["Books Setup Wizard", {
@@ -136,6 +163,7 @@ jobs:
             frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup
 
       - name: Run browser tests
+        if: ${{ !matrix.erpnext }}
         working-directory: ${{ github.workspace }}/frontend
         env:
           BOOKS_TEST_URL: http://books-test.localhost:8000
@@ -150,7 +178,7 @@ jobs:
           yarn test:ui
 
       - name: Upload browser test results
-        if: failure()
+        if: ${{ failure() && !matrix.erpnext }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-${{ matrix.database }}

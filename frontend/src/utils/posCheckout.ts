@@ -135,6 +135,13 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
   return posCheckout as POSCheckout;
 }
 
+/** ERPNext's return refunds its sale's payments; a POS return leaves the refund to the cashier's tender. */
+export async function clearReturnPayments(sale: SalesInvoice) {
+  for (const row of sale.payments ?? []) {
+    await row.set('amount', fyo.pesa(0));
+  }
+}
+
 /** Submits a draft sale, paid with `tenders`; a submitted sale is only paid. */
 async function checkOutSale(
   sale: SalesInvoice,

@@ -271,7 +271,11 @@ import {
   getQuickQtyBuffer,
   getPayableTotal,
 } from 'src/utils/pos';
-import { posCheckoutKey, usePOSCheckout } from 'src/utils/posCheckout';
+import {
+  clearReturnPayments,
+  posCheckoutKey,
+  usePOSCheckout,
+} from 'src/utils/posCheckout';
 import {
   canApplyCoupon,
   canRedeemLoyalty,
@@ -739,6 +743,10 @@ export default defineComponent({
         ModelNameEnum.SalesInvoice,
         'make_return'
       )) as SalesInvoice;
+      if (isAccessoryMode()) {
+        await clearReturnPayments(this.sinvDoc);
+        await this.previewInvoice();
+      }
     },
     toggleView() {
       this.tableView = !this.tableView;

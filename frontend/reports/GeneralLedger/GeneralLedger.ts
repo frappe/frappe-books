@@ -64,7 +64,7 @@ export class GeneralLedger extends Report {
       { label: t`All`, value: 'All' },
       { label: t`Sales Invoice`, value: 'Books Sales Invoice' },
       { label: t`Purchase Invoice`, value: 'Books Purchase Invoice' },
-      { label: t`Payment`, value: 'Books Payment' },
+      { label: t`Payment Entry`, value: 'Books Payment Entry' },
       { label: t`Journal Entry`, value: 'Books Journal Entry' },
     ];
 

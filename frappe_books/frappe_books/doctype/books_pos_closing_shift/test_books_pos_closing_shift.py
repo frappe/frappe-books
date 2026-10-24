@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, now_datetime
+from frappe.utils import add_days, now_datetime, nowdate
 
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
@@ -255,20 +255,20 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 	def _cash_payment(self, invoices):
 		return frappe.get_doc(
 			{
-				"doctype": "Books Payment",
+				"doctype": "Books Payment Entry",
 				"party_type": self.party.doctype,
 				"party": self.party.name,
-				"date": now_datetime(),
+				"posting_date": nowdate(),
 				"payment_type": "Receive",
-				"account": self.receivable.name,
-				"payment_account": self.counter,
-				"payment_method": "Cash",
-				"amount": sum(invoice.base_grand_total for invoice in invoices),
-				"payment_references": [
+				"paid_from": self.receivable.name,
+				"paid_to": self.counter,
+				"mode_of_payment": "Cash",
+				"paid_amount": sum(invoice.base_grand_total for invoice in invoices),
+				"references": [
 					{
-						"reference_type": invoice.doctype,
+						"reference_doctype": invoice.doctype,
 						"reference_name": invoice.name,
-						"amount": invoice.base_grand_total,
+						"allocated_amount": invoice.base_grand_total,
 					}
 					for invoice in invoices
 				],

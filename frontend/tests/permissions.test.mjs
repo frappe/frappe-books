@@ -52,10 +52,13 @@ test('without boot permissions nothing is restricted', () => {
 
 test('a saved document uses the rights the server returned for it', async () => {
   fyo.store.permissions = {
-    doctypes: { Payment: 'Books Payment' },
-    user: { can_write: ['Books Payment'], can_delete: ['Books Payment'] },
+    doctypes: { PaymentEntry: 'Books Payment Entry' },
+    user: {
+      can_write: ['Books Payment Entry'],
+      can_delete: ['Books Payment Entry'],
+    },
   };
-  const payment = await getSaved('Payment', 'PAY-0001');
+  const payment = await getSaved('PaymentEntry', 'PAY-0001');
   assert.equal(payment.canWrite, true);
   assert.equal(payment.canDelete, true);
 
@@ -66,13 +69,13 @@ test('a saved document uses the rights the server returned for it', async () => 
 
 test("a form loads the user's rights on its saved document from Frappe", async () => {
   fyo.store.permissions = {
-    doctypes: { Payment: 'Books Payment' },
-    user: { can_write: ['Books Payment'] },
+    doctypes: { PaymentEntry: 'Books Payment Entry' },
+    user: { can_write: ['Books Payment Entry'] },
   };
   const requests = stubFrappe(() => ({
     message: { permissions: { read: 1, write: 0 } },
   }));
-  const payment = await getSaved('Payment', 'PAY-0002');
+  const payment = await getSaved('PaymentEntry', 'PAY-0002');
 
   await loadDocPermissions(payment);
 
@@ -81,7 +84,7 @@ test("a form loads the user's rights on its saved document from Frappe", async (
     '/api/method/frappe.client.get_doc_permissions'
   );
   assert.deepEqual(requests[0].body, {
-    doctype: 'Books Payment',
+    doctype: 'Books Payment Entry',
     docname: 'PAY-0002',
   });
   assert.equal(payment.canWrite, false);
@@ -89,10 +92,10 @@ test("a form loads the user's rights on its saved document from Frappe", async (
 
 test('printing a document needs the print permission', async () => {
   fyo.store.permissions = {
-    doctypes: { Payment: 'Books Payment' },
-    user: { can_read: ['Books Payment'] },
+    doctypes: { PaymentEntry: 'Books Payment Entry' },
+    user: { can_read: ['Books Payment Entry'] },
   };
-  const payment = await getSaved('Payment', 'PAY-0001');
+  const payment = await getSaved('PaymentEntry', 'PAY-0001');
   assert.equal(payment.can('print'), false);
 
   payment.docPermissions = { read: 1, print: 1 };

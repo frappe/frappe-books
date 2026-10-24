@@ -173,7 +173,7 @@ export function getMakePaymentAction(fyo: Fyo): Action {
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) =>
       doc.isSubmitted && !(doc.outstanding_amount as Money).isZero(),
-    target: () => [ModelNameEnum.Payment, 'make_payment'],
+    target: () => [ModelNameEnum.PaymentEntry, 'make_payment'],
     open: openPayment,
   });
 }
@@ -191,7 +191,9 @@ async function openPayment(
   });
 
   // The party and its account come from the invoice.
-  const hideFields = ['party_type', 'party', 'payment_references', 'account'];
+  const partyAccountField =
+    payment.payment_type === 'Receive' ? 'paid_from' : 'paid_to';
+  const hideFields = ['party_type', 'party', 'references', partyAccountField];
 
   if (!payment.fyo.singles.AccountingSettings?.enable_invoice_returns) {
     hideFields.push('payment_type');

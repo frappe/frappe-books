@@ -6,13 +6,15 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "reference_type",
+  "reference_doctype",
   "reference_name",
-  "amount"
+  "total_amount",
+  "outstanding_amount",
+  "allocated_amount"
  ],
  "fields": [
   {
-   "fieldname": "reference_type",
+   "fieldname": "reference_doctype",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Type",
@@ -25,16 +27,30 @@
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
    "label": "Name",
-   "options": "reference_type",
+   "options": "reference_doctype",
    "placeholder": "Name",
    "reqd": 1,
    "search_index": 1
   },
   {
-   "fieldname": "amount",
+   "fieldname": "total_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount",
+   "label": "Grand Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Outstanding",
+   "read_only": 1
+  },
+  {
+   "fieldname": "allocated_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Allocated",
    "reqd": 1
   }
  ],
@@ -42,15 +58,15 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-30 19:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Payment For",
+ "name": "Books Payment Entry Reference",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "reference_name, reference_type",
+ "search_fields": "reference_name, reference_doctype",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []

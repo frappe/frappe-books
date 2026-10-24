@@ -13,6 +13,7 @@ export class NumberSeries extends FrappeDoc {
           SalesInvoice: 'Sales Invoice',
           Quotation: 'Quotation',
           PurchaseInvoice: 'Purchase Invoice',
+          PaymentEntry: 'Payment Entry',
           JournalEntry: 'Journal Entry',
           StockEntry: 'Stock Entry',
           PurchaseReceipt: 'Purchase Receipt',

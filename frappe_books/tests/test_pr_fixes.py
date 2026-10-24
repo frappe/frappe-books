@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import nowdate
 
 from frappe_books.currency import currency_precision
 from frappe_books.setup_service import complete_site_setup
@@ -37,24 +37,30 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 				with self.subTest(payment_type=payment_type, writeoff=writeoff):
 					invoice, account, party = self.make_invoice(payment_type)
 					invoice.submit()
+					sign = 1 if payment_type == "Receive" else -1
+					# A receipt comes from the party's ledger into cash, a payment the other way.
+					paid_from, paid_to = account.name, self.cash.name
+					if payment_type == "Pay":
+						paid_from, paid_to = paid_to, paid_from
 					payment = (
 						frappe.get_doc(
 							{
-								"doctype": "Books Payment",
+								"doctype": "Books Payment Entry",
 								"party_type": party.doctype,
 								"party": party.name,
-								"date": now_datetime(),
+								"posting_date": nowdate(),
 								"payment_type": payment_type,
-								"account": account.name,
-								"payment_account": self.cash.name,
-								"amount": 157.5,
-								"writeoff": writeoff,
-								"payment_method": "Cash",
-								"payment_references": [
+								"paid_from": paid_from,
+								"paid_to": paid_to,
+								"paid_amount": Decimal("157.50") - writeoff,
+								# The write-off has no account, so it takes the company's.
+								"deductions": [{"amount": sign * writeoff}] if writeoff else [],
+								"mode_of_payment": "Cash",
+								"references": [
 									{
-										"reference_type": invoice.doctype,
+										"reference_doctype": invoice.doctype,
 										"reference_name": invoice.name,
-										"amount": 157.5,
+										"allocated_amount": 157.5,
 									}
 								],
 							}
@@ -67,7 +73,6 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 						row.account: Decimal(str(row.debit or 0)) - Decimal(str(row.credit or 0))
 						for row in entries
 					}
-					sign = 1 if payment_type == "Receive" else -1
 					self.assertEqual(balances[self.cash.name], sign * (Decimal("157.50") - writeoff))
 					self.assertEqual(balances[account.name], -sign * Decimal("157.50"))
 					self.assertEqual(balances.get(self.writeoff.name, 0), sign * writeoff)

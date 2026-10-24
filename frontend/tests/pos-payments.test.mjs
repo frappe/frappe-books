@@ -41,10 +41,15 @@ test('a paid sale names the payments that settle its invoice, oldest first', asy
   const { body } = requests.at(-1);
   assert.deepEqual(
     [body.doctype, body.parent, body.fields, body.order_by],
-    ['Books Payment For', 'Books Payment', ['parent'], 'creation asc']
+    [
+      'Books Payment Entry Reference',
+      'Books Payment Entry',
+      ['parent'],
+      'creation asc',
+    ]
   );
   assert.deepEqual(body.filters, [
-    ['reference_type', '=', 'Books Sales Invoice'],
+    ['reference_doctype', '=', 'Books Sales Invoice'],
     ['reference_name', '=', 'SINV-1001'],
   ]);
 });

@@ -259,11 +259,11 @@ function getPOSInvoiceFilters(filters: Filter[], search: string): Filter[] {
 /** The payments of a sales invoice, oldest first; at checkout, those the server made with its submit. */
 export async function getInvoicePayments(invoice: string): Promise<string[]> {
   const rows = await call<DocValues[]>('frappe.client.get_list', {
-    doctype: 'Books Payment For',
-    parent: 'Books Payment',
+    doctype: 'Books Payment Entry Reference',
+    parent: 'Books Payment Entry',
     fields: ['parent'],
     filters: [
-      ['reference_type', '=', 'Books Sales Invoice'],
+      ['reference_doctype', '=', 'Books Sales Invoice'],
       ['reference_name', '=', invoice],
     ],
     order_by: 'creation asc',

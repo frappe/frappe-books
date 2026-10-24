@@ -60,8 +60,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		payment = map_invoice_payment(invoice.doctype, invoice.name)
 		self.assertEqual(payment.payment_type, "Receive")
-		self.assertEqual(Decimal(str(payment.amount)), Decimal("150"))
-		self.assertEqual(payment.payment_references[0].reference_name, invoice.name)
+		self.assertEqual(Decimal(str(payment.paid_amount)), Decimal("150"))
+		self.assertEqual(payment.references[0].reference_name, invoice.name)
 
 	def test_invoice_mapped_from_a_delivery_note_pays_automatically(self):
 		received = make_account("Mapped Received", root_type="Liability")
@@ -106,10 +106,10 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		mapped.make_auto_payment = 0
 		submitted = mapped.insert().submit()
 		payment = make_mapped_doc(MAPPERS.format("books_sales_invoice", "make_payment"), submitted.name)
-		self.assertEqual((payment.payment_type, payment.amount), ("Receive", 150))
-		reference = payment.payment_references[0]
+		self.assertEqual((payment.payment_type, payment.paid_amount), ("Receive", 150))
+		reference = payment.references[0]
 		self.assertEqual(
-			(reference.reference_type, reference.reference_name), (submitted.doctype, submitted.name)
+			(reference.reference_doctype, reference.reference_name), (submitted.doctype, submitted.name)
 		)
 
 	def test_documents_map_only_through_whitelisted_mappers(self):
@@ -243,8 +243,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			"Books Purchase Receipt Item", {"purchase_invoice": invoice.name}, "parent"
 		)
 		payment = frappe.get_doc(
-			"Books Payment",
-			frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent"),
+			"Books Payment Entry",
+			frappe.db.get_value("Books Payment Entry Reference", {"reference_name": invoice.name}, "parent"),
 		)
 		payment.cancel()
 		invoice.reload().cancel()
@@ -260,7 +260,9 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 	def test_an_invoice_cancels_the_payments_it_lists_through_its_controller(self):
 		invoice = self._paid_invoice()
-		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+		payment = frappe.db.get_value(
+			"Books Payment Entry Reference", {"reference_name": invoice.name}, "parent"
+		)
 		linked_docs = get_payments_to_cancel(invoice.doctype, invoice.name)
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
@@ -268,7 +270,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		self.assertEqual([doc["name"] for doc in linked_docs], [payment])
 		self.assertEqual(cancelled.docstatus, 2)
-		self.assertEqual(frappe.db.get_value("Books Payment", payment, "docstatus"), 2)
+		self.assertEqual(frappe.db.get_value("Books Payment Entry", payment, "docstatus"), 2)
 
 	def test_an_invoice_copy_older_than_the_saved_one_cancels_nothing(self):
 		invoice = self._paid_invoice()
@@ -282,7 +284,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			*(invoice, "cancel_with_linked_docs"),
 			linked_docs=linked_docs,
 		)
-		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Books Payment Entry", linked_docs[0]["name"], "docstatus"), 1)
 
 	def test_a_return_still_blocks_cancelling_a_paid_invoice(self):
 		invoice = self._paid_invoice()
@@ -293,7 +295,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		payments = get_payments_to_cancel(invoice.doctype, invoice.name)
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
-		self.assertEqual([doc["doctype"] for doc in payments], ["Books Payment"])
+		self.assertEqual([doc["doctype"] for doc in payments], ["Books Payment Entry"])
 		self.assertRaises(
 			frappe.LinkExistsError,
 			run_invoice_method,
@@ -309,7 +311,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		with self.set_user(ensure_user("books-cancel-user@example.com", "Books User")):
 			run_invoice_method(invoice, "cancel_with_linked_docs", linked_docs=linked_docs)
 
-		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 2)
+		self.assertEqual(frappe.db.get_value("Books Payment Entry", linked_docs[0]["name"], "docstatus"), 2)
 		self.assertEqual(invoice.db_get("docstatus"), 2)
 
 	def test_a_duplicate_of_a_returned_invoice_is_a_new_invoice(self):
@@ -349,7 +351,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				self.assertRaises(
 					frappe.TimestampMismatchError, run_invoice_method, invoice, method, **kwargs
 				)
-		self.assertEqual(frappe.db.get_value("Books Payment", linked_docs[0]["name"], "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Books Payment Entry", linked_docs[0]["name"], "docstatus"), 1)
 
 	def test_submit_makes_the_automatic_payment(self):
 		start_pos_shift()
@@ -369,14 +371,14 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				invoice.save().submit()
 
 				references = frappe.get_all(
-					"Books Payment For", filters={"reference_name": invoice.name}, pluck="parent"
+					"Books Payment Entry Reference", filters={"reference_name": invoice.name}, pluck="parent"
 				)
 				self.assertEqual(len(references), payments)
 				self.assertEqual(invoice.db_get("outstanding_amount"), 0 if payments else 200)
 				self.assertEqual(invoice.outstanding_amount, invoice.db_get("outstanding_amount"))
 
 	def test_automatic_payment_uses_the_defaults_series(self):
-		series = make_number_series("Payment")
+		series = make_number_series("PaymentEntry")
 		frappe.db.set_single_value("Books Defaults", "payment_number_series", series)
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -389,7 +391,9 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		invoice.items[0].discount_percentage = 0
 		invoice.save().submit()
 
-		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+		payment = frappe.db.get_value(
+			"Books Payment Entry Reference", {"reference_name": invoice.name}, "parent"
+		)
 		self.assertTrue(payment.startswith(series), payment)
 
 	def test_automatic_payment_method_matches_the_account_and_refers_to_the_invoice(self):
@@ -408,9 +412,11 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					doctype, party, account, self.item.name, item_account, make_auto_payment=1
 				).submit()
 
-				payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+				payment = frappe.db.get_value(
+					"Books Payment Entry Reference", {"reference_name": invoice.name}, "parent"
+				)
 				self.assertEqual(
-					frappe.db.get_value("Books Payment", payment, ["payment_method", "reference_id"]),
+					frappe.db.get_value("Books Payment Entry", payment, ["mode_of_payment", "reference_no"]),
 					(method, invoice.name),
 				)
 
@@ -419,7 +425,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			"Books Defaults", "sales_payment_account", make_account("Mapped Bank", account_type="Bank").name
 		)
 		invoice = self._paid_invoice(make_auto_payment=0)
-		self.assertEqual(map_invoice_payment(invoice.doctype, invoice.name).payment_method, "Bank")
+		self.assertEqual(map_invoice_payment(invoice.doctype, invoice.name).mode_of_payment, "Bank")
 
 		frappe.db.set_value("Books Mode of Payment", "Bank", "type", "General")
 		with self.assertRaisesRegex(frappe.ValidationError, "Add a Bank payment method"):

@@ -70,7 +70,7 @@ export class Defaults extends FrappeDoc {
       ['reference_type', '=', ModelNameEnum.JournalEntry],
     ],
     payment_number_series: () => [
-      ['reference_type', '=', ModelNameEnum.Payment],
+      ['reference_type', '=', ModelNameEnum.PaymentEntry],
     ],
     stock_entry_number_series: () => [
       ['reference_type', '=', ModelNameEnum.StockEntry],

@@ -116,7 +116,7 @@ test('a number series shows its prefix, counter and labelled reference types', (
     referenceType.options.map(({ value, label }) => [value, label])
   );
   assert.equal(labels.SalesInvoice, 'Sales Invoice');
-  assert.equal(labels.Payment, 'Payment');
+  assert.equal(labels.PaymentEntry, 'Payment Entry');
   const digits = series.fields.find(
     ({ fieldname }) => fieldname === 'pad_zeros'
   );
@@ -127,7 +127,7 @@ test('a number series shows its prefix, counter and labelled reference types', (
 });
 
 test('number series links filter and create by reference_type', async () => {
-  const { SalesInvoice, Defaults, Payment, JournalEntry, StockEntry } =
+  const { SalesInvoice, Defaults, PaymentEntry, JournalEntry, StockEntry } =
     frappeModels;
   const invoice = { schemaName: 'SalesInvoice' };
   const series = (schemaName) => [['reference_type', '=', schemaName]];
@@ -135,7 +135,10 @@ test('number series links filter and create by reference_type', async () => {
     await SalesInvoice.filters.naming_series(invoice),
     series('SalesInvoice')
   );
-  assert.deepEqual(Payment.filters.naming_series(), series('Payment'));
+  assert.deepEqual(
+    PaymentEntry.filters.naming_series(),
+    series('PaymentEntry')
+  );
   assert.deepEqual(
     JournalEntry.filters.naming_series(),
     series('JournalEntry')

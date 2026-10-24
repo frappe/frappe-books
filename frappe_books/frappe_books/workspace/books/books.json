@@ -13,7 +13,7 @@
   {"label":"Transactions","link_count":5,"type":"Card Break"},
   {"label":"Sales Invoice","link_to":"Books Sales Invoice","link_type":"DocType","type":"Link"},
   {"label":"Purchase Invoice","link_to":"Books Purchase Invoice","link_type":"DocType","type":"Link"},
-  {"label":"Payment","link_to":"Books Payment","link_type":"DocType","type":"Link"},
+  {"label":"Payment Entry","link_to":"Books Payment Entry","link_type":"DocType","type":"Link"},
   {"label":"Journal Entry","link_to":"Books Journal Entry","link_type":"DocType","type":"Link"},
   {"label":"Quotation","link_to":"Books Quotation","link_type":"DocType","type":"Link"},
   {"label":"Masters","link_count":7,"type":"Card Break"},

@@ -114,13 +114,16 @@ test("each mapped document action opens the form of what its source's whiteliste
 });
 
 test('a payment action opens the payment in a quick edit without the fields its invoice sets', async () => {
-  const requests = stubMapper({ party: 'Acme' });
   const pushed = [];
   router.currentRoute = {
     value: { fullPath: '/list/SalesInvoice', query: {} },
   };
   router.push = async (to) => pushed.push(to);
-  for (const schemaName of ['SalesInvoice', 'PurchaseInvoice']) {
+  for (const [schemaName, paymentType, partyAccount] of [
+    ['SalesInvoice', 'Receive', 'paid_from'],
+    ['PurchaseInvoice', 'Pay', 'paid_to'],
+  ]) {
+    const requests = stubMapper({ party: 'Acme', payment_type: paymentType });
     const invoice = await getSaved(schemaName, 'INV-1');
 
     await getAction(schemaName, 'Payment').action(invoice, router);
@@ -128,12 +131,12 @@ test('a payment action opens the payment in a quick edit without the fields its 
     const method = requests.at(-1).body.method;
     assert.ok(method.endsWith('.make_payment') && isWhitelisted(method));
     const { schemaName: opened, edit, hideFields } = pushed.at(-1).query;
-    assert.deepEqual([opened, edit], ['Payment', 1]);
+    assert.deepEqual([opened, edit], ['PaymentEntry', 1]);
     assert.deepEqual(hideFields, [
       'party_type',
       'party',
-      'payment_references',
-      'account',
+      'references',
+      partyAccount,
       'payment_type',
     ]);
   }

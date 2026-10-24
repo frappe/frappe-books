@@ -1,6 +1,6 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import nowdate
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.tests.accounting import (
@@ -18,7 +18,7 @@ STATUS_DOCTYPES = (
 	"Books Purchase Receipt",
 	"Books Quotation",
 	"Books Journal Entry",
-	"Books Payment",
+	"Books Payment Entry",
 	"Books Lead",
 	"Books Serial No",
 )
@@ -73,20 +73,20 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 	def _pay(self, amount):
 		payment = frappe.get_doc(
 			{
-				"doctype": "Books Payment",
+				"doctype": "Books Payment Entry",
 				"party_type": self.party.doctype,
 				"party": self.party.name,
-				"date": now_datetime(),
+				"posting_date": nowdate(),
 				"payment_type": "Receive",
-				"account": self.receivable.name,
-				"payment_account": self.cash.name,
-				"payment_method": "Cash",
-				"amount": amount,
-				"payment_references": [
+				"paid_from": self.receivable.name,
+				"paid_to": self.cash.name,
+				"mode_of_payment": "Cash",
+				"paid_amount": amount,
+				"references": [
 					{
-						"reference_type": self.invoice.doctype,
+						"reference_doctype": self.invoice.doctype,
 						"reference_name": self.invoice.name,
-						"amount": amount,
+						"allocated_amount": amount,
 					}
 				],
 			}

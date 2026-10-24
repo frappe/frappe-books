@@ -141,12 +141,14 @@ test('a row links to other forms and references select fields of the form', asyn
 });
 
 test('Dynamic Link references are the Select and DocType fields Frappe accepts', async () => {
-  const form = newFrappeDoc('CustomForm', { name: 'Books Payment For' });
+  const form = newFrappeDoc('CustomForm', {
+    name: 'Books Payment Entry Reference',
+  });
   await form.append('custom_fields', { label: 'Ref', fieldname: 'ref' });
   const references = CustomField.lists
     .references(form.custom_fields[0])
     .map(({ value }) => value);
-  assert.deepEqual(references, ['reference_type']);
+  assert.deepEqual(references, ['reference_doctype']);
 });
 
 test('a Table field targets only child tables', async () => {

@@ -433,6 +433,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     for (const field of this.schema.fields) {
       if (
         field.meta ||
+        field.clientOnly ||
         (field.insertOnly && this.inserted) ||
         (options.clearServerFilled && this._serverFilled.has(field.fieldname))
       ) {
@@ -1199,7 +1200,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   applyPreview(previewed: DocValueMap) {
     for (const field of this.schema.fields) {
       const { fieldname } = field;
-      if (field.meta || fieldname === 'name') {
+      if (field.meta || field.clientOnly || fieldname === 'name') {
         continue;
       }
 

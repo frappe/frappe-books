@@ -118,19 +118,19 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 	The balances count back from the invoice's outstanding amount, so the last one always matches it.
 	"""
 	allocations = frappe.get_list(
-		"Books Payment For",
-		filters={"reference_type": invoice.doctype, "reference_name": invoice.name, "docstatus": 1},
-		fields=["parent", "amount"],
-		parent_doctype="Books Payment",
+		"Books Payment Entry Reference",
+		filters={"reference_doctype": invoice.doctype, "reference_name": invoice.name, "docstatus": 1},
+		fields=["parent", "allocated_amount"],
+		parent_doctype="Books Payment Entry",
 	)
 	allocated = defaultdict(as_decimal)
 	for row in allocations:
-		allocated[row.parent] += as_decimal(row.amount)
+		allocated[row.parent] += as_decimal(row.allocated_amount)
 	payments = frappe.get_list(
-		"Books Payment",
+		"Books Payment Entry",
 		filters={"name": ["in", list(allocated)]},
-		fields=["name", "payment_method", "amount_paid"],
-		order_by="date asc, name asc",
+		fields=["name", "mode_of_payment", "paid_amount"],
+		order_by="posting_date asc, name asc",
 	)
 	balance = settlement.due(invoice) + sum_decimal(allocated[payment.name] for payment in payments)
 	details = []
@@ -138,9 +138,9 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 		balance -= allocated[payment.name]
 		details.append(
 			{
-				"amount": allocated[payment.name],
-				"amount_paid": payment.amount_paid,
-				"payment_method": payment.payment_method,
+				"allocated_amount": allocated[payment.name],
+				"paid_amount": payment.paid_amount,
+				"mode_of_payment": payment.mode_of_payment,
 				"outstanding_amount": balance,
 			}
 		)
@@ -150,9 +150,11 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 def _payment_totals(payment) -> dict[str, Any]:
 	taxes = _payment_taxes(payment)
 	currency = company_currency()
-	totals = _amount_totals(payment.amount, currency)
-	totals["sub_total"] = as_decimal(payment.amount) - sum_decimal(tax["amount"] for tax in taxes)
-	totals["amount_paid_in_words"] = amount_in_words(payment.amount_paid, currency)
+	settled = payment.party_amount
+	totals = _amount_totals(settled, currency)
+	totals["settled_amount"] = settled
+	totals["sub_total"] = settled - sum_decimal(tax["amount"] for tax in taxes)
+	totals["paid_amount_in_words"] = amount_in_words(payment.paid_amount, currency)
 	totals["taxes"] = taxes
 	return totals
 
@@ -160,15 +162,15 @@ def _payment_totals(payment) -> dict[str, Any]:
 def _payment_taxes(payment) -> list[dict[str, Any]]:
 	"""Each tax of the paid invoices: the amount the payment realised, else the share it settles."""
 	realised = defaultdict(as_decimal)
-	for row in payment.taxes:
+	for row in payment.realised_taxes:
 		realised[row.from_account] += as_decimal(row.amount)
 	shares = defaultdict(as_decimal)
-	for row in payment.payment_references:
-		invoice = frappe.get_doc(row.reference_type, row.reference_name)
+	for row in payment.references:
+		invoice = frappe.get_doc(row.reference_doctype, row.reference_name)
 		if not as_decimal(invoice.base_grand_total):
 			continue
 		for tax in invoice.taxes:
-			shares[tax.account_head] += tax_share(invoice, tax, as_decimal(row.amount))
+			shares[tax.account_head] += tax_share(invoice, tax, as_decimal(row.allocated_amount))
 	return [{"account": account, "amount": realised.get(account, share)} for account, share in shares.items()]
 
 

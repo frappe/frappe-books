@@ -484,7 +484,9 @@ test('a cancel with linked documents runs the controller method that cancels the
       : undefined
   );
   const order = await getFrappeDoc('Order', 'ORD-2');
-  const payments = [{ doctype: 'Books Payment', name: 'PAY-1', docstatus: 1 }];
+  const payments = [
+    { doctype: 'Books Payment Entry', name: 'PAY-1', docstatus: 1 },
+  ];
 
   await order.cancel(payments);
 

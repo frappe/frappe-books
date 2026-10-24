@@ -317,8 +317,8 @@ for (const [field, value, expected] of [
   });
 }
 
-// Invoices post on a date; payments still post on a date and time.
-const datetimeSchema = { schema: 'Payment', label: 'Posting Date' };
+// Invoices and payments post on a date; POS shifts open on a date and time.
+const datetimeSchema = { schema: 'POSOpeningShift', label: 'Opening Date' };
 
 /** Lists the schema's records in the fixture and opens its filters again. */
 async function useSchema(page: Page, schema: string) {
@@ -373,13 +373,13 @@ test('datetime filters select both calendar date and time and preserve SQL round
   ]);
 });
 
-// Journal entries filter on their posting date, payments on their date and time.
+// Journal entries filter on their posting date, POS shifts on their date and time.
 const dateFields: Record<string, [fieldname: string, label: string]> = {
   JournalEntry: ['posting_date', 'Date'],
-  Payment: ['date', 'Posting Date'],
+  POSOpeningShift: ['opening_date', 'Opening Date'],
 };
 
-for (const schema of ['JournalEntry', 'Payment']) {
+for (const schema of ['JournalEntry', 'POSOpeningShift']) {
   test(`${schema} date picker supports keyboard selection, Escape, clearing and empty conditions`, async ({
     page,
   }) => {
@@ -426,7 +426,7 @@ for (const schema of ['JournalEntry', 'Payment']) {
 
 for (const [schema, first, second] of [
   ['JournalEntry', '2024-02-29', '2024-03-01'],
-  ['Payment', '2024-02-29T13:45:12', '2024-03-01T00:00:00'],
+  ['POSOpeningShift', '2024-02-29T13:45:12', '2024-03-01T00:00:00'],
 ]) {
   test(`${schema} typed picker values commit before Apply and outside clicks`, async ({
     page,

@@ -11,7 +11,7 @@ INVALID_PREFIX_CHARACTERS = "/, ?, &, =, %"
 # Doctype: (standard prefix, series reference type, Books Defaults field that selects its series)
 NUMBER_SERIES = {
 	"Books Journal Entry": ("JV-", "JournalEntry", "journal_entry_number_series"),
-	"Books Payment": ("PAY-", "Payment", "payment_number_series"),
+	"Books Payment Entry": ("PAY-", "PaymentEntry", "payment_number_series"),
 	"Books Purchase Invoice": ("PINV-", "PurchaseInvoice", "purchase_invoice_number_series"),
 	"Books Pricing Rule": ("PRLE-", "PricingRule", None),
 	"Books Purchase Receipt": ("PREC-", "PurchaseReceipt", "purchase_receipt_number_series"),

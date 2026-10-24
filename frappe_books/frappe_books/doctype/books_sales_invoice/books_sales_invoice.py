@@ -8,7 +8,11 @@ from frappe.utils import nowdate, nowtime
 from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.accounting.payment import map_invoice_payment, validate_payment_details
+from frappe_books.accounting.payment import (
+	map_invoice_payment,
+	payment_account_field,
+	validate_payment_details,
+)
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
@@ -193,14 +197,14 @@ class BooksSalesInvoice(PostingInvoiceController):
 		payment = map_invoice_payment(self.doctype, self.name)
 		payment.update(
 			{
-				"payment_method": row.mode_of_payment,
-				"payment_account": counter_payment_account(row.mode_of_payment),
-				"amount": amount,
-				"reference_id": row.reference_no,
+				"mode_of_payment": row.mode_of_payment,
+				payment_account_field(payment.payment_type): counter_payment_account(row.mode_of_payment),
+				"paid_amount": amount,
+				"reference_no": row.reference_no,
 				"clearance_date": row.clearance_date,
 			}
 		)
-		payment.payment_references[0].amount = amount
+		payment.references[0].allocated_amount = amount
 		payment.insert()
 		payment.submit()
 		return payment.name

@@ -17,7 +17,7 @@ test('linked entries come from the server by doctype, grouped by schema in schem
     return Response.json({
       message: {
         'Books GL Entry': ['7', '3'],
-        'Books Payment': ['PAY-1002'],
+        'Books Payment Entry': ['PAY-1002'],
         'Books Delivery Note': [],
       },
     });
@@ -25,7 +25,7 @@ test('linked entries come from the server by doctype, grouped by schema in schem
   const doctypes = {
     SalesInvoice: 'Books Sales Invoice',
     DeliveryNote: 'Books Delivery Note',
-    Payment: 'Books Payment',
+    PaymentEntry: 'Books Payment Entry',
     GLEntry: 'Books GL Entry',
   };
   const doc = {
@@ -37,7 +37,7 @@ test('linked entries come from the server by doctype, grouped by schema in schem
   const entries = await getLinkedEntries(doc);
 
   assert.deepEqual(Object.entries(entries), [
-    ['Payment', ['PAY-1002']],
+    ['PaymentEntry', ['PAY-1002']],
     ['GLEntry', ['7', '3']],
   ]);
   assert.deepEqual(requests, [

@@ -6,7 +6,7 @@ import frappe
 from bs4 import BeautifulSoup
 from frappe.contacts.doctype.address.address import get_address_display
 from frappe.tests import IntegrationTestCase
-from frappe.utils import money_in_words, now_datetime
+from frappe.utils import money_in_words, nowdate
 from frappe.utils.pdf import get_print_format_styles
 from frappe.utils.print_utils import get_print
 
@@ -63,7 +63,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		for doc, print_format, expected in (
 			(invoice, "Business - Sales Invoice", grand_total),
 			(invoice, "Business-POS - Sales Invoice", "Thank you! Please visit again."),
-			(payment, "Business - Payment", "Amount Paid"),
+			(payment, "Business - Payment", "Paid Amount"),
 		):
 			with self.subTest(print_format=print_format):
 				html = get_print(doc.doctype, doc.name, print_format=print_format)
@@ -141,7 +141,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				"Business - Quotation": "Books Quotation",
 				"Business - Sales Invoice": "Books Sales Invoice",
 				"Business - Purchase Invoice": "Books Purchase Invoice",
-				"Business - Payment": "Books Payment",
+				"Business - Payment": "Books Payment Entry",
 				"Business - Delivery Note": "Books Delivery Note",
 				"Business-POS - Sales Invoice": "Books Sales Invoice",
 			},
@@ -230,9 +230,16 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 		self.assertEqual(
 			totals["payment_details"],
-			[{"amount": 100, "amount_paid": 198, "payment_method": "Cash", "outstanding_amount": 98}],
+			[
+				{
+					"allocated_amount": 100,
+					"paid_amount": 198,
+					"mode_of_payment": "Cash",
+					"outstanding_amount": 98,
+				}
+			],
 		)
-		self.assertEqual(payment.amount_paid, 198)
+		self.assertEqual(payment.paid_amount, 198)
 
 	def test_printed_balances_end_at_what_the_invoice_still_owes(self):
 		invoice = self.make_invoice()
@@ -259,7 +266,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 		self.assertEqual(totals["taxes"], [{"account": self.tax_account.name, "amount": 9}])
 		self.assertEqual(totals["sub_total"], 90)
-		self.assertEqual(totals["amount_paid_in_words"], money_in_words(99, company_currency()))
+		self.assertEqual(totals["paid_amount_in_words"], money_in_words(99, company_currency()))
 
 	def test_payment_prints_the_realised_tax_it_stored(self):
 		paid_tax = make_account("Print Tax Paid", root_type="Liability", account_type="Tax")
@@ -283,7 +290,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 		totals = get_print_totals(payment)
 
-		self.assertEqual([row.amount for row in payment.taxes], [Decimal("0.88")])
+		self.assertEqual([row.amount for row in payment.realised_taxes], [Decimal("0.88")])
 		self.assertEqual(
 			totals["taxes"],
 			[
@@ -410,17 +417,21 @@ class IntegrationTestPrinting(IntegrationTestCase):
 	def make_payment(self, allocations):
 		payment = frappe.get_doc(
 			{
-				"doctype": "Books Payment",
+				"doctype": "Books Payment Entry",
 				"party_type": self.party.doctype,
 				"party": self.party.name,
-				"date": now_datetime(),
+				"posting_date": nowdate(),
 				"payment_type": "Receive",
-				"account": self.receivable.name,
-				"payment_account": self.cash.name,
-				"payment_method": "Cash",
-				"amount": sum(allocations.values()),
-				"payment_references": [
-					{"reference_type": invoice.doctype, "reference_name": invoice.name, "amount": amount}
+				"paid_from": self.receivable.name,
+				"paid_to": self.cash.name,
+				"mode_of_payment": "Cash",
+				"paid_amount": sum(allocations.values()),
+				"references": [
+					{
+						"reference_doctype": invoice.doctype,
+						"reference_name": invoice.name,
+						"allocated_amount": amount,
+					}
 					for invoice, amount in allocations.items()
 				],
 			}

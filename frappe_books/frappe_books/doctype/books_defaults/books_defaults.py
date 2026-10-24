@@ -18,7 +18,7 @@ PRINT_FORMAT_FIELDS = {
 	"sales_invoice_print_template": "Books Sales Invoice",
 	"purchase_invoice_print_template": "Books Purchase Invoice",
 	"journal_entry_print_template": "Books Journal Entry",
-	"payment_print_template": "Books Payment",
+	"payment_print_template": "Books Payment Entry",
 	"delivery_note_print_template": "Books Delivery Note",
 	"purchase_receipt_print_template": "Books Purchase Receipt",
 	"stock_entry_print_template": "Books Stock Entry",

@@ -27,7 +27,7 @@ export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
   const importables = [
     ModelNameEnum.SalesInvoice,
     ModelNameEnum.PurchaseInvoice,
-    ModelNameEnum.Payment,
+    ModelNameEnum.PaymentEntry,
     ModelNameEnum.Customer,
     ModelNameEnum.Supplier,
     ModelNameEnum.Item,

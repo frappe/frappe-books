@@ -12,7 +12,7 @@ COMPANY_DOCTYPES = (
 	"Books Warehouse",
 	"Books Loyalty Point Entry",
 	"Books Loyalty Program",
-	"Books Payment",
+	"Books Payment Entry",
 	"Books Pos Closing Shift",
 	"Books Pos Opening Shift",
 	"Books Pos Profile",

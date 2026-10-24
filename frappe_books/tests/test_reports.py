@@ -69,13 +69,13 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 
 	def test_general_ledger_filters_and_shows_documents_by_doctype(self):
 		_post("2045-01-05", self.cash.name, 50, 0)
-		_post("2045-01-06", self.cash.name, 30, 0, voucher_type="Books Payment")
+		_post("2045-01-06", self.cash.name, 30, 0, voucher_type="Books Payment Entry")
 
-		rows = self._ledger(account=self.cash.name, voucher_type="Books Payment")
+		rows = self._ledger(account=self.cash.name, voucher_type="Books Payment Entry")
 
 		entries = [row for row in rows if row.get("type") == "entry"]
 		self.assertEqual(
-			[(row["voucher_type"], row["debit"]) for row in entries], [("Books Payment", Decimal(30))]
+			[(row["voucher_type"], row["debit"]) for row in entries], [("Books Payment Entry", Decimal(30))]
 		)
 
 	def test_general_ledger_of_a_group_account_shows_its_accounts_entries(self):

@@ -138,7 +138,7 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		self.assertEqual(
 			[
 				default_series(doctype)
-				for doctype in ("Books Sales Invoice", "Books Payment", "Books Pricing Rule")
+				for doctype in ("Books Sales Invoice", "Books Payment Entry", "Books Pricing Rule")
 			],
 			[series, "PAY-", "PRLE-"],
 		)

@@ -158,7 +158,7 @@ test.describe('on a phone', () => {
     await waitForBooks(page);
 
     await page.getByRole('button', { name: 'Receive payment' }).click();
-    const sheet = page.getByRole('dialog', { name: 'New Payment' });
+    const sheet = page.getByRole('dialog', { name: 'New Payment Entry' });
     await sheet.getByRole('button', { name: 'Save', exact: true }).click();
     await page.getByRole('button', { name: 'Submit', exact: true }).click();
     // The confirmation opens over the payment sheet, not behind it.

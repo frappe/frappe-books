@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksPaymentFor(Document):
+class BooksPaymentEntryReference(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -14,12 +14,14 @@ class BooksPaymentFor(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		amount: DF.Currency
+		allocated_amount: DF.Currency
+		outstanding_amount: DF.Currency
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
+		reference_doctype: DF.Link
 		reference_name: DF.DynamicLink
-		reference_type: DF.Link
+		total_amount: DF.Currency
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Payment For"
+	_DOCTYPE_NAME = "Books Payment Entry Reference"

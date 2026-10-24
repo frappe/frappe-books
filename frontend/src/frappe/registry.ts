@@ -60,8 +60,10 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
  */
 export function getFileFields(schemaName: string): Field[] {
   const schema = getSchema(schemaName)!;
-  // Insert-only values are not the DocType's, so files cannot hold them.
-  const fields = schema.fields.filter((field) => !field.insertOnly);
+  // Insert-only and client values are not the DocType's, so files cannot hold them.
+  const fields = schema.fields.filter(
+    (field) => !field.insertOnly && !field.clientOnly
+  );
   const { fileFields } = schema;
   if (!fileFields) {
     return fields;

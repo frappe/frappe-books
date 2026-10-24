@@ -74,7 +74,7 @@ class IntegrationTestBooksNumberSeries(IntegrationTestCase):
 
 	def test_documents_take_only_a_series_of_their_type(self):
 		journal = frappe.get_doc(
-			{"doctype": "Books Journal Entry", "naming_series": make_number_series("Payment")}
+			{"doctype": "Books Journal Entry", "naming_series": make_number_series("PaymentEntry")}
 		)
 		self.assertRaisesRegex(frappe.ValidationError, "is not for Books Journal Entry", journal.insert)
 

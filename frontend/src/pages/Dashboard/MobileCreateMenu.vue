@@ -34,7 +34,7 @@ const options = (
     {
       label: t`Receive payment`,
       icon: 'lucide-hand-coins',
-      schemaName: ModelNameEnum.Payment,
+      schemaName: ModelNameEnum.PaymentEntry,
       initData: createFilters.SalesPayments,
     },
     {
@@ -45,7 +45,7 @@ const options = (
     {
       label: t`Make payment`,
       icon: 'lucide-coins',
-      schemaName: ModelNameEnum.Payment,
+      schemaName: ModelNameEnum.PaymentEntry,
       initData: createFilters.PurchasePayments,
     },
     {

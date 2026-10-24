@@ -69,6 +69,7 @@ export interface BaseField {
   filter?: boolean; // UI Facing config, whether to be used to filter the List.
   computed?: boolean; // Computed values are not stored in the database.
   insertOnly?: boolean; // A quick-entry value only a new document is saved with; its DocType does not hold it
+  clientOnly?: boolean; // A value only the form shows; its model keeps it in DocType fields
   section?: string; // UI Facing config, for grouping by sections
   tab?: string; // UI Facing config, for grouping by tabs
   isCustom?: boolean; // Whether the field is a custom field

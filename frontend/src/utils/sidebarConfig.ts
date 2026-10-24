@@ -222,8 +222,8 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Sales Payment`,
           name: 'payments',
-          route: `/list/Payment/${t`Sales Payment`}`,
-          schemaName: 'Payment',
+          route: `/list/PaymentEntry/${t`Sales Payment`}`,
+          schemaName: 'PaymentEntry',
           filters: routeFilters.SalesPayments,
         },
         {
@@ -277,8 +277,8 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Purchase Payment`,
           name: 'payments',
-          route: `/list/Payment/${t`Purchase Payment`}`,
-          schemaName: 'Payment',
+          route: `/list/PaymentEntry/${t`Purchase Payment`}`,
+          schemaName: 'PaymentEntry',
           filters: routeFilters.PurchasePayments,
         },
         {

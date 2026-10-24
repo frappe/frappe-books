@@ -7,30 +7,28 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "amended_from",
   "default_section_break_1",
   "naming_series",
+  "payment_type",
+  "posting_date",
   "party_type",
   "party",
-  "date",
-  "status",
-  "payment_type",
-  "details_section_break_6",
-  "account",
-  "payment_account",
-  "payment_method",
-  "clearance_date",
-  "reference_id",
+  "mode_of_payment",
+  "paid_from",
+  "paid_to",
+  "paid_amount",
+  "received_amount",
+  "reference_no",
   "reference_date",
-  "amounts_section_break_13",
-  "amount",
-  "writeoff",
-  "amount_paid",
-  "taxes",
-  "references_section_break_18",
-  "payment_references",
-  "attachment",
-  "reference_type",
-  "amended_from",
+  "clearance_date",
+  "deductions",
+  "total_allocated_amount",
+  "unallocated_amount",
+  "realised_taxes",
+  "references_section_break",
+  "references",
+  "status",
   "company"
  ],
  "fields": [
@@ -40,7 +38,7 @@
    "hidden": 1,
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Books Payment",
+   "options": "Books Payment Entry",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -60,12 +58,30 @@
    "set_only_once": 1
   },
   {
+   "fieldname": "payment_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Payment Type",
+   "options": "\nReceive\nPay\nInternal Transfer",
+   "placeholder": "Payment Type",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
    "fieldname": "party_type",
    "fieldtype": "Link",
    "label": "Party Type",
    "link_filters": "[[\"DocType\",\"name\",\"in\",[\"Books Customer\",\"Books Supplier\"]]]",
    "options": "DocType",
-   "reqd": 1
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\"",
+   "mandatory_depends_on": "eval:doc.payment_type != \"Internal Transfer\""
   },
   {
    "fieldname": "party",
@@ -73,68 +89,59 @@
    "in_list_view": 1,
    "label": "Party",
    "options": "party_type",
-   "reqd": 1
-  },
-  {
-   "default": "Now",
-   "fieldname": "date",
-   "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "Posting Date",
-   "reqd": 1
-  },
-  {
-   "default": "Saved",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Status",
-   "no_copy": 1,
-   "options": "Saved\nSubmitted\nCancelled",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "payment_type",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Payment Type",
-   "options": "\nReceive\nPay",
-   "placeholder": "Payment Type",
-   "reqd": 1
-  },
-  {
-   "fieldname": "details_section_break_6",
-   "fieldtype": "Section Break",
-   "label": "Details"
-  },
-  {
-   "fieldname": "account",
-   "fieldtype": "Link",
-   "label": "Party Account",
-   "options": "Books Account",
-   "permlevel": 1,
-   "reqd": 1
-  },
-  {
-   "fieldname": "payment_account",
-   "fieldtype": "Link",
-   "label": "Payment Account",
-   "options": "Books Account",
-   "permlevel": 1,
-   "reqd": 1
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\"",
+   "mandatory_depends_on": "eval:doc.payment_type != \"Internal Transfer\""
   },
   {
    "default": "Cash",
-   "fieldname": "payment_method",
+   "fieldname": "mode_of_payment",
    "fieldtype": "Link",
-   "label": "Payment Method",
+   "label": "Mode of Payment",
    "options": "Books Mode of Payment",
-   "placeholder": "Payment Method",
+   "placeholder": "Mode of Payment",
    "reqd": 1
+  },
+  {
+   "fieldname": "paid_from",
+   "fieldtype": "Link",
+   "label": "Account Paid From",
+   "options": "Books Account",
+   "permlevel": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "paid_to",
+   "fieldtype": "Link",
+   "label": "Account Paid To",
+   "options": "Books Account",
+   "permlevel": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Paid Amount",
+   "reqd": 1
+  },
+  {
+   "fieldname": "received_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Received Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_no",
+   "fieldtype": "Data",
+   "label": "Cheque/Reference No",
+   "placeholder": "Cheque/Reference No"
+  },
+  {
+   "fieldname": "reference_date",
+   "fieldtype": "Date",
+   "label": "Cheque/Reference Date",
+   "placeholder": "Cheque/Reference Date"
   },
   {
    "fieldname": "clearance_date",
@@ -143,74 +150,61 @@
    "placeholder": "Clearance Date"
   },
   {
-   "fieldname": "reference_id",
-   "fieldtype": "Data",
-   "label": "Ref. / Cheque No.",
-   "placeholder": "Ref. / Cheque No."
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\"",
+   "fieldname": "deductions",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Payment Deductions or Loss",
+   "options": "Books Payment Entry Deduction"
   },
   {
-   "fieldname": "reference_date",
-   "fieldtype": "Date",
-   "label": "Reference Date",
-   "placeholder": "Ref. Date"
-  },
-  {
-   "fieldname": "amounts_section_break_13",
-   "fieldtype": "Section Break",
-   "label": "Amounts"
-  },
-  {
-   "fieldname": "amount",
+   "fieldname": "total_allocated_amount",
    "fieldtype": "Currency",
-   "label": "Amount",
-   "reqd": 1
-  },
-  {
-   "fieldname": "writeoff",
-   "fieldtype": "Currency",
-   "label": "Write Off"
-  },
-  {
-   "depends_on": "eval:doc.writeoff != 0",
-   "fieldname": "amount_paid",
-   "fieldtype": "Currency",
-   "label": "Amount Paid",
+   "hidden": 1,
+   "label": "Total Allocated Amount",
    "read_only": 1
   },
   {
-   "depends_on": "taxes",
-   "fieldname": "taxes",
+   "fieldname": "unallocated_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Unallocated Amount",
+   "read_only": 1
+  },
+  {
+   "depends_on": "realised_taxes",
+   "fieldname": "realised_taxes",
    "fieldtype": "Table",
    "label": "Taxes",
-   "options": "Books Tax Summary",
+   "options": "Books Realised Tax",
    "read_only": 1
   },
   {
-   "fieldname": "references_section_break_18",
+   "fieldname": "references_section_break",
    "fieldtype": "Section Break",
-   "label": "References"
+   "label": "References",
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\""
   },
   {
-   "depends_on": "eval:!doc.docstatus || doc.payment_references.length",
-   "fieldname": "payment_references",
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\" && (!doc.docstatus || doc.references.length)",
+   "fieldname": "references",
    "fieldtype": "Table",
-   "label": "Payment Reference",
-   "options": "Books Payment For"
+   "label": "Payment References",
+   "options": "Books Payment Entry Reference"
   },
   {
-   "depends_on": "eval:doc.attachment || !doc.docstatus",
-   "fieldname": "attachment",
-   "fieldtype": "Attach",
-   "label": "Attachment",
-   "placeholder": "Add attachment"
-  },
-  {
-   "description": "Type",
-   "fieldname": "reference_type",
+   "default": "Draft",
+   "fieldname": "status",
    "fieldtype": "Select",
    "hidden": 1,
-   "label": "Type",
-   "options": "\nSalesInvoice\nPurchaseInvoice"
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Draft\nSubmitted\nCancelled",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "company",
@@ -224,10 +218,10 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 16:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Payment",
+ "name": "Books Payment Entry",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
@@ -292,12 +286,12 @@
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "party, payment_type",
- "sort_field": "creation",
+ "sort_field": "posting_date",
  "sort_order": "DESC",
  "states": [
   {
-   "color": "Blue",
-   "title": "Saved"
+   "color": "Gray",
+   "title": "Draft"
   },
   {
    "color": "Green",

@@ -80,7 +80,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		self.assertEqual([(row.item_code, row.batch_no, row.actual_qty) for row in stock], [(ink, batch, 4)])
 
 	def test_locations_are_given_for_invoices_to_their_readers(self):
-		self.assertRaises(frappe.ValidationError, get_stock_location, "Books Payment")
+		self.assertRaises(frappe.ValidationError, get_stock_location, "Books Payment Entry")
 		with self.set_user(ensure_user(NO_ROLE_USER)), self.assertRaises(frappe.PermissionError):
 			get_stock_location("Books Sales Invoice")
 

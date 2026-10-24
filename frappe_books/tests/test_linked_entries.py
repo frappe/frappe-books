@@ -6,7 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.core.doctype.permission_type.permission_type import get_doctype_ptype_map
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import nowdate
 
 from frappe_books import linked_entries as linked_entries_module
 from frappe_books.linked_entries import get_linked_entries
@@ -55,24 +55,24 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
 		invoice.submit()
-		self.assertNotIn("Books Payment", get_linked_entries(invoice.doctype, invoice.name))
+		self.assertNotIn("Books Payment Entry", get_linked_entries(invoice.doctype, invoice.name))
 
 		payment = frappe.get_doc(
 			{
-				"doctype": "Books Payment",
+				"doctype": "Books Payment Entry",
 				"party_type": party.doctype,
 				"party": party.name,
-				"date": now_datetime(),
+				"posting_date": nowdate(),
 				"payment_type": "Receive",
-				"account": receivable.name,
-				"payment_account": cash.name,
-				"payment_method": "Cash",
-				"amount": invoice.base_grand_total,
-				"payment_references": [
+				"paid_from": receivable.name,
+				"paid_to": cash.name,
+				"mode_of_payment": "Cash",
+				"paid_amount": invoice.base_grand_total,
+				"references": [
 					{
-						"reference_type": invoice.doctype,
+						"reference_doctype": invoice.doctype,
 						"reference_name": invoice.name,
-						"amount": invoice.base_grand_total,
+						"allocated_amount": invoice.base_grand_total,
 					}
 				],
 			}
@@ -80,11 +80,11 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		payment.submit()
 
 		entries = get_linked_entries(invoice.doctype, invoice.name)
-		self.assertEqual(entries["Books Payment"], [payment.name])
+		self.assertEqual(entries["Books Payment Entry"], [payment.name])
 		self.assertIn("Books GL Entry", entries)
 
 		payment.cancel()
-		self.assertNotIn("Books Payment", get_linked_entries(invoice.doctype, invoice.name))
+		self.assertNotIn("Books Payment Entry", get_linked_entries(invoice.doctype, invoice.name))
 
 	def test_linked_entries_list_the_newest_within_the_limit(self):
 		account = make_account("Linked limit")

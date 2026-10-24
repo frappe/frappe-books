@@ -32,6 +32,12 @@ export interface Presentation {
    * entry does. The server reads them on insert; a saved document hides them.
    */
   insertFields?: Field[];
+  /**
+   * Fields a form shows, each after the field it names, that the DocType does
+   * not hold: the model keeps their values in DocType fields, like a
+   * payment's positive Write Off in its signed deductions.
+   */
+  clientFields?: ClientField[];
   /** The field a link to the doctype shows instead of the name. */
   linkDisplayField?: string;
   /**
@@ -52,6 +58,8 @@ export interface Presentation {
    */
   fileFields?: string[];
 }
+
+export type ClientField = Field & { after: string };
 
 /**
  * Field properties that no DocField property says, like Select option labels,
@@ -116,7 +124,10 @@ export function toSchema(
   presentation: Presentation,
   context: SchemaContext
 ): Schema {
-  const docFields = getDocFields(meta, context, presentation);
+  const docFields = withClientFields(
+    getDocFields(meta, context, presentation),
+    presentation
+  );
   const fields = [
     ...getNameFields(meta, presentation, docFields),
     ...getInsertFields(presentation),
@@ -328,6 +339,28 @@ function getNameFields(
   } as Field;
   const index = isPrompt && fields[0]?.fieldtype === 'AttachImage' ? 1 : 0;
   return [...fields.slice(0, index), nameField, ...fields.slice(index)];
+}
+
+/** Client fields go after the fields they name, in their sections; they filter no list. */
+function withClientFields(
+  fields: Field[],
+  { clientFields = [] }: Presentation
+): Field[] {
+  const placed = [...fields];
+  for (const { after, ...field } of clientFields) {
+    const index = placed.findIndex(({ fieldname }) => fieldname === after);
+    const { section, tab } = placed[index] ?? {};
+    const clientField = {
+      ...field,
+      section,
+      tab,
+      clientOnly: true,
+      filter: false,
+    };
+    placed.splice(index + 1, 0, clientField as Field);
+  }
+
+  return placed;
 }
 
 /** Insert-only fields filter no list, as no column holds them. */

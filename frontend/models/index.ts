@@ -18,7 +18,7 @@ import { LoyaltyProgram } from './baseModels/LoyaltyProgram/LoyaltyProgram';
 import { LoyaltyPointEntry } from './baseModels/LoyaltyPointEntry/LoyaltyPointEntry';
 import { Lead } from './baseModels/Lead/Lead';
 import { CouponCode } from './baseModels/CouponCode/CouponCode';
-import { Payment } from './baseModels/Payment/Payment';
+import { PaymentEntry } from './baseModels/PaymentEntry/PaymentEntry';
 import { Customer } from './baseModels/Customer/Customer';
 import { Supplier } from './baseModels/Supplier/Supplier';
 import { ModeOfPayment } from './baseModels/ModeOfPayment/ModeOfPayment';
@@ -75,7 +75,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   UOM,
   LoyaltyProgram,
   LoyaltyPointEntry,
-  Payment,
+  PaymentEntry,
   ModeOfPayment,
   JournalEntry,
   ItemEnquiry,

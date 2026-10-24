@@ -199,7 +199,7 @@ test('general ledger offers stock reference doctypes only with inventory', async
     'All',
     'Books Sales Invoice',
     'Books Purchase Invoice',
-    'Books Payment',
+    'Books Payment Entry',
     'Books Journal Entry',
   ]);
   fyo.singles.AccountingSettings.enable_inventory = true;

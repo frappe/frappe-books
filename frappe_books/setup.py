@@ -14,7 +14,7 @@ DEFAULT_PRINT_FORMATS = {
 	"Books Quotation": "Business - Quotation",
 	"Books Sales Invoice": "Business - Sales Invoice",
 	"Books Purchase Invoice": "Business - Purchase Invoice",
-	"Books Payment": "Business - Payment",
+	"Books Payment Entry": "Business - Payment",
 	"Books Delivery Note": "Business - Delivery Note",
 }
 POS_PRINT_FORMAT = "Business-POS - Sales Invoice"

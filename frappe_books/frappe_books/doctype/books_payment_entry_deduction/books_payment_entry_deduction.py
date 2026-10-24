@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksTaxSummary(Document):
+class BooksPaymentEntryDeduction(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -16,11 +16,9 @@ class BooksTaxSummary(Document):
 
 		account: DF.Link
 		amount: DF.Currency
-		from_account: DF.Link | None
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		rate: DF.Float
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Tax Summary"
+	_DOCTYPE_NAME = "Books Payment Entry Deduction"

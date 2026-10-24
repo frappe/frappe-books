@@ -31,7 +31,7 @@
   </div>
   <div v-else class="text-base">
     <template v-for="df in formFields">
-      <!-- Table Field Form (Eg: PaymentFor) -->
+      <!-- Table Field Form (Eg: PaymentEntryReference) -->
       <Table
         v-if="df.fieldtype === 'Table'"
         :key="`${df.fieldname}-table`"

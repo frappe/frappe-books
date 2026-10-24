@@ -13,7 +13,7 @@ test('a shipped template is read-only and its duplicate edits, previews and save
   // The preview shows the latest payment, so one must exist.
   await insertPayment(page);
   await routeTo(page, '/template-builder/Business - Payment');
-  await expect(preview(page).getByText('Amount Paid')).toBeVisible();
+  await expect(preview(page).getByText('Paid Amount')).toBeVisible();
   await expect(page.locator('.cm-content')).toHaveAttribute(
     'contenteditable',
     'false'
@@ -60,7 +60,7 @@ test('a shipped template is read-only and its duplicate edits, previews and save
     return (await response.json()).data;
   }, name);
   expect(saved).toMatchObject({
-    doc_type: 'Books Payment',
+    doc_type: 'Books Payment Entry',
     standard: 'No',
     custom_format: 1,
   });
@@ -136,7 +136,7 @@ test('the Control shortcuts work in the editor on macOS', async ({ page }) => {
 /** Opens an editable copy of the shipped payment template, with a new name. */
 async function duplicatePaymentTemplate(page: Page) {
   await routeTo(page, '/template-builder/Business - Payment');
-  await expect(preview(page).getByText('Amount Paid')).toBeVisible();
+  await expect(preview(page).getByText('Paid Amount')).toBeVisible();
   await page.getByRole('button', { name: 'Actions' }).click();
   await page.getByRole('menuitem', { name: 'Duplicate' }).click();
   const name = `Payment ${Date.now()}`;
@@ -168,12 +168,12 @@ async function routeTo(page: Page, path: string) {
 async function insertPayment(page: Page) {
   const customer = `Template Customer ${Date.now()}`;
   await insertDocument(page, 'Books Customer', { customer_name: customer });
-  await insertDocument(page, 'Books Payment', {
+  await insertDocument(page, 'Books Payment Entry', {
     party_type: 'Books Customer',
     party: customer,
     payment_type: 'Receive',
-    payment_method: 'Cash',
-    amount: 10,
+    mode_of_payment: 'Cash',
+    paid_amount: 10,
     docstatus: 1,
   });
 }

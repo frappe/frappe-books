@@ -46,7 +46,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		payment = make_payment(invoice.name)
 
-		self.assertEqual(payment.payment_account, self.counter)
+		self.assertEqual(payment.paid_to, self.counter)
 		payment.insert().submit()
 		self.assertEqual(invoice.reload().outstanding_amount, 0)
 
@@ -54,7 +54,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		invoice = self.make_pos_invoice()
 		invoice.submit()
 		payment = make_payment(invoice.name)
-		payment.payment_account = make_account("Other Cash", account_type="Cash").name
+		payment.paid_to = make_account("Other Cash", account_type="Cash").name
 
 		self.assertRaisesRegex(frappe.ValidationError, "counter cash account", payment.insert)
 
@@ -63,8 +63,8 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		invoice.submit()
 
-		payment = frappe.get_doc("Books Payment", counter_payments(invoice)[0])
-		self.assertEqual((payment.amount, payment.payment_account), (180, self.counter))
+		payment = frappe.get_doc("Books Payment Entry", counter_payments(invoice)[0])
+		self.assertEqual((payment.paid_amount, payment.paid_to), (180, self.counter))
 		self.assertEqual((invoice.outstanding_amount, invoice.reload().status), (0, "Paid"))
 
 	def test_a_cashier_lists_the_payments_a_paid_sale_made(self):
@@ -74,11 +74,11 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		# The query the POS runs after checkout to toast each payment.
 		with self.set_user(ensure_user("pos-cashier@example.com", "Books User")):
 			rows = get_list(
-				"Books Payment For",
-				parent="Books Payment",
+				"Books Payment Entry Reference",
+				parent="Books Payment Entry",
 				fields=["parent"],
 				filters=[
-					["reference_type", "=", "Books Sales Invoice"],
+					["reference_doctype", "=", "Books Sales Invoice"],
 					["reference_name", "=", invoice.name],
 				],
 				order_by="creation asc",
@@ -153,8 +153,8 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 			invoice.name, [{"mode_of_payment": card.name, "amount": 180, "reference_no": "R1"}]
 		)
 
-		payment = frappe.get_doc("Books Payment", names[0])
-		self.assertEqual((payment.payment_account, payment.reference_id), (card.account, "R1"))
+		payment = frappe.get_doc("Books Payment Entry", names[0])
+		self.assertEqual((payment.paid_to, payment.reference_no), (card.account, "R1"))
 		self.assertEqual(invoice.reload().outstanding_amount, 0)
 
 	def test_refund_is_paid_from_the_counter(self):
@@ -165,8 +165,8 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		refund.insert().submit()
 
-		payment = frappe.get_doc("Books Payment", counter_payments(refund)[0])
-		self.assertEqual((payment.payment_type, payment.payment_account), ("Pay", self.counter))
+		payment = frappe.get_doc("Books Payment Entry", counter_payments(refund)[0])
+		self.assertEqual((payment.payment_type, payment.paid_from), ("Pay", self.counter))
 		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
 		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Cash": 0})
 
@@ -212,7 +212,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 def counter_payments(invoice):
 	return frappe.get_all(
-		"Books Payment For",
+		"Books Payment Entry Reference",
 		filters={"reference_name": invoice.name, "docstatus": 1},
 		pluck="parent",
 	)

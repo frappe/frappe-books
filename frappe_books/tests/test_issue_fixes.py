@@ -78,20 +78,20 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		payment = (
 			frappe.get_doc(
 				{
-					"doctype": "Books Payment",
+					"doctype": "Books Payment Entry",
 					"party_type": party.doctype,
 					"party": party.name,
-					"date": frappe.utils.now_datetime(),
+					"posting_date": frappe.utils.nowdate(),
 					"payment_type": "Receive",
-					"account": receivable.name,
-					"payment_account": cash.name,
-					"amount": 220.5,
-					"payment_method": "Cash",
-					"payment_references": [
+					"paid_from": receivable.name,
+					"paid_to": cash.name,
+					"paid_amount": 220.5,
+					"mode_of_payment": "Cash",
+					"references": [
 						{
-							"reference_type": invoice.doctype,
+							"reference_doctype": invoice.doctype,
 							"reference_name": invoice.name,
-							"amount": invoice.grand_total,
+							"allocated_amount": invoice.grand_total,
 						}
 						for invoice in invoices
 					],

@@ -26,7 +26,7 @@
       <div class="flex flex-col gap-1.5">
         <Currency
           :df="{
-            ...getField('PaymentFor', 'amount')!,
+            ...getField('PaymentEntryReference', 'allocated_amount')!,
             label: sinvDoc.isReturn ? t`Refund amount` : t`Amount paid`,
           }"
           :show-label="true"
@@ -68,7 +68,7 @@
       >
         <Data
           v-if="posCheckout.requirements.requiresReferenceId"
-          :df="getField('Payment', 'reference_id')!"
+          :df="getField('PaymentEntry', 'reference_no')!"
           :show-label="true"
           :border="true"
           :required="true"
@@ -82,7 +82,7 @@
 
         <DateControl
           v-if="posCheckout.requirements.requiresClearanceDate"
-          :df="getField('Payment', 'clearance_date')!"
+          :df="getField('PaymentEntry', 'clearance_date')!"
           :show-label="true"
           :border="true"
           :required="true"

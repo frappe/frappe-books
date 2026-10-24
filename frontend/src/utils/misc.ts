@@ -31,7 +31,7 @@ export const docsPathMap: Record<string, string | undefined> = {
   [ModelNameEnum.Quotation]: 'books/sales-quotes',
   [ModelNameEnum.SalesInvoice]: 'books/sales-invoices',
   [ModelNameEnum.PurchaseInvoice]: 'books/purchase-invoices',
-  [ModelNameEnum.Payment]: 'books/payments',
+  [ModelNameEnum.PaymentEntry]: 'books/payments',
   [ModelNameEnum.JournalEntry]: 'books/journal-entries',
   [ModelNameEnum.LoyaltyProgram]: 'books/loyalty-program',
   [ModelNameEnum.PricingRule]: 'books/pricing-rule',

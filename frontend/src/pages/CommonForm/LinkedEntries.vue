@@ -338,7 +338,7 @@ const linkSequence = [
   ModelNameEnum.DeliveryNote,
   ModelNameEnum.PurchaseReceipt,
   // Other Transactional
-  ModelNameEnum.Payment,
+  ModelNameEnum.PaymentEntry,
   ModelNameEnum.JournalEntry,
   ModelNameEnum.StockEntry,
   // Non Transfers
@@ -383,7 +383,12 @@ const linkEntryDisplayFields: Record<string, string[]> = {
     'grand_total',
   ],
   // Other Transactional
-  [ModelNameEnum.Payment]: ['name', 'date', 'party', 'amount'],
+  [ModelNameEnum.PaymentEntry]: [
+    'name',
+    'posting_date',
+    'party',
+    'paid_amount',
+  ],
   [ModelNameEnum.JournalEntry]: ['name', 'posting_date', 'voucher_type'],
   [ModelNameEnum.StockEntry]: ['name', 'posting_date', 'total_amount'],
   // Ledgers

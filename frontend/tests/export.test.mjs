@@ -175,36 +175,36 @@ test('files hold Books’ keys and values', async () => {
     message: [
       {
         name: 'PAY-1',
-        date: '2026-09-30 10:00:00',
+        posting_date: '2026-09-30',
         creation: '2026-09-30 10:00:01.123456',
         modified: '2026-09-30 10:00:02.5',
         docstatus: 1,
-        payment_references: [
+        references: [
           {
-            reference_type: 'Books Sales Invoice',
+            reference_doctype: 'Books Sales Invoice',
             reference_name: 'SINV-1',
-            amount: 10,
+            allocated_amount: 10,
           },
         ],
       },
       {
         name: 'PAY-2',
-        date: null,
+        posting_date: null,
         creation: '2026-10-01 09:00:00',
         modified: '2026-10-01 09:00:00',
         docstatus: 0,
-        payment_references: [],
+        references: [],
       },
     ],
   }));
-  const [references] = getExportTableFields('Payment').filter(
-    ({ fieldname }) => fieldname === 'payment_references'
+  const [references] = getExportTableFields('PaymentEntry').filter(
+    ({ fieldname }) => fieldname === 'references'
   );
   const query = {
-    schemaName: 'Payment',
-    fields: pick(getExportFields('Payment'), [
-      'date',
-      'payment_references',
+    schemaName: 'PaymentEntry',
+    fields: pick(getExportFields('PaymentEntry'), [
+      'posting_date',
+      'references',
       'creation',
       'modified',
       'submitted',
@@ -212,7 +212,10 @@ test('files hold Books’ keys and values', async () => {
     tableFields: [
       {
         ...references,
-        fields: pick(references.fields, ['reference_type', 'reference_name']),
+        fields: pick(references.fields, [
+          'reference_doctype',
+          'reference_name',
+        ]),
       },
     ],
     limit: null,
@@ -222,23 +225,23 @@ test('files hold Books’ keys and values', async () => {
   const [paid, draft] = JSON.parse(await getJsonExportData(query));
   assert.deepEqual(Object.keys(paid), [
     'name',
-    'date',
+    'postingDate',
     'created',
     'modified',
     'submitted',
-    'for',
+    'references',
   ]);
   assert.deepEqual(paid, {
     name: 'PAY-1',
-    date: '2026-09-30T10:00:00+05:30',
+    postingDate: '2026-09-30',
     created: '2026-09-30T10:00:01.123456+05:30',
     modified: '2026-09-30 10:00:02.5',
     submitted: true,
-    for: [{ referenceType: 'SalesInvoice', referenceName: 'SINV-1' }],
+    references: [{ referenceDoctype: 'SalesInvoice', referenceName: 'SINV-1' }],
   });
   assert.deepEqual(draft, {
     name: 'PAY-2',
-    date: null,
+    postingDate: null,
     created: '2026-10-01T09:00:00+05:30',
     modified: '2026-10-01 09:00:00',
     submitted: false,
@@ -246,12 +249,12 @@ test('files hold Books’ keys and values', async () => {
 
   const [, keys, row] = parseCSV(await getCsvExportData(query));
   assert.deepEqual(keys, [
-    'Payment.date',
-    'Payment.created',
-    'Payment.modified',
-    'Payment.submitted',
-    'PaymentFor.referenceType',
-    'PaymentFor.referenceName',
+    'PaymentEntry.postingDate',
+    'PaymentEntry.created',
+    'PaymentEntry.modified',
+    'PaymentEntry.submitted',
+    'PaymentEntryReference.referenceDoctype',
+    'PaymentEntryReference.referenceName',
   ]);
   assert.deepEqual(row.slice(-2), ['SalesInvoice', 'SINV-1']);
 });

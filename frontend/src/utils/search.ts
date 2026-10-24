@@ -86,12 +86,12 @@ function getCreateList(fyo: Fyo): SearchItem[] {
   const filteredCreateList = [
     {
       label: t`Sales Payment`,
-      schemaName: ModelNameEnum.Payment,
+      schemaName: ModelNameEnum.PaymentEntry,
       create: createFilters.SalesPayments,
     },
     {
       label: t`Purchase Payment`,
-      schemaName: ModelNameEnum.Payment,
+      schemaName: ModelNameEnum.PaymentEntry,
       create: createFilters.PurchasePayments,
     },
   ].map(({ label, create, schemaName }) => {
@@ -201,12 +201,12 @@ function getListViewList(fyo: Fyo): SearchItem[] {
   const filteredLists = [
     {
       label: t`Sales Payment`,
-      route: `/list/Payment/${t`Sales Payment`}`,
+      route: `/list/PaymentEntry/${t`Sales Payment`}`,
       filters: routeFilters.SalesPayments,
     },
     {
       label: t`Purchase Payment`,
-      route: `/list/Payment/${t`Purchase Payment`}`,
+      route: `/list/PaymentEntry/${t`Purchase Payment`}`,
       filters: routeFilters.PurchasePayments,
     },
   ].map((i) => {

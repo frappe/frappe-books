@@ -21,7 +21,7 @@ const metaFieldnames: Record<string, string[]> = {
   [ModelNameEnum.Customer]: ['mobile_no'],
   [ModelNameEnum.Supplier]: ['mobile_no'],
   [ModelNameEnum.Item]: ['item_type'],
-  [ModelNameEnum.Payment]: ['name', 'date', 'payment_type'],
+  [ModelNameEnum.PaymentEntry]: ['name', 'posting_date', 'payment_type'],
 };
 
 /** Schemas whose rows start with an initials avatar. */

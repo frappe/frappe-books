@@ -58,7 +58,7 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 				self.assertRaises(frappe.CannotChangeConstantError, account.save)
 
 	def test_number_series_format_cannot_change_after_insert(self):
-		for fieldname, value in (("reference_type", "Payment"), ("pad_zeros", 6), ("start", 50)):
+		for fieldname, value in (("reference_type", "PaymentEntry"), ("pad_zeros", 6), ("start", 50)):
 			with self.subTest(fieldname=fieldname):
 				series = frappe.get_doc("Books Number Series", make_number_series("SalesInvoice"))
 				series.set(fieldname, value)

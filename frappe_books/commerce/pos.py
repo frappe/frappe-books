@@ -85,13 +85,13 @@ def transacted_amounts(from_date, to_date):
 	if not invoices:
 		return {}
 	references = frappe.get_all(
-		"Books Payment For",
+		"Books Payment Entry Reference",
 		filters={
-			"parenttype": "Books Payment",
-			"reference_type": "Books Sales Invoice",
+			"parenttype": "Books Payment Entry",
+			"reference_doctype": "Books Sales Invoice",
 			"reference_name": ["in", [invoice.name for invoice in invoices]],
 		},
-		fields=["parent", "reference_name", "amount"],
+		fields=["parent", "reference_name", "allocated_amount"],
 	)
 	methods = _submitted_payment_methods({reference.parent for reference in references})
 	invoices = {invoice.name: invoice for invoice in invoices}
@@ -99,7 +99,9 @@ def transacted_amounts(from_date, to_date):
 	for reference in references:
 		method = methods.get(reference.parent)
 		if method:
-			result[method] += settlement.signed(invoices[reference.reference_name], reference.amount)
+			result[method] += settlement.signed(
+				invoices[reference.reference_name], reference.allocated_amount
+			)
 	return {method: rounded(amount) for method, amount in result.items()}
 
 
@@ -178,9 +180,9 @@ def _submitted_payment_methods(names):
 		return {}
 	return dict(
 		frappe.get_all(
-			"Books Payment",
+			"Books Payment Entry",
 			filters={"name": ["in", sorted(names)], "docstatus": 1},
-			fields=["name", "payment_method"],
+			fields=["name", "mode_of_payment"],
 			as_list=True,
 		)
 	)

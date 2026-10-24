@@ -15,10 +15,10 @@ test('detail and print routes select their source list or report', () => {
       '/list/Item',
     ],
     [
-      '/print/Payment/PAY-1',
-      { schemaName: 'Payment' },
+      '/print/PaymentEntry/PAY-1',
+      { schemaName: 'PaymentEntry' },
       '/list/:schemaName',
-      '/list/Payment',
+      '/list/PaymentEntry',
     ],
     [
       '/report-print/GeneralLedger',

@@ -55,7 +55,7 @@ test('filter chips show transactions first, by schema label', () => {
   assert.deepEqual(labels.slice(0, 3), [
     'Delivery Note',
     'Journal Entry',
-    'Payment',
+    'Payment Entry',
   ]);
   // Then the masters, by schema name.
   assert.equal(labels.at(-1), 'Supplier');

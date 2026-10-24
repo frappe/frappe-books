@@ -69,7 +69,7 @@ test('the server date defaults Now and Today give a new document the current dat
   for (const [schemaName, fieldname] of [
     ['SalesInvoice', 'posting_date'],
     ['Quotation', 'transaction_date'],
-    ['Payment', 'date'],
+    ['PaymentEntry', 'posting_date'],
     ['JournalEntry', 'posting_date'],
     ['DeliveryNote', 'posting_date'],
   ]) {

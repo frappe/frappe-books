@@ -189,7 +189,7 @@ class PostingInvoiceController(InvoiceController):
 	def pay_outstanding_amount(self):
 		payment = map_invoice_payment(self.doctype, self.name)
 		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
-		payment.reference_id = self.name
+		payment.reference_no = self.name
 		payment.insert()
 		payment.submit()
 		settlement.reload_balance(self)
@@ -222,12 +222,12 @@ class PostingInvoiceController(InvoiceController):
 		"""Delete the cancelled stock transfers and payments made for this invoice, with the user's rights."""
 		invoice_transfer.delete_cancelled_transfers(self)
 		payments = frappe.get_all(
-			"Books Payment For",
-			filters={"reference_type": self.doctype, "reference_name": self.name, "docstatus": 2},
+			"Books Payment Entry Reference",
+			filters={"reference_doctype": self.doctype, "reference_name": self.name, "docstatus": 2},
 			pluck="parent",
 		)
 		for name in set(payments):
-			frappe.delete_doc("Books Payment", name)
+			frappe.delete_doc("Books Payment Entry", name)
 
 
 @frappe.whitelist()
@@ -237,7 +237,7 @@ def get_payments_to_cancel(doctype: str, name: str) -> list[dict]:
 	Other submitted documents that link to the invoice, like returns, still block its cancellation.
 	"""
 	linked = linked_with.get_submitted_linked_docs(doctype, name)
-	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment"]
+	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment Entry"]
 
 
 def calculate_invoice(invoice):

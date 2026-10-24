@@ -75,6 +75,10 @@ These node tests catch common mistakes after a merge:
 - `tests/settings-models.test.mjs`: the filters, hidden, read-only and validation rules of each Frappe-backed model name fields of its DocType.
 - `tests/link-create.test.mjs`: each Link of a form or row offers Create as it did before phase 2 (`tests/helpers/previousForms.mjs` keeps what the old schema files showed).
 
+## Accessory mode
+
+With ERPNext on the site, a System Manager turns on accessory mode in Settings → ERPNext (Books ERPNext Settings: `default_company`, `accessory_mode`). The boot sends `books.accessory_mode` and, as `books.company`, the ERPNext company; it falls back to standalone when ERPNext or the company is gone. `src/frappe/mode.ts` gives the active doctype of each model: its `doctype` without `Books `, or its `erpnextDoctype`. A model whose `erpnextDoctype` is `null` is standalone only and is not registered, so its lists, sidebar items and routes go away. Feature switches are read through `fyo.isFeatureOn`, which is on in accessory mode for every feature ERPNext has. Books previews and mappers do not run on ERPNext documents.
+
 ## Custom forms
 
 A Books Custom Form is named after the DocType it adds fields to. Each row places one Custom Field, named `custom_books_` and the row's fieldname, on a tab and section of the /books form. The Custom Field holds the definition; a row's Target is a DocType and its References is a Frappe fieldname. `get_books_meta` sends the placements with the meta, and saving or deleting a Custom Form reloads the doctypes that show or hold the customized one.

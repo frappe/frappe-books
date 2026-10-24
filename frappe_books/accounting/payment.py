@@ -18,6 +18,7 @@ from frappe_books.accounting.accounts import (
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.commerce.pos import counter_cash_account, is_cash_method
+from frappe_books.company import company_value
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.status import StatusMixin
@@ -325,9 +326,9 @@ def _post_writeoff(payment, posting):
 	writeoff = as_decimal(payment.writeoff)
 	if writeoff == 0:
 		return
-	writeoff_account = frappe.db.get_single_value("Books Accounting Settings", "write_off_account")
+	writeoff_account = company_value("write_off_account")
 	if not writeoff_account:
-		frappe.throw(_("Set a write-off account in Books Accounting Settings."))
+		frappe.throw(_("Set a write-off account in Books Company."))
 	if payment.payment_type == "Pay":
 		posting.credit(writeoff_account, writeoff)
 	else:

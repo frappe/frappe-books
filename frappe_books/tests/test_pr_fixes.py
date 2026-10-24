@@ -16,6 +16,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_supplier,
 	restored_company_settings,
+	set_company_value,
 )
 
 
@@ -26,8 +27,8 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 		self.income = make_account("PR Income", root_type="Income")
 		self.expense = make_account("PR Expense", root_type="Expense")
 		self.writeoff = make_account("PR Writeoff", root_type="Expense")
-		frappe.db.set_single_value("Books Accounting Settings", "write_off_account", self.writeoff.name)
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		set_company_value("write_off_account", self.writeoff.name)
+		set_company_value("default_discount_account", self.expense.name)
 		self.item = make_item(self.income.name, self.expense.name)
 
 	def test_writeoff_settles_invoice_and_cancel_restores_it(self):

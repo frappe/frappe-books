@@ -9,7 +9,20 @@
   "company_name",
   "abbr",
   "country",
-  "default_currency"
+  "default_currency",
+  "email",
+  "tax_id",
+  "accounts_section_break",
+  "write_off_account",
+  "round_off_account",
+  "default_discount_account",
+  "stock_section_break",
+  "default_warehouse",
+  "stock_accounts_section_break",
+  "default_inventory_account",
+  "stock_received_but_not_billed",
+  "default_expense_account",
+  "stock_adjustment_account"
  ],
  "fields": [
   {
@@ -22,8 +35,7 @@
    "fieldtype": "Data",
    "label": "Company Name",
    "read_only": 1,
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
   },
   {
    "description": "Short name of the company, as ERPNext uses it.",
@@ -39,6 +51,7 @@
    "is_virtual": 1,
    "label": "Country",
    "options": "Country",
+   "placeholder": "Select Country",
    "read_only": 1
   },
   {
@@ -48,6 +61,83 @@
    "label": "Currency",
    "options": "Currency",
    "read_only": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.country == \"Switzerland\"",
+   "fieldname": "tax_id",
+   "fieldtype": "Data",
+   "label": "Tax ID",
+   "placeholder": "CHE-123.456.789"
+  },
+  {
+   "fieldname": "accounts_section_break",
+   "fieldtype": "Section Break",
+   "label": "Accounts"
+  },
+  {
+   "fieldname": "write_off_account",
+   "fieldtype": "Link",
+   "label": "Write Off Account",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "round_off_account",
+   "fieldtype": "Link",
+   "label": "Round Off Account",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "default_discount_account",
+   "fieldtype": "Link",
+   "label": "Discount Account",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "stock_section_break",
+   "fieldtype": "Section Break",
+   "label": "Inventory"
+  },
+  {
+   "fieldname": "default_warehouse",
+   "fieldtype": "Link",
+   "label": "Default Location",
+   "options": "Books Location"
+  },
+  {
+   "fieldname": "stock_accounts_section_break",
+   "fieldtype": "Section Break",
+   "label": "Inventory Accounts"
+  },
+  {
+   "fieldname": "default_inventory_account",
+   "fieldtype": "Link",
+   "label": "Stock In Hand Acc.",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "stock_received_but_not_billed",
+   "fieldtype": "Link",
+   "label": "Stock Received But Not Billed Acc.",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "default_expense_account",
+   "fieldtype": "Link",
+   "label": "Cost Of Goods Sold Acc.",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "stock_adjustment_account",
+   "fieldtype": "Link",
+   "label": "Stock Adjustment Acc.",
+   "options": "Books Account"
   }
  ],
  "links": [],

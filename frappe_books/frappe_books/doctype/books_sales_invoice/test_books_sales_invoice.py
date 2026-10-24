@@ -22,6 +22,7 @@ from frappe_books.tests.accounting import (
 	make_invoice,
 	make_item,
 	make_tax,
+	set_company_value,
 	unique_name,
 )
 
@@ -36,7 +37,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.party = make_customer(self.receivable.name)
 		self.tax = make_tax(self.tax_account.name)
 		self.item = make_item(self.income.name, self.expense.name, self.tax.name)
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.discount.name)
+		set_company_value("default_discount_account", self.discount.name)
 
 	def test_calculates_and_posts_tax_and_discount(self):
 		invoice = self._make_invoice()
@@ -135,7 +136,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_multi_currency_posting_balances_with_round_off(self):
 		round_off = make_account("Round Off", root_type="Expense", account_type="Round Off")
-		frappe.db.set_single_value("Books Accounting Settings", "round_off_account", round_off.name)
+		set_company_value("round_off_account", round_off.name)
 		item = make_item(self.income.name, self.expense.name)
 		party = make_customer(self.receivable.name, currency=foreign_currency())
 		invoice = make_invoice(

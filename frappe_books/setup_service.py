@@ -24,7 +24,7 @@ from frappe_books.settings import update_frappe_settings
 
 def run_setup(wizard):
 	complete_site_setup(wizard)
-	save_company({"company_name": wizard.company_name})
+	save_company({"company_name": wizard.company_name, "email": wizard.email})
 	chart = load_chart(wizard.chart_of_accounts)
 	ensure_chart(chart)
 	ensure_regional_records(wizard.country)
@@ -32,10 +32,10 @@ def run_setup(wizard):
 	discount_account = ensure_discount_account(chart)
 	enable_currency(wizard.currency)
 	accounts = {**default_accounts(chart), "cash": ensure_cash_account(chart)}
-	_update_accounting_settings(wizard, discount_account, accounts)
+	_update_company_accounts(discount_account, accounts)
+	_update_accounting_settings(wizard)
 	_update_books_system_settings(wizard)
 	_update_print_settings(wizard)
-	_update_inventory_settings(accounts)
 	_update_pos_settings(accounts)
 	_update_payment_methods(accounts["cash"], bank_account)
 	_update_defaults()
@@ -84,17 +84,27 @@ def default_accounts(chart):
 	}
 
 
-def _update_accounting_settings(wizard, discount_account, accounts):
+def _update_company_accounts(discount_account, accounts):
+	save_company(
+		{
+			"write_off_account": accounts["write_off"],
+			"round_off_account": accounts["round_off"],
+			"default_discount_account": discount_account,
+			"default_warehouse": "Stores",
+			"default_inventory_account": accounts["stock_in_hand"],
+			"stock_received_but_not_billed": accounts["stock_received_but_not_billed"],
+			"default_expense_account": accounts["cost_of_goods_sold"],
+			"stock_adjustment_account": accounts["stock_adjustment"],
+		}
+	)
+
+
+def _update_accounting_settings(wizard):
 	settings = frappe.get_single("Books Accounting Settings")
 	settings.update(
 		{
 			"fullname": wizard.fullname,
-			"company_name": wizard.company_name,
 			"bank_name": wizard.bank_name,
-			"email": wizard.email,
-			"write_off_account": accounts["write_off"],
-			"round_off_account": accounts["round_off"],
-			"discount_account": discount_account,
 			"fiscal_year_start": wizard.fiscal_year_start,
 			"fiscal_year_end": wizard.fiscal_year_end,
 			"setup_complete": 1,
@@ -132,20 +142,6 @@ def _update_books_system_settings(wizard):
 		settings.date_format = books_date_format(date_format)
 	settings.save(ignore_permissions=True)
 	settings.update_frappe_formats()
-
-
-def _update_inventory_settings(accounts):
-	settings = frappe.get_single("Books Inventory Settings")
-	settings.update(
-		{
-			"default_location": "Stores",
-			"stock_in_hand": accounts["stock_in_hand"],
-			"stock_received_but_not_billed": accounts["stock_received_but_not_billed"],
-			"cost_of_goods_sold": accounts["cost_of_goods_sold"],
-			"stock_adjustment": accounts["stock_adjustment"],
-		}
-	)
-	settings.save(ignore_permissions=True)
 
 
 def _update_pos_settings(accounts):

@@ -6,13 +6,6 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "default_section_break_1",
-  "default_location",
-  "accounts_section_break_3",
-  "stock_in_hand",
-  "stock_received_but_not_billed",
-  "cost_of_goods_sold",
-  "stock_adjustment",
   "features_section_break_7",
   "enable_barcodes",
   "enable_batches",
@@ -21,46 +14,6 @@
   "enable_point_of_sale"
  ],
  "fields": [
-  {
-   "fieldname": "default_section_break_1",
-   "fieldtype": "Section Break",
-   "label": "Default"
-  },
-  {
-   "fieldname": "default_location",
-   "fieldtype": "Link",
-   "label": "Default Location",
-   "options": "Books Location"
-  },
-  {
-   "fieldname": "accounts_section_break_3",
-   "fieldtype": "Section Break",
-   "label": "Accounts"
-  },
-  {
-   "fieldname": "stock_in_hand",
-   "fieldtype": "Link",
-   "label": "Stock In Hand Acc.",
-   "options": "Books Account"
-  },
-  {
-   "fieldname": "stock_received_but_not_billed",
-   "fieldtype": "Link",
-   "label": "Stock Received But Not Billed Acc.",
-   "options": "Books Account"
-  },
-  {
-   "fieldname": "cost_of_goods_sold",
-   "fieldtype": "Link",
-   "label": "Cost Of Goods Sold Acc.",
-   "options": "Books Account"
-  },
-  {
-   "fieldname": "stock_adjustment",
-   "fieldtype": "Link",
-   "label": "Stock Adjustment Acc.",
-   "options": "Books Account"
-  },
   {
    "fieldname": "features_section_break_7",
    "fieldtype": "Section Break",

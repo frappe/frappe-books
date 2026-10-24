@@ -1,6 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.company import default_company
 from frappe_books.tests.accounting import make_account
 
 
@@ -9,9 +10,9 @@ class IntegrationTestSettingsAccounts(IntegrationTestCase):
 		cash = make_account("Settings Cash", account_type="Cash").name
 		receivable = make_account("Settings Receivable", account_type="Receivable").name
 		for doctype, fieldname, account in (
-			("Books Accounting Settings", "discount_account", cash),
-			("Books Inventory Settings", "stock_in_hand", cash),
-			("Books Inventory Settings", "stock_adjustment", cash),
+			("Books Company", "default_discount_account", cash),
+			("Books Company", "default_inventory_account", cash),
+			("Books Company", "stock_adjustment_account", cash),
 			("Books Pos Settings", "cash_account", receivable),
 			("Books Pos Settings", "write_off_account", cash),
 			("Books Pos Settings", "default_account", cash),
@@ -42,7 +43,7 @@ class IntegrationTestSettingsAccounts(IntegrationTestCase):
 					self.save("Books Defaults", fieldname, account)
 
 	def save(self, doctype, fieldname, account):
-		settings = frappe.get_single(doctype)
+		settings = frappe.get_doc(doctype, default_company() if doctype == "Books Company" else doctype)
 		settings.set(fieldname, account)
 		# A test site skips the setup wizard that fills the company details.
 		settings.flags.ignore_mandatory = True

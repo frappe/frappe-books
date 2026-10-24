@@ -24,6 +24,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	set_company_value,
 	set_inventory_accounts,
 	stock_quantity,
 	unique_name,
@@ -323,7 +324,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		item, _cogs, _stock = self._tracked_item(has_serial_number=1, hsn_code="012345")
 		serial_numbers = [unique_name("SN"), unique_name("SN")]
 		seed_stock(item.name, quantity=2, rate=10, serial_number="\n".join(serial_numbers))
-		frappe.db.set_single_value("Books Inventory Settings", "default_location", "Stores")
+		set_company_value("default_warehouse", "Stores")
 		frappe.db.set_single_value("Books Defaults", "delivery_note_terms", "Ships in a week")
 		shipment = frappe.get_doc(
 			{"doctype": "Books Delivery Note", "items": [{"item": item.name, "quantity": 2, "rate": 25}]}
@@ -346,7 +347,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 	def test_rows_default_to_the_inventory_location(self):
 		item, _cogs, _stock = self._tracked_item()
-		frappe.db.set_single_value("Books Inventory Settings", "default_location", "Stores")
+		set_company_value("default_warehouse", "Stores")
 		shipment = self._make_delivery_note(
 			item, quantity=1, rate=25, items=[{"item": item.name, "quantity": 1}]
 		)
@@ -547,7 +548,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 	def _make_invoice(self, item, account):
 		receivable = make_account("Receivable", account_type="Receivable")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", account.name)
+		set_company_value("default_discount_account", account.name)
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			make_customer(receivable.name).name,

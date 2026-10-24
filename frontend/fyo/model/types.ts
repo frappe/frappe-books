@@ -7,6 +7,7 @@ import type { Filter } from 'src/frappe/api';
 import type { RouteLocationRaw, Router } from 'vue-router';
 import type { FrappeDoc } from 'src/frappe/document';
 import type { AccountingSettings } from 'models/baseModels/AccountingSettings/AccountingSettings';
+import type { Company } from 'models/baseModels/Company/Company';
 import type { GetStarted } from 'models/baseModels/GetStarted/GetStarted';
 import type { Defaults } from 'models/baseModels/Defaults/Defaults';
 import type { PrintSettings } from 'models/baseModels/PrintSettings/PrintSettings';
@@ -45,6 +46,8 @@ export interface DocumentActionWarning {
 export interface SinglesMap {
   SystemSettings?: SystemSettings;
   AccountingSettings?: AccountingSettings;
+  /** The one Books Company, which Settings edits with the settings singles. */
+  Company?: Company;
   InventorySettings?: InventorySettings;
   POSSettings?: POSSettings;
   PrintSettings?: PrintSettings;

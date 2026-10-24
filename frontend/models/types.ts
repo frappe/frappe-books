@@ -4,6 +4,7 @@ export enum ModelNameEnum {
   AccountingSettings = 'AccountingSettings',
   Address = 'Address',
   Batch = 'Batch',
+  Company = 'Company',
   Country = 'Country',
   Currency = 'Currency',
   Customer = 'Customer',

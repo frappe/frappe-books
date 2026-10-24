@@ -23,6 +23,7 @@ from frappe_books.tests.accounting import (
 	make_invoice,
 	make_item,
 	make_tax,
+	set_company_value,
 	unique_name,
 )
 
@@ -62,6 +63,7 @@ FINANCIAL_REPORTS = (
 	"Books GSTR-1",
 	"Books GSTR-2",
 )
+
 STOCK_REPORTS = ("Books Stock Ledger", "Books Stock Balance")
 BOOKS_USER = "books-user-permissions@example.com"
 MANAGER = "books-manager-permissions@example.com"
@@ -271,7 +273,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		expense = make_account("Permission Expense", root_type="Expense", account_type="Expense Account")
 		party = make_customer(receivable.name)
 		item = make_item(income.name, expense.name)
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		row = {
 			"item": item.name,
 			"account": income.name,

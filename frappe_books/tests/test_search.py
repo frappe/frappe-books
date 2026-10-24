@@ -12,6 +12,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	set_company_value,
 )
 
 USER = "books-search-user@example.com"
@@ -85,7 +86,7 @@ class IntegrationTestSearchPalette(IntegrationTestCase):
 	def _make_invoice(self, item=None, party=None):
 		income = make_account("Search Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Search Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		item = item or make_item(income.name, expense.name).name
 		party = party or make_customer(self.receivable).name
 		invoice = make_invoice(INVOICE, party, self.receivable, item, income.name)

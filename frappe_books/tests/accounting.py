@@ -6,6 +6,7 @@ from frappe.tests import change_settings
 from frappe.utils import flt, now_datetime
 
 from frappe_books.accounting.money import company_currency
+from frappe_books.company import company_value, default_company
 from frappe_books.inventory.availability import get_stock_quantities
 from frappe_books.settings import FEATURES
 
@@ -18,16 +19,19 @@ def enable_features():
 
 def set_default_inventory_accounts():
 	"""Give stock movements the ledger accounts the setup wizard sets, as test sites skip it."""
-	settings = frappe.get_single("Books Inventory Settings")
-	frappe.db.set_single_value(
-		"Books Inventory Settings",
+	stock, adjustment = company_value(["default_inventory_account", "stock_adjustment_account"])
+	set_company_value(
 		{
-			"stock_in_hand": settings.stock_in_hand
-			or make_account("Stock In Hand", account_type="Stock").name,
-			"stock_adjustment": settings.stock_adjustment
+			"default_inventory_account": stock or make_account("Stock In Hand", account_type="Stock").name,
+			"stock_adjustment_account": adjustment
 			or make_account("Stock Adjustment", root_type="Expense", account_type="Stock Adjustment").name,
-		},
+		}
 	)
+
+
+def set_company_value(fieldname, value=None):
+	"""Set a value, or a dict of values, of the one Books Company."""
+	frappe.db.set_value("Books Company", default_company(), fieldname, value)
 
 
 def make_account(label, root_type="Asset", **values):
@@ -153,9 +157,12 @@ def ensure_user(email, *roles):
 
 
 def set_inventory_accounts(stock, received, cogs):
-	frappe.db.set_single_value(
-		"Books Inventory Settings",
-		{"stock_in_hand": stock, "stock_received_but_not_billed": received, "cost_of_goods_sold": cogs},
+	set_company_value(
+		{
+			"default_inventory_account": stock,
+			"stock_received_but_not_billed": received,
+			"default_expense_account": cogs,
+		}
 	)
 
 

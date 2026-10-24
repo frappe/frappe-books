@@ -23,6 +23,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	set_company_value,
 	unique_name,
 )
 
@@ -34,7 +35,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.receivable = make_account("POS Receivable", account_type="Receivable")
 		self.income = make_account("POS Income", root_type="Income", account_type="Income Account")
 		expense = make_account("POS Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		self.item = make_item(self.income.name, expense.name)
 		self.party = make_customer(self.receivable.name)
 

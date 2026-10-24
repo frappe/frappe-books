@@ -10,6 +10,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.company import company_value
 from frappe_books.permissions import check_preview_permission
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, validate_prefix
@@ -127,7 +128,7 @@ def _default_income_account(item_type):
 def _default_expense_account(track_item):
 	"""Tracked items are bought into stock received but not billed, others into cost of goods sold."""
 	if track_item:
-		return frappe.db.get_single_value("Books Inventory Settings", "stock_received_but_not_billed")
+		return company_value("stock_received_but_not_billed")
 	return latest_ledger_account("Cost of Goods Sold")
 
 

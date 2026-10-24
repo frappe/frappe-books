@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import getdate
 
 from frappe_books.accounting.money import as_decimal, currency_unit, rounded
+from frappe_books.company import company_value
 
 
 @dataclass(frozen=True)
@@ -76,9 +77,9 @@ def _add_round_off(debits, credits):
 		return
 	if abs(difference) > _round_off_limit(len(debits) + len(credits)):
 		_throw_unbalanced(_total(debits), _total(credits))
-	account = frappe.db.get_single_value("Books Accounting Settings", "round_off_account")
+	account = company_value("round_off_account")
 	if not account:
-		frappe.throw(_("Set a round-off account in Books Accounting Settings."))
+		frappe.throw(_("Set a round-off account in Books Company."))
 	entries = credits if difference > 0 else debits
 	entries[EntryKey(account, None)] += abs(difference)
 

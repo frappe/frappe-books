@@ -8,14 +8,8 @@
  "field_order": [
   "default_section_break_1",
   "fullname",
-  "company_name",
   "bank_name",
   "country",
-  "email",
-  "accounts_section_break_7",
-  "write_off_account",
-  "round_off_account",
-  "discount_account",
   "features_section_break_11",
   "enable_discounting",
   "enable_inventory",
@@ -35,7 +29,6 @@
   "fiscal_year_end",
   "setup_complete",
   "default_section_break_30",
-  "tax_id",
   "gstin"
  ],
  "fields": [
@@ -49,14 +42,6 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Full Name",
-   "reqd": 1
-  },
-  {
-   "fieldname": "company_name",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Company Name",
-   "read_only": 1,
    "reqd": 1
   },
   {
@@ -75,37 +60,6 @@
    "options": "Country",
    "placeholder": "Select Country",
    "read_only": 1
-  },
-  {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "label": "Email",
-   "options": "Email",
-   "reqd": 1
-  },
-  {
-   "fieldname": "accounts_section_break_7",
-   "fieldtype": "Section Break",
-   "label": "Accounts"
-  },
-  {
-   "fieldname": "write_off_account",
-   "fieldtype": "Link",
-   "label": "Write Off Account",
-   "options": "Books Account"
-  },
-  {
-   "fieldname": "round_off_account",
-   "fieldtype": "Link",
-   "label": "Round Off Account",
-   "options": "Books Account"
-  },
-  {
-   "depends_on": "enable_discounting",
-   "fieldname": "discount_account",
-   "fieldtype": "Link",
-   "label": "Discount Account",
-   "options": "Books Account"
   },
   {
    "fieldname": "features_section_break_11",
@@ -227,13 +181,6 @@
    "fieldname": "default_section_break_30",
    "fieldtype": "Section Break",
    "label": "Default"
-  },
-  {
-   "depends_on": "eval:doc.country == \"Switzerland\"",
-   "fieldname": "tax_id",
-   "fieldtype": "Data",
-   "label": "Tax ID",
-   "placeholder": "CHE-123.456.789"
   },
   {
    "depends_on": "eval:doc.country == \"India\"",

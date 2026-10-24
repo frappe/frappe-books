@@ -14,6 +14,7 @@ from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
 	make_item,
+	set_company_value,
 	stock_quantity,
 	unique_name,
 )
@@ -289,7 +290,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, "does not track stock", receipt.insert)
 
 	def test_rows_default_to_the_inventory_location(self):
-		frappe.db.set_single_value("Books Inventory Settings", "default_location", self.warehouse.name)
+		set_company_value("default_warehouse", self.warehouse.name)
 		row = {"item": self.item.name, "quantity": 1, "rate": 10}
 		receipt = make_movement("MaterialReceipt", [row])
 		issue = make_movement("MaterialIssue", [row])
@@ -298,7 +299,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		self.assertEqual(issue.items[0].from_location, self.warehouse.name)
 
 	def test_issues_and_receipts_keep_only_the_location_they_use(self):
-		frappe.db.set_single_value("Books Inventory Settings", "default_location", self.warehouse.name)
+		set_company_value("default_warehouse", self.warehouse.name)
 		row = {"item": self.item.name, "from_location": "Stores", "to_location": "Stores", "quantity": 1}
 		receipt = make_movement("MaterialReceipt", [row])
 		issue = frappe.get_doc(movement_values("MaterialIssue", [{**row, "from_location": None}]))
@@ -310,7 +311,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		)
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
-		frappe.db.set_single_value("Books Inventory Settings", "default_location", self.warehouse.name)
+		set_company_value("default_warehouse", self.warehouse.name)
 		self.item.db_set("rate", 15)
 		movement = frappe.get_doc(
 			movement_values("MaterialReceipt", [{"item": self.item.name, "quantity": 2}])
@@ -372,8 +373,8 @@ class IntegrationTestStockEntryPostings(IntegrationTestCase):
 		self.adjustment = make_account(
 			"Adjustment", root_type="Expense", account_type="Stock Adjustment"
 		).name
-		frappe.db.set_single_value(
-			"Books Inventory Settings", {"stock_in_hand": self.stock, "stock_adjustment": self.adjustment}
+		set_company_value(
+			{"default_inventory_account": self.stock, "stock_adjustment_account": self.adjustment}
 		)
 		self.shop = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert().name
 

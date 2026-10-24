@@ -1,7 +1,6 @@
 from collections import defaultdict
 from decimal import Decimal
 
-import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.returns import map_return
@@ -13,6 +12,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_supplier,
 	make_tax,
+	set_company_value,
 )
 
 NO_FOLLOW_UPS = {"make_auto_payment": 0, "make_auto_stock_transfer": 0}
@@ -30,7 +30,7 @@ class IntegrationTestInvoicePosting(IntegrationTestCase):
 		self.expense = make_account("Purchases", root_type="Expense", account_type="Expense Account").name
 		self.tax_account = make_account("Tax", root_type="Liability", account_type="Tax").name
 		self.discount = make_account("Discount", root_type="Expense", account_type="Expense Account").name
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.discount)
+		set_company_value("default_discount_account", self.discount)
 		self.item = make_item(self.income, self.expense, make_tax(self.tax_account).name).name
 
 	def test_party_and_discount_post_opposite_the_items_and_taxes(self):

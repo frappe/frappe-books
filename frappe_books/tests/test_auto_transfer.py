@@ -34,6 +34,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_number_series,
 	make_supplier,
+	set_company_value,
 	set_inventory_accounts,
 	stock_quantity,
 	unique_name,
@@ -262,7 +263,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		stock = make_account("Map Stock", account_type="Stock")
 		received = make_account("Map Received", root_type="Liability")
 		expense = make_account("Map Expense", root_type="Expense")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
 		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
@@ -284,7 +285,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		cogs = make_account("Auto COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		stock = make_account("Auto Stock", account_type="Stock")
 		received = make_account("Auto Received", root_type="Liability")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", cogs.name)
+		set_company_value("default_discount_account", cogs.name)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", "Stores")
 		item = make_item(income.name, received.name, track_item=1, rate=10)
@@ -332,7 +333,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		stock = make_account("Used Stock", account_type="Stock")
 		received = make_account("Used Received", root_type="Liability")
 		expense = make_account("Used Expense", root_type="Expense")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
 		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
@@ -371,7 +372,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		cogs = make_account("POS COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		stock = make_account("POS Stock", account_type="Stock")
 		received = make_account("POS Received", root_type="Liability")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", cogs.name)
+		set_company_value("default_discount_account", cogs.name)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", "Stores")
 		location = frappe.get_doc({"doctype": "Books Location", "name": unique_name("POS Shelf")}).insert()

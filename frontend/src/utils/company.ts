@@ -15,7 +15,7 @@ export function useCompanyIdentity() {
   }
 
   onMounted(() => {
-    companyName.value = fyo.singles.AccountingSettings?.company_name ?? '';
+    companyName.value = fyo.singles.Company?.company_name ?? '';
     setCompanyLogo();
     fyo.observer.on(printSettingsSync, setCompanyLogo);
   });

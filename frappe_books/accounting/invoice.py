@@ -13,6 +13,7 @@ from frappe_books.accounting.party import PartyDocumentMixin
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
+from frappe_books.company import company_value
 from frappe_books.currency import get_exchange_rate
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
@@ -373,9 +374,9 @@ class InvoicePosting(LedgerPosting):
 
 
 def _discount_account():
-	account = frappe.db.get_single_value("Books Accounting Settings", "discount_account")
+	account = company_value("default_discount_account")
 	if not account:
-		frappe.throw(_("Set a discount account in Books Accounting Settings."))
+		frappe.throw(_("Set a discount account in Books Company."))
 	return account
 
 

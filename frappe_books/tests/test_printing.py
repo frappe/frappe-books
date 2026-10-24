@@ -32,6 +32,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_supplier,
 	make_tax,
+	set_company_value,
 	unique_name,
 )
 from frappe_books.tests.test_units import make_uom
@@ -46,9 +47,8 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.income = make_account("Print Sales", root_type="Income", account_type="Income Account")
 		self.expense = make_account("Print Expense", root_type="Expense", account_type="Expense Account")
 		self.cash = make_account("Print Cash", account_type="Cash")
-		frappe.db.set_single_value(
-			"Books Accounting Settings", {"discount_account": self.expense.name, "enable_partial_payment": 1}
-		)
+		set_company_value("default_discount_account", self.expense.name)
+		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		self.party = make_customer(self.receivable.name)
 		self.tax_account = make_account("Print Tax", root_type="Liability", account_type="Tax")
 		self.item = make_item(self.income.name, self.expense.name, make_tax(self.tax_account.name).name)

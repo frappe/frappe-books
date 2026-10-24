@@ -54,7 +54,7 @@ def before_tests():
 	if not frappe.is_setup_complete():
 		complete_app_setup(country="India", currency="INR", timezone="Asia/Kolkata")
 	if not default_company():
-		save_company({"company_name": "Books Test Company"})
+		save_company({"company_name": "Books Test Company", "email": "books-tests@example.com"})
 
 
 def grant_core_permissions():

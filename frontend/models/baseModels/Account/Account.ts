@@ -51,9 +51,7 @@ export class Account extends FrappeDoc {
     return {
       parentField: 'parent_books_account',
       getRootLabel(): Promise<string> {
-        return Promise.resolve(
-          fyo.singles.AccountingSettings?.company_name ?? ''
-        );
+        return Promise.resolve(fyo.singles.Company?.company_name ?? '');
       },
     };
   }

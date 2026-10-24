@@ -5,14 +5,15 @@ from frappe import _
 
 from frappe_books.accounting import ledger
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.company import company_value
 from frappe_books.inventory import valuation
 from frappe_books.inventory.stock import parse_serial_numbers
 
-# The Books Inventory Settings account each stock document moves its stock value against.
+# The Books Company account each stock document moves its stock value against.
 STOCK_COUNTER_ACCOUNTS = {
-	"Books Delivery Note": "cost_of_goods_sold",
+	"Books Delivery Note": "default_expense_account",
 	"Books Purchase Receipt": "stock_received_but_not_billed",
-	"Books Stock Entry": "stock_adjustment",
+	"Books Stock Entry": "stock_adjustment_account",
 }
 
 
@@ -135,11 +136,11 @@ def _post_stock_value(transaction):
 	if value == 0:
 		return
 	_validate_value_direction(transaction, value)
-	settings = frappe.get_single("Books Inventory Settings")
-	stock = settings.stock_in_hand
-	counter = settings.get(STOCK_COUNTER_ACCOUNTS[transaction.doctype])
+	stock, counter = company_value(
+		["default_inventory_account", STOCK_COUNTER_ACCOUNTS[transaction.doctype]]
+	) or (None, None)
 	if not stock or not counter:
-		frappe.throw(_("Set all inventory ledger accounts in Books Inventory Settings."))
+		frappe.throw(_("Set all inventory ledger accounts in Books Company."))
 	debit, credit = (stock, counter) if value > 0 else (counter, stock)
 	posting = ledger.LedgerPosting(transaction)
 	posting.debit(debit, abs(value))

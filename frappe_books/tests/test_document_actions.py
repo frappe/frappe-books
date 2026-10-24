@@ -31,6 +31,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_number_series,
 	make_supplier,
+	set_company_value,
 )
 
 MAPPERS = "frappe_books.frappe_books.doctype.{0}.{0}.{1}"
@@ -199,7 +200,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual(remaining.items[0].serial_number, "S-2")
 
 	def test_return_keeps_the_item_discounts(self):
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		set_company_value("default_discount_account", self.expense.name)
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			self.party.name,
@@ -221,7 +222,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		stock = make_account("Delete Stock", account_type="Stock")
 		received = make_account("Delete Received", root_type="Liability")
 		set_inventory_accounts(stock.name, received.name, self.expense.name)
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		set_company_value("default_discount_account", self.expense.name)
 		frappe.db.set_single_value(
 			"Books Defaults",
 			{"purchase_receipt_location": "Stores", "purchase_payment_account": self.cash.name},
@@ -323,7 +324,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual(submitted.outstanding_amount, submitted.grand_total)
 
 	def test_submit_refuses_a_document_changed_since_it_was_read(self):
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		set_company_value("default_discount_account", self.expense.name)
 		invoice = make_invoice(
 			"Books Sales Invoice", self.party.name, self.receivable.name, self.item.name, self.income.name
 		)
@@ -392,7 +393,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		payable = make_account("Auto Payable", root_type="Liability", account_type="Payable")
 		bank = make_account("Auto Bank", account_type="Bank")
 		frappe.db.set_single_value("Books Defaults", "purchase_payment_account", bank.name)
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		set_company_value("default_discount_account", self.expense.name)
 		supplier = make_supplier(payable.name)
 		cases = (
 			("Books Sales Invoice", self.party.name, self.receivable.name, self.income.name, "Cash"),
@@ -449,7 +450,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertTrue(frappe.response.docs.pop().make_auto_payment)
 
 	def _paid_invoice(self, make_auto_payment=1):
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		set_company_value("default_discount_account", self.expense.name)
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			self.party.name,

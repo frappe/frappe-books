@@ -40,6 +40,7 @@
 <script lang="ts">
 import type { FrappeDoc } from 'src/frappe/document';
 import { frappeModels, getRegionalFrappeModels } from 'models';
+import type { Company } from 'models/baseModels/Company/Company';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
 import { ModelNameEnum } from 'models/types';
 import DialogSheet from 'src/mobile/DialogSheet.vue';
@@ -153,7 +154,10 @@ export default defineComponent({
       const singles = getSingleSchemaNames().filter(
         (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
       );
-      await Promise.all(singles.map((name) => getFrappeDoc(name, name)));
+      await Promise.all([
+        ...singles.map((name) => getFrappeDoc(name, name)),
+        loadCompany(books.company),
+      ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
@@ -173,6 +177,16 @@ export default defineComponent({
     },
   },
 });
+
+/** The one company is read from `fyo.singles`, as the settings are. */
+async function loadCompany(name: string | null) {
+  if (name) {
+    fyo.singles.Company = (await getFrappeDoc(
+      ModelNameEnum.Company,
+      name
+    )) as Company;
+  }
+}
 </script>
 
 <style>

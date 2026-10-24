@@ -14,6 +14,7 @@ import { computed, inject, ref, shallowRef } from 'vue';
 
 const SETTINGS_SCHEMAS = [
   ModelNameEnum.AccountingSettings,
+  ModelNameEnum.Company,
   ModelNameEnum.InventorySettings,
   ModelNameEnum.Defaults,
   ModelNameEnum.POSSettings,
@@ -28,7 +29,7 @@ export interface SettingsTab {
   icon: string;
 }
 
-/** The settings singles as tabs of sections, saved together. */
+/** The settings singles and the one company as tabs of sections, saved together. */
 export function useSettings() {
   const shortcuts = inject(shortcutsKey);
   const errors = ref<Record<string, string>>({});
@@ -144,6 +145,11 @@ export function useSettings() {
 }
 
 function isEnabled(name: ModelNameEnum): boolean {
+  // The setup wizard makes the company.
+  if (name === ModelNameEnum.Company) {
+    return !!fyo.singles.Company;
+  }
+
   if (name === ModelNameEnum.InventorySettings) {
     return !!fyo.singles.AccountingSettings?.enable_inventory;
   }
@@ -158,6 +164,7 @@ function isEnabled(name: ModelNameEnum): boolean {
 function getTab(name: ModelNameEnum): SettingsTab {
   const tabs: Partial<Record<ModelNameEnum, [string, string]>> = {
     [ModelNameEnum.AccountingSettings]: [t`General`, 'lucide-building-2'],
+    [ModelNameEnum.Company]: [t`Company`, 'lucide-landmark'],
     [ModelNameEnum.InventorySettings]: [t`Inventory`, 'lucide-package'],
     [ModelNameEnum.Defaults]: [t`Defaults`, 'lucide-file-cog'],
     [ModelNameEnum.POSSettings]: [t`POS Settings`, 'lucide-store'],

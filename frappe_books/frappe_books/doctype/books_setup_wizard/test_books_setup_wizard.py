@@ -7,11 +7,8 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
 from frappe_books.company import company_value, default_company
-from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
-	ACCOUNT_TYPES as ACCOUNTING_RULES,
-)
-from frappe_books.frappe_books.doctype.books_inventory_settings.books_inventory_settings import (
-	ACCOUNT_TYPES as INVENTORY_RULES,
+from frappe_books.frappe_books.doctype.books_company.books_company import (
+	ACCOUNT_TYPES as COMPANY_RULES,
 )
 from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings import (
 	ACCOUNT_TYPES as POS_RULES,
@@ -37,10 +34,13 @@ FRAPPE_SETUP_FIELDS = (
 )
 SETUP_ACCOUNT_RULES = {
 	"write_off": POS_RULES["write_off_account"],
-	"round_off": ACCOUNTING_RULES["round_off_account"],
+	"round_off": COMPANY_RULES["round_off_account"],
 	"cash": POS_RULES["cash_account"],
 	"receivable": POS_RULES["default_account"],
-	**INVENTORY_RULES,
+	"stock_in_hand": COMPANY_RULES["default_inventory_account"],
+	"stock_received_but_not_billed": COMPANY_RULES["stock_received_but_not_billed"],
+	"cost_of_goods_sold": COMPANY_RULES["default_expense_account"],
+	"stock_adjustment": COMPANY_RULES["stock_adjustment_account"],
 }
 
 
@@ -61,10 +61,6 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual(
 			frappe.db.get_value("Books Account", wizard.bank_name, "parent_books_account"),
 			"Bank Accounts",
-		)
-		self.assertEqual(
-			frappe.db.get_single_value("Books Accounting Settings", "company_name"),
-			default_company(),
 		)
 		self.assertEqual(
 			frappe.db.get_single_value("Books Defaults", "sales_invoice_number_series"),
@@ -114,13 +110,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			"Bank Accounts",
 		)
 		self.assertEqual(
-			frappe.db.get_single_value("Books Accounting Settings", "round_off_account"), "Rounded Off"
-		)
-		self.assertEqual(
-			frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"), "Stock In Hand"
-		)
-		self.assertEqual(
-			frappe.db.get_single_value("Books Inventory Settings", "stock_adjustment"), "Stock Adjustment"
+			company_value(["round_off_account", "default_inventory_account", "stock_adjustment_account"]),
+			("Rounded Off", "Stock In Hand", "Stock Adjustment"),
 		)
 		self.assert_gst_heads()
 
@@ -138,10 +129,10 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		# The chart's first cash and receivable accounts are empty groups.
 		self.assert_pos_accounts_are_ledgers()
 		self.assertEqual(frappe.db.get_value("Books Account", "Discounts", "root_type"), "Income")
-		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "write_off_account"))
+		self.assertFalse(company_value("write_off_account"))
 		# The chart has no postable round-off or stock account, only groups or other types.
-		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "round_off_account"))
-		self.assertFalse(frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"))
+		self.assertFalse(company_value("round_off_account"))
+		self.assertFalse(company_value("default_inventory_account"))
 
 	def test_setup_makes_a_cash_ledger_for_a_chart_without_one(self):
 		wizard = self._wizard(

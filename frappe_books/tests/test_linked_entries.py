@@ -10,7 +10,13 @@ from frappe.utils import now_datetime
 
 from frappe_books import linked_entries as linked_entries_module
 from frappe_books.linked_entries import get_linked_entries
-from frappe_books.tests.accounting import make_account, make_customer, make_invoice, make_item
+from frappe_books.tests.accounting import (
+	make_account,
+	make_customer,
+	make_invoice,
+	make_item,
+	set_company_value,
+)
 
 QUOTED_TABLE = re.compile(r'[`"](tab[^`"]+)[`"]')
 
@@ -44,7 +50,7 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		cash = make_account("Linked Cash", account_type="Cash")
 		income = make_account("Linked Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Linked Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		party = make_customer(receivable.name)
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)

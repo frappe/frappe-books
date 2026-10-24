@@ -187,7 +187,10 @@ function getListViewList(fyo: Fyo): SearchItem[] {
   const standardLists = getAllSchemaNames()
     .filter((s) => !switchedOff.includes(s))
     .map((s) => getSchema(s))
-    .filter((s) => s && !s.isChild && !s.isSingle)
+    // Settings edit the one company; it has no list.
+    .filter(
+      (s) => s && !s.isChild && !s.isSingle && s.name !== ModelNameEnum.Company
+    )
     .map(
       (s) =>
         ({

@@ -5,7 +5,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import nowdate
 
 from frappe_books.accounting.ledger import LedgerPosting
-from frappe_books.tests.accounting import make_account
+from frappe_books.tests.accounting import make_account, set_company_value
 
 
 class IntegrationTestLedgerPosting(IntegrationTestCase):
@@ -13,7 +13,7 @@ class IntegrationTestLedgerPosting(IntegrationTestCase):
 		self.cash = make_account("Ledger Cash", account_type="Cash")
 		self.income = make_account("Ledger Income", root_type="Income")
 		round_off = make_account("Ledger Round Off", root_type="Expense")
-		frappe.db.set_single_value("Books Accounting Settings", "round_off_account", round_off.name)
+		set_company_value("round_off_account", round_off.name)
 		self.voucher = frappe._dict(doctype="Books Journal Entry", name="JV-TEST", posting_date=nowdate())
 
 	def test_rejects_gap_larger_than_rounding(self):

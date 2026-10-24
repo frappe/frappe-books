@@ -163,44 +163,53 @@ test('Defaults and POS profiles offer colours for the POS buttons that use them'
   }
 });
 
-test('the General tab shows the fields, placeholders and sections it showed', () => {
-  const layout = getSchema('AccountingSettings')
-    .fields.filter((field) => !field.meta && !field.hidden)
-    .map(({ fieldname, placeholder, section, readOnly }) =>
-      [fieldname, placeholder ?? '', section, readOnly ? 'read only' : '']
-        .join(' | ')
-        .trim()
-    );
-  assert.deepEqual(layout.slice(0, 5), [
+test('the General and Company tabs show the fields, placeholders and sections they showed', () => {
+  const layout = (schemaName) =>
+    getSchema(schemaName)
+      .fields.filter((field) => !field.meta && !field.hidden)
+      .map(({ fieldname, placeholder, section, readOnly }) =>
+        [fieldname, placeholder ?? '', section, readOnly ? 'read only' : '']
+          .join(' | ')
+          .trim()
+      );
+  assert.deepEqual(layout('AccountingSettings').slice(0, 3), [
     'fullname |  | Default |',
-    'company_name |  | Default | read only',
     'bank_name |  | Default | read only',
     'country | Select Country | Default | read only',
-    'email |  | Default |',
   ]);
-  assert.deepEqual(layout.slice(-2), [
-    'tax_id | CHE-123.456.789 | Default |',
+  assert.deepEqual(layout('AccountingSettings').slice(-1), [
     'gstin | 27AAAAA0000A1Z5 | Default |',
+  ]);
+  assert.deepEqual(layout('Company').slice(0, 6), [
+    'company_name |  | Default | read only',
+    'abbr |  | Default | read only',
+    'country | Select Country | Default | read only',
+    'default_currency |  | Default | read only',
+    'email |  | Default |',
+    'tax_id | CHE-123.456.789 | Default |',
   ]);
 });
 
-test('General settings show the regional tax ID of the company country', async () => {
+test('settings show the regional tax ID of the company country', async () => {
   const settings = newFrappeDoc('AccountingSettings', { country: 'India' });
+  const company = newFrappeDoc('Company', { country: 'India' });
   assert.equal(hidden(settings, 'gstin'), false);
-  assert.equal(hidden(settings, 'tax_id'), true);
+  assert.equal(hidden(company, 'tax_id'), true);
 
   await settings.set('country', 'Switzerland');
+  await company.set('country', 'Switzerland');
   assert.equal(hidden(settings, 'gstin'), true);
-  assert.equal(hidden(settings, 'tax_id'), false);
+  assert.equal(hidden(company, 'tax_id'), false);
 });
 
 test('discounts lead to pricing rules, then coupons, and stay on once on', async () => {
   const settings = newFrappeDoc('AccountingSettings');
-  assert.equal(hidden(settings, 'discount_account'), true);
+  const company = newFrappeDoc('Company');
+  assert.equal(hidden(company, 'default_discount_account'), true);
   assert.equal(hidden(settings, 'enable_pricing_rule'), true);
 
   await settings.set('enable_discounting', true);
-  assert.equal(hidden(settings, 'discount_account'), false);
+  assert.equal(hidden(company, 'default_discount_account'), false);
   assert.equal(hidden(settings, 'enable_pricing_rule'), false);
   assert.equal(hidden(settings, 'enable_coupon_code'), true);
 

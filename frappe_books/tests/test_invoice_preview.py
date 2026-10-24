@@ -10,6 +10,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_item,
 	make_tax,
+	set_company_value,
 	unique_name,
 )
 
@@ -37,9 +38,9 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		self.income = make_account("Preview Sales", root_type="Income", account_type="Income Account")
 		self.expense = make_account("Preview Expense", root_type="Expense", account_type="Expense Account")
 		tax_account = make_account("Preview Tax", root_type="Liability", account_type="Tax")
+		set_company_value("default_discount_account", self.expense.name)
 		frappe.db.set_single_value(
-			"Books Accounting Settings",
-			{"discount_account": self.expense.name, "enable_pricing_rule": 1, "enable_price_list": 1},
+			"Books Accounting Settings", {"enable_pricing_rule": 1, "enable_price_list": 1}
 		)
 		self.party = make_customer(self.receivable.name)
 		self.item = make_item(self.income.name, self.expense.name, make_tax(tax_account.name).name, rate=100)

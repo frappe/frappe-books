@@ -12,6 +12,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	set_company_value,
 	unique_name,
 )
 
@@ -65,7 +66,7 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		receivable = make_account("Stale Receivable", account_type="Receivable")
 		income = make_account("Stale Income", root_type="Income")
 		expense = make_account("Stale Expense", root_type="Expense")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		customer = make_customer(receivable.name)
 		item = make_item(income.name, expense.name)
 		make_invoice("Books Sales Invoice", customer.name, receivable.name, item.name, income.name).submit()

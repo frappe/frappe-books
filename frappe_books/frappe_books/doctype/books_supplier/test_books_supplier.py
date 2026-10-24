@@ -5,7 +5,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.frappe_books.doctype.books_supplier.books_supplier import make_purchase_invoice
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_supplier, unique_name
+from frappe_books.tests.accounting import (
+	make_account,
+	make_invoice,
+	make_item,
+	make_supplier,
+	set_company_value,
+	unique_name,
+)
 
 
 class IntegrationTestBooksSupplier(IntegrationTestCase):
@@ -25,7 +32,7 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 		payable = make_account("Supplier Payable", root_type="Liability", account_type="Payable")
 		income = make_account("Supplier Income", root_type="Income")
 		expense = make_account("Supplier Expense", root_type="Expense")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		supplier = make_supplier(payable.name)
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Purchase Invoice", supplier.name, payable.name, item.name, expense.name)

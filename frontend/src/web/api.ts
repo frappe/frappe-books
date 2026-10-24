@@ -154,6 +154,8 @@ declare global {
         /** Added by `frappe_books.boot.extend_bootinfo`. */
         books?: {
           country_code: string;
+          /** The one Books Company, once the setup wizard has made it. */
+          company: string | null;
           charts_of_accounts: ChartOfAccounts[];
           indian_states: Record<string, string>;
           print_style: string;

@@ -21,20 +21,22 @@ from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import InvoiceController, PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
 from frappe_books.accounting.payment import PaymentController, tax_share
+from frappe_books.company import company_value
 from frappe_books.inventory.transaction import StockEntryController, StockTransferController
 
-TAX_ID_FIELDS = ("gstin", "tax_id")
+# The tax IDs print formats show, by the doctype that holds each.
+TAX_ID_FIELDS = {"gstin": "Books Accounting Settings", "tax_id": "Books Company"}
 
 
 def get_print_settings() -> dict[str, Any]:
 	"""Books Print Settings with the company address and tax IDs, and Frappe's print font, for print formats."""
 	settings = frappe.get_cached_doc("Books Print Settings")
-	accounting = frappe.get_cached_doc("Books Accounting Settings")
 	address = settings.address and frappe.db.get_value("Books Address", settings.address, "address_display")
 	return {
 		**settings.as_dict(no_default_fields=True),
 		"address": address,
-		**{fieldname: accounting.get(fieldname) for fieldname in TAX_ID_FIELDS},
+		"gstin": frappe.db.get_single_value("Books Accounting Settings", "gstin"),
+		"tax_id": company_value("tax_id"),
 		# The font-family Frappe prints in, for templates that set their own
 		"font": get_font(frappe.get_cached_doc("Print Settings")),
 	}
@@ -221,12 +223,14 @@ def template_error_message(error: TemplateError) -> str:
 def get_print_hints(doctype: str) -> dict[str, Any]:
 	"""The values a print format for `doctype` can show, with their labels."""
 	frappe.has_permission(doctype, "read", throw=True)
-	accounting = frappe.get_meta("Books Accounting Settings")
 	return {
 		"doc": {"name": _("Name"), **field_hints(frappe.get_meta(doctype))},
 		"print": {
 			**field_hints(frappe.get_meta("Books Print Settings")),
-			**{fieldname: _(accounting.get_label(fieldname)) for fieldname in TAX_ID_FIELDS},
+			**{
+				fieldname: _(frappe.get_meta(doctype).get_label(fieldname))
+				for fieldname, doctype in TAX_ID_FIELDS.items()
+			},
 		},
 	}
 

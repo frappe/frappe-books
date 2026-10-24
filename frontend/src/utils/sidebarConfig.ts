@@ -354,7 +354,8 @@ function getCompleteSidebar(): SidebarConfig {
       name: 'setup',
       icon: 'lucide-sliders-horizontal',
       route: '/chart-of-accounts',
-      hidden: () => !canEditSettings(),
+      // Accessory mode shows each Setup page the user's ERPNext roles open.
+      hidden: () => !isAccessoryMode() && !canEditSettings(),
       items: [
         {
           label: t`Chart of Accounts`,

@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { getEmptyValuesByFieldTypes, isPesa } from 'fyo/utils';
 import { ValidationError } from 'fyo/utils/errors';
+import { hasDocTypePermission } from 'fyo/utils/permissions';
 import { ModelNameEnum } from 'models/types';
 import {
   Field,
@@ -25,6 +26,11 @@ export type TemplateField = Field & TemplateFieldProps;
 
 /** The schemas the Import Wizard offers that the user may import. */
 export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
+  // Frappe's Data Import imports, so the user must be able to make one.
+  if (!hasDocTypePermission(fyo.store.permissions, 'Data Import', 'create')) {
+    return [];
+  }
+
   const importables = [
     ModelNameEnum.SalesInvoice,
     ModelNameEnum.PurchaseInvoice,

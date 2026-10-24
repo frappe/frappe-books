@@ -20,11 +20,11 @@ export default {
     thirdLink: String,
   },
   methods: {
-    async getOptions(keyword, filters) {
+    async getOptions(keyword, search) {
       const fields = [this.secondaryLink, this.thirdLink].filter(Boolean);
       const options = this.optionRecords
         ? this.getRecordOptions()
-        : await this.searchOptions(keyword, filters, fields);
+        : await this.searchOptions(keyword, search, fields);
       return options.map(({ record, ...option }) => ({
         ...option,
         value2: record[this.secondaryLink],
@@ -41,11 +41,11 @@ export default {
       }));
     },
     async getSuggestions(keyword = '') {
-      const filters = await this.getFilters();
+      const search = await this.getSearch();
       // Given records are filtered here; searched ones were matched by the server.
       let options = sortByFuzzyMatch(
         keyword,
-        await this.getOptions(keyword, filters),
+        await this.getOptions(keyword, search),
         (item) => [item.label, item.value2, item.value3],
         !!this.optionRecords
       );

@@ -3,7 +3,7 @@ export type EvalDoc = Record<string, unknown>;
 
 type Expression = (
   doc: EvalDoc,
-  parent: EvalDoc,
+  parent: EvalDoc | null,
   ...globals: unknown[]
 ) => unknown;
 
@@ -43,6 +43,19 @@ export function evaluateCondition(
   }
 
   return hasValue(doc[condition]);
+}
+
+/**
+ * The value of an `eval:` expression over `doc` and `parent`, as Desk's link
+ * control works out a DocField's link_filters; `frappe` is the boot's.
+ * Throws when the expression fails.
+ */
+export function evaluateExpression(
+  source: string,
+  doc: EvalDoc,
+  parent: EvalDoc | null
+): unknown {
+  return getExpression(source)(doc, parent, ...Object.values(GLOBALS));
 }
 
 /** An expression's truth, or undefined when it needs Desk's form scripts or fails. */

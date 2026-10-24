@@ -1,7 +1,8 @@
 import { translateValue } from 'fyo/utils/translation';
 import { call } from 'src/web/api';
-import { getValue, type Filter } from './api';
+import { getValue } from './api';
 import { getDocType, isFrappeBacked } from './doctypes';
+import type { DeskFilters } from './erpnextQueries';
 import { getOpenFrappeDocs } from './documents';
 import { getSchema } from './registry';
 
@@ -9,7 +10,48 @@ export type LinkRecord = Record<string, string | null | undefined> & {
   name: string;
   label?: string | null;
 };
-export type LinkOption = { label: string; value: string; record: LinkRecord };
+export type LinkOption = {
+  label: string;
+  value: string;
+  record: LinkRecord;
+  description?: string;
+};
+
+/** How a Link searches: with Desk's filters, a list or a dict, and maybe a whitelisted query method. */
+export interface LinkSearch {
+  query?: string;
+  filters: DeskFilters | null;
+}
+
+type QueryRow = { value: string; label?: string; description?: string };
+
+/** Link options for `search`: from its query method, as Desk's link searches, else from `searchFrappeLink`. */
+export async function searchLink(
+  schemaName: string,
+  text: string,
+  search: LinkSearch,
+  limit: number,
+  fields: string[] = []
+): Promise<LinkOption[]> {
+  if (!search.query) {
+    return searchFrappeLink(schemaName, text, search.filters, limit, fields);
+  }
+
+  // A query method reads the text as typed, e.g. to rank names that start with it.
+  const rows = await call<QueryRow[]>('frappe.desk.search.search_link', {
+    doctype: getLinkDoctype(schemaName).doctype,
+    txt: text,
+    query: search.query,
+    filters: search.filters ?? {},
+    page_length: limit,
+  });
+  return rows.map(({ value, label, description }) => ({
+    label: label || value,
+    value,
+    record: { name: value },
+    description: description || undefined,
+  }));
+}
 
 /**
  * Link options from Frappe's link search, each with its record's `fields`.
@@ -20,7 +62,7 @@ export type LinkOption = { label: string; value: string; record: LinkRecord };
 export async function searchFrappeLink(
   schemaName: string,
   text: string,
-  filters: Filter[] | null,
+  filters: LinkSearch['filters'],
   limit: number,
   fields: string[] = []
 ): Promise<LinkOption[]> {

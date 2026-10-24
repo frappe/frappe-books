@@ -1,3 +1,4 @@
+import { serverHtmlToText } from 'src/utils/serverHtml';
 import type { ServerMessage } from 'src/web/api';
 import { getDocType } from './doctypes';
 import type { FrappeDoc } from './document';
@@ -18,7 +19,7 @@ export function getMissingFieldsOf(
   messages: ServerMessage[]
 ): MissingField[] {
   return messages
-    .map(({ message }) => toMissingField(doc, toText(message)))
+    .map(({ message }) => toMissingField(doc, serverHtmlToText(message)))
     .filter((missing): missing is MissingField => !!missing);
 }
 
@@ -58,10 +59,4 @@ function withFieldname(
   const { meta } = getDocType(doc.schemaName);
   const docfield = meta.fields.find((field) => field.label === label.trim());
   return docfield && { doc, fieldname: docfield.fieldname };
-}
-
-function toText(html: string): string {
-  return new DOMParser()
-    .parseFromString(html, 'text/html')
-    .body.textContent!.trim();
 }

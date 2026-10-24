@@ -23,6 +23,13 @@ const ALLOWED_TAGS = new Set([
 const DROPPED_TAGS = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT']);
 const NUMBER = /^[-+]?[^\d\s]{0,3}\s?[\d.,]+%?$/;
 
+/** A server message's text, for places that show no markup, e.g. a toast. */
+export function serverHtmlToText(html: string): string {
+  return new DOMParser()
+    .parseFromString(html, 'text/html')
+    .body.textContent!.trim();
+}
+
 /**
  * A server message's HTML with other elements unwrapped to their text, and
  * every attribute dropped but a link's own-site or http(s) `href`. Table

@@ -3,6 +3,8 @@ import { FrappeDoc } from 'src/frappe/document';
 /** Books Number Series, served by Frappe; its counter is Frappe's Series. */
 export class NumberSeries extends FrappeDoc {
   static override doctype = 'Books Number Series';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation = {
     label: 'Number Series',
     nameField: { label: 'Prefix' },

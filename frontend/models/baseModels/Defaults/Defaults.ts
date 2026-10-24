@@ -31,6 +31,8 @@ export class DefaultCashDenominations extends FrappeDoc {
 /** Books Defaults, served by Frappe: what new documents start with. */
 export class Defaults extends FrappeDoc {
   static override doctype = 'Books Defaults';
+  // Standalone only
+  static override erpnextDoctype = null;
   // Print templates are picked, not created, from the settings.
   static override presentation = {
     label: 'Defaults',

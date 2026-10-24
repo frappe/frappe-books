@@ -1,7 +1,4 @@
-import {
-  call as frappeCall,
-  type FrappeResourceError,
-} from 'frappe-ui';
+import { call as frappeCall, type FrappeResourceError } from 'frappe-ui';
 import {
   BaseError,
   ConflictError,
@@ -154,8 +151,12 @@ declare global {
         /** Added by `frappe_books.boot.extend_bootinfo`. */
         books?: {
           country_code: string;
-          /** The one Books Company, once the setup wizard has made it. */
+          /** The ERPNext company in accessory mode, else the one Books Company once the setup wizard has made it. */
           company: string | null;
+          /** /books shows ERPNext documents of `company` instead of Books ones. */
+          accessory_mode?: boolean;
+          /** With ERPNext installed, whether its setup wizard is done; null without ERPNext. */
+          erpnext?: { setup_complete: boolean } | null;
           charts_of_accounts: ChartOfAccounts[];
           indian_states: Record<string, string>;
           print_style: string;

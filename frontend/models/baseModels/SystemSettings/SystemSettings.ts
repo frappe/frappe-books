@@ -18,6 +18,8 @@ const SET_DISPLAY_PRECISION =
  */
 export class SystemSettings extends FrappeDoc {
   static override doctype = 'Books System Settings';
+  // UI settings, kept in accessory mode
+  static override erpnextDoctype = 'Books System Settings';
   static override presentation = {
     label: 'System Settings',
     fields: {

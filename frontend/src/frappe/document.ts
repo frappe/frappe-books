@@ -112,6 +112,11 @@ export function setPreviewScheduler(scheduler: PreviewScheduler) {
 export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   /** The Frappe DocType the model shows, e.g. `Books Item`. */
   static doctype = '';
+  /**
+   * The ERPNext DocType the model shows in accessory mode; by default `doctype`
+   * without `Books `. Null leaves the model out of accessory mode.
+   */
+  static erpnextDoctype?: string | null;
   static presentation: Presentation = { label: '' };
   /** A whitelisted method that fills what a save would; previewed while the user edits. */
   static previewMethod?: string;

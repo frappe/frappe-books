@@ -13,6 +13,7 @@ import type { Defaults } from 'models/baseModels/Defaults/Defaults';
 import type { PrintSettings } from 'models/baseModels/PrintSettings/PrintSettings';
 import type { InventorySettings } from 'models/inventory/InventorySettings';
 import type { Misc } from 'models/baseModels/Misc';
+import type { ERPNextSettings } from 'models/baseModels/ERPNextSettings/ERPNextSettings';
 import type { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 
 /**
@@ -53,6 +54,7 @@ export interface SinglesMap {
   PrintSettings?: PrintSettings;
   Defaults?: Defaults;
   Misc?: Misc;
+  ERPNextSettings?: ERPNextSettings;
   GetStarted?: GetStarted;
   [key: string]: FrappeDoc | undefined;
 }

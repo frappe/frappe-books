@@ -6,6 +6,8 @@ import { FrappeDoc } from 'src/frappe/document';
  */
 export class AccountingSettings extends FrappeDoc {
   static override doctype = 'Books Accounting Settings';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation = { label: 'Accounting Settings' };
 
   declare fullname?: string;

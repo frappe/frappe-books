@@ -221,7 +221,7 @@ function getGeneralLedgerAction(fyo: Fyo): Action {
     action: async (partyDoc, router) => {
       // The party type first: a new party type clears the party.
       const filters = {
-        partyType: (partyDoc.constructor as typeof Party).doctype,
+        partyType: partyDoc.doctype,
         party: partyDoc.name,
       };
       await router.push({

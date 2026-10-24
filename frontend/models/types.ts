@@ -19,6 +19,7 @@ export enum ModelNameEnum {
   JournalEntry = 'JournalEntry',
   JournalEntryAccount = 'JournalEntryAccount',
   Misc = 'Misc',
+  ERPNextSettings = 'ERPNextSettings',
   NumberSeries = 'NumberSeries',
   Lead = 'Lead',
   LoyaltyProgram = 'LoyaltyProgram',

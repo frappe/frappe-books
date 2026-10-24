@@ -8,6 +8,8 @@ import { FrappeDoc } from 'src/frappe/document';
  */
 export class SetupWizard extends FrappeDoc {
   static override doctype = 'Books Setup Wizard';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation = {
     label: 'Setup Wizard',
     fields: { country: { create: false }, currency: { create: false } },

@@ -9,6 +9,7 @@ import { Address } from './baseModels/Address/Address';
 import { Contact } from './baseModels/Contact/Contact';
 import { CustomForm } from './baseModels/CustomForm/CustomForm';
 import { Defaults } from './baseModels/Defaults/Defaults';
+import { ERPNextSettings } from './baseModels/ERPNextSettings/ERPNextSettings';
 import { GetStarted } from './baseModels/GetStarted/GetStarted';
 import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
@@ -103,6 +104,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   DeliveryNote,
   PurchaseReceipt,
   SystemSettings,
+  ERPNextSettings,
 };
 
 /** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */

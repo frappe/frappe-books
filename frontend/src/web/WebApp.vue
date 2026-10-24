@@ -2,13 +2,7 @@
   <FrappeUIProvider>
     <div
       id="books-app"
-      class="
-        h-screen
-        flex flex-col
-        overflow-hidden
-        bg-surface-base
-        antialiased
-      "
+      class="h-screen flex flex-col overflow-hidden bg-surface-base antialiased"
       :dir="languageDirection"
     >
       <div
@@ -54,6 +48,7 @@ import {
   loadFrappeDocTypes,
 } from 'src/frappe/registry';
 import { getFrappeDoc } from 'src/frappe/documents';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
@@ -144,21 +139,30 @@ export default defineComponent({
 
       registerFrappeModels(frappeModels);
       registerFrappeModels(await getRegionalFrappeModels(books.country_code));
-      fyo.store.permissions = { doctypes: getSchemaDoctypes(), user: boot.user };
+      fyo.store.permissions = {
+        doctypes: getSchemaDoctypes(),
+        user: boot.user,
+      };
       await loadFrappeDocTypes();
       // Amounts load in the currency and precision the system settings set.
       const systemSettings = ModelNameEnum.SystemSettings;
       fyo.initializeMoneyMaker(
         (await getFrappeDoc(systemSettings, systemSettings)) as SystemSettings
       );
+      // Some singles, like the ERPNext settings, are only for some roles.
       const singles = getSingleSchemaNames().filter(
-        (name) => name !== ModelNameEnum.SetupWizard && name !== systemSettings
+        (name) =>
+          name !== ModelNameEnum.SetupWizard &&
+          name !== systemSettings &&
+          fyo.can(name, 'read')
       );
       await Promise.all([
         ...singles.map((name) => getFrappeDoc(name, name)),
         loadCompany(books.company),
       ]);
-      this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
+      // ERPNext's setup wizard sets up accessory mode.
+      this.needsSetup =
+        !isAccessoryMode() && !fyo.singles.AccountingSettings?.setup_complete;
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
         this.searcher.initialize();

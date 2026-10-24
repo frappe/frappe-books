@@ -8,6 +8,8 @@ import { FrappeDoc } from 'src/frappe/document';
 /** Books POS Settings, served by Frappe. */
 export class POSSettings extends FrappeDoc {
   static override doctype = 'Books POS Settings';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation = { label: 'POS Settings' };
 
   declare warehouse?: string;

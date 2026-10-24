@@ -3,6 +3,8 @@ import { FrappeDoc } from 'src/frappe/document';
 /** Books Inventory Settings, served by Frappe. */
 export class InventorySettings extends FrappeDoc {
   static override doctype = 'Books Inventory Settings';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation = { label: 'Inventory Settings' };
 
   declare show_barcode_field?: boolean;

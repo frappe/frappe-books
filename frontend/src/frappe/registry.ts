@@ -6,6 +6,7 @@ import { FrappeDoc } from './document';
 import {
   getDocType,
   getFrappeModels,
+  getModelDoctype,
   isFrappeBacked,
   setDocType,
   type FrappeDocType,
@@ -26,7 +27,7 @@ const QUICK_VIEW_SKIPPED_FIELDTYPES = ['Table', 'AttachImage', 'Attachment'];
 /** Loads the meta of every model's schema in one request. Screens read it synchronously after this. */
 export async function loadFrappeDocTypes() {
   const models = getFrappeModels();
-  const doctypes = models.map(([, Model]) => Model.doctype);
+  const doctypes = models.map(([, Model]) => getModelDoctype(Model));
   setDocTypes(models, await getBooksMeta(doctypes));
 
   fyo.observer.on('sync:CustomForm', reloadCustomized);
@@ -108,7 +109,7 @@ export function getAllSchemaNames(): string[] {
 /** The DocType of each model's schema, by schema name, in schema name order. */
 export function getSchemaDoctypes(): Record<string, string> {
   const doctypes = getFrappeModels().map(
-    ([name, Model]) => [name, Model.doctype] as const
+    ([name, Model]) => [name, getModelDoctype(Model)] as const
   );
   return Object.fromEntries(doctypes.sort(([a], [b]) => (a < b ? -1 : 1)));
 }
@@ -146,7 +147,7 @@ function setDocTypes(
 ) {
   const byName = new Map(metas.map((meta) => [meta.name, meta]));
   for (const [schemaName, Model] of models) {
-    const meta = byName.get(Model.doctype)!;
+    const meta = byName.get(getModelDoctype(Model))!;
     const docType = toDocType(meta, schemaName, Model, placements[meta.name]);
     docType.tables = getTables(meta, byName, Model, placements);
     setDocType(schemaName, docType);
@@ -228,7 +229,10 @@ async function reloadCustomized(customized: unknown) {
       continue;
     }
 
-    setDocTypes([[schemaName, Model]], await getBooksMeta([Model.doctype]));
+    setDocTypes(
+      [[schemaName, Model]],
+      await getBooksMeta([getModelDoctype(Model)])
+    );
     // A customized table refreshes the rows of the open documents that hold it.
     const customizedSchema = toSchemaName(customized as string)!;
     for (const doc of getOpenFrappeDocs(schemaName)) {

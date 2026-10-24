@@ -12,6 +12,8 @@ const SET_FONT =
  */
 export class PrintSettings extends FrappeDoc {
   static override doctype = 'Books Print Settings';
+  // UI settings, kept in accessory mode
+  static override erpnextDoctype = 'Books Print Settings';
   static override presentation = {
     label: 'Print Settings',
     fields: {

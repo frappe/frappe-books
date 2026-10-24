@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksLocation(Document):
+class BooksWarehouse(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -16,6 +16,8 @@ class BooksLocation(Document):
 
 		address: DF.Link | None
 		company: DF.Link | None
+		is_group: DF.Check
+		warehouse_name: DF.Data
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Location"
+	_DOCTYPE_NAME = "Books Warehouse"

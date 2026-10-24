@@ -432,7 +432,7 @@ export const previousForms = {
     'Company.default_inventory_account': false,
     'Company.stock_received_but_not_billed': false,
     'Company.default_expense_account': false,
-    'Location.address': true,
+    'Warehouse.address': true,
     'StockEntry.naming_series': true,
     'StockEntryItem.item': true,
     'StockEntryItem.from_location': true,

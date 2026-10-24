@@ -147,7 +147,7 @@ function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
         ModelNameEnum.StockEntry,
         ModelNameEnum.DeliveryNote,
         ModelNameEnum.PurchaseReceipt,
-        ModelNameEnum.Location,
+        ModelNameEnum.Warehouse,
         ModelNameEnum.StockLedgerEntry,
       ],
     ],

@@ -43,7 +43,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Inventory",
-   "options": "Books Location",
+   "options": "Books Warehouse",
    "reqd": 1
   },
   {

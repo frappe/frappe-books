@@ -60,7 +60,7 @@ def bootstrap():
 		_insert_if_missing("Books Number Series", prefix, values)
 	for name, whole in DEFAULT_UOMS.items():
 		_insert_if_missing("Books UOM", name, {"uom_name": name, "must_be_whole_number": whole})
-	_insert_if_missing("Books Location", "Stores", {})
+	_insert_if_missing("Books Warehouse", "Stores", {"warehouse_name": "Stores"})
 	for method_type in ("Cash", "Bank"):
 		_insert_if_missing("Books Payment Method", method_type, {"type": method_type})
 	grant_core_permissions()

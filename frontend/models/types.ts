@@ -58,7 +58,7 @@ export enum ModelNameEnum {
   DeliveryNoteItem = 'DeliveryNoteItem',
   PurchaseReceipt = 'PurchaseReceipt',
   PurchaseReceiptItem = 'PurchaseReceiptItem',
-  Location = 'Location',
+  Warehouse = 'Warehouse',
   CustomForm = 'CustomForm',
   CustomField = 'CustomField',
   POSSettings = 'POSSettings',

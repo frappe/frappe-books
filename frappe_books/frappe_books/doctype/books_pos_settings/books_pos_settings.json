@@ -35,7 +35,7 @@
    "fieldname": "inventory",
    "fieldtype": "Link",
    "label": "Inventory",
-   "options": "Books Location"
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "pos_profile",

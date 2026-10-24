@@ -74,13 +74,13 @@
    "fieldname": "delivery_note_location",
    "fieldtype": "Link",
    "label": "Delivery Note Location",
-   "options": "Books Location"
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "purchase_receipt_location",
    "fieldtype": "Link",
    "label": "Purchase Receipt Location",
-   "options": "Books Location"
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "number_series_section_break_7",

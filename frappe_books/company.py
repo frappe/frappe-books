@@ -9,7 +9,7 @@ COMPANY_DOCTYPES = (
 	"Books Journal Entry",
 	"Books Lead",
 	"Books Ledger Entry",
-	"Books Location",
+	"Books Warehouse",
 	"Books Loyalty Point Entry",
 	"Books Loyalty Program",
 	"Books Payment",

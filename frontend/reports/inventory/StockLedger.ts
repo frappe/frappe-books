@@ -104,7 +104,7 @@ export class StockLedger extends Report {
       },
       {
         fieldtype: 'Link',
-        target: 'Location',
+        target: 'Warehouse',
         placeholder: t`Location`,
         label: t`Location`,
         fieldname: 'location',

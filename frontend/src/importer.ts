@@ -43,7 +43,7 @@ export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
       ModelNameEnum.StockEntry,
       ModelNameEnum.DeliveryNote,
       ModelNameEnum.PurchaseReceipt,
-      ModelNameEnum.Location
+      ModelNameEnum.Warehouse
     );
   }
 

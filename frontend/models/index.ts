@@ -34,7 +34,7 @@ import { ItemTaxTemplate } from './baseModels/ItemTaxTemplate/ItemTaxTemplate';
 import { UOM } from './baseModels/UOM/UOM';
 import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
-import { Location } from './inventory/Location';
+import { Warehouse } from './inventory/Warehouse';
 import { PurchaseReceipt } from './inventory/PurchaseReceipt';
 import { SerialNumber } from './inventory/SerialNumber';
 import { DeliveryNote } from './inventory/DeliveryNote';
@@ -85,7 +85,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   PricingRule,
   ItemTaxTemplate,
   InventorySettings,
-  Location,
+  Warehouse,
   StockLedgerEntry,
   StockEntry,
   Batch,

@@ -34,6 +34,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_number_series,
 	make_supplier,
+	make_warehouse,
 	set_company_value,
 	set_inventory_accounts,
 	stock_quantity,
@@ -375,7 +376,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		set_company_value("default_discount_account", cogs.name)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", "Stores")
-		location = frappe.get_doc({"doctype": "Books Location", "name": unique_name("POS Shelf")}).insert()
+		location = make_warehouse("POS Shelf")
 		profile = None
 		if use_profile:
 			profile = frappe.get_doc(

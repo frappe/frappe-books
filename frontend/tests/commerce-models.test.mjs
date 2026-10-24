@@ -29,7 +29,7 @@ const requests = await loadFrappeModels(frappeModels, (request) =>
 const hidden = (doc, fieldname) =>
   doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
-test('item group, unit, location, batch and serial number forms show what they showed', () => {
+test('item group, unit, warehouse, batch and serial number forms show what they showed', () => {
   assert.deepEqual(getLayout('ItemGroup'), [
     'image | Image |  | Default',
     'item_group_name | Item Group Name |  | Default',
@@ -40,8 +40,8 @@ test('item group, unit, location, batch and serial number forms show what they s
     'uom_name | UOM Name |  | Default',
     'must_be_whole_number | Must be Whole Number |  | Default',
   ]);
-  assert.deepEqual(getLayout('Location'), [
-    'name | Location Name |  | Default',
+  assert.deepEqual(getLayout('Warehouse'), [
+    'warehouse_name | Warehouse Name |  | Default',
     'address | Address |  | Default',
   ]);
   assert.deepEqual(getLayout('Batch'), [

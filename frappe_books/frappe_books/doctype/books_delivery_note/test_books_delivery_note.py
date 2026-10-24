@@ -24,6 +24,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	make_warehouse,
 	set_company_value,
 	set_inventory_accounts,
 	stock_quantity,
@@ -356,7 +357,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 	def test_empty_serial_numbers_are_the_earliest_in_stock_at_the_row_location(self):
 		item, _cogs, _stock = self._tracked_item(has_serial_no=1)
-		shelf = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shelf")}).insert().name
+		shelf = make_warehouse("Shelf").name
 		serials = [unique_name("SER") for _ in range(3)]
 		now = now_datetime()
 		seed_stock(item.name, quantity=1, rate=10, serial_number=serials[0], date=add_to_date(now, hours=-3))

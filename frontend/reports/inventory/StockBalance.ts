@@ -49,7 +49,7 @@ export class StockBalance extends StockLedger {
       },
       {
         fieldtype: 'Link',
-        target: 'Location',
+        target: 'Warehouse',
         placeholder: t`Location`,
         label: t`Location`,
         fieldname: 'location',

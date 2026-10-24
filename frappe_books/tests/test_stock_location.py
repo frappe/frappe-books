@@ -3,7 +3,13 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_books.inventory.availability import get_stock_location
 from frappe_books.inventory.transaction import fill_default_location
-from frappe_books.tests.accounting import make_account, make_item, set_company_value, unique_name
+from frappe_books.tests.accounting import (
+	make_account,
+	make_item,
+	make_warehouse,
+	set_company_value,
+	unique_name,
+)
 
 
 class IntegrationTestStockLocation(IntegrationTestCase):
@@ -65,4 +71,4 @@ def stock_location(source_schema, is_pos):
 
 
 def make_location(label):
-	return frappe.get_doc({"doctype": "Books Location", "name": unique_name(label)}).insert().name
+	return make_warehouse(label).name

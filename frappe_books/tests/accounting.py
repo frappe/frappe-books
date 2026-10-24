@@ -221,5 +221,9 @@ def make_number_series(reference_type):
 	)
 
 
+def make_warehouse(label):
+	return frappe.get_doc({"doctype": "Books Warehouse", "warehouse_name": unique_name(label)}).insert()
+
+
 def unique_name(label):
 	return f"{label} {frappe.generate_hash(length=8)}"

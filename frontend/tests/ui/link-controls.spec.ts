@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { holdOpenDoc } from './helpers/openDoc';
 import { useBooksSession } from './helpers/session';
 
-const locationName = 'Audit Saved Location';
+const warehouseName = 'Audit Saved Warehouse';
 // Frappe names an address by its title and type; a link shows the name.
 const addressName = 'Audit Address A-Billing';
 const addressLabel = addressName;
@@ -11,7 +11,7 @@ useBooksSession();
 
 test.beforeEach(async ({ page }) => {
   await installFixture(page);
-  await openFixture(page, 'Location', locationName);
+  await openFixture(page, 'Warehouse', warehouseName);
 });
 
 test('displaying and reopening a saved link does not edit the document', async ({
@@ -21,7 +21,7 @@ test('displaying and reopening a saved link does not edit the document', async (
   await expect(address).toHaveValue(addressLabel);
   await address.hover();
   await expect
-    .poll(() => getLocationState(page))
+    .poll(() => getWarehouseState(page))
     .toEqual({
       dirty: false,
       address: addressName,
@@ -32,9 +32,9 @@ test('displaying and reopening a saved link does not edit the document', async (
     fullPage: true,
   });
   await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
-  await openFixture(page, 'Location', locationName);
+  await openFixture(page, 'Warehouse', warehouseName);
   await expect(address).toHaveValue(addressLabel);
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: false,
     address: addressName,
   });
@@ -49,13 +49,13 @@ test('searching and dismissing link options preserves the saved ID and label', a
   await expect(
     page.getByRole('option', { name: 'Audit Address B' })
   ).toBeVisible();
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: false,
     address: addressName,
   });
   await address.press('Escape');
   await expect(address).toHaveValue(addressLabel);
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: false,
     address: addressName,
   });
@@ -71,7 +71,7 @@ test('selecting another address commits its ID and shows an unsaved edit', async
     .getByRole('option', { name: 'Audit Address B-Billing', exact: true })
     .click();
   await expect(address).toHaveValue('Audit Address B-Billing');
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: true,
     address: 'Audit Address B-Billing',
   });
@@ -83,7 +83,7 @@ test('clearing a link remains a real document edit', async ({ page }) => {
   await expect(address).toHaveValue(addressLabel);
   await address.fill('');
   await expect
-    .poll(() => getLocationState(page))
+    .poll(() => getWarehouseState(page))
     .toEqual({ dirty: true, address: null });
 });
 
@@ -134,7 +134,7 @@ test('creating a linked entry uses the search text without changing the saved li
   await expect(
     page.getByRole('textbox', { name: 'Address Title', exact: true })
   ).toHaveValue('New Audit Address');
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: false,
     address: addressName,
   });
@@ -149,13 +149,13 @@ test('cancelling a new linked record returns to its parent quick edit', async ({
       path: '/chart-of-accounts',
       query: {
         edit: '1',
-        schemaName: 'Location',
-        name: 'Audit Saved Location',
+        schemaName: 'Warehouse',
+        name: 'Audit Saved Warehouse',
       },
     });
   });
   const title = page.getByRole('heading', {
-    name: locationName,
+    name: warehouseName,
     exact: true,
     level: 2,
   });
@@ -164,18 +164,18 @@ test('cancelling a new linked record returns to its parent quick edit', async ({
   const address = page.getByRole('combobox', { name: 'Address', exact: true });
   // A label that loads while typing replaces the selected text.
   await expect(address).toHaveValue(addressLabel);
-  await address.fill(locationName);
+  await address.fill(warehouseName);
   await page.getByRole('option', { name: /^Create/ }).click();
   await expect(
     page.getByRole('textbox', { name: 'Address Title', exact: true })
-  ).toHaveValue(locationName);
+  ).toHaveValue(warehouseName);
   await page
     .getByRole('button', { name: 'Close quick edit', exact: true })
     .click();
   await expect(title).toBeVisible();
   await expect(page).toHaveURL(parentUrl);
   await expect(address).toHaveValue(addressLabel);
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: false,
     address: addressName,
   });
@@ -190,13 +190,13 @@ test('Escape dismisses account menus and dialogs without closing quick edit', as
       path: '/chart-of-accounts',
       query: {
         edit: '1',
-        schemaName: 'Location',
-        name: 'Audit Saved Location',
+        schemaName: 'Warehouse',
+        name: 'Audit Saved Warehouse',
       },
     });
   });
   const title = page.getByRole('heading', {
-    name: locationName,
+    name: warehouseName,
     exact: true,
     level: 2,
   });
@@ -228,7 +228,7 @@ test('Escape dismisses account menus and dialogs without closing quick edit', as
     .focus();
   await page.keyboard.press('Escape');
   await expect(title).toBeHidden();
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: false,
     address: addressName,
   });
@@ -241,11 +241,11 @@ test('one action opens one dismissible confirmation', async ({ page }) => {
   await expect(confirmation).toHaveCount(1);
   await expect(confirmation).toBeVisible();
   await confirmation
-    .getByRole('button', { name: 'Keep Location', exact: true })
+    .getByRole('button', { name: 'Keep Warehouse', exact: true })
     .hover();
   await page.keyboard.press('Escape');
   await expect(confirmation).toHaveCount(0);
-  expect(await getLocationState(page)).toEqual({
+  expect(await getWarehouseState(page)).toEqual({
     dirty: false,
     address: addressName,
   });
@@ -300,8 +300,8 @@ async function openFixture(page: Page, schemaName: string, name: string) {
   );
 }
 
-async function getLocationState(page: Page) {
-  await holdOpenDoc(page, 'Location');
+async function getWarehouseState(page: Page) {
+  await holdOpenDoc(page, 'Warehouse');
   return page.evaluate(() => {
     const doc = (window as any).openDoc;
     return { dirty: doc.dirty, address: doc.address || null };
@@ -316,7 +316,7 @@ async function getAddressState(page: Page) {
   });
 }
 
-/** The saved location and addresses the tests open; Frappe serves them, so they are stored. */
+/** The saved warehouse and addresses the tests open; Frappe serves them, so they are stored. */
 async function installFixture(page: Page) {
   const addresses = [
     ['Audit Address A', '103, Demo Commerce Street', 'Mumbai'],
@@ -333,8 +333,9 @@ async function installFixture(page: Page) {
     });
   }
 
-  await upsert(page, 'Books Location', {
-    name: locationName,
+  await upsert(page, 'Books Warehouse', {
+    name: warehouseName,
+    warehouse_name: warehouseName,
     address: addressName,
   });
 }

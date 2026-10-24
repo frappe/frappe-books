@@ -12,7 +12,7 @@ from frappe_books.frappe_books.doctype.books_stock_entry.test_books_stock_entry 
 )
 from frappe_books.inventory.valuation import next_state
 from frappe_books.reports.stock import get_ledger_data
-from frappe_books.tests.accounting import make_account, make_item, unique_name
+from frappe_books.tests.accounting import make_account, make_item, make_warehouse
 
 CENT = Decimal("0.01")
 
@@ -61,7 +61,7 @@ class IntegrationTestValuation(IntegrationTestCase):
 		self.assertEqual(entries[-1]["valuation_rate"], Decimal("10.00"))
 
 	def test_transfer_moves_stock_at_the_cost_it_leaves_with(self):
-		shop = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert().name
+		shop = make_warehouse("Shop").name
 		move(self.item, "MaterialReceipt", 2, 10)
 		move(self.item, "MaterialReceipt", 1, 20)
 		row = {"item": self.item, "from_location": "Stores", "to_location": shop, "quantity": 3, "rate": 99}

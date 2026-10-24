@@ -1,4 +1,3 @@
-import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.frappe_books.doctype.books_delivery_note.test_books_delivery_note import (
@@ -9,7 +8,7 @@ from frappe_books.frappe_books.doctype.books_stock_entry.test_books_stock_entry 
 	make_movement,
 )
 from frappe_books.inventory.availability import get_stock_quantities
-from frappe_books.tests.accounting import make_account, make_item
+from frappe_books.tests.accounting import make_account, make_item, make_warehouse
 
 
 class IntegrationTestStockQuantities(IntegrationTestCase):
@@ -23,7 +22,7 @@ class IntegrationTestStockQuantities(IntegrationTestCase):
 		seed_stock(item, quantity=2, rate=10, batch=first)
 		seed_stock(item, quantity=4, rate=10, batch=second)
 		seed_stock(other, quantity=1, rate=10)
-		location = frappe.get_doc({"doctype": "Books Location", "name": frappe.generate_hash()}).insert()
+		location = make_warehouse("Shelf")
 		make_movement(
 			"MaterialTransfer",
 			[

@@ -14,6 +14,7 @@ from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
 	make_item,
+	make_warehouse,
 	set_company_value,
 	stock_quantity,
 	unique_name,
@@ -27,9 +28,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		income = make_account("Income", root_type="Income")
 		received = make_account("Received", root_type="Liability")
 		self.item = make_item(income.name, received.name, is_stock_item=1)
-		self.warehouse = frappe.get_doc(
-			{"doctype": "Books Location", "name": unique_name("Warehouse")}
-		).insert()
+		self.warehouse = make_warehouse("Warehouse")
 
 	def test_receipt_transfer_availability_and_cancel(self):
 		receipt = make_movement(
@@ -376,7 +375,7 @@ class IntegrationTestStockEntryPostings(IntegrationTestCase):
 		set_company_value(
 			{"default_inventory_account": self.stock, "stock_adjustment_account": self.adjustment}
 		)
-		self.shop = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert().name
+		self.shop = make_warehouse("Shop").name
 
 	def test_each_movement_type_posts_its_net_stock_value(self):
 		receipt = self.submit("MaterialReceipt", [self.row(4, 10, to_location="Stores")])
@@ -415,7 +414,7 @@ class IntegrationTestStockEntryPostings(IntegrationTestCase):
 
 	def test_a_restated_transfer_passes_its_new_cost_on(self):
 		now = now_datetime()
-		warehouse = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Warehouse")}).insert()
+		warehouse = make_warehouse("Warehouse")
 		self.submit("MaterialReceipt", [self.row(5, 10, to_location="Stores")], add_to_date(now, hours=-4))
 		first = self.submit(
 			"MaterialTransfer",

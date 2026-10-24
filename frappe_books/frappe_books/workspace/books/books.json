@@ -28,7 +28,7 @@
   {"label":"Stock Entry","link_to":"Books Stock Entry","link_type":"DocType","type":"Link"},
   {"label":"Delivery Note","link_to":"Books Delivery Note","link_type":"DocType","type":"Link"},
   {"label":"Purchase Receipt","link_to":"Books Purchase Receipt","link_type":"DocType","type":"Link"},
-  {"label":"Location","link_to":"Books Location","link_type":"DocType","type":"Link"},
+  {"label":"Warehouse","link_to":"Books Warehouse","link_type":"DocType","type":"Link"},
   {"label":"Batch","link_to":"Books Batch","link_type":"DocType","type":"Link"},
   {"label":"Commerce","link_count":5,"type":"Card Break"},
   {"label":"Pricing Rule","link_to":"Books Pricing Rule","link_type":"DocType","type":"Link"},

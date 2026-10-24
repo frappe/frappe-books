@@ -107,8 +107,8 @@
   {
    "fieldname": "default_warehouse",
    "fieldtype": "Link",
-   "label": "Default Location",
-   "options": "Books Location"
+   "label": "Default Warehouse",
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "stock_accounts_section_break",

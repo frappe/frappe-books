@@ -36,7 +36,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "From Loc.",
-   "options": "Books Location",
+   "options": "Books Warehouse",
    "reqd": 1
   },
   {

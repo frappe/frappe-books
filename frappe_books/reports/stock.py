@@ -45,7 +45,7 @@ def get_ledger_columns() -> list[dict]:
 		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
 		{"fieldname": "date", "label": _("Date"), "fieldtype": "Datetime", "width": 150},
 		{"fieldname": "item", "label": _("Item"), "fieldtype": "Link", "options": "Books Item"},
-		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Location"},
+		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Warehouse"},
 		*_tracking_columns(show_serial_numbers=True),
 		{"fieldname": "quantity", "label": _("Quantity"), "fieldtype": "Float"},
 		{"fieldname": "balance_quantity", "label": _("Balance Qty."), "fieldtype": "Float"},
@@ -63,7 +63,7 @@ def get_balance_columns(filters) -> list[dict]:
 	columns = [
 		{"fieldname": "index", "label": "#", "fieldtype": "Int", "width": 60},
 		{"fieldname": "item", "label": _("Item"), "fieldtype": "Link", "options": "Books Item"},
-		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Location"},
+		{"fieldname": "location", "label": _("Location"), "fieldtype": "Link", "options": "Books Warehouse"},
 		*_tracking_columns(show_serial_numbers=_shows_serial_numbers(filters)),
 		{"fieldname": "balance_quantity", "label": _("Balance Qty."), "fieldtype": "Float"},
 		{"fieldname": "balance_value", "label": _("Balance Value"), "fieldtype": "Currency"},

@@ -34,7 +34,7 @@
    "in_list_view": 1,
    "label": "From",
    "mandatory_depends_on": "eval:['MaterialIssue', 'MaterialTransfer'].includes(parent.movement_type)",
-   "options": "Books Location",
+   "options": "Books Warehouse",
    "read_only_depends_on": "eval:parent.movement_type == 'MaterialReceipt'"
   },
   {
@@ -43,7 +43,7 @@
    "in_list_view": 1,
    "label": "To",
    "mandatory_depends_on": "eval:['MaterialReceipt', 'MaterialTransfer'].includes(parent.movement_type)",
-   "options": "Books Location",
+   "options": "Books Warehouse",
    "read_only_depends_on": "eval:parent.movement_type == 'MaterialIssue'"
   },
   {

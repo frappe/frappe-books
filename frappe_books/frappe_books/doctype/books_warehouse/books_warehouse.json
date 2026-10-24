@@ -3,21 +3,39 @@
  "allow_bulk_edit": 1,
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:warehouse_name",
  "creation": "2026-08-27 22:09:39.821113",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "warehouse_name",
   "address",
+  "is_group",
   "company"
  ],
  "fields": [
+  {
+   "fieldname": "warehouse_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Warehouse Name",
+   "reqd": 1,
+   "unique": 1
+  },
   {
    "fieldname": "address",
    "fieldtype": "Link",
    "label": "Address",
    "options": "Address"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_group",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Group Warehouse",
+   "read_only": 1
   },
   {
    "fieldname": "company",
@@ -30,10 +48,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-24 16:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Location",
+ "name": "Books Warehouse",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

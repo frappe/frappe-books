@@ -24,7 +24,7 @@
    "fieldname": "default_warehouse",
    "fieldtype": "Link",
    "label": "Warehouse",
-   "options": "Books Location"
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "income_account",

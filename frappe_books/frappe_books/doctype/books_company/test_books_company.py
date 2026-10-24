@@ -5,7 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.company import company_value, default_company, save_company
-from frappe_books.tests.accounting import unique_name
+from frappe_books.tests.accounting import make_warehouse
 
 
 class IntegrationTestBooksCompany(IntegrationTestCase):
@@ -27,13 +27,13 @@ class IntegrationTestBooksCompany(IntegrationTestCase):
 			self.assertEqual((company.country, company.default_currency), ("Switzerland", "CHF"))
 
 	def test_new_documents_belong_to_the_one_company(self):
-		location = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert()
+		location = make_warehouse("Shop")
 
 		self.assertEqual(location.company, default_company())
 
 	def test_the_company_takes_the_records_made_before_it(self):
 		frappe.db.delete("Books Company")
-		location = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert()
+		location = make_warehouse("Shop")
 		company = save_company({"company_name": "Lin's Things", "email": "lin@example.com"})
 
-		self.assertEqual(frappe.db.get_value("Books Location", location.name, "company"), company.name)
+		self.assertEqual(frappe.db.get_value("Books Warehouse", location.name, "company"), company.name)

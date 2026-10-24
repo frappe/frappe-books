@@ -48,7 +48,7 @@
    "fieldname": "location",
    "fieldtype": "Link",
    "label": "Location",
-   "options": "Books Location",
+   "options": "Books Warehouse",
    "read_only": 1,
    "search_index": 1
   },

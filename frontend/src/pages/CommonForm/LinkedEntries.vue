@@ -324,7 +324,7 @@ const linkSequence = [
   ModelNameEnum.Supplier,
   ModelNameEnum.Item,
   ModelNameEnum.Account,
-  ModelNameEnum.Location,
+  ModelNameEnum.Warehouse,
   // Ledgers
   ModelNameEnum.AccountingLedgerEntry,
   ModelNameEnum.StockLedgerEntry,

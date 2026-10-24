@@ -16,7 +16,7 @@ from frappe_books.tests.accounting import (
 	make_account,
 	make_customer,
 	make_item,
-	unique_name,
+	make_warehouse,
 )
 
 NO_ROLE_USER = "books-availability-no-role@example.com"
@@ -64,7 +64,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		)
 
 	def test_pos_sales_ship_from_the_pos_inventory(self):
-		location = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Counter")}).insert()
+		location = make_warehouse("Counter")
 		frappe.db.set_single_value("Books Pos Settings", {"inventory": location.name, "pos_profile": None})
 
 		self.assertEqual(get_stock_location("Books Sales Invoice", is_pos=True), location.name)

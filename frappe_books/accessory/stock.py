@@ -39,5 +39,6 @@ def _available(item: str, warehouse: str, batch: str, at) -> float:
 	"""ERPNext's stock of the item, or of its batch, at the warehouse, by the time when given."""
 	if batch:
 		return flt(get_batch_qty(batch, warehouse, item, posting_datetime=at))
-	date, time = (at.date(), at.time()) if at else (None, None)
+	# ERPNext's whitelisted signature takes the time as text.
+	date, time = (at.date(), at.time().isoformat()) if at else (None, None)
 	return flt(get_stock_balance(item, warehouse, date, time))

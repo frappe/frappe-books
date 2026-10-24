@@ -191,6 +191,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   previewError?: string;
   /** Rows edited since the server last answered a preview. */
   _rowsSincePreview = new Set<FrappeDoc>();
+  /** Fields the user edited since the server last answered a preview; ERPNext's preview refreshes what follows them. */
+  _editedSincePreview = new Set<string>();
 
   validations: ValidationMap = {};
   required: RequiredMap = {};
@@ -252,11 +254,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this.docstatus === 2;
   }
 
-  /** Books controllers preview; ERPNext documents have no preview yet, so accessory mode has none. */
   get previewMethod(): string | undefined {
-    return isAccessoryMode()
-      ? undefined
-      : (this.constructor as typeof FrappeDoc).previewMethod;
+    return (this.constructor as typeof FrappeDoc).previewMethod;
   }
 
   get namingField(): string | undefined {
@@ -1051,6 +1050,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
   async change({ changed }: ChangeArg) {
     if (changed) {
+      this._editedSincePreview.add(changed);
       this._serverFilled.delete(changed);
       const { refills } = this.constructor as typeof FrappeDoc;
       this.leaveToServer(refills[changed] ?? []);
@@ -1180,18 +1180,27 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
     this._isPreviewDue = false;
     this._rowsSincePreview.clear();
+    for (const doc of this._getDocAndRows()) {
+      doc._editedSincePreview.clear();
+    }
+
     if (previewed) {
       this.applyPreview(this.toDocValues(previewed));
     }
   }
 
-  /** The server's preview, or none for a document changed elsewhere, which only its save reports. */
+  /**
+   * The server's preview, or none for a document changed elsewhere, which
+   * only its save reports. ERPNext documents preview through ERPNext's code.
+   */
   async _fetchPreview(
     document: DocValues,
     kwargs?: Record<string, unknown>
   ): Promise<DocValues | undefined> {
     try {
-      return await api.runDocMethod(this.previewMethod!, document, kwargs);
+      return isAccessoryMode()
+        ? await api.previewERPNextDocument(document, this._getEdits())
+        : await api.runDocMethod(this.previewMethod!, document, kwargs);
     } catch (error) {
       if (error instanceof ConflictError) {
         return;
@@ -1199,6 +1208,18 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
       throw error;
     }
+  }
+
+  /** The fields edited since the last preview, of the document and of its rows by row name. */
+  _getEdits(): api.PreviewEdits {
+    const rows: Record<string, string[]> = {};
+    for (const row of this._getDocAndRows().slice(1)) {
+      if (row._editedSincePreview.size) {
+        rows[row.name!] = [...row._editedSincePreview];
+      }
+    }
+
+    return { doc: [...this._editedSincePreview], rows };
   }
 
   /**

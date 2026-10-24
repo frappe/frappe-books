@@ -85,6 +85,26 @@ export async function runDocMethod(
   return docs![0];
 }
 
+/** Fields edited since the last preview: the document's, and its rows' by row name. */
+export interface PreviewEdits {
+  doc: string[];
+  rows: Record<string, string[]>;
+}
+
+/**
+ * What ERPNext fills in a document on save, without saving it. Edits name
+ * what the user changed, so a new party or item refreshes what follows it.
+ */
+export async function previewERPNextDocument(
+  document: DocValues,
+  edits: PreviewEdits
+): Promise<DocValues> {
+  return await call<DocValues>('frappe_books.accessory.preview.preview', {
+    doc: document,
+    changed: edits,
+  });
+}
+
 export async function getDocuments(
   doctype: string,
   query: ListQuery

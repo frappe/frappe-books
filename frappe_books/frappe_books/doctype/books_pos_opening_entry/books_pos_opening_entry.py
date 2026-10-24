@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
+from frappe_books.accessory import forbid_in_accessory_mode
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.commerce.pos import (
 	cancel_cash_journal,
@@ -109,5 +110,6 @@ class BooksPOSOpeningEntry(Document):
 @frappe.whitelist()
 def get_open_shift() -> str | None:
 	"""Return the name of the open POS shift, if there is one."""
+	forbid_in_accessory_mode()
 	frappe.has_permission("Books POS Opening Entry", "read", throw=True)
 	return open_shift_name()

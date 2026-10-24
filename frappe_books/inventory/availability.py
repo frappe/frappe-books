@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, get_datetime
 
+from frappe_books.accessory import accessory_company, forbid_in_accessory_mode
 from frappe_books.accounting.money import as_decimal, plain_number
 from frappe_books.inventory.invoice_transfer import default_location
 
@@ -13,7 +14,11 @@ INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
 
 @frappe.whitelist()
 def get_stock_location(doctype: str, is_pos: bool = False) -> str | None:
-	"""Return where an invoice of the doctype moves its stock, as its stock transfer would."""
+	"""Return where an invoice of the doctype moves its stock, as its stock transfer would.
+
+	ERPNext rows name their warehouse, so accessory mode has no default location.
+	"""
+	forbid_in_accessory_mode()
 	# A quote ships like the sales invoice made from it.
 	invoice_doctype = "Books Sales Invoice" if doctype == "Books Quotation" else doctype
 	if invoice_doctype not in INVOICE_DOCTYPES:
@@ -43,11 +48,19 @@ def get_stock_quantities(
 
 
 @frappe.whitelist()
-def get_sale_shortfalls(items: list[dict], date: str | None = None, is_pos: bool = False) -> list[dict]:
+def get_sale_shortfalls(
+	items: list[dict], date: str | None = None, is_pos: bool = False, warehouse: str | None = None
+) -> list[dict]:
 	"""Return how much of each tracked item, or of its batch, a sale lacks where it ships from, on the date when given.
 
-	`items` are invoice rows' item_code, batch_no and stock_qty.
+	`items` are invoice rows' item_code, batch_no and stock_qty. In accessory mode
+	a sale ships from each row's warehouse, else from `warehouse`.
 	"""
+	if accessory_company():
+		from frappe_books.accessory.stock import get_sale_shortfalls as get_erpnext_shortfalls
+
+		return get_erpnext_shortfalls(items, date, warehouse)
+
 	required, available = _sale_stock(items, date, is_pos)
 	return [
 		{"item_code": item, "batch_no": batch or None, "stock_qty": quantity - available[item, batch]}

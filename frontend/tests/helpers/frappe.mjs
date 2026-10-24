@@ -41,6 +41,8 @@ await build({
       export { deskTheme, getColorScheme } from './src/utils/theme';
       export { default as ListView } from './src/pages/ListView/ListView.vue';
       export { default as POS } from './src/pages/POS/POS.vue';
+      export { default as LinkedRecordsSection } from './src/pages/CommonForm/LinkedRecordsSection.vue';
+      export { getEmptyState } from './src/pages/ListView/listColumns';
       export { default as router } from 'src/router';
       export { ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
@@ -90,7 +92,10 @@ await build({
         }));
         // Components under test keep their script; the rest are stubs.
         builder.onLoad(
-          { filter: /(ListView\/ListView|pages\/POS\/POS)\.vue$/ },
+          {
+            filter:
+              /(ListView\/ListView|pages\/POS\/POS|CommonForm\/LinkedRecordsSection)\.vue$/,
+          },
           async (args) => ({
             contents: (await readFile(args.path, 'utf8')).match(
               /<script[^>]*>([\s\S]*?)<\/script>/
@@ -211,6 +216,8 @@ export const {
   getColorScheme,
   ListView,
   POS,
+  LinkedRecordsSection,
+  getEmptyState,
   router,
 } = createRequire(import.meta.url)(output);
 

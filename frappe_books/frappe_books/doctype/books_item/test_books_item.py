@@ -26,17 +26,25 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 class IntegrationTestBooksItem(IntegrationTestCase):
-	def test_validates_hsn_barcode_and_rate(self):
+	def test_validates_hsn_and_rate(self):
 		income = make_account("Item Sales", root_type="Income", account_type="Income Account")
 		expense = make_account("Item Expense", root_type="Expense", account_type="Expense Account")
 		with self.assertRaises(frappe.ValidationError):
 			make_item(income.name, expense.name, hsn_code="12A4")
-		with self.assertRaises(frappe.ValidationError):
-			make_item(income.name, expense.name, barcode="123")
 		with self.assertRaises(frappe.NonNegativeError):
 			make_item(income.name, expense.name, rate=-1)
-		item = make_item(income.name, expense.name, hsn_code="123456", barcode="123456789012")
+		item = make_item(income.name, expense.name, hsn_code="123456")
 		self.assertEqual(item.hsn_code, "123456")
+
+	def test_a_barcode_of_any_length_names_one_item(self):
+		income = make_account("Item Sales", root_type="Income", account_type="Income Account")
+		expense = make_account("Item Expense", root_type="Expense", account_type="Expense Account")
+		code = frappe.generate_hash(length=5)
+		item = make_item(income.name, expense.name, barcodes=[{"barcode": code}])
+
+		self.assertEqual([row.barcode for row in item.barcodes], [code])
+		with self.assertRaises(frappe.UniqueValidationError):
+			make_item(income.name, expense.name, barcodes=[{"barcode": code}])
 
 	def test_item_group_hsn_code_must_contain_four_to_eight_digits(self):
 		group = frappe.get_doc(

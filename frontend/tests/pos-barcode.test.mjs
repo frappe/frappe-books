@@ -92,6 +92,18 @@ test('a scan looks up only the items its code, or its scale item code, may name'
   ]);
 });
 
+test('a scan finds an item by any of its barcodes, listed once', async () => {
+  fyo.singles.POSSettings = {};
+  // A barcode filter joins the item once per barcode row.
+  stubFrappe(() => ({ message: [riceRow, riceRow] }));
+  const { item, quantity } = await posItemSearch.getScannedItem('12345');
+
+  assert.deepEqual(
+    [item.name, item.barcodes, quantity],
+    ['Basmati Rice', ['12345', '890000000001'], 1]
+  );
+});
+
 test('a blank code looks nothing up', async () => {
   const requests = stubFrappe(() => ({ message: [riceRow] }));
   assert.equal(await posItemSearch.getScannedItem('  '), undefined);

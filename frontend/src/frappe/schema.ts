@@ -51,6 +51,8 @@ export interface Presentation {
   mobileTableFields?: string[];
   /** The field a phone row shows under its amount, labelled. */
   mobileRowDetail?: string;
+  /** Phone row fields shown with their labels, like a reference's Outstanding; the amount's label goes under it. */
+  mobileLabelledFields?: string[];
   /**
    * The fields of list exports, import templates and quick views, in Books'
    * order, where it differs from the DocType's; fields the server fills are
@@ -150,6 +152,7 @@ export function toSchema(
     fileFields: presentation.fileFields,
     mobileTableFields: presentation.mobileTableFields,
     mobileRowDetail: presentation.mobileRowDetail,
+    mobileLabelledFields: presentation.mobileLabelledFields,
     tableFields:
       presentation.tableFields ??
       meta.fields

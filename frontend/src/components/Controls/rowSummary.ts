@@ -11,6 +11,8 @@ export interface RowSummary {
   amount: string;
   /** A labelled value under the amount, e.g. a tax row's running total. */
   detail?: string;
+  /** What the amount is, under it, e.g. a reference's Allocated. */
+  amountLabel?: string;
   /** The last preview failed on this row, so its amounts are unknown. */
   failed?: boolean;
 }
@@ -24,12 +26,15 @@ const taxRateFields = ['rate', 'tax_rate'];
 /**
  * Phone summary of a table row: the first column, a closing amount, the
  * rest, and the detail field under the amount. Fields the row's depends_on
- * hides are left out; amounts being calculated say so.
+ * hides are left out; amounts being calculated say so. Labelled fields show
+ * their labels, the amount's under it. A row edited before a failed preview
+ * is marked failed.
  */
 export function getRowSummary(
   row: FrappeDoc,
   fields: Field[],
-  detailField?: Field
+  detailField?: Field,
+  labelledFields: string[] = []
 ): RowSummary {
   const [titleField, ...rest] = fields;
   const amountField = getAmountField(fields);
@@ -45,9 +50,13 @@ export function getRowSummary(
   return {
     title: titleField ? formatCell(row, titleField) : '',
     amount: amountField ? formatAmount(row, amountField, state) : '',
-    meta: getMeta(row, metaFields),
+    meta: getMeta(row, metaFields, labelledFields),
     detail,
-    failed: state === 'failed',
+    amountLabel:
+      amountField && labelledFields.includes(amountField.fieldname)
+        ? amountField.label
+        : undefined,
+    failed: state === 'failed' || !!row.parentdoc?.isRowFailed(row),
   };
 }
 
@@ -70,7 +79,7 @@ export function getAmountField(fields: Field[]): Field | undefined {
   return last?.fieldtype === FieldTypeEnum.Currency ? last : undefined;
 }
 
-function getMeta(row: FrappeDoc, fields: Field[]) {
+function getMeta(row: FrappeDoc, fields: Field[], labelled: string[]) {
   const quantity = fields.find((f) => quantityFields.includes(f.fieldname));
   const rate = fields.find(
     (f) =>
@@ -83,7 +92,9 @@ function getMeta(row: FrappeDoc, fields: Field[]) {
 
   for (const field of fields) {
     if (!pairQuantity || (field !== quantity && field !== rate)) {
-      parts.push(formatCell(row, field));
+      const value = formatCell(row, field);
+      const isLabelled = value && labelled.includes(field.fieldname);
+      parts.push(isLabelled ? `${field.label} ${value}` : value);
     }
   }
 

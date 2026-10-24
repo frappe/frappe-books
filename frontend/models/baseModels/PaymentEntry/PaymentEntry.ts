@@ -101,7 +101,10 @@ export class PaymentEntry extends FrappeDoc {
   }
 
   // A transfer moves the company's own money, so nothing is written off.
-  hidden: HiddenMap = { write_off: () => this.isTransfer };
+  hidden: HiddenMap = {
+    write_off: () =>
+      this.isTransfer || (!this.canEdit && this.write_off.isZero()),
+  };
 
   get isTransfer(): boolean {
     return this.payment_type === PaymentTypeEnum.InternalTransfer;

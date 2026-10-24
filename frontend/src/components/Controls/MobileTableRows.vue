@@ -35,6 +35,7 @@
           meta,
           amount,
           detail,
+          amountLabel,
           failed,
         } of summaries"
         :key="row.name"
@@ -75,6 +76,12 @@
               dir="ltr"
             >
               {{ detail }}
+            </span>
+            <span
+              v-else-if="amountLabel && !failed"
+              class="mt-0.5 text-md text-ink-gray-5"
+            >
+              {{ amountLabel }}
             </span>
           </div>
           <span
@@ -120,6 +127,8 @@ const props = defineProps<{
   emptyMessage?: string;
   /** The field each row shows under its amount. */
   detailField?: Field;
+  /** Fields shown with their labels; see `getRowSummary`. */
+  labelledFields?: string[];
 }>();
 
 defineEmits<{ edit: [row: FrappeDoc]; add: [] }>();
@@ -127,7 +136,12 @@ defineEmits<{ edit: [row: FrappeDoc]; add: [] }>();
 const summaries = computed(() =>
   props.rows.map((row) => ({
     row,
-    ...getRowSummary(row, props.fields, props.detailField),
+    ...getRowSummary(
+      row,
+      props.fields,
+      props.detailField,
+      props.labelledFields
+    ),
   }))
 );
 

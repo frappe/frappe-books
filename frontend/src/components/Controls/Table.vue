@@ -10,6 +10,7 @@
       :rows="value"
       :fields="mobileTableFields"
       :detail-field="mobileRowDetail"
+      :labelled-fields="mobileLabelledFields"
       :can-add="canAddRemoveRows"
       :title="title"
       :empty-message="df.emptyMessage"
@@ -295,6 +296,9 @@ export default {
     mobileRowDetail() {
       const fieldname = getSchema(this.df.target)?.mobileRowDetail;
       return fieldname ? getFields(this.df.target, [fieldname])[0] : undefined;
+    },
+    mobileLabelledFields() {
+      return getSchema(this.df.target)?.mobileLabelledFields ?? [];
     },
   },
   methods: {

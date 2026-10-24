@@ -22,6 +22,7 @@ export class PaymentEntryReference extends FrappeDoc {
       'outstanding_amount',
       'allocated_amount',
     ],
+    mobileLabelledFields: ['outstanding_amount', 'allocated_amount'],
   };
   static override calculatedFields = ['total_amount', 'outstanding_amount'];
   // A new invoice's total and what it owes, which the server reads.

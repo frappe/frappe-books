@@ -217,10 +217,10 @@ test('the import file puts each document’s rows together, its values on the fi
 
 test('named documents import their name under the DocType’s fieldname', async () => {
   const lead = new Importer('Lead', fyo);
-  lead.assignedTemplateFields = ['Lead.name', 'Lead.email'];
+  lead.assignedTemplateFields = ['Lead.lead_name', 'Lead.email_id'];
   lead.valueMatrix = [[{ value: 'Ann' }, { value: 'ann@example.com' }]];
   assert.deepEqual(importRows(lead), [
-    ['docstatus', 'name', 'email'],
+    ['docstatus', 'lead_name', 'email_id'],
     ['0', 'Ann', 'ann@example.com'],
   ]);
 

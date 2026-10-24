@@ -76,11 +76,11 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 			self.invoice(is_pos=1)
 
 	def test_leads_need_the_lead_feature(self):
-		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Lead")}).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
 		self.switch_off("enable_lead")
 
 		with self.assertRaisesRegex(frappe.ValidationError, f"Lead {OFF}"):
-			frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Lead")}).insert()
+			frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
 		with self.assertRaisesRegex(frappe.ValidationError, f"Lead {OFF}"):
 			make_invoice(
 				"Books Quotation",

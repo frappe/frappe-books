@@ -11,7 +11,7 @@ from frappe_books.tests.accounting import unique_name
 
 class IntegrationTestDocumentSave(IntegrationTestCase):
 	def test_party_converts_the_linked_lead_even_when_the_names_differ(self):
-		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Source Lead")}).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Source Lead")}).insert()
 		party = frappe.get_doc(
 			{
 				"doctype": "Books Customer",
@@ -23,7 +23,7 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		self.assertEqual(lead.reload().status, "Converted")
 
 	def test_deleting_a_converted_party_reopens_its_lead(self):
-		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Source Lead")}).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Source Lead")}).insert()
 		party = frappe.get_doc(
 			{
 				"doctype": "Books Customer",
@@ -37,7 +37,7 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		self.assertEqual(lead.reload().status, "Interested")
 
 	def test_rejected_lead_conversion_fails_the_party_insert(self):
-		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Source Lead")}).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Source Lead")}).insert()
 		with patch.object(BooksLead, "validate", self.reject_save, create=True):
 			with self.assertRaises(frappe.ValidationError):
 				frappe.get_doc(

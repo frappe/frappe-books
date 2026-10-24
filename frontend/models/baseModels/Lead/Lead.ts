@@ -7,18 +7,17 @@ import {
 import { getLeadActions, getLeadStatusColumn } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
 
-/** Books Lead, served by Frappe. Its server mappers make customers and quotes. */
+/** Books Lead, served by Frappe and named by its Full Name. Its server mappers make customers and quotes. */
 export class Lead extends FrappeDoc {
   static override doctype = 'Books Lead';
   static override presentation = {
     label: 'Lead',
-    nameField: { label: 'Name', placeholder: 'Full Name' },
   };
 
   // Frappe checks these on save; mirrored to show its message at the field.
   validations: ValidationMap = {
-    email: validateEmail,
-    mobile: validatePhoneNumber,
+    email_id: validateEmail,
+    mobile_no: validatePhoneNumber,
   };
 
   static getActions(fyo: Fyo): Action[] {
@@ -27,7 +26,7 @@ export class Lead extends FrappeDoc {
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', getLeadStatusColumn(), 'email', 'mobile'],
+      columns: ['name', getLeadStatusColumn(), 'email_id', 'mobile_no'],
     };
   }
 }

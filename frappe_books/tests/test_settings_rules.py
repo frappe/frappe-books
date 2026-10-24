@@ -100,8 +100,16 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 				{"customer_name": unique_name("Format Test"), "mobile_no": "call me"},
 				frappe.InvalidPhoneNumberError,
 			),
-			("Books Lead", {"email": "not-an-email"}, frappe.InvalidEmailAddressError),
-			("Books Lead", {"mobile": "call me"}, frappe.InvalidPhoneNumberError),
+			(
+				"Books Lead",
+				{"lead_name": unique_name("Format Test"), "email_id": "not-an-email"},
+				frappe.InvalidEmailAddressError,
+			),
+			(
+				"Books Lead",
+				{"lead_name": unique_name("Format Test"), "mobile_no": "call me"},
+				frappe.InvalidPhoneNumberError,
+			),
 		]
 		for doctype, values, error in invalid_values:
 			with self.subTest(doctype=doctype, values=values):

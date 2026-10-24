@@ -43,6 +43,19 @@ def make_primary_records(party):
 			party.db_set(fieldname, record.name)
 
 
+def link_lead_records(customer):
+	"""Link the Contacts and Addresses of the customer's lead to it, as ERPNext does."""
+	if not customer.lead_name:
+		return
+	filters = {
+		"parenttype": ("in", ("Contact", "Address")),
+		"link_doctype": "Books Lead",
+		"link_name": customer.lead_name,
+	}
+	for link in frappe.get_all("Dynamic Link", filters=filters, fields=["parenttype", "parent"]):
+		_link(frappe.get_doc(link.parenttype, link.parent), customer)
+
+
 def delete_primary_records(party):
 	"""Delete the Contacts and Addresses only the party links to, and unlink the rest, as ERPNext does."""
 	party.db_set(

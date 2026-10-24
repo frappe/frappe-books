@@ -205,21 +205,25 @@ test('an address lists Indian states for India and has no place of supply', () =
 
 test('the lead form and list show what they showed, status coloured by state', () => {
   assert.deepEqual(getLayout('Lead'), [
-    'name | Name | Full Name | Default',
+    'lead_name | Full Name | Full Name | Default',
     'status | Status |  | Default',
-    'email | Email | john@doe.com | Contacts',
-    'mobile | Mobile | Mobile | Contacts',
-    'address | Address |  | Contacts',
+    'email_id | Email | john@doe.com | Contacts',
+    'mobile_no | Mobile No | Mobile | Contacts',
   ]);
-  assert.deepEqual(getColumns('Lead'), ['name', 'status', 'email', 'mobile']);
+  assert.deepEqual(getColumns('Lead'), [
+    'name',
+    'status',
+    'email_id',
+    'mobile_no',
+  ]);
   const [, status] = getModel('Lead').getListViewSettings().columns;
   const schema = getSchema('Lead');
   assert.deepEqual(status.badge({ schema, status: 'Converted' }), {
     label: 'Converted',
     theme: 'green',
   });
-  assert.deepEqual(status.badge({ schema, status: 'Do not Contact' }), {
-    label: 'Do not Contact',
+  assert.deepEqual(status.badge({ schema, status: 'Do Not Contact' }), {
+    label: 'Do Not Contact',
     theme: 'red',
   });
 });
@@ -237,15 +241,15 @@ test('a lead makes a customer or a quote once saved', () => {
 
 test('lead contacts are checked as Frappe checks them, with the Books messages', async () => {
   const lead = newFrappeDoc('Lead', { name: 'Asha' });
-  await assert.rejects(lead.set('email', 'asha@'), {
+  await assert.rejects(lead.set('email_id', 'asha@'), {
     message: 'Invalid email: asha@',
   });
-  await assert.rejects(lead.set('mobile', '98x'), {
+  await assert.rejects(lead.set('mobile_no', '98x'), {
     message: 'Invalid phone: 98x',
   });
-  await lead.set('email', 'Asha <asha@example.com>, ops@example.com');
-  await lead.set('mobile', '+91 (22) 555-0199');
-  assert.equal(lead.mobile, '+91 (22) 555-0199');
+  await lead.set('email_id', 'Asha <asha@example.com>, ops@example.com');
+  await lead.set('mobile_no', '+91 (22) 555-0199');
+  assert.equal(lead.mobile_no, '+91 (22) 555-0199');
 });
 
 test('a lead makes its customer with the server mapper, as an unsaved customer', async () => {

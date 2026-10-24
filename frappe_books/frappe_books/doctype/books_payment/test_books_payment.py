@@ -312,7 +312,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self.assertEqual([row.amount for row in payment.payment_references], [100, 180])
 
 	def test_a_payment_party_is_a_customer_or_a_supplier(self):
-		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Lead")}).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
 		payment = self._payment(self.invoice, party_type="Books Lead", party=lead.name)
 
 		self.assertRaisesRegex(frappe.ValidationError, "must be Customer or Supplier", payment.insert)

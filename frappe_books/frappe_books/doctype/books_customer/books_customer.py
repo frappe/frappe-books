@@ -4,6 +4,7 @@
 import frappe
 
 from frappe_books.accounting.party import PartyController, map_invoice
+from frappe_books.accounting.party_contacts import link_lead_records
 from frappe_books.settings import require_features
 
 
@@ -43,6 +44,10 @@ class BooksCustomer(PartyController):
 	def validate(self):
 		require_features(self, {"loyalty_program": "enable_loyalty_program"})
 		super().validate()
+
+	def after_insert(self):
+		super().after_insert()
+		link_lead_records(self)
 
 	def on_update(self):
 		if not self.lead_name:

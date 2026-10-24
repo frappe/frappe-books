@@ -103,7 +103,10 @@ test('a lead makes its customer through the server mapper', async ({
 }) => {
   const lead = `Form Lead ${Date.now()}`;
   await updateSingle(page, 'Books Accounting Settings', { enable_lead: 1 });
-  await insert(page, 'Books Lead', { name: lead, email: 'lead@example.com' });
+  await insert(page, 'Books Lead', {
+    lead_name: lead,
+    email_id: 'lead@example.com',
+  });
   await page.goto(`/books/edit/Lead/${encodeURIComponent(lead)}`);
   await waitForBooks(page);
 

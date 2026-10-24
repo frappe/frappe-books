@@ -37,7 +37,7 @@ class IntegrationTestBooksQuotation(IntegrationTestCase):
 		income = make_account("Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Expense", root_type="Expense", account_type="Expense Account")
 		item = make_item(income.name, expense.name)
-		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Lead")}).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
 		frappe.get_doc(
 			{
 				"doctype": "Books Quotation",

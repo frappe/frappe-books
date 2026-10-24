@@ -165,9 +165,9 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		lead = frappe.get_doc(
 			{
 				"doctype": "Books Lead",
-				"name": unique_name("Lead"),
-				"email": "lead@example.com",
-				"mobile": "9876543210",
+				"lead_name": unique_name("Lead"),
+				"email_id": "lead@example.com",
+				"mobile_no": "9876543210",
 			}
 		).insert()
 
@@ -176,25 +176,25 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 
 		self.assertEqual(
 			(customer.doctype, customer.name, customer.email_id, customer.mobile_no, customer.lead_name),
-			("Books Customer", lead.name, lead.email, lead.mobile, lead.name),
+			("Books Customer", lead.name, lead.email_id, lead.mobile_no, lead.name),
 		)
 		self.assertEqual((quotation.party_name, quotation.quotation_to), (lead.name, "Books Lead"))
 		customer.insert()
 		self.assertEqual(lead.reload().status, "Converted")
 		self.assertEqual(
-			frappe.db.get_value("Contact", customer.customer_primary_contact, "email_id"), lead.email
+			frappe.db.get_value("Contact", customer.customer_primary_contact, "email_id"), lead.email_id
 		)
 
 	def test_a_lead_address_becomes_the_customers_primary_address(self):
-		address = make_address()
-		lead = frappe.get_doc(
-			{"doctype": "Books Lead", "name": unique_name("Lead"), "address": address.name}
-		).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
+		links = [{"link_doctype": lead.doctype, "link_name": lead.name}]
+		other, address = make_address(links=links), make_address(links=links, is_primary_address=1)
 
 		customer = books_lead.make_customer(lead.name).insert()
 
 		self.assertEqual(customer.customer_primary_address, address.name)
-		self.assertTrue(frappe.get_doc("Address", address.name).has_link("Books Customer", customer.name))
+		for name in (address.name, other.name):
+			self.assertTrue(frappe.get_doc("Address", name).has_link("Books Customer", customer.name))
 
 	def test_customer_maps_to_an_invoice_with_its_defaults(self):
 		receivable = make_account("Mapped Receivable", account_type="Receivable")

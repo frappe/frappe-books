@@ -97,7 +97,9 @@ test('leaving a sale with items asks to save or discard it', async ({
 
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
   for (const name of ['Cancel', 'Discard and continue', 'Save and continue']) {
-    await expect(dialog.getByRole('button', { name, exact: true })).toBeVisible();
+    await expect(
+      dialog.getByRole('button', { name, exact: true })
+    ).toBeVisible();
   }
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -134,9 +136,13 @@ test('leaving a submitted sale offers only to leave or stay', async ({
   });
 
   const dialog = page.getByRole('dialog', { name: 'Leave this sale?' });
-  await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: 'Cancel', exact: true })
+  ).toBeVisible();
   for (const name of ['Save and continue', 'Discard and continue']) {
-    await expect(dialog.getByRole('button', { name, exact: true })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name, exact: true })).toHaveCount(
+      0
+    );
   }
   await dialog.getByRole('button', { name: 'Leave', exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -159,7 +165,9 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   await page.evaluate(() => {
     const { invoice } = (window as any).posFixture.state;
     const document = invoice.getMethodDocument({ keepRowNames: true });
-    invoice.applyPreview(invoice.toDocValues({ ...document, coupon_code: null }));
+    invoice.applyPreview(
+      invoice.toDocValues({ ...document, coupon_code: null })
+    );
   });
   await expect(
     page.getByText('Coupon FOSSCLUB no longer applies, so it was removed.')
@@ -169,9 +177,7 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   ).toBeVisible();
 });
 
-test('Done keeps the applied coupon after a refused code', async ({
-  page,
-}) => {
+test('Done keeps the applied coupon after a refused code', async ({ page }) => {
   await page.evaluate(() => {
     const { fillCart, state } = (window as any).posFixture;
     fillCart();
@@ -192,12 +198,28 @@ test('Done keeps the applied coupon after a refused code', async ({
   ).toBeVisible();
 });
 
+test('a typed coupon code applies the coupon it names', async ({ page }) => {
+  await page.evaluate(() => (window as any).posFixture.fillCart());
+  await page.getByRole('button', { name: 'Coupon', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Coupon code', exact: true });
+  await dialog.getByRole('combobox').fill('CLUB10');
+  await dialog.getByRole('combobox').press('Enter');
+
+  await expect(dialog.getByText('Club Offer', { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as any).posFixture.pos.sinvDoc.coupon_code
+    )
+  ).toBe('Club Offer');
+});
+
 test('a long price list name wraps instead of leaving the cart', async ({
   page,
 }) => {
   await page.evaluate(() => {
     const { state } = (window as any).posFixture;
-    state.invoice.selling_price_list = 'Partner Price List 2026-27 for Resellers';
+    state.invoice.selling_price_list =
+      'Partner Price List 2026-27 for Resellers';
   });
   const cart = page.getByRole('complementary', { name: 'Cart' });
   const priceList = cart.getByRole('button', { name: /Partner Price List/ });
@@ -237,8 +259,12 @@ test('a submitted invoice from Held offers only its payment', async ({
     })
   );
   const dialog = page.getByRole('dialog', { name: 'Payment' });
-  await expect(dialog.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Submit unpaid' })).toHaveCount(0);
+  await expect(
+    dialog.getByRole('button', { name: 'Pay', exact: true })
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole('button', { name: 'Submit unpaid' })
+  ).toHaveCount(0);
 });
 
 test('a submitted invoice in the cart offers nothing that changes its totals', async ({
@@ -256,7 +282,9 @@ test('a submitted invoice in the cart offers nothing that changes its totals', a
     'Decrease quantity',
     'Remove item',
   ]) {
-    await expect(cart.getByRole('button', { name, exact: true })).toHaveCount(0);
+    await expect(cart.getByRole('button', { name, exact: true })).toHaveCount(
+      0
+    );
   }
   await expect(cart.getByRole('combobox')).toHaveCount(0);
 
@@ -271,15 +299,18 @@ test('a submitted invoice in the cart offers nothing that changes its totals', a
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('a picked batch shows its stock at the POS location', async ({
-  page,
-}) => {
+test('a picked batch shows its stock at the POS location', async ({ page }) => {
   await page
     .getByLabel('Add Roasted Arabica Coffee Beans', { exact: true })
     .click();
-  const dialog = page.getByRole('dialog', { name: 'Select batch', exact: true });
+  const dialog = page.getByRole('dialog', {
+    name: 'Select batch',
+    exact: true,
+  });
   await dialog.getByRole('combobox').fill('COFFEE');
-  await page.getByRole('option', { name: 'COFFEE-2026-09', exact: true }).click();
+  await page
+    .getByRole('option', { name: 'COFFEE-2026-09', exact: true })
+    .click();
   await dialog.getByRole('button', { name: 'Select', exact: true }).click();
   await expect(dialog).toBeHidden();
 
@@ -387,7 +418,10 @@ for (const modern of [true, false]) {
       .getByRole('list', { name: 'Cart' })
       .getByRole('listitem')
       .first();
-    const remove = row.getByRole('button', { name: 'Remove item', exact: true });
+    const remove = row.getByRole('button', {
+      name: 'Remove item',
+      exact: true,
+    });
     await expect(
       row.getByRole('button', { name: 'Increase quantity', exact: true })
     ).toBeVisible();
@@ -406,9 +440,7 @@ for (const modern of [true, false]) {
     await expect(
       row.getByRole('button', { name: /^Organic Assam Tea/ })
     ).toHaveAttribute('aria-expanded', 'true');
-    await page
-      .getByRole('textbox', { name: 'Quantity', exact: true })
-      .click();
+    await page.getByRole('textbox', { name: 'Quantity', exact: true }).click();
     const keypad = page.getByRole('dialog', { name: 'Quantity', exact: true });
     if (modern) {
       await expect(keypad).toBeVisible();
@@ -569,13 +601,21 @@ async function showModal(page: Page, name: string) {
 }
 
 for (const dark of [false, true]) {
-  test(`link actions share their size and hover styling in ${dark ? 'dark' : 'light'} mode`, async ({ page }) => {
+  test(`link actions share their size and hover styling in ${dark ? 'dark' : 'light'} mode`, async ({
+    page,
+  }) => {
     await page.evaluate((dark) => {
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     }, dark);
-    const clear = page.getByRole('button', { name: 'Clear value', exact: true }).first();
-    const linked = page.getByRole('button', { name: 'Open linked entry', exact: true }).first();
-    const options = clear.locator('..').getByRole('button', { name: 'Open options', exact: true });
+    const clear = page
+      .getByRole('button', { name: 'Clear value', exact: true })
+      .first();
+    const linked = page
+      .getByRole('button', { name: 'Open linked entry', exact: true })
+      .first();
+    const options = clear
+      .locator('..')
+      .getByRole('button', { name: 'Open options', exact: true });
     const preview = page.locator('[data-slot="content"]').filter({
       has: page.getByText('Customer', { exact: true }),
     });
@@ -584,13 +624,19 @@ for (const dark of [false, true]) {
     expect(await actionStyle(linked)).toEqual(normal);
     expect(await actionStyle(options)).toEqual(normal);
     await clear.hover();
-    await page.screenshot({ animations: 'disabled', path: test.info().outputPath('clear-hover.png') });
+    await page.screenshot({
+      animations: 'disabled',
+      path: test.info().outputPath('clear-hover.png'),
+    });
     const hovered = await actionStyle(clear);
     expect(hovered.backgroundColor).not.toBe(normal.backgroundColor);
     await linked.hover();
     await expect(preview).toBeVisible();
     await expect.poll(() => actionStyle(linked)).toEqual(hovered);
-    await page.screenshot({ animations: 'disabled', path: test.info().outputPath('linked-hover.png') });
+    await page.screenshot({
+      animations: 'disabled',
+      path: test.info().outputPath('linked-hover.png'),
+    });
     await options.hover();
     await expect.poll(() => actionStyle(options)).toEqual(hovered);
     await expect(preview).toBeHidden();
@@ -602,13 +648,19 @@ for (const dark of [false, true]) {
     await expect(options).toBeFocused();
     await expect(preview).toBeHidden();
     await options.click();
-    await expect(page.getByRole('option', { name: 'Aarav Shah', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('option', { name: 'Aarav Shah', exact: true })
+    ).toBeVisible();
     await page.keyboard.press('Escape');
     await clear.click();
     await expect(clear).toBeHidden();
     await page.getByRole('option', { name: 'Aarav Shah', exact: true }).click();
     await expect(clear).toBeVisible();
-    expect(await page.evaluate(() => (window as any).posFixture.state.invoice.customer)).toBe('Aarav Shah');
+    expect(
+      await page.evaluate(
+        () => (window as any).posFixture.state.invoice.customer
+      )
+    ).toBe('Aarav Shah');
     await linked.click();
     await expect(page).toHaveURL(/\/edit\/Customer\/Aarav%20Shah/);
   });
@@ -721,7 +773,9 @@ for (const size of ['large', 'small']) {
       }
     }
     expect(
-      await page.evaluate(() => (window as any).posFixture.state.invoice.customer)
+      await page.evaluate(
+        () => (window as any).posFixture.state.invoice.customer
+      )
     ).toBe('Aarav Shah');
     const linked = page.getByRole('button', {
       name: 'Open linked entry',

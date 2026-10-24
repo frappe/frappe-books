@@ -90,6 +90,8 @@ const records: Record<string, Row[]> = {
   'Books Coupon Code': [
     { name: 'FOSSCLUB', coupon_code: 'FOSSCLUB' },
     { name: 'EXPIRED', coupon_code: 'EXPIRED' },
+    // Named as ERPNext names coupons; cashiers type the code.
+    { name: 'Club Offer', coupon_code: 'CLUB10' },
   ],
   'Books Batch': [coffeeBatch],
   'Books POS Opening Entry': [openingShift],

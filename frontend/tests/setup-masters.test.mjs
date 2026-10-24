@@ -28,25 +28,32 @@ function getLayout(schemaName) {
     );
 }
 
-test('a tax template shows its name and detail rows as before', () => {
-  const tax = getSchema('Tax');
+test('a tax template shows its title and tax rate rows', () => {
+  const tax = getSchema('ItemTaxTemplate');
   assert.equal(tax.label, 'Tax Template');
-  assert.deepEqual(getLayout('Tax'), [
-    'name | Name | ',
-    'details | Details | ',
+  assert.deepEqual(getLayout('ItemTaxTemplate'), [
+    'title | Title | ',
+    'taxes | Tax Rates | ',
   ]);
-  assert.deepEqual(tax.quickEditFields, ['details']);
-  assert.deepEqual(getLayout('TaxDetail'), [
-    'account | Tax Invoice Account | ',
+  assert.deepEqual(tax.quickEditFields, ['taxes']);
+  assert.deepEqual(getLayout('ItemTaxTemplateDetail'), [
+    'tax_type | Tax | ',
     'payment_account | Tax Payment Account | ',
-    'rate | Rate | 0%',
+    'tax_rate | Tax Rate | 0%',
   ]);
-  const detail = getSchema('TaxDetail');
-  assert.deepEqual(detail.tableFields, ['account', 'payment_account', 'rate']);
+  const detail = getSchema('ItemTaxTemplateDetail');
+  assert.deepEqual(detail.tableFields, [
+    'tax_type',
+    'payment_account',
+    'tax_rate',
+  ]);
   assert.ok(
-    detail.fields.find((field) => field.fieldname === 'account').create
+    detail.fields.find((field) => field.fieldname === 'tax_type').create
   );
-  assert.deepEqual(frappeModels.Tax.getListViewSettings(fyo).columns, ['name']);
+  assert.deepEqual(
+    frappeModels.ItemTaxTemplate.getListViewSettings(fyo).columns,
+    ['name']
+  );
 });
 
 test('a payment method shows its type, account and clearance date as before', () => {
@@ -132,10 +139,7 @@ test('number series links filter and create by reference_type', async () => {
     JournalEntry.filters.naming_series(),
     series('JournalEntry')
   );
-  assert.deepEqual(
-    StockEntry.filters.naming_series(),
-    series('StockEntry')
-  );
+  assert.deepEqual(StockEntry.filters.naming_series(), series('StockEntry'));
   assert.deepEqual(
     Defaults.createFilters.delivery_note_number_series(),
     series('DeliveryNote')

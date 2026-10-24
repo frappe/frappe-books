@@ -29,7 +29,7 @@ import { PrintSettings } from './baseModels/PrintSettings/PrintSettings';
 import { SetupWizard } from './baseModels/SetupWizard/SetupWizard';
 import { SystemSettings } from './baseModels/SystemSettings/SystemSettings';
 import { ItemGroup } from './baseModels/ItemGroup/ItemGroup';
-import { Tax } from './baseModels/Tax/Tax';
+import { ItemTaxTemplate } from './baseModels/ItemTaxTemplate/ItemTaxTemplate';
 import { UOM } from './baseModels/UOM/UOM';
 import { Batch } from './inventory/Batch';
 import { InventorySettings } from './inventory/InventorySettings';
@@ -81,7 +81,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   CouponCode,
   PriceList,
   PricingRule,
-  Tax,
+  ItemTaxTemplate,
   InventorySettings,
   Location,
   StockLedgerEntry,

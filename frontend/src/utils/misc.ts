@@ -51,7 +51,7 @@ export const docsPathMap: Record<string, string | undefined> = {
   [ModelNameEnum.Customer]: 'books/party',
   [ModelNameEnum.Supplier]: 'books/party',
   [ModelNameEnum.Item]: 'books/items',
-  [ModelNameEnum.Tax]: 'books/taxes',
+  [ModelNameEnum.ItemTaxTemplate]: 'books/taxes',
   [ModelNameEnum.PriceList]: 'books/price-list',
   [ModelNameEnum.PrintFormat]: 'books/print-templates',
 

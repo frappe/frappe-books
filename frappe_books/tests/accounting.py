@@ -109,9 +109,9 @@ def make_item(income_account, expense_account, tax=None, **values):
 def make_tax(account, rate=10):
 	return frappe.get_doc(
 		{
-			"doctype": "Books Tax",
-			"name": unique_name("Test Tax"),
-			"details": [{"account": account, "rate": rate}],
+			"doctype": "Books Item Tax Template",
+			"title": unique_name("Test Tax"),
+			"taxes": [{"tax_type": account, "tax_rate": rate}],
 		}
 	).insert()
 

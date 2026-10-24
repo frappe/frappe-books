@@ -103,9 +103,9 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 	def test_flat_discount_with_tax_matches_before_and_after_tax_postings(self):
 		tax = frappe.get_doc(
 			{
-				"doctype": "Books Tax",
-				"name": "PR Tax " + frappe.generate_hash(length=8),
-				"details": [{"account": self.income.name, "rate": 10}],
+				"doctype": "Books Item Tax Template",
+				"title": "PR Tax " + frappe.generate_hash(length=8),
+				"taxes": [{"tax_type": self.income.name, "tax_rate": 10}],
 			}
 		).insert()
 		for after_tax, total, taxed_total in ((0, 275, 275), (1, 280, 330)):

@@ -269,9 +269,9 @@ def _calculate_row(invoice, row, taxes):
 def _add_row_taxes(row, base, taxes, currency):
 	row_tax = as_decimal(0)
 	for detail in _tax_details(row.tax):
-		amount = rounded(base * as_decimal(detail.rate) / 100, currency)
+		amount = rounded(base * as_decimal(detail.tax_rate) / 100, currency)
 		tax = taxes.setdefault(
-			detail.account, {"account": detail.account, "rate": detail.rate, "amount": as_decimal(0)}
+			detail.tax_type, {"account": detail.tax_type, "rate": detail.tax_rate, "amount": as_decimal(0)}
 		)
 		tax["amount"] += amount
 		row_tax += amount
@@ -470,7 +470,7 @@ def _item_details(names):
 def _tax_details(tax_name):
 	if not tax_name:
 		return []
-	return frappe.get_cached_doc("Books Tax", tax_name).details
+	return frappe.get_cached_doc("Books Item Tax Template", tax_name).taxes
 
 
 def _item_discount(row, amount, currency):

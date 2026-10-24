@@ -21,7 +21,7 @@
   {"label":"Supplier","link_to":"Books Supplier","link_type":"DocType","type":"Link"},
   {"label":"Item","link_to":"Books Item","link_type":"DocType","type":"Link"},
   {"label":"Account","link_to":"Books Account","link_type":"DocType","type":"Link"},
-  {"label":"Tax","link_to":"Books Tax","link_type":"DocType","type":"Link"},
+  {"label":"Tax","link_to":"Books Item Tax Template","link_type":"DocType","type":"Link"},
   {"label":"Price List","link_to":"Books Price List","link_type":"DocType","type":"Link"},
   {"label":"Payment Method","link_to":"Books Payment Method","link_type":"DocType","type":"Link"},
   {"label":"Inventory","link_count":5,"type":"Card Break"},

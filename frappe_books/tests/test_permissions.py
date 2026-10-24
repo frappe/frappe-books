@@ -49,7 +49,7 @@ ROLE_MATRIX = {
 	"Address": (FULL, FULL, FULL),
 	"Contact": (FULL, FULL, FULL),
 	"Books Account": (FULL, FULL, NONE),
-	"Books Tax": (FULL, FULL, READ),
+	"Books Item Tax Template": (FULL, FULL, READ),
 	"Books Defaults": (FULL, FULL, READ),
 	"Print Format": (FULL, FULL, READ),
 	"Books Custom Form": (FULL, READ, READ),

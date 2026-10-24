@@ -656,9 +656,9 @@ def _tax(*details):
 	return (
 		frappe.get_doc(
 			{
-				"doctype": "Books Tax",
-				"name": unique_name("GST"),
-				"details": [{"account": account, "rate": rate} for account, rate in details],
+				"doctype": "Books Item Tax Template",
+				"title": unique_name("GST"),
+				"taxes": [{"tax_type": account, "tax_rate": rate} for account, rate in details],
 			}
 		)
 		.insert()

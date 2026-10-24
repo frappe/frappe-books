@@ -121,7 +121,7 @@
    "fieldname": "tax",
    "fieldtype": "Link",
    "label": "Tax",
-   "options": "Books Tax",
+   "options": "Books Item Tax Template",
    "placeholder": "Tax"
   },
   {

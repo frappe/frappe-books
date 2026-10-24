@@ -130,10 +130,10 @@ def _tax_details(taxes):
 	if not taxes:
 		return details
 	for detail in frappe.get_list(
-		"Books Tax Detail",
-		filters={"parent": ["in", list(taxes)], "parenttype": "Books Tax"},
-		fields=["parent", "rate", "account.gst_head as gst_head"],
-		parent_doctype="Books Tax",
+		"Books Item Tax Template Detail",
+		filters={"parent": ["in", list(taxes)], "parenttype": "Books Item Tax Template"},
+		fields=["parent", "tax_rate", "tax_type.gst_head as gst_head"],
+		parent_doctype="Books Item Tax Template",
 	):
 		details[detail.parent].append(detail)
 	return details
@@ -193,7 +193,7 @@ def _invoice_rows(invoice, items, details, header):
 	rows = {}
 	for item in items:
 		item_details = details[item.tax] if item.tax else []
-		rate = sum_decimal(detail.rate for detail in item_details)
+		rate = sum_decimal(detail.tax_rate for detail in item_details)
 		row = rows.setdefault(rate, {**header, "rate": rate, "taxable_value": as_decimal(0)})
 		base = as_decimal(item.amount if invoice.discount_after_tax else item.item_discounted_total)
 		row["taxable_value"] += base
@@ -206,7 +206,7 @@ def _add_tax(row, detail, base, currency):
 	field = TAX_AMOUNT_FIELDS.get(detail.gst_head)
 	if not field:
 		return
-	row[field] = row.get(field, as_decimal(0)) + rounded(base * as_decimal(detail.rate) / 100, currency)
+	row[field] = row.get(field, as_decimal(0)) + rounded(base * as_decimal(detail.tax_rate) / 100, currency)
 	if detail.gst_head == "IGST":
 		row["in_state"] = False
 

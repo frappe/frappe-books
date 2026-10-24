@@ -45,7 +45,7 @@ const RENAMED_KEYS: Record<string, Record<string, string>> = {
   JournalEntry: { posting_date: 'date' },
   Payment: { payment_references: 'for' },
   POSProfile: { pos_ui: 'posUI' },
-  TaxDetail: { payment_account: 'payment_account' },
+  ItemTaxTemplateDetail: { payment_account: 'payment_account' },
   TaxSummary: { from_account: 'from_account' },
 };
 const AUDIT_KEYS: Record<string, string> = {

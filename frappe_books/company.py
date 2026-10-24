@@ -24,7 +24,7 @@ COMPANY_DOCTYPES = (
 	"Books Serial Number",
 	"Books Stock Entry",
 	"Books Stock Ledger Entry",
-	"Books Tax",
+	"Books Item Tax Template",
 )
 
 

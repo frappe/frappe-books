@@ -66,13 +66,13 @@ def ensure_regional_records(country):
 	}.items():
 		for rate in rates:
 			name = f"{tax_type}-{rate}"
-			if frappe.db.exists("Books Tax", name):
+			if frappe.db.exists("Books Item Tax Template", name):
 				continue
 			frappe.get_doc(
 				{
-					"doctype": "Books Tax",
-					"name": name,
-					"details": _tax_details(tax_type, rate),
+					"doctype": "Books Item Tax Template",
+					"title": name,
+					"taxes": _tax_details(tax_type, rate),
 				}
 			).insert(ignore_permissions=True)
 
@@ -109,7 +109,7 @@ def validate_hsn_codes(docs):
 def _tax_details(tax_type, rate):
 	if tax_type == "GST":
 		return [
-			{"account": "CGST", "rate": rate / 2},
-			{"account": "SGST", "rate": rate / 2},
+			{"tax_type": "CGST", "tax_rate": rate / 2},
+			{"tax_type": "SGST", "tax_rate": rate / 2},
 		]
-	return [{"account": tax_type.split("-")[0], "rate": rate}]
+	return [{"tax_type": tax_type.split("-")[0], "tax_rate": rate}]

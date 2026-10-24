@@ -32,7 +32,7 @@ export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
     ModelNameEnum.Supplier,
     ModelNameEnum.Item,
     ModelNameEnum.JournalEntry,
-    ModelNameEnum.Tax,
+    ModelNameEnum.ItemTaxTemplate,
     ModelNameEnum.Account,
     ModelNameEnum.Address,
     ModelNameEnum.NumberSeries,

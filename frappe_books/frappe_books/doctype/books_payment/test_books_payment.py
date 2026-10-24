@@ -418,9 +418,9 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 	def _taxed_invoice(self, unrealised, realised, discount_after_tax):
 		tax = frappe.get_doc(
 			{
-				"doctype": "Books Tax",
-				"name": unique_name("Deferred Tax"),
-				"details": [{"account": unrealised.name, "payment_account": realised.name, "rate": 10}],
+				"doctype": "Books Item Tax Template",
+				"title": unique_name("Deferred Tax"),
+				"taxes": [{"tax_type": unrealised.name, "payment_account": realised.name, "tax_rate": 10}],
 			}
 		).insert()
 		invoice = make_invoice(

@@ -309,7 +309,7 @@ test('every exported table is headed by the label of its rows, not their doctype
   );
 
   assert.deepEqual(doctypeLabels, []);
-  assert.equal(getSchema('TaxDetail').label, 'Tax Detail');
+  assert.equal(getSchema('ItemTaxTemplateDetail').label, 'Tax Template Detail');
   assert.equal(getSchema('UOMConversionDetail').label, 'UOM Conversion Detail');
 });
 

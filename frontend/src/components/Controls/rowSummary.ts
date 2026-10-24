@@ -11,6 +11,8 @@ export interface RowSummary {
 const quantityFields = ['qty', 'quantity'];
 // Invoice rows show their rate per transfer unit, as their Qty is.
 const rateFields = ['rate', 'transfer_rate'];
+// Tax summary rows and tax template rows.
+const taxRateFields = ['rate', 'tax_rate'];
 
 /** Phone summary of a table row: the first column, a closing amount, the rest. */
 export function getRowSummary(row: FrappeDoc, fields: Field[]): RowSummary {
@@ -59,7 +61,8 @@ function formatCell(row: FrappeDoc, field: Field): string {
 
   const formatted = fyo.format(value, field, row);
   // Tax rates are stored as plain numbers.
-  return field.fieldname === 'rate' && field.fieldtype === FieldTypeEnum.Float
+  return taxRateFields.includes(field.fieldname) &&
+    field.fieldtype === FieldTypeEnum.Float
     ? `${formatted}%`
     : formatted;
 }

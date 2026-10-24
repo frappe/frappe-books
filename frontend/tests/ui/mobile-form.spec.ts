@@ -102,11 +102,11 @@ test('rows without quick edit fields edit their table columns', async ({
 });
 
 test('fields before a table stay above its header', async ({ page }) => {
-  await page.goto(`/books/edit/Tax/new-phone-${Date.now()}`);
+  await page.goto(`/books/edit/ItemTaxTemplate/new-phone-${Date.now()}`);
   await waitForBooks(page);
 
-  const name = page.getByRole('textbox', { name: 'Name' });
-  const details = page.getByRole('heading', { name: 'Details' });
+  const name = page.getByRole('textbox', { name: 'Title' });
+  const details = page.getByRole('heading', { name: 'Tax Rates' });
   await expect(details).toBeVisible();
   const [nameBox, detailsBox] = await Promise.all([
     name.boundingBox(),

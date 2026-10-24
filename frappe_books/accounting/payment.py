@@ -303,12 +303,12 @@ def _tax_payment_accounts(invoice):
 	"""Map each invoice tax account to the account its tax moves to on payment."""
 	accounts = {}
 	for tax_name in {row.tax for row in invoice.items if row.tax}:
-		for detail in frappe.get_cached_doc("Books Tax", tax_name).details:
+		for detail in frappe.get_cached_doc("Books Item Tax Template", tax_name).taxes:
 			if not detail.payment_account:
 				continue
-			if accounts.setdefault(detail.account, detail.payment_account) != detail.payment_account:
+			if accounts.setdefault(detail.tax_type, detail.payment_account) != detail.payment_account:
 				frappe.throw(
-					_("Tax account {0} moves to more than one payment account.").format(detail.account)
+					_("Tax account {0} moves to more than one payment account.").format(detail.tax_type)
 				)
 	return accounts
 

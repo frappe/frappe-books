@@ -74,9 +74,9 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		for fieldname in payment_accounts:
 			self.assertFalse(frappe.db.get_single_value("Books Defaults", fieldname), fieldname)
 		self.assert_gst_heads()
-		self.assertTrue(frappe.db.exists("Books Tax", "GST-18"))
-		gst = frappe.get_doc("Books Tax", "GST-18")
-		self.assertEqual([(row.account, row.rate) for row in gst.details], [("CGST", 9), ("SGST", 9)])
+		self.assertTrue(frappe.db.exists("Books Item Tax Template", "GST-18"))
+		gst = frappe.get_doc("Books Item Tax Template", "GST-18")
+		self.assertEqual([(row.tax_type, row.tax_rate) for row in gst.taxes], [("CGST", 9), ("SGST", 9)])
 
 	def test_setup_makes_the_one_company(self):
 		frappe.db.delete("Books Company")

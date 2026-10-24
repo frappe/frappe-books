@@ -335,8 +335,8 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Tax Template`,
           name: 'taxes',
-          route: '/list/Tax',
-          schemaName: 'Tax',
+          route: '/list/ItemTaxTemplate',
+          schemaName: 'ItemTaxTemplate',
         },
         {
           label: t`Number Series`,

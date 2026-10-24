@@ -61,8 +61,14 @@ test('the Account form shows the fields, labels and placeholders it showed', () 
 
 test('a ledger account needs a parent group; a root group does not', () => {
   const parent = field('parent_books_account');
-  assert.equal(newAccount({ is_group: false }).getFieldState(parent).required, true);
-  assert.equal(newAccount({ is_group: true }).getFieldState(parent).required, false);
+  assert.equal(
+    newAccount({ is_group: false }).getFieldState(parent).required,
+    true
+  );
+  assert.equal(
+    newAccount({ is_group: true }).getFieldState(parent).required,
+    false
+  );
 });
 
 test('a saved account keeps its name, types, parent and group; a saved type stays', async () => {
@@ -150,8 +156,8 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     defaults.find((f) => f.fieldname === 'sales_payment_account').linkFilters,
     [ledger, ['account_type', 'in', ['Cash', 'Bank']]]
   );
-  const taxRow = getSchema('TaxDetail').fields;
-  for (const fieldname of ['account', 'payment_account']) {
+  const taxRow = getSchema('ItemTaxTemplateDetail').fields;
+  for (const fieldname of ['tax_type', 'payment_account']) {
     const field = taxRow.find((f) => f.fieldname === fieldname);
     assert.deepEqual(field.linkFilters, [ledger], fieldname);
   }

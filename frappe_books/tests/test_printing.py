@@ -269,11 +269,11 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		other_tax = make_account("Print Other Tax", root_type="Liability", account_type="Tax")
 		tax = frappe.get_doc(
 			{
-				"doctype": "Books Tax",
-				"name": unique_name("Print Cash Tax"),
-				"details": [
-					{"account": self.tax_account.name, "rate": 10, "payment_account": paid_tax.name},
-					{"account": other_tax.name, "rate": 5},
+				"doctype": "Books Item Tax Template",
+				"title": unique_name("Print Cash Tax"),
+				"taxes": [
+					{"tax_type": self.tax_account.name, "tax_rate": 10, "payment_account": paid_tax.name},
+					{"tax_type": other_tax.name, "tax_rate": 5},
 				],
 			}
 		).insert()

@@ -897,3 +897,12 @@ test('invoice lists show their columns and filter by status, totals and docstatu
     ]
   );
 });
+
+test('the taxes template shows narrow above the Taxes table', () => {
+  for (const schemaName of ['SalesInvoice', 'PurchaseInvoice', 'Quotation']) {
+    const field = getSchema(schemaName).fields.find(
+      ({ fieldname }) => fieldname === 'taxes_and_charges'
+    );
+    assert.equal(field.narrow, true, schemaName);
+  }
+});

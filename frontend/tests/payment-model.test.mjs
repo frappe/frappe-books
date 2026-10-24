@@ -293,3 +293,12 @@ test('the payment lists show, filter and open by party type', () => {
     false
   );
 });
+
+test('a payment lays out three columns on desktop and pairs fields on phones', () => {
+  const { formColumns, mobileFieldPairs } = getSchema('PaymentEntry');
+  assert.equal(formColumns, 3);
+  assert.deepEqual(mobileFieldPairs, [
+    ['party_type', 'party'],
+    ['reference_no', 'reference_date'],
+  ]);
+});

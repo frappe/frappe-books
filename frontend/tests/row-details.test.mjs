@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   fyo,
+  getOwnRowTitle,
   getRowDetails,
   getRowSummary,
+  isRedAmount,
   newFrappeDoc,
 } from './helpers/frappe.mjs';
 import { loadFrappeModels } from './helpers/models.mjs';
@@ -119,7 +121,7 @@ test('a payment reference summary labels its outstanding and allocation', () => 
   );
 });
 
-test('a POS closing row reads its expected amount and a negative difference in red', () => {
+test('a POS closing row is a phone block with a negative difference in red', () => {
   const closing = newFrappeDoc('POSClosingEntry', {
     payment_reconciliation: [
       {
@@ -131,15 +133,29 @@ test('a POS closing row reads its expected amount and a negative difference in r
     ],
   });
   const [row] = closing.payment_reconciliation;
-  const { mobileTableFields, mobileLabelledFields } = row.schema;
-  const fields = mobileTableFields.map((name) => row.fieldMap[name]);
+  assert.deepEqual(row.schema.mobileBlock, {
+    title: 'mode_of_payment',
+    fields: ['expected_amount', 'closing_amount'],
+    result: 'difference',
+  });
 
-  const summary = getRowSummary(row, fields, undefined, mobileLabelledFields);
-  assert.deepEqual(
-    [summary.title, summary.meta, summary.amount, summary.amountLabel],
-    ['Cash', 'Expected Amount 455.00', '-5.00', 'Difference']
-  );
-  assert.equal(summary.isNegative, true);
+  const difference = row.fieldMap.difference;
+  assert.equal(isRedAmount(row, difference), true);
   row.difference = fyo.pesa(0);
-  assert.equal(getRowSummary(row, fields).isNegative, false);
+  assert.equal(isRedAmount(row, difference), false);
+});
+
+test('tax and reference row editors name their rows', () => {
+  const invoice = newFrappeDoc('SalesInvoice', {
+    items: [{ item_code: 'Widget' }],
+    taxes: [{ charge_type: 'On Net Total' }, { charge_type: 'Actual' }],
+  });
+  const payment = newFrappeDoc('PaymentEntry', {
+    references: [{ reference_name: 'SINV-1' }],
+  });
+
+  assert.equal(getOwnRowTitle(invoice.taxes[1], 1), 'Tax row 2');
+  assert.equal(getOwnRowTitle(payment.references[0], 0), 'Reference 1');
+  // Other rows keep the editor's "Row 1".
+  assert.equal(getOwnRowTitle(invoice.items[0], 0), undefined);
 });

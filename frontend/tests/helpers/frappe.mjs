@@ -33,7 +33,8 @@ await build({
       export { setLanguageMapOnTranslationString } from './fyo/utils/translation';
       export { loadDocPermissions } from './src/utils/doc';
       export { getRowDetails } from './src/components/Controls/rowDetails';
-      export { getRowSummary } from './src/components/Controls/rowSummary';
+      export { getRowSummary, isRedAmount } from './src/components/Controls/rowSummary';
+      export { getOwnRowTitle } from './src/utils/sheetFields';
       export * as errors from './fyo/utils/errors';
       export { frappeModels, getRegionalFrappeModels } from './models';
       export { getLedgerLink, getStockTransferActions } from './models/helpers';
@@ -49,7 +50,7 @@ await build({
       export { default as LinkedRecordsSection } from './src/pages/CommonForm/LinkedRecordsSection.vue';
       export { getEmptyState } from './src/pages/ListView/listColumns';
       export { default as router } from 'src/router';
-      export { ListFilters } from './src/utils/listFilters';
+      export { getSearchFilters, ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
       export { usePOSCheckout } from './src/utils/posCheckout';
       export * as posDiscounts from './src/utils/posDiscounts';
@@ -188,6 +189,8 @@ export const {
   loadDocPermissions,
   getRowDetails,
   getRowSummary,
+  isRedAmount,
+  getOwnRowTitle,
   errors,
   frappeModels,
   getRegionalFrappeModels,
@@ -197,6 +200,7 @@ export const {
   getNewDocValues,
   getStockTransferActions,
   getFilterFields,
+  getSearchFilters,
   ListFilters,
   pos,
   usePOSCheckout,

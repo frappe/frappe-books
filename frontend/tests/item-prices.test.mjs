@@ -5,6 +5,7 @@ import {
   fyo,
   getEmptyState,
   getModel,
+  getSearchFilters,
   LinkedRecordsSection,
 } from './helpers/frappe.mjs';
 import { loadFrappeModels } from './helpers/frappeModels.mjs';
@@ -125,9 +126,27 @@ test('an empty list says what the model says, filtered or not', () => {
     description: 'Each Item Price sets a rate for one item in one price list.',
     createLabel: 'New item price',
   });
-  assert.equal(
-    getEmptyState(config, true, fallback).title,
-    'No item prices match these filters'
-  );
+  // The filtered title stands alone, without the fallback's description.
+  const described = { ...fallback, description: 'Create one to get started.' };
+  assert.deepEqual(getEmptyState(config, true, described), {
+    title: 'No item prices match these filters',
+    description: undefined,
+    createLabel: 'Make entry',
+  });
   assert.deepEqual(getEmptyState({}, false, fallback), fallback);
+});
+
+test('the list searches items and filters by price list above its rows', () => {
+  const { filterBar } = getModel('ItemPrice').getListViewSettings(fyo);
+  assert.deepEqual(filterBar, {
+    searchPlaceholder: 'Search item…',
+    linkField: 'price_list',
+    allLabel: 'All price lists',
+  });
+
+  assert.deepEqual(getSearchFilters(['name', 'item_code'], '  Tea '), [
+    ['name', 'like', '%Tea%'],
+    ['item_code', 'like', '%Tea%'],
+  ]);
+  assert.deepEqual(getSearchFilters(['item_code'], '   '), []);
 });

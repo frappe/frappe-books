@@ -134,10 +134,10 @@ def _unit_rate(row, rates):
 
 def pos_setting(fieldname):
 	"""Read a POS setting from the POS profile in use, or from POS settings without one."""
-	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
+	profile = frappe.db.get_single_value("Books POS Settings", "pos_profile")
 	if profile:
-		return frappe.db.get_value("Books Pos Profile", profile, fieldname)
-	return frappe.db.get_single_value("Books Pos Settings", fieldname)
+		return frappe.db.get_value("Books POS Profile", profile, fieldname)
+	return frappe.db.get_single_value("Books POS Settings", fieldname)
 
 
 def _reset_row(row):

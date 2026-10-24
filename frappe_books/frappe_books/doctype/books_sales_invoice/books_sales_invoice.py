@@ -154,7 +154,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		if self.is_pos:
 			return True
 		pos_enabled = frappe.db.get_single_value("Books Inventory Settings", "enable_point_of_sale")
-		return bool(pos_enabled) and not frappe.has_permission("Books Pos Settings", "write")
+		return bool(pos_enabled) and not frappe.has_permission("Books POS Settings", "write")
 
 	def validate_payments(self):
 		if self.payments and not self.is_pos:
@@ -212,9 +212,9 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def validate_pos_permissions(self):
 		"""Hold the rows to the rates and discounts the POS profile allows."""
 		rows = [row for row in self.items if not row.is_free_item]
-		if not pricing.pos_setting("can_change_rate"):
+		if not pricing.pos_setting("allow_rate_change"):
 			self._validate_pos_rates(rows)
-		if not pricing.pos_setting("can_edit_discount"):
+		if not pricing.pos_setting("allow_discount_change"):
 			self._validate_pos_discounts(rows)
 
 	def _validate_pos_rates(self, rows):

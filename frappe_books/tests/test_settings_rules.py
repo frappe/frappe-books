@@ -59,15 +59,15 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 			self.assertTrue(inventory_settings.get(fieldname), fieldname)
 
 	def test_a_pos_can_list_all_items(self):
-		settings = frappe.get_single("Books Pos Settings")
+		settings = frappe.get_single("Books POS Settings")
 		cash = make_account("POS Cash", account_type="Cash").name
 		settings.update({"item_visibility": "All Items", "cash_account": cash})
 		settings.save()
 		profile = frappe.get_doc(
 			{
-				"doctype": "Books Pos Profile",
+				"doctype": "Books POS Profile",
 				"name": unique_name("POS Profile"),
-				"inventory": "Stores",
+				"warehouse": "Stores",
 				"item_visibility": "All Items",
 			}
 		).insert()

@@ -65,7 +65,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 
 	def test_pos_sales_ship_from_the_pos_inventory(self):
 		location = make_warehouse("Counter")
-		frappe.db.set_single_value("Books Pos Settings", {"inventory": location.name, "pos_profile": None})
+		frappe.db.set_single_value("Books POS Settings", {"warehouse": location.name, "pos_profile": None})
 
 		self.assertEqual(get_stock_location("Books Sales Invoice", is_pos=True), location.name)
 		self.assertEqual(get_stock_location("Books Sales Invoice"), "Stores")

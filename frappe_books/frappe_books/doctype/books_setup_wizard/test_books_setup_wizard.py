@@ -68,7 +68,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			"SINV-",
 		)
 		self.assertTrue(frappe.db.get_value("Currency", "INR", "enabled"))
-		cash = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+		cash = frappe.db.get_single_value("Books POS Settings", "cash_account")
 		for method, account in (("Cash", cash), ("Bank", wizard.bank_name)):
 			self.assertEqual(mode_of_payment_account(method), account)
 		# Invoices stay unpaid on submit until the user picks an automatic payment account.
@@ -323,7 +323,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 	def assert_pos_accounts_are_ledgers(self):
 		for fieldname, account_type in (("cash_account", "Cash"), ("default_account", "Receivable")):
-			account = frappe.db.get_single_value("Books Pos Settings", fieldname)
+			account = frappe.db.get_single_value("Books POS Settings", fieldname)
 			self.assertEqual(
 				frappe.db.get_value("Books Account", account, ["is_group", "account_type"]), (0, account_type)
 			)

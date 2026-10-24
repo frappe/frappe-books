@@ -30,9 +30,7 @@ class BooksPOSClosingEntry(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_closing_cash.books_closing_cash import (
-			BooksClosingCash,
-		)
+		from frappe_books.frappe_books.doctype.books_closing_cash.books_closing_cash import BooksClosingCash
 		from frappe_books.frappe_books.doctype.books_pos_closing_entry_detail.books_pos_closing_entry_detail import (
 			BooksPOSClosingEntryDetail,
 		)
@@ -149,7 +147,7 @@ def _cash_sum(cash_rows, fieldname):
 
 def _closing_journal_rows(cash_rows):
 	"""Move counted cash out of the counter, clear what was expected, and write off the difference."""
-	settings = frappe.get_single("Books Pos Settings")
+	settings = frappe.get_single("Books POS Settings")
 	rows = [
 		(cash_account(), _cash_sum(cash_rows, "closing_amount"), 0),
 		(settings.cash_account, 0, _cash_sum(cash_rows, "expected_amount")),

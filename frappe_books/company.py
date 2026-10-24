@@ -15,7 +15,7 @@ COMPANY_DOCTYPES = (
 	"Books Payment Entry",
 	"Books POS Closing Entry",
 	"Books POS Opening Entry",
-	"Books Pos Profile",
+	"Books POS Profile",
 	"Books Pricing Rule",
 	"Books Purchase Invoice",
 	"Books Purchase Receipt",

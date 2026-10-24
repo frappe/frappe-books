@@ -29,9 +29,7 @@ class BooksPOSOpeningEntry(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_opening_cash.books_opening_cash import (
-			BooksOpeningCash,
-		)
+		from frappe_books.frappe_books.doctype.books_opening_cash.books_opening_cash import BooksOpeningCash
 		from frappe_books.frappe_books.doctype.books_pos_opening_entry_detail.books_pos_opening_entry_detail import (
 			BooksPOSOpeningEntryDetail,
 		)
@@ -78,7 +76,7 @@ class BooksPOSOpeningEntry(Document):
 
 	def on_submit(self):
 		total = cash_total(self.opening_cash)
-		counter = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+		counter = frappe.db.get_single_value("Books POS Settings", "cash_account")
 		journal = make_cash_journal(
 			self.period_start_date,
 			[(counter, total, 0), (cash_account(), 0, total)],

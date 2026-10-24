@@ -144,8 +144,8 @@ export async function preparePOSData() {
   });
   Object.assign(fyo.singles.POSSettings!, {
     pos_ui: 'Modern',
-    can_change_rate: true,
-    can_edit_discount: true,
+    allow_rate_change: true,
+    allow_discount_change: true,
   });
   Object.assign(fyo.singles.InventorySettings!, {
     enable_uom_conversions: false,

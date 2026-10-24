@@ -323,7 +323,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_pos_invoice_keeps_rate_and_discount_when_profile_forbids(self):
 		frappe.db.set_single_value(
-			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 0, "can_edit_discount": 0}
+			"Books POS Settings", {"pos_profile": None, "allow_rate_change": 0, "allow_discount_change": 0}
 		)
 		item = make_item(self.income.name, self.expense.name, standard_rate=100)
 		for values, message in (
@@ -344,12 +344,12 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				with self.assertRaisesRegex(frappe.ValidationError, message):
 					invoice.insert()
 
-		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
+		frappe.db.set_single_value("Books POS Settings", {"allow_rate_change": 1, "allow_discount_change": 1})
 		invoice.insert()
 
 	def test_pos_invoice_defaults_to_the_pos_customer_and_account(self):
 		frappe.db.set_single_value(
-			"Books Pos Settings", {"pos_profile": None, "default_account": self.receivable.name}
+			"Books POS Settings", {"pos_profile": None, "default_account": self.receivable.name}
 		)
 		frappe.db.set_single_value("Books Defaults", "pos_customer", self.party.name)
 		invoice = frappe.get_doc(
@@ -366,13 +366,13 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 	def test_a_new_pos_sale_previews_the_customer_of_the_pos_profile(self):
 		profile = frappe.get_doc(
 			{
-				"doctype": "Books Pos Profile",
+				"doctype": "Books POS Profile",
 				"name": unique_name("POS Profile"),
-				"inventory": "Stores",
-				"pos_customer": self.party.name,
+				"warehouse": "Stores",
+				"customer": self.party.name,
 			}
 		).insert()
-		frappe.db.set_single_value("Books Pos Settings", "pos_profile", profile.name)
+		frappe.db.set_single_value("Books POS Settings", "pos_profile", profile.name)
 		frappe.db.set_single_value("Books Defaults", "pos_customer", make_customer(self.receivable.name).name)
 		invoice = frappe.get_doc({"doctype": "Books Sales Invoice", "is_pos": 1})
 

@@ -21,7 +21,7 @@ class IntegrationTestFieldRules(IntegrationTestCase):
 		self.assertRaises(frappe.NonNegativeError, settings.save)
 
 	def test_pos_settings_need_a_cash_account(self):
-		settings = frappe.get_single("Books Pos Settings")
+		settings = frappe.get_single("Books POS Settings")
 		settings.cash_account = None
 		self.assertRaises(frappe.MandatoryError, settings.save)
 

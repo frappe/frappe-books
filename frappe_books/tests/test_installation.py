@@ -12,7 +12,7 @@ from frappe_books.regional import ensure_address_template
 from frappe_books.setup import DEFAULT_PRINT_FORMATS, POS_PRINT_FORMAT, bootstrap
 
 POST_INSTALL_LINK_FIELDS = {
-	"Books Pos Settings": ("inventory", "cash_account", "write_off_account", "default_account"),
+	"Books POS Settings": ("warehouse", "cash_account", "write_off_account", "default_account"),
 	"Books Defaults": ("pos_print_template",),
 }
 

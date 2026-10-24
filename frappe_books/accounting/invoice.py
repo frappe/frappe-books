@@ -405,7 +405,7 @@ def _populate_pos_defaults(invoice):
 		return
 	invoice.set(invoice.party_field, invoice.party or pos_customer())
 	invoice.debit_to = invoice.get("debit_to") or frappe.db.get_single_value(
-		"Books Pos Settings", "default_account"
+		"Books POS Settings", "default_account"
 	)
 
 

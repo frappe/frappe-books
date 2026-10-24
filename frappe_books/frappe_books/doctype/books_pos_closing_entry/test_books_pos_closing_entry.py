@@ -29,7 +29,7 @@ from frappe_books.tests.accounting import (
 class IntegrationTestBooksPOSClosingEntry(IntegrationTestCase):
 	def setUp(self):
 		self.counter = set_pos_accounts()
-		self.write_off = frappe.db.get_single_value("Books Pos Settings", "write_off_account")
+		self.write_off = frappe.db.get_single_value("Books POS Settings", "write_off_account")
 		self.receivable = make_account("POS Receivable", account_type="Receivable")
 		self.party = make_customer(self.receivable.name)
 
@@ -70,7 +70,7 @@ class IntegrationTestBooksPOSClosingEntry(IntegrationTestCase):
 		self.assertEqual(credits(entries, self.write_off), Decimal("5"))
 
 	def test_a_counter_that_is_the_cash_account_posts_only_the_difference(self):
-		frappe.db.set_single_value("Books Pos Settings", "cash_account", "Cash")
+		frappe.db.set_single_value("Books POS Settings", "cash_account", "Cash")
 		opening = open_shift(100)
 		self.assertIsNone(opening.journal_entry)
 
@@ -201,7 +201,7 @@ class IntegrationTestBooksPOSClosingEntry(IntegrationTestCase):
 
 	def test_a_cash_difference_needs_the_write_off_account(self):
 		opening = open_shift(100)
-		frappe.db.set_single_value("Books Pos Settings", "write_off_account", None)
+		frappe.db.set_single_value("Books POS Settings", "write_off_account", None)
 
 		message = "POS Write Off Account is not set. Please set it on POS Settings"
 		self.assertRaisesRegex(frappe.ValidationError, message, close_shift, opening, 90)

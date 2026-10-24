@@ -44,7 +44,7 @@ class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 		)
 
 	def test_a_shift_needs_the_counter_cash_account(self):
-		frappe.db.set_single_value("Books Pos Settings", "cash_account", None)
+		frappe.db.set_single_value("Books POS Settings", "cash_account", None)
 
 		message = "POS Counter Cash Account is not set. Please set it on POS Settings"
 		self.assertRaisesRegex(frappe.ValidationError, message, open_shift, 0)
@@ -121,13 +121,13 @@ def set_pos_accounts():
 	counter = make_account("POS Counter", account_type="Cash")
 	write_off = make_account("POS Write Off", root_type="Expense", account_type="Expense Account")
 	frappe.db.set_single_value(
-		"Books Pos Settings",
+		"Books POS Settings",
 		{
 			"cash_account": counter.name,
 			"write_off_account": write_off.name,
 			"default_account": counter.name,
-			"can_change_rate": 1,
-			"can_edit_discount": 1,
+			"allow_rate_change": 1,
+			"allow_discount_change": 1,
 		},
 	)
 	if not frappe.db.exists("Books Account", "Cash"):

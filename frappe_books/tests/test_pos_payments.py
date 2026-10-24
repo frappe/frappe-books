@@ -32,7 +32,7 @@ from frappe_books.tests.accounting import (
 class IntegrationTestPosPayments(IntegrationTestCase):
 	def setUp(self):
 		start_pos_shift()
-		self.counter = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+		self.counter = frappe.db.get_single_value("Books POS Settings", "cash_account")
 		self.receivable = make_account("POS Receivable", account_type="Receivable")
 		self.income = make_account("POS Income", root_type="Income", account_type="Income Account")
 		expense = make_account("POS Expense", root_type="Expense", account_type="Expense Account")

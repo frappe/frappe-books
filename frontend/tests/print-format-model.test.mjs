@@ -112,10 +112,7 @@ test('print template pickers offer the Print Formats of the doctype they print',
     ['doc_type', '=', 'Books Payment Entry'],
   ]);
   assert.deepEqual(linkFilters('pos_print_template'), sales);
-  assert.deepEqual(
-    frappeModels.POSProfile.filters.pos_print_template(),
-    sales
-  );
+  assert.deepEqual(frappeModels.POSProfile.filters.print_format(), sales);
 });
 
 test("a settings save first sets the doctypes' print formats through their method", async () => {

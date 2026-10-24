@@ -395,10 +395,10 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		)
 		profile = frappe.get_doc(
 			{
-				"doctype": "Books Pos Profile",
+				"doctype": "Books POS Profile",
 				"name": unique_name("Print Profile"),
-				"inventory": "Stores",
-				"pos_print_template": "Business - Payment",
+				"warehouse": "Stores",
+				"print_format": "Business - Payment",
 			}
 		)
 		self.assertRaisesRegex(frappe.ValidationError, message, profile.insert)

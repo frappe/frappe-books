@@ -77,11 +77,11 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 	def test_pos_sale_without_a_location_asks_for_the_pos_inventory(self):
 		invoice, _item, _location = self._make_pos_invoice(use_profile=False)
-		frappe.db.set_single_value("Books Pos Settings", "inventory", None)
+		frappe.db.set_single_value("Books POS Settings", "warehouse", None)
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", None)
 
 		self.assertRaisesRegex(
-			frappe.ValidationError, "POS Inventory is not set. Please set it on POS Settings", invoice.submit
+			frappe.ValidationError, "POS Warehouse is not set. Please set it on POS Settings", invoice.submit
 		)
 
 	def test_pos_sale_preview_fills_serial_numbers_in_stock_at_the_pos(self):
@@ -415,16 +415,16 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		if use_profile:
 			profile = frappe.get_doc(
 				{
-					"doctype": "Books Pos Profile",
+					"doctype": "Books POS Profile",
 					"name": unique_name("POS Profile"),
-					"inventory": location.name,
-					"can_change_rate": 1,
-					"can_edit_discount": 1,
+					"warehouse": location.name,
+					"allow_rate_change": 1,
+					"allow_discount_change": 1,
 				}
 			).insert()
-		frappe.db.set_single_value("Books Pos Settings", "pos_profile", profile.name if profile else "")
-		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
-		frappe.db.set_single_value("Books Pos Settings", "inventory", "Stores" if profile else location.name)
+		frappe.db.set_single_value("Books POS Settings", "pos_profile", profile.name if profile else "")
+		frappe.db.set_single_value("Books POS Settings", {"allow_rate_change": 1, "allow_discount_change": 1})
+		frappe.db.set_single_value("Books POS Settings", "warehouse", "Stores" if profile else location.name)
 		party = make_customer(receivable.name)
 		item = make_item(income.name, received.name, is_stock_item=1, standard_rate=10)
 		make_movement(

@@ -271,7 +271,7 @@ test('one notification renders once and dismisses on click', async ({
     const fyo = app._context.mixins
       .find((m: any) => m.computed?.fyo)
       .computed.fyo();
-    fyo.singles.POSSettings.inventory = 'Stores';
+    fyo.singles.POSSettings.warehouse = 'Stores';
     fyo.singles.POSSettings.cash_account = 'Fixture Cash';
     fyo.singles.POSSettings.write_off_account = 'Fixture Write Off';
     fyo.singles.AccountingSettings.enable_coupon_code = true;

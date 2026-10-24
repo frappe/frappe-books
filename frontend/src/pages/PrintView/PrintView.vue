@@ -426,11 +426,7 @@ export default defineComponent({
         const posProfileName = this.fyo.singles.POSSettings?.pos_profile;
         const profileTemplate =
           posProfileName &&
-          (await getValue(
-            'Books Pos Profile',
-            posProfileName,
-            'pos_print_template'
-          ));
+          (await getValue('Books POS Profile', posProfileName, 'print_format'));
         if (profileTemplate) {
           templateName = profileTemplate;
         }

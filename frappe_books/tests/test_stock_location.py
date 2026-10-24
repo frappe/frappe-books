@@ -19,21 +19,21 @@ class IntegrationTestStockLocation(IntegrationTestCase):
 		frappe.db.set_single_value(
 			"Books Defaults", {"delivery_note_location": "Stores", "purchase_receipt_location": self.counter}
 		)
-		frappe.db.set_single_value("Books Pos Settings", {"pos_profile": "", "inventory": self.shelf})
+		frappe.db.set_single_value("Books POS Settings", {"pos_profile": "", "warehouse": self.shelf})
 
 	def test_pos_sales_use_the_pos_inventory(self):
 		self.assertEqual(stock_location("SalesInvoice", True), self.shelf)
 
 	def test_pos_profile_inventory_comes_first(self):
 		profile = frappe.get_doc(
-			{"doctype": "Books Pos Profile", "name": unique_name("POS Profile"), "inventory": self.counter}
+			{"doctype": "Books POS Profile", "name": unique_name("POS Profile"), "warehouse": self.counter}
 		).insert()
-		frappe.db.set_single_value("Books Pos Settings", "pos_profile", profile.name)
+		frappe.db.set_single_value("Books POS Settings", "pos_profile", profile.name)
 
 		self.assertEqual(stock_location("SalesInvoice", True), self.counter)
 
 	def test_other_invoices_use_the_default_transfer_location(self):
-		frappe.db.set_single_value("Books Pos Settings", "inventory", None)
+		frappe.db.set_single_value("Books POS Settings", "warehouse", None)
 
 		self.assertEqual(
 			[

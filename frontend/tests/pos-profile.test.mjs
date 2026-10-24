@@ -13,11 +13,11 @@ const profile = {
   name: 'Counter 1',
   pos_ui: 'Modern',
   item_visibility: 'Non-Inventory Items',
-  can_change_rate: 1,
-  can_edit_discount: 0,
+  allow_rate_change: 1,
+  allow_discount_change: 0,
 };
 const requests = await loadFrappeModels(frappeModels, ({ path }) =>
-  path.endsWith('/Books Pos Profile/Counter 1')
+  path.endsWith('/Books POS Profile/Counter 1')
     ? { data: profile }
     : { data: [] }
 );
@@ -25,9 +25,9 @@ const requests = await loadFrappeModels(frappeModels, ({ path }) =>
 test('the POS profile form shows the fields and quick edit fields it showed', () => {
   assert.deepEqual(getLayout('POSProfile').slice(0, 4), [
     'name | Profile |  | Default',
-    'pos_customer | POS Customer |  | Default',
-    'inventory | Inventory |  | Default',
-    'pos_print_template | POS Print Template |  | Default',
+    'customer | Customer |  | Default',
+    'warehouse | Warehouse |  | Default',
+    'print_format | Print Format |  | Default',
   ]);
   assert.equal(
     getLayout('POSProfile').at(-1),
@@ -35,22 +35,22 @@ test('the POS profile form shows the fields and quick edit fields it showed', ()
   );
   assert.deepEqual(getSchema('POSProfile').quickEditFields, [
     'name',
-    'pos_customer',
-    'inventory',
-    'pos_print_template',
+    'customer',
+    'warehouse',
+    'print_format',
     'pos_ui',
     'item_visibility',
-    'can_change_rate',
+    'allow_rate_change',
     'hide_unavailable_items',
-    'can_edit_discount',
+    'allow_discount_change',
     'ignore_pricing_rule',
   ]);
 });
 
 test('the POS reads what its profile allows and lists, else POS Settings', async () => {
   fyo.singles.POSSettings = {
-    can_change_rate: false,
-    can_edit_discount: true,
+    allow_rate_change: false,
+    allow_discount_change: true,
     item_visibility: 'Inventory Items',
   };
   assert.deepEqual(await posSetup.getPOSPermissions(), {

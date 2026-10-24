@@ -408,7 +408,7 @@ def _stock_location(invoice) -> str:
 	if location:
 		return location
 	if _is_pos_sale(invoice):
-		frappe.throw(_("POS Inventory is not set. Please set it on POS Settings"))
+		frappe.throw(_("POS Warehouse is not set. Please set it on POS Settings"))
 	label = frappe.get_meta("Books Defaults").get_label(_location_field(invoice))
 	frappe.throw(_("Set {0} in Books Defaults to transfer stock automatically.").format(label))
 
@@ -423,11 +423,11 @@ def _location_field(invoice) -> str:
 
 
 def _pos_location() -> str | None:
-	settings = frappe.get_single("Books Pos Settings")
+	settings = frappe.get_single("Books POS Settings")
 	profile_location = settings.pos_profile and frappe.db.get_value(
-		"Books Pos Profile", settings.pos_profile, "inventory"
+		"Books POS Profile", settings.pos_profile, "warehouse"
 	)
-	return profile_location or settings.inventory
+	return profile_location or settings.warehouse
 
 
 def _stock_rows(invoice) -> list[dict]:

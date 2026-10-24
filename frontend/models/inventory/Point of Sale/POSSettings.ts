@@ -5,12 +5,12 @@ import {
 } from 'models/baseModels/Account/types';
 import { FrappeDoc } from 'src/frappe/document';
 
-/** Books Pos Settings, served by Frappe. */
+/** Books POS Settings, served by Frappe. */
 export class POSSettings extends FrappeDoc {
-  static override doctype = 'Books Pos Settings';
+  static override doctype = 'Books POS Settings';
   static override presentation = { label: 'POS Settings' };
 
-  declare inventory?: string;
+  declare warehouse?: string;
   declare pos_profile?: string;
   declare cash_account?: string;
   declare write_off_account?: string;
@@ -21,8 +21,8 @@ export class POSSettings extends FrappeDoc {
   declare item_code_digits?: number;
   declare item_weight_digits?: number;
   declare item_visibility?: string;
-  declare can_change_rate?: boolean;
-  declare can_edit_discount?: boolean;
+  declare allow_rate_change?: boolean;
+  declare allow_discount_change?: boolean;
   declare hide_unavailable_items?: boolean;
   declare ignore_pricing_rule?: boolean;
 

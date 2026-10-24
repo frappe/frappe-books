@@ -293,7 +293,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 def _set_pos_discount_limit(pos_enabled):
 	frappe.db.set_single_value("Books Accounting Settings", "enable_discounts_and_margin", 1)
 	frappe.db.set_single_value("Books Inventory Settings", "enable_point_of_sale", pos_enabled)
-	frappe.db.set_single_value("Books Pos Settings", {"pos_profile": None, "can_edit_discount": 0})
+	frappe.db.set_single_value("Books POS Settings", {"pos_profile": None, "allow_discount_change": 0})
 
 
 def _role_rights(doctype, role):

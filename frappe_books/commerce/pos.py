@@ -31,14 +31,14 @@ def open_shift_name():
 
 def pos_customer():
 	"""Return the customer of the POS profile in use, else the Books Defaults POS customer."""
-	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
-	customer = profile and frappe.db.get_value("Books Pos Profile", profile, "pos_customer")
+	profile = frappe.db.get_single_value("Books POS Settings", "pos_profile")
+	customer = profile and frappe.db.get_value("Books POS Profile", profile, "customer")
 	return customer or frappe.db.get_single_value("Books Defaults", "pos_customer")
 
 
 def counter_cash_account():
 	"""Return the account that POS cash goes through until the shift closes."""
-	account = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+	account = frappe.db.get_single_value("Books POS Settings", "cash_account")
 	if not account:
 		frappe.throw(_("POS Counter Cash Account is not set. Please set it on POS Settings"))
 	return account
@@ -73,7 +73,7 @@ def counter_payment_amounts(rows, due):
 
 def lock_pos_settings():
 	"""Lock POS Settings so shift state changes run one at a time."""
-	settings = frappe.get_doc("Books Pos Settings", for_update=True)
+	settings = frappe.get_doc("Books POS Settings", for_update=True)
 	if not settings.cash_account:
 		frappe.throw(_("POS Counter Cash Account is not set. Please set it on POS Settings"))
 	return settings

@@ -275,7 +275,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 
 	def test_pos_cash_defaults_to_the_counter_account(self):
 		counter = make_account("Rules Counter", account_type="Cash")
-		frappe.db.set_single_value("Books Pos Settings", "cash_account", counter.name)
+		frappe.db.set_single_value("Books POS Settings", "cash_account", counter.name)
 		self.invoice.db_set("is_pos", 1)
 		payment = self._payment(self.invoice, paid_to=None)
 

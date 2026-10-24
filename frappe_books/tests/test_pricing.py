@@ -606,7 +606,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 	def test_coupons_need_pricing_rules_that_apply(self):
 		coupon = self._coupon(self._pricing_rule(is_coupon_code_based=1))
 		start_pos_shift()
-		frappe.db.set_single_value("Books Pos Settings", {"pos_profile": None, "ignore_pricing_rule": 1})
+		frappe.db.set_single_value("Books POS Settings", {"pos_profile": None, "ignore_pricing_rule": 1})
 		for enable_pricing_rule, is_pos in ((0, 0), (1, 1)):
 			with self.subTest(enable_pricing_rule=enable_pricing_rule, is_pos=is_pos):
 				frappe.db.set_single_value(
@@ -629,7 +629,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 		coupon = self._coupon(self._pricing_rule(is_coupon_code_based=1))
 		other_item = make_item(self.income.name, self.expense.name)
 		start_pos_shift()
-		frappe.db.set_single_value("Books Pos Settings", {"pos_profile": None, "ignore_pricing_rule": 0})
+		frappe.db.set_single_value("Books POS Settings", {"pos_profile": None, "ignore_pricing_rule": 0})
 
 		def sale(is_pos):
 			return frappe.get_doc(
@@ -655,8 +655,13 @@ class IntegrationTestPricing(IntegrationTestCase):
 	def test_pos_profile_that_forbids_edits_keeps_rule_prices(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		frappe.db.set_single_value(
-			"Books Pos Settings",
-			{"pos_profile": None, "ignore_pricing_rule": 0, "can_change_rate": 0, "can_edit_discount": 0},
+			"Books POS Settings",
+			{
+				"pos_profile": None,
+				"ignore_pricing_rule": 0,
+				"allow_rate_change": 0,
+				"allow_discount_change": 0,
+			},
 		)
 		for values, total in (
 			({"price_discount_type": "rate", "discount_rate": 80}, 80),

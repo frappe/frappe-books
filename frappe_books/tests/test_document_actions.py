@@ -355,7 +355,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 	def test_submit_makes_the_automatic_payment(self):
 		start_pos_shift()
-		frappe.db.set_single_value("Books Pos Settings", "pos_profile", None)
+		frappe.db.set_single_value("Books POS Settings", "pos_profile", None)
 		for is_pos, payments in ((0, 1), (1, 0)):
 			with self.subTest(is_pos=is_pos):
 				invoice = make_invoice(

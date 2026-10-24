@@ -147,10 +147,10 @@ def _update_books_system_settings(wizard):
 
 
 def _update_pos_settings(accounts):
-	settings = frappe.get_single("Books Pos Settings")
+	settings = frappe.get_single("Books POS Settings")
 	settings.update(
 		{
-			"inventory": "Stores",
+			"warehouse": "Stores",
 			"cash_account": accounts["cash"],
 			"write_off_account": accounts["write_off"],
 			"default_account": accounts["receivable"],

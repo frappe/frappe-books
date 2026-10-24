@@ -26,8 +26,8 @@ export async function getPOSProfile(): Promise<POSProfile | undefined> {
 export async function getPOSPermissions(): Promise<POSPermissions> {
   const source = (await getPOSProfile()) ?? fyo.singles.POSSettings;
   return {
-    canChangeRate: !!source?.can_change_rate,
-    canEditDiscount: !!source?.can_edit_discount,
+    canChangeRate: !!source?.allow_rate_change,
+    canEditDiscount: !!source?.allow_discount_change,
   };
 }
 
@@ -38,13 +38,13 @@ export async function getItemVisibility(): Promise<ItemVisibility> {
     fyo.singles.POSSettings?.item_visibility) as ItemVisibility;
 }
 
-/** Warns of POS settings that a sale needs; the profile's inventory stands in for POS Settings', as on the server. */
+/** Warns of POS settings that a sale needs; the profile's warehouse stands in for POS Settings', as on the server. */
 export function validateIsPosSettingsSet(profile?: POSProfile | null) {
   try {
-    const inventory = profile?.inventory || fyo.singles.POSSettings?.inventory;
-    if (!inventory) {
+    const warehouse = profile?.warehouse || fyo.singles.POSSettings?.warehouse;
+    if (!warehouse) {
       throw new ValidationError(
-        t`POS Inventory is not set. Please set it on POS Settings`
+        t`POS Warehouse is not set. Please set it on POS Settings`
       );
     }
 

@@ -13,9 +13,9 @@ class IntegrationTestSettingsAccounts(IntegrationTestCase):
 			("Books Company", "default_discount_account", cash),
 			("Books Company", "default_inventory_account", cash),
 			("Books Company", "stock_adjustment_account", cash),
-			("Books Pos Settings", "cash_account", receivable),
-			("Books Pos Settings", "write_off_account", cash),
-			("Books Pos Settings", "default_account", cash),
+			("Books POS Settings", "cash_account", receivable),
+			("Books POS Settings", "write_off_account", cash),
+			("Books POS Settings", "default_account", cash),
 			("Books Defaults", "sales_payment_account", receivable),
 			("Books Defaults", "purchase_payment_account", receivable),
 		):
@@ -27,7 +27,7 @@ class IntegrationTestSettingsAccounts(IntegrationTestCase):
 	def test_settings_reject_group_accounts(self):
 		group = make_account("Settings Cash Group", account_type="Cash", is_group=1).name
 		for doctype, fieldname in (
-			("Books Pos Settings", "cash_account"),
+			("Books POS Settings", "cash_account"),
 			("Books Defaults", "sales_payment_account"),
 		):
 			with self.subTest(fieldname=fieldname):

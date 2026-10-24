@@ -11,18 +11,35 @@
       class="-mx-2 flex min-h-9 max-w-full items-center gap-1.5 self-start rounded-4 px-2 text-start text-lg text-ink-gray-8 active:bg-surface-gray-2"
       @click="$emit('open')"
     >
-      <span class="min-w-0 truncate">{{ displayText }}</span>
+      <span class="min-w-0" :class="isAccessory ? 'break-words' : 'truncate'">{{
+        displayText
+      }}</span>
       <FrappeIcon
         icon="lucide-arrow-up-right"
         class="size-4 shrink-0 text-ink-gray-5"
       />
     </button>
-    <span
-      v-else
-      class="min-h-6 break-words text-lg"
-      :class="isRed ? 'text-ink-red-6' : 'text-ink-gray-8'"
-      >{{ displayText }}</span
+    <span v-else class="min-h-6 break-words text-lg" :class="textClass">{{
+      displayText
+    }}</span>
+  </div>
+  <!-- Accessory mode's form fields read as text: no input surface, nothing to focus. -->
+  <div
+    v-else-if="isAccessory && showLabel"
+    class="flex min-w-0 flex-col gap-1.5"
+    :style="containerStyles"
+  >
+    <FrappeFormLabel :label="df.label" />
+    <button
+      v-if="linked"
+      class="self-start break-words text-start text-base text-ink-gray-8 underline decoration-outline-gray-3 underline-offset-2 hover:decoration-current"
+      @click="$emit('open')"
     >
+      {{ displayText }}
+    </button>
+    <p v-else class="min-h-5 break-words text-base" :class="textClass">
+      {{ displayText }}
+    </p>
   </div>
   <FrappeTextInput
     v-else
@@ -51,9 +68,14 @@
 
 <script lang="ts">
 import type { FrappeDoc } from 'src/frappe/document';
-import { Icon as FrappeIcon, TextInput as FrappeTextInput } from 'frappe-ui';
+import {
+  FormLabel as FrappeFormLabel,
+  Icon as FrappeIcon,
+  TextInput as FrappeTextInput,
+} from 'frappe-ui';
 import type { Money } from 'pesa';
 import { Field, NumberField } from 'schemas/types';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
 import { isNumeric } from 'src/utils';
 import { isMobile } from 'src/utils/viewport';
@@ -61,7 +83,7 @@ import { defineComponent, PropType } from 'vue';
 
 export default defineComponent({
   name: 'ReadOnlyValue',
-  components: { FrappeIcon, FrappeTextInput },
+  components: { FrappeFormLabel, FrappeIcon, FrappeTextInput },
   props: {
     df: { type: Object as PropType<Field>, required: true },
     value: {
@@ -87,7 +109,7 @@ export default defineComponent({
   },
   emits: ['open'],
   setup() {
-    return { isMobile };
+    return { isMobile, isAccessory: isAccessoryMode() };
   },
   computed: {
     displayText(): string {
@@ -97,7 +119,19 @@ export default defineComponent({
 
       const formatted =
         this.displayValue ?? this.formatValue(this.value, this.df, this.doc);
-      return formatted || '—';
+      return formatted || this.emptyText;
+    },
+    /** Accessory mode's form fields read "Not set"; table cells keep the dash. */
+    emptyText(): string {
+      const isField = this.isMobile || this.showLabel;
+      return this.isAccessory && isField ? this.t`Not set` : '—';
+    },
+    textClass(): string {
+      if (this.isAccessory && this.displayText === this.emptyText) {
+        return 'text-ink-gray-4';
+      }
+
+      return this.isRed ? 'text-ink-red-6' : 'text-ink-gray-8';
     },
     frappeSize(): 'sm' | 'md' {
       return this.size === 'small' ? 'sm' : 'md';

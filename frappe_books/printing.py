@@ -18,6 +18,7 @@ from frappe.utils import flt, formatdate, money_in_words
 from frappe.www.printview import get_font, get_print_style, get_rendered_template
 from jinja2 import TemplateError
 
+from frappe_books.accessory import forbid_in_accessory_mode
 from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import (
 	InvoiceController,
@@ -206,6 +207,7 @@ def validate_print_format(print_format: str | None, doctype: str) -> None:
 @frappe.whitelist(methods=["POST"])
 def preview_print_format(doctype: str, name: str, html: str, css: str | None = None) -> dict[str, str]:
 	"""Render unsaved print format HTML for a document, as Frappe's print preview does."""
+	forbid_in_accessory_mode()
 	frappe.has_permission("Print Format", "write", throw=True)
 	print_format = frappe.get_doc(
 		{
@@ -232,6 +234,7 @@ def template_error_message(error: TemplateError) -> str:
 @frappe.whitelist()
 def get_print_hints(doctype: str) -> dict[str, Any]:
 	"""The values a print format for `doctype` can show, with their labels."""
+	forbid_in_accessory_mode()
 	frappe.has_permission(doctype, "read", throw=True)
 	return {
 		"doc": {"name": _("Name"), **field_hints(frappe.get_meta(doctype))},

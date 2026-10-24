@@ -47,7 +47,7 @@ def company_conditions() -> list:
 
 
 def forbid_in_accessory_mode():
-	"""Refuse a Books action that writes Books documents, as accessory mode makes none."""
+	"""Refuse a Books action accessory mode does not offer, e.g. one that writes Books documents."""
 	if accessory_company():
 		frappe.throw(_("This is not available in accessory mode yet."))
 

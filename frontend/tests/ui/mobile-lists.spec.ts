@@ -18,8 +18,8 @@ test.beforeEach(async ({ page }) => {
   if (hasCustomers) return;
   await insertDocument(page, 'Books Customer', {
     customer_name: customer,
-    phone: '98765 43210',
-    email: `${run}@example.com`,
+    mobile_no: '98765 43210',
+    email_id: `${run}@example.com`,
   });
   await insertDocument(page, 'Books Customer', {
     customer_name: otherCustomer,
@@ -100,7 +100,7 @@ test('a filter chip narrows the list until it is removed', async ({ page }) => {
   await page.getByRole('button', { name: 'Filters', exact: true }).tap();
   await page
     .getByRole('dialog', { name: 'Filter by' })
-    .getByRole('button', { name: /^Phone/ })
+    .getByRole('button', { name: /^Mobile No/ })
     .tap();
   const sheet = page.getByRole('dialog', { name: 'Filters' });
   await sheet.getByPlaceholder('Value').fill('98765');
@@ -111,7 +111,7 @@ test('a filter chip narrows the list until it is removed', async ({ page }) => {
   await expect(rows(page)).toContainText(customer);
   await expect(page.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Remove filter Phone' }).tap();
+  await page.getByRole('button', { name: 'Remove filter Mobile No' }).tap();
   await expect(rows(page)).toHaveCount(2);
   await expect(
     page.getByRole('button', { name: 'Filters', exact: true })

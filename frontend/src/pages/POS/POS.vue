@@ -270,6 +270,7 @@ import {
   isTypingInField,
   getQuickQtyBuffer,
   getPayableTotal,
+  loadPricingRuleTitles,
 } from 'src/utils/pos';
 import {
   clearReturnPayments,
@@ -422,6 +423,12 @@ export default defineComponent({
     appliedCouponsCount(): number {
       return this.sinvDoc.coupon_code ? 1 : 0;
     },
+    /** The rules the cart rows got, which their labels name. */
+    pricingRules(): string {
+      return (this.sinvDoc.items ?? [])
+        .map((row) => row.pricing_rules ?? '')
+        .join('|');
+    },
     cartLabel(): string {
       const name = this.sinvDoc.inserted ? this.sinvDoc.name : t`New sale`;
       const date = this.sinvDoc.posting_date
@@ -471,6 +478,10 @@ export default defineComponent({
     },
   },
   watch: {
+    pricingRules() {
+      // A title that cannot be read leaves the row's fallback label.
+      loadPricingRuleTitles(this.sinvDoc.items ?? []).catch(() => undefined);
+    },
     /** A preview takes off a coupon the cart no longer allows; say which. */
     coupon(
       current: { doc: SalesInvoice; code?: string },

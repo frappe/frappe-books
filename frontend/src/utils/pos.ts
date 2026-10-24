@@ -23,6 +23,7 @@ import { isAccessoryMode, toActiveDoctype } from 'src/frappe/mode';
 import { toDocValues } from 'src/frappe/values';
 import { fyo } from 'src/initFyo';
 import { call } from 'src/web/api';
+import { reactive } from 'vue';
 
 export { getTotalQuantity } from './posCart';
 
@@ -449,14 +450,49 @@ export function getCostLines(invoice: SalesInvoice): CostLine[] {
   ];
 }
 
-/** The rule a cart row got, as ERPNext lists a row's pricing rules. */
+/** Titles of the pricing rules cart rows got, by rule name; see `loadPricingRuleTitles`. */
+const pricingRuleTitles = reactive<Record<string, string>>({});
+
+/** What a cart row says of the rule it got: the rule's title, else "Free item" on a free row. */
 export function getRowPricingRule(row: SalesInvoiceItem): string {
+  const rule = getRowPricingRuleName(row);
+  const title = rule && pricingRuleTitles[rule];
+  if (title) {
+    return title;
+  }
+
+  return row.is_free_item ? t`Free item` : '';
+}
+
+/** The first rule a cart row got, as ERPNext lists a row's pricing rules. */
+function getRowPricingRuleName(row: SalesInvoiceItem): string {
   const rules = row.pricing_rules ?? '';
   if (!rules.startsWith('[')) {
     return rules.split(',')[0] ?? '';
   }
 
   return (JSON.parse(rules) as string[])[0] ?? '';
+}
+
+/** Reads the titles of the cart rows' rules not read yet, in one call; a user who cannot read rules sees none. */
+export async function loadPricingRuleTitles(rows: SalesInvoiceItem[]) {
+  const names = [...new Set(rows.map(getRowPricingRuleName))].filter(
+    (name) => name && !(name in pricingRuleTitles)
+  );
+  if (!names.length || !fyo.can(ModelNameEnum.PricingRule, 'read')) {
+    return;
+  }
+
+  // A rule that is gone keeps the fallback instead of being asked for again.
+  names.forEach((name) => (pricingRuleTitles[name] = ''));
+  const rules = await getList(toActiveDoctype('Books Pricing Rule'), {
+    fields: ['name', 'title'],
+    filters: [['name', 'in', names]],
+    limit: names.length,
+  });
+  for (const { name, title } of rules) {
+    pricingRuleTitles[String(name)] = String(title ?? '');
+  }
 }
 
 /** A row's amount before its discount, as the cart lists it above the discount. */

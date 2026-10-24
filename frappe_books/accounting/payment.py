@@ -95,6 +95,9 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		self.set_amounts()
 
 	def set_accounts(self, invoice):
+		"""Fill the accounts the payment type points to; without a type, neither is known."""
+		if not self.payment_type:
+			return
 		if fieldname := party_account_field(self.payment_type):
 			account = _default_party_account(self.get_party_account(), invoice, self.payment_type)
 			self.set(fieldname, self.get(fieldname) or account)

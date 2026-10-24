@@ -46,6 +46,7 @@ import * as api from './api';
 import type { DocValues } from './api';
 import type { EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
+import { isAccessoryMode } from './mode';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
 import {
   getFieldState,
@@ -251,8 +252,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return this.docstatus === 2;
   }
 
+  /** Books controllers preview; ERPNext documents have no preview yet, so accessory mode has none. */
   get previewMethod(): string | undefined {
-    return (this.constructor as typeof FrappeDoc).previewMethod;
+    return isAccessoryMode()
+      ? undefined
+      : (this.constructor as typeof FrappeDoc).previewMethod;
   }
 
   get namingField(): string | undefined {

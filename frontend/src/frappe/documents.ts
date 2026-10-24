@@ -1,11 +1,12 @@
 import type { DocValueMap } from 'fyo/core/types';
-import { NotFoundError } from 'fyo/utils/errors';
+import { NotFoundError, ValidationError } from 'fyo/utils/errors';
 import { getIsNullOrUndef } from 'utils';
 import { fyo } from 'src/initFyo';
 import { call } from 'src/web/api';
 import type { DocValues } from './api';
 import type { FrappeDoc } from './document';
 import { getDocType } from './doctypes';
+import { isAccessoryMode } from './mode';
 import { getNamingField } from './schema';
 import { toDocValues } from './values';
 
@@ -41,6 +42,13 @@ export async function getMappedValues(
   sourceName: string,
   mapper: string
 ): Promise<DocValues> {
+  // Books mappers make Books documents; ERPNext's come later.
+  if (isAccessoryMode()) {
+    throw new ValidationError(
+      fyo.t`This is not available in accessory mode yet.`
+    );
+  }
+
   return await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
     method: `${getControllerModule(sourceSchemaName)}.${mapper}`,
     source_name: sourceName,

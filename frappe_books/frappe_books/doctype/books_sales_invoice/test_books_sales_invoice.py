@@ -7,6 +7,7 @@ from unittest.mock import patch
 import frappe
 from frappe.client import insert
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, nowdate
 
 from frappe_books.accounting.money import company_currency
 from frappe_books.accounting.returns import map_return
@@ -86,6 +87,30 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 		self.assertEqual(invoice.items[0].tax, self.tax.name)
 		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
+
+	def test_row_tax_is_the_latest_item_tax_valid_on_the_invoice_date(self):
+		later = make_tax(self.tax_account.name, rate=5)
+		starts = add_days(nowdate(), 10)
+		item = make_item(
+			self.income.name,
+			self.expense.name,
+			taxes=[
+				{"item_tax_template": self.tax.name},
+				{"item_tax_template": later.name, "valid_from": starts},
+			],
+		)
+
+		for date, tax in ((nowdate(), self.tax.name), (starts, later.name)):
+			with self.subTest(date=date):
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					item.name,
+					self.income.name,
+					date=date,
+				)
+				self.assertEqual(invoice.items[0].tax, tax)
 
 	def test_row_hsn_code_comes_from_the_item_with_its_leading_zero(self):
 		item = make_item(self.income.name, self.expense.name, gst_hsn_code="0902")

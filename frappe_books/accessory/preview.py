@@ -1,11 +1,15 @@
 """Previews of ERPNext documents: what a save would fill, worked out by ERPNext's own code."""
 
 import frappe
+from erpnext.accounts.doctype.loyalty_program.loyalty_program import get_loyalty_program_details
+from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
 from erpnext.accounts.party import get_party_details
 from erpnext.accounts.services.taxes import get_default_taxes_and_charges
 from frappe.model import no_value_fields
 from frappe.model.document import Document
+from frappe.utils import flt
 
+from frappe_books.accessory import pos
 from frappe_books.permissions import check_preview_permission
 
 # ERPNext's own steps that fill a draft, by doctype; transactions fill their defaults and totals.
@@ -28,16 +32,22 @@ DEFAULT_FILL_STEPS = ("set_missing_values", "calculate_taxes_and_totals")
 PARTY_TYPES = {"customer": "Customer", "supplier": "Supplier", "party_name": "Customer"}
 # Fields after whose change Desk prices every row again.
 PRICE_SOURCES = {"selling_price_list", "buying_price_list", "currency", "price_list_currency"}
+# What Desk's form scripts fill as their fields change, for doctypes ERPNext's Python leaves to them
+FORM_FILLS = {
+	"POS Opening Entry": pos.fill_opening_entry,
+	"POS Closing Entry": pos.fill_closing_entry,
+}
 
 
 @frappe.whitelist(methods=["POST"])
-def preview(doc: dict, changed: dict | None = None) -> dict:
+def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False) -> dict:
 	"""`doc` as ERPNext would fill it on save, without writing anything.
 
 	`changed` names the fields the user edited since the last preview, as
 	`{"doc": [fieldname], "rows": {row name: [fieldname]}}`. As in Desk, a new
 	party refreshes its details and the prices, and a new item its row; a rate
-	the user typed stays, which ERPNext keeps as a discount.
+	the user typed stays, which ERPNext keeps as a discount. `check_coupons`
+	refuses a coupon ERPNext would refuse on save.
 	"""
 	document = get_document(frappe.parse_json(doc))
 	check_preview_permission(document)
@@ -53,7 +63,9 @@ def preview(doc: dict, changed: dict | None = None) -> dict:
 		refresh_items(document, edited_rows)
 		if edited & PRICE_SOURCES:
 			reprice_rows(document, edited_rows)
-		fill(document)
+		if check_coupons and document.get("coupon_code"):
+			validate_coupon_code(document.coupon_code)
+		fill(document, edited)
 		return document.as_dict()
 	finally:
 		# ERPNext's fills only read, but a preview never keeps a write.
@@ -130,8 +142,40 @@ def reprice_rows(document: Document, edited_rows: dict[str, list[str]]):
 		row.rate = None
 
 
-def fill(document: Document):
-	"""Run ERPNext's steps that fill the document's defaults, details and totals."""
+def fill(document: Document, edited: set[str]):
+	"""Run ERPNext's steps that fill the document's defaults, details and totals, then Desk's form fills.
+
+	A POS invoice keeps the payments the cashier entered, which its POS Profile's modes replace.
+	"""
+	tendered = pos.get_tendered_payments(document)
 	for step in FILL_STEPS.get(document.doctype, DEFAULT_FILL_STEPS):
 		if hasattr(document, step):
 			getattr(document, step)()
+		if step == "set_missing_values":
+			pos.restore_tendered_payments(document, tendered)
+			fill_loyalty(document, edited)
+
+	if form_fill := FORM_FILLS.get(document.doctype):
+		form_fill(document, edited)
+
+
+def fill_loyalty(document: Document, edited: set[str]):
+	"""A sales invoice takes its customer's loyalty program, and redeemed points their value, as Desk's form does."""
+	if document.doctype != "Sales Invoice" or not document.customer:
+		return
+
+	if "customer" in edited or not document.loyalty_program:
+		# The field's fetch_from, which Desk runs as the customer changes
+		document.loyalty_program = frappe.db.get_value("Customer", document.customer, "loyalty_program")
+	if not (document.redeem_loyalty_points and document.loyalty_points and document.loyalty_program):
+		document.loyalty_amount = 0
+		return
+
+	details = get_loyalty_program_details(
+		document.customer, document.loyalty_program, document.posting_date, document.company
+	)
+	document.loyalty_redemption_account = details.expense_account
+	document.loyalty_redemption_cost_center = details.cost_center
+	document.loyalty_amount = flt(
+		details.conversion_factor * document.loyalty_points, document.precision("loyalty_amount")
+	)

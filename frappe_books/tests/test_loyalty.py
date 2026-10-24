@@ -253,6 +253,25 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		invoice.save()
 		self.assertIsNone(invoice.loyalty_program)
 
+	def test_collection_factor_is_the_amount_spent_for_one_point(self):
+		program = self._loyalty_program(
+			collection_rules=[{"tier_name": "Base", "collection_factor": 7, "min_spent": 0}]
+		)
+		invoice = self._loyalty_invoice(program).submit()
+
+		# As ERPNext: 180 / 7, part points dropped.
+		entry = frappe.get_all(
+			"Books Loyalty Point Entry",
+			filters={"invoice": invoice.name},
+			fields=["loyalty_points", "invoice_type", "loyalty_program_tier"],
+		)
+		self.assertEqual([tuple(row.values()) for row in entry], [(25, "Books Sales Invoice", "Base")])
+
+	def test_a_program_is_named_by_its_name(self):
+		program = self._loyalty_program()
+
+		self.assertEqual(program.name, program.loyalty_program_name)
+
 	def _points(self):
 		return frappe.db.get_value("Books Customer", self.party.name, "loyalty_points")
 

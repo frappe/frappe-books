@@ -1,3 +1,4 @@
+import AccessoryChartOfAccounts from 'src/pages/AccessoryChartOfAccounts.vue';
 import ChartOfAccounts from 'src/pages/ChartOfAccounts.vue';
 import CommonForm from 'src/pages/CommonForm/CommonForm.vue';
 import Dashboard from 'src/pages/Dashboard/Dashboard.vue';
@@ -35,6 +36,8 @@ declare module 'vue-router' {
     phoneOnly?: boolean;
     /** Left out of accessory mode. */
     standaloneOnly?: boolean;
+    /** A desktop-only page that phones show in accessory mode. */
+    accessoryOnPhone?: boolean;
   }
 }
 
@@ -113,9 +116,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/chart-of-accounts',
     name: 'Chart Of Accounts',
-    meta: { desktopOnly: true },
+    meta: { desktopOnly: true, accessoryOnPhone: true },
     components: {
-      default: ChartOfAccounts,
+      // Accessory mode shows ERPNext's tree, read only.
+      default: () =>
+        Promise.resolve(
+          isAccessoryMode() ? AccessoryChartOfAccounts : ChartOfAccounts
+        ),
       edit: QuickEditForm,
     },
     props: {

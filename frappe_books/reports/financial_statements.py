@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, getdate
 
+from frappe_books.accessory import active_doctype, company_conditions, company_filters
 from frappe_books.accounting.money import as_decimal, sum_decimal
 from frappe_books.reports.periods import get_fiscal_year
 
@@ -172,13 +173,13 @@ def _balance(root_type, debit, credit):
 
 def _ledger_sums(from_date, to_date):
 	"""Return the debit and credit totals of each account, both dates included."""
-	filters = [["is_cancelled", "=", 0]]
+	filters = [["is_cancelled", "=", 0], *company_conditions()]
 	if from_date:
 		filters.append(["posting_date", ">=", from_date])
 	if to_date:
 		filters.append(["posting_date", "<=", to_date])
 	rows = frappe.get_list(
-		LEDGER,
+		active_doctype(LEDGER),
 		filters=filters,
 		fields=["account", {"SUM": "debit", "as": "debit"}, {"SUM": "credit", "as": "credit"}],
 		group_by="account",
@@ -207,7 +208,8 @@ def _sections(root_types, values, width, accounts=None):
 
 def _accounts():
 	accounts = frappe.get_list(
-		"Books Account",
+		active_doctype("Books Account"),
+		filters=company_filters(),
 		fields=["name", "root_type", "is_group", "parent_account"],
 		order_by="lft asc",
 	)

@@ -132,7 +132,7 @@
    "fieldname": "payment_method",
    "fieldtype": "Link",
    "label": "Payment Method",
-   "options": "Books Payment Method",
+   "options": "Books Mode of Payment",
    "placeholder": "Payment Method",
    "reqd": 1
   },

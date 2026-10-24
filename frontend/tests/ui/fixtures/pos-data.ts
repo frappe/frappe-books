@@ -55,12 +55,12 @@ const openingShift = {
 
 /** Frappe's records by doctype, which the fixture's server answers from. */
 const records: Record<string, Row[]> = {
-  'Books Payment Method': [
+  'Books Mode of Payment': [
     { name: 'Cash', type: 'Cash' },
-    { name: 'Credit Card', type: 'Transfer' },
-    { name: 'Bank Transfer', type: 'Transfer', requires_clearance_date: 1 },
+    { name: 'Credit Card', type: 'Bank' },
+    { name: 'Bank Transfer', type: 'Bank', requires_clearance_date: 1 },
     { name: 'Store Cash', type: 'Cash' },
-    { name: 'Store UPI', type: 'Transfer' },
+    { name: 'Store UPI', type: 'Bank' },
   ],
   'Books Item': items,
   'Books Stock Ledger Entry': [
@@ -277,7 +277,7 @@ function shareCountedCash(rows: Row[], counted: number) {
 }
 
 function getCashRows(rows: Row[]): Row[] {
-  const cashMethods = getList('Books Payment Method', [['type', '=', 'Cash']]);
+  const cashMethods = getList('Books Mode of Payment', [['type', '=', 'Cash']]);
   return rows.filter((row) =>
     cashMethods.some(({ name }) => name === row.payment_method)
   );

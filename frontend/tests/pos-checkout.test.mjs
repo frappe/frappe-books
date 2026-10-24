@@ -27,7 +27,7 @@ function respond({ path, body }) {
     return { status: 417, body: { exc_type: 'PermissionError' } };
   }
   if (method === 'get_list') {
-    const isMethods = body.doctype === 'Books Payment Method';
+    const isMethods = body.doctype === 'Books Mode of Payment';
     return { message: isMethods ? paymentMethods : [{ parent: 'PAY-1001' }] };
   }
   if (method === 'get_sale_shortfalls') {

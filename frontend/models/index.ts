@@ -21,7 +21,7 @@ import { CouponCode } from './baseModels/CouponCode/CouponCode';
 import { Payment } from './baseModels/Payment/Payment';
 import { Customer } from './baseModels/Customer/Customer';
 import { Supplier } from './baseModels/Supplier/Supplier';
-import { PaymentMethod } from './baseModels/PaymentMethod/PaymentMethod';
+import { ModeOfPayment } from './baseModels/ModeOfPayment/ModeOfPayment';
 import { ItemPrice } from './baseModels/ItemPrice/ItemPrice';
 import { PriceList } from './baseModels/PriceList/PriceList';
 import { PricingRule } from './baseModels/PricingRule/PricingRule';
@@ -76,7 +76,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   LoyaltyProgram,
   LoyaltyPointEntry,
   Payment,
-  PaymentMethod,
+  ModeOfPayment,
   JournalEntry,
   ItemEnquiry,
   CouponCode,

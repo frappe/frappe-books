@@ -134,7 +134,7 @@ export class Payment extends FrappeDoc {
     payment_account: async (doc: FrappeDoc) => {
       const method = doc.payment_method as string | undefined;
       const type =
-        method && (await getValue('Books Payment Method', method, 'type'));
+        method && (await getValue('Books Mode of Payment', method, 'type'));
       if (type === 'Cash') {
         return [
           ['account_type', '=', 'Cash'],

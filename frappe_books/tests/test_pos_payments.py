@@ -23,8 +23,8 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	make_mode_of_payment,
 	set_company_value,
-	unique_name,
 )
 
 
@@ -97,7 +97,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual((invoice.outstanding_amount, invoice.status), (0, "Paid"))
 
 	def test_failed_payment_fails_the_submit(self):
-		card = make_payment_method("Card", make_account("Card Clearing", account_type="Bank").name)
+		card = make_mode_of_payment("Card", account=make_account("Card Clearing", account_type="Bank").name)
 		# A card payment's account must be a bank or cash account, which this is not.
 		card.db_set("account", self.income.name)
 		invoice = self.make_pos_invoice(
@@ -111,7 +111,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Please enter a reference number."):
 			self.make_pos_invoice(payments=[{"payment_method": "Bank", "amount": 180}])
 
-		card = make_payment_method("Card", make_account("Card Clearing", account_type="Bank").name)
+		card = make_mode_of_payment("Card", account=make_account("Card Clearing", account_type="Bank").name)
 		card.db_set("requires_clearance_date", 1)
 		with self.assertRaisesRegex(frappe.ValidationError, "Please select a clearance date."):
 			self.make_pos_invoice(
@@ -144,7 +144,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 			)
 
 	def test_submitted_pos_invoice_is_paid_at_the_counter(self):
-		card = make_payment_method("Card", make_account("Card Clearing", account_type="Bank").name)
+		card = make_mode_of_payment("Card", account=make_account("Card Clearing", account_type="Bank").name)
 		invoice = self.make_pos_invoice()
 		invoice.submit()
 
@@ -214,12 +214,6 @@ def counter_payments(invoice):
 		filters={"reference_name": invoice.name, "docstatus": 1},
 		pluck="parent",
 	)
-
-
-def make_payment_method(label, account):
-	return frappe.get_doc(
-		{"doctype": "Books Payment Method", "name": unique_name(label), "type": "Bank", "account": account}
-	).insert()
 
 
 def account_balance(account):

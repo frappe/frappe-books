@@ -1,5 +1,5 @@
 import { POSOpeningShift } from 'models/inventory/Point of Sale/POSOpeningShift';
-import { ModelNameEnum, PaymentMethodType } from 'models/types';
+import { ModelNameEnum, ModeOfPaymentType } from 'models/types';
 import { getAllDocuments } from 'src/frappe/api';
 import { getFrappeDoc } from 'src/frappe/documents';
 import { call } from 'src/web/api';
@@ -15,13 +15,13 @@ const GET_OPEN_SHIFT =
  */
 export function usePOSShift() {
   const openShift = shallowRef<POSOpeningShift>();
-  const methodTypes = shallowRef<Record<string, PaymentMethodType>>({});
+  const methodTypes = shallowRef<Record<string, ModeOfPaymentType>>({});
   const isLoaded = shallowRef(false);
 
   async function refresh() {
     const [name, methods] = await Promise.all([
       call<string | null>(GET_OPEN_SHIFT),
-      getAllDocuments('Books Payment Method', { fields: ['name', 'type'] }),
+      getAllDocuments('Books Mode of Payment', { fields: ['name', 'type'] }),
     ]);
     openShift.value = name
       ? ((await getFrappeDoc(
@@ -30,7 +30,7 @@ export function usePOSShift() {
         )) as POSOpeningShift)
       : undefined;
     methodTypes.value = Object.fromEntries(
-      methods.map(({ name, type }) => [name, type as PaymentMethodType])
+      methods.map(({ name, type }) => [name, type as ModeOfPaymentType])
     );
     isLoaded.value = true;
   }

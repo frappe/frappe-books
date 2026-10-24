@@ -3,7 +3,7 @@ import { DateTime } from 'luxon';
 import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
-} from 'models/baseModels/PaymentMethod/requirements';
+} from 'models/baseModels/ModeOfPayment/requirements';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { Money } from 'pesa';
 import type { PaymentMethodOption } from 'src/components/POS/types';
@@ -212,7 +212,7 @@ function isTenderComplete(
 }
 
 async function getPaymentMethods(): Promise<PaymentMethodOption[]> {
-  return (await getAllDocuments('Books Payment Method', {
+  return (await getAllDocuments('Books Mode of Payment', {
     fields: ['name', 'type', 'requires_clearance_date'],
   })) as PaymentMethodOption[];
 }

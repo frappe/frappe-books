@@ -21,8 +21,8 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	make_mode_of_payment,
 	set_company_value,
-	unique_name,
 )
 
 
@@ -157,9 +157,7 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertEqual(draft.closing_amounts[1].difference_amount, 5)
 
 	def test_preview_shares_the_counted_cash_among_the_cash_methods(self):
-		petty = frappe.get_doc(
-			{"doctype": "Books Payment Method", "name": unique_name("Petty Cash"), "type": "Cash"}
-		).insert()
+		petty = make_mode_of_payment("Petty Cash", "Cash")
 		opening = frappe.get_doc(
 			{
 				"doctype": "Books Pos Opening Shift",
@@ -217,9 +215,7 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		)
 
 	def test_every_cash_type_method_is_reconciled_through_the_counter(self):
-		petty = frappe.get_doc(
-			{"doctype": "Books Payment Method", "name": unique_name("Petty Cash"), "type": "Cash"}
-		).insert()
+		petty = make_mode_of_payment("Petty Cash", "Cash")
 		opening = frappe.get_doc(
 			{
 				"doctype": "Books Pos Opening Shift",

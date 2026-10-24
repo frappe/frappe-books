@@ -221,6 +221,19 @@ def make_number_series(reference_type):
 	)
 
 
+def make_mode_of_payment(label, mode_type="Bank", account=None):
+	values = {"mode_of_payment": unique_name(label), "type": mode_type}
+	accounts = [{"default_account": account}] if account else []
+	return frappe.get_doc({"doctype": "Books Mode of Payment", **values, "accounts": accounts}).insert()
+
+
+def set_mode_of_payment_account(mode_of_payment, account):
+	"""Give the mode `account` for the one company, or no account."""
+	mode = frappe.get_doc("Books Mode of Payment", mode_of_payment)
+	mode.set("accounts", [{"company": default_company(), "default_account": account}] if account else [])
+	mode.save()
+
+
 def make_warehouse(label):
 	return frappe.get_doc({"doctype": "Books Warehouse", "warehouse_name": unique_name(label)}).insert()
 

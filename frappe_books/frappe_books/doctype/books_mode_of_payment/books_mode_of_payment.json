@@ -2,30 +2,39 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:mode_of_payment",
  "creation": "2026-08-27 22:09:39.995934",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "mode_of_payment",
   "type",
-  "account",
+  "accounts",
   "requires_clearance_date"
  ],
  "fields": [
+  {
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Mode of Payment",
+   "reqd": 1,
+   "unique": 1
+  },
   {
    "fieldname": "type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Type",
-   "options": "Cash\nBank\nTransfer",
+   "options": "Cash\nBank\nGeneral\nPhone",
    "reqd": 1
   },
   {
-   "fieldname": "account",
-   "fieldtype": "Link",
-   "label": "Account",
-   "options": "Books Account"
+   "fieldname": "accounts",
+   "fieldtype": "Table",
+   "label": "Accounts",
+   "options": "Books Mode of Payment Account"
   },
   {
    "default": "0",
@@ -37,10 +46,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Payment Method",
+ "name": "Books Mode of Payment",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

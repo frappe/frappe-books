@@ -17,7 +17,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Payment Method",
-   "options": "Books Payment Method",
+   "options": "Books Mode of Payment",
    "reqd": 1
   },
   {

@@ -418,7 +418,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		invoice = self._paid_invoice(make_auto_payment=0)
 		self.assertEqual(map_invoice_payment(invoice.doctype, invoice.name).payment_method, "Bank")
 
-		frappe.db.set_value("Books Payment Method", "Bank", "type", "Transfer")
+		frappe.db.set_value("Books Mode of Payment", "Bank", "type", "General")
 		with self.assertRaisesRegex(frappe.ValidationError, "Add a Bank payment method"):
 			map_invoice_payment(invoice.doctype, invoice.name)
 

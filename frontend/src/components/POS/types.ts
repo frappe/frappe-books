@@ -1,4 +1,4 @@
-import { PaymentMethodType } from 'models/types';
+import { ModeOfPaymentType } from 'models/types';
 import { Money } from 'pesa';
 
 export type ItemQtyMap = {
@@ -50,15 +50,16 @@ export interface POSItem {
 }
 
 /** The icon for each kind of payment method. */
-export const paymentMethodIcons: Record<PaymentMethodType, string> = {
+export const paymentMethodIcons: Record<ModeOfPaymentType, string> = {
   Cash: 'lucide-banknote',
   Bank: 'lucide-landmark',
-  Transfer: 'lucide-arrow-right-left',
+  General: 'lucide-wallet',
+  Phone: 'lucide-smartphone',
 };
 
-/** A payment method the cashier picks, by Books Payment Method fieldnames. */
+/** A payment method the cashier picks, by Books Mode of Payment fieldnames. */
 export type PaymentMethodOption = {
   name: string;
-  type?: PaymentMethodType;
+  type?: ModeOfPaymentType;
   requires_clearance_date?: boolean;
 };

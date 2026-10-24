@@ -12,6 +12,7 @@ from frappe_books.accounting import settlement
 from frappe_books.accounting.accounts import (
 	PARTY_ACCOUNT_TYPES,
 	latest_ledger_account,
+	mode_of_payment_account,
 	validate_party_account,
 	validate_payment_account,
 )
@@ -127,7 +128,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 			frappe.throw(_("Party Type must be Customer or Supplier."))
 		validate_party_account(self, "account", self.party_type)
 		method_type = self.payment_method and frappe.get_cached_value(
-			"Books Payment Method", self.payment_method, "type"
+			"Books Mode of Payment", self.payment_method, "type"
 		)
 		validate_payment_account(self, "payment_account", method_type)
 
@@ -211,17 +212,14 @@ def _default_party_account(party_account, invoice, payment_type):
 def _default_payment_account(payment_method, invoice):
 	"""POS cash goes to the counter, other payments to the method's account, else the newest ledger
 	of the method's kind."""
-	fields = ["type", "account"]
-	method = payment_method and frappe.db.get_value(
-		"Books Payment Method", payment_method, fields, as_dict=True
-	)
-	if not method:
+	method_type = payment_method and frappe.db.get_value("Books Mode of Payment", payment_method, "type")
+	if not method_type:
 		return None
-	if method.type == "Cash" and invoice and invoice.get("is_pos"):
+	if method_type == "Cash" and invoice and invoice.get("is_pos"):
 		return counter_cash_account()
-	if method.account:
-		return method.account
-	return latest_ledger_account("Cash" if method.type == "Cash" else "Bank")
+	return mode_of_payment_account(payment_method) or latest_ledger_account(
+		"Cash" if method_type == "Cash" else "Bank"
+	)
 
 
 def _validate_allocations(payment):
@@ -382,7 +380,7 @@ def _settle_invoice(invoice, payment):
 def validate_payment_details(payment_method, reference_id, clearance_date):
 	"""A non-cash payment needs a reference number, and its method may need a clearance date."""
 	method = frappe.db.get_value(
-		"Books Payment Method", payment_method, ["type", "requires_clearance_date"], as_dict=True
+		"Books Mode of Payment", payment_method, ["type", "requires_clearance_date"], as_dict=True
 	)
 	if not method:
 		return
@@ -403,9 +401,7 @@ def default_payment_account(invoice_doctype) -> str | None:
 def _settling_account(invoice):
 	if invoice.get("is_pos"):
 		return counter_cash_account()
-	account = default_payment_account(invoice.doctype) or frappe.db.get_value(
-		"Books Payment Method", "Cash", "account"
-	)
+	account = default_payment_account(invoice.doctype) or mode_of_payment_account("Cash")
 	if not account:
 		frappe.throw(_("Set a default payment account in Books Defaults."))
 	return account
@@ -415,7 +411,7 @@ def _settling_method(account):
 	"""Return the oldest payment method of the account's type: Cash for cash, Bank for bank."""
 	account_type = frappe.db.get_value("Books Account", account, "account_type")
 	method = frappe.db.get_value(
-		"Books Payment Method", {"type": account_type}, "name", order_by="creation asc"
+		"Books Mode of Payment", {"type": account_type}, "name", order_by="creation asc"
 	)
 	if not method:
 		frappe.throw(_("Add a {0} payment method to pay from {1}.").format(_(account_type), account))

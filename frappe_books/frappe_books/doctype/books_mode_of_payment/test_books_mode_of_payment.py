@@ -4,31 +4,25 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.tests.accounting import make_account, unique_name
+from frappe_books.tests.accounting import make_account, make_mode_of_payment
 
 
-class IntegrationTestBooksPaymentMethod(IntegrationTestCase):
-	def test_account_suits_the_method_type(self):
+class IntegrationTestBooksModeofPayment(IntegrationTestCase):
+	def test_account_suits_the_mode_type(self):
 		cash = make_account("Method Cash", account_type="Cash").name
 		bank = make_account("Method Bank", account_type="Bank").name
 		income = make_account("Method Income", root_type="Income", account_type="Income Account").name
-		for method_type, account, message in (
+		for mode_type, account, message in (
 			("Cash", bank, "must be of type Cash, but"),
 			("Bank", income, "must be of type Cash or Bank"),
 			("Cash", cash, None),
 			("Bank", bank, None),
 			("Bank", cash, None),
 		):
-			with self.subTest(method_type=method_type, account=account):
-				method = frappe.get_doc(
-					{
-						"doctype": "Books Payment Method",
-						"name": unique_name(method_type),
-						"type": method_type,
-						"account": account,
-					}
-				)
+			with self.subTest(mode_type=mode_type, account=account):
 				if message:
-					self.assertRaisesRegex(frappe.ValidationError, message, method.insert)
+					self.assertRaisesRegex(
+						frappe.ValidationError, message, make_mode_of_payment, mode_type, mode_type, account
+					)
 				else:
-					method.insert()
+					make_mode_of_payment(mode_type, mode_type, account)

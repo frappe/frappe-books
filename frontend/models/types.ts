@@ -27,7 +27,7 @@ export enum ModelNameEnum {
   CouponCode = 'CouponCode',
   AppliedCouponCodes = 'AppliedCouponCodes',
   Payment = 'Payment',
-  PaymentMethod = 'PaymentMethod',
+  ModeOfPayment = 'ModeOfPayment',
   PaymentFor = 'PaymentFor',
   PriceList = 'PriceList',
   ItemPrice = 'ItemPrice',
@@ -69,4 +69,4 @@ export enum ModelNameEnum {
 
 export type ModelName = keyof typeof ModelNameEnum;
 
-export type PaymentMethodType = 'Cash' | 'Bank' | 'Transfer';
+export type ModeOfPaymentType = 'Cash' | 'Bank' | 'General' | 'Phone';

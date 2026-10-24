@@ -56,25 +56,26 @@ test('a tax template shows its title and tax rate rows', () => {
   );
 });
 
-test('a payment method shows its type, account and clearance date as before', () => {
-  const method = getSchema('PaymentMethod');
-  assert.equal(method.label, 'Payment Method');
-  assert.deepEqual(getLayout('PaymentMethod'), [
-    'name | Name | ',
+test('a mode of payment shows its type, accounts and clearance date', () => {
+  const mode = getSchema('ModeOfPayment');
+  assert.equal(mode.label, 'Mode of Payment');
+  assert.deepEqual(getLayout('ModeOfPayment'), [
+    'mode_of_payment | Mode of Payment | ',
     'type | Type | ',
-    'account | Account | ',
+    'accounts | Accounts | ',
     'requires_clearance_date | Requires Clearance Date | ',
   ]);
-  assert.deepEqual(method.quickEditFields, [
-    'name',
+  assert.deepEqual(mode.quickEditFields, [
     'type',
-    'account',
+    'accounts',
     'requires_clearance_date',
   ]);
-  const account = method.fields.find((field) => field.fieldname === 'account');
+  const account = getSchema('ModeofPaymentAccount').fields.find(
+    (field) => field.fieldname === 'default_account'
+  );
   assert.equal(account.create, false);
   assert.deepEqual(
-    frappeModels.PaymentMethod.getListViewSettings(fyo).columns,
+    frappeModels.ModeOfPayment.getListViewSettings(fyo).columns,
     ['name', 'type']
   );
 });

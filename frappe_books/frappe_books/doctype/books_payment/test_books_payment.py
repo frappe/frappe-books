@@ -16,9 +16,11 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	make_mode_of_payment,
 	make_number_series,
 	make_supplier,
 	set_company_value,
+	set_mode_of_payment_account,
 	unique_name,
 )
 
@@ -243,7 +245,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self._payment(self.invoice, amount=100).insert()
 
 	def test_missing_type_and_accounts_are_filled(self):
-		frappe.db.set_value("Books Payment Method", "Cash", "account", self.cash.name)
+		set_mode_of_payment_account("Cash", self.cash.name)
 		receipt = self._payment(self.invoice, payment_type=None, account=None, payment_account=None)
 		receipt.insert()
 		self.assertEqual(
@@ -256,7 +258,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		# A payment out uses the method's account too, else the newest cash account.
 		for method_account, payment_account in ((self.cash.name, self.cash.name), (None, cash.name)):
 			with self.subTest(method_account=method_account):
-				frappe.db.set_value("Books Payment Method", "Cash", "account", method_account)
+				set_mode_of_payment_account("Cash", method_account)
 				payment = frappe.get_doc(
 					{
 						"doctype": "Books Payment",
@@ -282,7 +284,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self.assertEqual(payment.payment_account, counter.name)
 
 	def test_preview_fills_a_payment_from_its_invoice_without_saving(self):
-		frappe.db.set_value("Books Payment Method", "Cash", "account", self.cash.name)
+		set_mode_of_payment_account("Cash", self.cash.name)
 		payment = frappe.new_doc("Books Payment", payment_method="Cash")
 		payment.append("payment_references", {"reference_name": self.invoice.name})
 		payments = frappe.db.count("Books Payment")
@@ -375,9 +377,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 			self.assertRaises(frappe.PermissionError, payment.preview)
 
 	def test_payment_method_requirements(self):
-		method = frappe.get_doc(
-			{"doctype": "Books Payment Method", "name": unique_name("Cheque"), "type": "Bank"}
-		).insert()
+		method = make_mode_of_payment("Cheque")
 		payment = self._payment(self.invoice, payment_method=method.name)
 		with self.assertRaisesRegex(frappe.ValidationError, "Please enter a reference number."):
 			payment.insert()

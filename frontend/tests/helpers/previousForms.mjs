@@ -414,7 +414,7 @@ export const previousForms = {
     'TaxSummary.account': false,
     'TaxSummary.from_account': false,
     'PaymentFor.reference_name': false,
-    'PaymentMethod.account': false,
+    'ModeofPaymentAccount.default_account': false,
     'JournalEntry.naming_series': true,
     'JournalEntryAccount.account': false,
     'CouponCode.pricing_rule': false,

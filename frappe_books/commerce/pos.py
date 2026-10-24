@@ -8,6 +8,7 @@ from frappe.query_builder import Order
 from frappe.utils import getdate
 
 from frappe_books.accounting import settlement
+from frappe_books.accounting.accounts import mode_of_payment_account
 from frappe_books.accounting.money import as_decimal, rounded
 
 
@@ -44,14 +45,14 @@ def counter_cash_account():
 
 def is_cash_method(payment_method):
 	"""Cash-type methods go through the counter, which the POS shift counts and reconciles."""
-	return frappe.get_cached_value("Books Payment Method", payment_method, "type") == "Cash"
+	return frappe.get_cached_value("Books Mode of Payment", payment_method, "type") == "Cash"
 
 
 def counter_payment_account(payment_method):
 	"""Cash goes through the counter; other methods use their own account."""
 	if is_cash_method(payment_method):
 		return counter_cash_account()
-	return frappe.get_cached_value("Books Payment Method", payment_method, "account")
+	return mode_of_payment_account(payment_method)
 
 
 def counter_payment_amounts(rows, due):

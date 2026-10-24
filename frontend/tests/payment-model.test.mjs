@@ -188,8 +188,8 @@ test('payment links filter as they did', async () => {
     ['account_type', '=', 'Cash'],
     ['is_group', '=', 0],
   ]);
-  const [read] = requests.filter(({ path }) => path.includes('Payment Method'));
-  assert.equal(read.path, '/api/v2/document/Books Payment Method');
+  const [read] = requests.filter(({ path }) => path.includes('Mode of Payment'));
+  assert.equal(read.path, '/api/v2/document/Books Mode of Payment');
   assert.deepEqual(read.params, {
     fields: ['type'],
     filters: [['name', '=', 'Cash']],

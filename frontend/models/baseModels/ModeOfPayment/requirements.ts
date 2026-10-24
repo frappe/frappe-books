@@ -1,4 +1,4 @@
-import { PaymentMethodType } from 'models/types';
+import { ModeOfPaymentType } from 'models/types';
 
 export type PaymentMethodRequirements = {
   isCash: boolean;
@@ -8,7 +8,7 @@ export type PaymentMethodRequirements = {
 
 /** What a payment by the method needs, as the server's validate_payment_details checks it. */
 export function getPaymentMethodRequirements(
-  type?: PaymentMethodType,
+  type?: ModeOfPaymentType,
   requiresClearanceDate = false
 ): PaymentMethodRequirements {
   const isCash = type === 'Cash';

@@ -5,6 +5,7 @@ import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import get_setup_wizard_url
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.accounting.accounts import mode_of_payment_account
 from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
 from frappe_books.company import company_value, default_company
 from frappe_books.frappe_books.doctype.books_company.books_company import (
@@ -69,7 +70,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertTrue(frappe.db.get_value("Currency", "INR", "enabled"))
 		cash = frappe.db.get_single_value("Books Pos Settings", "cash_account")
 		for method, account in (("Cash", cash), ("Bank", wizard.bank_name)):
-			self.assertEqual(frappe.db.get_value("Books Payment Method", method, "account"), account)
+			self.assertEqual(mode_of_payment_account(method), account)
 		# Invoices stay unpaid on submit until the user picks an automatic payment account.
 		for fieldname in payment_accounts:
 			self.assertFalse(frappe.db.get_single_value("Books Defaults", fieldname), fieldname)

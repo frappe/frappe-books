@@ -14,7 +14,7 @@ from frappe_books.coa import (
 	find_ledger_account,
 	load_chart,
 )
-from frappe_books.company import save_company
+from frappe_books.company import default_company, save_company
 from frappe_books.currency import currency_precision
 from frappe_books.formats import books_date_format
 from frappe_books.regional import ensure_address_template, ensure_regional_records
@@ -39,7 +39,7 @@ def run_setup(wizard):
 	_update_books_system_settings(wizard)
 	_update_print_settings(wizard)
 	_update_pos_settings(accounts)
-	_update_payment_methods(accounts["cash"], bank_account)
+	_update_modes_of_payment(accounts["cash"], bank_account)
 	_update_defaults()
 	return {"setup_complete": True, "bank_account": bank_account}
 
@@ -159,10 +159,15 @@ def _update_pos_settings(accounts):
 	settings.save(ignore_permissions=True)
 
 
-def _update_payment_methods(cash_account, bank_account):
-	"""Receipts by the seeded methods default to the company's cash and bank accounts."""
-	for method, account in (("Cash", cash_account), ("Bank", bank_account)):
-		frappe.db.set_value("Books Payment Method", method, "account", account, update_modified=False)
+def _update_modes_of_payment(cash_account, bank_account):
+	"""Receipts by the seeded modes default to the company's cash and bank accounts."""
+	company = default_company()
+	for mode, account in (("Cash", cash_account), ("Bank", bank_account)):
+		doc = frappe.get_doc("Books Mode of Payment", mode)
+		row = doc.get("accounts", {"company": company})
+		row = row[0] if row else doc.append("accounts", {"company": company})
+		row.default_account = account
+		doc.save(ignore_permissions=True)
 
 
 def _update_defaults():

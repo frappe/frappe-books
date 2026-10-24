@@ -62,11 +62,11 @@ class IntegrationTestInstallation(IntegrationTestCase):
 
 		self.assertEqual(default_print_format("Books Sales Invoice"), POS_PRINT_FORMAT)
 
-	def test_install_seeds_a_bank_payment_method(self):
-		frappe.delete_doc("Books Payment Method", "Bank")
+	def test_install_seeds_a_bank_mode_of_payment(self):
+		frappe.delete_doc("Books Mode of Payment", "Bank")
 		bootstrap()
 
-		self.assertEqual(frappe.db.get_value("Books Payment Method", "Bank", "type"), "Bank")
+		self.assertEqual(frappe.db.get_value("Books Mode of Payment", "Bank", "type"), "Bank")
 
 	def test_setup_makes_a_default_address_template_once(self):
 		frappe.db.delete("Address Template")

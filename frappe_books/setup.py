@@ -61,8 +61,10 @@ def bootstrap():
 	for name, whole in DEFAULT_UOMS.items():
 		_insert_if_missing("Books UOM", name, {"uom_name": name, "must_be_whole_number": whole})
 	_insert_if_missing("Books Warehouse", "Stores", {"warehouse_name": "Stores"})
-	for method_type in ("Cash", "Bank"):
-		_insert_if_missing("Books Payment Method", method_type, {"type": method_type})
+	for mode_type in ("Cash", "Bank"):
+		_insert_if_missing(
+			"Books Mode of Payment", mode_type, {"mode_of_payment": mode_type, "type": mode_type}
+		)
 	grant_core_permissions()
 	set_default_print_formats()
 

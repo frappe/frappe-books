@@ -22,11 +22,11 @@ def accessory_company() -> str | None:
 
 	ERPNext gone or the company deleted turns accessory mode off on the next load.
 	"""
-	if not erpnext_installed():
+	if not (erpnext_installed() and frappe.db.get_single_value(SETTINGS, "accessory_mode")):
 		return None
 
-	accessory_mode, company = frappe.db.get_value(SETTINGS, None, ["accessory_mode", "default_company"])
-	if accessory_mode and company and frappe.db.exists("Company", company):
+	company = frappe.db.get_single_value(SETTINGS, "default_company")
+	if company and frappe.db.exists("Company", company):
 		return company
 
 

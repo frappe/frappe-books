@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, flt, nowdate
+from frappe.utils import add_days, flt, now_datetime, nowdate
 
 from frappe_books.tests.accounting import ensure_user
 from frappe_books.tests.test_accessory_erpnext import (
@@ -133,19 +133,24 @@ class IntegrationTestAccessoryPOS(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.preview(values, {}, check_coupons=True)
 
-	def test_the_closing_entry_expects_the_opening_amounts_plus_the_shift_payments(self):
+	def open_shift(self):
+		"""A submitted POS Opening Entry of the user with 100 in cash."""
 		opening = frappe.get_doc(
 			{
 				"doctype": "POS Opening Entry",
 				"company": self.company,
 				"pos_profile": self.profile.name,
 				"user": frappe.session.user,
-				"period_start_date": nowdate(),
+				"period_start_date": now_datetime(),
 				"posting_date": nowdate(),
 				"balance_details": [{"mode_of_payment": "Cash", "opening_amount": 100}],
 			}
 		)
 		opening.submit()
+		return opening
+
+	def test_the_closing_entry_expects_the_opening_amounts_plus_the_shift_payments(self):
+		opening = self.open_shift()
 		invoice = make_pos_invoice(self.profile, self.customer, self.item, is_created_using_pos=1, paid=23.6)
 
 		closing = self.preview(
@@ -159,6 +164,14 @@ class IntegrationTestAccessoryPOS(IntegrationTestCase):
 		self.assertEqual(row["opening_amount"], 100)
 		self.assertEqual(row["expected_amount"], flt(100 + invoice.paid_amount))
 		self.assertEqual(row["closing_amount"], row["expected_amount"])
+
+	def test_a_new_closing_entry_closes_the_users_open_shift(self):
+		opening = self.open_shift()
+
+		closing = self.preview({"doctype": "POS Closing Entry", "__islocal": 1}, {})
+
+		self.assertEqual(closing["pos_opening_entry"], opening.name)
+		self.assertEqual(closing["payment_reconciliation"][0]["expected_amount"], 100)
 
 	def test_a_submitted_pos_invoice_is_paid_with_payment_entries(self):
 		from frappe_books.accessory.pos import pay_pos_invoice

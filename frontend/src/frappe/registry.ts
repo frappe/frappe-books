@@ -1,6 +1,7 @@
 import { translateSchema, TranslationString } from 'fyo/utils/translation';
 import type { Field, Schema } from 'schemas/types';
 import { fyo } from 'src/initFyo';
+import { getIsNullOrUndef } from 'utils';
 import { schemaTranslateables } from 'utils/translationHelpers';
 import { FrappeDoc } from './document';
 import {
@@ -59,13 +60,14 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
 
 /**
  * The fields of export and import files: the schema's `fileFields` in their
- * order, then its custom and meta fields; else all its stored fields.
+ * order, then its custom and meta fields; else all its stored fields. An
+ * ERPNext DocType's files hold the fields its form shows, as Books lays it out.
  */
 export function getFileFields(schemaName: string): Field[] {
   const schema = getSchema(schemaName)!;
   // Insert-only and client values are not the DocType's, so files cannot hold them.
   const fields = schema.fields.filter(
-    (field) => !field.insertOnly && !field.clientOnly
+    (field) => !field.insertOnly && !field.clientOnly && isShownInFiles(field)
   );
   const { fileFields } = schema;
   if (!fileFields) {
@@ -77,6 +79,17 @@ export function getFileFields(schemaName: string): Field[] {
     (field) => (field.isCustom || field.meta) && !listed.includes(field)
   );
   return [...listed, ...rest];
+}
+
+/**
+ * Accessory mode leaves out ERPNext fields its forms show only while mandatory
+ * and empty, but keeps the mandatory ones with no default, which imports need.
+ */
+function isShownInFiles(field: Field): boolean {
+  return (
+    field.moreDetails !== 'ifMissing' ||
+    (!!field.required && getIsNullOrUndef(field.default))
+  );
 }
 
 /**

@@ -32,8 +32,18 @@ const booksFieldTypes: Record<string, FieldType | undefined> = {
   'Small Text': 'Text',
   'Text Editor': 'Text',
   Percent: 'Float',
+  // Rows of a link each, which /books edits as a table.
+  'Table MultiSelect': 'Table',
   Time: 'Data',
 };
+
+/** Whether a DocField holds rows, as Frappe's table fieldtypes do. */
+export function isTableDocField(docfield: DocFieldProperties): boolean {
+  return (
+    booksFieldTypes[docfield.fieldtype] === 'Table' ||
+    docfield.fieldtype === 'Table'
+  );
+}
 
 /** A reference field holds a DocType name, which /books shows as a choice of doctypes. */
 export function isReferenceField(docfield: DocFieldProperties): boolean {

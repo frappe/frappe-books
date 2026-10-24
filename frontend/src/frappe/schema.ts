@@ -1,4 +1,8 @@
-import { getFieldProperties, isReferenceField } from './fieldProperties';
+import {
+  getFieldProperties,
+  isReferenceField,
+  isTableDocField,
+} from './fieldProperties';
 import type { Field, Naming, OptionField, Schema } from 'schemas/types';
 import type { Filter } from './api';
 import type { DocField, DocTypeMeta } from './meta';
@@ -266,7 +270,7 @@ function toField(docfield: DocField, context: FieldContext): Field {
     }),
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
-  if (docfield.fieldtype === 'Table') {
+  if (isTableDocField(docfield)) {
     field.target = getTableSchemaName(docfield.options!);
   } else if (properties.target) {
     field.target = schemaNames[properties.target] ?? properties.target;

@@ -12,6 +12,7 @@ import {
   type FrappeDocType,
   type FrappeModel,
 } from './doctypes';
+import { isTableDocField } from './fieldProperties';
 import { getOpenFrappeDocs } from './documents';
 import { getBooksMeta, type BooksMeta, type DocTypeMeta } from './meta';
 import {
@@ -162,8 +163,9 @@ function getTables(
 ) {
   const tables: FrappeDocType['tables'] = {};
   for (const field of meta.fields) {
-    const child =
-      field.fieldtype === 'Table' ? byName.get(field.options!) : undefined;
+    const child = isTableDocField(field)
+      ? byName.get(field.options!)
+      : undefined;
     if (child) {
       const name = getTableSchemaName(child.name);
       const RowModel = Model.rowModels[field.fieldname] ?? FrappeDoc;

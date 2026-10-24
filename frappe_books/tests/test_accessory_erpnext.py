@@ -118,6 +118,16 @@ class IntegrationTestAccessoryPreview(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "is mandatory"):
 			self.preview(values, {"doc": ["paid_amount"]})
 
+	def test_a_new_payment_of_a_party_type_takes_its_payment_type(self):
+		doc = self.preview({"doctype": "Payment Entry", "__islocal": 1, "party_type": "Supplier"}, {})
+
+		self.assertEqual((doc["payment_type"], doc["party_type"]), ("Pay", "Supplier"))
+
+	def test_a_new_payment_of_a_payment_type_takes_its_party_type(self):
+		doc = self.preview({"doctype": "Payment Entry", "__islocal": 1, "payment_type": "Pay"}, {})
+
+		self.assertEqual((doc["payment_type"], doc["party_type"]), ("Pay", "Supplier"))
+
 	def test_a_preview_needs_the_right_to_make_the_document(self):
 		ensure_user(NO_RIGHTS_USER)
 		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):

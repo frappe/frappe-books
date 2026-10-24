@@ -1231,7 +1231,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   ): Promise<DocValues | undefined> {
     try {
       return isAccessoryMode()
-        ? await api.previewERPNextDocument(document, this._getEdits())
+        ? await api.previewERPNextDocument(document, this._getEdits(), kwargs)
         : await api.runDocMethod(this.previewMethod!, document, kwargs);
     } catch (error) {
       if (error instanceof ConflictError) {

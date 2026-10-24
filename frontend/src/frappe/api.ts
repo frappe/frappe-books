@@ -96,13 +96,16 @@ export interface PreviewEdits {
 
 /**
  * What ERPNext fills in a document on save, without saving it. Edits name
- * what the user changed, so a new party or item refreshes what follows it.
+ * what the user changed, so a new party or item refreshes what follows it;
+ * `kwargs` are the preview's options, like `check_coupons`.
  */
 export async function previewERPNextDocument(
   document: DocValues,
-  edits: PreviewEdits
+  edits: PreviewEdits,
+  kwargs?: Record<string, unknown>
 ): Promise<DocValues> {
   return await call<DocValues>('frappe_books.accessory.preview.preview', {
+    ...kwargs,
     doc: document,
     changed: edits,
   });

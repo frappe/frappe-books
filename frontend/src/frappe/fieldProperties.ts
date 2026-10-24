@@ -106,7 +106,8 @@ function getOptionProperties(
 }
 
 function getDefault(fieldtype: string, value: string | undefined) {
-  if (value === undefined) {
+  // A default like ":Company", the user's default company, is the server's to fill.
+  if (value === undefined || value.startsWith(':')) {
     return undefined;
   }
 

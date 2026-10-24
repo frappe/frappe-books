@@ -1,11 +1,13 @@
 import type {
   DynamicLinkField,
   Field,
+  FieldControl,
   FieldType,
   NumberField,
   OptionField,
   TargetField,
 } from 'schemas/types';
+import { isAccessoryMode } from './mode';
 
 /** The DocField properties a field's data properties come from. */
 export type DocFieldProperties = {
@@ -18,6 +20,7 @@ export type DocFieldProperties = {
   set_only_once?: number;
   non_negative?: number;
   max_value?: number;
+  precision?: string;
   states?: Record<string, string>;
 };
 
@@ -35,6 +38,15 @@ const booksFieldTypes: Record<string, FieldType | undefined> = {
   // Rows of a link each, which /books edits as a table.
   'Table MultiSelect': 'Table',
   Time: 'Data',
+  'Read Only': 'Data',
+};
+// The control each ERPNext field type shows in accessory mode.
+const accessoryControls: Record<string, FieldControl | undefined> = {
+  'Text Editor': 'TextEditor',
+  'Table MultiSelect': 'TableMultiSelect',
+  Time: 'Time',
+  Percent: 'Percent',
+  'Read Only': 'ReadOnly',
 };
 
 /** Whether a DocField holds rows, as Frappe's table fieldtypes do. */
@@ -68,6 +80,7 @@ export function getFieldProperties(
   return {
     ...properties,
     fieldtype,
+    ...getControlProperties(docfield),
     // A Time's default, like "Now", is the server's to fill.
     default:
       docfield.fieldtype === 'Time'
@@ -75,6 +88,23 @@ export function getFieldProperties(
         : getDefault(fieldtype, docfield.default),
     ...getOptionProperties(field, fieldtype, docfield),
   } as Partial<Field>;
+}
+
+function getControlProperties(
+  docfield: DocFieldProperties
+): Partial<NumberField> {
+  const control = isAccessoryMode()
+    ? accessoryControls[docfield.fieldtype]
+    : undefined;
+  if (!control) {
+    return {};
+  }
+
+  // An unset precision is Frappe's float precision.
+  const precision = parseInt(docfield.precision ?? '');
+  return control === 'Percent' && !Number.isNaN(precision)
+    ? { control, precision }
+    : { control };
 }
 
 function getOptionProperties(

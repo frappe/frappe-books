@@ -81,7 +81,15 @@ export interface BaseField {
   moreDetails?: 'picked' | 'ifMissing'; // Accessory mode: an ERPNext field with no Books position, in More details when picked or while mandatory and empty
   appTab?: string; // Accessory mode: the end tab of a custom field, `custom`, `other` or its app's title
   rows?: number; // UI Facing config, number of rows for Text field (default 3)
+  control?: FieldControl; // The control an ERPNext field type shows in accessory mode; the fieldtype still holds the value
 }
+
+export type FieldControl =
+  | 'TextEditor'
+  | 'TableMultiSelect'
+  | 'Time'
+  | 'Percent'
+  | 'ReadOnly';
 
 export type SelectOption = { value: string; label: string };
 export interface OptionField extends Omit<BaseField, 'fieldtype'> {
@@ -112,6 +120,7 @@ export interface NumberField extends Omit<BaseField, 'fieldtype'> {
   minvalue?: number; // UI Facing used to restrict lower bound
   maxvalue?: number; // UI Facing used to restrict upper bound
   negativeInRed?: boolean; // UI Facing: a negative read-only value shows in red ink
+  precision?: number; // A Percent's decimal places, from its DocField
 }
 
 export type Field =

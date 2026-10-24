@@ -16,6 +16,7 @@ export interface DocField {
   set_only_once?: number;
   non_negative?: number;
   max_value?: number;
+  precision?: string;
   no_copy?: number;
   in_list_view?: number;
   is_custom_field?: number;

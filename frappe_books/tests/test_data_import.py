@@ -23,8 +23,8 @@ class IntegrationTestDataImport(IntegrationTestCase):
 		party = make_customer(receivable.name)
 		item = make_item(income.name, expense.name)
 		rows = [
-			"docstatus,customer,account,date,items.item,items.quantity,items.rate",
-			f"0,{party.name},{receivable.name},2031-01-05 10:00:00,{item.name},2,10",
+			"docstatus,customer,debit_to,posting_date,items.item_code,items.qty,items.price_list_rate",
+			f"0,{party.name},{receivable.name},2031-01-05,{item.name},2,10",
 			f",,,,{item.name},1,5",
 		]
 
@@ -35,7 +35,7 @@ class IntegrationTestDataImport(IntegrationTestCase):
 		invoice = frappe.get_last_doc("Books Sales Invoice", filters={"customer": party.name})
 		self.assertTrue(invoice.name.startswith("SINV-"))
 		self.assertEqual(invoice.docstatus, 1)
-		self.assertEqual([row.quantity for row in invoice.items], [2, 1])
+		self.assertEqual([row.qty for row in invoice.items], [2, 1])
 
 
 def _run_import(doctype, csv):

@@ -196,8 +196,9 @@ async function installPaymentFixture(page: Page) {
     const invoice = {
       name: 'PAYMENT-FLOW-INVOICE',
       supplier: 'Flow Supplier',
-      account: 'Flow Creditors',
-      date: '2026-09-30 10:00:00',
+      credit_to: 'Flow Creditors',
+      posting_date: '2026-09-30',
+      posting_time: '10:00:00',
       docstatus: 1,
       grand_total: 100,
       base_grand_total: 100,

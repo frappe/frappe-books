@@ -610,15 +610,15 @@ class IntegrationTestGSTR(IntegrationTestCase):
 				{
 					"doctype": "Books Sales Invoice",
 					"customer": self.party.name,
-					"account": self.receivable.name,
-					"date": date or now_datetime(),
+					"debit_to": self.receivable.name,
+					"posting_date": date or nowdate(),
 					"items": [
 						{
-							"item": self.item,
-							"account": self.income.name,
-							"tax": tax,
-							"rate": rate,
-							"quantity": quantity,
+							"item_code": self.item,
+							"income_account": self.income.name,
+							"item_tax_template": tax,
+							"price_list_rate": rate,
+							"qty": quantity,
 						}
 						for tax, rate, quantity in rows
 					],
@@ -631,7 +631,7 @@ class IntegrationTestGSTR(IntegrationTestCase):
 	def _credit_note(self, invoice, date):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_invoice_returns", 1)
 		note = map_return(invoice.doctype, invoice.name)
-		note.date = date
+		note.posting_date = date
 		return note.insert().submit()
 
 	def _rows(self, invoice):

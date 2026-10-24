@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import nowdate, nowtime
 
 from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import PostingInvoiceController
@@ -26,8 +26,8 @@ class BooksSalesInvoice(PostingInvoiceController):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_applied_coupon_codes.books_applied_coupon_codes import (
-			BooksAppliedCouponCodes,
+		from frappe_books.frappe_books.doctype.books_item_wise_tax_detail.books_item_wise_tax_detail import (
+			BooksItemWiseTaxDetail,
 		)
 		from frappe_books.frappe_books.doctype.books_pricing_rule_detail.books_pricing_rule_detail import (
 			BooksPricingRuleDetail,
@@ -38,31 +38,27 @@ class BooksSalesInvoice(PostingInvoiceController):
 		from frappe_books.frappe_books.doctype.books_sales_invoice_payment.books_sales_invoice_payment import (
 			BooksSalesInvoicePayment,
 		)
-		from frappe_books.frappe_books.doctype.books_tax_summary.books_tax_summary import (
-			BooksTaxSummary,
+		from frappe_books.frappe_books.doctype.books_sales_taxes_and_charges.books_sales_taxes_and_charges import (
+			BooksSalesTaxesandCharges,
 		)
 
-		account: DF.Link
 		amended_from: DF.Link | None
-		attachment: DF.Attach | None
-		available_loyalty_points: DF.Int
-		back_reference: DF.Link | None
 		base_grand_total: DF.Currency
 		company: DF.Link | None
-		coupons: DF.Table[BooksAppliedCouponCodes]
+		conversion_rate: DF.Float
+		coupon_code: DF.Link | None
 		currency: DF.Link | None
 		customer: DF.Link
-		date: DF.Datetime
+		debit_to: DF.Link
 		discount_after_tax: DF.Check
-		exchange_rate: DF.Float
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check
 		is_pos: DF.Check
-		is_pricing_rule_applied: DF.Check
-		is_returned: DF.Check
+		is_return: DF.Check
+		item_wise_tax_details: DF.Table[BooksItemWiseTaxDetail]
 		items: DF.Table[BooksSalesInvoiceItem]
+		loyalty_amount: DF.Currency
 		loyalty_points: DF.Int
-		loyalty_points_amount: DF.Currency
 		loyalty_program: DF.Link | None
 		make_auto_payment: DF.Check
 		make_auto_stock_transfer: DF.Check
@@ -70,16 +66,20 @@ class BooksSalesInvoice(PostingInvoiceController):
 		net_total: DF.Currency
 		outstanding_amount: DF.Currency
 		payments: DF.Table[BooksSalesInvoicePayment]
-		price_list: DF.Link | None
-		pricing_rule_detail: DF.Table[BooksPricingRuleDetail]
-		quotation: DF.Link | None
+		posting_date: DF.Date
+		posting_time: DF.Time | None
+		pricing_rules: DF.Table[BooksPricingRuleDetail]
 		redeem_loyalty_points: DF.Check
 		return_against: DF.Link | None
-		status: DF.Literal["Saved", "Unpaid", "Partly Paid", "Paid", "Return", "Return Issued", "Cancelled"]
+		selling_price_list: DF.Link | None
+		status: DF.Literal[
+			"Draft", "Unpaid", "Partly Paid", "Paid", "Return", "Credit Note Issued", "Cancelled"
+		]
 		stock_not_transferred: DF.Float
-		taxes: DF.Table[BooksTaxSummary]
-		terms: DF.Text | None
-		total_discount: DF.Currency
+		taxes: DF.Table[BooksSalesTaxesandCharges]
+		taxes_and_charges: DF.Link | None
+		terms: DF.TextEditor | None
+		total_taxes_and_charges: DF.Currency
 	# end: auto-generated types
 
 	transaction_type = "sales"
@@ -87,18 +87,9 @@ class BooksSalesInvoice(PostingInvoiceController):
 	party_type = "Books Customer"
 	party_field = "customer"
 	party_account_type = "Receivable"
+	party_account_field = "debit_to"
 	party_default_fields = (*PostingInvoiceController.party_default_fields, "loyalty_program")
 	item_account_field = "income_account"
-
-	@property
-	def loyalty_points_amount(self):
-		"""What the redeemed points take off the grand total, as a virtual field."""
-		return loyalty.redemption_amount(self)
-
-	def calculate(self, drop_invalid_coupons=False):
-		"""Also show the points the customer can redeem."""
-		super().calculate(drop_invalid_coupons)
-		loyalty.set_available_points(self)
 
 	def set_prices(self, drop_invalid_coupons=False):
 		"""Apply pricing rules and coupons too; a return keeps its original's prices."""
@@ -114,18 +105,19 @@ class BooksSalesInvoice(PostingInvoiceController):
 			self.loyalty_program = party.loyalty_program
 		return party
 
-	def deduct_redemption(self, total):
-		"""A return gives back its share of the points its original redeemed."""
+	def set_loyalty_amount(self):
+		"""What redeemed points pay, in the company currency; a return gives back its share of its original's."""
 		if self.return_against:
-			loyalty.set_return_redemption(self, total)
-		return total - loyalty.redemption_amount(self)
+			loyalty.set_return_redemption(self, self.grand_total)
+		self.loyalty_amount = loyalty.redemption_amount(self)
 
 	def get_ledger_posting(self):
-		"""Also expense the redeemed loyalty points, on the party's side."""
+		"""Also expense the redeemed loyalty points, which pay part of what the party owes."""
 		posting = super().get_ledger_posting()
-		redeemed = loyalty.redemption_amount(self)
+		redeemed = as_decimal(self.loyalty_amount) / as_decimal(self.conversion_rate or 1)
 		if redeemed:
 			posting.on_party_side(loyalty.loyalty_expense_account(self), redeemed)
+			posting.on_item_side(self.debit_to, redeemed, self.party)
 		return posting
 
 	@frappe.whitelist()
@@ -138,7 +130,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def before_validate(self):
 		if self.is_pos and self._action == "submit":
 			# A POS sale is dated when it is checked out.
-			self.date = now_datetime()
+			self.posting_date, self.posting_time = nowdate(), nowtime()
 		super().before_validate()
 
 	def validate(self):
@@ -164,7 +156,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		if self.payments and not self.is_pos:
 			frappe.throw(_("Only POS invoices take counter payments."))
 		for row in self.payments:
-			validate_payment_details(row.payment_method, row.reference_id, row.clearance_date)
+			validate_payment_details(row.mode_of_payment, row.reference_no, row.clearance_date)
 		counter_payment_amounts(self.payments, settlement.due(self))
 
 	def before_submit(self):
@@ -201,10 +193,10 @@ class BooksSalesInvoice(PostingInvoiceController):
 		payment = map_invoice_payment(self.doctype, self.name)
 		payment.update(
 			{
-				"payment_method": row.payment_method,
-				"payment_account": counter_payment_account(row.payment_method),
+				"payment_method": row.mode_of_payment,
+				"payment_account": counter_payment_account(row.mode_of_payment),
 				"amount": amount,
-				"reference_id": row.reference_id,
+				"reference_id": row.reference_no,
 				"clearance_date": row.clearance_date,
 			}
 		)
@@ -228,16 +220,18 @@ class BooksSalesInvoice(PostingInvoiceController):
 			# Rows without a standard rate, or priced by a rule, keep the rate they have.
 			if rate is None or pricing.is_rule_priced(row, "rate"):
 				continue
-			if rounded(row.rate, self.currency) != rate:
-				frappe.throw(_("The POS profile does not allow changing the rate of {0}.").format(row.item))
+			if rounded(row.price_list_rate, self.currency) != rate:
+				frappe.throw(
+					_("The POS profile does not allow changing the rate of {0}.").format(row.item_code)
+				)
 
 	def _validate_pos_discounts(self, rows):
 		for row in rows:
 			if pricing.is_rule_priced(row, "discount"):
 				continue
-			if as_decimal(row.item_discount_percent) or as_decimal(row.item_discount_amount):
+			if as_decimal(row.discount_percentage) or as_decimal(row.discount_amount):
 				frappe.throw(
-					_("The POS profile does not allow editing the discount of {0}.").format(row.item)
+					_("The POS profile does not allow editing the discount of {0}.").format(row.item_code)
 				)
 
 

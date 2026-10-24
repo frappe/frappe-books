@@ -19,7 +19,7 @@
     <div v-if="sinvDoc.fieldMap" class="flex flex-col gap-4">
       <PaymentMethodSelector
         :methods="posCheckout.methods"
-        :selected="posCheckout.tender.payment_method"
+        :selected="posCheckout.tender.mode_of_payment"
         @select="posCheckout.selectMethod"
       />
 
@@ -73,7 +73,7 @@
           :border="true"
           :required="true"
           :read-only="false"
-          :value="posCheckout.tender.reference_id"
+          :value="posCheckout.tender.reference_no"
           :class="
             posCheckout.requirements.requiresClearanceDate ? '' : 'col-span-2'
           "

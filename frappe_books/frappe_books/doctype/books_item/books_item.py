@@ -203,5 +203,5 @@ def _map_invoice(item, invoice_doctype):
 
 
 def _bill_item(item, invoice):
-	invoice.append("items", {"item": item.name, "quantity": 1})
+	invoice.append("items", {"item_code": item.name, "qty": 1})
 	invoice.fill_mapped_values()

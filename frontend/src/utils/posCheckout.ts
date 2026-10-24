@@ -29,9 +29,9 @@ const PAY_POS_INVOICE =
 
 /** What the cashier takes for a POS sale, by Books Sales Invoice Payment fieldnames. The checkout's actions set it. */
 export type Tender = {
-  payment_method?: string;
+  mode_of_payment?: string;
   amount: Money;
-  reference_id?: string;
+  reference_no?: string;
   clearance_date?: Date;
 };
 
@@ -73,7 +73,7 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
   const tender = shallowReactive<Tender>(getEmptyTender());
   const methods = shallowRef<PaymentMethodOption[]>([]);
   const requirements = computed(() =>
-    getRequirements(methods.value, tender.payment_method)
+    getRequirements(methods.value, tender.mode_of_payment)
   );
   // Every preview fills it; a draft owes its whole total.
   const due = computed(() =>
@@ -103,7 +103,7 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
     ),
     canPay: computed(() => isTenderComplete(tender, requirements.value)),
     selectMethod(name: string) {
-      tender.payment_method = name;
+      tender.mode_of_payment = name;
       tender.amount = due.value;
       dropUnneededDetails(tender, requirements.value);
     },
@@ -112,7 +112,7 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
       tender.amount = fyo.pesa(amount?.toString() ?? 0);
     },
     setReference(reference: string) {
-      tender.reference_id = reference;
+      tender.reference_no = reference;
     },
     setClearanceDate(date: Date) {
       tender.clearance_date = date;
@@ -149,9 +149,9 @@ async function checkOutSale(
 
 function getEmptyTender(): Tender {
   return {
-    payment_method: undefined,
+    mode_of_payment: undefined,
     amount: fyo.pesa(0),
-    reference_id: undefined,
+    reference_no: undefined,
     clearance_date: undefined,
   };
 }
@@ -173,7 +173,7 @@ function dropUnneededDetails(
   requirements: PaymentMethodRequirements
 ) {
   if (!requirements.requiresReferenceId) {
-    tender.reference_id = undefined;
+    tender.reference_no = undefined;
   }
   if (!requirements.requiresClearanceDate) {
     tender.clearance_date = undefined;
@@ -204,9 +204,9 @@ function isTenderComplete(
   requirements: PaymentMethodRequirements
 ): boolean {
   return Boolean(
-    tender.payment_method &&
+    tender.mode_of_payment &&
     tender.amount.isPositive() &&
-    (tender.reference_id || !requirements.requiresReferenceId) &&
+    (tender.reference_no || !requirements.requiresReferenceId) &&
     (tender.clearance_date || !requirements.requiresClearanceDate)
   );
 }

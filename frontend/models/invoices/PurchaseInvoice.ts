@@ -4,7 +4,7 @@ import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { PurchaseInvoiceItem } from './InvoiceItem';
-import { TaxSummary } from './TaxSummary';
+import { TaxesAndCharges } from './TaxesAndCharges';
 
 export class PurchaseInvoice extends Invoice {
   static override doctype = 'Books Purchase Invoice';
@@ -16,39 +16,46 @@ export class PurchaseInvoice extends Invoice {
       'name',
       'naming_series',
       'supplier',
-      'account',
-      'date',
-      'price_list',
+      'credit_to',
+      'posting_date',
+      'buying_price_list',
       'items',
-      'net_total',
-      'total_discount',
+      'taxes_and_charges',
       'taxes',
+      'net_total',
+      'total_taxes_and_charges',
       'base_grand_total',
       'grand_total',
       'currency',
-      'exchange_rate',
+      'conversion_rate',
       'discount_after_tax',
       'make_auto_payment',
       'make_auto_stock_transfer',
       'outstanding_amount',
-      'stock_not_transferred',
+      'per_received',
       'terms',
-      'attachment',
-      'back_reference',
       'return_against',
       'status',
     ],
   };
   static override partyField = 'supplier';
+  static override partyAccountField = 'credit_to';
   static override rowModels = {
     items: PurchaseInvoiceItem,
-    taxes: TaxSummary,
+    taxes: TaxesAndCharges,
   };
+
+  per_received?: number;
 
   override hidden: HiddenMap = {
     ...this.hidden,
     ...this.postingHidden,
   };
+
+  /** The server sets every row received, 100%, once nothing is left to receive. */
+  override get hasStockToTransfer(): boolean {
+    return (this.per_received ?? 0) < 100;
+  }
 
   static getListViewSettings(): ListViewSettings {
     return {
@@ -56,7 +63,7 @@ export class PurchaseInvoice extends Invoice {
         'name',
         getDocStatusListColumn(),
         'supplier',
-        'date',
+        'posting_date',
         'base_grand_total',
         'outstanding_amount',
       ],

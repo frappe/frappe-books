@@ -96,7 +96,7 @@
         <template #suffix>
           <span class="ms-auto tabular-nums">
             <span dir="ltr">
-              {{ fyo.format(sinvDoc.grand_total ?? fyo.pesa(0), 'Currency') }}
+              {{ fyo.format(getPayableTotal(sinvDoc), 'Currency') }}
             </span>
           </span>
         </template>
@@ -134,7 +134,7 @@ import { fyo } from 'src/initFyo';
 import EmptyState from 'src/components/EmptyState.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
-import { getItemInitials } from 'src/utils/pos';
+import { getItemInitials, getPayableTotal } from 'src/utils/pos';
 import { getQuantityByItem } from 'src/utils/posCart';
 import {
   computed,

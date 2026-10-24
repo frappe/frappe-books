@@ -394,11 +394,11 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 		invoice = make_sales_invoice(shipment.name)
 
+		self.assertEqual((invoice.doctype, invoice.party), ("Books Sales Invoice", shipment.party))
 		self.assertEqual(
-			(invoice.doctype, invoice.party, invoice.back_reference),
-			("Books Sales Invoice", shipment.party, shipment.name),
+			[(row.item_code, row.qty, row.price_list_rate, row.delivery_note) for row in invoice.items],
+			[(item.name, 2, 25, shipment.name)],
 		)
-		self.assertEqual([(row.item, row.quantity, row.rate) for row in invoice.items], [(item.name, 2, 25)])
 		self.assertEqual(invoice.grand_total, 50)
 		invoice.make_auto_stock_transfer = 1
 		invoice.insert().submit()
@@ -442,10 +442,10 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		shipment = self._make_delivery_note(item, quantity=3, rate=25)
 		shipment.submit()
 		first = make_sales_invoice(shipment.name)
-		first.items[0].update({"quantity": 2, "transfer_quantity": 2})
+		first.items[0].update({"qty": 2, "stock_qty": 2})
 		first.insert().submit()
 
-		self.assertEqual([row.quantity for row in make_sales_invoice(shipment.name).items], [1])
+		self.assertEqual([row.qty for row in make_sales_invoice(shipment.name).items], [1])
 		make_sales_invoice(shipment.name).insert().submit()
 		self.assertRaisesRegex(
 			frappe.ValidationError, "already fully billed", make_sales_invoice, shipment.name
@@ -457,7 +457,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		shipment = self._make_delivery_note(item, quantity=2, rate=25)
 		shipment.submit()
 		first = make_sales_invoice(shipment.name)
-		first.items[0].update({"quantity": 1, "transfer_quantity": 1})
+		first.items[0].update({"qty": 1, "stock_qty": 1})
 		first.insert().submit()
 		self.assertEqual(shipment.db_get("is_fully_billed"), 0)
 
@@ -475,7 +475,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		shipment = self._make_delivery_note(item, quantity=2, rate=25)
 		shipment.submit()
 		invoice = make_sales_invoice(shipment.name)
-		invoice.append("items", {"item": service.name, "quantity": 1, "rate": 5})
+		invoice.append("items", {"item_code": service.name, "qty": 1, "price_list_rate": 5})
 
 		invoice.insert().submit()
 
@@ -617,4 +617,5 @@ def serial_statuses(serial_numbers):
 def transfer_balance(invoice):
 	"""Return the invoice's and its first row's quantity still to transfer."""
 	invoice.reload()
-	return [invoice.stock_not_transferred, invoice.items[0].stock_not_transferred]
+	row = invoice.items[0]
+	return [invoice.stock_not_transferred, row.qty - row.delivered_qty]

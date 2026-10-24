@@ -187,6 +187,26 @@ test('Setup lists Number Series for a user who can read them', () => {
   assert.ok(!setupItems(false).includes('Number Series'));
 });
 
+test('Setup lists the taxes and charges templates the user can read', () => {
+  fyo.store.permissions = {
+    doctypes: {
+      SalesTaxesAndChargesTemplate: 'Books Sales Taxes and Charges Template',
+      PurchaseTaxesAndChargesTemplate:
+        'Books Purchase Taxes and Charges Template',
+      AccountingSettings: 'Books Accounting Settings',
+    },
+    user: {
+      can_read: ['Books Sales Taxes and Charges Template'],
+      can_write: ['Books Accounting Settings'],
+    },
+  };
+  const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
+  const labels = setup.items.map(({ label }) => label);
+
+  assert.ok(labels.includes('Sales Taxes and Charges Template'));
+  assert.ok(!labels.includes('Purchase Taxes and Charges Template'));
+});
+
 test('the search palette offers only the lists and reports the user can open', () => {
   const lists = ['Quotation', 'SalesInvoice', 'Customer', 'Item', 'Account'];
   fyo.store.permissions = {

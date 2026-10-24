@@ -17,13 +17,18 @@ const {
   isPriceListOffered,
 } = posDiscounts;
 
-/** Held sales as the server saved them, with what their previews filled. */
+/** Held sales as the server saved them, and the points their customers can redeem. */
 const heldSales = {
-  'SINV-1001': { customer: 'Asha', loyalty_program: 'Gold', points: 40 },
-  'SINV-1002': { customer: 'Ravi', loyalty_program: null, points: 0 },
+  'SINV-1001': { customer: 'Asha', loyalty_program: 'Gold' },
+  'SINV-1002': { customer: 'Ravi', loyalty_program: null },
 };
+const points = { Asha: 40, Ravi: 0 };
 
-await loadFrappeModels(frappeModels, ({ path }) => {
+await loadFrappeModels(frappeModels, ({ path, body }) => {
+  if (path.endsWith('.get_loyalty_program_details_with_points')) {
+    return { message: { loyalty_points: points[body.customer] } };
+  }
+
   const name = decodeURIComponent(path).split('/').pop();
   const held = heldSales[name];
   return held ? { data: toSavedSale(name, held) } : { data: [] };
@@ -36,28 +41,27 @@ beforeEach(() => {
   };
 });
 
-function toSavedSale(name, { customer, loyalty_program, points }) {
+function toSavedSale(name, { customer, loyalty_program }) {
   return {
     name,
     docstatus: 0,
     is_pos: 1,
     customer,
     loyalty_program,
-    available_loyalty_points: points,
-    items: [{ name: `${name}-1`, item: 'Pen', quantity: 1 }],
+    items: [{ name: `${name}-1`, item_code: 'Pen', qty: 1 }],
   };
 }
 
-/** A sale of a Pen to Asha, whose program has 40 points left. */
-function makeSale(values = {}) {
+/** A sale of a Pen to Asha, whose program has `availableLoyaltyPoints`, 40 unless given, left. */
+function makeSale({ availableLoyaltyPoints = 40, ...values } = {}) {
   const sale = newFrappeDoc('SalesInvoice', {
     is_pos: true,
     customer: 'Asha',
     loyalty_program: 'Gold',
-    available_loyalty_points: 40,
-    items: [{ item: 'Pen', quantity: 1 }],
+    items: [{ item_code: 'Pen', qty: 1 }],
     ...values,
   });
+  sale.availableLoyaltyPoints = availableLoyaltyPoints;
   return sale;
 }
 
@@ -66,9 +70,10 @@ const getGates = (sale) => [canApplyCoupon(sale), canRedeemLoyalty(sale)];
 test("a reopened held sale shows its own customer's points", async () => {
   const asha = await getFrappeDoc('SalesInvoice', 'SINV-1001');
   const ravi = await getFrappeDoc('SalesInvoice', 'SINV-1002');
+  await Promise.all([asha.loadLoyaltyPoints(), ravi.loadLoyaltyPoints()]);
 
   assert.deepEqual(
-    [asha.loyalty_program, asha.available_loyalty_points],
+    [asha.loyalty_program, asha.availableLoyaltyPoints],
     ['Gold', 40]
   );
   assert.equal(canRedeemLoyalty(asha), true);
@@ -110,7 +115,7 @@ test('each gate follows its own feature', () => {
 });
 
 test('loyalty also needs points to redeem on a sale, not a return', () => {
-  const noPoints = makeSale({ available_loyalty_points: 0 });
+  const noPoints = makeSale({ availableLoyaltyPoints: 0 });
   const noProgram = makeSale({ loyalty_program: null });
   const refund = makeSale({ return_against: 'SINV-0900' });
 

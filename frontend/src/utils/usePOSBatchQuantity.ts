@@ -11,7 +11,7 @@ export function usePOSBatchQuantity(
 ): Ref<number> {
   const quantity = ref(0);
   watch(
-    [() => getRow()?.item, () => getRow()?.batch],
+    [() => getRow()?.item_code, () => getRow()?.batch_no],
     async ([item, batch]) => {
       quantity.value = await getPOSBatchQuantity(item, batch);
     },

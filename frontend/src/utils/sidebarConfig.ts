@@ -346,6 +346,18 @@ function getCompleteSidebar(): SidebarConfig {
           schemaName: 'ItemTaxTemplate',
         },
         {
+          label: t`Sales Taxes and Charges Template`,
+          name: 'sales-taxes',
+          route: '/list/SalesTaxesAndChargesTemplate',
+          schemaName: 'SalesTaxesAndChargesTemplate',
+        },
+        {
+          label: t`Purchase Taxes and Charges Template`,
+          name: 'purchase-taxes',
+          route: '/list/PurchaseTaxesAndChargesTemplate',
+          schemaName: 'PurchaseTaxesAndChargesTemplate',
+        },
+        {
           label: t`Number Series`,
           name: 'number-series',
           route: '/list/NumberSeries',

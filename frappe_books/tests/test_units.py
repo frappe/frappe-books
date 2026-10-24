@@ -38,14 +38,15 @@ class IntegrationTestUnits(IntegrationTestCase):
 			self.income.name,
 		)
 		invoice.items[0].update(
-			{"transfer_unit": self.box, "unit_conversion_factor": 5, "transfer_quantity": 2, "quantity": 7}
+			{"uom": self.box, "conversion_factor": 5, "qty": 2, "stock_qty": 7, "discount_percentage": 0}
 		)
 		invoice.save()
 
+		# The rate of 100 is per box.
 		row = invoice.items[0]
-		self.assertEqual((row.unit_conversion_factor, row.quantity, row.amount), (12, 24, 2400))
+		self.assertEqual((row.conversion_factor, row.stock_qty, row.amount), (12, 24, 200))
 
-	def test_invoice_row_stores_its_qty_in_the_transfer_unit(self):
+	def test_invoice_row_keeps_its_qty_in_its_unit(self):
 		receivable = make_account("Unit Receivable", account_type="Receivable")
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -54,10 +55,10 @@ class IntegrationTestUnits(IntegrationTestCase):
 			self.item.name,
 			self.income.name,
 		)
-		invoice.items[0].update({"transfer_unit": self.box, "transfer_quantity": 2, "qty": 1})
+		invoice.items[0].update({"uom": self.box, "qty": 2, "stock_qty": 1})
 		invoice.save()
 
-		stored = frappe.db.get_value("Books Sales Invoice Item", invoice.items[0].name, ["qty", "quantity"])
+		stored = frappe.db.get_value("Books Sales Invoice Item", invoice.items[0].name, ["qty", "stock_qty"])
 		self.assertEqual(stored, (2, 24))
 
 	def test_stock_row_converts_with_the_item_factor(self):
@@ -98,66 +99,49 @@ class IntegrationTestUnits(IntegrationTestCase):
 			{
 				"doctype": "Books Sales Invoice",
 				"customer": make_customer(receivable.name).name,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": item.name, "quantity": 2, "rate": 10}],
+				"items": [{"item_code": item.name, "qty": 2, "price_list_rate": 10}],
 			}
 		)
 		row = invoice["items"][0]
-		self.assertEqual((row["transfer_unit"], row["transfer_quantity"], row["amount"]), (piece, 2, 20))
+		self.assertEqual((row["uom"], row["stock_uom"], row["qty"], row["amount"]), (piece, piece, 2, 20))
 
-	def test_invoice_rows_show_their_rate_per_transfer_unit(self):
+	def test_invoice_rows_are_priced_per_their_unit(self):
 		customer = make_customer(make_account("Unit Receivable", account_type="Receivable").name).name
 		payable = make_account("Unit Payable", root_type="Liability", account_type="Payable").name
 		supplier = make_supplier(payable).name
-		row = {"item": self.item.name, "transfer_unit": self.box, "transfer_quantity": 2, "rate": 10}
+		row = {"item_code": self.item.name, "uom": self.box, "qty": 2, "price_list_rate": 120}
 		for doctype, values in (
 			("Books Sales Invoice", {"customer": customer}),
 			("Books Quotation", {"party_name": customer}),
-			("Books Purchase Invoice", {"supplier": supplier, "account": payable}),
+			("Books Purchase Invoice", {"supplier": supplier, "credit_to": payable}),
 		):
 			with self.subTest(doctype=doctype):
-				invoice = insert(
-					{
-						"doctype": doctype,
-						"date": frappe.utils.now_datetime(),
-						"items": [row],
-						**values,
-					}
-				)
+				invoice = insert({"doctype": doctype, "items": [row], **values})
 				saved = invoice["items"][0]
-				self.assertEqual((saved["rate"], saved["transfer_rate"], saved["amount"]), (10, 120, 240))
+				self.assertEqual(
+					(saved["price_list_rate"], saved["stock_uom_rate"], saved["stock_qty"], saved["amount"]),
+					(120, 10, 24, 240),
+				)
 
-	def test_invoice_row_rate_per_transfer_unit_is_rounded(self):
+	def test_invoice_row_rate_of_the_stock_unit_is_rounded(self):
 		party = make_customer(make_account("Unit Receivable", account_type="Receivable").name).name
-		row = {"item": self.item.name, "transfer_unit": self.box, "transfer_quantity": 1, "rate": 10 / 3}
-		invoice = insert(
-			{
-				"doctype": "Books Sales Invoice",
-				"customer": party,
-				"date": frappe.utils.now_datetime(),
-				"items": [row],
-			}
-		)
-		# The saved rate keeps 9 decimals, so 3.333333333 x 12 must still read 40.
+		row = {"item_code": self.item.name, "uom": self.box, "qty": 1, "price_list_rate": 40}
+		invoice = insert({"doctype": "Books Sales Invoice", "customer": party, "items": [row]})
+
 		saved = frappe.get_doc("Books Sales Invoice", invoice["name"]).items[0]
-		self.assertEqual(saved.transfer_rate, 40)
+		self.assertEqual((saved.price_list_rate, saved.stock_uom_rate), (40, 3.33))
 
-	def test_a_manual_rate_sent_per_transfer_unit_sets_the_rate(self):
+	def test_a_manual_rate_per_box_is_kept(self):
 		party = make_customer(make_account("Unit Receivable", account_type="Receivable").name).name
-		row = {"item": self.item.name, "transfer_unit": self.box, "transfer_quantity": 2, "is_manual_rate": 1}
-		values = {"doctype": "Books Sales Invoice", "customer": party, "date": frappe.utils.now_datetime()}
-		# /books leaves the rate out when the user types the rate per box.
-		previewed = frappe.get_doc({**values, "items": [{**row, "transfer_rate": 100}]})
+		row = {"item_code": self.item.name, "uom": self.box, "qty": 2, "is_manual_rate": 1}
+		values = {"doctype": "Books Sales Invoice", "customer": party}
+		previewed = frappe.get_doc({**values, "items": [{**row, "price_list_rate": 100}]})
 		previewed.preview()
-		saved = insert({**values, "items": [{**row, "transfer_rate": 100}]})["items"][0]
+		saved = insert({**values, "items": [{**row, "price_list_rate": 100}]})["items"][0]
 		for result in (previewed.items[0].as_dict(), saved):
 			self.assertEqual(
-				(round(result["rate"], 9), result["transfer_rate"], result["amount"]), (8.333333333, 100, 200)
+				(result["price_list_rate"], result["stock_uom_rate"], result["amount"]), (100, 8.33, 200)
 			)
-
-		# A sent rate wins over a rate per box sent with it.
-		saved = insert({**values, "items": [{**row, "rate": 10, "transfer_rate": 999}]})["items"][0]
-		self.assertEqual((saved["rate"], saved["transfer_rate"]), (10, 120))
 
 	def test_row_unit_must_be_a_unit_of_the_item(self):
 		crate = make_uom("Crate")
@@ -197,12 +181,13 @@ class IntegrationTestUnits(IntegrationTestCase):
 			{
 				"doctype": "Books Sales Invoice",
 				"customer": make_customer(receivable.name).name,
-				"account": receivable.name,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": item.name, "transfer_unit": piece, "quantity": 2.5, "rate": 10}],
+				"debit_to": receivable.name,
+				"items": [{"item_code": item.name, "uom": piece, "qty": 2.5, "price_list_rate": 10}],
 			}
 		)
-		self.assertRaisesRegex(frappe.ValidationError, "^Quantity of .* whole number", invoice.insert)
+		self.assertRaisesRegex(
+			frappe.ValidationError, "^Qty as per Stock UOM of .* whole number", invoice.insert
+		)
 
 	def test_other_units_take_fractional_quantities(self):
 		movement = self._receipt({"transfer_unit": self.box, "transfer_quantity": 0.5}).insert()

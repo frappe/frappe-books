@@ -75,7 +75,7 @@ export default defineComponent({
   },
   methods: {
     getRowKey(row: SalesInvoiceItem): string {
-      return String(row.name ?? row.idx ?? row.item ?? '');
+      return String(row.name ?? row.idx ?? row.item_code ?? '');
     },
   },
 });

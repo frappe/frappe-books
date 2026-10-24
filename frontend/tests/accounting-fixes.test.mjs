@@ -129,7 +129,7 @@ test('list and form statuses come from the stored status', () => {
   assert.equal(getDocStatus({ schema, status: 'Partly Paid' }), 'Partly Paid');
   assert.equal(getDocStatus({ schema, notInserted: true }), 'Draft');
   assert.equal(
-    getDocStatus({ schema, dirty: true, status: 'Saved' }),
+    getDocStatus({ schema, dirty: true, status: 'Draft' }),
     'NotSaved'
   );
   const shift = getSchema('POSOpeningShift');
@@ -154,8 +154,17 @@ test('status badges use the status option label and the DocType state colour', (
     label: 'Draft',
     theme: 'gray',
   });
+  // A saved draft is gray too, as the design shows drafts.
+  assert.deepEqual(getDocStatusBadge({ schema, status: 'Draft' }), {
+    label: 'Draft',
+    theme: 'gray',
+  });
   assert.deepEqual(
-    getDocStatusBadge({ schema, dirty: true, status: 'Saved' }),
+    getDocStatusBadge({ schema, status: 'Credit Note Issued' }),
+    { label: 'Credit Note Issued', theme: 'gray' }
+  );
+  assert.deepEqual(
+    getDocStatusBadge({ schema, dirty: true, status: 'Draft' }),
     { label: 'Not Saved', theme: 'amber' }
   );
   assert.deepEqual(getStateBadge(getSchema('Lead'), 'Do Not Contact'), {

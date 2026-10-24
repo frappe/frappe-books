@@ -9,6 +9,7 @@ from frappe.client import insert
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, nowdate
 
+from frappe_books.accounting.invoice import item_discount
 from frappe_books.accounting.money import company_currency
 from frappe_books.accounting.returns import map_return
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
@@ -42,8 +43,8 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_calculates_and_posts_tax_and_discount(self):
 		invoice = self._make_invoice()
-		self.assertEqual(Decimal(str(invoice.net_total)), Decimal("200"))
-		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
+		self.assertEqual(Decimal(str(invoice.net_total)), Decimal("180"))
+		self.assertEqual(Decimal(str(invoice.taxes[0].tax_amount)), Decimal("18"))
 		self.assertEqual(Decimal(str(invoice.grand_total)), Decimal("198"))
 
 		invoice.submit()
@@ -52,16 +53,19 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("218"))
 		self.assertEqual(Decimal(str(invoice.db_get("outstanding_amount"))), Decimal("198"))
 
-	def test_total_discount_is_a_virtual_field(self):
+	def test_item_discount_is_the_rows_discount_before_tax(self):
 		invoice = self._make_invoice()
-		self.assertEqual(Decimal(str(invoice.as_dict().total_discount)), Decimal("20"))
+		self.assertEqual((invoice.items[0].rate, invoice.items[0].amount), (90, 180))
+		self.assertEqual(item_discount(invoice), Decimal("20"))
 
 	def test_the_api_cannot_set_an_invoice_wide_discount(self):
 		values = {
 			"doctype": "Books Sales Invoice",
 			"customer": self.party.name,
-			"date": str(frappe.utils.now_datetime()),
-			"items": [{"item": self.item.name, "rate": 100, "quantity": 2, "item_discount_percent": 10}],
+			"posting_date": nowdate(),
+			"items": [
+				{"item_code": self.item.name, "price_list_rate": 100, "qty": 2, "discount_percentage": 10}
+			],
 		}
 		saved = insert({**values, "set_discount_amount": 1, "discount_amount": 50, "discount_percent": 50})
 		invoice = frappe.get_doc(saved.doctype, saved.name).submit()
@@ -85,8 +89,8 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
 		)
 
-		self.assertEqual(invoice.items[0].tax, self.tax.name)
-		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
+		self.assertEqual(invoice.items[0].item_tax_template, self.tax.name)
+		self.assertEqual(Decimal(str(invoice.taxes[0].tax_amount)), Decimal("18"))
 
 	def test_row_tax_is_the_latest_item_tax_valid_on_the_invoice_date(self):
 		later = make_tax(self.tax_account.name, rate=5)
@@ -108,9 +112,9 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 					self.receivable.name,
 					item.name,
 					self.income.name,
-					date=date,
+					posting_date=date,
 				)
-				self.assertEqual(invoice.items[0].tax, tax)
+				self.assertEqual(invoice.items[0].item_tax_template, tax)
 
 	def test_row_hsn_code_comes_from_the_item_with_its_leading_zero(self):
 		item = make_item(self.income.name, self.expense.name, gst_hsn_code="0902")
@@ -118,40 +122,40 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
 		)
 
-		self.assertEqual(invoice.items[0].db_get("hsn_code"), "0902")
+		self.assertEqual(invoice.items[0].db_get("gst_hsn_code"), "0902")
 
 	def test_row_hsn_code_must_contain_four_to_eight_digits(self):
 		invoice = self._make_invoice()
-		invoice.items[0].hsn_code = "12A4"
+		invoice.items[0].gst_hsn_code = "12A4"
 
 		self.assertRaisesRegex(frappe.ValidationError, "between 4 and 8 digits", invoice.save)
 
 	def test_item_discount_stays_within_the_row(self):
 		for values, message in (
-			({"item_discount_percent": 101}, "between 0 and 100"),
-			({"set_item_discount_amount": 1, "item_discount_amount": 201}, "cannot exceed the row amount"),
-			({"set_item_discount_amount": 1, "item_discount_amount": -1}, "cannot exceed the row amount"),
+			({"discount_percentage": 101}, "between 0 and 100"),
+			({"discount_percentage": 0, "discount_amount": 101}, "cannot exceed the row rate"),
+			({"discount_percentage": 0, "discount_amount": -1}, "cannot exceed the row rate"),
 		):
 			with self.subTest(values=values):
 				invoice = self._make_invoice()
 				invoice.items[0].update(values)
 				self.assertRaisesRegex(frappe.ValidationError, message, invoice.save)
 
-	def test_transfer_quantity_counts_transfer_units(self):
+	def test_quantity_counts_the_rows_unit(self):
 		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		self.item.append("uoms", {"uom": box.name, "conversion_factor": 12})
 		self.item.save()
 		invoice = self._make_invoice()
 		invoice.items[0].update(
 			{
-				"transfer_unit": box.name,
-				"quantity": 24,
-				"transfer_quantity": None,
+				"uom": box.name,
+				"stock_qty": 24,
+				"qty": None,
 			}
 		)
 		invoice.save()
 
-		self.assertEqual(invoice.items[0].transfer_quantity, 2)
+		self.assertEqual(invoice.items[0].qty, 2)
 
 	def test_cancel_posts_reversals_and_clears_outstanding(self):
 		invoice = self._make_invoice()
@@ -174,9 +178,9 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			self.receivable.name,
 			item.name,
 			self.income.name,
-			exchange_rate=1.2345,
+			conversion_rate=1.2345,
 		)
-		invoice.items[0].update({"rate": 10, "quantity": 3, "item_discount_percent": 5})
+		invoice.items[0].update({"price_list_rate": 10, "qty": 3, "discount_percentage": 5})
 		invoice.save().submit()
 
 		entries = ledger_entries(invoice.doctype, invoice.name)
@@ -201,7 +205,9 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 					item.name,
 					self.income.name,
 				)
-				invoice.items[0].update({"rate": Decimal(rate), "quantity": 2, "item_discount_percent": 0})
+				invoice.items[0].update(
+					{"price_list_rate": Decimal(rate), "qty": 2, "discount_percentage": 0}
+				)
 				invoice.save().submit()
 
 				self.assertEqual(Decimal(str(invoice.grand_total)), Decimal(total))
@@ -218,9 +224,9 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				self.receivable.name,
 				item.name,
 				self.income.name,
-				exchange_rate=150,
+				conversion_rate=150,
 			)
-			invoice.items[0].update({"rate": Decimal("10.25"), "quantity": 1, "item_discount_percent": 0})
+			invoice.items[0].update({"price_list_rate": Decimal("10.25"), "qty": 1, "discount_percentage": 0})
 			invoice.save().submit()
 
 			self.assertEqual(Decimal(str(invoice.grand_total)), Decimal("10.25"))
@@ -239,18 +245,13 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 					item.name,
 					self.income.name,
 				)
-				invoice.items[0].update(
-					{
-						"set_item_discount_amount": 1,
-						"item_discount_amount": row_discount,
-						"item_discount_percent": 0,
-					}
-				)
+				# The discount is per unit: half the row's for each of its two.
+				invoice.items[0].update({"discount_amount": row_discount / 2, "discount_percentage": 0})
 				invoice.save().submit()
 
 				for _ in range(2):
 					credit_note = map_return(invoice.doctype, invoice.name)
-					credit_note.items[0].quantity = -1
+					credit_note.items[0].qty = -1
 					credit_note.insert().submit()
 					self.assertEqual(credit_note.grand_total, -refund)
 
@@ -266,7 +267,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		invoice.submit()
 		credit_note = frappe.copy_doc(invoice)
 		credit_note.update({"docstatus": 0, "return_against": invoice.name})
-		credit_note.items[0].update({"quantity": -2, "item_discount_percent": 0})
+		credit_note.items[0].update({"qty": -2, "discount_percentage": 0})
 
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
 			credit_note.insert()
@@ -275,22 +276,23 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		invoice = self._make_invoice()
 		invoice.submit()
 		credit_note = map_return(invoice.doctype, invoice.name)
-		credit_note.items[0].quantity = 1
+		credit_note.items[0].qty = 1
 
 		credit_note.insert()
 
 		row = credit_note.items[0]
-		self.assertEqual((row.quantity, row.transfer_quantity, row.qty), (-1, -1, -1))
+		self.assertEqual((row.stock_qty, row.qty), (-1, -1))
+		self.assertTrue(credit_note.is_return)
 		self.assertLess(credit_note.grand_total, 0)
 
 	def test_other_invoices_have_positive_quantities(self):
 		invoice = self._make_invoice()
-		invoice.items[0].quantity = -2
+		invoice.items[0].qty = -2
 
 		invoice.save()
 
 		row = invoice.items[0]
-		self.assertEqual((row.quantity, row.transfer_quantity, row.qty), (2, 2, 2))
+		self.assertEqual((row.stock_qty, row.qty), (2, 2))
 
 	def test_new_documents_start_with_the_default_terms(self):
 		frappe.db.set_single_value("Books Defaults", "sales_invoice_terms", "Pay within 30 days")
@@ -321,18 +323,18 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		)
 		item = make_item(self.income.name, self.expense.name, standard_rate=100)
 		for values, message in (
-			({"rate": 90, "item_discount_percent": 0}, "changing the rate"),
-			({"rate": 100, "item_discount_percent": 10}, "editing the discount"),
+			({"price_list_rate": 90, "discount_percentage": 0}, "changing the rate"),
+			({"price_list_rate": 100, "discount_percentage": 10}, "editing the discount"),
 		):
 			with self.subTest(values=values):
 				invoice = frappe.get_doc(
 					{
 						"doctype": "Books Sales Invoice",
 						"customer": self.party.name,
-						"account": self.receivable.name,
-						"date": frappe.utils.now_datetime(),
+						"debit_to": self.receivable.name,
+						"posting_date": nowdate(),
 						"is_pos": 1,
-						"items": [{"item": item.name, "quantity": 1, **values}],
+						"items": [{"item_code": item.name, "qty": 1, **values}],
 					}
 				)
 				with self.assertRaisesRegex(frappe.ValidationError, message):
@@ -349,13 +351,13 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		invoice = frappe.get_doc(
 			{
 				"doctype": "Books Sales Invoice",
-				"date": frappe.utils.now_datetime(),
+				"posting_date": nowdate(),
 				"is_pos": 1,
-				"items": [{"item": self.item.name, "quantity": 1, "rate": 100}],
+				"items": [{"item_code": self.item.name, "qty": 1, "price_list_rate": 100}],
 			}
 		).insert()
 
-		self.assertEqual((invoice.party, invoice.account), (self.party.name, self.receivable.name))
+		self.assertEqual((invoice.party, invoice.debit_to), (self.party.name, self.receivable.name))
 
 	def test_a_new_pos_sale_previews_the_customer_of_the_pos_profile(self):
 		profile = frappe.get_doc(
@@ -384,10 +386,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			self.item.name,
 			self.income.name,
 			currency=company_currency(),
-			exchange_rate=80,
+			conversion_rate=80,
 		)
 
-		self.assertEqual((invoice.currency, invoice.exchange_rate), (currency, 80))
+		self.assertEqual((invoice.currency, invoice.conversion_rate), (currency, 80))
 
 	def test_foreign_currency_invoice_needs_an_exchange_rate(self):
 		party = make_customer(self.receivable.name, default_currency=foreign_currency())
@@ -407,10 +409,10 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			self.item.name,
 			self.income.name,
 			currency=foreign_currency(),
-			exchange_rate=80,
+			conversion_rate=80,
 		)
 
-		self.assertEqual((invoice.currency, invoice.exchange_rate), (company_currency(), 1))
+		self.assertEqual((invoice.currency, invoice.conversion_rate), (company_currency(), 1))
 
 	def test_sales_invoice_needs_a_receivable_ledger_account(self):
 		group = make_account("Receivables", account_type="Receivable", is_group=1)

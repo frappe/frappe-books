@@ -35,7 +35,7 @@ export function canRedeemLoyalty(sale: SalesInvoice): boolean {
   return (
     isLoyaltyOffered(sale) &&
     hasItemsAndCustomer(sale) &&
-    (sale.available_loyalty_points ?? 0) > 0
+    sale.availableLoyaltyPoints > 0
   );
 }
 

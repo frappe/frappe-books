@@ -7,6 +7,7 @@ from frappe.utils import get_datetime
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import return_unreturned_rows
+from frappe_books.inventory.row_fields import row_values
 from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.settings import require_feature
 
@@ -92,13 +93,17 @@ def _validate_serial_numbers(original, returned, rows):
 
 
 def batch_quantities(rows):
+	"""Sum the rows' stock quantities by item and batch."""
 	quantities = defaultdict(as_decimal)
 	for row in rows:
-		quantities[(row.item, row.batch or "")] += abs(as_decimal(row.quantity))
+		item, batch, stock_qty = row_values(row, "item", "batch", "stock_qty")
+		quantities[(item, batch or "")] += abs(as_decimal(stock_qty))
 	return quantities
 
 
 def _serial_numbers(rows):
 	return {
-		(row.item, serial_number) for row in rows for serial_number in parse_serial_numbers(row.serial_number)
+		(item, serial_number)
+		for item, serials in (row_values(row, "item", "serial") for row in rows)
+		for serial_number in parse_serial_numbers(serials)
 	}

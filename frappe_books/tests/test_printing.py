@@ -97,7 +97,8 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		customer = make_customer(self.receivable.name).name
 		payable = make_account("Print Payable", root_type="Liability", account_type="Payable").name
 		supplier = make_supplier(payable).name
-		row = {"item": item.name, "transfer_unit": box, "transfer_quantity": 6, "rate": 62}
+		# 62 a piece is 3100 a box of 50.
+		row = {"item_code": item.name, "uom": box, "qty": 6, "price_list_rate": 3100}
 		for doctype, print_format, values in (
 			("Books Sales Invoice", "Business - Sales Invoice", {"customer": customer}),
 			("Books Sales Invoice", "Business-POS - Sales Invoice", {"customer": customer}),
@@ -105,13 +106,11 @@ class IntegrationTestPrinting(IntegrationTestCase):
 			(
 				"Books Purchase Invoice",
 				"Business - Purchase Invoice",
-				{"supplier": supplier, "account": payable},
+				{"supplier": supplier, "credit_to": payable},
 			),
 		):
 			with self.subTest(print_format=print_format):
-				doc = frappe.get_doc(
-					{"doctype": doctype, "date": now_datetime(), "items": [row], **values}
-				).insert()
+				doc = frappe.get_doc({"doctype": doctype, "items": [row], **values}).insert()
 				html = get_print(doctype, doc.name, print_format=print_format)
 
 				self.assertIn(books_format(3100, "Currency", doc.currency), html)
@@ -335,7 +334,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		hints = get_print_hints("Books Sales Invoice")
 
 		self.assertEqual(hints["doc"]["customer"], "Customer")
-		self.assertEqual(hints["doc"]["items"][0]["rate"], "Rate")
+		self.assertEqual(hints["doc"]["items"][0]["price_list_rate"], "Rate")
 		self.assertNotIn("items_section_break_7", hints["doc"])
 		self.assertEqual(hints["print"]["company_name"], "Company Name")
 		self.assertEqual(hints["print"]["gstin"], "GSTIN")

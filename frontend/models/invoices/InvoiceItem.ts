@@ -5,7 +5,6 @@ import {
   CurrenciesMap,
   FiltersMap,
   HiddenMap,
-  RequiredMap,
   ValidationMap,
 } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
@@ -26,107 +25,107 @@ import { setCurrencies } from './Invoice';
 
 // The server fills these from the row's item.
 const ITEM_DETAILS = [
+  'item_name',
+  'description',
+  'stock_uom',
+  'uom',
+  'item_tax_template',
+  'gst_hsn_code',
+  'income_account',
+  'expense_account',
+];
+const QUANTITY_FIELDS = ['qty', 'stock_qty'];
+const QUICK_EDIT_FIELDS = [
+  'item_code',
+  'income_account',
+  'expense_account',
+  'description',
+  'gst_hsn_code',
+  'item_tax_template',
+  'price_list_rate',
+  'qty',
+  'uom',
+  'batch_no',
+  'serial_no',
+  'stock_qty',
+  'stock_uom',
+  'conversion_factor',
+  'discount_percentage',
+  'discount_amount',
+  'amount',
+];
+const FILE_FIELDS = [
   'item_code',
   'description',
-  'unit',
-  'transfer_unit',
-  'tax',
-  'hsn_code',
-  'account',
+  'price_list_rate',
+  'uom',
+  'qty',
+  'stock_uom',
+  'batch_no',
+  'serial_no',
+  'conversion_factor',
+  'income_account',
+  'expense_account',
+  'item_tax_template',
+  'amount',
+  'discount_percentage',
+  'discount_amount',
+  'gst_hsn_code',
+  'is_manual_rate',
 ];
-const QUANTITY_FIELDS = ['qty', 'transfer_quantity', 'quantity'];
 
 /**
- * An invoice or quote row. The server fills its item details, units, price
- * and amounts; the row only turns the user's edits into what the server reads.
+ * An invoice or quote row, priced as ERPNext prices one: per its unit, less
+ * its discount. The server fills its item details, units, price and amounts;
+ * the row only turns the user's edits into what the server reads.
  */
 export class InvoiceItem extends FrappeDoc {
   static override presentation = {
     label: 'Invoice Item',
-    quickEditFields: [
-      'item',
-      'account',
-      'description',
-      'hsn_code',
-      'tax',
-      'transfer_rate',
-      'transfer_quantity',
-      'transfer_unit',
-      'batch',
-      'serial_number',
-      'quantity',
-      'unit',
-      'unit_conversion_factor',
-      'amount',
-      'set_item_discount_amount',
-      'item_discount_amount',
-      'item_discount_percent',
-      'item_discounted_total',
-      'item_taxed_total',
-    ],
-    tableFields: ['item', 'tax', 'qty', 'transfer_rate', 'amount'],
-    fields: {
-      ...withoutCreate(['transfer_unit', 'unit', 'account']),
-      // The server computes it from the rate; an edit here sets the rate instead.
-      transfer_rate: { readOnly: false },
-    },
-    // Without `qty`: the server sets it from the quantity.
-    fileFields: [
-      'item',
+    quickEditFields: QUICK_EDIT_FIELDS,
+    tableFields: [
       'item_code',
-      'description',
-      'rate',
-      'transfer_unit',
-      'transfer_quantity',
-      'unit',
-      'batch',
-      'serial_number',
-      'quantity',
-      'unit_conversion_factor',
-      'account',
-      'tax',
+      'qty',
+      'price_list_rate',
+      'item_tax_template',
       'amount',
-      'set_item_discount_amount',
-      'item_discount_amount',
-      'item_discount_percent',
-      'item_discounted_total',
-      'item_taxed_total',
-      'hsn_code',
-      'stock_not_transferred',
-      'is_manual_rate',
     ],
+    fields: withoutCreate([
+      'uom',
+      'stock_uom',
+      'income_account',
+      'expense_account',
+    ]),
+    fileFields: FILE_FIELDS,
   };
-  // The server prices the row, turns a typed rate per transfer unit into the
-  // rate, and derives the other quantities again.
+  // The server prices the row and derives the other quantity again.
   static override refills = {
-    item: ['rate', ...ITEM_DETAILS],
-    transfer_rate: ['rate'],
-    transfer_unit: ['rate', 'quantity'],
-    quantity: ['qty', 'transfer_quantity'],
-    qty: ['quantity'],
-    transfer_quantity: ['quantity'],
+    item_code: ['price_list_rate', ...ITEM_DETAILS],
+    uom: ['price_list_rate', 'conversion_factor', 'stock_qty'],
+    qty: ['stock_qty'],
+    stock_qty: ['qty'],
+    discount_percentage: ['discount_amount'],
+    discount_amount: ['discount_percentage'],
   };
 
   parentdoc?: Invoice;
-  item?: string;
+  item_code?: string;
+  price_list_rate?: Money;
   rate?: Money;
-  transfer_rate?: Money;
   amount?: Money;
-  tax?: string;
+  item_tax_template?: string;
   qty?: number;
-  quantity?: number;
-  transfer_quantity?: number;
-  unit?: string;
-  transfer_unit?: string;
-  unit_conversion_factor?: number;
-  batch?: string;
-  serial_number?: string;
-  set_item_discount_amount?: boolean;
-  item_discount_amount?: Money;
-  item_discount_percent?: number;
+  stock_qty?: number;
+  stock_uom?: string;
+  uom?: string;
+  conversion_factor?: number;
+  batch_no?: string;
+  serial_no?: string;
+  discount_amount?: Money;
+  discount_percentage?: number;
   is_manual_rate?: boolean;
   is_free_item?: boolean;
-  pricing_rule?: string;
+  pricing_rules?: string;
 
   getCurrencies: CurrenciesMap = {};
 
@@ -148,9 +147,12 @@ export class InvoiceItem extends FrappeDoc {
     this.followEdit(arg.changed);
   }
 
-  /** A cleared tax goes empty, not null, as the server fills a missing one from the item. */
+  /** A cleared template goes empty, not null, as the server fills a missing one from the item. */
   override _getFrappeValue(field: Field, options: FrappeValueOptions) {
-    if (field.fieldname === 'tax' && this.tax === '') {
+    if (
+      field.fieldname === 'item_tax_template' &&
+      this.item_tax_template === ''
+    ) {
       return '';
     }
 
@@ -159,11 +161,11 @@ export class InvoiceItem extends FrappeDoc {
 
   /** What an edit asks of the server besides its refills: a price of its own or the server's. */
   followEdit(fieldname?: string) {
-    if (fieldname === 'rate' || fieldname === 'transfer_rate') {
+    if (fieldname === 'price_list_rate') {
       this.is_manual_rate = true;
-    } else if (fieldname === 'item') {
+    } else if (fieldname === 'item_code') {
       this.followItem();
-    } else if (fieldname === 'transfer_unit') {
+    } else if (fieldname === 'uom') {
       this.is_manual_rate = false;
     } else if (fieldname && QUANTITY_FIELDS.includes(fieldname)) {
       this.followQuantity(fieldname);
@@ -174,38 +176,26 @@ export class InvoiceItem extends FrappeDoc {
     this.is_manual_rate = false;
     // The server names an empty purchase batch from the new item's series on save.
     if (!this.isSales) {
-      this.batch = undefined;
+      this.batch_no = undefined;
     }
   }
 
-  /** Signs the quantity as the invoice takes it; the server derives the other quantities. */
+  /** Signs the quantity as the invoice takes it; the server derives the other quantity. */
   followQuantity(fieldname: string) {
     const quantity = Math.abs(this[fieldname] as number);
     this[fieldname] = this.isReturn ? -quantity : quantity;
-    // Qty is the quantity in the transfer unit, as the item table shows it.
-    if (fieldname !== 'quantity') {
-      this.qty = this.transfer_quantity = this[fieldname] as number;
-    }
   }
 
-  // The rate per transfer unit is the rate the server requires, as the row shows it.
-  required: RequiredMap = { transfer_rate: () => true };
-
-  // Fields of features turned off in the settings, and the rate per stock unit,
-  // which the row shows per transfer unit. The DocType's depends_on hides the rest.
+  // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
-    rate: () => true,
-    hsn_code: () => isHsnCodeHidden(this.fyo),
-    item_discounted_total: () => !this.enableDiscounting,
-    set_item_discount_amount: () => !this.enableDiscounting,
-    item_discount_amount: () => !this.enableDiscounting,
-    item_discount_percent: () => !this.enableDiscounting,
-    batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
-    serial_number: () =>
-      !this.fyo.singles.InventorySettings?.enable_serial_number,
-    transfer_unit: () => !this.enableUomConversions,
-    transfer_quantity: () => !this.enableUomConversions,
-    unit_conversion_factor: () => !this.enableUomConversions,
+    gst_hsn_code: () => isHsnCodeHidden(this.fyo),
+    discount_amount: () => !this.enableDiscounting,
+    discount_percentage: () => !this.enableDiscounting,
+    batch_no: () => !this.fyo.singles.InventorySettings?.enable_batches,
+    serial_no: () => !this.fyo.singles.InventorySettings?.enable_serial_number,
+    uom: () => !this.enableUomConversions,
+    stock_qty: () => !this.enableUomConversions,
+    conversion_factor: () => !this.enableUomConversions,
   };
 
   get enableDiscounting(): boolean {
@@ -218,21 +208,21 @@ export class InvoiceItem extends FrappeDoc {
 
   // The server checks these too; mirrored to show the message at the field.
   validations: ValidationMap = {
-    transfer_unit: async (value: DocValue) =>
+    uom: async (value: DocValue) =>
       await validateTransferUnit(
-        { item: this.item, unit: this.unit },
+        { item: this.item_code, unit: this.stock_uom },
         value as string
       ),
     qty: async (value: DocValue) => {
-      if (this.batch) {
-        // Qty is in the transfer unit; the batch holds stock units.
-        const quantity = (value as number) * (this.unit_conversion_factor || 1);
-        await this.validateBatchQuantity(this.batch, quantity);
+      if (this.batch_no) {
+        // Qty is in the row's unit; the batch holds stock units.
+        const quantity = (value as number) * (this.conversion_factor || 1);
+        await this.validateBatchQuantity(this.batch_no, quantity);
       }
     },
-    batch: async (value: DocValue) => {
+    batch_no: async (value: DocValue) => {
       if (value) {
-        await this.validateBatchQuantity(value as string, this.quantity ?? 0);
+        await this.validateBatchQuantity(value as string, this.stock_qty ?? 0);
       }
     },
   };
@@ -249,7 +239,7 @@ export class InvoiceItem extends FrappeDoc {
 
   async validateBatchQuantity(batch: string, quantity: number) {
     if (
-      !this.item ||
+      !this.item_code ||
       !this.isSales ||
       this.isReturn ||
       !this.fyo.singles.InventorySettings?.enable_batches
@@ -258,7 +248,7 @@ export class InvoiceItem extends FrappeDoc {
     }
 
     const location = await this.getStockLocation();
-    const available = await getBatchQuantity(this.item, batch, location);
+    const available = await getBatchQuantity(this.item_code, batch, location);
     if (quantity > available) {
       throw new ValidationError(
         this.fyo
@@ -269,8 +259,8 @@ export class InvoiceItem extends FrappeDoc {
 
   // Items, batches and units are Frappe-backed and filter by Frappe fieldnames.
   static override filters: FiltersMap = {
-    batch: async (doc: FrappeDoc) => {
-      const item = doc.item as string;
+    batch_no: async (doc: FrappeDoc) => {
+      const item = doc.item_code as string;
       if (!doc.isSales || doc.isReturn) {
         return [['item', '=', item]];
       }
@@ -282,12 +272,12 @@ export class InvoiceItem extends FrappeDoc {
         .map((row) => row.batch as string);
       return [['name', 'in', batches]];
     },
-    transfer_unit: getTransferUnitFilter,
+    uom: getTransferUnitFilter,
   };
 
   static override createFilters: FiltersMap = {
     // A new batch is of the row's item, not one of the batches in stock.
-    batch: (doc: FrappeDoc) => [['item', '=', doc.item]],
+    batch_no: (doc: FrappeDoc) => [['item', '=', doc.item_code]],
   };
 }
 
@@ -305,15 +295,23 @@ export class PurchaseInvoiceItem extends InvoiceItem {
   };
 }
 
+// Quote rows have no account, batch or serial numbers.
+const NOT_QUOTED = [
+  'income_account',
+  'expense_account',
+  'batch_no',
+  'serial_no',
+];
+
 export class QuotationItem extends InvoiceItem {
   static override presentation = {
     ...InvoiceItem.presentation,
     label: 'Quotation Item',
-    quickEditFields: InvoiceItem.presentation.quickEditFields.filter(
-      (fieldname) => fieldname !== 'serial_number'
+    quickEditFields: QUICK_EDIT_FIELDS.filter(
+      (fieldname) => !NOT_QUOTED.includes(fieldname)
     ),
-    fileFields: InvoiceItem.presentation.fileFields.filter(
-      (fieldname) => fieldname !== 'serial_number'
+    fileFields: FILE_FIELDS.filter(
+      (fieldname) => !NOT_QUOTED.includes(fieldname)
     ),
   };
 }

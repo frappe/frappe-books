@@ -21,49 +21,37 @@
         <FrappeErrorMessage :message="errorMessage" />
       </div>
 
-      <div v-if="appliedCoupons.length" class="flex flex-col gap-1.5">
+      <div v-if="appliedCoupon" class="flex flex-col gap-1.5">
         <p class="text-sm text-ink-gray-5">{{ t`Applied` }}</p>
         <!-- MobileFilterChip's shape; its name says "filter". -->
         <div v-if="isMobile" class="flex flex-wrap gap-2">
           <MobileFilterChip
-            v-for="coupon in appliedCoupons as AppliedCouponCode[]"
-            :key="coupon.coupons"
-            :value="coupon.coupons ?? ''"
-            :remove-label="t`Remove coupon ${coupon.coupons ?? ''}`"
-            @click="removeAppliedCoupon(coupon)"
+            :value="appliedCoupon"
+            :remove-label="t`Remove coupon ${appliedCoupon}`"
+            @click="removeAppliedCoupon"
           />
         </div>
-        <FrappeScrollArea
-          v-else
-          class="rounded-6 border border-outline-gray-1"
-          viewport-class="max-h-40"
-        >
-          <ul class="divide-y divide-outline-gray-1">
-            <li
-              v-for="coupon in appliedCoupons as AppliedCouponCode[]"
-              :key="coupon.coupons"
-              class="flex items-center gap-2.5 px-3 py-2.5"
+        <div v-else class="rounded-6 border border-outline-gray-1">
+          <div class="flex items-center gap-2.5 px-3 py-2.5">
+            <span
+              class="lucide-ticket-percent size-4 shrink-0 text-ink-green-5"
+              aria-hidden="true"
+            />
+            <span
+              class="min-w-0 flex-1 truncate text-base-medium text-ink-gray-8"
             >
-              <span
-                class="lucide-ticket-percent size-4 shrink-0 text-ink-green-5"
-                aria-hidden="true"
-              />
-              <span
-                class="min-w-0 flex-1 truncate text-base-medium text-ink-gray-8"
-              >
-                {{ coupon.coupons }}
-              </span>
-              <FrappeButton
-                icon="lucide-x"
-                variant="ghost"
-                size="xs"
-                :tooltip="t`Remove coupon`"
-                :aria-label="t`Remove coupon`"
-                @click="removeAppliedCoupon(coupon)"
-              />
-            </li>
-          </ul>
-        </FrappeScrollArea>
+              {{ appliedCoupon }}
+            </span>
+            <FrappeButton
+              icon="lucide-x"
+              variant="ghost"
+              size="xs"
+              :tooltip="t`Remove coupon`"
+              :aria-label="t`Remove coupon`"
+              @click="removeAppliedCoupon"
+            />
+          </div>
+        </div>
       </div>
     </div>
     <template #actions="{ size }">
@@ -88,7 +76,6 @@
 import Modal from 'src/components/POS/POSDialog.vue';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { defineComponent, inject } from 'vue';
-import type { AppliedCouponCode } from 'models/invoices/AppliedCouponCode';
 import { getField } from 'src/frappe/registry';
 import Link from 'src/components/Controls/Link.vue';
 import MobileFilterChip from 'src/mobile/MobileFilterChip.vue';
@@ -96,7 +83,6 @@ import { Field } from 'schemas/types';
 import {
   Button as FrappeButton,
   ErrorMessage as FrappeErrorMessage,
-  ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import { getErrorMessage } from 'src/utils';
 import { isMobile } from 'src/utils/viewport';
@@ -109,7 +95,6 @@ export default defineComponent({
     FrappeButton,
     MobileFilterChip,
     FrappeErrorMessage,
-    FrappeScrollArea,
   },
   props: {
     openModal: Boolean,
@@ -120,19 +105,19 @@ export default defineComponent({
     return {
       isMobile,
       sinvDoc: inject('sinvDoc') as SalesInvoice,
-      appliedCoupons: inject('appliedCoupons') as AppliedCouponCode[],
+      appliedCoupon: inject('appliedCoupon') as string | undefined,
     };
   },
   data() {
     return {
       errorMessage: '',
       couponCode: '',
-      initialCouponCodes: [] as string[],
+      initialCouponCode: undefined as string | undefined,
     };
   },
   computed: {
     couponField(): Field | undefined {
-      return getField('AppliedCouponCodes', 'coupons');
+      return getField('SalesInvoice', 'coupon_code');
     },
     subtitle(): string {
       const name = this.sinvDoc.inserted ? this.sinvDoc.name : '';
@@ -147,8 +132,7 @@ export default defineComponent({
 
       this.couponCode = '';
       this.errorMessage = '';
-      this.initialCouponCodes =
-        this.sinvDoc.coupons?.map((coupon) => coupon.coupons ?? '') ?? [];
+      this.initialCouponCode = this.sinvDoc.coupon_code;
     },
   },
   methods: {
@@ -170,31 +154,29 @@ export default defineComponent({
         this.errorMessage = getErrorMessage(error as Error);
       }
     },
-    /** The server's preview says why a coupon does not apply, which is then taken off. */
+    /**
+     * A sale takes one coupon, so a new one replaces it. The server's preview
+     * says why a coupon does not apply, which then gives way to the one before.
+     */
     async applyCoupon(coupon: string) {
-      await this.sinvDoc.append('coupons', { coupons: coupon });
+      const previous = this.sinvDoc.coupon_code;
+      await this.sinvDoc.set('coupon_code', coupon);
       try {
         await this.sinvDoc.preview({ check_coupons: true });
       } catch (error) {
-        const added = this.sinvDoc.coupons?.at(-1);
-        await this.sinvDoc.remove('coupons', added?.idx as number);
+        await this.sinvDoc.set('coupon_code', previous ?? null);
         throw error;
       }
     },
     setCouponCode() {
       this.$emit('toggleModal', 'CouponCode');
     },
-    async removeAppliedCoupon(coupon: AppliedCouponCode) {
-      await coupon?.parentdoc?.remove('coupons', coupon.idx as number);
+    async removeAppliedCoupon() {
+      await this.sinvDoc.set('coupon_code', null);
     },
     async cancelApplyCouponCode() {
       this.couponCode = '';
-      await this.sinvDoc.set('coupons', null);
-
-      for (const coupons of this.initialCouponCodes) {
-        await this.sinvDoc.append('coupons', { coupons });
-      }
-
+      await this.sinvDoc.set('coupon_code', this.initialCouponCode ?? null);
       this.$emit('toggleModal', 'CouponCode');
     },
   },

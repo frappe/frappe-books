@@ -19,7 +19,7 @@
       v-if="showPriceList"
       class="max-w-full"
       icon-left="lucide-list-checks"
-      :label="sinvDoc.price_list || t`Price list`"
+      :label="sinvDoc.selling_price_list || t`Price list`"
       @click="$emit('openPriceList')"
     />
   </div>

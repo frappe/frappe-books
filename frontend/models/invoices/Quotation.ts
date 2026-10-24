@@ -4,7 +4,7 @@ import { getDocStatusListColumn, getQuoteActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { QuotationItem } from './InvoiceItem';
-import { TaxSummary } from './TaxSummary';
+import { TaxesAndCharges } from './TaxesAndCharges';
 
 /** A quote to a customer or a lead; its Type names the doctype of its party. */
 export class Quotation extends Invoice {
@@ -25,31 +25,33 @@ export class Quotation extends Invoice {
       'name',
       'naming_series',
       'party_name',
-      'date',
-      'price_list',
+      'transaction_date',
+      'selling_price_list',
       'items',
-      'net_total',
-      'total_discount',
+      'taxes_and_charges',
       'taxes',
+      'net_total',
+      'total_taxes_and_charges',
       'base_grand_total',
       'grand_total',
       'currency',
-      'exchange_rate',
+      'conversion_rate',
       'discount_after_tax',
-      'outstanding_amount',
       'terms',
-      'attachment',
       'status',
       'quotation_to',
     ],
   };
   static override partyField = 'party_name';
-  static override rowModels = { items: QuotationItem, taxes: TaxSummary };
+  static override rowModels = { items: QuotationItem, taxes: TaxesAndCharges };
+  // The exchange rate is the one on the quote's date.
+  static override refills = { transaction_date: ['conversion_rate'] };
 
   // A quote has no party account.
   static override filters: FiltersMap = {
     naming_series: Invoice.filters.naming_series,
-    price_list: Invoice.filters.price_list,
+    selling_price_list: Invoice.filters.selling_price_list,
+    taxes_and_charges: Invoice.filters.taxes_and_charges,
   };
 
   /** Quotes post no ledger entries. */
@@ -63,7 +65,7 @@ export class Quotation extends Invoice {
         'name',
         getDocStatusListColumn(),
         'party_name',
-        'date',
+        'transaction_date',
         'base_grand_total',
       ],
     };

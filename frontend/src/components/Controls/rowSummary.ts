@@ -9,8 +9,8 @@ export interface RowSummary {
 }
 
 const quantityFields = ['qty', 'quantity'];
-// Invoice rows show their rate per transfer unit, as their Qty is.
-const rateFields = ['rate', 'transfer_rate'];
+// Invoice rows show their rate before discount, stock rows their rate.
+const rateFields = ['rate', 'price_list_rate'];
 // Tax summary rows and tax template rows.
 const taxRateFields = ['rate', 'tax_rate'];
 

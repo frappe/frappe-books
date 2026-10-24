@@ -316,11 +316,23 @@ for (const [field, value, expected] of [
   });
 }
 
+// Invoices post on a date; payments still post on a date and time.
+const datetimeSchema = { schema: 'Payment', label: 'Posting Date' };
+
+/** Lists the schema's records in the fixture and opens its filters again. */
+async function useSchema(page: Page, schema: string) {
+  await page.evaluate((schemaName) => {
+    (window as any).filterFixture.state.schemaName = schemaName;
+  }, schema);
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+}
+
 test('datetime filters select both calendar date and time and preserve SQL round trips', async ({
   page,
 }) => {
+  await useSchema(page, datetimeSchema.schema);
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
-  await choose(page, 'Field', 'Date');
+  await choose(page, 'Field', datetimeSchema.label);
   const input = page.getByRole('combobox', { name: 'Value', exact: true });
   const panel = page.getByRole('region', { name: 'Filters', exact: true });
   await input.click();
@@ -360,26 +372,21 @@ test('datetime filters select both calendar date and time and preserve SQL round
   ]);
 });
 
-// Journal entries filter on their posting date.
-const dateFields: Record<string, string> = {
-  JournalEntry: 'posting_date',
-  SalesInvoice: 'date',
+// Journal entries filter on their posting date, payments on their date and time.
+const dateFields: Record<string, [fieldname: string, label: string]> = {
+  JournalEntry: ['posting_date', 'Date'],
+  Payment: ['date', 'Posting Date'],
 };
 
-for (const schema of ['JournalEntry', 'SalesInvoice']) {
+for (const schema of ['JournalEntry', 'Payment']) {
   test(`${schema} date picker supports keyboard selection, Escape, clearing and empty conditions`, async ({
     page,
   }) => {
-    if (schema === 'JournalEntry') {
-      await page.evaluate(() => {
-        (window as any).filterFixture.state.schemaName = 'JournalEntry';
-      });
-      await page.getByRole('button', { name: 'Filter', exact: true }).click();
-    }
+    await useSchema(page, schema);
     await page
       .getByRole('button', { name: 'Add a filter', exact: true })
       .click();
-    await choose(page, 'Field', 'Date');
+    await choose(page, 'Field', dateFields[schema][1]);
     const input = page.getByRole('combobox', { name: 'Value', exact: true });
     const panel = page.getByRole('region', { name: 'Filters', exact: true });
     await input.focus();
@@ -411,34 +418,29 @@ for (const schema of ['JournalEntry', 'SalesInvoice']) {
     await expect(input).toHaveCount(0);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
     expect(await appliedFilters(page)).toEqual([
-      [dateFields[schema], 'is', 'not set'],
+      [dateFields[schema][0], 'is', 'not set'],
     ]);
   });
 }
 
 for (const [schema, first, second] of [
   ['JournalEntry', '2024-02-29', '2024-03-01'],
-  ['SalesInvoice', '2024-02-29T13:45:12', '2024-03-01T00:00:00'],
+  ['Payment', '2024-02-29T13:45:12', '2024-03-01T00:00:00'],
 ]) {
   test(`${schema} typed picker values commit before Apply and outside clicks`, async ({
     page,
   }) => {
-    if (schema === 'JournalEntry') {
-      await page.evaluate(() => {
-        (window as any).filterFixture.state.schemaName = 'JournalEntry';
-      });
-      await page.getByRole('button', { name: 'Filter', exact: true }).click();
-    }
+    await useSchema(page, schema);
     await page
       .getByRole('button', { name: 'Add a filter', exact: true })
       .click();
-    await choose(page, 'Field', 'Date');
+    await choose(page, 'Field', dateFields[schema][1]);
     const input = page.getByRole('combobox', { name: 'Value', exact: true });
     await input.click();
     await input.fill(first);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
     expect(await appliedFilters(page)).toEqual([
-      [dateFields[schema], '=', first.replace('T', ' ')],
+      [dateFields[schema][0], '=', first.replace('T', ' ')],
     ]);
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
@@ -452,7 +454,7 @@ for (const [schema, first, second] of [
       page.getByRole('region', { name: 'Filters', exact: true })
     ).toBeHidden();
     expect(await appliedFilters(page)).toEqual([
-      [dateFields[schema], '=', second.replace('T', ' ')],
+      [dateFields[schema][0], '=', second.replace('T', ' ')],
     ]);
   });
 }
@@ -463,10 +465,11 @@ for (const width of [1440, 768]) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 560 });
+    await useSchema(page, datetimeSchema.schema);
     await page
       .getByRole('button', { name: 'Add a filter', exact: true })
       .click();
-    await choose(page, 'Field', 'Date');
+    await choose(page, 'Field', datetimeSchema.label);
     await page.getByRole('combobox', { name: 'Value', exact: true }).click();
     const calendar = page.getByRole('grid', { name: 'Calendar dates' });
     await expect(calendar).toBeVisible();
@@ -517,14 +520,14 @@ test('outside click applies changes and zero matches can be cleared', async ({
   page,
 }) => {
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
-  await setValue(page, 'Saved');
+  await setValue(page, 'Draft');
   await page
     .getByRole('heading', { name: 'Sales Invoice', exact: true })
     .click();
   await expect(
     page.getByRole('region', { name: 'Filters', exact: true })
   ).toBeHidden();
-  expect(await appliedFilters(page)).toEqual([['status', '=', 'Saved']]);
+  expect(await appliedFilters(page)).toEqual([['status', '=', 'Draft']]);
   await expect(
     page.getByText('No entries found', { exact: true })
   ).toBeVisible();

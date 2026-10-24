@@ -3,7 +3,7 @@
 import frappe
 from frappe.model.base_document import get_controller
 from frappe.tests import change_settings
-from frappe.utils import flt, now_datetime
+from frappe.utils import flt, nowdate
 
 from frappe_books.accounting.money import company_currency
 from frappe_books.company import company_value, default_company
@@ -140,24 +140,14 @@ def make_price_list(*prices, **values):
 
 
 def make_invoice(doctype, party, account, item, item_account, **values):
-	return frappe.get_doc(
-		{
-			"doctype": doctype,
-			get_controller(doctype).party_field: party,
-			"account": account,
-			"date": now_datetime(),
-			"items": [
-				{
-					"item": item,
-					"account": item_account,
-					"rate": 100,
-					"quantity": 2,
-					"item_discount_percent": 10,
-				}
-			],
-			**values,
-		}
-	).insert()
+	"""An invoice of two of the item at 100 less 10%; a quote takes no accounts."""
+	controller = get_controller(doctype)
+	row = {"item_code": item, "price_list_rate": 100, "qty": 2, "discount_percentage": 10}
+	invoice = {"doctype": doctype, controller.party_field: party, controller.date_field: nowdate()}
+	if controller.party_account_field:
+		invoice[controller.party_account_field] = account
+		row[controller.item_account_field] = item_account
+	return frappe.get_doc({**invoice, "items": [row], **values}).insert()
 
 
 def ledger_entries(voucher_type, voucher_no):

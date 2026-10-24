@@ -109,8 +109,13 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		purchase_return = make_return(receipt.name)
 
 		self.assertEqual(
-			(invoice.doctype, invoice.back_reference, invoice.account, invoice.grand_total),
-			("Books Purchase Invoice", receipt.name, payable, 20),
+			(invoice.doctype, invoice.credit_to, invoice.grand_total),
+			("Books Purchase Invoice", payable, 20),
+		)
+		row = invoice.items[0]
+		self.assertEqual(
+			(row.purchase_receipt, row.pr_detail, row.qty, row.price_list_rate),
+			(receipt.name, receipt.items[0].name, 2, 10),
 		)
 		self.assertEqual(
 			(purchase_return.doctype, purchase_return.return_against, purchase_return.items[0].quantity),

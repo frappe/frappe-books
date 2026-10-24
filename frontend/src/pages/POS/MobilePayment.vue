@@ -41,11 +41,11 @@
             role="radio"
             class="flex h-12 min-w-0 items-center gap-2.5 rounded-5 border px-3 text-start text-md-medium"
             :class="
-              method.name === posCheckout.tender.payment_method
+              method.name === posCheckout.tender.mode_of_payment
                 ? 'border-outline-gray-4 bg-surface-base text-ink-gray-9 shadow-sm'
                 : 'border-outline-gray-2 text-ink-gray-7'
             "
-            :aria-checked="method.name === posCheckout.tender.payment_method"
+            :aria-checked="method.name === posCheckout.tender.mode_of_payment"
             @click="posCheckout.selectMethod(method.name)"
           >
             <FrappeIcon
@@ -54,7 +54,7 @@
             />
             <span class="min-w-0 flex-1 truncate">{{ method.name }}</span>
             <FrappeIcon
-              v-if="method.name === posCheckout.tender.payment_method"
+              v-if="method.name === posCheckout.tender.mode_of_payment"
               icon="lucide-circle-check"
               class="size-4 shrink-0 text-ink-gray-9"
             />
@@ -69,7 +69,7 @@
         :border="true"
         :required="true"
         :read-only="false"
-        :value="posCheckout.tender.reference_id"
+        :value="posCheckout.tender.reference_no"
         @change="posCheckout.setReference"
       />
       <DateControl
@@ -126,7 +126,7 @@
         size="md"
         :label="t`Redeem loyalty points`"
         :description="
-          t`${sinvDoc.available_loyalty_points ?? 0} points available`
+          t`${sinvDoc.availableLoyaltyPoints} points available`
         "
         :model-value="!!sinvDoc.redeem_loyalty_points"
         @update:model-value="(on: boolean) => $emit('setLoyalty', on)"

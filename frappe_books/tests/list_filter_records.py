@@ -41,7 +41,8 @@ def make_sales_invoice(index: int, tag: str) -> str:
 		{
 			"doctype": "Books Sales Invoice",
 			"name": f"Filter invoice {index} {tag}",
-			"date": f"2024-01-{index + 1:02} 12:00:00",
+			"posting_date": f"2024-01-{index + 1:02}",
+			"posting_time": "12:00:00",
 			"naming_series": "SINV-",
 			"net_total": index * 100,
 			"grand_total": index * 112,

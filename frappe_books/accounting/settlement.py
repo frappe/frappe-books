@@ -5,11 +5,12 @@ from frappe_books.status import store_status
 
 
 def open_balance(invoice):
-	"""Make the invoice owe its whole total; a submitted return owes it back, as a negative amount.
+	"""Make the invoice owe its whole total less redeemed loyalty points; a submitted return owes it
+	back, as a negative amount.
 
 	A draft shows its total as positive, as the Books app does.
 	"""
-	total = abs(as_decimal(invoice.base_grand_total))
+	total = abs(as_decimal(invoice.base_grand_total)) - abs(as_decimal(invoice.get("loyalty_amount")))
 	invoice.outstanding_amount = signed(invoice, total) if invoice.docstatus == 1 else total
 
 

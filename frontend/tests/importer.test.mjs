@@ -42,7 +42,7 @@ test('child table fields are never required in an import template', async () => 
     (field) => field.parentSchemaChildField
   );
 
-  assert.ok(childFields.some((field) => field.fieldname === 'item'));
+  assert.ok(childFields.some((field) => field.fieldname === 'item_code'));
   assert.ok(childFields.every((field) => !field.required));
 });
 
@@ -71,7 +71,7 @@ test('a customer template holds a tax ID, not Indian GST fields', () => {
   assert.ok(!labels.includes('GSTIN / UIN'));
 });
 
-test('an invoice template keeps Books’ column order, without the quantity the server sets', () => {
+test('an invoice template keeps Books’ column order, without the stock quantity the server sets', () => {
   const importer = new Importer('SalesInvoice', fyo);
   const headers = parseCSV(importer.getCSVTemplate())[0];
 
@@ -79,18 +79,18 @@ test('an invoice template keeps Books’ column order, without the quantity the 
     'Invoice No',
     'Number Series',
     'Customer',
-    'Account',
+    'Debit To',
     'Date',
     'Price List',
+    'Sales Taxes and Charges Template',
     'Apply Discount After Tax',
     'Make Payment On Submit',
     'Make Delivery Note On Submit',
     'Notes',
-    'Back Reference',
     'Return Against',
   ]);
   assert.ok(headers.includes('Quantity (Items)'));
-  assert.ok(!headers.includes('Qty (Items)'));
+  assert.ok(!headers.includes('Qty as per Stock UOM (Items)'));
 });
 
 test('each table’s columns start with its row ID, which is not imported', () => {
@@ -99,16 +99,16 @@ test('each table’s columns start with its row ID, which is not imported', () =
   const items = headers.filter((header) => header.endsWith('(Items)'));
 
   assert.deepEqual(items.slice(0, 2), ['ID (Items)', 'Item (Items)']);
-  assert.ok(headers.includes('ID (Coupons)'));
+  assert.ok(headers.includes('ID (Sales Taxes and Charges)'));
 
   importer.assignedTemplateFields = [
     'SalesInvoice.name',
     'SalesInvoiceItem.name',
-    'SalesInvoiceItem.item',
+    'SalesInvoiceItem.item_code',
   ];
   importer.valueMatrix = [[{ value: 'A' }, { value: 'R-1' }, { value: 'Pen' }]];
   assert.deepEqual(parseCSV(importer.getImportFile().csv), [
-    ['docstatus', 'items.item'],
+    ['docstatus', 'items.item_code'],
     ['0', 'Pen'],
   ]);
 });
@@ -122,7 +122,7 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
       {
         name: 'SINV-1',
         naming_series: 'SINV-',
-        items: [{ item: 'Pen', quantity: 2 }],
+        items: [{ item_code: 'Pen', qty: 2 }],
       },
     ],
   }));
@@ -134,7 +134,7 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
       'items',
     ]),
     tableFields: [
-      { ...items, fields: pick(items.fields, ['item', 'quantity']) },
+      { ...items, fields: pick(items.fields, ['item_code', 'qty']) },
     ],
     limit: null,
     filters: [],
@@ -146,8 +146,8 @@ test('a list export’s CSV maps onto the template by its keys', async () => {
   assert.deepEqual(importer.assignedTemplateFields.slice(0, 4), [
     'SalesInvoice.name',
     'SalesInvoice.naming_series',
-    'SalesInvoiceItem.item',
-    'SalesInvoiceItem.quantity',
+    'SalesInvoiceItem.item_code',
+    'SalesInvoiceItem.qty',
   ]);
   assert.deepEqual(
     importer.valueMatrix.map((row) => row.map(({ value }) => value)),
@@ -192,8 +192,8 @@ test('the import file puts each document’s rows together, its values on the fi
   importer.assignedTemplateFields = [
     'SalesInvoice.name',
     'SalesInvoice.customer',
-    'SalesInvoiceItem.item',
-    'SalesInvoiceItem.quantity',
+    'SalesInvoiceItem.item_code',
+    'SalesInvoiceItem.qty',
   ];
   importer.valueMatrix = [
     [{ value: 'A' }, { value: 'Ann' }, { value: 'Pen' }, { value: 2 }],
@@ -205,7 +205,7 @@ test('the import file puts each document’s rows together, its values on the fi
   const file = importer.getImportFile();
   // Frappe names numbered documents, so their name only groups the rows.
   assert.deepEqual(parseCSV(file.csv), [
-    ['docstatus', 'customer', 'items.item', 'items.quantity'],
+    ['docstatus', 'customer', 'items.item_code', 'items.qty'],
     ['0', 'Amy', 'Pen', '2'],
     ['', '', 'Pad', '3'],
     ['0', 'Bob', 'Ink', '1'],
@@ -242,9 +242,9 @@ test('import cells are written as Frappe’s Data Import parses them', async () 
   const importer = new Importer('SalesInvoice', fyo);
   importer.assignedTemplateFields = [
     'SalesInvoice.name',
-    'SalesInvoice.date',
+    'SalesInvoice.posting_date',
     'SalesInvoice.discount_after_tax',
-    'SalesInvoiceItem.rate',
+    'SalesInvoiceItem.price_list_rate',
   ];
   importer.valueMatrix = [
     [
@@ -255,21 +255,23 @@ test('import cells are written as Frappe’s Data Import parses them', async () 
     ],
   ];
 
-  assert.deepEqual(importRows(importer)[1], [
-    '0',
-    '2026-09-30 10:05:00.000',
-    '1',
-    '12.5',
-  ]);
+  assert.deepEqual(importRows(importer)[1], ['0', '2026-09-30', '1', '12.5']);
+
+  const payment = new Importer('Payment', fyo);
+  payment.assignedTemplateFields = ['Payment.name', 'Payment.date'];
+  payment.valueMatrix = [
+    [{ value: 'A' }, { value: new Date(Date.UTC(2026, 8, 30, 4, 35)) }],
+  ];
+  assert.deepEqual(importRows(payment)[1], ['0', '2026-09-30 10:05:00.000']);
 });
 
 test('import datetimes are read as system time, whatever the browser’s time zone', async () => {
   // The system time zone is Asia/Kolkata; the browser is in Tokyo.
   process.env.TZ = 'Asia/Tokyo';
-  const importer = new Importer('SalesInvoice', fyo);
+  const importer = new Importer('Payment', fyo);
   importer.selectFile(
     [
-      'SalesInvoice.name,SalesInvoice.date',
+      'Payment.name,Payment.date',
       'A,2026-01-01',
       'B,2026-01-01 10:00:00',
       'C,2026-01-01T10:00:00+05:30',

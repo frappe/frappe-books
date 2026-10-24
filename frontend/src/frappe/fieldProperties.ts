@@ -30,6 +30,9 @@ const booksFieldTypes: Record<string, FieldType | undefined> = {
   'Dynamic Link': 'DynamicLink',
   'Long Text': 'Text',
   'Small Text': 'Text',
+  'Text Editor': 'Text',
+  Percent: 'Float',
+  Time: 'Data',
 };
 
 /** A reference field holds a DocType name, which /books shows as a choice of doctypes. */
@@ -55,7 +58,11 @@ export function getFieldProperties(
   return {
     ...properties,
     fieldtype,
-    default: getDefault(fieldtype, docfield.default),
+    // A Time's default, like "Now", is the server's to fill.
+    default:
+      docfield.fieldtype === 'Time'
+        ? undefined
+        : getDefault(fieldtype, docfield.default),
     ...getOptionProperties(field, fieldtype, docfield),
   } as Partial<Field>;
 }

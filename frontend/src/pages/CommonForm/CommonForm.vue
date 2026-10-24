@@ -287,11 +287,11 @@ export default defineComponent({
     },
     exchangeRate(): number {
       // 0 shows the rate as missing, to be entered by the user.
-      if (!this.hasDoc || typeof this.doc.exchange_rate !== 'number') {
+      if (!this.hasDoc || typeof this.doc.conversion_rate !== 'number') {
         return 0;
       }
 
-      return this.doc.exchange_rate;
+      return this.doc.conversion_rate;
     },
     exchangeRateProps() {
       return {
@@ -485,7 +485,7 @@ export default defineComponent({
       await this.doc.addItem(name, quantity);
     },
     async setExchangeRate(exchangeRate: number) {
-      await this.doc.set('exchange_rate', exchangeRate);
+      await this.doc.set('conversion_rate', exchangeRate);
     },
     async openPrintView() {
       await routeTo(`/print/${this.doc.schemaName}/${this.doc.name}`);

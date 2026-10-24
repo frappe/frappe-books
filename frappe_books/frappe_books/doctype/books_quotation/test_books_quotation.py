@@ -19,13 +19,13 @@ class IntegrationTestBooksQuotation(IntegrationTestCase):
 				"doctype": "Books Quotation",
 				"quotation_to": "Books Customer",
 				"party_name": party.name,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": item.name, "account": income.name, "rate": 25, "quantity": 2}],
+				"transaction_date": frappe.utils.nowdate(),
+				"items": [{"item_code": item.name, "price_list_rate": 25, "qty": 2}],
 			}
 		).insert()
 		quote.submit()
 
-		self.assertEqual(quote.grand_total, 50)
+		self.assertEqual((quote.grand_total, quote.status), (50, "Open"))
 		self.assertFalse(
 			frappe.db.exists(
 				"Books Ledger Entry",
@@ -43,8 +43,8 @@ class IntegrationTestBooksQuotation(IntegrationTestCase):
 				"doctype": "Books Quotation",
 				"quotation_to": "Books Lead",
 				"party_name": lead.name,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": item.name, "account": income.name, "rate": 25, "quantity": 2}],
+				"transaction_date": frappe.utils.nowdate(),
+				"items": [{"item_code": item.name, "price_list_rate": 25, "qty": 2}],
 			}
 		).insert().submit()
 

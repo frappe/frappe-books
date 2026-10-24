@@ -14,11 +14,11 @@ class BooksPricingRuleDetail(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		item_code: DF.Data | None
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		reference_item: DF.Link | None
-		reference_name: DF.Link | None
+		pricing_rule: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Pricing Rule Detail"

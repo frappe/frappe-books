@@ -129,7 +129,10 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		invoice = make_purchase_invoice(item.name)
 
 		row = invoice.items[0]
-		self.assertEqual((row.item, row.quantity, row.rate, row.account), (item.name, 1, 40, expense.name))
+		self.assertEqual(
+			(row.item_code, row.qty, row.price_list_rate, row.expense_account),
+			(item.name, 1, 40, expense.name),
+		)
 
 	def test_item_invoice_row_shows_its_quantity(self):
 		income = make_account("Mapped Sales", root_type="Income")
@@ -138,7 +141,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 
 		row = make_sales_invoice(item.name).items[0]
 
-		self.assertEqual((row.qty, row.transfer_quantity), (1, 1))
+		self.assertEqual((row.qty, row.stock_qty), (1, 1))
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
 		cogs, received, group = self.make_default_sources()

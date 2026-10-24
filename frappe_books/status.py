@@ -3,6 +3,9 @@ import frappe
 from frappe_books.accounting.money import as_decimal
 
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
+# ERPNext's status of an invoice a submitted return points to, and of a submitted quote.
+RETURN_ISSUED = {"Books Sales Invoice": "Credit Note Issued", "Books Purchase Invoice": "Debit Note Issued"}
+SUBMITTED = {"Books Quotation": "Open"}
 
 
 class StatusMixin:
@@ -18,23 +21,34 @@ class StatusMixin:
 def get_status(doc) -> str:
 	"""Return the list status of a submittable Books document."""
 	if doc.docstatus == 0:
-		return "Saved"
+		return "Draft" if "Draft" in _status_options(doc) else "Saved"
 	if doc.docstatus == 2:
 		return "Cancelled"
 	if doc.get("return_against"):
 		return "Return"
-	if doc.get("is_returned"):
-		return "Return Issued"
+	if _is_returned(doc):
+		return RETURN_ISSUED.get(doc.doctype, "Return Issued")
 	if doc.doctype in INVOICE_DOCTYPES:
 		return _payment_status(doc)
-	return "Submitted"
+	return SUBMITTED.get(doc.doctype, "Submitted")
+
+
+def _status_options(doc):
+	return (doc.meta.get_field("status").options or "").split("\n")
+
+
+def _is_returned(doc) -> bool:
+	"""An invoice has a submitted return against it; a stock transfer stores whether it has."""
+	if doc.doctype in INVOICE_DOCTYPES:
+		return bool(frappe.db.exists(doc.doctype, {"return_against": doc.name, "docstatus": 1}))
+	return bool(doc.get("is_returned"))
 
 
 def _payment_status(invoice) -> str:
 	outstanding = as_decimal(invoice.outstanding_amount)
 	if not outstanding:
 		return "Paid"
-	if outstanding == as_decimal(invoice.base_grand_total):
+	if outstanding == as_decimal(invoice.base_grand_total) - as_decimal(invoice.get("loyalty_amount")):
 		return "Unpaid"
 	return "Partly Paid"
 

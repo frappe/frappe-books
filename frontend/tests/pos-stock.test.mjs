@@ -91,18 +91,25 @@ test('stock sums come from the ledger through frappe.client.get_list', async () 
 
 test('checkout asks the server for the whole sale’s shortfalls in one request', async () => {
   const requests = stubServer();
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validateSinv(invoice);
   assert.deepEqual(requests, [
     [
       'frappe_books.inventory.availability.get_sale_shortfalls',
-      { items: [{ item, batch, quantity: 2 }], is_pos: true },
+      {
+        items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+        is_pos: true,
+      },
     ],
   ]);
 });
 
 test('checkout accepts stocked batches and rejects stock held elsewhere', async () => {
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validateSinv(invoice);
 
   stubServer({ location: 'Empty Counter' });
@@ -119,7 +126,9 @@ test('checkout checks the selected batch instead of just total item stock', asyn
       { item, batch: 'DEMO-COFFEE-2027', location: inventory, quantity: 131 },
     ],
   });
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await assert.rejects(
     pos.validateSinv(invoice),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 1; required: 2/
@@ -129,8 +138,8 @@ test('checkout checks the selected batch instead of just total item stock', asyn
 test('checkout combines repeated item rows, including free items', async () => {
   const invoice = {
     items: [
-      { item, batch, quantity: 3 },
-      { item, batch, quantity: 2, is_free_item: true },
+      { item_code: item, batch_no: batch, stock_qty: 3 },
+      { item_code: item, batch_no: batch, stock_qty: 2, is_free_item: true },
     ],
   };
   await assert.rejects(
@@ -142,8 +151,8 @@ test('checkout combines repeated item rows, including free items', async () => {
 test('an item the POS location has none of is out of stock, the error the server gives first', async () => {
   const invoice = {
     items: [
-      { item, batch, quantity: 5 },
-      { item: tea, quantity: 1 },
+      { item_code: item, batch_no: batch, stock_qty: 5 },
+      { item_code: tea, stock_qty: 1 },
     ],
   };
   await assert.rejects(
@@ -155,18 +164,20 @@ test('an item the POS location has none of is out of stock, the error the server
 test('checkout needs no stock of untracked items', async () => {
   const invoice = {
     items: [
-      { item: service, quantity: 99 },
-      { item, batch, quantity: 2 },
+      { item_code: service, stock_qty: 99 },
+      { item_code: item, batch_no: batch, stock_qty: 2 },
     ],
   };
   await pos.validateSinv(invoice);
 });
 
 test('fractional sales and returns do not produce false stock errors', async () => {
-  const invoice = { items: [{ item, batch, quantity: 0.5 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 0.5 }],
+  };
   await pos.validateSinv(invoice);
   invoice.return_against = 'Original Invoice';
-  invoice.items[0].quantity = -2;
+  invoice.items[0].stock_qty = -2;
   const requests = stubServer({ stock: [] });
   await pos.validateSinv(invoice);
   assert.deepEqual(requests, []);
@@ -181,7 +192,9 @@ test('a row without an item or batch shows no batch stock and asks nothing', asy
 });
 
 test('checkout validates against the stock the server has now', async () => {
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validatePOSCheckout(invoice);
   stubServer({ stock: [{ item, batch, location: inventory, quantity: 1 }] });
   await assert.rejects(
@@ -192,7 +205,10 @@ test('checkout validates against the stock the server has now', async () => {
 
 test('a payment retry does not require stock that has already shipped', async () => {
   const requests = stubServer();
-  const invoice = { isSubmitted: true, items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    isSubmitted: true,
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validatePOSCheckout(invoice);
   assert.deepEqual(requests, []);
 });
@@ -224,9 +240,9 @@ function getSums(stock, filters) {
 /** What the rows lack of each tracked item, or batch, at the location, as the server sums them. */
 function getShortfalls(rows, stock, location) {
   const required = new Map();
-  for (const row of rows.filter((row) => items[row.item]?.is_stock_item)) {
-    const key = JSON.stringify([row.item, row.batch ?? '']);
-    required.set(key, (required.get(key) ?? 0) + row.quantity);
+  for (const row of rows.filter((row) => items[row.item_code]?.is_stock_item)) {
+    const key = JSON.stringify([row.item_code, row.batch_no ?? '']);
+    required.set(key, (required.get(key) ?? 0) + row.stock_qty);
   }
 
   return [...required].flatMap(([key, quantity]) => {
@@ -236,7 +252,13 @@ function getShortfalls(rows, stock, location) {
       .filter((row) => !batch || row.batch === batch)
       .reduce((total, row) => total + row.quantity, 0);
     return quantity > available
-      ? [{ item, batch: batch || null, quantity: quantity - available }]
+      ? [
+          {
+            item_code: item,
+            batch_no: batch || null,
+            stock_qty: quantity - available,
+          },
+        ]
       : [];
   });
 }

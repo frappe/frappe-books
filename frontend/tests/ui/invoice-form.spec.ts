@@ -19,17 +19,20 @@ test('a new sales invoice takes its account, rows and totals from the server', a
   ).toHaveValue('SINV-');
 
   await pickLink(page, 'Customer', customer);
-  await expect(page.getByRole('combobox', { name: 'Account' })).toHaveValue(
+  await expect(page.getByRole('combobox', { name: 'Debit To' })).toHaveValue(
     'Debtors'
   );
 
   await page.getByText('Add row', { exact: true }).first().click();
   await pickLink(page, 'Item', item);
-  // The first data row, after the header; Qty is its first number.
+  // The first data row, after the header; Quantity is its first number.
   const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
   await qty.fill('3');
   await page.keyboard.press('Tab');
-  await expect(page.getByLabel('Net Total')).toHaveValue('₹ 150.00');
+  // The totals block shows what the server calculated.
+  await expect(page.locator('[data-fieldname="net_total"]')).toContainText(
+    '₹ 150.00'
+  );
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
@@ -64,7 +67,7 @@ test('a submitted quote makes an invoice with its rows', async ({ page }) => {
   const quote = await insertDocument(page, 'Books Quotation', {
     quotation_to: 'Books Customer',
     party_name: customer,
-    items: [{ item, quantity: 4 }],
+    items: [{ item_code: item, qty: 4 }],
   });
   await runMethod(page, 'Books Quotation', quote, 'submit');
   await page.goto(`/books/edit/Quotation/${quote}`);
@@ -73,8 +76,9 @@ test('a submitted quote makes an invoice with its rows', async ({ page }) => {
   await page.getByRole('button', { name: 'Create' }).click();
   await page.getByRole('menuitem', { name: 'Sales Invoice' }).click();
   await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\/New/);
-  await expect(page.getByRole('combobox', { name: 'Quotation' })).toHaveValue(
-    quote
+  // The invoice bills the quote's customer and rows.
+  await expect(page.getByRole('combobox', { name: 'Customer' })).toHaveValue(
+    customer
   );
   const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
   await expect(qty).toHaveValue('4.000');
@@ -165,7 +169,9 @@ test.describe('on a phone', () => {
 });
 
 async function pickLink(page: Page, label: string, value: string) {
-  const input = page.getByRole('combobox', { name: label }).last();
+  // Item, not Item Tax Template.
+  const name = new RegExp(`^${label}(?! Tax)`);
+  const input = page.getByRole('combobox', { name }).last();
   await input.click();
   await input.fill(value.slice(0, 6));
   await page.getByRole('option', { name: value }).click();
@@ -190,7 +196,7 @@ async function insertSubmittedInvoice(page: Page): Promise<string> {
     customer,
     make_auto_payment: 0,
     make_auto_stock_transfer: 0,
-    items: [{ item, quantity: 2 }],
+    items: [{ item_code: item, qty: 2 }],
   });
   await runMethod(page, 'Books Sales Invoice', name, 'submit');
   return name;

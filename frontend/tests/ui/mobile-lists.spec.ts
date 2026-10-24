@@ -119,12 +119,13 @@ test('a filter chip narrows the list until it is removed', async ({ page }) => {
   ).toBeVisible();
 });
 
+// Payments post on a date and time; invoices post on a date.
 test('date filters use the native picker', async ({ page }) => {
-  await page.goto('/books/list/SalesInvoice');
+  await page.goto('/books/list/Payment');
   await page.getByRole('button', { name: 'Filters', exact: true }).tap();
   await page
     .getByRole('dialog', { name: 'Filter by' })
-    .getByRole('button', { name: /^Date/ })
+    .getByRole('button', { name: /^Posting Date/ })
     .tap();
   const sheet = page.getByRole('dialog', { name: 'Filters' });
   const value = sheet.getByLabel('Value');

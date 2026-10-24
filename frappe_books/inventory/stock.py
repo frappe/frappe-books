@@ -7,6 +7,7 @@ from frappe import _
 from frappe.query_builder.functions import Coalesce, Min, Sum
 
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.inventory.row_fields import row_fields, row_values
 from frappe_books.inventory.units import populate_units
 from frappe_books.series import new_item_names
 
@@ -37,13 +38,14 @@ def create_series_batches(rows):
 
 	Runs in validate: Frappe checks links before any hook, and an empty batch passes.
 	"""
-	rows = [row for row in rows if row.item and not row.batch]
-	batch_items = _items_with("has_batch_no", {row.item for row in rows})
+	rows = [row for row in rows if row_values(row, "item")[0] and not row_values(row, "batch")[0]]
+	batch_items = _items_with("has_batch_no", {row_values(row, "item")[0] for row in rows})
 	for row in rows:
-		names = new_item_names("Books Batch", row.item, 1) if row.item in batch_items else []
+		item = row_values(row, "item")[0]
+		names = new_item_names("Books Batch", item, 1) if item in batch_items else []
 		if names:
-			frappe.get_doc({"doctype": "Books Batch", "batch_id": names[0], "item": row.item}).insert()
-			row.batch = names[0]
+			frappe.get_doc({"doctype": "Books Batch", "batch_id": names[0], "item": item}).insert()
+			row.set(row_fields(row).batch, names[0])
 
 
 def create_series_serial_numbers(rows):
@@ -111,15 +113,16 @@ def start_row_quantities(rows):
 
 def fill_serial_numbers(rows, location=None):
 	"""Give serialised rows without serial numbers the earliest received ones in stock at their location, else at `location`."""
-	serialised = _items_with("has_serial_no", {row.item for row in rows if not row.serial_number})
-	taken = set(_all_serial_numbers(rows))
-	for row in rows:
+	values = [(row, *row_values(row, "item", "serial", "stock_qty")) for row in rows]
+	serialised = _items_with("has_serial_no", {item for _row, item, serials, _qty in values if not serials})
+	taken = {serial for _row, _item, serials, _qty in values for serial in parse_serial_numbers(serials)}
+	for row, item, serials, stock_qty in values:
 		row_location = row.get("location") or location
-		if row.item in serialised and row_location and not row.serial_number:
-			count = int(abs(as_decimal(row.quantity)))
-			picked = available_serial_numbers(row.item, row_location, count, exclude=taken)
+		if item in serialised and row_location and not serials:
+			count = int(abs(as_decimal(stock_qty)))
+			picked = available_serial_numbers(item, row_location, count, exclude=taken)
 			taken.update(picked)
-			row.serial_number = "\n".join(picked) or None
+			row.set(row_fields(row).serial, "\n".join(picked) or None)
 
 
 def available_serial_numbers(item, location, count, exclude=()):

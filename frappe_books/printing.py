@@ -19,7 +19,12 @@ from frappe.www.printview import get_font, get_print_style, get_rendered_templat
 from jinja2 import TemplateError
 
 from frappe_books.accounting import settlement
-from frappe_books.accounting.invoice import InvoiceController, PostingInvoiceController
+from frappe_books.accounting.invoice import (
+	InvoiceController,
+	PostingInvoiceController,
+	gross_amount,
+	item_discount,
+)
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
 from frappe_books.accounting.payment import PaymentController, tax_share
 from frappe_books.company import company_value
@@ -97,9 +102,11 @@ def _amount_totals(amount, currency) -> dict[str, Any]:
 
 
 def _invoice_totals(invoice) -> dict[str, Any]:
-	tax = sum_decimal(row.amount for row in invoice.taxes)
+	"""Also the rows' total before their discounts, and the discounts, which the rows' amounts are net of."""
 	totals = _amount_totals(invoice.grand_total, invoice.currency)
-	totals["sub_total"] = as_decimal(invoice.grand_total) - tax
+	totals["sub_total"] = as_decimal(invoice.grand_total) - as_decimal(invoice.total_taxes_and_charges)
+	totals["gross_total"] = sum_decimal(gross_amount(invoice, row) for row in invoice.items)
+	totals["discount"] = item_discount(invoice)
 	if isinstance(invoice, PostingInvoiceController):
 		totals["payment_details"] = _payment_details(invoice)
 	return totals
@@ -161,7 +168,7 @@ def _payment_taxes(payment) -> list[dict[str, Any]]:
 		if not as_decimal(invoice.base_grand_total):
 			continue
 		for tax in invoice.taxes:
-			shares[tax.account] += tax_share(invoice, tax, as_decimal(row.amount))
+			shares[tax.account_head] += tax_share(invoice, tax, as_decimal(row.amount))
 	return [{"account": account, "amount": realised.get(account, share)} for account, share in shares.items()]
 
 

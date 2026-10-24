@@ -55,8 +55,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		# Paid by hand below, not by the automatic payment the defaults ask for.
 		invoice.make_auto_payment = 0
 		invoice.insert()
-		self.assertEqual(invoice.quotation, quote.name)
-		self.assertEqual(invoice.account, self.receivable.name)
+		self.assertEqual(invoice.debit_to, self.receivable.name)
 		invoice.submit()
 
 		payment = map_invoice_payment(invoice.doctype, invoice.name)
@@ -100,8 +99,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		quote = self._submitted_quote()
 
 		invoice = make_mapped_doc(MAPPERS.format("books_quotation", "make_sales_invoice"), quote.name)
-		self.assertEqual((invoice.quotation, invoice.party), (quote.name, self.party.name))
-		self.assertEqual(invoice.items[0].rate, 75)
+		self.assertEqual(invoice.party, self.party.name)
+		self.assertEqual(invoice.items[0].price_list_rate, 75)
 
 		mapped = make_sales_invoice(quote.name)
 		mapped.make_auto_payment = 0
@@ -126,14 +125,15 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			self.item.name,
 			self.income.name,
 		)
-		invoice.items[0].item_discount_percent = 0
+		invoice.items[0].discount_percentage = 0
 		invoice.save()
 		invoice.submit()
 
 		credit_note = map_return(invoice.doctype, invoice.name).insert()
-		self.assertEqual(Decimal(str(credit_note.items[0].quantity)), Decimal("-2"))
+		self.assertEqual(Decimal(str(credit_note.items[0].qty)), Decimal("-2"))
 		credit_note.submit()
 		self.assertEqual(invoice.db_get("is_fully_returned"), 1)
+		self.assertEqual(invoice.db_get("status"), "Credit Note Issued")
 		self.assertEqual(Decimal(str(credit_note.db_get("outstanding_amount"))), Decimal("-200"))
 
 		with self.assertRaises(frappe.ValidationError):
@@ -146,35 +146,36 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		refund.cancel()
 
 		credit_note.cancel()
-		self.assertEqual(invoice.db_get("is_returned"), 0)
+		self.assertEqual(invoice.db_get("status"), "Unpaid")
 		self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 	def test_partial_and_full_return_flags_for_sales_and_purchases(self):
 		payable = make_account("Return Payable", root_type="Liability", account_type="Payable")
 		supplier = make_supplier(payable.name)
-		for doctype, party, account, item_account in (
-			("Books Sales Invoice", self.party.name, self.receivable.name, self.income.name),
-			("Books Purchase Invoice", supplier.name, payable.name, self.expense.name),
+		for doctype, party, account, item_account, returned in (
+			("Books Sales Invoice", self.party.name, self.receivable.name, self.income.name, "Credit"),
+			("Books Purchase Invoice", supplier.name, payable.name, self.expense.name, "Debit"),
 		):
 			with self.subTest(doctype=doctype):
+				returned = f"{returned} Note Issued"
 				invoice = make_invoice(doctype, party, account, self.item.name, item_account)
-				invoice.items[0].item_discount_percent = 0
+				invoice.items[0].discount_percentage = 0
 				invoice.save().submit()
 				partial = map_return(doctype, invoice.name)
-				partial.items[0].quantity = -1
+				partial.items[0].qty = -1
 				partial.insert().submit()
-				self.assertEqual(invoice.db_get("is_returned"), 1)
+				self.assertEqual(invoice.db_get("status"), returned)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 				remaining = map_return(doctype, invoice.name)
-				remaining.items[0].quantity = -1
+				remaining.items[0].qty = -1
 				remaining.insert().submit()
 				self.assertEqual(invoice.db_get("is_fully_returned"), 1)
 				remaining.cancel()
-				self.assertEqual(invoice.db_get("is_returned"), 1)
+				self.assertEqual(invoice.db_get("status"), returned)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 				partial.cancel()
-				self.assertEqual(invoice.db_get("is_returned"), 0)
+				self.assertEqual(invoice.db_get("status"), "Unpaid")
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 	def test_return_offers_only_what_is_not_yet_returned(self):
@@ -185,19 +186,19 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			self.item.name,
 			self.income.name,
 		)
-		invoice.items[0].update({"item_discount_percent": 0, "serial_number": "S-1\nS-2"})
+		invoice.items[0].update({"discount_percentage": 0, "serial_no": "S-1\nS-2"})
 		other_item = make_item(self.income.name, self.expense.name)
-		invoice.append("items", {"item": other_item.name, "rate": 10, "quantity": 1})
+		invoice.append("items", {"item_code": other_item.name, "price_list_rate": 10, "qty": 1})
 		invoice.save().submit()
 		partial = map_return(invoice.doctype, invoice.name)
-		partial.items[0].update({"quantity": -1, "serial_number": "S-1"})
+		partial.items[0].update({"qty": -1, "serial_no": "S-1"})
 		partial.remove(partial.items[1])
 		partial.insert().submit()
 
 		remaining = map_return(invoice.doctype, invoice.name)
 
-		self.assertEqual([row.quantity for row in remaining.items], [-1, -1])
-		self.assertEqual(remaining.items[0].serial_number, "S-2")
+		self.assertEqual([row.qty for row in remaining.items], [-1, -1])
+		self.assertEqual(remaining.items[0].serial_no, "S-2")
 
 	def test_return_keeps_the_item_discounts(self):
 		set_company_value("default_discount_account", self.expense.name)
@@ -215,7 +216,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		credit_note.insert()
 		self.assertEqual(credit_note.grand_total, -invoice.grand_total)
 		self.assertEqual(credit_note.return_against, invoice.name)
-		self.assertFalse(credit_note.is_returned)
+		self.assertTrue(credit_note.is_return)
 
 	def test_deleting_an_invoice_deletes_its_cancelled_payment_and_receipt(self):
 		payable = make_account("Delete Payable", root_type="Liability", account_type="Payable")
@@ -238,7 +239,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			make_auto_stock_transfer=1,
 			make_auto_payment=1,
 		).submit()
-		receipt = invoice.reload().back_reference
+		receipt = frappe.db.get_value("Books Purchase Receipt", {"back_reference": invoice.name})
 		payment = frappe.get_doc(
 			"Books Payment",
 			frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent"),
@@ -320,7 +321,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 		submitted = run_invoice_method(duplicate, "submit")
 
-		self.assertEqual((submitted.is_returned, submitted.status), (0, "Unpaid"))
+		self.assertEqual((submitted.is_return, submitted.status), (0, "Unpaid"))
 		self.assertEqual(submitted.outstanding_amount, submitted.grand_total)
 
 	def test_submit_refuses_a_document_changed_since_it_was_read(self):
@@ -362,7 +363,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					make_auto_payment=1,
 					is_pos=is_pos,
 				)
-				invoice.items[0].item_discount_percent = 0
+				invoice.items[0].discount_percentage = 0
 				invoice.save().submit()
 
 				references = frappe.get_all(
@@ -383,7 +384,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			self.income.name,
 			make_auto_payment=1,
 		)
-		invoice.items[0].item_discount_percent = 0
+		invoice.items[0].discount_percentage = 0
 		invoice.save().submit()
 
 		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
@@ -442,7 +443,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		document = {
 			"doctype": "Books Sales Invoice",
 			"customer": self.party.name,
-			"items": [{"item": self.item.name, "quantity": 1}],
+			"items": [{"item_code": self.item.name, "qty": 1}],
 			"__islocal": 1,
 		}
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
@@ -465,8 +466,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		return {
 			"doctype": "Books Sales Invoice",
 			"customer": self.party.name,
-			"date": frappe.utils.now_datetime(),
-			"items": [{"item": self.item.name, "rate": 75, "quantity": 2}],
+			"items": [{"item_code": self.item.name, "price_list_rate": 75, "qty": 2}],
 			**values,
 		}
 
@@ -477,8 +477,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					"doctype": "Books Quotation",
 					"quotation_to": "Books Customer",
 					"party_name": self.party.name,
-					"date": frappe.utils.now_datetime(),
-					"items": [{"item": self.item.name, "rate": 75, "quantity": 2}],
+					"items": [{"item_code": self.item.name, "price_list_rate": 75, "qty": 2}],
 				}
 			)
 			.insert()

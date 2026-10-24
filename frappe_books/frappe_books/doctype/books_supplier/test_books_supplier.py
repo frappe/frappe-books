@@ -56,4 +56,4 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 
 		invoice = make_purchase_invoice(supplier.name)
 
-		self.assertEqual((invoice.supplier, invoice.account), (supplier.name, payable.name))
+		self.assertEqual((invoice.supplier, invoice.credit_to), (supplier.name, payable.name))

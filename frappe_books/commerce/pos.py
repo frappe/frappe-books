@@ -5,11 +5,12 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.query_builder import Order
-from frappe.utils import getdate
+from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting import settlement
 from frappe_books.accounting.accounts import mode_of_payment_account
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.dates import posting_datetime
 
 
 def open_shift_name():
@@ -62,7 +63,7 @@ def counter_payment_amounts(rows, due):
 		tendered = as_decimal(row.amount)
 		if tendered <= 0:
 			frappe.throw(_("Please enter an amount greater than zero."))
-		if tendered > due and not is_cash_method(row.payment_method):
+		if tendered > due and not is_cash_method(row.mode_of_payment):
 			frappe.throw(_("Non-cash payment amount cannot exceed the outstanding amount."))
 		paid = min(tendered, due)
 		due -= paid
@@ -79,11 +80,8 @@ def lock_pos_settings():
 
 
 def transacted_amounts(from_date, to_date):
-	invoices = frappe.get_all(
-		"Books Sales Invoice",
-		filters={"is_pos": 1, "docstatus": 1, "date": ["between", [from_date, to_date]]},
-		fields=["name", "return_against"],
-	)
+	"""Sum the payments of the POS invoices dated from `from_date` to `to_date`, by payment method."""
+	invoices = _pos_invoices(get_datetime(from_date), get_datetime(to_date))
 	if not invoices:
 		return {}
 	references = frappe.get_all(
@@ -152,6 +150,23 @@ def cancel_cash_journal(name):
 	journal = frappe.get_doc("Books Journal Entry", name)
 	journal.flags.ignore_permissions = True
 	journal.cancel()
+
+
+def _pos_invoices(from_datetime, to_datetime):
+	invoices = frappe.get_all(
+		"Books Sales Invoice",
+		filters={
+			"is_pos": 1,
+			"docstatus": 1,
+			"posting_date": ["between", [from_datetime.date(), to_datetime.date()]],
+		},
+		fields=["name", "return_against", "posting_date", "posting_time"],
+	)
+	return [
+		invoice
+		for invoice in invoices
+		if from_datetime <= posting_datetime(invoice.posting_date, invoice.posting_time) <= to_datetime
+	]
 
 
 def _submitted_payment_methods(names):

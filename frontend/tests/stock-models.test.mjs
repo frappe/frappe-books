@@ -212,6 +212,21 @@ test('picking an invoice fills a shipment with the rows its mapper gives', async
   );
 });
 
+test('a transfer offers the submitted invoices with stock still to move', () => {
+  const invoices = (name) =>
+    getModel(name).filters.back_reference(newFrappeDoc(name));
+
+  assert.deepEqual(invoices('DeliveryNote'), [
+    ['stock_not_transferred', '>', 0],
+    ['docstatus', '=', 1],
+  ]);
+  // A purchase invoice keeps the share received, as ERPNext does.
+  assert.deepEqual(invoices('PurchaseReceipt'), [
+    ['per_received', '<', 100],
+    ['docstatus', '=', 1],
+  ]);
+});
+
 test('links of stock documents filter by the vocabulary of their targets', async () => {
   const requests = stubFrappe(() => ({
     data: [{ stock_uom: 'Unit', uoms: [{ uom: 'Box' }] }],

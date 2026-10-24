@@ -228,7 +228,7 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		).insert()
 		opening.submit()
 		invoice = self._pos_invoice()
-		pay_pos_invoice(invoice.name, [{"payment_method": petty.name, "amount": invoice.base_grand_total}])
+		pay_pos_invoice(invoice.name, [{"mode_of_payment": petty.name, "amount": invoice.base_grand_total}])
 
 		closing = make_closing_shift(opening, 280)
 		closing.closing_amounts[0].closing_amount = 60

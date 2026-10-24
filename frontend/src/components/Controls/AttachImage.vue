@@ -5,7 +5,11 @@
       v-if="value"
       class="relative h-24 overflow-hidden rounded-5 border border-outline-gray-2"
     >
-      <img :src="value" :alt="df?.label ?? ''" class="h-full w-full object-contain" />
+      <img
+        :src="value"
+        :alt="df?.label ?? ''"
+        class="h-full w-full object-contain"
+      />
       <FrappeButton
         v-if="!isReadOnly"
         class="absolute end-1 top-1"

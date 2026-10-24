@@ -116,11 +116,11 @@ test('a cart line shows its batch and the batch stock at the POS location', asyn
   await page.evaluate(() =>
     (window as any).posFixture.state.invoice.push('items', {
       name: 'row-batch',
-      item: 'Roasted Arabica Coffee Beans',
-      batch: 'COFFEE-2026-09',
-      quantity: 1,
-      transfer_quantity: 1,
-      unit: 'Unit',
+      item_code: 'Roasted Arabica Coffee Beans',
+      batch_no: 'COFFEE-2026-09',
+      stock_qty: 1,
+      qty: 1,
+      stock_uom: 'Unit',
     })
   );
   await page.getByRole('button', { name: /1 item/ }).click();
@@ -141,15 +141,16 @@ test('the cart lists every amount between net and grand total', async ({
   await page.evaluate(() => {
     const { fyo, state } = (window as any).posFixture;
     (window as any).posFixture.fillCart();
-    state.invoice.total_discount = fyo.pesa(250);
-    state.invoice.loyalty_points_amount = fyo.pesa(50);
+    // The rows' amounts before their discounts total 250 more than the grand total.
+    state.invoice.grand_total = state.invoice.grand_total.sub(250);
+    state.invoice.loyalty_amount = fyo.pesa(50);
   });
   await page.getByRole('button', { name: /\d+ items?/ }).click();
   const cart = page.getByRole('dialog', { name: 'Cart', exact: true });
   for (const label of [
     'Net Total',
     'Discount',
-    'Loyalty Points Redeemed',
+    'Loyalty Amount',
     'Grand Total',
   ]) {
     await expect(cart.getByText(label, { exact: true })).toBeVisible();
@@ -167,10 +168,11 @@ test('the payment screen explains the amount due', async ({ page }) => {
 
   await page.evaluate(() => {
     const { fyo, state } = (window as any).posFixture;
-    state.invoice.total_discount = fyo.pesa(250);
-    state.invoice.loyalty_points_amount = fyo.pesa(50);
+    // The rows' amounts before their discounts total 250 more than the grand total.
+    state.invoice.grand_total = state.invoice.grand_total.sub(250);
+    state.invoice.loyalty_amount = fyo.pesa(50);
   });
-  for (const label of ['Net Total', 'Discount', 'Loyalty Points Redeemed']) {
+  for (const label of ['Net Total', 'Discount', 'Loyalty Amount']) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
 });

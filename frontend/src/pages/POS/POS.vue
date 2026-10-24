@@ -123,7 +123,7 @@
             :disable-pay="disablePayButton"
             :is-return="!!sinvDoc.isReturn"
             :is-submitted="sinvDoc.isSubmitted"
-            :grand-total="(sinvDoc as SalesInvoice).grand_total"
+            :grand-total="getPayableTotal(sinvDoc as SalesInvoice)"
             @save="saveInvoiceAction"
             @pay="handlePaymentAction"
           />
@@ -243,6 +243,7 @@ import {
   validatePOSCheckout,
   isTypingInField,
   getQuickQtyBuffer,
+  getPayableTotal,
 } from 'src/utils/pos';
 import { posCheckoutKey, usePOSCheckout } from 'src/utils/posCheckout';
 import {
@@ -307,7 +308,7 @@ export default defineComponent({
     return {
       doc: computed(() => this.sinvDoc),
       sinvDoc: computed(() => this.sinvDoc),
-      appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
+      appliedCoupon: computed(() => this.sinvDoc.coupon_code),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
       [posCheckoutKey]: this.posCheckout,
     };
@@ -386,17 +387,17 @@ export default defineComponent({
 
       return this.sinvDoc.isReturn ? t`Refund` : t`Payment`;
     },
-    coupons(): { doc: SalesInvoice; codes: string[] } {
+    coupon(): { doc: SalesInvoice; code?: string } {
       const doc = this.sinvDoc as SalesInvoice;
-      return { doc, codes: (doc.coupons ?? []).map((row) => row.coupons ?? '') };
+      return { doc, code: doc.coupon_code };
     },
     appliedCouponsCount(): number {
-      return this.sinvDoc.coupons?.length ?? 0;
+      return this.sinvDoc.coupon_code ? 1 : 0;
     },
     cartLabel(): string {
       const name = this.sinvDoc.inserted ? this.sinvDoc.name : t`New sale`;
-      const date = this.sinvDoc.date
-        ? fyo.format(this.sinvDoc.date, 'Date')
+      const date = this.sinvDoc.posting_date
+        ? fyo.format(this.sinvDoc.posting_date, 'Date')
         : '';
       return [name, date].filter(Boolean).join(' · ');
     },
@@ -422,26 +423,19 @@ export default defineComponent({
   },
   watch: {
     /** A preview takes off a coupon the cart no longer allows; say which. */
-    coupons(
-      current: { doc: SalesInvoice; codes: string[] },
-      previous: { doc: SalesInvoice; codes: string[] }
+    coupon(
+      current: { doc: SalesInvoice; code?: string },
+      previous: { doc: SalesInvoice; code?: string }
     ) {
-      if (current.doc !== previous.doc || this.openCouponCodeModal) {
-        return;
-      }
-
-      const removed = previous.codes.filter((c) => !current.codes.includes(c));
-      if (!removed.length) {
+      const isRemoved = !!previous.code && !current.code;
+      if (current.doc !== previous.doc || this.openCouponCodeModal || !isRemoved) {
         return;
       }
 
       showToast({
         id: 'pos-coupons-removed',
         type: 'warning',
-        message:
-          removed.length === 1
-            ? t`Coupon ${removed[0]} no longer applies, so it was removed.`
-            : t`Coupons ${removed.join(', ')} no longer apply, so they were removed.`,
+        message: t`Coupon ${previous.code ?? ''} no longer applies, so it was removed.`,
       });
     },
   },
@@ -737,6 +731,8 @@ export default defineComponent({
       }
 
       this.sinvDoc = doc as SalesInvoice;
+      // A held sale's points are counted again; no preview runs as it opens.
+      await this.sinvDoc.loadLoyaltyPoints();
       this.toggleModal('SavedInvoice', false);
 
       if (invoice.docstatus === 1) {
@@ -1056,6 +1052,7 @@ export default defineComponent({
 
       this.toggleModal('Payment', true);
     },
+    getPayableTotal,
     routeTo,
   },
 });

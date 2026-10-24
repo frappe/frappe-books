@@ -48,5 +48,5 @@ class IntegrationTestExchangeRate(IntegrationTestCase):
 		with patch("frappe_books.accounting.invoice.get_exchange_rate", return_value=80) as rate:
 			invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
 
-		self.assertEqual(invoice.exchange_rate, 80)
-		rate.assert_called_with(invoice.currency, company_currency(), invoice.date)
+		self.assertEqual(invoice.conversion_rate, 80)
+		rate.assert_called_with(invoice.currency, company_currency(), invoice.posting_date)

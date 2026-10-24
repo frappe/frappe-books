@@ -98,7 +98,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		if not row or row.reference_type not in REFERENCE_DOCTYPES.values():
 			return None
 		controller = get_controller(row.reference_type)
-		fields = [controller.party_field, "return_against", "account"]
+		fields = [controller.party_field, "return_against", f"{controller.party_account_field} as account"]
 		if row.reference_type == "Books Sales Invoice":
 			fields.append("is_pos")
 		invoice = frappe.db.get_value(row.reference_type, row.reference_name, fields, as_dict=True)
@@ -279,11 +279,11 @@ def _invoice_realised_taxes(invoice, amount):
 		return
 	paid = total - settlement.due(invoice)
 	for tax in invoice.taxes:
-		if tax.account not in payment_accounts:
+		if tax.account_head not in payment_accounts:
 			continue
 		yield {
-			"account": payment_accounts[tax.account],
-			"from_account": tax.account,
+			"account": payment_accounts[tax.account_head],
+			"from_account": tax.account_head,
 			"rate": tax.rate,
 			"amount": tax_share(invoice, tax, amount, paid),
 		}
@@ -292,7 +292,7 @@ def _invoice_realised_taxes(invoice, amount):
 def tax_share(invoice, tax, amount, paid=0):
 	"""Return the base-currency part of an invoice tax that `amount` settles after `paid`."""
 	total = abs(as_decimal(invoice.base_grand_total))
-	base_tax = abs(as_decimal(tax.amount)) * as_decimal(invoice.exchange_rate or 1)
+	base_tax = abs(as_decimal(tax.tax_amount)) * as_decimal(invoice.conversion_rate or 1)
 	# Share what is paid so far, so partial payments add up to the full tax.
 	return rounded(base_tax * (paid + amount) / total) - rounded(base_tax * paid / total)
 
@@ -300,7 +300,7 @@ def tax_share(invoice, tax, amount, paid=0):
 def _tax_payment_accounts(invoice):
 	"""Map each invoice tax account to the account its tax moves to on payment."""
 	accounts = {}
-	for tax_name in {row.tax for row in invoice.items if row.tax}:
+	for tax_name in {row.item_tax_template for row in invoice.items if row.item_tax_template}:
 		for detail in frappe.get_cached_doc("Books Item Tax Template", tax_name).taxes:
 			if not detail.payment_account:
 				continue
@@ -348,9 +348,9 @@ def map_invoice_payment(invoice_doctype, invoice_name):
 			invoice_doctype: {
 				"doctype": "Books Payment",
 				"validation": {"docstatus": ["=", 1]},
-				"field_no_map": ["date", "naming_series", "attachment"],
+				# A payment is dated when it is made.
+				"field_no_map": ["posting_date", "naming_series"],
 			},
-			"Books Tax Summary": {"doctype": "Books Tax Summary", "ignore": True},
 		},
 		postprocess=_settle_invoice,
 	)

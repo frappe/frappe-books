@@ -57,8 +57,12 @@ test('filter chips show transactions first, by schema label', () => {
     'Journal Entry',
     'Payment',
   ]);
-  assert.deepEqual(labels.slice(-2), ['Supplier', 'Tax Template']);
-  assert.equal(labels.length, 19);
+  // Then the masters, by schema name.
+  assert.equal(labels.at(-1), 'Supplier');
+  assert.ok(labels.includes('Tax Template'));
+  assert.ok(labels.includes('Sales Taxes and Charges Template'));
+  assert.ok(labels.includes('Purchase Taxes and Charges Template'));
+  assert.equal(labels.length, 23);
 });
 test('one request searches the text in the doctypes the filters allow', async () => {
   const { search, requests } = makeSearch();

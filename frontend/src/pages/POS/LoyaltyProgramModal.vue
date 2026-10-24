@@ -14,7 +14,7 @@
           {{ isMobile ? sinvDoc.loyalty_program : t`Available` }}
         </span>
         <span class="text-3xl-semibold tabular-nums text-ink-gray-9">
-          {{ t`${sinvDoc.available_loyalty_points ?? 0} points` }}
+          {{ t`${sinvDoc.availableLoyaltyPoints} points` }}
         </span>
       </div>
       <div v-if="sinvDoc.fieldMap" class="flex flex-col gap-1.5">

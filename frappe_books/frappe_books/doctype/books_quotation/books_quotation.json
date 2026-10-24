@@ -9,26 +9,25 @@
   "default_section_break_1",
   "naming_series",
   "party_name",
-  "date",
+  "transaction_date",
   "status",
-  "price_list",
+  "selling_price_list",
   "quotation_to",
   "items_section_break_6",
   "items",
-  "net_total",
-  "tax_and_totals_section_break_9",
-  "total_discount",
+  "taxes_section",
+  "taxes_and_charges",
   "taxes",
+  "totals_section",
+  "net_total",
+  "total_taxes_and_charges",
   "base_grand_total",
   "grand_total",
   "currency",
-  "exchange_rate",
-  "outstanding_section_break_22",
-  "outstanding_amount",
+  "conversion_rate",
   "references_section_break_24",
   "terms",
-  "attachment",
-  "is_fully_returned",
+  "item_wise_tax_details",
   "amended_from",
   "settings_tab_break_19",
   "discount_after_tax",
@@ -58,15 +57,16 @@
    "reqd": 1
   },
   {
-   "default": "Now",
-   "fieldname": "date",
-   "fieldtype": "Datetime",
+   "default": "Today",
+   "fieldname": "transaction_date",
+   "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Date",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
-   "default": "Saved",
+   "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
    "hidden": 1,
@@ -74,13 +74,13 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Saved\nSubmitted\nCancelled",
+   "options": "Draft\nOpen\nCancelled",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
   },
   {
-   "fieldname": "price_list",
+   "fieldname": "selling_price_list",
    "fieldtype": "Link",
    "label": "Price List",
    "options": "Books Price List"
@@ -109,34 +109,42 @@
    "reqd": 1
   },
   {
+   "fieldname": "taxes_section",
+   "fieldtype": "Section Break",
+   "label": "Taxes"
+  },
+  {
+   "fieldname": "taxes_and_charges",
+   "fieldtype": "Link",
+   "label": "Sales Taxes and Charges Template",
+   "options": "Books Sales Taxes and Charges Template",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "label": "Sales Taxes and Charges",
+   "options": "Books Sales Taxes and Charges"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
    "fieldname": "net_total",
    "fieldtype": "Currency",
    "label": "Net Total",
    "read_only": 1
   },
   {
-   "fieldname": "tax_and_totals_section_break_9",
-   "fieldtype": "Section Break",
-   "label": "Tax and Totals"
-  },
-  {
-   "depends_on": "total_discount",
-   "fieldname": "total_discount",
+   "fieldname": "total_taxes_and_charges",
    "fieldtype": "Currency",
-   "is_virtual": 1,
-   "label": "Discount",
+   "label": "Total Taxes and Charges",
    "read_only": 1
   },
   {
-   "depends_on": "taxes",
-   "fieldname": "taxes",
-   "fieldtype": "Table",
-   "label": "Taxes",
-   "options": "Books Tax Summary",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval:doc.exchange_rate != 1 && doc.base_grand_total",
+   "depends_on": "eval:doc.conversion_rate != 1 && doc.base_grand_total",
    "fieldname": "base_grand_total",
    "fieldtype": "Currency",
    "label": "Base Grand Total",
@@ -152,27 +160,15 @@
    "fieldname": "currency",
    "fieldtype": "Link",
    "hidden": 1,
-   "label": "Customer Currency",
+   "label": "Currency",
    "options": "Currency",
    "read_only": 1
   },
   {
-   "fieldname": "exchange_rate",
+   "fieldname": "conversion_rate",
    "fieldtype": "Float",
    "hidden": 1,
    "label": "Exchange Rate",
-   "read_only": 1
-  },
-  {
-   "fieldname": "outstanding_section_break_22",
-   "fieldtype": "Section Break",
-   "label": "Outstanding"
-  },
-  {
-   "fieldname": "outstanding_amount",
-   "fieldtype": "Currency",
-   "label": "Outstanding Amount",
-   "no_copy": 1,
    "read_only": 1
   },
   {
@@ -183,24 +179,18 @@
   {
    "depends_on": "eval:doc.terms || !doc.docstatus",
    "fieldname": "terms",
-   "fieldtype": "Text",
+   "fieldtype": "Text Editor",
    "label": "Notes",
    "placeholder": "Add quote terms"
   },
   {
-   "depends_on": "eval:doc.attachment || !doc.docstatus",
-   "fieldname": "attachment",
-   "fieldtype": "Attach",
-   "label": "Attachment",
-   "placeholder": "Add attachment"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_fully_returned",
-   "fieldtype": "Check",
+   "fieldname": "item_wise_tax_details",
+   "fieldtype": "Table",
    "hidden": 1,
-   "label": "Is Fully Returned",
-   "no_copy": 1
+   "label": "Item Wise Tax Details",
+   "no_copy": 1,
+   "options": "Books Item Wise Tax Detail",
+   "print_hide": 1
   },
   {
    "fieldname": "amended_from",
@@ -236,7 +226,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 16:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Quotation",
@@ -306,12 +296,12 @@
  "sort_order": "DESC",
  "states": [
   {
-   "color": "Blue",
-   "title": "Saved"
+   "color": "Gray",
+   "title": "Draft"
   },
   {
    "color": "Green",
-   "title": "Submitted"
+   "title": "Open"
   },
   {
    "color": "Red",

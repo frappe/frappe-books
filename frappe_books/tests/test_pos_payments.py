@@ -6,6 +6,7 @@ from frappe.utils import add_days, getdate, now_datetime, set_request
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
+from frappe_books.dates import posting_datetime
 from frappe_books.frappe_books.doctype.books_pos_closing_shift.test_books_pos_closing_shift import (
 	cash_amounts,
 	close_shift,
@@ -58,7 +59,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, "counter cash account", payment.insert)
 
 	def test_submit_pays_the_tendered_cash_and_keeps_the_change(self):
-		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])
+		invoice = self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 200}])
 
 		invoice.submit()
 
@@ -67,7 +68,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual((invoice.outstanding_amount, invoice.reload().status), (0, "Paid"))
 
 	def test_a_cashier_lists_the_payments_a_paid_sale_made(self):
-		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])
+		invoice = self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 200}])
 		invoice.submit()
 
 		# The query the POS runs after checkout to toast each payment.
@@ -88,7 +89,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual([row.parent for row in rows], counter_payments(invoice))
 
 	def test_a_submit_of_the_client_copy_pays_the_tendered_rows(self):
-		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}])
+		invoice = self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 200}])
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 
 		run_doc_method("submit", invoice.as_dict(convert_dates_to_str=True))
@@ -101,7 +102,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		# A card payment's account must be a bank or cash account, which this is not.
 		card.db_set("account", self.income.name)
 		invoice = self.make_pos_invoice(
-			payments=[{"payment_method": card.name, "amount": 180, "reference_id": "R1"}]
+			payments=[{"mode_of_payment": card.name, "amount": 180, "reference_no": "R1"}]
 		)
 
 		# Raised inside the submit, so the request rolls the sale back with the payment.
@@ -109,18 +110,18 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 	def test_a_tendered_payment_needs_what_its_method_asks_for(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "Please enter a reference number."):
-			self.make_pos_invoice(payments=[{"payment_method": "Bank", "amount": 180}])
+			self.make_pos_invoice(payments=[{"mode_of_payment": "Bank", "amount": 180}])
 
 		card = make_mode_of_payment("Card", account=make_account("Card Clearing", account_type="Bank").name)
 		card.db_set("requires_clearance_date", 1)
 		with self.assertRaisesRegex(frappe.ValidationError, "Please select a clearance date."):
 			self.make_pos_invoice(
-				payments=[{"payment_method": card.name, "amount": 180, "reference_id": "R1"}]
+				payments=[{"mode_of_payment": card.name, "amount": 180, "reference_no": "R1"}]
 			)
 
 	def test_a_tendered_amount_must_be_above_zero(self):
 		invoice = self.make_pos_invoice()
-		invoice.append("payments", {"payment_method": "Cash", "amount": -5})
+		invoice.append("payments", {"mode_of_payment": "Cash", "amount": -5})
 
 		self.assertRaisesRegex(
 			frappe.ValidationError, "Please enter an amount greater than zero.", invoice.save
@@ -128,7 +129,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 	def test_non_cash_cannot_pay_more_than_is_due(self):
 		invoice = self.make_pos_invoice()
-		invoice.append("payments", {"payment_method": "Bank", "amount": 200, "reference_id": "R1"})
+		invoice.append("payments", {"mode_of_payment": "Bank", "amount": 200, "reference_no": "R1"})
 
 		self.assertRaisesRegex(frappe.ValidationError, "cannot exceed the outstanding", invoice.save)
 
@@ -140,7 +141,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 				self.receivable.name,
 				self.item.name,
 				self.income.name,
-				payments=[{"payment_method": "Cash", "amount": 180}],
+				payments=[{"mode_of_payment": "Cash", "amount": 180}],
 			)
 
 	def test_submitted_pos_invoice_is_paid_at_the_counter(self):
@@ -149,7 +150,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		invoice.submit()
 
 		names = pay_pos_invoice(
-			invoice.name, [{"payment_method": card.name, "amount": 180, "reference_id": "R1"}]
+			invoice.name, [{"mode_of_payment": card.name, "amount": 180, "reference_no": "R1"}]
 		)
 
 		payment = frappe.get_doc("Books Payment", names[0])
@@ -157,20 +158,21 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual(invoice.reload().outstanding_amount, 0)
 
 	def test_refund_is_paid_from_the_counter(self):
-		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])
+		invoice = self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 180}])
 		invoice.submit()
 		refund = map_return(invoice.doctype, invoice.name)
-		refund.append("payments", {"payment_method": "Cash", "amount": 180})
+		refund.append("payments", {"mode_of_payment": "Cash", "amount": 180})
 
 		refund.insert().submit()
 
 		payment = frappe.get_doc("Books Payment", counter_payments(refund)[0])
 		self.assertEqual((payment.payment_type, payment.payment_account), ("Pay", self.counter))
-		self.assertEqual(transacted_amounts(invoice.date, now_datetime()), {"Cash": 0})
+		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
+		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Cash": 0})
 
 	def test_closing_shift_reconciles_counter_payments(self):
 		shift = frappe.get_doc("Books Pos Opening Shift", open_shift_name())
-		self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}]).submit()
+		self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 200}]).submit()
 
 		closing = close_shift(shift, 180)
 
@@ -178,23 +180,23 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual(account_balance(self.counter), 0)
 
 	def test_pos_invoice_is_dated_at_checkout(self):
-		yesterday = add_days(now_datetime(), -1)
-		held = self.make_pos_invoice(date=yesterday)
+		yesterday = getdate(add_days(now_datetime(), -1))
+		held = self.make_pos_invoice(posting_date=yesterday)
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			self.party.name,
 			self.receivable.name,
 			self.item.name,
 			self.income.name,
-			date=yesterday,
+			posting_date=yesterday,
 			make_auto_payment=0,
 		)
 
 		held.submit()
 		invoice.submit()
 
-		self.assertEqual(getdate(held.reload().date), getdate(now_datetime()))
-		self.assertEqual(getdate(invoice.reload().date), getdate(yesterday))
+		self.assertEqual(getdate(held.reload().posting_date), getdate(now_datetime()))
+		self.assertEqual(getdate(invoice.reload().posting_date), yesterday)
 
 	def make_pos_invoice(self, **values):
 		return make_invoice(

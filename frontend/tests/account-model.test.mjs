@@ -141,10 +141,17 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     ledger,
     ['account_type', '=', 'Receivable'],
   ]);
-  assert.deepEqual(await PurchaseInvoice.filters.account({ isSales: false }), [
+  assert.deepEqual(await PurchaseInvoice.filters.credit_to(), [
     ledger,
     ['account_type', '=', 'Payable'],
   ]);
+  // A tax row's account, as its DocField's link_filters say.
+  assert.deepEqual(
+    getSchema('SalesTaxesandCharges').fields.find(
+      (f) => f.fieldname === 'account_head'
+    ).linkFilters,
+    [ledger]
+  );
   assert.deepEqual(JournalEntryAccount.filters.account(), [ledger]);
   assert.deepEqual(Company.filters.default_discount_account(), [
     ledger,

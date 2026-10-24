@@ -110,7 +110,7 @@ export function getMakeStockTransferAction(
     label,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) =>
-      doc.isSubmitted && !!doc.stock_not_transferred,
+      doc.isSubmitted && (doc as InvoiceDoc).hasStockToTransfer,
     target: (doc: FrappeDoc) => {
       const invoice = doc as InvoiceDoc;
       return [invoice.stockTransferSchemaName, invoice.stockTransferMapper];
@@ -450,16 +450,34 @@ export function getLoyaltyProgramBadge(doc: RenderData | FrappeDoc): BadgeData {
   );
 }
 
+// Invoice and quote rows take ERPNext's item and quantity fields; stock rows keep Books' until renamed.
+const INVOICE_SCHEMAS: string[] = [
+  ModelNameEnum.SalesInvoice,
+  ModelNameEnum.PurchaseInvoice,
+  ModelNameEnum.Quotation,
+];
+
+/** The item and quantity fields of a document's rows. */
+export function getRowItemFields(doc: FrappeDoc): [item: string, qty: string] {
+  return INVOICE_SCHEMAS.includes(doc.schemaName)
+    ? ['item_code', 'qty']
+    : ['item', 'quantity'];
+}
+
 /** Adds `quantity` of an item to a document's rows, to its row of the item if it has one. */
 export async function addItem(name: string, doc: FrappeDoc, quantity = 1) {
   if (!doc.canEdit) {
     return;
   }
 
+  const [itemField, quantityField] = getRowItemFields(doc);
   const rows = (doc.items ?? []) as FrappeDoc[];
-  const row = rows.find((existing) => existing.item === name);
+  const row = rows.find((existing) => existing[itemField] === name);
   if (row) {
-    await row.set('quantity', ((row.quantity as number) ?? 0) + quantity);
+    await row.set(
+      quantityField,
+      ((row[quantityField] as number) ?? 0) + quantity
+    );
     return;
   }
 
@@ -469,8 +487,8 @@ export async function addItem(name: string, doc: FrappeDoc, quantity = 1) {
     return;
   }
 
-  await added.set('item', name);
+  await added.set(itemField, name);
   if (quantity !== 1) {
-    await added.set('quantity', quantity);
+    await added.set(quantityField, quantity);
   }
 }

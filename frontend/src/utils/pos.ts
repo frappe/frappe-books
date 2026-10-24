@@ -2,6 +2,7 @@ import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import type { Item } from 'models/baseModels/Item/Item';
 import { validatePOSStock } from 'models/inventory/posStock';
+import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
@@ -63,11 +64,11 @@ export function getQuickQtyBuffer(
  * the stock it ships; a return brings stock back.
  */
 export async function validateSinv(sinvDoc: SalesInvoice) {
-  const rows = (sinvDoc.items ?? []).filter((row) => row.item);
+  const rows = (sinvDoc.items ?? []).filter((row) => row.item_code);
   const isReturn = !!sinvDoc.return_against;
-  for (const { item, quantity = 0 } of rows) {
-    if (!quantity || (quantity < 0 && !isReturn)) {
-      throw new ValidationError(t`Invalid quantity for item ${item!}`);
+  for (const { item_code, stock_qty = 0 } of rows) {
+    if (!stock_qty || (stock_qty < 0 && !isReturn)) {
+      throw new ValidationError(t`Invalid quantity for item ${item_code!}`);
     }
   }
 
@@ -203,7 +204,12 @@ export function getPOSInvoiceFields(): Field[] {
       fieldtype: 'Data',
       readOnly: true,
     },
-    { fieldname: 'date', label: t`Date`, fieldtype: 'Date', readOnly: true },
+    {
+      fieldname: 'posting_date',
+      label: t`Date`,
+      fieldtype: 'Date',
+      readOnly: true,
+    },
     {
       fieldname: 'grand_total',
       label: t`Grand Total`,
@@ -225,7 +231,7 @@ export async function getPOSInvoices(
 ): Promise<DocValueMap[]> {
   const schema = getSchema(ModelNameEnum.SalesInvoice)!;
   const rows = await getList('Books Sales Invoice', {
-    fields: ['name', 'customer', 'date', 'grand_total', 'docstatus'],
+    fields: ['name', 'customer', 'posting_date', 'grand_total', 'docstatus'],
     filters: getPOSInvoiceFilters(filters, search),
     orderBy: 'creation desc',
     start,
@@ -271,18 +277,6 @@ async function getItemDoc(name: string): Promise<Item> {
   return (await getFrappeDoc(ModelNameEnum.Item, name)) as Item;
 }
 
-export function getTotalTaxedAmount(sinvDoc: SalesInvoice): Money {
-  let totalTaxedAmount = fyo.pesa(0);
-  if (!sinvDoc.items?.length || !sinvDoc.taxes?.length) {
-    return totalTaxedAmount;
-  }
-
-  for (const row of sinvDoc.taxes) {
-    totalTaxedAmount = totalTaxedAmount.add(row.amount ?? 0);
-  }
-  return totalTaxedAmount;
-}
-
 export interface CostLine {
   label: string;
   value: Money;
@@ -290,26 +284,70 @@ export interface CostLine {
   isDiscount?: boolean;
 }
 
-/** The net total, then each amount that takes it to the grand total. */
+/** The rows' total before their discounts, which the rows' amounts are net of. */
+export function getGrossTotal(invoice: SalesInvoice): Money {
+  return (invoice.items ?? []).reduce(
+    (total, row) => total.add(getRowGrossAmount(invoice, row)),
+    fyo.pesa(0)
+  );
+}
+
+/** The item discounts, before or after tax, as the server posts them. */
+export function getItemDiscount(invoice: SalesInvoice): Money {
+  return getGrossTotal(invoice)
+    .add(invoice.total_taxes_and_charges ?? 0)
+    .sub(invoice.grand_total ?? 0);
+}
+
+/** What the customer pays: the grand total less what redeemed points pay. */
+export function getPayableTotal(invoice: SalesInvoice): Money {
+  const loyalty = (invoice.loyalty_amount ?? fyo.pesa(0)).div(
+    invoice.conversion_rate || 1
+  );
+  return (invoice.grand_total ?? fyo.pesa(0)).sub(loyalty);
+}
+
+/** The rows' total before discounts, then each amount that takes it to the payable total. */
 export function getCostLines(invoice: SalesInvoice): CostLine[] {
   const getLabel = (fieldname: string) =>
     getField(invoice.schemaName, fieldname)?.label ?? fieldname;
   const changes = [
+    { label: t`Discount`, value: getItemDiscount(invoice), isDiscount: true },
     {
-      label: getLabel('total_discount'),
-      value: invoice.total_discount,
-      isDiscount: true,
+      label: getLabel('taxes'),
+      value: invoice.total_taxes_and_charges,
     },
-    { label: getLabel('taxes'), value: getTotalTaxedAmount(invoice) },
     {
-      label: getLabel('loyalty_points_amount'),
-      value: invoice.loyalty_points_amount,
+      label: getLabel('loyalty_amount'),
+      value: invoice.loyalty_amount,
       isDiscount: true,
     },
   ].filter((line): line is CostLine => !!line.value && !line.value.isZero());
 
   return [
-    { label: getLabel('net_total'), value: invoice.net_total ?? fyo.pesa(0) },
+    { label: getLabel('net_total'), value: getGrossTotal(invoice) },
     ...changes,
   ];
+}
+
+/** The rule a cart row got, as ERPNext lists a row's pricing rules. */
+export function getRowPricingRule(row: SalesInvoiceItem): string {
+  const rules = row.pricing_rules ?? '';
+  if (!rules.startsWith('[')) {
+    return rules.split(',')[0] ?? '';
+  }
+
+  return (JSON.parse(rules) as string[])[0] ?? '';
+}
+
+/** A row's amount before its discount, as the cart lists it above the discount. */
+export function getRowGrossAmount(
+  invoice: SalesInvoice,
+  row: SalesInvoiceItem
+): Money {
+  if (invoice.discount_after_tax) {
+    return row.amount ?? fyo.pesa(0);
+  }
+
+  return (row.price_list_rate ?? fyo.pesa(0)).mul(row.qty ?? 0).clip();
 }

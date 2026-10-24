@@ -31,9 +31,15 @@ export function getStockRowHiddenMap(doc: FrappeDoc): HiddenMap {
   };
 }
 
-/** The units a row can move its item in: the stock unit and the item's conversions. */
+/**
+ * The units a row can move its item in: the stock unit and the item's
+ * conversions. Invoice rows name the item `item_code`; stock rows keep `item`
+ * until they are renamed too.
+ */
 export async function getTransferUnitFilter(doc: FrappeDoc): Promise<Filter[]> {
-  const { unit, factors } = await getItemUnits(doc.item as string);
+  const { unit, factors } = await getItemUnits(
+    (doc.item_code ?? doc.item) as string
+  );
   const units = [unit, ...Object.keys(factors)];
   return [['name', 'in', units.filter(Boolean)]];
 }

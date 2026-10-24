@@ -3,6 +3,7 @@ import type { DocValueMap } from 'fyo/core/types';
 import {
   ChangeArg,
   CurrenciesMap,
+  FilterFunction,
   FiltersMap,
   HiddenMap,
   RequiredMap,
@@ -11,25 +12,30 @@ import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { addItem } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
-import type { Schema } from 'schemas/types';
-import { FrappeDoc } from 'src/frappe/document';
+import type { Field, Schema } from 'schemas/types';
+import { FrappeDoc, type FrappeValueOptions } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
 import type { InvoiceItem } from './InvoiceItem';
-import type { TaxSummary } from './TaxSummary';
+import type { TaxesAndCharges } from './TaxesAndCharges';
 
 // A new rate for rows priced by the server follows these and the party.
-const RATE_SOURCE_FIELDS = ['date', 'price_list', 'currency', 'exchange_rate'];
-// The server fills these from the party.
-const PARTY_FIELDS = ['account', 'currency', 'exchange_rate'];
+const RATE_SOURCE_FIELDS = [
+  'posting_date',
+  'transaction_date',
+  'selling_price_list',
+  'buying_price_list',
+  'currency',
+  'conversion_rate',
+];
 /** Invoice and quote fields: links that offer no Create, and items edited in the row editor. */
 export const INVOICE_FIELDS = {
   ...withoutCreate([
-    'price_list',
+    'selling_price_list',
+    'buying_price_list',
     'currency',
-    'back_reference',
     'return_against',
-    'quotation',
     'loyalty_program',
+    'coupon_code',
   ]),
   items: { edit: true },
 };
@@ -45,22 +51,29 @@ export abstract class Invoice extends FrappeDoc {
     'make_auto_stock_transfer',
   ];
   // The exchange rate is the one on the invoice date.
-  static override refills = { date: ['exchange_rate'] };
+  static override refills: Record<string, string[]> = {
+    posting_date: ['conversion_rate'],
+  };
   static override partyField: string;
+  /** The field of the party's ledger account; a quote has none. */
+  static partyAccountField?: string;
 
   items?: InvoiceItem[];
-  date?: Date;
-  account?: string;
+  posting_date?: Date;
+  posting_time?: string;
+  debit_to?: string;
+  credit_to?: string;
   currency?: string;
-  exchange_rate?: number;
-  price_list?: string;
+  conversion_rate?: number;
+  selling_price_list?: string;
+  buying_price_list?: string;
+  taxes_and_charges?: string;
   net_total?: Money;
-  total_discount?: Money;
-  loyalty_points_amount?: Money;
+  total_taxes_and_charges?: Money;
   grand_total?: Money;
   base_grand_total?: Money;
   outstanding_amount?: Money;
-  taxes?: TaxSummary[];
+  taxes?: TaxesAndCharges[];
   loyalty_points?: number;
   redeem_loyalty_points?: boolean;
   return_against?: string;
@@ -100,9 +113,15 @@ export abstract class Invoice extends FrappeDoc {
     return !!this.currency && this.currency !== this.companyCurrency;
   }
 
+  /** The party's ledger account, which the server fills from the party. */
+  get partyAccount(): string | undefined {
+    const { partyAccountField } = this.constructor as typeof Invoice;
+    return partyAccountField ? (this[partyAccountField] as string) : undefined;
+  }
+
   /** Amounts are in the party's currency unless it is the company's. */
   get documentCurrency(): string {
-    if (this.exchange_rate === 1) {
+    if (this.conversion_rate === 1) {
       return this.companyCurrency;
     }
 
@@ -124,13 +143,14 @@ export abstract class Invoice extends FrappeDoc {
 
     const amount = this.fyo.format(this.outstanding_amount, 'Currency');
     // A Books User does not see the accounts.
-    if (!this.account) {
+    const account = this.partyAccount;
+    if (!account) {
       return this.fyo.t`Payment of ${amount} will be made on Submit.`;
     }
 
     const [from = '', to = ''] = this.isSales
-      ? [this.account, this.autoPaymentAccount]
-      : [this.autoPaymentAccount, this.account];
+      ? [account, this.autoPaymentAccount]
+      : [this.autoPaymentAccount, account];
     return this.fyo
       .t`Payment of ${amount} will be made from account "${from}" to account "${to}" on Submit.`;
   }
@@ -152,14 +172,29 @@ export abstract class Invoice extends FrappeDoc {
     return this.isSales ? 'make_delivery_note' : 'make_purchase_receipt';
   }
 
+  /** Whether a submitted invoice has tracked stock no transfer has moved yet. */
+  get hasStockToTransfer(): boolean {
+    return false;
+  }
+
+  get priceList(): string | undefined {
+    return this.isSales ? this.selling_price_list : this.buying_price_list;
+  }
+
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     discount_after_tax: () =>
       !this.fyo.singles.AccountingSettings?.enable_discounting,
-    price_list: () =>
-      !this.fyo.singles.AccountingSettings?.enable_price_list ||
-      (!this.canEdit && !this.price_list),
+    selling_price_list: () => this.isPriceListHidden,
+    buying_price_list: () => this.isPriceListHidden,
   };
+
+  get isPriceListHidden(): boolean {
+    return (
+      !this.fyo.singles.AccountingSettings?.enable_price_list ||
+      (!this.canEdit && !this.priceList)
+    );
+  }
 
   /** Rules of the fields invoices have and quotes lack: follow-ups on submit, and returns. */
   get postingHidden(): HiddenMap {
@@ -176,42 +211,61 @@ export abstract class Invoice extends FrappeDoc {
 
   // The server refuses a missing rate too; asked for here to show it at the field.
   required: RequiredMap = {
-    exchange_rate: () => this.isMultiCurrency,
+    conversion_rate: () => this.isMultiCurrency,
   };
 
   static override filters: FiltersMap = {
-    account: (doc: FrappeDoc) => [
-      ['is_group', '=', 0],
-      ['account_type', '=', doc.isSales ? 'Receivable' : 'Payable'],
-    ],
+    debit_to: getPartyAccountFilter('Receivable'),
+    credit_to: getPartyAccountFilter('Payable'),
     naming_series: (doc: FrappeDoc) => [
       ['reference_type', '=', doc.schemaName],
     ],
-    price_list: (doc: FrappeDoc) => [
-      ['enabled', '=', 1],
-      [doc.isSales ? 'selling' : 'buying', '=', 1],
-    ],
+    selling_price_list: getPriceListFilter('selling'),
+    buying_price_list: getPriceListFilter('buying'),
+    taxes_and_charges: () => [['disabled', '=', 0]],
   };
 
   override async change(arg: ChangeArg) {
-    const { partyField } = this.constructor as typeof Invoice;
+    const { partyField, partyAccountField } = this
+      .constructor as typeof Invoice;
     const isPartyChange = arg.changed === partyField;
     if (isPartyChange) {
-      this.leaveToServer(PARTY_FIELDS);
+      // The server fills these from the party.
+      const fields = ['currency', 'conversion_rate'];
+      this.leaveToServer(
+        partyAccountField ? [partyAccountField, ...fields] : fields
+      );
     }
 
     if (isPartyChange || RATE_SOURCE_FIELDS.includes(arg.changed ?? '')) {
       this.repriceRows();
     }
 
+    if (arg.changed === 'taxes_and_charges' && this.taxes_and_charges) {
+      // A new template replaces the rows, as the server fills them from it.
+      this.taxes = [];
+    }
+
     await super.change(arg);
+  }
+
+  /** A cleared template goes empty, not null, as the server starts a new document with the default one. */
+  override _getFrappeValue(field: Field, options: FrappeValueOptions) {
+    if (
+      field.fieldname === 'taxes_and_charges' &&
+      this.taxes_and_charges === ''
+    ) {
+      return '';
+    }
+
+    return super._getFrappeValue(field, options);
   }
 
   /** Lets the server price rows again, except free rows and rates the user set. */
   repriceRows() {
     for (const row of this.items ?? []) {
       if (!row.is_free_item && !row.is_manual_rate) {
-        row.leaveToServer(['rate']);
+        row.leaveToServer(['price_list_rate']);
       }
     }
   }
@@ -223,7 +277,7 @@ export abstract class Invoice extends FrappeDoc {
 
   /** Warns once per currency when the server has no rate, which the user then enters. */
   warnOfMissingRate() {
-    if (!this.isMultiCurrency || this.exchange_rate) {
+    if (!this.isMultiCurrency || this.conversion_rate) {
       this._missingRateCurrency = undefined;
       return;
     }
@@ -243,6 +297,20 @@ export abstract class Invoice extends FrappeDoc {
   async addItem(name: string, quantity = 1) {
     await addItem(name, this, quantity);
   }
+}
+
+function getPartyAccountFilter(accountType: string): FilterFunction {
+  return () => [
+    ['is_group', '=', 0],
+    ['account_type', '=', accountType],
+  ];
+}
+
+function getPriceListFilter(side: 'selling' | 'buying'): FilterFunction {
+  return () => [
+    ['enabled', '=', 1],
+    [side, '=', 1],
+  ];
 }
 
 /** Shows a currency field of `doc` in the currency `getCurrency` names. */

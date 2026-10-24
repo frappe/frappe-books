@@ -1,5 +1,4 @@
 import frappe
-from frappe.model.base_document import get_controller
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime
 
@@ -36,31 +35,32 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		seed_stock(pen, quantity=5, rate=10)
 		seed_stock(ink, quantity=2, rate=10, batch=batch)
 		rows = [
-			{"item": pen, "quantity": 3},
-			{"item": pen, "quantity": 3},
-			{"item": ink, "batch": batch, "quantity": 2},
-			{"item": service, "quantity": 9},
+			{"item_code": pen, "stock_qty": 3},
+			{"item_code": pen, "stock_qty": 3},
+			{"item_code": ink, "batch_no": batch, "stock_qty": 2},
+			{"item_code": service, "stock_qty": 9},
 		]
 
 		shortfalls = get_sale_shortfalls(rows, str(now_datetime()))
 
-		self.assertEqual(shortfalls, [{"item": pen, "batch": None, "quantity": 1}])
+		self.assertEqual(shortfalls, [{"item_code": pen, "batch_no": None, "stock_qty": 1}])
 
 	def test_stock_that_arrives_after_the_sale_does_not_count(self):
 		pen = self.make_item(is_stock_item=1)
 		seed_stock(pen, quantity=5, rate=10, date=add_days(now_datetime(), 2))
 
-		shortfalls = get_sale_shortfalls([{"item": pen, "quantity": 1}], str(now_datetime()))
+		shortfalls = get_sale_shortfalls([{"item_code": pen, "stock_qty": 1}], str(now_datetime()))
 
-		self.assertEqual(shortfalls, [{"item": pen, "batch": None, "quantity": 1}])
+		self.assertEqual(shortfalls, [{"item_code": pen, "batch_no": None, "stock_qty": 1}])
 
 	def test_without_a_date_all_stock_counts(self):
 		pen = self.make_item(is_stock_item=1)
 		seed_stock(pen, quantity=5, rate=10, date=add_days(now_datetime(), 2))
 
-		self.assertEqual(get_sale_shortfalls([{"item": pen, "quantity": 5}]), [])
+		self.assertEqual(get_sale_shortfalls([{"item_code": pen, "stock_qty": 5}]), [])
 		self.assertEqual(
-			get_sale_shortfalls([{"item": pen, "quantity": 6}]), [{"item": pen, "batch": None, "quantity": 1}]
+			get_sale_shortfalls([{"item_code": pen, "stock_qty": 6}]),
+			[{"item_code": pen, "batch_no": None, "stock_qty": 1}],
 		)
 
 	def test_pos_sales_ship_from_the_pos_inventory(self):
@@ -97,15 +97,6 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		)
 		self._sale(ink, batch, quantity=2).insert()
 
-	def test_a_quote_row_takes_no_more_of_its_batch_than_is_in_stock(self):
-		ink = self.make_item(is_stock_item=1, has_batch_no=1)
-		batch = make_batch(ink)
-		seed_stock(ink, quantity=2, rate=10, batch=batch)
-
-		quote = self._sale(ink, batch, quantity=3, doctype="Books Quotation")
-		self.assertRaisesRegex(frappe.ValidationError, "only has 2 quantity available but 3 is", quote.insert)
-		self._sale(ink, batch, quantity=2, doctype="Books Quotation").insert()
-
 	def test_a_saved_sale_row_is_checked_again_only_when_edited(self):
 		ink = self.make_item(is_stock_item=1, has_batch_no=1)
 		batch = make_batch(ink)
@@ -121,16 +112,15 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 
 		sale.terms = "Kept as it was entered"
 		sale.save()
-		sale.items[0].quantity = 2
+		sale.items[0].qty = 2
 		self.assertRaisesRegex(frappe.ValidationError, "only has 1 quantity available but 2 is", sale.save)
 
-	def _sale(self, item, batch, quantity, doctype="Books Sales Invoice"):
+	def _sale(self, item, batch, quantity):
 		receivable = make_account("Receivable", account_type="Receivable").name
 		return frappe.get_doc(
 			{
-				"doctype": doctype,
-				get_controller(doctype).party_field: make_customer(receivable).name,
-				"date": now_datetime(),
-				"items": [{"item": item, "batch": batch, "quantity": quantity, "rate": 10}],
+				"doctype": "Books Sales Invoice",
+				"customer": make_customer(receivable).name,
+				"items": [{"item_code": item, "batch_no": batch, "qty": quantity, "price_list_rate": 10}],
 			}
 		)

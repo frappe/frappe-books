@@ -40,7 +40,7 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		)
 
 	def test_invoice_status_follows_payments(self):
-		self.assertEqual(self.invoice.db_get("status"), "Saved")
+		self.assertEqual(self.invoice.db_get("status"), "Draft")
 		self.invoice.submit()
 		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
 
@@ -56,7 +56,7 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		self.invoice.submit()
 		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
 		self.assertEqual(credit_note.db_get("status"), "Return")
-		self.assertEqual(self.invoice.db_get("status"), "Return Issued")
+		self.assertEqual(self.invoice.db_get("status"), "Credit Note Issued")
 
 		credit_note.cancel()
 		self.assertEqual(credit_note.db_get("status"), "Cancelled")

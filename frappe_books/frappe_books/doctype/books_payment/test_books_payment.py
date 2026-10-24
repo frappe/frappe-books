@@ -40,7 +40,7 @@ class IntegrationTestBooksPayment(IntegrationTestCase):
 			item.name,
 			income.name,
 		)
-		invoice.items[0].item_discount_percent = 0
+		invoice.items[0].discount_percentage = 0
 		invoice.save()
 		invoice.submit()
 
@@ -83,7 +83,7 @@ class IntegrationTestBooksPayment(IntegrationTestCase):
 		other_party = make_customer(receivable.name)
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
-		invoice.items[0].item_discount_percent = 0
+		invoice.items[0].discount_percentage = 0
 		invoice.save()
 
 		with self.assertRaisesRegex(frappe.ValidationError, "Submit invoice .* before allocating a payment"):
@@ -130,7 +130,7 @@ class IntegrationTestBooksPayment(IntegrationTestCase):
 			item.name,
 			expense.name,
 		)
-		invoice.items[0].item_discount_percent = 0
+		invoice.items[0].discount_percentage = 0
 		invoice.save().submit()
 
 		payment = frappe.get_doc(
@@ -431,7 +431,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 			self.income.name,
 			discount_after_tax=discount_after_tax,
 		)
-		invoice.items[0].tax = tax.name
+		invoice.items[0].item_tax_template = tax.name
 		return invoice.save().submit()
 
 	def _balance(self, account):

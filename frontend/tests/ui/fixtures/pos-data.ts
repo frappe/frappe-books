@@ -87,7 +87,8 @@ const records: Record<string, Row[]> = {
     ...Array.from({ length: 24 }, (_, index) => ({
       name: `SINV-2026-${String(index + 1).padStart(4, '0')}`,
       customer: index % 2 ? 'Aarav Shah' : 'Meera Patel',
-      date: '2026-09-06 10:00:00',
+      posting_date: '2026-09-06',
+      posting_time: '10:00:00',
       grand_total: 1250,
       outstanding_amount: 0,
       docstatus: 1,
@@ -96,7 +97,8 @@ const records: Record<string, Row[]> = {
     {
       name: 'SINV-2026-HELD',
       customer: 'Aarav Shah',
-      date: '2026-09-06 11:00:00',
+      posting_date: '2026-09-06',
+      posting_time: '11:00:00',
       grand_total: items[0].standard_rate,
       outstanding_amount: items[0].standard_rate,
       docstatus: 0,
@@ -104,12 +106,13 @@ const records: Record<string, Row[]> = {
       items: [
         {
           name: 'held-row',
-          item: items[0].name,
-          quantity: 1,
-          transfer_quantity: 1,
+          item_code: items[0].name,
+          stock_qty: 1,
+          qty: 1,
+          price_list_rate: items[0].standard_rate,
           rate: items[0].standard_rate,
           amount: items[0].standard_rate,
-          unit: 'Unit',
+          stock_uom: 'Unit',
         },
       ],
     },
@@ -169,6 +172,10 @@ function answer(path: string, body: Row, params: Row): unknown {
     get_open_shift: () => (shift.open ? openingShift.name : null),
     get_stock_location: () => inventory,
     get_sale_shortfalls: () => [],
+    get_loyalty_program_details_with_points: () => ({
+      loyalty_points:
+        getRecord('Books Customer', body.customer)?.loyalty_points ?? 0,
+    }),
   };
   const answerMethod = methods[method] ?? methods[method.split('.').pop()!];
   if (answerMethod) {
@@ -184,8 +191,7 @@ function answer(path: string, body: Row, params: Row): unknown {
 
 /** The server refuses the EXPIRED coupon when the POS checks coupons. */
 function checkCoupons({ document, kwargs }: Row): Response | undefined {
-  const codes = (document.coupons ?? []).map((row: Row) => row.coupons);
-  if (kwargs?.check_coupons && codes.includes('EXPIRED')) {
+  if (kwargs?.check_coupons && document.coupon_code === 'EXPIRED') {
     const message = 'Coupon EXPIRED has expired.';
     return Response.json(
       { errors: [{ type: 'ValidationError', message }] },
@@ -207,7 +213,7 @@ function getDocuments(path: string, params: Row): unknown {
 /**
  * Totals as the server leaves them. A sale fills the checks it was sent
  * without, as Frappe sends every check, and takes its customer's loyalty
- * program and points. An opening shift's first cash row takes the counted
+ * program. An opening shift's first cash row takes the counted
  * cash; a closing shift expects what its shift opened with and shares the
  * counted cash among the cash methods.
  */
@@ -219,7 +225,6 @@ function preview(document: Row): Row {
       make_auto_payment: document.make_auto_payment ?? 0,
       make_auto_stock_transfer: document.make_auto_stock_transfer ?? 0,
       loyalty_program: customer?.loyalty_program ?? null,
-      available_loyalty_points: customer?.loyalty_points ?? 0,
     };
   }
 

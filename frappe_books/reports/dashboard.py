@@ -87,7 +87,7 @@ def get_invoice_summary(doctype: str, period: str) -> dict:
 	if doctype not in INVOICE_DOCTYPES:
 		frappe.throw(_("{0} is not an invoice.").format(doctype))
 	from_date, to_date = get_period_dates(period)
-	conditions = [["docstatus", "=", 1], *datetime_conditions("date", from_date, to_date)]
+	conditions = [["docstatus", "=", 1], *datetime_conditions("posting_date", from_date, to_date)]
 	totals = _invoice_totals(doctype, conditions)
 	total, unpaid = as_decimal(totals.total), as_decimal(totals.outstanding)
 	paid_count, unpaid_count = (

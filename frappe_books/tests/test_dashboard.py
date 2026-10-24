@@ -142,8 +142,8 @@ class IntegrationTestInvoiceDrillDown(IntegrationTestCase):
 				["docstatus", "in", [1, 2]],
 				["docstatus", "not in", [2]],
 				["outstanding_amount", operator, 0],
-				["date", ">=", summary["from_date"]],
-				["date", "<", summary["before_date"]],
+				["posting_date", ">=", summary["from_date"]],
+				["posting_date", "<", summary["before_date"]],
 			]
 			self.assertEqual(len(frappe.get_list("Books Sales Invoice", filters=filters)), count)
 
@@ -177,11 +177,14 @@ def _post(account, debit, credit, date="2031-01-10"):
 
 
 def _invoice(date, total, outstanding, **values):
+	"""Insert a submitted invoice dated `date`, a date with an optional time."""
+	posting_date, _, posting_time = date.partition(" ")
 	frappe.get_doc(
 		{
 			"doctype": "Books Sales Invoice",
 			"name": frappe.generate_hash(),
-			"date": date,
+			"posting_date": posting_date,
+			"posting_time": posting_time or None,
 			"docstatus": 1,
 			"base_grand_total": total,
 			"outstanding_amount": outstanding,

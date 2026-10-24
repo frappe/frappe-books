@@ -25,6 +25,8 @@ COMPANY_DOCTYPES = (
 	"Books Stock Entry",
 	"Books Stock Ledger Entry",
 	"Books Item Tax Template",
+	"Books Sales Taxes and Charges Template",
+	"Books Purchase Taxes and Charges Template",
 )
 
 

@@ -660,20 +660,14 @@ test('coupon and invoice links filter pricing rules and price lists by Frappe fi
   assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), [
     ['is_coupon_code_based', '=', 1],
   ]);
-  assert.deepEqual(
-    frappeModels.SalesInvoice.filters.price_list({ isSales: true }),
-    [
-      ['is_enabled', '=', 1],
-      ['is_sales', '=', 1],
-    ]
-  );
-  assert.deepEqual(
-    frappeModels.PurchaseInvoice.filters.price_list({ isSales: false }),
-    [
-      ['is_enabled', '=', 1],
-      ['is_purchase', '=', 1],
-    ]
-  );
+  assert.deepEqual(frappeModels.SalesInvoice.filters.selling_price_list(), [
+    ['enabled', '=', 1],
+    ['selling', '=', 1],
+  ]);
+  assert.deepEqual(frappeModels.PurchaseInvoice.filters.buying_price_list(), [
+    ['enabled', '=', 1],
+    ['buying', '=', 1],
+  ]);
 });
 
 test('the coupon form shows what it showed and names a new coupon from its name', async () => {

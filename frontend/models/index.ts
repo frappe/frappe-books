@@ -98,6 +98,8 @@ export const frappeModels: Record<string, FrappeModel> = {
   SalesInvoice: invoices.SalesInvoice,
   PurchaseInvoice: invoices.PurchaseInvoice,
   Quotation: invoices.Quotation,
+  SalesTaxesAndChargesTemplate: invoices.SalesTaxesAndChargesTemplate,
+  PurchaseTaxesAndChargesTemplate: invoices.PurchaseTaxesAndChargesTemplate,
   DeliveryNote,
   PurchaseReceipt,
   SystemSettings,

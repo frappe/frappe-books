@@ -116,7 +116,7 @@ async function mount() {
         name: 'SINV-SAVED',
         is_pos: true,
         docstatus,
-        items: [{ item: items[0].name, quantity: 1, transfer_quantity: 1 }],
+        items: [{ item_code: items[0].name, stock_qty: 1, qty: 1 }],
       });
       invoice._notInserted = false;
       pos.sinvDoc = invoice;
@@ -126,14 +126,13 @@ async function mount() {
       items.slice(0, 3).forEach((item, index) =>
         state.invoice.push('items', {
           name: `row-${index}`,
-          item: item.name,
-          quantity: 2,
-          transfer_quantity: 2,
+          item_code: item.name,
+          stock_qty: 2,
+          qty: 2,
+          price_list_rate: item.rate,
           rate: item.rate,
-          transfer_rate: item.rate,
           amount: item.rate.mul(2),
-          item_discounted_total: item.rate.mul(2),
-          unit: 'Unit',
+          stock_uom: 'Unit',
         })
       );
       for (const field of [
@@ -151,14 +150,15 @@ async function mount() {
       state.invoice.items = [];
       state.invoice.push('items', {
         name: 'row-box',
-        item: items[0].name,
-        unit: 'Unit',
-        transfer_unit: 'Box',
-        unit_conversion_factor: 50,
-        transfer_quantity: 6,
-        quantity: 300,
-        rate: fyo.pesa(62),
-        transfer_rate: fyo.pesa(3100),
+        item_code: items[0].name,
+        stock_uom: 'Unit',
+        uom: 'Box',
+        conversion_factor: 50,
+        qty: 6,
+        stock_qty: 300,
+        price_list_rate: fyo.pesa(3100),
+        rate: fyo.pesa(3100),
+        stock_uom_rate: fyo.pesa(62),
         amount: fyo.pesa(18600),
       });
     },

@@ -13,10 +13,22 @@ from frappe_books.accounting.money import as_decimal, rounded
 ENTRY = "Books Loyalty Point Entry"
 
 
-def set_available_points(invoice):
-	if not (invoice.customer and invoice.get("loyalty_program")):
-		return
-	invoice.available_loyalty_points = get_available_points(invoice.customer, invoice.loyalty_program)
+@frappe.whitelist()
+def get_loyalty_program_details_with_points(customer: str, loyalty_program: str | None = None) -> dict:
+	"""The customer's loyalty program, or `loyalty_program`, with the points they can redeem now.
+
+	ERPNext's method of the same name answers in accessory mode.
+	"""
+	frappe.has_permission("Books Customer", "read", doc=customer, throw=True)
+	program = loyalty_program or frappe.db.get_value("Books Customer", customer, "loyalty_program")
+	if not program:
+		return {}
+	conversion_factor = frappe.db.get_value("Books Loyalty Program", program, "conversion_factor")
+	return {
+		"loyalty_program": program,
+		"loyalty_points": get_available_points(customer, program),
+		"conversion_factor": conversion_factor,
+	}
 
 
 def validate_invoice_loyalty(invoice):
@@ -33,21 +45,20 @@ def _validate_redemption(invoice):
 	if not points:
 		frappe.throw(_("Enter the loyalty points to redeem."))
 	program = frappe.get_doc("Books Loyalty Program", invoice.loyalty_program)
-	_validate_redeemable(program, invoice.date)
+	_validate_redeemable(program, invoice.posting_date)
 	_lock_customer(invoice.customer)
 	available = get_available_points(invoice.customer, program.name)
 	if points > available:
 		frappe.throw(
 			_("Customer {0} has only {1} available loyalty points.").format(invoice.customer, available)
 		)
-	amount = redemption_amount(invoice)
-	total_before_redemption = as_decimal(invoice.grand_total) + amount
-	if amount > total_before_redemption:
+	if redemption_amount(invoice) > as_decimal(invoice.base_grand_total):
 		frappe.throw(_("Loyalty redemption cannot exceed the invoice total."))
 
 
-def set_return_redemption(invoice, total_before_redemption):
-	"""Give a return its share of the points its original invoice redeemed, as negative points."""
+def set_return_redemption(invoice, total):
+	"""Give a return its share of the points its original invoice redeemed, by its grand total, as
+	negative points."""
 	original = frappe.db.get_value(
 		invoice.doctype,
 		invoice.return_against,
@@ -58,16 +69,15 @@ def set_return_redemption(invoice, total_before_redemption):
 		return
 	invoice.redeem_loyalty_points = original.redeem_loyalty_points
 	invoice.loyalty_points = 0
-	if not original.redeem_loyalty_points:
+	if not (original.redeem_loyalty_points and as_decimal(original.grand_total)):
 		return
-	share = abs(as_decimal(total_before_redemption)) / (
-		as_decimal(original.grand_total) + redemption_amount(original)
-	)
+	share = abs(as_decimal(total)) / as_decimal(original.grand_total)
 	unrestored = original.loyalty_points - _restored_points(invoice)
 	invoice.loyalty_points = -min(int(_whole(original.loyalty_points * share)), unrestored)
 
 
 def redemption_amount(invoice):
+	"""What the redeemed points pay, in the company currency."""
 	if not invoice.get("redeem_loyalty_points") or not invoice.get("loyalty_program"):
 		return as_decimal(0)
 	conversion = frappe.db.get_value("Books Loyalty Program", invoice.loyalty_program, "conversion_factor")
@@ -89,7 +99,7 @@ def process_invoice(invoice):
 		_reverse_original_points(invoice)
 	elif invoice.redeem_loyalty_points:
 		_redeem_points(invoice, program)
-	elif _is_active(program, invoice.date):
+	elif _is_active(program, invoice.posting_date):
 		_earn_points(invoice, program)
 	update_customer_points(invoice.customer)
 
@@ -161,7 +171,7 @@ def _earn_points(invoice, program):
 		return
 	points = _whole(_whole(abs(as_decimal(invoice.grand_total))) * as_decimal(tier.collection_factor))
 	duration = program.expiry_duration
-	expiry_date = add_days(getdate(invoice.date), duration) if duration else None
+	expiry_date = add_days(getdate(invoice.posting_date), duration) if duration else None
 	_insert_entry(invoice, int(points), expiry_date, tier.tier_name)
 
 
@@ -268,7 +278,7 @@ def _insert_entry(invoice, points, expiry_date, tier=None):
 			"loyalty_points": points,
 			"purchase_amount": invoice.grand_total,
 			"expiry_date": expiry_date,
-			"posting_date": getdate(invoice.date),
+			"posting_date": getdate(invoice.posting_date),
 		}
 	).insert(ignore_permissions=True)
 

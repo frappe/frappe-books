@@ -19,7 +19,7 @@ test('the invoice form keeps the POS payment rows hidden, and saves them', () =>
   fyo.singles.AccountingSettings = {};
   const invoice = newFrappeDoc('SalesInvoice', {
     is_pos: true,
-    payments: [{ payment_method: 'Cash', amount: fyo.pesa(150) }],
+    payments: [{ mode_of_payment: 'Cash', amount: fyo.pesa(150) }],
   });
   const field = getSchema('SalesInvoice').fields.find(
     ({ fieldname }) => fieldname === 'payments'
@@ -28,7 +28,7 @@ test('the invoice form keeps the POS payment rows hidden, and saves them', () =>
   assert.equal(invoice.getFieldState(field).hidden, true);
   const [payment] = invoice.getFrappeValues().payments;
   assert.deepEqual(
-    [payment.payment_method, Number(payment.amount)],
+    [payment.mode_of_payment, Number(payment.amount)],
     ['Cash', 150]
   );
 });

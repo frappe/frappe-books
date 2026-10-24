@@ -114,11 +114,11 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			BOOKS_USER,
 			discount=10,
 		)
-		self.assertEqual(self._make_invoice_as(MANAGER, discount=10).items[0].item_discount_percent, 10)
+		self.assertEqual(self._make_invoice_as(MANAGER, discount=10).items[0].discount_percentage, 10)
 
 	def test_with_pos_off_books_users_discount_any_invoice(self):
 		_set_pos_discount_limit(pos_enabled=0)
-		self.assertEqual(self._make_invoice_as(BOOKS_USER, discount=10).items[0].item_discount_percent, 10)
+		self.assertEqual(self._make_invoice_as(BOOKS_USER, discount=10).items[0].discount_percentage, 10)
 
 	def test_only_managers_open_financial_reports(self):
 		for report in FINANCIAL_REPORTS:
@@ -150,7 +150,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		other_receivable = make_account("Rights Other Receivable", account_type="Receivable")
 		item = make_item(income.name, expense.name)
 		party = make_customer(receivable.name)
-		row = {"item": item.name, "account": other_income.name, "rate": 100, "quantity": 1}
+		row = {"item_code": item.name, "income_account": other_income.name, "price_list_rate": 100, "qty": 1}
 
 		with self.set_user(BOOKS_USER):
 			edited = frappe.get_doc("Books Item", item.name)
@@ -164,9 +164,9 @@ class IntegrationTestPermissions(IntegrationTestCase):
 
 		item.reload()
 		self.assertEqual(item.item_defaults[0].income_account, income.name)
-		self.assertEqual(invoice.account, receivable.name)
-		self.assertIsNone(read_back["account"])
-		self.assertIsNone(read_back["items"][0]["account"])
+		self.assertEqual(invoice.debit_to, receivable.name)
+		self.assertIsNone(read_back["debit_to"])
+		self.assertIsNone(read_back["items"][0]["income_account"])
 
 	def test_books_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")
@@ -278,11 +278,11 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		item = make_item(income.name, expense.name)
 		set_company_value("default_discount_account", expense.name)
 		row = {
-			"item": item.name,
-			"account": income.name,
-			"rate": 100,
-			"quantity": 2,
-			"item_discount_percent": discount,
+			"item_code": item.name,
+			"income_account": income.name,
+			"price_list_rate": 100,
+			"qty": 2,
+			"discount_percentage": discount,
 		}
 		with self.set_user(user):
 			return make_invoice(

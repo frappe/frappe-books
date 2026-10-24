@@ -151,7 +151,7 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   await page.evaluate(() => {
     const { fillCart, state } = (window as any).posFixture;
     fillCart();
-    state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
+    state.invoice.coupon_code = 'FOSSCLUB';
   });
   await expect(
     page.getByRole('button', { name: '1 coupon applied', exact: true })
@@ -159,7 +159,7 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   await page.evaluate(() => {
     const { invoice } = (window as any).posFixture.state;
     const document = invoice.getMethodDocument({ keepRowNames: true });
-    invoice.applyPreview(invoice.toDocValues({ ...document, coupons: [] }));
+    invoice.applyPreview(invoice.toDocValues({ ...document, coupon_code: null }));
   });
   await expect(
     page.getByText('Coupon FOSSCLUB no longer applies, so it was removed.')
@@ -169,38 +169,13 @@ test('a coupon a preview takes off is named in a warning', async ({ page }) => {
   ).toBeVisible();
 });
 
-test('coupons a preview takes off share one warning', async ({ page }) => {
-  await page.evaluate(() => {
-    const { fillCart, state } = (window as any).posFixture;
-    fillCart();
-    state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
-    state.invoice.push('coupons', { coupons: 'SUMMER' });
-  });
-  await expect(
-    page.getByRole('button', { name: '2 coupons applied', exact: true })
-  ).toBeVisible();
-  await page.evaluate(() => {
-    const { invoice } = (window as any).posFixture.state;
-    const document = invoice.getMethodDocument({ keepRowNames: true });
-    invoice.applyPreview(invoice.toDocValues({ ...document, coupons: [] }));
-  });
-  await expect(
-    page.getByText(
-      'Coupons FOSSCLUB, SUMMER no longer apply, so they were removed.'
-    )
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-sonner-toast]', { hasText: 'no longer appl' })
-  ).toHaveCount(1);
-});
-
-test('Done keeps the applied coupons after a refused code', async ({
+test('Done keeps the applied coupon after a refused code', async ({
   page,
 }) => {
   await page.evaluate(() => {
     const { fillCart, state } = (window as any).posFixture;
     fillCart();
-    state.invoice.push('coupons', { coupons: 'FOSSCLUB' });
+    state.invoice.coupon_code = 'FOSSCLUB';
   });
   await page
     .getByRole('button', { name: '1 coupon applied', exact: true })
@@ -222,7 +197,7 @@ test('a long price list name wraps instead of leaving the cart', async ({
 }) => {
   await page.evaluate(() => {
     const { state } = (window as any).posFixture;
-    state.invoice.price_list = 'Partner Price List 2026-27 for Resellers';
+    state.invoice.selling_price_list = 'Partner Price List 2026-27 for Resellers';
   });
   const cart = page.getByRole('complementary', { name: 'Cart' });
   const priceList = cart.getByRole('button', { name: /Partner Price List/ });
@@ -370,7 +345,7 @@ test('a cart row in boxes shows and takes its rate per box', async ({
   await keypad.getByRole('textbox', { name: 'Rate', exact: true }).fill('3000');
   await keypad.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(keypad).toBeHidden();
-  // The server's preview sets the rate per stock unit from the rate per box.
+  // The typed rate is the row's price list rate, per box, which the server keeps.
   const sent = await page.evaluate(() => {
     const { invoice } = (window as any).posFixture.state;
     const [row] = invoice.getMethodDocument({
@@ -378,16 +353,11 @@ test('a cart row in boxes shows and takes its rate per box', async ({
       clearServerFilled: true,
     }).items;
     return {
-      hasRate: 'rate' in row,
-      transferRate: Number(row.transfer_rate),
+      priceListRate: Number(row.price_list_rate),
       isManualRate: invoice.items[0].is_manual_rate,
     };
   });
-  expect(sent).toEqual({
-    hasRate: false,
-    transferRate: 3000,
-    isManualRate: true,
-  });
+  expect(sent).toEqual({ priceListRate: 3000, isManualRate: true });
 });
 
 test('the transfer quantity keypad is titled as its cart field', async ({

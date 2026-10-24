@@ -10,7 +10,10 @@
       class="m-4"
       theme="red"
       :title="t`Could not load linked entries. Please try again.`"
-      :primary-action="{ label: t`Try again`, onClick: () => setLinkedEntries() }"
+      :primary-action="{
+        label: t`Try again`,
+        onClick: () => setLinkedEntries(),
+      }"
     />
 
     <!-- Linked Entry List -->
@@ -85,7 +88,8 @@
                   <!-- Amounts -->
                   <FrappeBadge
                     v-if="
-                      isPesa(e.outstanding_amount) && !e.outstanding_amount.isZero()
+                      isPesa(e.outstanding_amount) &&
+                      !e.outstanding_amount.isZero()
                     "
                     theme="amber"
                     variant="subtle"
@@ -95,7 +99,9 @@
                     }}
                   </FrappeBadge>
                   <FrappeBadge
-                    v-else-if="isPesa(e.grand_total) && e.grand_total.isPositive()"
+                    v-else-if="
+                      isPesa(e.grand_total) && e.grand_total.isPositive()
+                    "
                     theme="green"
                     variant="subtle"
                   >
@@ -188,7 +194,10 @@ import {
   ListCell as FrappeListCell,
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
-import { Accordion as FrappeAccordion, type AccordionItem } from 'frappe-ui-accordion';
+import {
+  Accordion as FrappeAccordion,
+  type AccordionItem,
+} from 'frappe-ui-accordion';
 import { ModelNameEnum } from 'models/types';
 import { getFrappeRows } from 'src/frappe/list';
 import { getModel, getSchema } from 'src/frappe/registry';
@@ -226,7 +235,12 @@ export default defineComponent({
     };
   },
   data() {
-    return { entries: {}, openGroups: [], loading: true, loadFailed: false } as {
+    return {
+      entries: {},
+      openGroups: [],
+      loading: true,
+      loadFailed: false,
+    } as {
       entries: Record<string, { details: Record<string, unknown>[] }>;
       openGroups: string[];
       loading: boolean;
@@ -235,7 +249,9 @@ export default defineComponent({
   },
   computed: {
     sequence(): string[] {
-      const seq: string[] = linkSequence.filter((s) => !!this.entries[s]?.details?.length);
+      const seq: string[] = linkSequence.filter(
+        (s) => !!this.entries[s]?.details?.length
+      );
 
       for (const s in this.entries) {
         if (seq.includes(s) || !this.entries[s].details.length) {
@@ -334,7 +350,7 @@ const linkEntryDisplayFields: Record<string, string[]> = {
   // Invoices
   [ModelNameEnum.SalesInvoice]: [
     'name',
-    'date',
+    'posting_date',
     'customer',
     'grand_total',
     'outstanding_amount',
@@ -342,11 +358,10 @@ const linkEntryDisplayFields: Record<string, string[]> = {
   ],
   [ModelNameEnum.PurchaseInvoice]: [
     'name',
-    'date',
+    'posting_date',
     'supplier',
     'grand_total',
     'outstanding_amount',
-    'stock_not_transferred',
   ],
   // Stock Transfers
   [ModelNameEnum.DeliveryNote]: ['name', 'date', 'customer', 'grand_total'],
@@ -356,7 +371,19 @@ const linkEntryDisplayFields: Record<string, string[]> = {
   [ModelNameEnum.JournalEntry]: ['name', 'date', 'entry_type'],
   [ModelNameEnum.StockEntry]: ['name', 'date', 'amount'],
   // Ledgers
-  [ModelNameEnum.AccountingLedgerEntry]: ['name', 'posting_date', 'account', 'credit', 'debit'],
-  [ModelNameEnum.StockLedgerEntry]: ['name', 'date', 'item', 'location', 'quantity'],
+  [ModelNameEnum.AccountingLedgerEntry]: [
+    'name',
+    'posting_date',
+    'account',
+    'credit',
+    'debit',
+  ],
+  [ModelNameEnum.StockLedgerEntry]: [
+    'name',
+    'date',
+    'item',
+    'location',
+    'quantity',
+  ],
 };
 </script>

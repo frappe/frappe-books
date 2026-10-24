@@ -49,8 +49,11 @@ export abstract class StockTransfer extends FrappeDoc {
 
   static filters: FiltersMap = {
     naming_series: (doc) => [['reference_type', '=', doc.schemaName]],
-    back_reference: () => [
-      ['stock_not_transferred', '!=', 0],
+    // Invoices with stock pending: a sale's pending quantity, a purchase's share received.
+    back_reference: (doc) => [
+      doc.isSales
+        ? ['stock_not_transferred', '>', 0]
+        : ['per_received', '<', 100],
       ['docstatus', '=', 1],
     ],
   };

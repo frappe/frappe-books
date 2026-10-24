@@ -40,7 +40,7 @@ class IntegrationTestBooksPage(IntegrationTestCase):
 
 		names = [meta["name"] for meta in metas]
 		self.assertEqual(len(names), len(set(names)))
-		for doctype in ("Books Sales Invoice", "Books Sales Invoice Item", "Books Tax Summary"):
+		for doctype in ("Books Sales Invoice", "Books Sales Invoice Item", "Books Sales Taxes and Charges"):
 			self.assertIn(doctype, names)
 		invoice = next(meta for meta in metas if meta["name"] == "Books Sales Invoice")
 		self.assertIn("customer", [field["fieldname"] for field in invoice["fields"]])

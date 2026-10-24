@@ -31,7 +31,7 @@ test('startup loads every schema in one request, translated for a non-English la
     Object.values(frappeModels).map(({ doctype }) => doctype)
   );
   const date = getSchema('SalesInvoice').fields.find(
-    (field) => field.fieldname === 'date'
+    (field) => field.fieldname === 'posting_date'
   );
   assert.equal(date.label, 'Datum');
   assert.equal(getSchema('SalesInvoiceItem').isChild, true);

@@ -13,7 +13,7 @@
         :show-label="true"
         :value="selectedPriceList"
         :focus-input="!isMobile"
-        :df="sinvDoc.fieldMap.price_list"
+        :df="sinvDoc.fieldMap.selling_price_list"
         @change="(value) => (selectedPriceList = value ?? '')"
       />
       <FrappeButton
@@ -83,7 +83,7 @@ export default defineComponent({
   watch: {
     openModal(value: boolean) {
       if (value) {
-        this.selectedPriceList = this.sinvDoc.price_list ?? '';
+        this.selectedPriceList = this.sinvDoc.selling_price_list ?? '';
       }
     },
   },
@@ -93,7 +93,7 @@ export default defineComponent({
     },
     async setPriceList() {
       try {
-        await this.sinvDoc.set('price_list', this.selectedPriceList);
+        await this.sinvDoc.set('selling_price_list', this.selectedPriceList);
         this.$emit('toggleModal', 'PriceList');
       } catch (error) {
         showToast({

@@ -134,8 +134,8 @@ test('HSN/SAC shows and is checked only for an Indian company', async () => {
 test('item links filter and create items by Frappe fieldnames', async () => {
   const SalesInvoiceItem = frappeModels.SalesInvoice.rowModels.items;
   const StockEntryItem = frappeModels.StockEntry.rowModels.items;
-  assert.equal(SalesInvoiceItem.filters.item, undefined);
-  assert.equal(SalesInvoiceItem.createFilters.item, undefined);
+  assert.equal(SalesInvoiceItem.filters.item_code, undefined);
+  assert.equal(SalesInvoiceItem.createFilters.item_code, undefined);
   assert.deepEqual(StockEntryItem.filters.item(), [['is_stock_item', '=', 1]]);
   assert.deepEqual(StockEntryItem.createFilters.item(), [
     ['is_stock_item', '=', 1],

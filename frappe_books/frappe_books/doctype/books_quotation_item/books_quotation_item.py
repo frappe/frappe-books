@@ -1,10 +1,10 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from frappe_books.accounting.invoice import InvoiceItemController
+from frappe.model.document import Document
 
 
-class BooksQuotationItem(InvoiceItemController):
+class BooksQuotationItem(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -13,32 +13,28 @@ class BooksQuotationItem(InvoiceItemController):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		account: DF.Link
 		amount: DF.Currency
-		batch: DF.Link | None
-		description: DF.Text | None
-		hsn_code: DF.Data | None
+		conversion_factor: DF.Float
+		description: DF.TextEditor | None
+		discount_amount: DF.Currency
+		discount_percentage: DF.Percent
+		gst_hsn_code: DF.Data | None
 		is_manual_rate: DF.Check
-		item: DF.Link
-		item_code: DF.Data | None
-		item_discount_amount: DF.Currency
-		item_discount_percent: DF.Float
-		item_discounted_total: DF.Currency
-		item_taxed_total: DF.Currency
+		item_code: DF.Link
+		item_name: DF.Data
+		item_tax_template: DF.Link | None
+		net_amount: DF.Currency
+		net_rate: DF.Currency
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
+		price_list_rate: DF.Currency
 		qty: DF.Float
-		quantity: DF.Float
 		rate: DF.Currency
-		set_item_discount_amount: DF.Check
-		stock_not_transferred: DF.Float
-		tax: DF.Link | None
-		transfer_quantity: DF.Float
-		transfer_rate: DF.Currency
-		transfer_unit: DF.Link | None
-		unit: DF.Link | None
-		unit_conversion_factor: DF.Float
+		stock_qty: DF.Float
+		stock_uom: DF.Link | None
+		stock_uom_rate: DF.Currency
+		uom: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Quotation Item"

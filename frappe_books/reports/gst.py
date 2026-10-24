@@ -66,8 +66,9 @@ def get_data(doctype, filters) -> list[dict]:
 	invoices = _invoices(doctype, filters)
 	if not invoices:
 		return []
-	items = _items(doctype, [invoice.name for invoice in invoices])
-	details = _tax_details({item.tax for item in items if item.tax})
+	names = [invoice.name for invoice in invoices]
+	items = _items(doctype, names)
+	details = _tax_details(doctype, names)
 	party_type = get_controller(doctype).party_type
 	places = _party_places(party_type, {invoice.party for invoice in invoices})
 	company_state = _gstin_state(frappe.db.get_single_value("Books Accounting Settings", "gstin"))
@@ -88,7 +89,7 @@ def get_data(doctype, filters) -> list[dict]:
 def _invoices(doctype, filters):
 	conditions = [
 		["docstatus", "=", 1],
-		*datetime_conditions("date", filters.get("from_date"), filters.get("to_date")),
+		*datetime_conditions("posting_date", filters.get("from_date"), filters.get("to_date")),
 	]
 	return frappe.get_list(
 		doctype,
@@ -96,47 +97,50 @@ def _invoices(doctype, filters):
 		fields=[
 			"name",
 			f"{get_controller(doctype).party_field} as party",
-			"date",
+			"posting_date",
 			"base_grand_total",
-			"currency",
-			"exchange_rate",
-			"discount_after_tax",
+			"conversion_rate",
 			"return_against",
 		],
-		order_by="date asc, name asc",
+		order_by="posting_date asc, posting_time asc, name asc",
 	)
 
 
 def _originals(doctype, names):
 	"""Return the invoices that the credit notes return, by name."""
-	invoices = _get_list_in(doctype, "name", names, fields=["name", "date", "base_grand_total"])
+	invoices = _get_list_in(doctype, "name", names, fields=["name", "posting_date", "base_grand_total"])
 	return {invoice.name: invoice for invoice in invoices}
 
 
 def _items(doctype, names):
+	return _child_rows(doctype, "items", names, ["parent", "name", "amount"], order_by="idx asc")
+
+
+def _tax_details(doctype, names):
+	"""Map each item row to its GST taxes: their head, rate and amount in the company currency."""
+	heads = {
+		row.name: row.gst_head
+		for row in _child_rows(doctype, "taxes", names, ["name", "account_head.gst_head as gst_head"])
+	}
+	details = defaultdict(list)
+	for detail in _child_rows(
+		doctype, "item_wise_tax_details", names, ["item_row", "tax_row", "rate", "amount"]
+	):
+		if heads.get(detail.tax_row):
+			details[detail.item_row].append(frappe._dict(detail, gst_head=heads[detail.tax_row]))
+	return details
+
+
+def _child_rows(doctype, fieldname, names, fields, **kwargs):
 	return _get_list_in(
-		frappe.get_meta(doctype).get_field("items").options,
+		frappe.get_meta(doctype).get_field(fieldname).options,
 		"parent",
 		names,
-		filters={"parenttype": doctype, "parentfield": "items"},
-		fields=["parent", "tax", "amount", "item_discounted_total"],
+		filters={"parenttype": doctype, "parentfield": fieldname},
+		fields=fields,
 		parent_doctype=doctype,
-		order_by="idx asc",
+		**kwargs,
 	)
-
-
-def _tax_details(taxes):
-	details = defaultdict(list)
-	if not taxes:
-		return details
-	for detail in frappe.get_list(
-		"Books Item Tax Template Detail",
-		filters={"parent": ["in", list(taxes)], "parenttype": "Books Item Tax Template"},
-		fields=["parent", "tax_rate", "tax_type.gst_head as gst_head"],
-		parent_doctype="Books Item Tax Template",
-	):
-		details[detail.parent].append(detail)
-	return details
 
 
 def _party_places(party_type, parties):
@@ -171,7 +175,7 @@ def _row_header(invoice, gstin, place, company_state, original):
 		"gstin": gstin,
 		"party": invoice.party,
 		"invoice_no": invoice.name,
-		"invoice_date": getdate(invoice.date),
+		"invoice_date": getdate(invoice.posting_date),
 		# Reverse charge depends on what is supplied, not on the GSTIN, and Books records no such supply.
 		"reverse_charge": "N",
 		"in_state": bool(company_state) and company_state == place,
@@ -184,38 +188,34 @@ def _row_header(invoice, gstin, place, company_state, original):
 
 
 def _is_above_b2c_limit(invoice):
-	date = getdate(invoice.date)
+	date = getdate(invoice.posting_date)
 	limit = LARGE_B2C_INVOICE if date >= LARGE_B2C_INVOICE_FROM else LARGE_B2C_INVOICE_BEFORE
 	return as_decimal(invoice.base_grand_total) > limit
 
 
 def _invoice_rows(invoice, items, details, header):
+	"""One row per tax rate: its rows' amounts, and their taxes from the item-wise tax details."""
 	rows = {}
 	for item in items:
-		item_details = details[item.tax] if item.tax else []
-		rate = sum_decimal(detail.tax_rate for detail in item_details)
+		item_details = details[item.name]
+		rate = sum_decimal(detail.rate for detail in item_details)
 		row = rows.setdefault(rate, {**header, "rate": rate, "taxable_value": as_decimal(0)})
-		base = as_decimal(item.amount if invoice.discount_after_tax else item.item_discounted_total)
-		row["taxable_value"] += base
+		row["taxable_value"] += as_decimal(item.amount)
 		for detail in item_details:
-			_add_tax(row, detail, base, invoice.currency)
-	return [_in_company_currency(row, invoice.exchange_rate) for row in rows.values()]
+			_add_tax(row, detail)
+	for row in rows.values():
+		row["taxable_value"] = rounded(row["taxable_value"] * as_decimal(invoice.conversion_rate or 1))
+	return list(rows.values())
 
 
-def _add_tax(row, detail, base, currency):
+def _add_tax(row, detail):
+	"""Add a GST head's amount, which the item-wise details hold in the company currency."""
 	field = TAX_AMOUNT_FIELDS.get(detail.gst_head)
 	if not field:
 		return
-	row[field] = row.get(field, as_decimal(0)) + rounded(base * as_decimal(detail.tax_rate) / 100, currency)
+	row[field] = row.get(field, as_decimal(0)) + as_decimal(detail.amount)
 	if detail.gst_head == "IGST":
 		row["in_state"] = False
-
-
-def _in_company_currency(row, exchange_rate):
-	for field in ("taxable_value", *TAX_AMOUNT_FIELDS.values()):
-		if field in row:
-			row[field] = rounded(row[field] * as_decimal(exchange_rate or 1))
-	return row
 
 
 def _transfer_type(row):

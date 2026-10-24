@@ -2,7 +2,7 @@ import frappe
 from frappe.api.v2 import run_doc_method
 from frappe.permissions import add_permission, update_permission_property
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, now_datetime, nowdate, set_request
+from frappe.utils import add_days, nowdate, set_request
 
 from frappe_books.tests.accounting import (
 	ensure_user,
@@ -15,19 +15,26 @@ from frappe_books.tests.accounting import (
 	unique_name,
 )
 
-COMPARED_FIELDS = ("net_total", "grand_total", "base_grand_total", "outstanding_amount", "total_discount")
+COMPARED_FIELDS = (
+	"net_total",
+	"total_taxes_and_charges",
+	"grand_total",
+	"base_grand_total",
+	"outstanding_amount",
+)
 COMPARED_ROW_FIELDS = (
-	"item",
+	"item_code",
+	"price_list_rate",
 	"rate",
 	"amount",
-	"tax",
-	"account",
-	"item_discount_percent",
-	"item_discounted_total",
-	"item_taxed_total",
-	"pricing_rule",
+	"item_tax_template",
+	"income_account",
+	"discount_percentage",
+	"discount_amount",
+	"pricing_rules",
 	"is_free_item",
 )
+TAX_FIELDS = ("charge_type", "account_head", "rate", "tax_amount", "total")
 NO_ROLE_USER = "books-preview-no-role@example.com"
 CREATOR = "books-preview-creator@example.com"
 
@@ -55,14 +62,12 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 		for field in COMPARED_FIELDS:
 			self.assertEqual(preview[field], saved[field], field)
-		self.assertEqual(
-			_rows(preview["taxes"], ("account", "rate", "amount")),
-			_rows(saved["taxes"], ("account", "rate", "amount")),
-		)
+		self.assertEqual(_rows(preview["taxes"], TAX_FIELDS), _rows(saved["taxes"], TAX_FIELDS))
 		self.assertEqual(
 			_rows(preview["items"], COMPARED_ROW_FIELDS), _rows(saved["items"], COMPARED_ROW_FIELDS)
 		)
-		self.assertEqual(preview["items"][0]["rate"], 80)
+		# The price list's 80, less the coupon's 25%.
+		self.assertEqual((preview["items"][0]["price_list_rate"], preview["items"][0]["rate"]), (80, 60))
 		self.assertTrue(preview["items"][-1]["is_free_item"])
 
 	def test_preview_keeps_client_row_names(self):
@@ -82,15 +87,14 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 	def test_preview_recalculates_an_edited_draft_without_saving_it(self):
 		saved = _insert(self.values)
-		# /books leaves the quantities that follow an edited quantity for the server to fill.
-		row = {
-			key: value for key, value in saved["items"][0].items() if key not in ("qty", "transfer_quantity")
-		}
-		edited = {**saved, "items": [{**row, "quantity": 4}]}
+		# /books leaves the quantity that follows an edited one for the server to fill.
+		row = {key: value for key, value in saved["items"][0].items() if key != "qty"}
+		edited = {**saved, "items": [{**row, "stock_qty": 4}]}
 
 		preview = _preview(edited)
 
-		self.assertEqual(preview["net_total"], 320)
+		# Four at 80 less the coupon's 25%.
+		self.assertEqual(preview["net_total"], 240)
 		self.assertEqual(
 			frappe.db.get_value("Books Sales Invoice", saved["name"], "net_total"), saved["net_total"]
 		)
@@ -137,17 +141,18 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		self.assertEqual((invoice.terms, invoice.make_auto_payment), ("Pay in 30 days", 1))
 
 	def test_a_row_tax_left_out_follows_the_item_and_a_cleared_one_stays_cleared(self):
-		row = {"item": self.item.name, "quantity": 1}
-		values = {"customer": self.party.name, "date": str(now_datetime()), "items": [row]}
-		self.assertEqual(_preview(values)["items"][0]["tax"], self.item.taxes[0].item_tax_template)
+		row = {"item_code": self.item.name, "qty": 1}
+		values = {"customer": self.party.name, "posting_date": nowdate(), "items": [row]}
+		template = self.item.taxes[0].item_tax_template
+		self.assertEqual(_preview(values)["items"][0]["item_tax_template"], template)
 
-		cleared = {**values, "items": [{**row, "tax": ""}]}
+		cleared = {**values, "items": [{**row, "item_tax_template": ""}]}
 		saved = _insert(cleared)
-		self.assertFalse(_preview(cleared)["items"][0].get("tax"))
-		self.assertFalse(saved["items"][0].get("tax"))
+		self.assertFalse(_preview(cleared)["items"][0].get("item_tax_template"))
+		self.assertFalse(saved["items"][0].get("item_tax_template"))
 		self.assertEqual((saved["grand_total"], saved["taxes"]), (100, []))
 		resaved = frappe.get_doc("Books Sales Invoice", saved["name"]).save()
-		self.assertFalse(resaved.items[0].tax)
+		self.assertFalse(resaved.items[0].item_tax_template)
 
 	def test_only_whitelisted_methods_run(self):
 		with self.assertRaisesRegex(frappe.PermissionError, "not whitelisted"):
@@ -178,12 +183,12 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		).insert()
 		return {
 			"customer": self.party.name,
-			"date": str(now_datetime()),
-			"price_list": price_list.name,
-			"coupons": [{"coupons": coupon.name}],
+			"posting_date": nowdate(),
+			"selling_price_list": price_list.name,
+			"coupon_code": coupon.name,
 			"items": [
-				{"name": "client-row-1", "item": self.item.name, "quantity": 2},
-				{"name": "client-row-2", "item": bundle_item.name, "quantity": 1},
+				{"name": "client-row-1", "item_code": self.item.name, "qty": 2},
+				{"name": "client-row-2", "item_code": bundle_item.name, "qty": 1},
 			],
 		}
 

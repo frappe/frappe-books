@@ -36,11 +36,13 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
     ]
   );
   assert.equal(
-    exported.find(({ fieldname }) => fieldname === 'attachment').export,
+    getExportFields('JournalEntry').find(
+      ({ fieldname }) => fieldname === 'attachment'
+    ).export,
     false
   );
   assert.equal(items.target, 'SalesInvoiceItem');
-  assert.ok(items.fields.some(({ fieldname }) => fieldname === 'item'));
+  assert.ok(items.fields.some(({ fieldname }) => fieldname === 'item_code'));
   assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'name'));
 });
 
@@ -96,7 +98,7 @@ test('the wizard offers Books’ fields in Books’ order', () => {
       .map(({ label }) => label),
     ['Submitted', 'Cancelled']
   );
-  assert.deepEqual(invoice.slice(15, 18), [
+  assert.deepEqual(invoice.slice(16, 19), [
     'discount_after_tax',
     'make_auto_payment',
     'make_auto_stock_transfer',
@@ -107,8 +109,9 @@ test('the wizard offers Books’ fields in Books’ order', () => {
   );
   for (const fieldname of [
     'amended_from',
-    'is_returned',
+    'is_return',
     'is_pos',
+    'item_wise_tax_details',
     'docstatus',
   ]) {
     assert.ok(!invoice.includes(fieldname), fieldname);
@@ -116,7 +119,8 @@ test('the wizard offers Books’ fields in Books’ order', () => {
   assert.ok(!fieldnames('JournalEntry').includes('total_debit'));
   assert.ok(!fieldnames('StockLedgerEntry').includes('stock_queue'));
   assert.equal(items.fieldname, 'items');
-  assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'qty'));
+  // The server derives the stock quantity from the quantity.
+  assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'stock_qty'));
   assert.deepEqual(fieldnames('Customer').slice(0, 2), ['image', 'name']);
   assert.deepEqual(
     account
@@ -252,7 +256,7 @@ test('files hold Books’ keys and values', async () => {
   assert.deepEqual(row.slice(-2), ['SalesInvoice', 'SINV-1']);
 });
 
-test('files hold virtual amounts as 0 and other unread values as null', async () => {
+test('files hold unread virtual values as null', async () => {
   stubFrappe(() => ({ message: [{ name: 'SINV-' }] }));
   const series = await getJsonExportData({
     schemaName: 'NumberSeries',
@@ -261,16 +265,8 @@ test('files hold virtual amounts as 0 and other unread values as null', async ()
     limit: null,
     filters: [],
   });
-  const invoice = await getJsonExportData({
-    schemaName: 'SalesInvoice',
-    fields: pick(getExportFields('SalesInvoice'), ['total_discount']),
-    tableFields: [],
-    limit: null,
-    filters: [],
-  });
 
   assert.deepEqual(JSON.parse(series), [{ name: 'SINV-', current: null }]);
-  assert.deepEqual(JSON.parse(invoice), [{ name: 'SINV-', totalDiscount: 0 }]);
 });
 
 test('files keep the keys Books renamed', async () => {
@@ -365,8 +361,8 @@ test("CSV repeats a document's values on each row of its tables", async () => {
         name: 'SINV-1',
         customer: 'Acme',
         items: [
-          { item: 'Pen', rate: 10 },
-          { item: 'Ink', rate: 5 },
+          { item_code: 'Pen', price_list_rate: 10 },
+          { item_code: 'Ink', price_list_rate: 5 },
         ],
       },
       { name: 'SINV-2', customer: 'Bolt', items: [] },
@@ -377,7 +373,6 @@ test("CSV repeats a document's values on each row of its tables", async () => {
     fields: [
       field('name', 'Invoice No'),
       field('customer', 'Customer'),
-      field('total_discount', 'Discount', 'Currency'),
       field('items', 'Items', 'Table'),
     ],
     tableFields: [
@@ -385,30 +380,31 @@ test("CSV repeats a document's values on each row of its tables", async () => {
         fieldname: 'items',
         label: 'Items',
         target: 'SalesInvoiceItem',
-        fields: [field('item', 'Item'), field('rate', 'Rate', 'Currency')],
+        fields: [
+          field('item_code', 'Item'),
+          field('price_list_rate', 'Rate', 'Currency'),
+        ],
       },
     ],
     limit: null,
     filters: [],
   });
 
-  // A virtual field has no column to read.
   assert.deepEqual(requests[0].body.fields, [
     'name',
     'customer',
-    { items: ['item', 'rate'] },
+    { items: ['item_code', 'price_list_rate'] },
   ]);
   assert.deepEqual(parseCSV(csv), [
-    ['Invoice No', 'Customer', 'Discount', 'Item', 'Rate'],
+    ['Invoice No', 'Customer', 'Item', 'Rate'],
     [
       'SalesInvoice.name',
       'SalesInvoice.customer',
-      'SalesInvoice.totalDiscount',
-      'SalesInvoiceItem.item',
-      'SalesInvoiceItem.rate',
+      'SalesInvoiceItem.itemCode',
+      'SalesInvoiceItem.priceListRate',
     ],
-    ['SINV-1', 'Acme', '0', 'Pen', '10'],
-    ['SINV-1', 'Acme', '0', 'Ink', '5'],
-    ['SINV-2', 'Bolt', '0', '', ''],
+    ['SINV-1', 'Acme', 'Pen', '10'],
+    ['SINV-1', 'Acme', 'Ink', '5'],
+    ['SINV-2', 'Bolt', '', ''],
   ]);
 });

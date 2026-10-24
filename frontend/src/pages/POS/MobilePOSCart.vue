@@ -33,12 +33,14 @@
             <button
               type="button"
               class="absolute inset-0"
-              :aria-label="row.item"
+              :aria-label="row.item_code"
               :disabled="!!row.is_free_item || sinvDoc.isSubmitted"
               @click="$emit('edit', row)"
             />
             <div class="min-w-0">
-              <div class="truncate text-lg text-ink-gray-8">{{ row.item }}</div>
+              <div class="truncate text-lg text-ink-gray-8">
+                {{ row.item_code }}
+              </div>
               <div class="mt-0.5 truncate text-md tabular-nums text-ink-gray-5">
                 {{ getRowMeta(row) }}
               </div>
@@ -52,9 +54,9 @@
               :min="1"
               :value="getCartRowQuantity(row)"
               :df="{
-                fieldname: 'quantity',
+                fieldname: 'qty',
                 fieldtype: 'Float',
-                label: t`Quantity of ${row.item ?? ''}`,
+                label: t`Quantity of ${row.item_code ?? ''}`,
               }"
               @change="(quantity: number) => setQuantity(row, quantity)"
               @remove="row.parentdoc?.remove('items', row.idx as number)"
@@ -122,7 +124,12 @@ import { POS_ITEM_TOAST_ID } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { showToast } from 'src/utils/interactive';
-import { CostLine, getCostLines } from 'src/utils/pos';
+import {
+  CostLine,
+  getCostLines,
+  getPayableTotal,
+  getRowPricingRule,
+} from 'src/utils/pos';
 import { getCartRowQuantity, setCartQuantity } from 'src/utils/posCart';
 import { computed, inject, type Ref } from 'vue';
 
@@ -143,19 +150,21 @@ const totals = computed<(CostLine & { strong?: boolean })[]>(() => [
   ...getCostLines(sinvDoc.value),
   {
     label: t`Grand Total`,
-    value: sinvDoc.value.grand_total ?? fyo.pesa(0),
+    value: getPayableTotal(sinvDoc.value),
     strong: true,
   },
 ]);
 
 const payLabel = computed(() => {
-  const amount = fyo.format(sinvDoc.value.grand_total ?? 0, 'Currency');
+  const amount = fyo.format(getPayableTotal(sinvDoc.value), 'Currency');
   return sinvDoc.value.isReturn ? t`Refund ${amount}` : t`Pay ${amount}`;
 });
 
 function getRowMeta(row: SalesInvoiceItem): string {
-  const rate = fyo.format(row.transfer_rate ?? 0, 'Currency');
-  return [rate, row.tax, row.pricing_rule].filter(Boolean).join(' · ');
+  const rate = fyo.format(row.price_list_rate ?? 0, 'Currency');
+  return [rate, row.item_tax_template, getRowPricingRule(row)]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 async function setQuantity(row: SalesInvoiceItem, quantity: number) {

@@ -204,5 +204,5 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 
 		invoice = make_sales_invoice(customer.name)
 
-		self.assertEqual((invoice.customer, invoice.account), (customer.name, receivable.name))
+		self.assertEqual((invoice.customer, invoice.debit_to), (customer.name, receivable.name))
 		self.assertEqual(invoice.make_auto_payment, 1)

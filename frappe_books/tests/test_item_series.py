@@ -81,13 +81,14 @@ class IntegrationTestSeriesBatches(IntegrationTestCase):
 
 	def test_receipts_create_empty_batches_from_the_item_series(self):
 		row = {"item": self.item, "quantity": 1, "rate": 10}
-		invoice = frappe.get_doc(self._purchase("Books Purchase Invoice", row)).insert()
+		invoice_row = {"item_code": self.item, "qty": 1, "price_list_rate": 10}
+		invoice = frappe.get_doc(self._purchase("Books Purchase Invoice", invoice_row)).insert()
 		receipt = frappe.get_doc(
 			self._purchase("Books Purchase Receipt", {**row, "location": "Stores"})
 		).insert()
 		movement = insert(movement_values("MaterialReceipt", row))
 
-		batches = [invoice.items[0].batch, receipt.items[0].batch, movement["items"][0]["batch"]]
+		batches = [invoice.items[0].batch_no, receipt.items[0].batch, movement["items"][0]["batch"]]
 		self.assertEqual(batches, [f"{self.prefix}{number}" for number in range(1001, 1004)])
 		for batch in batches:
 			self.assertEqual(frappe.db.get_value("Books Batch", batch, "item"), self.item)
@@ -118,7 +119,9 @@ class IntegrationTestSeriesBatches(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", receipt.insert)
 
 	def _purchase(self, doctype, row):
-		return {"doctype": doctype, "supplier": self.supplier, "date": now_datetime(), "items": [row]}
+		"""A purchase invoice takes its date by default; a receipt is dated now."""
+		date = {} if doctype == "Books Purchase Invoice" else {"date": now_datetime()}
+		return {"doctype": doctype, "supplier": self.supplier, **date, "items": [row]}
 
 
 def movement_values(movement_type, row):

@@ -78,7 +78,7 @@ test('rows of one invoice become one submitted invoice', async ({ page }) => {
     page,
     'Sales Invoice',
     [
-      'Invoice No,Number Series,Customer,Account,Date,Item (Items),Quantity (Items),Rate (Items)',
+      'Invoice No,Number Series,Customer,Debit To,Date,Item (Items),Quantity (Items),Rate (Items)',
       `A,SINV-,Import Dan ${run},Debtors,2026-09-30,${item},2,10`,
       `A,,,,,${item},1,5`,
     ].join('\n')
@@ -90,9 +90,7 @@ test('rows of one invoice become one submitted invoice', async ({ page }) => {
   const name = (await results.locator('p.break-words').first().textContent())!;
   const invoice = await getDoc(page, 'Books Sales Invoice', name.trim());
   expect(invoice.docstatus).toBe(1);
-  expect(
-    invoice.items.map((row: { quantity: number }) => row.quantity)
-  ).toEqual([2, 1]);
+  expect(invoice.items.map((row: { qty: number }) => row.qty)).toEqual([2, 1]);
 });
 
 test('Fix Failed keeps only the rows Frappe could not save', async ({

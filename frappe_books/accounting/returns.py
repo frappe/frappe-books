@@ -7,7 +7,8 @@ from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
-from frappe_books.accounting.money import as_decimal, currency_unit, rounded, sum_decimal
+from frappe_books.accounting.money import as_decimal, currency_unit, sum_decimal
+from frappe_books.inventory.row_fields import row_fields, row_values
 from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.settings import require_feature
 
@@ -15,7 +16,8 @@ from frappe_books.settings import require_feature
 def map_return(invoice_doctype, invoice_name):
 	"""Return an unsaved credit note or purchase return for the whole invoice."""
 	require_feature("enable_invoice_returns")
-	item_doctype = frappe.get_meta(invoice_doctype).get_field("items").options
+	meta = frappe.get_meta(invoice_doctype)
+	item_doctype, tax_doctype = (meta.get_field(fieldname).options for fieldname in ("items", "taxes"))
 	return get_mapped_doc(
 		invoice_doctype,
 		invoice_name,
@@ -25,15 +27,16 @@ def map_return(invoice_doctype, invoice_name):
 				"validation": {"docstatus": ["=", 1]},
 				"field_map": {"name": "return_against"},
 				"field_no_map": [
-					"date",
-					"quotation",
+					"posting_date",
+					"posting_time",
+					"coupon_code",
 					"make_auto_payment",
 					"redeem_loyalty_points",
 					"loyalty_points",
 				],
 			},
 			item_doctype: {"doctype": item_doctype},
-			"Books Applied Coupon Codes": {"doctype": "Books Applied Coupon Codes", "ignore": True},
+			tax_doctype: {"doctype": tax_doctype},
 		},
 		postprocess=_prepare_return,
 	)
@@ -57,11 +60,14 @@ def return_unreturned_rows(original, return_doc):
 	remaining = batch_quantities(original.items)
 	for key, quantity in batch_quantities(returned_rows).items():
 		remaining[key] -= quantity
-	returned_serials = {serial for row in returned_rows for serial in parse_serial_numbers(row.serial_number)}
+	returned_serials = {
+		serial for row in returned_rows for serial in parse_serial_numbers(row_values(row, "serial")[0])
+	}
 	rows = []
 	for row in return_doc.items:
-		key = (row.item, row.batch or "")
-		quantity = min(abs(as_decimal(row.quantity)), remaining[key])
+		item, batch, stock_qty = row_values(row, "item", "batch", "stock_qty")
+		key = (item, batch or "")
+		quantity = min(abs(as_decimal(stock_qty)), remaining[key])
 		remaining[key] -= quantity
 		if quantity > 0:
 			_negate_row(row, quantity, returned_serials)
@@ -70,17 +76,21 @@ def return_unreturned_rows(original, return_doc):
 
 
 def _negate_row(row, quantity, returned_serials):
-	row.quantity = -quantity
-	row.transfer_quantity = -quantity / as_decimal(row.unit_conversion_factor or 1)
-	serials = [serial for serial in parse_serial_numbers(row.serial_number) if serial not in returned_serials]
-	row.serial_number = "\n".join(serials) or None
+	fields = row_fields(row)
+	row.set(fields.stock_qty, -quantity)
+	row.set(fields.qty, -quantity / as_decimal(row.get(fields.factor) or 1))
+	serials = [
+		serial for serial in parse_serial_numbers(row.get(fields.serial)) if serial not in returned_serials
+	]
+	row.set(fields.serial, "\n".join(serials) or None)
 
 
 def set_quantity_signs(rows, is_return):
 	"""A return takes quantities back, so its quantities are negative, and every other document's positive."""
 	sign = -1 if is_return else 1
 	for row in rows:
-		for fieldname in ("quantity", "transfer_quantity"):
+		fields = row_fields(row)
+		for fieldname in (fields.stock_qty, fields.qty):
 			if row.get(fieldname):
 				row.set(fieldname, sign * abs(flt(row.get(fieldname))))
 
@@ -117,25 +127,6 @@ def _validate_value(invoice, original, returns, returned_row_count):
 		frappe.throw(_("Returns against {0} cannot exceed its value of {1}.").format(original.name, billed))
 
 
-def share_fixed_row_discounts(credit_note, original):
-	"""Give each fixed row discount of a return its share of the original's, by quantity."""
-	per_unit = _fixed_discounts_per_unit(original.items)
-	for row in credit_note.items:
-		if row.set_item_discount_amount:
-			share = per_unit[row.item, row.batch] * abs(as_decimal(row.quantity))
-			row.item_discount_amount = rounded(share, credit_note.get("currency"))
-
-
-def _fixed_discounts_per_unit(rows):
-	discounts = defaultdict(as_decimal)
-	quantities = defaultdict(as_decimal)
-	for row in rows:
-		if row.set_item_discount_amount:
-			discounts[row.item, row.batch] += as_decimal(row.item_discount_amount)
-			quantities[row.item, row.batch] += abs(as_decimal(row.quantity))
-	return defaultdict(as_decimal, {key: discounts[key] / quantities[key] for key in discounts})
-
-
 def update_return_status(return_invoice, *, include_current):
 	"""Keep the original invoice's return indicators consistent after submit or cancel."""
 	original = frappe.get_doc(return_invoice.doctype, return_invoice.return_against)
@@ -144,15 +135,11 @@ def update_return_status(return_invoice, *, include_current):
 		returned_rows += return_invoice.items
 	returned_quantities = _item_quantities(returned_rows)
 	original_quantities = _item_quantities(original.items)
-	is_returned = any(returned_quantities.values())
 	is_fully_returned = bool(original_quantities) and all(
 		returned_quantities[item] >= quantity for item, quantity in original_quantities.items()
 	)
 	frappe.db.set_value(
-		original.doctype,
-		original.name,
-		{"is_returned": int(is_returned), "is_fully_returned": int(is_fully_returned)},
-		update_modified=False,
+		original.doctype, original.name, "is_fully_returned", int(is_fully_returned), update_modified=False
 	)
 
 
@@ -171,13 +158,20 @@ def _submitted_returns(original, *, exclude=None):
 			"parentfield": "items",
 			"parent": ["in", [row.name for row in returns]],
 		},
-		fields=["item", "batch", "quantity", "serial_number"],
+		fields=["parenttype", *_returned_fields(original.doctype)],
 	)
 	return returns, rows
+
+
+def _returned_fields(doctype):
+	"""The row fields a return takes back, as the doctype's rows name them."""
+	fields = row_fields({"parenttype": doctype})
+	return [fields.item, fields.batch, fields.stock_qty, fields.serial]
 
 
 def _item_quantities(rows):
 	quantities = defaultdict(as_decimal)
 	for row in rows:
-		quantities[row.item] += abs(as_decimal(row.quantity))
+		item, stock_qty = row_values(row, "item", "stock_qty")
+		quantities[item] += abs(as_decimal(stock_qty))
 	return quantities

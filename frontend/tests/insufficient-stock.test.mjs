@@ -12,16 +12,17 @@ await loadFrappeModels();
 /** Asks the server for the invoice's shortfalls and records the request. */
 async function getShortfalls(items, values = {}) {
   const requests = stubFrappe(() => ({
-    message: [{ item: 'Pen', quantity: 1 }],
+    message: [{ item_code: 'Pen', stock_qty: 1 }],
   }));
   const invoice = newFrappeDoc('SalesInvoice', {
-    date: new Date('2026-01-01T00:00:00Z'),
+    posting_date: new Date('2026-01-01T00:00:00Z'),
+    posting_time: '10:30:00',
     ...values,
   });
-  invoice.items = items.map(([item, quantity, batch]) => ({
-    item,
-    quantity,
-    batch,
+  invoice.items = items.map(([item_code, stock_qty, batch_no]) => ({
+    item_code,
+    stock_qty,
+    batch_no,
   }));
   return { insufficient: await getInsufficientItems(invoice), requests };
 }
@@ -32,7 +33,7 @@ test('the server tells a sale what its rows lack where it ships from, in one req
     ['Ink', 2, 'B1'],
   ]);
 
-  assert.deepEqual(insufficient, [{ item: 'Pen', quantity: 1 }]);
+  assert.deepEqual(insufficient, [{ item_code: 'Pen', stock_qty: 1 }]);
   assert.equal(requests.length, 1);
   assert.equal(
     requests[0].path,
@@ -40,10 +41,11 @@ test('the server tells a sale what its rows lack where it ships from, in one req
   );
   assert.deepEqual(requests[0].body, {
     items: [
-      { item: 'Pen', quantity: 3 },
-      { item: 'Ink', quantity: 2, batch: 'B1' },
+      { item_code: 'Pen', stock_qty: 3 },
+      { item_code: 'Ink', stock_qty: 2, batch_no: 'B1' },
     ],
-    date: '2026-01-01 05:30:00.000',
+    // The stock at the invoice's posting date and time.
+    date: '2026-01-01 10:30:00',
     is_pos: false,
   });
 });

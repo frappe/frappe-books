@@ -109,7 +109,7 @@ test('saving and deleting customizations refresh open documents without losing e
 
 test('customizing a table refreshes the rows of open documents', async () => {
   const invoice = newFrappeDoc('SalesInvoice');
-  invoice.push('items', { item: 'Test Item', quantity: 2 });
+  invoice.push('items', { item_code: 'Test Item', qty: 2 });
   const [row] = invoice.items;
 
   await customize('Books Sales Invoice Item', [
@@ -125,5 +125,5 @@ test('customizing a table refreshes the rows of open documents', async () => {
   ]);
 
   assert.ok(row.fieldMap.custom_books_packingnote);
-  assert.deepEqual([row.item, row.quantity], ['Test Item', 2]);
+  assert.deepEqual([row.item_code, row.qty], ['Test Item', 2]);
 });

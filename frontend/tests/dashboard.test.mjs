@@ -30,8 +30,8 @@ test('paid and unpaid lists show the submitted invoices of the period', () => {
   const filters = (operator) => [
     ['docstatus', '=', 1],
     ['outstanding_amount', operator, 0],
-    ['date', '>=', '2031-09-01'],
-    ['date', '<', '2031-10-01'],
+    ['posting_date', '>=', '2031-09-01'],
+    ['posting_date', '<', '2031-10-01'],
   ];
 
   assert.deepEqual(getInvoiceListFilters(summary, true), filters('='));

@@ -49,7 +49,7 @@ export function getInvoiceListFilters(
   return [
     ['docstatus', '=', 1],
     ['outstanding_amount', paid ? '=' : '!=', 0],
-    ['date', '>=', summary.from_date],
-    ['date', '<', summary.before_date],
+    ['posting_date', '>=', summary.from_date],
+    ['posting_date', '<', summary.before_date],
   ];
 }

@@ -68,7 +68,7 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, f"Coupon Code {OFF}"):
 			self.coupon()
 		with self.assertRaisesRegex(frappe.ValidationError, f"Coupon Code {OFF}"):
-			self.invoice(coupons=[{"coupons": coupon.name}])
+			self.invoice(coupon_code=coupon.name)
 
 	def test_pos_invoices_need_point_of_sale(self):
 		self.switch_off("enable_point_of_sale")

@@ -8,28 +8,42 @@ STANDARD = "Standard"
 
 
 @frappe.whitelist()
-def get_print_options(doctype: str) -> dict:
-	"""The print formats of `doctype`, its default first, and the letter heads with the default one."""
-	frappe.has_permission(doctype, "read", throw=True)
+def get_print_options(doctype: str, name: str | None = None) -> dict:
+	"""The print formats of `doctype`, its default first, and the letter heads with the default one.
+
+	A POS invoice `name` puts its POS Profile's print format first, as Desk does.
+	"""
+	frappe.has_permission(doctype, "read", doc=name, throw=True)
 	letter_heads = get_letter_heads()
 	return {
-		"print_formats": get_print_formats(doctype),
+		"print_formats": get_print_formats(doctype, get_pos_print_format(doctype, name)),
 		"letter_heads": letter_heads,
 		"default_letter_head": get_default_letter_head(letter_heads),
 	}
 
 
-def get_print_formats(doctype: str) -> list[str]:
-	"""Desk's list: "Standard" and the enabled formats by name, the DocType's default first.
+def get_print_formats(doctype: str, default: str | None = None) -> list[str]:
+	"""Desk's list: "Standard" and the enabled formats by name, `default` else the DocType's default first.
 
 	Desk reads them from the DocType's meta, so users who cannot read Print Format see them too.
 	"""
 	names = [STANDARD, *(row.name for row in _enabled_print_formats(doctype) if _is_offered(row))]
-	default = frappe.get_meta(doctype).default_print_format
+	if default not in names:
+		default = frappe.get_meta(doctype).default_print_format
 	if default in names:
 		names.remove(default)
 		names.insert(0, default)
 	return names
+
+
+def get_pos_print_format(doctype: str, name: str | None) -> str | None:
+	"""The print format of a POS invoice's POS Profile."""
+	if doctype != "Sales Invoice" or not name:
+		return None
+
+	is_pos, pos_profile = frappe.db.get_value(doctype, name, ["is_pos", "pos_profile"]) or (0, None)
+	if is_pos and pos_profile:
+		return frappe.db.get_value("POS Profile", pos_profile, "print_format")
 
 
 def _enabled_print_formats(doctype: str) -> list[dict]:

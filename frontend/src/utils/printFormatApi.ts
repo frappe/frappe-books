@@ -25,10 +25,14 @@ export async function getPrintHTML(
   });
 }
 
-export async function getPrintOptions(doctype: string): Promise<PrintOptions> {
+/** ERPNext's print formats and letter heads for the document; a POS invoice's POS Profile format comes first. */
+export async function getPrintOptions(
+  doctype: string,
+  name: string
+): Promise<PrintOptions> {
   return await call<PrintOptions>(
     'frappe_books.accessory.printing.get_print_options',
-    { doctype }
+    { doctype, name }
   );
 }
 

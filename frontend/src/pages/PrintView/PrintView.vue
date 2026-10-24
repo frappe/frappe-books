@@ -442,7 +442,7 @@ export default defineComponent({
       this.setScale();
       try {
         const [options, doc] = await Promise.all([
-          getPrintOptions(this.doctype),
+          getPrintOptions(this.doctype, this.name),
           getFrappeDoc(this.schemaName, this.name),
         ]);
         if (request !== this.templateRequest) {
@@ -452,7 +452,6 @@ export default defineComponent({
         this.doc = doc;
         this.templateList = options.print_formats;
         this.letterHeads = options.letter_heads;
-        // POS invoices too: the POS Profile's print format is not read yet.
         this.templateName = options.print_formats[0];
         this.letterHead = options.default_letter_head ?? '';
         await this.loadPreview();

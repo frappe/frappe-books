@@ -2,6 +2,7 @@
 # See license.txt
 
 import frappe
+from frappe.contacts.doctype.address.address import get_address_display
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.money import company_currency
@@ -11,6 +12,7 @@ from frappe_books.frappe_books.doctype.books_customer.books_customer import make
 from frappe_books.frappe_books.doctype.books_lead import books_lead
 from frappe_books.tests.accounting import (
 	make_account,
+	make_address,
 	make_customer,
 	make_invoice,
 	make_item,
@@ -67,6 +69,16 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		self.assertEqual(
 			(customer.accounts[0].account, customer.default_currency), ("Debtors", company_currency())
 		)
+
+	def test_primary_address_prints_as_the_address_template_renders_it(self):
+		address = make_address(address_line1="7 Hill Road", city="Pune")
+		customer = make_customer(None, customer_primary_address=address.name)
+		self.assertEqual(customer.primary_address, get_address_display(address.name))
+		self.assertIn("7 Hill Road", customer.primary_address)
+
+		customer.customer_primary_address = None
+		customer.save()
+		self.assertIsNone(customer.primary_address)
 
 	def test_customer_account_belongs_to_the_one_company(self):
 		receivable = make_account("Company Receivable", account_type="Receivable")

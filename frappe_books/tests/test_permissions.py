@@ -46,6 +46,7 @@ ROLE_MATRIX = {
 	"Books Customer": (FULL, FULL, FULL),
 	"Books Supplier": (FULL, FULL, FULL),
 	"Books Item": (FULL, FULL, FULL),
+	"Address": (FULL, FULL, FULL),
 	"Books Account": (FULL, FULL, NONE),
 	"Books Tax": (FULL, FULL, READ),
 	"Books Defaults": (FULL, FULL, READ),

@@ -3,7 +3,7 @@
   <div v-if="isMobile" class="flex flex-col gap-4 py-4">
     <template v-for="df in formFields" :key="df.fieldname">
       <Table
-        v-if="df.fieldtype === 'Table'"
+        v-if="df.fieldtype === 'Table' && !df.control"
         ref="controls"
         :df="df"
         :show-label="true"
@@ -33,7 +33,7 @@
     <template v-for="df in formFields">
       <!-- Table Field Form (Eg: PaymentEntryReference) -->
       <Table
-        v-if="df.fieldtype === 'Table'"
+        v-if="df.fieldtype === 'Table' && !df.control"
         :key="`${df.fieldname}-table`"
         ref="controls"
         size="small"

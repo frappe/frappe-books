@@ -247,12 +247,17 @@ const visibleFields = computed(() => {
   return props.fields.filter((field) => hasFieldValue(props.doc, field));
 });
 
+// A Table MultiSelect is a field, not a table of rows.
+function isTable(field: Field) {
+  return field.fieldtype === FieldTypeEnum.Table && !field.control;
+}
+
 function isLineTable(field: Field) {
-  return field.fieldtype === FieldTypeEnum.Table && !field.readOnly;
+  return isTable(field) && !field.readOnly;
 }
 
 function isTotal(field: Field) {
-  if (field.fieldtype === FieldTypeEnum.Table) {
+  if (isTable(field)) {
     return !!field.readOnly;
   }
 

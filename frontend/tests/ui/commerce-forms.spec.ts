@@ -130,10 +130,12 @@ test('a pricing rule shows the fields of its discount scheme', async ({
   await expect(page.getByRole('textbox', { name: 'ID' })).toBeVisible();
   await expect(page.getByText('Free Item', { exact: true })).toBeVisible();
 
-  await page.getByRole('combobox', { name: 'Discount Type' }).click();
-  await page.getByRole('option', { name: 'Price Discount' }).click();
+  await page
+    .getByRole('combobox', { name: 'Price or Product Discount' })
+    .click();
+  await page.getByRole('option', { name: 'Price', exact: true }).click();
   await expect(page.getByText('Free Item', { exact: true })).toBeHidden();
-  await page.getByRole('combobox', { name: 'Price Discount Type' }).click();
+  await page.getByRole('combobox', { name: 'Rate or Discount' }).click();
   await expect(page.getByRole('option')).toHaveText([
     'Rate',
     'Discount Percentage',

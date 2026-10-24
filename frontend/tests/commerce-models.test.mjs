@@ -537,32 +537,32 @@ test('a pricing rule row takes the unit of each item it is given', async () => {
       return { data: [] };
     }
     // As the server's fetch_if_empty: an empty unit is the item's.
-    const table = 'applied_items';
+    const table = 'items';
     const rows = body.document[table].map((row) => {
-      sent.push(row.unit ?? null);
-      return { ...row, unit: row.unit || units[row.item] };
+      sent.push(row.uom ?? null);
+      return { ...row, uom: row.uom || units[row.item_code] };
     });
     return { docs: [{ ...body.document, [table]: rows }] };
   };
-  for (const [schemaName, table] of [['PricingRule', 'applied_items']]) {
+  for (const [schemaName, table] of [['PricingRule', 'items']]) {
     sent.length = 0;
     const doc = newFrappeDoc(schemaName);
-    await doc.append(table, { item: 'Sugar' });
+    await doc.append(table, { item_code: 'Sugar' });
     const row = doc[table][0];
     await doc.preview();
-    assert.equal(row.unit, 'Kg');
+    assert.equal(row.uom, 'Kg');
 
-    await row.set('unit', 'Gram');
+    await row.set('uom', 'Gram');
     await doc.preview();
-    assert.equal(row.unit, 'Gram');
+    assert.equal(row.uom, 'Gram');
 
-    await row.set('item', 'Salt');
+    await row.set('item_code', 'Salt');
     await doc.preview();
-    assert.equal(row.unit, 'Gram');
+    assert.equal(row.uom, 'Gram');
 
-    await row.set('unit', 'Kg');
+    await row.set('uom', 'Kg');
     await doc.preview();
-    assert.equal(row.unit, 'Kg');
+    assert.equal(row.uom, 'Kg');
     assert.deepEqual(sent, [null, 'Gram', null, 'Kg']);
   }
 });
@@ -571,20 +571,20 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
   assert.deepEqual(getLayout('PricingRule').slice(0, 8), [
     'name | ID |  | Default',
     'naming_series | Number Series |  | Default',
-    'is_enabled | Is Pricing Rule Enabled |  | Default',
+    'disable | Disable |  | Default',
     'title | Title |  | Default',
-    'applied_items | Applied Items |  | Items',
-    'discount_type | Discount Type |  | Default',
-    'is_coupon_code_based | Is Coupon Code Based |  | Default',
+    'items | Apply Rule On Item Code |  | Items',
+    'price_or_product_discount | Price or Product Discount |  | Default',
+    'coupon_code_based | Coupon Code Based |  | Default',
     'priority | Priority |  | Default',
   ]);
   const schema = getSchema('PricingRule');
   const field = (fieldname) =>
     schema.fields.find((f) => f.fieldname === fieldname);
   assert.equal(schema.naming, 'numberSeries');
-  assert.equal(field('applied_items').edit, true);
+  assert.equal(field('items').edit, true);
   assert.deepEqual(
-    field('price_discount_type').options.map(({ label }) => label),
+    field('rate_or_discount').options.map(({ label }) => label),
     ['Rate', 'Discount Percentage', 'Discount Amount']
   );
   assert.equal(field('naming_series').setOnlyOnce, true);
@@ -594,11 +594,14 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
       (name) =>
         getSchema(schemaName).fields.find((f) => f.fieldname === name).create
     );
-  assert.deepEqual(creates('PricingRule', ['free_item', 'free_item_unit']), [
+  assert.deepEqual(creates('PricingRule', ['free_item', 'free_item_uom']), [
     false,
     false,
   ]);
-  assert.deepEqual(creates('PricingRuleItem', ['item', 'unit']), [false, true]);
+  assert.deepEqual(creates('PricingRuleItemCode', ['item_code', 'uom']), [
+    false,
+    true,
+  ]);
   assert.deepEqual(creates('ItemPrice', ['item_code', 'uom']), [true, false]);
 
   const rule = newFrappeDoc('PricingRule');
@@ -610,47 +613,47 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
       )
       .filter((f) => !hidden(rule, f.fieldname))
       .map((f) => f.fieldname);
-  await rule.set('discount_type', 'Price Discount');
-  await rule.set('price_discount_type', 'percentage');
+  await rule.set('price_or_product_discount', 'Price');
+  await rule.set('rate_or_discount', 'Discount Percentage');
   assert.deepEqual(shown().slice(0, 2), [
-    'price_discount_type',
+    'rate_or_discount',
     'discount_percentage',
   ]);
   assert.equal(
-    rule.getFieldState(rule.fieldMap.price_discount_type).required,
+    rule.getFieldState(rule.fieldMap.rate_or_discount).required,
     true
   );
-  await rule.set('discount_type', 'Product Discount');
+  await rule.set('price_or_product_discount', 'Product');
   await rule.set('is_recursive', true);
   assert.deepEqual(shown().slice(0, 6), [
     'free_item',
-    'free_item_quantity',
-    'free_item_unit',
-    'round_free_item_qty',
+    'free_qty',
+    'free_item_uom',
+    'round_free_qty',
     'is_recursive',
-    'recurse_every',
+    'recurse_for',
   ]);
   assert.equal(
-    rule.getFieldState(rule.fieldMap.price_discount_type).required,
+    rule.getFieldState(rule.fieldMap.rate_or_discount).required,
     false
   );
 });
 
 test('pricing rule limits show the message /books showed at each field', async () => {
-  const rule = newFrappeDoc('PricingRule', { max_quantity: 5 });
-  await assert.rejects(rule.set('min_quantity', 6), {
+  const rule = newFrappeDoc('PricingRule', { max_qty: 5 });
+  await assert.rejects(rule.set('min_qty', 6), {
     message: 'Minimum Quantity should be less than the Maximum Quantity.',
   });
-  await rule.set('max_quantity', 0);
-  await rule.set('min_quantity', 6);
-  await assert.rejects(rule.set('max_quantity', 5), {
+  await rule.set('max_qty', 0);
+  await rule.set('min_qty', 6);
+  await assert.rejects(rule.set('max_qty', 5), {
     message: 'Maximum Quantity should be greater than the Minimum Quantity.',
   });
-  await rule.set('max_amount', fyo.pesa(10));
-  await assert.rejects(rule.set('min_amount', fyo.pesa(10)), {
+  await rule.set('max_amt', fyo.pesa(10));
+  await assert.rejects(rule.set('min_amt', fyo.pesa(10)), {
     message: 'Minimum Amount should be less than the Maximum Amount.',
   });
-  await rule.set('valid_to', new Date('2026-01-01'));
+  await rule.set('valid_upto', new Date('2026-01-01'));
   await assert.rejects(rule.set('valid_from', new Date('2026-02-01')), {
     message: 'Valid From Date should be less than Valid To Date.',
   });
@@ -658,7 +661,7 @@ test('pricing rule limits show the message /books showed at each field', async (
 
 test('coupon and invoice links filter pricing rules and price lists by Frappe fieldnames', () => {
   assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), [
-    ['is_coupon_code_based', '=', 1],
+    ['coupon_code_based', '=', 1],
   ]);
   assert.deepEqual(frappeModels.SalesInvoice.filters.selling_price_list(), [
     ['enabled', '=', 1],
@@ -670,22 +673,23 @@ test('coupon and invoice links filter pricing rules and price lists by Frappe fi
   ]);
 });
 
-test('the coupon form shows what it showed and names a new coupon from its name', async () => {
+test('the coupon form shows what it showed and makes a new coupon a code from its name', async () => {
   assert.deepEqual(getLayout('CouponCode'), [
-    'name | Coupon Code |  | Default',
-    'coupon_name | Name | Coupon Name | Default',
+    'coupon_name | Coupon Name |  | Default',
+    'coupon_type | Coupon Type |  | Default',
+    'coupon_code | Coupon Code |  | Default',
     'is_enabled | Is Enabled |  | Default',
     'pricing_rule | Pricing Rule |  | Default',
-    'min_amount | Min Amount |  | Amount',
-    'max_amount | Max Amount |  | Amount',
+    'min_amt | Min Amt |  | Amount',
+    'max_amt | Max Amt |  | Amount',
     'valid_from | Valid From |  | Validity and Usage',
-    'valid_to | Valid To |  | Validity and Usage',
+    'valid_upto | Valid Up To |  | Validity and Usage',
     'maximum_use | Maximum Use |  | Validity and Usage',
     'used | Used |  | Validity and Usage',
   ]);
   assert.deepEqual(getColumns('CouponCode'), [
     'name',
-    'coupon_name',
+    'coupon_code',
     'pricing_rule',
     'maximum_use',
     'used',
@@ -697,21 +701,27 @@ test('the coupon form shows what it showed and names a new coupon from its name'
 
   const coupon = newFrappeDoc('CouponCode');
   await coupon.set('coupon_name', 'Save Twenty Five');
-  assert.equal(coupon.name, 'SAVETWEN');
+  assert.equal(coupon.coupon_code, 'SAVETWEN');
+  await coupon.set('coupon_name', 'Spring Sale');
+  assert.equal(coupon.coupon_code, 'SPRINGSA');
+  await coupon.set('coupon_code', 'SPRING');
+  await coupon.set('coupon_name', 'Spring Offer');
+  assert.equal(coupon.coupon_code, 'SPRING');
   await loadSaved(coupon);
+  await coupon.set('coupon_code', '');
   await coupon.set('coupon_name', 'Other');
-  assert.equal(coupon.name, 'SAVETWEN');
+  assert.equal(coupon.coupon_code, '');
 });
 
 test('a coupon code leaves its amount and date rules to the server', async () => {
   const coupon = newFrappeDoc('CouponCode', {
     pricing_rule: 'Promotion',
     valid_from: new Date('2026-06-01'),
-    min_amount: fyo.pesa(20),
+    min_amt: fyo.pesa(20),
   });
-  await coupon.set('valid_to', new Date('2026-05-01'));
-  await coupon.set('max_amount', fyo.pesa(5));
-  assert.equal(coupon.max_amount.float, 5);
+  await coupon.set('valid_upto', new Date('2026-05-01'));
+  await coupon.set('max_amt', fyo.pesa(5));
+  assert.equal(coupon.max_amt.float, 5);
 });
 
 test('the loyalty program form and list show what they showed', async () => {

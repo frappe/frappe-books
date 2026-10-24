@@ -1,17 +1,17 @@
 import { ChangeArg, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 
-/** Books Coupon Code, served by Frappe. The server names a coupon from its name. */
+/** Books Coupon Code, served by Frappe. A coupon is named by its name; cashiers type its code. */
 export class CouponCode extends FrappeDoc {
   static override doctype = 'Books Coupon Code';
   static override presentation = {
     label: 'Coupon Code',
-    nameField: { label: 'Coupon Code' },
     quickEditFields: [
-      'name',
+      'coupon_name',
+      'coupon_code',
       'pricing_rule',
       'valid_from',
-      'valid_to',
+      'valid_upto',
       'maximum_use',
       'used',
     ],
@@ -19,27 +19,35 @@ export class CouponCode extends FrappeDoc {
   };
 
   coupon_name?: string;
+  coupon_code?: string;
+  /** The code last made from the name, which a new name replaces. */
+  _nameCode?: string;
 
   override async change(change: ChangeArg) {
     await super.change(change);
-    // Mirrors the server's naming, so a new coupon shows its code as its name is typed.
-    const code = this.coupon_name
-      ?.replace(/\s+/g, '')
-      .toUpperCase()
-      .slice(0, 8);
-    if (change.changed === 'coupon_name' && this.notInserted && code) {
-      this.name = code;
+    // Mirrors the server, which gives a coupon without a code one made from its name.
+    const isNameCode = !this.coupon_code || this.coupon_code === this._nameCode;
+    if (change.changed !== 'coupon_name' || !this.notInserted || !isNameCode) {
+      return;
     }
+
+    this._nameCode = getCouponCode(this.coupon_name);
+    this.coupon_code = this._nameCode;
   }
 
   // Pricing rules are Frappe-backed, so their filters use Frappe fieldnames.
   static filters: FiltersMap = {
-    pricing_rule: () => [['is_coupon_code_based', '=', 1]],
+    pricing_rule: () => [['coupon_code_based', '=', 1]],
   };
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'coupon_name', 'pricing_rule', 'maximum_use', 'used'],
+      columns: ['name', 'coupon_code', 'pricing_rule', 'maximum_use', 'used'],
     };
   }
+}
+
+/** Books' code for a coupon name: no spaces, upper case, at most 8 letters. */
+function getCouponCode(name = ''): string {
+  return name.replace(/\s+/g, '').toUpperCase().slice(0, 8);
 }

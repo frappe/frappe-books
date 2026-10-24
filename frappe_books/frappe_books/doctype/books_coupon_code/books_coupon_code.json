@@ -2,7 +2,7 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:coupon_name",
  "creation": "2026-08-27 22:09:39.635266",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -10,14 +10,16 @@
  "field_order": [
   "default_section_break_1",
   "coupon_name",
+  "coupon_type",
+  "coupon_code",
   "is_enabled",
   "pricing_rule",
   "amount_section_break_5",
-  "min_amount",
-  "max_amount",
+  "min_amt",
+  "max_amt",
   "validity_and_usage_section_break_8",
   "valid_from",
-  "valid_to",
+  "valid_upto",
   "maximum_use",
   "used"
  ],
@@ -28,12 +30,30 @@
    "label": "Default"
   },
   {
+   "description": "e.g. \"Summer Holiday 2019 Offer 20\"",
    "fieldname": "coupon_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Name",
-   "placeholder": "Coupon Name",
+   "label": "Coupon Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Promotional",
+   "fieldname": "coupon_type",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Coupon Type",
+   "options": "Promotional\nGift Card",
    "reqd": 1
+  },
+  {
+   "description": "Filled from the coupon name when empty. Cashiers type it to apply the coupon.",
+   "fieldname": "coupon_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Coupon Code",
+   "unique": 1
   },
   {
    "default": "1",
@@ -57,14 +77,14 @@
    "label": "Amount"
   },
   {
-   "fieldname": "min_amount",
+   "fieldname": "min_amt",
    "fieldtype": "Currency",
-   "label": "Min Amount"
+   "label": "Min Amt"
   },
   {
-   "fieldname": "max_amount",
+   "fieldname": "max_amt",
    "fieldtype": "Currency",
-   "label": "Max Amount"
+   "label": "Max Amt"
   },
   {
    "fieldname": "validity_and_usage_section_break_8",
@@ -79,9 +99,9 @@
    "reqd": 1
   },
   {
-   "fieldname": "valid_to",
+   "fieldname": "valid_upto",
    "fieldtype": "Date",
-   "label": "Valid To",
+   "label": "Valid Up To",
    "reqd": 1
   },
   {
@@ -103,10 +123,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Coupon Code",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -144,6 +165,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "coupon_code",
  "show_name_in_global_search": 1,
  "sort_field": "creation",
  "sort_order": "DESC",

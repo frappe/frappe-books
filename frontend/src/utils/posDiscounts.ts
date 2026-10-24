@@ -1,4 +1,5 @@
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
+import { getList } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
 
 /** Whether the POS offers coupons on the sale: the feature is on and its totals can still change. */
@@ -28,6 +29,16 @@ export function isPriceListOffered(sale: SalesInvoice): boolean {
 /** Whether the cashier can apply a coupon now; the server checks it again at save. */
 export function canApplyCoupon(sale: SalesInvoice): boolean {
   return isCouponOffered(sale) && hasItemsAndCustomer(sale);
+}
+
+/** The coupon a typed code is for, as ERPNext looks codes up; else `code` names the coupon. */
+export async function getCouponName(code: string): Promise<string> {
+  const [coupon] = await getList('Books Coupon Code', {
+    fields: ['name'],
+    filters: [['coupon_code', '=', code]],
+    limit: 1,
+  });
+  return (coupon?.name as string | undefined) ?? code;
 }
 
 /** Whether the cashier can redeem points now: also needs points left. */

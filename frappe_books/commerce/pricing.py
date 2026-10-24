@@ -33,10 +33,10 @@ def row_pricing_rule(row):
 
 def is_rule_priced(row, field):
 	"""Whether the row's pricing rule sets its "rate" or its "discount"."""
-	price_type = _price_discount_type(row_pricing_rule(row))
+	price_type = _rate_or_discount(row_pricing_rule(row))
 	if field == "rate":
-		return price_type == "rate"
-	return price_type in ("percentage", "amount")
+		return price_type == "Rate"
+	return price_type in ("Discount Percentage", "Discount Amount")
 
 
 def _reset_pricing(invoice):
@@ -48,12 +48,13 @@ def _reset_pricing(invoice):
 			_reset_row(row)
 
 
-def _price_discount_type(rule_name):
-	"""Return what a price discount rule changes: rate, percentage or amount; None for other rules."""
+def _rate_or_discount(rule_name):
+	"""Return what a price discount rule changes: its Rate, Discount Percentage or Discount Amount;
+	None for other rules."""
 	rule = rule_name and frappe.get_cached_value(
-		"Books Pricing Rule", rule_name, ["discount_type", "price_discount_type"], as_dict=True
+		"Books Pricing Rule", rule_name, ["price_or_product_discount", "rate_or_discount"], as_dict=True
 	)
-	return rule.price_discount_type if rule and rule.discount_type == "Price Discount" else None
+	return rule.rate_or_discount if rule and rule.price_or_product_discount == "Price" else None
 
 
 def price_list(invoice):
@@ -141,13 +142,13 @@ def pos_setting(fieldname):
 
 
 def _reset_row(row):
-	price_type = _price_discount_type(row_pricing_rule(row))
+	price_type = _rate_or_discount(row_pricing_rule(row))
 	row.pricing_rules = None
-	if price_type == "rate" and not row.is_manual_rate:
+	if price_type == "Rate" and not row.is_manual_rate:
 		row.price_list_rate = None
-	elif price_type == "percentage":
+	elif price_type == "Discount Percentage":
 		row.discount_percentage = 0
-	elif price_type == "amount":
+	elif price_type == "Discount Amount":
 		row.discount_amount = 0
 
 
@@ -172,35 +173,37 @@ def _apply_pricing(invoice, drop_invalid_coupons):
 def _apply_rules(invoice, rows, coupons):
 	"""Apply each row's best rule, and each item's free row once; return the (item, rule name)s applied."""
 	candidates = _candidate_rules(rows)
-	quantities, amounts = _rule_totals(rows, candidates)
+	totals = _rule_totals(rows, candidates)
 	applied = {}
 	for row in rows:
 		rules = candidates[row.item_code, row.uom]
-		rule = _best_rule(invoice, row.item_code, quantities, amounts, rules, coupons)
+		rule = _best_rule(invoice, row.item_code, totals, rules, coupons)
 		if rule:
 			_apply_rule(invoice, row, rule)
 			applied[row.item_code, rule.name] = rule
 	for key, rule in applied.items():
 		invoice.append("pricing_rules", {"pricing_rule": rule.name, "item_code": key[0]})
-		if rule.discount_type == "Product Discount":
-			_append_free_item(invoice, rule, quantities[key])
+		if rule.price_or_product_discount == "Product":
+			_append_free_item(invoice, rule, totals[key].qty)
 	return applied
 
 
 def _rule_totals(rows, candidates):
-	"""Sum, by (item, rule name), the stock quantity and amount of the item's rows in the rule's units."""
-	quantities = defaultdict(Decimal)
-	amounts = defaultdict(Decimal)
+	"""Sum, by (item, rule name), the quantity, stock quantity and amount of the item's rows in the
+	rule's units. Rules match rows by unit, so the quantities share one unit."""
+	totals = defaultdict(lambda: frappe._dict(qty=Decimal(0), stock_qty=Decimal(0), amount=Decimal(0)))
 	for row in rows:
 		for rule in candidates[row.item_code, row.uom]:
-			quantities[row.item_code, rule.name] += as_decimal(row.stock_qty)
-			amounts[row.item_code, rule.name] += _row_value(row)
-	return quantities, amounts
+			total = totals[row.item_code, rule.name]
+			total.qty += as_decimal(row.qty)
+			total.stock_qty += as_decimal(row.stock_qty)
+			total.amount += _row_value(row)
+	return totals
 
 
 def _apply_rule(invoice, row, rule):
 	row.pricing_rules = json.dumps([rule.name])
-	if rule.discount_type == "Price Discount":
+	if rule.price_or_product_discount == "Price":
 		_apply_price_discount(invoice, row, rule)
 
 
@@ -250,34 +253,34 @@ def _reject_coupon(invoice, message, drop):
 
 
 def _candidate_rules(rows):
-	"""Return enabled rules keyed by the (item, unit) they apply to; a row's unit is its transfer unit."""
+	"""Return enabled rules keyed by the (item, unit) they apply to; a row's unit is its transaction unit."""
 	links = frappe.get_all(
-		"Books Pricing Rule Item",
-		filters={"item": ["in", list({row.item_code for row in rows})]},
-		fields=["parent", "item", "unit"],
+		"Books Pricing Rule Item Code",
+		filters={"item_code": ["in", list({row.item_code for row in rows})]},
+		fields=["parent", "item_code", "uom"],
 	)
 	if not links:
 		return defaultdict(list)
 	rules = frappe.get_all(
 		"Books Pricing Rule",
-		filters={"name": ["in", list({link.parent for link in links})], "is_enabled": 1},
+		filters={"name": ["in", list({link.parent for link in links})], "disable": 0},
 		fields=["*"],
 	)
 	rules = {rule.name: rule for rule in rules}
 	candidates = defaultdict(dict)
 	for link in links:
 		if link.parent in rules:
-			candidates[link.item, link.unit][link.parent] = rules[link.parent]
+			candidates[link.item_code, link.uom][link.parent] = rules[link.parent]
 	return defaultdict(list, {key: list(value.values()) for key, value in candidates.items()})
 
 
-def _best_rule(invoice, item, quantities, amounts, rules, coupons):
+def _best_rule(invoice, item, totals, rules, coupons):
 	"""Return the highest-priority rule whose `_rule_totals` for the item qualify."""
 	rules = [
 		rule
 		for rule in rules
-		if bool(rule.is_coupon_code_based) == (rule.name in coupons)
-		and _qualifies(invoice, rule, quantities[item, rule.name], amounts[item, rule.name])
+		if bool(rule.coupon_code_based) == (rule.name in coupons)
+		and _qualifies(invoice, rule, totals[item, rule.name])
 	]
 	if not rules:
 		return None
@@ -291,11 +294,11 @@ def _best_rule(invoice, item, quantities, amounts, rules, coupons):
 	return rules[0]
 
 
-def _qualifies(invoice, rule, quantity, amount):
-	"""The quantity and amount are within the rule's limits, and a product discount gives something."""
-	amount = _in_company_currency(invoice, amount)
-	return _within_limits(rule, invoice.document_date, amount, quantity) and (
-		rule.discount_type == "Price Discount" or _free_quantity(rule, quantity) > 0
+def _qualifies(invoice, rule, total):
+	"""The stock quantity and amount are within the rule's limits, and a product discount gives something."""
+	amount = _in_company_currency(invoice, total.amount)
+	return _within_limits(rule, invoice.document_date, amount, total.stock_qty) and (
+		rule.price_or_product_discount == "Price" or _free_quantity(rule, total.qty) > 0
 	)
 
 
@@ -309,13 +312,13 @@ def _in_company_currency(invoice, amount):
 
 
 def _apply_price_discount(invoice, row, rule):
-	if rule.price_discount_type == "rate":
+	if rule.rate_or_discount == "Rate":
 		# The rule rate is per the row's unit, which the rule matched, as the row's rate is.
 		if not row.is_manual_rate:
-			row.price_list_rate = in_invoice_currency(invoice, rule.discount_rate)
-	elif rule.price_discount_type == "percentage":
+			row.price_list_rate = in_invoice_currency(invoice, rule.rate)
+	elif rule.rate_or_discount == "Discount Percentage":
 		row.discount_percentage = rule.discount_percentage
-	elif rule.price_discount_type == "amount":
+	elif rule.rate_or_discount == "Discount Amount":
 		# The rule takes its amount off the row, at most the row's amount; rows hold it per unit.
 		row.discount_percentage = 0
 		row_amount = abs(_row_value(row))
@@ -327,11 +330,11 @@ def _apply_price_discount(invoice, row, rule):
 
 
 def _free_quantity(rule, quantity):
-	"""Return the free quantity a product discount gives for `quantity` stock units of its item."""
-	free_quantity = as_decimal(rule.free_item_quantity)
+	"""Return the free quantity a product discount gives for `quantity` of its item, in the matched unit."""
+	free_quantity = as_decimal(rule.free_qty)
 	if rule.is_recursive:
-		free_quantity *= quantity / as_decimal(rule.recurse_every)
-	if rule.round_free_item_qty:
+		free_quantity *= quantity / as_decimal(rule.recurse_for)
+	if rule.round_free_qty:
 		rounding = {
 			"floor": ROUND_FLOOR,
 			"ceil": ROUND_CEILING,
@@ -346,7 +349,7 @@ def _append_free_item(invoice, rule, quantity):
 		"items",
 		{
 			"item_code": rule.free_item,
-			"uom": rule.free_item_unit,
+			"uom": rule.free_item_uom,
 			"qty": _free_quantity(rule, quantity),
 			"price_list_rate": 0,
 			"is_free_item": 1,
@@ -366,18 +369,18 @@ def _within_limits(record, date, amount, quantity=None):
 	amount = as_decimal(amount)
 	if quantity is not None:
 		quantity = as_decimal(quantity)
-		if as_decimal(record.min_quantity) > 0 and quantity < as_decimal(record.min_quantity):
+		if as_decimal(record.min_qty) > 0 and quantity < as_decimal(record.min_qty):
 			return False
-		if as_decimal(record.max_quantity) > 0 and quantity > as_decimal(record.max_quantity):
+		if as_decimal(record.max_qty) > 0 and quantity > as_decimal(record.max_qty):
 			return False
-	if as_decimal(record.min_amount) > 0 and amount < as_decimal(record.min_amount):
+	if as_decimal(record.min_amt) > 0 and amount < as_decimal(record.min_amt):
 		return False
-	if as_decimal(record.max_amount) > 0 and amount > as_decimal(record.max_amount):
+	if as_decimal(record.max_amt) > 0 and amount > as_decimal(record.max_amt):
 		return False
 	date = frappe.utils.getdate(date)
 	return not (
 		(record.valid_from and date < frappe.utils.getdate(record.valid_from))
-		or (record.valid_to and date > frappe.utils.getdate(record.valid_to))
+		or (record.valid_upto and date > frappe.utils.getdate(record.valid_upto))
 	)
 
 

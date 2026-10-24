@@ -141,11 +141,11 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 			{
 				"doctype": "Books Pricing Rule",
 				"title": unique_name("Promotion"),
-				"applied_items": [{"item": self.item.name}],
-				"discount_type": "Price Discount",
-				"price_discount_type": "amount",
+				"items": [{"item_code": self.item.name}],
+				"price_or_product_discount": "Price",
+				"rate_or_discount": "Discount Amount",
 				"discount_amount": 10,
-				"is_coupon_code_based": 1,
+				"coupon_code_based": 1,
 			}
 		).insert()
 		return frappe.get_doc(
@@ -154,7 +154,7 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 				"coupon_name": unique_name("Coupon"),
 				"pricing_rule": rule.name,
 				"valid_from": nowdate(),
-				"valid_to": add_days(nowdate(), 1),
+				"valid_upto": add_days(nowdate(), 1),
 			}
 		).insert()
 

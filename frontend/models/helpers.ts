@@ -412,14 +412,15 @@ export function getPriceListStatusColumn(): ColumnConfig {
   };
 }
 
-/** A badge of whether the document is enabled, by its check `fieldname`. */
+/** A badge of whether the document is enabled, by its check `fieldname`, or by ERPNext's `disable` check. */
 export function getIsDocEnabledColumn(fieldname = 'is_enabled'): ColumnConfig {
+  const isDisableField = fieldname === 'disable';
   return {
     label: t`Enabled`,
     fieldname: 'enabled',
     fieldtype: 'Data',
     badge(doc) {
-      if (doc[fieldname]) {
+      if (isDisableField !== !!doc[fieldname]) {
         return { theme: 'green', label: t`Enabled` };
       }
 

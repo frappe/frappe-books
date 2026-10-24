@@ -163,14 +163,14 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		bundle_item = make_item(self.income.name, self.expense.name, standard_rate=50)
 		price_list = make_price_list((self.item.name, "Unit", 80))
 		coupon_rule = self._pricing_rule(
-			self.item, is_coupon_code_based=1, price_discount_type="percentage", discount_percentage=25
+			self.item, coupon_code_based=1, rate_or_discount="Discount Percentage", discount_percentage=25
 		)
 		self._pricing_rule(
 			bundle_item,
-			discount_type="Product Discount",
+			price_or_product_discount="Product",
 			free_item=free_item.name,
-			free_item_quantity=1,
-			free_item_unit="Unit",
+			free_qty=1,
+			free_item_uom="Unit",
 		)
 		coupon = frappe.get_doc(
 			{
@@ -178,7 +178,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 				"coupon_name": frappe.generate_hash(length=8),
 				"pricing_rule": coupon_rule.name,
 				"valid_from": add_days(nowdate(), -1),
-				"valid_to": add_days(nowdate(), 1),
+				"valid_upto": add_days(nowdate(), 1),
 			}
 		).insert()
 		return {
@@ -197,8 +197,8 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 			{
 				"doctype": "Books Pricing Rule",
 				"title": unique_name("Preview Rule"),
-				"applied_items": [{"item": item.name, "unit": "Unit"}],
-				"discount_type": "Price Discount",
+				"items": [{"item_code": item.name, "uom": "Unit"}],
+				"price_or_product_discount": "Price",
 				"priority": "10",
 				**values,
 			}

@@ -87,7 +87,10 @@ const records: Record<string, Row[]> = {
     },
   ],
   'Books Price List': [{ name: 'Retail' }, { name: 'Members' }],
-  'Books Coupon Code': [{ name: 'FOSSCLUB' }, { name: 'EXPIRED' }],
+  'Books Coupon Code': [
+    { name: 'FOSSCLUB', coupon_code: 'FOSSCLUB' },
+    { name: 'EXPIRED', coupon_code: 'EXPIRED' },
+  ],
   'Books Batch': [coffeeBatch],
   'Books POS Opening Entry': [openingShift],
   'Books Sales Invoice': [

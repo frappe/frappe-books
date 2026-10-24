@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksPricingRuleItem(Document):
+class BooksPricingRuleItemCode(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -14,11 +14,11 @@ class BooksPricingRuleItem(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		item: DF.Link
+		item_code: DF.Link
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		unit: DF.Link | None
+		uom: DF.Link | None
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Pricing Rule Item"
+	_DOCTYPE_NAME = "Books Pricing Rule Item Code"

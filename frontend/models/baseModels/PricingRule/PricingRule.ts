@@ -6,11 +6,11 @@ import { getIsDocEnabledColumn } from 'models/helpers';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 import { withoutCreate } from 'src/frappe/schema';
-import { PricingRuleItem } from '../PricingRuleItem/PricingRuleItem';
+import { PricingRuleItemCode } from '../PricingRuleItemCode/PricingRuleItemCode';
 
 /**
  * Books Pricing Rule, served by Frappe. The DocType shows each discount
- * scheme's fields; its preview fills each applied item's unit.
+ * scheme's fields; its preview fills each item's UOM.
  */
 export class PricingRule extends FrappeDoc {
   static override doctype = 'Books Pricing Rule';
@@ -18,63 +18,56 @@ export class PricingRule extends FrappeDoc {
     label: 'Pricing Rule',
     nameField: { label: 'ID' },
     fields: {
-      applied_items: { edit: true },
-      price_discount_type: {
-        optionLabels: {
-          rate: 'Rate',
-          percentage: 'Discount Percentage',
-          amount: 'Discount Amount',
-        },
-      },
+      items: { edit: true },
       rounding_method: {
         optionLabels: { floor: 'Floor', round: 'Round', ceil: 'Ceil' },
       },
-      ...withoutCreate(['free_item', 'free_item_unit']),
+      ...withoutCreate(['free_item', 'free_item_uom']),
     },
   };
   static override previewMethod = 'preview';
-  static override rowModels = { applied_items: PricingRuleItem };
+  static override rowModels = { items: PricingRuleItemCode };
 
-  min_quantity?: number;
-  max_quantity?: number;
-  min_amount?: Money;
-  max_amount?: Money;
+  min_qty?: number;
+  max_qty?: number;
+  min_amt?: Money;
+  max_amt?: Money;
   valid_from?: Date;
-  valid_to?: Date;
+  valid_upto?: Date;
 
   // The server checks these too, with the message of the edited field.
   validations: ValidationMap = {
-    min_quantity: (value: DocValue) =>
+    min_qty: (value: DocValue) =>
       validateQuantities(
         value as number,
-        this.max_quantity,
+        this.max_qty,
         t`Minimum Quantity should be less than the Maximum Quantity.`
       ),
-    max_quantity: (value: DocValue) =>
+    max_qty: (value: DocValue) =>
       validateQuantities(
-        this.min_quantity,
+        this.min_qty,
         value as number,
         t`Maximum Quantity should be greater than the Minimum Quantity.`
       ),
-    min_amount: (value: DocValue) =>
+    min_amt: (value: DocValue) =>
       validateAmounts(
         value as Money,
-        this.max_amount,
+        this.max_amt,
         t`Minimum Amount should be less than the Maximum Amount.`
       ),
-    max_amount: (value: DocValue) =>
+    max_amt: (value: DocValue) =>
       validateAmounts(
-        this.min_amount,
+        this.min_amt,
         value as Money,
         t`Maximum Amount should be greater than the Minimum Amount.`
       ),
     valid_from: (value: DocValue) =>
       validateDates(
         value as Date,
-        this.valid_to,
+        this.valid_upto,
         t`Valid From Date should be less than Valid To Date.`
       ),
-    valid_to: (value: DocValue) =>
+    valid_upto: (value: DocValue) =>
       validateDates(
         this.valid_from,
         value as Date,
@@ -83,13 +76,18 @@ export class PricingRule extends FrappeDoc {
   };
 
   hidden: HiddenMap = {
-    is_coupon_code_based: () =>
+    coupon_code_based: () =>
       !this.fyo.singles.AccountingSettings?.enable_coupon_code,
   };
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'title', getIsDocEnabledColumn(), 'discount_type'],
+      columns: [
+        'name',
+        'title',
+        getIsDocEnabledColumn('disable'),
+        'price_or_product_discount',
+      ],
     };
   }
 }

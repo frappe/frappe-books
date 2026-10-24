@@ -85,6 +85,7 @@ import {
   ErrorMessage as FrappeErrorMessage,
 } from 'frappe-ui';
 import { getErrorMessage } from 'src/utils';
+import { getCouponName } from 'src/utils/posDiscounts';
 import { isMobile } from 'src/utils/viewport';
 
 export default defineComponent({
@@ -148,7 +149,7 @@ export default defineComponent({
         }
 
         this.couponCode = value as string;
-        await this.applyCoupon(this.couponCode);
+        await this.applyCoupon(await getCouponName(this.couponCode));
         this.couponCode = '';
       } catch (error) {
         this.errorMessage = getErrorMessage(error as Error);

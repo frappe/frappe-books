@@ -2,7 +2,7 @@ import type { Feature } from 'fyo/utils/features';
 import { Fyo, t } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
-import { reports } from 'reports';
+import { getReports } from 'reports';
 import { OptionField } from 'schemas/types';
 import type { DocValues } from 'src/frappe/api';
 import { getAllSchemaNames, getField, getSchema } from 'src/frappe/registry';
@@ -113,27 +113,22 @@ function getCreateList(fyo: Fyo): SearchItem[] {
 function getReportList(fyo: Fyo): SearchItem[] {
   const hasGstin = !!fyo.singles?.AccountingSettings?.gstin;
   const hasInventory = fyo.isFeatureOn('enable_inventory');
-  const reportNames = Object.keys(reports) as (keyof typeof reports)[];
-  return reportNames
-    .filter((r) => {
-      const report = reports[r];
-      if (report.isInventory && !hasInventory) {
+  return Object.entries(getReports())
+    .filter(([, report]) => {
+      if (!report || (report.isInventory && !hasInventory)) {
         return false;
       }
 
-      if (report.title.startsWith('GST') && !hasGstin) {
-        return false;
-      }
-      return true;
+      return !report.title.startsWith('GST') || hasGstin;
     })
-    .map((r) => {
-      const report = reports[r];
-      return {
-        label: report.title,
-        route: `/report/${r}`,
-        group: 'Report',
-      } as SearchItem;
-    })
+    .map(
+      ([name, report]) =>
+        ({
+          label: report!.title,
+          route: `/report/${name}`,
+          group: 'Report',
+        }) as SearchItem
+    )
     .filter((item) => canOpen(item.route!));
 }
 

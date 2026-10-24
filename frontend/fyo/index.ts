@@ -19,7 +19,7 @@ import {
   type Permissions,
 } from './utils/permissions';
 import { t, T } from './utils/translation';
-import type { reports } from 'reports/index';
+import type { ReportName } from 'reports/index';
 import type { Report } from 'reports/Report';
 import type { ChartOfAccounts } from 'utils/types';
 
@@ -136,7 +136,7 @@ export class Fyo {
     chartsOfAccounts: [] as ChartOfAccounts[],
     // GST state codes and names, from the server
     indianStates: {} as Record<string, string>,
-    reports: {} as Record<keyof typeof reports, Report | undefined>,
+    reports: {} as Partial<Record<ReportName, Report>>,
   };
 }
 

@@ -9,6 +9,7 @@ import {
 } from 'fyo/model/types';
 import { canOpenLedger, getMappedDocAction } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
+import { getReports } from 'reports';
 import type { Field } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 import type { Presentation } from 'src/frappe/schema';
@@ -220,9 +221,10 @@ function getGeneralLedgerAction(fyo: Fyo): Action {
       doc.inserted && canOpenLedger('GeneralLedger'),
     action: async (partyDoc, router) => {
       // The party type first: a new party type clears the party.
+      const [typeFilter, nameFilter] = getReports().GeneralLedger!.partyFilters;
       const filters = {
-        partyType: partyDoc.doctype,
-        party: partyDoc.name,
+        [typeFilter]: partyDoc.doctype,
+        [nameFilter]: partyDoc.name,
       };
       await router.push({
         path: '/report/GeneralLedger',

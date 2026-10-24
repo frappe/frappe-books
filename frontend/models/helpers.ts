@@ -20,7 +20,7 @@ import { getDocType } from 'src/frappe/doctypes';
 import { getMappedDoc } from 'src/frappe/documents';
 import { toFrappeValue } from 'src/frappe/values';
 import { DateTime } from 'luxon';
-import { reports } from 'reports';
+import { getReports } from 'reports';
 import { canOpenReport } from 'reports/serverReport';
 
 // POS.vue imports it from here.
@@ -236,25 +236,25 @@ export function getLedgerLinkAction(fyo: Fyo, isStock = false): Action {
 
 /** Whether the user may open the ledger report. */
 export function canOpenLedger(reportClassName: LedgerReport): boolean {
-  return canOpenReport(reports[reportClassName].serverReportName);
+  const report = getReports()[reportClassName];
+  return !!report && canOpenReport(report.serverReportName);
 }
 
 /** The report of the document's entries, which all post on its date. */
 export function getLedgerLink(doc: FrappeDoc, reportClassName: LedgerReport) {
-  const date = getPostingDate(doc);
-  const [typeFilter, nameFilter] = reports[reportClassName].referenceFilters;
+  const report = getReports()[reportClassName]!;
+  const filters = report.getVoucherFilters(
+    getDocType(doc.schemaName).doctype,
+    doc.name!,
+    getPostingDate(doc)
+  );
   return {
     name: 'Report',
     params: {
       reportClassName,
     },
     query: {
-      defaultFilters: JSON.stringify({
-        [typeFilter]: getDocType(doc.schemaName).doctype,
-        [nameFilter]: doc.name,
-        fromDate: date,
-        toDate: date,
-      }),
+      defaultFilters: JSON.stringify(filters),
     },
   };
 }

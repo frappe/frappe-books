@@ -162,8 +162,15 @@ function formatCurrency(
   doc: FrappeDoc | null,
   fyo: Fyo
 ): string {
-  const currency = getCurrency(field, doc, fyo);
+  return formatCurrencyValue(value, getCurrency(field, doc, fyo), fyo);
+}
 
+/** An amount in the locale's number format, after its currency's symbol. */
+export function formatCurrencyValue(
+  value: unknown,
+  currency: string,
+  fyo: Fyo
+): string {
   let valueString;
   try {
     valueString = formatNumber(value, fyo);

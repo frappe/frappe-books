@@ -87,6 +87,7 @@ export interface BaseField {
 export type FieldControl =
   | 'TextEditor'
   | 'TableMultiSelect'
+  | 'MultiSelectList'
   | 'Time'
   | 'Percent'
   | 'ReadOnly';

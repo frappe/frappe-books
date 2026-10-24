@@ -1,5 +1,7 @@
 import { t } from 'fyo';
-import { reports } from 'reports';
+import { kebabCase } from 'lodash';
+import { getReports, type ReportName } from 'reports';
+import { erpnextReports } from 'reports/erpnext';
 import { canOpenReport } from 'reports/serverReport';
 import { getImportableSchemaNames } from 'src/importer';
 import { canPickFields } from 'src/frappe/fieldPicks';
@@ -52,8 +54,8 @@ export function canOpen(route: string): boolean {
   }
 
   if (page === 'report') {
-    const report = reports[name as keyof typeof reports];
-    return canOpenReport(report.serverReportName);
+    const report = getReports()[name as ReportName];
+    return !!report && canOpenReport(report.serverReportName);
   }
 
   return pageRights[page]?.() ?? true;
@@ -162,48 +164,61 @@ function getPOSSidebar() {
 }
 
 function getReportSidebar() {
-  const isInventoryDisabled = () => !fyo.isFeatureOn('enable_inventory');
-
   return {
     label: t`Reports`,
     name: 'reports',
     icon: 'lucide-chart-no-axes-combined',
     route: '/report/GeneralLedger',
-    items: [
-      {
-        label: t`General Ledger`,
-        name: 'general-ledger',
-        route: '/report/GeneralLedger',
-      },
-      {
-        label: t`Profit and Loss`,
-        name: 'profit-and-loss',
-        route: '/report/ProfitAndLoss',
-      },
-      {
-        label: t`Balance Sheet`,
-        name: 'balance-sheet',
-        route: '/report/BalanceSheet',
-      },
-      {
-        label: t`Trial Balance`,
-        name: 'trial-balance',
-        route: '/report/TrialBalance',
-      },
-      {
-        label: t`Stock Ledger`,
-        name: 'stock-ledger',
-        route: '/report/StockLedger',
-        hidden: isInventoryDisabled,
-      },
-      {
-        label: t`Stock Balance`,
-        name: 'stock-balance',
-        route: '/report/StockBalance',
-        hidden: isInventoryDisabled,
-      },
-    ],
+    items: isAccessoryMode() ? getERPNextReportItems() : getBooksReportItems(),
   };
+}
+
+/** Accessory mode lists ERPNext's reports, stock ones only with inventory on. */
+function getERPNextReportItems(): SidebarItem[] {
+  return Object.entries(erpnextReports).map(([name, report]) => ({
+    label: report.title,
+    name: kebabCase(name),
+    route: `/report/${name}`,
+    hidden: () => report.isInventory && !fyo.isFeatureOn('enable_inventory'),
+  }));
+}
+
+function getBooksReportItems(): SidebarItem[] {
+  const isInventoryDisabled = () => !fyo.isFeatureOn('enable_inventory');
+  return [
+    {
+      label: t`General Ledger`,
+      name: 'general-ledger',
+      route: '/report/GeneralLedger',
+    },
+    {
+      label: t`Profit and Loss`,
+      name: 'profit-and-loss',
+      route: '/report/ProfitAndLoss',
+    },
+    {
+      label: t`Balance Sheet`,
+      name: 'balance-sheet',
+      route: '/report/BalanceSheet',
+    },
+    {
+      label: t`Trial Balance`,
+      name: 'trial-balance',
+      route: '/report/TrialBalance',
+    },
+    {
+      label: t`Stock Ledger`,
+      name: 'stock-ledger',
+      route: '/report/StockLedger',
+      hidden: isInventoryDisabled,
+    },
+    {
+      label: t`Stock Balance`,
+      name: 'stock-balance',
+      route: '/report/StockBalance',
+      hidden: isInventoryDisabled,
+    },
+  ];
 }
 
 function getCompleteSidebar(): SidebarConfig {

@@ -1,6 +1,6 @@
 import { DocValue, DocValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
-import { reports } from 'reports/index';
+import { getReports, type ReportName } from 'reports/index';
 import type { Report } from 'reports/Report';
 import type { Filter } from 'src/frappe/api';
 import { newFrappeDoc } from 'src/frappe/documents';
@@ -103,7 +103,7 @@ export function getIsMac() {
 }
 
 export async function getReport(
-  name: keyof typeof reports,
+  name: ReportName,
   filters: Record<string, DocValue> = {}
 ) {
   const cachedReport = fyo.store.reports[name];
@@ -112,22 +112,15 @@ export async function getReport(
   }
 
   // Reactive, so refreshing the cached report updates the pages showing it.
-  const report = reactive(new reports[name](fyo)) as unknown as Report;
+  const ReportClass = getReports()[name];
+  if (!ReportClass) {
+    throw new Error(`No report ${name}`);
+  }
+
+  const report = reactive(new ReportClass(fyo)) as unknown as Report;
   await report.initialize(filters);
   fyo.store.reports[name] = report;
   return report;
-}
-
-/**
- * Ref filters pick one document, so they last only while a link sets them,
- * as do the dates its ledger link sets with them; cleared dates take defaults.
- */
-function getDocumentFilterResets(report: Report): Record<string, DocValue> {
-  const [typeFilter, nameFilter] = report.referenceFilters;
-  const resets = { [typeFilter]: 'All', [nameFilter]: null };
-  return report.get(nameFilter)
-    ? { ...resets, fromDate: null, toDate: null }
-    : resets;
 }
 
 /**
@@ -135,7 +128,7 @@ function getDocumentFilterResets(report: Report): Record<string, DocValue> {
  * again. Either way the server runs it once, with the filters set.
  */
 export async function showReport(
-  name: keyof typeof reports,
+  name: ReportName,
   filters: Record<string, DocValue> = {}
 ): Promise<Report> {
   const report = fyo.store.reports[name];
@@ -143,7 +136,7 @@ export async function showReport(
     return getReport(name, filters);
   }
 
-  await report.setFilters({ ...getDocumentFilterResets(report), ...filters });
+  await report.setFilters({ ...report.getDocumentFilterResets(), ...filters });
   await report.setReportData(undefined, true);
   return report;
 }

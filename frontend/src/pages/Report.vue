@@ -64,7 +64,7 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
-import { reports } from 'reports';
+import { getReports, type ReportName } from 'reports';
 import { Report } from 'reports/Report';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
 import PageHeader from 'src/components/PageHeader.vue';
@@ -105,7 +105,7 @@ export default defineComponent({
   },
   props: {
     reportClassName: {
-      type: String as PropType<keyof typeof reports>,
+      type: String as PropType<ReportName>,
       required: true,
     },
     defaultFilters: {
@@ -126,7 +126,7 @@ export default defineComponent({
   },
   computed: {
     title() {
-      return reports[this.reportClassName]?.title ?? t`Report`;
+      return getReports()[this.reportClassName]?.title ?? t`Report`;
     },
     groupedActions() {
       const actions = this.report?.getActions() ?? [];

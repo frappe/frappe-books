@@ -129,8 +129,15 @@ def _serial_status(transaction, row, cancel):
 		return "Active"
 	# Stock leaves: shipped or issued, or taken back out by cancelling a return or receipt.
 	if cancel or (row.get("from_location") and not row.get("to_location")):
-		return "Delivered" if transaction.doctype == "Books Delivery Note" else "Inactive"
+		return _leaving_status(transaction.doctype, cancel)
 	return "Active"
+
+
+def _leaving_status(doctype, cancel):
+	"""Shipped serial numbers are Delivered and issued ones Consumed, as in ERPNext."""
+	if doctype == "Books Delivery Note":
+		return "Delivered"
+	return "Consumed" if doctype == "Books Stock Entry" and not cancel else "Inactive"
 
 
 def _post_stock_value(transaction):

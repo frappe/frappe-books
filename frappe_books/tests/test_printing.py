@@ -275,7 +275,8 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				],
 			}
 		).insert()
-		self.item.db_set("tax", tax.name)
+		self.item.set("taxes", [{"item_tax_template": tax.name}])
+		self.item.save()
 		invoice = self.make_invoice()
 		self.make_payment({invoice: Decimal("10.04")})
 		# A fresh share of 18 * 10.04 / 207 rounds to 0.87; the second payment realised 0.88.

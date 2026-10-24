@@ -138,7 +138,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 	def test_a_row_tax_left_out_follows_the_item_and_a_cleared_one_stays_cleared(self):
 		row = {"item": self.item.name, "quantity": 1}
 		values = {"customer": self.party.name, "date": str(now_datetime()), "items": [row]}
-		self.assertEqual(_preview(values)["items"][0]["tax"], self.item.tax)
+		self.assertEqual(_preview(values)["items"][0]["tax"], self.item.taxes[0].item_tax_template)
 
 		cleared = {**values, "items": [{**row, "tax": ""}]}
 		saved = _insert(cleared)

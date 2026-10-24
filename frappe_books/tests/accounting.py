@@ -98,7 +98,7 @@ def make_item(income_account, expense_account, tax=None, **values):
 			"item_code": unique_name("Test Item"),
 			"stock_uom": "Unit",
 			"item_defaults": _item_defaults(income_account, expense_account),
-			"tax": tax,
+			"taxes": [{"item_tax_template": tax}] if tax else [],
 			**values,
 		}
 	).insert()

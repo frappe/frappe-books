@@ -20,7 +20,7 @@ export interface MobileRowLayout {
 const metaFieldnames: Record<string, string[]> = {
   [ModelNameEnum.Customer]: ['mobile_no'],
   [ModelNameEnum.Supplier]: ['mobile_no'],
-  [ModelNameEnum.Item]: ['item_type', 'tax'],
+  [ModelNameEnum.Item]: ['item_type'],
   [ModelNameEnum.Payment]: ['name', 'date', 'payment_type'],
 };
 
@@ -44,7 +44,9 @@ export function getMobileRowLayout(
     (column) => column !== badge && !isNumeric(column.fieldtype)
   );
   const title =
-    text.find((column) => column.fieldname === getModel(schemaName)?.partyField) ??
+    text.find(
+      (column) => column.fieldname === getModel(schemaName)?.partyField
+    ) ??
     text[0] ??
     columns[0];
 

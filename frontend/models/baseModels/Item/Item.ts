@@ -14,6 +14,7 @@ import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 import { ItemBarcode } from './ItemBarcode';
 import { ItemDefault } from './ItemDefault';
+import { ItemTax } from './ItemTax';
 import { UOMConversionDetail } from './UOMConversionDetail';
 
 /**
@@ -28,7 +29,7 @@ export class Item extends FrappeDoc {
       'standard_rate',
       'stock_uom',
       'item_type',
-      'tax',
+      'taxes',
       'description',
       'item_defaults',
       'barcodes',
@@ -38,6 +39,7 @@ export class Item extends FrappeDoc {
   };
   static override rowModels = {
     item_defaults: ItemDefault,
+    taxes: ItemTax,
     barcodes: ItemBarcode,
     uoms: UOMConversionDetail,
   };
@@ -92,7 +94,7 @@ export class Item extends FrappeDoc {
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'stock_uom', 'tax', 'standard_rate'],
+      columns: ['name', 'stock_uom', 'standard_rate'],
     };
   }
 }

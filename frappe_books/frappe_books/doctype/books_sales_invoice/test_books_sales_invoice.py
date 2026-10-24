@@ -76,7 +76,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 			{
 				"doctype": "Books Item Group",
 				"item_group_name": unique_name("Taxed Group"),
-				"tax": self.tax.name,
+				"taxes": [{"item_tax_template": self.tax.name}],
 			}
 		).insert()
 		item = make_item(self.income.name, self.expense.name, item_group=group.name)

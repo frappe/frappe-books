@@ -15,7 +15,7 @@ from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.company import company_value
 from frappe_books.currency import get_exchange_rate
-from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults
+from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults, item_tax_templates
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import validate_batches
@@ -76,7 +76,7 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 	def populate_rows(self, rows):
 		"""Fill the rows' units, item details, accounts and standard rates."""
 		populate_units(rows)
-		items = _item_details({row.item for row in rows if row.item})
+		items = _item_details({row.item for row in rows if row.item}, self.date)
 		rates = pricing.standard_rates(self) if items else {}
 		for row in rows:
 			if row.item in items:
@@ -445,24 +445,19 @@ def _populate_rate_from_transfer_rate(row):
 		row.rate = as_decimal(transfer_rate) / as_decimal(row.unit_conversion_factor or 1)
 
 
-def _item_details(names):
+def _item_details(names, date):
+	"""The row values each item gives, under the row's fieldnames, for an invoice dated `date`."""
 	if not names:
 		return {}
 	rows = frappe.get_all(
 		"Books Item",
 		filters={"name": ["in", sorted(names)]},
-		fields=[
-			"name",
-			"description",
-			"stock_uom as unit",
-			"tax",
-			"item_group.tax as group_tax",
-			"gst_hsn_code as hsn_code",
-		],
+		fields=["name", "description", "stock_uom as unit", "item_group", "gst_hsn_code as hsn_code"],
 	)
 	defaults = company_item_defaults(names)
+	taxes = item_tax_templates(rows, date)
 	for row in rows:
-		row.tax = row.tax or row.group_tax
+		row.tax = taxes[row.name]
 		row.update(defaults.get(row.name, {}))
 	return {row.name: row for row in rows}
 

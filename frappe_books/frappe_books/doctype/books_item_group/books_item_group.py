@@ -15,10 +15,12 @@ class BooksItemGroup(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from frappe_books.frappe_books.doctype.books_item_tax.books_item_tax import BooksItemTax
+
 		gst_hsn_code: DF.Data | None
 		image: DF.AttachImage | None
 		item_group_name: DF.Data
-		tax: DF.Link | None
+		taxes: DF.Table[BooksItemTax]
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Item Group"

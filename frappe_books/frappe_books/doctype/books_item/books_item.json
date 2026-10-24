@@ -21,7 +21,7 @@
   "description",
   "accounts_section_break_11",
   "item_defaults",
-  "tax",
+  "taxes",
   "inventory_section_break_15",
   "gst_hsn_code",
   "barcodes",
@@ -116,11 +116,10 @@
    "permlevel": 1
   },
   {
-   "fieldname": "tax",
-   "fieldtype": "Link",
-   "label": "Tax",
-   "options": "Books Item Tax Template",
-   "placeholder": "Tax"
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "label": "Taxes",
+   "options": "Books Item Tax"
   },
   {
    "fieldname": "inventory_section_break_15",

@@ -1,11 +1,13 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+from collections import defaultdict
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
 from frappe_books.company import company_value, default_company
@@ -35,6 +37,7 @@ class BooksItem(Document):
 
 		from frappe_books.frappe_books.doctype.books_item_barcode.books_item_barcode import BooksItemBarcode
 		from frappe_books.frappe_books.doctype.books_item_default.books_item_default import BooksItemDefault
+		from frappe_books.frappe_books.doctype.books_item_tax.books_item_tax import BooksItemTax
 		from frappe_books.frappe_books.doctype.books_uom_conversion_detail.books_uom_conversion_detail import (
 			BooksUOMConversionDetail,
 		)
@@ -56,7 +59,7 @@ class BooksItem(Document):
 		serial_no_series: DF.Data | None
 		standard_rate: DF.Currency
 		stock_uom: DF.Link | None
-		tax: DF.Link | None
+		taxes: DF.Table[BooksItemTax]
 		uoms: DF.Table[BooksUOMConversionDetail]
 	# end: auto-generated types
 
@@ -154,6 +157,32 @@ def company_item_defaults(names):
 		fields=["parent", "income_account", "expense_account", "default_warehouse"],
 	)
 	return {row.parent: row for row in rows}
+
+
+def item_tax_templates(items, date):
+	"""Map each item to the tax template its taxes, else its group's, apply on `date`, as ERPNext picks it."""
+	parents = {item.name for item in items} | {item.item_group for item in items if item.item_group}
+	taxes = defaultdict(list)
+	for row in frappe.get_all(
+		"Books Item Tax",
+		filters={"parenttype": ["in", ["Books Item", "Books Item Group"]], "parent": ["in", sorted(parents)]},
+		fields=["parenttype", "parent", "item_tax_template", "valid_from"],
+	):
+		taxes[row.parenttype, row.parent].append(row)
+	return {
+		item.name: _applicable_template(taxes["Books Item", item.name], date)
+		or _applicable_template(taxes["Books Item Group", item.item_group], date)
+		for item in items
+	}
+
+
+def _applicable_template(taxes, date):
+	"""The template of the latest row valid on `date`; a row without a date always applies."""
+	date = getdate(date)
+	for row in sorted(taxes, key=lambda row: row.valid_from or date.min, reverse=True):
+		if not row.valid_from or row.valid_from <= date:
+			return row.item_tax_template
+	return None
 
 
 @frappe.whitelist()

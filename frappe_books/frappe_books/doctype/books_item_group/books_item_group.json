@@ -11,7 +11,7 @@
   "default_section_break_1",
   "image",
   "item_group_name",
-  "tax",
+  "taxes",
   "gst_hsn_code"
  ],
  "fields": [
@@ -34,11 +34,10 @@
    "unique": 1
   },
   {
-   "fieldname": "tax",
-   "fieldtype": "Link",
-   "label": "Tax",
-   "options": "Books Item Tax Template",
-   "placeholder": "Tax"
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "label": "Taxes",
+   "options": "Books Item Tax"
   },
   {
    "fieldname": "gst_hsn_code",

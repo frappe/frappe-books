@@ -40,7 +40,7 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
     'standard_rate | Rate |  | Details',
     'description | Description | Item Description | Details',
     'item_defaults | Item Defaults |  | Accounts',
-    'tax | Tax | Tax | Accounts',
+    'taxes | Taxes |  | Accounts',
     'gst_hsn_code | HSN/SAC | HSN/SAC Code | Inventory',
     'barcodes | Barcodes |  | Inventory',
     'is_stock_item | Maintain Stock |  | Inventory',

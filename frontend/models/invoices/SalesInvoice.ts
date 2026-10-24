@@ -64,6 +64,9 @@ export class SalesInvoice extends Invoice {
 
   customer?: string;
   coupon_code?: string;
+  payments?: SalesInvoicePayment[];
+  /** An ERPNext POS sale's POS Profile, whose shift it belongs to. */
+  pos_profile?: string;
   stock_not_transferred?: number;
   loyalty_amount?: Money;
   /** The customer's program, as the server's preview fills it. */
@@ -114,9 +117,15 @@ export class SalesInvoice extends Invoice {
         : 0;
   }
 
-  /** The server ships no short stock, so a Yes submits without the shipment. */
+  /**
+   * The server ships no short stock, so a Yes submits without the shipment;
+   * an ERPNext invoice then updates no stock.
+   */
   override async getSubmitWarning(): Promise<SubmitWarning | undefined> {
-    if (!this.make_auto_stock_transfer) {
+    const shipField = isAccessoryMode()
+      ? 'update_stock'
+      : 'make_auto_stock_transfer';
+    if (!this[shipField]) {
       return undefined;
     }
 
@@ -135,7 +144,7 @@ export class SalesInvoice extends Invoice {
           .t`The following items have insufficient quantity for Delivery Note: ${list}`,
         this.fyo.t`Continue submitting Sales Invoice?`,
       ],
-      accept: () => this.set('make_auto_stock_transfer', false),
+      accept: () => this.set(shipField, false),
     };
   }
 

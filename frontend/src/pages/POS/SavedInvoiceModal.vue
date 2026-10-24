@@ -61,10 +61,15 @@
 import Modal from 'src/components/POS/POSDialog.vue';
 import InvoiceSelectionTable from 'src/components/POS/InvoiceSelectionTable.vue';
 import type { DocValueMap } from 'fyo/core/types';
-import { defineComponent } from 'vue';
+import { defineComponent, inject } from 'vue';
 import { Field } from 'schemas/types';
 import type { Filter } from 'src/frappe/api';
-import { getPOSInvoiceFields, getPOSInvoices } from 'src/utils/pos';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
+import {
+  getPOSInvoiceFields,
+  getPOSInvoices,
+  getProfileFilters,
+} from 'src/utils/pos';
 import {
   Badge as FrappeBadge,
   Button as FrappeButton,
@@ -98,7 +103,7 @@ export default defineComponent({
   },
   emits: ['toggleModal', 'selectedInvoiceName'],
   setup() {
-    return { isMobile };
+    return { isMobile, sinvDoc: inject('sinvDoc') as SalesInvoice };
   },
   data() {
     return {
@@ -148,9 +153,10 @@ export default defineComponent({
     /** Both tabs' invoices whose name has the search term; a later search replaces them. */
     async setInvoices() {
       const search = this.invoiceSearchTerm;
+      const profileFilters = getProfileFilters(this.sinvDoc);
       const loading = Promise.all([
-        getPOSInvoices(SAVED_FILTERS, search),
-        getPOSInvoices(SUBMITTED_FILTERS, search),
+        getPOSInvoices([...SAVED_FILTERS, ...profileFilters], search),
+        getPOSInvoices([...SUBMITTED_FILTERS, ...profileFilters], search),
       ]).then(([saved, submitted]) => {
         if (this.loading === loading) {
           this.savedInvoices = saved;

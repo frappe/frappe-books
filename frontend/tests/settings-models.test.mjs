@@ -56,14 +56,14 @@ test('each Get Started task is checked by a Books Get Started field', async () =
 });
 
 test('POS Settings hide barcode fields as the features they need are off', async () => {
-  fyo.singles.InventorySettings = { enable_barcodes: false };
+  fyo.singles.InventorySettings = { show_barcode_field: false };
   fyo.singles.AccountingSettings = {};
   const settings = newFrappeDoc('POSSettings');
   assert.equal(hidden(settings, 'weight_enabled_barcode'), true);
   // An inventory POS can list all items too.
   assert.equal(hidden(settings, 'item_visibility'), false);
 
-  fyo.singles.InventorySettings = { enable_barcodes: true };
+  fyo.singles.InventorySettings = { show_barcode_field: true };
   fyo.singles.AccountingSettings = {
     enable_point_of_sale_with_out_inventory: true,
   };
@@ -77,7 +77,7 @@ test('POS Settings hide barcode fields as the features they need are off', async
 
 test('a saved inventory feature cannot be turned off; an unsaved one can', async () => {
   const features = [
-    'enable_barcodes',
+    'show_barcode_field',
     'enable_batches',
     'enable_serial_number',
     'enable_uom_conversions',

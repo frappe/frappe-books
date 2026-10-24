@@ -13,7 +13,7 @@ POINT_OF_SALE_FEATURES = (
 	"enable_batches",
 	"enable_uom_conversions",
 	"enable_serial_number",
-	"enable_barcodes",
+	"show_barcode_field",
 	"enable_point_of_sale",
 )
 ONE_WAY_SWITCHES = (

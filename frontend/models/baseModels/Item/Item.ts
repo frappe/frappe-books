@@ -69,7 +69,7 @@ export class Item extends FrappeDoc {
   hidden: HiddenMap = {
     gst_hsn_code: () => isHsnCodeHidden(this.fyo),
     is_stock_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
-    barcodes: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
+    barcodes: () => !this.fyo.singles.InventorySettings?.show_barcode_field,
     has_batch_no: () => !this.fyo.singles.InventorySettings?.enable_batches,
     has_serial_no: () =>
       !this.fyo.singles.InventorySettings?.enable_serial_number,

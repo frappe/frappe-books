@@ -5,7 +5,7 @@ export class InventorySettings extends FrappeDoc {
   static override doctype = 'Books Inventory Settings';
   static override presentation = { label: 'Inventory Settings' };
 
-  declare enable_barcodes?: boolean;
+  declare show_barcode_field?: boolean;
   declare enable_batches?: boolean;
   declare enable_serial_number?: boolean;
   declare enable_uom_conversions?: boolean;

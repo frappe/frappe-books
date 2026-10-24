@@ -30,7 +30,7 @@ test('the camera reads a barcode that fills the view', async ({ page }) => {
     '**/api/v2/document/Books%20Inventory%20Settings/**',
     async (route) => {
       const json = await (await route.fetch()).json();
-      json.data.enable_barcodes = 1;
+      json.data.show_barcode_field = 1;
       await route.fulfill({ json });
     }
   );

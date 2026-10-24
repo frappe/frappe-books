@@ -91,7 +91,7 @@ test('the barcode field marks itself with a leading icon, not a trailing control
     '**/api/v2/document/Books%20Inventory%20Settings/**',
     async (route) => {
       const json = await (await route.fetch()).json();
-      json.data.enable_barcodes = 1;
+      json.data.show_barcode_field = 1;
       await route.fulfill({ json });
     }
   );

@@ -8,7 +8,7 @@ from frappe.model.document import Document
 from frappe_books.commerce.pos import open_shift_name
 from frappe_books.settings import validate_one_way_switches
 
-ONE_WAY_SWITCHES = ("enable_barcodes", "enable_batches", "enable_serial_number", "enable_uom_conversions")
+ONE_WAY_SWITCHES = ("show_barcode_field", "enable_batches", "enable_serial_number", "enable_uom_conversions")
 
 
 class BooksInventorySettings(Document):
@@ -20,11 +20,11 @@ class BooksInventorySettings(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		enable_barcodes: DF.Check
 		enable_batches: DF.Check
 		enable_point_of_sale: DF.Check
 		enable_serial_number: DF.Check
 		enable_uom_conversions: DF.Check
+		show_barcode_field: DF.Check
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Inventory Settings"

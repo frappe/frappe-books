@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "features_section_break_7",
-  "enable_barcodes",
+  "show_barcode_field",
   "enable_batches",
   "enable_serial_number",
   "enable_uom_conversions",
@@ -21,10 +21,10 @@
   },
   {
    "default": "0",
-   "fieldname": "enable_barcodes",
+   "fieldname": "show_barcode_field",
    "fieldtype": "Check",
    "label": "Enable Barcodes",
-   "read_only_depends_on": "enable_barcodes"
+   "read_only_depends_on": "show_barcode_field"
   },
   {
    "default": "0",

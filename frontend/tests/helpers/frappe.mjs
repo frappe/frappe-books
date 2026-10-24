@@ -18,7 +18,9 @@ await build({
       export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
       export { getFrappeDoc, getFrappeDocOrNew, getMappedDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
-      export { evaluateCondition } from './src/frappe/dependsOn';
+      export { evaluateCondition, evaluateExpression } from './src/frappe/dependsOn';
+      export { ERPNEXT_QUERIES } from './src/frappe/erpnextQueries';
+      export { toFilterList } from './src/frappe/linkSearch';
       export { getActiveDoctype, isAccessoryMode, toActiveDoctype } from './src/frappe/mode';
       export { getCalculatedState } from './src/frappe/calculated';
       export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';

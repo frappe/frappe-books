@@ -1,14 +1,23 @@
 from collections import defaultdict
 
 import frappe
+from frappe.desk.form import linked_with
+
+from frappe_books.accessory import accessory_company
 
 LINKED_ENTRIES_LIMIT = 100
 
 
 @frappe.whitelist()
 def get_linked_entries(doctype: str, name: str) -> dict[str, list[str]]:
-	"""Names of the Books documents that link to a document, by doctype, newest first, without cancelled ones."""
+	"""Names of the Books documents that link to a document, by doctype, newest first, without cancelled ones.
+
+	In accessory mode, Frappe's linked documents of the ERPNext document.
+	"""
 	frappe.has_permission(doctype, doc=name, throw=True)
+	if accessory_company():
+		return _frappe_linked_entries(doctype, name)
+
 	creation_by_doctype = defaultdict(dict)
 	for linked_doctype, filters, or_filters in _link_queries(doctype, name):
 		for row in _linked_rows(linked_doctype, filters, or_filters):
@@ -16,6 +25,22 @@ def get_linked_entries(doctype: str, name: str) -> dict[str, list[str]]:
 	return {
 		linked_doctype: _newest(creation_by_name)
 		for linked_doctype, creation_by_name in creation_by_doctype.items()
+	}
+
+
+def _frappe_linked_entries(doctype: str, name: str) -> dict[str, list[str]]:
+	linked = linked_with.get_linked_docs(
+		doctype,
+		name,
+		linkinfo=linked_with.get_linked_doctypes(doctype),
+		filters=[["docstatus", "!=", 2]],
+		limit=LINKED_ENTRIES_LIMIT,
+		order_by="creation desc",
+	)
+	return {
+		linked_doctype: [str(doc.name) for doc in result["docs"]]
+		for linked_doctype, result in linked.items()
+		if result["docs"]
 	}
 
 

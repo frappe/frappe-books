@@ -68,6 +68,8 @@ await build({
       export { StockBalance } from './reports/inventory/StockBalance';
       export { StockLedger } from './reports/inventory/StockLedger';
       export { MobileTree } from './src/components/Report/Mobile/MobileTree';
+      export { erpnextReports } from './reports/erpnext';
+      export { getFilterItems } from './src/components/Report/filterToolbar';
       export { getCsvData, getJsonData } from './reports/commonExporter';
       export { getRowReference } from './src/components/Report/Mobile/mobileRows';
       export { Importer, getGridRows, getImportableSchemaNames } from './src/importer';
@@ -216,6 +218,8 @@ export const {
   StockBalance,
   StockLedger,
   MobileTree,
+  erpnextReports,
+  getFilterItems,
   getCsvData,
   getJsonData,
   getRowReference,

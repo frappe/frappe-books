@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.accounting.accounts import mode_of_payment_account
+from frappe_books.company import default_company
 from frappe_books.tests.accounting import make_account, make_mode_of_payment
 
 
@@ -26,3 +28,12 @@ class IntegrationTestBooksModeofPayment(IntegrationTestCase):
 					)
 				else:
 					make_mode_of_payment(mode_type, mode_type, account)
+
+	def test_a_mode_has_one_account_per_company(self):
+		bank = make_account("Mode Bank", account_type="Bank").name
+		mode = make_mode_of_payment("Card", account=bank)
+
+		self.assertEqual(mode.accounts[0].company, default_company())
+		self.assertEqual(mode_of_payment_account(mode.name), bank)
+		mode.append("accounts", {"default_account": bank})
+		self.assertRaisesRegex(frappe.ValidationError, "Same Company", mode.save)

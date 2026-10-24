@@ -756,6 +756,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     await this._setLoadedValues(await this._fetchSaved());
   }
 
+  /** Loads saved values the server sent another way, e.g. settings the user's roles cannot read. */
+  async loadValues(values: DocValues) {
+    await this._setLoadedValues(this.toDocValues(values));
+  }
+
   /** Reloads a saved, unedited doc so it shows changes made elsewhere. */
   async refresh() {
     if (!this.canRefresh) {

@@ -117,6 +117,22 @@ export async function getFrappeDoc(
   return doc;
 }
 
+/** A saved document from `values` the server sent, kept open like a loaded one. */
+export async function openFrappeDoc(
+  schemaName: string,
+  values: DocValues
+): Promise<FrappeDoc> {
+  const { Model, schema } = getDocType(schemaName);
+  const doc = new Model(
+    schema,
+    { name: String(values.name) },
+    fyo
+  ) as FrappeDoc;
+  await doc.loadValues(values);
+  keep(doc);
+  return doc;
+}
+
 /** The open document, the saved one, or a new one when there is no saved one by `name`. */
 export async function getFrappeDocOrNew(
   schemaName: string,

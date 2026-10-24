@@ -214,3 +214,44 @@ class IntegrationTestAccessoryFieldPicks(IntegrationTestCase):
 		ensure_user(NO_RIGHTS_USER)
 		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):
 			self.save("Sales Invoice", [{"fieldname": "po_no"}])
+
+
+@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+class IntegrationTestAccessoryScreens(IntegrationTestCase):
+	def setUp(self):
+		self.company = frappe.db.get_value("Company", {}, "name")
+		for module in ("accessory", "accessory.ui_settings", "permissions"):
+			accessory = patch(f"frappe_books.{module}.accessory_company", return_value=self.company)
+			accessory.start()
+			self.addCleanup(accessory.stop)
+
+	def test_erpnext_users_read_the_ui_settings(self):
+		from frappe_books.accessory.ui_settings import get_ui_settings
+
+		user = ensure_user("accessory-accounts-user@example.com", "Accounts User")
+		with self.set_user(user):
+			settings = get_ui_settings()
+		ensure_user(NO_RIGHTS_USER)
+		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):
+			get_ui_settings()
+
+		self.assertEqual(set(settings), {"Books System Settings", "Books Misc", "Books Print Settings"})
+
+	def test_the_dashboard_totals_erpnext_invoices(self):
+		from frappe_books.reports.dashboard import get_invoice_summary
+
+		before = get_invoice_summary("Sales Invoice", "This Month")
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Sales Invoice",
+				"company": self.company,
+				"customer": make_customer("Accessory Dashboard Customer"),
+				"due_date": nowdate(),
+				"items": [{"item_code": make_item("ACC-DASH-PEN", 20), "qty": 2}],
+			}
+		).insert()
+		invoice.submit()
+
+		after = get_invoice_summary("Sales Invoice", "This Month")
+		self.assertEqual(after["unpaid"] - before["unpaid"], invoice.outstanding_amount)
+		self.assertEqual(after["unpaid_count"], before["unpaid_count"] + 1)

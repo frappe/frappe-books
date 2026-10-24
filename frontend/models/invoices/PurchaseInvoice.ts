@@ -52,9 +52,9 @@ export class PurchaseInvoice extends Invoice {
     ...this.postingHidden,
   };
 
-  /** The server sets every row received, 100%, once nothing is left to receive. */
+  /** The server sets every row received, 100%, once nothing is left to receive; an ERPNext invoice may move its stock itself. */
   override get hasStockToTransfer(): boolean {
-    return (this.per_received ?? 0) < 100;
+    return !this.update_stock && (this.per_received ?? 0) < 100;
   }
 
   static getListViewSettings(): ListViewSettings {

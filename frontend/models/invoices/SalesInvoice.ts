@@ -6,6 +6,7 @@ import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { SubmitWarning } from 'src/frappe/document';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { getLoyaltyPoints } from './loyalty';
 import { INVOICE_FIELDS, Invoice } from './Invoice';
 import { SalesInvoiceItem } from './InvoiceItem';
@@ -80,8 +81,18 @@ export class SalesInvoice extends Invoice {
       !this.redeem_loyalty_points && this.availableLoyaltyPoints <= 0,
   };
 
+  /** Books counts the stock no transfer moved; an ERPNext invoice that moved no stock itself counts what its rows delivered. */
   override get hasStockToTransfer(): boolean {
-    return (this.stock_not_transferred ?? 0) > 0;
+    if (!isAccessoryMode()) {
+      return (this.stock_not_transferred ?? 0) > 0;
+    }
+
+    return (
+      !this.update_stock &&
+      (this.items ?? []).some(
+        (row) => Number(row.delivered_qty ?? 0) < Number(row.qty ?? 0)
+      )
+    );
   }
 
   override applyPreview(previewed: DocValueMap) {

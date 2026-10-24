@@ -23,7 +23,7 @@
       @click="$emit('invoices')"
     />
     <FrappeButton
-      v-if="fyo.singles.AccountingSettings?.enable_item_enquiry"
+      v-if="fyo.isFeatureOn('enable_item_enquiry')"
       icon-left="lucide-square-pen"
       :label="t`Item enquiry`"
       @click="$emit('enquiry')"

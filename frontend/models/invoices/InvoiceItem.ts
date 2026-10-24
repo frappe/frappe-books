@@ -191,19 +191,19 @@ export class InvoiceItem extends FrappeDoc {
     gst_hsn_code: () => isHsnCodeHidden(this.fyo),
     discount_amount: () => !this.enableDiscounting,
     discount_percentage: () => !this.enableDiscounting,
-    batch_no: () => !this.fyo.singles.InventorySettings?.enable_batches,
-    serial_no: () => !this.fyo.singles.InventorySettings?.enable_serial_number,
+    batch_no: () => !this.fyo.isFeatureOn('enable_batches'),
+    serial_no: () => !this.fyo.isFeatureOn('enable_serial_number'),
     uom: () => !this.enableUomConversions,
     stock_qty: () => !this.enableUomConversions,
     conversion_factor: () => !this.enableUomConversions,
   };
 
   get enableDiscounting(): boolean {
-    return !!this.fyo.singles.AccountingSettings?.enable_discounts_and_margin;
+    return this.fyo.isFeatureOn('enable_discounts_and_margin');
   }
 
   get enableUomConversions(): boolean {
-    return !!this.fyo.singles.InventorySettings?.enable_uom_conversions;
+    return this.fyo.isFeatureOn('enable_uom_conversions');
   }
 
   // The server checks these too; mirrored to show the message at the field.
@@ -242,7 +242,7 @@ export class InvoiceItem extends FrappeDoc {
       !this.item_code ||
       !this.isSales ||
       this.isReturn ||
-      !this.fyo.singles.InventorySettings?.enable_batches
+      !this.fyo.isFeatureOn('enable_batches')
     ) {
       return;
     }

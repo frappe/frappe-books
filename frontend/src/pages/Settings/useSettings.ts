@@ -151,11 +151,11 @@ function isEnabled(name: ModelNameEnum): boolean {
   }
 
   if (name === ModelNameEnum.InventorySettings) {
-    return !!fyo.singles.AccountingSettings?.enable_inventory;
+    return fyo.isFeatureOn('enable_inventory');
   }
 
   if (name === ModelNameEnum.POSSettings) {
-    return !!fyo.singles.InventorySettings?.enable_point_of_sale;
+    return fyo.isFeatureOn('enable_point_of_sale');
   }
 
   return true;

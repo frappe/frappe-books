@@ -195,7 +195,7 @@ async function openPayment(
     payment.payment_type === 'Receive' ? 'paid_from' : 'paid_to';
   const hideFields = ['party_type', 'party', 'references', partyAccountField];
 
-  if (!payment.fyo.singles.AccountingSettings?.enable_invoice_returns) {
+  if (!payment.fyo.isFeatureOn('enable_invoice_returns')) {
     hideFields.push('payment_type');
   }
 
@@ -267,7 +267,7 @@ export function getMakeReturnDocAction(fyo: Fyo): Action {
     label: fyo.t`Return`,
     group: fyo.t`Create`,
     condition: (doc: FrappeDoc) =>
-      !!fyo.singles.AccountingSettings?.enable_invoice_returns &&
+      fyo.isFeatureOn('enable_invoice_returns') &&
       doc.isSubmitted &&
       !doc.isReturn &&
       !doc.is_fully_returned,

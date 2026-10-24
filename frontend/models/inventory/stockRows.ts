@@ -1,3 +1,4 @@
+import type { Feature } from 'fyo/utils/features';
 import type { FrappeDoc } from 'src/frappe/document';
 import type { HiddenMap } from 'fyo/model/types';
 import type { Filter } from 'src/frappe/api';
@@ -50,13 +51,13 @@ export function getStockRowHiddenMap(
   doc: FrappeDoc,
   stockQtyField: StockQtyField
 ): HiddenMap {
-  const settings = () => doc.fyo.singles.InventorySettings;
+  const isOff = (feature: Feature) => () => !doc.fyo.isFeatureOn(feature);
   return {
-    batch_no: () => !settings()?.enable_batches,
-    serial_no: () => !settings()?.enable_serial_number,
-    uom: () => !settings()?.enable_uom_conversions,
-    [stockQtyField]: () => !settings()?.enable_uom_conversions,
-    conversion_factor: () => !settings()?.enable_uom_conversions,
+    batch_no: isOff('enable_batches'),
+    serial_no: isOff('enable_serial_number'),
+    uom: isOff('enable_uom_conversions'),
+    [stockQtyField]: isOff('enable_uom_conversions'),
+    conversion_factor: isOff('enable_uom_conversions'),
   };
 }
 

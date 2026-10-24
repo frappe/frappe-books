@@ -112,7 +112,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    if (!fyo.singles.AccountingSettings?.enable_item_group) {
+    if (!fyo.isFeatureOn('enable_item_group')) {
       return;
     }
 

@@ -186,7 +186,7 @@ export abstract class Invoice extends FrappeDoc {
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     discount_after_tax: () =>
-      !this.fyo.singles.AccountingSettings?.enable_discounts_and_margin,
+      !this.fyo.isFeatureOn('enable_discounts_and_margin'),
     selling_price_list: () => this.isPriceListHidden,
     buying_price_list: () => this.isPriceListHidden,
     // A finished document names its template in the Taxes section instead.
@@ -209,7 +209,7 @@ export abstract class Invoice extends FrappeDoc {
 
   get isPriceListHidden(): boolean {
     return (
-      !this.fyo.singles.AccountingSettings?.enable_price_list ||
+      !this.fyo.isFeatureOn('enable_price_list') ||
       (!this.canEdit && !this.priceList)
     );
   }
@@ -219,11 +219,10 @@ export abstract class Invoice extends FrappeDoc {
     return {
       make_auto_payment: () => !this.autoPaymentAccount,
       make_auto_stock_transfer: () =>
-        !this.fyo.singles.AccountingSettings?.enable_inventory ||
+        !this.fyo.isFeatureOn('enable_inventory') ||
         !this.autoStockTransferLocation,
       return_against: () =>
-        !this.fyo.singles.AccountingSettings?.enable_invoice_returns &&
-        !this.return_against,
+        !this.fyo.isFeatureOn('enable_invoice_returns') && !this.return_against,
     };
   }
 

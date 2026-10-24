@@ -324,7 +324,7 @@ export default defineComponent({
       return this.layout === 'Classic';
     },
     isUOMConversionEnabled(): boolean {
-      return !!fyo.singles.InventorySettings?.enable_uom_conversions;
+      return fyo.isFeatureOn('enable_uom_conversions');
     },
     isSaleSubmitted(): boolean {
       return !!this.row.parentdoc?.isSubmitted;

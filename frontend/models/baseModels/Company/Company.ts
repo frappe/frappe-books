@@ -64,11 +64,11 @@ export class Company extends FrappeDoc {
 
   hidden: HiddenMap = {
     default_discount_account: () =>
-      !this.fyo.singles.AccountingSettings?.enable_discounts_and_margin,
+      !this.fyo.isFeatureOn('enable_discounts_and_margin'),
     ...Object.fromEntries(
       INVENTORY_FIELDS.map((fieldname) => [
         fieldname,
-        () => !this.fyo.singles.AccountingSettings?.enable_inventory,
+        () => !this.fyo.isFeatureOn('enable_inventory'),
       ])
     ),
   };

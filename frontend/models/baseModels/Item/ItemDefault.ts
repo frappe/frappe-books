@@ -7,8 +7,7 @@ export class ItemDefault extends FrappeDoc {
   static override presentation = { label: 'Item Default' };
 
   hidden: HiddenMap = {
-    default_warehouse: () =>
-      !this.fyo.singles.AccountingSettings?.enable_inventory,
+    default_warehouse: () => !this.fyo.isFeatureOn('enable_inventory'),
   };
 
   // A tracked item is bought into stock received but not billed, a liability.

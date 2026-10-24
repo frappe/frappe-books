@@ -1,3 +1,4 @@
+import type { Feature } from 'fyo/utils/features';
 import { Fyo, t } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
@@ -61,7 +62,7 @@ export function getGroupLabelMap() {
 }
 
 function getCreateList(fyo: Fyo): SearchItem[] {
-  const hasInventory = fyo.singles.AccountingSettings?.enable_inventory;
+  const hasInventory = fyo.isFeatureOn('enable_inventory');
   const formEditCreateList = [
     ModelNameEnum.SalesInvoice,
     ModelNameEnum.PurchaseInvoice,
@@ -111,7 +112,7 @@ function getCreateList(fyo: Fyo): SearchItem[] {
 
 function getReportList(fyo: Fyo): SearchItem[] {
   const hasGstin = !!fyo.singles?.AccountingSettings?.gstin;
-  const hasInventory = !!fyo.singles?.AccountingSettings?.enable_inventory;
+  const hasInventory = fyo.isFeatureOn('enable_inventory');
   const reportNames = Object.keys(reports) as (keyof typeof reports)[];
   return reportNames
     .filter((r) => {
@@ -138,11 +139,9 @@ function getReportList(fyo: Fyo): SearchItem[] {
 
 /** Schemas of the features that are turned off, whose lists are not offered. */
 function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
-  const accounting = fyo.singles.AccountingSettings;
-  const inventory = fyo.singles.InventorySettings;
-  const features: [boolean | undefined, ModelNameEnum[]][] = [
+  const features: [Feature, ModelNameEnum[]][] = [
     [
-      accounting?.enable_inventory,
+      'enable_inventory',
       [
         ModelNameEnum.StockEntry,
         ModelNameEnum.DeliveryNote,
@@ -151,23 +150,20 @@ function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
         ModelNameEnum.StockLedgerEntry,
       ],
     ],
+    ['enable_price_list', [ModelNameEnum.PriceList, ModelNameEnum.ItemPrice]],
+    ['enable_pricing_rule', [ModelNameEnum.PricingRule]],
+    ['enable_coupon_code', [ModelNameEnum.CouponCode]],
+    ['enable_lead', [ModelNameEnum.Lead]],
     [
-      accounting?.enable_price_list,
-      [ModelNameEnum.PriceList, ModelNameEnum.ItemPrice],
-    ],
-    [accounting?.enable_pricing_rule, [ModelNameEnum.PricingRule]],
-    [accounting?.enable_coupon_code, [ModelNameEnum.CouponCode]],
-    [accounting?.enable_lead, [ModelNameEnum.Lead]],
-    [
-      accounting?.enable_loyalty_point_program,
+      'enable_loyalty_point_program',
       [ModelNameEnum.LoyaltyProgram, ModelNameEnum.LoyaltyPointEntry],
     ],
-    [accounting?.enable_item_group, [ModelNameEnum.ItemGroup]],
-    [accounting?.enable_form_customization, [ModelNameEnum.CustomForm]],
-    [inventory?.enable_batches, [ModelNameEnum.Batch]],
-    [inventory?.enable_serial_number, [ModelNameEnum.SerialNo]],
+    ['enable_item_group', [ModelNameEnum.ItemGroup]],
+    ['enable_form_customization', [ModelNameEnum.CustomForm]],
+    ['enable_batches', [ModelNameEnum.Batch]],
+    ['enable_serial_number', [ModelNameEnum.SerialNo]],
     [
-      inventory?.enable_point_of_sale,
+      'enable_point_of_sale',
       [
         ModelNameEnum.POSProfile,
         ModelNameEnum.POSOpeningEntry,
@@ -177,7 +173,9 @@ function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
     ],
   ];
 
-  return features.filter(([isOn]) => !isOn).flatMap(([, names]) => names);
+  return features
+    .filter(([feature]) => !fyo.isFeatureOn(feature))
+    .flatMap(([, names]) => names);
 }
 
 function getListViewList(fyo: Fyo): SearchItem[] {

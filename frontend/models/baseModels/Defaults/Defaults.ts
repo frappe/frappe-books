@@ -89,11 +89,11 @@ export class Defaults extends FrappeDoc {
   static createFilters: FiltersMap = this.commonFilters;
 
   getInventoryHidden() {
-    return () => !this.fyo.singles.AccountingSettings?.enable_inventory;
+    return () => !this.fyo.isFeatureOn('enable_inventory');
   }
 
   getPointOfSaleHidden() {
-    return () => !this.fyo.singles.InventorySettings?.enable_point_of_sale;
+    return () => !this.fyo.isFeatureOn('enable_point_of_sale');
   }
 
   hidden: HiddenMap = {

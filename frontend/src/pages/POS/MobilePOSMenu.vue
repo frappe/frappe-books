@@ -63,7 +63,6 @@ watch(open, async (isOpen) => {
 });
 
 const actions = computed(() => {
-  const settings = fyo.singles.AccountingSettings;
   const all: MenuAction[] = [
     {
       name: 'SavedInvoice',
@@ -100,7 +99,7 @@ const actions = computed(() => {
       name: 'ItemEnquiry',
       label: t`Item enquiry`,
       icon: 'lucide-package-search',
-      hidden: !settings?.enable_item_enquiry,
+      hidden: !fyo.isFeatureOn('enable_item_enquiry'),
     },
   ];
   return all.filter(({ hidden }) => !hidden);

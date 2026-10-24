@@ -76,8 +76,7 @@ export class PricingRule extends FrappeDoc {
   };
 
   hidden: HiddenMap = {
-    coupon_code_based: () =>
-      !this.fyo.singles.AccountingSettings?.enable_coupon_code,
+    coupon_code_based: () => !this.fyo.isFeatureOn('enable_coupon_code'),
   };
 
   static getListViewSettings(): ListViewSettings {

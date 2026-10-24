@@ -49,7 +49,7 @@ export function getItemPrices(
   linkField: 'item_code' | 'price_list',
   emptyMessage: string
 ): LinkedRecords | undefined {
-  if (!fyo.singles.AccountingSettings?.enable_price_list) {
+  if (!fyo.isFeatureOn('enable_price_list')) {
     return;
   }
 

@@ -10,6 +10,7 @@ import {
   DEFAULT_INTERNAL_PRECISION,
 } from './utils/consts';
 import * as errors from './utils/errors';
+import { isFeatureOn, type Feature } from './utils/features';
 import { format } from './utils/format';
 import Observable from './utils/observable';
 import {
@@ -76,8 +77,10 @@ export class Fyo {
   ) {
     const label = doc.name ?? doc.schema.label ?? doc.schemaName;
     const messages = {
-      save: this.t`${label} was saved, but the view could not be fully updated. Reload the page before continuing.`,
-      submit: this.t`${label} was submitted, but the view could not be fully updated. Reload the page before continuing.`,
+      save: this
+        .t`${label} was saved, but the view could not be fully updated. Reload the page before continuing.`,
+      submit: this
+        .t`${label} was submitted, but the view could not be fully updated. Reload the page before continuing.`,
     };
     const message = messages[action];
     try {
@@ -103,6 +106,10 @@ export class Fyo {
 
   can(schemaName: string, permission: DocPermission): boolean {
     return hasPermission(this.store.permissions, schemaName, permission);
+  }
+
+  isFeatureOn(feature: Feature): boolean {
+    return isFeatureOn(this.singles, feature);
   }
 
   /** The name a new document shows until the server names it, e.g. `New Sales Invoice 01`. */

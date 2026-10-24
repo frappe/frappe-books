@@ -70,9 +70,13 @@
         class="flex w-[24.5rem] shrink-0 flex-col border-s border-outline-gray-1"
         :aria-label="t`Cart`"
       >
-        <div class="flex flex-col gap-2 border-b border-outline-gray-1 px-4 pb-3 pt-4">
+        <div
+          class="flex flex-col gap-2 border-b border-outline-gray-1 px-4 pb-3 pt-4"
+        >
           <div class="flex h-6 items-center justify-between gap-2">
-            <span class="truncate text-sm text-ink-gray-5">{{ cartLabel }}</span>
+            <span class="truncate text-sm text-ink-gray-5">{{
+              cartLabel
+            }}</span>
             <POSActionButton
               v-if="sinvDoc.items?.length"
               action="cancel"
@@ -196,7 +200,11 @@
 </template>
 
 <script lang="ts">
-import { Badge as FrappeBadge, Button as FrappeButton, dialog } from 'frappe-ui';
+import {
+  Badge as FrappeBadge,
+  Button as FrappeButton,
+  dialog,
+} from 'frappe-ui';
 import { t } from 'fyo';
 import { DateTime } from 'luxon';
 import { fyo } from 'src/initFyo';
@@ -266,11 +274,7 @@ import { usePOSShift } from 'src/utils/posShift';
 import { getAllDocuments } from 'src/frappe/api';
 import { getFrappeDoc, getMappedDoc, newFrappeDoc } from 'src/frappe/documents';
 import { getItemQtyMap } from 'models/inventory/posStock';
-import {
-  POSItem,
-  POSLayout,
-  ItemQtyMap,
-} from 'src/components/POS/types';
+import { POSItem, POSLayout, ItemQtyMap } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { filterPOSItems, getScannedItem } from 'src/utils/posItemSearch';
 
@@ -342,7 +346,6 @@ export default defineComponent({
       openBatchSelectionModal: false,
       isMenuOpen: false,
 
-
       itemSearchTerm: '',
       selectedItemGroup: '',
       defaultCustomer: undefined as string | undefined,
@@ -364,15 +367,14 @@ export default defineComponent({
   },
   computed: {
     layout(): POSLayout {
-      const posUI =
-        this.posProfile?.pos_ui || fyo.singles.POSSettings?.pos_ui;
+      const posUI = this.posProfile?.pos_ui || fyo.singles.POSSettings?.pos_ui;
       return posUI === 'Classic' ? 'Classic' : 'Modern';
     },
     isDiscountingEnabled(): boolean {
-      return !!fyo.singles.AccountingSettings?.enable_discounts_and_margin;
+      return fyo.isFeatureOn('enable_discounts_and_margin');
     },
     enableReturns(): boolean {
-      return !!fyo.singles.AccountingSettings?.enable_invoice_returns;
+      return fyo.isFeatureOn('enable_invoice_returns');
     },
     filteredItems() {
       return filterPOSItems(this.items, this.itemSearchTerm);
@@ -428,7 +430,11 @@ export default defineComponent({
       previous: { doc: SalesInvoice; code?: string }
     ) {
       const isRemoved = !!previous.code && !current.code;
-      if (current.doc !== previous.doc || this.openCouponCodeModal || !isRemoved) {
+      if (
+        current.doc !== previous.doc ||
+        this.openCouponCodeModal ||
+        !isRemoved
+      ) {
         return;
       }
 
@@ -677,7 +683,10 @@ export default defineComponent({
       this.items = getListedPOSItems(items, this.itemQtyMap, hideUnavailable);
     },
     async selectedReturnInvoice(invoiceName: string) {
-      const invoice = await getFrappeDoc(ModelNameEnum.SalesInvoice, invoiceName);
+      const invoice = await getFrappeDoc(
+        ModelNameEnum.SalesInvoice,
+        invoiceName
+      );
       this.sinvDoc = (await getMappedDoc(
         invoice,
         ModelNameEnum.SalesInvoice,
@@ -1042,7 +1051,9 @@ export default defineComponent({
       await this.saveOrder();
     },
     cancelPayment() {
-      (this.$refs.payment as InstanceType<typeof PaymentModal>).cancelTransaction();
+      (
+        this.$refs.payment as InstanceType<typeof PaymentModal>
+      ).cancelTransaction();
     },
     handlePaymentAction() {
       if (!this.sinvDoc.items?.length || !this.sinvDoc.customer) {

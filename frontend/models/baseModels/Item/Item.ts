@@ -68,13 +68,12 @@ export class Item extends FrappeDoc {
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     gst_hsn_code: () => isHsnCodeHidden(this.fyo),
-    is_stock_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
-    barcodes: () => !this.fyo.singles.InventorySettings?.show_barcode_field,
-    has_batch_no: () => !this.fyo.singles.InventorySettings?.enable_batches,
-    has_serial_no: () =>
-      !this.fyo.singles.InventorySettings?.enable_serial_number,
-    uoms: () => !this.fyo.singles.InventorySettings?.enable_uom_conversions,
-    item_group: () => !this.fyo.singles.AccountingSettings?.enable_item_group,
+    is_stock_item: () => !this.fyo.isFeatureOn('enable_inventory'),
+    barcodes: () => !this.fyo.isFeatureOn('show_barcode_field'),
+    has_batch_no: () => !this.fyo.isFeatureOn('enable_batches'),
+    has_serial_no: () => !this.fyo.isFeatureOn('enable_serial_number'),
+    uoms: () => !this.fyo.isFeatureOn('enable_uom_conversions'),
+    item_group: () => !this.fyo.isFeatureOn('enable_item_group'),
   };
 
   static getActions(fyo: Fyo): Action[] {

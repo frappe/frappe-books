@@ -42,11 +42,11 @@ export class StockLedger extends Report {
   };
 
   get hasBatches(): boolean {
-    return !!this.fyo.singles.InventorySettings?.enable_batches;
+    return this.fyo.isFeatureOn('enable_batches');
   }
 
   get hasSerialNumbers(): boolean {
-    return !!this.fyo.singles.InventorySettings?.enable_serial_number;
+    return this.fyo.isFeatureOn('enable_serial_number');
   }
 
   async setDefaultFilters() {

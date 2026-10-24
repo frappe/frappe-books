@@ -194,9 +194,7 @@ export function validateSerialNumberCount(row: SalesInvoiceItem) {
 
 /** The quantity field the cart shows and edits: the quantity in the row's unit with UOM conversions. */
 function getQuantityField(): QuantityField {
-  return fyo.singles.InventorySettings?.enable_uom_conversions
-    ? 'qty'
-    : 'stock_qty';
+  return fyo.isFeatureOn('enable_uom_conversions') ? 'qty' : 'stock_qty';
 }
 
 /** A stock quantity in the unit the cart row shows. */

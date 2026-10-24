@@ -74,9 +74,8 @@ export class SalesInvoice extends Invoice {
   override hidden: HiddenMap = {
     ...this.hidden,
     ...this.postingHidden,
-    coupon_code: () => !this.fyo.singles.AccountingSettings?.enable_coupon_code,
-    pricing_rules: () =>
-      !this.fyo.singles.AccountingSettings?.enable_pricing_rule,
+    coupon_code: () => !this.fyo.isFeatureOn('enable_coupon_code'),
+    pricing_rules: () => !this.fyo.isFeatureOn('enable_pricing_rule'),
     redeem_loyalty_points: () =>
       !this.redeem_loyalty_points && this.availableLoyaltyPoints <= 0,
   };

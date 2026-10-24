@@ -39,6 +39,11 @@ export default defineConfig([
     },
   },
   {
+    // Command line tools print their findings.
+    files: ['scripts/**'],
+    rules: { 'no-console': 'off' },
+  },
+  {
     files: ['postcss.config.js'],
     languageOptions: { sourceType: 'commonjs' },
     rules: { '@typescript-eslint/no-require-imports': 'off' },

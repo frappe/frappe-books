@@ -81,7 +81,7 @@ function getLinkFilters(fieldname: string, doc: FrappeDoc): string | undefined {
 }
 
 /** The first case of the rule that holds, its values worked out. */
-function resolveRule(rule: LinkQueryRule, context: Context): LinkQuery {
+export function resolveRule(rule: LinkQueryRule, context: Context): LinkQuery {
   const cases = Array.isArray(rule) ? rule : [rule];
   const found = cases.find(({ when }) => !when || resolve(when, context));
   if (!found) {

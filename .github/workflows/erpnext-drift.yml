@@ -1,0 +1,44 @@
+name: ERPNext drift
+
+# Books copies some of ERPNext's Desk JS (link queries, report filters) and
+# calls ERPNext by name; this compares them with ERPNext develop every night.
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Books against ERPNext develop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check out ERPNext develop
+        uses: actions/checkout@v6
+        with:
+          repository: frappe/erpnext
+          ref: develop
+          path: upstream/erpnext
+
+      - name: Check out Frappe develop
+        uses: actions/checkout@v6
+        with:
+          repository: frappe/frappe
+          ref: develop
+          path: upstream/frappe
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Compare Books with ERPNext
+        working-directory: frontend
+        run: |
+          npm install --global yarn@1.22.22
+          yarn install --frozen-lockfile
+          node scripts/erpnext-drift.mjs "$GITHUB_WORKSPACE/upstream/erpnext" "$GITHUB_WORKSPACE/upstream/frappe"

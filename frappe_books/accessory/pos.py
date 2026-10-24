@@ -4,6 +4,7 @@ import frappe
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import make_closing_entry_from_opening
 from erpnext.accounts.doctype.sales_invoice.services.pos import get_bank_cash_account
+from erpnext.selling.page.point_of_sale.point_of_sale import check_opening_entry
 from frappe import _
 from frappe.utils import flt, getdate, now_datetime, nowdate
 
@@ -122,10 +123,12 @@ def fill_opening_entry(entry, edited: set[str]):
 def fill_closing_entry(entry, edited: set[str]):
 	"""Fill a draft POS Closing Entry from its opening entry as Desk's form does.
 
-	It takes the shift's invoices, taxes and totals, which each preview reads
-	afresh; a new opening entry lists, per mode of payment, the opening amount
-	plus the payments as expected, where the counted amount starts.
+	Without an opening entry it closes the user's open shift. It takes the
+	shift's invoices, taxes and totals, which each preview reads afresh; a new
+	opening entry lists, per mode of payment, the opening amount plus the
+	payments as expected, where the counted amount starts.
 	"""
+	entry.pos_opening_entry = entry.pos_opening_entry or get_open_shift(entry.company)
 	if not entry.pos_opening_entry:
 		return
 
@@ -135,6 +138,13 @@ def fill_closing_entry(entry, edited: set[str]):
 	entry.update({field: closing.get(field) for field in CLOSING_FIELDS})
 	if "pos_opening_entry" in edited or not entry.payment_reconciliation:
 		entry.set("payment_reconciliation", get_closing_amounts(opening, closing))
+
+
+def get_open_shift(company: str) -> str | None:
+	"""The user's latest open POS Opening Entry in the company, as ERPNext's POS finds it."""
+	return next(
+		(shift.name for shift in check_opening_entry(frappe.session.user) if shift.company == company), None
+	)
 
 
 def get_closing_amounts(opening, closing) -> list[dict]:

@@ -4,17 +4,29 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, add_years, cint, format_date, get_last_day, getdate, month_diff
 
+from frappe_books.accessory import accessory_company
+
 MONTHS = {"Monthly": 1, "Quarterly": 3, "Half Yearly": 6, "Yearly": 12}
 
 
 def get_fiscal_year(date=None) -> tuple:
 	"""Return the start and end of the fiscal year that holds `date`, today by default."""
-	start, end = _fiscal_year_setting()
 	date = getdate(date)
+	if company := accessory_company():
+		return _erpnext_fiscal_year(date, company)
+
+	start, end = _fiscal_year_setting()
 	years = date.year - start.year
 	if add_years(start, years) > date:
 		years -= 1
 	return add_years(start, years), add_years(end, years)
+
+
+def _erpnext_fiscal_year(date, company) -> tuple:
+	from erpnext.accounts.utils import get_fiscal_year as erpnext_fiscal_year
+
+	year = erpnext_fiscal_year(date, company=company, as_dict=True)
+	return getdate(year.year_start_date), getdate(year.year_end_date)
 
 
 def get_fiscal_years_range(from_year, to_year) -> tuple:

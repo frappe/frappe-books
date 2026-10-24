@@ -26,14 +26,14 @@
         >
           <InvoiceCards
             v-if="canRead.sales"
-            doctype="Books Sales Invoice"
+            :schema-name="ModelNameEnum.SalesInvoice"
             :paid-title="t`Paid sales`"
             :unpaid-title="t`Unpaid sales`"
             :period="period"
           />
           <InvoiceCards
             v-if="canRead.purchases"
-            doctype="Books Purchase Invoice"
+            :schema-name="ModelNameEnum.PurchaseInvoice"
             :paid-title="t`Paid purchases`"
             :unpaid-title="t`Unpaid purchases`"
             :period="period"
@@ -86,7 +86,7 @@ export default {
       purchases: fyo.can(ModelNameEnum.PurchaseInvoice, 'read'),
       ledger: fyo.can(ModelNameEnum.GLEntry, 'read'),
     };
-    return { isMobile, canRead };
+    return { isMobile, canRead, ModelNameEnum };
   },
   data() {
     return { period: 'This Year' };

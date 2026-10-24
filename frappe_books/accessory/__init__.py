@@ -30,6 +30,22 @@ def accessory_company() -> str | None:
 		return company
 
 
+def active_doctype(books_doctype: str) -> str:
+	"""A Books doctype as the current mode names it: its ERPNext twin in accessory mode."""
+	return books_doctype.removeprefix("Books ") if accessory_company() else books_doctype
+
+
+def company_filters() -> dict:
+	"""Filters that keep a query to the accessory mode company; none in standalone, which has one."""
+	company = accessory_company()
+	return {"company": company} if company else {}
+
+
+def company_conditions() -> list:
+	"""`company_filters` as a list of conditions."""
+	return [[field, "=", value] for field, value in company_filters().items()]
+
+
 def forbid_in_accessory_mode():
 	"""Refuse a Books action that writes Books documents, as accessory mode makes none."""
 	if accessory_company():

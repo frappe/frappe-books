@@ -32,7 +32,8 @@
 import { t } from 'fyo';
 import { Button as FrappeButton } from 'frappe-ui';
 import { NumberCard as FrappeNumberCard } from 'frappe-ui/charts';
-import { getDoctypeLabel, toSchemaName } from 'src/frappe/registry';
+import { getDocType } from 'src/frappe/doctypes';
+import { getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import {
   getInvoiceListFilters,
@@ -53,7 +54,7 @@ export default defineComponent({
   },
   extends: BaseDashboardChart,
   props: {
-    doctype: { type: String, required: true },
+    schemaName: { type: String, required: true },
     paidTitle: { type: String, required: true },
     unpaidTitle: { type: String, required: true },
   },
@@ -88,16 +89,17 @@ export default defineComponent({
   },
   methods: {
     getListRoute(summary: InvoiceSummary, paid: boolean) {
-      const schemaLabel = getDoctypeLabel(this.doctype);
+      const schemaLabel = getSchema(this.schemaName)!.label;
       const label = paid ? t`Paid ${schemaLabel}` : t`Unpaid ${schemaLabel}`;
       const filters = getInvoiceListFilters(summary, paid);
       return {
-        path: `/list/${toSchemaName(this.doctype)}/${label}`,
+        path: `/list/${this.schemaName}/${label}`,
         query: { filters: JSON.stringify(filters) },
       };
     },
     async setData() {
-      this.summary = await getInvoiceSummary(this.doctype, this.period);
+      const { doctype } = getDocType(this.schemaName);
+      this.summary = await getInvoiceSummary(doctype, this.period);
     },
   },
 });

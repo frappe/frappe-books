@@ -5,7 +5,7 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_ent
 from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import make_closing_entry_from_opening
 from erpnext.accounts.doctype.sales_invoice.services.pos import get_bank_cash_account
 from frappe import _
-from frappe.utils import flt, getdate, now_datetime
+from frappe.utils import flt, getdate, now_datetime, nowdate
 
 from frappe_books.accessory.ui_settings import check_ui_settings_access
 
@@ -47,6 +47,35 @@ def get_pos_preferences() -> dict:
 		**{field: defaults.get(field) for field in DEFAULTS_FIELDS},
 		"pos_cash_denominations": [row.denomination for row in defaults.pos_cash_denominations],
 	}
+
+
+@frappe.whitelist()
+def get_selling_rates(pos_profile: str) -> dict[str, float]:
+	"""Each item's selling rate today in the POS Profile's price list, as ERPNext's POS lists items.
+
+	The profile entitles its cashiers to its prices, as in ERPNext's POS, so they need no Item Price rights.
+	"""
+	frappe.has_permission("POS Profile", doc=pos_profile, throw=True)
+	price_list = frappe.db.get_value("POS Profile", pos_profile, "selling_price_list")
+	if not price_list:
+		return {}
+
+	price = frappe.qb.DocType("Item Price")
+	today = nowdate()
+	rows = (
+		frappe.qb.from_(price)
+		.select(price.item_code, price.price_list_rate, price.valid_from)
+		.where(
+			(price.price_list == price_list)
+			& (price.selling == 1)
+			& (price.valid_from.isnull() | (price.valid_from <= today))
+			& (price.valid_upto.isnull() | (price.valid_upto >= today))
+		)
+		.run(as_dict=True)
+	)
+	# A dated price wins over an undated one, the latest start over earlier ones.
+	rows.sort(key=lambda row: (row.valid_from is not None, row.valid_from or getdate(today)))
+	return {row.item_code: row.price_list_rate for row in rows}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -93,17 +122,19 @@ def fill_opening_entry(entry, edited: set[str]):
 def fill_closing_entry(entry, edited: set[str]):
 	"""Fill a draft POS Closing Entry from its opening entry as Desk's form does.
 
-	It lists the shift's invoices and taxes, and per mode of payment the
-	opening amount plus the payments as expected; the counted amount starts there.
+	It takes the shift's invoices, taxes and totals, which each preview reads
+	afresh; a new opening entry lists, per mode of payment, the opening amount
+	plus the payments as expected, where the counted amount starts.
 	"""
-	if not entry.pos_opening_entry or "pos_opening_entry" not in edited:
+	if not entry.pos_opening_entry:
 		return
 
 	opening = frappe.get_doc("POS Opening Entry", entry.pos_opening_entry)
 	opening.check_permission("read")
 	closing = make_closing_entry_from_opening(opening)
 	entry.update({field: closing.get(field) for field in CLOSING_FIELDS})
-	entry.set("payment_reconciliation", get_closing_amounts(opening, closing))
+	if "pos_opening_entry" in edited or not entry.payment_reconciliation:
+		entry.set("payment_reconciliation", get_closing_amounts(opening, closing))
 
 
 def get_closing_amounts(opening, closing) -> list[dict]:

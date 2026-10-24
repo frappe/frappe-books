@@ -370,11 +370,8 @@ export function getDocStatus(doc?: RenderData | FrappeDoc): string {
     return '';
   }
 
-  if (doc.notInserted) {
-    return 'Draft';
-  }
-
-  if (doc.dirty) {
+  // A new document is not saved yet, as Frappe's desk shows it.
+  if (doc.notInserted || doc.dirty) {
     return 'NotSaved';
   }
 

@@ -5,7 +5,7 @@
       theme="amber"
       variant="subtle"
       size="md"
-      :label="t`Not saved`"
+      :label="t`Not Saved`"
     />
     <FrappeButton
       variant="solid"
@@ -29,7 +29,7 @@ import {
 
 const SAVED_TOAST_MS = 3_000;
 
-/** "Not saved" while a form's picks differ from the saved ones, and Save. */
+/** "Not Saved", as forms say it, while a form's picks differ from the saved ones, and Save. */
 const props = defineProps<{ schemaName: string }>();
 
 const saving = ref(false);

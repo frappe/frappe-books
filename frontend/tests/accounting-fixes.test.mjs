@@ -127,7 +127,7 @@ test('P&L takes its defaults, periods and totals from the server', async () => {
 test('list and form statuses come from the stored status', () => {
   const schema = getSchema('SalesInvoice');
   assert.equal(getDocStatus({ schema, status: 'Partly Paid' }), 'Partly Paid');
-  assert.equal(getDocStatus({ schema, notInserted: true }), 'Draft');
+  assert.equal(getDocStatus({ schema, notInserted: true }), 'NotSaved');
   assert.equal(
     getDocStatus({ schema, dirty: true, status: 'Draft' }),
     'NotSaved'
@@ -151,8 +151,8 @@ test('status badges use the status option label and the DocType state colour', (
     theme: 'green',
   });
   assert.deepEqual(getDocStatusBadge({ schema, notInserted: true }), {
-    label: 'Draft',
-    theme: 'gray',
+    label: 'Not Saved',
+    theme: 'amber',
   });
   // A saved draft is gray too, as the design shows drafts.
   assert.deepEqual(getDocStatusBadge({ schema, status: 'Draft' }), {

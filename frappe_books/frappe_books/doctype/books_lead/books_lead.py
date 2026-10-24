@@ -41,7 +41,12 @@ def make_customer(source_name: str):
 		{
 			"Books Lead": {
 				"doctype": "Books Customer",
-				"field_map": {"name": "lead_name", "mobile": "phone", "address": "customer_primary_address"},
+				"field_map": {
+					"name": "lead_name",
+					"email": "email_id",
+					"mobile": "mobile_no",
+					"address": "customer_primary_address",
+				},
 			}
 		},
 		postprocess=_set_customer,

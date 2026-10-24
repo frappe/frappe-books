@@ -1,6 +1,9 @@
 <template>
   <div v-if="(fields ?? []).length > 0">
     <component :is="DefineFields">
+      <p v-if="description" class="mb-4 text-p-sm text-ink-gray-5">
+        {{ description }}
+      </p>
       <div class="grid gap-4 gap-x-8 grid-cols-1 md:grid-cols-2">
         <div
           v-for="group in fieldGroups"
@@ -98,6 +101,7 @@ export default defineComponent({
   components: { FrappeAccordion, FrappeErrorMessage, FormControl, Table },
   props: {
     title: { type: String, default: '' },
+    description: { type: String, default: undefined },
     errors: {
       type: Object as PropType<Record<string, string>>,
       required: true,

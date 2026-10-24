@@ -8,17 +8,21 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_party_account
 from frappe_books.accounting.money import company_currency
+from frappe_books.accounting.party_contacts import (
+	delete_primary_records,
+	make_primary_records,
+	party_field,
+	validate_primary_records,
+)
 from frappe_books.company import default_company
 from frappe_books.regional import validate_gstin
 
 # The account a new party's ledger defaults to, when the chart has it.
 CHART_ACCOUNTS = {"Books Customer": "Debtors", "Books Supplier": "Creditors"}
-# The prefix of a party's own fieldnames, as ERPNext names them.
-PARTY_KEYS = {"Books Customer": "customer", "Books Supplier": "supplier"}
 
 
 class PartyController(Document):
-	"""A customer or supplier: its ledger account, currency and GST registration."""
+	"""A customer or supplier: its ledger account, currency, primary Contact and Address and GST registration."""
 
 	def before_validate(self):
 		self.default_currency = self.default_currency or company_currency()
@@ -26,6 +30,7 @@ class PartyController(Document):
 
 	def validate(self):
 		self.validate_accounts()
+		validate_primary_records(self)
 		self.set_primary_address()
 		if self.gst_category != "Registered Regular":
 			self.gstin = None
@@ -33,6 +38,12 @@ class PartyController(Document):
 			frappe.throw(_("GSTIN is required for a registered party."))
 		else:
 			self.gstin = validate_gstin(self.gstin)
+
+	def after_insert(self):
+		make_primary_records(self)
+
+	def on_trash(self):
+		delete_primary_records(self)
 
 	def set_company_account(self):
 		"""Rows belong to the one company, which takes the chart's party account when it has no row."""
@@ -45,7 +56,7 @@ class PartyController(Document):
 
 	def set_primary_address(self):
 		"""The primary address as the Address Template renders it, which prints show."""
-		address = self.get(primary_field(self.doctype, "Address"))
+		address = self.get(party_field(self.doctype, "primary_address"))
 		self.primary_address = get_address_display(address) if address else None
 
 	def validate_accounts(self):
@@ -67,11 +78,6 @@ class PartyDocumentMixin:
 	@property
 	def party(self):
 		return self.get(self.party_field)
-
-
-def primary_field(party_type, doctype):
-	"""The party's field that holds its primary Address or Contact, e.g. customer_primary_address."""
-	return f"{PARTY_KEYS[party_type]}_primary_{doctype.lower()}"
 
 
 def party_account(party_type, party):

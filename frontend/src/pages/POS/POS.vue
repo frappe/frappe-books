@@ -88,7 +88,7 @@
           <MultiLabelLink
             v-if="sinvDoc.fieldMap"
             class="w-full"
-            secondary-link="phone"
+            secondary-link="mobile_no"
             :border="true"
             :value="sinvDoc.customer"
             :df="sinvDoc.fieldMap.customer"

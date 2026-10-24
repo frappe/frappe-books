@@ -52,6 +52,7 @@
       v-for="([section, fields], index) of activeSections"
       :key="activeTab + section"
       :title="section"
+      :description="doc.getSectionDescription(section)"
       :fields="fields"
       :doc="doc"
       :errors="errors"

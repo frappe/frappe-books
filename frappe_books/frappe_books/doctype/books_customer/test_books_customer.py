@@ -98,7 +98,7 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		item = make_item(income.name, expense.name)
 		make_invoice("Books Sales Invoice", customer.name, receivable.name, item.name, income.name).submit()
 
-		customer.email = "stale@example.com"
+		customer.tax_id = "STALE"
 		with self.assertRaises(frappe.TimestampMismatchError):
 			customer.save()
 
@@ -116,7 +116,7 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		quotation = books_lead.make_quotation(lead.name)
 
 		self.assertEqual(
-			(customer.doctype, customer.name, customer.email, customer.phone, customer.lead_name),
+			(customer.doctype, customer.name, customer.email_id, customer.mobile_no, customer.lead_name),
 			("Books Customer", lead.name, lead.email, lead.mobile, lead.name),
 		)
 		self.assertEqual((quotation.party_name, quotation.quotation_to), (lead.name, "Books Lead"))

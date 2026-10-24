@@ -7,7 +7,7 @@ from frappe.model.base_document import get_controller
 from frappe.utils import add_months, create_batch, getdate
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
-from frappe_books.accounting.party import primary_field
+from frappe_books.accounting.party_contacts import party_field
 from frappe_books.regional import INDIAN_STATES, gst_state
 from frappe_books.reports.filters import datetime_conditions
 
@@ -141,7 +141,7 @@ def _tax_details(taxes):
 
 def _party_places(party_type, parties):
 	"""Return each customer's or supplier's GSTIN and place of supply."""
-	address_field = primary_field(party_type, "Address")
+	address_field = party_field(party_type, "primary_address")
 	rows = _get_list_in(party_type, "name", parties, fields=["name", "gstin", f"{address_field} as address"])
 	addresses = {row.address for row in rows if row.address}
 	fields = ["name", "state", "country"]

@@ -19,23 +19,26 @@ DEFAULT_PRINT_FORMATS = {
 }
 POS_PRINT_FORMAT = "Business-POS - Sales Invoice"
 DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
+# A party's Contacts and Addresses, which Books users keep as they keep the party
+PARTY_RECORD_RIGHTS = {
+	"Books User": ("read", "write", "create", "delete", "report", "print", "export", "email"),
+	"Books Manager": (
+		"read",
+		"write",
+		"create",
+		"delete",
+		"report",
+		"print",
+		"export",
+		"import",
+		"email",
+		"share",
+	),
+}
 # Rights Books roles need on core doctypes the Books interface uses; if_owner limits them to own records
 CORE_PERMISSIONS = {
-	"Address": {
-		"Books User": ("read", "write", "create", "delete", "report", "print", "export", "email"),
-		"Books Manager": (
-			"read",
-			"write",
-			"create",
-			"delete",
-			"report",
-			"print",
-			"export",
-			"import",
-			"email",
-			"share",
-		),
-	},
+	"Address": PARTY_RECORD_RIGHTS,
+	"Contact": PARTY_RECORD_RIGHTS,
 	"Currency": {
 		"Books User": ("read", "report", "print", "export", "email"),
 		"Books Manager": ("read", "write", "create", "delete", "report", "print", "export", "email", "share"),

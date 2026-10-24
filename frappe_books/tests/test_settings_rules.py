@@ -92,12 +92,12 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		invalid_values = [
 			(
 				"Books Customer",
-				{"customer_name": unique_name("Format Test"), "email": "not-an-email"},
+				{"customer_name": unique_name("Format Test"), "email_id": "not-an-email"},
 				frappe.InvalidEmailAddressError,
 			),
 			(
 				"Books Customer",
-				{"customer_name": unique_name("Format Test"), "phone": "call me"},
+				{"customer_name": unique_name("Format Test"), "mobile_no": "call me"},
 				frappe.InvalidPhoneNumberError,
 			),
 			("Books Lead", {"email": "not-an-email"}, frappe.InvalidEmailAddressError),

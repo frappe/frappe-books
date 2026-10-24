@@ -68,6 +68,7 @@ export interface BaseField {
   meta?: boolean;                // Field is a meta field, i.e. only for the db, not UI
   filter?: boolean;              // UI Facing config, whether to be used to filter the List.
   computed?: boolean;            // Computed values are not stored in the database.
+  insertOnly?: boolean;          // A quick-entry value only a new document is saved with; its DocType does not hold it
   section?: string;              // UI Facing config, for grouping by sections
   tab?: string;                  // UI Facing config, for grouping by tabs
   isCustom?: boolean;            // Whether the field is a custom field

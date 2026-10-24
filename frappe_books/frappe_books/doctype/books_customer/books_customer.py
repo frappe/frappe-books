@@ -23,16 +23,17 @@ class BooksCustomer(PartyController):
 		accounts: DF.Table[BooksPartyAccount]
 		customer_name: DF.Data
 		customer_primary_address: DF.Link | None
+		customer_primary_contact: DF.Link | None
 		default_currency: DF.Link | None
-		email: DF.Data | None
+		email_id: DF.ReadOnly | None
 		gst_category: DF.Literal["Registered Regular", "Unregistered"]
 		gstin: DF.Data | None
 		image: DF.AttachImage | None
 		lead_name: DF.Link | None
 		loyalty_points: DF.Int
 		loyalty_program: DF.Link | None
+		mobile_no: DF.ReadOnly | None
 		outstanding_amount: DF.Currency
-		phone: DF.Data | None
 		primary_address: DF.TextEditor | None
 		tax_id: DF.Data | None
 	# end: auto-generated types
@@ -52,6 +53,7 @@ class BooksCustomer(PartyController):
 			lead.save()
 
 	def on_trash(self):
+		super().on_trash()
 		if not self.lead_name:
 			return
 		lead = frappe.get_doc("Books Lead", self.lead_name)

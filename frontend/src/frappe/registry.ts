@@ -56,10 +56,13 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
 
 /**
  * The fields of export and import files: the schema's `fileFields` in their
- * order, then its custom and meta fields; else all its fields.
+ * order, then its custom and meta fields; else all its stored fields.
  */
 export function getFileFields(schemaName: string): Field[] {
-  const { fields, fileFields } = getSchema(schemaName)!;
+  const schema = getSchema(schemaName)!;
+  // Insert-only values are not the DocType's, so files cannot hold them.
+  const fields = schema.fields.filter((field) => !field.insertOnly);
+  const { fileFields } = schema;
   if (!fileFields) {
     return fields;
   }

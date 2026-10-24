@@ -30,9 +30,16 @@ test('an Indian customer or supplier asks for its GST registration instead of a 
   }
 
   assert.deepEqual(getSchema('Customer').quickEditFields, [
-    'email',
-    'phone',
+    'customer_primary_contact',
+    'email_id',
+    'mobile_no',
     'customer_primary_address',
+    'address_line1',
+    'address_line2',
+    'city',
+    'state',
+    'pincode',
+    'country',
     'accounts',
     'loyalty_program',
     'default_currency',
@@ -40,9 +47,16 @@ test('an Indian customer or supplier asks for its GST registration instead of a 
     'gstin',
   ]);
   assert.deepEqual(getSchema('Supplier').quickEditFields, [
-    'email',
-    'phone',
+    'supplier_primary_contact',
+    'email_id',
+    'mobile_no',
     'supplier_primary_address',
+    'address_line1',
+    'address_line2',
+    'city',
+    'state',
+    'pincode',
+    'country',
     'accounts',
     'default_currency',
     'gst_category',

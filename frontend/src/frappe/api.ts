@@ -11,8 +11,9 @@ import {
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
 export type DocValues = Record<string, unknown>;
 
-/** A Frappe list filter, `[fieldname, operator, value]`. */
-export type Filter = [string, string, unknown];
+/** A Frappe list filter, `[fieldname, operator, value]`, or `[table doctype, fieldname, operator, value]` on its rows. */
+export type Filter =
+  [string, string, unknown] | [string, string, string, unknown];
 
 export interface ListQuery {
   /** Fieldnames, or `{ table: [fieldnames] }` for a table's rows. */

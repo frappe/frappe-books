@@ -13,8 +13,10 @@
   "image",
   "customer_name",
   "contacts_section_break_4",
-  "email",
-  "phone",
+  "customer_primary_contact",
+  "email_id",
+  "mobile_no",
+  "address_section_break",
   "customer_primary_address",
   "primary_address",
   "billing_section_break_8",
@@ -54,21 +56,37 @@
   {
    "fieldname": "contacts_section_break_4",
    "fieldtype": "Section Break",
-   "label": "Contacts"
+   "label": "Contact"
   },
   {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "label": "Email",
+   "fieldname": "customer_primary_contact",
+   "fieldtype": "Link",
+   "label": "Customer Primary Contact",
+   "no_copy": 1,
+   "options": "Contact"
+  },
+  {
+   "fetch_from": "customer_primary_contact.email_id",
+   "fieldname": "email_id",
+   "fieldtype": "Read Only",
+   "label": "Email Id",
+   "no_copy": 1,
    "options": "Email",
    "placeholder": "john@doe.com"
   },
   {
-   "fieldname": "phone",
-   "fieldtype": "Data",
-   "label": "Phone",
+   "fetch_from": "customer_primary_contact.mobile_no",
+   "fieldname": "mobile_no",
+   "fieldtype": "Read Only",
+   "label": "Mobile No",
+   "no_copy": 1,
    "options": "Phone",
-   "placeholder": "Phone"
+   "placeholder": "Mobile No"
+  },
+  {
+   "fieldname": "address_section_break",
+   "fieldtype": "Section Break",
+   "label": "Address"
   },
   {
    "fieldname": "customer_primary_address",
@@ -227,7 +245,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "email, phone",
+ "search_fields": "email_id, mobile_no",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],

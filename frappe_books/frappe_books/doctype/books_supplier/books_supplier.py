@@ -21,15 +21,16 @@ class BooksSupplier(PartyController):
 
 		accounts: DF.Table[BooksPartyAccount]
 		default_currency: DF.Link | None
-		email: DF.Data | None
+		email_id: DF.ReadOnly | None
 		gst_category: DF.Literal["Registered Regular", "Unregistered"]
 		gstin: DF.Data | None
 		image: DF.AttachImage | None
+		mobile_no: DF.ReadOnly | None
 		outstanding_amount: DF.Currency
-		phone: DF.Data | None
 		primary_address: DF.TextEditor | None
 		supplier_name: DF.Data
 		supplier_primary_address: DF.Link | None
+		supplier_primary_contact: DF.Link | None
 		tax_id: DF.Data | None
 	# end: auto-generated types
 

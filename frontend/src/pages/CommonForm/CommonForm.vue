@@ -105,6 +105,7 @@
             class="py-5"
             :show-title="activeGroup.size > 1 && n !== t`Default`"
             :title="n"
+            :description="doc.getSectionDescription(n)"
             :fields="fields"
             :doc="doc"
             :errors="errors"

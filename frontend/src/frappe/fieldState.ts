@@ -28,7 +28,8 @@ const docFieldMaps = new WeakMap<DocTypeMeta, Record<string, DocField>>();
 const evalDocs = new WeakMap<FrappeDoc, ComputedRef<EvalDoc>>();
 
 /**
- * A field's state on `doc`, decided in this order:
+ * A field's state on `doc`, decided in this order; a saved document hides
+ * its insert-only fields first:
  * 1. Read only, before all else: a set-once field of a saved document, a
  *    name the server gives or that is saved, a submitted or cancelled
  *    document, or no right to write it.
@@ -42,7 +43,8 @@ const evalDocs = new WeakMap<FrappeDoc, ComputedRef<EvalDoc>>();
  */
 export function getFieldState(doc: FrappeDoc, field: Field): FieldState {
   return {
-    hidden: isRuleOn(doc, field, 'hidden'),
+    hidden:
+      (!!field.insertOnly && doc.inserted) || isRuleOn(doc, field, 'hidden'),
     readOnly: isLocked(doc, field) || isRuleOn(doc, field, 'readOnly'),
     required: isRuleOn(doc, field, 'required'),
   };

@@ -256,6 +256,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return fields;
   }
 
+  /** What a form section says under its title, if anything. */
+  getSectionDescription(_section: string): string | undefined {
+    return undefined;
+  }
+
   get isSubmitted() {
     return !!this.submitted && !this.cancelled;
   }
@@ -391,6 +396,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     for (const field of this.schema.fields) {
       if (
         field.meta ||
+        (field.insertOnly && this.inserted) ||
         (options.clearServerFilled && this._serverFilled.has(field.fieldname))
       ) {
         continue;

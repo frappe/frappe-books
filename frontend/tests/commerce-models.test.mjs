@@ -308,23 +308,31 @@ test('customer and supplier forms and lists show what they showed, without GST f
   const supplierFields = [
     'image | Image |  | Default',
     'supplier_name | Supplier Name | Full Name | Default',
-    'email | Email | john@doe.com | Contacts',
-    'phone | Phone | Phone | Contacts',
-    'supplier_primary_address | Primary Address |  | Contacts',
-    'primary_address | Primary Address Preview |  | Contacts',
+    'supplier_primary_contact | Primary Contact |  | Contact',
+    'email_id | Email ID | john@doe.com | Contact',
+    'mobile_no | Mobile No | Mobile No | Contact',
+    'supplier_primary_address | Primary Address |  | Address',
+    'primary_address | Primary Address Preview |  | Address',
     'accounts | Default Accounts |  | Billing',
     'default_currency | Billing Currency | INR | Billing',
     'tax_id | Tax ID |  | Billing',
     'outstanding_amount | Outstanding Amount |  | Billing',
+    'address_line1 | Address Line 1 |  | Address',
+    'address_line2 | Address Line 2 |  | Address',
+    'city | City |  | Address',
+    'state | State |  | Address',
+    'pincode | Postal Code |  | Address',
+    'country | Country |  | Address',
   ];
   assert.deepEqual(getLayout('Supplier'), supplierFields);
   assert.deepEqual(getLayout('Customer'), [
     'image | Image |  | Default',
     'customer_name | Customer Name | Full Name | Default',
-    'email | Email | john@doe.com | Contacts',
-    'phone | Phone | Phone | Contacts',
-    'customer_primary_address | Customer Primary Address |  | Contacts',
-    'primary_address | Primary Address |  | Contacts',
+    'customer_primary_contact | Customer Primary Contact |  | Contact',
+    'email_id | Email Id | john@doe.com | Contact',
+    'mobile_no | Mobile No | Mobile No | Contact',
+    'customer_primary_address | Customer Primary Address |  | Address',
+    'primary_address | Primary Address |  | Address',
     'accounts | Default Accounts |  | Billing',
     'default_currency | Billing Currency | INR | Billing',
     'lead_name | Lead |  | References',
@@ -332,6 +340,12 @@ test('customer and supplier forms and lists show what they showed, without GST f
     'loyalty_points | Loyalty Points |  | Loyalty Program',
     'tax_id | Tax ID |  | Billing',
     'outstanding_amount | Outstanding Amount |  | Billing',
+    'address_line1 | Address Line 1 |  | Address',
+    'address_line2 | Address Line 2 |  | Address',
+    'city | City |  | Address',
+    'state | State |  | Address',
+    'pincode | Postal Code |  | Address',
+    'country | Country |  | Address',
   ]);
   for (const schemaName of ['Customer', 'Supplier']) {
     const party = newFrappeDoc(schemaName);
@@ -339,8 +353,8 @@ test('customer and supplier forms and lists show what they showed, without GST f
     assert.equal(hidden(party, 'tax_id'), false);
     assert.deepEqual(getColumns(schemaName), [
       'name',
-      'email',
-      'phone',
+      'email_id',
+      'mobile_no',
       'outstanding_amount',
     ]);
   }

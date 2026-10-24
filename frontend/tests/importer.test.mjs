@@ -295,7 +295,10 @@ test('import datetimes are read as system time, whatever the browser’s time zo
 
 test('fix failed keeps the failed rows and the file columns', async () => {
   const importer = new Importer('Customer', fyo);
-  importer.assignedTemplateFields = ['Customer.email', 'Customer.name'];
+  importer.assignedTemplateFields = [
+    'Customer.email_id',
+    'Customer.customer_name',
+  ];
   importer.valueMatrix = [
     [{ value: 'a@example.com' }, { value: 'A' }],
     [{ value: 'b@example.com' }, { value: 'B' }],
@@ -309,7 +312,7 @@ test('fix failed keeps the failed rows and the file columns', async () => {
     ['B', 'C']
   );
   assert.deepEqual(importer.assignedTemplateFields, [
-    'Customer.email',
-    'Customer.name',
+    'Customer.email_id',
+    'Customer.customer_name',
   ]);
 });

@@ -42,8 +42,8 @@ test('the palette searches the schemas the DocType search fields name', () => {
 
   assert.equal(requests.length, 0);
   assert.deepEqual(fields('SalesInvoice'), ['name', 'customer']);
-  assert.deepEqual(fields('Customer'), ['name', 'email', 'phone']);
-  assert.deepEqual(fields('Supplier'), ['name', 'email', 'phone']);
+  assert.deepEqual(fields('Customer'), ['name', 'email_id', 'mobile_no']);
+  assert.deepEqual(fields('Supplier'), ['name', 'email_id', 'mobile_no']);
   assert.deepEqual(fields('Tax'), ['name']);
   assert.equal(fields('SalesInvoiceItem'), undefined);
   assert.equal(fields('Account'), undefined);
@@ -73,7 +73,10 @@ test('one request searches the text in the doctypes the filters allow', async ()
   assert.equal(requests[0].body.text, 'Karen SINV-1');
   assert.equal(requests[0].body.doctypes.length, 19);
   assert.equal(requests[0].body.doctypes.includes('Books Sales Invoice'), true);
-  assert.equal(requests[1].body.doctypes.includes('Books Sales Invoice'), false);
+  assert.equal(
+    requests[1].body.doctypes.includes('Books Sales Invoice'),
+    false
+  );
   assert.equal(requests[1].body.doctypes.includes('Books Customer'), true);
 });
 test('the palette lists only the lists of features that are on', () => {

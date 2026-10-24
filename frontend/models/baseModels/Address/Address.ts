@@ -3,6 +3,15 @@ import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
 import type { Presentation } from 'src/frappe/schema';
 
+/** The states an address in its country offers: India's, else none, as the state is then free text. */
+export function getStates(doc?: FrappeDoc): string[] {
+  if (doc?.country !== 'India') {
+    return [];
+  }
+
+  return Object.values(doc.fyo.store.indianStates ?? {}).sort();
+}
+
 /** Frappe's Address, which parties, locations and print settings link to. */
 export class Address extends FrappeDoc {
   static override doctype = 'Address';
@@ -28,17 +37,7 @@ export class Address extends FrappeDoc {
     },
   };
 
-  static lists: ListsMap = {
-    state(doc?: FrappeDoc) {
-      const country = doc?.country as string | undefined;
-      switch (country) {
-        case 'India':
-          return Object.values(doc?.fyo.store.indianStates ?? {}).sort();
-        default:
-          return [] as string[];
-      }
-    },
-  };
+  static lists: ListsMap = { state: getStates };
 
   static emptyMessages: EmptyMessageMap = {
     state: (doc: FrappeDoc) => {

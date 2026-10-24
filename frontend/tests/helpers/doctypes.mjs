@@ -6,8 +6,8 @@ export const doctypes = readDoctypes(new URL('frappe_books/doctype/', appRoot));
 
 /**
  * A doctype's meta and its tables' meta, with fields in field order, as
- * Frappe's getdoctype sends them. Currency, Country, Print Format, Address
- * and Dynamic Link are Frappe's own doctypes.
+ * Frappe's getdoctype sends them. Currency, Country, Print Format, Address,
+ * Contact and Dynamic Link are Frappe's own doctypes.
  */
 export function getMetaBundle(name) {
   const meta = getMeta(name);
@@ -31,6 +31,9 @@ function getMeta(name) {
     countryMeta,
     printFormatMeta,
     addressMeta,
+    contactMeta,
+    contactEmailMeta,
+    contactPhoneMeta,
     dynamicLinkMeta,
   ].find((meta) => meta.name === name);
   const order = meta.field_order ?? [];
@@ -279,6 +282,226 @@ const dynamicLinkMeta = {
       fieldtype: 'Read Only',
       label: 'Link Title',
       read_only: 1,
+      in_list_view: 1,
+    },
+  ],
+};
+
+// Frappe's Contact, which the app does not ship.
+const contactMeta = {
+  name: 'Contact',
+  naming_rule: 'By script',
+  title_field: 'full_name',
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'contact_section',
+      fieldtype: 'Section Break',
+      options: 'fa fa-user',
+    },
+    { fieldname: 'first_name', fieldtype: 'Data', label: 'First Name' },
+    { fieldname: 'middle_name', fieldtype: 'Data', label: 'Middle Name' },
+    { fieldname: 'last_name', fieldtype: 'Data', label: 'Last Name' },
+    {
+      fieldname: 'full_name',
+      fieldtype: 'Data',
+      label: 'Full Name',
+      read_only: 1,
+      hidden: 1,
+    },
+    {
+      fieldname: 'email_id',
+      fieldtype: 'Data',
+      label: 'Email Address',
+      options: 'Email',
+      read_only: 1,
+      in_list_view: 1,
+    },
+    { fieldname: 'user', fieldtype: 'Link', label: 'User Id', options: 'User' },
+    {
+      fieldname: 'address',
+      fieldtype: 'Link',
+      label: 'Address',
+      options: 'Address',
+    },
+    {
+      fieldname: 'sync_with_google_contacts',
+      fieldtype: 'Check',
+      label: 'Sync with Google Contacts',
+      default: '0',
+    },
+    { fieldname: 'cb00', fieldtype: 'Column Break' },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Passive\nOpen\nReplied',
+      default: 'Passive',
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'salutation',
+      fieldtype: 'Link',
+      label: 'Salutation',
+      options: 'Salutation',
+    },
+    { fieldname: 'designation', fieldtype: 'Data', label: 'Designation' },
+    {
+      fieldname: 'gender',
+      fieldtype: 'Link',
+      label: 'Gender',
+      options: 'Gender',
+    },
+    {
+      fieldname: 'phone',
+      fieldtype: 'Data',
+      label: 'Phone',
+      options: 'Phone',
+      read_only: 1,
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'mobile_no',
+      fieldtype: 'Data',
+      label: 'Mobile No',
+      options: 'Phone',
+      read_only: 1,
+    },
+    { fieldname: 'company_name', fieldtype: 'Data', label: 'Company Name' },
+    {
+      fieldname: 'image',
+      fieldtype: 'Attach Image',
+      label: 'Image',
+      hidden: 1,
+    },
+    {
+      fieldname: 'sb_00',
+      fieldtype: 'Section Break',
+      label: 'Google Contacts',
+      depends_on:
+        'eval:doc.sync_with_google_contacts || doc.pulled_from_google_contacts',
+    },
+    {
+      fieldname: 'google_contacts',
+      fieldtype: 'Link',
+      label: 'Google Contacts',
+      options: 'Google Contacts',
+    },
+    {
+      fieldname: 'google_contacts_id',
+      fieldtype: 'Data',
+      label: 'Google Contacts Id',
+      read_only: 1,
+    },
+    { fieldname: 'cb_00', fieldtype: 'Column Break' },
+    {
+      fieldname: 'pulled_from_google_contacts',
+      fieldtype: 'Check',
+      label: 'Pulled from Google Contacts',
+      read_only: 1,
+      default: '0',
+    },
+    {
+      fieldname: 'sb_01',
+      fieldtype: 'Section Break',
+      label: 'Contact Details',
+    },
+    {
+      fieldname: 'email_ids',
+      fieldtype: 'Table',
+      label: 'Email IDs',
+      options: 'Contact Email',
+    },
+    {
+      fieldname: 'phone_nos',
+      fieldtype: 'Table',
+      label: 'Contact Numbers',
+      options: 'Contact Phone',
+    },
+    {
+      fieldname: 'contact_details',
+      fieldtype: 'Section Break',
+      label: 'Reference',
+      options: 'fa fa-pushpin',
+    },
+    {
+      fieldname: 'links',
+      fieldtype: 'Table',
+      label: 'Links',
+      options: 'Dynamic Link',
+    },
+    {
+      fieldname: 'is_primary_contact',
+      fieldtype: 'Check',
+      label: 'Is Primary Contact',
+      default: '0',
+    },
+    {
+      fieldname: 'more_info',
+      fieldtype: 'Section Break',
+      label: 'More Information',
+      options: 'fa fa-file-text',
+    },
+    { fieldname: 'department', fieldtype: 'Data', label: 'Department' },
+    {
+      fieldname: 'unsubscribed',
+      fieldtype: 'Check',
+      label: 'Unsubscribed',
+      default: '0',
+    },
+  ],
+};
+
+// Frappe's Contact Email, which the app does not ship.
+const contactEmailMeta = {
+  name: 'Contact Email',
+  istable: 1,
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'email_id',
+      fieldtype: 'Data',
+      label: 'Email ID',
+      options: 'Email',
+      reqd: 1,
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'is_primary',
+      fieldtype: 'Check',
+      label: 'Is Primary',
+      default: '0',
+      in_list_view: 1,
+    },
+  ],
+};
+
+// Frappe's Contact Phone, which the app does not ship.
+const contactPhoneMeta = {
+  name: 'Contact Phone',
+  istable: 1,
+  permissions: [],
+  fields: [
+    {
+      fieldname: 'phone',
+      fieldtype: 'Data',
+      label: 'Number',
+      options: 'Phone',
+      reqd: 1,
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'is_primary_phone',
+      fieldtype: 'Check',
+      label: 'Is Primary Phone',
+      default: '0',
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'is_primary_mobile_no',
+      fieldtype: 'Check',
+      label: 'Is Primary Mobile',
+      default: '0',
       in_list_view: 1,
     },
   ],

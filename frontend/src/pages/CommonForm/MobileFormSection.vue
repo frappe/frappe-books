@@ -20,6 +20,13 @@
         />
       </button>
     </div>
+    <p
+      v-if="description && (kind !== 'collapsible' || isOpen)"
+      class="px-4 pt-2 text-p-sm text-ink-gray-5"
+      :class="{ 'pb-2': kind === 'collapsible' }"
+    >
+      {{ description }}
+    </p>
     <template v-for="block in blocks" :key="block.key">
       <div
         v-if="block.key === 'table' && tableField"
@@ -106,6 +113,7 @@ import MobileFormField from './MobileFormField.vue';
 
 const props = defineProps<{
   title: string;
+  description?: string;
   fields: Field[];
   doc: FrappeDoc;
   errors: Record<string, string>;

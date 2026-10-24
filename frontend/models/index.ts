@@ -6,6 +6,7 @@ import { Company } from './baseModels/Company/Company';
 import { Country } from './baseModels/Country';
 import { Currency } from './baseModels/Currency/Currency';
 import { Address } from './baseModels/Address/Address';
+import { Contact } from './baseModels/Contact/Contact';
 import { CustomForm } from './baseModels/CustomForm/CustomForm';
 import { Defaults } from './baseModels/Defaults/Defaults';
 import { GetStarted } from './baseModels/GetStarted/GetStarted';
@@ -66,6 +67,7 @@ export const frappeModels: Record<string, FrappeModel> = {
   Customer,
   Supplier,
   Lead,
+  Contact,
   Address,
   ItemGroup,
   Item,

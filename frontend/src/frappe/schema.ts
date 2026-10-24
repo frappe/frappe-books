@@ -26,6 +26,12 @@ export interface Presentation {
   omitFields?: string[];
   /** Values of omitted fields that each document /books creates gets, e.g. an enabled Currency. */
   insertValues?: Record<string, unknown>;
+  /**
+   * Fields a new document asks for that its DocType does not hold, like the
+   * address a new customer makes its primary Address from, as ERPNext's quick
+   * entry does. The server reads them on insert; a saved document hides them.
+   */
+  insertFields?: Field[];
   /** The field a link to the doctype shows instead of the name. */
   linkDisplayField?: string;
   /**
@@ -108,6 +114,7 @@ export function toSchema(
   const docFields = getDocFields(meta, context, presentation);
   const fields = [
     ...getNameFields(meta, presentation, docFields),
+    ...getInsertFields(presentation),
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 
@@ -314,6 +321,15 @@ function getNameFields(
   } as Field;
   const index = isPrompt && fields[0]?.fieldtype === 'AttachImage' ? 1 : 0;
   return [...fields.slice(0, index), nameField, ...fields.slice(index)];
+}
+
+/** Insert-only fields filter no list, as no column holds them. */
+function getInsertFields({ insertFields = [] }: Presentation): Field[] {
+  return insertFields.map((field) => ({
+    ...field,
+    insertOnly: true,
+    filter: false,
+  }));
 }
 
 function getMetaFields(meta: DocTypeMeta): Field[] {

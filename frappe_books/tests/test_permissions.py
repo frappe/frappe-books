@@ -47,6 +47,7 @@ ROLE_MATRIX = {
 	"Books Supplier": (FULL, FULL, FULL),
 	"Books Item": (FULL, FULL, FULL),
 	"Address": (FULL, FULL, FULL),
+	"Contact": (FULL, FULL, FULL),
 	"Books Account": (FULL, FULL, NONE),
 	"Books Tax": (FULL, FULL, READ),
 	"Books Defaults": (FULL, FULL, READ),
@@ -225,10 +226,10 @@ class IntegrationTestPermissions(IntegrationTestCase):
 
 	def test_documents_hide_fields_above_the_users_permlevel(self):
 		party = make_customer(make_account("Permlevel Receivable", account_type="Receivable").name)
-		party.db_set("email", "hidden@example.com")
-		email = frappe.get_meta("Books Customer").get_field("email")
+		party.db_set("email_id", "hidden@example.com")
+		email = frappe.get_meta("Books Customer").get_field("email_id")
 		with patch.object(email, "permlevel", 2), self.set_user(BOOKS_USER):
-			self.assertIsNone(read_doc("Books Customer", party.name).get("email"))
+			self.assertIsNone(read_doc("Books Customer", party.name).get("email_id"))
 
 	def test_counts_skip_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_delivery_note(), _seed_delivery_note()

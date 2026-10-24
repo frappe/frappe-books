@@ -30,6 +30,9 @@ DEFAULT_FILL_STEPS = ("set_missing_values", "calculate_taxes_and_totals")
 # Party fields and the party type they name, as Desk refreshes a document from its party; a
 # quotation's party is a customer or a lead, which ERPNext fills only where empty.
 PARTY_TYPES = {"customer": "Customer", "supplier": "Supplier", "party_name": "Customer"}
+# The payment type a new payment takes from its party type, and the reverse
+PAYMENT_TYPE_OF_PARTY = {"Customer": "Receive", "Supplier": "Pay"}
+PARTY_TYPE_OF_PAYMENT = {"Receive": "Customer", "Pay": "Supplier"}
 # Fields after whose change Desk prices every row again.
 PRICE_SOURCES = {"selling_price_list", "buying_price_list", "currency", "price_list_currency"}
 # What Desk's form scripts fill as their fields change, for doctypes ERPNext's Python leaves to them
@@ -85,6 +88,7 @@ def get_document(values: dict) -> Document:
 		document.update({key: value for key, value in values.items() if value is not None})
 		document.name = None
 		set_default_taxes(document)
+		set_payment_party_type(document, values)
 		return document
 
 	document = frappe.get_doc(doctype, name)
@@ -97,6 +101,19 @@ def set_default_taxes(document: Document):
 	field = document.meta.get_field("taxes_and_charges")
 	if field and document.get("taxes_and_charges") is None and not document.get("taxes"):
 		document.update(get_default_taxes_and_charges(field.options, company=document.company) or {})
+
+
+def set_payment_party_type(document: Document, values: dict):
+	"""A new payment given only a party type receives from a customer or pays a supplier, as Books' payments do;
+	one without a party type takes its payment type's, as Desk's form fills it.
+	"""
+	if document.doctype != "Payment Entry":
+		return
+
+	if values.get("party_type") and not values.get("payment_type"):
+		document.payment_type = PAYMENT_TYPE_OF_PARTY.get(document.party_type, document.payment_type)
+	elif not (document.party_type or document.party):
+		document.party_type = PARTY_TYPE_OF_PAYMENT.get(document.payment_type)
 
 
 def refresh_party(document: Document, edited: set[str]):
